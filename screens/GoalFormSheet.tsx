@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
@@ -28,18 +28,11 @@ export default function GoalFormSheet({
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
 
-  // El hueco del teclado se mide en vivo, no se deduce (ver utils/keyboard.ts).
-  const containerRef = useRef<View>(null);
-  const { padding, keyboardVisible, onContainerLayout, onFieldFocus } =
-    useKeyboardPadding(containerRef);
+  // El hueco del teclado es directamente su propia altura (ver utils/keyboard.ts).
+  const { padding, keyboardVisible, onFieldFocus } = useKeyboardPadding();
 
   return (
-    <View
-      ref={containerRef}
-      onLayout={onContainerLayout}
-      className="absolute inset-0 z-40 justify-end"
-      style={{ paddingBottom: padding }}
-    >
+    <View className="absolute inset-0 z-40 justify-end" style={{ paddingBottom: padding }}>
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
         className="bg-white dark:bg-slate-900 rounded-t-3xl px-5 pt-3"

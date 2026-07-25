@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
@@ -30,18 +30,11 @@ export default function MoveMoneySheet({
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
 
-  // Igual que en AddSheet: el hueco del teclado se mide, no se calcula.
-  const containerRef = useRef<View>(null);
-  const { padding, keyboardVisible, onContainerLayout, onFieldFocus } =
-    useKeyboardPadding(containerRef);
+  // Igual que en AddSheet: el hueco del teclado es su propia altura.
+  const { padding, keyboardVisible, onFieldFocus } = useKeyboardPadding();
 
   return (
-    <View
-      ref={containerRef}
-      onLayout={onContainerLayout}
-      className="absolute inset-0 z-40 justify-end"
-      style={{ paddingBottom: padding }}
-    >
+    <View className="absolute inset-0 z-40 justify-end" style={{ paddingBottom: padding }}>
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
         className="bg-white dark:bg-slate-900 rounded-t-3xl px-5 pt-3"

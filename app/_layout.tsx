@@ -57,15 +57,25 @@ export default function RootLayout() {
       <AppDataProvider>
         <View style={{ flex: 1 }}>
           <Stack screenOptions={{ headerShown: false }}>
+            {/* transaction/new y transaction/[id]/edit muestran AddSheet, que
+                ahora es una pantalla llena y opaca — "modal" normal es
+                correcto porque no hay nada transparente detrás que se vea. */}
             <Stack.Screen name="transaction/new" options={{ presentation: "modal" }} />
-            <Stack.Screen name="transaction/choose" options={{ presentation: "modal" }} />
             <Stack.Screen name="transaction/[id]/edit" options={{ presentation: "modal" }} />
-            <Stack.Screen name="edit-budget" options={{ presentation: "modal" }} />
-            <Stack.Screen name="savings/form" options={{ presentation: "modal" }} />
-            <Stack.Screen name="savings/move" options={{ presentation: "modal" }} />
-            <Stack.Screen name="savings/picker" options={{ presentation: "modal" }} />
-            <Stack.Screen name="export-pdf" options={{ presentation: "modal" }} />
-            <Stack.Screen name="import" options={{ presentation: "modal" }} />
+
+            {/* El resto son hojas con fondo oscuro translúcido (se ve la
+                pantalla de atrás difuminada). Con "modal" a secas, Android
+                pinta primero un fondo BLANCO opaco por defecto y recién un
+                instante después la hoja translúcida — eso es el destello
+                blanco. "transparentModal" no pinta ningún fondo propio: se
+                ve la pantalla de atrás desde el primer fotograma. */}
+            <Stack.Screen name="transaction/choose" options={{ presentation: "transparentModal" }} />
+            <Stack.Screen name="edit-budget" options={{ presentation: "transparentModal" }} />
+            <Stack.Screen name="savings/form" options={{ presentation: "transparentModal" }} />
+            <Stack.Screen name="savings/move" options={{ presentation: "transparentModal" }} />
+            <Stack.Screen name="savings/picker" options={{ presentation: "transparentModal" }} />
+            <Stack.Screen name="export-pdf" options={{ presentation: "transparentModal" }} />
+            <Stack.Screen name="import" options={{ presentation: "transparentModal" }} />
           </Stack>
           <GlobalOverlays />
           <ResetToHomeOnResume />

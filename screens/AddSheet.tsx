@@ -64,10 +64,9 @@ export default function AddSheet({
   const dateOk = isValidISODate(date);
   const valid = parseAmountInput(amount) > 0 && dateOk;
 
-  // El hueco del teclado se MIDE, no se deduce: ver utils/keyboard.ts.
-  const containerRef = useRef<View>(null);
-  const { padding, keyboardVisible, onContainerLayout, onFieldFocus } =
-    useKeyboardPadding(containerRef);
+  // El hueco del teclado es directamente su propia altura, medida en vivo
+  // (ver utils/keyboard.ts — el porqué de este cambio está documentado ahí).
+  const { padding, keyboardVisible, onFieldFocus } = useKeyboardPadding();
 
   // Al saltar de un campo a otro el teclado NO se cierra: solo cambia de
   // tamaño (el numérico es más bajo que el de texto) y Android no siempre
@@ -87,11 +86,11 @@ export default function AddSheet({
     // pantalla el reparto lo hace flexbox solo: cabecera arriba, campos en
     // medio (con scroll) y botones abajo. Nada puede desbordarse.
     //
-    // paddingBottom es lo único que sigue midiéndose: es lo que el teclado
-    // tapa, y hace que los botones queden flotando justo encima de él.
+    // paddingBottom = alto del teclado. Como este panel ocupa la pantalla
+    // entera, ese padding empuja a Cancelar/Guardar (el último elemento)
+    // justo hasta el borde superior del teclado — quedan flotando siempre
+    // visibles por completo, nunca a medias.
     <View
-      ref={containerRef}
-      onLayout={onContainerLayout}
       className="flex-1 bg-white dark:bg-slate-900"
       style={{ paddingTop: insets.top, paddingBottom: padding }}
     >
