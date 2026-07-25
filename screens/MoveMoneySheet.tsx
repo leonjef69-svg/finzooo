@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
@@ -6,7 +6,7 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import { sanitizeAmountInput } from "@/utils/amount";
-import { useKeyboardOverlap } from "@/utils/keyboard";
+import { useKeyboardPadding } from "@/utils/keyboard";
 import type { Goal } from "@/types";
 import { useColorScheme } from "nativewind";
 
@@ -30,12 +30,18 @@ export default function MoveMoneySheet({
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
 
-  // Mismo motivo que en GoalFormSheet: el hueco del teclado ya lo descuenta
-  // la pantalla contenedora, no hay que restarlo otra vez.
-  const { keyboardVisible } = useKeyboardOverlap();
+  // Igual que en AddSheet: el hueco del teclado se mide, no se calcula.
+  const containerRef = useRef<View>(null);
+  const { padding, keyboardVisible, onContainerLayout, onFieldFocus } =
+    useKeyboardPadding(containerRef);
 
   return (
-    <View className="absolute inset-0 z-40 justify-end">
+    <View
+      ref={containerRef}
+      onLayout={onContainerLayout}
+      className="absolute inset-0 z-40 justify-end"
+      style={{ paddingBottom: padding }}
+    >
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
         className="bg-white dark:bg-slate-900 rounded-t-3xl px-5 pt-3"
@@ -64,6 +70,7 @@ export default function MoveMoneySheet({
         <View className="items-center justify-center bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-800 px-4 py-5 mb-2 flex-row">
           <Text className="text-slate-500 dark:text-slate-300 font-bold text-xl mr-1">{currencySymbolFor(userCurrency)}</Text>
           <TextInput
+            onFocus={onFieldFocus}
             autoFocus
             keyboardType="decimal-pad"
             value={amount}

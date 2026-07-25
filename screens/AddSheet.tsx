@@ -8,7 +8,7 @@ import { methodLabel, PAYMENT_METHODS } from "@/constants/i18n";
 import { useAppData } from "@/contexts/AppDataContext";
 import { defaultDateForMonth, isValidISODate, normalizeDateInput } from "@/utils/date";
 import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
-import { useKeyboardOverlap } from "@/utils/keyboard";
+import { useKeyboardPadding } from "@/utils/keyboard";
 import { nextId } from "@/utils/id";
 import type { Month, Transaction } from "@/types";
 import { useColorScheme } from "nativewind";
@@ -64,28 +64,32 @@ export default function AddSheet({
   const dateOk = isValidISODate(date);
   const valid = parseAmountInput(amount) > 0 && dateOk;
 
-  // Solo se consulta SI hay teclado, para el margen inferior de los botones.
-  // El espacio que ocupa NO se calcula aquí a propósito — ver abajo.
-  const { keyboardVisible } = useKeyboardOverlap();
+  // El hueco del teclado se MIDE, no se deduce: ver utils/keyboard.ts.
+  const containerRef = useRef<View>(null);
+  const { padding, keyboardVisible, onContainerLayout, onFieldFocus } =
+    useKeyboardPadding(containerRef);
+
+  // Al saltar de un campo a otro el teclado NO se cierra: solo cambia de
+  // tamaño (el numérico es más bajo que el de texto) y Android no siempre
+  // avisa. Sin esto quedaba aplicada la medida del campo anterior, que era
+  // justo el fallo: con el numérico sobraba hueco y con el de texto los
+  // botones quedaban cortados.
+  function focusField() {
+    onFieldFocus();
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120);
+  }
 
   return (
-    // Por qué aquí NO se resta el teclado (medido en un celular real):
-    //
-    //   pantalla 948 · ventana 911 · teclado de 606 a 948
-    //
-    // La ventana NUNCA se encoge (sigue diciendo 911 con y sin teclado),
-    // pero la pantalla modal que contiene esta hoja SÍ se encoge sola: a
-    // eso se encarga react-native-screens. O sea que "inset-0" ya es el
-    // hueco libre por encima del teclado.
-    //
-    // Al restarle además el teclado por nuestra cuenta se descontaba DOS
-    // VECES: la hoja quedaba estrujada unos 210 px de más, se salía por
-    // arriba (el Monto detrás del reloj) y a la vez dejaba un hueco gris
-    // sobre el teclado. Los dos síntomas eran el mismo error.
-    //
-    // maxHeight "100%" es relativo a ese hueco ya correcto: la hoja mide
-    // lo que ocupa su contenido y jamás puede desbordarlo.
-    <View className="absolute inset-0 z-40 justify-end">
+    // paddingBottom = lo que el teclado tapa DE ESTE contenedor, medido en
+    // vivo (no calculado a ojo). onLayout vuelve a medir si el sistema
+    // cambia el tamaño después, así que el resultado se corrige solo.
+    // maxHeight "100%" garantiza que la hoja jamás desborde ese hueco.
+    <View
+      ref={containerRef}
+      onLayout={onContainerLayout}
+      className="absolute inset-0 z-40 justify-end"
+      style={{ paddingBottom: padding }}
+    >
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View className="bg-white dark:bg-slate-900 rounded-t-3xl" style={{ maxHeight: "100%" }}>
         <View className="items-center pt-3">
@@ -147,6 +151,9 @@ export default function AddSheet({
                 keyboardType="decimal-pad"
                 value={amount}
                 onChangeText={(v) => setAmount(sanitizeAmountInput(v))}
+                // Este campo abre el teclado NUMÉRICO, más bajo que el de
+                // texto. Hay que volver a medir o queda el hueco del otro.
+                onFocus={onFieldFocus}
                 placeholder="0.00"
                 placeholderTextColor="#94a3b8"
                 className="flex-1 text-lg font-extrabold"
@@ -232,6 +239,7 @@ export default function AddSheet({
                 <TextInput
                   value={date}
                   onChangeText={setDate}
+                  onFocus={onFieldFocus}
                   // Al salir del campo se acomoda sola: si escribiste
                   // "24/07/2026" queda como la app la guarda internamente,
                   // en vez de rechazarte algo que estaba bien escrito.
@@ -272,7 +280,7 @@ export default function AddSheet({
             <TextInput
               value={description}
               onChangeText={setDescription}
-              onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
+              onFocus={focusField}
               placeholder={t("addSheet.descriptionPlaceholder")}
               placeholderTextColor="#94a3b8"
               className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800 px-4 py-3.5 text-sm"
@@ -284,7 +292,7 @@ export default function AddSheet({
             <TextInput
               value={notes}
               onChangeText={setNotes}
-              onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 100)}
+              onFocus={focusField}
               placeholder={t("addSheet.notesPlaceholder")}
               placeholderTextColor="#94a3b8"
               multiline
@@ -306,6 +314,15 @@ export default function AddSheet({
             disabled={!valid}
             onPress={() =>
               onSave({
+                // Conserva los campos que esta pantalla no edita: de dónde
+                // vino el movimiento, el comercio, la cuenta, el código de
+                // operación y las etiquetas.
+                //
+                // Sin esto, editar un movimiento traído del banco lo dejaba
+                // como si lo hubieras escrito a mano: perdía su insignia de
+                // "Importado" y los datos con los que el detector de
+                // duplicados evita registrar dos veces el mismo gasto.
+                ...transaction,
                 id: transaction?.id || nextId(),
                 type,
                 amount: parseAmountInput(amount),

@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
 import { nextId } from "@/utils/id";
 import { sanitizeAmountInput } from "@/utils/amount";
-import { useKeyboardOverlap } from "@/utils/keyboard";
+import { useKeyboardPadding } from "@/utils/keyboard";
 import { fmtDate } from "@/utils/format";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -28,13 +28,18 @@ export default function GoalFormSheet({
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
 
-  // El hueco del teclado NO se calcula aquí: la pantalla que contiene esta
-  // hoja ya se encoge sola, así que "inset-0" es el espacio libre real.
-  // Restarlo otra vez lo descontaría dos veces (ver AddSheet.tsx).
-  const { keyboardVisible } = useKeyboardOverlap();
+  // El hueco del teclado se mide en vivo, no se deduce (ver utils/keyboard.ts).
+  const containerRef = useRef<View>(null);
+  const { padding, keyboardVisible, onContainerLayout, onFieldFocus } =
+    useKeyboardPadding(containerRef);
 
   return (
-    <View className="absolute inset-0 z-40 justify-end">
+    <View
+      ref={containerRef}
+      onLayout={onContainerLayout}
+      className="absolute inset-0 z-40 justify-end"
+      style={{ paddingBottom: padding }}
+    >
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
         className="bg-white dark:bg-slate-900 rounded-t-3xl px-5 pt-3"
@@ -61,6 +66,7 @@ export default function GoalFormSheet({
           <View>
             <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("goalForm.nameLabel")}</Text>
             <TextInput
+              onFocus={onFieldFocus}
               value={name}
               onChangeText={setName}
               placeholder={t("goalForm.namePlaceholder")}
@@ -73,6 +79,7 @@ export default function GoalFormSheet({
             <View className="flex-row items-center bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800 px-4 py-3.5">
               <Text className="text-slate-500 dark:text-slate-300 font-bold mr-1">{currencySymbolFor(userCurrency)}</Text>
               <TextInput
+                onFocus={onFieldFocus}
                 keyboardType="decimal-pad"
                 value={target}
                 onChangeText={(v) => setTarget(sanitizeAmountInput(v))}
