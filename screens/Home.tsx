@@ -1,0 +1,402 @@
+import { useMemo, useState } from "react";
+import { FlatList, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import {
+  Bell,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+  Circle,
+  Eye,
+  EyeOff,
+  ListChecks,
+  Target,
+  Trash2,
+  X,
+} from "lucide-react-native";
+import BudgetRing from "@/components/BudgetRing";
+import IconBadge from "@/components/IconBadge";
+import PressableScale from "@/components/PressableScale";
+import ThemeToggleButton from "@/components/ThemeToggleButton";
+import { catInfo } from "@/constants/categories";
+import { CARD_SHADOW } from "@/constants/style";
+import { fmtDate, monthKey } from "@/utils/format";
+import { sanitizeAmountInput } from "@/utils/amount";
+import { useAppData } from "@/contexts/AppDataContext";
+import type { Month, Transaction } from "@/types";
+import { useColorScheme } from "nativewind";
+
+const softShadow = CARD_SHADOW;
+
+export default function Home({
+  userName,
+  month,
+  setMonth,
+  budget,
+  spent,
+  income,
+  prevBalance,
+  transactions,
+  onOpenDetail,
+  onBulkDelete,
+}: {
+  userName: string;
+  month: Month;
+  setMonth: (m: Month) => void;
+  budget: number;
+  spent: number;
+  income: number;
+  prevBalance: number;
+  transactions: Transaction[];
+  onOpenDetail: (id: number) => void;
+  onBulkDelete: (ids: number[]) => void;
+}) {
+  const { fmt, t, monthNames, setBudgetForCurrentMonth } = useAppData();
+  const available = budget + prevBalance + income - spent;
+  const pct = budget > 0 ? (spent / budget) * 100 : 0;
+  const mk = monthKey(month.y, month.m);
+  const [editingBudget, setEditingBudget] = useState(false);
+  const [budgetInput, setBudgetInput] = useState("");
+  const [hideBalance, setHideBalance] = useState(false);
+
+  function startEditBudget() {
+    setBudgetInput(String(budget));
+    setEditingBudget(true);
+  }
+  function saveBudgetInline() {
+    setBudgetForCurrentMonth(parseFloat(budgetInput) || 0);
+    setEditingBudget(false);
+  }
+  const monthTx = useMemo(
+    () =>
+      transactions
+        .filter((t) => t.date.startsWith(mk))
+        .sort((a, b) => (a.date < b.date ? 1 : -1)),
+    [transactions, mk]
+  );
+
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<number[]>([]);
+  const insets = useSafeAreaInsets();
+  const { colorScheme } = useColorScheme();
+
+  function shiftMonth(d: number) {
+    let m = month.m + d;
+    let y = month.y;
+    if (m < 0) {
+      m = 11;
+      y -= 1;
+    }
+    if (m > 11) {
+      m = 0;
+      y += 1;
+    }
+    setMonth({ y, m });
+  }
+
+  function toggleSelectMode() {
+    setSelectMode((v) => !v);
+    setSelected([]);
+  }
+  function toggleSelected(id: number) {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+  function confirmBulkDelete() {
+    onBulkDelete(selected);
+    setSelected([]);
+    setSelectMode(false);
+  }
+
+  return (
+    <View className="flex-1 bg-white dark:bg-slate-900">
+      <FlatList
+        data={monthTx}
+        keyExtractor={(t) => String(t.id)}
+        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 112 }}
+        ListHeaderComponent={
+          <View>
+            <View className="px-5 pt-2 pb-1 flex-row items-center justify-between">
+              <View>
+                <Text className="text-sm text-slate-500 dark:text-slate-300 font-medium">{t("home.greeting")}</Text>
+                <Text
+                  className="text-lg font-extrabold"
+                  style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                >
+                  {userName.split(" ")[0]} 👋
+                </Text>
+              </View>
+              <View className="flex-row items-center gap-2">
+                <ThemeToggleButton />
+                <TouchableOpacity className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center">
+                  <Bell size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+                  <View className="absolute top-2 right-2 w-1.5 h-1.5 bg-rose-500 rounded-full" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            <View className="flex-row items-center justify-center gap-5 mt-2 mb-4">
+              <TouchableOpacity
+                onPress={() => shiftMonth(-1)}
+                className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+              >
+                <ChevronLeft size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+              </TouchableOpacity>
+              <View className="px-5 py-1.5 rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <Text
+                  className="font-bold text-base text-center"
+                  numberOfLines={1}
+                  style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                >
+                  {monthNames[month.m]} {month.y}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => shiftMonth(1)}
+                className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+              >
+                <ChevronRight size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+              </TouchableOpacity>
+            </View>
+
+            <LinearGradient
+              colors={["#059669", "#0f766e"]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              className="mx-5 rounded-[32px] overflow-hidden p-5 flex-row items-center gap-4 border border-white/20"
+            >
+              <BudgetRing pct={pct} />
+              <View className="flex-1">
+                <View className="flex-row items-center justify-between">
+                  <Text className="text-emerald-100 text-xs font-semibold">
+                    {editingBudget ? t("home.monthlyBudget") : t("home.availableBalance")}
+                  </Text>
+                  {!editingBudget && (
+                    <TouchableOpacity
+                      onPress={() => setHideBalance((v) => !v)}
+                      className="w-6 h-6 items-center justify-center"
+                    >
+                      {hideBalance ? (
+                        <EyeOff size={15} color="#d1fae5" />
+                      ) : (
+                        <Eye size={15} color="#d1fae5" />
+                      )}
+                    </TouchableOpacity>
+                  )}
+                </View>
+                {editingBudget ? (
+                  <View className="flex-row items-center gap-2 mt-1">
+                    <TextInput
+                      value={budgetInput}
+                      onChangeText={(v) => setBudgetInput(sanitizeAmountInput(v))}
+                      keyboardType="decimal-pad"
+                      autoFocus
+                      className="text-white text-2xl font-extrabold flex-1 border-b border-white/40 py-0.5"
+                    />
+                    <TouchableOpacity
+                      onPress={saveBudgetInline}
+                      className="w-[42px] h-[42px] rounded-full bg-white/25 items-center justify-center"
+                    >
+                      <Check size={21} color="#ffffff" />
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      onPress={() => setEditingBudget(false)}
+                      className="w-[42px] h-[42px] rounded-full bg-white/15 items-center justify-center"
+                    >
+                      <X size={21} color="#ffffff" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <>
+                    <Text className="text-white text-3xl font-extrabold tracking-tight">
+                      {hideBalance ? "• • • • • •" : fmt(available)}
+                    </Text>
+                    <Text className="text-emerald-100 text-[11px] mt-1">
+                      {hideBalance
+                        ? t("home.budgetedOf", { amount: "••••" })
+                        : t("home.budgetedOf", { amount: fmt(budget) })}
+                    </Text>
+                  </>
+                )}
+              </View>
+            </LinearGradient>
+
+            {!editingBudget && (
+              <TouchableOpacity
+                onPress={startEditBudget}
+                className="mx-5 mt-3 flex-row items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-2xl py-3"
+              >
+                <Target size={19} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+                <Text className="text-base font-bold text-slate-700 dark:text-slate-200">
+                  {t("home.setMonthlyBudget")}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <View className="flex-row flex-wrap gap-3 px-5 mt-4">
+              <Animated.View entering={FadeInDown.delay(0 * 70).duration(300)} style={{ width: "47%" }}>
+                <PressableScale
+                  onPress={startEditBudget}
+                  className="bg-sky-50 dark:bg-slate-800 rounded-2xl p-4 border border-sky-100 dark:border-slate-700"
+                  style={softShadow}
+                >
+                  <Text className="text-base mb-1">💰</Text>
+                  <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">
+                    {t("home.monthlyBudget")}
+                  </Text>
+                  <Text
+                    className="text-lg font-extrabold"
+                    style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                  >
+                    {fmt(budget)}
+                  </Text>
+                </PressableScale>
+              </Animated.View>
+              <Animated.View entering={FadeInDown.delay(1 * 70).duration(300)} style={{ width: "47%" }}>
+                <PressableScale
+                  className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700"
+                  style={softShadow}
+                >
+                  <Text className="text-base mb-1">🕒</Text>
+                  <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">
+                    {t("home.previousBalance")}
+                  </Text>
+                  <Text
+                    className={`text-lg font-extrabold ${prevBalance >= 0 ? "" : "text-rose-500"}`}
+                    style={prevBalance >= 0 ? { color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" } : undefined}
+                  >
+                    {fmt(prevBalance)}
+                  </Text>
+                </PressableScale>
+              </Animated.View>
+              <Animated.View entering={FadeInDown.delay(2 * 70).duration(300)} style={{ width: "47%" }}>
+                <PressableScale
+                  className="bg-rose-50 dark:bg-slate-800 rounded-2xl p-4 border border-rose-100 dark:border-slate-700"
+                  style={softShadow}
+                >
+                  <Text className="text-base mb-1">📉</Text>
+                  <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">{t("home.spent")}</Text>
+                  <Text className="text-lg font-extrabold text-rose-500">{fmt(spent)}</Text>
+                </PressableScale>
+              </Animated.View>
+              <Animated.View entering={FadeInDown.delay(3 * 70).duration(300)} style={{ width: "47%" }}>
+                <PressableScale
+                  className="bg-emerald-50 dark:bg-slate-800 rounded-2xl p-4 border border-emerald-100 dark:border-slate-700"
+                  style={softShadow}
+                >
+                  <Text className="text-base mb-1">📈</Text>
+                  <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">{t("home.income")}</Text>
+                  <Text className="text-lg font-extrabold text-emerald-600">{fmt(income)}</Text>
+                </PressableScale>
+              </Animated.View>
+            </View>
+
+            <View className="px-5 mt-6 mb-2 flex-row items-center justify-between">
+              {selectMode ? (
+                <>
+                  <Text
+                    className="font-extrabold text-base"
+                    style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                  >
+                    {t(selected.length > 1 ? "home.selectedCountPlural" : "home.selectedCount", {
+                      count: selected.length,
+                    })}
+                  </Text>
+                  <View className="flex-row items-center gap-3">
+                    <TouchableOpacity
+                      onPress={confirmBulkDelete}
+                      disabled={selected.length === 0}
+                      className={`w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-950 items-center justify-center ${
+                        selected.length === 0 ? "opacity-40" : ""
+                      }`}
+                    >
+                      <Trash2 size={21} color="#f43f5e" />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={toggleSelectMode}>
+                      <Text className="text-base font-bold text-emerald-600">{t("common.cancel")}</Text>
+                    </TouchableOpacity>
+                  </View>
+                </>
+              ) : (
+                <>
+                  <Text
+                    className="font-extrabold text-base"
+                    style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                  >
+                    {t("home.recentTransactions")}
+                  </Text>
+                  {monthTx.length > 0 && (
+                    <TouchableOpacity onPress={toggleSelectMode} className="flex-row items-center gap-1">
+                      <ListChecks size={16} color="#059669" />
+                      <Text className="text-sm font-bold text-emerald-600">{t("common.select")}</Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+            </View>
+          </View>
+        }
+        renderItem={({ item: t2, index }) => {
+          const c = catInfo(t2.category);
+          const isSel = selected.includes(t2.id);
+          return (
+            <View className="px-5">
+              <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).duration(280)}>
+                <PressableScale
+                  onPress={() => (selectMode ? toggleSelected(t2.id) : onOpenDetail(t2.id))}
+                  className={`flex-row items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl p-3 border mb-2.5 ${
+                    isSel
+                      ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950"
+                      : "border-slate-100 dark:border-slate-800"
+                  }`}
+                  style={softShadow}
+                >
+                  {selectMode &&
+                    (isSel ? (
+                      <CheckCircle2 size={22} color="#059669" />
+                    ) : (
+                      <Circle size={22} color="#cbd5e1" />
+                    ))}
+                  <IconBadge Icon={c.icon} color={c.color} />
+                  <View className="flex-1 min-w-0">
+                    <Text
+                      className="text-base font-bold"
+                      style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                      numberOfLines={1}
+                    >
+                      {t2.description || t(c.label)}
+                    </Text>
+                    <Text
+                      className="text-sm"
+                      style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#334155" }}
+                    >
+                      {t(c.label)} · {fmtDate(t2.date, monthNames)}
+                    </Text>
+                  </View>
+                  <Text
+                    className={`text-base font-extrabold ${
+                      t2.type === "expense" ? "text-rose-500" : "text-emerald-600"
+                    }`}
+                  >
+                    {t2.type === "expense" ? "-" : "+"}
+                    {fmt(t2.amount)}
+                  </Text>
+                </PressableScale>
+              </Animated.View>
+            </View>
+          );
+        }}
+        ListEmptyComponent={
+          <View className="px-5">
+            <View className="items-center py-10 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+              <Text className="text-slate-500 dark:text-slate-300 text-sm">{t("home.noTransactions")}</Text>
+            </View>
+          </View>
+        }
+      />
+
+    </View>
+  );
+}

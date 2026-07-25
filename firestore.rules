@@ -1,0 +1,29 @@
+rules_version = '2';
+
+// Reglas de seguridad de la base de datos (Firestore).
+//
+// IMPORTANTE: este archivo NO hace nada por sí solo estando aquí. Hay que
+// copiarlo/publicarlo en la consola de Firebase:
+//   Firebase Console > Firestore Database > pestaña "Reglas" > Publicar
+//
+// Sin reglas correctas, CUALQUIER persona en internet podría leer o borrar
+// los movimientos de todos los usuarios, aunque la app se vea bien.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Cada persona guarda todo en un solo documento: users/{su-id}
+    match /users/{userId} {
+
+      // Solo puedes leer/escribir TU propio documento, y solo si iniciaste
+      // sesión Y confirmaste tu correo.
+      allow read, write: if request.auth != null
+                      && request.auth.uid == userId
+                      && request.auth.token.email_verified == true;
+    }
+
+    // Todo lo demás queda cerrado por defecto.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
