@@ -30,17 +30,17 @@ export default function MoveMoneySheet({
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
 
-  // Mismo motivo que en GoalFormSheet: KeyboardAvoidingView no compensa
-  // nada con "edgeToEdge". Se mide el teclado (ver utils/keyboard.ts).
-  const { windowHeight, overlap, keyboardVisible } = useKeyboardOverlap();
+  // Mismo motivo que en GoalFormSheet: el hueco del teclado ya lo descuenta
+  // la pantalla contenedora, no hay que restarlo otra vez.
+  const { keyboardVisible } = useKeyboardOverlap();
 
   return (
-    <View className="absolute inset-0 z-40 justify-end" style={{ paddingBottom: overlap }}>
+    <View className="absolute inset-0 z-40 justify-end">
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
         className="bg-white dark:bg-slate-900 rounded-t-3xl px-5 pt-3"
         style={{
-          maxHeight: windowHeight - insets.top - overlap,
+          maxHeight: "100%",
           paddingBottom: keyboardVisible ? 20 : 32 + insets.bottom,
         }}
       >

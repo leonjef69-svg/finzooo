@@ -64,27 +64,34 @@ export default function AddSheet({
   const dateOk = isValidISODate(date);
   const valid = parseAmountInput(amount) > 0 && dateOk;
 
-  // Espacio real que ocupa el teclado (ver utils/keyboard.ts). Con esto la
-  // hoja se coloca JUSTO encima del teclado y nunca por debajo ni por
-  // encima del borde de la pantalla.
-  const { windowHeight, overlap, keyboardVisible } = useKeyboardOverlap();
-
-  // Alto disponible = pantalla − barra de estado − teclado. Es un tope, no
-  // una altura fija: con poco contenido la hoja mide lo que ocupa.
-  const availableHeight = windowHeight - insets.top - overlap;
+  // Solo se consulta SI hay teclado, para el margen inferior de los botones.
+  // El espacio que ocupa NO se calcula aquí a propósito — ver abajo.
+  const { keyboardVisible } = useKeyboardOverlap();
 
   return (
-    // paddingBottom deja libre la franja del teclado, y justify-end apoya
-    // la hoja justo encima de esa franja en vez de quedar debajo.
-    <View className="absolute inset-0 z-40 justify-end" style={{ paddingBottom: overlap }}>
+    // Por qué aquí NO se resta el teclado (medido en un celular real):
+    //
+    //   pantalla 948 · ventana 911 · teclado de 606 a 948
+    //
+    // La ventana NUNCA se encoge (sigue diciendo 911 con y sin teclado),
+    // pero la pantalla modal que contiene esta hoja SÍ se encoge sola: a
+    // eso se encarga react-native-screens. O sea que "inset-0" ya es el
+    // hueco libre por encima del teclado.
+    //
+    // Al restarle además el teclado por nuestra cuenta se descontaba DOS
+    // VECES: la hoja quedaba estrujada unos 210 px de más, se salía por
+    // arriba (el Monto detrás del reloj) y a la vez dejaba un hueco gris
+    // sobre el teclado. Los dos síntomas eran el mismo error.
+    //
+    // maxHeight "100%" es relativo a ese hueco ya correcto: la hoja mide
+    // lo que ocupa su contenido y jamás puede desbordarlo.
+    <View className="absolute inset-0 z-40 justify-end">
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
-      <View
-        className="bg-white dark:bg-slate-900 rounded-t-3xl"
-        style={{ maxHeight: availableHeight }}
-      >
+      <View className="bg-white dark:bg-slate-900 rounded-t-3xl" style={{ maxHeight: "100%" }}>
         <View className="items-center pt-3">
           <View className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
         </View>
+
         <View className="flex-row items-center justify-between px-5 pt-3 pb-2">
           <Text
             className="font-extrabold text-base"

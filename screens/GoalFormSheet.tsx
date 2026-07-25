@@ -28,19 +28,18 @@ export default function GoalFormSheet({
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
 
-  // KeyboardAvoidingView con behavior="height" NO sirve en esta app: con
-  // "edgeToEdge" la ventana no se encoge, así que no tiene nada que
-  // compensar y el teclado seguía tapando los campos. Se mide el teclado
-  // de verdad (ver utils/keyboard.ts).
-  const { windowHeight, overlap, keyboardVisible } = useKeyboardOverlap();
+  // El hueco del teclado NO se calcula aquí: la pantalla que contiene esta
+  // hoja ya se encoge sola, así que "inset-0" es el espacio libre real.
+  // Restarlo otra vez lo descontaría dos veces (ver AddSheet.tsx).
+  const { keyboardVisible } = useKeyboardOverlap();
 
   return (
-    <View className="absolute inset-0 z-40 justify-end" style={{ paddingBottom: overlap }}>
+    <View className="absolute inset-0 z-40 justify-end">
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
         className="bg-white dark:bg-slate-900 rounded-t-3xl px-5 pt-3"
         style={{
-          maxHeight: windowHeight - insets.top - overlap,
+          maxHeight: "100%",
           paddingBottom: keyboardVisible ? 20 : 32 + insets.bottom,
         }}
       >

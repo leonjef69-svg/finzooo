@@ -1,41 +1,30 @@
 import { useEffect, useState } from "react";
-import { Keyboard, Platform, useWindowDimensions } from "react-native";
+import { Keyboard, Platform } from "react-native";
 
-// Cuánto espacio le quita REALMENTE el teclado a la pantalla.
+// ¿Hay un teclado abierto ahora mismo?
 //
-// El problema que resuelve
-// ------------------------
-// Un panel inferior se dibuja pegado al borde de abajo. Si no sabe que hay
-// un teclado abierto pasan dos cosas a la vez:
+// Ojo: esto NO calcula cuánto espacio ocupa el teclado, y es a propósito.
 //
-//   · Lo de abajo (Descripción, Notas, Cancelar/Guardar) queda TAPADO.
-//   · Como el panel sigue midiendo la pantalla entera pero solo cabe la
-//     mitad, lo que sobra se sale POR ARRIBA.
+// Medido en un celular real (Android con edgeToEdge):
 //
-// Por qué NO se calcula restando alturas
-// --------------------------------------
-// El intento anterior guardaba el alto de la pantalla sin teclado para
-// compararlo después. No funcionaba: al abrirse el teclado, ese alto y el
-// aviso del teclado cambian en el mismo instante, y React puede procesarlos
-// en cualquier orden. Cuando llegaban al revés se guardaba el alto YA
-// encogido como si fuera el completo, salía "el teclado tapa 0 píxeles" y
-// el panel se quedaba otra vez debajo del teclado.
+//     pantalla 948 · ventana 911 · teclado de 606 a 948
 //
-// Cómo se calcula ahora
-// ---------------------
-// Se pregunta la posición absoluta donde EMPIEZA el teclado (screenY). Es
-// una coordenada fija de la pantalla: no depende del orden de los avisos ni
-// de si Android encogió la ventana o no, así que sirve en los dos casos:
+// La ventana nunca se encoge — sigue reportando 911 con y sin teclado. Pero
+// la pantalla que contiene los paneles inferiores SÍ se encoge sola: de eso
+// se encarga react-native-screens. Es decir, el espacio libre por encima del
+// teclado ya viene descontado.
 //
-//   · Ventana sin encoger: alto 2400, teclado empieza en 1400 → tapa 1000.
-//   · Ventana encogida:    alto 1400, teclado empieza en 1400 → tapa 0,
-//     porque Android ya lo descontó y volver a restarlo sería contarlo dos
-//     veces (el otro error que tuvo esta pantalla).
-export function useKeyboardOverlap() {
-  const { height: windowHeight } = useWindowDimensions();
-
-  // Dónde empieza el teclado. null = teclado cerrado.
-  const [keyboardTop, setKeyboardTop] = useState<number | null>(null);
+// Los intentos anteriores restaban el teclado por su cuenta y lo descontaban
+// DOS VECES: el panel quedaba estrujado ~210 px de más, se salía por arriba
+// (el campo Monto acababa detrás del reloj) y a la vez dejaba un hueco gris
+// sobre el teclado. Los dos síntomas eran el mismo error.
+//
+// La regla que queda: los paneles usan maxHeight "100%" y dejan que su
+// contenedor —que ya sabe del teclado— mande. Este hook solo sirve para
+// detalles cosméticos, como no dejar el margen de la barra de navegación
+// cuando el teclado ya la está tapando.
+export function useKeyboardVisible(): boolean {
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     // En iOS conviene reaccionar antes de que termine la animación (will…);
@@ -43,31 +32,20 @@ export function useKeyboardOverlap() {
     const showEvent = Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
     const hideEvent = Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
 
-    const showSub = Keyboard.addListener(showEvent, (e) => {
-      const coords = e.endCoordinates;
-      if (!coords) return;
-      // screenY es donde empieza el teclado. Si el celular no lo reporta,
-      // se deduce con la altura, que es el dato que sí llega siempre.
-      const top =
-        typeof coords.screenY === "number" ? coords.screenY : windowHeight - coords.height;
-      setKeyboardTop(top);
-    });
-    const hideSub = Keyboard.addListener(hideEvent, () => setKeyboardTop(null));
+    const showSub = Keyboard.addListener(showEvent, () => setVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setVisible(false));
 
     return () => {
       showSub.remove();
       hideSub.remove();
     };
-  }, [windowHeight]);
+  }, []);
 
-  const overlap = keyboardTop === null ? 0 : Math.max(0, windowHeight - keyboardTop);
+  return visible;
+}
 
-  return {
-    /** Alto de la ventana ahora mismo. */
-    windowHeight,
-    /** Píxeles que hay que dejar libres abajo para no quedar bajo el teclado. */
-    overlap,
-    /** Si hay teclado abierto (para ajustar márgenes). */
-    keyboardVisible: keyboardTop !== null,
-  };
+// Se mantiene el nombre anterior para no tocar las tres pantallas que ya lo
+// usan. Devuelve solo lo que de verdad hace falta.
+export function useKeyboardOverlap() {
+  return { keyboardVisible: useKeyboardVisible() };
 }
