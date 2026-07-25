@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X, Check, ChevronDown, ChevronUp, Calendar } from "lucide-react-native";
 import { EXPENSE_CATS, INCOME_CATS } from "@/constants/categories";
@@ -8,7 +9,7 @@ import { methodLabel, PAYMENT_METHODS } from "@/constants/i18n";
 import { useAppData } from "@/contexts/AppDataContext";
 import { defaultDateForMonth, isValidISODate, normalizeDateInput } from "@/utils/date";
 import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
-import { useKeyboardPadding } from "@/utils/keyboard";
+import { useKeyboardAnimatedPadding } from "@/utils/keyboard";
 import { nextId } from "@/utils/id";
 import type { Month, Transaction } from "@/types";
 import { useColorScheme } from "nativewind";
@@ -64,17 +65,12 @@ export default function AddSheet({
   const dateOk = isValidISODate(date);
   const valid = parseAmountInput(amount) > 0 && dateOk;
 
-  // El hueco del teclado es directamente su propia altura, medida en vivo
-  // (ver utils/keyboard.ts — el porqué de este cambio está documentado ahí).
-  const { padding, keyboardVisible, onFieldFocus } = useKeyboardPadding();
+  // El hueco del teclado lo entrega Reanimated, sincronizado con la
+  // animación nativa del teclado (ver utils/keyboard.ts). Ya no depende de
+  // avisos de JavaScript que Android podía saltarse al cambiar de campo.
+  const { animatedPaddingStyle, keyboardVisible } = useKeyboardAnimatedPadding();
 
-  // Al saltar de un campo a otro el teclado NO se cierra: solo cambia de
-  // tamaño (el numérico es más bajo que el de texto) y Android no siempre
-  // avisa. Sin esto quedaba aplicada la medida del campo anterior, que era
-  // justo el fallo: con el numérico sobraba hueco y con el de texto los
-  // botones quedaban cortados.
   function focusField() {
-    onFieldFocus();
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120);
   }
 
@@ -86,14 +82,14 @@ export default function AddSheet({
     // pantalla el reparto lo hace flexbox solo: cabecera arriba, campos en
     // medio (con scroll) y botones abajo. Nada puede desbordarse.
     //
-    // paddingBottom = alto del teclado. Como este panel ocupa la pantalla
-    // entera, ese padding empuja a Cancelar/Guardar (el último elemento)
-    // justo hasta el borde superior del teclado — quedan flotando siempre
-    // visibles por completo, nunca a medias.
-    <View
-      className="flex-1 bg-white dark:bg-slate-900"
-      style={{ paddingTop: insets.top, paddingBottom: padding }}
-    >
+    // El Animated.View exterior lleva SOLO el padding animado (mismo patrón
+    // que PressableScale.tsx: la animación va en un envoltorio propio, las
+    // clases de Tailwind en el View de dentro). Ese padding empuja a
+    // Cancelar/Guardar (el último elemento) justo hasta el borde superior
+    // del teclado, cuadro a cuadro — quedan flotando siempre visibles por
+    // completo, nunca a medias ni con un hueco de más.
+    <Animated.View style={[{ flex: 1 }, animatedPaddingStyle]}>
+      <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top }}>
       <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
         <Text
           className="font-extrabold text-lg"
@@ -147,9 +143,6 @@ export default function AddSheet({
                 keyboardType="decimal-pad"
                 value={amount}
                 onChangeText={(v) => setAmount(sanitizeAmountInput(v))}
-                // Este campo abre el teclado NUMÉRICO, más bajo que el de
-                // texto. Hay que volver a medir o queda el hueco del otro.
-                onFocus={onFieldFocus}
                 placeholder="0.00"
                 placeholderTextColor="#94a3b8"
                 className="flex-1 text-lg font-extrabold"
@@ -235,7 +228,6 @@ export default function AddSheet({
                 <TextInput
                   value={date}
                   onChangeText={setDate}
-                  onFocus={onFieldFocus}
                   // Al salir del campo se acomoda sola: si escribiste
                   // "24/07/2026" queda como la app la guarda internamente,
                   // en vez de rechazarte algo que estaba bien escrito.
@@ -339,6 +331,7 @@ export default function AddSheet({
           <Text className="font-bold text-white">{t("common.save")}</Text>
         </TouchableOpacity>
       </View>
+      </View>
 
       {/* Selector de método de pago.
           Va aquí fuera, encima de todo, y NO dentro de la lista con scroll.
@@ -385,6 +378,6 @@ export default function AddSheet({
           </View>
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 }

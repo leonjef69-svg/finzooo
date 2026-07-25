@@ -57,18 +57,21 @@ export default function RootLayout() {
       <AppDataProvider>
         <View style={{ flex: 1 }}>
           <Stack screenOptions={{ headerShown: false }}>
-            {/* transaction/new y transaction/[id]/edit muestran AddSheet, que
-                ahora es una pantalla llena y opaca — "modal" normal es
-                correcto porque no hay nada transparente detrás que se vea. */}
-            <Stack.Screen name="transaction/new" options={{ presentation: "modal" }} />
-            <Stack.Screen name="transaction/[id]/edit" options={{ presentation: "modal" }} />
-
-            {/* El resto son hojas con fondo oscuro translúcido (se ve la
-                pantalla de atrás difuminada). Con "modal" a secas, Android
-                pinta primero un fondo BLANCO opaco por defecto y recién un
-                instante después la hoja translúcida — eso es el destello
-                blanco. "transparentModal" no pinta ningún fondo propio: se
-                ve la pantalla de atrás desde el primer fotograma. */}
+            {/* TODAS las hojas modales van con "transparentModal", incluidas
+                transaction/new y transaction/[id]/edit (AddSheet).
+                AddSheet ya pinta su propio fondo opaco por JS (bg-white
+                dark:bg-slate-900) — pero eso no evita el destello: la
+                presentación nativa "modal" de Android muestra primero un
+                fondo BLANCO propio por defecto (sin importar el tema), y
+                recién un instante después se monta el contenido de la app.
+                En modo oscuro eso se ve como un parpadeo blanco antes de
+                que aparezca la pantalla oscura real — justo lo reportado al
+                pasar de "elegir Gasto/Ingreso" a "Nuevo movimiento".
+                "transparentModal" no pinta ningún fondo nativo propio: lo
+                que se ve desde el primer fotograma es directamente el
+                contenido de React, sea cual sea. */}
+            <Stack.Screen name="transaction/new" options={{ presentation: "transparentModal" }} />
+            <Stack.Screen name="transaction/[id]/edit" options={{ presentation: "transparentModal" }} />
             <Stack.Screen name="transaction/choose" options={{ presentation: "transparentModal" }} />
             <Stack.Screen name="edit-budget" options={{ presentation: "transparentModal" }} />
             <Stack.Screen name="savings/form" options={{ presentation: "transparentModal" }} />
