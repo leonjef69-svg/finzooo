@@ -80,69 +80,66 @@ export default function AddSheet({
   }
 
   return (
-    // paddingBottom = lo que el teclado tapa DE ESTE contenedor, medido en
-    // vivo (no calculado a ojo). onLayout vuelve a medir si el sistema
-    // cambia el tamaño después, así que el resultado se corrige solo.
-    // maxHeight "100%" garantiza que la hoja jamás desborde ese hueco.
+    // Pantalla COMPLETA, no un panel flotante.
+    //
+    // Antes era una hoja pegada abajo dentro de una pantalla transparente, y
+    // eso obligaba a calcular su altura contra el teclado. Ocupando toda la
+    // pantalla el reparto lo hace flexbox solo: cabecera arriba, campos en
+    // medio (con scroll) y botones abajo. Nada puede desbordarse.
+    //
+    // paddingBottom es lo único que sigue midiéndose: es lo que el teclado
+    // tapa, y hace que los botones queden flotando justo encima de él.
     <View
       ref={containerRef}
       onLayout={onContainerLayout}
-      className="absolute inset-0 z-40 justify-end"
-      style={{ paddingBottom: padding }}
+      className="flex-1 bg-white dark:bg-slate-900"
+      style={{ paddingTop: insets.top, paddingBottom: padding }}
     >
-      <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
-      <View className="bg-white dark:bg-slate-900 rounded-t-3xl" style={{ maxHeight: "100%" }}>
-        <View className="items-center pt-3">
-          <View className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
-        </View>
-
-        <View className="flex-row items-center justify-between px-5 pt-3 pb-2">
-          <Text
-            className="font-extrabold text-base"
-            style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-          >
-            {transaction ? t("addSheet.editTitle") : t("addSheet.newTitle")}
-          </Text>
-          <TouchableOpacity
-            onPress={onClose}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
-          >
-            <X size={16} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
-          </TouchableOpacity>
-        </View>
-
-        {!transaction && (
-          <View className="px-5 mt-1 mb-3">
-            <View className="bg-slate-100 dark:bg-slate-800 rounded-xl p-1 flex-row">
-              {(["expense", "income"] as const).map((opt) => (
-                <TouchableOpacity
-                  key={opt}
-                  onPress={() => setType(opt)}
-                  className={`flex-1 py-2.5 rounded-xl items-center ${
-                    type === opt ? (opt === "expense" ? "bg-rose-500" : "bg-emerald-600") : ""
-                  }`}
-                >
-                  <Text className={`text-sm font-bold ${type === opt ? "text-white" : "text-slate-500 dark:text-slate-300"}`}>
-                    {opt === "expense" ? t("addSheet.expense") : t("addSheet.income")}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          </View>
-        )}
-
-        <ScrollView
-          ref={scrollRef}
-          className="px-5"
-          // flexShrink (en vez de flex-1): con contenido corto la lista mide
-          // lo que ocupa —sin dejar el hueco vacío que se veía antes de los
-          // botones— y con contenido largo se encoge hasta el tope y hace
-          // scroll dentro. flex-1 exigiría un padre de altura fija, que es
-          // justo lo que causaba el desbordamiento.
-          style={{ flexShrink: 1 }}
-          contentContainerClassName="gap-4 pb-3"
-          keyboardShouldPersistTaps="handled"
+      <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
+        <Text
+          className="font-extrabold text-lg"
+          style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
         >
+          {transaction ? t("addSheet.editTitle") : t("addSheet.newTitle")}
+        </Text>
+        <TouchableOpacity
+          onPress={onClose}
+          className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+        >
+          <X size={16} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+        </TouchableOpacity>
+      </View>
+
+      {!transaction && (
+        <View className="px-5 mb-3">
+          <View className="bg-slate-100 dark:bg-slate-800 rounded-xl p-1 flex-row">
+            {(["expense", "income"] as const).map((opt) => (
+              <TouchableOpacity
+                key={opt}
+                onPress={() => setType(opt)}
+                className={`flex-1 py-2.5 rounded-xl items-center ${
+                  type === opt ? (opt === "expense" ? "bg-rose-500" : "bg-emerald-600") : ""
+                }`}
+              >
+                <Text className={`text-sm font-bold ${type === opt ? "text-white" : "text-slate-500 dark:text-slate-300"}`}>
+                  {opt === "expense" ? t("addSheet.expense") : t("addSheet.income")}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* flex-1: los campos ocupan todo el espacio que quede entre la
+          cabecera y los botones, y hacen scroll dentro si no caben. Ahora
+          funciona porque el padre SÍ tiene altura definida (la pantalla
+          entera); antes, al ser un panel de altura variable, no podía. */}
+      <ScrollView
+        ref={scrollRef}
+        className="flex-1 px-5"
+        contentContainerClassName="gap-4 pb-5"
+        keyboardShouldPersistTaps="handled"
+      >
           <View>
             <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("addSheet.amount")}</Text>
             <View className="flex-row items-center bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800 px-4 py-3.5">
@@ -301,12 +298,15 @@ export default function AddSheet({
               style={{ textAlignVertical: "top", color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
             />
           </View>
-        </ScrollView>
+      </ScrollView>
 
-        <View
-          className="px-5 py-4 flex-row gap-3 border-t border-slate-100 dark:border-slate-800"
-          style={{ paddingBottom: keyboardVisible ? 16 : 16 + insets.bottom }}
-        >
+      {/* Botones fijos abajo. Quedan flotando justo encima del teclado
+          porque el contenedor ya descontó lo que este ocupa. Cuando no hay
+          teclado se respeta la barra de navegación del sistema. */}
+      <View
+        className="px-5 py-4 flex-row gap-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900"
+        style={{ paddingBottom: keyboardVisible ? 16 : 16 + insets.bottom }}
+      >
           <TouchableOpacity onPress={onClose} className="flex-1 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 items-center">
             <Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text>
           </TouchableOpacity>
@@ -337,9 +337,8 @@ export default function AddSheet({
               type === "expense" ? "bg-rose-500" : "bg-emerald-600"
             } ${!valid ? "opacity-40" : ""}`}
           >
-            <Text className="font-bold text-white">{t("common.save")}</Text>
-          </TouchableOpacity>
-        </View>
+          <Text className="font-bold text-white">{t("common.save")}</Text>
+        </TouchableOpacity>
       </View>
 
       {/* Selector de método de pago.
