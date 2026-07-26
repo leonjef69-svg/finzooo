@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X, Check, ChevronDown, ChevronUp, Calendar } from "lucide-react-native";
@@ -69,6 +69,25 @@ export default function AddSheet({
   // animación nativa del teclado (ver utils/keyboard.ts). Ya no depende de
   // avisos de JavaScript que Android podía saltarse al cambiar de campo.
   const { animatedPaddingStyle, keyboardVisible } = useKeyboardAnimatedPadding();
+
+  // Bug encontrado con datos reales (captura de pantalla con medición):
+  // al guardar o cancelar, esta pantalla se cierra sin avisarle al teclado
+  // que se cierre. Si el usuario estaba escribiendo, el sistema se queda
+  // creyendo "el teclado sigue abierto" — y la SIGUIENTE vez que se abre
+  // Nuevo movimiento, hereda ese estado viejo: estado=OPEN, altura=341,
+  // sin ningún teclado real en pantalla. Resultado: un hueco vacío del
+  // tamaño exacto de un teclado, sin razón visible.
+  //
+  // La solución no es filtrar mejor el estado (ya se intentó con CLOSED
+  // y no bastó, porque el estado heredado decía OPEN, no CLOSED) sino
+  // cerrar el teclado a propósito al salir de esta pantalla, sin importar
+  // por qué botón se salió — así la siguiente instancia siempre arranca
+  // desde un estado realmente cerrado.
+  useEffect(() => {
+    return () => {
+      Keyboard.dismiss();
+    };
+  }, []);
 
   function focusField() {
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120);

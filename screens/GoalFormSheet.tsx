@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Keyboard, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
@@ -31,6 +31,16 @@ export default function GoalFormSheet({
 
   // El hueco del teclado lo entrega Reanimated (ver utils/keyboard.ts).
   const { animatedPaddingStyle, keyboardVisible } = useKeyboardAnimatedPadding();
+
+  // Al cerrar sin avisarle al teclado, el sistema puede quedarse creyendo
+  // "sigue abierto" y la SIGUIENTE hoja que se abra hereda ese estado
+  // viejo (ver el porqué completo en AddSheet.tsx). Se cierra a propósito
+  // al salir de esta pantalla, sea cual sea el botón que la cerró.
+  useEffect(() => {
+    return () => {
+      Keyboard.dismiss();
+    };
+  }, []);
 
   return (
     <Animated.View

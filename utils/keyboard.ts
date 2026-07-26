@@ -23,21 +23,26 @@ import { KeyboardState, useAnimatedKeyboard, useAnimatedStyle } from "react-nati
 // teclado y actualiza su valor cuadro a cuadro, sea cual sea el motivo por
 // el que el teclado cambia de tamaño. No hay aviso que perderse porque no
 // hay aviso: es el propio sistema operativo empujando el valor.
+//
+// Un segundo bug, encontrado después con medición real (captura de
+// pantalla con estado y altura en vivo): al cerrar esta pantalla (Guardar
+// o Cancelar) sin decirle explícitamente al teclado que se cierre, el
+// sistema podía quedarse creyendo "sigue abierto". La SIGUIENTE vez que
+// se abría una hoja nueva, heredaba ese estado viejo — llegó a verse
+// estado=OPEN con altura=341 sin ningún teclado real en pantalla, lo que
+// dejaba un hueco vacío del tamaño exacto de un teclado.
+//
+// Esto tiene dos capas de corrección:
+//   1. Cada pantalla que use este hook debe cerrar el teclado a propósito
+//      al desmontarse (Keyboard.dismiss() en el cleanup de un useEffect),
+//      para que la siguiente instancia arranque de un estado realmente
+//      cerrado. Ver AddSheet.tsx, GoalFormSheet.tsx, MoveMoneySheet.tsx.
+//   2. Como red de seguridad, aquí también se ignora la altura cuando el
+//      estado dice explícitamente CLOSED — por si el aviso de cierre
+//      tardara en llegar.
 export function useKeyboardAnimatedPadding() {
   const keyboard = useAnimatedKeyboard();
 
-  // Bug encontrado después: al abrir una pantalla NUEVA justo tras cerrar
-  // otra donde el teclado estaba abierto (Guardar → volver a Inicio →
-  // tocar "+" otra vez), la primera lectura de `keyboard.height` en esta
-  // nueva instancia llegaba con un valor viejo y distinto de cero, aunque
-  // el teclado ya estuviera realmente cerrado. Efecto: un hueco enorme
-  // abajo que dejaba ver Inicio (su botón "+" y la barra de pestañas) por
-  // detrás, sin que hubiera ningún teclado en pantalla.
-  //
-  // La corrección: `useAnimatedKeyboard` también da el ESTADO del teclado
-  // (CLOSED, OPEN, OPENING, CLOSING), no solo su altura. Cuando el estado
-  // dice explícitamente "cerrado", se ignora la altura y se usa 0 sin
-  // excepción — la altura sola no basta para confiar en ella.
   const animatedPaddingStyle = useAnimatedStyle(() => ({
     paddingBottom: keyboard.state.value === KeyboardState.CLOSED ? 0 : keyboard.height.value,
   }));

@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Keyboard, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
@@ -33,6 +33,15 @@ export default function MoveMoneySheet({
 
   // Igual que en AddSheet: el hueco del teclado lo entrega Reanimated.
   const { animatedPaddingStyle, keyboardVisible } = useKeyboardAnimatedPadding();
+
+  // Igual que en AddSheet: se cierra el teclado a propósito al salir de
+  // esta pantalla, para que la siguiente hoja no herede un estado "sigue
+  // abierto" que ya no es real.
+  useEffect(() => {
+    return () => {
+      Keyboard.dismiss();
+    };
+  }, []);
 
   return (
     <Animated.View
