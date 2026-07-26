@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Keyboard } from "react-native";
-import { useAnimatedKeyboard, useAnimatedStyle } from "react-native-reanimated";
+import { KeyboardState, useAnimatedKeyboard, useAnimatedStyle } from "react-native-reanimated";
 
 // Cuánto hay que levantar un panel inferior para que el teclado no lo tape.
 //
@@ -26,8 +26,20 @@ import { useAnimatedKeyboard, useAnimatedStyle } from "react-native-reanimated";
 export function useKeyboardAnimatedPadding() {
   const keyboard = useAnimatedKeyboard();
 
+  // Bug encontrado después: al abrir una pantalla NUEVA justo tras cerrar
+  // otra donde el teclado estaba abierto (Guardar → volver a Inicio →
+  // tocar "+" otra vez), la primera lectura de `keyboard.height` en esta
+  // nueva instancia llegaba con un valor viejo y distinto de cero, aunque
+  // el teclado ya estuviera realmente cerrado. Efecto: un hueco enorme
+  // abajo que dejaba ver Inicio (su botón "+" y la barra de pestañas) por
+  // detrás, sin que hubiera ningún teclado en pantalla.
+  //
+  // La corrección: `useAnimatedKeyboard` también da el ESTADO del teclado
+  // (CLOSED, OPEN, OPENING, CLOSING), no solo su altura. Cuando el estado
+  // dice explícitamente "cerrado", se ignora la altura y se usa 0 sin
+  // excepción — la altura sola no basta para confiar en ella.
   const animatedPaddingStyle = useAnimatedStyle(() => ({
-    paddingBottom: keyboard.height.value,
+    paddingBottom: keyboard.state.value === KeyboardState.CLOSED ? 0 : keyboard.height.value,
   }));
 
   // Esto SÍ puede seguir basado en eventos de JS: solo decide un detalle
