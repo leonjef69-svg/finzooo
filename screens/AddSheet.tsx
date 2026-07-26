@@ -82,13 +82,27 @@ export default function AddSheet({
     // pantalla el reparto lo hace flexbox solo: cabecera arriba, campos en
     // medio (con scroll) y botones abajo. Nada puede desbordarse.
     //
-    // El Animated.View exterior lleva SOLO el padding animado (mismo patrón
-    // que PressableScale.tsx: la animación va en un envoltorio propio, las
-    // clases de Tailwind en el View de dentro). Ese padding empuja a
-    // Cancelar/Guardar (el último elemento) justo hasta el borde superior
-    // del teclado, cuadro a cuadro — quedan flotando siempre visibles por
-    // completo, nunca a medias ni con un hueco de más.
-    <Animated.View style={[{ flex: 1 }, animatedPaddingStyle]}>
+    // El Animated.View exterior cubre la pantalla con "position: absolute,
+    // inset 0" —NO con "flex: 1"— y lleva solo el padding animado (mismo
+    // patrón que PressableScale.tsx: la animación en un envoltorio propio,
+    // las clases de Tailwind en el View de dentro).
+    //
+    // Por qué NO flex:1: esta pantalla ahora se presenta como
+    // "transparentModal" (para evitar el destello blanco al abrirla). Ese
+    // tipo de presentación no siempre le da a su contenido una altura
+    // definida — "flex: 1" necesita que ALGÚN ancestro tenga un alto
+    // concreto para saber qué significa "llenar el espacio". Sin eso, el
+    // contenido se encogía a lo que ocupaba (cabecera + campos + botones)
+    // y el resto de la pantalla, al ser el modal transparente, dejaba ver
+    // Inicio por debajo — que es justo lo que apareció después de guardar
+    // un movimiento y abrir uno nuevo.
+    //
+    // "position: absolute, inset 0" no depende de que nadie le dé una
+    // altura: siempre cubre el dispositivo entero, sea cual sea el tipo de
+    // presentación. Es el mismo recurso que ya usa AddChooser.tsx.
+    <Animated.View
+      style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }, animatedPaddingStyle]}
+    >
       <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top }}>
       <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
         <Text
