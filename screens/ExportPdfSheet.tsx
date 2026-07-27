@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+import { useMemo, useState } from "react";
+import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -22,12 +22,39 @@ function csvEscape(value: string) {
 }
 
 export default function ExportPdfSheet({ onClose }: { onClose: () => void }) {
-  const { t, transactions, month, monthNames, monthLabel, fmt, userName, showToast } = useAppData();
+  const { t, transactions, month, monthNames, fmt, userName, showToast } = useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const [exportType, setExportType] = useState<ExportType>("all");
   const [format, setFormat] = useState<ExportFormat>("pdf");
   const [exporting, setExporting] = useState(false);
+
+  // Antes se exportaba siempre el mes que se estuviera viendo en Inicio, sin
+  // posibilidad de elegir otro: para bajarse un mes pasado había que salir,
+  // cambiarlo con las flechas y volver a entrar aquí. Ahora se elige desde
+  // esta misma pantalla, y arranca en el mes que se venía viendo para que
+  // el camino de siempre siga siendo el más corto.
+  const viewedMk = monthKey(month.y, month.m);
+  const [selectedMk, setSelectedMk] = useState(viewedMk);
+
+  // Solo se ofrecen meses que tengan algo que exportar, del más reciente al
+  // más antiguo. Se incluye igualmente el mes que se está viendo aunque
+  // esté vacío: si no, la selección por defecto no existiría en la lista.
+  const availableMonths = useMemo(() => {
+    const months = new Set(transactions.map((tx) => tx.date.slice(0, 7)));
+    months.add(viewedMk);
+    return Array.from(months).sort().reverse();
+  }, [transactions, viewedMk]);
+
+  // "2026-08" → "Agosto 2026", en el idioma elegido. No se puede usar el
+  // monthLabel del contexto porque ese siempre describe el mes que se está
+  // viendo, no el que se eligió aquí.
+  function labelForMonth(key: string) {
+    const [y, m] = key.split("-").map(Number);
+    return `${monthNames[m - 1]} ${y}`;
+  }
+
+  const selectedMonthLabel = labelForMonth(selectedMk);
 
   const TYPE_OPTIONS: { id: ExportType; label: string }[] = [
     { id: "all", label: t("exportPdf.all") },
@@ -40,9 +67,8 @@ export default function ExportPdfSheet({ onClose }: { onClose: () => void }) {
     { id: "csv", label: "Excel (CSV)", Icon: Sheet },
   ];
 
-  const mk = monthKey(month.y, month.m);
   const monthTx = transactions
-    .filter((tx) => tx.date.startsWith(mk))
+    .filter((tx) => tx.date.startsWith(selectedMk))
     .filter((tx) => exportType === "all" || tx.type === exportType)
     .sort((a, b) => (a.date < b.date ? -1 : 1));
   const total = monthTx.reduce(
@@ -83,7 +109,7 @@ export default function ExportPdfSheet({ onClose }: { onClose: () => void }) {
           <h1 style="color:#059669;margin-bottom:2px;">Finzo</h1>
           <p style="color:#64748b;margin-top:0;">${userName}</p>
           <h2 style="margin-bottom:4px;">${reportTitleFor(exportType)}</h2>
-          <p style="color:#64748b;margin-top:0;">${monthLabel}</p>
+          <p style="color:#64748b;margin-top:0;">${selectedMonthLabel}</p>
           <table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:13px;">
             <thead>
               <tr style="background:#f1f5f9;">
@@ -137,7 +163,7 @@ export default function ExportPdfSheet({ onClose }: { onClose: () => void }) {
       "\n"
     );
 
-    const fileName = `finzo-${exportType}-${mk}.csv`;
+    const fileName = `finzo-${exportType}-${selectedMk}.csv`;
     const file = new File(Paths.cache, fileName);
     if (file.exists) file.delete();
     file.create();
@@ -189,8 +215,41 @@ export default function ExportPdfSheet({ onClose }: { onClose: () => void }) {
           </TouchableOpacity>
         </View>
         <Text className="text-xs text-slate-500 dark:text-slate-300 mb-4">
-          {t("exportPdf.subtitle", { month: monthLabel })}
+          {t("exportPdf.subtitle", { month: selectedMonthLabel })}
         </Text>
+
+        {/* Selector de mes. En fila con desplazamiento horizontal en vez de
+            una lista desplegable: así se ven varios meses de un vistazo y se
+            elige de un toque, sin abrir otro panel encima de este. */}
+        <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
+          {t("exportPdf.monthLabel")}
+        </Text>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: 8, paddingRight: 8 }}
+          className="mb-4"
+        >
+          {availableMonths.map((key) => (
+            <TouchableOpacity
+              key={key}
+              onPress={() => setSelectedMk(key)}
+              className={`px-4 py-2.5 rounded-xl border ${
+                selectedMk === key
+                  ? "bg-emerald-600 border-emerald-600"
+                  : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+              }`}
+            >
+              <Text
+                className={`text-sm font-bold ${
+                  selectedMk === key ? "text-white" : "text-slate-600 dark:text-slate-200"
+                }`}
+              >
+                {labelForMonth(key)}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
           {t("exportPdf.formatLabel")}

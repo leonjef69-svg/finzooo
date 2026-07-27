@@ -275,6 +275,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "exportPdf.exportDataTitle": "Exportar movimientos",
     "exportPdf.formatLabel": "Formato",
+    "exportPdf.monthLabel": "Mes",
     "exportPdf.typeLabel": "Qué exportar",
     "exportPdf.subtitle": "Elige qué movimientos exportar de {month}",
     "exportPdf.lockedDescription": "Genera un PDF con tus gastos, tus ingresos o todos tus movimientos del mes. Disponible con Premium.",
@@ -691,6 +692,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "exportPdf.exportDataTitle": "Export transactions",
     "exportPdf.formatLabel": "Format",
+    "exportPdf.monthLabel": "Month",
     "exportPdf.typeLabel": "What to export",
     "exportPdf.subtitle": "Choose what to export from {month}",
     "exportPdf.lockedDescription": "Generate a PDF with your expenses, your income, or all your transactions for the month. Available with Premium.",
@@ -1105,6 +1107,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "exportPdf.exportDataTitle": "Exportar movimentos",
     "exportPdf.formatLabel": "Formato",
+    "exportPdf.monthLabel": "Mês",
     "exportPdf.typeLabel": "O que exportar",
     "exportPdf.subtitle": "Escolha o que exportar de {month}",
     "exportPdf.lockedDescription": "Gere um PDF com seus gastos, suas receitas ou todos os seus movimentos do mês. Disponível com o Premium.",
