@@ -96,14 +96,44 @@ export default function RootLayout() {
                 para ellas "transparentModal" es el uso correcto y ya
                 funciona bien: evita el mismo destello blanco sin el
                 problema de ventana recortada, porque su contenido real
-                nunca pretendió cubrir el dispositivo entero. */}
-            <Stack.Screen name="transaction/choose" options={{ presentation: "transparentModal" }} />
-            <Stack.Screen name="edit-budget" options={{ presentation: "transparentModal" }} />
-            <Stack.Screen name="savings/form" options={{ presentation: "transparentModal" }} />
-            <Stack.Screen name="savings/move" options={{ presentation: "transparentModal" }} />
-            <Stack.Screen name="savings/picker" options={{ presentation: "transparentModal" }} />
-            <Stack.Screen name="export-pdf" options={{ presentation: "transparentModal" }} />
-            <Stack.Screen name="import" options={{ presentation: "transparentModal" }} />
+                nunca pretendió cubrir el dispositivo entero.
+
+                contentStyle transparent explícito: sin esto, el instante
+                antes de que React pinte el panel (con su propio overlay
+                oscuro translúcido), Android puede mostrar de fondo el color
+                por defecto del tema en vez de dejar ver Inicio — un destello
+                vacío del mismo tipo que el destello blanco de "Nuevo
+                movimiento", solo que oscuro (por eso pasaba desapercibido
+                en modo oscuro). Confirmado con la app real al abrir el
+                panel de "Agregar gasto/ingreso" desde Inicio. */}
+            <Stack.Screen
+              name="transaction/choose"
+              options={{ presentation: "transparentModal", contentStyle: { backgroundColor: "transparent" } }}
+            />
+            <Stack.Screen
+              name="edit-budget"
+              options={{ presentation: "transparentModal", contentStyle: { backgroundColor: "transparent" } }}
+            />
+            <Stack.Screen
+              name="savings/form"
+              options={{ presentation: "transparentModal", contentStyle: { backgroundColor: "transparent" } }}
+            />
+            <Stack.Screen
+              name="savings/move"
+              options={{ presentation: "transparentModal", contentStyle: { backgroundColor: "transparent" } }}
+            />
+            <Stack.Screen
+              name="savings/picker"
+              options={{ presentation: "transparentModal", contentStyle: { backgroundColor: "transparent" } }}
+            />
+            <Stack.Screen
+              name="export-pdf"
+              options={{ presentation: "transparentModal", contentStyle: { backgroundColor: "transparent" } }}
+            />
+            <Stack.Screen
+              name="import"
+              options={{ presentation: "transparentModal", contentStyle: { backgroundColor: "transparent" } }}
+            />
           </Stack>
           <GlobalOverlays />
           <ResetToHomeOnResume />
