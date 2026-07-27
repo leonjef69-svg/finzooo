@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
-import Animated, { KeyboardState, useAnimatedKeyboard, useAnimatedStyle } from "react-native-reanimated";
+import Animated, {
+  KeyboardState,
+  useAnimatedKeyboard,
+  useAnimatedReaction,
+  useAnimatedStyle,
+  useSharedValue,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X, Check, ChevronDown, ChevronUp, Calendar } from "lucide-react-native";
 import { EXPENSE_CATS, INCOME_CATS } from "@/constants/categories";
@@ -81,22 +87,67 @@ export default function AddSheet({
   // dentro de Expo Go, esto simplemente no era una opción disponible.
   const keyboard = useAnimatedKeyboard();
 
-  const animatedPaddingStyle = useAnimatedStyle(() => ({
-    paddingBottom: keyboard.state.value === KeyboardState.CLOSED ? 0 : keyboard.height.value,
-  }));
+  // El valor de useAnimatedKeyboard es COMPARTIDO por toda la app y
+  // sobrevive a que esta pantalla se cierre y se vuelva a abrir. Cuando la
+  // última pantalla que lo usaba se desmonta, Reanimated deja de escuchar
+  // al teclado — y la siguiente que se monta arranca con el ÚLTIMO valor
+  // conocido, que puede ser "abierto, 341px de alto" aunque en pantalla no
+  // haya ningún teclado. Resultado: la hoja arranca con un hueco enorme
+  // abajo y Descripción/Notas quedan empujados fuera de vista.
+  //
+  // Cerrar el teclado al salir (más abajo) no alcanza: si esta pantalla se
+  // desmonta antes de que la animación de cierre termine, el último valor
+  // que quedó grabado sigue siendo el de "abierto".
+  //
+  // ignoreStaleKeyboard resuelve eso: al montar se comprueba con
+  // Keyboard.isVisible() si hay un teclado DE VERDAD en pantalla. Si no lo
+  // hay, se ignora cualquier altura heredada hasta que llegue una apertura
+  // real — sea porque el teclado empieza a abrirse (OPENING, detectado
+  // cuadro a cuadro) o porque Android confirma que ya está abierto
+  // (keyboardDidShow). A partir de ahí se vuelve a confiar en el valor
+  // nativo y la animación sigue siendo igual de fluida que antes.
+  const ignoreStaleKeyboard = useSharedValue(0);
 
-  // Esto NO es un segundo sistema compitiendo con useAnimatedKeyboard: no
-  // decide ninguna posición ni ninguna altura. Solo contesta "¿está abierto
-  // el teclado ahora mismo?" para un detalle puramente cosmético más abajo
-  // (cuánto margen dejar bajo los botones).
+  const animatedPaddingStyle = useAnimatedStyle(() => {
+    if (ignoreStaleKeyboard.value === 1) return { paddingBottom: 0 };
+    const state = keyboard.state.value;
+    const open = state === KeyboardState.OPENING || state === KeyboardState.OPEN;
+    return { paddingBottom: open ? keyboard.height.value : 0 };
+  });
+
+  // En cuanto el teclado empieza a abrirse de verdad, el valor deja de ser
+  // heredado y se puede volver a confiar en él.
+  useAnimatedReaction(
+    () => keyboard.state.value,
+    (state) => {
+      if (state === KeyboardState.OPENING || state === KeyboardState.OPEN) {
+        ignoreStaleKeyboard.value = 0;
+      }
+    }
+  );
+
+  // keyboardVisible solo decide un detalle cosmético (cuánto margen dejar
+  // bajo los botones), no la posición de nada.
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", () => setKeyboardVisible(true));
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardVisible(false));
+    // Al montar: si no hay un teclado real en pantalla, no confiar en el
+    // valor heredado.
+    const visibleNow = Keyboard.isVisible();
+    ignoreStaleKeyboard.value = visibleNow ? 0 : 1;
+    setKeyboardVisible(visibleNow);
+
+    const showSub = Keyboard.addListener("keyboardDidShow", () => {
+      ignoreStaleKeyboard.value = 0;
+      setKeyboardVisible(true);
+    });
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
+      setKeyboardVisible(false);
+    });
     return () => {
       showSub.remove();
       hideSub.remove();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Cierra el teclado a propósito al salir de esta pantalla (Guardar o
