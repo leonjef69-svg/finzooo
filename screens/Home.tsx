@@ -57,8 +57,16 @@ export default function Home({
   onOpenDetail: (id: number) => void;
   onBulkDelete: (ids: number[]) => void;
 }) {
-  const { fmt, t, monthNames, setBudgetForCurrentMonth, carryoverActive, resetCarryover, restoreCarryover } =
-    useAppData();
+  const {
+    fmt,
+    t,
+    monthNames,
+    monthLabel,
+    setBudgetForCurrentMonth,
+    carryoverActive,
+    resetCarryover,
+    restoreCarryover,
+  } = useAppData();
   const [confirmResetCarryover, setConfirmResetCarryover] = useState(false);
   const [confirmRestoreCarryover, setConfirmRestoreCarryover] = useState(false);
   const available = budget + prevBalance + income - spent;
@@ -449,8 +457,13 @@ export default function Home({
 
       <ConfirmDialog
         visible={confirmResetCarryover}
-        title={t("home.resetCarryoverTitle")}
-        message={t("home.resetCarryoverMessage")}
+        // Se nombra el mes en concreto ("¿Empezar de cero desde Agosto
+        // 2026?") en vez de "este mes": el botón actúa sobre el mes que se
+        // está viendo, y equivocarse de mes cambia el resultado por
+        // completo, así que conviene que quede a la vista antes de
+        // confirmar.
+        title={t("home.resetCarryoverTitle", { month: monthLabel })}
+        message={t("home.resetCarryoverMessage", { month: monthLabel })}
         confirmLabel={t("home.resetCarryoverConfirm")}
         cancelLabel={t("common.cancel")}
         danger={false}
