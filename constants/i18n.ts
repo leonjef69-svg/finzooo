@@ -427,6 +427,11 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "home.resetCarryoverMessage":
       "El saldo anterior quedará en 0 a partir de este mes. Tus movimientos, presupuestos y metas NO se borran: siguen en el Historial tal como están.",
     "home.resetCarryoverConfirm": "Empezar de cero",
+    "toast.carryoverRestored": "Saldo anterior restaurado",
+    "home.restoreCarryoverTitle": "¿Restaurar el saldo anterior?",
+    "home.restoreCarryoverMessage":
+      "Volverá a contarse desde el principio de tu historial, como antes de ponerlo en cero. No se perdió nada: tus movimientos siempre estuvieron ahí.",
+    "home.restoreCarryoverConfirm": "Restaurar",
     "toast.transactionUpdated": "Movimiento actualizado",
     "toast.transactionSaved": "Movimiento guardado",
     "toast.transactionDeleted": "Movimiento eliminado",
@@ -833,6 +838,11 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "home.resetCarryoverMessage":
       "The previous balance will be 0 from this month on. Your transactions, budgets and goals are NOT deleted: they stay in History exactly as they are.",
     "home.resetCarryoverConfirm": "Start fresh",
+    "toast.carryoverRestored": "Previous balance restored",
+    "home.restoreCarryoverTitle": "Restore the previous balance?",
+    "home.restoreCarryoverMessage":
+      "It will be counted from the start of your history again, as it was before you zeroed it. Nothing was lost: your transactions were always there.",
+    "home.restoreCarryoverConfirm": "Restore",
     "toast.transactionUpdated": "Transaction updated",
     "toast.transactionSaved": "Transaction saved",
     "toast.transactionDeleted": "Transaction deleted",
@@ -1239,6 +1249,11 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "home.resetCarryoverMessage":
       "O saldo anterior ficará em 0 a partir deste mês. Seus movimentos, orçamentos e metas NÃO são apagados: continuam no Histórico como estão.",
     "home.resetCarryoverConfirm": "Começar do zero",
+    "toast.carryoverRestored": "Saldo anterior restaurado",
+    "home.restoreCarryoverTitle": "Restaurar o saldo anterior?",
+    "home.restoreCarryoverMessage":
+      "Voltará a ser contado desde o início do seu histórico, como antes de zerá-lo. Nada foi perdido: seus movimentos sempre estiveram lá.",
+    "home.restoreCarryoverConfirm": "Restaurar",
     "toast.transactionUpdated": "Movimentação atualizada",
     "toast.transactionSaved": "Movimentação salva",
     "toast.transactionDeleted": "Movimentação excluída",

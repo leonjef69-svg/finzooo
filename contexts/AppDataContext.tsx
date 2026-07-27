@@ -66,6 +66,7 @@ type AppDataContextValue = {
   // siempre. resetCarryover() lo fija en el mes que se está viendo.
   carryoverFrom: string;
   resetCarryover: () => void;
+  restoreCarryover: () => void;
   autoSavings: number;
   monthLabel: string;
   setBudgetForCurrentMonth: (amount: number) => void;
@@ -549,6 +550,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     showToast(t("toast.carryoverReset"));
   }
 
+  // Deshace lo anterior: vuelve a contar el arrastre desde el principio.
+  //
+  // Existe porque "empezar de cero" es fácil de tocar por curiosidad o por
+  // error, y sin esto no habría forma de volver atrás: al quedar el saldo
+  // en 0 el propio botón desaparecía, así que la acción era irreversible
+  // desde la app. Como no se borró ningún dato, restaurar es solo dejar de
+  // acotar el cálculo — el saldo vuelve exactamente al valor que tenía.
+  function restoreCarryover() {
+    setCarryoverFrom("");
+    showToast(t("toast.carryoverRestored"));
+  }
+
   function setBudgetForCurrentMonth(amount: number) {
     setBudgets((b) => ({ ...b, [mk]: amount }));
     showToast(t("toast.budgetUpdated"));
@@ -681,6 +694,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         prevBalance,
         carryoverFrom,
         resetCarryover,
+        restoreCarryover,
         autoSavings,
         monthLabel,
         setBudgetForCurrentMonth,
