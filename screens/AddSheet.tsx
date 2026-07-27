@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated, {
   KeyboardState,
-  runOnJS,
   useAnimatedKeyboard,
   useAnimatedReaction,
   useAnimatedStyle,
@@ -115,26 +114,6 @@ export default function AddSheet({
     const open = state === KeyboardState.OPENING || state === KeyboardState.OPEN;
     return { paddingBottom: open ? keyboard.height.value : 0 };
   });
-
-  // ───────── MEDICIÓN TEMPORAL (quitar cuando el bug esté cerrado) ─────────
-  // Muestra en pantalla lo que esta pantalla está leyendo de verdad. Se
-  // agregó porque dos correcciones seguidas, razonadas sobre lo que
-  // "debería" pasar, no arreglaron el problema — hace falta el dato real.
-  const [dbg, setDbg] = useState("(sin lecturas)");
-  useAnimatedReaction(
-    () => [keyboard.state.value, keyboard.height.value, ignoreStaleKeyboard.value] as const,
-    ([state, height, ignore]) => {
-      const names = ["DESCONOCIDO", "ABRIENDO", "ABIERTO", "CERRANDO", "CERRADO"];
-      runOnJS(setDbg)(
-        `estado=${names[state] ?? state} alto=${Math.round(height)} ignorar=${ignore} → padding=${
-          ignore === 1 || (state !== KeyboardState.OPENING && state !== KeyboardState.OPEN)
-            ? 0
-            : Math.round(height)
-        }`
-      );
-    }
-  );
-  // ─────────────────────────────────────────────────────────────────────────
 
   // En cuanto el teclado empieza a abrirse DE VERDAD, el valor deja de ser
   // heredado y se puede volver a confiar en él.
@@ -294,11 +273,6 @@ export default function AddSheet({
           >
             <X size={16} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
           </TouchableOpacity>
-        </View>
-
-        {/* MEDICIÓN TEMPORAL — quitar cuando el bug del teclado esté cerrado */}
-        <View className="mx-5 mb-2 px-2 py-1 rounded bg-amber-200">
-          <Text style={{ fontSize: 11, color: "#000000" }}>{dbg}</Text>
         </View>
 
         {!transaction && (
