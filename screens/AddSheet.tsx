@@ -124,6 +124,26 @@ export default function AddSheet({
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120);
   }
 
+  // Bug encontrado con la app real (development build): si se guarda o se
+  // cancela con el teclado todavía abierto (por ejemplo, recién escrito el
+  // monto), la siguiente vez que se abre esta pantalla puede alcanzar a
+  // leer un instante el teclado "todavía abierto" de la pantalla anterior
+  // — useAnimatedKeyboard reporta una altura vieja antes de corregirse, y
+  // los campos de abajo (Descripción, Notas) quedan apretados fuera de
+  // vista. La corrección: cerrar el teclado en el mismo instante en que se
+  // toca Cancelar o Guardar (no esperar a que la pantalla se desmonte),
+  // para que la siguiente instancia nunca llegue a heredar ese momento de
+  // transición.
+  function handleClose() {
+    Keyboard.dismiss();
+    onClose();
+  }
+
+  function handleSave(t: Transaction) {
+    Keyboard.dismiss();
+    onSave(t);
+  }
+
   return (
     // Pantalla COMPLETA, no un panel flotante — cubre el dispositivo entero
     // sin importar el tipo de presentación con la que Expo Router la abra
@@ -141,7 +161,7 @@ export default function AddSheet({
             {transaction ? t("addSheet.editTitle") : t("addSheet.newTitle")}
           </Text>
           <TouchableOpacity
-            onPress={onClose}
+            onPress={handleClose}
             className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
           >
             <X size={16} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
@@ -347,13 +367,13 @@ export default function AddSheet({
             className="px-5 py-4 flex-row gap-3 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900"
             style={{ paddingBottom: keyboardVisible ? 16 : 16 + insets.bottom }}
           >
-            <TouchableOpacity onPress={onClose} className="flex-1 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 items-center">
+            <TouchableOpacity onPress={handleClose} className="flex-1 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 items-center">
               <Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               disabled={!valid}
               onPress={() =>
-                onSave({
+                handleSave({
                   // Conserva los campos que esta pantalla no edita: de dónde
                   // vino el movimiento, el comercio, la cuenta, el código de
                   // operación y las etiquetas.
