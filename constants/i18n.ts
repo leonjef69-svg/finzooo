@@ -428,12 +428,12 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "toast.carryoverReset": "Saldo anterior puesto en cero",
     "home.resetCarryoverTitle": "¿Poner en cero el saldo anterior de {month}?",
     "home.resetCarryoverMessage":
-      "Afecta solo a {month}: los demás meses no cambian. Tus movimientos, presupuestos y metas NO se borran, y puedes deshacerlo cuando quieras.",
+      "{month} quedará en 0 y la cuenta empezará de nuevo desde ahí: los meses siguientes ya no arrastrarán nada anterior a {month}. Los meses previos no cambian. Tus movimientos, presupuestos y metas NO se borran, y puedes deshacerlo cuando quieras.",
     "home.resetCarryoverConfirm": "Poner en cero",
     "toast.carryoverRestored": "Saldo anterior restaurado",
     "home.restoreCarryoverTitle": "¿Restaurar el saldo anterior de {month}?",
     "home.restoreCarryoverMessage":
-      "{month} volverá a mostrar su saldo real. Afecta solo a este mes; los demás quedan como están. No se perdió nada: tus movimientos siempre estuvieron ahí.",
+      "{month} volverá a mostrar su saldo real, y los meses siguientes volverán a arrastrar todo con normalidad. No se perdió nada: tus movimientos siempre estuvieron ahí.",
     "home.restoreCarryoverConfirm": "Restaurar",
     "toast.transactionUpdated": "Movimiento actualizado",
     "toast.transactionSaved": "Movimiento guardado",
@@ -842,12 +842,12 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "toast.carryoverReset": "Previous balance set to zero",
     "home.resetCarryoverTitle": "Set {month}'s previous balance to zero?",
     "home.resetCarryoverMessage":
-      "This affects {month} only: other months stay the same. Your transactions, budgets and goals are NOT deleted, and you can undo this anytime.",
+      "{month} will be 0 and the count restarts from there: later months will no longer carry anything from before {month}. Earlier months stay the same. Your transactions, budgets and goals are NOT deleted, and you can undo this anytime.",
     "home.resetCarryoverConfirm": "Set to zero",
     "toast.carryoverRestored": "Previous balance restored",
     "home.restoreCarryoverTitle": "Restore {month}'s previous balance?",
     "home.restoreCarryoverMessage":
-      "{month} will show its real balance again. This affects only this month; the others stay as they are. Nothing was lost: your transactions were always there.",
+      "{month} will show its real balance again, and later months will carry everything normally once more. Nothing was lost: your transactions were always there.",
     "home.restoreCarryoverConfirm": "Restore",
     "toast.transactionUpdated": "Transaction updated",
     "toast.transactionSaved": "Transaction saved",
@@ -1256,12 +1256,12 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "toast.carryoverReset": "Saldo anterior zerado",
     "home.resetCarryoverTitle": "Zerar o saldo anterior de {month}?",
     "home.resetCarryoverMessage":
-      "Afeta somente {month}: os outros meses não mudam. Seus movimentos, orçamentos e metas NÃO são apagados, e você pode desfazer quando quiser.",
+      "{month} ficará em 0 e a contagem recomeça a partir daí: os meses seguintes não vão mais arrastar nada anterior a {month}. Os meses anteriores não mudam. Seus movimentos, orçamentos e metas NÃO são apagados, e você pode desfazer quando quiser.",
     "home.resetCarryoverConfirm": "Zerar",
     "toast.carryoverRestored": "Saldo anterior restaurado",
     "home.restoreCarryoverTitle": "Restaurar o saldo anterior de {month}?",
     "home.restoreCarryoverMessage":
-      "{month} voltará a mostrar seu saldo real. Afeta apenas este mês; os outros ficam como estão. Nada foi perdido: seus movimentos sempre estiveram lá.",
+      "{month} voltará a mostrar seu saldo real, e os meses seguintes voltarão a arrastar tudo normalmente. Nada foi perdido: seus movimentos sempre estiveram lá.",
     "home.restoreCarryoverConfirm": "Restaurar",
     "toast.transactionUpdated": "Movimentação atualizada",
     "toast.transactionSaved": "Movimentação salva",

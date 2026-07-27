@@ -468,31 +468,44 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // rápido, y este cálculo se rehace cada vez que cambia un movimiento o
   // se cambia de mes. Ahora es una sola pasada, con el mismo resultado.
   //
-  // Poner el Saldo anterior en cero es una decisión INDEPENDIENTE POR MES.
+  // Cada mes puesto en cero es un PUNTO DE PARTIDA: desde ahí, la cuenta
+  // vuelve a empezar y sigue acumulando hacia adelante con normalidad.
   //
-  // Cada mes se calcula siempre desde el principio de tu historial, salvo
-  // que ese mes concreto esté en la lista de "puestos en cero". Ponerlo en
-  // cero en agosto no cambia nada en julio ni en septiembre: septiembre
-  // vuelve a sumar todo por su cuenta, incluido lo que se ocultó en
-  // agosto. Si también se quiere en cero, hay que hacerlo ahí.
+  // Ejemplo (julio, agosto y septiembre dejan 100 cada uno). Si se pone
+  // agosto en cero:
+  //    julio       → sin cambios (es anterior al punto de partida)
+  //    agosto      → 0
+  //    septiembre  → 100  (solo lo de agosto; lo de julio ya no entra)
+  //    octubre     → 200  (agosto + septiembre)
+  // Y al restaurar agosto, septiembre vuelve a 200 (julio + agosto), etc.
   //
-  // Es distinto a un "punto de corte" que se arrastra hacia adelante, que
-  // fue como estaba antes: con esto, borrar y restaurar afectan solo al
-  // mes en el que se pulsa el botón.
+  // Puede haber varios puntos de partida a la vez: para cada mes manda el
+  // más reciente que no sea posterior a él. Así, restaurar uno solo afecta
+  // al tramo que ese punto abría, sin tocar los demás.
+  const carryoverStart = useMemo(() => {
+    let start = "";
+    for (const cleared of carryoverCleared) {
+      if (cleared <= mk && cleared > start) start = cleared;
+    }
+    return start;
+  }, [carryoverCleared, mk]);
+
+  // El botón "restaurar" solo se ofrece en el mes exacto donde se puso el
+  // punto de partida — que es donde tiene sentido quitarlo.
   const carryoverActive = carryoverCleared.includes(mk);
 
   const prevBalance = useMemo(() => {
-    if (carryoverCleared.includes(mk)) return 0;
     let carry = 0;
     for (const [monthK, amount] of Object.entries(budgets)) {
-      if (monthK < mk) carry += amount || 0;
+      if (monthK < mk && monthK >= carryoverStart) carry += amount || 0;
     }
     for (const tx of transactions) {
-      if (tx.date.slice(0, 7) >= mk) continue;
+      const txMonth = tx.date.slice(0, 7);
+      if (txMonth >= mk || txMonth < carryoverStart) continue;
       carry += tx.type === "income" ? tx.amount : -tx.amount;
     }
     return carry;
-  }, [transactions, budgets, mk, carryoverCleared]);
+  }, [transactions, budgets, mk, carryoverStart]);
 
   const autoSavings = budget + income - spent;
   const monthLabel = `${monthNames[month.m]} ${month.y}`;
