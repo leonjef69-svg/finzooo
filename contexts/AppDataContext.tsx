@@ -468,44 +468,47 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // rápido, y este cálculo se rehace cada vez que cambia un movimiento o
   // se cambia de mes. Ahora es una sola pasada, con el mismo resultado.
   //
-  // Cada mes puesto en cero es un PUNTO DE PARTIDA: desde ahí, la cuenta
-  // vuelve a empezar y sigue acumulando hacia adelante con normalidad.
+  // Poner un mes en cero ROMPE LA CADENA de ahí en adelante.
   //
-  // Ejemplo (julio, agosto y septiembre dejan 100 cada uno). Si se pone
-  // agosto en cero:
-  //    julio       → sin cambios (es anterior al punto de partida)
+  // El arrastre funciona como un relevo: cada mes le pasa su saldo final
+  // al siguiente. Si un mes se pone en cero, deja de recibir y también
+  // deja de pasar — y como el siguiente ya no recibe nada, tampoco tiene
+  // qué pasar. El relevo queda cortado mientras esa marca siga puesta.
+  //
+  // Ejemplo, poniendo AGOSTO en cero:
+  //    julio       → sin cambios (es anterior al corte)
   //    agosto      → 0
-  //    septiembre  → 100  (solo lo de agosto; lo de julio ya no entra)
-  //    octubre     → 200  (agosto + septiembre)
-  // Y al restaurar agosto, septiembre vuelve a 200 (julio + agosto), etc.
+  //    septiembre  → 0
+  //    octubre     → 0   ... y así hasta que se restaure agosto
   //
-  // Puede haber varios puntos de partida a la vez: para cada mes manda el
-  // más reciente que no sea posterior a él. Así, restaurar uno solo afecta
-  // al tramo que ese punto abría, sin tocar los demás.
-  const carryoverStart = useMemo(() => {
-    let start = "";
-    for (const cleared of carryoverCleared) {
-      if (cleared <= mk && cleared > start) start = cleared;
-    }
-    return start;
-  }, [carryoverCleared, mk]);
+  // Al restaurar agosto, la cadena entera se reconstruye sola: no hay que
+  // ir mes por mes.
+  //
+  // Ojo con la diferencia (fue un malentendido real durante el
+  // desarrollo): NO es "septiembre arranca de nuevo desde agosto". Es
+  // "mientras la cadena esté rota, ningún mes posterior arrastra nada".
+  const carryoverBroken = useMemo(
+    () => carryoverCleared.some((cleared) => cleared <= mk),
+    [carryoverCleared, mk]
+  );
 
-  // El botón "restaurar" solo se ofrece en el mes exacto donde se puso el
-  // punto de partida — que es donde tiene sentido quitarlo.
+  // El botón "restaurar" solo se ofrece en el mes exacto donde se puso la
+  // marca — que es donde tiene sentido quitarla, y desde donde se
+  // reconstruye todo.
   const carryoverActive = carryoverCleared.includes(mk);
 
   const prevBalance = useMemo(() => {
+    if (carryoverBroken) return 0;
     let carry = 0;
     for (const [monthK, amount] of Object.entries(budgets)) {
-      if (monthK < mk && monthK >= carryoverStart) carry += amount || 0;
+      if (monthK < mk) carry += amount || 0;
     }
     for (const tx of transactions) {
-      const txMonth = tx.date.slice(0, 7);
-      if (txMonth >= mk || txMonth < carryoverStart) continue;
+      if (tx.date.slice(0, 7) >= mk) continue;
       carry += tx.type === "income" ? tx.amount : -tx.amount;
     }
     return carry;
-  }, [transactions, budgets, mk, carryoverStart]);
+  }, [transactions, budgets, mk, carryoverBroken]);
 
   const autoSavings = budget + income - spent;
   const monthLabel = `${monthNames[month.m]} ${month.y}`;
