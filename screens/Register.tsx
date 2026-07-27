@@ -12,17 +12,25 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Wallet } from "lucide-react-native";
 import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "@firebase/auth";
 import AuthField from "@/components/AuthField";
+import GoogleButton, { OrDivider } from "@/components/GoogleButton";
 import { auth } from "@/utils/firebase";
 import { firebaseErrorMessage } from "@/utils/firebaseErrors";
+import { GoogleSignInCancelled, signInWithGoogle } from "@/utils/googleAuth";
 import { useAppData } from "@/contexts/AppDataContext";
 
 type Errors = { name?: string; email?: string; pass?: string; general?: string };
 
 export default function Register({
   onRegistered,
+  onGoogleSignedIn,
   onGoLogin,
 }: {
   onRegistered: (name: string, email: string) => void;
+  // Con Google no hay diferencia entre "crear cuenta" y "entrar": Google
+  // crea la cuenta si no existía. Por eso este camino termina igual que el
+  // de la pantalla de Login, sin pasar por verificar el correo (las
+  // cuentas de Google ya vienen verificadas).
+  onGoogleSignedIn: () => void;
   onGoLogin: () => void;
 }) {
   const { t } = useAppData();
@@ -31,7 +39,23 @@ export default function Register({
   const [pass, setPass] = useState("");
   const [errors, setErrors] = useState<Errors>({});
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const insets = useSafeAreaInsets();
+
+  async function registerWithGoogle() {
+    setErrors({});
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+      onGoogleSignedIn();
+    } catch (err) {
+      if (err instanceof GoogleSignInCancelled) return;
+      const code = (err as { code?: string })?.code || "";
+      setErrors({ general: code ? firebaseErrorMessage(code) : t("login.googleError") });
+    } finally {
+      setGoogleLoading(false);
+    }
+  }
 
   async function submit() {
     const e: Errors = {};
@@ -116,6 +140,16 @@ export default function Register({
               <Text className="text-white font-bold">{t("register.submit")}</Text>
             )}
           </TouchableOpacity>
+
+          <OrDivider label={t("login.or")} />
+
+          <GoogleButton
+            label={t("login.withGoogle")}
+            onPress={registerWithGoogle}
+            loading={googleLoading}
+            disabled={loading}
+          />
+
           <View className="flex-row justify-center mt-5">
             <Text className="text-sm text-slate-500 dark:text-slate-300">{t("register.haveAccount")}</Text>
             <TouchableOpacity onPress={onGoLogin}>

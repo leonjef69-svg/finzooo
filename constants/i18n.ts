@@ -356,6 +356,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "login.resetEmailSentMessage": "Te enviamos un enlace a {email} para elegir una contraseña nueva.",
     "login.resetEmailFailedTitle": "No se pudo enviar",
     "login.submit": "Iniciar sesión",
+    "login.or": "o",
+    "login.withGoogle": "Continuar con Google",
+    "login.googleError": "No se pudo entrar con Google. Intenta de nuevo.",
     "login.noAccount": "¿No tienes cuenta? ",
     "login.register": "Regístrate",
 
@@ -769,6 +772,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "login.resetEmailSentMessage": "We sent a link to {email} to choose a new password.",
     "login.resetEmailFailedTitle": "Couldn't send it",
     "login.submit": "Sign in",
+    "login.or": "or",
+    "login.withGoogle": "Continue with Google",
+    "login.googleError": "Couldn't sign in with Google. Please try again.",
     "login.noAccount": "Don't have an account? ",
     "login.register": "Sign up",
 
@@ -1180,6 +1186,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "login.resetEmailSentMessage": "Enviamos um link para {email} para escolher uma nova senha.",
     "login.resetEmailFailedTitle": "Não foi possível enviar",
     "login.submit": "Entrar",
+    "login.or": "ou",
+    "login.withGoogle": "Continuar com o Google",
+    "login.googleError": "Não foi possível entrar com o Google. Tente novamente.",
     "login.noAccount": "Não tem uma conta? ",
     "login.register": "Cadastre-se",
 

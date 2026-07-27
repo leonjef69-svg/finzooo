@@ -24,6 +24,7 @@ import { fmt as formatAmount, monthKey } from "@/utils/format";
 import { reserveIdsAbove } from "@/utils/id";
 import { learnCategory } from "@/utils/classifier";
 import { auth } from "@/utils/firebase";
+import { signOutFromGoogle } from "@/utils/googleAuth";
 import { deleteCloudAccount, loadCloudData, saveCloudData } from "@/utils/cloudSync";
 import type { Goal, Month, Profile, Transaction } from "@/types";
 
@@ -269,6 +270,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         carryoverFrom,
       });
     }
+    // También hay que salir del lado de Google. Si no, la próxima vez que
+    // alguien pulse "Continuar con Google" entraría directo con la última
+    // cuenta usada, sin poder elegir otra — un problema real en un celular
+    // compartido, y confuso al probar con varias cuentas.
+    await signOutFromGoogle();
     await signOut(auth);
     // Borra todos los datos de la cuenta de forma atómica y esperada
     // ANTES de actualizar el estado. Si la app se cierra en este momento,

@@ -13,8 +13,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Wallet } from "lucide-react-native";
 import { sendPasswordResetEmail, signInWithEmailAndPassword } from "@firebase/auth";
 import AuthField from "@/components/AuthField";
+import GoogleButton, { OrDivider } from "@/components/GoogleButton";
 import { auth } from "@/utils/firebase";
 import { firebaseErrorMessage } from "@/utils/firebaseErrors";
+import { GoogleSignInCancelled, signInWithGoogle } from "@/utils/googleAuth";
 import { useAppData } from "@/contexts/AppDataContext";
 
 export default function Login({
@@ -28,6 +30,7 @@ export default function Login({
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const insets = useSafeAreaInsets();
 
@@ -46,6 +49,23 @@ export default function Login({
       setError(firebaseErrorMessage(code));
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function loginWithGoogle() {
+    setError("");
+    setGoogleLoading(true);
+    try {
+      await signInWithGoogle();
+      onLoggedIn();
+    } catch (err) {
+      // Cancelar no es un fallo: si la persona cerró la ventana de Google
+      // a propósito, mostrarle un error rojo sería confuso.
+      if (err instanceof GoogleSignInCancelled) return;
+      const code = (err as { code?: string })?.code || "";
+      setError(code ? firebaseErrorMessage(code) : t("login.googleError"));
+    } finally {
+      setGoogleLoading(false);
     }
   }
 
@@ -126,6 +146,15 @@ export default function Login({
             <Text className="text-white font-bold">{t("login.submit")}</Text>
           )}
         </TouchableOpacity>
+
+        <OrDivider label={t("login.or")} />
+
+        <GoogleButton
+          label={t("login.withGoogle")}
+          onPress={loginWithGoogle}
+          loading={googleLoading}
+          disabled={loading}
+        />
 
         <View className="flex-row justify-center mt-6 pb-6">
           <Text className="text-sm text-slate-500 dark:text-slate-300">{t("login.noAccount")}</Text>

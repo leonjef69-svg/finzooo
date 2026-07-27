@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "133168544890",
+    "project_id": "dotero-2d430",
+    "storage_bucket": "dotero-2d430.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:133168544890:android:81e5c80f7f49594af4cfc3",
+        "android_client_info": {
+          "package_name": "com.finzo.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "133168544890-0edjk1roe9pjb5ms7blfl7bcql742dvc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.finzo.app",
+            "certificate_hash": "3df8b6c010f15e2458d1aa706ba27beb7e078b3d"
+          }
+        },
+        {
+          "client_id": "133168544890-ron5kg6fllq20rrnqil0t2hbqguu54p1.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDgk6Px5AFdGXv6rGT47267IJxWGwbj0oo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "133168544890-ron5kg6fllq20rrnqil0t2hbqguu54p1.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
