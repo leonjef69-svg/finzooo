@@ -1,13 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import {
-  Animated,
-  Keyboard,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import Animated, { KeyboardState, useAnimatedKeyboard, useAnimatedStyle } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X, Check, ChevronDown, ChevronUp, Calendar } from "lucide-react-native";
 import { EXPENSE_CATS, INCOME_CATS } from "@/constants/categories";
@@ -72,67 +65,39 @@ export default function AddSheet({
   const dateOk = isValidISODate(date);
   const valid = parseAmountInput(amount) > 0 && dateOk;
 
-  // ÚNICO mecanismo responsable de reaccionar al teclado en esta pantalla.
+  // ÚNICO mecanismo responsable de reaccionar al teclado en esta pantalla:
+  // `useAnimatedKeyboard` (Reanimated). Se engancha directo al valor que el
+  // sistema operativo empuja cuadro a cuadro cuando el teclado cambia de
+  // tamaño — no depende de NINGÚN aviso de JavaScript que Android pueda
+  // saltarse al cambiar de campo. Ese era el problema real de fondo de los
+  // dos intentos anteriores en esta misma pantalla (KeyboardAvoidingView y
+  // Keyboard.metrics() + eventos): ambos, por dentro, dependían de avisos
+  // JS que Android no garantiza al saltar entre campos sin cerrar el
+  // teclado — confirmado con la app real, fallaba justo ahí.
   //
-  // Por qué NO es KeyboardAvoidingView (se probó primero y se revirtió):
-  // por dentro, en Android, KeyboardAvoidingView también depende de los
-  // avisos "keyboardDidShow"/"keyboardDidHide" — los mismos que ya
-  // sabíamos poco confiables al saltar de un campo a otro SIN que el
-  // teclado llegue a cerrarse. Confirmado con la app real: fallaba justo
-  // al saltar de Monto (teclado numérico) a Descripción/Notas (teclado de
-  // letras) — cambia el TIPO de teclado mientras ya estaba abierto, y
-  // Android no siempre avisa ese cambio de tamaño.
-  //
-  // La corrección real: en vez de esperar pasivamente ese aviso, se le
-  // PREGUNTA directo al sistema en el instante en que cada campo recibe el
-  // foco (`Keyboard.metrics()`, que responde al instante si el teclado ya
-  // está abierto ahora mismo, sin depender de ningún aviso que se pueda
-  // perder). El aviso "keyboardDidShow" se sigue escuchando, pero solo
-  // como respaldo para la PRIMERA vez que el teclado aparece desde
-  // cerrado — ahí `metrics()` todavía no tiene nada que responder porque
-  // el teclado recién se está animando hacia arriba.
-  //
-  // No hace falta ninguna lógica para "esconder" el panel al perder el
-  // foco de un campo: la altura solo baja cuando REALMENTE llega el aviso
-  // de teclado cerrado (`keyboardDidHide`). Como saltar entre campos no
-  // dispara ningún escondido de más, no hay ninguna carrera que evitar
-  // entre avisos que podrían llegar en distinto orden — a diferencia del
-  // sistema anterior, aquí no existe ese escenario.
-  const keyboardHeight = useRef(new Animated.Value(0)).current;
+  // Por qué recién ahora se puede usar: este hook necesita una pieza de
+  // código nativo que Expo Go no trae — solo funciona en una development
+  // build de verdad (la que se instaló en el celular). Mientras se probaba
+  // dentro de Expo Go, esto simplemente no era una opción disponible.
+  const keyboard = useAnimatedKeyboard();
+
+  const animatedPaddingStyle = useAnimatedStyle(() => ({
+    paddingBottom: keyboard.state.value === KeyboardState.CLOSED ? 0 : keyboard.height.value,
+  }));
+
+  // Esto NO es un segundo sistema compitiendo con useAnimatedKeyboard: no
+  // decide ninguna posición ni ninguna altura. Solo contesta "¿está abierto
+  // el teclado ahora mismo?" para un detalle puramente cosmético más abajo
+  // (cuánto margen dejar bajo los botones).
   const [keyboardVisible, setKeyboardVisible] = useState(false);
-
-  function animateKeyboardHeight(height: number) {
-    Animated.timing(keyboardHeight, {
-      toValue: height,
-      duration: 200,
-      useNativeDriver: false, // anima "paddingBottom", que el driver nativo no admite
-    }).start();
-  }
-
   useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", (e) => {
-      animateKeyboardHeight(e.endCoordinates?.height ?? 0);
-      setKeyboardVisible(true);
-    });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-      animateKeyboardHeight(0);
-      setKeyboardVisible(false);
-    });
+    const showSub = Keyboard.addListener("keyboardDidShow", () => setKeyboardVisible(true));
+    const hideSub = Keyboard.addListener("keyboardDidHide", () => setKeyboardVisible(false));
     return () => {
       showSub.remove();
       hideSub.remove();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // Se llama en el onFocus de CADA campo de texto de esta pantalla.
-  function syncKeyboardOnFocus() {
-    const metrics = Keyboard.metrics();
-    if (metrics) {
-      animateKeyboardHeight(metrics.height);
-      setKeyboardVisible(true);
-    }
-  }
 
   // Cierra el teclado a propósito al salir de esta pantalla (Guardar o
   // Cancelar), para que nunca quede abierto flotando sobre Inicio.
@@ -145,7 +110,7 @@ export default function AddSheet({
   // Descripción no es el último campo (Notas sí lo es), así que necesita
   // subir hasta SU propia posición (medida con onLayout) en vez de saltar
   // al final del todo. Esto es scroll de contenido, no manejo de teclado:
-  // no compite con keyboardHeight/syncKeyboardOnFocus, que son quienes
+  // no compite con useAnimatedKeyboard/animatedPaddingStyle, que son quienes
   // deciden cuánto se achica el espacio disponible; esto solo decide QUÉ
   // PARTE de ese espacio se ve primero.
   function focusDescription() {
@@ -206,12 +171,12 @@ export default function AddSheet({
         {/* Único bloque que reacciona al teclado: campos con scroll +
             botones fijos abajo, dentro de un mismo contenedor animado cuyo
             "paddingBottom" sigue la altura real del teclado (ver
-            keyboardHeight arriba). Cuando el teclado aparece, este bloque
-            (no la pantalla completa) se achica desde abajo — el ScrollView
-            dentro se ajusta solo por ser flex:1, y los botones quedan
-            pegados al borde inferior de este bloque, justo encima del
-            teclado. */}
-        <Animated.View style={{ flex: 1, paddingBottom: keyboardHeight }}>
+            animatedPaddingStyle arriba). Cuando el teclado aparece, este
+            bloque (no la pantalla completa) se achica desde abajo — el
+            ScrollView dentro se ajusta solo por ser flex:1, y los botones
+            quedan pegados al borde inferior de este bloque, justo encima
+            del teclado. */}
+        <Animated.View style={[{ flex: 1 }, animatedPaddingStyle]}>
           <ScrollView
             ref={scrollRef}
             className="flex-1 px-5"
@@ -226,7 +191,6 @@ export default function AddSheet({
                   keyboardType="decimal-pad"
                   value={amount}
                   onChangeText={(v) => setAmount(sanitizeAmountInput(v))}
-                  onFocus={syncKeyboardOnFocus}
                   placeholder="0.00"
                   placeholderTextColor="#94a3b8"
                   className="flex-1 text-lg font-extrabold"
@@ -312,7 +276,6 @@ export default function AddSheet({
                   <TextInput
                     value={date}
                     onChangeText={setDate}
-                    onFocus={syncKeyboardOnFocus}
                     // Al salir del campo se acomoda sola: si escribiste
                     // "24/07/2026" queda como la app la guarda internamente,
                     // en vez de rechazarte algo que estaba bien escrito.
@@ -353,10 +316,7 @@ export default function AddSheet({
               <TextInput
                 value={description}
                 onChangeText={setDescription}
-                onFocus={() => {
-                  syncKeyboardOnFocus();
-                  focusDescription();
-                }}
+                onFocus={focusDescription}
                 placeholder={t("addSheet.descriptionPlaceholder")}
                 placeholderTextColor="#94a3b8"
                 className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800 px-4 py-3.5 text-sm"
@@ -368,10 +328,7 @@ export default function AddSheet({
               <TextInput
                 value={notes}
                 onChangeText={setNotes}
-                onFocus={() => {
-                  syncKeyboardOnFocus();
-                  focusNotes();
-                }}
+                onFocus={focusNotes}
                 placeholder={t("addSheet.notesPlaceholder")}
                 placeholderTextColor="#94a3b8"
                 multiline
