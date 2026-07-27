@@ -122,15 +122,29 @@ export default function Reports({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactions, month, budget, categorySpent, totalExpense, userLanguage]);
 
+  // Los 3 meses que terminan en el mes que se está viendo.
+  //
+  // Bug corregido: antes esto era `[4, 5, 6]` fijo en el código, o sea
+  // Mayo/Junio/Julio SIEMPRE, sin importar en qué mes estuvieras parado ni
+  // en qué mes del año real fuera. En agosto seguía mostrando Mayo-Julio, y
+  // al cambiar de mes con las flechas de Inicio el gráfico no se movía.
+  // También cruza bien el cambio de año (ej. viendo Enero muestra
+  // Nov, Dic del año anterior + Ene).
   const barData = useMemo(() => {
-    return [4, 5, 6].map((mIdx) => {
-      const key = monthKey(month.y, mIdx);
+    return [2, 1, 0].map((back) => {
+      let m = month.m - back;
+      let y = month.y;
+      if (m < 0) {
+        m += 12;
+        y -= 1;
+      }
+      const key = monthKey(y, m);
       const sp = transactions
         .filter((t) => t.type === "expense" && t.date.startsWith(key))
         .reduce((s, t) => s + t.amount, 0);
-      return { label: monthNames[mIdx].slice(0, 3), value: sp };
+      return { label: monthNames[m].slice(0, 3), value: sp };
     });
-  }, [transactions, month.y, monthNames]);
+  }, [transactions, month.y, month.m, monthNames]);
 
   const lineData = useMemo(() => {
     const expenses = transactions.filter((t) => t.date.startsWith(mk) && t.type === "expense");

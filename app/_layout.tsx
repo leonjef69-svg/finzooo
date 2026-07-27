@@ -7,6 +7,7 @@ import { useColorScheme } from "nativewind";
 import "react-native-reanimated";
 import "../global.css";
 import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
+import { flushPendingSaves } from "@/utils/storage";
 import CelebrationOverlay from "@/components/CelebrationOverlay";
 import Toast from "@/components/Toast";
 
@@ -20,10 +21,17 @@ function GlobalOverlays() {
   );
 }
 
-// Cada vez que se sale de la app (se manda a segundo plano) y se vuelve a
-// entrar, regresa siempre a Inicio (el saldo disponible) — nunca deja a la
-// persona a medio camino en "Agregar movimiento" u otra pantalla.
-function ResetToHomeOnResume() {
+// Dos cosas que dependen de entrar/salir de la app:
+//
+//  1. Al VOLVER: regresa siempre a Inicio (el saldo disponible) — nunca
+//     deja a la persona a medio camino en "Agregar movimiento" u otra
+//     pantalla.
+//  2. Al SALIR: escribe de inmediato lo que estuviera esperando su turno
+//     de guardarse. Los guardados se agrupan con un retardo corto para no
+//     cifrar todo el conjunto de datos en cada toque (ver utils/storage),
+//     y esto garantiza que cerrar la app justo después de un cambio no
+//     alcance a perderlo.
+function AppLifecycleEffects() {
   const { hasOnboarded } = useAppData();
   const prevState = useRef(AppState.currentState);
   const navigationRef = useNavigationContainerRef();
@@ -33,6 +41,9 @@ function ResetToHomeOnResume() {
       const cameFromBackground = /inactive|background/.test(prevState.current);
       if (cameFromBackground && nextState === "active" && hasOnboarded && navigationRef.isReady()) {
         router.dismissTo("/(tabs)");
+      }
+      if (nextState === "background" || nextState === "inactive") {
+        flushPendingSaves();
       }
       prevState.current = nextState;
     });
@@ -136,7 +147,7 @@ export default function RootLayout() {
             />
           </Stack>
           <GlobalOverlays />
-          <ResetToHomeOnResume />
+          <AppLifecycleEffects />
           <ThemedStatusBar />
         </View>
       </AppDataProvider>

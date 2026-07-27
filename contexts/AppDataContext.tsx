@@ -348,8 +348,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   // Además de guardar en este celular, si hay una cuenta con sesión
   // iniciada y correo verificado, también sube los datos a la nube.
+  //
+  // Va agrupado (1.5 s) por el mismo motivo que el guardado local, pero
+  // más marcado: cada subida manda el conjunto COMPLETO de datos por
+  // internet. Sin agrupar, una sola acción podía disparar varias subidas
+  // idénticas seguidas — trabajo de red repetido y sin ningún beneficio,
+  // porque cada una pisa a la anterior con lo mismo.
+  //
+  // Perder la última subida no pierde datos: el celular ya los tiene
+  // guardados, y logout() sube todo explícitamente antes de cerrar sesión.
   useEffect(() => {
-    if (ready && hasOnboarded && uid) {
+    if (!(ready && hasOnboarded && uid)) return;
+    const timer = setTimeout(() => {
       saveCloudData(uid, {
         hasOnboarded,
         userName,
@@ -363,7 +373,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         isPremium,
         merchantLearned,
       });
-    }
+    }, 1500);
+    return () => clearTimeout(timer);
   }, [
     ready,
     hasOnboarded,
@@ -411,23 +422,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return result;
   }, [transactions, mk]);
 
+  // Lo que sobró (o faltó) de todos los meses ANTERIORES al que se está
+  // viendo: presupuestos + ingresos − gastos de esos meses.
+  //
+  // Antes esto recorría la lista completa de movimientos DOS veces por
+  // cada mes con datos. Con varios meses de historial eso se multiplicaba
+  // rápido, y este cálculo se rehace cada vez que cambia un movimiento o
+  // se cambia de mes. Ahora es una sola pasada, con el mismo resultado.
   const prevBalance = useMemo(() => {
-    const monthsWithData = new Set([
-      ...Object.keys(budgets),
-      ...transactions.map((t) => t.date.slice(0, 7)),
-    ]);
-    const sortedKeys = Array.from(monthsWithData).sort();
     let carry = 0;
-    for (const k of sortedKeys) {
-      if (k >= mk) break;
-      const kBudget = budgets[k] || 0;
-      const kSpent = transactions
-        .filter((t) => t.type === "expense" && t.date.startsWith(k))
-        .reduce((s, t) => s + t.amount, 0);
-      const kIncome = transactions
-        .filter((t) => t.type === "income" && t.date.startsWith(k))
-        .reduce((s, t) => s + t.amount, 0);
-      carry += kBudget + kIncome - kSpent;
+    for (const [monthK, amount] of Object.entries(budgets)) {
+      if (monthK < mk) carry += amount || 0;
+    }
+    for (const tx of transactions) {
+      if (tx.date.slice(0, 7) >= mk) continue;
+      carry += tx.type === "income" ? tx.amount : -tx.amount;
     }
     return carry;
   }, [transactions, budgets, mk]);

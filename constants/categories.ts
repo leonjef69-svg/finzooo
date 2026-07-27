@@ -77,6 +77,21 @@ export const INCOME_CATS: Category[] = [
 
 export const ALL_CATS = [...EXPENSE_CATS, ...INCOME_CATS];
 
+// Índice por id, armado una sola vez al cargar la app. Antes catInfo hacía
+// un .find() —recorrer la lista entera— y se la llama por CADA fila de
+// Inicio, del Historial, de Reportes y del detalle: con las listas
+// desplazándose, eran miles de recorridos por segundo sin necesidad.
+const CATS_BY_ID = new Map(ALL_CATS.map((c) => [c.id, c]));
+
+// Categoría de respaldo cuando el id guardado no existe (por ejemplo, un
+// movimiento importado con una categoría que ya no está en la app).
+// Antes el respaldo era EXPENSE_CATS[6] — que es "Servicios" ⚡, elegido
+// por su posición en la lista, no a propósito: cualquier categoría
+// desconocida se mostraba como un gasto de Servicios. "Otros" 🧾 es lo
+// correcto, y ahora se busca por id para que no vuelva a romperse si se
+// reordena la lista.
+const FALLBACK_CAT = CATS_BY_ID.get("otros") ?? EXPENSE_CATS[EXPENSE_CATS.length - 1];
+
 export function catInfo(id: string): Category {
-  return ALL_CATS.find((c) => c.id === id) || EXPENSE_CATS[6];
+  return CATS_BY_ID.get(id) ?? FALLBACK_CAT;
 }

@@ -13,13 +13,40 @@ function bytesToHex(bytes: Uint8Array): string {
     .join("");
 }
 
-async function getOrCreateKey(): Promise<string> {
+// La llave se lee del cajón seguro UNA sola vez por sesión y se guarda en
+// memoria. Antes se pedía a SecureStore en CADA guardado y en CADA lectura
+// — y como la app guarda cada vez que cambia algo (movimientos, metas,
+// presupuestos, preferencias...), eso eran varias llamadas al sistema
+// operativo por cada toque de botón, cada una atravesando el puente nativo.
+// Era una de las causas medibles de que la app se sintiera lenta.
+//
+// Se guarda la PROMESA, no el texto: si dos guardados salen casi a la vez
+// (algo normal, hay varios useEffect de guardado), ambos esperan la misma
+// petición en curso en vez de lanzar una cada uno.
+//
+// Seguridad: la llave vive en memoria solo mientras la app está abierta;
+// en disco sigue estando únicamente en el cajón cifrado del sistema.
+let cachedKeyPromise: Promise<string> | null = null;
+
+async function readOrCreateKey(): Promise<string> {
   const existing = await SecureStore.getItemAsync(KEY_STORAGE_NAME);
   if (existing) return existing;
   const randomBytes = await Crypto.getRandomBytesAsync(32);
   const key = bytesToHex(randomBytes);
   await SecureStore.setItemAsync(KEY_STORAGE_NAME, key);
   return key;
+}
+
+function getOrCreateKey(): Promise<string> {
+  if (!cachedKeyPromise) {
+    cachedKeyPromise = readOrCreateKey().catch((err) => {
+      // Si falló, no dejamos la promesa fallida en caché: el siguiente
+      // intento vuelve a preguntarle al sistema en vez de fallar siempre.
+      cachedKeyPromise = null;
+      throw err;
+    });
+  }
+  return cachedKeyPromise;
 }
 
 async function secureRandomWordArray(byteCount: number) {

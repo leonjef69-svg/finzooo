@@ -338,12 +338,27 @@ export default function Home({
             </View>
           </View>
         }
+        removeClippedSubviews
+        initialNumToRender={8}
+        maxToRenderPerBatch={8}
+        windowSize={7}
         renderItem={({ item: t2, index }) => {
           const c = catInfo(t2.category);
           const isSel = selected.includes(t2.id);
+          // La animación de entrada se aplica SOLO a las filas visibles al
+          // abrir (las 8 primeras). Antes se aplicaba a todas, y como las
+          // posteriores llevaban el retardo máximo (400 ms), al desplazarse
+          // cada fila nueva aparecía en blanco durante ese tiempo antes de
+          // dibujarse — se veía como tirones y la lista se sentía pesada.
+          // Las filas de más abajo ya no "entran" animadas: simplemente
+          // están ahí cuando llegas a ellas, que es lo esperable al
+          // desplazar.
+          const Row = index < 8 ? Animated.View : View;
+          const rowProps =
+            index < 8 ? { entering: FadeInDown.delay(index * 50).duration(280) } : {};
           return (
             <View className="px-5">
-              <Animated.View entering={FadeInDown.delay(Math.min(index, 8) * 50).duration(280)}>
+              <Row {...rowProps}>
                 <PressableScale
                   onPress={() => (selectMode ? toggleSelected(t2.id) : onOpenDetail(t2.id))}
                   className={`flex-row items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl p-3 border mb-2.5 ${
@@ -384,7 +399,7 @@ export default function Home({
                     {fmt(t2.amount)}
                   </Text>
                 </PressableScale>
-              </Animated.View>
+              </Row>
             </View>
           );
         }}
