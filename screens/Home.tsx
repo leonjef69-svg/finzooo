@@ -57,7 +57,7 @@ export default function Home({
   onOpenDetail: (id: number) => void;
   onBulkDelete: (ids: number[]) => void;
 }) {
-  const { fmt, t, monthNames, setBudgetForCurrentMonth, carryoverFrom, resetCarryover, restoreCarryover } =
+  const { fmt, t, monthNames, setBudgetForCurrentMonth, carryoverActive, resetCarryover, restoreCarryover } =
     useAppData();
   const [confirmResetCarryover, setConfirmResetCarryover] = useState(false);
   const [confirmRestoreCarryover, setConfirmRestoreCarryover] = useState(false);
@@ -276,15 +276,18 @@ export default function Home({
                     {fmt(prevBalance)}
                   </Text>
                   {/* Un solo botón con dos caras, según el estado:
-                      - Si el arrastre está acotado (ya se puso en cero),
-                        ofrece DESHACER. Es imprescindible que aparezca aquí:
-                        al quedar el saldo en 0 no habría ningún otro sitio
+                      - Si el corte está afectando a ESTE mes, ofrece
+                        DESHACER. Es imprescindible que aparezca aquí: al
+                        quedar el saldo en 0 no habría ningún otro sitio
                         desde donde volver atrás, y la acción quedaría siendo
                         irreversible desde la app.
                       - Si no, y hay algo que poner en cero, ofrece hacerlo.
+                        (En un mes anterior al corte se ve el historial real,
+                        así que ahí lo que corresponde es poner en cero, no
+                        restaurar.)
                       - Si el saldo ya es 0 por sí solo, no se muestra nada:
                         el botón no haría nada y solo estorbaría. */}
-                  {carryoverFrom ? (
+                  {carryoverActive ? (
                     <TouchableOpacity
                       onPress={() => setConfirmRestoreCarryover(true)}
                       hitSlop={10}

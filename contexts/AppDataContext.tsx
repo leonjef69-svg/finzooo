@@ -65,6 +65,11 @@ type AppDataContextValue = {
   // Mes desde el que cuenta el Saldo anterior ("AAAA-MM"); vacío = desde
   // siempre. resetCarryover() lo fija en el mes que se está viendo.
   carryoverFrom: string;
+  // ¿El corte está afectando AL MES QUE SE ESTÁ VIENDO ahora mismo? Es
+  // false en los meses anteriores al corte (ahí se ve el historial real),
+  // así que la pantalla usa esto —no carryoverFrom— para decidir si
+  // ofrecer "poner en cero" o "restaurar".
+  carryoverActive: boolean;
   resetCarryover: () => void;
   restoreCarryover: () => void;
   autoSavings: number;
@@ -460,18 +465,27 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // normal) significa "desde siempre": como toda cadena es >= "", las
   // comparaciones de abajo dejan pasar todo el historial sin necesitar
   // ningún caso especial.
+  // El "empezar de cero" solo rige del mes en que se declaró EN ADELANTE.
+  //
+  // Si estás mirando un mes ANTERIOR a ese corte, se cuenta todo su
+  // historial real, tal como estaba en su momento: ese mes ya estaba
+  // cerrado cuando se pulsó el botón, y poner en cero de aquí en adelante
+  // no debería reescribir meses que ya pasaron.
+  const carryoverActive = carryoverFrom !== "" && mk >= carryoverFrom;
+  const carryoverStart = carryoverActive ? carryoverFrom : "";
+
   const prevBalance = useMemo(() => {
     let carry = 0;
     for (const [monthK, amount] of Object.entries(budgets)) {
-      if (monthK < mk && monthK >= carryoverFrom) carry += amount || 0;
+      if (monthK < mk && monthK >= carryoverStart) carry += amount || 0;
     }
     for (const tx of transactions) {
       const txMonth = tx.date.slice(0, 7);
-      if (txMonth >= mk || txMonth < carryoverFrom) continue;
+      if (txMonth >= mk || txMonth < carryoverStart) continue;
       carry += tx.type === "income" ? tx.amount : -tx.amount;
     }
     return carry;
-  }, [transactions, budgets, mk, carryoverFrom]);
+  }, [transactions, budgets, mk, carryoverStart]);
 
   const autoSavings = budget + income - spent;
   const monthLabel = `${monthNames[month.m]} ${month.y}`;
@@ -693,6 +707,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         income,
         prevBalance,
         carryoverFrom,
+        carryoverActive,
         resetCarryover,
         restoreCarryover,
         autoSavings,
