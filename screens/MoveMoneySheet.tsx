@@ -32,7 +32,8 @@ export default function MoveMoneySheet({
   const { colorScheme } = useColorScheme();
 
   // Igual que en AddSheet: el hueco del teclado lo entrega Reanimated.
-  const { animatedPaddingStyle, keyboardVisible } = useKeyboardAnimatedPadding();
+  const { animatedPaddingStyle, keyboardVisible, onFieldFocus, onFieldBlur } =
+    useKeyboardAnimatedPadding();
 
   // Igual que en AddSheet: se cierra el teclado a propósito al salir de
   // esta pantalla, para que la siguiente hoja no herede un estado "sigue
@@ -79,6 +80,8 @@ export default function MoveMoneySheet({
             keyboardType="decimal-pad"
             value={amount}
             onChangeText={(v) => setAmount(sanitizeAmountInput(v))}
+            onFocus={() => onFieldFocus("amount")}
+            onBlur={() => onFieldBlur("amount")}
             placeholder="0.00"
             placeholderTextColor="#94a3b8"
             className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 text-center w-40"

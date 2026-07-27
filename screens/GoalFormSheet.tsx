@@ -30,7 +30,11 @@ export default function GoalFormSheet({
   const { colorScheme } = useColorScheme();
 
   // El hueco del teclado lo entrega Reanimated (ver utils/keyboard.ts).
-  const { animatedPaddingStyle, keyboardVisible } = useKeyboardAnimatedPadding();
+  // onFieldFocus/onFieldBlur hay que llamarlos desde cada campo de texto
+  // (fuera de Expo Go no hacen nada; dentro de Expo Go son los que de
+  // verdad deciden si se ve el panel de Guardar — ver utils/keyboard.ts).
+  const { animatedPaddingStyle, keyboardVisible, onFieldFocus, onFieldBlur } =
+    useKeyboardAnimatedPadding();
 
   // Al cerrar sin avisarle al teclado, el sistema puede quedarse creyendo
   // "sigue abierto" y la SIGUIENTE hoja que se abra hereda ese estado
@@ -74,6 +78,8 @@ export default function GoalFormSheet({
             <TextInput
               value={name}
               onChangeText={setName}
+              onFocus={() => onFieldFocus("name")}
+              onBlur={() => onFieldBlur("name")}
               placeholder={t("goalForm.namePlaceholder")}
               placeholderTextColor="#94a3b8"
               className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800 px-4 py-3.5 text-sm font-semibold text-slate-900 dark:text-slate-100"
@@ -87,6 +93,8 @@ export default function GoalFormSheet({
                 keyboardType="decimal-pad"
                 value={target}
                 onChangeText={(v) => setTarget(sanitizeAmountInput(v))}
+                onFocus={() => onFieldFocus("target")}
+                onBlur={() => onFieldBlur("target")}
                 placeholder="0.00"
                 placeholderTextColor="#94a3b8"
                 className="flex-1 text-lg font-extrabold text-slate-900 dark:text-slate-100"

@@ -8,7 +8,7 @@ export default function ChooseTransactionTypeRoute() {
   return (
     <AddChooser
       onClose={safeBack}
-      onPick={(type) => router.replace(`/transaction/new?type=${type}`)}
+      onPick={(type) => router.push(`/transaction/new?type=${type}`)}
     />
   );
 }
