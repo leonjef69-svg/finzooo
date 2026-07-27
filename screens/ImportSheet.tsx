@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import { FileUp, CheckCircle2, AlertTriangle, Copy, X, Landmark } from "lucide-react-native";
+import { extractPdfText } from "@/utils/pdfExtract";
 import { useColorScheme } from "nativewind";
 import { useAppData } from "@/contexts/AppDataContext";
 import { nextId } from "@/utils/id";
@@ -48,6 +49,7 @@ export default function ImportSheet({ onClose }: { onClose: () => void }) {
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [errorCount, setErrorCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [loadingPdf, setLoadingPdf] = useState(false);
   const [reviewing, setReviewing] = useState(false);
   const [done, setDone] = useState(false);
   const [importedTotal, setImportedTotal] = useState(0);
@@ -60,7 +62,13 @@ export default function ImportSheet({ onClose }: { onClose: () => void }) {
 
   async function pickFile() {
     const result = await DocumentPicker.getDocumentAsync({
-      type: ["text/csv", "text/comma-separated-values", "text/plain", "application/vnd.ms-excel"],
+      type: [
+        "text/csv",
+        "text/comma-separated-values",
+        "text/plain",
+        "application/vnd.ms-excel",
+        "application/pdf",
+      ],
       copyToCacheDirectory: true,
     });
     if (result.canceled || !result.assets[0]) return;
@@ -68,20 +76,37 @@ export default function ImportSheet({ onClose }: { onClose: () => void }) {
     setLoading(true);
     setDone(false);
     const asset = result.assets[0];
+    const isPdf = asset.name.toLowerCase().endsWith(".pdf") ||
+      asset.mimeType === "application/pdf";
     let file: File | null = null;
+    let readAsPdf = false;
     try {
       file = new File(asset.uri);
-      const text = await file.text();
+      readAsPdf = isPdf;
+
+      let text: string;
+      if (isPdf) {
+        setLoadingPdf(true);
+        const arrayBuffer = await file.arrayBuffer();
+        text = await extractPdfText(new Uint8Array(arrayBuffer));
+        setLoadingPdf(false);
+        if (!text.trim()) {
+          showToastAndClose(t("importSheet.pdfError"));
+          return;
+        }
+      } else {
+        text = await file.text();
+      }
 
       const detectedBank = guessAccount(asset.name, text.slice(0, 400));
       const parsed = parseStatement(text, detectedBank);
 
       if (!parsed.ok) {
-        showParseError(parsed.reason);
+        showToastAndClose(isPdf ? t("importSheet.pdfError") : t(parsed.reason === "empty" ? "importSheet.emptyFile" : "importSheet.missingColumns"));
         return;
       }
       if (parsed.rows.length === 0) {
-        showToastAndClose(t("importSheet.emptyFile"));
+        showToastAndClose(isPdf ? t("importSheet.pdfError") : t("importSheet.emptyFile"));
         return;
       }
 
@@ -118,7 +143,7 @@ export default function ImportSheet({ onClose }: { onClose: () => void }) {
       setCandidates(built);
       setErrorCount(parsed.errorCount);
     } catch {
-      showToastAndClose(t("importSheet.readError"));
+      showToastAndClose(readAsPdf ? t("importSheet.pdfError") : t("importSheet.readError"));
     } finally {
       // Seguridad/privacidad: el archivo del banco se borra del celular
       // apenas terminamos de leerlo. No lo guardamos más de lo necesario.
@@ -129,11 +154,8 @@ export default function ImportSheet({ onClose }: { onClose: () => void }) {
         // que el sistema limpia solo.
       }
       setLoading(false);
+      setLoadingPdf(false);
     }
-  }
-
-  function showParseError(reason: "empty" | "noTable") {
-    showToastAndClose(reason === "empty" ? t("importSheet.emptyFile") : t("importSheet.missingColumns"));
   }
 
   function showToastAndClose(msg: string) {
@@ -238,7 +260,9 @@ export default function ImportSheet({ onClose }: { onClose: () => void }) {
               {loading ? (
                 <>
                   <ActivityIndicator color="#059669" />
-                  <Text className="text-xs text-slate-500 dark:text-slate-300 mt-2">{t("importSheet.analyzing")}</Text>
+                  <Text className="text-xs text-slate-500 dark:text-slate-300 mt-2">
+                    {loadingPdf ? t("importSheet.analyzingPdf") : t("importSheet.analyzing")}
+                  </Text>
                 </>
               ) : (
                 <>
@@ -246,7 +270,7 @@ export default function ImportSheet({ onClose }: { onClose: () => void }) {
                   <Text className="text-sm font-bold text-slate-600 dark:text-slate-200 mt-2">
                     {t("importSheet.pickFile")}
                   </Text>
-                  <Text className="text-[11px] text-slate-400 dark:text-slate-300 mt-1">CSV</Text>
+                  <Text className="text-[11px] text-slate-400 dark:text-slate-300 mt-1">CSV · PDF</Text>
                 </>
               )}
             </TouchableOpacity>
