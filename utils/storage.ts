@@ -10,6 +10,9 @@ export const STORAGE_KEYS = {
   isPremium: "finzo:isPremium",
   themeMode: "finzo:themeMode",
   merchantLearned: "finzo:merchantLearned",
+  // Mes desde el cual se empieza a contar el "Saldo anterior" (formato
+  // "AAAA-MM"). Vacío = se cuenta todo el historial, que es lo normal.
+  carryoverFrom: "finzo:carryoverFrom",
 } as const;
 
 // Borra todos los datos de la cuenta de golpe (operación atómica y
@@ -29,6 +32,7 @@ export async function clearAccountData(): Promise<void> {
       STORAGE_KEYS.goals,
       STORAGE_KEYS.isPremium,
       STORAGE_KEYS.merchantLearned,
+      STORAGE_KEYS.carryoverFrom,
     ]);
   } catch {
     // Si falla el borrado, los saveJSON individuales de abajo sirven de

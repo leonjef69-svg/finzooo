@@ -62,6 +62,10 @@ type AppDataContextValue = {
   spent: number;
   income: number;
   prevBalance: number;
+  // Mes desde el que cuenta el Saldo anterior ("AAAA-MM"); vacío = desde
+  // siempre. resetCarryover() lo fija en el mes que se está viendo.
+  carryoverFrom: string;
+  resetCarryover: () => void;
   autoSavings: number;
   monthLabel: string;
   setBudgetForCurrentMonth: (amount: number) => void;
@@ -120,6 +124,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Lo que la persona le enseñó al clasificador de importaciones:
   // { "primax": "transporte", ... }. Ver utils/classifier.ts.
   const [merchantLearned, setMerchantLearned] = useState<Record<string, string>>({});
+  // Mes desde el que se cuenta el "Saldo anterior" ("AAAA-MM"). Vacío =
+  // desde siempre. Lo cambia el botón de "empezar de cero" de Inicio.
+  const [carryoverFrom, setCarryoverFrom] = useState("");
   const [celebrateGoal, setCelebrateGoal] = useState<string | null>(null);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -183,6 +190,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     protectExistingIds(cloud.transactions, cloud.goals);
     setIsPremium(cloud.isPremium);
     setMerchantLearned(cloud.merchantLearned ?? {});
+    setCarryoverFrom(cloud.carryoverFrom ?? "");
     setHasOnboarded(true);
     saveJSON(STORAGE_KEYS.profile, {
       userName: cloud.userName,
@@ -198,19 +206,28 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     saveJSON(STORAGE_KEYS.goals, cloud.goals);
     saveJSON(STORAGE_KEYS.isPremium, cloud.isPremium);
     saveJSON(STORAGE_KEYS.merchantLearned, cloud.merchantLearned ?? {});
+    saveJSON(STORAGE_KEYS.carryoverFrom, cloud.carryoverFrom ?? "");
     return true;
   }
 
   async function reloadPersistedData() {
-    const [savedBudgets, savedCategoryBudgets, savedTransactions, savedGoals, savedIsPremium, savedLearned] =
-      await Promise.all([
-        loadJSON<Record<string, number>>(STORAGE_KEYS.budgets, {}),
-        loadJSON<Record<string, number>>(STORAGE_KEYS.categoryBudgets, {}),
-        loadJSON<Transaction[]>(STORAGE_KEYS.transactions, seedTransactions),
-        loadJSON<Goal[]>(STORAGE_KEYS.goals, seedGoals),
-        loadJSON<boolean>(STORAGE_KEYS.isPremium, false),
-        loadJSON<Record<string, string>>(STORAGE_KEYS.merchantLearned, {}),
-      ]);
+    const [
+      savedBudgets,
+      savedCategoryBudgets,
+      savedTransactions,
+      savedGoals,
+      savedIsPremium,
+      savedLearned,
+      savedCarryoverFrom,
+    ] = await Promise.all([
+      loadJSON<Record<string, number>>(STORAGE_KEYS.budgets, {}),
+      loadJSON<Record<string, number>>(STORAGE_KEYS.categoryBudgets, {}),
+      loadJSON<Transaction[]>(STORAGE_KEYS.transactions, seedTransactions),
+      loadJSON<Goal[]>(STORAGE_KEYS.goals, seedGoals),
+      loadJSON<boolean>(STORAGE_KEYS.isPremium, false),
+      loadJSON<Record<string, string>>(STORAGE_KEYS.merchantLearned, {}),
+      loadJSON<string>(STORAGE_KEYS.carryoverFrom, ""),
+    ]);
     setBudgets(savedBudgets);
     setCategoryBudgets(savedCategoryBudgets);
     setTransactions(savedTransactions);
@@ -218,6 +235,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     protectExistingIds(savedTransactions, savedGoals);
     setIsPremium(savedIsPremium);
     setMerchantLearned(savedLearned);
+    setCarryoverFrom(savedCarryoverFrom);
   }
 
   // Cierra la sesión de verdad (Firebase) y limpia los datos de este
@@ -242,6 +260,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         goals,
         isPremium,
         merchantLearned,
+        carryoverFrom,
       });
     }
     await signOut(auth);
@@ -262,6 +281,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setGoals([]);
     setIsPremium(false);
     setMerchantLearned({});
+    setCarryoverFrom("");
   }
 
   // Antes de cambiar la contraseña o borrar la cuenta, Firebase exige
@@ -301,6 +321,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setGoals([]);
     setIsPremium(false);
     setMerchantLearned({});
+    setCarryoverFrom("");
   }
 
   useEffect(() => {
@@ -345,6 +366,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (ready) saveJSON(STORAGE_KEYS.merchantLearned, merchantLearned);
   }, [merchantLearned, ready]);
+  useEffect(() => {
+    if (ready) saveJSON(STORAGE_KEYS.carryoverFrom, carryoverFrom);
+  }, [carryoverFrom, ready]);
 
   // Además de guardar en este celular, si hay una cuenta con sesión
   // iniciada y correo verificado, también sube los datos a la nube.
@@ -372,6 +396,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         goals,
         isPremium,
         merchantLearned,
+        carryoverFrom,
       });
     }, 1500);
     return () => clearTimeout(timer);
@@ -389,6 +414,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     goals,
     isPremium,
     merchantLearned,
+    carryoverFrom,
   ]);
 
   function showToast(msg: string) {
@@ -429,17 +455,22 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // cada mes con datos. Con varios meses de historial eso se multiplicaba
   // rápido, y este cálculo se rehace cada vez que cambia un movimiento o
   // se cambia de mes. Ahora es una sola pasada, con el mismo resultado.
+  // carryoverFrom acota desde qué mes se empieza a contar. Vacío (lo
+  // normal) significa "desde siempre": como toda cadena es >= "", las
+  // comparaciones de abajo dejan pasar todo el historial sin necesitar
+  // ningún caso especial.
   const prevBalance = useMemo(() => {
     let carry = 0;
     for (const [monthK, amount] of Object.entries(budgets)) {
-      if (monthK < mk) carry += amount || 0;
+      if (monthK < mk && monthK >= carryoverFrom) carry += amount || 0;
     }
     for (const tx of transactions) {
-      if (tx.date.slice(0, 7) >= mk) continue;
+      const txMonth = tx.date.slice(0, 7);
+      if (txMonth >= mk || txMonth < carryoverFrom) continue;
       carry += tx.type === "income" ? tx.amount : -tx.amount;
     }
     return carry;
-  }, [transactions, budgets, mk]);
+  }, [transactions, budgets, mk, carryoverFrom]);
 
   const autoSavings = budget + income - spent;
   const monthLabel = `${monthNames[month.m]} ${month.y}`;
@@ -505,6 +536,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     colorScheme.set(mode);
     saveJSON(STORAGE_KEYS.themeMode, mode);
     showToast(t("toast.themeUpdated"));
+  }
+
+  // "Empezar de cero" desde el mes que se está viendo: el Saldo anterior
+  // pasa a contar solo desde aquí, así que queda en 0 para este mes.
+  //
+  // No borra NADA: los movimientos, presupuestos y metas de los meses
+  // anteriores siguen intactos y se pueden seguir consultando en el
+  // Historial. Lo único que cambia es desde dónde arranca el arrastre.
+  function resetCarryover() {
+    setCarryoverFrom(mk);
+    showToast(t("toast.carryoverReset"));
   }
 
   function setBudgetForCurrentMonth(amount: number) {
@@ -637,6 +679,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         spent,
         income,
         prevBalance,
+        carryoverFrom,
+        resetCarryover,
         autoSavings,
         monthLabel,
         setBudgetForCurrentMonth,

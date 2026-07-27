@@ -35,6 +35,7 @@ export default function Premium({
     t("premium.freeHistory"),
     t("premium.freeReports"),
     t("premium.freeBudget"),
+    t("premium.freeCarryover"),
     t("premium.freeSearch"),
     t("premium.freeTheme"),
     t("premium.freeSync"),

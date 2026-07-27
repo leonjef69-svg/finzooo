@@ -10,6 +10,7 @@ import {
   ChevronRight,
   CheckCircle2,
   Circle,
+  Eraser,
   Eye,
   EyeOff,
   ListChecks,
@@ -17,6 +18,7 @@ import {
   Trash2,
   X,
 } from "lucide-react-native";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import BudgetRing from "@/components/BudgetRing";
 import IconBadge from "@/components/IconBadge";
 import PressableScale from "@/components/PressableScale";
@@ -54,7 +56,8 @@ export default function Home({
   onOpenDetail: (id: number) => void;
   onBulkDelete: (ids: number[]) => void;
 }) {
-  const { fmt, t, monthNames, setBudgetForCurrentMonth } = useAppData();
+  const { fmt, t, monthNames, setBudgetForCurrentMonth, resetCarryover } = useAppData();
+  const [confirmResetCarryover, setConfirmResetCarryover] = useState(false);
   const available = budget + prevBalance + income - spent;
   const pct = budget > 0 ? (spent / budget) * 100 : 0;
   const mk = monthKey(month.y, month.m);
@@ -269,6 +272,18 @@ export default function Home({
                   >
                     {fmt(prevBalance)}
                   </Text>
+                  {/* Poner el saldo anterior en cero desde este mes. Solo
+                      aparece si hay algo que poner en cero — con el saldo ya
+                      en 0 el botón no haría nada y solo estorbaría. */}
+                  {prevBalance !== 0 && (
+                    <TouchableOpacity
+                      onPress={() => setConfirmResetCarryover(true)}
+                      hitSlop={10}
+                      className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-slate-200/70 dark:bg-slate-700 items-center justify-center"
+                    >
+                      <Eraser size={14} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+                    </TouchableOpacity>
+                  )}
                 </PressableScale>
               </Animated.View>
               <Animated.View entering={FadeInDown.delay(2 * 70).duration(300)} style={{ width: "47%" }}>
@@ -412,6 +427,19 @@ export default function Home({
         }
       />
 
+      <ConfirmDialog
+        visible={confirmResetCarryover}
+        title={t("home.resetCarryoverTitle")}
+        message={t("home.resetCarryoverMessage")}
+        confirmLabel={t("home.resetCarryoverConfirm")}
+        cancelLabel={t("common.cancel")}
+        danger={false}
+        onCancel={() => setConfirmResetCarryover(false)}
+        onConfirm={() => {
+          setConfirmResetCarryover(false);
+          resetCarryover();
+        }}
+      />
     </View>
   );
 }
