@@ -207,24 +207,69 @@ export default function AddSheet({
     setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 120);
   }
 
-  // Bug encontrado con la app real (development build): si se guarda o se
-  // cancela con el teclado todavía abierto (por ejemplo, recién escrito el
-  // monto), la siguiente vez que se abre esta pantalla puede alcanzar a
-  // leer un instante el teclado "todavía abierto" de la pantalla anterior
-  // — useAnimatedKeyboard reporta una altura vieja antes de corregirse, y
-  // los campos de abajo (Descripción, Notas) quedan apretados fuera de
-  // vista. La corrección: cerrar el teclado en el mismo instante en que se
-  // toca Cancelar o Guardar (no esperar a que la pantalla se desmonte),
-  // para que la siguiente instancia nunca llegue a heredar ese momento de
-  // transición.
-  function handleClose() {
+  // Causa real del bug de "la pantalla vuelve cortada", confirmada MIDIENDO
+  // en el celular (no deducida):
+  //
+  //   estado=ABIERTO  alto=341  ignorar=1  →  padding=0
+  //
+  // O sea: el hueco NO lo ponía esta pantalla — el padding calculado era 0.
+  // Lo ponía Android. El sistema seguía creyendo que el teclado estaba
+  // abierto y le tenía encogida la ventana a la app justo esos 341 puntos
+  // (verificado midiendo los píxeles de la captura: coincide exacto). Por
+  // eso ningún ajuste dentro de React lo arreglaba: el límite estaba fuera
+  // de nuestra jerarquía de vistas, a nivel del sistema operativo.
+  //
+  // Por qué se quedaba así: al tocar Guardar/Cancelar, el campo de texto
+  // TIENE el foco. Se pide cerrar el teclado y, en el mismo instante, la
+  // pantalla se destruye. Android se queda a medio esconder el teclado, con
+  // la vista enfocada ya eliminada, y el espacio reservado nunca se libera.
+  //
+  // La corrección: pedir el cierre y ESPERAR a que Android confirme que
+  // terminó (keyboardDidHide) antes de navegar. Con un tope de 400 ms por
+  // si ese aviso no llegara, para no dejar la pantalla trabada nunca.
+  // Cuando el teclado ya está cerrado no hay ninguna espera: se navega al
+  // instante, como siempre.
+  const pendingExit = useRef<{
+    sub: { remove: () => void };
+    timer: ReturnType<typeof setTimeout>;
+  } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (pendingExit.current) {
+        pendingExit.current.sub.remove();
+        clearTimeout(pendingExit.current.timer);
+        pendingExit.current = null;
+      }
+    };
+  }, []);
+
+  function exitAfterKeyboardHidden(action: () => void) {
+    if (!Keyboard.isVisible()) {
+      action();
+      return;
+    }
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      pendingExit.current?.sub.remove();
+      if (pendingExit.current) clearTimeout(pendingExit.current.timer);
+      pendingExit.current = null;
+      action();
+    };
+    const sub = Keyboard.addListener("keyboardDidHide", finish);
+    const timer = setTimeout(finish, 400);
+    pendingExit.current = { sub, timer };
     Keyboard.dismiss();
-    onClose();
+  }
+
+  function handleClose() {
+    exitAfterKeyboardHidden(onClose);
   }
 
   function handleSave(t: Transaction) {
-    Keyboard.dismiss();
-    onSave(t);
+    exitAfterKeyboardHidden(() => onSave(t));
   }
 
   return (
