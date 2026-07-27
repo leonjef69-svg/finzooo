@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Print from "expo-print";
@@ -37,14 +37,22 @@ export default function ExportPdfSheet({ onClose }: { onClose: () => void }) {
   const viewedMk = monthKey(month.y, month.m);
   const [selectedMk, setSelectedMk] = useState(viewedMk);
 
-  // Solo se ofrecen meses que tengan algo que exportar, del más reciente al
-  // más antiguo. Se incluye igualmente el mes que se está viendo aunque
-  // esté vacío: si no, la selección por defecto no existiría en la lista.
+  // Solo meses que tengan al menos un movimiento —gasto o ingreso, da igual
+  // el monto—, del más reciente al más antiguo. Un mes vacío no se ofrece:
+  // elegirlo solo llevaría a un "0 movimientos" y a un botón que no hace
+  // nada. Ojo: NO se filtra por el tipo elegido abajo (Gastos/Ingresos), o
+  // los meses irían apareciendo y desapareciendo al cambiar ese selector.
   const availableMonths = useMemo(() => {
     const months = new Set(transactions.map((tx) => tx.date.slice(0, 7)));
-    months.add(viewedMk);
     return Array.from(months).sort().reverse();
-  }, [transactions, viewedMk]);
+  }, [transactions]);
+
+  // El mes que se venía viendo puede no estar en la lista (si está vacío),
+  // así que en ese caso se cae al más reciente que sí tenga movimientos.
+  useEffect(() => {
+    if (availableMonths.length === 0) return;
+    if (!availableMonths.includes(selectedMk)) setSelectedMk(availableMonths[0]);
+  }, [availableMonths, selectedMk]);
 
   // "2026-08" → "Agosto 2026", en el idioma elegido. No se puede usar el
   // monthLabel del contexto porque ese siempre describe el mes que se está
@@ -224,32 +232,40 @@ export default function ExportPdfSheet({ onClose }: { onClose: () => void }) {
         <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
           {t("exportPdf.monthLabel")}
         </Text>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: 8, paddingRight: 8 }}
-          className="mb-4"
-        >
-          {availableMonths.map((key) => (
-            <TouchableOpacity
-              key={key}
-              onPress={() => setSelectedMk(key)}
-              className={`px-4 py-2.5 rounded-xl border ${
-                selectedMk === key
-                  ? "bg-emerald-600 border-emerald-600"
-                  : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-              }`}
-            >
-              <Text
-                className={`text-sm font-bold ${
-                  selectedMk === key ? "text-white" : "text-slate-600 dark:text-slate-200"
+        {availableMonths.length === 0 ? (
+          <View className="bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 mb-4">
+            <Text className="text-xs text-slate-500 dark:text-slate-300">
+              {t("exportPdf.noMonths")}
+            </Text>
+          </View>
+        ) : (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={{ gap: 8, paddingRight: 8 }}
+            className="mb-4"
+          >
+            {availableMonths.map((key) => (
+              <TouchableOpacity
+                key={key}
+                onPress={() => setSelectedMk(key)}
+                className={`px-4 py-2.5 rounded-xl border ${
+                  selectedMk === key
+                    ? "bg-emerald-600 border-emerald-600"
+                    : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                 }`}
               >
-                {labelForMonth(key)}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+                <Text
+                  className={`text-sm font-bold ${
+                    selectedMk === key ? "text-white" : "text-slate-600 dark:text-slate-200"
+                  }`}
+                >
+                  {labelForMonth(key)}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
 
         <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
           {t("exportPdf.formatLabel")}
