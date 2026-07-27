@@ -115,12 +115,23 @@ export default function AddSheet({
     return { paddingBottom: open ? keyboard.height.value : 0 };
   });
 
-  // En cuanto el teclado empieza a abrirse de verdad, el valor deja de ser
+  // En cuanto el teclado empieza a abrirse DE VERDAD, el valor deja de ser
   // heredado y se puede volver a confiar en él.
+  //
+  // Dos detalles que importan y que en un primer intento estaban mal:
+  //
+  //  - Se ignora la PRIMERA lectura (prev === null). Esa primera lectura es
+  //    exactamente el valor heredado que queremos descartar; si se actuara
+  //    sobre ella, la protección se anularía a sí misma en el mismo instante
+  //    de abrir la pantalla (que es justo lo que pasaba).
+  //  - Solo cuenta OPENING, no OPEN. "Abierto" es el estado en el que se
+  //    queda grabado el valor viejo; "abriéndose" solo puede venir de una
+  //    transición real que ocurrió con esta pantalla ya montada.
   useAnimatedReaction(
     () => keyboard.state.value,
-    (state) => {
-      if (state === KeyboardState.OPENING || state === KeyboardState.OPEN) {
+    (state, prev) => {
+      if (prev === null) return;
+      if (state === KeyboardState.OPENING) {
         ignoreStaleKeyboard.value = 0;
       }
     }
