@@ -283,16 +283,13 @@ export default function Home({
                   >
                     {fmt(prevBalance)}
                   </Text>
-                  {/* Un solo botón con dos caras, según el estado:
-                      - Si el corte está afectando a ESTE mes, ofrece
-                        DESHACER. Es imprescindible que aparezca aquí: al
-                        quedar el saldo en 0 no habría ningún otro sitio
-                        desde donde volver atrás, y la acción quedaría siendo
-                        irreversible desde la app.
+                  {/* Un solo botón con dos caras, y siempre referido AL MES
+                      QUE SE ESTÁ VIENDO (cada mes es independiente):
+                      - Si este mes está puesto en cero, ofrece DESHACER. Es
+                        imprescindible que aparezca aquí: al quedar el saldo
+                        en 0 no habría ningún otro sitio desde donde volver
+                        atrás, y la acción sería irreversible desde la app.
                       - Si no, y hay algo que poner en cero, ofrece hacerlo.
-                        (En un mes anterior al corte se ve el historial real,
-                        así que ahí lo que corresponde es poner en cero, no
-                        restaurar.)
                       - Si el saldo ya es 0 por sí solo, no se muestra nada:
                         el botón no haría nada y solo estorbaría. */}
                   {carryoverActive ? (
@@ -476,8 +473,8 @@ export default function Home({
 
       <ConfirmDialog
         visible={confirmRestoreCarryover}
-        title={t("home.restoreCarryoverTitle")}
-        message={t("home.restoreCarryoverMessage")}
+        title={t("home.restoreCarryoverTitle", { month: monthLabel })}
+        message={t("home.restoreCarryoverMessage", { month: monthLabel })}
         confirmLabel={t("home.restoreCarryoverConfirm")}
         cancelLabel={t("common.cancel")}
         danger={false}

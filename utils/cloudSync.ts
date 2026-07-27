@@ -17,10 +17,10 @@ export type CloudData = {
   // esta categoría". Opcional para no romper cuentas viejas que no lo
   // tienen guardado todavía.
   merchantLearned?: Record<string, string>;
-  // Mes desde el cual cuenta el "Saldo anterior" (formato "AAAA-MM").
-  // Vacío o ausente = se cuenta todo el historial. Opcional por lo mismo:
-  // las cuentas creadas antes de esta función no lo tienen guardado.
-  carryoverFrom?: string;
+  // Meses cuyo "Saldo anterior" se muestra en cero, cada uno por separado
+  // (claves "AAAA-MM"). Opcional: las cuentas creadas antes de esta
+  // función no lo tienen guardado.
+  carryoverCleared?: string[];
 };
 
 // Trae los datos guardados en la nube para esta cuenta (o "null" si esta
@@ -43,7 +43,7 @@ export async function loadCloudData(uid: string): Promise<CloudData | null> {
       goals: data.goals || [],
       isPremium: !!data.isPremium,
       merchantLearned: data.merchantLearned || {},
-      carryoverFrom: data.carryoverFrom || "",
+      carryoverCleared: data.carryoverCleared || [],
     };
   } catch {
     return null;

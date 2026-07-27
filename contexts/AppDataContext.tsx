@@ -63,13 +63,9 @@ type AppDataContextValue = {
   spent: number;
   income: number;
   prevBalance: number;
-  // Mes desde el que cuenta el Saldo anterior ("AAAA-MM"); vacío = desde
-  // siempre. resetCarryover() lo fija en el mes que se está viendo.
-  carryoverFrom: string;
-  // ¿El corte está afectando AL MES QUE SE ESTÁ VIENDO ahora mismo? Es
-  // false en los meses anteriores al corte (ahí se ve el historial real),
-  // así que la pantalla usa esto —no carryoverFrom— para decidir si
-  // ofrecer "poner en cero" o "restaurar".
+  // ¿El mes que se está viendo tiene su Saldo anterior puesto en cero? La
+  // pantalla lo usa para decidir si ofrecer "poner en cero" o "restaurar".
+  // Cada mes es independiente: esto es cierto o falso mes por mes.
   carryoverActive: boolean;
   resetCarryover: () => void;
   restoreCarryover: () => void;
@@ -131,9 +127,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Lo que la persona le enseñó al clasificador de importaciones:
   // { "primax": "transporte", ... }. Ver utils/classifier.ts.
   const [merchantLearned, setMerchantLearned] = useState<Record<string, string>>({});
-  // Mes desde el que se cuenta el "Saldo anterior" ("AAAA-MM"). Vacío =
-  // desde siempre. Lo cambia el botón de "empezar de cero" de Inicio.
-  const [carryoverFrom, setCarryoverFrom] = useState("");
+  // Meses cuyo "Saldo anterior" se muestra en cero ("AAAA-MM"), cada uno
+  // independiente del resto. Lo maneja el botón de Inicio.
+  const [carryoverCleared, setCarryoverCleared] = useState<string[]>([]);
   const [celebrateGoal, setCelebrateGoal] = useState<string | null>(null);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -156,7 +152,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     let text = dict[key] ?? translations.es[key] ?? key;
     if (vars) {
       for (const [k, v] of Object.entries(vars)) {
-        text = text.replace(`{${k}}`, String(v));
+        // replaceAll, no replace: con replace solo se sustituía la PRIMERA
+        // aparición, así que un texto que usara la misma variable dos veces
+        // mostraba un "{month}" crudo en la segunda. No había ningún texto
+        // así todavía, pero es una trampa fácil de pisar al traducir.
+        text = text.replaceAll(`{${k}}`, String(v));
       }
     }
     return text;
@@ -197,7 +197,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     protectExistingIds(cloud.transactions, cloud.goals);
     setIsPremium(cloud.isPremium);
     setMerchantLearned(cloud.merchantLearned ?? {});
-    setCarryoverFrom(cloud.carryoverFrom ?? "");
+    setCarryoverCleared(cloud.carryoverCleared ?? []);
     setHasOnboarded(true);
     saveJSON(STORAGE_KEYS.profile, {
       userName: cloud.userName,
@@ -213,7 +213,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     saveJSON(STORAGE_KEYS.goals, cloud.goals);
     saveJSON(STORAGE_KEYS.isPremium, cloud.isPremium);
     saveJSON(STORAGE_KEYS.merchantLearned, cloud.merchantLearned ?? {});
-    saveJSON(STORAGE_KEYS.carryoverFrom, cloud.carryoverFrom ?? "");
+    saveJSON(STORAGE_KEYS.carryoverCleared, cloud.carryoverCleared ?? []);
     return true;
   }
 
@@ -225,7 +225,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       savedGoals,
       savedIsPremium,
       savedLearned,
-      savedCarryoverFrom,
+      savedCarryoverCleared,
     ] = await Promise.all([
       loadJSON<Record<string, number>>(STORAGE_KEYS.budgets, {}),
       loadJSON<Record<string, number>>(STORAGE_KEYS.categoryBudgets, {}),
@@ -233,7 +233,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       loadJSON<Goal[]>(STORAGE_KEYS.goals, seedGoals),
       loadJSON<boolean>(STORAGE_KEYS.isPremium, false),
       loadJSON<Record<string, string>>(STORAGE_KEYS.merchantLearned, {}),
-      loadJSON<string>(STORAGE_KEYS.carryoverFrom, ""),
+      loadJSON<string[]>(STORAGE_KEYS.carryoverCleared, []),
     ]);
     setBudgets(savedBudgets);
     setCategoryBudgets(savedCategoryBudgets);
@@ -242,7 +242,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     protectExistingIds(savedTransactions, savedGoals);
     setIsPremium(savedIsPremium);
     setMerchantLearned(savedLearned);
-    setCarryoverFrom(savedCarryoverFrom);
+    setCarryoverCleared(savedCarryoverCleared);
   }
 
   // Cierra la sesión de verdad (Firebase) y limpia los datos de este
@@ -267,7 +267,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         goals,
         isPremium,
         merchantLearned,
-        carryoverFrom,
+        carryoverCleared,
       });
     }
     // También hay que salir del lado de Google. Si no, la próxima vez que
@@ -293,7 +293,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setGoals([]);
     setIsPremium(false);
     setMerchantLearned({});
-    setCarryoverFrom("");
+    setCarryoverCleared([]);
   }
 
   // Antes de cambiar la contraseña o borrar la cuenta, Firebase exige
@@ -333,7 +333,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setGoals([]);
     setIsPremium(false);
     setMerchantLearned({});
-    setCarryoverFrom("");
+    setCarryoverCleared([]);
   }
 
   useEffect(() => {
@@ -379,8 +379,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (ready) saveJSON(STORAGE_KEYS.merchantLearned, merchantLearned);
   }, [merchantLearned, ready]);
   useEffect(() => {
-    if (ready) saveJSON(STORAGE_KEYS.carryoverFrom, carryoverFrom);
-  }, [carryoverFrom, ready]);
+    if (ready) saveJSON(STORAGE_KEYS.carryoverCleared, carryoverCleared);
+  }, [carryoverCleared, ready]);
 
   // Además de guardar en este celular, si hay una cuenta con sesión
   // iniciada y correo verificado, también sube los datos a la nube.
@@ -408,7 +408,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         goals,
         isPremium,
         merchantLearned,
-        carryoverFrom,
+        carryoverCleared,
       });
     }, 1500);
     return () => clearTimeout(timer);
@@ -426,7 +426,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     goals,
     isPremium,
     merchantLearned,
-    carryoverFrom,
+    carryoverCleared,
   ]);
 
   function showToast(msg: string) {
@@ -467,31 +467,32 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // cada mes con datos. Con varios meses de historial eso se multiplicaba
   // rápido, y este cálculo se rehace cada vez que cambia un movimiento o
   // se cambia de mes. Ahora es una sola pasada, con el mismo resultado.
-  // carryoverFrom acota desde qué mes se empieza a contar. Vacío (lo
-  // normal) significa "desde siempre": como toda cadena es >= "", las
-  // comparaciones de abajo dejan pasar todo el historial sin necesitar
-  // ningún caso especial.
-  // El "empezar de cero" solo rige del mes en que se declaró EN ADELANTE.
   //
-  // Si estás mirando un mes ANTERIOR a ese corte, se cuenta todo su
-  // historial real, tal como estaba en su momento: ese mes ya estaba
-  // cerrado cuando se pulsó el botón, y poner en cero de aquí en adelante
-  // no debería reescribir meses que ya pasaron.
-  const carryoverActive = carryoverFrom !== "" && mk >= carryoverFrom;
-  const carryoverStart = carryoverActive ? carryoverFrom : "";
+  // Poner el Saldo anterior en cero es una decisión INDEPENDIENTE POR MES.
+  //
+  // Cada mes se calcula siempre desde el principio de tu historial, salvo
+  // que ese mes concreto esté en la lista de "puestos en cero". Ponerlo en
+  // cero en agosto no cambia nada en julio ni en septiembre: septiembre
+  // vuelve a sumar todo por su cuenta, incluido lo que se ocultó en
+  // agosto. Si también se quiere en cero, hay que hacerlo ahí.
+  //
+  // Es distinto a un "punto de corte" que se arrastra hacia adelante, que
+  // fue como estaba antes: con esto, borrar y restaurar afectan solo al
+  // mes en el que se pulsa el botón.
+  const carryoverActive = carryoverCleared.includes(mk);
 
   const prevBalance = useMemo(() => {
+    if (carryoverCleared.includes(mk)) return 0;
     let carry = 0;
     for (const [monthK, amount] of Object.entries(budgets)) {
-      if (monthK < mk && monthK >= carryoverStart) carry += amount || 0;
+      if (monthK < mk) carry += amount || 0;
     }
     for (const tx of transactions) {
-      const txMonth = tx.date.slice(0, 7);
-      if (txMonth >= mk || txMonth < carryoverStart) continue;
+      if (tx.date.slice(0, 7) >= mk) continue;
       carry += tx.type === "income" ? tx.amount : -tx.amount;
     }
     return carry;
-  }, [transactions, budgets, mk, carryoverStart]);
+  }, [transactions, budgets, mk, carryoverCleared]);
 
   const autoSavings = budget + income - spent;
   const monthLabel = `${monthNames[month.m]} ${month.y}`;
@@ -566,19 +567,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // anteriores siguen intactos y se pueden seguir consultando en el
   // Historial. Lo único que cambia es desde dónde arranca el arrastre.
   function resetCarryover() {
-    setCarryoverFrom(mk);
+    setCarryoverCleared((prev) => (prev.includes(mk) ? prev : [...prev, mk]));
     showToast(t("toast.carryoverReset"));
   }
 
-  // Deshace lo anterior: vuelve a contar el arrastre desde el principio.
+  // Deshace lo anterior, SOLO en el mes que se está viendo: ese mes vuelve
+  // a sumar su historial completo. Los demás meses puestos en cero siguen
+  // como estaban.
   //
   // Existe porque "empezar de cero" es fácil de tocar por curiosidad o por
   // error, y sin esto no habría forma de volver atrás: al quedar el saldo
   // en 0 el propio botón desaparecía, así que la acción era irreversible
   // desde la app. Como no se borró ningún dato, restaurar es solo dejar de
-  // acotar el cálculo — el saldo vuelve exactamente al valor que tenía.
+  // ocultarlo — el saldo vuelve exactamente al valor que tenía.
   function restoreCarryover() {
-    setCarryoverFrom("");
+    setCarryoverCleared((prev) => prev.filter((m) => m !== mk));
     showToast(t("toast.carryoverRestored"));
   }
 
@@ -712,7 +715,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         spent,
         income,
         prevBalance,
-        carryoverFrom,
         carryoverActive,
         resetCarryover,
         restoreCarryover,
