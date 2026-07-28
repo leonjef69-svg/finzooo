@@ -213,14 +213,18 @@ function cleanName(raw: string): string {
 
 /**
  * Toma las últimas palabras antes de una posición dada, que es donde va el
- * nombre en "Luis Vargas te yapeó S/ 30.00". Se camina hacia atrás para no
- * arrastrar el título de la notificación, que va pegado delante.
+ * nombre en "JEFFERSON GIOVANNI LEON CARLOS te envió un pago". Se camina
+ * hacia atrás para no arrastrar el título de la notificación, que va pegado
+ * delante ("Confirmación de Pago Yape!").
+ *
+ * El tope es de cuatro palabras porque así son los nombres completos en Perú:
+ * dos nombres y dos apellidos. Con tres se perdía el primer nombre.
  */
 function nameBefore(text: string): string {
   const words = text.replace(/\s+/g, " ").trim().split(" ");
   const picked: string[] = [];
 
-  for (let i = words.length - 1; i >= 0 && picked.length < 3; i--) {
+  for (let i = words.length - 1; i >= 0 && picked.length < 4; i--) {
     const clean = words[i].replace(/[.,;:!¡?¿]+$/, "");
     if (!looksLikeName(clean)) break;
     picked.unshift(clean);
