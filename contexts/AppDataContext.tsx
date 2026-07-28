@@ -476,8 +476,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Los valores más recientes, para que la recogida use los movimientos y
   // categorías de ahora sin tener que volver a montar el escuchador cada
   // vez que cambia algo.
+  //
+  // Se actualiza dentro de un useEffect y no directamente al dibujar porque
+  // este proyecto usa el compilador de React: si se escribiera al dibujar,
+  // el compilador podría saltarse ese paso y la recogida acabaría usando
+  // una lista de movimientos vieja (y registrando repetidos).
   const captureInputs = useRef({ transactions, merchantLearned, t });
-  captureInputs.current = { transactions, merchantLearned, t };
+  useEffect(() => {
+    captureInputs.current = { transactions, merchantLearned, t };
+  });
   // Evita que dos recogidas se pisen (abrir la app y volver al frente casi
   // a la vez): sin esto, las dos vaciarían el buzón y se duplicaría todo.
   const captureBusy = useRef(false);

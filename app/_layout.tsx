@@ -40,7 +40,9 @@ function AppLifecycleEffects() {
   // registrarlo cada vez que se cambia de pantalla.
   const pathname = usePathname();
   const pathnameRef = useRef(pathname);
-  pathnameRef.current = pathname;
+  useEffect(() => {
+    pathnameRef.current = pathname;
+  }, [pathname]);
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
