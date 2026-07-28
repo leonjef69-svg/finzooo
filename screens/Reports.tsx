@@ -130,30 +130,48 @@ export default function Reports({
   // al cambiar de mes con las flechas de Inicio el gráfico no se movía.
   // También cruza bien el cambio de año (ej. viendo Enero muestra
   // Nov, Dic del año anterior + Ene).
+  // Solo se muestran los meses en los que de verdad hubo gastos. Un mes en
+  // cero no aporta nada al gráfico: solo ocupa espacio y hace que las barras
+  // de los meses con datos se vean más chicas de lo que son.
   const barData = useMemo(() => {
-    return [2, 1, 0].map((back) => {
-      let m = month.m - back;
-      let y = month.y;
-      if (m < 0) {
-        m += 12;
-        y -= 1;
-      }
-      const key = monthKey(y, m);
-      const sp = transactions
-        .filter((t) => t.type === "expense" && t.date.startsWith(key))
-        .reduce((s, t) => s + t.amount, 0);
-      return { label: monthNames[m].slice(0, 3), value: sp };
-    });
+    return [2, 1, 0]
+      .map((back) => {
+        let m = month.m - back;
+        let y = month.y;
+        if (m < 0) {
+          m += 12;
+          y -= 1;
+        }
+        const key = monthKey(y, m);
+        const sp = transactions
+          .filter((t) => t.type === "expense" && t.date.startsWith(key))
+          .reduce((s, t) => s + t.amount, 0);
+        return { label: monthNames[m].slice(0, 3), value: sp };
+      })
+      .filter((b) => b.value > 0);
   }, [transactions, month.y, month.m, monthNames]);
 
-  const lineData = useMemo(() => {
+  // Gasto acumulado a lo largo del mes: cada punto es "cuánto llevabas
+  // gastado hasta ese día".
+  //
+  // Antes los días estaban fijos en [1,6,11,16,21,26,31], así que en febrero
+  // (28 días) o en los meses de 30 el último punto decía "31", un día que no
+  // existe. Ahora el último punto es siempre el último día real del mes.
+  const { lineValues, lineLabels } = useMemo(() => {
     const expenses = transactions.filter((t) => t.date.startsWith(mk) && t.type === "expense");
-    const lineDays = [1, 6, 11, 16, 21, 26, 31];
-    return lineDays.map((day) => {
+    const daysInMonth = new Date(month.y, month.m + 1, 0).getDate();
+
+    const days: number[] = [];
+    for (let d = 1; d <= daysInMonth; d += 5) days.push(d);
+    if (days[days.length - 1] !== daysInMonth) days.push(daysInMonth);
+
+    const values = days.map((day) => {
       const cutoff = `${mk}-${String(day).padStart(2, "0")}`;
       return expenses.filter((t) => t.date <= cutoff).reduce((s, t) => s + t.amount, 0);
     });
-  }, [transactions, mk]);
+
+    return { lineValues: values, lineLabels: days.map(String) };
+  }, [transactions, mk, month.y, month.m]);
 
   return (
     <ScrollView
@@ -288,17 +306,40 @@ export default function Reports({
         style={CARD_SHADOW}
       >
         <Text className="text-sm font-bold mb-2" style={{ color: primaryTextColor }}>{t("reports.byMonth")}</Text>
-        <BarChartSimple data={barData} fmt={fmt} />
+        {barData.length === 0 ? (
+          <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">
+            {t("reports.noMonthsWithSpending")}
+          </Text>
+        ) : (
+          <BarChartSimple data={barData} fmt={fmt} />
+        )}
       </View>
 
       <View
         className="mx-5 mt-4 mb-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-4"
         style={CARD_SHADOW}
       >
-        <Text className="text-sm font-bold mb-2" style={{ color: primaryTextColor }}>{t("reports.accumulated")}</Text>
-        <View className="items-center">
-          <LineChartSimple data={lineData} width={280} height={130} fmt={fmt} />
-        </View>
+        <Text className="text-sm font-bold" style={{ color: primaryTextColor }}>{t("reports.accumulated")}</Text>
+        {totalExpense === 0 ? (
+          <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">
+            {t("reports.noDataThisMonth")}
+          </Text>
+        ) : (
+          <>
+            <Text className="text-[11px] text-slate-400 dark:text-slate-400 mb-1">
+              {t("reports.accumulatedHint")}
+            </Text>
+            <View className="items-center">
+              <LineChartSimple
+                data={lineValues}
+                labels={lineLabels}
+                width={280}
+                height={130}
+                fmt={fmt}
+              />
+            </View>
+          </>
+        )}
       </View>
     </ScrollView>
   );
