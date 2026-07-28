@@ -1,0 +1,23 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <!--
+      Servicio que el sistema Android usa para entregarnos las notificaciones.
+
+      Sobre "exported=true": es lo que documenta Android para este tipo de
+      servicio, y hace falta para que Finzo aparezca en la lista de "Acceso a
+      notificaciones" de los ajustes del sistema. No abre ningún agujero: la
+      línea "android:permission" de abajo exige BIND_NOTIFICATION_LISTENER_SERVICE,
+      un permiso que SOLO tiene el sistema operativo y que ninguna otra app
+      puede pedir. Es decir, exportado pero con la puerta cerrada con llave.
+    -->
+    <service
+      android:name="com.finzo.notificationreader.FinzoNotificationListener"
+      android:exported="true"
+      android:label="Finzo"
+      android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
+      <intent-filter>
+        <action android:name="android.service.notification.NotificationListenerService" />
+      </intent-filter>
+    </service>
+  </application>
+</manifest>

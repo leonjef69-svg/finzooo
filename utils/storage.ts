@@ -14,6 +14,10 @@ export const STORAGE_KEYS = {
   // separado (lista de claves "AAAA-MM"). Poner uno en cero no afecta a
   // ningún otro mes.
   carryoverCleared: "finzo:carryoverCleared",
+  // Registro de las últimas notificaciones capturadas y qué se hizo con
+  // cada una. Solo sirve para la pantalla de diagnóstico de la captura
+  // automática; no se sube a la nube.
+  autoCaptureLog: "finzo:autoCaptureLog",
 } as const;
 
 // Borra todos los datos de la cuenta de golpe (operación atómica y
@@ -34,6 +38,7 @@ export async function clearAccountData(): Promise<void> {
       STORAGE_KEYS.isPremium,
       STORAGE_KEYS.merchantLearned,
       STORAGE_KEYS.carryoverCleared,
+      STORAGE_KEYS.autoCaptureLog,
     ]);
   } catch {
     // Si falla el borrado, los saveJSON individuales de abajo sirven de

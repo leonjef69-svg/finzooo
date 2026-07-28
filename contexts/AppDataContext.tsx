@@ -15,6 +15,7 @@ import {
   signOut,
   updatePassword,
 } from "@firebase/auth";
+import { AppState } from "react-native";
 import { colorScheme } from "nativewind";
 import { seedTransactions, seedGoals } from "@/constants/seed";
 import { currencySymbolFor } from "@/constants/currencies";
@@ -26,6 +27,8 @@ import { learnCategory } from "@/utils/classifier";
 import { auth } from "@/utils/firebase";
 import { signOutFromGoogle } from "@/utils/googleAuth";
 import { deleteCloudAccount, loadCloudData, saveCloudData } from "@/utils/cloudSync";
+import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
+import * as notificationReader from "@/modules/notification-reader";
 import type { Goal, Month, Profile, Transaction } from "@/types";
 
 export type ThemeMode = "light" | "dark" | "system";
@@ -85,6 +88,22 @@ type AppDataContextValue = {
   merchantLearned: Record<string, string>;
   learnMerchantCategory: (merchantText: string, category: string) => void;
 
+  // ---- Captura automática desde notificaciones (solo Android) ----
+  // ¿Existe siquiera en este celular? En iPhone y en versiones viejas de la
+  // app es false, y la pantalla de ajustes lo explica en vez de mostrar un
+  // interruptor que no haría nada.
+  autoCaptureSupported: boolean;
+  // ¿Android le dio a Finzo acceso a las notificaciones?
+  autoCapturePermission: boolean;
+  // Interruptor propio de Finzo, aparte del permiso de Android.
+  autoCaptureOn: boolean;
+  setAutoCaptureOn: (value: boolean) => void;
+  openAutoCaptureSettings: () => void;
+  refreshAutoCapture: () => void;
+  // Últimas notificaciones vistas y qué se hizo con cada una.
+  autoCaptureLog: CaptureLogEntry[];
+  clearAutoCaptureLog: () => void;
+
   goals: Goal[];
   addOrUpdateGoal: (g: Goal) => void;
   deleteGoal: (id: number) => void;
@@ -130,6 +149,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Meses cuyo "Saldo anterior" se muestra en cero ("AAAA-MM"), cada uno
   // independiente del resto. Lo maneja el botón de Inicio.
   const [carryoverCleared, setCarryoverCleared] = useState<string[]>([]);
+  // Captura automática desde notificaciones. El estado real vive en el
+  // módulo nativo (sobrevive a que la app se cierre); aquí solo tenemos un
+  // reflejo para pintar la pantalla de ajustes.
+  const [autoCaptureOn, setAutoCaptureOnState] = useState(false);
+  const [autoCapturePermission, setAutoCapturePermission] = useState(false);
+  const [autoCaptureLog, setAutoCaptureLog] = useState<CaptureLogEntry[]>([]);
   const [celebrateGoal, setCelebrateGoal] = useState<string | null>(null);
   const [toast, setToast] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -433,6 +458,119 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(""), 2200);
+  }
+
+  // ---------------------------------------------------------------------
+  // CAPTURA AUTOMÁTICA DESDE NOTIFICACIONES
+  // ---------------------------------------------------------------------
+  // El servicio de Android va guardando en el celular las notificaciones de
+  // apps de dinero, incluso con Finzo cerrada. Aquí las recogemos cada vez
+  // que la app se abre o vuelve al frente — que es justo cuando la persona
+  // regresa de Yape.
+  //
+  // Se hace así, y no reaccionando al instante a cada notificación, porque
+  // Android limita mucho lo que una app puede ejecutar en segundo plano y
+  // los fabricantes cierran procesos por batería. Recoger al volver es lo
+  // único que funciona igual de bien en todos los celulares.
+
+  // Los valores más recientes, para que la recogida use los movimientos y
+  // categorías de ahora sin tener que volver a montar el escuchador cada
+  // vez que cambia algo.
+  const captureInputs = useRef({ transactions, merchantLearned, t });
+  captureInputs.current = { transactions, merchantLearned, t };
+  // Evita que dos recogidas se pisen (abrir la app y volver al frente casi
+  // a la vez): sin esto, las dos vaciarían el buzón y se duplicaría todo.
+  const captureBusy = useRef(false);
+
+  useEffect(() => {
+    let alive = true;
+    loadJSON<CaptureLogEntry[]>(STORAGE_KEYS.autoCaptureLog, []).then((saved) => {
+      if (alive && Array.isArray(saved)) setAutoCaptureLog(saved);
+    });
+    if (notificationReader.isSupported) {
+      setAutoCaptureOnState(notificationReader.isEnabled());
+      setAutoCapturePermission(notificationReader.isPermissionGranted());
+    }
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (ready) saveJSON(STORAGE_KEYS.autoCaptureLog, autoCaptureLog);
+  }, [autoCaptureLog, ready]);
+
+  useEffect(() => {
+    if (!(ready && hasOnboarded && notificationReader.isSupported)) return;
+
+    async function collect() {
+      if (captureBusy.current) return;
+      // El permiso de Android se puede quitar desde los ajustes del sistema
+      // en cualquier momento, así que se comprueba en cada recogida.
+      if (!notificationReader.isEnabled() || !notificationReader.isPermissionGranted()) return;
+
+      captureBusy.current = true;
+      try {
+        const captured = await notificationReader.drain();
+        if (captured.length === 0) return;
+
+        const { transactions: current, merchantLearned: learned, t: translate } = captureInputs.current;
+        const { toAdd, log } = processCaptured(captured, current, learned, translate);
+
+        setAutoCaptureLog((prev) => [...prev, ...log].slice(-40));
+        if (toAdd.length > 0) {
+          setTransactions((prev) => [...toAdd, ...prev]);
+          showToast(
+            translate(toAdd.length > 1 ? "autoCapture.toastPlural" : "autoCapture.toast", {
+              count: toAdd.length,
+            })
+          );
+        }
+      } catch {
+        // Un fallo aquí no debe impedir que la app se abra. Lo capturado
+        // sigue en el buzón del celular y se reintenta la próxima vez.
+      } finally {
+        captureBusy.current = false;
+      }
+    }
+
+    collect();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state !== "active") return;
+      // Al volver al frente puede que la persona acabe de conceder (o
+      // quitar) el permiso desde los ajustes de Android.
+      setAutoCapturePermission(notificationReader.isPermissionGranted());
+      collect();
+    });
+    return () => sub.remove();
+    // Solo depende de si la app ya está lista: los datos que necesita los
+    // lee de captureInputs en el momento de recoger.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, hasOnboarded]);
+
+  function setAutoCaptureOn(value: boolean) {
+    notificationReader.setEnabled(value);
+    setAutoCaptureOnState(notificationReader.isEnabled());
+    if (!value) {
+      // Al apagar se tira lo que quedara sin procesar: si la persona vuelve
+      // a encender la función semanas después, no queremos que aparezcan de
+      // golpe gastos de antes de apagarla.
+      notificationReader.clear();
+    }
+  }
+
+  function openAutoCaptureSettings() {
+    notificationReader.openPermissionSettings();
+  }
+
+  function refreshAutoCapture() {
+    if (!notificationReader.isSupported) return;
+    setAutoCaptureOnState(notificationReader.isEnabled());
+    setAutoCapturePermission(notificationReader.isPermissionGranted());
+  }
+
+  function clearAutoCaptureLog() {
+    setAutoCaptureLog([]);
   }
 
   const mk = monthKey(month.y, month.m);
@@ -747,6 +885,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         commitImport,
         merchantLearned,
         learnMerchantCategory,
+        autoCaptureSupported: notificationReader.isSupported,
+        autoCapturePermission,
+        autoCaptureOn,
+        setAutoCaptureOn,
+        openAutoCaptureSettings,
+        refreshAutoCapture,
+        autoCaptureLog,
+        clearAutoCaptureLog,
         goals,
         addOrUpdateGoal,
         deleteGoal,

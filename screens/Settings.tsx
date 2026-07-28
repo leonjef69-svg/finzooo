@@ -24,6 +24,7 @@ import {
   LogOut,
   Info,
   Shield,
+  Zap,
   X,
 } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
@@ -57,6 +58,7 @@ export default function Settings({
   onCategoryBudgets,
   onExportPdf,
   onImport,
+  onAutoCapture,
   onLogout,
   onPremium,
   onSavings,
@@ -78,6 +80,7 @@ export default function Settings({
   onCategoryBudgets: () => void;
   onExportPdf: () => void;
   onImport: () => void;
+  onAutoCapture: () => void;
   onLogout: () => void;
   onPremium: () => void;
   onSavings: () => void;
@@ -86,7 +89,7 @@ export default function Settings({
   onAbout: () => void;
   onLegal: () => void;
 }) {
-  const { t, isCloudSynced } = useAppData();
+  const { t, isCloudSynced, autoCaptureOn } = useAppData();
   const { colorScheme } = useColorScheme();
   const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
   const [notif, setNotif] = useState(true);
@@ -274,6 +277,20 @@ export default function Settings({
             <View className="bg-amber-50 px-2 py-1 rounded-full">
               <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
             </View>
+          }
+        />
+        <Row
+          Icon={Zap}
+          label={t("autoCapture.rowLabel")}
+          onPress={onAutoCapture}
+          right={
+            autoCaptureOn ? (
+              <View className="bg-violet-50 px-2 py-1 rounded-full">
+                <Text className="text-[10px] font-extrabold text-violet-500">{t("autoCapture.rowOn")}</Text>
+              </View>
+            ) : (
+              <ChevronRight size={16} color="#cbd5e1" />
+            )
           }
         />
         <Row

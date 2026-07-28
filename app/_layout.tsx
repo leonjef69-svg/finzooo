@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { AppState, View } from "react-native";
-import { Stack, router, useNavigationContainerRef } from "expo-router";
+import { Stack, router, useNavigationContainerRef, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
@@ -35,12 +35,24 @@ function AppLifecycleEffects() {
   const { hasOnboarded } = useAppData();
   const prevState = useRef(AppState.currentState);
   const navigationRef = useNavigationContainerRef();
+  // En qué pantalla está la persona ahora mismo. Se guarda en una "caja"
+  // para poder leerlo desde el escuchador de abajo sin tener que volver a
+  // registrarlo cada vez que se cambia de pantalla.
+  const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
+  pathnameRef.current = pathname;
 
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
       const cameFromBackground = /inactive|background/.test(prevState.current);
       if (cameFromBackground && nextState === "active" && hasOnboarded && navigationRef.isReady()) {
-        router.dismissTo("/(tabs)");
+        // Excepción: "Registro automático" manda a la persona a los ajustes
+        // de Android a dar el permiso. Si al volver la sacáramos a Inicio,
+        // perdería de vista justo la pantalla donde tiene que continuar —
+        // y encima sin ver que el permiso ya quedó dado.
+        if (pathnameRef.current !== "/auto-capture") {
+          router.dismissTo("/(tabs)");
+        }
       }
       if (nextState === "background" || nextState === "inactive") {
         flushPendingSaves();

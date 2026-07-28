@@ -338,6 +338,38 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "origin.imported": "Importado",
     "origin.verified": "Verificado",
     "origin.merged": "Fusionado",
+    "origin.auto": "Automático",
+
+    "autoCapture.rowLabel": "Registro automático",
+    "autoCapture.rowOn": "ACTIVO",
+    "autoCapture.title": "Registro automático",
+    "autoCapture.subtitle":
+      "Finzo puede anotar sola tus gastos e ingresos leyendo los avisos que te manda Yape y tu banco. Tú no haces nada: pagas con Yape y el movimiento ya está en tu lista cuando vuelves a Finzo.",
+    "autoCapture.privacyTitle": "Qué se lee y qué no",
+    "autoCapture.privacyBody":
+      "Finzo solo mira los avisos de apps de dinero (Yape, Plin, bancos). Los avisos de WhatsApp, correo, redes o cualquier otra app se descartan al instante y nunca se guardan ni se leen. Nada de esto sale de tu celular: no se envía a internet ni a nadie más. Puedes apagarlo cuando quieras desde esta misma pantalla.",
+    "autoCapture.unsupportedTitle": "No disponible en este celular",
+    "autoCapture.unsupportedBody":
+      "Esta función solo funciona en Android y necesita la última versión de Finzo instalada desde el archivo de la app. Si estás en iPhone, Android no permite que otras apps lean los avisos.",
+    "autoCapture.permissionTitle": "Dar acceso a los avisos",
+    "autoCapture.permissionHint":
+      "Toca aquí, busca Finzo en la lista que abre Android y actívala.",
+    "autoCapture.permissionGranted": "Listo, ya tienes el acceso dado.",
+    "autoCapture.toggleTitle": "Anotar movimientos solo",
+    "autoCapture.toggleHint":
+      "Se registran sin preguntarte nada. Los verás con la etiqueta morada «Automático».",
+    "autoCapture.toggleBlocked": "Primero da el acceso del paso 1.",
+    "autoCapture.logTitle": "Últimos avisos recibidos",
+    "autoCapture.logClear": "Borrar",
+    "autoCapture.logEmpty":
+      "Todavía no llegó ningún aviso. Cuando hagas un Yape aparecerá aquí, junto con lo que Finzo entendió.",
+    "autoCapture.result.added": "Registrado",
+    "autoCapture.result.duplicate": "Ya lo tenías",
+    "autoCapture.result.noAmount": "Sin monto",
+    "autoCapture.result.noDirection": "No se supo si entró o salió",
+    "autoCapture.result.notMoney": "No es un movimiento",
+    "autoCapture.toast": "Se registró {count} movimiento automáticamente",
+    "autoCapture.toastPlural": "Se registraron {count} movimientos automáticamente",
 
     "onboarding.skip": "Omitir",
     "onboarding.slide1Title": "Define tu presupuesto",
@@ -760,6 +792,37 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "origin.imported": "Imported",
     "origin.verified": "Verified",
     "origin.merged": "Merged",
+    "origin.auto": "Automatic",
+
+    "autoCapture.rowLabel": "Automatic tracking",
+    "autoCapture.rowOn": "ON",
+    "autoCapture.title": "Automatic tracking",
+    "autoCapture.subtitle":
+      "Finzo can log your expenses and income on its own by reading the alerts Yape and your bank send you. You do nothing: pay with Yape and the movement is already in your list when you come back to Finzo.",
+    "autoCapture.privacyTitle": "What is read and what is not",
+    "autoCapture.privacyBody":
+      "Finzo only looks at alerts from money apps (Yape, Plin, banks). Alerts from WhatsApp, email, social media or any other app are discarded instantly and are never stored or read. None of this leaves your phone: nothing is sent to the internet or to anyone else. You can turn it off any time from this screen.",
+    "autoCapture.unsupportedTitle": "Not available on this phone",
+    "autoCapture.unsupportedBody":
+      "This feature only works on Android and needs the latest version of Finzo installed from the app file. On iPhone, Android's approach is not allowed: other apps cannot read your alerts.",
+    "autoCapture.permissionTitle": "Grant access to alerts",
+    "autoCapture.permissionHint": "Tap here, find Finzo in the list Android opens, and switch it on.",
+    "autoCapture.permissionGranted": "Done, access is granted.",
+    "autoCapture.toggleTitle": "Log movements on its own",
+    "autoCapture.toggleHint":
+      "They are saved without asking you anything. You will see them with the purple \"Automatic\" tag.",
+    "autoCapture.toggleBlocked": "Grant the access in step 1 first.",
+    "autoCapture.logTitle": "Latest alerts received",
+    "autoCapture.logClear": "Clear",
+    "autoCapture.logEmpty":
+      "No alerts yet. Once you make a payment it will show up here, along with what Finzo understood.",
+    "autoCapture.result.added": "Logged",
+    "autoCapture.result.duplicate": "Already had it",
+    "autoCapture.result.noAmount": "No amount",
+    "autoCapture.result.noDirection": "Could not tell in or out",
+    "autoCapture.result.notMoney": "Not a movement",
+    "autoCapture.toast": "{count} movement logged automatically",
+    "autoCapture.toastPlural": "{count} movements logged automatically",
 
     "onboarding.skip": "Skip",
     "onboarding.slide1Title": "Set your budget",
@@ -1180,6 +1243,37 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "origin.imported": "Importado",
     "origin.verified": "Verificado",
     "origin.merged": "Mesclado",
+    "origin.auto": "Automático",
+
+    "autoCapture.rowLabel": "Registro automático",
+    "autoCapture.rowOn": "ATIVO",
+    "autoCapture.title": "Registro automático",
+    "autoCapture.subtitle":
+      "O Finzo pode anotar sozinho seus gastos e receitas lendo os avisos que o Yape e seu banco enviam. Você não faz nada: paga com o Yape e o movimento já está na sua lista quando voltar ao Finzo.",
+    "autoCapture.privacyTitle": "O que é lido e o que não é",
+    "autoCapture.privacyBody":
+      "O Finzo só olha os avisos de apps de dinheiro (Yape, Plin, bancos). Avisos do WhatsApp, e-mail, redes sociais ou qualquer outro app são descartados na hora e nunca são guardados nem lidos. Nada disso sai do seu celular: não é enviado para a internet nem para ninguém. Você pode desligar quando quiser nesta mesma tela.",
+    "autoCapture.unsupportedTitle": "Não disponível neste celular",
+    "autoCapture.unsupportedBody":
+      "Este recurso só funciona no Android e precisa da última versão do Finzo instalada pelo arquivo do app. No iPhone, outros apps não podem ler os seus avisos.",
+    "autoCapture.permissionTitle": "Dar acesso aos avisos",
+    "autoCapture.permissionHint": "Toque aqui, procure o Finzo na lista que o Android abre e ative.",
+    "autoCapture.permissionGranted": "Pronto, o acesso já está dado.",
+    "autoCapture.toggleTitle": "Anotar movimentos sozinho",
+    "autoCapture.toggleHint":
+      "São registrados sem perguntar nada. Você os verá com a etiqueta roxa «Automático».",
+    "autoCapture.toggleBlocked": "Primeiro dê o acesso do passo 1.",
+    "autoCapture.logTitle": "Últimos avisos recebidos",
+    "autoCapture.logClear": "Apagar",
+    "autoCapture.logEmpty":
+      "Ainda não chegou nenhum aviso. Quando você fizer um pagamento vai aparecer aqui, junto com o que o Finzo entendeu.",
+    "autoCapture.result.added": "Registrado",
+    "autoCapture.result.duplicate": "Você já tinha",
+    "autoCapture.result.noAmount": "Sem valor",
+    "autoCapture.result.noDirection": "Não deu para saber se entrou ou saiu",
+    "autoCapture.result.notMoney": "Não é um movimento",
+    "autoCapture.toast": "{count} movimento registrado automaticamente",
+    "autoCapture.toastPlural": "{count} movimentos registrados automaticamente",
 
     "onboarding.skip": "Pular",
     "onboarding.slide1Title": "Defina seu orçamento",

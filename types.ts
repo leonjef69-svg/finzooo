@@ -3,7 +3,8 @@
 //   imported  🔵 vino de un archivo del banco
 //   verified  🟢 lo escribiste tú Y el banco lo confirmó después
 //   merged    🟢 se juntaron el tuyo y el del banco en uno solo
-export type TransactionOrigin = "manual" | "imported" | "verified" | "merged";
+//   auto      🟣 lo registró Finzo sola, leyendo una notificación de Yape
+export type TransactionOrigin = "manual" | "imported" | "verified" | "merged" | "auto";
 
 export type Transaction = {
   id: number;

@@ -1,5 +1,5 @@
 import { Text, View } from "react-native";
-import { PenLine, Download, BadgeCheck, GitMerge } from "lucide-react-native";
+import { PenLine, Download, BadgeCheck, GitMerge, Zap } from "lucide-react-native";
 import { useAppData } from "@/contexts/AppDataContext";
 import { originOf, type Transaction } from "@/types";
 
@@ -13,6 +13,7 @@ const STYLES = {
   imported: { Icon: Download, color: "#0ea5e9", bg: "bg-sky-50 dark:bg-slate-800", text: "text-sky-600 dark:text-sky-400", key: "origin.imported" },
   verified: { Icon: BadgeCheck, color: "#059669", bg: "bg-emerald-50 dark:bg-slate-800", text: "text-emerald-600 dark:text-emerald-400", key: "origin.verified" },
   merged: { Icon: GitMerge, color: "#059669", bg: "bg-emerald-50 dark:bg-slate-800", text: "text-emerald-600 dark:text-emerald-400", key: "origin.merged" },
+  auto: { Icon: Zap, color: "#8b5cf6", bg: "bg-violet-50 dark:bg-slate-800", text: "text-violet-600 dark:text-violet-400", key: "origin.auto" },
 } as const;
 
 export default function OriginBadge({

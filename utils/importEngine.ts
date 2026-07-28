@@ -10,6 +10,7 @@
 // por banco, el motor observa el archivo y se adapta.
 
 import { EXPENSE_CATS, INCOME_CATS } from "@/constants/categories";
+import { PAYMENT_METHODS } from "@/constants/i18n";
 
 // ---------------------------------------------------------------------
 // 1. LECTURA DEL ARCHIVO
@@ -400,4 +401,20 @@ export function parseStatement(text: string, account?: string): ParseResult {
   }
 
   return { ok: true, rows, errorCount, headerIndex };
+}
+
+// Convierte el método de pago que dice el banco a uno de los de Finzo.
+// Si no lo reconoce, deja el texto tal cual (mejor eso que perderlo).
+//
+// Vive aquí, y no en la pantalla de importar, porque la captura automática
+// de notificaciones necesita exactamente la misma conversión: si fueran dos
+// copias, un arreglo en una se olvidaría en la otra.
+export function matchMethod(raw: string, t: (k: string) => string): string {
+  const normalized = normalizeHeader(raw);
+  if (!normalized) return "cash";
+  const byId = PAYMENT_METHODS.find((m) => m.id === normalized);
+  if (byId) return byId.id;
+  const byLabel = PAYMENT_METHODS.find((m) => normalizeHeader(t(m.labelKey)) === normalized);
+  if (byLabel) return byLabel.id;
+  return raw.trim() || "cash";
 }

@@ -9,8 +9,7 @@ import { useColorScheme } from "nativewind";
 import { useAppData } from "@/contexts/AppDataContext";
 import { nextId } from "@/utils/id";
 import { accountLabelFor, guessAccount } from "@/constants/accounts";
-import { PAYMENT_METHODS } from "@/constants/i18n";
-import { normalizeHeader, parseStatement, type RawRow } from "@/utils/importEngine";
+import { matchMethod, parseStatement, type RawRow } from "@/utils/importEngine";
 import { suggestCategory } from "@/utils/classifier";
 import { findBestMatch, mergeTransaction, type DuplicateMatch } from "@/utils/duplicates";
 import DuplicateReview from "@/screens/DuplicateReview";
@@ -26,18 +25,6 @@ type Candidate = {
 
 // Decisión que toma la persona (o el sistema) sobre cada candidato.
 export type Resolution = "new" | "merge" | "keepBoth" | "skip";
-
-// Convierte el método de pago que dice el banco a uno de los de Finzo.
-// Si no lo reconoce, deja el texto tal cual (mejor eso que perderlo).
-function matchMethod(raw: string, t: (k: string) => string): string {
-  const normalized = normalizeHeader(raw);
-  if (!normalized) return "cash";
-  const byId = PAYMENT_METHODS.find((m) => m.id === normalized);
-  if (byId) return byId.id;
-  const byLabel = PAYMENT_METHODS.find((m) => normalizeHeader(t(m.labelKey)) === normalized);
-  if (byLabel) return byLabel.id;
-  return raw.trim() || "cash";
-}
 
 export default function ImportSheet({ onClose }: { onClose: () => void }) {
   const { t, showToast, transactions, commitImport, learnMerchantCategory, merchantLearned } = useAppData();
