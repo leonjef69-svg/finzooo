@@ -18,6 +18,7 @@ export default function ChooseTransactionTypeRoute() {
     <AddChooser
       onClose={safeBack}
       onPick={(type) => router.push(`/transaction/new?type=${type}`)}
+      onVoice={() => router.replace("/voice")}
     />
   );
 }

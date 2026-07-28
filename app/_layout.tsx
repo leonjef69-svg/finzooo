@@ -115,6 +115,12 @@ export default function RootLayout() {
               name="transaction/[id]/edit"
               options={{ presentation: "modal", contentStyle: { backgroundColor: screenBg } }}
             />
+            {/* La pantalla de voz también es LLENA y opaca, así que va con
+                "modal" por el mismo motivo que las dos de arriba. */}
+            <Stack.Screen
+              name="voice"
+              options={{ presentation: "modal", contentStyle: { backgroundColor: screenBg } }}
+            />
 
             {/* Estas SÍ son paneles que ocupan solo parte de la pantalla
                 (fondo oscuro translúcido, se ve Inicio difuminado detrás) —
