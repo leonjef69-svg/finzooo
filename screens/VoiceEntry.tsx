@@ -40,6 +40,10 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   // Android manda el resultado final y DESPUÉS el aviso de "terminé": sin
   // esto, la frase se procesaría dos veces.
   const settled = useRef(false);
+  // Lo último que se alcanzó a escuchar. Va en una "caja" además del estado
+  // porque el aviso de "terminé" de Android puede llegar con la copia vieja
+  // del texto, y entonces se perdería justo la frase que la persona dijo.
+  const heardRef = useRef("");
 
   // ---- Animación del micrófono ----
   const pulse = useRef(new Animated.Value(0)).current;
@@ -72,6 +76,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
   async function start() {
     settled.current = false;
+    heardRef.current = "";
     setHeard("");
     setRow(null);
     setStage("listening");
@@ -110,8 +115,11 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
   useSpeechRecognitionEvent("result", (event) => {
     const text = event.results[0]?.transcript ?? "";
-    if (text) setHeard(text);
-    if (event.isFinal) settle(text);
+    if (text) {
+      heardRef.current = text;
+      setHeard(text);
+    }
+    if (event.isFinal) settle(text || heardRef.current);
   });
 
   useSpeechRecognitionEvent("error", (event) => {
@@ -126,7 +134,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   // escuchar igual sirve.
   useSpeechRecognitionEvent("end", () => {
     if (settled.current) return;
-    settle(heard);
+    settle(heardRef.current);
   });
 
   // La categoría se vuelve a adivinar cada vez que cambia el tipo, porque

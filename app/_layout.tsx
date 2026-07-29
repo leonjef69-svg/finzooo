@@ -31,6 +31,19 @@ function GlobalOverlays() {
 //     cifrar todo el conjunto de datos en cada toque (ver utils/storage),
 //     y esto garantiza que cerrar la app justo después de un cambio no
 //     alcance a perderlo.
+// Pantallas que NO deben cerrarse cuando la app vuelve al frente.
+//
+// La regla general (volver a Inicio al regresar) existe para no dejar a
+// nadie a medio camino en una pantalla de hace horas. Pero estas dos hacen
+// que Android tome el control un instante como parte de su propio
+// funcionamiento, y la app lo confunde con "se fue y volvió":
+//
+//   /auto-capture → manda a los ajustes de Android a dar el permiso.
+//   /voice        → al abrir el micrófono, el servicio de voz de Google
+//                   toma el foco. Sin esta excepción, la pantalla se
+//                   cerraba sola al segundo, sin dar tiempo a hablar.
+const KEEP_ON_RETURN = ["/auto-capture", "/voice"];
+
 function AppLifecycleEffects() {
   const { hasOnboarded } = useAppData();
   const prevState = useRef(AppState.currentState);
@@ -48,11 +61,7 @@ function AppLifecycleEffects() {
     const sub = AppState.addEventListener("change", (nextState) => {
       const cameFromBackground = /inactive|background/.test(prevState.current);
       if (cameFromBackground && nextState === "active" && hasOnboarded && navigationRef.isReady()) {
-        // Excepción: "Registro automático" manda a la persona a los ajustes
-        // de Android a dar el permiso. Si al volver la sacáramos a Inicio,
-        // perdería de vista justo la pantalla donde tiene que continuar —
-        // y encima sin ver que el permiso ya quedó dado.
-        if (pathnameRef.current !== "/auto-capture") {
+        if (!KEEP_ON_RETURN.includes(pathnameRef.current)) {
           router.dismissTo("/(tabs)");
         }
       }
