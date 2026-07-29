@@ -87,6 +87,17 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   // ignoran.
   const runId = useRef(0);
   const activeRun = useRef(-1);
+  // ¿Hay una escucha abierta AHORA?
+  //
+  // Sin esto se cerraba "por si acaso" antes de cada apertura, incluso la
+  // primera, cuando no había nada que cerrar. Android respondía a ese
+  // cierre inútil con un error, ese error llegaba un instante después y la
+  // pantalla lo tomaba por un fallo del micrófono — mostrando "no escuché
+  // nada" mientras el micrófono, de hecho, acababa de abrirse.
+  //
+  // Por eso al tocar "Repetir" sí funcionaba: ahí sí había una escucha
+  // viva, el cierre era legítimo y no generaba ese error.
+  const running = useRef(false);
 
   // ---- Animaciones ----
   //
@@ -148,11 +159,14 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   useEffect(() => {
     start();
     return () => {
+      // Al salir de la pantalla sí hay que cerrar siempre: si quedara
+      // abierta, el micrófono seguiría encendido con la app en otra parte.
       try {
         ExpoSpeechRecognitionModule.abort();
       } catch {
         // Si ya estaba cerrado no hay nada que cancelar.
       }
+      running.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -169,11 +183,14 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   async function listen() {
     runId.current += 1;
 
-    // Cierra cualquier escucha anterior antes de abrir una nueva.
-    try {
-      ExpoSpeechRecognitionModule.abort();
-    } catch {
-      // Si no había ninguna abierta, no hay nada que cerrar.
+    // Cierra la escucha anterior SOLO si de verdad hay una abierta.
+    if (running.current) {
+      try {
+        ExpoSpeechRecognitionModule.abort();
+      } catch {
+        // Si ya se había cerrado sola, no hay nada que hacer.
+      }
+      running.current = false;
     }
 
     settled.current = false;
@@ -215,6 +232,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
         // que el círculo crezca cuando hablas, y así se vea que te oye.
         volumeChangeEventOptions: { enabled: true, intervalMillis: 100 },
       });
+      running.current = true;
 
       // Respaldo por si Android no manda el aviso de arranque (hay
       // celulares que se lo saltan). Sin esto, esta escucha nunca se daría
@@ -279,6 +297,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   // momento, sus avisos pertenecen a ESTA escucha y no a una anterior.
   useSpeechRecognitionEvent("start", () => {
     activeRun.current = runId.current;
+    running.current = true;
   });
 
   useSpeechRecognitionEvent("volumechange", (event) => {
@@ -323,6 +342,16 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
       return;
     }
 
+    // Si se alcanzó a oír algo, eso vale más que el error. Android manda
+    // "no encontré coincidencia" con muchísima frecuencia aunque haya
+    // reconocido las palabras perfectamente — y hasta ahora esas palabras
+    // se tiraban para mostrar "no escuché nada" con la frase ya escrita en
+    // la pantalla un segundo antes.
+    if (heardRef.current.trim()) {
+      settle(heardRef.current);
+      return;
+    }
+
     settled.current = true;
     setErrorCode(`${event.error}${event.message ? ` · ${event.message}` : ""}`);
     setFailure("empty");
@@ -333,6 +362,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   // (por ejemplo si la persona se queda callada). Lo que se alcanzó a
   // escuchar igual sirve.
   useSpeechRecognitionEvent("end", () => {
+    running.current = false;
     // Este es el aviso que llegaba tarde y mataba la escucha nueva.
     if (activeRun.current !== runId.current) return;
     if (settled.current) return;

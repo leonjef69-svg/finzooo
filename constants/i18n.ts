@@ -375,6 +375,13 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "origin.merged": "Fusionado",
     "origin.auto": "Automático",
 
+    "appInfo.updateCheck": "Buscar actualización",
+    "appInfo.updateChecking": "Buscando…",
+    "appInfo.updateNone": "Ya tienes la última versión",
+    "appInfo.updateDownloading": "Descargando… la app se va a reiniciar",
+    "appInfo.updateError": "No se pudo buscar. Revisa tu internet",
+    "appInfo.updateEmbedded": "versión original del archivo instalado",
+
     "widget.rowLabelRound": "Micrófono redondo en pantalla de inicio",
     "widget.rowLabelWide": "Botón «Anotar gasto» en pantalla de inicio",
     "widget.manualHint":
@@ -882,6 +889,13 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "origin.merged": "Merged",
     "origin.auto": "Automatic",
 
+    "appInfo.updateCheck": "Check for update",
+    "appInfo.updateChecking": "Checking…",
+    "appInfo.updateNone": "You already have the latest version",
+    "appInfo.updateDownloading": "Downloading… the app will restart",
+    "appInfo.updateError": "Couldn't check. Verify your connection",
+    "appInfo.updateEmbedded": "original version from the installed file",
+
     "widget.rowLabelRound": "Round microphone on home screen",
     "widget.rowLabelWide": "\"Log expense\" button on home screen",
     "widget.manualHint":
@@ -1385,6 +1399,13 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "origin.verified": "Verificado",
     "origin.merged": "Mesclado",
     "origin.auto": "Automático",
+
+    "appInfo.updateCheck": "Buscar atualização",
+    "appInfo.updateChecking": "Buscando…",
+    "appInfo.updateNone": "Você já tem a última versão",
+    "appInfo.updateDownloading": "Baixando… o app vai reiniciar",
+    "appInfo.updateError": "Não foi possível buscar. Verifique sua internet",
+    "appInfo.updateEmbedded": "versão original do arquivo instalado",
 
     "widget.rowLabelRound": "Microfone redondo na tela inicial",
     "widget.rowLabelWide": "Botão «Anotar gasto» na tela inicial",
