@@ -37,8 +37,10 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   const insets = useSafeAreaInsets();
 
   const [stage, setStage] = useState<Stage>("listening");
-  // Mes del que se pidió el resumen ("AAAA-MM").
+  // Mes del que se pidió el resumen ("AAAA-MM") y si se pidió de lo que
+  // salió, de lo que entró, o de todo.
   const [summaryMk, setSummaryMk] = useState("");
+  const [summaryFocus, setSummaryFocus] = useState<"expense" | "income" | "all">("all");
   const [heard, setHeard] = useState("");
   const [failure, setFailure] = useState<VoiceFailure>("empty");
   // Una frase puede traer varios movimientos ("10 en hamburguesa y 20 en
@@ -137,6 +139,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
     if (command.kind === "summary") {
       setSummaryMk(command.monthKey);
+      setSummaryFocus(command.focus);
       setStage("summary");
       return;
     }
@@ -222,15 +225,24 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   const summary = (() => {
     if (!summaryMk) return null;
     const monthTx = transactions.filter((tx) => tx.date.startsWith(summaryMk));
-    const spent = monthTx.filter((tx) => tx.type === "expense");
+
+    // El "protagonista" es lo que se pidió; el otro lado va como línea
+    // pequeña debajo. Antes el protagonista era SIEMPRE el gasto, así que
+    // pedir un resumen de ingresos mostraba gastos.
+    const wantsIncome = summaryFocus === "income";
+    const main = monthTx.filter((tx) => (wantsIncome ? tx.type === "income" : tx.type === "expense"));
+    const other = monthTx.filter((tx) => (wantsIncome ? tx.type === "expense" : tx.type === "income"));
+
     const byCategory = new Map<string, number>();
-    for (const tx of spent) byCategory.set(tx.category, (byCategory.get(tx.category) ?? 0) + tx.amount);
+    for (const tx of main) byCategory.set(tx.category, (byCategory.get(tx.category) ?? 0) + tx.amount);
     const [y, m] = summaryMk.split("-").map(Number);
+
     return {
       label: `${monthNames[m - 1]} ${y}`,
-      total: spent.reduce((s, tx) => s + tx.amount, 0),
-      income: monthTx.filter((tx) => tx.type === "income").reduce((s, tx) => s + tx.amount, 0),
-      count: spent.length,
+      isIncome: wantsIncome,
+      total: main.reduce((s, tx) => s + tx.amount, 0),
+      otherTotal: other.reduce((s, tx) => s + tx.amount, 0),
+      count: main.length,
       top: Array.from(byCategory.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 4),
@@ -373,19 +385,31 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
               {summary.count === 0 ? (
                 <Text className="text-xs text-center text-slate-500 dark:text-slate-300 leading-5 mt-3">
-                  {t("voice.summaryEmpty")}
+                  {t(summary.isIncome ? "voice.summaryEmptyIncome" : "voice.summaryEmpty")}
                 </Text>
               ) : (
                 <>
-                  <Text className="text-3xl font-extrabold text-rose-500 text-center mt-1">
+                  <Text
+                    className={`text-3xl font-extrabold text-center mt-1 ${
+                      summary.isIncome ? "text-emerald-600" : "text-rose-500"
+                    }`}
+                  >
                     {fmt(summary.total)}
                   </Text>
                   <Text className="text-[11px] text-center text-slate-500 dark:text-slate-300">
-                    {t("voice.summarySpent", { count: summary.count })}
+                    {t(summary.isIncome ? "voice.summaryEarned" : "voice.summarySpent", {
+                      count: summary.count,
+                    })}
                   </Text>
-                  {summary.income > 0 && (
-                    <Text className="text-[11px] text-center text-emerald-600 mt-0.5">
-                      {t("voice.summaryIncome", { amount: fmt(summary.income) })}
+                  {summary.otherTotal > 0 && (
+                    <Text
+                      className={`text-[11px] text-center mt-0.5 ${
+                        summary.isIncome ? "text-rose-500" : "text-emerald-600"
+                      }`}
+                    >
+                      {t(summary.isIncome ? "voice.summaryOutLine" : "voice.summaryIncome", {
+                        amount: fmt(summary.otherTotal),
+                      })}
                     </Text>
                   )}
 
