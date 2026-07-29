@@ -21,8 +21,13 @@ export type VoiceFailure =
   | "noAmount"; // se escuchó algo, pero sin un monto reconocible
 
 export type VoiceParse =
-  | { ok: true; row: RawRow }
+  | { ok: true; rows: RawRow[] }
   | { ok: false; reason: VoiceFailure };
+
+// Tope de movimientos por frase. Nadie dicta nueve gastos de corrido; si
+// salen más, es que la frase se entendió mal y es mejor no inundar la
+// lista con basura.
+const MAX_ROWS = 6;
 
 // Números escritos con letras. El reconocimiento de voz de Google casi
 // siempre devuelve dígitos ("30"), pero con números chicos a veces escribe
@@ -50,6 +55,13 @@ const INCOME_VERBS = [
   "recibi", "me pagaron", "me pago", "cobre", "gane", "me depositaron",
   "me deposito", "me transfirieron", "me dieron", "entro", "ingreso",
   "me llego", "me yapearon",
+];
+
+// Salió dinero. Solo se usan para decidir el tipo de CADA movimiento
+// cuando en una misma frase se mezclan gastos e ingresos.
+const EXPENSE_VERBS = [
+  "gaste", "pague", "compre", "invert", "me costo", "costo", "se me fue",
+  "salio", "yapee", "consumi", "deposite", "retire",
 ];
 
 // Palabras que separan el monto del comercio, o que sobran en una frase
@@ -139,36 +151,63 @@ function findSpelledRun(tokens: string[], from: number): { value: number; end: n
   return null;
 }
 
+// Un monto encontrado y dónde estaba: "start" es la palabra donde empieza y
+// "end" la primera palabra que ya no es parte de él (contando los céntimos
+// de "treinta con cincuenta").
+type AmountHit = { value: number; start: number; end: number };
+
 /**
- * Saca el monto. Acepta "30", "30.50", "S/30", "treinta" y
- * "treinta con cincuenta" (la forma de decir los céntimos en Perú).
+ * Saca TODOS los montos de la frase, en el orden en que se dijeron.
+ *
+ * Que sean todos y no solo el primero es lo que permite decir varias cosas
+ * de corrido: "gasté 10 en una hamburguesa y 20 en una gaseosa". Antes se
+ * registraba solo la hamburguesa y los 20 soles se perdían sin avisar.
+ *
+ * Acepta "30", "30.50", "S/30", "treinta" y "treinta con cincuenta".
  */
-function findAmount(tokens: string[]): number | null {
-  // Primero con dígitos, que es lo que devuelve el reconocimiento de voz
-  // casi siempre.
-  for (let i = 0; i < tokens.length; i++) {
+function findAmounts(tokens: string[]): AmountHit[] {
+  const hits: AmountHit[] = [];
+  let i = 0;
+
+  while (i < tokens.length && hits.length < MAX_ROWS) {
     const token = tokens[i].replace(/^s\/+\.?/, ""); // "s/30" → "30"
-    if (!/^\d+([.,]\d{1,2})?$/.test(token)) continue;
 
-    const whole = parseAmount(token);
-    if (whole === null || whole <= 0) continue;
-
-    // "30 con 50" = 30.50
-    if (Number.isInteger(whole) && tokens[i + 1] === "con" && /^\d{1,2}$/.test(tokens[i + 2] ?? "")) {
-      return whole + Number(tokens[i + 2]) / 100;
+    if (/^\d+([.,]\d{1,2})?$/.test(token)) {
+      const whole = parseAmount(token);
+      if (whole !== null && whole > 0) {
+        // "30 con 50" = 30.50
+        if (Number.isInteger(whole) && tokens[i + 1] === "con" && /^\d{1,2}$/.test(tokens[i + 2] ?? "")) {
+          hits.push({ value: whole + Number(tokens[i + 2]) / 100, start: i, end: i + 3 });
+          i += 3;
+          continue;
+        }
+        hits.push({ value: whole, start: i, end: i + 1 });
+        i += 1;
+        continue;
+      }
     }
-    return whole;
+
+    if (NUM_WORDS[tokens[i]] !== undefined) {
+      const run = findSpelledRun(tokens, i);
+      if (run && run.end > i) {
+        if (tokens[run.end] === "con") {
+          const cents = findSpelledRun(tokens, run.end + 1);
+          if (cents && cents.value < 100) {
+            hits.push({ value: run.value + cents.value / 100, start: i, end: cents.end });
+            i = cents.end;
+            continue;
+          }
+        }
+        hits.push({ value: run.value, start: i, end: run.end });
+        i = run.end;
+        continue;
+      }
+    }
+
+    i++;
   }
 
-  // Si no, con letras.
-  const run = findSpelledRun(tokens, 0);
-  if (!run) return null;
-
-  if (tokens[run.end] === "con") {
-    const cents = findSpelledRun(tokens, run.end + 1);
-    if (cents && cents.value < 100) return run.value + cents.value / 100;
-  }
-  return run.value;
+  return hits;
 }
 
 /** ¿Esta palabra puede ser parte del nombre de un comercio? */
@@ -263,28 +302,48 @@ export function parseVoice(transcript: string, now: Date = new Date()): VoicePar
   const normalized = tokens.join(" ");
   if (!normalized.trim()) return { ok: false, reason: "empty" };
 
-  const amount = findAmount(tokens);
-  if (amount === null) return { ok: false, reason: "noAmount" };
+  const hits = findAmounts(tokens);
+  if (hits.length === 0) return { ok: false, reason: "noAmount" };
 
-  // Sin verbo reconocible se asume gasto: es lo que la gente registra el
-  // 90% de las veces, y la pantalla de confirmación deja cambiarlo de un
-  // toque antes de guardar.
-  const isIncome = INCOME_VERBS.some((v) => normalized.includes(v));
-  const type: "expense" | "income" = isIncome ? "income" : "expense";
+  // Tipo general de la frase. Sin verbo reconocible se asume gasto: es lo
+  // que la gente registra el 90% de las veces, y la pantalla de
+  // confirmación deja cambiarlo de un toque antes de guardar.
+  const overall: "expense" | "income" = INCOME_VERBS.some((v) => normalized.includes(v))
+    ? "income"
+    : "expense";
 
-  const merchant = findMerchant(rawWords, tokens);
+  const date = findDate(normalized, now);
 
+  // Cada monto se queda con las palabras que van DESDE él hasta el
+  // siguiente monto. Ahí está su comercio: en "10 en hamburguesa y 20 en
+  // gaseosa", la hamburguesa cae del lado del 10 y la gaseosa del lado
+  // del 20.
   return {
     ok: true,
-    row: {
-      date: findDate(normalized, now),
-      amount,
-      type,
-      description: merchant,
-      merchant,
-      reference: "",
-      categoryRaw: "",
-      methodRaw: "",
-    },
+    rows: hits.map((hit, index) => {
+      const nextStart = hits[index + 1]?.start ?? tokens.length;
+      const merchant = findMerchant(rawWords.slice(hit.end, nextStart), tokens.slice(hit.end, nextStart));
+
+      // Las palabras justo ANTES de este monto mandan sobre su tipo, para
+      // frases mezcladas como "recibí 500 de sueldo y gasté 20 en pan".
+      // Si ahí no hay ningún verbo, vale el tipo general de la frase.
+      const before = tokens.slice(hits[index - 1]?.end ?? 0, hit.start).join(" ");
+      const type = INCOME_VERBS.some((v) => before.includes(v))
+        ? "income"
+        : EXPENSE_VERBS.some((v) => before.includes(v))
+          ? "expense"
+          : overall;
+
+      return {
+        date,
+        amount: hit.value,
+        type,
+        description: merchant,
+        merchant,
+        reference: "",
+        categoryRaw: "",
+        methodRaw: "",
+      };
+    }),
   };
 }
