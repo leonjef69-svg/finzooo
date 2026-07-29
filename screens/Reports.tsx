@@ -308,8 +308,13 @@ export default function Reports({
               <Text className="text-sm font-bold" style={{ color: primaryTextColor }}>{fmt(budget)}</Text>
             </View>
             <View className="flex-row items-center justify-between py-0.5">
+              {/* NO se llama "Disponible": esa palabra ya significa otra
+                  cosa en Inicio, donde el saldo disponible suma los
+                  ingresos y el saldo anterior (100+0+3-56=47). Aquí solo
+                  se resta el gasto del tope (100-56=44). Dos numeros
+                  distintos con el mismo nombre confunden con razón. */}
               <Text className="text-xs text-slate-500 dark:text-slate-300">
-                {t(balance.available >= 0 ? "reports.balanceAvailable" : "reports.balanceOverBy")}
+                {t(balance.available >= 0 ? "reports.balanceLeftOfBudget" : "reports.balanceOverBy")}
               </Text>
               <Text
                 className={`text-sm font-bold ${

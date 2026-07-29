@@ -138,8 +138,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "reports.balanceShort": "Te faltaron",
     "reports.balanceBudgetTitle": "Presupuesto del mes",
     "reports.balanceBudgetAmount": "Presupuesto",
+    "reports.balanceLeftOfBudget": "Te queda del presupuesto",
     "reports.balanceBudgetHint":
-      "Esto se compara con lo que gastaste, no con lo que te entró. Por eso puede sobrarte presupuesto y aun así haber gastado más de lo que recibiste.",
+      "Aquí solo se compara tu gasto con el tope que te pusiste. El «saldo disponible» de Inicio es otra cosa: ahí se suman además tus ingresos y el saldo anterior.",
     "reports.balanceAvailable": "Disponible",
     "reports.balanceOverBy": "Te pasaste por",
     "reports.balanceUsed": "{pct}% utilizado",
@@ -675,8 +676,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "reports.balanceShort": "You went short",
     "reports.balanceBudgetTitle": "Monthly budget",
     "reports.balanceBudgetAmount": "Budget",
+    "reports.balanceLeftOfBudget": "Left of your budget",
     "reports.balanceBudgetHint":
-      "This compares against what you spent, not what came in. That's why you can have budget left and still have spent more than you received.",
+      "Here only your spending is compared against the limit you set. The \"available balance\" on Home is a different thing: it also adds your income and the carryover.",
     "reports.balanceAvailable": "Available",
     "reports.balanceOverBy": "Over by",
     "reports.balanceUsed": "{pct}% used",
@@ -1209,8 +1211,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "reports.balanceShort": "Faltaram",
     "reports.balanceBudgetTitle": "Orçamento do mês",
     "reports.balanceBudgetAmount": "Orçamento",
+    "reports.balanceLeftOfBudget": "Sobra do orçamento",
     "reports.balanceBudgetHint":
-      "Isto se compara com o que você gastou, não com o que entrou. Por isso pode sobrar orçamento e ainda assim ter gasto mais do que recebeu.",
+      "Aqui só se compara seu gasto com o limite que você definiu. O «saldo disponível» da tela Início é outra coisa: lá também se somam suas receitas e o saldo anterior.",
     "reports.balanceAvailable": "Disponível",
     "reports.balanceOverBy": "Passou por",
     "reports.balanceUsed": "{pct}% utilizado",
