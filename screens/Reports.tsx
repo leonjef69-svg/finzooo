@@ -58,6 +58,31 @@ export default function Reports({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactions, mk, userLanguage]);
 
+  // Balance del mes: lo que entró, lo que salió, lo que quedó, y cómo va
+  // eso contra el presupuesto.
+  //
+  // Va arriba del todo a propósito. El resto de la pantalla explica el
+  // detalle (en qué, cuándo, comparado con otros meses); esto responde
+  // primero la pregunta simple —¿me sobró o me falté?— que es la que se
+  // hace cualquiera al entrar.
+  const balance = useMemo(() => {
+    const inMonth = transactions.filter((t) => t.date.startsWith(mk));
+    const income = inMonth.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
+    const expense = inMonth.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+    // El porcentaje se limita al 100% para la barra, pero el número de
+    // arriba NO: si se gastó el 130% hay que verlo, no verlo tapado.
+    const usedPct = budget > 0 ? expense / budget : 0;
+    return {
+      income,
+      expense,
+      left: income - expense,
+      available: budget - expense,
+      usedPct,
+      // Tres estados y no dos: avisar solo cuando ya se pasó llega tarde.
+      status: usedPct > 1 ? "over" : usedPct >= 0.8 ? "close" : "ok",
+    };
+  }, [transactions, mk, budget]);
+
   const insights = useMemo(() => {
     const list: string[] = [];
     const now = new Date();
@@ -221,6 +246,103 @@ export default function Reports({
           </Text>
         </View>
         <ThemeToggleButton />
+      </View>
+
+      {/* Balance del mes */}
+      <View
+        className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-4"
+        style={CARD_SHADOW}
+      >
+        <Text className="text-sm font-bold mb-1" style={{ color: primaryTextColor }}>
+          {t("reports.balanceTitle")}
+        </Text>
+        <Text className="text-[11px] text-slate-400 mb-3">
+          {monthNames[month.m]} {month.y}
+        </Text>
+
+        <View className="flex-row items-center justify-between py-1">
+          <Text className="text-xs text-slate-500 dark:text-slate-300">{t("reports.balanceIncome")}</Text>
+          <Text className="text-sm font-bold text-emerald-600">{fmt(balance.income)}</Text>
+        </View>
+        <View className="flex-row items-center justify-between py-1">
+          <Text className="text-xs text-slate-500 dark:text-slate-300">{t("reports.balanceExpense")}</Text>
+          <Text className="text-sm font-bold text-rose-500">{fmt(balance.expense)}</Text>
+        </View>
+
+        <View className="h-px bg-slate-100 dark:bg-slate-800 my-2.5" />
+
+        <View className="flex-row items-center justify-between">
+          <Text className="text-sm font-bold" style={{ color: primaryTextColor }}>
+            {t(balance.left >= 0 ? "reports.balanceLeft" : "reports.balanceShort")}
+          </Text>
+          <Text
+            className={`text-xl font-extrabold ${
+              balance.left >= 0 ? "text-emerald-600" : "text-rose-500"
+            }`}
+          >
+            {fmt(Math.abs(balance.left))}
+          </Text>
+        </View>
+
+        {budget > 0 && (
+          <>
+            <View className="h-px bg-slate-100 dark:bg-slate-800 my-3" />
+            <Text className="text-sm font-bold mb-2" style={{ color: primaryTextColor }}>
+              {t("reports.balanceBudgetTitle")}
+            </Text>
+
+            <View className="flex-row items-center justify-between py-0.5">
+              <Text className="text-xs text-slate-500 dark:text-slate-300">{t("reports.statBudget")}</Text>
+              <Text className="text-sm font-bold" style={{ color: primaryTextColor }}>{fmt(budget)}</Text>
+            </View>
+            <View className="flex-row items-center justify-between py-0.5">
+              <Text className="text-xs text-slate-500 dark:text-slate-300">
+                {t(balance.available >= 0 ? "reports.balanceAvailable" : "reports.balanceOverBy")}
+              </Text>
+              <Text
+                className={`text-sm font-bold ${
+                  balance.available >= 0 ? "text-emerald-600" : "text-rose-500"
+                }`}
+              >
+                {fmt(Math.abs(balance.available))}
+              </Text>
+            </View>
+
+            <View className="h-2.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden mt-3">
+              <View
+                className="h-2.5 rounded-full"
+                style={{
+                  // La barra se corta en el 100%: más allá no cabe. El
+                  // porcentaje de al lado sí muestra el número real.
+                  width: `${Math.min(balance.usedPct, 1) * 100}%`,
+                  backgroundColor:
+                    balance.status === "over" ? "#f43f5e" : balance.status === "close" ? "#f59e0b" : "#059669",
+                }}
+              />
+            </View>
+            <Text className="text-[11px] text-slate-500 dark:text-slate-300 mt-1.5">
+              {t("reports.balanceUsed", { pct: Math.round(balance.usedPct * 100) })}
+            </Text>
+
+            <Text
+              className={`text-xs font-bold mt-2 ${
+                balance.status === "over"
+                  ? "text-rose-500"
+                  : balance.status === "close"
+                    ? "text-amber-500"
+                    : "text-emerald-600"
+              }`}
+            >
+              {t(
+                balance.status === "over"
+                  ? "reports.balanceStatusOver"
+                  : balance.status === "close"
+                    ? "reports.balanceStatusClose"
+                    : "reports.balanceStatusOk"
+              )}
+            </Text>
+          </>
+        )}
       </View>
 
       {isPremium ? (
