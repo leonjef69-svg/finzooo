@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ficha del widget redondo: 1 celda por 1 celda, o sea lo mismo que ocupa
+  cualquier ícono de app (fórmula de Android: 70 × 1 − 30 = 40dp).
+
+  resizeMode="none": a este no tiene sentido estirarlo — dejaría de ser un
+  círculo y pasaría a ser un óvalo.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+  android:minWidth="40dp"
+  android:minHeight="40dp"
+  android:targetCellWidth="1"
+  android:targetCellHeight="1"
+  android:updatePeriodMillis="0"
+  android:initialLayout="@layout/finzo_voice_widget_round"
+  android:previewLayout="@layout/finzo_voice_widget_round"
+  android:resizeMode="none"
+  android:description="@string/finzo_widget_round_description"
+  android:widgetCategory="home_screen" />

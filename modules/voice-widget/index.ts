@@ -1,9 +1,13 @@
 import { requireOptionalNativeModule } from "expo";
 import { Platform } from "react-native";
 
+// "round" es el círculo del tamaño de un ícono; "wide" el 2x1 con la
+// etiqueta "Anotar gasto".
+export type WidgetVariant = "round" | "wide";
+
 type NativeShape = {
   canRequestPin: () => boolean;
-  requestPin: () => boolean;
+  requestPin: (variant: string) => boolean;
 };
 
 // "Optional" porque el widget solo existe en Android y solo dentro de una
@@ -36,10 +40,10 @@ export function canRequestPin(): boolean {
  * del propio sistema; la app no puede colocarlo por su cuenta.
  * Devuelve false si el celular no lo permite.
  */
-export function requestPin(): boolean {
+export function requestPin(variant: WidgetVariant = "round"): boolean {
   if (!Native) return false;
   try {
-    return Native.requestPin();
+    return Native.requestPin(variant);
   } catch {
     return false;
   }

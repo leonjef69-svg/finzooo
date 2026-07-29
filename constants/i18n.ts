@@ -373,7 +373,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "origin.merged": "Fusionado",
     "origin.auto": "Automático",
 
-    "widget.rowLabel": "Micrófono en pantalla de inicio",
+    "widget.rowLabelRound": "Micrófono redondo en pantalla de inicio",
+    "widget.rowLabelWide": "Botón «Anotar gasto» en pantalla de inicio",
     "widget.manualHint":
       "Tu celular no deja hacerlo desde aquí. Mantén pulsado un espacio vacío de tu pantalla de inicio → Widgets → busca Finzo",
 
@@ -876,7 +877,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "origin.merged": "Merged",
     "origin.auto": "Automatic",
 
-    "widget.rowLabel": "Microphone on home screen",
+    "widget.rowLabelRound": "Round microphone on home screen",
+    "widget.rowLabelWide": "\"Log expense\" button on home screen",
     "widget.manualHint":
       "Your phone won't allow it from here. Long-press an empty spot on your home screen → Widgets → find Finzo",
 
@@ -1376,7 +1378,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "origin.merged": "Mesclado",
     "origin.auto": "Automático",
 
-    "widget.rowLabel": "Microfone na tela inicial",
+    "widget.rowLabelRound": "Microfone redondo na tela inicial",
+    "widget.rowLabelWide": "Botão «Anotar gasto» na tela inicial",
     "widget.manualHint":
       "Seu celular não permite fazer isso daqui. Mantenha pressionado um espaço vazio da tela inicial → Widgets → procure Finzo",
 

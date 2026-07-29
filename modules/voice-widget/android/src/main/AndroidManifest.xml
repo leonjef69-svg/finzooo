@@ -21,5 +21,20 @@
         android:name="android.appwidget.provider"
         android:resource="@xml/finzo_voice_widget_info" />
     </receiver>
+
+    <!-- La versión redonda de 1x1. Va como receptor aparte porque Android
+         identifica cada widget por su clase: uno solo no puede ofrecer dos
+         tamaños distintos en la lista de widgets. -->
+    <receiver
+      android:name="com.finzo.voicewidget.VoiceWidgetRoundProvider"
+      android:exported="true"
+      android:label="@string/finzo_widget_round_name">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/finzo_voice_widget_round_info" />
+    </receiver>
   </application>
 </manifest>

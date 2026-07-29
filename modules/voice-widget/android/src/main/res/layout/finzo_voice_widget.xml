@@ -35,8 +35,13 @@
       android:contentDescription="@string/finzo_widget_label" />
   </FrameLayout>
 
+  <!-- layout_width="0dp" + weight="1" hace que el texto se quede con TODO
+       el espacio que sobra después del círculo. Con "wrap_content" se
+       cortaba en "Anotar ..." aunque hubiera sitio de sobra al lado:
+       medía el ancho antes de saber cuánto le tocaba. -->
   <TextView
-    android:layout_width="wrap_content"
+    android:layout_width="0dp"
+    android:layout_weight="1"
     android:layout_height="wrap_content"
     android:layout_marginStart="10dp"
     android:text="@string/finzo_widget_label"

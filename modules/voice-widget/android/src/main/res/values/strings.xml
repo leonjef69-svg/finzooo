@@ -14,4 +14,6 @@
   <string name="finzo_widget_label">Anotar gasto</string>
   <string name="finzo_widget_name">Finzo · Anotar por voz</string>
   <string name="finzo_widget_description">Toca y dicta tu gasto sin abrir la app</string>
+  <string name="finzo_widget_round_name">Finzo · Micrófono redondo</string>
+  <string name="finzo_widget_round_description">Botón redondo para dictar tu gasto</string>
 </resources>

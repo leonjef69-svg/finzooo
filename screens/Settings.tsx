@@ -97,8 +97,8 @@ export default function Settings({
   // del celular no lo permite (algunos que se instalan aparte no lo
   // implementan), se explica el camino a mano en vez de dejar la sensación
   // de que el botón no hizo nada.
-  function addWidgetToHomeScreen() {
-    const placed = voiceWidget.requestPin();
+  function addWidgetToHomeScreen(variant: voiceWidget.WidgetVariant) {
+    const placed = voiceWidget.requestPin(variant);
     if (!placed) showToast(t("widget.manualHint"));
   }
   const { colorScheme } = useColorScheme();
@@ -305,12 +305,20 @@ export default function Settings({
           }
         />
         {voiceWidget.isSupported && (
-          <Row
-            Icon={Mic}
-            label={t("widget.rowLabel")}
-            onPress={addWidgetToHomeScreen}
-            right={<ChevronRight size={16} color="#cbd5e1" />}
-          />
+          <>
+            <Row
+              Icon={Mic}
+              label={t("widget.rowLabelRound")}
+              onPress={() => addWidgetToHomeScreen("round")}
+              right={<ChevronRight size={16} color="#cbd5e1" />}
+            />
+            <Row
+              Icon={Mic}
+              label={t("widget.rowLabelWide")}
+              onPress={() => addWidgetToHomeScreen("wide")}
+              right={<ChevronRight size={16} color="#cbd5e1" />}
+            />
+          </>
         )}
         <Row
           Icon={PiggyBank}

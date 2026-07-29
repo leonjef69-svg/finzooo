@@ -42,7 +42,9 @@ class VoiceWidgetModule : Module() {
     //
     // Devuelve false si el celular no lo permite; en ese caso no aparece
     // ninguna ventana y hay que hacerlo a mano.
-    Function("requestPin") { requestPin() }
+    // "round" coloca el círculo de 1x1; cualquier otra cosa, el 2x1 con
+    // etiqueta.
+    Function("requestPin") { variant: String -> requestPin(variant) }
   }
 
   private fun canRequestPin(): Boolean =
@@ -53,12 +55,15 @@ class VoiceWidgetModule : Module() {
       false
     }
 
-  private fun requestPin(): Boolean =
+  private fun requestPin(variant: String): Boolean =
     try {
       if (!canRequestPin()) {
         false
       } else {
-        val provider = ComponentName(context, VoiceWidgetProvider::class.java)
+        val target =
+          if (variant == "round") VoiceWidgetRoundProvider::class.java
+          else VoiceWidgetProvider::class.java
+        val provider = ComponentName(context, target)
         AppWidgetManager.getInstance(context).requestPinAppWidget(
           provider,
           null,
