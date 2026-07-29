@@ -21,6 +21,18 @@ object NotificationStore {
   private const val KEY_SEEN = "seen"
   private const val KEY_ENABLED = "enabled"
 
+  // ---- Diagnóstico ----
+  // Sin esto, cuando no se captura nada es imposible saber por qué: si
+  // Android nunca conectó el servicio, si lo conectó pero la app estaba
+  // apagada, o si llegan avisos pero de apps que no reconocemos. Son tres
+  // problemas distintos con tres arreglos distintos, y desde fuera se ven
+  // exactamente igual: una pantalla vacía.
+  private const val KEY_CONNECTED = "connected"
+  private const val KEY_CONNECTED_AT = "connectedAt"
+  private const val KEY_TOTAL_SEEN = "totalSeen"
+  private const val KEY_LAST_PKG = "lastPkg"
+  private const val KEY_LAST_AT = "lastAt"
+
   // Tope del buzón. Si alguien no abre Finzo en semanas, preferimos perder
   // lo más viejo antes que llenarle el almacenamiento del celular.
   private const val MAX_QUEUE = 200
@@ -39,6 +51,46 @@ object NotificationStore {
 
   fun setEnabled(context: Context, value: Boolean) {
     prefs(context).edit().putBoolean(KEY_ENABLED, value).apply()
+  }
+
+  /** Android conectó (o desconectó) el servicio de notificaciones. */
+  fun setConnected(context: Context, value: Boolean) {
+    prefs(context).edit()
+      .putBoolean(KEY_CONNECTED, value)
+      .putLong(KEY_CONNECTED_AT, System.currentTimeMillis())
+      .apply()
+  }
+
+  /**
+   * Anota que llegó UNA notificación cualquiera, sea de la app que sea.
+   *
+   * Se llama antes de filtrar por app a propósito: si este contador sube
+   * pero no se captura nada, el servicio funciona y el problema es la lista
+   * de apps de dinero. Si no sube, es que Android nunca lo conectó. Solo se
+   * guarda el nombre del paquete y la hora — nunca el contenido.
+   */
+  @Synchronized
+  fun noteSeen(context: Context, pkg: String) {
+    val p = prefs(context)
+    p.edit()
+      .putInt(KEY_TOTAL_SEEN, p.getInt(KEY_TOTAL_SEEN, 0) + 1)
+      .putString(KEY_LAST_PKG, pkg)
+      .putLong(KEY_LAST_AT, System.currentTimeMillis())
+      .apply()
+  }
+
+  /** Todo el diagnóstico junto, como texto JSON. */
+  fun stats(context: Context): String {
+    val p = prefs(context)
+    return JSONObject().apply {
+      put("connected", p.getBoolean(KEY_CONNECTED, false))
+      put("connectedAt", p.getLong(KEY_CONNECTED_AT, 0L))
+      put("totalSeen", p.getInt(KEY_TOTAL_SEEN, 0))
+      put("lastPackage", p.getString(KEY_LAST_PKG, "") ?: "")
+      put("lastAt", p.getLong(KEY_LAST_AT, 0L))
+      put("enabled", p.getBoolean(KEY_ENABLED, false))
+      put("queued", readArray(p.getString(KEY_QUEUE, null)).length())
+    }.toString()
   }
 
   /**

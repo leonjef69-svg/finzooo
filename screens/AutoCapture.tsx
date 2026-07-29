@@ -1,6 +1,8 @@
+import { useEffect, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Zap, ShieldCheck, Check, ChevronRight, Trash2, Smartphone } from "lucide-react-native";
+import { Zap, ShieldCheck, Check, ChevronRight, Trash2, Smartphone, Activity, RotateCcw } from "lucide-react-native";
+import * as notificationReader from "@/modules/notification-reader";
 import { useColorScheme } from "nativewind";
 import BackButton from "@/components/BackButton";
 import Toggle from "@/components/Toggle";
@@ -43,6 +45,16 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const iconColor = colorScheme === "dark" ? "#94a3b8" : "#334155";
+
+  // Estado real del servicio de Android. Se refresca al entrar y cada 3
+  // segundos mientras la pantalla esté abierta, para poder hacer un Yape,
+  // volver, y ver si el contador subió sin tener que salir y entrar.
+  const [stats, setStats] = useState(() => notificationReader.stats());
+  useEffect(() => {
+    if (!autoCaptureSupported) return;
+    const timer = setInterval(() => setStats(notificationReader.stats()), 3000);
+    return () => clearInterval(timer);
+  }, [autoCaptureSupported]);
 
   // Las más recientes arriba.
   const log = [...autoCaptureLog].reverse();
@@ -156,6 +168,77 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                 </Text>
               </View>
               {autoCapturePermission && <Toggle on={autoCaptureOn} onChange={setAutoCaptureOn} />}
+            </View>
+
+            {/* Estado del servicio de Android.
+                Cuando no se captura nada hay tres causas posibles y desde
+                fuera se ven idénticas: una pantalla vacía. Estas dos líneas
+                las separan. "Avisos vistos" cuenta TODAS las notificaciones
+                del celular, de cualquier app, antes de filtrar nada — solo
+                el número, nunca el contenido. */}
+            <View
+              className="rounded-2xl p-4 mt-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+              style={CARD_SHADOW}
+            >
+              <View className="flex-row items-center gap-2 mb-3">
+                <Activity size={15} color={iconColor} />
+                <Text className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                  {t("autoCapture.statusTitle")}
+                </Text>
+              </View>
+
+              <View className="flex-row items-center justify-between mb-1.5">
+                <Text className="text-[11px] text-slate-500 dark:text-slate-300">
+                  {t("autoCapture.statusService")}
+                </Text>
+                <Text
+                  className={`text-[11px] font-bold ${
+                    stats.connected ? "text-emerald-600" : "text-rose-500"
+                  }`}
+                >
+                  {t(stats.connected ? "autoCapture.statusOn" : "autoCapture.statusOff")}
+                </Text>
+              </View>
+
+              <View className="flex-row items-center justify-between">
+                <Text className="text-[11px] text-slate-500 dark:text-slate-300">
+                  {t("autoCapture.statusSeen")}
+                </Text>
+                <Text className="text-[11px] font-bold text-slate-900 dark:text-slate-100">
+                  {stats.totalSeen}
+                </Text>
+              </View>
+
+              {stats.lastPackage ? (
+                <Text className="text-[10px] text-slate-400 mt-2" numberOfLines={1}>
+                  {t("autoCapture.statusLast", { app: stats.lastPackage })}
+                </Text>
+              ) : null}
+
+              <Text className="text-[10px] leading-4 text-slate-400 mt-3">
+                {t(
+                  stats.totalSeen === 0
+                    ? "autoCapture.statusHelpNone"
+                    : stats.queued > 0
+                      ? "autoCapture.statusHelpQueued"
+                      : "autoCapture.statusHelpSeen"
+                )}
+              </Text>
+
+              {!stats.connected && (
+                <TouchableOpacity
+                  onPress={() => {
+                    notificationReader.requestRebind();
+                    setStats(notificationReader.stats());
+                  }}
+                  className="flex-row items-center justify-center gap-2 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 mt-3"
+                >
+                  <RotateCcw size={13} color="#64748b" />
+                  <Text className="text-[11px] font-bold text-slate-600 dark:text-slate-200">
+                    {t("autoCapture.statusRetry")}
+                  </Text>
+                </TouchableOpacity>
+              )}
             </View>
 
             {/* Diagnóstico. Sirve para dos cosas: que se vea que la app no

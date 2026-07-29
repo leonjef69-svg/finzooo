@@ -10,6 +10,23 @@ export type CapturedNotification = {
   postedAt: number;
 };
 
+// Estado real del servicio de Android, para poder ver POR QUÉ no se captura
+// nada cuando no se captura nada.
+export type ReaderStats = {
+  // ¿Android tiene enganchado el servicio AHORA? Es distinto de tener el
+  // permiso: el permiso puede estar dado y el servicio caído.
+  connected: boolean;
+  connectedAt: number;
+  // Cuántas notificaciones ha visto en total, de CUALQUIER app. Si esto es
+  // 0, el servicio nunca arrancó. Si sube pero no se captura nada, el
+  // servicio va bien y el problema es reconocer la app del banco.
+  totalSeen: number;
+  lastPackage: string;
+  lastAt: number;
+  enabled: boolean;
+  queued: number;
+};
+
 type NativeShape = {
   isPermissionGranted: () => boolean;
   openPermissionSettings: () => void;
@@ -17,6 +34,8 @@ type NativeShape = {
   setEnabled: (value: boolean) => void;
   drain: () => Promise<string>;
   clear: () => Promise<void>;
+  stats: () => string;
+  requestRebind: () => boolean;
 };
 
 // "Optional" porque este módulo solo existe en Android y solo dentro de una
@@ -88,6 +107,38 @@ export async function drain(): Promise<CapturedNotification[]> {
     );
   } catch {
     return [];
+  }
+}
+
+/** Estado del servicio. Nunca lanza: si algo falla, devuelve todo en cero. */
+export function stats(): ReaderStats {
+  const empty: ReaderStats = {
+    connected: false,
+    connectedAt: 0,
+    totalSeen: 0,
+    lastPackage: "",
+    lastAt: 0,
+    enabled: false,
+    queued: 0,
+  };
+  if (!Native) return empty;
+  try {
+    return { ...empty, ...(JSON.parse(Native.stats()) as Partial<ReaderStats>) };
+  } catch {
+    return empty;
+  }
+}
+
+/**
+ * Le pide a Android que vuelva a enganchar el servicio.
+ * Es lo que suele arreglar que deje de capturar tras actualizar la app.
+ */
+export function requestRebind(): boolean {
+  if (!Native) return false;
+  try {
+    return Native.requestRebind();
+  } catch {
+    return false;
   }
 }
 

@@ -1,6 +1,7 @@
 package com.finzo.notificationreader
 
 import android.app.Notification
+import android.content.ComponentName
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import org.json.JSONObject
@@ -20,14 +21,43 @@ import org.json.JSONObject
  */
 class FinzoNotificationListener : NotificationListenerService() {
 
+  // Android avisa por aquí cuando de verdad engancha el servicio. Dar el
+  // permiso y que el servicio esté CONECTADO son dos cosas distintas: el
+  // permiso puede estar dado y el servicio caído (pasa sobre todo después
+  // de actualizar la app). Sin anotarlo, esa diferencia era invisible.
+  override fun onListenerConnected() {
+    try {
+      NotificationStore.setConnected(applicationContext, true)
+    } catch (e: Throwable) {
+      // Nunca dejar que el servicio del sistema se caiga por esto.
+    }
+  }
+
+  override fun onListenerDisconnected() {
+    try {
+      NotificationStore.setConnected(applicationContext, false)
+      // Le pide a Android que lo vuelva a enganchar. Es lo que suele
+      // resolver que deje de capturar después de una actualización.
+      requestRebind(ComponentName(applicationContext, FinzoNotificationListener::class.java))
+    } catch (e: Throwable) {
+      // Igual que arriba.
+    }
+  }
+
   override fun onNotificationPosted(sbn: StatusBarNotification) {
     // Este servicio lo llama el sistema operativo. Si algo aquí lanzara una
     // excepción, Android podría desconectar el servicio y la función dejaría
     // de funcionar en silencio. Por eso todo va dentro de un try.
     try {
-      if (!NotificationStore.isEnabled(applicationContext)) return
-
       val pkg = sbn.packageName?.lowercase() ?: return
+
+      // Se anota ANTES de cualquier filtro: solo el nombre del paquete y la
+      // hora, nunca el contenido. Es lo que permite distinguir "el servicio
+      // no arrancó" de "arrancó pero no reconoce la app del banco" — dos
+      // problemas que desde la pantalla se ven exactamente igual.
+      NotificationStore.noteSeen(applicationContext, pkg)
+
+      if (!NotificationStore.isEnabled(applicationContext)) return
       if (!isMoneyApp(pkg)) return
 
       val extras = sbn.notification?.extras ?: return

@@ -396,6 +396,18 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "autoCapture.toggleHint":
       "Se registran sin preguntarte nada. Los verás con la etiqueta morada «Automático».",
     "autoCapture.toggleBlocked": "Primero da el acceso del paso 1.",
+    "autoCapture.statusTitle": "Estado del servicio",
+    "autoCapture.statusService": "Servicio de Android",
+    "autoCapture.statusOn": "Conectado",
+    "autoCapture.statusOff": "Desconectado",
+    "autoCapture.statusSeen": "Avisos vistos (de todas las apps)",
+    "autoCapture.statusLast": "Último: {app}",
+    "autoCapture.statusHelpNone":
+      "Está en cero: Android todavía no le pasa ningún aviso a Finzo. Revisa el paso 1, y si ya está dado, apaga y prende el acceso de Finzo en la lista de Android.",
+    "autoCapture.statusHelpSeen":
+      "Finzo sí está recibiendo avisos del celular. Si un Yape no aparece abajo, es que no se reconoció esa app o ese texto — mándame la captura.",
+    "autoCapture.statusHelpQueued": "Hay avisos esperando. Sal y vuelve a entrar a Finzo para que se procesen.",
+    "autoCapture.statusRetry": "Reintentar conexión",
     "autoCapture.logTitle": "Últimos avisos recibidos",
     "autoCapture.logClear": "Borrar",
     "autoCapture.logEmpty":
@@ -886,6 +898,18 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "autoCapture.toggleHint":
       "They are saved without asking you anything. You will see them with the purple \"Automatic\" tag.",
     "autoCapture.toggleBlocked": "Grant the access in step 1 first.",
+    "autoCapture.statusTitle": "Service status",
+    "autoCapture.statusService": "Android service",
+    "autoCapture.statusOn": "Connected",
+    "autoCapture.statusOff": "Disconnected",
+    "autoCapture.statusSeen": "Alerts seen (from all apps)",
+    "autoCapture.statusLast": "Last: {app}",
+    "autoCapture.statusHelpNone":
+      "It's at zero: Android isn't passing any alerts to Finzo yet. Check step 1, and if it's already granted, switch Finzo off and on in Android's list.",
+    "autoCapture.statusHelpSeen":
+      "Finzo is receiving alerts from the phone. If a payment doesn't show below, that app or wording wasn't recognized — send me the screenshot.",
+    "autoCapture.statusHelpQueued": "There are alerts waiting. Leave and reopen Finzo so they get processed.",
+    "autoCapture.statusRetry": "Retry connection",
     "autoCapture.logTitle": "Latest alerts received",
     "autoCapture.logClear": "Clear",
     "autoCapture.logEmpty":
@@ -1374,6 +1398,18 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "autoCapture.toggleHint":
       "São registrados sem perguntar nada. Você os verá com a etiqueta roxa «Automático».",
     "autoCapture.toggleBlocked": "Primeiro dê o acesso do passo 1.",
+    "autoCapture.statusTitle": "Estado do serviço",
+    "autoCapture.statusService": "Serviço do Android",
+    "autoCapture.statusOn": "Conectado",
+    "autoCapture.statusOff": "Desconectado",
+    "autoCapture.statusSeen": "Avisos vistos (de todos os apps)",
+    "autoCapture.statusLast": "Último: {app}",
+    "autoCapture.statusHelpNone":
+      "Está em zero: o Android ainda não passa nenhum aviso ao Finzo. Revise o passo 1 e, se já estiver concedido, desligue e ligue o acesso do Finzo na lista do Android.",
+    "autoCapture.statusHelpSeen":
+      "O Finzo está recebendo avisos do celular. Se um pagamento não aparecer abaixo, esse app ou texto não foi reconhecido — me envie a captura.",
+    "autoCapture.statusHelpQueued": "Há avisos esperando. Saia e volte ao Finzo para que sejam processados.",
+    "autoCapture.statusRetry": "Tentar conectar de novo",
     "autoCapture.logTitle": "Últimos avisos recebidos",
     "autoCapture.logClear": "Apagar",
     "autoCapture.logEmpty":

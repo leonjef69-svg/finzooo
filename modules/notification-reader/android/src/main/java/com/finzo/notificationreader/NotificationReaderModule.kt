@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.provider.Settings
+import android.service.notification.NotificationListenerService
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -47,7 +48,28 @@ class NotificationReaderModule : Module() {
     AsyncFunction("drain") { NotificationStore.drain(context) }
 
     AsyncFunction("clear") { NotificationStore.clear(context) }
+
+    // Diagnóstico, como texto JSON: si el servicio está conectado, cuántas
+    // notificaciones ha visto en total (de cualquier app), cuál fue la
+    // última y cuántas quedan por recoger. Es lo que permite saber POR QUÉ
+    // no se captura nada, en vez de mirar una pantalla vacía.
+    Function("stats") { NotificationStore.stats(context) }
+
+    // Le pide a Android que vuelva a enganchar el servicio. Es el arreglo
+    // habitual cuando deja de capturar después de actualizar la app: el
+    // permiso sigue dado, pero el servicio quedó suelto.
+    Function("requestRebind") { requestRebind() }
   }
+
+  private fun requestRebind(): Boolean =
+    try {
+      NotificationListenerService.requestRebind(
+        ComponentName(context, FinzoNotificationListener::class.java)
+      )
+      true
+    } catch (e: Throwable) {
+      false
+    }
 
   /**
    * Android guarda la lista de apps con acceso a notificaciones en un ajuste
