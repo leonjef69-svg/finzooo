@@ -25,8 +25,10 @@ import {
   Info,
   Shield,
   Zap,
+  Mic,
   X,
 } from "lucide-react-native";
+import * as voiceWidget from "@/modules/voice-widget";
 import { useColorScheme } from "nativewind";
 import Row from "@/components/Row";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
@@ -89,7 +91,16 @@ export default function Settings({
   onAbout: () => void;
   onLegal: () => void;
 }) {
-  const { t, isCloudSynced, autoCaptureOn } = useAppData();
+  const { t, isCloudSynced, autoCaptureOn, showToast } = useAppData();
+
+  // Le pide a Android que coloque el widget del micrófono. Si el lanzador
+  // del celular no lo permite (algunos que se instalan aparte no lo
+  // implementan), se explica el camino a mano en vez de dejar la sensación
+  // de que el botón no hizo nada.
+  function addWidgetToHomeScreen() {
+    const placed = voiceWidget.requestPin();
+    if (!placed) showToast(t("widget.manualHint"));
+  }
   const { colorScheme } = useColorScheme();
   const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
   const [notif, setNotif] = useState(true);
@@ -293,6 +304,14 @@ export default function Settings({
             )
           }
         />
+        {voiceWidget.isSupported && (
+          <Row
+            Icon={Mic}
+            label={t("widget.rowLabel")}
+            onPress={addWidgetToHomeScreen}
+            right={<ChevronRight size={16} color="#cbd5e1" />}
+          />
+        )}
         <Row
           Icon={PiggyBank}
           label={t("settings.savingsGoals")}

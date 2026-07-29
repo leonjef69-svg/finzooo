@@ -373,6 +373,10 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "origin.merged": "Fusionado",
     "origin.auto": "Automático",
 
+    "widget.rowLabel": "Micrófono en pantalla de inicio",
+    "widget.manualHint":
+      "Tu celular no deja hacerlo desde aquí. Mantén pulsado un espacio vacío de tu pantalla de inicio → Widgets → busca Finzo",
+
     "autoCapture.rowLabel": "Registro automático",
     "autoCapture.rowOn": "ACTIVO",
     "autoCapture.title": "Registro automático",
@@ -860,6 +864,10 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "origin.merged": "Merged",
     "origin.auto": "Automatic",
 
+    "widget.rowLabel": "Microphone on home screen",
+    "widget.manualHint":
+      "Your phone won't allow it from here. Long-press an empty spot on your home screen → Widgets → find Finzo",
+
     "autoCapture.rowLabel": "Automatic tracking",
     "autoCapture.rowOn": "ON",
     "autoCapture.title": "Automatic tracking",
@@ -1343,6 +1351,10 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "origin.verified": "Verificado",
     "origin.merged": "Mesclado",
     "origin.auto": "Automático",
+
+    "widget.rowLabel": "Microfone na tela inicial",
+    "widget.manualHint":
+      "Seu celular não permite fazer isso daqui. Mantenha pressionado um espaço vazio da tela inicial → Widgets → procure Finzo",
 
     "autoCapture.rowLabel": "Registro automático",
     "autoCapture.rowOn": "ATIVO",

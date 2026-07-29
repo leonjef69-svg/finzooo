@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Círculo claro detrás del micrófono, para que el icono no quede
+     flotando suelto sobre el violeta. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="oval">
+  <solid android:color="#33FFFFFF" />
+</shape>

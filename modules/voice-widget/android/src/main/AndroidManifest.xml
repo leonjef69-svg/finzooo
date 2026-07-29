@@ -1,0 +1,25 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <application>
+    <!--
+      Registro del widget ante Android.
+
+      exported="true" es obligatorio: quien dibuja el widget en la pantalla
+      de inicio es el lanzador del celular, que es otra app. Sin esto, Finzo
+      no aparecería en la lista de widgets.
+
+      No expone nada: este receptor solo sabe pintar un botón y abrir la
+      pantalla de voz. No lee ni entrega ningún dato.
+    -->
+    <receiver
+      android:name="com.finzo.voicewidget.VoiceWidgetProvider"
+      android:exported="true"
+      android:label="@string/finzo_widget_name">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/finzo_voice_widget_info" />
+    </receiver>
+  </application>
+</manifest>

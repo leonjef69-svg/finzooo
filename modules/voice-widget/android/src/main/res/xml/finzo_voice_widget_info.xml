@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Ficha del widget: tamaño y comportamiento.
+
+  minWidth/minHeight salen de la fórmula de Android (70 × celdas − 30), así
+  que 110dp × 40dp son exactamente 2 celdas de ancho por 1 de alto.
+
+  updatePeriodMillis="0" significa que Android NUNCA lo despierta para
+  refrescarlo. No hace falta: el widget no muestra ningún dato que pueda
+  quedarse viejo, solo abre el micrófono. Y así no gasta nada de batería.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+  android:minWidth="110dp"
+  android:minHeight="40dp"
+  android:targetCellWidth="2"
+  android:targetCellHeight="1"
+  android:updatePeriodMillis="0"
+  android:initialLayout="@layout/finzo_voice_widget"
+  android:previewLayout="@layout/finzo_voice_widget"
+  android:resizeMode="horizontal"
+  android:description="@string/finzo_widget_description"
+  android:widgetCategory="home_screen" />

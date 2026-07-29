@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Fondo del widget: un bloque violeta con esquinas redondeadas.
+
+  Va relleno y no translúcido a propósito. El fondo de pantalla del celular
+  puede ser cualquier foto, y un widget semitransparente encima de una
+  imagen cargada se vuelve ilegible. Un bloque sólido se lee bien sobre
+  cualquier cosa.
+-->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+  <solid android:color="#8B5CF6" />
+  <corners android:radius="20dp" />
+</shape>

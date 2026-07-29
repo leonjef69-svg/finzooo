@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <string name="finzo_widget_label">Log expense</string>
+  <string name="finzo_widget_name">Finzo · Voice entry</string>
+  <string name="finzo_widget_description">Tap and say your expense without opening the app</string>
+</resources>

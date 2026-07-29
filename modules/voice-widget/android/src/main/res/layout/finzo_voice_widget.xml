@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  El widget, tamaño 2x1 (dos íconos de ancho, uno de alto).
+
+  Lleva texto además del micrófono a propósito: un círculo violeta suelto
+  se confunde con cualquier otra app y no invita a tocarlo. Diciendo para
+  qué es, se entiende de una.
+
+  Nada de esto se mueve ni se anima. Los widgets de Android corren con un
+  sistema muy limitado que no admite animaciones — la del micrófono
+  latiendo está en la pantalla que se abre al tocarlo.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/finzo_widget_root"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:background="@drawable/finzo_widget_bg"
+  android:gravity="center_vertical"
+  android:orientation="horizontal"
+  android:paddingStart="10dp"
+  android:paddingEnd="16dp"
+  android:paddingTop="10dp"
+  android:paddingBottom="10dp">
+
+  <FrameLayout
+    android:layout_width="40dp"
+    android:layout_height="40dp"
+    android:background="@drawable/finzo_widget_circle">
+
+    <ImageView
+      android:layout_width="22dp"
+      android:layout_height="22dp"
+      android:layout_gravity="center"
+      android:src="@drawable/finzo_widget_mic"
+      android:contentDescription="@string/finzo_widget_label" />
+  </FrameLayout>
+
+  <TextView
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_marginStart="10dp"
+    android:text="@string/finzo_widget_label"
+    android:textColor="#FFFFFF"
+    android:textSize="14sp"
+    android:textStyle="bold"
+    android:maxLines="1"
+    android:ellipsize="end" />
+</LinearLayout>
