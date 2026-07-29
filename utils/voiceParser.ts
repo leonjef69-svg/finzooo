@@ -83,7 +83,7 @@ const FILLER = new Set([
 // Palabras de relleno que SÍ pueden ir dentro de un nombre: "bodega de Don
 // Pepe", "casa de cambio". Se aceptan solo en medio, nunca al final, y solo
 // estas dos: "por" o "para" en medio ya serían el resto de la frase.
-const CONNECTORS = new Set(["de", "del"]);
+const CONNECTORS = new Set(["de", "del", "para"]);
 
 // Artículos que pueden ir entre el conector y el nombre: "pan DE LA bodega".
 const ARTICLES = new Set(["la", "el", "los", "las"]);
