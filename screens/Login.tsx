@@ -156,7 +156,10 @@ export default function Login({
           disabled={loading}
         />
 
-        <View className="flex-row justify-center mt-6 pb-6">
+        {/* gap-1: la separación con "Regístrate" la pone el diseño. Antes
+            venía de un espacio al final del propio texto traducido, donde
+            no se ve y cualquiera lo borraría sin saber que hacía falta. */}
+        <View className="flex-row justify-center gap-1 mt-6 pb-6">
           <Text className="text-sm text-slate-500 dark:text-slate-300">{t("login.noAccount")}</Text>
           <TouchableOpacity onPress={onGoRegister}>
             <Text className="text-sm text-emerald-600 font-bold">{t("login.register")}</Text>

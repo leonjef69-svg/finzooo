@@ -150,7 +150,8 @@ export default function Register({
             disabled={loading}
           />
 
-          <View className="flex-row justify-center mt-5">
+          {/* gap-1: ver la nota del mismo bloque en Login.tsx. */}
+          <View className="flex-row justify-center gap-1 mt-5">
             <Text className="text-sm text-slate-500 dark:text-slate-300">{t("register.haveAccount")}</Text>
             <TouchableOpacity onPress={onGoLogin}>
               <Text className="text-sm text-emerald-600 font-bold">{t("register.login")}</Text>

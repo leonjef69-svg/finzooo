@@ -477,7 +477,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "login.or": "o",
     "login.withGoogle": "Continuar con Google",
     "login.googleError": "No se pudo entrar con Google. Intenta de nuevo.",
-    "login.noAccount": "¿No tienes cuenta? ",
+    "login.noAccount": "¿No tienes cuenta?",
     "login.register": "Regístrate",
 
     "register.title": "Crea tu cuenta",
@@ -488,7 +488,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "register.emailError": "Correo inválido",
     "register.passwordError": "Mínimo 8 caracteres",
     "register.submit": "Crear cuenta",
-    "register.haveAccount": "¿Ya tienes cuenta? ",
+    "register.haveAccount": "¿Ya tienes cuenta?",
     "register.login": "Inicia sesión",
 
     "verifyEmail.title": "Verifica tu correo",
@@ -1010,7 +1010,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "login.or": "or",
     "login.withGoogle": "Continue with Google",
     "login.googleError": "Couldn't sign in with Google. Please try again.",
-    "login.noAccount": "Don't have an account? ",
+    "login.noAccount": "Don't have an account?",
     "login.register": "Sign up",
 
     "register.title": "Create your account",
@@ -1021,7 +1021,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "register.emailError": "Invalid email",
     "register.passwordError": "At least 8 characters",
     "register.submit": "Create account",
-    "register.haveAccount": "Already have an account? ",
+    "register.haveAccount": "Already have an account?",
     "register.login": "Sign in",
 
     "verifyEmail.title": "Verify your email",
@@ -1541,7 +1541,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "login.or": "ou",
     "login.withGoogle": "Continuar com o Google",
     "login.googleError": "Não foi possível entrar com o Google. Tente novamente.",
-    "login.noAccount": "Não tem uma conta? ",
+    "login.noAccount": "Não tem uma conta?",
     "login.register": "Cadastre-se",
 
     "register.title": "Crie sua conta",
@@ -1552,7 +1552,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "register.emailError": "E-mail inválido",
     "register.passwordError": "Mínimo de 8 caracteres",
     "register.submit": "Criar conta",
-    "register.haveAccount": "Já tem uma conta? ",
+    "register.haveAccount": "Já tem uma conta?",
     "register.login": "Entrar",
 
     "verifyEmail.title": "Verifique seu e-mail",
