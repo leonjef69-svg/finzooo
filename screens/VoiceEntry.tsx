@@ -70,7 +70,47 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   const runId = useRef(0);
   const activeRun = useRef(-1);
 
-  // ---- Animación del micrófono ----
+  // ---- Animaciones ----
+  //
+  // Entrada del panel: crece desde un poco más chico hasta su tamaño, con
+  // un rebote suave. Es la diferencia entre "apareció algo de golpe" y
+  // "se abrió algo" — la segunda se siente como parte de un gesto y no
+  // como un salto de pantalla.
+  const entrance = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(entrance, {
+      toValue: 1,
+      friction: 7,
+      tension: 90,
+      useNativeDriver: true,
+    }).start();
+  }, [entrance]);
+
+  // El micrófono entra aparte y con más rebote, un pelín después que el
+  // panel. Así el ojo va primero al panel y después al micrófono, que es
+  // lo que hay que mirar.
+  const micPop = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (stage !== "listening") return;
+    micPop.setValue(0);
+    Animated.spring(micPop, {
+      toValue: 1,
+      friction: 5,
+      tension: 140,
+      delay: 60,
+      useNativeDriver: true,
+    }).start();
+  }, [stage, micPop]);
+
+  // Qué tan fuerte se está hablando AHORA (0 = silencio, 1 = fuerte).
+  //
+  // Esto es lo que de verdad hacía falta: sin ver nada moverse al hablar,
+  // no hay forma de saber si el micrófono te está oyendo o si estás
+  // hablándole a una pantalla muerta. El latido de abajo se mueve solo
+  // aunque nadie diga nada; este solo se mueve con tu voz.
+  const level = useRef(new Animated.Value(0)).current;
+
+  // Latido continuo mientras escucha.
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (stage !== "listening") return;
@@ -111,6 +151,9 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
     settled.current = false;
     heardRef.current = "";
+    // Se baja a cero por si venía movido de la escucha anterior: si no, el
+    // aro arrancaría abierto y parecería que ya te está oyendo.
+    level.setValue(0);
     setHeard("");
     setRows([]);
     setKinds([]);
@@ -141,6 +184,9 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
           EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 2500,
           EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 2500,
         },
+        // Android va avisando del volumen del micrófono. Es lo que permite
+        // que el círculo crezca cuando hablas, y así se vea que te oye.
+        volumeChangeEventOptions: { enabled: true, intervalMillis: 100 },
       });
 
       // Respaldo por si Android no manda el aviso de arranque (hay
@@ -206,6 +252,19 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   // momento, sus avisos pertenecen a ESTA escucha y no a una anterior.
   useSpeechRecognitionEvent("start", () => {
     activeRun.current = runId.current;
+  });
+
+  useSpeechRecognitionEvent("volumechange", (event) => {
+    if (activeRun.current !== runId.current) return;
+    // Android manda un número entre -2 y 10; por debajo de 0 es silencio.
+    // Se reparte hasta 6 porque una voz normal a un palmo del micrófono
+    // llega ahí — dejarlo hasta 10 haría falta gritar para verlo crecer.
+    const normalized = Math.max(0, Math.min(1, event.value / 6));
+    Animated.timing(level, {
+      toValue: normalized,
+      duration: 120,
+      useNativeDriver: true,
+    }).start();
   });
 
   useSpeechRecognitionEvent("result", (event) => {
@@ -318,8 +377,21 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     };
   })();
 
+  // Latido de fondo: existe siempre, para que se vea que está esperando.
   const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.35] });
   const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0] });
+
+  // Aro que se abre con la voz. Este SOLO se mueve si estás hablando.
+  const voiceScale = level.interpolate({ inputRange: [0, 1], outputRange: [1, 1.9] });
+  const voiceOpacity = level.interpolate({ inputRange: [0, 1], outputRange: [0, 0.4] });
+
+  // El micrófono en sí: entra creciendo y luego late con la voz. Se
+  // multiplican las dos cosas para que la entrada no se pierda si en ese
+  // momento ya se está hablando.
+  const micScale = Animated.multiply(
+    micPop.interpolate({ inputRange: [0, 1], outputRange: [0.4, 1] }),
+    level.interpolate({ inputRange: [0, 1], outputRange: [1, 1.16] })
+  );
   const single = rows.length === 1;
 
   return (
@@ -337,13 +409,19 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
         onPress={onClose}
       />
 
-      <View
+      <Animated.View
         className="w-full rounded-3xl bg-white dark:bg-slate-900 px-5 pt-3 pb-6"
         style={[
           CARD_SHADOW,
           // Tope de alto para que la lista de 30 movimientos no se salga de
           // la pantalla en celulares chicos.
           { maxHeight: "88%", marginTop: insets.top, marginBottom: insets.bottom },
+          {
+            opacity: entrance,
+            transform: [
+              { scale: entrance.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) },
+            ],
+          },
         ]}
       >
         <View className="flex-row justify-end">
@@ -363,9 +441,16 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                 className="absolute w-24 h-24 rounded-full bg-violet-500"
                 style={{ transform: [{ scale }], opacity }}
               />
-              <View className="w-20 h-20 rounded-full bg-violet-500 items-center justify-center">
+              <Animated.View
+                className="absolute w-24 h-24 rounded-full bg-violet-400"
+                style={{ transform: [{ scale: voiceScale }], opacity: voiceOpacity }}
+              />
+              <Animated.View
+                className="w-20 h-20 rounded-full bg-violet-500 items-center justify-center"
+                style={{ transform: [{ scale: micScale }] }}
+              >
                 <Mic size={32} color="#ffffff" />
-              </View>
+              </Animated.View>
             </View>
             <Text className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2">
               {t("voice.listening")}
@@ -619,7 +704,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
           </View>
         )}
         </View>
-      </View>
+      </Animated.View>
     </View>
   );
 }
