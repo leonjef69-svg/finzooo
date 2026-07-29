@@ -117,12 +117,16 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
     const command = parseVoiceCommand(text);
 
-    // Exportar: se abre la pantalla de exportar con el mes ya elegido. No
-    // se genera el archivo solo a propósito — si el micrófono oyó "mayo"
-    // donde dijiste "marzo", ver la pantalla equivocada no cuesta nada;
-    // que se abra el menú de compartir con el archivo equivocado, sí.
+    // Exportar: el archivo se genera solo y se abre el menú de compartir,
+    // sin tocar nada más. Antes solo dejaba la pantalla lista, por si el
+    // micrófono oía mal el mes; se cambió porque así se pidió. La red de
+    // seguridad quedó del otro lado: si el mes que se entendió no tiene
+    // movimientos, no se exporta nada y se avisa cuál era.
     if (command.kind === "export") {
-      router.replace({ pathname: "/export-pdf", params: { month: command.monthKey } });
+      router.replace({
+        pathname: "/export-pdf",
+        params: { month: command.monthKey, format: command.format, auto: "1" },
+      });
       return;
     }
 
@@ -404,7 +408,10 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
             <TouchableOpacity
               onPress={() =>
-                router.replace({ pathname: "/export-pdf", params: { month: summaryMk } })
+                router.replace({
+                  pathname: "/export-pdf",
+                  params: { month: summaryMk, format: "pdf", auto: "1" },
+                })
               }
               className="w-full flex-row items-center justify-center gap-2 py-4 rounded-2xl bg-violet-500 mt-4"
             >

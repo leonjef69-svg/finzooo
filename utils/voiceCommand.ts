@@ -16,7 +16,7 @@ import { parseVoice, type VoiceParse } from "@/utils/voiceParser";
 
 export type VoiceCommand =
   | { kind: "movements"; parsed: VoiceParse }
-  | { kind: "export"; monthKey: string }
+  | { kind: "export"; monthKey: string; format: "pdf" | "csv" }
   | { kind: "summary"; monthKey: string };
 
 // "Bájame", "descárgame", "pásame el PDF"...
@@ -94,7 +94,13 @@ export function parseVoiceCommand(transcript: string, now: Date = new Date()): V
   const normalized = normalize(transcript ?? "");
 
   if (EXPORT_WORDS.some((w) => normalized.includes(w))) {
-    return { kind: "export", monthKey: monthFromPhrase(normalized, now) };
+    // Si se nombró Excel se manda un CSV; en cualquier otro caso, PDF.
+    const wantsCsv = normalized.includes("excel") || normalized.includes("csv");
+    return {
+      kind: "export",
+      monthKey: monthFromPhrase(normalized, now),
+      format: wantsCsv ? "csv" : "pdf",
+    };
   }
   if (SUMMARY_WORDS.some((w) => normalized.includes(w))) {
     return { kind: "summary", monthKey: monthFromPhrase(normalized, now) };

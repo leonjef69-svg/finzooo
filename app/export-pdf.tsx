@@ -7,8 +7,13 @@ import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
 export default function ExportPdfRoute() {
   const { t, isPremium } = useAppData();
   const blocked = useRedirectIfOrphaned();
-  // Mes que puede venir de la orden por voz: "/export-pdf?month=2026-01".
-  const { month } = useLocalSearchParams<{ month?: string }>();
+  // Lo que puede venir de la orden por voz:
+  // "/export-pdf?month=2026-01&format=pdf&auto=1"
+  const { month, format, auto } = useLocalSearchParams<{
+    month?: string;
+    format?: string;
+    auto?: string;
+  }>();
   if (blocked) return null;
 
   if (!isPremium) {
@@ -22,5 +27,12 @@ export default function ExportPdfRoute() {
     );
   }
 
-  return <ExportPdfSheet onClose={safeBack} initialMonth={month} />;
+  return (
+    <ExportPdfSheet
+      onClose={safeBack}
+      initialMonth={month}
+      initialFormat={format === "csv" ? "csv" : "pdf"}
+      autoExport={auto === "1"}
+    />
+  );
 }

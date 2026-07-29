@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Print from "expo-print";
@@ -24,19 +24,23 @@ function csvEscape(value: string) {
 export default function ExportPdfSheet({
   onClose,
   initialMonth,
+  initialFormat,
+  autoExport,
 }: {
   onClose: () => void;
   // Mes "AAAA-MM" con el que abrir ya elegido. Lo usa la orden por voz
-  // ("exporta mis gastos de enero"): la pantalla aparece lista y solo falta
-  // apretar el botón. Si ese mes no tiene movimientos, el efecto de más
-  // abajo cae solo al más reciente que sí los tenga.
+  // ("exporta mis gastos de enero"). Si ese mes no tiene movimientos, el
+  // efecto de más abajo cae solo al más reciente que sí los tenga.
   initialMonth?: string;
+  initialFormat?: ExportFormat;
+  // Exportar solo, sin esperar a que se toque el botón (orden por voz).
+  autoExport?: boolean;
 }) {
   const { t, transactions, month, monthNames, fmt, userName, showToast } = useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const [exportType, setExportType] = useState<ExportType>("all");
-  const [format, setFormat] = useState<ExportFormat>("pdf");
+  const [format, setFormat] = useState<ExportFormat>(initialFormat ?? "pdf");
   const [exporting, setExporting] = useState(false);
 
   // Antes se exportaba siempre el mes que se estuviera viendo en Inicio, sin
@@ -210,6 +214,26 @@ export default function ExportPdfSheet({
       setExporting(false);
     }
   }
+
+  // Exportación automática por orden de voz ("exporta enero de 2025").
+  //
+  // Se exige que el mes pedido TENGA movimientos de verdad. Sin eso, el
+  // efecto de más arriba lo habría cambiado por el mes reciente que sí los
+  // tiene, y se habría enviado en silencio el archivo de un mes que nadie
+  // pidió — con la persona creyendo que era el suyo.
+  const autoFired = useRef(false);
+  useEffect(() => {
+    if (!autoExport || autoFired.current || !initialMonth) return;
+    if (availableMonths.length === 0) return;
+    autoFired.current = true;
+
+    if (!availableMonths.includes(initialMonth)) {
+      showToast(t("exportPdf.noDataForMonth", { month: labelForMonth(initialMonth) }));
+      return;
+    }
+    handleExport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoExport, initialMonth, availableMonths]);
 
   return (
     <View className="absolute inset-0 z-40 justify-end">
