@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { router } from "expo-router";
 import { Mic, MicOff, Check, RotateCcw, X, ArrowUpRight, ArrowDownRight } from "lucide-react-native";
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "expo-speech-recognition";
 import { useAppData } from "@/contexts/AppDataContext";
-import { parseVoice, type VoiceFailure } from "@/utils/voiceParser";
+import { type VoiceFailure } from "@/utils/voiceParser";
+import { parseVoiceCommand } from "@/utils/voiceCommand";
 import { suggestCategory } from "@/utils/classifier";
 import { catInfo } from "@/constants/categories";
 import { nextId } from "@/utils/id";
@@ -23,16 +25,20 @@ const LOCALES: Record<string, string> = {
 type Stage =
   | "listening" // el micrófono está abierto
   | "confirm" // se entendió: falta que la persona apruebe
+  | "summary" // se pidió un resumen del mes
   | "failed" // se escuchó algo pero no se entendió
   | "denied"; // no dio permiso al micrófono
 
 type Kind = "expense" | "income";
 
 export default function VoiceEntry({ onClose }: { onClose: () => void }) {
-  const { t, fmt, userLanguage, merchantLearned, addOrUpdateTransaction, showToast } = useAppData();
+  const { t, fmt, userLanguage, monthNames, transactions, merchantLearned, addOrUpdateTransaction, showToast } =
+    useAppData();
   const insets = useSafeAreaInsets();
 
   const [stage, setStage] = useState<Stage>("listening");
+  // Mes del que se pidió el resumen ("AAAA-MM").
+  const [summaryMk, setSummaryMk] = useState("");
   const [heard, setHeard] = useState("");
   const [failure, setFailure] = useState<VoiceFailure>("empty");
   // Una frase puede traer varios movimientos ("10 en hamburguesa y 20 en
@@ -85,6 +91,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     setHeard("");
     setRows([]);
     setKinds([]);
+    setSummaryMk("");
     setStage("listening");
     try {
       const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
@@ -108,7 +115,24 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     if (settled.current) return;
     settled.current = true;
 
-    const parsed = parseVoice(text);
+    const command = parseVoiceCommand(text);
+
+    // Exportar: se abre la pantalla de exportar con el mes ya elegido. No
+    // se genera el archivo solo a propósito — si el micrófono oyó "mayo"
+    // donde dijiste "marzo", ver la pantalla equivocada no cuesta nada;
+    // que se abra el menú de compartir con el archivo equivocado, sí.
+    if (command.kind === "export") {
+      router.replace({ pathname: "/export-pdf", params: { month: command.monthKey } });
+      return;
+    }
+
+    if (command.kind === "summary") {
+      setSummaryMk(command.monthKey);
+      setStage("summary");
+      return;
+    }
+
+    const parsed = command.parsed;
     if (!parsed.ok) {
       setFailure(parsed.reason);
       setStage("failed");
@@ -182,6 +206,27 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     if (rows.length > 1) showToast(t("voice.savedPlural", { count: rows.length }));
     onClose();
   }
+
+  // Cuentas del mes pedido: cuánto salió, cuánto entró y en qué se fue más.
+  // Se calcula aquí y no en un archivo aparte porque son cuatro líneas y
+  // solo las usa esta pantalla.
+  const summary = (() => {
+    if (!summaryMk) return null;
+    const monthTx = transactions.filter((tx) => tx.date.startsWith(summaryMk));
+    const spent = monthTx.filter((tx) => tx.type === "expense");
+    const byCategory = new Map<string, number>();
+    for (const tx of spent) byCategory.set(tx.category, (byCategory.get(tx.category) ?? 0) + tx.amount);
+    const [y, m] = summaryMk.split("-").map(Number);
+    return {
+      label: `${monthNames[m - 1]} ${y}`,
+      total: spent.reduce((s, tx) => s + tx.amount, 0),
+      income: monthTx.filter((tx) => tx.type === "income").reduce((s, tx) => s + tx.amount, 0),
+      count: spent.length,
+      top: Array.from(byCategory.entries())
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 4),
+    };
+  })();
 
   const scale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.35] });
   const opacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0] });
@@ -302,6 +347,77 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             <Text className="text-[10px] text-center text-slate-400 mt-3 leading-4">
               {t(single ? "voice.editHint" : "voice.manyHint")}
             </Text>
+          </View>
+        )}
+
+        {stage === "summary" && summary && (
+          <View className="w-full">
+            <Text className="text-xs text-center text-slate-400 mb-4">"{heard}"</Text>
+
+            <View
+              className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+              style={CARD_SHADOW}
+            >
+              <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 text-center">
+                {summary.label}
+              </Text>
+
+              {summary.count === 0 ? (
+                <Text className="text-xs text-center text-slate-500 dark:text-slate-300 leading-5 mt-3">
+                  {t("voice.summaryEmpty")}
+                </Text>
+              ) : (
+                <>
+                  <Text className="text-3xl font-extrabold text-rose-500 text-center mt-1">
+                    {fmt(summary.total)}
+                  </Text>
+                  <Text className="text-[11px] text-center text-slate-500 dark:text-slate-300">
+                    {t("voice.summarySpent", { count: summary.count })}
+                  </Text>
+                  {summary.income > 0 && (
+                    <Text className="text-[11px] text-center text-emerald-600 mt-0.5">
+                      {t("voice.summaryIncome", { amount: fmt(summary.income) })}
+                    </Text>
+                  )}
+
+                  <View className="mt-4 gap-2">
+                    {summary.top.map(([category, amount]) => {
+                      const cat = catInfo(category);
+                      const share = Math.round((amount / summary.total) * 100);
+                      return (
+                        <View key={category} className="flex-row items-center gap-2.5">
+                          <Text className="text-base">{cat.emoji}</Text>
+                          <Text className="flex-1 text-xs font-bold text-slate-900 dark:text-slate-100">
+                            {t(cat.label)}
+                          </Text>
+                          <Text className="text-[11px] text-slate-400">{share}%</Text>
+                          <Text className="text-xs font-bold text-slate-900 dark:text-slate-100 w-20 text-right">
+                            {fmt(amount)}
+                          </Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </>
+              )}
+            </View>
+
+            <TouchableOpacity
+              onPress={() =>
+                router.replace({ pathname: "/export-pdf", params: { month: summaryMk } })
+              }
+              className="w-full flex-row items-center justify-center gap-2 py-4 rounded-2xl bg-violet-500 mt-4"
+            >
+              <Check size={18} color="#ffffff" />
+              <Text className="text-white font-bold">{t("voice.summaryExport")}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={start}
+              className="w-full flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 mt-2"
+            >
+              <RotateCcw size={16} color="#64748b" />
+              <Text className="font-bold text-slate-600 dark:text-slate-200">{t("voice.retry")}</Text>
+            </TouchableOpacity>
           </View>
         )}
 

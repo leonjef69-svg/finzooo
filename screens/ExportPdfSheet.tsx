@@ -21,7 +21,17 @@ function csvEscape(value: string) {
   return value;
 }
 
-export default function ExportPdfSheet({ onClose }: { onClose: () => void }) {
+export default function ExportPdfSheet({
+  onClose,
+  initialMonth,
+}: {
+  onClose: () => void;
+  // Mes "AAAA-MM" con el que abrir ya elegido. Lo usa la orden por voz
+  // ("exporta mis gastos de enero"): la pantalla aparece lista y solo falta
+  // apretar el botón. Si ese mes no tiene movimientos, el efecto de más
+  // abajo cae solo al más reciente que sí los tenga.
+  initialMonth?: string;
+}) {
   const { t, transactions, month, monthNames, fmt, userName, showToast } = useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -35,7 +45,7 @@ export default function ExportPdfSheet({ onClose }: { onClose: () => void }) {
   // esta misma pantalla, y arranca en el mes que se venía viendo para que
   // el camino de siempre siga siendo el más corto.
   const viewedMk = monthKey(month.y, month.m);
-  const [selectedMk, setSelectedMk] = useState(viewedMk);
+  const [selectedMk, setSelectedMk] = useState(initialMonth || viewedMk);
 
   // Solo meses que tengan al menos un movimiento —gasto o ingreso, da igual
   // el monto—, del más reciente al más antiguo. Un mes vacío no se ofrece:
