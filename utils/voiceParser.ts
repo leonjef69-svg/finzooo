@@ -35,7 +35,7 @@ export type VoiceParse =
 // Y el tope real ya no es este número: es que la pantalla de confirmación
 // muestra la lista completa antes de guardar nada, así que lo que se
 // registra es siempre lo que se vio.
-const MAX_ROWS = 15;
+const MAX_ROWS = 30;
 
 // Números escritos con letras. El reconocimiento de voz de Google casi
 // siempre devuelve dígitos ("30"), pero con números chicos a veces escribe

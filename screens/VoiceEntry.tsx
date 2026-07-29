@@ -307,7 +307,19 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                 onKind={(k) => setKinds([k])}
               />
             ) : (
-              <ScrollView style={{ maxHeight: 300 }} contentContainerStyle={{ paddingVertical: 2 }}>
+              <>
+                {/* Con muchos movimientos, revisar uno por uno es imposible.
+                    Esta línea deja comprobar de un vistazo lo único que de
+                    verdad importa: cuántos son y cuánto suman. */}
+                <View className="flex-row items-center justify-between px-1 mb-2">
+                  <Text className="text-[11px] font-bold text-slate-500 dark:text-slate-300">
+                    {t("voice.manyCount", { count: rows.length })}
+                  </Text>
+                  <Text className="text-[11px] font-bold text-slate-900 dark:text-slate-100">
+                    {fmt(rows.reduce((s, r, i) => s + (kinds[i] === "expense" ? r.amount : -r.amount), 0))}
+                  </Text>
+                </View>
+                <ScrollView style={{ maxHeight: 340 }} contentContainerStyle={{ paddingVertical: 2 }}>
                 <View className="gap-2">
                   {rows.map((row, i) => {
                     const kind = kinds[i];
@@ -346,7 +358,8 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                     );
                   })}
                 </View>
-              </ScrollView>
+                </ScrollView>
+              </>
             )}
 
             <TouchableOpacity
