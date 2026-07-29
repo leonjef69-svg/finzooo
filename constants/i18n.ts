@@ -138,6 +138,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "reports.balanceShort": "Te faltaron",
     "reports.balanceBudgetTitle": "Presupuesto del mes",
     "reports.balanceBudgetAmount": "Presupuesto",
+    "reports.balanceBudgetHint":
+      "Esto se compara con lo que gastaste, no con lo que te entró. Por eso puede sobrarte presupuesto y aun así haber gastado más de lo que recibiste.",
     "reports.balanceAvailable": "Disponible",
     "reports.balanceOverBy": "Te pasaste por",
     "reports.balanceUsed": "{pct}% utilizado",
@@ -673,6 +675,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "reports.balanceShort": "You went short",
     "reports.balanceBudgetTitle": "Monthly budget",
     "reports.balanceBudgetAmount": "Budget",
+    "reports.balanceBudgetHint":
+      "This compares against what you spent, not what came in. That's why you can have budget left and still have spent more than you received.",
     "reports.balanceAvailable": "Available",
     "reports.balanceOverBy": "Over by",
     "reports.balanceUsed": "{pct}% used",
@@ -1205,6 +1209,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "reports.balanceShort": "Faltaram",
     "reports.balanceBudgetTitle": "Orçamento do mês",
     "reports.balanceBudgetAmount": "Orçamento",
+    "reports.balanceBudgetHint":
+      "Isto se compara com o que você gastou, não com o que entrou. Por isso pode sobrar orçamento e ainda assim ter gasto mais do que recebeu.",
     "reports.balanceAvailable": "Disponível",
     "reports.balanceOverBy": "Passou por",
     "reports.balanceUsed": "{pct}% utilizado",

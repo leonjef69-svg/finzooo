@@ -287,8 +287,16 @@ export default function Reports({
         {budget > 0 && (
           <>
             <View className="h-px bg-slate-100 dark:bg-slate-800 my-3" />
-            <Text className="text-sm font-bold mb-2" style={{ color: primaryTextColor }}>
+            <Text className="text-sm font-bold" style={{ color: primaryTextColor }}>
               {t("reports.balanceBudgetTitle")}
+            </Text>
+            {/* Sin esta línea, ver "te faltaron S/33" justo encima de
+                "disponible S/64" desconcierta con razón: parecen
+                contradecirse. No lo hacen — uno compara contra lo que
+                entró y el otro contra el tope que te pusiste — pero eso
+                hay que decirlo, no dejarlo adivinar. */}
+            <Text className="text-[10px] text-slate-400 mb-2 leading-4">
+              {t("reports.balanceBudgetHint")}
             </Text>
 
             {/* "Presupuesto" a secas: el título de arriba ya dice "del
