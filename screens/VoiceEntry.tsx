@@ -22,6 +22,15 @@ const LOCALES: Record<string, string> = {
   pt: "pt-BR",
 };
 
+// Si el celular no tiene instalado el idioma exacto, se prueban estos por
+// orden. "es-PE" no viene de fábrica en todos los celulares; "es-ES" y "es"
+// sí, y entienden igual de bien para lo que hace falta aquí.
+const LOCALE_FALLBACKS: Record<string, string[]> = {
+  "es-PE": ["es-PE", "es-ES", "es-419", "es"],
+  "en-US": ["en-US", "en"],
+  "pt-BR": ["pt-BR", "pt-PT", "pt"],
+};
+
 type Stage =
   | "listening" // el micrófono está abierto
   | "confirm" // se entendió: falta que la persona apruebe
@@ -45,6 +54,15 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   const [summaryCategory, setSummaryCategory] = useState("");
   const [heard, setHeard] = useState("");
   const [failure, setFailure] = useState<VoiceFailure>("empty");
+  // Lo que dijo Android cuando falló. Antes se tiraba y todo se mostraba
+  // como "no escuché nada", que es justo lo que impedía saber si el
+  // problema era el idioma, la red, el permiso o de verdad el silencio.
+  const [errorCode, setErrorCode] = useState("");
+
+  // Idiomas a probar, en orden. Si el reconocedor del celular no tiene el
+  // primero instalado, cae al siguiente en vez de fallar sin más.
+  const langs = LOCALES[userLanguage] ?? "es-PE";
+  const langChain = useRef<string[]>([]);
   // Una frase puede traer varios movimientos ("10 en hamburguesa y 20 en
   // gaseosa"), así que siempre se trabaja con una lista, aunque casi
   // siempre tenga uno solo.
@@ -140,6 +158,15 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   }, []);
 
   async function start() {
+    langChain.current = [...(LOCALE_FALLBACKS[langs] ?? [langs])];
+    setErrorCode("");
+    await listen();
+  }
+
+  // Abre el micrófono con el primer idioma de la lista que quede por
+  // probar. Separado de start() porque un fallo de idioma vuelve a entrar
+  // aquí con el siguiente, sin reiniciar el resto.
+  async function listen() {
     runId.current += 1;
 
     // Cierra cualquier escucha anterior antes de abrir una nueva.
@@ -167,7 +194,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
         return;
       }
       ExpoSpeechRecognitionModule.start({
-        lang: LOCALES[userLanguage] ?? "es-PE",
+        lang: langChain.current[0] ?? langs,
         interimResults: true,
         continuous: false,
         maxAlternatives: 1,
@@ -283,7 +310,21 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   // llega como "aborted", que ya se ignora aquí.
   useSpeechRecognitionEvent("error", (event) => {
     if (event.error === "aborted" || settled.current) return;
+
+    // Si el celular no tiene ese idioma instalado, se prueba el siguiente
+    // de la lista antes de darse por vencido. Es de las causas más comunes
+    // de que el micrófono "no oiga nada": no es que no oiga, es que no
+    // sabe reconocer ese idioma concreto.
+    const languageProblem =
+      event.error === "language-not-supported" || event.error === "service-not-allowed";
+    if (languageProblem && langChain.current.length > 1) {
+      langChain.current = langChain.current.slice(1);
+      listen();
+      return;
+    }
+
     settled.current = true;
+    setErrorCode(`${event.error}${event.message ? ` · ${event.message}` : ""}`);
     setFailure("empty");
     setStage("failed");
   });
@@ -681,9 +722,16 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
               {t(failure === "noAmount" ? "voice.noAmountTitle" : "voice.emptyTitle")}
             </Text>
             {heard ? <Text className="text-xs text-center text-slate-400 mb-2">"{heard}"</Text> : null}
-            <Text className="text-xs text-center text-slate-500 dark:text-slate-300 leading-5 mb-6">
+            <Text className="text-xs text-center text-slate-500 dark:text-slate-300 leading-5 mb-3">
               {t(failure === "noAmount" ? "voice.noAmountHint" : "voice.emptyHint")}
             </Text>
+            {/* El motivo tal cual lo dio Android. Feo a propósito: no es
+                para el uso diario, es para poder arreglarlo cuando algo
+                falla y desde fuera todo se ve igual. */}
+            {errorCode ? (
+              <Text className="text-[10px] text-center text-slate-400 mb-3">{errorCode}</Text>
+            ) : null}
+            <View className="h-3" />
             <TouchableOpacity
               onPress={start}
               className="w-full flex-row items-center justify-center gap-2 py-4 rounded-2xl bg-violet-500"
