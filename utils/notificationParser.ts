@@ -34,6 +34,14 @@ const NOT_A_MOVEMENT = [
   "codigo de seguridad",
   "clave temporal",
   "no compartas",
+  // Yape manda esto junto a cada pago: "Operación en curso. Hemos generado
+  // y autocompletado la clave". Hoy no trae monto, así que se descartaba
+  // solo por eso. Si algún día se lo agregan, el mismo pago se registraría
+  // DOS veces — y descubrirlo después, con los números ya descuadrados, es
+  // mucho peor que blindarlo ahora.
+  "operacion en curso",
+  "autocompletado la clave",
+  "generado y autocompletado",
   "sorteo",
   "promocion",
   "encuesta",
