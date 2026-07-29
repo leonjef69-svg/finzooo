@@ -392,7 +392,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "autoCapture.permissionTitle": "Dar acceso a los avisos",
     "autoCapture.permissionHint":
       "Toca aquí, busca Finzo en la lista que abre Android y actívala.",
-    "autoCapture.permissionGranted": "Listo, ya tienes el acceso dado.",
+    "autoCapture.permissionGranted":
+      "Listo, ya lo tienes. Si el servicio sale desconectado, toca aquí y apaga y prende Finzo en esa lista.",
     "autoCapture.toggleTitle": "Anotar movimientos solo",
     "autoCapture.toggleHint":
       "Se registran sin preguntarte nada. Los verás con la etiqueta morada «Automático».",
@@ -895,7 +896,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
       "This feature only works on Android and needs the latest version of Finzo installed from the app file. On iPhone, Android's approach is not allowed: other apps cannot read your alerts.",
     "autoCapture.permissionTitle": "Grant access to alerts",
     "autoCapture.permissionHint": "Tap here, find Finzo in the list Android opens, and switch it on.",
-    "autoCapture.permissionGranted": "Done, access is granted.",
+    "autoCapture.permissionGranted":
+      "Done, you have it. If the service shows disconnected, tap here and switch Finzo off and on in that list.",
     "autoCapture.toggleTitle": "Log movements on its own",
     "autoCapture.toggleHint":
       "They are saved without asking you anything. You will see them with the purple \"Automatic\" tag.",
@@ -1396,7 +1398,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
       "Este recurso só funciona no Android e precisa da última versão do Finzo instalada pelo arquivo do app. No iPhone, outros apps não podem ler os seus avisos.",
     "autoCapture.permissionTitle": "Dar acesso aos avisos",
     "autoCapture.permissionHint": "Toque aqui, procure o Finzo na lista que o Android abre e ative.",
-    "autoCapture.permissionGranted": "Pronto, o acesso já está dado.",
+    "autoCapture.permissionGranted":
+      "Pronto, você já tem. Se o serviço aparecer desconectado, toque aqui e desligue e ligue o Finzo nessa lista.",
     "autoCapture.toggleTitle": "Anotar movimentos sozinho",
     "autoCapture.toggleHint":
       "São registrados sem perguntar nada. Você os verá com a etiqueta roxa «Automático».",

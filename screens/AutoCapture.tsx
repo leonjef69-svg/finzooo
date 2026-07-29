@@ -121,9 +121,16 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
             {/* Paso 1: el permiso de Android. No se puede pedir con una
                 ventanita: hay que mandar a la persona a los ajustes del
                 sistema y que lo active ella misma. */}
+            {/* Este paso sigue tocándose aunque el permiso ya esté dado.
+                Antes se desactivaba al concederlo, y resultó ser justo lo
+                que hacía falta después: cuando Android suelta el servicio
+                —pasa al instalar una versión nueva encima— el permiso
+                sigue marcado como dado, y el arreglo es apagar y prender
+                Finzo en esa misma pantalla de Android. Con el botón
+                desactivado, la única forma de llegar ahí era buscarla a
+                mano en los ajustes del celular. */}
             <TouchableOpacity
               onPress={openAutoCaptureSettings}
-              disabled={autoCapturePermission}
               className="w-full flex-row items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 mb-2.5"
               style={CARD_SHADOW}
             >
@@ -146,7 +153,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                   {t(autoCapturePermission ? "autoCapture.permissionGranted" : "autoCapture.permissionHint")}
                 </Text>
               </View>
-              {!autoCapturePermission && <ChevronRight size={16} color="#cbd5e1" />}
+              <ChevronRight size={16} color="#cbd5e1" />
             </TouchableOpacity>
 
             {/* Paso 2: el interruptor de Finzo. Sigue disponible aunque el
