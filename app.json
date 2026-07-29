@@ -9,7 +9,11 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition.",
+        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone."
+      }
     },
     "android": {
       "package": "com.finzo.app",
@@ -22,7 +26,14 @@
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
       "edgeToEdgeEnabled": true,
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.RECORD_AUDIO"
+      ],
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "web": {
       "output": "static",
@@ -56,6 +67,9 @@
         "projectId": "f0c230a1-8bf6-4b65-a12d-24054597e161"
       }
     },
-    "owner": "asdsadasd23213"
+    "owner": "asdsadasd23213",
+    "updates": {
+      "url": "https://u.expo.dev/f0c230a1-8bf6-4b65-a12d-24054597e161"
+    }
   }
 }
