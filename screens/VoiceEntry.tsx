@@ -41,6 +41,8 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   // salió, de lo que entró, o de todo.
   const [summaryMk, setSummaryMk] = useState("");
   const [summaryFocus, setSummaryFocus] = useState<"expense" | "income" | "all">("all");
+  // Categoría pedida ("solo comida"), o vacío para todas.
+  const [summaryCategory, setSummaryCategory] = useState("");
   const [heard, setHeard] = useState("");
   const [failure, setFailure] = useState<VoiceFailure>("empty");
   // Una frase puede traer varios movimientos ("10 en hamburguesa y 20 en
@@ -104,6 +106,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     setRows([]);
     setKinds([]);
     setSummaryMk("");
+    setSummaryCategory("");
     setStage("listening");
     try {
       const permission = await ExpoSpeechRecognitionModule.requestPermissionsAsync();
@@ -150,6 +153,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     if (command.kind === "summary") {
       setSummaryMk(command.monthKey);
       setSummaryFocus(command.focus);
+      setSummaryCategory(command.category ?? "");
       setStage("summary");
       return;
     }
@@ -240,8 +244,11 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     // pequeña debajo. Antes el protagonista era SIEMPRE el gasto, así que
     // pedir un resumen de ingresos mostraba gastos.
     const wantsIncome = summaryFocus === "income";
-    const main = monthTx.filter((tx) => (wantsIncome ? tx.type === "income" : tx.type === "expense"));
+    const all = monthTx.filter((tx) => (wantsIncome ? tx.type === "income" : tx.type === "expense"));
     const other = monthTx.filter((tx) => (wantsIncome ? tx.type === "expense" : tx.type === "income"));
+
+    // Si se pidió una categoría, el resumen es SOLO de esa.
+    const main = summaryCategory ? all.filter((tx) => tx.category === summaryCategory) : all;
 
     const byCategory = new Map<string, number>();
     for (const tx of main) byCategory.set(tx.category, (byCategory.get(tx.category) ?? 0) + tx.amount);
@@ -250,12 +257,18 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     return {
       label: `${monthNames[m - 1]} ${y}`,
       isIncome: wantsIncome,
+      category: summaryCategory,
       total: main.reduce((s, tx) => s + tx.amount, 0),
       otherTotal: other.reduce((s, tx) => s + tx.amount, 0),
       count: main.length,
+      // Sin categoría pedida se enseña en qué se fue más (las categorías);
+      // con una categoría, esa lista sería una sola fila repitiendo el
+      // total, así que se enseñan los movimientos concretos, que es lo que
+      // de verdad se quiere ver.
       top: Array.from(byCategory.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 4),
+      items: [...main].sort((a, b) => b.amount - a.amount).slice(0, 6),
     };
   })();
 
@@ -422,12 +435,16 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
               style={CARD_SHADOW}
             >
               <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 text-center">
-                {summary.label}
+                {summary.category
+                  ? `${catInfo(summary.category).emoji} ${t(catInfo(summary.category).label)} · ${summary.label}`
+                  : summary.label}
               </Text>
 
               {summary.count === 0 ? (
                 <Text className="text-xs text-center text-slate-500 dark:text-slate-300 leading-5 mt-3">
-                  {t(summary.isIncome ? "voice.summaryEmptyIncome" : "voice.summaryEmpty")}
+                  {summary.category
+                    ? t("voice.summaryEmptyCategory", { cat: t(catInfo(summary.category).label) })
+                    : t(summary.isIncome ? "voice.summaryEmptyIncome" : "voice.summaryEmpty")}
                 </Text>
               ) : (
                 <>
@@ -443,7 +460,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                       count: summary.count,
                     })}
                   </Text>
-                  {summary.otherTotal > 0 && (
+                  {summary.otherTotal > 0 && !summary.category && (
                     <Text
                       className={`text-[11px] text-center mt-0.5 ${
                         summary.isIncome ? "text-rose-500" : "text-emerald-600"
@@ -455,24 +472,45 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                     </Text>
                   )}
 
-                  <View className="mt-4 gap-2">
-                    {summary.top.map(([category, amount]) => {
-                      const cat = catInfo(category);
-                      const share = Math.round((amount / summary.total) * 100);
-                      return (
-                        <View key={category} className="flex-row items-center gap-2.5">
-                          <Text className="text-base">{cat.emoji}</Text>
-                          <Text className="flex-1 text-xs font-bold text-slate-900 dark:text-slate-100">
-                            {t(cat.label)}
+                  {summary.category ? (
+                    // Con una categoría pedida se listan los movimientos.
+                    <View className="mt-4 gap-2">
+                      {summary.items.map((tx) => (
+                        <View key={tx.id} className="flex-row items-center gap-2.5">
+                          <Text className="flex-1 text-xs text-slate-900 dark:text-slate-100" numberOfLines={1}>
+                            {tx.description || t(catInfo(tx.category).label)}
                           </Text>
-                          <Text className="text-[11px] text-slate-400">{share}%</Text>
-                          <Text className="text-xs font-bold text-slate-900 dark:text-slate-100 w-20 text-right">
-                            {fmt(amount)}
+                          <Text className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                            {fmt(tx.amount)}
                           </Text>
                         </View>
-                      );
-                    })}
-                  </View>
+                      ))}
+                      {summary.count > summary.items.length && (
+                        <Text className="text-[10px] text-slate-400 text-center mt-1">
+                          {t("voice.summaryMore", { count: summary.count - summary.items.length })}
+                        </Text>
+                      )}
+                    </View>
+                  ) : (
+                    <View className="mt-4 gap-2">
+                      {summary.top.map(([category, amount]) => {
+                        const cat = catInfo(category);
+                        const share = Math.round((amount / summary.total) * 100);
+                        return (
+                          <View key={category} className="flex-row items-center gap-2.5">
+                            <Text className="text-base">{cat.emoji}</Text>
+                            <Text className="flex-1 text-xs font-bold text-slate-900 dark:text-slate-100">
+                              {t(cat.label)}
+                            </Text>
+                            <Text className="text-[11px] text-slate-400">{share}%</Text>
+                            <Text className="text-xs font-bold text-slate-900 dark:text-slate-100 w-20 text-right">
+                              {fmt(amount)}
+                            </Text>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
                 </>
               )}
             </View>

@@ -18,8 +18,14 @@ export type VoiceCommand =
   | { kind: "movements"; parsed: VoiceParse }
   | { kind: "export"; monthKey: string; format: "pdf" | "csv"; destination: "share" | "drive" }
   // "focus" dice de qué se pidió el resumen: solo lo que salió, solo lo que
-  // entró, o las dos cosas.
-  | { kind: "summary"; monthKey: string; focus: "expense" | "income" | "all" };
+  // entró, o las dos cosas. "category" queda puesto cuando se nombró una
+  // ("solo comida"), y entonces el resumen se limita a esa.
+  | {
+      kind: "summary";
+      monthKey: string;
+      focus: "expense" | "income" | "all";
+      category?: string;
+    };
 
 // "Bájame", "descárgame", "pásame el PDF"...
 const EXPORT_WORDS = [
@@ -34,6 +40,16 @@ const SUMMARY_WORDS = [
   "como voy", "cuanto me queda", "reporte de gastos",
   "cuanto recibi", "cuanto entro", "cuanto gane", "cuanto me pagaron",
   "mis ingresos", "cuanto ingreso",
+  // Formas de PEDIR, que es como sale natural y no estaban previstas:
+  // "dame los gastos de mayo..." no encajaba con ninguna de arriba y
+  // acababa tratándose como si se quisiera anotar un movimiento.
+  "dame los gastos", "dame mis gastos", "dame el gasto",
+  "dame los ingresos", "dame mis ingresos",
+  "muestrame", "muestra los", "muestra mis", "ensename",
+  "ver mis gastos", "ver los gastos", "ver mis ingresos",
+  "lista de gastos", "detalle de",
+  // Nombrar la categoría ya delata que se está preguntando, no anotando.
+  "categoria",
 ];
 
 // Palabras que piden ver SOLO lo que entró.
@@ -44,6 +60,62 @@ const INCOME_FOCUS = [
 
 // Palabras que piden ver SOLO lo que salió.
 const EXPENSE_FOCUS = ["gasto", "gastos", "gaste", "gastado", "se me fue"];
+
+// Nombres de categoría tal como los diría una persona → la categoría de
+// Finzo. Ojo: esto NO es lo mismo que el diccionario de classifier.ts.
+// Aquel traduce en QUÉ se gastó ("salchipapa" → comida); este traduce el
+// nombre de la categoría en sí ("comida" → comida), que es lo que se dice
+// al pedir un resumen.
+const CATEGORY_WORDS: { match: string; category: string }[] = [
+  // Gastos
+  { match: "comida", category: "comida" },
+  { match: "comidas", category: "comida" },
+  { match: "alimentacion", category: "comida" },
+  { match: "restaurante", category: "comida" },
+  { match: "transporte", category: "transporte" },
+  { match: "movilidad", category: "transporte" },
+  { match: "pasajes", category: "transporte" },
+  { match: "combustible", category: "combustible" },
+  { match: "gasolina", category: "combustible" },
+  { match: "grifo", category: "combustible" },
+  { match: "servicios", category: "servicios" },
+  { match: "recibos", category: "servicios" },
+  { match: "salud", category: "salud" },
+  { match: "farmacia", category: "salud" },
+  { match: "compras", category: "compras" },
+  { match: "ropa", category: "compras" },
+  { match: "entretenimiento", category: "entretenimiento" },
+  { match: "diversion", category: "entretenimiento" },
+  { match: "videojuegos", category: "videojuegos" },
+  { match: "juegos", category: "videojuegos" },
+  { match: "suscripciones", category: "suscripciones" },
+  { match: "suscripcion", category: "suscripciones" },
+  { match: "educacion", category: "educacion" },
+  { match: "estudios", category: "educacion" },
+  { match: "mascotas", category: "mascotas" },
+  { match: "mascota", category: "mascotas" },
+  { match: "hogar", category: "hogar" },
+  // Ingresos
+  { match: "sueldo", category: "salario" },
+  { match: "salario", category: "salario" },
+  { match: "freelance", category: "freelance" },
+  { match: "regalo", category: "regalo" },
+  { match: "regalos", category: "regalo" },
+  { match: "inversiones", category: "inversiones" },
+  { match: "inversion", category: "inversiones" },
+  { match: "venta", category: "venta" },
+  { match: "ventas", category: "venta" },
+  { match: "premio", category: "premios" },
+  { match: "premios", category: "premios" },
+  { match: "prestamo", category: "prestamo" },
+  { match: "dividendos", category: "dividendos" },
+  { match: "cripto", category: "cripto" },
+  { match: "beca", category: "beca" },
+  // Va al final porque es la única ambigua: como gasto es "hogar" (pagar
+  // el alquiler) y como ingreso es "alquiler" (cobrarlo). Se resuelve más
+  // abajo, mirando si se pidió de gastos o de ingresos.
+  { match: "alquiler", category: "alquiler" },
+];
 
 const MONTHS = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
@@ -112,6 +184,26 @@ function normalize(text: string): string {
     .trim();
 }
 
+/**
+ * ¿Se nombró alguna categoría? ("...solamente la categoría comida").
+ *
+ * Se compara por palabra entera: buscando "venta" como pedazo de texto,
+ * un "aventura" o un "ventana" la activarían sin que nadie la nombrara.
+ */
+function categoryFromPhrase(
+  normalized: string,
+  focus: "expense" | "income" | "all"
+): string | undefined {
+  for (const rule of CATEGORY_WORDS) {
+    if (!hasWord(normalized, rule.match)) continue;
+    // "Alquiler" es la única que significa dos cosas distintas: pagarlo es
+    // un gasto de hogar, cobrarlo es un ingreso. Manda lo que se pidió.
+    if (rule.category === "alquiler" && focus === "expense") return "hogar";
+    return rule.category;
+  }
+  return undefined;
+}
+
 export function parseVoiceCommand(transcript: string, now: Date = new Date()): VoiceCommand {
   const normalized = normalize(transcript ?? "");
 
@@ -134,10 +226,13 @@ export function parseVoiceCommand(transcript: string, now: Date = new Date()): V
     // gastos, que es de lo que uno quiere enterarse.
     const wantsIncome = INCOME_FOCUS.some((w) => hasWord(normalized, w));
     const wantsExpense = EXPENSE_FOCUS.some((w) => hasWord(normalized, w));
+    const focus = wantsIncome && !wantsExpense ? "income" : wantsExpense ? "expense" : "all";
+
     return {
       kind: "summary",
       monthKey: monthFromPhrase(normalized, now),
-      focus: wantsIncome && !wantsExpense ? "income" : wantsExpense ? "expense" : "all",
+      focus,
+      category: categoryFromPhrase(normalized, focus),
     };
   }
 
