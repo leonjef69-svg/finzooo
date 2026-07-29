@@ -157,21 +157,56 @@ export default function Reports({
   // Antes los días estaban fijos en [1,6,11,16,21,26,31], así que en febrero
   // (28 días) o en los meses de 30 el último punto decía "31", un día que no
   // existe. Ahora el último punto es siempre el último día real del mes.
-  const { lineValues, lineLabels } = useMemo(() => {
+  // Ahora hay UN PUNTO POR DÍA, no uno cada cinco.
+  //
+  // Con puntos cada cinco días, un gasto del día 29 no aparecía hasta el 31
+  // y no había nada que tocar en su día: los movimientos existían pero
+  // quedaban invisibles y fuera de alcance. Las etiquetas siguen saliendo
+  // cada cinco días para que no se amontonen, pero los puntos son todos.
+  //
+  // Además del gasto real se dibujan dos referencias:
+  //   · el RITMO del presupuesto — la línea recta que habría que seguir
+  //     para llegar a fin de mes justo con lo presupuestado;
+  //   · la PROYECCIÓN — a dónde se llega si se sigue gastando al ritmo
+  //     de lo que va del mes.
+  // El gasto real se corta en el día de hoy: dibujarlo hasta fin de mes
+  // decía que no se gastó nada en días que todavía no han ocurrido.
+  const pace = useMemo(() => {
     const expenses = transactions.filter((t) => t.date.startsWith(mk) && t.type === "expense");
     const daysInMonth = new Date(month.y, month.m + 1, 0).getDate();
 
-    const days: number[] = [];
-    for (let d = 1; d <= daysInMonth; d += 5) days.push(d);
-    if (days[days.length - 1] !== daysInMonth) days.push(daysInMonth);
+    const now = new Date();
+    const isCurrentMonth = now.getFullYear() === month.y && now.getMonth() === month.m;
+    // En un mes ya pasado, "hoy" es el último día: el mes está completo.
+    const today = isCurrentMonth ? Math.min(now.getDate(), daysInMonth) : daysInMonth;
 
-    const values = days.map((day) => {
+    const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+    const spentUpTo = (day: number) => {
       const cutoff = `${mk}-${String(day).padStart(2, "0")}`;
       return expenses.filter((t) => t.date <= cutoff).reduce((s, t) => s + t.amount, 0);
-    });
+    };
 
-    return { lineValues: values, lineLabels: days.map(String) };
-  }, [transactions, mk, month.y, month.m]);
+    const spentToday = spentUpTo(today);
+    const dailyAvg = today > 0 ? spentToday / today : 0;
+    const projected = dailyAvg * daysInMonth;
+
+    return {
+      isCurrentMonth,
+      today,
+      daysInMonth,
+      spentToday,
+      dailyAvg,
+      projected,
+      labels: days.map((d) => (d === 1 || d % 5 === 0 || d === daysInMonth ? String(d) : "")),
+      real: days.map((d) => (d <= today ? spentUpTo(d) : null)),
+      budgetPace: budget > 0 ? days.map((d) => (budget / daysInMonth) * d) : null,
+      // Arranca exactamente en el punto de hoy, para que se vea como la
+      // continuación de la línea real y no como una línea suelta.
+      projection: isCurrentMonth && today < daysInMonth
+        ? days.map((d) => (d >= today ? spentToday + dailyAvg * (d - today) : null))
+        : null,
+    };
+  }, [transactions, mk, month.y, month.m, budget]);
 
   return (
     <ScrollView
@@ -326,21 +361,94 @@ export default function Reports({
           </Text>
         ) : (
           <>
+            {/* Leyenda: sin ella, tres líneas de colores no dicen nada. */}
+            <View className="flex-row flex-wrap gap-x-3 gap-y-1 mt-1 mb-2">
+              <Legend color="#0ea5e9" label={t("reports.legendReal")} />
+              {pace.budgetPace && <Legend color="#f59e0b" label={t("reports.legendPace")} dashed />}
+              {pace.projection && <Legend color="#94a3b8" label={t("reports.legendProjection")} dashed />}
+            </View>
+
             <Text className="text-[11px] text-slate-400 dark:text-slate-400 mb-1">
               {t("reports.accumulatedHint")}
             </Text>
             <View className="items-center">
               <LineChartSimple
-                data={lineValues}
-                labels={lineLabels}
+                series={[
+                  { values: pace.real, color: "#0ea5e9", fill: true },
+                  ...(pace.budgetPace
+                    ? [{ values: pace.budgetPace, color: "#f59e0b", dashed: true }]
+                    : []),
+                  ...(pace.projection
+                    ? [{ values: pace.projection, color: "#94a3b8", dashed: true }]
+                    : []),
+                ]}
+                labels={pace.labels}
                 width={280}
                 height={130}
                 fmt={fmt}
               />
             </View>
+
+            {/* Los cuatro números que resumen el mes. La proyección es la
+                que de verdad avisa: dice a dónde se llega si nada cambia,
+                cuando todavía queda mes por delante para cambiarlo. */}
+            <View className="flex-row flex-wrap mt-2">
+              <Stat
+                label={t(pace.isCurrentMonth ? "reports.statSpentToday" : "reports.statSpentMonth", {
+                  day: pace.today,
+                })}
+                value={fmt(pace.spentToday)}
+              />
+              <Stat label={t("reports.statDaily")} value={fmt(pace.dailyAvg)} />
+              {pace.projection && (
+                <Stat
+                  label={t("reports.statProjection")}
+                  value={fmt(pace.projected)}
+                  danger={budget > 0 && pace.projected > budget}
+                />
+              )}
+              {budget > 0 && <Stat label={t("reports.statBudget")} value={fmt(budget)} />}
+            </View>
           </>
         )}
       </View>
     </ScrollView>
+  );
+}
+
+// Una raya de color con su nombre, para saber qué es cada línea.
+function Legend({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {
+  return (
+    <View className="flex-row items-center gap-1.5">
+      <View
+        style={{
+          width: 14,
+          height: 3,
+          borderRadius: 2,
+          backgroundColor: color,
+          opacity: dashed ? 0.7 : 1,
+        }}
+      />
+      <Text className="text-[10px] text-slate-500 dark:text-slate-300">{label}</Text>
+    </View>
+  );
+}
+
+// Un número del resumen. Van de dos en dos para que entren en el ancho del
+// celular sin apretarse.
+function Stat({ label, value, danger }: { label: string; value: string; danger?: boolean }) {
+  return (
+    <View style={{ width: "50%" }} className="py-2 pr-2">
+      <Text className="text-[10px] text-slate-500 dark:text-slate-300" numberOfLines={2}>
+        {label}
+      </Text>
+      <Text
+        className={`text-base font-extrabold ${
+          danger ? "text-rose-500" : "text-slate-900 dark:text-slate-100"
+        }`}
+      >
+        {value}
+      </Text>
+    </View>
   );
 }
