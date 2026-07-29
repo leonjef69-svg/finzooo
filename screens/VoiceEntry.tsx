@@ -60,6 +60,16 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   // del texto, y entonces se perdería justo la frase que la persona dijo.
   const heardRef = useRef("");
 
+  // Número de la escucha actual.
+  //
+  // Android avisa de que una escucha terminó CON RETRASO. Al abrir una
+  // nueva se cierra la anterior, y ese aviso tardío llegaba cuando la nueva
+  // ya había empezado — matándola al instante, con la persona hablando.
+  // Ahora cada escucha lleva su número y los avisos que traen uno viejo se
+  // ignoran.
+  const runId = useRef(0);
+  const activeRun = useRef(-1);
+
   // ---- Animación del micrófono ----
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -90,10 +100,9 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   }, []);
 
   async function start() {
-    // Cierra cualquier escucha anterior antes de abrir una nueva. Sin esto,
-    // al tocar "Repetir" muy rápido podían quedar dos abiertas: la vieja
-    // avisaba "terminé" sin texto y borraba la que acababa de empezar,
-    // dejando un "no escuché nada" con la persona hablando.
+    runId.current += 1;
+
+    // Cierra cualquier escucha anterior antes de abrir una nueva.
     try {
       ExpoSpeechRecognitionModule.abort();
     } catch {
@@ -119,7 +128,31 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
         interimResults: true,
         continuous: false,
         maxAlternatives: 1,
+        // Cuánto silencio espera Android antes de dar por terminada la
+        // frase. Sin esto usa su valor por defecto, que es cortísimo:
+        // bastaba dudar un segundo a mitad de frase para que cortara y se
+        // registrara solo lo dicho hasta ahí.
+        //
+        // El mínimo de 3 segundos da margen para empezar a hablar; los 2,5
+        // de silencio permiten pensar entre un gasto y el siguiente cuando
+        // se dictan varios seguidos.
+        androidIntentOptions: {
+          EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 3000,
+          EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 2500,
+          EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 2500,
+        },
       });
+
+      // Respaldo por si Android no manda el aviso de arranque (hay
+      // celulares que se lo saltan). Sin esto, esta escucha nunca se daría
+      // por válida y la pantalla se quedaría escuchando sin procesar nada.
+      // El segundo y medio es de sobra: ningún resultado real llega antes.
+      const mine = runId.current;
+      setTimeout(() => {
+        if (runId.current === mine && activeRun.current !== mine) {
+          activeRun.current = mine;
+        }
+      }, 1500);
     } catch {
       setFailure("empty");
       setStage("failed");
@@ -169,7 +202,14 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     setStage("confirm");
   }
 
+  // Android confirma aquí que la escucha arrancó de verdad. Desde este
+  // momento, sus avisos pertenecen a ESTA escucha y no a una anterior.
+  useSpeechRecognitionEvent("start", () => {
+    activeRun.current = runId.current;
+  });
+
   useSpeechRecognitionEvent("result", (event) => {
+    if (activeRun.current !== runId.current) return;
     const text = event.results[0]?.transcript ?? "";
     if (text) {
       heardRef.current = text;
@@ -178,6 +218,10 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     if (event.isFinal) settle(text || heardRef.current);
   });
 
+  // Los errores NO se filtran por número de escucha a propósito: si algo
+  // falla antes de que Android confirme el arranque, sin esto la pantalla
+  // se quedaría escuchando para siempre. El cierre que hacemos nosotros
+  // llega como "aborted", que ya se ignora aquí.
   useSpeechRecognitionEvent("error", (event) => {
     if (event.error === "aborted" || settled.current) return;
     settled.current = true;
@@ -189,6 +233,8 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   // (por ejemplo si la persona se queda callada). Lo que se alcanzó a
   // escuchar igual sirve.
   useSpeechRecognitionEvent("end", () => {
+    // Este es el aviso que llegaba tarde y mataba la escucha nueva.
+    if (activeRun.current !== runId.current) return;
     if (settled.current) return;
     settle(heardRef.current);
   });
