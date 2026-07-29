@@ -125,7 +125,12 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     if (command.kind === "export") {
       router.replace({
         pathname: "/export-pdf",
-        params: { month: command.monthKey, format: command.format, auto: "1" },
+        params: {
+          month: command.monthKey,
+          format: command.format,
+          dest: command.destination,
+          auto: "1",
+        },
       });
       return;
     }

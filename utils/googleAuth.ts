@@ -12,6 +12,12 @@ const WEB_CLIENT_ID = "133168544890-ron5kg6fllq20rrnqil0t2hbqguu54p1.apps.google
 // Se configura una sola vez al cargar el módulo. configure() no hace
 // llamadas de red ni pide permisos: solo deja anotado con qué proyecto
 // hablar cuando más tarde se pulse el botón.
+//
+// Ojo: aquí NO se pide el permiso de Drive. Se pide recién la primera vez
+// que alguien manda un reporte a Drive (ver utils/googleDrive.ts). Si
+// estuviera aquí, a todo el mundo le saldría una ventana pidiendo acceso a
+// su Drive solo por entrar con Google, incluso a quien nunca vaya a
+// exportar nada — y eso espanta con razón.
 GoogleSignin.configure({ webClientId: WEB_CLIENT_ID });
 
 // La persona canceló (cerró la ventana de Google o tocó "atrás"). No es un

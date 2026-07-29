@@ -9,10 +9,11 @@ export default function ExportPdfRoute() {
   const blocked = useRedirectIfOrphaned();
   // Lo que puede venir de la orden por voz:
   // "/export-pdf?month=2026-01&format=pdf&auto=1"
-  const { month, format, auto } = useLocalSearchParams<{
+  const { month, format, auto, dest } = useLocalSearchParams<{
     month?: string;
     format?: string;
     auto?: string;
+    dest?: string;
   }>();
   if (blocked) return null;
 
@@ -33,6 +34,7 @@ export default function ExportPdfRoute() {
       initialMonth={month}
       initialFormat={format === "csv" ? "csv" : "pdf"}
       autoExport={auto === "1"}
+      destination={dest === "drive" ? "drive" : "share"}
     />
   );
 }

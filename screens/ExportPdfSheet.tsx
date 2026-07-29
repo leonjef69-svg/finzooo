@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { uploadToDrive, DriveNotSignedIn, DriveDenied } from "@/utils/googleDrive";
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Print from "expo-print";
@@ -26,6 +27,7 @@ export default function ExportPdfSheet({
   initialMonth,
   initialFormat,
   autoExport,
+  destination = "share",
 }: {
   onClose: () => void;
   // Mes "AAAA-MM" con el que abrir ya elegido. Lo usa la orden por voz
@@ -35,6 +37,9 @@ export default function ExportPdfSheet({
   initialFormat?: ExportFormat;
   // Exportar solo, sin esperar a que se toque el botón (orden por voz).
   autoExport?: boolean;
+  // "share" abre el menú de compartir; "drive" sube el archivo a Google
+  // Drive sin ninguna ventana de por medio.
+  destination?: "share" | "drive";
 }) {
   const { t, transactions, month, monthNames, fmt, userName, showToast } = useAppData();
   const insets = useSafeAreaInsets();
@@ -151,9 +156,7 @@ export default function ExportPdfSheet({
       </html>`;
 
     const { uri } = await Print.printToFileAsync({ html });
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(uri, { mimeType: "application/pdf", UTI: "com.adobe.pdf" });
-    }
+    return { uri, mimeType: "application/pdf", fileName: `finzo-${exportType}-${selectedMk}.pdf` };
   }
 
   async function exportAsCsv() {
@@ -191,12 +194,7 @@ export default function ExportPdfSheet({
     file.create();
     file.write(csv);
 
-    if (await Sharing.isAvailableAsync()) {
-      await Sharing.shareAsync(file.uri, {
-        mimeType: "text/csv",
-        UTI: "public.comma-separated-values-text",
-      });
-    }
+    return { uri: file.uri, mimeType: "text/csv", fileName };
   }
 
   async function handleExport() {
@@ -206,10 +204,27 @@ export default function ExportPdfSheet({
     }
     setExporting(true);
     try {
-      if (format === "pdf") await exportAsPdf();
-      else await exportAsCsv();
-    } catch {
-      showToast(t("exportPdf.error"));
+      // Primero se arma el archivo, y después se decide qué hacer con él.
+      // Antes cada función se compartía a sí misma; separarlo es lo que
+      // permite mandarlo a Drive sin duplicar todo el armado.
+      const file = format === "pdf" ? await exportAsPdf() : await exportAsCsv();
+
+      if (destination === "drive") {
+        const uploaded = await uploadToDrive(file.uri, file.fileName, file.mimeType);
+        showToast(t("exportPdf.savedToDrive", { name: uploaded.name || file.fileName }));
+        return;
+      }
+
+      if (await Sharing.isAvailableAsync()) {
+        await Sharing.shareAsync(file.uri, {
+          mimeType: file.mimeType,
+          UTI: file.mimeType === "application/pdf" ? "com.adobe.pdf" : "public.comma-separated-values-text",
+        });
+      }
+    } catch (e) {
+      if (e instanceof DriveNotSignedIn) showToast(t("exportPdf.driveNoAccount"));
+      else if (e instanceof DriveDenied) showToast(t("exportPdf.driveDenied"));
+      else showToast(t(destination === "drive" ? "exportPdf.driveError" : "exportPdf.error"));
     } finally {
       setExporting(false);
     }
