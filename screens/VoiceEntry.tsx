@@ -264,20 +264,39 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   const single = rows.length === 1;
 
   return (
-    <View
-      className="flex-1 bg-white dark:bg-slate-900"
-      style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
-    >
-      <View className="flex-row justify-end px-5 pt-2">
-        <TouchableOpacity
-          onPress={onClose}
-          className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
-        >
-          <X size={18} color="#64748b" />
-        </TouchableOpacity>
-      </View>
+    // Panel flotante, no pantalla completa.
+    //
+    // Antes esto ocupaba toda la pantalla con el fondo de la app, y se
+    // sentía como "me sacó de lo que estaba haciendo y me metió en Finzo".
+    // Ahora se ve un panel encima de lo que había, con el resto oscurecido:
+    // la misma app, el mismo código, pero se percibe como algo que se abre
+    // un momento y se va. Tocar fuera lo cierra.
+    <View className="absolute inset-0 z-50 items-center justify-center px-5">
+      <TouchableOpacity
+        className="absolute inset-0 bg-slate-900/80"
+        activeOpacity={1}
+        onPress={onClose}
+      />
 
-      <View className="flex-1 items-center justify-center px-8">
+      <View
+        className="w-full rounded-3xl bg-white dark:bg-slate-900 px-5 pt-3 pb-6"
+        style={[
+          CARD_SHADOW,
+          // Tope de alto para que la lista de 30 movimientos no se salga de
+          // la pantalla en celulares chicos.
+          { maxHeight: "88%", marginTop: insets.top, marginBottom: insets.bottom },
+        ]}
+      >
+        <View className="flex-row justify-end">
+          <TouchableOpacity
+            onPress={onClose}
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+          >
+            <X size={16} color="#64748b" />
+          </TouchableOpacity>
+        </View>
+
+        <View className="items-center justify-center px-2 pb-1">
         {stage === "listening" && (
           <>
             <View className="w-32 h-32 items-center justify-center mb-8">
@@ -515,6 +534,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             </Text>
           </View>
         )}
+        </View>
       </View>
     </View>
   );

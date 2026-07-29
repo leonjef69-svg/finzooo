@@ -124,11 +124,15 @@ export default function RootLayout() {
               name="transaction/[id]/edit"
               options={{ presentation: "modal", contentStyle: { backgroundColor: screenBg } }}
             />
-            {/* La pantalla de voz también es LLENA y opaca, así que va con
-                "modal" por el mismo motivo que las dos de arriba. */}
+            {/* La pantalla de voz pasó de ocupar todo a ser un panel encima
+                de lo que hubiera, con el resto oscurecido. Por eso ahora va
+                con "transparentModal" —el caso para el que sirve, según la
+                nota de arriba— y con el fondo transparente explícito, para
+                que en el instante previo a dibujarse se vea lo de detrás y
+                no un rectángulo de color. */}
             <Stack.Screen
               name="voice"
-              options={{ presentation: "modal", contentStyle: { backgroundColor: screenBg } }}
+              options={{ presentation: "transparentModal", contentStyle: { backgroundColor: "transparent" } }}
             />
 
             {/* Estas SÍ son paneles que ocupan solo parte de la pantalla
