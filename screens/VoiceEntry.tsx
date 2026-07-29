@@ -88,6 +88,16 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   }, []);
 
   async function start() {
+    // Cierra cualquier escucha anterior antes de abrir una nueva. Sin esto,
+    // al tocar "Repetir" muy rápido podían quedar dos abiertas: la vieja
+    // avisaba "terminé" sin texto y borraba la que acababa de empezar,
+    // dejando un "no escuché nada" con la persona hablando.
+    try {
+      ExpoSpeechRecognitionModule.abort();
+    } catch {
+      // Si no había ninguna abierta, no hay nada que cerrar.
+    }
+
     settled.current = false;
     heardRef.current = "";
     setHeard("");
