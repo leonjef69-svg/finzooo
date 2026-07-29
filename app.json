@@ -70,6 +70,9 @@
     "owner": "asdsadasd23213",
     "updates": {
       "url": "https://u.expo.dev/f0c230a1-8bf6-4b65-a12d-24054597e161"
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
     }
   }
 }

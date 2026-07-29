@@ -24,10 +24,18 @@ export type VoiceParse =
   | { ok: true; rows: RawRow[] }
   | { ok: false; reason: VoiceFailure };
 
-// Tope de movimientos por frase. Nadie dicta nueve gastos de corrido; si
-// salen más, es que la frase se entendió mal y es mejor no inundar la
-// lista con basura.
-const MAX_ROWS = 6;
+// Tope de movimientos por frase.
+//
+// Estaba en 6, y era un error: quien volvía del mercado y dictaba diez
+// compras seguidas perdía las cuatro últimas SIN QUE NADIE SE LO DIJERA —
+// justo el fallo que este archivo existe para evitar.
+//
+// Ahora es un número que nadie alcanza hablando de corrido (el propio
+// reconocedor de Android corta antes, apenas te quedas callado un segundo).
+// Y el tope real ya no es este número: es que la pantalla de confirmación
+// muestra la lista completa antes de guardar nada, así que lo que se
+// registra es siempre lo que se vio.
+const MAX_ROWS = 15;
 
 // Números escritos con letras. El reconocimiento de voz de Google casi
 // siempre devuelve dígitos ("30"), pero con números chicos a veces escribe
