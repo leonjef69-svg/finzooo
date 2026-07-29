@@ -291,8 +291,12 @@ export default function Reports({
               {t("reports.balanceBudgetTitle")}
             </Text>
 
+            {/* "Presupuesto" a secas: el título de arriba ya dice "del
+                mes", y repetirlo en la línea quedaba como un tartamudeo. */}
             <View className="flex-row items-center justify-between py-0.5">
-              <Text className="text-xs text-slate-500 dark:text-slate-300">{t("reports.statBudget")}</Text>
+              <Text className="text-xs text-slate-500 dark:text-slate-300">
+                {t("reports.balanceBudgetAmount")}
+              </Text>
               <Text className="text-sm font-bold" style={{ color: primaryTextColor }}>{fmt(budget)}</Text>
             </View>
             <View className="flex-row items-center justify-between py-0.5">
