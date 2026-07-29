@@ -404,13 +404,17 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     // un momento y se va. Tocar fuera lo cierra.
     <View className="absolute inset-0 z-50 items-center justify-center px-5">
       <TouchableOpacity
-        className="absolute inset-0 bg-slate-900/80"
+        className="absolute inset-0 bg-black/70"
         activeOpacity={1}
         onPress={onClose}
       />
 
+      {/* En modo oscuro el panel va en slate-800 y NO en slate-900: el
+          fondo oscurecido de detrás es casi ese mismo color, así que un
+          panel slate-900 se fundía con él y todo parecía una pantalla
+          entera en vez de algo flotando encima. */}
       <Animated.View
-        className="w-full rounded-3xl bg-white dark:bg-slate-900 px-5 pt-3 pb-6"
+        className="w-full rounded-3xl bg-white dark:bg-slate-800 px-5 pt-3 pb-6"
         style={[
           CARD_SHADOW,
           // Tope de alto para que la lista de 30 movimientos no se salga de
