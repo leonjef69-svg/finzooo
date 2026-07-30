@@ -6,7 +6,7 @@ import { Crown, Sparkles } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import DonutChart from "@/components/DonutChart";
 import BarChartSimple from "@/components/BarChartSimple";
-import DailyBarsChart from "@/components/DailyBarsChart";
+import SpendingChart from "@/components/SpendingChart";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import { catInfo } from "@/constants/categories";
 import { COLOR_HEX_600 } from "@/constants/colors";
@@ -178,6 +178,15 @@ export default function Reports({
       amount: porDia.get(i + 1) ?? 0,
     }));
 
+    // Acumulado: cuánto llevabas gastado al terminar cada día. Se corta en
+    // hoy — dibujarlo hasta fin de mes afirmaría que no se gastó nada en
+    // días que todavía no han ocurrido.
+    let corriendo = 0;
+    const acumulado = bars.map((b) => {
+      corriendo += b.amount;
+      return { day: b.day, total: b.day <= elapsed ? corriendo : null };
+    });
+
     const total = expenses.reduce((s, t) => s + t.amount, 0);
     const diasConGasto = [...porDia.values()].filter((v) => v > 0).length;
 
@@ -190,8 +199,18 @@ export default function Reports({
       }
     }
 
+    const media = elapsed > 0 ? total / elapsed : 0;
+
     return {
       bars,
+      acumulado,
+      // Estimación de aquí a fin de mes, manteniendo el ritmo actual.
+      // Arranca en el punto de hoy para que se lea como su continuación.
+      // Solo en el mes en curso: en uno pasado no hay nada que estimar.
+      proyeccion:
+        isCurrentMonth && elapsed < daysInMonth
+          ? bars.map((b) => (b.day >= elapsed ? total + media * (b.day - elapsed) : null))
+          : null,
       daysInMonth,
       isCurrentMonth,
       today: isCurrentMonth ? Math.min(now.getDate(), daysInMonth) : 0,
@@ -361,10 +380,31 @@ export default function Reports({
           </Text>
         ) : (
           <>
+            {/* Leyenda: la línea verde es lo gastado de verdad; la punteada
+                es una estimación, y hay que decirlo para no mezclarlas. */}
+            <View className="flex-row flex-wrap gap-x-3 gap-y-1 mt-1">
+              <View className="flex-row items-center gap-1.5">
+                <View style={{ width: 14, height: 3, borderRadius: 2, backgroundColor: "#10b981" }} />
+                <Text className="text-[10px] text-slate-500 dark:text-slate-300">
+                  {t("reports.dailyLegendReal")}
+                </Text>
+              </View>
+              {daily.proyeccion && (
+                <View className="flex-row items-center gap-1.5">
+                  <View style={{ width: 14, height: 3, borderRadius: 2, backgroundColor: "#94a3b8" }} />
+                  <Text className="text-[10px] text-slate-500 dark:text-slate-300">
+                    {t("reports.dailyLegendProjection")}
+                  </Text>
+                </View>
+              )}
+            </View>
+
             <Text className="text-[11px] text-slate-400 mb-1">{t("reports.dailyHint")}</Text>
-            <DailyBarsChart
-              data={daily.bars}
+            <SpendingChart
+              data={daily.acumulado}
+              projection={daily.proyeccion}
               fmt={fmt}
+              width={280}
               today={daily.today}
               showAmountsLabel={t("reports.dailyShowAmounts")}
               hideAmountsLabel={t("reports.dailyHideAmounts")}
