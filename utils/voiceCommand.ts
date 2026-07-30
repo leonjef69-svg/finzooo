@@ -12,7 +12,7 @@
 // último gasto", tiene que enseñar primero cuál va a borrar y esperar un sí,
 // porque una palabra mal oída no puede costarle datos a nadie.
 
-import { parseVoice, type VoiceParse } from "@/utils/voiceParser";
+import { findSpokenDate, parseVoice, type VoiceParse } from "@/utils/voiceParser";
 
 export type VoiceCommand =
   | { kind: "movements"; parsed: VoiceParse }
@@ -20,9 +20,12 @@ export type VoiceCommand =
   // "focus" dice de qué se pidió el resumen: solo lo que salió, solo lo que
   // entró, o las dos cosas. "category" queda puesto cuando se nombró una
   // ("solo comida"), y entonces el resumen se limita a esa.
+  // "day" queda puesto cuando se preguntó por un día concreto ("gastos de 28
+  // de julio", "cuánto gasté ayer"). Sin él, el resumen es del mes entero.
   | {
       kind: "summary";
       monthKey: string;
+      day?: number;
       focus: "expense" | "income" | "all";
       category?: string;
     };
@@ -60,6 +63,14 @@ const INCOME_FOCUS = [
 
 // Palabras que piden ver SOLO lo que salió.
 const EXPENSE_FOCUS = ["gasto", "gastos", "gaste", "gastado", "se me fue"];
+
+// Formas verbales: se está CONTANDO algo que se hizo, no preguntando.
+// Sirven para decidir si un número suelto es un día o un monto.
+const SPOKEN_VERBS = [
+  // Van sin tildes porque se comparan contra el texto ya normalizado.
+  "gaste", "gastado", "pague", "compre", "inverti",
+  "recibi", "gane", "cobre", "me pagaron", "me dieron", "yapee",
+];
 
 // Nombres de categoría tal como los diría una persona → la categoría de
 // Finzo. Ojo: esto NO es lo mismo que el diccionario de classifier.ts.
@@ -220,17 +231,57 @@ export function parseVoiceCommand(transcript: string, now: Date = new Date()): V
       destination: wantsDrive ? "drive" : "share",
     };
   }
-  if (SUMMARY_WORDS.some((w) => normalized.includes(w))) {
-    // Los ingresos se revisan primero porque son los que hay que nombrar a
-    // propósito: quien no dice nada casi siempre está preguntando por sus
-    // gastos, que es de lo que uno quiere enterarse.
-    const wantsIncome = INCOME_FOCUS.some((w) => hasWord(normalized, w));
-    const wantsExpense = EXPENSE_FOCUS.some((w) => hasWord(normalized, w));
-    const focus = wantsIncome && !wantsExpense ? "income" : wantsExpense ? "expense" : "all";
+  // Los ingresos se revisan primero porque son los que hay que nombrar a
+  // propósito: quien no dice nada casi siempre está preguntando por sus
+  // gastos, que es de lo que uno quiere enterarse.
+  const wantsIncome = INCOME_FOCUS.some((w) => hasWord(normalized, w));
+  const wantsExpense = EXPENSE_FOCUS.some((w) => hasWord(normalized, w));
+  const focus = wantsIncome && !wantsExpense ? "income" : wantsExpense ? "expense" : "all";
+
+  const tokens = normalized.split(" ");
+  // Al preguntar sí se acepta un día suelto ("los gastos del 28"): una
+  // pregunta no lleva monto, así que no hay con qué confundirlo.
+  //
+  // Salvo si la frase trae un verbo. "gasté el veinte en pan" quiere decir
+  // veinte SOLES, no el día veinte; "gastos del 28" sí es el día. La forma
+  // del verbo es lo que los distingue, así que con verbo no se acepta un día
+  // suelto y el número se queda siendo el monto.
+  const allowBareDay = !SPOKEN_VERBS.some((v) => hasWord(normalized, v));
+  const spoken = findSpokenDate(tokens, now, allowBareDay);
+
+  // Se pidió un resumen con todas las letras: "resumen", "cuánto gasté"...
+  let asking = SUMMARY_WORDS.some((w) => normalized.includes(w));
+
+  // Y la forma en que sale natural, que no lleva ninguna de esas palabras:
+  // "gastos de 28 de julio".
+  //
+  // La regla: si se nombró gasto o ingreso y, quitando la fecha, no queda
+  // ningún monto, es una pregunta. Si queda un monto, se está anotando algo.
+  // Así "gastos de 28 de julio" pregunta, y "gasté 20 en pan el 28 de julio"
+  // anota — la fecha sale de la cuenta en los dos casos.
+  //
+  // Esto era el fallo: "gastos de 28 de julio" acababa registrando un gasto
+  // inventado de S/ 28 llamado "julio", cuando lo que había que hacer era
+  // contestar con lo que de verdad se gastó ese día.
+  if (!asking && (wantsIncome || wantsExpense)) {
+    const withoutDate = spoken
+      ? tokens.filter((_, i) => i < spoken.from || i >= spoken.to).join(" ")
+      : normalized;
+    asking = !parseVoice(withoutDate, now).ok;
+  }
+
+  if (asking) {
+    // El mes lo pone la fecha que se oyó; si no se oyó ninguna, la frase
+    // entera ("mes pasado") o, en último caso, el mes en curso.
+    const monthKey =
+      spoken && spoken.month !== null
+        ? key(spoken.year, spoken.month)
+        : monthFromPhrase(normalized, now);
 
     return {
       kind: "summary",
-      monthKey: monthFromPhrase(normalized, now),
+      monthKey,
+      day: spoken?.day ?? undefined,
       focus,
       category: categoryFromPhrase(normalized, focus),
     };

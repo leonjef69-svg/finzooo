@@ -52,6 +52,11 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   const [summaryFocus, setSummaryFocus] = useState<"expense" | "income" | "all">("all");
   // Categoría pedida ("solo comida"), o vacío para todas.
   const [summaryCategory, setSummaryCategory] = useState("");
+  // Día concreto si se preguntó por uno ("gastos de 28 de julio"), o 0 para
+  // el mes entero.
+  const [summaryDay, setSummaryDay] = useState(0);
+  // Si la persona dijo si era gasto o ingreso, no se le vuelve a preguntar.
+  const [typeSaid, setTypeSaid] = useState(false);
   const [heard, setHeard] = useState("");
   const [failure, setFailure] = useState<VoiceFailure>("empty");
   // Lo que dijo Android cuando falló. Antes se tiraba y todo se mostraba
@@ -278,6 +283,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
       setSummaryMk(command.monthKey);
       setSummaryFocus(command.focus);
       setSummaryCategory(command.category ?? "");
+      setSummaryDay(command.day ?? 0);
       setStage("summary");
       return;
     }
@@ -290,6 +296,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     }
     setRows(parsed.rows);
     setKinds(parsed.rows.map((r) => r.type));
+    setTypeSaid(parsed.typeSaid);
     setStage("confirm");
   }
 
@@ -414,7 +421,11 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   // solo las usa esta pantalla.
   const summary = (() => {
     if (!summaryMk) return null;
-    const monthTx = transactions.filter((tx) => tx.date.startsWith(summaryMk));
+    // Si se preguntó por un día, el filtro es la fecha completa. Funciona
+    // igual porque una fecha guardada es "2026-07-28": el mes es su
+    // principio y el día es la fecha entera.
+    const prefix = summaryDay > 0 ? `${summaryMk}-${String(summaryDay).padStart(2, "0")}` : summaryMk;
+    const monthTx = transactions.filter((tx) => tx.date.startsWith(prefix));
 
     // El "protagonista" es lo que se pidió; el otro lado va como línea
     // pequeña debajo. Antes el protagonista era SIEMPRE el gasto, así que
@@ -431,9 +442,26 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     const [y, m] = summaryMk.split("-").map(Number);
 
     return {
-      label: `${monthNames[m - 1]} ${y}`,
+      label: summaryDay > 0
+        ? t("voice.summaryDayLabel", { day: summaryDay, month: monthNames[m - 1], year: y })
+        : `${monthNames[m - 1]} ${y}`,
       isIncome: wantsIncome,
+      isDay: summaryDay > 0,
       category: summaryCategory,
+      // Qué decir cuando no hay nada. Con un día pedido, "en ese mes" sería
+      // mentira: se buscó en un solo día. Se elige aquí y no en el dibujo
+      // porque son seis casos y en medio del JSX no se leían.
+      emptyKey: summaryCategory
+        ? summaryDay > 0
+          ? "voice.summaryEmptyCategoryDay"
+          : "voice.summaryEmptyCategory"
+        : summaryDay > 0
+          ? wantsIncome
+            ? "voice.summaryEmptyIncomeDay"
+            : "voice.summaryEmptyDay"
+          : wantsIncome
+            ? "voice.summaryEmptyIncome"
+            : "voice.summaryEmpty",
       total: main.reduce((s, tx) => s + tx.amount, 0),
       otherTotal: other.reduce((s, tx) => s + tx.amount, 0),
       count: main.length,
@@ -444,7 +472,9 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
       top: Array.from(byCategory.entries())
         .sort((a, b) => b[1] - a[1])
         .slice(0, 4),
-      items: [...main].sort((a, b) => b.amount - a.amount).slice(0, 6),
+      // De un día se enseñan más: son pocos y caben. De un mes entero, seis
+      // ya llenan la pantalla y el resto se resume en "y N más".
+      items: [...main].sort((a, b) => b.amount - a.amount).slice(0, summaryDay > 0 ? 10 : 6),
     };
   })();
 
@@ -552,6 +582,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                 category={categoryOf(rows[0], kinds[0])}
                 fmt={fmt}
                 t={t}
+                typeSaid={typeSaid}
                 onKind={(k) => setKinds([k])}
               />
             ) : (
@@ -648,9 +679,9 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
               {summary.count === 0 ? (
                 <Text className="text-xs text-center text-slate-500 dark:text-slate-300 leading-5 mt-3">
-                  {summary.category
-                    ? t("voice.summaryEmptyCategory", { cat: t(catInfo(summary.category).label) })
-                    : t(summary.isIncome ? "voice.summaryEmptyIncome" : "voice.summaryEmpty")}
+                  {t(summary.emptyKey, {
+                    cat: summary.category ? t(catInfo(summary.category).label) : "",
+                  })}
                 </Text>
               ) : (
                 <>
@@ -678,8 +709,10 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                     </Text>
                   )}
 
-                  {summary.category ? (
-                    // Con una categoría pedida se listan los movimientos.
+                  {summary.category || summary.isDay ? (
+                    // Con una categoría pedida se listan los movimientos. Y
+                    // con un día también: en un solo día son pocos, y
+                    // "Otros S/ 36" no dice en qué se fue. Se ven las cosas.
                     <View className="mt-4 gap-2">
                       {summary.items.map((tx) => (
                         <View key={tx.id} className="flex-row items-center gap-2.5">
@@ -799,6 +832,7 @@ function SingleCard({
   category,
   fmt,
   t,
+  typeSaid,
   onKind,
 }: {
   row: RawRow;
@@ -806,6 +840,8 @@ function SingleCard({
   category: string;
   fmt: (n: number) => string;
   t: (k: string, vars?: Record<string, string | number>) => string;
+  /** La persona dijo si era gasto o ingreso: no hay que volver a preguntar. */
+  typeSaid: boolean;
   onKind: (k: Kind) => void;
 }) {
   const cat = catInfo(category);
@@ -825,7 +861,12 @@ function SingleCard({
       <Text className="text-[11px] text-slate-500 dark:text-slate-300 mt-0.5">{t(cat.label)}</Text>
 
       {/* Cambiar gasto/ingreso de un toque. Es el dato que más daño hace si
-          sale al revés y el más difícil de notar después. */}
+          sale al revés y el más difícil de notar después.
+          Solo aparece cuando la app lo SUPUSO. Si la persona lo dijo
+          ("gasté 20 en pan"), volver a preguntar sobra, y poner "Ingreso" al
+          lado como si fuera igual de probable solo invita a tocarlo por
+          error. Si aun así saliera mal, se corrige desde la lista. */}
+      {typeSaid ? null : (
       <View className="flex-row gap-2 mt-4">
         <TouchableOpacity
           onPress={() => onKind("expense")}
@@ -854,6 +895,7 @@ function SingleCard({
           </Text>
         </TouchableOpacity>
       </View>
+      )}
     </View>
   );
 }

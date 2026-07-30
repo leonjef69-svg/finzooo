@@ -21,7 +21,12 @@ export type VoiceFailure =
   | "noAmount"; // se escuchó algo, pero sin un monto reconocible
 
 export type VoiceParse =
-  | { ok: true; rows: RawRow[] }
+  // "typeSaid" avisa si la persona DIJO si era gasto o ingreso ("gasté 20",
+  // "recibí 500") o si se supuso. Cuando lo dijo, la pantalla de
+  // confirmación no ofrece cambiarlo: preguntar "¿gasto o ingreso?" a quien
+  // acaba de decir "gasté" sobra, y ofrecer el contrario como si fuera igual
+  // de probable invita a tocarlo por error.
+  | { ok: true; rows: RawRow[]; typeSaid: boolean }
   | { ok: false; reason: VoiceFailure };
 
 // Tope de movimientos por frase.
@@ -278,6 +283,130 @@ function findMerchant(rawWords: string[], tokens: string[]): string {
   return name.length >= 2 && name.length <= 40 ? name : "";
 }
 
+// Los meses como los dice una persona. "setiembre" y "septiembre" valen
+// igual: en Perú se escribe de las dos formas y el reconocedor devuelve una
+// o la otra según el día.
+const MONTH_NAMES: Record<string, number> = {
+  enero: 0, febrero: 1, marzo: 2, abril: 3, mayo: 4, junio: 5,
+  julio: 6, agosto: 7, setiembre: 8, septiembre: 8, octubre: 9,
+  noviembre: 10, diciembre: 11,
+};
+
+/**
+ * Una fecha dicha en voz alta, y —esto es lo importante— QUÉ PALABRAS ocupa.
+ *
+ * Saber dónde está permite tacharla antes de buscar montos. Sin eso, el "28"
+ * de "gastos de 28 de julio" se leía como un monto de S/ 28 y "julio" como
+ * el nombre de lo comprado: la app registraba un gasto de S/ 28 llamado
+ * "julio" que nunca existió.
+ *
+ * "day" o "month" pueden venir en null: "de julio" no dice ningún día, y
+ * "el día 28" no dice ningún mes.
+ */
+export type SpokenDate = {
+  day: number | null;
+  month: number | null;
+  year: number;
+  /** Primera palabra de la fecha. */
+  from: number;
+  /** Primera palabra que ya NO es parte de la fecha. */
+  to: number;
+};
+
+/** Lee un número en la posición dada, en dígitos o en letras. */
+function numberAt(tokens: string[], i: number): { value: number; end: number } | null {
+  const token = (tokens[i] ?? "").replace(/^s\/+\.?/, "");
+  if (/^\d{1,2}$/.test(token)) return { value: Number(token), end: i + 1 };
+  if (NUM_WORDS[tokens[i] ?? ""] !== undefined) {
+    const run = findSpelledRun(tokens, i);
+    if (run && run.end > i) return { value: run.value, end: run.end };
+  }
+  return null;
+}
+
+/**
+ * El año que corresponde a un mes dicho a secas.
+ *
+ * Un mes suelto se entiende como el más reciente que ya pasó o está en
+ * curso: en julio de 2026, "mayo" es mayo de 2026, pero "diciembre" es
+ * diciembre de 2025. Nadie pregunta por un mes que todavía no ha ocurrido.
+ */
+function yearForMonth(month: number, now: Date): number {
+  return month > now.getMonth() ? now.getFullYear() - 1 : now.getFullYear();
+}
+
+/**
+ * Busca una fecha en la frase. Devuelve la primera que encuentre, o null.
+ *
+ * `allowBareDay` permite entender un día suelto ("los gastos del 28"). Está
+ * apagado al anotar movimientos a propósito: ahí un número suelto es casi
+ * siempre el monto, y confundirlos costaría un gasto perdido. Al PREGUNTAR
+ * no hay ese riesgo, porque una pregunta no lleva monto.
+ */
+export function findSpokenDate(
+  tokens: string[],
+  now: Date,
+  allowBareDay = false
+): SpokenDate | null {
+  const y = now.getFullYear();
+
+  for (let i = 0; i < tokens.length; i++) {
+    const w = tokens[i];
+
+    // "hoy", "ayer", "anteayer"
+    const shift = w === "hoy" ? 0 : w === "ayer" ? -1 : w === "anteayer" ? -2 : null;
+    if (shift !== null) {
+      const d = new Date(now);
+      d.setDate(d.getDate() + shift);
+      return { day: d.getDate(), month: d.getMonth(), year: d.getFullYear(), from: i, to: i + 1 };
+    }
+
+    // "28 de julio" / "veintiocho de julio"
+    const num = numberAt(tokens, i);
+    if (num && num.value >= 1 && num.value <= 31) {
+      const after = tokens[num.end];
+      const monthWord = after === "de" || after === "del" ? tokens[num.end + 1] : after;
+      const month = MONTH_NAMES[monthWord ?? ""];
+      if (month !== undefined) {
+        const to = after === "de" || after === "del" ? num.end + 2 : num.end + 1;
+        return withYear({ day: num.value, month, from: i, to }, tokens, now);
+      }
+      // "el día 28" — un día sin mes. Se pide "dia" delante justamente para
+      // no tragarse un monto.
+      if (tokens[i - 1] === "dia" || tokens[i - 1] === "dias") {
+        return { day: num.value, month: null, year: y, from: i - 1, to: num.end };
+      }
+      if (allowBareDay && (tokens[i - 1] === "el" || tokens[i - 1] === "del")) {
+        return { day: num.value, month: null, year: y, from: i - 1, to: num.end };
+      }
+    }
+
+    // Un mes a secas: "de julio", "en mayo"
+    const month = MONTH_NAMES[w];
+    if (month !== undefined) {
+      return withYear({ day: null, month, from: i, to: i + 1 }, tokens, now);
+    }
+  }
+
+  return null;
+}
+
+/** Pega el año: el que se dijo a mano si lo hay, y si no el que toca. */
+function withYear(
+  hit: { day: number | null; month: number; from: number; to: number },
+  tokens: string[],
+  now: Date
+): SpokenDate {
+  // "28 de julio de 2025": un año dicho a mano manda sobre lo que se supone,
+  // y sus palabras también son parte de la fecha.
+  const skip = tokens[hit.to] === "de" || tokens[hit.to] === "del" ? 1 : 0;
+  const said = tokens[hit.to + skip];
+  if (said && /^20\d{2}$/.test(said)) {
+    return { ...hit, year: Number(said), to: hit.to + skip + 1 };
+  }
+  return { ...hit, year: yearForMonth(hit.month, now) };
+}
+
 /** Fecha en formato "AAAA-MM-DD", en hora local. */
 function toISO(d: Date): string {
   const y = d.getFullYear();
@@ -310,17 +439,35 @@ export function parseVoice(transcript: string, now: Date = new Date()): VoicePar
   const normalized = tokens.join(" ");
   if (!normalized.trim()) return { ok: false, reason: "empty" };
 
-  const hits = findAmounts(tokens);
+  // La fecha se busca ANTES que los montos y sus palabras quedan tachadas.
+  // Si no, el "28" de "el 28 de julio" se registraba como un gasto de S/ 28
+  // y "julio" como el nombre de lo comprado.
+  const spoken = findSpokenDate(tokens, now);
+  const maskedTokens = tokens.slice();
+  const maskedRaw = rawWords.slice();
+  if (spoken) {
+    for (let i = spoken.from; i < spoken.to; i++) {
+      maskedTokens[i] = "";
+      maskedRaw[i] = "";
+    }
+  }
+
+  const hits = findAmounts(maskedTokens);
   if (hits.length === 0) return { ok: false, reason: "noAmount" };
 
   // Tipo general de la frase. Sin verbo reconocible se asume gasto: es lo
   // que la gente registra el 90% de las veces, y la pantalla de
   // confirmación deja cambiarlo de un toque antes de guardar.
-  const overall: "expense" | "income" = INCOME_VERBS.some((v) => normalized.includes(v))
-    ? "income"
-    : "expense";
+  const saidIncome = INCOME_VERBS.some((v) => normalized.includes(v));
+  const saidExpense = EXPENSE_VERBS.some((v) => normalized.includes(v));
+  const overall: "expense" | "income" = saidIncome ? "income" : "expense";
 
-  const date = findDate(normalized, now);
+  // Una fecha con día y mes manda ("el 28 de julio"). Un día sin mes cae en
+  // el mes en curso. Si no se dijo ninguna, valen "ayer"/"anteayer"/hoy.
+  const date =
+    spoken && spoken.day !== null
+      ? toISO(new Date(spoken.year, spoken.month ?? now.getMonth(), spoken.day))
+      : findDate(normalized, now);
 
   // Cada monto se queda con las palabras que van DESDE él hasta el
   // siguiente monto. Ahí está su comercio: en "10 en hamburguesa y 20 en
@@ -328,9 +475,15 @@ export function parseVoice(transcript: string, now: Date = new Date()): VoicePar
   // del 20.
   return {
     ok: true,
+    typeSaid: saidIncome || saidExpense,
     rows: hits.map((hit, index) => {
       const nextStart = hits[index + 1]?.start ?? tokens.length;
-      const merchant = findMerchant(rawWords.slice(hit.end, nextStart), tokens.slice(hit.end, nextStart));
+      // Con las palabras de la fecha tachadas: "gasté 20 el 28 de julio"
+      // llamaba al gasto "julio".
+      const merchant = findMerchant(
+        maskedRaw.slice(hit.end, nextStart),
+        maskedTokens.slice(hit.end, nextStart)
+      );
 
       // Las palabras justo ANTES de este monto mandan sobre su tipo, para
       // frases mezcladas como "recibí 500 de sueldo y gasté 20 en pan".
