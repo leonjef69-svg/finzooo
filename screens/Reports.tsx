@@ -154,32 +154,28 @@ export default function Reports({
 
   // Gasto de cada día del mes que se está viendo.
   //
-  // Aquí NO se filtran los días en cero, al contrario que en el gráfico de
-  // meses: un día sin gasto es información: significa que ese día no se
-  // gastó nada. Saltárselos correría los días de lugar y el 15 caería donde
-  // debería estar el 8.
-  //
-  // La cantidad de barras sale del mes de verdad: febrero da 28 (29 si es
-  // bisiesto), abril 30, julio 31. No hay ningún 31 fijo en el código.
+  // Solo los días en que se gastó, en orden, igual que el gráfico de meses
+  // solo enseña los meses con gasto. Dibujar los 31 días del calendario
+  // dejaba cada columna en 9px, y ahí no cabe ni el número del día ni el
+  // monto: los números acababan debajo de la barra equivocada y los montos
+  // se pisaban o no se escribían.
   const daily = useMemo(() => {
-    const daysInMonth = new Date(month.y, month.m + 1, 0).getDate();
     const porDia = new Map<number, number>();
     for (const tx of transactions) {
       if (tx.type !== "expense" || !tx.date.startsWith(mk)) continue;
       const d = Number(tx.date.slice(8, 10));
       porDia.set(d, (porDia.get(d) ?? 0) + tx.amount);
     }
-    const bars = Array.from({ length: daysInMonth }, (_, i) => ({
-      day: i + 1,
-      amount: porDia.get(i + 1) ?? 0,
-    }));
+    const bars = [...porDia.entries()]
+      .map(([day, amount]) => ({ day, amount }))
+      .sort((a, b) => a.day - b.day);
 
     // Solo se resalta "hoy" si se está mirando el mes actual. En un mes
     // pasado, resaltar el día 29 no querría decir nada.
     const now = new Date();
     const isCurrentMonth = month.y === now.getFullYear() && month.m === now.getMonth();
 
-    return { bars, today: isCurrentMonth ? now.getDate() : 0, hasAny: porDia.size > 0 };
+    return { bars, today: isCurrentMonth ? now.getDate() : 0 };
   }, [transactions, mk, month.y, month.m]);
 
   return (
@@ -329,7 +325,7 @@ export default function Reports({
         style={CARD_SHADOW}
       >
         <Text className="text-sm font-bold" style={{ color: primaryTextColor }}>{t("reports.byDayTitle")}</Text>
-        {!daily.hasAny ? (
+        {daily.bars.length === 0 ? (
           <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">
             {t("reports.noDataThisMonth")}
           </Text>
@@ -341,8 +337,12 @@ export default function Reports({
               width={windowWidth - 72}
               today={daily.today}
               hint={t("reports.byDayHint")}
+              // Tocar un día sin gasto decía "S/ 0.00", que parece un fallo
+              // de la app más que una respuesta.
               formatSelected={(day, amount) =>
-                t("reports.byDaySelected", { day, month: monthNames[month.m], amount: fmt(amount) })
+                amount > 0
+                  ? t("reports.byDaySelected", { day, month: monthNames[month.m], amount: fmt(amount) })
+                  : t("reports.byDayNoSpend", { day, month: monthNames[month.m] })
               }
               showAmountsLabel={t("reports.byDayShowAmounts")}
               hideAmountsLabel={t("reports.byDayHideAmounts")}
