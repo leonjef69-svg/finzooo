@@ -107,6 +107,54 @@ export default function LineChartSimple({
     return prev == null ? v > 0 : v !== prev;
   };
 
+  // Los puntos que se dibujan: días con gasto, más hoy.
+  const drawnIdx = mainPoints
+    .map((p, i) => (p && (isStep(i) || i === lastDrawn) ? i : -1))
+    .filter((i) => i >= 0);
+
+  // Dónde va el monto de cada punto: encima o debajo.
+  //
+  // Con pocos puntos se etiquetan TODOS, alternando arriba/abajo cuando dos
+  // caen juntos. Hacía falta: dos gastos en días seguidos quedan a 8px uno
+  // del otro, y una cifra ocupa unos 35 — con las dos arriba, la primera se
+  // perdía. Puestas una arriba y otra abajo, ambas se leen.
+  //
+  // Con muchos puntos (gasto casi diario) etiquetar todos sería ilegible, así
+  // que se van salteando por distancia, siempre de derecha a izquierda para
+  // que el total de hoy —el número que más importa— nunca se quede sin él.
+  const labelSide = new Map<number, "above" | "below">();
+  if (drawnIdx.length <= 8) {
+    drawnIdx.forEach((i, k) => {
+      const x = PAD_X + i * stepX;
+      const prevX = k > 0 ? PAD_X + drawnIdx[k - 1] * stepX : -Infinity;
+      const juntos = x - prevX < 42;
+      const ladoAnterior = k > 0 ? labelSide.get(drawnIdx[k - 1]) : undefined;
+      labelSide.set(i, juntos && ladoAnterior === "above" ? "below" : "above");
+    });
+  } else {
+    const elegidos: number[] = [];
+    let lastLabelX = Infinity;
+    for (let k = drawnIdx.length - 1; k >= 0; k--) {
+      const i = drawnIdx[k];
+      const x = PAD_X + i * stepX;
+      if (lastLabelX - x >= 42 || k === drawnIdx.length - 1) {
+        elegidos.push(i);
+        lastLabelX = x;
+      }
+    }
+    // Se recorrió al revés para asegurar el de hoy; se ordena de izquierda
+    // a derecha para que el resto del código no dependa de ese detalle.
+    elegidos.reverse().forEach((i) => labelSide.set(i, "above"));
+  }
+
+  // Si hoy no hubo gasto, su monto es el mismo que el del último día con
+  // movimiento: escribirlo dos veces es ruido. El punto de hoy se queda
+  // (marca dónde estamos), pero sin repetir la cifra.
+  if (drawnIdx.length > 1 && !isStep(lastDrawn)) {
+    const anterior = drawnIdx[drawnIdx.length - 2];
+    if (main.values[anterior] === main.values[lastDrawn]) labelSide.delete(lastDrawn);
+  }
+
   return (
     <View style={{ width, height: height + TOOLTIP_H + LABEL_H }}>
       {/* Globo con el monto del punto tocado */}
@@ -136,25 +184,34 @@ export default function LineChartSimple({
         {fmt(max)}
       </Text>
 
-      {/* El total de hoy, siempre visible junto a su punto. Antes había que
-          tocar para ver cualquier cifra, así que el número más importante
-          —cuánto llevas gastado— estaba escondido. */}
-      {lastDrawn >= 0 && selected == null && mainPoints[lastDrawn] && (
-        <Text
-          style={{
-            position: "absolute",
-            top: TOOLTIP_H + Math.max(0, (mainPoints[lastDrawn] as { y: number }).y - 20),
-            left: Math.min(
-              Math.max((mainPoints[lastDrawn] as { x: number }).x - 40, 0),
-              Math.max(0, width - 80)
-            ),
-            width: 80,
-          }}
-          className="text-[10px] font-bold text-slate-900 dark:text-slate-100 text-center"
-        >
-          {fmt(main.values[lastDrawn] as number)}
-        </Text>
-      )}
+      {/* El monto encima de cada punto. Antes había que tocarlos uno por
+          uno para ver cualquier cifra, así que los puntos no decían nada
+          por sí solos. */}
+      {[...labelSide.entries()].map(([i, side]) => {
+        const p = mainPoints[i];
+        const v = main.values[i];
+        if (!p || v == null) return null;
+        const top =
+          side === "above"
+            ? Math.max(0, p.y - 19)
+            : Math.min(height - 14, p.y + 7);
+        return (
+          <Text
+            key={i}
+            style={{
+              position: "absolute",
+              top: TOOLTIP_H + top,
+              left: Math.min(Math.max(p.x - 30, 0), Math.max(0, width - 60)),
+              width: 60,
+            }}
+            className={`text-[10px] font-bold text-center ${
+              selected === i ? "text-slate-900 dark:text-slate-100" : "text-slate-500 dark:text-slate-300"
+            }`}
+          >
+            {fmt(v)}
+          </Text>
+        );
+      })}
 
       <Svg width={width} height={height} style={{ marginTop: TOOLTIP_H }}>
         <Defs>
