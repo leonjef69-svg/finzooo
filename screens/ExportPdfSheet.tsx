@@ -298,7 +298,7 @@ export default function ExportPdfSheet({
               <TouchableOpacity
                 key={key}
                 onPress={() => setSelectedMk(key)}
-                className={`px-4 py-2.5 rounded-xl border ${
+                className={`px-4 py-2.5 rounded-xl border-[1.5px] ${
                   selectedMk === key
                     ? "bg-emerald-600 border-emerald-600"
                     : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
@@ -324,7 +324,7 @@ export default function ExportPdfSheet({
             <TouchableOpacity
               key={opt.id}
               onPress={() => setFormat(opt.id)}
-              className={`flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl border ${
+              className={`flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl border-[1.5px] ${
                 format === opt.id
                   ? "bg-emerald-600 border-emerald-600"
                   : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"

@@ -246,7 +246,7 @@ export default function Settings({
       </TouchableOpacity>
 
       {isCloudSynced && (
-        <View className="mx-5 mt-3 flex-row items-center gap-3 bg-emerald-50 dark:bg-slate-800 rounded-2xl p-3.5 border border-emerald-100 dark:border-slate-700">
+        <View className="mx-5 mt-3 flex-row items-center gap-3 bg-emerald-50 dark:bg-slate-800 rounded-2xl p-3.5 border-[1.5px] border-emerald-100 dark:border-slate-700">
           <View className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-slate-700 items-center justify-center">
             <Cloud size={16} color="#059669" />
           </View>

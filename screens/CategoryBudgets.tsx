@@ -50,7 +50,7 @@ export default function CategoryBudgets({ onBack }: { onBack: () => void }) {
             const over = limit > 0 && pct >= 1;
             const barColor = over ? "#f43f5e" : pct >= 0.7 ? "#f59e0b" : "#10b981";
             return (
-              <View key={c.id} className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-3 border border-slate-200 dark:border-slate-700">
+              <View key={c.id} className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-3 border-[1.5px] border-slate-200 dark:border-slate-700">
                 <View className="flex-row items-center gap-3">
                   <IconBadge Icon={c.icon} color={c.color} size={38} />
                   <Text
@@ -60,7 +60,7 @@ export default function CategoryBudgets({ onBack }: { onBack: () => void }) {
                   >
                     {t(c.label)}
                   </Text>
-                  <View className="flex-row items-center bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2 w-32">
+                  <View className="flex-row items-center bg-white dark:bg-slate-900 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-3 py-2 w-32">
                     <Text className="text-slate-500 dark:text-slate-300 text-xs font-bold mr-1">
                       {currencySymbolFor(userCurrency)}
                     </Text>

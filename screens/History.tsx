@@ -79,7 +79,7 @@ export default function History({
       </View>
 
       <View className="px-5 mt-3">
-        <View className="flex-row items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2.5">
+        <View className="flex-row items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-3 py-2.5">
           <Search size={16} color="#94a3b8" />
           <TextInput
             value={search}
@@ -113,7 +113,7 @@ export default function History({
       <View className="px-5 mt-3 flex-row gap-2.5">
         {(filter === "all" || filter === "expense") && (
           <View
-            className="flex-1 flex-row items-center gap-3 bg-rose-50 dark:bg-slate-900 rounded-2xl p-3.5 border border-rose-100 dark:border-slate-800"
+            className="flex-1 flex-row items-center gap-3 bg-rose-50 dark:bg-slate-900 rounded-2xl p-3.5 border-[1.5px] border-rose-100 dark:border-slate-800"
             style={CARD_SHADOW}
           >
             <View className="w-9 h-9 rounded-xl bg-rose-100 items-center justify-center">
@@ -129,7 +129,7 @@ export default function History({
         )}
         {(filter === "all" || filter === "income") && (
           <View
-            className="flex-1 flex-row items-center gap-3 bg-emerald-50 dark:bg-slate-900 rounded-2xl p-3.5 border border-emerald-100 dark:border-slate-800"
+            className="flex-1 flex-row items-center gap-3 bg-emerald-50 dark:bg-slate-900 rounded-2xl p-3.5 border-[1.5px] border-emerald-100 dark:border-slate-800"
             style={CARD_SHADOW}
           >
             <View className="w-9 h-9 rounded-xl bg-emerald-100 items-center justify-center">
@@ -147,7 +147,7 @@ export default function History({
 
       <View className="px-5 mt-4">
         {groupedEntries.length === 0 && (
-          <View className="items-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 px-6">
+          <View className="items-center py-16 bg-white dark:bg-slate-900 rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-slate-700 px-6">
             <Text className="text-slate-500 dark:text-slate-300 text-sm text-center">
               {search.trim()
                 ? t("history.noSearchResults", { query: search.trim() })

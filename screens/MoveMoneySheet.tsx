@@ -73,7 +73,7 @@ export default function MoveMoneySheet({
         <Text className="text-xs text-slate-500 dark:text-slate-300 mb-4">
           {t("moveMoney.savedLabel", { goalName: goal.name, amount: fmt(goal.saved) })}
         </Text>
-        <View className="items-center justify-center bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 px-4 py-5 mb-2 flex-row">
+        <View className="items-center justify-center bg-slate-50 dark:bg-slate-800 rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 px-4 py-5 mb-2 flex-row">
           <Text className="text-slate-500 dark:text-slate-300 font-bold text-xl mr-1">{currencySymbolFor(userCurrency)}</Text>
           <TextInput
             autoFocus

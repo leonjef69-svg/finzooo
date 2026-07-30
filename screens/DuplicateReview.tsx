@@ -106,7 +106,7 @@ export default function DuplicateReview({
         </View>
 
         {/* Movimiento existente (el tuyo) */}
-        <View className="rounded-2xl border border-slate-200 dark:border-slate-700 p-4 mb-3">
+        <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4 mb-3">
           <Text className="text-[11px] font-bold text-slate-400 dark:text-slate-400 uppercase mb-2">
             {t("dupes.existing")}
           </Text>

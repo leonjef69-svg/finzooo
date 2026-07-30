@@ -87,7 +87,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
             así que la persona merece saber exactamente qué se hace con ellas
             antes de decidir. */}
         <View
-          className="rounded-2xl p-4 mb-5 bg-emerald-50 dark:bg-slate-800 border border-emerald-100 dark:border-slate-700"
+          className="rounded-2xl p-4 mb-5 bg-emerald-50 dark:bg-slate-800 border-[1.5px] border-emerald-100 dark:border-slate-700"
           style={CARD_SHADOW}
         >
           <View className="flex-row items-center gap-2 mb-2">

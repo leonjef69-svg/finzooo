@@ -30,7 +30,7 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
         <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5 text-center">
           {t("setup.monthlyBudget")}
         </Text>
-        <View className="flex-row items-center justify-center bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 px-4 py-5">
+        <View className="flex-row items-center justify-center bg-slate-50 dark:bg-slate-800 rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 px-4 py-5">
           <Text className="text-slate-500 dark:text-slate-300 font-bold text-xl mr-1">{currencySymbolFor(userCurrency)}</Text>
           <TextInput
             autoFocus

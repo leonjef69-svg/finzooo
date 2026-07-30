@@ -1151,7 +1151,7 @@ function SingleCard({
       <View className="flex-row gap-2 mt-4">
         <TouchableOpacity
           onPress={() => onKind("expense")}
-          className={`flex-row items-center gap-1.5 px-3.5 py-2 rounded-full border ${
+          className={`flex-row items-center gap-1.5 px-3.5 py-2 rounded-full border-[1.5px] ${
             kind === "expense"
               ? "bg-rose-50 dark:bg-slate-800 border-rose-300"
               : "border-slate-200 dark:border-slate-700"
@@ -1164,7 +1164,7 @@ function SingleCard({
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => onKind("income")}
-          className={`flex-row items-center gap-1.5 px-3.5 py-2 rounded-full border ${
+          className={`flex-row items-center gap-1.5 px-3.5 py-2 rounded-full border-[1.5px] ${
             kind === "income"
               ? "bg-emerald-50 dark:bg-slate-800 border-emerald-300"
               : "border-slate-200 dark:border-slate-700"

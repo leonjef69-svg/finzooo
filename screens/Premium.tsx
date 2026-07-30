@@ -77,7 +77,7 @@ export default function Premium({
         <Text className="text-emerald-100 text-sm mt-1">{t("premium.subtitle")}</Text>
       </View>
       <ScrollView className="px-6 flex-1" contentContainerClassName="gap-4 pb-4">
-        <View className="bg-white/5 border border-white/10 rounded-3xl p-5">
+        <View className="bg-white/5 border-[1.5px] border-white/10 rounded-3xl p-5">
           <Text className="text-white text-base font-extrabold mb-3">{t("premium.freeSectionTitle")}</Text>
           <View className="gap-3">
             {FREE_PERKS.map((label) => (

@@ -36,7 +36,7 @@ export default function EditBudgetSheet({
         <Text className="font-extrabold text-slate-900 dark:text-slate-100 text-base mb-4 text-center">
           {t("editBudget.title")}
         </Text>
-        <View className="flex-row items-center justify-center bg-slate-50 dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 px-4 py-5 mb-5">
+        <View className="flex-row items-center justify-center bg-slate-50 dark:bg-slate-800 rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 px-4 py-5 mb-5">
           <Text className="text-slate-500 dark:text-slate-300 font-bold text-xl mr-1">{currencySymbolFor(userCurrency)}</Text>
           <TextInput
             autoFocus

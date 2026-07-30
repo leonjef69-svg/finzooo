@@ -82,12 +82,12 @@ export default function GoalFormSheet({
               onBlur={() => onFieldBlur("name")}
               placeholder={t("goalForm.namePlaceholder")}
               placeholderTextColor="#94a3b8"
-              className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3.5 text-sm font-semibold text-slate-900 dark:text-slate-100"
+              className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-4 py-3.5 text-sm font-semibold text-slate-900 dark:text-slate-100"
             />
           </View>
           <View>
             <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("goalForm.targetLabel")}</Text>
-            <View className="flex-row items-center bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 px-4 py-3.5">
+            <View className="flex-row items-center bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-4 py-3.5">
               <Text className="text-slate-500 dark:text-slate-300 font-bold mr-1">{currencySymbolFor(userCurrency)}</Text>
               <TextInput
                 keyboardType="decimal-pad"

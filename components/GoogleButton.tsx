@@ -48,7 +48,7 @@ export default function GoogleButton({
       activeOpacity={0.85}
       onPress={onPress}
       disabled={disabled || loading}
-      className={`w-full py-4 rounded-2xl items-center justify-center flex-row gap-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 ${
+      className={`w-full py-4 rounded-2xl items-center justify-center flex-row gap-3 bg-white dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700 ${
         disabled || loading ? "opacity-70" : ""
       }`}
     >

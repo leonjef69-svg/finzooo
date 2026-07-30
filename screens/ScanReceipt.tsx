@@ -247,7 +247,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
                 resultado: se muestra igual, pero avisando, porque casi
                 siempre hay algo aprovechable aunque falte el total. */}
             {read?.confidence !== "high" && (
-              <View className="rounded-2xl p-3.5 mb-4 bg-amber-50 dark:bg-slate-800 border border-amber-200 dark:border-slate-700">
+              <View className="rounded-2xl p-3.5 mb-4 bg-amber-50 dark:bg-slate-800 border-[1.5px] border-amber-200 dark:border-slate-700">
                 <Text className="text-xs text-amber-800 dark:text-amber-300 leading-5">
                   {t(read?.confidence === "low" ? "scan.checkLow" : "scan.checkMedium")}
                 </Text>
@@ -267,7 +267,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
                       setKind(k);
                       setCategory(suggestCategory(merchant, k, merchantLearned));
                     }}
-                    className={`flex-1 py-2.5 rounded-full border items-center ${
+                    className={`flex-1 py-2.5 rounded-full border-[1.5px] items-center ${
                       kind === k
                         ? k === "expense"
                           ? "bg-rose-50 dark:bg-slate-800 border-rose-300"
@@ -344,7 +344,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
                     <Pressable
                       key={c.id}
                       onPress={() => setCategory(c.id)}
-                      className={`flex-row items-center gap-1.5 px-3 py-2 rounded-full border ${
+                      className={`flex-row items-center gap-1.5 px-3 py-2 rounded-full border-[1.5px] ${
                         category === c.id
                           ? "bg-emerald-50 dark:bg-slate-800 border-emerald-400"
                           : "border-slate-200 dark:border-slate-700"

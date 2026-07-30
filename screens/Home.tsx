@@ -159,7 +159,7 @@ export default function Home({
           >
             <ChevronLeft size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
           </TouchableOpacity>
-          <View className="px-5 py-1.5 rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+          <View className="px-5 py-1.5 rounded-full bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700">
             <Text
               className="font-bold text-base text-center"
               numberOfLines={1}
@@ -180,7 +180,7 @@ export default function Home({
           colors={["#059669", "#0f766e"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          className="mx-5 rounded-[32px] overflow-hidden p-5 flex-row items-center gap-4 border border-white/20"
+          className="mx-5 rounded-[32px] overflow-hidden p-5 flex-row items-center gap-4 border-[1.5px] border-white/20"
         >
           <BudgetRing pct={pct} />
           <View className="flex-1">
@@ -254,7 +254,7 @@ export default function Home({
           <Animated.View entering={FadeInDown.delay(0 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
               onPress={startEditBudget}
-              className="bg-sky-50 dark:bg-slate-800 rounded-2xl p-4 border border-sky-100 dark:border-slate-700"
+              className="bg-sky-50 dark:bg-slate-800 rounded-2xl p-4 border-[1.5px] border-sky-100 dark:border-slate-700"
               style={softShadow}
             >
               <Text className="text-base mb-1">💰</Text>
@@ -271,7 +271,7 @@ export default function Home({
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(1 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
-              className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700"
+              className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 border-[1.5px] border-slate-200 dark:border-slate-700"
               style={softShadow}
             >
               <Text className="text-base mb-1">🕒</Text>
@@ -314,7 +314,7 @@ export default function Home({
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(2 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
-              className="bg-rose-50 dark:bg-slate-800 rounded-2xl p-4 border border-rose-100 dark:border-slate-700"
+              className="bg-rose-50 dark:bg-slate-800 rounded-2xl p-4 border-[1.5px] border-rose-100 dark:border-slate-700"
               style={softShadow}
             >
               <Text className="text-base mb-1">📉</Text>
@@ -324,7 +324,7 @@ export default function Home({
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(3 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
-              className="bg-emerald-50 dark:bg-slate-800 rounded-2xl p-4 border border-emerald-100 dark:border-slate-700"
+              className="bg-emerald-50 dark:bg-slate-800 rounded-2xl p-4 border-[1.5px] border-emerald-100 dark:border-slate-700"
               style={softShadow}
             >
               <Text className="text-base mb-1">📈</Text>
@@ -459,7 +459,7 @@ export default function Home({
         }}
         ListEmptyComponent={
           <View className="px-5">
-            <View className="items-center py-10 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+            <View className="items-center py-10 bg-white dark:bg-slate-900 rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-slate-700">
               <Text className="text-slate-500 dark:text-slate-300 text-sm">{t("home.noTransactions")}</Text>
             </View>
           </View>

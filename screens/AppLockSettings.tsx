@@ -266,7 +266,7 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
             {/* El aviso que de verdad importa: qué pasa si se olvida el PIN.
                 Cambia según haya copia en la nube o no, porque las
                 consecuencias son muy distintas. */}
-            <View className="flex-row gap-2 mt-5 rounded-2xl p-3.5 bg-amber-50 dark:bg-slate-800 border border-amber-200 dark:border-slate-700">
+            <View className="flex-row gap-2 mt-5 rounded-2xl p-3.5 bg-amber-50 dark:bg-slate-800 border-[1.5px] border-amber-200 dark:border-slate-700">
               <ShieldAlert size={16} color="#b45309" />
               <Text className="flex-1 text-[11px] text-amber-800 dark:text-amber-300 leading-4">
                 {t(isCloudSynced ? "lock.warnWithCloud" : "lock.warnNoCloud")}
@@ -317,7 +317,7 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
                 {/* Los límites, dichos claro. Una función de seguridad que
                     promete más de lo que da es peor que no tenerla: lleva a
                     confiarse justo cuando no hay que confiarse. */}
-                <View className="flex-row gap-2 mt-4 rounded-2xl p-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <View className="flex-row gap-2 mt-4 rounded-2xl p-3.5 bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700">
                   <Info size={16} color="#64748b" />
                   <Text className="flex-1 text-[11px] text-slate-600 dark:text-slate-300 leading-4">
                     {t("lock.decoyLimits")}

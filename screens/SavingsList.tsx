@@ -105,7 +105,7 @@ export default function SavingsList({
         {tab === "metas" && (
           <View className="mt-3">
             {goals.length === 0 && (
-              <View className="items-center py-16 px-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700">
+              <View className="items-center py-16 px-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-slate-700">
                 <Text className="text-slate-500 dark:text-slate-300 text-sm text-center">{t("savingsList.noGoals")}</Text>
               </View>
             )}
