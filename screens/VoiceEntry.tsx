@@ -672,7 +672,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
         {stage === "confirm" && rows.length > 0 && (
           <View className="w-full">
-            <Text className="text-xs text-center text-slate-400 mb-4">"{heard}"</Text>
+            <Text className="text-xs text-center text-slate-400 mb-4">{`"${heard}"`}</Text>
 
             {single ? (
               <SingleCard
@@ -764,7 +764,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
         {stage === "summary" && summary && (
           <View className="w-full">
-            <Text className="text-xs text-center text-slate-400 mb-4">"{heard}"</Text>
+            <Text className="text-xs text-center text-slate-400 mb-4">{`"${heard}"`}</Text>
 
             <View
               className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
@@ -878,7 +878,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
         {/* "¿En qué mes gasté más?" */}
         {stage === "topMonth" && topMonth && (
           <View className="w-full">
-            <Text className="text-xs text-center text-slate-400 mb-4">"{heard}"</Text>
+            <Text className="text-xs text-center text-slate-400 mb-4">{`"${heard}"`}</Text>
 
             <View
               className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
@@ -959,7 +959,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
         {/* "Compara junio con mayo" */}
         {stage === "compare" && compare && (
           <View className="w-full">
-            <Text className="text-xs text-center text-slate-400 mb-4">"{heard}"</Text>
+            <Text className="text-xs text-center text-slate-400 mb-4">{`"${heard}"`}</Text>
 
             <View
               className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
@@ -1065,7 +1065,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             <Text className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2 text-center">
               {t(failure === "noAmount" ? "voice.noAmountTitle" : "voice.emptyTitle")}
             </Text>
-            {heard ? <Text className="text-xs text-center text-slate-400 mb-2">"{heard}"</Text> : null}
+            {heard ? <Text className="text-xs text-center text-slate-400 mb-2">{`"${heard}"`}</Text> : null}
             <Text className="text-xs text-center text-slate-500 dark:text-slate-300 leading-5 mb-3">
               {t(failure === "noAmount" ? "voice.noAmountHint" : "voice.emptyHint")}
             </Text>

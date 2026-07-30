@@ -608,7 +608,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return () => sub.remove();
     // Solo depende de si la app ya está lista: los datos que necesita los
     // lee de captureInputs en el momento de recoger.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, hasOnboarded]);
 
   function setAutoCaptureOn(value: boolean) {
