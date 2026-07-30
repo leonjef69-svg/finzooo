@@ -1,6 +1,26 @@
 import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/utils/firebase";
+import { isDecoyActive } from "@/utils/decoyMode";
 import type { Goal, Transaction } from "@/types";
+
+// EL CANDADO DE LA NUBE EN MODO SEÑUELO
+//
+// Con el señuelo encendido, esta app no habla con la nube. Ni sube ni baja.
+// Los dos sentidos son igual de graves y por motivos opuestos:
+//
+//   SUBIR  → los movimientos inventados pisarían el respaldo real. Sería
+//            perder los datos de verdad, para siempre, sin avisar. Es el
+//            peor desenlace posible de toda esta función.
+//   BAJAR  → traería los movimientos REALES desde la nube y los enseñaría
+//            dentro del señuelo. O sea: el modo pensado para esconder los
+//            datos acabaría revelándolos.
+//
+// El candado está aquí abajo, en la única puerta que da a Firestore, y no en
+// cada sitio que llama. Hoy hay tres llamadas —la sincronización
+// automática, la de cerrar sesión y la de entrar desde otro celular— pero lo
+// que importa es la cuarta, la que alguien escriba dentro de seis meses sin
+// acordarse de que este modo existe. Desde aquí no hace falta que se
+// acuerde.
 
 export type CloudData = {
   hasOnboarded: boolean;
@@ -26,6 +46,8 @@ export type CloudData = {
 // Trae los datos guardados en la nube para esta cuenta (o "null" si esta
 // cuenta nunca terminó de configurarse, o si no hay internet ahora mismo).
 export async function loadCloudData(uid: string): Promise<CloudData | null> {
+  // Ver el candado explicado arriba: bajar aquí enseñaría los datos reales.
+  if (isDecoyActive()) return null;
   try {
     const snap = await getDoc(doc(db, "users", uid));
     if (!snap.exists()) return null;
@@ -56,6 +78,8 @@ export async function loadCloudData(uid: string): Promise<CloudData | null> {
 // promesa por si quien la llama necesita esperar a que termine (por
 // ejemplo, antes de cerrar sesión) en vez de solo "lanzarla y olvidarla".
 export function saveCloudData(uid: string, data: CloudData): Promise<void> {
+  // Ver el candado explicado arriba: subir aquí borraría el respaldo real.
+  if (isDecoyActive()) return Promise.resolve();
   // Firestore RECHAZA cualquier campo cuyo valor sea "undefined" y tira el
   // guardado entero. Como los movimientos ahora tienen campos opcionales
   // (comercio, cuenta, referencia...), uno vacío podría hacer que la copia
@@ -70,5 +94,9 @@ export function saveCloudData(uid: string, data: CloudData): Promise<void> {
 // falta saber si funcionó, porque no queremos borrar la cuenta de
 // inicio de sesión si sus datos no se pudieron borrar primero.
 export async function deleteCloudAccount(uid: string): Promise<void> {
+  // Desde el señuelo no se borra la cuenta de verdad. Requiere la
+  // contraseña, que quien esté obligando a abrir la app no tiene, pero un
+  // borrado irreversible no debería depender solo de eso.
+  if (isDecoyActive()) throw new Error("No disponible");
   await deleteDoc(doc(db, "users", uid));
 }

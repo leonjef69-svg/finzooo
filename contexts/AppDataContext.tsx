@@ -20,7 +20,15 @@ import { colorScheme } from "nativewind";
 import { seedTransactions, seedGoals } from "@/constants/seed";
 import { currencySymbolFor } from "@/constants/currencies";
 import { monthNamesFor, translations } from "@/constants/i18n";
-import { clearAccountData, loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
+import {
+  clearAccountData,
+  flushPendingSaves,
+  loadJSON,
+  saveJSON,
+  STORAGE_KEYS,
+} from "@/utils/storage";
+import { activate as activateDecoy, deactivate as deactivateDecoy } from "@/utils/decoyMode";
+import { DECOY_BUDGET, buildDecoyTransactions } from "@/utils/decoySeed";
 import { fmt as formatAmount, monthKey } from "@/utils/format";
 import { reserveIdsAbove } from "@/utils/id";
 import { learnCategory } from "@/utils/classifier";
@@ -113,6 +121,10 @@ type AppDataContextValue = {
   isPremium: boolean;
   setIsPremium: (v: boolean) => void;
   isCloudSynced: boolean;
+  // Modo señuelo. Solo los llama la pantalla de bloqueo; ninguna otra parte
+  // de la app sabe que esto existe, y esa es la idea.
+  enterDecoyMode: () => Promise<void>;
+  leaveDecoyMode: () => Promise<void>;
 
   celebrateGoal: string | null;
   clearCelebration: () => void;
@@ -240,6 +252,50 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     saveJSON(STORAGE_KEYS.merchantLearned, cloud.merchantLearned ?? {});
     saveJSON(STORAGE_KEYS.carryoverCleared, cloud.carryoverCleared ?? []);
     return true;
+  }
+
+  /**
+   * Entra en el modo señuelo: la app pasa a leer y escribir en un almacén
+   * aparte y deja de hablar con la nube.
+   *
+   * El orden importa y no es intercambiable:
+   *
+   *  1. Se escribe YA lo que estuviera en cola. Son cambios de la cuenta
+   *     REAL; si se quedaran encolados, se escribirían después del cambio de
+   *     modo y acabarían dentro del señuelo — datos de verdad guardados en
+   *     el almacén falso, y perdidos del bueno.
+   *  2. Se enciende el interruptor. A partir de aquí todo va al otro lado.
+   *  3. Si es la primera vez, se siembran los movimientos inventados.
+   *  4. Se recargan los datos, que ahora salen del almacén del señuelo.
+   */
+  async function enterDecoyMode() {
+    await flushPendingSaves();
+    activateDecoy();
+
+    const existing = await loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []);
+    if (existing.length === 0) {
+      const fake = buildDecoyTransactions();
+      saveJSON(STORAGE_KEYS.transactions, fake);
+      saveJSON(STORAGE_KEYS.budgets, { [monthKey(new Date().getFullYear(), new Date().getMonth())]: DECOY_BUDGET });
+      saveJSON(STORAGE_KEYS.goals, []);
+      saveJSON(STORAGE_KEYS.categoryBudgets, {});
+      saveJSON(STORAGE_KEYS.merchantLearned, {});
+      saveJSON(STORAGE_KEYS.carryoverCleared, []);
+      // El señuelo NO es Premium. Si lo fuera, quien mire podría entrar a
+      // Ajustes → Bloqueo y encontrarse la pantalla del PIN, que es
+      // justamente lo que no debe existir en esta versión de la app.
+      saveJSON(STORAGE_KEYS.isPremium, false);
+      await flushPendingSaves();
+    }
+
+    await reloadPersistedData();
+  }
+
+  /** Vuelve a la cuenta real. Solo desde la pantalla de bloqueo. */
+  async function leaveDecoyMode() {
+    await flushPendingSaves();
+    deactivateDecoy();
+    await reloadPersistedData();
   }
 
   async function reloadPersistedData() {
@@ -908,6 +964,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         isPremium,
         setIsPremium,
         isCloudSynced: uid !== null,
+        enterDecoyMode,
+        leaveDecoyMode,
         celebrateGoal,
         clearCelebration: () => setCelebrateGoal(null),
         toast,

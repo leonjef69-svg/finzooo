@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Lock } from "lucide-react-native";
 import PinPad from "@/components/PinPad";
 import { useAppData } from "@/contexts/AppDataContext";
+import { isDecoyActive } from "@/utils/decoyMode";
 import {
   PIN_LENGTH,
   biometricKind,
@@ -35,7 +36,7 @@ const GRACE_MS = 30_000;
  * bastaría con el botón de "atrás" de Android para saltársela.
  */
 export default function AppLockGate() {
-  const { t, ready } = useAppData();
+  const { t, ready, enterDecoyMode, leaveDecoyMode } = useAppData();
   const insets = useSafeAreaInsets();
 
   const [enabled, setEnabled] = useState(false);
@@ -67,23 +68,38 @@ export default function AppLockGate() {
     };
   }, []);
 
+  // ESTANDO EN EL SEÑUELO NO SE OFRECE LA HUELLA.
+  //
+  // El caso: alguien obliga a abrir la app, se escribe el PIN señuelo, y
+  // deja el teléfono un rato. La app se rebloquea. Si entonces apareciera el
+  // cuadro de la huella, bastaría con "pon el dedo" para que se abriera la
+  // cuenta DE VERDAD delante de quien esté mirando — y toda esta función no
+  // habría servido de nada.
+  //
+  // Dentro del señuelo solo se puede entrar con PIN. Y no se nota, porque en
+  // un celular sin huella registrada la pantalla se ve exactamente así.
+  const inDecoy = isDecoyActive();
+  const offerBiometrics = kind !== "none" && !inDecoy;
+
   const askBiometrics = useCallback(async () => {
-    if (kind === "none" || prompting.current) return;
+    if (!offerBiometrics || prompting.current) return;
     prompting.current = true;
     const ok = await promptBiometrics(t("lock.prompt"), t("lock.usePin"));
     prompting.current = false;
     if (ok) {
+      // La huella es del dueño, así que abre la cuenta real.
+      await leaveDecoyMode();
       setLocked(false);
       setPin("");
       setFailures(0);
     }
-  }, [kind, t]);
+  }, [offerBiometrics, t, leaveDecoyMode]);
 
   // Se pide la huella sola en cuanto aparece la pantalla: lo normal es no
   // tener que tocar nada.
   useEffect(() => {
-    if (locked && kind !== "none") void askBiometrics();
-  }, [locked, kind, askBiometrics]);
+    if (locked && offerBiometrics) void askBiometrics();
+  }, [locked, offerBiometrics, askBiometrics]);
 
   // Entrar y salir de la app
   useEffect(() => {
@@ -111,9 +127,28 @@ export default function AppLockGate() {
     if (pin.length !== PIN_LENGTH) return;
     let alive = true;
     (async () => {
-      const ok = await verifyPin(pin);
+      const match = await verifyPin(pin);
       if (!alive) return;
-      if (ok) {
+
+      // El PIN señuelo abre la cuenta falsa. Desde fuera se ve EXACTAMENTE
+      // igual que abrir la de verdad: mismo tiempo, misma animación, ningún
+      // aviso. Cualquier diferencia —un parpadeo distinto, un mensaje, un
+      // segundo de más— delataría que este PIN no es el bueno.
+      if (match === "decoy") {
+        await enterDecoyMode();
+        if (!alive) return;
+        setLocked(false);
+        setPin("");
+        setError(false);
+        setFailures(0);
+        return;
+      }
+
+      if (match === "real") {
+        // Si se venía del señuelo (la app se bloqueó estando dentro), hay
+        // que volver a la cuenta real antes de destapar la pantalla.
+        await leaveDecoyMode();
+        if (!alive) return;
         setLocked(false);
         setPin("");
         setError(false);
@@ -132,6 +167,7 @@ export default function AppLockGate() {
     return () => {
       alive = false;
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pin]);
 
   // Mientras se cargan los datos guardados no se dibuja nada: si se pintara
@@ -151,14 +187,14 @@ export default function AppLockGate() {
         {t("lock.title")}
       </Text>
       <Text className="text-xs text-slate-500 dark:text-slate-300 mb-10 text-center">
-        {t(kind === "none" ? "lock.subtitlePin" : "lock.subtitleBiometric")}
+        {t(offerBiometrics ? "lock.subtitleBiometric" : "lock.subtitlePin")}
       </Text>
 
       <PinPad
         value={pin}
         onChange={setPin}
         error={error}
-        biometric={kind}
+        biometric={offerBiometrics ? kind : "none"}
         onBiometric={() => void askBiometrics()}
       />
 
@@ -171,7 +207,7 @@ export default function AppLockGate() {
         </Text>
       )}
 
-      {kind !== "none" && (
+      {offerBiometrics && (
         <TouchableOpacity onPress={() => void askBiometrics()} className="mt-6 px-4 py-2">
           <Text className="text-xs font-bold text-emerald-600">
             {t(kind === "face" ? "lock.retryFace" : "lock.retryFingerprint")}

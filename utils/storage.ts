@@ -1,5 +1,25 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { decryptText, encryptText } from "@/utils/encryption";
+import { isDecoyActive } from "@/utils/decoyMode";
+
+/**
+ * Traduce una clave según el modo en que esté la app.
+ *
+ * Esta línea es todo el modo señuelo, del lado del guardado. Con el señuelo
+ * encendido, "finzo:transactions" pasa a ser "finzo:decoy:transactions", y a
+ * partir de ahí la app entera —Inicio, Historial, Reportes, exportar, el
+ * escáner— trabaja sobre otro conjunto de datos sin enterarse de nada.
+ *
+ * Se hace aquí, en el punto más bajo, y no en cada pantalla, precisamente
+ * para que ninguna pantalla pueda olvidarse. Todo lo que se guarda pasa por
+ * estas funciones; no hay ninguna otra puerta.
+ *
+ * Los datos reales quedan intactos bajo sus claves de siempre: el señuelo no
+ * los borra ni los toca, solo mira a otro lado.
+ */
+function actualKey(key: string): string {
+  return isDecoyActive() ? key.replace(/^finzo:/, "finzo:decoy:") : key;
+}
 
 export const STORAGE_KEYS = {
   profile: "finzo:profile",
@@ -29,17 +49,19 @@ export async function clearAccountData(): Promise<void> {
   // en el celular los datos que acabamos de eliminar.
   discardPendingSaves();
   try {
-    await AsyncStorage.multiRemove([
-      STORAGE_KEYS.profile,
-      STORAGE_KEYS.budgets,
-      STORAGE_KEYS.categoryBudgets,
-      STORAGE_KEYS.transactions,
-      STORAGE_KEYS.goals,
-      STORAGE_KEYS.isPremium,
-      STORAGE_KEYS.merchantLearned,
-      STORAGE_KEYS.carryoverCleared,
-      STORAGE_KEYS.autoCaptureLog,
-    ]);
+    await AsyncStorage.multiRemove(
+      [
+        STORAGE_KEYS.profile,
+        STORAGE_KEYS.budgets,
+        STORAGE_KEYS.categoryBudgets,
+        STORAGE_KEYS.transactions,
+        STORAGE_KEYS.goals,
+        STORAGE_KEYS.isPremium,
+        STORAGE_KEYS.merchantLearned,
+        STORAGE_KEYS.carryoverCleared,
+        STORAGE_KEYS.autoCaptureLog,
+      ].map(actualKey)
+    );
   } catch {
     // Si falla el borrado, los saveJSON individuales de abajo sirven de
     // respaldo — la cuenta sigue sin datos relevantes.
@@ -48,7 +70,7 @@ export async function clearAccountData(): Promise<void> {
 
 export async function loadJSON<T>(key: string, fallback: T): Promise<T> {
   try {
-    const raw = await AsyncStorage.getItem(key);
+    const raw = await AsyncStorage.getItem(actualKey(key));
     if (raw == null) return fallback;
     const decrypted = await decryptText(raw);
     if (decrypted != null) {
@@ -91,18 +113,23 @@ function writeNow(key: string, value: unknown): Promise<void> {
 }
 
 export function saveJSON(key: string, value: unknown): void {
-  pendingValues.set(key, value);
+  // La clave se traduce AQUÍ, al entrar en la cola, y no al escribir. Es
+  // deliberado: si se tradujera al final, un guardado encolado justo antes
+  // de cambiar de modo se escribiría en el almacén equivocado — datos
+  // reales dentro del señuelo, o al revés.
+  const target = actualKey(key);
+  pendingValues.set(target, value);
 
-  const existing = pendingTimers.get(key);
+  const existing = pendingTimers.get(target);
   if (existing) clearTimeout(existing);
 
   pendingTimers.set(
-    key,
+    target,
     setTimeout(() => {
-      pendingTimers.delete(key);
-      const pending = pendingValues.get(key);
-      pendingValues.delete(key);
-      writeNow(key, pending);
+      pendingTimers.delete(target);
+      const pending = pendingValues.get(target);
+      pendingValues.delete(target);
+      writeNow(target, pending);
     }, DEBOUNCE_MS)
   );
 }

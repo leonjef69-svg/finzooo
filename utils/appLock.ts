@@ -21,6 +21,10 @@ import * as SecureStore from "expo-secure-store";
 const KEY_ENABLED = "finzo.lock.enabled";
 const KEY_HASH = "finzo.lock.hash";
 const KEY_SALT = "finzo.lock.salt";
+// El PIN señuelo. El nombre de la clave es a propósito anodino: quien mire
+// el cajón cifrado con herramientas no debería poder deducir de un vistazo
+// que existe un segundo PIN, y menos aún cuál de los dos es el de verdad.
+const KEY_DECOY = "finzo.lock.alt";
 
 export const PIN_LENGTH = 4;
 
@@ -135,15 +139,59 @@ export async function enableLock(pin: string): Promise<boolean> {
   return (await isLockEnabled()) && (await hasPin());
 }
 
-/** Apaga el bloqueo y borra el PIN. */
+/** Apaga el bloqueo y borra los dos PIN. */
 export async function disableLock(): Promise<void> {
   await remove(KEY_ENABLED);
   await remove(KEY_HASH);
   await remove(KEY_SALT);
+  await remove(KEY_DECOY);
 }
 
-export async function verifyPin(pin: string): Promise<boolean> {
-  const [hash, salt] = await Promise.all([read(KEY_HASH), read(KEY_SALT)]);
-  if (!hash || !salt) return false;
-  return (await hashPin(pin, salt)) === hash;
+/** ¿Hay un PIN señuelo configurado? */
+export async function hasDecoyPin(): Promise<boolean> {
+  return (await read(KEY_DECOY)) !== null;
+}
+
+/**
+ * Guarda el PIN señuelo. Comparte la misma sal que el de verdad, así que
+ * de lo guardado tampoco se puede volver al PIN.
+ *
+ * Devuelve false si es igual al PIN real: entonces no habría señuelo
+ * ninguno, solo la falsa sensación de tenerlo.
+ */
+export async function setDecoyPin(pin: string): Promise<boolean> {
+  if (pin.length !== PIN_LENGTH) return false;
+  const salt = await read(KEY_SALT);
+  if (!salt) return false;
+  const hash = await hashPin(pin, salt);
+  if (hash === (await read(KEY_HASH))) return false;
+  await write(KEY_DECOY, hash);
+  return (await read(KEY_DECOY)) === hash;
+}
+
+export async function clearDecoyPin(): Promise<void> {
+  await remove(KEY_DECOY);
+}
+
+/** Cuál de los dos PIN se escribió, si alguno. */
+export type PinMatch = "real" | "decoy" | null;
+
+/**
+ * Comprueba el PIN y dice CUÁL era.
+ *
+ * El real se mira primero. Si por un descuido al configurarlo los dos
+ * acabaran siendo el mismo, gana el de verdad: quedarse encerrado fuera de
+ * los datos propios sería peor que quedarse sin señuelo.
+ */
+export async function verifyPin(pin: string): Promise<PinMatch> {
+  const [hash, salt, decoy] = await Promise.all([
+    read(KEY_HASH),
+    read(KEY_SALT),
+    read(KEY_DECOY),
+  ]);
+  if (!salt) return null;
+  const attempt = await hashPin(pin, salt);
+  if (hash && attempt === hash) return "real";
+  if (decoy && attempt === decoy) return "decoy";
+  return null;
 }

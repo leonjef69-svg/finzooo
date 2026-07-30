@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ChevronLeft, Fingerprint, Lock, ScanFace, ShieldAlert } from "lucide-react-native";
+import { ChevronLeft, EyeOff, Fingerprint, Info, Lock, ScanFace, ShieldAlert } from "lucide-react-native";
 import PinPad from "@/components/PinPad";
 import Toggle from "@/components/Toggle";
 import { CARD_SHADOW } from "@/constants/style";
@@ -9,9 +9,12 @@ import { useAppData } from "@/contexts/AppDataContext";
 import {
   PIN_LENGTH,
   biometricKind,
+  clearDecoyPin,
   disableLock,
   enableLock,
+  hasDecoyPin,
   isLockEnabled,
+  setDecoyPin,
   verifyPin,
   type BiometricKind,
 } from "@/utils/appLock";
@@ -20,13 +23,16 @@ type Step =
   | "idle" // viendo el interruptor
   | "create" // eligiendo un PIN nuevo
   | "confirm" // repitiéndolo
-  | "verify"; // comprobando el actual para poder apagarlo
+  | "verify" // comprobando el actual para poder apagarlo
+  | "decoyCreate" // eligiendo el PIN señuelo
+  | "decoyConfirm"; // repitiéndolo
 
 export default function AppLockSettings({ onBack }: { onBack: () => void }) {
   const { t, isCloudSynced } = useAppData();
   const insets = useSafeAreaInsets();
 
   const [enabled, setEnabled] = useState(false);
+  const [hasDecoy, setHasDecoy] = useState(false);
   const [kind, setKind] = useState<BiometricKind>("none");
   const [step, setStep] = useState<Step>("idle");
   const [pin, setPin] = useState("");
@@ -37,10 +43,15 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [on, biometric] = await Promise.all([isLockEnabled(), biometricKind()]);
+      const [on, biometric, decoy] = await Promise.all([
+        isLockEnabled(),
+        biometricKind(),
+        hasDecoyPin(),
+      ]);
       if (!alive) return;
       setEnabled(on);
       setKind(biometric);
+      setHasDecoy(decoy);
     })();
     return () => {
       alive = false;
@@ -97,12 +108,55 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
         return;
       }
 
+      if (step === "decoyCreate") {
+        setFirstPin(pin);
+        setPin("");
+        setStep("decoyConfirm");
+        return;
+      }
+
+      if (step === "decoyConfirm") {
+        if (pin !== firstPin) {
+          setError(true);
+          setMessage(t("lock.mismatch"));
+          setTimeout(() => {
+            if (!alive) return;
+            setPin("");
+            setFirstPin("");
+            setError(false);
+            setStep("decoyCreate");
+          }, 700);
+          return;
+        }
+        const ok = await setDecoyPin(pin);
+        if (!alive) return;
+        if (ok) {
+          setHasDecoy(true);
+          setMessage("");
+          reset();
+        } else {
+          // El único motivo real: es el mismo PIN que el de verdad. Entonces
+          // no habría señuelo, solo la falsa sensación de tenerlo.
+          setError(true);
+          setMessage(t("lock.decoySame"));
+          setTimeout(() => {
+            if (!alive) return;
+            setPin("");
+            setFirstPin("");
+            setError(false);
+            setStep("decoyCreate");
+          }, 900);
+        }
+        return;
+      }
+
       if (step === "verify") {
         const ok = await verifyPin(pin);
         if (!alive) return;
-        if (ok) {
+        if (ok === "real") {
           await disableLock();
           setEnabled(false);
+          setHasDecoy(false);
           setMessage("");
           reset();
         } else {
@@ -139,7 +193,11 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
         ? t("lock.stepConfirm")
         : step === "verify"
           ? t("lock.stepVerify")
-          : "";
+          : step === "decoyCreate"
+            ? t("lock.stepDecoyCreate")
+            : step === "decoyConfirm"
+              ? t("lock.stepDecoyConfirm")
+              : "";
 
   return (
     <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top }}>
@@ -216,6 +274,57 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
             </View>
 
             <Text className="text-[11px] text-slate-400 mt-5 leading-4">{t("lock.graceNote")}</Text>
+
+            {/* EL PIN SEÑUELO. Solo aparece con el bloqueo ya puesto: sin
+                un PIN de verdad no hay nada de lo que ser el señuelo. */}
+            {enabled && (
+              <>
+                <View
+                  className="rounded-3xl p-5 mt-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+                  style={CARD_SHADOW}
+                >
+                  <View className="flex-row items-center gap-3">
+                    <View className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 items-center justify-center">
+                      <EyeOff size={20} color="#64748b" />
+                    </View>
+                    <View className="flex-1">
+                      <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                        {t("lock.decoyLabel")}
+                      </Text>
+                      <Text className="text-[11px] text-slate-500 dark:text-slate-300">
+                        {hasDecoy ? t("lock.decoyOn") : t("lock.decoyOff")}
+                      </Text>
+                    </View>
+                    <Toggle
+                      on={hasDecoy}
+                      onChange={(next) => {
+                        setMessage("");
+                        if (next) {
+                          setPin("");
+                          setFirstPin("");
+                          setStep("decoyCreate");
+                        } else {
+                          void clearDecoyPin().then(() => setHasDecoy(false));
+                        }
+                      }}
+                    />
+                  </View>
+                  <Text className="text-[11px] text-slate-500 dark:text-slate-300 leading-4 mt-4">
+                    {t("lock.decoyExplain")}
+                  </Text>
+                </View>
+
+                {/* Los límites, dichos claro. Una función de seguridad que
+                    promete más de lo que da es peor que no tenerla: lleva a
+                    confiarse justo cuando no hay que confiarse. */}
+                <View className="flex-row gap-2 mt-4 rounded-2xl p-3.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                  <Info size={16} color="#64748b" />
+                  <Text className="flex-1 text-[11px] text-slate-600 dark:text-slate-300 leading-4">
+                    {t("lock.decoyLimits")}
+                  </Text>
+                </View>
+              </>
+            )}
           </>
         )}
       </ScrollView>
