@@ -43,7 +43,18 @@ function GlobalOverlays() {
 //   /voice        → al abrir el micrófono, el servicio de voz de Google
 //                   toma el foco. Sin esta excepción, la pantalla se
 //                   cerraba sola al segundo, sin dar tiempo a hablar.
-const KEEP_ON_RETURN = ["/auto-capture", "/voice"];
+//   /scan-receipt → la cámara y la galería son aplicaciones aparte. Sin
+//                   esta excepción, la pantalla se cerraba al volver de
+//                   tomar la foto y el escaneo se perdía sin decir nada:
+//                   la persona veía Inicio y no sabía si había funcionado.
+//   /import       → el selector de archivos también es otra aplicación, y
+//                   el archivo elegido se perdía igual.
+//
+// La regla para añadir una pantalla aquí: si abre una aplicación de Android
+// (cámara, galería, archivos, ajustes, voz) Y todavía le queda trabajo por
+// hacer al volver, tiene que estar en esta lista. Lo comprueba el auditor
+// auditar-pantallas-externas.mjs, para que no se vuelva a olvidar.
+const KEEP_ON_RETURN = ["/auto-capture", "/voice", "/scan-receipt", "/import"];
 
 function AppLifecycleEffects() {
   const { hasOnboarded } = useAppData();
