@@ -126,258 +126,267 @@ export default function Home({
 
   return (
     <View className="flex-1 bg-white dark:bg-slate-900">
+      {/* PARTE FIJA
+          El saludo, el mes, el presupuesto y el resumen se quedan quietos:
+          antes formaban la cabecera de la lista y se iban hacia arriba al
+          desplazar, así que para llegar a los movimientos había que pasarlos
+          todos, y para volver a mirar el saldo había que subir otra vez.
+          Ahora solo se desliza la lista, por debajo. */}
+      <View style={{ paddingTop: insets.top }}>
+        <View className="px-5 pt-2 pb-1 flex-row items-center justify-between">
+          <View>
+            <Text className="text-sm text-slate-500 dark:text-slate-300 font-medium">{t("home.greeting")}</Text>
+            <Text
+              className="text-lg font-extrabold"
+              style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+            >
+              {userName.split(" ")[0]} 👋
+            </Text>
+          </View>
+          <View className="flex-row items-center gap-2">
+            <ThemeToggleButton />
+            <TouchableOpacity className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center">
+              <Bell size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+              <View className="absolute top-2 right-2 w-1.5 h-1.5 bg-rose-500 rounded-full" />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        <View className="flex-row items-center justify-center gap-5 mt-2 mb-4">
+          <TouchableOpacity
+            onPress={() => shiftMonth(-1)}
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+          >
+            <ChevronLeft size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+          </TouchableOpacity>
+          <View className="px-5 py-1.5 rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+            <Text
+              className="font-bold text-base text-center"
+              numberOfLines={1}
+              style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+            >
+              {monthNames[month.m]} {month.y}
+            </Text>
+          </View>
+          <TouchableOpacity
+            onPress={() => shiftMonth(1)}
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+          >
+            <ChevronRight size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+          </TouchableOpacity>
+        </View>
+
+        <LinearGradient
+          colors={["#059669", "#0f766e"]}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          className="mx-5 rounded-[32px] overflow-hidden p-5 flex-row items-center gap-4 border border-white/20"
+        >
+          <BudgetRing pct={pct} />
+          <View className="flex-1">
+            <View className="flex-row items-center justify-between">
+              <Text className="text-emerald-100 text-xs font-semibold">
+                {editingBudget ? t("home.monthlyBudget") : t("home.availableBalance")}
+              </Text>
+              {!editingBudget && (
+                <TouchableOpacity
+                  onPress={() => setHideBalance((v) => !v)}
+                  className="w-6 h-6 items-center justify-center"
+                >
+                  {hideBalance ? (
+                    <EyeOff size={15} color="#d1fae5" />
+                  ) : (
+                    <Eye size={15} color="#d1fae5" />
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+            {editingBudget ? (
+              <View className="flex-row items-center gap-2 mt-1">
+                <TextInput
+                  value={budgetInput}
+                  onChangeText={(v) => setBudgetInput(sanitizeAmountInput(v))}
+                  keyboardType="decimal-pad"
+                  autoFocus
+                  className="text-white text-2xl font-extrabold flex-1 border-b border-white/40 py-0.5"
+                />
+                <TouchableOpacity
+                  onPress={saveBudgetInline}
+                  className="w-[42px] h-[42px] rounded-full bg-white/25 items-center justify-center"
+                >
+                  <Check size={21} color="#ffffff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setEditingBudget(false)}
+                  className="w-[42px] h-[42px] rounded-full bg-white/15 items-center justify-center"
+                >
+                  <X size={21} color="#ffffff" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <>
+                <Text className="text-white text-3xl font-extrabold tracking-tight">
+                  {hideBalance ? "• • • • • •" : fmt(available)}
+                </Text>
+                <Text className="text-emerald-100 text-[11px] mt-1">
+                  {hideBalance
+                    ? t("home.budgetedOf", { amount: "••••" })
+                    : t("home.budgetedOf", { amount: fmt(budget) })}
+                </Text>
+              </>
+            )}
+          </View>
+        </LinearGradient>
+
+        {!editingBudget && (
+          <TouchableOpacity
+            onPress={startEditBudget}
+            className="mx-5 mt-3 flex-row items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-2xl py-3"
+          >
+            <Target size={19} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+            <Text className="text-base font-bold text-slate-700 dark:text-slate-200">
+              {t("home.setMonthlyBudget")}
+            </Text>
+          </TouchableOpacity>
+        )}
+
+        <View className="flex-row flex-wrap gap-3 px-5 mt-4">
+          <Animated.View entering={FadeInDown.delay(0 * 70).duration(300)} style={{ width: "47%" }}>
+            <PressableScale
+              onPress={startEditBudget}
+              className="bg-sky-50 dark:bg-slate-800 rounded-2xl p-4 border border-sky-100 dark:border-slate-700"
+              style={softShadow}
+            >
+              <Text className="text-base mb-1">💰</Text>
+              <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">
+                {t("home.monthlyBudget")}
+              </Text>
+              <Text
+                className="text-lg font-extrabold"
+                style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+              >
+                {fmt(budget)}
+              </Text>
+            </PressableScale>
+          </Animated.View>
+          <Animated.View entering={FadeInDown.delay(1 * 70).duration(300)} style={{ width: "47%" }}>
+            <PressableScale
+              className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700"
+              style={softShadow}
+            >
+              <Text className="text-base mb-1">🕒</Text>
+              <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">
+                {t("home.previousBalance")}
+              </Text>
+              <Text
+                className={`text-lg font-extrabold ${prevBalance >= 0 ? "" : "text-rose-500"}`}
+                style={prevBalance >= 0 ? { color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" } : undefined}
+              >
+                {fmt(prevBalance)}
+              </Text>
+              {/* Un solo botón con dos caras, y siempre referido AL MES
+                  QUE SE ESTÁ VIENDO (cada mes es independiente):
+                  - Si este mes está puesto en cero, ofrece DESHACER. Es
+                    imprescindible que aparezca aquí: al quedar el saldo
+                    en 0 no habría ningún otro sitio desde donde volver
+                    atrás, y la acción sería irreversible desde la app.
+                  - Si no, y hay algo que poner en cero, ofrece hacerlo.
+                  - Si el saldo ya es 0 por sí solo, no se muestra nada:
+                    el botón no haría nada y solo estorbaría. */}
+              {carryoverActive ? (
+                <TouchableOpacity
+                  onPress={() => setConfirmRestoreCarryover(true)}
+                  hitSlop={10}
+                  className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900 items-center justify-center"
+                >
+                  <RotateCcw size={14} color="#059669" />
+                </TouchableOpacity>
+              ) : prevBalance !== 0 ? (
+                <TouchableOpacity
+                  onPress={() => setConfirmResetCarryover(true)}
+                  hitSlop={10}
+                  className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-slate-200/70 dark:bg-slate-700 items-center justify-center"
+                >
+                  <Eraser size={14} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+                </TouchableOpacity>
+              ) : null}
+            </PressableScale>
+          </Animated.View>
+          <Animated.View entering={FadeInDown.delay(2 * 70).duration(300)} style={{ width: "47%" }}>
+            <PressableScale
+              className="bg-rose-50 dark:bg-slate-800 rounded-2xl p-4 border border-rose-100 dark:border-slate-700"
+              style={softShadow}
+            >
+              <Text className="text-base mb-1">📉</Text>
+              <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">{t("home.spent")}</Text>
+              <Text className="text-lg font-extrabold text-rose-500">{fmt(spent)}</Text>
+            </PressableScale>
+          </Animated.View>
+          <Animated.View entering={FadeInDown.delay(3 * 70).duration(300)} style={{ width: "47%" }}>
+            <PressableScale
+              className="bg-emerald-50 dark:bg-slate-800 rounded-2xl p-4 border border-emerald-100 dark:border-slate-700"
+              style={softShadow}
+            >
+              <Text className="text-base mb-1">📈</Text>
+              <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">{t("home.income")}</Text>
+              <Text className="text-lg font-extrabold text-emerald-600">{fmt(income)}</Text>
+            </PressableScale>
+          </Animated.View>
+        </View>
+
+        <View className="px-5 mt-6 mb-2 flex-row items-center justify-between">
+          {selectMode ? (
+            <>
+              <Text
+                className="font-extrabold text-base"
+                style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+              >
+                {t(selected.length > 1 ? "home.selectedCountPlural" : "home.selectedCount", {
+                  count: selected.length,
+                })}
+              </Text>
+              <View className="flex-row items-center gap-3">
+                <TouchableOpacity
+                  onPress={confirmBulkDelete}
+                  disabled={selected.length === 0}
+                  className={`w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-950 items-center justify-center ${
+                    selected.length === 0 ? "opacity-40" : ""
+                  }`}
+                >
+                  <Trash2 size={21} color="#f43f5e" />
+                </TouchableOpacity>
+                <TouchableOpacity onPress={toggleSelectMode}>
+                  <Text className="text-base font-bold text-emerald-600">{t("common.cancel")}</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <>
+              <Text
+                className="font-extrabold text-base"
+                style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+              >
+                {t("home.recentTransactions")}
+              </Text>
+              {monthTx.length > 0 && (
+                <TouchableOpacity onPress={toggleSelectMode} className="flex-row items-center gap-1">
+                  <ListChecks size={16} color="#059669" />
+                  <Text className="text-sm font-bold text-emerald-600">{t("common.select")}</Text>
+                </TouchableOpacity>
+              )}
+            </>
+          )}
+        </View>
+      </View>
+
       <FlatList
         data={monthTx}
         keyExtractor={(t) => String(t.id)}
-        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 112 }}
-        ListHeaderComponent={
-          <View>
-            <View className="px-5 pt-2 pb-1 flex-row items-center justify-between">
-              <View>
-                <Text className="text-sm text-slate-500 dark:text-slate-300 font-medium">{t("home.greeting")}</Text>
-                <Text
-                  className="text-lg font-extrabold"
-                  style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-                >
-                  {userName.split(" ")[0]} 👋
-                </Text>
-              </View>
-              <View className="flex-row items-center gap-2">
-                <ThemeToggleButton />
-                <TouchableOpacity className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center">
-                  <Bell size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
-                  <View className="absolute top-2 right-2 w-1.5 h-1.5 bg-rose-500 rounded-full" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View className="flex-row items-center justify-center gap-5 mt-2 mb-4">
-              <TouchableOpacity
-                onPress={() => shiftMonth(-1)}
-                className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
-              >
-                <ChevronLeft size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
-              </TouchableOpacity>
-              <View className="px-5 py-1.5 rounded-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
-                <Text
-                  className="font-bold text-base text-center"
-                  numberOfLines={1}
-                  style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-                >
-                  {monthNames[month.m]} {month.y}
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => shiftMonth(1)}
-                className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
-              >
-                <ChevronRight size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
-              </TouchableOpacity>
-            </View>
-
-            <LinearGradient
-              colors={["#059669", "#0f766e"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              className="mx-5 rounded-[32px] overflow-hidden p-5 flex-row items-center gap-4 border border-white/20"
-            >
-              <BudgetRing pct={pct} />
-              <View className="flex-1">
-                <View className="flex-row items-center justify-between">
-                  <Text className="text-emerald-100 text-xs font-semibold">
-                    {editingBudget ? t("home.monthlyBudget") : t("home.availableBalance")}
-                  </Text>
-                  {!editingBudget && (
-                    <TouchableOpacity
-                      onPress={() => setHideBalance((v) => !v)}
-                      className="w-6 h-6 items-center justify-center"
-                    >
-                      {hideBalance ? (
-                        <EyeOff size={15} color="#d1fae5" />
-                      ) : (
-                        <Eye size={15} color="#d1fae5" />
-                      )}
-                    </TouchableOpacity>
-                  )}
-                </View>
-                {editingBudget ? (
-                  <View className="flex-row items-center gap-2 mt-1">
-                    <TextInput
-                      value={budgetInput}
-                      onChangeText={(v) => setBudgetInput(sanitizeAmountInput(v))}
-                      keyboardType="decimal-pad"
-                      autoFocus
-                      className="text-white text-2xl font-extrabold flex-1 border-b border-white/40 py-0.5"
-                    />
-                    <TouchableOpacity
-                      onPress={saveBudgetInline}
-                      className="w-[42px] h-[42px] rounded-full bg-white/25 items-center justify-center"
-                    >
-                      <Check size={21} color="#ffffff" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      onPress={() => setEditingBudget(false)}
-                      className="w-[42px] h-[42px] rounded-full bg-white/15 items-center justify-center"
-                    >
-                      <X size={21} color="#ffffff" />
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <>
-                    <Text className="text-white text-3xl font-extrabold tracking-tight">
-                      {hideBalance ? "• • • • • •" : fmt(available)}
-                    </Text>
-                    <Text className="text-emerald-100 text-[11px] mt-1">
-                      {hideBalance
-                        ? t("home.budgetedOf", { amount: "••••" })
-                        : t("home.budgetedOf", { amount: fmt(budget) })}
-                    </Text>
-                  </>
-                )}
-              </View>
-            </LinearGradient>
-
-            {!editingBudget && (
-              <TouchableOpacity
-                onPress={startEditBudget}
-                className="mx-5 mt-3 flex-row items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-2xl py-3"
-              >
-                <Target size={19} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
-                <Text className="text-base font-bold text-slate-700 dark:text-slate-200">
-                  {t("home.setMonthlyBudget")}
-                </Text>
-              </TouchableOpacity>
-            )}
-
-            <View className="flex-row flex-wrap gap-3 px-5 mt-4">
-              <Animated.View entering={FadeInDown.delay(0 * 70).duration(300)} style={{ width: "47%" }}>
-                <PressableScale
-                  onPress={startEditBudget}
-                  className="bg-sky-50 dark:bg-slate-800 rounded-2xl p-4 border border-sky-100 dark:border-slate-700"
-                  style={softShadow}
-                >
-                  <Text className="text-base mb-1">💰</Text>
-                  <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">
-                    {t("home.monthlyBudget")}
-                  </Text>
-                  <Text
-                    className="text-lg font-extrabold"
-                    style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-                  >
-                    {fmt(budget)}
-                  </Text>
-                </PressableScale>
-              </Animated.View>
-              <Animated.View entering={FadeInDown.delay(1 * 70).duration(300)} style={{ width: "47%" }}>
-                <PressableScale
-                  className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 border border-slate-200 dark:border-slate-700"
-                  style={softShadow}
-                >
-                  <Text className="text-base mb-1">🕒</Text>
-                  <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">
-                    {t("home.previousBalance")}
-                  </Text>
-                  <Text
-                    className={`text-lg font-extrabold ${prevBalance >= 0 ? "" : "text-rose-500"}`}
-                    style={prevBalance >= 0 ? { color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" } : undefined}
-                  >
-                    {fmt(prevBalance)}
-                  </Text>
-                  {/* Un solo botón con dos caras, y siempre referido AL MES
-                      QUE SE ESTÁ VIENDO (cada mes es independiente):
-                      - Si este mes está puesto en cero, ofrece DESHACER. Es
-                        imprescindible que aparezca aquí: al quedar el saldo
-                        en 0 no habría ningún otro sitio desde donde volver
-                        atrás, y la acción sería irreversible desde la app.
-                      - Si no, y hay algo que poner en cero, ofrece hacerlo.
-                      - Si el saldo ya es 0 por sí solo, no se muestra nada:
-                        el botón no haría nada y solo estorbaría. */}
-                  {carryoverActive ? (
-                    <TouchableOpacity
-                      onPress={() => setConfirmRestoreCarryover(true)}
-                      hitSlop={10}
-                      className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900 items-center justify-center"
-                    >
-                      <RotateCcw size={14} color="#059669" />
-                    </TouchableOpacity>
-                  ) : prevBalance !== 0 ? (
-                    <TouchableOpacity
-                      onPress={() => setConfirmResetCarryover(true)}
-                      hitSlop={10}
-                      className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-slate-200/70 dark:bg-slate-700 items-center justify-center"
-                    >
-                      <Eraser size={14} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
-                    </TouchableOpacity>
-                  ) : null}
-                </PressableScale>
-              </Animated.View>
-              <Animated.View entering={FadeInDown.delay(2 * 70).duration(300)} style={{ width: "47%" }}>
-                <PressableScale
-                  className="bg-rose-50 dark:bg-slate-800 rounded-2xl p-4 border border-rose-100 dark:border-slate-700"
-                  style={softShadow}
-                >
-                  <Text className="text-base mb-1">📉</Text>
-                  <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">{t("home.spent")}</Text>
-                  <Text className="text-lg font-extrabold text-rose-500">{fmt(spent)}</Text>
-                </PressableScale>
-              </Animated.View>
-              <Animated.View entering={FadeInDown.delay(3 * 70).duration(300)} style={{ width: "47%" }}>
-                <PressableScale
-                  className="bg-emerald-50 dark:bg-slate-800 rounded-2xl p-4 border border-emerald-100 dark:border-slate-700"
-                  style={softShadow}
-                >
-                  <Text className="text-base mb-1">📈</Text>
-                  <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">{t("home.income")}</Text>
-                  <Text className="text-lg font-extrabold text-emerald-600">{fmt(income)}</Text>
-                </PressableScale>
-              </Animated.View>
-            </View>
-
-            <View className="px-5 mt-6 mb-2 flex-row items-center justify-between">
-              {selectMode ? (
-                <>
-                  <Text
-                    className="font-extrabold text-base"
-                    style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-                  >
-                    {t(selected.length > 1 ? "home.selectedCountPlural" : "home.selectedCount", {
-                      count: selected.length,
-                    })}
-                  </Text>
-                  <View className="flex-row items-center gap-3">
-                    <TouchableOpacity
-                      onPress={confirmBulkDelete}
-                      disabled={selected.length === 0}
-                      className={`w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-950 items-center justify-center ${
-                        selected.length === 0 ? "opacity-40" : ""
-                      }`}
-                    >
-                      <Trash2 size={21} color="#f43f5e" />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={toggleSelectMode}>
-                      <Text className="text-base font-bold text-emerald-600">{t("common.cancel")}</Text>
-                    </TouchableOpacity>
-                  </View>
-                </>
-              ) : (
-                <>
-                  <Text
-                    className="font-extrabold text-base"
-                    style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-                  >
-                    {t("home.recentTransactions")}
-                  </Text>
-                  {monthTx.length > 0 && (
-                    <TouchableOpacity onPress={toggleSelectMode} className="flex-row items-center gap-1">
-                      <ListChecks size={16} color="#059669" />
-                      <Text className="text-sm font-bold text-emerald-600">{t("common.select")}</Text>
-                    </TouchableOpacity>
-                  )}
-                </>
-              )}
-            </View>
-          </View>
-        }
+        // flex-1: ocupa todo lo que sobra bajo la parte fija. Sin esto, la
+        // lista se estira solo hasta donde llegue su contenido y con pocos
+        // movimientos deja un hueco raro.
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 112 }}
         removeClippedSubviews
         initialNumToRender={8}
         maxToRenderPerBatch={8}
