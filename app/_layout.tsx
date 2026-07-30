@@ -8,6 +8,7 @@ import "react-native-reanimated";
 import "../global.css";
 import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
 import { flushPendingSaves } from "@/utils/storage";
+import AppLockGate from "@/components/AppLockGate";
 import CelebrationOverlay from "@/components/CelebrationOverlay";
 import Toast from "@/components/Toast";
 
@@ -181,6 +182,11 @@ export default function RootLayout() {
           </Stack>
           <GlobalOverlays />
           <AppLifecycleEffects />
+          {/* Va aquí, el último de todos, para quedar POR ENCIMA de todo lo
+              demás — incluidos los paneles modales. Si fuera una pantalla de
+              navegación, bastaría el botón "atrás" de Android para
+              saltárselo. */}
+          <AppLockGate />
           <ThemedStatusBar />
         </View>
       </AppDataProvider>

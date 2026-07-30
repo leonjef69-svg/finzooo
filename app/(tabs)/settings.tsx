@@ -35,6 +35,7 @@ export default function SettingsTab() {
       }}
       onPremium={() => router.push("/premium")}
       onSavings={() => router.push("/savings")}
+      onAppLock={() => router.push("/app-lock")}
       onChangePassword={() => router.push("/change-password")}
       onDeleteAccount={() => router.push("/delete-account")}
       onAbout={() => router.push("/about")}

@@ -12,6 +12,7 @@ import {
   Crown,
   FileDown,
   FileUp,
+  Lock,
   PiggyBank,
   PieChart,
   Globe,
@@ -64,6 +65,7 @@ export default function Settings({
   onLogout,
   onPremium,
   onSavings,
+  onAppLock,
   onChangePassword,
   onDeleteAccount,
   onAbout,
@@ -86,6 +88,7 @@ export default function Settings({
   onLogout: () => void;
   onPremium: () => void;
   onSavings: () => void;
+  onAppLock: () => void;
   onChangePassword: () => void;
   onDeleteAccount: () => void;
   onAbout: () => void;
@@ -318,6 +321,16 @@ export default function Settings({
             right={<ChevronRight size={16} color="#cbd5e1" />}
           />
         )}
+        <Row
+          Icon={Lock}
+          label={t("lock.rowLabel")}
+          onPress={onAppLock}
+          right={
+            <View className="bg-amber-50 px-2 py-1 rounded-full">
+              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
+            </View>
+          }
+        />
         <Row
           Icon={PiggyBank}
           label={t("settings.savingsGoals")}
