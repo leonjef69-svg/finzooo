@@ -132,7 +132,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "reports.byMonth": "Gasto por mes",
     "reports.noMonthsWithSpending": "Sin gastos en estos meses",
     "reports.dailyTitle": "Gasto acumulado del mes",
-    "reports.dailyHint": "Toca un día para ver cuánto llevabas gastado",
+    "reports.dailyHint":
+      "Abajo, los días del mes. A la izquierda, cuánto llevabas gastado. Toca un día para ver su monto exacto.",
     "reports.dailyLegendReal": "Gastado",
     "reports.dailyLegendProjection": "Estimado a fin de mes",
     "reports.dailyShowAmounts": "Ver montos",
@@ -656,7 +657,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "reports.byMonth": "Spending by month",
     "reports.noMonthsWithSpending": "No spending in these months",
     "reports.dailyTitle": "Accumulated spending",
-    "reports.dailyHint": "Tap a day to see how much you had spent",
+    "reports.dailyHint":
+      "Along the bottom, the days of the month. On the left, how much you had spent. Tap a day for its exact amount.",
     "reports.dailyLegendReal": "Spent",
     "reports.dailyLegendProjection": "Estimated month end",
     "reports.dailyShowAmounts": "Show amounts",
@@ -1177,7 +1179,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "reports.byMonth": "Gasto por mês",
     "reports.noMonthsWithSpending": "Sem gastos nestes meses",
     "reports.dailyTitle": "Gasto acumulado do mês",
-    "reports.dailyHint": "Toque num dia para ver quanto já havia gasto",
+    "reports.dailyHint":
+      "Embaixo, os dias do mês. À esquerda, quanto você já havia gasto. Toque num dia para ver o valor exato.",
     "reports.dailyLegendReal": "Gasto",
     "reports.dailyLegendProjection": "Estimado fim do mês",
     "reports.dailyShowAmounts": "Ver valores",
