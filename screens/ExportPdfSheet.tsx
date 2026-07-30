@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { File, Paths } from "expo-file-system";
-import { FileDown, Sheet, X } from "lucide-react-native";
+import { Cloud, FileDown, Share2, Sheet, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import { catInfo } from "@/constants/categories";
 import { methodLabel } from "@/constants/i18n";
@@ -27,7 +27,7 @@ export default function ExportPdfSheet({
   initialMonth,
   initialFormat,
   autoExport,
-  destination = "share",
+  destination: initialDestination = "share",
 }: {
   onClose: () => void;
   // Mes "AAAA-MM" con el que abrir ya elegido. Lo usa la orden por voz
@@ -46,6 +46,10 @@ export default function ExportPdfSheet({
   const { colorScheme } = useColorScheme();
   const [exportType, setExportType] = useState<ExportType>("all");
   const [format, setFormat] = useState<ExportFormat>(initialFormat ?? "pdf");
+  // Dónde va el archivo. Era una propiedad fija que solo podía cambiar la
+  // orden por voz: la subida a Drive estaba entera y funcionando, pero sin
+  // ningún botón que la alcanzara. Ahora es un estado con su selector.
+  const [destination, setDestination] = useState<"share" | "drive">(initialDestination);
   const [exporting, setExporting] = useState(false);
 
   // Antes se exportaba siempre el mes que se estuviera viendo en Inicio, sin
@@ -156,7 +160,28 @@ export default function ExportPdfSheet({
       </html>`;
 
     const { uri } = await Print.printToFileAsync({ html });
-    return { uri, mimeType: "application/pdf", fileName: `finzo-${exportType}-${selectedMk}.pdf` };
+
+    // El PDF recién creado se llama con un código de máquina
+    // ("00568bde-f682-452f-803e-bdf56d86c76a.pdf"), que es lo que aparecía
+    // al compartirlo por WhatsApp: ilegible para quien lo recibe e
+    // imposible de encontrar después entre los archivos.
+    //
+    // Se cambia a un nombre que se lee: "finzo-todos-2026-06.pdf". El
+    // nombre YA se calculaba aquí abajo, pero solo lo usaba la subida a
+    // Drive; el archivo que se compartía seguía siendo el del código.
+    const fileName = `finzo-${exportType}-${selectedMk}.pdf`;
+    let shareUri = uri;
+    try {
+      const nice = new File(Paths.cache, fileName);
+      if (nice.exists) nice.delete();
+      new File(uri).move(nice);
+      shareUri = nice.uri;
+    } catch {
+      // Si el renombrado falla se comparte con el nombre feo: es mejor eso
+      // que quedarse sin exportar.
+    }
+
+    return { uri: shareUri, mimeType: "application/pdf", fileName };
   }
 
   async function exportAsCsv() {
@@ -368,6 +393,43 @@ export default function ExportPdfSheet({
           ))}
         </View>
 
+        {/* DÓNDE VA EL ARCHIVO.
+            "Compartir" abre la lista de Android (WhatsApp, correo…). Qué
+            apps salen ahí lo decide Android, no Finzo, y de un celular a
+            otro cambia. "Guardar en Drive" no depende de esa lista: sube el
+            archivo directo, sin ventanas de por medio. */}
+        <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
+          {t("exportPdf.destinationLabel")}
+        </Text>
+        <View className="flex-row gap-2.5 mb-4">
+          {([
+            { id: "share", label: t("exportPdf.destShare"), Icon: Share2 },
+            { id: "drive", label: t("exportPdf.destDrive"), Icon: Cloud },
+          ] as const).map((opt) => (
+            <TouchableOpacity
+              key={opt.id}
+              onPress={() => setDestination(opt.id)}
+              className={`flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl border-[1.5px] ${
+                destination === opt.id
+                  ? "bg-emerald-600 border-emerald-600"
+                  : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+              }`}
+            >
+              <opt.Icon
+                size={16}
+                color={destination === opt.id ? "#ffffff" : colorScheme === "dark" ? "#94a3b8" : "#475569"}
+              />
+              <Text
+                className={`text-sm font-bold ${
+                  destination === opt.id ? "text-white" : "text-slate-600 dark:text-slate-200"
+                }`}
+              >
+                {opt.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         <View className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 mb-4">
           <Text className="text-xs text-slate-500 dark:text-slate-300">
             {t("exportPdf.countLabel", { count: monthTx.length })}
@@ -395,7 +457,13 @@ export default function ExportPdfSheet({
             <Sheet size={18} color="#ffffff" />
           )}
           <Text className="text-white font-extrabold">
-            {exporting ? t("exportPdf.exporting") : t("exportPdf.export")}
+            {exporting
+              ? t("exportPdf.exporting")
+              : t(destination === "drive" ? "exportPdf.saveToDrive" : "exportPdf.exportFormat", {
+                  // El botón decía "Exportar PDF" incluso con Excel
+                  // elegido. Ahora nombra lo que de verdad va a salir.
+                  format: format === "pdf" ? "PDF" : "Excel",
+                })}
           </Text>
         </TouchableOpacity>
       </View>

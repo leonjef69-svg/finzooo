@@ -50,12 +50,16 @@ function GlobalOverlays() {
 //                   la persona veía Inicio y no sabía si había funcionado.
 //   /import       → el selector de archivos también es otra aplicación, y
 //                   el archivo elegido se perdía igual.
+//   /export-pdf   → el menú de compartir es otra aplicación. Al cerrarlo
+//                   sin elegir nada, la pantalla se cerraba y aparecía
+//                   Inicio: había que volver a entrar y a elegir mes,
+//                   formato y qué exportar desde cero.
 //
 // La regla para añadir una pantalla aquí: si abre una aplicación de Android
 // (cámara, galería, archivos, ajustes, voz) Y todavía le queda trabajo por
 // hacer al volver, tiene que estar en esta lista. Lo comprueba el auditor
 // auditar-pantallas-externas.mjs, para que no se vuelva a olvidar.
-const KEEP_ON_RETURN = ["/auto-capture", "/voice", "/scan-receipt", "/import"];
+const KEEP_ON_RETURN = ["/auto-capture", "/voice", "/scan-receipt", "/import", "/export-pdf"];
 
 /**
  * Abre Importar cuando Finzo se ha lanzado con un archivo desde otra app
