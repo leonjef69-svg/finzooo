@@ -410,10 +410,15 @@ export default function Home({
               <Row {...rowProps}>
                 <PressableScale
                   onPress={() => (selectMode ? toggleSelected(t2.id) : onOpenDetail(t2.id))}
-                  className={`flex-row items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl p-3 border mb-2.5 ${
+                  // El contorno se ve poco, sobre todo de noche: la tarjeta
+                  // es slate-900 y el fondo de la pantalla TAMBIÉN, así que
+                  // lo único que las separaba era un borde casi del mismo
+                  // color. Se sube medio píxel de grosor y se aclara el
+                  // color un tono en cada tema.
+                  className={`flex-row items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl p-3 border-[1.5px] mb-2.5 ${
                     isSel
                       ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950"
-                      : "border-slate-100 dark:border-slate-800"
+                      : "border-slate-200 dark:border-slate-700"
                   }`}
                   style={softShadow}
                 >

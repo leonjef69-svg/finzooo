@@ -165,7 +165,10 @@ export default function History({
                   <TouchableOpacity
                     key={tx.id}
                     onPress={() => onOpenDetail(tx.id)}
-                    className="flex-row items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl p-3 border border-slate-100 dark:border-slate-800"
+                    // Mismo contorno que las filas de Inicio: medio píxel más
+                    // de grosor y un tono más claro, porque la tarjeta y el
+                    // fondo de la pantalla son del mismo color en oscuro.
+                    className="flex-row items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl p-3 border-[1.5px] border-slate-200 dark:border-slate-700"
                     style={CARD_SHADOW}
                   >
                     <IconBadge Icon={c.icon} color={c.color} />
