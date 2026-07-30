@@ -705,7 +705,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                     return (
                       <View
                         key={`${row.amount}-${i}`}
-                        className="flex-row items-center gap-3 rounded-2xl p-3.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+                        className="flex-row items-center gap-3 rounded-2xl p-3.5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
                         style={CARD_SHADOW}
                       >
                         <Text className="text-xl">{cat.emoji}</Text>
@@ -767,7 +767,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             <Text className="text-xs text-center text-slate-400 mb-4">"{heard}"</Text>
 
             <View
-              className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+              className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
               style={CARD_SHADOW}
             >
               <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 text-center">
@@ -881,7 +881,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             <Text className="text-xs text-center text-slate-400 mb-4">"{heard}"</Text>
 
             <View
-              className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+              className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
               style={CARD_SHADOW}
             >
               <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 text-center">
@@ -962,7 +962,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             <Text className="text-xs text-center text-slate-400 mb-4">"{heard}"</Text>
 
             <View
-              className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+              className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
               style={CARD_SHADOW}
             >
               <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 text-center mb-3">
@@ -1128,7 +1128,7 @@ function SingleCard({
   const cat = catInfo(category);
   return (
     <View
-      className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 items-center"
+      className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700 items-center"
       style={CARD_SHADOW}
     >
       <Text className="text-4xl mb-1">{cat.emoji}</Text>

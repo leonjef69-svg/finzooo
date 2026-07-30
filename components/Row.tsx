@@ -22,7 +22,7 @@ export default function Row({
     <TouchableOpacity
       onPress={onPress}
       disabled={!onPress}
-      className="w-full flex-row items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800"
+      className="w-full flex-row items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl p-4 border-[1.5px] border-slate-200 dark:border-slate-700"
       style={CARD_SHADOW}
     >
       <View className={`w-9 h-9 rounded-xl items-center justify-center ${danger ? "bg-rose-50" : "bg-slate-50 dark:bg-slate-800"}`}>

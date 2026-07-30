@@ -79,7 +79,7 @@ export default function History({
       </View>
 
       <View className="px-5 mt-3">
-        <View className="flex-row items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-800 px-3 py-2.5">
+        <View className="flex-row items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 px-3 py-2.5">
           <Search size={16} color="#94a3b8" />
           <TextInput
             value={search}

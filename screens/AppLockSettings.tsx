@@ -228,7 +228,7 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
         ) : (
           <>
             <View
-              className="rounded-3xl p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+              className="rounded-3xl p-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
               style={CARD_SHADOW}
             >
               <View className="flex-row items-center gap-3">
@@ -280,7 +280,7 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
             {enabled && (
               <>
                 <View
-                  className="rounded-3xl p-5 mt-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+                  className="rounded-3xl p-5 mt-6 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
                   style={CARD_SHADOW}
                 >
                   <View className="flex-row items-center gap-3">

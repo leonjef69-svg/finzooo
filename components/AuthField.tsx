@@ -29,7 +29,7 @@ export default function AuthField({
       <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{label}</Text>
       <View
         className={`flex-row items-center bg-slate-50 dark:bg-slate-800 rounded-xl border px-4 py-3.5 ${
-          error ? "border-rose-400" : "border-slate-100 dark:border-slate-800"
+          error ? "border-rose-400" : "border-slate-200 dark:border-slate-700"
         }`}
       >
         <TextInput

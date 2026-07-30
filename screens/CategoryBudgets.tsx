@@ -50,7 +50,7 @@ export default function CategoryBudgets({ onBack }: { onBack: () => void }) {
             const over = limit > 0 && pct >= 1;
             const barColor = over ? "#f43f5e" : pct >= 0.7 ? "#f59e0b" : "#10b981";
             return (
-              <View key={c.id} className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-3 border border-slate-100 dark:border-slate-800">
+              <View key={c.id} className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-3 border border-slate-200 dark:border-slate-700">
                 <View className="flex-row items-center gap-3">
                   <IconBadge Icon={c.icon} color={c.color} size={38} />
                   <Text
@@ -104,7 +104,7 @@ export default function CategoryBudgets({ onBack }: { onBack: () => void }) {
       </ScrollView>
 
       <View
-        className="px-5 py-4 border-t border-slate-100 dark:border-slate-800"
+        className="px-5 py-4 border-t border-slate-200 dark:border-slate-700"
         style={{ paddingBottom: 16 + insets.bottom }}
       >
         <TouchableOpacity onPress={save} className="w-full bg-emerald-600 py-4 rounded-2xl items-center">

@@ -103,7 +103,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
 
         {!autoCaptureSupported ? (
           <View
-            className="rounded-2xl p-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+            className="rounded-2xl p-4 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
             style={CARD_SHADOW}
           >
             <View className="flex-row items-center gap-2 mb-2">
@@ -131,7 +131,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                 mano en los ajustes del celular. */}
             <TouchableOpacity
               onPress={openAutoCaptureSettings}
-              className="w-full flex-row items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800 mb-2.5"
+              className="w-full flex-row items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl p-4 border-[1.5px] border-slate-200 dark:border-slate-700 mb-2.5"
               style={CARD_SHADOW}
             >
               <View
@@ -160,7 +160,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                 permiso esté dado, para poder parar la captura sin tener que
                 ir a los ajustes de Android. */}
             <View
-              className="w-full flex-row items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-100 dark:border-slate-800"
+              className="w-full flex-row items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl p-4 border-[1.5px] border-slate-200 dark:border-slate-700"
               style={CARD_SHADOW}
             >
               <View className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-800 items-center justify-center">
@@ -184,7 +184,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                 del celular, de cualquier app, antes de filtrar nada — solo
                 el número, nunca el contenido. */}
             <View
-              className="rounded-2xl p-4 mt-6 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+              className="rounded-2xl p-4 mt-6 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
               style={CARD_SHADOW}
             >
               <View className="flex-row items-center gap-2 mb-3">
@@ -265,7 +265,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
 
             {log.length === 0 ? (
               <View
-                className="rounded-2xl p-4 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+                className="rounded-2xl p-4 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
                 style={CARD_SHADOW}
               >
                 <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-300">
@@ -277,7 +277,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                 {log.map((entry, i) => (
                   <View
                     key={`${entry.at}-${i}`}
-                    className="rounded-2xl p-3.5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+                    className="rounded-2xl p-3.5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
                     style={CARD_SHADOW}
                   >
                     <View className="flex-row items-center justify-between mb-1">

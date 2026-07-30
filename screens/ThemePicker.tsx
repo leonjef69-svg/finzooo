@@ -51,7 +51,7 @@ export default function ThemePicker({
                 className={`flex-row items-center justify-between rounded-2xl p-4 border ${
                   selected
                     ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950"
-                    : "border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900"
+                    : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
                 }`}
               >
                 <View className="flex-row items-center gap-3">

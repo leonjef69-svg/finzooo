@@ -166,7 +166,7 @@ export default function Settings({
         <ThemeToggleButton />
       </View>
 
-      <View className="mx-5 mt-3 bg-white dark:bg-slate-900 rounded-2xl p-5 border border-slate-100 dark:border-slate-800 items-center">
+      <View className="mx-5 mt-3 bg-white dark:bg-slate-900 rounded-2xl p-5 border-[1.5px] border-slate-200 dark:border-slate-700 items-center">
         <TouchableOpacity onPress={pickPhoto} disabled={pickingPhoto} activeOpacity={0.8}>
           <View className="w-20 h-20 rounded-full bg-emerald-600 items-center justify-center overflow-hidden">
             {userPhoto ? (

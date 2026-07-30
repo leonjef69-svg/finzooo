@@ -231,7 +231,7 @@ export default function Reports({
       )}
 
       <View
-        className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-4"
+        className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4"
         style={CARD_SHADOW}
       >
         <Text className="text-sm font-bold mb-1" style={{ color: primaryTextColor }}>{t("reports.byCategory")}</Text>
@@ -263,7 +263,7 @@ export default function Reports({
       </View>
 
       <View
-        className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-4"
+        className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4"
         style={CARD_SHADOW}
       >
         <Text className="text-sm font-bold mb-1" style={{ color: primaryTextColor }}>{t("categoryBudgets.title")}</Text>
@@ -307,7 +307,7 @@ export default function Reports({
       </View>
 
       <View
-        className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-4"
+        className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4"
         style={CARD_SHADOW}
       >
         <Text className="text-sm font-bold mb-2" style={{ color: primaryTextColor }}>{t("reports.byMonth")}</Text>
@@ -321,7 +321,7 @@ export default function Reports({
       </View>
 
       <View
-        className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-4"
+        className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4"
         style={CARD_SHADOW}
       >
         <Text className="text-sm font-bold" style={{ color: primaryTextColor }}>{t("reports.byDayTitle")}</Text>
