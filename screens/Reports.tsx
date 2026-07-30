@@ -150,53 +150,6 @@ export default function Reports({
       .filter((b) => b.value > 0);
   }, [transactions, month.y, month.m, monthNames]);
 
-  // Gasto de CADA DÍA del mes, más las cuentas que lo resumen.
-  //
-  // Todo sale de los movimientos guardados: nada está escrito en el código.
-  // Y se recalcula con el mes que se esté viendo, así que cambiando de mes
-  // con las flechas de Inicio, esto cambia con él.
-  const daily = useMemo(() => {
-    const expenses = transactions.filter((t) => t.date.startsWith(mk) && t.type === "expense");
-    const daysInMonth = new Date(month.y, month.m + 1, 0).getDate();
-
-    const now = new Date();
-    const isCurrentMonth = now.getFullYear() === month.y && now.getMonth() === month.m;
-    // En un mes ya pasado se promedia sobre el mes completo; en el actual,
-    // solo sobre los días transcurridos. Si no, el promedio de hoy saldría
-    // repartido entre días que aún no han llegado y parecería más bajo.
-    const elapsed = isCurrentMonth ? Math.min(now.getDate(), daysInMonth) : daysInMonth;
-
-    const porDia = new Map<number, number>();
-    for (const t of expenses) {
-      const d = Number(t.date.slice(8, 10));
-      porDia.set(d, (porDia.get(d) ?? 0) + t.amount);
-    }
-
-    const total = expenses.reduce((s, t) => s + t.amount, 0);
-    const diasConGasto = [...porDia.values()].filter((v) => v > 0).length;
-
-    let topDay = 0;
-    let topAmount = 0;
-    for (const [d, amount] of porDia) {
-      if (amount > topAmount) {
-        topAmount = amount;
-        topDay = d;
-      }
-    }
-
-    return {
-      daysInMonth,
-      isCurrentMonth,
-      today: isCurrentMonth ? Math.min(now.getDate(), daysInMonth) : 0,
-      todayAmount: isCurrentMonth ? (porDia.get(now.getDate()) ?? 0) : 0,
-      total,
-      average: elapsed > 0 ? total / elapsed : 0,
-      diasConGasto,
-      topDay,
-      topAmount,
-    };
-  }, [transactions, mk, month.y, month.m]);
-
   return (
     <ScrollView
       className="flex-1 bg-white dark:bg-slate-900"
@@ -338,59 +291,6 @@ export default function Reports({
           <BarChartSimple data={barData} fmt={fmt} />
         )}
       </View>
-
-      {/* Gasto por día + las cuentas del mes */}
-      <View
-        className="mx-5 mt-4 mb-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-4"
-        style={CARD_SHADOW}
-      >
-        <Text className="text-sm font-bold" style={{ color: primaryTextColor }}>
-          {t("reports.dailyTitle")}
-        </Text>
-
-        {daily.total === 0 ? (
-          <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">
-            {t("reports.noDataThisMonth")}
-          </Text>
-        ) : (
-          <>
-            <View className="flex-row flex-wrap mt-1">
-              {daily.isCurrentMonth && (
-                <Stat label={t("reports.statToday")} value={fmt(daily.todayAmount)} />
-              )}
-              <Stat label={t("reports.statMonthTotal")} value={fmt(daily.total)} />
-              <Stat label={t("reports.statDailyAvg")} value={fmt(daily.average)} />
-              {daily.topDay > 0 && (
-                <Stat
-                  label={t("reports.statTopDay")}
-                  value={`${daily.topDay} · ${fmt(daily.topAmount)}`}
-                />
-              )}
-              <Stat
-                label={t("reports.statDaysWith")}
-                value={t("reports.statDaysWithValue", {
-                  count: daily.diasConGasto,
-                  total: daily.daysInMonth,
-                })}
-              />
-              {budget > 0 && <Stat label={t("reports.statBudget")} value={fmt(budget)} />}
-            </View>
-          </>
-        )}
-      </View>
     </ScrollView>
-  );
-}
-
-// Un dato del resumen. Van de dos en dos para que entren en el ancho del
-// celular sin apretarse.
-function Stat({ label, value }: { label: string; value: string }) {
-  return (
-    <View style={{ width: "50%" }} className="py-2 pr-2">
-      <Text className="text-[10px] text-slate-500 dark:text-slate-300" numberOfLines={2}>
-        {label}
-      </Text>
-      <Text className="text-base font-extrabold text-slate-900 dark:text-slate-100">{value}</Text>
-    </View>
   );
 }
