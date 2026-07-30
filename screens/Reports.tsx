@@ -1,11 +1,12 @@
 ﻿import { useMemo } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Crown, Sparkles } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import DonutChart from "@/components/DonutChart";
 import BarChartSimple from "@/components/BarChartSimple";
+import DailyBarsChart from "@/components/DailyBarsChart";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import { catInfo } from "@/constants/categories";
 import { COLOR_HEX_600 } from "@/constants/colors";
@@ -26,6 +27,7 @@ export default function Reports({
   const { fmt, t, monthNames, userLanguage, categoryBudgets, categorySpent, budget, isPremium } =
     useAppData();
   const insets = useSafeAreaInsets();
+  const { width: windowWidth } = useWindowDimensions();
   const { colorScheme } = useColorScheme();
   const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
   const mk = monthKey(month.y, month.m);
@@ -149,6 +151,36 @@ export default function Reports({
       })
       .filter((b) => b.value > 0);
   }, [transactions, month.y, month.m, monthNames]);
+
+  // Gasto de cada día del mes que se está viendo.
+  //
+  // Aquí NO se filtran los días en cero, al contrario que en el gráfico de
+  // meses: un día sin gasto es información: significa que ese día no se
+  // gastó nada. Saltárselos correría los días de lugar y el 15 caería donde
+  // debería estar el 8.
+  //
+  // La cantidad de barras sale del mes de verdad: febrero da 28 (29 si es
+  // bisiesto), abril 30, julio 31. No hay ningún 31 fijo en el código.
+  const daily = useMemo(() => {
+    const daysInMonth = new Date(month.y, month.m + 1, 0).getDate();
+    const porDia = new Map<number, number>();
+    for (const tx of transactions) {
+      if (tx.type !== "expense" || !tx.date.startsWith(mk)) continue;
+      const d = Number(tx.date.slice(8, 10));
+      porDia.set(d, (porDia.get(d) ?? 0) + tx.amount);
+    }
+    const bars = Array.from({ length: daysInMonth }, (_, i) => ({
+      day: i + 1,
+      amount: porDia.get(i + 1) ?? 0,
+    }));
+
+    // Solo se resalta "hoy" si se está mirando el mes actual. En un mes
+    // pasado, resaltar el día 29 no querría decir nada.
+    const now = new Date();
+    const isCurrentMonth = month.y === now.getFullYear() && month.m === now.getMonth();
+
+    return { bars, today: isCurrentMonth ? now.getDate() : 0, hasAny: porDia.size > 0 };
+  }, [transactions, mk, month.y, month.m]);
 
   return (
     <ScrollView
@@ -289,6 +321,33 @@ export default function Reports({
           </Text>
         ) : (
           <BarChartSimple data={barData} fmt={fmt} />
+        )}
+      </View>
+
+      <View
+        className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-4"
+        style={CARD_SHADOW}
+      >
+        <Text className="text-sm font-bold" style={{ color: primaryTextColor }}>{t("reports.byDayTitle")}</Text>
+        {!daily.hasAny ? (
+          <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">
+            {t("reports.noDataThisMonth")}
+          </Text>
+        ) : (
+          <View className="mt-2">
+            <DailyBarsChart
+              data={daily.bars}
+              fmt={fmt}
+              width={windowWidth - 72}
+              today={daily.today}
+              hint={t("reports.byDayHint")}
+              formatSelected={(day, amount) =>
+                t("reports.byDaySelected", { day, month: monthNames[month.m], amount: fmt(amount) })
+              }
+              showAmountsLabel={t("reports.byDayShowAmounts")}
+              hideAmountsLabel={t("reports.byDayHideAmounts")}
+            />
+          </View>
         )}
       </View>
     </ScrollView>
