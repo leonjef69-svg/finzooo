@@ -94,6 +94,19 @@ export default function LineChartSimple({
     if (p) lastDrawn = i;
   });
 
+  // Días en los que el total CAMBIÓ, o sea en los que de verdad se gastó.
+  //
+  // Antes los círculos salían en los días 1, 5, 10, 15... que son fechas
+  // arbitrarias donde normalmente no pasó nada: eran adorno. Ahora cada
+  // círculo marca un día con movimiento, así que verlo significa algo.
+  const isStep = (i: number) => {
+    const v = main.values[i];
+    if (v == null) return false;
+    if (i === 0) return v > 0;
+    const prev = main.values[i - 1];
+    return prev == null ? v > 0 : v !== prev;
+  };
+
   return (
     <View style={{ width, height: height + TOOLTIP_H + LABEL_H }}>
       {/* Globo con el monto del punto tocado */}
@@ -114,6 +127,35 @@ export default function LineChartSimple({
         </View>
       )}
 
+      {/* El monto del techo de la escala, arriba a la izquierda. Ahí nunca
+          estorba: la línea del gasto acumulado arranca abajo. */}
+      <Text
+        style={{ position: "absolute", top: TOOLTIP_H + 1, left: PAD_X + 2 }}
+        className="text-[9px] text-slate-400"
+      >
+        {fmt(max)}
+      </Text>
+
+      {/* El total de hoy, siempre visible junto a su punto. Antes había que
+          tocar para ver cualquier cifra, así que el número más importante
+          —cuánto llevas gastado— estaba escondido. */}
+      {lastDrawn >= 0 && selected == null && mainPoints[lastDrawn] && (
+        <Text
+          style={{
+            position: "absolute",
+            top: TOOLTIP_H + Math.max(0, (mainPoints[lastDrawn] as { y: number }).y - 20),
+            left: Math.min(
+              Math.max((mainPoints[lastDrawn] as { x: number }).x - 40, 0),
+              Math.max(0, width - 80)
+            ),
+            width: 80,
+          }}
+          className="text-[10px] font-bold text-slate-900 dark:text-slate-100 text-center"
+        >
+          {fmt(main.values[lastDrawn] as number)}
+        </Text>
+      )}
+
       <Svg width={width} height={height} style={{ marginTop: TOOLTIP_H }}>
         <Defs>
           <LinearGradient id="lineFill" x1="0" y1="0" x2="0" y2="1">
@@ -121,6 +163,19 @@ export default function LineChartSimple({
             <Stop offset="1" stopColor={main.color} stopOpacity={0.02} />
           </LinearGradient>
         </Defs>
+
+        {/* Techo de la escala. Sin esta referencia no se sabe si la altura
+            del dibujo son S/ 56 o S/ 5.000: el eje vertical no decía nada. */}
+        <Line
+          x1={PAD_X}
+          y1={PAD_TOP}
+          x2={PAD_X + plotW}
+          y2={PAD_TOP}
+          stroke={main.color}
+          strokeOpacity={0.12}
+          strokeWidth={1}
+          strokeDasharray="3,4"
+        />
 
         {/* Línea guía del suelo, para dar referencia visual */}
         <Line
@@ -178,7 +233,8 @@ export default function LineChartSimple({
             funcionando en cualquier día: las zonas de toque son aparte. */}
         {mainPoints.map((p, i) => {
           if (!p) return null;
-          const visible = selected === i || i === lastDrawn || !labels || labels[i] !== "";
+          // Solo donde significa algo: un día con gasto, hoy, o el tocado.
+          const visible = selected === i || i === lastDrawn || isStep(i);
           if (!visible) return null;
           return (
             <Circle
