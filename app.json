@@ -31,6 +31,21 @@
         "android.permission.RECORD_AUDIO",
         "android.permission.CAMERA"
       ],
+      "intentFilters": [
+        {
+          "action": "SEND",
+          "category": ["DEFAULT"],
+          "data": [{ "mimeType": "application/pdf" }]
+        },
+        {
+          "action": "VIEW",
+          "category": ["DEFAULT"],
+          "data": [
+            { "scheme": "content", "mimeType": "application/pdf" },
+            { "scheme": "file", "mimeType": "application/pdf" }
+          ]
+        }
+      ],
       "runtimeVersion": {
         "policy": "appVersion"
       }

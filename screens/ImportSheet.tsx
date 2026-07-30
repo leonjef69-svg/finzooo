@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
@@ -26,7 +26,17 @@ type Candidate = {
 // Decisión que toma la persona (o el sistema) sobre cada candidato.
 export type Resolution = "new" | "merge" | "keepBoth" | "skip";
 
-export default function ImportSheet({ onClose }: { onClose: () => void }) {
+export default function ImportSheet({
+  onClose,
+  incoming,
+}: {
+  onClose: () => void;
+  /**
+   * Archivo que llegó desde otra app ("Compartir → Finzo"). Si viene, se
+   * carga solo al abrir la pantalla y no hace falta elegir nada.
+   */
+  incoming?: { uri: string; name: string } | null;
+}) {
   const { t, showToast, transactions, commitImport, learnMerchantCategory, merchantLearned } = useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -47,6 +57,17 @@ export default function ImportSheet({ onClose }: { onClose: () => void }) {
   const newOnes = useMemo(() => candidates.filter((c) => !c.match), [candidates]);
   const dupes = useMemo(() => candidates.filter((c) => c.match), [candidates]);
 
+  // Archivo llegado desde fuera: se carga una sola vez, al abrir. La marca
+  // evita que un redibujado lo vuelva a leer — el archivo se borra tras
+  // leerlo, así que un segundo intento fallaría y mostraría un error falso.
+  const alreadyLoaded = useRef(false);
+  useEffect(() => {
+    if (!incoming || alreadyLoaded.current) return;
+    alreadyLoaded.current = true;
+    void loadFile(incoming.uri, incoming.name, "application/pdf");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [incoming]);
+
   async function pickFile() {
     const result = await DocumentPicker.getDocumentAsync({
       type: [
@@ -59,10 +80,23 @@ export default function ImportSheet({ onClose }: { onClose: () => void }) {
       copyToCacheDirectory: true,
     });
     if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    await loadFile(asset.uri, asset.name, asset.mimeType);
+  }
 
+  /**
+   * Lee un archivo y lo convierte en candidatos a importar.
+   *
+   * Se separó de pickFile para que sirva a los dos caminos: el de siempre
+   * (elegir el archivo a mano) y el nuevo (llegar desde "Compartir" o
+   * "Abrir con" de Android, con el archivo ya dado). Un segundo lector en
+   * paralelo se habría desviado del primero en cuanto uno de los dos se
+   * tocara.
+   */
+  async function loadFile(uri: string, name: string, mimeType?: string) {
     setLoading(true);
     setDone(false);
-    const asset = result.assets[0];
+    const asset = { uri, name, mimeType };
     const isPdf = asset.name.toLowerCase().endsWith(".pdf") ||
       asset.mimeType === "application/pdf";
     let file: File | null = null;

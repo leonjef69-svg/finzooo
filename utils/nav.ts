@@ -42,11 +42,17 @@ export function safeBack() {
 // redirigiendo) — en ese caso, la pantalla que llama a este hook debe
 // mostrar "nada" en vez de su contenido normal, para que la persona
 // nunca alcance a VER esa pantalla ni un instante antes de la corrección.
-export function useRedirectIfOrphaned() {
+//
+// `allowed` sirve para los casos en que SÍ es correcto llegar aquí de
+// primeras: cuando Android abre Finzo con un archivo compartido, la app
+// arranca directo en Importar y no hay nada detrás. Ahí, "no hay pantalla
+// anterior" no es un error, es lo esperado.
+export function useRedirectIfOrphaned(allowed = false) {
   const navigationRef = useNavigationContainerRef();
-  const [blocked, setBlocked] = useState(true);
+  const [blocked, setBlocked] = useState(!allowed);
 
   useEffect(() => {
+    if (allowed) return;
     return whenNavigationReady(navigationRef, () => {
       if (!router.canGoBack()) {
         router.replace("/(tabs)");
@@ -56,7 +62,7 @@ export function useRedirectIfOrphaned() {
       }
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [allowed]);
 
   return blocked;
 }

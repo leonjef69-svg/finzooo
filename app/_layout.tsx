@@ -11,6 +11,7 @@ import { flushPendingSaves } from "@/utils/storage";
 import AppLockGate from "@/components/AppLockGate";
 import CelebrationOverlay from "@/components/CelebrationOverlay";
 import Toast from "@/components/Toast";
+import * as incomingFile from "@/modules/incoming-file";
 
 function GlobalOverlays() {
   const { celebrateGoal, clearCelebration, toast } = useAppData();
@@ -55,6 +56,42 @@ function GlobalOverlays() {
 // hacer al volver, tiene que estar en esta lista. Lo comprueba el auditor
 // auditar-pantallas-externas.mjs, para que no se vuelva a olvidar.
 const KEEP_ON_RETURN = ["/auto-capture", "/voice", "/scan-receipt", "/import"];
+
+/**
+ * Abre Importar cuando Finzo se ha lanzado con un archivo desde otra app
+ * ("Compartir → Finzo" o "Abrir con → Finzo" sobre un estado de cuenta).
+ *
+ * Se mira al arrancar y cada vez que la app vuelve al frente: si ya estaba
+ * abierta, Android no la reinicia, solo le entrega el archivo nuevo.
+ *
+ * consumePendingFile() solo entrega el archivo UNA vez, así que no hace
+ * falta llevar la cuenta aquí de lo que ya se importó.
+ */
+function IncomingFileEffect() {
+  const { ready, hasOnboarded } = useAppData();
+  const navigationRef = useNavigationContainerRef();
+
+  useEffect(() => {
+    // Sin la app configurada no hay dónde importar: el archivo se recoge
+    // igual (para no dejarlo pendiente) pero no se hace nada con él.
+    if (!ready) return;
+
+    function check() {
+      const file = incomingFile.consumePendingFile();
+      if (!file) return;
+      if (!hasOnboarded || !navigationRef.isReady()) return;
+      router.push({ pathname: "/import", params: { uri: file.uri, name: file.name } });
+    }
+
+    check();
+    const sub = AppState.addEventListener("change", (next) => {
+      if (next === "active") check();
+    });
+    return () => sub.remove();
+  }, [ready, hasOnboarded, navigationRef]);
+
+  return null;
+}
 
 function AppLifecycleEffects() {
   const { hasOnboarded } = useAppData();
@@ -193,6 +230,7 @@ export default function RootLayout() {
           </Stack>
           <GlobalOverlays />
           <AppLifecycleEffects />
+          <IncomingFileEffect />
           {/* Va aquí, el último de todos, para quedar POR ENCIMA de todo lo
               demás — incluidos los paneles modales. Si fuera una pantalla de
               navegación, bastaría el botón "atrás" de Android para
