@@ -19,6 +19,7 @@ export default function ChooseTransactionTypeRoute() {
       onClose={safeBack}
       onPick={(type) => router.push(`/transaction/new?type=${type}`)}
       onVoice={() => router.replace("/voice")}
+      onScan={() => router.replace("/scan-receipt")}
     />
   );
 }

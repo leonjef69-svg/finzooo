@@ -1,0 +1,36 @@
+apply plugin: 'com.android.library'
+
+group = 'com.finzo.textrecognizer'
+version = '0.1.0'
+
+def expoModulesCorePlugin = new File(
+  project(":expo-modules-core").projectDir.absolutePath,
+  "ExpoModulesCorePlugin.gradle"
+)
+apply from: expoModulesCorePlugin
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+useDefaultAndroidSdkVersions()
+useExpoPublishing()
+
+android {
+  namespace "com.finzo.textrecognizer"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+  lintOptions {
+    abortOnError false
+  }
+}
+
+dependencies {
+  // Lector de texto de Google, en su versión EMPAQUETADA: el modelo viaja
+  // dentro del APK (unos 4 MB más de peso).
+  //
+  // Existe otra versión que descarga el modelo desde los Servicios de Google
+  // la primera vez. Pesaría menos, pero rompería lo que se pidió: que el
+  // escáner funcione sin internet. Con esta, la primera boleta se lee igual
+  // en un celular recién instalado y sin señal.
+  implementation 'com.google.mlkit:text-recognition:16.0.1'
+}

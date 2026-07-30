@@ -29,7 +29,7 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.RECORD_AUDIO"
+        "android.permission.CAMERA"
       ],
       "runtimeVersion": {
         "policy": "appVersion"
@@ -55,7 +55,14 @@
       ],
       "expo-secure-store",
       "@react-native-google-signin/google-signin",
-      "expo-speech-recognition"
+      "expo-speech-recognition",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Finzo necesita tus fotos solo para leer la boleta que elijas. La imagen no sale de tu celular.",
+          "cameraPermission": "Finzo usa la cámara para escanear boletas. La foto se lee dentro de tu celular y no se envía a ningún servidor."
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
