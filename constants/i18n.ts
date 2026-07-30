@@ -131,6 +131,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "reports.noDataThisMonth": "Sin datos este mes",
     "reports.byMonth": "Gasto por mes",
     "reports.noMonthsWithSpending": "Sin gastos en estos meses",
+    "reports.accumulatedSameDay":
+      "Todos tus gastos de este mes tienen la misma fecha, así que la línea sale plana. Al anotar en un mes pasado, la fecha se pone en el día 1 — cámbiala en cada movimiento si quieres ver cómo se fue repartiendo.",
     "reports.legendReal": "Gasto real",
     "reports.legendPace": "Ritmo del presupuesto",
     "reports.legendProjection": "Proyección",
@@ -652,6 +654,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "reports.noDataThisMonth": "No data this month",
     "reports.byMonth": "Spending by month",
     "reports.noMonthsWithSpending": "No spending in these months",
+    "reports.accumulatedSameDay":
+      "All of this month's expenses share the same date, so the line comes out flat. When logging in a past month the date defaults to day 1 — change it on each movement to see how spending spread out.",
     "reports.legendReal": "Actual spending",
     "reports.legendPace": "Budget pace",
     "reports.legendProjection": "Projection",
@@ -1170,6 +1174,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "reports.noDataThisMonth": "Sem dados este mês",
     "reports.byMonth": "Gasto por mês",
     "reports.noMonthsWithSpending": "Sem gastos nestes meses",
+    "reports.accumulatedSameDay":
+      "Todos os gastos deste mês têm a mesma data, então a linha sai reta. Ao anotar num mês passado, a data fica no dia 1 — mude em cada movimento para ver como o gasto se distribuiu.",
     "reports.legendReal": "Gasto real",
     "reports.legendPace": "Ritmo do orçamento",
     "reports.legendProjection": "Projeção",

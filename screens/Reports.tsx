@@ -190,10 +190,20 @@ export default function Reports({
     const dailyAvg = today > 0 ? spentToday / today : 0;
     const projected = dailyAvg * daysInMonth;
 
+    // ¿Están todos los gastos del mes en un mismo día?
+    //
+    // Pasa sin querer: al agregar un movimiento mirando un mes que no es el
+    // actual, la fecha viene puesta al día 1, y quien no la cambia acaba
+    // con el mes entero fechado el día 1. Entonces la línea nace ya arriba
+    // y no sube nunca — correcto, pero parece que la gráfica está rota.
+    // Detectarlo permite decirlo en vez de dejar a nadie adivinando.
+    const distintasFechas = new Set(expenses.map((t) => t.date)).size;
+
     return {
       isCurrentMonth,
       today,
       daysInMonth,
+      sameDayOnly: expenses.length > 1 && distintasFechas === 1,
       spentToday,
       dailyAvg,
       projected,
@@ -375,7 +385,7 @@ export default function Reports({
             </View>
 
             <Text className="text-[11px] text-slate-400 dark:text-slate-400 mb-1">
-              {t("reports.accumulatedHint")}
+              {t(pace.sameDayOnly ? "reports.accumulatedSameDay" : "reports.accumulatedHint")}
             </Text>
             <View className="items-center">
               <LineChartSimple
