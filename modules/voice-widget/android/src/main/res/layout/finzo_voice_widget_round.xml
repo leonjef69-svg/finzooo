@@ -4,16 +4,23 @@
 
   Sin texto: a este tamaño no cabe, y el micrófono solo ya se entiende.
   Quien prefiera que diga para qué es, tiene el 2x1 con etiqueta.
+
+  OJO CON EL TAMAÑO FIJO: el círculo mide 52dp exactos y va centrado, en
+  vez de estirarse para llenar la casilla. Antes usaba "match_parent" y en
+  celulares donde la casilla es más alta que ancha —como los Honor— el
+  círculo se estiraba y salía un ÓVALO. Un tamaño fijo se ve igual de
+  redondo en cualquier pantalla; lo que sobra queda de aire alrededor, que
+  es exactamente como se ven los íconos de las demás apps.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
   android:id="@+id/finzo_widget_round_root"
   android:layout_width="match_parent"
-  android:layout_height="match_parent"
-  android:padding="4dp">
+  android:layout_height="match_parent">
 
   <FrameLayout
-    android:layout_width="match_parent"
-    android:layout_height="match_parent"
+    android:layout_width="52dp"
+    android:layout_height="52dp"
+    android:layout_gravity="center"
     android:background="@drawable/finzo_widget_round_bg">
 
     <ImageView
