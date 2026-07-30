@@ -30,7 +30,6 @@ export default function HomeTab() {
         transactions={transactions}
         onOpenDetail={(id) => router.push(`/transaction/${id}`)}
         onBulkDelete={deleteTransactions}
-        onSeeAll={() => router.push("/(tabs)/history")}
       />
       <FAB onPress={() => router.push("/transaction/choose")} />
     </View>
