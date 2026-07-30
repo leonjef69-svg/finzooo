@@ -102,6 +102,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "home.income": "Ingresos",
     "home.recentTransactions": "Movimientos recientes",
     "home.noTransactions": "Aún no hay movimientos este mes.",
+    "home.seeAll": "Ver los {count} restantes",
     "home.selectedCount": "{count} seleccionado",
     "home.selectedCountPlural": "{count} seleccionados",
 
@@ -699,6 +700,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "home.income": "Income",
     "home.recentTransactions": "Recent transactions",
     "home.noTransactions": "No transactions yet this month.",
+    "home.seeAll": "See the other {count}",
     "home.selectedCount": "{count} selected",
     "home.selectedCountPlural": "{count} selected",
 
@@ -1293,6 +1295,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "home.income": "Receitas",
     "home.recentTransactions": "Movimentações recentes",
     "home.noTransactions": "Ainda não há movimentações este mês.",
+    "home.seeAll": "Ver os {count} restantes",
     "home.selectedCount": "{count} selecionado",
     "home.selectedCountPlural": "{count} selecionados",
 

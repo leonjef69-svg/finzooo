@@ -45,6 +45,7 @@ export default function Home({
   transactions,
   onOpenDetail,
   onBulkDelete,
+  onSeeAll,
 }: {
   userName: string;
   month: Month;
@@ -56,6 +57,8 @@ export default function Home({
   transactions: Transaction[];
   onOpenDetail: (id: number) => void;
   onBulkDelete: (ids: number[]) => void;
+  /** Lleva al Historial, que es donde están todos y hay búsqueda y filtros. */
+  onSeeAll: () => void;
 }) {
   const {
     fmt,
@@ -93,6 +96,24 @@ export default function Home({
   );
 
   const [selectMode, setSelectMode] = useState(false);
+
+  // Inicio enseña solo los ÚLTIMOS movimientos, no todos.
+  //
+  // La sección se llama "Movimientos recientes" y sin embargo pintaba el mes
+  // entero: con veinte gastos, llegar al final de Inicio era un rollo
+  // interminable, y lo que uno viene a ver aquí —el saldo, lo gastado, lo
+  // que entró— quedaba enterrado arriba.
+  //
+  // Ocho es lo que llena la pantalla de un celular normal sin obligar a
+  // desplazarse. Debajo va un botón al Historial, que es la pantalla hecha
+  // para mirarlos todos y además tiene búsqueda y filtros.
+  //
+  // EXCEPCIÓN: en modo selección se enseñan TODOS. Borrar en lote solo
+  // existe aquí (el Historial no lo tiene), así que recortar la lista
+  // dejaría movimientos imposibles de seleccionar.
+  const HOME_LIMIT = 8;
+  const shownTx = selectMode ? monthTx : monthTx.slice(0, HOME_LIMIT);
+  const hiddenCount = selectMode ? 0 : monthTx.length - shownTx.length;
   const [selected, setSelected] = useState<number[]>([]);
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -127,7 +148,7 @@ export default function Home({
   return (
     <View className="flex-1 bg-white dark:bg-slate-900">
       <FlatList
-        data={monthTx}
+        data={shownTx}
         keyExtractor={(t) => String(t.id)}
         contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 112 }}
         ListHeaderComponent={
@@ -449,6 +470,21 @@ export default function Home({
               <Text className="text-slate-500 dark:text-slate-300 text-sm">{t("home.noTransactions")}</Text>
             </View>
           </View>
+        }
+        ListFooterComponent={
+          hiddenCount > 0 ? (
+            <View className="px-5 pt-1">
+              <TouchableOpacity
+                onPress={onSeeAll}
+                className="flex-row items-center justify-center gap-1.5 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800"
+              >
+                <Text className="text-sm font-bold text-slate-600 dark:text-slate-200">
+                  {t("home.seeAll", { count: hiddenCount })}
+                </Text>
+                <ChevronRight size={16} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+          ) : null
         }
       />
 
