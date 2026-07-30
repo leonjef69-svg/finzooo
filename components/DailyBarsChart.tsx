@@ -5,10 +5,21 @@ import { Text, TouchableOpacity, View } from "react-native";
 const AXIS_W = 42;
 const PLOT_H = 140;
 const LABEL_BAND = 32; // sitio libre arriba para los montos escritos
-const DAYS_H = 16; // sitio abajo para los números de los días
+const DAYS_H = 26; // sitio abajo para los números de los días
 const ROW_H = 14; // separación entre los dos renglones de montos
 const MIN_GAP = 32; // hueco mínimo entre dos montos del mismo renglón
 const ROWS = 2;
+
+// Lo mismo para los números de los días, que son más angostos: dos dígitos
+// a 9px ocupan unos 14px.
+const DAY_W = 18;
+const DAY_ROW_H = 11;
+
+// A partir de cuántos días con gasto se deja de numerarlos uno por uno.
+// Con pocos, saber CUÁLES fueron es justo lo que se quiere ver. Cuando casi
+// todos los días tienen gasto, esa pregunta ya no significa nada y treinta
+// números pegados no se leen: ahí se vuelve a las marcas de 5 en 5.
+const MAX_NUMBERED_DAYS = 12;
 
 export type DayBar = { day: number; amount: number };
 
@@ -29,34 +40,85 @@ export function niceMax(value: number, steps: number): number {
 }
 
 /**
- * Decide dónde escribir cada monto cuando se enciende "Ver montos".
+ * Reparte etiquetas en varios renglones para que no se pisen.
  *
- * El problema: con 31 días cada barra mide unos 9px de ancho y un monto
+ * El problema: con 31 días cada barra mide unos 9px de ancho, y un monto
  * escrito ocupa unos 32px. No caben uno al lado del otro.
  *
- * La solución son dos renglones a distinta altura. Un monto solo choca con
- * otro si comparten renglón, así que dos días pegados —como el 28 y el 29,
- * que es justo el caso real— caen uno en cada renglón y se leen los dos. Si
- * ninguno de los dos renglones tiene sitio, ese monto no se escribe: sigue
- * saliendo al tocar su barra.
+ * La solución son renglones a distinta altura. Dos etiquetas solo chocan si
+ * comparten renglón, así que dos días pegados —como el 28 y el 29, que es
+ * justo el caso real— caen uno en cada renglón y se leen los dos. La que no
+ * quepa en ninguno se queda fuera.
  *
- * Devuelve, para cada día que se escribe, en qué renglón va.
+ * El orden de la lista es la prioridad: lo primero entra seguro, lo último
+ * solo si sobra sitio. Se compara contra TODAS las etiquetas ya puestas en
+ * el renglón, no solo la anterior, para poder pasar cosas desordenadas
+ * (primero los días con gasto, después los de los extremos).
+ *
+ * Devuelve, para cada etiqueta que entra, en qué renglón va.
  */
-export function planLabels(data: DayBar[], colW: number): Map<number, number> {
+export function placeInRows(
+  items: { index: number; x: number }[],
+  minGap: number,
+  rows: number
+): Map<number, number> {
   const plan = new Map<number, number>();
-  const lastX = Array<number>(ROWS).fill(-Infinity);
-  data.forEach((d, i) => {
-    if (d.amount <= 0) return;
-    const x = i * colW + colW / 2;
-    for (let row = 0; row < ROWS; row++) {
-      if (x - lastX[row] >= MIN_GAP) {
-        plan.set(i, row);
-        lastX[row] = x;
-        return;
+  const used: number[][] = Array.from({ length: rows }, () => []);
+  for (const item of items) {
+    for (let row = 0; row < rows; row++) {
+      if (used[row].every((x) => Math.abs(item.x - x) >= minGap)) {
+        plan.set(item.index, row);
+        used[row].push(item.x);
+        break;
       }
     }
-  });
+  }
   return plan;
+}
+
+/** Dónde escribir cada monto cuando se enciende "Ver montos". */
+export function planAmounts(data: DayBar[], colW: number): Map<number, number> {
+  const conGasto = data
+    .map((d, i) => ({ index: i, x: i * colW + colW / 2, amount: d.amount }))
+    .filter((it) => it.amount > 0);
+  return placeInRows(conGasto, MIN_GAP, ROWS);
+}
+
+/**
+ * Qué días llevan su número debajo.
+ *
+ * Antes eran marcas fijas de 5 en 5 (1, 5, 10, 15...), y eso dejaba las
+ * barras que importan sin número: con gasto el 28 y el 29, los números más
+ * cercanos eran el 25 y el 30, así que no había forma de saber de qué día
+ * era cada barra sin tocarla.
+ *
+ * Ahora se numeran LOS DÍAS EN QUE SE GASTÓ, en orden. Los extremos del mes
+ * (el 1 y el último) se añaden en gris flojo si sobra sitio, para no perder
+ * de vista dónde empieza y dónde acaba el mes.
+ */
+export function planDays(
+  data: DayBar[],
+  colW: number
+): { plan: Map<number, number>; strong: Set<number> } {
+  const xOf = (i: number) => i * colW + colW / 2;
+  const conGasto = data
+    .map((d, i) => ({ index: i, x: xOf(i), amount: d.amount }))
+    .filter((it) => it.amount > 0);
+
+  if (conGasto.length > MAX_NUMBERED_DAYS) {
+    // Mes cargado: marcas de 5 en 5, que es lo legible.
+    const cada5 = data
+      .map((d, i) => ({ index: i, x: xOf(i), day: d.day }))
+      .filter((it) => it.day === 1 || it.day % 5 === 0);
+    return { plan: placeInRows(cada5, DAY_W, 1), strong: new Set() };
+  }
+
+  const strong = new Set(conGasto.map((it) => it.index));
+  const extremos = [0, data.length - 1]
+    .filter((i) => !strong.has(i))
+    .map((i) => ({ index: i, x: xOf(i) }));
+
+  return { plan: placeInRows([...conGasto, ...extremos], DAY_W, ROWS), strong };
 }
 
 /**
@@ -104,7 +166,8 @@ export default function DailyBarsChart({
   const hOf = (amount: number) => (amount > 0 ? Math.max(5, (amount / top) * PLOT_H) : 2);
   const yOfValue = (v: number) => PLOT_H * (1 - v / top);
 
-  const plan = showAmounts ? planLabels(data, colW) : new Map<number, number>();
+  const plan = showAmounts ? planAmounts(data, colW) : new Map<number, number>();
+  const days = planDays(data, colW);
   const activo = selected != null ? data[selected] : null;
 
   return (
@@ -217,31 +280,40 @@ export default function DailyBarsChart({
           })}
         </View>
 
-        {/* Los días, cada 5. Con 31 no caben todos.
-            El último se pega al borde para que no se salga del dibujo: en un
-            mes de 30 días el "30" caía 7px afuera. */}
+        {/* Los días. Los que tuvieron gasto van en negro; el 1 y el último,
+            en gris flojo, solo si sobra sitio.
+            Se pegan al borde para que no se salgan del dibujo: en un mes de
+            30 días el "30" caía 7px afuera. */}
         <View style={{ position: "absolute", top: LABEL_BAND + PLOT_H, left: AXIS_W, width: plotW, height: DAYS_H }}>
-          {data.map((d, i) =>
-            d.day === 1 || d.day % 5 === 0 ? (
+          {data.map((d, i) => {
+            const row = days.plan.get(i);
+            if (row == null) return null;
+            const fuerte = days.strong.has(i);
+            return (
               <View
                 key={d.day}
                 style={{
                   position: "absolute",
-                  left: Math.min(Math.max(i * colW + colW / 2 - 12, 0), plotW - 24),
-                  width: 24,
+                  top: row * DAY_ROW_H,
+                  left: Math.min(Math.max(i * colW + colW / 2 - DAY_W / 2, 0), plotW - DAY_W),
+                  width: DAY_W,
                   alignItems: "center",
                 }}
               >
                 <Text
                   className={`text-[9px] ${
-                    selected === i ? "text-slate-900 dark:text-slate-100 font-bold" : "text-slate-400"
+                    selected === i
+                      ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                      : fuerte
+                        ? "text-slate-700 dark:text-slate-200 font-bold"
+                        : "text-slate-400"
                   }`}
                 >
                   {d.day}
                 </Text>
               </View>
-            ) : null
-          )}
+            );
+          })}
         </View>
 
         {/* Zonas para tocar, encima de todo el área de barras.
