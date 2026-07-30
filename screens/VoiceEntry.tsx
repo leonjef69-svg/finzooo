@@ -35,6 +35,8 @@ type Stage =
   | "listening" // el micrófono está abierto
   | "confirm" // se entendió: falta que la persona apruebe
   | "summary" // se pidió un resumen del mes
+  | "topMonth" // "¿en qué mes gasté más?"
+  | "compare" // "compara junio con mayo"
   | "failed" // se escuchó algo pero no se entendió
   | "denied"; // no dio permiso al micrófono
 
@@ -57,6 +59,13 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   const [summaryDay, setSummaryDay] = useState(0);
   // Si la persona dijo si era gasto o ingreso, no se le vuelve a preguntar.
   const [typeSaid, setTypeSaid] = useState(false);
+  // "¿En qué mes gasté más?": de qué se pregunta y si se quiere el mayor o
+  // el menor.
+  const [topFocus, setTopFocus] = useState<"expense" | "income">("expense");
+  const [topDirection, setTopDirection] = useState<"most" | "least">("most");
+  // "Compara junio con mayo": los dos meses, en el orden en que se dijeron.
+  const [compareMonths, setCompareMonths] = useState<[string, string]>(["", ""]);
+  const [compareFocus, setCompareFocus] = useState<"expense" | "income" | "all">("all");
   const [heard, setHeard] = useState("");
   const [failure, setFailure] = useState<VoiceFailure>("empty");
   // Lo que dijo Android cuando falló. Antes se tiraba y todo se mostraba
@@ -279,6 +288,20 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
       return;
     }
 
+    if (command.kind === "topMonth") {
+      setTopFocus(command.focus);
+      setTopDirection(command.direction);
+      setStage("topMonth");
+      return;
+    }
+
+    if (command.kind === "compare") {
+      setCompareMonths(command.months);
+      setCompareFocus(command.focus);
+      setStage("compare");
+      return;
+    }
+
     if (command.kind === "summary") {
       setSummaryMk(command.monthKey);
       setSummaryFocus(command.focus);
@@ -475,6 +498,82 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
       // De un día se enseñan más: son pocos y caben. De un mes entero, seis
       // ya llenan la pantalla y el resto se resume en "y N más".
       items: [...main].sort((a, b) => b.amount - a.amount).slice(0, summaryDay > 0 ? 10 : 6),
+    };
+  })();
+
+  /** Nombre legible de un mes guardado como "2026-05". */
+  function monthLabel(key: string): string {
+    const [y, m] = key.split("-").map(Number);
+    return `${monthNames[m - 1]} ${y}`;
+  }
+
+  /** Lo que salió y lo que entró en cada mes que tenga algo. */
+  function totalsByMonth(): Map<string, { expense: number; income: number }> {
+    const map = new Map<string, { expense: number; income: number }>();
+    for (const tx of transactions) {
+      const key = tx.date.slice(0, 7);
+      const acc = map.get(key) ?? { expense: 0, income: 0 };
+      if (tx.type === "income") acc.income += tx.amount;
+      else acc.expense += tx.amount;
+      map.set(key, acc);
+    }
+    return map;
+  }
+
+  // "¿En qué mes gasté más?" — el ranking de todos los meses guardados.
+  const topMonth = (() => {
+    if (stage !== "topMonth") return null;
+    const totals = totalsByMonth();
+
+    // Un mes sin nada de lo que se pregunta no entra en la carrera: si se
+    // pregunta por ingresos, un mes solo con gastos no es "el que menos
+    // ingresos tuvo", es un mes que no cuenta.
+    const lista = [...totals.entries()]
+      .map(([key, t]) => ({ key, value: topFocus === "income" ? t.income : t.expense }))
+      .filter((m) => m.value > 0)
+      .sort((a, b) => (topDirection === "least" ? a.value - b.value : b.value - a.value));
+
+    if (lista.length === 0) return { empty: true, winner: null, others: [], max: 0 };
+    return {
+      empty: false,
+      winner: lista[0],
+      others: lista.slice(1, 6),
+      // Para las barritas: se miden todas contra la más grande de la lista,
+      // no contra la ganadora, que al pedir "el que menos" es la más chica.
+      max: Math.max(...lista.map((m) => m.value)),
+    };
+  })();
+
+  // "Compara junio con mayo" — los dos meses, uno al lado del otro.
+  const compare = (() => {
+    if (stage !== "compare" || !compareMonths[0]) return null;
+    const totals = totalsByMonth();
+    const vacio = { expense: 0, income: 0 };
+    const a = { key: compareMonths[0], ...(totals.get(compareMonths[0]) ?? vacio) };
+    const b = { key: compareMonths[1], ...(totals.get(compareMonths[1]) ?? vacio) };
+
+    // La frase de abajo habla de lo que se preguntó. Sin decir nada, de los
+    // gastos: es de lo que uno quiere enterarse al comparar dos meses.
+    const porIngresos = compareFocus === "income";
+    const va = porIngresos ? a.income : a.expense;
+    const vb = porIngresos ? b.income : b.expense;
+    const diff = va - vb;
+
+    // "Casi lo mismo" cuando la diferencia no llega al 5% del mayor: decir
+    // "gastaste S/ 2 más" en dos meses de mil soles no informa de nada.
+    const mayor = Math.max(va, vb);
+    const casiIgual = mayor === 0 || Math.abs(diff) / mayor < 0.05;
+
+    return {
+      a,
+      b,
+      empty: a.expense + a.income + b.expense + b.income === 0,
+      casiIgual,
+      diff: Math.abs(diff),
+      // De qué mes se habla en la frase: del que tenga más.
+      mesConMas: diff >= 0 ? a.key : b.key,
+      subeLaFrase: diff >= 0,
+      porIngresos,
     };
   })();
 
@@ -769,6 +868,188 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             <TouchableOpacity
               onPress={start}
               className="w-full flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 mt-2"
+            >
+              <RotateCcw size={16} color="#64748b" />
+              <Text className="font-bold text-slate-600 dark:text-slate-200">{t("voice.retry")}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* "¿En qué mes gasté más?" */}
+        {stage === "topMonth" && topMonth && (
+          <View className="w-full">
+            <Text className="text-xs text-center text-slate-400 mb-4">"{heard}"</Text>
+
+            <View
+              className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+              style={CARD_SHADOW}
+            >
+              <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 text-center">
+                {t(
+                  topFocus === "income"
+                    ? topDirection === "least"
+                      ? "voice.topMonthLeastIncome"
+                      : "voice.topMonthMostIncome"
+                    : topDirection === "least"
+                      ? "voice.topMonthLeastExpense"
+                      : "voice.topMonthMostExpense"
+                )}
+              </Text>
+
+              {topMonth.empty || !topMonth.winner ? (
+                <Text className="text-xs text-center text-slate-500 dark:text-slate-300 leading-5 mt-3">
+                  {t("voice.topMonthEmpty")}
+                </Text>
+              ) : (
+                <>
+                  <Text className="text-2xl font-extrabold text-slate-900 dark:text-slate-100 text-center mt-2">
+                    {monthLabel(topMonth.winner.key)}
+                  </Text>
+                  <Text
+                    className={`text-3xl font-extrabold text-center mt-1 ${
+                      topFocus === "income" ? "text-emerald-600" : "text-rose-500"
+                    }`}
+                  >
+                    {fmt(topMonth.winner.value)}
+                  </Text>
+
+                  {topMonth.others.length > 0 && (
+                    <>
+                      <Text className="text-[11px] font-bold text-slate-400 mt-5 mb-2">
+                        {t("voice.topMonthOthers")}
+                      </Text>
+                      <View className="gap-2.5">
+                        {topMonth.others.map((m) => (
+                          <View key={m.key}>
+                            <View className="flex-row items-center justify-between mb-1">
+                              <Text className="text-xs font-medium text-slate-600 dark:text-slate-200" numberOfLines={1}>
+                                {monthLabel(m.key)}
+                              </Text>
+                              <Text className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                                {fmt(m.value)}
+                              </Text>
+                            </View>
+                            <View className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                              <View
+                                className={`h-1.5 rounded-full ${
+                                  topFocus === "income" ? "bg-emerald-500" : "bg-rose-400"
+                                }`}
+                                style={{ width: `${Math.max(4, (m.value / topMonth.max) * 100)}%` }}
+                              />
+                            </View>
+                          </View>
+                        ))}
+                      </View>
+                    </>
+                  )}
+                </>
+              )}
+            </View>
+
+            <TouchableOpacity
+              onPress={start}
+              className="w-full flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 mt-4"
+            >
+              <RotateCcw size={16} color="#64748b" />
+              <Text className="font-bold text-slate-600 dark:text-slate-200">{t("voice.retry")}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* "Compara junio con mayo" */}
+        {stage === "compare" && compare && (
+          <View className="w-full">
+            <Text className="text-xs text-center text-slate-400 mb-4">"{heard}"</Text>
+
+            <View
+              className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800"
+              style={CARD_SHADOW}
+            >
+              <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 text-center mb-3">
+                {t("voice.compareTitle")}
+              </Text>
+
+              {compare.empty ? (
+                <Text className="text-xs text-center text-slate-500 dark:text-slate-300 leading-5">
+                  {t("voice.compareEmpty")}
+                </Text>
+              ) : (
+                <>
+                  {/* Los dos meses, en el orden en que se dijeron */}
+                  <View className="flex-row">
+                    <View className="w-20" />
+                    {[compare.a, compare.b].map((m) => (
+                      <Text
+                        key={m.key}
+                        numberOfLines={1}
+                        className="flex-1 text-[11px] font-extrabold text-slate-900 dark:text-slate-100 text-right"
+                      >
+                        {monthLabel(m.key)}
+                      </Text>
+                    ))}
+                  </View>
+
+                  {(
+                    [
+                      ["voice.compareExpense", "expense", "text-rose-500"],
+                      ["voice.compareIncome", "income", "text-emerald-600"],
+                    ] as const
+                  ).map(([label, campo, color]) => (
+                    <View key={campo} className="flex-row items-center mt-3">
+                      <Text className="w-20 text-[11px] font-bold text-slate-500 dark:text-slate-300">
+                        {t(label)}
+                      </Text>
+                      {[compare.a, compare.b].map((m) => (
+                        <Text key={m.key} className={`flex-1 text-xs font-bold text-right ${color}`}>
+                          {fmt(m[campo])}
+                        </Text>
+                      ))}
+                    </View>
+                  ))}
+
+                  <View className="h-px bg-slate-100 dark:bg-slate-800 my-3" />
+
+                  <View className="flex-row items-center">
+                    <Text className="w-20 text-[11px] font-bold text-slate-500 dark:text-slate-300">
+                      {t("voice.compareBalance")}
+                    </Text>
+                    {[compare.a, compare.b].map((m) => {
+                      const queda = m.income - m.expense;
+                      return (
+                        <Text
+                          key={m.key}
+                          className={`flex-1 text-xs font-extrabold text-right ${
+                            queda < 0 ? "text-rose-500" : "text-slate-900 dark:text-slate-100"
+                          }`}
+                        >
+                          {fmt(queda)}
+                        </Text>
+                      );
+                    })}
+                  </View>
+
+                  {/* La conclusión en una frase, que es lo que se preguntó */}
+                  <Text className="text-xs font-bold text-slate-900 dark:text-slate-100 text-center mt-5 leading-5">
+                    {compare.casiIgual
+                      ? t(compare.porIngresos ? "voice.compareSameIncome" : "voice.compareSameExpense")
+                      : t(
+                          compare.porIngresos
+                            ? compare.subeLaFrase
+                              ? "voice.compareMoreIncome"
+                              : "voice.compareLessIncome"
+                            : compare.subeLaFrase
+                              ? "voice.compareMoreExpense"
+                              : "voice.compareLessExpense",
+                          { amount: fmt(compare.diff), month: monthLabel(compare.a.key) }
+                        )}
+                  </Text>
+                </>
+              )}
+            </View>
+
+            <TouchableOpacity
+              onPress={start}
+              className="w-full flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 mt-4"
             >
               <RotateCcw size={16} color="#64748b" />
               <Text className="font-bold text-slate-600 dark:text-slate-200">{t("voice.retry")}</Text>

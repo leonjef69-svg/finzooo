@@ -28,7 +28,12 @@ export type VoiceCommand =
       day?: number;
       focus: "expense" | "income" | "all";
       category?: string;
-    };
+    }
+  // "¿En qué mes gasté más?" — mira TODOS los meses que hay guardados y
+  // dice cuál gana, no uno en concreto.
+  | { kind: "topMonth"; focus: "expense" | "income"; direction: "most" | "least" }
+  // "Compara junio con mayo" — dos meses, uno al lado del otro.
+  | { kind: "compare"; months: [string, string]; focus: "expense" | "income" | "all" };
 
 // "Bájame", "descárgame", "pásame el PDF"...
 const EXPORT_WORDS = [
@@ -128,6 +133,21 @@ const CATEGORY_WORDS: { match: string; category: string }[] = [
   { match: "alquiler", category: "alquiler" },
 ];
 
+// "Compara junio con mayo", "junio versus mayo", "diferencia entre..."
+const COMPARE_WORDS = [
+  "compara", "comparar", "comparame", "comparacion", "comparado", "comparativa",
+  "versus", " vs ", "diferencia entre", "frente a", "contra el mes",
+];
+
+// "¿En qué mes gasté más?", "¿cuál fue mi mes más caro?"
+//
+// Son trozos de DOS palabras a propósito. Buscando solo "mes" saltaría en
+// "cuánto gasté este mes", que es otra pregunta distinta.
+const TOP_MONTH_WORDS = [
+  "que mes", "cual mes", "mes mas", "mes menos", "mes con mas", "mes con menos",
+  "mes que mas", "mes que menos", "mejor mes", "peor mes", "mes mejor", "mes peor",
+];
+
 const MONTHS = [
   "enero", "febrero", "marzo", "abril", "mayo", "junio",
   "julio", "agosto", "setiembre", "septiembre", "octubre", "noviembre", "diciembre",
@@ -147,6 +167,43 @@ function monthIndexFrom(normalized: string): number | null {
 
 function key(y: number, m: number): string {
   return `${y}-${String(m + 1).padStart(2, "0")}`;
+}
+
+/** El mes anterior a uno dado. "2026-01" → "2025-12". */
+export function previousMonth(monthKey: string): string {
+  const [y, m] = monthKey.split("-").map(Number);
+  return m === 1 ? key(y - 1, 11) : key(y, m - 2);
+}
+
+/**
+ * TODOS los meses nombrados en la frase, en el orden en que se dijeron.
+ *
+ * Hace falta para comparar: "compara junio con mayo" tiene que dar junio
+ * primero y mayo después, porque el orden es el que se enseña en pantalla y
+ * el que decide de qué mes se dice "gastaste más".
+ *
+ * "setiembre" y "septiembre" son el mismo mes; si se dicen los dos, cuenta
+ * una sola vez.
+ */
+export function monthsInPhrase(normalized: string, now: Date): string[] {
+  const found: { pos: number; m: number }[] = [];
+  for (let i = 0; i < MONTHS.length; i++) {
+    const pos = normalized.indexOf(MONTHS[i]);
+    if (pos >= 0) found.push({ pos, m: i >= 9 ? i - 1 : i });
+  }
+  found.sort((a, b) => a.pos - b.pos);
+
+  const said = normalized.match(/\b(20\d{2})\b/);
+  const out: string[] = [];
+  const seen = new Set<number>();
+  for (const f of found) {
+    if (seen.has(f.m)) continue;
+    seen.add(f.m);
+    // Un mes suelto es el más reciente que ya pasó o está en curso.
+    const y = said ? Number(said[1]) : f.m > now.getMonth() ? now.getFullYear() - 1 : now.getFullYear();
+    out.push(key(y, f.m));
+  }
+  return out;
 }
 
 /**
@@ -237,6 +294,36 @@ export function parseVoiceCommand(transcript: string, now: Date = new Date()): V
   const wantsIncome = INCOME_FOCUS.some((w) => hasWord(normalized, w));
   const wantsExpense = EXPENSE_FOCUS.some((w) => hasWord(normalized, w));
   const focus = wantsIncome && !wantsExpense ? "income" : wantsExpense ? "expense" : "all";
+
+  // "¿En qué mes gasté más?" — va antes que el resumen porque comparte
+  // palabras con él ("gasté"), y antes que comparar porque "el mes que más
+  // gasté" no nombra ningún mes que comparar.
+  if (TOP_MONTH_WORDS.some((w) => normalized.includes(w))) {
+    const menos = hasWord(normalized, "menos") || normalized.includes("mejor mes") || normalized.includes("mes mejor");
+    const mas = hasWord(normalized, "mas") || normalized.includes("peor mes") || normalized.includes("mes peor");
+    if (menos || mas) {
+      return {
+        kind: "topMonth",
+        // Sin decir nada se entiende que se pregunta por los gastos, igual
+        // que en el resumen.
+        focus: wantsIncome && !wantsExpense ? "income" : "expense",
+        // "Menos" manda sobre "más": en "el mes que menos gasté" están las
+        // dos palabras si se dijo "gasté más o menos".
+        direction: menos ? "least" : "most",
+      };
+    }
+  }
+
+  // "Compara junio con mayo"
+  if (COMPARE_WORDS.some((w) => normalized.includes(w))) {
+    const dichos = monthsInPhrase(normalized, now);
+    // Con un solo mes nombrado se compara con el anterior, que es lo que
+    // quiere decir "compara junio" sin más. Sin ninguno, este mes con el
+    // pasado.
+    const base = dichos[0] ?? monthFromPhrase(normalized, now);
+    const months: [string, string] = [base, dichos[1] ?? previousMonth(base)];
+    return { kind: "compare", months, focus };
+  }
 
   const tokens = normalized.split(" ");
   // Al preguntar sí se acepta un día suelto ("los gastos del 28"): una
