@@ -4,16 +4,16 @@ import { Text, TouchableOpacity, View } from "react-native";
 // Espacio a la izquierda para los montos del eje, y alturas del dibujo.
 const AXIS_W = 42;
 const PLOT_H = 140;
-const LABEL_BAND = 32; // sitio libre arriba para los montos escritos
-const DAYS_H = 26; // sitio abajo para los números de los días
+const LABEL_BAND = 34; // sitio libre arriba para los montos escritos
+const DAYS_H = 16; // sitio abajo para los números de los días
 const ROW_H = 14; // separación entre los dos renglones de montos
 const MIN_GAP = 32; // hueco mínimo entre dos montos del mismo renglón
+const LABEL_W = MIN_GAP + 12; // ancho de un monto escrito, "S/ 1,347.00"
 const ROWS = 2;
 
-// Lo mismo para los números de los días, que son más angostos: dos dígitos
-// a 9px ocupan unos 14px.
-const DAY_W = 18;
-const DAY_ROW_H = 11;
+// Los números de los días van todos a la misma altura, en una sola línea.
+// Dos dígitos a 9px ocupan unos 14px; se pide un poco más de hueco.
+const DAY_W = 16;
 
 // A partir de cuántos días con gasto se deja de numerarlos uno por uno.
 // Con pocos, saber CUÁLES fueron es justo lo que se quiere ver. Cuando casi
@@ -76,16 +76,71 @@ export function placeInRows(
   return plan;
 }
 
-/** Dónde escribir cada monto cuando se enciende "Ver montos". */
-export function planAmounts(data: DayBar[], colW: number): Map<number, number> {
+/**
+ * Dónde escribir cada monto cuando se enciende "Ver montos".
+ *
+ * Devuelve el renglón de cada uno y, sobre todo, la ALTURA desde la que
+ * arranca: la de la barra más alta que le quede por debajo del texto, no la
+ * de su propia barra.
+ *
+ * Esto último era un fallo visible: el monto del día 29 se escribía justo
+ * encima de su barra, que es baja, y el texto le cruzaba por encima a la
+ * barra del 28, que es alta. Midiendo la más alta de las que caen bajo el
+ * texto, ninguna lo atraviesa.
+ */
+export function planAmounts(
+  data: DayBar[],
+  colW: number,
+  heights: number[]
+): { rows: Map<number, number>; base: Map<number, number> } {
+  const xOf = (i: number) => i * colW + colW / 2;
   const conGasto = data
-    .map((d, i) => ({ index: i, x: i * colW + colW / 2, amount: d.amount }))
+    .map((d, i) => ({ index: i, x: xOf(i), amount: d.amount }))
     .filter((it) => it.amount > 0);
-  return placeInRows(conGasto, MIN_GAP, ROWS);
+
+  const rows = placeInRows(conGasto, MIN_GAP, ROWS);
+  const base = new Map<number, number>();
+  for (const index of rows.keys()) {
+    const x = xOf(index);
+    let maxH = 0;
+    heights.forEach((h, j) => {
+      if (Math.abs(xOf(j) - x) <= LABEL_W / 2) maxH = Math.max(maxH, h);
+    });
+    base.set(index, maxH);
+  }
+  return { rows, base };
 }
 
 /**
- * Qué días llevan su número debajo.
+ * Separa etiquetas que quedarían pegadas, sin cambiarlas de línea.
+ *
+ * Los números de los días van todos a la misma altura. Dos días seguidos
+ * están a unos 9px y su número ocupa 16, así que se empujan lo justo para
+ * que no se toquen: el 28 un poco a la izquierda, el 29 un poco a la
+ * derecha. Se mueven 3 o 4 píxeles y siguen debajo de su barra.
+ *
+ * Antes se resolvía poniéndolos a dos alturas distintas, y eso se leía como
+ * si estuvieran desalineados o desbordados —parecía un error del dibujo, no
+ * una solución.
+ *
+ * La segunda pasada, de derecha a izquierda, es la que evita que el último
+ * se salga: el "31" cae al borde justo del dibujo.
+ */
+export function spreadRow(xs: number[], minGap: number, boxW: number, plotW: number): number[] {
+  const out = xs.slice();
+  for (let i = 0; i < out.length; i++) {
+    const min = i === 0 ? boxW / 2 : out[i - 1] + minGap;
+    if (out[i] < min) out[i] = min;
+  }
+  for (let i = out.length - 1; i >= 0; i--) {
+    const max = i === out.length - 1 ? plotW - boxW / 2 : out[i + 1] - minGap;
+    if (out[i] > max) out[i] = max;
+  }
+  return out;
+}
+
+/**
+ * Qué días llevan su número debajo, y en qué punto exacto.
  *
  * Antes eran marcas fijas de 5 en 5 (1, 5, 10, 15...), y eso dejaba las
  * barras que importan sin número: con gasto el 28 y el 29, los números más
@@ -93,32 +148,32 @@ export function planAmounts(data: DayBar[], colW: number): Map<number, number> {
  * era cada barra sin tocarla.
  *
  * Ahora se numeran LOS DÍAS EN QUE SE GASTÓ, en orden. Los extremos del mes
- * (el 1 y el último) se añaden en gris flojo si sobra sitio, para no perder
- * de vista dónde empieza y dónde acaba el mes.
+ * (el 1 y el último) se añaden en gris flojo, para no perder de vista dónde
+ * empieza y dónde acaba el mes.
  */
 export function planDays(
   data: DayBar[],
-  colW: number
-): { plan: Map<number, number>; strong: Set<number> } {
+  colW: number,
+  plotW: number
+): { positions: Map<number, number>; strong: Set<number> } {
   const xOf = (i: number) => i * colW + colW / 2;
-  const conGasto = data
-    .map((d, i) => ({ index: i, x: xOf(i), amount: d.amount }))
-    .filter((it) => it.amount > 0);
+  const conGasto = data.map((d, i) => i).filter((i) => data[i].amount > 0);
 
-  if (conGasto.length > MAX_NUMBERED_DAYS) {
-    // Mes cargado: marcas de 5 en 5, que es lo legible.
-    const cada5 = data
-      .map((d, i) => ({ index: i, x: xOf(i), day: d.day }))
-      .filter((it) => it.day === 1 || it.day % 5 === 0);
-    return { plan: placeInRows(cada5, DAY_W, 1), strong: new Set() };
+  // Mes cargado, o tantos días con gasto que ya no caben ni empujándolos:
+  // marcas de 5 en 5, que es lo legible.
+  const cabenTodos = (conGasto.length + 2) * DAY_W <= plotW;
+  if (conGasto.length > MAX_NUMBERED_DAYS || !cabenTodos) {
+    const cada5 = data.map((d, i) => i).filter((i) => data[i].day === 1 || data[i].day % 5 === 0);
+    const xs = spreadRow(cada5.map(xOf), DAY_W, DAY_W, plotW);
+    return { positions: new Map(cada5.map((i, k) => [i, xs[k]])), strong: new Set() };
   }
 
-  const strong = new Set(conGasto.map((it) => it.index));
-  const extremos = [0, data.length - 1]
-    .filter((i) => !strong.has(i))
-    .map((i) => ({ index: i, x: xOf(i) }));
-
-  return { plan: placeInRows([...conGasto, ...extremos], DAY_W, ROWS), strong };
+  const strong = new Set(conGasto);
+  // Los extremos van en la lista y se ordenan con los demás: la separación
+  // se calcula sobre el conjunto entero, o el "31" pisaría al "29".
+  const todos = [...new Set([0, ...conGasto, data.length - 1])].sort((a, b) => a - b);
+  const xs = spreadRow(todos.map(xOf), DAY_W, DAY_W, plotW);
+  return { positions: new Map(todos.map((i, k) => [i, xs[k]])), strong };
 }
 
 /**
@@ -166,8 +221,16 @@ export default function DailyBarsChart({
   const hOf = (amount: number) => (amount > 0 ? Math.max(5, (amount / top) * PLOT_H) : 2);
   const yOfValue = (v: number) => PLOT_H * (1 - v / top);
 
-  const plan = showAmounts ? planAmounts(data, colW) : new Map<number, number>();
-  const days = planDays(data, colW);
+  // Un poco más gruesas que antes (eran el 60% de la columna, unos 5px con
+  // 31 días). Se deja un hueco mínimo entre barras para que sigan
+  // contándose de un vistazo.
+  const barW = Math.max(5, Math.min(18, colW - 2));
+
+  const heights = data.map((d) => hOf(d.amount));
+  const amounts = showAmounts
+    ? planAmounts(data, colW, heights)
+    : { rows: new Map<number, number>(), base: new Map<number, number>() };
+  const days = planDays(data, colW, plotW);
   const activo = selected != null ? data[selected] : null;
 
   return (
@@ -246,8 +309,8 @@ export default function DailyBarsChart({
           }}
         >
           {data.map((d, i) => {
-            const h = hOf(d.amount);
-            const row = plan.get(i);
+            const h = heights[i];
+            const row = amounts.rows.get(i);
             const isSelected = selected === i;
             const isToday = today > 0 && d.day === today;
             return (
@@ -255,19 +318,38 @@ export default function DailyBarsChart({
                 {row != null && (
                   <Text
                     numberOfLines={1}
-                    style={{ position: "absolute", bottom: h + 3 + row * ROW_H, width: MIN_GAP + 12 }}
+                    style={{
+                      position: "absolute",
+                      // Desde la barra más alta que quede bajo el texto, no
+                      // desde la propia: así no le cruza por encima a ninguna.
+                      bottom: (amounts.base.get(i) ?? h) + 3 + row * ROW_H,
+                      width: LABEL_W,
+                    }}
                     className={`text-[9px] font-bold text-center ${
-                      isSelected ? "text-emerald-600 dark:text-emerald-400" : "text-slate-500 dark:text-slate-300"
+                      isSelected ? "text-emerald-500" : "text-slate-500 dark:text-slate-300"
                     }`}
                   >
                     {fmt(d.amount)}
                   </Text>
                 )}
                 <View
-                  style={{ height: h, width: "60%", minWidth: 3 }}
+                  style={{
+                    height: h,
+                    width: barW,
+                    // La barra tocada se ve de lejos: más clara que las
+                    // demás y con un borde que la separa del fondo. Antes
+                    // era un verde casi igual al normal y no se notaba.
+                    // El borde solo si la barra tiene alto donde ponerlo: en
+                      // un día sin gasto mide 2px y el borde se la comería.
+                    ...(isSelected
+                      ? d.amount > 0
+                        ? { backgroundColor: "#6ee7b7", borderWidth: 1.5, borderColor: "#047857" }
+                        : { backgroundColor: "#047857" }
+                      : null),
+                  }}
                   className={`rounded-t ${
                     isSelected
-                      ? "bg-emerald-400"
+                      ? ""
                       : d.amount > 0
                         ? isToday
                           ? "bg-emerald-500"
@@ -280,30 +362,23 @@ export default function DailyBarsChart({
           })}
         </View>
 
-        {/* Los días. Los que tuvieron gasto van en negro; el 1 y el último,
-            en gris flojo, solo si sobra sitio.
-            Se pegan al borde para que no se salgan del dibujo: en un mes de
-            30 días el "30" caía 7px afuera. */}
-        <View style={{ position: "absolute", top: LABEL_BAND + PLOT_H, left: AXIS_W, width: plotW, height: DAYS_H }}>
+        {/* Los días, todos a la misma altura y en una sola línea. Los que
+            tuvieron gasto van en negro; el 1 y el último, en gris flojo.
+            La posición sale ya separada y metida dentro del dibujo. */}
+        <View style={{ position: "absolute", top: LABEL_BAND + PLOT_H + 2, left: AXIS_W, width: plotW, height: DAYS_H }}>
           {data.map((d, i) => {
-            const row = days.plan.get(i);
-            if (row == null) return null;
+            const x = days.positions.get(i);
+            if (x == null) return null;
             const fuerte = days.strong.has(i);
             return (
               <View
                 key={d.day}
-                style={{
-                  position: "absolute",
-                  top: row * DAY_ROW_H,
-                  left: Math.min(Math.max(i * colW + colW / 2 - DAY_W / 2, 0), plotW - DAY_W),
-                  width: DAY_W,
-                  alignItems: "center",
-                }}
+                style={{ position: "absolute", left: x - DAY_W / 2, width: DAY_W, alignItems: "center" }}
               >
                 <Text
                   className={`text-[9px] ${
                     selected === i
-                      ? "text-emerald-600 dark:text-emerald-400 font-extrabold"
+                      ? "text-emerald-500 font-extrabold"
                       : fuerte
                         ? "text-slate-700 dark:text-slate-200 font-bold"
                         : "text-slate-400"
