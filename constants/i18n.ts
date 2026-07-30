@@ -390,8 +390,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "appInfo.updateError": "No se pudo buscar. Revisa tu internet",
     "appInfo.updateEmbedded": "versión original del archivo instalado",
 
-    "widget.rowLabelRound": "Micrófono redondo en pantalla de inicio",
-    "widget.rowLabelWide": "Botón «Anotar gasto» en pantalla de inicio",
+    "widget.rowLabel": "Micrófono en pantalla de inicio",
     "widget.manualHint":
       "Tu celular no deja hacerlo desde aquí. Mantén pulsado un espacio vacío de tu pantalla de inicio → Widgets → busca Finzo",
 
@@ -912,8 +911,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "appInfo.updateError": "Couldn't check. Verify your connection",
     "appInfo.updateEmbedded": "original version from the installed file",
 
-    "widget.rowLabelRound": "Round microphone on home screen",
-    "widget.rowLabelWide": "\"Log expense\" button on home screen",
+    "widget.rowLabel": "Microphone on home screen",
     "widget.manualHint":
       "Your phone won't allow it from here. Long-press an empty spot on your home screen → Widgets → find Finzo",
 
@@ -1431,8 +1429,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "appInfo.updateError": "Não foi possível buscar. Verifique sua internet",
     "appInfo.updateEmbedded": "versão original do arquivo instalado",
 
-    "widget.rowLabelRound": "Microfone redondo na tela inicial",
-    "widget.rowLabelWide": "Botão «Anotar gasto» na tela inicial",
+    "widget.rowLabel": "Microfone na tela inicial",
     "widget.manualHint":
       "Seu celular não permite fazer isso daqui. Mantenha pressionado um espaço vazio da tela inicial → Widgets → procure Finzo",
 

@@ -304,21 +304,19 @@ export default function Settings({
             )
           }
         />
+        {/* Una sola fila, no dos. Antes había una por cada tamaño de
+            widget (el círculo y el ancho con texto), y con el mismo icono
+            y textos casi iguales se leían como una opción repetida. Esta
+            coloca el círculo, que es el que ocupa lo mismo que un ícono
+            normal; el ancho sigue existiendo en la lista de widgets de
+            Android para quien lo prefiera. */}
         {voiceWidget.isSupported && (
-          <>
-            <Row
-              Icon={Mic}
-              label={t("widget.rowLabelRound")}
-              onPress={() => addWidgetToHomeScreen("round")}
-              right={<ChevronRight size={16} color="#cbd5e1" />}
-            />
-            <Row
-              Icon={Mic}
-              label={t("widget.rowLabelWide")}
-              onPress={() => addWidgetToHomeScreen("wide")}
-              right={<ChevronRight size={16} color="#cbd5e1" />}
-            />
-          </>
+          <Row
+            Icon={Mic}
+            label={t("widget.rowLabel")}
+            onPress={() => addWidgetToHomeScreen("round")}
+            right={<ChevronRight size={16} color="#cbd5e1" />}
+          />
         )}
         <Row
           Icon={PiggyBank}
