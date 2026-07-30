@@ -87,6 +87,13 @@ export default function LineChartSimple({
   const activeValue = selected != null ? main.values[selected] : null;
   const activePoint = selected != null ? mainPoints[selected] : null;
 
+  // Último punto dibujado de la línea principal: es "hoy", y siempre lleva
+  // círculo aunque ese día no tenga etiqueta debajo.
+  let lastDrawn = -1;
+  mainPoints.forEach((p, i) => {
+    if (p) lastDrawn = i;
+  });
+
   return (
     <View style={{ width, height: height + TOOLTIP_H + LABEL_H }}>
       {/* Globo con el monto del punto tocado */}
@@ -165,8 +172,15 @@ export default function LineChartSimple({
           strokeLinecap="round"
         />
 
-        {mainPoints.map((p, i) =>
-          p ? (
+        {/* Puntos solo en los días con etiqueta, en el de hoy y en el que
+            se esté tocando. Dibujarlos todos —uno por día— llenaba la
+            línea de 31 círculos blancos y se veía cargado. Tocar sigue
+            funcionando en cualquier día: las zonas de toque son aparte. */}
+        {mainPoints.map((p, i) => {
+          if (!p) return null;
+          const visible = selected === i || i === lastDrawn || !labels || labels[i] !== "";
+          if (!visible) return null;
+          return (
             <Circle
               key={i}
               cx={p.x}
@@ -176,20 +190,27 @@ export default function LineChartSimple({
               stroke={main.color}
               strokeWidth={selected === i ? 2.5 : 2}
             />
-          ) : null
-        )}
+          );
+        })}
       </Svg>
 
       {/* Día de cada punto, centrado exactamente bajo su punto */}
       {labels && (
         <View style={{ height: LABEL_H }}>
-          {labels.map((label, i) => (
+          {labels.map((label, i) =>
+            // Los días sin etiqueta no dibujan nada: con un punto por día
+            // serían 31 cajas invisibles amontonadas.
+            label === "" ? null : (
             <View
               key={i}
+              // 26 de ancho y no 32: un "31" a 10px ocupa unos 12, así que
+              // 32 era espacio de sobra que solo servía para que dos
+              // etiquetas cercanas se pisaran. Con 26 caben las de
+              // febrero, que quedaban a 27,6px una de otra.
               style={{
                 position: "absolute",
-                left: PAD_X + i * stepX - 16,
-                width: 32,
+                left: PAD_X + i * stepX - 13,
+                width: 26,
                 alignItems: "center",
               }}
             >
@@ -203,7 +224,8 @@ export default function LineChartSimple({
                 {label}
               </Text>
             </View>
-          ))}
+            )
+          )}
         </View>
       )}
 

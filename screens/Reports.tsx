@@ -197,7 +197,13 @@ export default function Reports({
       spentToday,
       dailyAvg,
       projected,
-      labels: days.map((d) => (d === 1 || d % 5 === 0 || d === daysInMonth ? String(d) : "")),
+      // El último día solo se etiqueta si queda lejos del último múltiplo
+      // de 5. En un mes de 31, el 30 y el 31 caen pegados y las etiquetas
+      // se encimaban: se leía "301". En febrero (28) sí hay hueco.
+      labels: days.map((d) => {
+        const esUltimoConHueco = d === daysInMonth && daysInMonth % 5 >= 3;
+        return d === 1 || d % 5 === 0 || esUltimoConHueco ? String(d) : "";
+      }),
       real: days.map((d) => (d <= today ? spentUpTo(d) : null)),
       budgetPace: budget > 0 ? days.map((d) => (budget / daysInMonth) * d) : null,
       // Arranca exactamente en el punto de hoy, para que se vea como la
