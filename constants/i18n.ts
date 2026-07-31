@@ -129,6 +129,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "reports.title": "Reportes",
     "reports.availableShort": "Disponible",
+    "reports.budgetShort": "Presupuesto",
+    "reports.formula": "Saldo anterior + Presupuesto + Ingresos − Gastos = Disponible",
     "reports.healthGood": "Tu salud financiera es buena",
     "reports.healthTight": "Vas justo con tu presupuesto",
     "reports.healthOver": "Te pasaste de tu presupuesto",
@@ -833,6 +835,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "reports.title": "Reports",
     "reports.availableShort": "Available",
+    "reports.budgetShort": "Budget",
+    "reports.formula": "Previous balance + Budget + Income − Expenses = Available",
     "reports.healthGood": "Your finances look healthy",
     "reports.healthTight": "You're cutting it close this month",
     "reports.healthOver": "You went over your budget",
@@ -1531,6 +1535,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "reports.title": "Relatórios",
     "reports.availableShort": "Disponível",
+    "reports.budgetShort": "Orçamento",
+    "reports.formula": "Saldo anterior + Orçamento + Receitas − Despesas = Disponível",
     "reports.healthGood": "Sua saúde financeira está boa",
     "reports.healthTight": "Você está no limite do orçamento",
     "reports.healthOver": "Você passou do seu orçamento",

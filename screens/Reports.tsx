@@ -330,36 +330,54 @@ export default function Reports({
               Ahora se ve la cuenta entera, línea por línea, y cierra. De paso
               se acaba el "Presupuesto d..." recortado por falta de sitio. */}
           <View
-            className="mx-5 mt-2.5 rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3"
+            className="mx-5 mt-2.5 rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex-row"
             style={CARD_SHADOW}
           >
             {[
-              // El arrastre solo aparece si existe. Una línea de "+ S/ 0.00"
-              // no explica nada y quita sitio.
-              ...(prevBalance !== 0
-                ? [{ label: t("home.previousBalance"), value: prevBalance, signo: prevBalance < 0 ? "−" : "+", Icon: Wallet, color: "#64748b" }]
-                : []),
-              { label: t("home.monthlyBudget"), value: budget, signo: "+", Icon: PieChartIcon, color: "#0ea5e9" },
-              { label: t("exportPdf.income"), value: income, signo: "+", Icon: ArrowUpCircle, color: "#059669" },
-              { label: t("exportPdf.expenses"), value: spent, signo: "−", Icon: ArrowDownCircle, color: "#e11d48" },
+              // La casilla que estaba antes en este sitio repetía el
+              // "Disponible" que ya sale en grande justo encima, y a cambio
+              // faltaba el saldo arrastrado de los meses anteriores — que
+              // aquí eran 231 de los 284, la mayor parte del total.
+              //
+              // Por eso las cuatro cifras no sumaban: 100 − 50 + 3 daba 53 y
+              // arriba ponía 284. Cambiando la casilla repetida por la que
+              // faltaba, las cuatro suman EXACTAMENTE el número de arriba.
+              { label: t("home.previousBalance"), value: prevBalance, Icon: Wallet, color: "#64748b" },
+              { label: t("reports.budgetShort"), value: budget, Icon: PieChartIcon, color: "#0ea5e9" },
+              { label: t("exportPdf.income"), value: income, Icon: ArrowUpCircle, color: "#059669" },
+              { label: t("exportPdf.expenses"), value: spent, Icon: ArrowDownCircle, color: "#e11d48" },
             ].map((c, i) => (
-              <View key={i} className="flex-row items-center gap-2.5 py-1.5">
+              <View
+                key={i}
+                className={`flex-1 items-center py-3 px-1 ${
+                  i > 0 ? "border-l-[1.5px] border-slate-200 dark:border-slate-700" : ""
+                }`}
+              >
                 <c.Icon size={15} color={c.color} />
-                <Text className="flex-1 text-xs text-slate-600 dark:text-slate-300">{c.label}</Text>
-                <Text className="text-xs font-bold" style={{ color: primaryTextColor }}>
-                  {c.signo} {fmt(Math.abs(c.value))}
+                <Text
+                  className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 text-center"
+                  numberOfLines={1}
+                >
+                  {c.label}
+                </Text>
+                <Text
+                  className="text-[11px] font-extrabold mt-0.5 text-center"
+                  style={{ color: primaryTextColor }}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {fmt(c.value)}
                 </Text>
               </View>
             ))}
-            <View className="flex-row items-center gap-2.5 pt-2.5 mt-1 border-t-[1.5px] border-slate-200 dark:border-slate-700">
-              <Text className="flex-1 text-xs font-extrabold" style={{ color: primaryTextColor }}>
-                {t("reports.availableShort")}
-              </Text>
-              <Text className="text-sm font-extrabold" style={{ color: primaryTextColor }}>
-                {fmt(resumen.disponible)}
-              </Text>
-            </View>
           </View>
+
+          {/* La cuenta, escrita. Una línea pequeña, pero es la que convierte
+              cuatro cifras sueltas en algo comprobable de un vistazo: se
+              suman las de arriba y tiene que dar el número grande. */}
+          <Text className="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-1.5 px-5">
+            {t("reports.formula")}
+          </Text>
 
           {/* Ingresos y gastos, con su tendencia real del mes. */}
           <View className="flex-row gap-2.5 mx-5 mt-2.5">
