@@ -687,6 +687,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "appInfo.title": "Información",
     "appInfo.version": "Versión {version}",
     "appInfo.codeMarker": "Código: {marker}",
+    "appInfo.nativeParts": "Partes nativas",
     "appInfo.description":
       "Finzo es tu presupuesto de bolsillo: una forma simple de anotar tus ingresos y gastos, ver en qué se va tu dinero cada mes y guardar para tus metas de ahorro.",
     "appInfo.questions": "¿Dudas o sugerencias? Escríbenos a {email}",
@@ -1394,6 +1395,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "appInfo.title": "Information",
     "appInfo.version": "Version {version}",
     "appInfo.codeMarker": "Code: {marker}",
+    "appInfo.nativeParts": "Native parts",
     "appInfo.description":
       "Finzo is your pocket budget: a simple way to track your income and expenses, see where your money goes each month, and save toward your goals.",
     "appInfo.questions": "Questions or suggestions? Write to us at {email}",
@@ -2099,6 +2101,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "appInfo.title": "Informações",
     "appInfo.version": "Versão {version}",
     "appInfo.codeMarker": "Código: {marker}",
+    "appInfo.nativeParts": "Partes nativas",
     "appInfo.description":
       "Finzo é o seu orçamento de bolso: uma forma simples de anotar suas receitas e gastos, ver para onde vai seu dinheiro a cada mês e guardar para suas metas.",
     "appInfo.questions": "Dúvidas ou sugestões? Escreva para {email}",

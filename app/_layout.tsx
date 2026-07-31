@@ -169,10 +169,34 @@ function IncomingFileEffect() {
     if (!ready) return;
     let cancelled = false;
 
+    // Cuántas vueltas se sigue PREGUNTANDO por el archivo cuando la primera
+    // respuesta es "no hay nada".
+    //
+    // Esto era un fallo: en cuanto consumePendingFile devolvía null, se daba
+    // por hecho que no había archivo y se dejaba de insistir para siempre.
+    // Pero null también significa "todavía no puedo mirar" — la parte nativa
+    // necesita la pantalla de la app ya montada para leer con qué se abrió, y
+    // en un arranque desde cero eso puede tardar un instante más que el
+    // JavaScript.
+    //
+    // Con el bloqueo activado el arranque es aún más lento, así que la
+    // primera pregunta caía justo en ese hueco: se respondía "no hay nada",
+    // se dejaba de preguntar, y el archivo se quedaba sin recoger.
+    //
+    // Diez vueltas de 300 ms son tres segundos preguntando. Pasado eso, si de
+    // verdad no hay archivo, se para: seguir preguntando dos minutos en cada
+    // arranque normal de la app sería gastar batería para nada.
+    const VUELTAS_BUSCANDO = 10;
+    let vueltasSinArchivo = 0;
+
     function intentar(): boolean {
       if (!pending.current) pending.current = incomingFile.consumePendingFile();
       const file = pending.current;
-      if (!file) return true; // No hay nada que hacer, se deja de insistir.
+      if (!file) {
+        vueltasSinArchivo++;
+        // Se sigue preguntando un rato antes de darlo por hecho.
+        return vueltasSinArchivo >= VUELTAS_BUSCANDO;
+      }
 
       // Se apunta EN CUANTO aparece el archivo, no al navegar.
       // consumePendingFile es inmediato, así que para cuando el aviso de

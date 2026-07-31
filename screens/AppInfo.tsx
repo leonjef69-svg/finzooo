@@ -6,6 +6,9 @@ import * as Updates from "expo-updates";
 import { LEGAL_CONTACT_EMAIL } from "@/constants/legal";
 import { useAppData } from "@/contexts/AppDataContext";
 import BackButton from "@/components/BackButton";
+import * as incomingFile from "@/modules/incoming-file";
+import * as shareToApp from "@/modules/share-to-app";
+import * as textRecognizer from "@/modules/text-recognizer";
 
 const APP_VERSION = "1.0.0";
 
@@ -21,7 +24,7 @@ const APP_VERSION = "1.0.0";
  * La versión de la app (1.0.0) no sirve para esto: no cambia entre entregas.
  * Esta sí.
  */
-const CODE_MARKER = "31jul-16";
+const CODE_MARKER = "31jul-17";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast } = useAppData();
@@ -108,6 +111,17 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
           </Text>
           <Text className="text-[10px] text-slate-400 mt-0.5" selectable>
             {runningLabel}
+          </Text>
+
+          {/* QUÉ PARTES NATIVAS TRAE ESTE APK.
+              Las actualizaciones por internet solo cambian el JavaScript;
+              esto viene dentro del APK y solo cambia reinstalando. Sin verlo
+              no hay forma de saber si un arreglo nativo está o no, y se
+              acaba arreglando dos veces algo que ya estaba bien. */}
+          <Text className="text-[10px] text-slate-400 mt-1" selectable>
+            {t("appInfo.nativeParts")}: {incomingFile.isSupported ? "✓" : "✗"} compartir ·{" "}
+            {shareToApp.isSupported ? "✓" : "✗"} gmail ·{" "}
+            {textRecognizer.isSupported ? "✓" : "✗"} escáner
           </Text>
 
           <TouchableOpacity
