@@ -9,10 +9,27 @@ import BackButton from "@/components/BackButton";
 
 const APP_VERSION = "1.0.0";
 
+/**
+ * Marca de la versión del CÓDIGO, no de la app.
+ *
+ * Se sube a mano en cada entrega. Existe porque durante un día entero no hubo
+ * forma de saber si los arreglos publicados estaban llegando al celular o no:
+ * se reportaba un fallo, se arreglaba, se publicaba, y volvía a reportarse el
+ * mismo fallo. Sin saber qué código se estaba ejecutando, cada arreglo era a
+ * ciegas — y podía estar ya hecho.
+ *
+ * La versión de la app (1.0.0) no sirve para esto: no cambia entre entregas.
+ * Esta sí.
+ */
+const CODE_MARKER = "31jul-16";
+
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast } = useAppData();
   const insets = useSafeAreaInsets();
   const [checking, setChecking] = useState(false);
+  // El motivo exacto del ultimo fallo al actualizar. Se deja escrito en
+  // pantalla porque un mensajito que se va solo no sirve para copiarlo.
+  const [updateError, setUpdateError] = useState("");
 
   /**
    * Busca una actualización AHORA y la aplica.
@@ -26,6 +43,7 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
   async function checkForUpdate() {
     if (checking) return;
     setChecking(true);
+    setUpdateError("");
     try {
       const result = await Updates.checkForUpdateAsync();
       if (!result.isAvailable) {
@@ -35,7 +53,17 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
       showToast(t("appInfo.updateDownloading"));
       await Updates.fetchUpdateAsync();
       await Updates.reloadAsync();
-    } catch {
+    } catch (e) {
+      // Se guarda el motivo EXACTO y se deja escrito en pantalla, no en un
+      // mensajito que se va solo.
+      //
+      // Antes solo salía "no se pudo actualizar". Con eso no hay forma de
+      // distinguir un celular sin internet de un canal mal configurado o de
+      // una versión que no corresponde, y se pierden días adivinando cuál de
+      // las tres es. El texto no es bonito, pero es el único que dice la
+      // verdad de lo que pasó.
+      const motivo = e instanceof Error ? e.message : String(e);
+      setUpdateError(motivo);
       showToast(t("appInfo.updateError"));
     } finally {
       setChecking(false);
@@ -72,7 +100,15 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
           <Text className="text-xs text-slate-500 dark:text-slate-300 mt-1">
             {t("appInfo.version", { version: APP_VERSION })}
           </Text>
-          <Text className="text-[10px] text-slate-400 mt-1">{runningLabel}</Text>
+          {/* Estas dos líneas son para poder decir por chat, sin adivinar,
+              qué está corriendo el celular: la marca del código y de dónde
+              vino. Ver CODE_MARKER. */}
+          <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 mt-1.5" selectable>
+            {t("appInfo.codeMarker", { marker: CODE_MARKER })}
+          </Text>
+          <Text className="text-[10px] text-slate-400 mt-0.5" selectable>
+            {runningLabel}
+          </Text>
 
           <TouchableOpacity
             onPress={checkForUpdate}
@@ -84,6 +120,20 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
               {t(checking ? "appInfo.updateChecking" : "appInfo.updateCheck")}
             </Text>
           </TouchableOpacity>
+
+          {/* El motivo exacto del fallo, escrito y sin irse solo. Es feo a
+              propósito: no está para leerlo por gusto, sino para poder
+              copiarlo tal cual cuando algo no llega. */}
+          {updateError !== "" && (
+            <View className="mt-3 mx-6 rounded-xl border-[1.5px] border-rose-300 bg-rose-50 dark:bg-rose-900/20 px-3 py-2.5">
+              <Text className="text-[11px] font-bold text-rose-600 dark:text-rose-300">
+                {t("appInfo.updateErrorTitle")}
+              </Text>
+              <Text className="text-[10px] text-rose-700 dark:text-rose-200 mt-1" selectable>
+                {updateError}
+              </Text>
+            </View>
+          )}
         </View>
 
         <View className="px-6">

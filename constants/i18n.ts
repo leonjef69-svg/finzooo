@@ -563,6 +563,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "appInfo.updateNone": "Ya tienes la última versión",
     "appInfo.updateDownloading": "Descargando… la app se va a reiniciar",
     "appInfo.updateError": "No se pudo buscar. Revisa tu internet",
+    "appInfo.updateErrorTitle": "No se pudo actualizar. Este es el motivo:",
     "appInfo.updateEmbedded": "versión original del archivo instalado",
 
     "widget.rowLabel": "Micrófono en pantalla de inicio",
@@ -685,6 +686,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "appInfo.title": "Información",
     "appInfo.version": "Versión {version}",
+    "appInfo.codeMarker": "Código: {marker}",
     "appInfo.description":
       "Finzo es tu presupuesto de bolsillo: una forma simple de anotar tus ingresos y gastos, ver en qué se va tu dinero cada mes y guardar para tus metas de ahorro.",
     "appInfo.questions": "¿Dudas o sugerencias? Escríbenos a {email}",
@@ -1269,6 +1271,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "appInfo.updateNone": "You already have the latest version",
     "appInfo.updateDownloading": "Downloading… the app will restart",
     "appInfo.updateError": "Couldn't check. Verify your connection",
+    "appInfo.updateErrorTitle": "Update failed. Here is why:",
     "appInfo.updateEmbedded": "original version from the installed file",
 
     "widget.rowLabel": "Microphone on home screen",
@@ -1390,6 +1393,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "appInfo.title": "Information",
     "appInfo.version": "Version {version}",
+    "appInfo.codeMarker": "Code: {marker}",
     "appInfo.description":
       "Finzo is your pocket budget: a simple way to track your income and expenses, see where your money goes each month, and save toward your goals.",
     "appInfo.questions": "Questions or suggestions? Write to us at {email}",
@@ -1972,6 +1976,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "appInfo.updateNone": "Você já tem a última versão",
     "appInfo.updateDownloading": "Baixando… o app vai reiniciar",
     "appInfo.updateError": "Não foi possível buscar. Verifique sua internet",
+    "appInfo.updateErrorTitle": "Não deu para atualizar. Este é o motivo:",
     "appInfo.updateEmbedded": "versão original do arquivo instalado",
 
     "widget.rowLabel": "Microfone na tela inicial",
@@ -2093,6 +2098,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "appInfo.title": "Informações",
     "appInfo.version": "Versão {version}",
+    "appInfo.codeMarker": "Código: {marker}",
     "appInfo.description":
       "Finzo é o seu orçamento de bolso: uma forma simples de anotar suas receitas e gastos, ver para onde vai seu dinheiro a cada mês e guardar para suas metas.",
     "appInfo.questions": "Dúvidas ou sugestões? Escreva para {email}",

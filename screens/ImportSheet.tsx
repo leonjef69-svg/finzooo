@@ -333,7 +333,13 @@ export default function ImportSheet({
                   <Text className="text-sm font-bold text-slate-600 dark:text-slate-200 mt-2">
                     {t("importSheet.pickFile")}
                   </Text>
-                  <Text className="text-[11px] text-slate-400 dark:text-slate-300 mt-1">CSV · PDF</Text>
+                  {/* Los formatos que se aceptan, a la vista. Esta línea
+                      decía "CSV · PDF" y se quedó igual al añadir Excel: el
+                      selector ya lo aceptaba, pero desde fuera no había forma
+                      de saberlo y parecía que la función no estaba. */}
+                  <Text className="text-[11px] text-slate-400 dark:text-slate-300 mt-1">
+                    CSV · Excel · PDF
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
