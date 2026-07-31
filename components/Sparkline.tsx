@@ -1,6 +1,17 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Text, View } from "react-native";
 import Svg, { Circle, Line, Path, Defs, LinearGradient, Stop } from "react-native-svg";
+import Animated, {
+  Easing,
+  useAnimatedProps,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
+
+// La linea que se dibuja sola. Se crea una sola vez, fuera del componente:
+// crearla dentro haria una clase nueva en cada dibujado y la animacion se
+// reiniciaria sola.
+const AnimatedPath = Animated.createAnimatedComponent(Path);
 
 /**
  * La línea de tendencia de las tarjetas de Ingresos y Gastos.
@@ -61,6 +72,25 @@ export function pointsOf(valores: number[], w: number, h: number, pad = 2): [num
   });
 }
 
+/**
+ * Lo que mide la línea, sumando tramo a tramo.
+ *
+ * Hace falta para animarla: el truco para que una línea se dibuje sola es
+ * pintarla toda de guiones, con un guión tan largo como ella entera, y luego
+ * ir corriendo ese guión desde fuera hasta su sitio. Sin saber cuánto mide,
+ * no se puede.
+ */
+export function polylineLength(puntos: [number, number][]): number {
+  let total = 0;
+  for (let i = 1; i < puntos.length; i++) {
+    const dx = puntos[i][0] - puntos[i - 1][0];
+    const dy = puntos[i][1] - puntos[i - 1][1];
+    total += Math.hypot(dx, dy);
+  }
+  // Nunca cero: se usa como divisor y como largo del guión.
+  return Math.max(1, total);
+}
+
 /** Qué día cae bajo el dedo. */
 export function dayAtX(x: number, total: number, w: number): number {
   if (total <= 1 || w <= 0) return 0;
@@ -87,10 +117,24 @@ export default function Sparkline({
   fmt?: (n: number) => string;
 }) {
   const [elegido, setElegido] = useState<number | null>(null);
+  const avance = useSharedValue(0);
 
   const acumulado = acumular(values);
   const puntos = pointsOf(acumulado, width, height);
   const linea = buildPath(acumulado, width, height);
+
+  // El trazo se rehace cada vez que la línea cambia de forma, que es lo que
+  // pasa al anotar un movimiento nuevo. La comparación es sobre el texto de
+  // la orden de dibujo: si es igual, nada cambió y no hay que reanimar.
+  const largo = polylineLength(puntos);
+  useEffect(() => {
+    avance.value = 0;
+    avance.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.cubic) });
+  }, [linea, avance]);
+
+  const trazo = useAnimatedProps(() => ({
+    strokeDashoffset: largo * (1 - avance.value),
+  }));
 
   if (!linea) return <View style={{ width, height }} />;
 
@@ -143,7 +187,20 @@ export default function Sparkline({
             </LinearGradient>
           </Defs>
           <Path d={relleno} fill={`url(#${id})`} />
-          <Path d={linea} stroke={color} strokeWidth={2} fill="none" strokeLinejoin="round" />
+          {/* La línea se dibuja sola de izquierda a derecha cada vez que los
+              datos cambian. Antes aparecía ya hecha, y con un mes de
+              movimientos pequeños el cambio era de unos pocos píxeles: la
+              gráfica parecía la misma de siempre aunque acabaras de anotar un
+              gasto. Ahora se ve crecer. */}
+          <AnimatedPath
+            d={linea}
+            stroke={color}
+            strokeWidth={2}
+            fill="none"
+            strokeLinejoin="round"
+            strokeDasharray={largo}
+            animatedProps={trazo}
+          />
 
           {/* Un punto por cada día con movimiento. Es lo que hace que un
               gasto nuevo se vea aunque la línea apenas suba. */}

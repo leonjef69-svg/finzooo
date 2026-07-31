@@ -15,6 +15,7 @@ import DonutChart from "@/components/DonutChart";
 import BarChartSimple from "@/components/BarChartSimple";
 import DailyBarsChart from "@/components/DailyBarsChart";
 import Sparkline from "@/components/Sparkline";
+import AnimatedBar from "@/components/AnimatedBar";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import { catInfo } from "@/constants/categories";
 import { COLOR_HEX_600 } from "@/constants/colors";
@@ -452,22 +453,19 @@ export default function Reports({
                   {fmt(spent)} {t("reports.ofBudget")} {fmt(budget)}
                 </Text>
               </View>
-              <View className="h-2.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
-                <View
-                  className="h-2.5 rounded-full"
-                  style={{
-                    // Se topa al 100% para que la barra no se salga del
-                    // recuadro al pasarse del presupuesto. El número de
-                    // debajo sí dice la verdad completa.
-                    width: `${Math.min(100, Math.round(resumen.usado * 100))}%`,
-                    backgroundColor: SALUD_COLOR[resumen.salud],
-                  }}
-                />
-              </View>
+              {/* La barra se mueve sola al cambiar los gastos, con 600 ms de
+                  recorrido. Antes saltaba de golpe: el dato era correcto pero
+                  el salto instantáneo del 50 al 60 no se veía. */}
+              <AnimatedBar pct={resumen.usado} color={SALUD_COLOR[resumen.salud]} />
+              {/* Cuatro estados, no dos. Justo al llegar al 100% no queda
+                  nada ni se ha pasado nadie: "aún te quedan S/ 0.00" suena a
+                  error, y decir que se pasó cuando no se pasó es falso. */}
               <Text className="text-[11px] mt-2 text-slate-500 dark:text-slate-400">
-                {resumen.restante >= 0
+                {resumen.restante > 0
                   ? t("reports.budgetLeft", { amount: fmt(resumen.restante) })
-                  : t("reports.budgetOver", { amount: fmt(Math.abs(resumen.restante)) })}
+                  : resumen.restante === 0
+                    ? t("reports.budgetExact")
+                    : t("reports.budgetOver", { amount: fmt(Math.abs(resumen.restante)) })}
               </Text>
             </View>
           )}
