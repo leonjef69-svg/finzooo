@@ -299,7 +299,11 @@ export default function Reports({
             colors={["#065f46", "#047857"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            className="mx-5 mt-4 rounded-3xl px-5 py-4"
+            // Esta se quedó sin contorno cuando las cuatro tarjetas de debajo
+            // sí lo llevan. Mismo grosor que el resto y el mismo blanco al
+            // 45% que la tarjeta del saldo en Inicio, que es la hermana de
+            // esta: las dos van sobre verde.
+            className="mx-5 mt-4 rounded-3xl px-5 py-4 border-[1.5px] border-white/45"
           >
             <Text className="text-emerald-100 text-xs font-semibold">
               {t("home.availableBalance")}

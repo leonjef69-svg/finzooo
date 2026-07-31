@@ -7,6 +7,10 @@ export const CURRENCIES = [
   { id: "COP", label: "currency.COP", symbol: "COL$" },
   { id: "ARS", label: "currency.ARS", symbol: "AR$" },
   { id: "CLP", label: "currency.CLP", symbol: "CL$" },
+  // El real faltaba, y era un hueco de verdad: el portugués ya estaba entre
+  // los idiomas, así que un brasileño podía tener la app en su idioma pero
+  // tenía que llevar sus cuentas en soles o en dólares.
+  { id: "BRL", label: "currency.BRL", symbol: "R$" },
   { id: "EUR", label: "currency.EUR", symbol: "€" },
 ] as const;
 

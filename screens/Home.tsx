@@ -188,7 +188,12 @@ export default function Home({
           colors={["#059669", "#0f766e"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          className="mx-5 rounded-[32px] overflow-hidden p-5 flex-row items-center gap-4 border-[1.5px] border-white/20"
+          // El grosor ya era 1.5, como el resto; lo que fallaba era el color.
+          // Un blanco al 20% sobre el verde se pierde, así que esta tarjeta
+          // parecía la única sin contorno estando rodeada de tarjetas que sí
+          // lo tienen. Al 45% se ve igual de marcado que el gris de las
+          // demás, sin meter un borde gris que sobre el verde chirriaría.
+          className="mx-5 rounded-[32px] overflow-hidden p-5 flex-row items-center gap-4 border-[1.5px] border-white/45"
         >
           <BudgetRing pct={pct} />
           <View className="flex-1">

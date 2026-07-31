@@ -62,6 +62,7 @@ type AppDataContextValue = {
   fmt: (n: number) => string;
   userLanguage: string;
   updateLanguage: (id: string) => void;
+  updateCountry: (language: string, currency: string) => void;
   t: (key: string, vars?: Record<string, string | number>) => string;
   monthNames: string[];
   themeMode: ThemeMode;
@@ -769,6 +770,35 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     showToast(translations[id as keyof typeof translations]?.["toast.languageUpdated"] || "Idioma actualizado");
   }
 
+  /**
+   * Pone idioma y moneda de una vez, al elegir un país.
+   *
+   * Va aparte y no llama a updateCurrency + updateLanguage seguidos por una
+   * razón concreta: las dos guardan el perfil ENTERO, cada una con el valor
+   * de la otra tal como estaba al empezar. Encadenadas, la segunda escribiría
+   * encima con el idioma o la moneda viejos y uno de los dos cambios se
+   * perdería. Aquí se escribe el perfil una sola vez, con los dos ya puestos.
+   *
+   * Y un solo mensajito, en el idioma NUEVO: dos avisos seguidos por una sola
+   * decisión sobran.
+   */
+  function updateCountry(language: string, currency: string) {
+    setUserLanguage(language);
+    setUserCurrency(currency);
+    saveJSON(STORAGE_KEYS.profile, {
+      userName,
+      userEmail,
+      userPhoto,
+      userCurrency: currency,
+      userLanguage: language,
+      hasOnboarded: true,
+    });
+    showToast(
+      translations[language as keyof typeof translations]?.["toast.countryUpdated"] ||
+        "Listo"
+    );
+  }
+
   function updateThemeMode(mode: ThemeMode) {
     setThemeMode(mode);
     colorScheme.set(mode);
@@ -917,6 +947,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         updateProfileInfo,
         userCurrency,
         updateCurrency,
+        updateCountry,
         fmt,
         userLanguage,
         updateLanguage,

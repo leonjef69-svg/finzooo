@@ -23,7 +23,7 @@ export default function SettingsTab() {
       onCurrency={() => router.push("/currency")}
       userLanguage={userLanguage}
       onLanguage={() => router.push("/language")}
-      onTheme={() => router.push("/theme")}
+      onCountry={() => router.push("/country")}
       isPremium={isPremium}
       onCategoryBudgets={() => router.push("/category-budgets")}
       onExportPdf={() => router.push("/export-pdf")}

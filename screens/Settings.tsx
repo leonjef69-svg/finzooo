@@ -18,7 +18,7 @@ import {
   PieChart,
   Globe,
   Coins,
-  Palette,
+  MapPin,
   Bell,
   KeyRound,
   Pencil,
@@ -36,6 +36,7 @@ import Row from "@/components/Row";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import Toggle from "@/components/Toggle";
 import { currencyLabelFor } from "@/constants/currencies";
+import { countryFor } from "@/constants/countries";
 import { languageLabelFor } from "@/constants/i18n";
 import { useAppData } from "@/contexts/AppDataContext";
 
@@ -57,7 +58,7 @@ export default function Settings({
   onCurrency,
   userLanguage,
   onLanguage,
-  onTheme,
+  onCountry,
   isPremium,
   onCategoryBudgets,
   onExportPdf,
@@ -81,7 +82,7 @@ export default function Settings({
   onCurrency: () => void;
   userLanguage: string;
   onLanguage: () => void;
-  onTheme: () => void;
+  onCountry: () => void;
   isPremium: boolean;
   onCategoryBudgets: () => void;
   onExportPdf: () => void;
@@ -110,6 +111,10 @@ export default function Settings({
   const { colorScheme } = useColorScheme();
   const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
   const [notif, setNotif] = useState(true);
+  // Qué país corresponde al idioma y la moneda puestos. Puede no haber
+  // ninguno si alguien los ajustó por separado a una combinación que no es
+  // de ningún país; ahí la fila sale sin nombre en vez de mentir.
+  const paisActual = countryFor(userLanguage, userCurrency);
   const insets = useSafeAreaInsets();
 
   const [pickingPhoto, setPickingPhoto] = useState(false);
@@ -355,6 +360,15 @@ export default function Settings({
             </View>
           }
         />
+        {/* PAÍS primero, porque pone el idioma y la moneda de una vez. Los dos
+            de abajo siguen ahí para el caso raro pero real: quien vive en un
+            sitio y prefiere la app en otro idioma, o cobra en otra moneda. */}
+        <Row
+          Icon={MapPin}
+          label={`${t("settings.country")}${paisActual ? ` · ${t(paisActual.label)}` : ""}`}
+          onPress={onCountry}
+          right={<ChevronRight size={16} color="#cbd5e1" />}
+        />
         <Row
           Icon={Globe}
           label={`${t("settings.language")} · ${languageLabelFor(userLanguage)}`}
@@ -367,12 +381,10 @@ export default function Settings({
           onPress={onCurrency}
           right={<ChevronRight size={16} color="#cbd5e1" />}
         />
-        <Row
-          Icon={Palette}
-          label={t("settings.theme")}
-          onPress={onTheme}
-          right={<ChevronRight size={16} color="#cbd5e1" />}
-        />
+        {/* La fila de Apariencia se quitó: el botón de sol/luna de arriba a la
+            derecha hace lo mismo y está a la vista en cuatro pantallas.
+            Ahora recorre los tres modos —claro, oscuro y automático—, así que
+            no se pierde ninguna opción al quitar esta pantalla. */}
         <Row Icon={Bell} label={t("settings.notifications")} right={<Toggle on={notif} onChange={setNotif} />} />
       </View>
 
