@@ -1,0 +1,34 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+      Desde Android 11 una app no puede ver qué otras apps hay instaladas a
+      menos que lo declare aquí. Sin esto, preguntar "¿está Gmail?" siempre
+      responde que no, y mandarle el archivo directamente falla en silencio:
+      no hay error, simplemente no pasa nada.
+    -->
+    <queries>
+        <package android:name="com.google.android.gm" />
+        <intent>
+            <action android:name="android.intent.action.SEND" />
+            <data android:mimeType="*/*" />
+        </intent>
+    </queries>
+
+    <application>
+        <!--
+          El PDF vive en la carpeta privada de Finzo, donde ninguna otra app
+          puede entrar. Este proveedor es lo que permite prestarle el archivo
+          a Gmail para ese envío concreto y solo para ese: no se le da acceso
+          a la carpeta, se le da una llave de un solo uso para un archivo.
+        -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.ShareToAppProvider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/share_to_app_paths" />
+        </provider>
+    </application>
+</manifest>

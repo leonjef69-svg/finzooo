@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Qué carpetas puede prestar el proveedor. Solo estas dos, y ambas son
+  privadas de Finzo: la de temporales, donde se arma el PDF antes de
+  mandarlo, y la de archivos. Nada de la galería ni del almacenamiento
+  compartido.
+-->
+<paths>
+    <cache-path name="temporales" path="." />
+    <files-path name="archivos" path="." />
+</paths>

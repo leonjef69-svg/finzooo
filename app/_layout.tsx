@@ -15,6 +15,9 @@ import * as incomingFile from "@/modules/incoming-file";
 import * as Notifications from "expo-notifications";
 import {
   alreadyHandledTap,
+  armRetry,
+  buildFileName,
+  exportedOn,
   isAutoRunDue,
   loadSchedule,
   markTapHandled,
@@ -130,25 +133,41 @@ function IncomingFileEffect() {
   return null;
 }
 
+// El mismo nombre de archivo que enseña la pantalla de recordatorios. Se
+// calcula cada vez y no se guarda ya hecho a propósito: guardado se quedaría
+// con la fecha del día en que se configuró.
+//
+// Vive fuera del componente para no crearse de nuevo en cada dibujado, que es
+// lo que obligaría a meterla en las dependencias del efecto y a volver a
+// registrar el escuchador de avisos sin motivo.
+function typeLabelFor(type: "all" | "expense" | "income", t: (k: string) => string) {
+  if (type === "expense") return t("exportPdf.expenses");
+  if (type === "income") return t("exportPdf.income");
+  return t("exportPdf.all");
+}
+
 /**
- * Lo que pasa cuando llega la hora de una exportación programada.
+ * Lo que pasa cuando llega la hora de un recordatorio de exportación.
  *
- * Dos caminos, y son distintos a propósito:
+ * Tres caminos, y son distintos a propósito:
  *
  *  1. Se toca el aviso → se abre la pantalla de exportar con el mes, el
- *     formato, qué exportar y el destino ya puestos. Queda darle al botón.
+ *     formato, qué exportar, el destino y el nombre del archivo ya puestos.
+ *     Queda darle al botón. Y se arma la repesca, por si se distrae.
  *  2. El destino es Drive → no hace falta tocar nada. Al abrir la app se
  *     sube sola, sin pantalla: la exportación corre en silencio y se cierra
  *     al terminar. Drive es el único destino que puede hacerlo, porque es el
  *     único que no necesita que alguien elija a quién mandar el archivo.
+ *  3. Se exporta de verdad → el exportador retira la repesca.
  *
  * Lo de subir "al abrir la app" y no a la hora exacta no es un atajo: armar
  * un PDF necesita un WebView, y un WebView necesita la app en pantalla. Ver
  * la explicación larga en utils/scheduledExport.ts.
  */
 function ScheduledExportEffect() {
-  const { ready, hasOnboarded, isPremium } = useAppData();
+  const { ready, hasOnboarded, isPremium, t } = useAppData();
   const navigationRef = useNavigationContainerRef();
+
   // Una sola comprobación por arranque. Sin esto, cada vuelta al frente
   // dispararía otra subida mientras la anterior sigue en marcha.
   const checked = useRef(false);
@@ -158,8 +177,20 @@ function ScheduledExportEffect() {
 
     function abrirExportar(response: Notifications.NotificationResponse) {
       if (response.notification.request.content.data?.screen !== "export") return;
-      loadSchedule().then((s) => {
+      loadSchedule().then(async (s) => {
         if (!navigationRef.isReady()) return;
+
+        // Al tocar el aviso sabemos que el recordatorio acaba de sonar. Es el
+        // momento exacto de armar la repesca: quien llega hasta aquí y se
+        // distrae antes de darle al botón es justo a quien hay que volver a
+        // avisar. Si exporta, el propio exportador la retira.
+        if (s.retryMinutes > 0 && !(await exportedOn(new Date()))) {
+          armRetry(s.retryMinutes, {
+            title: t("schedExport.retryTitle"),
+            body: t("schedExport.retryBody"),
+          }).catch(() => {});
+        }
+
         router.push({
           pathname: "/export-pdf",
           params: {
@@ -167,6 +198,13 @@ function ScheduledExportEffect() {
             format: s.format,
             type: s.type,
             dest: s.destination,
+            name: buildFileName({
+              mode: s.fileNameMode,
+              custom: s.fileName,
+              typeLabel: typeLabelFor(s.type, t),
+              dateKey: toDateKey(new Date()),
+              extension: s.format,
+            }),
           },
         });
       });
@@ -219,7 +257,7 @@ function ScheduledExportEffect() {
     }
 
     return () => sub.remove();
-  }, [ready, hasOnboarded, isPremium, navigationRef]);
+  }, [ready, hasOnboarded, isPremium, navigationRef, t]);
 
   return null;
 }

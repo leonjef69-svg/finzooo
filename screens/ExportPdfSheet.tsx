@@ -13,7 +13,8 @@ import { methodLabel } from "@/constants/i18n";
 import { LOGO_DATA_URI } from "@/constants/logo";
 import { monthKey, fmtDate } from "@/utils/format";
 import { buildPdfHtml, type PdfTx } from "@/utils/exportPdfHtml";
-import { toDateKey } from "@/utils/scheduledExport";
+import { buildFileName, cancelRetry, markExported, toDateKey } from "@/utils/scheduledExport";
+import { isGmailInstalled, shareToGmail } from "@/modules/share-to-app";
 import { useAppData } from "@/contexts/AppDataContext";
 
 // Cuántos movimientos se dibujan en la vista previa. El PDF los lleva todos;
@@ -39,6 +40,7 @@ export default function ExportPdfSheet({
   autoExport,
   destination: initialDestination = "share",
   silent,
+  fileName: forcedName,
 }: {
   onClose: () => void;
   // Mes "AAAA-MM" con el que abrir ya elegido. Lo usa la orden por voz
@@ -54,10 +56,13 @@ export default function ExportPdfSheet({
   // exportar para cerrarla medio segundo después sería un parpadeo raro
   // encima de Inicio, y encima daría tiempo a tocarla.
   silent?: boolean;
+  // Nombre completo con extensión ("Gastos_Julio.pdf"), tal como lo dejó la
+  // pantalla de recordatorios. Si no viene, se arma aquí igual que allí.
+  fileName?: string;
   // Dónde va el archivo: "share" abre el menú de compartir de Android,
   // "mail" abre la aplicación de correo con el archivo ya adjunto, y
   // "drive" lo sube a Google Drive sin ninguna ventana de por medio.
-  destination?: "share" | "mail" | "drive";
+  destination?: "share" | "mail" | "gmail" | "drive";
 }) {
   const { t, transactions, month, monthNames, fmt, userName, showToast } = useAppData();
   const insets = useSafeAreaInsets();
@@ -67,12 +72,18 @@ export default function ExportPdfSheet({
   // Dónde va el archivo. Era una propiedad fija que solo podía cambiar la
   // orden por voz: la subida a Drive estaba entera y funcionando, pero sin
   // ningún botón que la alcanzara. Ahora es un estado con su selector.
-  const [destination, setDestination] = useState<"share" | "mail" | "drive">(initialDestination);
+  const [destination, setDestination] = useState<"share" | "mail" | "gmail" | "drive">(
+    initialDestination
+  );
   const [exporting, setExporting] = useState(false);
   // Los gráficos vienen puestos porque son lo que hace que el reporte se
   // entienda de un vistazo. Se pueden quitar para quien quiera solo la lista
   // —por ejemplo si el PDF se lo va a pasar al contador—.
   const [charts, setCharts] = useState(true);
+  // Se pregunta una vez al abrir. Es falso también cuando el APK es anterior
+  // a esta función, porque la parte que habla con Gmail es código nativo y no
+  // llega en las actualizaciones por internet.
+  const [gmailDisponible] = useState(() => isGmailInstalled());
 
   // Antes se exportaba siempre el mes que se estuviera viendo en Inicio, sin
   // posibilidad de elegir otro: para bajarse un mes pasado había que salir,
@@ -128,6 +139,30 @@ export default function ExportPdfSheet({
     (sum, tx) => sum + (tx.type === "expense" ? -tx.amount : tx.amount),
     0
   );
+
+  /**
+   * Cómo se llamará el archivo.
+   *
+   * Si la pantalla de recordatorios ya decidió un nombre, manda ese. Si no,
+   * se arma igual que allí: "Gastos_2026-07-31.pdf". Antes salía
+   * "finzo-expense-2026-07.pdf", con la palabra en inglés del código dentro
+   * del nombre que ve la persona que recibe el archivo.
+   */
+  function nombreDeArchivo(extension: "pdf" | "csv"): string {
+    if (forcedName) return forcedName;
+    return buildFileName({
+      mode: "auto",
+      custom: "",
+      typeLabel:
+        exportType === "expense"
+          ? t("exportPdf.expenses")
+          : exportType === "income"
+            ? t("exportPdf.income")
+            : t("exportPdf.all"),
+      dateKey: selectedMk,
+      extension,
+    });
+  }
 
   function reportTitleFor(exportType: ExportType) {
     return exportType === "expense"
@@ -197,7 +232,7 @@ export default function ExportPdfSheet({
     // Se cambia a un nombre que se lee: "finzo-todos-2026-06.pdf". El
     // nombre YA se calculaba aquí abajo, pero solo lo usaba la subida a
     // Drive; el archivo que se compartía seguía siendo el del código.
-    const fileName = `finzo-${exportType}-${selectedMk}.pdf`;
+    const fileName = nombreDeArchivo("pdf");
     let shareUri = uri;
     try {
       const nice = new File(Paths.cache, fileName);
@@ -241,13 +276,26 @@ export default function ExportPdfSheet({
       "\n"
     );
 
-    const fileName = `finzo-${exportType}-${selectedMk}.csv`;
+    const fileName = nombreDeArchivo("csv");
     const file = new File(Paths.cache, fileName);
     if (file.exists) file.delete();
     file.create();
     file.write(csv);
 
     return { uri: file.uri, mimeType: "text/csv", fileName };
+  }
+
+  /**
+   * Se llama al terminar una exportación de verdad, venga de donde venga.
+   *
+   * Apunta el día y retira el aviso de repesca. Lo segundo importa: si se
+   * exportó a las 9:05, el "todavía no exportaste" de las 9:30 tiene que no
+   * llegar. Un recordatorio que insiste después de hecha la tarea se
+   * silencia en dos días, y con él se pierde el que sí servía.
+   */
+  function exportacionHecha() {
+    markExported(new Date());
+    cancelRetry().catch(() => {});
   }
 
   async function handleExport() {
@@ -265,6 +313,30 @@ export default function ExportPdfSheet({
       if (destination === "drive") {
         const uploaded = await uploadToDrive(file.uri, file.fileName, file.mimeType);
         showToast(t("exportPdf.savedToDrive", { name: uploaded.name || file.fileName }));
+        exportacionHecha();
+        return;
+      }
+
+      if (destination === "gmail") {
+        // Va directo a Gmail, sin pasar por el menú de compartir. "Correo"
+        // abre la app de correo que esté puesta por defecto, que en un Honor
+        // suele ser la del fabricante: quien tiene las dos instaladas no
+        // tenía forma de llegar a Gmail.
+        const ok = shareToGmail(
+          file.uri,
+          file.mimeType,
+          t("exportPdf.mailSubject", { month: selectedMonthLabel }),
+          t("exportPdf.mailBody", { month: selectedMonthLabel })
+        );
+        if (!ok) {
+          // Si no se pudo (sin Gmail, o sin la parte nativa porque el APK es
+          // anterior), se cae al menú de compartir en vez de no hacer nada.
+          showToast(t("schedExport.gmailMissing"));
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(file.uri, { mimeType: file.mimeType });
+          }
+        }
+        exportacionHecha();
         return;
       }
 
@@ -283,6 +355,7 @@ export default function ExportPdfSheet({
           body: t("exportPdf.mailBody", { month: selectedMonthLabel }),
           attachments: [file.uri],
         });
+        exportacionHecha();
         return;
       }
 
@@ -291,6 +364,7 @@ export default function ExportPdfSheet({
           mimeType: file.mimeType,
           UTI: file.mimeType === "application/pdf" ? "com.adobe.pdf" : "public.comma-separated-values-text",
         });
+        exportacionHecha();
       }
     } catch (e) {
       if (e instanceof DriveNotSignedIn) showToast(t("exportPdf.driveNoAccount"));
@@ -469,16 +543,21 @@ export default function ExportPdfSheet({
         <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
           {t("exportPdf.destinationLabel")}
         </Text>
-        <View className="flex-row gap-2.5 mb-4">
+        <View className="flex-row flex-wrap gap-2 mb-4">
           {([
             { id: "share", label: t("exportPdf.destShare"), Icon: Share2 },
             { id: "mail", label: t("exportPdf.destMail"), Icon: Mail },
+            // Gmail solo si de verdad está instalado. Un botón "Gmail" en un
+            // celular sin Gmail solo puede decepcionar.
+            ...(gmailDisponible
+              ? ([{ id: "gmail", label: t("schedExport.destGmail"), Icon: Mail }] as const)
+              : []),
             { id: "drive", label: t("exportPdf.destDrive"), Icon: Cloud },
           ] as const).map((opt) => (
             <TouchableOpacity
               key={opt.id}
               onPress={() => setDestination(opt.id)}
-              className={`flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl border-[1.5px] ${
+              className={`flex-row items-center justify-center gap-1.5 px-3.5 py-3 rounded-xl border-[1.5px] ${
                 destination === opt.id
                   ? "bg-emerald-600 border-emerald-600"
                   : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
