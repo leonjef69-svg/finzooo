@@ -5,6 +5,7 @@ import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import { FileUp, CheckCircle2, AlertTriangle, Copy, X, Landmark } from "lucide-react-native";
 import { extractPdfText } from "@/utils/pdfExtract";
+import { extractExcelText, looksLikeExcel } from "@/utils/excelExtract";
 import { useColorScheme } from "nativewind";
 import { setPendingImport } from "@/utils/pendingImport";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -78,7 +79,14 @@ export default function ImportSheet({
     // al pedir la navegación sería confundir "se mandó abrir" con "se abrió",
     // que es exactamente donde se perdía el archivo.
     setPendingImport(null);
-    void loadFile(incoming.uri, incoming.name, "application/pdf");
+    // Sin forzar el tipo. Antes iba "application/pdf" fijo, así que un Excel
+    // o un CSV compartidos a Finzo se leían como si fueran un PDF: el lector
+    // de PDF no encontraba nada y salía "no se pudo leer el texto de este
+    // PDF" sobre un archivo que ni siquiera era un PDF.
+    //
+    // Se deja que decida el nombre del archivo, que es lo que Android nos da
+    // de verdad al compartir.
+    void loadFile(incoming.uri, incoming.name);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incoming]);
 
@@ -89,6 +97,8 @@ export default function ImportSheet({
         "text/comma-separated-values",
         "text/plain",
         "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-excel.sheet.macroEnabled.12",
         "application/pdf",
       ],
       copyToCacheDirectory: true,
@@ -113,6 +123,7 @@ export default function ImportSheet({
     const asset = { uri, name, mimeType };
     const isPdf = asset.name.toLowerCase().endsWith(".pdf") ||
       asset.mimeType === "application/pdf";
+    const isExcel = !isPdf && looksLikeExcel(asset.name, asset.mimeType);
     let file: File | null = null;
     let readAsPdf = false;
     try {
@@ -127,6 +138,23 @@ export default function ImportSheet({
         setLoadingPdf(false);
         if (!text.trim()) {
           showToastAndClose(t("importSheet.pdfError"));
+          return;
+        }
+      } else if (isExcel) {
+        // Un Excel es un archivo BINARIO, no texto. Antes se ofrecía el tipo
+        // "application/vnd.ms-excel" en el selector pero se leía con
+        // file.text(), así que salía un montón de caracteres ilegibles y el
+        // importador decía que no encontraba las columnas — un mensaje que
+        // hacía pensar que el archivo estaba mal cuando el fallo era este.
+        //
+        // Se convierte a texto separado por comas y entra por la misma
+        // puerta que un CSV, con las mismas reglas de banco y duplicados.
+        setLoadingPdf(true);
+        const arrayBuffer = await file.arrayBuffer();
+        text = extractExcelText(new Uint8Array(arrayBuffer)).text;
+        setLoadingPdf(false);
+        if (!text.trim()) {
+          showToastAndClose(t("importSheet.excelError"));
           return;
         }
       } else {
@@ -178,7 +206,7 @@ export default function ImportSheet({
       setCandidates(built);
       setErrorCount(parsed.errorCount);
     } catch {
-      showToastAndClose(readAsPdf ? t("importSheet.pdfError") : t("importSheet.readError"));
+      showToastAndClose(readAsPdf ? t("importSheet.pdfError") : isExcel ? t("importSheet.excelError") : t("importSheet.readError"));
     } finally {
       // Seguridad/privacidad: el archivo del banco se borra del celular
       // apenas terminamos de leerlo. No lo guardamos más de lo necesario.
@@ -312,7 +340,7 @@ export default function ImportSheet({
             <View className="flex-row items-center gap-2 mt-4 px-1">
               <Landmark size={13} color={iconMuted} />
               <Text className="text-[11px] text-slate-400 dark:text-slate-300 flex-1">
-                {t("importSheet.compatBanks")}
+                {t("importSheet.compatBanks2")}
               </Text>
             </View>
           </>

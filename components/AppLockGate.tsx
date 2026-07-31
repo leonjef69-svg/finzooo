@@ -5,6 +5,7 @@ import { Lock } from "lucide-react-native";
 import PinPad from "@/components/PinPad";
 import { useAppData } from "@/contexts/AppDataContext";
 import { isDecoyActive } from "@/utils/decoyMode";
+import { setAppLocked } from "@/utils/lockState";
 import {
   PIN_LENGTH,
   biometricKind,
@@ -169,6 +170,13 @@ export default function AppLockGate() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pin]);
+
+  // Se avisa al resto de la app de si el candado está puesto. Lo usa la
+  // apertura de un estado de cuenta compartido: mientras esto sea cierto no
+  // se navega a ningún sitio, porque abrir Importar por debajo del candado
+  // solo consigue que la app se lo lleve por delante al desbloquear. Ver
+  // utils/lockState.ts.
+  setAppLocked(ready && locked);
 
   // Mientras se cargan los datos guardados no se dibuja nada: si se pintara
   // la app antes de saber si hay bloqueo, se vería el saldo un instante

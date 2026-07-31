@@ -8,7 +8,8 @@ import "react-native-reanimated";
 import "../global.css";
 import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
 import { flushPendingSaves } from "@/utils/storage";
-import { setPendingImport } from "@/utils/pendingImport";
+import { getPendingImport, setPendingImport } from "@/utils/pendingImport";
+import { isAppLocked } from "@/utils/lockState";
 import AppLockGate from "@/components/AppLockGate";
 import CelebrationOverlay from "@/components/CelebrationOverlay";
 import Toast from "@/components/Toast";
@@ -122,8 +123,20 @@ const KEEP_ON_RETURN = [
  * Una bandera y no un pathname porque el problema es justo ese: el pathname
  * va un paso por detrás. Esto se enciende en el mismo instante en que el
  * archivo aparece, sin esperar a nada.
+ *
+ * Y NO es un cronómetro. Lo fue —dos segundos y medio tras pedir la
+ * navegación— y se quedaba corto justo en el caso peor: con el bloqueo
+ * activado, entre que aparece el candado y la persona termina de poner su
+ * PIN pasan más de dos segundos y medio, así que la bandera se bajaba sola
+ * y la regla de Inicio se llevaba la importación igual.
+ *
+ * Ahora se mira si TODAVÍA hay un archivo esperando. Deja de estar puesta
+ * cuando Importar carga el archivo de verdad, que es el único momento en que
+ * se puede dar por hecho.
  */
-let abriendoArchivoEntrante = false;
+function abriendoArchivoEntrante(): boolean {
+  return getPendingImport() !== null;
+}
 
 /**
  * Abre Importar cuando Finzo se ha lanzado con un archivo desde otra app
@@ -161,52 +174,55 @@ function IncomingFileEffect() {
       const file = pending.current;
       if (!file) return true; // No hay nada que hacer, se deja de insistir.
 
-      // Se levanta la bandera EN CUANTO aparece el archivo, no al navegar.
+      // Se apunta EN CUANTO aparece el archivo, no al navegar.
       // consumePendingFile es inmediato, así que para cuando el aviso de
       // "la app volvió al frente" llega a AppLifecycleEffects, esto ya está
       // puesto y no manda a Inicio. Por eso este componente se dibuja antes
       // que aquel: quien escucha primero, avisa primero.
-      abriendoArchivoEntrante = true;
-      // Se apunta ANTES de intentar navegar. Si la navegación no llega a
-      // ocurrir —o ocurre y algo la deshace—, Inicio enseñará el aviso para
-      // abrirlo a mano. Lo limpia Importar cuando carga el archivo de
-      // verdad, no cuando se pide abrirla.
+      //
+      // Y si la navegación no llega a ocurrir —o ocurre y algo la deshace—,
+      // Inicio enseñará el aviso para abrirlo a mano. Lo limpia Importar
+      // cuando CARGA el archivo, no cuando se pide abrirla.
       setPendingImport(file);
+
+      // Con el candado puesto no se navega. El cuadro de la huella lo dibuja
+      // Android encima de la app, y al cerrarse la app cree que volvió del
+      // segundo plano y se manda sola a Inicio: abrir Importar por debajo
+      // solo consigue que se lo lleve por delante. Se espera y se abre justo
+      // después de desbloquear, que es cuando se puede ver.
+      if (isAppLocked()) return false;
 
       if (!hasOnboarded || !navigationRef.isReady()) return false;
       // Se suelta ANTES de navegar: si el push fallara, insistir en bucle
       // sería peor que perder la importación.
       pending.current = null;
       router.push({ pathname: "/import", params: { uri: file.uri, name: file.name } });
-      // La bandera se baja un poco después, no de inmediato: la app tarda un
-      // momento en darse cuenta de que ya está en Importar, y hasta que lo
-      // sepa sigue creyendo que está en Inicio.
-      setTimeout(() => {
-        abriendoArchivoEntrante = false;
-      }, 2500);
       return true;
     }
 
-    // Se reintenta hasta que la navegación esté en pie. Es la misma espera
-    // que hace utils/nav.ts, y por el mismo motivo: "existe" y "puede
-    // recibir órdenes" son dos momentos distintos.
+    // Se reintenta hasta que se pueda de verdad: hasta que la navegación
+    // esté en pie Y el candado esté quitado.
+    //
+    // Antes eran tres segundos y se rendía. Con el bloqueo activado eso no
+    // llegaba ni de lejos: Android trae la app al frente, aparece el
+    // candado, y mientras la persona pone su huella o su PIN el reintento ya
+    // se había dado por vencido. Al desbloquear salía Inicio y del archivo
+    // no quedaba rastro.
+    //
+    // Ahora son dos minutos, que es tiempo de sobra para desbloquear sin
+    // prisa. El tope existe igual: sin él, un archivo que nunca se pueda
+    // abrir dejaría un temporizador dando vueltas para siempre.
     function insistir(intentosRestantes: number) {
       if (cancelled) return;
       if (intentar()) return;
       if (intentosRestantes > 0) {
-        setTimeout(() => insistir(intentosRestantes - 1), 50);
-        return;
+        setTimeout(() => insistir(intentosRestantes - 1), 300);
       }
-      // Se acabaron los intentos con el archivo todavía en la mano. Se baja
-      // la bandera, o la app se quedaría sin volver a Inicio nunca.
-      //
-      // No se hace nada más: el archivo sigue apuntado en pendingImport y el
-      // aviso de Inicio se encarga. Un mensajito que se va a los tres
-      // segundos no sirve para algo sobre lo que hay que actuar.
-      abriendoArchivoEntrante = false;
+      // Si se acaban los intentos no se hace nada más: el archivo sigue
+      // apuntado en pendingImport y el aviso de Inicio se encarga.
     }
 
-    insistir(60); // hasta unos tres segundos
+    insistir(400); // 400 × 300 ms = dos minutos
     const sub = AppState.addEventListener("change", (next) => {
       if (next === "active") insistir(60);
     });
@@ -370,7 +386,7 @@ function AppLifecycleEffects() {
         // —esa lista se compara con la pantalla en la que la app cree estar,
         // que en este instante sigue siendo Inicio porque la de importar
         // todavía no ha llegado—. Ver la explicación en la bandera.
-        if (!abriendoArchivoEntrante && !KEEP_ON_RETURN.includes(pathnameRef.current)) {
+        if (!abriendoArchivoEntrante() && !KEEP_ON_RETURN.includes(pathnameRef.current)) {
           router.dismissTo("/(tabs)");
         }
       }
