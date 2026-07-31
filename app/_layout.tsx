@@ -98,17 +98,45 @@ const KEEP_ON_RETURN = [
 ];
 
 /**
+ * "Estoy abriendo un archivo que llegó de fuera, no me mandes a Inicio".
+ *
+ * Existe porque dos reglas de la app se peleaban y ganaba la equivocada:
+ *
+ *   AppLifecycleEffects dice "al volver al frente, vuelve a Inicio", para no
+ *   dejar a nadie a medio camino en una pantalla de hace horas. Salvo que la
+ *   pantalla esté en KEEP_ON_RETURN.
+ *
+ *   IncomingFileEffect dice "abre Importar con este archivo".
+ *
+ * Compartir un estado de cuenta a Finzo dispara las DOS a la vez: Android
+ * trae la app al frente (regla 1) y le entrega el archivo (regla 2). Y aunque
+ * /import está en KEEP_ON_RETURN, esa lista se consulta contra la pantalla en
+ * la que la app CREE que está, que en ese instante sigue siendo Inicio: la
+ * pantalla de importar acaba de pedirse y todavía no ha llegado. Así que la
+ * regla 1 no la reconoce, manda a Inicio, y la importación se va con ella.
+ *
+ * Desde fuera: tocabas Finzo en el menú de compartir, la app se abría en
+ * Inicio, y ahí se acababa todo.
+ *
+ * Una bandera y no un pathname porque el problema es justo ese: el pathname
+ * va un paso por detrás. Esto se enciende en el mismo instante en que el
+ * archivo aparece, sin esperar a nada.
+ */
+let abriendoArchivoEntrante = false;
+
+/**
  * Abre Importar cuando Finzo se ha lanzado con un archivo desde otra app
  * ("Compartir → Finzo" o "Abrir con → Finzo" sobre un estado de cuenta).
  *
  * Se mira al arrancar y cada vez que la app vuelve al frente: si ya estaba
  * abierta, Android no la reinicia, solo le entrega el archivo nuevo.
  *
- * consumePendingFile() solo entrega el archivo UNA vez, así que no hace
- * falta llevar la cuenta aquí de lo que ya se importó.
+ * consumePendingFile() solo entrega el archivo UNA vez, así que si en ese
+ * momento no se puede abrir Importar hay que guardarlo y reintentar — no
+ * dejarlo caer, que es lo que hacía antes.
  */
 function IncomingFileEffect() {
-  const { ready, hasOnboarded } = useAppData();
+  const { ready, hasOnboarded, showToast, t } = useAppData();
   const navigationRef = useNavigationContainerRef();
   // El archivo recogido que todavía no se ha podido abrir.
   //
@@ -131,11 +159,25 @@ function IncomingFileEffect() {
       if (!pending.current) pending.current = incomingFile.consumePendingFile();
       const file = pending.current;
       if (!file) return true; // No hay nada que hacer, se deja de insistir.
+
+      // Se levanta la bandera EN CUANTO aparece el archivo, no al navegar.
+      // consumePendingFile es inmediato, así que para cuando el aviso de
+      // "la app volvió al frente" llega a AppLifecycleEffects, esto ya está
+      // puesto y no manda a Inicio. Por eso este componente se dibuja antes
+      // que aquel: quien escucha primero, avisa primero.
+      abriendoArchivoEntrante = true;
+
       if (!hasOnboarded || !navigationRef.isReady()) return false;
       // Se suelta ANTES de navegar: si el push fallara, insistir en bucle
       // sería peor que perder la importación.
       pending.current = null;
       router.push({ pathname: "/import", params: { uri: file.uri, name: file.name } });
+      // La bandera se baja un poco después, no de inmediato: la app tarda un
+      // momento en darse cuenta de que ya está en Importar, y hasta que lo
+      // sepa sigue creyendo que está en Inicio.
+      setTimeout(() => {
+        abriendoArchivoEntrante = false;
+      }, 2500);
       return true;
     }
 
@@ -145,8 +187,17 @@ function IncomingFileEffect() {
     function insistir(intentosRestantes: number) {
       if (cancelled) return;
       if (intentar()) return;
-      if (intentosRestantes <= 0) return;
-      setTimeout(() => insistir(intentosRestantes - 1), 50);
+      if (intentosRestantes > 0) {
+        setTimeout(() => insistir(intentosRestantes - 1), 50);
+        return;
+      }
+      // Se acabaron los intentos con el archivo todavía en la mano. Se baja
+      // la bandera —si no, la app se quedaría sin volver a Inicio nunca— y se
+      // avisa. Fallar en silencio es lo que hacía imposible saber qué estaba
+      // pasando: la app se abría, no ocurría nada, y no había nada que
+      // contar.
+      abriendoArchivoEntrante = false;
+      if (pending.current) showToast(t("importSheet.incomingFailed"));
     }
 
     insistir(60); // hasta unos tres segundos
@@ -157,7 +208,7 @@ function IncomingFileEffect() {
       cancelled = true;
       sub.remove();
     };
-  }, [ready, hasOnboarded, navigationRef]);
+  }, [ready, hasOnboarded, navigationRef, showToast, t]);
 
   return null;
 }
@@ -308,7 +359,12 @@ function AppLifecycleEffects() {
     const sub = AppState.addEventListener("change", (nextState) => {
       const cameFromBackground = /inactive|background/.test(prevState.current);
       if (cameFromBackground && nextState === "active" && hasOnboarded && navigationRef.isReady()) {
-        if (!KEEP_ON_RETURN.includes(pathnameRef.current)) {
+        // Si viene un archivo de fuera, la app no vuelve a Inicio: está a
+        // punto de abrir Importar. Consultar KEEP_ON_RETURN aquí no bastaría
+        // —esa lista se compara con la pantalla en la que la app cree estar,
+        // que en este instante sigue siendo Inicio porque la de importar
+        // todavía no ha llegado—. Ver la explicación en la bandera.
+        if (!abriendoArchivoEntrante && !KEEP_ON_RETURN.includes(pathnameRef.current)) {
           router.dismissTo("/(tabs)");
         }
       }
@@ -427,8 +483,14 @@ export default function RootLayout() {
             />
           </Stack>
           <GlobalOverlays />
-          <AppLifecycleEffects />
+          {/* IncomingFileEffect va ANTES que AppLifecycleEffects, y el orden
+              importa de verdad: los dos escuchan el aviso de "la app volvió
+              al frente", y se les llama en el orden en que se registraron.
+              Así, cuando llega un archivo compartido, este levanta su bandera
+              antes de que el otro decida mandar a Inicio. Al revés, la
+              importación se perdía. */}
           <IncomingFileEffect />
+          <AppLifecycleEffects />
           <ScheduledExportEffect />
           {/* Va aquí, el último de todos, para quedar POR ENCIMA de todo lo
               demás — incluidos los paneles modales. Si fuera una pantalla de
