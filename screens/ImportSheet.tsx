@@ -9,6 +9,8 @@ import { useColorScheme } from "nativewind";
 import { useAppData } from "@/contexts/AppDataContext";
 import { nextId } from "@/utils/id";
 import { accountLabelFor, guessAccount } from "@/constants/accounts";
+import { catInfo } from "@/constants/categories";
+import { fmtDate } from "@/utils/format";
 import { matchMethod, parseStatement, type RawRow } from "@/utils/importEngine";
 import { suggestCategory } from "@/utils/classifier";
 import { findBestMatch, mergeTransaction, type DuplicateMatch } from "@/utils/duplicates";
@@ -22,6 +24,11 @@ type Candidate = {
   raw: RawRow; // los datos crudos del banco (para aprender/fusionar)
   match: DuplicateMatch | null; // el parecido encontrado (o null si es nuevo)
 };
+
+// Cuántos movimientos se dibujan en la vista previa. Un extracto largo con
+// cientos de filas dentro de un ScrollView se siente pesado al desplazar;
+// con cien ya se ve de sobra si el archivo se leyó bien.
+const PREVIEW_LIMIT = 100;
 
 // Decisión que toma la persona (o el sistema) sobre cada candidato.
 export type Resolution = "new" | "merge" | "keepBoth" | "skip";
@@ -37,7 +44,8 @@ export default function ImportSheet({
    */
   incoming?: { uri: string; name: string } | null;
 }) {
-  const { t, showToast, transactions, commitImport, learnMerchantCategory, merchantLearned } = useAppData();
+  const { t, fmt, monthNames, showToast, transactions, commitImport, learnMerchantCategory, merchantLearned } =
+    useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
 
@@ -342,6 +350,56 @@ export default function ImportSheet({
                     {t("importSheet.summaryErrors", { count: errorCount })}
                   </Text>
                 </View>
+              )}
+            </View>
+
+            {/* VISTA PREVIA
+                Antes solo se decía cuántos movimientos había: "34
+                encontrados, 30 nuevos". Nadie importa 30 movimientos a
+                ciegas en su cuenta, y si el banco venía mal leído no había
+                forma de notarlo hasta después de guardarlo todo.
+                Ahora se ven, con su fecha, su monto y marcados los que ya
+                tienes. */}
+            <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
+              {t("importSheet.previewTitle")}
+            </Text>
+            <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 overflow-hidden mb-4">
+              {candidates.slice(0, PREVIEW_LIMIT).map((c, i) => (
+                <View
+                  key={c.tx.id}
+                  className={`flex-row items-center gap-2.5 px-3 py-2.5 ${
+                    i > 0 ? "border-t border-slate-100 dark:border-slate-800" : ""
+                  }`}
+                >
+                  <Text className="text-[11px] text-slate-400 w-14">{fmtDate(c.tx.date, monthNames)}</Text>
+                  <View className="flex-1 min-w-0">
+                    <Text
+                      className="text-xs font-bold"
+                      style={{ color: primaryText }}
+                      numberOfLines={1}
+                    >
+                      {c.tx.description || t(catInfo(c.tx.category).label)}
+                    </Text>
+                    {c.match && (
+                      <Text className="text-[10px] text-amber-600 dark:text-amber-400 font-bold">
+                        {t("importSheet.previewDupe")}
+                      </Text>
+                    )}
+                  </View>
+                  <Text
+                    className={`text-xs font-extrabold ${
+                      c.tx.type === "expense" ? "text-rose-500" : "text-emerald-600"
+                    }`}
+                  >
+                    {c.tx.type === "expense" ? "-" : "+"}
+                    {fmt(c.tx.amount)}
+                  </Text>
+                </View>
+              ))}
+              {candidates.length > PREVIEW_LIMIT && (
+                <Text className="text-[11px] text-slate-400 text-center py-2.5 border-t border-slate-100 dark:border-slate-800">
+                  {t("importSheet.previewMore", { count: candidates.length - PREVIEW_LIMIT })}
+                </Text>
               )}
             </View>
 

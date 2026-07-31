@@ -5,7 +5,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { File, Paths } from "expo-file-system";
-import { Cloud, FileDown, Share2, Sheet, X } from "lucide-react-native";
+import { Cloud, FileDown, Mail, Share2, Sheet, X } from "lucide-react-native";
+import * as MailComposer from "expo-mail-composer";
 import { useColorScheme } from "nativewind";
 import { catInfo } from "@/constants/categories";
 import { methodLabel } from "@/constants/i18n";
@@ -37,9 +38,10 @@ export default function ExportPdfSheet({
   initialFormat?: ExportFormat;
   // Exportar solo, sin esperar a que se toque el botón (orden por voz).
   autoExport?: boolean;
-  // "share" abre el menú de compartir; "drive" sube el archivo a Google
-  // Drive sin ninguna ventana de por medio.
-  destination?: "share" | "drive";
+  // Dónde va el archivo: "share" abre el menú de compartir de Android,
+  // "mail" abre la aplicación de correo con el archivo ya adjunto, y
+  // "drive" lo sube a Google Drive sin ninguna ventana de por medio.
+  destination?: "share" | "mail" | "drive";
 }) {
   const { t, transactions, month, monthNames, fmt, userName, showToast } = useAppData();
   const insets = useSafeAreaInsets();
@@ -49,7 +51,7 @@ export default function ExportPdfSheet({
   // Dónde va el archivo. Era una propiedad fija que solo podía cambiar la
   // orden por voz: la subida a Drive estaba entera y funcionando, pero sin
   // ningún botón que la alcanzara. Ahora es un estado con su selector.
-  const [destination, setDestination] = useState<"share" | "drive">(initialDestination);
+  const [destination, setDestination] = useState<"share" | "mail" | "drive">(initialDestination);
   const [exporting, setExporting] = useState(false);
 
   // Antes se exportaba siempre el mes que se estuviera viendo en Inicio, sin
@@ -240,6 +242,24 @@ export default function ExportPdfSheet({
         return;
       }
 
+      if (destination === "mail") {
+        // El correo va aparte del menú de compartir a propósito. Ese menú
+        // lo arma Android y qué apps salen ahí cambia de un celular a otro:
+        // en el suyo aparecían WhatsApp y poco más. Esto abre directamente
+        // la aplicación de correo, con el archivo ya adjunto y el asunto
+        // puesto.
+        if (!(await MailComposer.isAvailableAsync())) {
+          showToast(t("exportPdf.mailUnavailable"));
+          return;
+        }
+        await MailComposer.composeAsync({
+          subject: t("exportPdf.mailSubject", { month: selectedMonthLabel }),
+          body: t("exportPdf.mailBody", { month: selectedMonthLabel }),
+          attachments: [file.uri],
+        });
+        return;
+      }
+
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(file.uri, {
           mimeType: file.mimeType,
@@ -404,6 +424,7 @@ export default function ExportPdfSheet({
         <View className="flex-row gap-2.5 mb-4">
           {([
             { id: "share", label: t("exportPdf.destShare"), Icon: Share2 },
+            { id: "mail", label: t("exportPdf.destMail"), Icon: Mail },
             { id: "drive", label: t("exportPdf.destDrive"), Icon: Cloud },
           ] as const).map((opt) => (
             <TouchableOpacity
