@@ -14,8 +14,10 @@ import Toast from "@/components/Toast";
 import * as incomingFile from "@/modules/incoming-file";
 import * as Notifications from "expo-notifications";
 import {
+  alreadyHandledTap,
   isAutoRunDue,
   loadSchedule,
+  markTapHandled,
   monthForSchedule,
   saveSchedule,
   toDateKey,
@@ -154,8 +156,7 @@ function ScheduledExportEffect() {
   useEffect(() => {
     if (!ready || !hasOnboarded || !isPremium) return;
 
-    // Al tocar el aviso.
-    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+    function abrirExportar(response: Notifications.NotificationResponse) {
       if (response.notification.request.content.data?.screen !== "export") return;
       loadSchedule().then((s) => {
         if (!navigationRef.isReady()) return;
@@ -169,6 +170,26 @@ function ScheduledExportEffect() {
           },
         });
       });
+    }
+
+    // Al tocar el aviso con la app ya abierta o en segundo plano.
+    const sub = Notifications.addNotificationResponseReceivedListener(abrirExportar);
+
+    // Y al tocarlo con la app CERRADA del todo, que es el caso normal a las
+    // 9 de la mañana. Ahí el toque abre la app desde cero, y para cuando el
+    // escuchador de arriba queda registrado el aviso ya se entregó: sin esto,
+    // tocar el recordatorio abría Finzo en Inicio y no pasaba nada más. Justo
+    // lo que la función entera existe para evitar.
+    Notifications.getLastNotificationResponseAsync().then(async (last) => {
+      if (!last) return;
+      // Ese método no olvida nunca: devuelve el último aviso tocado aunque
+      // hayan pasado días y aunque ahora se esté abriendo la app desde el
+      // icono. Se comprueba que no se haya atendido ya, o la pantalla de
+      // exportar saltaría sola en cada arranque a partir del primer toque.
+      const cuando = last.notification.date;
+      if (await alreadyHandledTap(cuando)) return;
+      markTapHandled(cuando);
+      abrirExportar(last);
     });
 
     // La subida sola a Drive.

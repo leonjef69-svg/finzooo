@@ -78,13 +78,24 @@ export default function PinPad({
         ))}
       </Animated.View>
 
-      <View className="w-full max-w-[280px]">
+      {/* Las teclas se reparten el ancho con una separación FIJA, en vez de
+          medir 76 fijos y repartirse lo que sobre.
+
+          Antes eran de ancho fijo con justify-between: si el contenedor daba
+          justo para las tres (3 × 76 = 228), no quedaba nada que repartir y
+          las teclas salían pegadas unas a otras, casi tocándose. Y como el
+          hueco vertical sí era fijo, el teclado se veía torcido: separado
+          por arriba y apelotonado por los lados.
+
+          Con flex-1 y gap-3 la separación es la misma —12— en las dos
+          direcciones y no depende del ancho de la pantalla. */}
+      <View className="w-full max-w-[300px] self-center">
         {[
           ["1", "2", "3"],
           ["4", "5", "6"],
           ["7", "8", "9"],
         ].map((row) => (
-          <View key={row[0]} className="flex-row justify-between mb-3">
+          <View key={row[0]} className="flex-row gap-3 mb-3">
             {row.map((digit) => (
               <Key key={digit} onPress={() => press(digit)}>
                 <Text className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{digit}</Text>
@@ -93,7 +104,7 @@ export default function PinPad({
           </View>
         ))}
 
-        <View className="flex-row justify-between">
+        <View className="flex-row gap-3">
           {showBiometric ? (
             <Key onPress={onBiometric} plain>
               {biometric === "face" ? (
@@ -104,7 +115,7 @@ export default function PinPad({
             </Key>
           ) : (
             // Hueco vacío para que el "0" siga en el centro.
-            <View style={{ width: 76, height: 64 }} />
+            <View className="flex-1" style={{ height: 64 }} />
           )}
 
           <Key onPress={() => press("0")}>
@@ -133,9 +144,11 @@ function Key({
     <TouchableOpacity
       onPress={onPress}
       activeOpacity={0.6}
-      // Teclas grandes: 76×64 es cómodo con el pulgar y con una mano.
-      style={{ width: 76, height: 64 }}
-      className={`items-center justify-center rounded-2xl ${
+      // Alto fijo y ancho repartido. Con el contenedor más estrecho que se
+      // da (unos 228), cada tecla queda en 68 de ancho: por encima de los 48
+      // que Android pide como mínimo para poder tocar algo sin fallar.
+      style={{ height: 64 }}
+      className={`flex-1 items-center justify-center rounded-2xl ${
         plain ? "" : "bg-slate-100 dark:bg-slate-800"
       }`}
     >

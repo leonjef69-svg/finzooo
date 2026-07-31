@@ -190,6 +190,29 @@ export function isAutoRunDue(schedule: ScheduledExport, now: Date): boolean {
   return now.getDate() === Math.min(schedule.day, MAX_MONTH_DAY);
 }
 
+// Cuándo se entregó el último aviso que ya se atendió.
+//
+// Hace falta porque getLastNotificationResponseAsync() no olvida: devuelve el
+// último aviso tocado SIEMPRE, también tres días después y aunque la app se
+// abra normalmente desde el icono. Sin esto, tocar el recordatorio del lunes
+// haría que la pantalla de exportar saltara sola cada vez que se abre Finzo
+// el resto de la semana.
+//
+// Se guarda la FECHA DE ENTREGA y no el identificador del aviso: un aviso que
+// se repite conserva el mismo identificador en todas sus entregas, así que
+// con el identificador no habría forma de distinguir el del lunes del
+// del martes. La fecha de entrega sí cambia cada vez.
+const KEY_LAST_TAP = "finzo:scheduledExport.lastTap";
+
+export async function alreadyHandledTap(deliveredAt: number): Promise<boolean> {
+  const last = await loadJSON<number>(KEY_LAST_TAP, 0);
+  return deliveredAt <= last;
+}
+
+export function markTapHandled(deliveredAt: number): void {
+  saveJSON(KEY_LAST_TAP, deliveredAt);
+}
+
 export function toDateKey(d: Date): string {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");

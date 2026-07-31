@@ -13,6 +13,7 @@ import { methodLabel } from "@/constants/i18n";
 import { LOGO_DATA_URI } from "@/constants/logo";
 import { monthKey, fmtDate } from "@/utils/format";
 import { buildPdfHtml, type PdfTx } from "@/utils/exportPdfHtml";
+import { toDateKey } from "@/utils/scheduledExport";
 import { useAppData } from "@/contexts/AppDataContext";
 
 // Cuántos movimientos se dibujan en la vista previa. El PDF los lleva todos;
@@ -165,7 +166,10 @@ export default function ExportPdfSheet({
       daysInMonth,
       fmt,
       charts,
-      generatedAt: fmtDate(new Date().toISOString().slice(0, 10), monthNames),
+      // toDateKey y no toISOString(): toISOString da la fecha en horario de
+      // Greenwich, y Perú va cinco horas por detrás. Un PDF exportado a las
+      // 8 de la noche del 30 habría salido fechado el 31.
+      generatedAt: fmtDate(toDateKey(new Date()), monthNames),
       texts: {
         colDate: t("exportPdf.colDate"),
         colCategory: t("exportPdf.colCategory"),
