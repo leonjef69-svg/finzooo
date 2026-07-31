@@ -31,6 +31,7 @@ import {
   health,
   previousMonthKey,
   totalsForMonth,
+  visibleRange,
 } from "@/utils/finances";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
@@ -226,6 +227,12 @@ export default function Reports({
     const antes = totalsForMonth(transactions, anterior);
     const dias = daysInMonthOf(mk);
     const [ay, am] = anterior.split("-").map(Number);
+    // Hasta dónde llega el mes de verdad: hoy si es el mes en curso, y el
+    // último día si es un mes pasado. Dibujar hasta el 31 de un mes que va
+    // por el día 5 pinta 26 días planos que todavía no han ocurrido.
+    const hoy = new Date();
+    const esMesActual = month.y === hoy.getFullYear() && month.m === hoy.getMonth();
+    const ultimoDia = esMesActual ? hoy.getDate() : dias;
 
     return {
       disponible: availableBalance(cifras),
@@ -234,8 +241,19 @@ export default function Reports({
       salud: health(cifras),
       cambioIngresos: changeVsPrevious(income, antes.income),
       cambioGastos: changeVsPrevious(spent, antes.spent),
-      lineaIngresos: dailyTotals(transactions, mk, "income", dias),
-      lineaGastos: dailyTotals(transactions, mk, "expense", dias),
+      // Se recorta lo que no aporta: los días antes del primer movimiento y
+      // los que aún no han llegado. Así la línea usa el ancho entero en vez
+      // de gastar el 95% en días vacíos. Ver visibleRange.
+      lineaIngresos: (() => {
+        const todo = dailyTotals(transactions, mk, "income", dias);
+        const r = visibleRange(todo, ultimoDia);
+        return { valores: todo.slice(r.from, r.to + 1), desde: r.from };
+      })(),
+      lineaGastos: (() => {
+        const todo = dailyTotals(transactions, mk, "expense", dias);
+        const r = visibleRange(todo, ultimoDia);
+        return { valores: todo.slice(r.from, r.to + 1), desde: r.from };
+      })(),
       mesAnterior: monthNames[am - 1],
       // Si el mes anterior no tiene NADA, ni siquiera se nombra: decir
       // "vs. junio" cuando junio está vacío invita a leer un cero como si
@@ -243,7 +261,7 @@ export default function Reports({
       hayAnterior: antes.income > 0 || antes.spent > 0,
       anteriorAnio: ay,
     };
-  }, [transactions, mk, budget, spent, income, prevBalance, monthNames]);
+  }, [transactions, mk, budget, spent, income, prevBalance, monthNames, month.y, month.m]);
 
   const SALUD_TEXTO: Record<string, string> = {
     good: t("reports.healthGood"),
@@ -426,7 +444,8 @@ export default function Reports({
                 </View>
                 <View className="mt-2">
                   <Sparkline
-                    values={c.linea}
+                    values={c.linea.valores}
+                    dayOffset={c.linea.desde}
                     color={c.color}
                     width={sparkWidth}
                     monthNames={monthNames}

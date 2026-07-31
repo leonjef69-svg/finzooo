@@ -138,6 +138,43 @@ export function previousMonthKey(monthKey: string): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
+/**
+ * El tramo del mes que vale la pena dibujar.
+ *
+ * POR QUÉ ESTO EXISTE
+ *
+ * La línea de tendencia cubría los 31 días del mes SIEMPRE. Con los
+ * movimientos en los últimos días —que es lo normal a fin de mes, o al
+ * empezar a usar la app— salía una raya pegada al suelo durante 29 días y un
+ * salto al final. Correcta y muerta: el 95% del ancho para días en los que no
+ * pasó nada, y el trozo con información aplastado contra el borde.
+ *
+ * Es el mismo problema que ya se resolvió en el gráfico de barras diarias
+ * dibujando solo los días con gasto. Aquí no se pueden saltar días sueltos
+ * —una línea acumulada necesita continuidad— pero sí recortar por los dos
+ * extremos:
+ *
+ *   Por delante: hasta el primer día con movimiento. Lo de antes eran ceros,
+ *   y quitarlos no cambia el acumulado ni una unidad.
+ *
+ *   Por detrás: hasta hoy, en el mes en curso. Los días que aún no han
+ *   llegado dibujaban una raya plana que parecía "aquí dejaste de gastar",
+ *   cuando en realidad todavía no ha pasado.
+ *
+ * Lo que queda usa el ancho entero y todo lo que se ve ocurrió de verdad.
+ */
+export function visibleRange(
+  values: number[],
+  lastDay: number
+): { from: number; to: number } {
+  const fin = Math.max(0, Math.min(values.length - 1, lastDay - 1));
+  const primero = values.findIndex((v) => v > 0);
+  // Sin ningún movimiento no hay nada que recortar: se enseña plano desde el
+  // día 1 hasta hoy, que es la verdad.
+  if (primero < 0 || primero > fin) return { from: 0, to: fin };
+  return { from: primero, to: fin };
+}
+
 /** Días que tiene el mes. El día 0 del siguiente es el último de este. */
 export function daysInMonthOf(monthKey: string): number {
   const [y, m] = monthKey.split("-").map(Number);

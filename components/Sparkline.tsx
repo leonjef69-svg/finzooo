@@ -106,6 +106,7 @@ export default function Sparkline({
   monthNames,
   monthIndex,
   fmt,
+  dayOffset = 0,
 }: {
   /** Lo movido cada día del mes. Una posición por día. */
   values: number[];
@@ -115,6 +116,9 @@ export default function Sparkline({
   monthNames?: string[];
   monthIndex?: number;
   fmt?: (n: number) => string;
+  /** Que dia del mes es la primera posicion. La linea puede empezar en el
+   *  dia 12 si antes no hubo nada, y entonces al tocar hay que decir 12. */
+  dayOffset?: number;
 }) {
   const [elegido, setElegido] = useState<number | null>(null);
   const avance = useSharedValue(0);
@@ -151,8 +155,8 @@ export default function Sparkline({
   const etiqueta =
     dia !== null && monthNames && monthIndex !== undefined && fmt
       ? values[dia] > 0
-        ? `${dia + 1} ${monthNames[monthIndex].slice(0, 3).toLowerCase()} · ${fmt(values[dia])}`
-        : `${dia + 1} ${monthNames[monthIndex].slice(0, 3).toLowerCase()} · —`
+        ? `${dia + 1 + dayOffset} ${monthNames[monthIndex].slice(0, 3).toLowerCase()} · ${fmt(values[dia])}`
+        : `${dia + 1 + dayOffset} ${monthNames[monthIndex].slice(0, 3).toLowerCase()} · —`
       : null;
 
   function tocar(x: number) {
