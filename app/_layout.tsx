@@ -8,6 +8,7 @@ import "react-native-reanimated";
 import "../global.css";
 import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
 import { flushPendingSaves } from "@/utils/storage";
+import { setPendingImport } from "@/utils/pendingImport";
 import AppLockGate from "@/components/AppLockGate";
 import CelebrationOverlay from "@/components/CelebrationOverlay";
 import Toast from "@/components/Toast";
@@ -136,7 +137,7 @@ let abriendoArchivoEntrante = false;
  * dejarlo caer, que es lo que hacía antes.
  */
 function IncomingFileEffect() {
-  const { ready, hasOnboarded, showToast, t } = useAppData();
+  const { ready, hasOnboarded } = useAppData();
   const navigationRef = useNavigationContainerRef();
   // El archivo recogido que todavía no se ha podido abrir.
   //
@@ -166,6 +167,11 @@ function IncomingFileEffect() {
       // puesto y no manda a Inicio. Por eso este componente se dibuja antes
       // que aquel: quien escucha primero, avisa primero.
       abriendoArchivoEntrante = true;
+      // Se apunta ANTES de intentar navegar. Si la navegación no llega a
+      // ocurrir —o ocurre y algo la deshace—, Inicio enseñará el aviso para
+      // abrirlo a mano. Lo limpia Importar cuando carga el archivo de
+      // verdad, no cuando se pide abrirla.
+      setPendingImport(file);
 
       if (!hasOnboarded || !navigationRef.isReady()) return false;
       // Se suelta ANTES de navegar: si el push fallara, insistir en bucle
@@ -192,12 +198,12 @@ function IncomingFileEffect() {
         return;
       }
       // Se acabaron los intentos con el archivo todavía en la mano. Se baja
-      // la bandera —si no, la app se quedaría sin volver a Inicio nunca— y se
-      // avisa. Fallar en silencio es lo que hacía imposible saber qué estaba
-      // pasando: la app se abría, no ocurría nada, y no había nada que
-      // contar.
+      // la bandera, o la app se quedaría sin volver a Inicio nunca.
+      //
+      // No se hace nada más: el archivo sigue apuntado en pendingImport y el
+      // aviso de Inicio se encarga. Un mensajito que se va a los tres
+      // segundos no sirve para algo sobre lo que hay que actuar.
       abriendoArchivoEntrante = false;
-      if (pending.current) showToast(t("importSheet.incomingFailed"));
     }
 
     insistir(60); // hasta unos tres segundos
@@ -208,7 +214,7 @@ function IncomingFileEffect() {
       cancelled = true;
       sub.remove();
     };
-  }, [ready, hasOnboarded, navigationRef, showToast, t]);
+  }, [ready, hasOnboarded, navigationRef]);
 
   return null;
 }

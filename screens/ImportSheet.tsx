@@ -6,6 +6,7 @@ import { File } from "expo-file-system";
 import { FileUp, CheckCircle2, AlertTriangle, Copy, X, Landmark } from "lucide-react-native";
 import { extractPdfText } from "@/utils/pdfExtract";
 import { useColorScheme } from "nativewind";
+import { setPendingImport } from "@/utils/pendingImport";
 import { useAppData } from "@/contexts/AppDataContext";
 import { nextId } from "@/utils/id";
 import { accountLabelFor, guessAccount } from "@/constants/accounts";
@@ -72,6 +73,11 @@ export default function ImportSheet({
   useEffect(() => {
     if (!incoming || alreadyLoaded.current) return;
     alreadyLoaded.current = true;
+    // Aquí se limpia el aviso de Inicio, y no antes: esto es lo único que
+    // demuestra que la pantalla se abrió DE VERDAD con el archivo. Limpiarlo
+    // al pedir la navegación sería confundir "se mandó abrir" con "se abrió",
+    // que es exactamente donde se perdía el archivo.
+    setPendingImport(null);
     void loadFile(incoming.uri, incoming.name, "application/pdf");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incoming]);

@@ -13,6 +13,7 @@ import {
   Eraser,
   Eye,
   EyeOff,
+  FileUp,
   ListChecks,
   RotateCcw,
   Target,
@@ -29,6 +30,8 @@ import { CARD_SHADOW } from "@/constants/style";
 import { fmtDate, monthKey } from "@/utils/format";
 import { sanitizeAmountInput } from "@/utils/amount";
 import { availableBalance, budgetUsed } from "@/utils/finances";
+import { usePendingImport } from "@/utils/pendingImport";
+import { router } from "expo-router";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
 import { useColorScheme } from "nativewind";
@@ -79,6 +82,7 @@ export default function Home({
   const [editingBudget, setEditingBudget] = useState(false);
   const [budgetInput, setBudgetInput] = useState("");
   const [hideBalance, setHideBalance] = useState(false);
+  const archivoPendiente = usePendingImport();
 
   function startEditBudget() {
     setBudgetInput(String(budget));
@@ -254,6 +258,35 @@ export default function Home({
             <Text className="text-base font-bold text-slate-700 dark:text-slate-200">
               {t("home.setMonthlyBudget")}
             </Text>
+          </TouchableOpacity>
+        )}
+
+        {/* ESTADO DE CUENTA QUE LLEGÓ Y NO SE LLEGÓ A ABRIR.
+            Es la red de seguridad de "Compartir → Finzo". Si por lo que sea
+            la pantalla de importar no se abrió sola, el archivo NO se pierde
+            en silencio: aparece aquí con su nombre y se abre de un toque.
+            Antes, cuando algo fallaba, la app se quedaba en Inicio sin decir
+            nada y no había forma de saber si el archivo había llegado. */}
+        {archivoPendiente && (
+          <TouchableOpacity
+            onPress={() =>
+              router.push({
+                pathname: "/import",
+                params: { uri: archivoPendiente.uri, name: archivoPendiente.name },
+              })
+            }
+            className="mx-5 mt-3 flex-row items-center gap-3 rounded-2xl border-[1.5px] border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-4 py-3"
+          >
+            <FileUp size={19} color="#059669" />
+            <View className="flex-1">
+              <Text className="text-sm font-extrabold text-emerald-800 dark:text-emerald-200">
+                {t("home.incomingFileTitle")}
+              </Text>
+              <Text className="text-[11px] text-emerald-700 dark:text-emerald-300" numberOfLines={1}>
+                {archivoPendiente.name}
+              </Text>
+            </View>
+            <ChevronRight size={18} color="#059669" />
           </TouchableOpacity>
         )}
 
