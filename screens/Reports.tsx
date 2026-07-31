@@ -397,7 +397,14 @@ export default function Reports({
                   <c.Icon size={18} color={c.color} />
                 </View>
                 <View className="mt-2">
-                  <Sparkline values={c.linea} color={c.color} width={sparkWidth} />
+                  <Sparkline
+                    values={c.linea}
+                    color={c.color}
+                    width={sparkWidth}
+                    monthNames={monthNames}
+                    monthIndex={month.m}
+                    fmt={fmt}
+                  />
                 </View>
               </View>
             ))}
