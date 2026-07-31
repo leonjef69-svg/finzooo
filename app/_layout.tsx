@@ -12,6 +12,26 @@ import AppLockGate from "@/components/AppLockGate";
 import CelebrationOverlay from "@/components/CelebrationOverlay";
 import Toast from "@/components/Toast";
 import * as incomingFile from "@/modules/incoming-file";
+import * as Notifications from "expo-notifications";
+import {
+  isAutoRunDue,
+  loadSchedule,
+  monthForSchedule,
+  saveSchedule,
+  toDateKey,
+} from "@/utils/scheduledExport";
+
+// Que el aviso de exportación se vea aunque Finzo esté abierta. Por defecto
+// expo-notifications los calla cuando la app está en primer plano, y entonces
+// a quien tenga la app abierta a las 9:00 no le llegaría nada.
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: false,
+    shouldSetBadge: false,
+  }),
+});
 
 function GlobalOverlays() {
   const { celebrateGoal, clearCelebration, toast } = useAppData();
@@ -54,12 +74,23 @@ function GlobalOverlays() {
 //                   sin elegir nada, la pantalla se cerraba y aparecía
 //                   Inicio: había que volver a entrar y a elegir mes,
 //                   formato y qué exportar desde cero.
+//   /scheduled-export → al elegir una frecuencia se pide el permiso de
+//                   avisos, y ese cuadro lo dibuja Android encima de la app.
+//                   Sin esta excepción, conceder el permiso mandaba a Inicio
+//                   justo en el primer toque de la pantalla.
 //
 // La regla para añadir una pantalla aquí: si abre una aplicación de Android
 // (cámara, galería, archivos, ajustes, voz) Y todavía le queda trabajo por
 // hacer al volver, tiene que estar en esta lista. Lo comprueba el auditor
 // auditar-pantallas-externas.mjs, para que no se vuelva a olvidar.
-const KEEP_ON_RETURN = ["/auto-capture", "/voice", "/scan-receipt", "/import", "/export-pdf"];
+const KEEP_ON_RETURN = [
+  "/auto-capture",
+  "/voice",
+  "/scan-receipt",
+  "/import",
+  "/export-pdf",
+  "/scheduled-export",
+];
 
 /**
  * Abre Importar cuando Finzo se ha lanzado con un archivo desde otra app
@@ -93,6 +124,81 @@ function IncomingFileEffect() {
     });
     return () => sub.remove();
   }, [ready, hasOnboarded, navigationRef]);
+
+  return null;
+}
+
+/**
+ * Lo que pasa cuando llega la hora de una exportación programada.
+ *
+ * Dos caminos, y son distintos a propósito:
+ *
+ *  1. Se toca el aviso → se abre la pantalla de exportar con el mes, el
+ *     formato, qué exportar y el destino ya puestos. Queda darle al botón.
+ *  2. El destino es Drive → no hace falta tocar nada. Al abrir la app se
+ *     sube sola, sin pantalla: la exportación corre en silencio y se cierra
+ *     al terminar. Drive es el único destino que puede hacerlo, porque es el
+ *     único que no necesita que alguien elija a quién mandar el archivo.
+ *
+ * Lo de subir "al abrir la app" y no a la hora exacta no es un atajo: armar
+ * un PDF necesita un WebView, y un WebView necesita la app en pantalla. Ver
+ * la explicación larga en utils/scheduledExport.ts.
+ */
+function ScheduledExportEffect() {
+  const { ready, hasOnboarded, isPremium } = useAppData();
+  const navigationRef = useNavigationContainerRef();
+  // Una sola comprobación por arranque. Sin esto, cada vuelta al frente
+  // dispararía otra subida mientras la anterior sigue en marcha.
+  const checked = useRef(false);
+
+  useEffect(() => {
+    if (!ready || !hasOnboarded || !isPremium) return;
+
+    // Al tocar el aviso.
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      if (response.notification.request.content.data?.screen !== "export") return;
+      loadSchedule().then((s) => {
+        if (!navigationRef.isReady()) return;
+        router.push({
+          pathname: "/export-pdf",
+          params: {
+            month: monthForSchedule(s, new Date()),
+            format: s.format,
+            type: s.type,
+            dest: s.destination,
+          },
+        });
+      });
+    });
+
+    // La subida sola a Drive.
+    if (!checked.current) {
+      checked.current = true;
+      loadSchedule().then((s) => {
+        const now = new Date();
+        if (!isAutoRunDue(s, now)) return;
+        if (!navigationRef.isReady()) return;
+        // Se apunta ANTES de exportar, no después. Si se apuntara después y
+        // la subida fallara a medias, al reabrir la app volvería a intentarlo
+        // en bucle. Perder una copia es molesto; repetirla sin parar hasta
+        // que alguien lo note, peor.
+        saveSchedule({ ...s, lastAutoRun: toDateKey(now) });
+        router.push({
+          pathname: "/export-pdf",
+          params: {
+            month: monthForSchedule(s, now),
+            format: s.format,
+            type: s.type,
+            dest: "drive",
+            auto: "1",
+            silent: "1",
+          },
+        });
+      });
+    }
+
+    return () => sub.remove();
+  }, [ready, hasOnboarded, isPremium, navigationRef]);
 
   return null;
 }
@@ -235,6 +341,7 @@ export default function RootLayout() {
           <GlobalOverlays />
           <AppLifecycleEffects />
           <IncomingFileEffect />
+          <ScheduledExportEffect />
           {/* Va aquí, el último de todos, para quedar POR ENCIMA de todo lo
               demás — incluidos los paneles modales. Si fuera una pantalla de
               navegación, bastaría el botón "atrás" de Android para

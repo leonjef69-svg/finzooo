@@ -5,6 +5,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import {
+  CalendarClock,
   Camera,
   Check,
   ChevronRight,
@@ -60,6 +61,7 @@ export default function Settings({
   isPremium,
   onCategoryBudgets,
   onExportPdf,
+  onScheduledExport,
   onImport,
   onAutoCapture,
   onLogout,
@@ -83,6 +85,7 @@ export default function Settings({
   isPremium: boolean;
   onCategoryBudgets: () => void;
   onExportPdf: () => void;
+  onScheduledExport: () => void;
   onImport: () => void;
   onAutoCapture: () => void;
   onLogout: () => void;
@@ -277,6 +280,17 @@ export default function Settings({
           Icon={FileDown}
           label={t("exportPdf.exportDataTitle")}
           onPress={onExportPdf}
+          right={
+            <View className="bg-amber-50 px-2 py-1 rounded-full">
+              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
+            </View>
+          }
+        />
+        {/* Justo debajo de Exportar, porque es lo mismo pero con horario. */}
+        <Row
+          Icon={CalendarClock}
+          label={t("schedExport.settingsRow")}
+          onPress={onScheduledExport}
           right={
             <View className="bg-amber-50 px-2 py-1 rounded-full">
               <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>

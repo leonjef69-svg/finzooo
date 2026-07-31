@@ -28,7 +28,9 @@
       "predictiveBackGestureEnabled": false,
       "permissions": [
         "android.permission.RECORD_AUDIO",
-        "android.permission.CAMERA"
+        "android.permission.CAMERA",
+        "android.permission.POST_NOTIFICATIONS",
+        "android.permission.SCHEDULE_EXACT_ALARM"
       ],
       "intentFilters": [
         {
@@ -91,7 +93,14 @@
           "cameraPermission": "Finzo usa la cámara para escanear boletas. La foto se lee dentro de tu celular y no se envía a ningún servidor."
         }
       ],
-      "expo-mail-composer"
+      "expo-mail-composer",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/icon.png",
+          "color": "#059669"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,

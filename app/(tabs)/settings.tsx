@@ -27,6 +27,7 @@ export default function SettingsTab() {
       isPremium={isPremium}
       onCategoryBudgets={() => router.push("/category-budgets")}
       onExportPdf={() => router.push("/export-pdf")}
+      onScheduledExport={() => router.push("/scheduled-export")}
       onImport={() => router.push("/import")}
       onAutoCapture={() => router.push("/auto-capture")}
       onLogout={async () => {

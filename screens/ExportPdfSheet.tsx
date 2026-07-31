@@ -5,13 +5,20 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { File, Paths } from "expo-file-system";
-import { Cloud, FileDown, Mail, Share2, Sheet, X } from "lucide-react-native";
+import { BarChart3, Cloud, FileDown, Mail, Share2, Sheet, X } from "lucide-react-native";
 import * as MailComposer from "expo-mail-composer";
 import { useColorScheme } from "nativewind";
 import { catInfo } from "@/constants/categories";
 import { methodLabel } from "@/constants/i18n";
+import { LOGO_DATA_URI } from "@/constants/logo";
 import { monthKey, fmtDate } from "@/utils/format";
+import { buildPdfHtml, type PdfTx } from "@/utils/exportPdfHtml";
 import { useAppData } from "@/contexts/AppDataContext";
+
+// Cuántos movimientos se dibujan en la vista previa. El PDF los lleva todos;
+// esto es solo lo que se ve antes de decidir. Con cincuenta ya se comprueba
+// que el mes y el tipo son los correctos, que es para lo que sirve mirar.
+const PREVIEW_LIMIT = 50;
 
 type ExportType = "all" | "expense" | "income";
 type ExportFormat = "pdf" | "csv";
@@ -27,8 +34,10 @@ export default function ExportPdfSheet({
   onClose,
   initialMonth,
   initialFormat,
+  initialType,
   autoExport,
   destination: initialDestination = "share",
+  silent,
 }: {
   onClose: () => void;
   // Mes "AAAA-MM" con el que abrir ya elegido. Lo usa la orden por voz
@@ -36,8 +45,14 @@ export default function ExportPdfSheet({
   // efecto de más abajo cae solo al más reciente que sí los tenga.
   initialMonth?: string;
   initialFormat?: ExportFormat;
+  initialType?: ExportType;
   // Exportar solo, sin esperar a que se toque el botón (orden por voz).
   autoExport?: boolean;
+  // Sin pantalla. Lo usa la copia automática a Drive, que corre al abrir la
+  // app: exporta, avisa con un mensajito y se cierra. Mostrar la hoja de
+  // exportar para cerrarla medio segundo después sería un parpadeo raro
+  // encima de Inicio, y encima daría tiempo a tocarla.
+  silent?: boolean;
   // Dónde va el archivo: "share" abre el menú de compartir de Android,
   // "mail" abre la aplicación de correo con el archivo ya adjunto, y
   // "drive" lo sube a Google Drive sin ninguna ventana de por medio.
@@ -46,13 +61,17 @@ export default function ExportPdfSheet({
   const { t, transactions, month, monthNames, fmt, userName, showToast } = useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
-  const [exportType, setExportType] = useState<ExportType>("all");
+  const [exportType, setExportType] = useState<ExportType>(initialType ?? "all");
   const [format, setFormat] = useState<ExportFormat>(initialFormat ?? "pdf");
   // Dónde va el archivo. Era una propiedad fija que solo podía cambiar la
   // orden por voz: la subida a Drive estaba entera y funcionando, pero sin
   // ningún botón que la alcanzara. Ahora es un estado con su selector.
   const [destination, setDestination] = useState<"share" | "mail" | "drive">(initialDestination);
   const [exporting, setExporting] = useState(false);
+  // Los gráficos vienen puestos porque son lo que hace que el reporte se
+  // entienda de un vistazo. Se pueden quitar para quien quiera solo la lista
+  // —por ejemplo si el PDF se lo va a pasar al contador—.
+  const [charts, setCharts] = useState(true);
 
   // Antes se exportaba siempre el mes que se estuviera viendo en Inicio, sin
   // posibilidad de elegir otro: para bajarse un mes pasado había que salir,
@@ -118,48 +137,51 @@ export default function ExportPdfSheet({
   }
 
   async function exportAsPdf() {
-    const rows = monthTx
-      .map((tx) => {
-        const c = catInfo(tx.category);
-        const amountColor = tx.type === "expense" ? "#e11d48" : "#059669";
-        const sign = tx.type === "expense" ? "-" : "+";
-        return `
-          <tr>
-            <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${fmtDate(tx.date, monthNames)}</td>
-            <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${t(c.label)}</td>
-            <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${tx.description || "-"}</td>
-            <td style="padding:8px;border-bottom:1px solid #e2e8f0;">${methodLabel(tx.method, t)}</td>
-            <td style="padding:8px;border-bottom:1px solid #e2e8f0;text-align:right;color:${amountColor};font-weight:bold;">
-              ${sign}${fmt(tx.amount)}
-            </td>
-          </tr>`;
-      })
-      .join("");
+    const [y, m] = selectedMk.split("-").map(Number);
+    // Días que tiene el mes elegido. El día 0 del mes siguiente es el último
+    // del actual, y así también sale bien febrero en año bisiesto.
+    const daysInMonth = new Date(y, m, 0).getDate();
 
-    const html = `
-      <html>
-        <body style="font-family:-apple-system,Helvetica,sans-serif;padding:28px;color:#0f172a;">
-          <h1 style="color:#059669;margin-bottom:2px;">Finzo</h1>
-          <p style="color:#64748b;margin-top:0;">${userName}</p>
-          <h2 style="margin-bottom:4px;">${reportTitleFor(exportType)}</h2>
-          <p style="color:#64748b;margin-top:0;">${selectedMonthLabel}</p>
-          <table style="width:100%;border-collapse:collapse;margin-top:16px;font-size:13px;">
-            <thead>
-              <tr style="background:#f1f5f9;">
-                <th style="text-align:left;padding:8px;">${t("exportPdf.colDate")}</th>
-                <th style="text-align:left;padding:8px;">${t("exportPdf.colCategory")}</th>
-                <th style="text-align:left;padding:8px;">${t("exportPdf.colDescription")}</th>
-                <th style="text-align:left;padding:8px;">${t("exportPdf.colMethod")}</th>
-                <th style="text-align:right;padding:8px;">${t("exportPdf.colAmount")}</th>
-              </tr>
-            </thead>
-            <tbody>${rows}</tbody>
-          </table>
-          <h3 style="text-align:right;margin-top:20px;">
-            ${t("exportPdf.total")}: ${fmt(total)}
-          </h3>
-        </body>
-      </html>`;
+    const pdfTxs: PdfTx[] = monthTx.map((tx) => {
+      const c = catInfo(tx.category);
+      return {
+        dateLabel: fmtDate(tx.date, monthNames),
+        day: Number(tx.date.slice(8, 10)),
+        categoryLabel: t(c.label),
+        categoryColor: c.color,
+        description: tx.description || "",
+        methodLabel: methodLabel(tx.method, t),
+        amount: tx.amount,
+        type: tx.type,
+      };
+    });
+
+    const html = buildPdfHtml({
+      logoDataUri: LOGO_DATA_URI,
+      userName,
+      title: reportTitleFor(exportType),
+      monthLabel: selectedMonthLabel,
+      txs: pdfTxs,
+      daysInMonth,
+      fmt,
+      charts,
+      generatedAt: fmtDate(new Date().toISOString().slice(0, 10), monthNames),
+      texts: {
+        colDate: t("exportPdf.colDate"),
+        colCategory: t("exportPdf.colCategory"),
+        colDescription: t("exportPdf.colDescription"),
+        colMethod: t("exportPdf.colMethod"),
+        colAmount: t("exportPdf.colAmount"),
+        total: t("exportPdf.total"),
+        income: t("exportPdf.income"),
+        expenses: t("exportPdf.expenses"),
+        balance: t("exportPdf.balance"),
+        byCategory: t("exportPdf.chartByCategory"),
+        byDay: t("exportPdf.chartByDay"),
+        generatedOn: t("exportPdf.generatedOn"),
+        movements: t("exportPdf.movements"),
+      },
+    });
 
     const { uri } = await Print.printToFileAsync({ html });
 
@@ -289,18 +311,34 @@ export default function ExportPdfSheet({
 
     if (!availableMonths.includes(initialMonth)) {
       showToast(t("exportPdf.noDataForMonth", { month: labelForMonth(initialMonth) }));
+      // Sin pantalla no hay nada que mirar ni forma de salir: si no se cierra
+      // aquí, la copia automática de un mes vacío dejaría a la persona con
+      // una pantalla en blanco encima de Inicio.
+      if (silent) onClose();
       return;
     }
-    handleExport();
+    handleExport().finally(() => {
+      if (silent) onClose();
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoExport, initialMonth, availableMonths]);
+
+  // La copia automática a Drive no dibuja nada. El trabajo lo hacen los
+  // efectos de arriba, que corren igual: un componente que devuelve null
+  // sigue vivo.
+  if (silent) return null;
 
   return (
     <View className="absolute inset-0 z-40 justify-end">
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
+      {/* La hoja no puede pasar del 88% de la pantalla. Con la vista previa
+          dentro, en un celular corto el botón de exportar se salía por abajo
+          y no había forma de alcanzarlo: se veían las opciones pero no se
+          podía exportar. El tope, más el ScrollView de más abajo, dejan el
+          botón siempre pegado al borde inferior y todo lo demás se desliza. */}
       <View
         className="bg-white dark:bg-slate-900 rounded-t-3xl px-5 pt-3"
-        style={{ paddingBottom: 32 + insets.bottom }}
+        style={{ maxHeight: "88%", paddingBottom: 20 + insets.bottom }}
       >
         <View className="items-center mb-3">
           <View className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
@@ -319,6 +357,12 @@ export default function ExportPdfSheet({
         <Text className="text-xs text-slate-500 dark:text-slate-300 mb-4">
           {t("exportPdf.subtitle", { month: selectedMonthLabel })}
         </Text>
+
+        <ScrollView
+          style={{ flexShrink: 1 }}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 4 }}
+        >
 
         {/* Selector de mes. En fila con desplazamiento horizontal en vez de
             una lista desplegable: así se ven varios meses de un vistazo y se
@@ -451,22 +495,119 @@ export default function ExportPdfSheet({
           ))}
         </View>
 
-        <View className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 mb-4">
-          <Text className="text-xs text-slate-500 dark:text-slate-300">
-            {t("exportPdf.countLabel", { count: monthTx.length })}
-          </Text>
-          <Text
-            className="text-lg font-extrabold mt-0.5"
-            style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+        {/* GRÁFICOS.
+            Solo tiene sentido en PDF: un CSV es una tabla de números que se
+            abre en Excel, no tiene dónde dibujar nada. Se oculta en vez de
+            mostrarse apagado para no ofrecer algo que no va a pasar. */}
+        {format === "pdf" && (
+          <TouchableOpacity
+            onPress={() => setCharts((v) => !v)}
+            className={`flex-row items-center gap-3 rounded-xl border-[1.5px] px-4 py-3 mb-4 ${
+              charts
+                ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-600"
+                : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+            }`}
           >
-            {fmt(total)}
-          </Text>
+            <BarChart3 size={17} color={charts ? "#059669" : colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+            <View className="flex-1">
+              <Text
+                className={`text-sm font-bold ${
+                  charts ? "text-emerald-700 dark:text-emerald-300" : "text-slate-600 dark:text-slate-200"
+                }`}
+              >
+                {t("exportPdf.chartsLabel")}
+              </Text>
+              <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                {t("exportPdf.chartsHint")}
+              </Text>
+            </View>
+            <View
+              className={`w-5 h-5 rounded-md border-[1.5px] items-center justify-center ${
+                charts ? "bg-emerald-600 border-emerald-600" : "border-slate-300 dark:border-slate-600"
+              }`}
+            >
+              {charts && <Text className="text-white text-[11px] font-extrabold">✓</Text>}
+            </View>
+          </TouchableOpacity>
+        )}
+
+        {/* VISTA PREVIA.
+            Antes solo se decía "34 movimientos" y un total. Eso no basta
+            para saber si lo que va a salir es lo correcto: con el mes o el
+            tipo mal elegidos el número también se ve razonable, y el error
+            se descubría al abrir el archivo o, peor, cuando ya lo había
+            recibido otra persona. Ahora se ven antes de mandarlo. */}
+        <View className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 mb-4">
+          <View className="flex-row items-end justify-between">
+            <View>
+              <Text className="text-xs text-slate-500 dark:text-slate-300">
+                {t("exportPdf.countLabel", { count: monthTx.length })}
+              </Text>
+              <Text
+                className="text-lg font-extrabold mt-0.5"
+                style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+              >
+                {fmt(total)}
+              </Text>
+            </View>
+            {monthTx.length > 0 && (
+              <Text className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mb-1">
+                {t("exportPdf.previewLabel")}
+              </Text>
+            )}
+          </View>
+
+          {monthTx.length > 0 && (
+            <View className="mt-3 border-t-[1.5px] border-slate-200 dark:border-slate-700 pt-1">
+              {monthTx.slice(0, PREVIEW_LIMIT).map((tx) => {
+                const c = catInfo(tx.category);
+                return (
+                  <View
+                    key={tx.id}
+                    className="flex-row items-center gap-2.5 py-1.5"
+                  >
+                    <View
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: c.color }}
+                    />
+                    <Text
+                      className="text-[11px] text-slate-400 dark:text-slate-500"
+                      style={{ width: 62 }}
+                      numberOfLines={1}
+                    >
+                      {fmtDate(tx.date, monthNames)}
+                    </Text>
+                    <Text
+                      className="flex-1 text-xs text-slate-600 dark:text-slate-200"
+                      numberOfLines={1}
+                    >
+                      {tx.description || t(c.label)}
+                    </Text>
+                    <Text
+                      className="text-xs font-bold"
+                      style={{ color: tx.type === "expense" ? "#e11d48" : "#059669" }}
+                    >
+                      {tx.type === "expense" ? "-" : "+"}
+                      {fmt(tx.amount)}
+                    </Text>
+                  </View>
+                );
+              })}
+              {monthTx.length > PREVIEW_LIMIT && (
+                <Text className="text-[11px] text-slate-400 dark:text-slate-500 pt-1.5">
+                  {t("exportPdf.previewMore", { count: monthTx.length - PREVIEW_LIMIT })}
+                </Text>
+              )}
+            </View>
+          )}
         </View>
+
+        </ScrollView>
 
         <TouchableOpacity
           onPress={handleExport}
           disabled={exporting}
-          className={`w-full py-4 rounded-2xl items-center flex-row justify-center gap-2 bg-emerald-600 ${
+          className={`w-full mt-3 py-4 rounded-2xl items-center flex-row justify-center gap-2 bg-emerald-600 ${
             exporting ? "opacity-60" : ""
           }`}
         >
