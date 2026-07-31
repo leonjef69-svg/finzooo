@@ -110,24 +110,53 @@ const KEEP_ON_RETURN = [
 function IncomingFileEffect() {
   const { ready, hasOnboarded } = useAppData();
   const navigationRef = useNavigationContainerRef();
+  // El archivo recogido que todavía no se ha podido abrir.
+  //
+  // Antes se recogía y, si la navegación aún no estaba lista, se dejaba
+  // caer: `return` y a otra cosa. Como el módulo nativo solo lo entrega UNA
+  // vez, ese archivo se perdía para siempre. Y era el caso NORMAL, no el
+  // raro: al llegar desde otra app, Finzo arranca de cero y este efecto
+  // corre en cuanto los datos están listos, que es antes de que el sistema
+  // de pantallas pueda recibir órdenes.
+  //
+  // Desde fuera se veía así: tocas Finzo en el menú de compartir, la app se
+  // abre, y no pasa nada. Sin error, sin aviso, sin pantalla de importar.
+  const pending = useRef<incomingFile.IncomingFile | null>(null);
 
   useEffect(() => {
-    // Sin la app configurada no hay dónde importar: el archivo se recoge
-    // igual (para no dejarlo pendiente) pero no se hace nada con él.
     if (!ready) return;
+    let cancelled = false;
 
-    function check() {
-      const file = incomingFile.consumePendingFile();
-      if (!file) return;
-      if (!hasOnboarded || !navigationRef.isReady()) return;
+    function intentar(): boolean {
+      if (!pending.current) pending.current = incomingFile.consumePendingFile();
+      const file = pending.current;
+      if (!file) return true; // No hay nada que hacer, se deja de insistir.
+      if (!hasOnboarded || !navigationRef.isReady()) return false;
+      // Se suelta ANTES de navegar: si el push fallara, insistir en bucle
+      // sería peor que perder la importación.
+      pending.current = null;
       router.push({ pathname: "/import", params: { uri: file.uri, name: file.name } });
+      return true;
     }
 
-    check();
+    // Se reintenta hasta que la navegación esté en pie. Es la misma espera
+    // que hace utils/nav.ts, y por el mismo motivo: "existe" y "puede
+    // recibir órdenes" son dos momentos distintos.
+    function insistir(intentosRestantes: number) {
+      if (cancelled) return;
+      if (intentar()) return;
+      if (intentosRestantes <= 0) return;
+      setTimeout(() => insistir(intentosRestantes - 1), 50);
+    }
+
+    insistir(60); // hasta unos tres segundos
     const sub = AppState.addEventListener("change", (next) => {
-      if (next === "active") check();
+      if (next === "active") insistir(60);
     });
-    return () => sub.remove();
+    return () => {
+      cancelled = true;
+      sub.remove();
+    };
   }, [ready, hasOnboarded, navigationRef]);
 
   return null;

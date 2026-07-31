@@ -30,8 +30,34 @@ import java.io.File
  */
 class IncomingFileModule : Module() {
 
+  /**
+   * El archivo que llegó con Finzo YA ABIERTA.
+   *
+   * Hace falta guardarlo aparte por cómo funciona Android. La pantalla
+   * principal de Finzo es de tipo "singleTask": si la app ya está viva,
+   * Android no la abre otra vez, sino que le entrega el archivo nuevo por
+   * onNewIntent(). Y ahí está el problema: React Native NO actualiza
+   * activity.intent al recibirlo, así que activity.intent se queda con el
+   * intent con el que se abrió la app la primera vez —normalmente un
+   * "abrir la app" pelado, sin ningún archivo—.
+   *
+   * Resultado antes de esto: compartir un estado de cuenta a Finzo cuando
+   * Finzo ya estaba abierta no hacía absolutamente nada. Ni error ni aviso:
+   * la app pasaba al frente y se quedaba en Inicio.
+   */
+  private var pendingIntent: Intent? = null
+
   override fun definition() = ModuleDefinition {
     Name("IncomingFile")
+
+    OnNewIntent { intent ->
+      // Solo se guardan los que traen archivo. Cualquier otro motivo por el
+      // que Android traiga la app al frente no debe pisar un archivo que
+      // todavía esté esperando a que la app termine de arrancar.
+      if (intent.action == Intent.ACTION_VIEW || intent.action == Intent.ACTION_SEND) {
+        pendingIntent = intent
+      }
+    }
 
     // Devuelve el archivo pendiente como texto JSON, o null si no hay
     // ninguno. "consume" en el nombre no es adorno: solo lo entrega UNA
@@ -42,7 +68,8 @@ class IncomingFileModule : Module() {
 
   private fun consume(): String? {
     val activity = appContext.currentActivity ?: return null
-    val intent = activity.intent ?: return null
+    // Primero el que llegó con la app abierta; si no, el de arranque.
+    val intent = pendingIntent ?: activity.intent ?: return null
 
     val uri = when (intent.action) {
       Intent.ACTION_VIEW -> intent.data
@@ -56,15 +83,21 @@ class IncomingFileModule : Module() {
       // Se marca como consumido ANTES de devolverlo. Si algo fallara más
       // adelante, es preferible perder una importación a repetirla en
       // bucle cada vez que la app vuelve al frente.
-      activity.intent = Intent(Intent.ACTION_MAIN)
+      forget(activity)
       JSONObject().apply {
         put("uri", "file://${copied.absolutePath}")
         put("name", name)
       }.toString()
     } catch (e: Throwable) {
-      activity.intent = Intent(Intent.ACTION_MAIN)
+      forget(activity)
       null
     }
+  }
+
+  /** Borra el archivo pendiente por los dos lados por los que puede llegar. */
+  private fun forget(activity: android.app.Activity) {
+    pendingIntent = null
+    activity.intent = Intent(Intent.ACTION_MAIN)
   }
 
   @Suppress("DEPRECATION")
