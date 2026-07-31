@@ -28,6 +28,7 @@ import { catInfo } from "@/constants/categories";
 import { CARD_SHADOW } from "@/constants/style";
 import { fmtDate, monthKey } from "@/utils/format";
 import { sanitizeAmountInput } from "@/utils/amount";
+import { availableBalance, budgetUsed } from "@/utils/finances";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
 import { useColorScheme } from "nativewind";
@@ -69,8 +70,11 @@ export default function Home({
   } = useAppData();
   const [confirmResetCarryover, setConfirmResetCarryover] = useState(false);
   const [confirmRestoreCarryover, setConfirmRestoreCarryover] = useState(false);
-  const available = budget + prevBalance + income - spent;
-  const pct = budget > 0 ? (spent / budget) * 100 : 0;
+  // El cálculo vive en utils/finances.ts y no aquí. Reportes enseña el mismo
+  // "Disponible", y con la fórmula copiada en dos sitios bastaría con tocar
+  // una para que las dos pantallas mostraran saldos distintos del mismo mes.
+  const available = availableBalance({ budget, prevBalance, income, spent });
+  const pct = budgetUsed({ budget, prevBalance, income, spent }) * 100;
   const mk = monthKey(month.y, month.m);
   const [editingBudget, setEditingBudget] = useState(false);
   const [budgetInput, setBudgetInput] = useState("");
@@ -241,7 +245,10 @@ export default function Home({
         {!editingBudget && (
           <TouchableOpacity
             onPress={startEditBudget}
-            className="mx-5 mt-3 flex-row items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-2xl py-3"
+            // Mismo contorno de 1.5 que las tarjetas de justo debajo. Era el
+            // único recuadro de esta pantalla sin ninguno: al lado de las
+            // tarjetas con borde, parecía hundido en el fondo.
+            className="mx-5 mt-3 flex-row items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-2xl py-3 border-[1.5px] border-slate-200 dark:border-slate-700"
           >
             <Target size={19} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
             <Text className="text-base font-bold text-slate-700 dark:text-slate-200">

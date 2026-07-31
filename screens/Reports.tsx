@@ -2,16 +2,35 @@ import { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { Crown, Sparkles } from "lucide-react-native";
+import {
+  ArrowDownCircle,
+  ArrowUpCircle,
+  Crown,
+  PieChart as PieChartIcon,
+  Sparkles,
+  Wallet,
+} from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import DonutChart from "@/components/DonutChart";
 import BarChartSimple from "@/components/BarChartSimple";
 import DailyBarsChart from "@/components/DailyBarsChart";
+import Sparkline from "@/components/Sparkline";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import { catInfo } from "@/constants/categories";
 import { COLOR_HEX_600 } from "@/constants/colors";
 import { CARD_SHADOW } from "@/constants/style";
 import { monthKey } from "@/utils/format";
+import {
+  availableBalance,
+  budgetLeft,
+  budgetUsed,
+  changeVsPrevious,
+  dailyTotals,
+  daysInMonthOf,
+  health,
+  previousMonthKey,
+  totalsForMonth,
+} from "@/utils/finances";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
 
@@ -24,8 +43,19 @@ export default function Reports({
   month: Month;
   onSeePremium: () => void;
 }) {
-  const { fmt, t, monthNames, userLanguage, categoryBudgets, categorySpent, budget, isPremium } =
-    useAppData();
+  const {
+    fmt,
+    t,
+    monthNames,
+    userLanguage,
+    categoryBudgets,
+    categorySpent,
+    budget,
+    spent,
+    income,
+    prevBalance,
+    isPremium,
+  } = useAppData();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const { colorScheme } = useColorScheme();
@@ -178,6 +208,73 @@ export default function Reports({
     return { bars, today: isCurrentMonth ? now.getDate() : 0 };
   }, [transactions, mk, month.y, month.m]);
 
+  // EL RESUMEN DE ARRIBA.
+  //
+  // Todo lo de aquí sale de los movimientos y los presupuestos que ya están
+  // guardados. No hay ni un número de ejemplo, ni una estimación, ni un
+  // relleno para cuando faltan datos: si algo no se puede calcular, no se
+  // enseña. Por eso el porcentaje contra el mes pasado puede no aparecer, y
+  // por eso sin presupuesto no se dice si la salud es buena.
+  //
+  // Las cuentas están en utils/finances.ts, que es el mismo sitio del que
+  // bebe Inicio. El "Disponible" de esta pantalla y el de Inicio no pueden
+  // salir distintos porque son literalmente la misma función.
+  const resumen = useMemo(() => {
+    const cifras = { budget, spent, income, prevBalance };
+    const anterior = previousMonthKey(mk);
+    const antes = totalsForMonth(transactions, anterior);
+    const dias = daysInMonthOf(mk);
+    const [ay, am] = anterior.split("-").map(Number);
+
+    return {
+      disponible: availableBalance(cifras),
+      usado: budgetUsed(cifras),
+      restante: budgetLeft(cifras),
+      salud: health(cifras),
+      cambioIngresos: changeVsPrevious(income, antes.income),
+      cambioGastos: changeVsPrevious(spent, antes.spent),
+      lineaIngresos: dailyTotals(transactions, mk, "income", dias),
+      lineaGastos: dailyTotals(transactions, mk, "expense", dias),
+      mesAnterior: monthNames[am - 1],
+      // Si el mes anterior no tiene NADA, ni siquiera se nombra: decir
+      // "vs. junio" cuando junio está vacío invita a leer un cero como si
+      // fuera una comparación de verdad.
+      hayAnterior: antes.income > 0 || antes.spent > 0,
+      anteriorAnio: ay,
+    };
+  }, [transactions, mk, budget, spent, income, prevBalance, monthNames]);
+
+  const SALUD_TEXTO: Record<string, string> = {
+    good: t("reports.healthGood"),
+    tight: t("reports.healthTight"),
+    over: t("reports.healthOver"),
+    unknown: t("reports.healthUnknown"),
+  };
+  const SALUD_COLOR: Record<string, string> = {
+    good: "#34d399",
+    tight: "#fbbf24",
+    over: "#fb7185",
+    unknown: "#94a3b8",
+  };
+
+  // Ancho de la línea de tendencia: media pantalla menos los márgenes de las
+  // dos tarjetas y el hueco entre ellas.
+  const sparkWidth = Math.max(80, (windowWidth - 40 - 10) / 2 - 28);
+
+  function Cambio({ valor }: { valor: number | null }) {
+    // null significa que el mes pasado fue cero, y entonces no hay
+    // comparación posible: pasar de 0 a 300 no es "+100%", es una cuenta que
+    // no existe. Antes que inventar un número, no se enseña ninguno.
+    if (valor === null || !resumen.hayAnterior) return null;
+    const pct = Math.round(valor * 100);
+    return (
+      <Text className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+        {pct >= 0 ? "+" : ""}
+        {pct}% {t("reports.vsMonth", { month: resumen.mesAnterior })}
+      </Text>
+    );
+  }
+
   return (
     <ScrollView
       className="flex-1 bg-white dark:bg-slate-900"
@@ -192,6 +289,156 @@ export default function Reports({
         </View>
         <ThemeToggleButton />
       </View>
+
+      {/* PANORAMA DEL MES (Premium).
+          Cada cifra de aquí sale de utils/finances.ts, con los movimientos y
+          presupuestos guardados. Nada es de ejemplo. */}
+      {isPremium && (
+        <>
+          <LinearGradient
+            colors={["#065f46", "#047857"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            className="mx-5 mt-4 rounded-3xl px-5 py-4"
+          >
+            <Text className="text-emerald-100 text-xs font-semibold">
+              {t("home.availableBalance")}
+            </Text>
+            <Text className="text-white text-4xl font-extrabold mt-0.5">
+              {fmt(resumen.disponible)}
+            </Text>
+            <View className="flex-row items-center gap-1.5 mt-2">
+              <View
+                className="w-2 h-2 rounded-full"
+                style={{ backgroundColor: SALUD_COLOR[resumen.salud] }}
+              />
+              <Text className="text-emerald-50 text-xs">{SALUD_TEXTO[resumen.salud]}</Text>
+            </View>
+          </LinearGradient>
+
+          {/* Las cuatro cifras del mes, en fila. */}
+          <View
+            className="mx-5 mt-2.5 rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex-row"
+            style={CARD_SHADOW}
+          >
+            {[
+              { label: t("home.monthlyBudget"), value: budget, Icon: Wallet, color: "#64748b" },
+              { label: t("exportPdf.expenses"), value: spent, Icon: ArrowDownCircle, color: "#e11d48" },
+              { label: t("exportPdf.income"), value: income, Icon: ArrowUpCircle, color: "#059669" },
+              { label: t("reports.availableShort"), value: resumen.disponible, Icon: PieChartIcon, color: "#0ea5e9" },
+            ].map((c, i) => (
+              <View
+                key={i}
+                className={`flex-1 items-center py-3 px-1 ${
+                  i > 0 ? "border-l-[1.5px] border-slate-200 dark:border-slate-700" : ""
+                }`}
+              >
+                <c.Icon size={15} color={c.color} />
+                <Text
+                  className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 text-center"
+                  numberOfLines={1}
+                >
+                  {c.label}
+                </Text>
+                <Text
+                  className="text-[11px] font-extrabold mt-0.5 text-center"
+                  style={{ color: primaryTextColor }}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                >
+                  {fmt(c.value)}
+                </Text>
+              </View>
+            ))}
+          </View>
+
+          {/* Ingresos y gastos, con su tendencia real del mes. */}
+          <View className="flex-row gap-2.5 mx-5 mt-2.5">
+            {[
+              {
+                label: t("exportPdf.income"),
+                value: income,
+                cambio: resumen.cambioIngresos,
+                linea: resumen.lineaIngresos,
+                color: "#059669",
+                Icon: ArrowUpCircle,
+                fondo: "bg-emerald-50 dark:bg-emerald-900/20",
+              },
+              {
+                label: t("exportPdf.expenses"),
+                value: spent,
+                cambio: resumen.cambioGastos,
+                linea: resumen.lineaGastos,
+                color: "#e11d48",
+                Icon: ArrowDownCircle,
+                fondo: "bg-rose-50 dark:bg-rose-900/20",
+              },
+            ].map((c, i) => (
+              <View
+                key={i}
+                className={`flex-1 rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 p-3.5 ${c.fondo}`}
+                style={CARD_SHADOW}
+              >
+                <View className="flex-row items-start justify-between">
+                  <View className="flex-1">
+                    <Text className="text-[11px] font-semibold text-slate-500 dark:text-slate-300">
+                      {c.label}
+                    </Text>
+                    <Text
+                      className="text-xl font-extrabold mt-0.5"
+                      style={{ color: primaryTextColor }}
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                    >
+                      {fmt(c.value)}
+                    </Text>
+                    <Cambio valor={c.cambio} />
+                  </View>
+                  <c.Icon size={18} color={c.color} />
+                </View>
+                <View className="mt-2">
+                  <Sparkline values={c.linea} color={c.color} width={sparkWidth} />
+                </View>
+              </View>
+            ))}
+          </View>
+
+          {/* Presupuesto utilizado. Solo si hay presupuesto: sin él, una
+              barra de progreso no mide nada y un 0% engañaría. */}
+          {budget > 0 && (
+            <View
+              className="mx-5 mt-2.5 rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4"
+              style={CARD_SHADOW}
+            >
+              <View className="flex-row items-center justify-between mb-2">
+                <Text className="text-xs font-bold" style={{ color: primaryTextColor }}>
+                  {t("reports.budgetUsed")}
+                </Text>
+                <Text className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {fmt(spent)} {t("reports.ofBudget")} {fmt(budget)}
+                </Text>
+              </View>
+              <View className="h-2.5 rounded-full bg-slate-100 dark:bg-slate-700 overflow-hidden">
+                <View
+                  className="h-2.5 rounded-full"
+                  style={{
+                    // Se topa al 100% para que la barra no se salga del
+                    // recuadro al pasarse del presupuesto. El número de
+                    // debajo sí dice la verdad completa.
+                    width: `${Math.min(100, Math.round(resumen.usado * 100))}%`,
+                    backgroundColor: SALUD_COLOR[resumen.salud],
+                  }}
+                />
+              </View>
+              <Text className="text-[11px] mt-2 text-slate-500 dark:text-slate-400">
+                {resumen.restante >= 0
+                  ? t("reports.budgetLeft", { amount: fmt(resumen.restante) })
+                  : t("reports.budgetOver", { amount: fmt(Math.abs(resumen.restante)) })}
+              </Text>
+            </View>
+          )}
+        </>
+      )}
 
       {isPremium ? (
         insights.length > 0 && (
