@@ -320,40 +320,45 @@ export default function Reports({
             </View>
           </LinearGradient>
 
-          {/* Las cuatro cifras del mes, en fila. */}
+          {/* DE DÓNDE SALE EL DISPONIBLE.
+              Antes esto eran cuatro casillas en fila: presupuesto, gastos,
+              ingresos y disponible. Y no sumaban a la vista — 100 − 50 + 3 da
+              53, no 284— porque faltaba el saldo que viene arrastrado de los
+              meses anteriores, que en ese caso era la mayor parte del total.
+              Cuatro números correctos que no cuadran entre sí se leen como
+              números inventados, y con razón.
+              Ahora se ve la cuenta entera, línea por línea, y cierra. De paso
+              se acaba el "Presupuesto d..." recortado por falta de sitio. */}
           <View
-            className="mx-5 mt-2.5 rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex-row"
+            className="mx-5 mt-2.5 rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-4 py-3"
             style={CARD_SHADOW}
           >
             {[
-              { label: t("home.monthlyBudget"), value: budget, Icon: Wallet, color: "#64748b" },
-              { label: t("exportPdf.expenses"), value: spent, Icon: ArrowDownCircle, color: "#e11d48" },
-              { label: t("exportPdf.income"), value: income, Icon: ArrowUpCircle, color: "#059669" },
-              { label: t("reports.availableShort"), value: resumen.disponible, Icon: PieChartIcon, color: "#0ea5e9" },
+              // El arrastre solo aparece si existe. Una línea de "+ S/ 0.00"
+              // no explica nada y quita sitio.
+              ...(prevBalance !== 0
+                ? [{ label: t("home.previousBalance"), value: prevBalance, signo: prevBalance < 0 ? "−" : "+", Icon: Wallet, color: "#64748b" }]
+                : []),
+              { label: t("home.monthlyBudget"), value: budget, signo: "+", Icon: PieChartIcon, color: "#0ea5e9" },
+              { label: t("exportPdf.income"), value: income, signo: "+", Icon: ArrowUpCircle, color: "#059669" },
+              { label: t("exportPdf.expenses"), value: spent, signo: "−", Icon: ArrowDownCircle, color: "#e11d48" },
             ].map((c, i) => (
-              <View
-                key={i}
-                className={`flex-1 items-center py-3 px-1 ${
-                  i > 0 ? "border-l-[1.5px] border-slate-200 dark:border-slate-700" : ""
-                }`}
-              >
+              <View key={i} className="flex-row items-center gap-2.5 py-1.5">
                 <c.Icon size={15} color={c.color} />
-                <Text
-                  className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 text-center"
-                  numberOfLines={1}
-                >
-                  {c.label}
-                </Text>
-                <Text
-                  className="text-[11px] font-extrabold mt-0.5 text-center"
-                  style={{ color: primaryTextColor }}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {fmt(c.value)}
+                <Text className="flex-1 text-xs text-slate-600 dark:text-slate-300">{c.label}</Text>
+                <Text className="text-xs font-bold" style={{ color: primaryTextColor }}>
+                  {c.signo} {fmt(Math.abs(c.value))}
                 </Text>
               </View>
             ))}
+            <View className="flex-row items-center gap-2.5 pt-2.5 mt-1 border-t-[1.5px] border-slate-200 dark:border-slate-700">
+              <Text className="flex-1 text-xs font-extrabold" style={{ color: primaryTextColor }}>
+                {t("reports.availableShort")}
+              </Text>
+              <Text className="text-sm font-extrabold" style={{ color: primaryTextColor }}>
+                {fmt(resumen.disponible)}
+              </Text>
+            </View>
           </View>
 
           {/* Ingresos y gastos, con su tendencia real del mes. */}
