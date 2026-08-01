@@ -370,6 +370,22 @@ function nombreAlFinal(normalized: string): string | undefined {
   if (ultimaDeLaOrden < 0) return undefined;
 
   const cola = palabras.slice(ultimaDeLaOrden + 1);
+
+  // "exportar julio pdf gmail MI CORREO": la frase acaba en una palabra de la
+  // orden, así que por detrás no queda nada. Pero ese "mi" delante la cambia
+  // de sentido: "por correo" es a dónde va, y "mi correo" es de quién es.
+  //
+  // Pasa sobre todo con el correo, porque el contacto se llama igual que el
+  // destino. Con WhatsApp no se nota: nadie tiene un contacto llamado
+  // "whatsapp".
+  if (cola.length === 0) {
+    const anterior = palabras[ultimaDeLaOrden - 1];
+    if (anterior === "mi" || anterior === "mis") {
+      return `${anterior} ${palabras[ultimaDeLaOrden]}`;
+    }
+    return undefined;
+  }
+
   const nombre = cola.join(" ").trim();
   if (nombre.length < 2) return undefined;
   // Un año no es nadie. "exportar julio de 2026" deja "2026" al final, y sin

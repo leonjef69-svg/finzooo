@@ -171,7 +171,10 @@ export default function ExportPdfSheet({
   // "exportar julio pdf whatsapp a mamá" llegue con todo puesto.
   useEffect(() => {
     setAgregando(false);
-    if (!recipientName) {
+    // Drive es tuyo y Compartir abre el menú de Android: ahí no hay a quién
+    // mandar nada. Sin esto, "exporta julio a mi drive" acabaría avisando de
+    // que no existe el contacto "mi drive" — un contacto que no haría falta.
+    if (!recipientName || destination === "drive" || destination === "share") {
       setContactoId(null);
       return;
     }
