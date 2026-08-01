@@ -167,6 +167,39 @@ function normalizeForMatch(raw: string): string {
     .trim();
 }
 
+/**
+ * A quién se le manda, de verdad, en el momento de mandarlo.
+ *
+ * POR QUÉ NO BASTA CON MIRAR EL CONTACTO MARCADO EN PANTALLA
+ *
+ * Cuando la orden viene por voz, la pantalla de exportar hace dos cosas en la
+ * misma vuelta: buscar el nombre dicho entre los contactos y marcarlo, y
+ * exportar. Pero marcar no cambia nada al instante — queda apuntado para la
+ * vuelta siguiente—, así que al exportar el contacto marcado todavía era
+ * NINGUNO aunque estuviera guardado y el nombre se hubiera entendido bien.
+ *
+ * Se llamaba entonces a WhatsApp sin número, y WhatsApp abría su lista de
+ * contactos. Desde fuera parecía que no había entendido a quién, cuando lo
+ * sabía y lo perdía en el último paso.
+ *
+ * Aquí se decide sin depender de ninguna vuelta: si hay algo marcado manda
+ * eso, y si no, se busca el nombre dicho.
+ *
+ * Drive y Compartir no llevan destinatario: uno es tuyo y el otro abre el
+ * menú de Android.
+ */
+export function resolveRecipient(
+  chosen: SendContact | null,
+  list: SendContact[],
+  spokenName: string | undefined,
+  destination: string
+): SendContact | null {
+  if (chosen) return chosen;
+  if (!spokenName) return null;
+  if (destination === "drive" || destination === "share") return null;
+  return findContactByName(list, spokenName, destination);
+}
+
 /** Un identificador que no choque con los que ya hay. */
 export function nextContactId(list: SendContact[]): string {
   let n = 1;

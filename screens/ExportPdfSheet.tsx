@@ -46,6 +46,7 @@ import {
   findContactByName,
   loadContacts,
   nextContactId,
+  resolveRecipient,
   saveContacts,
   validateContact,
   type SendContact,
@@ -561,6 +562,26 @@ export default function ExportPdfSheet({
       showToast(t("exportPdf.noData"));
       return;
     }
+
+    // A QUIÉN VA. Se busca AQUÍ, y no se lee del contacto ya marcado en
+    // pantalla, a propósito.
+    //
+    // Cuando la orden viene por voz, el efecto que busca el nombre entre los
+    // contactos y esta función corren en la MISMA vuelta de React. Ese efecto
+    // llama a setContactoId, pero eso no cambia nada al instante: apunta el
+    // cambio para la vuelta siguiente. Así que aquí, en la vuelta de ahora,
+    // el contacto marcado seguía siendo NINGUNO — aunque estuviera guardado y
+    // el nombre se hubiera entendido perfectamente.
+    //
+    // Resultado: se llamaba a WhatsApp sin número y WhatsApp abría su lista
+    // de contactos. Desde fuera parecía que no había entendido a quién,
+    // cuando lo sabía y lo perdía en el último paso.
+    //
+    // Buscarlo aquí no depende de ninguna vuelta: los contactos ya están
+    // cargados (la exportación automática espera a que lo estén) y el nombre
+    // llega por parámetro.
+    const destinatario = resolveRecipient(contactoElegido, contactos, recipientName, destination);
+
     setExporting(true);
     try {
       // Primero se arma el archivo, y después se decide qué hacer con él.
@@ -589,7 +610,7 @@ export default function ExportPdfSheet({
           file.uri,
           file.mimeType,
           t("exportPdf.mailBody", { month: selectedMonthLabel }),
-          contactoElegido?.value ?? ""
+          destinatario?.value ?? ""
         );
         if (!ok) {
           // Si no se pudo —sin WhatsApp, o con un APK anterior a esto— se cae
@@ -613,7 +634,7 @@ export default function ExportPdfSheet({
           file.mimeType,
           t("exportPdf.mailSubject", { month: selectedMonthLabel }),
           t("exportPdf.mailBody", { month: selectedMonthLabel }),
-          contactoElegido?.value ?? ""
+          destinatario?.value ?? ""
         );
         if (!ok) {
           // Si no se pudo (sin Gmail, o sin la parte nativa porque el APK es
@@ -638,7 +659,7 @@ export default function ExportPdfSheet({
           return;
         }
         await MailComposer.composeAsync({
-          recipients: contactoElegido ? [contactoElegido.value] : undefined,
+          recipients: destinatario ? [destinatario.value] : undefined,
           subject: t("exportPdf.mailSubject", { month: selectedMonthLabel }),
           body: t("exportPdf.mailBody", { month: selectedMonthLabel }),
           attachments: [file.uri],

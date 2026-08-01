@@ -1,5 +1,6 @@
 package com.finzo.sharetoapp
 
+import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import androidx.core.content.FileProvider
@@ -80,6 +81,37 @@ class ShareToAppModule : Module() {
             // Gmail y cualquier app de correo entienden este.
             putExtra(Intent.EXTRA_EMAIL, arrayOf(recipient))
           }
+        }
+      }
+
+      // APUNTAR A LA PANTALLA QUE SABE LEER EL NÚMERO.
+      //
+      // WhatsApp registra VARIAS pantallas para recibir un archivo, y solo una
+      // —el selector de contactos— mira el "jid" de arriba. Con setPackage a
+      // secas, quién de las varias abre lo decide Android: si le toca otra,
+      // el número se ignora sin más y sale la lista de contactos, igual que si
+      // no se hubiera pedido nadie.
+      //
+      // Así que se le pregunta al sistema qué pantallas pueden recibir esto y
+      // se elige la del selector a dedo. Se busca por nombre y no se escribe
+      // fijo, porque WhatsApp la ha cambiado de sitio entre versiones y un
+      // nombre fijo dejaría de funcionar en la siguiente.
+      if (recipient.isNotBlank() && packageName.startsWith("com.whatsapp")) {
+        try {
+          val candidatas = ctx.packageManager.queryIntentActivities(intent, 0)
+          val selector = candidatas.firstOrNull {
+            it.activityInfo.name.contains("ContactPicker", ignoreCase = true)
+          }
+          if (selector != null) {
+            intent.component = ComponentName(
+              selector.activityInfo.packageName,
+              selector.activityInfo.name
+            )
+          }
+        } catch (e: Exception) {
+          // Si no se puede preguntar, se sigue con setPackage: es lo que
+          // había y funciona en parte de los celulares. Quedarse sin mandar
+          // nada sería peor que mandarlo a la lista de contactos.
         }
       }
 
