@@ -87,6 +87,34 @@ export function normalizePhone(raw: string, defaultCountry = "51"): string {
 }
 
 /**
+ * Cómo va a quedar guardado el número, y si tiene mala pinta.
+ *
+ * Existe porque un número mal escrito NO da ningún error visible: WhatsApp no
+ * dice "ese número no existe", abre un chat vacío. Se descubre cuando el
+ * reporte no llegó, y para entonces ya no se sabe si falló el número, la app
+ * o el envío.
+ *
+ * No bloquea nada: solo enseña el número tal como se va a usar, para poder
+ * contarlo antes de guardarlo.
+ */
+export type PhoneCheck = { normalized: string; warning: "peruLength" | null };
+
+export function checkPhone(raw: string): PhoneCheck {
+  const normalized = normalizePhone(raw);
+  // Mientras se escribe no se avisa de nada: quien va por el tercer dígito ya
+  // sabe que le faltan, y un aviso ahí solo estorba.
+  if (normalized.length < 8) return { normalized, warning: null };
+
+  // Un celular peruano son 9 dígitos, más el 51 del país: 11 en total.
+  // Es el error fácil de cometer y el imposible de ver: a simple vista,
+  // 5194258430 y 51942582430 son el mismo número.
+  if (normalized.startsWith("51") && normalized.length !== 11) {
+    return { normalized, warning: "peruLength" };
+  }
+  return { normalized, warning: null };
+}
+
+/**
  * ¿Sirve este correo?
  *
  * Se comprueba lo mínimo —algo, arroba, algo, punto, algo— y no más. Las

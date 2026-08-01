@@ -45,6 +45,7 @@ import {
   contactsFor,
   findContactByName,
   loadContacts,
+  checkPhone,
   nextContactId,
   resolveRecipient,
   saveContacts,
@@ -197,6 +198,9 @@ export default function ExportPdfSheet({
   }, [destination, contactos, contactosCargados, recipientName]);
 
   const contactoElegido = contactosDelDestino.find((c) => c.id === contactoId) ?? null;
+
+  // Como quedaria el numero escrito, para poder contarlo antes de guardarlo.
+  const revisionNumero = useMemo(() => checkPhone(nuevoValor), [nuevoValor]);
 
   function guardarContacto() {
     const kind: SendContact["kind"] = destination === "whatsapp" ? "whatsapp" : "email";
@@ -977,6 +981,24 @@ export default function ExportPdfSheet({
                   maxLength={60}
                   className="border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900"
                 />
+                {/* EL NÚMERO TAL COMO SE VA A USAR.
+                    Un número mal escrito no da ningún error: WhatsApp abre un
+                    chat vacío en vez de decir que no existe, y eso se
+                    descubre cuando el reporte no llegó. Aquí se ve antes. */}
+                {destination === "whatsapp" && revisionNumero.normalized !== "" && (
+                  <Text
+                    className={`text-[11px] mt-2 ${
+                      revisionNumero.warning
+                        ? "font-bold text-amber-600 dark:text-amber-400"
+                        : "text-slate-500 dark:text-slate-400"
+                    }`}
+                  >
+                    {revisionNumero.warning === "peruLength"
+                      ? t("exportPdf.phonePeru", { count: revisionNumero.normalized.length })
+                      : t("exportPdf.phonePreview", { number: revisionNumero.normalized })}
+                  </Text>
+                )}
+
                 <View className="flex-row gap-2.5 mt-3">
                   <TouchableOpacity
                     onPress={() => setAgregando(false)}
