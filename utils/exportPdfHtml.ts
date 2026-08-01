@@ -380,7 +380,11 @@ export function buildPdfHtml(o: PdfOptions): string {
   const foco: "expense" | "income" = gastos > 0 ? "expense" : "income";
   const colorFoco = foco === "expense" ? ROJO : VERDE;
 
-  const cats = o.charts ? byCategory(o.txs, foco) : [];
+  // Los dos repartos, cada uno con sus categorias. Antes solo se calculaba
+  // el del "foco" —los gastos salvo que no hubiera ninguno—, asi que en un
+  // reporte con las dos cosas los ingresos no salian en ningun grafico.
+  const catsGasto = o.charts ? byCategory(o.txs, "expense") : [];
+  const catsIngreso = o.charts ? byCategory(o.txs, "income") : [];
   // Solo los dias con movimiento, con su numero de dia de verdad. Enviar el
   // arreglo entero de 31 posiciones dejaba las columnas en 17 puntos, donde
   // no cabe ningun monto.
@@ -418,22 +422,43 @@ export function buildPdfHtml(o: PdfOptions): string {
 
   // La rosquilla va al lado de la lista, no debajo: así el bloque entero cabe
   // en el alto de la propia rosquilla y no se come media hoja.
-  const totalFoco = cats.reduce((s, c) => s + c.amount, 0);
-  const bloqueCategorias =
-    cats.length > 0
-      ? `
+  const totalGastoCats = catsGasto.reduce((s, c) => s + c.amount, 0);
+  const totalIngresoCats = catsIngreso.reduce((s, c) => s + c.amount, 0);
+  /**
+   * El reparto por categoría de un lado: la rosquilla y sus barras.
+   *
+   * Se saca a una función porque ahora se dibuja DOS VECES cuando el reporte
+   * trae gastos e ingresos. Antes solo se dibujaba el reparto de los gastos,
+   * aunque el documento llevara las dos cosas: quien exportaba su mes entero
+   * veía sus 1.500 de sueldo en la lista del final y en ningún gráfico.
+   */
+  const repartoDe = (
+    titulo: string,
+    lista: { label: string; color: string; amount: number; share: number }[],
+    total: number
+  ) =>
+    lista.length === 0
+      ? ""
+      : `
       <div style="page-break-inside:avoid;margin-top:20px;">
-        <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(T.byCategory)}</div>
+        <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(titulo)}</div>
         <table style="width:100%;border-collapse:collapse;">
           <tr>
-            <td style="width:170px;vertical-align:middle;">${rosquilla(cats, totalFoco, fmt, T.total)}</td>
+            <td style="width:170px;vertical-align:middle;">${rosquilla(lista, total, fmt, T.total)}</td>
             <td style="vertical-align:middle;padding-left:6px;">
-              <table style="width:100%;border-collapse:collapse;">${barrasPorCategoria(cats, fmt)}</table>
+              <table style="width:100%;border-collapse:collapse;">${barrasPorCategoria(lista, fmt)}</table>
             </td>
           </tr>
         </table>
-      </div>`
-      : "";
+      </div>`;
+
+  // Con las dos cosas dentro, cada bloque dice de cuál habla. Dos rosquillas
+  // seguidas bajo el mismo "Reparto por categoría" no se distinguirían: los
+  // dos son montos por categoría y solo cambia el signo.
+  const hayDeTodo = o.charts && catsGasto.length > 0 && catsIngreso.length > 0;
+  const bloqueCategorias =
+    repartoDe(hayDeTodo ? T.expenses : T.byCategory, catsGasto, totalGastoCats) +
+    repartoDe(hayDeTodo ? T.income : T.byCategory, catsIngreso, totalIngresoCats);
 
   const bloquePresupuestos =
     o.charts && o.categoryBudgets.length > 0
@@ -457,7 +482,14 @@ export function buildPdfHtml(o: PdfOptions): string {
     hayDias
       ? `
       <div style="page-break-inside:avoid;margin-top:20px;">
-        <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(T.byDay)}</div>
+        <!-- Con las dos cosas dentro, el título dice de cuál son las columnas.
+             Este gráfico sigue siendo de gasto: los ingresos de un mes son
+             dos o tres días sueltos y un gráfico diario de eso serían tres
+             columnas perdidas en una hoja vacía. Pero llamarlo solo "Día a
+             día" en un reporte que trae las dos parecía que faltaban. -->
+        <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(
+          hayDeTodo ? `${T.byDay} · ${T.expenses}` : T.byDay
+        )}</div>
         ${barrasPorDia(dias, colorFoco, fmt)}
       </div>`
       : "";
