@@ -140,10 +140,18 @@ export default function ExportPdfSheet({
   const [agregando, setAgregando] = useState(false);
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevoValor, setNuevoValor] = useState("");
+  // Si los contactos ya se leyeron del almacenamiento. Lo mira la
+  // exportacion automatica por voz antes de arrancar: sin ellos no sabria a
+  // quien mandarlo aunque se hubiera dicho.
+  const [contactosCargados, setContactosCargados] = useState(false);
 
   useEffect(() => {
     let vivo = true;
-    loadContacts().then((l) => vivo && setContactos(l));
+    loadContacts().then((l) => {
+      if (!vivo) return;
+      setContactos(l);
+      setContactosCargados(true);
+    });
     return () => {
       vivo = false;
     };
@@ -171,11 +179,18 @@ export default function ExportPdfSheet({
     setContactoId(encontrado?.id ?? null);
     // Si se dijo un nombre y no está guardado, se avisa. Callarlo abriría
     // WhatsApp sin destinatario y parecería que no entendió a quién.
-    if (!encontrado && contactos.length > 0) {
-      showToast(t("exportPdf.contactNotFound", { name: recipientName }));
+    //
+    // Y se distingue entre "ese nombre no está" y "no hay ninguno guardado",
+    // porque son problemas distintos con soluciones distintas. Antes, sin
+    // ningún contacto guardado, no se decía NADA: WhatsApp abría su lista de
+    // contactos con el archivo puesto y parecía que la orden no se había
+    // entendido, cuando lo que faltaba era decirle el número una vez.
+    if (!encontrado && contactosCargados) {
+      const aviso = contactos.length === 0 ? "exportPdf.noContactsYet" : "exportPdf.contactNotFound";
+      showToast(t(aviso, { name: recipientName }));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [destination, contactos, recipientName]);
+  }, [destination, contactos, contactosCargados, recipientName]);
 
   const contactoElegido = contactosDelDestino.find((c) => c.id === contactoId) ?? null;
 
@@ -655,6 +670,18 @@ export default function ExportPdfSheet({
   useEffect(() => {
     if (!autoExport || autoFired.current || !initialMonth) return;
     if (availableMonths.length === 0) return;
+
+    // Si la voz dijo A QUIÉN, hay que esperar a que los contactos terminen
+    // de cargarse.
+    //
+    // Se cargan del almacenamiento, que tarda un instante, y la exportación
+    // automática arrancaba en cuanto sabía el mes — antes de eso. Resultado:
+    // WhatsApp se abría con el archivo pero SIN el número, y había que
+    // buscar el contacto a mano justo en la orden que existe para no tener
+    // que buscarlo. Y no fallaba nada, así que parecía que no había
+    // entendido a quién.
+    if (recipientName && !contactosCargados) return;
+
     autoFired.current = true;
 
     if (!availableMonths.includes(initialMonth)) {
@@ -669,7 +696,7 @@ export default function ExportPdfSheet({
       if (silent) onClose();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoExport, initialMonth, availableMonths]);
+  }, [autoExport, initialMonth, availableMonths, recipientName, contactosCargados]);
 
   // La copia automática a Drive no dibuja nada. El trabajo lo hacen los
   // efectos de arriba, que corren igual: un componente que devuelve null

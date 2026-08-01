@@ -331,15 +331,52 @@ export function recipientFromPhrase(normalized: string): string | undefined {
   // "a mamá" / "al contador" / "para el contador". El "a" suelto no vale:
   // aparece en medio de cualquier frase.
   const m = normalized.match(/\b(?:a|al|para)\s+(?:el\s+|la\s+|mi\s+)?([a-zñáéíóú0-9 ]+)$/);
-  if (!m) return undefined;
-
-  const palabras: string[] = [];
-  for (const palabra of m[1].trim().split(/\s+/)) {
-    if (PALABRAS_QUE_CORTAN.includes(palabra)) break;
-    palabras.push(palabra);
+  if (m) {
+    const palabras: string[] = [];
+    for (const palabra of m[1].trim().split(/\s+/)) {
+      if (PALABRAS_QUE_CORTAN.includes(palabra)) break;
+      palabras.push(palabra);
+    }
+    const nombre = palabras.join(" ").trim();
+    if (nombre.length >= 2) return nombre;
   }
-  const nombre = palabras.join(" ").trim();
-  return nombre.length >= 2 ? nombre : undefined;
+
+  return nombreAlFinal(normalized);
+}
+
+/**
+ * El nombre dicho SIN "a" ni "para" delante: "exportar julio pdf whatsapp mi
+ * número".
+ *
+ * Hablando no se dice la preposición. Se dice el destino y detrás a quién, de
+ * corrido, y exigir el "a" hacía que no se entendiera a nadie — WhatsApp se
+ * abría con el archivo puesto pero preguntando a quién mandarlo, que es
+ * justo el paso que la orden por voz existe para quitar.
+ *
+ * Se toma lo que queda DESPUÉS de la última palabra de la orden (formato,
+ * destino o mes). Todo lo de antes ya significa otra cosa, así que lo que
+ * sobra al final solo puede ser el nombre.
+ */
+function nombreAlFinal(normalized: string): string | undefined {
+  const palabras = normalized.trim().split(/\s+/);
+
+  let ultimaDeLaOrden = -1;
+  for (let i = 0; i < palabras.length; i++) {
+    if (PALABRAS_QUE_CORTAN.includes(palabras[i])) ultimaDeLaOrden = i;
+  }
+  // Si no se dijo ni formato ni destino ni mes, lo del final no es un nombre:
+  // es la orden entera. Sin esto, "exportar movimientos" tomaría
+  // "movimientos" por una persona.
+  if (ultimaDeLaOrden < 0) return undefined;
+
+  const cola = palabras.slice(ultimaDeLaOrden + 1);
+  const nombre = cola.join(" ").trim();
+  if (nombre.length < 2) return undefined;
+  // Un año no es nadie. "exportar julio de 2026" deja "2026" al final, y sin
+  // esto se avisaría de que no existe el contacto "2026" en una frase donde
+  // nadie nombró a nadie.
+  if (/^\d+$/.test(nombre)) return undefined;
+  return nombre;
 }
 
 export function parseVoiceCommand(transcript: string, now: Date = new Date()): VoiceCommand {
