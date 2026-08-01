@@ -24,7 +24,7 @@ const APP_VERSION = "1.0.0";
  * La versión de la app (1.0.0) no sirve para esto: no cambia entre entregas.
  * Esta sí.
  */
-const CODE_MARKER = "1ago-03";
+const CODE_MARKER = "1ago-04";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast } = useAppData();
@@ -120,7 +120,10 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
               acaba arreglando dos veces algo que ya estaba bien. */}
           <Text className="text-[10px] text-slate-400 mt-1" selectable>
             {t("appInfo.nativeParts")}: {incomingFile.isSupported ? "✓" : "✗"} compartir ·{" "}
-            {shareToApp.isSupported ? "✓" : "✗"} gmail ·{" "}
+            {/* Ponía "gmail", y es el mismo módulo que abre el chat de
+                WhatsApp con el número puesto. Viéndolo así parecía que lo de
+                WhatsApp no venía en el APK. */}
+            {shareToApp.isSupported ? "✓" : "✗"} enviar directo ·{" "}
             {textRecognizer.isSupported ? "✓" : "✗"} escáner
           </Text>
 
