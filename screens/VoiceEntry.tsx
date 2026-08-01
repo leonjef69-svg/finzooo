@@ -230,18 +230,28 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
         interimResults: true,
         continuous: false,
         maxAlternatives: 1,
-        // Cuánto silencio espera Android antes de dar por terminada la
-        // frase. Sin esto usa su valor por defecto, que es cortísimo:
+        // CUÁNTO AGUANTA EL MICRÓFONO ANTES DE CERRARSE SOLO.
+        //
+        // Sin esto Android usa su valor por defecto, que es cortísimo:
         // bastaba dudar un segundo a mitad de frase para que cortara y se
         // registrara solo lo dicho hasta ahí.
         //
-        // El mínimo de 3 segundos da margen para empezar a hablar; los 2,5
-        // de silencio permiten pensar entre un gasto y el siguiente cuando
-        // se dictan varios seguidos.
+        // Estaba en 2,5 segundos de silencio y seguía quedándose corto: había
+        // que hablar rápido y de corrido para que no se cerrara antes de
+        // terminar. Y con una orden larga —"exportar los gastos de julio a
+        // León por WhatsApp en PDF"— o dictando varios movimientos seguidos,
+        // pensar un momento entre uno y otro es lo normal, no la excepción.
+        //
+        // Ahora son 5. El precio es esperar esos 5 segundos al terminar de
+        // hablar antes de que procese, y es un precio que vale la pena:
+        // esperar molesta, perder la frase a medias obliga a repetirla entera.
+        //
+        // El mínimo de 4 segundos es solo un suelo para empezar a hablar; no
+        // alarga nada si ya se estaba hablando.
         androidIntentOptions: {
-          EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 3000,
-          EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 2500,
-          EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 2500,
+          EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 4000,
+          EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 5000,
+          EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 5000,
         },
         // Android va avisando del volumen del micrófono. Es lo que permite
         // que el círculo crezca cuando hablas, y así se vea que te oye.
