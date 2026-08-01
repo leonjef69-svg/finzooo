@@ -20,6 +20,7 @@ import {
   FileSpreadsheet,
   Mail,
   MessageCircle,
+  Pencil,
   Share2,
   Sheet,
   X,
@@ -140,6 +141,9 @@ export default function ExportPdfSheet({
   const [contactos, setContactos] = useState<SendContact[]>([]);
   const [contactoId, setContactoId] = useState<string | null>(null);
   const [agregando, setAgregando] = useState(false);
+  // Cual se esta cambiando, o null si se esta creando uno nuevo. El
+  // formulario es el mismo para las dos cosas.
+  const [editandoId, setEditandoId] = useState<string | null>(null);
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevoValor, setNuevoValor] = useState("");
   // Si los contactos ya se leyeron del almacenamiento. Lo mira la
@@ -173,6 +177,7 @@ export default function ExportPdfSheet({
   // "exportar julio pdf whatsapp a mamá" llegue con todo puesto.
   useEffect(() => {
     setAgregando(false);
+    setEditandoId(null);
     // Drive es tuyo y Compartir abre el menú de Android: ahí no hay a quién
     // mandar nada. Sin esto, "exporta julio a mi drive" acabaría avisando de
     // que no existe el contacto "mi drive" — un contacto que no haría falta.
@@ -202,6 +207,21 @@ export default function ExportPdfSheet({
   // Como quedaria el numero escrito, para poder contarlo antes de guardarlo.
   const revisionNumero = useMemo(() => checkPhone(nuevoValor), [nuevoValor]);
 
+  /** Abre el formulario con un contacto ya escrito dentro, para cambiarlo. */
+  function editarContacto(c: SendContact) {
+    setEditandoId(c.id);
+    setNuevoNombre(c.name);
+    setNuevoValor(c.value);
+    setAgregando(true);
+  }
+
+  function cerrarFormulario() {
+    setAgregando(false);
+    setEditandoId(null);
+    setNuevoNombre("");
+    setNuevoValor("");
+  }
+
   function guardarContacto() {
     const kind: SendContact["kind"] = destination === "whatsapp" ? "whatsapp" : "email";
     const r = validateContact(nuevoNombre, kind, nuevoValor);
@@ -209,6 +229,22 @@ export default function ExportPdfSheet({
       showToast(t(r.reason === "name" ? "exportPdf.contactNameError" : "exportPdf.contactValueError"));
       return;
     }
+
+    // CAMBIAR UNO QUE YA ESTÁ.
+    //
+    // Conserva su identificador a propósito: si estaba elegido para enviar,
+    // sigue estándolo después de corregirlo. Con un identificador nuevo se
+    // habría quedado sin elegir justo después de arreglarle el número, que es
+    // el momento en el que se va a usar.
+    if (editandoId) {
+      const lista = contactos.map((c) => (c.id === editandoId ? { ...c, ...r.contact } : c));
+      setContactos(lista);
+      saveContacts(lista);
+      cerrarFormulario();
+      showToast(t("exportPdf.contactSaved"));
+      return;
+    }
+
     const nuevo: SendContact = { id: nextContactId(contactos), ...r.contact };
     const lista = [...contactos, nuevo];
     setContactos(lista);
@@ -216,9 +252,7 @@ export default function ExportPdfSheet({
     // Se deja elegido el que se acaba de crear: quien lo añade es para
     // mandarle algo ahora, no para tener que tocarlo otra vez.
     setContactoId(nuevo.id);
-    setNuevoNombre("");
-    setNuevoValor("");
-    setAgregando(false);
+    cerrarFormulario();
   }
 
   function borrarContacto(id: string) {
@@ -942,6 +976,18 @@ export default function ExportPdfSheet({
                       {c.name}
                     </Text>
                   </TouchableOpacity>
+                  {/* CAMBIARLO.
+                      Un número con un dígito de menos no da ningún error
+                      visible, así que se descubre tarde. Sin esto, la única
+                      forma de corregirlo era borrarlo y escribirlo entero
+                      otra vez. */}
+                  <TouchableOpacity
+                    onPress={() => editarContacto(c)}
+                    hitSlop={{ top: 10, bottom: 10, left: 4, right: 4 }}
+                    className="px-1 py-2.5"
+                  >
+                    <Pencil size={12} color={contactoId === c.id ? "#ffffff" : "#94a3b8"} strokeWidth={2.6} />
+                  </TouchableOpacity>
                   {/* BORRAR, A LA VISTA.
                       Se borraba manteniendo pulsado, y eso no lo descubre
                       nadie: un contacto escrito mal se quedaba ahí para
@@ -957,7 +1003,7 @@ export default function ExportPdfSheet({
                 </View>
               ))}
               <TouchableOpacity
-                onPress={() => setAgregando(true)}
+                onPress={() => { setEditandoId(null); setNuevoNombre(""); setNuevoValor(""); setAgregando(true); }}
                 className="px-3.5 py-2.5 rounded-xl border-[1.5px] border-dashed border-slate-300 dark:border-slate-600"
               >
                 <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
@@ -1017,7 +1063,7 @@ export default function ExportPdfSheet({
 
                 <View className="flex-row gap-2.5 mt-3">
                   <TouchableOpacity
-                    onPress={() => setAgregando(false)}
+                    onPress={cerrarFormulario}
                     className="flex-1 py-2.5 rounded-xl items-center border-[1.5px] border-slate-200 dark:border-slate-700"
                   >
                     <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
