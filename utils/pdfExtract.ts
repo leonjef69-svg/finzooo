@@ -354,3 +354,46 @@ export async function extractPdfText(data: Uint8Array): Promise<string> {
 
   return piecesToText(allPieces);
 }
+
+/** Por qué un PDF no se dejó leer. */
+export type PdfProblem = 'encrypted' | 'scanned' | 'unknown';
+
+/**
+ * Averigua POR QUÉ no salió texto de un PDF.
+ *
+ * Antes, cualquier PDF que fallara daba el mismo mensaje: "no se pudo leer el
+ * texto de este PDF, intenta exportarlo como CSV". Ese consejo sirve para un
+ * caso y para los otros dos no, y quien lo lee se queda sin saber si el
+ * problema tiene arreglo o si su banco no sirve.
+ *
+ * Son tres cosas distintas y cada una tiene su salida:
+ *
+ *   PROTEGIDO — el banco le puso contraseña, normalmente el DNI. Se abre en
+ *   el celular porque el visor la pide, pero Finzo no puede leer dentro. Se
+ *   arregla guardando una copia sin contraseña.
+ *
+ *   ESCANEADO — las páginas son fotos, no texto. No hay letras que leer, por
+ *   mucho que se vean en pantalla. Aquí sí hace falta reconocer la imagen.
+ *
+ *   OTRO — el PDF usa algo que este lector no entiende.
+ *
+ * Se mira solo el primer trozo del archivo: el diccionario del PDF y sus
+ * cabeceras van al principio, y recorrer un estado de cuenta entero para esto
+ * sería lento en un celular.
+ */
+export function diagnosePdf(data: Uint8Array): PdfProblem {
+  const cabecera = u8str(data.slice(0, Math.min(data.length, 4096)));
+  const cola = u8str(data.slice(Math.max(0, data.length - 4096)));
+
+  // /Encrypt vive en el trailer, al final del archivo.
+  if (/\/Encrypt\b/.test(cola) || /\/Encrypt\b/.test(cabecera)) return 'encrypted';
+
+  // Las páginas escaneadas son imágenes JPEG o JPEG2000 incrustadas. Se busca
+  // en todo el archivo porque la primera imagen puede estar en cualquier
+  // sitio, pero solo el nombre del filtro, que es barato de encontrar.
+  if (u8search(data, '/DCTDecode') >= 0 || u8search(data, '/JPXDecode') >= 0) {
+    return 'scanned';
+  }
+
+  return 'unknown';
+}

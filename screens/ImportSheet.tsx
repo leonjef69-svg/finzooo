@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import { FileUp, CheckCircle2, AlertTriangle, Copy, X, Landmark } from "lucide-react-native";
-import { extractPdfText } from "@/utils/pdfExtract";
+import { diagnosePdf, extractPdfText } from "@/utils/pdfExtract";
 import { extractExcelText, looksLikeExcel } from "@/utils/excelExtract";
 import { useColorScheme } from "nativewind";
 import { setPendingImport } from "@/utils/pendingImport";
@@ -134,10 +134,23 @@ export default function ImportSheet({
       if (isPdf) {
         setLoadingPdf(true);
         const arrayBuffer = await file.arrayBuffer();
-        text = await extractPdfText(new Uint8Array(arrayBuffer));
+        const bytes = new Uint8Array(arrayBuffer);
+        text = await extractPdfText(bytes);
         setLoadingPdf(false);
         if (!text.trim()) {
-          showToastAndClose(t("importSheet.pdfError"));
+          // Se dice POR QUÉ, no solo que no se pudo. Antes salía siempre el
+          // mismo consejo —"expórtalo como CSV"— que sirve para un caso y
+          // para los otros dos no, y dejaba sin saber si tenía arreglo.
+          const problema = diagnosePdf(bytes);
+          showToastAndClose(
+            t(
+              problema === "encrypted"
+                ? "importSheet.pdfEncrypted"
+                : problema === "scanned"
+                  ? "importSheet.pdfScanned"
+                  : "importSheet.pdfError"
+            )
+          );
           return;
         }
       } else if (isExcel) {
@@ -314,7 +327,7 @@ export default function ImportSheet({
           </View>
         ) : !fileName ? (
           <>
-            <Text className="text-xs text-slate-500 dark:text-slate-300 mb-4">{t("importSheet.subtitle")}</Text>
+            <Text className="text-xs text-slate-500 dark:text-slate-300 mb-4">{t("importSheet.subtitle2")}</Text>
             <TouchableOpacity
               onPress={pickFile}
               disabled={loading}
