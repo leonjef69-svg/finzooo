@@ -1,6 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { uploadToDrive, DriveNotSignedIn, DriveDenied } from "@/utils/googleDrive";
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -34,6 +41,14 @@ import {
   shareToGmail,
   shareToWhatsApp,
 } from "@/modules/share-to-app";
+import {
+  contactsFor,
+  loadContacts,
+  nextContactId,
+  saveContacts,
+  validateContact,
+  type SendContact,
+} from "@/utils/sendContacts";
 import { useAppData } from "@/contexts/AppDataContext";
 
 // Cuántos movimientos se dibujan en la vista previa. El PDF los lleva todos;
@@ -109,6 +124,64 @@ export default function ExportPdfSheet({
   // armado y no una marca de "abierto": así lo que se ve es exactamente lo
   // que había en el momento de tocar, sin recalcularse por debajo.
   const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+
+  // A quién mandarlo. La lista se guarda; la elección NO: se toca cada vez,
+  // a propósito. Ver utils/sendContacts.
+  const [contactos, setContactos] = useState<SendContact[]>([]);
+  const [contactoId, setContactoId] = useState<string | null>(null);
+  const [agregando, setAgregando] = useState(false);
+  const [nuevoNombre, setNuevoNombre] = useState("");
+  const [nuevoValor, setNuevoValor] = useState("");
+
+  useEffect(() => {
+    let vivo = true;
+    loadContacts().then((l) => vivo && setContactos(l));
+    return () => {
+      vivo = false;
+    };
+  }, []);
+
+  const contactosDelDestino = useMemo(
+    () => contactsFor(contactos, destination),
+    [contactos, destination]
+  );
+
+  // Al cambiar de destino se suelta el elegido: un contacto de correo no
+  // sirve para WhatsApp, y dejarlo marcado invitaría a mandar a un sitio que
+  // no existe.
+  useEffect(() => {
+    setContactoId(null);
+    setAgregando(false);
+  }, [destination]);
+
+  const contactoElegido = contactosDelDestino.find((c) => c.id === contactoId) ?? null;
+
+  function guardarContacto() {
+    const kind: SendContact["kind"] = destination === "whatsapp" ? "whatsapp" : "email";
+    const r = validateContact(nuevoNombre, kind, nuevoValor);
+    if (!r.ok) {
+      showToast(t(r.reason === "name" ? "exportPdf.contactNameError" : "exportPdf.contactValueError"));
+      return;
+    }
+    const nuevo: SendContact = { id: nextContactId(contactos), ...r.contact };
+    const lista = [...contactos, nuevo];
+    setContactos(lista);
+    saveContacts(lista);
+    // Se deja elegido el que se acaba de crear: quien lo añade es para
+    // mandarle algo ahora, no para tener que tocarlo otra vez.
+    setContactoId(nuevo.id);
+    setNuevoNombre("");
+    setNuevoValor("");
+    setAgregando(false);
+  }
+
+  function borrarContacto(id: string) {
+    const lista = contactos.filter((c) => c.id !== id);
+    setContactos(lista);
+    saveContacts(lista);
+    if (contactoId === id) setContactoId(null);
+    showToast(t("exportPdf.contactRemoved"));
+  }
 
   // Antes se exportaba siempre el mes que se estuviera viendo en Inicio, sin
   // posibilidad de elegir otro: para bajarse un mes pasado había que salir,
@@ -474,7 +547,8 @@ export default function ExportPdfSheet({
         const ok = shareToWhatsApp(
           file.uri,
           file.mimeType,
-          t("exportPdf.mailBody", { month: selectedMonthLabel })
+          t("exportPdf.mailBody", { month: selectedMonthLabel }),
+          contactoElegido?.value ?? ""
         );
         if (!ok) {
           // Si no se pudo —sin WhatsApp, o con un APK anterior a esto— se cae
@@ -497,7 +571,8 @@ export default function ExportPdfSheet({
           file.uri,
           file.mimeType,
           t("exportPdf.mailSubject", { month: selectedMonthLabel }),
-          t("exportPdf.mailBody", { month: selectedMonthLabel })
+          t("exportPdf.mailBody", { month: selectedMonthLabel }),
+          contactoElegido?.value ?? ""
         );
         if (!ok) {
           // Si no se pudo (sin Gmail, o sin la parte nativa porque el APK es
@@ -522,6 +597,7 @@ export default function ExportPdfSheet({
           return;
         }
         await MailComposer.composeAsync({
+          recipients: contactoElegido ? [contactoElegido.value] : undefined,
           subject: t("exportPdf.mailSubject", { month: selectedMonthLabel }),
           body: t("exportPdf.mailBody", { month: selectedMonthLabel }),
           attachments: [file.uri],
@@ -751,6 +827,102 @@ export default function ExportPdfSheet({
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* A QUIÉN.
+            Solo para los destinos que necesitan una persona: Drive es tuyo y
+            Compartir abre el menú de Android, donde ya eliges allí.
+
+            Se elige EN EL MOMENTO, no una vez y para siempre. Un destinatario
+            guardado como fijo se olvida a los tres meses, y un día se toca
+            Exportar en automático y el estado de cuenta se va a quien no
+            toca. Aquí siempre se toca el nombre de quien lo va a recibir. */}
+        {(destination === "mail" || destination === "gmail" || destination === "whatsapp") && (
+          <>
+            <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
+              {t("exportPdf.sendTo")}
+            </Text>
+            <View className="flex-row flex-wrap gap-2 mb-2">
+              {contactosDelDestino.map((c) => (
+                <TouchableOpacity
+                  key={c.id}
+                  onPress={() => setContactoId(contactoId === c.id ? null : c.id)}
+                  onLongPress={() => borrarContacto(c.id)}
+                  className={`px-3.5 py-2.5 rounded-xl border-[1.5px] ${
+                    contactoId === c.id
+                      ? "bg-emerald-600 border-emerald-600"
+                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                  }`}
+                >
+                  <Text
+                    className={`text-xs font-bold ${
+                      contactoId === c.id ? "text-white" : "text-slate-600 dark:text-slate-200"
+                    }`}
+                  >
+                    {c.name}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+              <TouchableOpacity
+                onPress={() => setAgregando(true)}
+                className="px-3.5 py-2.5 rounded-xl border-[1.5px] border-dashed border-slate-300 dark:border-slate-600"
+              >
+                <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
+                  {t("exportPdf.addContact")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <Text className="text-[11px] text-slate-500 dark:text-slate-400 mb-4">
+              {contactoId
+                ? t("exportPdf.sendToHint")
+                : contactosDelDestino.length > 0
+                  ? t("exportPdf.sendToNone")
+                  : t("exportPdf.sendToEmpty")}
+            </Text>
+
+            {agregando && (
+              <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 mb-4">
+                <TextInput
+                  value={nuevoNombre}
+                  onChangeText={setNuevoNombre}
+                  placeholder={t("exportPdf.contactName")}
+                  placeholderTextColor="#94a3b8"
+                  maxLength={30}
+                  className="border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900 mb-2"
+                />
+                <TextInput
+                  value={nuevoValor}
+                  onChangeText={setNuevoValor}
+                  placeholder={
+                    destination === "whatsapp"
+                      ? t("exportPdf.contactPhone")
+                      : t("exportPdf.contactEmail")
+                  }
+                  placeholderTextColor="#94a3b8"
+                  keyboardType={destination === "whatsapp" ? "phone-pad" : "email-address"}
+                  autoCapitalize="none"
+                  maxLength={60}
+                  className="border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900"
+                />
+                <View className="flex-row gap-2.5 mt-3">
+                  <TouchableOpacity
+                    onPress={() => setAgregando(false)}
+                    className="flex-1 py-2.5 rounded-xl items-center border-[1.5px] border-slate-200 dark:border-slate-700"
+                  >
+                    <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
+                      {t("common.cancel")}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={guardarContacto}
+                    className="flex-1 py-2.5 rounded-xl items-center bg-emerald-600"
+                  >
+                    <Text className="text-xs font-bold text-white">{t("common.save")}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            )}
+          </>
+        )}
 
         {/* GRÁFICOS.
             Solo tiene sentido en PDF: un CSV es una tabla de números que se

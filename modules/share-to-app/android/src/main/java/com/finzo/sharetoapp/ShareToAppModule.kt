@@ -40,7 +40,7 @@ class ShareToAppModule : Module() {
       }
     }
 
-    Function("shareToPackage") { fileUri: String, mimeType: String, packageName: String, subject: String, text: String ->
+    Function("shareToPackage") { fileUri: String, mimeType: String, packageName: String, subject: String, text: String, recipient: String ->
       val activity = appContext.currentActivity ?: return@Function false
       val ctx = appContext.reactContext ?: return@Function false
 
@@ -67,6 +67,20 @@ class ShareToAppModule : Module() {
         // Gmail recibe la dirección del archivo pero no el permiso de leerlo,
         // y el correo sale con un adjunto vacío.
         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+
+        // A QUIÉN. Cada app lo pide a su manera.
+        if (recipient.isNotBlank()) {
+          if (packageName.startsWith("com.whatsapp")) {
+            // WhatsApp abre el chat de un contacto concreto con este extra.
+            // El número tiene que ir con código de país y SOLO dígitos: con
+            // un "+" o un espacio dentro no encuentra a nadie y abre el
+            // selector de contactos como si no se hubiera pedido nada.
+            putExtra("jid", "$recipient@s.whatsapp.net")
+          } else {
+            // Gmail y cualquier app de correo entienden este.
+            putExtra(Intent.EXTRA_EMAIL, arrayOf(recipient))
+          }
+        }
       }
 
       try {

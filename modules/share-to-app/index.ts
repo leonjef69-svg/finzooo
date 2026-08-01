@@ -18,7 +18,9 @@ type NativeShape = {
     mimeType: string,
     packageName: string,
     subject: string,
-    text: string
+    text: string,
+    /** A quién: un correo, o un número con código de país y solo dígitos. */
+    recipient: string
   ) => boolean;
 };
 
@@ -49,11 +51,13 @@ export function shareToGmail(
   fileUri: string,
   mimeType: string,
   subject: string,
-  text: string
+  text: string,
+  /** El correo de quien lo recibe. Vacío para elegirlo dentro de Gmail. */
+  recipient = ""
 ): boolean {
   if (!Native) return false;
   try {
-    return Native.shareToPackage(fileUri, mimeType, GMAIL_PACKAGE, subject, text);
+    return Native.shareToPackage(fileUri, mimeType, GMAIL_PACKAGE, subject, text, recipient);
   } catch {
     return false;
   }
@@ -93,13 +97,26 @@ export function isWhatsAppInstalled(): boolean {
  * siempre en vez de dejar a la persona mirando una pantalla donde no pasó
  * nada.
  */
-export function shareToWhatsApp(fileUri: string, mimeType: string, text: string): boolean {
+export function shareToWhatsApp(
+  fileUri: string,
+  mimeType: string,
+  text: string,
+  /**
+   * El número con código de país y SOLO dígitos ("51999888777"). Vacío para
+   * que WhatsApp abra su selector de contactos.
+   *
+   * Con un "+" o un espacio dentro, WhatsApp no encuentra a nadie y abre el
+   * selector igual, como si no se hubiera pedido nada. Por eso el número se
+   * limpia antes de guardarlo, en utils/sendContacts.
+   */
+  recipient = ""
+): boolean {
   const paquete = whatsAppPackage();
   if (!Native || !paquete) return false;
   try {
     // WhatsApp ignora el asunto —no tiene—, así que va vacío. El texto sí lo
     // usa: se manda junto al archivo.
-    return Native.shareToPackage(fileUri, mimeType, paquete, "", text);
+    return Native.shareToPackage(fileUri, mimeType, paquete, "", text, recipient);
   } catch {
     return false;
   }
