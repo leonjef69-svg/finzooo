@@ -5,10 +5,12 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { File, Paths } from "expo-file-system";
-import { BarChart3, Cloud, FileDown, Mail, Share2, Sheet, X } from "lucide-react-native";
+import { BarChart3, Cloud, Eye, FileDown, Mail, Share2, Sheet, X } from "lucide-react-native";
 import * as MailComposer from "expo-mail-composer";
 import { useColorScheme } from "nativewind";
 import { catInfo } from "@/constants/categories";
+import { COLOR_HEX_600 } from "@/constants/colors";
+import PdfPreview from "@/components/PdfPreview";
 import { methodLabel } from "@/constants/i18n";
 import { LOGO_DATA_URI } from "@/constants/logo";
 import { monthKey, fmtDate } from "@/utils/format";
@@ -64,7 +66,8 @@ export default function ExportPdfSheet({
   // "drive" lo sube a Google Drive sin ninguna ventana de por medio.
   destination?: "share" | "mail" | "gmail" | "drive";
 }) {
-  const { t, transactions, month, monthNames, fmt, userName, showToast } = useAppData();
+  const { t, transactions, month, monthNames, fmt, userName, showToast, categoryBudgets } =
+    useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const [exportType, setExportType] = useState<ExportType>(initialType ?? "all");
@@ -84,6 +87,10 @@ export default function ExportPdfSheet({
   // a esta función, porque la parte que habla con Gmail es código nativo y no
   // llega en las actualizaciones por internet.
   const [gmailDisponible] = useState(() => isGmailInstalled());
+  // El documento que se está mirando en grande, o null. Se guarda el HTML ya
+  // armado y no una marca de "abierto": así lo que se ve es exactamente lo
+  // que había en el momento de tocar, sin recalcularse por debajo.
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
 
   // Antes se exportaba siempre el mes que se estuviera viendo en Inicio, sin
   // posibilidad de elegir otro: para bajarse un mes pasado había que salir,
@@ -172,7 +179,16 @@ export default function ExportPdfSheet({
       : t("exportPdf.pdfTitleAll");
   }
 
-  async function exportAsPdf() {
+  /**
+   * Arma el HTML del documento.
+   *
+   * Lo usan las DOS cosas: la vista previa y la exportación de verdad. Es lo
+   * que hace que lo que se ve antes sea exactamente lo que sale después —
+   * dos armadores distintos se habrían separado en cuanto alguien tocara uno,
+   * y una vista previa que no coincide con el archivo es peor que no tener
+   * vista previa.
+   */
+  function construirHtml(): string {
     const [y, m] = selectedMk.split("-").map(Number);
     // Días que tiene el mes elegido. El día 0 del mes siguiente es el último
     // del actual, y así también sale bien febrero en año bisiesto.
@@ -192,7 +208,45 @@ export default function ExportPdfSheet({
       };
     });
 
-    const html = buildPdfHtml({
+    // Los límites por categoría, con lo gastado DEL MES ELEGIDO.
+    //
+    // No se usa el categorySpent del contexto a propósito: ese siempre mira
+    // el mes que se está viendo en Inicio, no el que se eligió aquí.
+    // Exportando junio desde julio habría salido el gasto de julio contra los
+    // límites, y nadie lo habría notado hasta comparar dos meses.
+    const gastadoPorCategoria: Record<string, number> = {};
+    for (const tx of transactions) {
+      if (tx.type !== "expense" || !tx.date.startsWith(selectedMk)) continue;
+      gastadoPorCategoria[tx.category] = (gastadoPorCategoria[tx.category] || 0) + tx.amount;
+    }
+    const limites = Object.entries(categoryBudgets)
+      .filter(([, limit]) => limit > 0)
+      .map(([id, limit]) => {
+        const c = catInfo(id);
+        return {
+          name: t(c.label),
+          color: COLOR_HEX_600[c.color] || "#64748b",
+          limit,
+          spent: gastadoPorCategoria[id] || 0,
+        };
+      })
+      .sort((a, b) => b.spent / b.limit - a.spent / a.limit);
+
+    // Los tres meses que TERMINAN en el mes elegido, del más antiguo al más
+    // reciente. Solo los que tuvieron gasto: un mes en cero no aporta y hace
+    // que las columnas de los otros se vean más chicas de lo que son.
+    const meses = [2, 1, 0]
+      .map((atras) => {
+        const d = new Date(y, m - 1 - atras, 1);
+        const key = monthKey(d.getFullYear(), d.getMonth());
+        const total = transactions
+          .filter((tx) => tx.type === "expense" && tx.date.startsWith(key))
+          .reduce((s, tx) => s + tx.amount, 0);
+        return { label: monthNames[d.getMonth()].slice(0, 3), value: total };
+      })
+      .filter((b) => b.value > 0);
+
+    return buildPdfHtml({
       logoDataUri: LOGO_DATA_URI,
       userName,
       title: reportTitleFor(exportType),
@@ -201,6 +255,8 @@ export default function ExportPdfSheet({
       daysInMonth,
       fmt,
       charts,
+      categoryBudgets: charts ? limites : [],
+      monthly: charts ? meses : [],
       // toDateKey y no toISOString(): toISOString da la fecha en horario de
       // Greenwich, y Perú va cinco horas por detrás. Un PDF exportado a las
       // 8 de la noche del 30 habría salido fechado el 31.
@@ -216,11 +272,17 @@ export default function ExportPdfSheet({
         expenses: t("exportPdf.expenses"),
         balance: t("exportPdf.balance"),
         byCategory: t("exportPdf.chartByCategory"),
+        byCategoryBudget: t("categoryBudgets.rowLabel"),
+        byMonth: t("reports.byMonth"),
         byDay: t("exportPdf.chartByDay"),
         generatedOn: t("exportPdf.generatedOn"),
         movements: t("exportPdf.movements"),
       },
     });
+  }
+
+  async function exportAsPdf() {
+    const html = construirHtml();
 
     const { uri } = await Print.printToFileAsync({ html });
 
@@ -687,6 +749,22 @@ export default function ExportPdfSheet({
 
         </ScrollView>
 
+        {/* VER EL DOCUMENTO ANTES DE MANDARLO.
+            Enseña el MISMO HTML que se le da al generador del PDF, así que
+            no es una aproximación: es el documento, antes de convertirlo.
+            Solo en PDF — un Excel es una tabla de números y se mira en Excel. */}
+        {format === "pdf" && monthTx.length > 0 && (
+          <TouchableOpacity
+            onPress={() => setPreviewHtml(construirHtml())}
+            className="w-full mt-3 py-3.5 rounded-2xl items-center flex-row justify-center gap-2 border-[1.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+          >
+            <Eye size={17} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+            <Text className="text-slate-600 dark:text-slate-200 font-bold">
+              {t("exportPdf.seeDocument")}
+            </Text>
+          </TouchableOpacity>
+        )}
+
         <TouchableOpacity
           onPress={handleExport}
           disabled={exporting}
@@ -712,6 +790,16 @@ export default function ExportPdfSheet({
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* Va el último y por encima de todo: al abrirse tapa la hoja de
+          exportar entera, que es lo que se quiere para mirar un documento. */}
+      {previewHtml !== null && (
+        <PdfPreview
+          html={previewHtml}
+          title={`${reportTitleFor(exportType)} · ${selectedMonthLabel}`}
+          onClose={() => setPreviewHtml(null)}
+        />
+      )}
     </View>
   );
 }

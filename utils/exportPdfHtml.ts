@@ -35,10 +35,23 @@ export type PdfTexts = {
   expenses: string;
   balance: string;
   byCategory: string;
+  byCategoryBudget: string;
+  byMonth: string;
   byDay: string;
   generatedOn: string;
   movements: string;
 };
+
+/** Un límite por categoría y lo que se lleva gastado de él. */
+export type PdfCategoryBudget = {
+  name: string;
+  color: string;
+  limit: number;
+  spent: number;
+};
+
+/** Lo gastado en un mes, para el gráfico de los últimos meses. */
+export type PdfMonth = { label: string; value: number };
 
 export type PdfOptions = {
   logoDataUri: string;
@@ -52,6 +65,10 @@ export type PdfOptions = {
   texts: PdfTexts;
   /** Dibujar los gráficos. Se puede apagar desde la pantalla. */
   charts: boolean;
+  /** Los límites por categoría que estén puestos. Vacío si no hay ninguno. */
+  categoryBudgets: PdfCategoryBudget[];
+  /** Los últimos meses con gasto, del más antiguo al más reciente. */
+  monthly: PdfMonth[];
   /** Fecha de generación, ya escrita. */
   generatedAt: string;
 };
@@ -126,6 +143,132 @@ export function dayLabelStep(daysInMonth: number, plotWidth = 535, fontSize = 7)
   const colW = plotWidth / daysInMonth;
   const labelW = 2 * fontSize * 0.62 + 2;
   return Math.max(1, Math.ceil(labelW / colW));
+}
+
+/**
+ * Un trozo de la rosquilla, como orden de dibujo.
+ *
+ * Se calcula a mano porque el PDF se arma en un WebView aislado donde no se
+ * puede cargar ninguna librería de gráficos: todo tiene que ir escrito dentro
+ * del propio HTML.
+ *
+ * Empieza arriba (−90°) y avanza en el sentido del reloj, que es como se lee
+ * una rosquilla y como la dibuja la app en Reportes. Sin ese giro empezaría a
+ * las tres en punto y no coincidiría con la pantalla.
+ */
+export function donutSlice(
+  desde: number,
+  hasta: number,
+  cx: number,
+  cy: number,
+  rFuera: number,
+  rDentro: number
+): string {
+  const a0 = (desde * 2 - 0.5) * Math.PI;
+  const a1 = (hasta * 2 - 0.5) * Math.PI;
+  const grande = hasta - desde > 0.5 ? 1 : 0;
+
+  const x0 = cx + rFuera * Math.cos(a0);
+  const y0 = cy + rFuera * Math.sin(a0);
+  const x1 = cx + rFuera * Math.cos(a1);
+  const y1 = cy + rFuera * Math.sin(a1);
+  const x2 = cx + rDentro * Math.cos(a1);
+  const y2 = cy + rDentro * Math.sin(a1);
+  const x3 = cx + rDentro * Math.cos(a0);
+  const y3 = cy + rDentro * Math.sin(a0);
+
+  const n = (v: number) => v.toFixed(2);
+  return [
+    `M${n(x0)},${n(y0)}`,
+    `A${rFuera},${rFuera} 0 ${grande} 1 ${n(x1)},${n(y1)}`,
+    `L${n(x2)},${n(y2)}`,
+    `A${rDentro},${rDentro} 0 ${grande} 0 ${n(x3)},${n(y3)}`,
+    "Z",
+  ].join(" ");
+}
+
+/**
+ * La rosquilla de gastos por categoría, igual que la de Reportes.
+ *
+ * Va en SVG y no como imagen: un PDF se imprime y se le hace zoom, y una
+ * imagen se ve pastosa. Dibujado así se mantiene nítido a cualquier tamaño.
+ */
+function rosquilla(
+  filas: { label: string; color: string; amount: number; share: number }[],
+  total: number,
+  fmt: (n: number) => string,
+  totalLabel: string
+): string {
+  const CX = 78;
+  const CY = 78;
+  const R_FUERA = 66;
+  const R_DENTRO = 44;
+
+  let acumulado = 0;
+  const trozos = filas
+    .map((f) => {
+      const desde = acumulado;
+      acumulado += f.share;
+      // Una categoría que no llega al medio grado no se dibuja: saldría como
+      // una raya sobre el borde y ensuciaría el resto.
+      if (f.share < 0.0015) return "";
+      return `<path d="${donutSlice(desde, acumulado, CX, CY, R_FUERA, R_DENTRO)}" fill="${f.color}" />`;
+    })
+    .join("");
+
+  return `
+    <svg width="156" height="156" viewBox="0 0 156 156">
+      ${trozos}
+      <text x="${CX}" y="${CY - 4}" text-anchor="middle" font-size="9" fill="#64748b">${esc(totalLabel)}</text>
+      <text x="${CX}" y="${CY + 11}" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">${esc(fmt(total))}</text>
+    </svg>`;
+}
+
+/** Los límites por categoría: cuánto se lleva de cada uno. */
+function barrasPresupuesto(filas: PdfCategoryBudget[], fmt: (n: number) => string): string {
+  return filas
+    .map((f) => {
+      const parte = f.limit > 0 ? Math.min(1, f.spent / f.limit) : 0;
+      // Pasarse del límite se pinta en rojo. Es el dato que se busca en esta
+      // tabla, así que se ve sin tener que comparar los dos números.
+      const color = f.spent > f.limit ? ROJO : f.color;
+      return `
+        <tr>
+          <td style="padding:3px 8px 3px 0;font-size:10px;white-space:nowrap;">${esc(f.name)}</td>
+          <td style="padding:3px 0;width:100%;">
+            <div style="background:#f1f5f9;border-radius:3px;height:10px;">
+              <div style="background:${color};width:${(parte * 100).toFixed(1)}%;height:10px;border-radius:3px;"></div>
+            </div>
+          </td>
+          <td style="padding:3px 0 3px 8px;font-size:9px;text-align:right;white-space:nowrap;color:#64748b;">
+            ${esc(fmt(f.spent))} / ${esc(fmt(f.limit))}
+          </td>
+        </tr>`;
+    })
+    .join("");
+}
+
+/** Gasto de los últimos meses, en columnas. */
+function barrasPorMes(meses: PdfMonth[], fmt: (n: number) => string): string {
+  const max = Math.max(...meses.map((m) => m.value), 0);
+  if (max <= 0) return "";
+  const columnas = meses
+    .map((m) => {
+      const alto = Math.max(3, Math.round((m.value / max) * 70));
+      return `<td style="vertical-align:bottom;padding:0 10px;text-align:center;">
+          <div style="font-size:9px;color:#334155;margin-bottom:3px;">${esc(fmt(m.value))}</div>
+          <div style="background:${VERDE};height:${alto}px;border-radius:3px 3px 0 0;"></div>
+        </td>`;
+    })
+    .join("");
+  const etiquetas = meses
+    .map((m) => `<td style="text-align:center;font-size:9px;color:#64748b;padding-top:4px;">${esc(m.label)}</td>`)
+    .join("");
+  return `
+    <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
+      <tr style="height:86px;">${columnas}</tr>
+      <tr>${etiquetas}</tr>
+    </table>`;
 }
 
 function barrasPorCategoria(
@@ -224,12 +367,40 @@ export function buildPdfHtml(o: PdfOptions): string {
       </div>
     </td>`;
 
+  // La rosquilla va al lado de la lista, no debajo: así el bloque entero cabe
+  // en el alto de la propia rosquilla y no se come media hoja.
+  const totalFoco = cats.reduce((s, c) => s + c.amount, 0);
   const bloqueCategorias =
     cats.length > 0
       ? `
       <div style="page-break-inside:avoid;margin-top:20px;">
         <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(T.byCategory)}</div>
-        <table style="width:100%;border-collapse:collapse;">${barrasPorCategoria(cats, fmt)}</table>
+        <table style="width:100%;border-collapse:collapse;">
+          <tr>
+            <td style="width:170px;vertical-align:middle;">${rosquilla(cats, totalFoco, fmt, T.total)}</td>
+            <td style="vertical-align:middle;padding-left:6px;">
+              <table style="width:100%;border-collapse:collapse;">${barrasPorCategoria(cats, fmt)}</table>
+            </td>
+          </tr>
+        </table>
+      </div>`
+      : "";
+
+  const bloquePresupuestos =
+    o.charts && o.categoryBudgets.length > 0
+      ? `
+      <div style="page-break-inside:avoid;margin-top:20px;">
+        <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(T.byCategoryBudget)}</div>
+        <table style="width:100%;border-collapse:collapse;">${barrasPresupuesto(o.categoryBudgets, fmt)}</table>
+      </div>`
+      : "";
+
+  const bloqueMeses =
+    o.charts && o.monthly.length > 1
+      ? `
+      <div style="page-break-inside:avoid;margin-top:20px;">
+        <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(T.byMonth)}</div>
+        ${barrasPorMes(o.monthly, fmt)}
       </div>`
       : "";
 
@@ -290,6 +461,8 @@ export function buildPdfHtml(o: PdfOptions): string {
     </table>
 
     ${bloqueCategorias}
+    ${bloquePresupuestos}
+    ${bloqueMeses}
     ${bloqueDias}
 
     <!-- MOVIMIENTOS -->
