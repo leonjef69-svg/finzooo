@@ -21,6 +21,8 @@ export type VoiceCommand =
       monthKey: string;
       format: "pdf" | "xlsx" | "csv";
       destination: "share" | "mail" | "gmail" | "whatsapp" | "drive";
+      /** Todo, solo los gastos o solo los ingresos. */
+      type: "all" | "expense" | "income";
       /** A quien, tal como se dijo. Lo resuelve quien llama. */
       recipient?: string;
     }
@@ -309,90 +311,136 @@ export function destinationFromPhrase(
 }
 
 /**
- * A quién, tal como se dijo: "a mamá", "al contador", "a mi número".
+ * ¿Todo, solo los gastos o solo los ingresos?
+ *
+ * "exportar pdf whatsapp INGRESOS leon julio" pedía los ingresos y salía el
+ * mes entero: la frase se entendía en todo menos en esto, que era lo único
+ * que hacía distinto al documento.
+ */
+export function typeFromPhrase(normalized: string): "all" | "expense" | "income" {
+  const ingresos = hasWord(normalized, "ingreso") || hasWord(normalized, "ingresos");
+  const gastos = hasWord(normalized, "gasto") || hasWord(normalized, "gastos");
+  // Nombrar los dos es pedirlo todo, que es lo que sale sin decir nada.
+  if (ingresos && !gastos) return "income";
+  if (gastos && !ingresos) return "expense";
+  return "all";
+}
+
+/**
+ * A quién, tal como se dijo: "a mamá", "al contador", "leon", "mi correo".
  *
  * Devuelve el texto en crudo, no un contacto. Este archivo solo traduce la
  * frase y no sabe nada de la app; quien llame busca ese texto entre los
  * contactos guardados. Mezclar las dos cosas aquí obligaría a este archivo a
  * leer del almacenamiento, y dejaría de poder probarse solo.
  *
- * Se corta en la primera palabra que ya significa otra cosa —un formato, un
- * destino, un mes— porque el reconocedor entrega la frase entera de corrido:
- * sin ese corte, "exportar julio pdf whatsapp a mama" daría un nombre de
- * "mama" con media orden pegada detrás.
+ * CÓMO SE ENCUENTRA
+ *
+ * El reconocedor entrega la frase entera de corrido, sin comas. Así que se
+ * hace al revés de lo evidente: en vez de buscar el nombre, se tachan todas
+ * las palabras que YA significan algo —el verbo, el formato, el destino, el
+ * mes, el tipo, los años, y los "de", "por", "a"— y lo que queda sin tachar
+ * solo puede ser el nombre.
+ *
+ * Se hace así porque el nombre no está siempre al final. "exportar pdf
+ * whatsapp ingresos LEON julio" lo deja en medio, y cualquier regla del tipo
+ * "lo que va detrás de la última palabra de la orden" se lo perdía entero.
  */
-const PALABRAS_QUE_CORTAN = [
-  "pdf", "excel", "csv", "whatsapp", "wasap", "wasa", "gmail", "correo", "email",
-  "drive", "nube", "google", "de", "del",
+const PALABRAS_DE_LA_ORDEN = [
+  // El verbo y lo que se exporta
+  "exporta", "exportar", "exportame", "descarga", "descargar", "descargame",
+  "pasame", "bajame", "mandame", "enviame", "reporte", "comprobante",
+  "movimiento", "movimientos", "resumen", "documento", "archivo", "todo", "todos",
+  // Formato
+  "pdf", "excel", "xlsx", "csv",
+  // Destino
+  "whatsapp", "wasap", "wasa", "gmail", "correo", "email", "drive", "nube", "google",
+  // Tipo
+  "gasto", "gastos", "ingreso", "ingresos",
   ...MONTHS,
 ];
 
-export function recipientFromPhrase(normalized: string): string | undefined {
-  // "a mamá" / "al contador" / "para el contador". El "a" suelto no vale:
-  // aparece en medio de cualquier frase.
-  const m = normalized.match(/\b(?:a|al|para)\s+(?:el\s+|la\s+|mi\s+)?([a-zñáéíóú0-9 ]+)$/);
-  if (m) {
-    const palabras: string[] = [];
-    for (const palabra of m[1].trim().split(/\s+/)) {
-      if (PALABRAS_QUE_CORTAN.includes(palabra)) break;
-      palabras.push(palabra);
-    }
-    const nombre = palabras.join(" ").trim();
-    if (nombre.length >= 2) return nombre;
-  }
+/** Palabras de pegamento: no son nombres de nadie ni parte de la orden. */
+const CONECTORES = [
+  "a", "al", "para", "de", "del", "en", "por", "con", "y", "el", "la", "los",
+  "las", "un", "una", "sobre",
+];
 
-  return nombreAlFinal(normalized);
-}
+const POSESIVOS = ["mi", "mis"];
 
 /**
- * El nombre dicho SIN "a" ni "para" delante: "exportar julio pdf whatsapp mi
- * número".
+ * Las únicas palabras de la orden que también pueden ser el nombre de un
+ * contacto, y solo con un "mi" delante: "mi correo", "mi gmail".
  *
- * Hablando no se dice la preposición. Se dice el destino y detrás a quién, de
- * corrido, y exigir el "a" hacía que no se entendiera a nadie — WhatsApp se
- * abría con el archivo puesto pero preguntando a quién mandarlo, que es
- * justo el paso que la orden por voz existe para quitar.
+ * La lista es corta a propósito. Con cualquier palabra de la orden valdría,
+ * "exporta MIS GASTOS de julio" saldría con un destinatario llamado "mis
+ * gastos" y se avisaría de que ese contacto no existe — en una frase donde
+ * nadie nombró a nadie.
  *
- * Se toma lo que queda DESPUÉS de la última palabra de la orden (formato,
- * destino o mes). Todo lo de antes ya significa otra cosa, así que lo que
- * sobra al final solo puede ser el nombre.
+ * Y no están drive ni la nube: ahí no hay destinatario que valga.
  */
-function nombreAlFinal(normalized: string): string | undefined {
-  const palabras = normalized.trim().split(/\s+/);
+const NOMBRES_DE_DESTINO = ["correo", "email", "gmail", "whatsapp", "wasap", "wasa"];
 
-  let ultimaDeLaOrden = -1;
-  for (let i = 0; i < palabras.length; i++) {
-    if (PALABRAS_QUE_CORTAN.includes(palabras[i])) ultimaDeLaOrden = i;
-  }
-  // Si no se dijo ni formato ni destino ni mes, lo del final no es un nombre:
-  // es la orden entera. Sin esto, "exportar movimientos" tomaría
-  // "movimientos" por una persona.
-  if (ultimaDeLaOrden < 0) return undefined;
+function esDeLaOrden(palabra: string): boolean {
+  // Los años se tachan como parte de la orden: "julio de 2026" no nombra a
+  // nadie, y sin esto "2026" quedaba sin tachar y pasaba por un nombre.
+  return PALABRAS_DE_LA_ORDEN.includes(palabra) || /^\d+$/.test(palabra);
+}
 
-  const cola = palabras.slice(ultimaDeLaOrden + 1);
+function esNombre(palabra: string): boolean {
+  return !esDeLaOrden(palabra) && !CONECTORES.includes(palabra) && !POSESIVOS.includes(palabra);
+}
 
-  // "exportar julio pdf gmail MI CORREO": la frase acaba en una palabra de la
-  // orden, así que por detrás no queda nada. Pero ese "mi" delante la cambia
-  // de sentido: "por correo" es a dónde va, y "mi correo" es de quién es.
-  //
-  // Pasa sobre todo con el correo, porque el contacto se llama igual que el
-  // destino. Con WhatsApp no se nota: nadie tiene un contacto llamado
-  // "whatsapp".
-  if (cola.length === 0) {
-    const anterior = palabras[ultimaDeLaOrden - 1];
-    if (anterior === "mi" || anterior === "mis") {
-      return `${anterior} ${palabras[ultimaDeLaOrden]}`;
+export function recipientFromPhrase(normalized: string): string | undefined {
+  const palabras = normalized.trim().split(/\s+/).filter(Boolean);
+  // Sin una sola palabra de la orden, esto no es una orden con un nombre
+  // dentro: es otra cosa, y lo que quede no es de nadie.
+  if (!palabras.some(esDeLaOrden)) return undefined;
+
+  const rachas: { palabras: string[]; conPreposicion: boolean }[] = [];
+  let i = 0;
+  while (i < palabras.length) {
+    const p = palabras[i];
+
+    // "MI CORREO", "MI GMAIL": un posesivo pegado a una palabra de la orden.
+    //
+    // Es el único caso en que una palabra tachada vuelve a contar. Pasa
+    // porque el contacto se llama igual que el destino: "por correo" es a
+    // dónde va, y "mi correo" es de quién es. Sin esto, quien guarda su
+    // dirección como "mi correo" no podía nombrarla nunca.
+    if (POSESIVOS.includes(p) && NOMBRES_DE_DESTINO.includes(palabras[i + 1] ?? "")) {
+      rachas.push({ palabras: [p, palabras[i + 1]], conPreposicion: CONECTORES.includes(palabras[i - 1] ?? "") });
+      i += 2;
+      continue;
     }
-    return undefined;
+
+    // El posesivo delante de un nombre normal se cae: "a mi hermana" es
+    // "hermana". Quien lo guardó como "Mi hermana" se encuentra igual, porque
+    // la búsqueda acepta que uno contenga al otro.
+    const arranque = POSESIVOS.includes(p) && esNombre(palabras[i + 1] ?? "") ? i + 1 : i;
+    if (!esNombre(palabras[arranque] ?? "")) {
+      i++;
+      continue;
+    }
+
+    const racha: string[] = [];
+    let j = arranque;
+    while (j < palabras.length && esNombre(palabras[j])) {
+      racha.push(palabras[j]);
+      j++;
+    }
+    const anterior = palabras[i - 1] ?? "";
+    rachas.push({ palabras: racha, conPreposicion: anterior === "a" || anterior === "al" || anterior === "para" });
+    i = j;
   }
 
-  const nombre = cola.join(" ").trim();
-  if (nombre.length < 2) return undefined;
-  // Un año no es nadie. "exportar julio de 2026" deja "2026" al final, y sin
-  // esto se avisaría de que no existe el contacto "2026" en una frase donde
-  // nadie nombró a nadie.
-  if (/^\d+$/.test(nombre)) return undefined;
-  return nombre;
+  if (rachas.length === 0) return undefined;
+
+  // Con varios trozos sin tachar, manda el que lleva un "a" delante: ese es
+  // el que se dijo como destinatario y no de pasada.
+  const elegida = rachas.find((r) => r.conPreposicion) ?? rachas[rachas.length - 1];
+  const nombre = elegida.palabras.join(" ").trim();
+  return nombre.length >= 2 ? nombre : undefined;
 }
 
 export function parseVoiceCommand(transcript: string, now: Date = new Date()): VoiceCommand {
@@ -404,6 +452,7 @@ export function parseVoiceCommand(transcript: string, now: Date = new Date()): V
       monthKey: monthFromPhrase(normalized, now),
       format: formatFromPhrase(normalized),
       destination: destinationFromPhrase(normalized),
+      type: typeFromPhrase(normalized),
       // A quién, tal como se dijo. Aquí no se puede resolver a un contacto:
       // este archivo no sabe nada de la app, solo traduce la frase. Quien
       // llame se encarga de buscarlo entre los contactos guardados.

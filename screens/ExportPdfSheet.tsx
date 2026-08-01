@@ -440,8 +440,12 @@ export default function ExportPdfSheet({
       daysInMonth,
       fmt,
       charts,
-      categoryBudgets: charts ? limites : [],
-      monthly: charts ? meses : [],
+      // Los presupuestos y las columnas de los tres meses son de GASTO: no
+      // existe un presupuesto de ingresos ni tiene sentido comparar cuánto
+      // gastaste en un reporte donde pediste solo lo que entró. En un
+      // "exportar ingresos" salían igual, hablando de otra cosa.
+      categoryBudgets: charts && exportType !== "income" ? limites : [],
+      monthly: charts && exportType !== "income" ? meses : [],
       // toDateKey y no toISOString(): toISOString da la fecha en horario de
       // Greenwich, y Perú va cinco horas por detrás. Un PDF exportado a las
       // 8 de la noche del 30 habría salido fechado el 31.
