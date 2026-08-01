@@ -1,4 +1,5 @@
 import type { ComponentType } from "react";
+import { getOverride } from "@/utils/categoryCustom";
 import {
   Utensils,
   Car,
@@ -39,6 +40,11 @@ export type Category = {
   color: string;
   emoji: string;
   extra?: boolean;
+  /**
+   * Imagen propia, ya recortada y guardada como texto. Cuando la hay, se
+   * dibuja en lugar del emoji. La pone catInfo desde la personalizacion.
+   */
+  image?: string;
 };
 
 // "label" es una CLAVE de traducción (no el texto en sí) — se traduce con
@@ -92,6 +98,36 @@ const CATS_BY_ID = new Map(ALL_CATS.map((c) => [c.id, c]));
 // reordena la lista.
 const FALLBACK_CAT = CATS_BY_ID.get("otros") ?? EXPENSE_CATS[EXPENSE_CATS.length - 1];
 
+/**
+ * La categoría, ya con los cambios que le haya hecho la persona.
+ *
+ * Aquí es donde se aplican el nombre, el color y la imagen propios. Se hace
+ * en este único sitio a propósito: la categoría se dibuja en 38 lugares
+ * repartidos por 16 archivos, y si cada uno tuviera que acordarse de mirar
+ * la personalización, alguno se quedaría sin hacerlo — y ese fallo se
+ * arrastra meses porque solo se nota cuando alguien renombra justo esa.
+ *
+ * SOBRE EL NOMBRE
+ *
+ * "label" es una clave de traducción y quien la muestra hace t(label). El
+ * traductor, cuando no encuentra una clave, devuelve la clave tal cual — así
+ * que poner aquí el nombre escrito a mano hace que salga sin tocar ninguno de
+ * los 38 sitios.
+ *
+ * El único caso raro sería llamar a una categoría exactamente igual que una
+ * clave interna ("category.comida"), y entonces se vería el nombre traducido
+ * en vez del escrito. Se asume: las claves son palabras técnicas con punto y
+ * sin espacios, y nadie llama así a sus gastos.
+ */
 export function catInfo(id: string): Category {
-  return CATS_BY_ID.get(id) ?? FALLBACK_CAT;
+  const base = CATS_BY_ID.get(id) ?? FALLBACK_CAT;
+  const custom = getOverride(id);
+  if (!custom) return base;
+
+  return {
+    ...base,
+    label: custom.name ?? base.label,
+    color: custom.color ?? base.color,
+    image: custom.image,
+  };
 }

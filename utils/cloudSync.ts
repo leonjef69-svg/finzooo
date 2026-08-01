@@ -37,6 +37,9 @@ export type CloudData = {
   // esta categoría". Opcional para no romper cuentas viejas que no lo
   // tienen guardado todavía.
   merchantLearned?: Record<string, string>;
+  // Nombre, color e imagen propios de cada categoria. Opcional: las cuentas
+  // creadas antes de esto no lo tienen, y sin el "?" leerlas fallaria.
+  categoryOverrides?: Record<string, { name?: string; color?: string; image?: string }>;
   // Meses cuyo "Saldo anterior" se muestra en cero, cada uno por separado
   // (claves "AAAA-MM"). Opcional: las cuentas creadas antes de esta
   // función no lo tienen guardado.

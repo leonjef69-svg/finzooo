@@ -26,6 +26,7 @@ export default function SettingsTab() {
       onCountry={() => router.push("/country")}
       isPremium={isPremium}
       onCategoryBudgets={() => router.push("/category-budgets")}
+      onCategoryStyle={() => router.push("/category-style")}
       onExportPdf={() => router.push("/export-pdf")}
       onScheduledExport={() => router.push("/scheduled-export")}
       onImport={() => router.push("/import")}

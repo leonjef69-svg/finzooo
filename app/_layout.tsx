@@ -81,6 +81,9 @@ function GlobalOverlays() {
 //                   sin elegir nada, la pantalla se cerraba y aparecía
 //                   Inicio: había que volver a entrar y a elegir mes,
 //                   formato y qué exportar desde cero.
+//   /category-style → abre la galeria para elegir la imagen de una
+//                   categoria. Al volver, la pantalla se cerraba y la foto
+//                   se perdia sin decir nada.
 //   /scheduled-export → al elegir una frecuencia se pide el permiso de
 //                   avisos, y ese cuadro lo dibuja Android encima de la app.
 //                   Sin esta excepción, conceder el permiso mandaba a Inicio
@@ -97,6 +100,7 @@ const KEEP_ON_RETURN = [
   "/import",
   "/export-pdf",
   "/scheduled-export",
+  "/category-style",
 ];
 
 /**

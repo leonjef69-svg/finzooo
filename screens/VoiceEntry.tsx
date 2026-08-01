@@ -8,6 +8,7 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { type VoiceFailure } from "@/utils/voiceParser";
 import { parseVoiceCommand } from "@/utils/voiceCommand";
 import { suggestCategory } from "@/utils/classifier";
+import CategoryAvatar from "@/components/CategoryAvatar";
 import { catInfo } from "@/constants/categories";
 import { nextId } from "@/utils/id";
 import { CARD_SHADOW } from "@/constants/style";
@@ -708,7 +709,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                         className="flex-row items-center gap-3 rounded-2xl p-3.5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
                         style={CARD_SHADOW}
                       >
-                        <Text className="text-xl">{cat.emoji}</Text>
+                        <CategoryAvatar id={cat.id} size={20} />
                         <View className="flex-1">
                           <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">
                             {row.description || t(cat.label)}
@@ -836,7 +837,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                         const share = Math.round((amount / summary.total) * 100);
                         return (
                           <View key={category} className="flex-row items-center gap-2.5">
-                            <Text className="text-base">{cat.emoji}</Text>
+                            <CategoryAvatar id={cat.id} size={16} />
                             <Text className="flex-1 text-xs font-bold text-slate-900 dark:text-slate-100">
                               {t(cat.label)}
                             </Text>
@@ -1131,7 +1132,7 @@ function SingleCard({
       className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700 items-center"
       style={CARD_SHADOW}
     >
-      <Text className="text-4xl mb-1">{cat.emoji}</Text>
+      <View className="mb-1"><CategoryAvatar id={cat.id} size={36} /></View>
       <Text className={`text-3xl font-extrabold ${kind === "expense" ? "text-rose-500" : "text-emerald-600"}`}>
         {kind === "expense" ? "-" : "+"}
         {fmt(row.amount)}

@@ -19,6 +19,7 @@ import {
   Globe,
   Coins,
   MapPin,
+  Palette,
   Bell,
   KeyRound,
   Pencil,
@@ -61,6 +62,7 @@ export default function Settings({
   onCountry,
   isPremium,
   onCategoryBudgets,
+  onCategoryStyle,
   onExportPdf,
   onScheduledExport,
   onImport,
@@ -85,6 +87,7 @@ export default function Settings({
   onCountry: () => void;
   isPremium: boolean;
   onCategoryBudgets: () => void;
+  onCategoryStyle: () => void;
   onExportPdf: () => void;
   onScheduledExport: () => void;
   onImport: () => void;
@@ -292,6 +295,12 @@ export default function Settings({
           }
         />
         {/* Justo debajo de Exportar, porque es lo mismo pero con horario. */}
+        <Row
+          Icon={Palette}
+          label={t("catCustom.rowLabel")}
+          onPress={onCategoryStyle}
+          right={<ChevronRight size={16} color="#cbd5e1" />}
+        />
         <Row
           Icon={CalendarClock}
           label={t("schedExport.settingsRow")}

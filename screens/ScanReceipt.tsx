@@ -13,6 +13,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Camera, Check, Image as ImageIcon, RotateCcw, ScanLine, X } from "lucide-react-native";
+import CategoryAvatar from "@/components/CategoryAvatar";
 import { EXPENSE_CATS, INCOME_CATS, catInfo } from "@/constants/categories";
 import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -350,7 +351,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
                           : "border-slate-200 dark:border-slate-700"
                       }`}
                     >
-                      <Text className="text-sm">{c.emoji}</Text>
+                      <CategoryAvatar id={c.id} size={14} />
                       <Text
                         className={`text-[11px] font-bold ${
                           category === c.id ? "text-emerald-700 dark:text-emerald-400" : "text-slate-500"

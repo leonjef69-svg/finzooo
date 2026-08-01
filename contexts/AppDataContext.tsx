@@ -28,6 +28,12 @@ import {
   STORAGE_KEYS,
 } from "@/utils/storage";
 import { activate as activateDecoy, deactivate as deactivateDecoy } from "@/utils/decoyMode";
+import {
+  loadOverrides,
+  saveOverrides,
+  setOverrides,
+  type CategoryOverrides,
+} from "@/utils/categoryCustom";
 import { DECOY_BUDGET, buildDecoyTransactions } from "@/utils/decoySeed";
 import { fmt as formatAmount, monthKey } from "@/utils/format";
 import { reserveIdsAbove } from "@/utils/id";
@@ -87,6 +93,9 @@ type AppDataContextValue = {
   categoryBudgets: Record<string, number>;
   categorySpent: Record<string, number>;
   updateCategoryBudgets: (newBudgets: Record<string, number>) => void;
+  // Nombre, color e imagen propios de cada categoria. Ver utils/categoryCustom.
+  categoryOverrides: CategoryOverrides;
+  updateCategoryOverrides: (next: CategoryOverrides) => void;
 
   transactions: Transaction[];
   addOrUpdateTransaction: (t: Transaction) => void;
@@ -153,6 +162,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [month, setMonth] = useState<Month>(currentRealMonth);
   const [budgets, setBudgets] = useState<Record<string, number>>({});
   const [categoryBudgets, setCategoryBudgets] = useState<Record<string, number>>({});
+  const [categoryOverrides, setCategoryOverridesState] = useState<CategoryOverrides>({});
   const [transactions, setTransactions] = useState<Transaction[]>(seedTransactions);
   const [goals, setGoals] = useState<Goal[]>(seedGoals);
   const [isPremium, setIsPremium] = useState(false);
@@ -235,6 +245,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     protectExistingIds(cloud.transactions, cloud.goals);
     setIsPremium(cloud.isPremium);
     setMerchantLearned(cloud.merchantLearned ?? {});
+    // La personalizacion va a los DOS sitios: a la variable de modulo que
+    // consulta catInfo, y al estado que provoca el redibujado. Solo con el
+    // estado, las pantallas se dibujarian con los datos viejos.
+    setOverrides(cloud.categoryOverrides ?? {});
+    setCategoryOverridesState(cloud.categoryOverrides ?? {});
     setCarryoverCleared(cloud.carryoverCleared ?? []);
     setHasOnboarded(true);
     saveJSON(STORAGE_KEYS.profile, {
@@ -308,6 +323,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       savedIsPremium,
       savedLearned,
       savedCarryoverCleared,
+      savedOverrides,
     ] = await Promise.all([
       loadJSON<Record<string, number>>(STORAGE_KEYS.budgets, {}),
       loadJSON<Record<string, number>>(STORAGE_KEYS.categoryBudgets, {}),
@@ -316,9 +332,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       loadJSON<boolean>(STORAGE_KEYS.isPremium, false),
       loadJSON<Record<string, string>>(STORAGE_KEYS.merchantLearned, {}),
       loadJSON<string[]>(STORAGE_KEYS.carryoverCleared, []),
+      // La personalizacion de categorias se carga en la variable de modulo
+      // que consulta catInfo, y ademas al estado para que las pantallas se
+      // dibujen con ella desde el primer momento.
+      loadOverrides(),
     ]);
     setBudgets(savedBudgets);
     setCategoryBudgets(savedCategoryBudgets);
+    setCategoryOverridesState(savedOverrides);
     setTransactions(savedTransactions);
     setGoals(savedGoals);
     protectExistingIds(savedTransactions, savedGoals);
@@ -349,6 +370,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         goals,
         isPremium,
         merchantLearned,
+        categoryOverrides,
         carryoverCleared,
       });
     }
@@ -490,6 +512,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         goals,
         isPremium,
         merchantLearned,
+        categoryOverrides,
         carryoverCleared,
       });
     }, 1500);
@@ -508,6 +531,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     goals,
     isPremium,
     merchantLearned,
+    // Sin esto, personalizar una categoria se quedaba solo en el celular:
+    // la subida a la nube no se rehacia y al entrar desde otro telefono
+    // volvian los nombres y colores de fabrica.
+    categoryOverrides,
     carryoverCleared,
   ]);
 
@@ -839,6 +866,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Reemplaza todos los límites por categoría de una sola vez (la
   // pantalla de "Presupuestos por categoría" guarda todos los cambios
   // juntos, en vez de uno por uno).
+  /**
+   * Guarda la personalizacion y avisa a las pantallas.
+   *
+   * El aviso hace falta porque catInfo lee de una variable de modulo, no del
+   * contexto: cambiarla no redibuja nada por si sola. Este estado existe solo
+   * para provocar ese redibujado — el dato de verdad vive en categoryCustom.
+   */
+  function updateCategoryOverrides(next: CategoryOverrides) {
+    saveOverrides(next);
+    setCategoryOverridesState(next);
+  }
+
   function updateCategoryBudgets(newBudgets: Record<string, number>) {
     setCategoryBudgets(newBudgets);
     showToast(t("toast.budgetUpdated"));
@@ -971,6 +1010,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         categoryBudgets,
         categorySpent,
         updateCategoryBudgets,
+        categoryOverrides,
+        updateCategoryOverrides,
         transactions,
         addOrUpdateTransaction,
         deleteTransaction,

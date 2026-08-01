@@ -9,6 +9,7 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X, Check, ChevronDown, ChevronUp, Calendar } from "lucide-react-native";
+import CategoryAvatar from "@/components/CategoryAvatar";
 import { EXPENSE_CATS, INCOME_CATS } from "@/constants/categories";
 import { currencySymbolFor } from "@/constants/currencies";
 import { methodLabel, PAYMENT_METHODS } from "@/constants/i18n";
@@ -351,7 +352,7 @@ export default function AddSheet({
                               active ? `border-2 border-${c.color}-500` : ""
                             }`}
                           >
-                            <Text style={{ fontSize: 20 }}>{c.emoji}</Text>
+                            <CategoryAvatar id={c.id} size={20} />
                           </View>
                           <Text
                             className={`text-xs font-bold text-center ${
