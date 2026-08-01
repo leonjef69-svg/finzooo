@@ -393,7 +393,8 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
             <View className="flex-row gap-2.5 mb-5">
               {([
                 { id: "pdf", label: "PDF" },
-                { id: "csv", label: "Excel (CSV)" },
+                { id: "xlsx", label: "Excel" },
+                { id: "csv", label: "CSV" },
               ] as const).map((f) => (
                 <TouchableOpacity
                   key={f.id}
@@ -580,7 +581,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
               {[
                 freqLabel,
                 hhmm(schedule.hour, schedule.minute),
-                schedule.format === "pdf" ? "PDF" : "Excel (CSV)",
+                schedule.format === "pdf" ? "PDF" : schedule.format === "xlsx" ? "Excel" : "CSV",
                 typeLabel,
                 destLabel,
                 nombreArchivo,

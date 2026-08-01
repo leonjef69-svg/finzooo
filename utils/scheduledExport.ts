@@ -33,7 +33,7 @@ import { isDecoyActive } from "@/utils/decoyMode";
 
 export type ExportFrequency = "daily" | "weekly" | "monthly" | "custom";
 export type ExportDestination = "share" | "mail" | "gmail" | "drive";
-export type ExportFormat = "pdf" | "csv";
+export type ExportFormat = "pdf" | "xlsx" | "csv";
 export type ExportType = "all" | "expense" | "income";
 export type FileNameMode = "auto" | "custom";
 
@@ -165,7 +165,7 @@ export function buildFileName(opts: {
   custom: string;
   typeLabel: string;
   dateKey: string;
-  extension: "pdf" | "csv";
+  extension: "pdf" | "xlsx" | "csv";
 }): string {
   if (opts.mode === "custom") {
     const limpio = sanitizeFileName(opts.custom);

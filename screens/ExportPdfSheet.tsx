@@ -5,9 +5,10 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { File, Paths } from "expo-file-system";
-import { BarChart3, Cloud, Eye, FileDown, Mail, Share2, Sheet, X } from "lucide-react-native";
+import { BarChart3, Cloud, Eye, FileDown, FileSpreadsheet, Mail, Share2, Sheet, X } from "lucide-react-native";
 import * as MailComposer from "expo-mail-composer";
 import { useColorScheme } from "nativewind";
+import * as XLSX from "xlsx";
 import { catInfo } from "@/constants/categories";
 import { COLOR_HEX_600 } from "@/constants/colors";
 import PdfPreview from "@/components/PdfPreview";
@@ -25,7 +26,7 @@ import { useAppData } from "@/contexts/AppDataContext";
 const PREVIEW_LIMIT = 50;
 
 type ExportType = "all" | "expense" | "income";
-type ExportFormat = "pdf" | "csv";
+type ExportFormat = "pdf" | "xlsx" | "csv";
 
 function csvEscape(value: string) {
   if (/[",\n]/.test(value)) {
@@ -135,7 +136,8 @@ export default function ExportPdfSheet({
 
   const FORMAT_OPTIONS: { id: ExportFormat; label: string; Icon: typeof FileDown }[] = [
     { id: "pdf", label: "PDF", Icon: FileDown },
-    { id: "csv", label: "Excel (CSV)", Icon: Sheet },
+    { id: "xlsx", label: "Excel", Icon: FileSpreadsheet },
+    { id: "csv", label: "CSV", Icon: Sheet },
   ];
 
   const monthTx = transactions
@@ -155,7 +157,7 @@ export default function ExportPdfSheet({
    * "finzo-expense-2026-07.pdf", con la palabra en inglés del código dentro
    * del nombre que ve la persona que recibe el archivo.
    */
-  function nombreDeArchivo(extension: "pdf" | "csv"): string {
+  function nombreDeArchivo(extension: "pdf" | "xlsx" | "csv"): string {
     if (forcedName) return forcedName;
     return buildFileName({
       mode: "auto",
@@ -309,6 +311,69 @@ export default function ExportPdfSheet({
     return { uri: shareUri, mimeType: "application/pdf", fileName };
   }
 
+  /**
+   * Las filas del reporte, sin dar formato todavía.
+   *
+   * Las comparten el CSV y el Excel. Antes solo existía la versión del CSV;
+   * copiarla para el Excel habría hecho que un cambio en las columnas se
+   * aplicara a uno y al otro no, y nadie lo notaría hasta abrir los dos
+   * archivos del mismo mes y verlos distintos.
+   */
+  function filasDelReporte(): (string | number)[][] {
+    const cabecera = [
+      t("exportPdf.colDate"),
+      t("exportPdf.colCategory"),
+      t("exportPdf.colDescription"),
+      t("exportPdf.colMethod"),
+      t("exportPdf.colAmount"),
+    ];
+    const filas = monthTx.map((tx) => {
+      const c = catInfo(tx.category);
+      const montoConSigno = tx.type === "expense" ? -tx.amount : tx.amount;
+      return [
+        fmtDate(tx.date, monthNames),
+        t(c.label),
+        tx.description || "",
+        methodLabel(tx.method, t),
+        montoConSigno,
+      ];
+    });
+    return [cabecera, ...filas, [], [t("exportPdf.total"), "", "", "", total]];
+  }
+
+  /**
+   * Excel de verdad (.xlsx), no un CSV con nombre de Excel.
+   *
+   * El formato que había se llamaba "Excel (CSV)" y era un CSV: se abre en
+   * Excel, sí, pero con todo en una columna hasta que alguien sepa separarlo,
+   * y con los montos como texto. Este sale con sus columnas y con los montos
+   * como NÚMEROS, así que se pueden sumar y ordenar sin tocar nada.
+   */
+  async function exportAsExcel() {
+    const wb = XLSX.utils.book_new();
+    const hoja = XLSX.utils.aoa_to_sheet(filasDelReporte());
+    // Anchos de columna, o la descripción sale cortada y hay que arrastrar
+    // cada borde a mano al abrirlo.
+    hoja["!cols"] = [{ wch: 16 }, { wch: 16 }, { wch: 34 }, { wch: 14 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, hoja, t("exportPdf.movements").slice(0, 31));
+
+    const bytes = new Uint8Array(
+      XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer
+    );
+
+    const fileName = nombreDeArchivo("xlsx");
+    const file = new File(Paths.cache, fileName);
+    if (file.exists) file.delete();
+    file.create();
+    file.write(bytes);
+
+    return {
+      uri: file.uri,
+      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      fileName,
+    };
+  }
+
   async function exportAsCsv() {
     const header = [
       t("exportPdf.colDate"),
@@ -370,7 +435,12 @@ export default function ExportPdfSheet({
       // Primero se arma el archivo, y después se decide qué hacer con él.
       // Antes cada función se compartía a sí misma; separarlo es lo que
       // permite mandarlo a Drive sin duplicar todo el armado.
-      const file = format === "pdf" ? await exportAsPdf() : await exportAsCsv();
+      const file =
+        format === "pdf"
+          ? await exportAsPdf()
+          : format === "xlsx"
+            ? await exportAsExcel()
+            : await exportAsCsv();
 
       if (destination === "drive") {
         const uploaded = await uploadToDrive(file.uri, file.fileName, file.mimeType);
@@ -424,7 +494,7 @@ export default function ExportPdfSheet({
       if (await Sharing.isAvailableAsync()) {
         await Sharing.shareAsync(file.uri, {
           mimeType: file.mimeType,
-          UTI: file.mimeType === "application/pdf" ? "com.adobe.pdf" : "public.comma-separated-values-text",
+          UTI: file.mimeType === "application/pdf" ? "com.adobe.pdf" : "public.data",
         });
         exportacionHecha();
       }
@@ -785,7 +855,7 @@ export default function ExportPdfSheet({
               : t(destination === "drive" ? "exportPdf.saveToDrive" : "exportPdf.exportFormat", {
                   // El botón decía "Exportar PDF" incluso con Excel
                   // elegido. Ahora nombra lo que de verdad va a salir.
-                  format: format === "pdf" ? "PDF" : "Excel",
+                  format: format === "pdf" ? "PDF" : format === "xlsx" ? "Excel" : "CSV",
                 })}
           </Text>
         </TouchableOpacity>
