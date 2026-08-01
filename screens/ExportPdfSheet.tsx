@@ -43,6 +43,7 @@ import {
 } from "@/modules/share-to-app";
 import {
   contactsFor,
+  findContactByName,
   loadContacts,
   nextContactId,
   saveContacts,
@@ -75,6 +76,7 @@ export default function ExportPdfSheet({
   destination: initialDestination = "share",
   silent,
   fileName: forcedName,
+  recipientName,
 }: {
   onClose: () => void;
   // Mes "AAAA-MM" con el que abrir ya elegido. Lo usa la orden por voz
@@ -93,6 +95,12 @@ export default function ExportPdfSheet({
   // Nombre completo con extensión ("Gastos_Julio.pdf"), tal como lo dejó la
   // pantalla de recordatorios. Si no viene, se arma aquí igual que allí.
   fileName?: string;
+  /**
+   * A quien, tal como lo dijo la voz ("mama", "contador"). Se busca entre
+   * los contactos guardados; si no aparece, se abre la app y se elige alli,
+   * que es lo que pasaba antes de poder decirlo.
+   */
+  recipientName?: string;
   // Dónde va el archivo: "share" abre el menú de compartir de Android,
   // "mail" abre la aplicación de correo con el archivo ya adjunto, y
   // "drive" lo sube a Google Drive sin ninguna ventana de por medio.
@@ -149,10 +157,25 @@ export default function ExportPdfSheet({
   // Al cambiar de destino se suelta el elegido: un contacto de correo no
   // sirve para WhatsApp, y dejarlo marcado invitaría a mandar a un sitio que
   // no existe.
+  //
+  // Salvo que la orden por voz haya dicho a quién: ahí se busca entre los
+  // contactos de ese destino y se deja marcado, que es lo que hace que
+  // "exportar julio pdf whatsapp a mamá" llegue con todo puesto.
   useEffect(() => {
-    setContactoId(null);
     setAgregando(false);
-  }, [destination]);
+    if (!recipientName) {
+      setContactoId(null);
+      return;
+    }
+    const encontrado = findContactByName(contactos, recipientName, destination);
+    setContactoId(encontrado?.id ?? null);
+    // Si se dijo un nombre y no está guardado, se avisa. Callarlo abriría
+    // WhatsApp sin destinatario y parecería que no entendió a quién.
+    if (!encontrado && contactos.length > 0) {
+      showToast(t("exportPdf.contactNotFound", { name: recipientName }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [destination, contactos, recipientName]);
 
   const contactoElegido = contactosDelDestino.find((c) => c.id === contactoId) ?? null;
 

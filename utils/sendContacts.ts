@@ -128,6 +128,45 @@ export function contactsFor(list: SendContact[], destination: string): SendConta
   return [];
 }
 
+/**
+ * Busca un contacto por el nombre que se dijo en voz alta.
+ *
+ * El reconocedor de Android entrega el texto sin tildes fiables y en
+ * minúsculas o no, según el celular, así que se compara sin tildes y sin
+ * mayúsculas. Y se acepta que el nombre dicho esté CONTENIDO en el guardado
+ * o al revés: quien guardó "Mamá Rosa" dirá "mamá", y quien guardó "Conta"
+ * puede decir "el contador".
+ *
+ * Si hay dos que encajan, NO se elige ninguno. Mandar el estado de cuenta a
+ * la persona equivocada por haber adivinado entre dos parecidos es peor que
+ * abrir la app y que se elija a mano.
+ */
+export function findContactByName(
+  list: SendContact[],
+  spoken: string,
+  destination: string
+): SendContact | null {
+  const dicho = normalizeForMatch(spoken);
+  if (dicho.length < 2) return null;
+
+  const candidatos = contactsFor(list, destination).filter((c) => {
+    const guardado = normalizeForMatch(c.name);
+    return guardado === dicho || guardado.includes(dicho) || dicho.includes(guardado);
+  });
+
+  return candidatos.length === 1 ? candidatos[0] : null;
+}
+
+/** Sin tildes, sin mayúsculas y sin espacios de sobra. */
+function normalizeForMatch(raw: string): string {
+  return raw
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 /** Un identificador que no choque con los que ya hay. */
 export function nextContactId(list: SendContact[]): string {
   let n = 1;

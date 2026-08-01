@@ -16,7 +16,14 @@ import { findSpokenDate, parseVoice, type VoiceParse } from "@/utils/voiceParser
 
 export type VoiceCommand =
   | { kind: "movements"; parsed: VoiceParse }
-  | { kind: "export"; monthKey: string; format: "pdf" | "csv"; destination: "share" | "drive" }
+  | {
+      kind: "export";
+      monthKey: string;
+      format: "pdf" | "xlsx" | "csv";
+      destination: "share" | "mail" | "gmail" | "whatsapp" | "drive";
+      /** A quien, tal como se dijo. Lo resuelve quien llama. */
+      recipient?: string;
+    }
   // "focus" dice de qué se pidió el resumen: solo lo que salió, solo lo que
   // entró, o las dos cosas. "category" queda puesto cuando se nombró una
   // ("solo comida"), y entonces el resumen se limita a esa.
@@ -272,20 +279,82 @@ function categoryFromPhrase(
   return undefined;
 }
 
+/** Qué formato se pidió. Sin decir nada, PDF. */
+export function formatFromPhrase(normalized: string): "pdf" | "xlsx" | "csv" {
+  if (normalized.includes("csv")) return "csv";
+  if (normalized.includes("excel")) return "xlsx";
+  return "pdf";
+}
+
+/**
+ * A dónde se pidió mandarlo.
+ *
+ * El orden importa. "Gmail" se mira antes que "correo" porque quien dice
+ * "mándalo por Gmail" quiere Gmail, y las dos palabras aparecen en frases
+ * parecidas; al revés, "gmail" caería en "correo" y se abriría la aplicación
+ * de correo del fabricante en vez de Gmail.
+ */
+export function destinationFromPhrase(
+  normalized: string
+): "share" | "mail" | "gmail" | "whatsapp" | "drive" {
+  if (normalized.includes("whatsapp") || normalized.includes("wasap") || normalized.includes("wasa")) {
+    return "whatsapp";
+  }
+  if (normalized.includes("gmail")) return "gmail";
+  if (normalized.includes("correo") || normalized.includes("email")) return "mail";
+  if (normalized.includes("drive") || normalized.includes("nube") || normalized.includes("google")) {
+    return "drive";
+  }
+  return "share";
+}
+
+/**
+ * A quién, tal como se dijo: "a mamá", "al contador", "a mi número".
+ *
+ * Devuelve el texto en crudo, no un contacto. Este archivo solo traduce la
+ * frase y no sabe nada de la app; quien llame busca ese texto entre los
+ * contactos guardados. Mezclar las dos cosas aquí obligaría a este archivo a
+ * leer del almacenamiento, y dejaría de poder probarse solo.
+ *
+ * Se corta en la primera palabra que ya significa otra cosa —un formato, un
+ * destino, un mes— porque el reconocedor entrega la frase entera de corrido:
+ * sin ese corte, "exportar julio pdf whatsapp a mama" daría un nombre de
+ * "mama" con media orden pegada detrás.
+ */
+const PALABRAS_QUE_CORTAN = [
+  "pdf", "excel", "csv", "whatsapp", "wasap", "wasa", "gmail", "correo", "email",
+  "drive", "nube", "google", "de", "del",
+  ...MONTHS,
+];
+
+export function recipientFromPhrase(normalized: string): string | undefined {
+  // "a mamá" / "al contador" / "para el contador". El "a" suelto no vale:
+  // aparece en medio de cualquier frase.
+  const m = normalized.match(/\b(?:a|al|para)\s+(?:el\s+|la\s+|mi\s+)?([a-zñáéíóú0-9 ]+)$/);
+  if (!m) return undefined;
+
+  const palabras: string[] = [];
+  for (const palabra of m[1].trim().split(/\s+/)) {
+    if (PALABRAS_QUE_CORTAN.includes(palabra)) break;
+    palabras.push(palabra);
+  }
+  const nombre = palabras.join(" ").trim();
+  return nombre.length >= 2 ? nombre : undefined;
+}
+
 export function parseVoiceCommand(transcript: string, now: Date = new Date()): VoiceCommand {
   const normalized = normalize(transcript ?? "");
 
   if (EXPORT_WORDS.some((w) => normalized.includes(w))) {
-    // Si se nombró Excel se manda un CSV; en cualquier otro caso, PDF.
-    const wantsCsv = normalized.includes("excel") || normalized.includes("csv");
-    // "a Drive", "a la nube", "guardalo en drive"...
-    const wantsDrive =
-      normalized.includes("drive") || normalized.includes("nube") || normalized.includes("google");
     return {
       kind: "export",
       monthKey: monthFromPhrase(normalized, now),
-      format: wantsCsv ? "csv" : "pdf",
-      destination: wantsDrive ? "drive" : "share",
+      format: formatFromPhrase(normalized),
+      destination: destinationFromPhrase(normalized),
+      // A quién, tal como se dijo. Aquí no se puede resolver a un contacto:
+      // este archivo no sabe nada de la app, solo traduce la frase. Quien
+      // llame se encarga de buscarlo entre los contactos guardados.
+      recipient: recipientFromPhrase(normalized),
     };
   }
   // Los ingresos se revisan primero porque son los que hay que nombrar a

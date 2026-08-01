@@ -283,6 +283,10 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
           month: command.monthKey,
           format: command.format,
           dest: command.destination,
+          // A quien, tal como se dijo. La pantalla de exportar lo busca entre
+          // los contactos guardados; si no lo encuentra, abre la app y se
+          // elige alli, que es lo que pasaba antes de esto.
+          to: command.recipient,
           auto: "1",
         },
       });
