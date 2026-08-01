@@ -128,24 +128,6 @@ export function byDay(txs: PdfTx[], type: "expense" | "income", daysInMonth: num
 }
 
 /**
- * ¿Entran los números de todos los días debajo del gráfico diario?
- *
- * La hoja útil son 535 puntos y el mes más largo tiene 31 columnas: 17.2
- * puntos cada una. Un "31" a 7px ocupa unos 10.7 puntos, así que entra con
- * holgura y se puede numerar cada día.
- *
- * Esto ya salió mal una vez en la app, donde los números terminaron
- * señalando la barra equivocada, así que aquí se calcula en vez de suponer.
- * Si alguien sube el tamaño de letra o mete márgenes, esta cuenta lo avisa y
- * se numera de dos en dos en lugar de encimarse.
- */
-export function dayLabelStep(daysInMonth: number, plotWidth = 535, fontSize = 7): number {
-  const colW = plotWidth / daysInMonth;
-  const labelW = 2 * fontSize * 0.62 + 2;
-  return Math.max(1, Math.ceil(labelW / colW));
-}
-
-/**
  * Un trozo de la rosquilla, como orden de dibujo.
  *
  * Se calcula a mano porque el PDF se arma en un WebView aislado donde no se
@@ -296,32 +278,93 @@ function barrasPorCategoria(
     .join("");
 }
 
-function barrasPorDia(dias: number[], color: string, paso: number): string {
-  const max = Math.max(...dias, 0);
+/** Lo que ocupa un texto, aproximado. Suficiente para decidir si cabe. */
+export function textWidth(text: string, fontSize: number): number {
+  return text.length * fontSize * 0.58 + 2;
+}
+
+/**
+ * Cómo se coloca el gráfico diario.
+ *
+ * Se separa del dibujo para poder comprobarla: que un monto no se salga de su
+ * columna es una cuenta, no algo que haya que mirar a ojo. Ya pasó una vez en
+ * la app que los números acabaron señalando la barra equivocada.
+ *
+ * Si los montos no caben tumbados, se ponen de pie. Es preferible girar el
+ * texto a no enseñarlo: el monto es justo el dato que se busca en este
+ * gráfico.
+ */
+export function dailyLayout(
+  cuantos: number,
+  etiquetas: string[],
+  ancho = 535,
+  fontSize = 7
+): { colW: number; barW: number; girar: boolean; espacioArriba: number } {
+  const colW = cuantos > 0 ? ancho / cuantos : ancho;
+  const masAncha = Math.max(0, ...etiquetas.map((e) => textWidth(e, fontSize)));
+  const girar = masAncha > colW - 2;
+  return {
+    colW,
+    // La barra deja un respiro a cada lado, y no pasa de 30 para que con dos
+    // o tres días no salgan tres columnas gordísimas.
+    barW: Math.max(4, Math.min(30, colW - 8)),
+    girar,
+    // De pie, el monto ocupa a lo alto lo que ocupaba a lo ancho.
+    espacioArriba: girar ? masAncha + 4 : fontSize + 4,
+  };
+}
+
+/**
+ * Gasto de cada día, con su monto encima.
+ *
+ * SOLO LOS DÍAS EN QUE HUBO MOVIMIENTO
+ *
+ * Antes se dibujaban los 31 días del mes. Con 31 columnas en el ancho de una
+ * hoja, cada una queda en 17 puntos, y ahí no cabe un "S/ 1,234.56": por eso
+ * el monto no se enseñaba y solo salía la barra. Un gráfico de gastos sin los
+ * montos obliga a adivinar mirando la altura.
+ *
+ * Enseñando solo los días con gasto —lo mismo que hace la app en Reportes—
+ * las columnas se ensanchan y el monto entra. Y los días vacíos no se pierden:
+ * nunca dijeron nada.
+ */
+function barrasPorDia(
+  dias: { day: number; amount: number }[],
+  color: string,
+  fmt: (n: number) => string
+): string {
+  if (dias.length === 0) return "";
+  const max = Math.max(...dias.map((d) => d.amount));
   if (max <= 0) return "";
-  // Cada día es una celda de una fila de tabla, así que todas miden lo mismo
-  // sin tener que calcular anchos a mano. La barra crece desde abajo con
-  // vertical-align.
-  const barras = dias
-    .map((monto) => {
-      const alto = monto > 0 ? Math.max(2, Math.round((monto / max) * 64)) : 0;
-      return `<td style="vertical-align:bottom;padding:0 1px;">
-          <div style="background:${color};height:${alto}px;border-radius:2px 2px 0 0;"></div>
-        </td>`;
+
+  const ANCHO = 535;
+  const ALTO_BARRAS = 64;
+  const etiquetas = dias.map((d) => fmt(d.amount));
+  const { colW, barW, girar, espacioArriba } = dailyLayout(dias.length, etiquetas);
+
+  const baseY = espacioArriba + ALTO_BARRAS;
+  const alto = baseY + 16;
+
+  const piezas = dias
+    .map((d, i) => {
+      const cx = i * colW + colW / 2;
+      const h = Math.max(2, (d.amount / max) * ALTO_BARRAS);
+      const y = baseY - h;
+      const texto = esc(etiquetas[i]);
+      const monto = girar
+        ? `<text x="${cx.toFixed(1)}" y="${(y - 4).toFixed(1)}" font-size="7" fill="#334155" text-anchor="start" transform="rotate(-90 ${cx.toFixed(1)} ${(y - 4).toFixed(1)})">${texto}</text>`
+        : `<text x="${cx.toFixed(1)}" y="${(y - 4).toFixed(1)}" font-size="7" fill="#334155" text-anchor="middle">${texto}</text>`;
+      return `
+        <rect x="${(cx - barW / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${color}" />
+        ${monto}
+        <text x="${cx.toFixed(1)}" y="${(baseY + 11).toFixed(1)}" font-size="7" fill="#94a3b8" text-anchor="middle">${d.day}</text>`;
     })
     .join("");
-  const numeros = dias
-    .map((_, i) => {
-      const dia = i + 1;
-      const visible = dia === 1 || dia % paso === 0 || dia === dias.length;
-      return `<td style="text-align:center;font-size:7px;color:#94a3b8;padding-top:3px;">${visible ? dia : ""}</td>`;
-    })
-    .join("");
-  return `
-    <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
-      <tr style="height:66px;">${barras}</tr>
-      <tr>${numeros}</tr>
-    </table>`;
+
+  return `<svg width="100%" viewBox="0 0 ${ANCHO} ${alto.toFixed(0)}">
+      <line x1="0" y1="${baseY}" x2="${ANCHO}" y2="${baseY}" stroke="#e2e8f0" stroke-width="1" />
+      ${piezas}
+    </svg>`;
 }
 
 export function buildPdfHtml(o: PdfOptions): string {
@@ -338,9 +381,15 @@ export function buildPdfHtml(o: PdfOptions): string {
   const colorFoco = foco === "expense" ? ROJO : VERDE;
 
   const cats = o.charts ? byCategory(o.txs, foco) : [];
-  const dias = o.charts ? byDay(o.txs, foco, o.daysInMonth) : [];
-  const hayDias = dias.some((d) => d > 0);
-  const paso = dayLabelStep(o.daysInMonth);
+  // Solo los dias con movimiento, con su numero de dia de verdad. Enviar el
+  // arreglo entero de 31 posiciones dejaba las columnas en 17 puntos, donde
+  // no cabe ningun monto.
+  const dias = o.charts
+    ? byDay(o.txs, foco, o.daysInMonth)
+        .map((amount, i) => ({ day: i + 1, amount }))
+        .filter((d) => d.amount > 0)
+    : [];
+  const hayDias = dias.length > 0;
 
   const filas = o.txs
     .map((tx) => {
@@ -409,7 +458,7 @@ export function buildPdfHtml(o: PdfOptions): string {
       ? `
       <div style="page-break-inside:avoid;margin-top:20px;">
         <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(T.byDay)}</div>
-        ${barrasPorDia(dias, colorFoco, paso)}
+        ${barrasPorDia(dias, colorFoco, fmt)}
       </div>`
       : "";
 
