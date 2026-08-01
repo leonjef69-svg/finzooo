@@ -84,23 +84,29 @@ class ShareToAppModule : Module() {
         }
       }
 
-      // APUNTAR A LA PANTALLA QUE SABE LEER EL NÚMERO.
+      // APUNTAR A LA PANTALLA QUE SABE LEER EL DESTINATARIO.
       //
-      // WhatsApp registra VARIAS pantallas para recibir un archivo, y solo una
-      // —el selector de contactos— mira el "jid" de arriba. Con setPackage a
-      // secas, quién de las varias abre lo decide Android: si le toca otra,
-      // el número se ignora sin más y sale la lista de contactos, igual que si
-      // no se hubiera pedido nadie.
+      // Tanto WhatsApp como Gmail registran VARIAS pantallas para recibir un
+      // archivo, y solo UNA de cada una mira el destinatario de arriba. Con
+      // setPackage a secas, cuál de ellas abre lo decide Android: si le toca
+      // otra, el número o el correo se ignoran sin más y sale la lista de
+      // contactos —o un correo en blanco—, igual que si no se hubiera pedido
+      // nadie.
       //
       // Así que se le pregunta al sistema qué pantallas pueden recibir esto y
-      // se elige la del selector a dedo. Se busca por nombre y no se escribe
-      // fijo, porque WhatsApp la ha cambiado de sitio entre versiones y un
-      // nombre fijo dejaría de funcionar en la siguiente.
-      if (recipient.isNotBlank() && packageName.startsWith("com.whatsapp")) {
+      // se elige la buena a dedo. Se busca por nombre y no se escribe fijo:
+      // las dos aplicaciones las han cambiado de sitio entre versiones, y un
+      // nombre fijo dejaría de funcionar en la siguiente actualización suya.
+      if (recipient.isNotBlank()) {
         try {
+          // Cada app guarda el destinatario en una pantalla distinta. En
+          // WhatsApp lo lee el selector de contactos; en Gmail, la de
+          // redactar. Las demás pantallas de la misma app reciben el archivo
+          // igual, pero del destinatario no se enteran.
+          val marca = if (packageName.startsWith("com.whatsapp")) "ContactPicker" else "Compose"
           val candidatas = ctx.packageManager.queryIntentActivities(intent, 0)
           val selector = candidatas.firstOrNull {
-            it.activityInfo.name.contains("ContactPicker", ignoreCase = true)
+            it.activityInfo.name.contains(marca, ignoreCase = true)
           }
           if (selector != null) {
             intent.component = ComponentName(
