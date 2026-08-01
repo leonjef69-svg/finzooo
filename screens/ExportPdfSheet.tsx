@@ -921,24 +921,40 @@ export default function ExportPdfSheet({
             </Text>
             <View className="flex-row flex-wrap gap-2 mb-2">
               {contactosDelDestino.map((c) => (
-                <TouchableOpacity
+                <View
                   key={c.id}
-                  onPress={() => setContactoId(contactoId === c.id ? null : c.id)}
-                  onLongPress={() => borrarContacto(c.id)}
-                  className={`px-3.5 py-2.5 rounded-xl border-[1.5px] ${
+                  className={`flex-row items-center rounded-xl border-[1.5px] ${
                     contactoId === c.id
                       ? "bg-emerald-600 border-emerald-600"
                       : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                   }`}
                 >
-                  <Text
-                    className={`text-xs font-bold ${
-                      contactoId === c.id ? "text-white" : "text-slate-600 dark:text-slate-200"
-                    }`}
+                  <TouchableOpacity
+                    onPress={() => setContactoId(contactoId === c.id ? null : c.id)}
+                    onLongPress={() => borrarContacto(c.id)}
+                    className="pl-3.5 pr-2 py-2.5"
                   >
-                    {c.name}
-                  </Text>
-                </TouchableOpacity>
+                    <Text
+                      className={`text-xs font-bold ${
+                        contactoId === c.id ? "text-white" : "text-slate-600 dark:text-slate-200"
+                      }`}
+                    >
+                      {c.name}
+                    </Text>
+                  </TouchableOpacity>
+                  {/* BORRAR, A LA VISTA.
+                      Se borraba manteniendo pulsado, y eso no lo descubre
+                      nadie: un contacto escrito mal se quedaba ahí para
+                      siempre. Mantener pulsado sigue funcionando para quien
+                      ya lo sabía. */}
+                  <TouchableOpacity
+                    onPress={() => borrarContacto(c.id)}
+                    hitSlop={{ top: 10, bottom: 10, left: 4, right: 10 }}
+                    className="pr-3 pl-0.5 py-2.5"
+                  >
+                    <X size={13} color={contactoId === c.id ? "#ffffff" : "#94a3b8"} strokeWidth={2.8} />
+                  </TouchableOpacity>
+                </View>
               ))}
               <TouchableOpacity
                 onPress={() => setAgregando(true)}

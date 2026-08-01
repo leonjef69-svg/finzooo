@@ -3,6 +3,7 @@ import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { WebView } from "react-native-webview";
 import { X } from "lucide-react-native";
+import { useBackClose } from "@/utils/useBackClose";
 
 /**
  * Enseña el documento tal como va a salir, antes de exportarlo.
@@ -33,6 +34,9 @@ export default function PdfPreview({
 }) {
   const insets = useSafeAreaInsets();
   const [cargando, setCargando] = useState(true);
+  // Atras cierra la vista previa y deja debajo la pantalla de exportar, en vez
+  // de salirse de las dos de golpe.
+  useBackClose(onClose);
 
   return (
     <View

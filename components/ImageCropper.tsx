@@ -8,6 +8,7 @@ import {
   View,
 } from "react-native";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
+import { useBackClose } from "@/utils/useBackClose";
 
 /**
  * Recorta una imagen a un cuadrado, con zoom y arrastre.
@@ -101,6 +102,9 @@ export default function ImageCropper({
   const [tam, setTam] = useState<{ w: number; h: number } | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
+  // Atras cierra el recorte y deja debajo la pantalla de la categoria, en vez
+  // de salirse de las dos de golpe.
+  useBackClose(onCancel);
 
   // El tamaño real del archivo. Sin él no se puede convertir lo que se ve a
   // píxeles, así que hasta que llegue no se deja guardar.
