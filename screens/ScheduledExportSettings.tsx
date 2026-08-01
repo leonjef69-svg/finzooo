@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Check, ChevronLeft, Cloud, Info, Mail, Play, Share2 } from "lucide-react-native";
+import { Check, ChevronLeft, Cloud, Info, Mail, MessageCircle, Play, Share2 } from "lucide-react-native";
 import Toggle from "@/components/Toggle";
 import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
-import { isGmailInstalled } from "@/modules/share-to-app";
+import { isGmailInstalled, isWhatsAppInstalled } from "@/modules/share-to-app";
 import {
   DEFAULT_SCHEDULE,
   MAX_MONTH_DAY,
@@ -41,6 +41,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
   // Gmail solo se ofrece si de verdad está en el celular. Un botón "Gmail"
   // en un teléfono sin Gmail solo puede decepcionar.
   const [gmail, setGmail] = useState(false);
+  const [whatsapp, setWhatsapp] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -51,6 +52,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
       setLoaded(true);
     });
     setGmail(isGmailInstalled());
+    setWhatsapp(isWhatsAppInstalled());
     return () => {
       alive = false;
     };
@@ -169,6 +171,9 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
     { id: "share", label: t("exportPdf.destShare"), Icon: Share2 },
     { id: "mail", label: t("exportPdf.destMail"), Icon: Mail },
     ...(gmail ? [{ id: "gmail" as const, label: t("schedExport.destGmail"), Icon: Mail }] : []),
+    ...(whatsapp
+      ? [{ id: "whatsapp" as const, label: t("exportPdf.destWhatsApp"), Icon: MessageCircle }]
+      : []),
     { id: "drive", label: t("exportPdf.destDrive"), Icon: Cloud },
   ];
 

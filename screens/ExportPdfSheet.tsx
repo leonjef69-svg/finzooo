@@ -5,7 +5,18 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
 import { File, Paths } from "expo-file-system";
-import { BarChart3, Cloud, Eye, FileDown, FileSpreadsheet, Mail, Share2, Sheet, X } from "lucide-react-native";
+import {
+  BarChart3,
+  Cloud,
+  Eye,
+  FileDown,
+  FileSpreadsheet,
+  Mail,
+  MessageCircle,
+  Share2,
+  Sheet,
+  X,
+} from "lucide-react-native";
 import * as MailComposer from "expo-mail-composer";
 import { useColorScheme } from "nativewind";
 import * as XLSX from "xlsx";
@@ -17,7 +28,12 @@ import { LOGO_DATA_URI } from "@/constants/logo";
 import { monthKey, fmtDate } from "@/utils/format";
 import { buildPdfHtml, type PdfTx } from "@/utils/exportPdfHtml";
 import { buildFileName, cancelRetry, markExported, toDateKey } from "@/utils/scheduledExport";
-import { isGmailInstalled, shareToGmail } from "@/modules/share-to-app";
+import {
+  isGmailInstalled,
+  isWhatsAppInstalled,
+  shareToGmail,
+  shareToWhatsApp,
+} from "@/modules/share-to-app";
 import { useAppData } from "@/contexts/AppDataContext";
 
 // Cuántos movimientos se dibujan en la vista previa. El PDF los lleva todos;
@@ -65,7 +81,7 @@ export default function ExportPdfSheet({
   // Dónde va el archivo: "share" abre el menú de compartir de Android,
   // "mail" abre la aplicación de correo con el archivo ya adjunto, y
   // "drive" lo sube a Google Drive sin ninguna ventana de por medio.
-  destination?: "share" | "mail" | "gmail" | "drive";
+  destination?: "share" | "mail" | "gmail" | "whatsapp" | "drive";
 }) {
   const { t, transactions, month, monthNames, fmt, userName, showToast, categoryBudgets } =
     useAppData();
@@ -76,7 +92,7 @@ export default function ExportPdfSheet({
   // Dónde va el archivo. Era una propiedad fija que solo podía cambiar la
   // orden por voz: la subida a Drive estaba entera y funcionando, pero sin
   // ningún botón que la alcanzara. Ahora es un estado con su selector.
-  const [destination, setDestination] = useState<"share" | "mail" | "gmail" | "drive">(
+  const [destination, setDestination] = useState<"share" | "mail" | "gmail" | "whatsapp" | "drive">(
     initialDestination
   );
   const [exporting, setExporting] = useState(false);
@@ -88,6 +104,7 @@ export default function ExportPdfSheet({
   // a esta función, porque la parte que habla con Gmail es código nativo y no
   // llega en las actualizaciones por internet.
   const [gmailDisponible] = useState(() => isGmailInstalled());
+  const [whatsappDisponible] = useState(() => isWhatsAppInstalled());
   // El documento que se está mirando en grande, o null. Se guarda el HTML ya
   // armado y no una marca de "abierto": así lo que se ve es exactamente lo
   // que había en el momento de tocar, sin recalcularse por debajo.
@@ -449,6 +466,28 @@ export default function ExportPdfSheet({
         return;
       }
 
+      if (destination === "whatsapp") {
+        // Va directo a WhatsApp, sin pasar por el menú de compartir. Ese menú
+        // lo arma Android: WhatsApp puede salir al final de una lista larga,
+        // o no salir. Así se abre el selector de contactos de WhatsApp con el
+        // archivo ya adjunto y solo queda elegir a quién.
+        const ok = shareToWhatsApp(
+          file.uri,
+          file.mimeType,
+          t("exportPdf.mailBody", { month: selectedMonthLabel })
+        );
+        if (!ok) {
+          // Si no se pudo —sin WhatsApp, o con un APK anterior a esto— se cae
+          // al menú de compartir de siempre en vez de no hacer nada.
+          showToast(t("exportPdf.whatsappMissing"));
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(file.uri, { mimeType: file.mimeType });
+          }
+        }
+        exportacionHecha();
+        return;
+      }
+
       if (destination === "gmail") {
         // Va directo a Gmail, sin pasar por el menú de compartir. "Correo"
         // abre la app de correo que esté puesta por defecto, que en un Honor
@@ -683,6 +722,9 @@ export default function ExportPdfSheet({
             // celular sin Gmail solo puede decepcionar.
             ...(gmailDisponible
               ? ([{ id: "gmail", label: t("schedExport.destGmail"), Icon: Mail }] as const)
+              : []),
+            ...(whatsappDisponible
+              ? ([{ id: "whatsapp", label: t("exportPdf.destWhatsApp"), Icon: MessageCircle }] as const)
               : []),
             { id: "drive", label: t("exportPdf.destDrive"), Icon: Cloud },
           ] as const).map((opt) => (

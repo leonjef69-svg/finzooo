@@ -32,7 +32,7 @@ import { loadJSON, saveJSON } from "@/utils/storage";
 import { isDecoyActive } from "@/utils/decoyMode";
 
 export type ExportFrequency = "daily" | "weekly" | "monthly" | "custom";
-export type ExportDestination = "share" | "mail" | "gmail" | "drive";
+export type ExportDestination = "share" | "mail" | "gmail" | "whatsapp" | "drive";
 export type ExportFormat = "pdf" | "xlsx" | "csv";
 export type ExportType = "all" | "expense" | "income";
 export type FileNameMode = "auto" | "custom";

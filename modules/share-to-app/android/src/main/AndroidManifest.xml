@@ -8,6 +8,11 @@
     -->
     <queries>
         <package android:name="com.google.android.gm" />
+        <!-- WhatsApp son dos aplicaciones distintas, y hay gente que solo
+             tiene la de negocios. Sin declarar las dos, preguntar por la que
+             falte responde que no existe. -->
+        <package android:name="com.whatsapp" />
+        <package android:name="com.whatsapp.w4b" />
         <intent>
             <action android:name="android.intent.action.SEND" />
             <data android:mimeType="*/*" />
