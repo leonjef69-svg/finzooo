@@ -14,7 +14,6 @@ import { useColorScheme } from "nativewind";
 import DonutChart from "@/components/DonutChart";
 import BarChartSimple from "@/components/BarChartSimple";
 import DailyBarsChart from "@/components/DailyBarsChart";
-import Sparkline from "@/components/Sparkline";
 import AnimatedBar from "@/components/AnimatedBar";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import { catInfo } from "@/constants/categories";
@@ -25,13 +24,7 @@ import {
   availableBalance,
   budgetLeft,
   budgetUsed,
-  changeVsPrevious,
-  dailyTotals,
-  daysInMonthOf,
   health,
-  previousMonthKey,
-  totalsForMonth,
-  visibleRange,
 } from "@/utils/finances";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
@@ -223,45 +216,13 @@ export default function Reports({
   // salir distintos porque son literalmente la misma función.
   const resumen = useMemo(() => {
     const cifras = { budget, spent, income, prevBalance };
-    const anterior = previousMonthKey(mk);
-    const antes = totalsForMonth(transactions, anterior);
-    const dias = daysInMonthOf(mk);
-    const [ay, am] = anterior.split("-").map(Number);
-    // Hasta dónde llega el mes de verdad: hoy si es el mes en curso, y el
-    // último día si es un mes pasado. Dibujar hasta el 31 de un mes que va
-    // por el día 5 pinta 26 días planos que todavía no han ocurrido.
-    const hoy = new Date();
-    const esMesActual = month.y === hoy.getFullYear() && month.m === hoy.getMonth();
-    const ultimoDia = esMesActual ? hoy.getDate() : dias;
-
     return {
       disponible: availableBalance(cifras),
       usado: budgetUsed(cifras),
       restante: budgetLeft(cifras),
       salud: health(cifras),
-      cambioIngresos: changeVsPrevious(income, antes.income),
-      cambioGastos: changeVsPrevious(spent, antes.spent),
-      // Se recorta lo que no aporta: los días antes del primer movimiento y
-      // los que aún no han llegado. Así la línea usa el ancho entero en vez
-      // de gastar el 95% en días vacíos. Ver visibleRange.
-      lineaIngresos: (() => {
-        const todo = dailyTotals(transactions, mk, "income", dias);
-        const r = visibleRange(todo, ultimoDia);
-        return { valores: todo.slice(r.from, r.to + 1), desde: r.from };
-      })(),
-      lineaGastos: (() => {
-        const todo = dailyTotals(transactions, mk, "expense", dias);
-        const r = visibleRange(todo, ultimoDia);
-        return { valores: todo.slice(r.from, r.to + 1), desde: r.from };
-      })(),
-      mesAnterior: monthNames[am - 1],
-      // Si el mes anterior no tiene NADA, ni siquiera se nombra: decir
-      // "vs. junio" cuando junio está vacío invita a leer un cero como si
-      // fuera una comparación de verdad.
-      hayAnterior: antes.income > 0 || antes.spent > 0,
-      anteriorAnio: ay,
     };
-  }, [transactions, mk, budget, spent, income, prevBalance, monthNames, month.y, month.m]);
+  }, [budget, spent, income, prevBalance]);
 
   const SALUD_TEXTO: Record<string, string> = {
     good: t("reports.healthGood"),
@@ -275,24 +236,6 @@ export default function Reports({
     over: "#fb7185",
     unknown: "#94a3b8",
   };
-
-  // Ancho de la línea de tendencia: media pantalla menos los márgenes de las
-  // dos tarjetas y el hueco entre ellas.
-  const sparkWidth = Math.max(80, (windowWidth - 40 - 10) / 2 - 28);
-
-  function Cambio({ valor }: { valor: number | null }) {
-    // null significa que el mes pasado fue cero, y entonces no hay
-    // comparación posible: pasar de 0 a 300 no es "+100%", es una cuenta que
-    // no existe. Antes que inventar un número, no se enseña ninguno.
-    if (valor === null || !resumen.hayAnterior) return null;
-    const pct = Math.round(valor * 100);
-    return (
-      <Text className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-        {pct >= 0 ? "+" : ""}
-        {pct}% {t("reports.vsMonth", { month: resumen.mesAnterior })}
-      </Text>
-    );
-  }
 
   return (
     <ScrollView
@@ -397,65 +340,6 @@ export default function Reports({
           <Text className="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-1.5 px-5">
             {t("reports.formula")}
           </Text>
-
-          {/* Ingresos y gastos, con su tendencia real del mes. */}
-          <View className="flex-row gap-2.5 mx-5 mt-2.5">
-            {[
-              {
-                label: t("exportPdf.income"),
-                value: income,
-                cambio: resumen.cambioIngresos,
-                linea: resumen.lineaIngresos,
-                color: "#059669",
-                Icon: ArrowUpCircle,
-                fondo: "bg-emerald-50 dark:bg-emerald-900/20",
-              },
-              {
-                label: t("exportPdf.expenses"),
-                value: spent,
-                cambio: resumen.cambioGastos,
-                linea: resumen.lineaGastos,
-                color: "#e11d48",
-                Icon: ArrowDownCircle,
-                fondo: "bg-rose-50 dark:bg-rose-900/20",
-              },
-            ].map((c, i) => (
-              <View
-                key={i}
-                className={`flex-1 rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 p-3.5 ${c.fondo}`}
-                style={CARD_SHADOW}
-              >
-                <View className="flex-row items-start justify-between">
-                  <View className="flex-1">
-                    <Text className="text-[11px] font-semibold text-slate-500 dark:text-slate-300">
-                      {c.label}
-                    </Text>
-                    <Text
-                      className="text-xl font-extrabold mt-0.5"
-                      style={{ color: primaryTextColor }}
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                    >
-                      {fmt(c.value)}
-                    </Text>
-                    <Cambio valor={c.cambio} />
-                  </View>
-                  <c.Icon size={18} color={c.color} />
-                </View>
-                <View className="mt-2">
-                  <Sparkline
-                    values={c.linea.valores}
-                    dayOffset={c.linea.desde}
-                    color={c.color}
-                    width={sparkWidth}
-                    monthNames={monthNames}
-                    monthIndex={month.m}
-                    fmt={fmt}
-                  />
-                </View>
-              </View>
-            ))}
-          </View>
 
           {/* Presupuesto utilizado. Solo si hay presupuesto: sin él, una
               barra de progreso no mide nada y un 0% engañaría. */}
