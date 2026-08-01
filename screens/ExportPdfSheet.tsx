@@ -168,25 +168,37 @@ export default function ExportPdfSheet({
     [contactos, destination]
   );
 
-  // Al cambiar de destino se suelta el elegido: un contacto de correo no
+  // AL CAMBIAR DE DESTINO se suelta el elegido: un contacto de correo no
   // sirve para WhatsApp, y dejarlo marcado invitaría a mandar a un sitio que
   // no existe.
   //
-  // Salvo que la orden por voz haya dicho a quién: ahí se busca entre los
-  // contactos de ese destino y se deja marcado, que es lo que hace que
-  // "exportar julio pdf whatsapp a mamá" llegue con todo puesto.
+  // Mira SOLO el destino, y esto es la corrección de un fallo de verdad.
+  //
+  // Antes miraba también la lista de contactos, así que se disparaba al
+  // añadir uno. Y como añadir cambia la lista, el contacto recién creado
+  // —que se deja elegido a propósito— se soltaba medio segundo después, solo.
+  // Sin aviso ni nada visible.
+  //
+  // Se veía así: guardabas tu correo, tocabas Exportar, y Gmail abría con el
+  // asunto, el texto y el PDF puestos pero el "Para" EN BLANCO. El mismo
+  // fallo que tenía WhatsApp, con otra cara: el dato existía y se perdía en
+  // el último paso.
   useEffect(() => {
     setAgregando(false);
     setEditandoId(null);
+    setContactoId(null);
+  }, [destination]);
+
+  // A QUIÉN dijo la voz. Va aparte del de arriba porque este sí tiene que
+  // volver a mirar cuando cambia la lista: los contactos se leen del
+  // almacenamiento después de abrirse la pantalla.
+  useEffect(() => {
     // Drive es tuyo y Compartir abre el menú de Android: ahí no hay a quién
     // mandar nada. Sin esto, "exporta julio a mi drive" acabaría avisando de
     // que no existe el contacto "mi drive" — un contacto que no haría falta.
-    if (!recipientName || destination === "drive" || destination === "share") {
-      setContactoId(null);
-      return;
-    }
+    if (!recipientName || destination === "drive" || destination === "share") return;
     const encontrado = findContactByName(contactos, recipientName, destination);
-    setContactoId(encontrado?.id ?? null);
+    if (encontrado) setContactoId(encontrado.id);
     // Si se dijo un nombre y no está guardado, se avisa. Callarlo abriría
     // WhatsApp sin destinatario y parecería que no entendió a quién.
     //
@@ -619,6 +631,20 @@ export default function ExportPdfSheet({
     // cargados (la exportación automática espera a que lo estén) y el nombre
     // llega por parámetro.
     const destinatario = resolveRecipient(contactoElegido, contactos, recipientName, destination);
+
+    // TENÍAS CONTACTOS Y NO ELEGISTE A NADIE.
+    //
+    // Se avisa antes de salir de Finzo, porque después ya no hay dónde: la
+    // app de correo o WhatsApp se abren encima y el aviso quedaría detrás.
+    //
+    // No frena el envío —dejar el destinatario en blanco y escribirlo allí es
+    // una forma legítima de usarlo—, pero avisa de que va a pasar. Abrir
+    // Gmail con el "Para" vacío sin decir nada es lo que parece un fallo.
+    const pideDestinatario =
+      destination === "whatsapp" || destination === "gmail" || destination === "mail";
+    if (pideDestinatario && !destinatario && contactosDelDestino.length > 0) {
+      showToast(t("exportPdf.noContactPicked"));
+    }
 
     setExporting(true);
     try {
