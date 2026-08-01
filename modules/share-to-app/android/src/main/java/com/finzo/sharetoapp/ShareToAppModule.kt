@@ -2,6 +2,7 @@ package com.finzo.sharetoapp
 
 import android.content.ComponentName
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import androidx.core.content.FileProvider
 import expo.modules.kotlin.modules.Module
@@ -38,6 +39,40 @@ class ShareToAppModule : Module() {
         true
       } catch (e: Exception) {
         false
+      }
+    }
+
+    /**
+     * Qué aplicación de correo abre este celular cuando se toca una
+     * dirección de correo, o "" si no hay ninguna marcada.
+     *
+     * Existe para que "Correo" pueda ir DIRECTO. Hasta ahora abría el menú de
+     * Android preguntando con qué aplicación, y con la orden por voz eso es
+     * justo el toque que se quería quitar: se dice la frase entera y aun así
+     * hay que contestar una pregunta.
+     *
+     * Se pregunta con un "mailto:" vacío, que es como Android guarda esa
+     * preferencia. Si nadie la ha elegido, el sistema responde con su propia
+     * pantalla de "elige una" — y eso NO es una aplicación de correo, así que
+     * se devuelve vacío para que quien llame decida.
+     */
+    Function("defaultMailPackage") {
+      val ctx = appContext.reactContext ?: return@Function ""
+      try {
+        val consulta = Intent(Intent.ACTION_SENDTO, Uri.parse("mailto:"))
+        val info = ctx.packageManager.resolveActivity(consulta, PackageManager.MATCH_DEFAULT_ONLY)
+          ?: return@Function ""
+        val paquete = info.activityInfo.packageName
+        // "android" es el propio sistema: es la pantalla de "elige una", no
+        // una aplicación de correo. Mandarle el archivo ahí sería volver a
+        // preguntar.
+        if (paquete == "android" || info.activityInfo.name.contains("Resolver", true)) {
+          ""
+        } else {
+          paquete
+        }
+      } catch (e: Exception) {
+        ""
       }
     }
 

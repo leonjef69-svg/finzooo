@@ -40,6 +40,7 @@ import {
   isGmailInstalled,
   isWhatsAppInstalled,
   shareToGmail,
+  shareToMail,
   shareToWhatsApp,
 } from "@/modules/share-to-app";
 import {
@@ -718,6 +719,26 @@ export default function ExportPdfSheet({
         // en el suyo aparecían WhatsApp y poco más. Esto abre directamente
         // la aplicación de correo, con el archivo ya adjunto y el asunto
         // puesto.
+        // Primero, directo a la aplicación de correo, igual que Gmail y
+        // WhatsApp. Antes esto siempre pasaba por el menú de Android
+        // preguntando con qué aplicación abrirlo — y con la orden por voz eso
+        // era justo el toque que se quería quitar: se decía la frase entera y
+        // aun así había que contestar una pregunta antes de ver el correo.
+        const directo = shareToMail(
+          file.uri,
+          file.mimeType,
+          t("exportPdf.mailSubject", { month: selectedMonthLabel }),
+          t("exportPdf.mailBody", { month: selectedMonthLabel }),
+          destinatario?.value ?? ""
+        );
+        if (directo) {
+          exportacionHecha();
+          return;
+        }
+
+        // Si no se pudo —sin aplicación de correo, o con un APK anterior a
+        // esto, porque es código nativo y no llega por actualización— se cae
+        // al camino de siempre: el menú de Android.
         if (!(await MailComposer.isAvailableAsync())) {
           showToast(t("exportPdf.mailUnavailable"));
           return;

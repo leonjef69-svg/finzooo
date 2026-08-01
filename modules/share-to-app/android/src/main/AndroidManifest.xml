@@ -13,6 +13,13 @@
              falte responde que no existe. -->
         <package android:name="com.whatsapp" />
         <package android:name="com.whatsapp.w4b" />
+        <!-- Para poder preguntar QUE aplicacion de correo abre este
+             celular. Sin declararlo, Android 11 y posteriores responden
+             que no hay ninguna. -->
+        <intent>
+            <action android:name="android.intent.action.SENDTO" />
+            <data android:scheme="mailto" />
+        </intent>
         <intent>
             <action android:name="android.intent.action.SEND" />
             <data android:mimeType="*/*" />

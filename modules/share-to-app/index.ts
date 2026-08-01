@@ -13,6 +13,8 @@ export const WHATSAPP_BUSINESS_PACKAGE = "com.whatsapp.w4b";
 
 type NativeShape = {
   isAppInstalled: (packageName: string) => boolean;
+  /** El paquete de la app de correo predeterminada, o "" si no hay. */
+  defaultMailPackage: () => string;
   shareToPackage: (
     fileUri: string,
     mimeType: string,
@@ -58,6 +60,64 @@ export function shareToGmail(
   if (!Native) return false;
   try {
     return Native.shareToPackage(fileUri, mimeType, GMAIL_PACKAGE, subject, text, recipient);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * A qué aplicación de correo mandar el archivo, o null si no hay ninguna.
+ *
+ * POR QUÉ NO SE DEJA QUE PREGUNTE ANDROID
+ *
+ * "Correo" abría el menú de Android preguntando con qué aplicación. Con la
+ * orden por voz eso es justo el toque que se quiere quitar: se dice la frase
+ * entera —mes, formato, destino y a quién— y aun así hay que contestar una
+ * pregunta antes de llegar al correo.
+ *
+ * Se busca en dos pasos:
+ *
+ *   1. La que el celular tenga marcada para abrir direcciones de correo. Es
+ *      la respuesta correcta cuando existe: es la que la persona eligió.
+ *
+ *   2. Si no hay ninguna marcada —el caso de quien tiene Gmail y la del
+ *      fabricante y nunca eligió—, Gmail. Es a donde va a parar el correo de
+ *      casi todo el mundo, y ese "casi" tiene arreglo: basta con marcar la
+ *      otra como predeterminada en los ajustes de Android y el paso 1 la
+ *      encuentra.
+ *
+ * Si no hay ni una ni otra se devuelve null y quien llame abre el menú de
+ * siempre, que es mejor que no hacer nada.
+ */
+export function mailPackage(): string | null {
+  if (!Native) return null;
+  try {
+    const preferida = Native.defaultMailPackage();
+    if (preferida) return preferida;
+    if (Native.isAppInstalled(GMAIL_PACKAGE)) return GMAIL_PACKAGE;
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Abre la aplicación de correo con el archivo adjunto y el destinatario ya
+ * puesto. Devuelve false si no se pudo, para que quien llame abra el menú de
+ * siempre en vez de dejar a la persona mirando una pantalla donde no pasó
+ * nada.
+ */
+export function shareToMail(
+  fileUri: string,
+  mimeType: string,
+  subject: string,
+  text: string,
+  recipient = ""
+): boolean {
+  const paquete = mailPackage();
+  if (!Native || !paquete) return false;
+  try {
+    return Native.shareToPackage(fileUri, mimeType, paquete, subject, text, recipient);
   } catch {
     return false;
   }
