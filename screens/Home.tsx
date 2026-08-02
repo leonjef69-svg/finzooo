@@ -28,6 +28,7 @@ import ThemeToggleButton from "@/components/ThemeToggleButton";
 import { catInfo } from "@/constants/categories";
 import { CARD_SHADOW } from "@/constants/style";
 import { fmtDate, monthKey } from "@/utils/format";
+import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { sanitizeAmountInput } from "@/utils/amount";
 import { availableBalance, budgetUsed } from "@/utils/finances";
 import { usePendingImport } from "@/utils/pendingImport";
@@ -96,7 +97,7 @@ export default function Home({
     () =>
       transactions
         .filter((t) => t.date.startsWith(mk))
-        .sort((a, b) => (a.date < b.date ? 1 : -1)),
+        .sort(compararMovimientos),
     [transactions, mk]
   );
 

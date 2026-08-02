@@ -1,4 +1,5 @@
 import type { Transaction } from "@/types";
+import { compararMovimientos } from "@/utils/ordenarMovimientos";
 
 /**
  * Junta los movimientos que tiene la app en memoria con los que hay
@@ -44,10 +45,9 @@ export function mergeTransactions(
   // fecha se ordena por identificador para que el orden no baile entre dos
   // aperturas: una lista que se reordena sola parece que cambió sin que nadie
   // la tocara.
-  return [...porId.values()].sort((a, b) => {
-    if (a.date !== b.date) return a.date < b.date ? 1 : -1;
-    return a.id < b.id ? 1 : -1;
-  });
+  // El mismo orden que usan las pantallas. Ordenar aqui de otra manera haria
+  // que la lista se recolocara sola al volver a la app.
+  return [...porId.values()].sort(compararMovimientos);
 }
 
 /** ¿Hay algo en el disco que la app todavía no tiene? */

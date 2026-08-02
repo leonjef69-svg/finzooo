@@ -9,6 +9,7 @@ import { catInfo } from "@/constants/categories";
 import { methodLabel } from "@/constants/i18n";
 import { CARD_SHADOW } from "@/constants/style";
 import { fmtDate, monthKey } from "@/utils/format";
+import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
 
@@ -54,7 +55,7 @@ export default function History({
         const haystack = `${tx.description} ${t(c.label)} ${methodLabel(tx.method, t)}`.toLowerCase();
         return haystack.includes(query);
       })
-      .sort((a, b) => (a.date < b.date ? 1 : -1));
+      .sort(compararMovimientos);
     const grouped: Record<string, Transaction[]> = {};
     monthTx.forEach((t) => {
       (grouped[t.date] = grouped[t.date] || []).push(t);
