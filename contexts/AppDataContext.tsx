@@ -43,6 +43,7 @@ import { signOutFromGoogle } from "@/utils/googleAuth";
 import { deleteCloudAccount, loadCloudData, saveCloudData } from "@/utils/cloudSync";
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
 import { mergeTransactions, hayNovedades } from "@/utils/mergeTransactions";
+import { presupuestoAHeredar } from "@/utils/presupuestoMensual";
 import * as notificationReader from "@/modules/notification-reader";
 import type { Goal, Month, Profile, Transaction } from "@/types";
 
@@ -463,6 +464,35 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // recarga y pisaría los datos que la persona esté editando.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * EL PRESUPUESTO SIGUE VIGENTE EL MES SIGUIENTE.
+   *
+   * Los presupuestos se guardan mes por mes, y un mes sin su entrada valía
+   * cero. Así que cada 1 de mes había que volver a escribirlo, y hasta
+   * hacerlo Inicio decía que no hay presupuesto. Doce veces al año.
+   *
+   * Se copia SOLO al mes en curso, y solo si no tiene el suyo. Heredarlo al
+   * vuelo —devolver el del mes anterior cuando falta— se vería igual de bien
+   * y rompería el Saldo anterior: ese suma los presupuestos de todos los
+   * meses previos, así que quien puso 500 en enero y no abrió la app en seis
+   * meses tendría de golpe 3.000 soles salidos de la nada.
+   *
+   * Y se avisa. Escribir un presupuesto sin decirlo es cambiarle a alguien un
+   * número de dinero a sus espaldas, aunque sea el número que quería.
+   */
+  useEffect(() => {
+    if (!(ready && hasOnboarded)) return;
+    const mesEnCurso = monthKey(new Date().getFullYear(), new Date().getMonth());
+    const heredado = presupuestoAHeredar(budgets, mesEnCurso);
+    if (heredado === null) return;
+    setBudgets((prev) => ({ ...prev, [mesEnCurso]: heredado }));
+    showToast(t("home.budgetInherited", { amount: formatAmount(heredado, userCurrency) }));
+    // Solo al abrir la app y al cambiar de mes estando abierta. No depende de
+    // "budgets" a propósito: si dependiera, se volvería a disparar con su
+    // propio cambio.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, hasOnboarded]);
 
   // Guardado automático: cada vez que algo cambia, se guarda solo.
   useEffect(() => {
