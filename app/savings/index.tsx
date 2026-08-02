@@ -5,7 +5,7 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
 
 export default function SavingsIndexRoute() {
-  const { t, isPremium, goals, autoSavings, monthLabel } = useAppData();
+  const { t, isPremium, goals, disponible, apartado, libre, descuadre, monthLabel } = useAppData();
   const blocked = useRedirectIfOrphaned();
   if (blocked) return null;
 
@@ -26,7 +26,10 @@ export default function SavingsIndexRoute() {
       onBack={safeBack}
       onAdd={() => router.push("/savings/form")}
       onOpen={(id) => router.push(`/savings/${id}`)}
-      autoSavings={autoSavings}
+      disponible={disponible}
+      apartado={apartado}
+      libre={libre}
+      descuadre={descuadre}
       monthLabel={monthLabel}
       onAllocate={() => {
         if (goals.length === 0) router.push("/savings/form");

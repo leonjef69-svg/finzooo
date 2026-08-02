@@ -44,6 +44,7 @@ import { deleteCloudAccount, loadCloudData, saveCloudData } from "@/utils/cloudS
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
 import { mergeTransactions, hayNovedades } from "@/utils/mergeTransactions";
 import { presupuestoAHeredar } from "@/utils/presupuestoMensual";
+import { hayDescuadre, maximoAApartar, saldoLibre, totalApartado } from "@/utils/ahorro";
 import * as notificationReader from "@/modules/notification-reader";
 import type { Goal, Month, Profile, Transaction } from "@/types";
 
@@ -90,6 +91,16 @@ type AppDataContextValue = {
   resetCarryover: () => void;
   restoreCarryover: () => void;
   autoSavings: number;
+  /** Lo mismo que enseña Inicio como Disponible. */
+  disponible: number;
+  /** Lo que suman las metas sin cumplir. */
+  apartado: number;
+  /** Lo que se puede gastar sin tocar las metas. */
+  libre: number;
+  /** Hay mas apartado que dinero: se avisa, no se corrige solo. */
+  descuadre: boolean;
+  /** Cuanto mas se puede apartar sin pasarse. */
+  maximoAApartar: number;
   monthLabel: string;
   setBudgetForCurrentMonth: (amount: number) => void;
   categoryBudgets: Record<string, number>;
@@ -797,6 +808,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, [transactions, budgets, mk, carryoverBroken]);
 
   const autoSavings = budget + income - spent;
+
+  // EL AHORRO, COMO SOBRES. Ver utils/ahorro.
+  //
+  // El disponible es EL MISMO que enseña Inicio —con el saldo anterior
+  // dentro—. La pantalla de Ahorro enseñaba autoSavings, que se lo deja
+  // fuera: dos pantallas, dos numeros, el mismo mes.
+  const disponible = budget + prevBalance + income - spent;
+  const apartado = useMemo(() => totalApartado(goals), [goals]);
+  const libre = saldoLibre(disponible, apartado);
+  const descuadre = hayDescuadre(disponible, apartado);
   const monthLabel = `${monthNames[month.m]} ${month.y}`;
 
   function completeOnboarding(budgetAmount: number) {
@@ -1063,6 +1084,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         resetCarryover,
         restoreCarryover,
         autoSavings,
+        disponible,
+        apartado,
+        libre,
+        descuadre,
+        maximoAApartar: maximoAApartar(disponible, apartado),
         monthLabel,
         setBudgetForCurrentMonth,
         categoryBudgets,

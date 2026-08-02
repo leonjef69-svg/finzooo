@@ -22,12 +22,22 @@ export default function MoveMoneySheet({
   onClose: () => void;
   onConfirm: (amount: number) => void;
 }) {
-  const { userCurrency, fmt, t } = useAppData();
+  const { userCurrency, fmt, t, maximoAApartar: tope } = useAppData();
   const [amount, setAmount] = useState("");
   const [confirming, setConfirming] = useState(false);
   const isAdd = mode === "add";
   const amt = parseFloat(amount) || 0;
-  const valid = amt > 0 && (isAdd || amt <= goal.saved);
+  // EL TOPE QUE FALTABA.
+  //
+  // Apartar solo subia un numero dentro de la meta, sin mirar nada: con
+  // S/ 500 se podian apartar S/ 500 en tres metas distintas —S/ 1.500 que no
+  // existen— y nada lo impedia, porque el dinero nunca salia de ningun lado.
+  //
+  // Al sacar no hay tope que valga: como mucho, lo que tenga la meta.
+  const valid = amt > 0 && (isAdd ? amt <= tope : amt <= goal.saved);
+  // Se pidio mas de lo que hay. Se dice cuanto es lo que hay, en vez de
+  // dejar el boton apagado sin explicar por que.
+  const sePasa = isAdd && amt > tope;
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
 
@@ -90,6 +100,19 @@ export default function MoveMoneySheet({
         {!isAdd && amt > goal.saved && (
           <Text className="text-rose-500 text-xs font-semibold text-center mb-2">
             {t("moveMoney.cannotWithdrawMore")}
+          </Text>
+        )}
+        {/* CUÁNTO SE PUEDE APARTAR, Y POR QUÉ NO MÁS.
+            Se enseña siempre, no solo al pasarse: saberlo ANTES de escribir
+            evita el intento. Y al pasarse se pone en rojo con el número
+            exacto, en vez de dejar el botón apagado sin decir por qué. */}
+        {isAdd && (
+          <Text
+            className={`text-xs font-semibold text-center mb-2 ${
+              sePasa ? "text-rose-500" : "text-slate-400 dark:text-slate-500"
+            }`}
+          >
+            {t(sePasa ? "moveMoney.overFree" : "moveMoney.freeAvailable", { amount: fmt(tope) })}
           </Text>
         )}
         <TouchableOpacity

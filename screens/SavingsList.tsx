@@ -14,7 +14,10 @@ export default function SavingsList({
   onBack,
   onAdd,
   onOpen,
-  autoSavings,
+  disponible,
+  apartado,
+  libre,
+  descuadre,
   monthLabel,
   onAllocate,
 }: {
@@ -22,7 +25,10 @@ export default function SavingsList({
   onBack: () => void;
   onAdd: () => void;
   onOpen: (id: number) => void;
-  autoSavings: number;
+  disponible: number;
+  apartado: number;
+  libre: number;
+  descuadre: boolean;
   monthLabel: string;
   onAllocate: () => void;
 }) {
@@ -72,21 +78,61 @@ export default function SavingsList({
               end={{ x: 1, y: 1 }}
               className="rounded-3xl p-5 mt-3"
             >
+              {/* EL NÚMERO GRANDE ES LO LIBRE, NO "EL AHORRO DEL MES".
+                  Antes enseñaba presupuesto + ingresos − gastos, que ni es
+                  ahorro ni cuadra con Inicio: a Inicio se le suma el saldo
+                  anterior y a esto no. Dos pantallas, dos números, el mismo
+                  mes.
+
+                  Lo libre es lo que de verdad hace falta saber aquí: cuánto
+                  se puede gastar sin tocar las metas. */}
               <View className="flex-row items-center gap-1.5 mb-1">
                 <Sparkles size={14} color="#a7f3d0" />
                 <Text className="text-emerald-100 text-xs font-bold">
-                  {t("savingsList.smartSavings", { month: monthLabel })}
+                  {t("savingsList.freeTitle", { month: monthLabel })}
                 </Text>
               </View>
-              <Text className={`text-3xl font-extrabold ${autoSavings >= 0 ? "text-white" : "text-rose-200"}`}>
-                {fmt(autoSavings)}
+              <Text className={`text-3xl font-extrabold ${libre >= 0 ? "text-white" : "text-rose-200"}`}>
+                {fmt(libre)}
               </Text>
-              <Text className="text-emerald-100 text-[11px] mt-1">{t("savingsList.formula")}</Text>
+
+              {/* De dónde sale ese número, con las dos piezas a la vista. Sin
+                  esto es un número más que hay que creerse. */}
+              <View className="flex-row gap-4 mt-3 pt-3 border-t border-emerald-400/30">
+                <View>
+                  <Text className="text-emerald-100 text-[10px]">{t("savingsList.availableLabel")}</Text>
+                  <Text className="text-white text-sm font-bold">{fmt(disponible)}</Text>
+                </View>
+                <View>
+                  <Text className="text-emerald-100 text-[10px]">{t("savingsList.setAsideLabel")}</Text>
+                  <Text className="text-white text-sm font-bold">− {fmt(apartado)}</Text>
+                </View>
+              </View>
             </LinearGradient>
+
+            {/* HAY MÁS APARTADO QUE DINERO.
+                Pasa por dos caminos legítimos —se gastó parte de lo apartado,
+                o se puso el saldo anterior en cero— y ninguno es un fallo. La
+                app NO baja la meta sola: que un número de dinero baje sin que
+                nadie lo tocara es de las cosas que hacen desconfiar. Se avisa
+                y se deja decidir. */}
+            {descuadre && (
+              <View className="rounded-2xl bg-amber-50 dark:bg-amber-900/20 border-[1.5px] border-amber-200 dark:border-amber-800 p-4 mt-3">
+                <Text className="text-xs font-extrabold text-amber-700 dark:text-amber-300 mb-1">
+                  {t("savingsList.mismatchTitle")}
+                </Text>
+                <Text className="text-[11px] text-amber-800 dark:text-amber-200 leading-relaxed">
+                  {t("savingsList.mismatchBody", {
+                    apartado: fmt(apartado),
+                    disponible: fmt(disponible),
+                  })}
+                </Text>
+              </View>
+            )}
             <Text className="text-xs text-slate-500 dark:text-slate-300 leading-relaxed mt-4 px-1">
               {t("savingsList.explanation")}
             </Text>
-            {autoSavings > 0 && (
+            {libre > 0 && (
               <TouchableOpacity
                 onPress={onAllocate}
                 className="mt-4 bg-emerald-50 rounded-2xl p-4 flex-row items-center gap-3"
@@ -95,7 +141,7 @@ export default function SavingsList({
                   <PiggyBank size={16} color="#059669" />
                 </View>
                 <Text className="text-sm font-bold text-emerald-700 flex-1">
-                  {t("savingsList.moveToGoal", { amount: fmt(autoSavings) })}
+                  {t("savingsList.moveToGoal", { amount: fmt(libre) })}
                 </Text>
               </TouchableOpacity>
             )}
