@@ -13,6 +13,14 @@ useCoreDependencies()
 useDefaultAndroidSdkVersions()
 useExpoPublishing()
 
+// El servicio que despierta a la app sin abrirla (FinzoCaptureService) usa
+// HeadlessJsTaskService, que viene de React Native. Este modulo no lo tenia
+// declarado —hasta ahora solo usaba cosas de Android y de Expo— y sin esta
+// linea el modulo no compila.
+dependencies {
+  implementation "com.facebook.react:react-android"
+}
+
 android {
   namespace "com.finzo.notificationreader"
   defaultConfig {
