@@ -53,10 +53,16 @@ Y las pruebas, que ahora corren con un solo comando:
 node pruebas/correr.mjs
 ```
 
-Son 26 pruebas y 5 auditores. Ver [pruebas/LEEME.md](pruebas/LEEME.md).
+Son 32 pruebas y 7 auditores. Ver [pruebas/LEEME.md](pruebas/LEEME.md).
 
 Cada prueba nueva tiene que **fallar contra la versión anterior**: una que
 pasa siempre no está probando nada.
+
+Y si la prueba está escrita en otro lenguaje que el código que prueba (las de
+Kotlin corren en Node), tiene que **traducir también las diferencias del
+lenguaje**. Escribir `\s` en JavaScript para imitar un `\s` de Kotlin dio una
+prueba en verde y una voz muda en el celular: en JavaScript incluye el espacio
+duro y en Java no. El porqué entero está en ESTADO.md.
 
 ## Dos cosas que se olvidan y cuestan horas
 

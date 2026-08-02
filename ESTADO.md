@@ -62,8 +62,10 @@ Y las pruebas, con un solo comando:
 node pruebas/correr.mjs
 ```
 
-Son 26 pruebas y 5 auditores. Cada prueba nueva tiene que **fallar contra la
-versión anterior**: una que pasa siempre no está probando nada.
+Son 32 pruebas y 7 auditores. Cada prueba nueva tiene que **fallar contra la
+versión anterior**: una que pasa siempre no está probando nada. Y si la prueba
+imita código de otro lenguaje, tiene que imitar también sus reglas — ver el
+espacio duro, más abajo.
 
 ---
 
@@ -122,10 +124,41 @@ registro automático):
 
 Se corrigió que leyera cosas que no son un yapeo: el aviso "Operación en
 curso. Hemos generado y autocompletado la clave" que Yape manda pegado a cada
-pago, y avisos de otros bancos (Scotiabank y parecidos) que no traen un
-monto. Ese arreglo está en el commit `ec34687` — **es código nativo, necesita
-el APK de esa fila en ENTREGAS.md**. El anterior (`c4b715e`) todavía lee esas
-cosas de más.
+pago, y avisos de otros bancos (Scotiabank y parecidos) que no traen un monto.
+
+### El espacio que no es un espacio (02/08/2026)
+
+Ese arreglo trajo otro fallo, y **es el más instructivo del proyecto**:
+
+Yape escribe el monto con un espacio **duro** —el que impide que "S/" y el
+número se partan en dos líneas—. En pantalla se ve igual que uno normal. Para
+JavaScript **es** un espacio; para Kotlin **no lo es**.
+
+El registro lo hace JavaScript, así que anotó el yapeo. La voz la hace Kotlin,
+no reconoció el monto y se calló. Un carácter invisible separando las dos
+mitades de la app.
+
+**Y la prueba decía que todo estaba bien.** Tenía el texto real de la captura
+y afirmaba que hablaría. El servicio está en Kotlin y la prueba lo imitaba en
+JavaScript, escribiendo `\s` en los dos sitios como si significara lo mismo.
+Probaba una versión más permisiva que la real.
+
+De aquí salen dos reglas que valen para todo el proyecto:
+
+1. **Una prueba escrita en otro idioma que el código que prueba tiene que
+   traducir también las diferencias del idioma.** Si no, miente. Ahora
+   `verificar-voz-yape` traduce las reglas a las de Java antes de comparar, y
+   las lee del propio `.kt` en vez de copiarlas.
+2. **Cuando la voz y el registro deciden por separado, acaban discrepando.**
+   Hay una prueba que comprueba que los dos vean lo mismo como monto.
+
+Y para que no cueste otro día: el servicio **deja anotado por qué se calló**
+(solo el motivo, nunca el texto) y la pantalla de registro automático lo
+enseña — "Calló: no le vio el monto". Antes, "no dijo nada" se veía idéntico
+estuviera apagada, no reconociera el monto o lo tomara por un pago tuyo.
+
+En Acerca de, la línea de partes nativas trae **`✓ voz afinada`**: distingue
+este APK del de esa misma mañana, que ya traía la voz pero muda.
 
 ---
 
