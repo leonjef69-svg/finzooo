@@ -53,7 +53,7 @@ Y las pruebas, que ahora corren con un solo comando:
 node pruebas/correr.mjs
 ```
 
-Son 32 pruebas y 7 auditores. Ver [pruebas/LEEME.md](pruebas/LEEME.md).
+Son 34 pruebas y 7 auditores. Ver [pruebas/LEEME.md](pruebas/LEEME.md).
 
 Cada prueba nueva tiene que **fallar contra la versión anterior**: una que
 pasa siempre no está probando nada.

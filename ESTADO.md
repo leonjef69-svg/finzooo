@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **2 de agosto de 2026** · Código publicado: **2ago-17**
+Actualizado: **2 de agosto de 2026** · Código publicado: **2ago-21**
 
 Este archivo existe para que una sesión nueva —de Claude o de quien sea— no
 empiece de cero. No cuenta lo que ya se ve en el código ni en el historial de
@@ -74,7 +74,7 @@ Y las pruebas, con un solo comando:
 node pruebas/correr.mjs
 ```
 
-Son 32 pruebas y 7 auditores. Cada prueba nueva tiene que **fallar contra la
+Son 34 pruebas y 7 auditores. Cada prueba nueva tiene que **fallar contra la
 versión anterior**: una que pasa siempre no está probando nada. Y si la prueba
 imita código de otro lenguaje, tiene que imitar también sus reglas — ver el
 espacio duro, más abajo.
@@ -120,8 +120,18 @@ Esto es lo pendiente de verdad, en orden de bloqueo:
 
 ## LO SIGUIENTE A HACER
 
-Por decidir con el usuario. La voz que dice quién yapeó y cuánto (pedida el
-01/08/2026) **ya está hecha y funcionando** — ver abajo.
+**Pendiente de respuesta del usuario:** el registro de diagnóstico guarda el
+TEXTO de los avisos descartados, y entre ellos van los de clave ("Tu código
+de verificación es 4821"). Queda escrito en el celular (cifrado, local, los
+últimos 40) y a la vista de cualquiera que agarre el celular desbloqueado.
+
+Propuesto el 02/08/2026: seguir anotando que llegó un aviso de seguridad,
+pero sin guardar su texto. Para diagnosticar un yapeo que no entra, el texto
+de un código no sirve de nada. Es solo JavaScript.
+
+Sin probar de verdad: **Plin y los bancos**. Las listas de palabras están
+escritas según cómo suelen redactar sus avisos, pero solo se ha comprobado
+con Yape. Hoy quedó claro lo que cuesta dar por bueno lo que no se probó.
 
 ## La voz que anuncia los yapeos — hecha el 02/08/2026
 
@@ -197,6 +207,39 @@ Tres cosas que no cuadran y hay que decidir:
   Hoy los tiene todo el mundo. Es la función más llamativa de la app y la
   candidata natural al Premium — o al menos debería figurar.
 - **"Sin anuncios"**: ver el punto 2 de arriba.
+
+---
+
+## El registro automático, entero (02/08/2026)
+
+El servicio de Android mira los avisos de **18 apps de dinero** y descarta el
+resto sin leerlo. Lo que reconoce está en `utils/notificationParser.ts`:
+entradas (te yapearon, te plinearon, te transfirieron, abono, depósito...) y
+salidas (yapeaste, plineaste, pagaste, transferiste, retiro...).
+
+**Cómo llega a registrarse**, por el camino más corto que haya:
+
+1. **App abierta y escuchando** → el servicio avisa por el evento `onCapture`
+   y se registra al instante. Es nativo: `ba4972c` en adelante.
+2. **App cerrada** → se despierta `FinzoCaptureService` (trabajo de fondo).
+3. **Si Android se niega** → se queda en el buzón y entra al abrir la app.
+
+Nunca 1 y 2 a la vez: levantar el trabajo de fondo con la app delante es
+despertar un proceso para nada, y además Android lo prohíbe. El repaso cada
+8 segundos y la recogida al volver al frente **se quedan** como red: cubren
+el APK anterior y lo que llegue con la app cerrada.
+
+**Lo que protege el dinero** (cada una costó su fallo):
+
+- Nada de hace más de 7 días se registra.
+- El repetido solo se compara contra lo escrito a mano: tres yapes de S/ 1
+  de la misma persona el mismo día son TRES movimientos.
+- Entre vaciar el buzón y guardar hay un instante en que el yapeo no está en
+  ningún sitio; se aparta en una lista de pendientes y solo se suelta cuando
+  ya está guardado.
+- La app **junta** en vez de pisar lo que escribió el trabajo de fondo, tanto
+  los movimientos (`mergeTransactions`) como el registro de avisos
+  (`mergeCaptureLog`).
 
 ---
 
