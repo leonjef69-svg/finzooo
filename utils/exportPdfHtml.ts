@@ -179,12 +179,15 @@ function rosquilla(
   filas: { label: string; color: string; amount: number; share: number }[],
   total: number,
   fmt: (n: number) => string,
-  totalLabel: string
+  totalLabel: string,
+  /** Lado del dibujo. Se encoge cuando el documento va justo de hoja. */
+  lado = 156
 ): string {
-  const CX = 78;
-  const CY = 78;
-  const R_FUERA = 66;
-  const R_DENTRO = 44;
+  // Todo se mide contra el lado para que encoja entero y no a trozos.
+  const CX = lado / 2;
+  const CY = lado / 2;
+  const R_FUERA = lado * 0.423;
+  const R_DENTRO = lado * 0.282;
 
   let acumulado = 0;
   const trozos = filas
@@ -199,7 +202,7 @@ function rosquilla(
     .join("");
 
   return `
-    <svg width="156" height="156" viewBox="0 0 156 156">
+    <svg width="${lado}" height="${lado}" viewBox="0 0 ${lado} ${lado}">
       ${trozos}
       <text x="${CX}" y="${CY - 4}" text-anchor="middle" font-size="9" fill="#64748b">${esc(totalLabel)}</text>
       <text x="${CX}" y="${CY + 11}" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">${esc(fmt(total))}</text>
@@ -367,6 +370,47 @@ function barrasPorDia(
     </svg>`;
 }
 
+/**
+ * Alto aproximado del documento, en puntos, para saber si cabe en una hoja.
+ *
+ * Es una CUENTA A OJO, no una medida: quien mide de verdad es el motor que
+ * arma el PDF, y ese no dice nada hasta que ya lo armó. Pero para esto basta
+ * con acertar el orden de magnitud, porque lo único que se decide con el
+ * número es apretar un poco el espaciado o no.
+ *
+ * Los valores salen de lo que ocupa cada bloque con el espaciado normal.
+ */
+export function alturaEstimada(p: {
+  categorias: number;
+  presupuestos: number;
+  meses: number;
+  dias: number;
+  movimientos: number;
+}): number {
+  let alto = 120; // cabecera con el logo + las tres tarjetas de totales
+  if (p.categorias > 0) alto += 40 + Math.max(156, p.categorias * 17);
+  if (p.presupuestos > 0) alto += 34 + p.presupuestos * 20;
+  if (p.meses > 1) alto += 34 + 110;
+  if (p.dias > 0) alto += 34 + 150;
+  alto += 52 + p.movimientos * 26 + 44; // título, filas y la línea de Total
+  return alto;
+}
+
+/** Alto util de una hoja A4 con sus margenes, en los mismos puntos. */
+export const ALTO_HOJA = 1040;
+
+/**
+ * ¿Vale la pena apretar el documento para que quepa en una hoja?
+ *
+ * Solo cuando se pasa POCO. Si cabe de sobra no hay nada que apretar, y si se
+ * pasa por mucho —veinte movimientos y todos los gráficos— no hay espaciado
+ * que lo salve: apretarlo dejaría el documento incómodo de leer y seguiría
+ * ocupando dos hojas igual.
+ */
+export function cabeApretando(alto: number): boolean {
+  return alto > ALTO_HOJA && alto <= ALTO_HOJA * 1.3;
+}
+
 export function buildPdfHtml(o: PdfOptions): string {
   const { texts: T, fmt } = o;
 
@@ -395,19 +439,37 @@ export function buildPdfHtml(o: PdfOptions): string {
     : [];
   const hayDias = dias.length > 0;
 
+  // ¿Se apreta el documento para que quepa en una hoja?
+  //
+  // Solo cuando falta poco. Con pocos movimientos ya cabía y no hay nada que
+  // hacer; con muchos no cabría de ninguna forma y apretarlo solo lo dejaría
+  // incómodo de leer para acabar ocupando dos hojas igual.
+  const apretar = cabeApretando(
+    alturaEstimada({
+      categorias: catsGasto.length + catsIngreso.length,
+      presupuestos: o.charts ? o.categoryBudgets.length : 0,
+      meses: o.charts ? o.monthly.length : 0,
+      dias: dias.length,
+      movimientos: o.txs.length,
+    })
+  );
+  const sep = apretar ? 11 : 20;
+  const padFila = apretar ? "3px 8px" : "6px 8px";
+  const ladoRosquilla = apretar ? 124 : 156;
+
   const filas = o.txs
     .map((tx) => {
       const color = tx.type === "expense" ? ROJO : VERDE;
       const signo = tx.type === "expense" ? "-" : "+";
       return `
         <tr>
-          <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;white-space:nowrap;">${esc(tx.dateLabel)}</td>
-          <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;white-space:nowrap;">
+          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;white-space:nowrap;">${esc(tx.dateLabel)}</td>
+          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;white-space:nowrap;">
             <span style="display:inline-block;width:7px;height:7px;border-radius:4px;background:${tx.categoryColor};margin-right:5px;"></span>${esc(tx.categoryLabel)}
           </td>
-          <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;">${esc(tx.description || "-")}</td>
-          <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;white-space:nowrap;">${esc(tx.methodLabel)}</td>
-          <td style="padding:6px 8px;border-bottom:1px solid #e2e8f0;text-align:right;white-space:nowrap;color:${color};font-weight:bold;">${signo}${esc(fmt(tx.amount))}</td>
+          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;">${esc(tx.description || "-")}</td>
+          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;white-space:nowrap;">${esc(tx.methodLabel)}</td>
+          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;text-align:right;white-space:nowrap;color:${color};font-weight:bold;">${signo}${esc(fmt(tx.amount))}</td>
         </tr>`;
     })
     .join("");
@@ -440,11 +502,11 @@ export function buildPdfHtml(o: PdfOptions): string {
     lista.length === 0
       ? ""
       : `
-      <div style="page-break-inside:avoid;margin-top:20px;">
+      <div style="page-break-inside:avoid;margin-top:${sep}px;">
         <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(titulo)}</div>
         <table style="width:100%;border-collapse:collapse;">
           <tr>
-            <td style="width:170px;vertical-align:middle;">${rosquilla(lista, total, fmt, T.total)}</td>
+            <td style="width:${ladoRosquilla + 14}px;vertical-align:middle;">${rosquilla(lista, total, fmt, T.total, ladoRosquilla)}</td>
             <td style="vertical-align:middle;padding-left:6px;">
               <table style="width:100%;border-collapse:collapse;">${barrasPorCategoria(lista, fmt)}</table>
             </td>
@@ -452,18 +514,32 @@ export function buildPdfHtml(o: PdfOptions): string {
         </table>
       </div>`;
 
-  // Con las dos cosas dentro, cada bloque dice de cuál habla. Dos rosquillas
-  // seguidas bajo el mismo "Reparto por categoría" no se distinguirían: los
-  // dos son montos por categoría y solo cambia el signo.
+  // UNA SOLA ROSQUILLA, LA DE GASTOS.
+  //
+  // Se probó a dibujar también la de ingresos y no compensa: en un mes normal
+  // los ingresos son dos o tres categorías —el sueldo y poco más—, así que
+  // una rosquilla entera para eso empujaba la lista de movimientos a la hoja
+  // siguiente a cambio de dos líneas de información. El reparto de ingresos
+  // se ve igual de bien en la lista del final, con sus montos en verde.
+  //
+  // Un reporte de SOLO ingresos sí la lleva: ahí graficar gastos daría una
+  // hoja en blanco. De eso se encarga el "foco" de arriba.
   const hayDeTodo = o.charts && catsGasto.length > 0 && catsIngreso.length > 0;
-  const bloqueCategorias =
-    repartoDe(hayDeTodo ? T.expenses : T.byCategory, catsGasto, totalGastoCats) +
-    repartoDe(hayDeTodo ? T.income : T.byCategory, catsIngreso, totalIngresoCats);
+  const catsFoco = foco === "expense" ? catsGasto : catsIngreso;
+  const totalFoco = foco === "expense" ? totalGastoCats : totalIngresoCats;
+  // Con las dos cosas dentro, el título dice de cuál es la rosquilla. Sin
+  // eso, "Reparto por categoría" en un documento que trae gastos e ingresos
+  // se lee como si fueran los dos, y los números no cuadran con el total.
+  const bloqueCategorias = repartoDe(
+    hayDeTodo ? `${T.byCategory} · ${T.expenses}` : T.byCategory,
+    catsFoco,
+    totalFoco
+  );
 
   const bloquePresupuestos =
     o.charts && o.categoryBudgets.length > 0
       ? `
-      <div style="page-break-inside:avoid;margin-top:20px;">
+      <div style="page-break-inside:avoid;margin-top:${sep}px;">
         <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(T.byCategoryBudget)}</div>
         <table style="width:100%;border-collapse:collapse;">${barrasPresupuesto(o.categoryBudgets, fmt)}</table>
       </div>`
@@ -472,7 +548,7 @@ export function buildPdfHtml(o: PdfOptions): string {
   const bloqueMeses =
     o.charts && o.monthly.length > 1
       ? `
-      <div style="page-break-inside:avoid;margin-top:20px;">
+      <div style="page-break-inside:avoid;margin-top:${sep}px;">
         <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(T.byMonth)}</div>
         ${barrasPorMes(o.monthly, fmt)}
       </div>`
@@ -481,7 +557,7 @@ export function buildPdfHtml(o: PdfOptions): string {
   const bloqueDias =
     hayDias
       ? `
-      <div style="page-break-inside:avoid;margin-top:20px;">
+      <div style="page-break-inside:avoid;margin-top:${sep}px;">
         <!-- Con las dos cosas dentro, el título dice de cuál son las columnas.
              Este gráfico sigue siendo de gasto: los ingresos de un mes son
              dos o tres días sueltos y un gráfico diario de eso serían tres
@@ -547,7 +623,12 @@ export function buildPdfHtml(o: PdfOptions): string {
     ${bloqueDias}
 
     <!-- MOVIMIENTOS -->
-    <div style="font-size:11px;font-weight:bold;color:#334155;margin:22px 0 7px 0;">
+    <!-- page-break-after:avoid pega el título a su tabla.
+         Sin esto el corte de hoja caía justo debajo del título y la primera
+         página terminaba con un "Movimientos (21)" solo, sin ni una fila
+         debajo. Desde fuera parece que la lista no salió, no que siguiera en
+         la hoja siguiente. -->
+    <div style="font-size:11px;font-weight:bold;color:#334155;margin:${sep + 2}px 0 7px 0;page-break-after:avoid;">
       ${esc(T.movements)} (${o.txs.length})
     </div>
     <table style="width:100%;border-collapse:collapse;font-size:10px;">
