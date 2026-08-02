@@ -11,6 +11,7 @@ import Toggle from "@/components/Toggle";
 import { useAppData } from "@/contexts/AppDataContext";
 import { CARD_SHADOW } from "@/constants/style";
 import type { CaptureLogEntry } from "@/utils/autoCapture";
+import { horaDe } from "@/utils/format";
 
 // Color con el que se pinta cada resultado en el diagnóstico. Verde = se
 // registró; ámbar = se reconoció pero no hacía falta; gris = no era un
@@ -77,7 +78,12 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
     error: "autoCapture.speak.error",
   };
   const claveVoz = MOTIVOS_VOZ[stats.lastSpeak];
-  const motivoVoz = claveVoz ? t(claveVoz) : "";
+  // CON LA HORA. Sin ella el motivo no sirve para lo que se hizo: al mirarlo
+  // no se sabe si habla del aviso que se acaba de recibir o de uno de hace
+  // media hora, que es justo la pregunta que hay que responder.
+  const motivoVoz = claveVoz
+    ? t(claveVoz) + (stats.lastSpeakAt > 0 ? ` · ${horaDe(stats.lastSpeakAt)}` : "")
+    : "";
 
   return (
     <View
