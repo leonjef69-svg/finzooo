@@ -30,6 +30,7 @@ const GRUPOS: { titulo: string; ejemplos: { dice: string; hace: string }[] }[] =
       { dice: "voiceHelp.addSay1", hace: "voiceHelp.addDo1" },
       { dice: "voiceHelp.addSay2", hace: "voiceHelp.addDo2" },
       { dice: "voiceHelp.addSay3", hace: "voiceHelp.addDo3" },
+      { dice: "voiceHelp.addSay4", hace: "voiceHelp.addDo4" },
     ],
   },
   {
@@ -39,6 +40,9 @@ const GRUPOS: { titulo: string; ejemplos: { dice: string; hace: string }[] }[] =
       { dice: "voiceHelp.askSay2", hace: "voiceHelp.askDo2" },
       { dice: "voiceHelp.askSay3", hace: "voiceHelp.askDo3" },
       { dice: "voiceHelp.askSay4", hace: "voiceHelp.askDo4" },
+      { dice: "voiceHelp.askSay5", hace: "voiceHelp.askDo5" },
+      { dice: "voiceHelp.askSay6", hace: "voiceHelp.askDo6" },
+      { dice: "voiceHelp.askSay7", hace: "voiceHelp.askDo7" },
     ],
   },
   {
