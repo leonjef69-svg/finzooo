@@ -69,5 +69,8 @@ duro y en Java no. El porqué entero está en ESTADO.md.
 1. **El código nativo no viaja por actualización.** Si tocas
    `modules/*/android/`, hace falta APK nuevo. Se arregló dos veces lo mismo
    por no tenerlo presente.
-2. **Sube `CODE_MARKER`** en `screens/AppInfo.tsx` en cada entrega, y da **un
-   solo enlace de APK** por mensaje. El porqué está en ESTADO.md.
+2. **Sube `CODE_MARKER`** en `screens/AppInfo.tsx` en cada entrega, y deja
+   **un solo APK vigente en toda la conversación** — no "uno por mensaje": dos
+   enlaces en mensajes distintos confunden igual, y ya pasó dos veces. No des
+   un enlace hasta tener el arreglo hecho, y al dar el nuevo di que el
+   anterior queda anulado. El porqué está en ESTADO.md.

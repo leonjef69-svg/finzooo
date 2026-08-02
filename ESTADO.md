@@ -38,9 +38,21 @@ arregló dos veces lo mismo.
 
 ### Reglas que costó aprender
 
-- **UN SOLO enlace de APK por mensaje.** Nunca uno "de respaldo": el 30/07/2026
-  se dieron dos, el usuario instaló el viejo, y dos funciones que estaban bien
-  parecieron rotas. Se perdió medio día.
+- **UN SOLO enlace de APK por mensaje, y UNO SOLO VIVO EN TODA LA
+  CONVERSACIÓN.** Nunca uno "de respaldo": el 30/07/2026 se dieron dos, el
+  usuario instaló el viejo, y dos funciones que estaban bien parecieron rotas.
+  Se perdió medio día.
+
+  Volvió a pasar el 02/08/2026, y de otra forma: los dos enlaces iban en
+  mensajes distintos —uno al diagnosticar, otro al terminar el arreglo— y aun
+  así el usuario acabó con dos enlaces delante sin saber cuál instalar. La
+  regla no es "uno por mensaje": es que en la conversación **solo puede haber
+  un APK vigente**.
+
+  De ahí sale la práctica: **no dar el enlace de un APK hasta tener el arreglo
+  hecho**. Si hay que enseñar el diagnóstico antes, se cuenta el problema sin
+  enlace. Y al dar el nuevo, se dice explícitamente que el anterior queda
+  anulado.
 - **Subir `CODE_MARKER`** en `screens/AppInfo.tsx` en cada entrega. Es la única
   forma de saber por chat qué código está corriendo el celular. Sin eso, cada
   arreglo es a ciegas y puede estar ya hecho.
