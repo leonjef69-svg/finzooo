@@ -28,7 +28,14 @@ export function niceMax(value: number, steps: number): number {
 }
 
 /** Ancho aproximado de un texto corto. Sobra un poco, que es lo prudente. */
-export function textWidth(text: string, fontSize: number): number {
+/**
+ * Lo que ocupa un texto EN LA PANTALLA, a ojo.
+ *
+ * Lleva el sufijo Screen porque hay otra igual para el PDF, en
+ * utils/exportPdfHtml, con numeros distintos: alli el texto lo dibuja un
+ * WebView con otra fuente. Ver el comentario de aquella.
+ */
+export function textWidthScreen(text: string, fontSize: number): number {
   return text.length * fontSize * 0.62 + 4;
 }
 
@@ -99,14 +106,14 @@ export default function DailyBarsChart({
 
   // Los montos van con su formato completo ("S/ 36.00") si caben; si no,
   // solo el número. La moneda ya la dice el eje de la izquierda.
-  const anchoCompleto = Math.max(...data.map((d) => textWidth(fmt(d.amount), AMOUNT_FONT)));
+  const anchoCompleto = Math.max(...data.map((d) => textWidthScreen(fmt(d.amount), AMOUNT_FONT)));
   const usarCompleto = anchoCompleto <= colW;
   const amountText = (n: number) =>
     usarCompleto ? fmt(n) : Number.isInteger(n) ? String(n) : n.toFixed(2);
 
-  const anchoMonto = Math.max(...data.map((d) => textWidth(amountText(d.amount), AMOUNT_FONT)));
+  const anchoMonto = Math.max(...data.map((d) => textWidthScreen(amountText(d.amount), AMOUNT_FONT)));
   const pasoMonto = labelStep(anchoMonto, colW);
-  const pasoDia = labelStep(textWidth(String(data[data.length - 1].day), DAY_FONT), colW);
+  const pasoDia = labelStep(textWidthScreen(String(data[data.length - 1].day), DAY_FONT), colW);
 
   const activo = selected != null ? data[selected] : null;
 

@@ -280,6 +280,13 @@ export default function ExportPdfSheet({
     setContactos(lista);
     saveContacts(lista);
     if (contactoId === id) setContactoId(null);
+    // Si era JUSTO el que se estaba cambiando, se cierra el formulario.
+    //
+    // Sin esto quedaba abierto con los datos de un contacto que ya no existe,
+    // y al tocar Guardar no se guardaba nada —no hay a quién cambiarle nada—
+    // pero salía igual el aviso de "Contacto actualizado". Se creería
+    // corregido algo que se acababa de borrar.
+    if (editandoId === id) cerrarFormulario();
     showToast(t("exportPdf.contactRemoved"));
   }
 

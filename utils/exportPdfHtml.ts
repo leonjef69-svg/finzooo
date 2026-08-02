@@ -282,7 +282,16 @@ function barrasPorCategoria(
 }
 
 /** Lo que ocupa un texto, aproximado. Suficiente para decidir si cabe. */
-export function textWidth(text: string, fontSize: number): number {
+/**
+ * Lo que ocupa un texto EN EL PDF, a ojo.
+ *
+ * Lleva el sufijo Pdf porque hay otra igual para el grafico de la pantalla,
+ * en components/DailyBarsChart, con numeros distintos: no es la misma fuente
+ * ni el mismo motor de dibujo. Las dos se llamaban textWidth, y con el mismo
+ * nombre importar la que no toca dejaba el dibujo mal medido sin dar ningun
+ * error — el peor tipo de fallo, porque se ve raro y no se sabe por que.
+ */
+export function textWidthPdf(text: string, fontSize: number): number {
   return text.length * fontSize * 0.58 + 2;
 }
 
@@ -304,7 +313,7 @@ export function dailyLayout(
   fontSize = 7
 ): { colW: number; barW: number; girar: boolean; espacioArriba: number } {
   const colW = cuantos > 0 ? ancho / cuantos : ancho;
-  const masAncha = Math.max(0, ...etiquetas.map((e) => textWidth(e, fontSize)));
+  const masAncha = Math.max(0, ...etiquetas.map((e) => textWidthPdf(e, fontSize)));
   const girar = masAncha > colW - 2;
   return {
     colW,
@@ -446,7 +455,11 @@ export function buildPdfHtml(o: PdfOptions): string {
   // incómodo de leer para acabar ocupando dos hojas igual.
   const apretar = cabeApretando(
     alturaEstimada({
-      categorias: catsGasto.length + catsIngreso.length,
+      // Solo las del lado que SE DIBUJA. Sumar los dos contaba una rosquilla
+      // que ya no existe —desde que volvió a haber una sola— y hacía creer al
+      // cálculo que el documento era más largo de lo que es. El efecto era
+      // apretar documentos que cabían de sobra.
+      categorias: foco === "expense" ? catsGasto.length : catsIngreso.length,
       presupuestos: o.charts ? o.categoryBudgets.length : 0,
       meses: o.charts ? o.monthly.length : 0,
       dias: dias.length,
