@@ -89,8 +89,9 @@ espacio duro, más abajo.
 
 Esto es lo pendiente de verdad, en orden de bloqueo:
 
-1. **Premium se regala.** No hay Play Billing. O se cobra de verdad o se quita
-   la etiqueta PRO.
+1. **Premium se regala.** No hay Play Billing ni precio en ninguna parte del
+   código: el botón "Actualizar a Premium" llama a `setIsPremium(true)` y ya.
+   O se cobra de verdad o se quita la etiqueta PRO.
 2. **"Sin anuncios" es una promesa vacía** en los textos de Premium: no hay
    anuncios que quitar. Google lo trata como afirmación engañosa.
 3. **Política de privacidad sin URL pública.** Además está desfasada: ahora se
@@ -159,6 +160,31 @@ estuviera apagada, no reconociera el monto o lo tomara por un pago tuyo.
 
 En Acerca de, la línea de partes nativas trae **`✓ voz afinada`**: distingue
 este APK del de esa misma mañana, que ya traía la voz pero muda.
+
+---
+
+## Qué separa el plan Gratis del Premium (revisado el 02/08/2026)
+
+**Gratis:** movimientos ilimitados, historial completo, reportes básicos,
+presupuesto mensual, saldo anterior automático, buscar, modo claro/oscuro,
+sincronización en la nube.
+
+**Premium:** presupuesto por categoría, metas de ahorro, Finzo IA, exportar
+PDF, exportar Excel, importar (Excel/CSV), "sin anuncios".
+
+El candado sí funciona: las pantallas de metas, presupuesto por categoría,
+exportar PDF, importar, exportación programada y bloqueo con PIN comprueban
+`isPremium` antes de dejar entrar. Lo único que falta es el cobro.
+
+Tres cosas que no cuadran y hay que decidir:
+
+- **El bloqueo con PIN/huella es Premium pero no sale en la lista** de la
+  pantalla. Se paga sin saber que lo incluye, o se topa uno con el candado
+  sin entender por qué.
+- **El registro automático y la voz de los yapeos no están en ninguna lista.**
+  Hoy los tiene todo el mundo. Es la función más llamativa de la app y la
+  candidata natural al Premium — o al menos debería figurar.
+- **"Sin anuncios"**: ver el punto 2 de arriba.
 
 ---
 
