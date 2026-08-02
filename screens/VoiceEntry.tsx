@@ -297,6 +297,9 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
           // salía entendido en todo menos en lo único que hacía distinto al
           // documento: llegaba el mes entero.
           type: command.type,
+          // Los graficos solo si se pidieron: "exportar julio pdf con
+          // graficos". Sin decirlo llega la lista sola, que es lo normal.
+          charts: command.charts ? "1" : "0",
           // A quien, tal como se dijo. La pantalla de exportar lo busca entre
           // los contactos guardados; si no lo encuentra, abre la app y se
           // elige alli, que es lo que pasaba antes de esto.

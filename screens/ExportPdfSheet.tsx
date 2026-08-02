@@ -77,6 +77,7 @@ export default function ExportPdfSheet({
   initialFormat,
   initialType,
   autoExport,
+  initialCharts,
   destination: initialDestination = "share",
   silent,
   fileName: forcedName,
@@ -89,6 +90,8 @@ export default function ExportPdfSheet({
   initialMonth?: string;
   initialFormat?: ExportFormat;
   initialType?: ExportType;
+  /** Dibujar los graficos. Apagados si no se dice nada. */
+  initialCharts?: boolean;
   // Exportar solo, sin esperar a que se toque el botón (orden por voz).
   autoExport?: boolean;
   // Sin pantalla. Lo usa la copia automática a Drive, que corre al abrir la
@@ -123,10 +126,14 @@ export default function ExportPdfSheet({
     initialDestination
   );
   const [exporting, setExporting] = useState(false);
-  // Los gráficos vienen puestos porque son lo que hace que el reporte se
-  // entienda de un vistazo. Se pueden quitar para quien quiera solo la lista
-  // —por ejemplo si el PDF se lo va a pasar al contador—.
-  const [charts, setCharts] = useState(true);
+  // Los graficos vienen APAGADOS: se encienden si se quieren.
+  //
+  // Ocupan media hoja y empujan la lista de movimientos a la siguiente. El
+  // documento que se pide casi siempre es la lista; ponerlos por si acaso es
+  // cobrarle esa hoja a quien solo queria sus movimientos.
+  //
+  // Por voz se encienden diciendo "graficos".
+  const [charts, setCharts] = useState(initialCharts ?? false);
   // Se pregunta una vez al abrir. Es falso también cuando el APK es anterior
   // a esta función, porque la parte que habla con Gmail es código nativo y no
   // llega en las actualizaciones por internet.

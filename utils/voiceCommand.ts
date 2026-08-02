@@ -21,6 +21,8 @@ export type VoiceCommand =
       monthKey: string;
       format: "pdf" | "xlsx" | "csv";
       destination: "share" | "mail" | "gmail" | "whatsapp" | "drive";
+      /** Dibujar los graficos. Solo si se piden. */
+      charts: boolean;
       /** Todo, solo los gastos o solo los ingresos. */
       type: "all" | "expense" | "income";
       /** A quien, tal como se dijo. Lo resuelve quien llama. */
@@ -327,6 +329,22 @@ export function typeFromPhrase(normalized: string): "all" | "expense" | "income"
 }
 
 /**
+ * ¿Con gráficos?
+ *
+ * Solo si se piden. El documento normal es la lista de movimientos; los
+ * gráficos ocupan media hoja y empujan la lista a la siguiente, así que
+ * ponerlos "por si acaso" es cobrarle esa hoja a quien solo quería sus
+ * movimientos.
+ *
+ * "Sin gráficos" se entiende aunque nombre la palabra: quien lo dice está
+ * pidiendo justo lo contrario, y sin esto se tomaría como que los quiere.
+ */
+export function chartsFromPhrase(normalized: string): boolean {
+  if (!/\bgrafic[oa]s?\b/.test(normalized)) return false;
+  return !/\bsin\s+(?:los\s+|las\s+)?grafic[oa]s?\b/.test(normalized);
+}
+
+/**
  * A quién, tal como se dijo: "a mamá", "al contador", "leon", "mi correo".
  *
  * Devuelve el texto en crudo, no un contacto. Este archivo solo traduce la
@@ -351,6 +369,7 @@ const PALABRAS_DE_LA_ORDEN = [
   "exporta", "exportar", "exportame", "descarga", "descargar", "descargame",
   "pasame", "bajame", "mandame", "enviame", "reporte", "comprobante",
   "movimiento", "movimientos", "resumen", "documento", "archivo", "todo", "todos",
+  "grafico", "graficos", "grafica", "graficas", "sin", "con",
   // Formato
   "pdf", "excel", "xlsx", "csv",
   // Destino
@@ -453,6 +472,7 @@ export function parseVoiceCommand(transcript: string, now: Date = new Date()): V
       format: formatFromPhrase(normalized),
       destination: destinationFromPhrase(normalized),
       type: typeFromPhrase(normalized),
+      charts: chartsFromPhrase(normalized),
       // A quién, tal como se dijo. Aquí no se puede resolver a un contacto:
       // este archivo no sabe nada de la app, solo traduce la frase. Quien
       // llame se encarga de buscarlo entre los contactos guardados.
