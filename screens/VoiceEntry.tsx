@@ -11,6 +11,7 @@ import { suggestCategory } from "@/utils/classifier";
 import CategoryAvatar from "@/components/CategoryAvatar";
 import { catInfo } from "@/constants/categories";
 import { nextId } from "@/utils/id";
+import { horaDe } from "@/utils/format";
 import { CARD_SHADOW } from "@/constants/style";
 import type { RawRow } from "@/utils/importEngine";
 import type { Transaction } from "@/types";
@@ -450,6 +451,8 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
         method: "cash",
         description: row.description || t(catInfo(category).label),
         notes: "",
+        // La hora de ahora: es cuando se dicta.
+        time: horaDe(Date.now()),
         merchant: row.merchant || undefined,
         origin: "manual",
       };

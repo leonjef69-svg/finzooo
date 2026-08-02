@@ -17,6 +17,7 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { defaultDateForMonth, isValidISODate, normalizeDateInput } from "@/utils/date";
 import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { nextId } from "@/utils/id";
+import { horaDe } from "@/utils/format";
 import type { Month, Transaction } from "@/types";
 import { useColorScheme } from "nativewind";
 
@@ -499,6 +500,10 @@ export default function AddSheet({
                   method,
                   description,
                   notes,
+                  // La hora se conserva al EDITAR y se pone al crear: si al
+                  // corregir un monto se cambiara, un movimiento de la manana
+                  // pasaria a ser de la noche solo por haberlo tocado.
+                  time: transaction?.time ?? horaDe(Date.now()),
                 })
               }
               className={`flex-1 py-3.5 rounded-2xl items-center ${

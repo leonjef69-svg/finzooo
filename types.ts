@@ -25,6 +25,14 @@ export type Transaction = {
   merchant?: string;
   // Cuenta/banco de donde salió el dinero (ver constants/accounts.ts).
   account?: string;
+  /**
+   * Hora a la que ocurrio, "HH:MM". Opcional a proposito.
+   *
+   * Los movimientos guardados antes de esto no la tienen, y los importados de
+   * un estado de cuenta tampoco: el banco solo da la fecha. Donde no hay, no
+   * se enseña nada — mejor sin hora que con una inventada.
+   */
+  time?: string;
   // Código de operación del banco, sirve para no repetir un movimiento.
   reference?: string;
   tags?: string[];

@@ -13,6 +13,7 @@ import { findBestMatch } from "@/utils/duplicates";
 import { parseNotification, type ParseFailure } from "@/utils/notificationParser";
 import { suggestCategory } from "@/utils/classifier";
 import { nextId } from "@/utils/id";
+import { horaDe } from "@/utils/format";
 import type { CapturedNotification } from "@/modules/notification-reader";
 import type { Transaction } from "@/types";
 
@@ -109,6 +110,10 @@ export function processCaptured(
       method: matchMethod(raw.methodRaw, t),
       description: raw.description,
       notes: "",
+      // La hora del AVISO, no la de ahora. Si el trabajo de fondo corre horas
+      // después —o si la app estuvo cerrada dos días— la hora buena es la del
+      // yapeo, no la de cuando la app se enteró.
+      time: horaDe(n.postedAt),
       merchant: raw.merchant || undefined,
       account: raw.account,
       origin: "auto",

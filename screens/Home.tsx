@@ -486,7 +486,12 @@ export default function Home({
                       className="text-sm"
                       style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#334155" }}
                     >
+                      {/* La hora solo si la hay. Los movimientos guardados
+                          antes de esto no la tienen, y los importados de un
+                          estado de cuenta tampoco: el banco solo da la fecha.
+                          Mejor sin hora que con una inventada. */}
                       {t(c.label)} · {fmtDate(t2.date, monthNames)}
+                      {t2.time ? ` · ${t2.time}` : ""}
                     </Text>
                   </View>
                   <Text

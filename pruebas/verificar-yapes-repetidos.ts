@@ -88,5 +88,19 @@ console.log("\n--- MONTOS DISTINTOS, SIN DUDA ---");
   ok(toAdd.filter((m) => m.amount === 50).length === 1, "y el de S/ 50");
 }
 
+console.log("\n--- LA HORA ES LA DEL YAPEO, NO LA DE AHORA ---");
+{
+  // Si el trabajo de fondo corre horas despues —o la app estuvo cerrada dos
+  // dias— la hora buena es la del aviso. Poner la de ahora haria que un yapeo
+  // de la mañana apareciera como de la noche.
+  const haceTresHoras = 180;
+  const { toAdd } = processCaptured([yape(haceTresHoras, 25)], [], {}, t, HOY);
+  ok(toAdd.length === 1, "entra el movimiento");
+  const esperada = new Date(HOY - haceTresHoras * 60000);
+  const hhmm =
+    String(esperada.getHours()).padStart(2, "0") + ":" + String(esperada.getMinutes()).padStart(2, "0");
+  ok(toAdd[0].time === hhmm, `con la hora del aviso (${toAdd[0].time}, esperada ${hhmm})`);
+}
+
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

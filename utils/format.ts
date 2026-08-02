@@ -28,3 +28,15 @@ export function fmtDate(iso: string, monthNames: string[]) {
   if (!name || !Number.isFinite(d)) return String(iso ?? "");
   return `${d} ${name.slice(0, 3).toLowerCase()}.`;
 }
+
+/**
+ * La hora de un instante, "HH:MM", en la hora del celular.
+ *
+ * Se guarda ya escrita y no el instante crudo porque es lo unico que se
+ * enseña: un numero de milisegundos habria que convertirlo en cada pantalla,
+ * y bastaria olvidarse en una para que saliera la hora de Londres.
+ */
+export function horaDe(ms: number): string {
+  const d = new Date(ms);
+  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+}
