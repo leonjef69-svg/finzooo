@@ -1,6 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <application>
     <!--
+      El servicio que despierta a Finzo lo justo para registrar el movimiento,
+      sin abrirla. No se exporta: solo lo arranca el propio Finzo, desde el
+      servicio de notificaciones de arriba.
+    -->
+    <service
+      android:name="com.finzo.notificationreader.FinzoCaptureService"
+      android:exported="false" />
+
+    <!--
       Servicio que el sistema Android usa para entregarnos las notificaciones.
 
       Sobre "exported=true": es lo que documenta Android para este tipo de

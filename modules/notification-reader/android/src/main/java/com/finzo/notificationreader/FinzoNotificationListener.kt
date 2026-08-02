@@ -1,6 +1,8 @@
 package com.finzo.notificationreader
 
 import android.app.Notification
+import android.content.Intent
+import com.facebook.react.HeadlessJsTaskService
 import android.media.AudioManager
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
@@ -93,10 +95,36 @@ class FinzoNotificationListener : NotificationListenerService() {
       // Solo se dice en voz alta si de verdad es nueva. Android reenvía la
       // misma notificación cada vez que se actualiza, y sin esto el celular
       // repetiría el mismo yapeo dos y tres veces seguidas.
-      if (esNueva) anunciar(title, body)
+      if (esNueva) {
+        anunciar(title, body)
+        // Y se despierta a Finzo lo justo para registrarlo, sin abrirla. Si
+        // Android se niega —cada fabricante aprieta el ahorro de bateria a su
+        // manera— lo capturado sigue en el buzon y la app lo recoge al
+        // abrirse, igual que antes.
+        registrarYa()
+      }
     } catch (e: Throwable) {
       // Se ignora a propósito: más vale perder una notificación que dejar el
       // servicio caído para todas las siguientes.
+    }
+  }
+
+  /**
+   * Le pide a Android que despierte a Finzo para registrar lo capturado.
+   *
+   * Va en su propio try y aparte del guardado: si esto falla, el aviso YA
+   * esta en el buzon. Lo peor que puede pasar es que se registre al abrir la
+   * app, que es lo que pasaba antes.
+   */
+  private fun registrarYa() {
+    try {
+      val intent = Intent(applicationContext, FinzoCaptureService::class.java)
+      applicationContext.startService(intent)
+      HeadlessJsTaskService.acquireWakeLockNow(applicationContext)
+    } catch (e: Throwable) {
+      // Android 12 y posteriores pueden negarse a arrancar un servicio desde
+      // segundo plano. No es un fallo: el buzon sigue lleno y la app lo
+      // vacia al abrirse.
     }
   }
 
