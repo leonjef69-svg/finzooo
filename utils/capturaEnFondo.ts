@@ -32,12 +32,54 @@ import type { Profile, Transaction } from "@/types";
  * escribe. Y por eso hizo falta primero la fusión al volver (ver
  * utils/mergeTransactions): sin ella, la app pisaba esto al reabrirse.
  */
+/**
+ * Donde se dejan los avisos ya sacados del buzon pero todavia sin registrar.
+ *
+ * Es la red debajo del trapecio: entre vaciar el buzon y guardar el
+ * movimiento hay un momento en el que el yapeo no esta en ningun sitio, y en
+ * un trabajo de fondo Android puede cortar justo ahi.
+ */
+const CLAVE_PENDIENTES = "finzo:capturaPendiente";
+
+async function guardarPendientes(items: unknown[]): Promise<void> {
+  saveJSON(CLAVE_PENDIENTES, items);
+  await flushPendingSaves();
+}
+
+/**
+ * Lo que se saco del buzon y nunca llego a registrarse.
+ *
+ * La app la mira al abrirse. Si hay algo, es que un trabajo de fondo se quedo
+ * a medias — y ese yapeo, sin esto, no lo veria nadie nunca.
+ */
+export async function pendientesDeCaptura(): Promise<unknown[]> {
+  const guardados = await loadJSON<unknown[]>(CLAVE_PENDIENTES, []);
+  return Array.isArray(guardados) ? guardados : [];
+}
+
+export function limpiarPendientes(): void {
+  saveJSON(CLAVE_PENDIENTES, []);
+}
+
 export async function capturarEnFondo(): Promise<number> {
   // Si la función está apagada o Android quitó el permiso, no se toca nada.
   if (!notificationReader.isEnabled() || !notificationReader.isPermissionGranted()) return 0;
 
   const captured = await notificationReader.drain();
   if (captured.length === 0) return 0;
+
+  // LO PRIMERO: dejarlo a buen recaudo.
+  //
+  // drain() VACIA el buzon del servicio. A partir de esta linea, lo capturado
+  // solo existe aqui, en memoria. Si algo falla despues —o Android mata el
+  // proceso a media faena, que es lo normal en un trabajo de fondo— el yapeo
+  // desaparece: ni registrado ni en el buzon. No queda ni rastro de que
+  // llego.
+  //
+  // Se guarda en una lista aparte antes de tocar nada, y se borra solo cuando
+  // ya esta registrado. Si el proceso muere entremedias, la app lo encuentra
+  // ahi la proxima vez que se abre.
+  await guardarPendientes(captured);
 
   const [guardadas, learned, logPrevio, perfil] = await Promise.all([
     loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []),
@@ -73,6 +115,12 @@ export async function capturarEnFondo(): Promise<number> {
   // se tocan varias cosas seguidas. Aqui no hay ese "momento despues": el
   // trabajo de fondo termina y Android mata el proceso. Sin esta linea, el
   // yapeo se registraria en memoria y no llegaria nunca al disco.
+  // Ya esta guardado: se puede soltar el respaldo.
+  saveJSON(CLAVE_PENDIENTES, []);
+
+  // ESTO NO SE PUEDE OLVIDAR. saveJSON no escribe al instante: deja el dato
+  // en cola y lo escribe un momento despues. Aqui no hay ese "momento
+  // despues" — Android mata el proceso al terminar.
   await flushPendingSaves();
   return toAdd.length;
 }

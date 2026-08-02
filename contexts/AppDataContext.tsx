@@ -42,6 +42,7 @@ import { auth } from "@/utils/firebase";
 import { signOutFromGoogle } from "@/utils/googleAuth";
 import { deleteCloudAccount, loadCloudData, saveCloudData } from "@/utils/cloudSync";
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
+import { limpiarPendientes, pendientesDeCaptura } from "@/utils/capturaEnFondo";
 import { mergeTransactions, hayNovedades } from "@/utils/mergeTransactions";
 import { presupuestoAHeredar } from "@/utils/presupuestoMensual";
 import { hayDescuadre, maximoAApartar, saldoLibre, totalApartado } from "@/utils/ahorro";
@@ -672,12 +673,20 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
       captureBusy.current = true;
       try {
-        const captured = await notificationReader.drain();
+        // Lo que un trabajo de fondo saco del buzon y no llego a registrar.
+        //
+        // Va PRIMERO y junto con lo del buzon: si Android corto el proceso a
+        // medias, ese yapeo no esta ni registrado ni en el buzon, y sin esto
+        // no lo veria nadie nunca.
+        const delBuzon = await notificationReader.drain();
+        const aMedias = (await pendientesDeCaptura()) as typeof delBuzon;
+        const captured = [...aMedias, ...delBuzon];
         if (captured.length === 0) return;
 
         const { transactions: current, merchantLearned: learned, t: translate } = captureInputs.current;
         const { toAdd, log } = processCaptured(captured, current, learned, translate);
 
+        limpiarPendientes();
         setAutoCaptureLog((prev) => [...prev, ...log].slice(-40));
         if (toAdd.length > 0) {
           setTransactions((prev) => [...toAdd, ...prev]);
