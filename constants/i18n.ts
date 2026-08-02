@@ -84,6 +84,8 @@ export function methodLabel(method: string, t: (key: string) => string): string 
 export const translations: Record<LanguageId, Record<string, string>> = {
   es: {
     "common.cancel": "Cancelar",
+    "common.show": "Ver",
+    "common.hide": "Ocultar",
     "common.close": "Cerrar",
     "common.select": "Seleccionar",
     "common.delete": "Eliminar",
@@ -139,6 +141,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "categoryBudgets.spentOfLimit": "{spent} de {limit}",
     "categoryBudgets.overBudget": "Te pasaste del límite",
     "categoryBudgets.noneSet": "Aún no le pusiste límite a ninguna categoría.",
+    "categoryBudgets.untouched": "{count} categorías sin gastos este mes · {amount} sin usar",
     "categoryBudgets.lockedDescription":
       "Ponle un límite de gasto a cada categoría y recibe un aviso cuando te estés por pasar. Disponible con Premium.",
 
@@ -897,6 +900,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
   },
   en: {
     "common.cancel": "Cancel",
+    "common.show": "Show",
+    "common.hide": "Hide",
     "common.close": "Close",
     "common.select": "Select",
     "common.delete": "Delete",
@@ -952,6 +957,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "categoryBudgets.spentOfLimit": "{spent} of {limit}",
     "categoryBudgets.overBudget": "You went over the limit",
     "categoryBudgets.noneSet": "You haven't set a limit for any category yet.",
+    "categoryBudgets.untouched": "{count} categories with no spending this month · {amount} unused",
     "categoryBudgets.lockedDescription":
       "Set a spending limit for each category and get a heads-up before you go over. Available with Premium.",
 
@@ -1704,6 +1710,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
   },
   pt: {
     "common.cancel": "Cancelar",
+    "common.show": "Ver",
+    "common.hide": "Ocultar",
     "common.close": "Fechar",
     "common.select": "Selecionar",
     "common.delete": "Excluir",
@@ -1759,6 +1767,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "categoryBudgets.spentOfLimit": "{spent} de {limit}",
     "categoryBudgets.overBudget": "Você ultrapassou o limite",
     "categoryBudgets.noneSet": "Você ainda não definiu um limite para nenhuma categoria.",
+    "categoryBudgets.untouched": "{count} categorias sem gastos este mês · {amount} sem usar",
     "categoryBudgets.lockedDescription":
       "Defina um limite de gastos para cada categoria e receba um aviso antes de ultrapassá-lo. Disponível com o Premium.",
 

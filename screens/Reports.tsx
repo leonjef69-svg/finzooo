@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -55,10 +55,29 @@ export default function Reports({
   const { width: windowWidth } = useWindowDimensions();
   const { colorScheme } = useColorScheme();
   const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
+  // Si se despliegan las categorias sin gasto. Cerrado de entrada: la lista
+  // larga era justo el problema.
+  const [verSinGasto, setVerSinGasto] = useState(false);
+
   const mk = monthKey(month.y, month.m);
 
-  const budgetProgress = useMemo(() => {
-    return Object.entries(categoryBudgets)
+  /**
+   * Los límites por categoría, separados en dos: los que se están usando y
+   * los que siguen intactos.
+   *
+   * POR QUÉ SEPARARLOS
+   *
+   * Se pintaban todos seguidos. Con un límite puesto en cada categoría, eso
+   * son trece filas y doce dicen lo mismo: "S/ 0.00 de S/ 50.00". La única
+   * que importa —la que se pasó del límite— queda enterrada entre doce que no
+   * dicen nada, y todo lo que va debajo se empuja fuera de la pantalla.
+   *
+   * Las intactas NO se esconden: no gastar en algo también es información, y
+   * saber cuánto queda sin tocar es la mitad de un presupuesto. Pero van
+   * resumidas en una línea en vez de en doce.
+   */
+  const { budgetProgress, sinGasto, sinGastoTotal } = useMemo(() => {
+    const todos = Object.entries(categoryBudgets)
       .filter(([, limit]) => limit > 0)
       .map(([id, limit]) => {
         const spent = categorySpent[id] || 0;
@@ -66,6 +85,14 @@ export default function Reports({
         return { id, limit, spent, pct: limit > 0 ? spent / limit : 0, name: t(c.label) };
       })
       .sort((a, b) => b.pct - a.pct);
+
+    const usados = todos.filter((b) => b.spent > 0);
+    const intactos = todos.filter((b) => b.spent === 0);
+    return {
+      budgetProgress: usados,
+      sinGasto: intactos,
+      sinGastoTotal: intactos.reduce((s, b) => s + b.limit, 0),
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryBudgets, categorySpent, userLanguage]);
 
@@ -485,6 +512,43 @@ export default function Reports({
               );
             })}
           </View>
+        )}
+
+        {/* LAS QUE SIGUEN INTACTAS, EN UNA LÍNEA.
+            No gastar en algo también es información —y saber cuánto queda sin
+            tocar es la mitad de un presupuesto—, pero doce filas diciendo
+            "S/ 0.00 de S/ 50.00" enterraban la única que importaba y empujaban
+            todo lo de abajo fuera de la pantalla.
+
+            Se puede desplegar: si alguien quiere ver cuáles son, están. */}
+        {sinGasto.length > 0 && (
+          <TouchableOpacity
+            onPress={() => setVerSinGasto((v) => !v)}
+            className="mt-3 pt-3 border-t-[1.5px] border-slate-100 dark:border-slate-800"
+          >
+            <View className="flex-row items-center justify-between">
+              <Text className="text-[11px] text-slate-500 dark:text-slate-400 flex-1 pr-2">
+                {t("categoryBudgets.untouched", {
+                  count: sinGasto.length,
+                  amount: fmt(sinGastoTotal),
+                })}
+              </Text>
+              <Text className="text-[11px] font-bold text-emerald-600">
+                {t(verSinGasto ? "common.hide" : "common.show")}
+              </Text>
+            </View>
+
+            {verSinGasto && (
+              <View className="mt-2.5 gap-1.5">
+                {sinGasto.map((b) => (
+                  <View key={b.id} className="flex-row justify-between">
+                    <Text className="text-[11px] text-slate-500 dark:text-slate-400">{b.name}</Text>
+                    <Text className="text-[11px] text-slate-400 dark:text-slate-500">{fmt(b.limit)}</Text>
+                  </View>
+                ))}
+              </View>
+            )}
+          </TouchableOpacity>
         )}
       </View>
 
