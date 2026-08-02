@@ -56,6 +56,7 @@ const SUITES = [
   { archivo: "verificar-excel.ts", alias: BASE, formato: "cjs" },
   { archivo: "verificar-exportar.ts", alias: EXPO },
   { archivo: "verificar-panorama.ts", alias: BASE },
+  { archivo: "verificar-fusion.ts", alias: BASE },
   { archivo: "verificar-programado.ts", alias: EXPO },
 ];
 

@@ -42,6 +42,7 @@ import { auth } from "@/utils/firebase";
 import { signOutFromGoogle } from "@/utils/googleAuth";
 import { deleteCloudAccount, loadCloudData, saveCloudData } from "@/utils/cloudSync";
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
+import { mergeTransactions, hayNovedades } from "@/utils/mergeTransactions";
 import * as notificationReader from "@/modules/notification-reader";
 import type { Goal, Month, Profile, Transaction } from "@/types";
 
@@ -594,7 +595,34 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!(ready && hasOnboarded && notificationReader.isSupported)) return;
 
+    /**
+     * Vuelve a leer del disco y se queda con TODO lo que haya.
+     *
+     * La app guarda la lista entera cada vez que cambia algo. Mientras solo
+     * escriba ella eso funciona, pero en cuanto algo más escriba —el servicio
+     * registrando un yapeo con la app cerrada— la lista de memoria se queda
+     * vieja y el siguiente guardado la pisa entera: el movimiento desaparece
+     * sin dejar rastro.
+     *
+     * Con dinero eso no es un despiste. Es un movimiento que existió y ya no
+     * está, y nadie se entera hasta que las cuentas no cuadran.
+     */
+    async function recogerDelDisco() {
+      try {
+        const guardadas = await loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []);
+        setTransactions((memoria) =>
+          hayNovedades(memoria, guardadas) ? mergeTransactions(memoria, guardadas) : memoria
+        );
+      } catch {
+        // Si no se puede leer, se sigue con lo que hay en memoria. Nunca se
+        // borra nada por no haber podido leer.
+      }
+    }
+
     async function collect() {
+      // Antes que nada, recoger lo que se haya escrito por fuera.
+      await recogerDelDisco();
+
       if (captureBusy.current) return;
       // El permiso de Android se puede quitar desde los ajustes del sistema
       // en cualquier momento, así que se comprueba en cada recogida.
