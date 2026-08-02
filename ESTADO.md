@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **1 de agosto de 2026** · Código publicado: **1ago-20**
+Actualizado: **2 de agosto de 2026** · Código publicado: **2ago-17**
 
 Este archivo existe para que una sesión nueva —de Claude o de quien sea— no
 empiece de cero. No cuenta lo que ya se ve en el código ni en el historial de
@@ -105,25 +105,27 @@ Esto es lo pendiente de verdad, en orden de bloqueo:
 
 ## LO SIGUIENTE A HACER
 
-**Que la app DIGA en voz alta quién te yapeó y cuánto.** Pedido el 01/08/2026.
+Por decidir con el usuario. La voz que dice quién yapeó y cuánto (pedida el
+01/08/2026) **ya está hecha y funcionando** — ver abajo.
 
-El registro automático ya saca el nombre y el monto (`findCounterparty` en
-`utils/notificationParser.ts`): lo único que falta es que suene.
+## La voz que anuncia los yapeos — hecha el 02/08/2026
 
-Dónde va: `FinzoNotificationListener.kt`, en `onNotificationPosted`. Ese
-servicio corre aunque Finzo esté cerrada, así que puede hablar **en el
-momento** en que llega el yapeo, no al abrir la app. El texto de Yape ya dice
-"Te yapearon S/ 50.00 de Juan Pérez": basta con leerlo tal cual, sin analizar
-nada.
+El celular dice el nombre y el monto apenas llega el yapeo, aunque Finzo esté
+cerrada (`FinzoNotificationListener.kt`). Lee el aviso de Yape tal cual, sin
+armar la frase.
 
-Hace falta:
-- TextToSpeech de Android en el servicio, en español
-- Un interruptor para apagarlo, en la pantalla de registro automático. Sin él,
-  el celular hablaría en una reunión o en la caja del supermercado.
-- **Es código nativo: necesita APK nuevo.**
+Dos interruptores, los dos **apagados de fábrica** (en la pantalla de
+registro automático):
+- Decirlo en voz alta — la función entera
+- También cuando pagas — aparte, porque anunciar un pago suena en la caja
+  del súper delante de todos
 
-**Pendiente de decidir con el usuario:** si anuncia solo lo que RECIBE o
-también lo que paga. Anunciar los pagos sonaría en la caja delante de todos.
+Se corrigió que leyera cosas que no son un yapeo: el aviso "Operación en
+curso. Hemos generado y autocompletado la clave" que Yape manda pegado a cada
+pago, y avisos de otros bancos (Scotiabank y parecidos) que no traen un
+monto. Ese arreglo está en el commit `ec34687` — **es código nativo, necesita
+el APK de esa fila en ENTREGAS.md**. El anterior (`c4b715e`) todavía lee esas
+cosas de más.
 
 ---
 
