@@ -29,6 +29,7 @@ import {
   Shield,
   Zap,
   Mic,
+  MessageSquare,
   X,
 } from "lucide-react-native";
 import * as voiceWidget from "@/modules/voice-widget";
@@ -75,6 +76,7 @@ export default function Settings({
   onDeleteAccount,
   onAbout,
   onLegal,
+  onVoiceHelp,
 }: {
   userName: string;
   userEmail: string;
@@ -100,6 +102,7 @@ export default function Settings({
   onDeleteAccount: () => void;
   onAbout: () => void;
   onLegal: () => void;
+  onVoiceHelp: () => void;
 }) {
   const { t, isCloudSynced, autoCaptureOn, showToast } = useAppData();
 
@@ -349,6 +352,17 @@ export default function Settings({
             right={<ChevronRight size={16} color="#cbd5e1" />}
           />
         )}
+        {/* QUE SE LE PUEDE DECIR AL MICROFONO.
+            Va pegada a la del widget porque las dos hablan de lo mismo. El
+            microfono entiende anotar, preguntar, comparar y exportar, y nada
+            de eso se ve en ninguna parte: sin esta pantalla se usa solo para
+            lo primero, que es lo unico que se adivina al tocarlo. */}
+        <Row
+          Icon={MessageSquare}
+          label={t("voiceHelp.rowLabel")}
+          onPress={onVoiceHelp}
+          right={<ChevronRight size={16} color="#cbd5e1" />}
+        />
         <Row
           Icon={Lock}
           label={t("lock.rowLabel")}

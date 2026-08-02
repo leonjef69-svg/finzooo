@@ -41,6 +41,7 @@ export default function SettingsTab() {
       onChangePassword={() => router.push("/change-password")}
       onDeleteAccount={() => router.push("/delete-account")}
       onAbout={() => router.push("/about")}
+      onVoiceHelp={() => router.push("/voice-help")}
       onLegal={() => router.push("/legal")}
     />
   );
