@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **1 de agosto de 2026** · Código publicado: **1ago-19**
+Actualizado: **1 de agosto de 2026** · Código publicado: **1ago-20**
 
 Este archivo existe para que una sesión nueva —de Claude o de quien sea— no
 empiece de cero. No cuenta lo que ya se ve en el código ni en el historial de
@@ -78,7 +78,8 @@ versión anterior**: una que pasa siempre no está probando nada.
 - Importar estados de cuenta (PDF, Excel, CSV) y archivos compartidos a Finzo
 - Personalizar categorías: imagen propia con recorte, color y nombre
 - Bloqueo con PIN o huella, copia en la nube, tres idiomas (es/en/pt)
-- Pantalla **Comandos de voz** en Ajustes, que enseña qué se le puede decir
+- Pantalla **Comandos de voz** en Ajustes, con ejemplos de gastos Y de
+  ingresos, de anotar, preguntar, comparar y exportar
 
 ---
 
@@ -99,6 +100,30 @@ Esto es lo pendiente de verdad, en orden de bloqueo:
    sensibles, si se mantiene esa función.
 6. **12 probadores × 14 días** en prueba cerrada, para cuentas nuevas de
    desarrollador.
+
+---
+
+## LO SIGUIENTE A HACER
+
+**Que la app DIGA en voz alta quién te yapeó y cuánto.** Pedido el 01/08/2026.
+
+El registro automático ya saca el nombre y el monto (`findCounterparty` en
+`utils/notificationParser.ts`): lo único que falta es que suene.
+
+Dónde va: `FinzoNotificationListener.kt`, en `onNotificationPosted`. Ese
+servicio corre aunque Finzo esté cerrada, así que puede hablar **en el
+momento** en que llega el yapeo, no al abrir la app. El texto de Yape ya dice
+"Te yapearon S/ 50.00 de Juan Pérez": basta con leerlo tal cual, sin analizar
+nada.
+
+Hace falta:
+- TextToSpeech de Android en el servicio, en español
+- Un interruptor para apagarlo, en la pantalla de registro automático. Sin él,
+  el celular hablaría en una reunión o en la caja del supermercado.
+- **Es código nativo: necesita APK nuevo.**
+
+**Pendiente de decidir con el usuario:** si anuncia solo lo que RECIBE o
+también lo que paga. Anunciar los pagos sonaría en la caja delante de todos.
 
 ---
 
