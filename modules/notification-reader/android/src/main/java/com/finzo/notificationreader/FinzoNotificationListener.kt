@@ -1,6 +1,11 @@
 package com.finzo.notificationreader
 
 import android.app.Notification
+import android.media.AudioManager
+import android.os.Bundle
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
+import java.util.Locale
 import android.content.ComponentName
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
@@ -83,10 +88,105 @@ class FinzoNotificationListener : NotificationListenerService() {
       // sí entran los dos.
       val dedupeKey = "$pkg|$title|$body|${sbn.postTime / 1000}"
 
-      NotificationStore.add(applicationContext, item, dedupeKey)
+      val esNueva = NotificationStore.add(applicationContext, item, dedupeKey)
+
+      // Solo se dice en voz alta si de verdad es nueva. Android reenvía la
+      // misma notificación cada vez que se actualiza, y sin esto el celular
+      // repetiría el mismo yapeo dos y tres veces seguidas.
+      if (esNueva) anunciar(title, body)
     } catch (e: Throwable) {
       // Se ignora a propósito: más vale perder una notificación que dejar el
       // servicio caído para todas las siguientes.
+    }
+  }
+
+  /**
+   * DICE EN VOZ ALTA lo que acaba de llegar.
+   *
+   * Se lee el texto de la notificación TAL CUAL, sin analizarlo. Yape ya
+   * escribe "Te yapearon S/ 50.00 de Juan Pérez": ahí están el nombre y el
+   * monto, mejor puestos de lo que los pondría cualquier frase armada por
+   * nosotros, y sin riesgo de decir un número equivocado.
+   *
+   * Va aquí y no en la app porque este servicio corre aunque Finzo esté
+   * cerrada. Hecho del otro lado, el aviso llegaría cuando la persona abriera
+   * la app —horas después— y ya no serviría de nada.
+   */
+  private fun anunciar(title: String, body: String) {
+    try {
+      if (!NotificationStore.isSpeakEnabled(applicationContext)) return
+
+      val texto = if (body.isNotBlank()) body else title
+      if (texto.isBlank()) return
+
+      // Solo lo que ENTRA, salvo que se pida lo contrario. Que el celular
+      // anuncie en voz alta lo que uno acaba de pagar, delante de la cola del
+      // supermercado, no lo quiere nadie.
+      if (!NotificationStore.isSpeakOutgoing(applicationContext) && !pareceIngreso(texto)) return
+
+      hablar(texto)
+    } catch (e: Throwable) {
+      // Nunca dejar caer el servicio por no poder hablar.
+    }
+  }
+
+  /**
+   * ¿Es plata que ENTRA?
+   *
+   * Se mira el texto y no la app: la misma app manda los dos avisos. La lista
+   * está en minúsculas y sin tildes porque el texto se compara así.
+   */
+  private fun pareceIngreso(texto: String): Boolean {
+    val t = texto.lowercase()
+      .replace("á", "a").replace("é", "e").replace("í", "i")
+      .replace("ó", "o").replace("ú", "u")
+    return PALABRAS_DE_INGRESO.any { t.contains(it) }
+  }
+
+  /**
+   * El motor de voz de Android.
+   *
+   * Se crea uno nuevo por cada aviso y se suelta al terminar. Guardarlo
+   * dejaría un motor de voz vivo dentro de un servicio del sistema que puede
+   * pasar días sin usarse.
+   *
+   * El texto se pone en cola con el volumen de notificación, no el de
+   * multimedia: así respeta el silencio del celular como cualquier otro
+   * aviso.
+   */
+  private fun hablar(texto: String) {
+    var motor: TextToSpeech? = null
+    motor = TextToSpeech(applicationContext) { estado ->
+      try {
+        if (estado != TextToSpeech.SUCCESS) {
+          motor?.shutdown()
+          return@TextToSpeech
+        }
+        motor?.language = Locale("es", "PE")
+
+        // El aviso de "ya termine" se registra ANTES de hablar. Puesto
+        // despues no llega nunca —la frase ya iba en camino— y el motor de
+        // voz se quedaria vivo dentro de un servicio del sistema.
+        motor?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+          override fun onStart(id: String?) {}
+
+          override fun onDone(id: String?) {
+            motor?.shutdown()
+          }
+
+          @Deprecated("Android lo pide igual", ReplaceWith(""))
+          override fun onError(id: String?) {
+            motor?.shutdown()
+          }
+        })
+
+        val params = Bundle().apply {
+          putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_NOTIFICATION)
+        }
+        motor?.speak(texto, TextToSpeech.QUEUE_ADD, params, "finzo-aviso")
+      } catch (e: Throwable) {
+        motor?.shutdown()
+      }
     }
   }
 
@@ -100,6 +200,18 @@ class FinzoNotificationListener : NotificationListenerService() {
     MONEY_APP_HINTS.any { pkg.contains(it) }
 
   companion object {
+    /**
+     * Como suena un aviso de plata que ENTRA. Sin tildes: el texto se compara
+     * ya normalizado. Cubre Yape, Plin y los avisos de los bancos.
+     */
+    private val PALABRAS_DE_INGRESO = listOf(
+      "te yapearon", "te yapeo", "yapeo recibido", "nuevo yapeo",
+      "te plineo", "te plinearon", "recibiste", "has recibido",
+      "abono", "deposito", "te deposito", "te depositaron",
+      "transferencia recibida", "ingreso", "te transfirio", "te transfirieron",
+      "pago recibido", "acreditado"
+    )
+
     private val MONEY_APP_HINTS = listOf(
       "yape",
       "plin",

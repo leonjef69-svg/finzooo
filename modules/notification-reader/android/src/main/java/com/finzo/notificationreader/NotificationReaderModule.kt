@@ -39,6 +39,18 @@ class NotificationReaderModule : Module() {
     // Interruptor propio de Finzo, independiente del permiso de Android.
     Function("isEnabled") { NotificationStore.isEnabled(context) }
 
+    Function("isSpeakEnabled") { NotificationStore.isSpeakEnabled(context) }
+
+    Function("setSpeakEnabled") { value: Boolean ->
+      NotificationStore.setSpeakEnabled(context, value)
+    }
+
+    Function("isSpeakOutgoing") { NotificationStore.isSpeakOutgoing(context) }
+
+    Function("setSpeakOutgoing") { value: Boolean ->
+      NotificationStore.setSpeakOutgoing(context, value)
+    }
+
     Function("setEnabled") { value: Boolean ->
       NotificationStore.setEnabled(context, value)
     }

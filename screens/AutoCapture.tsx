@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View,
+  Switch,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Zap, ShieldCheck, Check, ChevronRight, Trash2, Smartphone, Activity, RotateCcw } from "lucide-react-native";
 import * as notificationReader from "@/modules/notification-reader";
@@ -50,6 +52,10 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
   // segundos mientras la pantalla esté abierta, para poder hacer un Yape,
   // volver, y ver si el contador subió sin tener que salir y entrar.
   const [stats, setStats] = useState(() => notificationReader.stats());
+  // Los dos interruptores de la voz. Se leen del lado nativo, que es donde
+  // viven: el servicio los consulta aunque Finzo este cerrada.
+  const [hablar, setHablar] = useState(() => notificationReader.isSpeakEnabled());
+  const [hablarSalidas, setHablarSalidas] = useState(() => notificationReader.isSpeakOutgoing());
   useEffect(() => {
     if (!autoCaptureSupported) return;
     const timer = setInterval(() => setStats(notificationReader.stats()), 3000);
@@ -247,6 +253,57 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                 </TouchableOpacity>
               )}
             </View>
+
+            {/* DECIRLO EN VOZ ALTA.
+                Solo si el APK lo trae: es código nativo y no llega por
+                actualización. Enseñar un interruptor que no hace nada sería
+                peor que no enseñarlo. */}
+            {notificationReader.canSpeak && (
+              <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4 mt-6">
+                <View className="flex-row items-center justify-between">
+                  <View className="flex-1 pr-3">
+                    <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                      {t("autoCapture.speakTitle")}
+                    </Text>
+                    <Text className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
+                      {t("autoCapture.speakHint")}
+                    </Text>
+                  </View>
+                  <Switch
+                    value={hablar}
+                    onValueChange={(v) => {
+                      setHablar(v);
+                      notificationReader.setSpeakEnabled(v);
+                    }}
+                    trackColor={{ true: "#059669", false: "#cbd5e1" }}
+                    thumbColor="#ffffff"
+                  />
+                </View>
+
+                {/* La segunda solo tiene sentido con la primera encendida. */}
+                {hablar && (
+                  <View className="flex-row items-center justify-between mt-3.5 pt-3.5 border-t-[1.5px] border-slate-100 dark:border-slate-700">
+                    <View className="flex-1 pr-3">
+                      <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                        {t("autoCapture.speakOutTitle")}
+                      </Text>
+                      <Text className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
+                        {t("autoCapture.speakOutHint")}
+                      </Text>
+                    </View>
+                    <Switch
+                      value={hablarSalidas}
+                      onValueChange={(v) => {
+                        setHablarSalidas(v);
+                        notificationReader.setSpeakOutgoing(v);
+                      }}
+                      trackColor={{ true: "#059669", false: "#cbd5e1" }}
+                      thumbColor="#ffffff"
+                    />
+                  </View>
+                )}
+              </View>
+            )}
 
             {/* Diagnóstico. Sirve para dos cosas: que se vea que la app no
                 está guardando nada raro, y que se pueda saber por qué un

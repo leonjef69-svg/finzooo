@@ -20,6 +20,8 @@ object NotificationStore {
   private const val KEY_QUEUE = "queue"
   private const val KEY_SEEN = "seen"
   private const val KEY_ENABLED = "enabled"
+  private const val KEY_SPEAK = "speak"
+  private const val KEY_SPEAK_OUT = "speak_outgoing"
 
   // ---- Diagnóstico ----
   // Sin esto, cuando no se captura nada es imposible saber por qué: si
@@ -51,6 +53,34 @@ object NotificationStore {
 
   fun setEnabled(context: Context, value: Boolean) {
     prefs(context).edit().putBoolean(KEY_ENABLED, value).apply()
+  }
+
+  /**
+   * Si el celular DICE en voz alta lo que acaba de llegar.
+   *
+   * Viene apagado. Una app que empieza a hablar sola sin avisar es de las
+   * pocas cosas que se desinstalan en el momento: sonaria en una reunion, en
+   * clase o en la caja del supermercado sin que nadie lo hubiera pedido.
+   */
+  fun isSpeakEnabled(context: Context): Boolean =
+    prefs(context).getBoolean(KEY_SPEAK, false)
+
+  fun setSpeakEnabled(context: Context, value: Boolean) {
+    prefs(context).edit().putBoolean(KEY_SPEAK, value).apply()
+  }
+
+  /**
+   * Si tambien habla cuando SALE dinero, no solo cuando entra.
+   *
+   * Apagado tambien. Enterarse de que a uno le llego un yape sin sacar el
+   * celular es util; que el celular anuncie en voz alta lo que uno acaba de
+   * pagar, delante de la cola del supermercado, no lo es.
+   */
+  fun isSpeakOutgoing(context: Context): Boolean =
+    prefs(context).getBoolean(KEY_SPEAK_OUT, false)
+
+  fun setSpeakOutgoing(context: Context, value: Boolean) {
+    prefs(context).edit().putBoolean(KEY_SPEAK_OUT, value).apply()
   }
 
   /** Android conectó (o desconectó) el servicio de notificaciones. */

@@ -609,6 +609,10 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "autoCapture.rowLabel": "Registro automático",
     "autoCapture.rowOn": "ACTIVO",
     "autoCapture.title": "Registro automático",
+    "autoCapture.speakTitle": "Decirlo en voz alta",
+    "autoCapture.speakHint": "Cuando te yapeen, el celular lee el aviso: \"Te yapearon S/ 50.00 de Juan Pérez\". Suena en el momento, aunque Finzo esté cerrada, y respeta el silencio del celular.",
+    "autoCapture.speakOutTitle": "También cuando pagas",
+    "autoCapture.speakOutHint": "Apagado, solo habla del dinero que ENTRA. Encendido, también dice lo que pagas — que suena en la caja delante de la cola.",
     "autoCapture.subtitle":
       "Finzo puede anotar sola tus gastos e ingresos leyendo los avisos que te manda Yape y tu banco. Tú no haces nada: pagas con Yape y el movimiento ya está en tu lista cuando vuelves a Finzo.",
     "autoCapture.privacyTitle": "Qué se lee y qué no",
@@ -1408,6 +1412,10 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "autoCapture.rowLabel": "Automatic tracking",
     "autoCapture.rowOn": "ON",
     "autoCapture.title": "Automatic tracking",
+    "autoCapture.speakTitle": "Say it out loud",
+    "autoCapture.speakHint": "When money arrives, the phone reads the alert out loud. It sounds right away, even with Finzo closed, and respects your phone's silent mode.",
+    "autoCapture.speakOutTitle": "Also when you pay",
+    "autoCapture.speakOutHint": "Off, it only speaks about money coming IN. On, it also announces what you pay — out loud at the checkout queue.",
     "autoCapture.subtitle":
       "Finzo can log your expenses and income on its own by reading the alerts Yape and your bank send you. You do nothing: pay with Yape and the movement is already in your list when you come back to Finzo.",
     "autoCapture.privacyTitle": "What is read and what is not",
@@ -2204,6 +2212,10 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "autoCapture.rowLabel": "Registro automático",
     "autoCapture.rowOn": "ATIVO",
     "autoCapture.title": "Registro automático",
+    "autoCapture.speakTitle": "Dizer em voz alta",
+    "autoCapture.speakHint": "Quando entrar dinheiro, o celular lê o aviso em voz alta. Soa na hora, mesmo com o Finzo fechado, e respeita o silencioso.",
+    "autoCapture.speakOutTitle": "Também quando você paga",
+    "autoCapture.speakOutHint": "Desligado, só fala do dinheiro que ENTRA. Ligado, também anuncia o que você paga — em voz alta na fila do caixa.",
     "autoCapture.subtitle":
       "O Finzo pode anotar sozinho seus gastos e receitas lendo os avisos que o Yape e seu banco enviam. Você não faz nada: paga com o Yape e o movimento já está na sua lista quando voltar ao Finzo.",
     "autoCapture.privacyTitle": "O que é lido e o que não é",

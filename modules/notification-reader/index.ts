@@ -32,6 +32,10 @@ type NativeShape = {
   openPermissionSettings: () => void;
   isEnabled: () => boolean;
   setEnabled: (value: boolean) => void;
+  isSpeakEnabled: () => boolean;
+  setSpeakEnabled: (value: boolean) => void;
+  isSpeakOutgoing: () => boolean;
+  setSpeakOutgoing: (value: boolean) => void;
   drain: () => Promise<string>;
   clear: () => Promise<void>;
   stats: () => string;
@@ -150,3 +154,51 @@ export async function clear(): Promise<void> {
     // Nada crítico: el buzón se sobrescribe solo con el tiempo.
   }
 }
+
+/**
+ * Si el celular DICE en voz alta lo que acaba de llegar.
+ *
+ * Lo hace el servicio de notificaciones, no la app: asi suena EN EL MOMENTO
+ * en que llega el yapeo, aunque Finzo este cerrada. Hecho desde la app, el
+ * aviso llegaria al abrirla —horas despues— y ya no serviria de nada.
+ *
+ * Falso tambien si el APK es anterior a esto: es codigo nativo y no llega en
+ * las actualizaciones por internet, asi que el interruptor no aparece.
+ */
+export function isSpeakEnabled(): boolean {
+  if (!Native?.isSpeakEnabled) return false;
+  try {
+    return Native.isSpeakEnabled();
+  } catch {
+    return false;
+  }
+}
+
+export function setSpeakEnabled(value: boolean): void {
+  try {
+    Native?.setSpeakEnabled?.(value);
+  } catch {
+    // Sin la parte nativa no hay nada que guardar.
+  }
+}
+
+/** Si tambien habla cuando SALE dinero, no solo cuando entra. */
+export function isSpeakOutgoing(): boolean {
+  if (!Native?.isSpeakOutgoing) return false;
+  try {
+    return Native.isSpeakOutgoing();
+  } catch {
+    return false;
+  }
+}
+
+export function setSpeakOutgoing(value: boolean): void {
+  try {
+    Native?.setSpeakOutgoing?.(value);
+  } catch {
+    // Igual que arriba.
+  }
+}
+
+/** Si este APK trae la voz. Con uno anterior, el interruptor no se enseña. */
+export const canSpeak = isSupported && typeof Native?.isSpeakEnabled === "function";
