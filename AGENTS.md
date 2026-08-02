@@ -47,8 +47,16 @@ npx tsc --noEmit
 npx eslint app screens components utils constants contexts modules
 ```
 
-Más los auditores y las pruebas. Cada prueba nueva tiene que **fallar contra
-la versión anterior**: una que pasa siempre no está probando nada.
+Y las pruebas, que ahora corren con un solo comando:
+
+```bash
+node pruebas/correr.mjs
+```
+
+Son 26 pruebas y 5 auditores. Ver [pruebas/LEEME.md](pruebas/LEEME.md).
+
+Cada prueba nueva tiene que **fallar contra la versión anterior**: una que
+pasa siempre no está probando nada.
 
 ## Dos cosas que se olvidan y cuestan horas
 

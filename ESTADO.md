@@ -56,9 +56,14 @@ npx tsc --noEmit
 npx eslint app screens components utils constants contexts modules
 ```
 
-Y los auditores y las pruebas, que viven fuera del repositorio (ver abajo).
-Cada prueba nueva tiene que **fallar contra la versión anterior**: una que
-pasa siempre no está probando nada.
+Y las pruebas, con un solo comando:
+
+```
+node pruebas/correr.mjs
+```
+
+Son 26 pruebas y 5 auditores. Cada prueba nueva tiene que **fallar contra la
+versión anterior**: una que pasa siempre no está probando nada.
 
 ---
 
@@ -142,8 +147,9 @@ Ver [ENTREGAS.md](ENTREGAS.md).
   70 MB y git guarda **todas** las versiones para siempre: diez entregas serían
   700 MB que se descargan enteros en cada clon. Lo que sí está aquí son los
   enlaces y de qué commit salió cada uno, que es lo que hace falta saber.
-- **Los auditores y las pruebas** (`verificar-*.ts`, `auditar-*.mjs`) están en
-  la carpeta temporal de la sesión, no versionados. Es una deuda: convendría
-  traerlos a `pruebas/` para que sobrevivan a la sesión.
+- **La llave que firma la app** está en los servidores de Expo. Es lo correcto
+  —no debe estar en git— pero si se pierde el acceso a esa cuenta, la app **no
+  se puede volver a actualizar en Play Store nunca más**. Habría que publicarla
+  como una app distinta y los usuarios perderían sus datos.
 - **Los datos del usuario**: movimientos, contactos y presupuestos están solo
   en su celular, cifrados, y en su copia de nube. Nunca en el repositorio.
