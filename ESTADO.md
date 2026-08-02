@@ -53,6 +53,22 @@ arregló dos veces lo mismo.
   hecho**. Si hay que enseñar el diagnóstico antes, se cuenta el problema sin
   enlace. Y al dar el nuevo, se dice explícitamente que el anterior queda
   anulado.
+
+  **Y una tercera vez, el mismo 02/08/2026.** Esta vez ni siquiera eran dos
+  APK distintos: era el MISMO enlace pegado en dos mensajes seguidos —al
+  entregarlo y al resumir—. Da igual: en la pantalla del usuario se ven dos
+  enlaces, y eso es lo único que cuenta.
+
+  La regla, ya sin margen para cumplirla a medias:
+
+  > **El enlace de un APK se escribe UNA sola vez en toda la conversación.**
+  > Para volver a referirse a él se dice "el APK que te pasé" o se nombra por
+  > sus últimas letras. Nunca se vuelve a pegar la dirección.
+
+  Las dos versiones anteriores de esta regla se cumplieron al pie de la letra
+  y el usuario acabó igual las tres veces. Una regla que se puede cumplir sin
+  resolver el problema está mal escrita: por eso ahora se cuenta algo que se
+  puede contar —cuántas veces aparece la dirección— y no una intención.
 - **Subir `CODE_MARKER`** en `screens/AppInfo.tsx` en cada entrega. Es la única
   forma de saber por chat qué código está corriendo el celular. Sin eso, cada
   arreglo es a ciegas y puede estar ya hecho.
