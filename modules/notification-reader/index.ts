@@ -25,6 +25,12 @@ export type ReaderStats = {
   lastAt: number;
   enabled: boolean;
   queued: number;
+  // Por qué la voz habló o se calló con el último aviso: "hablo",
+  // "sin-monto", "es-salida", "no-es-movimiento", "apagado"... Sin esto,
+  // "no dijo nada" se ve igual con cualquiera de esos motivos, y averiguar
+  // cuál era costaba hacer un yapeo de verdad y volver a empezar.
+  lastSpeak: string;
+  lastSpeakAt: number;
 };
 
 type NativeShape = {
@@ -124,6 +130,8 @@ export function stats(): ReaderStats {
     lastAt: 0,
     enabled: false,
     queued: 0,
+    lastSpeak: "",
+    lastSpeakAt: 0,
   };
   if (!Native) return empty;
   try {
@@ -202,3 +210,22 @@ export function setSpeakOutgoing(value: boolean): void {
 
 /** Si este APK trae la voz. Con uno anterior, el interruptor no se enseña. */
 export const canSpeak = isSupported && typeof Native?.isSpeakEnabled === "function";
+
+/**
+ * Si este APK trae la voz ARREGLADA: la que reconoce el espacio duro de Yape
+ * y deja dicho por qué se calló.
+ *
+ * No basta con `canSpeak`: el APK anterior también la traía, pero muda con un
+ * yapeo de verdad. Sin poder distinguirlos por pantalla, un arreglo ya hecho
+ * parece roto y se arregla dos veces — ya pasó.
+ *
+ * Se detecta por el motivo en el diagnóstico, que el anterior no manda.
+ */
+export const hasSpeakReason = (() => {
+  if (!canSpeak) return false;
+  try {
+    return "lastSpeak" in (JSON.parse(Native!.stats()) as Record<string, unknown>);
+  } catch {
+    return false;
+  }
+})();

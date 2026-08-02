@@ -142,52 +142,95 @@ class FinzoNotificationListener : NotificationListenerService() {
    */
   private fun anunciar(title: String, body: String) {
     try {
-      if (!NotificationStore.isSpeakEnabled(applicationContext)) return
+      if (!NotificationStore.isSpeakEnabled(applicationContext)) {
+        anotarVoz("apagado")
+        return
+      }
 
       val texto = if (body.isNotBlank()) body else title
-      if (texto.isBlank()) return
-      val limpio = sinTildes(texto)
+      if (texto.isBlank()) {
+        anotarVoz("sin-texto")
+        return
+      }
+      val limpio = normalizar(texto)
 
       // NO ES UN MOVIMIENTO: claves, promociones, encuestas.
       //
       // Yape manda "Operación en curso. Hemos generado y autocompletado la
       // clave" pegado a CADA yapeo. La app ya lo descartaba —salía como "No
       // es un movimiento"— pero la voz no lo miraba y lo leía en voz alta.
-      if (PALABRAS_A_IGNORAR.any { limpio.contains(it) }) return
+      if (PALABRAS_A_IGNORAR.any { limpio.contains(it) }) {
+        anotarVoz("no-es-movimiento")
+        return
+      }
 
       // Y TIENE QUE TRAER UN MONTO.
       //
       // Un movimiento de dinero siempre dice cuánto. Sin esto, cualquier
       // aviso de una app de banco —"tu estado de cuenta ya está listo"— se
-      // leería en voz alta. Es la misma condición que usa la app para decidir
-      // si registra algo.
-      if (!TIENE_MONTO.containsMatchIn(limpio)) return
+      // leería en voz alta.
+      if (!TIENE_MONTO.containsMatchIn(limpio)) {
+        anotarVoz("sin-monto")
+        return
+      }
 
       // Solo lo que ENTRA, salvo que se pida lo contrario. Que el celular
       // anuncie en voz alta lo que uno acaba de pagar, delante de la cola del
       // supermercado, no lo quiere nadie.
-      if (!NotificationStore.isSpeakOutgoing(applicationContext) && !pareceIngreso(texto)) return
+      if (!NotificationStore.isSpeakOutgoing(applicationContext) && !pareceIngreso(limpio)) {
+        anotarVoz("es-salida")
+        return
+      }
 
+      anotarVoz("hablo")
       hablar(texto)
     } catch (e: Throwable) {
       // Nunca dejar caer el servicio por no poder hablar.
+      anotarVoz("error")
+    }
+  }
+
+  /**
+   * Deja anotado POR QUÉ se hablo o no.
+   *
+   * Costo un dia entero averiguar por que la voz callaba con un yapeo real:
+   * desde fuera, "no dijo nada" se ve igual esté apagada, no reconozca el
+   * monto, o crea que es un pago tuyo. Ahora la pantalla lo dice.
+   *
+   * Se guarda solo el MOTIVO, nunca el texto del aviso.
+   */
+  private fun anotarVoz(motivo: String) {
+    try {
+      NotificationStore.noteSpeak(applicationContext, motivo)
+    } catch (e: Throwable) {
+      // Un diagnostico nunca puede tumbar el servicio.
     }
   }
 
   /**
    * ¿Es plata que ENTRA?
    *
-   * Se mira el texto y no la app: la misma app manda los dos avisos. La lista
-   * está en minúsculas y sin tildes porque el texto se compara así.
+   * Se mira el texto y no la app: la misma app manda los dos avisos. Recibe
+   * el texto YA normalizado, que es como estan escritas las listas.
    */
-  private fun pareceIngreso(texto: String): Boolean =
-    PALABRAS_DE_INGRESO.any { sinTildes(texto).contains(it) }
+  private fun pareceIngreso(limpio: String): Boolean =
+    PALABRAS_DE_INGRESO.any { limpio.contains(it) }
 
-  /** Minusculas y sin tildes, que es como estan escritas las listas. */
-  private fun sinTildes(texto: String): String =
+  /**
+   * Minusculas, sin tildes y con los espacios RAROS convertidos en normales.
+   *
+   * Lo de los espacios no es un detalle: Yape escribe el monto con un espacio
+   * "duro" (el que impide que "S/" y el numero se partan en dos lineas). Se
+   * ve igual que un espacio normal, pero para Kotlin NO lo es, y por eso la
+   * voz se quedo muda con un yapeo de verdad. Aqui se igualan todos antes de
+   * comparar nada.
+   */
+  private fun normalizar(texto: String): String =
     texto.lowercase()
       .replace("á", "a").replace("é", "e").replace("í", "i")
       .replace("ó", "o").replace("ú", "u")
+      .replace(ESPACIOS, " ")
+      .trim()
 
   /**
    * El motor de voz de Android.
@@ -273,11 +316,31 @@ class FinzoNotificationListener : NotificationListenerService() {
     )
 
     /**
-     * Un monto: "S/ 20", "S/20.00". Sin monto no hay movimiento que anunciar.
+     * TODO lo que se ve como un espacio pero no lo es.
      *
-     * El texto llega ya en minusculas, por eso "s/" y no "S/".
+     * El espacio "duro" ( ) es el que usan las apps para que "S/" y el
+     * numero no se partan en dos lineas. En JavaScript cuenta como espacio;
+     * en Kotlin NO. Por esa unica diferencia el registro reconocia el yapeo y
+     * la voz se quedaba muda con el mismo texto.
+     *
+     * Se pasan todos a un espacio normal —y varios seguidos a uno solo—
+     * antes de comparar.
      */
-    private val TIENE_MONTO = Regex("s/\\s?\\d")
+    private val ESPACIOS =
+      Regex("[\\s\\u00a0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000\\ufeff]+")
+
+    /**
+     * Un monto: "S/ 20", "S/20.00", "S/. 1,250.50", "S / 20" o "PEN 20".
+     *
+     * Es el mismo criterio que usa findAmount en utils/notificationParser, y
+     * se escribe igual de ancho A PROPOSITO. La version anterior —"s/" pegado
+     * y un solo espacio— era mas estrecha que la de JavaScript, y esa
+     * diferencia es justo la que dejo la voz muda: la app registraba el
+     * yapeo y el celular no decia nada.
+     *
+     * El texto llega ya normalizado, por eso "s/" y no "S/".
+     */
+    private val TIENE_MONTO = Regex("(?:s\\s*/\\s*\\.?|pen\\b)\\s*\\d")
 
     /**
      * Como suena un aviso de plata que ENTRA. Copiada tal cual de

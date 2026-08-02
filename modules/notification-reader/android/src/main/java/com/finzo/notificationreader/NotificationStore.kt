@@ -35,6 +35,13 @@ object NotificationStore {
   private const val KEY_LAST_PKG = "lastPkg"
   private const val KEY_LAST_AT = "lastAt"
 
+  // Por qué la voz hablo o se callo la ultima vez. Sin esto, "no dijo nada"
+  // se ve exactamente igual con la voz apagada, con un monto que no se
+  // reconocio, o con un aviso que se tomo por un pago tuyo: tres problemas
+  // distintos, tres arreglos distintos, y un dia entero para distinguirlos.
+  private const val KEY_LAST_SPEAK = "lastSpeak"
+  private const val KEY_LAST_SPEAK_AT = "lastSpeakAt"
+
   // Tope del buzón. Si alguien no abre Finzo en semanas, preferimos perder
   // lo más viejo antes que llenarle el almacenamiento del celular.
   private const val MAX_QUEUE = 200
@@ -109,6 +116,20 @@ object NotificationStore {
       .apply()
   }
 
+  /**
+   * Anota por qué la voz hablo o se callo con el ultimo aviso.
+   *
+   * Se guarda SOLO el motivo ("sin-monto", "es-salida", "hablo"...), nunca el
+   * texto de la notificacion, igual que en noteSeen.
+   */
+  @Synchronized
+  fun noteSpeak(context: Context, motivo: String) {
+    prefs(context).edit()
+      .putString(KEY_LAST_SPEAK, motivo)
+      .putLong(KEY_LAST_SPEAK_AT, System.currentTimeMillis())
+      .apply()
+  }
+
   /** Todo el diagnóstico junto, como texto JSON. */
   fun stats(context: Context): String {
     val p = prefs(context)
@@ -120,6 +141,8 @@ object NotificationStore {
       put("lastAt", p.getLong(KEY_LAST_AT, 0L))
       put("enabled", p.getBoolean(KEY_ENABLED, false))
       put("queued", readArray(p.getString(KEY_QUEUE, null)).length())
+      put("lastSpeak", p.getString(KEY_LAST_SPEAK, "") ?: "")
+      put("lastSpeakAt", p.getLong(KEY_LAST_SPEAK_AT, 0L))
     }.toString()
   }
 

@@ -9,6 +9,7 @@ import BackButton from "@/components/BackButton";
 import * as incomingFile from "@/modules/incoming-file";
 import * as shareToApp from "@/modules/share-to-app";
 import * as textRecognizer from "@/modules/text-recognizer";
+import * as notificationReader from "@/modules/notification-reader";
 
 const APP_VERSION = "1.0.0";
 
@@ -24,7 +25,7 @@ const APP_VERSION = "1.0.0";
  * La versión de la app (1.0.0) no sirve para esto: no cambia entre entregas.
  * Esta sí.
  */
-const CODE_MARKER = "2ago-17";
+const CODE_MARKER = "2ago-18";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast } = useAppData();
@@ -129,7 +130,11 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
                 sola no dice cuál está instalado, y quien no recuerde si
                 llegó a instalarlo se queda sin saberlo. */}
             {shareToApp.hasDirectMail ? "✓" : "✗"} correo directo ·{" "}
-            {textRecognizer.isSupported ? "✓" : "✗"} escáner
+            {textRecognizer.isSupported ? "✓" : "✗"} escáner ·{" "}
+            {/* El APK del 2 de agosto por la mañana ya traía la voz, pero se
+                quedaba muda con un yapeo de verdad. Esta línea distingue uno
+                del otro: sin ella, el arreglo ya instalado parece no estar. */}
+            {notificationReader.hasSpeakReason ? "✓" : "✗"} voz afinada
           </Text>
 
           <TouchableOpacity

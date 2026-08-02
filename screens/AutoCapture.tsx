@@ -65,6 +65,20 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
   // Las más recientes arriba.
   const log = [...autoCaptureLog].reverse();
 
+  // El motivo llega del servicio como una palabra suelta ("sin-monto") para
+  // no depender del idioma: la traducción se hace aquí.
+  const MOTIVOS_VOZ: Record<string, string> = {
+    hablo: "autoCapture.speak.hablo",
+    apagado: "autoCapture.speak.apagado",
+    "sin-monto": "autoCapture.speak.sinMonto",
+    "es-salida": "autoCapture.speak.esSalida",
+    "no-es-movimiento": "autoCapture.speak.noEsMovimiento",
+    "sin-texto": "autoCapture.speak.sinTexto",
+    error: "autoCapture.speak.error",
+  };
+  const claveVoz = MOTIVOS_VOZ[stats.lastSpeak];
+  const motivoVoz = claveVoz ? t(claveVoz) : "";
+
   return (
     <View
       className="flex-1 bg-white dark:bg-slate-900"
@@ -300,6 +314,23 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                       trackColor={{ true: "#059669", false: "#cbd5e1" }}
                       thumbColor="#ffffff"
                     />
+                  </View>
+                )}
+
+                {/* POR QUÉ HABLÓ O SE CALLÓ.
+                    Un yapeo de verdad llegó y el celular no dijo nada. Desde
+                    fuera eso se ve idéntico esté la voz apagada, no se
+                    reconozca el monto o se tome por un pago tuyo — y
+                    distinguirlo costó un día entero. Ahora lo dice la
+                    pantalla. */}
+                {motivoVoz !== "" && (
+                  <View className="mt-3.5 pt-3.5 border-t-[1.5px] border-slate-100 dark:border-slate-700">
+                    <Text className="text-[11px] font-bold text-slate-400 dark:text-slate-500">
+                      {t("autoCapture.speakLast")}
+                    </Text>
+                    <Text className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
+                      {motivoVoz}
+                    </Text>
                   </View>
                 )}
               </View>
