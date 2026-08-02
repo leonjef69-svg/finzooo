@@ -80,7 +80,20 @@ export function processCaptured(
     // parecido es alto: ante una coincidencia dudosa preferimos registrarlo
     // (un repetido se ve en la lista y se borra; un gasto que nunca se
     // registró no se nota).
-    const match = findBestMatch(existing, raw, matchedIds);
+    // SOLO se compara contra lo que NO vino de una notificacion.
+    //
+    // Esta regla existe para no duplicar lo que ya escribiste a mano, o lo
+    // que entro al importar el estado de cuenta. Para eso mira si hay un
+    // movimiento parecido y descarta el aviso.
+    //
+    // Contra otro movimiento que vino de una notificacion no sirve, y hace
+    // dano: tres yapes de S/ 1 de la misma persona el mismo dia son TRES
+    // movimientos, y el primero se comia a los otros dos. Los avisos ya
+    // vienen sin repetir del servicio de Android, que descarta el mismo aviso
+    // reenviado usando su hora al segundo; si uno llega hasta aqui es porque
+    // es distinto.
+    const escritosPorMano = existing.filter((tx) => tx.origin !== "auto");
+    const match = findBestMatch(escritosPorMano, raw, matchedIds);
     if (match && match.level === "high") {
       matchedIds.add(match.existing.id);
       log.push({ at: n.postedAt, text: preview, result: "duplicate", amount: raw.amount });

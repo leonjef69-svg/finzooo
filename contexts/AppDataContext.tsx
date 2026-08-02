@@ -705,6 +705,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
 
     collect();
+
+    // Y CADA POCO, MIENTRAS LA APP ESTE EN PANTALLA.
+    //
+    // Sin esto, un yapeo que llega con Finzo abierta no se registraba hasta
+    // salir y volver a entrar. El trabajo de fondo no lo toca a proposito
+    // —con la app delante lo hace ella, y hacerlo los dos seria registrarlo
+    // dos veces— pero la app solo recogia al VOLVER al frente. Estando ya
+    // delante no volvia nunca, asi que el yapeo se quedaba esperando.
+    //
+    // Ocho segundos: si el buzon esta vacio, recoger no cuesta nada.
+    const cada = setInterval(collect, 8000);
+
     const sub = AppState.addEventListener("change", (state) => {
       if (state !== "active") return;
       // Al volver al frente puede que la persona acabe de conceder (o
@@ -712,7 +724,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setAutoCapturePermission(notificationReader.isPermissionGranted());
       collect();
     });
-    return () => sub.remove();
+    return () => {
+      clearInterval(cada);
+      sub.remove();
+    };
     // Solo depende de si la app ya está lista: los datos que necesita los
     // lee de captureInputs en el momento de recoger.
   }, [ready, hasOnboarded]);
