@@ -25,6 +25,19 @@ export type NotificationParse =
 // Letras que pueden formar parte de un nombre en español.
 const L = "A-Za-zÁÉÍÓÚÑÜáéíóúñü";
 
+/**
+ * De qué apps se registran movimientos. **Solo Yape**, por ahora.
+ *
+ * Tiene que decir lo mismo que MONEY_APP_HINTS en FinzoNotificationListener.
+ * Hay una prueba que lo comprueba: si las dos listas se separan, el servicio
+ * captura avisos que la app tira —o al revés— y desde fuera eso se ve como
+ * que el registro automático falla sin motivo.
+ *
+ * Se compara por "contiene" y no por el nombre exacto: el paquete real de
+ * Yape es "com.bcp.innovacxion.yapeapp".
+ */
+const APPS_ACEPTADAS = ["yape"];
+
 // Avisos que traen un monto pero NO son un movimiento. La lista es corta a
 // propósito: exigir una palabra de dirección ya descarta casi toda la
 // publicidad, y una lista larga corre el riesgo de bloquear gastos reales
@@ -297,6 +310,19 @@ function findMethod(pkg: string, normalized: string): string {
  * la pantalla de diagnóstico y así saber qué formato falta reconocer.
  */
 export function parseNotification(n: CapturedNotification): NotificationParse {
+  // SOLO YAPE. Decisión del usuario el 02/08/2026.
+  //
+  // El servicio de Android ya filtra por app, pero esa lista viaja dentro del
+  // APK y solo cambia reinstalando. Esta comprobación va aquí ADEMÁS, no en
+  // vez de: así el cambio hace efecto por actualización, sin esperar a un APK
+  // nuevo, y con uno anterior instalado tampoco se cuela nada.
+  //
+  // Los demás bancos nunca se probaron con un movimiento de verdad. Volver a
+  // meter uno pide un aviso real suyo, aquí y en MONEY_APP_HINTS del servicio.
+  if (!APPS_ACEPTADAS.some((app) => (n.package ?? "").toLowerCase().includes(app))) {
+    return { ok: false, reason: "notMoney" };
+  }
+
   const original = `${n.title ?? ""} ${n.text ?? ""}`.trim();
   const normalized = normalizeHeader(original);
 

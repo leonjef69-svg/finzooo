@@ -61,6 +61,7 @@ const SUITES = [
   { archivo: "verificar-orden-movimientos.ts", alias: BASE },
   { archivo: "verificar-yapes-repetidos.ts", alias: EXPO },
   { archivo: "verificar-registro-avisos.ts", alias: EXPO },
+  { archivo: "verificar-solo-yape.ts", alias: EXPO },
   { archivo: "verificar-presupuesto-mensual.ts", alias: BASE },
   { archivo: "verificar-programado.ts", alias: EXPO },
 ];

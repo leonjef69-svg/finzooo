@@ -383,25 +383,28 @@ class FinzoNotificationListener : NotificationListenerService() {
       "cobraste"
     )
 
-    private val MONEY_APP_HINTS = listOf(
-      "yape",
-      "plin",
-      "bcp",
-      "viabcp",
-      "interbank",
-      "bbva",
-      "scotiabank",
-      "banbif",
-      "pichincha",
-      "banconacion",
-      "bn.gob",
-      "caja",
-      "mibanco",
-      "ripley",
-      "falabella",
-      "tunki",
-      "izipay",
-      "niubiz"
-    )
+    /**
+     * SOLO YAPE, por decision del usuario el 02/08/2026.
+     *
+     * Antes estaban tambien Plin, BCP, Interbank, BBVA, Scotiabank, BanBif,
+     * Pichincha, Banco de la Nacion, cajas, Mibanco, Ripley, Falabella,
+     * Tunki, Izipay y Niubiz. Ninguno se llego a probar con un movimiento de
+     * verdad: las palabras estaban escritas segun como SUELEN redactar sus
+     * avisos, no segun uno real.
+     *
+     * Y mientras tanto molestaban. El aviso de Scotiabank "Operacion en
+     * curso. Hemos generado y autocompletado la clave" se capturaba, se
+     * guardaba y salia en la pantalla de diagnostico — un aviso de seguridad
+     * de un banco que Finzo no necesita ni mirar.
+     *
+     * Mejor una app que funciona con la que se usa que quince a medias. Para
+     * volver a meter uno hace falta un aviso REAL suyo: se agrega su paquete
+     * aqui y en APPS_ACEPTADAS de utils/notificationParser, y se comprueba que
+     * sus palabras esten en las listas de entradas y salidas.
+     *
+     * "yape" tambien cubre "com.bcp.innovacxion.yapeapp", que es el paquete
+     * de verdad de la app.
+     */
+    private val MONEY_APP_HINTS = listOf("yape")
   }
 }
