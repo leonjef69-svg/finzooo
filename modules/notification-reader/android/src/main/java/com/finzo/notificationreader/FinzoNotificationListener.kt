@@ -146,6 +146,22 @@ class FinzoNotificationListener : NotificationListenerService() {
 
       val texto = if (body.isNotBlank()) body else title
       if (texto.isBlank()) return
+      val limpio = sinTildes(texto)
+
+      // NO ES UN MOVIMIENTO: claves, promociones, encuestas.
+      //
+      // Yape manda "Operación en curso. Hemos generado y autocompletado la
+      // clave" pegado a CADA yapeo. La app ya lo descartaba —salía como "No
+      // es un movimiento"— pero la voz no lo miraba y lo leía en voz alta.
+      if (PALABRAS_A_IGNORAR.any { limpio.contains(it) }) return
+
+      // Y TIENE QUE TRAER UN MONTO.
+      //
+      // Un movimiento de dinero siempre dice cuánto. Sin esto, cualquier
+      // aviso de una app de banco —"tu estado de cuenta ya está listo"— se
+      // leería en voz alta. Es la misma condición que usa la app para decidir
+      // si registra algo.
+      if (!TIENE_MONTO.containsMatchIn(limpio)) return
 
       // Solo lo que ENTRA, salvo que se pida lo contrario. Que el celular
       // anuncie en voz alta lo que uno acaba de pagar, delante de la cola del
@@ -164,12 +180,14 @@ class FinzoNotificationListener : NotificationListenerService() {
    * Se mira el texto y no la app: la misma app manda los dos avisos. La lista
    * está en minúsculas y sin tildes porque el texto se compara así.
    */
-  private fun pareceIngreso(texto: String): Boolean {
-    val t = texto.lowercase()
+  private fun pareceIngreso(texto: String): Boolean =
+    PALABRAS_DE_INGRESO.any { sinTildes(texto).contains(it) }
+
+  /** Minusculas y sin tildes, que es como estan escritas las listas. */
+  private fun sinTildes(texto: String): String =
+    texto.lowercase()
       .replace("á", "a").replace("é", "e").replace("í", "i")
       .replace("ó", "o").replace("ú", "u")
-    return PALABRAS_DE_INGRESO.any { t.contains(it) }
-  }
 
   /**
    * El motor de voz de Android.
@@ -232,6 +250,35 @@ class FinzoNotificationListener : NotificationListenerService() {
      * Como suena un aviso de plata que ENTRA. Sin tildes: el texto se compara
      * ya normalizado. Cubre Yape, Plin y los avisos de los bancos.
      */
+    /**
+     * Avisos que NO son un movimiento: claves, promociones, encuestas.
+     *
+     * Copiada tal cual de NOT_A_MOVEMENT, en utils/notificationParser. La app
+     * ya los descartaba, pero la voz no los miraba: leia en voz alta cosas
+     * como "Operacion en curso. Hemos generado y autocompletado la clave",
+     * que Yape manda pegada a cada yapeo.
+     */
+    private val PALABRAS_A_IGNORAR = listOf(
+      "codigo de verificacion",
+      "codigo de seguridad",
+      "clave temporal",
+      "no compartas",
+      "Operación en curso. Hemos generado
+  // y autocompletado la clave",
+      "operacion en curso",
+      "autocompletado la clave",
+      "generado y autocompletado",
+      "sorteo",
+      "promocion",
+      "encuesta",
+      "preaprobado",
+      "pre aprobado",
+      "solicita tu"
+    )
+
+    /** Un monto: "S/ 20", "S/20.00". Sin monto no hay movimiento. */
+    private val TIENE_MONTO = Regex("""s/s?d""")
+
     private val PALABRAS_DE_INGRESO = listOf(
       "te yapearon",
       "te yapeo",

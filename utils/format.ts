@@ -38,5 +38,13 @@ export function fmtDate(iso: string, monthNames: string[]) {
  */
 export function horaDe(ms: number): string {
   const d = new Date(ms);
-  return String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+  const h24 = d.getHours();
+  // En Peru la hora se lee en 12 horas con a.m./p.m. "14:35" obliga a hacer
+  // la resta mentalmente; "2:35 p.m." se lee de golpe.
+  //
+  // El 0 de la medianoche es las 12 a.m., no las 0 a.m.: el resto (h % 12) da
+  // cero y habria que leer "0:15 a.m.", que no dice nadie.
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  const minutos = String(d.getMinutes()).padStart(2, "0");
+  return h12 + ":" + minutos + (h24 < 12 ? " a.m." : " p.m.");
 }

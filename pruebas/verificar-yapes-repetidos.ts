@@ -97,8 +97,11 @@ console.log("\n--- LA HORA ES LA DEL YAPEO, NO LA DE AHORA ---");
   const { toAdd } = processCaptured([yape(haceTresHoras, 25)], [], {}, t, HOY);
   ok(toAdd.length === 1, "entra el movimiento");
   const esperada = new Date(HOY - haceTresHoras * 60000);
-  const hhmm =
-    String(esperada.getHours()).padStart(2, "0") + ":" + String(esperada.getMinutes()).padStart(2, "0");
+  // La misma cuenta que horaDe: 12 horas con a.m./p.m., y la medianoche son
+  // las 12 a.m., no las 0.
+  const h24 = esperada.getHours();
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  const hhmm = h12 + ":" + String(esperada.getMinutes()).padStart(2, "0") + (h24 < 12 ? " a.m." : " p.m.");
   ok(toAdd[0].time === hhmm, `con la hora del aviso (${toAdd[0].time}, esperada ${hhmm})`);
 }
 
