@@ -208,6 +208,67 @@ console.log("\n--- COMPARACIONES SOSPECHOSAS ---");
 }
 
 // ---------------------------------------------------------------------------
+console.log("\n--- COLORES DE CATEGORIA QUE SE PISAN ---");
+{
+  // En la rosquilla, el color es lo UNICO que distingue una categoria de
+  // otra: los trozos no llevan etiqueta. Dos categorias del mismo color —o de
+  // dos que se parecen— y no se sabe cual es cual.
+  //
+  // Llego a haber dos con el MISMO naranja exacto (Combustible y Hogar), y
+  // no se vio hasta que se noto a ojo en la pantalla.
+  const colores = fs.readFileSync(path.join(RAIZ, "constants/colors.ts"), "utf8");
+  const hex = Object.fromEntries(
+    [
+      ...colores
+        .split("GOAL_COLOR_HEX")[0]
+        .matchAll(/^\s{2}(\w+):\s*"(#[0-9a-fA-F]{6})"/gm),
+    ].map((m) => [m[1], m[2]])
+  );
+
+  // El ojo no ve igual los tres canales: el verde pesa mas y el azul menos.
+  const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+  const dist = (a, b) => {
+    const [r1, g1, b1] = rgb(a);
+    const [r2, g2, b2] = rgb(b);
+    return Math.sqrt((r1 - r2) ** 2 * 2 + (g1 - g2) ** 2 * 4 + (b1 - b2) ** 2 * 3);
+  };
+
+  const cats = fs.readFileSync(path.join(RAIZ, "constants/categories.ts"), "utf8");
+  // 65 y no mas: con 13 categorias y 18 colores, lo maximo que se puede
+  // separar el par mas parecido es 69. Pedir mas seria pedir lo imposible.
+  const MINIMO = 65;
+
+  for (const bloque of ["EXPENSE_CATS", "INCOME_CATS"]) {
+    const desde = cats.indexOf(bloque);
+    const trozo = cats.slice(desde, desde + cats.slice(desde).indexOf("];"));
+    const lista = [...trozo.matchAll(/id: "(\w+)"[\s\S]*?color: "(\w+)"/g)].map((m) => ({
+      id: m[1],
+      color: m[2],
+    }));
+
+    for (let i = 0; i < lista.length; i++) {
+      for (let j = i + 1; j < lista.length; j++) {
+        const a = hex[lista[i].color];
+        const b = hex[lista[j].color];
+        if (!a || !b) {
+          fallo("categorias", lista[i].id + " o " + lista[j].id + " usa un color que no esta en la paleta");
+          continue;
+        }
+        const d = dist(a, b);
+        if (d < MINIMO) {
+          fallo(
+            "categorias",
+            lista[i].id + " (" + lista[i].color + ") y " + lista[j].id +
+              " (" + lista[j].color + ") se parecen demasiado: " + d.toFixed(0)
+          );
+        }
+      }
+    }
+    console.log("  " + bloque + ": " + lista.length + " categorias revisadas");
+  }
+}
+
+// ---------------------------------------------------------------------------
 console.log("\n=== RESULTADO ===");
 if (problemas.length === 0) {
   console.log("Sin problemas\n");
