@@ -185,7 +185,12 @@ export default function History({
                         className="text-xs"
                         style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#64748b" }}
                       >
+                        {/* La hora solo si la hay. Aquí la fecha ya va arriba
+                            como título del grupo, así que basta con la hora:
+                            repetir el día en cada fila sería decir dos veces
+                            lo mismo. */}
                         {t(c.label)} · {methodLabel(tx.method, t)}
+                        {tx.time ? ` · ${tx.time}` : ""}
                       </Text>
                     </View>
                     <Text
