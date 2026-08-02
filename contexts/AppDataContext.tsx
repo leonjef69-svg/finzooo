@@ -45,6 +45,7 @@ import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
 import { mergeTransactions, hayNovedades } from "@/utils/mergeTransactions";
 import { presupuestoAHeredar } from "@/utils/presupuestoMensual";
 import { hayDescuadre, maximoAApartar, saldoLibre, totalApartado } from "@/utils/ahorro";
+import { availableBalance } from "@/utils/finances";
 import * as notificationReader from "@/modules/notification-reader";
 import type { Goal, Month, Profile, Transaction } from "@/types";
 
@@ -814,7 +815,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // El disponible es EL MISMO que enseña Inicio —con el saldo anterior
   // dentro—. La pantalla de Ahorro enseñaba autoSavings, que se lo deja
   // fuera: dos pantallas, dos numeros, el mismo mes.
-  const disponible = budget + prevBalance + income - spent;
+  // La cuenta NO se escribe aqui: se llama a la de utils/finances, que es la
+  // que usa Inicio y la que usa Reportes.
+  //
+  // Escribirla otra vez es el fallo que mas ha costado en este proyecto. Ya
+  // paso: una pantalla decia un numero y otra decia otro del mismo mes,
+  // porque una de las dos copias se cambio y la otra no. Con una sola no
+  // pueden discrepar.
+  const disponible = availableBalance({ budget, prevBalance, income, spent });
   const apartado = useMemo(() => totalApartado(goals), [goals]);
   const libre = saldoLibre(disponible, apartado);
   const descuadre = hayDescuadre(disponible, apartado);

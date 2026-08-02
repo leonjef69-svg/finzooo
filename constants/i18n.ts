@@ -224,7 +224,6 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "addSheet.notesOptional": "Notas (opcional)",
     "addSheet.notesPlaceholder": "Agrega una nota...",
 
-    "editBudget.title": "Editar presupuesto mensual",
 
     "goalForm.editTitle": "Editar meta",
     "goalForm.newTitle": "Nueva meta de ahorro",
@@ -1038,7 +1037,6 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "addSheet.notesOptional": "Notes (optional)",
     "addSheet.notesPlaceholder": "Add a note...",
 
-    "editBudget.title": "Edit monthly budget",
 
     "goalForm.editTitle": "Edit goal",
     "goalForm.newTitle": "New savings goal",
@@ -1846,7 +1844,6 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "addSheet.notesOptional": "Notas (opcional)",
     "addSheet.notesPlaceholder": "Adicione uma nota...",
 
-    "editBudget.title": "Editar orçamento mensal",
 
     "goalForm.editTitle": "Editar meta",
     "goalForm.newTitle": "Nova meta de poupança",

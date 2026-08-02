@@ -508,10 +508,6 @@ export default function RootLayout() {
               options={{ presentation: "transparentModal", contentStyle: { backgroundColor: "transparent" } }}
             />
             <Stack.Screen
-              name="edit-budget"
-              options={{ presentation: "transparentModal", contentStyle: { backgroundColor: "transparent" } }}
-            />
-            <Stack.Screen
               name="savings/form"
               options={{ presentation: "transparentModal", contentStyle: { backgroundColor: "transparent" } }}
             />
