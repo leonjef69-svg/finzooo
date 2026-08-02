@@ -1,4 +1,5 @@
 import type { Transaction } from "@/types";
+import type { CaptureLogEntry } from "@/utils/autoCapture";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 
 /**
@@ -55,4 +56,54 @@ export function hayNovedades(enMemoria: Transaction[], guardadas: Transaction[])
   if (guardadas.length === 0) return false;
   const conocidas = new Set<number>(enMemoria.map((t) => t.id));
   return guardadas.some((t) => !conocidas.has(t.id));
+}
+
+// Cuántos avisos se recuerdan. El mismo tope que usa processCaptured: si
+// aquí fuera otro, la lista crecería o se recortaría de dos maneras
+// distintas según quién la escribiera.
+const MAX_REGISTRO = 40;
+
+/** Un aviso concreto. No tiene identificador, así que se arma con lo que lo distingue. */
+function claveDeAviso(e: CaptureLogEntry): string {
+  return `${e.at}|${e.result}|${e.amount ?? ""}|${e.text}`;
+}
+
+/**
+ * Junta el registro de avisos que tiene la app en memoria con el del disco.
+ *
+ * POR QUÉ HACE FALTA
+ *
+ * Es el mismo problema que arriba, con los movimientos, pero con la lista de
+ * la pantalla de registro automático — y aquí nadie lo había resuelto.
+ *
+ * La app leía esa lista del disco UNA sola vez, al arrancar, y la guardaba
+ * entera cada vez que cambiaba. Mientras solo escribiera ella, bien. Pero el
+ * trabajo de fondo —el que registra el yapeo con la app en segundo plano—
+ * también escribe ahí. Resultado: el yapeo se registraba de verdad y se veía
+ * en los movimientos, pero en la pantalla de registro automático no aparecía
+ * hasta cerrar la app del todo y volver a abrirla. Y peor: el siguiente
+ * guardado de la app pisaba esa entrada con su copia vieja.
+ *
+ * Que un yapeo esté registrado pero la pantalla que existe para comprobarlo
+ * diga que no llegó es de lo peor que puede pasar aquí: es la pantalla a la
+ * que se recurre justo cuando se sospecha que algo falla.
+ *
+ * DEVUELVE LA MISMA LISTA SI NO HAY NADA NUEVO
+ *
+ * A propósito, y con la misma referencia: esto se llama cada ocho segundos.
+ * Devolver una lista nueva cada vez haría repintar la pantalla y volver a
+ * cifrar y guardar el registro entero sin que nada hubiera cambiado.
+ */
+export function mergeCaptureLog(
+  enMemoria: CaptureLogEntry[],
+  guardadas: CaptureLogEntry[]
+): CaptureLogEntry[] {
+  if (guardadas.length === 0) return enMemoria;
+
+  const conocidas = new Set(enMemoria.map(claveDeAviso));
+  const nuevas = guardadas.filter((e) => !conocidas.has(claveDeAviso(e)));
+  if (nuevas.length === 0) return enMemoria;
+
+  // Por hora, que es como los espera la pantalla, y sin pasar del tope.
+  return [...enMemoria, ...nuevas].sort((a, b) => a.at - b.at).slice(-MAX_REGISTRO);
 }

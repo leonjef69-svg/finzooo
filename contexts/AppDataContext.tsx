@@ -43,7 +43,7 @@ import { signOutFromGoogle } from "@/utils/googleAuth";
 import { deleteCloudAccount, loadCloudData, saveCloudData } from "@/utils/cloudSync";
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
 import { limpiarPendientes, pendientesDeCaptura } from "@/utils/capturaEnFondo";
-import { mergeTransactions, hayNovedades } from "@/utils/mergeTransactions";
+import { mergeTransactions, hayNovedades, mergeCaptureLog } from "@/utils/mergeTransactions";
 import { presupuestoAHeredar } from "@/utils/presupuestoMensual";
 import { hayDescuadre, maximoAApartar, saldoLibre, totalApartado } from "@/utils/ahorro";
 import { availableBalance } from "@/utils/finances";
@@ -652,10 +652,23 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
      */
     async function recogerDelDisco() {
       try {
-        const guardadas = await loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []);
+        const [guardadas, registro] = await Promise.all([
+          loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []),
+          loadJSON<CaptureLogEntry[]>(STORAGE_KEYS.autoCaptureLog, []),
+        ]);
         setTransactions((memoria) =>
           hayNovedades(memoria, guardadas) ? mergeTransactions(memoria, guardadas) : memoria
         );
+        // Y EL REGISTRO DE AVISOS, IGUAL.
+        //
+        // Se leía del disco UNA sola vez, al arrancar. El trabajo de fondo
+        // también escribe ahí, así que un yapeo registrado con la app en
+        // segundo plano quedaba en los movimientos pero NO en esta lista
+        // hasta cerrar la app del todo. Justo la pantalla a la que se recurre
+        // para comprobar si un yapeo llegó.
+        if (Array.isArray(registro)) {
+          setAutoCaptureLog((memoria) => mergeCaptureLog(memoria, registro));
+        }
       } catch {
         // Si no se puede leer, se sigue con lo que hay en memoria. Nunca se
         // borra nada por no haber podido leer.
