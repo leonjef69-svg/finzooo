@@ -24,7 +24,7 @@ const APP_VERSION = "1.0.0";
  * La versión de la app (1.0.0) no sirve para esto: no cambia entre entregas.
  * Esta sí.
  */
-const CODE_MARKER = "1ago-14";
+const CODE_MARKER = "1ago-15";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast } = useAppData();
@@ -124,6 +124,11 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
                 WhatsApp con el número puesto. Viéndolo así parecía que lo de
                 WhatsApp no venía en el APK. */}
             {shareToApp.isSupported ? "✓" : "✗"} enviar directo ·{" "}
+            {/* Esta distingue el APK del 1 de agosto de los anteriores. Los
+                de antes también traen "enviar directo", así que esa línea
+                sola no dice cuál está instalado, y quien no recuerde si
+                llegó a instalarlo se queda sin saberlo. */}
+            {shareToApp.hasDirectMail ? "✓" : "✗"} correo directo ·{" "}
             {textRecognizer.isSupported ? "✓" : "✗"} escáner
           </Text>
 

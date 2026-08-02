@@ -34,6 +34,21 @@ const Native = requireOptionalNativeModule<NativeShape>("ShareToApp");
 
 export const isSupported = Platform.OS === "android" && Native != null;
 
+/**
+ * ¿Este APK sabe abrir la aplicación de correo directamente?
+ *
+ * Sirve para saber, mirando la pantalla de Acerca de, si el APK instalado es
+ * el que trae esa parte o uno anterior. Sin esto no había forma de
+ * distinguirlos: el módulo existe en los dos y la línea de partes nativas
+ * salía igual, así que quien no recordara si llegó a instalar el nuevo tenía
+ * que ponerse a exportar un documento para averiguarlo.
+ *
+ * Se pregunta si la función EXISTE, no si devuelve algo: en un APK anterior
+ * ni siquiera está, y llamarla revienta.
+ */
+export const hasDirectMail =
+  isSupported && typeof (Native as Partial<NativeShape> | null)?.defaultMailPackage === "function";
+
 /** ¿Está Gmail en este celular? Falso también si el módulo nativo no está. */
 export function isGmailInstalled(): boolean {
   if (!Native) return false;
