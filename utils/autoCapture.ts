@@ -10,7 +10,7 @@
 
 import { matchMethod } from "@/utils/importEngine";
 import { findBestMatch } from "@/utils/duplicates";
-import { parseNotification, type ParseFailure } from "@/utils/notificationParser";
+import { parseNotification, esAppVigilada, type ParseFailure } from "@/utils/notificationParser";
 import { suggestCategory } from "@/utils/classifier";
 import { nextId } from "@/utils/id";
 import { horaDe } from "@/utils/format";
@@ -60,6 +60,16 @@ export function processCaptured(
   const ordered = [...notifications].sort((a, b) => a.postedAt - b.postedAt);
 
   for (const n of ordered) {
+    // DE OTRA APP: NI SE ANOTA.
+    //
+    // Va antes que nada, y sin dejar entrada en el registro. Un aviso de Yape
+    // que no se entendió SÍ tiene que salir en la pantalla —es lo que permite
+    // ver qué texto falta reconocer—, pero uno de otra app solo ensucia la
+    // lista. Y con los de clave es peor: dejaba escrito en el celular
+    // "Operación en curso. Hemos generado y autocompletado la clave", de un
+    // banco que Finzo ya ni mira.
+    if (!esAppVigilada(n.package)) continue;
+
     const preview = `${n.title ?? ""} ${n.text ?? ""}`.trim().slice(0, 160);
     const parsed = parseNotification(n);
 

@@ -106,7 +106,13 @@ console.log("\n--- LA COMPROBACION VA EN LOS DOS LADOS ---");
   // hueco de quien tenga un APK anterior instalado.
   const ts = fs.readFileSync(path.join(RAIZ, "utils/notificationParser.ts"), "utf8");
   const fn = ts.slice(ts.indexOf("export function parseNotification"));
-  ok(fn.slice(0, 900).includes("APPS_ACEPTADAS"), "parseNotification comprueba la app que manda el aviso");
+  ok(fn.slice(0, 900).includes("esAppVigilada"), "parseNotification comprueba la app que manda el aviso");
+
+  // Y en processCaptured, ANTES de anotar nada: un aviso de otra app no debe
+  // dejar ni rastro en la pantalla, ni su texto guardado en el celular.
+  const auto = fs.readFileSync(path.join(RAIZ, "utils/autoCapture.ts"), "utf8");
+  const bucle = auto.slice(auto.indexOf("for (const n of ordered)"));
+  ok(bucle.indexOf("esAppVigilada") < bucle.indexOf("const preview"), "y se salta antes de guardar su texto");
 }
 
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);

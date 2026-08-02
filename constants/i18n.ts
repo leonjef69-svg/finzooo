@@ -624,10 +624,10 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "autoCapture.speakOutTitle": "También cuando pagas",
     "autoCapture.speakOutHint": "Apagado, solo habla del dinero que ENTRA. Encendido, también dice lo que pagas — que suena en la caja delante de la cola.",
     "autoCapture.subtitle":
-      "Finzo puede anotar sola tus gastos e ingresos leyendo los avisos que te manda Yape y tu banco. Tú no haces nada: pagas con Yape y el movimiento ya está en tu lista cuando vuelves a Finzo.",
+      "Finzo anota sola tus Yapes. Tú no haces nada: te yapean y el movimiento ya está en tu lista.",
     "autoCapture.privacyTitle": "Qué se lee y qué no",
     "autoCapture.privacyBody":
-      "Finzo solo mira los avisos de apps de dinero (Yape, Plin, bancos). Los avisos de WhatsApp, correo, redes o cualquier otra app se descartan al instante y nunca se guardan ni se leen. Nada de esto sale de tu celular: no se envía a internet ni a nadie más. Puedes apagarlo cuando quieras desde esta misma pantalla.",
+      "Solo los avisos de Yape. Los de tu banco, WhatsApp, correo o cualquier otra app se descartan al instante y nunca se guardan ni se leen. Nada sale de tu celular. Puedes apagarlo cuando quieras desde aquí.",
     "autoCapture.unsupportedTitle": "No disponible en este celular",
     "autoCapture.unsupportedBody":
       "Esta función solo funciona en Android y necesita la última versión de Finzo instalada desde el archivo de la app. Si estás en iPhone, Android no permite que otras apps lean los avisos.",
@@ -1445,10 +1445,10 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "autoCapture.speakOutTitle": "Also when you pay",
     "autoCapture.speakOutHint": "Off, it only speaks about money coming IN. On, it also announces what you pay — out loud at the checkout queue.",
     "autoCapture.subtitle":
-      "Finzo can log your expenses and income on its own by reading the alerts Yape and your bank send you. You do nothing: pay with Yape and the movement is already in your list when you come back to Finzo.",
+      "Finzo logs your Yape payments on its own. You do nothing: you get paid and the movement is already in your list.",
     "autoCapture.privacyTitle": "What is read and what is not",
     "autoCapture.privacyBody":
-      "Finzo only looks at alerts from money apps (Yape, Plin, banks). Alerts from WhatsApp, email, social media or any other app are discarded instantly and are never stored or read. None of this leaves your phone: nothing is sent to the internet or to anyone else. You can turn it off any time from this screen.",
+      "Only Yape alerts. Those from your bank, WhatsApp, email or any other app are discarded instantly and never stored or read. Nothing leaves your phone. You can turn it off any time from here.",
     "autoCapture.unsupportedTitle": "Not available on this phone",
     "autoCapture.unsupportedBody":
       "This feature only works on Android and needs the latest version of Finzo installed from the app file. On iPhone, Android's approach is not allowed: other apps cannot read your alerts.",
@@ -2263,10 +2263,10 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "autoCapture.speakOutTitle": "Também quando você paga",
     "autoCapture.speakOutHint": "Desligado, só fala do dinheiro que ENTRA. Ligado, também anuncia o que você paga — em voz alta na fila do caixa.",
     "autoCapture.subtitle":
-      "O Finzo pode anotar sozinho seus gastos e receitas lendo os avisos que o Yape e seu banco enviam. Você não faz nada: paga com o Yape e o movimento já está na sua lista quando voltar ao Finzo.",
+      "O Finzo anota sozinho seus Yapes. Você não faz nada: recebe e o movimento já está na sua lista.",
     "autoCapture.privacyTitle": "O que é lido e o que não é",
     "autoCapture.privacyBody":
-      "O Finzo só olha os avisos de apps de dinheiro (Yape, Plin, bancos). Avisos do WhatsApp, e-mail, redes sociais ou qualquer outro app são descartados na hora e nunca são guardados nem lidos. Nada disso sai do seu celular: não é enviado para a internet nem para ninguém. Você pode desligar quando quiser nesta mesma tela.",
+      "Só os avisos do Yape. Os do seu banco, WhatsApp, e-mail ou qualquer outro app são descartados na hora e nunca são guardados nem lidos. Nada sai do seu celular. Você pode desligar quando quiser aqui.",
     "autoCapture.unsupportedTitle": "Não disponível neste celular",
     "autoCapture.unsupportedBody":
       "Este recurso só funciona no Android e precisa da última versão do Finzo instalada pelo arquivo do app. No iPhone, outros apps não podem ler os seus avisos.",

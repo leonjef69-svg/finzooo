@@ -38,6 +38,20 @@ const L = "A-Za-zÁÉÍÓÚÑÜáéíóúñü";
  */
 const APPS_ACEPTADAS = ["yape"];
 
+/**
+ * ¿Este aviso viene de una app que Finzo mira?
+ *
+ * Se usa para DESCARTARLO SIN DEJAR RASTRO. No es lo mismo que un aviso de
+ * Yape que no se entendió: ese sí tiene que salir en la pantalla, porque es
+ * lo que permite saber qué texto falta reconocer. Un aviso de otra app no
+ * aporta nada ahí y encima ensucia la lista — y si es de clave, la deja
+ * escrita en el celular.
+ */
+export function esAppVigilada(pkg: string): boolean {
+  const p = (pkg ?? "").toLowerCase();
+  return APPS_ACEPTADAS.some((app) => p.includes(app));
+}
+
 // Avisos que traen un monto pero NO son un movimiento. La lista es corta a
 // propósito: exigir una palabra de dirección ya descarta casi toda la
 // publicidad, y una lista larga corre el riesgo de bloquear gastos reales
@@ -319,7 +333,7 @@ export function parseNotification(n: CapturedNotification): NotificationParse {
   //
   // Los demás bancos nunca se probaron con un movimiento de verdad. Volver a
   // meter uno pide un aviso real suyo, aquí y en MONEY_APP_HINTS del servicio.
-  if (!APPS_ACEPTADAS.some((app) => (n.package ?? "").toLowerCase().includes(app))) {
+  if (!esAppVigilada(n.package)) {
     return { ok: false, reason: "notMoney" };
   }
 

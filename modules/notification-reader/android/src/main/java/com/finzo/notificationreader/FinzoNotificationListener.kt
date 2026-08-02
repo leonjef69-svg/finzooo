@@ -5,6 +5,8 @@ import android.content.Intent
 import com.facebook.react.HeadlessJsTaskService
 import android.media.AudioManager
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
@@ -28,6 +30,22 @@ import org.json.JSONObject
  */
 class FinzoNotificationListener : NotificationListenerService() {
 
+  // ---- La voz ----
+  //
+  // UN SOLO motor, compartido y reutilizado. Antes se creaba uno nuevo por
+  // cada aviso; como cada motor tiene su propia cola, dos yapes seguidos
+  // hablaban A LA VEZ y no se entendia ninguno. En un negocio, con varios
+  // yapes en un minuto, eso es ruido.
+  //
+  // Todo lo de la voz pasa por este Handler, que es el hilo principal: las
+  // notificaciones llegan por hilos distintos y la cola no es a prueba de
+  // dos a la vez.
+  private val mano = Handler(Looper.getMainLooper())
+  private var motor: TextToSpeech? = null
+  private var vozLista = false
+  private val porDecir = ArrayDeque<String>()
+  private val apagarVoz = Runnable { soltarVoz() }
+
   // Android avisa por aquí cuando de verdad engancha el servicio. Dar el
   // permiso y que el servicio esté CONECTADO son dos cosas distintas: el
   // permiso puede estar dado y el servicio caído (pasa sobre todo después
@@ -38,6 +56,17 @@ class FinzoNotificationListener : NotificationListenerService() {
     } catch (e: Throwable) {
       // Nunca dejar que el servicio del sistema se caiga por esto.
     }
+  }
+
+  // Android tira el servicio: no dejar un motor de voz colgando.
+  override fun onDestroy() {
+    try {
+      mano.removeCallbacks(apagarVoz)
+      soltarVoz()
+    } catch (e: Throwable) {
+      // Nunca estorbar el cierre del servicio.
+    }
+    super.onDestroy()
   }
 
   override fun onListenerDisconnected() {
@@ -258,39 +287,93 @@ class FinzoNotificationListener : NotificationListenerService() {
    * aviso.
    */
   private fun hablar(texto: String) {
-    var motor: TextToSpeech? = null
-    motor = TextToSpeech(applicationContext) { estado ->
+    mano.post {
       try {
-        if (estado != TextToSpeech.SUCCESS) {
-          motor?.shutdown()
-          return@TextToSpeech
-        }
-        motor?.language = Locale("es", "PE")
+        porDecir.add(texto)
+        mano.removeCallbacks(apagarVoz)
 
-        // El aviso de "ya termine" se registra ANTES de hablar. Puesto
-        // despues no llega nunca —la frase ya iba en camino— y el motor de
-        // voz se quedaria vivo dentro de un servicio del sistema.
-        motor?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-          override fun onStart(id: String?) {}
-
-          override fun onDone(id: String?) {
-            motor?.shutdown()
+        if (motor == null) {
+          // Todavia no hay motor: se crea y la frase espera en la cola. Al
+          // terminar de arrancar se dicen todas las que se hayan juntado
+          // mientras tanto.
+          motor = TextToSpeech(applicationContext) { estado ->
+            mano.post {
+              if (estado == TextToSpeech.SUCCESS) {
+                prepararMotor()
+                vaciarCola()
+              } else {
+                soltarVoz()
+              }
+            }
           }
-
-          @Deprecated("Android lo pide igual", ReplaceWith(""))
-          override fun onError(id: String?) {
-            motor?.shutdown()
-          }
-        })
-
-        val params = Bundle().apply {
-          putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_NOTIFICATION)
+        } else if (vozLista) {
+          vaciarCola()
         }
-        motor?.speak(texto, TextToSpeech.QUEUE_ADD, params, "finzo-aviso")
       } catch (e: Throwable) {
-        motor?.shutdown()
+        soltarVoz()
       }
     }
+  }
+
+  /** Idioma y el aviso de "ya termine". Una sola vez por motor. */
+  private fun prepararMotor() {
+    val m = motor ?: return
+    m.language = Locale("es", "PE")
+    m.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+      override fun onStart(id: String?) {}
+
+      // Al acabar una frase, si no queda ninguna esperando se programa el
+      // apagado. Asi el motor no se queda vivo dentro de un servicio del
+      // sistema, pero tampoco se apaga entre dos yapes seguidos.
+      override fun onDone(id: String?) {
+        mano.post { if (porDecir.isEmpty()) programarApagado() }
+      }
+
+      @Deprecated("Android lo pide igual", ReplaceWith(""))
+      override fun onError(id: String?) {
+        mano.post { if (porDecir.isEmpty()) programarApagado() }
+      }
+    })
+    vozLista = true
+  }
+
+  /**
+   * Suelta en el motor todo lo que haya esperando, EN ORDEN y una detras de
+   * otra.
+   *
+   * QUEUE_ADD encola dentro de ESTE motor. Por eso hay uno solo y se reutiliza:
+   * antes se creaba uno nuevo por cada aviso, y como cada motor tiene su
+   * propia cola, cinco yapes seguidos hablaban los cinco A LA VEZ. En un
+   * negocio con varios yapes en un minuto no se entendia ninguno.
+   */
+  private fun vaciarCola() {
+    val m = motor ?: return
+    val params = Bundle().apply {
+      putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_NOTIFICATION)
+    }
+    while (porDecir.isNotEmpty()) {
+      // Un identificador distinto por frase: con el mismo, el aviso de "ya
+      // termine" no distingue cual acabo.
+      m.speak(porDecir.removeFirst(), TextToSpeech.QUEUE_ADD, params, "finzo-" + System.nanoTime())
+    }
+    mano.removeCallbacks(apagarVoz)
+  }
+
+  private fun programarApagado() {
+    mano.removeCallbacks(apagarVoz)
+    mano.postDelayed(apagarVoz, ESPERA_APAGADO)
+  }
+
+  /** Apaga el motor y tira lo que quedara sin decir. */
+  private fun soltarVoz() {
+    try {
+      motor?.shutdown()
+    } catch (e: Throwable) {
+      // Da igual: lo importante es no quedarse con la referencia.
+    }
+    motor = null
+    vozLista = false
+    porDecir.clear()
   }
 
   /**
@@ -355,6 +438,17 @@ class FinzoNotificationListener : NotificationListenerService() {
      * El texto llega ya normalizado, por eso "s/" y no "S/".
      */
     private val TIENE_MONTO = Regex("(?:s\\s*/\\s*\\.?|pen\\b)\\s*\\d")
+
+    /**
+     * Cuanto se espera, sin nada que decir, antes de apagar el motor de voz.
+     *
+     * Ni muy corto ni muy largo: apagarlo entre dos yapes seguidos obliga a
+     * volver a arrancarlo —y arrancar tarda, asi que la segunda frase llegaria
+     * con retraso—, y dejarlo vivo para siempre es tener un motor de voz
+     * despierto dentro de un servicio del sistema que puede pasar dias sin
+     * usarse.
+     */
+    private const val ESPERA_APAGADO = 60000L
 
     /**
      * Como suena un aviso de plata que ENTRA. Copiada tal cual de
