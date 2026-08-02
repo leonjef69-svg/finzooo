@@ -247,10 +247,6 @@ class FinzoNotificationListener : NotificationListenerService() {
 
   companion object {
     /**
-     * Como suena un aviso de plata que ENTRA. Sin tildes: el texto se compara
-     * ya normalizado. Cubre Yape, Plin y los avisos de los bancos.
-     */
-    /**
      * Avisos que NO son un movimiento: claves, promociones, encuestas.
      *
      * Copiada tal cual de NOT_A_MOVEMENT, en utils/notificationParser. La app
@@ -263,8 +259,8 @@ class FinzoNotificationListener : NotificationListenerService() {
       "codigo de seguridad",
       "clave temporal",
       "no compartas",
-      "Operación en curso. Hemos generado
-  // y autocompletado la clave",
+      // Yape manda esto pegado a CADA yapeo: "Operación en curso. Hemos
+      // generado y autocompletado la clave".
       "operacion en curso",
       "autocompletado la clave",
       "generado y autocompletado",
@@ -276,9 +272,18 @@ class FinzoNotificationListener : NotificationListenerService() {
       "solicita tu"
     )
 
-    /** Un monto: "S/ 20", "S/20.00". Sin monto no hay movimiento. */
-    private val TIENE_MONTO = Regex("""s/s?d""")
+    /**
+     * Un monto: "S/ 20", "S/20.00". Sin monto no hay movimiento que anunciar.
+     *
+     * El texto llega ya en minusculas, por eso "s/" y no "S/".
+     */
+    private val TIENE_MONTO = Regex("s/\\s?\\d")
 
+    /**
+     * Como suena un aviso de plata que ENTRA. Copiada tal cual de
+     * INCOME_HINTS, en utils/notificationParser: escribirla a mano fue lo que
+     * dejo la voz muda con los yapes, por faltarle "te envio".
+     */
     private val PALABRAS_DE_INGRESO = listOf(
       "te yapearon",
       "te yapeo",
