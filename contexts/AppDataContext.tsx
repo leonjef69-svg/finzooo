@@ -730,6 +730,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // Ocho segundos: si el buzon esta vacio, recoger no cuesta nada.
     const cada = setInterval(collect, 8000);
 
+    // EN EL MOMENTO EN QUE LLEGA EL YAPEO.
+    //
+    // El servicio de Android avisa aquí en cuanto captura un aviso de dinero,
+    // y se registra al instante: no hay que esperar al repaso de arriba.
+    //
+    // El repaso se queda igualmente. Este aviso solo llega si el APK trae esa
+    // parte y si la app está viva para escucharlo; el repaso cubre todo lo
+    // demás —un APK anterior, un aviso que llegó con la app cerrada— y no
+    // duplica nada, porque el buzón se vacía de una sola vez.
+    const alLlegar = notificationReader.onCapture(() => {
+      collect();
+    });
+
     const sub = AppState.addEventListener("change", (state) => {
       if (state !== "active") return;
       // Al volver al frente puede que la persona acabe de conceder (o
@@ -739,6 +752,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     });
     return () => {
       clearInterval(cada);
+      alLlegar.remove();
       sub.remove();
     };
     // Solo depende de si la app ya está lista: los datos que necesita los

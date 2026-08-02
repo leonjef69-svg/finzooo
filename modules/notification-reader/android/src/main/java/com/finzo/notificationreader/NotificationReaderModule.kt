@@ -3,6 +3,7 @@ package com.finzo.notificationreader
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.os.Bundle
 import android.provider.Settings
 import android.service.notification.NotificationListenerService
 import expo.modules.kotlin.modules.Module
@@ -23,6 +24,20 @@ class NotificationReaderModule : Module() {
 
   override fun definition() = ModuleDefinition {
     Name("NotificationReader")
+
+    // El aviso que la app espera para registrar el yapeo EN EL MOMENTO.
+    //
+    // Antes la app preguntaba "¿llegó algo?" cada ocho segundos. Funcionaba,
+    // pero el movimiento tardaba en aparecer y con la pantalla delante eso se
+    // ve como que no se registró.
+    Events(EVENTO)
+
+    // Expo avisa por aquí cuando la app se pone a escuchar (y cuando deja de
+    // hacerlo). Es lo que permite saber si hay alguien al otro lado: con la
+    // app cerrada no lo hay, y entonces el yapeo lo registra el trabajo de
+    // fondo, como hasta ahora.
+    OnStartObserving { enEscucha = this@NotificationReaderModule }
+    OnStopObserving { enEscucha = null }
 
     // ¿La persona le dio a Finzo el acceso a notificaciones en los ajustes
     // de Android? Es un permiso especial: no se puede pedir con un popup,
@@ -71,6 +86,43 @@ class NotificationReaderModule : Module() {
     // habitual cuando deja de capturar después de actualizar la app: el
     // permiso sigue dado, pero el servicio quedó suelto.
     Function("requestRebind") { requestRebind() }
+  }
+
+  companion object {
+    const val EVENTO = "onCapture"
+
+    /**
+     * El modulo mientras la app lo esta escuchando, o null si no.
+     *
+     * Volatile porque lo escribe el hilo de la app y lo lee el del servicio de
+     * notificaciones, que son distintos.
+     */
+    @Volatile
+    private var enEscucha: NotificationReaderModule? = null
+
+    /**
+     * Le dice a la app que acaba de llegar un aviso, para que lo registre YA.
+     *
+     * Devuelve true solo si habia alguien escuchando. Cuando devuelve false
+     * —la app cerrada, o sin haberse suscrito todavia— quien llama tiene que
+     * seguir por el camino de siempre: despertar el trabajo de fondo.
+     *
+     * Nunca lanza: lo llama el servicio de notificaciones de Android, y una
+     * excepcion ahi puede dejar el servicio desconectado y la funcion entera
+     * muerta en silencio.
+     */
+    fun avisarDeCaptura(): Boolean =
+      try {
+        val modulo = enEscucha
+        if (modulo == null) {
+          false
+        } else {
+          modulo.sendEvent(EVENTO, Bundle())
+          true
+        }
+      } catch (e: Throwable) {
+        false
+      }
   }
 
   private fun requestRebind(): Boolean =

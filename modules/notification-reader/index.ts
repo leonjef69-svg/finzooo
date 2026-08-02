@@ -46,6 +46,7 @@ type NativeShape = {
   clear: () => Promise<void>;
   stats: () => string;
   requestRebind: () => boolean;
+  addListener: (evento: string, cb: () => void) => { remove: () => void };
 };
 
 // "Optional" porque este módulo solo existe en Android y solo dentro de una
@@ -205,6 +206,26 @@ export function setSpeakOutgoing(value: boolean): void {
     Native?.setSpeakOutgoing?.(value);
   } catch {
     // Igual que arriba.
+  }
+}
+
+/**
+ * Avisa EN EL MOMENTO en que el celular captura un aviso de dinero.
+ *
+ * Antes la app preguntaba "¿llegó algo?" cada ocho segundos. Funcionaba, pero
+ * con la pantalla delante el movimiento tardaba en salir y eso se ve como que
+ * no se registró.
+ *
+ * Devuelve la forma de darse de baja. Si el APK no trae esta parte —o no es
+ * Android— devuelve una baja que no hace nada, y la app se queda con el
+ * repaso cada ocho segundos, que sigue ahí como red.
+ */
+export function onCapture(cb: () => void): { remove: () => void } {
+  if (!Native?.addListener) return { remove: () => {} };
+  try {
+    return Native.addListener("onCapture", cb);
+  } catch {
+    return { remove: () => {} };
   }
 }
 

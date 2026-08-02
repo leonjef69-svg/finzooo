@@ -97,11 +97,25 @@ class FinzoNotificationListener : NotificationListenerService() {
       // repetiría el mismo yapeo dos y tres veces seguidas.
       if (esNueva) {
         anunciar(title, body)
-        // Y se despierta a Finzo lo justo para registrarlo, sin abrirla. Si
-        // Android se niega —cada fabricante aprieta el ahorro de bateria a su
-        // manera— lo capturado sigue en el buzon y la app lo recoge al
-        // abrirse, igual que antes.
-        registrarYa()
+
+        // Y SE REGISTRA. Por el camino más corto que haya en este momento.
+        //
+        // Si la app está abierta y escuchando, se le avisa y lo registra ella
+        // AL INSTANTE. Antes no se le decía nada: la app preguntaba sola cada
+        // ocho segundos, así que con la pantalla delante el movimiento
+        // tardaba en salir y parecía que no se había registrado.
+        //
+        // Si no hay nadie escuchando —la app cerrada— se despierta el trabajo
+        // de fondo, como hasta ahora. Y si Android se niega a despertarlo
+        // —cada fabricante aprieta el ahorro de batería a su manera— lo
+        // capturado sigue en el buzón y la app lo recoge al abrirse.
+        //
+        // Nunca los dos: el buzón se vacía de una sola vez, así que quien
+        // llegue primero se lo lleva, pero avisar por los dos lados sería
+        // despertar un proceso para nada.
+        if (!NotificationReaderModule.avisarDeCaptura()) {
+          registrarYa()
+        }
       }
     } catch (e: Throwable) {
       // Se ignora a propósito: más vale perder una notificación que dejar el
