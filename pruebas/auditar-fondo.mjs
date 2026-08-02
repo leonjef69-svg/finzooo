@@ -208,6 +208,42 @@ console.log("\n--- COMPARACIONES SOSPECHOSAS ---");
 }
 
 // ---------------------------------------------------------------------------
+console.log("\n--- LA LISTA DE 'ENTRO DINERO', EN LOS DOS SITIOS ---");
+{
+  // La misma lista existe dos veces: en JavaScript, que decide si un aviso es
+  // un ingreso, y en Kotlin, que decide si el celular lo dice en voz alta. No
+  // se pueden unir: el servicio de Android no puede leer JavaScript.
+  //
+  // Se separaron. La de Kotlin la escribi a mano en vez de copiarla, y le
+  // faltaba "te envio" — que es JUSTO como escribe Yape sus avisos: "te envio
+  // un pago por S/ 1". Resultado: el yapeo se registraba bien (esa parte usa
+  // la lista buena) y la voz callaba. Un fallo que solo se ve probando con un
+  // yapeo de verdad.
+  const js = fs.readFileSync(path.join(RAIZ, "utils/notificationParser.ts"), "utf8");
+  const bloqueJs = js.slice(js.indexOf("const INCOME_HINTS"), js.indexOf("// Salió dinero"));
+  const enJs = [...bloqueJs.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+
+  const kt = fs.readFileSync(
+    path.join(
+      RAIZ,
+      "modules/notification-reader/android/src/main/java/com/finzo/notificationreader/FinzoNotificationListener.kt"
+    ),
+    "utf8"
+  );
+  const desde = kt.indexOf("PALABRAS_DE_INGRESO = listOf(");
+  const bloqueKt = kt.slice(desde, desde + kt.slice(desde).indexOf(")"));
+  const enKt = [...bloqueKt.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+
+  const faltan = enJs.filter((p) => !enKt.includes(p));
+  const sobran = enKt.filter((p) => !enJs.includes(p));
+
+  for (const p of faltan) fallo("voz", `"${p}" esta en JavaScript pero no en Kotlin: la voz callara`);
+  for (const p of sobran) fallo("voz", `"${p}" esta en Kotlin pero no en JavaScript`);
+
+  console.log(`  ${enJs.length} palabras, iguales en los dos sitios: ${faltan.length + sobran.length === 0 ? "si" : "NO"}`);
+}
+
+// ---------------------------------------------------------------------------
 console.log("\n--- COLORES DE CATEGORIA QUE SE PISAN ---");
 {
   // En la rosquilla, el color es lo UNICO que distingue una categoria de

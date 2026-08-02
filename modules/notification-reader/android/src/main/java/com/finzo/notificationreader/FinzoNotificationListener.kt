@@ -233,11 +233,25 @@ class FinzoNotificationListener : NotificationListenerService() {
      * ya normalizado. Cubre Yape, Plin y los avisos de los bancos.
      */
     private val PALABRAS_DE_INGRESO = listOf(
-      "te yapearon", "te yapeo", "yapeo recibido", "nuevo yapeo",
-      "te plineo", "te plinearon", "recibiste", "has recibido",
-      "abono", "deposito", "te deposito", "te depositaron",
-      "transferencia recibida", "ingreso", "te transfirio", "te transfirieron",
-      "pago recibido", "acreditado"
+      "te yapearon",
+      "te yapeo",
+      "nuevo yapeo",
+      "yapeo recibido",
+      "te plinearon",
+      "te plineo",
+      "recibiste",
+      "has recibido",
+      "pago recibido",
+      "abono",
+      "abonaron",
+      "abonado",
+      "deposito",
+      "depositaron",
+      "te envio",
+      "te enviaron",
+      "te transfirio",
+      "te transfirieron",
+      "cobraste"
     )
 
     private val MONEY_APP_HINTS = listOf(
