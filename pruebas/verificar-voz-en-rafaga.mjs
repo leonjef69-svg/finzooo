@@ -34,7 +34,10 @@ console.log("\n--- UN SOLO MOTOR DE VOZ ---");
   ok(veces === 1, `el motor se crea en un solo sitio (${veces})`);
 
   ok(/private var motor: TextToSpeech\? = null/.test(kt), "y vive en el servicio, no dentro de hablar()");
-  ok(/if \(motor == null\)/.test(kt), "solo se crea si no habia uno");
+  // Sin esta guarda, encenderlo al conectar y encenderlo al hablar crearian
+  // dos motores, y dos motores son dos colas: justo el fallo que se arreglo.
+  const prep = kt.slice(kt.indexOf("private fun prepararVoz"));
+  ok(/if \(motor != null\) return/.test(prep.slice(0, 300)), "solo se crea si no habia uno");
 }
 
 console.log("\n--- LAS FRASES HACEN COLA ---");
@@ -46,9 +49,6 @@ console.log("\n--- LAS FRASES HACEN COLA ---");
   // Lo que llega mientras el motor arranca no se puede perder: arrancar tarda,
   // y en una rafaga los primeros avisos caen justo en ese hueco.
   ok(/vaciarCola\(\)/.test(kt), "y al terminar de arrancar se dicen todas las que esperaban");
-
-  // Con el mismo identificador para todas, el aviso de "ya termine" no
-  // distingue cual acabo y el apagado se programaria antes de tiempo.
   ok(/"finzo-" \+ System\.nanoTime\(\)/.test(kt), "cada frase lleva su propio identificador");
 }
 
@@ -60,18 +60,28 @@ console.log("\n--- Y NO SE PISAN POR VENIR DE HILOS DISTINTOS ---");
   ok(/mano\.post \{/.test(kt), "incluido lo que llega desde el servicio");
 }
 
-console.log("\n--- EL MOTOR NO SE QUEDA VIVO PARA SIEMPRE ---");
+console.log("\n--- EL MOTOR SE QUEDA CALIENTE: LA VOZ, SIN ESPERA ---");
 {
-  ok(kt.includes("ESPERA_APAGADO"), "se apaga tras un rato sin nada que decir");
-  ok(/postDelayed\(apagarVoz/.test(kt), "y el apagado es diferido, no inmediato");
-  ok(/removeCallbacks\(apagarVoz\)/.test(kt), "si llega otro yapeo antes, se cancela");
+  // Arrancar el motor de voz tarda 2 a 4 segundos —es Android despertando su
+  // sistema de voz, no Finzo pensando— y eso se OIA: la notificacion aparecia
+  // y la voz llegaba despues.
+  //
+  // Se apagaba tras un minuto sin usarse, asi que ese retraso volvia cada vez
+  // que pasaba un rato. Decision del usuario el 02/08/2026: sin limite, que
+  // hable en el momento siempre. Cuesta algo de bateria y se acepta.
+  ok(!kt.includes("ESPERA_APAGADO"), "no hay apagado por tiempo");
+  ok(!kt.includes("postDelayed"), "ni nada programado para apagarlo");
 
-  // Apagarlo entre dos yapes seguidos obligaria a arrancarlo otra vez, y
-  // arrancar tarda: la segunda frase llegaria con retraso.
-  const espera = kt.match(/ESPERA_APAGADO = (\d+)L/);
-  ok(espera && Number(espera[1]) >= 30000, `espera suficiente entre yapes (${espera?.[1]} ms)`);
+  // Y se enciende ANTES del primer yapeo, en cuanto Android engancha el
+  // servicio. Si se esperara al primer aviso, ese primero seguiria tardando.
+  const conecta = kt.slice(kt.indexOf("override fun onListenerConnected"));
+  const cuerpo = conecta.slice(0, conecta.indexOf("override fun onListenerDisconnected"));
+  ok(cuerpo.includes("prepararVoz()"), "el motor se enciende al conectar el servicio");
+  ok(cuerpo.includes("isSpeakEnabled"), "pero solo si la voz esta encendida");
 
-  ok(/override fun onDestroy/.test(kt), "y si Android tira el servicio, se suelta");
+  // Lo unico que lo suelta: que Android tire el servicio.
+  ok(/override fun onDestroy/.test(kt), "y se suelta si Android tira el servicio");
+  ok(/soltarVoz\(\)/.test(kt), "con su apagado de verdad");
 }
 
 console.log("\n--- LO DE OTRAS APPS NI SE ANOTA ---");

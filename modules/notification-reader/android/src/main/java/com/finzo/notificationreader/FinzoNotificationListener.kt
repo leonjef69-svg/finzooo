@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
 import java.util.Locale
 import android.content.ComponentName
 import android.service.notification.NotificationListenerService
@@ -44,7 +43,6 @@ class FinzoNotificationListener : NotificationListenerService() {
   private var motor: TextToSpeech? = null
   private var vozLista = false
   private val porDecir = ArrayDeque<String>()
-  private val apagarVoz = Runnable { soltarVoz() }
 
   // Android avisa por aquí cuando de verdad engancha el servicio. Dar el
   // permiso y que el servicio esté CONECTADO son dos cosas distintas: el
@@ -53,6 +51,19 @@ class FinzoNotificationListener : NotificationListenerService() {
   override fun onListenerConnected() {
     try {
       NotificationStore.setConnected(applicationContext, true)
+
+      // EL MOTOR DE VOZ, LISTO DESDE YA.
+      //
+      // Arrancarlo tarda 2 a 4 segundos: es el sistema de voz de Android
+      // despertandose y cargando el idioma, no Finzo pensando. Si se espera al
+      // primer yapeo, esa espera se oye — la notificacion aparece y la voz
+      // llega despues.
+      //
+      // Encendiendolo aqui, en cuanto Android engancha el servicio, ya esta
+      // caliente cuando llega el primer yapeo del dia.
+      if (NotificationStore.isSpeakEnabled(applicationContext)) {
+        mano.post { prepararVoz() }
+      }
     } catch (e: Throwable) {
       // Nunca dejar que el servicio del sistema se caiga por esto.
     }
@@ -61,7 +72,6 @@ class FinzoNotificationListener : NotificationListenerService() {
   // Android tira el servicio: no dejar un motor de voz colgando.
   override fun onDestroy() {
     try {
-      mano.removeCallbacks(apagarVoz)
       soltarVoz()
     } catch (e: Throwable) {
       // Nunca estorbar el cierre del servicio.
@@ -290,51 +300,41 @@ class FinzoNotificationListener : NotificationListenerService() {
     mano.post {
       try {
         porDecir.add(texto)
-        mano.removeCallbacks(apagarVoz)
-
-        if (motor == null) {
-          // Todavia no hay motor: se crea y la frase espera en la cola. Al
-          // terminar de arrancar se dicen todas las que se hayan juntado
-          // mientras tanto.
-          motor = TextToSpeech(applicationContext) { estado ->
-            mano.post {
-              if (estado == TextToSpeech.SUCCESS) {
-                prepararMotor()
-                vaciarCola()
-              } else {
-                soltarVoz()
-              }
-            }
-          }
-        } else if (vozLista) {
-          vaciarCola()
-        }
+        // Si el motor ya esta caliente —lo normal— se dice AHORA. Si no, se
+        // enciende y la frase espera en la cola hasta que termine de arrancar.
+        if (vozLista) vaciarCola() else prepararVoz()
       } catch (e: Throwable) {
         soltarVoz()
       }
     }
   }
 
-  /** Idioma y el aviso de "ya termine". Una sola vez por motor. */
-  private fun prepararMotor() {
-    val m = motor ?: return
-    m.language = Locale("es", "PE")
-    m.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-      override fun onStart(id: String?) {}
-
-      // Al acabar una frase, si no queda ninguna esperando se programa el
-      // apagado. Asi el motor no se queda vivo dentro de un servicio del
-      // sistema, pero tampoco se apaga entre dos yapes seguidos.
-      override fun onDone(id: String?) {
-        mano.post { if (porDecir.isEmpty()) programarApagado() }
+  /**
+   * Enciende el motor de voz si no lo estaba. **Y no lo apaga nunca.**
+   *
+   * Antes se apagaba tras un minuto sin usarse. Eso hacia que el primer yapeo
+   * despues de un rato tardara 2 a 4 segundos en sonar: lo que tarda el
+   * sistema de voz de Android en despertar. Por decision del usuario el
+   * 02/08/2026 se quita ese limite — quiere que hable en el momento, siempre.
+   *
+   * Lo que cuesta: un motor de voz despierto gasta algo de bateria y memoria.
+   * Se suelta al destruirse el servicio.
+   *
+   * Siempre desde el hilo principal.
+   */
+  private fun prepararVoz() {
+    if (motor != null) return
+    motor = TextToSpeech(applicationContext) { estado ->
+      mano.post {
+        if (estado == TextToSpeech.SUCCESS) {
+          motor?.language = Locale("es", "PE")
+          vozLista = true
+          vaciarCola()
+        } else {
+          soltarVoz()
+        }
       }
-
-      @Deprecated("Android lo pide igual", ReplaceWith(""))
-      override fun onError(id: String?) {
-        mano.post { if (porDecir.isEmpty()) programarApagado() }
-      }
-    })
-    vozLista = true
+    }
   }
 
   /**
@@ -352,16 +352,8 @@ class FinzoNotificationListener : NotificationListenerService() {
       putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_NOTIFICATION)
     }
     while (porDecir.isNotEmpty()) {
-      // Un identificador distinto por frase: con el mismo, el aviso de "ya
-      // termine" no distingue cual acabo.
       m.speak(porDecir.removeFirst(), TextToSpeech.QUEUE_ADD, params, "finzo-" + System.nanoTime())
     }
-    mano.removeCallbacks(apagarVoz)
-  }
-
-  private fun programarApagado() {
-    mano.removeCallbacks(apagarVoz)
-    mano.postDelayed(apagarVoz, ESPERA_APAGADO)
   }
 
   /** Apaga el motor y tira lo que quedara sin decir. */
@@ -438,17 +430,6 @@ class FinzoNotificationListener : NotificationListenerService() {
      * El texto llega ya normalizado, por eso "s/" y no "S/".
      */
     private val TIENE_MONTO = Regex("(?:s\\s*/\\s*\\.?|pen\\b)\\s*\\d")
-
-    /**
-     * Cuanto se espera, sin nada que decir, antes de apagar el motor de voz.
-     *
-     * Ni muy corto ni muy largo: apagarlo entre dos yapes seguidos obliga a
-     * volver a arrancarlo —y arrancar tarda, asi que la segunda frase llegaria
-     * con retraso—, y dejarlo vivo para siempre es tener un motor de voz
-     * despierto dentro de un servicio del sistema que puede pasar dias sin
-     * usarse.
-     */
-    private const val ESPERA_APAGADO = 60000L
 
     /**
      * Como suena un aviso de plata que ENTRA. Copiada tal cual de
