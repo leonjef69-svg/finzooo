@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **2 de agosto de 2026** · Código publicado: **2ago-25**
+Actualizado: **2 de agosto de 2026** · Código publicado: **2ago-31**
 
 Este archivo existe para que una sesión nueva —de Claude o de quien sea— no
 empiece de cero. No cuenta lo que ya se ve en el código ni en el historial de
@@ -35,6 +35,29 @@ Dos caminos, y confundirlos cuesta horas:
 **El código nativo NO viaja por actualización.** Todo lo que toque
 `modules/*/android/` necesita APK nuevo. Esto se olvidó varias veces y se
 arregló dos veces lo mismo.
+
+### LAS COMPILACIONES SE ACABAN. JUNTAR LO NATIVO.
+
+El **02/08/2026 se agotaron las compilaciones de Android del mes** (plan
+gratuito de Expo; se reponen el 1 de cada mes). Se gastaron todas en una sola
+tarde, compilando un APK por cada arreglo nativo — y varios porque el arreglo
+anterior no había salido bien.
+
+Consecuencia: **quedó un arreglo hecho y sin poder entregar** (la voz por su
+propio hilo, commit `db03dc7`), y hasta el 01/09/2026 no se puede tocar nada
+de `modules/*/android/`.
+
+La regla:
+
+> **No compilar un APK por cada arreglo nativo.** Se juntan y se compila una
+> vez. Antes de lanzar una compilación, comprobar si hay otro cambio nativo
+> pendiente o previsible que pueda ir en el mismo.
+
+Y antes de proponer algo nativo, decir en voz alta lo que cuesta: cada intento
+gasta una compilación, y equivocarse gasta dos.
+
+Lo que **no** se ve afectado: todo lo que sea JavaScript sigue llegando por
+`eas update` sin límite. Es la mayor parte del trabajo.
 
 ### Reglas que costó aprender
 

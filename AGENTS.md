@@ -69,6 +69,11 @@ duro y en Java no. El porqué entero está en ESTADO.md.
 1. **El código nativo no viaja por actualización.** Si tocas
    `modules/*/android/`, hace falta APK nuevo. Se arregló dos veces lo mismo
    por no tenerlo presente.
+
+   Y **las compilaciones se acaban**: el plan gratuito de Expo da unas pocas
+   al mes. El 02/08/2026 se gastaron todas en una tarde, una por arreglo, y
+   quedó uno hecho sin poder entregar hasta el mes siguiente. **Junta los
+   cambios nativos y compila una vez.** El porqué está en ESTADO.md.
 2. **Sube `CODE_MARKER`** en `screens/AppInfo.tsx` en cada entrega, y escribe
    **la dirección del APK UNA sola vez en toda la conversación**. Ni una más:
    para volver a mencionarlo, "el APK que te pasé". Pegarlo otra vez —aunque
