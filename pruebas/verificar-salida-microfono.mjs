@@ -66,5 +66,27 @@ console.log("\n--- LA PANTALLA SIGUE ABRIENDOSE DIRECTA ---");
   ok(/useState<Stage>\("listening"\)/.test(entry), "y el microfono empieza escuchando solo");
 }
 
+
+console.log("\n--- ENTRANDO POR EL WIDGET NO SE VE FINZO DETRAS ---");
+{
+  // El fondo de la tarjeta es negro al 70%, asi que dejaba asomar lo de
+  // detras. Dentro de la app eso esta bien —dice "es un panel encima de donde
+  // estabas"—. Pero entrando por el widget, lo de detras es el Inicio de Finzo
+  // recien abierto, y verlo es justo lo que hace sentir "me metio en la app".
+  const entry2 = fs.readFileSync(path.join(RAIZ, "screens/VoiceEntry.tsx"), "utf8");
+  ok(entry2.includes("fondoOpaco"), "la tarjeta sabe si debe tapar del todo");
+  ok(
+    entry2.includes('fondoOpaco ? "bg-slate-950" : "bg-black/70"'),
+    "opaco desde el widget, translucido desde dentro"
+  );
+
+  ok(voz.includes("fondoOpaco={desdeWidget}"), "y la pantalla se lo pasa");
+  ok(voz.includes("!router.canGoBack()"), "sabiendo si hay pantalla anterior");
+
+  // Se calcula al montar y no en cada dibujado: tras dictar un gasto el
+  // historial puede cambiar, y el fondo no puede cambiar a media conversacion.
+  ok(voz.includes("const [desdeWidget] = useState"), "y se decide una sola vez, al abrir");
+}
+
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

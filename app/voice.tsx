@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { BackHandler } from "react-native";
 import { router } from "expo-router";
 import VoiceEntry from "@/screens/VoiceEntry";
@@ -23,6 +24,17 @@ import { flushPendingSaves } from "@/utils/storage";
 export default function VoiceRoute() {
   const { ready, hasOnboarded } = useAppData();
 
+  // ¿Se entró desde el micrófono del escritorio?
+  //
+  // Si no hay pantalla anterior, sí. Y entonces lo que hay detrás es el Inicio
+  // de Finzo recién abierto: verlo asomar por el fondo oscurecido es lo que
+  // hace sentir "me metió en la app". Se tapa del todo.
+  //
+  // Se calcula UNA vez, al montar. Después de dictar un gasto el historial
+  // puede cambiar, y el fondo no tiene por qué cambiar con él a media
+  // conversación.
+  const [desdeWidget] = useState(() => !router.canGoBack());
+
   useNavigateWhenReady(
     ready && !hasOnboarded ? () => router.replace("/onboarding") : null,
     [ready, hasOnboarded]
@@ -33,7 +45,7 @@ export default function VoiceRoute() {
   // que todavía está vacía y perderse al terminar de cargar.
   if (!ready || !hasOnboarded) return null;
 
-  return <VoiceEntry onClose={cerrar} />;
+  return <VoiceEntry onClose={cerrar} fondoOpaco={desdeWidget} />;
 }
 
 /**

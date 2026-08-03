@@ -44,7 +44,22 @@ type Stage =
 
 type Kind = "expense" | "income";
 
-export default function VoiceEntry({ onClose }: { onClose: () => void }) {
+export default function VoiceEntry({
+  onClose,
+  fondoOpaco = false,
+}: {
+  onClose: () => void;
+  /**
+   * Tapar del todo lo que haya detrás, en vez de oscurecerlo.
+   *
+   * Entrando desde dentro de la app, ver Inicio difuminado detrás está bien:
+   * dice "esto es un panel encima de donde estabas". Pero entrando desde el
+   * micrófono del escritorio, lo de detrás es el Inicio de Finzo recién
+   * abierto — y verlo asomar es justo lo que hace sentir "me metió en la
+   * app", que es lo que el widget existe para evitar.
+   */
+  fondoOpaco?: boolean;
+}) {
   const { t, fmt, userLanguage, monthNames, transactions, merchantLearned, addOrUpdateTransaction, showToast } =
     useAppData();
   const insets = useSafeAreaInsets();
@@ -629,7 +644,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     // un momento y se va. Tocar fuera lo cierra.
     <View className="absolute inset-0 z-50 items-center justify-center px-5">
       <TouchableOpacity
-        className="absolute inset-0 bg-black/70"
+        className={`absolute inset-0 ${fondoOpaco ? "bg-slate-950" : "bg-black/70"}`}
         activeOpacity={1}
         onPress={onClose}
       />
