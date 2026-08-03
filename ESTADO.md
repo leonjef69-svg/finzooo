@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **2 de agosto de 2026** · Código publicado: **2ago-23**
+Actualizado: **2 de agosto de 2026** · Código publicado: **2ago-24**
 
 Este archivo existe para que una sesión nueva —de Claude o de quien sea— no
 empiece de cero. No cuenta lo que ya se ve en el código ni en el historial de
@@ -90,7 +90,7 @@ Y las pruebas, con un solo comando:
 node pruebas/correr.mjs
 ```
 
-Son 36 pruebas y 7 auditores. Cada prueba nueva tiene que **fallar contra la
+Son 37 pruebas y 7 auditores. Cada prueba nueva tiene que **fallar contra la
 versión anterior**: una que pasa siempre no está probando nada. Y si la prueba
 imita código de otro lenguaje, tiene que imitar también sus reglas — ver el
 espacio duro, más abajo.

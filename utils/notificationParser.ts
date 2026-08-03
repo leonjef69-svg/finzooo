@@ -56,7 +56,16 @@ export function esAppVigilada(pkg: string): boolean {
 // propósito: exigir una palabra de dirección ya descarta casi toda la
 // publicidad, y una lista larga corre el riesgo de bloquear gastos reales
 // ("Pagaste S/20 y ganaste puntos" es un gasto de verdad).
-const NOT_A_MOVEMENT = [
+/**
+ * Avisos de SEGURIDAD: claves, códigos, confirmaciones de operación.
+ *
+ * Van aparte del resto por un motivo concreto: de estos **no se guarda el
+ * texto** en el registro de la pantalla. "Tu código de verificación es 4821"
+ * quedaba escrito en el celular y a la vista de cualquiera que lo agarrara
+ * desbloqueado. Para diagnosticar un yapeo que no entra, el texto de un
+ * código no sirve de nada.
+ */
+const AVISOS_DE_SEGURIDAD = [
   "codigo de verificacion",
   "codigo de seguridad",
   "clave temporal",
@@ -69,6 +78,11 @@ const NOT_A_MOVEMENT = [
   "operacion en curso",
   "autocompletado la clave",
   "generado y autocompletado",
+];
+
+// Ruido con monto: sorteos, promociones, préstamos. Se descarta igual, pero
+// su texto sí se guarda: no tiene nada delicado y ayuda a ver qué llegó.
+const RUIDO_CON_MONTO = [
   "sorteo",
   "promocion",
   "encuesta",
@@ -76,6 +90,20 @@ const NOT_A_MOVEMENT = [
   "pre aprobado",
   "solicita tu",
 ];
+
+const NOT_A_MOVEMENT = [...AVISOS_DE_SEGURIDAD, ...RUIDO_CON_MONTO];
+
+/**
+ * ¿Es un aviso de clave o de confirmación de operación?
+ *
+ * Se usa para anotar que llegó **sin dejar su texto escrito**. Sigue
+ * apareciendo en la pantalla, y eso importa: si un yapeo dejara de entrar por
+ * confundirse con uno de estos, hay que poder verlo.
+ */
+export function esAvisoDeSeguridad(title: string, text: string): boolean {
+  const normalizado = normalizeHeader(`${title ?? ""} ${text ?? ""}`);
+  return AVISOS_DE_SEGURIDAD.some((hint) => normalizado.includes(hint));
+}
 
 // Entró dinero. Se revisan ANTES que los gastos porque algunas frases
 // ("pago recibido") contienen palabras que también aparecen en gastos.

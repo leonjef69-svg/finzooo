@@ -57,6 +57,8 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
   // viven: el servicio los consulta aunque Finzo este cerrada.
   const [hablar, setHablar] = useState(() => notificationReader.isSpeakEnabled());
   const [hablarSalidas, setHablarSalidas] = useState(() => notificationReader.isSpeakOutgoing());
+  // El diagnóstico viene cerrado: sirve cuando algo falla, no cada día.
+  const [verDetalles, setVerDetalles] = useState(false);
   useEffect(() => {
     if (!autoCaptureSupported) return;
     const timer = setInterval(() => setStats(notificationReader.stats()), 3000);
@@ -233,30 +235,56 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                 </Text>
               </View>
 
-              <View className="flex-row items-center justify-between">
-                <Text className="text-[11px] text-slate-500 dark:text-slate-300">
-                  {t("autoCapture.statusSeen")}
+              {/* EL RESTO, DETRÁS DE UN TOQUE.
+                  El contador de avisos, el nombre del paquete y el motivo de
+                  la voz son para cuando algo falla, no para el uso diario:
+                  ocupaban media pantalla todos los días para servir un rato
+                  cada mes. Siguen ahí, a un toque. */}
+              <TouchableOpacity
+                onPress={() => setVerDetalles((v) => !v)}
+                className="mt-2.5 py-1"
+              >
+                <Text className="text-[11px] font-bold text-slate-400 dark:text-slate-500">
+                  {t(verDetalles ? "autoCapture.statusHide" : "autoCapture.statusDetails")}
                 </Text>
-                <Text className="text-[11px] font-bold text-slate-900 dark:text-slate-100">
-                  {stats.totalSeen}
-                </Text>
-              </View>
+              </TouchableOpacity>
 
-              {stats.lastPackage ? (
-                <Text className="text-[10px] text-slate-400 mt-2" numberOfLines={1}>
-                  {t("autoCapture.statusLast", { app: stats.lastPackage })}
-                </Text>
-              ) : null}
+              {verDetalles && (
+                <View className="mt-2 pt-3 border-t-[1.5px] border-slate-100 dark:border-slate-700">
+                  <View className="flex-row items-center justify-between">
+                    <Text className="text-[11px] text-slate-500 dark:text-slate-300">
+                      {t("autoCapture.statusSeen")}
+                    </Text>
+                    <Text className="text-[11px] font-bold text-slate-900 dark:text-slate-100">
+                      {stats.totalSeen}
+                    </Text>
+                  </View>
 
-              <Text className="text-[10px] leading-4 text-slate-400 mt-3">
-                {t(
-                  stats.totalSeen === 0
-                    ? "autoCapture.statusHelpNone"
-                    : stats.queued > 0
-                      ? "autoCapture.statusHelpQueued"
-                      : "autoCapture.statusHelpSeen"
-                )}
-              </Text>
+                  {stats.lastPackage ? (
+                    <Text className="text-[10px] text-slate-400 mt-2" numberOfLines={1}>
+                      {t("autoCapture.statusLast", { app: stats.lastPackage })}
+                    </Text>
+                  ) : null}
+
+                  {/* POR QUÉ HABLÓ O SE CALLÓ. Vive aquí y no junto al
+                      interruptor: es diagnóstico, igual que lo de arriba. */}
+                  {motivoVoz !== "" && (
+                    <Text className="text-[10px] text-slate-400 mt-2">
+                      {t("autoCapture.speakLast")}: {motivoVoz}
+                    </Text>
+                  )}
+
+                  <Text className="text-[10px] leading-4 text-slate-400 mt-3">
+                    {t(
+                      stats.totalSeen === 0
+                        ? "autoCapture.statusHelpNone"
+                        : stats.queued > 0
+                          ? "autoCapture.statusHelpQueued"
+                          : "autoCapture.statusHelpSeen"
+                    )}
+                  </Text>
+                </View>
+              )}
 
               {!stats.connected && (
                 <TouchableOpacity
@@ -323,22 +351,6 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                   </View>
                 )}
 
-                {/* POR QUÉ HABLÓ O SE CALLÓ.
-                    Un yapeo de verdad llegó y el celular no dijo nada. Desde
-                    fuera eso se ve idéntico esté la voz apagada, no se
-                    reconozca el monto o se tome por un pago tuyo — y
-                    distinguirlo costó un día entero. Ahora lo dice la
-                    pantalla. */}
-                {motivoVoz !== "" && (
-                  <View className="mt-3.5 pt-3.5 border-t-[1.5px] border-slate-100 dark:border-slate-700">
-                    <Text className="text-[11px] font-bold text-slate-400 dark:text-slate-500">
-                      {t("autoCapture.speakLast")}
-                    </Text>
-                    <Text className="text-[11px] text-slate-600 dark:text-slate-300 mt-0.5">
-                      {motivoVoz}
-                    </Text>
-                  </View>
-                )}
               </View>
             )}
 
@@ -384,8 +396,14 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                       </Text>
                       <Text className="text-[10px] text-slate-400">{fmtTime(entry.at)}</Text>
                     </View>
-                    <Text className="text-[11px] leading-4 text-slate-500 dark:text-slate-300">
-                      {entry.text}
+                    {/* Sin texto = era un aviso de clave. Se anota que llegó,
+                        pero su frase no se guarda en el celular. */}
+                    <Text
+                      className={`text-[11px] leading-4 ${
+                        entry.text ? "text-slate-500 dark:text-slate-300" : "italic text-slate-400"
+                      }`}
+                    >
+                      {entry.text || t("autoCapture.logHidden")}
                     </Text>
                   </View>
                 ))}

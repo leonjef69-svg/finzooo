@@ -10,7 +10,12 @@
 
 import { matchMethod } from "@/utils/importEngine";
 import { findBestMatch } from "@/utils/duplicates";
-import { parseNotification, esAppVigilada, type ParseFailure } from "@/utils/notificationParser";
+import {
+  parseNotification,
+  esAppVigilada,
+  esAvisoDeSeguridad,
+  type ParseFailure,
+} from "@/utils/notificationParser";
 import { suggestCategory } from "@/utils/classifier";
 import { nextId } from "@/utils/id";
 import { horaDe } from "@/utils/format";
@@ -74,7 +79,14 @@ export function processCaptured(
     const parsed = parseNotification(n);
 
     if (!parsed.ok) {
-      log.push({ at: n.postedAt, text: preview, result: parsed.reason });
+      // DE UN AVISO DE CLAVE NO SE GUARDA EL TEXTO.
+      //
+      // Sigue apareciendo en la pantalla —si un yapeo dejara de entrar por
+      // confundirse con uno de estos, hay que poder verlo— pero sin la frase.
+      // "Tu código de verificación es 4821" quedaba escrito en el celular y a
+      // la vista de cualquiera que lo agarrara desbloqueado.
+      const delicado = esAvisoDeSeguridad(n.title, n.text);
+      log.push({ at: n.postedAt, text: delicado ? "" : preview, result: parsed.reason });
       continue;
     }
 
