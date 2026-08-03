@@ -54,6 +54,15 @@ class NotificationReaderModule : Module() {
     // Interruptor propio de Finzo, independiente del permiso de Android.
     Function("isEnabled") { NotificationStore.isEnabled(context) }
 
+    // SOLO PARA SABER QUE APK ESTA INSTALADO.
+    //
+    // No hace nada: existir ya es la respuesta. Los APK del 2 de agosto por la
+    // tarde traen la voz, pero solo a partir de este habla SIN ESPERA —motor
+    // precalentado y en su propio hilo—. Sin una marca que los distinga, el
+    // usuario dice "sigue tardando" y no hay forma de saber si el arreglo
+    // llego a instalarse o si no sirvio. Eso ya paso hoy.
+    Function("vozSinEspera") { true }
+
     Function("isSpeakEnabled") { NotificationStore.isSpeakEnabled(context) }
 
     Function("setSpeakEnabled") { value: Boolean ->

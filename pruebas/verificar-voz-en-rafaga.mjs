@@ -56,8 +56,20 @@ console.log("\n--- Y NO SE PISAN POR VENIR DE HILOS DISTINTOS ---");
 {
   // onNotificationPosted lo llama Android desde hilos distintos. Dos avisos a
   // la vez tocando la misma cola es justo lo que rompe en una rafaga.
-  ok(/Handler\(Looper\.getMainLooper\(\)\)/.test(kt), "todo lo de la voz pasa por un solo hilo");
+  ok(/private val mano = Handler\(hiloVoz\.looper\)/.test(kt), "todo lo de la voz pasa por un solo hilo");
   ok(/mano\.post \{/.test(kt), "incluido lo que llega desde el servicio");
+}
+
+console.log("\n--- Y ESE HILO NO ES EL DE LA PANTALLA ---");
+{
+  // Estaba en el hilo principal, que es donde Android dibuja y donde Finzo se
+  // despierta para registrar el yapeo. Al llegar un yape pasan las dos cosas a
+  // la vez, y hablar quedaba EN LA COLA detras de todo ese trabajo: la
+  // notificacion aparecia y la voz llegaba segundos despues.
+  ok(!kt.includes("Looper.getMainLooper()"), "la voz NO va por el hilo principal");
+  ok(/HandlerThread\("finzo-voz"\)/.test(kt), "tiene su propio hilo");
+  ok(/\.apply \{ start\(\) \}/.test(kt), "arrancado al crearse, no a la primera frase");
+  ok(/hiloVoz\.quitSafely\(\)/.test(kt), "y se cierra si Android tira el servicio");
 }
 
 console.log("\n--- EL MOTOR SE QUEDA CALIENTE: LA VOZ, SIN ESPERA ---");

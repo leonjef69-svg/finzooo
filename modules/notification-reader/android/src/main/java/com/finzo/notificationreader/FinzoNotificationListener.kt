@@ -6,7 +6,7 @@ import com.facebook.react.HeadlessJsTaskService
 import android.media.AudioManager
 import android.os.Bundle
 import android.os.Handler
-import android.os.Looper
+import android.os.HandlerThread
 import android.speech.tts.TextToSpeech
 import java.util.Locale
 import android.content.ComponentName
@@ -36,10 +36,21 @@ class FinzoNotificationListener : NotificationListenerService() {
   // hablaban A LA VEZ y no se entendia ninguno. En un negocio, con varios
   // yapes en un minuto, eso es ruido.
   //
-  // Todo lo de la voz pasa por este Handler, que es el hilo principal: las
-  // notificaciones llegan por hilos distintos y la cola no es a prueba de
-  // dos a la vez.
-  private val mano = Handler(Looper.getMainLooper())
+  // Y TODO ESTO EN SU PROPIO HILO, NO EN EL PRINCIPAL.
+  //
+  // Estaba en el hilo principal, que es el mismo donde Android dibuja y donde
+  // Finzo se despierta para registrar el yapeo. Al llegar un yape pasan las
+  // dos cosas a la vez, y hablar se ponia EN LA COLA detras de todo ese
+  // trabajo: la notificacion aparecia y la voz llegaba segundos despues.
+  //
+  // La voz no tiene nada que ver con la pantalla, asi que no tiene por que
+  // esperar a la pantalla. Con su propio hilo sale en cuanto llega el aviso,
+  // sin importar lo ocupada que este la app.
+  //
+  // Sigue habiendo UN solo hilo para la voz —no uno por aviso— porque la cola
+  // se toca desde varios sitios y dos a la vez la romperian.
+  private val hiloVoz = HandlerThread("finzo-voz").apply { start() }
+  private val mano = Handler(hiloVoz.looper)
   private var motor: TextToSpeech? = null
   private var vozLista = false
   private val porDecir = ArrayDeque<String>()
@@ -69,10 +80,11 @@ class FinzoNotificationListener : NotificationListenerService() {
     }
   }
 
-  // Android tira el servicio: no dejar un motor de voz colgando.
+  // Android tira el servicio: no dejar un motor de voz ni un hilo colgando.
   override fun onDestroy() {
     try {
       soltarVoz()
+      hiloVoz.quitSafely()
     } catch (e: Throwable) {
       // Nunca estorbar el cierre del servicio.
     }

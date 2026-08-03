@@ -46,6 +46,7 @@ type NativeShape = {
   clear: () => Promise<void>;
   stats: () => string;
   requestRebind: () => boolean;
+  vozSinEspera: () => boolean;
   addListener: (evento: string, cb: () => void) => { remove: () => void };
 };
 
@@ -242,6 +243,16 @@ export const canSpeak = isSupported && typeof Native?.isSpeakEnabled === "functi
  *
  * Se detecta por el motivo en el diagnóstico, que el anterior no manda.
  */
+/**
+ * Si este APK trae la voz SIN ESPERA: motor precalentado y en su propio hilo.
+ *
+ * Los APK del 2 de agosto por la tarde ya traían la voz, pero tardaban unos
+ * segundos en hablar. Sin una marca que los distinga, "sigue tardando" no dice
+ * si el arreglo llegó a instalarse o si no sirvió — y averiguarlo cuesta un
+ * yapeo de verdad y otra ronda entera.
+ */
+export const hasVozSinEspera = typeof Native?.vozSinEspera === "function";
+
 export const hasSpeakReason = (() => {
   if (!canSpeak) return false;
   try {

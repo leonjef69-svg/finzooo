@@ -25,7 +25,7 @@ const APP_VERSION = "1.0.0";
  * La versión de la app (1.0.0) no sirve para esto: no cambia entre entregas.
  * Esta sí.
  */
-const CODE_MARKER = "2ago-30";
+const CODE_MARKER = "2ago-31";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast } = useAppData();
@@ -134,7 +134,11 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
             {/* El APK del 2 de agosto por la mañana ya traía la voz, pero se
                 quedaba muda con un yapeo de verdad. Esta línea distingue uno
                 del otro: sin ella, el arreglo ya instalado parece no estar. */}
-            {notificationReader.hasSpeakReason ? "✓" : "✗"} voz afinada
+            {notificationReader.hasSpeakReason ? "✓" : "✗"} voz afinada ·{" "}
+            {/* Y esta distingue el APK que habla SIN ESPERA de los anteriores,
+                que ya traían la voz pero tardaban unos segundos. Sin ella,
+                "sigue tardando" no dice si el arreglo llegó a instalarse. */}
+            {notificationReader.hasVozSinEspera ? "✓" : "✗"} voz al instante
           </Text>
 
           <TouchableOpacity
