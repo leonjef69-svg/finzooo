@@ -28,6 +28,69 @@ const KEY_DECOY = "finzo.lock.alt";
 
 export const PIN_LENGTH = 4;
 
+/**
+ * Cuánto puede estar la app fuera antes de volver a pedir la huella.
+ *
+ * No es cero a propósito. La app manda a Android a otras pantallas como parte
+ * de su funcionamiento normal —la cámara al escanear, el micrófono, el
+ * selector de archivos— y sobre todo: se sale a Yape y se vuelve.
+ *
+ * Estaba en 30 segundos y se quedaba corto justo ahí. Hacer un yapeo tarda
+ * más, así que al volver pedía la huella SIEMPRE. Subido a 2 minutos a
+ * petición del usuario el 02/08/2026: cubre salir a Yape, contestar un
+ * WhatsApp o mirar algo, y sigue bloqueando el celular olvidado en una mesa.
+ */
+export const GRACE_MS = 120_000;
+
+// A qué hora se salió de la app. Se guarda EN DISCO, no solo en memoria, y el
+// porqué está en recordarSalida().
+const KEY_LEFT_AT = "finzo.lock.leftAt";
+
+/**
+ * Apunta que la app se va al fondo.
+ *
+ * VA A DISCO, Y ESA ES TODA LA GRACIA.
+ *
+ * Guardarlo solo en memoria bastaba mientras Android dejara viva la app. Pero
+ * hay marcas —Honor, Huawei, Xiaomi— que la matan a los pocos segundos de
+ * mandarla al fondo. Entonces volver no es "volver": es abrir desde cero, con
+ * la memoria en blanco, y la app bloqueaba SIEMPRE aunque hubieran pasado
+ * veinte segundos.
+ *
+ * Ese era el motivo de verdad de que pidiera la huella cada vez.
+ */
+export async function recordarSalida(): Promise<void> {
+  await write(KEY_LEFT_AT, String(Date.now()));
+}
+
+export async function olvidarSalida(): Promise<void> {
+  await remove(KEY_LEFT_AT);
+}
+
+/**
+ * ¿Se salió hace tan poco que no hace falta volver a pedir la huella?
+ *
+ * ANTE LA DUDA, SE BLOQUEA. Si no hay nada guardado, si no se puede leer, o
+ * si el número no tiene sentido, devuelve false. Un fallo aquí tiene que
+ * dejar la app cerrada, nunca abierta.
+ */
+export async function salioHaceNada(): Promise<boolean> {
+  try {
+    const guardado = await read(KEY_LEFT_AT);
+    if (!guardado) return false;
+    const cuando = Number(guardado);
+    if (!Number.isFinite(cuando)) return false;
+
+    const pasado = Date.now() - cuando;
+    // El negativo importa: si alguien atrasa el reloj del celular, "pasado"
+    // sale negativo y sin esta comprobación pasaría por reciente para
+    // siempre. Se exige que esté entre cero y el margen.
+    return pasado >= 0 && pasado <= GRACE_MS;
+  } catch {
+    return false;
+  }
+}
+
 /** Qué tipo de biometría tiene este celular, para nombrarla bien en pantalla. */
 export type BiometricKind = "fingerprint" | "face" | "iris" | "none";
 

@@ -7,27 +7,20 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { isDecoyActive } from "@/utils/decoyMode";
 import { setAppLocked } from "@/utils/lockState";
 import {
+  GRACE_MS,
   PIN_LENGTH,
   biometricKind,
   isLockEnabled,
+  olvidarSalida,
   promptBiometrics,
+  recordarSalida,
+  salioHaceNada,
   verifyPin,
   type BiometricKind,
 } from "@/utils/appLock";
 
-/**
- * Cuánto puede estar la app en segundo plano antes de pedir la huella.
- *
- * No es cero a propósito. La app manda a Android a otras pantallas como
- * parte de su funcionamiento normal: la cámara al escanear una boleta, el
- * servicio de voz al usar el micrófono, el selector de archivos al importar.
- * Con cero segundos, volver de cualquiera de esas cosas pediría la huella
- * otra vez y la función acabaría estorbando más de lo que protege.
- *
- * Medio minuto cubre esos rebotes y sigue bloqueando cuando el teléfono se
- * queda solo — que es de lo que se trata.
- */
-const GRACE_MS = 30_000;
+// El margen y las dos funciones que lo recuerdan viven en utils/appLock, al
+// lado del resto del bloqueo. Aquí solo se usan.
 
 /**
  * Tapa la app entera cuando está bloqueada.
@@ -54,15 +47,45 @@ export default function AppLockGate() {
   const prompting = useRef(false);
   const leftAt = useRef<number | null>(null);
 
+  // ¿Está el candado puesto AHORA MISMO? En una "caja" porque lo mira el
+  // escuchador de abajo, que se registra una sola vez y si no vería siempre
+  // el valor del primer dibujado.
+  //
+  // Es lo que cierra este agujero: con la app YA bloqueada, salir no debe
+  // apuntar nada. Si lo apuntara, cerrar la app desde la pantalla del PIN y
+  // volver a abrirla dentro del margen la dejaría entrar sin PIN — justo al
+  // revés de para lo que sirve.
+  const lockedRef = useRef(false);
+  useEffect(() => {
+    lockedRef.current = locked;
+  }, [locked]);
+
   // Al arrancar: si el bloqueo está puesto, se bloquea antes de enseñar nada.
+  //
+  // SALVO que se acabe de salir. Android mata la app en cuanto se va al fondo
+  // en varias marcas —Honor, Huawei, Xiaomi— y entonces volver es abrir desde
+  // cero. Sin esta comprobación, la app pedía la huella aunque hubieran pasado
+  // veinte segundos, y ese era el motivo de verdad de que molestara cada vez.
+  //
+  // El margen es el mismo que estando viva: no se afloja nada, solo deja de
+  // depender de si Android tuvo a bien no matarla.
   useEffect(() => {
     let alive = true;
     (async () => {
       const on = await isLockEnabled();
       if (!alive) return;
       setEnabled(on);
-      setLocked(on);
-      if (on) setKind(await biometricKind());
+      if (on) {
+        const reciente = await salioHaceNada();
+        if (!alive) return;
+        setLocked(!reciente);
+        // Si ya no vale, se borra: una marca vieja no tiene por qué quedarse
+        // ahí esperando.
+        if (!reciente) void olvidarSalida();
+        setKind(await biometricKind());
+      } else {
+        setLocked(false);
+      }
     })();
     return () => {
       alive = false;
@@ -107,7 +130,11 @@ export default function AppLockGate() {
     if (!enabled) return;
     const sub = AppState.addEventListener("change", (next) => {
       if (next === "background" || next === "inactive") {
-        if (!prompting.current && leftAt.current === null) leftAt.current = Date.now();
+        if (!lockedRef.current && !prompting.current && leftAt.current === null) {
+          leftAt.current = Date.now();
+          // Y también en disco, por si Android mata la app antes de volver.
+          void recordarSalida();
+        }
         return;
       }
       if (next === "active") {
@@ -117,6 +144,9 @@ export default function AppLockGate() {
           setLocked(true);
           setPin("");
           setError(false);
+          // Pasado el margen ya no sirve de nada: borrarlo evita que un
+          // arranque posterior lo encuentre y se salte el candado.
+          void olvidarSalida();
         }
       }
     });
