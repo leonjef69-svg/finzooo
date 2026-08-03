@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import { Check, ChevronLeft, ImageIcon, RotateCcw } from "lucide-react-native";
+import { Camera as CameraIcon, Check, ChevronLeft, ImageIcon, RotateCcw } from "lucide-react-native";
 import CategoryAvatar from "@/components/CategoryAvatar";
 import ImageCropper from "@/components/ImageCropper";
 import { ALL_CATS, catInfo } from "@/constants/categories";
@@ -64,6 +64,29 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
     // No se usa el recorte de Android (allowsEditing) a propósito: cambia de
     // un celular a otro y en algunos no deja cuadrado. El recortador propio
     // enseña el círculo de verdad, que es como se va a ver luego.
+    setRecortando(r.assets[0].uri);
+    setAbierta(id);
+  }
+
+  /**
+   * La foto, tomada en el momento.
+   *
+   * Antes solo se podia elegir de la galeria, asi que para poner el logo de un
+   * negocio o un producto habia que fotografiarlo primero, salir a la galeria
+   * y volver. El permiso de camara ya lo tiene la app —lo usa el escaner de
+   * boletas— asi que esto no necesita un APK nuevo.
+   *
+   * Termina en el mismo recortador que la galeria: una sola forma de encuadrar
+   * y una sola de guardar.
+   */
+  async function tomarFoto(id: string) {
+    const permiso = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permiso.granted) {
+      showToast(t("catCustom.cameraPermission"));
+      return;
+    }
+    const r = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 1 });
+    if (r.canceled || !r.assets[0]) return;
     setRecortando(r.assets[0].uri);
     setAbierta(id);
   }
@@ -152,7 +175,19 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
             <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
               {t("catCustom.image")}
             </Text>
-            <View className="flex-row gap-2.5 mb-5">
+            {/* Los dos caminos, uno al lado del otro. Para el logo de un
+                negocio o un producto, tener que fotografiarlo primero, salir a
+                la galería y volver sobraba. */}
+            <View className="flex-row gap-2.5 mb-2.5">
+              <TouchableOpacity
+                onPress={() => tomarFoto(abierta)}
+                className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+              >
+                <CameraIcon size={16} color="#64748b" />
+                <Text className="text-sm font-bold text-slate-600 dark:text-slate-200">
+                  {t("catCustom.takePhoto")}
+                </Text>
+              </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => elegirImagen(abierta)}
                 className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
@@ -162,15 +197,16 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
                   {t("catCustom.pickImage")}
                 </Text>
               </TouchableOpacity>
-              {cat?.image && (
-                <TouchableOpacity
-                  onPress={() => cambiar(abierta, { image: null })}
-                  className="px-4 py-3 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700"
-                >
-                  <Text className="text-sm font-bold text-rose-500">{t("catCustom.removeImage")}</Text>
-                </TouchableOpacity>
-              )}
             </View>
+            {cat?.image && (
+              <TouchableOpacity
+                onPress={() => cambiar(abierta, { image: null })}
+                className="py-2.5 mb-3 items-center rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700"
+              >
+                <Text className="text-sm font-bold text-rose-500">{t("catCustom.removeImage")}</Text>
+              </TouchableOpacity>
+            )}
+            <View className="mb-5" />
 
             <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
               {t("catCustom.color")}

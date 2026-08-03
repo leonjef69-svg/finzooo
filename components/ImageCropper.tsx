@@ -34,6 +34,28 @@ import { useBackClose } from "@/utils/useBackClose";
 
 const VENTANA = 240;
 
+/**
+ * A cuántos píxeles se guarda la imagen recortada.
+ *
+ * Estaba en 128 y se veía como una mancha: el círculo grande de la pantalla
+ * de personalizar mide unos 64 puntos, que en un celular normal son 192
+ * píxeles reales. Se guardaba menos de lo que la pantalla iba a enseñar.
+ *
+ * PERO NO SE PUEDE SUBIR SIN MIRAR: la imagen se guarda dentro de los datos
+ * de la cuenta, y TODA la copia de la nube va en un solo documento con un
+ * tope de 1 MB. Cada imagen ocupa aproximadamente:
+ *
+ *    128 px, calidad 0.6  →   ~4 KB
+ *    256 px, calidad 0.8  →  ~18 KB
+ *    512 px, calidad 0.9  → ~110 KB   ← con seis ya se come medio MB
+ *
+ * 256 es cuatro veces más nítida y deja sitio de sobra. Si algún día se
+ * suben más, hay que mirar antes cuántas categorías con foto caben junto a
+ * los movimientos: pasarse del megabyte deja la copia sin guardarse.
+ */
+const LADO = 256;
+const CALIDAD = 0.8;
+
 // Los pasos del zoom. Cinco y no un control continuo: en un circulito de 240
 // puntos, la diferencia entre 1.6 y 1.7 no se aprecia, y con pasos se acierta
 // a la primera sin pelearse con el dedo.
@@ -138,14 +160,11 @@ export default function ImageCropper({
     setError("");
     try {
       const r = cropRect(tam.w, tam.h, zoom, pan.x, pan.y);
-      const ctx = ImageManipulator.manipulate(uri).crop(r).resize({ width: 128, height: 128 });
+      const ctx = ImageManipulator.manipulate(uri).crop(r).resize({ width: LADO, height: LADO });
       const rendered = await ctx.renderAsync();
       const saved = await rendered.saveAsync({
         base64: true,
-        // 128 px y calidad media: es un círculo pequeño dentro de la app, y
-        // esto viaja a la copia de la nube. Guardarlo grande sería pagar
-        // megas por algo que se ve igual.
-        compress: 0.6,
+        compress: CALIDAD,
         format: SaveFormat.JPEG,
       });
       if (!saved.base64) throw new Error("sin imagen");
