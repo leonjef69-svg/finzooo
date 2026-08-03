@@ -90,7 +90,7 @@ Y las pruebas, con un solo comando:
 node pruebas/correr.mjs
 ```
 
-Son 37 pruebas y 7 auditores. Cada prueba nueva tiene que **fallar contra la
+Son 38 pruebas y 7 auditores. Cada prueba nueva tiene que **fallar contra la
 versión anterior**: una que pasa siempre no está probando nada. Y si la prueba
 imita código de otro lenguaje, tiene que imitar también sus reglas — ver el
 espacio duro, más abajo.
@@ -131,6 +131,31 @@ Esto es lo pendiente de verdad, en orden de bloqueo:
    sensibles, si se mantiene esa función.
 6. **12 probadores × 14 días** en prueba cerrada, para cuentas nuevas de
    desarrollador.
+
+---
+
+## El micrófono del escritorio — se probó y se volvió atrás (02/08/2026)
+
+El widget de la pantalla de inicio **ya existía** y ya hacía lo importante:
+abre `finzo://voice` directo y el micrófono empieza a escuchar solo. Eso no se
+toca.
+
+Lo que el usuario quería era que **no se viera Finzo**: la tarjeta flotando
+sobre su fondo de pantalla. Se intentaron dos pasos intermedios —salir de
+Finzo al terminar de dictar, y tapar el fondo con un oscuro opaco— y **el
+usuario pidió deshacerlos**. Están revertidos.
+
+**No volver a proponerlos sin preguntar.** Y si algún día se retoma:
+
+- **Lo que de verdad pedía** es una segunda ventana de la app, propia y
+  transparente, que muestre solo la tarjeta. Es trabajo nativo: una Activity
+  aparte con tema translúcido, un segundo punto de entrada de React, y hay que
+  resolver el bloqueo (esa ventana no pasa por la huella) y "exporta enero"
+  (un PDF no cabe en una tarjeta flotante).
+- **Lo que NO hay que hacer nunca**: volver translúcida la ventana de toda la
+  app. Con `windowIsTranslucent`, Android deja de redimensionar la ventana con
+  el teclado, y escribir un monto o el PIN se rompe en TODAS las pantallas.
+  Es el atajo evidente y es una trampa.
 
 ---
 
