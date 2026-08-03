@@ -18,6 +18,7 @@ demás llega por actualización.
 
 | Fecha | Commit | Qué trae de nuevo (lo nativo) | Archivo |
 |---|---|---|---|
+| 02/08/2026 | `f3e9951` | La voz habla sin espera: el motor se enciende al conectar el servicio y ya no se apaga por tiempo | [APK](https://expo.dev/artifacts/eas/VT__wfJVHE1OVfXdNse9Ju32C1ZjwrzCLwrSkSYOlNo.apk) |
 | 02/08/2026 | `e77d47e` | Varios yapes seguidos hablan uno detrás de otro (antes, todos a la vez); solo Yape en la pantalla | [APK](https://expo.dev/artifacts/eas/ujCXYt2AuT6DxGw1HmcIb5i2Rov9LWJ8LiOq7NLO4n4.apk) |
 | 02/08/2026 | `ba4972c` | El yapeo se registra AL INSTANTE con la app abierta: el servicio avisa en vez de que la app pregunte cada 8 s | [APK](https://expo.dev/artifacts/eas/77nNwoRExlh1N7eGe-XGI-cfGbS-eI3R8DDNN9PaTqY.apk) |
 | 02/08/2026 | `d9d5208` | La voz vuelve a sonar con el yapeo real (el espacio duro del monto), y la pantalla dice por qué se calló | [APK](https://expo.dev/artifacts/eas/QCEnZchxy9lw_KBXlc7vafGh-xhDJqLFCP78_YFa4Co.apk) |

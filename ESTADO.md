@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **2 de agosto de 2026** · Código publicado: **2ago-24**
+Actualizado: **2 de agosto de 2026** · Código publicado: **2ago-25**
 
 Este archivo existe para que una sesión nueva —de Claude o de quien sea— no
 empiece de cero. No cuenta lo que ya se ve en el código ni en el historial de
@@ -131,6 +131,33 @@ Esto es lo pendiente de verdad, en orden de bloqueo:
    sensibles, si se mantiene esa función.
 6. **12 probadores × 14 días** en prueba cerrada, para cuentas nuevas de
    desarrollador.
+
+---
+
+## El saldo que pasa de un mes a otro — explicado el 02/08/2026
+
+Se preguntó tres veces, así que conviene tenerlo escrito: **el saldo no se
+guarda, se recalcula.** `prevBalance` suma los presupuestos de todos los meses
+anteriores más los ingresos, menos los gastos.
+
+Es un **relevo, mes a mes**: enero le pasa a febrero, febrero a marzo. Nunca
+salta. Si febrero está vacío, cierra con lo mismo que recibió — y por eso
+*parece* que enero le pasa a marzo, pero es febrero pasando lo que no tocó.
+Los mismos 300, no 300 nuevos cada mes.
+
+Como se recalcula, corregir un gasto de hace tres meses ajusta solos todos los
+meses siguientes.
+
+**Sugerido y sin respuesta: un "Ajustar saldo".** El arrastre es *presupuesto
+menos lo anotado*, no la plata real. Cada gasto sin anotar mete un error que
+nunca se corrige y se acumula: a los doce meses Finzo puede decir S/ 2.400
+cuando hay S/ 600. Se propuso poder decirle "en realidad tengo S/ X" y que
+anote la diferencia, como cuadrar caja. Es solo JavaScript.
+
+**Descartado: cortar el arrastre por año.** Castiga al que ahorró de verdad
+—borrarle lo suyo el 1 de enero es mentirle— y le perdona la deuda al que se
+pasó. Al 31 de diciembre no le pasa nada a la plata. El botón de "poner en
+cero" ya existe para cortarlo a mano cuando haga falta.
 
 ---
 
