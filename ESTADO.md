@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **2 de agosto de 2026** · Código publicado: **2ago-21**
+Actualizado: **2 de agosto de 2026** · Código publicado: **2ago-23**
 
 Este archivo existe para que una sesión nueva —de Claude o de quien sea— no
 empiece de cero. No cuenta lo que ya se ve en el código ni en el historial de
@@ -90,7 +90,7 @@ Y las pruebas, con un solo comando:
 node pruebas/correr.mjs
 ```
 
-Son 34 pruebas y 7 auditores. Cada prueba nueva tiene que **fallar contra la
+Son 36 pruebas y 7 auditores. Cada prueba nueva tiene que **fallar contra la
 versión anterior**: una que pasa siempre no está probando nada. Y si la prueba
 imita código de otro lenguaje, tiene que imitar también sus reglas — ver el
 espacio duro, más abajo.
@@ -135,6 +135,24 @@ Esto es lo pendiente de verdad, en orden de bloqueo:
 ---
 
 ## LO SIGUIENTE A HACER
+
+**Propuesto y sin respuesta: aligerar la pantalla de registro automático.**
+Más de la mitad es texto que sirve una vez y estorba siempre. Se propuso el
+02/08/2026, con las capturas delante:
+
+- El paso 1, ya concedido, encogido a una línea con su ✓
+- "Avisos vistos: 13.933", el nombre del paquete y "la voz en el último
+  aviso" detrás de un toque: es diagnóstico, no información de uso diario
+- Los textos de los dos interruptores de la voz, a una línea
+
+Quedaría en la mitad de largo sin perder nada. El párrafo de arriba y el de
+privacidad ya se acortaron.
+
+**Y solo Yape.** Decisión del 02/08/2026: fuera Plin y los catorce bancos.
+Ninguno se probó nunca con un movimiento real y el aviso de clave de
+Scotiabank se colaba en la pantalla. Para volver a meter uno hace falta un
+aviso REAL suyo — se agrega en `MONEY_APP_HINTS` (Kotlin) y `APPS_ACEPTADAS`
+(`utils/notificationParser.ts`), que una prueba obliga a mantener iguales.
 
 **Pendiente de respuesta del usuario:** el registro de diagnóstico guarda el
 TEXTO de los avisos descartados, y entre ellos van los de clave ("Tu código
@@ -190,6 +208,22 @@ De aquí salen dos reglas que valen para todo el proyecto:
    las lee del propio `.kt` en vez de copiarlas.
 2. **Cuando la voz y el registro deciden por separado, acaban discrepando.**
    Hay una prueba que comprueba que los dos vean lo mismo como monto.
+
+### Varios yapes seguidos (02/08/2026)
+
+Preguntado pensando en un negocio, y había un fallo de verdad: `hablar()`
+creaba un motor de voz **nuevo por cada aviso**. `QUEUE_ADD` encola dentro de
+SU motor, así que cinco motores son cinco colas independientes — los cinco
+yapes hablaban a la vez y no se entendía ninguno.
+
+Ahora hay **un solo motor**, se reutiliza, y las frases hacen cola de verdad.
+Lo que llega mientras arranca espera (arrancar tarda, y en una ráfaga los
+primeros avisos caen justo en ese hueco), todo pasa por el hilo principal
+—las notificaciones llegan por hilos distintos— y el motor se suelta tras un
+minuto sin nada que decir, no después de cada frase.
+
+El registro no se ralentiza: son milésimas. Lo único que va por detrás en una
+ráfaga es la voz, que habla más lento de lo que llegan los yapes.
 
 Y para que no cueste otro día: el servicio **deja anotado por qué se calló**
 (solo el motivo, nunca el texto) y la pantalla de registro automático lo
