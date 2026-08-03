@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { getOverride } from "@/utils/categoryCustom";
+import { getPropia, getPropias, type CategoriaPropia } from "@/utils/categoriasPropias";
 import {
   Utensils,
   Car,
@@ -119,7 +120,63 @@ const FALLBACK_CAT = CATS_BY_ID.get("otros") ?? EXPENSE_CATS[EXPENSE_CATS.length
  * en vez del escrito. Se asume: las claves son palabras técnicas con punto y
  * sin espacios, y nadie llama así a sus gastos.
  */
+/**
+ * Las que creó la persona, con la misma forma que las de la app.
+ *
+ * Se convierten aquí y no en cada pantalla: así "Broster" se dibuja igual que
+ * "Comida" en los 38 sitios, sin que ninguno tenga que saber que existen dos
+ * clases de categoría.
+ *
+ * El icono es el de "Otros": las propias se distinguen por su emoji o por su
+ * foto, y el icono de línea solo se usa donde no cabe ninguno de los dos.
+ */
+function comoCategoria(p: CategoriaPropia): Category {
+  return {
+    id: p.id,
+    // El nombre va TAL CUAL, no como clave de traducción. El traductor
+    // devuelve la clave cuando no la encuentra, así que un nombre escrito a
+    // mano sale escrito a mano. Igual que en la personalización.
+    label: p.nombre,
+    icon: MoreHorizontal,
+    color: p.color,
+    emoji: p.emoji,
+    image: p.image,
+  };
+}
+
+/** Las de gasto: las de la app más las que creó la persona. */
+export function gastosDisponibles(): Category[] {
+  return [...EXPENSE_CATS, ...getPropias().filter((p) => p.tipo === "expense").map(comoCategoria)];
+}
+
+/** Las de ingreso, igual. */
+export function ingresosDisponibles(): Category[] {
+  return [...INCOME_CATS, ...getPropias().filter((p) => p.tipo === "income").map(comoCategoria)];
+}
+
+/** Todas, en el mismo orden en que se enseñan. */
+export function todasDisponibles(): Category[] {
+  return [...gastosDisponibles(), ...ingresosDisponibles()];
+}
+
 export function catInfo(id: string): Category {
+  // PRIMERO las propias: su id nunca choca con las de la app —llevan su
+  // prefijo— así que buscar aquí no puede tapar ninguna de fábrica.
+  const propia = getPropia(id);
+  if (propia) {
+    const suyo = comoCategoria(propia);
+    const cambio = getOverride(id);
+    // La personalización manda también sobre las propias: quien le puso una
+    // foto a "Broster" desde la pantalla de personalizar espera verla.
+    if (!cambio) return suyo;
+    return {
+      ...suyo,
+      label: cambio.name ?? suyo.label,
+      color: cambio.color ?? suyo.color,
+      image: cambio.image ?? suyo.image,
+    };
+  }
+
   const base = CATS_BY_ID.get(id) ?? FALLBACK_CAT;
   const custom = getOverride(id);
   if (!custom) return base;
