@@ -19,7 +19,7 @@
 import fs from "fs";
 import path from "path";
 
-const RAIZ = "C:/Users/User/Videos/Fino control de gastos diarios/PresupuestoApp";
+const RAIZ = process.cwd();
 const gate = fs.readFileSync(path.join(RAIZ, "components/AppLockGate.tsx"), "utf8");
 const lock = fs.readFileSync(path.join(RAIZ, "utils/appLock.ts"), "utf8");
 

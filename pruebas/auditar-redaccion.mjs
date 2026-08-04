@@ -4,7 +4,7 @@
 
 import fs from "node:fs";
 
-const ROOT = "C:/Users/User/Videos/Fino control de gastos diarios/PresupuestoApp";
+const ROOT = process.cwd();
 const src = fs.readFileSync(`${ROOT}/constants/i18n.ts`, "utf8");
 const lines = src.split(/\r?\n/);
 

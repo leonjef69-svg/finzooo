@@ -16,7 +16,6 @@ import {
   Lock,
   PiggyBank,
   PieChart,
-  Globe,
   Coins,
   MapPin,
   Bell,
@@ -38,7 +37,6 @@ import ThemeToggleButton from "@/components/ThemeToggleButton";
 import Toggle from "@/components/Toggle";
 import { currencyLabelFor } from "@/constants/currencies";
 import { countryFor } from "@/constants/countries";
-import { languageLabelFor } from "@/constants/i18n";
 import { useAppData } from "@/contexts/AppDataContext";
 
 // Achica y comprime la foto antes de guardarla, para que no pese mucho
@@ -383,19 +381,19 @@ export default function Settings({
             </View>
           }
         />
-        {/* PAÍS primero, porque pone el idioma y la moneda de una vez. Los dos
-            de abajo siguen ahí para el caso raro pero real: quien vive en un
-            sitio y prefiere la app en otro idioma, o cobra en otra moneda. */}
+        {/* EL PAÍS MANDA. Pone el idioma y la moneda de una vez.
+            La fila de Idioma se quitó el 03/08/2026 a petición del usuario:
+            eligiendo Perú la app tiene que quedar en español y punto, sin un
+            segundo ajuste que pueda contradecirlo.
+
+            Lo que se pierde es el caso raro —vivir en Perú y querer la app en
+            inglés— y se acepta a cambio de que no pueda quedar una mezcla que
+            nadie eligió a propósito. La pantalla de idioma sigue existiendo
+            en /language por si algún día se repone. */}
         <Row
           Icon={MapPin}
           label={`${t("settings.country")}${paisActual ? ` · ${t(paisActual.label)}` : ""}`}
           onPress={onCountry}
-          right={<ChevronRight size={16} color="#cbd5e1" />}
-        />
-        <Row
-          Icon={Globe}
-          label={`${t("settings.language")} · ${languageLabelFor(userLanguage)}`}
-          onPress={onLanguage}
           right={<ChevronRight size={16} color="#cbd5e1" />}
         />
         <Row

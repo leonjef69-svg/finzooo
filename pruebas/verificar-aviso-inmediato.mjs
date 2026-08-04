@@ -19,7 +19,7 @@
 import fs from "fs";
 import path from "path";
 
-const RAIZ = "C:/Users/User/Videos/Fino control de gastos diarios/PresupuestoApp";
+const RAIZ = process.cwd();
 const KT = path.join(RAIZ, "modules/notification-reader/android/src/main/java/com/finzo/notificationreader");
 
 let fallos = 0;

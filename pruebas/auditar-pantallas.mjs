@@ -9,7 +9,7 @@
 import fs from "fs";
 import path from "path";
 
-const RAIZ = "C:/Users/User/Videos/Fino control de gastos diarios/PresupuestoApp";
+const RAIZ = process.cwd();
 const problemas = [];
 const fallo = (donde, que) => problemas.push(`${donde}: ${que}`);
 

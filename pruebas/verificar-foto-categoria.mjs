@@ -21,7 +21,7 @@
 import fs from "fs";
 import path from "path";
 
-const RAIZ = "C:/Users/User/Videos/Fino control de gastos diarios/PresupuestoApp";
+const RAIZ = process.cwd();
 
 let fallos = 0;
 function ok(c, m) {

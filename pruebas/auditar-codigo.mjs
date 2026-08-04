@@ -7,7 +7,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const ROOT = "C:/Users/User/Videos/Fino control de gastos diarios/PresupuestoApp";
+const ROOT = process.cwd();
 const i18n = fs.readFileSync(path.join(ROOT, "constants/i18n.ts"), "utf8");
 const claves = new Set([...i18n.matchAll(/^\s*"([^"]+)":/gm)].map((m) => m[1]));
 

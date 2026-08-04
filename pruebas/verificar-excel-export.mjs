@@ -1,7 +1,7 @@
 // El Excel que se EXPORTA: que salga con columnas y con los montos como
 // numeros, no como texto. Es la diferencia con el CSV que habia antes.
 import { createRequire } from "module";
-const ROOT = "C:/Users/User/Videos/Fino control de gastos diarios/PresupuestoApp";
+const ROOT = process.cwd();
 const require = createRequire(`${ROOT}/package.json`);
 const XLSX = require("xlsx");
 

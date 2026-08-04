@@ -25,7 +25,7 @@ import path from "path";
 import { mergeCaptureLog } from "@/utils/mergeTransactions";
 import type { CaptureLogEntry } from "@/utils/autoCapture";
 
-const RAIZ = "C:/Users/User/Videos/Fino control de gastos diarios/PresupuestoApp";
+const RAIZ = process.cwd();
 
 let fallos = 0;
 function ok(c: boolean, m: string) {

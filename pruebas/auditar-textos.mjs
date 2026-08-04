@@ -10,7 +10,7 @@
 import fs from "node:fs";
 import path from "node:path";
 
-const ROOT = "C:/Users/User/Videos/Fino control de gastos diarios/PresupuestoApp";
+const ROOT = process.cwd();
 const i18nPath = path.join(ROOT, "constants/i18n.ts");
 const src = fs.readFileSync(i18nPath, "utf8");
 const lines = src.split(/\r?\n/);
