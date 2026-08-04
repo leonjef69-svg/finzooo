@@ -172,7 +172,7 @@ export default function History({
                     className="flex-row items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl p-3 border-[1.5px] border-slate-200 dark:border-slate-700"
                     style={CARD_SHADOW}
                   >
-                    <IconBadge Icon={c.icon} color={c.color} />
+                    <IconBadge Icon={c.icon} color={c.color} image={c.image} />
                     <View className="flex-1 min-w-0">
                       <Text
                         className="text-sm font-bold"

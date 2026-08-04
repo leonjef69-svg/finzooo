@@ -44,3 +44,12 @@ app-example
 
 # Restos de empaquetar las pruebas
 tmp/
+
+# Lo que deja la compilacion local de Android.
+#
+# Al compilar en la PC, Gradle crea estas carpetas dentro de cada modulo
+# nativo. Traen archivos con rutas larguisimas que en Windows revientan
+# "git add" con "Filename too long" — y entonces no se puede ni guardar un
+# cambio de una linea hasta darse cuenta de que la culpa es de esto.
+modules/*/android/build/
+modules/*/android/.cxx/

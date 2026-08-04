@@ -48,7 +48,7 @@ export default function Detail({
       </View>
 
       <View className="px-6 items-center pt-4 pb-6">
-        <IconBadge Icon={c.icon} color={c.color} size={64} />
+        <IconBadge Icon={c.icon} color={c.color} size={64} image={c.image} />
         <Text
           className={`text-3xl font-extrabold mt-4 ${
             transaction.type === "expense" ? "text-rose-500" : "text-emerald-600"

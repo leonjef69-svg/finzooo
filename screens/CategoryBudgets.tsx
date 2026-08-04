@@ -52,7 +52,7 @@ export default function CategoryBudgets({ onBack }: { onBack: () => void }) {
             return (
               <View key={c.id} className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-3 border-[1.5px] border-slate-200 dark:border-slate-700">
                 <View className="flex-row items-center gap-3">
-                  <IconBadge Icon={c.icon} color={c.color} size={38} />
+                  <IconBadge Icon={c.icon} color={c.color} size={38} image={c.image} />
                   <Text
                     className="flex-1 text-sm font-bold"
                     style={{ color: primaryTextColor }}

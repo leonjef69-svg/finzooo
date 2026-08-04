@@ -474,7 +474,7 @@ export default function Home({
                     ) : (
                       <Circle size={22} color="#cbd5e1" />
                     ))}
-                  <IconBadge Icon={c.icon} color={c.color} />
+                  <IconBadge Icon={c.icon} color={c.color} image={c.image} />
                   <View className="flex-1 min-w-0">
                     <Text
                       className="text-base font-bold"
