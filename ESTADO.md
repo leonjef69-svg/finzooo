@@ -413,9 +413,25 @@ Ver [ENTREGAS.md](ENTREGAS.md).
   70 MB y git guarda **todas** las versiones para siempre: diez entregas serían
   700 MB que se descargan enteros en cada clon. Lo que sí está aquí son los
   enlaces y de qué commit salió cada uno, que es lo que hace falta saber.
-- **La llave que firma la app** está en los servidores de Expo. Es lo correcto
-  —no debe estar en git— pero si se pierde el acceso a esa cuenta, la app **no
-  se puede volver a actualizar en Play Store nunca más**. Habría que publicarla
-  como una app distinta y los usuarios perderían sus datos.
+- **La llave que firma la app** está en los servidores de Expo. Es lo correcto:
+  no debe estar en git.
+
+  Aquí decía que perder el acceso a esa cuenta dejaba la app **sin poder
+  actualizarse en Play Store nunca más**. Eso está **desfasado** y corregido el
+  02/08/2026, porque asustaba de más y una nota que asusta de más hace tomar
+  malas decisiones.
+
+  Con **Play App Signing** —lo normal en una app nueva de hoy— Google guarda
+  una copia de la llave de verdad: se firma con una llave "de subida" y ellos
+  vuelven a firmar. Si esa llave de subida se pierde, **se puede pedir a Google
+  que la reponga**. Es un trámite, no el fin.
+
+  Lo que sigue siendo cierto: hay que cuidarla, y perderla cuesta tiempo y
+  papeleo. Si algún día se compila en local, la llave pasa a ser un archivo del
+  usuario y **hay que guardarle dos copias** (nube y USB). Ahí está mejor que
+  hoy, porque hoy no se puede tener copia de nada.
+
+  Y mientras Finzo **no esté publicada**, perder la llave solo obliga a
+  desinstalar y reinstalar. El problema serio empieza el día de la publicación.
 - **Los datos del usuario**: movimientos, contactos y presupuestos están solo
   en su celular, cifrados, y en su copia de nube. Nunca en el repositorio.
