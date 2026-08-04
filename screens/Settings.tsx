@@ -19,7 +19,6 @@ import {
   Globe,
   Coins,
   MapPin,
-  Palette,
   Bell,
   KeyRound,
   Pencil,
@@ -297,13 +296,14 @@ export default function Settings({
             </View>
           }
         />
-        {/* Justo debajo de Exportar, porque es lo mismo pero con horario. */}
-        <Row
-          Icon={Palette}
-          label={t("catCustom.rowLabel")}
-          onPress={onCategoryStyle}
-          right={<ChevronRight size={16} color="#cbd5e1" />}
-        />
+        {/* AQUÍ ESTABA "PERSONALIZAR CATEGORÍAS".
+            Quitada a petición del usuario el 03/08/2026: no le servía y
+            ocupaba sitio en un menú ya largo.
+
+            La pantalla NO se borró: sigue en screens/CategoryCustomize y en
+            la ruta /category-style, y lo que cada quien tuviera
+            personalizado se sigue aplicando. Solo se quitó la puerta de
+            entrada, que es lo reversible. */}
         <Row
           Icon={CalendarClock}
           label={t("schedExport.settingsRow")}
