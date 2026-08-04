@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **2 de agosto de 2026** · Código publicado: **2ago-31**
+Actualizado: **3 de agosto de 2026** · Código instalado: **3ago-01** (viene en el APK, no publicado)
 
 Este archivo existe para que una sesión nueva —de Claude o de quien sea— no
 empiece de cero. No cuenta lo que ya se ve en el código ni en el historial de
@@ -35,6 +35,47 @@ Dos caminos, y confundirlos cuesta horas:
 **El código nativo NO viaja por actualización.** Todo lo que toque
 `modules/*/android/` necesita APK nuevo. Esto se olvidó varias veces y se
 arregló dos veces lo mismo.
+
+### AHORA SE COMPILA EN LA PC DEL USUARIO (03/08/2026)
+
+Se agotaron las compilaciones de Expo del mes y no se podía esperar al día 1,
+así que se montó la compilación local. **Funciona y ya no hay límite.** Expo
+sigue disponible cuando vuelva su cupo; los dos caminos conviven.
+
+```
+C:\finzo\android\compilar.bat
+```
+
+Ese `.bat` pone `ANDROID_HOME` y `JAVA_HOME` (el Java que trae Android
+Studio) y lanza `gradlew assembleRelease --max-workers=3`. El APK sale en
+`android/app/build/outputs/apk/release/`.
+
+**Cuatro cosas costaron esta primera vez, y ninguna es obvia:**
+
+1. **El proyecto tuvo que MOVERSE a `C:\finzo`.** Estaba en
+   `Videos\Fino control de gastos diarios\PresupuestoApp` y las rutas del
+   código C++ de `react-native-safe-area-context` pasaban de los 260
+   caracteres que admite Windows. Un atajo corto (junction) **no basta**:
+   Gradle resuelve la ruta real por su cuenta. Hubo que mover de verdad.
+2. **Memoria.** `MaxMetaspaceSize=512m` no llega: muere en
+   `compileReleaseKotlin` con "Metaspace" tras 1.276 de 1.308 tareas. Está
+   subido a `-Xmx4096m -XX:MaxMetaspaceSize=2048m` en
+   `android/gradle.properties` — ojo, ese archivo lo regenera `prebuild`.
+3. **El canal de actualizaciones.** EAS lo inyecta desde `eas.json`; gradle
+   no. Sin él la app compila bien pero **no puede buscar actualizaciones**
+   ("checkForUpdateAsync has been rejected"). Resuelto pasándolo a
+   `app.json` → `updates.requestHeaders`, que sí lo lee el prebuild.
+4. **`git add -A` falla** tras compilar: las carpetas de Gradle dentro de
+   `modules/*/android/build` traen rutas larguísimas y Windows revienta con
+   "Filename too long". Ya están en `.gitignore`.
+
+**La llave de firma** está en `C:\Users\User\finzo-llave\` (bajada de Expo) y
+la referencian `FINZO_*` en `android/gradle.properties`. El APK sale firmado
+igual que los de Expo — comprobado: SHA-1 `3D:F8:...:8B:3D` — así que se
+instala encima sin desinstalar. **Esa carpeta necesita copia de seguridad.**
+
+**El APK local pesa 163 MB** contra los ~70 MB de Expo, porque lleva las
+cuatro arquitecturas. Se puede reducir; no se ha hecho.
 
 ### LAS COMPILACIONES SE ACABAN. JUNTAR LO NATIVO.
 

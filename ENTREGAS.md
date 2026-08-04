@@ -4,6 +4,12 @@ Qué se le dio al usuario y cuándo. Los archivos viven en Expo; aquí están lo
 enlaces y **de qué commit salió cada uno**, que es lo que permite saber qué
 lleva dentro una versión instalada.
 
+Carpeta del proyecto: `C:\finzo` — se movió ahí el 03/08/2026 porque las rutas
+largas rompían la compilación local. El porqué, en ESTADO.md.
+
+El APK se compila en la PC: `android\compilar.bat`. Los de Expo siguen
+valiendo cuando haya cupo.
+
 Proyecto en Expo: `expo.dev/accounts/asdsadasd23213/projects/finzo`
 Canal y rama de actualizaciones: `preview` · Versión de ejecución: `1.0.0`
 
@@ -18,6 +24,7 @@ demás llega por actualización.
 
 | Fecha | Commit | Qué trae de nuevo (lo nativo) | Archivo |
 |---|---|---|---|
+| 03/08/2026 | `b3f7e4e` | La voz habla sin espera (hilo propio). **Primer APK compilado en la PC** — en Descargas, no en Expo | `finzo-3ago-02.apk` |
 | 02/08/2026 | `f3e9951` | La voz habla sin espera: el motor se enciende al conectar el servicio y ya no se apaga por tiempo | [APK](https://expo.dev/artifacts/eas/VT__wfJVHE1OVfXdNse9Ju32C1ZjwrzCLwrSkSYOlNo.apk) |
 | 02/08/2026 | `e77d47e` | Varios yapes seguidos hablan uno detrás de otro (antes, todos a la vez); solo Yape en la pantalla | [APK](https://expo.dev/artifacts/eas/ujCXYt2AuT6DxGw1HmcIb5i2Rov9LWJ8LiOq7NLO4n4.apk) |
 | 02/08/2026 | `ba4972c` | El yapeo se registra AL INSTANTE con la app abierta: el servicio avisa en vez de que la app pregunte cada 8 s | [APK](https://expo.dev/artifacts/eas/77nNwoRExlh1N7eGe-XGI-cfGbS-eI3R8DDNN9PaTqY.apk) |
