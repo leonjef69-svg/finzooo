@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **3 de agosto de 2026** · Código instalado: **3ago-01** (viene en el APK, no publicado)
+Actualizado: **3 de agosto de 2026** · Código publicado: **3ago-03**
 
 Este archivo existe para que una sesión nueva —de Claude o de quien sea— no
 empiece de cero. No cuenta lo que ya se ve en el código ni en el historial de
@@ -154,7 +154,7 @@ Y las pruebas, con un solo comando:
 node pruebas/correr.mjs
 ```
 
-Son 38 pruebas y 7 auditores. Cada prueba nueva tiene que **fallar contra la
+Son 39 pruebas y 7 auditores. Cada prueba nueva tiene que **fallar contra la
 versión anterior**: una que pasa siempre no está probando nada. Y si la prueba
 imita código de otro lenguaje, tiene que imitar también sus reglas — ver el
 espacio duro, más abajo.
@@ -247,25 +247,6 @@ anote la diferencia, como cuadrar caja. Es solo JavaScript.
 —borrarle lo suyo el 1 de enero es mentirle— y le perdona la deuda al que se
 pasó. Al 31 de diciembre no le pasa nada a la plata. El botón de "poner en
 cero" ya existe para cortarlo a mano cuando haga falta.
-
----
-
-## SIN PUBLICAR — RECORDÁRSELO AL USUARIO
-
-Lo pidió él expresamente el 03/08/2026: "hazme acordar".
-
-**Commit `0b5779a` está en GitHub pero NO en su celular.** Es la fila de
-Idioma quitada de Ajustes. Solo es JavaScript, así que basta un `eas update`
-y que él toque Ajustes → Buscar actualización.
-
-No se publicó en el momento porque la noche anterior una actualización dejó
-la app sin abrir —causa nunca encontrada— y se acordó publicar de a poco y
-comprobando. Ese miedo ya se disipó: el APK del 03/08 lleva ese mismo código
-dentro y la app abre bien.
-
-Lo que SÍ tiene ya en el celular, dentro del APK `finzo-3ago-02.apk`: la foto
-de la categoría en Inicio/Historial/Detalle, y "Personalizar categorías"
-fuera de Ajustes.
 
 ---
 
