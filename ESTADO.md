@@ -250,6 +250,25 @@ cero" ya existe para cortarlo a mano cuando haga falta.
 
 ---
 
+## SIN PUBLICAR — RECORDÁRSELO AL USUARIO
+
+Lo pidió él expresamente el 03/08/2026: "hazme acordar".
+
+**Commit `0b5779a` está en GitHub pero NO en su celular.** Es la fila de
+Idioma quitada de Ajustes. Solo es JavaScript, así que basta un `eas update`
+y que él toque Ajustes → Buscar actualización.
+
+No se publicó en el momento porque la noche anterior una actualización dejó
+la app sin abrir —causa nunca encontrada— y se acordó publicar de a poco y
+comprobando. Ese miedo ya se disipó: el APK del 03/08 lleva ese mismo código
+dentro y la app abre bien.
+
+Lo que SÍ tiene ya en el celular, dentro del APK `finzo-3ago-02.apk`: la foto
+de la categoría en Inicio/Historial/Detalle, y "Personalizar categorías"
+fuera de Ajustes.
+
+---
+
 ## LO SIGUIENTE A HACER
 
 **Propuesto y sin respuesta: aligerar la pantalla de registro automático.**
