@@ -65,14 +65,25 @@ console.log("\n--- Y TODAS LAS PANTALLAS SE LA PASAN ---");
   }
 }
 
-console.log("\n--- NO SE TOCO LO QUE YA FUNCIONABA ---");
+console.log("\n--- Y LOS DOS DIBUJAN LA MISMA CATEGORIA IGUAL ---");
 {
-  // CategoryAvatar ya enseñaba foto o emoji. Si alguien "unifica" los dos
-  // componentes sin querer, las pantallas de elegir categoria perderian el
-  // emoji y se llenarian de iconos grises.
+  // Hasta el 03/08/2026 aqui se exigia lo contrario: que CategoryAvatar
+  // enseñara el EMOJI. Se cambio a proposito —la misma categoria se veia con
+  // emoji al elegirla y con icono de linea en Inicio, dos caras de lo mismo—
+  // y ademas con emojis no hay forma de ofrecer mil iconos donde elegir.
+  //
+  // Una prueba que defiende una decision ya cambiada no protege: estorba, y
+  // la siguiente sesion la ve fallar y "arregla" el codigo hacia atras.
   const avatar = fs.readFileSync(path.join(RAIZ, "components/CategoryAvatar.tsx"), "utf8");
-  ok(/c\.emoji/.test(avatar), "al elegir categoria se sigue viendo el emoji");
-  ok(/c\.image/.test(avatar), "y la foto cuando la hay");
+  ok(/<c\.icon size=/.test(avatar), "al elegir categoria tambien se ve el icono");
+  ok(!/c\.emoji/.test(avatar), "y ya no el emoji");
+  ok(/c\.image/.test(avatar), "la foto sigue mandando cuando la hay");
+
+  // Los dos tienen que sacar el color del mismo sitio. Si uno usa el color de
+  // la categoria y el otro un gris fijo, la misma categoria sale de dos
+  // colores segun la pantalla.
+  ok(/COLOR_HEX_600/.test(avatar), "y el color sale de la misma tabla que en IconBadge");
+  ok(/COLOR_HEX_600/.test(badge), "IconBadge igual");
 }
 
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
