@@ -1,43 +1,32 @@
 import type { ComponentType } from "react";
-import { FontAwesome5 } from "@expo/vector-icons";
-import {
-  Utensils, UtensilsCrossed, Coffee, Pizza, Beef, Sandwich, IceCreamCone, CakeSlice,
-  Apple, Carrot, Fish, EggFried, Beer, Wine, CupSoda, Milk, Croissant, Soup, Salad,
-  Cookie, Popcorn, Candy, Ham, Drumstick,
-  Car, Bus, TrainFront, Plane, Bike, Fuel, CircleParking, TramFront, Ship, Truck,
-  CarTaxiFront, Footprints, Sailboat, Caravan, Ambulance,
-  ShoppingBag, ShoppingCart, ShoppingBasket, Store, Tag, Tags, Gift, Package, Shirt,
-  Watch, Glasses, Gem, Backpack, Baby,
-  Film, Gamepad2, Music, Tv, Ticket, Drama, Guitar, Headphones, PartyPopper, Dices,
-  Puzzle, Clapperboard, Radio, Mic, Camera, BookOpen, Palette,
-  House, Sofa, Bed, Lamp, Refrigerator, WashingMachine, ShowerHead, Toilet, Armchair,
-  DoorOpen, Wrench, Hammer, PaintRoller, Plug, Trash2, Flower2, TreePine, Blinds,
-  HeartPulse, Pill, Stethoscope, Syringe, Cross, Activity, Brain, Eye, Bandage,
-  Thermometer, Hospital,
-  GraduationCap, Book, Library, Pencil, NotebookPen, School, Calculator, Microscope, Ruler,
-  Briefcase, Laptop, TrendingUp, Crown, HandCoins, Key, Coins, Wallet, CreditCard,
-  Banknote, PiggyBank, Receipt, Landmark, ChartColumn, ChartPie, Handshake, Percent,
-  Trophy, Medal, BadgeDollarSign,
-  Zap, Droplet, Flame, Wifi, Phone, Smartphone, Signal, Cloud, Repeat, CalendarClock,
-  Router, MonitorSmartphone,
-  PawPrint, Dog, Cat, Bird, Bone, Rabbit, Turtle,
-  Dumbbell, Volleyball, WavesHorizontal, Mountain, Tent, Target, Timer,
-  Ellipsis, Star, Heart, Bookmark, Flag, MapPin, Calendar, Clock, Users, User, Shield,
-  Sparkles, Lightbulb, Rocket, Anchor, Umbrella, Snowflake, Sun,
-} from "lucide-react-native";
+import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import type { IconComponent } from "@/constants/categories";
 
 /**
  * TODOS LOS DIBUJOS QUE SE PUEDEN ELEGIR AL CREAR UNA CATEGORÍA.
  *
- * Son dos clases y se guardan distinto a propósito:
+ * TODOS SON TIPOGRAFÍA, Y ESA ES LA DECISIÓN IMPORTANTE DE ESTE ARCHIVO
  *
- *   GENÉRICOS  — dibujos de línea (lucide). Se importan uno a uno arriba, y
- *                eso NO es descuido: importar la librería entera metería 1.749
- *                iconos en la app para usar ciento y pico.
+ * Antes los genéricos eran dibujos vectoriales (lucide), importados uno a uno.
+ * Se veían muy bien y costaron cinco entregas de dolores de cabeza: armar 236
+ * dibujos vectoriales tarda cerca de un segundo en un celular normal, y ese
+ * segundo no se puede esconder. Se intentó de todo —memorizar, virtualizar la
+ * lista, darle medidas, armar por grupos— y el usuario lo encontraba siempre,
+ * porque estaba ahí:
  *
- *   MARCAS     — logos (FontAwesome). Van por NOMBRE, no importados: es una
- *                tipografía, así que agregar una marca más no pesa nada.
+ *   "deslizo rápidamente y los iconos no cargan, los iconos ya deberían estar
+ *    ahí fijos"  (05/08/2026)
+ *
+ * Una tipografía no se arma: se pinta, como una letra. Los 236 salen de una y
+ * no hay nada que cargar nunca. Los logos de marca ya funcionaban así y nunca
+ * dieron un solo problema — eso fue la pista.
+ *
+ * Lo que se paga: los dibujos no son idénticos a los de antes. Son de línea
+ * igual y del mismo estilo, pero no los mismos trazos.
+ *
+ * LOS IDENTIFICADORES NO CAMBIAN. Una categoría guardada dice `icono: "Coffee"`,
+ * y sigue diciéndolo. Renombrarlos habría dejado sin dibujo a todas las
+ * categorías que la persona ya creó, y a las copias de nube viejas.
  *
  * ---- POR QUÉ NO HAY NI UN LOGO DE BANCO ----
  *
@@ -101,31 +90,118 @@ function logo(nombre: string): IconComponent {
   return Logo;
 }
 
-const GENERICOS: Record<string, IconComponent> = {
-  Utensils, UtensilsCrossed, Coffee, Pizza, Beef, Sandwich, IceCreamCone, CakeSlice,
-  Apple, Carrot, Fish, EggFried, Beer, Wine, CupSoda, Milk, Croissant, Soup, Salad,
-  Cookie, Popcorn, Candy, Ham, Drumstick,
-  Car, Bus, TrainFront, Plane, Bike, Fuel, CircleParking, TramFront, Ship, Truck,
-  CarTaxiFront, Footprints, Sailboat, Caravan, Ambulance,
-  ShoppingBag, ShoppingCart, ShoppingBasket, Store, Tag, Tags, Gift, Package, Shirt,
-  Watch, Glasses, Gem, Backpack, Baby,
-  Film, Gamepad2, Music, Tv, Ticket, Drama, Guitar, Headphones, PartyPopper, Dices,
-  Puzzle, Clapperboard, Radio, Mic, Camera, BookOpen, Palette,
-  House, Sofa, Bed, Lamp, Refrigerator, WashingMachine, ShowerHead, Toilet, Armchair,
-  DoorOpen, Wrench, Hammer, PaintRoller, Plug, Trash2, Flower2, TreePine, Blinds,
-  HeartPulse, Pill, Stethoscope, Syringe, Cross, Activity, Brain, Eye, Bandage,
-  Thermometer, Hospital,
-  GraduationCap, Book, Library, Pencil, NotebookPen, School, Calculator, Microscope, Ruler,
-  Briefcase, Laptop, TrendingUp, Crown, HandCoins, Key, Coins, Wallet, CreditCard,
-  Banknote, PiggyBank, Receipt, Landmark, ChartColumn, ChartPie, Handshake, Percent,
-  Trophy, Medal, BadgeDollarSign,
-  Zap, Droplet, Flame, Wifi, Phone, Smartphone, Signal, Cloud, Repeat, CalendarClock,
-  Router, MonitorSmartphone,
-  PawPrint, Dog, Cat, Bird, Bone, Rabbit, Turtle,
-  Dumbbell, Volleyball, WavesHorizontal, Mountain, Tent, Target, Timer,
-  Ellipsis, Star, Heart, Bookmark, Flag, MapPin, Calendar, Clock, Users, User, Shield,
-  Sparkles, Lightbulb, Rocket, Anchor, Umbrella, Snowflake, Sun,
+/** Igual que los logos, pero de la tipografía de dibujos genéricos. */
+const DIBUJOS_HECHOS = new Map<string, IconComponent>();
+
+function dibujo(id: string, nombre: string): IconComponent {
+  const guardado = DIBUJOS_HECHOS.get(id);
+  if (guardado) return guardado;
+
+  // Se ignora strokeWidth por lo mismo que en los logos: el grosor del trazo
+  // viene en la tipografía y no se puede pedir aparte.
+  const Dibujo: ComponentType<{ size?: number; color?: string; strokeWidth?: number }> = ({
+    size = 20,
+    color = "#475569",
+  }) => <MaterialCommunityIcons name={nombre as never} size={size} color={color} />;
+  Dibujo.displayName = "Dibujo" + id;
+  DIBUJOS_HECHOS.set(id, Dibujo);
+  return Dibujo;
+}
+
+/**
+ * De identificador guardado al nombre en la tipografía.
+ *
+ * La izquierda son los identificadores de siempre y NO se tocan: es lo que hay
+ * guardado en las categorías de la persona y en sus copias de nube. La derecha
+ * es el nombre del dibujo dentro de la tipografía, y esos 172 nombres se
+ * comprobaron uno por uno contra la lista real antes de escribirlos aquí — hay
+ * una prueba que lo vuelve a comprobar, porque un nombre inventado no da error:
+ * simplemente no dibuja nada y la casilla sale vacía.
+ */
+const GENERICOS: Record<string, string> = {
+  Utensils: "silverware-fork-knife", UtensilsCrossed: "silverware", Coffee: "coffee-outline",
+  Pizza: "pizza", Beef: "food-steak", Sandwich: "hamburger", IceCreamCone: "ice-cream",
+  CakeSlice: "cake-variant-outline", Apple: "food-apple-outline", Carrot: "carrot",
+  Fish: "fish", EggFried: "egg-fried", Beer: "beer-outline", Wine: "glass-wine",
+  CupSoda: "cup-outline", Milk: "bottle-soda-outline", Croissant: "food-croissant",
+  Soup: "bowl-mix-outline", Salad: "leaf", Cookie: "cookie-outline", Popcorn: "popcorn",
+  Candy: "candy-outline", Ham: "pig-variant-outline", Drumstick: "food-drumstick-outline",
+
+  Car: "car-outline", Bus: "bus", TrainFront: "train", Plane: "airplane", Bike: "bike",
+  Fuel: "gas-station-outline", CircleParking: "parking", TramFront: "tram", Ship: "ferry",
+  Truck: "truck-outline", CarTaxiFront: "taxi", Footprints: "shoe-print",
+  Sailboat: "sail-boat", Caravan: "rv-truck", Ambulance: "ambulance",
+
+  ShoppingBag: "shopping-outline", ShoppingCart: "cart-outline", ShoppingBasket: "basket-outline",
+  Store: "store-outline", Tag: "tag-outline", Tags: "tag-multiple-outline", Gift: "gift-outline",
+  Package: "package-variant-closed", Shirt: "tshirt-crew-outline", Watch: "watch",
+  Glasses: "glasses", Gem: "diamond-stone", Backpack: "bag-personal-outline", Baby: "baby-carriage",
+
+  Film: "movie-outline", Gamepad2: "gamepad-variant-outline", Music: "music", Tv: "television",
+  Ticket: "ticket-outline", Drama: "drama-masks", Guitar: "guitar-acoustic",
+  Headphones: "headphones", PartyPopper: "party-popper", Dices: "dice-multiple-outline",
+  Puzzle: "puzzle-outline", Clapperboard: "movie-open-outline", Radio: "radio",
+  Mic: "microphone-outline", Camera: "camera-outline", BookOpen: "book-open-outline",
+  Palette: "palette-outline",
+
+  House: "home-outline", Sofa: "sofa-outline", Bed: "bed-outline", Lamp: "lamp-outline",
+  Refrigerator: "fridge-outline", WashingMachine: "washing-machine", ShowerHead: "shower-head",
+  Toilet: "toilet", Armchair: "seat-outline", DoorOpen: "door-open", Wrench: "wrench-outline",
+  Hammer: "hammer", PaintRoller: "format-paint", Plug: "power-plug-outline",
+  Trash2: "trash-can-outline", Flower2: "flower-outline", TreePine: "pine-tree", Blinds: "blinds",
+
+  HeartPulse: "heart-pulse", Pill: "pill", Stethoscope: "stethoscope", Syringe: "needle",
+  Cross: "medical-bag", Activity: "pulse", Brain: "brain", Eye: "eye-outline",
+  Bandage: "bandage", Thermometer: "thermometer", Hospital: "hospital-building",
+
+  GraduationCap: "school-outline", Book: "book-outline", Library: "bookshelf",
+  Pencil: "pencil-outline", NotebookPen: "notebook-edit-outline", School: "town-hall",
+  Calculator: "calculator", Microscope: "microscope", Ruler: "ruler",
+
+  Briefcase: "briefcase-outline", Laptop: "laptop", TrendingUp: "trending-up",
+  Crown: "crown-outline", HandCoins: "hand-coin-outline", Key: "key-outline",
+  Coins: "cash-multiple", Wallet: "wallet-outline", CreditCard: "credit-card-outline",
+  Banknote: "cash", PiggyBank: "piggy-bank-outline", Receipt: "receipt", Landmark: "bank-outline",
+  ChartColumn: "chart-bar", ChartPie: "chart-pie", Handshake: "handshake-outline",
+  Percent: "percent-outline", Trophy: "trophy-outline", Medal: "medal-outline",
+  BadgeDollarSign: "cash-check",
+
+  Zap: "flash-outline", Droplet: "water-outline", Flame: "fire", Wifi: "wifi",
+  Phone: "phone-outline", Smartphone: "cellphone", Signal: "signal", Cloud: "cloud-outline",
+  Repeat: "repeat", CalendarClock: "calendar-clock-outline", Router: "router-wireless",
+  MonitorSmartphone: "monitor-cellphone",
+
+  PawPrint: "paw-outline", Dog: "dog", Cat: "cat", Bird: "bird", Bone: "bone",
+  Rabbit: "rabbit", Turtle: "turtle",
+
+  Dumbbell: "dumbbell", Volleyball: "volleyball", WavesHorizontal: "waves",
+  Mountain: "image-filter-hdr", Tent: "tent", Target: "target", Timer: "timer-outline",
+
+  Ellipsis: "dots-horizontal", Star: "star-outline", Heart: "heart-outline",
+  Bookmark: "bookmark-outline", Flag: "flag-outline", MapPin: "map-marker-outline",
+  Calendar: "calendar-blank-outline", Clock: "clock-outline", Users: "account-group-outline",
+  User: "account-outline", Shield: "shield-outline", Sparkles: "auto-fix",
+  Lightbulb: "lightbulb-outline", Rocket: "rocket-outline", Anchor: "anchor",
+  Umbrella: "umbrella-outline", Snowflake: "snowflake", Sun: "white-balance-sunny",
+
+  // No sale en el catálogo de elegir, pero lo usa la categoría de fábrica
+  // "Otro ingreso". Estar aquí es lo que la deja del mismo estilo que el resto.
+  PlusCircle: "plus-circle-outline",
 };
+
+/**
+ * La misma tabla, para las pruebas.
+ *
+ * Está expuesta porque un nombre de tipografía mal escrito NO da error: la
+ * casilla sale vacía y nadie se entera hasta que alguien la mira. La prueba los
+ * compara con la lista real de nombres de la tipografía, uno por uno.
+ *
+ * Para dibujar se usa iconoDe, no esto.
+ */
+export const NOMBRES_EN_TIPOGRAFIA: Readonly<Record<string, string>> = GENERICOS;
+
+/** Se usa cuando el identificador guardado ya no existe. Ver iconoDe. */
+const DE_RESPALDO = "Ellipsis";
 
 /**
  * El dibujo que corresponde a un identificador guardado.
@@ -136,7 +212,9 @@ const GENERICOS: Record<string, IconComponent> = {
  */
 export function iconoDe(id: string): IconComponent {
   if (esMarca(id)) return logo(id.slice(MARCA.length));
-  return GENERICOS[id] ?? Ellipsis;
+  const nombre = GENERICOS[id];
+  if (nombre) return dibujo(id, nombre);
+  return dibujo(DE_RESPALDO, GENERICOS[DE_RESPALDO]);
 }
 
 /** Los genéricos, agrupados como se enseñan en la pantalla de elegir. */

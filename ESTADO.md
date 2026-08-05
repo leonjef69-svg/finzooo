@@ -325,7 +325,51 @@ los iconos y está lento, se siente feo al abrirlo"):
     porque al volver hay que rehacerlas. Con 236 casillas la memoria no era el
     problema; los huecos sí.
 
+### EL ARREGLO DE VERDAD: los dibujos son tipografía, no vectores (05/08/2026)
+
+**A PRUEBA. Está publicado para que el usuario lo mire y decida.** Si no le gusta
+cómo se ven, se revierte el commit y se va por el otro camino (dejar unos 70
+iconos en vez de 236, manteniendo el aspecto de antes).
+
+Cinco entregas intentando repartir el mismo segundo. El usuario lo encontraba
+siempre, y su queja final era la respuesta: *"no le das una solución real"*.
+Tenía razón — todo lo anterior escondía el coste en distintos sitios en vez de
+quitarlo.
+
+**Armar 236 dibujos vectoriales tarda cerca de un segundo, y ese segundo no se
+puede esconder.** Con `MaterialCommunityIcons` cada dibujo es una letra de una
+tipografía: no se arma, se pinta. Los 236 salen de una, sin lista virtual, sin
+cargar por partes, sin nada que aparezca después.
+
+La pista estuvo delante todo el tiempo: **los logos de marca ya eran tipografía y
+nunca dieron un solo problema.**
+
+Lo que se paga: los dibujos no son idénticos a los de lucide. Son de línea igual
+y del mismo estilo, pero no los mismos trazos.
+
+Decisiones que sostienen esto:
+
+- **Los identificadores NO cambian.** Una categoría guardada dice
+  `icono: "Coffee"` y sigue diciéndolo; hay una tabla de 173 pares
+  identificador → nombre en la tipografía. Renombrarlos habría dejado sin dibujo
+  a todas las categorías ya creadas y a las copias de nube viejas.
+- **Las categorías de fábrica también pasaron por `iconoDe`.** Antes traían su
+  dibujo a mano. Si solo hubieran cambiado las propias, "Comida" de fábrica y una
+  "Broster" creada por la persona se verían de dos estilos distintos — el mismo
+  fallo que ya pasó una vez con emoji contra icono.
+- **Un nombre de tipografía mal escrito NO da error**: la casilla sale vacía y
+  nadie se entera. Por eso los 173 se comprueban contra la lista real de la
+  tipografía (`glyphmaps/MaterialCommunityIcons.json`, 7.448 nombres), y también
+  que no haya dos ids con el mismo dibujo, que se verían idénticos en la
+  cuadrícula.
+- **Se quitó el escalonado por grupos** que se había puesto la entrega anterior.
+  Hacía falta con vectores; con tipografía solo dejaría huecos visibles si se
+  desliza en ese instante, que es justo lo que se estaba arreglando.
+
 ### La lista virtual era la herramienta equivocada, y costó cuatro entregas verlo
+
+*(Lo de abajo quedó resuelto por lo de arriba. Se conserva porque explica por qué
+no volver a intentarlo.)*
 
 Con un deslizón fuerte se quedaba en blanco **la pantalla entera**. Se probó
 todo lo que una `FlatList` ofrece para eso: `windowSize` 2, 3 y 5; tandas de 4 y

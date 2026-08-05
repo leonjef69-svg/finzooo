@@ -158,24 +158,13 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   ok(!codigo.includes("windowSize"), "ni hay reserva que un deslizon pueda agotar");
   ok(!codigo.includes("memo(function Catalogo"), "y tampoco vuelve el catalogo que los armaba todos de golpe");
 
-  // Lo unico que no se puede hacer es armarlos todos de golpe: eso tarda casi un
-  // segundo y la pantalla no abriria. Entran de a un grupo por vuelta.
-  ok(pant.includes("gruposArmados"), "los grupos entran de a uno, no todos de golpe");
-  const alAbrir = Number(/const GRUPOS_AL_ABRIR = (\d+)/.exec(pant)?.[1] ?? "999");
-  ok(alAbrir >= 2 && alAbrir <= 4, `GRUPOS_AL_ABRIR es ${alAbrir}: lo que se ve al abrir, ni mas ni menos`);
-  ok(/setTimeout\(\(\) => setGruposArmados/.test(pant), "cada grupo en su propia vuelta, sin dejar tieso el celular");
-  ok(/clearTimeout\(vuelta\)/.test(pant), "y se corta si se sale antes de terminar");
-
-  // Y mientras un grupo no esta, su hueco tiene que medir EXACTO lo que va a
-  // medir. Si midiera de menos, el contenido creceria bajo el dedo y la pantalla
-  // saltaria sola mientras los grupos entran.
-  ok(pant.includes("altoDeLasFilas(grupo, altoFila)"), "el hueco de lo que falta mide lo que va a medir");
-  // El titulo va siempre, aunque sus filas no esten: es barato, y asi al
-  // deslizar en el primer instante se ve que la seccion existe.
-  ok(
-    pant.indexOf("ALTO_TITULO") < pant.indexOf("i < gruposArmados"),
-    "el titulo del grupo sale antes de que sus filas esten armadas"
-  );
+  // Y NO SE CARGA POR PARTES. Hubo un escalonado que metia los grupos de a uno
+  // tras abrir, y hacia falta mientras los dibujos eran vectores: armarlos todos
+  // tardaba casi un segundo. Con la tipografia cada dibujo es una letra y no
+  // hace falta repartir nada; el escalonado solo dejaria huecos que se ven si se
+  // desliza en ese instante, que es lo que se estaba arreglando.
+  ok(!codigo.includes("gruposArmados"), "no se cargan por partes: estan los 236 desde el principio");
+  ok(!codigo.includes("altoDeLasFilas"), "ni hay huecos reservados que llenar despues");
 
   // 05/08/2026, con foto: "esta disparejo los iconos". Al pasar a filas de
   // cinco quedaron con ancho fijo, asi que no llegaban al borde y sobraba un
@@ -220,6 +209,66 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   ok(/animation: "slide_from_right"/.test(suya), "y entra deslizandose, no de golpe");
   ok(!/animation: "fade"/.test(suya), "sin el fundido, que se probo y no gusto");
   ok(/backgroundColor: screenBg/.test(suya), "con el fondo del tema, para que no destelle blanco");
+}
+
+console.log("\n--- LOS 173 NOMBRES DE LA TIPOGRAFIA EXISTEN DE VERDAD ---");
+{
+  // Los dibujos genericos pasaron de vectores (lucide) a tipografia
+  // (MaterialCommunityIcons) el 05/08/2026, porque armar 236 vectores tarda
+  // cerca de un segundo y ese segundo no se puede esconder — se intento cinco
+  // veces. Una tipografia se pinta como una letra.
+  //
+  // El riesgo nuevo: un nombre mal escrito NO DA ERROR. La casilla sale vacia y
+  // nadie se entera. Asi que se comparan con la lista real de la tipografia.
+  const glifos = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        RAIZ,
+        "node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/glyphmaps/MaterialCommunityIcons.json"
+      ),
+      "utf8"
+    )
+  ) as Record<string, number>;
+  ok(Object.keys(glifos).length > 1000, `la tipografia trae ${Object.keys(glifos).length} dibujos`);
+
+  const { NOMBRES_EN_TIPOGRAFIA: nombres, TODOS_LOS_GRUPOS: grupos, iconoDe: resolver2 } =
+    require("@/constants/iconos") as typeof import("@/constants/iconos");
+
+  const inventados = Object.entries(nombres).filter(([, v]) => !(v in glifos));
+  ok(
+    inventados.length === 0,
+    `los ${Object.keys(nombres).length} nombres existen en la tipografia${
+      inventados.length ? " — no existen: " + inventados.map(([k, v]) => `${k}->${v}`).join(", ") : ""
+    }`
+  );
+
+  // Y al reves: todo id que se pueda ELEGIR tiene que tener su nombre. Sin el,
+  // esa casilla del catalogo sale con los puntos suspensivos de respaldo.
+  const idsElegibles = grupos.flatMap((g) => g.iconos).filter((id) => !id.startsWith("marca:"));
+  const sinNombre = idsElegibles.filter((id) => !nombres[id]);
+  ok(
+    sinNombre.length === 0,
+    `los ${idsElegibles.length} dibujos del catalogo tienen nombre${sinNombre.length ? " — sin nombre: " + sinNombre.join(", ") : ""}`
+  );
+
+  // El respaldo tiene que existir, o iconoDe se cae justo cuando llega un id
+  // desconocido: el unico caso para el que el respaldo existe.
+  const respaldo = resolver2("esto-no-existe-en-ningun-sitio");
+  ok(typeof respaldo === "function", "un id desconocido devuelve un dibujo, no un hueco");
+  ok(respaldo === resolver2("Ellipsis"), "y es el de los puntos suspensivos");
+
+  // Dos ids con el MISMO dibujo se ven identicos en la cuadricula y no hay forma
+  // de saber cual se eligio. En el catalogo de elegir eso no puede pasar.
+  const porGlifo = new Map<string, string[]>();
+  for (const id of idsElegibles) {
+    const n = nombres[id];
+    porGlifo.set(n, [...(porGlifo.get(n) ?? []), id]);
+  }
+  const gemelos = [...porGlifo].filter(([, ids]) => ids.length > 1);
+  ok(
+    gemelos.length === 0,
+    `ningun dibujo sale dos veces${gemelos.length ? " — repetidos: " + gemelos.map(([n, ids]) => `${n} (${ids.join("/")})`).join(", ") : ""}`
+  );
 }
 
 console.log("\n--- LAS MEDIDAS DE LA CUADRICULA CUADRAN ---");
@@ -283,17 +332,16 @@ console.log("\n--- LAS MEDIDAS DE LA CUADRICULA CUADRAN ---");
   const titulosRepes = titulos.filter((tt, i) => titulos.indexOf(tt) !== i);
   ok(titulosRepes.length === 0, `ningun grupo repite nombre${titulosRepes.length ? " — " + titulosRepes.join(", ") : ""}`);
 
-  // 5. El hueco reservado mide EXACTAMENTE lo que van a medir las filas que
-  //    faltan. Es la cuenta que evita que la pantalla salte mientras se llena.
+  // 5. Cada grupo tiene las filas justas para sus dibujos: ni una de sobra
+  //    (dejaria una fila vacia) ni una de menos (perderia dibujos).
   const altoFila = altoFilaDe(412);
   let cuadran = true;
   for (const g of catalogo) {
+    const suyos = g.filas.flat().filter((x) => x !== null).length;
+    if (g.filas.length !== Math.ceil(suyos / porFila)) cuadran = false;
     if (altoDeLasFilas(g, altoFila) !== g.filas.length * altoFila) cuadran = false;
-    if (g.filas.length !== Math.ceil(g.filas.flat().filter((x) => x !== null).length / porFila)) {
-      cuadran = false;
-    }
   }
-  ok(cuadran, "el hueco de cada grupo mide lo mismo que sus filas");
+  ok(cuadran, "cada grupo tiene las filas justas para sus dibujos");
 }
 
 console.log("\n--- NI UN LOGO DE BANCO EN EL CATALOGO ---");

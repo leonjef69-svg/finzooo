@@ -2,32 +2,12 @@ import type { ComponentType } from "react";
 import { getOverride } from "@/utils/categoryCustom";
 import { getPropia, getPropias, type CategoriaPropia } from "@/utils/categoriasPropias";
 import { iconoDe } from "@/constants/iconos";
-import {
-  Utensils,
-  Car,
-  Fuel,
-  Repeat,
-  ShoppingBag,
-  Film,
-  Gamepad2,
-  HeartPulse,
-  Zap,
-  GraduationCap,
-  PawPrint,
-  Home as HouseIcon,
-  MoreHorizontal,
-  Briefcase,
-  Laptop,
-  Gift,
-  TrendingUp,
-  Tag,
-  PlusCircle,
-  Crown,
-  HandCoins,
-  BarChart3,
-  KeyRound,
-  Coins,
-} from "lucide-react-native";
+
+// Los dibujos de las categorías de fábrica se piden por el MISMO identificador
+// que usan las categorías propias, en vez de traerse a mano. Es lo que garantiza
+// que "Comida" de fábrica y una "Broster" creada por la persona se vean del
+// mismo estilo. Cuando cada una venía de su sitio, ya pasó una vez: la misma
+// categoría salía con emoji al elegirla y con dibujo de línea en Inicio.
 
 export type IconComponent = ComponentType<{
   size?: number;
@@ -53,34 +33,34 @@ export type Category = {
 // t() al momento de mostrarla, para que cambie de idioma sin tener que
 // tocar el "id" (que es lo que de verdad se guarda en cada movimiento).
 export const EXPENSE_CATS: Category[] = [
-  { id: "comida", label: "category.comida", icon: Utensils, color: "green", emoji: "🍔" },
-  { id: "transporte", label: "category.transporte", icon: Car, color: "yellow", emoji: "🚗" },
-  { id: "compras", label: "category.compras", icon: ShoppingBag, color: "violet", emoji: "🛍️" },
-  { id: "entretenimiento", label: "category.entretenimiento", icon: Film, color: "pink", emoji: "🎬" },
-  { id: "videojuegos", label: "category.videojuegos", icon: Gamepad2, color: "indigo", emoji: "🎮" },
-  { id: "salud", label: "category.salud", icon: HeartPulse, color: "red", emoji: "💊" },
-  { id: "servicios", label: "category.servicios", icon: Zap, color: "blue", emoji: "⚡" },
-  { id: "combustible", label: "category.combustible", icon: Fuel, color: "orange", emoji: "⛽", extra: true },
-  { id: "suscripciones", label: "category.suscripciones", icon: Repeat, color: "fuchsia", emoji: "🔁", extra: true },
-  { id: "educacion", label: "category.educacion", icon: GraduationCap, color: "cyan", emoji: "🎓", extra: true },
-  { id: "mascotas", label: "category.mascotas", icon: PawPrint, color: "lime", emoji: "🐾", extra: true },
-  { id: "hogar", label: "category.hogar", icon: HouseIcon, color: "stone", emoji: "🏠", extra: true },
-  { id: "otros", label: "category.otros", icon: MoreHorizontal, color: "teal", emoji: "🧾", extra: true },
+  { id: "comida", label: "category.comida", icon: iconoDe("Utensils"), color: "green", emoji: "🍔" },
+  { id: "transporte", label: "category.transporte", icon: iconoDe("Car"), color: "yellow", emoji: "🚗" },
+  { id: "compras", label: "category.compras", icon: iconoDe("ShoppingBag"), color: "violet", emoji: "🛍️" },
+  { id: "entretenimiento", label: "category.entretenimiento", icon: iconoDe("Film"), color: "pink", emoji: "🎬" },
+  { id: "videojuegos", label: "category.videojuegos", icon: iconoDe("Gamepad2"), color: "indigo", emoji: "🎮" },
+  { id: "salud", label: "category.salud", icon: iconoDe("HeartPulse"), color: "red", emoji: "💊" },
+  { id: "servicios", label: "category.servicios", icon: iconoDe("Zap"), color: "blue", emoji: "⚡" },
+  { id: "combustible", label: "category.combustible", icon: iconoDe("Fuel"), color: "orange", emoji: "⛽", extra: true },
+  { id: "suscripciones", label: "category.suscripciones", icon: iconoDe("Repeat"), color: "fuchsia", emoji: "🔁", extra: true },
+  { id: "educacion", label: "category.educacion", icon: iconoDe("GraduationCap"), color: "cyan", emoji: "🎓", extra: true },
+  { id: "mascotas", label: "category.mascotas", icon: iconoDe("PawPrint"), color: "lime", emoji: "🐾", extra: true },
+  { id: "hogar", label: "category.hogar", icon: iconoDe("House"), color: "stone", emoji: "🏠", extra: true },
+  { id: "otros", label: "category.otros", icon: iconoDe("Ellipsis"), color: "teal", emoji: "🧾", extra: true },
 ];
 
 export const INCOME_CATS: Category[] = [
-  { id: "salario", label: "category.salario", icon: Briefcase, color: "lime", emoji: "💼" },
-  { id: "freelance", label: "category.freelance", icon: Laptop, color: "teal", emoji: "💻" },
-  { id: "regalo", label: "category.regalo", icon: Gift, color: "fuchsia", emoji: "🎁" },
-  { id: "inversiones", label: "category.inversiones", icon: TrendingUp, color: "green", emoji: "📈" },
-  { id: "venta", label: "category.venta", icon: Tag, color: "red", emoji: "🏷️" },
-  { id: "otro_ingreso", label: "category.otro_ingreso", icon: PlusCircle, color: "stone", emoji: "➕" },
-  { id: "premios", label: "category.premios", icon: Crown, color: "pink", emoji: "🏆", extra: true },
-  { id: "prestamo", label: "category.prestamo", icon: HandCoins, color: "cyan", emoji: "🤝", extra: true },
-  { id: "dividendos", label: "category.dividendos", icon: BarChart3, color: "violet", emoji: "📊", extra: true },
-  { id: "alquiler", label: "category.alquiler", icon: KeyRound, color: "orange", emoji: "🏘️", extra: true },
-  { id: "cripto", label: "category.cripto", icon: Coins, color: "yellow", emoji: "🪙", extra: true },
-  { id: "beca", label: "category.beca", icon: GraduationCap, color: "blue", emoji: "🎓", extra: true },
+  { id: "salario", label: "category.salario", icon: iconoDe("Briefcase"), color: "lime", emoji: "💼" },
+  { id: "freelance", label: "category.freelance", icon: iconoDe("Laptop"), color: "teal", emoji: "💻" },
+  { id: "regalo", label: "category.regalo", icon: iconoDe("Gift"), color: "fuchsia", emoji: "🎁" },
+  { id: "inversiones", label: "category.inversiones", icon: iconoDe("TrendingUp"), color: "green", emoji: "📈" },
+  { id: "venta", label: "category.venta", icon: iconoDe("Tag"), color: "red", emoji: "🏷️" },
+  { id: "otro_ingreso", label: "category.otro_ingreso", icon: iconoDe("PlusCircle"), color: "stone", emoji: "➕" },
+  { id: "premios", label: "category.premios", icon: iconoDe("Crown"), color: "pink", emoji: "🏆", extra: true },
+  { id: "prestamo", label: "category.prestamo", icon: iconoDe("HandCoins"), color: "cyan", emoji: "🤝", extra: true },
+  { id: "dividendos", label: "category.dividendos", icon: iconoDe("ChartColumn"), color: "violet", emoji: "📊", extra: true },
+  { id: "alquiler", label: "category.alquiler", icon: iconoDe("Key"), color: "orange", emoji: "🏘️", extra: true },
+  { id: "cripto", label: "category.cripto", icon: iconoDe("Coins"), color: "yellow", emoji: "🪙", extra: true },
+  { id: "beca", label: "category.beca", icon: iconoDe("GraduationCap"), color: "blue", emoji: "🎓", extra: true },
 ];
 
 export const ALL_CATS = [...EXPENSE_CATS, ...INCOME_CATS];

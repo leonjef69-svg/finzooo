@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useState } from "react";
+import { memo, useMemo, useState } from "react";
 import {
   ScrollView,
   Text,
@@ -9,14 +9,7 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check, ChevronLeft, Trash2 } from "lucide-react-native";
-import {
-  ALTO_FILA_DE,
-  ALTO_TITULO,
-  altoDeLasFilas,
-  CATALOGO_EN_FILAS,
-  LADO_DE,
-  SEPARACION,
-} from "@/constants/catalogoFilas";
+import { ALTO_TITULO, CATALOGO_EN_FILAS, LADO_DE, SEPARACION } from "@/constants/catalogoFilas";
 import { COLOR_HEX_600 } from "@/constants/colors";
 import { iconoDe, TODOS_LOS_GRUPOS } from "@/constants/iconos";
 import { CARD_SHADOW } from "@/constants/style";
@@ -76,10 +69,6 @@ const Dibujito = memo(function Dibujito({
     </TouchableOpacity>
   );
 });
-
-// Cuántos grupos se arman en el primer instante: los que caben en pantalla. Más
-// que esto y abrir se siente pesado; menos y se ve hueco al abrir.
-const GRUPOS_AL_ABRIR = 3;
 
 /** Una fila de cinco casillas. Memorizada para que un toque no rehaga las demás. */
 const Fila = memo(function Fila({
@@ -170,33 +159,10 @@ export default function NuevaCategoria({
   const [pestana, setPestana] = useState<"icono" | "color">("icono");
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
 
+  // El lado de cada casilla sale del ancho real de la pantalla, para que las
+  // cinco de una fila lleguen justo al borde. Ver constants/catalogoFilas.ts.
   const { width: anchoPantalla } = useWindowDimensions();
   const lado = LADO_DE(anchoPantalla);
-  const altoFila = ALTO_FILA_DE(anchoPantalla);
-
-  // LOS DIBUJOS SE QUEDAN PUESTOS. Cuántos grupos ya están armados.
-  //
-  // Aquí hubo una lista que armaba y desarmaba según lo que se veía. Es lo
-  // recomendado para listas largas y aquí estuvo mal, y costó cuatro entregas
-  // entenderlo: por más reserva que se le diera, un deslizón fuerte le ganaba
-  // siempre y se veía la pantalla en blanco. El pedido del usuario fue claro y
-  // era la respuesta: "los iconos ya deberían estar ahí fijos, no cargar recién
-  // cuando yo deslizo".
-  //
-  // Así que se arman los 236 UNA vez y no se sueltan nunca. Lo único que no se
-  // puede hacer es armarlos todos de golpe, porque eso tarda casi un segundo y
-  // la pantalla no abriría. Entran de a un grupo por vuelta: los tres primeros
-  // —lo que se ve— desde el primer instante, y el resto en menos de un segundo,
-  // mientras la persona mira. A partir de ahí ya no hay nada que cargar: se
-  // deslice como se deslice, están todos.
-  const [gruposArmados, setGruposArmados] = useState(GRUPOS_AL_ABRIR);
-  useEffect(() => {
-    if (gruposArmados >= CATALOGO_EN_FILAS.length) return;
-    // setTimeout de 0 y no un bucle: así cada grupo entra en su propia vuelta y
-    // el celular puede atender el dedo entremedio en vez de quedarse tieso.
-    const vuelta = setTimeout(() => setGruposArmados((n) => n + 1), 0);
-    return () => clearTimeout(vuelta);
-  }, [gruposArmados]);
 
   // Los títulos de los grupos, traducidos UNA vez. Pasarle la función de
   // traducir al catálogo lo redibujaría entero en cada letra escrita, que es
@@ -328,42 +294,37 @@ export default function NuevaCategoria({
           </View>
         </ScrollView>
       ) : (
-        // UNA PANTALLA DESLIZABLE NORMAL, a propósito, no una lista de las que
-        // arman y sueltan según lo que se ve. Aquí eso no servía: por más
-        // reserva que se le diera, un deslizón fuerte le ganaba y se veía la
-        // pantalla en blanco. Los 236 dibujos se arman una vez y se quedan.
+        // UNA PANTALLA DESLIZABLE NORMAL CON LOS 236 DIBUJOS PUESTOS. Sin lista
+        // virtual, sin cargar por partes, sin nada que aparezca después.
+        //
+        // Esto sería impensable con dibujos vectoriales —armarlos tarda cerca de
+        // un segundo, y por eso hubo cinco intentos de repartir ese segundo en
+        // algún sitio donde no se notara—. Con la tipografía cada dibujo es una
+        // letra, así que los 236 salen de una y ya está. El arreglo no estuvo
+        // nunca en cómo organizar la lista: estuvo en de qué están hechos los
+        // dibujos. Ver constants/iconos.tsx.
         <ScrollView
           className="flex-1 px-5"
           contentContainerStyle={{ paddingBottom: 24 }}
           keyboardShouldPersistTaps="handled"
         >
-          {CATALOGO_EN_FILAS.map((grupo, i) => (
+          {CATALOGO_EN_FILAS.map((grupo) => (
             <View key={grupo.titulo}>
-              {/* El título va siempre, aunque sus filas no estén todavía: es
-                  barato, y así al deslizar en el primer instante se ve que la
-                  sección existe en vez de un vacío sin explicación. */}
               <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
                 <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
                   {titulos[grupo.titulo]}
                 </Text>
               </View>
-              {i < gruposArmados ? (
-                grupo.filas.map((fila, f) => (
-                  <Fila
-                    key={f}
-                    iconos={fila}
-                    elegido={icono}
-                    color={color}
-                    lado={lado}
-                    onElegir={setIcono}
-                  />
-                ))
-              ) : (
-                // El hueco mide EXACTO lo que van a medir sus filas. Si midiera
-                // de menos, el contenido crecería bajo el dedo y la pantalla
-                // saltaría sola mientras los grupos entran.
-                <View style={{ height: altoDeLasFilas(grupo, altoFila) }} />
-              )}
+              {grupo.filas.map((fila, f) => (
+                <Fila
+                  key={f}
+                  iconos={fila}
+                  elegido={icono}
+                  color={color}
+                  lado={lado}
+                  onElegir={setIcono}
+                />
+              ))}
             </View>
           ))}
         </ScrollView>
