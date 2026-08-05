@@ -95,6 +95,42 @@ console.log("\n--- LO QUE SE VE EN EL MARCO ES LO QUE SE GUARDA ---");
   ok(!/setPan\(\{ x: inicio\.x/.test(cropper), "y ya no se mueve libre como antes");
 }
 
+console.log("\n--- LAS MEDIDAS Y LOS PIXELES SALEN DEL MISMO SITIO ---");
+{
+  // Reportado con fotos el 05/08/2026: en el marco entraba la taza entera y en
+  // el icono salia un pedazo del borde, ampliado.
+  //
+  // La causa: se medía con Image.getSize y se recortaba con el manipulador de
+  // imagenes, y en una foto de camara los dos NO coinciden — el archivo suele
+  // guardarse tumbado con una marca de "girame al mostrar". Se pedia el recorte
+  // en un sistema de medidas y se aplicaba en otro: se salia de la imagen,
+  // quedaba la parte que cabia, y al agrandarla a 256 salia un trozo ampliado.
+  //
+  // Estas son comprobaciones de texto y no de calculo a proposito: el fallo NO
+  // estaba en las cuentas —cropRect siempre estuvo bien— sino en de donde venian
+  // los numeros. Eso no se puede pillar con una cuenta.
+  const cropper = fs.readFileSync(path.join(process.cwd(), "components/ImageCropper.tsx"), "utf8");
+  const codigo = cropper.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+  ok(!/Image\.getSize/.test(codigo), "ya no se mide con Image.getSize, que no ve la rotacion");
+  ok(/manipulate\(uri\)\.renderAsync\(\)/.test(codigo), "se pasa la imagen por el manipulador al abrir");
+  ok(/setFuente\(\{ uri: normal\.uri/.test(codigo), "y se trabaja con esa copia");
+
+  // Las tres tienen que apuntar a la copia. Si una sola apunta al original,
+  // vuelve el desajuste: enseñar una cosa y recortar otra.
+  ok(/source=\{\{ uri: fuente\.uri \}\}/.test(codigo), "se ENSEÑA la copia");
+  ok(/manipulate\(fuente\.uri\)/.test(codigo), "se RECORTA la copia");
+  ok(/cropRect\(fuente\.w, fuente\.h/.test(codigo), "y se MIDE la copia");
+  // El original solo se usa para HACER la copia, en ningun otro sitio. Se cuenta
+  // el nombre suelto —ni "fuente.uri" ni "uri:" cuentan—: son el prop, la
+  // llamada al manipulador y la dependencia del efecto, y nada mas.
+  const usosDelOriginal = [...codigo.matchAll(/(?<![.\w])uri\b(?!\s*:)/g)].length;
+  ok(
+    usosDelOriginal === 3,
+    `el archivo original solo se usa para hacer la copia (${usosDelOriginal} usos, se esperan 3)`
+  );
+}
+
 console.log("\n--- EL MARCO TIENE LA FORMA DEL ICONO ---");
 {
   // Era un circulo, heredado de cuando las categorias se dibujaban redondas.

@@ -325,6 +325,34 @@ los iconos y está lento, se siente feo al abrirlo"):
     porque al volver hay que rehacerlas. Con 236 casillas la memoria no era el
     problema; los huecos sí.
 
+### El recorte no caía donde el marco prometía (05/08/2026)
+
+Reportado con fotos: en el marco entraba la taza entera y en el icono salía un
+pedazo del borde, ampliado.
+
+**Se medía con `Image.getSize` y se recortaba con el manipulador de imágenes, y
+en una foto de cámara los dos no coinciden.** El archivo suele guardarse tumbado
+con una marca de "gírame al mostrar": `Image.getSize` daba las medidas de cómo se
+VE, el manipulador trabajaba sobre cómo está GUARDADA. Así que el recorte se
+pedía en un sistema de medidas y se aplicaba en otro: se salía de la imagen,
+quedaba la parte que cabía, y al agrandarla a 256 salía un trozo ampliado.
+
+Arreglo: al abrir, la imagen se pasa por el manipulador y **se trabaja siempre
+con esa copia** — se enseña esa, se mide esa y se recorta esa. La copia ya tiene
+la rotación aplicada, así que no hay dos sistemas que puedan discrepar. Cuesta
+una pasada más al abrir, y a cambio el marco no puede mentir.
+
+Es el mismo patrón que ya mordió tres veces en este proyecto: **dos mitades que
+por separado están bien, con el fallo en la costura.** El espacio entre JS y
+Kotlin en la voz, el emoji contra el icono en las categorías, y ahora las
+medidas de un sitio y los píxeles de otro.
+
+Y las pruebas de esto son **de texto, no de cálculo, a propósito**: `cropRect`
+siempre estuvo bien. El fallo no estaba en las cuentas sino en de dónde venían
+los números, y eso ninguna cuenta lo detecta. Lo que se vigila es que las tres
+—enseñar, medir, recortar— apunten a la copia, y que el archivo original solo
+se use para hacerla.
+
 ### El recortador: marco con la forma real, pinza de dos dedos (05/08/2026)
 
 Pedido: *"que se aparezca el espacio de todo lo que aparecerá en el icono y se

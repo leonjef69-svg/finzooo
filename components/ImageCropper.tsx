@@ -22,15 +22,20 @@ import { useBackClose } from "@/utils/useBackClose";
  *
  * LO QUE HAY QUE CALCULAR BIEN
  *
- * La imagen se enseña en una ventana de unos 240 puntos, pero el archivo
- * puede ser de 4000 píxeles de ancho. El recorte hay que pedirlo en píxeles
- * del ARCHIVO, no en lo que se ve. Confundir las dos medidas es el error
- * clásico aquí: el recorte sale desplazado, y con una cara encuadrada sale
- * media frente.
+ * La imagen se enseña en una ventana de unos 240 puntos, pero puede tener 4000
+ * píxeles de ancho. El recorte hay que pedirlo en PÍXELES, no en lo que se ve.
+ * Confundir las dos medidas es el error clásico aquí: el recorte sale
+ * desplazado, y con una cara encuadrada sale media frente.
  *
  * Por eso todo se calcula en una sola conversión, al final, y se topa a los
  * bordes reales de la imagen: pedir un recorte que se salga hace fallar la
  * operación entera en vez de recortar lo que se pueda.
+ *
+ * Y HAY UN SOLO SITIO DEL QUE SALEN LAS MEDIDAS
+ *
+ * Al abrir, la imagen se pasa por el manipulador y se trabaja SIEMPRE con esa
+ * copia: se enseña esa, se mide esa y se recorta esa. Tenerlas de dos sitios
+ * distintos ya costó un fallo entero — ver el efecto de más abajo.
  */
 
 /**
@@ -161,26 +166,45 @@ export default function ImageCropper({
 }) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [tam, setTam] = useState<{ w: number; h: number } | null>(null);
+  /** La imagen ya normalizada: la que se enseña Y la que se recorta. */
+  const [fuente, setFuente] = useState<{ uri: string; w: number; h: number } | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
   // Atras cierra el recorte y deja debajo la pantalla de la categoria, en vez
   // de salirse de las dos de golpe.
   useBackClose(onCancel);
 
-  // El tamaño real del archivo. Sin él no se puede convertir lo que se ve a
-  // píxeles, así que hasta que llegue no se deja guardar.
-  //
-  // Va en un efecto y no suelto en el dibujado: ahí se pediría otra vez en
-  // cada redibujado —y cada respuesta provoca uno—, así que se quedaría
-  // preguntando el tamaño en bucle mientras la ventana esté abierta.
+  /**
+   * LAS MEDIDAS Y LOS PÍXELES, DEL MISMO SITIO. AQUÍ ESTUVO EL FALLO.
+   *
+   * Antes se medía con Image.getSize y se recortaba con el manipulador de
+   * imágenes, y en una foto de cámara los dos NO coinciden: el archivo suele
+   * guardarse tumbado con una marca de "gírame al mostrar". Image.getSize daba
+   * las medidas de cómo se ve; el manipulador trabajaba sobre cómo está
+   * guardada. Así que el recorte se pedía en un sistema y se aplicaba en otro:
+   * se salía de la imagen, quedaba la parte que cabía, y al agrandarla a 256
+   * salía un trozo ampliado. Reportado con fotos el 05/08/2026 — en el marco
+   * entraba la taza entera y en el icono salía un pedazo del borde.
+   *
+   * Ahora la imagen se pasa PRIMERO por el manipulador. Eso deja la rotación ya
+   * aplicada, y de esa copia salen tanto las medidas como los píxeles: no hay
+   * dos sistemas que puedan discrepar. Es más lento al abrir —una vez— y a
+   * cambio el marco no puede mentir.
+   *
+   * Hasta que la copia esté no se deja guardar.
+   */
   useEffect(() => {
     let vivo = true;
-    Image.getSize(
-      uri,
-      (w, h) => vivo && setTam({ w, h }),
-      () => vivo && setError(labels.error)
-    );
+    (async () => {
+      try {
+        const ref = await ImageManipulator.manipulate(uri).renderAsync();
+        const normal = await ref.saveAsync({ format: SaveFormat.JPEG, compress: 0.95 });
+        if (!vivo) return;
+        setFuente({ uri: normal.uri, w: normal.width, h: normal.height });
+      } catch {
+        if (vivo) setError(labels.error);
+      }
+    })();
     return () => {
       vivo = false;
     };
@@ -231,11 +255,11 @@ export default function ImageCropper({
       }
       // Un dedo: mover. Se resta la referencia porque g.dx cuenta desde el
       // principio del gesto, y el gesto pudo empezar con dos dedos.
-      if (!tam) return;
+      if (!fuente) return;
       setPan(
         limitarPan(
-          tam.w,
-          tam.h,
+          fuente.w,
+          fuente.h,
           zoom,
           gesto.pan.x + (g.dx - gesto.dx),
           gesto.pan.y + (g.dy - gesto.dy),
@@ -258,16 +282,21 @@ export default function ImageCropper({
   function cambiarZoom(hacia: number) {
     const nuevo = limitarZoom(zoom + hacia);
     setZoom(nuevo);
-    if (tam) setPan(limitarPan(tam.w, tam.h, nuevo, pan.x, pan.y, VENTANA));
+    if (fuente) setPan(limitarPan(fuente.w, fuente.h, nuevo, pan.x, pan.y, VENTANA));
   }
 
   async function guardar() {
-    if (!tam || guardando) return;
+    if (!fuente || guardando) return;
     setGuardando(true);
     setError("");
     try {
-      const r = cropRect(tam.w, tam.h, zoom, pan.x, pan.y);
-      const ctx = ImageManipulator.manipulate(uri).crop(r).resize({ width: LADO, height: LADO });
+      const r = cropRect(fuente.w, fuente.h, zoom, pan.x, pan.y);
+      // Se recorta la COPIA, no el archivo original: es la que se midió y la
+      // que se está enseñando. Recortar el original es justo el fallo que se
+      // arregló — las medidas de una y los píxeles del otro.
+      const ctx = ImageManipulator.manipulate(fuente.uri)
+        .crop(r)
+        .resize({ width: LADO, height: LADO });
       const rendered = await ctx.renderAsync();
       const saved = await rendered.saveAsync({
         base64: true,
@@ -283,7 +312,7 @@ export default function ImageCropper({
     }
   }
 
-  const escalaBase = tam ? Math.max(VENTANA / tam.w, VENTANA / tam.h) : 1;
+  const escalaBase = fuente ? Math.max(VENTANA / fuente.w, VENTANA / fuente.h) : 1;
   const escala = escalaBase * zoom;
 
   return (
@@ -298,15 +327,17 @@ export default function ImageCropper({
         className="overflow-hidden bg-slate-800 border-[3px] border-white"
         {...arrastre.panHandlers}
       >
-        {tam && (
+        {fuente && (
           <Image
-            source={{ uri }}
+            // También la copia. Enseñar el original y recortar la copia sería
+            // el mismo desajuste al revés.
+            source={{ uri: fuente.uri }}
             style={{
-              width: tam.w * escala,
-              height: tam.h * escala,
+              width: fuente.w * escala,
+              height: fuente.h * escala,
               transform: [
-                { translateX: pan.x - (tam.w * escala - VENTANA) / 2 },
-                { translateY: pan.y - (tam.h * escala - VENTANA) / 2 },
+                { translateX: pan.x - (fuente.w * escala - VENTANA) / 2 },
+                { translateY: pan.y - (fuente.h * escala - VENTANA) / 2 },
               ],
             }}
           />
@@ -350,9 +381,9 @@ export default function ImageCropper({
         </TouchableOpacity>
         <TouchableOpacity
           onPress={guardar}
-          disabled={!tam || guardando}
+          disabled={!fuente || guardando}
           className={`flex-1 py-3.5 rounded-2xl items-center bg-emerald-600 ${
-            !tam || guardando ? "opacity-60" : ""
+            !fuente || guardando ? "opacity-60" : ""
           }`}
         >
           {guardando ? (
