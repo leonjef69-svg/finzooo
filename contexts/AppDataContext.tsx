@@ -35,7 +35,9 @@ import {
   type CategoryOverrides,
 } from "@/utils/categoryCustom";
 import {
+  borrar as borrarPropia,
   crear as crearPropia,
+  editar as editarPropia,
   loadPropias,
   savePropias,
   type CategoriaPropia,
@@ -123,6 +125,10 @@ type AppDataContextValue = {
   /** La recien creada, para que la pantalla de agregar la deje elegida. */
   categoriaRecienCreada: string | null;
   olvidarCategoriaRecienCreada: () => void;
+  editarCategoria: (id: string, cambios: { nombre?: string; color?: string; icono?: string }) => void;
+  borrarCategoria: (id: string) => void;
+  /** Cuantos movimientos quedarian en "Otros" al borrarla. */
+  movimientosDeCategoria: (id: string) => number;
 
   transactions: Transaction[];
   addOrUpdateTransaction: (t: Transaction) => void;
@@ -1055,6 +1061,37 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return creada.id;
   }
 
+  /** Cambia una propia. Lo que no se pase se deja como estaba. */
+  function editarCategoria(
+    id: string,
+    cambios: { nombre?: string; color?: string; icono?: string }
+  ) {
+    const lista = editarPropia(categoriasPropias, id, cambios);
+    savePropias(lista);
+    setCategoriasPropiasState(lista);
+  }
+
+  /**
+   * Borra una propia.
+   *
+   * LOS MOVIMIENTOS NO SE TOCAN, Y ES A PROPÓSITO.
+   *
+   * Un movimiento guarda el ID de su categoría, no la categoría entera. Al
+   * borrarla, catInfo los devuelve como "Otros" y siguen contando en todos los
+   * totales. Perder el nombre de la categoría es molesto; borrar el gasto
+   * sería grave — y nadie que quita una categoría está pidiendo eso.
+   */
+  function borrarCategoria(id: string) {
+    const lista = borrarPropia(categoriasPropias, id);
+    savePropias(lista);
+    setCategoriasPropiasState(lista);
+  }
+
+  /** Cuántos movimientos quedarían en "Otros" si se borra esta categoría. */
+  function movimientosDeCategoria(id: string): number {
+    return transactions.filter((t) => t.category === id).length;
+  }
+
   function updateCategoryBudgets(newBudgets: Record<string, number>) {
     setCategoryBudgets(newBudgets);
     showToast(t("toast.budgetUpdated"));
@@ -1198,6 +1235,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         crearCategoria,
         categoriaRecienCreada,
         olvidarCategoriaRecienCreada: () => setCategoriaRecienCreada(null),
+        editarCategoria,
+        borrarCategoria,
+        movimientosDeCategoria,
         transactions,
         addOrUpdateTransaction,
         deleteTransaction,

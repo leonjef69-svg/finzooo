@@ -136,5 +136,45 @@ console.log("\n--- Y LA APP DE VERDAD LO USA ---");
   ok(ctx.includes("loadPropias"), "y las lee al arrancar");
 }
 
+console.log("\n--- EDITAR Y BORRAR SE PUEDEN ALCANZAR ---");
+{
+  // Sin una puerta visible, quien cree una categoria con el icono equivocado
+  // se queda con ella para siempre. Se descarto el toque largo: es invisible,
+  // y quien no lo sepa no lo encuentra nunca.
+  const add = fs.readFileSync(path.join(RAIZ, "screens/AddSheet.tsx"), "utf8");
+  ok(add.includes("esPropia(category)"), "el enlace de editar solo sale con una propia elegida");
+  ok(add.includes("nuevaCat.editarEsta"), "y dice cual se va a editar");
+  ok(add.includes("id: category"), "pasandole su id");
+
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/NuevaCategoria.tsx"), "utf8");
+  ok(pant.includes("editandoId"), "la pantalla sabe editar, no solo crear");
+  ok(pant.includes("borrarCategoria"), "y borrar");
+
+  // Los valores se leen UNA vez, al abrir. Leidos en cada dibujado, cada toque
+  // en el catalogo pisaria lo que la persona acaba de elegir.
+  ok(
+    pant.includes("useState(() => original?.icono"),
+    "y arranca con lo que la categoria ya tenia, sin pisarlo despues"
+  );
+}
+
+console.log("\n--- ANTES DE BORRAR SE DICE QUE PASA CON LOS MOVIMIENTOS ---");
+{
+  // "Se va a borrar" no informa igual que "3 movimientos quedaran en Otros", y
+  // ese numero es justo lo que hace dudar o seguir. Con dinero, el aviso tiene
+  // que traer el dato.
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/NuevaCategoria.tsx"), "utf8");
+  ok(pant.includes("movimientosDeCategoria"), "se cuentan los movimientos afectados");
+  ok(pant.includes("nuevaCat.borrarConMovs"), "y se avisa con el numero");
+  ok(pant.includes("nuevaCat.borrarSinMovs"), "o que no hay ninguno, si es el caso");
+  ok(pant.includes("confirmandoBorrado"), "y se confirma antes, no se borra de un toque");
+
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  const aviso = i18n.slice(i18n.indexOf('"nuevaCat.borrarConMovs"'));
+  const linea = aviso.slice(0, aviso.indexOf("\n"));
+  ok(linea.includes("{count}"), "el aviso lleva el numero de verdad, no un 'algunos'");
+  ok(/NO se borran/.test(linea), "y deja claro que los movimientos NO se pierden");
+}
+
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

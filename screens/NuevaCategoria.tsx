@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Check, ChevronLeft } from "lucide-react-native";
+import { Check, ChevronLeft, Trash2 } from "lucide-react-native";
 import { COLOR_HEX_600 } from "@/constants/colors";
 import { GRUPOS_GENERICOS, GRUPOS_MARCAS, iconoDe } from "@/constants/iconos";
 import { CARD_SHADOW } from "@/constants/style";
@@ -35,33 +35,71 @@ const COLORES = [
  */
 export default function NuevaCategoria({
   tipo,
+  editandoId,
   onBack,
   onCreada,
 }: {
   tipo: "expense" | "income";
+  /** Si viene, se está EDITANDO esa categoría en vez de creando una. */
+  editandoId?: string;
   onBack: () => void;
   /** Se avisa con el id para poder dejarla ya elegida en el movimiento. */
   onCreada: (id: string) => void;
 }) {
-  const { t, categoriasPropias, crearCategoria, showToast } = useAppData();
+  const {
+    t,
+    categoriasPropias,
+    crearCategoria,
+    editarCategoria,
+    borrarCategoria,
+    movimientosDeCategoria,
+    showToast,
+  } = useAppData();
   const insets = useSafeAreaInsets();
 
-  const [nombre, setNombre] = useState("");
-  const [icono, setIcono] = useState("Tag");
-  const [color, setColor] = useState("violet");
+  // La que se está editando, si es que se está editando alguna.
+  const original = editandoId ? categoriasPropias.find((c) => c.id === editandoId) : undefined;
+  const editando = !!original;
+
+  // Se arranca con lo que ya tenía. useState con función: se lee UNA vez, al
+  // abrir. Si se leyera en cada dibujado, cada toque en el catálogo pisaría lo
+  // que la persona acaba de elegir con el valor guardado.
+  const [nombre, setNombre] = useState(() => original?.nombre ?? "");
+  const [icono, setIcono] = useState(() => original?.icono ?? "Tag");
+  const [color, setColor] = useState(() => original?.color ?? "violet");
   const [pestana, setPestana] = useState<"icono" | "color">("icono");
+  const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
 
   const Dibujo = iconoDe(icono);
   const limpio = sanitizeName(nombre);
-  const repetido = nombreRepetido(categoriasPropias, limpio, tipo);
+  // Al editar no cuenta como repetida consigo misma.
+  const repetido = nombreRepetido(categoriasPropias, limpio, tipo, editandoId);
   const puedeGuardar = limpio.length > 0 && !repetido;
 
   function guardar() {
     if (!puedeGuardar) return;
+    if (editando && editandoId) {
+      editarCategoria(editandoId, { nombre: limpio, color, icono });
+      showToast(t("nuevaCat.guardada"));
+      onCreada(editandoId);
+      return;
+    }
     const id = crearCategoria({ nombre: limpio, tipo, color, icono });
     showToast(t("nuevaCat.creada"));
     onCreada(id);
   }
+
+  function borrar() {
+    if (!editandoId) return;
+    borrarCategoria(editandoId);
+    showToast(t("nuevaCat.borrada"));
+    onBack();
+  }
+
+  // Cuántos movimientos pasarían a "Otros". Se dice ANTES de borrar, con el
+  // número: "se va a borrar" no informa igual que "3 movimientos quedarán en
+  // Otros", y es justo el dato que hace dudar o seguir.
+  const cuantos = editandoId ? movimientosDeCategoria(editandoId) : 0;
 
   return (
     <View
@@ -73,7 +111,7 @@ export default function NuevaCategoria({
           <ChevronLeft size={24} color="#94a3b8" />
         </TouchableOpacity>
         <Text className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
-          {t("nuevaCat.title")}
+          {t(editando ? "nuevaCat.titleEditar" : "nuevaCat.title")}
         </Text>
       </View>
 
@@ -181,6 +219,47 @@ export default function NuevaCategoria({
       </ScrollView>
 
       <View className="px-5" style={{ paddingBottom: insets.bottom + 16 }}>
+        {/* BORRAR, solo al editar.
+            Se pide confirmación en el sitio, no con una ventana: la ventana
+            del sistema tapa la pantalla y no deja leer cuántos movimientos
+            están en juego, que es justo el dato que importa. */}
+        {editando &&
+          (confirmandoBorrado ? (
+            <View className="mb-3 rounded-2xl border-[1.5px] border-rose-300 bg-rose-50 dark:bg-rose-900/20 p-3.5">
+              <Text className="text-[11px] leading-5 text-rose-700 dark:text-rose-300">
+                {cuantos > 0
+                  ? t("nuevaCat.borrarConMovs", { count: cuantos })
+                  : t("nuevaCat.borrarSinMovs")}
+              </Text>
+              <View className="flex-row gap-2.5 mt-3">
+                <TouchableOpacity
+                  onPress={() => setConfirmandoBorrado(false)}
+                  className="flex-1 py-2.5 rounded-xl items-center border-[1.5px] border-slate-300 dark:border-slate-600"
+                >
+                  <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
+                    {t("nuevaCat.cancelar")}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={borrar}
+                  className="flex-1 py-2.5 rounded-xl items-center bg-rose-600"
+                >
+                  <Text className="text-xs font-extrabold text-white">
+                    {t("nuevaCat.borrarSi")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={() => setConfirmandoBorrado(true)}
+              className="flex-row items-center justify-center gap-2 py-3 mb-3"
+            >
+              <Trash2 size={15} color="#e11d48" />
+              <Text className="text-sm font-bold text-rose-600">{t("nuevaCat.borrar")}</Text>
+            </TouchableOpacity>
+          ))}
+
         <TouchableOpacity
           onPress={guardar}
           disabled={!puedeGuardar}
@@ -193,7 +272,7 @@ export default function NuevaCategoria({
               puedeGuardar ? "text-white" : "text-slate-400"
             }`}
           >
-            {t("nuevaCat.aplicar")}
+            {t(editando ? "nuevaCat.guardar" : "nuevaCat.aplicar")}
           </Text>
         </TouchableOpacity>
       </View>

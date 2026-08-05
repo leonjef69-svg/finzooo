@@ -8,15 +8,16 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X, Check, ChevronDown, ChevronUp, Calendar, Plus } from "lucide-react-native";
+import { X, Check, ChevronDown, ChevronUp, Calendar, Plus, Pencil } from "lucide-react-native";
 import { router } from "expo-router";
 import CategoryAvatar from "@/components/CategoryAvatar";
-import { gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
+import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
 import { currencySymbolFor } from "@/constants/currencies";
 import { methodLabel, PAYMENT_METHODS } from "@/constants/i18n";
 import { useAppData } from "@/contexts/AppDataContext";
 import { defaultDateForMonth, isValidISODate, normalizeDateInput } from "@/utils/date";
 import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
+import { esPropia } from "@/utils/categoriasPropias";
 import { nextId } from "@/utils/id";
 import { horaDe } from "@/utils/format";
 import type { Month, Transaction } from "@/types";
@@ -423,6 +424,25 @@ export default function AddSheet({
                     </TouchableOpacity>
                   )}
                 </View>
+
+                {/* EDITAR LA PROPIA QUE ESTÉ ELEGIDA.
+                    Solo aparece con una categoría tuya seleccionada, y por eso
+                    no estorba: el resto del tiempo no está. Se descarta el
+                    toque largo a propósito — es invisible, y quien no lo sepa
+                    no encuentra nunca cómo cambiar lo que acaba de crear. */}
+                {esPropia(category) && (
+                  <TouchableOpacity
+                    onPress={() =>
+                      router.push({ pathname: "/nueva-categoria", params: { tipo: type, id: category } })
+                    }
+                    className="flex-row items-center justify-center gap-1.5 mt-3 pt-3 border-t-[1.5px] border-slate-200 dark:border-slate-700"
+                  >
+                    <Pencil size={13} color="#64748b" />
+                    <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
+                      {t("nuevaCat.editarEsta", { nombre: catInfo(category).label })}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
 
