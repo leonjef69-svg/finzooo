@@ -409,6 +409,26 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
               contentContainerStyle={{ gap: 6, paddingRight: 8 }}
               className="mb-2.5"
             >
+              {/* "Otra hora" va PRIMERA, y no es capricho: la fila se desliza y
+                  detrás de las diez horas en punto queda fuera de la pantalla.
+                  Puesta al final, el usuario no la encontró — "añade una opción
+                  para colocar cualquier hora", cuando ya estaba. */}
+              <TouchableOpacity
+                onPress={() => setHoraPersonal(true)}
+                className={`px-3.5 py-2.5 rounded-xl border-[1.5px] ${
+                  horaPersonal
+                    ? "bg-emerald-600 border-emerald-600"
+                    : "bg-white dark:bg-slate-800 border-dashed border-slate-400 dark:border-slate-500"
+                }`}
+              >
+                <Text
+                  className={`text-xs font-bold ${
+                    horaPersonal ? "text-white" : "text-slate-600 dark:text-slate-200"
+                  }`}
+                >
+                  {t("schedExport.timeCustom")}
+                </Text>
+              </TouchableOpacity>
               {HORAS.map((h) => {
                 // Una hora en punto solo está elegida si los minutos son 0. Sin
                 // mirar el minuto, poner 03:15 dejaría "03:00" resaltado.
@@ -436,22 +456,6 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                   </TouchableOpacity>
                 );
               })}
-              <TouchableOpacity
-                onPress={() => setHoraPersonal(true)}
-                className={`px-3.5 py-2.5 rounded-xl border-[1.5px] ${
-                  horaPersonal
-                    ? "bg-emerald-600 border-emerald-600"
-                    : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-                }`}
-              >
-                <Text
-                  className={`text-xs font-bold ${
-                    horaPersonal ? "text-white" : "text-slate-600 dark:text-slate-200"
-                  }`}
-                >
-                  {t("schedExport.timeCustom")}
-                </Text>
-              </TouchableOpacity>
             </ScrollView>
 
             {/* LA HORA A MANO. Dos casillas y no un texto libre: escribir

@@ -346,6 +346,13 @@ Lo demás que se pidió: **hora a mano** (03:15 y cualquier otra) además de las
 horas en punto, y **fuera la repesca** ("si no exportas, insistir a los N
 minutos") con sus seis textos en tres idiomas.
 
+**La hora a mano se entregó invisible**, y el usuario la volvió a pedir al día
+siguiente: el botón "Otra hora" estaba al FINAL de la fila de horas, y esa fila
+se desliza — detrás de diez horas en punto quedaba fuera de la pantalla. Ahora va
+primera, y con borde de rayas para que se distinga de las horas fijas. Hay una
+prueba que compara su posición con la de las horas: entregar una opción donde no
+se ve es lo mismo que no entregarla.
+
 Cosas que había que no romper, cada una con prueba:
 
 - **Migrar los ajustes guardados.** Quien tuviera "WhatsApp" como destino se

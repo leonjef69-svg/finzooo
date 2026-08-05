@@ -234,6 +234,14 @@ console.log("\n--- LA PANTALLA DICE Y OFRECE LO QUE DEBE ---");
   ok(/horaPersonal/.test(codigo), "hay una opción de hora a mano");
   ok(codigo.includes("schedExport.timeCustom"), "con su etiqueta");
   ok(/keyboardType="number-pad"/.test(codigo), "y teclado de números");
+  // Y va ANTES de las horas en punto. La fila se desliza, y detrás de las diez
+  // horas quedaba fuera de la pantalla: el usuario pidió una opción que ya
+  // existía porque no se veía. Se compara la posición en el código, que es el
+  // orden en que se dibujan.
+  ok(
+    codigo.indexOf("schedExport.timeCustom") < codigo.indexOf("HORAS.map"),
+    "y sale antes de las horas en punto, no escondida al final de la fila"
+  );
 
   // Y la repesca no puede volver por la puerta de atrás.
   ok(!/retryMinutes/.test(codigo), "no queda nada de la repesca en la pantalla");
