@@ -477,6 +477,25 @@ export default function RootLayout() {
               name="transaction/[id]/edit"
               options={{ presentation: "modal", contentStyle: { backgroundColor: screenBg } }}
             />
+            {/* "Nueva categoría" se apila ENCIMA de esas dos, y sin declararla
+                tomaba la animación por defecto de Android: el cambio se sentía
+                brusco. Se desliza desde la derecha, que es lo que hace una
+                pantalla que se pone encima de otra, y al volver se desliza de
+                vuelta sola.
+                La animación la corre el sistema, no nuestro código, así que
+                sigue siendo suave aunque la pantalla esté armando sus iconos
+                en ese momento.
+                Y el fondo del tema en "contentStyle" por lo mismo que las de
+                arriba: en el instante previo a que React pinte, el fondo
+                nativo ya es del color correcto en vez del blanco por defecto,
+                que es la otra mitad de lo que se veía brusco. */}
+            <Stack.Screen
+              name="nueva-categoria"
+              options={{
+                animation: "slide_from_right",
+                contentStyle: { backgroundColor: screenBg },
+              }}
+            />
             {/* La pantalla de voz pasó de ocupar todo a ser un panel encima
                 de lo que hubiera, con el resto oscurecido. Por eso ahora va
                 con "transparentModal" —el caso para el que sirve, según la

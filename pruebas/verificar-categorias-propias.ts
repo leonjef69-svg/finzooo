@@ -196,6 +196,18 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   // es justo lo que la hacia abrir a tirones.
   const primeros = Number(/initialNumToRender=\{(\d+)\}/.exec(pant)?.[1] ?? "999");
   ok(primeros <= 8, `initialNumToRender es ${primeros}: la primera pasada se mantiene corta`);
+
+  // Con los iconos ya al instante, lo que quedaba era el cambio de pantalla en
+  // si: "podrias agregarle una transicion suave, se ve brusco al momento de
+  // cambiar". Sin declarar la ruta tomaba la animacion por defecto de Android y
+  // ademas pintaba el fondo nativo blanco un instante — las dos mitades de lo
+  // brusco. La animacion la corre el sistema, no nuestro codigo, asi que sigue
+  // suave aunque la pantalla este armando sus iconos.
+  const layout = fs.readFileSync(path.join(RAIZ, "app/_layout.tsx"), "utf8");
+  const suya = /name="nueva-categoria"[\s\S]{0,300}?\/>/.exec(layout)?.[0] ?? "";
+  ok(suya.length > 0, "la ruta de nueva categoria esta declarada en el layout");
+  ok(/animation: "slide_from_right"/.test(suya), "y entra deslizandose, no de golpe");
+  ok(/backgroundColor: screenBg/.test(suya), "con el fondo del tema, para que no destelle blanco");
 }
 
 console.log("\n--- NI UN LOGO DE BANCO EN EL CATALOGO ---");

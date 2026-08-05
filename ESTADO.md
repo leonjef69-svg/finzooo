@@ -309,6 +309,17 @@ los iconos y está lento, se siente feo al abrirlo"):
   Hay dos pruebas con **tope numérico** sobre esos dos números, porque son los
   más fáciles de subir "por si acaso" y los que más cuestan.
 
+- **Y recién entonces se podía arreglar lo brusco.** Con los iconos ya al
+  instante, quedaba el cambio de pantalla en sí. La ruta `nueva-categoria` no
+  estaba declarada en el layout, así que tomaba la animación por defecto de
+  Android y pintaba el fondo nativo blanco un instante: las dos mitades de lo
+  brusco. Ahora se desliza desde la derecha, con el fondo del tema en
+  `contentStyle` (el mismo patrón que las pantallas de arriba en ese archivo).
+
+  Importa el orden: **la animación la corre el sistema, no nuestro código**, así
+  que sigue siendo suave aunque la pantalla esté armando sus iconos. Puesta
+  antes de bajar el coste, habría tapado el problema en vez de resolverlo.
+
 Aviso para el futuro: **este proyecto no tiene configuración de prettier.**
 Correrlo reformatea el archivo entero a 80 columnas cuando el resto del código
 usa 100, y el cambio de verdad se pierde entre 90 líneas de ruido. Se hizo una
