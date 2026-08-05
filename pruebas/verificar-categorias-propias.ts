@@ -168,26 +168,34 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   ok(/while \(trozo\.length < POR_FILA\) trozo\.push\(null\)/.test(pant), "las filas incompletas se rellenan");
   ok(pant.includes('key={"hueco"'), "y el relleno es espacio vacio, no un dibujo");
 
-  // Mismo reporte: "se siente feo al abrirlo". La pantalla entra con animacion;
-  // construir los dibujos en ese instante la atropella. No se arregla
-  // abaratando los dibujos, porque el problema es CUANDO se hacen.
-  ok(pant.includes("InteractionManager.runAfterInteractions"), "los dibujos esperan a que la pantalla acabe de abrir");
+  // Mismo reporte: "se siente feo al abrirlo". Se intento dos veces APARTAR el
+  // dibujado de la animacion de entrada, y las dos salieron peor:
+  //
+  //   1. No dibujar nada hasta que la animacion acabara -> "luego de 1 segundo
+  //      aparece los iconos como si estuviera cargando".
+  //   2. Igual pero solo los dibujos, con la cuadricula vacia ya puesta -> se
+  //      seguia viendo el momento en que aparecian. "Ni bien entro deberia ya
+  //      estar los iconos".
+  //
+  // Esperar nunca era el arreglo, y estas dos aserciones existen para que no
+  // vuelva a intentarse: el arreglo era construir MENOS (ver windowSize abajo).
+  ok(!pant.includes("InteractionManager"), "los dibujos no esperan a nada para salir");
+  // Se busca el PROP, no la palabra: "dibujar" aparece en los comentarios que
+  // explican por que ya no existe, y una prueba que se cae por su propia
+  // explicacion invita a borrar la explicacion.
+  ok(!/dibujar=\{|dibujar: boolean/.test(pant), "ni sale la casilla vacia primero y el dibujo despues");
 
-  // Y el primer intento de eso fue no dibujar NADA hasta que la animacion
-  // acabara. Se reporto en seguida: "luego de 1 segundo aparece los iconos como
-  // si estuviera cargando". Lo que espera tiene que ser SOLO el dibujo de
-  // dentro; la cuadricula de casillas vacias sale completa desde el principio,
-  // que es lo que evita que parezca que carga y que algo salte de sitio.
-  ok(!pant.includes("catalogoListo"), "la cuadricula NO espera para aparecer");
-  ok(/\{dibujar && \(/.test(pant), "lo unico que espera es el dibujo de dentro de la casilla");
-  ok(/dibujar\?: boolean|dibujar: boolean/.test(pant), "y se pasa hasta la casilla");
+  // Y aqui esta lo que de verdad costaba el segundo. windowSize se cuenta en
+  // PANTALLAS: con 3, la lista levantaba la que se ve mas una arriba y otra
+  // abajo, unos 175 dibujos donde caben 60. Es el numero mas facil de subir
+  // "por si acaso" y el que mas cuesta, asi que se vigila con tope.
+  const ventana = Number(/windowSize=\{(\d+)\}/.exec(pant)?.[1] ?? "999");
+  ok(ventana <= 2, `windowSize es ${ventana}: no construye mas de una pantalla y algo`);
 
-  // La espera lleva tope: runAfterInteractions aguarda a que no quede NADA
-  // pendiente, que puede ser mucho mas que la animacion. Ese fue el segundo.
-  ok(pant.includes("ESPERA_MAXIMA_MS"), "la espera lleva tope");
-  ok(/setTimeout\(ya, ESPERA_MAXIMA_MS\)/.test(pant), "que corre en paralelo, no en vez de");
-  ok(/clearTimeout\(tope\)/.test(pant), "y se limpia al salir, para no dibujar en el aire");
-  ok(/tarea\.cancel\(\)/.test(pant), "igual que la otra via");
+  // Y la primera pasada ocurre MIENTRAS la pantalla se abre: pedir de mas ahi
+  // es justo lo que la hacia abrir a tirones.
+  const primeros = Number(/initialNumToRender=\{(\d+)\}/.exec(pant)?.[1] ?? "999");
+  ok(primeros <= 8, `initialNumToRender es ${primeros}: la primera pasada se mantiene corta`);
 }
 
 console.log("\n--- NI UN LOGO DE BANCO EN EL CATALOGO ---");

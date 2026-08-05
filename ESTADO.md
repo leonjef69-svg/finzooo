@@ -289,18 +289,25 @@ los iconos y está lento, se siente feo al abrirlo"):
   la pantalla entra con animación y construirlos en ese mismo instante la
   atropella. Abaratarlos más no habría arreglado esto nunca.
 
-  El primer intento fue no dibujar **nada** hasta que la animación acabara, y
-  se reportó en seguida: *"luego de 1 segundo aparece los iconos como si
-  estuviera cargando"*. Dos errores en uno:
+  **Y se intentó apartarlo de la animación dos veces, y las dos salieron
+  peor.** Primero, no dibujar nada hasta que la animación acabara: *"luego de 1
+  segundo aparece los iconos como si estuviera cargando"*. Después, esperar
+  solo los dibujos con la cuadrícula vacía ya puesta: mejor, pero *"ni bien
+  entro debería ya estar los iconos"*. Las dos veces el usuario tenía razón.
 
-  - Esperar sin dejar nada en pantalla convierte un tirón en algo peor: una
-    pantalla que parece cargando. Lo que espera ahora es **solo el dibujo de
-    dentro de cada casilla**. La cuadrícula de casillas vacías sale completa
-    desde el primer momento —cuatro líneas y un fondo, baratísimo—, así que la
-    pantalla se ve entera y nada cambia de sitio cuando entran los dibujos.
-  - `runAfterInteractions` no espera a la animación: espera a que no quede
-    **nada** pendiente, y eso puede ser mucho más. De ahí el segundo. Ahora
-    corre a la par un tope de 300 ms y vale el primero que llegue.
+  **Esperar nunca era el arreglo.** El arreglo era construir menos, y el
+  culpable estaba a la vista: `windowSize` se cuenta en **pantallas**, no en
+  renglones. Con 3, la lista levantaba la visible más una arriba y otra abajo:
+  unos 175 dibujos donde caben 60. Con 2 y una primera pasada corta, los
+  iconos entran de una y no hace falta apartarlos de nada.
+
+  De paso, dos cosas aprendidas sobre `InteractionManager`: no espera a la
+  animación, espera a que no quede **nada** pendiente, que puede ser mucho más;
+  y usarlo para tapar un coste que no se ha bajado solo cambia un tirón por una
+  pantalla que parece cargando. El tirón pasa; la pantalla vacía se ve.
+
+  Hay dos pruebas con **tope numérico** sobre esos dos números, porque son los
+  más fáciles de subir "por si acaso" y los que más cuestan.
 
 Aviso para el futuro: **este proyecto no tiene configuración de prettier.**
 Correrlo reformatea el archivo entero a 80 columnas cuando el resto del código

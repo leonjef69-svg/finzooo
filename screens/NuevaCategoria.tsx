@@ -1,13 +1,5 @@
-import { memo, useEffect, useMemo, useState } from "react";
-import {
-  FlatList,
-  InteractionManager,
-  ScrollView,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { memo, useMemo, useState } from "react";
+import { FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check, ChevronLeft, Trash2 } from "lucide-react-native";
 import { COLOR_HEX_600 } from "@/constants/colors";
@@ -39,14 +31,11 @@ const Dibujito = memo(function Dibujito({
   id,
   elegido,
   color,
-  dibujar,
   onElegir,
 }: {
   id: string;
   elegido: boolean;
   color: string;
-  /** Falso el primer instante: sale la casilla vacía y el dibujo entra luego. */
-  dibujar: boolean;
   onElegir: (id: string) => void;
 }) {
   const D = iconoDe(id);
@@ -61,28 +50,17 @@ const Dibujito = memo(function Dibujito({
           : "bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700"
       }`}
     >
-      {/* La casilla vacía es cuatro líneas y un fondo: sale al instante. El
-          dibujo de dentro es un vector de verdad y cuesta, así que entra un
-          momento después. La casilla ya ocupa su sitio, así que nada se mueve
-          ni salta cuando aparece. */}
-      {dibujar && (
-        <D
-          size={22}
-          color={elegido ? COLOR_HEX_600[color] || "#475569" : "#64748b"}
-          strokeWidth={2.2}
-        />
-      )}
+      <D
+        size={22}
+        color={elegido ? COLOR_HEX_600[color] || "#475569" : "#64748b"}
+        strokeWidth={2.2}
+      />
     </TouchableOpacity>
   );
 });
 
 // Cuántos dibujos caben de ancho.
 const POR_FILA = 5;
-
-// Lo máximo que los dibujos esperan a que la pantalla acabe de abrir. La
-// animación de entrada dura menos que esto; el tope está para que, si el
-// celular anda ocupado con otra cosa, la espera no se estire y se note.
-const ESPERA_MAXIMA_MS = 300;
 
 /**
  * El catálogo aplanado: títulos y filas de cinco, en una sola lista.
@@ -117,13 +95,11 @@ const Fila = memo(function Fila({
   iconos,
   elegido,
   color,
-  dibujar,
   onElegir,
 }: {
   iconos: (string | null)[];
   elegido: string;
   color: string;
-  dibujar: boolean;
   onElegir: (id: string) => void;
 }) {
   return (
@@ -132,14 +108,7 @@ const Fila = memo(function Fila({
         id === null ? (
           <View key={"hueco" + i} className="flex-1" />
         ) : (
-          <Dibujito
-            key={id}
-            id={id}
-            elegido={elegido === id}
-            color={color}
-            dibujar={dibujar}
-            onElegir={onElegir}
-          />
+          <Dibujito key={id} id={id} elegido={elegido === id} color={color} onElegir={onElegir} />
         )
       )}
     </View>
@@ -198,34 +167,18 @@ export default function NuevaCategoria({
   const [pestana, setPestana] = useState<"icono" | "color">("icono");
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
 
-  // ABRIR PRIMERO, DIBUJAR DESPUÉS.
+  // NO HAY ESPERA. Y hubo dos, las dos mías, las dos peores que el problema:
   //
-  // La pantalla entra con una animación. Construir los dibujos en ese mismo
-  // instante la atropella y el abrir sale a tirones; no se arregla haciendo los
-  // dibujos más baratos, porque el problema es CUÁNDO se hacen.
+  // 1. No dibujar nada hasta que la animación de entrada acabara. Se veía como
+  //    una pantalla cargando, que es peor que un tirón: el tirón pasa.
+  // 2. Igual pero solo los dibujos, con la cuadrícula vacía puesta. Mejor, pero
+  //    el usuario seguía viendo el momento en que aparecían, y con razón:
+  //    "ni bien entro debería ya estar los iconos".
   //
-  // El primer intento fue no dibujar NADA hasta que la animación acabara, y se
-  // veía como si la pantalla estuviera cargando. Lo que espera ahora son solo
-  // los dibujos: la cuadrícula de casillas vacías sale completa desde el primer
-  // momento, así que la pantalla se ve entera y nada cambia de sitio después.
-  //
-  // Y la espera lleva tope: runAfterInteractions aguarda a que no quede NADA
-  // pendiente, que puede ser bastante más que la animación. Sin tope, el
-  // usuario reportó como un segundo.
-  const [dibujar, setDibujar] = useState(false);
-  useEffect(() => {
-    let cancelado = false;
-    const ya = () => {
-      if (!cancelado) setDibujar(true);
-    };
-    const tarea = InteractionManager.runAfterInteractions(ya);
-    const tope = setTimeout(ya, ESPERA_MAXIMA_MS);
-    return () => {
-      cancelado = true;
-      tarea.cancel();
-      clearTimeout(tope);
-    };
-  }, []);
+  // Esperar nunca era el arreglo. El arreglo era construir MENOS: la lista
+  // estaba levantando unas tres pantallas de dibujos en vez de una (ver
+  // windowSize más abajo). Con una pantalla, entran de una y no hace falta
+  // apartarlos de la animación.
 
   // Los títulos de los grupos, traducidos UNA vez. Pasarle la función de
   // traducir al catálogo lo redibujaría entero en cada letra escrita, que es
@@ -364,14 +317,23 @@ export default function NuevaCategoria({
           contentContainerStyle={{ paddingBottom: 24, paddingTop: 12 }}
           data={RENGLONES}
           keyExtractor={(r) => r.clave}
-          // Solo lo que cabe y un poco más. Sin esto, la lista sigue montando
-          // de golpe todo lo que crea que entra en la pantalla. Se pide de
-          // entrada una pantalla completa de casillas: vacías son baratas, y
-          // así la cuadrícula sale entera de una vez en vez de irse llenando a
-          // pedazos, que es lo que se veía como "cargando".
-          initialNumToRender={14}
-          maxToRenderPerBatch={8}
-          windowSize={3}
+          // ESTOS TRES NÚMEROS SON EL RENDIMIENTO DE LA PANTALLA.
+          //
+          // windowSize se cuenta en pantallas, no en renglones: con 3, la lista
+          // construía la que se ve MÁS una arriba y otra abajo. Unos 175
+          // dibujos en vez de los 60 que caben, y de ahí venía casi todo el
+          // segundo de espera. Con 2 construye lo que se ve y medio de reserva
+          // a cada lado, que basta para que al deslizar no salgan huecos.
+          //
+          // initialNumToRender es cuánto entra en la PRIMERA pasada, y esa
+          // pasada ocurre mientras la pantalla se abre: pedir de más ahí es
+          // justo lo que la hacía abrir a tirones. Se piden los primeros
+          // renglones y el resto entra en las pasadas siguientes, que ya no
+          // pelean con la animación.
+          initialNumToRender={7}
+          maxToRenderPerBatch={4}
+          updateCellsBatchingPeriod={16}
+          windowSize={2}
           removeClippedSubviews
           keyboardShouldPersistTaps="handled"
           renderItem={({ item }) =>
@@ -380,13 +342,7 @@ export default function NuevaCategoria({
                 {titulos[item.clave]}
               </Text>
             ) : (
-              <Fila
-                iconos={item.iconos}
-                elegido={icono}
-                color={color}
-                dibujar={dibujar}
-                onElegir={setIcono}
-              />
+              <Fila iconos={item.iconos} elegido={icono} color={color} onElegir={setIcono} />
             )
           }
         />
