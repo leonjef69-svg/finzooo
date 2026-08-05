@@ -158,6 +158,38 @@ console.log("\n--- EDITAR Y BORRAR SE PUEDEN ALCANZAR ---");
   );
 }
 
+console.log("\n--- VIAJAN A LA COPIA DE LA NUBE ---");
+{
+  // Sin esto, cambiar de celular las pierde: los movimientos vuelven de la
+  // nube pero con la categoria en "Otros", y no hay forma de recuperar los
+  // nombres. Se descubre justo cuando mas duele.
+  const cloud = fs.readFileSync(path.join(RAIZ, "utils/cloudSync.ts"), "utf8");
+  ok(cloud.includes("categoriasPropias?:"), "el documento de la nube las contempla");
+  ok(/categoriasPropias\?:/.test(cloud), "y como opcional, para no romper cuentas viejas");
+
+  const ctx = fs.readFileSync(path.join(RAIZ, "contexts/AppDataContext.tsx"), "utf8");
+
+  // TODOS los sitios que suben, no "alguno": olvidar uno hace que se pierdan
+  // solo en ese camino —al cerrar sesion, por ejemplo— y eso no se nota
+  // probando.
+  const subidas = [...ctx.matchAll(/saveCloudData\(uid, \{/g)].map((m) => m.index ?? 0);
+  const conPropias = subidas.filter((i) => ctx.slice(i, i + 900).includes("categoriasPropias"));
+  ok(
+    subidas.length > 0 && conPropias.length === subidas.length,
+    `las suben los ${subidas.length} sitios que escriben en la nube (${conPropias.length} lo hacen)`
+  );
+
+  // Y al bajarlas hay que ponerlas en los DOS sitios: la variable de modulo
+  // que consulta catInfo y el estado. Solo con el estado, un movimiento con
+  // categoria propia se veria como "Otros" hasta el siguiente arranque.
+  const bajada = ctx.slice(ctx.indexOf("cloud.categoryOverrides ?? {}"));
+  ok(bajada.slice(0, 800).includes("setPropias(cloud.categoriasPropias"), "al bajarlas, van a catInfo");
+  ok(
+    bajada.slice(0, 800).includes("setCategoriasPropiasState(cloud.categoriasPropias"),
+    "y al estado que redibuja"
+  );
+}
+
 console.log("\n--- ANTES DE BORRAR SE DICE QUE PASA CON LOS MOVIMIENTOS ---");
 {
   // "Se va a borrar" no informa igual que "3 movimientos quedaran en Otros", y

@@ -40,6 +40,16 @@ export type CloudData = {
   // Nombre, color e imagen propios de cada categoria. Opcional: las cuentas
   // creadas antes de esto no lo tienen, y sin el "?" leerlas fallaria.
   categoryOverrides?: Record<string, { name?: string; color?: string; image?: string }>;
+  // Las categorias que creo la persona. Opcional: las cuentas de antes de
+  // esto no lo tienen, y sin el "?" leerlas fallaria.
+  categoriasPropias?: {
+    id: string;
+    nombre: string;
+    tipo: "expense" | "income";
+    color: string;
+    icono: string;
+    image?: string;
+  }[];
   // Meses cuyo "Saldo anterior" se muestra en cero, cada uno por separado
   // (claves "AAAA-MM"). Opcional: las cuentas creadas antes de esta
   // función no lo tienen guardado.

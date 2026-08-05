@@ -40,6 +40,7 @@ import {
   editar as editarPropia,
   loadPropias,
   savePropias,
+  setPropias,
   type CategoriaPropia,
 } from "@/utils/categoriasPropias";
 import { DECOY_BUDGET, buildDecoyTransactions } from "@/utils/decoySeed";
@@ -289,6 +290,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // estado, las pantallas se dibujarian con los datos viejos.
     setOverrides(cloud.categoryOverrides ?? {});
     setCategoryOverridesState(cloud.categoryOverrides ?? {});
+    // Igual que la personalizacion: a la variable de modulo que consulta
+    // catInfo Y al estado. Solo con el estado, un movimiento con categoria
+    // propia se veria como "Otros" hasta el siguiente arranque.
+    setPropias(cloud.categoriasPropias ?? []);
+    setCategoriasPropiasState(cloud.categoriasPropias ?? []);
     setCarryoverCleared(cloud.carryoverCleared ?? []);
     setHasOnboarded(true);
     saveJSON(STORAGE_KEYS.profile, {
@@ -415,6 +421,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         isPremium,
         merchantLearned,
         categoryOverrides,
+        categoriasPropias,
         carryoverCleared,
       });
     }
@@ -586,6 +593,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         isPremium,
         merchantLearned,
         categoryOverrides,
+        categoriasPropias,
         carryoverCleared,
       });
     }, 1500);
@@ -608,6 +616,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // la subida a la nube no se rehacia y al entrar desde otro telefono
     // volvian los nombres y colores de fabrica.
     categoryOverrides,
+    // Y lo mismo con las categorias creadas: crear "Broster" no disparaba la
+    // subida, asi que se guardaba en el celular y desaparecia al cambiar de
+    // telefono. El aviso del linter estaba senalando ese fallo exacto.
+    categoriasPropias,
     carryoverCleared,
   ]);
 
