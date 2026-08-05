@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **3 de agosto de 2026** · Código publicado: **3ago-03**
+Actualizado: **4 de agosto de 2026** · Código publicado: **4ago-03**
 
 Este archivo existe para que una sesión nueva —de Claude o de quien sea— no
 empiece de cero. No cuenta lo que ya se ve en el código ni en el historial de
@@ -154,7 +154,7 @@ Y las pruebas, con un solo comando:
 node pruebas/correr.mjs
 ```
 
-Son 39 pruebas y 7 auditores. Cada prueba nueva tiene que **fallar contra la
+Son 40 pruebas y 7 auditores. Cada prueba nueva tiene que **fallar contra la
 versión anterior**: una que pasa siempre no está probando nada. Y si la prueba
 imita código de otro lenguaje, tiene que imitar también sus reglas — ver el
 espacio duro, más abajo.
@@ -170,7 +170,9 @@ espacio duro, más abajo.
   de compartir, con el destinatario ya puesto
 - Contactos de envío guardados, con editar y borrar
 - Importar estados de cuenta (PDF, Excel, CSV) y archivos compartidos a Finzo
-- Personalizar categorías: imagen propia con recorte, color y nombre
+- **Crear tus propias categorías** con dibujo (181 iconos + 55 logos) y color;
+  editarlas y borrarlas. Personalizar las de fábrica sigue existiendo pero su
+  puerta se quitó de Ajustes.
 - Bloqueo con PIN o huella, copia en la nube, tres idiomas (es/en/pt)
 - Pantalla **Comandos de voz** en Ajustes, con ejemplos de gastos Y de
   ingresos, de anotar, preguntar, comparar y exportar
@@ -195,6 +197,62 @@ Esto es lo pendiente de verdad, en orden de bloqueo:
    sensibles, si se mantiene esa función.
 6. **12 probadores × 14 días** en prueba cerrada, para cuentas nuevas de
    desarrollador.
+
+---
+
+## Categorías propias — hecho el 03-04/08/2026
+
+Se pueden **crear, editar y borrar** categorías con nombre, dibujo y color.
+El botón "Nueva" está DENTRO de la cuadrícula al agregar un movimiento, y el
+"Editar «X»" aparece debajo solo cuando hay una propia elegida.
+
+**El catálogo** (`constants/iconos.tsx`): 181 iconos de línea en 12 grupos
+(lucide) y 55 logos de marca (FontAwesome, dentro de @expo/vector-icons). No
+hizo falta instalar nada.
+
+Los genéricos se importan uno a uno a propósito: importar la librería entera
+metería 1.749 iconos en la app para usar ciento y pico. Las marcas van por
+nombre porque son una tipografía — agregar una más no pesa nada.
+
+### NI UN LOGO FINANCIERO, Y ES DELIBERADO
+
+Ni Visa, ni Mastercard, ni PayPal, ni Yape, ni bancos. Todo logo es marca
+registrada; lo que cambia es la probabilidad de que su dueño se moleste, y los
+financieros son otro nivel: **una app de dinero mostrando el logo de un banco
+es justo lo que hace pensar "esto tiene relación con mi banco"**. Es el reclamo
+más fácil de recibir y el más difícil de defender.
+
+Se acordó con el usuario el 03/08/2026 sabiendo que ni así el riesgo es cero.
+Por eso **todas las marcas viven en un solo archivo**: si alguien reclama,
+quitar una es borrar una línea. Hay una prueba que vigila las dos cosas.
+
+Y nunca en el icono de la app ni en las fotos de la tienda: ahí sí parecería
+que Finzo es oficial de esa marca.
+
+### Decisiones que costaron pensarse
+
+- **El tipo no se pregunta**: sale de la pestaña donde se tocó "Nueva".
+- **El id lleva prefijo `propia_`.** Sin él, quien cree una "Comida" chocaría
+  con la de fábrica y una de las dos desaparecería, llevándose la categoría de
+  todos sus movimientos anteriores.
+- **Borrarla NO borra sus movimientos**: caen en "Otros" y siguen contando.
+  Antes de borrar se dice cuántos son, con el número. "Se va a borrar" no
+  informa igual que "tus 3 movimientos pasan a Otros".
+- **Se descartó el toque largo** para editar: es invisible, y quien no lo sepa
+  no encuentra nunca cómo cambiar lo que acaba de crear.
+- **Fuera los emojis** de toda la app (03/08/2026). La misma categoría se veía
+  con emoji al elegirla y con icono de línea en Inicio. Y con emojis no se
+  puede ofrecer un catálogo de mil dibujos.
+
+### Dos fallos que cazaron las herramientas, no las pruebas
+
+- **eslint**: al agregar el campo de la nube avisó de una dependencia que
+  faltaba. No era ruido — sin ella, crear una categoría no disparaba la subida
+  y se perdía al cambiar de celular.
+- **El sustituto de iconos de las pruebas** tenía 24 nombres escritos a mano.
+  Al llegar el catálogo, cinco pruebas que ni hablan de iconos dejaron de
+  compilar de golpe. Ahora se genera con los 5.984 nombres de la librería:
+  `node pruebas/stubs/generar-lucide.mjs`
 
 ---
 
