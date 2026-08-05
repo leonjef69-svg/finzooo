@@ -169,11 +169,25 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   ok(pant.includes('key={"hueco"'), "y el relleno es espacio vacio, no un dibujo");
 
   // Mismo reporte: "se siente feo al abrirlo". La pantalla entra con animacion;
-  // construir las casillas en ese instante la atropella. No se arregla
-  // abaratando las casillas, porque el problema es CUANDO se hacen.
-  ok(pant.includes("InteractionManager.runAfterInteractions"), "el catalogo espera a que la pantalla acabe de abrir");
-  ok(pant.includes("catalogoListo"), "y hasta entonces no se dibuja");
-  ok(/return \(\) => tarea\.cancel\(\)/.test(pant), "y se cancela si se sale antes, para no dibujar en el aire");
+  // construir los dibujos en ese instante la atropella. No se arregla
+  // abaratando los dibujos, porque el problema es CUANDO se hacen.
+  ok(pant.includes("InteractionManager.runAfterInteractions"), "los dibujos esperan a que la pantalla acabe de abrir");
+
+  // Y el primer intento de eso fue no dibujar NADA hasta que la animacion
+  // acabara. Se reporto en seguida: "luego de 1 segundo aparece los iconos como
+  // si estuviera cargando". Lo que espera tiene que ser SOLO el dibujo de
+  // dentro; la cuadricula de casillas vacias sale completa desde el principio,
+  // que es lo que evita que parezca que carga y que algo salte de sitio.
+  ok(!pant.includes("catalogoListo"), "la cuadricula NO espera para aparecer");
+  ok(/\{dibujar && \(/.test(pant), "lo unico que espera es el dibujo de dentro de la casilla");
+  ok(/dibujar\?: boolean|dibujar: boolean/.test(pant), "y se pasa hasta la casilla");
+
+  // La espera lleva tope: runAfterInteractions aguarda a que no quede NADA
+  // pendiente, que puede ser mucho mas que la animacion. Ese fue el segundo.
+  ok(pant.includes("ESPERA_MAXIMA_MS"), "la espera lleva tope");
+  ok(/setTimeout\(ya, ESPERA_MAXIMA_MS\)/.test(pant), "que corre en paralelo, no en vez de");
+  ok(/clearTimeout\(tope\)/.test(pant), "y se limpia al salir, para no dibujar en el aire");
+  ok(/tarea\.cancel\(\)/.test(pant), "igual que la otra via");
 }
 
 console.log("\n--- NI UN LOGO DE BANCO EN EL CATALOGO ---");

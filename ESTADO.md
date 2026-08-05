@@ -285,11 +285,22 @@ los iconos y está lento, se siente feo al abrirlo"):
   cada grupo casi nunca viene completa, y sus dibujos se estiran para llenarla
   y salen más grandes. Se rellena con espacio vacío. Las dos mitades hacen
   falta; con una sola se ve chueco por el otro lado.
-- **Feo al abrir.** No era el coste de las casillas, era **cuándo** se hacen:
-  la pantalla entra con animación y construirlas en ese mismo instante la
-  atropella. Ahora entran la vista previa y el nombre de inmediato, y las
-  casillas en cuanto la animación terminó (`InteractionManager`). Abaratar más
-  las casillas no habría arreglado esto nunca.
+- **Feo al abrir.** No era el coste de los dibujos, era **cuándo** se hacen:
+  la pantalla entra con animación y construirlos en ese mismo instante la
+  atropella. Abaratarlos más no habría arreglado esto nunca.
+
+  El primer intento fue no dibujar **nada** hasta que la animación acabara, y
+  se reportó en seguida: *"luego de 1 segundo aparece los iconos como si
+  estuviera cargando"*. Dos errores en uno:
+
+  - Esperar sin dejar nada en pantalla convierte un tirón en algo peor: una
+    pantalla que parece cargando. Lo que espera ahora es **solo el dibujo de
+    dentro de cada casilla**. La cuadrícula de casillas vacías sale completa
+    desde el primer momento —cuatro líneas y un fondo, baratísimo—, así que la
+    pantalla se ve entera y nada cambia de sitio cuando entran los dibujos.
+  - `runAfterInteractions` no espera a la animación: espera a que no quede
+    **nada** pendiente, y eso puede ser mucho más. De ahí el segundo. Ahora
+    corre a la par un tope de 300 ms y vale el primero que llegue.
 
 Aviso para el futuro: **este proyecto no tiene configuración de prettier.**
 Correrlo reformatea el archivo entero a 80 columnas cuando el resto del código

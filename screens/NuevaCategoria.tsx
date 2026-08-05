@@ -39,11 +39,14 @@ const Dibujito = memo(function Dibujito({
   id,
   elegido,
   color,
+  dibujar,
   onElegir,
 }: {
   id: string;
   elegido: boolean;
   color: string;
+  /** Falso el primer instante: sale la casilla vacía y el dibujo entra luego. */
+  dibujar: boolean;
   onElegir: (id: string) => void;
 }) {
   const D = iconoDe(id);
@@ -58,13 +61,28 @@ const Dibujito = memo(function Dibujito({
           : "bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700"
       }`}
     >
-      <D size={22} color={elegido ? COLOR_HEX_600[color] || "#475569" : "#64748b"} strokeWidth={2.2} />
+      {/* La casilla vacía es cuatro líneas y un fondo: sale al instante. El
+          dibujo de dentro es un vector de verdad y cuesta, así que entra un
+          momento después. La casilla ya ocupa su sitio, así que nada se mueve
+          ni salta cuando aparece. */}
+      {dibujar && (
+        <D
+          size={22}
+          color={elegido ? COLOR_HEX_600[color] || "#475569" : "#64748b"}
+          strokeWidth={2.2}
+        />
+      )}
     </TouchableOpacity>
   );
 });
 
 // Cuántos dibujos caben de ancho.
 const POR_FILA = 5;
+
+// Lo máximo que los dibujos esperan a que la pantalla acabe de abrir. La
+// animación de entrada dura menos que esto; el tope está para que, si el
+// celular anda ocupado con otra cosa, la espera no se estire y se note.
+const ESPERA_MAXIMA_MS = 300;
 
 /**
  * El catálogo aplanado: títulos y filas de cinco, en una sola lista.
@@ -99,11 +117,13 @@ const Fila = memo(function Fila({
   iconos,
   elegido,
   color,
+  dibujar,
   onElegir,
 }: {
   iconos: (string | null)[];
   elegido: string;
   color: string;
+  dibujar: boolean;
   onElegir: (id: string) => void;
 }) {
   return (
@@ -112,7 +132,14 @@ const Fila = memo(function Fila({
         id === null ? (
           <View key={"hueco" + i} className="flex-1" />
         ) : (
-          <Dibujito key={id} id={id} elegido={elegido === id} color={color} onElegir={onElegir} />
+          <Dibujito
+            key={id}
+            id={id}
+            elegido={elegido === id}
+            color={color}
+            dibujar={dibujar}
+            onElegir={onElegir}
+          />
         )
       )}
     </View>
@@ -173,16 +200,31 @@ export default function NuevaCategoria({
 
   // ABRIR PRIMERO, DIBUJAR DESPUÉS.
   //
-  // La pantalla entra con una animación. Si en ese mismo instante hay que
-  // construir además las casillas, las dos cosas se pelean por el celular y la
-  // animación sale a tirones: eso es lo que se sentía "feo al abrir", y no se
-  // arregla haciendo las casillas más baratas, porque el problema es CUÁNDO se
-  // hacen. Así entra la vista previa y el nombre de inmediato, y las casillas
-  // en cuanto la animación terminó — un pestañeo después.
-  const [catalogoListo, setCatalogoListo] = useState(false);
+  // La pantalla entra con una animación. Construir los dibujos en ese mismo
+  // instante la atropella y el abrir sale a tirones; no se arregla haciendo los
+  // dibujos más baratos, porque el problema es CUÁNDO se hacen.
+  //
+  // El primer intento fue no dibujar NADA hasta que la animación acabara, y se
+  // veía como si la pantalla estuviera cargando. Lo que espera ahora son solo
+  // los dibujos: la cuadrícula de casillas vacías sale completa desde el primer
+  // momento, así que la pantalla se ve entera y nada cambia de sitio después.
+  //
+  // Y la espera lleva tope: runAfterInteractions aguarda a que no quede NADA
+  // pendiente, que puede ser bastante más que la animación. Sin tope, el
+  // usuario reportó como un segundo.
+  const [dibujar, setDibujar] = useState(false);
   useEffect(() => {
-    const tarea = InteractionManager.runAfterInteractions(() => setCatalogoListo(true));
-    return () => tarea.cancel();
+    let cancelado = false;
+    const ya = () => {
+      if (!cancelado) setDibujar(true);
+    };
+    const tarea = InteractionManager.runAfterInteractions(ya);
+    const tope = setTimeout(ya, ESPERA_MAXIMA_MS);
+    return () => {
+      cancelado = true;
+      tarea.cancel();
+      clearTimeout(tope);
+    };
   }, []);
 
   // Los títulos de los grupos, traducidos UNA vez. Pasarle la función de
@@ -316,17 +358,20 @@ export default function NuevaCategoria({
             ))}
           </View>
         </ScrollView>
-      ) : catalogoListo ? (
+      ) : (
         <FlatList
           className="flex-1 px-5"
           contentContainerStyle={{ paddingBottom: 24, paddingTop: 12 }}
           data={RENGLONES}
           keyExtractor={(r) => r.clave}
           // Solo lo que cabe y un poco más. Sin esto, la lista sigue montando
-          // de golpe todo lo que crea que entra en la pantalla.
-          initialNumToRender={6}
-          maxToRenderPerBatch={6}
-          windowSize={5}
+          // de golpe todo lo que crea que entra en la pantalla. Se pide de
+          // entrada una pantalla completa de casillas: vacías son baratas, y
+          // así la cuadrícula sale entera de una vez en vez de irse llenando a
+          // pedazos, que es lo que se veía como "cargando".
+          initialNumToRender={14}
+          maxToRenderPerBatch={8}
+          windowSize={3}
           removeClippedSubviews
           keyboardShouldPersistTaps="handled"
           renderItem={({ item }) =>
@@ -335,13 +380,16 @@ export default function NuevaCategoria({
                 {titulos[item.clave]}
               </Text>
             ) : (
-              <Fila iconos={item.iconos} elegido={icono} color={color} onElegir={setIcono} />
+              <Fila
+                iconos={item.iconos}
+                elegido={icono}
+                color={color}
+                dibujar={dibujar}
+                onElegir={setIcono}
+              />
             )
           }
         />
-      ) : (
-        // Un instante, mientras termina de abrirse. Ver "abrir primero".
-        <View className="flex-1" />
       )}
 
       <View className="px-5" style={{ paddingBottom: insets.bottom + 16 }}>
