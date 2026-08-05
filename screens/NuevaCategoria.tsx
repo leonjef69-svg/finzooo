@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { memo, useMemo, useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check, ChevronLeft, Trash2 } from "lucide-react-native";
@@ -17,6 +17,88 @@ const COLORES = [
   "green", "emerald", "teal", "cyan", "sky", "blue",
   "indigo", "violet", "fuchsia", "pink", "stone", "slate",
 ];
+
+const TODOS_LOS_GRUPOS = [...GRUPOS_GENERICOS, ...GRUPOS_MARCAS];
+
+/**
+ * Un dibujo de la cuadrícula.
+ *
+ * Va en su propio componente memorizado por un motivo medible: son 236 en
+ * pantalla. Sin esto, elegir uno redibujaba los 236 aunque solo cambien dos
+ * —el que se deja y el que se toma— y el toque se sentía pesado.
+ */
+const Dibujito = memo(function Dibujito({
+  id,
+  elegido,
+  color,
+  onElegir,
+}: {
+  id: string;
+  elegido: boolean;
+  color: string;
+  onElegir: (id: string) => void;
+}) {
+  const D = iconoDe(id);
+  return (
+    <TouchableOpacity
+      onPress={() => onElegir(id)}
+      className={`w-12 h-12 rounded-2xl items-center justify-center ${
+        elegido
+          ? `bg-${color}-100 border-2 border-${color}-500`
+          : "bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700"
+      }`}
+    >
+      <D size={22} color={elegido ? COLOR_HEX_600[color] || "#475569" : "#64748b"} strokeWidth={2.2} />
+    </TouchableOpacity>
+  );
+});
+
+/**
+ * El catálogo entero.
+ *
+ * También memorizado, y esta es la parte que de verdad se notaba: esta
+ * pantalla se redibuja con CADA LETRA que se escribe en el nombre, y sin esto
+ * cada pulsación rehacía los 236 dibujos. Escribir "Broster" reconstruía la
+ * cuadrícula siete veces.
+ *
+ * Los títulos llegan ya traducidos a propósito: la función de traducir cambia
+ * en cada dibujado del padre, y bastaba con recibirla para que memo no
+ * sirviera de nada.
+ */
+const Catalogo = memo(function Catalogo({
+  elegido,
+  color,
+  titulos,
+  onElegir,
+}: {
+  elegido: string;
+  color: string;
+  titulos: Record<string, string>;
+  onElegir: (id: string) => void;
+}) {
+  return (
+    <>
+      {TODOS_LOS_GRUPOS.map((g) => (
+        <View key={g.titulo} className="mb-5">
+          <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 mb-2.5">
+            {titulos[g.titulo]}
+          </Text>
+          <View className="flex-row flex-wrap gap-2.5">
+            {g.iconos.map((id) => (
+              <Dibujito
+                key={id}
+                id={id}
+                elegido={elegido === id}
+                color={color}
+                onElegir={onElegir}
+              />
+            ))}
+          </View>
+        </View>
+      ))}
+    </>
+  );
+});
 
 
 /**
@@ -69,6 +151,16 @@ export default function NuevaCategoria({
   const [color, setColor] = useState(() => original?.color ?? "violet");
   const [pestana, setPestana] = useState<"icono" | "color">("icono");
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
+
+  // Los títulos de los grupos, traducidos UNA vez. Pasarle la función de
+  // traducir al catálogo lo redibujaría entero en cada letra escrita, que es
+  // justo lo que se está evitando. El idioma no se puede cambiar sin salir de
+  // aquí, así que calcularlo una vez es correcto.
+  const titulos = useMemo(
+    () => Object.fromEntries(TODOS_LOS_GRUPOS.map((g) => [g.titulo, t(g.titulo)])),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
   const Dibujo = iconoDe(icono);
   const limpio = sanitizeName(nombre);
@@ -168,38 +260,7 @@ export default function NuevaCategoria({
 
       <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 24, paddingTop: 12 }}>
         {pestana === "icono" ? (
-          <>
-            {[...GRUPOS_GENERICOS, ...GRUPOS_MARCAS].map((g) => (
-              <View key={g.titulo} className="mb-5">
-                <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 mb-2.5">
-                  {t(g.titulo)}
-                </Text>
-                <View className="flex-row flex-wrap gap-2.5">
-                  {g.iconos.map((id) => {
-                    const D = iconoDe(id);
-                    const elegido = icono === id;
-                    return (
-                      <TouchableOpacity
-                        key={id}
-                        onPress={() => setIcono(id)}
-                        className={`w-12 h-12 rounded-2xl items-center justify-center ${
-                          elegido
-                            ? `bg-${color}-100 border-2 border-${color}-500`
-                            : "bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700"
-                        }`}
-                      >
-                        <D
-                          size={22}
-                          color={elegido ? COLOR_HEX_600[color] || "#475569" : "#64748b"}
-                          strokeWidth={2.2}
-                        />
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </View>
-            ))}
-          </>
+          <Catalogo elegido={icono} color={color} titulos={titulos} onElegir={setIcono} />
         ) : (
           <View className="flex-row flex-wrap gap-3">
             {COLORES.map((c) => (

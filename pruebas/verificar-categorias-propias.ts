@@ -105,6 +105,36 @@ console.log("\n--- EDITAR NO BORRA LO QUE NO SE TOCA ---");
   ok(despues.icono === "Drumstick", "y el dibujo");
 }
 
+console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
+{
+  // Reportado el 04/08/2026: "al usar la categoria, poner nueva y mas, se pone
+  // lento". Eran dos cosas, y las dos medibles:
+  //
+  //   1. iconoDe devolvia un componente RECIEN CREADO para cada logo. Para
+  //      React eso no es "el mismo dibujo otra vez": es otro componente, asi
+  //      que tiraba el anterior y lo construia de cero. 55 logos por pulsacion.
+  //   2. La cuadricula entera se redibujaba con cada letra del nombre.
+  const iconos = fs.readFileSync(path.join(RAIZ, "constants/iconos.tsx"), "utf8");
+  ok(iconos.includes("LOGOS_HECHOS"), "los logos se guardan y se reutilizan");
+  ok(/LOGOS_HECHOS\.get\(nombre\)/.test(iconos), "se busca el ya hecho antes de crear otro");
+
+  // Comprobacion de verdad, no de texto: dos llamadas seguidas tienen que
+  // devolver EL MISMO componente. Si devuelven distintos, el fallo volvio.
+  const { iconoDe: resolver } = require("@/constants/iconos") as {
+    iconoDe: (id: string) => unknown;
+  };
+  ok(resolver("marca:youtube") === resolver("marca:youtube"), "el mismo logo dos veces es el MISMO objeto");
+  ok(resolver("Utensils") === resolver("Utensils"), "y lo mismo con los de linea");
+  ok(resolver("marca:youtube") !== resolver("marca:spotify"), "pero dos logos distintos son distintos");
+
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/NuevaCategoria.tsx"), "utf8");
+  ok(pant.includes("memo(function Catalogo"), "el catalogo esta memorizado");
+  ok(pant.includes("memo(function Dibujito"), "y cada dibujo tambien");
+  // Recibir la funcion de traducir bastaba para que memo no sirviera de nada:
+  // cambia en cada dibujado del padre.
+  ok(pant.includes("titulos={titulos}"), "los titulos llegan traducidos, no la funcion de traducir");
+}
+
 console.log("\n--- NI UN LOGO DE BANCO EN EL CATALOGO ---");
 {
   // Una app de dinero mostrando el logo de un banco es lo que hace pensar

@@ -71,13 +71,33 @@ export function esMarca(id: string): boolean {
   return id.startsWith(MARCA);
 }
 
-/** El componente de un logo, con la misma forma que uno de línea. */
+/**
+ * El componente de un logo, con la misma forma que uno de línea.
+ *
+ * SE GUARDA EL QUE YA SE HIZO, Y ESO NO ES UN ADORNO
+ *
+ * Sin esta tabla, cada llamada devolvía un componente RECIÉN CREADO. Para
+ * React eso no es "el mismo dibujo otra vez": es un componente distinto, así
+ * que tira el anterior y construye el nuevo desde cero.
+ *
+ * En la pantalla de crear categoría se dibujan 55 logos a la vez, y esa
+ * pantalla se redibuja con CADA LETRA que se escribe en el nombre. Resultado:
+ * 55 componentes destruidos y creados por pulsación, y la escritura se sentía
+ * pegajosa. Lo reportó el usuario el 04/08/2026.
+ */
+const LOGOS_HECHOS = new Map<string, IconComponent>();
+
 function logo(nombre: string): IconComponent {
+  const guardado = LOGOS_HECHOS.get(nombre);
+  if (guardado) return guardado;
+
   // Se ignora strokeWidth: un logo es una silueta rellena, no un trazo.
   const Logo: ComponentType<{ size?: number; color?: string; strokeWidth?: number }> = ({
     size = 20,
     color = "#475569",
   }) => <FontAwesome5 name={nombre} size={size} color={color} brand />;
+  Logo.displayName = "Logo" + nombre;
+  LOGOS_HECHOS.set(nombre, Logo);
   return Logo;
 }
 
