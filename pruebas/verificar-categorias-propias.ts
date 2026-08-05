@@ -128,6 +128,13 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   ok(resolver("marca:youtube") !== resolver("marca:spotify"), "pero dos logos distintos son distintos");
 
   const pant = fs.readFileSync(path.join(RAIZ, "screens/NuevaCategoria.tsx"), "utf8");
+
+  // La misma pantalla SIN COMENTARIOS, para las comprobaciones de "esto ya no
+  // debe existir". Tres aserciones se cayeron por su propia explicacion: el
+  // comentario que cuenta por que se quito algo contiene su nombre. Una prueba
+  // que castiga documentar el motivo termina haciendo que se borre el motivo.
+  const codigo = pant.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
   ok(pant.includes("memo(function Dibujito"), "cada dibujo esta memorizado");
   ok(pant.includes("memo(function Fila"), "y las filas, que son lo que la lista recicla");
   // Recibir la funcion de traducir bastaba para que memo no sirviera de nada:
@@ -141,10 +148,9 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   //
   // Ya existio un "memo(function Catalogo" que dibujaba todos los grupos sin
   // condicion: si vuelve, la lentitud vuelve con el.
-  ok(!pant.includes("memo(function Catalogo"), "ya no hay un catalogo que dibuje los 236 de golpe");
+  ok(!codigo.includes("memo(function Catalogo"), "ya no hay un catalogo que dibuje los 236 de golpe");
   ok(/<FlatList/.test(pant), "el catalogo va en una lista que solo construye lo que se ve");
   ok(pant.includes("initialNumToRender"), "y se le limita cuanto construye al abrir");
-  ok(pant.includes("removeClippedSubviews"), "y suelta lo que sale de pantalla");
 
   // Una lista dentro de una pantalla deslizable cree que tiene sitio infinito
   // y construye TODO: seria volver al fallo con mas codigo. Por eso el
@@ -179,23 +185,32 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   //
   // Esperar nunca era el arreglo, y estas dos aserciones existen para que no
   // vuelva a intentarse: el arreglo era construir MENOS (ver windowSize abajo).
-  ok(!pant.includes("InteractionManager"), "los dibujos no esperan a nada para salir");
-  // Se busca el PROP, no la palabra: "dibujar" aparece en los comentarios que
-  // explican por que ya no existe, y una prueba que se cae por su propia
-  // explicacion invita a borrar la explicacion.
-  ok(!/dibujar=\{|dibujar: boolean/.test(pant), "ni sale la casilla vacia primero y el dibujo despues");
+  ok(!codigo.includes("InteractionManager"), "los dibujos no esperan a nada para salir");
+  ok(!/\bdibujar\b/.test(codigo), "ni sale la casilla vacia primero y el dibujo despues");
 
-  // Y aqui esta lo que de verdad costaba el segundo. windowSize se cuenta en
-  // PANTALLAS: con 3, la lista levantaba la que se ve mas una arriba y otra
-  // abajo, unos 175 dibujos donde caben 60. Es el numero mas facil de subir
-  // "por si acaso" y el que mas cuesta, asi que se vigila con tope.
-  const ventana = Number(/windowSize=\{(\d+)\}/.exec(pant)?.[1] ?? "999");
-  ok(ventana <= 2, `windowSize es ${ventana}: no construye mas de una pantalla y algo`);
-
-  // Y la primera pasada ocurre MIENTRAS la pantalla se abre: pedir de mas ahi
-  // es justo lo que la hacia abrir a tirones.
+  // LO QUE DECIDE SI ABRIR PESA es la PRIMERA pasada, y solo esa: es la unica
+  // que ocurre mientras la pantalla entra. Aqui va el tope, porque es el numero
+  // que se sube "por si acaso" y el que se paga al abrir.
   const primeros = Number(/initialNumToRender=\{(\d+)\}/.exec(pant)?.[1] ?? "999");
   ok(primeros <= 8, `initialNumToRender es ${primeros}: la primera pasada se mantiene corta`);
+
+  // Y AQUI ESTUVO UN ERROR MIO, que esta prueba existe para no repetir: se le
+  // puso tope a windowSize (2) creyendo que era la causa de la lentitud al
+  // abrir. No lo era —windowSize se llena DESPUES, en tandas— y el tope trajo
+  // otro fallo: "cuando deslizo para abajo estan recien apareciendo los iconos
+  // como si estuvieran cargando". La reserva tiene que ser holgada.
+  const ventana = Number(/windowSize=\{(\d+)\}/.exec(pant)?.[1] ?? "0");
+  ok(ventana >= 4, `windowSize es ${ventana}: hay reserva de sobra para deslizar`);
+
+  // Y las tandas tienen que llenarse mas rapido que el dedo, o el hueco se ve
+  // igual aunque la reserva sea grande.
+  const tanda = Number(/maxToRenderPerBatch=\{(\d+)\}/.exec(pant)?.[1] ?? "0");
+  ok(tanda >= 8, `maxToRenderPerBatch es ${tanda}: las tandas no van mas lentas que el dedo`);
+
+  // removeClippedSubviews suelta las vistas que salen de pantalla: en Android es
+  // una causa conocida de celdas en blanco, porque al volver hay que rehacerlas.
+  // Con 236 casillas la memoria no es el problema; los huecos si lo eran.
+  ok(!codigo.includes("removeClippedSubviews"), "no suelta las vistas que salen de pantalla");
 
   // Con los iconos ya al instante, lo que quedaba era el cambio de pantalla en
   // si: "podrias agregarle una transicion suave, se ve brusco al momento de

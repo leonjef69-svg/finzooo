@@ -317,24 +317,31 @@ export default function NuevaCategoria({
           contentContainerStyle={{ paddingBottom: 24, paddingTop: 12 }}
           data={RENGLONES}
           keyExtractor={(r) => r.clave}
-          // ESTOS TRES NÚMEROS SON EL RENDIMIENTO DE LA PANTALLA.
+          // ESTOS NÚMEROS SON EL RENDIMIENTO DE LA PANTALLA, Y SON DOS COSAS
+          // DISTINTAS QUE UNA VEZ SE CONFUNDIERON.
           //
-          // windowSize se cuenta en pantallas, no en renglones: con 3, la lista
-          // construía la que se ve MÁS una arriba y otra abajo. Unos 175
-          // dibujos en vez de los 60 que caben, y de ahí venía casi todo el
-          // segundo de espera. Con 2 construye lo que se ve y medio de reserva
-          // a cada lado, que basta para que al deslizar no salgan huecos.
+          // initialNumToRender es la PRIMERA pasada, la única que ocurre
+          // mientras la pantalla se abre. Ese es el número que decide si abrir
+          // se siente pesado, y por eso se mantiene corto.
           //
-          // initialNumToRender es cuánto entra en la PRIMERA pasada, y esa
-          // pasada ocurre mientras la pantalla se abre: pedir de más ahí es
-          // justo lo que la hacía abrir a tirones. Se piden los primeros
-          // renglones y el resto entra en las pasadas siguientes, que ya no
-          // pelean con la animación.
+          // windowSize es cuánta reserva se mantiene lista alrededor de lo que
+          // se ve, y se cuenta en PANTALLAS. No pelea con la animación: se
+          // llena en tandas, después, mientras la persona mira. Se bajó a 2
+          // creyendo que era la causa de la lentitud al abrir —no lo era— y el
+          // resultado fue que al deslizar los dibujos aparecían recién al
+          // llegar, como cargando. Con 5 hay dos pantallas de reserva a cada
+          // lado, que es lo que un deslizamiento normal no alcanza a agotar.
+          //
+          // Y las tandas van de a 8 renglones cada 16 milésimas: si se llenan
+          // más despacio que el dedo, el hueco se ve igual.
           initialNumToRender={7}
-          maxToRenderPerBatch={4}
+          maxToRenderPerBatch={8}
           updateCellsBatchingPeriod={16}
-          windowSize={2}
-          removeClippedSubviews
+          windowSize={5}
+          // SIN removeClippedSubviews. Suelta las vistas que salen de pantalla
+          // para ahorrar memoria, pero en Android es una causa conocida de
+          // justo esto: al volver a entrar hay que rehacerlas y se ven vacías
+          // un momento. Con 236 casillas la memoria no es el problema.
           keyboardShouldPersistTaps="handled"
           renderItem={({ item }) =>
             item.clase === "titulo" ? (

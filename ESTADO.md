@@ -306,8 +306,28 @@ los iconos y está lento, se siente feo al abrirlo"):
   y usarlo para tapar un coste que no se ha bajado solo cambia un tirón por una
   pantalla que parece cargando. El tirón pasa; la pantalla vacía se ve.
 
-  Hay dos pruebas con **tope numérico** sobre esos dos números, porque son los
-  más fáciles de subir "por si acaso" y los que más cuestan.
+  **Pero el tope se le puso al número equivocado**, y eso costó otro fallo:
+  *"cuando deslizo para abajo están recién apareciendo los iconos como si
+  estuvieran cargando"*. Son dos cosas distintas y se confundieron:
+
+  - `initialNumToRender` es la **primera** pasada, la única que ocurre mientras
+    la pantalla se abre. **Ese** es el número que decide si abrir pesa, y ahí va
+    el tope (≤ 8).
+  - `windowSize` es la **reserva** que se mantiene lista alrededor de lo que se
+    ve. Se llena en tandas, después, mientras la persona mira: no pelea con la
+    animación. Bajarlo a 2 no ganó nada al abrir y dejó la reserva tan justa
+    que el dedo la agotaba. Está en 5, y la prueba ahora exige un **mínimo**,
+    no un máximo.
+  - Las tandas van de a 8 cada 16 ms: si se llenan más despacio que el dedo, el
+    hueco se ve igual aunque la reserva sea grande.
+  - **Fuera `removeClippedSubviews`.** Suelta las vistas que salen de pantalla
+    para ahorrar memoria, y en Android es causa conocida de celdas en blanco
+    porque al volver hay que rehacerlas. Con 236 casillas la memoria no era el
+    problema; los huecos sí.
+
+  Si aún con esto un deslizamiento muy rápido dejara huecos, lo siguiente es
+  `getItemLayout` (decirle las alturas exactas en vez de que las mida). No se
+  hizo ya porque una altura mal calculada se ve peor que un hueco.
 
 - **Y recién entonces se podía arreglar lo brusco.** Con los iconos ya al
   instante, quedaba el cambio de pantalla en sí. La ruta `nueva-categoria` no
@@ -326,6 +346,13 @@ los iconos y está lento, se siente feo al abrirlo"):
   Importa el orden: **la animación la corre el sistema, no nuestro código**, así
   que sigue siendo suave aunque la pantalla esté armando sus iconos. Puesta
   antes de bajar el coste, habría tapado el problema en vez de resolverlo.
+
+Y una lección sobre las pruebas de esta tanda: las que dicen **"esto ya no debe
+existir"** se caían por su propia explicación, porque el comentario que cuenta
+por qué se quitó algo contiene su nombre. Pasó tres veces (`Catalogo`,
+`dibujar`, `removeClippedSubviews`). Una prueba que castiga documentar el motivo
+acaba haciendo que se borre el motivo. Ahora esas comprobaciones van contra la
+pantalla **sin comentarios** (`codigo` en `verificar-categorias-propias.ts`).
 
 Aviso para el futuro: **este proyecto no tiene configuración de prettier.**
 Correrlo reformatea el archivo entero a 80 columnas cuando el resto del código
