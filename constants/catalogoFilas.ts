@@ -1,19 +1,21 @@
 import { TODOS_LOS_GRUPOS } from "@/constants/iconos";
 
 /**
- * El catálogo de dibujos, aplanado en renglones, y las medidas de la cuadrícula.
+ * El catálogo de dibujos partido en filas, y las medidas de la cuadrícula.
  *
  * POR QUÉ ESTO NO VIVE EN LA PANTALLA
  *
- * Son cuentas, no dibujo, y de ellas depende que la lista de "Nueva categoría"
- * no se quede en blanco al deslizar rápido: la lista necesita saber dónde
- * empieza cada renglón SIN haberlo dibujado. Mientras las medidas salían de
- * clases de estilo ("flex-1", "aspect-square"), solo se sabían después de
- * dibujar, y un deslizón fuerte dejaba la pantalla vacía.
+ * Son cuentas, no dibujo. Aquí, sin nada de React, se pueden comprobar con
+ * números en las pruebas: que las cinco casillas llenen justo el ancho, que
+ * ninguna fila quede corta, que al partir el catálogo no se pierda ni se repita
+ * un dibujo. Leyendo el código eso no se ve.
  *
- * Aquí, sin nada de React, se pueden comprobar con números en las pruebas — que
- * es lo que hace falta, porque una medida mal calculada se ve peor que un hueco:
- * las filas se montan unas sobre otras o quedan separadas.
+ * POR QUÉ HAY MEDIDAS EN NÚMEROS Y NO EN CLASES DE ESTILO
+ *
+ * Porque hay que reservar el sitio de lo que todavía no se ha dibujado. Los
+ * grupos entran de a uno tras abrir la pantalla, y mientras no están, su hueco
+ * tiene que medir exactamente lo que van a medir — si no, el contenido crece
+ * bajo el dedo y la pantalla salta.
  */
 
 /** Cuántos dibujos caben de ancho. */
@@ -34,45 +36,33 @@ export const ALTO_TITULO = 36;
 export const LADO_DE = (anchoPantalla: number) =>
   (anchoPantalla - MARGEN_LATERAL * 2 - SEPARACION * (POR_FILA - 1)) / POR_FILA;
 
-type Renglon =
-  | { clase: "titulo"; clave: string }
-  | { clase: "fila"; clave: string; iconos: (string | null)[] };
+/** Lo que ocupa una fila: la casilla más el hueco de debajo. */
+export const ALTO_FILA_DE = (anchoPantalla: number) => LADO_DE(anchoPantalla) + SEPARACION;
+
+type GrupoEnFilas = {
+  titulo: string;
+  /** Filas de POR_FILA. `null` es un hueco de relleno, no un dibujo. */
+  filas: (string | null)[][];
+};
 
 /**
- * Títulos y filas de cinco, en una sola lista.
- *
- * Aplanado a propósito: así la lista puede construir solo lo que se ve. Con la
- * cuadrícula normal, los 236 dibujos se montaban TODOS a la vez aunque en
- * pantalla cupieran veinte, y cada uno es un dibujo vectorial, no una letra.
+ * Cada grupo con sus dibujos ya repartidos en filas de cinco.
  *
  * Se calcula una vez al cargar el archivo, no en cada dibujado.
  */
-export const RENGLONES: Renglon[] = TODOS_LOS_GRUPOS.flatMap((g) => {
-  const filas: Renglon[] = [{ clase: "titulo", clave: g.titulo }];
+export const CATALOGO_EN_FILAS: GrupoEnFilas[] = TODOS_LOS_GRUPOS.map((g) => {
+  const filas: (string | null)[][] = [];
   for (let i = 0; i < g.iconos.length; i += POR_FILA) {
-    const trozo: (string | null)[] = g.iconos.slice(i, i + POR_FILA);
+    const fila: (string | null)[] = g.iconos.slice(i, i + POR_FILA);
     // La última fila de cada grupo casi nunca viene completa. Se rellena con
     // huecos para que TODAS midan lo mismo: si no, sus dibujos se reparten el
     // ancho de otra forma y salen más grandes que los de arriba.
-    while (trozo.length < POR_FILA) trozo.push(null);
-    filas.push({ clase: "fila", clave: g.titulo + i, iconos: trozo });
+    while (fila.length < POR_FILA) fila.push(null);
+    filas.push(fila);
   }
-  return filas;
+  return { titulo: g.titulo, filas };
 });
 
-/**
- * Dónde empieza y cuánto mide cada renglón.
- *
- * No hay una multiplicación simple que sirva, porque los renglones son de dos
- * tamaños: los títulos miden ALTO_TITULO y las filas lo que se le pase.
- */
-export function medidasDe(altoFila: number) {
-  const altos = RENGLONES.map((r) => (r.clase === "titulo" ? ALTO_TITULO : altoFila));
-  const desde: number[] = [];
-  let acumulado = 0;
-  for (const alto of altos) {
-    desde.push(acumulado);
-    acumulado += alto;
-  }
-  return { altos, desde, total: acumulado };
-}
+/** Lo que ocupan las filas de un grupo. Es el hueco a reservar mientras no están. */
+export const altoDeLasFilas = (grupo: GrupoEnFilas, altoFila: number) =>
+  grupo.filas.length * altoFila;

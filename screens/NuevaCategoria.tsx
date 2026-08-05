@@ -1,6 +1,5 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import {
-  FlatList,
   ScrollView,
   Text,
   TextInput,
@@ -11,10 +10,11 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check, ChevronLeft, Trash2 } from "lucide-react-native";
 import {
+  ALTO_FILA_DE,
   ALTO_TITULO,
+  altoDeLasFilas,
+  CATALOGO_EN_FILAS,
   LADO_DE,
-  medidasDe,
-  RENGLONES,
   SEPARACION,
 } from "@/constants/catalogoFilas";
 import { COLOR_HEX_600 } from "@/constants/colors";
@@ -77,7 +77,11 @@ const Dibujito = memo(function Dibujito({
   );
 });
 
-/** Una fila de cinco casillas. Memorizada: son las que la lista recicla. */
+// Cuántos grupos se arman en el primer instante: los que caben en pantalla. Más
+// que esto y abrir se siente pesado; menos y se ve hueco al abrir.
+const GRUPOS_AL_ABRIR = 3;
+
+/** Una fila de cinco casillas. Memorizada para que un toque no rehaga las demás. */
 const Fila = memo(function Fila({
   iconos,
   elegido,
@@ -166,35 +170,33 @@ export default function NuevaCategoria({
   const [pestana, setPestana] = useState<"icono" | "color">("icono");
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
 
-  // NO HAY ESPERA, y hubo dos, las dos mías, las dos peores que el problema:
-  //
-  // 1. No dibujar nada hasta que la animación de entrada acabara. Se veía como
-  //    una pantalla cargando, que es peor que un tirón: el tirón pasa.
-  // 2. Igual pero solo los dibujos, con la cuadrícula vacía puesta. Mejor, pero
-  //    el usuario seguía viendo el momento en que aparecían, y con razón:
-  //    "ni bien entro debería ya estar los iconos".
-  //
-  // Esperar nunca fue el arreglo. Lo que hace que abrir no pese es que la
-  // PRIMERA pasada sea corta (initialNumToRender, más abajo); lo demás se llena
-  // en tandas después, sin pelear con nada.
-
-  // LAS MEDIDAS, calculadas del ancho real de la pantalla. Es lo que le permite
-  // a la lista saber dónde está cada fila sin haberla dibujado, y con eso
-  // adelantarse a un deslizón rápido en vez de quedarse en blanco.
   const { width: anchoPantalla } = useWindowDimensions();
   const lado = LADO_DE(anchoPantalla);
-  const altoFila = lado + SEPARACION;
+  const altoFila = ALTO_FILA_DE(anchoPantalla);
 
-  const medidas = useMemo(() => medidasDe(altoFila), [altoFila]);
-
-  const medidaDelRenglon = useCallback(
-    (_: unknown, indice: number) => ({
-      length: medidas.altos[indice],
-      offset: medidas.desde[indice],
-      index: indice,
-    }),
-    [medidas]
-  );
+  // LOS DIBUJOS SE QUEDAN PUESTOS. Cuántos grupos ya están armados.
+  //
+  // Aquí hubo una lista que armaba y desarmaba según lo que se veía. Es lo
+  // recomendado para listas largas y aquí estuvo mal, y costó cuatro entregas
+  // entenderlo: por más reserva que se le diera, un deslizón fuerte le ganaba
+  // siempre y se veía la pantalla en blanco. El pedido del usuario fue claro y
+  // era la respuesta: "los iconos ya deberían estar ahí fijos, no cargar recién
+  // cuando yo deslizo".
+  //
+  // Así que se arman los 236 UNA vez y no se sueltan nunca. Lo único que no se
+  // puede hacer es armarlos todos de golpe, porque eso tarda casi un segundo y
+  // la pantalla no abriría. Entran de a un grupo por vuelta: los tres primeros
+  // —lo que se ve— desde el primer instante, y el resto en menos de un segundo,
+  // mientras la persona mira. A partir de ahí ya no hay nada que cargar: se
+  // deslice como se deslice, están todos.
+  const [gruposArmados, setGruposArmados] = useState(GRUPOS_AL_ABRIR);
+  useEffect(() => {
+    if (gruposArmados >= CATALOGO_EN_FILAS.length) return;
+    // setTimeout de 0 y no un bucle: así cada grupo entra en su propia vuelta y
+    // el celular puede atender el dedo entremedio en vez de quedarse tieso.
+    const vuelta = setTimeout(() => setGruposArmados((n) => n + 1), 0);
+    return () => clearTimeout(vuelta);
+  }, [gruposArmados]);
 
   // Los títulos de los grupos, traducidos UNA vez. Pasarle la función de
   // traducir al catálogo lo redibujaría entero en cada letra escrita, que es
@@ -302,15 +304,9 @@ export default function NuevaCategoria({
         ))}
       </View>
 
-      {/* Los colores son 18 y caben: un ScrollView normal basta. El catálogo
-          de dibujos, en cambio, va en una LISTA QUE SOLO CONSTRUYE LO QUE SE
-          VE, y por eso el color va primero en este if: la lista no puede
-          quedar dentro de un ScrollView, porque ahí cree que tiene sitio
-          infinito y vuelve a construir los 236 de golpe.
-          Y el ancho de las casillas se calcula del ancho de la pantalla, así
-          que la lista tiene que ocupar ese mismo ancho: el "px-5" de aquí es el
-          MARGEN_LATERAL de las medidas. Cambiar uno sin el otro descoloca la
-          cuadrícula. */}
+      {/* El "px-5" de las dos pantallas deslizables es el MARGEN_LATERAL de las
+          medidas, y de ahí sale el ancho de las casillas. Cambiar uno sin el
+          otro descoloca la cuadrícula. */}
       {pestana === "color" ? (
         <ScrollView
           className="flex-1 px-5"
@@ -332,69 +328,45 @@ export default function NuevaCategoria({
           </View>
         </ScrollView>
       ) : (
-        <FlatList
+        // UNA PANTALLA DESLIZABLE NORMAL, a propósito, no una lista de las que
+        // arman y sueltan según lo que se ve. Aquí eso no servía: por más
+        // reserva que se le diera, un deslizón fuerte le ganaba y se veía la
+        // pantalla en blanco. Los 236 dibujos se arman una vez y se quedan.
+        <ScrollView
           className="flex-1 px-5"
           contentContainerStyle={{ paddingBottom: 24 }}
-          data={RENGLONES}
-          keyExtractor={(r) => r.clave}
-          // LO QUE HACE QUE UN DESLIZÓN RÁPIDO NO DEJE LA PANTALLA EN BLANCO.
-          //
-          // Sin esto, la lista tiene que dibujar cada fila para averiguar cuánto
-          // mide, así que no sabe qué le toca mostrar hasta que ya llegó: en un
-          // deslizón fuerte se queda atrás y se ve el hueco. Con las medidas
-          // dadas, sabe de antemano dónde está todo y va directo.
-          //
-          // Es también lo único frágil de esta pantalla: si ALTO_TITULO, lado o
-          // SEPARACION dejan de coincidir con lo que se dibuja, las filas se
-          // montan unas sobre otras o quedan separadas. Van todas de un número,
-          // no de clases de estilo, justamente para que coincidan.
-          getItemLayout={medidaDelRenglon}
-          // Y ESTOS SON DOS COSAS DISTINTAS QUE UNA VEZ SE CONFUNDIERON.
-          //
-          // initialNumToRender es la PRIMERA pasada, la única que ocurre
-          // mientras la pantalla se abre. Ese es el número que decide si abrir
-          // se siente pesado, y por eso se mantiene corto.
-          //
-          // windowSize es cuánta reserva se mantiene lista alrededor de lo que
-          // se ve, y se cuenta en PANTALLAS. No pelea con la animación: se
-          // llena en tandas, después, mientras la persona mira. Se bajó a 2
-          // creyendo que era la causa de la lentitud al abrir —no lo era— y el
-          // resultado fue que al deslizar los dibujos aparecían recién al
-          // llegar, como cargando. Con 5 hay dos pantallas de reserva a cada
-          // lado, que es lo que un deslizamiento normal no alcanza a agotar.
-          //
-          // Y las tandas van de a 8 renglones cada 16 milésimas: si se llenan
-          // más despacio que el dedo, el hueco se ve igual.
-          initialNumToRender={7}
-          maxToRenderPerBatch={8}
-          updateCellsBatchingPeriod={16}
-          windowSize={5}
-          // SIN removeClippedSubviews. Suelta las vistas que salen de pantalla
-          // para ahorrar memoria, pero en Android es una causa conocida de
-          // justo esto: al volver a entrar hay que rehacerlas y se ven vacías
-          // un momento. Con 236 casillas la memoria no es el problema.
           keyboardShouldPersistTaps="handled"
-          renderItem={({ item }) =>
-            item.clase === "titulo" ? (
-              // Alto fijo, porque es el que la lista da por hecho. El texto se
-              // centra dentro en vez de llevar márgenes propios, que serían
-              // otra medida más que mantener a mano.
+        >
+          {CATALOGO_EN_FILAS.map((grupo, i) => (
+            <View key={grupo.titulo}>
+              {/* El título va siempre, aunque sus filas no estén todavía: es
+                  barato, y así al deslizar en el primer instante se ve que la
+                  sección existe en vez de un vacío sin explicación. */}
               <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
                 <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
-                  {titulos[item.clave]}
+                  {titulos[grupo.titulo]}
                 </Text>
               </View>
-            ) : (
-              <Fila
-                iconos={item.iconos}
-                elegido={icono}
-                color={color}
-                lado={lado}
-                onElegir={setIcono}
-              />
-            )
-          }
-        />
+              {i < gruposArmados ? (
+                grupo.filas.map((fila, f) => (
+                  <Fila
+                    key={f}
+                    iconos={fila}
+                    elegido={icono}
+                    color={color}
+                    lado={lado}
+                    onElegir={setIcono}
+                  />
+                ))
+              ) : (
+                // El hueco mide EXACTO lo que van a medir sus filas. Si midiera
+                // de menos, el contenido crecería bajo el dedo y la pantalla
+                // saltaría sola mientras los grupos entran.
+                <View style={{ height: altoDeLasFilas(grupo, altoFila) }} />
+              )}
+            </View>
+          ))}
+        </ScrollView>
       )}
 
       <View className="px-5" style={{ paddingBottom: insets.bottom + 16 }}>

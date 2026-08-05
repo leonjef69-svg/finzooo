@@ -136,32 +136,46 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   const codigo = pant.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 
   ok(pant.includes("memo(function Dibujito"), "cada dibujo esta memorizado");
-  ok(pant.includes("memo(function Fila"), "y las filas, que son lo que la lista recicla");
+  ok(pant.includes("memo(function Fila"), "y las filas");
   // Recibir la funcion de traducir bastaba para que memo no sirviera de nada:
   // cambia en cada dibujado del padre.
-  ok(pant.includes("titulos[item.clave]"), "los titulos llegan traducidos, no la funcion de traducir");
+  ok(pant.includes("titulos[grupo.titulo]"), "los titulos llegan traducidos, no la funcion de traducir");
 
-  // 04/08/2026, DESPUES de publicar lo de arriba: "ya actualize sigue lento".
-  // Memorizar evita REHACER los dibujos, no TENERLOS. El coste real era montar
-  // los 236 de golpe en una pantalla donde caben veinte, y cada uno es un
-  // dibujo vectorial, no una letra. Ahora la lista solo construye lo visible.
+  // LOS DIBUJOS SE QUEDAN PUESTOS. ESTO NO ES UN DESCUIDO, ES EL PEDIDO.
   //
-  // Ya existio un "memo(function Catalogo" que dibujaba todos los grupos sin
-  // condicion: si vuelve, la lentitud vuelve con el.
-  ok(!codigo.includes("memo(function Catalogo"), "ya no hay un catalogo que dibuje los 236 de golpe");
-  ok(/<FlatList/.test(pant), "el catalogo va en una lista que solo construye lo que se ve");
-  ok(pant.includes("initialNumToRender"), "y se le limita cuanto construye al abrir");
+  // Hubo aqui una FlatList, que es lo recomendado para listas largas y aqui
+  // estuvo mal. Arma y suelta segun lo que se ve, y por mas reserva que se le
+  // diera —se probo windowSize 2, 3 y 5, tandas de 4 y de 8, quitar
+  // removeClippedSubviews y darle las medidas con getItemLayout— un deslizon
+  // fuerte le ganaba siempre y se veia la pantalla en blanco. Cuatro entregas.
+  //
+  // El usuario lo dijo tal cual: "los iconos ya deberian estar ahi fijos, no
+  // deberian cargar recien cuando yo deslizo". Asi que se arman los 236 una vez
+  // y no se sueltan. Si alguien vuelve a meter una lista virtual aqui creyendo
+  // que optimiza, vuelve el fallo.
+  ok(!codigo.includes("FlatList"), "el catalogo NO va en una lista que arma y suelta");
+  ok(!codigo.includes("getItemLayout"), "ni hace falta adivinarle las medidas");
+  ok(!codigo.includes("windowSize"), "ni hay reserva que un deslizon pueda agotar");
+  ok(!codigo.includes("memo(function Catalogo"), "y tampoco vuelve el catalogo que los armaba todos de golpe");
 
-  // Una lista dentro de una pantalla deslizable cree que tiene sitio infinito
-  // y construye TODO: seria volver al fallo con mas codigo. Por eso el
-  // ScrollView que queda es solo el de los colores, y va en la otra rama.
-  // Se mide el anidamiento de verdad: cuantos ScrollView quedan ABIERTOS en el
-  // punto donde empieza la lista. "Aparece un ScrollView antes" no sirve — los
-  // colores usan uno, y son la otra rama del mismo if, no un envoltorio.
-  const antesDeLaLista = pant.slice(0, pant.indexOf("<FlatList"));
-  const abiertos = (antesDeLaLista.match(/<ScrollView[\s>]/g) ?? []).length;
-  const cerrados = (antesDeLaLista.match(/<\/ScrollView>/g) ?? []).length;
-  ok(abiertos === cerrados, "la lista NO va dentro de un ScrollView");
+  // Lo unico que no se puede hacer es armarlos todos de golpe: eso tarda casi un
+  // segundo y la pantalla no abriria. Entran de a un grupo por vuelta.
+  ok(pant.includes("gruposArmados"), "los grupos entran de a uno, no todos de golpe");
+  const alAbrir = Number(/const GRUPOS_AL_ABRIR = (\d+)/.exec(pant)?.[1] ?? "999");
+  ok(alAbrir >= 2 && alAbrir <= 4, `GRUPOS_AL_ABRIR es ${alAbrir}: lo que se ve al abrir, ni mas ni menos`);
+  ok(/setTimeout\(\(\) => setGruposArmados/.test(pant), "cada grupo en su propia vuelta, sin dejar tieso el celular");
+  ok(/clearTimeout\(vuelta\)/.test(pant), "y se corta si se sale antes de terminar");
+
+  // Y mientras un grupo no esta, su hueco tiene que medir EXACTO lo que va a
+  // medir. Si midiera de menos, el contenido creceria bajo el dedo y la pantalla
+  // saltaria sola mientras los grupos entran.
+  ok(pant.includes("altoDeLasFilas(grupo, altoFila)"), "el hueco de lo que falta mide lo que va a medir");
+  // El titulo va siempre, aunque sus filas no esten: es barato, y asi al
+  // deslizar en el primer instante se ve que la seccion existe.
+  ok(
+    pant.indexOf("ALTO_TITULO") < pant.indexOf("i < gruposArmados"),
+    "el titulo del grupo sale antes de que sus filas esten armadas"
+  );
 
   // 05/08/2026, con foto: "esta disparejo los iconos". Al pasar a filas de
   // cinco quedaron con ancho fijo, asi que no llegaban al borde y sobraba un
@@ -179,36 +193,11 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   //      seguia viendo el momento en que aparecian. "Ni bien entro deberia ya
   //      estar los iconos".
   //
-  // Esperar nunca era el arreglo, y estas dos aserciones existen para que no
-  // vuelva a intentarse: el arreglo era construir MENOS (ver windowSize abajo).
-  ok(!codigo.includes("InteractionManager"), "los dibujos no esperan a nada para salir");
+  // Ojo con la diferencia: los grupos que entran de a uno NO son esto. Lo que se
+  // ve al abrir esta completo desde el primer instante; lo que entra despues
+  // esta fuera de pantalla. Aquello hacia esperar a lo que se estaba mirando.
+  ok(!codigo.includes("InteractionManager"), "lo que se ve no espera a nada para salir");
   ok(!/\bdibujar\b/.test(codigo), "ni sale la casilla vacia primero y el dibujo despues");
-
-  // LO QUE DECIDE SI ABRIR PESA es la PRIMERA pasada, y solo esa: es la unica
-  // que ocurre mientras la pantalla entra. Aqui va el tope, porque es el numero
-  // que se sube "por si acaso" y el que se paga al abrir.
-  const primeros = Number(/initialNumToRender=\{(\d+)\}/.exec(pant)?.[1] ?? "999");
-  ok(primeros <= 8, `initialNumToRender es ${primeros}: la primera pasada se mantiene corta`);
-
-  // Y AQUI ESTUVO UN ERROR MIO, que esta prueba existe para no repetir: se le
-  // puso tope a windowSize (2) creyendo que era la causa de la lentitud al
-  // abrir. No lo era —windowSize se llena DESPUES, en tandas— y el tope trajo
-  // otro fallo: "cuando deslizo para abajo estan recien apareciendo los iconos
-  // como si estuvieran cargando". La reserva tiene que ser holgada.
-  const ventana = Number(/windowSize=\{(\d+)\}/.exec(pant)?.[1] ?? "0");
-  ok(ventana >= 4, `windowSize es ${ventana}: hay reserva de sobra para deslizar`);
-
-  // Y las tandas tienen que llenarse mas rapido que el dedo, o el hueco se ve
-  // igual aunque la reserva sea grande.
-  const tanda = Number(/maxToRenderPerBatch=\{(\d+)\}/.exec(pant)?.[1] ?? "0");
-  ok(tanda >= 8, `maxToRenderPerBatch es ${tanda}: las tandas no van mas lentas que el dedo`);
-
-  // 05/08/2026, con foto de la pantalla ENTERA en blanco: "cuando deslizo
-  // rapido para abajo o para arriba se pone asi". Reserva y tandas ayudan, pero
-  // no alcanzan a un deslizon fuerte: sin las medidas dadas, la lista tiene que
-  // dibujar cada fila para averiguar cuanto mide, asi que no sabe que mostrar
-  // hasta que ya llego. Con getItemLayout lo sabe de antemano y va directo.
-  ok(pant.includes("getItemLayout="), "la lista sabe de antemano donde esta cada fila");
 
   // removeClippedSubviews suelta las vistas que salen de pantalla: en Android es
   // una causa conocida de celdas en blanco, porque al volver hay que rehacerlas.
@@ -235,19 +224,18 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
 
 console.log("\n--- LAS MEDIDAS DE LA CUADRICULA CUADRAN ---");
 {
-  // Estas cuentas son lo unico fragil de la pantalla: la lista da por hechas las
-  // alturas para poder adelantarse al dedo, asi que si una no coincide con lo
-  // que se dibuja, las filas se montan unas sobre otras o quedan separadas. Y
-  // eso se ve PEOR que el hueco que se estaba arreglando. Por eso se comprueban
+  // Estas cuentas son la parte fragil: de ellas sale el hueco que se reserva
+  // para los grupos que todavia no estan armados. Si un hueco mide de menos, el
+  // contenido crece bajo el dedo y la pantalla salta sola. Por eso se comprueban
   // con numeros y no leyendo el codigo.
   const {
-    ALTO_TITULO: altoTitulo,
+    ALTO_FILA_DE: altoFilaDe,
+    CATALOGO_EN_FILAS: catalogo,
     LADO_DE: ladoDe,
     MARGEN_LATERAL: margen,
     POR_FILA: porFila,
-    RENGLONES: renglones,
     SEPARACION: sep,
-    medidasDe,
+    altoDeLasFilas,
   } = require("@/constants/catalogoFilas") as typeof import("@/constants/catalogoFilas");
   // Los grupos vienen de su propio archivo: hubo un momento en que existieron
   // dos "TODOS_LOS_GRUPOS", uno en cada sitio. Dos listas de lo mismo es una
@@ -262,59 +250,50 @@ console.log("\n--- LAS MEDIDAS DE LA CUADRICULA CUADRAN ---");
     const ocupado = lado * porFila + sep * (porFila - 1) + margen * 2;
     ok(Math.abs(ocupado - ancho) < 0.001, `en ${ancho} de ancho las cinco casillas llenan justo`);
     ok(lado > 0, `y el lado sale positivo en ${ancho}`);
+    ok(altoFilaDe(ancho) === lado + sep, `y la fila mide la casilla mas su hueco en ${ancho}`);
   }
 
   // 2. TODAS las filas tienen las mismas casillas. Una fila corta se reparte el
   //    ancho de otra forma y sus dibujos salen mas grandes: eso fue "disparejo".
-  const filas = renglones.filter((r) => r.clase === "fila");
+  const filas = catalogo.flatMap((g) => g.filas);
   ok(filas.length > 0, "hay filas que comprobar");
   ok(
-    filas.every((r) => r.clase === "fila" && r.iconos.length === porFila),
+    filas.every((f) => f.length === porFila),
     `las ${filas.length} filas tienen ${porFila} casillas exactas`
   );
 
-  // 3. Ni un dibujo perdido ni uno repetido al aplanar. Aplanar es donde se
+  // 3. Ni un dibujo perdido ni uno repetido al partir en filas. Es donde se
   //    pierde un icono sin que nadie lo note: el catalogo sigue "funcionando".
   const enGrupos = grupos.flatMap((g) => g.iconos);
-  const enFilas = filas.flatMap((r) => (r.clase === "fila" ? r.iconos : [])).filter((x) => x !== null);
+  const enFilas = filas.flat().filter((x) => x !== null);
   ok(enFilas.length === enGrupos.length, `los ${enGrupos.length} dibujos estan todos, ni uno mas`);
   ok(new Set(enGrupos).size === enGrupos.length, "y ninguno esta repetido en el catalogo");
+  ok(catalogo.length === grupos.length, "y estan los mismos grupos");
+  ok(
+    catalogo.every((g, i) => g.titulo === grupos[i].titulo),
+    "en el mismo orden"
+  );
 
-  // 4a. LA CAUSA RAIZ, encontrada por esta prueba el 05/08/2026: dos grupos se
-  //     llamaban "iconos.servicios" —el de luz, agua e internet, y el de Uber,
-  //     Airbnb y Dropbox—. Hacia dos danos a la vez: el titulo "Servicios" salia
-  //     dos veces en la pantalla, y los renglones de los dos grupos quedaban con
-  //     la misma clave. Existio desde que nacio el catalogo, sin que se notara.
+  // 4. LA CAUSA RAIZ DE UN BUG DE DOS DIAS, encontrada por esta prueba el
+  //    05/08/2026: dos grupos se llamaban "iconos.servicios" —el de luz, agua e
+  //    internet, y el de Uber, Airbnb y Dropbox—. El titulo "Servicios" salia
+  //    dos veces en la pantalla, y los dos grupos compartian clave. Existio
+  //    desde que nacio el catalogo, sin que se notara.
   const titulos = grupos.map((g) => g.titulo);
   const titulosRepes = titulos.filter((tt, i) => titulos.indexOf(tt) !== i);
   ok(titulosRepes.length === 0, `ningun grupo repite nombre${titulosRepes.length ? " — " + titulosRepes.join(", ") : ""}`);
 
-  // 4b. Y la consecuencia, medida aparte: dos renglones con la misma clave es
-  //     justo de lo que se agarra la lista para saber que dibujar donde.
-  const claves = renglones.map((r) => r.clave);
-  const cuantas = new Map<string, number>();
-  for (const c of claves) cuantas.set(c, (cuantas.get(c) ?? 0) + 1);
-  const repes = [...cuantas].filter(([, n]) => n > 1).map(([c, n]) => `${c} x${n}`);
-  ok(
-    repes.length === 0,
-    `las ${claves.length} claves de renglon son distintas${repes.length ? " — repetidas: " + repes.join(", ") : ""}`
-  );
-
-  // 5. Las posiciones son la suma corrida de las alturas. Es la cuenta que la
-  //    lista usa para saltar directo a donde el dedo la lleva.
-  const altoFila = ladoDe(412) + sep;
-  const { altos, desde, total } = medidasDe(altoFila);
-  ok(altos.length === renglones.length, "hay una altura por renglon");
-  let acumulado = 0;
+  // 5. El hueco reservado mide EXACTAMENTE lo que van a medir las filas que
+  //    faltan. Es la cuenta que evita que la pantalla salte mientras se llena.
+  const altoFila = altoFilaDe(412);
   let cuadran = true;
-  renglones.forEach((r, i) => {
-    if (desde[i] !== acumulado) cuadran = false;
-    const esperado = r.clase === "titulo" ? altoTitulo : altoFila;
-    if (altos[i] !== esperado) cuadran = false;
-    acumulado += altos[i];
-  });
-  ok(cuadran, "cada renglon empieza donde acaba el anterior, y mide lo que le toca");
-  ok(total === acumulado, "y el total es la suma de todos");
+  for (const g of catalogo) {
+    if (altoDeLasFilas(g, altoFila) !== g.filas.length * altoFila) cuadran = false;
+    if (g.filas.length !== Math.ceil(g.filas.flat().filter((x) => x !== null).length / porFila)) {
+      cuadran = false;
+    }
+  }
+  ok(cuadran, "el hueco de cada grupo mide lo mismo que sus filas");
 }
 
 console.log("\n--- NI UN LOGO DE BANCO EN EL CATALOGO ---");

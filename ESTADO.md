@@ -325,22 +325,43 @@ los iconos y está lento, se siente feo al abrirlo"):
     porque al volver hay que rehacerlas. Con 236 casillas la memoria no era el
     problema; los huecos sí.
 
-- **Y con un deslizón fuerte se quedaba en blanco la pantalla ENTERA.** Reserva
-  y tandas no alcanzan a un dedo rápido: sin las medidas dadas, la lista tiene
-  que dibujar cada fila para averiguar cuánto mide, así que no sabe qué mostrar
-  hasta que ya llegó. Ahora las medidas están en números
-  (`constants/catalogoFilas.ts`) y la lista las recibe con `getItemLayout`: sabe
-  de antemano dónde está todo y va directo.
+### La lista virtual era la herramienta equivocada, y costó cuatro entregas verlo
 
-  Es la parte frágil de la pantalla, y por eso las medidas viven en un archivo
-  **sin React**: así se comprueban con números en las pruebas —que las cinco
-  casillas llenen justo el ancho a seis anchos distintos, que cada renglón
-  empiece donde acaba el anterior— y no leyendo el código. Una altura mal
-  calculada se ve peor que un hueco: las filas se montan unas sobre otras.
+Con un deslizón fuerte se quedaba en blanco **la pantalla entera**. Se probó
+todo lo que una `FlatList` ofrece para eso: `windowSize` 2, 3 y 5; tandas de 4 y
+de 8; quitar `removeClippedSubviews`; y darle las medidas exactas con
+`getItemLayout`. Cada intento mejoraba y ninguno lo resolvía, porque **una lista
+virtual arma y suelta a propósito**: es su razón de existir. El dedo siempre
+puede ir más rápido que el armado.
 
-  Las medidas ya no salen de clases de estilo (`flex-1`, `aspect-square`). Se
-  veía igual, pero nadie sabía cuánto medía una casilla hasta después de
-  dibujarla.
+El usuario lo dijo tal cual y era la respuesta: *"los iconos ya deberían estar
+ahí fijos, no deberían cargar recién cuando yo deslizo"*.
+
+Ahora es una pantalla deslizable normal con los 236 dibujos **armados una vez y
+nunca soltados**. Después del primer segundo no hay nada que cargar: se deslice
+como se deslice, están todos.
+
+Lo único que no se puede hacer es armarlos todos de golpe —eso tarda casi un
+segundo y la pantalla no abriría—, así que **entran de a un grupo por vuelta**:
+los tres primeros (lo que se ve) en el primer instante, el resto mientras la
+persona mira. Y el hueco de un grupo que aún no está mide **exactamente** lo que
+va a medir, porque si midiera de menos el contenido crecería bajo el dedo y la
+pantalla saltaría sola.
+
+Ojo con no confundir esto con los dos intentos de "esperar" de más arriba:
+aquellos hacían esperar a **lo que se estaba mirando**. Aquí lo visible está
+completo desde el primer instante y lo que entra después está fuera de pantalla.
+
+Las medidas viven en `constants/catalogoFilas.ts`, **sin React**, para poder
+comprobarlas con números: que las cinco casillas llenen justo el ancho a seis
+anchos distintos, que ninguna fila quede corta, que al partir en filas no se
+pierda ni se repita un dibujo, que el hueco reservado mida lo mismo que las
+filas que reemplaza. Y ya no salen de clases de estilo (`flex-1`,
+`aspect-square`): se veía igual, pero nadie sabía cuánto medía una casilla hasta
+después de dibujarla.
+
+Hay cuatro pruebas que **prohíben** volver a meter una lista virtual aquí, con el
+motivo escrito al lado. Es lo que un ojo entrenado propondría como mejora.
 
 ### El bug que llevaba dos días ahí y lo encontró una prueba, no un ojo
 
