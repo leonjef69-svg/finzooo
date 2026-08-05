@@ -26,7 +26,14 @@ fs.mkdirSync(TMP, { recursive: true });
 const stub = (n) => path.join(DIR, "stubs", n);
 
 // Los sustitutos que hacen falta casi siempre.
-const BASE = { "react-native": stub("rn.ts"), "lucide-react-native": stub("lucide.ts") };
+const BASE = {
+  "react-native": stub("rn.ts"),
+  "lucide-react-native": stub("lucide.ts"),
+  // @expo/vector-icons trae tipografias (.ttf) y esbuild no sabe empaquetar
+  // eso. Sin este sustituto, cinco pruebas que ni hablan de iconos dejaban
+  // de compilar con "No loader is configured for .ttf".
+  "@expo/vector-icons": stub("vectoricons.ts"),
+};
 
 // Y los de las pruebas que cargan modulos de Expo.
 const EXPO = {
@@ -63,6 +70,7 @@ const SUITES = [
   { archivo: "verificar-registro-avisos.ts", alias: EXPO },
   { archivo: "verificar-solo-yape.ts", alias: EXPO },
   { archivo: "verificar-claves-ocultas.ts", alias: EXPO },
+  { archivo: "verificar-categorias-propias.ts", alias: EXPO },
   { archivo: "verificar-presupuesto-mensual.ts", alias: BASE },
   { archivo: "verificar-programado.ts", alias: EXPO },
 ];

@@ -32,8 +32,8 @@ export type CategoriaPropia = {
   tipo: "expense" | "income";
   /** Uno de los colores de la app ("rose", "sky"...). */
   color: string;
-  /** El dibujo. Si hay imagen propia, manda la imagen. */
-  emoji: string;
+  /** El dibujo elegido. Ver constants/iconos: un nombre de lucide o "marca:...". */
+  icono: string;
   image?: string;
 };
 
@@ -117,16 +117,15 @@ export function nuevaId(): string {
 /** Crea una y la devuelve junto a la lista nueva. */
 export function crear(
   actuales: CategoriaPropia[],
-  datos: { nombre: string; tipo: "expense" | "income"; color: string; emoji?: string }
+  datos: { nombre: string; tipo: "expense" | "income"; color: string; icono?: string }
 ): { lista: CategoriaPropia[]; creada: CategoriaPropia } {
   const creada: CategoriaPropia = {
     id: nuevaId(),
     nombre: sanitizeName(datos.nombre),
     tipo: datos.tipo,
     color: datos.color,
-    // Una etiqueta: sirve para cualquier cosa y no promete nada. Quien quiera
-    // otra cosa le pone su foto.
-    emoji: datos.emoji ?? "🏷️",
+    // Una etiqueta: sirve para cualquier cosa y no promete nada.
+    icono: datos.icono ?? "Tag",
   };
   return { lista: [...actuales, creada], creada };
 }
@@ -135,14 +134,14 @@ export function crear(
 export function editar(
   actuales: CategoriaPropia[],
   id: string,
-  cambio: { nombre?: string; color?: string; emoji?: string; image?: string | null }
+  cambio: { nombre?: string; color?: string; icono?: string; image?: string | null }
 ): CategoriaPropia[] {
   return actuales.map((c) => {
     if (c.id !== id) return c;
     const siguiente: CategoriaPropia = { ...c };
     if (cambio.nombre !== undefined) siguiente.nombre = sanitizeName(cambio.nombre) || c.nombre;
     if (cambio.color !== undefined) siguiente.color = cambio.color;
-    if (cambio.emoji !== undefined) siguiente.emoji = cambio.emoji;
+    if (cambio.icono !== undefined) siguiente.icono = cambio.icono;
     if (cambio.image !== undefined) {
       if (cambio.image === null || cambio.image === "") delete siguiente.image;
       else siguiente.image = cambio.image;

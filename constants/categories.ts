@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { getOverride } from "@/utils/categoryCustom";
 import { getPropia, getPropias, type CategoriaPropia } from "@/utils/categoriasPropias";
+import { iconoDe } from "@/constants/iconos";
 import {
   Utensils,
   Car,
@@ -137,9 +138,12 @@ function comoCategoria(p: CategoriaPropia): Category {
     // devuelve la clave cuando no la encuentra, así que un nombre escrito a
     // mano sale escrito a mano. Igual que en la personalización.
     label: p.nombre,
-    icon: MoreHorizontal,
+    icon: iconoDe(p.icono),
     color: p.color,
-    emoji: p.emoji,
+    // Las propias ya no tienen emoji: se eligió el dibujo de un catálogo.
+    // El campo sigue en el tipo porque las de fábrica lo usan en un texto del
+    // micrófono; aquí se deja vacío en vez de inventar uno.
+    emoji: "",
     image: p.image,
   };
 }

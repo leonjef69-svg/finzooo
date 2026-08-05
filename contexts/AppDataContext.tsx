@@ -34,6 +34,12 @@ import {
   setOverrides,
   type CategoryOverrides,
 } from "@/utils/categoryCustom";
+import {
+  crear as crearPropia,
+  loadPropias,
+  savePropias,
+  type CategoriaPropia,
+} from "@/utils/categoriasPropias";
 import { DECOY_BUDGET, buildDecoyTransactions } from "@/utils/decoySeed";
 import { fmt as formatAmount, monthKey } from "@/utils/format";
 import { reserveIdsAbove } from "@/utils/id";
@@ -111,6 +117,12 @@ type AppDataContextValue = {
   // Nombre, color e imagen propios de cada categoria. Ver utils/categoryCustom.
   categoryOverrides: CategoryOverrides;
   updateCategoryOverrides: (next: CategoryOverrides) => void;
+  /** Las categorias que creo la persona. */
+  categoriasPropias: CategoriaPropia[];
+  crearCategoria: (datos: { nombre: string; tipo: "expense" | "income"; color: string; icono: string }) => string;
+  /** La recien creada, para que la pantalla de agregar la deje elegida. */
+  categoriaRecienCreada: string | null;
+  olvidarCategoriaRecienCreada: () => void;
 
   transactions: Transaction[];
   addOrUpdateTransaction: (t: Transaction) => void;
@@ -178,6 +190,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [budgets, setBudgets] = useState<Record<string, number>>({});
   const [categoryBudgets, setCategoryBudgets] = useState<Record<string, number>>({});
   const [categoryOverrides, setCategoryOverridesState] = useState<CategoryOverrides>({});
+  // Igual que la personalizacion: el dato de verdad vive en la variable de
+  // modulo que consulta catInfo, y este estado existe para redibujar.
+  const [categoriasPropias, setCategoriasPropiasState] = useState<CategoriaPropia[]>([]);
+  // Se crea desde otra pantalla, encima de la de agregar. Al volver hay que
+  // dejarla elegida: nadie crea una categoria para despues buscarla.
+  const [categoriaRecienCreada, setCategoriaRecienCreada] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>(seedTransactions);
   const [goals, setGoals] = useState<Goal[]>(seedGoals);
   const [isPremium, setIsPremium] = useState(false);
@@ -339,6 +357,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       savedLearned,
       savedCarryoverCleared,
       savedOverrides,
+      savedPropias,
     ] = await Promise.all([
       loadJSON<Record<string, number>>(STORAGE_KEYS.budgets, {}),
       loadJSON<Record<string, number>>(STORAGE_KEYS.categoryBudgets, {}),
@@ -351,10 +370,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // que consulta catInfo, y ademas al estado para que las pantallas se
       // dibujen con ella desde el primer momento.
       loadOverrides(),
+      // Y las categorias propias, por el mismo motivo: catInfo las consulta
+      // desde una variable de modulo, no desde el contexto.
+      loadPropias(),
     ]);
     setBudgets(savedBudgets);
     setCategoryBudgets(savedCategoryBudgets);
     setCategoryOverridesState(savedOverrides);
+    setCategoriasPropiasState(savedPropias);
     setTransactions(savedTransactions);
     setGoals(savedGoals);
     protectExistingIds(savedTransactions, savedGoals);
@@ -1016,6 +1039,22 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setCategoryOverridesState(next);
   }
 
+  /**
+   * Crea una categoria propia y devuelve su id, para poder dejarla elegida.
+   *
+   * Guarda en los DOS sitios, igual que la personalizacion: la variable de
+   * modulo que consulta catInfo —si no, la categoria nueva se veria como
+   * "Otros" en las 38 pantallas— y el estado, que es lo que provoca el
+   * redibujado.
+   */
+  function crearCategoria(datos: { nombre: string; tipo: "expense" | "income"; color: string; icono: string }): string {
+    const { lista, creada } = crearPropia(categoriasPropias, datos);
+    savePropias(lista);
+    setCategoriasPropiasState(lista);
+    setCategoriaRecienCreada(creada.id);
+    return creada.id;
+  }
+
   function updateCategoryBudgets(newBudgets: Record<string, number>) {
     setCategoryBudgets(newBudgets);
     showToast(t("toast.budgetUpdated"));
@@ -1155,6 +1194,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         updateCategoryBudgets,
         categoryOverrides,
         updateCategoryOverrides,
+        categoriasPropias,
+        crearCategoria,
+        categoriaRecienCreada,
+        olvidarCategoriaRecienCreada: () => setCategoriaRecienCreada(null),
         transactions,
         addOrUpdateTransaction,
         deleteTransaction,

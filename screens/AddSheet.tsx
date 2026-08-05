@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated, {
   KeyboardState,
@@ -8,9 +8,10 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X, Check, ChevronDown, ChevronUp, Calendar } from "lucide-react-native";
+import { X, Check, ChevronDown, ChevronUp, Calendar, Plus } from "lucide-react-native";
+import { router } from "expo-router";
 import CategoryAvatar from "@/components/CategoryAvatar";
-import { EXPENSE_CATS, INCOME_CATS } from "@/constants/categories";
+import { gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
 import { currencySymbolFor } from "@/constants/currencies";
 import { methodLabel, PAYMENT_METHODS } from "@/constants/i18n";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -38,7 +39,8 @@ export default function AddSheet({
   onClose: () => void;
   onSave: (t: Transaction) => void;
 }) {
-  const { userCurrency, t } = useAppData();
+  const { userCurrency, t, categoriasPropias, categoriaRecienCreada, olvidarCategoriaRecienCreada } =
+    useAppData();
   const [type, setType] = useState<"expense" | "income">(
     initialType || transaction?.type || "expense"
   );
@@ -57,7 +59,25 @@ export default function AddSheet({
   const [descriptionY, setDescriptionY] = useState(0);
   const { colorScheme } = useColorScheme();
 
-  const cats = type === "expense" ? EXPENSE_CATS : INCOME_CATS;
+  // Las de la app MÁS las que creó la persona. Se recalcula cuando cambian:
+  // sin categoriasPropias en las dependencias, la recién creada no aparecería
+  // hasta salir y volver a entrar.
+  const cats = useMemo(
+    () => (type === "expense" ? gastosDisponibles() : ingresosDisponibles()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [type, categoriasPropias]
+  );
+
+  // Al volver de crear una categoría, se deja elegida. Nadie crea una
+  // categoría para después tener que buscarla en la cuadrícula.
+  useEffect(() => {
+    if (!categoriaRecienCreada) return;
+    setCategory(categoriaRecienCreada);
+    // Las propias van al final, detrás de "Ver más": sin esto se elegiría una
+    // que no se ve.
+    setShowAllCats(true);
+    olvidarCategoriaRecienCreada();
+  }, [categoriaRecienCreada, olvidarCategoriaRecienCreada]);
 
   useEffect(() => {
     if (!transaction) {
@@ -366,6 +386,24 @@ export default function AddSheet({
                         </TouchableOpacity>
                       );
                     })}
+                  {/* CREAR UNA PROPIA.
+                      Va DENTRO de la cuadrícula, como una más, y no en un
+                      botón aparte debajo: es donde la persona ya está mirando
+                      justo cuando descubre que la suya no está. */}
+                  <TouchableOpacity
+                    onPress={() =>
+                      router.push({ pathname: "/nueva-categoria", params: { tipo: type } })
+                    }
+                    className="items-center gap-1.5"
+                    style={{ width: "21%" }}
+                  >
+                    <View className="w-12 h-12 rounded-2xl items-center justify-center border-2 border-dashed border-emerald-400">
+                      <Plus size={20} color="#059669" />
+                    </View>
+                    <Text className="text-xs font-bold text-center text-emerald-600" numberOfLines={1}>
+                      {t("nuevaCat.boton")}
+                    </Text>
+                  </TouchableOpacity>
                   {cats.some((c) => c.extra) && (
                     <TouchableOpacity
                       onPress={() => setShowAllCats((v) => !v)}
