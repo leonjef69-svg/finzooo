@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { uploadToDrive, DriveNotSignedIn, DriveDenied } from "@/utils/googleDrive";
+import { guardarEnCarpeta, SinCarpeta } from "@/utils/carpetaTelefono";
 import {
   ActivityIndicator,
   ScrollView,
@@ -35,7 +36,12 @@ import { methodLabel } from "@/constants/i18n";
 import { LOGO_DATA_URI } from "@/constants/logo";
 import { monthKey, fmtDate } from "@/utils/format";
 import { buildPdfHtml, type PdfTx } from "@/utils/exportPdfHtml";
-import { buildFileName, cancelRetry, markExported, toDateKey } from "@/utils/scheduledExport";
+import {
+  buildFileName,
+  markExported,
+  toDateKey,
+  type ExportDestination,
+} from "@/utils/scheduledExport";
 import {
   isGmailInstalled,
   isWhatsAppInstalled,
@@ -122,9 +128,10 @@ export default function ExportPdfSheet({
   // Dónde va el archivo. Era una propiedad fija que solo podía cambiar la
   // orden por voz: la subida a Drive estaba entera y funcionando, pero sin
   // ningún botón que la alcanzara. Ahora es un estado con su selector.
-  const [destination, setDestination] = useState<"share" | "mail" | "gmail" | "whatsapp" | "drive">(
-    initialDestination
-  );
+  // "folder" no sale en el selector de esta pantalla —quien exporta a mano ya
+  // tiene el menú de compartir para eso— pero SÍ puede llegar: la exportación
+  // automática pasa por aquí con el destino que la persona programó.
+  const [destination, setDestination] = useState<ExportDestination>(initialDestination);
   const [exporting, setExporting] = useState(false);
   // Los graficos vienen APAGADOS: se encienden si se quieren.
   //
@@ -623,7 +630,6 @@ export default function ExportPdfSheet({
    */
   function exportacionHecha() {
     markExported(new Date());
-    cancelRetry().catch(() => {});
   }
 
   async function handleExport() {
@@ -681,6 +687,24 @@ export default function ExportPdfSheet({
         const uploaded = await uploadToDrive(file.uri, file.fileName, file.mimeType);
         showToast(t("exportPdf.savedToDrive", { name: uploaded.name || file.fileName }));
         exportacionHecha();
+        return;
+      }
+
+      // La carpeta del teléfono. Es un destino de la exportación automática, y
+      // llega aquí porque la copia automática pasa por esta misma pantalla.
+      if (destination === "folder") {
+        try {
+          await guardarEnCarpeta(file.uri, file.fileName, file.mimeType);
+          showToast(t("exportPdf.savedToFolder", { name: file.fileName }));
+          exportacionHecha();
+        } catch (e) {
+          // Los dos motivos se dicen distinto porque la salida es distinta: sin
+          // carpeta hay que ir a elegirla; con la carpeta perdida hay que volver
+          // a elegirla. "No se pudo guardar" no lleva a ninguna de las dos.
+          showToast(
+            t(e instanceof SinCarpeta ? "exportPdf.folderMissing" : "exportPdf.folderLost")
+          );
+        }
         return;
       }
 

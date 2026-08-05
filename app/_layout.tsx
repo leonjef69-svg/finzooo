@@ -17,9 +17,7 @@ import * as incomingFile from "@/modules/incoming-file";
 import * as Notifications from "expo-notifications";
 import {
   alreadyHandledTap,
-  armRetry,
   buildFileName,
-  exportedOn,
   isAutoRunDue,
   loadSchedule,
   markTapHandled,
@@ -314,18 +312,6 @@ function ScheduledExportEffect() {
       if (response.notification.request.content.data?.screen !== "export") return;
       loadSchedule().then(async (s) => {
         if (!navigationRef.isReady()) return;
-
-        // Al tocar el aviso sabemos que el recordatorio acaba de sonar. Es el
-        // momento exacto de armar la repesca: quien llega hasta aquí y se
-        // distrae antes de darle al botón es justo a quien hay que volver a
-        // avisar. Si exporta, el propio exportador la retira.
-        if (s.retryMinutes > 0 && !(await exportedOn(new Date()))) {
-          armRetry(s.retryMinutes, {
-            title: t("schedExport.retryTitle"),
-            body: t("schedExport.retryBody"),
-          }).catch(() => {});
-        }
-
         router.push({
           pathname: "/export-pdf",
           params: {
@@ -365,7 +351,7 @@ function ScheduledExportEffect() {
       abrirExportar(last);
     });
 
-    // La subida sola a Drive.
+    // La copia que se guarda sola, sin tocar nada.
     if (!checked.current) {
       checked.current = true;
       loadSchedule().then((s) => {
@@ -383,9 +369,18 @@ function ScheduledExportEffect() {
             month: monthForSchedule(s, now),
             format: s.format,
             type: s.type,
-            dest: "drive",
+            // El destino que la persona eligió, no "drive" fijo. Con el fijo,
+            // quien eligiera la carpeta del teléfono recibía su copia en Drive.
+            dest: s.destination,
             auto: "1",
             silent: "1",
+            name: buildFileName({
+              mode: s.fileNameMode,
+              custom: s.fileName,
+              typeLabel: typeLabelFor(s.type, t),
+              dateKey: toDateKey(now),
+              extension: s.format,
+            }),
           },
         });
       });

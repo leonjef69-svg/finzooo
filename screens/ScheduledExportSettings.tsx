@@ -2,15 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Check, ChevronLeft, Cloud, Info, Mail, MessageCircle, Play, Share2 } from "lucide-react-native";
+import { Check, ChevronLeft, Cloud, FolderOpen, Info, Play } from "lucide-react-native";
 import Toggle from "@/components/Toggle";
 import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
-import { isGmailInstalled, isWhatsAppInstalled } from "@/modules/share-to-app";
+import { carpetaElegida, elegirCarpeta } from "@/utils/carpetaTelefono";
 import {
   DEFAULT_SCHEDULE,
   MAX_MONTH_DAY,
-  RETRY_OPTIONS,
   applySchedule,
   buildFileName,
   loadSchedule,
@@ -38,10 +37,14 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
   // línea que la persona no controla desde aquí, y sin ella nada de lo demás
   // sirve.
   const [notifOk, setNotifOk] = useState(true);
-  // Gmail solo se ofrece si de verdad está en el celular. Un botón "Gmail"
-  // en un teléfono sin Gmail solo puede decepcionar.
-  const [gmail, setGmail] = useState(false);
-  const [whatsapp, setWhatsapp] = useState(false);
+  // La hora a mano. Se lleva aparte del ajuste porque mientras se escribe hay
+  // estados que no son una hora todavía ("0", vacío), y el ajuste guardado tiene
+  // que seguir siendo siempre válido.
+  const [horaPersonal, setHoraPersonal] = useState(false);
+  const [horaTexto, setHoraTexto] = useState("");
+  const [minutoTexto, setMinutoTexto] = useState("");
+  /** La carpeta del teléfono ya elegida, para poder enseñar cuál es. */
+  const [carpeta, setCarpeta] = useState("");
 
   useEffect(() => {
     let alive = true;
@@ -49,14 +52,48 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
       if (!alive) return;
       setSchedule(s);
       setNotifOk(!s.enabled ? true : true);
+      // Si la hora guardada no es una en punto de la lista, se abre la casilla
+      // de la hora a mano: si no, la pantalla no enseñaría 03:15 en ningún
+      // sitio y parecería que se perdió.
+      const enLista = s.minute === 0 && HORAS.includes(s.hour);
+      setHoraPersonal(!enLista);
+      setHoraTexto(String(s.hour).padStart(2, "0"));
+      setMinutoTexto(String(s.minute).padStart(2, "0"));
       setLoaded(true);
     });
-    setGmail(isGmailInstalled());
-    setWhatsapp(isWhatsAppInstalled());
+    carpetaElegida().then((c) => alive && setCarpeta(c));
     return () => {
       alive = false;
     };
   }, []);
+
+  /**
+   * Lo que se escribe en las casillas de la hora.
+   *
+   * Se acepta cualquier texto en la casilla —hay que poder borrar para
+   * corregir— pero solo se guarda cuando el número cabe en un reloj. Escribir
+   * "9" pasando por "" no puede dejar el ajuste en una hora inválida.
+   */
+  function escribirHora(valor: string, cual: "hora" | "minuto") {
+    const soloNumeros = valor.replace(/[^0-9]/g, "");
+    if (cual === "hora") setHoraTexto(soloNumeros);
+    else setMinutoTexto(soloNumeros);
+    if (soloNumeros === "") return;
+    const n = Number(soloNumeros);
+    if (cual === "hora") {
+      if (n >= 0 && n <= 23) update({ hour: n });
+    } else if (n >= 0 && n <= 59) {
+      update({ minute: n });
+    }
+  }
+
+  /** Elegir la carpeta del teléfono. Una vez, y el permiso se queda puesto. */
+  async function pedirCarpeta() {
+    const elegida = await elegirCarpeta();
+    if (elegida === "") return;
+    setCarpeta(elegida);
+    showToast(t("schedExport.folderReady"));
+  }
 
   // Cada cambio se guarda y se reprograma en el momento. No hay botón de
   // guardar a propósito: una pantalla de ajustes con botón de guardar es una
@@ -167,13 +204,14 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
   // "as const" se pierde y los identificadores vuelven a ser un string
   // cualquiera, con lo que update({ destination }) dejaría pasar cualquier
   // texto.
-  const DESTINOS: { id: ExportDestination; label: string; Icon: typeof Share2 }[] = [
-    { id: "share", label: t("exportPdf.destShare"), Icon: Share2 },
-    { id: "mail", label: t("exportPdf.destMail"), Icon: Mail },
-    ...(gmail ? [{ id: "gmail" as const, label: t("schedExport.destGmail"), Icon: Mail }] : []),
-    ...(whatsapp
-      ? [{ id: "whatsapp" as const, label: t("exportPdf.destWhatsApp"), Icon: MessageCircle }]
-      : []),
+  // SOLO LOS DESTINOS QUE SE HACEN SOLOS.
+  //
+  // Estaban también compartir, correo, Gmail y WhatsApp, y los cuatro abren
+  // otra aplicación y esperan a que una persona toque enviar — o sea, no son
+  // automáticos. Se quitaron el 05/08/2026 a pedido del usuario. Para exportar
+  // a mano siguen estando todos, en la pantalla de exportar.
+  const DESTINOS: { id: ExportDestination; label: string; Icon: typeof Cloud }[] = [
+    { id: "folder", label: t("schedExport.destFolder"), Icon: FolderOpen },
     { id: "drive", label: t("exportPdf.destDrive"), Icon: Cloud },
   ];
 
@@ -369,28 +407,84 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={{ gap: 6, paddingRight: 8 }}
-              className="mb-5"
+              className="mb-2.5"
             >
-              {HORAS.map((h) => (
-                <TouchableOpacity
-                  key={h}
-                  onPress={() => update({ hour: h, minute: 0 })}
-                  className={`px-3.5 py-2.5 rounded-xl border-[1.5px] ${
-                    schedule.hour === h
-                      ? "bg-emerald-600 border-emerald-600"
-                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
-                  }`}
-                >
-                  <Text
-                    className={`text-xs font-bold ${
-                      schedule.hour === h ? "text-white" : "text-slate-600 dark:text-slate-200"
+              {HORAS.map((h) => {
+                // Una hora en punto solo está elegida si los minutos son 0. Sin
+                // mirar el minuto, poner 03:15 dejaría "03:00" resaltado.
+                const elegida = !horaPersonal && schedule.hour === h && schedule.minute === 0;
+                return (
+                  <TouchableOpacity
+                    key={h}
+                    onPress={() => {
+                      setHoraPersonal(false);
+                      update({ hour: h, minute: 0 });
+                    }}
+                    className={`px-3.5 py-2.5 rounded-xl border-[1.5px] ${
+                      elegida
+                        ? "bg-emerald-600 border-emerald-600"
+                        : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
                     }`}
                   >
-                    {hhmm(h, 0)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      className={`text-xs font-bold ${
+                        elegida ? "text-white" : "text-slate-600 dark:text-slate-200"
+                      }`}
+                    >
+                      {hhmm(h, 0)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+              <TouchableOpacity
+                onPress={() => setHoraPersonal(true)}
+                className={`px-3.5 py-2.5 rounded-xl border-[1.5px] ${
+                  horaPersonal
+                    ? "bg-emerald-600 border-emerald-600"
+                    : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                }`}
+              >
+                <Text
+                  className={`text-xs font-bold ${
+                    horaPersonal ? "text-white" : "text-slate-600 dark:text-slate-200"
+                  }`}
+                >
+                  {t("schedExport.timeCustom")}
+                </Text>
+              </TouchableOpacity>
             </ScrollView>
+
+            {/* LA HORA A MANO. Dos casillas y no un texto libre: escribir
+                "3:15 pm" o "315" es más fácil que acertar el formato, y una
+                hora que no se entiende deja el aviso sin programar en silencio.
+                Se guarda solo cuando el número es válido; mientras se está
+                escribiendo, el ajuste no se toca. */}
+            {horaPersonal && (
+              <View className="flex-row items-center gap-2 mb-5">
+                <TextInput
+                  value={horaTexto}
+                  onChangeText={(v) => escribirHora(v, "hora")}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  placeholder="03"
+                  placeholderTextColor="#94a3b8"
+                  className="w-16 text-center border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl py-2.5 text-sm font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800"
+                />
+                <Text className="text-lg font-extrabold text-slate-400">:</Text>
+                <TextInput
+                  value={minutoTexto}
+                  onChangeText={(v) => escribirHora(v, "minuto")}
+                  keyboardType="number-pad"
+                  maxLength={2}
+                  placeholder="15"
+                  placeholderTextColor="#94a3b8"
+                  className="w-16 text-center border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl py-2.5 text-sm font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800"
+                />
+                <Text className="text-[11px] text-slate-500 dark:text-slate-400 flex-1">
+                  {t("schedExport.timeCustomHint")}
+                </Text>
+              </View>
+            )}
 
             <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
               {t("exportPdf.formatLabel")}
@@ -539,38 +633,36 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
               </View>
             )}
 
-            {/* REPETICIÓN.
-                Un aviso se ve a las 9:00 con las manos ocupadas y se olvida a
-                las 9:01. Esto lo vuelve a sacar más tarde, pero SOLO si ese
-                día todavía no se exportó: si insistiera igual, se silenciaría
-                en dos días y no serviría de nada. */}
-            <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
-              {t("schedExport.retryLabel")}
-            </Text>
-            <View className="flex-row flex-wrap gap-2 mb-1.5">
-              {RETRY_OPTIONS.map((m) => (
-                <TouchableOpacity
-                  key={m}
-                  onPress={() => update({ retryMinutes: m })}
-                  className={`px-3.5 py-2.5 rounded-xl border-[1.5px] ${
-                    schedule.retryMinutes === m
-                      ? "bg-emerald-600 border-emerald-600"
-                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+            {/* LA CARPETA. Hay que elegirla una vez o el reporte no tendrá dónde
+                ir, y ese fallo llegaría a la hora del reporte, sin nadie
+                mirando. Así que si falta, se pide aquí y en rojo. */}
+            {schedule.destination === "folder" && (
+              <View
+                className={`rounded-xl border-[1.5px] p-3.5 mb-5 ${
+                  carpeta === ""
+                    ? "bg-amber-50 dark:bg-amber-900/20 border-amber-500"
+                    : "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-600"
+                }`}
+              >
+                <Text
+                  className={`text-xs leading-5 ${
+                    carpeta === ""
+                      ? "text-amber-800 dark:text-amber-200"
+                      : "text-emerald-800 dark:text-emerald-200"
                   }`}
                 >
-                  <Text
-                    className={`text-xs font-bold ${
-                      schedule.retryMinutes === m ? "text-white" : "text-slate-600 dark:text-slate-200"
-                    }`}
-                  >
-                    {m === 0 ? t("schedExport.retryOff") : t("schedExport.retryMinutes", { count: m })}
+                  {carpeta === "" ? t("schedExport.folderMissing") : t("schedExport.folderNote")}
+                </Text>
+                <TouchableOpacity
+                  onPress={pedirCarpeta}
+                  className="mt-2.5 py-2.5 rounded-xl items-center bg-slate-900 dark:bg-white"
+                >
+                  <Text className="text-xs font-extrabold text-white dark:text-slate-900">
+                    {t(carpeta === "" ? "schedExport.folderChoose" : "schedExport.folderChange")}
                   </Text>
                 </TouchableOpacity>
-              ))}
-            </View>
-            <Text className="text-[11px] text-slate-500 dark:text-slate-400 mb-5">
-              {t("schedExport.retryHint")}
-            </Text>
+              </View>
+            )}
 
             {/* RESUMEN.
                 Antes solo se veía "cada día a las 09:00", y eso deja fuera el

@@ -1,14 +1,18 @@
-// Comprueba lo nuevo del recordatorio de exportación: nombres de archivo,
-// días personalizados, interruptor principal y calendario.
+// Comprueba la exportación automática: nombres de archivo, días personalizados,
+// interruptor principal, calendario, destinos y la hora puesta a mano.
+import fs from "fs";
+import path from "path";
 import {
   DEFAULT_SCHEDULE,
   MAX_MONTH_DAY,
-  RETRY_OPTIONS,
   activeWeekdays,
   buildFileName,
+  esDestinoAutomatico,
+  horaValida,
   isAutoRunDue,
   isPastTime,
   isScheduledDay,
+  minutoValido,
   monthForSchedule,
   sanitizeFileName,
   toDateKey,
@@ -143,9 +147,98 @@ console.log("\n--- QUÉ MES LLEVA EL REPORTE ---");
 
 console.log("\n--- COSAS QUE NO PUEDEN CAMBIAR SIN DARSE CUENTA ---");
 ok(MAX_MONTH_DAY === 28, "el día mensual no pasa del 28, porque febrero tiene 28");
-ok(RETRY_OPTIONS[0] === 0, "la primera opción de repesca es 'no insistir'");
-ok(RETRY_OPTIONS.every((m) => m === 0 || m >= 5), "ninguna repesca es de menos de 5 minutos");
 ok(DEFAULT_SCHEDULE.customDays.length > 0, "personalizado nunca arranca sin ningún día");
+
+// La repesca ("volver a avisar a los N minutos") se quitó el 05/08/2026 a
+// pedido del usuario. Aquí se comprobaban sus opciones; se deja anotado en vez
+// de borrarlo a secas, para que nadie la reponga creyendo que se perdió.
+ok(!("retryMinutes" in DEFAULT_SCHEDULE), "ya no hay repesca en los ajustes");
+
+console.log("\n--- SOLO SE OFRECEN DESTINOS QUE SE HACEN SOLOS ---");
+{
+  // El criterio: que NADIE tenga que elegir a quién mandar el archivo ni tocar
+  // enviar. Compartir, correo, Gmail y WhatsApp abren otra aplicación y esperan
+  // a una persona, así que dejaron de ofrecerse en la exportación automática.
+  ok(esDestinoAutomatico("drive"), "Drive sí: la cuenta ya está conectada");
+  ok(esDestinoAutomatico("folder"), "la carpeta del teléfono sí: el permiso queda puesto");
+  for (const d of ["share", "mail", "gmail", "whatsapp"] as const) {
+    ok(!esDestinoAutomatico(d), `${d} no, porque abre otra app y espera a alguien`);
+  }
+  ok(esDestinoAutomatico(DEFAULT_SCHEDULE.destination), "y el destino de fábrica es automático");
+
+  // Quien tuviera guardado uno de los que se quitaron no puede quedarse con un
+  // ajuste que apunta a una opción inexistente: la pantalla se vería sin destino
+  // y la exportación no haría nada. isAutoRunDue lo demuestra.
+  const conDestinoViejo = { ...DEFAULT_SCHEDULE, enabled: true, frequency: "daily" as const, hour: 0, minute: 0, destination: "whatsapp" as const };
+  ok(!isAutoRunDue(conDestinoViejo, new Date()), "un destino no automático nunca dispara la copia sola");
+  const conCarpeta = { ...conDestinoViejo, destination: "folder" as const };
+  ok(isAutoRunDue(conCarpeta, new Date()), "y la carpeta del teléfono sí la dispara");
+}
+
+console.log("\n--- LA HORA A MANO NO PUEDE QUEDAR INVÁLIDA ---");
+{
+  // Pedido: "en hora agrégale un personalizado, o sea para yo poder poner la
+  // hora cualquiera, ejemplo 03:15". Una hora fuera de rango deja el aviso sin
+  // programar, sin error y sin señal, así que se topa antes de guardarla.
+  ok(horaValida(3) === 3, "una hora normal se respeta");
+  ok(minutoValido(15) === 15, "y un minuto normal también");
+  ok(horaValida(0) === 0 && minutoValido(0) === 0, "la medianoche es válida");
+  ok(horaValida(23) === 23 && minutoValido(59) === 59, "y las 23:59");
+  ok(horaValida(24) === 9, "las 24 no existen: cae en la de reserva");
+  ok(horaValida(-1) === 9, "ni una hora negativa");
+  ok(minutoValido(60) === 0, "ni el minuto 60");
+  ok(horaValida("abc") === 9, "un texto que no es número tampoco");
+  ok(horaValida(undefined) === 9, "ni un ajuste que llega vacío");
+  ok(horaValida(NaN) === 9, "ni una cuenta imposible");
+  ok(horaValida(3.7) === 3, "y un decimal se queda con la hora entera");
+}
+
+console.log("\n--- LA PANTALLA DICE Y OFRECE LO QUE DEBE ---");
+{
+  const RAIZ = process.cwd();
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/ScheduledExportSettings.tsx"), "utf8");
+  const codigo = pant.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+  // El nombre: lo pidió el usuario el 05/08/2026. Se comprueba que no quede la
+  // palabra "recordatorio" en el título ni en la fila de ajustes, en los tres
+  // idiomas, porque cambiarlo en uno solo deja la app diciendo dos cosas.
+  const titulos = [...i18n.matchAll(/"schedExport\.(?:title|settingsRow)":\s*"([^"]*)"/g)].map(
+    (m) => m[1]
+  );
+  ok(titulos.length === 6, `hay 6 títulos (2 por idioma), y hay ${titulos.length}`);
+  ok(
+    titulos.every((x) => !/recordatorio|reminder|lembrete/i.test(x)),
+    "ninguno dice ya 'recordatorio'"
+  );
+  ok(
+    titulos.every((x) => /autom/i.test(x)),
+    "y todos dicen 'automática'"
+  );
+
+  // Destinos: solo los que se hacen solos, y ninguno de los cuatro que se
+  // quitaron. Se mira el código sin comentarios porque los comentarios explican
+  // justamente cuáles se fueron.
+  ok(/id: "folder"/.test(codigo), "se ofrece la carpeta del teléfono");
+  ok(/id: "drive"/.test(codigo), "y Drive");
+  for (const fuera of ["share", "mail", "gmail", "whatsapp"]) {
+    ok(!new RegExp(`id: "${fuera}"`).test(codigo), `y ya no se ofrece ${fuera}`);
+  }
+
+  // La carpeta hay que elegirla antes, y si falta hay que decirlo AQUÍ: el
+  // fallo llegaría de madrugada, a la hora del reporte, sin nadie mirando.
+  ok(/elegirCarpeta/.test(codigo), "se puede elegir la carpeta");
+  ok(codigo.includes("schedExport.folderMissing"), "y se avisa si todavía falta");
+
+  // La hora a mano.
+  ok(/horaPersonal/.test(codigo), "hay una opción de hora a mano");
+  ok(codigo.includes("schedExport.timeCustom"), "con su etiqueta");
+  ok(/keyboardType="number-pad"/.test(codigo), "y teclado de números");
+
+  // Y la repesca no puede volver por la puerta de atrás.
+  ok(!/retryMinutes/.test(codigo), "no queda nada de la repesca en la pantalla");
+  ok(!/"schedExport\.retry/.test(i18n), "ni sus textos en los idiomas");
+}
 
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

@@ -325,6 +325,59 @@ los iconos y está lento, se siente feo al abrirlo"):
     porque al volver hay que rehacerlas. Con 236 casillas la memoria no era el
     problema; los huecos sí.
 
+## Exportación automática — cambio de nombre y de fondo (05/08/2026)
+
+Se llamaba "Recordatorio de exportación" y el nombre estaba **defendido con un
+comentario largo** en `utils/scheduledExport.ts`: no era automática, así que
+llamarla así sería mentir. El usuario pidió el nombre *y* el comportamiento, y
+esta vez el nombre se sostiene, porque los dos destinos que quedan se hacen
+solos:
+
+- **Carpeta del teléfono** (nueva). Se elige una vez con el selector de Android
+  y el permiso **queda guardado y sobrevive a reiniciar**. Desde ahí los
+  reportes se escriben solos. Está en `utils/carpetaTelefono.ts`.
+- **Google Drive** (ya existía y ya era automático).
+
+Y se quitaron **compartir, correo, Gmail y WhatsApp**: los cuatro abren otra
+aplicación y esperan a que una persona toque enviar, así que no pueden ser
+automáticos. Siguen estando para exportar a mano.
+
+Lo demás que se pidió: **hora a mano** (03:15 y cualquier otra) además de las
+horas en punto, y **fuera la repesca** ("si no exportas, insistir a los N
+minutos") con sus seis textos en tres idiomas.
+
+Cosas que había que no romper, cada una con prueba:
+
+- **Migrar los ajustes guardados.** Quien tuviera "WhatsApp" como destino se
+  quedaba apuntando a una opción que ya no existe: la pantalla se vería sin
+  destino y la exportación no haría nada. Ahora `loadSchedule` lo pasa a Drive.
+- **La hora guardada se valida al cargar.** Una hora fuera de rango deja el
+  aviso sin programar, sin error y sin señal.
+- **Los avisos de repesca ya programados se cancelan.** A quien los tuviera
+  puestos le seguirían sonando y no habría forma de callarlos desde la app; por
+  eso la marca vieja se conserva solo para retirarlos.
+- **La copia automática usa el destino elegido**, no `"drive"` fijo como estaba:
+  quien eligiera la carpeta recibía su copia en Drive.
+- **Si falta elegir la carpeta se avisa en la pantalla, en ámbar.** Ese fallo
+  llegaría de madrugada, a la hora del reporte, sin nadie mirando.
+
+### LO QUE SIGUE PENDIENTE DE ESTA PETICIÓN, Y POR QUÉ
+
+Del pedido largo quedó fuera lo que no depende de programar más:
+
+- **Ejecutarse a la hora en punto con la app cerrada** (WorkManager). El PDF se
+  arma en un WebView, que necesita la app abierta. Hay que generar el archivo en
+  código nativo y meterlo en un WorkManager: **cambio de APK**, no de
+  actualización.
+- **OneDrive.** Necesita registrar la app en Azure (lo hace el dueño de la
+  cuenta, no el código) y librería nativa → **cambio de APK**.
+- **Correo automático.** No se puede enviar correo desde el celular sin abrir la
+  app de correo. Hace falta un **servicio de envío** con su clave (Resend,
+  SendGrid…) y eso implica un servidor y un coste mensual.
+- **Historial, varias programaciones a la vez, reintentos.** Se pueden hacer con
+  lo que hay, pero son otra pantalla y otro almacén; no se metieron en la misma
+  entrega para no mezclarlo con el cambio de destinos.
+
 ### El recorte no caía donde el marco prometía (05/08/2026)
 
 Reportado con fotos: en el marco entraba la taza entera y en el icono salía un

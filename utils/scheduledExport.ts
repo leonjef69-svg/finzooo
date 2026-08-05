@@ -1,30 +1,31 @@
-// Recordatorio de exportación: diario, semanal, mensual o personalizado.
+// EXPORTACIÓN AUTOMÁTICA: diaria, semanal, mensual o en los días que se elijan.
 //
-// EL NOMBRE ES LO QUE HACE, Y ES A PROPÓSITO
+// QUÉ ES AUTOMÁTICO DE VERDAD, Y QUÉ NO
 //
-// Antes se llamaba "exportación automática" y no lo era. Lo que uno esperaría
-// con ese nombre es que a la hora fijada el celular arme el PDF y lo mande al
-// correo solo, con la app cerrada. Eso NO se puede hacer desde una app de
-// Android sin un servidor detrás, y no es por falta de ganas:
+// A la hora fijada, la copia se genera y se guarda SOLA, sin que nadie toque
+// nada. Los dos destinos que ofrece cumplen eso: la carpeta del teléfono y
+// Google Drive (ver DESTINOS_AUTOMATICOS).
+//
+// Lo único que no es automático es EL MOMENTO EXACTO. La copia se hace la
+// primera vez que se abre la app pasada la hora, no a la hora en punto con el
+// celular guardado en el bolsillo. Y eso no es dejadez:
 //
 //   1. El PDF se arma en un WebView (expo-print). Un WebView necesita que la
-//      app esté abierta y en pantalla; con la app cerrada no hay dónde
-//      dibujar y no sale ningún archivo.
-//   2. Mandar un correo abre la aplicación de correo, que es otra app. Nadie
-//      puede abrirla y darle a enviar mientras el dueño del celular duerme.
-//   3. Android mata los procesos en segundo plano cuando quiere, y los
-//      Honor y Xiaomi son de los más agresivos. Aunque los dos puntos de
-//      arriba se resolvieran, la tarea no se ejecutaría de forma fiable.
+//      app esté abierta; con la app cerrada no hay dónde dibujar y no sale
+//      ningún archivo.
+//   2. Android mata los procesos en segundo plano cuando quiere, y los Honor y
+//      Xiaomi son de los más agresivos. Una tarea programada a las 3 de la
+//      mañana no se ejecutaría de forma fiable.
 //
-// Prometer "automático" y entregar esto es la forma más rápida de ganarse una
-// reseña de una estrella. Así que se llama recordatorio, que es lo que es: a
-// la hora fijada llega un aviso, y al tocarlo se abre la pantalla de exportar
-// con el mes, el formato, el destino y hasta el nombre del archivo ya
-// puestos. Queda un toque, no seis.
+// Para que ocurra a la hora en punto con la app cerrada hace falta armar el
+// archivo en código nativo (sin WebView) y meterlo en un WorkManager. Es un
+// cambio de APK, no de actualización, y está anotado como pendiente en
+// ESTADO.md.
 //
-// Con un destino sí es casi automático: Drive. Es el único que no necesita
-// que nadie elija a quién mandar el archivo, así que la copia se sube sola la
-// primera vez que se abra la app pasada la hora.
+// Mientras tanto llega un AVISO a la hora fijada, así que la app se abre y la
+// copia sale enseguida. Los destinos que necesitan que una persona elija a
+// quién mandar el archivo —correo, WhatsApp, compartir— no se ofrecen aquí, por
+// la sencilla razón de que no se pueden hacer solos.
 
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
@@ -32,7 +33,30 @@ import { loadJSON, saveJSON } from "@/utils/storage";
 import { isDecoyActive } from "@/utils/decoyMode";
 
 export type ExportFrequency = "daily" | "weekly" | "monthly" | "custom";
-export type ExportDestination = "share" | "mail" | "gmail" | "whatsapp" | "drive";
+export type ExportDestination = "share" | "mail" | "gmail" | "whatsapp" | "drive" | "folder";
+
+/**
+ * LOS DESTINOS QUE DE VERDAD SE HACEN SOLOS.
+ *
+ * Esta lista es la que decide qué puede ofrecer la pantalla de exportación
+ * automática, y el criterio es uno: que NADIE tenga que elegir a quién mandar
+ * el archivo ni darle a un botón de enviar.
+ *
+ *   drive  → la cuenta ya está conectada y la carpeta la crea Finzo.
+ *   folder → la carpeta se elige una vez y el permiso de Android se queda.
+ *
+ * Los demás (compartir, correo, Gmail, WhatsApp) abren OTRA aplicación y
+ * esperan a que una persona toque enviar. Siguen existiendo para exportar a
+ * mano, pero ofrecerlos como "automáticos" sería mentir. Por eso se quitaron de
+ * esta pantalla el 05/08/2026, a pedido del usuario: "que todas las opciones en
+ * dónde guardarlo sean de manera automática".
+ */
+const DESTINOS_AUTOMATICOS = ["drive", "folder"] as const;
+
+export function esDestinoAutomatico(d: ExportDestination): boolean {
+  return (DESTINOS_AUTOMATICOS as readonly string[]).includes(d);
+}
+
 export type ExportFormat = "pdf" | "xlsx" | "csv";
 export type ExportType = "all" | "expense" | "income";
 export type FileNameMode = "auto" | "custom";
@@ -56,9 +80,7 @@ export type ScheduledExport = {
   fileNameMode: FileNameMode;
   /** Nombre escrito a mano, sin extensión. Solo se usa con fileNameMode "custom". */
   fileName: string;
-  /** Volver a avisar a los N minutos si ese día todavía no se exportó. 0 = no. */
-  retryMinutes: number;
-  /** "AAAA-MM-DD" de la última vez que se subió sola a Drive. Evita repetir. */
+  /** "AAAA-MM-DD" de la última vez que se guardó sola. Evita repetir. */
   lastAutoRun?: string;
 };
 
@@ -75,10 +97,7 @@ export const DEFAULT_SCHEDULE: ScheduledExport = {
   destination: "drive",
   fileNameMode: "auto",
   fileName: "",
-  retryMinutes: 30,
 };
-
-export const RETRY_OPTIONS = [0, 5, 15, 30, 60];
 
 const STORAGE_KEY = "finzo:scheduledExport";
 
@@ -86,9 +105,10 @@ const STORAGE_KEY = "finzo:scheduledExport";
 // los nuestros. Cancelar todos los avisos programados se llevaría por delante
 // los de otras partes de la app que puedan existir mañana.
 const TAG = "finzo-export";
-// El segundo aviso, el de "todavía no exportaste". Va con su propia marca
-// para poder retirarlo en cuanto se exporte, sin tocar el recordatorio fijo.
-const TAG_RETRY = "finzo-export-retry";
+// La marca del segundo aviso ("todavía no exportaste"), que ya no se programa.
+// Se conserva SOLO para poder retirar los que quedaran puestos en celulares que
+// venían de una versión anterior. Ver donde se cancela.
+const TAG_VIEJO_REPESCA = "finzo-export-retry";
 
 export async function loadSchedule(): Promise<ScheduledExport> {
   const saved = await loadJSON<Partial<ScheduledExport>>(STORAGE_KEY, {});
@@ -99,7 +119,28 @@ export async function loadSchedule(): Promise<ScheduledExport> {
   if (!Array.isArray(merged.customDays) || merged.customDays.length === 0) {
     merged.customDays = DEFAULT_SCHEDULE.customDays;
   }
+  // Quien tuviera guardado "compartir", "correo", "Gmail" o "WhatsApp" se queda
+  // con Drive. Esos destinos dejaron de ofrecerse aquí el 05/08/2026 y sin esto
+  // el ajuste guardado apuntaría a una opción que ya no sale en la pantalla:
+  // se vería sin destino elegido y la exportación automática no haría nada.
+  if (!esDestinoAutomatico(merged.destination)) merged.destination = "drive";
+  // Y la hora, por si llega de una versión futura o de una copia estropeada:
+  // una hora inválida deja el aviso sin programar, sin error y sin señal.
+  merged.hour = horaValida(merged.hour, DEFAULT_SCHEDULE.hour);
+  merged.minute = minutoValido(merged.minute, DEFAULT_SCHEDULE.minute);
   return merged;
+}
+
+/** Deja una hora en 0..23. Cualquier cosa rara cae en el valor de reserva. */
+export function horaValida(h: unknown, reserva = 9): number {
+  const n = Math.floor(Number(h));
+  return Number.isFinite(n) && n >= 0 && n <= 23 ? n : reserva;
+}
+
+/** Deja un minuto en 0..59. */
+export function minutoValido(m: unknown, reserva = 0): number {
+  const n = Math.floor(Number(m));
+  return Number.isFinite(n) && n >= 0 && n <= 59 ? n : reserva;
 }
 
 export function saveSchedule(schedule: ScheduledExport): void {
@@ -215,7 +256,11 @@ export async function applySchedule(
   if (isDecoyActive()) return false;
 
   await cancelByTag(TAG);
-  await cancelByTag(TAG_RETRY);
+  // Y se retiran los segundos avisos de "todavía no exportaste" que pudiera
+  // haber dejado programados una versión anterior. Ese aviso se quitó el
+  // 05/08/2026; sin esta línea, a quien lo tuviera puesto le seguiría sonando
+  // una vez y no habría forma de callarlo desde la app.
+  await cancelByTag(TAG_VIEJO_REPESCA);
   if (!schedule.enabled) return true;
 
   const { status } = await Notifications.requestPermissionsAsync();
@@ -281,38 +326,6 @@ export async function applySchedule(
 }
 
 // ---------------------------------------------------------------------------
-// EL SEGUNDO AVISO ("todavía no exportaste")
-// ---------------------------------------------------------------------------
-
-/**
- * Programa el recordatorio de repesca a los N minutos.
- *
- * Es un aviso de UNA sola vez, y se arma en el momento en que sabemos que el
- * primero ya sonó (al tocarlo, o al abrir la app con la hora pasada y sin
- * exportar). No puede ser otro aviso repetido puesto a las 9:30: ese sonaría
- * también los días en que sí se exportó a las 9:05, y un recordatorio que
- * insiste cuando ya hiciste la tarea se silencia en dos días.
- */
-export async function armRetry(minutes: number, texts: { title: string; body: string }): Promise<void> {
-  if (isDecoyActive() || minutes <= 0) return;
-  await cancelByTag(TAG_RETRY);
-  await Notifications.scheduleNotificationAsync({
-    content: { title: texts.title, body: texts.body, data: { tag: TAG_RETRY, screen: "export" } },
-    trigger: {
-      type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-      seconds: minutes * 60,
-      repeats: false,
-      ...(Platform.OS === "android" ? { channelId: "finzo-export" } : {}),
-    },
-  });
-}
-
-/** Retira la repesca. Se llama en cuanto se exporta de verdad. */
-export async function cancelRetry(): Promise<void> {
-  await cancelByTag(TAG_RETRY);
-}
-
-// ---------------------------------------------------------------------------
 // QUÉ SE EXPORTÓ Y CUÁNDO
 // ---------------------------------------------------------------------------
 
@@ -323,10 +336,10 @@ export function markExported(now: Date): void {
   saveJSON(KEY_LAST_EXPORT, toDateKey(now));
 }
 
-export async function exportedOn(day: Date): Promise<boolean> {
-  const last = await loadJSON<string>(KEY_LAST_EXPORT, "");
-  return last === toDateKey(day);
-}
+// Aquí había un exportedOn(día) que respondía "¿ya se exportó hoy?". Lo usaba
+// solo la repesca, que se quitó el 05/08/2026. Se sigue APUNTANDO la fecha
+// (markExported) porque no cuesta nada y es el dato que haría falta el día que
+// se quiera un historial de exportaciones.
 
 // Cuándo se entregó el último aviso que ya se atendió.
 //
@@ -378,18 +391,18 @@ export function isPastTime(schedule: ScheduledExport, now: Date): boolean {
 }
 
 /**
- * ¿Toca subir sola la copia a Drive?
+ * ¿Toca guardar sola la copia?
  *
- * Solo aplica al destino Drive, que es el único que no necesita que nadie
- * elija nada. Se comprueba al abrir la app, no en segundo plano, porque en
- * segundo plano no se puede armar el PDF.
+ * Solo con los destinos que no necesitan que nadie elija nada — ver
+ * DESTINOS_AUTOMATICOS. Se comprueba al abrir la app, no en segundo plano,
+ * porque en segundo plano no se puede armar el PDF.
  *
  * `lastAutoRun` guarda el día en que se hizo la última para no repetirla cada
  * vez que se abre la app. Se compara por fecha y no por hora: abrir la app
  * cinco veces el mismo día tiene que dar una sola subida.
  */
 export function isAutoRunDue(schedule: ScheduledExport, now: Date): boolean {
-  if (schedule.destination !== "drive") return false;
+  if (!esDestinoAutomatico(schedule.destination)) return false;
   if (schedule.lastAutoRun === toDateKey(now)) return false;
   if (!isScheduledDay(schedule, now)) return false;
   return isPastTime(schedule, now);
