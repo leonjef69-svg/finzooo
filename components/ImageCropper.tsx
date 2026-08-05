@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Minus, Plus } from "lucide-react-native";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { useBackClose } from "@/utils/useBackClose";
 
@@ -32,6 +33,26 @@ import { useBackClose } from "@/utils/useBackClose";
  * operación entera en vez de recortar lo que se pueda.
  */
 
+/**
+ * EL MARCO TIENE LA FORMA DEL ICONO DE VERDAD, Y ESO ES EL PUNTO.
+ *
+ * Era un círculo, heredado de cuando las categorías se dibujaban redondas. Las
+ * categorías son cuadrados de esquinas redondeadas desde el 03/08/2026, así que
+ * el marco enseñaba una forma y el resultado salía en otra: encuadrabas una cara
+ * en un círculo y en la lista aparecía con las esquinas puestas.
+ *
+ * La proporción sale de las casillas reales: 16 puntos de redondeo en una
+ * casilla de ~55, y 24 en la vista previa de 80. Las dos dan casi 0,3, así que
+ * el marco a 0,3 es la MISMA forma a otro tamaño.
+ */
+const REDONDEO = 0.3;
+
+/** Lo máximo que se puede acercar. */
+const ZOOM_MAX = 4;
+const ZOOM_MIN = 1;
+/** Cuánto acerca cada toque a los botones − y +. */
+const PASO_ZOOM = 0.25;
+
 const VENTANA = 240;
 
 /**
@@ -56,12 +77,41 @@ const VENTANA = 240;
 const LADO = 256;
 const CALIDAD = 0.8;
 
-// Los pasos del zoom. Cinco y no un control continuo: en un circulito de 240
-// puntos, la diferencia entre 1.6 y 1.7 no se aprecia, y con pasos se acierta
-// a la primera sin pelearse con el dedo.
-const PASOS_ZOOM = [1, 1.5, 2, 2.5, 3];
-
 export type CropResult = { uri: string; base64: string };
+
+/** Deja el zoom dentro de lo permitido. */
+export function limitarZoom(zoom: number): number {
+  if (!Number.isFinite(zoom)) return ZOOM_MIN;
+  return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, zoom));
+}
+
+/**
+ * Hasta dónde se puede arrastrar sin dejar un hueco en blanco en el marco.
+ *
+ * ESTO SE SEPARÓ POR UN FALLO REAL: el arrastre de la pantalla no tenía tope,
+ * pero el recorte SÍ. Así que arrastrando de más se veía la imagen corrida
+ * —incluso con un borde vacío— y al guardar salía otra cosa, porque el recorte
+ * se había topado por su cuenta. La promesa de esta ventana es "lo que ves es
+ * lo que se guarda", y solo se cumple si las dos usan el mismo tope.
+ */
+export function limitarPan(
+  anchoReal: number,
+  altoReal: number,
+  zoom: number,
+  panX: number,
+  panY: number,
+  ventana = VENTANA
+): { x: number; y: number } {
+  // La imagen se dibuja "cubriendo" el marco: se agranda hasta que el lado
+  // corto lo llena, y lo que sobra del lado largo se sale por los bordes.
+  const escala = Math.max(ventana / anchoReal, ventana / altoReal) * zoom;
+  const margenX = Math.max(0, (anchoReal * escala - ventana) / 2);
+  const margenY = Math.max(0, (altoReal * escala - ventana) / 2);
+  return {
+    x: Math.max(-margenX, Math.min(margenX, panX)),
+    y: Math.max(-margenY, Math.min(margenY, panY)),
+  };
+}
 
 /**
  * De lo que se ve en pantalla a píxeles del archivo.
@@ -77,20 +127,11 @@ export function cropRect(
   panY: number,
   ventana = VENTANA
 ): { originX: number; originY: number; width: number; height: number } {
-  // La imagen se dibuja "cubriendo" la ventana: se agranda hasta que el lado
-  // corto la llena, y lo que sobra del lado largo se sale por los bordes.
   const escalaBase = Math.max(ventana / anchoReal, ventana / altoReal);
   const escala = escalaBase * zoom;
 
-  // Lo que ocupa la imagen en pantalla, ya con el zoom puesto.
-  const anchoEnPantalla = anchoReal * escala;
-  const altoEnPantalla = altoReal * escala;
-
-  // Cuánto puede moverse antes de dejar un hueco en blanco.
-  const margenX = Math.max(0, (anchoEnPantalla - ventana) / 2);
-  const margenY = Math.max(0, (altoEnPantalla - ventana) / 2);
-  const x = Math.max(-margenX, Math.min(margenX, panX));
-  const y = Math.max(-margenY, Math.min(margenY, panY));
+  // El MISMO tope que usa el arrastre de la pantalla. Ver limitarPan.
+  const { x, y } = limitarPan(anchoReal, altoReal, zoom, panX, panY, ventana);
 
   // La esquina de la ventana, llevada a píxeles del archivo.
   const lado = ventana / escala;
@@ -120,7 +161,6 @@ export default function ImageCropper({
 }) {
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
-  const [inicio, setInicio] = useState({ x: 0, y: 0 });
   const [tam, setTam] = useState<{ w: number; h: number } | null>(null);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
@@ -147,12 +187,79 @@ export default function ImageCropper({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [uri]);
 
+  /**
+   * ARRASTRAR CON UN DEDO, ACERCAR CON DOS.
+   *
+   * Va todo en un solo gesto porque los dedos entran y salen a mitad de camino:
+   * se empieza arrastrando, se apoya el segundo dedo para acercar, se levanta y
+   * se sigue arrastrando. Cada vez que cambia el número de dedos hay que VOLVER
+   * A TOMAR la referencia; si no, la imagen da un salto en ese instante, que es
+   * el fallo clásico de una pinza hecha a mano.
+   */
+  const gesto = useRef({ dedos: 0, pan: { x: 0, y: 0 }, zoom: 1, dist: 0, dx: 0, dy: 0 }).current;
+
+  function separacion(dedos: { pageX: number; pageY: number }[]): number {
+    const [a, b] = dedos;
+    return Math.hypot(a.pageX - b.pageX, a.pageY - b.pageY);
+  }
+
+  function tomarReferencia(dedos: { pageX: number; pageY: number }[], dx: number, dy: number) {
+    gesto.dedos = dedos.length;
+    gesto.pan = pan;
+    gesto.zoom = zoom;
+    gesto.dist = dedos.length >= 2 ? separacion(dedos) : 0;
+    gesto.dx = dx;
+    gesto.dy = dy;
+  }
+
   const arrastre = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
     onMoveShouldSetPanResponder: () => true,
-    onPanResponderGrant: () => setInicio(pan),
-    onPanResponderMove: (_, g) => setPan({ x: inicio.x + g.dx, y: inicio.y + g.dy }),
+    onPanResponderGrant: (e) => tomarReferencia(e.nativeEvent.touches, 0, 0),
+    onPanResponderMove: (e, g) => {
+      const dedos = e.nativeEvent.touches;
+      if (dedos.length !== gesto.dedos) {
+        tomarReferencia(dedos, g.dx, g.dy);
+        return;
+      }
+      if (dedos.length >= 2) {
+        if (gesto.dist <= 0) return;
+        // La proporción entre lo que se han separado los dedos y lo que estaban
+        // al empezar. Separar el doble acerca el doble.
+        setZoom(limitarZoom(gesto.zoom * (separacion(dedos) / gesto.dist)));
+        return;
+      }
+      // Un dedo: mover. Se resta la referencia porque g.dx cuenta desde el
+      // principio del gesto, y el gesto pudo empezar con dos dedos.
+      if (!tam) return;
+      setPan(
+        limitarPan(
+          tam.w,
+          tam.h,
+          zoom,
+          gesto.pan.x + (g.dx - gesto.dx),
+          gesto.pan.y + (g.dy - gesto.dy),
+          VENTANA
+        )
+      );
+    },
+    onPanResponderRelease: () => {
+      gesto.dedos = 0;
+    },
   });
+
+  /**
+   * Acerca o aleja de a pasos, para quien no puede hacer la pinza.
+   *
+   * Al alejar hay que volver a topar el arrastre: con menos zoom la imagen
+   * ocupa menos, así que un arrastre que antes era válido ahora dejaría un
+   * borde vacío.
+   */
+  function cambiarZoom(hacia: number) {
+    const nuevo = limitarZoom(zoom + hacia);
+    setZoom(nuevo);
+    if (tam) setPan(limitarPan(tam.w, tam.h, nuevo, pan.x, pan.y, VENTANA));
+  }
 
   async function guardar() {
     if (!tam || guardando) return;
@@ -184,9 +291,10 @@ export default function ImageCropper({
       <Text className="text-white font-extrabold text-base mb-1">{labels.title}</Text>
       <Text className="text-slate-300 text-xs mb-5 text-center">{labels.hint}</Text>
 
-      {/* La ventana. Lo que quede dentro es lo que se recorta. */}
+      {/* EL MARCO, con la forma exacta del icono. Lo que quede dentro es lo que
+          se recorta y lo que se verá. Ver REDONDEO. */}
       <View
-        style={{ width: VENTANA, height: VENTANA, borderRadius: VENTANA / 2 }}
+        style={{ width: VENTANA, height: VENTANA, borderRadius: VENTANA * REDONDEO }}
         className="overflow-hidden bg-slate-800 border-[3px] border-white"
         {...arrastre.panHandlers}
       >
@@ -205,23 +313,30 @@ export default function ImageCropper({
         )}
       </View>
 
-      {/* El zoom. Ver PASOS_ZOOM. */}
-      <View className="flex-row items-center gap-2 mt-6">
-        <Text className="text-slate-400 text-xs">−</Text>
-        {PASOS_ZOOM.map((z) => (
-          <TouchableOpacity
-            key={z}
-            onPress={() => setZoom(z)}
-            className={`w-9 h-9 rounded-full items-center justify-center border-[1.5px] ${
-              zoom === z ? "bg-emerald-600 border-emerald-600" : "border-slate-600"
-            }`}
-          >
-            <Text className={`text-[11px] font-bold ${zoom === z ? "text-white" : "text-slate-300"}`}>
-              {z}x
-            </Text>
-          </TouchableOpacity>
-        ))}
-        <Text className="text-slate-400 text-xs">+</Text>
+      {/* El zoom de a pasos. Está además de la pinza, no en su lugar: la pinza
+          es lo natural, pero con una sola mano ocupada no se puede hacer. */}
+      <View className="flex-row items-center gap-4 mt-6">
+        <TouchableOpacity
+          onPress={() => cambiarZoom(-PASO_ZOOM)}
+          disabled={zoom <= ZOOM_MIN}
+          className={`w-11 h-11 rounded-full items-center justify-center border-[1.5px] border-slate-600 ${
+            zoom <= ZOOM_MIN ? "opacity-40" : ""
+          }`}
+        >
+          <Minus size={20} color="#e2e8f0" strokeWidth={2.6} />
+        </TouchableOpacity>
+        <Text className="text-white text-sm font-bold w-14 text-center">
+          {zoom.toFixed(1)}x
+        </Text>
+        <TouchableOpacity
+          onPress={() => cambiarZoom(PASO_ZOOM)}
+          disabled={zoom >= ZOOM_MAX}
+          className={`w-11 h-11 rounded-full items-center justify-center border-[1.5px] border-slate-600 ${
+            zoom >= ZOOM_MAX ? "opacity-40" : ""
+          }`}
+        >
+          <Plus size={20} color="#e2e8f0" strokeWidth={2.6} />
+        </TouchableOpacity>
       </View>
 
       {error !== "" && <Text className="text-rose-400 text-xs mt-4">{error}</Text>}

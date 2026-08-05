@@ -1,5 +1,7 @@
 // Personalizar categorias: el recorte de la imagen y los cambios guardados.
-import { cropRect } from "@/components/ImageCropper";
+import fs from "fs";
+import path from "path";
+import { cropRect, limitarPan, limitarZoom } from "@/components/ImageCropper";
 import { applyChange, sanitizeName, type CategoryOverrides } from "@/utils/categoryCustom";
 
 let fallos = 0;
@@ -52,6 +54,92 @@ console.log("\n--- EL RECORTE NUNCA SE SALE DE LA IMAGEN ---");
   // que tiene.
   const r = cropRect(100, 80, 1, 0, 0);
   ok(r.width <= 100 && r.height <= 80, `una imagen chica no pide de mas (${r.width}x${r.height})`);
+}
+
+console.log("\n--- LO QUE SE VE EN EL MARCO ES LO QUE SE GUARDA ---");
+{
+  // Reportado el 05/08/2026: "que se aparezca el espacio de todo lo que
+  // aparecera en el icono y se pueda acortar, meterle zoom".
+  //
+  // Al mirarlo salio un fallo de fondo: el ARRASTRE de la pantalla no tenia
+  // tope, pero el RECORTE si. Arrastrando de mas se veia la imagen corrida
+  // —hasta con un borde vacio— y al guardar salia otra cosa, porque el recorte
+  // se habia topado por su cuenta. La promesa del marco es "lo que ves es lo
+  // que se guarda", y solo se cumple si los dos usan el MISMO tope.
+  let iguales = true;
+  for (const [w, h] of [
+    [3000, 4000],
+    [4000, 3000],
+    [1000, 1000],
+    [200, 5000],
+  ]) {
+    for (const zoom of [1, 1.25, 2, 3, 4]) {
+      for (const pan of [-9999, -300, -40, 0, 40, 300, 9999]) {
+        const topado = limitarPan(w, h, zoom, pan, pan);
+        // Recortar con el arrastre topado y con el sin topar tiene que dar lo
+        // mismo: es lo que demuestra que el recorte respeta el mismo limite.
+        const conTope = cropRect(w, h, zoom, topado.x, topado.y);
+        const sinTope = cropRect(w, h, zoom, pan, pan);
+        if (JSON.stringify(conTope) !== JSON.stringify(sinTope)) iguales = false;
+      }
+    }
+  }
+  ok(iguales, "el arrastre topado y el recorte llegan al mismo sitio, con cualquier foto y zoom");
+
+  // Y esta es la que vigila el fallo de verdad. La de arriba no lo habria
+  // cazado: cropRect YA topaba por su cuenta, asi que consigo mismo siempre
+  // cuadraba. Lo que no topaba era la PANTALLA, y eso solo se ve mirando que el
+  // arrastre pase por el mismo limitador.
+  const cropper = fs.readFileSync(path.join(process.cwd(), "components/ImageCropper.tsx"), "utf8");
+  ok(/setPan\(\s*limitarPan\(/.test(cropper), "el arrastre de la pantalla pasa por el tope");
+  ok(!/setPan\(\{ x: inicio\.x/.test(cropper), "y ya no se mueve libre como antes");
+}
+
+console.log("\n--- EL MARCO TIENE LA FORMA DEL ICONO ---");
+{
+  // Era un circulo, heredado de cuando las categorias se dibujaban redondas.
+  // Son cuadrados de esquinas redondeadas desde el 03/08/2026, asi que el marco
+  // ensenaba una forma y el resultado salia en otra: encuadrabas una cara en un
+  // circulo y en la lista aparecia con las esquinas puestas. Lo pidio el usuario
+  // el 05/08/2026: "que se aparezca el espacio de todo lo que aparecera".
+  const cropper = fs.readFileSync(path.join(process.cwd(), "components/ImageCropper.tsx"), "utf8");
+  ok(!/borderRadius: VENTANA \/ 2/.test(cropper), "el marco ya no es un circulo");
+  ok(/borderRadius: VENTANA \* REDONDEO/.test(cropper), "sino la forma de la casilla");
+  // La proporcion sale de las casillas reales: 16 de redondeo en una de ~55, y
+  // 24 en la vista previa de 80. Si se va lejos de eso, deja de ser un anticipo.
+  const redondeo = Number(/const REDONDEO = ([\d.]+)/.exec(cropper)?.[1] ?? "0");
+  ok(redondeo >= 0.2 && redondeo <= 0.4, `el redondeo (${redondeo}) es el de las casillas`);
+
+  // Y la pinza de dos dedos, que es la otra mitad del pedido.
+  ok(/nativeEvent\.touches/.test(cropper), "se miran los dos dedos");
+  ok(/Math\.hypot/.test(cropper), "se mide cuanto se separan");
+  // Al cambiar el numero de dedos hay que volver a tomar la referencia, o la
+  // imagen salta justo al apoyar o levantar el segundo dedo.
+  ok(/dedos\.length !== gesto\.dedos/.test(cropper), "y la imagen no salta al apoyar o levantar un dedo");
+  // Los botones siguen: con una mano ocupada no se puede pellizcar.
+  ok(/cambiarZoom\(/.test(cropper), "y quedan los botones para quien no pueda pellizcar");
+}
+{
+  // El tope no puede dejar hueco: con la imagen dentro del marco, moverse hasta
+  // el limite tiene que seguir cubriendolo entero.
+  const { x, y } = limitarPan(3000, 4000, 1, 9999, 9999);
+  ok(x === 0, "sin zoom no se puede mover a lo ancho: el lado corto llena el marco justo");
+  ok(y > 0, "pero si a lo alto, que es donde sobra imagen");
+
+  const cerca = limitarPan(3000, 4000, 2, 9999, 9999);
+  ok(cerca.x > 0, "y al acercar ya se puede mover en las dos direcciones");
+  ok(cerca.y > y, "con mas recorrido que antes, porque hay mas imagen fuera del marco");
+}
+{
+  // El zoom se topa por los dos lados. Sin tope por abajo, alejando se dejaria
+  // un borde vacio; sin tope por arriba, se pediria un recorte de pocos pixeles
+  // que al agrandarlo a 256 sale como una mancha.
+  ok(limitarZoom(0.2) === 1, "no se puede alejar mas alla de llenar el marco");
+  ok(limitarZoom(99) === 4, "ni acercar mas de 4x");
+  ok(limitarZoom(2.5) === 2.5, "y en medio se respeta lo que se pida");
+  // La pinza divide una separacion por otra: si los dos dedos caen en el mismo
+  // punto sale una division por cero, y un NaN de zoom borra la imagen.
+  ok(limitarZoom(NaN) === 1, "y una cuenta imposible no rompe la pantalla");
 }
 
 console.log("\n--- LOS CAMBIOS DE UNA CATEGORIA ---");

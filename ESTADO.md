@@ -325,6 +325,35 @@ los iconos y está lento, se siente feo al abrirlo"):
     porque al volver hay que rehacerlas. Con 236 casillas la memoria no era el
     problema; los huecos sí.
 
+### El recortador: marco con la forma real, pinza de dos dedos (05/08/2026)
+
+Pedido: *"que se aparezca el espacio de todo lo que aparecerá en el icono y se
+pueda acortar, meterle zoom"*. Al mirarlo salieron **tres** cosas, y la primera
+no la había pedido nadie porque nadie la había notado:
+
+- **El marco era un CÍRCULO y el icono es un cuadrado redondeado.** Herencia de
+  cuando las categorías se dibujaban redondas; son casillas desde el 03/08.
+  Encuadrabas una cara en un círculo y en la lista salía con las esquinas
+  puestas. El texto de ayuda incluso decía "lo que quede en el círculo". Ahora el
+  marco lleva el redondeo proporcional de la casilla real (`REDONDEO = 0.3`, que
+  sale de 16 sobre ~55 y de 24 sobre 80: la misma forma a otro tamaño).
+- **El arrastre no tenía tope, pero el recorte sí.** Así que arrastrando de más
+  se veía la imagen corrida —hasta con borde vacío— y al guardar salía otra cosa,
+  porque el recorte se topaba por su cuenta. Los dos usan ahora `limitarPan`.
+  Ojo: la prueba que compara `cropRect` consigo mismo **no habría cazado esto**,
+  porque `cropRect` ya topaba; lo que no topaba era la pantalla. Hay una
+  aserción aparte para eso.
+- **El zoom era de cinco pasos con botones.** Ahora se pellizca con dos dedos,
+  continuo, de 1× a 4×. Los botones − y + se quedan: con una mano ocupada no se
+  puede pellizcar.
+
+Detalle del gesto: cámara y pinza van en un solo `PanResponder` porque los dedos
+entran y salen a mitad de camino. **Cada vez que cambia el número de dedos hay
+que volver a tomar la referencia**, o la imagen salta justo al apoyar o levantar
+el segundo — es el fallo clásico de una pinza hecha a mano, y hay una prueba que
+lo vigila. Y `limitarZoom` aguanta un `NaN`, porque la pinza divide una
+separación por otra y dos dedos en el mismo punto dan división por cero.
+
 ### Foto propia como dibujo de categoría (05/08/2026)
 
 En "Nueva categoría", arriba del catálogo: **cámara y galería**. Va ahí y no en
