@@ -206,10 +206,12 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   const layout = fs.readFileSync(path.join(RAIZ, "app/_layout.tsx"), "utf8");
   const suya = /name="nueva-categoria"[\s\S]{0,300}?\/>/.exec(layout)?.[0] ?? "";
   ok(suya.length > 0, "la ruta de nueva categoria esta declarada en el layout");
-  // El usuario eligio el fundido sobre el deslizamiento: mas suave, aunque
-  // pierde la sensacion de direccion. Se guarda la eleccion, no solo "que haya
-  // animacion", porque es gusto suyo y no hay como deducirlo del codigo.
-  ok(/animation: "fade"/.test(suya), "y entra con un fundido, no de golpe");
+  // Se probo el fundido y el usuario lo quito el mismo dia: sobre el papel es
+  // mas suave, pero al usarlo la pantalla aparece de la nada y se nota como un
+  // parpadeo. Queda el deslizamiento. Se guarda la eleccion concreta, no un
+  // generico "que haya animacion": es gusto suyo y no se deduce del codigo.
+  ok(/animation: "slide_from_right"/.test(suya), "y entra deslizandose, no de golpe");
+  ok(!/animation: "fade"/.test(suya), "sin el fundido, que se probo y no gusto");
   ok(/backgroundColor: screenBg/.test(suya), "con el fondo del tema, para que no destelle blanco");
 }
 

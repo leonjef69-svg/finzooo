@@ -313,13 +313,15 @@ los iconos y está lento, se siente feo al abrirlo"):
   instante, quedaba el cambio de pantalla en sí. La ruta `nueva-categoria` no
   estaba declarada en el layout, así que tomaba la animación por defecto de
   Android y pintaba el fondo nativo blanco un instante: las dos mitades de lo
-  brusco. Ahora entra con un **fundido** de 220 ms y con el fondo del tema en
+  brusco. Ahora **se desliza desde la derecha** y con el fondo del tema en
   `contentStyle` (el mismo patrón que las pantallas de arriba en ese archivo).
 
-  El fundido lo **eligió el usuario** entre las dos opciones que se le
-  ofrecieron; primero se publicó con deslizamiento desde la derecha. Es gusto
-  suyo y no se deduce del código, así que la prueba guarda la elección, no un
-  genérico "que haya animación".
+  **El fundido se probó y se quitó el mismo día.** Se le ofreció como
+  alternativa, lo pidió, se publicó, y al usarlo lo quitó. Sobre el papel es
+  más suave; en la mano la pantalla aparece de la nada y el fundido se nota
+  como un parpadeo en vez de un movimiento. Queda anotado para no volver a
+  proponerlo. La prueba guarda la elección concreta, no un genérico "que haya
+  animación": es gusto del usuario y no se deduce del código.
 
   Importa el orden: **la animación la corre el sistema, no nuestro código**, así
   que sigue siendo suave aunque la pantalla esté armando sus iconos. Puesta

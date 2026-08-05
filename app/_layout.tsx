@@ -480,25 +480,23 @@ export default function RootLayout() {
             {/* "Nueva categoría" se apila ENCIMA de esas dos, y sin declararla
                 tomaba la animación por defecto de Android: el cambio se sentía
                 brusco.
-                Entra con un FUNDIDO, elegido por el usuario sobre el
-                deslizamiento clásico: es más suave, aunque pierde la sensación
-                de dirección. No es indiferente aquí — se llega desde un panel
-                que ya está encima de otra pantalla, así que "de qué lado
-                viene" no aportaba mucho de todas formas.
+                Se desliza desde la derecha, que es lo que hace una pantalla
+                que se apila encima, y al volver se desliza de vuelta sola.
+                SE PROBÓ EL FUNDIDO Y EL USUARIO LO QUITÓ (05/08/2026). Se
+                anota para no volver a proponerlo: sobre el papel es más suave,
+                pero al usarlo la pantalla aparece de la nada y el fundido se
+                nota como un parpadeo, no como un movimiento.
                 La animación la corre el sistema, no nuestro código, así que
                 sigue siendo suave aunque la pantalla esté armando sus iconos
                 en ese momento.
                 Y el fondo del tema en "contentStyle" por lo mismo que las de
                 arriba: en el instante previo a que React pinte, el fondo
                 nativo ya es del color correcto en vez del blanco por defecto,
-                que es la otra mitad de lo que se veía brusco. Con un fundido
-                importa aún más: el destello ocurriría con la pantalla a medio
-                aparecer. */}
+                que es la otra mitad de lo que se veía brusco. */}
             <Stack.Screen
               name="nueva-categoria"
               options={{
-                animation: "fade",
-                animationDuration: 220,
+                animation: "slide_from_right",
                 contentStyle: { backgroundColor: screenBg },
               }}
             />
