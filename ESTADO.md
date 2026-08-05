@@ -325,11 +325,37 @@ los iconos y está lento, se siente feo al abrirlo"):
     porque al volver hay que rehacerlas. Con 236 casillas la memoria no era el
     problema; los huecos sí.
 
+### Foto propia como dibujo de categoría (05/08/2026)
+
+En "Nueva categoría", arriba del catálogo: **cámara y galería**. Va ahí y no en
+una pestaña aparte porque es otra forma de contestar la misma pregunta —"¿con
+qué dibujo?"— y una pestaña más la esconde.
+
+Casi todo estaba hecho ya: `CategoriaPropia.image`, `catInfo` la reparte,
+`CategoryAvatar` la dibuja, y `ImageCropper` recorta a 256×256 JPEG. Lo único
+que faltaba era la forma de elegirla — la pantalla que la tenía es la que se
+quitó de Ajustes el 03/08.
+
+Lo que había que no romper:
+
+- **`/nueva-categoria` tuvo que entrar en `KEEP_ON_RETURN`.** Al volver de la
+  cámara la app cierra la pantalla y manda a Inicio, así que se perdían el
+  nombre y el color a medio escribir. **Lo cazó `auditar-pantallas-externas`**,
+  no yo; se comprobó que lo caza de verdad quitando la línea a propósito.
+- **La foto quitada viaja como `null`, no como `undefined`.** Con `undefined`,
+  `editar` no distingue "no la toques" de "bórrala" y quitar no haría nada.
+- **El icono no se borra al poner una foto**: queda debajo y vuelve a salir al
+  quitarla. Quien prueba una foto y no le gusta no pierde lo que había elegido.
+- **Sin foto no queda ni la clave** en el objeto. La copia de nube es un solo
+  documento con tope de 1 MB y un `image: undefined` viaja como campo.
+- **Tiene que haber forma de sacarla**: elegir un icono no la quita, porque la
+  foto manda. Sin eso es un callejón sin salida.
+- **Cámara y galería terminan las dos en el recortador propio**, sin
+  `allowsEditing`: el recorte de Android cambia de un celular a otro.
+
 ### EL ARREGLO DE VERDAD: los dibujos son tipografía, no vectores (05/08/2026)
 
-**A PRUEBA. Está publicado para que el usuario lo mire y decida.** Si no le gusta
-cómo se ven, se revierte el commit y se va por el otro camino (dejar unos 70
-iconos en vez de 236, manteniendo el aspecto de antes).
+**Confirmado por el usuario: "ahora todos aparecen al instante".** Se queda.
 
 Cinco entregas intentando repartir el mismo segundo. El usuario lo encontraba
 siempre, y su queja final era la respuesta: *"no le das una solución real"*.

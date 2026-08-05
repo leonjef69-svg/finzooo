@@ -117,7 +117,14 @@ export function nuevaId(): string {
 /** Crea una y la devuelve junto a la lista nueva. */
 export function crear(
   actuales: CategoriaPropia[],
-  datos: { nombre: string; tipo: "expense" | "income"; color: string; icono?: string }
+  datos: {
+    nombre: string;
+    tipo: "expense" | "income";
+    color: string;
+    icono?: string;
+    /** Foto propia, ya recortada. Cuando la hay, se dibuja en vez del icono. */
+    image?: string;
+  }
 ): { lista: CategoriaPropia[]; creada: CategoriaPropia } {
   const creada: CategoriaPropia = {
     id: nuevaId(),
@@ -127,6 +134,8 @@ export function crear(
     // Una etiqueta: sirve para cualquier cosa y no promete nada.
     icono: datos.icono ?? "Tag",
   };
+  // Solo si hay: un `image: undefined` suelto viaja a la nube como campo vacío.
+  if (datos.image) creada.image = datos.image;
   return { lista: [...actuales, creada], creada };
 }
 

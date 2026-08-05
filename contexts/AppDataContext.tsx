@@ -122,11 +122,22 @@ type AppDataContextValue = {
   updateCategoryOverrides: (next: CategoryOverrides) => void;
   /** Las categorias que creo la persona. */
   categoriasPropias: CategoriaPropia[];
-  crearCategoria: (datos: { nombre: string; tipo: "expense" | "income"; color: string; icono: string }) => string;
+  crearCategoria: (datos: {
+    nombre: string;
+    tipo: "expense" | "income";
+    color: string;
+    icono: string;
+    image?: string;
+  }) => string;
   /** La recien creada, para que la pantalla de agregar la deje elegida. */
   categoriaRecienCreada: string | null;
   olvidarCategoriaRecienCreada: () => void;
-  editarCategoria: (id: string, cambios: { nombre?: string; color?: string; icono?: string }) => void;
+  editarCategoria: (
+    id: string,
+    // image en null es "quitar la foto". Sin ese null no habria forma de
+    // distinguir "no la toques" de "borrala".
+    cambios: { nombre?: string; color?: string; icono?: string; image?: string | null }
+  ) => void;
   borrarCategoria: (id: string) => void;
   /** Cuantos movimientos quedarian en "Otros" al borrarla. */
   movimientosDeCategoria: (id: string) => number;
@@ -1065,7 +1076,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * "Otros" en las 38 pantallas— y el estado, que es lo que provoca el
    * redibujado.
    */
-  function crearCategoria(datos: { nombre: string; tipo: "expense" | "income"; color: string; icono: string }): string {
+  function crearCategoria(datos: {
+    nombre: string;
+    tipo: "expense" | "income";
+    color: string;
+    icono: string;
+    image?: string;
+  }): string {
     const { lista, creada } = crearPropia(categoriasPropias, datos);
     savePropias(lista);
     setCategoriasPropiasState(lista);
@@ -1076,7 +1093,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   /** Cambia una propia. Lo que no se pase se deja como estaba. */
   function editarCategoria(
     id: string,
-    cambios: { nombre?: string; color?: string; icono?: string }
+    cambios: { nombre?: string; color?: string; icono?: string; image?: string | null }
   ) {
     const lista = editarPropia(categoriasPropias, id, cambios);
     savePropias(lista);

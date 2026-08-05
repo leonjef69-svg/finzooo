@@ -84,6 +84,10 @@ function GlobalOverlays() {
 //   /category-style → abre la galeria para elegir la imagen de una
 //                   categoria. Al volver, la pantalla se cerraba y la foto
 //                   se perdia sin decir nada.
+//   /nueva-categoria → desde el 05/08/2026 tambien deja poner una foto propia,
+//                   asi que abre camara y galeria. Sin esta excepcion, volver
+//                   de tomar la foto cerraba la pantalla y se perdia el nombre
+//                   y el color que la persona ya llevaba escritos.
 //   /scheduled-export → al elegir una frecuencia se pide el permiso de
 //                   avisos, y ese cuadro lo dibuja Android encima de la app.
 //                   Sin esta excepción, conceder el permiso mandaba a Inicio
@@ -101,6 +105,7 @@ const KEEP_ON_RETURN = [
   "/export-pdf",
   "/scheduled-export",
   "/category-style",
+  "/nueva-categoria",
 ];
 
 /**

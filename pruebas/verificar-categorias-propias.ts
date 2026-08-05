@@ -20,6 +20,19 @@ function ok(c: boolean, m: string) {
   if (!c) fallos++;
 }
 
+/**
+ * El mismo archivo sin comentarios, para las comprobaciones de "esto NO debe
+ * estar".
+ *
+ * Existe porque cuatro aserciones se cayeron por su propia explicacion: el
+ * comentario que cuenta por que se quito algo contiene su nombre (Catalogo,
+ * dibujar, removeClippedSubviews, allowsEditing). Una prueba que castiga
+ * documentar el motivo acaba haciendo que se borre el motivo.
+ */
+function sinComentarios(fuente: string): string {
+  return fuente.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+}
+
 console.log("\n--- SE CREA Y SE COMPORTA COMO UNA DE FABRICA ---");
 {
   const { lista, creada } = crear([], { nombre: "Broster", tipo: "expense", color: "orange", icono: "Drumstick" });
@@ -129,11 +142,7 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
 
   const pant = fs.readFileSync(path.join(RAIZ, "screens/NuevaCategoria.tsx"), "utf8");
 
-  // La misma pantalla SIN COMENTARIOS, para las comprobaciones de "esto ya no
-  // debe existir". Tres aserciones se cayeron por su propia explicacion: el
-  // comentario que cuenta por que se quito algo contiene su nombre. Una prueba
-  // que castiga documentar el motivo termina haciendo que se borre el motivo.
-  const codigo = pant.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const codigo = sinComentarios(pant);
 
   ok(pant.includes("memo(function Dibujito"), "cada dibujo esta memorizado");
   ok(pant.includes("memo(function Fila"), "y las filas");
@@ -209,6 +218,80 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   ok(/animation: "slide_from_right"/.test(suya), "y entra deslizandose, no de golpe");
   ok(!/animation: "fade"/.test(suya), "sin el fundido, que se probo y no gusto");
   ok(/backgroundColor: screenBg/.test(suya), "con el fondo del tema, para que no destelle blanco");
+}
+
+console.log("\n--- SE PUEDE PONER UNA FOTO PROPIA, Y QUITARLA ---");
+{
+  // Pedido el 05/08/2026: "agregale una opcion un icono para tomar foto o una
+  // imagen de galeria". El dato ya existia (CategoriaPropia.image, catInfo,
+  // CategoryAvatar); lo que faltaba era la forma de elegirla.
+  const FOTO = "data:image/jpeg;base64,xxxx";
+
+  const { lista, creada } = crear([], {
+    nombre: "Broster",
+    tipo: "expense",
+    color: "orange",
+    icono: "Drumstick",
+    image: FOTO,
+  });
+  setPropias(lista);
+  ok(creada.image === FOTO, "se crea con la foto puesta");
+  // Lo importante no es que la guarde: es que LLEGUE a las 38 pantallas que
+  // dibujan una categoria, y todas pasan por catInfo.
+  ok(catInfo(creada.id).image === FOTO, "y catInfo la reparte a toda la app");
+
+  // Sin foto NO tiene que quedar la clave suelta. La copia de nube es un solo
+  // documento con un tope de 1 MB, y un `image: undefined` viaja como campo.
+  const sinFoto = crear([], { nombre: "Taxi", tipo: "expense", color: "sky", icono: "Car" }).creada;
+  ok(!("image" in sinFoto), "sin foto no queda ni la clave vacia");
+
+  // Quitarla. El null es lo que distingue "no la toques" de "borrala": sin el,
+  // no habria forma de volver a un dibujo, porque la foto siempre manda.
+  const quitada = editar(lista, creada.id, { image: null })[0];
+  ok(!("image" in quitada), "el null la borra de verdad");
+  const intacta = editar(lista, creada.id, { nombre: "Broster pollos" })[0];
+  ok(intacta.image === FOTO, "y cambiar el nombre no se la lleva");
+
+  // El icono sigue debajo: quien prueba una foto y no le gusta no pierde lo que
+  // habia elegido antes.
+  ok(quitada.icono === "Drumstick", "al quitar la foto vuelve a salir su dibujo");
+  setPropias([]);
+}
+
+console.log("\n--- Y LA PANTALLA LA SABE PEDIR DE LAS DOS FORMAS ---");
+{
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/NuevaCategoria.tsx"), "utf8");
+
+  ok(/launchCameraAsync/.test(pant), "la camara");
+  ok(/launchImageLibraryAsync/.test(pant), "y la galeria");
+  // Cada una pide SU permiso. El de camara no sirve para la galeria ni al
+  // contrario, y sin permiso la app se queda sin decir nada.
+  ok(/requestCameraPermissionsAsync/.test(pant), "pidiendo permiso de camara");
+  ok(/requestMediaLibraryPermissionsAsync/.test(pant), "y permiso de fotos");
+  ok(pant.includes("catCustom.cameraPermission"), "y avisando si lo niegan (camara)");
+  ok(pant.includes("settings.photoPermission"), "y si lo niegan (galeria)");
+
+  // LAS DOS terminan en el recortador propio. El recorte que trae Android
+  // cambia de un celular a otro y en algunos no deja cuadrado, asi que hay UNA
+  // sola forma de encuadrar.
+  const veces = [...pant.matchAll(/setRecortando\(r\.assets\[0\]\.uri\)/g)].length;
+  ok(veces === 2, `camara y galeria terminan las dos en el recortador (${veces} de 2)`);
+  ok(!/allowsEditing/.test(sinComentarios(pant)), "sin usar el recorte de Android");
+  ok(/<ImageCropper/.test(pant), "y el recortador esta puesto");
+
+  // La foto manda sobre el dibujo, igual que en el resto de la app. Si aqui se
+  // viera al contrario, la categoria saldria de una forma al crearla y de otra
+  // en Inicio — ya paso con los emojis.
+  ok(/foto \? \(/.test(pant), "la vista previa ensena la foto si la hay");
+  ok(/<Image source=\{\{ uri: foto \}\}/.test(pant), "dibujandola de verdad");
+  ok(/overflow-hidden/.test(pant), "recortada a la forma del cuadrito");
+
+  // Y tiene que haber forma de sacarla: elegir un icono no la quita, porque la
+  // foto manda. Sin esto se entra en un callejon sin salida.
+  ok(/setFoto\(undefined\)/.test(pant), "y se puede quitar");
+  // Al guardar, la foto quitada viaja como null. Si viajara como undefined, la
+  // de antes se quedaria puesta y "quitar" no haria nada.
+  ok(/image: foto \?\? null/.test(pant), "y al guardar la quitada se borra de verdad");
 }
 
 console.log("\n--- LOS 173 NOMBRES DE LA TIPOGRAFIA EXISTEN DE VERDAD ---");

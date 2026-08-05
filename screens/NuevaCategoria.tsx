@@ -1,5 +1,6 @@
 import { memo, useMemo, useState } from "react";
 import {
+  Image,
   ScrollView,
   Text,
   TextInput,
@@ -8,7 +9,9 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Check, ChevronLeft, Trash2 } from "lucide-react-native";
+import * as ImagePicker from "expo-image-picker";
+import { Camera, Check, ChevronLeft, ImageIcon, Trash2, X } from "lucide-react-native";
+import ImageCropper from "@/components/ImageCropper";
 import { ALTO_TITULO, CATALOGO_EN_FILAS, LADO_DE, SEPARACION } from "@/constants/catalogoFilas";
 import { COLOR_HEX_600 } from "@/constants/colors";
 import { iconoDe, TODOS_LOS_GRUPOS } from "@/constants/iconos";
@@ -159,6 +162,42 @@ export default function NuevaCategoria({
   const [pestana, setPestana] = useState<"icono" | "color">("icono");
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
 
+  // LA FOTO PROPIA. Cuando hay, se dibuja en vez del icono — la misma regla que
+  // sigue CategoryAvatar en el resto de la app, para que no se vea de una forma
+  // aquí y de otra en Inicio.
+  //
+  // El icono elegido NO se borra al poner una foto: queda debajo, y quitando la
+  // foto vuelve a salir. Quien prueba una foto y no le gusta no pierde lo que
+  // había elegido antes.
+  const [foto, setFoto] = useState<string | undefined>(() => original?.image);
+  /** La imagen recién elegida, esperando a que se encuadre. */
+  const [recortando, setRecortando] = useState<string | null>(null);
+
+  async function tomarFoto() {
+    const permiso = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permiso.granted) {
+      showToast(t("catCustom.cameraPermission"));
+      return;
+    }
+    const r = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], quality: 1 });
+    if (r.canceled || !r.assets[0]) return;
+    setRecortando(r.assets[0].uri);
+  }
+
+  async function elegirDeGaleria() {
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) {
+      showToast(t("settings.photoPermission"));
+      return;
+    }
+    // Sin allowsEditing a propósito: el recorte que trae Android cambia de un
+    // celular a otro y en algunos no deja cuadrado. Cámara y galería terminan
+    // las dos en el recortador propio, así que hay UNA sola forma de encuadrar.
+    const r = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], quality: 1 });
+    if (r.canceled || !r.assets[0]) return;
+    setRecortando(r.assets[0].uri);
+  }
+
   // El lado de cada casilla sale del ancho real de la pantalla, para que las
   // cinco de una fila lleguen justo al borde. Ver constants/catalogoFilas.ts.
   const { width: anchoPantalla } = useWindowDimensions();
@@ -183,12 +222,14 @@ export default function NuevaCategoria({
   function guardar() {
     if (!puedeGuardar) return;
     if (editando && editandoId) {
-      editarCategoria(editandoId, { nombre: limpio, color, icono });
+      // La foto va como null cuando se quitó: sin ese null, "no la toques" y
+      // "bórrala" serían lo mismo y no habría forma de sacarla.
+      editarCategoria(editandoId, { nombre: limpio, color, icono, image: foto ?? null });
       showToast(t("nuevaCat.guardada"));
       onCreada(editandoId);
       return;
     }
-    const id = crearCategoria({ nombre: limpio, tipo, color, icono });
+    const id = crearCategoria({ nombre: limpio, tipo, color, icono, image: foto });
     showToast(t("nuevaCat.creada"));
     onCreada(id);
   }
@@ -219,13 +260,20 @@ export default function NuevaCategoria({
         </Text>
       </View>
 
-      {/* LA VISTA PREVIA. Cambia con cada toque, y es lo que se está creando. */}
+      {/* LA VISTA PREVIA. Cambia con cada toque, y es lo que se está creando.
+          Si hay foto, MANDA la foto: es la misma regla que CategoryAvatar sigue
+          en el resto de la app, y saltársela aquí haría que la categoría se
+          viera de una forma al crearla y de otra en Inicio. Ya pasó una vez. */}
       <View className="items-center py-5">
         <View
-          className={`w-20 h-20 rounded-3xl items-center justify-center bg-${color}-100`}
+          className={`w-20 h-20 rounded-3xl items-center justify-center overflow-hidden bg-${color}-100`}
           style={CARD_SHADOW}
         >
-          <Dibujo size={36} color={COLOR_HEX_600[color] || "#475569"} strokeWidth={2.2} />
+          {foto ? (
+            <Image source={{ uri: foto }} style={{ width: 80, height: 80 }} />
+          ) : (
+            <Dibujo size={36} color={COLOR_HEX_600[color] || "#475569"} strokeWidth={2.2} />
+          )}
         </View>
         <Text className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-2.5">
           {limpio || t("nuevaCat.sinNombre")}
@@ -308,6 +356,50 @@ export default function NuevaCategoria({
           contentContainerStyle={{ paddingBottom: 24 }}
           keyboardShouldPersistTaps="handled"
         >
+          {/* TU PROPIA FOTO, PRIMERO.
+              Va arriba del catálogo y no en una pestaña aparte porque es otra
+              forma de contestar la misma pregunta —"¿con qué dibujo?"—, y una
+              pestaña más la esconde. Son casillas del mismo tamaño que las
+              demás para que se lean como parte de la misma elección. */}
+          <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
+            <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
+              {t("nuevaCat.tuFoto")}
+            </Text>
+          </View>
+          <View
+            style={{ flexDirection: "row", height: lado, gap: SEPARACION, marginBottom: SEPARACION }}
+          >
+            <TouchableOpacity
+              onPress={tomarFoto}
+              style={{ width: lado, height: lado }}
+              className="rounded-2xl items-center justify-center bg-slate-50 dark:bg-slate-800 border-[1.5px] border-dashed border-slate-300 dark:border-slate-600"
+            >
+              <Camera size={22} color="#64748b" strokeWidth={2.2} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={elegirDeGaleria}
+              style={{ width: lado, height: lado }}
+              className="rounded-2xl items-center justify-center bg-slate-50 dark:bg-slate-800 border-[1.5px] border-dashed border-slate-300 dark:border-slate-600"
+            >
+              <ImageIcon size={22} color="#64748b" strokeWidth={2.2} />
+            </TouchableOpacity>
+            {/* La foto puesta, y encima la forma de sacarla. Sin esto, quien
+                pone una foto no encuentra cómo volver a un dibujo: elegir un
+                icono no la quitaría, porque la foto manda. */}
+            {foto && (
+              <TouchableOpacity
+                onPress={() => setFoto(undefined)}
+                style={{ width: lado, height: lado }}
+                className={`rounded-2xl items-center justify-center overflow-hidden border-2 border-${color}-500`}
+              >
+                <Image source={{ uri: foto }} style={{ width: lado, height: lado }} />
+                <View className="absolute inset-0 items-center justify-center bg-slate-900/45">
+                  <X size={20} color="#ffffff" strokeWidth={2.6} />
+                </View>
+              </TouchableOpacity>
+            )}
+          </View>
+
           {CATALOGO_EN_FILAS.map((grupo) => (
             <View key={grupo.titulo}>
               <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
@@ -388,6 +480,27 @@ export default function NuevaCategoria({
           </Text>
         </TouchableOpacity>
       </View>
+
+      {/* EL RECORTADOR PROPIO, el mismo para cámara y galería.
+          Encima de todo y no en otra pantalla: al volver de la cámara la app
+          ya está aquí, con el nombre y el color que se iban escribiendo. */}
+      {recortando && (
+        <ImageCropper
+          uri={recortando}
+          onCancel={() => setRecortando(null)}
+          onDone={(r) => {
+            setFoto(r.base64);
+            setRecortando(null);
+          }}
+          labels={{
+            title: t("catCustom.cropTitle"),
+            hint: t("catCustom.cropHint"),
+            cancel: t("common.cancel"),
+            save: t("common.save"),
+            error: t("catCustom.cropError"),
+          }}
+        />
+      )}
     </View>
   );
 }
