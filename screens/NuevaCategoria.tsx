@@ -1,5 +1,5 @@
 import { memo, useMemo, useState } from "react";
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check, ChevronLeft, Trash2 } from "lucide-react-native";
 import { COLOR_HEX_600 } from "@/constants/colors";
@@ -53,50 +53,51 @@ const Dibujito = memo(function Dibujito({
   );
 });
 
+// Cuántos dibujos caben de ancho.
+const POR_FILA = 5;
+
 /**
- * El catálogo entero.
+ * El catálogo aplanado: títulos y filas de cinco, en una sola lista.
  *
- * También memorizado, y esta es la parte que de verdad se notaba: esta
- * pantalla se redibuja con CADA LETRA que se escribe en el nombre, y sin esto
- * cada pulsación rehacía los 236 dibujos. Escribir "Broster" reconstruía la
- * cuadrícula siete veces.
+ * Se aplana para poder usar una lista que solo construye lo que se ve. Con la
+ * cuadrícula normal, los 236 dibujos se montaban TODOS a la vez aunque en
+ * pantalla cupieran veinte — y cada uno es un dibujo vectorial de verdad, no
+ * una letra. Eso era el peso real, y por eso memorizar no bastó: el problema
+ * no era rehacerlos, era tenerlos.
  *
- * Los títulos llegan ya traducidos a propósito: la función de traducir cambia
- * en cada dibujado del padre, y bastaba con recibirla para que memo no
- * sirviera de nada.
+ * Se calcula una vez al cargar el archivo, no en cada dibujado.
  */
-const Catalogo = memo(function Catalogo({
+type Renglon =
+  | { clase: "titulo"; clave: string }
+  | { clase: "fila"; clave: string; iconos: string[] };
+
+const RENGLONES: Renglon[] = TODOS_LOS_GRUPOS.flatMap((g) => {
+  const filas: Renglon[] = [{ clase: "titulo", clave: g.titulo }];
+  for (let i = 0; i < g.iconos.length; i += POR_FILA) {
+    const trozo = g.iconos.slice(i, i + POR_FILA);
+    filas.push({ clase: "fila", clave: g.titulo + i, iconos: trozo });
+  }
+  return filas;
+});
+
+/** Una fila de cinco dibujos. Memorizada: son las que la lista recicla. */
+const Fila = memo(function Fila({
+  iconos,
   elegido,
   color,
-  titulos,
   onElegir,
 }: {
+  iconos: string[];
   elegido: string;
   color: string;
-  titulos: Record<string, string>;
   onElegir: (id: string) => void;
 }) {
   return (
-    <>
-      {TODOS_LOS_GRUPOS.map((g) => (
-        <View key={g.titulo} className="mb-5">
-          <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 mb-2.5">
-            {titulos[g.titulo]}
-          </Text>
-          <View className="flex-row flex-wrap gap-2.5">
-            {g.iconos.map((id) => (
-              <Dibujito
-                key={id}
-                id={id}
-                elegido={elegido === id}
-                color={color}
-                onElegir={onElegir}
-              />
-            ))}
-          </View>
-        </View>
+    <View className="flex-row gap-2.5 mb-2.5">
+      {iconos.map((id) => (
+        <Dibujito key={id} id={id} elegido={elegido === id} color={color} onElegir={onElegir} />
       ))}
-    </>
+    </View>
   );
 });
 
@@ -258,10 +259,38 @@ export default function NuevaCategoria({
         ))}
       </View>
 
-      <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 24, paddingTop: 12 }}>
-        {pestana === "icono" ? (
-          <Catalogo elegido={icono} color={color} titulos={titulos} onElegir={setIcono} />
-        ) : (
+      {/* LA LISTA SOLO CONSTRUYE LO QUE SE VE.
+          Y va sin ScrollView alrededor a propósito: una lista dentro de una
+          pantalla deslizable pierde justo eso —cree que tiene sitio infinito y
+          construye todo—, que es el fallo que se está arreglando. */}
+      {pestana === "icono" ? (
+        <FlatList
+          className="flex-1 px-5"
+          contentContainerStyle={{ paddingBottom: 24, paddingTop: 12 }}
+          data={RENGLONES}
+          keyExtractor={(r) => r.clave}
+          // Solo lo que cabe y un poco más. Sin esto, la lista sigue montando
+          // de golpe todo lo que crea que entra en la pantalla.
+          initialNumToRender={6}
+          maxToRenderPerBatch={6}
+          windowSize={5}
+          removeClippedSubviews
+          keyboardShouldPersistTaps="handled"
+          renderItem={({ item }) =>
+            item.clase === "titulo" ? (
+              <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 mb-2.5 mt-2.5">
+                {titulos[item.clave]}
+              </Text>
+            ) : (
+              <Fila iconos={item.iconos} elegido={icono} color={color} onElegir={setIcono} />
+            )
+          }
+        />
+      ) : (
+        <ScrollView
+          className="flex-1 px-5"
+          contentContainerStyle={{ paddingBottom: 24, paddingTop: 12 }}
+        >
           <View className="flex-row flex-wrap gap-3">
             {COLORES.map((c) => (
               <TouchableOpacity
@@ -276,8 +305,8 @@ export default function NuevaCategoria({
               </TouchableOpacity>
             ))}
           </View>
-        )}
-      </ScrollView>
+        </ScrollView>
+      )}
 
       <View className="px-5" style={{ paddingBottom: insets.bottom + 16 }}>
         {/* BORRAR, solo al editar.

@@ -128,11 +128,29 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   ok(resolver("marca:youtube") !== resolver("marca:spotify"), "pero dos logos distintos son distintos");
 
   const pant = fs.readFileSync(path.join(RAIZ, "screens/NuevaCategoria.tsx"), "utf8");
-  ok(pant.includes("memo(function Catalogo"), "el catalogo esta memorizado");
-  ok(pant.includes("memo(function Dibujito"), "y cada dibujo tambien");
+  ok(pant.includes("memo(function Dibujito"), "cada dibujo esta memorizado");
+  ok(pant.includes("memo(function Fila"), "y las filas, que son lo que la lista recicla");
   // Recibir la funcion de traducir bastaba para que memo no sirviera de nada:
   // cambia en cada dibujado del padre.
-  ok(pant.includes("titulos={titulos}"), "los titulos llegan traducidos, no la funcion de traducir");
+  ok(pant.includes("titulos[item.clave]"), "los titulos llegan traducidos, no la funcion de traducir");
+
+  // 04/08/2026, DESPUES de publicar lo de arriba: "ya actualize sigue lento".
+  // Memorizar evita REHACER los dibujos, no TENERLOS. El coste real era montar
+  // los 236 de golpe en una pantalla donde caben veinte, y cada uno es un
+  // dibujo vectorial, no una letra. Ahora la lista solo construye lo visible.
+  //
+  // Ya existio un "memo(function Catalogo" que dibujaba todos los grupos sin
+  // condicion: si vuelve, la lentitud vuelve con el.
+  ok(!pant.includes("memo(function Catalogo"), "ya no hay un catalogo que dibuje los 236 de golpe");
+  ok(/<FlatList/.test(pant), "el catalogo va en una lista que solo construye lo que se ve");
+  ok(pant.includes("initialNumToRender"), "y se le limita cuanto construye al abrir");
+  ok(pant.includes("removeClippedSubviews"), "y suelta lo que sale de pantalla");
+
+  // Una lista dentro de una pantalla deslizable cree que tiene sitio infinito
+  // y construye TODO: seria volver al fallo con mas codigo. Por eso el
+  // ScrollView que queda es solo el de los colores, y va en la otra rama.
+  const listaDentroDeScroll = /<ScrollView[^>]*>[\s\S]*<FlatList/.test(pant);
+  ok(!listaDentroDeScroll, "la lista NO va dentro de un ScrollView");
 }
 
 console.log("\n--- NI UN LOGO DE BANCO EN EL CATALOGO ---");

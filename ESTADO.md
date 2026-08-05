@@ -244,6 +244,38 @@ que Finzo es oficial de esa marca.
   con emoji al elegirla y con icono de línea en Inicio. Y con emojis no se
   puede ofrecer un catálogo de mil dibujos.
 
+### El catálogo iba lento, y el primer arreglo fue al sitio equivocado
+
+Reportado el 04/08/2026: "al usar la categoría, poner nueva y más, se pone
+lento". Se arreglaron dos cosas medibles y **siguió lento**:
+
+1. `iconoDe` devolvía un componente recién creado en cada llamada. Para React
+   eso no es "el mismo dibujo otra vez", es otro dibujo: tiraba el anterior y
+   lo construía de cero. 55 logos por pulsación. Se guardan en `LOGOS_HECHOS`.
+2. La cuadrícula entera se rehacía con cada letra del nombre. `memo`.
+
+Las dos eran ciertas y ninguna era la principal. **Memorizar evita rehacer los
+dibujos, no tenerlos.** El coste real era montar los 236 de golpe en una
+pantalla donde caben veinte, y cada uno es un dibujo vectorial de verdad, no
+una letra.
+
+Arreglo (05/08/2026): el catálogo se aplana en títulos y filas de cinco, y va
+en un `FlatList` que **solo construye lo que se ve**. Con `initialNumToRender`
+y `removeClippedSubviews`, porque sin ellos la lista igual monta todo lo que
+cree que entra.
+
+Dos trampas anotadas en el código y vigiladas por pruebas, porque las dos se
+ven bien al leerlas:
+
+- **La lista no puede ir dentro de un `ScrollView`**: ahí cree que tiene sitio
+  infinito y construye todo. Sería el mismo fallo con más código. El
+  `ScrollView` que queda es solo el de los colores, en la otra rama.
+- **No puede volver un componente que dibuje todos los grupos sin condición.**
+  Hay una prueba que falla si reaparece `memo(function Catalogo`.
+
+La lección, otra vez: se midió una causa real, se arregló, y no era la que
+dolía. Lo que evitó darlo por bueno fue que el usuario lo probara y lo dijera.
+
 ### Dos fallos que cazaron las herramientas, no las pruebas
 
 - **eslint**: al agregar el campo de la nube avisó de una dependencia que
