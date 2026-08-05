@@ -149,8 +149,31 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   // Una lista dentro de una pantalla deslizable cree que tiene sitio infinito
   // y construye TODO: seria volver al fallo con mas codigo. Por eso el
   // ScrollView que queda es solo el de los colores, y va en la otra rama.
-  const listaDentroDeScroll = /<ScrollView[^>]*>[\s\S]*<FlatList/.test(pant);
-  ok(!listaDentroDeScroll, "la lista NO va dentro de un ScrollView");
+  // Se mide el anidamiento de verdad: cuantos ScrollView quedan ABIERTOS en el
+  // punto donde empieza la lista. "Aparece un ScrollView antes" no sirve — los
+  // colores usan uno, y son la otra rama del mismo if, no un envoltorio.
+  const antesDeLaLista = pant.slice(0, pant.indexOf("<FlatList"));
+  const abiertos = (antesDeLaLista.match(/<ScrollView[\s>]/g) ?? []).length;
+  const cerrados = (antesDeLaLista.match(/<\/ScrollView>/g) ?? []).length;
+  ok(abiertos === cerrados, "la lista NO va dentro de un ScrollView");
+
+  // 05/08/2026, con foto: "esta disparejo los iconos". Al pasar a filas de
+  // cinco quedaron con ancho fijo, asi que no llegaban al borde y sobraba un
+  // vacio a la derecha. Ahora el ancho lo reparte la fila.
+  ok(/flex-1 aspect-square/.test(pant), "el ancho de cada casilla lo reparte la fila");
+  ok(!/w-12 h-12 rounded-2xl/.test(pant), "ya no tiene un ancho fijo que deje hueco al borde");
+  // Y la ultima fila de cada grupo hay que rellenarla: si no, sus dibujos se
+  // estiran para llenar el ancho y salen mas grandes que los de arriba. Ese es
+  // el mismo "disparejo" por el otro lado.
+  ok(/while \(trozo\.length < POR_FILA\) trozo\.push\(null\)/.test(pant), "las filas incompletas se rellenan");
+  ok(pant.includes('key={"hueco"'), "y el relleno es espacio vacio, no un dibujo");
+
+  // Mismo reporte: "se siente feo al abrirlo". La pantalla entra con animacion;
+  // construir las casillas en ese instante la atropella. No se arregla
+  // abaratando las casillas, porque el problema es CUANDO se hacen.
+  ok(pant.includes("InteractionManager.runAfterInteractions"), "el catalogo espera a que la pantalla acabe de abrir");
+  ok(pant.includes("catalogoListo"), "y hasta entonces no se dibuja");
+  ok(/return \(\) => tarea\.cancel\(\)/.test(pant), "y se cancela si se sale antes, para no dibujar en el aire");
 }
 
 console.log("\n--- NI UN LOGO DE BANCO EN EL CATALOGO ---");

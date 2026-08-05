@@ -276,6 +276,26 @@ ven bien al leerlas:
 La lección, otra vez: se midió una causa real, se arregló, y no era la que
 dolía. Lo que evitó darlo por bueno fue que el usuario lo probara y lo dijera.
 
+**Y el arreglo trajo dos cosas suyas** (05/08/2026, con foto: "está disparejo
+los iconos y está lento, se siente feo al abrirlo"):
+
+- **Disparejo.** Al pasar a filas de cinco, las casillas quedaron con ancho
+  fijo: no llegaban al borde y sobraba un vacío a la derecha. Ahora el ancho lo
+  reparte la fila. Pero eso solo trae el problema contrario: la última fila de
+  cada grupo casi nunca viene completa, y sus dibujos se estiran para llenarla
+  y salen más grandes. Se rellena con espacio vacío. Las dos mitades hacen
+  falta; con una sola se ve chueco por el otro lado.
+- **Feo al abrir.** No era el coste de las casillas, era **cuándo** se hacen:
+  la pantalla entra con animación y construirlas en ese mismo instante la
+  atropella. Ahora entran la vista previa y el nombre de inmediato, y las
+  casillas en cuanto la animación terminó (`InteractionManager`). Abaratar más
+  las casillas no habría arreglado esto nunca.
+
+Aviso para el futuro: **este proyecto no tiene configuración de prettier.**
+Correrlo reformatea el archivo entero a 80 columnas cuando el resto del código
+usa 100, y el cambio de verdad se pierde entre 90 líneas de ruido. Se hizo una
+vez y hubo que deshacerlo.
+
 ### Dos fallos que cazaron las herramientas, no las pruebas
 
 - **eslint**: al agregar el campo de la nube avisó de una dependencia que

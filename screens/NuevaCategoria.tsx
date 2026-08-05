@@ -1,5 +1,13 @@
-import { memo, useMemo, useState } from "react";
-import { FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { memo, useEffect, useMemo, useState } from "react";
+import {
+  FlatList,
+  InteractionManager,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check, ChevronLeft, Trash2 } from "lucide-react-native";
 import { COLOR_HEX_600 } from "@/constants/colors";
@@ -42,7 +50,9 @@ const Dibujito = memo(function Dibujito({
   return (
     <TouchableOpacity
       onPress={() => onElegir(id)}
-      className={`w-12 h-12 rounded-2xl items-center justify-center ${
+      // El ancho lo reparte la fila, no lo fija el dibujo: con ancho fijo, las
+      // cinco casillas no llegaban al borde y quedaba un vacío a la derecha.
+      className={`flex-1 aspect-square rounded-2xl items-center justify-center ${
         elegido
           ? `bg-${color}-100 border-2 border-${color}-500`
           : "bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700"
@@ -69,34 +79,42 @@ const POR_FILA = 5;
  */
 type Renglon =
   | { clase: "titulo"; clave: string }
-  | { clase: "fila"; clave: string; iconos: string[] };
+  | { clase: "fila"; clave: string; iconos: (string | null)[] };
 
 const RENGLONES: Renglon[] = TODOS_LOS_GRUPOS.flatMap((g) => {
   const filas: Renglon[] = [{ clase: "titulo", clave: g.titulo }];
   for (let i = 0; i < g.iconos.length; i += POR_FILA) {
-    const trozo = g.iconos.slice(i, i + POR_FILA);
+    const trozo: (string | null)[] = g.iconos.slice(i, i + POR_FILA);
+    // La última fila de cada grupo casi nunca viene completa, y como el ancho
+    // lo reparte la fila, sus dibujos se estirarían para llenarla: saldrían más
+    // grandes que los de arriba. Los huecos se rellenan con espacio vacío.
+    while (trozo.length < POR_FILA) trozo.push(null);
     filas.push({ clase: "fila", clave: g.titulo + i, iconos: trozo });
   }
   return filas;
 });
 
-/** Una fila de cinco dibujos. Memorizada: son las que la lista recicla. */
+/** Una fila de cinco casillas. Memorizada: son las que la lista recicla. */
 const Fila = memo(function Fila({
   iconos,
   elegido,
   color,
   onElegir,
 }: {
-  iconos: string[];
+  iconos: (string | null)[];
   elegido: string;
   color: string;
   onElegir: (id: string) => void;
 }) {
   return (
     <View className="flex-row gap-2.5 mb-2.5">
-      {iconos.map((id) => (
-        <Dibujito key={id} id={id} elegido={elegido === id} color={color} onElegir={onElegir} />
-      ))}
+      {iconos.map((id, i) =>
+        id === null ? (
+          <View key={"hueco" + i} className="flex-1" />
+        ) : (
+          <Dibujito key={id} id={id} elegido={elegido === id} color={color} onElegir={onElegir} />
+        )
+      )}
     </View>
   );
 });
@@ -152,6 +170,20 @@ export default function NuevaCategoria({
   const [color, setColor] = useState(() => original?.color ?? "violet");
   const [pestana, setPestana] = useState<"icono" | "color">("icono");
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
+
+  // ABRIR PRIMERO, DIBUJAR DESPUÉS.
+  //
+  // La pantalla entra con una animación. Si en ese mismo instante hay que
+  // construir además las casillas, las dos cosas se pelean por el celular y la
+  // animación sale a tirones: eso es lo que se sentía "feo al abrir", y no se
+  // arregla haciendo las casillas más baratas, porque el problema es CUÁNDO se
+  // hacen. Así entra la vista previa y el nombre de inmediato, y las casillas
+  // en cuanto la animación terminó — un pestañeo después.
+  const [catalogoListo, setCatalogoListo] = useState(false);
+  useEffect(() => {
+    const tarea = InteractionManager.runAfterInteractions(() => setCatalogoListo(true));
+    return () => tarea.cancel();
+  }, []);
 
   // Los títulos de los grupos, traducidos UNA vez. Pasarle la función de
   // traducir al catálogo lo redibujaría entero en cada letra escrita, que es
@@ -259,11 +291,32 @@ export default function NuevaCategoria({
         ))}
       </View>
 
-      {/* LA LISTA SOLO CONSTRUYE LO QUE SE VE.
-          Y va sin ScrollView alrededor a propósito: una lista dentro de una
-          pantalla deslizable pierde justo eso —cree que tiene sitio infinito y
-          construye todo—, que es el fallo que se está arreglando. */}
-      {pestana === "icono" ? (
+      {/* Los colores son 18 y caben: un ScrollView normal basta. El catálogo
+          de dibujos, en cambio, va en una LISTA QUE SOLO CONSTRUYE LO QUE SE
+          VE, y por eso el color va primero en este if: la lista no puede
+          quedar dentro de un ScrollView, porque ahí cree que tiene sitio
+          infinito y vuelve a construir los 236 de golpe. */}
+      {pestana === "color" ? (
+        <ScrollView
+          className="flex-1 px-5"
+          contentContainerStyle={{ paddingBottom: 24, paddingTop: 12 }}
+        >
+          <View className="flex-row flex-wrap gap-3">
+            {COLORES.map((c) => (
+              <TouchableOpacity
+                key={c}
+                onPress={() => setColor(c)}
+                className={`w-12 h-12 rounded-full items-center justify-center ${
+                  color === c ? "border-[3px] border-slate-900 dark:border-white" : ""
+                }`}
+                style={{ backgroundColor: COLOR_HEX_600[c] }}
+              >
+                {color === c && <Check size={18} color="#ffffff" />}
+              </TouchableOpacity>
+            ))}
+          </View>
+        </ScrollView>
+      ) : catalogoListo ? (
         <FlatList
           className="flex-1 px-5"
           contentContainerStyle={{ paddingBottom: 24, paddingTop: 12 }}
@@ -287,25 +340,8 @@ export default function NuevaCategoria({
           }
         />
       ) : (
-        <ScrollView
-          className="flex-1 px-5"
-          contentContainerStyle={{ paddingBottom: 24, paddingTop: 12 }}
-        >
-          <View className="flex-row flex-wrap gap-3">
-            {COLORES.map((c) => (
-              <TouchableOpacity
-                key={c}
-                onPress={() => setColor(c)}
-                className={`w-12 h-12 rounded-full items-center justify-center ${
-                  color === c ? "border-[3px] border-slate-900 dark:border-white" : ""
-                }`}
-                style={{ backgroundColor: COLOR_HEX_600[c] }}
-              >
-                {color === c && <Check size={18} color="#ffffff" />}
-              </TouchableOpacity>
-            ))}
-          </View>
-        </ScrollView>
+        // Un instante, mientras termina de abrirse. Ver "abrir primero".
+        <View className="flex-1" />
       )}
 
       <View className="px-5" style={{ paddingBottom: insets.bottom + 16 }}>
