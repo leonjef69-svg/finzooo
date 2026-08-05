@@ -325,9 +325,45 @@ los iconos y está lento, se siente feo al abrirlo"):
     porque al volver hay que rehacerlas. Con 236 casillas la memoria no era el
     problema; los huecos sí.
 
-  Si aún con esto un deslizamiento muy rápido dejara huecos, lo siguiente es
-  `getItemLayout` (decirle las alturas exactas en vez de que las mida). No se
-  hizo ya porque una altura mal calculada se ve peor que un hueco.
+- **Y con un deslizón fuerte se quedaba en blanco la pantalla ENTERA.** Reserva
+  y tandas no alcanzan a un dedo rápido: sin las medidas dadas, la lista tiene
+  que dibujar cada fila para averiguar cuánto mide, así que no sabe qué mostrar
+  hasta que ya llegó. Ahora las medidas están en números
+  (`constants/catalogoFilas.ts`) y la lista las recibe con `getItemLayout`: sabe
+  de antemano dónde está todo y va directo.
+
+  Es la parte frágil de la pantalla, y por eso las medidas viven en un archivo
+  **sin React**: así se comprueban con números en las pruebas —que las cinco
+  casillas llenen justo el ancho a seis anchos distintos, que cada renglón
+  empiece donde acaba el anterior— y no leyendo el código. Una altura mal
+  calculada se ve peor que un hueco: las filas se montan unas sobre otras.
+
+  Las medidas ya no salen de clases de estilo (`flex-1`, `aspect-square`). Se
+  veía igual, pero nadie sabía cuánto medía una casilla hasta después de
+  dibujarla.
+
+### El bug que llevaba dos días ahí y lo encontró una prueba, no un ojo
+
+Al escribir la comprobación de "ninguna clave de renglón repetida" saltó que
+**dos grupos se llamaban `iconos.servicios`**: el de luz, agua e internet, y el
+de Uber, Airbnb y Dropbox. Existía desde que nació el catálogo (03/08/2026).
+Hacía dos daños a la vez:
+
+- El título **"Servicios" salía dos veces** en la pantalla.
+- Tres renglones quedaban con la **misma clave**, y la clave es de lo que se
+  agarra la lista para saber qué dibujar dónde. Es de la familia exacta de
+  fallos que el usuario estaba reportando al deslizar.
+
+El grupo de marcas pasó a `iconos.apps` ("Apps y servicios"), en los tres
+idiomas. Hay dos pruebas: una sobre la causa (ningún grupo repite nombre) y otra
+sobre la consecuencia (ninguna clave repetida), porque la segunda sin la primera
+no dice qué arreglar.
+
+Y de la misma auditoría salió un duplicado **recién hecho por mí**: `iconos.tsx`
+ya exportaba `TODOS_LOS_GRUPOS` y el archivo nuevo armó otra lista igual. Dos
+listas de lo mismo es una que se queda atrás. `GRUPOS_GENERICOS` y
+`GRUPOS_MARCAS` ya no se exportan, para que no vuelva a poder juntarse por
+fuera.
 
 - **Y recién entonces se podía arreglar lo brusco.** Con los iconos ya al
   instante, quedaba el cambio de pantalla en sí. La ruta `nueva-categoria` no

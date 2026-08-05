@@ -165,14 +165,10 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
 
   // 05/08/2026, con foto: "esta disparejo los iconos". Al pasar a filas de
   // cinco quedaron con ancho fijo, asi que no llegaban al borde y sobraba un
-  // vacio a la derecha. Ahora el ancho lo reparte la fila.
-  ok(/flex-1 aspect-square/.test(pant), "el ancho de cada casilla lo reparte la fila");
-  ok(!/w-12 h-12 rounded-2xl/.test(pant), "ya no tiene un ancho fijo que deje hueco al borde");
-  // Y la ultima fila de cada grupo hay que rellenarla: si no, sus dibujos se
-  // estiran para llenar el ancho y salen mas grandes que los de arriba. Ese es
-  // el mismo "disparejo" por el otro lado.
-  ok(/while \(trozo\.length < POR_FILA\) trozo\.push\(null\)/.test(pant), "las filas incompletas se rellenan");
-  ok(pant.includes('key={"hueco"'), "y el relleno es espacio vacio, no un dibujo");
+  // vacio a la derecha. Se comprueba con numeros mas abajo, en su seccion.
+  ok(!/w-12 h-12 rounded-2xl/.test(codigo), "ninguna casilla lleva ancho fijo");
+  ok(/style=\{\{ width: lado, height: lado \}\}/.test(pant), "el lado sale del ancho de la pantalla");
+  ok(pant.includes('key={"hueco"'), "y las filas cortas se rellenan con espacio vacio");
 
   // Mismo reporte: "se siente feo al abrirlo". Se intento dos veces APARTAR el
   // dibujado de la animacion de entrada, y las dos salieron peor:
@@ -207,6 +203,13 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   const tanda = Number(/maxToRenderPerBatch=\{(\d+)\}/.exec(pant)?.[1] ?? "0");
   ok(tanda >= 8, `maxToRenderPerBatch es ${tanda}: las tandas no van mas lentas que el dedo`);
 
+  // 05/08/2026, con foto de la pantalla ENTERA en blanco: "cuando deslizo
+  // rapido para abajo o para arriba se pone asi". Reserva y tandas ayudan, pero
+  // no alcanzan a un deslizon fuerte: sin las medidas dadas, la lista tiene que
+  // dibujar cada fila para averiguar cuanto mide, asi que no sabe que mostrar
+  // hasta que ya llego. Con getItemLayout lo sabe de antemano y va directo.
+  ok(pant.includes("getItemLayout="), "la lista sabe de antemano donde esta cada fila");
+
   // removeClippedSubviews suelta las vistas que salen de pantalla: en Android es
   // una causa conocida de celdas en blanco, porque al volver hay que rehacerlas.
   // Con 236 casillas la memoria no es el problema; los huecos si lo eran.
@@ -228,6 +231,90 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   ok(/animation: "slide_from_right"/.test(suya), "y entra deslizandose, no de golpe");
   ok(!/animation: "fade"/.test(suya), "sin el fundido, que se probo y no gusto");
   ok(/backgroundColor: screenBg/.test(suya), "con el fondo del tema, para que no destelle blanco");
+}
+
+console.log("\n--- LAS MEDIDAS DE LA CUADRICULA CUADRAN ---");
+{
+  // Estas cuentas son lo unico fragil de la pantalla: la lista da por hechas las
+  // alturas para poder adelantarse al dedo, asi que si una no coincide con lo
+  // que se dibuja, las filas se montan unas sobre otras o quedan separadas. Y
+  // eso se ve PEOR que el hueco que se estaba arreglando. Por eso se comprueban
+  // con numeros y no leyendo el codigo.
+  const {
+    ALTO_TITULO: altoTitulo,
+    LADO_DE: ladoDe,
+    MARGEN_LATERAL: margen,
+    POR_FILA: porFila,
+    RENGLONES: renglones,
+    SEPARACION: sep,
+    medidasDe,
+  } = require("@/constants/catalogoFilas") as typeof import("@/constants/catalogoFilas");
+  // Los grupos vienen de su propio archivo: hubo un momento en que existieron
+  // dos "TODOS_LOS_GRUPOS", uno en cada sitio. Dos listas de lo mismo es una
+  // que se queda atras.
+  const { TODOS_LOS_GRUPOS: grupos } = require("@/constants/iconos") as typeof import("@/constants/iconos");
+
+  // 1. Las cinco casillas mas los huecos mas los margenes llenan JUSTO el ancho.
+  //    Si sobra, se ve el vacio a la derecha que el usuario reporto; si falta,
+  //    la quinta casilla se sale.
+  for (const ancho of [320, 360, 393, 412, 480, 600]) {
+    const lado = ladoDe(ancho);
+    const ocupado = lado * porFila + sep * (porFila - 1) + margen * 2;
+    ok(Math.abs(ocupado - ancho) < 0.001, `en ${ancho} de ancho las cinco casillas llenan justo`);
+    ok(lado > 0, `y el lado sale positivo en ${ancho}`);
+  }
+
+  // 2. TODAS las filas tienen las mismas casillas. Una fila corta se reparte el
+  //    ancho de otra forma y sus dibujos salen mas grandes: eso fue "disparejo".
+  const filas = renglones.filter((r) => r.clase === "fila");
+  ok(filas.length > 0, "hay filas que comprobar");
+  ok(
+    filas.every((r) => r.clase === "fila" && r.iconos.length === porFila),
+    `las ${filas.length} filas tienen ${porFila} casillas exactas`
+  );
+
+  // 3. Ni un dibujo perdido ni uno repetido al aplanar. Aplanar es donde se
+  //    pierde un icono sin que nadie lo note: el catalogo sigue "funcionando".
+  const enGrupos = grupos.flatMap((g) => g.iconos);
+  const enFilas = filas.flatMap((r) => (r.clase === "fila" ? r.iconos : [])).filter((x) => x !== null);
+  ok(enFilas.length === enGrupos.length, `los ${enGrupos.length} dibujos estan todos, ni uno mas`);
+  ok(new Set(enGrupos).size === enGrupos.length, "y ninguno esta repetido en el catalogo");
+
+  // 4a. LA CAUSA RAIZ, encontrada por esta prueba el 05/08/2026: dos grupos se
+  //     llamaban "iconos.servicios" —el de luz, agua e internet, y el de Uber,
+  //     Airbnb y Dropbox—. Hacia dos danos a la vez: el titulo "Servicios" salia
+  //     dos veces en la pantalla, y los renglones de los dos grupos quedaban con
+  //     la misma clave. Existio desde que nacio el catalogo, sin que se notara.
+  const titulos = grupos.map((g) => g.titulo);
+  const titulosRepes = titulos.filter((tt, i) => titulos.indexOf(tt) !== i);
+  ok(titulosRepes.length === 0, `ningun grupo repite nombre${titulosRepes.length ? " — " + titulosRepes.join(", ") : ""}`);
+
+  // 4b. Y la consecuencia, medida aparte: dos renglones con la misma clave es
+  //     justo de lo que se agarra la lista para saber que dibujar donde.
+  const claves = renglones.map((r) => r.clave);
+  const cuantas = new Map<string, number>();
+  for (const c of claves) cuantas.set(c, (cuantas.get(c) ?? 0) + 1);
+  const repes = [...cuantas].filter(([, n]) => n > 1).map(([c, n]) => `${c} x${n}`);
+  ok(
+    repes.length === 0,
+    `las ${claves.length} claves de renglon son distintas${repes.length ? " — repetidas: " + repes.join(", ") : ""}`
+  );
+
+  // 5. Las posiciones son la suma corrida de las alturas. Es la cuenta que la
+  //    lista usa para saltar directo a donde el dedo la lleva.
+  const altoFila = ladoDe(412) + sep;
+  const { altos, desde, total } = medidasDe(altoFila);
+  ok(altos.length === renglones.length, "hay una altura por renglon");
+  let acumulado = 0;
+  let cuadran = true;
+  renglones.forEach((r, i) => {
+    if (desde[i] !== acumulado) cuadran = false;
+    const esperado = r.clase === "titulo" ? altoTitulo : altoFila;
+    if (altos[i] !== esperado) cuadran = false;
+    acumulado += altos[i];
+  });
+  ok(cuadran, "cada renglon empieza donde acaba el anterior, y mide lo que le toca");
+  ok(total === acumulado, "y el total es la suma de todos");
 }
 
 console.log("\n--- NI UN LOGO DE BANCO EN EL CATALOGO ---");

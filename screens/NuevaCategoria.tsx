@@ -1,9 +1,24 @@
-import { memo, useMemo, useState } from "react";
-import { FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { memo, useCallback, useMemo, useState } from "react";
+import {
+  FlatList,
+  ScrollView,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check, ChevronLeft, Trash2 } from "lucide-react-native";
+import {
+  ALTO_TITULO,
+  LADO_DE,
+  medidasDe,
+  RENGLONES,
+  SEPARACION,
+} from "@/constants/catalogoFilas";
 import { COLOR_HEX_600 } from "@/constants/colors";
-import { GRUPOS_GENERICOS, GRUPOS_MARCAS, iconoDe } from "@/constants/iconos";
+import { iconoDe, TODOS_LOS_GRUPOS } from "@/constants/iconos";
 import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 
@@ -18,8 +33,6 @@ const COLORES = [
   "indigo", "violet", "fuchsia", "pink", "stone", "slate",
 ];
 
-const TODOS_LOS_GRUPOS = [...GRUPOS_GENERICOS, ...GRUPOS_MARCAS];
-
 /**
  * Un dibujo de la cuadrícula.
  *
@@ -31,20 +44,25 @@ const Dibujito = memo(function Dibujito({
   id,
   elegido,
   color,
+  lado,
   onElegir,
 }: {
   id: string;
   elegido: boolean;
   color: string;
+  /** Medida del cuadrado, calculada del ancho de la pantalla. Ver LADO_DE. */
+  lado: number;
   onElegir: (id: string) => void;
 }) {
   const D = iconoDe(id);
   return (
     <TouchableOpacity
       onPress={() => onElegir(id)}
-      // El ancho lo reparte la fila, no lo fija el dibujo: con ancho fijo, las
-      // cinco casillas no llegaban al borde y quedaba un vacío a la derecha.
-      className={`flex-1 aspect-square rounded-2xl items-center justify-center ${
+      // La medida va en número, no en clase. Con "flex-1" la repartía la fila y
+      // se veía igual, pero nadie sabía cuánto medía hasta después de dibujarla
+      // — y la lista necesita saberlo ANTES para poder adelantarse al dedo.
+      style={{ width: lado, height: lado }}
+      className={`rounded-2xl items-center justify-center ${
         elegido
           ? `bg-${color}-100 border-2 border-${color}-500`
           : "bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700"
@@ -59,56 +77,37 @@ const Dibujito = memo(function Dibujito({
   );
 });
 
-// Cuántos dibujos caben de ancho.
-const POR_FILA = 5;
-
-/**
- * El catálogo aplanado: títulos y filas de cinco, en una sola lista.
- *
- * Se aplana para poder usar una lista que solo construye lo que se ve. Con la
- * cuadrícula normal, los 236 dibujos se montaban TODOS a la vez aunque en
- * pantalla cupieran veinte — y cada uno es un dibujo vectorial de verdad, no
- * una letra. Eso era el peso real, y por eso memorizar no bastó: el problema
- * no era rehacerlos, era tenerlos.
- *
- * Se calcula una vez al cargar el archivo, no en cada dibujado.
- */
-type Renglon =
-  | { clase: "titulo"; clave: string }
-  | { clase: "fila"; clave: string; iconos: (string | null)[] };
-
-const RENGLONES: Renglon[] = TODOS_LOS_GRUPOS.flatMap((g) => {
-  const filas: Renglon[] = [{ clase: "titulo", clave: g.titulo }];
-  for (let i = 0; i < g.iconos.length; i += POR_FILA) {
-    const trozo: (string | null)[] = g.iconos.slice(i, i + POR_FILA);
-    // La última fila de cada grupo casi nunca viene completa, y como el ancho
-    // lo reparte la fila, sus dibujos se estirarían para llenarla: saldrían más
-    // grandes que los de arriba. Los huecos se rellenan con espacio vacío.
-    while (trozo.length < POR_FILA) trozo.push(null);
-    filas.push({ clase: "fila", clave: g.titulo + i, iconos: trozo });
-  }
-  return filas;
-});
-
 /** Una fila de cinco casillas. Memorizada: son las que la lista recicla. */
 const Fila = memo(function Fila({
   iconos,
   elegido,
   color,
+  lado,
   onElegir,
 }: {
   iconos: (string | null)[];
   elegido: string;
   color: string;
+  lado: number;
   onElegir: (id: string) => void;
 }) {
   return (
-    <View className="flex-row gap-2.5 mb-2.5">
+    // Alto y separación explícitos: es la altura que la lista da por hecha.
+    <View
+      style={{ flexDirection: "row", height: lado, gap: SEPARACION, marginBottom: SEPARACION }}
+    >
       {iconos.map((id, i) =>
         id === null ? (
-          <View key={"hueco" + i} className="flex-1" />
+          <View key={"hueco" + i} style={{ width: lado }} />
         ) : (
-          <Dibujito key={id} id={id} elegido={elegido === id} color={color} onElegir={onElegir} />
+          <Dibujito
+            key={id}
+            id={id}
+            elegido={elegido === id}
+            color={color}
+            lado={lado}
+            onElegir={onElegir}
+          />
         )
       )}
     </View>
@@ -167,7 +166,7 @@ export default function NuevaCategoria({
   const [pestana, setPestana] = useState<"icono" | "color">("icono");
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
 
-  // NO HAY ESPERA. Y hubo dos, las dos mías, las dos peores que el problema:
+  // NO HAY ESPERA, y hubo dos, las dos mías, las dos peores que el problema:
   //
   // 1. No dibujar nada hasta que la animación de entrada acabara. Se veía como
   //    una pantalla cargando, que es peor que un tirón: el tirón pasa.
@@ -175,10 +174,27 @@ export default function NuevaCategoria({
   //    el usuario seguía viendo el momento en que aparecían, y con razón:
   //    "ni bien entro debería ya estar los iconos".
   //
-  // Esperar nunca era el arreglo. El arreglo era construir MENOS: la lista
-  // estaba levantando unas tres pantallas de dibujos en vez de una (ver
-  // windowSize más abajo). Con una pantalla, entran de una y no hace falta
-  // apartarlos de la animación.
+  // Esperar nunca fue el arreglo. Lo que hace que abrir no pese es que la
+  // PRIMERA pasada sea corta (initialNumToRender, más abajo); lo demás se llena
+  // en tandas después, sin pelear con nada.
+
+  // LAS MEDIDAS, calculadas del ancho real de la pantalla. Es lo que le permite
+  // a la lista saber dónde está cada fila sin haberla dibujado, y con eso
+  // adelantarse a un deslizón rápido en vez de quedarse en blanco.
+  const { width: anchoPantalla } = useWindowDimensions();
+  const lado = LADO_DE(anchoPantalla);
+  const altoFila = lado + SEPARACION;
+
+  const medidas = useMemo(() => medidasDe(altoFila), [altoFila]);
+
+  const medidaDelRenglon = useCallback(
+    (_: unknown, indice: number) => ({
+      length: medidas.altos[indice],
+      offset: medidas.desde[indice],
+      index: indice,
+    }),
+    [medidas]
+  );
 
   // Los títulos de los grupos, traducidos UNA vez. Pasarle la función de
   // traducir al catálogo lo redibujaría entero en cada letra escrita, que es
@@ -290,7 +306,11 @@ export default function NuevaCategoria({
           de dibujos, en cambio, va en una LISTA QUE SOLO CONSTRUYE LO QUE SE
           VE, y por eso el color va primero en este if: la lista no puede
           quedar dentro de un ScrollView, porque ahí cree que tiene sitio
-          infinito y vuelve a construir los 236 de golpe. */}
+          infinito y vuelve a construir los 236 de golpe.
+          Y el ancho de las casillas se calcula del ancho de la pantalla, así
+          que la lista tiene que ocupar ese mismo ancho: el "px-5" de aquí es el
+          MARGEN_LATERAL de las medidas. Cambiar uno sin el otro descoloca la
+          cuadrícula. */}
       {pestana === "color" ? (
         <ScrollView
           className="flex-1 px-5"
@@ -314,11 +334,22 @@ export default function NuevaCategoria({
       ) : (
         <FlatList
           className="flex-1 px-5"
-          contentContainerStyle={{ paddingBottom: 24, paddingTop: 12 }}
+          contentContainerStyle={{ paddingBottom: 24 }}
           data={RENGLONES}
           keyExtractor={(r) => r.clave}
-          // ESTOS NÚMEROS SON EL RENDIMIENTO DE LA PANTALLA, Y SON DOS COSAS
-          // DISTINTAS QUE UNA VEZ SE CONFUNDIERON.
+          // LO QUE HACE QUE UN DESLIZÓN RÁPIDO NO DEJE LA PANTALLA EN BLANCO.
+          //
+          // Sin esto, la lista tiene que dibujar cada fila para averiguar cuánto
+          // mide, así que no sabe qué le toca mostrar hasta que ya llegó: en un
+          // deslizón fuerte se queda atrás y se ve el hueco. Con las medidas
+          // dadas, sabe de antemano dónde está todo y va directo.
+          //
+          // Es también lo único frágil de esta pantalla: si ALTO_TITULO, lado o
+          // SEPARACION dejan de coincidir con lo que se dibuja, las filas se
+          // montan unas sobre otras o quedan separadas. Van todas de un número,
+          // no de clases de estilo, justamente para que coincidan.
+          getItemLayout={medidaDelRenglon}
+          // Y ESTOS SON DOS COSAS DISTINTAS QUE UNA VEZ SE CONFUNDIERON.
           //
           // initialNumToRender es la PRIMERA pasada, la única que ocurre
           // mientras la pantalla se abre. Ese es el número que decide si abrir
@@ -345,11 +376,22 @@ export default function NuevaCategoria({
           keyboardShouldPersistTaps="handled"
           renderItem={({ item }) =>
             item.clase === "titulo" ? (
-              <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 mb-2.5 mt-2.5">
-                {titulos[item.clave]}
-              </Text>
+              // Alto fijo, porque es el que la lista da por hecho. El texto se
+              // centra dentro en vez de llevar márgenes propios, que serían
+              // otra medida más que mantener a mano.
+              <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
+                <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
+                  {titulos[item.clave]}
+                </Text>
+              </View>
             ) : (
-              <Fila iconos={item.iconos} elegido={icono} color={color} onElegir={setIcono} />
+              <Fila
+                iconos={item.iconos}
+                elegido={icono}
+                color={color}
+                lado={lado}
+                onElegir={setIcono}
+              />
             )
           }
         />

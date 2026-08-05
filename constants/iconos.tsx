@@ -140,7 +140,10 @@ export function iconoDe(id: string): IconComponent {
 }
 
 /** Los genéricos, agrupados como se enseñan en la pantalla de elegir. */
-export const GRUPOS_GENERICOS: GrupoIconos[] = [
+// Sin "export": el unico consumidor es TODOS_LOS_GRUPOS, mas abajo. Cuando los
+// dos grupos se exportaban, alguien (yo) armo una SEGUNDA lista juntandolos en
+// otro archivo, y dos listas de lo mismo es una que se queda atras.
+const GRUPOS_GENERICOS: GrupoIconos[] = [
   { titulo: "iconos.comida", iconos: ["Utensils","UtensilsCrossed","Coffee","Pizza","Beef","Sandwich","IceCreamCone","CakeSlice","Apple","Carrot","Fish","EggFried","Beer","Wine","CupSoda","Milk","Croissant","Soup","Salad","Cookie","Popcorn","Candy","Ham","Drumstick"] },
   { titulo: "iconos.transporte", iconos: ["Car","Bus","TrainFront","Plane","Bike","Fuel","CircleParking","TramFront","Ship","Truck","CarTaxiFront","Footprints","Sailboat","Caravan","Ambulance"] },
   { titulo: "iconos.compras", iconos: ["ShoppingBag","ShoppingCart","ShoppingBasket","Store","Tag","Tags","Gift","Package","Shirt","Watch","Glasses","Gem","Backpack","Baby"] },
@@ -161,12 +164,17 @@ export const GRUPOS_GENERICOS: GrupoIconos[] = [
  * Para quitar una: se borra de aquí y desaparece de la pantalla. Los que ya la
  * tuvieran puesta caen en los puntos suspensivos, sin romperse nada.
  */
-export const GRUPOS_MARCAS: GrupoIconos[] = [
+const GRUPOS_MARCAS: GrupoIconos[] = [
   { titulo: "iconos.streaming", iconos: ["marca:youtube","marca:spotify","marca:soundcloud","marca:deezer","marca:itunes","marca:napster","marca:audible","marca:vimeo","marca:dailymotion","marca:imdb"] },
   { titulo: "iconos.juegos", iconos: ["marca:steam","marca:playstation","marca:xbox","marca:twitch","marca:itch-io","marca:battle-net","marca:unity","marca:discord"] },
   { titulo: "iconos.redes", iconos: ["marca:instagram","marca:facebook","marca:whatsapp","marca:telegram","marca:tiktok","marca:twitter","marca:snapchat","marca:reddit","marca:pinterest","marca:linkedin"] },
   { titulo: "iconos.tiendas", iconos: ["marca:amazon","marca:ebay","marca:shopify","marca:etsy","marca:google-play","marca:app-store"] },
-  { titulo: "iconos.servicios", iconos: ["marca:uber","marca:airbnb","marca:dropbox","marca:patreon","marca:kickstarter","marca:goodreads","marca:wordpress"] },
+  // "iconos.apps", NO "iconos.servicios": ese nombre ya lo usa el grupo de luz,
+  // agua e internet de arriba. Compartirlo hacia dos cosas malas a la vez — el
+  // titulo "Servicios" salia dos veces en la pantalla, y los renglones de los
+  // dos grupos quedaban con la misma clave, que es de lo que se agarra la lista
+  // para saber que dibujar donde.
+  { titulo: "iconos.apps", iconos: ["marca:uber","marca:airbnb","marca:dropbox","marca:patreon","marca:kickstarter","marca:goodreads","marca:wordpress"] },
   { titulo: "iconos.tecnologia", iconos: ["marca:apple","marca:android","marca:windows","marca:microsoft","marca:google","marca:chrome","marca:firefox","marca:github","marca:gitlab","marca:figma","marca:slack","marca:trello","marca:ubuntu","marca:docker"] },
 ];
 
