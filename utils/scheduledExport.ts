@@ -31,6 +31,7 @@ import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { loadJSON, saveJSON } from "@/utils/storage";
 import { isDecoyActive } from "@/utils/decoyMode";
+import { cancelarExportacion, programarExportacion } from "@/modules/export-scheduler";
 
 export type ExportFrequency = "daily" | "weekly" | "monthly" | "custom";
 export type ExportDestination =
@@ -270,6 +271,18 @@ export async function applySchedule(
   // 05/08/2026; sin esta línea, a quien lo tuviera puesto le seguiría sonando
   // una vez y no habría forma de callarlo desde la app.
   await cancelByTag(TAG_VIEJO_REPESCA);
+
+  // EL DESPERTADOR DE ANDROID, el que hace el reporte con la app cerrada.
+  //
+  // Va aquí y no en la pantalla porque este es el único sitio por el que pasan
+  // TODOS los cambios de la programación. Puesto en la pantalla, cualquier
+  // camino que no fuera tocar un botón —una restauración de la nube, un ajuste
+  // cambiado por voz— dejaría el aviso puesto y el despertador sin poner.
+  //
+  // Si el APK no trae el módulo nativo, estas dos funciones no hacen nada y
+  // queda el comportamiento de siempre. Ver modules/export-scheduler.
+  if (schedule.enabled) programarExportacion(proximaEjecucion(schedule, new Date()));
+  else cancelarExportacion();
   if (!schedule.enabled) return true;
 
   const { status } = await Notifications.requestPermissionsAsync();
@@ -415,6 +428,66 @@ export function isAutoRunDue(schedule: ScheduledExport, now: Date): boolean {
   if (schedule.lastAutoRun === toDateKey(now)) return false;
   if (!isScheduledDay(schedule, now)) return false;
   return isPastTime(schedule, now);
+}
+
+/**
+ * CUÁNDO TOCA LA PRÓXIMA VEZ, para poner el despertador de Android.
+ *
+ * El despertador nativo no sabe nada de frecuencias ni de días: solo entiende
+ * "avísame en este instante". El calendario vive aquí, en un solo sitio, y no
+ * duplicado en Kotlin — dos calendarios se desincronizan y el que falla es
+ * siempre el que nadie mira.
+ *
+ * LAS TRAMPAS QUE TIENE ESTA CUENTA
+ *
+ *   · Si la hora de hoy YA PASÓ, toca mañana (o el siguiente día válido). Sin
+ *     eso, el despertador se pondría para un momento del pasado y Android lo
+ *     dispararía de inmediato: reporte al instante y luego nunca más.
+ *   · El día del mes se corta en 28, igual que los avisos. El 31 no existe en
+ *     cinco meses del año.
+ *   · Los días de la semana van 1..7 empezando en domingo, que es lo que pide
+ *     expo-notifications; getDay() da 0..6. De ahí el +1 de siempre.
+ */
+export function proximaEjecucion(schedule: ScheduledExport, ahora: Date): Date {
+  const h = horaValida(schedule.hour);
+  const m = minutoValido(schedule.minute);
+
+  /** Ese mismo día a la hora fijada. */
+  const aLaHora = (d: Date) =>
+    new Date(d.getFullYear(), d.getMonth(), d.getDate(), h, m, 0, 0);
+
+  if (schedule.frequency === "monthly") {
+    const dia = Math.min(schedule.day, MAX_MONTH_DAY);
+    const esteMes = new Date(ahora.getFullYear(), ahora.getMonth(), dia, h, m, 0, 0);
+    if (esteMes.getTime() > ahora.getTime()) return esteMes;
+    return new Date(ahora.getFullYear(), ahora.getMonth() + 1, dia, h, m, 0, 0);
+  }
+
+  const dias = activeWeekdays(schedule);
+  if (dias.length === 0) {
+    // Diario. Hoy si todavía no ha pasado la hora; si no, mañana.
+    const hoy = aLaHora(ahora);
+    if (hoy.getTime() > ahora.getTime()) return hoy;
+    const manana = new Date(ahora);
+    manana.setDate(manana.getDate() + 1);
+    return aLaHora(manana);
+  }
+
+  // Semanal o los días elegidos. Se prueban los siete días siguientes en orden
+  // y se toma el primero que valga: es más corto que calcular la diferencia de
+  // días, y no se equivoca al cruzar de semana, de mes ni de año.
+  for (let i = 0; i <= 7; i++) {
+    const d = new Date(ahora);
+    d.setDate(d.getDate() + i);
+    if (!dias.includes(d.getDay() + 1)) continue;
+    const candidato = aLaHora(d);
+    if (candidato.getTime() > ahora.getTime()) return candidato;
+  }
+  // No puede llegar aquí —en siete días siempre cae uno—, pero devolver algo
+  // válido es mejor que devolver undefined y que el despertador reciba basura.
+  const manana = new Date(ahora);
+  manana.setDate(manana.getDate() + 1);
+  return aLaHora(manana);
 }
 
 /**

@@ -33,6 +33,10 @@ const BASE = {
   // eso. Sin este sustituto, cinco pruebas que ni hablan de iconos dejaban
   // de compilar con "No loader is configured for .ttf".
   "@expo/vector-icons": stub("vectoricons.ts"),
+  // El despertador de Android. Lo carga utils/scheduledExport, y a ese lo
+  // cargan varias pruebas que no tienen nada que ver con el despertador: sin
+  // el sustituto se caian todas al arrancar.
+  "@/modules/export-scheduler": stub("programador.ts"),
 };
 
 // Y los de las pruebas que cargan modulos de Expo.

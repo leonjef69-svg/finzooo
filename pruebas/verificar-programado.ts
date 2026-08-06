@@ -15,6 +15,7 @@ import {
   isScheduledDay,
   minutoValido,
   monthForSchedule,
+  proximaEjecucion,
   sanitizeFileName,
   toDateKey,
   type ScheduledExport,
@@ -132,6 +133,79 @@ console.log("\n--- LA COPIA SOLA A DRIVE ---");
     !isAutoRunDue({ ...drive, lastAutoRun: toDateKey(new Date(2026, 6, 30)) }, new Date(2026, 6, 30, 22, 0)),
     "abrir la app diez veces el mismo día da UNA sola copia"
   );
+}
+
+console.log("\n--- CUÁNDO TOCA LA PRÓXIMA VEZ (el despertador de Android) ---");
+{
+  // El despertador nativo solo entiende "avísame en este instante". Si esta
+  // cuenta devuelve un momento del PASADO, Android lo dispara de inmediato:
+  // reporte al instante y luego nunca más. Es el fallo más probable de todos.
+  const dia = (d: Date) => `${d.getDate()}/${d.getMonth() + 1} ${d.getHours()}:${String(d.getMinutes()).padStart(2, "0")}`;
+
+  // Diario, con la hora todavía por llegar hoy.
+  const antes = proximaEjecucion({ ...base, frequency: "daily", hour: 19, minute: 26 }, new Date(2026, 7, 5, 10, 0));
+  ok(dia(antes) === "5/8 19:26", `si la hora no ha pasado, es hoy (${dia(antes)})`);
+
+  // Diario, con la hora ya pasada.
+  const despues = proximaEjecucion({ ...base, frequency: "daily", hour: 19, minute: 26 }, new Date(2026, 7, 5, 20, 0));
+  ok(dia(despues) === "6/8 19:26", `si ya pasó, es mañana (${dia(despues)})`);
+
+  // Y en el minuto exacto cuenta como pasada: si no, se volvería a programar
+  // para el instante en que se está ejecutando y se repetiría en bucle.
+  const justo = proximaEjecucion({ ...base, frequency: "daily", hour: 19, minute: 26 }, new Date(2026, 7, 5, 19, 26));
+  ok(dia(justo) === "6/8 19:26", `en el minuto justo salta a mañana (${dia(justo)})`);
+
+  // NUNCA en el pasado, con cualquier combinación.
+  let todasFuturas = true;
+  const ahora = new Date(2026, 7, 5, 19, 26, 30);
+  for (const frequency of ["daily", "weekly", "monthly", "custom"] as const) {
+    for (const hour of [0, 9, 19, 23]) {
+      for (const minute of [0, 26, 59]) {
+        for (const day of [1, 15, 28]) {
+          const p = proximaEjecucion({ ...base, frequency, hour, minute, day, weekday: 2, customDays: [2, 6] }, ahora);
+          if (p.getTime() <= ahora.getTime()) todasFuturas = false;
+          if (p.getHours() !== hour || p.getMinutes() !== minute) todasFuturas = false;
+        }
+      }
+    }
+  }
+  ok(todasFuturas, "con cualquier frecuencia, hora y día, el momento siempre es futuro y con la hora pedida");
+}
+{
+  // Mensual: el día 1 del mes siguiente cuando el de este ya pasó, cruzando de
+  // año sin equivocarse.
+  const dic = proximaEjecucion({ ...base, frequency: "monthly", day: 1, hour: 9, minute: 0 }, new Date(2026, 11, 5, 10, 0));
+  ok(dic.getFullYear() === 2027 && dic.getMonth() === 0 && dic.getDate() === 1, "en diciembre el mensual salta a enero del año siguiente");
+
+  // El 31 no existe en febrero: se corta en 28 igual que los avisos.
+  const feb = proximaEjecucion({ ...base, frequency: "monthly", day: 31, hour: 9, minute: 0 }, new Date(2026, 1, 1, 10, 0));
+  ok(feb.getDate() === MAX_MONTH_DAY, `el día 31 se corta en ${MAX_MONTH_DAY} (salió ${feb.getDate()})`);
+  ok(feb.getMonth() === 1, "y se queda en febrero, no se va a marzo");
+}
+{
+  // Semanal: el 5/8/2026 es miércoles (getDay 3, o 4 en la numeración de los
+  // avisos). Con el lunes elegido (2), toca el lunes siguiente.
+  const miercoles = new Date(2026, 7, 5, 10, 0);
+  ok(miercoles.getDay() === 3, "el 5/8/2026 es miércoles (comprobación de la propia prueba)");
+  const lunes = proximaEjecucion({ ...base, frequency: "weekly", weekday: 2, hour: 9, minute: 0 }, miercoles);
+  ok(lunes.getDay() === 1, "con el lunes elegido cae en lunes");
+  ok(lunes.getDate() === 10, `y es el lunes siguiente, el 10 (salió el ${lunes.getDate()})`);
+}
+{
+  // Días elegidos: lunes y viernes. Desde el miércoles, toca el viernes.
+  const viernes = proximaEjecucion(
+    { ...base, frequency: "custom", customDays: [2, 6], hour: 9, minute: 0 },
+    new Date(2026, 7, 5, 10, 0)
+  );
+  ok(viernes.getDay() === 5, "con lunes y viernes elegidos, desde el miércoles toca el viernes");
+  ok(viernes.getDate() === 7, `el día 7 (salió el ${viernes.getDate()})`);
+
+  // Y si HOY es uno de los días elegidos y la hora no ha pasado, es hoy.
+  const hoyMismo = proximaEjecucion(
+    { ...base, frequency: "custom", customDays: [4], hour: 23, minute: 0 },
+    new Date(2026, 7, 5, 10, 0)
+  );
+  ok(hoyMismo.getDate() === 5, "si hoy está elegido y la hora no ha pasado, es hoy mismo");
 }
 
 console.log("\n--- QUÉ MES LLEVA EL REPORTE ---");

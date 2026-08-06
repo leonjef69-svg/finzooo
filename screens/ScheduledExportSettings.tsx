@@ -8,6 +8,8 @@ import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 import { carpetaElegida, elegirCarpeta } from "@/utils/carpetaTelefono";
 import { conectarDropbox, dropboxConectado } from "@/utils/dropbox";
+import { ultimoIntentoEnFondo, type UltimoIntento } from "@/utils/exportarEnFondo";
+import { puedeExportarEnFondo } from "@/modules/export-scheduler";
 import {
   DEFAULT_SCHEDULE,
   MAX_MONTH_DAY,
@@ -48,6 +50,16 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
   const [carpeta, setCarpeta] = useState("");
   /** Si ya hay una cuenta de Dropbox autorizada. */
   const [dropbox, setDropbox] = useState(false);
+  /**
+   * Si ESTE APK sabe exportar con la app cerrada.
+   *
+   * Se pregunta porque las actualizaciones por internet no traen código de
+   * Android: en un APK anterior al despertador, prometer "sale solo a la hora"
+   * sería mentir, y de las mentiras que se descubren solas.
+   */
+  const [enFondo] = useState(() => puedeExportarEnFondo());
+  /** Lo último que hizo el trabajo de fondo. Ver abajo por qué se enseña. */
+  const [ultimo, setUltimo] = useState<UltimoIntento | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -66,6 +78,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
     });
     carpetaElegida().then((c) => alive && setCarpeta(c));
     dropboxConectado().then((c) => alive && setDropbox(c));
+    ultimoIntentoEnFondo().then((u) => alive && setUltimo(u));
     return () => {
       alive = false;
     };
@@ -516,9 +529,39 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                 y "la próxima vez que abras Finzo" en la misma frase. */}
             <View className="rounded-xl bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700 p-3.5 mb-5 flex-row gap-2.5">
               <Info size={15} color="#64748b" />
-              <Text className="text-[11px] leading-5 text-slate-600 dark:text-slate-300 flex-1">
-                {t("schedExport.timeWhatHappens")}
-              </Text>
+              <View className="flex-1">
+                <Text className="text-[11px] leading-5 text-slate-600 dark:text-slate-300">
+                  {/* Con el despertador de Android sale solo; sin él, al abrir la
+                      app. Son dos promesas distintas y hay que decir la que
+                      corresponde a ESTE celular: quien tenga un APK anterior
+                      recibe el texto nuevo y no la función. */}
+                  {t(
+                    enFondo && schedule.format !== "pdf"
+                      ? "schedExport.fondoSi"
+                      : "schedExport.timeWhatHappens"
+                  )}
+                </Text>
+                {/* Y el PDF no se puede armar con la app cerrada, así que quien
+                    tenga el despertador y elija PDF tiene que saberlo aquí, al
+                    elegirlo, y no descubrirlo por un reporte que no llega. */}
+                {enFondo && schedule.format === "pdf" && (
+                  <Text className="text-[11px] leading-5 text-amber-700 dark:text-amber-300 mt-1.5">
+                    {t("schedExport.fondoNoPdf")}
+                  </Text>
+                )}
+                {/* LO ÚLTIMO QUE PASÓ.
+                    Un trabajo de fondo sin esto es imposible de arreglar: "no
+                    llegó nada" se ve igual con diez causas distintas. Es la
+                    misma lección que dejó el registro de la captura de yapes. */}
+                {ultimo && (
+                  <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-400 mt-1.5">
+                    {t("schedExport.ultimoIntento", {
+                      cuando: new Date(ultimo.cuando).toLocaleString(),
+                      resultado: t(`schedExport.res.${ultimo.resultado}`),
+                    })}
+                  </Text>
+                )}
+              </View>
             </View>
 
             <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">

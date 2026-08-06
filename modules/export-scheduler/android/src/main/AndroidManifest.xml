@@ -1,0 +1,35 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!--
+    Para volver a poner el despertador despues de reiniciar el celular. Los
+    despertadores de Android NO sobreviven a un reinicio: sin esto, apagar y
+    encender el telefono deja la exportacion automatica muerta en silencio
+    hasta que alguien vuelva a entrar a la pantalla de ajustes.
+  -->
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+
+  <application>
+    <!--
+      Quien recibe el despertador a la hora fijada. No se exporta: solo lo
+      dispara el propio Finzo.
+
+      Y tiene que ser un receptor y no el servicio directamente: desde
+      Android 8 una app en segundo plano no puede arrancar un servicio, pero
+      un receptor SI puede, y es la forma documentada de hacer esto.
+    -->
+    <receiver
+      android:name="com.finzo.exportscheduler.FinzoExportReceiver"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="android.intent.action.BOOT_COMPLETED" />
+      </intent-filter>
+    </receiver>
+
+    <!--
+      El servicio que despierta a Finzo lo justo para armar el reporte y
+      subirlo, sin abrirla ni ensenar nada.
+    -->
+    <service
+      android:name="com.finzo.exportscheduler.FinzoExportService"
+      android:exported="false" />
+  </application>
+</manifest>

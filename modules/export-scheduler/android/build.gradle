@@ -1,0 +1,31 @@
+apply plugin: 'com.android.library'
+
+group = 'com.finzo.exportscheduler'
+version = '0.1.0'
+
+def expoModulesCorePlugin = new File(
+  project(":expo-modules-core").projectDir.absolutePath,
+  "ExpoModulesCorePlugin.gradle"
+)
+apply from: expoModulesCorePlugin
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+useDefaultAndroidSdkVersions()
+useExpoPublishing()
+
+// FinzoExportService usa HeadlessJsTaskService, que viene de React Native. Sin
+// esta linea el modulo no compila — el mismo caso que notification-reader.
+dependencies {
+  implementation "com.facebook.react:react-android"
+}
+
+android {
+  namespace "com.finzo.exportscheduler"
+  defaultConfig {
+    versionCode 1
+    versionName "0.1.0"
+  }
+  lintOptions {
+    abortOnError false
+  }
+}
