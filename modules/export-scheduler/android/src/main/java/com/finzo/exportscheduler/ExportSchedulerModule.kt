@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
@@ -72,6 +73,25 @@ class ExportSchedulerModule : Module() {
     Function("cancelar") {
       guardar(context).edit().remove(CLAVE_CUANDO).apply()
       alarmas(context).cancel(aviso(context))
+    }
+
+    /**
+     * Convierte el HTML del reporte en un PDF y devuelve donde quedo.
+     *
+     * AsyncFunction y no Function: crear el WebView, cargar el HTML, medirlo y
+     * escribirlo lleva su tiempo, y una Function bloquearia el hilo de la app
+     * mientras. Ademas el resultado llega por callbacks, asi que hace falta
+     * poder contestar mas tarde.
+     *
+     * Recibe el HTML ya armado por utils/exportPdfHtml, el MISMO que usa la
+     * pantalla de exportar a mano: asi el PDF automatico y el de a mano son el
+     * mismo documento. Ver HtmlAPdf.
+     */
+    AsyncFunction("htmlAPdf") { html: String, destino: String, promesa: Promise ->
+      HtmlAPdf.convertir(context, html, destino) { uri, error ->
+        if (uri != null) promesa.resolve(uri)
+        else promesa.reject("pdf", error ?: "no se pudo convertir a PDF", null)
+      }
     }
   }
 
