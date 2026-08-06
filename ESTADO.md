@@ -485,6 +485,21 @@ La pantalla también pregunta si **este APK** trae el módulo (`puedeExportarEnF
 y solo entonces promete que sale solo. Las actualizaciones por internet no traen
 código de Android, así que con un APK anterior dice la verdad de antes.
 
+#### TRAMPA AL ENTREGAR UN APK: publicar la OTA ANTES de que se instale
+
+Al terminar el APK `5ago-19`, la última actualización publicada era `5ago-18`. Si
+se instala el APK en ese estado, la app **descarga la 5ago-18 y la pone encima**
+del código que trae dentro: se instala el APK correcto, Acerca de sigue diciendo
+`5ago-18`, la exportación automática no aparece **y parece que el APK está roto**.
+
+La regla: **al entregar un APK, publicar antes una actualización con el mismo
+código.** Así, use el código de dentro o el de internet, es el mismo.
+
+Y por eso el módulo nativo se pide con `requireOptionalNativeModule`: la
+actualización `5ago-19` llega también a celulares con un APK viejo que no trae el
+despertador. Ahí las funciones no hacen nada y queda el comportamiento de antes,
+en vez de reventar al arrancar.
+
 #### Lo que hay que hacer en el celular, una vez
 
 Quitarle a Finzo el **ahorro de batería** en los ajustes de Android. Los Honor y
