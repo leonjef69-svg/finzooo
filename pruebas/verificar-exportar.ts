@@ -9,6 +9,7 @@ import {
 import {
   DEFAULT_SCHEDULE,
   MAX_MONTH_DAY,
+  claveDeEjecucion,
   isAutoRunDue,
   monthForSchedule,
   toDateKey,
@@ -185,11 +186,11 @@ const base: ScheduledExport = { ...DEFAULT_SCHEDULE, enabled: true, frequency: "
   ok(isAutoRunDue(base, despues), "pasada la hora sí toca");
 }
 ok(
-  !isAutoRunDue({ ...base, lastAutoRun: toDateKey(new Date(2026, 6, 30)) }, new Date(2026, 6, 30, 20, 0)),
+  !isAutoRunDue({ ...base, lastAutoRun: claveDeEjecucion(base, new Date(2026, 6, 30)) }, new Date(2026, 6, 30, 20, 0)),
   "abrir la app diez veces el mismo día da UNA sola copia"
 );
 ok(
-  isAutoRunDue({ ...base, lastAutoRun: "2026-07-29" }, new Date(2026, 6, 30, 10, 0)),
+  isAutoRunDue({ ...base, lastAutoRun: "2026-07-29 09:00" }, new Date(2026, 6, 30, 10, 0)),
   "al día siguiente vuelve a tocar"
 );
 ok(!isAutoRunDue({ ...base, enabled: false }, new Date(2026, 6, 30, 10, 0)), "con el interruptor apagado no se exporta nada");

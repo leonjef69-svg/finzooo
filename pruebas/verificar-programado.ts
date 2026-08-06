@@ -8,6 +8,7 @@ import {
   MAX_MONTH_DAY,
   activeWeekdays,
   buildFileName,
+  claveDeEjecucion,
   esDestinoAutomatico,
   horaValida,
   isAutoRunDue,
@@ -17,7 +18,6 @@ import {
   monthForSchedule,
   proximaEjecucion,
   sanitizeFileName,
-  toDateKey,
   type ScheduledExport,
 } from "@/utils/scheduledExport";
 
@@ -130,7 +130,7 @@ console.log("\n--- LA COPIA SOLA A DRIVE ---");
   ok(!isAutoRunDue({ ...drive, destination: "mail" }, new Date(2026, 6, 30, 9, 1)), "el correo tampoco");
   ok(!isAutoRunDue({ ...drive, destination: "share" }, new Date(2026, 6, 30, 9, 1)), "compartir tampoco");
   ok(
-    !isAutoRunDue({ ...drive, lastAutoRun: toDateKey(new Date(2026, 6, 30)) }, new Date(2026, 6, 30, 22, 0)),
+    !isAutoRunDue({ ...drive, lastAutoRun: claveDeEjecucion(drive, new Date(2026, 6, 30)) }, new Date(2026, 6, 30, 22, 0)),
     "abrir la app diez veces el mismo día da UNA sola copia"
   );
 }
@@ -206,6 +206,62 @@ console.log("\n--- CUÁNDO TOCA LA PRÓXIMA VEZ (el despertador de Android) ---"
     new Date(2026, 7, 5, 10, 0)
   );
   ok(hoyMismo.getDate() === 5, "si hoy está elegido y la hora no ha pasado, es hoy mismo");
+}
+
+console.log("\n--- LA MARCA DE 'YA SE HIZO' NO PUEDE BLOQUEAR EL DÍA ENTERO ---");
+{
+  // EL FALLO DE VERDAD, el que costó tres intentos del usuario el 06/08/2026.
+  //
+  // La marca guardaba solo el DÍA, y la escriben dos mecanismos: el que exporta
+  // al abrir la app (que la escribe ANTES de exportar, para no repetir en bucle)
+  // y el despertador. Con solo el día, en cuanto uno tocaba el día el otro se
+  // saltaba el reporte hasta la medianoche.
+  //
+  // Lo que vivió el usuario: tenía puesto 08:38 de una prueba anterior; al abrir
+  // la app pasada esa hora se marcó el día y falló. Cambió a las 17:00, el
+  // despertador sonó PUNTUAL, y se saltó el reporte. Desde fuera: "no funciona".
+  const hoy = new Date(2026, 7, 6, 17, 0, 30);
+  const alas1700: ScheduledExport = { ...base, frequency: "daily", destination: "drive", hour: 17, minute: 0 };
+
+  ok(claveDeEjecucion(alas1700, hoy) === "2026-08-06 17:00", `la clave lleva día y hora (${claveDeEjecucion(alas1700, hoy)})`);
+
+  // Una marca vieja (solo el día) NO puede bloquear: es lo que se autocura al
+  // actualizar, y lo que desbloqueó al usuario.
+  ok(
+    isAutoRunDue({ ...alas1700, lastAutoRun: "2026-08-06" }, hoy),
+    "una marca vieja de solo-el-día ya no bloquea"
+  );
+
+  // La marca de la MISMA ejecución sí bloquea: abrir la app diez veces con la
+  // misma programación tiene que dar UNA sola copia. Eso no se puede perder.
+  ok(
+    !isAutoRunDue({ ...alas1700, lastAutoRun: "2026-08-06 17:00" }, hoy),
+    "la misma ejecución no se repite"
+  );
+
+  // Y cambiar la hora el mismo día es otra ejecución: vuelve a intentarse.
+  const alas1800 = { ...alas1700, hour: 18, lastAutoRun: "2026-08-06 17:00" };
+  ok(isAutoRunDue(alas1800, new Date(2026, 7, 6, 18, 0, 30)), "cambiar la hora el mismo día vuelve a exportar");
+  // Incluso cambiando solo los minutos.
+  const alas1705 = { ...alas1700, minute: 5, lastAutoRun: "2026-08-06 17:00" };
+  ok(isAutoRunDue(alas1705, new Date(2026, 7, 6, 17, 5, 30)), "y cambiar solo los minutos también");
+
+  // Al día siguiente, la misma hora es otra ejecución.
+  ok(
+    isAutoRunDue({ ...alas1700, lastAutoRun: "2026-08-06 17:00" }, new Date(2026, 7, 7, 17, 0, 30)),
+    "y mañana a la misma hora se vuelve a hacer"
+  );
+
+  // La pantalla borra la marca al cambiar cualquier cosa: reconfigurar es decir
+  // "quiero que esto pase". Es la otra mitad del arreglo.
+  const pant = fs.readFileSync(path.join(process.cwd(), "screens/ScheduledExportSettings.tsx"), "utf8");
+  ok(
+    /const next = \{ \.\.\.schedule, \.\.\.patch, lastAutoRun: undefined \}/.test(pant),
+    "cambiar un ajuste borra la marca de 'ya se hizo'"
+  );
+
+  // Y el mensajito al guardar no puede decir "te avisaremos" cuando exporta solo.
+  ok(pant.includes("schedExport.savedFondo"), "el mensaje al guardar dice que se exporta, no que se avisa");
 }
 
 console.log("\n--- QUÉ MES LLEVA EL REPORTE ---");

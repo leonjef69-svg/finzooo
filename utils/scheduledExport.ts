@@ -406,6 +406,34 @@ export function markTapHandled(deliveredAt: number): void {
   saveJSON(KEY_LAST_TAP, deliveredAt);
 }
 
+/**
+ * LA EJECUCIÓN CONCRETA QUE TOCA: el día MÁS la hora fijada.
+ *
+ * Antes esta marca era solo el día, y eso costó una tarde entera de pruebas
+ * fallidas (06/08/2026). El problema: la marca la escriben DOS mecanismos —el
+ * que exporta al abrir la app y el despertador— y con solo el día, en cuanto
+ * uno de los dos tocaba el día, el otro se saltaba el reporte hasta la
+ * medianoche.
+ *
+ * Lo que le pasó al usuario: tenía puesto 08:38 de una prueba anterior. Al abrir
+ * la app pasada esa hora, el primer mecanismo marcó el día y falló. Cambió la
+ * hora a las 17:00, el despertador sonó puntual… y se saltó el reporte porque el
+ * día ya estaba marcado. Cualquier hora que pusiera ese día iba a fallar igual,
+ * y desde fuera parecía que la exportación automática no funcionaba.
+ *
+ * Con el día Y la hora, cambiar la hora es otra ejecución distinta y vuelve a
+ * intentarse. Y sigue cumpliendo lo que la marca existía para hacer: abrir la
+ * app diez veces con la misma programación da UNA sola copia.
+ *
+ * Las marcas viejas (solo el día, "2026-08-06") no coinciden con este formato,
+ * así que la primera vez tras actualizar se ejecuta. Es justo lo que se quiere.
+ */
+export function claveDeEjecucion(schedule: ScheduledExport, now: Date): string {
+  const h = String(horaValida(schedule.hour)).padStart(2, "0");
+  const m = String(minutoValido(schedule.minute)).padStart(2, "0");
+  return `${toDateKey(now)} ${h}:${m}`;
+}
+
 export function toDateKey(d: Date): string {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const dd = String(d.getDate()).padStart(2, "0");
@@ -439,13 +467,13 @@ export function isPastTime(schedule: ScheduledExport, now: Date): boolean {
  * DESTINOS_AUTOMATICOS. Se comprueba al abrir la app, no en segundo plano,
  * porque en segundo plano no se puede armar el PDF.
  *
- * `lastAutoRun` guarda el día en que se hizo la última para no repetirla cada
- * vez que se abre la app. Se compara por fecha y no por hora: abrir la app
- * cinco veces el mismo día tiene que dar una sola subida.
+ * `lastAutoRun` guarda la ejecución que ya se hizo, para no repetirla cada vez
+ * que se abre la app. Es el día MÁS la hora, no solo el día: ver
+ * claveDeEjecucion, que explica el fallo que costó eso.
  */
 export function isAutoRunDue(schedule: ScheduledExport, now: Date): boolean {
   if (!esDestinoAutomatico(schedule.destination)) return false;
-  if (schedule.lastAutoRun === toDateKey(now)) return false;
+  if (schedule.lastAutoRun === claveDeEjecucion(schedule, now)) return false;
   if (!isScheduledDay(schedule, now)) return false;
   return isPastTime(schedule, now);
 }

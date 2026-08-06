@@ -22,6 +22,7 @@ import { uploadToDrive } from "@/utils/googleDrive";
 import { programarExportacion } from "@/modules/export-scheduler";
 import {
   buildFileName,
+  claveDeEjecucion,
   esDestinoAutomatico,
   isScheduledDay,
   loadSchedule,
@@ -89,7 +90,9 @@ export async function exportarEnFondo(): Promise<ResultadoDeFondo> {
   // se comprueba el día aquí. Sin esto, un despertador que se retrasa hasta
   // pasada la medianoche haría el reporte de un día que no tocaba.
   if (!isScheduledDay(schedule, ahora)) return await apuntar("no-toca-hoy");
-  if (schedule.lastAutoRun === toDateKey(ahora)) return await apuntar("ya-se-hizo-hoy");
+  if (schedule.lastAutoRun === claveDeEjecucion(schedule, ahora)) {
+    return await apuntar("ya-se-hizo-hoy");
+  }
 
   // El PDF se dibuja en una ventana del navegador de Android, y esa ventana
   // necesita la app en pantalla. No se intenta: se deja para cuando la app se
@@ -160,7 +163,7 @@ export async function exportarEnFondo(): Promise<ResultadoDeFondo> {
     // la app: allí se apunta antes porque un fallo a medias repetiría la subida
     // en bucle cada vez que se abre. Aquí no hay bucle —el despertador es uno al
     // día— así que conviene lo contrario: si falló, que mañana se reintente.
-    saveSchedule({ ...schedule, lastAutoRun: toDateKey(ahora) });
+    saveSchedule({ ...schedule, lastAutoRun: claveDeEjecucion(schedule, ahora) });
     markExported(ahora);
     await flushPendingSaves();
     return await apuntar("hecho", archivo.fileName);

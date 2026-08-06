@@ -135,7 +135,13 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
   // lo que se ve es lo que está programado.
   async function update(patch: Partial<ScheduledExport>) {
     if (!loaded) return;
-    const next = { ...schedule, ...patch };
+    // Cambiar algo aquí BORRA la marca de "ya se hizo".
+    //
+    // Reconfigurar es decir "quiero que esto pase". Sin esto, quien tocaba la
+    // hora después de que ya se hubiera hecho un reporte ese día se quedaba
+    // esperando hasta la medianoche sin saber por qué — que es exactamente lo
+    // que le pasó al usuario el 06/08/2026, tres intentos seguidos.
+    const next = { ...schedule, ...patch, lastAutoRun: undefined };
 
     // "Personalizado" sin ningún día elegido no programaría nada y la
     // pantalla seguiría diciendo que está activo. Se impide quitar el último.
@@ -170,6 +176,11 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
     }
 
     if (!next.enabled) showToast(t("schedExport.savedOff"));
+    // "Te avisaremos" era del recordatorio, cuando lo único que llegaba era un
+    // aviso. Decirlo ahora contradice a la propia pantalla: el usuario lo leyó
+    // justo debajo de un cuadro que dice "se guarda solo". Si de verdad se
+    // exporta solo, el mensaje tiene que decir eso.
+    else if (saleSolo) showToast(t("schedExport.savedFondo", { when: describir(next) }));
     else showToast(t("schedExport.saved", { when: describir(next) }));
   }
 

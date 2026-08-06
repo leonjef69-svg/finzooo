@@ -18,6 +18,7 @@ import * as Notifications from "expo-notifications";
 import {
   alreadyHandledTap,
   buildFileName,
+  claveDeEjecucion,
   isAutoRunDue,
   loadSchedule,
   markTapHandled,
@@ -362,7 +363,7 @@ function ScheduledExportEffect() {
         // la subida fallara a medias, al reabrir la app volvería a intentarlo
         // en bucle. Perder una copia es molesto; repetirla sin parar hasta
         // que alguien lo note, peor.
-        saveSchedule({ ...s, lastAutoRun: toDateKey(now) });
+        saveSchedule({ ...s, lastAutoRun: claveDeEjecucion(s, now) });
         router.push({
           pathname: "/export-pdf",
           params: {
