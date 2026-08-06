@@ -368,6 +368,39 @@ Cosas que había que no romper, cada una con prueba:
 - **Si falta elegir la carpeta se avisa en la pantalla, en ámbar.** Ese fallo
   llegaría de madrugada, a la hora del reporte, sin nadie mirando.
 
+### Dropbox (05/08/2026)
+
+Tercer destino automático. Se autoriza una vez en el navegador y los reportes se
+suben solos a `Dropbox/Aplicaciones/<nombre de la app>/`.
+
+**Se entregó por actualización, sin APK.** Yo había dicho que hacía falta APK y
+me equivoqué: las piezas ya estaban dentro (`expo-web-browser`, `expo-crypto`,
+`expo-secure-store`, y el esquema `finzo` registrado). No hizo falta la librería
+oficial de Dropbox: son tres llamadas de red.
+
+El usuario creó la app en `dropbox.com/developers/apps` con **"carpeta de
+aplicaciones"** y el único permiso `files.content.write`. La clave pública está en
+`utils/dropbox.ts`; **el secreto no está y no debe estar**, se usa PKCE.
+
+**La clave se leyó mal de una captura.** El penúltimo carácter era una `l`
+minúscula y en imagen se veía igual que un `1`. Se pidió escrita, y por eso hay
+una prueba que comprueba su forma (15 caracteres, minúsculas y dígitos): una
+letra mal copiada da "app no encontrada", que no dice nada útil.
+
+**LA TRAMPA QUE SE EVITÓ, Y ES LA LECCIÓN DE ESTE CAMBIO:** lo natural aquí era
+usar `btoa`, `new URL(...).searchParams` y `URLSearchParams`. Las tres son lo
+normal en un navegador y las tres son una trampa aquí: en el motor del celular
+`btoa` **no existe** y `URL.searchParams` está a medias. Con ellas todo esto
+**pasa las pruebas en la computadora y falla solo en el celular**, con un error
+que parece "permiso rechazado" y manda a buscar al sitio equivocado. Se comprobó
+antes de publicar que nada en la app las usaba — este archivo iba a ser el
+primero. Las cuentas puras viven en `utils/pkce.ts` (sin nada nativo, para poder
+comprobarlas) y hay pruebas que prohíben las tres funciones.
+
+También se tapó un hueco del auditor de pantallas externas: solo lee el texto de
+las pantallas, así que una llamada indirecta no se ve. Se añadieron `elegirCarpeta`
+y `conectarDropbox` a su lista, igual que ya estaba `applySchedule`.
+
 ### LO QUE SIGUE PENDIENTE DE ESTA PETICIÓN, Y POR QUÉ
 
 Del pedido largo quedó fuera lo que no depende de programar más:
@@ -376,8 +409,10 @@ Del pedido largo quedó fuera lo que no depende de programar más:
   arma en un WebView, que necesita la app abierta. Hay que generar el archivo en
   código nativo y meterlo en un WorkManager: **cambio de APK**, no de
   actualización.
-- **OneDrive.** Necesita registrar la app en Azure (lo hace el dueño de la
-  cuenta, no el código) y librería nativa → **cambio de APK**.
+- **OneDrive.** Necesita que el dueño de la cuenta registre la app en Azure y dé
+  el identificador; eso no lo puede hacer el código. **Lo demás sí se puede por
+  actualización**, igual que Dropbox: se copia `utils/dropbox.ts` cambiando las
+  tres direcciones y el permiso a `Files.ReadWrite.AppFolder`.
 - **Correo automático.** No se puede enviar correo desde el celular sin abrir la
   app de correo. Hace falta un **servicio de envío** con su clave (Resend,
   SendGrid…) y eso implica un servidor y un coste mensual.

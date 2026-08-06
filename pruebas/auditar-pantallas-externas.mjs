@@ -38,6 +38,12 @@ const ABREN_OTRA_APP = [
   // que si lo pidiera ella misma. Si mañana aparece otro ayudante que pida
   // permisos, hay que añadirlo aquí.
   { patron: /requestPermissionsAsync|applySchedule/, que: "el cuadro de permisos de Android" },
+  // Estos dos son funciones nuestras, igual que applySchedule: por dentro abren
+  // el selector de carpetas de Android y el navegador para autorizar Dropbox.
+  // El auditor solo lee el texto de las PANTALLAS, así que una llamada indirecta
+  // no se ve — hay que nombrar al ayudante o el hueco queda abierto.
+  { patron: /elegirCarpeta/, que: "el selector de carpetas de Android" },
+  { patron: /conectarDropbox/, que: "el navegador para autorizar Dropbox" },
 ];
 
 // Pantallas que abren otra app pero NO necesitan seguir abiertas al volver,

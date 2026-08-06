@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Check, ChevronLeft, Cloud, FolderOpen, Info, Play } from "lucide-react-native";
+import { Check, ChevronLeft, Cloud, FolderOpen, Info, Package, Play } from "lucide-react-native";
 import Toggle from "@/components/Toggle";
 import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 import { carpetaElegida, elegirCarpeta } from "@/utils/carpetaTelefono";
+import { conectarDropbox, dropboxConectado } from "@/utils/dropbox";
 import {
   DEFAULT_SCHEDULE,
   MAX_MONTH_DAY,
@@ -45,6 +46,8 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
   const [minutoTexto, setMinutoTexto] = useState("");
   /** La carpeta del teléfono ya elegida, para poder enseñar cuál es. */
   const [carpeta, setCarpeta] = useState("");
+  /** Si ya hay una cuenta de Dropbox autorizada. */
+  const [dropbox, setDropbox] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -62,6 +65,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
       setLoaded(true);
     });
     carpetaElegida().then((c) => alive && setCarpeta(c));
+    dropboxConectado().then((c) => alive && setDropbox(c));
     return () => {
       alive = false;
     };
@@ -93,6 +97,19 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
     if (elegida === "") return;
     setCarpeta(elegida);
     showToast(t("schedExport.folderReady"));
+  }
+
+  /** Autorizar Dropbox. Abre el navegador una vez y ya no vuelve a pedir nada. */
+  async function conectar() {
+    try {
+      await conectarDropbox();
+      setDropbox(true);
+      showToast(t("schedExport.dropboxReady"));
+    } catch {
+      // Cerrar el navegador a medias entra por aquí, y es lo más normal del
+      // mundo: no es un error que merezca alarma, solo "no quedó conectado".
+      showToast(t("schedExport.dropboxFailed"));
+    }
   }
 
   // Cada cambio se guarda y se reprograma en el momento. No hay botón de
@@ -213,6 +230,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
   const DESTINOS: { id: ExportDestination; label: string; Icon: typeof Cloud }[] = [
     { id: "folder", label: t("schedExport.destFolder"), Icon: FolderOpen },
     { id: "drive", label: t("exportPdf.destDrive"), Icon: Cloud },
+    { id: "dropbox", label: t("schedExport.destDropbox"), Icon: Package },
   ];
 
   const destLabel = DESTINOS.find((d) => d.id === schedule.destination)?.label ?? "";
@@ -665,6 +683,38 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                     {t(carpeta === "" ? "schedExport.folderChoose" : "schedExport.folderChange")}
                   </Text>
                 </TouchableOpacity>
+              </View>
+            )}
+
+            {/* DROPBOX. Igual que la carpeta: hay que autorizar una vez, y si
+                falta hay que decirlo aquí y no a la hora del reporte. */}
+            {schedule.destination === "dropbox" && (
+              <View
+                className={`rounded-xl border-[1.5px] p-3.5 mb-5 ${
+                  dropbox
+                    ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-600"
+                    : "bg-amber-50 dark:bg-amber-900/20 border-amber-500"
+                }`}
+              >
+                <Text
+                  className={`text-xs leading-5 ${
+                    dropbox
+                      ? "text-emerald-800 dark:text-emerald-200"
+                      : "text-amber-800 dark:text-amber-200"
+                  }`}
+                >
+                  {t(dropbox ? "schedExport.dropboxNote" : "schedExport.dropboxMissing")}
+                </Text>
+                {!dropbox && (
+                  <TouchableOpacity
+                    onPress={conectar}
+                    className="mt-2.5 py-2.5 rounded-xl items-center bg-slate-900 dark:bg-white"
+                  >
+                    <Text className="text-xs font-extrabold text-white dark:text-slate-900">
+                      {t("schedExport.dropboxConnect")}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             )}
 

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { uploadToDrive, DriveNotSignedIn, DriveDenied } from "@/utils/googleDrive";
 import { guardarEnCarpeta, SinCarpeta } from "@/utils/carpetaTelefono";
+import { subirADropbox, DropboxSinConectar } from "@/utils/dropbox";
 import {
   ActivityIndicator,
   ScrollView,
@@ -687,6 +688,25 @@ export default function ExportPdfSheet({
         const uploaded = await uploadToDrive(file.uri, file.fileName, file.mimeType);
         showToast(t("exportPdf.savedToDrive", { name: uploaded.name || file.fileName }));
         exportacionHecha();
+        return;
+      }
+
+      if (destination === "dropbox") {
+        try {
+          const puesto = await subirADropbox(file.uri, file.fileName);
+          showToast(t("exportPdf.savedToDropbox", { name: puesto }));
+          exportacionHecha();
+        } catch (e) {
+          // "Sin conectar" tiene salida (ir a autorizar) y el resto no, así que
+          // se dicen distinto. Un "no se pudo" genérico no lleva a ningún sitio.
+          showToast(
+            t(
+              e instanceof DropboxSinConectar
+                ? "exportPdf.dropboxMissing"
+                : "exportPdf.dropboxError"
+            )
+          );
+        }
         return;
       }
 

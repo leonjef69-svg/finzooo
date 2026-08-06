@@ -3,8 +3,8 @@
 // QUÉ ES AUTOMÁTICO DE VERDAD, Y QUÉ NO
 //
 // A la hora fijada, la copia se genera y se guarda SOLA, sin que nadie toque
-// nada. Los dos destinos que ofrece cumplen eso: la carpeta del teléfono y
-// Google Drive (ver DESTINOS_AUTOMATICOS).
+// nada. Los tres destinos que ofrece cumplen eso: la carpeta del teléfono,
+// Google Drive y Dropbox (ver DESTINOS_AUTOMATICOS).
 //
 // Lo único que no es automático es EL MOMENTO EXACTO. La copia se hace la
 // primera vez que se abre la app pasada la hora, no a la hora en punto con el
@@ -33,7 +33,14 @@ import { loadJSON, saveJSON } from "@/utils/storage";
 import { isDecoyActive } from "@/utils/decoyMode";
 
 export type ExportFrequency = "daily" | "weekly" | "monthly" | "custom";
-export type ExportDestination = "share" | "mail" | "gmail" | "whatsapp" | "drive" | "folder";
+export type ExportDestination =
+  | "share"
+  | "mail"
+  | "gmail"
+  | "whatsapp"
+  | "drive"
+  | "folder"
+  | "dropbox";
 
 /**
  * LOS DESTINOS QUE DE VERDAD SE HACEN SOLOS.
@@ -42,8 +49,10 @@ export type ExportDestination = "share" | "mail" | "gmail" | "whatsapp" | "drive
  * automática, y el criterio es uno: que NADIE tenga que elegir a quién mandar
  * el archivo ni darle a un botón de enviar.
  *
- *   drive  → la cuenta ya está conectada y la carpeta la crea Finzo.
- *   folder → la carpeta se elige una vez y el permiso de Android se queda.
+ *   drive   → la cuenta ya está conectada y la carpeta la crea Finzo.
+ *   folder  → la carpeta se elige una vez y el permiso de Android se queda.
+ *   dropbox → se autoriza una vez en el navegador y el permiso es de larga
+ *             duración, así que después no vuelve a pedir nada.
  *
  * Los demás (compartir, correo, Gmail, WhatsApp) abren OTRA aplicación y
  * esperan a que una persona toque enviar. Siguen existiendo para exportar a
@@ -51,7 +60,7 @@ export type ExportDestination = "share" | "mail" | "gmail" | "whatsapp" | "drive
  * esta pantalla el 05/08/2026, a pedido del usuario: "que todas las opciones en
  * dónde guardarlo sean de manera automática".
  */
-const DESTINOS_AUTOMATICOS = ["drive", "folder"] as const;
+const DESTINOS_AUTOMATICOS = ["drive", "folder", "dropbox"] as const;
 
 export function esDestinoAutomatico(d: ExportDestination): boolean {
   return (DESTINOS_AUTOMATICOS as readonly string[]).includes(d);

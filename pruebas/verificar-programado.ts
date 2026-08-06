@@ -2,6 +2,7 @@
 // interruptor principal, calendario, destinos y la hora puesta a mano.
 import fs from "fs";
 import path from "path";
+import { codigoDeLaVuelta, verificadorPkce } from "@/utils/pkce";
 import {
   DEFAULT_SCHEDULE,
   MAX_MONTH_DAY,
@@ -161,6 +162,7 @@ console.log("\n--- SOLO SE OFRECEN DESTINOS QUE SE HACEN SOLOS ---");
   // a una persona, así que dejaron de ofrecerse en la exportación automática.
   ok(esDestinoAutomatico("drive"), "Drive sí: la cuenta ya está conectada");
   ok(esDestinoAutomatico("folder"), "la carpeta del teléfono sí: el permiso queda puesto");
+  ok(esDestinoAutomatico("dropbox"), "Dropbox sí: se autoriza una vez y el permiso es duradero");
   for (const d of ["share", "mail", "gmail", "whatsapp"] as const) {
     ok(!esDestinoAutomatico(d), `${d} no, porque abre otra app y espera a alguien`);
   }
@@ -221,6 +223,7 @@ console.log("\n--- LA PANTALLA DICE Y OFRECE LO QUE DEBE ---");
   // justamente cuáles se fueron.
   ok(/id: "folder"/.test(codigo), "se ofrece la carpeta del teléfono");
   ok(/id: "drive"/.test(codigo), "y Drive");
+  ok(/id: "dropbox"/.test(codigo), "y Dropbox");
   for (const fuera of ["share", "mail", "gmail", "whatsapp"]) {
     ok(!new RegExp(`id: "${fuera}"`).test(codigo), `y ya no se ofrece ${fuera}`);
   }
@@ -246,6 +249,78 @@ console.log("\n--- LA PANTALLA DICE Y OFRECE LO QUE DEBE ---");
   // Y la repesca no puede volver por la puerta de atrás.
   ok(!/retryMinutes/.test(codigo), "no queda nada de la repesca en la pantalla");
   ok(!/"schedExport\.retry/.test(i18n), "ni sus textos en los idiomas");
+}
+
+console.log("\n--- DROPBOX: LO QUE NO PUEDE ESTAR MAL ---");
+{
+  const RAIZ = process.cwd();
+  const db =
+    fs.readFileSync(path.join(RAIZ, "utils/dropbox.ts"), "utf8") +
+    fs.readFileSync(path.join(RAIZ, "utils/pkce.ts"), "utf8");
+  const codigo = db.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+  // EL SECRETO NO PUEDE ESTAR EN EL CÓDIGO. Cualquiera abre un APK y le saca los
+  // textos, así que un secreto metido en una app de celular está regalado. Se usa
+  // PKCE justamente para no necesitarlo. Esta es la aserción más importante del
+  // archivo: si alguien "arregla" la conexión pegando el secreto, la app queda
+  // suplantable y nada falla a la vista.
+  ok(!/client_secret/.test(codigo), "el secreto de la app NO está en el código");
+  ok(/code_challenge_method=S256/.test(codigo), "se usa PKCE con huella SHA-256");
+  ok(/code_verifier/.test(codigo), "y se manda el número al azar al canjear");
+
+  // La dirección de vuelta tiene que ser LA MISMA que está dada de alta en la
+  // consola de Dropbox. Si se cambia aquí y no allá, Dropbox se niega antes de
+  // enseñar la pantalla de permiso y el error no dice cuál de las dos está mal.
+  ok(/const REDIRECT = "finzo:\/\/dropbox"/.test(codigo), "la dirección de vuelta es la registrada");
+
+  // Sin esto, el permiso caduca en unas horas y habría que iniciar sesión cada
+  // día: no sería automático de ninguna manera.
+  ok(/token_access_type=offline/.test(codigo), "se pide un permiso de larga duración");
+
+  // La clave es de 15 caracteres. Un carácter mal copiado da "app no encontrada",
+  // y ese error no dice nada útil. Ya pasó al leerla de una captura: el penúltimo
+  // signo era una L minúscula y se veía igual que un 1.
+  const clave = /const CLIENT_ID = "([^"]+)"/.exec(codigo)?.[1] ?? "";
+  ok(clave.length === 15, `la clave tiene 15 caracteres (tiene ${clave.length})`);
+  ok(/^[a-z0-9]+$/.test(clave), "y son solo letras minúsculas y números");
+
+  // El permiso de larga duración va al almacén seguro, no a los ajustes
+  // normales: con él se puede escribir en la carpeta de la persona.
+  ok(/SecureStore/.test(codigo), "el permiso guardado va al almacén seguro");
+  ok(!/loadJSON|saveJSON/.test(codigo), "y no a los ajustes de siempre");
+
+  // Si Dropbox dice que el permiso ya no vale, hay que olvidarlo. Dejarlo haría
+  // que cada reporte fallara igual y sin explicación, para siempre.
+  ok(/status === 400 \|\| respuesta\.status === 401/.test(codigo), "un permiso revocado se detecta");
+  ok(/desconectarDropbox\(\)/.test(codigo), "y se olvida");
+
+  // Y los avisos por cada subida van apagados: son reportes automáticos y
+  // avisarlos convertiría la función en una molestia diaria.
+  ok(/mute: true/.test(codigo), "las subidas no avisan en el celular");
+
+  // NADA DE btoa, URL NI URLSearchParams. En el motor del celular btoa no existe
+  // y URL.searchParams está a medias, así que con ellos todo esto pasa las
+  // pruebas en la computadora y falla SOLO en el celular, con un error que
+  // parece "permiso rechazado". Nada en la app los usaba: este archivo fue el
+  // primero en tener la tentación.
+  ok(!/\bbtoa\b/.test(codigo), "no se usa btoa, que en el celular no existe");
+  ok(!/new URL\(/.test(codigo), "ni URL, que está a medias");
+  ok(!/URLSearchParams/.test(codigo), "ni URLSearchParams");
+
+  // Y las dos piezas que las reemplazan, comprobadas de verdad.
+  const bytes = new Uint8Array([0, 1, 63, 64, 65, 127, 128, 200, 255]);
+  const v = verificadorPkce(bytes);
+  ok(v.length === bytes.length, "el número secreto tiene una letra por byte");
+  ok(/^[A-Za-z0-9\-_]+$/.test(v), "y solo usa signos que PKCE permite");
+  const largo = verificadorPkce(new Uint8Array(64));
+  ok(largo.length >= 43 && largo.length <= 128, `con 64 bytes cabe en lo que pide PKCE (${largo.length})`);
+
+  ok(codigoDeLaVuelta("finzo://dropbox?code=ABC123") === "ABC123", "se lee el código de la vuelta");
+  ok(codigoDeLaVuelta("finzo://dropbox?state=x&code=ABC&y=1") === "ABC", "aunque venga entre otros datos");
+  ok(codigoDeLaVuelta("finzo://dropbox?code=a%2Fb%2Bc") === "a/b+c", "y se descifra: sin esto Dropbox lo rechaza");
+  ok(codigoDeLaVuelta("finzo://dropbox?error=access_denied") === "", "si no hay código, no se inventa uno");
+  // El "code" tiene que ser el parámetro, no un trozo de otro nombre.
+  ok(codigoDeLaVuelta("finzo://dropbox?mycode=NO&code=SI") === "SI", "y no se confunde con otro parámetro parecido");
 }
 
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
