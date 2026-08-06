@@ -73,6 +73,7 @@ const SUITES = [
   { archivo: "verificar-categorias-propias.ts", alias: EXPO },
   { archivo: "verificar-presupuesto-mensual.ts", alias: BASE },
   { archivo: "verificar-programado.ts", alias: EXPO },
+  { archivo: "verificar-reporte-archivo.ts", alias: EXPO },
 ];
 
 /**

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { uploadToDrive, DriveNotSignedIn, DriveDenied } from "@/utils/googleDrive";
 import { guardarEnCarpeta, SinCarpeta } from "@/utils/carpetaTelefono";
 import { subirADropbox, DropboxSinConectar } from "@/utils/dropbox";
+import { archivoCsv, archivoExcel, filasDelReporte } from "@/utils/reporteArchivo";
 import {
   ActivityIndicator,
   ScrollView,
@@ -29,7 +30,6 @@ import {
 } from "lucide-react-native";
 import * as MailComposer from "expo-mail-composer";
 import { useColorScheme } from "nativewind";
-import * as XLSX from "xlsx";
 import { catInfo } from "@/constants/categories";
 import { COLOR_HEX_600 } from "@/constants/colors";
 import PdfPreview from "@/components/PdfPreview";
@@ -71,13 +71,6 @@ const PREVIEW_LIMIT = 50;
 type ExportType = "all" | "expense" | "income";
 type ExportFormat = "pdf" | "xlsx" | "csv";
 
-function csvEscape(value: string) {
-  if (/[",\n]/.test(value)) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
-}
-
 export default function ExportPdfSheet({
   onClose,
   initialMonth,
@@ -117,8 +110,12 @@ export default function ExportPdfSheet({
   recipientName?: string;
   // Dónde va el archivo: "share" abre el menú de compartir de Android,
   // "mail" abre la aplicación de correo con el archivo ya adjunto, y
-  // "drive" lo sube a Google Drive sin ninguna ventana de por medio.
-  destination?: "share" | "mail" | "gmail" | "whatsapp" | "drive";
+  // "drive", "dropbox" y "folder" lo guardan sin ninguna ventana de por medio.
+  //
+  // Es el tipo completo y no una lista corta: la exportación automática llega
+  // aquí con el destino que la persona programó, y una lista corta hacía que
+  // TypeScript diera por imposible un caso que sí ocurre.
+  destination?: ExportDestination;
 }) {
   const { t, transactions, month, monthNames, fmt, userName, showToast, categoryBudgets } =
     useAppData();
@@ -528,26 +525,9 @@ export default function ExportPdfSheet({
    * aplicara a uno y al otro no, y nadie lo notaría hasta abrir los dos
    * archivos del mismo mes y verlos distintos.
    */
-  function filasDelReporte(): (string | number)[][] {
-    const cabecera = [
-      t("exportPdf.colDate"),
-      t("exportPdf.colCategory"),
-      t("exportPdf.colDescription"),
-      t("exportPdf.colMethod"),
-      t("exportPdf.colAmount"),
-    ];
-    const filas = monthTx.map((tx) => {
-      const c = catInfo(tx.category);
-      const montoConSigno = tx.type === "expense" ? -tx.amount : tx.amount;
-      return [
-        fmtDate(tx.date, monthNames),
-        t(c.label),
-        tx.description || "",
-        methodLabel(tx.method, t),
-        montoConSigno,
-      ];
-    });
-    return [cabecera, ...filas, [], [t("exportPdf.total"), "", "", "", total]];
+  /** Las filas del reporte. La cuenta vive en utils/reporteArchivo. */
+  function filas() {
+    return filasDelReporte({ movimientos: monthTx, total, nombresDeMes: monthNames, t });
   }
 
   /**
@@ -559,66 +539,11 @@ export default function ExportPdfSheet({
    * como NÚMEROS, así que se pueden sumar y ordenar sin tocar nada.
    */
   async function exportAsExcel() {
-    const wb = XLSX.utils.book_new();
-    const hoja = XLSX.utils.aoa_to_sheet(filasDelReporte());
-    // Anchos de columna, o la descripción sale cortada y hay que arrastrar
-    // cada borde a mano al abrirlo.
-    hoja["!cols"] = [{ wch: 16 }, { wch: 16 }, { wch: 34 }, { wch: 14 }, { wch: 12 }];
-    XLSX.utils.book_append_sheet(wb, hoja, t("exportPdf.movements").slice(0, 31));
-
-    const bytes = new Uint8Array(
-      XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer
-    );
-
-    const fileName = nombreDeArchivo("xlsx");
-    const file = new File(Paths.cache, fileName);
-    if (file.exists) file.delete();
-    file.create();
-    file.write(bytes);
-
-    return {
-      uri: file.uri,
-      mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-      fileName,
-    };
+    return archivoExcel(filas(), t("exportPdf.movements"), nombreDeArchivo("xlsx"));
   }
 
   async function exportAsCsv() {
-    const header = [
-      t("exportPdf.colDate"),
-      t("exportPdf.colCategory"),
-      t("exportPdf.colDescription"),
-      t("exportPdf.colMethod"),
-      t("exportPdf.colAmount"),
-    ]
-      .map(csvEscape)
-      .join(",");
-
-    const rows = monthTx.map((tx) => {
-      const c = catInfo(tx.category);
-      const signedAmount = tx.type === "expense" ? -tx.amount : tx.amount;
-      return [
-        fmtDate(tx.date, monthNames),
-        t(c.label),
-        tx.description || "",
-        methodLabel(tx.method, t),
-        signedAmount.toFixed(2),
-      ]
-        .map((v) => csvEscape(String(v)))
-        .join(",");
-    });
-
-    const csv = [header, ...rows, "", `${csvEscape(t("exportPdf.total"))},,,,${total.toFixed(2)}`].join(
-      "\n"
-    );
-
-    const fileName = nombreDeArchivo("csv");
-    const file = new File(Paths.cache, fileName);
-    if (file.exists) file.delete();
-    file.create();
-    file.write(csv);
-
-    return { uri: file.uri, mimeType: "text/csv", fileName };
+    return archivoCsv(filas(), nombreDeArchivo("csv"));
   }
 
   /**
