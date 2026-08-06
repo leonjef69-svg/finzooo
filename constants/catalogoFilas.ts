@@ -50,18 +50,30 @@ type GrupoEnFilas = {
  *
  * Se calcula una vez al cargar el archivo, no en cada dibujado.
  */
-export const CATALOGO_EN_FILAS: GrupoEnFilas[] = TODOS_LOS_GRUPOS.map((g) => {
+/**
+ * Parte una lista de dibujos en filas de cinco.
+ *
+ * Se usa para el catálogo y para la pestaña de favoritos, y por eso está aparte:
+ * las dos son la misma elección, así que tienen que verse igual. Con dos
+ * repartos distintos, los favoritos saldrían de otro tamaño que los de al lado.
+ */
+export function enFilas(iconos: string[]): (string | null)[][] {
   const filas: (string | null)[][] = [];
-  for (let i = 0; i < g.iconos.length; i += POR_FILA) {
-    const fila: (string | null)[] = g.iconos.slice(i, i + POR_FILA);
-    // La última fila de cada grupo casi nunca viene completa. Se rellena con
-    // huecos para que TODAS midan lo mismo: si no, sus dibujos se reparten el
-    // ancho de otra forma y salen más grandes que los de arriba.
+  for (let i = 0; i < iconos.length; i += POR_FILA) {
+    const fila: (string | null)[] = iconos.slice(i, i + POR_FILA);
+    // La última fila casi nunca viene completa. Se rellena con huecos para que
+    // TODAS midan lo mismo: si no, sus dibujos se reparten el ancho de otra
+    // forma y salen más grandes que los de arriba.
     while (fila.length < POR_FILA) fila.push(null);
     filas.push(fila);
   }
-  return { titulo: g.titulo, filas };
-});
+  return filas;
+}
+
+export const CATALOGO_EN_FILAS: GrupoEnFilas[] = TODOS_LOS_GRUPOS.map((g) => ({
+  titulo: g.titulo,
+  filas: enFilas(g.iconos),
+}));
 
 /** Lo que ocupan las filas de un grupo. Es el hueco a reservar mientras no están. */
 export const altoDeLasFilas = (grupo: GrupoEnFilas, altoFila: number) =>

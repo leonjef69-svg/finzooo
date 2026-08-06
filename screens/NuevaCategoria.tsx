@@ -10,15 +10,22 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import { Camera, Check, ChevronLeft, ImageIcon, Trash2, X } from "lucide-react-native";
+import { Camera, Check, ChevronLeft, ImageIcon, Star, Trash2, X } from "lucide-react-native";
 import ImageCropper from "@/components/ImageCropper";
-import { ALTO_TITULO, CATALOGO_EN_FILAS, LADO_DE, SEPARACION } from "@/constants/catalogoFilas";
+import {
+  ALTO_TITULO,
+  CATALOGO_EN_FILAS,
+  enFilas,
+  LADO_DE,
+  SEPARACION,
+} from "@/constants/catalogoFilas";
 import { COLOR_HEX_600 } from "@/constants/colors";
 import { iconoDe, TODOS_LOS_GRUPOS } from "@/constants/iconos";
 import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 
 import { nombreRepetido } from "@/utils/categoriasPropias";
+import { alternar, getFavoritos, saveFavoritos } from "@/utils/iconosFavoritos";
 import { sanitizeName } from "@/utils/categoryCustom";
 
 // Los mismos de personalizar categorias, para que una categoria propia no
@@ -159,7 +166,29 @@ export default function NuevaCategoria({
   const [nombre, setNombre] = useState(() => original?.nombre ?? "");
   const [icono, setIcono] = useState(() => original?.icono ?? "Tag");
   const [color, setColor] = useState(() => original?.color ?? "violet");
-  const [pestana, setPestana] = useState<"icono" | "color">("icono");
+  const [pestana, setPestana] = useState<"icono" | "favoritos" | "color">("icono");
+
+  /**
+   * LOS ÍCONOS FAVORITOS. Se marcan con la estrella de al lado de la vista previa.
+   *
+   * POR QUÉ LA ESTRELLA VA ARRIBA Y NO EN CADA CASILLA
+   *
+   * En una casilla de 55 puntos, una estrellita en la esquina se toca sin querer
+   * al elegir el dibujo. Y el toque largo se descartó en este proyecto por lo
+   * mismo que se descartó para editar categorías: es invisible, y quien no lo
+   * sepa no lo encuentra nunca.
+   *
+   * Arriba, junto al dibujo grande, la estrella se ve siempre y actúa sobre el
+   * ícono que se acaba de elegir, que es justo el que se querría guardar.
+   */
+  const [favoritos, setFavoritosEstado] = useState<string[]>(() => getFavoritos());
+
+  function alternarFavorito() {
+    const siguiente = alternar(favoritos, icono);
+    setFavoritosEstado(siguiente);
+    saveFavoritos(siguiente);
+    showToast(t(siguiente.includes(icono) ? "nuevaCat.favGuardado" : "nuevaCat.favQuitado"));
+  }
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
 
   // LA FOTO PROPIA. Cuando hay, se dibuja en vez del icono — la misma regla que
@@ -214,6 +243,7 @@ export default function NuevaCategoria({
   );
 
   const Dibujo = iconoDe(icono);
+  const esFav = favoritos.includes(icono);
   const limpio = sanitizeName(nombre);
   // Al editar no cuenta como repetida consigo misma.
   const repetido = nombreRepetido(categoriasPropias, limpio, tipo, editandoId);
@@ -265,14 +295,36 @@ export default function NuevaCategoria({
           en el resto de la app, y saltársela aquí haría que la categoría se
           viera de una forma al crearla y de otra en Inicio. Ya pasó una vez. */}
       <View className="items-center py-5">
-        <View
-          className={`w-20 h-20 rounded-3xl items-center justify-center overflow-hidden bg-${color}-100`}
-          style={CARD_SHADOW}
-        >
-          {foto ? (
-            <Image source={{ uri: foto }} style={{ width: 80, height: 80 }} />
-          ) : (
-            <Dibujo size={36} color={COLOR_HEX_600[color] || "#475569"} strokeWidth={2.2} />
+        <View className="flex-row items-center gap-3">
+          <View
+            className={`w-20 h-20 rounded-3xl items-center justify-center overflow-hidden bg-${color}-100`}
+            style={CARD_SHADOW}
+          >
+            {foto ? (
+              <Image source={{ uri: foto }} style={{ width: 80, height: 80 }} />
+            ) : (
+              <Dibujo size={36} color={COLOR_HEX_600[color] || "#475569"} strokeWidth={2.2} />
+            )}
+          </View>
+          {/* LA ESTRELLA. Solo cuando NO hay foto: un favorito es un ícono del
+              catálogo, y una foto propia no está en el catálogo — guardarla
+              como "favorito" no llevaría a ningún sitio al que volver. */}
+          {!foto && (
+            <TouchableOpacity
+              onPress={alternarFavorito}
+              className={`w-10 h-10 rounded-full items-center justify-center border-[1.5px] ${
+                esFav
+                  ? "bg-amber-100 border-amber-400"
+                  : "border-slate-300 dark:border-slate-600"
+              }`}
+            >
+              <Star
+                size={19}
+                color={esFav ? "#d97706" : "#94a3b8"}
+                fill={esFav ? "#f59e0b" : "transparent"}
+                strokeWidth={2.2}
+              />
+            </TouchableOpacity>
           )}
         </View>
         <Text className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-2.5">
@@ -297,9 +349,10 @@ export default function NuevaCategoria({
         )}
       </View>
 
-      {/* Las dos pestañas. */}
+      {/* LAS TRES PESTAÑAS. Favoritos va EN EL MEDIO, a pedido del usuario.
+          El número al lado dice cuántos hay sin tener que entrar. */}
       <View className="flex-row mx-5 mt-5 mb-1 border-b-[1.5px] border-slate-200 dark:border-slate-700">
-        {(["icono", "color"] as const).map((p) => (
+        {(["icono", "favoritos", "color"] as const).map((p) => (
           <TouchableOpacity
             key={p}
             onPress={() => setPestana(p)}
@@ -312,7 +365,11 @@ export default function NuevaCategoria({
                 pestana === p ? "text-emerald-600" : "text-slate-400"
               }`}
             >
-              {t(p === "icono" ? "nuevaCat.tabIcono" : "nuevaCat.tabColor")}
+              {p === "icono"
+                ? t("nuevaCat.tabIcono")
+                : p === "color"
+                  ? t("nuevaCat.tabColor")
+                  : `${t("nuevaCat.tabFavoritos")}${favoritos.length > 0 ? ` ${favoritos.length}` : ""}`}
             </Text>
           </TouchableOpacity>
         ))}
@@ -340,6 +397,38 @@ export default function NuevaCategoria({
               </TouchableOpacity>
             ))}
           </View>
+        </ScrollView>
+      ) : pestana === "favoritos" ? (
+        <ScrollView
+          className="flex-1 px-5"
+          contentContainerStyle={{ paddingBottom: 24, paddingTop: 12 }}
+          keyboardShouldPersistTaps="handled"
+        >
+          {favoritos.length === 0 ? (
+            /* VACÍA, PERO NO MUDA. Una pestaña vacía sin explicación deja a la
+               persona sin saber si está roto o si le falta hacer algo. Aquí se
+               dice exactamente qué hacer, y con la misma estrella que hay que
+               tocar. */
+            <View className="items-center py-10 px-6">
+              <Star size={30} color="#cbd5e1" strokeWidth={2} />
+              <Text className="text-xs text-center leading-5 text-slate-500 dark:text-slate-400 mt-3">
+                {t("nuevaCat.favVacio")}
+              </Text>
+            </View>
+          ) : (
+            // Las mismas filas y el mismo tamaño de casilla que el catálogo: es
+            // la misma elección, así que tiene que verse igual.
+            enFilas(favoritos).map((fila, f) => (
+              <Fila
+                key={f}
+                iconos={fila}
+                elegido={icono}
+                color={color}
+                lado={lado}
+                onElegir={setIcono}
+              />
+            ))
+          )}
         </ScrollView>
       ) : (
         // UNA PANTALLA DESLIZABLE NORMAL CON LOS 236 DIBUJOS PUESTOS. Sin lista

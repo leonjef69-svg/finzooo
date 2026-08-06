@@ -43,6 +43,7 @@ import {
   setPropias,
   type CategoriaPropia,
 } from "@/utils/categoriasPropias";
+import { loadFavoritos } from "@/utils/iconosFavoritos";
 import { DECOY_BUDGET, buildDecoyTransactions } from "@/utils/decoySeed";
 import { fmt as formatAmount, monthKey } from "@/utils/format";
 import { reserveIdsAbove } from "@/utils/id";
@@ -396,6 +397,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // Y las categorias propias, por el mismo motivo: catInfo las consulta
       // desde una variable de modulo, no desde el contexto.
       loadPropias(),
+      // Los iconos favoritos, tambien en variable de modulo: la pantalla de
+      // crear categoria los necesita al dibujarse, y leer el disco en cada
+      // letra que se escribe seria leer el disco decenas de veces.
+      loadFavoritos(),
     ]);
     setBudgets(savedBudgets);
     setCategoryBudgets(savedCategoryBudgets);
