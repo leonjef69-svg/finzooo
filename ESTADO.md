@@ -421,14 +421,86 @@ La lección: **el límite hay que decirlo en la pantalla, no solo en el chat.** 
 se lo había explicado bien en la conversación, y eso no sirve de nada tres
 semanas después, ni a nadie más que use la app.
 
+### El reporte se arma con la app cerrada (05/08/2026) — CAMBIO DE APK
+
+*"La idea es que yo rellene los datos y por ejemplo ponga una hora y que se
+exporte de manera automática, no tenga que hacer nada el usuario."*
+
+Ahora sí. A la hora fijada el archivo se arma y se guarda solo, con Finzo
+cerrada. **Solo Excel y CSV**: el PDF se dibuja en una ventana del navegador de
+Android y esa ventana necesita la app en pantalla. Es la única razón.
+
+**`modules/export-scheduler`** (nuevo): un despertador de Android
+(`AlarmManager`), un receptor que lo atiende y un `HeadlessJsTaskService` que
+arranca el JavaScript sin pantalla. **Es el mismo patrón que ya funciona para
+leer los yapes con la app cerrada**, copiado a propósito: es el que se sabe que
+funciona en este celular.
+
+**`utils/exportarEnFondo.ts`**: el trabajo. Vuelve a leer todo del disco
+—movimientos, idioma, ajustes— porque ahí no hay app.
+
+Y antes de nada hubo que **sacar la generación del Excel fuera de la pantalla**
+(`utils/reporteArchivo.ts`): estaba dentro de un componente, y un componente no
+existe cuando la app está cerrada.
+
+#### Decisiones que no se pueden cambiar sin romperlo
+
+- **Despertador INEXACTO** (`setAndAllowWhileIdle`). El exacto clava el minuto
+  pero desde Android 12 exige `SCHEDULE_EXACT_ALARM`, que Google solo aprueba
+  para alarmas y calendarios: pedirlo para un reporte de gastos es de las cosas
+  por las que rechazan una app en la tienda. Unos minutos de desvío no los nota
+  nadie. El `AllowWhileIdle` sí importa: sin él, un reporte de madrugada con el
+  celular quieto no llegaría nunca.
+- **Un RECEPTOR en medio**, no el servicio directo. Desde Android 8 una app en
+  segundo plano no puede arrancar un servicio; un receptor sí.
+- **El candado de energía se pide ANTES** de arrancar el servicio: entre que el
+  receptor termina y el servicio empieza hay un hueco donde Android puede volver
+  a dormir el celular.
+- **`BOOT_COMPLETED`.** Los despertadores no sobreviven a reiniciar el teléfono.
+  Sin esto, apagar y encender dejaba la exportación muerta **en silencio**, con
+  la pantalla diciendo que seguía activa. Y al reiniciar NO se exporta: solo se
+  repone el despertador, o saldría un reporte por cada reinicio.
+- **El despertador se repone SIEMPRE**, también cuando el reporte falla. Solo al
+  terminar bien, un día sin internet mataría la función para siempre.
+- **Tope de 120 s** y no los 30 del registro de yapes: aquí se sube un archivo
+  por internet, y con mala señal 30 s corta la subida a medias.
+- **Corre también con la app en pantalla** (`true`), al contrario que el registro
+  de yapes. Con `false` se saltaría a quien esté usando Finzo a esa hora.
+- **El día se comprueba otra vez en JavaScript**: un despertador retrasado hasta
+  pasada la medianoche haría el reporte de un día que no tocaba.
+- **`proximaEjecucion` vive en JavaScript**, no duplicada en Kotlin. Dos
+  calendarios se desincronizan y el que falla es el que nadie mira. Hay ~200
+  comprobaciones de que el momento devuelto **nunca cae en el pasado**: si
+  cayera, Android lo dispara de inmediato y luego nunca más.
+- **Cero movimientos no se sube**: llenaría la nube de archivos vacíos.
+
+#### Y se puede saber si corrió
+
+Se guarda el último intento con su motivo —listo, hoy no tocaba, sin
+movimientos, el PDF necesita la app abierta, falló— y la pantalla lo enseña. Un
+trabajo de fondo sin esto es imposible de arreglar: "no llegó nada" se ve igual
+con diez causas. Misma lección que dejó el registro de la captura de yapes.
+
+La pantalla también pregunta si **este APK** trae el módulo (`puedeExportarEnFondo`)
+y solo entonces promete que sale solo. Las actualizaciones por internet no traen
+código de Android, así que con un APK anterior dice la verdad de antes.
+
+#### Lo que hay que hacer en el celular, una vez
+
+Quitarle a Finzo el **ahorro de batería** en los ajustes de Android. Los Honor y
+Xiaomi son de los más agresivos matando procesos de fondo, y sin eso pueden
+retrasar o saltarse el reporte. No es algo que el código pueda arreglar.
+
 ### LO QUE SIGUE PENDIENTE DE ESTA PETICIÓN, Y POR QUÉ
 
 Del pedido largo quedó fuera lo que no depende de programar más:
 
-- **Ejecutarse a la hora en punto con la app cerrada** (WorkManager). El PDF se
-  arma en un WebView, que necesita la app abierta. Hay que generar el archivo en
-  código nativo y meterlo en un WorkManager: **cambio de APK**, no de
-  actualización.
+- **El PDF con la app cerrada.** Excel y CSV ya salen solos (ver arriba); el PDF
+  no, porque se dibuja en una ventana del navegador de Android que necesita la
+  app en pantalla. Para lograrlo habría que dibujarlo con `PdfDocument` de
+  Android o renderizar el HTML fuera de pantalla con `createPrintDocumentAdapter`.
+  Lo segundo es lo que conviene intentar primero: mantiene el diseño actual. Es
+  la parte incierta de esta petición y el usuario aceptó dejarla para después.
 - **OneDrive.** Necesita que el dueño de la cuenta registre la app en Azure y dé
   el identificador; eso no lo puede hacer el código. **Lo demás sí se puede por
   actualización**, igual que Dropbox: se copia `utils/dropbox.ts` cambiando las
