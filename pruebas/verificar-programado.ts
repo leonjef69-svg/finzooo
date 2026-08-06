@@ -474,6 +474,86 @@ console.log("\n--- EL DESPERTADOR DE ANDROID: LAS COSTURAS ---");
   ok(/\btrue\b\s*\)/.test(servicio), "corre también con la app abierta");
 }
 
+console.log("\n--- EL PDF CON LA APP CERRADA ---");
+{
+  const RAIZ = process.cwd();
+  const leer = (f: string) => fs.readFileSync(path.join(RAIZ, f), "utf8");
+  const fondo = leer("utils/exportarEnFondo.ts");
+  const pantalla = leer("screens/ExportPdfSheet.tsx");
+  const armador = leer("utils/reportePdfDatos.ts");
+  const puente = leer("modules/export-scheduler/index.ts");
+  const conversor = leer("modules/export-scheduler/android/src/main/java/com/finzo/exportscheduler/HtmlAPdf.kt");
+  const callbacks = leer("modules/export-scheduler/android/src/main/java/android/print/FinzoPrintCallbacks.kt");
+
+  // UN SOLO ARMADOR DEL HTML, y esto es lo importante de todo el cambio.
+  //
+  // Copiar las cuentas para el trabajo de fondo habría dejado DOS armadores del
+  // mismo documento: el PDF automático y el de a mano se irían separando con
+  // cada cambio, y el que nadie mira es el que se rompe. Es el fallo que más
+  // veces ha mordido este proyecto.
+  ok(/export function htmlDelReporte/.test(armador), "hay un armador del HTML, fuera de la pantalla");
+  ok(/htmlDelReporte\(\{/.test(pantalla), "la pantalla de exportar a mano lo usa");
+  ok(/htmlDelReporte\(\{/.test(fondo), "y el trabajo de fondo usa el MISMO");
+  // Y la pantalla ya no puede armarlo por su cuenta.
+  ok(!/buildPdfHtml\(/.test(pantalla), "la pantalla ya no arma el HTML por su cuenta");
+
+  // El PDF ya no se salta en el trabajo de fondo.
+  ok(
+    !/schedule\.format === "pdf"\) return await apuntar\("pdf-no-se-puede"\)/.test(fondo),
+    "el PDF ya no se descarta de entrada"
+  );
+  ok(/htmlAPdfEnFondo\(/.test(fondo), "se convierte con el código de Android");
+
+  // SE PREGUNTA POR LA FUNCIÓN, NO POR EL MÓDULO. Los APK 6ago-01 y 6ago-02 ya
+  // traen el despertador pero NO el conversor de PDF, que llegó después.
+  // Preguntando solo por el módulo, la app prometería el PDF automático a un
+  // celular que no puede hacerlo.
+  ok(/typeof nativo\?\.htmlAPdf === "function"/.test(puente), "se comprueba la función, no el módulo");
+  ok(/PdfEnFondoNoDisponible/.test(puente), "y hay un error propio para el APK viejo");
+  ok(
+    /e instanceof PdfEnFondoNoDisponible/.test(fondo),
+    "que se dice aparte: 'falló' mandaría a buscar un problema de internet"
+  );
+  ok(
+    /puedePdfEnFondo/.test(leer("screens/ScheduledExportSettings.tsx")),
+    "y la pantalla solo promete el PDF automático si el APK lo trae"
+  );
+
+  // LA CONVERSIÓN. Un WebView solo se puede crear desde el hilo principal, y
+  // desde el hilo del trabajo de fondo Android lanza.
+  ok(/Looper\.getMainLooper/.test(conversor), "el conversor trabaja en el hilo principal");
+  // onPageFinished avisa de que el HTML llegó, no de que esté COLOCADO. Midiendo
+  // en ese instante salían PDFs en blanco o con la tabla cortada.
+  ok(/ESPERA_COLOCADO_MS/.test(conversor), "espera a que el HTML quede colocado antes de medir");
+  ok(/javaScriptEnabled = false/.test(conversor), "sin JavaScript: el reporte es tablas y estilos");
+  ok(/NO_MARGINS/.test(conversor), "sin márgenes propios, que el HTML ya trae los suyos");
+  ok(/if \(archivo\.exists\(\)\) archivo\.delete\(\)/.test(conversor), "borra el anterior antes de escribir");
+
+  // La puerta lateral que hace posible todo esto, con su motivo escrito.
+  ok(/^package android\.print$/m.test(callbacks), "los callbacks viven en android.print, o no se pueden heredar");
+  ok(/constructores/i.test(callbacks), "y está escrito por qué hace falta");
+
+  // DOS CONTRADICCIONES QUE SE CAZARON REVISANDO EN FRÍO, antes de entregar.
+  //
+  // Son de la misma familia que las de ayer: un texto que decide por su cuenta y
+  // acaba diciendo lo contrario que el de al lado.
+  const ajustes = leer("screens/ScheduledExportSettings.tsx");
+
+  // 1. El aviso ámbar "el PDF no se puede con la app cerrada" salía TAMBIÉN con
+  //    el APK que sí sabe hacerlo, junto al cuadro que dice "se guarda solo".
+  ok(
+    /schedule\.format === "pdf" && !pdfEnFondo/.test(ajustes),
+    "el aviso de 'el PDF no se puede' solo sale si de verdad no se puede"
+  );
+
+  // 2. El aviso que llega al celular decía "Toca para exportar", y cuando llega
+  //    el archivo YA está guardado: tocarlo invitaría a hacer una segunda copia.
+  ok(/notifBodyFondo/.test(ajustes), "el aviso del celular no dice 'toca para exportar' si ya se guardó");
+  const i18nTexto = leer("constants/i18n.ts");
+  const cuantos = [...i18nTexto.matchAll(/"schedExport\.notifBodyFondo"/g)].length;
+  ok(cuantos === 3, `y está en los tres idiomas (hay ${cuantos})`);
+}
+
 console.log("\n--- DROPBOX: LO QUE NO PUEDE ESTAR MAL ---");
 {
   const RAIZ = process.cwd();

@@ -16,6 +16,7 @@ type NativeShape = {
   estaDisponible: () => boolean;
   programar: (cuandoMillis: number) => void;
   cancelar: () => void;
+  htmlAPdf: (html: string, destino: string) => Promise<string>;
 };
 
 const nativo = requireOptionalNativeModule<NativeShape>("ExportScheduler");
@@ -39,4 +40,35 @@ export function programarExportacion(cuando: Date): void {
 /** Quita el despertador. */
 export function cancelarExportacion(): void {
   nativo?.cancelar();
+}
+
+/** Se lanza cuando el APK instalado no sabe hacer el PDF sin pantalla. */
+export class PdfEnFondoNoDisponible extends Error {
+  constructor() {
+    super("pdf-en-fondo-no-disponible");
+    this.name = "PdfEnFondoNoDisponible";
+  }
+}
+
+/**
+ * ¿ESTE APK sabe hacer el PDF sin pantalla?
+ *
+ * Se pregunta por la FUNCIÓN y no por el módulo, y esa diferencia importa: los
+ * APK 6ago-01 y 6ago-02 ya traen el módulo (el despertador) pero NO traen esta
+ * función, que llegó después. Preguntando solo por el módulo, la app prometería
+ * el PDF automático a un celular que no puede hacerlo.
+ */
+export function puedePdfEnFondo(): boolean {
+  return Platform.OS === "android" && typeof nativo?.htmlAPdf === "function";
+}
+
+/**
+ * Convierte el HTML del reporte en un PDF, sin necesitar la app en pantalla.
+ *
+ * Es lo que permite que el PDF automático sea EL MISMO documento que el de a
+ * mano: se le pasa el HTML que arma utils/reportePdfDatos, el de siempre.
+ */
+export async function htmlAPdfEnFondo(html: string, destino: string): Promise<string> {
+  if (!puedePdfEnFondo()) throw new PdfEnFondoNoDisponible();
+  return await nativo!.htmlAPdf(html, destino);
 }

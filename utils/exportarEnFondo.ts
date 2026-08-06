@@ -15,11 +15,19 @@
 
 import { loadJSON, saveJSON, flushPendingSaves, STORAGE_KEYS } from "@/utils/storage";
 import { monthNamesFor, translations } from "@/constants/i18n";
+import { currencySymbolFor } from "@/constants/currencies";
+import { fmt as formatAmount } from "@/utils/format";
+import { htmlDelReporte } from "@/utils/reportePdfDatos";
+import { Paths } from "expo-file-system";
 import { archivoCsv, archivoExcel, filasDelReporte } from "@/utils/reporteArchivo";
 import { guardarEnCarpeta } from "@/utils/carpetaTelefono";
 import { subirADropbox } from "@/utils/dropbox";
 import { uploadToDrive } from "@/utils/googleDrive";
-import { programarExportacion } from "@/modules/export-scheduler";
+import {
+  htmlAPdfEnFondo,
+  PdfEnFondoNoDisponible,
+  programarExportacion,
+} from "@/modules/export-scheduler";
 import {
   buildFileName,
   claveDeEjecucion,
@@ -94,10 +102,9 @@ export async function exportarEnFondo(): Promise<ResultadoDeFondo> {
     return await apuntar("ya-se-hizo-hoy");
   }
 
-  // El PDF se dibuja en una ventana del navegador de Android, y esa ventana
-  // necesita la app en pantalla. No se intenta: se deja para cuando la app se
-  // abra, que es lo que hacía antes de que este trabajo existiera.
-  if (schedule.format === "pdf") return await apuntar("pdf-no-se-puede");
+  // El PDF ya NO se salta: desde el 06/08/2026 se convierte con código de
+  // Android que no necesita la app en pantalla. Ver modules/export-scheduler.
+  // Si el APK es anterior, htmlAPdfEnFondo lanza y se apunta el motivo.
   if (!esDestinoAutomatico(schedule.destination)) return await apuntar("destino-no-automatico");
 
   try {
@@ -140,16 +147,52 @@ export async function exportarEnFondo(): Promise<ResultadoDeFondo> {
       extension: schedule.format,
     });
 
-    const filas = filasDelReporte({
-      movimientos: delTipo,
-      total,
-      nombresDeMes: monthNamesFor(idioma),
-      t,
-    });
-    const archivo =
-      schedule.format === "xlsx"
-        ? archivoExcel(filas, t("exportPdf.movements"), fileName)
-        : archivoCsv(filas, fileName);
+    let archivo: { uri: string; fileName: string; mimeType: string };
+    if (schedule.format === "pdf") {
+      // El MISMO armador que usa la pantalla de exportar a mano, para que el PDF
+      // automático y el de a mano sean el mismo documento. Ver reportePdfDatos.
+      //
+      // Los gráficos van APAGADOS, igual que de fábrica en la pantalla: ocupan
+      // media hoja y empujan la lista a la siguiente. Quien quiera gráficos los
+      // enciende al exportar a mano.
+      const html = htmlDelReporte({
+        movimientos: delTipo,
+        todos: movimientos,
+        mes,
+        tipo: schedule.type,
+        charts: false,
+        userName: perfil.userName ?? "",
+        nombresDeMes: monthNamesFor(idioma),
+        presupuestos: await loadJSON<Record<string, number>>(STORAGE_KEYS.categoryBudgets, {}),
+        // El MISMO formateador que usa la app, con la moneda del perfil. Uno
+        // hecho aquí a mano ("S/ 12.50") saldría distinto del de la pantalla en
+        // cuanto alguien cambie el formato en un sitio y no en el otro.
+        fmt: (n) => formatAmount(n, currencySymbolFor(perfil.userCurrency ?? "PEN")),
+        titulo: t(
+          schedule.type === "expense"
+            ? "exportPdf.pdfTitleExpenses"
+            : schedule.type === "income"
+              ? "exportPdf.pdfTitleIncome"
+              : "exportPdf.pdfTitleAll"
+        ),
+        etiquetaDelMes: `${monthNamesFor(idioma)[Number(mes.slice(5, 7)) - 1]} ${mes.slice(0, 4)}`,
+        t,
+      });
+      const destino = `${Paths.cache.uri.replace("file://", "")}/${fileName}`;
+      const uri = await htmlAPdfEnFondo(html, destino);
+      archivo = { uri, fileName, mimeType: "application/pdf" };
+    } else {
+      const filas = filasDelReporte({
+        movimientos: delTipo,
+        total,
+        nombresDeMes: monthNamesFor(idioma),
+        t,
+      });
+      archivo =
+        schedule.format === "xlsx"
+          ? archivoExcel(filas, t("exportPdf.movements"), fileName)
+          : archivoCsv(filas, fileName);
+    }
 
     if (schedule.destination === "folder") {
       await guardarEnCarpeta(archivo.uri, archivo.fileName, archivo.mimeType);
@@ -167,9 +210,14 @@ export async function exportarEnFondo(): Promise<ResultadoDeFondo> {
     markExported(ahora);
     await flushPendingSaves();
     return await apuntar("hecho", archivo.fileName);
-  } catch {
-    // Nunca dejar que esto reviente: un trabajo de fondo que lanza una excepción
-    // deja a Android con un candado de energía abierto y el proceso colgado.
+  } catch (e) {
+    // El APK viejo se dice aparte: "falló" mandaría a buscar un problema de
+    // internet cuando lo que falta es instalar el APK nuevo. Los 6ago-01 y
+    // 6ago-02 traen el despertador pero no el conversor de PDF.
+    if (e instanceof PdfEnFondoNoDisponible) return await apuntar("pdf-no-se-puede");
+    // Y nunca dejar que esto reviente: un trabajo de fondo que lanza una
+    // excepción deja a Android con un candado de energía abierto y el proceso
+    // colgado.
     return await apuntar("error");
   }
 }

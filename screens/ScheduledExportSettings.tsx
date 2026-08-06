@@ -9,7 +9,7 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { carpetaElegida, elegirCarpeta } from "@/utils/carpetaTelefono";
 import { conectarDropbox, dropboxConectado } from "@/utils/dropbox";
 import { ultimoIntentoEnFondo, type UltimoIntento } from "@/utils/exportarEnFondo";
-import { puedeExportarEnFondo } from "@/modules/export-scheduler";
+import { puedeExportarEnFondo, puedePdfEnFondo } from "@/modules/export-scheduler";
 import {
   DEFAULT_SCHEDULE,
   MAX_MONTH_DAY,
@@ -59,6 +59,11 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
    * sería mentir, y de las mentiras que se descubren solas.
    */
   const [enFondo] = useState(() => puedeExportarEnFondo());
+  /**
+   * Y si sabe hacer el PDF sin pantalla, que llego despues que el despertador.
+   * Los APK 6ago-01 y 6ago-02 traen el despertador pero no el conversor.
+   */
+  const [pdfEnFondo] = useState(() => puedePdfEnFondo());
   /** Lo último que hizo el trabajo de fondo. Ver abajo por qué se enseña. */
   const [ultimo, setUltimo] = useState<UltimoIntento | null>(null);
   /** Para cuando quedo puesto el despertador. Ver applySchedule. */
@@ -157,9 +162,18 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
     // programar, así que no puede nombrar el mes: un aviso puesto en julio
     // seguiría diciendo "julio" en diciembre. El mes correcto lo calcula la
     // app al tocar el aviso, no el aviso mismo.
+    // El aviso que llega al celular decía "Toca para exportar", y con la
+    // exportación en fondo eso es falso: cuando llega, el archivo YA está
+    // guardado. Tocarlo abriría la pantalla de exportar e invitaría a hacer una
+    // segunda copia del mismo reporte.
+    //
+    // Se decide aquí y no dentro de applySchedule porque el texto del aviso se
+    // fija en el momento de programarlo y se queda así: hay que elegirlo con lo
+    // que se sabe ahora, no cuando suene.
+    const saldraSolo = enFondo && (next.format !== "pdf" || pdfEnFondo);
     const ok = await applySchedule(next, {
       title: t("schedExport.notifTitle"),
-      body: t("schedExport.notifBody"),
+      body: t(saldraSolo ? "schedExport.notifBodyFondo" : "schedExport.notifBody"),
     });
     setNotifOk(ok);
 
@@ -276,7 +290,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
    * mañana cambia la condición —por ejemplo cuando el PDF también pueda—, se
    * cambia en un sitio y los tres se enteran.
    */
-  const saleSolo = enFondo && schedule.format !== "pdf";
+  const saleSolo = enFondo && (schedule.format !== "pdf" || pdfEnFondo);
 
   return (
     <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top }}>
@@ -576,7 +590,12 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                 {/* Y el PDF no se puede armar con la app cerrada, así que quien
                     tenga el despertador y elija PDF tiene que saberlo aquí, al
                     elegirlo, y no descubrirlo por un reporte que no llega. */}
-                {enFondo && schedule.format === "pdf" && (
+                {/* El "!pdfEnFondo" es la corrección de una contradicción que
+                    duró un rato: con el APK que SÍ sabe hacer el PDF sin
+                    pantalla, este aviso salía igual, así que la pantalla decía
+                    "se guarda solo" y "el PDF no se puede" a la vez. Es el mismo
+                    fallo de tener dos textos decidiendo por su cuenta. */}
+                {enFondo && schedule.format === "pdf" && !pdfEnFondo && (
                   <Text className="text-[11px] leading-5 text-amber-700 dark:text-amber-300 mt-1.5">
                     {t("schedExport.fondoNoPdf")}
                   </Text>
