@@ -342,6 +342,82 @@ console.log("\n--- LA PANTALLA DICE Y OFRECE LO QUE DEBE ---");
   ok(!/"schedExport\.retry/.test(i18n), "ni sus textos en los idiomas");
 }
 
+console.log("\n--- EL DESPERTADOR DE ANDROID: LAS COSTURAS ---");
+{
+  const RAIZ = process.cwd();
+  const MOD = "modules/export-scheduler";
+  const leer = (f: string) => fs.readFileSync(path.join(RAIZ, f), "utf8");
+  const modulo = leer(`${MOD}/android/src/main/java/com/finzo/exportscheduler/ExportSchedulerModule.kt`);
+  const receptor = leer(`${MOD}/android/src/main/java/com/finzo/exportscheduler/FinzoExportReceiver.kt`);
+  const servicio = leer(`${MOD}/android/src/main/java/com/finzo/exportscheduler/FinzoExportService.kt`);
+  const manifiesto = leer(`${MOD}/android/src/main/AndroidManifest.xml`);
+  const puente = leer(`${MOD}/index.ts`);
+  const entrada = leer("index.js");
+
+  // NOMBRES QUE TIENEN QUE COINCIDIR ENTRE KOTLIN Y JAVASCRIPT.
+  //
+  // Es el fallo que más veces ha mordido este proyecto: dos mitades que por
+  // separado están bien y el error en la costura. Aquí duele especialmente,
+  // porque si un nombre no coincide Android despierta el trabajo, no encuentra
+  // nada con ese nombre y se cierra SIN DECIR NADA. No falla: no pasa.
+  const tarea = /TAREA = "([^"]+)"/.exec(servicio)?.[1] ?? "";
+  ok(tarea !== "", "el servicio declara el nombre de la tarea");
+  ok(
+    entrada.includes(`registerHeadlessTask("${tarea}"`),
+    `index.js registra ese mismo nombre (${tarea})`
+  );
+
+  const nombreModulo = /Name\("([^"]+)"\)/.exec(modulo)?.[1] ?? "";
+  ok(
+    puente.includes(`requireOptionalNativeModule<NativeShape>("${nombreModulo}")`),
+    `el puente pide el módulo por su nombre real (${nombreModulo})`
+  );
+  ok(
+    manifiesto.includes("com.finzo.exportscheduler.FinzoExportService"),
+    "el servicio está declarado en el manifiesto"
+  );
+  ok(
+    manifiesto.includes("com.finzo.exportscheduler.FinzoExportReceiver"),
+    "y el receptor también"
+  );
+
+  // Y cada función que JavaScript llama tiene que existir en Kotlin.
+  for (const f of ["estaDisponible", "programar", "cancelar"]) {
+    ok(modulo.includes(`Function("${f}")`), `Kotlin declara ${f}`);
+  }
+
+  // EL RECEPTOR TIENE QUE ESTAR ABIERTO, y estuvo cerrado: el mensaje de
+  // "teléfono encendido" lo manda el sistema, que es OTRA app, así que con
+  // exported="false" no llegaba nunca. Reiniciar el celular dejaba la función
+  // muerta en silencio.
+  const bloqueReceptor = /<receiver[\s\S]*?<\/receiver>/.exec(manifiesto)?.[0] ?? "";
+  ok(/android:exported="true"/.test(bloqueReceptor), "el receptor está abierto, o el arranque no llega");
+  ok(/BOOT_COMPLETED/.test(bloqueReceptor), "y escucha el arranque del teléfono");
+  // Y el agujero que eso abre se cierra exigiendo una acción propia: sin esto,
+  // otra app podría disparar una exportación mandando un mensaje vacío.
+  ok(/ACCION_EXPORTAR/.test(modulo), "hay una acción propia para el despertador");
+  ok(/ACCION_EXPORTAR ->/.test(receptor), "y el receptor solo exporta con esa acción");
+  ok(/else -> Unit/.test(receptor), "cualquier otro mensaje se ignora");
+
+  // EL TIPO DE DESPERTADOR. Se usó el inexacto y fue un error: Android agrupa
+  // esos avisos y puede retrasarlos diez minutos, así que la función no se podía
+  // ni probar. setAlarmClock es el único exacto que no pide permisos.
+  ok(/setAlarmClock/.test(modulo), "el despertador es exacto (setAlarmClock)");
+  ok(
+    !/SCHEDULE_EXACT_ALARM/.test(manifiesto),
+    "y no se pide SCHEDULE_EXACT_ALARM, que Google solo aprueba para alarmas"
+  );
+
+  // El tope de tiempo del servicio: aquí se sube un archivo por internet, y los
+  // 30 s que usa el registro de yapes cortarían la subida a medias.
+  const tope = Number(/^\s*(\d{4,}),$/m.exec(servicio)?.[1] ?? "0");
+  ok(tope >= 60000, `el tope de tiempo es de al menos un minuto (${tope} ms)`);
+
+  // Y corre también con la app en pantalla: con false se saltaría a quien esté
+  // usando Finzo justo a esa hora.
+  ok(/\btrue\b\s*\)/.test(servicio), "corre también con la app abierta");
+}
+
 console.log("\n--- DROPBOX: LO QUE NO PUEDE ESTAR MAL ---");
 {
   const RAIZ = process.cwd();

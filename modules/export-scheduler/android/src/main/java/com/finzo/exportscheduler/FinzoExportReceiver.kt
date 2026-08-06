@@ -31,14 +31,21 @@ import com.facebook.react.HeadlessJsTaskService
 class FinzoExportReceiver : BroadcastReceiver() {
 
   override fun onReceive(context: Context, intent: Intent?) {
-    if (intent?.action == Intent.ACTION_BOOT_COMPLETED) {
-      // Al reiniciar no se exporta: se vuelve a poner el despertador. Exportar
-      // aqui mandaria un reporte cada vez que alguien reinicia el telefono.
-      ExportSchedulerModule.reponerTrasReinicio(context)
-      return
+    when (intent?.action) {
+      Intent.ACTION_BOOT_COMPLETED -> {
+        // Al reiniciar no se exporta: se vuelve a poner el despertador. Exportar
+        // aqui mandaria un reporte cada vez que alguien reinicia el telefono.
+        ExportSchedulerModule.reponerTrasReinicio(context)
+      }
+      ExportSchedulerModule.ACCION_EXPORTAR -> {
+        HeadlessJsTaskService.acquireWakeLockNow(context)
+        context.startService(Intent(context, FinzoExportService::class.java))
+      }
+      // Cualquier otra cosa se ignora, y eso es lo que cierra el agujero de
+      // tener el receptor abierto (hace falta abrirlo para que el sistema pueda
+      // avisar del arranque; ver el manifiesto). Sin este filtro, otra app
+      // podria disparar una exportacion mandando un mensaje vacio.
+      else -> Unit
     }
-
-    HeadlessJsTaskService.acquireWakeLockNow(context)
-    context.startService(Intent(context, FinzoExportService::class.java))
   }
 }

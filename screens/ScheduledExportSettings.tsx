@@ -17,6 +17,7 @@ import {
   buildFileName,
   loadSchedule,
   monthForSchedule,
+  proximaProgramada,
   saveSchedule,
   toDateKey,
   type ExportDestination,
@@ -60,6 +61,8 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
   const [enFondo] = useState(() => puedeExportarEnFondo());
   /** Lo último que hizo el trabajo de fondo. Ver abajo por qué se enseña. */
   const [ultimo, setUltimo] = useState<UltimoIntento | null>(null);
+  /** Para cuando quedo puesto el despertador. Ver applySchedule. */
+  const [proxima, setProxima] = useState(0);
 
   useEffect(() => {
     let alive = true;
@@ -79,6 +82,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
     carpetaElegida().then((c) => alive && setCarpeta(c));
     dropboxConectado().then((c) => alive && setDropbox(c));
     ultimoIntentoEnFondo().then((u) => alive && setUltimo(u));
+    proximaProgramada().then((p) => alive && setProxima(p));
     return () => {
       alive = false;
     };
@@ -249,6 +253,20 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
   const destLabel = DESTINOS.find((d) => d.id === schedule.destination)?.label ?? "";
   const freqLabel = FRECUENCIAS.find((f) => f.id === schedule.frequency)?.label ?? "";
 
+  /**
+   * ¿ESTA configuración sale sola con la app cerrada? UNA sola respuesta.
+   *
+   * Existe porque la pantalla se contradecía: arriba decía "no puede mandarse
+   * solo con la app cerrada", en medio "se guarda solo aunque Finzo esté
+   * cerrada", y abajo en verde "en cuanto abras Finzo". Tres textos, tres
+   * versiones, y el usuario leyendo las tres a la vez.
+   *
+   * Pasó porque cada texto decidía por su cuenta. Ahora todos miran aquí: si
+   * mañana cambia la condición —por ejemplo cuando el PDF también pueda—, se
+   * cambia en un sitio y los tres se enteran.
+   */
+  const saleSolo = enFondo && schedule.format !== "pdf";
+
   return (
     <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top }}>
       <View className="px-5 pt-3 pb-2 flex-row items-center gap-2">
@@ -286,19 +304,22 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
         </View>
 
         {/* QUÉ HACE Y QUÉ NO.
-            Alguien que activa esto espera que le llegue el archivo al correo
-            dormido. Si eso no va a pasar, tiene que saberlo antes de confiar
-            en ello y no un mes después. */}
+            Alguien que activa esto espera que le llegue el archivo solo. Si eso
+            no va a pasar, tiene que saberlo ANTES de confiar en ello y no un mes
+            después. Y si SÍ va a pasar, decir lo contrario es igual de malo:
+            este cuadro decía que no se podía cuando ya se podía. */}
         <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 mb-5">
           <View className="flex-row gap-2.5">
             <Info size={16} color="#64748b" />
             <Text className="flex-1 text-xs text-slate-600 dark:text-slate-300 leading-5">
-              {t("schedExport.explain")}
+              {t(saleSolo ? "schedExport.explainFondo" : "schedExport.explain")}
             </Text>
           </View>
-          <Text className="text-[11px] text-slate-500 dark:text-slate-400 leading-4 mt-2.5 pl-[26px]">
-            {t("schedExport.whyNotFull")}
-          </Text>
+          {!saleSolo && (
+            <Text className="text-[11px] text-slate-500 dark:text-slate-400 leading-4 mt-2.5 pl-[26px]">
+              {t("schedExport.whyNotFull")}
+            </Text>
+          )}
         </View>
 
         {schedule.enabled && (
@@ -553,6 +574,14 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                     Un trabajo de fondo sin esto es imposible de arreglar: "no
                     llegó nada" se ve igual con diez causas distintas. Es la
                     misma lección que dejó el registro de la captura de yapes. */}
+                {/* PARA CUÁNDO QUEDÓ PUESTO. Es la línea que resuelve de una
+                    la duda de "puse la hora y no llegó nada": si dice mañana,
+                    ya está contestado. */}
+                {saleSolo && proxima > 0 && (
+                  <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-400 mt-1.5">
+                    {t("schedExport.proxima", { cuando: new Date(proxima).toLocaleString() })}
+                  </Text>
+                )}
                 {ultimo && (
                   <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-400 mt-1.5">
                     {t("schedExport.ultimoIntento", {
@@ -706,7 +735,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
             {schedule.destination === "drive" && (
               <View className="rounded-xl bg-emerald-50 dark:bg-emerald-900/20 border-[1.5px] border-emerald-600 p-3.5 mb-5">
                 <Text className="text-xs text-emerald-800 dark:text-emerald-200 leading-5">
-                  {t("schedExport.driveNote")}
+                  {t(saleSolo ? "schedExport.destinoFondo" : "schedExport.driveNote")}
                 </Text>
               </View>
             )}
@@ -729,7 +758,9 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                       : "text-emerald-800 dark:text-emerald-200"
                   }`}
                 >
-                  {carpeta === "" ? t("schedExport.folderMissing") : t("schedExport.folderNote")}
+                  {carpeta === ""
+                    ? t("schedExport.folderMissing")
+                    : t(saleSolo ? "schedExport.destinoFondo" : "schedExport.folderNote")}
                 </Text>
                 <TouchableOpacity
                   onPress={pedirCarpeta}
@@ -759,7 +790,13 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                       : "text-amber-800 dark:text-amber-200"
                   }`}
                 >
-                  {t(dropbox ? "schedExport.dropboxNote" : "schedExport.dropboxMissing")}
+                  {t(
+                    !dropbox
+                      ? "schedExport.dropboxMissing"
+                      : saleSolo
+                        ? "schedExport.destinoFondo"
+                        : "schedExport.dropboxNote"
+                  )}
                 </Text>
                 {!dropbox && (
                   <TouchableOpacity

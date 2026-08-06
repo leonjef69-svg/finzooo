@@ -17,18 +17,26 @@ import expo.modules.kotlin.modules.ModuleDefinition
  * concreta: garantizan "una vez cada 24 horas", que puede caer a cualquier
  * hora. Para "todos los dias a las 19:26" hace falta un despertador.
  *
- * SE USA EL DESPERTADOR INEXACTO, Y ES A PROPOSITO
+ * POR QUE setAlarmClock Y NO LOS OTROS DOS
  *
- * setAndAllowWhileIdle avisa CERCA de la hora —puede desviarse unos minutos— y
- * no necesita ningun permiso. El exacto (setExactAndAllowWhileIdle) clava el
- * minuto pero desde Android 12 exige el permiso SCHEDULE_EXACT_ALARM, que
- * Google solo aprueba para alarmas y recordatorios de calendario; pedirlo para
- * un reporte de gastos es la clase de cosa que hace que rechacen la app en la
- * tienda. Unos minutos de desvio en un reporte diario no los nota nadie.
+ * Es el unico que da hora exacta SIN pedir permisos, y ademas Android lo
+ * respeta con el telefono dormido. Los otros dos que parecian obvios fallaron:
  *
- * El "AllowWhileIdle" si importa: sin eso, con el celular quieto toda la noche
- * el despertador se queda esperando a que alguien lo toque, y un reporte a las
- * 3 de la manana no llegaria nunca.
+ *   setAndAllowWhileIdle — se uso primero y fue un error. Es INEXACTO: Android
+ *     agrupa esos avisos y puede retrasarlos diez minutos o mas. El usuario
+ *     probo poniendo la hora un minuto adelante y no sono; con este despertador
+ *     era casi imposible que sonara puntual. Para un reporte diario el desvio
+ *     no importaria, pero para PROBARLO importa muchisimo, y una funcion que no
+ *     se puede probar no se puede creer.
+ *
+ *   setExactAndAllowWhileIdle — clava el minuto, pero desde Android 12 exige el
+ *     permiso SCHEDULE_EXACT_ALARM, que Google solo aprueba para alarmas y
+ *     calendarios. Pedirlo para una app de gastos es de las cosas por las que
+ *     rechazan una app en la tienda.
+ *
+ * LO QUE SE PAGA: Android trata esto como una alarma de reloj, asi que puede
+ * ensenar el iconito de alarma en la barra de arriba con la proxima hora. Es
+ * visible y hay que avisarlo; a cambio, el reporte llega cuando dice que llega.
  */
 class ExportSchedulerModule : Module() {
 
@@ -68,6 +76,9 @@ class ExportSchedulerModule : Module() {
   }
 
   companion object {
+    /** La accion del despertador. Solo con esta se exporta. Ver el receptor. */
+    const val ACCION_EXPORTAR = "com.finzo.exportscheduler.EXPORTAR"
+
     private const val PREFS = "finzo.exportScheduler"
     private const val CLAVE_CUANDO = "cuando"
 
@@ -78,7 +89,11 @@ class ExportSchedulerModule : Module() {
       context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     private fun aviso(context: Context): PendingIntent {
-      val intent = Intent(context, FinzoExportReceiver::class.java)
+      // Con accion propia, y no un mensaje vacio: el receptor tiene que estar
+      // abierto para que el sistema pueda avisar del arranque, y lo unico que
+      // impide que otra app dispare una exportacion es que el receptor exija
+      // esta accion. Ver FinzoExportReceiver.
+      val intent = Intent(context, FinzoExportReceiver::class.java).setAction(ACCION_EXPORTAR)
       return PendingIntent.getBroadcast(
         context,
         0,
@@ -90,7 +105,14 @@ class ExportSchedulerModule : Module() {
     }
 
     private fun poner(context: Context, cuando: Long) {
-      alarmas(context).setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cuando, aviso(context))
+      val gestor = alarmas(context)
+      try {
+        gestor.setAlarmClock(AlarmManager.AlarmClockInfo(cuando, aviso(context)), aviso(context))
+      } catch (e: SecurityException) {
+        // Algun fabricante podria negarlo. Antes que quedarse sin nada, se cae
+        // al inexacto: llega tarde, pero llega.
+        gestor.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cuando, aviso(context))
+      }
     }
 
     /**

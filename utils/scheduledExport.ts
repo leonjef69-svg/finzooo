@@ -110,6 +110,13 @@ export const DEFAULT_SCHEDULE: ScheduledExport = {
 };
 
 const STORAGE_KEY = "finzo:scheduledExport";
+/** Para cuándo quedó puesto el despertador. Ver applySchedule. */
+const KEY_PROXIMA = "finzo:scheduledExport.proxima";
+
+/** Para cuándo está puesto el despertador, o 0 si no hay ninguno. */
+export async function proximaProgramada(): Promise<number> {
+  return await loadJSON<number>(KEY_PROXIMA, 0);
+}
 
 // Todos los avisos de exportación llevan esta marca para poder cancelar solo
 // los nuestros. Cancelar todos los avisos programados se llevaría por delante
@@ -281,8 +288,21 @@ export async function applySchedule(
   //
   // Si el APK no trae el módulo nativo, estas dos funciones no hacen nada y
   // queda el comportamiento de siempre. Ver modules/export-scheduler.
-  if (schedule.enabled) programarExportacion(proximaEjecucion(schedule, new Date()));
-  else cancelarExportacion();
+  if (schedule.enabled) {
+    const cuando = proximaEjecucion(schedule, new Date());
+    programarExportacion(cuando);
+    // Se apunta PARA CUÁNDO quedó puesto, y la pantalla lo enseña.
+    //
+    // Sin este dato no había forma de saber por qué no llegó un reporte: si el
+    // despertador no había sonado o si había sonado y el trabajo falló. Se veía
+    // igual. El usuario puso la hora un minuto adelante, no llegó nada, y para
+    // averiguar el motivo hubo que leer código — cuando la respuesta ("quedó
+    // puesto para mañana") cabía en una línea de la pantalla.
+    saveJSON(KEY_PROXIMA, cuando.getTime());
+  } else {
+    cancelarExportacion();
+    saveJSON(KEY_PROXIMA, 0);
+  }
   if (!schedule.enabled) return true;
 
   const { status } = await Notifications.requestPermissionsAsync();

@@ -16,9 +16,24 @@
       Android 8 una app en segundo plano no puede arrancar un servicio, pero
       un receptor SI puede, y es la forma documentada de hacer esto.
     -->
+    <!--
+      exported="true" Y NO false, y no es un descuido: estuvo en false y el
+      arranque NO llegaba nunca.
+
+      El mensaje de "telefono encendido" lo manda el sistema operativo, que es
+      OTRA aplicacion. Con exported="false" Android solo entrega mensajes de la
+      propia app, asi que el filtro de abajo no servia para nada: reiniciar el
+      telefono dejaba la exportacion muerta EN SILENCIO, con la pantalla
+      diciendo que seguia activa.
+
+      Y el agujero que abre exported="true" se cierra en el codigo: onReceive
+      solo hace algo con dos acciones conocidas —el arranque y la nuestra— y
+      cualquier otro mensaje lo ignora. Sin eso, otra app podria disparar una
+      exportacion mandando un mensaje vacio.
+    -->
     <receiver
       android:name="com.finzo.exportscheduler.FinzoExportReceiver"
-      android:exported="false">
+      android:exported="true">
       <intent-filter>
         <action android:name="android.intent.action.BOOT_COMPLETED" />
       </intent-filter>
