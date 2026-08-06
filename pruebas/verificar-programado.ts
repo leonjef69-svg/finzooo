@@ -246,6 +246,23 @@ console.log("\n--- LA PANTALLA DICE Y OFRECE LO QUE DEBE ---");
     "y sale antes de las horas en punto, no escondida al final de la fila"
   );
 
+  // QUÉ PASA A ESA HORA, dicho en la pantalla. El usuario lo preguntó con todo
+  // ya configurado —"¿debería exportar automáticamente a la hora que le puse?"—
+  // y tenía razón: no se decía en ningún sitio.
+  ok(codigo.includes("schedExport.timeWhatHappens"), "la pantalla explica qué pasa a la hora fijada");
+
+  // Y ninguna nota puede volver a prometer "automático del todo". Lo decían las
+  // tres, en la MISMA frase en que admitían que hay que abrir la app. Prometer
+  // de más es peor que explicar el límite.
+  const notas = [...i18n.matchAll(/"schedExport\.(?:driveNote|folderNote|dropboxNote)":\s*\n?\s*"([^"]*)"/g)].map(
+    (m) => m[1]
+  );
+  ok(notas.length === 9, `hay 9 notas de destino (3 por idioma), y hay ${notas.length}`);
+  ok(
+    notas.every((x) => !/del todo|fully automatic|de verdade/i.test(x)),
+    "ninguna promete 'automático del todo'"
+  );
+
   // Y la repesca no puede volver por la puerta de atrás.
   ok(!/retryMinutes/.test(codigo), "no queda nada de la repesca en la pantalla");
   ok(!/"schedExport\.retry/.test(i18n), "ni sus textos en los idiomas");

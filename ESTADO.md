@@ -401,6 +401,26 @@ También se tapó un hueco del auditor de pantallas externas: solo lee el texto 
 las pantallas, así que una llamada indirecta no se ve. Se añadieron `elegirCarpeta`
 y `conectarDropbox` a su lista, igual que ya estaba `applySchedule`.
 
+### La pantalla no decía qué pasa a la hora fijada (05/08/2026)
+
+Con todo ya configurado, el usuario preguntó: *"debería automáticamente ya
+exportar a la hora que le puse, ¿cierto o no?"*. Tenía razón en preguntar: **no
+se decía en ningún sitio**.
+
+Y las tres notas de destino lo empeoraban, porque **se contradecían en la misma
+frase**: "Con Drive sí es automático **del todo**: la copia se sube sola la
+próxima vez que **abras Finzo**". Las dos mitades no pueden ser verdad a la vez.
+
+Ahora hay un aviso fijo debajo de la hora —"a esa hora te llega un aviso; el
+archivo se crea solo en cuanto abras Finzo, no a la hora exacta con la app
+cerrada"— y las tres notas dicen lo mismo sin prometer de más. Hay una prueba que
+prohíbe que vuelva a aparecer "del todo" / "fully automatic" / "de verdade" en
+esas notas.
+
+La lección: **el límite hay que decirlo en la pantalla, no solo en el chat.** Yo
+se lo había explicado bien en la conversación, y eso no sirve de nada tres
+semanas después, ni a nadie más que use la app.
+
 ### LO QUE SIGUE PENDIENTE DE ESTA PETICIÓN, Y POR QUÉ
 
 Del pedido largo quedó fuera lo que no depende de programar más:

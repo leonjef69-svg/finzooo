@@ -508,6 +508,19 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
               </View>
             )}
 
+            {/* QUÉ PASA A ESA HORA, dicho debajo de la hora.
+                El usuario preguntó "¿debería exportar automáticamente a la hora
+                que le puse?" con todo ya configurado, y es la pregunta correcta:
+                en ningún sitio se decía. Las notas de cada destino lo explicaban
+                a medias y encima se contradecían — decían "automático del todo"
+                y "la próxima vez que abras Finzo" en la misma frase. */}
+            <View className="rounded-xl bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700 p-3.5 mb-5 flex-row gap-2.5">
+              <Info size={15} color="#64748b" />
+              <Text className="text-[11px] leading-5 text-slate-600 dark:text-slate-300 flex-1">
+                {t("schedExport.timeWhatHappens")}
+              </Text>
+            </View>
+
             <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
               {t("exportPdf.formatLabel")}
             </Text>
