@@ -542,9 +542,42 @@ NativeWind en las casillas, el remontaje al cambiar de pestaña, montar las cuat
 pestañas al abrir, `overflow` en las 236, las 48 filas rehaciéndose al tocar, y la
 vista animada de `TouchableOpacity` (esa además rompió la cuadrícula).
 
-**Lo primero, antes de seguir buscando: que él pruebe `7ago-17` y mida las dos cosas
-por separado** —entrar a la pantalla, y tocar un icono—. Si esta séptima causa era la
-gorda, se nota sin cronómetro; si no, ya no quedan causas "de leer" y toca el punto 2.
+### Lo que midió él con 7ago-17
+
+| | Antes | Con 7ago-17 |
+|---|---|---|
+| Entrar a Elegir categoría | 2–3 segundos | **1 segundo** |
+| Tocar un icono | 1–2 segundos | **sigue sin ser instantáneo** |
+
+**Entrar quedó resuelto**: la séptima causa era la gorda de esa mitad. Lo que queda es
+solo el toque.
+
+### EL MEDIDOR EN LA APP (7ago-18) — temporal, hay que quitarlo
+
+Aquí se dejó de buscar una octava causa leyendo. Se releyó el camino del toque entero y
+**está correcto**: `Fila` y `Dibujito` memorizados, `onElegir` es `setIcono` (estable),
+`aspecto` sale de un `useMemo` que no depende del dibujo elegido, y a cada fila se le
+pasa nulo si el elegido no está en ella. Sobre el papel se rehacen dos filas. Buscar la
+octava por lectura sería repetir el error por octava vez.
+
+Así que el medidor va **dentro de la app**, en la pantalla, y él lee el número. Da dos
+datos y **cada uno señala un culpable distinto** — por eso son dos y no uno:
+
+- **Milisegundos** desde `onPressIn` —el primer instante en que el toque llega al
+  código— hasta el cuadro siguiente al cambio, con `requestAnimationFrame`, que es
+  cuando ya se VE. Si sale bajo, el retraso **no está en rehacer nada**: está antes, en
+  la parte de Android que decide si el dedo era un toque o un deslizón dentro de la
+  parte deslizable, y entonces el arreglo es otro completamente.
+- **Cuántas filas se rehicieron.** Tienen que ser **2**. Si en el celular salen 48, la
+  memorización no funciona allí — y eso **no se puede ver leyendo**, porque el código
+  parece correcto. Es justo el caso que dos días de lectura no encontrarían.
+
+Se mide desde `onPressIn` y no desde `onPress` a propósito: `onPress` espera a que el
+dedo se levante, y eso lo decide la persona. Mediría a la persona, no al programa.
+
+> **PENDIENTE DE QUITAR:** `MEDIDOR`, el `onPressIn`, el contador en `Fila`, el estado
+> `medida`, el texto en pantalla y la clave `nuevaCat.medida` en los tres idiomas. No
+> tiene prueba que lo vigile **a propósito**: una prueba lo volvería permanente.
 
 **Lo que queda por probar, en orden de menos a más invasivo:**
 

@@ -42,6 +42,29 @@ import { sanitizeName } from "@/utils/categoryCustom";
  */
 const ESPERA_RESTO_MS = 350;
 
+/**
+ * EL MEDIDOR DEL TOQUE. ES TEMPORAL: se quita en cuanto sepamos dónde está el retraso.
+ *
+ * Por qué existe. Se arreglaron SIETE causas de lentitud razonando sobre el código, y
+ * el toque sigue sin sentirse instantáneo (07/08/2026: *"tocar un icono, ¿se marca al
+ * instante? no"*). Buscar una octava leyendo sería el mismo error por octava vez: lo
+ * que falta es un NÚMERO sacado del propio celular.
+ *
+ * Da dos datos, y cada uno señala un culpable distinto:
+ *
+ * - **milisegundos**, desde que el toque llega al código hasta que la casilla nueva ya
+ *   está pintada. Si sale bajo (unas decenas) el retraso NO está en rehacer nada:
+ *   está antes, en la parte de Android que decide si el dedo era un toque o un
+ *   deslizón, y el arreglo es otro completamente.
+ * - **cuántas filas se rehicieron**. Tienen que ser DOS: la que suelta la marca y la
+ *   que la toma. Si en el celular salen 48, la memorización no está funcionando allí
+ *   —y eso no se puede ver leyendo, porque el código parece correcto—.
+ *
+ * Se mide desde onPressIn y no desde onPress: onPress espera a que el dedo se levante,
+ * y eso lo decide la persona, no la app. Mediría a la persona, no al programa.
+ */
+const MEDIDOR = { toque: 0, filas: 0 };
+
 // Los mismos de personalizar categorias, para que una categoria propia no
 // pueda tener un color que las de fabrica no tienen.
 const COLORES = [
@@ -165,6 +188,12 @@ const Dibujito = memo(function Dibujito({
     // El ahorro que sí valía era otro y se quedó: las pestañas ya no se rehacen al
     // cambiar (ver la nota del display) y solo recortan las casillas con foto.
     <TouchableOpacity
+      // MEDIDOR TEMPORAL: aquí es donde el toque llega al código por primera vez.
+      // Ver MEDIDOR arriba. Se quita junto con él.
+      onPressIn={() => {
+        MEDIDOR.toque = Date.now();
+        MEDIDOR.filas = 0;
+      }}
       onPress={() => onElegir(id)}
       // SIN NINGUNA CLASE, y ahí está el arreglo. Ver aspectoDeCasilla: el aspecto
       // ya viene calculado y las 236 comparten el mismo objeto.
@@ -218,6 +247,8 @@ const Fila = memo(function Fila({
   lado: number;
   onElegir: (id: string) => void;
 }) {
+  // MEDIDOR TEMPORAL: cada vez que una fila se rehace, se cuenta. Ver MEDIDOR arriba.
+  MEDIDOR.filas++;
   return (
     // Alto y separación explícitos: es la altura que la lista da por hecha.
     <View style={{ flexDirection: "row", height: lado, gap: SEPARACION, marginBottom: SEPARACION }}>
@@ -442,6 +473,23 @@ export default function NuevaCategoria({
     const reloj = setTimeout(() => setGruposADibujar(CATALOGO_EN_FILAS.length), ESPERA_RESTO_MS);
     return () => clearTimeout(reloj);
   }, [gruposADibujar]);
+
+  /**
+   * EL MEDIDOR TEMPORAL, la mitad que para el cronómetro. Ver MEDIDOR arriba.
+   *
+   * El requestAnimationFrame es lo que hace que el número signifique algo: este efecto
+   * corre cuando el cambio ya está hecho, pero ANTES de que la pantalla lo muestre. Lo
+   * que se quiere medir es hasta que se VE, así que se espera al siguiente cuadro.
+   */
+  const [medida, setMedida] = useState<string | null>(null);
+  useEffect(() => {
+    if (!MEDIDOR.toque) return;
+    const desde = MEDIDOR.toque;
+    const filas = MEDIDOR.filas;
+    MEDIDOR.toque = 0;
+    const cuadro = requestAnimationFrame(() => setMedida(`${Date.now() - desde} ms · ${filas}`));
+    return () => cancelAnimationFrame(cuadro);
+  }, [icono]);
   function irA(cual: typeof pestana) {
     setPestana(cual);
     // Solo se toca el conjunto la primera vez: pasarlo nuevo en cada toque haría
@@ -838,6 +886,16 @@ export default function NuevaCategoria({
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* EL NÚMERO DEL MEDIDOR. TEMPORAL, se quita con el resto. Ver MEDIDOR.
+            Se pone aquí y no escondido en un registro porque el que tiene que leerlo
+            es él, en su celular, y contármelo. Dice los milisegundos y cuántas filas
+            se rehicieron; deberían ser 2. */}
+        {medida !== null && (
+          <Text className="text-[10px] text-slate-400 text-center mt-1">
+            {t("nuevaCat.medida", { medida })}
+          </Text>
+        )}
       </View>
 
       {/* El "px-5" del contenido de las pestañas es el MARGEN_LATERAL de las
