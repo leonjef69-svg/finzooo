@@ -158,6 +158,7 @@ export function catInfo(id: string): Category {
       label: cambio.name ?? suyo.label,
       color: cambio.color ?? suyo.color,
       image: cambio.image ?? suyo.image,
+      icon: cambio.icono ? iconoDe(cambio.icono) : suyo.icon,
     };
   }
 
@@ -170,5 +171,9 @@ export function catInfo(id: string): Category {
     label: custom.name ?? base.label,
     color: custom.color ?? base.color,
     image: custom.image,
+    // El dibujo también se puede cambiar, incluso en las de fábrica: se elige en
+    // la pantalla de elegir categoría y se aplica en los 38 sitios donde se
+    // dibuja una categoría, igual que el color y el nombre.
+    icon: custom.icono ? iconoDe(custom.icono) : base.icon,
   };
 }

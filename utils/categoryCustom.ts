@@ -28,6 +28,15 @@ export type CategoryOverride = {
   color?: string;
   /** La imagen, ya recortada y guardada como texto ("data:image/jpeg;..."). */
   image?: string;
+  /**
+   * El dibujo elegido del catálogo. Ver constants/iconos.
+   *
+   * Llegó el 07/08/2026, con la pantalla de elegir categoría: ahí se puede tocar
+   * "Comida", cambiarle el dibujo y darle a Aplicar. Sin este campo, el dibujo
+   * nuevo se veía en la vista previa y al guardar volvía el de antes — la
+   * pantalla habría prometido algo que no podía cumplir.
+   */
+  icono?: string;
 };
 
 export type CategoryOverrides = Record<string, CategoryOverride>;

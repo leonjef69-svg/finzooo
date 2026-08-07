@@ -216,6 +216,8 @@ export default function NuevaCategoria({
   const {
     t,
     categoriasPropias,
+    categoryOverrides,
+    updateCategoryOverrides,
     crearCategoria,
     editarCategoria,
     borrarCategoria,
@@ -245,6 +247,38 @@ export default function NuevaCategoria({
   const [nombre, setNombre] = useState(() => original?.nombre ?? "");
   const [icono, setIcono] = useState(() => original?.icono ?? "Tag");
   const [color, setColor] = useState(() => original?.color ?? "violet");
+
+  /**
+   * LA CATEGORÍA QUE YA EXISTE Y SE TOCÓ EN "TUS CATEGORÍAS".
+   *
+   * Antes, tocar una volvía al movimiento en el acto. El usuario lo pidió al
+   * revés el 07/08/2026: *"debería yo seleccionar el icono y recién cuando le doy
+   * aplicar mandarme [al movimiento], aparte podría cambiarle el color"*.
+   *
+   * Y tiene razón: volver de golpe convertía las otras tres pestañas en algo que
+   * no se podía usar sobre una categoría que ya existe. Ahora tocarla la deja
+   * ELEGIDA —con su dibujo, su color y su nombre cargados arriba— y de ahí se le
+   * puede cambiar lo que sea antes de darle a Aplicar.
+   *
+   * Nulo mientras no se haya tocado ninguna: entonces Aplicar CREA una nueva, que
+   * es lo que hace la pantalla cuando se llega a ella para eso.
+   */
+  const [elegida, setElegida] = useState<string | null>(null);
+  /**
+   * Cómo era la elegida ANTES de tocarle nada.
+   *
+   * Hace falta para guardar solo lo que de verdad cambió. Guardando todo, el
+   * nombre de una categoría de fábrica quedaría fijado al texto en español
+   * ("Comida") y dejaría de traducirse al cambiar el idioma de la app — un daño
+   * silencioso a cambio de nada.
+   */
+  const [comoEra, setComoEra] = useState<{
+    nombre: string;
+    icono: string;
+    color: string;
+    foto?: string;
+  } | null>(null);
+
   /**
    * ARRANCA EN "icono", NO EN "tuyas", y es una decisión suya.
    *
@@ -292,6 +326,31 @@ export default function NuevaCategoria({
   /** La imagen recién elegida, esperando a que se encuadre. */
   const [recortando, setRecortando] = useState<string | null>(null);
 
+  /**
+   * Tocar una de "Tus categorías": se carga arriba para poder retocarla.
+   *
+   * Va aquí abajo, y no junto a su estado, porque necesita setFoto: en
+   * JavaScript, una función puede usar lo que se declara después de ella siempre
+   * que se LLAME después, pero leerlo así obliga a comprobarlo. Declarada
+   * después de todo lo que usa, no hay nada que comprobar.
+   */
+  function elegirDeLaLista(id: string) {
+    const info = catInfo(id);
+    const propia = categoriasPropias.find((c) => c.id === id);
+    const cambio = categoryOverrides[id];
+    // El dibujo sale de la personalización si la hay, y si no del de la propia.
+    // Las de fábrica no guardan su dibujo con un nombre —lo traen ya hecho— así
+    // que ahí se arranca con el que estuviera puesto: cambiarlo es decisión de la
+    // persona, y dejarlo igual no escribe nada.
+    const suIcono = cambio?.icono ?? propia?.icono ?? icono;
+    setElegida(id);
+    setNombre(info.label);
+    setIcono(suIcono);
+    setColor(info.color);
+    setFoto(info.image);
+    setComoEra({ nombre: info.label, icono: suIcono, color: info.color, foto: info.image });
+  }
+
   async function tomarFoto() {
     const permiso = await ImagePicker.requestCameraPermissionsAsync();
     if (!permiso.granted) {
@@ -335,12 +394,76 @@ export default function NuevaCategoria({
   const Dibujo = iconoDe(icono);
   const esFav = favoritos.includes(icono);
   const limpio = sanitizeName(nombre);
-  // Al editar no cuenta como repetida consigo misma.
-  const repetido = nombreRepetido(categoriasPropias, limpio, tipo, editandoId);
+  // Al editar no cuenta como repetida consigo misma — y lo mismo si se eligió de
+  // la lista: tocar "Broster" y darle a Aplicar sin cambiarle nada diría "ya
+  // tienes una con ese nombre", que es ella.
+  const laMisma = editandoId ?? (elegida && esPropia(elegida) ? elegida : undefined);
+  const repetido = nombreRepetido(categoriasPropias, limpio, tipo, laMisma);
   const puedeGuardar = limpio.length > 0 && !repetido;
+
+  /**
+   * Guarda los cambios de una categoría que YA EXISTÍA y la deja puesta.
+   *
+   * SOLO SE GUARDA LO QUE CAMBIÓ, y eso importa de verdad en el nombre: escribir
+   * el nombre siempre dejaría "Comida" fijado en español, y al cambiar el idioma
+   * de la app esa categoría se quedaría sin traducir. Un daño que nadie relaciona
+   * con haber tocado un color meses antes.
+   */
+  function aplicarALaElegida(id: string) {
+    const antes = comoEra;
+    const cambios = {
+      nombre: antes && limpio !== antes.nombre ? limpio : undefined,
+      color: antes && color !== antes.color ? color : undefined,
+      icono: antes && icono !== antes.icono ? icono : undefined,
+      // La foto se distingue en tres estados: no tocada, cambiada y QUITADA. Sin
+      // el null, quitarla y no tocarla serían lo mismo.
+      foto: antes && foto !== antes.foto ? (foto ?? null) : undefined,
+    };
+    const hayCambios =
+      cambios.nombre !== undefined ||
+      cambios.color !== undefined ||
+      cambios.icono !== undefined ||
+      cambios.foto !== undefined;
+
+    if (hayCambios) {
+      if (esPropia(id)) {
+        // Las propias se cambian en su propio sitio: ahí el nombre y el dibujo
+        // son suyos, no un parche encima de otra cosa.
+        editarCategoria(id, {
+          nombre: cambios.nombre,
+          color: cambios.color,
+          icono: cambios.icono,
+          image: cambios.foto,
+        });
+      } else {
+        // Y las de fábrica por la personalización, la misma que usa la pantalla
+        // de "Personalizar categorías". No se toca la de la app: se le pone un
+        // parche encima, y quitando el parche vuelve la original.
+        const anterior = categoryOverrides[id] ?? {};
+        const puesto = { ...anterior };
+        if (cambios.nombre !== undefined) puesto.name = cambios.nombre;
+        if (cambios.color !== undefined) puesto.color = cambios.color;
+        if (cambios.icono !== undefined) puesto.icono = cambios.icono;
+        if (cambios.foto !== undefined) {
+          if (cambios.foto === null) delete puesto.image;
+          else puesto.image = cambios.foto;
+        }
+        updateCategoryOverrides({ ...categoryOverrides, [id]: puesto });
+      }
+      showToast(t("nuevaCat.guardada"));
+    }
+    onElegir?.(id);
+  }
 
   function guardar() {
     if (!puedeGuardar) return;
+    // UNA CATEGORÍA ELEGIDA DE LA LISTA no se duplica: se deja puesta en el
+    // movimiento, con los retoques que se le hayan hecho. Antes esto no existía
+    // porque tocarla volvía al movimiento en el acto.
+    if (elegida) {
+      aplicarALaElegida(elegida);
+      return;
+    }
     if (editando && editandoId) {
       // La foto va como null cuando se quitó: sin ese null, "no la toques" y
       // "bórrala" serían lo mismo y no habría forma de sacarla.
@@ -494,11 +617,16 @@ export default function NuevaCategoria({
           <View className="px-5" style={{ paddingTop: 12 }}>
             <View className="flex-row flex-wrap gap-3">
               {cats.map((c) => {
-                const puesta = actual === c.id;
+                // La marcada es la que se va a aplicar: la que se acaba de tocar
+                // o, si no se ha tocado ninguna, la que el movimiento ya lleva.
+                const puesta = (elegida ?? actual) === c.id;
                 return (
                   <TouchableOpacity
                     key={c.id}
-                    onPress={() => onElegir?.(c.id)}
+                    // Tocarla la ELIGE, no cierra la pantalla. Ver elegirDeLaLista:
+                    // volver de golpe dejaba las otras pestañas sin poder usarse
+                    // sobre una categoría que ya existe.
+                    onPress={() => elegirDeLaLista(c.id)}
                     className="items-center gap-1.5"
                     style={{ width: "21%" }}
                   >
@@ -522,22 +650,29 @@ export default function NuevaCategoria({
               })}
             </View>
 
-            {/* EDITAR LA PROPIA QUE ESTÉ PUESTA.
-                Solo con una categoría tuya elegida, y por eso no estorba: el
-                resto del tiempo no está. Se descartó el toque largo a propósito —
-                es invisible, y quien no lo sepa no encuentra nunca cómo cambiar
-                lo que acaba de crear. */}
-            {actual && esPropia(actual) && (
-              <TouchableOpacity
-                onPress={() => onEditar?.(actual)}
-                className="flex-row items-center justify-center gap-1.5 mt-5"
-              >
-                <Pencil size={13} color="#64748b" />
-                <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
-                  {t("nuevaCat.editarEsta", { nombre: catInfo(actual).label })}
-                </Text>
-              </TouchableOpacity>
-            )}
+            {/* EDITAR LA PROPIA QUE ESTÉ MARCADA.
+                El nombre, el dibujo y el color ya se le pueden cambiar aquí
+                mismo; lo que solo está ahí dentro es BORRARLA. Por eso el enlace
+                se queda: es la única puerta a eso.
+                Apunta a la marcada y no a la del movimiento — si se acaba de
+                tocar "Broster", es esa la que se quiere abrir.
+                Se descartó el toque largo a propósito: es invisible, y quien no
+                lo sepa no lo encuentra nunca. */}
+            {(() => {
+              const suya = elegida ?? actual;
+              if (!suya || !esPropia(suya)) return null;
+              return (
+                <TouchableOpacity
+                  onPress={() => onEditar?.(suya)}
+                  className="flex-row items-center justify-center gap-1.5 mt-5"
+                >
+                  <Pencil size={13} color="#64748b" />
+                  <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
+                    {t("nuevaCat.editarEsta", { nombre: catInfo(suya).label })}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })()}
           </View>
         ) : pestana === "color" ? (
           <View className="px-5" style={{ paddingTop: 12 }}>

@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **6 de agosto de 2026** · Código publicado: **6ago-10**
+Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-01**
 · APK que hay que instalar: **finzo-6ago-10** (el arreglo del PDF colgado es
 código de Android; por internet no viaja)
 
@@ -383,29 +383,58 @@ que pedía— y elegir una que ya existe sigue costando un toque.
 La lección, que ya es la tercera vez en este proyecto: **cuando el usuario dice
 "sobra esto", la respuesta no es moverlo un poco más abajo.**
 
-### PENDIENTE: quiere quitar también la pestaña "Tus categorías" (07/08/2026)
+### TOCAR UNA CATEGORÍA LA MARCA; VOLVER ES COSA DE "APLICAR" (07/08/2026)
 
-Lo ha pedido tres veces. La última: *"quiero que quites mis categorías, solo dejes
-iconos, favoritos, color"*, aclarando que se refiere a **la pestaña**, no a la
-pantalla de *Nuevo movimiento*.
+Pedido así: *"cuando le doy click a un icono en Tus categorías automáticamente te
+manda a la [pantalla del movimiento]; debería yo seleccionar el icono y recién
+cuando le doy aplicar mandarme [al movimiento], aparte podría cambiarle el
+color"*.
 
-**No se hizo, y quedó en pausa a su decisión** (*"déjalo así de momento"*). El
-motivo de no hacerlo tal cual: esa pestaña es **el único sitio de la app donde se
-elige una categoría que ya existe**. Sin ella, cada gasto obligaría a crear una
-categoría nueva, y en una semana habría siete "Comida" con el reporte repartido
-entre las siete.
+Y **con esto se entiende por fin lo que quería desde el principio.** Tres veces
+pidió que la pantalla quedara con solo Ícono · Favoritos · Color, y se leyó como
+"quita la lista". No era eso: **las cuatro pestañas son un solo formulario.** Se
+elige una categoría de la lista, se le retoca el dibujo o el color, y se confirma
+con Aplicar. Volver de golpe al tocarla dejaba las otras tres pestañas sin poder
+usarse sobre una categoría que ya existe — no había forma de tenerla elegida y
+cambiarle nada.
 
-Se le explicó tres veces por escrito y **no se entendió hasta dibujarlo**: tres
-maquetas lado a lado (hoy · si solo se quita · lo propuesto). Con el dibujo delante
-decidió dejarlo.
+Cómo quedó:
 
-Lo propuesto, para cuando lo retome: el botón del movimiento abre una **lista
-pequeña** con sus categorías —como la de "Método de pago"— y esa lista lleva un
-"＋ Nueva" que abre la pantalla del catálogo, que entonces sí quedaría con solo
-Ícono · Favoritos · Color.
+- Tocar una la deja **marcada**, y carga arriba su nombre, su dibujo y su color.
+- De ahí se le cambia lo que sea en las otras pestañas.
+- **Aplicar** guarda los cambios, la deja puesta en el movimiento y vuelve.
+- Si no se tocó ninguna, Aplicar **crea** una nueva, como antes.
 
-> **Cuando una explicación no se entiende a la segunda, dibujarla.** Dos mensajes
-> de texto no sirvieron; una maqueta sí.
+**Solo se guarda lo que de verdad cambió**, y eso importa en el nombre: escribirlo
+siempre dejaría "Comida" fijado en español, y esa categoría dejaría de traducirse
+al cambiar el idioma de la app. Un daño que nadie relacionaría con haber tocado un
+color meses antes.
+
+Las de fábrica se cambian con la **personalización** (el mismo parche que usa
+"Personalizar categorías"), y las propias en su propio sitio. Para que el dibujo
+también se pudiera cambiar en una de fábrica hubo que añadir `icono` a
+`CategoryOverride` y hacer que `catInfo` lo lea: sin eso, el dibujo nuevo se veía
+en la vista previa y al guardar volvía el de antes — la pantalla prometiendo algo
+que no podía cumplir.
+
+**"Editar «X»" se queda**, apuntando ahora a la marcada. Lo único que solo está
+ahí dentro es **borrarla**.
+
+### Antes de entenderlo, dos rondas perdidas — y la lección
+
+Se leyó "quita la lista" y se le contestó tres veces que sin ella no habría forma
+de poner "Comida" en un gasto. Era cierto, pero **no era lo que estaba pidiendo**.
+Hizo falta dibujarlo (tres maquetas: hoy · si solo se quita · lo propuesto) para
+que él dijera "déjalo así de momento", y una captura más para que se viera que el
+problema era el **volver de golpe**, no la lista.
+
+> **Cuando alguien insiste tres veces en algo que parece un error, lo más probable
+> es que se esté entendiendo mal la petición, no que la petición sea mala.** La
+> pregunta útil no era "¿seguro que quieres quitarla?" sino "¿qué esperabas que
+> pasara al tocar una?".
+>
+> Y: **cuando una explicación no se entiende a la segunda, dibujarla.** Dos
+> mensajes de texto no sirvieron; una maqueta sí.
 
 ### El precio, dicho y anotado en el código
 

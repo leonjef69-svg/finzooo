@@ -10,6 +10,7 @@
 import fs from "fs";
 import path from "path";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
+import { setOverrides } from "@/utils/categoryCustom";
 import { crear, borrar, editar, esPropia, nombreRepetido, setPropias, type CategoriaPropia } from "@/utils/categoriasPropias";
 
 const RAIZ = process.cwd();
@@ -47,6 +48,38 @@ console.log("\n--- SE CREA Y SE COMPORTA COMO UNA DE FABRICA ---");
   // Aparece donde toca y NO donde no toca.
   ok(gastosDisponibles().some((x) => x.id === creada.id), "sale en la lista de gastos");
   ok(!ingresosDisponibles().some((x) => x.id === creada.id), "y NO en la de ingresos");
+  setPropias([]);
+}
+
+console.log("\n--- SE LE PUEDE CAMBIAR EL DIBUJO A UNA DE FABRICA ---");
+{
+  // Desde el 07/08/2026 la pantalla de elegir categoria deja tocar "Comida",
+  // cambiarle el dibujo y darle a Aplicar. Sin que catInfo lea ese campo, el
+  // dibujo nuevo se veria en la vista previa y al guardar volveria el de antes:
+  // la pantalla prometiendo algo que no puede cumplir.
+  const deFabrica = catInfo("comida").icon;
+
+  setOverrides({ comida: { icono: "Coffee" } });
+  ok(catInfo("comida").icon !== deFabrica, "el dibujo puesto a mano manda sobre el de la app");
+  // Y lo demas de esa categoria no se toca: cambiar el dibujo no puede cambiarle
+  // el nombre ni el color de rebote.
+  ok(catInfo("comida").label === "category.comida", "sin tocarle el nombre");
+
+  // Sin dibujo puesto, vuelve el de la app. Es lo que hace que quitar el parche
+  // devuelva la categoria original en vez de dejarla a medias.
+  setOverrides({ comida: { color: "sky" } });
+  ok(catInfo("comida").icon === deFabrica, "y sin ponerle ninguno, queda el de siempre");
+  ok(catInfo("comida").color === "sky", "mientras el color si cambia");
+
+  // Tambien vale para las propias: ahi el dibujo es suyo, pero el parche manda
+  // igual — es lo que ya pasaba con el nombre y el color.
+  const { lista, creada } = crear([], { nombre: "Broster", tipo: "expense", color: "orange", icono: "Drumstick" });
+  setPropias(lista);
+  const suyo = catInfo(creada.id).icon;
+  setOverrides({ [creada.id]: { icono: "Coffee" } });
+  ok(catInfo(creada.id).icon !== suyo, "en una propia el parche tambien manda");
+
+  setOverrides({});
   setPropias([]);
 }
 
@@ -483,7 +516,7 @@ console.log("\n--- EDITAR Y BORRAR SE PUEDEN ALCANZAR ---");
   // pantalla del catalogo. Lo que se protege es lo mismo de siempre: que la
   // puerta EXISTA.
   const pant0 = fs.readFileSync(path.join(RAIZ, "screens/NuevaCategoria.tsx"), "utf8");
-  ok(pant0.includes("esPropia(actual)"), "el enlace de editar solo sale con una propia elegida");
+  ok(pant0.includes("esPropia(suya)"), "el enlace de editar solo sale con una propia elegida");
   ok(pant0.includes("nuevaCat.editarEsta"), "y dice cual se va a editar");
   const ruta = fs.readFileSync(path.join(RAIZ, "app/nueva-categoria.tsx"), "utf8");
   ok(/params: \{ tipo: suTipo, id: suId \}/.test(ruta), "pasandole su id");

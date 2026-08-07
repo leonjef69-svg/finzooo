@@ -141,7 +141,35 @@ console.log("\n--- Y ELEGIR UNA QUE YA EXISTE SIGUE ESTANDO, EN SU PESTAÑA ---"
     "estan las de gasto y las de ingreso"
   );
   ok(pantLimpia.includes("categoriasPropias"), "y las propias aparecen en cuanto se crean");
-  ok(/onPress=\{\(\) => onElegir\?\.\(c\.id\)\}/.test(pantLimpia), "tocar una la elige");
+  // TOCAR UNA LA MARCA, NO CIERRA LA PANTALLA.
+  //
+  // Antes volvía al movimiento en el acto, y con eso las pestañas de dibujo y
+  // color no servían para nada sobre una categoría que ya existe: no había manera
+  // de tenerla elegida y retocarla. El usuario lo pidió al revés el 07/08/2026:
+  // "debería yo seleccionar el icono y recién cuando le doy aplicar mandarme
+  // [al movimiento], aparte podría cambiarle el color".
+  ok(/onPress=\{\(\) => elegirDeLaLista\(c\.id\)\}/.test(pantLimpia), "tocar una la marca");
+  ok(
+    !/onPress=\{\(\) => onElegir\?\.\(/.test(pantLimpia),
+    "y NO cierra la pantalla de golpe, que era el fallo"
+  );
+  // La vuelta al movimiento pasa por Aplicar, y por ningún otro sitio.
+  ok(
+    /function aplicarALaElegida\([\s\S]{0,2000}?onElegir\?\.\(id\);/.test(pantLimpia),
+    "solo Aplicar la deja puesta y vuelve"
+  );
+  ok(/if \(elegida\) \{\s*\r?\n\s*aplicarALaElegida\(elegida\);/.test(pantLimpia), "y Aplicar la reconoce");
+
+  // LO QUE SE LE HAYA CAMBIADO SE GUARDA, pero SOLO lo que cambió. Escribiendo el
+  // nombre siempre, "Comida" quedaría fijado en español y esa categoría dejaría de
+  // traducirse al cambiar el idioma: un daño que nadie relaciona con haber tocado
+  // un color meses antes.
+  ok(/limpio !== antes\.nombre \? limpio : undefined/.test(pantLimpia), "solo se guarda lo que cambió");
+  ok(/color !== antes\.color/.test(pantLimpia), "el color");
+  ok(/icono !== antes\.icono/.test(pantLimpia), "y el dibujo");
+  // Las de fábrica por la personalización; las propias en su propio sitio.
+  ok(/updateCategoryOverrides\(/.test(pantLimpia), "las de fábrica se cambian con un parche encima");
+  ok(/esPropia\(id\)[\s\S]{0,120}?editarCategoria\(id,/.test(pantLimpia), "y las propias en su sitio");
   ok(/\["tuyas", "icono", "favoritos", "color"\]/.test(pantLimpia), "la pestaña va primera");
   ok(pantLimpia.includes("elegirCat.tuyas"), "y se llama Tus categorias, como lo pidio");
 
