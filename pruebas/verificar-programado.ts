@@ -760,6 +760,75 @@ console.log("\n--- 'PROBAR AHORA' PRUEBA EL CAMINO QUE VA A CORRER ---");
   );
 }
 
+console.log("\n--- LA CONVERSIÓN A PDF NO PUEDE QUEDARSE COLGADA ---");
+{
+  // ESTE ERA EL FALLO. El usuario tocó "Probar ahora" y el botón se quedó en
+  // "Probando..." para siempre: ni PDF ni error. La conversión no contestaba.
+  //
+  // Dos causas, las dos aquí vigiladas:
+  //
+  //  1. El navegador que dibuja el PDF no estaba dentro de ninguna pantalla, así
+  //     que medía 0 x 0. Con cero de alto no hay nada que colocar en la hoja y el
+  //     adaptador de impresión espera un contenido que no llega.
+  //  2. No había NINGÚN tope de tiempo. Un trabajo de fondo colgado no avisa de
+  //     nada: no falla, no termina, y desde fuera se ve igual que "no pasó nada".
+  const RAIZ = process.cwd();
+  const kt = fs.readFileSync(
+    path.join(RAIZ, "modules/export-scheduler/android/src/main/java/com/finzo/exportscheduler/HtmlAPdf.kt"),
+    "utf8"
+  );
+  const idx = fs.readFileSync(path.join(RAIZ, "modules/export-scheduler/index.ts"), "utf8");
+  const svc = fs.readFileSync(
+    path.join(RAIZ, "modules/export-scheduler/android/src/main/java/com/finzo/exportscheduler/FinzoExportService.kt"),
+    "utf8"
+  );
+
+  // 1. El tamaño del navegador.
+  ok(/\.measure\(/.test(kt), "al navegador se le da una medida");
+  ok(/\.layout\(0, 0, ancho, alto\)/.test(kt), "y se le coloca esa medida, o mide cero");
+  ok(/loadDataWithBaseURL/.test(kt), "y el tamaño va ANTES de cargar el HTML");
+  ok(
+    kt.indexOf(".layout(0, 0, ancho, alto)") < kt.indexOf("loadDataWithBaseURL"),
+    "en ese orden, que es el que importa"
+  );
+
+  // 2. Los topes de tiempo, y que estén ESCALONADOS.
+  const num = (s: string | undefined) => Number((s ?? "").replace(/_/g, ""));
+  const topeKt = num(/TOPE_MS = ([\d_]+)L/.exec(kt)?.[1]);
+  const topeJs = num(/TOPE_PDF_MS = ([\d_]+)/.exec(idx)?.[1]);
+  const topeTarea = num(/HeadlessJsTaskConfig\([\s\S]*?(\d{5,7}),/.exec(svc)?.[1]);
+  ok(topeKt > 0, `Android tiene su propio tope (${topeKt} ms)`);
+  ok(topeJs > 0, `y la app el suyo de reserva (${topeJs} ms)`);
+  ok(topeTarea > 0, `y el trabajo de fondo el suyo (${topeTarea} ms)`);
+
+  // El de Android va PRIMERO: su mensaje dice si falló al medir o al escribir, y
+  // eso vale mucho más que "no contestó".
+  ok(topeKt < topeJs, "el de Android salta antes que el de la app, que dice menos");
+  // Y el de la app antes de que Android mate el trabajo: si saltara después, el
+  // motivo no se llegaría a guardar y volveríamos a "no pasó nada".
+  ok(topeJs < topeTarea, "y el de la app antes de que se acabe el trabajo de fondo");
+  // Con sitio de sobra para SUBIR el archivo después de convertirlo.
+  ok(
+    topeTarea - topeJs >= 20000,
+    `y quedan ${(topeTarea - topeJs) / 1000} s para subirlo (hacen falta 20)`
+  );
+
+  // El de reserva vive en la app A PROPÓSITO: los APK anteriores no traen el de
+  // Android y no se les puede añadir por internet.
+  ok(/Promise\.race/.test(idx), "el tope de la app no espera al APK nuevo");
+  ok(/clearTimeout\(reloj\)/.test(idx), "y se retira al terminar, para no dejar el proceso despierto");
+
+  // Contestar dos veces —el tope y el resultado de verdad— hace reventar la
+  // promesa de JavaScript, y encima se tocaría un navegador ya soltado.
+  ok(/if \(contestado\) return/.test(kt), "se contesta una sola vez");
+  ok(/v\.destroy\(\)/.test(kt), "y el navegador se suelta, para no dejar uno por reporte");
+
+  // Colgarse se dice APARTE de "falló": lo que hay que hacer es distinto, hace
+  // falta el APK nuevo. Sin distinguirlo, se buscaría un problema de internet.
+  const fondo = fs.readFileSync(path.join(RAIZ, "utils/exportarEnFondo.ts"), "utf8");
+  ok(/PdfEnFondoSinRespuesta/.test(fondo), "y en la app se cuenta como su propio motivo");
+}
+
 console.log("\n--- Y SE PUEDE VER DESDE FUERA QUÉ TRAE EL CELULAR ---");
 {
   // La marca del código (CODE_MARKER) dice qué JavaScript corre, y por internet

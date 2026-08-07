@@ -1,11 +1,11 @@
 # Dónde nos quedamos
 
-Actualizado: **6 de agosto de 2026** · Código publicado: **6ago-08**
-· APK instalado en el celular: **finzo-6ago-03** (confirmado por las marcas
-nativas de *Acerca de*: `✓ reporte solo · ✓ PDF solo`)
+Actualizado: **6 de agosto de 2026** · Código publicado: **6ago-09**
+· APK que hay que instalar: **finzo-6ago-09** (el arreglo del PDF colgado es
+código de Android; por internet no viaja)
 
-> **SIN RESOLVER AHORA MISMO:** el PDF automático no sale a su hora (el Excel sí).
-> Ver la sección "El PDF automático no sale".
+> **El PDF automático se colgaba y ya está encontrado y arreglado**, pero el
+> arreglo va dentro del APK. Ver "El PDF automático: ENCONTRADO".
 
 Este archivo existe para que una sesión nueva —de Claude o de quien sea— no
 empiece de cero. No cuenta lo que ya se ve en el código ni en el historial de
@@ -424,7 +424,47 @@ La ruta `/nueva-categoria` tiene ahora **tres modos**, y los deciden los
 parámetros: con `actual` se puede elegir; con `id` se edita (sin lista: quien
 viene a renombrar "Broster" no viene a elegir otra); sin nada, solo crear.
 
-## El PDF automático no sale — SIN RESOLVER (06/08/2026)
+## El PDF automático: ENCONTRADO. Se colgaba (06/08/2026)
+
+**La conversión a PDF no contestaba nunca.** El usuario tocó "Probar ahora" y el
+botón se quedó en "Probando…" para siempre: ni PDF, ni error. A la hora fijada
+pasaba lo mismo sin que se viera — el trabajo de fondo se colgaba y Android lo
+mataba en silencio al agotar sus 120 s.
+
+Dos causas, y la primera es la de verdad:
+
+**1. El navegador que dibuja el PDF medía 0 × 0.** Un `WebView` que no está dentro
+de ninguna pantalla no tiene tamaño. Con cero de alto no hay nada que colocar en
+la hoja, y el adaptador de impresión se queda esperando un contenido que nunca
+llega — no falla, espera. Ahora se le da el tamaño de una A4 a mano (`measure` +
+`layout`) **antes** de cargar el HTML.
+
+> Es otra vez el mismo tipo de fallo de este proyecto: no un cálculo mal hecho,
+> sino **una pieza que solo funciona dentro de una pantalla, usada fuera de una
+> pantalla**. Igual que el PDF con expo-print, igual que el WebView de siempre.
+
+**2. No había NINGÚN tope de tiempo, en ninguna de las dos mitades.** Y sin tope,
+"colgado" y "no pasó nada" se ven idénticos desde fuera. Ahora hay tres, y están
+**escalonados a propósito** (con una prueba que lo vigila, porque son números en
+dos lenguajes distintos):
+
+| Tope | Dónde | Cuánto |
+|---|---|---|
+| Conversión | Kotlin, `HtmlAPdf` | 30 s |
+| Reserva | JS, `htmlAPdfEnFondo` | 40 s |
+| Trabajo de fondo | Kotlin, `FinzoExportService` | 120 s |
+
+El de Android salta primero porque **su mensaje dice más** ("al medir: …", "al
+escribir: …"). El de JavaScript existe porque **los APK anteriores no traen el de
+Android y no se les puede añadir por internet**: sin él, quien tenga un APK viejo
+se queda con el botón girando para siempre. Y los 80 s de diferencia con el
+trabajo de fondo son para que quepa la subida del archivo después de convertirlo.
+
+Además: se contesta **una sola vez** (el tope y el resultado real podrían
+contestar los dos, y el segundo hace reventar la promesa), y el navegador se
+suelta al terminar en vez de quedar uno por reporte.
+
+## Cómo se llegó hasta aquí — SIN RESOLVER hasta el 6ago-09 (06/08/2026)
 
 Reportado así: *"en exportación automática relleno la información y no se exporta
 de manera automática en pdf, parece que tuviera el mismo problema que tuvo el
@@ -469,11 +509,15 @@ dos esperas. Con el error a la vista, uno. Se eligió instrumentar primero.
   `Paths.cache` ya acaba en barra: de las cosas que funcionan en un sitio y no en
   el siguiente.
 
-### Lo siguiente, en orden
+### Y esa instrumentación es la que encontró el fallo
 
-1. Tocar **"Probar ahora"** con PDF: ahora corre el camino de verdad y escribe el
-   error en pantalla.
-2. Con ese texto, arreglar la causa concreta. Si es nativa, **un** APK.
+No fue el texto del error: fue el **botón girando para siempre**. Antes de que
+"Probar ahora" corriera el camino de verdad, ese síntoma no existía — la prueba
+abría la pantalla de exportar y salía bien. El fallo llevaba desde el 6ago-03 sin
+que nada lo delatara.
+
+> **Un botón de probar que prueba otro camino no es "casi lo mismo": es lo que
+> convierte "no sé si funciona" en "comprobé que funciona".**
 
 ### Tres defectos reales que lo escondieron, y ninguno es de cálculo
 

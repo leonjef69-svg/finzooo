@@ -26,6 +26,7 @@ import { uploadToDrive } from "@/utils/googleDrive";
 import {
   htmlAPdfEnFondo,
   PdfEnFondoNoDisponible,
+  PdfEnFondoSinRespuesta,
   programarExportacion,
 } from "@/modules/export-scheduler";
 import {
@@ -56,6 +57,7 @@ type ResultadoDeFondo =
   | "no-toca-hoy"
   | "ya-se-hizo-hoy"
   | "pdf-no-se-puede"
+  | "pdf-sin-respuesta"
   | "pdf-vacio"
   | "destino-no-automatico"
   | "sin-movimientos"
@@ -283,6 +285,12 @@ export async function exportarEnFondo(forzar = false): Promise<ResultadoDeFondo>
     // internet cuando lo que falta es instalar el APK nuevo. Los 6ago-01 y
     // 6ago-02 traen el despertador pero no el conversor de PDF.
     if (e instanceof PdfEnFondoNoDisponible) return await apuntar("pdf-no-se-puede");
+    // La conversión colgada se dice aparte, porque lo que hay que hacer es
+    // distinto: no es un fallo del reporte ni de internet, es que el conversor
+    // del APK instalado se queda esperando. Hace falta el APK nuevo.
+    if (e instanceof PdfEnFondoSinRespuesta) {
+      return await apuntar("pdf-sin-respuesta", "", e.message);
+    }
     // Y nunca dejar que esto reviente: un trabajo de fondo que lanza una
     // excepción deja a Android con un candado de energía abierto y el proceso
     // colgado.

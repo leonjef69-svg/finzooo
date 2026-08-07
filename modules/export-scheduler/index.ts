@@ -62,13 +62,54 @@ export function puedePdfEnFondo(): boolean {
   return Platform.OS === "android" && typeof nativo?.htmlAPdf === "function";
 }
 
+/** Se lanza cuando la conversión no contesta ni bien ni mal. Ver el tope de abajo. */
+export class PdfEnFondoSinRespuesta extends Error {
+  constructor(segundos: number) {
+    super(`pdf-en-fondo-sin-respuesta-${segundos}s`);
+    this.name = "PdfEnFondoSinRespuesta";
+  }
+}
+
+/**
+ * Cuánto se espera a la conversión antes de darla por perdida, EN ESTE LADO.
+ *
+ * El código de Android tiene su propio tope, y este es el de reserva: los APK
+ * anteriores al 06/08/2026 por la noche NO lo traen, y las actualizaciones por
+ * internet no pueden añadirlo. Sin este, en esos APK el botón "Probar ahora" se
+ * queda girando para siempre y el trabajo de fondo muere en silencio al agotar
+ * su tiempo — que es exactamente lo que pasó.
+ *
+ * Va más alto que el de Android (30 s) a propósito: si el de allá funciona, es él
+ * quien contesta, y su mensaje dice mucho más que "no contestó".
+ */
+const TOPE_PDF_MS = 40_000;
+
 /**
  * Convierte el HTML del reporte en un PDF, sin necesitar la app en pantalla.
  *
  * Es lo que permite que el PDF automático sea EL MISMO documento que el de a
  * mano: se le pasa el HTML que arma utils/reportePdfDatos, el de siempre.
+ *
+ * NUNCA SE QUEDA ESPERANDO PARA SIEMPRE. Un trabajo de fondo colgado no avisa de
+ * nada: no falla, no termina, y desde fuera se ve igual que "no pasó nada".
  */
 export async function htmlAPdfEnFondo(html: string, destino: string): Promise<string> {
   if (!puedePdfEnFondo()) throw new PdfEnFondoNoDisponible();
-  return await nativo!.htmlAPdf(html, destino);
+  let reloj: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      nativo!.htmlAPdf(html, destino),
+      new Promise<never>((_, rechazar) => {
+        reloj = setTimeout(
+          () => rechazar(new PdfEnFondoSinRespuesta(TOPE_PDF_MS / 1000)),
+          TOPE_PDF_MS
+        );
+      }),
+    ]);
+  } finally {
+    // Sin esto el temporizador sigue vivo hasta el final aunque la conversión ya
+    // haya salido bien, y en un trabajo de fondo eso es tener el proceso
+    // despierto sin motivo.
+    if (reloj) clearTimeout(reloj);
+  }
 }

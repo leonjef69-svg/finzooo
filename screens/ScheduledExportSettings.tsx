@@ -664,6 +664,13 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                       cuando: new Date(ultimo.cuando).toLocaleString(),
                       resultado: t(`schedExport.res.${ultimo.resultado}`),
                     })}
+                    {/* CON EL NOMBRE DEL ARCHIVO QUE SALIÓ.
+                        El dato se guardaba y no se enseñaba, y hizo falta: el
+                        usuario vio llegar a Drive un archivo con otro nombre y no
+                        había forma de saber de qué intento venía — si del de
+                        ahora, con su nombre escrito a mano, o de uno anterior
+                        cuando el nombre todavía era automático. */}
+                    {ultimo.archivo ? ` · ${ultimo.archivo}` : ""}
                   </Text>
                 )}
                 {/* EL TEXTO DEL ERROR, cuando hubo uno.
