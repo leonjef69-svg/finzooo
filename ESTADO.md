@@ -716,6 +716,49 @@ mitad, costaría la mitad. El catálogo grande lo pidió él, así que no se toc
 > —las que de verdad lo arreglaron— salieron de **un número sacado del celular**. Cuando
 > arreglar lo que se ve no mueve la aguja, no hay que releer: hay que medir.
 
+## La voz leía la publicidad de Yape (7ago-24, 07/08/2026) — NECESITA APK
+
+Reportado así: *"me llegó una notificación de Yape pero no era alguien que me había
+yapeado, sino un mensaje normal, ejemplo: sin dinero solicita tu préstamo por S/2000
+preaprobados págalo en 6 cuotas"*. Y con la captura de lo que **sí** debe leerse:
+*"Confirmación de Pago Yape! JEFFERSON GIOVANNI LEON CARLOS te envió un pago por S/ 20"*.
+
+**Ya había una lista negra de palabras de anuncio desde el 02/08** —"preaprobado",
+"solicita tu", "promoción", "sorteo"— **y no bastó.** Esa carrera no se gana: Yape puede
+redactar un anuncio de mil maneras y todos llevan un monto.
+
+**El fallo real, y es otra vez la costura.** El intérprete de la app ya rechazaba estos
+avisos: exige que el texto diga si el dinero **entra o sale**, y si no lo dice devuelve
+`noDirection`. La voz no miraba eso — le bastaba que hubiera un monto.
+
+Y con **"leer también las salidas" activado era peor**: la comprobación era *"si NO leo
+salidas y NO parece ingreso, callar"*, así que al encender ese ajuste **la única
+comprobación que quedaba era la del monto**. Cualquier aviso de Yape con una cifra se leía
+en voz alta. El ajuste debe ensanchar la regla, nunca apagarla.
+
+Ahora la voz pide lo mismo que el intérprete: una **dirección reconocida**. Se añadió
+`PALABRAS_DE_SALIDA` **copiada** de `EXPENSE_HINTS` (escribirla a mano es lo que dejó la
+voz muda en agosto, por faltarle "te envio"), y el motivo nuevo `sin-direccion` aparece en
+*Captura automática* con su texto en los tres idiomas.
+
+### Y un fallo DE LA PRUEBA, que es el tercero de este tipo en ese archivo
+
+`verificar-voz-yape` imita en JavaScript lo que el servicio hace en Kotlin. Se añadió la
+regla nueva a la imitación… y las comprobaciones de la publicidad **pasaban también contra
+la versión anterior del servicio**. Dos causas, las dos arregladas:
+
+1. `listaDelKotlin` devolvía una **lista vacía** cuando no encontraba la lista, así que
+   todo caía del mismo lado y pasaba **por el motivo equivocado**. Ahora para la prueba con
+   un mensaje claro.
+2. Faltaba lo esencial: **comprobar que la regla está en el Kotlin**, no solo en la
+   imitación. Una imitación solo vale si alguien verifica que se parece al original.
+
+Se comprobaron los dos escenarios de rotura: quitar la lista (la prueba para en seco) y
+quitar **solo** la regla dejando la lista (fallan cuatro afirmaciones).
+
+> **ESTO ES CÓDIGO NATIVO: NO VIAJA POR OTA.** Hace falta instalar el APK. Mientras no se
+> instale, el celular sigue leyendo los anuncios.
+
 ## El micrófono perdía casi todo lo dictado (7ago-19, 07/08/2026)
 
 Pedido así: *"el micrófono no está registrando correctamente los ingresos y gastos

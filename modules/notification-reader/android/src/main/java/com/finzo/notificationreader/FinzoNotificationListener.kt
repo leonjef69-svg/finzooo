@@ -239,10 +239,36 @@ class FinzoNotificationListener : NotificationListenerService() {
         return
       }
 
-      // Solo lo que ENTRA, salvo que se pida lo contrario. Que el celular
+      // Y TIENE QUE DECIR SI EL DINERO ENTRA O SALE.
+      //
+      // AQUI ESTABA EL FALLO DE LA PUBLICIDAD DE YAPE (07/08/2026). Le llego esto y el
+      // celular lo leyo en voz alta: *"sin dinero? solicita tu prestamo por S/ 2000
+      // preaprobados, pagalo en 6 cuotas"*. Un anuncio, no un movimiento.
+      //
+      // Y era el fallo tipico de este proyecto: DOS MITADES QUE POR SEPARADO ESTAN BIEN Y
+      // EL FALLO EN LA COSTURA. El interprete de la app ya lo rechazaba —exige que el
+      // aviso diga si el dinero entra o sale, y si no lo dice devuelve "noDirection"—.
+      // Pero la voz no miraba eso: le bastaba que hubiera un monto. Y un anuncio de
+      // prestamo lleva monto de sobra.
+      //
+      // Peor todavia con "leer tambien las salidas" activado: ahi la unica comprobacion
+      // que quedaba era la del monto, asi que CUALQUIER aviso de Yape con una cifra se
+      // leia en voz alta. El ajuste solo debe ensanchar la regla a las salidas de verdad,
+      // nunca apagarla.
+      //
+      // Ahora se pide lo mismo que pide el interprete: una direccion reconocida. Un
+      // anuncio no dice "te envio" ni "pagaste", asi que se queda callado.
+      val entra = pareceIngreso(limpio)
+      val sale = pareceSalida(limpio)
+      if (!entra && !sale) {
+        anotarVoz("sin-direccion")
+        return
+      }
+
+      // Y de las dos, solo lo que ENTRA salvo que se pida lo contrario. Que el celular
       // anuncie en voz alta lo que uno acaba de pagar, delante de la cola del
       // supermercado, no lo quiere nadie.
-      if (!NotificationStore.isSpeakOutgoing(applicationContext) && !pareceIngreso(limpio)) {
+      if (!entra && !NotificationStore.isSpeakOutgoing(applicationContext)) {
         anotarVoz("es-salida")
         return
       }
@@ -280,6 +306,10 @@ class FinzoNotificationListener : NotificationListenerService() {
    */
   private fun pareceIngreso(limpio: String): Boolean =
     PALABRAS_DE_INGRESO.any { limpio.contains(it) }
+
+  /** Como suena un aviso de plata que SALE. Ver PALABRAS_DE_SALIDA. */
+  private fun pareceSalida(limpio: String): Boolean =
+    PALABRAS_DE_SALIDA.any { limpio.contains(it) }
 
   /**
    * Minusculas, sin tildes y con los espacios RAROS convertidos en normales.
@@ -468,6 +498,39 @@ class FinzoNotificationListener : NotificationListenerService() {
       "te transfirio",
       "te transfirieron",
       "cobraste"
+    )
+
+    /**
+     * Como suena un aviso de plata que SALE. Copiada tal cual de EXPENSE_HINTS, en
+     * utils/notificationParser.
+     *
+     * SE COPIA, NO SE ESCRIBE A MANO. Ya paso una vez con la lista de entradas: se
+     * escribio "segun como suenan" los avisos, le faltaba "te envio", y la voz se quedaba
+     * muda con los yapes de verdad mientras la app SI los registraba. Un fallo que desde
+     * fuera parecia del microfono, del volumen o del celular.
+     *
+     * Hace falta desde el 07/08/2026, cuando la voz empezo a exigir una direccion: sin
+     * esta lista, "leer tambien las salidas" no tendria con que reconocer una salida y
+     * dejaria muda justamente la opcion que se pidio activar.
+     */
+    private val PALABRAS_DE_SALIDA = listOf(
+      "yapeaste",
+      "yapeo enviado",
+      "plineaste",
+      "pagaste",
+      "pago exitoso",
+      "pago realizado",
+      "pago procesado",
+      "compra",
+      "consumo",
+      "consumiste",
+      "cargo",
+      "debito",
+      "retiro",
+      "retiraste",
+      "enviaste",
+      "transferiste",
+      "transferencia enviada"
     )
 
     /**

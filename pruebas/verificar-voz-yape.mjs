@@ -38,9 +38,25 @@ function ok(c, m) {
 
 const kt = fs.readFileSync(KT, "utf8");
 
-/** Saca la lista tal cual esta en el servicio, sin copiarla aqui. */
+/**
+ * Saca la lista tal cual esta en el servicio, sin copiarla aqui.
+ *
+ * SI NO LA ENCUENTRA, PARA LA PRUEBA. No devuelve una lista vacia, y eso importa: con
+ * una lista vacia las comprobaciones seguian corriendo y PASABAN POR EL MOTIVO
+ * EQUIVOCADO. Se vio el 07/08/2026 al probar la regla nueva contra la version anterior:
+ * los anuncios salian callados, pero no porque el servicio los callara — era que sin
+ * lista no habia ninguna palabra que reconocer y todo caia del mismo lado.
+ *
+ * Es exactamente la mentira que este archivo existe para evitar, esta vez dentro de la
+ * propia prueba.
+ */
 function listaDelKotlin(nombre) {
   const desde = kt.indexOf(`${nombre} = listOf(`);
+  if (desde < 0) {
+    console.log(`  FALLA el servicio no tiene la lista ${nombre}`);
+    console.log("\n1 FALLAS");
+    process.exit(1);
+  }
   const bloque = kt.slice(desde, desde + kt.slice(desde).indexOf(")"));
   return [...bloque.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
 }
@@ -62,6 +78,7 @@ function regexDelKotlin(nombre) {
 }
 
 const PALABRAS = listaDelKotlin("PALABRAS_DE_INGRESO");
+const SALIDAS = listaDelKotlin("PALABRAS_DE_SALIDA");
 const IGNORAR = listaDelKotlin("PALABRAS_A_IGNORAR");
 const TIENE_MONTO = regexDelKotlin("TIENE_MONTO");
 // Si el servicio no trae la regla de los espacios, se prueba tal cual: sin
@@ -93,7 +110,12 @@ function hablaria(texto, tambienSalidas = false) {
   const t = normalizar(texto);
   if (IGNORAR.some((p) => t.includes(p))) return false;
   if (!TIENE_MONTO.test(t)) return false;
-  if (!tambienSalidas && !PALABRAS.some((p) => t.includes(p))) return false;
+  // TIENE QUE DECIR SI EL DINERO ENTRA O SALE. Nuevo el 07/08/2026, y es la regla que
+  // calla la publicidad de Yape. Ver la seccion de los anuncios mas abajo.
+  const entra = PALABRAS.some((p) => t.includes(p));
+  const sale = SALIDAS.some((p) => t.includes(p));
+  if (!entra && !sale) return false;
+  if (!entra && !tambienSalidas) return false;
   return true;
 }
 
@@ -215,6 +237,107 @@ console.log("\n--- LO QUE NO ES UN MOVIMIENTO: NO SE DICE ---");
   }
 }
 
+console.log("\n--- LA REGLA DE LA DIRECCION ESTA EN EL SERVICIO, NO SOLO AQUI ---");
+{
+  // ESTA SECCION EXISTE POR UN FALLO DE LA PRUEBA, NO DEL CODIGO, Y ES LA TERCERA VEZ QUE
+  // PASA EN ESTE ARCHIVO.
+  //
+  // Todo lo que hay debajo lo decide hablaria(), que es una IMITACION en JavaScript de lo
+  // que hace el servicio en Kotlin. Al añadir la regla de la direccion el 07/08/2026 se
+  // añadio a la imitacion... y las comprobaciones de la publicidad pasaban tambien contra
+  // la version ANTERIOR del servicio. Claro: la regla estaba en la imitacion, no en el
+  // celular.
+  //
+  // Una imitacion solo vale si alguien comprueba que se parece al original. Eso es esto:
+  // se mira el Kotlin de verdad.
+  const anunciar = kt.slice(kt.indexOf("private fun anunciar"), kt.indexOf("private fun anotarVoz"));
+  ok(anunciar.length > 200, "se encuentra el codigo que decide si hablar");
+
+  ok(/val entra = pareceIngreso\(limpio\)/.test(anunciar), "el servicio mira si el dinero ENTRA");
+  ok(/val sale = pareceSalida\(limpio\)/.test(anunciar), "y si SALE");
+  // La regla nueva: sin direccion no se habla. Es la que calla la publicidad.
+  ok(
+    /if \(!entra && !sale\) \{[\s\S]{0,120}return/.test(anunciar),
+    "y si no dice ninguna de las dos cosas, se calla"
+  );
+  // Y EL AJUSTE DE LAS SALIDAS NO PUEDE SALTARSE ESA REGLA. Aqui estaba el fallo: la
+  // comprobacion vieja era "si NO leo salidas y NO parece ingreso, callar", asi que al
+  // encender las salidas la unica comprobacion que quedaba era la del monto — y cualquier
+  // aviso de Yape con una cifra se leia en voz alta.
+  ok(
+    /if \(!entra && !NotificationStore\.isSpeakOutgoing/.test(anunciar),
+    "el ajuste de las salidas ensancha la regla, no la apaga"
+  );
+  ok(
+    !/if \(!NotificationStore\.isSpeakOutgoing\(applicationContext\) && !pareceIngreso/.test(anunciar),
+    "y no queda la comprobacion vieja, que con ese ajuste dejaba pasar cualquier cosa"
+  );
+  // La funcion tiene que existir de verdad, o el Kotlin no compilaria — pero compilar se
+  // comprueba aparte y tarda tres minutos, y esto tarda nada.
+  ok(/private fun pareceSalida/.test(kt), "existe la funcion que reconoce una salida");
+  ok(SALIDAS.length > 10, `y su lista trae ${SALIDAS.length} palabras`);
+}
+
+console.log("\n--- LA PUBLICIDAD DE YAPE SE QUEDA CALLADA ---");
+{
+  // EL CASO REPORTADO EL 07/08/2026: *"me llego una notificacion de Yape pero no era
+  // alguien que me habia yapeado, sino un mensaje normal, ejemplo: sin dinero solicita tu
+  // prestamo por S/2000 preaprobados pagalo en 6 cuotas"*.
+  //
+  // Ya habia una lista negra de palabras de anuncio desde el 02/08 ("preaprobado",
+  // "solicita tu", "promocion", "sorteo") Y NO BASTO. Es una carrera que no se gana: Yape
+  // puede redactar un anuncio de mil maneras y siempre lleva un monto.
+  //
+  // Lo que si se gana es al reves: pedir la señal de un movimiento DE VERDAD. Un anuncio
+  // no dice "te envio" ni "pagaste". Es la misma regla que ya usaba el interprete de la
+  // app —"noDirection"— y que la voz no miraba: otra vez dos mitades bien y el fallo en la
+  // costura.
+  //
+  // TODO ESTO SE PRUEBA CON LAS SALIDAS ENCENDIDAS a proposito, que es el peor caso: con
+  // ese interruptor, antes la unica comprobacion que quedaba era la del monto y la voz
+  // leia absolutamente cualquier aviso de Yape con una cifra.
+  for (const texto of [
+    // Redactados SIN ninguna palabra de la lista negra, para que lo que los calle sea la
+    // regla nueva y no la lista. Si alguien quita la regla, estos vuelven a hablar.
+    "Tienes S/ 2000 listos para ti, elige en cuantas cuotas",
+    "S/ 500 disponibles en tu Yape ahora mismo",
+    "Aprovecha hasta S/ 3000 para lo que necesites",
+    "Tu linea de credito llego a S/ 1200",
+    "Paga tus servicios y acumula hasta S/ 50",
+    // Y los que ya callaba la lista negra, que tienen que seguir callados.
+    "Tienes un préstamo preaprobado de S/ 5000",
+    "Participa en el sorteo de S/ 1000",
+  ]) {
+    ok(!hablaria(texto, true), `calla con: "${texto.slice(0, 46)}"`);
+  }
+
+  // Y LO DE LA FOTO SIGUE HABLANDO. Es la mitad que importa: apretar la regla no sirve de
+  // nada si de paso deja muda la notificacion que el usuario SI quiere oir. Copiado de su
+  // captura del 07/08/2026.
+  const suyo = "Confirmación de Pago Yape! JEFFERSON GIOVANNI LEON CARLOS te envió un pago por S/ 20";
+  ok(hablaria(suyo), `habla con el aviso de la foto: "...te envió un pago por S/ 20"`);
+  ok(hablaria(suyo, true), "y tambien con las salidas encendidas");
+}
+
+console.log("\n--- LA LISTA DE SALIDAS ES LA MISMA QUE LA DE JAVASCRIPT ---");
+{
+  // El mismo motivo que con la de entradas, y la misma leccion: la de entradas se escribio
+  // a mano "segun como suenan" los avisos, le faltaba "te envio", y la voz se quedaba muda
+  // con los yapes de verdad mientras la app SI los registraba.
+  //
+  // Y aqui una lista corta duele el doble: si le falta una palabra, "leer tambien las
+  // salidas" no reconoce esa salida y se queda muda justo en lo que se pidio encender.
+  const js = fs.readFileSync(path.join(RAIZ, "utils/notificationParser.ts"), "utf8");
+  const trozo = js.slice(js.indexOf("const EXPENSE_HINTS"), js.indexOf("const NOT_A_NAME"));
+  const enJs = [...trozo.matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  ok(enJs.length > 10, `se encontraron las ${enJs.length} palabras de salida de JavaScript`);
+  const faltan = enJs.filter((p) => !SALIDAS.includes(p));
+  ok(
+    faltan.length === 0,
+    `ninguna palabra de salida se quedo fuera del servicio${faltan.length ? ": " + faltan.join(", ") : ""}`
+  );
+}
+
 console.log("\n--- Y SIN MONTO TAMPOCO HABLA ---");
 {
   ok(!hablaria("Tu estado de cuenta ya esta listo", true), "un aviso sin monto no es un movimiento");
@@ -227,7 +350,7 @@ console.log("\n--- EL SERVICIO DEJA DICHO POR QUE CALLO ---");
   // Sin esto, "no dijo nada" se ve igual con la voz apagada, con un monto no
   // reconocido o con un aviso tomado por un pago tuyo. Distinguirlos costo
   // un dia y un yapeo de verdad.
-  for (const motivo of ["hablo", "apagado", "sin-monto", "es-salida", "no-es-movimiento", "sin-texto", "error"]) {
+  for (const motivo of ["hablo", "apagado", "sin-monto", "es-salida", "sin-direccion", "no-es-movimiento", "sin-texto", "error"]) {
     ok(kt.includes(`anotarVoz("${motivo}")`), `anota el motivo "${motivo}"`);
   }
 

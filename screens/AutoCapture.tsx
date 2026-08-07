@@ -75,6 +75,10 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
     apagado: "autoCapture.speak.apagado",
     "sin-monto": "autoCapture.speak.sinMonto",
     "es-salida": "autoCapture.speak.esSalida",
+    // Nuevo el 07/08/2026: el aviso trae un monto pero no dice si el dinero entra o
+    // sale, así que no es un movimiento. Es el motivo de la publicidad de préstamos.
+    // Sin esta línea el motivo llegaría y la pantalla lo mostraría en blanco.
+    "sin-direccion": "autoCapture.speak.sinDireccion",
     "no-es-movimiento": "autoCapture.speak.noEsMovimiento",
     "sin-texto": "autoCapture.speak.sinTexto",
     error: "autoCapture.speak.error",
