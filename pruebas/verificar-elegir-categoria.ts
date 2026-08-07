@@ -115,31 +115,48 @@ console.log("\n--- Y DETRAS HAY UNA SOLA PANTALLA, NO DOS ---");
   ok(cuantas === 1, `una sola parte deslizable en toda la pantalla (hay ${cuantas})`);
 }
 
-console.log("\n--- ARRIBA SE ELIGE UNA DE LAS QUE YA HAY ---");
+console.log("\n--- LA PANTALLA SE ABRE EN EL CATALOGO ---");
 {
+  // Es lo que el usuario pidio tres veces: "al darle click a elegir categoria
+  // deberia mandarme a la 3 imagen no a la 2". Nada suelto encima del catalogo.
+  ok(
+    /useState<"tuyas" \| "icono" \| "favoritos" \| "color">\("icono"\)/.test(pantLimpia),
+    "arranca en la pestaña del catalogo, no en la lista"
+  );
+
+  // La lista estuvo suelta arriba unas horas y ocupaba media pantalla antes del
+  // catalogo. Que no vuelva: es el fallo que se reporto.
+  ok(!pantLimpia.includes("elegirCat.oCrea"), "no queda la raya de o crea una nueva");
+  ok(!pantLimpia.includes("stickyHeaderIndices"), "ni el bloque pegado que hizo falta con ella");
+  ok(!pantLimpia.includes("scrollTo("), "ni el salto hasta el formulario");
+}
+
+console.log("\n--- Y ELEGIR UNA QUE YA EXISTE SIGUE ESTANDO, EN SU PESTAÑA ---");
+{
+  // Sin esto la app quedaria inservible: habria que crear una categoria nueva en
+  // cada gasto, y los reportes acabarian repartidos entre veinte "Comida". Se le
+  // advirtio dos veces antes de mover nada.
   ok(
     pantLimpia.includes("gastosDisponibles") && pantLimpia.includes("ingresosDisponibles"),
     "estan las de gasto y las de ingreso"
   );
   ok(pantLimpia.includes("categoriasPropias"), "y las propias aparecen en cuanto se crean");
   ok(/onPress=\{\(\) => onElegir\?\.\(c\.id\)\}/.test(pantLimpia), "tocar una la elige");
-  ok(pantLimpia.includes("elegirCat.tuyas"), "con un titulo que dice que son las tuyas");
+  ok(/\["tuyas", "icono", "favoritos", "color"\]/.test(pantLimpia), "la pestaña va primera");
+  ok(pantLimpia.includes("elegirCat.tuyas"), "y se llama Tus categorias, como lo pidio");
 
-  // La lista NO sale al editar: quien viene a cambiarle el nombre a "Broster" no
-  // viene a elegir otra, y una lista ahi solo confunde.
+  // La pestaña NO sale al editar: quien viene a cambiarle el nombre a "Broster"
+  // no viene a elegir otra, y una lista ahi solo confunde.
   ok(
     /const eligiendo = !!onElegir && !editando/.test(pantLimpia),
-    "y no aparece cuando se viene a editar una"
+    "no aparece cuando se viene a editar una"
+  );
+  ok(
+    /eligiendo\s*\r?\n?\s*\? \(\["tuyas"/.test(pantLimpia),
+    "y es esa misma condicion la que decide si la pestaña esta"
   );
 
-  // "Nueva" BAJA hasta el formulario, no abre nada. Es el mismo gesto de antes
-  // en el mismo sitio, sin cambiar de pantalla.
-  ok(
-    /scrollRef\.current\?\.scrollTo\(\{ y: yDelFormulario/.test(pantLimpia),
-    "y Nueva baja hasta el catalogo en la misma pantalla"
-  );
-  ok(pantLimpia.includes("nuevaCat.boton"), "sigue estando la casilla de Nueva");
-  ok(pantLimpia.includes("nuevaCat.editarEsta"), "y el enlace para editar la propia puesta");
+  ok(pantLimpia.includes("nuevaCat.editarEsta"), "esta el enlace para editar la propia puesta");
 
   // Todas a la vista. El "Ver mas" existia porque no habia sitio; aqui sobra.
   ok(!pantLimpia.includes("showAllCats"), "se ven todas, sin Ver mas");
@@ -147,37 +164,25 @@ console.log("\n--- ARRIBA SE ELIGE UNA DE LAS QUE YA HAY ---");
   ok(!pantLimpia.includes("onLongPress"), "sin toque largo, que nadie descubre");
 }
 
-console.log("\n--- LA VISTA PREVIA SE QUEDA PEGADA ARRIBA ---");
+console.log("\n--- LA VISTA PREVIA SIGUE VIENDOSE AL ELEGIR DIBUJO Y COLOR ---");
 {
-  // La decision es de cuando se creo la pantalla: elegir dibujo y color sin ver
-  // el resultado obliga a guardar para descubrir que no pegaban. Antes se
-  // conseguia teniendola FUERA de la parte deslizable; con la lista encima, se
-  // consigue pegandola. Si esto se cae, se cae en silencio: la pantalla sigue
-  // funcionando, solo que se decide a ciegas.
-  ok(pantLimpia.includes("stickyHeaderIndices={[1]}"), "el bloque de la vista previa se pega arriba");
-
-  // Y es el hijo 1 SIEMPRE. El de arriba se dibuja aunque este vacio justo para
-  // que este numero no baile segun el caso — con un numero equivocado se pegaria
-  // el bloque que no toca, que es peor que no pegar ninguno.
+  // Decision de cuando se creo la pantalla: sin verla, se elige a ciegas y se
+  // descubre al guardar que no pegaban. Se consigue teniendola FUERA de la parte
+  // deslizable — que es tambien la razon por la que la lista de categorias no
+  // podia ir suelta encima: la empujaba dentro.
+  //
+  // Si esto se cae, se cae en silencio: la pantalla seguiria funcionando.
+  const deslizable = pant.indexOf("<ScrollView");
+  ok(deslizable > 0, "hay una parte deslizable");
   ok(
-    /stickyHeaderIndices=\{\[1\]\}[\s\S]{0,400}?\{eligiendo && \(/.test(pantLimpia),
-    "y antes va un hijo que existe siempre, para que el numero no cambie"
+    pant.indexOf("nuevaCat.sinNombre") < deslizable,
+    "la vista previa queda FUERA de ella, arriba"
   );
-
-  // Sin fondo propio, el catalogo se veria pasar por debajo de la vista previa.
-  // Se comprueba por el nombre y no por las clases: "bg-white dark:bg-slate-900"
-  // esta tambien en la pantalla entera, asi que buscar el texto no distinguiria
-  // si el bloque pegado se quedo sin el.
-  ok(/const FONDO_PEGAJOSO = /.test(pant), "el fondo del bloque pegado tiene nombre propio");
-  ok(pantLimpia.includes("className={FONDO_PEGAJOSO}"), "y el bloque lo lleva puesto");
-
-  // Y se mide dónde acaba la lista, NO dónde empieza el bloque pegado: a un
-  // bloque pegado lo envuelve React en una caja propia, asi que su "y" sale 0 y
-  // la casilla "Nueva" subiria al principio en vez de bajar al catalogo.
   ok(
-    /layout\.y \+ e\.nativeEvent\.layout\.height/.test(pantLimpia),
-    "y se mide donde ACABA la lista, que es donde empieza lo de crear"
+    pant.indexOf("nuevaCat.nombrePlaceholder") < deslizable,
+    "y el nombre tambien, para escribirlo sin perderlo de vista"
   );
+  ok(pant.indexOf("nuevaCat.tabIcono") < deslizable, "y las pestañas, para cambiar sin subir");
 }
 
 console.log("\n--- LA ELEGIDA VUELVE AL MOVIMIENTO ---");
@@ -215,7 +220,7 @@ console.log("\n--- LOS TEXTOS, EN LOS TRES IDIOMAS ---");
   // Una clave que falta no revienta: el traductor devuelve la clave, y en
   // pantalla sale "elegirCat.tuyas". Se descubre solo si alguien mira la app en
   // ese idioma.
-  for (const clave of ["elegirCat.title", "elegirCat.tuyas", "elegirCat.oCrea", "addSheet.chooseCategory"]) {
+  for (const clave of ["elegirCat.title", "elegirCat.tuyas", "addSheet.chooseCategory"]) {
     const veces = (i18n.match(new RegExp(`"${clave.replace(".", "\\.")}":`, "g")) ?? []).length;
     ok(veces === 3, `${clave} esta en los tres idiomas (${veces})`);
   }

@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **6 de agosto de 2026** · Código publicado: **6ago-05**
+Actualizado: **6 de agosto de 2026** · Código publicado: **6ago-06**
 
 Este archivo existe para que una sesión nueva —de Claude o de quien sea— no
 empiece de cero. No cuenta lo que ya se ve en el código ni en el historial de
@@ -336,7 +336,8 @@ para llegar a la fecha, la descripción y las notas había que desplazarse.
 
 Ahora en "Nuevo movimiento" hay **una fila** con el dibujo de la categoría
 puesta, el texto "Elegir categoría" y su nombre a la derecha. Todo lo demás se
-mudó a la pantalla del catálogo de dibujos.
+mudó a la pantalla del catálogo de dibujos, que se abre en el catálogo y lleva
+"Tus categorías" como primera pestaña — costó dos intentos, ver más abajo.
 
 **Se le ofreció la variante con las cuatro más usadas al lado del botón, para
 conservar el toque único, y eligió el botón solo.** Queda anotado: elegir pasó de
@@ -352,44 +353,51 @@ De regalo, dos cosas que la cuadrícula arrastraba y se fueron con la mudanza:
   texto sin dueño es lo que hace que dentro de un año nadie sepa si se puede
   tocar.
 
-### PRIMERO FUERON DOS PANTALLAS, Y ESO ERA EL ERROR
+### DOS INTENTOS FALLIDOS ANTES DE ACERTAR, Y LOS DOS POR LO MISMO
 
-La primera versión hizo una pantalla nueva con la lista de categorías, aparte de
-la del catálogo de dibujos. El usuario lo señaló con las tres capturas: *"al
-darle click a elegir categoría debería mandarme a la 3 imagen no a la 2"*. Quería
-el catálogo, y la lista de por medio era un paso que no había pedido nadie.
+**Intento 1: una pantalla aparte con la lista de categorías.** El usuario lo
+señaló con las tres capturas: *"al darle click a elegir categoría debería
+mandarme a la 3 imagen no a la 2"*. Quería el catálogo, y la lista de por medio
+era un paso que no había pedido nadie.
 
-**Borrar la lista no era una opción y se le dijo:** es lo que se usa en CADA
-gasto, y sin ella habría que crear una categoría nueva cada vez, con los reportes
-repartidos entre veinte "Comida". Con eso delante eligió **juntarlas**.
+**Intento 2: juntarlas, con la lista SUELTA ARRIBA** del catálogo, en la misma
+pantalla. Volvió a decir lo mismo, marcando en azul justo esa parte: *"la idea era
+que solo quede la parte de abajo y todo lo que esté de azul ya no esté, y donde
+dice o crea una nueva debería decir Tus categorías"*. Tenía razón otra vez: media
+pantalla por delante del catálogo estorba igual, solo que sin cambiar de pantalla.
 
-Así que hoy hay **UNA sola pantalla** (`screens/NuevaCategoria.tsx`), que se
-recorre de arriba abajo:
+**Borrar la lista no era una opción, y se le dijo las dos veces:** es lo que se
+usa en CADA gasto. Sin ella habría que crear una categoría nueva cada vez, con
+los reportes repartidos entre veinte "Comida".
 
-1. **Tus categorías** — un toque y vuelve al movimiento. Y "Editar «X»" si la
-   puesta es tuya.
-2. **La vista previa, el nombre y las pestañas** (Ícono · Favoritos · Color).
-3. **El catálogo entero.**
+**La salida fue la que él mismo nombró: "Tus categorías" es una PESTAÑA**, la
+primera de cuatro (Tus categorías · Ícono · Favoritos · Color). De pestaña no
+ocupa nada hasta que se toca, así que la pantalla se **abre en el catálogo** —lo
+que pedía— y elegir una que ya existe sigue costando un toque.
 
-La casilla **"Nueva" ya no abre nada**: baja hasta el punto 2 en la misma
-pantalla (`scrollTo`). Mismo gesto de siempre, sin cambiar de pantalla.
+La lección, que ya es la tercera vez en este proyecto: **cuando el usuario dice
+"sobra esto", la respuesta no es moverlo un poco más abajo.**
 
-### El bloque del medio se queda PEGADO arriba, y no es un adorno
+### El precio, dicho y anotado en el código
 
-`stickyHeaderIndices`. La vista previa tiene que verse **mientras** se elige
-dibujo y color — decisión de cuando se creó la pantalla: sin verla, se guarda
-para descubrir que no pegaban. Antes se conseguía teniéndola fuera de la parte
-deslizable; con la lista encima, se consigue pegándola.
+`pestana` arranca en `"icono"`, no en `"tuyas"`. Es decisión suya, pedida tres
+veces, y **no es simétrica**: crear una categoría se hace de vez en cuando, y
+elegir una se hace en cada gasto. Si algún día dice que elegir se le hace pesado,
+lo que hay que cambiar es ese valor inicial y nada más. Está escrito ahí mismo.
 
-Dos trampas, las dos vigiladas por pruebas porque las dos fallan **en silencio**:
+### Lo que se descartó por el camino (no volver sobre ello)
 
-- **El índice es 1 SIEMPRE.** El hijo de arriba se dibuja aunque esté vacío, para
-  que el número no baile según el caso. Con un número equivocado se pega el
-  bloque que no toca.
-- **`onLayout` en un bloque pegado no mide lo que parece.** React lo envuelve en
-  una caja propia, así que su `y` se cuenta desde esa caja y sale 0 — "Nueva"
-  habría subido al principio en vez de bajar al catálogo. Se mide **dónde acaba la
-  lista** (`y + height` del bloque de arriba), que es dónde empieza el otro.
+- **La lista suelta encima de la vista previa.** Rechazada por el usuario.
+- **`stickyHeaderIndices` para pegar la vista previa.** Hizo falta solo mientras
+  la lista iba encima y la empujaba fuera de la vista. Al pasar la lista a
+  pestaña, la vista previa vuelve a estar fija fuera de la parte deslizable, que
+  es más simple y era la solución original.
+- **La casilla "Nueva" que bajaba con `scrollTo`.** Sin lista suelta, no hay a
+  dónde bajar: la clave `nuevaCat.boton` se borró de los tres idiomas.
+- Y una trampa que quedó aprendida aunque el código se fuera: **`onLayout` dentro
+  de un bloque pegajoso no mide lo que parece.** React lo envuelve en una caja
+  propia, así que su `y` se cuenta desde esa caja y sale 0. Se encontró leyendo,
+  no probando: las pruebas pasaban igual.
 
 ### Cómo vuelve la elegida, y por qué editar va con `replace`
 
