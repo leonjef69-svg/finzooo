@@ -1,11 +1,14 @@
 # Dónde nos quedamos
 
-Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-08**
-· APK que hay que instalar: **finzo-6ago-10** (el arreglo del PDF colgado es
-código de Android; por internet no viaja)
+Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-10**
+· APK instalado y al día: **finzo-6ago-10** (no hace falta uno nuevo: desde
+entonces no ha cambiado nada de Android)
 
-> **El PDF automático se colgaba: era esperar la medida del documento.** Arreglado
-> en el 6ago-10, copiando lo que hace expo-print. Ver la sección.
+> **Lo último y lo más serio:** al añadir los favoritos a la copia de la cuenta
+> salieron tres fallos que ya estaban ahí — las categorías propias se subían y no
+> se bajaban, cerrar sesión habría borrado datos de la nube, y la cuenta siguiente
+> en un mismo celular heredaba las categorías y **fotos** de la anterior. Ver
+> "Los favoritos van a la nube".
 
 Este archivo existe para que una sesión nueva —de Claude o de quien sea— no
 empiece de cero. No cuenta lo que ya se ve en el código ni en el historial de
@@ -330,6 +333,69 @@ los iconos y está lento, se siente feo al abrirlo"):
     para ahorrar memoria, y en Android es causa conocida de celdas en blanco
     porque al volver hay que rehacerlas. Con 236 casillas la memoria no era el
     problema; los huecos sí.
+
+## Los favoritos van a la nube — y aparecieron TRES fallos al hacerlo (07/08/2026)
+
+Era el pendiente "los favoritos se pierden al cambiar de celular". Se pidió empezar
+por lo que no necesitara nada del usuario, y este era. **Lo que se encontró por el
+camino es más grave que la función pedida.**
+
+### 1. Las categorías propias y la personalización SE SUBÍAN Y NO SE BAJABAN
+
+Estaban en el tipo del documento, se enviaban bien, y **quien lee la nube no las
+leía**. Así que al entrar desde otro celular volvían vacías: las categorías creadas
+desaparecían, sus movimientos se veían como "Otros", y los nombres, colores y fotos
+se perdían — **con la copia correcta guardada en la nube todo el tiempo**.
+
+No dio ningún error porque el lado que escribe estaba bien y el que lee devolvía
+`undefined`, que quien lo recibe convierte en vacío.
+
+> **Y había una prueba que decía "viajan a la copia de la nube". Solo comprobaba
+> que el TIPO nombrara el campo.** Una aserción que mira la declaración y no el
+> camino completo da la tranquilidad sin dar la garantía; es peor que no tenerla.
+> Ahora se comprueba que quien lee la nube los devuelva.
+
+Además, al bajarlos se usaba `setPropias`/`setOverrides`, que solo tocan memoria:
+se veían bien **hasta cerrar la app**, y al reabrir volvía el disco vacío. Ahora se
+usan `savePropias`/`saveOverrides`, que escriben las dos cosas.
+
+### 2. Cerrar sesión habría borrado los favoritos de la nube
+
+Había **dos** armadores del paquete que se sube: el de la subida normal y el de
+cerrar sesión. El nuevo campo entró en el primero y no en el segundo — y subir
+**reemplaza el documento entero**, así que cerrar sesión los habría borrado justo
+después de guardarlos. Ya había pasado con la personalización y con las propias.
+
+Ahora hay **un solo armador** (`datosParaLaNube`), y una prueba exige que los dos
+sitios que suben lo usen y que ninguno escriba su propia lista.
+
+### 3. FALLO DE PRIVACIDAD: la cuenta siguiente heredaba los datos de la anterior
+
+El borrado de fin de sesión tenía una lista escrita a mano, y **tres claves no
+estaban en ella**: categorías propias, personalización y favoritos. Cada una vivía
+en su propio archivo, así que esa lista no las conocía.
+
+Consecuencia real: alguien cierra sesión, entra otra cuenta en ese celular, y hereda
+las categorías de la persona anterior, sus nombres, colores **y sus fotos**.
+
+Las tres claves se declaran ahora en `STORAGE_KEYS` y sus archivos las leen de ahí.
+La prueba **no comprueba esas tres**: comprueba **todas** — cualquier clave que se
+añada y no entre en el borrado hace fallar la prueba. `themeMode` es la única
+excepción, y está dicho por qué (es preferencia del aparato, no de la cuenta).
+
+### Y lo pedido: los favoritos viajan
+
+Los del catálogo suben con el resto. **Las fotos propias no**, y es a propósito: una
+pesa ~18 KB y el documento entero tiene un tope de 1 MB compartido con los
+movimientos. Treinta fotos serían medio megabyte gastado en atajos, y pasarse del
+tope no deja el documento a medias: **lo deja sin guardar, y con él los gastos**.
+Perder un atajo es molesto; perder los movimientos, grave. La foto en sí no se
+pierde si está puesta en una categoría — eso sí viaja.
+
+Y marcar un favorito **dispara la subida**: la pantalla llamaba directo al disco,
+que no avisa a nadie, así que se quedaba en el celular hasta que cambiara otra cosa.
+Ahora pasa por el contexto. Mismo fallo que ya tuvieron la personalización y las
+propias — tercera vez.
 
 ## La tarjeta del saldo, igual en las dos pantallas (07/08/2026)
 

@@ -587,25 +587,93 @@ console.log("\n--- VIAJAN A LA COPIA DE LA NUBE ---");
 
   const ctx = fs.readFileSync(path.join(RAIZ, "contexts/AppDataContext.tsx"), "utf8");
 
-  // TODOS los sitios que suben, no "alguno": olvidar uno hace que se pierdan
-  // solo en ese camino —al cerrar sesion, por ejemplo— y eso no se nota
-  // probando.
-  const subidas = [...ctx.matchAll(/saveCloudData\(uid, \{/g)].map((m) => m.index ?? 0);
-  const conPropias = subidas.filter((i) => ctx.slice(i, i + 900).includes("categoriasPropias"));
+  // HAY UN SOLO ARMADOR DEL PAQUETE, y esa es la proteccion de verdad.
+  //
+  // Antes se escribia en cada subida: en la normal y en la de cerrar sesion. Al
+  // añadir los favoritos el 07/08/2026 la primera los llevaba y la segunda no — y
+  // subir REEMPLAZA el documento entero, asi que cerrar sesion los habria borrado
+  // de la nube justo despues de guardarlos. Ya habia pasado con la personalizacion
+  // y con las propias.
+  //
+  // Con un solo armador, un campo nuevo entra en las dos subidas a la vez.
+  ok(/function datosParaLaNube\(\): CloudData/.test(ctx), "hay un solo armador del paquete");
+  ok(/categoriasPropias,/.test(ctx), "y lleva las categorias propias");
+  const subidas = [...ctx.matchAll(/saveCloudData\(/g)].map((m) => m.index ?? 0);
+  const conArmador = subidas.filter((i) => ctx.slice(i, i + 60).includes("datosParaLaNube()"));
   ok(
-    subidas.length > 0 && conPropias.length === subidas.length,
-    `las suben los ${subidas.length} sitios que escriben en la nube (${conPropias.length} lo hacen)`
+    subidas.length > 1 && conArmador.length === subidas.length,
+    `lo usan los ${subidas.length} sitios que suben (${conArmador.length} lo hacen)`
   );
+  // Y ninguno puede volver a escribir su propia lista.
+  ok(!/saveCloudData\(uid, \{/.test(ctx), "ninguno arma su propia lista");
 
-  // Y al bajarlas hay que ponerlas en los DOS sitios: la variable de modulo
-  // que consulta catInfo y el estado. Solo con el estado, un movimiento con
-  // categoria propia se veria como "Otros" hasta el siguiente arranque.
-  const bajada = ctx.slice(ctx.indexOf("cloud.categoryOverrides ?? {}"));
-  ok(bajada.slice(0, 800).includes("setPropias(cloud.categoriasPropias"), "al bajarlas, van a catInfo");
+  // Y AL BAJARLAS HACEN FALTA LOS TRES SITIOS: catInfo, el estado y el DISCO.
+  //
+  // Aqui se usaba setPropias, que solo pone la variable de modulo que consulta
+  // catInfo. Con eso se veian bien hasta cerrar la app: al reabrir se lee el disco,
+  // que seguia vacio, y las categorias propias desaparecian otra vez con la copia
+  // correcta guardada en la nube. savePropias hace las dos cosas.
+  // Se lee el cuerpo entero de la funcion que trae los datos, no un trozo contado
+  // a mano: contando caracteres, la prueba pasa o falla segun donde caiga un
+  // comentario.
+  const traer = /async function hydrateFromCloud\([\s\S]*?\n  \}/.exec(ctx)?.[0] ?? "";
+  ok(traer.length > 0, "se encontro la funcion que trae los datos de la nube");
+  ok(traer.includes("savePropias(cloud.categoriasPropias"), "al bajarlas van a catInfo y al disco");
   ok(
-    bajada.slice(0, 800).includes("setCategoriasPropiasState(cloud.categoriasPropias"),
-    "y al estado que redibuja"
+    traer.includes("setCategoriasPropiasState(cloud.categoriasPropias"),
+    "y al estado, para que las pantallas se redibujen"
   );
+  // LO MISMO PARA LA PERSONALIZACION, que tenia el mismo agujero.
+  ok(traer.includes("saveOverrides(cloud.categoryOverrides"), "y la personalizacion igual");
+  // Y que no vuelvan las versiones que solo tocan memoria.
+  ok(!/setPropias\(cloud\./.test(traer), "sin quedarse solo en memoria");
+  ok(!/setOverrides\(cloud\./.test(traer), "ninguna de las dos");
+
+  // Y EL FALLO GORDO: se subian y NO SE BAJABAN. Estaban en el tipo, se enviaban
+  // bien, y quien lee el documento no las leia — asi que al entrar desde otro
+  // celular volvian vacias, sin ningun error. La prueba de antes solo comprobaba
+  // que el TIPO las nombrara, que es lo que dejo pasar esto durante dias.
+  const nube = fs.readFileSync(path.join(RAIZ, "utils/cloudSync.ts"), "utf8");
+  ok(/categoriasPropias: data\.categoriasPropias \|\| \[\]/.test(nube), "quien lee la nube las devuelve");
+  ok(/categoryOverrides: data\.categoryOverrides \|\| \{\}/.test(nube), "y la personalizacion tambien");
+}
+
+console.log("\n--- AL CERRAR SESION NO SE QUEDA NADA DE LA CUENTA ANTERIOR ---");
+{
+  // FALLO DE PRIVACIDAD, encontrado el 07/08/2026 mientras se añadian los
+  // favoritos a la nube.
+  //
+  // El borrado de fin de sesion tenia una lista escrita a mano, y tres claves no
+  // estaban en ella: las categorias propias, la personalizacion y los favoritos.
+  // Vivian cada una en su propio archivo, asi que esta lista no las conocia.
+  //
+  // Lo que se veia: alguien cerraba sesion y la siguiente cuenta que entrara en ese
+  // celular heredaba las categorias que la persona anterior habia creado, sus
+  // nombres y colores, Y SUS FOTOS. Datos de una cuenta a la vista de otra.
+  //
+  // Asi que no se comprueban esas tres, se comprueban TODAS: cualquier clave que se
+  // añada y no entre en el borrado hace fallar esto.
+  const almacen = fs.readFileSync(path.join(RAIZ, "utils/storage.ts"), "utf8");
+  const declaradas = [...almacen.matchAll(/^ {2}([a-zA-Z]+): "finzo:/gm)].map((m) => m[1]);
+  ok(declaradas.length >= 8, `se leyeron las claves guardadas (${declaradas.length})`);
+
+  const borrado = /async function clearAccountData\(\)[\s\S]*?\]\.map\(actualKey\)/.exec(almacen)?.[0] ?? "";
+  ok(borrado.length > 0, "se encontro el borrado de fin de sesion");
+  // themeMode se queda a proposito: es preferencia del aparato, no de la cuenta.
+  const fuera = declaradas.filter(
+    (k) => k !== "themeMode" && !borrado.includes(`STORAGE_KEYS.${k}`)
+  );
+  ok(fuera.length === 0, `todas se borran al cerrar sesion${fuera.length ? ": falta " + fuera.join(", ") : ""}`);
+
+  // Y las tres claves viven en la lista comun, no cada una en su archivo: es lo que
+  // hace que la prueba de arriba pueda verlas.
+  for (const archivo of ["categoriasPropias", "categoryCustom", "iconosFavoritos"]) {
+    const suyo = fs.readFileSync(path.join(RAIZ, `utils/${archivo}.ts`), "utf8");
+    ok(
+      new RegExp(`STORAGE_KEY = STORAGE_KEYS\\.${archivo}`).test(suyo),
+      `${archivo} lee su clave de la lista comun`
+    );
+  }
 }
 
 console.log("\n--- ANTES DE BORRAR SE DICE QUE PASA CON LOS MOVIMIENTOS ---");

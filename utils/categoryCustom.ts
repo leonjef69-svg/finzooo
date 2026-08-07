@@ -1,4 +1,4 @@
-import { loadJSON, saveJSON } from "@/utils/storage";
+import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 
 /**
  * Los cambios que la persona le hace a sus categorías: nombre, color e
@@ -41,7 +41,10 @@ export type CategoryOverride = {
 
 export type CategoryOverrides = Record<string, CategoryOverride>;
 
-const STORAGE_KEY = "finzo:categoryCustom";
+// La clave se lee de STORAGE_KEYS y no se escribe aqui: la lista de lo que se
+// borra al cerrar sesion esta alli, y una clave que solo conoce su propio archivo
+// se queda fuera de ese borrado sin que nadie lo note. Ya paso con estas tres.
+const STORAGE_KEY = STORAGE_KEYS.categoryCustom;
 
 let overrides: CategoryOverrides = {};
 

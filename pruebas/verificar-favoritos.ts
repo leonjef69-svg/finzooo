@@ -16,6 +16,7 @@ import {
   esFoto,
   getFavoritos,
   MAX_FAVORITOS,
+  paraLaNube,
   setFavoritos,
 } from "@/utils/iconosFavoritos";
 import { enFilas, POR_FILA } from "@/constants/catalogoFilas";
@@ -147,10 +148,61 @@ console.log("\n--- LA PANTALLA: LA PESTAÑA VA EN EL MEDIO ---");
   // Una pestaña vacía sin explicación deja sin saber si está roto o falta algo.
   ok(pant.includes("nuevaCat.favVacio"), "la pestaña vacía dice qué hacer");
 
-  // Y se guarda en el disco, o se perderían al cerrar la app.
-  ok(/saveFavoritos\(/.test(pant), "marcar guarda en el celular");
+  // Y se guarda POR EL CONTEXTO, no llamando al disco directamente.
+  //
+  // saveFavoritos escribe el disco pero no avisa a nadie, y la subida a la copia de
+  // la cuenta es un efecto que solo se dispara cuando cambia algo de su lista: con
+  // la llamada directa, marcar un favorito se guardaba aqui y NO se subia hasta que
+  // cambiara cualquier otra cosa. Es el mismo fallo que ya tuvieron la
+  // personalizacion y las categorias propias.
+  ok(/guardarFavoritos\(siguiente\)/.test(pant), "marcar guarda por el contexto");
+  ok(!/saveFavoritos\(/.test(pant), "y no salta al disco por su cuenta");
   const ctx = fs.readFileSync(path.join(process.cwd(), "contexts/AppDataContext.tsx"), "utf8");
   ok(/loadFavoritos\(\)/.test(ctx), "y se leen al arrancar la app");
+}
+
+console.log("\n--- Y VIAJAN A LA COPIA DE LA CUENTA ---");
+{
+  // Se pierden al cambiar de celular: eso era lo que quedaba pendiente y estaba
+  // dicho al usuario. Lo pidió el 07/08/2026.
+  const RAIZ = process.cwd();
+  const ctx = fs.readFileSync(path.join(RAIZ, "contexts/AppDataContext.tsx"), "utf8");
+  const nube = fs.readFileSync(path.join(RAIZ, "utils/cloudSync.ts"), "utf8");
+
+  ok(/iconosFavoritos\?: string\[\]/.test(nube), "el documento de la nube los contempla");
+  ok(/iconosFavoritos: data\.iconosFavoritos \|\| \[\]/.test(nube), "y quien lo lee los devuelve");
+  ok(/iconosFavoritos: paraLaNube\(iconosFavoritos\)/.test(ctx), "se suben");
+  ok(/saveFavoritos\(cloud\.iconosFavoritos/.test(ctx), "y al bajarlos van al disco de este celular");
+
+  // El estado existe SOLO para que la subida se dispare. Sin el, marcar un favorito
+  // no cambiaba nada de lo que ese efecto vigila, asi que se quedaba en el celular.
+  //
+  // Se ancla en la espera de 1,5 segundos, que es solo de ese efecto. Anclar en
+  // "saveCloudData" no servia: logout() tambien sube antes de cerrar sesion y
+  // aparece primero, asi que se leian las dependencias de otro efecto cualquiera.
+  const desdeLaSubida = ctx.slice(ctx.indexOf("}, 1500);"));
+  const deps = /\}, \[[\s\S]*?\]\);/.exec(desdeLaSubida)?.[0] ?? "";
+  ok(deps.length > 0, "se encontro la lista de lo que dispara la subida");
+  ok(deps.includes("iconosFavoritos"), "y marcar uno dispara la subida");
+}
+
+console.log("\n--- PERO LAS FOTOS NO VIAJAN, Y ES A PROPOSITO ---");
+{
+  // Una foto recortada pesa unos 18 KB y TODO el documento de la nube tiene un tope
+  // de 1 MB, compartido con los movimientos y las fotos de las categorias. Treinta
+  // fotos de favoritos serian medio megabyte gastado en atajos, y pasarse del tope
+  // no deja el documento a medias: lo deja SIN GUARDAR, y con el los movimientos.
+  // Perder un atajo es molesto; perder los gastos, grave.
+  const FOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRg";
+  const salen = paraLaNube([FOTO, "Coffee", "Car"]);
+  ok(salen.join() === "Coffee,Car", "sube los dibujos del catalogo");
+  ok(!salen.includes(FOTO), "y deja la foto en el celular");
+
+  // Y la limpieza de siempre se sigue aplicando a lo que sube: un repetido o una
+  // basura guardada no puede acabar en la copia de la cuenta.
+  ok(paraLaNube(["Coffee", "Coffee", "", "Car"]).join() === "Coffee,Car", "sin repetidos ni vacios");
+  ok(paraLaNube([1, null, "Pizza"] as unknown as string[]).join() === "Pizza", "ni cosas que no son texto");
+  ok(paraLaNube("no soy lista" as unknown as string[]).length === 0, "y si no es una lista, no sube nada");
 }
 
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);

@@ -28,29 +28,38 @@ import {
   STORAGE_KEYS,
 } from "@/utils/storage";
 import { activate as activateDecoy, deactivate as deactivateDecoy } from "@/utils/decoyMode";
-import {
-  loadOverrides,
-  saveOverrides,
-  setOverrides,
-  type CategoryOverrides,
-} from "@/utils/categoryCustom";
+// setOverrides y setPropias ya no se usan aqui: al traer los datos de la nube se
+// llama a saveOverrides y savePropias, que ponen la variable de modulo Y escriben
+// el disco. Con las versiones "set" se quedaban solo en memoria y al reabrir la app
+// volvia el disco vacio — la personalizacion y las categorias propias desaparecian
+// otra vez.
+import { loadOverrides, saveOverrides, type CategoryOverrides } from "@/utils/categoryCustom";
 import {
   borrar as borrarPropia,
   crear as crearPropia,
   editar as editarPropia,
   loadPropias,
   savePropias,
-  setPropias,
   type CategoriaPropia,
 } from "@/utils/categoriasPropias";
-import { loadFavoritos } from "@/utils/iconosFavoritos";
+import {
+  getFavoritos,
+  loadFavoritos,
+  paraLaNube,
+  saveFavoritos,
+} from "@/utils/iconosFavoritos";
 import { DECOY_BUDGET, buildDecoyTransactions } from "@/utils/decoySeed";
 import { fmt as formatAmount, monthKey } from "@/utils/format";
 import { reserveIdsAbove } from "@/utils/id";
 import { learnCategory } from "@/utils/classifier";
 import { auth } from "@/utils/firebase";
 import { signOutFromGoogle } from "@/utils/googleAuth";
-import { deleteCloudAccount, loadCloudData, saveCloudData } from "@/utils/cloudSync";
+import {
+  deleteCloudAccount,
+  loadCloudData,
+  saveCloudData,
+  type CloudData,
+} from "@/utils/cloudSync";
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
 import { limpiarPendientes, pendientesDeCaptura } from "@/utils/capturaEnFondo";
 import { mergeTransactions, hayNovedades, mergeCaptureLog } from "@/utils/mergeTransactions";
@@ -123,6 +132,16 @@ type AppDataContextValue = {
   updateCategoryOverrides: (next: CategoryOverrides) => void;
   /** Las categorias que creo la persona. */
   categoriasPropias: CategoriaPropia[];
+  /**
+   * Guarda los dibujos favoritos: en el celular Y en la copia de la cuenta.
+   *
+   * La pantalla de categorias llamaba directamente a saveFavoritos, que escribe el
+   * disco pero no avisa al contexto. Con eso, marcar un favorito NO disparaba la
+   * subida a la nube y se quedaba en este celular hasta que cambiara cualquier
+   * otra cosa. Es el mismo fallo que ya tuvieron la personalizacion y las
+   * categorias propias.
+   */
+  guardarFavoritos: (lista: string[]) => void;
   crearCategoria: (datos: {
     nombre: string;
     tipo: "expense" | "income";
@@ -221,6 +240,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Igual que la personalizacion: el dato de verdad vive en la variable de
   // modulo que consulta catInfo, y este estado existe para redibujar.
   const [categoriasPropias, setCategoriasPropiasState] = useState<CategoriaPropia[]>([]);
+  /**
+   * Los dibujos favoritos, tambien como estado.
+   *
+   * El dato de verdad vive en la variable de modulo que lee la pantalla de
+   * categorias; esto existe por UN motivo concreto: la subida a la nube es un
+   * efecto que se dispara cuando cambia algo de su lista de dependencias, y una
+   * variable de modulo no dispara nada. Sin este estado, marcar un favorito se
+   * guardaba en el celular y no se subia hasta que cambiara cualquier otra cosa
+   * — es el mismo fallo que ya tuvieron la personalizacion y las categorias
+   * propias, y esta anotado en las dependencias de ese efecto.
+   */
+  const [iconosFavoritos, setIconosFavoritosState] = useState<string[]>([]);
   // Se crea desde otra pantalla, encima de la de agregar. Al volver hay que
   // dejarla elegida: nadie crea una categoria para despues buscarla.
   const [categoriaRecienCreada, setCategoriaRecienCreada] = useState<string | null>(null);
@@ -289,6 +320,43 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (ids.length > 0) reserveIdsAbove(Math.max(...ids));
   }
 
+  /**
+   * TODO lo que va a la copia de la cuenta, en UN SOLO SITIO.
+   *
+   * POR QUÉ, Y NO ESCRITO EN CADA SUBIDA
+   *
+   * Había dos: la subida normal (que espera un segundo y medio tras cada cambio) y
+   * la de cerrar sesión. Al añadir los dibujos favoritos el 07/08/2026, la primera
+   * los llevaba y la segunda no — y subir REEMPLAZA el documento entero, así que
+   * cerrar sesión los habría borrado de la nube justo después de guardarlos.
+   *
+   * No es la primera vez: es el mismo fallo que ya pasó con la personalización y
+   * con las categorías propias. Con un solo armador, un campo nuevo entra en las
+   * dos subidas a la vez y no hay una segunda lista que acordarse de tocar.
+   */
+  function datosParaLaNube(): CloudData {
+    return {
+      hasOnboarded,
+      userName,
+      userPhoto,
+      userCurrency,
+      userLanguage,
+      budgets,
+      categoryBudgets,
+      transactions,
+      goals,
+      isPremium,
+      merchantLearned,
+      categoryOverrides,
+      categoriasPropias,
+      carryoverCleared,
+      // SIN LAS FOTOS: paraLaNube las quita. Todo este documento tiene un tope de
+      // 1 MB compartido con los movimientos, y pasarse no lo deja a medias: lo
+      // deja sin guardar. Ver la nota en utils/iconosFavoritos.
+      iconosFavoritos: paraLaNube(iconosFavoritos),
+    };
+  }
+
   // Trae lo que haya guardado en la nube para esta cuenta (por ejemplo,
   // al iniciar sesión desde un celular nuevo). Si no hay nada guardado
   // todavía, no hace nada y devuelve "false".
@@ -309,13 +377,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // La personalizacion va a los DOS sitios: a la variable de modulo que
     // consulta catInfo, y al estado que provoca el redibujado. Solo con el
     // estado, las pantallas se dibujarian con los datos viejos.
-    setOverrides(cloud.categoryOverrides ?? {});
+    //
+    // Y con saveOverrides —no setOverrides— para que ADEMAS quede en el disco de
+    // este celular. Con setOverrides se quedaba solo en memoria: al cerrar y
+    // volver a abrir la app se leia el disco, que estaba vacio, y la
+    // personalizacion desaparecia otra vez.
+    saveOverrides(cloud.categoryOverrides ?? {});
     setCategoryOverridesState(cloud.categoryOverrides ?? {});
     // Igual que la personalizacion: a la variable de modulo que consulta
-    // catInfo Y al estado. Solo con el estado, un movimiento con categoria
-    // propia se veria como "Otros" hasta el siguiente arranque.
-    setPropias(cloud.categoriasPropias ?? []);
+    // catInfo, al estado, Y al disco.
+    savePropias(cloud.categoriasPropias ?? []);
     setCategoriasPropiasState(cloud.categoriasPropias ?? []);
+    // Y los dibujos favoritos, a los tres sitios igual. Ver paraLaNube: en la
+    // nube van sin las fotos propias.
+    saveFavoritos(cloud.iconosFavoritos ?? []);
+    setIconosFavoritosState(cloud.iconosFavoritos ?? []);
     setCarryoverCleared(cloud.carryoverCleared ?? []);
     setHasOnboarded(true);
     saveJSON(STORAGE_KEYS.profile, {
@@ -391,6 +467,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       savedCarryoverCleared,
       savedOverrides,
       savedPropias,
+      savedFavoritos,
     ] = await Promise.all([
       loadJSON<Record<string, number>>(STORAGE_KEYS.budgets, {}),
       loadJSON<Record<string, number>>(STORAGE_KEYS.categoryBudgets, {}),
@@ -415,6 +492,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setCategoryBudgets(savedCategoryBudgets);
     setCategoryOverridesState(savedOverrides);
     setCategoriasPropiasState(savedPropias);
+    setIconosFavoritosState(savedFavoritos);
     setTransactions(savedTransactions);
     setGoals(savedGoals);
     protectExistingIds(savedTransactions, savedGoals);
@@ -432,24 +510,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // se espera esto, cerrar sesión muy rápido después de un cambio
     // podía "perderlo": ya no quedaba ni en el celular (se borra abajo)
     // ni en la nube (no le había dado tiempo de subir).
-    if (uid) {
-      await saveCloudData(uid, {
-        hasOnboarded,
-        userName,
-        userPhoto,
-        userCurrency,
-        userLanguage,
-        budgets,
-        categoryBudgets,
-        transactions,
-        goals,
-        isPremium,
-        merchantLearned,
-        categoryOverrides,
-        categoriasPropias,
-        carryoverCleared,
-      });
-    }
+    if (uid) await saveCloudData(uid, datosParaLaNube());
     // También hay que salir del lado de Google. Si no, la próxima vez que
     // alguien pulse "Continuar con Google" entraría directo con la última
     // cuenta usada, sin poder elegir otra — un problema real en un celular
@@ -605,24 +666,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!(ready && hasOnboarded && uid)) return;
     const timer = setTimeout(() => {
-      saveCloudData(uid, {
-        hasOnboarded,
-        userName,
-        userPhoto,
-        userCurrency,
-        userLanguage,
-        budgets,
-        categoryBudgets,
-        transactions,
-        goals,
-        isPremium,
-        merchantLearned,
-        categoryOverrides,
-        categoriasPropias,
-        carryoverCleared,
-      });
+      saveCloudData(uid, datosParaLaNube());
     }, 1500);
     return () => clearTimeout(timer);
+    // datosParaLaNube se queda FUERA de esta lista a propósito. Es una función que
+    // se crea de nuevo en cada dibujado, así que incluirla dispararía una subida
+    // por dibujado — internet gastado en mandar lo mismo. La lista de abajo son
+    // los DATOS que decide subir: es lo que tiene que estar aquí, y el armador
+    // solo los recoge.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     ready,
     hasOnboarded,
@@ -645,6 +697,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // subida, asi que se guardaba en el celular y desaparecia al cambiar de
     // telefono. El aviso del linter estaba senalando ese fallo exacto.
     categoriasPropias,
+    // Y lo mismo con los favoritos: marcar uno no disparaba la subida, asi que se
+    // quedaba en el celular. Por eso hay un estado ademas de la variable de
+    // modulo — ver iconosFavoritos arriba.
+    iconosFavoritos,
     carryoverCleared,
   ]);
 
@@ -1104,6 +1160,20 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return creada.id;
   }
 
+  /**
+   * Guarda los favoritos en los DOS sitios: disco y estado.
+   *
+   * El disco es donde viven de verdad; el estado existe para que la subida a la
+   * nube se dispare. Ver iconosFavoritos.
+   */
+  function guardarFavoritos(lista: string[]) {
+    saveFavoritos(lista);
+    // Se relee del sitio donde quedaron, no se guarda lo que llego: saveFavoritos
+    // limpia repetidos y aplica el tope, y el estado tiene que ser lo mismo que
+    // hay en el disco o la nube recibiria una lista distinta de la que se ve.
+    setIconosFavoritosState(getFavoritos());
+  }
+
   /** Cambia una propia. Lo que no se pase se deja como estaba. */
   function editarCategoria(
     id: string,
@@ -1277,6 +1347,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         categoriasPropias,
         crearCategoria,
         categoriaRecienCreada,
+        guardarFavoritos,
         olvidarCategoriaRecienCreada: () => setCategoriaRecienCreada(null),
         elegirCategoriaEnMovimiento: setCategoriaRecienCreada,
         editarCategoria,

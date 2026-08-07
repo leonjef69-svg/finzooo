@@ -29,15 +29,18 @@
 // dibujado sería leer el disco en cada letra que se escribe. Se cargan una vez
 // al abrir la app y se avisa a mano cuando cambian.
 //
-// SOLO EN ESTE CELULAR, POR AHORA
+// VIAJAN A LA COPIA DE LA CUENTA (07/08/2026), MENOS LAS FOTOS
 //
-// No viajan a la nube. Al cambiar de teléfono se pierden, y está dicho al
-// usuario. Añadirlos a la copia de la cuenta es fácil de escribir y tocaría los
-// sitios que suben datos, así que se dejó fuera de esta entrega a propósito.
+// Aquí decía "no viajan a la nube, al cambiar de teléfono se pierden". Ya no: los
+// dibujos del catálogo suben con el resto de los datos. Las fotos propias NO — ver
+// paraLaNube(), que explica por qué y qué se pierde exactamente.
 
-import { loadJSON, saveJSON } from "@/utils/storage";
+import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 
-const STORAGE_KEY = "finzo:iconosFavoritos";
+// La clave se lee de STORAGE_KEYS y no se escribe aqui: la lista de lo que se
+// borra al cerrar sesion esta alli, y una clave que solo conoce su propio archivo
+// se queda fuera de ese borrado sin que nadie lo note. Ya paso con estas tres.
+const STORAGE_KEY = STORAGE_KEYS.iconosFavoritos;
 
 /**
  * Cuántos se pueden guardar.
@@ -115,6 +118,26 @@ function limpiar(lista: unknown): string[] {
 export function alternar(lista: string[], id: string): string[] {
   if (lista.includes(id)) return lista.filter((x) => x !== id);
   return [id, ...lista].slice(0, MAX_FAVORITOS);
+}
+
+/**
+ * Los favoritos que SÍ pueden viajar a la copia de la cuenta: los del catálogo.
+ *
+ * POR QUÉ LAS FOTOS SE QUEDAN EN EL CELULAR
+ *
+ * Una foto recortada pesa unos 18 KB, y TODO el documento de la nube tiene un tope
+ * de 1 MB — el mismo que comparten los movimientos y las fotos de las categorías.
+ * Treinta fotos de favoritos serían medio megabyte gastado en atajos, y pasarse del
+ * tope no deja el documento a medias: lo deja SIN GUARDAR, y con él los
+ * movimientos. Perder un atajo es molesto; perder los gastos, grave.
+ *
+ * Un nombre del catálogo pesa diez bytes, así que esos van todos.
+ *
+ * La foto en sí NO se pierde al cambiar de celular si está puesta en una categoría:
+ * las categorías propias y su imagen sí viajan. Lo que no vuelve es el atajo.
+ */
+export function paraLaNube(lista: string[]): string[] {
+  return limpiar(lista).filter((x) => !esFoto(x));
 }
 
 export async function loadFavoritos(): Promise<string[]> {

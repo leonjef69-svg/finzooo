@@ -1,4 +1,4 @@
-import { loadJSON, saveJSON } from "@/utils/storage";
+import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 import { sanitizeName } from "@/utils/categoryCustom";
 
 /**
@@ -37,7 +37,10 @@ export type CategoriaPropia = {
   image?: string;
 };
 
-const STORAGE_KEY = "finzo:categoriasPropias";
+// La clave se lee de STORAGE_KEYS y no se escribe aqui: la lista de lo que se
+// borra al cerrar sesion esta alli, y una clave que solo conoce su propio archivo
+// se queda fuera de ese borrado sin que nadie lo note. Ya paso con estas tres.
+const STORAGE_KEY = STORAGE_KEYS.categoriasPropias;
 
 /**
  * El prefijo NO es decorativo.

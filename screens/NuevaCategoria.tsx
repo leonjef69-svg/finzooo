@@ -35,7 +35,7 @@ import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 
 import { esPropia, nombreRepetido } from "@/utils/categoriasPropias";
-import { alternar, esFoto, getFavoritos, saveFavoritos } from "@/utils/iconosFavoritos";
+import { alternar, esFoto, getFavoritos } from "@/utils/iconosFavoritos";
 import { sanitizeName } from "@/utils/categoryCustom";
 
 // Los mismos de personalizar categorias, para que una categoria propia no
@@ -226,6 +226,7 @@ export default function NuevaCategoria({
     crearCategoria,
     editarCategoria,
     borrarCategoria,
+    guardarFavoritos,
     movimientosDeCategoria,
     showToast,
   } = useAppData();
@@ -337,7 +338,10 @@ export default function NuevaCategoria({
   function alternarFavorito() {
     const siguiente = alternar(favoritos, loQueSeMarca);
     setFavoritosEstado(siguiente);
-    saveFavoritos(siguiente);
+    // Por el contexto y no con saveFavoritos directo: aquel escribe el disco pero
+    // no avisa a nadie, y con eso marcar un favorito NO se subia a la copia de la
+    // cuenta hasta que cambiara cualquier otra cosa. Ver guardarFavoritos.
+    guardarFavoritos(siguiente);
     showToast(t(siguiente.includes(loQueSeMarca) ? "nuevaCat.favGuardado" : "nuevaCat.favQuitado"));
   }
 

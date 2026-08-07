@@ -54,6 +54,20 @@ export type CloudData = {
   // (claves "AAAA-MM"). Opcional: las cuentas creadas antes de esta
   // función no lo tienen guardado.
   carryoverCleared?: string[];
+  /**
+   * Los dibujos marcados como favoritos, por su nombre del catálogo.
+   *
+   * SIN LAS FOTOS PROPIAS, y es a propósito. Una foto recortada pesa unos 18 KB y
+   * TODO este documento tiene un tope de 1 MB — el mismo que comparten los
+   * movimientos y las fotos de las categorías. Treinta fotos de favoritos serían
+   * medio megabyte gastado en atajos, y pasarse del tope no deja el documento a
+   * medias: lo deja SIN GUARDAR, y con él los movimientos. Perder un atajo es
+   * molesto; perder los gastos, grave.
+   *
+   * Los nombres del catálogo pesan diez bytes cada uno, así que esos sí van. Ver
+   * paraLaNube() en utils/iconosFavoritos.
+   */
+  iconosFavoritos?: string[];
 };
 
 // Trae los datos guardados en la nube para esta cuenta (o "null" si esta
@@ -79,6 +93,21 @@ export async function loadCloudData(uid: string): Promise<CloudData | null> {
       isPremium: !!data.isPremium,
       merchantLearned: data.merchantLearned || {},
       carryoverCleared: data.carryoverCleared || [],
+      // ESTAS DOS SE SUBÍAN Y NO SE BAJABAN, y eso era un fallo de verdad
+      // (encontrado el 07/08/2026 al añadir los favoritos).
+      //
+      // Estaban en el tipo, se enviaban bien, y aquí no se leían: así que al
+      // entrar desde otro celular volvían vacías. Las categorías que la persona
+      // creó desaparecían, sus movimientos se veían como "Otros", y los nombres,
+      // colores y fotos que hubiera puesto se perdían — todo con la copia
+      // correcta guardada en la nube.
+      //
+      // No dio ningún error porque el lado que las escribe estaba bien y este
+      // devolvía "undefined", que quien lo recibe convierte en vacío. La prueba
+      // que decía "viajan a la nube" solo comprobaba que el TIPO las nombrara.
+      categoryOverrides: data.categoryOverrides || {},
+      categoriasPropias: data.categoriasPropias || [],
+      iconosFavoritos: data.iconosFavoritos || [],
     };
   } catch {
     return null;

@@ -38,6 +38,23 @@ export const STORAGE_KEYS = {
   // cada una. Solo sirve para la pantalla de diagnóstico de la captura
   // automática; no se sube a la nube.
   autoCaptureLog: "finzo:autoCaptureLog",
+  /**
+   * ESTAS TRES VIVÍAN SOLO EN SU PROPIO ARCHIVO, y por eso se quedaron fuera del
+   * borrado al cerrar sesión (encontrado el 07/08/2026).
+   *
+   * Consecuencia real: alguien cerraba sesión y la siguiente cuenta que entrara en
+   * ese celular heredaba las categorías que la persona anterior había creado, sus
+   * nombres y colores, **y sus fotos**. Datos de una cuenta a la vista de otra.
+   *
+   * Pasó porque la lista de lo que se borra está aquí y estas claves estaban
+   * escritas en utils/categoriasPropias, utils/categoryCustom y
+   * utils/iconosFavoritos. Cada archivo sabía la suya y esta lista no las conocía.
+   * Ahora se declaran aquí y esos archivos las leen de aquí: una clave nueva entra
+   * en el borrado sola.
+   */
+  categoriasPropias: "finzo:categoriasPropias",
+  categoryCustom: "finzo:categoryCustom",
+  iconosFavoritos: "finzo:iconosFavoritos",
 } as const;
 
 // Borra todos los datos de la cuenta de golpe (operación atómica y
@@ -60,6 +77,12 @@ export async function clearAccountData(): Promise<void> {
         STORAGE_KEYS.merchantLearned,
         STORAGE_KEYS.carryoverCleared,
         STORAGE_KEYS.autoCaptureLog,
+        // Las tres que faltaban. Sin ellas, la cuenta siguiente heredaba las
+        // categorías, la personalización y las fotos de la anterior. Ver la nota
+        // en STORAGE_KEYS.
+        STORAGE_KEYS.categoriasPropias,
+        STORAGE_KEYS.categoryCustom,
+        STORAGE_KEYS.iconosFavoritos,
       ].map(actualKey)
     );
   } catch {
