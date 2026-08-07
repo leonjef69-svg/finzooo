@@ -351,6 +351,29 @@ El aspecto vive ahora en `SALDO_VERDE` y `SALDO_TARJETA` (`constants/style.ts`),
 lo usan las dos. El contorno se queda en blanco al 45%: al 20% se perdía sobre el
 verde y la tarjeta parecía la única sin contorno.
 
+### Y el primer arreglo lo empeoró: LAS CLASES DE TAILWIND NO VIAJAN
+
+Compartir el aspecto como **texto de clases** (`"rounded-[32px] overflow-hidden …"`)
+desde `constants/style.ts` **no funcionó, y no dio ningún error.** Tailwind genera
+las clases **leyendo archivos**, y solo lee `app/`, `screens/` y `components/` (el
+`content` de `tailwind.config.js`). `constants/` no está en esa lista, así que
+`rounded-[32px]` dejó de existir y **las dos tarjetas se quedaron sin esquina** —
+incluida la que ya estaba bien.
+
+Lo vio el usuario en el celular antes que nosotros: *"redondea las esquinas, te
+faltó eso"*.
+
+Ahora va en **medidas** (`borderRadius: 32`, `overflow: "hidden"`, …) por `style`:
+con números no hay nada que generar y da igual dónde viva el archivo. Es el mismo
+motivo por el que `CARD_SHADOW` es un objeto desde siempre.
+
+> **Una clase de Tailwind escrita fuera de las carpetas que Tailwind lee no falla:
+> desaparece.** Hay una prueba que recorre `constants/`, `utils/`, `contexts/` y
+> `modules/` buscando clases con corchetes (`rounded-[32px]`, `w-[80px]`), que son
+> las que no pueden existir por casualidad. Las normales pueden colarse y funcionar
+> **de rebote** porque otra pantalla las usa — y eso es peor, porque funciona hasta
+> que esa otra pantalla cambia.
+
 ## En el PDF, los límites sin gasto no salen (07/08/2026)
 
 *"Si no hay movimiento en presupuesto por categoría, quítalo; solo debe aparecer

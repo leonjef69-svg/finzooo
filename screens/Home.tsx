@@ -189,11 +189,14 @@ export default function Home({
           colors={[...SALDO_VERDE]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          // El aspecto sale de SALDO_TARJETA, compartido con la tarjeta del saldo
-          // del Panorama en Reportes. Estaba escrito aquí a mano, se arregló solo
-          // aquí, y la otra se quedó con el verde apagado y sin recortar el
-          // degradado. Ver la nota en constants/style.
-          className={`mx-5 p-5 flex-row items-center gap-4 ${SALDO_TARJETA}`}
+          // La esquina, el recorte y el contorno salen de SALDO_TARJETA, compartido
+          // con la tarjeta del saldo del Panorama en Reportes. Y van por "style",
+          // no por clases: Tailwind solo genera las clases que encuentra leyendo
+          // app/, screens/ y components/, así que un "rounded-[32px]" escrito en
+          // constants/ no existe y la esquina desaparece sin ningún error. Ya pasó.
+          // Ver la nota en constants/style.
+          className="mx-5 p-5 flex-row items-center gap-4"
+          style={SALDO_TARJETA}
         >
           <BudgetRing pct={pct} />
           <View className="flex-1">

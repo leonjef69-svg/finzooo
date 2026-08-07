@@ -284,12 +284,13 @@ export default function Reports({
             colors={[...SALDO_VERDE]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            // El aspecto sale de SALDO_TARJETA, el mismo que usa la tarjeta del
-            // saldo en Inicio: es el MISMO número con el MISMO título en otra
-            // pantalla, así que no puede verse distinto. Aquí iba con un verde más
-            // apagado, menos esquina y —lo que se veía feo— sin recortar el
-            // degradado. Ver la nota en constants/style.
-            className={`mx-5 mt-4 px-5 py-4 ${SALDO_TARJETA}`}
+            // Mismo aspecto que la tarjeta del saldo en Inicio: es el MISMO número
+            // con el MISMO título en otra pantalla, así que no puede verse
+            // distinto. Aquí iba con un verde más apagado, menos esquina y —lo que
+            // se veía feo— sin recortar el degradado.
+            // Por "style" y no por clases: ver la nota en constants/style.
+            className="mx-5 mt-4 px-5 py-4"
+            style={SALDO_TARJETA}
           >
             <Text className="text-emerald-100 text-xs font-semibold">
               {t("home.availableBalance")}

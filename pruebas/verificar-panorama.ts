@@ -225,12 +225,24 @@ console.log("\n--- LA TARJETA VERDE DEL SALDO SE VE IGUAL EN LAS DOS PANTALLAS -
   // degradado se pinta con las esquinas cuadradas y el borde blanco se dibuja
   // redondeado encima. En cada esquina asoma el arco claro del borde con el verde
   // saliendose por fuera, y eso era el "aparente blanco".
-  ok(/overflow-hidden/.test(estilo), "la tarjeta recorta su degradado a las esquinas");
-  ok(/rounded-\[32px\]/.test(estilo), "con la esquina de siempre");
-  ok(/border-white\/45/.test(estilo), "y el contorno que se ve sobre verde");
+  ok(/overflow: "hidden"/.test(estilo), "la tarjeta recorta su degradado a las esquinas");
+  ok(/borderRadius: 32/.test(estilo), "con la esquina de siempre");
+  ok(/rgba\(255,255,255,0\.45\)/.test(estilo), "y el contorno que se ve sobre verde");
+
+  // Y VA EN MEDIDAS, NO EN CLASES. El primer intento compartio el texto de las
+  // clases desde aqui y NO FUNCIONO SIN DAR NINGUN ERROR: Tailwind genera las
+  // clases leyendo los archivos, y solo lee app/, screens/ y components/. Un
+  // "rounded-[32px]" escrito en constants/ no existe, asi que las dos tarjetas se
+  // quedaron sin esquina — tambien la que ya estaba bien. Lo vio el usuario en el
+  // celular antes que nosotros.
+  // Sin comentarios: la explicacion de arriba nombra "rounded-[32px]", y una prueba
+  // que se cae por su propia explicacion acaba haciendo que se borre la explicacion.
+  // Es la cuarta vez que pasa en este proyecto.
+  const estiloLimpio = estilo.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  ok(!/rounded-\[/.test(estiloLimpio), "sin clases de Tailwind aqui, que no se generan");
 
   for (const [nombre, fuente] of [["Inicio", inicio], ["Reportes", reportes]] as const) {
-    ok(fuente.includes("SALDO_TARJETA"), `${nombre} usa el aspecto compartido`);
+    ok(fuente.includes("style={SALDO_TARJETA}"), `${nombre} usa el aspecto compartido`);
     ok(fuente.includes("SALDO_VERDE"), `${nombre} usa el verde compartido`);
     // Y ninguna puede volver a escribir ESE verde a mano: es como se separaron.
     // Se miran los cuatro tonos que tuvieron las dos versiones, no cualquier
@@ -241,6 +253,59 @@ console.log("\n--- LA TARJETA VERDE DEL SALDO SE VE IGUAL EN LAS DOS PANTALLAS -
     );
     ok(suVerde.length === 0, `${nombre} no lleva el verde del saldo escrito a mano`);
   }
+}
+
+console.log("\n--- NINGUNA CLASE DE TAILWIND FUERA DE DONDE SE LEEN ---");
+{
+  // LA TRAMPA, y por eso se comprueba en general y no solo en la tarjeta del saldo.
+  //
+  // Tailwind genera las clases LEYENDO archivos, y la lista de carpetas que lee
+  // esta en tailwind.config.js. Una clase escrita fuera de esas carpetas
+  // simplemente NO SE GENERA: no hay error, no hay aviso, y en el celular ese
+  // trozo de aspecto no esta. Pasó el 07/08/2026 al mover el aspecto de la tarjeta
+  // del saldo a constants/: se quedaron sin esquina las dos, incluida la que ya
+  // estaba bien.
+  //
+  // Se buscan las clases con valor entre corchetes —rounded-[32px], w-[80px]—
+  // porque son las que no pueden existir por casualidad. Una como "overflow-hidden"
+  // puede colarse igual y funcionar de rebote, solo porque otra pantalla la usa; y
+  // eso es peor, porque funciona hasta que esa otra pantalla cambia.
+  const fs = await import("fs");
+  const path = await import("path");
+  const RAIZ = process.cwd();
+  const config = fs.readFileSync(path.join(RAIZ, "tailwind.config.js"), "utf8");
+  const leidas = [...config.matchAll(/\.\/([a-z]+)\/\*\*/g)].map((m) => m[1]);
+  ok(leidas.length > 0, `se leyo la lista de carpetas de tailwind.config (${leidas.join(", ")})`);
+
+  const sospechosas: string[] = [];
+  for (const carpeta of ["constants", "utils", "contexts", "modules"]) {
+    if (leidas.includes(carpeta)) continue;
+    const dir = path.join(RAIZ, carpeta);
+    if (!fs.existsSync(dir)) continue;
+    const pila = [dir];
+    while (pila.length > 0) {
+      const actual = pila.pop() as string;
+      for (const entrada of fs.readdirSync(actual, { withFileTypes: true })) {
+        const completo = path.join(actual, entrada.name);
+        // Sin entrar en lo compilado: ahi hay clases de sobra y no son nuestras.
+        if (entrada.isDirectory()) {
+          if (entrada.name !== "build" && entrada.name !== "node_modules") pila.push(completo);
+          continue;
+        }
+        if (!/\.(ts|tsx)$/.test(entrada.name)) continue;
+        const texto = fs.readFileSync(completo, "utf8");
+        // Sin comentarios: la explicacion de este fallo nombra "rounded-[32px]".
+        const codigo = texto.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+        if (/\b[a-z-]+-\[[^\]]+\]/.test(codigo)) {
+          sospechosas.push(path.relative(RAIZ, completo));
+        }
+      }
+    }
+  }
+  ok(
+    sospechosas.length === 0,
+    `ningun archivo fuera de esas carpetas define clases con corchetes${sospechosas.length ? ": " + sospechosas.join(", ") : ""}`
+  );
 }
 
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
