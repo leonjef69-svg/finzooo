@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -50,20 +50,24 @@ const ESPERA_RESTO_MS = 350;
  * instante? no"*). Buscar una octava leyendo sería el mismo error por octava vez: lo
  * que falta es un NÚMERO sacado del propio celular.
  *
- * Da dos datos, y cada uno señala un culpable distinto:
+ * LA PRIMERA VERSIÓN DE ESTE MEDIDOR MEDÍA MAL, y conviene dejarlo escrito porque el
+ * error es fácil de repetir: contaba desde que el dedo se APOYA hasta que la casilla
+ * está pintada. Pero la marca se decide cuando el dedo se LEVANTA, así que dentro de
+ * ese número estaba el rato que la persona tuvo el dedo encima — que no es la app. Dio
+ * 262 ms y no se podía saber cuánto era de cada uno.
  *
- * - **milisegundos**, desde que el toque llega al código hasta que la casilla nueva ya
- *   está pintada. Si sale bajo (unas decenas) el retraso NO está en rehacer nada:
- *   está antes, en la parte de Android que decide si el dedo era un toque o un
- *   deslizón, y el arreglo es otro completamente.
- * - **cuántas filas se rehicieron**. Tienen que ser DOS: la que suelta la marca y la
- *   que la toma. Si en el celular salen 48, la memorización no está funcionando allí
- *   —y eso no se puede ver leyendo, porque el código parece correcto—.
+ * Ahora son tres datos, y cada uno señala un culpable distinto:
  *
- * Se mide desde onPressIn y no desde onPress: onPress espera a que el dedo se levante,
- * y eso lo decide la persona, no la app. Mediría a la persona, no al programa.
+ * - **dedo**: de apoyar a levantar. Es la persona, no el programa. Está aquí para poder
+ *   restarlo, y para ver de un golpe si el resto es grande o chico al lado suyo.
+ * - **app**: de levantar el dedo al cuadro en que ya se ve. ESTE es el único que
+ *   podemos arreglar. Si sale de unas decenas de milisegundos, no hay nada que arreglar
+ *   por el lado de la velocidad.
+ * - **filas**: cuántas se rehicieron. Tienen que ser DOS. Si salen 48, la memorización
+ *   no funciona en el celular — y eso no se puede ver leyendo, porque el código parece
+ *   correcto. En la primera medición salieron 2, así que esa parte está bien.
  */
-const MEDIDOR = { toque: 0, filas: 0 };
+const MEDIDOR = { abajo: 0, suelta: 0, filas: 0 };
 
 // Los mismos de personalizar categorias, para que una categoria propia no
 // pueda tener un color que las de fabrica no tienen.
@@ -171,6 +175,40 @@ const Dibujito = memo(function Dibujito({
   // parecerían todos iguales.
   const foto = esFoto(id);
   const D = foto ? null : iconoDe(id);
+
+  /**
+   * LA MARCA SE PINTA AL APOYAR EL DEDO, NO AL LEVANTARLO. (07/08/2026)
+   *
+   * Esto no es un arreglo de velocidad, y por eso los siete anteriores no lo movieron:
+   * *"tocar un icono, ¿se marca al instante? no"*.
+   *
+   * La marca violeta la decidía la pantalla entera, y la pantalla se enteraba del toque
+   * cuando el dedo se LEVANTABA — así funciona un botón: avisa al soltarlo. O sea que
+   * por muy rápida que fuera la app, la marca llegaba siempre después del dedo. Se
+   * estaba midiendo y optimizando algo que no era el problema.
+   *
+   * Ahora la casilla se marca ella misma en cuanto la tocan, sin preguntarle a nadie:
+   * no se rehace ninguna fila, no hay nada que esperar, aparece en el mismo cuadro.
+   * Cuando el dedo se levanta llega la marca de verdad —"elegido"— y como ya estaba
+   * pintada, no se ve ningún cambio.
+   *
+   * Los tres cabos que hay que atar, y que son el motivo de que esto tenga tres piezas
+   * en vez de una:
+   *
+   *  1. Si el dedo era el principio de un DESLIZÓN y no un toque, no se eligió nada:
+   *     hay que despintarla. Eso lo dice "onPressOut sin onPress".
+   *  2. Si sí se eligió, NO se despinta al levantar el dedo, o parpadearía en el hueco
+   *     entre soltarlo y que llegue la marca de verdad.
+   *  3. Y cuando se elige OTRA casilla, esta tiene que despintarse aunque nadie la
+   *     toque. De eso se encarga el efecto: mira cuándo deja de ser la elegida.
+   */
+  const [tocada, setTocada] = useState(false);
+  const eligio = useRef(false);
+  useEffect(() => {
+    if (!elegido) setTocada(false);
+  }, [elegido]);
+  const marcada = elegido || tocada;
+
   return (
     // SE PROBÓ CAMBIARLO POR PRESSABLE Y ROMPIÓ LA CUADRÍCULA. NO REPETIRLO.
     //
@@ -188,13 +226,25 @@ const Dibujito = memo(function Dibujito({
     // El ahorro que sí valía era otro y se quedó: las pestañas ya no se rehacen al
     // cambiar (ver la nota del display) y solo recortan las casillas con foto.
     <TouchableOpacity
-      // MEDIDOR TEMPORAL: aquí es donde el toque llega al código por primera vez.
-      // Ver MEDIDOR arriba. Se quita junto con él.
       onPressIn={() => {
-        MEDIDOR.toque = Date.now();
+        // Se pinta YA. Ver la nota de "tocada": esto es todo el arreglo del toque.
+        eligio.current = false;
+        setTocada(true);
+        // MEDIDOR TEMPORAL: el instante en que el toque llega al código.
+        MEDIDOR.abajo = Date.now();
         MEDIDOR.filas = 0;
       }}
-      onPress={() => onElegir(id)}
+      onPress={() => {
+        eligio.current = true;
+        // MEDIDOR TEMPORAL: el instante en que se levantó el dedo. Lo de antes es la
+        // persona; lo de después, la app. Ver MEDIDOR.
+        MEDIDOR.suelta = Date.now();
+        onElegir(id);
+      }}
+      onPressOut={() => {
+        // Era el principio de un deslizón, no un toque: no se eligió nada.
+        if (!eligio.current) setTocada(false);
+      }}
       // SIN NINGUNA CLASE, y ahí está el arreglo. Ver aspectoDeCasilla: el aspecto
       // ya viene calculado y las 236 comparten el mismo objeto.
       //
@@ -203,14 +253,14 @@ const Dibujito = memo(function Dibujito({
       // dentro y no sobresale de nada.
       style={
         foto
-          ? [elegido ? aspecto.elegida : aspecto.normal, { overflow: "hidden" }]
-          : elegido
+          ? [marcada ? aspecto.elegida : aspecto.normal, { overflow: "hidden" }]
+          : marcada
             ? aspecto.elegida
             : aspecto.normal
       }
     >
       {D ? (
-        <D size={22} color={elegido ? aspecto.tinta : "#64748b"} strokeWidth={2.2} />
+        <D size={22} color={marcada ? aspecto.tinta : "#64748b"} strokeWidth={2.2} />
       ) : (
         <Image source={{ uri: id }} style={{ width: lado, height: lado }} />
       )}
@@ -483,11 +533,15 @@ export default function NuevaCategoria({
    */
   const [medida, setMedida] = useState<string | null>(null);
   useEffect(() => {
-    if (!MEDIDOR.toque) return;
-    const desde = MEDIDOR.toque;
+    if (!MEDIDOR.abajo || !MEDIDOR.suelta) return;
+    const dedo = MEDIDOR.suelta - MEDIDOR.abajo;
+    const suelta = MEDIDOR.suelta;
     const filas = MEDIDOR.filas;
-    MEDIDOR.toque = 0;
-    const cuadro = requestAnimationFrame(() => setMedida(`${Date.now() - desde} ms · ${filas}`));
+    MEDIDOR.abajo = 0;
+    MEDIDOR.suelta = 0;
+    const cuadro = requestAnimationFrame(() =>
+      setMedida(`dedo ${dedo} · app ${Date.now() - suelta} ms · ${filas}`)
+    );
     return () => cancelAnimationFrame(cuadro);
   }, [icono]);
   function irA(cual: typeof pestana) {

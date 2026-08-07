@@ -246,6 +246,54 @@ console.log("\n--- LA VISTA PREVIA SIGUE VIENDOSE AL ELEGIR DIBUJO Y COLOR ---")
   ok(pant.indexOf("nuevaCat.tabIcono") < deslizable, "y las pestañas, para cambiar sin subir");
 }
 
+console.log("\n--- LA CASILLA SE MARCA AL APOYAR EL DEDO, NO AL LEVANTARLO ---");
+{
+  // POR QUE EXISTE ESTA PRUEBA (07/08/2026).
+  //
+  // Se arreglaron SIETE causas de lentitud del catalogo y el toque seguia sin sentirse
+  // instantaneo. La octava no era lentitud: la marca violeta la decidia la pantalla, y
+  // la pantalla se enteraba del toque al LEVANTAR el dedo —asi avisa un boton—. Por muy
+  // rapida que fuera la app, la marca llegaba siempre despues del dedo.
+  //
+  // Ahora la casilla se pinta ella misma al ser tocada, sin preguntarle a nadie: no se
+  // rehace ninguna fila y no hay nada que esperar.
+  //
+  // Se lee el codigo porque lo que se vigila es CUANDO se pinta, y eso no se le puede
+  // preguntar al resultado: pintado de las dos formas se ve igual en una foto. Si
+  // alguien vuelve a colgar el aspecto solo de "elegido" —que parece lo mas limpio— la
+  // demora vuelve sin que nada se rompa.
+  const casilla = pantLimpia.slice(
+    pantLimpia.indexOf("function Dibujito"),
+    pantLimpia.indexOf("function Fila")
+  );
+  ok(casilla.length > 200, "se encuentra el codigo de la casilla");
+
+  // 1. Al apoyar el dedo ya se pinta.
+  ok(/onPressIn=\{\(\) => \{[\s\S]*setTocada\(true\)/.test(casilla), "al apoyar el dedo la casilla se marca");
+
+  // 2. Y el aspecto NO cuelga solo de la marca de la pantalla. Esta es la que de verdad
+  //    importa: sin ella, lo de arriba se pintaria y no se veria.
+  ok(
+    /marcada \? aspecto\.elegida : aspecto\.normal/.test(casilla),
+    "el aspecto sale de la marca propia, no solo de la de la pantalla"
+  );
+  ok(/const marcada = elegido \|\| tocada/.test(casilla), "que es la suya O la de la pantalla");
+
+  // 3. Si era un deslizon y no un toque, se despinta. Sin esto, deslizar el catalogo
+  //    dejaria casillas marcadas por el camino.
+  ok(/onPressOut=/.test(casilla) && /if \(!eligio\.current\) setTocada\(false\)/.test(casilla),
+    "si era el principio de un deslizon se despinta");
+
+  // 4. Y al elegir OTRA, esta se despinta aunque nadie la toque. Sin esto quedarian dos
+  //    casillas marcadas a la vez y no se sabria cual esta elegida.
+  ok(/if \(!elegido\) setTocada\(false\)/.test(casilla), "y al elegir otra, esta se despinta");
+
+  // 5. NO REGRESION: la eleccion de verdad sigue ocurriendo. Esta pasa tambien contra la
+  //    version anterior a proposito — no describe el arreglo, vigila que al pintar antes
+  //    no se haya dejado de elegir.
+  ok(/onElegir\(id\)/.test(casilla), "y elegir de verdad sigue pasando al levantar el dedo");
+}
+
 console.log("\n--- LA ELEGIDA VUELVE AL MOVIMIENTO ---");
 {
   // Son dos pantallas distintas: no hay propiedad por la que devolver el dato.

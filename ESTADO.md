@@ -552,7 +552,42 @@ vista animada de `TouchableOpacity` (esa además rompió la cuadrícula).
 **Entrar quedó resuelto**: la séptima causa era la gorda de esa mitad. Lo que queda es
 solo el toque.
 
-### EL MEDIDOR EN LA APP (7ago-18) — temporal, hay que quitarlo
+### Octava causa, y NO era lentitud: la marca se pintaba al soltar (7ago-20)
+
+Lo que midió el medidor: **262 ms · 2 filas**.
+
+Las "2 filas" contestaron una pregunta de golpe: **la memorización sí funciona en el
+celular**, no se está rehaciendo la cuadrícula entera. Ahí no hay nada que buscar.
+
+Y los 262 ms **estaban mal medidos, por mi culpa**: contaban desde que el dedo se apoya,
+pero la marca se decide cuando se levanta, así que dentro de ese número estaba el rato
+que la persona tuvo el dedo encima. No se podía saber cuánto era de cada uno.
+
+Pero el error de medición **señaló la causa**. Si la marca se decide al levantar el
+dedo, entonces:
+
+> **Por muy rápida que sea la app, la marca llega siempre después del dedo.** No es
+> lentitud. Es dónde está puesto el aviso. Siete arreglos de velocidad no podían mover
+> esto, y por eso no lo movieron.
+
+Ahora la casilla **se pinta ella misma al ser tocada**, sin preguntarle a la pantalla:
+no se rehace ninguna fila, no hay nada que esperar, aparece en el mismo cuadro. Cuando
+el dedo se levanta llega la marca de verdad y, como ya estaba pintada, no se ve cambio.
+
+Tiene tres piezas y no una, y cada una tapa un agujero real:
+
+1. **Al apoyar** se pinta (`onPressIn`).
+2. **Si era un deslizón** y no un toque, se despinta (`onPressOut` sin que hubiera
+   habido `onPress`). Sin esto, deslizar el catálogo dejaría casillas marcadas por el
+   camino.
+3. **Al elegir otra**, esta se despinta aunque nadie la toque (un efecto que mira cuándo
+   deja de ser la elegida). Sin esto quedarían dos marcadas a la vez.
+
+Las cinco afirmaciones nuevas de `verificar-elegir-categoria` fallan contra la versión
+anterior. Las dos que pasan están marcadas: una encuentra el bloque de código y la otra
+vigila que al pintar antes no se haya dejado de elegir.
+
+### EL MEDIDOR EN LA APP (7ago-18, corregido en 7ago-20) — temporal, hay que quitarlo
 
 Aquí se dejó de buscar una octava causa leyendo. Se releyó el camino del toque entero y
 **está correcto**: `Fila` y `Dibujito` memorizados, `onElegir` es `setIcono` (estable),
@@ -563,23 +598,32 @@ octava por lectura sería repetir el error por octava vez.
 Así que el medidor va **dentro de la app**, en la pantalla, y él lee el número. Da dos
 datos y **cada uno señala un culpable distinto** — por eso son dos y no uno:
 
-- **Milisegundos** desde `onPressIn` —el primer instante en que el toque llega al
-  código— hasta el cuadro siguiente al cambio, con `requestAnimationFrame`, que es
-  cuando ya se VE. Si sale bajo, el retraso **no está en rehacer nada**: está antes, en
-  la parte de Android que decide si el dedo era un toque o un deslizón dentro de la
-  parte deslizable, y entonces el arreglo es otro completamente.
-- **Cuántas filas se rehicieron.** Tienen que ser **2**. Si en el celular salen 48, la
-  memorización no funciona allí — y eso **no se puede ver leyendo**, porque el código
-  parece correcto. Es justo el caso que dos días de lectura no encontrarían.
+- **dedo**: de apoyar a levantar. Es la persona, no el programa. Está para poder
+  restarlo, y para ver de un golpe si el resto es grande o chico a su lado.
+- **app**: de levantar el dedo al cuadro en que ya se ve, con `requestAnimationFrame`.
+  **Este es el único que se puede arreglar.** Si sale de unas decenas de milisegundos,
+  no hay nada que arreglar por el lado de la velocidad.
+- **filas**: cuántas se rehicieron. Tienen que ser **2**. Ya salieron 2, así que esa
+  parte está confirmada en el celular.
 
-Se mide desde `onPressIn` y no desde `onPress` a propósito: `onPress` espera a que el
-dedo se levante, y eso lo decide la persona. Mediría a la persona, no al programa.
+> **La primera versión de este medidor medía mal, y el error vale más que el número.**
+> Contaba de apoyar el dedo a ver la marca, o sea que mezclaba a la persona con el
+> programa. Al ir a arreglarlo se vio POR QUÉ mezclaba: la marca se decide al levantar
+> el dedo. Ese fue el hallazgo de la octava causa. Un instrumento mal hecho apuntó al
+> problema mejor que siete lecturas del código.
 
-> **PENDIENTE DE QUITAR:** `MEDIDOR`, el `onPressIn`, el contador en `Fila`, el estado
-> `medida`, el texto en pantalla y la clave `nuevaCat.medida` en los tres idiomas. No
-> tiene prueba que lo vigile **a propósito**: una prueba lo volvería permanente.
+> **PENDIENTE DE QUITAR:** `MEDIDOR`, sus dos marcas de tiempo en la casilla, el
+> contador en `Fila`, el estado `medida`, el texto en pantalla y la clave
+> `nuevaCat.medida` en los tres idiomas. **OJO al quitarlo:** el `onPressIn` y el
+> `onPressOut` de la casilla **se quedan** — son el arreglo de la octava causa, no el
+> medidor. Este no tiene prueba que lo vigile **a propósito**: una prueba lo volvería
+> permanente.
 
-**Lo que queda por probar, en orden de menos a más invasivo:**
+**Lo siguiente: que pruebe `7ago-20` y diga si el toque ya se siente instantáneo.** Si
+sí, esto se cierra y solo queda quitar el medidor. Si no, el número de **app** dirá si
+queda algo que arreglar por velocidad o si el problema es otro.
+
+**Lo que quedaba por probar antes de la octava causa, si hiciera falta volver:**
 
 1. **Bajar `GRUPOS_AL_ABRIR` de 4 a 2** (~40 dibujos, dos pantallas). Es cambiar un
    número. Si entrar mejora de golpe, el coste sigue siendo el montaje y merece la
