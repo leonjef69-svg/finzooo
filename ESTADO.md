@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-12**
+Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-13**
 · APK instalado y al día: **finzo-6ago-10** (no hace falta uno nuevo: desde
 entonces no ha cambiado nada de Android)
 
@@ -348,20 +348,44 @@ Ahora las cuatro se quedan puestas y solo se esconde la que no toca
 cuesta nada. Yoga saca de la cuenta lo que lleva `display: none`, así que la parte
 deslizable sigue midiendo solo lo que se ve.
 
-**2. Cada casilla traía una vista ANIMADA dentro.** `TouchableOpacity` la usa para
-bajar la opacidad al tocarla: eran **236 valores animados** creados al abrir, y
-ninguno hace nada hasta que se toca uno. Con `Pressable` es la misma caja sin esa
-parte, y el aviso de "estoy tocando" se da con la opacidad de siempre.
+**2. ~~Cada casilla traía una vista ANIMADA dentro.~~ SE INTENTÓ Y ROMPIÓ LA
+CUADRÍCULA — REVERTIDO.** `TouchableOpacity` usa una vista animada para bajar la
+opacidad al tocarla: eran 236 valores animados creados al abrir sin que ninguno haga
+nada hasta que se toca uno. Se cambió por `Pressable`… y para dar ese aviso con
+`Pressable` hay que pasar la medida en una **función**
+(`style={({pressed}) => [...]}`). **Las clases de NativeWind se aplican también por
+`style`, así que con una función de por medio el ancho y el alto no llegan**: las
+casillas salieron como pastillas altas y estrechas.
+
+Lo vio el usuario en el celular: *"no quiero que se vea así, estaba bien como estaba
+antes"*. Vuelto a `TouchableOpacity`. La prueba **no vigila qué componente se usa**
+—eso da igual— vigila que **la medida llegue**, en un objeto y no en una función.
 
 **3. Las 236 recortaban su contenido.** `overflow-hidden` obliga a Android a darle a
 cada casilla su propia capa para cortar lo que sobresale. Se puso en todas el mismo
 día, al permitir fotos en favoritos — **sin pensar en que la cuadrícula grande no
 tiene ninguna foto**. Ahora solo recortan las que llevan foto.
 
-> Ninguna de las tres es un cálculo mal hecho: son **tres cosas añadidas por un
-> motivo bueno y aplicadas donde no hacían falta**. El escenario que las delató es el
-> mismo de siempre —usar la pantalla de verdad, ir y volver— y ninguna se ve leyendo
-> el archivo de una sola pasada.
+> Ninguna es un cálculo mal hecho: son **cosas añadidas por un motivo bueno y
+> aplicadas donde no hacían falta**. El escenario que las delató es el mismo de
+> siempre —usar la pantalla de verdad, ir y volver— y ninguna se ve leyendo el
+> archivo de una sola pasada.
+
+### Y el nombre salía como clave interna (7ago-13)
+
+En la misma captura: al tocar "Mascotas", la vista previa y la casilla del nombre
+decían **"category.mascotas"**. El `label` de una categoría de fábrica es una
+**clave** de traducción, no el nombre, y se metía tal cual. Venía del 7ago-01, cuando
+tocar una categoría pasó a cargarla arriba.
+
+Se traduce con `t()`, que sirve para las dos clases sin preguntar: en una categoría
+propia el `label` ya es el nombre escrito a mano y el traductor devuelve tal cual lo
+que no reconoce.
+
+**Y "cómo era" guarda el nombre YA TRADUCIDO**, el mismo que se ve. Guardando la
+clave, dar a Aplicar sin tocar nada habría escrito "Mascotas" como nombre propio de
+esa categoría — y habría dejado de traducirse al cambiar el idioma de la app, por no
+haber hecho nada.
 
 Lo que **no** se volvió a intentar, porque ya se probó y el usuario lo rechazó:
 cargar el catálogo por partes, virtualizarlo, o esperar a que acabe la animación. Ver

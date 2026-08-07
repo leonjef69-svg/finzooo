@@ -1,7 +1,6 @@
 import { memo, useCallback, useMemo, useState } from "react";
 import {
   Image,
-  Pressable,
   ScrollView,
   Text,
   TextInput,
@@ -90,20 +89,27 @@ const Dibujito = memo(function Dibujito({
   const foto = esFoto(id);
   const D = foto ? null : iconoDe(id);
   return (
-    // PRESSABLE Y NO TOUCHABLEOPACITY, y en 236 casillas se nota.
+    // SE PROBÓ CAMBIARLO POR PRESSABLE Y ROMPIÓ LA CUADRÍCULA. NO REPETIRLO.
     //
-    // TouchableOpacity trae dentro una vista ANIMADA para bajar la opacidad al
-    // tocarla: son 236 valores animados que Android tiene que crear al abrir la
-    // pantalla, y ninguno hace nada hasta que se toca uno. Pressable es la misma
-    // caja sin esa parte, y el aviso de "estoy tocando" se da con la opacidad de
-    // siempre. Reportado el 07/08/2026: "quiero que la aplicación se sienta rápida
-    // y fluida".
-    <Pressable
+    // La idea era buena: TouchableOpacity trae dentro una vista animada para bajar
+    // la opacidad al tocarla, y eran 236 valores animados creados al abrir sin que
+    // ninguno haga nada hasta que se toca uno.
+    //
+    // Pero para dar ese aviso con Pressable hay que pasar la medida en una FUNCIÓN
+    // —style={({pressed}) => [...]}— y ahí se rompe: las clases de NativeWind también
+    // se aplican por "style", y con una función de por medio el ancho y el alto no
+    // llegan. Las casillas salieron como pastillas altas y estrechas en vez de
+    // cuadrados. Lo vio el usuario en el celular el 07/08/2026: "no quiero que se
+    // vea así, estaba bien como estaba antes".
+    //
+    // El ahorro que sí valía era otro y se quedó: las pestañas ya no se rehacen al
+    // cambiar (ver la nota del display) y solo recortan las casillas con foto.
+    <TouchableOpacity
       onPress={() => onElegir(id)}
       // La medida va en número, no en clase. Con "flex-1" la repartía la fila y
       // se veía igual, pero nadie sabía cuánto medía hasta después de dibujarla
       // — y la lista necesita saberlo ANTES para poder adelantarse al dedo.
-      style={({ pressed }) => [{ width: lado, height: lado }, pressed && { opacity: 0.6 }]}
+      style={{ width: lado, height: lado }}
       // El recorte SOLO cuando hay foto, y ahí está el segundo ahorro.
       //
       // Recortar obliga a Android a darle a esa casilla su propia capa para poder
@@ -126,7 +132,7 @@ const Dibujito = memo(function Dibujito({
       ) : (
         <Image source={{ uri: id }} style={{ width: lado, height: lado }} />
       )}
-    </Pressable>
+    </TouchableOpacity>
   );
 });
 
@@ -412,12 +418,27 @@ export default function NuevaCategoria({
     // cambiaba el nombre y el color, y el dibujo de arriba no se movía. Fue
     // exactamente lo que reportó el usuario el 07/08/2026.
     const suIcono = info.iconoNombre ?? icono;
+    // EL NOMBRE HAY QUE TRADUCIRLO, y eso faltaba.
+    //
+    // El "label" de una categoría de fábrica es una CLAVE ("category.mascotas"), no
+    // el nombre: quien la enseña hace t(label). Aquí se metía tal cual, así que al
+    // tocar "Mascotas" la vista previa y la casilla del nombre decían
+    // "category.mascotas". Lo vio el usuario en el celular el 07/08/2026.
+    //
+    // En una categoría propia el "label" ya es el nombre escrito a mano, y el
+    // traductor devuelve tal cual lo que no reconoce: así que t() sirve para las dos
+    // sin preguntar de qué tipo es.
+    const suNombre = t(info.label);
     setElegida(id);
-    setNombre(info.label);
+    setNombre(suNombre);
     setIcono(suIcono);
     setColor(info.color);
     setFoto(info.image);
-    setComoEra({ nombre: info.label, icono: suIcono, color: info.color, foto: info.image });
+    // Y "como era" guarda el nombre YA TRADUCIDO, el mismo que se ve. Guardando la
+    // clave, al darle a Aplicar sin tocar nada la comparación diría que el nombre
+    // cambió y escribiría "Mascotas" como nombre propio de esa categoría: dejaría de
+    // traducirse al cambiar el idioma de la app, por no haber hecho nada.
+    setComoEra({ nombre: suNombre, icono: suIcono, color: info.color, foto: info.image });
   }
 
   async function tomarFoto() {

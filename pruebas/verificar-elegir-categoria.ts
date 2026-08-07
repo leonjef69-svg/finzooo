@@ -149,6 +149,19 @@ console.log("\n--- Y ELEGIR UNA QUE YA EXISTE SIGUE ESTANDO, EN SU PESTAÑA ---"
   // "debería yo seleccionar el icono y recién cuando le doy aplicar mandarme
   // [al movimiento], aparte podría cambiarle el color".
   ok(/onPress=\{\(\) => elegirDeLaLista\(c\.id\)\}/.test(pantLimpia), "tocar una la marca");
+
+  // Y EL NOMBRE SE TRADUCE AL CARGARLO.
+  //
+  // El "label" de una categoria de fabrica es una CLAVE ("category.mascotas"), no el
+  // nombre: quien la enseña hace t(label). Se metia tal cual, asi que al tocar
+  // "Mascotas" la vista previa y la casilla del nombre decian "category.mascotas".
+  // Lo vio el usuario en el celular el 07/08/2026.
+  ok(/const suNombre = t\(info\.label\)/.test(pantLimpia), "el nombre se traduce al cargarlo");
+  // Y "como era" guarda el YA TRADUCIDO, el mismo que se ve. Guardando la clave, dar
+  // a Aplicar sin tocar nada escribiria "Mascotas" como nombre propio de esa
+  // categoria, y dejaria de traducirse al cambiar el idioma — por no hacer nada.
+  ok(/nombre: suNombre,/.test(pantLimpia), "y se compara contra el mismo que se ve");
+  ok(!/setNombre\(info\.label\)/.test(pantLimpia), "nunca la clave cruda");
   ok(
     !/onPress=\{\(\) => onElegir\?\.\(/.test(pantLimpia),
     "y NO cierra la pantalla de golpe, que era el fallo"

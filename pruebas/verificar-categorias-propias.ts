@@ -253,14 +253,31 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
     "ninguna se desmonta al cambiar de pestaña"
   );
 
-  // Y LA CASILLA NO LLEVA UNA VISTA ANIMADA DENTRO.
+  // LA MEDIDA DE LA CASILLA VA EN UN OBJETO, NUNCA EN UNA FUNCION.
   //
-  // TouchableOpacity trae una para bajar la opacidad al tocarla: son 236 valores
-  // animados que Android crea al abrir la pantalla, y ninguno hace nada hasta que
-  // se toca uno. Pressable es la misma caja sin esa parte.
+  // Se probo cambiar TouchableOpacity por Pressable para ahorrar 236 vistas
+  // animadas. La idea era buena y rompio la cuadricula: para dar el aviso de
+  // "estoy tocando" con Pressable hay que pasar la medida en una FUNCION
+  // —style={({pressed}) => [...]}— y las clases de NativeWind se aplican tambien
+  // por "style", asi que con una funcion de por medio el ancho y el alto no
+  // llegan. Las casillas salieron como pastillas altas y estrechas.
+  //
+  // Lo vio el usuario en el celular: "no quiero que se vea asi, estaba bien como
+  // estaba antes". Asi que lo que se vigila no es que use Pressable —eso da igual—
+  // es que la medida llegue.
   const laCasilla = /const Dibujito = memo\([\s\S]*?\n\}\);/.exec(codigo)?.[0] ?? "";
-  ok(laCasilla.includes("<Pressable"), "la casilla del catalogo usa Pressable");
-  ok(!laCasilla.includes("TouchableOpacity"), "y no la version con vista animada");
+  ok(laCasilla.length > 0, "la casilla del catalogo sigue siendo su propia pieza");
+  // Se mira la medida DE LA CASILLA, no cualquier medida del archivo: la imagen de
+  // dentro tambien lleva "width: lado, height: lado", asi que buscarlo suelto daba
+  // por bueno el codigo roto. Tiene que ser la del propio boton, justo tras su
+  // onPress.
+  ok(
+    /onPress=\{\(\) => onElegir\(id\)\}[\s\S]{0,400}?style=\{\{ width: lado, height: lado \}\}/.test(
+      laCasilla
+    ),
+    "la medida de la casilla va en un objeto, no en una funcion"
+  );
+  ok(!/style=\{\(\{ pressed/.test(laCasilla), "sin funcion de estilo, que se come el tamaño");
 
   // Y NO RECORTA SU CONTENIDO SALVO QUE HAYA FOTO.
   //
