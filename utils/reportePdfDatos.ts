@@ -90,6 +90,23 @@ export function htmlDelReporte(d: DatosDelPdf): string {
         spent: gastadoPorCategoria[id] || 0,
       };
     })
+    // SOLO LAS QUE TUVIERON GASTO ESE MES.
+    //
+    // El usuario lo pidió el 07/08/2026 con la captura del PDF: trece filas
+    // diciendo "€ 0.00 / € 50.00", una detrás de otra, y ni una con nada dentro.
+    // *"Si no hay movimiento, quítalo; solo debe aparecer cuando haya algún
+    // movimiento"*. Es media hoja que no contesta nada, y encima empuja los
+    // gráficos y la lista de movimientos hacia abajo.
+    //
+    // Y ES LA MISMA REGLA QUE YA SEGUÍA LA PANTALLA DE REPORTES. Ahí solo se
+    // dibujan los límites con gasto —desde antes que esto—, así que el PDF y la
+    // pantalla enseñaban cosas distintas del mismo mes. Otra vez una decisión
+    // tomada en un sitio y sin aplicar en el de al lado, que es el fallo que este
+    // proyecto repite. Si algún día se cambia, se cambia en los dos.
+    //
+    // Si ninguna tuvo gasto, la lista queda vacía y buildPdfHtml no dibuja el
+    // bloque: ya se salta lo que no tiene filas.
+    .filter((l) => l.spent > 0)
     .sort((a, b) => b.spent / b.limit - a.spent / a.limit);
 
   // Los tres meses que TERMINAN en el mes elegido, del más antiguo al más

@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-06**
+Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-07**
 · APK que hay que instalar: **finzo-6ago-10** (el arreglo del PDF colgado es
 código de Android; por internet no viaja)
 
@@ -330,6 +330,21 @@ los iconos y está lento, se siente feo al abrirlo"):
     para ahorrar memoria, y en Android es causa conocida de celdas en blanco
     porque al volver hay que rehacerlas. Con 236 casillas la memoria no era el
     problema; los huecos sí.
+
+## En el PDF, los límites sin gasto no salen (07/08/2026)
+
+*"Si no hay movimiento en presupuesto por categoría, quítalo; solo debe aparecer
+cuando haya algún movimiento"*. En la captura: **trece filas seguidas diciendo
+"€ 0.00 / € 50.00"**, ninguna con nada dentro. Media hoja que no contesta nada y
+que empuja los gráficos y la lista de movimientos hacia abajo.
+
+**Y la pantalla de Reportes ya seguía esa regla** —ahí solo se dibujan los límites
+con gasto—, así que el PDF y la pantalla enseñaban **cosas distintas del mismo
+mes**. Otra vez: decisión tomada en un sitio, sin aplicar en el de al lado.
+
+Ahora se filtran en `reportePdfDatos`, que es el armador que comparten el PDF de a
+mano y el automático — así los dos cambian juntos. Si ninguna tuvo gasto, el bloque
+entero no se dibuja: `buildPdfHtml` ya se salta lo que no tiene filas.
 
 ## Las columnas por mes del PDF salían gigantes (07/08/2026)
 
