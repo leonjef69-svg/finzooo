@@ -104,5 +104,51 @@ console.log("\n--- EL REPASO CADA POCO SE QUEDA ---");
   ok(ctx.includes('AppState.addEventListener("change"'), "y la recogida al volver al frente");
 }
 
+console.log("\n--- Y LA APP PIDE SOLA QUE VUELVAN A ENGANCHAR EL LECTOR ---");
+{
+  // EL FALLO DEL 07/08/2026: *"cuando me ingresa una notificacion de que me yapearon ya no
+  // habla en voz alta"*, justo despues de instalar un APK.
+  //
+  // Dar el permiso y que el lector este ENGANCHADO son dos cosas distintas. Al actualizar
+  // la app, Android mata el proceso del lector y NO lo vuelve a enganchar: en los ajustes
+  // del sistema el permiso sigue dado —asi que desde fuera todo parece bien— pero el lector
+  // no recibe ni un aviso. Ni registra ni habla.
+  //
+  // El servicio ya pedia reengancharse, pero solo en onListenerDisconnected, y ESE AVISO NO
+  // LLEGA al actualizar: el proceso muere de golpe. Nadie pedia la reconexion.
+  //
+  // Y habia un boton para hacerlo a mano en "Captura automatica". Eso es el error de
+  // siempre en este proyecto —se puede pero no se encuentra—: hay que saber que el boton
+  // existe, que hay que tocarlo, y que hay que tocarlo justo despues de instalar.
+  //
+  // Se vigila el codigo porque el fallo es que las dos mitades no queden unidas, y eso no
+  // lo caza el compilador: son dos lenguajes distintos.
+  ok(modulo.includes("NotificationListenerService.requestRebind("), "el modulo sabe pedir la reconexion");
+  ok(puente.includes("export function requestRebind"), "y el puente la ofrece a la app");
+
+  // LA MITAD QUE FALTABA: que la app la pida SOLA.
+  ok(/function reengancharLector\(\)/.test(ctx), "la app tiene un sitio que pide la reconexion");
+  ok(/notificationReader\.requestRebind\(\)/.test(ctx), "y llama a la reconexion de verdad");
+
+  // Al arrancar Y al volver al frente. Las dos hacen falta: la primera cubre la
+  // actualizacion de la app, y la segunda que Android tire el lector mientras la app esta
+  // en segundo plano —los Honor y Huawei aprietan el ahorro de bateria—.
+  const alArrancar = ctx.indexOf("reengancharLector();");
+  const elDeVolver = ctx.indexOf('AppState.addEventListener("change"');
+  ok(alArrancar > 0 && alArrancar < elDeVolver, "se pide al arrancar la app");
+  ok(
+    ctx.slice(elDeVolver).includes("reengancharLector();"),
+    "y tambien cada vez que la app vuelve al frente"
+  );
+
+  // Solo si el permiso esta dado: pedir una reconexion sin permiso no arregla nada y deja
+  // un error apuntado que despista al buscar de verdad.
+  const laFuncion = ctx.slice(ctx.indexOf("function reengancharLector"));
+  ok(
+    /if \(!notificationReader\.isPermissionGranted\(\)\) return/.test(laFuncion.slice(0, 400)),
+    "y no se pide si el permiso no esta dado"
+  );
+}
+
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

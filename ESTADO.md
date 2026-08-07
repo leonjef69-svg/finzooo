@@ -770,6 +770,56 @@ mitad, costaría la mitad. El catálogo grande lo pidió él, así que no se toc
 > —las que de verdad lo arreglaron— salieron de **un número sacado del celular**. Cuando
 > arreglar lo que se ve no mueve la aguja, no hay que releer: hay que medir.
 
+## Tras instalar el APK, el lector de avisos quedó desenganchado (7ago-26, 07/08/2026)
+
+Reportado justo después de instalar `7ago-24`: *"cuando me ingresa una notificación de que
+me yapearon ya no habla en voz alta... ¿por qué cuando me llega un yapeo se demora en
+leerlo?"*.
+
+**Lo primero fue descartar mi propio cambio de la noche anterior**, que era el sospechoso
+obvio: la regla nueva de la dirección. No era. Su aviso —*"...te envió un pago por S/
+20"*— contiene "te envio", que está en la lista de entradas, así que la regla lo acepta.
+
+**El fallo de verdad:** dar el permiso y que el lector esté **enganchado** son dos cosas
+distintas. Al actualizar la app, Android mata el proceso del lector y **no lo vuelve a
+enganchar**. En los ajustes del sistema el permiso sigue dado —así que desde fuera todo
+parece correcto— pero el lector no recibe ni un aviso. Ni registra ni habla.
+
+El servicio **ya pedía** reengancharse... pero solo en `onListenerDisconnected`, y **ese
+aviso no llega cuando se actualiza la app**: el proceso muere de golpe, sin que nadie pueda
+avisar de nada. Nadie pedía la reconexión.
+
+> **Y se podía arreglar a mano: había un botón en "Captura automática".** Ese es el error
+> que este proyecto repite —*se puede* pero *no se encuentra*—, y ya van tres veces. Hay que
+> saber que el botón existe, que hay que tocarlo, y que hay que tocarlo **justo después de
+> instalar**. Nadie sabe eso.
+
+Ahora la app pide la reconexión **sola**: al arrancar y cada vez que vuelve al frente
+(`reengancharLector`). Pedirla cuando ya está enganchado no hace nada, así que se puede
+pedir tranquilamente. Solo se pide si el permiso está dado — pedirla sin permiso no arregla
+nada y deja un error apuntado que despista al buscar de verdad.
+
+### Y eso explica también la demora
+
+Arrancar el motor de voz de Android tarda **2 a 4 segundos**: es el sistema cargando el
+idioma, no Finzo pensando. Por eso el servicio lo enciende **en cuanto Android lo engancha**
+(`onListenerConnected`), para que esté caliente cuando llegue el primer yapeo.
+
+Con el lector desenganchado, **eso nunca pasaba**. El motor estaba frío y la espera se oía.
+Con la reconexión al arrancar, el motor se calienta con la app delante y el yapeo suena en
+el momento.
+
+### El hueco que queda apuntado y NO se tocó
+
+`prepararVoz()` hace `if (motor != null) return`. Si el motor se creara pero su arranque no
+terminara nunca —pasa si Android está actualizando su sistema de voz— quedaría
+`motor != null` con `vozLista = false` para siempre, y cada yapeo se encolaría en silencio.
+
+No se le puso un reintento a propósito: es un caso raro, no se puede probar desde aquí, y
+**la reconexión ya lo cura** — un lector reenganchado es un servicio nuevo, con su motor
+nuevo. Meter lógica de reintentos sin poder probarla en un servicio del sistema es más
+riesgo que beneficio.
+
 ## La voz leía la publicidad de Yape (7ago-24, 07/08/2026) — NECESITA APK
 
 Reportado así: *"me llegó una notificación de Yape pero no era alguien que me había

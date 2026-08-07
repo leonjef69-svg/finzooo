@@ -929,11 +929,47 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       collect();
     });
 
+    /**
+     * PEDIRLE A ANDROID QUE VUELVA A ENGANCHAR EL LECTOR DE AVISOS.
+     *
+     * ESTE ERA EL FALLO DE "DESPUÉS DE INSTALAR EL APK DEJÓ DE HABLAR" (07/08/2026).
+     *
+     * Dar el permiso y que el lector esté ENGANCHADO son dos cosas distintas. Al
+     * actualizar la app, Android mata el proceso del lector y **no lo vuelve a
+     * enganchar**: en los ajustes del sistema el permiso sigue dado —así que desde fuera
+     * todo parece bien— pero el lector no recibe ni un aviso. Ni registra ni habla.
+     *
+     * El servicio ya pedía reengancharse él mismo, pero solo en `onListenerDisconnected`,
+     * y ese aviso NO LLEGA cuando se actualiza la app: el proceso muere de golpe, sin que
+     * nadie pueda avisar de nada. Nadie pedía la reconexión.
+     *
+     * Y se podía arreglar a mano: hay un botón en "Captura automática". Pero eso es el
+     * mismo error de siempre en este proyecto —*se puede* pero *no se encuentra*—: hay que
+     * saber que el botón existe, que hay que tocarlo, y que hay que tocarlo justo después
+     * de instalar. Nadie lo sabe.
+     *
+     * Ahora lo pide la app sola: al arrancar y cada vez que vuelve al frente. Pedirlo
+     * cuando ya está enganchado no hace nada, así que se puede pedir tranquilamente.
+     */
+    function reengancharLector() {
+      try {
+        if (!notificationReader.isPermissionGranted()) return;
+        notificationReader.requestRebind();
+      } catch {
+        // Una reconexión que falla no puede impedir que la app arranque.
+      }
+    }
+
+    reengancharLector();
+
     const sub = AppState.addEventListener("change", (state) => {
       if (state !== "active") return;
       // Al volver al frente puede que la persona acabe de conceder (o
       // quitar) el permiso desde los ajustes de Android.
       setAutoCapturePermission(notificationReader.isPermissionGranted());
+      // Y puede que Android haya tirado el lector mientras la app estaba en segundo
+      // plano — los Honor y Huawei aprietan el ahorro de batería. Ver reengancharLector.
+      reengancharLector();
       collect();
     });
     return () => {
