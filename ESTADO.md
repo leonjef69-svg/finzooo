@@ -1,11 +1,11 @@
 # Dónde nos quedamos
 
-Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-15**
+Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-16**
 
-> **SIN CERRAR:** el usuario sigue midiendo lentitud al abrir "Elegir categoría". Se
-> arreglaron cuatro causas reales (ver la sección); lo único que queda por probar es
-> **no dibujar los 236 dibujos de golpe**, y eso ya se rechazó una vez en otra forma,
-> así que no se hace sin preguntarle.
+> **Seis causas de lentitud arregladas en "Elegir categoría"** (ver la sección). La
+> última era el fondo del asunto: 227 medidas de texto encima de la animación de
+> entrada. Ahora el catálogo llega en **dos tandas**, con la primera llenando tres
+> pantallas — que no es el "de a poquitos" que se rechazó en agosto.
 · APK instalado y al día: **finzo-6ago-10** (no hace falta uno nuevo: desde
 entonces no ha cambiado nada de Android)
 
@@ -430,9 +430,43 @@ clave, dar a Aplicar sin tocar nada habría escrito "Mascotas" como nombre propi
 esa categoría — y habría dejado de traducirse al cambiar el idioma de la app, por no
 haber hecho nada.
 
-Lo que **no** se volvió a intentar, porque ya se probó y el usuario lo rechazó:
-cargar el catálogo por partes, virtualizarlo, o esperar a que acabe la animación. Ver
-la sección del catálogo lento del 05/08.
+### EL CATÁLOGO EN DOS TANDAS — lo que faltaba (7ago-16)
+
+Con todo lo anterior arreglado seguía lento. Lo que quedaba es el fondo del asunto:
+**cada dibujo es una letra de una tipografía y Android tiene que MEDIR cada letra.**
+227 medidas es un coste que **no se puede abaratar, solo repartir** — y puestas todas
+de golpe caen justo encima de la animación de entrada.
+
+**No es lo que se rechazó en agosto, y la diferencia es la que importa:**
+
+| Rechazado entonces | Lo que se hace ahora |
+|---|---|
+| Los grupos **de a uno** → huecos al deslizar | **Dos** tandas |
+| Nada dibujado hasta acabar la animación → un segundo en blanco | La primera tanda son **4 grupos (~70 dibujos, más de 3 pantallas)**: lo que se ve está completo desde el primer instante |
+| — | La segunda trae **TODO el resto de una vez**, fuera de la vista, a los 350 ms |
+
+`GRUPOS_AL_ABRIR = 4` es el equilibrio y no se toca a la ligera: menos y un deslizón
+rápido llega al final de lo dibujado; más y volvemos a cargar la entrada. **Hay una
+prueba que lo cuenta de verdad** — suma los dibujos de esos grupos y exige que pasen
+de tres pantallas.
+
+Y la prueba que decía *"están los 236 desde el principio"* **se cambió con su motivo
+escrito**, no para que pasara: la regla vieja tenía buenas razones y las nuevas son
+otras.
+
+### Y el retraso AL TOCAR: las 48 filas se rehacían (7ago-16)
+
+Cada fila recibía "el dibujo elegido de la pantalla". Cambiaba con cada toque, así que
+**las 48 filas se rehacían** —y las 236 casillas se volvían a comparar— aunque el
+cambio afectara a dos.
+
+Ahora una fila recibe el elegido **solo si está en ella**, y nulo si no. Las que no lo
+tienen reciben lo mismo que antes (nulo) y la memorización las deja fuera: se rehacen
+**dos** filas, la que suelta la marca y la que la toma.
+
+Lo que **sigue rechazado**: virtualizar (`FlatList`), `windowSize`, cargar de a uno, y
+`InteractionManager` —que no espera a la animación, espera a que no quede *nada*
+pendiente—. Ver la sección del catálogo lento del 05/08.
 
 ## La pantalla de Premium, rediseñada (07/08/2026)
 

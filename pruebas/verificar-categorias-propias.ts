@@ -10,6 +10,7 @@
 import fs from "fs";
 import path from "path";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
+import { CATALOGO_EN_FILAS, GRUPOS_AL_ABRIR, POR_FILA } from "@/constants/catalogoFilas";
 import { iconoDe } from "@/constants/iconos";
 import { setOverrides } from "@/utils/categoryCustom";
 import { crear, borrar, editar, esPropia, nombreRepetido, setPropias, type CategoriaPropia } from "@/utils/categoriasPropias";
@@ -229,12 +230,44 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   ok(!codigo.includes("windowSize"), "ni hay reserva que un deslizon pueda agotar");
   ok(!codigo.includes("memo(function Catalogo"), "y tampoco vuelve el catalogo que los armaba todos de golpe");
 
-  // Y NO SE CARGA POR PARTES. Hubo un escalonado que metia los grupos de a uno
-  // tras abrir, y hacia falta mientras los dibujos eran vectores: armarlos todos
-  // tardaba casi un segundo. Con la tipografia cada dibujo es una letra y no
-  // hace falta repartir nada; el escalonado solo dejaria huecos que se ven si se
-  // desliza en ese instante, que es lo que se estaba arreglando.
-  ok(!codigo.includes("gruposArmados"), "no se cargan por partes: estan los 236 desde el principio");
+  // EL CATALOGO LLEGA EN DOS TANDAS, NI EN UNA NI DE A POQUITOS.
+  //
+  // AQUI DECIA "estan los 236 desde el principio", y eso cambio el 07/08/2026. Se
+  // deja escrito por que, porque la regla de antes tenia buenos motivos:
+  //
+  //   · Hubo un escalonado que metia los grupos DE A UNO y dejaba huecos que se
+  //     veian al deslizar ("se pone asi cuando deslizo rapido"), y una version que
+  //     no dibujaba nada hasta acabar la animacion ("aparecen luego de 1 segundo").
+  //     Las dos las rechazo el usuario, y siguen rechazadas.
+  //   · Pero ponerlos TODOS de golpe deja las 227 medidas de texto encima de la
+  //     animacion de entrada, y la pantalla llega a trompicones: "el cambio de
+  //     pantalla debe verse fluido y mas rapido".
+  //
+  // La forma que cumple las dos cosas son DOS tandas: los primeros grupos al abrir
+  // —mas de tres pantallas, asi que lo que se ve esta completo desde el primer
+  // instante— y TODO el resto de una vez, fuera de la vista.
+  //
+  // Lo que se vigila es justo eso: que sean dos y que la primera llene la pantalla.
+  ok(!codigo.includes("gruposArmados"), "no se cargan de a poquitos, como se rechazo");
+  ok(/setGruposADibujar\(CATALOGO_EN_FILAS\.length\)/.test(codigo), "el resto llega TODO de una vez");
+  ok(/useState\(GRUPOS_AL_ABRIR\)/.test(codigo), "y arranca con los primeros grupos");
+
+  // Y la primera tanda tiene que llenar la pantalla de sobra. Se cuenta de verdad:
+  // con menos, un deslizon rapido llega al final de lo dibujado y ahi si se veria el
+  // hueco que el usuario rechazo.
+  const CABEN_EN_PANTALLA = 20;
+  const primeros = CATALOGO_EN_FILAS.slice(0, GRUPOS_AL_ABRIR).reduce(
+    (suma, g) => suma + g.filas.length * POR_FILA,
+    0
+  );
+  ok(
+    primeros >= CABEN_EN_PANTALLA * 3,
+    `la primera tanda son ${primeros} dibujos, mas de tres pantallas (${CABEN_EN_PANTALLA * 3})`
+  );
+  // Y no puede ser el catalogo entero: entonces no habria dos tandas y volveriamos
+  // al trompicon.
+  const total = CATALOGO_EN_FILAS.reduce((s, g) => s + g.filas.length * POR_FILA, 0);
+  ok(primeros < total, `pero no el catalogo completo (${primeros} de ${total})`);
 
   // NI SE REHACEN AL CAMBIAR DE PESTAÑA.
   //

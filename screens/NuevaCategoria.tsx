@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -20,6 +20,7 @@ import {
   ALTO_TITULO,
   CATALOGO_EN_FILAS,
   enFilas,
+  GRUPOS_AL_ABRIR,
   LADO_DE,
   SEPARACION,
 } from "@/constants/catalogoFilas";
@@ -31,6 +32,15 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { esPropia, nombreRepetido } from "@/utils/categoriasPropias";
 import { alternar, esFoto, getFavoritos } from "@/utils/iconosFavoritos";
 import { sanitizeName } from "@/utils/categoryCustom";
+
+/**
+ * Cuánto se espera antes de dibujar el resto del catálogo.
+ *
+ * Es lo que dura la animación de entrada de una pantalla en Android. Antes de eso, el
+ * trabajo la atropella y el cambio de pantalla se ve a trompicones; mucho después, un
+ * deslizón muy rápido podría llegar al final de lo ya dibujado. Ver gruposADibujar.
+ */
+const ESPERA_RESTO_MS = 350;
 
 // Los mismos de personalizar categorias, para que una categoria propia no
 // pueda tener un color que las de fabrica no tienen.
@@ -179,7 +189,21 @@ const Dibujito = memo(function Dibujito({
   );
 });
 
-/** Una fila de cinco casillas. Memorizada para que un toque no rehaga las demás. */
+/**
+ * Una fila de cinco casillas. Memorizada para que un toque no rehaga las demás.
+ *
+ * "elegido" ES NULO EN LAS FILAS QUE NO TIENEN NADA ELEGIDO, y eso es lo que hace
+ * que tocar un dibujo sea instantáneo.
+ *
+ * Antes se le pasaba a todas el dibujo elegido de la pantalla. Cambiaba con cada
+ * toque, así que **las 48 filas se rehacían** —y con ellas las 236 casillas se
+ * volvían a comparar— aunque el cambio solo afectara a dos. El usuario lo midió: *"al
+ * seleccionar se demora 1 a 2 segundos"*.
+ *
+ * Pasando nulo a las filas que no contienen al elegido, esas filas reciben lo mismo
+ * que antes (nulo) y la memorización las deja fuera. Solo se rehacen DOS: la que
+ * suelta la marca y la que la toma.
+ */
 const Fila = memo(function Fila({
   iconos,
   elegido,
@@ -188,7 +212,8 @@ const Fila = memo(function Fila({
   onElegir,
 }: {
   iconos: (string | null)[];
-  elegido: string;
+  /** El dibujo elegido SI está en esta fila; si no, nulo. */
+  elegido: string | null;
   aspecto: AspectoCasilla;
   lado: number;
   onElegir: (id: string) => void;
@@ -385,6 +410,38 @@ export default function NuevaCategoria({
    * aquí, se construiría igual pero un dibujado más tarde.
    */
   const [vistas, setVistas] = useState<Set<string>>(() => new Set(["icono"]));
+
+  /**
+   * CUÁNTOS GRUPOS DEL CATÁLOGO SE DIBUJAN. Los primeros al abrir; el resto, entero,
+   * en cuanto la pantalla ya está puesta.
+   *
+   * ESTO ES LO ÚLTIMO QUE QUEDABA, Y HAY QUE LEER POR QUÉ ANTES DE TOCARLO
+   *
+   * Cada dibujo es una letra de una tipografía, y Android tiene que MEDIR cada letra.
+   * Doscientas veintisiete medidas es un coste que no se puede abaratar: solo
+   * repartir. Con todas de golpe, ese trabajo cae justo encima de la animación de
+   * entrada y la pantalla llega a trompicones — *"el cambio de pantalla debe verse
+   * fluido y más rápido"*.
+   *
+   * NO ES LO QUE SE RECHAZÓ EN AGOSTO, y la diferencia es la que importa:
+   *
+   *   · Aquello metía los grupos DE A UNO y dejaba huecos que se veían al deslizar
+   *     («se pone así cuando deslizo rápido»), o no dibujaba nada hasta que acababa
+   *     la animación («aparecen luego de 1 segundo»).
+   *   · Esto son DOS tandas. La primera llena más de tres pantallas, así que lo que
+   *     se ve está completo desde el primer instante; la segunda trae TODO el resto
+   *     de una vez, fuera de la vista.
+   *
+   * La espera es lo que dura la animación de entrada. Antes se acaba y el trabajo la
+   * atropella; mucho después y un deslizón muy rápido podría llegar al final de lo
+   * dibujado.
+   */
+  const [gruposADibujar, setGruposADibujar] = useState(GRUPOS_AL_ABRIR);
+  useEffect(() => {
+    if (gruposADibujar >= CATALOGO_EN_FILAS.length) return;
+    const reloj = setTimeout(() => setGruposADibujar(CATALOGO_EN_FILAS.length), ESPERA_RESTO_MS);
+    return () => clearTimeout(reloj);
+  }, [gruposADibujar]);
   function irA(cual: typeof pestana) {
     setPestana(cual);
     // Solo se toca el conjunto la primera vez: pasarlo nuevo en cada toque haría
@@ -987,7 +1044,7 @@ export default function NuevaCategoria({
                   <Fila
                     key={f}
                     iconos={fila}
-                    elegido={loQueSeMarca}
+                    elegido={fila.includes(loQueSeMarca) ? loQueSeMarca : null}
                     aspecto={aspecto}
                     lado={lado}
                     onElegir={elegirFavorito}
@@ -1062,7 +1119,10 @@ export default function NuevaCategoria({
                 )}
               </View>
 
-              {CATALOGO_EN_FILAS.map((grupo) => (
+              {/* LOS PRIMEROS GRUPOS AL ABRIR, EL RESTO JUSTO DESPUÉS Y DE UNA VEZ.
+                  Ver la nota larga de gruposADibujar: no es cargar por partes, son
+                  DOS tandas, y la primera llena tres pantallas. */}
+              {CATALOGO_EN_FILAS.slice(0, gruposADibujar).map((grupo) => (
                 <View key={grupo.titulo}>
                   <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
                     <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
@@ -1073,7 +1133,7 @@ export default function NuevaCategoria({
                     <Fila
                       key={f}
                       iconos={fila}
-                      elegido={icono}
+                      elegido={fila.includes(icono) ? icono : null}
                       aspecto={aspecto}
                       lado={lado}
                       onElegir={setIcono}

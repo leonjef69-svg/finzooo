@@ -28,6 +28,21 @@ export const MARGEN_LATERAL = 20;
 export const ALTO_TITULO = 36;
 
 /**
+ * Cuántos grupos se dibujan A LA VEZ QUE SE ABRE la pantalla.
+ *
+ * EL RESTO LLEGA JUSTO DESPUÉS, TODO DE UNA VEZ. Ver la nota larga en la pantalla.
+ *
+ * Cuatro grupos son unos 70 dibujos, y en la pantalla caben unos 20: hay más de tres
+ * pantallas de contenido antes de llegar al final de lo dibujado. Ni el deslizón más
+ * rápido alcanza el borde en el rato que tarda en llegar el resto.
+ *
+ * Este número es el equilibrio de todo el asunto y no se cambia a la ligera: menos y
+ * un deslizón rápido llega al final; más y volvemos a cargar la entrada de la
+ * pantalla, que es lo que se está arreglando.
+ */
+export const GRUPOS_AL_ABRIR = 4;
+
+/**
  * El lado de una casilla para que las cinco llenen justo el ancho.
  *
  * Se calcula en vez de fijarse: con una medida fija, las cinco casillas no
