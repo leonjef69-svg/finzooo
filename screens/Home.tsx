@@ -26,7 +26,7 @@ import IconBadge from "@/components/IconBadge";
 import PressableScale from "@/components/PressableScale";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import { catInfo } from "@/constants/categories";
-import { CARD_SHADOW } from "@/constants/style";
+import { CARD_SHADOW, SALDO_TARJETA, SALDO_VERDE } from "@/constants/style";
 import { fmtDate, monthKey } from "@/utils/format";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { sanitizeAmountInput } from "@/utils/amount";
@@ -186,15 +186,14 @@ export default function Home({
         </View>
 
         <LinearGradient
-          colors={["#059669", "#0f766e"]}
+          colors={[...SALDO_VERDE]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
-          // El grosor ya era 1.5, como el resto; lo que fallaba era el color.
-          // Un blanco al 20% sobre el verde se pierde, así que esta tarjeta
-          // parecía la única sin contorno estando rodeada de tarjetas que sí
-          // lo tienen. Al 45% se ve igual de marcado que el gris de las
-          // demás, sin meter un borde gris que sobre el verde chirriaría.
-          className="mx-5 rounded-[32px] overflow-hidden p-5 flex-row items-center gap-4 border-[1.5px] border-white/45"
+          // El aspecto sale de SALDO_TARJETA, compartido con la tarjeta del saldo
+          // del Panorama en Reportes. Estaba escrito aquí a mano, se arregló solo
+          // aquí, y la otra se quedó con el verde apagado y sin recortar el
+          // degradado. Ver la nota en constants/style.
+          className={`mx-5 p-5 flex-row items-center gap-4 ${SALDO_TARJETA}`}
         >
           <BudgetRing pct={pct} />
           <View className="flex-1">

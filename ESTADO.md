@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-07**
+Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-08**
 · APK que hay que instalar: **finzo-6ago-10** (el arreglo del PDF colgado es
 código de Android; por internet no viaja)
 
@@ -330,6 +330,26 @@ los iconos y está lento, se siente feo al abrirlo"):
     para ahorrar memoria, y en Android es causa conocida de celdas en blanco
     porque al volver hay que rehacerlas. Con 236 casillas la memoria no era el
     problema; los huecos sí.
+
+## La tarjeta del saldo, igual en las dos pantallas (07/08/2026)
+
+*"Redondea las esquinas y los bordes emparéjalos al igual que los demás, y ponle un
+color que vaya de acorde, no ese aparente blanco que se ve feo"*, con las dos
+capturas juntas: la de Inicio y la del Panorama en Reportes.
+
+Son **la misma tarjeta en dos sitios** —el mismo número con el mismo título— y
+estaban escritas a mano en cada pantalla. Tres diferencias, y una era un fallo:
+
+- Verde más apagado en Reportes (`#065f46` → `#047857`).
+- Esquina de 24 puntos contra 32.
+- **Le faltaba `overflow-hidden`, y eso era "el blanco".** Sin recortar, en Android
+  el degradado se pinta con las esquinas **cuadradas** y el borde blanco se dibuja
+  redondeado encima: en cada esquina asoma el arco claro con el verde saliéndose
+  por fuera. No era un color mal elegido, era el relleno sin recortar.
+
+El aspecto vive ahora en `SALDO_VERDE` y `SALDO_TARJETA` (`constants/style.ts`), y
+lo usan las dos. El contorno se queda en blanco al 45%: al 20% se perdía sobre el
+verde y la tarjeta parecía la única sin contorno.
 
 ## En el PDF, los límites sin gasto no salen (07/08/2026)
 

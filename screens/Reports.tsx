@@ -18,7 +18,7 @@ import AnimatedBar from "@/components/AnimatedBar";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import { catInfo } from "@/constants/categories";
 import { COLOR_HEX_600 } from "@/constants/colors";
-import { CARD_SHADOW } from "@/constants/style";
+import { CARD_SHADOW, SALDO_TARJETA, SALDO_VERDE } from "@/constants/style";
 import { monthKey } from "@/utils/format";
 import {
   availableBalance,
@@ -281,14 +281,15 @@ export default function Reports({
       {isPremium && (
         <>
           <LinearGradient
-            colors={["#065f46", "#047857"]}
+            colors={[...SALDO_VERDE]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
-            // Esta se quedó sin contorno cuando las cuatro tarjetas de debajo
-            // sí lo llevan. Mismo grosor que el resto y el mismo blanco al
-            // 45% que la tarjeta del saldo en Inicio, que es la hermana de
-            // esta: las dos van sobre verde.
-            className="mx-5 mt-4 rounded-3xl px-5 py-4 border-[1.5px] border-white/45"
+            // El aspecto sale de SALDO_TARJETA, el mismo que usa la tarjeta del
+            // saldo en Inicio: es el MISMO número con el MISMO título en otra
+            // pantalla, así que no puede verse distinto. Aquí iba con un verde más
+            // apagado, menos esquina y —lo que se veía feo— sin recortar el
+            // degradado. Ver la nota en constants/style.
+            className={`mx-5 mt-4 px-5 py-4 ${SALDO_TARJETA}`}
           >
             <Text className="text-emerald-100 text-xs font-semibold">
               {t("home.availableBalance")}

@@ -204,5 +204,44 @@ console.log("\n--- LOS CUATRO ESTADOS DEL TEXTO ---");
   ok(budgetLeft({ budget: 100, prevBalance: 0, income: 0, spent: 100 }) === 0, "en el limite exacto no queda nada ni se paso nadie");
 }
 
+console.log("\n--- LA TARJETA VERDE DEL SALDO SE VE IGUAL EN LAS DOS PANTALLAS ---");
+{
+  // Hay dos: la de Inicio y la del Panorama en Reportes. Ensenan el MISMO numero
+  // con el MISMO titulo, asi que son la misma tarjeta en dos sitios.
+  //
+  // Estaban distintas y se veia. El usuario mando las dos capturas juntas el
+  // 07/08/2026: "redondea las esquinas y los bordes emparejalos al igual que los
+  // demas, y ponle un color que vaya de acorde, no ese aparente blanco que se ve
+  // feo". El aspecto estaba escrito a mano en cada pantalla, se arreglo en una, y
+  // la otra se quedo atras — el fallo que este proyecto repite.
+  const fs = await import("fs");
+  const path = await import("path");
+  const RAIZ = process.cwd();
+  const estilo = fs.readFileSync(path.join(RAIZ, "constants/style.ts"), "utf8");
+  const inicio = fs.readFileSync(path.join(RAIZ, "screens/Home.tsx"), "utf8");
+  const reportes = fs.readFileSync(path.join(RAIZ, "screens/Reports.tsx"), "utf8");
+
+  // EL RECORTE ES EL ARREGLO DE VERDAD, no el color: sin recortar, en Android el
+  // degradado se pinta con las esquinas cuadradas y el borde blanco se dibuja
+  // redondeado encima. En cada esquina asoma el arco claro del borde con el verde
+  // saliendose por fuera, y eso era el "aparente blanco".
+  ok(/overflow-hidden/.test(estilo), "la tarjeta recorta su degradado a las esquinas");
+  ok(/rounded-\[32px\]/.test(estilo), "con la esquina de siempre");
+  ok(/border-white\/45/.test(estilo), "y el contorno que se ve sobre verde");
+
+  for (const [nombre, fuente] of [["Inicio", inicio], ["Reportes", reportes]] as const) {
+    ok(fuente.includes("SALDO_TARJETA"), `${nombre} usa el aspecto compartido`);
+    ok(fuente.includes("SALDO_VERDE"), `${nombre} usa el verde compartido`);
+    // Y ninguna puede volver a escribir ESE verde a mano: es como se separaron.
+    // Se miran los cuatro tonos que tuvieron las dos versiones, no cualquier
+    // color: la tarjeta de Finzo IA tiene su propio degradado oscuro y ahi esta
+    // bien escrito donde se usa, porque solo hay una.
+    const suVerde = ["#059669", "#0f766e", "#065f46", "#047857"].filter((c) =>
+      new RegExp(`colors=\\{\\[[^\\]]*${c}`).test(fuente)
+    );
+    ok(suVerde.length === 0, `${nombre} no lleva el verde del saldo escrito a mano`);
+  }
+}
+
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);
