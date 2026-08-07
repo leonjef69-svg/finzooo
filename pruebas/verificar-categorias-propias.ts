@@ -247,11 +247,27 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   // no cuesta nada. Se cuentan las cuatro: con tres, la que quede fuera vuelve a
   // pagar el precio y nadie lo notara hasta que sea la de los dibujos.
   const escondidas = (codigo.match(/display: pestana === "[a-z]+" \? "flex" : "none"/g) ?? []).length;
-  ok(escondidas === 4, `las cuatro pestañas se quedan puestas y solo se esconden (${escondidas})`);
+  ok(escondidas === 4, `las cuatro pestañas se esconden en vez de desmontarse (${escondidas})`);
   ok(
     !/pestana === "(tuyas|color|favoritos)" \? \(/.test(codigo),
     "ninguna se desmonta al cambiar de pestaña"
   );
+
+  // PERO SE CONSTRUYEN LA PRIMERA VEZ QUE SE MIRAN, NO TODAS AL ABRIR.
+  //
+  // Dejarlas las cuatro puestas arreglo el cambio de pestaña y EMPEORO lo que mas
+  // molestaba: abrir la pantalla paso a construirlas todas —incluida la lista de
+  // categorias con sus fotos— cuando antes solo montaba una. Y entrar era justo la
+  // queja: "se demora 2 a 3 segundos en entrar".
+  //
+  // Con esto, abrir cuesta solo la pestaña de los dibujos y cambiar se paga una vez.
+  const perezosas = (codigo.match(/vistas\.has\("[a-z]+"\) && \(/g) ?? []).length;
+  ok(perezosas === 4, `y cada una se construye la primera vez que se mira (${perezosas})`);
+  // Arranca con la de los dibujos, que es la que se ve al abrir.
+  ok(/new Set\(\["icono"\]\)/.test(codigo), "arranca con la de los dibujos, que es la que se ve");
+  // Y el conjunto solo se toca la primera vez: pasarlo nuevo en cada toque haria que
+  // todo lo que dependa de el se rehiciera sin motivo.
+  ok(/if \(!vistas\.has\(cual\)\) setVistas/.test(codigo), "y solo se apunta la primera vez");
 
   // LA MEDIDA DE LA CASILLA VA EN UN OBJETO, NUNCA EN UNA FUNCION.
   //

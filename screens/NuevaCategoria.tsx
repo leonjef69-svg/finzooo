@@ -12,15 +12,7 @@ import {
 import { useColorScheme } from "nativewind";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import {
-  Camera,
-  Check,
-  ChevronLeft,
-  ImageIcon,
-  Star,
-  Trash2,
-  X,
-} from "lucide-react-native";
+import { Camera, Check, ChevronLeft, ImageIcon, Star, Trash2, X } from "lucide-react-native";
 import CategoryAvatar from "@/components/CategoryAvatar";
 import ImageCropper from "@/components/ImageCropper";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
@@ -372,6 +364,35 @@ export default function NuevaCategoria({
   const [pestana, setPestana] = useState<"tuyas" | "icono" | "favoritos" | "color">("icono");
 
   /**
+   * QUÉ PESTAÑAS SE HAN LLEGADO A ABRIR. Cada una se construye la PRIMERA vez que se
+   * mira, y a partir de ahí se queda puesta.
+   *
+   * ES EL EQUILIBRIO ENTRE LOS DOS FALLOS QUE SE REPORTARON, y hubo que pasar por
+   * los dos para verlo:
+   *
+   *   · Al principio cada pestaña se dibujaba solo si era la elegida. Volver a la de
+   *     los dibujos rehacía las 236 casillas, y otra vez en cada ida y vuelta.
+   *   · Se pasó a dejarlas las cuatro puestas y escondidas. Eso arregló el cambio de
+   *     pestaña y **empeoró lo que más molestaba**: abrir la pantalla pasó a
+   *     construirlas TODAS —incluida la lista de categorías con sus fotos— cuando
+   *     antes solo montaba una. Y entrar era justo la queja: *"se demora 2 a 3
+   *     segundos en entrar"*.
+   *
+   * Con esto, abrir cuesta SOLO la pestaña de los dibujos, igual que antes de todo
+   * esto, y cambiar de pestaña se paga una vez y nunca más.
+   *
+   * Arranca con la de los dibujos porque es la que se ve al abrir; si no estuviera
+   * aquí, se construiría igual pero un dibujado más tarde.
+   */
+  const [vistas, setVistas] = useState<Set<string>>(() => new Set(["icono"]));
+  function irA(cual: typeof pestana) {
+    setPestana(cual);
+    // Solo se toca el conjunto la primera vez: pasarlo nuevo en cada toque haría
+    // que todo lo que dependa de él se rehiciera sin motivo.
+    if (!vistas.has(cual)) setVistas((antes) => new Set(antes).add(cual));
+  }
+
+  /**
    * LOS ÍCONOS FAVORITOS. Se marcan con la estrella de al lado de la vista previa.
    *
    * POR QUÉ LA ESTRELLA VA ARRIBA Y NO EN CADA CASILLA
@@ -533,7 +554,7 @@ export default function NuevaCategoria({
   const { colorScheme } = useColorScheme();
   const aspecto = useMemo(
     () => aspectoDeCasilla(color, lado, colorScheme === "dark"),
-    [color, lado, colorScheme]
+    [color, lado, colorScheme],
   );
 
   // Los títulos de los grupos, traducidos UNA vez. Pasarle la función de
@@ -738,7 +759,7 @@ export default function NuevaCategoria({
           ).map((p) => (
             <TouchableOpacity
               key={p}
-              onPress={() => setPestana(p)}
+              onPress={() => irA(p)}
               className={`flex-1 items-center pb-2.5 ${
                 pestana === p ? "border-b-2 border-emerald-600 -mb-[1.5px]" : ""
               }`}
@@ -781,44 +802,45 @@ export default function NuevaCategoria({
         contentContainerStyle={{ paddingBottom: 24 }}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={{ display: pestana === "tuyas" ? "flex" : "none" }}>
-          <View className="px-5" style={{ paddingTop: 12 }}>
-            <View className="flex-row flex-wrap gap-3">
-              {cats.map((c) => {
-                // La marcada es la que se va a aplicar: la que se acaba de tocar
-                // o, si no se ha tocado ninguna, la que el movimiento ya lleva.
-                const puesta = (elegida ?? actual) === c.id;
-                return (
-                  <TouchableOpacity
-                    key={c.id}
-                    // Tocarla la ELIGE, no cierra la pantalla. Ver elegirDeLaLista:
-                    // volver de golpe dejaba las otras pestañas sin poder usarse
-                    // sobre una categoría que ya existe.
-                    onPress={() => elegirDeLaLista(c.id)}
-                    className="items-center gap-1.5"
-                    style={{ width: "21%" }}
-                  >
-                    <View
-                      className={`w-12 h-12 rounded-2xl items-center justify-center bg-${c.color}-100 ${
-                        puesta ? `border-2 border-${c.color}-500` : ""
-                      }`}
+        {vistas.has("tuyas") && (
+          <View style={{ display: pestana === "tuyas" ? "flex" : "none" }}>
+            <View className="px-5" style={{ paddingTop: 12 }}>
+              <View className="flex-row flex-wrap gap-3">
+                {cats.map((c) => {
+                  // La marcada es la que se va a aplicar: la que se acaba de tocar
+                  // o, si no se ha tocado ninguna, la que el movimiento ya lleva.
+                  const puesta = (elegida ?? actual) === c.id;
+                  return (
+                    <TouchableOpacity
+                      key={c.id}
+                      // Tocarla la ELIGE, no cierra la pantalla. Ver elegirDeLaLista:
+                      // volver de golpe dejaba las otras pestañas sin poder usarse
+                      // sobre una categoría que ya existe.
+                      onPress={() => elegirDeLaLista(c.id)}
+                      className="items-center gap-1.5"
+                      style={{ width: "21%" }}
                     >
-                      <CategoryAvatar id={c.id} size={20} />
-                    </View>
-                    <Text
-                      className={`text-xs font-bold text-center ${
-                        puesta ? `text-${c.color}-600` : "text-slate-600 dark:text-slate-200"
-                      }`}
-                      numberOfLines={1}
-                    >
-                      {t(c.label)}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
+                      <View
+                        className={`w-12 h-12 rounded-2xl items-center justify-center bg-${c.color}-100 ${
+                          puesta ? `border-2 border-${c.color}-500` : ""
+                        }`}
+                      >
+                        <CategoryAvatar id={c.id} size={20} />
+                      </View>
+                      <Text
+                        className={`text-xs font-bold text-center ${
+                          puesta ? `text-${c.color}-600` : "text-slate-600 dark:text-slate-200"
+                        }`}
+                        numberOfLines={1}
+                      >
+                        {t(c.label)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
 
-            {/* EDITAR LA PROPIA QUE ESTÉ MARCADA.
+              {/* EDITAR LA PROPIA QUE ESTÉ MARCADA.
                 El nombre, el dibujo y el color ya se le pueden cambiar aquí
                 mismo; lo que solo está ahí dentro es BORRARLA. Por eso el enlace
                 se queda: es la única puerta a eso.
@@ -826,13 +848,13 @@ export default function NuevaCategoria({
                 tocar "Broster", es esa la que se quiere abrir.
                 Se descartó el toque largo a propósito: es invisible, y quien no
                 lo sepa no lo encuentra nunca. */}
-            {(() => {
-              const suya = elegida ?? actual;
-              if (!suya) return null;
-              const info = catInfo(suya);
-              return (
-                <>
-                  {/* QUITARLE LA FOTO.
+              {(() => {
+                const suya = elegida ?? actual;
+                if (!suya) return null;
+                const info = catInfo(suya);
+                return (
+                  <>
+                    {/* QUITARLE LA FOTO.
                       Se podía desde el principio —la casilla de la foto con su ✕
                       está en la pestaña del catálogo— pero ahí no la encuentra
                       nadie que venga de esta lista: hay que saber que la foto de
@@ -843,22 +865,22 @@ export default function NuevaCategoria({
                       Al tocarla, la categoría queda marcada con su foto ya
                       quitada, y se guarda al darle a Aplicar — como todo lo demás
                       de esta pantalla. Nada se pierde antes de confirmar. */}
-                  {info.image ? (
-                    <TouchableOpacity
-                      onPress={() => {
-                        elegirDeLaLista(suya);
-                        setFoto(undefined);
-                      }}
-                      className="flex-row items-center justify-center gap-1.5 mt-5"
-                    >
-                      <Trash2 size={13} color="#e11d48" />
-                      <Text className="text-xs font-bold text-rose-600">
-                        {t("nuevaCat.quitarFotoDe", { nombre: info.label })}
-                      </Text>
-                    </TouchableOpacity>
-                  ) : null}
+                    {info.image ? (
+                      <TouchableOpacity
+                        onPress={() => {
+                          elegirDeLaLista(suya);
+                          setFoto(undefined);
+                        }}
+                        className="flex-row items-center justify-center gap-1.5 mt-5"
+                      >
+                        <Trash2 size={13} color="#e11d48" />
+                        <Text className="text-xs font-bold text-rose-600">
+                          {t("nuevaCat.quitarFotoDe", { nombre: info.label })}
+                        </Text>
+                      </TouchableOpacity>
+                    ) : null}
 
-                  {/* BORRARLA, AQUÍ MISMO.
+                    {/* BORRARLA, AQUÍ MISMO.
                       Se podía —dentro de "Editar «X»", al final— y el usuario no
                       lo encontró: *"no me deja eliminar los iconos, en tus
                       categorías se quedan"* (07/08/2026). Es la segunda cosa que
@@ -870,106 +892,111 @@ export default function NuevaCategoria({
                       vez.
                       Solo las propias: "Comida" y "Otros" son de la app, y
                       borrarlas dejaría movimientos apuntando a nada. */}
-                  {esPropia(suya) ? (
-                    borrando === suya ? (
-                      <View className="mt-5 rounded-2xl border-[1.5px] border-rose-300 bg-rose-50 dark:bg-rose-900/20 p-3.5">
-                        {/* CON EL NÚMERO DELANTE. "Se va a borrar" no informa
+                    {esPropia(suya) ? (
+                      borrando === suya ? (
+                        <View className="mt-5 rounded-2xl border-[1.5px] border-rose-300 bg-rose-50 dark:bg-rose-900/20 p-3.5">
+                          {/* CON EL NÚMERO DELANTE. "Se va a borrar" no informa
                             igual que "tus 3 movimientos pasan a Otros", y es
                             justo el dato que hace dudar o seguir. */}
-                        <Text className="text-[11px] leading-5 text-rose-700 dark:text-rose-300">
-                          {movimientosDeCategoria(suya) > 0
-                            ? t("nuevaCat.borrarConMovs", { count: movimientosDeCategoria(suya) })
-                            : t("nuevaCat.borrarSinMovs")}
-                        </Text>
-                        <View className="flex-row gap-2.5 mt-3">
-                          <TouchableOpacity
-                            onPress={() => setBorrando(null)}
-                            className="flex-1 py-2.5 rounded-xl items-center border-[1.5px] border-slate-300 dark:border-slate-600"
-                          >
-                            <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
-                              {t("nuevaCat.cancelar")}
-                            </Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            onPress={() => borrarDeLaLista(suya)}
-                            className="flex-1 py-2.5 rounded-xl items-center bg-rose-600"
-                          >
-                            <Text className="text-xs font-extrabold text-white">
-                              {t("nuevaCat.borrarSi")}
-                            </Text>
-                          </TouchableOpacity>
+                          <Text className="text-[11px] leading-5 text-rose-700 dark:text-rose-300">
+                            {movimientosDeCategoria(suya) > 0
+                              ? t("nuevaCat.borrarConMovs", { count: movimientosDeCategoria(suya) })
+                              : t("nuevaCat.borrarSinMovs")}
+                          </Text>
+                          <View className="flex-row gap-2.5 mt-3">
+                            <TouchableOpacity
+                              onPress={() => setBorrando(null)}
+                              className="flex-1 py-2.5 rounded-xl items-center border-[1.5px] border-slate-300 dark:border-slate-600"
+                            >
+                              <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
+                                {t("nuevaCat.cancelar")}
+                              </Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              onPress={() => borrarDeLaLista(suya)}
+                              className="flex-1 py-2.5 rounded-xl items-center bg-rose-600"
+                            >
+                              <Text className="text-xs font-extrabold text-white">
+                                {t("nuevaCat.borrarSi")}
+                              </Text>
+                            </TouchableOpacity>
+                          </View>
                         </View>
-                      </View>
-                    ) : (
-                      <TouchableOpacity
-                        onPress={() => setBorrando(suya)}
-                        className="flex-row items-center justify-center gap-1.5 mt-4"
-                      >
-                        <Trash2 size={13} color="#e11d48" />
-                        <Text className="text-xs font-bold text-rose-600">
-                          {t("nuevaCat.borrarLa", { nombre: info.label })}
-                        </Text>
-                      </TouchableOpacity>
-                    )
-                  ) : null}
-                </>
-              );
-            })()}
-          </View>
-        </View>
-
-        <View style={{ display: pestana === "color" ? "flex" : "none" }}>
-          <View className="px-5" style={{ paddingTop: 12 }}>
-            <View className="flex-row flex-wrap gap-3">
-              {COLORES.map((c) => (
-                <TouchableOpacity
-                  key={c}
-                  onPress={() => setColor(c)}
-                  className={`w-12 h-12 rounded-full items-center justify-center ${
-                    color === c ? "border-[3px] border-slate-900 dark:border-white" : ""
-                  }`}
-                  style={{ backgroundColor: COLOR_HEX_600[c] }}
-                >
-                  {color === c && <Check size={18} color="#ffffff" />}
-                </TouchableOpacity>
-              ))}
+                      ) : (
+                        <TouchableOpacity
+                          onPress={() => setBorrando(suya)}
+                          className="flex-row items-center justify-center gap-1.5 mt-4"
+                        >
+                          <Trash2 size={13} color="#e11d48" />
+                          <Text className="text-xs font-bold text-rose-600">
+                            {t("nuevaCat.borrarLa", { nombre: info.label })}
+                          </Text>
+                        </TouchableOpacity>
+                      )
+                    ) : null}
+                  </>
+                );
+              })()}
             </View>
           </View>
-        </View>
+        )}
 
-        <View style={{ display: pestana === "favoritos" ? "flex" : "none" }}>
-          <View className="px-5" style={{ paddingTop: 12 }}>
-            {favoritos.length === 0 ? (
-              /* VACÍA, PERO NO MUDA. Una pestaña vacía sin explicación deja a la
+        {vistas.has("color") && (
+          <View style={{ display: pestana === "color" ? "flex" : "none" }}>
+            <View className="px-5" style={{ paddingTop: 12 }}>
+              <View className="flex-row flex-wrap gap-3">
+                {COLORES.map((c) => (
+                  <TouchableOpacity
+                    key={c}
+                    onPress={() => setColor(c)}
+                    className={`w-12 h-12 rounded-full items-center justify-center ${
+                      color === c ? "border-[3px] border-slate-900 dark:border-white" : ""
+                    }`}
+                    style={{ backgroundColor: COLOR_HEX_600[c] }}
+                  >
+                    {color === c && <Check size={18} color="#ffffff" />}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          </View>
+        )}
+
+        {vistas.has("favoritos") && (
+          <View style={{ display: pestana === "favoritos" ? "flex" : "none" }}>
+            <View className="px-5" style={{ paddingTop: 12 }}>
+              {favoritos.length === 0 ? (
+                /* VACÍA, PERO NO MUDA. Una pestaña vacía sin explicación deja a la
                persona sin saber si está roto o si le falta hacer algo. Aquí se
                dice exactamente qué hacer, y con la misma estrella que hay que
                tocar. */
-              <View className="items-center py-10 px-6">
-                <Star size={30} color="#cbd5e1" strokeWidth={2} />
-                <Text className="text-xs text-center leading-5 text-slate-500 dark:text-slate-400 mt-3">
-                  {t("nuevaCat.favVacio")}
-                </Text>
-              </View>
-            ) : (
-              // Las mismas filas y el mismo tamaño de casilla que el catálogo: es
-              // la misma elección, así que tiene que verse igual.
-              //
-              // "elegido" mira la foto ANTES que el dibujo, igual que la vista
-              // previa: con una foto puesta, la marcada tiene que ser la foto y no
-              // el dibujo que quedó debajo.
-              enFilas(favoritos).map((fila, f) => (
-                <Fila
-                  key={f}
-                  iconos={fila}
-                  elegido={loQueSeMarca}
-                  aspecto={aspecto}
-                  lado={lado}
-                  onElegir={elegirFavorito}
-                />
-              ))
-            )}
+                <View className="items-center py-10 px-6">
+                  <Star size={30} color="#cbd5e1" strokeWidth={2} />
+                  <Text className="text-xs text-center leading-5 text-slate-500 dark:text-slate-400 mt-3">
+                    {t("nuevaCat.favVacio")}
+                  </Text>
+                </View>
+              ) : (
+                // Las mismas filas y el mismo tamaño de casilla que el catálogo: es
+                // la misma elección, así que tiene que verse igual.
+                //
+                // "elegido" mira la foto ANTES que el dibujo, igual que la vista
+                // previa: con una foto puesta, la marcada tiene que ser la foto y no
+                // el dibujo que quedó debajo.
+                enFilas(favoritos).map((fila, f) => (
+                  <Fila
+                    key={f}
+                    iconos={fila}
+                    elegido={loQueSeMarca}
+                    aspecto={aspecto}
+                    lado={lado}
+                    onElegir={elegirFavorito}
+                  />
+                ))
+              )}
+            </View>
           </View>
-        </View>
+        )}
 
         {/* LOS 236 DIBUJOS PUESTOS, TODOS. Sin lista virtual, sin cargar por
             partes, sin nada que aparezca después.
@@ -983,78 +1010,80 @@ export default function NuevaCategoria({
 
             Y desde el 07/08/2026 se quedan puestos al cambiar de pestaña: antes se
             rehacían los 236 en cada ida y vuelta. Ver la nota de arriba. */}
-        <View style={{ display: pestana === "icono" ? "flex" : "none" }}>
-          <View className="px-5">
-            {/* TU PROPIA FOTO, PRIMERO.
+        {vistas.has("icono") && (
+          <View style={{ display: pestana === "icono" ? "flex" : "none" }}>
+            <View className="px-5">
+              {/* TU PROPIA FOTO, PRIMERO.
               Va arriba del catálogo y no en una pestaña aparte porque es otra
               forma de contestar la misma pregunta —"¿con qué dibujo?"—, y una
               pestaña más la esconde. Son casillas del mismo tamaño que las
               demás para que se lean como parte de la misma elección. */}
-            <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
-              <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
-                {t("nuevaCat.tuFoto")}
-              </Text>
-            </View>
-            <View
-              style={{
-                flexDirection: "row",
-                height: lado,
-                gap: SEPARACION,
-                marginBottom: SEPARACION,
-              }}
-            >
-              <TouchableOpacity
-                onPress={tomarFoto}
-                style={{ width: lado, height: lado }}
-                className="rounded-2xl items-center justify-center bg-slate-50 dark:bg-slate-800 border-[1.5px] border-dashed border-slate-300 dark:border-slate-600"
+              <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
+                <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
+                  {t("nuevaCat.tuFoto")}
+                </Text>
+              </View>
+              <View
+                style={{
+                  flexDirection: "row",
+                  height: lado,
+                  gap: SEPARACION,
+                  marginBottom: SEPARACION,
+                }}
               >
-                <Camera size={22} color="#64748b" strokeWidth={2.2} />
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={elegirDeGaleria}
-                style={{ width: lado, height: lado }}
-                className="rounded-2xl items-center justify-center bg-slate-50 dark:bg-slate-800 border-[1.5px] border-dashed border-slate-300 dark:border-slate-600"
-              >
-                <ImageIcon size={22} color="#64748b" strokeWidth={2.2} />
-              </TouchableOpacity>
-              {/* La foto puesta, y encima la forma de sacarla. Sin esto, quien
+                <TouchableOpacity
+                  onPress={tomarFoto}
+                  style={{ width: lado, height: lado }}
+                  className="rounded-2xl items-center justify-center bg-slate-50 dark:bg-slate-800 border-[1.5px] border-dashed border-slate-300 dark:border-slate-600"
+                >
+                  <Camera size={22} color="#64748b" strokeWidth={2.2} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={elegirDeGaleria}
+                  style={{ width: lado, height: lado }}
+                  className="rounded-2xl items-center justify-center bg-slate-50 dark:bg-slate-800 border-[1.5px] border-dashed border-slate-300 dark:border-slate-600"
+                >
+                  <ImageIcon size={22} color="#64748b" strokeWidth={2.2} />
+                </TouchableOpacity>
+                {/* La foto puesta, y encima la forma de sacarla. Sin esto, quien
                 pone una foto no encuentra cómo volver a un dibujo: elegir un
                 icono no la quitaría, porque la foto manda. */}
-              {foto && (
-                <TouchableOpacity
-                  onPress={() => setFoto(undefined)}
-                  style={{ width: lado, height: lado }}
-                  className={`rounded-2xl items-center justify-center overflow-hidden border-2 border-${color}-500`}
-                >
-                  <Image source={{ uri: foto }} style={{ width: lado, height: lado }} />
-                  <View className="absolute inset-0 items-center justify-center bg-slate-900/45">
-                    <X size={20} color="#ffffff" strokeWidth={2.6} />
-                  </View>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {CATALOGO_EN_FILAS.map((grupo) => (
-              <View key={grupo.titulo}>
-                <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
-                  <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
-                    {titulos[grupo.titulo]}
-                  </Text>
-                </View>
-                {grupo.filas.map((fila, f) => (
-                  <Fila
-                    key={f}
-                    iconos={fila}
-                    elegido={icono}
-                    aspecto={aspecto}
-                    lado={lado}
-                    onElegir={setIcono}
-                  />
-                ))}
+                {foto && (
+                  <TouchableOpacity
+                    onPress={() => setFoto(undefined)}
+                    style={{ width: lado, height: lado }}
+                    className={`rounded-2xl items-center justify-center overflow-hidden border-2 border-${color}-500`}
+                  >
+                    <Image source={{ uri: foto }} style={{ width: lado, height: lado }} />
+                    <View className="absolute inset-0 items-center justify-center bg-slate-900/45">
+                      <X size={20} color="#ffffff" strokeWidth={2.6} />
+                    </View>
+                  </TouchableOpacity>
+                )}
               </View>
-            ))}
+
+              {CATALOGO_EN_FILAS.map((grupo) => (
+                <View key={grupo.titulo}>
+                  <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
+                    <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
+                      {titulos[grupo.titulo]}
+                    </Text>
+                  </View>
+                  {grupo.filas.map((fila, f) => (
+                    <Fila
+                      key={f}
+                      iconos={fila}
+                      elegido={icono}
+                      aspecto={aspecto}
+                      lado={lado}
+                      onElegir={setIcono}
+                    />
+                  ))}
+                </View>
+              ))}
+            </View>
           </View>
-        </View>
+        )}
       </ScrollView>
 
       <View className="px-5" style={{ paddingBottom: insets.bottom + 16 }}>

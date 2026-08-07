@@ -1,6 +1,11 @@
 # Dónde nos quedamos
 
-Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-14**
+Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-15**
+
+> **SIN CERRAR:** el usuario sigue midiendo lentitud al abrir "Elegir categoría". Se
+> arreglaron cuatro causas reales (ver la sección); lo único que queda por probar es
+> **no dibujar los 236 dibujos de golpe**, y eso ya se rechazó una vez en otra forma,
+> así que no se hace sin preguntarle.
 · APK instalado y al día: **finzo-6ago-10** (no hace falta uno nuevo: desde
 entonces no ha cambiado nada de Android)
 
@@ -343,10 +348,16 @@ Tres causas, y **las tres las habíamos introducido nosotros estos días**:
 
 **1. Cada pestaña se dibujaba solo si era la elegida.** Así que volver a la de los
 dibujos construía **las 236 casillas otra vez**, y otra vez en cada ida y vuelta.
-Ahora las cuatro se quedan puestas y solo se esconde la que no toca
-(`display: "none"`): se construyen una sola vez, al abrir, y cambiar de pestaña ya no
-cuesta nada. Yoga saca de la cuenta lo que lleva `display: none`, así que la parte
-deslizable sigue midiendo solo lo que se ve.
+
+El primer arreglo fue dejarlas **las cuatro puestas** y esconder la que no toca
+(`display: "none"`). Arregló el cambio de pestaña y **empeoró lo que más molestaba**:
+abrir la pantalla pasó a construirlas todas —incluida la lista de categorías con sus
+fotos— cuando antes solo montaba una. Y entrar era justo la queja.
+
+**Lo correcto es lo de los dos: cada pestaña se construye la PRIMERA vez que se mira
+y a partir de ahí se queda puesta** (`vistas`). Abrir cuesta solo la de los dibujos, y
+cambiar de pestaña se paga una vez y nunca más. Yoga saca de la cuenta lo que lleva
+`display: none`, así que la parte deslizable sigue midiendo solo lo que se ve.
 
 **2. ~~Cada casilla traía una vista ANIMADA dentro.~~ SE INTENTÓ Y ROMPIÓ LA
 CUADRÍCULA — REVERTIDO.** `TouchableOpacity` usa una vista animada para bajar la
