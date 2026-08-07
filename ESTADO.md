@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-13**
+Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-14**
 · APK instalado y al día: **finzo-6ago-10** (no hace falta uno nuevo: desde
 entonces no ha cambiado nada de Android)
 
@@ -370,6 +370,38 @@ tiene ninguna foto**. Ahora solo recortan las que llevan foto.
 > aplicadas donde no hacían falta**. El escenario que las delató es el mismo de
 > siempre —usar la pantalla de verdad, ir y volver— y ninguna se ve leyendo el
 > archivo de una sola pasada.
+
+### LA CAUSA DE FONDO: 236 casillas con clases de Tailwind (7ago-14)
+
+El usuario volvió a medirlo con el celular en la mano: **2 a 3 segundos en entrar** y
+**1 a 2 segundos en marcar un dibujo**. Los arreglos anteriores ayudaron y no era eso.
+
+**Cada casilla llevaba su aspecto en clases de NativeWind.** Un componente con clases
+se apunta al sistema de estilos para enterarse de los cambios de tema, y resuelve su
+cadena: son **236 apuntes y 236 resoluciones solo para abrir la pantalla**, y otros
+tantos que comparar en cada toque. Eso explica las dos cosas a la vez — entrar y
+marcar.
+
+Ahora el aspecto se calcula **una vez para toda la pantalla** (`aspectoDeCasilla`) y
+las 236 comparten **dos objetos**. Ninguna usa clases. Y como el objeto es siempre el
+mismo, la memorización de cada casilla por fin sirve: al marcar un dibujo se rehacen
+dos, no 236.
+
+Para eso hicieron falta los tonos **100 y 500** en `constants/colors.ts`, que antes
+solo salían por las clases. Son los mismos valores de Tailwind, así que **no cambia
+nada de lo que se ve** — cuatro de los dieciocho se pudieron verificar contra
+`GOAL_COLOR_HEX`, que ya los tenía escritos.
+
+Hay una prueba que comprueba que **los 18 colores tengan su entrada en los tres
+mapas**: si a uno le falta, no hay error — cae en el gris de reserva y esa casilla se
+ve apagada mientras las demás se ven bien.
+
+> **Y añadir esos dos mapas rompió un auditor**, que fue lo mejor que pudo pasar.
+> `auditar-fondo` comprobaba que dos categorías no usen colores parecidos leyendo
+> *"todo lo que hay antes de GOAL_COLOR_HEX"*. Con tres mapas de las mismas claves,
+> el último pisaba al primero y acabó comparando colores que no son los que se ven.
+> Avisó en falso; podría haber sido al contrario. Ahora lee **el bloque del 600** y
+> falla si no consigue leerlo, en vez de pasar sin haber mirado.
 
 ### Y el nombre salía como clave interna (7ago-13)
 

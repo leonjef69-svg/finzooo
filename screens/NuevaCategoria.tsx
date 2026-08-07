@@ -7,7 +7,9 @@ import {
   TouchableOpacity,
   useWindowDimensions,
   View,
+  type ViewStyle,
 } from "react-native";
+import { useColorScheme } from "nativewind";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import {
@@ -29,7 +31,7 @@ import {
   LADO_DE,
   SEPARACION,
 } from "@/constants/catalogoFilas";
-import { COLOR_HEX_600 } from "@/constants/colors";
+import { COLOR_HEX_100, COLOR_HEX_500, COLOR_HEX_600 } from "@/constants/colors";
 import { iconoDe, TODOS_LOS_GRUPOS } from "@/constants/iconos";
 import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -62,6 +64,62 @@ const COLORES = [
 ];
 
 /**
+ * El aspecto de una casilla, ya calculado. Ver por qué en AspectoCasilla.
+ */
+type AspectoCasilla = {
+  /** Sin elegir: fondo y borde grises, con la medida dentro. */
+  normal: ViewStyle;
+  /** Elegida: fondo y borde del color de la categoría. */
+  elegida: ViewStyle;
+  /** Con qué color se pinta el dibujo cuando está elegido. */
+  tinta: string;
+};
+
+/**
+ * Calcula ese aspecto UNA vez para las 236 casillas.
+ *
+ * ESTE ES EL ARREGLO DE LA LENTITUD (07/08/2026)
+ *
+ * Cada casilla llevaba su aspecto en clases de NativeWind. Un componente con clases
+ * se apunta al sistema de estilos para enterarse de los cambios de tema, y resuelve
+ * su cadena de clases: son **236 apuntes y 236 resoluciones** solo para abrir la
+ * pantalla, y otros tantos que comparar en cada toque.
+ *
+ * El usuario lo midió con el celular en la mano: *"se demora 2 a 3 segundos en
+ * entrar"* y *"cuando le doy click a un icono se demora 1 a 2 segundos en
+ * seleccionar"*.
+ *
+ * Con el aspecto ya calculado aquí, las 236 casillas comparten DOS objetos y no
+ * usan ninguna clase. Y como el objeto es siempre el mismo, la memorización de cada
+ * casilla funciona de verdad: al marcar un dibujo solo se rehacen dos.
+ *
+ * Los colores son los mismos valores de Tailwind que salían por las clases, así que
+ * no cambia nada de lo que se ve. Ver COLOR_HEX_100 y COLOR_HEX_500.
+ */
+function aspectoDeCasilla(color: string, lado: number, oscuro: boolean): AspectoCasilla {
+  const medida = { width: lado, height: lado, borderRadius: 16 } as const;
+  return {
+    normal: {
+      ...medida,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: oscuro ? "#1e293b" : "#f8fafc",
+      borderWidth: 1.5,
+      borderColor: oscuro ? "#334155" : "#e2e8f0",
+    },
+    elegida: {
+      ...medida,
+      alignItems: "center",
+      justifyContent: "center",
+      backgroundColor: COLOR_HEX_100[color] || "#f1f5f9",
+      borderWidth: 2,
+      borderColor: COLOR_HEX_500[color] || "#64748b",
+    },
+    tinta: COLOR_HEX_600[color] || "#475569",
+  };
+}
+
+/**
  * Un dibujo de la cuadrícula.
  *
  * Va en su propio componente memorizado por un motivo medible: son 236 en
@@ -71,13 +129,13 @@ const COLORES = [
 const Dibujito = memo(function Dibujito({
   id,
   elegido,
-  color,
+  aspecto,
   lado,
   onElegir,
 }: {
   id: string;
   elegido: boolean;
-  color: string;
+  aspecto: AspectoCasilla;
   /** Medida del cuadrado, calculada del ancho de la pantalla. Ver LADO_DE. */
   lado: number;
   onElegir: (id: string) => void;
@@ -106,29 +164,22 @@ const Dibujito = memo(function Dibujito({
     // cambiar (ver la nota del display) y solo recortan las casillas con foto.
     <TouchableOpacity
       onPress={() => onElegir(id)}
-      // La medida va en número, no en clase. Con "flex-1" la repartía la fila y
-      // se veía igual, pero nadie sabía cuánto medía hasta después de dibujarla
-      // — y la lista necesita saberlo ANTES para poder adelantarse al dedo.
-      style={{ width: lado, height: lado }}
-      // El recorte SOLO cuando hay foto, y ahí está el segundo ahorro.
+      // SIN NINGUNA CLASE, y ahí está el arreglo. Ver aspectoDeCasilla: el aspecto
+      // ya viene calculado y las 236 comparten el mismo objeto.
       //
-      // Recortar obliga a Android a darle a esa casilla su propia capa para poder
-      // cortar lo que sobresale. Puesto en todas eran 236 capas, y solo hace falta
-      // en las de foto: un dibujo de la tipografía cabe dentro y no sobresale de
-      // nada. Se puso en todas el 07/08/2026 al permitir fotos en favoritos, sin
-      // pensar en que la cuadrícula grande no tiene ninguna.
-      className={`rounded-2xl items-center justify-center ${foto ? "overflow-hidden" : ""} ${
-        elegido
-          ? `bg-${color}-100 border-2 border-${color}-500`
-          : "bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700"
-      }`}
+      // El recorte solo cuando hay foto: obliga a Android a darle a esa casilla su
+      // propia capa para cortar lo que sobresale, y un dibujo de la tipografía cabe
+      // dentro y no sobresale de nada.
+      style={
+        foto
+          ? [elegido ? aspecto.elegida : aspecto.normal, { overflow: "hidden" }]
+          : elegido
+            ? aspecto.elegida
+            : aspecto.normal
+      }
     >
       {D ? (
-        <D
-          size={22}
-          color={elegido ? COLOR_HEX_600[color] || "#475569" : "#64748b"}
-          strokeWidth={2.2}
-        />
+        <D size={22} color={elegido ? aspecto.tinta : "#64748b"} strokeWidth={2.2} />
       ) : (
         <Image source={{ uri: id }} style={{ width: lado, height: lado }} />
       )}
@@ -140,13 +191,13 @@ const Dibujito = memo(function Dibujito({
 const Fila = memo(function Fila({
   iconos,
   elegido,
-  color,
+  aspecto,
   lado,
   onElegir,
 }: {
   iconos: (string | null)[];
   elegido: string;
-  color: string;
+  aspecto: AspectoCasilla;
   lado: number;
   onElegir: (id: string) => void;
 }) {
@@ -161,7 +212,7 @@ const Fila = memo(function Fila({
             key={id}
             id={id}
             elegido={elegido === id}
-            color={color}
+            aspecto={aspecto}
             lado={lado}
             onElegir={onElegir}
           />
@@ -470,6 +521,20 @@ export default function NuevaCategoria({
   // cinco de una fila lleguen justo al borde. Ver constants/catalogoFilas.ts.
   const { width: anchoPantalla } = useWindowDimensions();
   const lado = LADO_DE(anchoPantalla);
+
+  /**
+   * El aspecto de las casillas, calculado UNA vez para las 236.
+   *
+   * Ver aspectoDeCasilla, que explica el fallo de lentitud que esto arregla. El
+   * useMemo importa: sin él saldrían objetos nuevos en cada dibujado, la
+   * memorización de cada casilla dejaría de valer y volveríamos a rehacer las 236
+   * en cada toque — que es justo lo que se está quitando.
+   */
+  const { colorScheme } = useColorScheme();
+  const aspecto = useMemo(
+    () => aspectoDeCasilla(color, lado, colorScheme === "dark"),
+    [color, lado, colorScheme]
+  );
 
   // Los títulos de los grupos, traducidos UNA vez. Pasarle la función de
   // traducir al catálogo lo redibujaría entero en cada letra escrita, que es
@@ -897,7 +962,7 @@ export default function NuevaCategoria({
                   key={f}
                   iconos={fila}
                   elegido={loQueSeMarca}
-                  color={color}
+                  aspecto={aspecto}
                   lado={lado}
                   onElegir={elegirFavorito}
                 />
@@ -981,7 +1046,7 @@ export default function NuevaCategoria({
                     key={f}
                     iconos={fila}
                     elegido={icono}
-                    color={color}
+                    aspecto={aspecto}
                     lado={lado}
                     onElegir={setIcono}
                   />

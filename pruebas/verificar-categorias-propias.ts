@@ -267,29 +267,53 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   // es que la medida llegue.
   const laCasilla = /const Dibujito = memo\([\s\S]*?\n\}\);/.exec(codigo)?.[0] ?? "";
   ok(laCasilla.length > 0, "la casilla del catalogo sigue siendo su propia pieza");
-  // Se mira la medida DE LA CASILLA, no cualquier medida del archivo: la imagen de
-  // dentro tambien lleva "width: lado, height: lado", asi que buscarlo suelto daba
-  // por bueno el codigo roto. Tiene que ser la del propio boton, justo tras su
-  // onPress.
+  // Y LA CASILLA NO USA NI UNA CLASE. Este es el arreglo de la lentitud que el
+  // usuario midio con el celular: 2 a 3 segundos en entrar y 1 a 2 en marcar un
+  // dibujo.
+  //
+  // Un componente con clases se apunta al sistema de estilos para enterarse de los
+  // cambios de tema, y resuelve su cadena: son 236 apuntes y 236 resoluciones solo
+  // para abrir, y otros tantos que comparar en cada toque. Con el aspecto ya
+  // calculado, las 236 comparten dos objetos.
+  ok(!laCasilla.includes("className"), "la casilla del catalogo no usa ninguna clase");
+  ok(/aspecto\.elegida : aspecto\.normal/.test(laCasilla), "y toma el aspecto ya calculado");
+  // Y el objeto tiene que ser SIEMPRE EL MISMO, o la memorizacion no vale de nada y
+  // volveriamos a rehacer las 236 en cada toque, que es lo que se esta quitando.
+  ok(/const aspecto = useMemo\(/.test(codigo), "el aspecto se calcula una sola vez");
   ok(
-    /onPress=\{\(\) => onElegir\(id\)\}[\s\S]{0,400}?style=\{\{ width: lado, height: lado \}\}/.test(
-      laCasilla
-    ),
-    "la medida de la casilla va en un objeto, no en una funcion"
+    /\[color, lado, colorScheme\]/.test(codigo),
+    "y solo se rehace si cambia el color, la medida o el tema"
   );
+  // Sin funcion de estilo: ahi se perdian el ancho y el alto. Ver la nota de la
+  // casilla.
   ok(!/style=\{\(\{ pressed/.test(laCasilla), "sin funcion de estilo, que se come el tamaño");
 
   // Y NO RECORTA SU CONTENIDO SALVO QUE HAYA FOTO.
   //
   // Recortar obliga a Android a darle a esa casilla su propia capa para cortar lo
   // que sobresale. Puesto en todas eran 236 capas, y solo hace falta en las de
-  // foto: un dibujo de la tipografia cabe dentro y no sobresale de nada. Se puso en
-  // todas al permitir fotos en favoritos, sin pensar en que la cuadricula grande no
-  // tiene ninguna.
-  ok(
-    /\$\{foto \? "overflow-hidden" : ""\}/.test(laCasilla),
-    "y solo recorta cuando la casilla lleva una foto"
-  );
+  // foto: un dibujo de la tipografia cabe dentro y no sobresale de nada.
+  ok(/foto\s*\r?\n?\s*\? \[/.test(laCasilla), "y solo recorta cuando la casilla lleva una foto");
+  ok(/overflow: "hidden"/.test(laCasilla), "con el recorte puesto a mano, no por clase");
+
+  // NINGUN COLOR PUEDE QUEDARSE SIN SU TONO.
+  //
+  // Al pasar de clases a numeros, el color de una casilla elegida sale de dos mapas
+  // (el 100 para el fondo y el 500 para el borde). Si a un color le falta su entrada,
+  // no hay error: cae en el gris de reserva y esa casilla se ve apagada mientras las
+  // demas se ven bien — de las cosas que se descubren por casualidad meses despues.
+  //
+  // Se comprueban los 18 colores que la pantalla ofrece, leidos de la propia
+  // pantalla, contra los tres mapas.
+  const paleta = fs.readFileSync(path.join(RAIZ, "constants/colors.ts"), "utf8");
+  const ofrecidos = /const COLORES = \[([\s\S]*?)\];/.exec(codigo)?.[1] ?? "";
+  const lista = [...ofrecidos.matchAll(/"(\w+)"/g)].map((m) => m[1]);
+  ok(lista.length >= 15, `se leyeron los colores que ofrece la pantalla (${lista.length})`);
+  for (const mapa of ["COLOR_HEX_100", "COLOR_HEX_500", "COLOR_HEX_600"]) {
+    const bloque = new RegExp(`${mapa}[\\s\\S]*?\\n\\};`).exec(paleta)?.[0] ?? "";
+    const faltan = lista.filter((c) => !new RegExp(`^ {2}${c}:`, "m").test(bloque));
+    ok(faltan.length === 0, `${mapa} tiene los 18${faltan.length ? ": falta " + faltan.join(", ") : ""}`);
+  }
   ok(!codigo.includes("altoDeLasFilas"), "ni hay huecos reservados que llenar despues");
 
   // 05/08/2026, con foto: "esta disparejo los iconos". Al pasar a filas de

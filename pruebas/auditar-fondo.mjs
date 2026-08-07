@@ -252,14 +252,23 @@ console.log("\n--- COLORES DE CATEGORIA QUE SE PISAN ---");
   //
   // Llego a haber dos con el MISMO naranja exacto (Combustible y Hogar), y
   // no se vio hasta que se noto a ojo en la pantalla.
+  // Se lee EL BLOQUE DEL TONO 600, no "todo lo que hay antes de GOAL_COLOR_HEX".
+  //
+  // Asi estaba, y se rompio el 07/08/2026 al anadir los tonos 100 y 500 al mismo
+  // archivo: los tres mapas usan las mismas claves, asi que al leerlos todos
+  // seguidos el ultimo pisaba al primero y este auditor acabo comparando unos
+  // colores que no son los que se ven. Aviso en falso, y podria haber sido al
+  // contrario — dar por bueno un par que si se parece.
   const colores = fs.readFileSync(path.join(RAIZ, "constants/colors.ts"), "utf8");
+  const bloque600 = /COLOR_HEX_600[\s\S]*?\n\};/.exec(colores)?.[0] ?? "";
   const hex = Object.fromEntries(
-    [
-      ...colores
-        .split("GOAL_COLOR_HEX")[0]
-        .matchAll(/^\s{2}(\w+):\s*"(#[0-9a-fA-F]{6})"/gm),
-    ].map((m) => [m[1], m[2]])
+    [...bloque600.matchAll(/^\s{2}(\w+):\s*"(#[0-9a-fA-F]{6})"/gm)].map((m) => [m[1], m[2]])
   );
+  // Y se comprueba que de verdad se leyo: con el bloque vacio, el bucle de abajo no
+  // compararia nada y el auditor pasaria sin haber mirado.
+  if (Object.keys(hex).length < 15) {
+    fallo("categorias", "no se pudo leer la paleta del tono 600 (" + Object.keys(hex).length + ")");
+  }
 
   // El ojo no ve igual los tres canales: el verde pesa mas y el azul menos.
   const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
