@@ -420,6 +420,102 @@ const Fila = memo(function Fila({
 });
 
 /**
+ * UNA CATEGORÍA DE LA LISTA DE "TUS CATEGORÍAS", Y UN COLOR DE LA PALETA.
+ *
+ * POR QUÉ EXISTEN ESTAS DOS PIEZAS (07/08/2026)
+ *
+ * *"se siente lento, no fluido, piensa diferente"*. Y pensar diferente era mirar FUERA de
+ * lo que se llevaba toda la tarde optimizando.
+ *
+ * Lo que se sabía por el medidor: **un dibujado de esta pantalla cuesta entre 136 y 353
+ * ms**. Se había atacado CUÁNTAS VECES se dibuja; nunca CUÁNTO CUESTA cada vez.
+ *
+ * Y cuesta eso porque un dibujado de la pantalla arrastra consigo, cada vez, todo lo que
+ * no está memorizado: **las 14 casillas de "Tus categorías" y los 18 colores**. Son unas
+ * 50 piezas con clases de estilo, y varias de esas clases se ARMAN AL VUELO
+ * (`bg-${color}-100`), que es lo más caro que hay: una clase así no se puede preparar de
+ * antemano, hay que resolverla en el momento.
+ *
+ * El catálogo ya estaba arreglado —sus casillas están memorizadas y sin clases— y estas
+ * dos cuadrículas, en la misma pantalla, nunca recibieron el mismo trato.
+ *
+ * Y LA PANTALLA SE REDIBUJA MÁS DE LO QUE PARECE, no solo al tocarla: el reparto de datos
+ * de la app crea su paquete de nuevo en cada cambio, así que **cualquier cambio ahí
+ * redibuja todas las pantallas montadas**, y tiene relojes de 8 y de 60 segundos. Eso son
+ * tirones cada tanto sin que nadie toque nada, que es justo lo que se siente como "no
+ * fluido".
+ *
+ * SE MEMORIZAN Y NO SE LES TOCA NI UNA CLASE, y eso es a propósito. Quitarles las clases
+ * ahorraría un poco más, pero hay que reescribir medidas a mano y ya pasó una vez: *"no
+ * quiero que se vea así, estaba bien como estaba antes"*. Memorizadas, un dibujado de la
+ * pantalla **no las toca**, así que sus clases no se resuelven — el mismo ahorro, sin
+ * poder cambiar cómo se ven.
+ */
+const CasillaCategoria = memo(function CasillaCategoria({
+  id,
+  color,
+  nombre,
+  puesta,
+  onElegir,
+}: {
+  id: string;
+  color: string;
+  nombre: string;
+  /** Es la que se va a aplicar. Cambia en DOS casillas: la que la suelta y la que la toma. */
+  puesta: boolean;
+  onElegir: (id: string) => void;
+}) {
+  return (
+    <TouchableOpacity
+      // Tocarla la ELIGE, no cierra la pantalla. Ver elegirDeLaLista: volver de golpe
+      // dejaba las otras pestañas sin poder usarse sobre una categoría que ya existe.
+      onPress={() => onElegir(id)}
+      className="items-center gap-1.5"
+      style={{ width: "21%" }}
+    >
+      <View
+        className={`w-12 h-12 rounded-2xl items-center justify-center bg-${color}-100 ${
+          puesta ? `border-2 border-${color}-500` : ""
+        }`}
+      >
+        <CategoryAvatar id={id} size={20} />
+      </View>
+      <Text
+        className={`text-xs font-bold text-center ${
+          puesta ? `text-${color}-600` : "text-slate-600 dark:text-slate-200"
+        }`}
+        numberOfLines={1}
+      >
+        {nombre}
+      </Text>
+    </TouchableOpacity>
+  );
+});
+
+/** Un color de la paleta. Memorizada por lo mismo que CasillaCategoria. */
+const CasillaColor = memo(function CasillaColor({
+  color,
+  puesto,
+  onElegir,
+}: {
+  color: string;
+  puesto: boolean;
+  onElegir: (color: string) => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={() => onElegir(color)}
+      className={`w-12 h-12 rounded-full items-center justify-center ${
+        puesto ? "border-[3px] border-slate-900 dark:border-white" : ""
+      }`}
+      style={{ backgroundColor: COLOR_HEX_600[color] }}
+    >
+      {puesto && <Check size={18} color="#ffffff" />}
+    </TouchableOpacity>
+  );
+});
+
+/**
  * Elegir una categoría, o crear una propia con nombre, dibujo y color.
  *
  * UNA SOLA PANTALLA PARA LAS DOS COSAS (06/08/2026)
@@ -731,6 +827,27 @@ export default function NuevaCategoria({
   const marcaDeVerdad = useRef(loQueSeMarca);
   marcaDeVerdad.current = loQueSeMarca;
   const cancelarMarca = useCallback(() => ponerMarca(marcaDeVerdad.current), []);
+
+  /**
+   * La misma treta para elegir de la lista de "Tus categorías".
+   *
+   * elegirDeLaLista se escribe de nuevo en cada dibujado —como cualquier función suelta
+   * dentro de un componente—, y pasarla tal cual haría que las 14 casillas se rehicieran
+   * cada vez, justo lo que se está quitando. La caja guarda siempre la última versión y
+   * lo que se pasa a las casillas no cambia nunca.
+   */
+  const elegirDeLaListaRef = useRef(elegirDeLaLista);
+  elegirDeLaListaRef.current = elegirDeLaLista;
+  const elegirDeLaListaEstable = useCallback((id: string) => elegirDeLaListaRef.current(id), []);
+
+  /**
+   * Las filas de los favoritos, calculadas una sola vez por lista.
+   *
+   * Sin esto, enFilas(favoritos) devuelve un ARRAY NUEVO en cada dibujado de la pantalla,
+   * y con un array nuevo la memorización de la fila no sirve: las casillas de favoritos se
+   * rehacían en cada dibujado aunque los favoritos no hubieran cambiado.
+   */
+  const filasDeFavoritos = useMemo(() => enFilas(favoritos), [favoritos]);
 
   function alternarFavorito() {
     const siguiente = alternar(favoritos, loQueSeMarca);
@@ -1110,38 +1227,20 @@ export default function NuevaCategoria({
           <View style={{ display: pestana === "tuyas" ? "flex" : "none" }}>
             <View className="px-5" style={{ paddingTop: 12 }}>
               <View className="flex-row flex-wrap gap-3">
-                {cats.map((c) => {
-                  // La marcada es la que se va a aplicar: la que se acaba de tocar
-                  // o, si no se ha tocado ninguna, la que el movimiento ya lleva.
-                  const puesta = (elegida ?? actual) === c.id;
-                  return (
-                    <TouchableOpacity
-                      key={c.id}
-                      // Tocarla la ELIGE, no cierra la pantalla. Ver elegirDeLaLista:
-                      // volver de golpe dejaba las otras pestañas sin poder usarse
-                      // sobre una categoría que ya existe.
-                      onPress={() => elegirDeLaLista(c.id)}
-                      className="items-center gap-1.5"
-                      style={{ width: "21%" }}
-                    >
-                      <View
-                        className={`w-12 h-12 rounded-2xl items-center justify-center bg-${c.color}-100 ${
-                          puesta ? `border-2 border-${c.color}-500` : ""
-                        }`}
-                      >
-                        <CategoryAvatar id={c.id} size={20} />
-                      </View>
-                      <Text
-                        className={`text-xs font-bold text-center ${
-                          puesta ? `text-${c.color}-600` : "text-slate-600 dark:text-slate-200"
-                        }`}
-                        numberOfLines={1}
-                      >
-                        {t(c.label)}
-                      </Text>
-                    </TouchableOpacity>
-                  );
-                })}
+                {cats.map((c) => (
+                  <CasillaCategoria
+                    key={c.id}
+                    id={c.id}
+                    color={c.color}
+                    // El nombre ya traducido, no la función de traducir: la función cambia
+                    // en cada dibujado y con ella la memorización no valdría de nada.
+                    nombre={t(c.label)}
+                    // La marcada es la que se va a aplicar: la que se acaba de tocar o, si
+                    // no se ha tocado ninguna, la que el movimiento ya lleva.
+                    puesta={(elegida ?? actual) === c.id}
+                    onElegir={elegirDeLaListaEstable}
+                  />
+                ))}
               </View>
 
               {/* EDITAR LA PROPIA QUE ESTÉ MARCADA.
@@ -1250,16 +1349,7 @@ export default function NuevaCategoria({
             <View className="px-5" style={{ paddingTop: 12 }}>
               <View className="flex-row flex-wrap gap-3">
                 {COLORES.map((c) => (
-                  <TouchableOpacity
-                    key={c}
-                    onPress={() => setColor(c)}
-                    className={`w-12 h-12 rounded-full items-center justify-center ${
-                      color === c ? "border-[3px] border-slate-900 dark:border-white" : ""
-                    }`}
-                    style={{ backgroundColor: COLOR_HEX_600[c] }}
-                  >
-                    {color === c && <Check size={18} color="#ffffff" />}
-                  </TouchableOpacity>
+                  <CasillaColor key={c} color={c} puesto={color === c} onElegir={setColor} />
                 ))}
               </View>
             </View>
@@ -1287,7 +1377,7 @@ export default function NuevaCategoria({
                 // "elegido" mira la foto ANTES que el dibujo, igual que la vista
                 // previa: con una foto puesta, la marcada tiene que ser la foto y no
                 // el dibujo que quedó debajo.
-                enFilas(favoritos).map((fila, f) => (
+                filasDeFavoritos.map((fila, f) => (
                   <Fila
                     key={f}
                     iconos={fila}

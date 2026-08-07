@@ -148,7 +148,22 @@ console.log("\n--- Y ELEGIR UNA QUE YA EXISTE SIGUE ESTANDO, EN SU PESTAÑA ---"
   // de tenerla elegida y retocarla. El usuario lo pidió al revés el 07/08/2026:
   // "debería yo seleccionar el icono y recién cuando le doy aplicar mandarme
   // [al movimiento], aparte podría cambiarle el color".
-  ok(/onPress=\{\(\) => elegirDeLaLista\(c\.id\)\}/.test(pantLimpia), "tocar una la marca");
+  //
+  // El 07/08/2026 la casilla paso a ser su propia pieza memorizada —CasillaCategoria— para
+  // que un dibujado de la pantalla no arrastre las 14. Asi que el toque ya no se escribe
+  // aqui: la casilla llama a lo que le pasen. Lo que se vigila es lo mismo de antes, en sus
+  // dos mitades: que la casilla avise, y que quien recibe el aviso MARQUE en vez de cerrar.
+  ok(/onPress=\{\(\) => onElegir\(id\)\}/.test(pantLimpia), "tocar una casilla avisa");
+  ok(/onElegir=\{elegirDeLaListaEstable\}/.test(pantLimpia), "y quien recibe el aviso es elegirDeLaLista");
+  {
+    const laFuncion = pantLimpia.slice(
+      pantLimpia.indexOf("function elegirDeLaLista"),
+      pantLimpia.indexOf("function aplicarALaElegida")
+    );
+    ok(laFuncion.length > 100, "se encuentra elegirDeLaLista");
+    ok(/setElegida\(/.test(laFuncion), "que MARCA la categoria");
+    ok(!/router\.back\(\)/.test(laFuncion) && !/onBack\(\)/.test(laFuncion), "y no cierra la pantalla");
+  }
 
   // Y EL NOMBRE SE TRADUCE AL CARGARLO.
   //

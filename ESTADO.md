@@ -696,6 +696,60 @@ viaja por las filas, así que **ninguna fila se rehace al elegir**.
 > los dos avisos ya llegaron en el orden que sea. Tiene prueba propia porque es el detalle
 > más fácil de "limpiar" sin saber qué se rompe.
 
+### Undécima causa: se atacó CUÁNTAS VECES se dibuja, nunca CUÁNTO CUESTA (7ago-25)
+
+*"Se siente lento, no fluido. Piensa diferente."* Y pensar diferente era **mirar fuera de
+lo que se llevaba toda la tarde optimizando**.
+
+El número estaba delante desde el principio y no se leyó bien: **un dibujado de esta
+pantalla cuesta entre 136 y 353 ms**. Los diez arreglos anteriores atacaron *cuántas veces
+se dibuja* —tandas, pausas, memorizar filas, la marca fuera de React—. **Ninguno atacó
+cuánto cuesta cada dibujado.**
+
+Y cuesta eso porque cada dibujado arrastraba consigo todo lo que **no** está memorizado:
+
+| | |
+|---|---|
+| "Tus categorías" | 14 casillas × 4 piezas, con **3 clases cada una** y dos de ellas armadas al vuelo (`bg-${color}-100`) |
+| "Color" | 18 casillas con su clase |
+| "Favoritos" | `enFilas(favoritos)` devolvía un **array nuevo** cada vez, así que la memorización de la fila no servía |
+
+Son unas **90 piezas y unas 60 clases** resueltas en cada dibujado. Y una clase armada al
+vuelo es lo más caro que hay: no se puede preparar de antemano, hay que resolverla en el
+momento.
+
+**El catálogo ya estaba arreglado** —casillas memorizadas y sin clases, y eso se midió— y
+estas dos cuadrículas, **en la misma pantalla**, nunca recibieron el mismo trato. Otra vez
+media pantalla optimizada y la otra media no.
+
+> **El arreglo que NO se hizo, a propósito.** No se les quitaron las clases; solo se
+> memorizaron. Quitarlas ahorraría algo más pero obliga a reescribir medidas a mano, y eso
+> ya salió mal: *"no quiero que se vea así, estaba bien como estaba antes"*. **Memorizadas,
+> un dibujado no las toca y sus clases no se resuelven: el mismo ahorro sin poder cambiar
+> cómo se ven.** Cuando hay dos caminos con el mismo resultado, se toma el que no puede
+> romper nada.
+
+Y la mitad que se olvida: memorizar y luego pasarle **una función nueva en cada dibujado**
+deja el trabajo hecho a medias sin que nada avise. `elegirDeLaLista` se escribe de nuevo en
+cada dibujado, así que va por una caja (`elegirDeLaListaEstable`), y el nombre llega **ya
+traducido** en vez de la función de traducir. Las dos cosas tienen prueba.
+
+### Lo que se encontró de paso y NO se tocó, con su motivo
+
+**El reparto de datos de la app crea su paquete de nuevo en cada dibujado**
+(`AppDataContext`, el `value={{…}}` sin memorizar). Consecuencia: **cualquier cambio ahí
+redibuja todas las pantallas montadas a la vez**.
+
+No se arregló, y conviene que quede escrito por qué: memorizar ese paquete es una lista de
+casi cien dependencias, y equivocarse en una sola significa **datos viejos en pantalla en
+una app de dinero** — un movimiento que no aparece, un saldo que no cuadra. El riesgo no se
+parece al beneficio. Si algún día hace falta, se hace **partiendo el contexto en varios**
+(datos, ajustes, acciones), no memorizando el de cien.
+
+Lo que sí se comprobó de sus dos relojes, y los dos están bien: el de 8 segundos solo
+redibuja **si de verdad llegó algo**, y el de 60 solo corre **mientras haya una prueba
+Premium abierta**.
+
 ### Lo que dejaron las diez causas, por si vuelve a ir lento
 
 Está descartado —no volver a mirarlo—: las clases de NativeWind en las casillas, el

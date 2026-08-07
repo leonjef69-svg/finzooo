@@ -412,6 +412,52 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   // todo lo que dependa de el se rehiciera sin motivo.
   ok(/if \(!vistas\.has\(cual\)\) setVistas/.test(codigo), "y solo se apunta la primera vez");
 
+  // UN DIBUJADO DE LA PANTALLA NO PUEDE ARRASTRAR LAS OTRAS DOS CUADRICULAS.
+  //
+  // Reportado el 07/08/2026, despues de diez arreglos: *"se siente lento no fluido, piensa
+  // diferente"*. Y pensar diferente era mirar FUERA de lo que se llevaba toda la tarde
+  // optimizando.
+  //
+  // Lo que decia el medidor: UN DIBUJADO DE ESTA PANTALLA CUESTA ENTRE 136 Y 353 ms. Se
+  // habia atacado cuantas VECES se dibuja —tandas, pausas, memorizar filas— y nunca cuanto
+  // CUESTA cada vez.
+  //
+  // Y costaba eso porque cada dibujado arrastraba las 14 casillas de "Tus categorias" y
+  // los 18 colores: unas 50 piezas con clases, varias ARMADAS AL VUELO (bg-${color}-100),
+  // que es lo mas caro que hay porque no se pueden preparar de antemano. El catalogo ya
+  // estaba arreglado; estas dos, en la misma pantalla, nunca recibieron el mismo trato.
+  //
+  // OJO CON EL ARREGLO QUE NO SE HIZO: no se les quitaron las clases, solo se memorizaron.
+  // Quitarlas ahorraria un poco mas y obliga a reescribir medidas a mano, y eso ya salio
+  // mal una vez ("no quiero que se vea asi, estaba bien como estaba antes"). Memorizadas,
+  // un dibujado no las toca y sus clases no se resuelven: el mismo ahorro sin poder
+  // cambiar como se ven.
+  ok(/const CasillaCategoria = memo\(/.test(codigo), "la casilla de una categoria esta memorizada");
+  ok(/const CasillaColor = memo\(/.test(codigo), "y la de un color tambien");
+
+  // Y HAY QUE PASARLES COSAS QUE NO CAMBIEN, o la memorizacion no sirve de nada. Es la
+  // mitad que se olvida: memorizar y luego pasarle una funcion nueva en cada dibujado deja
+  // el trabajo hecho a medias y sin que nada avise.
+  ok(
+    /onElegir=\{elegirDeLaListaEstable\}/.test(codigo),
+    "se les pasa una funcion que no cambia, no una escrita al vuelo"
+  );
+  ok(
+    /const elegirDeLaListaEstable = useCallback\(/.test(codigo),
+    "y esa funcion sale de una caja, para que sea siempre la misma"
+  );
+  ok(/nombre=\{t\(c\.label\)\}/.test(codigo), "y el nombre ya traducido, no la funcion de traducir");
+  ok(/onElegir=\{setColor\}/.test(codigo), "al color se le pasa setColor, que ya no cambia nunca");
+
+  // Y LAS FILAS DE FAVORITOS, DE UNA CAJA. enFilas(favoritos) devuelve un array NUEVO en
+  // cada dibujado, y con un array nuevo la memorizacion de la fila no vale: las casillas de
+  // favoritos se rehacian aunque los favoritos no hubieran cambiado.
+  ok(
+    /const filasDeFavoritos = useMemo\(\(\) => enFilas\(favoritos\), \[favoritos\]\)/.test(codigo),
+    "las filas de favoritos se calculan una vez por lista"
+  );
+  ok(!/enFilas\(favoritos\)\.map/.test(codigo), "y no se vuelven a repartir en cada dibujado");
+
   // LA MEDIDA DE LA CASILLA VA EN UN OBJETO, NUNCA EN UNA FUNCION.
   //
   // Se probo cambiar TouchableOpacity por Pressable para ahorrar 236 vistas
