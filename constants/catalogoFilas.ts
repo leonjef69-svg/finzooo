@@ -43,6 +43,32 @@ export const ALTO_TITULO = 36;
 export const GRUPOS_AL_ABRIR = 4;
 
 /**
+ * Cuántos grupos entran en cada tanda DESPUÉS de la primera.
+ *
+ * POR QUÉ DEJÓ DE SER "TODO EL RESTO DE UNA VEZ" (07/08/2026)
+ *
+ * El medidor lo dijo con un número: el PRIMER toque después de abrir tardaba **6000 ms**.
+ * Eso no lo tarda marcar una casilla — es el toque esperando a que la pantalla acabe de
+ * armar los 223 dibujos que faltaban, que llegaban todos en un solo golpe. Mientras ese
+ * golpe dura, el dedo no existe para la app.
+ *
+ * ESTO NO ES CARGAR AL DESLIZAR, Y LA DIFERENCIA ES TODA LA CUESTIÓN. El usuario rechazó
+ * eso con estas palabras: *"los iconos ya deberían estar ahí fijos, no deberían cargar
+ * recién cuando yo deslizo"*. Siguen llegando **solos**, sin que nadie deslice, y en
+ * cuanto acaban están todos puestos para siempre. Lo único que cambia es que el trabajo
+ * se parte, y entre trozo y trozo la app puede atender un toque.
+ *
+ * Tampoco es el escalonado de a uno que se rechazó antes: aquel dejaba huecos VISIBLES
+ * al deslizar porque iba justo por detrás del dedo. Aquí la primera tanda ya llena más
+ * de tres pantallas y cada tanda añade unas dos más, así que lo que se ve siempre está
+ * completo.
+ *
+ * Dos y no cinco porque lo que importa es cuánto dura el trozo MÁS LARGO: ese es lo que
+ * un toque tiene que esperar en el peor caso.
+ */
+export const GRUPOS_POR_TANDA = 2;
+
+/**
  * El lado de una casilla para que las cinco llenen justo el ancho.
  *
  * Se calcula en vez de fijarse: con una medida fija, las cinco casillas no

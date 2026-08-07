@@ -587,7 +587,41 @@ Las cinco afirmaciones nuevas de `verificar-elegir-categoria` fallan contra la v
 anterior. Las dos que pasan están marcadas: una encuentra el bloque de código y la otra
 vigila que al pintar antes no se haya dejado de elegir.
 
-### EL MEDIDOR EN LA APP (7ago-18, corregido en 7ago-20) — temporal, hay que quitarlo
+### Novena causa: el primer toque hacía cola detrás de 223 dibujos (7ago-21)
+
+Con el medidor arreglado, el número que dio: **el primer toque después de abrir, 6000 ms
+en la parte de "app"**.
+
+Marcar una casilla no cuesta eso ni de lejos. Lo que pasaba es que el toque **hacía cola**
+detrás del golpe que armaba los 223 dibujos que faltaban — la segunda tanda, que llegaba
+entera de una vez a los 350 ms. Mientras ese golpe dura, el dedo no existe para la app.
+
+**La solución obvia estaba prohibida, y por escrito.** Lo primero que se me ocurrió fue
+armarlos según se desliza. Es lo que él ya rechazó con estas palabras, guardadas en
+`verificar-categorias-propias`: *"los iconos ya deberían estar ahí fijos, no deberían
+cargar recién cuando yo deslizo"*. Cuatro entregas se fueron en eso. **Se descartó antes
+de escribir una línea**, y ahora hay una prueba que guarda esa puerta — precisamente
+porque es la idea que se le ocurre a cualquiera al ver el problema.
+
+Lo que sí se puede: el trabajo total **no se abarata** —son 227 letras que Android tiene
+que medir— pero sí se **parte**. Ahora el resto llega en tandas de dos grupos, una tras
+otra, **solas**, sin que nadie deslice. En cuanto acaban están los 227 puestos para
+siempre, igual que antes.
+
+La diferencia no está en cuánto tardan todas, sino en que **entre tanda y tanda la app
+cede el turno**, y ahí entra el toque que estaba esperando. Un toque espera, como mucho,
+lo que dura **una** tanda. De ahí que las tandas sean chicas: subir `GRUPOS_POR_TANDA`
+para "que acabe antes" devuelve la espera, y hay una prueba con números que lo impide.
+
+Y tampoco es el escalonado de a uno que se rechazó en agosto: aquel iba justo por detrás
+del dedo y dejaba huecos visibles. Aquí la primera tanda ya llena más de tres pantallas y
+cada una añade unas dos más.
+
+> **Se añadió un segundo número temporal al medidor:** cuánto tardó en armarse todo el
+> resto. Si sale grande y parecido a los 6000 ms, queda confirmado que era esto. Es la
+> forma de no volver a suponerlo.
+
+### EL MEDIDOR EN LA APP (7ago-18, corregido en 7ago-20 y 7ago-21) — temporal, hay que quitarlo
 
 Aquí se dejó de buscar una octava causa leyendo. Se releyó el camino del toque entero y
 **está correcto**: `Fila` y `Dibujito` memorizados, `onElegir` es `setIcono` (estable),
@@ -613,8 +647,9 @@ datos y **cada uno señala un culpable distinto** — por eso son dos y no uno:
 > problema mejor que siete lecturas del código.
 
 > **PENDIENTE DE QUITAR:** `MEDIDOR`, sus dos marcas de tiempo en la casilla, el
-> contador en `Fila`, el estado `medida`, el texto en pantalla y la clave
-> `nuevaCat.medida` en los tres idiomas. **OJO al quitarlo:** el `onPressIn` y el
+> contador en `Fila`, los estados `medida` y `resto`, `restoDesde`, los dos textos en
+> pantalla y las claves `nuevaCat.medida` y `nuevaCat.resto` en los tres idiomas.
+> **OJO al quitarlo:** el `onPressIn` y el
 > `onPressOut` de la casilla **se quedan** — son el arreglo de la octava causa, no el
 > medidor. Este no tiene prueba que lo vigile **a propósito**: una prueba lo volvería
 > permanente.

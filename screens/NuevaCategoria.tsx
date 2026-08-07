@@ -21,6 +21,7 @@ import {
   CATALOGO_EN_FILAS,
   enFilas,
   GRUPOS_AL_ABRIR,
+  GRUPOS_POR_TANDA,
   LADO_DE,
   SEPARACION,
 } from "@/constants/catalogoFilas";
@@ -509,18 +510,52 @@ export default function NuevaCategoria({
    *   · Aquello metía los grupos DE A UNO y dejaba huecos que se veían al deslizar
    *     («se pone así cuando deslizo rápido»), o no dibujaba nada hasta que acababa
    *     la animación («aparecen luego de 1 segundo»).
-   *   · Esto son DOS tandas. La primera llena más de tres pantallas, así que lo que
-   *     se ve está completo desde el primer instante; la segunda trae TODO el resto
-   *     de una vez, fuera de la vista.
+   *   · Esto son TANDAS QUE LLEGAN SOLAS, no al deslizar. La primera llena más de tres
+   *     pantallas —lo que se ve está completo desde el primer instante— y las
+   *     siguientes van entrando por su cuenta hasta que están los 227 puestos.
    *
-   * La espera es lo que dura la animación de entrada. Antes se acaba y el trabajo la
-   * atropella; mucho después y un deslizón muy rápido podría llegar al final de lo
-   * dibujado.
+   * Y TAMPOCO ES CARGAR AL DESLIZAR, que es lo que él rechazó con estas palabras: *"los
+   * iconos ya deberían estar ahí fijos, no deberían cargar recién cuando yo deslizo"*.
+   * Nadie tiene que deslizar para que lleguen; llegan igual con el dedo quieto.
+   *
+   * POR QUÉ EL RESTO YA NO LLEGA EN UN SOLO GOLPE (07/08/2026)
+   *
+   * Porque el medidor lo dijo con un número: el PRIMER toque después de abrir tardaba
+   * **6000 ms**. Marcar una casilla no cuesta eso ni de lejos — el toque estaba haciendo
+   * cola detrás del golpe que armaba los 223 dibujos que faltaban. Mientras ese golpe
+   * dura, el dedo no existe para la app.
+   *
+   * El trabajo total es el mismo; lo que cambia es que se parte en trozos y entre trozo
+   * y trozo la app respira. Un toque espera, como mucho, lo que dura UN trozo. De ahí
+   * que las tandas sean chicas (GRUPOS_POR_TANDA): lo que importa no es cuánto tardan
+   * todas, es cuánto tarda la más larga.
+   *
+   * La primera espera sigue siendo lo que dura la animación de entrada. Las siguientes
+   * no esperan nada: solo ceden el turno, que es justamente lo que deja pasar el toque.
    */
   const [gruposADibujar, setGruposADibujar] = useState(GRUPOS_AL_ABRIR);
+  // MEDIDOR TEMPORAL: cuánto tarda en armarse todo el resto. Es el número que dirá si
+  // esto era de verdad lo que hacía esperar al primer toque.
+  const restoDesde = useRef(0);
+  const [resto, setResto] = useState<number | null>(null);
   useEffect(() => {
-    if (gruposADibujar >= CATALOGO_EN_FILAS.length) return;
-    const reloj = setTimeout(() => setGruposADibujar(CATALOGO_EN_FILAS.length), ESPERA_RESTO_MS);
+    if (gruposADibujar >= CATALOGO_EN_FILAS.length) {
+      if (restoDesde.current) {
+        setResto(Date.now() - restoDesde.current);
+        restoDesde.current = 0;
+      }
+      return;
+    }
+    const primera = gruposADibujar === GRUPOS_AL_ABRIR;
+    const reloj = setTimeout(
+      () => {
+        if (!restoDesde.current) restoDesde.current = Date.now();
+        setGruposADibujar((n) => Math.min(n + GRUPOS_POR_TANDA, CATALOGO_EN_FILAS.length));
+      },
+      // Cero no es "ya mismo": es "en cuanto sueltes el turno". Ahí es donde entra el
+      // toque que estaba esperando.
+      primera ? ESPERA_RESTO_MS : 0
+    );
     return () => clearTimeout(reloj);
   }, [gruposADibujar]);
 
@@ -948,6 +983,14 @@ export default function NuevaCategoria({
         {medida !== null && (
           <Text className="text-[10px] text-slate-400 text-center mt-1">
             {t("nuevaCat.medida", { medida })}
+          </Text>
+        )}
+        {/* Y cuánto tardó en armarse todo el resto del catálogo. TEMPORAL. Si este
+            número es grande y parecido a los 6000 ms que salían en el primer toque,
+            confirmado: era esto lo que hacía esperar al dedo. */}
+        {resto !== null && (
+          <Text className="text-[10px] text-slate-400 text-center">
+            {t("nuevaCat.resto", { ms: String(resto) })}
           </Text>
         )}
       </View>

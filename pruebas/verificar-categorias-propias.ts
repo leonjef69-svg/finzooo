@@ -10,7 +10,7 @@
 import fs from "fs";
 import path from "path";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
-import { CATALOGO_EN_FILAS, GRUPOS_AL_ABRIR, POR_FILA } from "@/constants/catalogoFilas";
+import { CATALOGO_EN_FILAS, GRUPOS_AL_ABRIR, GRUPOS_POR_TANDA, POR_FILA } from "@/constants/catalogoFilas";
 import { iconoDe } from "@/constants/iconos";
 import { setOverrides } from "@/utils/categoryCustom";
 import { crear, borrar, editar, esPropia, nombreRepetido, setPropias, type CategoriaPropia } from "@/utils/categoriasPropias";
@@ -243,14 +243,63 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   //     animacion de entrada, y la pantalla llega a trompicones: "el cambio de
   //     pantalla debe verse fluido y mas rapido".
   //
-  // La forma que cumple las dos cosas son DOS tandas: los primeros grupos al abrir
-  // —mas de tres pantallas, asi que lo que se ve esta completo desde el primer
-  // instante— y TODO el resto de una vez, fuera de la vista.
+  // AQUI DECIA ADEMAS "el resto llega TODO de una vez", Y ESO CAMBIO EL 07/08/2026.
+  // Se deja escrito el porque, porque tambien esa regla tenia su motivo:
   //
-  // Lo que se vigila es justo eso: que sean dos y que la primera llene la pantalla.
+  //   · El medidor dio un numero: el PRIMER toque tras abrir tardaba 6000 ms. Marcar una
+  //     casilla no cuesta eso: el toque hacia cola detras del golpe que armaba los 223
+  //     dibujos que faltaban. Mientras ese golpe dura, el dedo no existe para la app.
+  //   · El trabajo total no se puede abaratar —son 227 letras que Android tiene que
+  //     medir— pero si PARTIR. Entre trozo y trozo la app respira y el toque entra.
+  //
+  // Lo que se vigila ahora son tres cosas, y las tres son la diferencia con lo que el
+  // usuario ya rechazo:
+  //
+  //   1. Las tandas llegan SOLAS, no al deslizar: *"los iconos ya deberian estar ahi
+  //      fijos, no deberian cargar recien cuando yo deslizo"*.
+  //   2. La primera llena mas de tres pantallas, asi que lo que se ve esta completo
+  //      desde el primer instante (esto no cambio).
+  //   3. Y acaban TODOS puestos. Una tanda que no converge dejaria el catalogo a medias
+  //      para siempre, que seria peor que el problema que arregla.
   ok(!codigo.includes("gruposArmados"), "no se cargan de a poquitos, como se rechazo");
-  ok(/setGruposADibujar\(CATALOGO_EN_FILAS\.length\)/.test(codigo), "el resto llega TODO de una vez");
-  ok(/useState\(GRUPOS_AL_ABRIR\)/.test(codigo), "y arranca con los primeros grupos");
+  ok(/useState\(GRUPOS_AL_ABRIR\)/.test(codigo), "arranca con los primeros grupos");
+
+  // 1. Solas. Si esto se cae, se cae en silencio: la pantalla funcionaria igual y el
+  //    usuario volveria a ver iconos apareciendo bajo el dedo.
+  //
+  //    ESTA PASABA TAMBIEN ANTES DEL CAMBIO, y es a proposito: no describe el arreglo,
+  //    guarda la puerta. Cargar al deslizar es LA solucion que se le ocurre a cualquiera
+  //    al ver el problema de los 6000 ms —se me ocurrio a mi— y es justo la que el
+  //    usuario ya rechazo por escrito. La prueba esta para que la proxima vez el aviso
+  //    llegue antes de entregarlo.
+  ok(!/onScroll/.test(codigo), "el resto NO llega al deslizar, llega solo");
+  ok(
+    /setTimeout\(\s*\(\) => \{[\s\S]{0,200}setGruposADibujar/.test(codigo),
+    "y lo trae un reloj, sin que nadie tenga que tocar nada"
+  );
+
+  // 3. Converge en el catalogo entero.
+  ok(
+    /Math\.min\(n \+ GRUPOS_POR_TANDA, CATALOGO_EN_FILAS\.length\)/.test(codigo),
+    "cada tanda suma hasta llegar al catalogo completo, sin pasarse"
+  );
+
+  // Y la tanda tiene que ser CHICA. Lo que un toque espera en el peor caso es lo que
+  // dura UNA tanda, no lo que duran todas: si alguien sube este numero buscando que
+  // acabe antes, vuelve la espera de los 6000 ms. Se cuenta con numeros.
+  //
+  // Esta tambien vigila un numero y no un cambio, asi que pasa sola: lo que hace es
+  // impedir que MAÑANA GRUPOS_POR_TANDA suba a 9 "para que acabe antes".
+  const mayorTanda = Math.max(
+    ...CATALOGO_EN_FILAS.map((_, i) =>
+      CATALOGO_EN_FILAS.slice(i, i + GRUPOS_POR_TANDA).reduce((s, g) => s + g.filas.length * POR_FILA, 0)
+    )
+  );
+  ok(GRUPOS_POR_TANDA >= 1, "la tanda trae al menos un grupo, o no avanzaria nunca");
+  ok(
+    mayorTanda <= 40,
+    `la tanda mas gorda son ${mayorTanda} dibujos, unas dos pantallas (tope 40)`
+  );
 
   // Y la primera tanda tiene que llenar la pantalla de sobra. Se cuenta de verdad:
   // con menos, un deslizon rapido llega al final de lo dibujado y ahi si se veria el
