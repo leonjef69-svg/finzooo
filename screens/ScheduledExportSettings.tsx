@@ -8,8 +8,13 @@ import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 import { carpetaElegida, elegirCarpeta } from "@/utils/carpetaTelefono";
 import { conectarDropbox, dropboxConectado } from "@/utils/dropbox";
-import { ultimoIntentoEnFondo, type UltimoIntento } from "@/utils/exportarEnFondo";
+import {
+  exportarEnFondo,
+  ultimoIntentoEnFondo,
+  type UltimoIntento,
+} from "@/utils/exportarEnFondo";
 import { puedeExportarEnFondo, puedePdfEnFondo } from "@/modules/export-scheduler";
+import { flushPendingSaves } from "@/utils/storage";
 import {
   DEFAULT_SCHEDULE,
   MAX_MONTH_DAY,
@@ -68,6 +73,13 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
   const [ultimo, setUltimo] = useState<UltimoIntento | null>(null);
   /** Para cuando quedo puesto el despertador. Ver applySchedule. */
   const [proxima, setProxima] = useState(0);
+  /**
+   * Mientras corre la prueba de verdad.
+   *
+   * Armar el PDF y subirlo tarda unos segundos, y sin esto el botón se queda
+   * igual: se toca otra vez, y otra, y se hacen tres copias del mismo reporte.
+   */
+  const [probando, setProbando] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -238,18 +250,66 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
     [schedule.fileNameMode, schedule.fileName, schedule.format, typeLabel]
   );
 
-  function probarAhora() {
-    router.push({
-      pathname: "/export-pdf",
-      params: {
-        month: monthForSchedule(schedule, new Date()),
-        format: schedule.format,
-        type: schedule.type,
-        dest: schedule.destination,
-        name: nombreArchivo,
-        auto: "1",
-      },
-    });
+  /**
+   * ¿ESTA configuración sale sola con la app cerrada? UNA sola respuesta.
+   *
+   * Existe porque la pantalla se contradecía: arriba decía "no puede mandarse
+   * solo con la app cerrada", en medio "se guarda solo aunque Finzo esté
+   * cerrada", y abajo en verde "en cuanto abras Finzo". Tres textos, tres
+   * versiones, y el usuario leyendo las tres a la vez.
+   *
+   * Pasó porque cada texto decidía por su cuenta. Ahora todos miran aquí: si
+   * mañana cambia la condición —por ejemplo cuando el PDF también pueda—, se
+   * cambia en un sitio y los tres se enteran.
+   */
+  const saleSolo = enFondo && (schedule.format !== "pdf" || pdfEnFondo);
+
+  /**
+   * PROBAR AHORA PRUEBA EL CAMINO QUE DE VERDAD VA A CORRER.
+   *
+   * Antes abría siempre la pantalla de exportar y hacía el archivo con la app
+   * delante. Salía bien, y a la hora fijada no llegaba nada: son dos caminos
+   * distintos y solo se estaba probando el que no iba a usarse. El usuario lo
+   * reportó el 06/08/2026 con el PDF.
+   *
+   * Ahora: si esta configuración sale sola, se llama al MISMO trabajo que
+   * despierta el despertador, forzándolo. Y si no sale sola, se abre la pantalla
+   * — porque entonces eso es exactamente lo que va a pasar a la hora.
+   */
+  async function probarAhora() {
+    if (!saleSolo) {
+      router.push({
+        pathname: "/export-pdf",
+        params: {
+          month: monthForSchedule(schedule, new Date()),
+          format: schedule.format,
+          type: schedule.type,
+          dest: schedule.destination,
+          name: nombreArchivo,
+          auto: "1",
+        },
+      });
+      return;
+    }
+
+    if (probando) return;
+    setProbando(true);
+    showToast(t("schedExport.testRunning"));
+    // Los ajustes se guardan agrupados con un retardo corto, y el trabajo de
+    // fondo los lee DEL DISCO. Sin esto, probar justo después de cambiar la hora
+    // o el destino probaría con los valores anteriores.
+    await flushPendingSaves();
+    const resultado = await exportarEnFondo(true);
+    setProbando(false);
+    showToast(
+      t(resultado === "hecho" ? "schedExport.testOk" : "schedExport.testFail", {
+        motivo: t(`schedExport.res.${resultado}`),
+      })
+    );
+    // Se refrescan las dos líneas del resumen: el intento que se acaba de hacer
+    // queda ahí escrito, que es lo que se puede leer o mandar en una captura.
+    ultimoIntentoEnFondo().then(setUltimo);
+    proximaProgramada().then(setProxima);
   }
 
   const FRECUENCIAS: { id: ExportFrequency; label: string }[] = [
@@ -277,20 +337,6 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
 
   const destLabel = DESTINOS.find((d) => d.id === schedule.destination)?.label ?? "";
   const freqLabel = FRECUENCIAS.find((f) => f.id === schedule.frequency)?.label ?? "";
-
-  /**
-   * ¿ESTA configuración sale sola con la app cerrada? UNA sola respuesta.
-   *
-   * Existe porque la pantalla se contradecía: arriba decía "no puede mandarse
-   * solo con la app cerrada", en medio "se guarda solo aunque Finzo esté
-   * cerrada", y abajo en verde "en cuanto abras Finzo". Tres textos, tres
-   * versiones, y el usuario leyendo las tres a la vez.
-   *
-   * Pasó porque cada texto decidía por su cuenta. Ahora todos miran aquí: si
-   * mañana cambia la condición —por ejemplo cuando el PDF también pueda—, se
-   * cambia en un sitio y los tres se enteran.
-   */
-  const saleSolo = enFondo && (schedule.format !== "pdf" || pdfEnFondo);
 
   return (
     <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top }}>
@@ -886,15 +932,27 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                 más. */}
             <TouchableOpacity
               onPress={probarAhora}
-              className="w-full py-4 rounded-2xl items-center flex-row justify-center gap-2 border-[1.5px] border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20"
+              disabled={probando}
+              className={`w-full py-4 rounded-2xl items-center flex-row justify-center gap-2 border-[1.5px] ${
+                probando
+                  ? "border-slate-300 bg-slate-100 dark:border-slate-600 dark:bg-slate-800"
+                  : "border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20"
+              }`}
             >
-              <Play size={17} color="#059669" />
-              <Text className="text-emerald-700 dark:text-emerald-300 font-extrabold">
-                {t("schedExport.testNow")}
+              <Play size={17} color={probando ? "#94a3b8" : "#059669"} />
+              <Text
+                className={`font-extrabold ${
+                  probando ? "text-slate-400" : "text-emerald-700 dark:text-emerald-300"
+                }`}
+              >
+                {t(probando ? "schedExport.testRunning" : "schedExport.testNow")}
               </Text>
             </TouchableOpacity>
             <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 text-center">
-              {t("schedExport.testHint")}
+              {/* Dos avisos distintos porque son dos pruebas distintas: la de
+                  verdad no abre nada y el archivo aparece en el destino, y quien
+                  espere ver la pantalla de exportar creerá que no funcionó. */}
+              {t(saleSolo ? "schedExport.testHintFondo" : "schedExport.testHint")}
             </Text>
           </>
         )}

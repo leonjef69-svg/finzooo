@@ -10,6 +10,7 @@ import * as incomingFile from "@/modules/incoming-file";
 import * as shareToApp from "@/modules/share-to-app";
 import * as textRecognizer from "@/modules/text-recognizer";
 import * as notificationReader from "@/modules/notification-reader";
+import { puedeExportarEnFondo, puedePdfEnFondo } from "@/modules/export-scheduler";
 
 const APP_VERSION = "1.0.0";
 
@@ -25,7 +26,7 @@ const APP_VERSION = "1.0.0";
  * La versión de la app (1.0.0) no sirve para esto: no cambia entre entregas.
  * Esta sí.
  */
-const CODE_MARKER = "6ago-06";
+const CODE_MARKER = "6ago-07";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast } = useAppData();
@@ -138,7 +139,19 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
             {/* Y esta distingue el APK que habla SIN ESPERA de los anteriores,
                 que ya traían la voz pero tardaban unos segundos. Sin ella,
                 "sigue tardando" no dice si el arreglo llegó a instalarse. */}
-            {notificationReader.hasVozSinEspera ? "✓" : "✗"} voz al instante
+            {notificationReader.hasVozSinEspera ? "✓" : "✗"} voz al instante ·{" "}
+            {/* LAS DOS DE LA EXPORTACIÓN AUTOMÁTICA, y hacían falta.
+                El 06/08/2026 el usuario reportó que el PDF no salía solo. El
+                motivo era que su APK trae el despertador pero NO el conversor de
+                PDF —llegó en uno posterior que no había instalado—, y no había
+                forma de verlo: la marca del código dice la del JavaScript, que
+                sí le había llegado por internet. Con estas dos, una captura
+                contesta la pregunta.
+                Son dos y no una a propósito: el despertador llegó antes que el
+                conversor, así que hay APK con el primero y sin el segundo. Es
+                justo el caso que costó este ida y vuelta. */}
+            {puedeExportarEnFondo() ? "✓" : "✗"} reporte solo ·{" "}
+            {puedePdfEnFondo() ? "✓" : "✗"} PDF solo
           </Text>
 
           <TouchableOpacity

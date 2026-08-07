@@ -1,6 +1,7 @@
 # Dónde nos quedamos
 
-Actualizado: **6 de agosto de 2026** · Código publicado: **6ago-06**
+Actualizado: **6 de agosto de 2026** · Código publicado: **6ago-07**
+· APK que hay que tener instalado: **finzo-6ago-03** (trae el conversor de PDF)
 
 Este archivo existe para que una sesión nueva —de Claude o de quien sea— no
 empiece de cero. No cuenta lo que ya se ve en el código ni en el historial de
@@ -418,6 +419,66 @@ computadora y falla a medias en el celular.
 La ruta `/nueva-categoria` tiene ahora **tres modos**, y los deciden los
 parámetros: con `actual` se puede elegir; con `id` se edita (sin lista: quien
 viene a renombrar "Broster" no viene a elegir otra); sin nada, solo crear.
+
+## El PDF automático "no funciona": no era el código (06/08/2026)
+
+Reportado así: *"en exportación automática relleno la información y no se exporta
+de manera automática en pdf, parece que tuviera el mismo problema que tuvo el
+excel antes"*.
+
+**La causa es que el conversor de PDF vive en el APK, y ese APK no está
+instalado.** `finzo-6ago-03.apk` lleva la parte de Android que arma el PDF sin
+pantalla; el celular tiene uno anterior (6ago-01 o -02), que trae el despertador
+pero no el conversor. El JavaScript sí le había llegado por internet, y **por
+internet no viaja código de Android**.
+
+Con eso, `puedePdfEnFondo()` da falso, el trabajo de fondo devuelve
+`pdf-no-se-puede`, y el reporte solo sale al abrir la app. Todo funcionando como
+está escrito. **Lo que estaba mal era otra cosa, y era mío.**
+
+### Tres defectos reales, y ninguno es de cálculo
+
+**1. La app contaba un límite que ya no existía.** Tres textos decían que el PDF
+*no se puede* armar con la app cerrada — verdad hasta esa misma tarde. El usuario
+leyó "El PDF es el único que no se puede armar con la app cerrada. Elige Excel o
+CSV" y sacó la única conclusión posible: la app no sabe hacerlo. La verdad era
+"te falta instalar". Uno de ellos seguía nombrando el correo, que dejó de ser un
+destino el 05/08.
+
+> **Un límite se cuenta siempre junto a lo que hay que hacer.** Un texto que dice
+> "no se puede" cuando la verdad es "te falta instalar algo" no es impreciso: es
+> lo que hace que se busque el fallo donde no está.
+
+**2. "Probar ahora" probaba otro camino.** Abría la pantalla de exportar y hacía
+el archivo con la app delante. Salía bien, el archivo aparecía en Drive, y a la
+hora fijada no llegaba nada. Son dos rutas distintas y se estaba probando la que
+no iba a usarse — que convierte "no sé si funciona" en "comprobé que funciona".
+
+Ahora, si la configuración sale sola, el botón llama al **mismo** trabajo que
+despierta el despertador (`exportarEnFondo(true)`) y dice el resultado con su
+motivo. Forzando se salta el calendario, pero **no** apunta el reporte como
+hecho: probar a las tres no puede dejar sin reporte a las siete.
+
+**3. No había forma de saber qué trae el celular.** `CODE_MARKER` dice qué
+JavaScript corre, y por internet llega siempre el último: el celular decía
+"6ago-06" con la parte de Android de dos APK antes. Preguntar "¿qué versión
+tienes?" daba una respuesta correcta e inútil.
+
+*Acerca de* ya tenía la línea de partes nativas y le faltaban justo estas dos.
+Ahora enseña **`✓/✗ reporte solo`** y **`✓/✗ PDF solo`** — dos y no una, porque el
+despertador llegó en un APK y el conversor en otro posterior: existen celulares
+con el primero y sin el segundo, que es exactamente este caso. Una captura
+contesta la pregunta.
+
+### Lo que sigue sin comprobarse, y hay que decirlo
+
+**El conversor nativo de PDF no se ha ejecutado nunca en un celular.** Compila y
+está revisado, pero el APK que lo trae no se llegó a instalar. La primera vez que
+corra de verdad será la primera prueba real.
+
+El colchón existe y es el de siempre: si la conversión falla, el trabajo **no**
+apunta el reporte como hecho, así que el PDF sale igual al abrir la app. El peor
+caso es lo de antes, nunca un reporte perdido.
 
 ## Exportación automática — cambio de nombre y de fondo (05/08/2026)
 

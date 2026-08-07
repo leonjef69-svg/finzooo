@@ -626,5 +626,127 @@ console.log("\n--- DROPBOX: LO QUE NO PUEDE ESTAR MAL ---");
   ok(codigoDeLaVuelta("finzo://dropbox?mycode=NO&code=SI") === "SI", "y no se confunde con otro parámetro parecido");
 }
 
+console.log("\n--- CADA MOTIVO DE 'NO SE HIZO' TIENE SU TEXTO ---");
+{
+  // El trabajo de fondo devuelve un MOTIVO y la pantalla lo enseña. Si a un
+  // motivo le falta su texto no revienta nada: en pantalla sale la clave cruda
+  // ("schedExport.res.error"), y encima justo en el momento en que alguien está
+  // intentando entender por qué no llegó su reporte.
+  const RAIZ = process.cwd();
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  const fondo = fs.readFileSync(path.join(RAIZ, "utils/exportarEnFondo.ts"), "utf8");
+  const union = /type ResultadoDeFondo =([\s\S]*?);/.exec(fondo)?.[1] ?? "";
+  const motivos = [...union.matchAll(/"([a-z-]+)"/g)].map((m) => m[1]);
+  ok(motivos.length >= 8, `se leyeron los motivos del código (${motivos.length})`);
+  for (const motivo of motivos) {
+    const veces = (i18n.match(new RegExp(`"schedExport\\.res\\.${motivo}":`, "g")) ?? []).length;
+    ok(veces === 3, `${motivo} tiene texto en los tres idiomas (${veces})`);
+  }
+}
+
+console.log("\n--- Y NINGÚN TEXTO SE QUEDA CONTANDO UN LÍMITE QUE YA NO EXISTE ---");
+{
+  // ESTO ES EL FALLO DEL 06/08/2026, y no era de código: el usuario puso PDF,
+  // no salió solo, y la app le dijo "el PDF es el único que no se puede armar
+  // con la app cerrada. Elige Excel o CSV".
+  //
+  // Ese texto era verdad hasta el 06/08 por la tarde, cuando el PDF SÍ pasó a
+  // poder hacerse con la app cerrada. Lo que le faltaba era instalar el APK que
+  // trae esa parte —el JavaScript le había llegado por internet, la parte de
+  // Android no—. Leyendo el aviso, la conclusión correcta era imposible: decía
+  // "no se puede" cuando la verdad era "te falta instalar".
+  //
+  // Un límite se cuenta SIEMPRE junto a lo que hay que hacer. Estos tres textos
+  // salen justo cuando el PDF automático no está disponible, así que los tres
+  // tienen que nombrar la instalación.
+  const RAIZ = process.cwd();
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  for (const clave of ["schedExport.fondoNoPdf", "schedExport.whyNotFull", "schedExport.res.pdf-no-se-puede"]) {
+    const valores = [
+      ...i18n.matchAll(new RegExp(`"${clave.replace(/\./g, "\\.")}":\\s*\\n?\\s*"((?:[^"\\\\]|\\\\.)*)"`, "g")),
+    ].map((m) => m[1]);
+    ok(valores.length === 3, `${clave} está en los tres idiomas (${valores.length})`);
+    // "instal" cubre instalar / instalada / install / instale en los tres.
+    const sinDecirQueHacer = valores.filter((v) => !/instal/i.test(v));
+    ok(
+      sinDecirQueHacer.length === 0,
+      `${clave} dice que hay que instalar la versión nueva${sinDecirQueHacer.length ? ` (falta en ${sinDecirQueHacer.length})` : ""}`
+    );
+  }
+
+  // Y de paso, el mismo tipo de resto: el correo dejó de ser un destino el
+  // 05/08/2026, y "abrir el correo necesita la app abierta" siguió escrito en
+  // whyNotFull hasta hoy. Un texto que nombra algo que ya no existe manda a
+  // buscar una opción que no está.
+  const seccion = [...i18n.matchAll(/"schedExport\.[^"]*":\s*\n?\s*"((?:[^"\\]|\\.)*)"/g)].map((m) => m[1]);
+  const conCorreo = seccion.filter((v) => /correo|e-mail|\bemail\b|WhatsApp/i.test(v));
+  ok(
+    conCorreo.length === 0,
+    `ningún texto de la exportación nombra correo ni WhatsApp${conCorreo.length ? `: "${conCorreo[0].slice(0, 60)}…"` : ""}`
+  );
+}
+
+console.log("\n--- 'PROBAR AHORA' PRUEBA EL CAMINO QUE VA A CORRER ---");
+{
+  // OTRO TROZO DEL FALLO DEL 06/08/2026, y de los que engañan bien: el botón
+  // abría la pantalla de exportar y hacía el archivo con la app delante. Salía
+  // bien, el archivo aparecía en Drive, y a la hora fijada no llegaba nada.
+  //
+  // Son dos caminos distintos y se estaba probando el que NO iba a usarse. Un
+  // botón de probar que no prueba lo que va a pasar es peor que no tenerlo:
+  // convierte "no sé si funciona" en "comprobé que funciona".
+  const RAIZ = process.cwd();
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/ScheduledExportSettings.tsx"), "utf8");
+  const fondo = fs.readFileSync(path.join(RAIZ, "utils/exportarEnFondo.ts"), "utf8");
+
+  ok(pant.includes("exportarEnFondo(true)"), "probar llama al MISMO trabajo del despertador");
+  // Y solo cuando de verdad va a salir solo. Si no puede, lo que va a pasar a la
+  // hora ES abrir la pantalla, así que probar eso es lo correcto.
+  ok(/if \(!saleSolo\) \{[\s\S]{0,200}?pathname: "\/export-pdf"/.test(pant), "y si no sale solo, prueba lo que sí pasará");
+  // Los ajustes se guardan agrupados con un retardo y el trabajo los lee DEL
+  // DISCO: sin volcarlos, probar tras cambiar la hora probaría la hora anterior.
+  ok(
+    /flushPendingSaves\(\);\s*\r?\n\s*const resultado = await exportarEnFondo\(true\)/.test(pant),
+    "volcando antes los ajustes al disco, para no probar los de antes"
+  );
+  ok(pant.includes("probando"), "y el botón se bloquea mientras corre, para no hacer tres copias");
+
+  // Forzando se salta el calendario —probar un martes una programación de lunes
+  // tiene que funcionar— pero NO se apunta como hecho: si se apuntara, probar a
+  // las tres de la tarde se llevaría por delante el reporte de las siete.
+  ok(/if \(!forzar && !isScheduledDay\(/.test(fondo), "forzando no mira si hoy tocaba");
+  ok(/if \(!forzar && schedule\.lastAutoRun ===/.test(fondo), "ni si ya se había hecho");
+  ok(
+    /if \(!forzar\) \{[\s\S]{0,220}?markExported\(ahora\);/.test(fondo),
+    "y NO lo apunta como hecho, para no cancelar el reporte de verdad"
+  );
+
+  for (const clave of ["schedExport.testHintFondo", "schedExport.testRunning", "schedExport.testOk", "schedExport.testFail"]) {
+    const veces = (i18n.match(new RegExp(`"${clave.replace(/\./g, "\\.")}":`, "g")) ?? []).length;
+    ok(veces === 3, `${clave} está en los tres idiomas (${veces})`);
+  }
+  // El resultado se dice con su motivo. "No salió" a secas es exactamente el
+  // "no pasó nada" que costó este ida y vuelta.
+  ok(/schedExport\.testFail[^\n]*\{motivo\}/.test(i18n), "y si falla, dice por qué");
+}
+
+console.log("\n--- Y SE PUEDE VER DESDE FUERA QUÉ TRAE EL CELULAR ---");
+{
+  // La marca del código (CODE_MARKER) dice qué JavaScript corre, y por internet
+  // llega siempre el último: en el celular decía "6ago-06" mientras la parte de
+  // Android era de dos APK antes. Preguntando por chat "¿qué versión tienes?"
+  // la respuesta era correcta y no servía.
+  //
+  // Estas dos marcas en "Acerca de" contestan lo que sí importaba. Son dos y no
+  // una porque el despertador llegó en un APK y el conversor de PDF en otro
+  // posterior: hay celulares con el primero y sin el segundo, que es justo el
+  // caso de este fallo.
+  const RAIZ = process.cwd();
+  const info = fs.readFileSync(path.join(RAIZ, "screens/AppInfo.tsx"), "utf8");
+  ok(info.includes("puedeExportarEnFondo()"), "Acerca de enseña si trae el despertador");
+  ok(info.includes("puedePdfEnFondo()"), "y si trae el conversor de PDF, que es lo que faltaba");
+}
+
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

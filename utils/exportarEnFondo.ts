@@ -87,7 +87,19 @@ function reprogramar(schedule: ScheduledExport): void {
   programarExportacion(proximaEjecucion(schedule, new Date()));
 }
 
-export async function exportarEnFondo(): Promise<ResultadoDeFondo> {
+/**
+ * @param forzar Hacer el reporte AHORA, aunque hoy no toque y aunque ya se
+ *   hubiera hecho. Es lo que usa el botón "Probar ahora" de la pantalla.
+ *
+ *   Existe porque ese botón antes probaba OTRA COSA: abría la pantalla de
+ *   exportar y hacía el archivo con la app delante. Salía bien, y a la hora
+ *   fijada no llegaba nada — el camino automático no se había ejecutado nunca.
+ *   Un botón de probar que no prueba lo que va a pasar es peor que no tenerlo.
+ *
+ *   Forzando NO se apunta el reporte como hecho: si se apuntara, probar a las
+ *   tres de la tarde se llevaría por delante el reporte de verdad de las siete.
+ */
+export async function exportarEnFondo(forzar = false): Promise<ResultadoDeFondo> {
   const schedule = await loadSchedule();
   reprogramar(schedule);
 
@@ -97,8 +109,8 @@ export async function exportarEnFondo(): Promise<ResultadoDeFondo> {
   // El despertador puede desviarse unos minutos (ver el módulo nativo), así que
   // se comprueba el día aquí. Sin esto, un despertador que se retrasa hasta
   // pasada la medianoche haría el reporte de un día que no tocaba.
-  if (!isScheduledDay(schedule, ahora)) return await apuntar("no-toca-hoy");
-  if (schedule.lastAutoRun === claveDeEjecucion(schedule, ahora)) {
+  if (!forzar && !isScheduledDay(schedule, ahora)) return await apuntar("no-toca-hoy");
+  if (!forzar && schedule.lastAutoRun === claveDeEjecucion(schedule, ahora)) {
     return await apuntar("ya-se-hizo-hoy");
   }
 
@@ -206,8 +218,13 @@ export async function exportarEnFondo(): Promise<ResultadoDeFondo> {
     // la app: allí se apunta antes porque un fallo a medias repetiría la subida
     // en bucle cada vez que se abre. Aquí no hay bucle —el despertador es uno al
     // día— así que conviene lo contrario: si falló, que mañana se reintente.
-    saveSchedule({ ...schedule, lastAutoRun: claveDeEjecucion(schedule, ahora) });
-    markExported(ahora);
+    //
+    // Probando no se apunta nada: probar a las tres de la tarde no puede dejar
+    // sin reporte a las siete.
+    if (!forzar) {
+      saveSchedule({ ...schedule, lastAutoRun: claveDeEjecucion(schedule, ahora) });
+      markExported(ahora);
+    }
     await flushPendingSaves();
     return await apuntar("hecho", archivo.fileName);
   } catch (e) {
