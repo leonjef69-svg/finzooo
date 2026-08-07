@@ -43,5 +43,45 @@ console.log("\n--- Y LO IMPORTANTE: NO SE INVENTAN MESES ---");
   ok(Object.keys(soloEnero).length === 1, "y la funcion no escribe nada por su cuenta");
 }
 
+console.log("\n--- LA TARJETA DE LIMITES NO PUEDE CONTRADECIRSE ---");
+{
+  // EL FALLO, reportado con captura el 07/08/2026: la tarjeta "Presupuestos por
+  // categoria" decia "Aun no le pusiste limite a ninguna categoria" y justo debajo
+  // "13 categorias sin gastos este mes · € 650.00 sin usar". Las dos a la vez, y
+  // las dos no pueden ser verdad.
+  //
+  // El motivo: ese primer texto se decidia con las categorias que TIENEN GASTO, no
+  // con las que tienen limite. Con trece limites puestos y ningun gasto en ellos,
+  // "no pusiste ninguno" era falso.
+  //
+  // Es el mismo fallo que ya paso en la pantalla de exportacion automatica: dos
+  // textos decidiendo por su cuenta. La regla es la misma: una sola pregunta.
+  const fs = await import("fs");
+  const path = await import("path");
+  const RAIZ = process.cwd();
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/Reports.tsx"), "utf8");
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+
+  ok(/hayLimites: todos\.length > 0/.test(pant), "'hay limites' se cuenta de los limites, no de los gastos");
+  ok(
+    /t\(hayLimites \? "categoryBudgets\.noneSpentYet" : "categoryBudgets\.noneSet"\)/.test(pant),
+    "y es esa misma respuesta la que elige el texto"
+  );
+  // Los dos textos tienen que existir en los tres idiomas: si falta uno, en
+  // pantalla sale la clave cruda justo cuando alguien mira sus presupuestos.
+  for (const clave of ["categoryBudgets.noneSet", "categoryBudgets.noneSpentYet"]) {
+    const veces = (i18n.match(new RegExp(`"${clave.replace(".", "\\.")}":`, "g")) ?? []).length;
+    ok(veces === 3, `${clave} esta en los tres idiomas (${veces})`);
+  }
+
+  // Y el resumen de las categorias sin gasto no vuelve: se quito a pedido del
+  // usuario ("no se por que me sale eso, quitalo, no me gusta") porque esa tarjeta
+  // contesta "¿como voy con mis limites?" y una lista de las que ni toco no
+  // contesta eso — ademas de que "€ 650.00 sin usar" se leia como dinero
+  // disponible.
+  ok(!i18n.includes("categoryBudgets.untouched"), "el resumen de las intactas no vuelve");
+  ok(!pant.includes("sinGastoTotal"), "ni su cuenta");
+}
+
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

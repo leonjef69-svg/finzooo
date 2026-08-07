@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -55,28 +55,27 @@ export default function Reports({
   const { width: windowWidth } = useWindowDimensions();
   const { colorScheme } = useColorScheme();
   const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
-  // Si se despliegan las categorias sin gasto. Cerrado de entrada: la lista
-  // larga era justo el problema.
-  const [verSinGasto, setVerSinGasto] = useState(false);
-
   const mk = monthKey(month.y, month.m);
 
   /**
-   * Los límites por categoría, separados en dos: los que se están usando y
-   * los que siguen intactos.
+   * Los límites por categoría en los que SÍ se gastó este mes, más una respuesta:
+   * ¿hay algún límite puesto?
    *
-   * POR QUÉ SEPARARLOS
+   * POR QUÉ SOLO LOS QUE TIENEN GASTO
    *
-   * Se pintaban todos seguidos. Con un límite puesto en cada categoría, eso
-   * son trece filas y doce dicen lo mismo: "S/ 0.00 de S/ 50.00". La única
-   * que importa —la que se pasó del límite— queda enterrada entre doce que no
-   * dicen nada, y todo lo que va debajo se empuja fuera de la pantalla.
+   * Con un límite en cada categoría son trece filas y doce dicen lo mismo:
+   * "S/ 0.00 de S/ 50.00". La única que importa —la que se pasó— queda enterrada
+   * entre doce que no dicen nada, y todo lo de abajo se empuja fuera de la
+   * pantalla.
    *
-   * Las intactas NO se esconden: no gastar en algo también es información, y
-   * saber cuánto queda sin tocar es la mitad de un presupuesto. Pero van
-   * resumidas en una línea en vez de en doce.
+   * Las intactas estuvieron resumidas en una línea al final de la tarjeta, y el
+   * usuario la mandó quitar el 07/08/2026. Ver la nota donde estaba.
+   *
+   * Y "hayLimites" sale de aquí, del mismo cálculo, para que el texto de la
+   * tarjeta no pueda volver a contradecirse: la pregunta "¿puse límites?" y la
+   * pregunta "¿en cuáles gasté?" se contestan con la misma lista.
    */
-  const { budgetProgress, sinGasto, sinGastoTotal } = useMemo(() => {
+  const { budgetProgress, hayLimites } = useMemo(() => {
     const todos = Object.entries(categoryBudgets)
       .filter(([, limit]) => limit > 0)
       .map(([id, limit]) => {
@@ -86,12 +85,9 @@ export default function Reports({
       })
       .sort((a, b) => b.pct - a.pct);
 
-    const usados = todos.filter((b) => b.spent > 0);
-    const intactos = todos.filter((b) => b.spent === 0);
     return {
-      budgetProgress: usados,
-      sinGasto: intactos,
-      sinGastoTotal: intactos.reduce((s, b) => s + b.limit, 0),
+      budgetProgress: todos.filter((b) => b.spent > 0),
+      hayLimites: todos.length > 0,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryBudgets, categorySpent, userLanguage]);
@@ -477,7 +473,18 @@ export default function Reports({
       >
         <Text className="text-sm font-bold mb-1" style={{ color: primaryTextColor }}>{t("categoryBudgets.title")}</Text>
         {budgetProgress.length === 0 ? (
-          <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-6">{t("categoryBudgets.noneSet")}</Text>
+          /* LA TARJETA SE CONTRADECÍA, y es lo que reportó el usuario el
+             07/08/2026 con una captura: arriba decía "aún no le pusiste límite a
+             ninguna categoría" y justo debajo "13 categorías sin gastos este mes ·
+             € 650.00 sin usar". Las dos cosas a la vez, y las dos imposibles.
+             El motivo: este texto se decidía con las categorías que TIENEN GASTO,
+             no con las que tienen límite. Con trece límites puestos y ningún gasto
+             en ellos, "no pusiste ninguno" era falso.
+             Es otra vez el mismo fallo de este proyecto —dos textos decidiendo por
+             su cuenta— así que ahora hay una sola pregunta: ¿hay límites o no? */
+          <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-6">
+            {t(hayLimites ? "categoryBudgets.noneSpentYet" : "categoryBudgets.noneSet")}
+          </Text>
         ) : (
           <View className="gap-3 mt-2">
             {budgetProgress.map((b) => {
@@ -514,42 +521,20 @@ export default function Reports({
           </View>
         )}
 
-        {/* LAS QUE SIGUEN INTACTAS, EN UNA LÍNEA.
-            No gastar en algo también es información —y saber cuánto queda sin
-            tocar es la mitad de un presupuesto—, pero doce filas diciendo
-            "S/ 0.00 de S/ 50.00" enterraban la única que importaba y empujaban
-            todo lo de abajo fuera de la pantalla.
+        {/* AQUÍ HABÍA UN RESUMEN DE LAS CATEGORÍAS SIN GASTO
+            ("13 categorías sin gastos este mes · € 650.00 sin usar · Ver", con la
+            lista desplegable). Se quitó a pedido del usuario el 07/08/2026:
+            *"no sé por qué me sale eso, quítalo, no me gusta"*.
 
-            Se puede desplegar: si alguien quiere ver cuáles son, están. */}
-        {sinGasto.length > 0 && (
-          <TouchableOpacity
-            onPress={() => setVerSinGasto((v) => !v)}
-            className="mt-3 pt-3 border-t-[1.5px] border-slate-100 dark:border-slate-800"
-          >
-            <View className="flex-row items-center justify-between">
-              <Text className="text-[11px] text-slate-500 dark:text-slate-400 flex-1 pr-2">
-                {t("categoryBudgets.untouched", {
-                  count: sinGasto.length,
-                  amount: fmt(sinGastoTotal),
-                })}
-              </Text>
-              <Text className="text-[11px] font-bold text-emerald-600">
-                {t(verSinGasto ? "common.hide" : "common.show")}
-              </Text>
-            </View>
+            Se defendía con que "no gastar en algo también es información". Y es
+            verdad, pero el sitio estaba mal: esta tarjeta contesta "¿cómo voy con
+            mis límites?", y una lista de las que ni he tocado no contesta eso —
+            además de que ese "€ 650.00 sin usar" se leía como dinero disponible,
+            justo al lado de un texto que decía que no había ningún límite puesto.
+            Quien quiera ver sus límites los tiene todos en su propia pantalla,
+            "Presupuestos por categoría" (app/category-budgets).
 
-            {verSinGasto && (
-              <View className="mt-2.5 gap-1.5">
-                {sinGasto.map((b) => (
-                  <View key={b.id} className="flex-row justify-between">
-                    <Text className="text-[11px] text-slate-500 dark:text-slate-400">{b.name}</Text>
-                    <Text className="text-[11px] text-slate-400 dark:text-slate-500">{fmt(b.limit)}</Text>
-                  </View>
-                ))}
-              </View>
-            )}
-          </TouchableOpacity>
-        )}
+            No volver a meterlo aquí sin un motivo nuevo. */}
       </View>
 
       <View

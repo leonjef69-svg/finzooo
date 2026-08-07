@@ -187,7 +187,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "categoryBudgets.spentOfLimit": "{spent} de {limit}",
     "categoryBudgets.overBudget": "Te pasaste del límite",
     "categoryBudgets.noneSet": "Aún no le pusiste límite a ninguna categoría.",
-    "categoryBudgets.untouched": "{count} categorías sin gastos este mes · {amount} sin usar",
+    "categoryBudgets.noneSpentYet": "Todavía no gastaste en ninguna categoría con límite este mes.",
     "categoryBudgets.lockedDescription":
       "Ponle un límite de gasto a cada categoría y recibe un aviso cuando te estés por pasar. Disponible con Premium.",
 
@@ -1095,7 +1095,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "categoryBudgets.spentOfLimit": "{spent} of {limit}",
     "categoryBudgets.overBudget": "You went over the limit",
     "categoryBudgets.noneSet": "You haven't set a limit for any category yet.",
-    "categoryBudgets.untouched": "{count} categories with no spending this month · {amount} unused",
+    "categoryBudgets.noneSpentYet": "You have not spent in any category with a limit this month.",
     "categoryBudgets.lockedDescription":
       "Set a spending limit for each category and get a heads-up before you go over. Available with Premium.",
 
@@ -1997,7 +1997,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "categoryBudgets.spentOfLimit": "{spent} de {limit}",
     "categoryBudgets.overBudget": "Você ultrapassou o limite",
     "categoryBudgets.noneSet": "Você ainda não definiu um limite para nenhuma categoria.",
-    "categoryBudgets.untouched": "{count} categorias sem gastos este mês · {amount} sem usar",
+    "categoryBudgets.noneSpentYet": "Você ainda não gastou em nenhuma categoria com limite neste mês.",
     "categoryBudgets.lockedDescription":
       "Defina um limite de gastos para cada categoria e receba um aviso antes de ultrapassá-lo. Disponível com o Premium.",
 

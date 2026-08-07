@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-04**
+Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-05**
 · APK que hay que instalar: **finzo-6ago-10** (el arreglo del PDF colgado es
 código de Android; por internet no viaja)
 
@@ -330,6 +330,34 @@ los iconos y está lento, se siente feo al abrirlo"):
     para ahorrar memoria, y en Android es causa conocida de celdas en blanco
     porque al volver hay que rehacerlas. Con 236 casillas la memoria no era el
     problema; los huecos sí.
+
+## La tarjeta de límites se contradecía (07/08/2026)
+
+Reportado con captura, señalando la línea *"13 categorías sin gastos este mes ·
+€ 650.00 sin usar · Ver"*: **"no sé por qué me sale eso, quítalo, no me gusta"**.
+
+Y tenía razón, porque justo encima la misma tarjeta decía **"Aún no le pusiste
+límite a ninguna categoría"**. Las dos cosas a la vez, y las dos no pueden ser
+verdad: había trece límites puestos, sumando 650.
+
+**El motivo:** ese primer texto se decidía con las categorías que **tienen gasto**,
+no con las que tienen límite. Con trece límites y ningún gasto en ellos, "no
+pusiste ninguno" era falso. Es **el mismo fallo de la pantalla de exportación
+automática** —dos textos decidiendo por su cuenta— y la solución es la misma: una
+sola pregunta, `hayLimites`, que sale del mismo cálculo que las barras.
+
+Ahora la tarjeta dice una de dos, y las dos son ciertas:
+
+- sin límites → "Aún no le pusiste límite a ninguna categoría."
+- con límites y sin gasto en ellos → "Todavía no gastaste en ninguna categoría con
+  límite este mes."
+
+**Y el resumen de las intactas se fue**, con su lista desplegable. Se defendía con
+que "no gastar en algo también es información" — es verdad, pero el sitio estaba
+mal: esa tarjeta contesta *"¿cómo voy con mis límites?"* y una lista de las que ni
+he tocado no contesta eso. Además ese "€ 650.00 sin usar" se leía como dinero
+disponible. Quien quiera ver sus límites los tiene todos en su propia pantalla.
+Hay una prueba para que no vuelva sin un motivo nuevo.
 
 ## Un solo botón "Elegir categoría" (06/08/2026)
 
