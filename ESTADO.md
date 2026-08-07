@@ -383,6 +383,30 @@ que pedía— y elegir una que ya existe sigue costando un toque.
 La lección, que ya es la tercera vez en este proyecto: **cuando el usuario dice
 "sobra esto", la respuesta no es moverlo un poco más abajo.**
 
+### PENDIENTE: quiere quitar también la pestaña "Tus categorías" (07/08/2026)
+
+Lo ha pedido tres veces. La última: *"quiero que quites mis categorías, solo dejes
+iconos, favoritos, color"*, aclarando que se refiere a **la pestaña**, no a la
+pantalla de *Nuevo movimiento*.
+
+**No se hizo, y quedó en pausa a su decisión** (*"déjalo así de momento"*). El
+motivo de no hacerlo tal cual: esa pestaña es **el único sitio de la app donde se
+elige una categoría que ya existe**. Sin ella, cada gasto obligaría a crear una
+categoría nueva, y en una semana habría siete "Comida" con el reporte repartido
+entre las siete.
+
+Se le explicó tres veces por escrito y **no se entendió hasta dibujarlo**: tres
+maquetas lado a lado (hoy · si solo se quita · lo propuesto). Con el dibujo delante
+decidió dejarlo.
+
+Lo propuesto, para cuando lo retome: el botón del movimiento abre una **lista
+pequeña** con sus categorías —como la de "Método de pago"— y esa lista lleva un
+"＋ Nueva" que abre la pantalla del catálogo, que entonces sí quedaría con solo
+Ícono · Favoritos · Color.
+
+> **Cuando una explicación no se entiende a la segunda, dibujarla.** Dos mensajes
+> de texto no sirvieron; una maqueta sí.
+
 ### El precio, dicho y anotado en el código
 
 `pestana` arranca en `"icono"`, no en `"tuyas"`. Es decisión suya, pedida tres
