@@ -666,6 +666,19 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                     })}
                   </Text>
                 )}
+                {/* EL TEXTO DEL ERROR, cuando hubo uno.
+                    Se puede seleccionar a propósito: es un dato para copiar y
+                    mandar, no para leer. "Falló" no distingue entre el permiso
+                    de Drive caducado, el archivo que no se escribió y la
+                    conversión que no salió — y esa diferencia es todo. */}
+                {ultimo?.detalle ? (
+                  <Text
+                    selectable
+                    className="text-[10px] leading-4 text-rose-600 dark:text-rose-400 mt-1"
+                  >
+                    {ultimo.detalle}
+                  </Text>
+                ) : null}
               </View>
             </View>
 

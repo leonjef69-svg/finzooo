@@ -19,12 +19,15 @@ import com.facebook.react.jstasks.HeadlessJsTaskConfig
  * (FinzoCaptureService). Se copia el patron a proposito: es el que se sabe que
  * funciona en este celular.
  *
- * EL PDF NO SE PUEDE HACER AQUI
+ * EL PDF TAMBIEN SE HACE AQUI (desde el 06/08/2026)
  *
- * El PDF se dibuja en una ventana invisible del navegador de Android, y esa
- * ventana necesita que la app este en pantalla. Excel y CSV son cuentas y
- * texto, asi que si salen. El trabajo de JavaScript lo comprueba y no intenta
- * lo imposible.
+ * Aqui decia que no se podia, y era verdad hasta esa fecha: el PDF se dibuja en
+ * una ventana del navegador de Android y se creia que necesitaba la app en
+ * pantalla. Ya no — se crea una ventana suelta y se imprime a un archivo. Ver
+ * HtmlAPdf.
+ *
+ * Se corrige esta nota porque una nota vieja que dice "esto es imposible" es
+ * peor que ninguna: manda a no intentarlo.
  *
  * SI ANDROID NO LO DESPIERTA, NO SE PIERDE NADA
  *

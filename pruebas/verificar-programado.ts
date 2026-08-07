@@ -729,6 +729,35 @@ console.log("\n--- 'PROBAR AHORA' PRUEBA EL CAMINO QUE VA A CORRER ---");
   // El resultado se dice con su motivo. "No salió" a secas es exactamente el
   // "no pasó nada" que costó este ida y vuelta.
   ok(/schedExport\.testFail[^\n]*\{motivo\}/.test(i18n), "y si falla, dice por qué");
+
+  // EL TEXTO DEL ERROR SE GUARDA Y SE ENSEÑA.
+  //
+  // Faltaba, y fue lo que dejó el fallo sin diagnosticar: el motivo guardado era
+  // "error", y "error" no distingue entre el permiso de Drive caducado, el
+  // archivo que no se escribió y la conversión que no salió. El único caso que
+  // necesita detalle era justo el que lo tiraba a la basura.
+  ok(/detalle\?: string/.test(fondo), "el intento guarda el texto del error");
+  ok(/e instanceof Error \? `\$\{e\.name\}: \$\{e\.message\}`/.test(fondo), "sacado de la excepción de verdad");
+  ok(/ultimo\?\.detalle/.test(pant), "y la pantalla lo enseña");
+  ok(/selectable/.test(pant), "para poder copiarlo y mandarlo");
+
+  // UN PDF VACÍO NO SE SUBE.
+  //
+  // La conversión puede contestar "listo" y dejar un archivo de cero bytes: el
+  // navegador que lo dibuja no está en ninguna pantalla. Sin comprobarlo, en
+  // Drive quedaría un archivo que no abre y el reporte diría "listo" — peor que
+  // no tener ninguno, porque así nadie lo revisa.
+  ok(/\(hecho\.size \?\? 0\) === 0/.test(fondo), "un PDF de cero bytes no se sube");
+  ok(/apuntar\("pdf-vacio"/.test(fondo), "y se dice con su propio motivo, no como 'falló'");
+
+  // La ruta se arma con la MISMA pieza que el Excel. Pegando textos salía una
+  // barra doble —Paths.cache ya acaba en barra— y una ruta con "//" en medio es
+  // de las que funcionan en un sitio y no en el siguiente.
+  ok(/new File\(Paths\.cache, fileName\)/.test(fondo), "la ruta del PDF se arma como la del Excel");
+  ok(
+    !/Paths\.cache\.uri\.replace\("file:\/\/", ""\)\}\//.test(fondo),
+    "sin pegar textos, que dejaba una barra doble"
+  );
 }
 
 console.log("\n--- Y SE PUEDE VER DESDE FUERA QUÉ TRAE EL CELULAR ---");

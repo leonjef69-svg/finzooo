@@ -18,7 +18,7 @@ import { monthNamesFor, translations } from "@/constants/i18n";
 import { currencySymbolFor } from "@/constants/currencies";
 import { fmt as formatAmount } from "@/utils/format";
 import { htmlDelReporte } from "@/utils/reportePdfDatos";
-import { Paths } from "expo-file-system";
+import { File, Paths } from "expo-file-system";
 import { archivoCsv, archivoExcel, filasDelReporte } from "@/utils/reporteArchivo";
 import { guardarEnCarpeta } from "@/utils/carpetaTelefono";
 import { subirADropbox } from "@/utils/dropbox";
@@ -56,21 +56,53 @@ type ResultadoDeFondo =
   | "no-toca-hoy"
   | "ya-se-hizo-hoy"
   | "pdf-no-se-puede"
+  | "pdf-vacio"
   | "destino-no-automatico"
   | "sin-movimientos"
   | "error";
 
 const CLAVE_ULTIMO = "finzo:exportacionEnFondo.ultimo";
 
+/**
+ * Cuánto del error se guarda.
+ *
+ * Suficiente para reconocer de qué se trata —el permiso de Drive, el archivo que
+ * no está, la conversión que falló— y no tanto como para llenar la pantalla con
+ * una pila de llamadas que nadie va a leer.
+ */
+const LARGO_DETALLE = 200;
+
 /** Lo último que hizo el trabajo de fondo, para la pantalla de ajustes. */
-export type UltimoIntento = { cuando: number; resultado: ResultadoDeFondo; archivo: string };
+export type UltimoIntento = {
+  cuando: number;
+  resultado: ResultadoDeFondo;
+  archivo: string;
+  /**
+   * EL TEXTO DEL ERROR, cuando hubo uno.
+   *
+   * Faltaba, y se notó el 06/08/2026: el PDF automático no salía, el motivo
+   * guardado era "error", y "error" no distingue entre el permiso de Drive
+   * caducado, el archivo que no se escribió y la conversión que falló. El único
+   * caso que necesita detalle era justo el que lo tiraba a la basura.
+   */
+  detalle?: string;
+};
 
 export async function ultimoIntentoEnFondo(): Promise<UltimoIntento | null> {
   return await loadJSON<UltimoIntento | null>(CLAVE_ULTIMO, null);
 }
 
-async function apuntar(resultado: ResultadoDeFondo, archivo = ""): Promise<ResultadoDeFondo> {
-  saveJSON(CLAVE_ULTIMO, { cuando: Date.now(), resultado, archivo });
+async function apuntar(
+  resultado: ResultadoDeFondo,
+  archivo = "",
+  detalle = ""
+): Promise<ResultadoDeFondo> {
+  saveJSON(CLAVE_ULTIMO, {
+    cuando: Date.now(),
+    resultado,
+    archivo,
+    detalle: detalle.slice(0, LARGO_DETALLE),
+  });
   await flushPendingSaves();
   return resultado;
 }
@@ -190,8 +222,27 @@ export async function exportarEnFondo(forzar = false): Promise<ResultadoDeFondo>
         etiquetaDelMes: `${monthNamesFor(idioma)[Number(mes.slice(5, 7)) - 1]} ${mes.slice(0, 4)}`,
         t,
       });
-      const destino = `${Paths.cache.uri.replace("file://", "")}/${fileName}`;
-      const uri = await htmlAPdfEnFondo(html, destino);
+      // La ruta se arma con la MISMA pieza que usa el Excel (new File(Paths.cache,
+      // ...)) y no pegando textos. Pegándolos salía una barra doble —Paths.cache
+      // ya acaba en barra— y una ruta con "//" en medio es de las que funcionan
+      // en un sitio y no en el siguiente.
+      //
+      // Y se le quita el "file://" porque al otro lado hay código de Android, que
+      // espera una ruta de archivo y no una dirección.
+      const salida = new File(Paths.cache, fileName);
+      const uri = await htmlAPdfEnFondo(html, salida.uri.replace("file://", ""));
+
+      // QUE EL PDF NO ESTÉ VACÍO.
+      //
+      // La conversión puede contestar "listo" y dejar un archivo de cero bytes:
+      // el WebView que lo dibuja no está en ninguna pantalla, y si algo sale mal
+      // al medirlo el resultado es un PDF sin páginas. Sin esta comprobación se
+      // subiría igual, el reporte diría "listo", y en Drive habría un archivo que
+      // no abre — que es peor que no tener ninguno, porque nadie lo revisa.
+      const hecho = new File(uri);
+      if (!hecho.exists || (hecho.size ?? 0) === 0) {
+        return await apuntar("pdf-vacio", fileName, `${uri} · ${hecho.size ?? "sin tamaño"}`);
+      }
       archivo = { uri, fileName, mimeType: "application/pdf" };
     } else {
       const filas = filasDelReporte({
@@ -235,6 +286,11 @@ export async function exportarEnFondo(forzar = false): Promise<ResultadoDeFondo>
     // Y nunca dejar que esto reviente: un trabajo de fondo que lanza una
     // excepción deja a Android con un candado de energía abierto y el proceso
     // colgado.
-    return await apuntar("error");
+    //
+    // El TEXTO del error se guarda. Antes se perdía, y con él la única pista de
+    // qué había fallado: en la pantalla ponía "falló" y a partir de ahí solo
+    // quedaba adivinar. Ver UltimoIntento.detalle.
+    const detalle = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
+    return await apuntar("error", "", detalle);
   }
 }
