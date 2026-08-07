@@ -621,63 +621,70 @@ cada una añade unas dos más.
 > resto. Si sale grande y parecido a los 6000 ms, queda confirmado que era esto. Es la
 > forma de no volver a suponerlo.
 
-### EL MEDIDOR EN LA APP (7ago-18, corregido en 7ago-20 y 7ago-21) — temporal, hay que quitarlo
+### Décima causa, y la que lo cerró: tandas de dos FILAS y pausa al tocar (7ago-22)
 
-Aquí se dejó de buscar una octava causa leyendo. Se releyó el camino del toque entero y
-**está correcto**: `Fila` y `Dibujito` memorizados, `onElegir` es `setIcono` (estable),
-`aspecto` sale de un `useMemo` que no depende del dibujo elegido, y a cada fila se le
-pasa nulo si el elegido no está en ella. Sobre el papel se rehacen dos filas. Buscar la
-octava por lectura sería repetir el error por octava vez.
+Los dos números que dio el celular con las tandas de dos grupos:
 
-Así que el medidor va **dentro de la app**, en la pantalla, y él lee el número. Da dos
-datos y **cada uno señala un culpable distinto** — por eso son dos y no uno:
+| | |
+|---|---|
+| `app` (levantar el dedo → verlo marcado) | **136 y 353 ms** — venía de 6000 |
+| armar todo el resto del catálogo | **2370 y 2759 ms** |
+| filas rehechas por toque | **2**, o sea que la memorización va bien |
 
-- **dedo**: de apoyar a levantar. Es la persona, no el programa. Está para poder
-  restarlo, y para ver de un golpe si el resto es grande o chico a su lado.
-- **app**: de levantar el dedo al cuadro en que ya se ve, con `requestAnimationFrame`.
-  **Este es el único que se puede arreglar.** Si sale de unas decenas de milisegundos,
-  no hay nada que arreglar por el lado de la velocidad.
-- **filas**: cuántas se rehicieron. Tienen que ser **2**. Ya salieron 2, así que esa
-  parte está confirmada en el celular.
+Y su respuesta, que es la que ordenó lo que había que hacer: *"SOLUCIONALO DE UNA VEZ, NO
+PUEDO ESTAR HACIENDO PRUEBAS CADA RATO, DALE UNA SOLUCION REAL"*. **Tenía razón.** Cuatro
+entregas seguidas pidiéndole que midiera es demasiado.
 
-> **La primera versión de este medidor medía mal, y el error vale más que el número.**
-> Contaba de apoyar el dedo a ver la marca, o sea que mezclaba a la persona con el
-> programa. Al ir a arreglarlo se vio POR QUÉ mezclaba: la marca se decide al levantar
-> el dedo. Ese fue el hallazgo de la octava causa. Un instrumento mal hecho apuntó al
-> problema mejor que siete lecturas del código.
+Lo que faltaba, leyendo esos números:
 
-> **PENDIENTE DE QUITAR:** `MEDIDOR`, sus dos marcas de tiempo en la casilla, el
-> contador en `Fila`, los estados `medida` y `resto`, `restoDesde`, los dos textos en
-> pantalla y las claves `nuevaCat.medida` y `nuevaCat.resto` en los tres idiomas.
-> **OJO al quitarlo:** el `onPressIn` y el
-> `onPressOut` de la casilla **se quedan** — son el arreglo de la octava causa, no el
-> medidor. Este no tiene prueba que lo vigile **a propósito**: una prueba lo volvería
-> permanente.
+1. **La tanda era una medida mala.** Un grupo tiene de 6 a 20 dibujos, así que la tanda
+   más gorda era el triple de la más chica y el peor caso lo marcaba ella. **Ahora se
+   reparte por FILAS**: una fila son siempre cinco, y una tanda son **diez dibujos
+   exactos**. Nunca veinticinco.
+2. **El reparto ahora se para mientras hay un dedo en la pantalla** (`QUIETO_MS`, medio
+   segundo). Esto es la otra mitad y es lo que quita el "peor caso" de la práctica:
+   mientras se está eligiendo no se arma nada, y el trabajo se hace en los huecos. La
+   hora del último toque vive en un objeto de módulo y **no** en un estado — si fuera un
+   estado, apuntarla redibujaría la pantalla en cada toque, que es el coste que se está
+   quitando.
+3. **`TouchableOpacity` → `Pressable` en la casilla.** Eran 227 vistas animadas y 227
+   valores animados creados al abrir para un efecto que ya no se usa.
 
-**Lo siguiente: que pruebe `7ago-20` y diga si el toque ya se siente instantáneo.** Si
-sí, esto se cierra y solo queda quitar el medidor. Si no, el número de **app** dirá si
-queda algo que arreglar por velocidad o si el problema es otro.
+> **Esto ya se intentó una vez y rompió la cuadrícula**, así que hay que decir por qué
+> ahora no puede fallar por lo mismo. Falló porque el aviso de "estoy tocando" obligaba a
+> pasar la medida en una **función** —`style={({pressed}) => …}`— y NativeWind aplica las
+> clases también por `style`: el ancho y el alto no llegaban y las casillas salieron como
+> pastillas. Desde 7ago-20 **ese aviso no se le pide a nadie**: la casilla se pinta ella
+> misma. La medida vuelve a ir en un **objeto**, que era lo único que hacía falta, y la
+> casilla no usa ni una clase de NativeWind. La prueba que existe vigila justamente eso
+> —objeto y no función— y dice explícitamente que el componente da igual.
 
-**Lo que quedaba por probar antes de la octava causa, si hiciera falta volver:**
+Y de paso, cada fila iba envuelta en una vista que no pintaba nada: **46 vistas menos**,
+ahora es un fragmento.
 
-1. **Bajar `GRUPOS_AL_ABRIR` de 4 a 2** (~40 dibujos, dos pantallas). Es cambiar un
-   número. Si entrar mejora de golpe, el coste sigue siendo el montaje y merece la
-   pena seguir por ahí; si no cambia nada, **el problema no es el catálogo** y hay que
-   medir la pantalla de agregar movimiento, que es la que se queda debajo.
-2. **Medir de verdad antes de seguir.** Ya se gastaron seis intentos razonando sobre
-   el código, y el último solo mejoró "un poco": eso es la señal de que falta un
-   número real. Con la app en modo desarrollo y el monitor de rendimiento de React
-   Native se ve cuántos milisegundos tarda el montaje y cuántas veces se redibuja cada
-   parte. Sin eso, lo siguiente vuelve a ser adivinar.
-3. **Recortar el catálogo.** 227 dibujos en 18 grupos; con la mitad, el montaje cuesta
-   la mitad. Es decisión suya: el catálogo grande fue algo que pidió.
+**El medidor se quitó.** Sus números quedaron escritos en el comentario de
+`NuevaCategoria.tsx` donde estaba, porque de ahí salen las medidas del archivo y sin eso
+parecerían elegidas a dedo.
 
-> **Y la lección de la tarde:** seis causas ciertas, todas encontradas leyendo **nuestro
-> código**, y el resultado fue "un poco mejor". Cuando arreglar lo que se ve no mueve la
-> aguja, hay dos salidas: **medir**, o **mirar dónde no se había mirado**. La séptima
-> causa salió de lo segundo —leer el código de la librería en `node_modules`— y ahí
-> estaba, un componente que parecía un dibujo y era una clase con estado. Lo que no
-> sirve es releer por sexta vez lo mismo.
+### Lo que dejaron las diez causas, por si vuelve a ir lento
+
+Está descartado —no volver a mirarlo—: las clases de NativeWind en las casillas, el
+remontaje al cambiar de pestaña, montar las cuatro pestañas al abrir, `overflow` en las
+227, las 48 filas rehaciéndose al tocar, la clase con estado de los iconos de Expo, que la
+marca se pintara al soltar el dedo, y el golpe único del resto del catálogo.
+
+Si volviera a ir lento, **lo primero es medir, no leer**. Es la lección de la tarde y está
+demostrada: siete causas encontradas leyendo dieron "un poco mejor"; el medidor encontró
+las tres gordas en dos intentos. Un medidor temporal en pantalla cuesta veinte minutos.
+
+Y lo que queda sin tocar, que es **decisión suya**: **recortar el catálogo**. Son 227
+dibujos en 18 grupos y armarlos cuesta unos 2,5 segundos de trabajo repartido. Con la
+mitad, costaría la mitad. El catálogo grande lo pidió él, así que no se toca sin pedirlo.
+
+> **La lección, ya con las diez:** seis causas encontradas leyendo nuestro código dieron
+> "un poco mejor". La séptima salió de leer el código de la LIBRERÍA. Y las tres últimas
+> —las que de verdad lo arreglaron— salieron de **un número sacado del celular**. Cuando
+> arreglar lo que se ve no mueve la aguja, no hay que releer: hay que medir.
 
 ## El micrófono perdía casi todo lo dictado (7ago-19, 07/08/2026)
 

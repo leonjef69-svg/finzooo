@@ -10,7 +10,14 @@
 import fs from "fs";
 import path from "path";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
-import { CATALOGO_EN_FILAS, GRUPOS_AL_ABRIR, GRUPOS_POR_TANDA, POR_FILA } from "@/constants/catalogoFilas";
+import {
+  CATALOGO_EN_FILAS,
+  CATALOGO_EN_TROZOS,
+  FILAS_AL_ABRIR,
+  FILAS_POR_TANDA,
+  GRUPOS_AL_ABRIR,
+  POR_FILA,
+} from "@/constants/catalogoFilas";
 import { iconoDe } from "@/constants/iconos";
 import { setOverrides } from "@/utils/categoryCustom";
 import { crear, borrar, editar, esPropia, nombreRepetido, setPropias, type CategoriaPropia } from "@/utils/categoriasPropias";
@@ -211,7 +218,10 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   ok(pant.includes("memo(function Fila"), "y las filas");
   // Recibir la funcion de traducir bastaba para que memo no sirviera de nada:
   // cambia en cada dibujado del padre.
-  ok(pant.includes("titulos[grupo.titulo]"), "los titulos llegan traducidos, no la funcion de traducir");
+  // El nombre de la variable cambio de "grupo" a "trozo" el 07/08/2026, al repartir el
+  // catalogo por filas en vez de por grupos. Lo que se vigila es lo mismo: que llegue el
+  // titulo YA TRADUCIDO y no la funcion de traducir.
+  ok(pant.includes("titulos[trozo.titulo]"), "los titulos llegan traducidos, no la funcion de traducir");
 
   // LOS DIBUJOS SE QUEDAN PUESTOS. ESTO NO ES UN DESCUIDO, ES EL PEDIDO.
   //
@@ -261,8 +271,19 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   //      desde el primer instante (esto no cambio).
   //   3. Y acaban TODOS puestos. Una tanda que no converge dejaria el catalogo a medias
   //      para siempre, que seria peor que el problema que arregla.
+  // Y AQUI DECIA "el resto llega TODO de una vez" Y LUEGO "tandas de dos GRUPOS". Las dos
+  // cambiaron el 07/08/2026, y las dos veces por un numero del celular:
+  //
+  //   · Todo de una vez → el primer toque tras abrir tardaba 6000 ms. El toque hacia cola
+  //     detras de 223 dibujos, y mientras el golpe dura el dedo no existe para la app.
+  //   · Tandas de dos GRUPOS → 136 a 353 ms. Muchisimo mejor, y todavia se notaba. Un
+  //     grupo no sirve de medida: los hay de 6 dibujos y de 20, asi que la tanda mas gorda
+  //     era el triple de la mas chica y el peor caso lo marcaba ella.
+  //   · Ahora tandas de dos FILAS: diez dibujos exactos, siempre.
+  //
+  // Lo que se vigila son cuatro cosas:
   ok(!codigo.includes("gruposArmados"), "no se cargan de a poquitos, como se rechazo");
-  ok(/useState\(GRUPOS_AL_ABRIR\)/.test(codigo), "arranca con los primeros grupos");
+  ok(/useState\(FILAS_AL_ABRIR\)/.test(codigo), "arranca con las filas de los primeros grupos");
 
   // 1. Solas. Si esto se cae, se cae en silencio: la pantalla funcionaria igual y el
   //    usuario volveria a ver iconos apareciendo bajo el dedo.
@@ -274,31 +295,71 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   //    llegue antes de entregarlo.
   ok(!/onScroll/.test(codigo), "el resto NO llega al deslizar, llega solo");
   ok(
-    /setTimeout\(\s*\(\) => \{[\s\S]{0,200}setGruposADibujar/.test(codigo),
+    /setTimeout\(\s*\(\) => \{[\s\S]{0,400}setFilasADibujar/.test(codigo),
     "y lo trae un reloj, sin que nadie tenga que tocar nada"
   );
 
-  // 3. Converge en el catalogo entero.
+  // 2. Converge en el catalogo entero. Una tanda que no converge dejaria el catalogo a
+  //    medias PARA SIEMPRE, que seria peor que el problema que arregla.
   ok(
-    /Math\.min\(n \+ GRUPOS_POR_TANDA, CATALOGO_EN_FILAS\.length\)/.test(codigo),
+    /Math\.min\(n \+ FILAS_POR_TANDA, CATALOGO_EN_TROZOS\.length\)/.test(codigo),
     "cada tanda suma hasta llegar al catalogo completo, sin pasarse"
   );
+  // Y el reparto no puede quedarse esperando para siempre a que nadie toque: cuando el
+  // dedo aplaza una tanda, tiene que volver a intentarlo.
+  ok(/setReintento\(\(r\) => r \+ 1\)/.test(codigo), "si un dedo aplaza una tanda, se reintenta");
 
-  // Y la tanda tiene que ser CHICA. Lo que un toque espera en el peor caso es lo que
-  // dura UNA tanda, no lo que duran todas: si alguien sube este numero buscando que
-  // acabe antes, vuelve la espera de los 6000 ms. Se cuenta con numeros.
-  //
-  // Esta tambien vigila un numero y no un cambio, asi que pasa sola: lo que hace es
-  // impedir que MAÑANA GRUPOS_POR_TANDA suba a 9 "para que acabe antes".
-  const mayorTanda = Math.max(
-    ...CATALOGO_EN_FILAS.map((_, i) =>
-      CATALOGO_EN_FILAS.slice(i, i + GRUPOS_POR_TANDA).reduce((s, g) => s + g.filas.length * POR_FILA, 0)
-    )
-  );
-  ok(GRUPOS_POR_TANDA >= 1, "la tanda trae al menos un grupo, o no avanzaria nunca");
+  // 3. El reparto SE PARA MIENTRAS SE TOCA. Es la otra mitad del arreglo: asi el trabajo
+  //    cae en los huecos y no compite nunca con el dedo.
+  ok(/ULTIMO_TOQUE\.cuando = Date\.now\(\)/.test(codigo), "se apunta cuando se toco por ultima vez");
   ok(
-    mayorTanda <= 40,
-    `la tanda mas gorda son ${mayorTanda} dibujos, unas dos pantallas (tope 40)`
+    /Date\.now\(\) - ULTIMO_TOQUE\.cuando < QUIETO_MS/.test(codigo),
+    "y no se arma nada mientras haya un dedo reciente en la pantalla"
+  );
+  // Apuntar la hora NO PUEDE ser un estado: si lo fuera, cada toque rehaceria la pantalla,
+  // que es justo el coste que se esta quitando.
+  ok(
+    /const ULTIMO_TOQUE = \{ cuando: 0 \}/.test(codigo),
+    "y esa hora no vive en un estado, para que apuntarla no redibuje nada"
+  );
+
+  // 4. La tanda tiene que ser CHICA. Lo que un toque espera en el peor caso es lo que
+  //    dura UNA tanda, no lo que duran todas: si alguien sube este numero buscando que
+  //    acabe antes, vuelve la espera. Se cuenta con numeros.
+  //
+  //    Esta vigila un numero y no un cambio, asi que pasa sola: lo que hace es impedir que
+  //    MAÑANA FILAS_POR_TANDA suba a 20 "para que acabe antes".
+  ok(FILAS_POR_TANDA >= 1, "la tanda trae al menos una fila, o no avanzaria nunca");
+  ok(
+    FILAS_POR_TANDA * POR_FILA <= 10,
+    `la tanda son ${FILAS_POR_TANDA * POR_FILA} dibujos como mucho (tope 10)`
+  );
+
+  // Y AL REPARTIR POR FILAS NO SE PUEDE PERDER NI REPETIR NADA. Es el riesgo real de
+  // cambiar de grupos a filas, y es de los que no se ven: sobraria o faltaria un dibujo en
+  // medio del catalogo y nadie lo notaria hasta buscarlo.
+  const enGrupos = CATALOGO_EN_FILAS.flatMap((g) => g.filas.flat()).filter((x) => x !== null);
+  const enTrozos = CATALOGO_EN_TROZOS.flatMap((t) => t.fila).filter((x) => x !== null);
+  ok(
+    enTrozos.join("|") === enGrupos.join("|"),
+    `los ${enGrupos.length} dibujos son los mismos y en el mismo orden (${enTrozos.length})`
+  );
+  // Y cada grupo pone su titulo UNA vez, en su primera fila. Con el titulo en todas, el
+  // catalogo saldria repitiendo el encabezado entre fila y fila.
+  const titulos = CATALOGO_EN_TROZOS.filter((t) => t.titulo !== null).map((t) => t.titulo);
+  ok(
+    titulos.length === CATALOGO_EN_FILAS.length,
+    `hay un titulo por grupo (${titulos.length} de ${CATALOGO_EN_FILAS.length})`
+  );
+  ok(
+    titulos.join("|") === CATALOGO_EN_FILAS.map((g) => g.titulo).join("|"),
+    "y en el mismo orden que los grupos"
+  );
+  // Las filas del principio son los primeros grupos ENTEROS: un grupo cortado por la
+  // mitad al abrir se veria como un catalogo a medio armar.
+  ok(
+    CATALOGO_EN_TROZOS[FILAS_AL_ABRIR]?.titulo !== null,
+    "lo que se dibuja al abrir acaba justo donde empieza un grupo nuevo"
   );
 
   // Y la primera tanda tiene que llenar la pantalla de sobra. Se cuenta de verdad:

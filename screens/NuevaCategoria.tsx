@@ -1,6 +1,7 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Image,
+  Pressable,
   ScrollView,
   Text,
   TextInput,
@@ -18,10 +19,10 @@ import ImageCropper from "@/components/ImageCropper";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
 import {
   ALTO_TITULO,
-  CATALOGO_EN_FILAS,
+  CATALOGO_EN_TROZOS,
   enFilas,
-  GRUPOS_AL_ABRIR,
-  GRUPOS_POR_TANDA,
+  FILAS_AL_ABRIR,
+  FILAS_POR_TANDA,
   LADO_DE,
   SEPARACION,
 } from "@/constants/catalogoFilas";
@@ -44,32 +45,39 @@ import { sanitizeName } from "@/utils/categoryCustom";
 const ESPERA_RESTO_MS = 350;
 
 /**
- * EL MEDIDOR DEL TOQUE. ES TEMPORAL: se quita en cuanto sepamos dónde está el retraso.
+ * Cuánto tiene que llevar la pantalla sin que nadie la toque para que el reparto del
+ * catálogo siga. Ver filasADibujar.
  *
- * Por qué existe. Se arreglaron SIETE causas de lentitud razonando sobre el código, y
- * el toque sigue sin sentirse instantáneo (07/08/2026: *"tocar un icono, ¿se marca al
- * instante? no"*). Buscar una octava leyendo sería el mismo error por octava vez: lo
- * que falta es un NÚMERO sacado del propio celular.
- *
- * LA PRIMERA VERSIÓN DE ESTE MEDIDOR MEDÍA MAL, y conviene dejarlo escrito porque el
- * error es fácil de repetir: contaba desde que el dedo se APOYA hasta que la casilla
- * está pintada. Pero la marca se decide cuando el dedo se LEVANTA, así que dentro de
- * ese número estaba el rato que la persona tuvo el dedo encima — que no es la app. Dio
- * 262 ms y no se podía saber cuánto era de cada uno.
- *
- * Ahora son tres datos, y cada uno señala un culpable distinto:
- *
- * - **dedo**: de apoyar a levantar. Es la persona, no el programa. Está aquí para poder
- *   restarlo, y para ver de un golpe si el resto es grande o chico al lado suyo.
- * - **app**: de levantar el dedo al cuadro en que ya se ve. ESTE es el único que
- *   podemos arreglar. Si sale de unas decenas de milisegundos, no hay nada que arreglar
- *   por el lado de la velocidad.
- * - **filas**: cuántas se rehicieron. Tienen que ser DOS. Si salen 48, la memorización
- *   no funciona en el celular — y eso no se puede ver leyendo, porque el código parece
- *   correcto. En la primera medición salieron 2, así que esa parte está bien.
+ * Medio segundo es lo que dura el hueco entre dos toques de alguien que está eligiendo.
+ * Con menos, una tanda se cuela justo entre toque y toque; con mucho más, quien se queda
+ * mirando la pantalla sin decidirse retrasaría el reparto sin motivo.
  */
-const MEDIDOR = { abajo: 0, suelta: 0, filas: 0 };
+const QUIETO_MS = 500;
 
+/**
+ * Cuándo se tocó una casilla por última vez.
+ *
+ * Va en un objeto de módulo y no en un estado a propósito: apuntar la hora del toque NO
+ * TIENE QUE REDIBUJAR NADA. Si esto fuera un estado, cada toque rehacía la pantalla, que
+ * es exactamente el coste que se está quitando.
+ */
+const ULTIMO_TOQUE = { cuando: 0 };
+
+/**
+ * ESTO ERA EL MEDIDOR TEMPORAL, Y YA SE QUITÓ (7ago-22).
+ *
+ * Se deja escrito lo que dijo, porque es de donde salen las medidas de este archivo y
+ * sin esto parecerían números elegidos a dedo:
+ *
+ *   · Primer toque con todo el catálogo en un golpe: **6000 ms**.
+ *   · Con tandas de dos grupos: **136 a 353 ms**, y armar el resto tardaba **2400 a
+ *     2800 ms** en total.
+ *   · Filas rehechas por toque: **2**. O sea que la memorización sí funciona en el
+ *     celular y por ahí no había nada que buscar.
+ *
+ * Y la lección: el medidor encontró en dos intentos lo que siete lecturas del código no
+ * encontraron. Si algo vuelve a ir lento aquí, lo primero es medir, no leer.
+ */
 // Los mismos de personalizar categorias, para que una categoria propia no
 // pueda tener un color que las de fabrica no tienen.
 const COLORES = [
@@ -211,40 +219,48 @@ const Dibujito = memo(function Dibujito({
   const marcada = elegido || tocada;
 
   return (
-    // SE PROBÓ CAMBIARLO POR PRESSABLE Y ROMPIÓ LA CUADRÍCULA. NO REPETIRLO.
+    // AQUÍ HUBO UN TOUCHABLEOPACITY, Y EL CAMBIO A PRESSABLE FALLÓ UNA VEZ. LEER ESTO
+    // ANTES DE VOLVER A TOCARLO.
     //
-    // La idea era buena: TouchableOpacity trae dentro una vista animada para bajar
-    // la opacidad al tocarla, y eran 236 valores animados creados al abrir sin que
-    // ninguno haga nada hasta que se toca uno.
+    // El motivo del cambio: TouchableOpacity trae dentro una vista ANIMADA para bajar la
+    // opacidad mientras la tocas. Eran 227 vistas animadas y 227 valores animados creados
+    // al abrir, sin que ninguno haga nada hasta que se toca uno. Pressable es una vista
+    // normal.
     //
-    // Pero para dar ese aviso con Pressable hay que pasar la medida en una FUNCIÓN
-    // —style={({pressed}) => [...]}— y ahí se rompe: las clases de NativeWind también
-    // se aplican por "style", y con una función de por medio el ancho y el alto no
-    // llegan. Las casillas salieron como pastillas altas y estrechas en vez de
-    // cuadrados. Lo vio el usuario en el celular el 07/08/2026: "no quiero que se
-    // vea así, estaba bien como estaba antes".
+    // POR QUÉ FALLÓ LA PRIMERA VEZ, Y POR QUÉ AHORA NO PUEDE FALLAR POR ESO:
     //
-    // El ahorro que sí valía era otro y se quedó: las pestañas ya no se rehacen al
-    // cambiar (ver la nota del display) y solo recortan las casillas con foto.
-    <TouchableOpacity
+    // Falló porque para dar el aviso de "estoy tocando" con Pressable había que pasar la
+    // medida en una FUNCIÓN —style={({pressed}) => [...]}— y las clases de NativeWind se
+    // aplican también por "style": con una función de por medio, el ancho y el alto no
+    // llegaban. Las casillas salieron como pastillas altas y estrechas. Lo vio el usuario
+    // en el celular: "no quiero que se vea así, estaba bien como estaba antes".
+    //
+    // Ese aviso YA NO SE LE PIDE A NADIE: desde el 7ago-20 la casilla se pinta ella misma
+    // al ser tocada (ver la nota de "tocada"). Así que la medida vuelve a ir en un OBJETO,
+    // que es lo único que hacía falta. Y la casilla no usa ni una clase de NativeWind, así
+    // que la causa de aquel fallo no existe aquí.
+    //
+    // Hay una prueba que vigila justamente eso: que la medida llegue en un objeto y no en
+    // una función. Qué componente se use da igual.
+    <Pressable
       onPressIn={() => {
         // Se pinta YA. Ver la nota de "tocada": esto es todo el arreglo del toque.
         eligio.current = false;
         setTocada(true);
-        // MEDIDOR TEMPORAL: el instante en que el toque llega al código.
-        MEDIDOR.abajo = Date.now();
-        MEDIDOR.filas = 0;
+        // Y se apunta la hora, para que el reparto del catálogo no se ponga a armar nada
+        // mientras hay un dedo en la pantalla. Ver ULTIMO_TOQUE y filasADibujar.
+        ULTIMO_TOQUE.cuando = Date.now();
       }}
       onPress={() => {
         eligio.current = true;
-        // MEDIDOR TEMPORAL: el instante en que se levantó el dedo. Lo de antes es la
-        // persona; lo de después, la app. Ver MEDIDOR.
-        MEDIDOR.suelta = Date.now();
         onElegir(id);
       }}
       onPressOut={() => {
         // Era el principio de un deslizón, no un toque: no se eligió nada.
         if (!eligio.current) setTocada(false);
+        // También cuenta como "acabo de tocar": si el reparto arrancara justo al soltar,
+        // se comería el deslizón que la persona está empezando.
+        ULTIMO_TOQUE.cuando = Date.now();
       }}
       // SIN NINGUNA CLASE, y ahí está el arreglo. Ver aspectoDeCasilla: el aspecto
       // ya viene calculado y las 236 comparten el mismo objeto.
@@ -265,7 +281,7 @@ const Dibujito = memo(function Dibujito({
       ) : (
         <Image source={{ uri: id }} style={{ width: lado, height: lado }} />
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 });
 
@@ -298,8 +314,6 @@ const Fila = memo(function Fila({
   lado: number;
   onElegir: (id: string) => void;
 }) {
-  // MEDIDOR TEMPORAL: cada vez que una fila se rehace, se cuenta. Ver MEDIDOR arriba.
-  MEDIDOR.filas++;
   return (
     // Alto y separación explícitos: es la altura que la lista da por hecha.
     <View style={{ flexDirection: "row", height: lado, gap: SEPARACION, marginBottom: SEPARACION }}>
@@ -518,67 +532,46 @@ export default function NuevaCategoria({
    * iconos ya deberían estar ahí fijos, no deberían cargar recién cuando yo deslizo"*.
    * Nadie tiene que deslizar para que lleguen; llegan igual con el dedo quieto.
    *
-   * POR QUÉ EL RESTO YA NO LLEGA EN UN SOLO GOLPE (07/08/2026)
+   * LO QUE MIDIÓ EL CELULAR, QUE ES DE DÓNDE SALE TODO ESTO
    *
-   * Porque el medidor lo dijo con un número: el PRIMER toque después de abrir tardaba
-   * **6000 ms**. Marcar una casilla no cuesta eso ni de lejos — el toque estaba haciendo
-   * cola detrás del golpe que armaba los 223 dibujos que faltaban. Mientras ese golpe
-   * dura, el dedo no existe para la app.
+   *   · Todo el resto en un solo golpe → el primer toque tardaba **6000 ms**. El toque
+   *     hacía cola detrás de 223 dibujos, y mientras el golpe dura el dedo no existe.
+   *   · Tandas de dos GRUPOS → **136 a 353 ms**. Muchísimo mejor y todavía se notaba.
+   *   · Ahora tandas de dos FILAS, que son diez dibujos exactos. Un grupo no servía de
+   *     medida: los hay de 6 y de 20, y el peor caso lo marcaba el más gordo.
    *
-   * El trabajo total es el mismo; lo que cambia es que se parte en trozos y entre trozo
-   * y trozo la app respira. Un toque espera, como mucho, lo que dura UN trozo. De ahí
-   * que las tandas sean chicas (GRUPOS_POR_TANDA): lo que importa no es cuánto tardan
-   * todas, es cuánto tarda la más larga.
+   * Y ADEMÁS SE PARA MIENTRAS LA PERSONA ESTÁ TOCANDO. Esto es la otra mitad, y es la
+   * que hace que no haya "peor caso" en la práctica: mientras hay un dedo en la pantalla
+   * no se arma nada. En cuanto se queda quieta —QUIETO_MS— sigue por donde iba. Así el
+   * trabajo se hace en los huecos, que es cuando no molesta a nadie.
    *
    * La primera espera sigue siendo lo que dura la animación de entrada. Las siguientes
    * no esperan nada: solo ceden el turno, que es justamente lo que deja pasar el toque.
    */
-  const [gruposADibujar, setGruposADibujar] = useState(GRUPOS_AL_ABRIR);
-  // MEDIDOR TEMPORAL: cuánto tarda en armarse todo el resto. Es el número que dirá si
-  // esto era de verdad lo que hacía esperar al primer toque.
-  const restoDesde = useRef(0);
-  const [resto, setResto] = useState<number | null>(null);
+  const [filasADibujar, setFilasADibujar] = useState(FILAS_AL_ABRIR);
+  // Cuando el reparto se posterga por un dedo en la pantalla, hay que volver a mirarlo
+  // más tarde. Este contador es lo que hace que el efecto se vuelva a ejecutar.
+  const [reintento, setReintento] = useState(0);
   useEffect(() => {
-    if (gruposADibujar >= CATALOGO_EN_FILAS.length) {
-      if (restoDesde.current) {
-        setResto(Date.now() - restoDesde.current);
-        restoDesde.current = 0;
-      }
-      return;
-    }
-    const primera = gruposADibujar === GRUPOS_AL_ABRIR;
+    if (filasADibujar >= CATALOGO_EN_TROZOS.length) return;
+    const primera = filasADibujar === FILAS_AL_ABRIR;
     const reloj = setTimeout(
       () => {
-        if (!restoDesde.current) restoDesde.current = Date.now();
-        setGruposADibujar((n) => Math.min(n + GRUPOS_POR_TANDA, CATALOGO_EN_FILAS.length));
+        // Hay un dedo tocando ahora mismo o lo hubo hace un instante: no es momento de
+        // ponerse a armar nada. Se vuelve a mirar en un rato.
+        if (Date.now() - ULTIMO_TOQUE.cuando < QUIETO_MS) {
+          setReintento((r) => r + 1);
+          return;
+        }
+        setFilasADibujar((n) => Math.min(n + FILAS_POR_TANDA, CATALOGO_EN_TROZOS.length));
       },
       // Cero no es "ya mismo": es "en cuanto sueltes el turno". Ahí es donde entra el
       // toque que estaba esperando.
       primera ? ESPERA_RESTO_MS : 0
     );
     return () => clearTimeout(reloj);
-  }, [gruposADibujar]);
+  }, [filasADibujar, reintento]);
 
-  /**
-   * EL MEDIDOR TEMPORAL, la mitad que para el cronómetro. Ver MEDIDOR arriba.
-   *
-   * El requestAnimationFrame es lo que hace que el número signifique algo: este efecto
-   * corre cuando el cambio ya está hecho, pero ANTES de que la pantalla lo muestre. Lo
-   * que se quiere medir es hasta que se VE, así que se espera al siguiente cuadro.
-   */
-  const [medida, setMedida] = useState<string | null>(null);
-  useEffect(() => {
-    if (!MEDIDOR.abajo || !MEDIDOR.suelta) return;
-    const dedo = MEDIDOR.suelta - MEDIDOR.abajo;
-    const suelta = MEDIDOR.suelta;
-    const filas = MEDIDOR.filas;
-    MEDIDOR.abajo = 0;
-    MEDIDOR.suelta = 0;
-    const cuadro = requestAnimationFrame(() =>
-      setMedida(`dedo ${dedo} · app ${Date.now() - suelta} ms · ${filas}`)
-    );
-    return () => cancelAnimationFrame(cuadro);
-  }, [icono]);
   function irA(cual: typeof pestana) {
     setPestana(cual);
     // Solo se toca el conjunto la primera vez: pasarlo nuevo en cada toque haría
@@ -976,23 +969,6 @@ export default function NuevaCategoria({
           ))}
         </View>
 
-        {/* EL NÚMERO DEL MEDIDOR. TEMPORAL, se quita con el resto. Ver MEDIDOR.
-            Se pone aquí y no escondido en un registro porque el que tiene que leerlo
-            es él, en su celular, y contármelo. Dice los milisegundos y cuántas filas
-            se rehicieron; deberían ser 2. */}
-        {medida !== null && (
-          <Text className="text-[10px] text-slate-400 text-center mt-1">
-            {t("nuevaCat.medida", { medida })}
-          </Text>
-        )}
-        {/* Y cuánto tardó en armarse todo el resto del catálogo. TEMPORAL. Si este
-            número es grande y parecido a los 6000 ms que salían en el primer toque,
-            confirmado: era esto lo que hacía esperar al dedo. */}
-        {resto !== null && (
-          <Text className="text-[10px] text-slate-400 text-center">
-            {t("nuevaCat.resto", { ms: String(resto) })}
-          </Text>
-        )}
       </View>
 
       {/* El "px-5" del contenido de las pestañas es el MARGEN_LATERAL de las
@@ -1274,27 +1250,27 @@ export default function NuevaCategoria({
                 )}
               </View>
 
-              {/* LOS PRIMEROS GRUPOS AL ABRIR, EL RESTO JUSTO DESPUÉS Y DE UNA VEZ.
-                  Ver la nota larga de gruposADibujar: no es cargar por partes, son
-                  DOS tandas, y la primera llena tres pantallas. */}
-              {CATALOGO_EN_FILAS.slice(0, gruposADibujar).map((grupo) => (
-                <View key={grupo.titulo}>
-                  <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
-                    <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
-                      {titulos[grupo.titulo]}
-                    </Text>
-                  </View>
-                  {grupo.filas.map((fila, f) => (
-                    <Fila
-                      key={f}
-                      iconos={fila}
-                      elegido={fila.includes(icono) ? icono : null}
-                      aspecto={aspecto}
-                      lado={lado}
-                      onElegir={setIcono}
-                    />
-                  ))}
-                </View>
+              {/* LOS PRIMEROS GRUPOS AL ABRIR, Y EL RESTO EN TANDAS DE DOS FILAS.
+                  Ver la nota larga de filasADibujar. Llegan solas, sin deslizar. */}
+              {CATALOGO_EN_TROZOS.slice(0, filasADibujar).map((trozo, f) => (
+                // Un fragmento y no una vista: envolver cada fila en su propia vista
+                // añadiría 46 vistas que no pintan nada, y de eso justamente se trata.
+                <Fragment key={f}>
+                  {trozo.titulo !== null && (
+                    <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
+                      <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
+                        {titulos[trozo.titulo]}
+                      </Text>
+                    </View>
+                  )}
+                  <Fila
+                    iconos={trozo.fila}
+                    elegido={trozo.fila.includes(icono) ? icono : null}
+                    aspecto={aspecto}
+                    lado={lado}
+                    onElegir={setIcono}
+                  />
+                </Fragment>
               ))}
             </View>
           </View>

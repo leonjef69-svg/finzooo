@@ -63,10 +63,16 @@ export const GRUPOS_AL_ABRIR = 4;
  * de tres pantallas y cada tanda añade unas dos más, así que lo que se ve siempre está
  * completo.
  *
- * Dos y no cinco porque lo que importa es cuánto dura el trozo MÁS LARGO: ese es lo que
- * un toque tiene que esperar en el peor caso.
+ * SE MIDE EN FILAS Y NO EN GRUPOS, y eso también salió de un número. Con tandas de dos
+ * GRUPOS el toque bajó de 6000 ms a **136–353 ms**: muchísimo mejor, pero todavía se
+ * nota. El motivo es que un grupo no es una medida útil para esto: los hay de 6 dibujos
+ * y de 20, así que la tanda más gorda era el triple de la más chica y el peor caso lo
+ * marcaba ella.
+ *
+ * Una fila son siempre cinco. Con dos filas, un toque espera como mucho lo que cuestan
+ * **diez dibujos** — no veinticinco, y no doscientos veintitrés.
  */
-export const GRUPOS_POR_TANDA = 2;
+export const FILAS_POR_TANDA = 2;
 
 /**
  * El lado de una casilla para que las cinco llenen justo el ancho.
@@ -119,3 +125,35 @@ export const CATALOGO_EN_FILAS: GrupoEnFilas[] = TODOS_LOS_GRUPOS.map((g) => ({
 /** Lo que ocupan las filas de un grupo. Es el hueco a reservar mientras no están. */
 export const altoDeLasFilas = (grupo: GrupoEnFilas, altoFila: number) =>
   grupo.filas.length * altoFila;
+
+/**
+ * El catálogo entero en UNA sola lista de filas, cada una con el título de su grupo si es
+ * la primera de ese grupo.
+ *
+ * Existe para poder repartir el trabajo por filas. Con el catálogo repartido en grupos la
+ * unidad más chica era un grupo entero, y los grupos van de 6 a 20 dibujos: el peor caso
+ * lo marcaba siempre el más gordo. Ver FILAS_POR_TANDA.
+ *
+ * Se calcula una vez al cargar el archivo, no en cada dibujado.
+ */
+export type TrozoDelCatalogo = {
+  /** El título del grupo, SOLO en su primera fila. En las demás, null. */
+  titulo: string | null;
+  fila: (string | null)[];
+};
+
+export const CATALOGO_EN_TROZOS: TrozoDelCatalogo[] = CATALOGO_EN_FILAS.flatMap((g) =>
+  g.filas.map((fila, i) => ({ titulo: i === 0 ? g.titulo : null, fila }))
+);
+
+/**
+ * Cuántas filas se dibujan al abrir.
+ *
+ * Sale de GRUPOS_AL_ABRIR a propósito, para que las dos medidas no se puedan
+ * contradecir: la regla al abrir sigue siendo "los primeros grupos, enteros", y así un
+ * grupo nunca aparece cortado por la mitad al abrir la pantalla.
+ */
+export const FILAS_AL_ABRIR = CATALOGO_EN_FILAS.slice(0, GRUPOS_AL_ABRIR).reduce(
+  (suma, g) => suma + g.filas.length,
+  0
+);
