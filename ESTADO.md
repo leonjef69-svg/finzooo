@@ -2,10 +2,10 @@
 
 Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-16**
 
-> **Seis causas de lentitud arregladas en "Elegir categoría"** (ver la sección). La
-> última era el fondo del asunto: 227 medidas de texto encima de la animación de
-> entrada. Ahora el catálogo llega en **dos tandas**, con la primera llenando tres
-> pantallas — que no es el "de a poquitos" que se rechazó en agosto.
+> **PENDIENTE: "Elegir categoría" sigue lenta.** Se arreglaron **seis** causas reales
+> (ver la sección) y el usuario dice *"mejoró un poco pero sigue lento"*. Lo dejó en
+> pausa él. **Lo que queda por probar está escrito al final de esa sección** — no
+> volver a empezar por arriba.
 · APK instalado y al día: **finzo-6ago-10** (no hace falta uno nuevo: desde
 entonces no ha cambiado nada de Android)
 
@@ -467,6 +467,33 @@ tienen reciben lo mismo que antes (nulo) y la memorización las deja fuera: se r
 Lo que **sigue rechazado**: virtualizar (`FlatList`), `windowSize`, cargar de a uno, y
 `InteractionManager` —que no espera a la animación, espera a que no quede *nada*
 pendiente—. Ver la sección del catálogo lento del 05/08.
+
+### DÓNDE QUEDÓ ESTO, Y QUÉ PROBAR DESPUÉS (07/08/2026)
+
+Tras los seis arreglos: *"mejoró un poco pero sigue lento"*. **Lo dejó en pausa él.**
+
+**Lo que ya está descartado como causa** —no volver a mirarlo—: las clases de
+NativeWind en las casillas, el remontaje al cambiar de pestaña, montar las cuatro
+pestañas al abrir, `overflow` en las 236, las 48 filas rehaciéndose al tocar, y la
+vista animada de `TouchableOpacity` (esa además rompió la cuadrícula).
+
+**Lo que queda por probar, en orden de menos a más invasivo:**
+
+1. **Bajar `GRUPOS_AL_ABRIR` de 4 a 2** (~40 dibujos, dos pantallas). Es cambiar un
+   número. Si entrar mejora de golpe, el coste sigue siendo el montaje y merece la
+   pena seguir por ahí; si no cambia nada, **el problema no es el catálogo** y hay que
+   medir la pantalla de agregar movimiento, que es la que se queda debajo.
+2. **Medir de verdad antes de seguir.** Ya se gastaron seis intentos razonando sobre
+   el código, y el último solo mejoró "un poco": eso es la señal de que falta un
+   número real. Con la app en modo desarrollo y el monitor de rendimiento de React
+   Native se ve cuántos milisegundos tarda el montaje y cuántas veces se redibuja cada
+   parte. Sin eso, lo siguiente vuelve a ser adivinar.
+3. **Recortar el catálogo.** 227 dibujos en 18 grupos; con la mitad, el montaje cuesta
+   la mitad. Es decisión suya: el catálogo grande fue algo que pidió.
+
+> **Y la lección de la tarde:** seis causas ciertas, todas encontradas leyendo, y el
+> resultado fue "un poco mejor". Cuando arreglar lo que se ve en el código no mueve la
+> aguja, lo que falta es **medir**, no seguir leyendo.
 
 ## La pantalla de Premium, rediseñada (07/08/2026)
 
