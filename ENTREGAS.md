@@ -24,6 +24,8 @@ demás llega por actualización.
 
 | Fecha | Commit | Qué trae de nuevo (lo nativo) | Archivo |
 |---|---|---|---|
+| 06/08/2026 | `0f67e81` | **El PDF automático ya no se cuelga**: la ventana que lo dibuja tenía tamaño cero, y no había ningún tope de tiempo. Ahora se rinde a los 30 s y dice qué falló | `finzo-6ago-09.apk` |
+| 06/08/2026 | `737713f` | El PDF se arma con la app cerrada (conversor propio de Android). **Se colgaba** — sustituido por el de arriba | `finzo-6ago-03.apk` |
 | 03/08/2026 | `b3f7e4e` | La voz habla sin espera (hilo propio). **Primer APK compilado en la PC** — en Descargas, no en Expo | `finzo-3ago-02.apk` |
 | 02/08/2026 | `f3e9951` | La voz habla sin espera: el motor se enciende al conectar el servicio y ya no se apaga por tiempo | [APK](https://expo.dev/artifacts/eas/VT__wfJVHE1OVfXdNse9Ju32C1ZjwrzCLwrSkSYOlNo.apk) |
 | 02/08/2026 | `e77d47e` | Varios yapes seguidos hablan uno detrás de otro (antes, todos a la vez); solo Yape en la pantalla | [APK](https://expo.dev/artifacts/eas/ujCXYt2AuT6DxGw1HmcIb5i2Rov9LWJ8LiOq7NLO4n4.apk) |
