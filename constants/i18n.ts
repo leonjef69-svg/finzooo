@@ -404,6 +404,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "voice.manyHint": "Toca el monto para cambiar entre gasto e ingreso, o la X para quitar uno.",
     "voice.manyCount": "{count} movimientos",
     "voice.example2": "O varias: «gasté 10 en pan y 20 en gaseosa». O «exporta enero», «cuánto gasté este mes».",
+    "voice.listo": "Listo",
     "voice.noAmountTitle": "No te entendí",
     "voice.noAmountHint":
       "Puedes decirme: «gasté 30 en KFC», «exporta mis gastos de enero» o «cuánto gasté este mes».",
@@ -1335,6 +1336,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "voice.manyHint": "Tap the amount to switch between expense and income, or the X to drop one.",
     "voice.manyCount": "{count} movements",
     "voice.example2": "Or several: \"I spent 10 on bread and 20 on soda\". Or \"export January\", \"how much did I spend\".",
+    "voice.listo": "Done",
     "voice.noAmountTitle": "I didn't get that",
     "voice.noAmountHint":
       "You can tell me: \"I spent 30 at KFC\", \"export my January expenses\" or \"how much did I spend this month\".",
@@ -2260,6 +2262,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "voice.manyHint": "Toque no valor para alternar entre gasto e receita, ou no X para remover um.",
     "voice.manyCount": "{count} movimentos",
     "voice.example2": "Ou várias: «gastei 10 em pão e 20 em refrigerante». Ou «exporte janeiro», «quanto gastei».",
+    "voice.listo": "Pronto",
     "voice.noAmountTitle": "Não entendi",
     "voice.noAmountHint":
       "Você pode me dizer: «gastei 30 no KFC», «exporte meus gastos de janeiro» ou «quanto gastei este mês».",

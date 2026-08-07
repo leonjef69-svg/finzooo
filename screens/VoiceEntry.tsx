@@ -33,6 +33,27 @@ const LOCALE_FALLBACKS: Record<string, string[]> = {
   "pt-BR": ["pt-BR", "pt-PT", "pt"],
 };
 
+/**
+ * CUÁNTO SILENCIO SE ESPERA ANTES DE DAR EL DICTADO POR TERMINADO.
+ *
+ * Ahora el micrófono no se cierra solo (ver ESCUCHA_SEGUIDA), así que este reloj es
+ * quien lo cierra. Se rearma con cada palabra que llega, o sea que solo salta cuando
+ * de verdad se dejó de hablar.
+ *
+ * Cuatro segundos porque entre "10 de mandarina" y lo siguiente uno piensa, y eso es
+ * lo normal cuando se dictan varias compras, no la excepción. Con 2,5 se quedaba corto
+ * (ya se probó). Y quien no quiera esperar tiene el botón de "Listo".
+ */
+const SILENCIO_MS = 4000;
+
+/**
+ * Cuánto se espera al principio si no se oye ABSOLUTAMENTE nada.
+ *
+ * Sin este, un micrófono abierto en el que nadie habla se quedaría abierto para
+ * siempre: el reloj de arriba solo se arma cuando llega la primera palabra.
+ */
+const ESPERA_PRIMERA_PALABRA_MS = 8000;
+
 type Stage =
   | "listening" // el micrófono está abierto
   | "confirm" // se entendió: falta que la persona apruebe
@@ -93,6 +114,56 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   // porque el aviso de "terminé" de Android puede llegar con la copia vieja
   // del texto, y entonces se perdería justo la frase que la persona dijo.
   const heardRef = useRef("");
+
+  /**
+   * LO DICHO, POR TROZOS. AQUÍ ESTABA EL FALLO GORDO DEL MICRÓFONO.
+   *
+   * Pedido el 07/08/2026: *"no está registrando correctamente los ingresos y gastos
+   * cuando hablo rápido... le digo varias cosas, por ejemplo gasté 10 salchipapa, 10
+   * mandarina, 10 tenedor, 10 papel, 10 cuchara"*.
+   *
+   * El intérprete de texto entiende esa frase perfectamente y saca los cinco
+   * movimientos. El problema era que **esa frase nunca le llegaba completa**.
+   *
+   * Android no manda lo dicho de una sola vez: lo va cerrando POR TROZOS. Cuando
+   * decide que un trozo terminó, lo manda con la marca de "final" y **empieza el
+   * siguiente desde cero**. Se leyó su código para confirmarlo
+   * (ExpoSpeechService.kt, onSegmentResults: manda "isFinal: true" y NO se detiene).
+   *
+   * Y esta pantalla hacía dos cosas que juntas tiraban casi todo:
+   *
+   *  1. Cada trozo nuevo **reemplazaba** al anterior en vez de sumarse. De "gasté 10
+   *     salchipapa / 10 mandarina / 10 tenedor" solo quedaba el último.
+   *  2. Al primer trozo marcado como "final" se cerraba la escucha y se procesaba.
+   *     O sea que lo demás no solo se perdía: ni se llegaba a escuchar.
+   *
+   * Eso explica exactamente los dos síntomas. Hablando rápido, Android corta el primer
+   * trozo antes de que uno acabe la lista; y al dictar varias cosas, cada una tapaba a
+   * la anterior.
+   *
+   * Ahora se guardan TODOS los trozos cerrados aquí, y aparte lo que se está diciendo
+   * en este momento. Lo que se muestra en pantalla y lo que se interpreta es la suma.
+   */
+  const trozos = useRef<string[]>([]);
+  const enCurso = useRef("");
+
+  /** Todo lo dicho hasta ahora: los trozos cerrados más lo que va en curso. */
+  function todoLoDicho(): string {
+    return [...trozos.current, enCurso.current].join(" ").replace(/\s+/g, " ").trim();
+  }
+
+  // El reloj que cierra el dictado cuando se dejó de hablar. Ver SILENCIO_MS.
+  const relojCierre = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /**
+   * ¿Se está usando la escucha seguida?
+   *
+   * Es la que no se cierra en el primer trozo, y sin ella nada de lo de arriba sirve.
+   * Se guarda en una caja porque si el celular no puede con ella —hay formas de fallar
+   * que no se pueden prever desde acá— se vuelve a intentar a la antigua, y así el
+   * micrófono nunca queda peor que antes de este cambio. Ver el manejo de errores.
+   */
+  const escuchaSeguida = useRef(true);
 
   // Número de la escucha actual.
   //
@@ -183,14 +254,57 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
         // Si ya estaba cerrado no hay nada que cancelar.
       }
       running.current = false;
+      // Y el reloj del silencio, que si no intentaría cerrar una escucha que ya no
+      // existe con la pantalla cerrada.
+      if (relojCierre.current) {
+        clearTimeout(relojCierre.current);
+        relojCierre.current = null;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function start() {
     langChain.current = [...(LOCALE_FALLBACKS[langs] ?? [langs])];
+    escuchaSeguida.current = true;
     setErrorCode("");
     await listen();
+  }
+
+  /**
+   * Arma —o rearma— el reloj que cierra el dictado. Ver SILENCIO_MS.
+   *
+   * Rearmar en vez de dejar uno fijo es lo que hace que las pausas para pensar no
+   * corten nada: mientras sigan llegando palabras, el cierre se va posponiendo.
+   */
+  function armarCierre(ms: number) {
+    if (relojCierre.current) clearTimeout(relojCierre.current);
+    relojCierre.current = setTimeout(() => {
+      relojCierre.current = null;
+      terminarDeEscuchar();
+    }, ms);
+  }
+
+  /**
+   * Cierra el micrófono y procesa lo dicho. La usan el reloj del silencio y el botón
+   * de "Listo".
+   *
+   * Se pide a Android que se detenga en vez de procesar aquí mismo, porque al detenerse
+   * manda el último trozo — el que la persona acababa de decir. Procesar sin esperarlo
+   * perdería justo la última compra de la lista.
+   */
+  function terminarDeEscuchar() {
+    if (relojCierre.current) {
+      clearTimeout(relojCierre.current);
+      relojCierre.current = null;
+    }
+    if (settled.current) return;
+    try {
+      ExpoSpeechRecognitionModule.stop();
+    } catch {
+      // Si ni detenerse se puede, al menos se aprovecha lo que se oyó.
+      settle(heardRef.current);
+    }
   }
 
   // Abre el micrófono con el primer idioma de la lista que quede por
@@ -211,6 +325,12 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
     settled.current = false;
     heardRef.current = "";
+    trozos.current = [];
+    enCurso.current = "";
+    if (relojCierre.current) {
+      clearTimeout(relojCierre.current);
+      relojCierre.current = null;
+    }
     // Se baja a cero por si venía movido de la escucha anterior: si no, el
     // aro arrancaría abierto y parecería que ya te está oyendo.
     level.setValue(0);
@@ -229,31 +349,31 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
       ExpoSpeechRecognitionModule.start({
         lang: langChain.current[0] ?? langs,
         interimResults: true,
-        continuous: false,
+        // LA ESCUCHA SEGUIDA. ES EL ARREGLO DEL 07/08/2026, NO TOCAR SIN LEER ESTO.
+        //
+        // Estaba en false, y la propia documentación de la librería dice qué significa
+        // eso en Android: *"recognition will run until a result with isFinal: true is
+        // received"*. O sea que el micrófono se cerraba en el PRIMER trozo que Android
+        // diera por cerrado — y dictando una lista, el primer trozo es la primera
+        // compra. Lo demás no se perdía: no se llegaba a escuchar.
+        //
+        // En true, Android 13 o más usa una sesión por trozos y sigue escuchando; en
+        // Android 12 o menos la librería consigue lo mismo poniéndole al reconocedor
+        // esperas larguísimas. En los dos casos el micrófono ya no se cierra solo, y
+        // quien lo cierra es el reloj del silencio o el botón de "Listo".
+        continuous: true,
         maxAlternatives: 1,
-        // CUÁNTO AGUANTA EL MICRÓFONO ANTES DE CERRARSE SOLO.
+        // AQUÍ IBAN NUESTRAS ESPERAS DE SILENCIO, Y HABÍA QUE QUITARLAS.
         //
-        // Sin esto Android usa su valor por defecto, que es cortísimo:
-        // bastaba dudar un segundo a mitad de frase para que cortara y se
-        // registrara solo lo dicho hasta ahí.
+        // Es un detalle que no se ve y que habría dejado el arreglo a medias, andando
+        // en el celular nuevo y no en uno viejo. Se leyó el código de la librería
+        // (ExpoSpeechService.kt): las opciones que le pasamos se aplican DESPUÉS de las
+        // suyas, así que las pisan. Y para la escucha seguida en Android 12 o menos su
+        // truco es justamente poner esas esperas en diez minutos. Nuestros 5 segundos
+        // las habrían borrado y el micrófono se habría cerrado igual que antes.
         //
-        // Estaba en 2,5 segundos de silencio y seguía quedándose corto: había
-        // que hablar rápido y de corrido para que no se cerrara antes de
-        // terminar. Y con una orden larga —"exportar los gastos de julio a
-        // León por WhatsApp en PDF"— o dictando varios movimientos seguidos,
-        // pensar un momento entre uno y otro es lo normal, no la excepción.
-        //
-        // Ahora son 5. El precio es esperar esos 5 segundos al terminar de
-        // hablar antes de que procese, y es un precio que vale la pena:
-        // esperar molesta, perder la frase a medias obliga a repetirla entera.
-        //
-        // El mínimo de 4 segundos es solo un suelo para empezar a hablar; no
-        // alarga nada si ya se estaba hablando.
-        androidIntentOptions: {
-          EXTRA_SPEECH_INPUT_MINIMUM_LENGTH_MILLIS: 4000,
-          EXTRA_SPEECH_INPUT_COMPLETE_SILENCE_LENGTH_MILLIS: 5000,
-          EXTRA_SPEECH_INPUT_POSSIBLY_COMPLETE_SILENCE_LENGTH_MILLIS: 5000,
-        },
+        // Ya no hacen falta: el que decide cuándo se terminó es SILENCIO_MS, de este
+        // lado, donde se puede rearmar con cada palabra.
         // Android va avisando del volumen del micrófono. Es lo que permite
         // que el círculo crezca cuando hablas, y así se vea que te oye.
         volumeChangeEventOptions: { enabled: true, intervalMillis: 100 },
@@ -279,6 +399,11 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   function settle(text: string) {
     if (settled.current) return;
     settled.current = true;
+    // El reloj del silencio ya no tiene nada que cerrar.
+    if (relojCierre.current) {
+      clearTimeout(relojCierre.current);
+      relojCierre.current = null;
+    }
 
     const command = parseVoiceCommand(text);
 
@@ -351,6 +476,9 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   useSpeechRecognitionEvent("start", () => {
     activeRun.current = runId.current;
     running.current = true;
+    // Con la escucha seguida el micrófono ya no se cierra por su cuenta, así que si
+    // nadie habla hay que cerrarlo nosotros. Ver ESPERA_PRIMERA_PALABRA_MS.
+    if (escuchaSeguida.current) armarCierre(ESPERA_PRIMERA_PALABRA_MS);
   });
 
   useSpeechRecognitionEvent("volumechange", (event) => {
@@ -369,11 +497,28 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   useSpeechRecognitionEvent("result", (event) => {
     if (activeRun.current !== runId.current) return;
     const text = event.results[0]?.transcript ?? "";
-    if (text) {
-      heardRef.current = text;
-      setHeard(text);
+
+    // UN TROZO CERRADO SE SUMA; EL QUE VA EN CURSO SE REEMPLAZA.
+    //
+    // La diferencia es todo el arreglo. Antes cualquiera de los dos reemplazaba lo
+    // anterior, y en un dictado de cinco compras quedaba una. Ver la nota de "trozos".
+    if (event.isFinal) {
+      if (text.trim()) trozos.current.push(text.trim());
+      enCurso.current = "";
+    } else {
+      enCurso.current = text;
     }
-    if (event.isFinal) settle(text || heardRef.current);
+
+    const todo = todoLoDicho();
+    if (todo) {
+      heardRef.current = todo;
+      setHeard(todo);
+    }
+
+    // Y NO SE CIERRA EN EL PRIMER TROZO FINAL. Eso es lo que cortaba la lista a la
+    // primera compra. Se espera a que de verdad se deje de hablar.
+    if (escuchaSeguida.current) armarCierre(SILENCIO_MS);
+    else if (event.isFinal) settle(heardRef.current);
   });
 
   // Los errores NO se filtran por número de escucha a propósito: si algo
@@ -391,6 +536,22 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
       event.error === "language-not-supported" || event.error === "service-not-allowed";
     if (languageProblem && langChain.current.length > 1) {
       langChain.current = langChain.current.slice(1);
+      listen();
+      return;
+    }
+
+    // LA RED DE SEGURIDAD DE LA ESCUCHA SEGUIDA.
+    //
+    // En Android 13 o más, la escucha seguida hace que la librería grabe el micrófono
+    // ella misma para poder ir cerrando trozos. Eso funciona en la mayoría de celulares
+    // pero depende de cosas que no se pueden comprobar desde acá.
+    //
+    // Si falla ANTES de oír nada, se vuelve a abrir el micrófono a la antigua. Se pierde
+    // el dictado largo, sí, pero el micrófono sigue sirviendo para una frase: nunca
+    // queda peor que antes de este cambio. Y solo se prueba si no se oyó nada, porque si
+    // ya había palabras esas valen más que el error (ver justo abajo).
+    if (escuchaSeguida.current && !heardRef.current.trim()) {
+      escuchaSeguida.current = false;
       listen();
       return;
     }
@@ -691,6 +852,20 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
               <Text className="text-[11px] text-center text-slate-400 leading-4 mt-2">
                 {t("voice.example2")}
               </Text>
+            )}
+            {/* "LISTO", PARA NO TENER QUE ESPERAR EL SILENCIO.
+                Aparece solo cuando ya se oyó algo: antes de eso no hay nada que dar por
+                terminado, y la ✕ de arriba ya sirve para irse.
+                Es además la salida segura de todo lo demás: si el reloj del silencio
+                fallara en algún celular, esto cierra el dictado a mano. */}
+            {heard.length > 0 && (
+              <TouchableOpacity
+                onPress={terminarDeEscuchar}
+                className="mt-6 px-7 py-2.5 rounded-full bg-violet-500 flex-row items-center gap-2"
+              >
+                <Check size={16} color="#ffffff" />
+                <Text className="text-sm font-bold text-white">{t("voice.listo")}</Text>
+              </TouchableOpacity>
             )}
           </>
         )}

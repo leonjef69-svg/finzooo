@@ -91,7 +91,8 @@ const FILLER = new Set([
 const CONNECTORS = new Set(["de", "del", "para"]);
 
 // Artículos que pueden ir entre el conector y el nombre: "pan DE LA bodega".
-const ARTICLES = new Set(["la", "el", "los", "las"]);
+// "lo" está por "lomo a LO pobre", que sin él se quedaba en "lomo".
+const ARTICLES = new Set(["la", "el", "los", "las", "lo"]);
 
 // Raíces de los verbos de la propia frase y de las palabras de tiempo. Si
 // la extracción del nombre llega a una de estas, el nombre ya terminó.
@@ -178,6 +179,47 @@ type AmountHit = { value: number; start: number; end: number };
  *
  * Acepta "30", "30.50", "S/30", "treinta" y "treinta con cincuenta".
  */
+/**
+ * ¿Este número es CUÁNTAS COSAS y no cuánto dinero?
+ *
+ * "gasté 10 en 2 mandarinas" registraba DOS movimientos: uno de S/ 10 sin nombre y
+ * otro de S/ 2 llamado "mandarinas". El de 2 no existió nunca, y el de 10 se quedaba
+ * sin nombre, así que caía en "Otros". Encontrado el 07/08/2026 probando el intérprete
+ * con frases de verdad, no leyéndolo.
+ *
+ * La señal es la de la propia forma de hablar: un número es cantidad cuando va justo
+ * después de "en" o "de" y justo antes del nombre de la cosa. Nadie dice "gasté en 10
+ * soles"; sí se dice "en 2 mandarinas", "de 12 huevos", "en 3 kilos".
+ *
+ * Es importante que sea EXACTAMENTE eso y no algo más suelto:
+ *
+ *  · "la cuenta de 45 soles" → detrás va "soles", que no es el nombre de nada, así que
+ *    los 45 siguen siendo dinero. Bien.
+ *  · "gasté 10 en pan y 20 en leche" → el 20 va detrás de "y", no de "en". Bien.
+ *  · "una caja de 12 huevos por 20 soles" → el 12 es cantidad y el 20 dinero. Bien.
+ */
+function esCantidad(tokens: string[], start: number, end: number): boolean {
+  const antes = tokens[start - 1];
+  if (antes !== "en" && antes !== "de") return false;
+  return looksLikeName(tokens[end] ?? "");
+}
+
+/**
+ * ¿Este número es UNA HORA y no dinero?
+ *
+ * "gasté 30 en pan a las 5" registraba el pan Y un gasto de S/ 5 que no existió. Es el
+ * mismo fallo que el de la cantidad, con otra ropa, y sale de lo mismo: cualquier
+ * número de la frase se tomaba por dinero.
+ *
+ * Se pide el "a" además del artículo, porque "las 5" a secas puede ser otra cosa
+ * ("las 5 mandarinas" ya lo agarra esCantidad). Cubre "a las 5" y "a la 1", que es como
+ * se dice la hora.
+ */
+function esHora(tokens: string[], start: number): boolean {
+  const antes = tokens[start - 1];
+  return (antes === "las" || antes === "la") && tokens[start - 2] === "a";
+}
+
 function findAmounts(tokens: string[]): AmountHit[] {
   const hits: AmountHit[] = [];
   let i = 0;
@@ -187,7 +229,7 @@ function findAmounts(tokens: string[]): AmountHit[] {
 
     if (/^\d+([.,]\d{1,2})?$/.test(token)) {
       const whole = parseAmount(token);
-      if (whole !== null && whole > 0) {
+      if (whole !== null && whole > 0 && !esCantidad(tokens, i, i + 1) && !esHora(tokens, i)) {
         // "30 con 50" = 30.50
         if (Number.isInteger(whole) && tokens[i + 1] === "con" && /^\d{1,2}$/.test(tokens[i + 2] ?? "")) {
           hits.push({ value: whole + Number(tokens[i + 2]) / 100, start: i, end: i + 3 });
@@ -202,6 +244,15 @@ function findAmounts(tokens: string[]): AmountHit[] {
 
     if (NUM_WORDS[tokens[i]] !== undefined) {
       const run = findSpelledRun(tokens, i);
+      // La misma regla vale dicho con letras: "gasté 10 en dos mandarinas".
+      //
+      // Y se salta la cantidad ENTERA, no solo su primera palabra. Con "en treinta y
+      // cinco mandarinas", saltar una sola dejaba suelto el "cinco" — que ya no venía
+      // detrás de "en" y se colaba como un gasto de S/ 5 que nadie hizo.
+      if (run && run.end > i && (esCantidad(tokens, i, run.end) || esHora(tokens, i))) {
+        i = run.end;
+        continue;
+      }
       if (run && run.end > i) {
         if (tokens[run.end] === "con") {
           const cents = findSpelledRun(tokens, run.end + 1);
@@ -263,6 +314,22 @@ function findMerchant(rawWords: string[], tokens: string[]): string {
           continue;
         }
       }
+      // "POLLO A LA BRASA" SE QUEDABA EN "POLLO", y en Perú eso es media carta:
+      // "arroz a la cubana", "lomo a lo pobre", "pescado a la chorrillana".
+      //
+      // Se pide "a" MÁS artículo MÁS nombre, las tres cosas. Un "a" suelto no vale, y
+      // por eso "gasté 30 en pan a las 5" no se lleva la hora: detrás del artículo hay
+      // un número, no un nombre.
+      if (
+        picked.length > 0 &&
+        token === "a" &&
+        ARTICLES.has(tokens[i + 1] ?? "") &&
+        looksLikeName(tokens[i + 2] ?? "")
+      ) {
+        picked.push(rawWords[i], rawWords[i + 1]);
+        i++;
+        continue;
+      }
       if (picked.length > 0) break; // el nombre ya empezó: aquí termina
       continue; // todavía era relleno del principio
     }
@@ -271,11 +338,11 @@ function findMerchant(rawWords: string[], tokens: string[]): string {
     if (picked.length >= 5) break;
   }
 
-  // Ni un conector ni un artículo pueden quedar al final: "bodega de" y
-  // "pan de la" no son nombres.
+  // Ni un conector ni un artículo pueden quedar al final: "bodega de", "pan de la" y
+  // "pollo a la" no son nombres. El "a" entra aquí por lo mismo que arriba.
   while (picked.length > 0) {
     const last = soften(picked[picked.length - 1]);
-    if (!CONNECTORS.has(last) && !ARTICLES.has(last)) break;
+    if (!CONNECTORS.has(last) && !ARTICLES.has(last) && last !== "a") break;
     picked.pop();
   }
 
@@ -480,10 +547,24 @@ export function parseVoice(transcript: string, now: Date = new Date()): VoicePar
       const nextStart = hits[index + 1]?.start ?? tokens.length;
       // Con las palabras de la fecha tachadas: "gasté 20 el 28 de julio"
       // llamaba al gasto "julio".
-      const merchant = findMerchant(
+      let merchant = findMerchant(
         maskedRaw.slice(hit.end, nextStart),
         maskedTokens.slice(hit.end, nextStart)
       );
+
+      // SI DETRÁS DEL MONTO NO HAY NOMBRE, SE BUSCA DELANTE.
+      //
+      // "el pan me costó 5 soles" y "compré una hamburguesa de 15" se guardaban sin
+      // nombre, y sin nombre no se puede adivinar la categoría: iban a "Otros". El
+      // nombre estaba dicho, solo que antes del monto.
+      //
+      // Solo para el PRIMER monto, y esto no es timidez: en "recibí 500 de sueldo y
+      // gasté 20", mirar hacia atrás desde el 20 encontraría "sueldo" y llamaría
+      // "sueldo" a un gasto de pan. Delante del primero no hay ningún movimiento
+      // anterior al que robarle palabras.
+      if (!merchant && index === 0) {
+        merchant = findMerchant(maskedRaw.slice(0, hit.start), maskedTokens.slice(0, hit.start));
+      }
 
       // Las palabras justo ANTES de este monto mandan sobre su tipo, para
       // frases mezcladas como "recibí 500 de sueldo y gasté 20 en pan".

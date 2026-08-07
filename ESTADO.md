@@ -600,6 +600,74 @@ dedo se levante, y eso lo decide la persona. Mediría a la persona, no al progra
 > estaba, un componente que parecía un dibujo y era una clase con estado. Lo que no
 > sirve es releer por sexta vez lo mismo.
 
+## El micrófono perdía casi todo lo dictado (7ago-19, 07/08/2026)
+
+Pedido así: *"el micrófono no está registrando correctamente los ingresos y gastos
+cuando hablo rápido y tampoco entender correctamente al momento de hablarle, le digo
+varias cosas por ejemplo gasté 10 salchipapa, 10 mandarina, 10 tenedor, 10 papel, 10
+cuchara y más"*.
+
+Eran **dos fallos distintos con el mismo síntoma**, y ese fue el hallazgo. Lo primero
+que se hizo fue meter la frase exacta en el intérprete: **la entendía perfectamente y
+sacaba los cinco movimientos**. O sea que el intérprete no era el culpable de esa queja
+— la frase nunca le llegaba completa.
+
+### Fallo 1: la escucha se cerraba en el primer trozo
+
+Android no entrega lo dicho de una vez: lo va **cerrando por trozos**. Se leyó su código
+para confirmarlo (`ExpoSpeechService.kt`, `onSegmentResults`: manda `isFinal: true` y
+**no se detiene**). Y la documentación de la librería lo dice sin rodeos sobre
+`continuous: false` — *"on Android, recognition will run until a result with isFinal:
+true is received"*.
+
+La pantalla hacía dos cosas que juntas tiraban casi todo:
+
+1. Cada trozo **reemplazaba** al anterior en vez de sumarse. De cinco compras quedaba
+   una.
+2. Al primer trozo marcado como final **cerraba la escucha**. Lo demás no se perdía: no
+   se llegaba ni a escuchar.
+
+Eso explica los dos síntomas exactos. Hablando rápido, Android cierra el primer trozo
+antes de que uno acabe la lista; dictando varias cosas, cada una tapaba a la anterior.
+
+Ahora: `continuous: true`, los trozos se **acumulan**, y el micrófono lo cierra
+**`SILENCIO_MS` (4 s) rearmable con cada palabra** o el botón **"Listo"**. Dos caminos a
+propósito: si el reloj falla en algún celular, el botón salva el dictado.
+
+> **El detalle invisible que habría dejado el arreglo a medias.** Nuestras
+> `androidIntentOptions` se aplican **después** de las de la librería (se leyó el
+> Kotlin), y su forma de conseguir la escucha seguida en **Android 12 o menos** es poner
+> esas mismas esperas en diez minutos. Nuestros 5 segundos las habrían borrado: el
+> arreglo habría andado en un celular nuevo y no en uno viejo, sin que nada avisara.
+> Hay una prueba que prohíbe volver a mandarlas.
+
+Y una red de seguridad: si el celular no puede con la escucha seguida, se reabre a la
+antigua. Nunca queda peor que antes de este cambio.
+
+### Fallo 2: el intérprete contaba como dinero lo que no lo era
+
+Esto salió de **hacerlo hablar**, no de leerlo: 35 frases reales por un script. Tres
+errores de verdad, los tres inventando o perdiendo movimientos:
+
+| Se dijo | Se registraba | Ahora |
+|---|---|---|
+| "gasté 10 en **2** mandarinas" | S/ 10 sin nombre **+ un gasto de S/ 2 que no existió** | un solo gasto de S/ 10, "mandarinas" |
+| "gasté 30 en pan **a las 5**" | el pan **+ un gasto de S/ 5** | solo el pan |
+| "el pan me costó 5 soles" | S/ 5 **sin nombre** → caía en "Otros" | S/ 5, "pan" |
+
+Y de paso, **"pollo a la brasa"** se quedaba en "pollo" — en Perú eso es media carta.
+
+Las tres reglas son estrechas a propósito, y las pruebas guardan el límite de cada una:
+"la cuenta **de 45 soles**" sigue siendo dinero (detrás va "soles", no el nombre de una
+cosa); "gasté 30 en pan **a las 5**" no se lleva la hora al nombre; y buscar el nombre
+hacia atrás **solo vale para el primer monto**, porque en "recibí 500 de sueldo y gasté
+20" mirar atrás desde el 20 encontraría "sueldo" y llamaría "sueldo" a un gasto — un
+error peor que el que arregla.
+
+`pruebas/verificar-voz-dictado.ts` es la prueba nueva: **23 de sus afirmaciones fallan
+contra la versión anterior**. Las de la sección "lo que ya andaba" pasan en las dos
+versiones a propósito: no describen el arreglo, vigilan que no se rompiera nada.
+
 ## La pantalla de Premium, rediseñada (07/08/2026)
 
 Pedido con **tres maquetas**: *"cuando le doy click y entre a Finzo Premium quiero ver

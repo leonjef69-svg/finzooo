@@ -62,6 +62,7 @@ const EXPO = {
 const SUITES = [
   { archivo: "verificar-voz-exportar.ts", alias: BASE },
   { archivo: "verificar-orden-voz.ts", alias: BASE },
+  { archivo: "verificar-voz-dictado.ts", alias: BASE },
   { archivo: "verificar-contactos.ts", alias: BASE },
   { archivo: "verificar-categorias.ts", alias: EXPO },
   { archivo: "verificar-pdf.ts", alias: BASE },
