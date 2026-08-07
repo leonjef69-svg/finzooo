@@ -522,9 +522,17 @@ console.log("\n--- EL PDF CON LA APP CERRADA ---");
   // LA CONVERSIÓN. Un WebView solo se puede crear desde el hilo principal, y
   // desde el hilo del trabajo de fondo Android lanza.
   ok(/Looper\.getMainLooper/.test(conversor), "el conversor trabaja en el hilo principal");
-  // onPageFinished avisa de que el HTML llegó, no de que esté COLOCADO. Midiendo
-  // en ese instante salían PDFs en blanco o con la tabla cortada.
-  ok(/ESPERA_COLOCADO_MS/.test(conversor), "espera a que el HTML quede colocado antes de medir");
+  // AQUÍ HABÍA UNA ESPERA de medio segundo tras cargar el HTML, "para que quedara
+  // colocado antes de medir". Se quitó el 06/08/2026: expo-print escribe en el
+  // mismo instante en que el HTML termina de cargar, y es lo que funciona en este
+  // celular. La espera era una suposición nuestra que nunca se comprobó —el
+  // conversor no había corrido ni una vez— y cada diferencia con expo-print es un
+  // sitio donde uno puede funcionar y el otro no.
+  ok(
+    /override fun onPageFinished\([\s\S]{0,200}?escribir\(view, destino/.test(conversor),
+    "se escribe en cuanto el HTML carga, igual que expo-print"
+  );
+  ok(!/postDelayed\(\{[\s\S]{0,80}?escribir\(/.test(conversor), "sin esperas inventadas de por medio");
   ok(/javaScriptEnabled = false/.test(conversor), "sin JavaScript: el reporte es tablas y estilos");
   ok(/NO_MARGINS/.test(conversor), "sin márgenes propios, que el HTML ya trae los suyos");
   ok(/if \(archivo\.exists\(\)\) archivo\.delete\(\)/.test(conversor), "borra el anterior antes de escribir");
@@ -783,14 +791,26 @@ console.log("\n--- LA CONVERSIÓN A PDF NO PUEDE QUEDARSE COLGADA ---");
     "utf8"
   );
 
-  // 1. El tamaño del navegador.
-  ok(/\.measure\(/.test(kt), "al navegador se le da una medida");
-  ok(/\.layout\(0, 0, ancho, alto\)/.test(kt), "y se le coloca esa medida, o mide cero");
-  ok(/loadDataWithBaseURL/.test(kt), "y el tamaño va ANTES de cargar el HTML");
-  ok(
-    kt.indexOf(".layout(0, 0, ancho, alto)") < kt.indexOf("loadDataWithBaseURL"),
-    "en ese orden, que es el que importa"
+  // 1. NO SE ESPERA LA MEDIDA. Es el arreglo entero.
+  //
+  // Lo natural es pedir la medida del documento, esperar la respuesta y escribir
+  // despues. Con eso la conversion se colgaba para siempre: en un navegador que no
+  // esta dentro de ninguna pantalla, esa respuesta NO LLEGA NUNCA. No falla: no
+  // llega.
+  //
+  // Lo hace asi porque asi lo hace expo-print, que es lo que esta misma app usa
+  // para el PDF de a mano y funciona en este celular. Costo dos entregas llegar
+  // ahi, asi que se vigila que no vuelva a "arreglarse" al revés.
+  const puente = fs.readFileSync(
+    path.join(RAIZ, "modules/export-scheduler/android/src/main/java/android/print/FinzoPrintCallbacks.kt"),
+    "utf8"
   );
+  ok(/fun medirSinEsperar\(/.test(puente), "la medida se pide sin esperar respuesta");
+  ok(/FinzoPrintPuente\.medirSinEsperar\(/.test(kt), "y es la que se usa al convertir");
+  // Si alguien vuelve a poner una respuesta que escuche la medida, vuelve el
+  // cuelgue. La unica que se escucha es la de ESCRIBIR.
+  ok(!/onLayoutFinished/.test(puente), "nadie escucha el resultado de la medida");
+  ok(/onWriteFinished/.test(puente), "y sí el de la escritura, que es el que llega");
 
   // 2. Los topes de tiempo, y que estén ESCALONADOS.
   const num = (s: string | undefined) => Number((s ?? "").replace(/_/g, ""));
@@ -827,6 +847,55 @@ console.log("\n--- LA CONVERSIÓN A PDF NO PUEDE QUEDARSE COLGADA ---");
   // falta el APK nuevo. Sin distinguirlo, se buscaría un problema de internet.
   const fondo = fs.readFileSync(path.join(RAIZ, "utils/exportarEnFondo.ts"), "utf8");
   ok(/PdfEnFondoSinRespuesta/.test(fondo), "y en la app se cuenta como su propio motivo");
+
+  // Y el tope dice DÓNDE se atascó. "No contestó" a secas no distingue entre
+  // cargar el HTML, medir y escribir, y esa diferencia es lo único que sirve.
+  ok(/\(\$etapa\)/.test(kt), "el tope dice en qué etapa se quedó");
+}
+
+console.log("\n--- EL PDF AUTOMÁTICO ES EL MISMO PAPEL QUE EL DE A MANO ---");
+{
+  // La pantalla de exportar llama a expo-print SIN decirle tamaño, así que sale
+  // en el papel que expo-print trae por defecto. El automático lo pone a mano, en
+  // otro archivo y en otro lenguaje: si los dos números no coinciden, el mismo
+  // reporte sale en hojas de distinto tamaño y con los saltos de página en otro
+  // sitio. Dos documentos distintos con el mismo nombre, que es justo lo que este
+  // módulo existe para evitar.
+  //
+  // Ya pasó: aquí había A4 a 300 puntos por pulgada y allí Carta a 72.
+  //
+  // Se leen de expo-print DE VERDAD, no copiados: el día que cambien su valor por
+  // defecto, esta prueba lo dice en vez de que se descubra comparando dos PDF.
+  const RAIZ = process.cwd();
+  const suyo = fs.readFileSync(
+    path.join(RAIZ, "node_modules/expo-print/android/src/main/java/expo/modules/print/PrintPDFRenderTask.kt"),
+    "utf8"
+  );
+  const num = (re: RegExp) => Number(re.exec(suyo)?.[1]);
+  const anchoPt = num(/DEFAULT_MEDIA_WIDTH = (\d+)/);
+  const altoPt = num(/DEFAULT_MEDIA_HEIGHT = (\d+)/);
+  const ppp = num(/PIXELS_PER_INCH = (\d+)/);
+  ok(anchoPt > 0 && altoPt > 0 && ppp > 0, `se leyó el papel de expo-print (${anchoPt}x${altoPt} a ${ppp})`);
+
+  // La misma cuenta que hace expo-print: puntos / (ppp / 1000) = milésimos.
+  const enMils = (puntos: number) => Math.round(puntos / (ppp / 1000));
+
+  const kt = fs.readFileSync(
+    path.join(RAIZ, "modules/export-scheduler/android/src/main/java/com/finzo/exportscheduler/HtmlAPdf.kt"),
+    "utf8"
+  );
+  const nuestro = (re: RegExp) => Number(re.exec(kt)?.[1]);
+  ok(nuestro(/ANCHO_MILS = (\d+)/) === enMils(anchoPt), `el ancho coincide (${enMils(anchoPt)})`);
+  ok(nuestro(/ALTO_MILS = (\d+)/) === enMils(altoPt), `y el alto (${enMils(altoPt)})`);
+  ok(nuestro(/PUNTOS_POR_PULGADA = (\d+)/) === ppp, `y los puntos por pulgada (${ppp})`);
+
+  // La pantalla no puede empezar a pedirle a expo-print un tamaño propio sin que
+  // esto se enteré: ahí se rompería la igualdad por el otro lado.
+  const pantExp = fs.readFileSync(path.join(RAIZ, "screens/ExportPdfSheet.tsx"), "utf8");
+  ok(
+    /printToFileAsync\(\{ html \}\)/.test(pantExp),
+    "y la pantalla sigue sin pedir un tamaño propio"
+  );
 }
 
 console.log("\n--- Y SE PUEDE VER DESDE FUERA QUÉ TRAE EL CELULAR ---");

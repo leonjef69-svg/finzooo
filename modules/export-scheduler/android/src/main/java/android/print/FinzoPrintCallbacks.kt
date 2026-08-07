@@ -1,6 +1,5 @@
 package android.print
 
-import android.os.CancellationSignal
 import android.os.ParcelFileDescriptor
 
 /**
@@ -21,17 +20,9 @@ import android.os.ParcelFileDescriptor
  * puede heredar. No se toca nada del sistema ni se usa reflexion; solo se pide
  * permiso de paquete.
  *
- * EL RIESGO Y POR QUE SE ASUME
- *
- * Es una puerta lateral, y si Google cambiara esas dos clases dejaria de
- * compilar. Llevan igual desde Android 4.4 (2013) y una API publica no se
- * cambia sin mas, asi que el riesgo es bajo. La alternativa era volver a dibujar
- * el reporte entero a mano en codigo de Android, y entonces el PDF automatico se
- * veria distinto del PDF que se hace a mano — dos disenos del mismo documento.
- *
- * SI ALGUN DIA DEJA DE COMPILAR, el aviso llega al compilar y no al usuario: el
- * PDF automatico se queda sin hacer y la app cae a lo de antes (esperar a que
- * alguien abra la app). Nunca un reporte corrupto.
+ * NO ES UN INVENTO NUESTRO: expo-print, que es la libreria que ya usa esta app
+ * para el PDF de a mano, hace exactamente esto, en dos archivos con el mismo
+ * paquete y el mismo comentario. Se comprobo mirando su codigo el 06/08/2026.
  */
 
 /** Recibe el resultado de medir el documento. */
@@ -41,12 +32,41 @@ abstract class FinzoLayoutCallback : PrintDocumentAdapter.LayoutResultCallback()
 abstract class FinzoWriteCallback : PrintDocumentAdapter.WriteResultCallback()
 
 /**
- * Escribe el PDF de un adaptador ya medido.
+ * Las dos ordenes que hay que darle al adaptador, en orden: medir y escribir.
  *
  * Vive aqui, y no en nuestro paquete, solo porque necesita crear las dos clases
  * de arriba. Lo demas de la conversion esta en com.finzo.exportscheduler.
  */
 object FinzoPrintPuente {
+
+  /**
+   * Pide medir el documento Y NO ESPERA LA RESPUESTA. Esto es lo que fallaba.
+   *
+   * ESTO COSTO DOS ENTREGAS, Y ES LA DIFERENCIA ENTERA
+   *
+   * Lo natural es pedir la medida, esperar a que conteste, y escribir despues.
+   * Asi estaba, y con eso la conversion se quedaba colgada para siempre: el
+   * usuario tocaba "Probar ahora" y el boton giraba sin fin. Con un tope de
+   * tiempo puesto, el mensaje fue "la conversion a PDF no contesto en 30
+   * segundos".
+   *
+   * El motivo es que en un WebView que NO esta dentro de ninguna pantalla, esa
+   * respuesta no llega nunca. No falla: no llega.
+   *
+   * La respuesta salio de mirar como lo hace expo-print, que es lo que esta app
+   * usa para el PDF de a mano y funciona en este mismo celular: pide la medida
+   * con una respuesta vacia —que nadie escucha— y pasa DIRECTAMENTE a escribir.
+   * El adaptador ya quedo medido por dentro; lo unico que hay que esperar de
+   * verdad es la escritura, y esa si contesta.
+   *
+   * La leccion, apuntada porque se pago caro: cuando algo de Android ya funciona
+   * en esta app, la primera fuente que hay que leer es ESO, no la documentacion.
+   */
+  fun medirSinEsperar(adaptador: PrintDocumentAdapter, atributos: PrintAttributes) {
+    adaptador.onLayout(null, atributos, null, object : FinzoLayoutCallback() {}, null)
+  }
+
+  /** Escribe el PDF de un adaptador ya medido. De esto SI se espera respuesta. */
   fun escribir(
     adaptador: PrintDocumentAdapter,
     destino: ParcelFileDescriptor,
@@ -55,7 +75,7 @@ object FinzoPrintPuente {
     adaptador.onWrite(
       arrayOf(PageRange.ALL_PAGES),
       destino,
-      CancellationSignal(),
+      null,
       object : FinzoWriteCallback() {
         override fun onWriteFinished(pages: Array<out PageRange>?) {
           alTerminar(true, "")
@@ -69,32 +89,6 @@ object FinzoPrintPuente {
           alTerminar(false, "cancelado")
         }
       }
-    )
-  }
-
-  fun medir(
-    adaptador: PrintDocumentAdapter,
-    atributos: PrintAttributes,
-    alTerminar: (Boolean, String) -> Unit
-  ) {
-    adaptador.onLayout(
-      null,
-      atributos,
-      CancellationSignal(),
-      object : FinzoLayoutCallback() {
-        override fun onLayoutFinished(info: PrintDocumentInfo?, changed: Boolean) {
-          alTerminar(true, "")
-        }
-
-        override fun onLayoutFailed(error: CharSequence?) {
-          alTerminar(false, error?.toString() ?: "no se pudo medir el PDF")
-        }
-
-        override fun onLayoutCancelled() {
-          alTerminar(false, "cancelado")
-        }
-      },
-      null
     )
   }
 }
