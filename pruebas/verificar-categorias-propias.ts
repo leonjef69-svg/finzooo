@@ -10,6 +10,7 @@
 import fs from "fs";
 import path from "path";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
+import { iconoDe } from "@/constants/iconos";
 import { setOverrides } from "@/utils/categoryCustom";
 import { crear, borrar, editar, esPropia, nombreRepetido, setPropias, type CategoriaPropia } from "@/utils/categoriasPropias";
 
@@ -49,6 +50,34 @@ console.log("\n--- SE CREA Y SE COMPORTA COMO UNA DE FABRICA ---");
   ok(gastosDisponibles().some((x) => x.id === creada.id), "sale en la lista de gastos");
   ok(!ingresosDisponibles().some((x) => x.id === creada.id), "y NO en la de ingresos");
   setPropias([]);
+}
+
+console.log("\n--- CADA CATEGORIA SABE EL NOMBRE DE SU DIBUJO ---");
+{
+  // De un dibujo ya hecho no se puede volver atras a su nombre, y hay una
+  // pantalla que lo necesita: al tocar "Salud" en la lista, la vista previa tiene
+  // que quedarse con SU dibujo y el catalogo tiene que marcar cual es.
+  //
+  // Sin este campo, tocar "Salud" cambiaba el nombre y el color pero el dibujo se
+  // quedaba quieto. Lo reporto el usuario el 07/08/2026: "por que cuando le doy
+  // click al icono de salud, en la imagen de arriba no cambia, se queda estatica".
+  const todas = [...gastosDisponibles(), ...ingresosDisponibles()];
+  const sinNombre = todas.filter((c) => !c.iconoNombre);
+  ok(
+    sinNombre.length === 0,
+    `las ${todas.length} categorias traen el nombre de su dibujo${sinNombre.length ? ": falta en " + sinNombre.map((c) => c.id).join(", ") : ""}`
+  );
+  ok(catInfo("salud").iconoNombre === "HeartPulse", "y es el que corresponde (salud)");
+
+  // Y el nombre tiene que ser DE VERDAD el del dibujo que se esta usando. Escritos
+  // por separado se pueden desincronizar, y seria un fallo silencioso: la
+  // categoria se veria bien en todas las pantallas y solo al abrir el catalogo
+  // apareceria marcado el dibujo equivocado.
+  const descuadradas = todas.filter((c) => iconoDe(c.iconoNombre ?? "") !== c.icon);
+  ok(
+    descuadradas.length === 0,
+    `y el nombre coincide con el dibujo${descuadradas.length ? ": no en " + descuadradas.map((c) => c.id).join(", ") : ""}`
+  );
 }
 
 console.log("\n--- SE LE PUEDE CAMBIAR EL DIBUJO A UNA DE FABRICA ---");

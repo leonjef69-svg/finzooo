@@ -336,13 +336,15 @@ export default function NuevaCategoria({
    */
   function elegirDeLaLista(id: string) {
     const info = catInfo(id);
-    const propia = categoriasPropias.find((c) => c.id === id);
-    const cambio = categoryOverrides[id];
-    // El dibujo sale de la personalización si la hay, y si no del de la propia.
-    // Las de fábrica no guardan su dibujo con un nombre —lo traen ya hecho— así
-    // que ahí se arranca con el que estuviera puesto: cambiarlo es decisión de la
-    // persona, y dejarlo igual no escribe nada.
-    const suIcono = cambio?.icono ?? propia?.icono ?? icono;
+    // SU dibujo, venga de donde venga: de la personalización, de la categoría
+    // propia o de la de fábrica. catInfo ya resuelve las tres y devuelve el
+    // NOMBRE junto al dibujo — ver Category.iconoNombre.
+    //
+    // Antes se buscaba a mano en dos sitios y las de fábrica se quedaban sin
+    // respuesta, así que caía en "el que ya estaba puesto": tocar "Salud"
+    // cambiaba el nombre y el color, y el dibujo de arriba no se movía. Fue
+    // exactamente lo que reportó el usuario el 07/08/2026.
+    const suIcono = info.iconoNombre ?? icono;
     setElegida(id);
     setNombre(info.label);
     setIcono(suIcono);

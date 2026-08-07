@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-01**
+Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-02**
 · APK que hay que instalar: **finzo-6ago-10** (el arreglo del PDF colgado es
 código de Android; por internet no viaja)
 
@@ -419,6 +419,24 @@ que no podía cumplir.
 
 **"Editar «X»" se queda**, apuntando ahora a la marcada. Lo único que solo está
 ahí dentro es **borrarla**.
+
+#### Y salió a la primera con el dibujo quieto (7ago-02)
+
+*"cuando le doy click al icono de salud, en la imagen de arriba no cambia, se
+queda estática"*. El nombre y el color sí cambiaban; el dibujo no.
+
+**De un dibujo ya hecho no se puede volver atrás a su nombre.** Las categorías de
+fábrica se definían con `icon: iconoDe("HeartPulse")`, y ahí el `"HeartPulse"` se
+perdía: quedaba el componente. La pantalla lo buscaba en los dos sitios donde sí
+había nombre —la personalización y las propias— y para una de fábrica no
+encontraba nada, así que se quedaba con el dibujo que ya estuviera puesto.
+
+Arreglo: `Category` lleva ahora `iconoNombre`, y las 25 categorías se definen con
+un `...dibujo("HeartPulse")` que **devuelve el dibujo y su nombre del mismo
+argumento**. Escritos por separado se podrían desincronizar, y sería un fallo
+silencioso: la categoría se vería bien en todas las pantallas y solo al abrir el
+catálogo aparecería marcado el dibujo equivocado. Hay una prueba que compara los
+dos, categoría por categoría.
 
 ### Antes de entenderlo, dos rondas perdidas — y la lección
 

@@ -19,6 +19,18 @@ export type Category = {
   id: string;
   label: string;
   icon: IconComponent;
+  /**
+   * EL NOMBRE del dibujo en el catálogo ("HeartPulse"), no el dibujo.
+   *
+   * Hace falta porque de un dibujo ya hecho no se puede volver atrás a su
+   * nombre, y hay una pantalla que lo necesita: al tocar "Salud" en la lista de
+   * categorías, la vista previa tiene que quedarse con SU dibujo y el catálogo
+   * tiene que marcar cuál es. Sin este campo, tocar "Salud" cambiaba el nombre y
+   * el color pero el dibujo se quedaba quieto — reportado el 07/08/2026.
+   *
+   * Va siempre junto al dibujo, y de la misma fuente: ver dibujo() abajo.
+   */
+  iconoNombre?: string;
   color: string;
   emoji: string;
   extra?: boolean;
@@ -29,38 +41,50 @@ export type Category = {
   image?: string;
 };
 
+/**
+ * El dibujo Y su nombre, de un solo dato.
+ *
+ * Escritos por separado se pueden desincronizar —el dibujo de uno y el nombre de
+ * otro— y sería un fallo silencioso: la categoría se vería bien en todas las
+ * pantallas y solo al abrir el catálogo aparecería marcado el dibujo equivocado.
+ * Con un único argumento eso no puede pasar.
+ */
+function dibujo(nombre: string): { icon: IconComponent; iconoNombre: string } {
+  return { icon: iconoDe(nombre), iconoNombre: nombre };
+}
+
 // "label" es una CLAVE de traducción (no el texto en sí) — se traduce con
 // t() al momento de mostrarla, para que cambie de idioma sin tener que
 // tocar el "id" (que es lo que de verdad se guarda en cada movimiento).
 export const EXPENSE_CATS: Category[] = [
-  { id: "comida", label: "category.comida", icon: iconoDe("Utensils"), color: "green", emoji: "🍔" },
-  { id: "transporte", label: "category.transporte", icon: iconoDe("Car"), color: "yellow", emoji: "🚗" },
-  { id: "compras", label: "category.compras", icon: iconoDe("ShoppingBag"), color: "violet", emoji: "🛍️" },
-  { id: "entretenimiento", label: "category.entretenimiento", icon: iconoDe("Film"), color: "pink", emoji: "🎬" },
-  { id: "videojuegos", label: "category.videojuegos", icon: iconoDe("Gamepad2"), color: "indigo", emoji: "🎮" },
-  { id: "salud", label: "category.salud", icon: iconoDe("HeartPulse"), color: "red", emoji: "💊" },
-  { id: "servicios", label: "category.servicios", icon: iconoDe("Zap"), color: "blue", emoji: "⚡" },
-  { id: "combustible", label: "category.combustible", icon: iconoDe("Fuel"), color: "orange", emoji: "⛽", extra: true },
-  { id: "suscripciones", label: "category.suscripciones", icon: iconoDe("Repeat"), color: "fuchsia", emoji: "🔁", extra: true },
-  { id: "educacion", label: "category.educacion", icon: iconoDe("GraduationCap"), color: "cyan", emoji: "🎓", extra: true },
-  { id: "mascotas", label: "category.mascotas", icon: iconoDe("PawPrint"), color: "lime", emoji: "🐾", extra: true },
-  { id: "hogar", label: "category.hogar", icon: iconoDe("House"), color: "stone", emoji: "🏠", extra: true },
-  { id: "otros", label: "category.otros", icon: iconoDe("Ellipsis"), color: "teal", emoji: "🧾", extra: true },
+  { id: "comida", label: "category.comida", ...dibujo("Utensils"), color: "green", emoji: "🍔" },
+  { id: "transporte", label: "category.transporte", ...dibujo("Car"), color: "yellow", emoji: "🚗" },
+  { id: "compras", label: "category.compras", ...dibujo("ShoppingBag"), color: "violet", emoji: "🛍️" },
+  { id: "entretenimiento", label: "category.entretenimiento", ...dibujo("Film"), color: "pink", emoji: "🎬" },
+  { id: "videojuegos", label: "category.videojuegos", ...dibujo("Gamepad2"), color: "indigo", emoji: "🎮" },
+  { id: "salud", label: "category.salud", ...dibujo("HeartPulse"), color: "red", emoji: "💊" },
+  { id: "servicios", label: "category.servicios", ...dibujo("Zap"), color: "blue", emoji: "⚡" },
+  { id: "combustible", label: "category.combustible", ...dibujo("Fuel"), color: "orange", emoji: "⛽", extra: true },
+  { id: "suscripciones", label: "category.suscripciones", ...dibujo("Repeat"), color: "fuchsia", emoji: "🔁", extra: true },
+  { id: "educacion", label: "category.educacion", ...dibujo("GraduationCap"), color: "cyan", emoji: "🎓", extra: true },
+  { id: "mascotas", label: "category.mascotas", ...dibujo("PawPrint"), color: "lime", emoji: "🐾", extra: true },
+  { id: "hogar", label: "category.hogar", ...dibujo("House"), color: "stone", emoji: "🏠", extra: true },
+  { id: "otros", label: "category.otros", ...dibujo("Ellipsis"), color: "teal", emoji: "🧾", extra: true },
 ];
 
 export const INCOME_CATS: Category[] = [
-  { id: "salario", label: "category.salario", icon: iconoDe("Briefcase"), color: "lime", emoji: "💼" },
-  { id: "freelance", label: "category.freelance", icon: iconoDe("Laptop"), color: "teal", emoji: "💻" },
-  { id: "regalo", label: "category.regalo", icon: iconoDe("Gift"), color: "fuchsia", emoji: "🎁" },
-  { id: "inversiones", label: "category.inversiones", icon: iconoDe("TrendingUp"), color: "green", emoji: "📈" },
-  { id: "venta", label: "category.venta", icon: iconoDe("Tag"), color: "red", emoji: "🏷️" },
-  { id: "otro_ingreso", label: "category.otro_ingreso", icon: iconoDe("PlusCircle"), color: "stone", emoji: "➕" },
-  { id: "premios", label: "category.premios", icon: iconoDe("Crown"), color: "pink", emoji: "🏆", extra: true },
-  { id: "prestamo", label: "category.prestamo", icon: iconoDe("HandCoins"), color: "cyan", emoji: "🤝", extra: true },
-  { id: "dividendos", label: "category.dividendos", icon: iconoDe("ChartColumn"), color: "violet", emoji: "📊", extra: true },
-  { id: "alquiler", label: "category.alquiler", icon: iconoDe("Key"), color: "orange", emoji: "🏘️", extra: true },
-  { id: "cripto", label: "category.cripto", icon: iconoDe("Coins"), color: "yellow", emoji: "🪙", extra: true },
-  { id: "beca", label: "category.beca", icon: iconoDe("GraduationCap"), color: "blue", emoji: "🎓", extra: true },
+  { id: "salario", label: "category.salario", ...dibujo("Briefcase"), color: "lime", emoji: "💼" },
+  { id: "freelance", label: "category.freelance", ...dibujo("Laptop"), color: "teal", emoji: "💻" },
+  { id: "regalo", label: "category.regalo", ...dibujo("Gift"), color: "fuchsia", emoji: "🎁" },
+  { id: "inversiones", label: "category.inversiones", ...dibujo("TrendingUp"), color: "green", emoji: "📈" },
+  { id: "venta", label: "category.venta", ...dibujo("Tag"), color: "red", emoji: "🏷️" },
+  { id: "otro_ingreso", label: "category.otro_ingreso", ...dibujo("PlusCircle"), color: "stone", emoji: "➕" },
+  { id: "premios", label: "category.premios", ...dibujo("Crown"), color: "pink", emoji: "🏆", extra: true },
+  { id: "prestamo", label: "category.prestamo", ...dibujo("HandCoins"), color: "cyan", emoji: "🤝", extra: true },
+  { id: "dividendos", label: "category.dividendos", ...dibujo("ChartColumn"), color: "violet", emoji: "📊", extra: true },
+  { id: "alquiler", label: "category.alquiler", ...dibujo("Key"), color: "orange", emoji: "🏘️", extra: true },
+  { id: "cripto", label: "category.cripto", ...dibujo("Coins"), color: "yellow", emoji: "🪙", extra: true },
+  { id: "beca", label: "category.beca", ...dibujo("GraduationCap"), color: "blue", emoji: "🎓", extra: true },
 ];
 
 export const ALL_CATS = [...EXPENSE_CATS, ...INCOME_CATS];
@@ -118,7 +142,7 @@ function comoCategoria(p: CategoriaPropia): Category {
     // devuelve la clave cuando no la encuentra, así que un nombre escrito a
     // mano sale escrito a mano. Igual que en la personalización.
     label: p.nombre,
-    icon: iconoDe(p.icono),
+    ...dibujo(p.icono),
     color: p.color,
     // Las propias ya no tienen emoji: se eligió el dibujo de un catálogo.
     // El campo sigue en el tipo porque las de fábrica lo usan en un texto del
@@ -158,7 +182,9 @@ export function catInfo(id: string): Category {
       label: cambio.name ?? suyo.label,
       color: cambio.color ?? suyo.color,
       image: cambio.image ?? suyo.image,
-      icon: cambio.icono ? iconoDe(cambio.icono) : suyo.icon,
+      // El dibujo y su nombre van SIEMPRE juntos: si se cambiara uno solo, el
+      // catálogo marcaría un dibujo distinto del que se está viendo.
+      ...(cambio.icono ? dibujo(cambio.icono) : {}),
     };
   }
 
@@ -174,6 +200,6 @@ export function catInfo(id: string): Category {
     // El dibujo también se puede cambiar, incluso en las de fábrica: se elige en
     // la pantalla de elegir categoría y se aplica en los 38 sitios donde se
     // dibuja una categoría, igual que el color y el nombre.
-    icon: custom.icono ? iconoDe(custom.icono) : base.icon,
+    ...(custom.icono ? dibujo(custom.icono) : {}),
   };
 }
