@@ -184,7 +184,12 @@ console.log("\n--- Y ELEGIR UNA QUE YA EXISTE SIGUE ESTANDO, EN SU PESTAÑA ---"
     "y es esa misma condicion la que decide si la pestaña esta"
   );
 
-  ok(pantLimpia.includes("nuevaCat.editarEsta"), "esta el enlace para editar la propia puesta");
+  // BORRARLA, desde la lista. Estaba dentro de "Editar «X»" y el usuario la
+  // reporto como imposible: "no me deja eliminar los iconos, en tus categorias se
+  // quedan" (07/08/2026). Era la segunda cosa escondida detras de ese enlace, asi
+  // que el enlace se fue y sus dos funciones estan aqui, a la vista.
+  ok(pantLimpia.includes("nuevaCat.borrarLa"), "esta el boton de borrar la marcada");
+  ok(!pantLimpia.includes("nuevaCat.editarEsta"), "y ya no hace falta pasar por Editar");
 
   // QUITARLE LA FOTO, desde aqui.
   //
@@ -248,7 +253,6 @@ console.log("\n--- LA ELEGIDA VUELVE AL MOVIMIENTO ---");
   // en el movimiento. Y se descarto encadenar dos router.back() seguidos — dos
   // ordenes de navegacion en el mismo instante es lo que funciona en la
   // computadora y falla a medias en el celular.
-  ok(/onEditar=\{[\s\S]{0,200}?router\.replace/.test(ruta), "editar reemplaza, no se apila encima");
   // Hay dos router.back() y los dos estan bien: uno cierra al crear y otro al
   // elegir. Lo que no puede haber es dos SEGUIDOS, que es la forma de cerrar dos
   // pantallas de una y lo que fallaria a medias en el celular.

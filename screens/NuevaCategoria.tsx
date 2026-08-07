@@ -15,7 +15,6 @@ import {
   Check,
   ChevronLeft,
   ImageIcon,
-  Pencil,
   Star,
   Trash2,
   X,
@@ -198,7 +197,6 @@ export default function NuevaCategoria({
   onBack,
   onCreada,
   onElegir,
-  onEditar,
 }: {
   tipo: "expense" | "income";
   /** Si viene, se está EDITANDO esa categoría en vez de creando una. */
@@ -219,8 +217,6 @@ export default function NuevaCategoria({
    * ningún sentido.
    */
   onElegir?: (id: string) => void;
-  /** Abrir esta misma pantalla para editar la categoría propia que está puesta. */
-  onEditar?: (id: string) => void;
 }) {
   const {
     t,
@@ -354,6 +350,28 @@ export default function NuevaCategoria({
     if (esFoto(v)) setFoto(v);
     else setIcono(v);
   }, []);
+
+  /** Cuál se está a punto de borrar de la lista, esperando confirmación. */
+  const [borrando, setBorrando] = useState<string | null>(null);
+
+  /**
+   * Borra una categoría propia SIN salir de la pantalla.
+   *
+   * Se queda en la lista a propósito: quien borra una de sus pruebas normalmente
+   * borra tres, y volver al movimiento tras cada una obligaría a entrar otra vez.
+   */
+  function borrarDeLaLista(id: string) {
+    borrarCategoria(id);
+    showToast(t("nuevaCat.borrada"));
+    setBorrando(null);
+    // Si era la que estaba marcada, el formulario se queda hablando de algo que
+    // ya no existe: Aplicar intentaría guardar cambios sobre una categoría
+    // borrada. Se suelta y la pantalla vuelve a estar en modo "crear una nueva".
+    if (elegida === id) {
+      setElegida(null);
+      setComoEra(null);
+    }
+  }
 
   /**
    * Tocar una de "Tus categorías": se carga arriba para poder retocarla.
@@ -723,16 +741,59 @@ export default function NuevaCategoria({
                     </TouchableOpacity>
                   ) : null}
 
+                  {/* BORRARLA, AQUÍ MISMO.
+                      Se podía —dentro de "Editar «X»", al final— y el usuario no
+                      lo encontró: *"no me deja eliminar los iconos, en tus
+                      categorías se quedan"* (07/08/2026). Es la segunda cosa que
+                      resulta estar escondida detrás de ese enlace, así que ahora
+                      está donde se está mirando.
+                      Y NO se sale de la pantalla al borrar: se queda en la lista.
+                      Quien borra una de sus pruebas normalmente borra tres, y
+                      volver al movimiento tras cada una obligaría a entrar otra
+                      vez.
+                      Solo las propias: "Comida" y "Otros" son de la app, y
+                      borrarlas dejaría movimientos apuntando a nada. */}
                   {esPropia(suya) ? (
-                    <TouchableOpacity
-                      onPress={() => onEditar?.(suya)}
-                      className="flex-row items-center justify-center gap-1.5 mt-4"
-                    >
-                      <Pencil size={13} color="#64748b" />
-                      <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
-                        {t("nuevaCat.editarEsta", { nombre: info.label })}
-                      </Text>
-                    </TouchableOpacity>
+                    borrando === suya ? (
+                      <View className="mt-5 rounded-2xl border-[1.5px] border-rose-300 bg-rose-50 dark:bg-rose-900/20 p-3.5">
+                        {/* CON EL NÚMERO DELANTE. "Se va a borrar" no informa
+                            igual que "tus 3 movimientos pasan a Otros", y es
+                            justo el dato que hace dudar o seguir. */}
+                        <Text className="text-[11px] leading-5 text-rose-700 dark:text-rose-300">
+                          {movimientosDeCategoria(suya) > 0
+                            ? t("nuevaCat.borrarConMovs", { count: movimientosDeCategoria(suya) })
+                            : t("nuevaCat.borrarSinMovs")}
+                        </Text>
+                        <View className="flex-row gap-2.5 mt-3">
+                          <TouchableOpacity
+                            onPress={() => setBorrando(null)}
+                            className="flex-1 py-2.5 rounded-xl items-center border-[1.5px] border-slate-300 dark:border-slate-600"
+                          >
+                            <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
+                              {t("nuevaCat.cancelar")}
+                            </Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity
+                            onPress={() => borrarDeLaLista(suya)}
+                            className="flex-1 py-2.5 rounded-xl items-center bg-rose-600"
+                          >
+                            <Text className="text-xs font-extrabold text-white">
+                              {t("nuevaCat.borrarSi")}
+                            </Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+                    ) : (
+                      <TouchableOpacity
+                        onPress={() => setBorrando(suya)}
+                        className="flex-row items-center justify-center gap-1.5 mt-4"
+                      >
+                        <Trash2 size={13} color="#e11d48" />
+                        <Text className="text-xs font-bold text-rose-600">
+                          {t("nuevaCat.borrarLa", { nombre: info.label })}
+                        </Text>
+                      </TouchableOpacity>
+                    )
                   ) : null}
                 </>
               );

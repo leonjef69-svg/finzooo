@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-03**
+Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-04**
 · APK que hay que instalar: **finzo-6ago-10** (el arreglo del PDF colgado es
 código de Android; por internet no viaja)
 
@@ -207,9 +207,9 @@ Esto es lo pendiente de verdad, en orden de bloqueo:
 
 ## Categorías propias — hecho el 03-04/08/2026
 
-Se pueden **crear, editar y borrar** categorías con nombre, dibujo y color.
-El botón "Nueva" está DENTRO de la cuadrícula de categorías, y el "Editar «X»"
-aparece debajo solo cuando hay una propia elegida. Esa cuadrícula ya no vive en
+Se pueden **crear, editar y borrar** categorías con nombre, dibujo y color, todo
+desde la pestaña "Tus categorías" de la pantalla de elegir categoría: se toca una,
+se le cambia lo que sea, y se confirma con Aplicar. Esa cuadrícula ya no vive en
 "Nuevo movimiento": se mudó a su propia pantalla el 06/08/2026 — ver más abajo.
 
 **El catálogo** (`constants/iconos.tsx`): 181 iconos de línea en 12 grupos
@@ -446,8 +446,35 @@ nube hay que volver a mirar ese número: ahí el documento entero tiene un tope 
 **Quitarle la foto a una categoría ya se podía** —la casilla de la foto con su ✕
 está en la pestaña del catálogo—, pero ahí no la encuentra nadie que venga de la
 lista: hay que saber que la foto se quita desde donde se eligen los dibujos. Ahora
-hay un "Quitar la foto de «X»" en "Tus categorías", junto a "Editar «X»", y solo
-cuando esa categoría tiene foto. Se guarda con Aplicar, como todo lo demás.
+hay un "Quitar la foto de «X»" en "Tus categorías", y solo cuando esa categoría
+tiene foto. Se guarda con Aplicar, como todo lo demás.
+
+#### Y borrar una categoría, también (7ago-04)
+
+*"No me deja eliminar los iconos, en tus categorías se quedan"*. **Sí se podía** —
+"Editar «X»" → abajo → "Borrar esta categoría"— y no lo encontró. **Segunda cosa
+escondida detrás del mismo enlace**, después de quitar la foto.
+
+Así que "Editar «X»" **se quitó**, y sus dos funciones están en la lista:
+
+- "🗑 Borrar «X»", solo con una propia marcada, con la confirmación en el sitio y
+  **el número de movimientos** que pasan a "Otros".
+- **No se sale de la pantalla al borrar.** Quien borra una de sus pruebas
+  normalmente borra tres, y volver al movimiento tras cada una obligaría a entrar
+  otra vez. Antes el borrado estaba en la otra pantalla y sí salía.
+- Si la borrada era la marcada, se suelta: el formulario se quedaría hablando de
+  algo que ya no existe y Aplicar intentaría guardar cambios sobre una categoría
+  borrada.
+
+Con eso, la lista hace **todo**: elegir, cambiar nombre / dibujo / color, quitar la
+foto y borrar. El modo `id` de la ruta —editar una sola, sin lista— se conserva
+aunque ya no se use desde ningún sitio: es la puerta que haría falta para llegar
+aquí desde el historial o un reporte.
+
+> **Dos veces seguidas, lo que el usuario dio por imposible existía y estaba a un
+> toque de distancia dentro de un enlace llamado "Editar".** "Se puede" y "se
+> encuentra" no son lo mismo, y en esta app la diferencia la ha marcado siempre
+> el mismo error: esconder una acción detrás de una palabra que no la nombra.
 
 #### Y salió a la primera con el dibujo quieto (7ago-02)
 

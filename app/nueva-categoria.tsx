@@ -12,11 +12,18 @@ import { safeBack } from "@/utils/nav";
  *
  * Los tres modos, y los deciden los parámetros:
  *
- *   con "actual"  → se puede ELEGIR una de las que ya existen, y además crear.
- *                   Es como se entra desde el botón del movimiento.
- *   con "id"      → se EDITA esa categoría. Sin lista: quien viene a cambiarle el
- *                   nombre a "Broster" no viene a elegir otra.
+ *   con "actual"  → se puede ELEGIR una de las que ya existen, y además crear,
+ *                   retocar y borrar. Es como se entra desde el botón del
+ *                   movimiento, y es el modo normal.
+ *   con "id"      → se EDITA esa categoría, sola y sin lista.
  *   sin nada      → solo crear.
+ *
+ * EL MODO "id" YA NO SE USA DESDE NINGÚN SITIO (07/08/2026), y se conserva a
+ * propósito: es el que hace que esta pantalla sepa editar UNA categoría sin más
+ * contexto, y es la puerta que haría falta el día que se quiera llegar aquí desde
+ * el historial o desde un reporte. Todo lo que antes obligaba a entrar por ahí
+ * —cambiarle el nombre, el dibujo, el color, quitarle la foto, borrarla— se hace
+ * ahora en la lista, que es donde la persona está mirando.
  *
  * La elegida vuelve por el contexto y no por una propiedad: son dos pantallas
  * distintas. Ver elegirCategoriaEnMovimiento.
@@ -47,12 +54,6 @@ export default function NuevaCategoriaRoute() {
               router.back();
             }
           : undefined
-      }
-      // Editar REEMPLAZA esta pantalla en vez de apilarse encima: al guardar, el
-      // "atrás" deja directamente en el movimiento, que es donde hay que acabar.
-      // Apilando haría falta un toque más para cerrar una lista que ya no sirve.
-      onEditar={(suId) =>
-        router.replace({ pathname: "/nueva-categoria", params: { tipo: suTipo, id: suId } })
       }
     />
   );

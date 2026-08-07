@@ -538,17 +538,31 @@ console.log("\n--- Y LA APP DE VERDAD LO USA ---");
 
 console.log("\n--- EDITAR Y BORRAR SE PUEDEN ALCANZAR ---");
 {
-  // Sin una puerta visible, quien cree una categoria con el icono equivocado
-  // se queda con ella para siempre. Se descarto el toque largo: es invisible,
-  // y quien no lo sepa no lo encuentra nunca.
-  // Vive junto a la lista de categorias desde el 06/08/2026, que se mudo a la
-  // pantalla del catalogo. Lo que se protege es lo mismo de siempre: que la
-  // puerta EXISTA.
+  // Sin una puerta visible, quien cree una categoria con el icono equivocado se
+  // queda con ella para siempre. Se descarto el toque largo: es invisible, y quien
+  // no lo sepa no lo encuentra nunca.
+  //
+  // Y ESTUVO ESCONDIDA IGUAL, dos veces. Hasta el 07/08/2026 lo unico visible era
+  // "Editar «X»", y dentro de ese enlace estaban quitarle la foto y borrarla: el
+  // usuario reporto las dos como imposibles ("no me deja eliminar los iconos, en
+  // tus categorias se quedan"). Ahora las tres cosas estan EN LA LISTA, donde se
+  // esta mirando, y por eso se comprueban aqui una por una.
   const pant0 = fs.readFileSync(path.join(RAIZ, "screens/NuevaCategoria.tsx"), "utf8");
-  ok(pant0.includes("esPropia(suya)"), "el enlace de editar solo sale con una propia elegida");
-  ok(pant0.includes("nuevaCat.editarEsta"), "y dice cual se va a editar");
-  const ruta = fs.readFileSync(path.join(RAIZ, "app/nueva-categoria.tsx"), "utf8");
-  ok(/params: \{ tipo: suTipo, id: suId \}/.test(ruta), "pasandole su id");
+  ok(pant0.includes("esPropia(suya)"), "las acciones solo salen con una propia marcada");
+  ok(pant0.includes("nuevaCat.borrarLa"), "se puede borrar desde la lista");
+  ok(pant0.includes("nuevaCat.quitarFotoDe"), "y quitarle la foto");
+  // Con su numero delante: "se va a borrar" no informa igual que "tus 3
+  // movimientos pasan a Otros", y es el dato que hace dudar o seguir.
+  ok(/movimientosDeCategoria\(suya\)/.test(pant0), "diciendo cuantos movimientos pasan a Otros");
+  // Y sin salir de la pantalla: quien borra una de sus pruebas borra tres, y
+  // volver al movimiento tras cada una obligaria a entrar otra vez.
+  const cuerpo = /function borrarDeLaLista\(id: string\) \{([\s\S]*?)\n  \}/.exec(pant0)?.[1] ?? "";
+  ok(cuerpo.includes("borrarCategoria(id)"), "borrar desde la lista borra de verdad");
+  ok(!cuerpo.includes("onBack("), "y no cierra la pantalla al hacerlo");
+  // Si era la marcada, hay que soltarla: el formulario se quedaria hablando de algo
+  // que ya no existe y Aplicar intentaria guardar cambios sobre una categoria
+  // borrada.
+  ok(cuerpo.includes("setElegida(null)"), "y suelta la marcada si era esa");
 
   const pant = fs.readFileSync(path.join(RAIZ, "screens/NuevaCategoria.tsx"), "utf8");
   ok(pant.includes("editandoId"), "la pantalla sabe editar, no solo crear");
