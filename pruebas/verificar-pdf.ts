@@ -1,5 +1,6 @@
 // Comprueba el documento que se exporta: los graficos nuevos y la rosquilla.
 import {
+  ANCHO_MAX_BARRA,
   buildPdfHtml,
   dailyLayout,
   donutSlice,
@@ -197,8 +198,35 @@ console.log("\n--- EL MONTO SOBRE CADA BARRA DEL GASTO DIARIO ---");
 }
 {
   const L = dailyLayout(2, ["S/ 5.00", "S/ 9.00"]);
-  ok(L.barW <= 30, `con dos días la barra no se hace gigante (${L.barW})`);
+  ok(L.barW <= ANCHO_MAX_BARRA, `con dos días la barra no se hace gigante (${L.barW})`);
   ok(L.barW >= 4, "y nunca desaparece");
+}
+
+console.log("\n--- LAS COLUMNAS POR MES TAMPOCO SE HACEN GIGANTES ---");
+{
+  // EL FALLO, reportado con captura el 07/08/2026: *"las barras tienen un tamaño
+  // desproporcional, deberían tener un tamaño normal"*. Con dos meses, cada
+  // columna se quedaba con MEDIA HOJA de ancho — dos bloques en vez de dos
+  // columnas.
+  //
+  // Y lo que hay que proteger no es el número: es que los DOS gráficos de columnas
+  // usen el MISMO tope. El de día a día ya lo tenía, con su comentario y todo, y
+  // el mensual no. La misma lección aprendida en un gráfico y sin aplicar en el de
+  // al lado es el fallo que este proyecto repite.
+  const dosMeses = html([tx({})], true, [], [
+    { label: "Jul", value: 10 },
+    { label: "Ago", value: 50 },
+  ]);
+
+  // Cada columna tiene que llevar su tope de ancho, y centrada: sin el centrado,
+  // el tope la deja pegada a la izquierda de su casilla y se ve torcida.
+  const conTope = (dosMeses.match(new RegExp(`max-width:${ANCHO_MAX_BARRA}px;margin:0 auto`, "g")) ?? []).length;
+  ok(conTope === 2, `las dos columnas del mes llevan tope y van centradas (${conTope})`);
+
+  // Y ninguna barra del gráfico por mes puede quedarse sin tope. Se busca el
+  // patrón contrario: un alto puesto sin ancho máximo delante.
+  const sinTope = /<div style="background:#059669;height:\d+px/.test(dosMeses);
+  ok(!sinTope, "y no queda ninguna sin él");
 }
 
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);

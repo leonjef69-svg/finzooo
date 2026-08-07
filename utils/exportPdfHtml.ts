@@ -77,6 +77,25 @@ const VERDE = "#059669";
 const ROJO = "#e11d48";
 
 /**
+ * Lo más ancha que puede salir una columna, en los dos gráficos de columnas.
+ *
+ * POR QUÉ HACE FALTA UN TOPE
+ *
+ * Las columnas se reparten el ancho de la hoja: con veinte días salen finitas, y
+ * con dos meses cada una se queda con media hoja. El gráfico de "Gasto por mes"
+ * salía así y el usuario lo reportó el 07/08/2026: *"las barras tienen un tamaño
+ * desproporcional, deberían tener un tamaño normal"*. Dos bloques enormes en vez
+ * de dos columnas.
+ *
+ * ES UNA SOLA CONSTANTE PARA LOS DOS GRÁFICOS, y eso es el arreglo de verdad: el
+ * de día a día YA tenía este tope —con su comentario y todo, "para que con dos o
+ * tres días no salgan tres columnas gordísimas"— y el mensual no. La misma
+ * lección aprendida en un gráfico y sin aplicar en el de al lado, que es el fallo
+ * que este proyecto repite. Compartiendo el número no puede volver a pasar.
+ */
+export const ANCHO_MAX_BARRA = 30;
+
+/**
  * Escapa el texto que escribió la persona antes de meterlo en el HTML.
  *
  * Hacía falta y no estaba: las descripciones se pegaban tal cual. Una
@@ -240,9 +259,12 @@ function barrasPorMes(meses: PdfMonth[], fmt: (n: number) => string): string {
   const columnas = meses
     .map((m) => {
       const alto = Math.max(3, Math.round((m.value / max) * 70));
+      // La columna va CENTRADA y con tope de ancho. Sin el tope se estiraba hasta
+      // llenar su casilla, y con dos meses eso es media hoja por barra: dos
+      // bloques enormes en vez de dos columnas. Ver ANCHO_MAX_BARRA.
       return `<td style="vertical-align:bottom;padding:0 10px;text-align:center;">
           <div style="font-size:9px;color:#334155;margin-bottom:3px;">${esc(fmt(m.value))}</div>
-          <div style="background:${VERDE};height:${alto}px;border-radius:3px 3px 0 0;"></div>
+          <div style="max-width:${ANCHO_MAX_BARRA}px;margin:0 auto;background:${VERDE};height:${alto}px;border-radius:3px 3px 0 0;"></div>
         </td>`;
     })
     .join("");
@@ -317,9 +339,10 @@ export function dailyLayout(
   const girar = masAncha > colW - 2;
   return {
     colW,
-    // La barra deja un respiro a cada lado, y no pasa de 30 para que con dos
-    // o tres días no salgan tres columnas gordísimas.
-    barW: Math.max(4, Math.min(30, colW - 8)),
+    // La barra deja un respiro a cada lado, y no pasa del tope para que con dos
+    // o tres días no salgan tres columnas gordísimas. Ver ANCHO_MAX_BARRA: el
+    // mismo número lo usa el gráfico por mes.
+    barW: Math.max(4, Math.min(ANCHO_MAX_BARRA, colW - 8)),
     girar,
     // De pie, el monto ocupa a lo alto lo que ocupaba a lo ancho.
     espacioArriba: girar ? masAncha + 4 : fontSize + 4,

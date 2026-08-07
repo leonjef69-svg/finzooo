@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-05**
+Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-06**
 · APK que hay que instalar: **finzo-6ago-10** (el arreglo del PDF colgado es
 código de Android; por internet no viaja)
 
@@ -330,6 +330,26 @@ los iconos y está lento, se siente feo al abrirlo"):
     para ahorrar memoria, y en Android es causa conocida de celdas en blanco
     porque al volver hay que rehacerlas. Con 236 casillas la memoria no era el
     problema; los huecos sí.
+
+## Las columnas por mes del PDF salían gigantes (07/08/2026)
+
+*"Las barras tienen un tamaño desproporcional, deberían tener un tamaño normal"*,
+con la captura del PDF: dos bloques enormes en vez de dos columnas.
+
+Las columnas se reparten el ancho de la hoja, así que con **dos** meses cada una se
+quedaba con media hoja.
+
+**Y el arreglo ya estaba escrito en el archivo, en el gráfico de al lado.** El de
+"Día a día" tenía su tope con el comentario puesto: *"no pasa de 30 para que con dos
+o tres días no salgan tres columnas gordísimas"*. El mensual no lo tenía.
+
+> **Es el fallo que este proyecto repite: una lección aprendida en un sitio y sin
+> aplicar en el de al lado.** Igual que los dos `TODOS_LOS_GRUPOS`, los dos
+> armadores de reporte, el papel del PDF automático contra el de a mano.
+
+Ahora el número es **uno solo** (`ANCHO_MAX_BARRA`) y lo usan los dos gráficos, con
+una prueba que lo comprueba en el HTML de verdad. Compartiéndolo no puede volver a
+pasar en uno y no en el otro.
 
 ## La tarjeta de límites se contradecía (07/08/2026)
 
