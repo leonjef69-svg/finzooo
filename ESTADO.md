@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-10**
+Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-11**
 · APK instalado y al día: **finzo-6ago-10** (no hace falta uno nuevo: desde
 entonces no ha cambiado nada de Android)
 
@@ -333,6 +333,62 @@ los iconos y está lento, se siente feo al abrirlo"):
     para ahorrar memoria, y en Android es causa conocida de celdas en blanco
     porque al volver hay que rehacerlas. Con 236 casillas la memoria no era el
     problema; los huecos sí.
+
+## La pantalla de Premium, rediseñada (07/08/2026)
+
+Pedido con **tres maquetas**: *"cuando le doy click y entre a Finzo Premium quiero ver
+este diseño de las 3 imágenes"*. Antes era una sola columna —lo gratis y debajo lo
+Premium— y con eso no se puede comparar: para saber qué se gana hay que recordar la
+lista de arriba mientras se lee la de abajo. Tampoco había precio ni forma de probarlo.
+
+Ahora: selector **mensual / anual** arriba, las dos columnas **lado a lado**, el botón
+grande, y la prueba gratuita de 24 horas con su aviso en la propia pantalla.
+
+### Lo que NO se copió de las maquetas, y por qué
+
+Traían "Categorías con emojis" y "Recordatorio de exportación". **Los emojis se
+quitaron de la app entera el 03/08** y el recordatorio pasó a llamarse "Exportación
+automática" el 05/08. Copiarlas habría puesto la pantalla a prometer cosas que no
+existen — justo el tipo de texto que se lleva días limpiando. La lista es la de verdad.
+
+Y **"Sin anuncios" se fue**: no hay anuncios que quitar, así que era una promesa vacía.
+Estaba en la lista de cosas que bloquean Play Store.
+
+### EL PAGO NO EXISTE, Y LA PANTALLA LO DICE
+
+No hay cobro integrado. El botón "ADQUIRIR VERSIÓN PREMIUM" activa Premium como antes,
+y debajo va una línea pequeña: *"El pago todavía no está disponible en esta versión"*.
+Un botón que no cobra y no lo advierte es lo que hace que alguien se sienta engañado.
+
+Sigue siendo uno de los puntos a resolver antes de publicar: **vender algo que no se
+cobra es motivo de rechazo**.
+
+Los precios viven en `constants/precios.ts` porque los mismos números salen en cuatro
+sitios de la pantalla; escritos a mano, cambiar el precio una vez dejaría dos diciendo
+otra cosa. El "por mes" del plan anual se **calcula**.
+
+### La prueba de 24 horas NO se mezcla con el Premium de la cuenta
+
+Son dos cosas y se guardan aparte. Si estuvieran juntas pasaría lo peor en las dos
+direcciones:
+
+- alguien que **ya tiene** Premium toca "probar" por curiosidad y al día siguiente lo
+  ha perdido, porque al caducar la prueba se apagó todo;
+- o la prueba se guarda como Premium comprado y queda **para siempre**, también en la
+  nube y en cualquier otro celular.
+
+Las pantallas ven **una sola respuesta** (`isPremium` = el de la cuenta **o** la prueba
+corriendo), calculada en un único sitio: si cada pantalla tuviera que acordarse de
+mirar también la prueba, alguna no lo haría.
+
+La prueba **no viaja a la nube** (sincronizarla haría que la gastada en un teléfono
+bloqueara la de otro) y **se suelta al cerrar sesión**, porque es de la cuenta que se
+va, no del aparato.
+
+Y se comprueban los bordes con números, que es donde esto falla: el instante exacto en
+que caduca, y **un reloj movido hacia atrás** — basta cambiar la fecha del teléfono
+después de activarla para que la resta dé negativo y la prueba se quede abierta para
+siempre.
 
 ## Los favoritos van a la nube — y aparecieron TRES fallos al hacerlo (07/08/2026)
 

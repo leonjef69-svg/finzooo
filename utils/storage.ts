@@ -55,6 +55,11 @@ export const STORAGE_KEYS = {
   categoriasPropias: "finzo:categoriasPropias",
   categoryCustom: "finzo:categoryCustom",
   iconosFavoritos: "finzo:iconosFavoritos",
+  /**
+   * Cuándo se activó la prueba gratuita de Premium. Solo de este celular: no viaja
+   * a la nube. Ver utils/pruebaPremium.
+   */
+  pruebaPremium: "finzo:pruebaPremium",
 } as const;
 
 // Borra todos los datos de la cuenta de golpe (operación atómica y
@@ -83,6 +88,9 @@ export async function clearAccountData(): Promise<void> {
         STORAGE_KEYS.categoriasPropias,
         STORAGE_KEYS.categoryCustom,
         STORAGE_KEYS.iconosFavoritos,
+        // La prueba gratuita también: es de la cuenta que se va, no del aparato.
+        // Dejándola, la cuenta siguiente entraría con la prueba ya gastada.
+        STORAGE_KEYS.pruebaPremium,
       ].map(actualKey)
     );
   } catch {

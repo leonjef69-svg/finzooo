@@ -48,6 +48,13 @@ import {
   paraLaNube,
   saveFavoritos,
 } from "@/utils/iconosFavoritos";
+import {
+  loadPrueba,
+  pruebaHorasRestantes,
+  pruebaVigente,
+  pruebaYaUsada,
+  savePrueba,
+} from "@/utils/pruebaPremium";
 import { DECOY_BUDGET, buildDecoyTransactions } from "@/utils/decoySeed";
 import { fmt as formatAmount, monthKey } from "@/utils/format";
 import { reserveIdsAbove } from "@/utils/id";
@@ -202,7 +209,20 @@ type AppDataContextValue = {
   addMoneyToGoal: (amount: number, goalId: number) => void;
   withdrawMoneyFromGoal: (goalId: number, amount: number) => void;
 
+  /**
+   * ¿Tiene Premium AHORA MISMO? Es el de la cuenta O la prueba gratuita corriendo.
+   *
+   * Las pantallas solo necesitan esta respuesta, y por eso la suma se hace en un
+   * unico sitio: si cada pantalla tuviera que acordarse de mirar tambien la prueba,
+   * alguna se quedaria sin hacerlo y ahi la prueba no serviria de nada.
+   */
   isPremium: boolean;
+  /** Cuando empezo la prueba gratuita, o null si no se ha usado. */
+  pruebaInicio: number | null;
+  /** Cuantas horas le quedan a la prueba. Cero si no hay ninguna corriendo. */
+  pruebaHoras: number;
+  /** Enciende la prueba gratuita. Devuelve false si ya se habia usado. */
+  activarPruebaPremium: () => boolean;
   setIsPremium: (v: boolean) => void;
   isCloudSynced: boolean;
   // Modo señuelo. Solo los llama la pantalla de bloqueo; ninguna otra parte
@@ -257,7 +277,34 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [categoriaRecienCreada, setCategoriaRecienCreada] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>(seedTransactions);
   const [goals, setGoals] = useState<Goal[]>(seedGoals);
-  const [isPremium, setIsPremium] = useState(false);
+  /**
+   * El Premium DE LA CUENTA: el que se guarda en el celular y viaja a la nube.
+   *
+   * Se llama distinto que el "isPremium" que ven las pantallas a propósito. Ese es
+   * la suma de este MÁS la prueba gratuita, y son dos cosas que no se pueden
+   * mezclar: si se guardara la suma, activar la prueba dejaría marcado Premium para
+   * siempre, y al caducar se apagaría también el de quien ya lo tenía de antes.
+   */
+  const [isPremiumDeLaCuenta, setIsPremium] = useState(false);
+  /** Cuándo se activó la prueba gratuita, o null. Solo de este celular. */
+  const [pruebaInicio, setPruebaInicio] = useState<number | null>(null);
+  /**
+   * Se mueve solo para que la prueba caduque a la vista.
+   *
+   * Sin esto, "¿tiene Premium?" se calcula al dibujar y nadie vuelve a dibujar
+   * cuando pasa la hora: la prueba seguiría abierta hasta que la persona tocara
+   * cualquier otra cosa. Un minuto es de sobra para una cuenta de 24 horas, y no
+   * hace nada mientras no haya prueba corriendo.
+   */
+  const [ahora, setAhora] = useState(() => Date.now());
+  const pruebaCorriendo = pruebaVigente(pruebaInicio, ahora);
+  useEffect(() => {
+    if (!pruebaCorriendo) return;
+    const reloj = setInterval(() => setAhora(Date.now()), 60_000);
+    return () => clearInterval(reloj);
+  }, [pruebaCorriendo]);
+  /** Lo que ven las pantallas: Premium de la cuenta O prueba corriendo. */
+  const isPremium = isPremiumDeLaCuenta || pruebaCorriendo;
   // Lo que la persona le enseñó al clasificador de importaciones:
   // { "primax": "transporte", ... }. Ver utils/classifier.ts.
   const [merchantLearned, setMerchantLearned] = useState<Record<string, string>>({});
@@ -345,7 +392,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       categoryBudgets,
       transactions,
       goals,
-      isPremium,
+      // EL DE LA CUENTA, no el que ven las pantallas: la prueba gratuita no puede
+      // subirse como Premium comprado. Si se subiera, al caducar quedaria marcado
+      // en la nube y volveria en cualquier celular donde se entrara.
+      isPremium: isPremiumDeLaCuenta,
       merchantLearned,
       categoryOverrides,
       categoriasPropias,
@@ -468,6 +518,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       savedOverrides,
       savedPropias,
       savedFavoritos,
+      savedPrueba,
     ] = await Promise.all([
       loadJSON<Record<string, number>>(STORAGE_KEYS.budgets, {}),
       loadJSON<Record<string, number>>(STORAGE_KEYS.categoryBudgets, {}),
@@ -487,12 +538,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // crear categoria los necesita al dibujarse, y leer el disco en cada
       // letra que se escribe seria leer el disco decenas de veces.
       loadFavoritos(),
+      // Cuando se activo la prueba gratuita, si se activo. Ver utils/pruebaPremium.
+      loadPrueba(),
     ]);
     setBudgets(savedBudgets);
     setCategoryBudgets(savedCategoryBudgets);
     setCategoryOverridesState(savedOverrides);
     setCategoriasPropiasState(savedPropias);
     setIconosFavoritosState(savedFavoritos);
+    setPruebaInicio(savedPrueba);
     setTransactions(savedTransactions);
     setGoals(savedGoals);
     protectExistingIds(savedTransactions, savedGoals);
@@ -533,6 +587,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setTransactions([]);
     setGoals([]);
     setIsPremium(false);
+    // La prueba gratuita tambien se suelta: el disco ya se limpio, pero lo que
+    // esta en memoria sobrevive y la cuenta siguiente entraria con la prueba de la
+    // anterior a medio correr.
+    setPruebaInicio(null);
     setMerchantLearned({});
     setCarryoverCleared([]);
   }
@@ -573,6 +631,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setTransactions([]);
     setGoals([]);
     setIsPremium(false);
+    // La prueba gratuita tambien se suelta: el disco ya se limpio, pero lo que
+    // esta en memoria sobrevive y la cuenta siguiente entraria con la prueba de la
+    // anterior a medio correr.
+    setPruebaInicio(null);
     setMerchantLearned({});
     setCarryoverCleared([]);
   }
@@ -643,8 +705,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (ready) saveJSON(STORAGE_KEYS.goals, goals);
   }, [goals, ready]);
   useEffect(() => {
-    if (ready) saveJSON(STORAGE_KEYS.isPremium, isPremium);
-  }, [isPremium, ready]);
+    // El de la cuenta. Guardando el que ven las pantallas, activar la prueba
+    // dejaria Premium marcado para siempre en este celular.
+    if (ready) saveJSON(STORAGE_KEYS.isPremium, isPremiumDeLaCuenta);
+  }, [isPremiumDeLaCuenta, ready]);
   useEffect(() => {
     if (ready) saveJSON(STORAGE_KEYS.merchantLearned, merchantLearned);
   }, [merchantLearned, ready]);
@@ -1174,6 +1238,24 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setIconosFavoritosState(getFavoritos());
   }
 
+  /**
+   * Enciende la prueba gratuita. Solo se puede una vez, y aqui se hace cumplir.
+   *
+   * La pantalla ya esconde el boton cuando esta usada, pero la regla se comprueba
+   * TAMBIEN aqui: un boton escondido es una decision de pantalla, y esto es una
+   * decision de la cuenta. Devuelve si se pudo, para poder avisar.
+   */
+  function activarPruebaPremium(): boolean {
+    if (pruebaYaUsada(pruebaInicio)) return false;
+    const inicio = Date.now();
+    setPruebaInicio(inicio);
+    savePrueba(inicio);
+    // El reloj de dentro se pone al dia para que la prueba cuente desde ya y no
+    // desde el ultimo minuto redondo.
+    setAhora(inicio);
+    return true;
+  }
+
   /** Cambia una propia. Lo que no se pase se deja como estaba. */
   function editarCategoria(
     id: string,
@@ -1374,6 +1456,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         addMoneyToGoal,
         withdrawMoneyFromGoal,
         isPremium,
+        pruebaInicio,
+        pruebaHoras: pruebaHorasRestantes(pruebaInicio, ahora),
+        activarPruebaPremium,
         setIsPremium,
         isCloudSynced: uid !== null,
         enterDecoyMode,
