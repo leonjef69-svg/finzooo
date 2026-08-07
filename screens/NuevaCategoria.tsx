@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useRef, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -10,8 +10,20 @@ import {
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
-import { Camera, Check, ChevronLeft, ImageIcon, Star, Trash2, X } from "lucide-react-native";
+import {
+  Camera,
+  Check,
+  ChevronLeft,
+  ImageIcon,
+  Pencil,
+  Plus,
+  Star,
+  Trash2,
+  X,
+} from "lucide-react-native";
+import CategoryAvatar from "@/components/CategoryAvatar";
 import ImageCropper from "@/components/ImageCropper";
+import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
 import {
   ALTO_TITULO,
   CATALOGO_EN_FILAS,
@@ -24,16 +36,41 @@ import { iconoDe, TODOS_LOS_GRUPOS } from "@/constants/iconos";
 import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 
-import { nombreRepetido } from "@/utils/categoriasPropias";
+import { esPropia, nombreRepetido } from "@/utils/categoriasPropias";
 import { alternar, getFavoritos, saveFavoritos } from "@/utils/iconosFavoritos";
 import { sanitizeName } from "@/utils/categoryCustom";
+
+/**
+ * El fondo del bloque que se queda pegado arriba.
+ *
+ * Tiene nombre propio porque parece decorativo y no lo es: un bloque pegado
+ * flota sobre el resto, y sin fondo el catalogo se ve pasar por debajo de la
+ * vista previa. Con nombre, quien limpie clases repetidas ve que este tiene un
+ * motivo.
+ */
+const FONDO_PEGAJOSO = "bg-white dark:bg-slate-900";
 
 // Los mismos de personalizar categorias, para que una categoria propia no
 // pueda tener un color que las de fabrica no tienen.
 const COLORES = [
-  "rose", "red", "orange", "amber", "yellow", "lime",
-  "green", "emerald", "teal", "cyan", "sky", "blue",
-  "indigo", "violet", "fuchsia", "pink", "stone", "slate",
+  "rose",
+  "red",
+  "orange",
+  "amber",
+  "yellow",
+  "lime",
+  "green",
+  "emerald",
+  "teal",
+  "cyan",
+  "sky",
+  "blue",
+  "indigo",
+  "violet",
+  "fuchsia",
+  "pink",
+  "stone",
+  "slate",
 ];
 
 /**
@@ -96,9 +133,7 @@ const Fila = memo(function Fila({
 }) {
   return (
     // Alto y separación explícitos: es la altura que la lista da por hecha.
-    <View
-      style={{ flexDirection: "row", height: lado, gap: SEPARACION, marginBottom: SEPARACION }}
-    >
+    <View style={{ flexDirection: "row", height: lado, gap: SEPARACION, marginBottom: SEPARACION }}>
       {iconos.map((id, i) =>
         id === null ? (
           <View key={"hueco" + i} style={{ width: lado }} />
@@ -111,39 +146,75 @@ const Fila = memo(function Fila({
             lado={lado}
             onElegir={onElegir}
           />
-        )
+        ),
       )}
     </View>
   );
 });
 
-
 /**
- * Crear una categoría propia: nombre, dibujo y color.
+ * Elegir una categoría, o crear una propia con nombre, dibujo y color.
+ *
+ * UNA SOLA PANTALLA PARA LAS DOS COSAS (06/08/2026)
+ *
+ * Fueron dos pantallas durante unas horas: una con la lista de categorías y otra
+ * con el catálogo de dibujos. El usuario lo señaló con las capturas delante — *"al
+ * darle click a elegir categoría debería mandarme a la 3, no a la 2"*: quería el
+ * catálogo, y la lista de por medio era un paso que no había pedido.
+ *
+ * Borrar la lista no era una opción: es lo que se usa en CADA gasto, y sin ella
+ * habría que crear una categoría nueva cada vez y los reportes acabarían
+ * repartidos entre veinte "Comida". Se le explicó y eligió juntarlas.
+ *
+ * Así que ahora es una sola, y se recorre de arriba abajo:
+ *
+ *   1. Las categorías que ya existen. Un toque, y vuelve al movimiento.
+ *   2. La vista previa, el nombre y las pestañas de dibujo/color.
+ *   3. El catálogo entero.
+ *
+ * EL BLOQUE DEL MEDIO SE QUEDA PEGADO ARRIBA (stickyHeaderIndices)
+ *
+ * Y no es un adorno: la vista previa tiene que verse MIENTRAS se elige el dibujo
+ * y el color, o se decide a ciegas y se descubre al guardar que no pegaban. Antes
+ * eso se conseguía teniéndola fija fuera de la parte deslizable; ahora que la
+ * lista de categorías va encima, se consigue pegándola. Mismo resultado, y la
+ * lista sigue alcanzable subiendo.
  *
  * EL TIPO NO SE PREGUNTA
  *
- * Llega desde donde se tocó "Nueva categoría": si estabas en la pestaña de
- * Ingreso, nace como ingreso. Preguntarlo otra vez sería pedir un dato que la
- * persona acaba de dar sin darse cuenta.
- *
- * LA VISTA PREVIA VA ARRIBA Y SIEMPRE VISIBLE
- *
- * Elegir dibujo y color por separado, sin ver el resultado, obliga a guardar
- * para descubrir que no pegaban. Arriba y fija, se decide mirando.
+ * Llega de la pestaña donde se estaba (Gasto o Ingreso). Preguntarlo otra vez
+ * sería pedir un dato que la persona acaba de dar sin darse cuenta.
  */
 export default function NuevaCategoria({
   tipo,
   editandoId,
+  actual,
   onBack,
   onCreada,
+  onElegir,
+  onEditar,
 }: {
   tipo: "expense" | "income";
   /** Si viene, se está EDITANDO esa categoría en vez de creando una. */
   editandoId?: string;
+  /**
+   * La categoría que el movimiento lleva puesta ahora. Sirve para marcarla en la
+   * lista y para saber si se puede ofrecer "Editar «X»".
+   */
+  actual?: string;
   onBack: () => void;
   /** Se avisa con el id para poder dejarla ya elegida en el movimiento. */
   onCreada: (id: string) => void;
+  /**
+   * Si llega, arriba se puede elegir una de las que ya existen.
+   *
+   * Es lo que separa "vengo a poner la categoría de este gasto" de "vengo a
+   * editar esta categoría": al editar, una lista para elegir otra no tendría
+   * ningún sentido.
+   */
+  onElegir?: (id: string) => void;
+  /** Abrir esta misma pantalla para editar la categoría propia que está puesta. */
+  onEditar?: (id: string) => void;
 }) {
   const {
     t,
@@ -159,6 +230,27 @@ export default function NuevaCategoria({
   // La que se está editando, si es que se está editando alguna.
   const original = editandoId ? categoriasPropias.find((c) => c.id === editandoId) : undefined;
   const editando = !!original;
+
+  /** ¿Se puede elegir una que ya existe, o solo se viene a crear/editar? */
+  const eligiendo = !!onElegir && !editando;
+
+  // Las de la app MÁS las propias. Se recalcula cuando cambian porque desde aquí
+  // mismo se crea una, y tiene que aparecer en la lista sin salir y volver.
+  const cats = useMemo(
+    () => (tipo === "expense" ? gastosDisponibles() : ingresosDisponibles()),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [tipo, categoriasPropias],
+  );
+
+  /**
+   * Dónde empieza la parte de crear, para poder bajar hasta ahí de un toque.
+   *
+   * El usuario quería el catálogo SIN pasos de más. Bajar deslizando funciona,
+   * pero la casilla "Nueva" de la lista lo lleva de una: es el mismo gesto que
+   * hacía antes, y ahora no cambia de pantalla.
+   */
+  const scrollRef = useRef<ScrollView>(null);
+  const [yDelFormulario, setYDelFormulario] = useState(0);
 
   // Se arranca con lo que ya tenía. useState con función: se lee UNA vez, al
   // abrir. Si se leyera en cada dibujado, cada toque en el catálogo pisaría lo
@@ -239,7 +331,7 @@ export default function NuevaCategoria({
   const titulos = useMemo(
     () => Object.fromEntries(TODOS_LOS_GRUPOS.map((g) => [g.titulo, t(g.titulo)])),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    []
+    [],
   );
 
   const Dibujo = iconoDe(icono);
@@ -277,226 +369,248 @@ export default function NuevaCategoria({
   const cuantos = editandoId ? movimientosDeCategoria(editandoId) : 0;
 
   return (
-    <View
-      className="flex-1 bg-white dark:bg-slate-900"
-      style={{ paddingTop: insets.top }}
-    >
+    <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top }}>
       <View className="px-5 pt-3 pb-2 flex-row items-center gap-2">
         <TouchableOpacity onPress={onBack} className="w-9 h-9 items-center justify-center -ml-2">
           <ChevronLeft size={24} color="#94a3b8" />
         </TouchableOpacity>
         <Text className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
-          {t(editando ? "nuevaCat.titleEditar" : "nuevaCat.title")}
+          {t(editando ? "nuevaCat.titleEditar" : eligiendo ? "elegirCat.title" : "nuevaCat.title")}
         </Text>
       </View>
 
-      {/* LA VISTA PREVIA. Cambia con cada toque, y es lo que se está creando.
-          Si hay foto, MANDA la foto: es la misma regla que CategoryAvatar sigue
-          en el resto de la app, y saltársela aquí haría que la categoría se
-          viera de una forma al crearla y de otra en Inicio. Ya pasó una vez. */}
-      <View className="items-center py-5">
-        <View className="flex-row items-center gap-3">
-          <View
-            className={`w-20 h-20 rounded-3xl items-center justify-center overflow-hidden bg-${color}-100`}
-            style={CARD_SHADOW}
-          >
-            {foto ? (
-              <Image source={{ uri: foto }} style={{ width: 80, height: 80 }} />
-            ) : (
-              <Dibujo size={36} color={COLOR_HEX_600[color] || "#475569"} strokeWidth={2.2} />
-            )}
-          </View>
-          {/* LA ESTRELLA. Solo cuando NO hay foto: un favorito es un ícono del
-              catálogo, y una foto propia no está en el catálogo — guardarla
-              como "favorito" no llevaría a ningún sitio al que volver. */}
-          {!foto && (
-            <TouchableOpacity
-              onPress={alternarFavorito}
-              className={`w-10 h-10 rounded-full items-center justify-center border-[1.5px] ${
-                esFav
-                  ? "bg-amber-100 border-amber-400"
-                  : "border-slate-300 dark:border-slate-600"
-              }`}
-            >
-              <Star
-                size={19}
-                color={esFav ? "#d97706" : "#94a3b8"}
-                fill={esFav ? "#f59e0b" : "transparent"}
-                strokeWidth={2.2}
-              />
-            </TouchableOpacity>
+      <ScrollView
+        ref={scrollRef}
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 24 }}
+        keyboardShouldPersistTaps="handled"
+        // El bloque de la vista previa se queda pegado arriba al bajar. Es el
+        // hijo número 1 SIEMPRE: el de abajo se dibuja aunque esté vacío, justo
+        // para que este número no cambie según el caso.
+        stickyHeaderIndices={[1]}
+      >
+        {/* DÓNDE ACABA ESTA PARTE ES DÓNDE EMPIEZA LA DE CREAR, y por eso se mide
+            aquí y no en el bloque de abajo.
+            Medirlo abajo era lo natural y estaba MAL: un bloque pegajoso lo
+            envuelve React en una caja propia, así que su "y" se cuenta desde esa
+            caja y sale 0 — la casilla "Nueva" habría subido al principio en vez
+            de bajar al catálogo. Este bloque empieza en 0, así que su alto es
+            exactamente dónde empieza el otro. */}
+        <View
+          onLayout={(e) => setYDelFormulario(e.nativeEvent.layout.y + e.nativeEvent.layout.height)}
+        >
+          {eligiendo && (
+            <View className="px-5 pt-1">
+              <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 mb-3">
+                {t("elegirCat.tuyas")}
+              </Text>
+              <View className="flex-row flex-wrap gap-3">
+                {cats.map((c) => {
+                  const puesta = actual === c.id;
+                  return (
+                    <TouchableOpacity
+                      key={c.id}
+                      onPress={() => onElegir?.(c.id)}
+                      className="items-center gap-1.5"
+                      style={{ width: "21%" }}
+                    >
+                      <View
+                        className={`w-12 h-12 rounded-2xl items-center justify-center bg-${c.color}-100 ${
+                          puesta ? `border-2 border-${c.color}-500` : ""
+                        }`}
+                      >
+                        <CategoryAvatar id={c.id} size={20} />
+                      </View>
+                      <Text
+                        className={`text-xs font-bold text-center ${
+                          puesta ? `text-${c.color}-600` : "text-slate-600 dark:text-slate-200"
+                        }`}
+                        numberOfLines={1}
+                      >
+                        {t(c.label)}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+                {/* "NUEVA" BAJA HASTA EL CATÁLOGO, NO CAMBIA DE PANTALLA.
+                    Es el mismo gesto de siempre y lleva al mismo sitio, pero sin
+                    abrir nada: lo de crear está aquí abajo. Sigue siendo una
+                    casilla de la cuadrícula porque es donde ya se está mirando
+                    justo cuando se descubre que la propia no está. */}
+                <TouchableOpacity
+                  onPress={() => scrollRef.current?.scrollTo({ y: yDelFormulario, animated: true })}
+                  className="items-center gap-1.5"
+                  style={{ width: "21%" }}
+                >
+                  <View className="w-12 h-12 rounded-2xl items-center justify-center border-2 border-dashed border-emerald-400">
+                    <Plus size={20} color="#059669" />
+                  </View>
+                  <Text
+                    className="text-xs font-bold text-center text-emerald-600"
+                    numberOfLines={1}
+                  >
+                    {t("nuevaCat.boton")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* EDITAR LA PROPIA QUE ESTÉ PUESTA.
+                  Solo con una categoría tuya elegida, y por eso no estorba: el
+                  resto del tiempo no está. Se descartó el toque largo a
+                  propósito — es invisible, y quien no lo sepa no encuentra nunca
+                  cómo cambiar lo que acaba de crear. */}
+              {actual && esPropia(actual) && (
+                <TouchableOpacity
+                  onPress={() => onEditar?.(actual)}
+                  className="flex-row items-center justify-center gap-1.5 mt-4"
+                >
+                  <Pencil size={13} color="#64748b" />
+                  <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
+                    {t("nuevaCat.editarEsta", { nombre: catInfo(actual).label })}
+                  </Text>
+                </TouchableOpacity>
+              )}
+
+              {/* La raya con su texto: dice que de aquí abajo ya es otra cosa.
+                  Sin ella, la vista previa de "Sin nombre" parece parte de la
+                  lista de arriba y no se entiende qué se está mirando. */}
+              <View className="flex-row items-center gap-3 mt-6">
+                <View className="flex-1 h-[1.5px] bg-slate-200 dark:bg-slate-700" />
+                <Text className="text-[11px] font-bold text-slate-400">{t("elegirCat.oCrea")}</Text>
+                <View className="flex-1 h-[1.5px] bg-slate-200 dark:bg-slate-700" />
+              </View>
+            </View>
           )}
         </View>
-        <Text className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-2.5">
-          {limpio || t("nuevaCat.sinNombre")}
-        </Text>
-      </View>
 
-      <View className="px-5">
-        <TextInput
-          value={nombre}
-          onChangeText={setNombre}
-          placeholder={t("nuevaCat.nombrePlaceholder")}
-          placeholderTextColor="#94a3b8"
-          maxLength={24}
-          className="border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800"
-        />
-        {/* Dos categorías del mismo tipo llamadas igual no se pueden
+        {/* EL BLOQUE PEGAJOSO: la vista previa, el nombre y las pestañas.
+            El fondo explícito no es decorativo: sin él, el catálogo se vería
+            pasar por debajo de la vista previa al deslizar.
+
+            LA VISTA PREVIA. Cambia con cada toque, y es lo que se está creando.
+            Si hay foto, MANDA la foto: es la misma regla que CategoryAvatar sigue
+            en el resto de la app, y saltársela aquí haría que la categoría se
+            viera de una forma al crearla y de otra en Inicio. Ya pasó una vez. */}
+        <View className={FONDO_PEGAJOSO}>
+          <View className="items-center py-5">
+            <View className="flex-row items-center gap-3">
+              <View
+                className={`w-20 h-20 rounded-3xl items-center justify-center overflow-hidden bg-${color}-100`}
+                style={CARD_SHADOW}
+              >
+                {foto ? (
+                  <Image source={{ uri: foto }} style={{ width: 80, height: 80 }} />
+                ) : (
+                  <Dibujo size={36} color={COLOR_HEX_600[color] || "#475569"} strokeWidth={2.2} />
+                )}
+              </View>
+              {/* LA ESTRELLA. Solo cuando NO hay foto: un favorito es un ícono del
+              catálogo, y una foto propia no está en el catálogo — guardarla
+              como "favorito" no llevaría a ningún sitio al que volver. */}
+              {!foto && (
+                <TouchableOpacity
+                  onPress={alternarFavorito}
+                  className={`w-10 h-10 rounded-full items-center justify-center border-[1.5px] ${
+                    esFav
+                      ? "bg-amber-100 border-amber-400"
+                      : "border-slate-300 dark:border-slate-600"
+                  }`}
+                >
+                  <Star
+                    size={19}
+                    color={esFav ? "#d97706" : "#94a3b8"}
+                    fill={esFav ? "#f59e0b" : "transparent"}
+                    strokeWidth={2.2}
+                  />
+                </TouchableOpacity>
+              )}
+            </View>
+            <Text className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-2.5">
+              {limpio || t("nuevaCat.sinNombre")}
+            </Text>
+          </View>
+
+          <View className="px-5">
+            <TextInput
+              value={nombre}
+              onChangeText={setNombre}
+              placeholder={t("nuevaCat.nombrePlaceholder")}
+              placeholderTextColor="#94a3b8"
+              maxLength={24}
+              className="border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800"
+            />
+            {/* Dos categorías del mismo tipo llamadas igual no se pueden
             distinguir al anotar un gasto: se elige una al azar y los totales
             quedan repartidos sin que nadie entienda por qué. */}
-        {repetido && (
-          <Text className="text-[11px] text-rose-500 mt-1.5">{t("nuevaCat.repetido")}</Text>
-        )}
-      </View>
+            {repetido && (
+              <Text className="text-[11px] text-rose-500 mt-1.5">{t("nuevaCat.repetido")}</Text>
+            )}
+          </View>
 
-      {/* LAS TRES PESTAÑAS. Favoritos va EN EL MEDIO, a pedido del usuario.
+          {/* LAS TRES PESTAÑAS. Favoritos va EN EL MEDIO, a pedido del usuario.
           El número al lado dice cuántos hay sin tener que entrar. */}
-      <View className="flex-row mx-5 mt-5 mb-1 border-b-[1.5px] border-slate-200 dark:border-slate-700">
-        {(["icono", "favoritos", "color"] as const).map((p) => (
-          <TouchableOpacity
-            key={p}
-            onPress={() => setPestana(p)}
-            className={`flex-1 items-center pb-2.5 ${
-              pestana === p ? "border-b-2 border-emerald-600 -mb-[1.5px]" : ""
-            }`}
-          >
-            <Text
-              className={`text-sm font-bold ${
-                pestana === p ? "text-emerald-600" : "text-slate-400"
-              }`}
-            >
-              {p === "icono"
-                ? t("nuevaCat.tabIcono")
-                : p === "color"
-                  ? t("nuevaCat.tabColor")
-                  : `${t("nuevaCat.tabFavoritos")}${favoritos.length > 0 ? ` ${favoritos.length}` : ""}`}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </View>
-
-      {/* El "px-5" de las dos pantallas deslizables es el MARGEN_LATERAL de las
-          medidas, y de ahí sale el ancho de las casillas. Cambiar uno sin el
-          otro descoloca la cuadrícula. */}
-      {pestana === "color" ? (
-        <ScrollView
-          className="flex-1 px-5"
-          contentContainerStyle={{ paddingBottom: 24, paddingTop: 12 }}
-        >
-          <View className="flex-row flex-wrap gap-3">
-            {COLORES.map((c) => (
+          <View className="flex-row mx-5 mt-5 mb-1 border-b-[1.5px] border-slate-200 dark:border-slate-700">
+            {(["icono", "favoritos", "color"] as const).map((p) => (
               <TouchableOpacity
-                key={c}
-                onPress={() => setColor(c)}
-                className={`w-12 h-12 rounded-full items-center justify-center ${
-                  color === c ? "border-[3px] border-slate-900 dark:border-white" : ""
+                key={p}
+                onPress={() => setPestana(p)}
+                className={`flex-1 items-center pb-2.5 ${
+                  pestana === p ? "border-b-2 border-emerald-600 -mb-[1.5px]" : ""
                 }`}
-                style={{ backgroundColor: COLOR_HEX_600[c] }}
               >
-                {color === c && <Check size={18} color="#ffffff" />}
+                <Text
+                  className={`text-sm font-bold ${
+                    pestana === p ? "text-emerald-600" : "text-slate-400"
+                  }`}
+                >
+                  {p === "icono"
+                    ? t("nuevaCat.tabIcono")
+                    : p === "color"
+                      ? t("nuevaCat.tabColor")
+                      : `${t("nuevaCat.tabFavoritos")}${favoritos.length > 0 ? ` ${favoritos.length}` : ""}`}
+                </Text>
               </TouchableOpacity>
             ))}
           </View>
-        </ScrollView>
-      ) : pestana === "favoritos" ? (
-        <ScrollView
-          className="flex-1 px-5"
-          contentContainerStyle={{ paddingBottom: 24, paddingTop: 12 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          {favoritos.length === 0 ? (
-            /* VACÍA, PERO NO MUDA. Una pestaña vacía sin explicación deja a la
+        </View>
+
+        {/* El "px-5" del contenido de las pestañas es el MARGEN_LATERAL de las
+          medidas, y de ahí sale el ancho de las casillas. Cambiar uno sin el
+          otro descoloca la cuadrícula. */}
+        {pestana === "color" ? (
+          <View className="px-5" style={{ paddingTop: 12 }}>
+            <View className="flex-row flex-wrap gap-3">
+              {COLORES.map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  onPress={() => setColor(c)}
+                  className={`w-12 h-12 rounded-full items-center justify-center ${
+                    color === c ? "border-[3px] border-slate-900 dark:border-white" : ""
+                  }`}
+                  style={{ backgroundColor: COLOR_HEX_600[c] }}
+                >
+                  {color === c && <Check size={18} color="#ffffff" />}
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
+        ) : pestana === "favoritos" ? (
+          <View className="px-5" style={{ paddingTop: 12 }}>
+            {favoritos.length === 0 ? (
+              /* VACÍA, PERO NO MUDA. Una pestaña vacía sin explicación deja a la
                persona sin saber si está roto o si le falta hacer algo. Aquí se
                dice exactamente qué hacer, y con la misma estrella que hay que
                tocar. */
-            <View className="items-center py-10 px-6">
-              <Star size={30} color="#cbd5e1" strokeWidth={2} />
-              <Text className="text-xs text-center leading-5 text-slate-500 dark:text-slate-400 mt-3">
-                {t("nuevaCat.favVacio")}
-              </Text>
-            </View>
-          ) : (
-            // Las mismas filas y el mismo tamaño de casilla que el catálogo: es
-            // la misma elección, así que tiene que verse igual.
-            enFilas(favoritos).map((fila, f) => (
-              <Fila
-                key={f}
-                iconos={fila}
-                elegido={icono}
-                color={color}
-                lado={lado}
-                onElegir={setIcono}
-              />
-            ))
-          )}
-        </ScrollView>
-      ) : (
-        // UNA PANTALLA DESLIZABLE NORMAL CON LOS 236 DIBUJOS PUESTOS. Sin lista
-        // virtual, sin cargar por partes, sin nada que aparezca después.
-        //
-        // Esto sería impensable con dibujos vectoriales —armarlos tarda cerca de
-        // un segundo, y por eso hubo cinco intentos de repartir ese segundo en
-        // algún sitio donde no se notara—. Con la tipografía cada dibujo es una
-        // letra, así que los 236 salen de una y ya está. El arreglo no estuvo
-        // nunca en cómo organizar la lista: estuvo en de qué están hechos los
-        // dibujos. Ver constants/iconos.tsx.
-        <ScrollView
-          className="flex-1 px-5"
-          contentContainerStyle={{ paddingBottom: 24 }}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* TU PROPIA FOTO, PRIMERO.
-              Va arriba del catálogo y no en una pestaña aparte porque es otra
-              forma de contestar la misma pregunta —"¿con qué dibujo?"—, y una
-              pestaña más la esconde. Son casillas del mismo tamaño que las
-              demás para que se lean como parte de la misma elección. */}
-          <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
-            <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
-              {t("nuevaCat.tuFoto")}
-            </Text>
-          </View>
-          <View
-            style={{ flexDirection: "row", height: lado, gap: SEPARACION, marginBottom: SEPARACION }}
-          >
-            <TouchableOpacity
-              onPress={tomarFoto}
-              style={{ width: lado, height: lado }}
-              className="rounded-2xl items-center justify-center bg-slate-50 dark:bg-slate-800 border-[1.5px] border-dashed border-slate-300 dark:border-slate-600"
-            >
-              <Camera size={22} color="#64748b" strokeWidth={2.2} />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={elegirDeGaleria}
-              style={{ width: lado, height: lado }}
-              className="rounded-2xl items-center justify-center bg-slate-50 dark:bg-slate-800 border-[1.5px] border-dashed border-slate-300 dark:border-slate-600"
-            >
-              <ImageIcon size={22} color="#64748b" strokeWidth={2.2} />
-            </TouchableOpacity>
-            {/* La foto puesta, y encima la forma de sacarla. Sin esto, quien
-                pone una foto no encuentra cómo volver a un dibujo: elegir un
-                icono no la quitaría, porque la foto manda. */}
-            {foto && (
-              <TouchableOpacity
-                onPress={() => setFoto(undefined)}
-                style={{ width: lado, height: lado }}
-                className={`rounded-2xl items-center justify-center overflow-hidden border-2 border-${color}-500`}
-              >
-                <Image source={{ uri: foto }} style={{ width: lado, height: lado }} />
-                <View className="absolute inset-0 items-center justify-center bg-slate-900/45">
-                  <X size={20} color="#ffffff" strokeWidth={2.6} />
-                </View>
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {CATALOGO_EN_FILAS.map((grupo) => (
-            <View key={grupo.titulo}>
-              <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
-                <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
-                  {titulos[grupo.titulo]}
+              <View className="items-center py-10 px-6">
+                <Star size={30} color="#cbd5e1" strokeWidth={2} />
+                <Text className="text-xs text-center leading-5 text-slate-500 dark:text-slate-400 mt-3">
+                  {t("nuevaCat.favVacio")}
                 </Text>
               </View>
-              {grupo.filas.map((fila, f) => (
+            ) : (
+              // Las mismas filas y el mismo tamaño de casilla que el catálogo: es
+              // la misma elección, así que tiene que verse igual.
+              enFilas(favoritos).map((fila, f) => (
                 <Fila
                   key={f}
                   iconos={fila}
@@ -505,11 +619,91 @@ export default function NuevaCategoria({
                   lado={lado}
                   onElegir={setIcono}
                 />
-              ))}
+              ))
+            )}
+          </View>
+        ) : (
+          // LOS 236 DIBUJOS PUESTOS, TODOS. Sin lista virtual, sin cargar por
+          // partes, sin nada que aparezca después.
+          //
+          // Esto sería impensable con dibujos vectoriales —armarlos tarda cerca de
+          // un segundo, y por eso hubo cinco intentos de repartir ese segundo en
+          // algún sitio donde no se notara—. Con la tipografía cada dibujo es una
+          // letra, así que los 236 salen de una y ya está. El arreglo no estuvo
+          // nunca en cómo organizar la lista: estuvo en de qué están hechos los
+          // dibujos. Ver constants/iconos.tsx.
+          <View className="px-5">
+            {/* TU PROPIA FOTO, PRIMERO.
+              Va arriba del catálogo y no en una pestaña aparte porque es otra
+              forma de contestar la misma pregunta —"¿con qué dibujo?"—, y una
+              pestaña más la esconde. Son casillas del mismo tamaño que las
+              demás para que se lean como parte de la misma elección. */}
+            <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
+              <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
+                {t("nuevaCat.tuFoto")}
+              </Text>
             </View>
-          ))}
-        </ScrollView>
-      )}
+            <View
+              style={{
+                flexDirection: "row",
+                height: lado,
+                gap: SEPARACION,
+                marginBottom: SEPARACION,
+              }}
+            >
+              <TouchableOpacity
+                onPress={tomarFoto}
+                style={{ width: lado, height: lado }}
+                className="rounded-2xl items-center justify-center bg-slate-50 dark:bg-slate-800 border-[1.5px] border-dashed border-slate-300 dark:border-slate-600"
+              >
+                <Camera size={22} color="#64748b" strokeWidth={2.2} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={elegirDeGaleria}
+                style={{ width: lado, height: lado }}
+                className="rounded-2xl items-center justify-center bg-slate-50 dark:bg-slate-800 border-[1.5px] border-dashed border-slate-300 dark:border-slate-600"
+              >
+                <ImageIcon size={22} color="#64748b" strokeWidth={2.2} />
+              </TouchableOpacity>
+              {/* La foto puesta, y encima la forma de sacarla. Sin esto, quien
+                pone una foto no encuentra cómo volver a un dibujo: elegir un
+                icono no la quitaría, porque la foto manda. */}
+              {foto && (
+                <TouchableOpacity
+                  onPress={() => setFoto(undefined)}
+                  style={{ width: lado, height: lado }}
+                  className={`rounded-2xl items-center justify-center overflow-hidden border-2 border-${color}-500`}
+                >
+                  <Image source={{ uri: foto }} style={{ width: lado, height: lado }} />
+                  <View className="absolute inset-0 items-center justify-center bg-slate-900/45">
+                    <X size={20} color="#ffffff" strokeWidth={2.6} />
+                  </View>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {CATALOGO_EN_FILAS.map((grupo) => (
+              <View key={grupo.titulo}>
+                <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
+                  <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
+                    {titulos[grupo.titulo]}
+                  </Text>
+                </View>
+                {grupo.filas.map((fila, f) => (
+                  <Fila
+                    key={f}
+                    iconos={fila}
+                    elegido={icono}
+                    color={color}
+                    lado={lado}
+                    onElegir={setIcono}
+                  />
+                ))}
+              </View>
+            ))}
+          </View>
+        )}
+      </ScrollView>
 
       <View className="px-5" style={{ paddingBottom: insets.bottom + 16 }}>
         {/* BORRAR, solo al editar.
@@ -560,11 +754,7 @@ export default function NuevaCategoria({
             puedeGuardar ? "bg-emerald-600" : "bg-slate-200 dark:bg-slate-800"
           }`}
         >
-          <Text
-            className={`font-extrabold ${
-              puedeGuardar ? "text-white" : "text-slate-400"
-            }`}
-          >
+          <Text className={`font-extrabold ${puedeGuardar ? "text-white" : "text-slate-400"}`}>
             {t(editando ? "nuevaCat.guardar" : "nuevaCat.aplicar")}
           </Text>
         </TouchableOpacity>

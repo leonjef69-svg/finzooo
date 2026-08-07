@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **6 de agosto de 2026** · Código publicado: **6ago-04**
+Actualizado: **6 de agosto de 2026** · Código publicado: **6ago-05**
 
 Este archivo existe para que una sesión nueva —de Claude o de quien sea— no
 empiece de cero. No cuenta lo que ya se ve en el código ni en el historial de
@@ -336,7 +336,7 @@ para llegar a la fecha, la descripción y las notas había que desplazarse.
 
 Ahora en "Nuevo movimiento" hay **una fila** con el dibujo de la categoría
 puesta, el texto "Elegir categoría" y su nombre a la derecha. Todo lo demás se
-mudó **completo** a `screens/ElegirCategoria.tsx`.
+mudó a la pantalla del catálogo de dibujos.
 
 **Se le ofreció la variante con las cuatro más usadas al lado del botón, para
 conservar el toque único, y eligió el botón solo.** Queda anotado: elegir pasó de
@@ -344,30 +344,72 @@ un toque a tres (abrir, elegir, volver) y fue una decisión suya, informada.
 
 De regalo, dos cosas que la cuadrícula arrastraba y se fueron con la mudanza:
 
-- **Fuera el "Ver más".** Existía porque no había sitio; en su propia pantalla
-  caben todas. Con él se va el problema de que las categorías propias vivieran
+- **Fuera el "Ver más".** Existía porque no había sitio; donde está ahora caben
+  todas. Con él se va el problema de que las categorías propias vivieran
   escondidas detrás de un botón — que es también por lo que la pantalla de
   agregar tenía que encender "Ver más" al volver de crear una.
 - Los textos `addSheet.seeMore` / `seeLess` se borraron de los tres idiomas. Un
   texto sin dueño es lo que hace que dentro de un año nadie sepa si se puede
   tocar.
 
-### Cómo vuelve la elegida, y por qué crear va con `replace`
+### PRIMERO FUERON DOS PANTALLAS, Y ESO ERA EL ERROR
 
-La elegida vuelve **por el contexto** (`elegirCategoriaEnMovimiento`), no por una
-propiedad: son dos pantallas y esta se apila encima, con la de agregar viva
-debajo y el monto ya escrito. Es el mismo canal por el que ya volvía una
-categoría recién creada — el significado es idéntico, "adopta esta".
+La primera versión hizo una pantalla nueva con la lista de categorías, aparte de
+la del catálogo de dibujos. El usuario lo señaló con las tres capturas: *"al
+darle click a elegir categoría debería mandarme a la 3 imagen no a la 2"*. Quería
+el catálogo, y la lista de por medio era un paso que no había pedido nadie.
 
-"Crear categoría" y "Editar «X»" navegan con **`router.replace`**, no con `push`:
-la pantalla de crear ocupa el lugar del selector. Así su "atrás" —el que se toca
-al guardar, al borrar o al cambiar de idea— deja directamente en el movimiento,
-que es donde hay que acabar. Con `push` habría que cerrar el selector después, y
-la recién creada ya queda elegida sola.
+**Borrar la lista no era una opción y se le dijo:** es lo que se usa en CADA
+gasto, y sin ella habría que crear una categoría nueva cada vez, con los reportes
+repartidos entre veinte "Comida". Con eso delante eligió **juntarlas**.
+
+Así que hoy hay **UNA sola pantalla** (`screens/NuevaCategoria.tsx`), que se
+recorre de arriba abajo:
+
+1. **Tus categorías** — un toque y vuelve al movimiento. Y "Editar «X»" si la
+   puesta es tuya.
+2. **La vista previa, el nombre y las pestañas** (Ícono · Favoritos · Color).
+3. **El catálogo entero.**
+
+La casilla **"Nueva" ya no abre nada**: baja hasta el punto 2 en la misma
+pantalla (`scrollTo`). Mismo gesto de siempre, sin cambiar de pantalla.
+
+### El bloque del medio se queda PEGADO arriba, y no es un adorno
+
+`stickyHeaderIndices`. La vista previa tiene que verse **mientras** se elige
+dibujo y color — decisión de cuando se creó la pantalla: sin verla, se guarda
+para descubrir que no pegaban. Antes se conseguía teniéndola fuera de la parte
+deslizable; con la lista encima, se consigue pegándola.
+
+Dos trampas, las dos vigiladas por pruebas porque las dos fallan **en silencio**:
+
+- **El índice es 1 SIEMPRE.** El hijo de arriba se dibuja aunque esté vacío, para
+  que el número no baile según el caso. Con un número equivocado se pega el
+  bloque que no toca.
+- **`onLayout` en un bloque pegado no mide lo que parece.** React lo envuelve en
+  una caja propia, así que su `y` se cuenta desde esa caja y sale 0 — "Nueva"
+  habría subido al principio en vez de bajar al catálogo. Se mide **dónde acaba la
+  lista** (`y + height` del bloque de arriba), que es dónde empieza el otro.
+
+### Cómo vuelve la elegida, y por qué editar va con `replace`
+
+Por el **contexto** (`elegirCategoriaEnMovimiento`), no por una propiedad: son
+dos pantallas y esta se apila encima, con la de agregar viva debajo y el monto ya
+escrito. Es el mismo canal por el que ya volvía una categoría recién creada — el
+significado es idéntico, "adopta esta".
+
+"Editar «X»" navega con **`router.replace`** a la misma ruta con `id`: así su
+"atrás" —al guardar, al borrar o al cambiar de idea— deja directamente en el
+movimiento. Apilando haría falta un toque más para cerrar una lista que ya no
+sirve.
 
 **Se descartó encadenar dos `router.back()` seguidos.** Dos órdenes de
 navegación en el mismo instante es justo el tipo de cosa que funciona en la
 computadora y falla a medias en el celular.
+
+La ruta `/nueva-categoria` tiene ahora **tres modos**, y los deciden los
+parámetros: con `actual` se puede elegir; con `id` se edita (sin lista: quien
+viene a renombrar "Broster" no viene a elegir otra); sin nada, solo crear.
 
 ## Exportación automática — cambio de nombre y de fondo (05/08/2026)
 

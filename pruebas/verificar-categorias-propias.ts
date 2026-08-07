@@ -178,7 +178,16 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   // 05/08/2026, con foto: "esta disparejo los iconos". Al pasar a filas de
   // cinco quedaron con ancho fijo, asi que no llegaban al borde y sobraba un
   // vacio a la derecha. Se comprueba con numeros mas abajo, en su seccion.
-  ok(!/w-12 h-12 rounded-2xl/.test(codigo), "ninguna casilla lleva ancho fijo");
+  //
+  // Se mira SOLO dentro de la casilla del catalogo, y no el archivo entero: desde
+  // el 06/08/2026 la misma pantalla lleva arriba la lista de categorias, y esas
+  // casillas si son de tamaño fijo con toda la razon —son cuatro por fila con su
+  // nombre debajo, no parte de la cuadricula de dibujos—. Mirando el archivo
+  // completo, esta prueba se caia por algo que esta bien.
+  const casilla = /const Dibujito = memo\([\s\S]*?\n\}\);/.exec(codigo)?.[0] ?? "";
+  ok(casilla.length > 0, "la casilla del catalogo sigue siendo su propia pieza");
+  ok(!/w-\d+ h-\d+/.test(casilla), "ninguna casilla del catalogo lleva ancho fijo");
+  ok(/width: lado, height: lado/.test(casilla), "su lado sale del ancho de la pantalla");
   ok(/style=\{\{ width: lado, height: lado \}\}/.test(pant), "el lado sale del ancho de la pantalla");
   ok(pant.includes('key={"hueco"'), "y las filas cortas se rellenan con espacio vacio");
 
@@ -452,13 +461,13 @@ console.log("\n--- Y LA APP DE VERDAD LO USA ---");
   ok(add.includes("gastosDisponibles"), "la pantalla de agregar usa las listas con las propias");
   ok(add.includes("categoriaRecienCreada"), "y la deja elegida al volver");
 
-  // El boton de crear se mudo el 06/08/2026: la cuadricula salio de la pantalla
-  // de agregar y se fue entera a "Elegir categoria". Se comprueba ahi, no aqui,
-  // pero se sigue comprobando: sin esa puerta no habria forma de crear una.
-  const eleg = fs.readFileSync(path.join(RAIZ, "screens/ElegirCategoria.tsx"), "utf8");
-  ok(eleg.includes("gastosDisponibles"), "el selector usa las listas con las propias");
-  const ruta = fs.readFileSync(path.join(RAIZ, "app/elegir-categoria.tsx"), "utf8");
-  ok(ruta.includes("/nueva-categoria"), "y desde el selector se llega a crear una");
+  // La cuadricula salio de la pantalla de agregar el 06/08/2026 y se fue a la
+  // MISMA pantalla del catalogo de dibujos: se elige una de las que hay, o se
+  // baja y se crea. Se comprueba alli, no aqui, pero se sigue comprobando: sin
+  // esa puerta no habria forma de crear una.
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/NuevaCategoria.tsx"), "utf8");
+  ok(pant.includes("gastosDisponibles"), "la pantalla de crear tambien lista las propias");
+  ok(add.includes("/nueva-categoria"), "y se llega a ella desde el movimiento");
 
   const ctx = fs.readFileSync(path.join(RAIZ, "contexts/AppDataContext.tsx"), "utf8");
   ok(ctx.includes("savePropias"), "el contexto las guarda en disco");
@@ -470,13 +479,14 @@ console.log("\n--- EDITAR Y BORRAR SE PUEDEN ALCANZAR ---");
   // Sin una puerta visible, quien cree una categoria con el icono equivocado
   // se queda con ella para siempre. Se descarto el toque largo: es invisible,
   // y quien no lo sepa no lo encuentra nunca.
-  // Vive en el selector desde el 06/08/2026, con la cuadricula con la que se
-  // mudo. Lo que se protege es lo mismo de siempre: que la puerta EXISTA.
-  const eleg = fs.readFileSync(path.join(RAIZ, "screens/ElegirCategoria.tsx"), "utf8");
-  ok(eleg.includes("esPropia(actual)"), "el enlace de editar solo sale con una propia elegida");
-  ok(eleg.includes("nuevaCat.editarEsta"), "y dice cual se va a editar");
-  const ruta = fs.readFileSync(path.join(RAIZ, "app/elegir-categoria.tsx"), "utf8");
-  ok(/params: \{[^}]*id \}/.test(ruta), "pasandole su id");
+  // Vive junto a la lista de categorias desde el 06/08/2026, que se mudo a la
+  // pantalla del catalogo. Lo que se protege es lo mismo de siempre: que la
+  // puerta EXISTA.
+  const pant0 = fs.readFileSync(path.join(RAIZ, "screens/NuevaCategoria.tsx"), "utf8");
+  ok(pant0.includes("esPropia(actual)"), "el enlace de editar solo sale con una propia elegida");
+  ok(pant0.includes("nuevaCat.editarEsta"), "y dice cual se va a editar");
+  const ruta = fs.readFileSync(path.join(RAIZ, "app/nueva-categoria.tsx"), "utf8");
+  ok(/params: \{ tipo: suTipo, id: suId \}/.test(ruta), "pasandole su id");
 
   const pant = fs.readFileSync(path.join(RAIZ, "screens/NuevaCategoria.tsx"), "utf8");
   ok(pant.includes("editandoId"), "la pantalla sabe editar, no solo crear");

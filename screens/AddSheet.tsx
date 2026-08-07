@@ -352,16 +352,17 @@ export default function AddSheet({
                 más" y "Editar esta". Se comía media pantalla, y para llegar a
                 la fecha, la descripción y las notas había que desplazarse.
                 El usuario lo pidió así el 06/08/2026: que quedara solo un
-                botón. Todo lo que estaba aquí se mudó completo a la pantalla
-                de "Elegir categoría" —ninguna función se perdió— y allá cabe
-                mejor: se ven TODAS sin el "Ver más" que escondía las de abajo.
+                botón. Todo lo que estaba aquí se mudó a "Elegir categoría", que
+                es la misma pantalla del catálogo de dibujos: se elige una de las
+                que ya hay, o se baja y se crea. Ninguna función se perdió, y de
+                paso se ven TODAS sin el "Ver más" que escondía las de abajo.
                 El botón enseña la que está puesta ahora. Sin eso sería un botón
                 que no dice nada, y habría que abrirlo para saber qué categoría
                 lleva el movimiento. */}
             <TouchableOpacity
               onPress={() =>
                 router.push({
-                  pathname: "/elegir-categoria",
+                  pathname: "/nueva-categoria",
                   params: { tipo: type, actual: category },
                 })
               }
