@@ -424,7 +424,17 @@ La ruta `/nueva-categoria` tiene ahora **tres modos**, y los deciden los
 parámetros: con `actual` se puede elegir; con `id` se edita (sin lista: quien
 viene a renombrar "Broster" no viene a elegir otra); sin nada, solo crear.
 
-## El PDF automático se colgaba: ERA ESPERAR LA MEDIDA (06/08/2026)
+## El PDF automático — RESUELTO Y CONFIRMADO (07/08/2026)
+
+> **Probado en el celular del usuario con el APK 6ago-10: *"ya instalé y probé,
+> está exportando automáticamente"*.** El PDF sale solo a su hora, con la app
+> cerrada, igual que el Excel. Con eso quedan los tres formatos igualados, que es
+> lo que se pidió el 06/08.
+
+Lo que sigue es el fallo y cómo se encontró. Se conserva entero —incluidos los dos
+intentos equivocados— porque la lección es más valiosa que el arreglo.
+
+### Se colgaba: ERA ESPERAR LA MEDIDA (06/08/2026)
 
 **La conversión a PDF no contestaba nunca.** El usuario tocó "Probar ahora" y el
 botón se quedó en "Probando…" para siempre: ni PDF, ni error. A la hora fijada
@@ -497,7 +507,7 @@ Además: se contesta **una sola vez** (el tope y el resultado real podrían
 contestar los dos, y el segundo hace reventar la promesa), y el navegador se
 suelta al terminar en vez de quedar uno por reporte.
 
-## Cómo se llegó hasta aquí — SIN RESOLVER hasta el 6ago-09 (06/08/2026)
+## Cómo se llegó hasta aquí (06/08/2026, ya resuelto arriba)
 
 Reportado así: *"en exportación automática relleno la información y no se exporta
 de manera automática en pdf, parece que tuviera el mismo problema que tuvo el
@@ -518,8 +528,9 @@ y la razón de no saberlo era la falta de instrumentación, no la falta de ideas
 - El camino es el mismo para los dos hasta la rama del formato, así que el fallo
   está en la rama del PDF: `htmlDelReporte` → `htmlAPdfEnFondo` → el WebView de
   Kotlin.
-- Ese conversor nativo **no se había ejecutado nunca**. Compila y está revisado,
-  pero la primera ejecución real es esta.
+- Ese conversor nativo **no se había ejecutado nunca**: compilaba y estaba
+  revisado, pero la primera ejecución real fue esta. De ahí que un fallo así
+  llegara hasta el usuario. *(Ya corre bien desde el 6ago-10.)*
 - El sospechoso principal: un `WebView` que no está en ninguna pantalla no tiene
   tamaño, y sin tamaño la medida del documento puede fallar o salir sin páginas.
 
