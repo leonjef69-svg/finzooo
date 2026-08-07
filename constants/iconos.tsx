@@ -1,4 +1,6 @@
 import type { ComponentType } from "react";
+import { Text } from "react-native";
+import * as Font from "expo-font";
 import { FontAwesome5, MaterialCommunityIcons } from "@expo/vector-icons";
 import type { IconComponent } from "@/constants/categories";
 
@@ -93,16 +95,89 @@ function logo(nombre: string): IconComponent {
 /** Igual que los logos, pero de la tipografía de dibujos genéricos. */
 const DIBUJOS_HECHOS = new Map<string, IconComponent>();
 
+/**
+ * LA LETRA Y LA TIPOGRAFÍA, PEDIDAS UNA VEZ.
+ *
+ * Un dibujo de esta tipografía es literalmente una letra: la tabla dice qué número
+ * de letra le toca a cada nombre. Con eso se puede pintar con un texto normal.
+ */
+const GLIFOS = MaterialCommunityIcons.getRawGlyphMap() as Record<string, number>;
+const FAMILIA = MaterialCommunityIcons.getFontFamily();
+
+/**
+ * SE PIDE LA TIPOGRAFÍA AL CARGAR ESTE ARCHIVO. NO QUITAR.
+ *
+ * Quien la pedía era el componente de Expo, la primera vez que se dibujaba un icono.
+ * Al dejar de usarlo (ver dibujo() abajo) nadie la pediría, y entonces cada dibujo
+ * caería en el camino de reserva —el componente de Expo— y no habríamos ganado nada.
+ *
+ * Aquí se pide una sola vez, al arrancar la app, mucho antes de que alguien pueda
+ * abrir el catálogo. La tipografía viene DENTRO del APK, así que no hay descarga ni
+ * espera de internet: son unos milisegundos leyendo del propio archivo de la app.
+ *
+ * Y no se espera el resultado a propósito: si tardara o fallara, los dibujos usan el
+ * camino de reserva y se ven igual. Nada se queda en blanco por esto.
+ */
+void MaterialCommunityIcons.loadFont();
+
+/**
+ * ESTO NO USA EL COMPONENTE DE EXPO, Y ES EL ARREGLO DE LA LENTITUD (07/08/2026)
+ *
+ * El usuario midió *"2 a 3 segundos en entrar"* en la pantalla del catálogo, y tras
+ * arreglar seis causas seguía lento. Al abrir el componente de Expo por dentro
+ * apareció por qué, y no era ninguna suposición:
+ *
+ *   · Cada icono de Expo es una CLASE CON ESTADO. En su constructor pregunta si la
+ *     tipografía está cargada; si no lo está, **dibuja un texto vacío**, pide la
+ *     tipografía y se vuelve a dibujar con setState. Con 227 iconos eso son 227
+ *     peticiones y 227 redibujados sueltos.
+ *   · Y aunque ya esté cargada, cada icono son DOS componentes anidados —el de Expo
+ *     y el suyo de dentro— más el texto. Por casilla salían cuatro piezas.
+ *
+ * Aquí se pinta el texto directamente: **una pieza en vez de tres**. El número de
+ * letra se calcula UNA vez, al crear el dibujo, no en cada dibujado.
+ *
+ * SE COPIA EXACTAMENTE LO QUE HACE EL DE EXPO por dentro, para que se vea igual:
+ * mismo peso y estilo normal (sin eso, la tipografía de dibujos hereda la negrita
+ * de alrededor y sale deforme) y sin escalar con el tamaño de letra del sistema
+ * (allowFontScaling en falso) — si escalara, con la letra grande de Android los
+ * dibujos se saldrían de su casilla.
+ *
+ * Y SI LA TIPOGRAFÍA NO ESTUVIERA LISTA, se cae al componente de Expo, que sabe
+ * esperarla. Es la única cosa que aquel hacía y esto no.
+ */
 function dibujo(id: string, nombre: string): IconComponent {
   const guardado = DIBUJOS_HECHOS.get(id);
   if (guardado) return guardado;
+
+  const codigo = GLIFOS[nombre];
+  const letra = typeof codigo === "number" ? String.fromCodePoint(codigo) : "";
 
   // Se ignora strokeWidth por lo mismo que en los logos: el grosor del trazo
   // viene en la tipografía y no se puede pedir aparte.
   const Dibujo: ComponentType<{ size?: number; color?: string; strokeWidth?: number }> = ({
     size = 20,
     color = "#475569",
-  }) => <MaterialCommunityIcons name={nombre as never} size={size} color={color} />;
+  }) => {
+    if (!letra || !Font.isLoaded(FAMILIA)) {
+      return <MaterialCommunityIcons name={nombre as never} size={size} color={color} />;
+    }
+    return (
+      <Text
+        selectable={false}
+        allowFontScaling={false}
+        style={{
+          fontFamily: FAMILIA,
+          fontSize: size,
+          color,
+          fontWeight: "normal",
+          fontStyle: "normal",
+        }}
+      >
+        {letra}
+      </Text>
+    );
+  };
   Dibujo.displayName = "Dibujo" + id;
   DIBUJOS_HECHOS.set(id, Dibujo);
   return Dibujo;

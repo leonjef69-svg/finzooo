@@ -468,14 +468,83 @@ Lo que **sigue rechazado**: virtualizar (`FlatList`), `windowSize`, cargar de a 
 `InteractionManager` —que no espera a la animación, espera a que no quede *nada*
 pendiente—. Ver la sección del catálogo lento del 05/08.
 
+### Séptima causa: cada icono de Expo es una CLASE CON ESTADO (7ago-17)
+
+Esta es la primera que **no** se encontró leyendo nuestro código, sino leyendo el de la
+librería: `node_modules/@expo/vector-icons/build/createIconSet.js`.
+
+Un icono de `@expo/vector-icons` parecía un dibujo. No lo es. Es una **clase con
+estado**:
+
+```js
+state = { fontIsLoaded: Font.isLoaded(fontName) };
+async componentDidMount() {
+  if (!this.state.fontIsLoaded) { await Font.loadAsync(font); this.setState({ fontIsLoaded: true }); }
+}
+render() {
+  if (!this.state.fontIsLoaded) { return <Text />; }   // ← vacío
+  return <RNVIconComponent {...this.props} />;          // ← y por dentro OTRO componente
+}
+```
+
+Lo que eso significaba con 227 casillas:
+
+- **227 clases con estado** en vez de 227 dibujos. Cada una con su ciclo de vida.
+- Si la tipografía no estaba lista —y al abrir por primera vez no lo está—, las 227
+  pedían la tipografía **cada una por su cuenta** y luego avisaban **227 veces** "ya
+  cargué". Son 227 redibujados de la cuadrícula, uno detrás de otro.
+- Y mientras eso pasaba, cada casilla devolvía un `<Text />` **vacío**.
+- Incluso ya cargada, cada casilla eran **cuatro piezas** apiladas: la clase, el
+  componente de dentro, su `Text`, y la letra.
+
+Ahora `dibujo()` en [constants/iconos.tsx](constants/iconos.tsx) **pinta la letra él
+mismo**: pide la tabla de la tipografía una vez, saca el carácter con
+`String.fromCodePoint` **al guardar el dibujo en la memoria** —no al pintarlo— y lo
+suelta en un `<Text>` pelado. Es exactamente lo que hace el componente de Expo por
+dentro, sin la clase, sin el estado y sin la capa de más.
+
+**El detalle que casi se pierde, y que era el que decidía si esto servía de algo:**
+quien pedía la tipografía era el componente de Expo, la primera vez que se dibujaba.
+Al dejar de usarlo, **nadie la pedía**: `Font.isLoaded` habría dicho "no" siempre, cada
+casilla habría caído en el camino de reserva —el componente de Expo— y no se habría
+ganado nada, sin que nada se rompiera a la vista. Por eso se pide al cargar el archivo
+(`MaterialCommunityIcons.loadFont()`), y **hay una prueba solo para esa línea**.
+
+El camino de reserva se queda: si la tipografía no estuviera lista o el nombre no
+existiera, se usa el componente de Expo. Sin él, el fallo sería el más caro de todos —
+las 227 casillas vacías.
+
+Se conservan los cuatro detalles de aspecto que pone Expo (`allowFontScaling={false}`,
+`fontWeight`, `fontStyle`, `selectable={false}`); si falta alguno el dibujo cambia de
+tamaño o de grosor y parece otro icono. **Los cuatro están en la prueba.**
+
+> Las nueve afirmaciones nuevas se comprobaron contra la versión anterior y **fallan**
+> las nueve. La décima —"y no se vuelve a calcular dentro del dibujo"— pasa sola y está
+> marcada como tal: vale solo pegada a la anterior.
+
+Y un arreglo de paso en las pruebas: `expo-font` arrastra `expo-asset`, que esbuild no
+sabe resolver, y con eso dejaban de compilar **ocho** pruebas que no hablan de iconos.
+Tienen su sustituto en [pruebas/stubs/font.ts](pruebas/stubs/font.ts). El de
+`@expo/vector-icons` ahora devuelve **la tabla de letras de verdad**, leída del propio
+paquete: con una tabla vacía las pruebas recorrerían el camino de reserva, o sea el
+código que en el celular no se usa.
+
 ### DÓNDE QUEDÓ ESTO, Y QUÉ PROBAR DESPUÉS (07/08/2026)
 
-Tras los seis arreglos: *"mejoró un poco pero sigue lento"*. **Lo dejó en pausa él.**
+Tras los seis primeros arreglos: *"mejoró un poco pero sigue lento"*. Lo dejó en pausa
+él, y luego pidió volver: *"que audites código, depures, encuentres fallas"*. De esa
+auditoría salió la séptima causa de arriba, que es de otra clase que las seis
+anteriores —está en la librería, no en nuestro código— y por eso **está sin medir
+todavía**.
 
 **Lo que ya está descartado como causa** —no volver a mirarlo—: las clases de
 NativeWind en las casillas, el remontaje al cambiar de pestaña, montar las cuatro
 pestañas al abrir, `overflow` en las 236, las 48 filas rehaciéndose al tocar, y la
 vista animada de `TouchableOpacity` (esa además rompió la cuadrícula).
+
+**Lo primero, antes de seguir buscando: que él pruebe `7ago-17` y mida las dos cosas
+por separado** —entrar a la pantalla, y tocar un icono—. Si esta séptima causa era la
+gorda, se nota sin cronómetro; si no, ya no quedan causas "de leer" y toca el punto 2.
 
 **Lo que queda por probar, en orden de menos a más invasivo:**
 
@@ -491,9 +560,12 @@ vista animada de `TouchableOpacity` (esa además rompió la cuadrícula).
 3. **Recortar el catálogo.** 227 dibujos en 18 grupos; con la mitad, el montaje cuesta
    la mitad. Es decisión suya: el catálogo grande fue algo que pidió.
 
-> **Y la lección de la tarde:** seis causas ciertas, todas encontradas leyendo, y el
-> resultado fue "un poco mejor". Cuando arreglar lo que se ve en el código no mueve la
-> aguja, lo que falta es **medir**, no seguir leyendo.
+> **Y la lección de la tarde:** seis causas ciertas, todas encontradas leyendo **nuestro
+> código**, y el resultado fue "un poco mejor". Cuando arreglar lo que se ve no mueve la
+> aguja, hay dos salidas: **medir**, o **mirar dónde no se había mirado**. La séptima
+> causa salió de lo segundo —leer el código de la librería en `node_modules`— y ahí
+> estaba, un componente que parecía un dibujo y era una clase con estado. Lo que no
+> sirve es releer por sexta vez lo mismo.
 
 ## La pantalla de Premium, rediseñada (07/08/2026)
 

@@ -553,6 +553,83 @@ console.log("\n--- LOS 173 NOMBRES DE LA TIPOGRAFIA EXISTEN DE VERDAD ---");
   );
 }
 
+console.log("\n--- LA LETRA SE PINTA DIRECTA, SIN EL COMPONENTE DE EXPO ---");
+{
+  // Por que existe esta prueba (07/08/2026):
+  //
+  // Cada icono de @expo/vector-icons NO es un dibujo: es una CLASE CON ESTADO. Se
+  // leyo su codigo en node_modules/@expo/vector-icons/build/createIconSet.js —
+  //   state = { fontIsLoaded: Font.isLoaded(fontName) }
+  //   componentDidMount() { ...await Font.loadAsync(font); this.setState(...) }
+  //   render() { if (!this.state.fontIsLoaded) return <Text />; ... }
+  // — y por dentro envuelve OTRO componente. Con 227 casillas eso son 227 clases
+  // con estado, y si la tipografia no estaba lista, 227 avisos de "ya cargue" que
+  // vuelven a dibujar la cuadricula 227 veces.
+  //
+  // Ahora la letra se calcula UNA VEZ al guardar el dibujo en la memoria y se pinta
+  // con un <Text> pelado. Esto es exactamente lo que hace el componente de Expo por
+  // dentro, sin la clase ni el estado ni la capa de mas.
+  //
+  // La prueba mira el codigo escrito porque lo que se vigila es la FORMA de dibujar,
+  // y eso no se puede preguntar al resultado: un dibujo hecho de las dos maneras se
+  // ve igual. Si alguien vuelve al componente de Expo "para simplificar", la
+  // lentitud regresa sin que nada se rompa a la vista.
+  const fuente = fs.readFileSync(path.join(RAIZ, "constants/iconos.tsx"), "utf8");
+  const codigo = sinComentarios(fuente);
+
+  // 1. La letra sale de la tabla de la tipografia, y se calcula FUERA del dibujo.
+  //    Si se calculara dentro, se recalcularia en cada pintada de cada casilla.
+  const laLetra = /const\s+letra\s*=[^;]*String\.fromCodePoint/.test(codigo);
+  ok(laLetra, "la letra se saca con String.fromCodePoint al guardar el dibujo, no al pintarlo");
+
+  // Esta de aqui, sola, no comprueba nada —contra la version vieja pasaba, porque
+  // alli no habia ningun fromCodePoint en ninguna parte—. Vale unicamente pegada a
+  // la anterior: entre las dos dicen "se calcula, y se calcula FUERA".
+  const dentroDelDibujo = codigo.slice(codigo.indexOf("const Dibujo"));
+  ok(
+    !dentroDelDibujo.includes("String.fromCodePoint"),
+    "y no se vuelve a calcular dentro del dibujo"
+  );
+
+  // 2. Se pinta con un <Text> propio, no con el componente de Expo.
+  ok(
+    /<Text\b/.test(dentroDelDibujo) && /fontFamily:\s*FAMILIA/.test(dentroDelDibujo),
+    "el dibujo pinta un <Text> con la tipografia de los iconos"
+  );
+
+  // 3. El camino de reserva sigue existiendo. Sin el, si la tipografia no estuviera
+  //    lista TODAS las casillas saldrian vacias — el fallo mas caro posible aqui.
+  ok(
+    /Font\.isLoaded\(\s*FAMILIA\s*\)/.test(codigo),
+    "se pregunta si la tipografia esta lista antes de pintar la letra"
+  );
+  ok(
+    /if\s*\(\s*!letra\s*\|\|\s*!Font\.isLoaded/.test(dentroDelDibujo),
+    "y si no lo esta —o el nombre no existe— se usa el componente de Expo de reserva"
+  );
+
+  // 4. Y hay que PEDIR la tipografia al arrancar. Es el detalle que se puede perder
+  //    sin que nada avise: quien la pedia era el componente de Expo, la primera vez
+  //    que se dibujaba. Al dejar de usarlo, si nadie la pide, la respuesta de arriba
+  //    es siempre "no esta lista", cada casilla cae en la reserva y no se gana nada.
+  //    La prueba se ve tonta —comprueba una linea— y es justo la que salva el cambio.
+  ok(
+    /MaterialCommunityIcons\.loadFont\(\)/.test(codigo),
+    "la tipografia se pide al cargar el archivo, para que no se use la reserva"
+  );
+
+  // 5. Detalles de como se ve. El componente de Expo pone estos cuatro; si falta
+  //    alguno el dibujo cambia de tamano o de grosor y parece "otro icono".
+  for (const detalle of [
+    "allowFontScaling={false}", // sin esto, la letra escala con el tamano del sistema y se sale de la casilla
+    'fontWeight: "normal"', // heredaria la negrita del texto de alrededor
+    'fontStyle: "normal"', // heredaria la cursiva
+    "selectable={false}", // se podria seleccionar el icono como si fuera texto
+  ]) {
+    ok(codigo.includes(detalle), `se conserva ${detalle}`);
+  }
+}
+
 console.log("\n--- LAS MEDIDAS DE LA CUADRICULA CUADRAN ---");
 {
   // Estas cuentas son la parte fragil: de ellas sale el hueco que se reserva
