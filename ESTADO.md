@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **4 de agosto de 2026** · Código publicado: **4ago-03**
+Actualizado: **6 de agosto de 2026** · Código publicado: **6ago-04**
 
 Este archivo existe para que una sesión nueva —de Claude o de quien sea— no
 empiece de cero. No cuenta lo que ya se ve en el código ni en el historial de
@@ -203,8 +203,9 @@ Esto es lo pendiente de verdad, en orden de bloqueo:
 ## Categorías propias — hecho el 03-04/08/2026
 
 Se pueden **crear, editar y borrar** categorías con nombre, dibujo y color.
-El botón "Nueva" está DENTRO de la cuadrícula al agregar un movimiento, y el
-"Editar «X»" aparece debajo solo cuando hay una propia elegida.
+El botón "Nueva" está DENTRO de la cuadrícula de categorías, y el "Editar «X»"
+aparece debajo solo cuando hay una propia elegida. Esa cuadrícula ya no vive en
+"Nuevo movimiento": se mudó a su propia pantalla el 06/08/2026 — ver más abajo.
 
 **El catálogo** (`constants/iconos.tsx`): 181 iconos de línea en 12 grupos
 (lucide) y 55 logos de marca (FontAwesome, dentro de @expo/vector-icons). No
@@ -324,6 +325,49 @@ los iconos y está lento, se siente feo al abrirlo"):
     para ahorrar memoria, y en Android es causa conocida de celdas en blanco
     porque al volver hay que rehacerlas. Con 236 casillas la memoria no era el
     problema; los huecos sí.
+
+## Un solo botón "Elegir categoría" (06/08/2026)
+
+Pedido con la pantalla delante y la mitad marcada en azul: *"quiero que solo
+quede un botón que diga Elegir categoría y todo lo que está en azul desaparezca,
+que siga funcionando normal como está hasta ahora"*. Lo azul era la cuadrícula de
+doce casillas más "Nueva", "Ver más" y "Editar «X»", que se comía media pantalla:
+para llegar a la fecha, la descripción y las notas había que desplazarse.
+
+Ahora en "Nuevo movimiento" hay **una fila** con el dibujo de la categoría
+puesta, el texto "Elegir categoría" y su nombre a la derecha. Todo lo demás se
+mudó **completo** a `screens/ElegirCategoria.tsx`.
+
+**Se le ofreció la variante con las cuatro más usadas al lado del botón, para
+conservar el toque único, y eligió el botón solo.** Queda anotado: elegir pasó de
+un toque a tres (abrir, elegir, volver) y fue una decisión suya, informada.
+
+De regalo, dos cosas que la cuadrícula arrastraba y se fueron con la mudanza:
+
+- **Fuera el "Ver más".** Existía porque no había sitio; en su propia pantalla
+  caben todas. Con él se va el problema de que las categorías propias vivieran
+  escondidas detrás de un botón — que es también por lo que la pantalla de
+  agregar tenía que encender "Ver más" al volver de crear una.
+- Los textos `addSheet.seeMore` / `seeLess` se borraron de los tres idiomas. Un
+  texto sin dueño es lo que hace que dentro de un año nadie sepa si se puede
+  tocar.
+
+### Cómo vuelve la elegida, y por qué crear va con `replace`
+
+La elegida vuelve **por el contexto** (`elegirCategoriaEnMovimiento`), no por una
+propiedad: son dos pantallas y esta se apila encima, con la de agregar viva
+debajo y el monto ya escrito. Es el mismo canal por el que ya volvía una
+categoría recién creada — el significado es idéntico, "adopta esta".
+
+"Crear categoría" y "Editar «X»" navegan con **`router.replace`**, no con `push`:
+la pantalla de crear ocupa el lugar del selector. Así su "atrás" —el que se toca
+al guardar, al borrar o al cambiar de idea— deja directamente en el movimiento,
+que es donde hay que acabar. Con `push` habría que cerrar el selector después, y
+la recién creada ya queda elegida sola.
+
+**Se descartó encadenar dos `router.back()` seguidos.** Dos órdenes de
+navegación en el mismo instante es justo el tipo de cosa que funciona en la
+computadora y falla a medias en el celular.
 
 ## Exportación automática — cambio de nombre y de fondo (05/08/2026)
 

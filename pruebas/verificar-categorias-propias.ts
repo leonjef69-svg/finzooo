@@ -450,8 +450,15 @@ console.log("\n--- Y LA APP DE VERDAD LO USA ---");
   // Un motor perfecto que ninguna pantalla llama no sirve de nada.
   const add = fs.readFileSync(path.join(RAIZ, "screens/AddSheet.tsx"), "utf8");
   ok(add.includes("gastosDisponibles"), "la pantalla de agregar usa las listas con las propias");
-  ok(add.includes("/nueva-categoria"), "y tiene el boton para crear una");
   ok(add.includes("categoriaRecienCreada"), "y la deja elegida al volver");
+
+  // El boton de crear se mudo el 06/08/2026: la cuadricula salio de la pantalla
+  // de agregar y se fue entera a "Elegir categoria". Se comprueba ahi, no aqui,
+  // pero se sigue comprobando: sin esa puerta no habria forma de crear una.
+  const eleg = fs.readFileSync(path.join(RAIZ, "screens/ElegirCategoria.tsx"), "utf8");
+  ok(eleg.includes("gastosDisponibles"), "el selector usa las listas con las propias");
+  const ruta = fs.readFileSync(path.join(RAIZ, "app/elegir-categoria.tsx"), "utf8");
+  ok(ruta.includes("/nueva-categoria"), "y desde el selector se llega a crear una");
 
   const ctx = fs.readFileSync(path.join(RAIZ, "contexts/AppDataContext.tsx"), "utf8");
   ok(ctx.includes("savePropias"), "el contexto las guarda en disco");
@@ -463,10 +470,13 @@ console.log("\n--- EDITAR Y BORRAR SE PUEDEN ALCANZAR ---");
   // Sin una puerta visible, quien cree una categoria con el icono equivocado
   // se queda con ella para siempre. Se descarto el toque largo: es invisible,
   // y quien no lo sepa no lo encuentra nunca.
-  const add = fs.readFileSync(path.join(RAIZ, "screens/AddSheet.tsx"), "utf8");
-  ok(add.includes("esPropia(category)"), "el enlace de editar solo sale con una propia elegida");
-  ok(add.includes("nuevaCat.editarEsta"), "y dice cual se va a editar");
-  ok(add.includes("id: category"), "pasandole su id");
+  // Vive en el selector desde el 06/08/2026, con la cuadricula con la que se
+  // mudo. Lo que se protege es lo mismo de siempre: que la puerta EXISTA.
+  const eleg = fs.readFileSync(path.join(RAIZ, "screens/ElegirCategoria.tsx"), "utf8");
+  ok(eleg.includes("esPropia(actual)"), "el enlace de editar solo sale con una propia elegida");
+  ok(eleg.includes("nuevaCat.editarEsta"), "y dice cual se va a editar");
+  const ruta = fs.readFileSync(path.join(RAIZ, "app/elegir-categoria.tsx"), "utf8");
+  ok(/params: \{[^}]*id \}/.test(ruta), "pasandole su id");
 
   const pant = fs.readFileSync(path.join(RAIZ, "screens/NuevaCategoria.tsx"), "utf8");
   ok(pant.includes("editandoId"), "la pantalla sabe editar, no solo crear");

@@ -8,7 +8,7 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X, Check, ChevronDown, ChevronUp, Calendar, Plus, Pencil } from "lucide-react-native";
+import { X, Check, ChevronDown, ChevronRight, Calendar } from "lucide-react-native";
 import { router } from "expo-router";
 import CategoryAvatar from "@/components/CategoryAvatar";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
@@ -17,7 +17,6 @@ import { methodLabel, PAYMENT_METHODS } from "@/constants/i18n";
 import { useAppData } from "@/contexts/AppDataContext";
 import { defaultDateForMonth, isValidISODate, normalizeDateInput } from "@/utils/date";
 import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
-import { esPropia } from "@/utils/categoriasPropias";
 import { nextId } from "@/utils/id";
 import { horaDe } from "@/utils/format";
 import type { Month, Transaction } from "@/types";
@@ -54,7 +53,6 @@ export default function AddSheet({
   const [description, setDescription] = useState(transaction?.description || "");
   const [notes, setNotes] = useState(transaction?.notes || "");
   const [showMethod, setShowMethod] = useState(false);
-  const [showAllCats, setShowAllCats] = useState(false);
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [descriptionY, setDescriptionY] = useState(0);
@@ -69,22 +67,22 @@ export default function AddSheet({
     [type, categoriasPropias]
   );
 
-  // Al volver de crear una categoría, se deja elegida. Nadie crea una
-  // categoría para después tener que buscarla en la cuadrícula.
+  // La categoría que llega de la otra pantalla: la que se acaba de elegir en
+  // "Elegir categoría", o la que se acaba de crear. Es el mismo canal para las
+  // dos porque significan lo mismo: "adopta esta".
+  //
+  // Ya no hace falta abrir nada más al recibirla: antes había que encender el
+  // "Ver más" porque las propias vivían escondidas detrás de ese botón, y sin
+  // eso se elegía una que no se veía. Aquí ahora solo hay un botón, y el botón
+  // enseña la que esté puesta, sea de fábrica o propia.
   useEffect(() => {
     if (!categoriaRecienCreada) return;
     setCategory(categoriaRecienCreada);
-    // Las propias van al final, detrás de "Ver más": sin esto se elegiría una
-    // que no se ve.
-    setShowAllCats(true);
     olvidarCategoriaRecienCreada();
   }, [categoriaRecienCreada, olvidarCategoriaRecienCreada]);
 
   useEffect(() => {
-    if (!transaction) {
-      setCategory(type === "expense" ? "comida" : "salario");
-      setShowAllCats(false);
-    }
+    if (!transaction) setCategory(type === "expense" ? "comida" : "salario");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
 
@@ -349,102 +347,48 @@ export default function AddSheet({
               </View>
             </View>
 
-            <View>
-              <View className="flex-row items-center justify-between mb-1.5">
-                <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200">{t("detail.category")}</Text>
-                <Text className="text-[11px] font-semibold text-slate-500 dark:text-slate-300">
-                  {t(cats.find((c) => c.id === category)?.label ?? "")}
-                </Text>
+            {/* CATEGORÍA: UN SOLO BOTÓN.
+                Aquí había una cuadrícula de doce casillas más "Nueva", "Ver
+                más" y "Editar esta". Se comía media pantalla, y para llegar a
+                la fecha, la descripción y las notas había que desplazarse.
+                El usuario lo pidió así el 06/08/2026: que quedara solo un
+                botón. Todo lo que estaba aquí se mudó completo a la pantalla
+                de "Elegir categoría" —ninguna función se perdió— y allá cabe
+                mejor: se ven TODAS sin el "Ver más" que escondía las de abajo.
+                El botón enseña la que está puesta ahora. Sin eso sería un botón
+                que no dice nada, y habría que abrirlo para saber qué categoría
+                lleva el movimiento. */}
+            <TouchableOpacity
+              onPress={() =>
+                router.push({
+                  pathname: "/elegir-categoria",
+                  params: { tipo: type, actual: category },
+                })
+              }
+              className="flex-row items-center gap-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-3"
+              style={{ height: FIELD_HEIGHT }}
+            >
+              <View
+                className={`w-8 h-8 rounded-xl items-center justify-center bg-${catInfo(category).color}-100`}
+              >
+                <CategoryAvatar id={category} size={17} />
               </View>
-              <View className="bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700 rounded-3xl p-3">
-                <View className="flex-row flex-wrap gap-3">
-                  {cats
-                    .filter((c) => showAllCats || !c.extra)
-                    .map((c) => {
-                      const active = category === c.id;
-                      return (
-                        <TouchableOpacity
-                          key={c.id}
-                          onPress={() => setCategory(c.id)}
-                          className="items-center gap-1.5"
-                          style={{ width: "21%" }}
-                        >
-                          <View
-                            className={`w-12 h-12 rounded-2xl items-center justify-center bg-${c.color}-100 ${
-                              active ? `border-2 border-${c.color}-500` : ""
-                            }`}
-                          >
-                            <CategoryAvatar id={c.id} size={20} />
-                          </View>
-                          <Text
-                            className={`text-xs font-bold text-center ${
-                              active ? `text-${c.color}-600` : "text-slate-600 dark:text-slate-200"
-                            }`}
-                            numberOfLines={1}
-                          >
-                            {t(c.label)}
-                          </Text>
-                        </TouchableOpacity>
-                      );
-                    })}
-                  {/* CREAR UNA PROPIA.
-                      Va DENTRO de la cuadrícula, como una más, y no en un
-                      botón aparte debajo: es donde la persona ya está mirando
-                      justo cuando descubre que la suya no está. */}
-                  <TouchableOpacity
-                    onPress={() =>
-                      router.push({ pathname: "/nueva-categoria", params: { tipo: type } })
-                    }
-                    className="items-center gap-1.5"
-                    style={{ width: "21%" }}
-                  >
-                    <View className="w-12 h-12 rounded-2xl items-center justify-center border-2 border-dashed border-emerald-400">
-                      <Plus size={20} color="#059669" />
-                    </View>
-                    <Text className="text-xs font-bold text-center text-emerald-600" numberOfLines={1}>
-                      {t("nuevaCat.boton")}
-                    </Text>
-                  </TouchableOpacity>
-                  {cats.some((c) => c.extra) && (
-                    <TouchableOpacity
-                      onPress={() => setShowAllCats((v) => !v)}
-                      className="items-center gap-1.5"
-                      style={{ width: "21%" }}
-                    >
-                      <View className="w-12 h-12 rounded-2xl items-center justify-center border-2 border-dashed border-slate-300 dark:border-slate-600">
-                        {showAllCats ? (
-                          <ChevronUp size={18} color="#94a3b8" />
-                        ) : (
-                          <ChevronDown size={18} color="#94a3b8" />
-                        )}
-                      </View>
-                      <Text className="text-xs font-bold text-center text-slate-500 dark:text-slate-300">
-                        {showAllCats ? t("addSheet.seeLess") : t("addSheet.seeMore")}
-                      </Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-
-                {/* EDITAR LA PROPIA QUE ESTÉ ELEGIDA.
-                    Solo aparece con una categoría tuya seleccionada, y por eso
-                    no estorba: el resto del tiempo no está. Se descarta el
-                    toque largo a propósito — es invisible, y quien no lo sepa
-                    no encuentra nunca cómo cambiar lo que acaba de crear. */}
-                {esPropia(category) && (
-                  <TouchableOpacity
-                    onPress={() =>
-                      router.push({ pathname: "/nueva-categoria", params: { tipo: type, id: category } })
-                    }
-                    className="flex-row items-center justify-center gap-1.5 mt-3 pt-3 border-t-[1.5px] border-slate-200 dark:border-slate-700"
-                  >
-                    <Pencil size={13} color="#64748b" />
-                    <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
-                      {t("nuevaCat.editarEsta", { nombre: catInfo(category).label })}
-                    </Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-            </View>
+              <Text
+                className="text-sm font-bold flex-1"
+                style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                numberOfLines={1}
+              >
+                {t("addSheet.chooseCategory")}
+              </Text>
+              {/* Se busca en "cats" y no directo en catInfo porque una categoría
+                  personalizada lleva su nombre escrito a mano, y el traductor
+                  devuelve tal cual lo que no reconoce. Así sale bien en los dos
+                  casos. */}
+              <Text className="text-sm font-semibold text-slate-500 dark:text-slate-300" numberOfLines={1}>
+                {t(cats.find((c) => c.id === category)?.label ?? catInfo(category).label)}
+              </Text>
+              <ChevronRight size={15} color="#94a3b8" />
+            </TouchableOpacity>
 
             {/* Fecha y Método comparten FIELD_HEIGHT. Sin esa altura fija se
                 veían de distinto tamaño: en Android un campo de escritura trae

@@ -133,6 +133,15 @@ type AppDataContextValue = {
   /** La recien creada, para que la pantalla de agregar la deje elegida. */
   categoriaRecienCreada: string | null;
   olvidarCategoriaRecienCreada: () => void;
+  /**
+   * Deja una categoria elegida en la pantalla de agregar movimiento.
+   *
+   * Lo usa la pantalla de "Elegir categoria", que es otra pantalla: no puede
+   * pasarle el dato de vuelta por una propiedad. Va por el mismo canal que la
+   * recien creada —el significado es identico, "adopta esta categoria"— pero con
+   * su propio nombre, para que en el sitio donde se llama se lea lo que hace.
+   */
+  elegirCategoriaEnMovimiento: (id: string) => void;
   editarCategoria: (
     id: string,
     // image en null es "quitar la foto". Sin ese null no habria forma de
@@ -1269,6 +1278,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         crearCategoria,
         categoriaRecienCreada,
         olvidarCategoriaRecienCreada: () => setCategoriaRecienCreada(null),
+        elegirCategoriaEnMovimiento: setCategoriaRecienCreada,
         editarCategoria,
         borrarCategoria,
         movimientosDeCategoria,

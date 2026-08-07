@@ -501,6 +501,17 @@ export default function RootLayout() {
                 contentStyle: { backgroundColor: screenBg },
               }}
             />
+            {/* "Elegir categoría" se apila igual que la de arriba y por los
+                mismos motivos, así que lleva la misma animación: si una se
+                deslizara y la otra no, pasar de una a la otra se sentiría como
+                dos apps distintas. */}
+            <Stack.Screen
+              name="elegir-categoria"
+              options={{
+                animation: "slide_from_right",
+                contentStyle: { backgroundColor: screenBg },
+              }}
+            />
             {/* La pantalla de voz pasó de ocupar todo a ser un panel encima
                 de lo que hubiera, con el resto oscurecido. Por eso ahora va
                 con "transparentModal" —el caso para el que sirve, según la
