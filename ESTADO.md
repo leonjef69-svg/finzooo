@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-11**
+Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-12**
 · APK instalado y al día: **finzo-6ago-10** (no hace falta uno nuevo: desde
 entonces no ha cambiado nada de Android)
 
@@ -333,6 +333,39 @@ los iconos y está lento, se siente feo al abrirlo"):
     para ahorrar memoria, y en Android es causa conocida de celdas en blanco
     porque al volver hay que rehacerlas. Con 236 casillas la memoria no era el
     problema; los huecos sí.
+
+## "La app la siento lenta": las pestañas rehacían el catálogo (07/08/2026)
+
+*"Cuando le doy a elegir categoría como que se demora en entrar a la pestaña donde
+están los iconos. Quiero que la aplicación se sienta rápida y fluida."*
+
+Tres causas, y **las tres las habíamos introducido nosotros estos días**:
+
+**1. Cada pestaña se dibujaba solo si era la elegida.** Así que volver a la de los
+dibujos construía **las 236 casillas otra vez**, y otra vez en cada ida y vuelta.
+Ahora las cuatro se quedan puestas y solo se esconde la que no toca
+(`display: "none"`): se construyen una sola vez, al abrir, y cambiar de pestaña ya no
+cuesta nada. Yoga saca de la cuenta lo que lleva `display: none`, así que la parte
+deslizable sigue midiendo solo lo que se ve.
+
+**2. Cada casilla traía una vista ANIMADA dentro.** `TouchableOpacity` la usa para
+bajar la opacidad al tocarla: eran **236 valores animados** creados al abrir, y
+ninguno hace nada hasta que se toca uno. Con `Pressable` es la misma caja sin esa
+parte, y el aviso de "estoy tocando" se da con la opacidad de siempre.
+
+**3. Las 236 recortaban su contenido.** `overflow-hidden` obliga a Android a darle a
+cada casilla su propia capa para cortar lo que sobresale. Se puso en todas el mismo
+día, al permitir fotos en favoritos — **sin pensar en que la cuadrícula grande no
+tiene ninguna foto**. Ahora solo recortan las que llevan foto.
+
+> Ninguna de las tres es un cálculo mal hecho: son **tres cosas añadidas por un
+> motivo bueno y aplicadas donde no hacían falta**. El escenario que las delató es el
+> mismo de siempre —usar la pantalla de verdad, ir y volver— y ninguna se ve leyendo
+> el archivo de una sola pasada.
+
+Lo que **no** se volvió a intentar, porque ya se probó y el usuario lo rechazó:
+cargar el catálogo por partes, virtualizarlo, o esperar a que acabe la animación. Ver
+la sección del catálogo lento del 05/08.
 
 ## La pantalla de Premium, rediseñada (07/08/2026)
 

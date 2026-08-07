@@ -235,6 +235,44 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   // hace falta repartir nada; el escalonado solo dejaria huecos que se ven si se
   // desliza en ese instante, que es lo que se estaba arreglando.
   ok(!codigo.includes("gruposArmados"), "no se cargan por partes: estan los 236 desde el principio");
+
+  // NI SE REHACEN AL CAMBIAR DE PESTAÑA.
+  //
+  // Reportado el 07/08/2026: "cuando le doy a elegir categoria como que se demora
+  // en entrar a la pestaña donde estan los iconos". Cada pestaña se dibujaba solo
+  // si era la elegida, asi que volver a la de los dibujos construia LAS 236
+  // CASILLAS OTRA VEZ, y otra vez en cada ida y vuelta.
+  //
+  // Con display none se construyen una sola vez, al abrir, y cambiar de pestaña ya
+  // no cuesta nada. Se cuentan las cuatro: con tres, la que quede fuera vuelve a
+  // pagar el precio y nadie lo notara hasta que sea la de los dibujos.
+  const escondidas = (codigo.match(/display: pestana === "[a-z]+" \? "flex" : "none"/g) ?? []).length;
+  ok(escondidas === 4, `las cuatro pestañas se quedan puestas y solo se esconden (${escondidas})`);
+  ok(
+    !/pestana === "(tuyas|color|favoritos)" \? \(/.test(codigo),
+    "ninguna se desmonta al cambiar de pestaña"
+  );
+
+  // Y LA CASILLA NO LLEVA UNA VISTA ANIMADA DENTRO.
+  //
+  // TouchableOpacity trae una para bajar la opacidad al tocarla: son 236 valores
+  // animados que Android crea al abrir la pantalla, y ninguno hace nada hasta que
+  // se toca uno. Pressable es la misma caja sin esa parte.
+  const laCasilla = /const Dibujito = memo\([\s\S]*?\n\}\);/.exec(codigo)?.[0] ?? "";
+  ok(laCasilla.includes("<Pressable"), "la casilla del catalogo usa Pressable");
+  ok(!laCasilla.includes("TouchableOpacity"), "y no la version con vista animada");
+
+  // Y NO RECORTA SU CONTENIDO SALVO QUE HAYA FOTO.
+  //
+  // Recortar obliga a Android a darle a esa casilla su propia capa para cortar lo
+  // que sobresale. Puesto en todas eran 236 capas, y solo hace falta en las de
+  // foto: un dibujo de la tipografia cabe dentro y no sobresale de nada. Se puso en
+  // todas al permitir fotos en favoritos, sin pensar en que la cuadricula grande no
+  // tiene ninguna.
+  ok(
+    /\$\{foto \? "overflow-hidden" : ""\}/.test(laCasilla),
+    "y solo recorta cuando la casilla lleva una foto"
+  );
   ok(!codigo.includes("altoDeLasFilas"), "ni hay huecos reservados que llenar despues");
 
   // 05/08/2026, con foto: "esta disparejo los iconos". Al pasar a filas de

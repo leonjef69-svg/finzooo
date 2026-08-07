@@ -1,6 +1,7 @@
 import { memo, useCallback, useMemo, useState } from "react";
 import {
   Image,
+  Pressable,
   ScrollView,
   Text,
   TextInput,
@@ -89,13 +90,28 @@ const Dibujito = memo(function Dibujito({
   const foto = esFoto(id);
   const D = foto ? null : iconoDe(id);
   return (
-    <TouchableOpacity
+    // PRESSABLE Y NO TOUCHABLEOPACITY, y en 236 casillas se nota.
+    //
+    // TouchableOpacity trae dentro una vista ANIMADA para bajar la opacidad al
+    // tocarla: son 236 valores animados que Android tiene que crear al abrir la
+    // pantalla, y ninguno hace nada hasta que se toca uno. Pressable es la misma
+    // caja sin esa parte, y el aviso de "estoy tocando" se da con la opacidad de
+    // siempre. Reportado el 07/08/2026: "quiero que la aplicación se sienta rápida
+    // y fluida".
+    <Pressable
       onPress={() => onElegir(id)}
       // La medida va en número, no en clase. Con "flex-1" la repartía la fila y
       // se veía igual, pero nadie sabía cuánto medía hasta después de dibujarla
       // — y la lista necesita saberlo ANTES para poder adelantarse al dedo.
-      style={{ width: lado, height: lado }}
-      className={`rounded-2xl items-center justify-center overflow-hidden ${
+      style={({ pressed }) => [{ width: lado, height: lado }, pressed && { opacity: 0.6 }]}
+      // El recorte SOLO cuando hay foto, y ahí está el segundo ahorro.
+      //
+      // Recortar obliga a Android a darle a esa casilla su propia capa para poder
+      // cortar lo que sobresale. Puesto en todas eran 236 capas, y solo hace falta
+      // en las de foto: un dibujo de la tipografía cabe dentro y no sobresale de
+      // nada. Se puso en todas el 07/08/2026 al permitir fotos en favoritos, sin
+      // pensar en que la cuadrícula grande no tiene ninguna.
+      className={`rounded-2xl items-center justify-center ${foto ? "overflow-hidden" : ""} ${
         elegido
           ? `bg-${color}-100 border-2 border-${color}-500`
           : "bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700"
@@ -110,7 +126,7 @@ const Dibujito = memo(function Dibujito({
       ) : (
         <Image source={{ uri: id }} style={{ width: lado, height: lado }} />
       )}
-    </TouchableOpacity>
+    </Pressable>
   );
 });
 
@@ -662,13 +678,24 @@ export default function NuevaCategoria({
 
       {/* El "px-5" del contenido de las pestañas es el MARGEN_LATERAL de las
           medidas, y de ahí sale el ancho de las casillas. Cambiar uno sin el
-          otro descoloca la cuadrícula. */}
+          otro descoloca la cuadrícula.
+
+          LAS CUATRO PESTAÑAS SE QUEDAN PUESTAS, Y SOLO SE ESCONDE LA QUE NO TOCA.
+          Esto es lo que hacía que la pantalla se sintiera lenta (07/08/2026:
+          "cuando le doy a elegir categoría como que se demora en entrar a la
+          pestaña donde están los iconos").
+          Antes cada pestaña se dibujaba solo si era la elegida, así que al volver
+          a la de los dibujos se construían LAS 236 CASILLAS OTRA VEZ — y otra vez
+          en cada ida y vuelta. Con "display: none" se construyen una sola vez, al
+          abrir, y cambiar de pestaña ya no cuesta nada.
+          Yoga saca de la cuenta lo que lleva display none, así que la parte
+          deslizable mide solo lo que se está viendo: no queda hueco vacío debajo. */}
       <ScrollView
         className="flex-1"
         contentContainerStyle={{ paddingBottom: 24 }}
         keyboardShouldPersistTaps="handled"
       >
-        {pestana === "tuyas" ? (
+        <View style={{ display: pestana === "tuyas" ? "flex" : "none" }}>
           <View className="px-5" style={{ paddingTop: 12 }}>
             <View className="flex-row flex-wrap gap-3">
               {cats.map((c) => {
@@ -803,7 +830,9 @@ export default function NuevaCategoria({
               );
             })()}
           </View>
-        ) : pestana === "color" ? (
+        </View>
+
+        <View style={{ display: pestana === "color" ? "flex" : "none" }}>
           <View className="px-5" style={{ paddingTop: 12 }}>
             <View className="flex-row flex-wrap gap-3">
               {COLORES.map((c) => (
@@ -820,7 +849,9 @@ export default function NuevaCategoria({
               ))}
             </View>
           </View>
-        ) : pestana === "favoritos" ? (
+        </View>
+
+        <View style={{ display: pestana === "favoritos" ? "flex" : "none" }}>
           <View className="px-5" style={{ paddingTop: 12 }}>
             {favoritos.length === 0 ? (
               /* VACÍA, PERO NO MUDA. Una pestaña vacía sin explicación deja a la
@@ -852,16 +883,21 @@ export default function NuevaCategoria({
               ))
             )}
           </View>
-        ) : (
-          // LOS 236 DIBUJOS PUESTOS, TODOS. Sin lista virtual, sin cargar por
-          // partes, sin nada que aparezca después.
-          //
-          // Esto sería impensable con dibujos vectoriales —armarlos tarda cerca de
-          // un segundo, y por eso hubo cinco intentos de repartir ese segundo en
-          // algún sitio donde no se notara—. Con la tipografía cada dibujo es una
-          // letra, así que los 236 salen de una y ya está. El arreglo no estuvo
-          // nunca en cómo organizar la lista: estuvo en de qué están hechos los
-          // dibujos. Ver constants/iconos.tsx.
+        </View>
+
+        {/* LOS 236 DIBUJOS PUESTOS, TODOS. Sin lista virtual, sin cargar por
+            partes, sin nada que aparezca después.
+
+            Esto sería impensable con dibujos vectoriales —armarlos tarda cerca de
+            un segundo, y por eso hubo cinco intentos de repartir ese segundo en
+            algún sitio donde no se notara—. Con la tipografía cada dibujo es una
+            letra, así que los 236 salen de una y ya está. El arreglo no estuvo
+            nunca en cómo organizar la lista: estuvo en de qué están hechos los
+            dibujos. Ver constants/iconos.tsx.
+
+            Y desde el 07/08/2026 se quedan puestos al cambiar de pestaña: antes se
+            rehacían los 236 en cada ida y vuelta. Ver la nota de arriba. */}
+        <View style={{ display: pestana === "icono" ? "flex" : "none" }}>
           <View className="px-5">
             {/* TU PROPIA FOTO, PRIMERO.
               Va arriba del catálogo y no en una pestaña aparte porque es otra
@@ -932,7 +968,7 @@ export default function NuevaCategoria({
               </View>
             ))}
           </View>
-        )}
+        </View>
       </ScrollView>
 
       <View className="px-5" style={{ paddingBottom: insets.bottom + 16 }}>
