@@ -186,6 +186,21 @@ console.log("\n--- Y ELEGIR UNA QUE YA EXISTE SIGUE ESTANDO, EN SU PESTAÑA ---"
 
   ok(pantLimpia.includes("nuevaCat.editarEsta"), "esta el enlace para editar la propia puesta");
 
+  // QUITARLE LA FOTO, desde aqui.
+  //
+  // Se podia desde el principio —la casilla de la foto con su ✕ esta en la pestaña
+  // del catalogo— pero ahi no la encuentra nadie que venga de esta lista: hay que
+  // saber que la foto de una categoria se quita desde donde se eligen los dibujos.
+  // Pedido el 07/08/2026.
+  ok(pantLimpia.includes("nuevaCat.quitarFotoDe"), "y el de quitarle la foto");
+  ok(
+    /elegirDeLaLista\(suya\);\s*\r?\n\s*setFoto\(undefined\);/.test(pantLimpia),
+    "que la deja marcada y sin foto, para guardarla con Aplicar"
+  );
+  // Solo sale si de verdad tiene foto: un enlace que no hace nada es peor que no
+  // tenerlo, porque se toca y no se entiende por que no pasa nada.
+  ok(/info\.image \? \(/.test(pantLimpia), "solo cuando esa categoria tiene foto");
+
   // Todas a la vista. El "Ver mas" existia porque no habia sitio; aqui sobra.
   ok(!pantLimpia.includes("showAllCats"), "se ven todas, sin Ver mas");
   // El toque largo se descarto en este proyecto por invisible.

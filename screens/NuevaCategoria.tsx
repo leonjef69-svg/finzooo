@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import {
   Image,
   ScrollView,
@@ -36,7 +36,7 @@ import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 
 import { esPropia, nombreRepetido } from "@/utils/categoriasPropias";
-import { alternar, getFavoritos, saveFavoritos } from "@/utils/iconosFavoritos";
+import { alternar, esFoto, getFavoritos, saveFavoritos } from "@/utils/iconosFavoritos";
 import { sanitizeName } from "@/utils/categoryCustom";
 
 // Los mismos de personalizar categorias, para que una categoria propia no
@@ -83,7 +83,12 @@ const Dibujito = memo(function Dibujito({
   lado: number;
   onElegir: (id: string) => void;
 }) {
-  const D = iconoDe(id);
+  // UNA FOTO PROPIA SE DIBUJA COMO FOTO, no como dibujo de línea. Aparece en la
+  // pestaña de favoritos desde el 07/08/2026, cuando las fotos también se pueden
+  // marcar. Sin esto, un favorito con foto saldría como el dibujo de respaldo y
+  // parecerían todos iguales.
+  const foto = esFoto(id);
+  const D = foto ? null : iconoDe(id);
   return (
     <TouchableOpacity
       onPress={() => onElegir(id)}
@@ -91,17 +96,21 @@ const Dibujito = memo(function Dibujito({
       // se veía igual, pero nadie sabía cuánto medía hasta después de dibujarla
       // — y la lista necesita saberlo ANTES para poder adelantarse al dedo.
       style={{ width: lado, height: lado }}
-      className={`rounded-2xl items-center justify-center ${
+      className={`rounded-2xl items-center justify-center overflow-hidden ${
         elegido
           ? `bg-${color}-100 border-2 border-${color}-500`
           : "bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700"
       }`}
     >
-      <D
-        size={22}
-        color={elegido ? COLOR_HEX_600[color] || "#475569" : "#64748b"}
-        strokeWidth={2.2}
-      />
+      {D ? (
+        <D
+          size={22}
+          color={elegido ? COLOR_HEX_600[color] || "#475569" : "#64748b"}
+          strokeWidth={2.2}
+        />
+      ) : (
+        <Image source={{ uri: id }} style={{ width: lado, height: lado }} />
+      )}
     </TouchableOpacity>
   );
 });
@@ -307,12 +316,6 @@ export default function NuevaCategoria({
    */
   const [favoritos, setFavoritosEstado] = useState<string[]>(() => getFavoritos());
 
-  function alternarFavorito() {
-    const siguiente = alternar(favoritos, icono);
-    setFavoritosEstado(siguiente);
-    saveFavoritos(siguiente);
-    showToast(t(siguiente.includes(icono) ? "nuevaCat.favGuardado" : "nuevaCat.favQuitado"));
-  }
   const [confirmandoBorrado, setConfirmandoBorrado] = useState(false);
 
   // LA FOTO PROPIA. Cuando hay, se dibuja en vez del icono — la misma regla que
@@ -325,6 +328,32 @@ export default function NuevaCategoria({
   const [foto, setFoto] = useState<string | undefined>(() => original?.image);
   /** La imagen recién elegida, esperando a que se encuadre. */
   const [recortando, setRecortando] = useState<string | null>(null);
+
+  /**
+   * Lo que la estrella marca: la FOTO si hay una, y si no el dibujo.
+   *
+   * Es lo mismo que se está viendo arriba, así que no hace falta explicarlo en
+   * pantalla: la estrella actúa sobre lo que se ve.
+   */
+  const loQueSeMarca = foto ?? icono;
+  const esFav = favoritos.includes(loQueSeMarca);
+
+  function alternarFavorito() {
+    const siguiente = alternar(favoritos, loQueSeMarca);
+    setFavoritosEstado(siguiente);
+    saveFavoritos(siguiente);
+    showToast(t(siguiente.includes(loQueSeMarca) ? "nuevaCat.favGuardado" : "nuevaCat.favQuitado"));
+  }
+
+  /**
+   * Tocar un favorito: si es una foto se pone como foto, y si es un dibujo como
+   * dibujo. Sin distinguirlo, tocar una foto guardaría su texto entero como si
+   * fuera el nombre de un dibujo del catálogo, y saldría el de respaldo.
+   */
+  const elegirFavorito = useCallback((v: string) => {
+    if (esFoto(v)) setFoto(v);
+    else setIcono(v);
+  }, []);
 
   /**
    * Tocar una de "Tus categorías": se carga arriba para poder retocarla.
@@ -394,7 +423,6 @@ export default function NuevaCategoria({
   );
 
   const Dibujo = iconoDe(icono);
-  const esFav = favoritos.includes(icono);
   const limpio = sanitizeName(nombre);
   // Al editar no cuenta como repetida consigo misma — y lo mismo si se eligió de
   // la lista: tocar "Broster" y darle a Aplicar sin cambiarle nada diría "ya
@@ -519,24 +547,27 @@ export default function NuevaCategoria({
                 <Dibujo size={36} color={COLOR_HEX_600[color] || "#475569"} strokeWidth={2.2} />
               )}
             </View>
-            {/* LA ESTRELLA. Solo cuando NO hay foto: un favorito es un ícono del
-              catálogo, y una foto propia no está en el catálogo — guardarla
-              como "favorito" no llevaría a ningún sitio al que volver. */}
-            {!foto && (
-              <TouchableOpacity
-                onPress={alternarFavorito}
-                className={`w-10 h-10 rounded-full items-center justify-center border-[1.5px] ${
-                  esFav ? "bg-amber-100 border-amber-400" : "border-slate-300 dark:border-slate-600"
-                }`}
-              >
-                <Star
-                  size={19}
-                  color={esFav ? "#d97706" : "#94a3b8"}
-                  fill={esFav ? "#f59e0b" : "transparent"}
-                  strokeWidth={2.2}
-                />
-              </TouchableOpacity>
-            )}
+            {/* LA ESTRELLA. Marca lo que se está viendo: la foto si hay una, y
+                si no el dibujo.
+                Con foto NO se ofrecía, con el argumento de que un favorito es un
+                dibujo del catálogo y una foto no está en el catálogo. El usuario
+                lo pidió el 07/08/2026 y tenía razón: recortar una foto cuesta
+                cámara, encuadre y zoom, y volver a hacerlo para la siguiente
+                categoría es justo lo que un favorito evita. El argumento miraba
+                de dónde sale el dibujo en vez de cuánto cuesta conseguirlo. */}
+            <TouchableOpacity
+              onPress={alternarFavorito}
+              className={`w-10 h-10 rounded-full items-center justify-center border-[1.5px] ${
+                esFav ? "bg-amber-100 border-amber-400" : "border-slate-300 dark:border-slate-600"
+              }`}
+            >
+              <Star
+                size={19}
+                color={esFav ? "#d97706" : "#94a3b8"}
+                fill={esFav ? "#f59e0b" : "transparent"}
+                strokeWidth={2.2}
+              />
+            </TouchableOpacity>
           </View>
           <Text className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-2.5">
             {limpio || t("nuevaCat.sinNombre")}
@@ -662,17 +693,48 @@ export default function NuevaCategoria({
                 lo sepa no lo encuentra nunca. */}
             {(() => {
               const suya = elegida ?? actual;
-              if (!suya || !esPropia(suya)) return null;
+              if (!suya) return null;
+              const info = catInfo(suya);
               return (
-                <TouchableOpacity
-                  onPress={() => onEditar?.(suya)}
-                  className="flex-row items-center justify-center gap-1.5 mt-5"
-                >
-                  <Pencil size={13} color="#64748b" />
-                  <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
-                    {t("nuevaCat.editarEsta", { nombre: catInfo(suya).label })}
-                  </Text>
-                </TouchableOpacity>
+                <>
+                  {/* QUITARLE LA FOTO.
+                      Se podía desde el principio —la casilla de la foto con su ✕
+                      está en la pestaña del catálogo— pero ahí no la encuentra
+                      nadie que venga de esta lista: hay que saber que la foto de
+                      una categoría se quita desde donde se eligen los dibujos.
+                      Pedido el 07/08/2026: *"las fotos o imágenes que suba en tus
+                      categorías debería haber una opción o icono para poder
+                      borrarlos"*.
+                      Al tocarla, la categoría queda marcada con su foto ya
+                      quitada, y se guarda al darle a Aplicar — como todo lo demás
+                      de esta pantalla. Nada se pierde antes de confirmar. */}
+                  {info.image ? (
+                    <TouchableOpacity
+                      onPress={() => {
+                        elegirDeLaLista(suya);
+                        setFoto(undefined);
+                      }}
+                      className="flex-row items-center justify-center gap-1.5 mt-5"
+                    >
+                      <Trash2 size={13} color="#e11d48" />
+                      <Text className="text-xs font-bold text-rose-600">
+                        {t("nuevaCat.quitarFotoDe", { nombre: info.label })}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+
+                  {esPropia(suya) ? (
+                    <TouchableOpacity
+                      onPress={() => onEditar?.(suya)}
+                      className="flex-row items-center justify-center gap-1.5 mt-4"
+                    >
+                      <Pencil size={13} color="#64748b" />
+                      <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
+                        {t("nuevaCat.editarEsta", { nombre: info.label })}
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </>
               );
             })()}
           </View>
@@ -709,14 +771,18 @@ export default function NuevaCategoria({
             ) : (
               // Las mismas filas y el mismo tamaño de casilla que el catálogo: es
               // la misma elección, así que tiene que verse igual.
+              //
+              // "elegido" mira la foto ANTES que el dibujo, igual que la vista
+              // previa: con una foto puesta, la marcada tiene que ser la foto y no
+              // el dibujo que quedó debajo.
               enFilas(favoritos).map((fila, f) => (
                 <Fila
                   key={f}
                   iconos={fila}
-                  elegido={icono}
+                  elegido={loQueSeMarca}
                   color={color}
                   lado={lado}
-                  onElegir={setIcono}
+                  onElegir={elegirFavorito}
                 />
               ))
             )}

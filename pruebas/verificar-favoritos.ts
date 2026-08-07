@@ -10,7 +10,14 @@
 // fuera de la pantalla sin forma de llegar a ellos.
 import fs from "fs";
 import path from "path";
-import { alternar, esFavorito, getFavoritos, MAX_FAVORITOS, setFavoritos } from "@/utils/iconosFavoritos";
+import {
+  alternar,
+  esFavorito,
+  esFoto,
+  getFavoritos,
+  MAX_FAVORITOS,
+  setFavoritos,
+} from "@/utils/iconosFavoritos";
 import { enFilas, POR_FILA } from "@/constants/catalogoFilas";
 
 let fallos = 0;
@@ -42,6 +49,29 @@ console.log("\n--- EL TOPE ---");
   // Y se cae el MÁS VIEJO, no se rechaza el nuevo: un "no caben más" obligaría a
   // ir a borrar uno antes de poder guardar el que importa ahora.
   ok(!conUnoMas.includes(`icono${MAX_FAVORITOS - 1}`), "y sale el más viejo, no se niega a guardar");
+}
+
+console.log("\n--- UNA FOTO PROPIA VALE COMO FAVORITO ---");
+{
+  const FOTO = "data:image/jpeg;base64,/9j/4AAQSkZJRg";
+
+  // Se distingue por cómo empieza el texto, y no con un campo aparte, para que las
+  // listas que ya estaban guardadas en los celulares se lean igual, sin convertir
+  // nada.
+  ok(esFoto(FOTO), "una foto se reconoce por su texto");
+  ok(!esFoto("Coffee"), "y un dibujo del catálogo no es una foto");
+  ok(!esFoto(""), "ni el vacío");
+  ok(!esFoto(undefined as unknown as string), "ni algo que no es texto, sin reventar");
+
+  // Y entra en la misma lista que los dibujos, sin tratarla distinto.
+  const lista = alternar(alternar([], "Coffee"), FOTO);
+  ok(lista.length === 2 && lista[0] === FOTO, "se marca igual que un dibujo, y va primera");
+  ok(alternar(lista, FOTO).length === 1, "y se desmarca igual");
+
+  // La limpieza del disco no puede tirarla por ser larga o traer signos raros.
+  setFavoritos([FOTO, "Coffee"]);
+  ok(getFavoritos().length === 2, "sobrevive a la limpieza de lo que llega del disco");
+  setFavoritos([]);
 }
 
 console.log("\n--- LO QUE LLEGA DEL DISCO ---");
@@ -98,9 +128,21 @@ console.log("\n--- LA PANTALLA: LA PESTAÑA VA EN EL MEDIO ---");
   ok(/onPress=\{alternarFavorito\}/.test(pant), "hay una estrella que marca y desmarca");
   ok(!/onLongPress/.test(pant), "y no se usa el toque largo, que nadie descubre");
 
-  // Con foto no hay estrella: un favorito es un ícono del catálogo, y una foto
-  // propia no está en el catálogo — no habría a dónde volver.
-  ok(/!foto && \(/.test(pant), "con una foto propia no se ofrece marcar favorito");
+  // LAS FOTOS PROPIAS TAMBIÉN SE PUEDEN MARCAR (07/08/2026).
+  //
+  // Antes no se ofrecía —"un favorito es un ícono del catálogo, y una foto no está
+  // en el catálogo"—. El usuario lo pidió y tenía razón: recortar una foto cuesta
+  // cámara, encuadre y zoom, y volver a hacerlo para la siguiente categoría es
+  // justo lo que un favorito evita. El argumento miraba de dónde sale el dibujo en
+  // vez de cuánto cuesta conseguirlo.
+  ok(!/\{!foto && \(/.test(pant), "la estrella ya no se esconde cuando hay foto");
+  ok(/const loQueSeMarca = foto \?\? icono;/.test(pant), "y marca lo que se está viendo");
+  ok(/alternar\(favoritos, loQueSeMarca\)/.test(pant), "que es lo que se guarda");
+  // Tocar un favorito con foto tiene que ponerlo como FOTO. Sin distinguirlo, su
+  // texto entero se guardaría como si fuera el nombre de un dibujo del catálogo y
+  // saldría el de respaldo.
+  ok(/if \(esFoto\(v\)\) setFoto\(v\);/.test(pant), "tocar una foto la pone como foto");
+  ok(/esFoto\(id\)/.test(pant), "y en la cuadrícula se dibuja como foto, no como ícono");
 
   // Una pestaña vacía sin explicación deja sin saber si está roto o falta algo.
   ok(pant.includes("nuevaCat.favVacio"), "la pestaña vacía dice qué hacer");

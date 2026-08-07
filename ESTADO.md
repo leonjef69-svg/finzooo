@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-02**
+Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-03**
 · APK que hay que instalar: **finzo-6ago-10** (el arreglo del PDF colgado es
 código de Android; por internet no viaja)
 
@@ -419,6 +419,35 @@ que no podía cumplir.
 
 **"Editar «X»" se queda**, apuntando ahora a la marcada. Lo único que solo está
 ahí dentro es **borrarla**.
+
+#### Las fotos también entran en Favoritos, y se pueden quitar (7ago-03)
+
+**Pedido:** *"los iconos que les tomé foto o subí una imagen también deberían poder
+añadirse a favoritos"* y *"las fotos o imágenes que suba en tus categorías debería
+haber una opción o icono para poder borrarlos"*.
+
+**Lo de favoritos estaba mal razonado y así estaba escrito en el código:** "un
+favorito es un ícono del catálogo, y una foto propia no está en el catálogo — no
+habría a dónde volver". Suena bien y mira lo que no importa. Lo que importa es que
+recortar una foto cuesta cámara, encuadre y zoom, y volver a hacerlo para la
+siguiente categoría es **justo lo que un favorito evita**. El argumento miraba de
+dónde sale el dibujo en vez de cuánto cuesta conseguirlo.
+
+Ahora la estrella marca **lo que se está viendo**: la foto si hay una, y si no el
+dibujo. Una foto se guarda como su propio texto (`data:image/jpeg;…`), así que
+entra en la misma lista sin cambiar nada de cómo se guardaba — las listas que ya
+estaban en los celulares se leen igual. `esFoto()` las distingue.
+
+Peso: unos 18 KB por foto (256 px, calidad 0.8), así que 30 serían medio megabyte.
+Cabe porque los favoritos son **solo de este celular**. *El día que viajen a la
+nube hay que volver a mirar ese número: ahí el documento entero tiene un tope de
+1 MB y las fotos de las categorías ya ocupan parte de él.*
+
+**Quitarle la foto a una categoría ya se podía** —la casilla de la foto con su ✕
+está en la pestaña del catálogo—, pero ahí no la encuentra nadie que venga de la
+lista: hay que saber que la foto se quita desde donde se eligen los dibujos. Ahora
+hay un "Quitar la foto de «X»" en "Tus categorías", junto a "Editar «X»", y solo
+cuando esa categoría tiene foto. Se guarda con Aplicar, como todo lo demás.
 
 #### Y salió a la primera con el dibujo quieto (7ago-02)
 

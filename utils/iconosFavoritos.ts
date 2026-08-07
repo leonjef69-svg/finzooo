@@ -9,6 +9,19 @@
 // para categorías distintas, que es como se usa: quien marca el tenedor lo
 // quiere para "Almuerzos", "Cena fuera" y "Broster".
 //
+// Y TAMBIÉN VALEN LAS FOTOS PROPIAS (07/08/2026)
+//
+// Pedido: *"los iconos que les tomé foto o subí una imagen también deberían poder
+// añadirse a favoritos"*. Antes no se ofrecía, con el argumento de que un favorito
+// es un dibujo del catálogo y una foto no está en el catálogo. Visto de otra
+// forma: recortar una foto cuesta trabajo —cámara, encuadre, zoom— y volver a
+// hacerlo para la siguiente categoría es justo lo que los favoritos evitan. El
+// argumento estaba mirando de dónde sale el dibujo en vez de cuánto cuesta
+// conseguirlo.
+//
+// Una foto se guarda como su propio texto ("data:image/jpeg;base64,..."), así que
+// entra en la misma lista sin cambiarla. Ver esFoto().
+//
 // POR QUÉ VIVE EN UNA VARIABLE SUELTA, IGUAL QUE LAS CATEGORÍAS PROPIAS
 //
 // Mismo motivo que en utils/categoriasPropias: la pantalla de crear categoría
@@ -32,8 +45,26 @@ const STORAGE_KEY = "finzo:iconosFavoritos";
  * Un tope existe porque la pestaña no se desliza: si alguien marcara ochenta,
  * los últimos quedarían fuera de la pantalla sin forma de llegar a ellos. Con
  * 30 caben seis filas de cinco, que es más de lo que nadie usa.
+ *
+ * SOBRE EL TAMAÑO, ahora que también entran fotos: una foto recortada pesa unos
+ * 18 KB (256 px, calidad 0.8 — ver ImageCropper), así que 30 fotos serían medio
+ * megabyte. Cabe de sobra porque esto se guarda SOLO en el celular. El día que
+ * los favoritos viajen a la nube hay que volver a mirar este número: ahí el
+ * documento entero tiene un tope de 1 MB y las fotos de las categorías ya ocupan
+ * parte de él.
  */
 export const MAX_FAVORITOS = 30;
+
+/**
+ * ¿Este favorito es una foto propia y no un dibujo del catálogo?
+ *
+ * Se distingue por cómo empieza el texto, y no con un campo aparte, porque así la
+ * lista guardada sigue siendo la de siempre: las que ya estaban en los celulares
+ * se leen igual, sin convertir nada.
+ */
+export function esFoto(id: string): boolean {
+  return typeof id === "string" && id.startsWith("data:");
+}
 
 let favoritos: string[] = [];
 
