@@ -1,4 +1,13 @@
-import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Fragment,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import {
   Image,
   Pressable,
@@ -62,6 +71,62 @@ const QUIETO_MS = 500;
  * es exactamente el coste que se está quitando.
  */
 const ULTIMO_TOQUE = { cuando: 0 };
+
+/**
+ * QUIÉN ESTÁ MARCADO AHORA MISMO. UN SOLO SITIO LO SABE, Y AQUÍ ESTÁ EL ARREGLO DE LOS
+ * DOS ICONOS MARCADOS A LA VEZ (07/08/2026).
+ *
+ * El fallo, con su foto: al cambiar de icono se veían **los dos marcados** —el viejo y el
+ * nuevo— mientras el dedo estaba apoyado.
+ *
+ * Y era culpa del arreglo anterior. Cada casilla se pintaba ella misma al ser tocada, con
+ * su propio estado, para que fuera instantáneo. Pero con el estado dentro de cada casilla,
+ * **la casilla vieja no tenía cómo enterarse** de que ya no era la elegida hasta que el
+ * dedo se levantaba y la pantalla entera se rehacía. Instantáneo para encenderse, tarde
+ * para apagarse.
+ *
+ * Ahora la marca vive en UN solo sitio, fuera de React, y las casillas se apuntan para
+ * que les avisen. Al avisar, cada una vuelve a mirar UNA pregunta: *"¿soy yo la marcada?"*
+ * Para 225 la respuesta no cambia y no se rehacen; para dos sí —la que se apaga y la que
+ * se enciende— y esas dos son las únicas que se rehacen. Sigue siendo instantáneo y ya no
+ * hay dos marcadas nunca.
+ *
+ * POR QUÉ NO ES UN ESTADO NORMAL DE LA PANTALLA: porque un estado de la pantalla rehace la
+ * pantalla, y eso es exactamente lo que costaba los segundos que se acaban de quitar. Este
+ * canal avisa solo a las dos casillas que cambian, sin tocar nada más.
+ *
+ * Y POR QUÉ LAS FILAS YA NO RECIBEN "elegido": porque ya no lo necesitan. Antes había que
+ * pasarles cuál estaba elegido y las filas afectadas se rehacían. Ahora la marca no pasa
+ * por las filas, así que **ninguna fila se rehace al elegir**.
+ */
+let marcaActual: string | null = null;
+const oyentesDeLaMarca = new Set<() => void>();
+
+/** Cambia la marca y avisa. Si no cambia nada, no avisa: 227 avisos de balde. */
+function ponerMarca(id: string | null) {
+  if (marcaActual === id) return;
+  marcaActual = id;
+  oyentesDeLaMarca.forEach((avisar) => avisar());
+}
+
+/**
+ * Apunta la marca SIN avisar a nadie.
+ *
+ * Es para el primer dibujado de la pantalla, y hace falta que sea sin avisar: avisar
+ * mientras React está dibujando es un error. En ese momento tampoco hay a quién avisar
+ * —las casillas todavía no existen— y así la marca ya está puesta cuando nacen, sin el
+ * parpadeo de "primero sin marca y un instante después con marca".
+ */
+function apuntarMarca(id: string | null) {
+  marcaActual = id;
+}
+
+function escucharLaMarca(avisar: () => void) {
+  oyentesDeLaMarca.add(avisar);
+  return () => {
+    oyentesDeLaMarca.delete(avisar);
+  };
+}
 
 /**
  * ESTO ERA EL MEDIDOR TEMPORAL, Y YA SE QUITÓ (7ago-22).
@@ -166,17 +231,18 @@ function aspectoDeCasilla(color: string, lado: number, oscuro: boolean): Aspecto
  */
 const Dibujito = memo(function Dibujito({
   id,
-  elegido,
   aspecto,
   lado,
   onElegir,
+  onCancelar,
 }: {
   id: string;
-  elegido: boolean;
   aspecto: AspectoCasilla;
   /** Medida del cuadrado, calculada del ancho de la pantalla. Ver LADO_DE. */
   lado: number;
   onElegir: (id: string) => void;
+  /** Devuelve la marca a la de verdad cuando el dedo era un deslizón y no un toque. */
+  onCancelar: () => void;
 }) {
   // UNA FOTO PROPIA SE DIBUJA COMO FOTO, no como dibujo de línea. Aparece en la
   // pestaña de favoritos desde el 07/08/2026, cuando las fotos también se pueden
@@ -196,27 +262,23 @@ const Dibujito = memo(function Dibujito({
    * por muy rápida que fuera la app, la marca llegaba siempre después del dedo. Se
    * estaba midiendo y optimizando algo que no era el problema.
    *
-   * Ahora la casilla se marca ella misma en cuanto la tocan, sin preguntarle a nadie:
-   * no se rehace ninguna fila, no hay nada que esperar, aparece en el mismo cuadro.
-   * Cuando el dedo se levanta llega la marca de verdad —"elegido"— y como ya estaba
-   * pintada, no se ve ningún cambio.
+   * Ahora la marca se mueve en cuanto la tocan, sin rehacer la pantalla: la casilla
+   * pregunta a un solo sitio si es ella la marcada. Ver marcaActual.
    *
-   * Los tres cabos que hay que atar, y que son el motivo de que esto tenga tres piezas
-   * en vez de una:
+   * LA PRIMERA VERSIÓN DE ESTO TENÍA UN FALLO Y ÉL LO VIO: se quedaban DOS marcadas a la
+   * vez. Cada casilla llevaba su propia marca, así que la nueva se encendía al instante
+   * pero **la vieja no tenía cómo enterarse** hasta que el dedo se levantaba. Instantáneo
+   * para encender, tarde para apagar. De ahí que la marca sea ahora una sola y compartida.
    *
-   *  1. Si el dedo era el principio de un DESLIZÓN y no un toque, no se eligió nada:
-   *     hay que despintarla. Eso lo dice "onPressOut sin onPress".
-   *  2. Si sí se eligió, NO se despinta al levantar el dedo, o parpadearía en el hueco
-   *     entre soltarlo y que llegue la marca de verdad.
-   *  3. Y cuando se elige OTRA casilla, esta tiene que despintarse aunque nadie la
-   *     toque. De eso se encarga el efecto: mira cuándo deja de ser la elegida.
+   * Dos cabos que hay que atar:
+   *
+   *  1. Si el dedo era el principio de un DESLIZÓN y no un toque, no se eligió nada: la
+   *     marca vuelve a donde estaba. Eso lo dice "onPressOut sin onPress".
+   *  2. Si sí se eligió, no hay que devolver nada: la marca ya está en su sitio, y cuando
+   *     la pantalla se entera al levantar el dedo, no se ve ningún cambio.
    */
-  const [tocada, setTocada] = useState(false);
+  const marcada = useSyncExternalStore(escucharLaMarca, () => marcaActual === id);
   const eligio = useRef(false);
-  useEffect(() => {
-    if (!elegido) setTocada(false);
-  }, [elegido]);
-  const marcada = elegido || tocada;
 
   return (
     // AQUÍ HUBO UN TOUCHABLEOPACITY, Y EL CAMBIO A PRESSABLE FALLÓ UNA VEZ. LEER ESTO
@@ -244,9 +306,10 @@ const Dibujito = memo(function Dibujito({
     // una función. Qué componente se use da igual.
     <Pressable
       onPressIn={() => {
-        // Se pinta YA. Ver la nota de "tocada": esto es todo el arreglo del toque.
+        // La marca se mueve YA, y se mueve DE VERDAD: la anterior se apaga en el mismo
+        // instante. Ver la nota de marcaActual.
         eligio.current = false;
-        setTocada(true);
+        ponerMarca(id);
         // Y se apunta la hora, para que el reparto del catálogo no se ponga a armar nada
         // mientras hay un dedo en la pantalla. Ver ULTIMO_TOQUE y filasADibujar.
         ULTIMO_TOQUE.cuando = Date.now();
@@ -256,8 +319,26 @@ const Dibujito = memo(function Dibujito({
         onElegir(id);
       }}
       onPressOut={() => {
-        // Era el principio de un deslizón, no un toque: no se eligió nada.
-        if (!eligio.current) setTocada(false);
+        // SE COMPRUEBA EN EL SIGUIENTE TURNO Y NO AQUÍ MISMO. NO QUITAR EL setTimeout.
+        //
+        // Porque el orden de los dos avisos de Android DEPENDE DE CUÁNTO DURÓ EL TOQUE.
+        // Se leyó el código de React Native (Pressability.js) para verlo:
+        //
+        //   · Toque de menos de 130 ms → el aviso de "dedo levantado" se RETRASA con un
+        //     reloj, así que llega DESPUÉS del de "toque completado".
+        //   · Toque de más de 130 ms → llega ANTES.
+        //
+        // Comprobando aquí mismo, un toque normal —que pasa de 130 ms de sobra— haría que
+        // la marca volviera al icono viejo y un instante después saltara al nuevo. Un
+        // parpadeo, y de los que solo se ven en el celular.
+        //
+        // En el siguiente turno los dos avisos ya llegaron, en el orden que sea, así que la
+        // respuesta es correcta siempre. Devolver la marca un cuadro más tarde no se nota.
+        setTimeout(() => {
+          // Era el principio de un deslizón, no un toque: no se eligió nada, así que la
+          // marca vuelve a la de verdad.
+          if (!eligio.current) onCancelar();
+        }, 0);
         // También cuenta como "acabo de tocar": si el reparto arrancara justo al soltar,
         // se comería el deslizón que la persona está empezando.
         ULTIMO_TOQUE.cuando = Date.now();
@@ -296,23 +377,26 @@ const Dibujito = memo(function Dibujito({
  * volvían a comparar— aunque el cambio solo afectara a dos. El usuario lo midió: *"al
  * seleccionar se demora 1 a 2 segundos"*.
  *
- * Pasando nulo a las filas que no contienen al elegido, esas filas reciben lo mismo
- * que antes (nulo) y la memorización las deja fuera. Solo se rehacen DOS: la que
- * suelta la marca y la que la toma.
+ * Luego se le pasaba nulo a las filas que no contenían al elegido, y así solo se rehacían
+ * dos. Y DESDE EL 07/08/2026 NO SE LE PASA NADA: la marca no viaja por las filas, cada
+ * casilla la pregunta a un solo sitio (ver marcaActual). Así que ahora **no se rehace
+ * ninguna fila al elegir** — solo las dos casillas que cambian de aspecto.
+ *
+ * Por eso esta fila ya no tiene ninguna propiedad que cambie al usar la pantalla: todas
+ * las que recibe son siempre las mismas, y la memorización la deja fuera SIEMPRE.
  */
 const Fila = memo(function Fila({
   iconos,
-  elegido,
   aspecto,
   lado,
   onElegir,
+  onCancelar,
 }: {
   iconos: (string | null)[];
-  /** El dibujo elegido SI está en esta fila; si no, nulo. */
-  elegido: string | null;
   aspecto: AspectoCasilla;
   lado: number;
   onElegir: (id: string) => void;
+  onCancelar: () => void;
 }) {
   return (
     // Alto y separación explícitos: es la altura que la lista da por hecha.
@@ -324,10 +408,10 @@ const Fila = memo(function Fila({
           <Dibujito
             key={id}
             id={id}
-            elegido={elegido === id}
             aspecto={aspecto}
             lado={lado}
             onElegir={onElegir}
+            onCancelar={onCancelar}
           />
         ),
       )}
@@ -615,6 +699,38 @@ export default function NuevaCategoria({
    */
   const loQueSeMarca = foto ?? icono;
   const esFav = favoritos.includes(loQueSeMarca);
+
+  /**
+   * MANTENER AL DÍA LA MARCA COMPARTIDA. Ver la nota larga de marcaActual.
+   *
+   * Son dos piezas y las dos hacen falta:
+   *
+   *  · La primera vez se APUNTA sin avisar, mientras se dibuja. Así las casillas nacen ya
+   *    con la marca puesta. Avisando aquí habría dos problemas: avisar mientras React
+   *    dibuja es un error, y no habría a quién avisar porque las casillas aún no existen.
+   *  · Después, cada vez que cambia de verdad, se avisa. Eso cubre lo que NO viene de
+   *    tocar una casilla: elegir de la lista de "Tus categorías", tomar una foto, quitarla,
+   *    o abrir la pantalla para editar una que ya existe.
+   */
+  const primerDibujado = useRef(true);
+  if (primerDibujado.current) {
+    primerDibujado.current = false;
+    apuntarMarca(loQueSeMarca);
+  }
+  useEffect(() => {
+    ponerMarca(loQueSeMarca);
+  }, [loQueSeMarca]);
+
+  /**
+   * Devolver la marca a su sitio cuando el dedo era un deslizón y no un toque.
+   *
+   * La caja es para que esta función no cambie nunca: si cambiara, las 48 filas y las 227
+   * casillas se rehacían en cada dibujado de la pantalla y la memorización no valdría nada
+   * — que es justo el coste que se ha estado quitando toda la tarde.
+   */
+  const marcaDeVerdad = useRef(loQueSeMarca);
+  marcaDeVerdad.current = loQueSeMarca;
+  const cancelarMarca = useCallback(() => ponerMarca(marcaDeVerdad.current), []);
 
   function alternarFavorito() {
     const siguiente = alternar(favoritos, loQueSeMarca);
@@ -1175,10 +1291,10 @@ export default function NuevaCategoria({
                   <Fila
                     key={f}
                     iconos={fila}
-                    elegido={fila.includes(loQueSeMarca) ? loQueSeMarca : null}
                     aspecto={aspecto}
                     lado={lado}
                     onElegir={elegirFavorito}
+                    onCancelar={cancelarMarca}
                   />
                 ))
               )}
@@ -1265,10 +1381,10 @@ export default function NuevaCategoria({
                   )}
                   <Fila
                     iconos={trozo.fila}
-                    elegido={trozo.fila.includes(icono) ? icono : null}
                     aspecto={aspecto}
                     lado={lado}
                     onElegir={setIcono}
+                    onCancelar={cancelarMarca}
                   />
                 </Fragment>
               ))}

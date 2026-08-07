@@ -255,42 +255,85 @@ console.log("\n--- LA CASILLA SE MARCA AL APOYAR EL DEDO, NO AL LEVANTARLO ---")
   // la pantalla se enteraba del toque al LEVANTAR el dedo —asi avisa un boton—. Por muy
   // rapida que fuera la app, la marca llegaba siempre despues del dedo.
   //
-  // Ahora la casilla se pinta ella misma al ser tocada, sin preguntarle a nadie: no se
-  // rehace ninguna fila y no hay nada que esperar.
+  // Y LA PRIMERA VERSION DE ESE ARREGLO TENIA UN FALLO QUE EL VIO EN EL CELULAR, CON FOTO:
+  // al cambiar de icono se quedaban DOS MARCADOS a la vez, el viejo y el nuevo.
   //
-  // Se lee el codigo porque lo que se vigila es CUANDO se pinta, y eso no se le puede
-  // preguntar al resultado: pintado de las dos formas se ve igual en una foto. Si
-  // alguien vuelve a colgar el aspecto solo de "elegido" —que parece lo mas limpio— la
-  // demora vuelve sin que nada se rompa.
+  // El motivo: cada casilla llevaba su propia marca. La nueva se encendia al instante,
+  // pero la vieja NO TENIA COMO ENTERARSE de que ya no era la elegida hasta que el dedo se
+  // levantaba y la pantalla entera se rehacia. Instantaneo para encender, tarde para
+  // apagar. Es el fallo tipico de este proyecto: dos mitades que por separado estan bien y
+  // el fallo esta en la costura.
+  //
+  // Ahora la marca vive en UN solo sitio fuera de React y las casillas se apuntan para que
+  // les avisen. Cada aviso hace que cada casilla mire UNA pregunta —"soy yo la marcada?"—
+  // y solo se rehacen las dos que cambian de respuesta.
+  //
+  // Se lee el codigo porque lo que se vigila es CUANDO y DE DONDE sale la marca, y eso no
+  // se le puede preguntar al resultado: pintado de las tres formas se ve igual en una foto
+  // quieta. El fallo de los dos marcados solo se veia con el dedo apoyado.
   const casilla = pantLimpia.slice(
     pantLimpia.indexOf("function Dibujito"),
     pantLimpia.indexOf("function Fila")
   );
   ok(casilla.length > 200, "se encuentra el codigo de la casilla");
 
-  // 1. Al apoyar el dedo ya se pinta.
-  ok(/onPressIn=\{\(\) => \{[\s\S]*setTocada\(true\)/.test(casilla), "al apoyar el dedo la casilla se marca");
+  // 1. Al apoyar el dedo la marca se MUEVE. Mover es lo importante: encender la nueva y
+  //    apagar la vieja en el mismo instante. Aqui estaba el fallo de las dos marcadas.
+  ok(
+    /onPressIn=\{\(\) => \{[\s\S]*ponerMarca\(id\)/.test(casilla),
+    "al apoyar el dedo la marca se mueve a esta casilla"
+  );
 
-  // 2. Y el aspecto NO cuelga solo de la marca de la pantalla. Esta es la que de verdad
-  //    importa: sin ella, lo de arriba se pintaria y no se veria.
+  // 2. Y la marca sale del sitio compartido, no de un estado propio de la casilla. Si
+  //    alguien le devuelve su propio estado "para que sea mas simple", vuelven las dos
+  //    marcadas — y se vuelven a ver solo con el dedo apoyado, que es lo dificil de pillar.
+  ok(
+    /const marcada = useSyncExternalStore\(escucharLaMarca, \(\) => marcaActual === id\)/.test(casilla),
+    "y la marca sale de un solo sitio compartido, no de un estado de la casilla"
+  );
   ok(
     /marcada \? aspecto\.elegida : aspecto\.normal/.test(casilla),
-    "el aspecto sale de la marca propia, no solo de la de la pantalla"
+    "el aspecto sale de esa marca"
   );
-  ok(/const marcada = elegido \|\| tocada/.test(casilla), "que es la suya O la de la pantalla");
 
-  // 3. Si era un deslizon y no un toque, se despinta. Sin esto, deslizar el catalogo
-  //    dejaria casillas marcadas por el camino.
-  ok(/onPressOut=/.test(casilla) && /if \(!eligio\.current\) setTocada\(false\)/.test(casilla),
-    "si era el principio de un deslizon se despinta");
+  // 3. Si era un deslizon y no un toque, la marca vuelve donde estaba. Sin esto, deslizar
+  //    el catalogo dejaria la marca movida a donde se apoyo el dedo.
+  ok(
+    /onPressOut=/.test(casilla) && /if \(!eligio\.current\) onCancelar\(\)/.test(casilla),
+    "si era el principio de un deslizon, la marca vuelve a su sitio"
+  );
+  // Y ESA COMPROBACION VA EN EL SIGUIENTE TURNO, NO EN EL SITIO. Es el detalle mas facil
+  // de "limpiar" sin saber lo que se rompe, asi que tiene prueba propia.
+  //
+  // El orden de los dos avisos de Android depende de CUANTO DURO EL TOQUE: se leyo
+  // Pressability.js de React Native y con menos de 130 ms el aviso de "dedo levantado" se
+  // retrasa y llega DESPUES del de "toque completado"; con mas de 130 ms llega ANTES.
+  // Comprobando en el sitio, un toque normal —que pasa de 130 ms de sobra— haria que la
+  // marca volviera al icono viejo y saltara al nuevo. Un parpadeo, y solo visible en el
+  // celular. En el siguiente turno los dos avisos ya llegaron y la respuesta es correcta.
+  ok(
+    /setTimeout\(\(\) => \{[\s\S]{0,200}if \(!eligio\.current\) onCancelar\(\)/.test(casilla),
+    "y esa comprobacion espera al siguiente turno, porque el orden de los avisos no es fijo"
+  );
 
-  // 4. Y al elegir OTRA, esta se despinta aunque nadie la toque. Sin esto quedarian dos
-  //    casillas marcadas a la vez y no se sabria cual esta elegida.
-  ok(/if \(!elegido\) setTocada\(false\)/.test(casilla), "y al elegir otra, esta se despinta");
+  // 4. Y LA FILA YA NO RECIBE CUAL ESTA ELEGIDO. Es la consecuencia buena del cambio: la
+  //    marca no viaja por las filas, asi que ninguna fila se rehace al elegir. Si vuelve
+  //    esa propiedad, vuelven a rehacerse filas en cada toque.
+  const fila = pantLimpia.slice(pantLimpia.indexOf("function Fila"));
+  ok(!/elegido/.test(fila.slice(0, 600)), "la fila ya no recibe cual esta elegido");
 
-  // 5. NO REGRESION: la eleccion de verdad sigue ocurriendo. Esta pasa tambien contra la
-  //    version anterior a proposito — no describe el arreglo, vigila que al pintar antes
-  //    no se haya dejado de elegir.
+  // 5. La marca compartida tiene que mantenerse al dia con lo que NO viene de tocar una
+  //    casilla: elegir de "Tus categorias", poner una foto o quitarla. Sin esto, la marca
+  //    se quedaria en el icono anterior y no habria forma de notarlo leyendo.
+  ok(/ponerMarca\(loQueSeMarca\)/.test(pantLimpia), "la marca se mantiene al dia con la pantalla");
+  // Y la primera vez se APUNTA sin avisar: avisar mientras React dibuja es un error, y
+  // ademas no hay a quien avisar todavia. Sin esto, las casillas nacerian sin marca y se
+  // veria un parpadeo al abrir la pantalla para editar una categoria que ya existe.
+  ok(/apuntarMarca\(loQueSeMarca\)/.test(pantLimpia), "y la primera vez se apunta sin avisar");
+
+  // 6. NO REGRESION: la eleccion de verdad sigue ocurriendo. Esta pasa tambien contra las
+  //    versiones anteriores a proposito — no describe el arreglo, vigila que al mover la
+  //    marca antes no se haya dejado de elegir.
   ok(/onElegir\(id\)/.test(casilla), "y elegir de verdad sigue pasando al levantar el dedo");
 }
 

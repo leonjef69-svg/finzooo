@@ -666,6 +666,36 @@ ahora es un fragmento.
 `NuevaCategoria.tsx` donde estaba, porque de ahí salen las medidas del archivo y sin eso
 parecerían elegidas a dedo.
 
+### Dos iconos marcados a la vez — el fallo que trajo el arreglo (7ago-23)
+
+Lo vio en el celular y lo mandó con foto: al cambiar de icono se quedaban **los dos
+marcados**, el viejo y el nuevo, mientras el dedo estaba apoyado. *"soluciona los problemas
+que tenga, no me des otro fallando o con otro error"*.
+
+**Era culpa del arreglo de 7ago-20.** Cada casilla llevaba SU PROPIA marca para que
+encender fuera instantáneo. Pero con la marca dentro de cada casilla, **la vieja no tenía
+cómo enterarse** de que ya no era la elegida hasta que el dedo se levantaba y la pantalla
+entera se rehacía. Instantáneo para encender, tarde para apagar.
+
+Es otra vez **el fallo de la costura**: las dos mitades por separado estaban bien —encender
+rápido, apagar cuando la pantalla se entera— y el fallo estaba en el hueco entre las dos.
+
+Ahora la marca vive en **un solo sitio, fuera de React**, y las casillas se apuntan para
+que les avisen. Cada aviso hace que cada casilla mire una pregunta —*"¿soy yo la
+marcada?"*— y **solo se rehacen las dos que cambian de respuesta**. Sigue siendo
+instantáneo, ya no puede haber dos marcadas, y de paso salió algo mejor: la marca ya no
+viaja por las filas, así que **ninguna fila se rehace al elegir**.
+
+> **Y al revisarlo apareció un segundo fallo, este antes de entregarlo.** El orden de los
+> dos avisos de Android —"dedo levantado" y "toque completado"— **depende de cuánto duró el
+> toque**. Se leyó `Pressability.js` de React Native: con menos de 130 ms el de "dedo
+> levantado" se retrasa y llega **después**; con más de 130 ms llega **antes**. Como la
+> marca volvía atrás si el toque no se había completado, un toque normal —que pasa de 130
+> ms de sobra— habría hecho que la marca saltara al icono viejo y volviera. Un parpadeo,
+> visible solo en el celular. Se arregla comprobándolo **en el siguiente turno**, cuando
+> los dos avisos ya llegaron en el orden que sea. Tiene prueba propia porque es el detalle
+> más fácil de "limpiar" sin saber qué se rompe.
+
 ### Lo que dejaron las diez causas, por si vuelve a ir lento
 
 Está descartado —no volver a mirarlo—: las clases de NativeWind en las casillas, el
