@@ -621,5 +621,85 @@ console.log("\n--- REGISTRAR UNA VENTA (paso 4) ---");
   }
 }
 
+console.log("\n--- ANOTAR UN GASTO O UN INGRESO EN LA CAJA (paso 4) ---");
+{
+  // EL MONTO SE REDONDEA A CENTIMOS EN UN SOLO SITIO, dentro de crearMovimientoNegocio. Con dos
+  // sitios redondeando, uno acaba guardando 45.299999999999996 y ese numero se imprime.
+  const m = crearMovimientoNegocio({
+    negocioId: "n1",
+    tipo: "gasto",
+    monto: 45.299999999999996,
+    metodo: "efectivo",
+    descripcion: "  Compra de pollo  ",
+    fecha: "2026-08-08",
+    hora: "08:00",
+  });
+  ok(m.monto === 45.3, `el monto se guarda a centimos (${m.monto})`);
+  ok(m.descripcion === "Compra de pollo", "y la descripcion sin espacios de sobra");
+  // A MANO SALVO QUE SE DIGA LO CONTRARIO: el automatico es el Yape del paso siguiente, y el
+  // panel los enseña en lineas distintas porque no son lo mismo.
+  ok(m.origen === "manual", "lo anotado a mano nace como manual");
+  // Sin venta y sin aviso detras: esos dos huecos son de V2 y del paso 5.
+  ok(m.ventaId === undefined && m.avisoId === undefined, "sin venta ni aviso detras");
+
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/MovimientoNegocio.tsx"), "utf8");
+
+  // EL MONTO SE TECLEA COMO TEXTO y se convierte una sola vez al guardar, igual que el precio
+  // de un producto: como numero, escribir "12." o "12,5" daria saltos bajo el dedo.
+  ok(/const \[montoTexto, setMontoTexto\] = useState\(""\)/.test(pant), "el monto se teclea como texto");
+  // Y LA COMA VALE COMO EL PUNTO: en Peru se escribe "12,50" tanto como "12.50".
+  ok(/montoTexto\.replace\(",", "\."\)/.test(pant), "y la coma vale como el punto");
+  // Cero o negativo no es un monto.
+  ok(/monto <= 0/.test(pant), "no se admite cero ni negativo");
+
+  // SALE O ENTRA, LAS DOS. Sin la de entrar, la linea de "ingresos anotados a mano" del panel
+  // seria un numero que no puede cambiar nunca — la clase de promesa vacia que se ha estado
+  // limpiando.
+  ok(/setTipo\("gasto"\)/.test(pant) && /setTipo\("ingreso"\)/.test(pant), "se puede anotar lo que sale y lo que entra");
+
+  // QUE ESTO NO TOCA LO PERSONAL, DICHO EN LA PANTALLA. Es lo que hace falta para fiarse: la
+  // compra de pollo no va a aparecer entre los gastos de casa.
+  ok(/caja\.avisoSeparado/.test(pant), "se dice que no toca los gastos personales");
+
+  // Y ES VERDAD, NO SOLO UN TEXTO: esta pantalla no puede tocar los movimientos personales.
+  // Si algun dia alguien mete aqui addOrUpdateTransaction, el gasto del negocio empezaria a
+  // sumar en el presupuesto de casa y el aviso de arriba pasaria a ser mentira.
+  ok(!/addOrUpdateTransaction/.test(pant), "y no toca los movimientos personales por ningun lado");
+
+  // La fecha y la hora, del celular. Ver ahoraDelNegocio.
+  ok(/ahoraDelNegocio\(\)/.test(pant), "la fecha y la hora salen del celular");
+
+  const ruta = fs.readFileSync(path.join(RAIZ, "app/negocio/movimiento.tsx"), "utf8");
+  ok(/if \(!isPremium\)/.test(ruta), "anotar en la caja tambien es Premium");
+  ok(/if \(!negocio\)/.test(ruta), "y sin negocio se vuelve");
+
+  const panel = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
+  ok(/pathname: "\/negocio\/movimiento"/.test(panel), "se entra a anotar desde el panel");
+
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  for (const clave of ["title", "gasto", "ingreso", "monto", "descripcion", "faltaMonto", "gastoGuardado", "avisoSeparado"]) {
+    const veces = (i18n.match(new RegExp(`"caja\\.${clave}":`, "g")) ?? []).length;
+    ok(veces === 3, `"caja.${clave}" esta en los tres idiomas (${veces})`);
+  }
+}
+
+console.log("\n--- Y LO PERSONAL SIGUE SIN ENTERARSE DE QUE EXISTE EL NEGOCIO ---");
+{
+  // LA COMPROBACION QUE PROTEGE LA DECISION DE TODA LA FUNCION, ahora que ya hay ventas y
+  // gastos de verdad guardandose. Se pidio que no se mezclen NI EN LOS TOTALES, y se eligio
+  // guardarlos aparte para que eso no dependa de acordarse de filtrar en los DIECISEIS sitios
+  // que leen movimientos.
+  //
+  // types.ts y utils/finances.ts ya se vigilan arriba, en la primera seccion. Lo que falta es
+  // la PANTALLA que enseña los totales de casa: es donde se veria la plata del negocio si
+  // algun dia se colara, y es el sitio donde alguien la anadiria "para que se vea todo junto".
+  //
+  // PASA CONTRA LA VERSION ANTERIOR y se deja escrita a proposito: no descubre nada hoy,
+  // guarda una puerta. Va marcada para que nadie la cuente como prueba de lo que se acaba de
+  // hacer.
+  const inicio = fs.readFileSync(path.join(RAIZ, "screens/Home.tsx"), "utf8");
+  ok(!/negocio/i.test(inicio), "la pantalla de Inicio no sabe que existe el negocio (ya estaba)");
+}
+
 console.log(fallos === 0 ? "\nTodo bien: los cimientos del Modo Negocio\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

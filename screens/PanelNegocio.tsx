@@ -186,15 +186,28 @@ export default function PanelNegocio({
           <Text className="text-sm font-bold text-white">{t("venta.registrar")}</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          onPress={() => router.push({ pathname: "/negocio/productos", params: { id: negocioId } })}
-          className="flex-row items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 mt-2.5"
-        >
-          <Package size={15} color="#059669" />
-          <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
-            {t("negocios.productos")}
-          </Text>
-        </TouchableOpacity>
+        {/* EL GASTO Y LOS PRODUCTOS, DEL MISMO TAMAÑO Y DEBAJO: se hacen a diario pero no cien
+            veces al día como vender. */}
+        <View className="flex-row gap-2.5 mt-2.5">
+          <TouchableOpacity
+            onPress={() => router.push({ pathname: "/negocio/movimiento", params: { id: negocioId } })}
+            className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800"
+          >
+            <TrendingDown size={15} color="#f43f5e" />
+            <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
+              {t("caja.rowLabel")}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => router.push({ pathname: "/negocio/productos", params: { id: negocioId } })}
+            className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800"
+          >
+            <Package size={15} color="#059669" />
+            <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
+              {t("negocios.productos")}
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* EL HISTORIAL. */}
         <Text className="text-xs font-bold text-slate-700 dark:text-slate-200 mt-6 mb-3">

@@ -246,7 +246,7 @@ paso natural y solo hace falta que baje uno.
 
 ## MODO NEGOCIO — V1 EN CURSO (07/08/2026)
 
-> ## 👉 EMPIEZA POR EL PASO 4
+> ## 👉 EMPIEZA POR EL PASO 5
 >
 > **De qué trata esto:** separar la plata del negocio de la personal, para que un Yape de un
 > cliente y uno de un familiar no acaben en el mismo bolsillo. Él tiene una pollería.
@@ -254,19 +254,27 @@ paso natural y solo hace falta que baje uno.
 > | | |
 > |---|---|
 > | Pasos 1, 2 y 3 | ✅ Terminados, y **confirmados por él en su celular** el 07/08/2026 |
-> | Paso 4 | ⚠️ **CASI. Panel (8ago-01) y registrar ventas (8ago-02), publicados. Falta solo ANOTAR UN GASTO del negocio** |
-> | Paso 5 | Sin empezar |
+> | Paso 4 | ✅ **Hecho y publicado el 08/08/2026** (8ago-01, 8ago-02, 8ago-03). **Falta que él lo pruebe en el celular** |
+> | Paso 5 | ⏳ **AQUÍ SE EMPIEZA.** El Yape que entra directo a la caja del negocio |
 >
 > Compila y las **47 pruebas están en verde**, así que se puede seguir sin arreglar nada
-> primero. Lo que hay del paso 4 y lo que falta está detallado en **"Pasos"**, al final de
-> esta sección, con los archivos concretos y en orden.
+> primero. Lo que tiene cada paso está detallado en **"Pasos"**, al final de esta sección, con
+> los archivos concretos y en orden.
 >
-> Última entrega publicada: **7ago-34**.
+> Última entrega publicada: **8ago-03**.
 >
 > **"Confirmado en su celular" no es lo mismo que "las pruebas pasan"**, y en este proyecto la
 > diferencia ha costado días: se han entregado cosas con las pruebas en verde que en el celular
 > no funcionaban —la voz muda por un espacio, el PDF automático, el lector desenganchado—. De
-> los pasos 1, 2 y 3 hay las dos cosas.
+> los pasos 1, 2 y 3 hay las dos cosas; **del paso 4 solo hay pruebas**. Si él aún no ha dicho
+> que lo probó, **preguntárselo antes de construir encima**.
+>
+> **Y sobre el paso 5, dos cosas que ya están decididas y no hay que volver a discutir:** el
+> Yape que entra dice *"entraron S/ 15"* y **nada más** —no se adivina qué se vendió, eso es
+> V2/V3—, y `destinoYapes` empieza en `"personal"`, así que **hay que encender el envío al
+> negocio a mano**: crear un negocio no puede cambiar dónde caían los Yapes que ya se
+> registraban bien. El campo `avisoId` de `MovimientoNegocio` existe desde el primer día justo
+> para no registrar dos veces el mismo yapeo.
 
 Separar 🏠 Personal de 🏪 Negocio para que la plata del negocio **no se mezcle con la
 personal, ni en los totales**. El ejemplo que dio: una pollería que recibe un Yape de un
@@ -370,9 +378,15 @@ está hecho: las tres piezas de abajo son exactamente eso.
    Y borrar un producto **no toca sus ventas**: la venta guarda el nombre y el precio copiados,
    así que sigue diciendo "Broster S/ 15" aunque ya no esté en la carta. Eso se **dice** en la
    pantalla antes de borrar.
-4. ⚠️ **A MEDIAS — AQUÍ ES DONDE HAY QUE SEGUIR.** Ventas y panel del negocio.
+4. ✅ **TERMINADO (8ago-01, 8ago-02 y 8ago-03, publicados el 08/08/2026).** Ventas, gastos y
+   panel del negocio. **Falta que él lo pruebe en el celular** — ver el cartel del principio:
+   en este proyecto "las pruebas pasan" y "funciona en su celular" no son lo mismo.
 
-   **Lo que YA está** (compilando, y las 47 pruebas en verde):
+   Se entregó en tres partes seguidas, cada una publicada y con las pruebas en verde: el
+   panel, registrar ventas, y anotar en la caja. **Y así conviene seguir**: él lo pidió
+   expresamente —*"entrégamelo por partes… en vez de un bloque enorme al final"*—.
+
+   **Los cimientos que ya estaban antes de empezar:**
    - El tipo `MovimientoNegocio` en `utils/negocio.ts`: la plata que entra y sale de la caja
      del negocio, con `origen` (manual/automatico), `ventaId` y `avisoId`.
    - Su clave `movimientosNegocio` en `utils/storage.ts`, **y en el borrado al cerrar sesión**.
@@ -385,7 +399,7 @@ está hecho: las tres piezas de abajo son exactamente eso.
    línea de "Gastos", y sin este tipo esa línea sería un cero que nunca puede cambiar — justo
    la clase de promesa vacía que se ha estado limpiando todo el día.
 
-   **Lo que FALTA, en orden:**
+   **Lo que se hizo, en orden:**
    1. ✅ **Enganchado al contexto** (8ago-01): `ventas`, `guardarVenta`, `quitarVenta`,
       `movimientosNegocio`, `guardarMovimientoNegocio`, `quitarMovimientoNegocio`, con el
       patrón exacto de `guardarNegocio` y `guardarProducto`.
@@ -427,8 +441,20 @@ está hecho: las tres piezas de abajo son exactamente eso.
       > error en una ruta nueva perfectamente correcta. Se regeneran arrancando el servidor
       > (`npx expo start`) y dejándolo un minuto: escribe `.expo/types/router.d.ts`. Sin eso,
       > **cualquier** ruta nueva parece rota.
-   6. Textos en los **tres** idiomas ✅ los del panel; y ampliar `pruebas/verificar-negocio.ts`
-      ✅ (de 47 pruebas siguen siendo 47 archivos, con 40 comprobaciones nuevas dentro).
+   6. ✅ **`screens/MovimientoNegocio.tsx` y `app/negocio/movimiento.tsx`** (8ago-03) — anotar
+      lo que sale y lo que entra de la caja sin ser una venta: la compra de pollo, el gas.
+
+      **Tiene las dos direcciones, no solo gastos**, y no es por completar: sin "entró plata",
+      la línea de *ingresos anotados a mano* del panel sería un número que no puede cambiar
+      nunca — la clase de promesa vacía que se ha estado limpiando.
+
+      El monto se teclea **como texto** y la **coma vale como el punto**, igual que el precio
+      de un producto y por lo mismo. Y la pantalla **dice que esto no toca lo personal**; hay
+      una prueba que comprueba que sea verdad y no solo un texto (que no aparezca
+      `addOrUpdateTransaction` por ningún lado).
+   7. ✅ Textos en los **tres** idiomas, y `pruebas/verificar-negocio.ts` ampliada: siguen
+      siendo 47 archivos de prueba, con **unas 75 comprobaciones nuevas dentro**. Todas fallan
+      contra la versión anterior menos dos, que van marcadas.
 
    **También de paso:** la lista de negocios decía `PEN` donde tenía que decir `S/` — guardaba
    el código de la moneda y lo enseñaba tal cual. El código lo entiende un banco, no quien abre
@@ -439,7 +465,18 @@ está hecho: las tres piezas de abajo son exactamente eso.
    > lo que se vincula en V2 — pero el panel tiene que advertirlo, o los números parecerán
    > equivocados.
 
-5. Captura automática al negocio, e historial propio.
+5. ⏳ **Captura automática al negocio.** Lo único que queda de la V1.
+
+   El historial propio **ya está hecho** (es el del panel, paso 4), así que lo que falta es
+   solo el enganche: que un yapeo capturado, cuando `destinoYapes` esté en `"negocio"`, caiga
+   en la caja del negocio con `origen: "automatico"` y su `avisoId`, en vez de en los
+   movimientos personales. Y el interruptor para elegirlo, que hoy no existe en ninguna
+   pantalla.
+
+   > **Es lo único de la V1 que puede ROMPER algo que ya funciona**, y por eso conviene tratarlo
+   > distinto de los cuatro pasos anteriores: toca el camino de la captura de Yape, que es de lo
+   > más probado de la app y de lo que más ha costado (ver la voz, el espacio duro, los avisos
+   > repetidos). Los pasos 1 a 4 no tocaron ni una línea de lo personal; este sí.
 
 ## Lo que falta para Play Store
 
