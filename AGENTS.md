@@ -15,6 +15,24 @@ de qué commit salió cada una y cómo publicar.
 Sin leer esos dos se empieza de cero, se rehace lo hecho y se vuelve a
 tropezar con lo mismo.
 
+## La carpeta del proyecto es C:\finzo, y solo esa
+
+Existe también `C:\Users\User\Videos\Fino control de gastos diarios`, con la
+planificación de julio y **su propio CLAUDE.md**. Ahí no hay código: el proyecto
+se mudó a `C:\finzo` porque Windows no admite rutas de más de 260 caracteres y
+desde Videos **la compilación del APK se moría**. Abrir esa carpeta por error es
+trabajar sobre una copia muerta leyendo instrucciones de hace tres semanas.
+
+## Para probar lo que está bajo Premium
+
+Ocho funciones son Premium: importar, exportar, exportación automática, metas de
+ahorro, huella/PIN, límites por categoría, y el panorama y los consejos de
+Reportes. **El Modo Negocio también.**
+
+No hay forma de comprar —no existe el cobro, ver ESTADO.md— pero la pantalla de
+Premium tiene una **prueba gratuita de 24 horas**. Es lo que permite entrar a
+esas ocho para comprobar un arreglo.
+
 ## Con quién se habla
 
 El usuario **no es programador** y escribe en español. Las respuestas van en
@@ -53,7 +71,8 @@ Y las pruebas, que ahora corren con un solo comando:
 node pruebas/correr.mjs
 ```
 
-Son 40 pruebas y 7 auditores. Ver [pruebas/LEEME.md](pruebas/LEEME.md).
+Son **47 pruebas y 7 auditores** (07/08/2026). Ver [pruebas/LEEME.md](pruebas/LEEME.md).
+El número sube: lo que no puede bajar es que estén todas en verde.
 
 Cada prueba nueva tiene que **fallar contra la versión anterior**: una que
 pasa siempre no está probando nada.
