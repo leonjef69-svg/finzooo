@@ -389,8 +389,37 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   // Con display none se construyen una sola vez, al abrir, y cambiar de pestaña ya
   // no cuesta nada. Se cuentan las cuatro: con tres, la que quede fuera vuelve a
   // pagar el precio y nadie lo notara hasta que sea la de los dibujos.
-  const escondidas = (codigo.match(/display: pestana === "[a-z]+" \? "flex" : "none"/g) ?? []).length;
+  //
+  // EL ESTILO PASO DE ESCRIBIRSE A MANO EN CADA PESTAÑA A SALIR DE DOS CONSTANTES
+  // (07/08/2026), y no fue por limpieza: escrito cuatro veces, la cuarta se olvida. Lo que
+  // se vigila es lo mismo —que sean CUATRO y que se escondan en vez de desmontarse— mas la
+  // regla nueva de abajo.
+  const escondidas = (codigo.match(/pestana === "[a-z]+" \? PESTANA_A_LA_VISTA : PESTANA_ESCONDIDA/g) ?? []).length;
   ok(escondidas === 4, `las cuatro pestañas se esconden en vez de desmontarse (${escondidas})`);
+  ok(
+    !/display: pestana ===/.test(codigo),
+    "y ninguna se esconde con el estilo escrito a mano, que es el que se olvidaba"
+  );
+
+  // Y LA ESCONDIDA TIENE QUE RECORTAR LO QUE LLEVA DENTRO. DOS FALLOS EN UNO.
+  //
+  // Con "display: none" a secas, Yoga deja la caja en cero de alto pero ANDROID SIGUE
+  // DIBUJANDO SUS HIJOS. El usuario lo vio y lo mando con foto: *"cuando salgo de la pestaña
+  // se pone asi"* — los colores encima de "Tu propia foto" y del catalogo, las dos pestañas
+  // dibujadas a la vez.
+  //
+  // Y ese mismo fallo es la explicacion de lo lento, que es lo que no se veia: si el
+  // contenido escondido se sigue dibujando, ESCONDER UNA PESTAÑA NO AHORRABA NADA. Estando
+  // en "Color", Android seguia dibujando las 227 casillas del catalogo ademas de los
+  // colores.
+  //
+  // El alto cero va ademas del display a proposito: si una version de React Native cambia
+  // como trata "display", el alto cero con el recorte sigue escondiendola.
+  const laEscondida = /const PESTANA_ESCONDIDA: ViewStyle = \{([^}]*)\}/.exec(codigo)?.[1] ?? "";
+  ok(laEscondida.length > 0, "se encuentra el estilo de la pestaña escondida");
+  ok(/display: "none"/.test(laEscondida), "la escondida no se dibuja");
+  ok(/overflow: "hidden"/.test(laEscondida), "y RECORTA lo que lleva dentro, o se dibuja encima");
+  ok(/height: 0/.test(laEscondida), "y mide cero, por si algun dia display deja de bastar");
   ok(
     !/pestana === "(tuyas|color|favoritos)" \? \(/.test(codigo),
     "ninguna se desmonta al cambiar de pestaña"

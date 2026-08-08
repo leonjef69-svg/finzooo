@@ -420,6 +420,35 @@ const Fila = memo(function Fila({
 });
 
 /**
+ * CÓMO SE ESCONDE LA PESTAÑA QUE NO TOCA. Y OJO, QUE AQUÍ HABÍA DOS FALLOS EN UNO.
+ *
+ * Las cuatro pestañas se quedan puestas y solo se esconde la que no toca —así cambiar de
+ * pestaña no vuelve a armar las 227 casillas—. Se escondían con `display: "none"` a secas,
+ * y eso trae un problema que en Android no se ve venir:
+ *
+ * **UNA CAJA QUE MIDE CERO NO RECORTA LO QUE LLEVA DENTRO.** Yoga la deja en cero de alto,
+ * pero Android sigue DIBUJANDO sus hijos, y como la caja de al lado empieza en el mismo
+ * sitio, se dibujan encima. El usuario lo vio y lo mandó con foto (07/08/2026): *"cuando
+ * salgo de la pestaña se pone así"* — los colores encima de "Tu propia foto" y del
+ * catálogo, las dos pestañas a la vez.
+ *
+ * Y ESE FALLO ES ADEMÁS LA EXPLICACIÓN DE LO LENTO, que es lo que no se veía:
+ *
+ * Si el contenido escondido se sigue dibujando, **esconder una pestaña no ahorraba nada**.
+ * Estando en "Color", Android seguía dibujando las 227 casillas del catálogo —unas 500
+ * piezas— además de los colores. Cada pasada de dibujo de esta pantalla arrastraba TODAS
+ * las pestañas, no solo la que se ve.
+ *
+ * Con el recorte puesto, una caja de alto cero no dibuja nada de lo que lleva dentro: se
+ * arregla lo que se veía mal y, de paso, la pestaña que no toca deja de costar.
+ *
+ * El alto cero va escrito además del `display` a propósito: si algún día una versión de
+ * React Native cambia cómo trata `display`, el alto cero con el recorte sigue escondiéndola.
+ */
+const PESTANA_A_LA_VISTA: ViewStyle = { display: "flex" };
+const PESTANA_ESCONDIDA: ViewStyle = { display: "none", height: 0, overflow: "hidden" };
+
+/**
  * UNA CATEGORÍA DE LA LISTA DE "TUS CATEGORÍAS", Y UN COLOR DE LA PALETA.
  *
  * POR QUÉ EXISTEN ESTAS DOS PIEZAS (07/08/2026)
@@ -489,6 +518,23 @@ const CasillaCategoria = memo(function CasillaCategoria({
         {nombre}
       </Text>
     </TouchableOpacity>
+  );
+});
+
+/**
+ * El renglón con el nombre de un grupo del catálogo ("Comida y bebida").
+ *
+ * Memorizado por lo mismo que las casillas: son DIECIOCHO, y sin esto los dieciocho se
+ * rehacían en cada dibujado de la pantalla. Es el último trozo que quedaba sin proteger.
+ *
+ * El alto va fijo y no lo decide el texto, porque de ese alto sale el hueco que se reserva
+ * para lo que todavía no está dibujado. Ver ALTO_TITULO.
+ */
+const TituloDeGrupo = memo(function TituloDeGrupo({ texto }: { texto: string }) {
+  return (
+    <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
+      <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">{texto}</Text>
+    </View>
   );
 });
 
@@ -1224,7 +1270,7 @@ export default function NuevaCategoria({
         keyboardShouldPersistTaps="handled"
       >
         {vistas.has("tuyas") && (
-          <View style={{ display: pestana === "tuyas" ? "flex" : "none" }}>
+          <View style={pestana === "tuyas" ? PESTANA_A_LA_VISTA : PESTANA_ESCONDIDA}>
             <View className="px-5" style={{ paddingTop: 12 }}>
               <View className="flex-row flex-wrap gap-3">
                 {cats.map((c) => (
@@ -1345,7 +1391,7 @@ export default function NuevaCategoria({
         )}
 
         {vistas.has("color") && (
-          <View style={{ display: pestana === "color" ? "flex" : "none" }}>
+          <View style={pestana === "color" ? PESTANA_A_LA_VISTA : PESTANA_ESCONDIDA}>
             <View className="px-5" style={{ paddingTop: 12 }}>
               <View className="flex-row flex-wrap gap-3">
                 {COLORES.map((c) => (
@@ -1357,7 +1403,7 @@ export default function NuevaCategoria({
         )}
 
         {vistas.has("favoritos") && (
-          <View style={{ display: pestana === "favoritos" ? "flex" : "none" }}>
+          <View style={pestana === "favoritos" ? PESTANA_A_LA_VISTA : PESTANA_ESCONDIDA}>
             <View className="px-5" style={{ paddingTop: 12 }}>
               {favoritos.length === 0 ? (
                 /* VACÍA, PERO NO MUDA. Una pestaña vacía sin explicación deja a la
@@ -1405,7 +1451,7 @@ export default function NuevaCategoria({
             Y desde el 07/08/2026 se quedan puestos al cambiar de pestaña: antes se
             rehacían los 236 en cada ida y vuelta. Ver la nota de arriba. */}
         {vistas.has("icono") && (
-          <View style={{ display: pestana === "icono" ? "flex" : "none" }}>
+          <View style={pestana === "icono" ? PESTANA_A_LA_VISTA : PESTANA_ESCONDIDA}>
             <View className="px-5">
               {/* TU PROPIA FOTO, PRIMERO.
               Va arriba del catálogo y no en una pestaña aparte porque es otra
@@ -1462,13 +1508,7 @@ export default function NuevaCategoria({
                 // Un fragmento y no una vista: envolver cada fila en su propia vista
                 // añadiría 46 vistas que no pintan nada, y de eso justamente se trata.
                 <Fragment key={f}>
-                  {trozo.titulo !== null && (
-                    <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
-                      <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
-                        {titulos[trozo.titulo]}
-                      </Text>
-                    </View>
-                  )}
+                  {trozo.titulo !== null && <TituloDeGrupo texto={titulos[trozo.titulo]} />}
                   <Fila
                     iconos={trozo.fila}
                     aspecto={aspecto}

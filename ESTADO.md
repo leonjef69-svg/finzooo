@@ -750,6 +750,41 @@ Lo que sí se comprobó de sus dos relojes, y los dos están bien: el de 8 segun
 redibuja **si de verdad llegó algo**, y el de 60 solo corre **mientras haya una prueba
 Premium abierta**.
 
+### Duodécima causa: la pestaña escondida se seguía dibujando (7ago-27)
+
+**El fallo lo descubrió una foto suya, no una medición.** Mandó una captura estando en
+"Color": los círculos de colores **encima** de "Tu propia foto" y del catálogo, las dos
+pestañas dibujadas a la vez. *"Cuando salgo de la pestaña se pone así."*
+
+Y la causa de ese dibujo roto **era también la causa de lo lento**, que es lo que llevaba
+todo el día sin ver:
+
+> `display: "none"` deja la caja en **cero de alto**, pero **Android sigue dibujando sus
+> hijos**. No los recorta. Así que la pestaña escondida se pintaba igual, encima de la que
+> sí toca.
+
+Lo que eso significaba para la velocidad: **esconder una pestaña no ahorraba nada.** Estando
+en "Color", Android seguía dibujando las **227 casillas del catálogo** —unas 500 piezas—
+además de los colores. Cada pasada de dibujo arrastraba **las cuatro pestañas**, no la que
+se ve. Y él lo pidió así: *"tienes que mejorar la velocidad de toda la pestaña de iconos,
+favoritos, tus categorías, color, no solo uno específico"*.
+
+El arreglo es una línea, y arregla las dos cosas: la pestaña escondida **recorta** lo que
+lleva dentro (`overflow: "hidden"`), así que una caja de alto cero deja de dibujar. Se ve
+bien y deja de costar.
+
+El estilo pasó de escribirse a mano en las cuatro pestañas a salir de **dos constantes**
+(`PESTANA_A_LA_VISTA` / `PESTANA_ESCONDIDA`): escrito cuatro veces, la cuarta se olvida —y
+la prueba cuenta que sean cuatro justamente por eso. Lleva también `height: 0`, por si algún
+día una versión de React Native cambia cómo trata `display`.
+
+Y el último trozo que quedaba sin proteger: los **18 títulos de grupo** del catálogo, que se
+rehacían en cada dibujado. Ahora son un componente memorizado.
+
+> **La lección, y es distinta de las anteriores:** un fallo que se VE puede ser la única
+> pista visible de un fallo que solo se SIENTE. Once causas se buscaron midiendo y leyendo;
+> la doceava llegó en una captura de pantalla de algo que se veía mal.
+
 ### Lo que dejaron las diez causas, por si vuelve a ir lento
 
 Está descartado —no volver a mirarlo—: las clases de NativeWind en las casillas, el
