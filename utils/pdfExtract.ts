@@ -356,7 +356,58 @@ export async function extractPdfText(data: Uint8Array): Promise<string> {
 }
 
 /** Por qué un PDF no se dejó leer. */
-export type PdfProblem = 'encrypted' | 'scanned' | 'unknown';
+export type PdfProblem = 'encrypted' | 'scanned' | 'sinLetras' | 'unknown';
+
+/**
+ * ¿Se entendió ALGO de este texto?
+ *
+ * Se busca una palabra de las que lleva cualquier estado de cuenta, en los tres idiomas.
+ * Es la prueba más directa que hay: si no aparece ni una, no se entendió nada, y da igual
+ * cuántos caracteres hayan salido.
+ *
+ * Se prefiere esto a contar caracteres porque contar engaña. Ver seEntiende.
+ */
+const PALABRAS_DE_ESTADO = [
+  'fecha', 'saldo', 'monto', 'total', 'cuenta', 'pago', 'consumo', 'importe', 'operacion',
+  'date', 'balance', 'amount', 'payment', 'account',
+  'data', 'valor', 'conta', 'pagamento',
+];
+
+/**
+ * ¿El texto que salió del PDF se entiende, o son letras sueltas sin sentido?
+ *
+ * HACE FALTA PORQUE UN PDF PUEDE DEVOLVER MUCHÍSIMO TEXTO Y NINGUNA LETRA (07/08/2026).
+ *
+ * El usuario subió su estado de cuenta de verdad —una tarjeta de crédito, diciembre— y le
+ * salió *"no se pudo leer el texto de este PDF"*. Se probó ese archivo contra este mismo
+ * extractor y salieron **7.024 caracteres**: texto había. Lo que no había era sentido.
+ *
+ * El motivo: ese PDF escribe con tipografías propias (`Identity-H`), donde cada letra
+ * viaja como un número que hay que traducir con una tabla que el propio PDF debería
+ * traer. Sin traducir, salen símbolos: `« ¬ ­ ® ¯ °`. Se midió: **12% de caracteres
+ * ASCII y CERO palabras reconocibles**.
+ *
+ * Los dos números están medidos del archivo real, no elegidos a ojo. Un PDF de texto
+ * normal pasa del 80% de ASCII y trae "fecha" y "saldo" por todas partes, así que entre
+ * uno bueno y este no hay zona de duda: hay un abismo.
+ *
+ * SE MIRAN LAS DOS COSAS, y cada una tapa el hueco de la otra:
+ *
+ *   · La palabra sola fallaría con un banco que escriba distinto —"F. Proceso" en vez de
+ *     "fecha"— y le diríamos que su PDF no se entiende cuando sí se entendía.
+ *   · El porcentaje solo fallaría con este archivo: sus letras raras caen en parte dentro
+ *     del ASCII, así que un umbral alto lo daría por bueno.
+ */
+export function seEntiende(texto: string): boolean {
+  const enMinusculas = texto.toLowerCase();
+  if (PALABRAS_DE_ESTADO.some((p) => enMinusculas.includes(p))) return true;
+
+  const sinEspacios = texto.replace(/\s/g, '');
+  if (sinEspacios.length < 200) return true; // demasiado poco para juzgarlo
+
+  const legibles = (sinEspacios.match(/[a-zA-Z0-9]/g) ?? []).length;
+  return legibles / sinEspacios.length >= 0.4;
+}
 
 /**
  * Averigua POR QUÉ no salió texto de un PDF.
@@ -381,17 +432,29 @@ export type PdfProblem = 'encrypted' | 'scanned' | 'unknown';
  * cabeceras van al principio, y recorrer un estado de cuenta entero para esto
  * sería lento en un celular.
  */
-export function diagnosePdf(data: Uint8Array): PdfProblem {
+export function diagnosePdf(data: Uint8Array, texto = ''): PdfProblem {
   const cabecera = u8str(data.slice(0, Math.min(data.length, 4096)));
   const cola = u8str(data.slice(Math.max(0, data.length - 4096)));
 
   // /Encrypt vive en el trailer, al final del archivo.
   if (/\/Encrypt\b/.test(cola) || /\/Encrypt\b/.test(cabecera)) return 'encrypted';
 
-  // Las páginas escaneadas son imágenes JPEG o JPEG2000 incrustadas. Se busca
-  // en todo el archivo porque la primera imagen puede estar en cualquier
-  // sitio, pero solo el nombre del filtro, que es barato de encontrar.
-  if (u8search(data, '/DCTDecode') >= 0 || u8search(data, '/JPXDecode') >= 0) {
+  // SALIÓ TEXTO PERO NO SE ENTIENDE: las letras van con códigos propios.
+  //
+  // Va ANTES de mirar si hay imágenes, y ese orden es el arreglo: con el orden anterior
+  // este archivo se llevaba el mensaje de "escaneado", que es falso. Ver seEntiende.
+  if (texto.replace(/\s/g, '').length >= 200 && !seEntiende(texto)) return 'sinLetras';
+
+  // ESCANEADO: páginas que son fotos. Son imágenes JPEG o JPEG2000 incrustadas.
+  //
+  // Y AHORA SE EXIGE ADEMÁS QUE NO HAYA SALIDO TEXTO, porque solo con la imagen esto
+  // estaba MAL (07/08/2026): **todos** los estados de cuenta traen el logo del banco en
+  // JPEG, así que cualquiera daba "escaneado". El del usuario tenía cinco imágenes y 7.024
+  // caracteres de texto, y se le dijo que eran fotos de las páginas.
+  //
+  // Una página de verdad escaneada no deja texto: si hay texto, las imágenes son adornos.
+  const casiSinTexto = texto.replace(/\s/g, '').length < 200;
+  if (casiSinTexto && (u8search(data, '/DCTDecode') >= 0 || u8search(data, '/JPXDecode') >= 0)) {
     return 'scanned';
   }
 

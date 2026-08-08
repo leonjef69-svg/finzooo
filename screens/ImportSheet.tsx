@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import { FileUp, CheckCircle2, AlertTriangle, Copy, X, Landmark } from "lucide-react-native";
-import { diagnosePdf, extractPdfText } from "@/utils/pdfExtract";
+import { diagnosePdf, extractPdfText, seEntiende } from "@/utils/pdfExtract";
 import { extractExcelText, looksLikeExcel } from "@/utils/excelExtract";
 import { useColorScheme } from "nativewind";
 import { setPendingImport } from "@/utils/pendingImport";
@@ -137,18 +137,27 @@ export default function ImportSheet({
         const bytes = new Uint8Array(arrayBuffer);
         text = await extractPdfText(bytes);
         setLoadingPdf(false);
-        if (!text.trim()) {
+        // SE MIRA SI SALIÓ TEXTO **Y SI SE ENTIENDE**. Antes solo se miraba lo primero.
+        //
+        // Ese "solo lo primero" es lo que dejó al usuario sin respuesta el 07/08/2026:
+        // subió su estado de cuenta real y salieron 7.024 caracteres de símbolos sin
+        // sentido. Como texto había, esta comprobación lo daba por bueno, el importador
+        // no encontraba ninguna columna y acababa saliendo el mensaje más genérico de
+        // todos. La app tenía la respuesta —el texto no se entiende— y no la usaba.
+        if (!text.trim() || !seEntiende(text)) {
           // Se dice POR QUÉ, no solo que no se pudo. Antes salía siempre el
           // mismo consejo —"expórtalo como CSV"— que sirve para un caso y
           // para los otros dos no, y dejaba sin saber si tenía arreglo.
-          const problema = diagnosePdf(bytes);
+          const problema = diagnosePdf(bytes, text);
           showToastAndClose(
             t(
               problema === "encrypted"
                 ? "importSheet.pdfEncrypted"
                 : problema === "scanned"
                   ? "importSheet.pdfScanned"
-                  : "importSheet.pdfError"
+                  : problema === "sinLetras"
+                    ? "importSheet.pdfSinLetras"
+                    : "importSheet.pdfError"
             )
           );
           return;

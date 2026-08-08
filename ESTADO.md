@@ -192,6 +192,58 @@ espacio duro, más abajo.
 
 ---
 
+## El estado de cuenta real no se podía leer, y el mensaje mentía (7ago-31, 07/08/2026)
+
+**Primera vez que se prueba la importación con un archivo de verdad.** Bajó su estado de
+cuenta de tarjeta de crédito de la banca móvil, lo subió, y salió *"No se pudo leer el texto
+de este PDF"*. Preguntó lo correcto: *"no sé si fue lo correcto o tal vez importar
+movimientos no sirve para eso"*.
+
+### Lo que se midió del archivo real
+
+| | |
+|---|---|
+| Caracteres extraídos | **7.024** — texto SÍ había |
+| De ellos, letras o números ASCII | **12%** |
+| Palabras reconocibles ("fecha", "saldo"…) | **CERO** |
+
+Ese PDF escribe con tipografías propias (`Identity-H`): cada letra viaja como un número que
+hay que traducir con una tabla que el PDF debería traer. Sin traducir salen símbolos.
+
+### Se midió si valía la pena implementar la traducción. NO vale.
+
+Se extrajo la tabla del PDF (`ToUnicode`) y se aplicó: **el texto legal del pie se
+descifra**, pero los montos y las fechas **no**. Son de una SEGUNDA tipografía que el archivo
+trae **sin tabla de traducción**. Justo la parte que importa.
+
+Sin eso habría que leer la tipografía incrustada (CFF) glifo por glifo. **No se hizo, y el
+motivo es la medición, no la pereza:** el trabajo es enorme y el resultado seguiría sin dar
+los montos de este banco.
+
+### Los dos fallos que sí aparecieron, y los dos eran mensajes que mentían
+
+1. **El diagnóstico decía "escaneado"** —fotos de las páginas— porque el PDF traía una imagen
+   JPEG. Pero **todos** los estados de cuenta traen el logo del banco en JPEG, así que
+   cualquiera daba "escaneado". El suyo tenía cinco imágenes **y** 7.024 caracteres de texto.
+   Ahora "escaneado" exige además que **no haya salido texto**.
+2. **La pantalla solo diagnosticaba cuando no salía texto.** Con texto ilegible lo daba por
+   bueno, el importador no encontraba columnas, y acababa saliendo el mensaje más genérico de
+   todos. **La app tenía la respuesta y no la usaba.**
+
+Hay un mensaje nuevo (`pdfSinLetras`) que dice la verdad y la salida: el PDF sí tiene texto,
+pero con letras que no se pueden traducir, y que baje CSV o Excel de la web del banco.
+
+> **La prueba NO guarda su archivo, y es a propósito:** es su estado de cuenta real, con su
+> nombre, su tarjeta y sus compras, y este repositorio se sube a internet. Se reproduce la
+> **condición** —12% de letras y ninguna palabra— sin ninguno de sus datos.
+
+Se comprueba con las dos señales juntas, y cada una tapa el hueco de la otra: la palabra sola
+fallaría con un banco que escriba "F. Proceso" en vez de "Fecha"; el porcentaje solo fallaría
+con este archivo, cuyas letras raras caen en parte dentro del ASCII.
+
+**Sigue sin probarse: que un CSV o un Excel real de su banco SÍ se importe.** Es el siguiente
+paso natural y solo hace falta que baje uno.
+
 ## Lo que falta para Play Store
 
 Esto es lo pendiente de verdad, en orden de bloqueo:
