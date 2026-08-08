@@ -301,7 +301,16 @@ habría dicho que salió bien.
 
 1. ✅ **Cimientos** — tipos, guardado, nube con documento aparte, borrado, y
    `pruebas/verificar-negocio.ts`.
-2. Crear y elegir negocio (pantalla).
+2. ✅ **Crear negocio** (7ago-33) — pantalla en **Ajustes → Modo Negocio**, con candado
+   Premium. Enganchado por los **cuatro** lados: se lee al arrancar, se guarda al cambiar, se
+   sube y **se baja** al entrar desde otro celular. Ese cuarto es el que falló con las
+   categorías propias, así que tiene prueba propia.
+
+   Y de paso, un fallo **de una prueba, no del código**: `verificar-favoritos` se anclaba en
+   el primer `}, 1500);` del contexto para leer qué dispara la subida, y la subida nueva del
+   negocio usa la misma espera — así que pasó a leer las dependencias equivocadas y decía que
+   marcar un favorito no subía nada. Ahora se ancla en la línea exacta de la subida de la
+   cuenta, así que una tercera subida no la romperá.
 3. Productos.
 4. Ventas y panel del negocio.
 5. Captura automática al negocio, e historial propio.

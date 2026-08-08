@@ -215,5 +215,74 @@ console.log("\n--- UN NEGOCIO NUEVO NO CAMBIA NADA DE LO QUE YA FUNCIONA ---");
   ok(n.id.startsWith("neg_"), "y se ve de un vistazo que es un negocio");
 }
 
+console.log("\n--- EL NEGOCIO ESTA ENGANCHADO POR LOS CUATRO LADOS ---");
+{
+  // Guardar en el celular, subir, BAJAR y soltar al cerrar sesion. Son cuatro, y que falte
+  // una es un fallo silencioso distinto cada vez. La que mas duele es BAJAR: el 07/08/2026
+  // pasó exactamente eso con las categorias propias y la personalizacion — se subian bien y
+  // aqui no se leian, asi que entrar desde otro celular las hacia desaparecer con la copia
+  // correcta a salvo en la nube. Y no dio ningun error.
+  const ctx = fs.readFileSync(path.join(RAIZ, "contexts/AppDataContext.tsx"), "utf8");
+
+  ok(/cargarNegocio\(\)/.test(ctx), "1. al arrancar se lee del celular");
+  ok(/guardarVentas\(datosNegocio\.ventas\)/.test(ctx), "2. al cambiar se guarda en el celular");
+  ok(/subirNegocio\(uid, datosNegocio\)/.test(ctx), "3. y se sube a la nube");
+  ok(/const negocioDeLaNube = await bajarNegocio\(userUid\)/.test(ctx), "4. Y SE BAJA al entrar desde otro celular");
+  // Bajar y no escribirlo en el celular seria peor que no bajarlo: la pantalla lo mostraria y
+  // al reiniciar la app volveria a estar vacio.
+  ok(/guardarVentas\(negocioDeLaNube\.ventas\)/.test(ctx), "y lo bajado se escribe en el celular");
+
+  // Al cerrar sesion y al borrar la cuenta se suelta DEL ESTADO. El disco ya lo borra
+  // clearAccountData, pero el estado en memoria sobrevive: sin esto, la cuenta siguiente veria
+  // el negocio de la anterior hasta reiniciar la app.
+  const veces = (ctx.match(/setDatosNegocio\(NEGOCIO_VACIO\)/g) ?? []).length;
+  ok(veces >= 2, `se suelta al cerrar sesion y al borrar la cuenta (${veces})`);
+
+  // LA SUBIDA DEL NEGOCIO VA EN SU PROPIO EFECTO, no dentro del de la cuenta: es otro
+  // documento de Firestore, no un campo de ese. Y sus dependencias tienen que incluir los
+  // datos del negocio, o crear uno no dispararia ninguna subida y se quedaria solo en el
+  // celular — el mismo fallo que tuvieron los favoritos.
+  const desdeLaSubida = ctx.slice(ctx.lastIndexOf("subirNegocio(uid, datosNegocio);"));
+  const deps = /\}, \[[\s\S]*?\]\);/.exec(desdeLaSubida)?.[0] ?? "";
+  ok(deps.includes("datosNegocio"), "y crear o cambiar algo del negocio dispara la subida");
+}
+
+console.log("\n--- LA PANTALLA, Y QUE EL MODO NEGOCIO ES PREMIUM ---");
+{
+  // Decision suya del 07/08/2026: es Premium. El candado va en la puerta de la pantalla, igual
+  // que en importar, exportar, metas y los limites por categoria — el patron de la app.
+  const ruta = fs.readFileSync(path.join(RAIZ, "app/negocio/index.tsx"), "utf8");
+  ok(/if \(!isPremium\)/.test(ruta), "sin Premium no se entra");
+  ok(/PremiumLocked/.test(ruta), "y se explica con la pantalla de siempre, no con una nueva");
+
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/Negocios.tsx"), "utf8");
+  // Borrar un negocio se lleva sus ventas: eso hay que DECIRLO antes, no descubrirlo despues.
+  ok(/negocios\.borrarAviso/.test(pant), "al borrar se avisa de que se van sus ventas");
+  // Y la confirmacion va en la propia fila, no en una ventana del sistema: la ventana tapa la
+  // pantalla y no deja leer de que negocio se trata, que es el dato que hace dudar.
+  ok(/borrando === n\.id/.test(pant), "y se confirma en la propia fila");
+  // Lo que la V1 todavia no hace, dicho en la pantalla. Es la leccion de la pantalla de
+  // exportar: un limite que no se dice se toma por un fallo y se busca durante horas.
+  ok(/negocios\.proximoPaso/.test(pant), "se dice que los productos llegan en el paso siguiente");
+
+  // Y se llega desde Ajustes, o la pantalla no existiria para nadie.
+  const ajustes = fs.readFileSync(path.join(RAIZ, "screens/Settings.tsx"), "utf8");
+  ok(/router\.push\("\/negocio"\)/.test(ajustes), "se llega desde Ajustes");
+  ok(/negocios\.rowLabel/.test(ajustes), "con su nombre traducido");
+
+  // Los textos, en los tres idiomas. Una clave que falte no da error: sale su nombre en
+  // pantalla, que es peor que nada.
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  for (const clave of ["title", "crear", "borrarAviso", "vacioTitulo", "proximoPaso", "lockedDescription"]) {
+    const veces = (i18n.match(new RegExp(`"negocios\\.${clave}":`, "g")) ?? []).length;
+    ok(veces === 3, `"${clave}" esta en los tres idiomas (${veces})`);
+  }
+  // Y las categorias de negocio, todas: una sin texto saldria como "negocios.cat.bodega".
+  for (const cat of ["restaurante", "bodega", "belleza", "servicios", "ropa", "otro"]) {
+    const veces = (i18n.match(new RegExp(`"negocios\\.cat\\.${cat}":`, "g")) ?? []).length;
+    ok(veces === 3, `la categoria ${cat} esta traducida (${veces})`);
+  }
+}
+
 console.log(fallos === 0 ? "\nTodo bien: los cimientos del Modo Negocio\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

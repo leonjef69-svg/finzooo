@@ -27,6 +27,17 @@ import {
   saveJSON,
   STORAGE_KEYS,
 } from "@/utils/storage";
+import {
+  borrarNegocio as borrarNegocioYLoSuyo,
+  cargarNegocio,
+  guardarNegocios,
+  guardarProductos,
+  guardarVentas,
+  NEGOCIO_VACIO,
+  type DatosDelNegocio,
+  type Negocio,
+} from "@/utils/negocio";
+import { bajarNegocio, subirNegocio } from "@/utils/cloudNegocio";
 import { activate as activateDecoy, deactivate as deactivateDecoy } from "@/utils/decoyMode";
 // setOverrides y setPropias ya no se usan aqui: al traer los datos de la nube se
 // llama a saveOverrides y savePropias, que ponen la variable de modulo Y escriben
@@ -223,6 +234,18 @@ type AppDataContextValue = {
   pruebaHoras: number;
   /** Enciende la prueba gratuita. Devuelve false si ya se habia usado. */
   activarPruebaPremium: () => boolean;
+  /**
+   * MODO NEGOCIO (V1). Los negocios de esta cuenta, y cómo cambiarlos.
+   *
+   * Se expone la lista y no los datos enteros: los productos y las ventas los pedirá cada
+   * pantalla suya cuando toque, y sacarlos todos por aquí haría que cualquier pantalla que
+   * lea el contexto se redibuje al vender.
+   */
+  negocios: Negocio[];
+  /** Crea uno nuevo o reemplaza el que tenga ese id. Devuelve el negocio guardado. */
+  guardarNegocio: (negocio: Negocio) => void;
+  /** Borra el negocio Y TODO LO SUYO: sus productos y sus ventas. */
+  quitarNegocio: (id: string) => void;
   setIsPremium: (v: boolean) => void;
   isCloudSynced: boolean;
   // Modo señuelo. Solo los llama la pantalla de bloqueo; ninguna otra parte
@@ -296,6 +319,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * cualquier otra cosa. Un minuto es de sobra para una cuenta de 24 horas, y no
    * hace nada mientras no haya prueba corriendo.
    */
+  /**
+   * MODO NEGOCIO (V1). Los negocios, sus productos y sus ventas.
+   *
+   * VA EN SU PROPIO ESTADO Y NO DENTRO DE "transactions", que es la decisión de arquitectura
+   * de toda la función: la plata del negocio no puede mezclarse con la personal ni en los
+   * totales, y guardándola aparte eso no depende de acordarse de filtrar en los 16 sitios
+   * que leen movimientos. Ver utils/negocio.
+   */
+  const [datosNegocio, setDatosNegocio] = useState<DatosDelNegocio>(NEGOCIO_VACIO);
+
   const [ahora, setAhora] = useState(() => Date.now());
   const pruebaCorriendo = pruebaVigente(pruebaInicio, ahora);
   useEffect(() => {
@@ -459,6 +492,28 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     saveJSON(STORAGE_KEYS.isPremium, cloud.isPremium);
     saveJSON(STORAGE_KEYS.merchantLearned, cloud.merchantLearned ?? {});
     saveJSON(STORAGE_KEYS.carryoverCleared, cloud.carryoverCleared ?? []);
+
+    /**
+     * Y EL NEGOCIO, QUE VIVE EN OTRO DOCUMENTO.
+     *
+     * Va con su propia llamada porque es otro documento de Firestore, no un campo de este.
+     * Si esta línea faltara, el negocio se subiría bien y **no bajaría nunca**: quien entrara
+     * desde otro celular vería sus movimientos personales y el negocio vacío, con las ventas
+     * y los precios a salvo en la nube.
+     *
+     * No es una suposición: eso pasó exactamente el 07/08/2026 con las categorías propias y
+     * la personalización — estaban en el tipo, se subían, y aquí no se leían.
+     *
+     * Si no hay nada en la nube se deja lo que haya en el celular: puede ser un negocio
+     * creado sin sesión, y borrarlo por venir vacío de la nube sería perderlo.
+     */
+    const negocioDeLaNube = await bajarNegocio(userUid);
+    if (negocioDeLaNube) {
+      setDatosNegocio(negocioDeLaNube);
+      guardarNegocios(negocioDeLaNube.negocios);
+      guardarProductos(negocioDeLaNube.productos);
+      guardarVentas(negocioDeLaNube.ventas);
+    }
     return true;
   }
 
@@ -519,6 +574,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       savedPropias,
       savedFavoritos,
       savedPrueba,
+      savedNegocio,
     ] = await Promise.all([
       loadJSON<Record<string, number>>(STORAGE_KEYS.budgets, {}),
       loadJSON<Record<string, number>>(STORAGE_KEYS.categoryBudgets, {}),
@@ -540,6 +596,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       loadFavoritos(),
       // Cuando se activo la prueba gratuita, si se activo. Ver utils/pruebaPremium.
       loadPrueba(),
+      // El negocio: sus negocios, productos y ventas. Ver utils/negocio.
+      cargarNegocio(),
     ]);
     setBudgets(savedBudgets);
     setCategoryBudgets(savedCategoryBudgets);
@@ -553,6 +611,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setIsPremium(savedIsPremium);
     setMerchantLearned(savedLearned);
     setCarryoverCleared(savedCarryoverCleared);
+    setDatosNegocio(savedNegocio);
   }
 
   // Cierra la sesión de verdad (Firebase) y limpia los datos de este
@@ -587,6 +646,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setTransactions([]);
     setGoals([]);
     setIsPremium(false);
+    setDatosNegocio(NEGOCIO_VACIO);
     // La prueba gratuita tambien se suelta: el disco ya se limpio, pero lo que
     // esta en memoria sobrevive y la cuenta siguiente entraria con la prueba de la
     // anterior a medio correr.
@@ -631,6 +691,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setTransactions([]);
     setGoals([]);
     setIsPremium(false);
+    setDatosNegocio(NEGOCIO_VACIO);
     // La prueba gratuita tambien se suelta: el disco ya se limpio, pero lo que
     // esta en memoria sobrevive y la cuenta siguiente entraria con la prueba de la
     // anterior a medio correr.
@@ -715,6 +776,32 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (ready) saveJSON(STORAGE_KEYS.carryoverCleared, carryoverCleared);
   }, [carryoverCleared, ready]);
+  // EL NEGOCIO, en sus tres claves. Se guardan las tres juntas porque cambian juntas: una
+  // venta toca las ventas, pero borrar un negocio toca las tres a la vez.
+  useEffect(() => {
+    if (!ready) return;
+    guardarNegocios(datosNegocio.negocios);
+    guardarProductos(datosNegocio.productos);
+    guardarVentas(datosNegocio.ventas);
+  }, [datosNegocio, ready]);
+
+  /**
+   * Y A LA NUBE, EN SU PROPIO DOCUMENTO.
+   *
+   * Va en un efecto aparte del de la cuenta a propósito: es OTRO documento de Firestore
+   * (`negocios/{uid}`), porque en el de la cuenta no cabe — tiene tope de 1 MB y ahí ya
+   * están todos los movimientos. Ver utils/cloudNegocio.
+   *
+   * Agrupado 1,5 s igual que el otro: sin agrupar, teclear el nombre de un producto mandaría
+   * una subida por letra.
+   */
+  useEffect(() => {
+    if (!(ready && hasOnboarded && uid)) return;
+    const timer = setTimeout(() => {
+      subirNegocio(uid, datosNegocio);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [datosNegocio, ready, hasOnboarded, uid]);
 
   // Además de guardar en este celular, si hay una cuenta con sesión
   // iniciada y correo verificado, también sube los datos a la nube.
@@ -1281,6 +1368,37 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * TAMBIEN aqui: un boton escondido es una decision de pantalla, y esto es una
    * decision de la cuenta. Devuelve si se pudo, para poder avisar.
    */
+  /**
+   * Guarda un negocio: lo crea si es nuevo, lo reemplaza si ya estaba.
+   *
+   * Uno solo para las dos cosas a propósito. Con "crear" y "editar" separados, cada uno
+   * escribe en la lista a su manera y basta que uno olvide algo para que editar pierda un
+   * dato que crear sí guardaba.
+   */
+  function guardarNegocio(negocio: Negocio) {
+    setDatosNegocio((antes) => {
+      const yaEstaba = antes.negocios.some((n) => n.id === negocio.id);
+      return {
+        ...antes,
+        negocios: yaEstaba
+          ? antes.negocios.map((n) => (n.id === negocio.id ? negocio : n))
+          : [...antes.negocios, negocio],
+      };
+    });
+  }
+
+  /**
+   * Borra un negocio con sus productos y sus ventas.
+   *
+   * En cascada, y aquí sí es lo correcto: quien borra el negocio quiere que no quede nada
+   * suyo. Dejar sus ventas las volvería imposibles de ver y seguirían contando en cualquier
+   * total que se sume mañana. La cuenta la hace utils/negocio, no aquí: así se puede
+   * comprobar con números en las pruebas.
+   */
+  function quitarNegocio(id: string) {
+    setDatosNegocio((antes) => borrarNegocioYLoSuyo(antes, id));
+  }
+
   function activarPruebaPremium(): boolean {
     if (pruebaYaUsada(pruebaInicio)) return false;
     const inicio = Date.now();
@@ -1495,6 +1613,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         pruebaInicio,
         pruebaHoras: pruebaHorasRestantes(pruebaInicio, ahora),
         activarPruebaPremium,
+        negocios: datosNegocio.negocios,
+        guardarNegocio,
+        quitarNegocio,
         setIsPremium,
         isCloudSynced: uid !== null,
         enterDecoyMode,

@@ -25,6 +25,7 @@ import {
   LogOut,
   Info,
   Shield,
+  Store,
   Zap,
   Mic,
   MessageSquare,
@@ -32,6 +33,7 @@ import {
 } from "lucide-react-native";
 import * as voiceWidget from "@/modules/voice-widget";
 import { useColorScheme } from "nativewind";
+import { router } from "expo-router";
 import Row from "@/components/Row";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import Toggle from "@/components/Toggle";
@@ -316,6 +318,20 @@ export default function Settings({
           Icon={FileUp}
           label={t("importSheet.rowLabel")}
           onPress={onImport}
+          right={
+            <View className="bg-amber-50 px-2 py-1 rounded-full">
+              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
+            </View>
+          }
+        />
+        {/* MODO NEGOCIO. Va aquí, entre importar y la captura automática, porque es de la
+            misma familia: cosas que cambian CÓMO entra el dinero, no ajustes de la cuenta.
+            Con la etiqueta PRO igual que las otras Premium: quien la ve sabe antes de tocar
+            que va a encontrar un candado. */}
+        <Row
+          Icon={Store}
+          label={t("negocios.rowLabel")}
+          onPress={() => router.push("/negocio")}
           right={
             <View className="bg-amber-50 px-2 py-1 rounded-full">
               <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>

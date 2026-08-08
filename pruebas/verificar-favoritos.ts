@@ -177,10 +177,20 @@ console.log("\n--- Y VIAJAN A LA COPIA DE LA CUENTA ---");
   // El estado existe SOLO para que la subida se dispare. Sin el, marcar un favorito
   // no cambiaba nada de lo que ese efecto vigila, asi que se quedaba en el celular.
   //
-  // Se ancla en la espera de 1,5 segundos, que es solo de ese efecto. Anclar en
-  // "saveCloudData" no servia: logout() tambien sube antes de cerrar sesion y
-  // aparece primero, asi que se leian las dependencias de otro efecto cualquiera.
-  const desdeLaSubida = ctx.slice(ctx.indexOf("}, 1500);"));
+  // ANCLAR AQUI ES MAS DIFICIL DE LO QUE PARECE, Y YA FALLO DOS VECES:
+  //
+  //  · Anclar en "saveCloudData" no sirve: logout() tambien sube antes de cerrar sesion y
+  //    aparece primero, asi que se leian las dependencias de otro efecto cualquiera.
+  //  · Anclar en la espera de 1,5 segundos tampoco: el 07/08/2026 el Modo Negocio añadio
+  //    OTRA subida agrupada, con la misma espera, y el primer "}, 1500);" del archivo paso a
+  //    ser el suyo. Esta prueba empezo a leer las dependencias de la subida del negocio y a
+  //    decir que marcar un favorito no dispara nada. Un fallo de la prueba, no del codigo.
+  //
+  // Ahora se ancla en la LINEA EXACTA que sube los datos de la cuenta, que es lo unico que
+  // identifica ese efecto y no otro. Si mañana entra una tercera subida, sigue valiendo.
+  const laSubidaDeLaCuenta = ctx.lastIndexOf("saveCloudData(uid, datosParaLaNube());");
+  ok(laSubidaDeLaCuenta > 0, "se encontro la subida de los datos de la cuenta");
+  const desdeLaSubida = ctx.slice(laSubidaDeLaCuenta);
   const deps = /\}, \[[\s\S]*?\]\);/.exec(desdeLaSubida)?.[0] ?? "";
   ok(deps.length > 0, "se encontro la lista de lo que dispara la subida");
   ok(deps.includes("iconosFavoritos"), "y marcar uno dispara la subida");
