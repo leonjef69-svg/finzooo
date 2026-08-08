@@ -246,6 +246,14 @@ paso natural y solo hace falta que baje uno.
 
 ## MODO NEGOCIO — V1 EN CURSO (07/08/2026)
 
+> ## 👉 AQUÍ ES DONDE SE QUEDÓ EL TRABAJO
+>
+> **Pasos 1, 2 y 3 terminados y funcionando. El paso 4 está A MEDIAS: solo la parte de datos.**
+> Compila y las 47 pruebas están en verde, así que se puede seguir sin arreglar nada primero.
+> Lo que hay y lo que falta está detallado en "Pasos", al final de esta sección.
+>
+> Última entrega publicada: **7ago-34** (productos y precios).
+
 Separar 🏠 Personal de 🏪 Negocio para que la plata del negocio **no se mezcle con la
 personal, ni en los totales**. El ejemplo que dio: una pollería que recibe un Yape de un
 cliente (negocio) y otro de un familiar (personal).
@@ -323,7 +331,41 @@ habría dicho que salió bien.
    Y borrar un producto **no toca sus ventas**: la venta guarda el nombre y el precio copiados,
    así que sigue diciendo "Broster S/ 15" aunque ya no esté en la carta. Eso se **dice** en la
    pantalla antes de borrar.
-4. Ventas y panel del negocio.
+4. ⚠️ **A MEDIAS — AQUÍ ES DONDE HAY QUE SEGUIR.** Ventas y panel del negocio.
+
+   **Lo que YA está** (compilando, y las 47 pruebas en verde):
+   - El tipo `MovimientoNegocio` en `utils/negocio.ts`: la plata que entra y sale de la caja
+     del negocio, con `origen` (manual/automatico), `ventaId` y `avisoId`.
+   - Su clave `movimientosNegocio` en `utils/storage.ts`, **y en el borrado al cerrar sesión**.
+   - Su hueco en `DatosDelNegocio`, en `cargarNegocio`, en `guardarMovimientosNegocio`, en el
+     documento de la nube (`utils/cloudNegocio.ts`) y en el borrado en cascada al borrar un
+     negocio.
+   - `crearMovimientoNegocio()`, que redondea a céntimos en un solo sitio.
+
+   **Se añadió el movimiento AHORA y no en el paso 5** porque el panel tiene que mostrar una
+   línea de "Gastos", y sin este tipo esa línea sería un cero que nunca puede cambiar — justo
+   la clase de promesa vacía que se ha estado limpiando todo el día.
+
+   **Lo que FALTA, en orden:**
+   1. Engancharlo al contexto (`contexts/AppDataContext.tsx`): `ventas`, `movimientos`,
+      `guardarVenta`, `quitarVenta`, `guardarMovimientoNegocio`. **Copiar el patrón exacto de
+      `guardarNegocio` y `guardarProducto`, que ya están ahí.**
+   2. `utils/negocioTotales.ts` — las cuentas del panel en funciones puras, para poder
+      comprobarlas con números en las pruebas y no leyendo la pantalla.
+   3. `screens/NuevaVenta.tsx` — elegir productos activos, cantidad, método de pago, y
+      registrar. El total sale de `totalDeLineas()`, nunca escrito a mano.
+   4. `screens/PanelNegocio.tsx` — las cinco líneas que pidió (ventas, ingresos automáticos,
+      gastos, saldo, cantidad de ventas) más el historial, y **con la marca 🏪 en cada fila**
+      para que no se confunda con lo personal.
+   5. Rutas `app/negocio/[id].tsx` (panel) y `app/negocio/venta.tsx`, **con candado Premium**
+      igual que `app/negocio/productos.tsx`.
+   6. Textos en los **tres** idiomas y ampliar `pruebas/verificar-negocio.ts`.
+
+   > **OJO CON UN DOBLE CONTEO, y hay que decirlo en la pantalla.** En V1 una venta cobrada por
+   > Yape puede aparecer **dos veces**: como venta y como ingreso automático. Él lo aceptó — es
+   > lo que se vincula en V2 — pero el panel tiene que advertirlo, o los números parecerán
+   > equivocados.
+
 5. Captura automática al negocio, e historial propio.
 
 ## Lo que falta para Play Store
