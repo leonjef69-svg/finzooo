@@ -246,13 +246,27 @@ paso natural y solo hace falta que baje uno.
 
 ## MODO NEGOCIO — V1 EN CURSO (07/08/2026)
 
-> ## 👉 AQUÍ ES DONDE SE QUEDÓ EL TRABAJO
+> ## 👉 EMPIEZA POR EL PASO 4
 >
-> **Pasos 1, 2 y 3 terminados y funcionando. El paso 4 está A MEDIAS: solo la parte de datos.**
-> Compila y las 47 pruebas están en verde, así que se puede seguir sin arreglar nada primero.
-> Lo que hay y lo que falta está detallado en "Pasos", al final de esta sección.
+> **De qué trata esto:** separar la plata del negocio de la personal, para que un Yape de un
+> cliente y uno de un familiar no acaben en el mismo bolsillo. Él tiene una pollería.
 >
-> Última entrega publicada: **7ago-34** (productos y precios).
+> | | |
+> |---|---|
+> | Pasos 1, 2 y 3 | ✅ Terminados, y **confirmados por él en su celular** el 07/08/2026 |
+> | Paso 4 | ⚠️ **A MEDIAS: solo la parte de datos. AQUÍ SE EMPIEZA** |
+> | Paso 5 | Sin empezar |
+>
+> Compila y las **47 pruebas están en verde**, así que se puede seguir sin arreglar nada
+> primero. Lo que hay del paso 4 y lo que falta está detallado en **"Pasos"**, al final de
+> esta sección, con los archivos concretos y en orden.
+>
+> Última entrega publicada: **7ago-34**.
+>
+> **"Confirmado en su celular" no es lo mismo que "las pruebas pasan"**, y en este proyecto la
+> diferencia ha costado días: se han entregado cosas con las pruebas en verde que en el celular
+> no funcionaban —la voz muda por un espacio, el PDF automático, el lector desenganchado—. De
+> los pasos 1, 2 y 3 hay las dos cosas.
 
 Separar 🏠 Personal de 🏪 Negocio para que la plata del negocio **no se mezcle con la
 personal, ni en los totales**. El ejemplo que dio: una pollería que recibe un Yape de un
@@ -309,7 +323,7 @@ habría dicho que salió bien.
 
 1. ✅ **Cimientos** — tipos, guardado, nube con documento aparte, borrado, y
    `pruebas/verificar-negocio.ts`.
-2. ✅ **Crear negocio** (7ago-33) — pantalla en **Ajustes → Modo Negocio**, con candado
+2. ✅ **Crear negocio** (7ago-33) — *probado por él en el celular.* — pantalla en **Ajustes → Modo Negocio**, con candado
    Premium. Enganchado por los **cuatro** lados: se lee al arrancar, se guarda al cambiar, se
    sube y **se baja** al entrar desde otro celular. Ese cuarto es el que falló con las
    categorías propias, así que tiene prueba propia.
@@ -319,7 +333,7 @@ habría dicho que salió bien.
    negocio usa la misma espera — así que pasó a leer las dependencias equivocadas y decía que
    marcar un favorito no subía nada. Ahora se ancla en la línea exacta de la subida de la
    cuenta, así que una tercera subida no la romperá.
-3. ✅ **Productos** (7ago-34) — crear, editar, borrar, **activar/desactivar** y precio. Sin
+3. ✅ **Productos** (7ago-34) — *probado por él en el celular.* — crear, editar, borrar, **activar/desactivar** y precio. Sin
    inventario ni stock, como se pidió.
 
    Tres decisiones que costaron pensar: el **precio se teclea como texto** y se convierte una
