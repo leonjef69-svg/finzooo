@@ -33,6 +33,7 @@ import {
   filtrarPorPeriodo,
   historialDelNegocio,
   horaVisible,
+  productosVendidos,
   totalesDelNegocio,
 } from "@/utils/negocioTotales";
 import {
@@ -965,6 +966,71 @@ console.log("\n--- V2: LO DE HOY, LO DEL MES Y TODO ---");
   const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
   for (const clave of ["periodo.hoy", "periodo.mes", "periodo.todo", "saldo.hoy", "saldo.mes", "vacio.hoy", "vacio.mes"]) {
     const veces = (i18n.match(new RegExp(`"panel\\.${clave.replace(".", "\\.")}":`, "g")) ?? []).length;
+    ok(veces === 3, `"panel.${clave}" esta en los tres idiomas (${veces})`);
+  }
+}
+
+console.log("\n--- V2: CUANTO BROSTER SALIO ---");
+{
+  const conLineas = (id: string, fecha: string, hora: string, lineas: { productoId: string; nombre: string; precio: number; cantidad: number }[]) => ({
+    id,
+    negocioId: "n1",
+    fecha,
+    hora,
+    lineas,
+    total: 0,
+    metodo: "efectivo" as const,
+    estado: "pagado" as const,
+  });
+
+  const ventas = [
+    conLineas("v1", "2026-08-08", "12:00", [
+      { productoId: "p1", nombre: "Broster", precio: 15, cantidad: 2 },
+      { productoId: "p2", nombre: "Gaseosa", precio: 5, cantidad: 1 },
+    ]),
+    conLineas("v2", "2026-08-08", "13:00", [{ productoId: "p2", nombre: "Gaseosa", precio: 5, cantidad: 3 }]),
+    // La del OTRO negocio no puede contar.
+    { ...conLineas("v3", "2026-08-08", "14:00", [{ productoId: "p1", nombre: "Broster", precio: 15, cantidad: 99 }]), negocioId: "n2" },
+  ];
+
+  const vendidos = productosVendidos("n1", ventas);
+  ok(vendidos.length === 2, `salen los dos productos vendidos (${vendidos.length})`);
+  // POR PLATA Y NO POR CANTIDAD: cuatro gaseosas son mas unidades que dos brosters, pero lo que
+  // sostiene el negocio son los 30 soles del broster contra los 20 de la gaseosa.
+  ok(vendidos[0].nombre === "Broster", `manda el que mas plata trae (${vendidos[0].nombre})`);
+  ok(vendidos[0].cantidad === 2 && vendidos[0].total === 30, `2 brosters, 30 soles (${vendidos[0].cantidad}, ${vendidos[0].total})`);
+  // SE SUMAN LAS LINEAS DE VENTAS DISTINTAS: la gaseosa salio en dos ventas.
+  ok(vendidos[1].cantidad === 4 && vendidos[1].total === 20, `4 gaseosas de dos ventas, 20 soles (${vendidos[1].cantidad}, ${vendidos[1].total})`);
+  ok(!vendidos.some((p) => p.cantidad === 99), "y no se cuela lo del otro negocio");
+
+  // SE AGRUPA POR PRODUCTO, NO POR NOMBRE. Si un dia se renombra "Broster" a "Broster de
+  // pollo", agrupando por nombre saldrian dos filas del mismo producto y ninguna diria la
+  // verdad. Y el nombre que se enseña es el de la venta MAS RECIENTE: la lista de "lo que mas
+  // vendes" con el nombre de hace tres meses no la reconoceria nadie.
+  const renombrado = productosVendidos("n1", [
+    conLineas("v1", "2026-08-01", "12:00", [{ productoId: "p1", nombre: "Broster", precio: 15, cantidad: 1 }]),
+    conLineas("v2", "2026-08-08", "12:00", [{ productoId: "p1", nombre: "Broster de pollo", precio: 15, cantidad: 1 }]),
+  ]);
+  ok(renombrado.length === 1, `un producto renombrado sigue siendo uno (${renombrado.length})`);
+  ok(renombrado[0].cantidad === 2, "con sus dos ventas juntas");
+  ok(renombrado[0].nombre === "Broster de pollo", `y con el nombre de ahora (${renombrado[0].nombre})`);
+
+  // LOS CENTIMOS NO PUEDEN SALIR CON COLA en una lista de dinero.
+  const conColas = productosVendidos("n1", [
+    conLineas("v1", "2026-08-08", "12:00", [{ productoId: "p1", nombre: "Pan", precio: 0.1, cantidad: 3 }]),
+  ]);
+  ok(conColas[0].total === 0.3, `0.10 x 3 son 0.30 (${conColas[0].total})`);
+
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
+  // DEL MISMO PERIODO QUE TODO LO DEMAS: una lista de "lo que mas vendes" de todos los tiempos
+  // debajo de unos totales de hoy seria dos respuestas a preguntas distintas en la misma
+  // pantalla.
+  ok(/productosVendidos\(negocioId, ventasDelPeriodo\)/.test(pant), "lo mas vendido es del periodo elegido");
+  ok(/panel\.vendidosCantidad/.test(pant), "y cada fila dice cuantos salieron");
+
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  for (const clave of ["vendidos", "vendidosCantidad"]) {
+    const veces = (i18n.match(new RegExp(`"panel\\.${clave}":`, "g")) ?? []).length;
     ok(veces === 3, `"panel.${clave}" esta en los tres idiomas (${veces})`);
   }
 }

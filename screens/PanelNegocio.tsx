@@ -25,6 +25,7 @@ import {
   filtrarPorPeriodo,
   historialDelNegocio,
   horaVisible,
+  productosVendidos,
   totalesDelNegocio,
   type PeriodoDelPanel,
 } from "@/utils/negocioTotales";
@@ -107,6 +108,11 @@ export default function PanelNegocio({
   const historial = useMemo(
     () => historialDelNegocio(negocioId, ventasDelPeriodo, movimientosDelPeriodo),
     [negocioId, ventasDelPeriodo, movimientosDelPeriodo]
+  );
+  /** Qué se vendió en ese mismo periodo: *"cuánto Broster salió"*. */
+  const vendidos = useMemo(
+    () => productosVendidos(negocioId, ventasDelPeriodo),
+    [negocioId, ventasDelPeriodo]
   );
 
   /** Cuál fila se está confirmando para borrar. En la propia fila, como en el resto de la app. */
@@ -275,6 +281,47 @@ export default function PanelNegocio({
             </Text>
           </TouchableOpacity>
         </View>
+
+        {/* LO QUE MÁS VENDES, del periodo elegido igual que todo lo demás.
+            Solo sale si hubo ventas: una lista vacía con un título encima ocupa sitio y no
+            dice nada, y esta pantalla ya es larga. */}
+        {vendidos.length > 0 && (
+          <>
+            <Text className="text-xs font-bold text-slate-700 dark:text-slate-200 mt-6 mb-3">
+              {t("panel.vendidos")}
+            </Text>
+            <View
+              className="rounded-2xl bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700 p-4 gap-3.5"
+              style={CARD_SHADOW}
+            >
+              {vendidos.map((p) => (
+                <View key={p.productoId}>
+                  <View className="flex-row items-center gap-3">
+                    <Text
+                      className="flex-1 text-xs font-bold text-slate-900 dark:text-slate-100"
+                      numberOfLines={1}
+                    >
+                      {p.nombre}
+                    </Text>
+                    <Text className="text-[11px] text-slate-500 dark:text-slate-400">
+                      {t("panel.vendidosCantidad", { count: p.cantidad })}
+                    </Text>
+                    <Text className="text-xs font-bold text-emerald-600">{dinero(p.total)}</Text>
+                  </View>
+                  {/* LA BARRA ES CONTRA EL QUE MÁS VENDE, no contra el total: comparada con el
+                      total, con veinte productos todas las barras salen igual de cortas y no
+                      se distingue nada. Así se lee de un vistazo quién manda. */}
+                  <View className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 mt-1.5 overflow-hidden">
+                    <View
+                      className="h-full rounded-full bg-emerald-500"
+                      style={{ width: `${Math.max(4, (p.total / vendidos[0].total) * 100)}%` }}
+                    />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
 
         {/* A QUÉ BOLSILLO VAN LOS YAPEOS QUE ENTREN.
             Va en el panel y no escondido en "editar el negocio": es lo que cambia dónde cae

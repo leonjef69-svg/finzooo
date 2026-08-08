@@ -531,9 +531,9 @@ Se entrega igual que la V1: **por partes, cada una publicada y con las pruebas e
 | | |
 |---|---|
 | **1. Reportes por día y por mes** | ✅ **8ago-05**, publicado. Sin confirmar por él |
-| 2. Productos vendidos (cuánto Broster salió) | ⏳ Sin empezar |
+| **2. Productos vendidos (cuánto Broster salió)** | ✅ **8ago-06**, publicado. Sin confirmar por él |
 | 3. Vinculación pago ↔ venta | ⏳ Sin empezar. **La más delicada** |
-| 4. "Caja del negocio" | ⏳ **HAY QUE PREGUNTARLE QUÉ QUIERE DECIR.** El saldo y el historial ya existen desde el paso 4, así que o ya está hecho, o quiere otra cosa —abrir y cerrar caja, cuánto efectivo hay— y eso no se adivina |
+| 4. "Caja del negocio" | ⏳ **PREGUNTADO Y SIN RESPUESTA.** Se le ofrecieron las tres lecturas —lo que ya existe, abrir y cerrar caja cada día, o separar efectivo de Yape— y **descartó la pregunta y dijo "sigue como estaba planeado"**. Así que se sigue con el resto y **esto queda para preguntárselo otra vez**, no para adivinarlo |
 
 **1. Reportes por día y por mes (8ago-05).** El panel tiene arriba **Hoy · Este mes · Todo**, y
 todo lo de abajo —los totales, el contador de ventas y el historial— es del periodo elegido.
@@ -547,6 +547,20 @@ todo lo de abajo —los totales, el contador de ventas y el historial— es del 
 - El nombre del número grande y el texto del vacío **cambian con el periodo**: "saldo del
   negocio" encima de lo de hoy sería mentira, y "todavía no hay nada registrado" con "Hoy"
   puesto haría pensar que se perdió lo de ayer.
+
+**2. Productos vendidos (8ago-06).** *"Lo que más vendes"* en el panel, del mismo periodo que
+todo lo demás: cada producto con cuántos salieron, cuánta plata trajeron y una barra.
+
+- **Se agrupa por producto, no por nombre.** Si un día se renombra "Broster" a "Broster de
+  pollo", agrupando por nombre saldrían dos filas del mismo producto y ninguna diría la verdad.
+  Y **el nombre que se enseña es el de la venta más reciente**: la lista con el nombre de hace
+  tres meses no la reconocería nadie. Las ventas viejas conservan el suyo, que es su historia.
+- **Ordenado por plata y no por cantidad.** Son dos preguntas distintas, y la que sostiene el
+  negocio es esta: veinte gaseosas de S/ 1 no pagan lo que pagan cinco brosters de S/ 15. La
+  cantidad sale igual en cada fila, así que la otra respuesta no se pierde.
+- **La barra se mide contra el que más vende**, no contra el total: contra el total, con veinte
+  productos todas salen igual de cortas y no se distingue nada.
+- Cuenta también **los productos borrados**: la venta copió su nombre y su precio.
 
 ## Lo que falta para Play Store
 

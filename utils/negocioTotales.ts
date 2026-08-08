@@ -213,6 +213,56 @@ export function historialDelNegocio(
   return filas.sort((a, b) => `${b.fecha} ${b.hora}`.localeCompare(`${a.fecha} ${a.hora}`));
 }
 
+/** Un producto en la cuenta de "qué se vendió": cuántos salieron y cuánta plata trajeron. */
+export type ProductoVendido = {
+  productoId: string;
+  nombre: string;
+  cantidad: number;
+  total: number;
+};
+
+/**
+ * QUÉ SE VENDIÓ Y CUÁNTO (V2, 08/08/2026): *"cuánto Broster salió"*, con sus palabras.
+ *
+ * SE AGRUPA POR PRODUCTO, NO POR NOMBRE. Dos cosas que parecen iguales y no lo son: si un día
+ * se renombra "Broster" a "Broster de pollo", agrupando por nombre saldrían dos filas del
+ * mismo producto y ninguna de las dos diría la verdad. Agrupando por producto sale una.
+ *
+ * Y EL NOMBRE QUE SE ENSEÑA ES EL DE LA VENTA MÁS RECIENTE, que es como se llama hoy. Las
+ * ventas viejas guardan el nombre que tenían —eso no se toca, es su historia— pero una lista
+ * de "lo que más vendes" con el nombre de hace tres meses no la reconocería nadie.
+ *
+ * CUENTA TAMBIÉN LOS PRODUCTOS BORRADOS. La venta copió su nombre y su precio, así que el
+ * Broster que ya no está en la carta sigue apareciendo con lo que se vendió. Quitarlo cambiaría
+ * el dinero que se ganó.
+ */
+export function productosVendidos(negocioId: string, ventas: Venta[]): ProductoVendido[] {
+  // Las más viejas primero: así, al ir pisando el nombre, el último que queda es el más nuevo.
+  const enOrden = [...ventas]
+    .filter((v) => v.negocioId === negocioId)
+    .sort((a, b) => `${a.fecha} ${a.hora}`.localeCompare(`${b.fecha} ${b.hora}`));
+
+  const porProducto = new Map<string, ProductoVendido>();
+  for (const venta of enOrden) {
+    for (const linea of venta.lineas) {
+      const antes = porProducto.get(linea.productoId);
+      porProducto.set(linea.productoId, {
+        productoId: linea.productoId,
+        nombre: linea.nombre,
+        cantidad: (antes?.cantidad ?? 0) + linea.cantidad,
+        total: aCentimos((antes?.total ?? 0) + linea.precio * linea.cantidad),
+      });
+    }
+  }
+
+  // POR PLATA Y NO POR CANTIDAD. Son dos preguntas distintas y la que sostiene el negocio es
+  // esta: veinte gaseosas de S/ 1 no pagan lo que pagan cinco brosters de S/ 15. La cantidad
+  // se enseña igual en cada fila, así que la otra respuesta no se pierde.
+  return [...porProducto.values()].sort(
+    (a, b) => b.total - a.total || b.cantidad - a.cantidad || a.nombre.localeCompare(b.nombre)
+  );
+}
+
 /**
  * La hora como se lee en Perú: "19:30" → "7:30 p.m.".
  *
