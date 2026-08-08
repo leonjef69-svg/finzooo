@@ -308,6 +308,31 @@ habría dicho que salió bien.
 > el primer commit (ya pasó con las categorías propias: la cuenta siguiente heredó las de la
 > anterior, con sus fotos).
 
+### QUÉ SON V2 Y V3, Y LA REGLA QUE LAS ACOMPAÑA
+
+Estaban nombradas por todo este documento como enganches —`estado`, `movimientoId`,
+`lineas[]`— y **no estaba escrito qué eran**. Sin eso, los enganches parecen adornos y el
+paso 4 se puede diseñar de una forma que no encaje después. Esto es lo que él pidió, con sus
+palabras:
+
+**V2 — la caja y los números**
+- Caja del negocio
+- Resumen de ventas
+- Productos vendidos (cuánto Broster salió)
+- **Vinculación entre pagos y ventas**
+- Reportes diarios y mensuales
+
+**V3 — la voz**
+> *"Dos broster y una gaseosa."* → la app entiende 2 × S/ 15 + 1 × S/ 5 = **S/ 35**. Después
+> llega el Yape de S/ 35 y **lo relaciona con la venta pendiente**.
+
+**LA REGLA, Y ES SUYA:** *"NO implementar todavía esta función. Solo dejar una arquitectura
+que permita agregarla sin rehacer todo el sistema."* Y también: *"NO avances a V2 ni V3 hasta
+que V1 esté terminada y funcionando correctamente."*
+
+Así que **no se adelanta nada de esto**. Lo único que se hace es no cerrarles la puerta, y ya
+está hecho: las tres piezas de abajo son exactamente eso.
+
 ### Detalles pensados para V2 y V3
 
 - La venta copia **el nombre y el precio**, no solo el id del producto: si sube el Broster de
