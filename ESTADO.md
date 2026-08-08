@@ -815,6 +815,43 @@ Dos cosas lo arreglan y hacen falta las dos:
 > Android, el celular—. Cuando algo empeora **justo después de un arreglo mío**, lo primero
 > que hay que releer es el arreglo.
 
+### Decimocuarta causa: el color viajaba a las 227 casillas (7ago-30)
+
+Su descripción fue la que resolvió esto, y merece leerse entera: *"yo me refiero al hacer
+cambios; por ejemplo toco un color rojo y paso a otro, se siente como una lentitud, al igual
+pasa con los demás: favoritos, color, tus categorías. **En iconos parece que ya está bien**,
+solo los demás están con lentitud"*.
+
+Esa última frase es la que señala el sitio. La pestaña de iconos estaba arreglada — **y lo
+que la hacía lenta era lo que pasaba en las otras**.
+
+El aspecto de una casilla salía de **una sola función que recibía el color**:
+
+```ts
+const aspecto = useMemo(() => aspectoDeCasilla(color, lado, oscuro), [color, lado, oscuro]);
+```
+
+Y ese objeto se le pasaba a las **46 filas** y de ahí a las **227 casillas**. Así que tocar
+un color creaba un objeto nuevo y **las 227 se rehacían** — estando en la pestaña de Color,
+con el catálogo ni a la vista. Lo mismo al tocar una categoría en "Tus categorías", que
+también cambia el color.
+
+**El arreglo: partirlo en dos, porque son dos cosas distintas.**
+
+| | Depende de | Quién lo necesita |
+|---|---|---|
+| El **gris** (sin elegir) | la medida y el tema. **No del color** | las 226 |
+| El del **color** (elegida + tinta) | el color | **una sola**, la marcada |
+
+El gris viaja como propiedad y **ya no cambia al cambiar de color**. El del color va por el
+mismo canal que la marca, donde solo lo mira la casilla marcada.
+
+> **El detalle que hace que funcione:** la respuesta que cada casilla le da al canal pasó de
+> ser *sí/no* a ser **el nombre del color**. Al cambiar de color, las 226 no marcadas siguen
+> contestando vacío —misma respuesta, no se rehacen— y la marcada contesta otro color, así
+> que **se rehace solo ella**. Con un sí/no, la marcada no se enteraría del cambio y se
+> quedaría pintada del color anterior.
+
 ### Lo que dejaron las diez causas, por si vuelve a ir lento
 
 Está descartado —no volver a mirarlo—: las clases de NativeWind en las casillas, el

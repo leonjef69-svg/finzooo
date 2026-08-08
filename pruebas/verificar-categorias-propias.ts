@@ -530,14 +530,34 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   // para abrir, y otros tantos que comparar en cada toque. Con el aspecto ya
   // calculado, las 236 comparten dos objetos.
   ok(!laCasilla.includes("className"), "la casilla del catalogo no usa ninguna clase");
-  ok(/aspecto\.elegida : aspecto\.normal/.test(laCasilla), "y toma el aspecto ya calculado");
-  // Y el objeto tiene que ser SIEMPRE EL MISMO, o la memorizacion no vale de nada y
-  // volveriamos a rehacer las 236 en cada toque, que es lo que se esta quitando.
-  ok(/const aspecto = useMemo\(/.test(codigo), "el aspecto se calcula una sola vez");
+  // EL GRIS Y EL DEL COLOR VAN POR SEPARADO. Esto cambio el 07/08/2026 por la noche y aqui
+  // decia "y toma el aspecto ya calculado", con UN solo aspecto.
+  //
+  // El fallo: ese aspecto recibia el color, asi que cambiar de color creaba un objeto NUEVO,
+  // ese objeto viajaba a las 46 filas y de ahi a las 227 casillas, y LAS 227 SE REHACIAN.
+  // Estando en la pestaña de Color, con el catalogo ni a la vista.
+  //
+  // El usuario lo describio exacto: *"toco un color rojo y paso a otro, se siente como una
+  // lentitud... en iconos parece que ya esta bien"*. La pestaña de iconos ya estaba
+  // arreglada; lo que la hacia lenta era lo que pasaba EN LAS OTRAS.
+  //
+  // Ahora la casilla recibe SOLO el gris —que no sabe nada del color y por tanto no cambia al
+  // cambiarlo— y el del color lo mira del canal la unica casilla que lo necesita.
+  ok(/aspectoElegida \?\? normal/.test(laCasilla), "la casilla toma el gris ya calculado");
   ok(
-    /\[color, lado, colorScheme\]/.test(codigo),
-    "y solo se rehace si cambia el color, la medida o el tema"
+    !/aspecto: AspectoCasilla/.test(codigo),
+    "y a las filas ya NO les llega el aspecto que depende del color"
   );
+  ok(/normal=\{aspectoGris\}/.test(codigo), "a las filas les llega solo el gris");
+
+  // El gris tiene que ser SIEMPRE EL MISMO objeto mientras no cambie la medida ni el tema, o
+  // la memorizacion no vale de nada. Y sobre todo: NO puede depender del color.
+  ok(/const aspectoGris = useMemo\(\(\) => casillaNormal\(lado, oscuro\), \[lado, oscuro\]\)/.test(codigo),
+    "el gris se calcula una vez y no depende del color");
+
+  // Y el del color viaja por el canal, no como propiedad.
+  ok(/ponerAspectoDeLaMarca\(color, aspectoDelColor\)/.test(codigo), "el del color va por el canal de la marca");
+  ok(/apuntarAspectoDeLaMarca\(color, aspectoDelColor\)/.test(codigo), "y la primera vez se apunta sin avisar");
   // Sin funcion de estilo: ahi se perdian el ancho y el alto. Ver la nota de la
   // casilla.
   ok(!/style=\{\(\{ pressed/.test(laCasilla), "sin funcion de estilo, que se come el tamaño");

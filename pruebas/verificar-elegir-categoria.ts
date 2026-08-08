@@ -303,13 +303,22 @@ console.log("\n--- LA CASILLA SE MARCA AL APOYAR EL DEDO, NO AL LEVANTARLO ---")
   //    alguien le devuelve su propio estado "para que sea mas simple", vuelven las dos
   //    marcadas — y se vuelven a ver solo con el dedo apoyado, que es lo dificil de pillar.
   ok(
-    /const marcada = useSyncExternalStore\(escucharLaMarca, \(\) => marcaActual === id\)/.test(casilla),
+    /const marcada = useSyncExternalStore\(escucharLaMarca, \(\) =>/.test(casilla),
     "y la marca sale de un solo sitio compartido, no de un estado de la casilla"
   );
+  // LA RESPUESTA ES EL COLOR, NO UN SI/NO. Cambio el 07/08/2026 por la noche, y es lo que
+  // arregla la lentitud al cambiar de color: al cambiarlo, las 226 que no estan marcadas
+  // siguen contestando vacio —misma respuesta, no se rehacen— y la marcada contesta otro
+  // color, asi que se rehace solo ella.
+  //
+  // Con un si/no, la marcada no se enteraria del cambio y se quedaria pintada del color
+  // anterior. Por eso las dos mitades van juntas en una sola asercion: quien lo cambie a
+  // si/no tiene que leer esto.
   ok(
-    /marcada \? aspecto\.elegida : aspecto\.normal/.test(casilla),
-    "el aspecto sale de esa marca"
+    /marcaActual === id \? colorDeLaMarca \|\| "marcada" : ""/.test(casilla),
+    "y contesta el COLOR cuando esta marcada, para que solo ella se entere del cambio"
   );
+  ok(/aspectoElegida \?\? normal/.test(casilla), "el aspecto sale de esa marca");
 
   // 3. Si era un deslizon y no un toque, la marca vuelve donde estaba. Sin esto, deslizar
   //    el catalogo dejaria la marca movida a donde se apoyo el dedo.

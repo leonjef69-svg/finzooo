@@ -100,6 +100,22 @@ const ULTIMO_TOQUE = { cuando: 0 };
  * por las filas, así que **ninguna fila se rehace al elegir**.
  */
 let marcaActual: string | null = null;
+
+/**
+ * EL ASPECTO DE LA CASILLA MARCADA, Y EL COLOR CON EL QUE SE PINTÓ.
+ *
+ * Viaja por aquí y no como propiedad de las filas, y ese es el arreglo de la lentitud al
+ * cambiar de color (07/08/2026). Antes el aspecto del color se le pasaba a las 46 filas y de
+ * ahí a las 227 casillas, así que **tocar un color rehacía las 227** — con el catálogo ni a
+ * la vista, estando en la pestaña de Color.
+ *
+ * Aquí solo lo mira la que está marcada. El nombre del color va al lado porque es lo que le
+ * dice a esa casilla que algo cambió: las demás siguen contestando lo mismo y no se rehacen.
+ * Ver la respuesta que da cada casilla en Dibujito.
+ */
+let colorDeLaMarca = "";
+let aspectoDeLaMarca: { elegida: ViewStyle; tinta: string } | null = null;
+
 const oyentesDeLaMarca = new Set<() => void>();
 
 /** Cambia la marca y avisa. Si no cambia nada, no avisa: 227 avisos de balde. */
@@ -107,6 +123,20 @@ function ponerMarca(id: string | null) {
   if (marcaActual === id) return;
   marcaActual = id;
   oyentesDeLaMarca.forEach((avisar) => avisar());
+}
+
+/** Cambia el aspecto del color y avisa. Solo se entera la casilla marcada. */
+function ponerAspectoDeLaMarca(color: string, aspecto: { elegida: ViewStyle; tinta: string }) {
+  if (colorDeLaMarca === color && aspectoDeLaMarca !== null) return;
+  colorDeLaMarca = color;
+  aspectoDeLaMarca = aspecto;
+  oyentesDeLaMarca.forEach((avisar) => avisar());
+}
+
+/** Lo mismo SIN avisar, para el primer dibujado. Ver apuntarMarca. */
+function apuntarAspectoDeLaMarca(color: string, aspecto: { elegida: ViewStyle; tinta: string }) {
+  colorDeLaMarca = color;
+  aspectoDeLaMarca = aspecto;
 }
 
 /**
@@ -199,17 +229,42 @@ type AspectoCasilla = {
  * Los colores son los mismos valores de Tailwind que salían por las clases, así que
  * no cambia nada de lo que se ve. Ver COLOR_HEX_100 y COLOR_HEX_500.
  */
+/**
+ * EL ASPECTO GRIS, EL DE LAS 226 CASILLAS QUE NO ESTÁN ELEGIDAS.
+ *
+ * VA APARTE DEL DEL COLOR, Y AHÍ ESTÁ EL ARREGLO DEL 07/08/2026 POR LA NOCHE.
+ *
+ * Antes los dos salían juntos de una sola función que recibía el color, así que **cambiar
+ * de color creaba un objeto nuevo**, ese objeto se le pasaba a las 46 filas y de ahí a las
+ * 227 casillas, y **las 227 se rehacían**. Estando en la pestaña de Color, con el catálogo
+ * ni a la vista.
+ *
+ * El usuario lo describió exacto: *"toco un color rojo y paso a otro, se siente como una
+ * lentitud, al igual pasa con los demás… en iconos parece que ya está bien"*. Y tenía toda
+ * la razón en la distinción: la pestaña de iconos ya estaba arreglada, y lo que la hacía
+ * lenta era **lo que pasaba en las otras**.
+ *
+ * Este aspecto NO SABE NADA DEL COLOR —el gris es gris—, así que solo cambia si cambia la
+ * medida de la casilla o el tema del celular. Cambiar de color ya no lo toca, y por eso las
+ * filas y las casillas ya no se enteran.
+ */
+function casillaNormal(lado: number, oscuro: boolean): ViewStyle {
+  return {
+    width: lado,
+    height: lado,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: oscuro ? "#1e293b" : "#f8fafc",
+    borderWidth: 1.5,
+    borderColor: oscuro ? "#334155" : "#e2e8f0",
+  };
+}
+
 function aspectoDeCasilla(color: string, lado: number, oscuro: boolean): AspectoCasilla {
   const medida = { width: lado, height: lado, borderRadius: 16 } as const;
   return {
-    normal: {
-      ...medida,
-      alignItems: "center",
-      justifyContent: "center",
-      backgroundColor: oscuro ? "#1e293b" : "#f8fafc",
-      borderWidth: 1.5,
-      borderColor: oscuro ? "#334155" : "#e2e8f0",
-    },
+    normal: casillaNormal(lado, oscuro),
     elegida: {
       ...medida,
       alignItems: "center",
@@ -231,13 +286,20 @@ function aspectoDeCasilla(color: string, lado: number, oscuro: boolean): Aspecto
  */
 const Dibujito = memo(function Dibujito({
   id,
-  aspecto,
+  normal,
   lado,
   onElegir,
   onCancelar,
 }: {
   id: string;
-  aspecto: AspectoCasilla;
+  /**
+   * SOLO EL ASPECTO GRIS, el que NO depende del color.
+   *
+   * Antes llegaba el aspecto entero —gris y color juntos— y por eso tocar un color rehacia
+   * las 227 casillas: el objeto era nuevo. El del color ya no viaja por aqui, lo mira del
+   * canal la unica casilla que lo necesita. Ver aspectoDeLaMarca.
+   */
+  normal: ViewStyle;
   /** Medida del cuadrado, calculada del ancho de la pantalla. Ver LADO_DE. */
   lado: number;
   onElegir: (id: string) => void;
@@ -277,7 +339,21 @@ const Dibujito = memo(function Dibujito({
    *  2. Si sí se eligió, no hay que devolver nada: la marca ya está en su sitio, y cuando
    *     la pantalla se entera al levantar el dedo, no se ve ningún cambio.
    */
-  const marcada = useSyncExternalStore(escucharLaMarca, () => marcaActual === id);
+  /**
+   * LA RESPUESTA ES EL COLOR CUANDO ESTA MARCADA, Y VACIO CUANDO NO.
+   *
+   * Que sea el color y no un simple si/no es lo que arregla la lentitud al cambiar de color:
+   * al cambiarlo, las 226 que no estan marcadas siguen contestando vacio —misma respuesta,
+   * no se rehacen— y la marcada contesta otro color, asi que se rehace solo ella.
+   *
+   * Con un si/no, la marcada no se enteraria del cambio de color y se quedaria pintada del
+   * anterior.
+   */
+  const marcada = useSyncExternalStore(escucharLaMarca, () =>
+    marcaActual === id ? colorDeLaMarca || "marcada" : ""
+  );
+  const aspectoElegida = marcada ? aspectoDeLaMarca?.elegida ?? normal : null;
+  const tinta = marcada ? aspectoDeLaMarca?.tinta ?? "#64748b" : "#64748b";
   const eligio = useRef(false);
 
   return (
@@ -349,16 +425,10 @@ const Dibujito = memo(function Dibujito({
       // El recorte solo cuando hay foto: obliga a Android a darle a esa casilla su
       // propia capa para cortar lo que sobresale, y un dibujo de la tipografía cabe
       // dentro y no sobresale de nada.
-      style={
-        foto
-          ? [marcada ? aspecto.elegida : aspecto.normal, { overflow: "hidden" }]
-          : marcada
-            ? aspecto.elegida
-            : aspecto.normal
-      }
+      style={foto ? [aspectoElegida ?? normal, { overflow: "hidden" }] : aspectoElegida ?? normal}
     >
       {D ? (
-        <D size={22} color={marcada ? aspecto.tinta : "#64748b"} strokeWidth={2.2} />
+        <D size={22} color={tinta} strokeWidth={2.2} />
       ) : (
         <Image source={{ uri: id }} style={{ width: lado, height: lado }} />
       )}
@@ -387,13 +457,14 @@ const Dibujito = memo(function Dibujito({
  */
 const Fila = memo(function Fila({
   iconos,
-  aspecto,
+  normal,
   lado,
   onElegir,
   onCancelar,
 }: {
   iconos: (string | null)[];
-  aspecto: AspectoCasilla;
+  /** Solo el aspecto gris. El del color ya no viaja por aqui. Ver Dibujito. */
+  normal: ViewStyle;
   lado: number;
   onElegir: (id: string) => void;
   onCancelar: () => void;
@@ -408,7 +479,7 @@ const Fila = memo(function Fila({
           <Dibujito
             key={id}
             id={id}
-            aspecto={aspecto}
+            normal={normal}
             lado={lado}
             onElegir={onElegir}
             onCancelar={onCancelar}
@@ -1042,10 +1113,39 @@ export default function NuevaCategoria({
    * en cada toque — que es justo lo que se está quitando.
    */
   const { colorScheme } = useColorScheme();
-  const aspecto = useMemo(
-    () => aspectoDeCasilla(color, lado, colorScheme === "dark"),
-    [color, lado, colorScheme],
-  );
+  /**
+   * EL GRIS Y EL DEL COLOR, POR SEPARADO. AQUI ESTA EL ARREGLO (07/08/2026 noche).
+   *
+   * Antes era UN solo aspecto que recibia el color, asi que cambiar de color creaba un objeto
+   * nuevo, ese objeto viajaba a las 46 filas y de ahi a las 227 casillas, y las 227 se
+   * rehacian. Estando en la pestaña de Color, con el catalogo ni a la vista.
+   *
+   * El gris no sabe nada del color, asi que cambiar de color NO lo toca: las filas y las
+   * casillas no se enteran. Y el del color va por el canal de la marca, donde solo lo mira la
+   * unica casilla que lo necesita.
+   */
+  const oscuro = colorScheme === "dark";
+  const aspectoGris = useMemo(() => casillaNormal(lado, oscuro), [lado, oscuro]);
+  const aspectoDelColor = useMemo(() => {
+    const a = aspectoDeCasilla(color, lado, oscuro);
+    return { elegida: a.elegida, tinta: a.tinta };
+  }, [color, lado, oscuro]);
+
+  /**
+   * El aspecto del color, al canal de la marca.
+   *
+   * Igual que con la marca, son dos piezas: la PRIMERA vez se apunta sin avisar —avisar
+   * mientras React dibuja es un error, y las casillas todavía no existen— y después, cada vez
+   * que cambia, se avisa. Solo se entera la casilla marcada.
+   */
+  const primerAspecto = useRef(true);
+  if (primerAspecto.current) {
+    primerAspecto.current = false;
+    apuntarAspectoDeLaMarca(color, aspectoDelColor);
+  }
+  useEffect(() => {
+    ponerAspectoDeLaMarca(color, aspectoDelColor);
+  }, [color, aspectoDelColor]);
 
   // Los títulos de los grupos, traducidos UNA vez. Pasarle la función de
   // traducir al catálogo lo redibujaría entero en cada letra escrita, que es
@@ -1451,7 +1551,7 @@ export default function NuevaCategoria({
                   <Fila
                     key={f}
                     iconos={fila}
-                    aspecto={aspecto}
+                    normal={aspectoGris}
                     lado={lado}
                     onElegir={elegirFavorito}
                     onCancelar={cancelarMarca}
@@ -1535,7 +1635,7 @@ export default function NuevaCategoria({
                   {trozo.titulo !== null && <TituloDeGrupo texto={titulos[trozo.titulo]} />}
                   <Fila
                     iconos={trozo.fila}
-                    aspecto={aspecto}
+                    normal={aspectoGris}
                     lado={lado}
                     onElegir={setIcono}
                     onCancelar={cancelarMarca}
