@@ -56,6 +56,9 @@ qué está corriendo el celular.
 
 | Código | Qué se arregló |
 |---|---|
+| `8ago-03` | Anotar gastos e ingresos en la caja del negocio. **Cierra el paso 4 del Modo Negocio** |
+| `8ago-02` | Registrar ventas del negocio: tocar productos, cantidad y cómo pagaron |
+| `8ago-01` | El panel del negocio: saldo, ventas, gastos e historial |
 | `2ago-21` | El yapeo se registra al instante (la parte de JavaScript; lo demás va en el APK) |
 | `2ago-20` | La pantalla de registro automático se actualiza sola, sin reiniciar la app |
 | `2ago-19` | La hora en el diagnóstico de la voz |
