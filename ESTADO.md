@@ -311,7 +311,18 @@ habría dicho que salió bien.
    negocio usa la misma espera — así que pasó a leer las dependencias equivocadas y decía que
    marcar un favorito no subía nada. Ahora se ancla en la línea exacta de la subida de la
    cuenta, así que una tercera subida no la romperá.
-3. Productos.
+3. ✅ **Productos** (7ago-34) — crear, editar, borrar, **activar/desactivar** y precio. Sin
+   inventario ni stock, como se pidió.
+
+   Tres decisiones que costaron pensar: el **precio se teclea como texto** y se convierte una
+   sola vez al guardar (como número, escribir "12." daría saltos bajo el dedo); **la coma vale
+   como el punto**, porque en Perú se escribe "12,50" tanto como "12.50"; y **desactivar no es
+   borrar** — la gaseosa que se acabó se desactiva, deja de salir al vender, y vuelve mañana
+   con su precio y con su historia de ventas intacta.
+
+   Y borrar un producto **no toca sus ventas**: la venta guarda el nombre y el precio copiados,
+   así que sigue diciendo "Broster S/ 15" aunque ya no esté en la carta. Eso se **dice** en la
+   pantalla antes de borrar.
 4. Ventas y panel del negocio.
 5. Captura automática al negocio, e historial propio.
 

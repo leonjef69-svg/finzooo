@@ -284,5 +284,64 @@ console.log("\n--- LA PANTALLA, Y QUE EL MODO NEGOCIO ES PREMIUM ---");
   }
 }
 
+console.log("\n--- PRODUCTOS: ENGANCHE Y PANTALLA (paso 3) ---");
+{
+  const ctx = fs.readFileSync(path.join(RAIZ, "contexts/AppDataContext.tsx"), "utf8");
+  ok(/function guardarProducto\(/.test(ctx), "se puede crear y editar un producto");
+  ok(/function quitarProducto\(/.test(ctx), "y borrarlo");
+  ok(/productos: datosNegocio\.productos,/.test(ctx), "y la pantalla los recibe");
+
+  // GUARDAR Y EDITAR SON LA MISMA FUNCION, a proposito: con dos, basta que una olvide un campo
+  // para que editar pierda lo que crear si guardaba.
+  const laFuncion = ctx.slice(ctx.indexOf("function guardarProducto("), ctx.indexOf("function quitarProducto("));
+  ok(/yaEstaba\s*$|const yaEstaba/m.test(laFuncion), "guardar sirve para crear y para editar");
+
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/Productos.tsx"), "utf8");
+
+  // EL PRECIO SE ESCRIBE COMO TEXTO Y SE CONVIERTE UNA SOLA VEZ, al guardar. Guardado como
+  // numero, escribir "12." o "12,5" se convertiria a medias mientras se teclea y el campo daria
+  // saltos bajo el dedo.
+  ok(/const \[precioTexto, setPrecioTexto\] = useState\(""\)/.test(pant), "el precio se teclea como texto");
+  // Y LA COMA VALE: en Peru se escribe "12,50" tanto como "12.50", y rechazarlo seria rechazar
+  // la forma en que la mitad de la gente escribe un precio.
+  ok(/precioTexto\.replace\(",", "\."\)/.test(pant), "y la coma vale como el punto");
+  // A dos decimales, o un precio con cola de coma flotante acaba impreso en un total.
+  ok(/Math\.round\(precio \* 100\) \/ 100/.test(pant), "y se redondea a centimos");
+  // Un precio de cero o negativo no es un precio.
+  ok(/precio <= 0/.test(pant), "no se admite precio cero ni negativo");
+
+  // NOMBRES REPETIDOS, NO: dos productos con el mismo nombre no se pueden distinguir al vender.
+  ok(/productoRepetido\(productos, negocioId, nombre, enEdicion\.id\)/.test(pant), "no se repiten nombres");
+
+  // SOLO LOS DE ESTE NEGOCIO. Sin el filtro, la polleria veria los productos de la bodega.
+  ok(/p\.negocioId === negocioId/.test(pant), "solo se ven los productos de ese negocio");
+
+  // ACTIVAR Y DESACTIVAR SIN ABRIR NADA: es lo que se hace a diario cuando se acaba un
+  // producto, y meterlo dentro de "editar" lo esconde.
+  ok(/<Toggle[\s\S]{0,200}activo: v/.test(pant), "se activa y desactiva desde la propia fila");
+  // Y el desactivado TIENE QUE VERSE desactivado, o nadie entiende por que no sale al vender.
+  ok(/productos\.desactivado/.test(pant), "y se ve que esta desactivado");
+
+  // AL BORRAR SE DICE LO QUE **NO** PASA. Sin esto, quien borre un producto puede pensar que se
+  // le van las ventas de la semana, y no se le van.
+  ok(/productos\.borrarAviso/.test(pant), "al borrar se dice que las ventas no se tocan");
+
+  // La ruta: con candado, y sin negocio no se dibuja una pantalla vacia.
+  const ruta = fs.readFileSync(path.join(RAIZ, "app/negocio/productos.tsx"), "utf8");
+  ok(/if \(!isPremium\)/.test(ruta), "los productos tambien son Premium");
+  ok(/if \(!negocio\)/.test(ruta), "y sin negocio se vuelve, no se dibuja una lista huerfana");
+
+  // Y se llega desde la lista de negocios.
+  const lista = fs.readFileSync(path.join(RAIZ, "screens/Negocios.tsx"), "utf8");
+  ok(/pathname: "\/negocio\/productos"/.test(lista), "se llega desde cada negocio");
+
+  // Los textos, en los tres idiomas.
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  for (const clave of ["title", "crear", "precio", "repetido", "borrarAviso", "desactivado", "faltaPrecio"]) {
+    const veces = (i18n.match(new RegExp(`"productos\\.${clave}":`, "g")) ?? []).length;
+    ok(veces === 3, `"productos.${clave}" esta en los tres idiomas (${veces})`);
+  }
+}
+
 console.log(fallos === 0 ? "\nTodo bien: los cimientos del Modo Negocio\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

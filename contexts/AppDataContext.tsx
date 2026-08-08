@@ -29,6 +29,7 @@ import {
 } from "@/utils/storage";
 import {
   borrarNegocio as borrarNegocioYLoSuyo,
+  borrarProducto as quitarProductoDeLaLista,
   cargarNegocio,
   guardarNegocios,
   guardarProductos,
@@ -36,6 +37,7 @@ import {
   NEGOCIO_VACIO,
   type DatosDelNegocio,
   type Negocio,
+  type Producto,
 } from "@/utils/negocio";
 import { bajarNegocio, subirNegocio } from "@/utils/cloudNegocio";
 import { activate as activateDecoy, deactivate as deactivateDecoy } from "@/utils/decoyMode";
@@ -246,6 +248,18 @@ type AppDataContextValue = {
   guardarNegocio: (negocio: Negocio) => void;
   /** Borra el negocio Y TODO LO SUYO: sus productos y sus ventas. */
   quitarNegocio: (id: string) => void;
+  /**
+   * Los productos de TODOS los negocios. Cada pantalla filtra por el suyo.
+   *
+   * Se reparte la lista entera y no la de un negocio porque el contexto no sabe en qué
+   * negocio se está: pasarle el negocio obligaría a un hook por negocio, y la lista completa
+   * de una pollería son treinta nombres con su precio. No es un dato grande.
+   */
+  productos: Producto[];
+  /** Crea uno nuevo o reemplaza el que tenga ese id. */
+  guardarProducto: (producto: Producto) => void;
+  /** Borra un producto. NO toca las ventas que lo incluían: ver utils/negocio. */
+  quitarProducto: (id: string) => void;
   setIsPremium: (v: boolean) => void;
   isCloudSynced: boolean;
   // Modo señuelo. Solo los llama la pantalla de bloqueo; ninguna otra parte
@@ -1399,6 +1413,36 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setDatosNegocio((antes) => borrarNegocioYLoSuyo(antes, id));
   }
 
+  /**
+   * Guarda un producto: lo crea si es nuevo, lo reemplaza si ya estaba.
+   *
+   * Uno solo para las dos cosas, por lo mismo que en guardarNegocio: con "crear" y "editar"
+   * separados basta que uno olvide un campo para que editar pierda lo que crear sí guardaba.
+   */
+  function guardarProducto(producto: Producto) {
+    setDatosNegocio((antes) => {
+      const yaEstaba = antes.productos.some((p) => p.id === producto.id);
+      return {
+        ...antes,
+        productos: yaEstaba
+          ? antes.productos.map((p) => (p.id === producto.id ? producto : p))
+          : [...antes.productos, producto],
+      };
+    });
+  }
+
+  /**
+   * Borra un producto, Y NO TOCA LAS VENTAS que lo incluían.
+   *
+   * Puede parecer un descuido y es lo contrario: la venta guarda el nombre y el precio
+   * copiados, así que una venta de ayer sigue diciendo "Broster S/ 15" aunque el Broster ya no
+   * esté en la carta. Borrar esas ventas cambiaría el dinero que se ganó, que es lo último que
+   * puede pasar aquí. La cuenta la hace utils/negocio para poder comprobarla con números.
+   */
+  function quitarProducto(id: string) {
+    setDatosNegocio((antes) => ({ ...antes, productos: quitarProductoDeLaLista(antes.productos, id) }));
+  }
+
   function activarPruebaPremium(): boolean {
     if (pruebaYaUsada(pruebaInicio)) return false;
     const inicio = Date.now();
@@ -1616,6 +1660,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         negocios: datosNegocio.negocios,
         guardarNegocio,
         quitarNegocio,
+        productos: datosNegocio.productos,
+        guardarProducto,
+        quitarProducto,
         setIsPremium,
         isCloudSynced: uid !== null,
         enterDecoyMode,

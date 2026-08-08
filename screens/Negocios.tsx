@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Store, Plus, Trash2, Check, X } from "lucide-react-native";
+import { router } from "expo-router";
+import { Store, Plus, Trash2, Check, X, Package } from "lucide-react-native";
 import BackButton from "@/components/BackButton";
 import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -219,12 +220,24 @@ export default function Negocios({ onBack }: { onBack: () => void }) {
                   </View>
                 ) : (
                   <View className="flex-row gap-2 mt-3">
+                    {/* PRODUCTOS PRIMERO, y en verde: es lo que se hace a diario con un
+                        negocio. Editar el nombre se hace una vez. Con los dos del mismo color
+                        se leerían como igual de importantes. */}
+                    <TouchableOpacity
+                      onPress={() => router.push({ pathname: "/negocio/productos", params: { id: n.id } })}
+                      className="flex-1 py-2.5 rounded-xl items-center bg-emerald-600 flex-row justify-center gap-1.5"
+                    >
+                      <Package size={13} color="#ffffff" />
+                      <Text className="text-[11px] font-bold text-white">
+                        {t("negocios.productos")}
+                      </Text>
+                    </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => {
                         setBorrando(null);
                         setEnEdicion(n);
                       }}
-                      className="flex-1 py-2.5 rounded-xl items-center bg-slate-100 dark:bg-slate-800"
+                      className="py-2.5 px-3 rounded-xl items-center bg-slate-100 dark:bg-slate-800"
                     >
                       <Text className="text-[11px] font-bold text-slate-600 dark:text-slate-200">
                         {t("negocios.editar")}
@@ -261,7 +274,7 @@ export default function Negocios({ onBack }: { onBack: () => void }) {
           <View className="rounded-2xl bg-slate-50 dark:bg-slate-800 p-4 mt-5 flex-row gap-2.5">
             <X size={14} color="#94a3b8" />
             <Text className="flex-1 text-[11px] leading-5 text-slate-500 dark:text-slate-400">
-              {t("negocios.proximoPaso")}
+              {t("negocios.proximoPaso2")}
             </Text>
           </View>
         )}
