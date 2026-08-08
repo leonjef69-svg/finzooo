@@ -805,6 +805,64 @@ mitad, costaría la mitad. El catálogo grande lo pidió él, así que no se toc
 > —las que de verdad lo arreglaron— salieron de **un número sacado del celular**. Cuando
 > arreglar lo que se ve no mueve la aguja, no hay que releer: hay que medir.
 
+## La voz no se oía con TODO en verde: el idioma (7ago-28, 07/08/2026) — NECESITA APK
+
+Mandó dos capturas y son la mejor pista que ha dado: **Servicio Conectado**, el yapeo
+**Registrado · S/ 1.00**, *Decirlo en voz alta* **encendido**… y silencio. *"No se escucha
+en voz alta, capaz pueda ser mi celular."*
+
+**Tenía razón en sospechar del celular, y esa es justo la parte que la app no podía
+responder.**
+
+### El fallo: se pedía la voz de Perú y no se miraba si existía
+
+```kotlin
+motor?.language = Locale("es", "PE")   // ← sin mirar el resultado
+```
+
+**Casi ningún celular trae la voz de Perú instalada.** Cuando no está, Android devuelve
+`LANG_NOT_SUPPORTED`, **el idioma se queda como estaba** —inglés, casi siempre— y una frase
+en español puede no sonar. La app creía haber hablado: apuntaba `hablo` y se quedaba tan
+tranquila.
+
+Ahora se prueba **es-PE → es-ES → es**, mirando la respuesta cada vez, y si no hay español
+de ninguna clase **se deja dicho** (`sin-espanol`) en vez de callar. La comprobación vive en
+**un solo sitio** (`ProbadorDeVoz.ponerEspanol`) que usan el servicio y el botón de probar:
+dos copias de esta regla es exactamente como empezaron los otros fallos de la voz.
+
+### Y los PASOS, con un botón cada uno
+
+Pedido: *"necesito que incorpores en registro automático los pasos que se deben seguir para
+una correcta funcionamiento para cualquier celular"*, y luego: *"como botones que te manden
+a una pestaña y te diga qué tengas que hacer"*.
+
+Para que un yapeo se oiga tienen que cumplirse **cuatro** cosas, y si falla una el resultado
+es el mismo —silencio—, así que desde fuera **no hay forma de saber cuál**:
+
+| Hace falta | Cómo se sabía antes |
+|---|---|
+| El lector enganchado | Ya se veía: "Conectado" |
+| Un sistema de voz instalado | No se sabía |
+| Ese sistema **con español** | No se sabía |
+| Volumen de **avisos** > 0 | No se sabía |
+
+El cuarto es el más traicionero: **el volumen de avisos va aparte del de la música**, así
+que el celular puede sonar perfecto con música y tener los avisos mudos. La voz habla de
+verdad y no se oye.
+
+**El botón que importa es "Probar la voz ahora":** dice la frase ahí mismo y responde cuál
+de las cuatro falta. Es lo único que convierte *"no funciona"* en *"te falta esto"*. Debajo,
+tres botones que abren el ajuste de Android que arregla cada cosa —voz, sonido, batería— y
+si un celular no tiene esa pantalla, **lo dice** en vez de no hacer nada al tocarlo.
+
+> **La prueba vigila lo que falla callado:** que cada uno de los cinco resultados tenga sus
+> **dos** textos —qué pasó y qué hacer— en los **tres** idiomas. Una clave que falte no da
+> error: en pantalla sale el nombre de la clave, que es peor que nada.
+
+Y de paso, la quinta vez que una aserción se cae **por su propia explicación**: el
+comentario que cuenta cuál era el fallo contiene el fallo escrito. Se le quitan los
+comentarios antes de comprobar, como en las otras.
+
 ## Tras instalar el APK, el lector de avisos quedó desenganchado (7ago-26, 07/08/2026)
 
 Reportado justo después de instalar `7ago-24`: *"cuando me ingresa una notificación de que

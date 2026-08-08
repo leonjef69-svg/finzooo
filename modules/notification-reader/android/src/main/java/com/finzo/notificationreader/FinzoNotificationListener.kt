@@ -8,7 +8,6 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.speech.tts.TextToSpeech
-import java.util.Locale
 import android.content.ComponentName
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
@@ -369,10 +368,26 @@ class FinzoNotificationListener : NotificationListenerService() {
     motor = TextToSpeech(applicationContext) { estado ->
       mano.post {
         if (estado == TextToSpeech.SUCCESS) {
-          motor?.language = Locale("es", "PE")
+          // EL IDIOMA, PROBANDO DE LO CONCRETO A LO GENERAL. AQUI HABIA UN FALLO.
+          //
+          // Antes era `motor?.language = Locale("es", "PE")` a secas, SIN MIRAR EL
+          // RESULTADO. Y casi ningun celular trae la voz de Peru instalada: en ese caso
+          // Android devuelve "no soportado", el idioma se queda como estaba —ingles, casi
+          // siempre— y una frase en espanol puede no sonar. La app creia haber hablado.
+          //
+          // Es la causa mas probable de lo reportado el 07/08/2026: servicio conectado,
+          // yapeo registrado, voz encendida, y silencio. Ver ProbadorDeVoz.ponerEspanol,
+          // que es la misma prueba y por eso vive en un solo sitio.
+          //
+          // Si no hay espanol de ninguna clase se deja anotado en vez de callar: asi la
+          // pantalla puede decir que falta instalar la voz.
+          if (!ProbadorDeVoz.ponerEspanol(motor ?: return@post)) {
+            anotarVoz("sin-espanol")
+          }
           vozLista = true
           vaciarCola()
         } else {
+          anotarVoz("sin-motor")
           soltarVoz()
         }
       }

@@ -47,6 +47,11 @@ type NativeShape = {
   stats: () => string;
   requestRebind: () => boolean;
   vozSinEspera: () => boolean;
+  probarVoz: (texto: string) => Promise<string>;
+  volumenDeAvisos: () => number;
+  abrirAjustesDeVoz: () => boolean;
+  abrirAjustesDeSonido: () => boolean;
+  abrirAjustesDeBateria: () => boolean;
   addListener: (evento: string, cb: () => void) => { remove: () => void };
 };
 
@@ -151,6 +156,79 @@ export function requestRebind(): boolean {
   if (!Native) return false;
   try {
     return Native.requestRebind();
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Lo que puede faltarle a un celular para que la voz se oiga.
+ *
+ * "sin-apk" es de este lado: el APK instalado no trae el probador. Los otros los devuelve
+ * Android. Ver ProbadorDeVoz.kt.
+ */
+export type ResultadoDeLaVoz =
+  | "ok"
+  | "sin-motor"
+  | "sin-espanol"
+  | "sin-volumen"
+  | "sin-apk";
+
+/**
+ * Dice una frase AHORA y cuenta que paso.
+ *
+ * Es lo unico que separa "la app no intento hablar" de "este celular no puede hablar", que
+ * desde fuera se ven igual: silencio.
+ */
+export async function probarVoz(texto: string): Promise<ResultadoDeLaVoz> {
+  if (!Native?.probarVoz) return "sin-apk";
+  try {
+    return (await Native.probarVoz(texto)) as ResultadoDeLaVoz;
+  } catch {
+    return "sin-motor";
+  }
+}
+
+/**
+ * El volumen del canal de AVISOS, de 0 a 100. Con un APK anterior devuelve -1.
+ *
+ * Va aparte del de multimedia: el celular puede tener la musica alta y los avisos en cero,
+ * y entonces la voz habla y no se oye. Es de los fallos mas dificiles de adivinar sin verlo.
+ */
+export function volumenDeAvisos(): number {
+  if (!Native?.volumenDeAvisos) return -1;
+  try {
+    return Native.volumenDeAvisos();
+  } catch {
+    return -1;
+  }
+}
+
+/** Abre los ajustes de Android donde se instala y elige la voz. */
+export function abrirAjustesDeVoz(): boolean {
+  if (!Native?.abrirAjustesDeVoz) return false;
+  try {
+    return Native.abrirAjustesDeVoz();
+  } catch {
+    return false;
+  }
+}
+
+/** Abre los de sonido, para subir el volumen de los avisos. */
+export function abrirAjustesDeSonido(): boolean {
+  if (!Native?.abrirAjustesDeSonido) return false;
+  try {
+    return Native.abrirAjustesDeSonido();
+  } catch {
+    return false;
+  }
+}
+
+/** Abre la ficha de Finzo en los ajustes, donde se quita el ahorro de bateria. */
+export function abrirAjustesDeBateria(): boolean {
+  if (!Native?.abrirAjustesDeBateria) return false;
+  try {
+    return Native.abrirAjustesDeBateria();
   } catch {
     return false;
   }

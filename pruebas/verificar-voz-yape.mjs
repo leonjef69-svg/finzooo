@@ -237,6 +237,94 @@ console.log("\n--- LO QUE NO ES UN MOVIMIENTO: NO SE DICE ---");
   }
 }
 
+console.log("\n--- EL IDIOMA SE COMPRUEBA, NO SE DA POR PUESTO ---");
+{
+  // EL FALLO DEL 07/08/2026, y es la causa mas probable de que su celular no hablara con
+  // TODO en verde: servicio Conectado, yapeo Registrado, voz encendida, y silencio.
+  //
+  // El servicio hacia `motor.language = Locale("es", "PE")` SIN MIRAR EL RESULTADO. Y casi
+  // ningun celular trae la voz de Peru instalada: en ese caso Android devuelve "no
+  // soportado", el idioma se queda como estaba —ingles, casi siempre— y una frase en
+  // espanol puede no sonar. La app creia haber hablado.
+  const probador = fs.readFileSync(
+    path.join(RAIZ, "modules/notification-reader/android/src/main/java/com/finzo/notificationreader/ProbadorDeVoz.kt"),
+    "utf8"
+  );
+
+  ok(/fun ponerEspanol/.test(probador), "hay un solo sitio que le pone espanol al motor");
+  // De lo concreto a lo general: si no esta el de Peru, vale el de España, y si no, espanol
+  // a secas. Sin la cadena, un celular sin es-PE se queda mudo.
+  for (const idioma of ['Locale("es", "PE")', 'Locale("es", "ES")', 'Locale("es")']) {
+    ok(probador.includes(idioma), `prueba ${idioma}`);
+  }
+  // Y MIRA LA RESPUESTA. Es lo que faltaba: sin esto la cadena no serviria de nada.
+  ok(
+    /LANG_AVAILABLE/.test(probador) && /LANG_COUNTRY_AVAILABLE/.test(probador),
+    "y comprueba si Android acepto el idioma"
+  );
+
+  // El servicio usa ESE mismo sitio y no su propia copia. Dos copias de esta regla es
+  // exactamente como empezaron los otros fallos de este archivo.
+  ok(
+    /ProbadorDeVoz\.ponerEspanol\(/.test(kt),
+    "el servicio usa ese mismo sitio, no una copia suya"
+  );
+  // SIN LOS COMENTARIOS. Esta asercion se cayo por su propia explicacion: el comentario que
+  // cuenta cual era el fallo contiene el fallo escrito. Ya van cinco veces en este proyecto,
+  // y la leccion es siempre la misma: una prueba que castiga documentar el motivo acaba
+  // haciendo que se borre el motivo.
+  const ktSinComentarios = kt.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  ok(
+    !/motor\?\.language = Locale/.test(ktSinComentarios),
+    "y ya no pone el idioma a ciegas, que era el fallo"
+  );
+
+  // Si no hay espanol de ninguna clase, se DEJA DICHO en vez de callar.
+  ok(/anotarVoz\("sin-espanol"\)/.test(kt), "si no hay espanol, se apunta el motivo");
+  ok(/anotarVoz\("sin-motor"\)/.test(kt), "y si no arranca el motor, tambien");
+}
+
+console.log("\n--- LOS PASOS PARA QUE SE OIGA, CON SUS BOTONES ---");
+{
+  // Pedido el 07/08/2026: *"necesito que incorpores en registro automatico los pasos que se
+  // deben seguir para una correcta funcionamiento para cualquier celular"*, y luego *"como
+  // botones que te manden a una pestaña y te diga que tengas que hacer"*.
+  //
+  // Para que un yapeo se oiga tienen que cumplirse CUATRO cosas, y si falla una el resultado
+  // es el mismo —silencio—, asi que desde fuera no hay forma de saber cual.
+  const pantalla = fs.readFileSync(path.join(RAIZ, "screens/AutoCapture.tsx"), "utf8");
+
+  ok(/function PasosDeLaVoz/.test(pantalla), "estan los pasos en la pantalla");
+  ok(/notificationReader\.probarVoz\(/.test(pantalla), "y el boton que prueba la voz ahi mismo");
+  // Los tres ajustes que arreglan cada cosa.
+  for (const boton of ["abrirAjustesDeVoz", "abrirAjustesDeSonido", "abrirAjustesDeBateria"]) {
+    ok(pantalla.includes(`notificationReader.${boton}`), `y el boton de ${boton}`);
+  }
+  // Un boton que no hace nada al tocarlo parece la app rota: si el ajuste no existe en ese
+  // celular, hay que decirlo.
+  ok(/pasos\.noSeAbrio/.test(pantalla), "y si el ajuste no existe en ese celular, se dice");
+
+  // CADA RESULTADO NECESITA SUS DOS TEXTOS, EN LOS TRES IDIOMAS: que paso y que hacer. Uno
+  // que falte no da error — en pantalla sale el nombre de la clave, que es peor que nada.
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  for (const res of ["ok", "sin-volumen", "sin-motor", "sin-espanol", "sin-apk"]) {
+    for (const parte of ["res", "haz"]) {
+      const veces = (i18n.match(new RegExp(`"autoCapture\\.pasos\\.${parte}\\.${res}":`, "g")) ?? []).length;
+      ok(veces === 3, `"${parte}.${res}" esta en los tres idiomas (${veces})`);
+    }
+  }
+  for (const clave of ["titulo", "intro", "frase", "probar", "probando", "voz", "volumen", "bateria", "noSeAbrio"]) {
+    const veces = (i18n.match(new RegExp(`"autoCapture\\.pasos\\.${clave}":`, "g")) ?? []).length;
+    ok(veces === 3, `"${clave}" esta en los tres idiomas (${veces})`);
+  }
+
+  // Y el puente tiene que ofrecerlo todo, respondiendo "no disponible" con un APK anterior
+  // en vez de reventar.
+  const elPuente = fs.readFileSync(path.join(RAIZ, "modules/notification-reader/index.ts"), "utf8");
+  ok(/export async function probarVoz/.test(elPuente), "el puente ofrece la prueba");
+  ok(/return "sin-apk"/.test(elPuente), "y con un APK anterior lo dice en vez de reventar");
+}
+
 console.log("\n--- LA REGLA DE LA DIRECCION ESTA EN EL SERVICIO, NO SOLO AQUI ---");
 {
   // ESTA SECCION EXISTE POR UN FALLO DE LA PRUEBA, NO DEL CODIGO, Y ES LA TERCERA VEZ QUE

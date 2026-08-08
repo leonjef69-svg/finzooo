@@ -3,7 +3,7 @@ import { ScrollView, Text, TouchableOpacity, View,
   Switch,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Zap, ShieldCheck, Check, ChevronRight, Trash2, Smartphone, Activity, RotateCcw } from "lucide-react-native";
+import { Zap, ShieldCheck, Check, ChevronRight, Trash2, Smartphone, Activity, RotateCcw, Volume2 } from "lucide-react-native";
 import * as notificationReader from "@/modules/notification-reader";
 import { useColorScheme } from "nativewind";
 import BackButton from "@/components/BackButton";
@@ -358,6 +358,17 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
               </View>
             )}
 
+            {/* SI NO SE ESCUCHA: LOS PASOS, CON SUS BOTONES.
+                Pedido el 07/08/2026: *"no se escucha en voz alta, capaz pueda
+                ser mi celular, necesito que incorpores en registro automático
+                los pasos que se deben seguir para una correcta funcionamiento
+                para cualquier celular"*, y luego: *"como botones que te manden
+                a una pestaña y te diga que tengas que hacer"*.
+                Va aquí, pegado a los interruptores de la voz, y no en una
+                pantalla de ayuda aparte: quien no oye la voz está mirando
+                justo estos interruptores. */}
+            {notificationReader.canSpeak && hablar && <PasosDeLaVoz />}
+
             {/* Diagnóstico. Sirve para dos cosas: que se vea que la app no
                 está guardando nada raro, y que se pueda saber por qué un
                 Yape no se registró (los bancos cambian sus textos). */}
@@ -417,5 +428,138 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
         )}
       </ScrollView>
     </View>
+  );
+}
+
+/**
+ * LOS PASOS PARA QUE LA VOZ SE OIGA, CON UN BOTÓN CADA UNO.
+ *
+ * POR QUÉ EXISTE (07/08/2026)
+ *
+ * Mandó dos capturas: el servicio decía **Conectado**, el yapeo salía **Registrado**, la
+ * voz **encendida**… y no se oyó nada. *"Capaz pueda ser mi celular. Necesito que
+ * incorpores en registro automático los pasos que se deben seguir para una correcta
+ * funcionamiento para cualquier celular."* Y después: *"como botones que te manden a una
+ * pestaña y te diga qué tengas que hacer."*
+ *
+ * Tenía razón en sospechar del celular, y esa es justo la parte que la app no podía
+ * responder. Para que un yapeo se oiga tienen que cumplirse CUATRO cosas, y si falla una
+ * el resultado es el mismo —silencio— así que desde fuera no hay forma de saber cuál:
+ *
+ *   1. El lector de avisos enganchado (eso ya se ve arriba: "Conectado").
+ *   2. Un sistema de voz instalado en el celular.
+ *   3. Ese sistema con **español**. Casi ningún celular trae el de Perú.
+ *   4. El volumen de **avisos** por encima de cero — va aparte del de la música, así que
+ *      el celular puede "sonar bien" y tener los avisos mudos.
+ *
+ * EL BOTÓN QUE IMPORTA ES "PROBAR LA VOZ": dice la frase ahí mismo y responde cuál de las
+ * cuatro falta. Es lo único que convierte "no funciona" en "te falta esto", y sin él
+ * averiguarlo son días de ir y venir.
+ *
+ * Los otros botones llevan al ajuste de Android que arregla cada cosa. Si un celular no
+ * tiene esa pantalla —cada fabricante las mueve—, el botón lo dice en vez de no hacer nada.
+ */
+function PasosDeLaVoz() {
+  const { t } = useAppData();
+  const [probando, setProbando] = useState(false);
+  const [resultado, setResultado] = useState<notificationReader.ResultadoDeLaVoz | null>(null);
+  // Si un ajuste no se pudo abrir, hay que decirlo: un botón que no hace nada al tocarlo
+  // parece la app rota.
+  const [noSeAbrio, setNoSeAbrio] = useState(false);
+
+  async function probar() {
+    setNoSeAbrio(false);
+    setProbando(true);
+    try {
+      setResultado(await notificationReader.probarVoz(t("autoCapture.pasos.frase")));
+    } finally {
+      setProbando(false);
+    }
+  }
+
+  function abrir(accion: () => boolean) {
+    setNoSeAbrio(!accion());
+  }
+
+  return (
+    <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4 mt-4">
+      <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
+        {t("autoCapture.pasos.titulo")}
+      </Text>
+      <Text className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
+        {t("autoCapture.pasos.intro")}
+      </Text>
+
+      {/* PRIMERO PROBAR, Y DESPUÉS ARREGLAR. Al revés se acaba cambiando ajustes que
+          estaban bien. */}
+      <TouchableOpacity
+        onPress={probar}
+        disabled={probando}
+        className="flex-row items-center justify-center gap-2 py-3 rounded-xl bg-emerald-600 mt-3.5"
+      >
+        <Volume2 size={15} color="#ffffff" />
+        <Text className="text-xs font-bold text-white">
+          {t(probando ? "autoCapture.pasos.probando" : "autoCapture.pasos.probar")}
+        </Text>
+      </TouchableOpacity>
+
+      {resultado !== null && (
+        <View
+          className={`rounded-xl p-3 mt-3 ${
+            resultado === "ok" ? "bg-emerald-50 dark:bg-emerald-900/20" : "bg-amber-50 dark:bg-amber-900/20"
+          }`}
+        >
+          <Text
+            className={`text-[11px] font-bold ${
+              resultado === "ok" ? "text-emerald-700 dark:text-emerald-300" : "text-amber-700 dark:text-amber-300"
+            }`}
+          >
+            {t(`autoCapture.pasos.res.${resultado}`)}
+          </Text>
+          <Text className="text-[11px] leading-4 text-slate-600 dark:text-slate-300 mt-1">
+            {t(`autoCapture.pasos.haz.${resultado}`)}
+          </Text>
+        </View>
+      )}
+
+      {/* LOS TRES AJUSTES. Se enseñan siempre y no solo cuando la prueba falla: si la
+          prueba suena pero el yapeo de la noche no despertó al celular, el que falta es el
+          del ahorro de batería, y esa prueba sale "ok". */}
+      <View className="mt-3.5 gap-2">
+        <BotonDePaso
+          texto={t("autoCapture.pasos.voz")}
+          onPress={() => abrir(notificationReader.abrirAjustesDeVoz)}
+        />
+        <BotonDePaso
+          texto={t("autoCapture.pasos.volumen")}
+          onPress={() => abrir(notificationReader.abrirAjustesDeSonido)}
+        />
+        <BotonDePaso
+          texto={t("autoCapture.pasos.bateria")}
+          onPress={() => abrir(notificationReader.abrirAjustesDeBateria)}
+        />
+      </View>
+
+      {noSeAbrio && (
+        <Text className="text-[11px] leading-4 text-amber-700 dark:text-amber-300 mt-3">
+          {t("autoCapture.pasos.noSeAbrio")}
+        </Text>
+      )}
+    </View>
+  );
+}
+
+/** Un paso: qué hacer, y la flecha que lleva al ajuste de Android que lo arregla. */
+function BotonDePaso({ texto, onPress }: { texto: string; onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      className="flex-row items-center justify-between py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800"
+    >
+      <Text className="text-[11px] font-bold text-slate-600 dark:text-slate-200 flex-1 pr-2">
+        {texto}
+      </Text>
+      <ChevronRight size={14} color="#94a3b8" />
+    </TouchableOpacity>
   );
 }

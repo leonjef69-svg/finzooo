@@ -95,6 +95,50 @@ class NotificationReaderModule : Module() {
     // habitual cuando deja de capturar después de actualizar la app: el
     // permiso sigue dado, pero el servicio quedó suelto.
     Function("requestRebind") { requestRebind() }
+
+    /**
+     * PROBAR LA VOZ AHORA MISMO. Es el boton que separa dos cosas que desde fuera se ven
+     * igual: "la app no intento hablar" y "este celular no puede hablar".
+     *
+     * Pedido el 07/08/2026, con las capturas delante: el servicio decia Conectado, el yapeo
+     * se registro, la voz encendida... y no se oyo nada. Sin una prueba a mano, averiguar
+     * eso son dias de ir y venir.
+     *
+     * Devuelve lo que encontro, para poder DECIRLO en pantalla en vez de callar:
+     *   "ok"          -> hablo
+     *   "sin-motor"   -> el celular no tiene ningun sistema de voz instalado
+     *   "sin-espanol" -> tiene voz, pero no en espanol
+     *   "sin-volumen" -> todo listo, pero el volumen de notificaciones esta en cero
+     */
+    AsyncFunction("probarVoz") { texto: String -> ProbadorDeVoz.probar(context, texto) }
+
+    /**
+     * El volumen del canal de AVISOS, de 0 a 100.
+     *
+     * Va aparte del de multimedia, y es el que usa la voz de Finzo a proposito: asi respeta
+     * el silencio del celular como cualquier otra notificacion. El precio es que se puede
+     * quedar en cero sin que nadie se de cuenta —el de la musica sigue alto y todo "suena"
+     * normal—, y entonces la voz habla y no se oye. Con este numero se puede decir.
+     */
+    Function("volumenDeAvisos") { ProbadorDeVoz.volumenDeAvisos(context) }
+
+    /** Los ajustes de Android donde se instala y elige la voz. */
+    Function("abrirAjustesDeVoz") { abrirAjustes("com.android.settings.TTS_SETTINGS") }
+
+    /** Los de sonido, para subir el volumen de los avisos. */
+    Function("abrirAjustesDeSonido") { abrirAjustes(Settings.ACTION_SOUND_SETTINGS) }
+
+    /**
+     * Los del ahorro de bateria de Finzo.
+     *
+     * Hace falta porque los Honor, Huawei y Xiaomi cierran los servicios en segundo plano
+     * por su cuenta, y con el lector cerrado no hay ni registro ni voz.
+     */
+    Function("abrirAjustesDeBateria") {
+      // Primero la pantalla de la propia app, que existe en todos los Android y lleva a
+      // "Bateria". La lista general de ahorro de bateria no esta en todos.
+      abrirAjustes(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, "package:" + context.packageName)
+    }
   }
 
   companion object {
@@ -133,6 +177,23 @@ class NotificationReaderModule : Module() {
         false
       }
   }
+
+  /**
+   * Abre una pantalla de ajustes de Android, y avisa si no se pudo.
+   *
+   * Devuelve false en vez de reventar porque estas pantallas NO estan en todos los
+   * celulares: la de la voz sobre todo, que cada fabricante mueve de sitio. Con el false, la
+   * pantalla puede decir "busca esto a mano" en vez de cerrarse sola.
+   */
+  private fun abrirAjustes(accion: String, datos: String? = null): Boolean =
+    try {
+      val intent = Intent(accion).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+      if (datos != null) intent.data = android.net.Uri.parse(datos)
+      context.startActivity(intent)
+      true
+    } catch (e: Throwable) {
+      false
+    }
 
   private fun requestRebind(): Boolean =
     try {
