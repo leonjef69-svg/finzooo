@@ -180,6 +180,7 @@ console.log("\n--- BORRAR UN NEGOCIO SE LLEVA LO SUYO, Y SOLO LO SUYO ---");
       crearVenta({ negocioId: a.id, lineas: [], metodo: "efectivo", fecha: "2026-08-07", hora: "10:00" }),
       crearVenta({ negocioId: b.id, lineas: [], metodo: "efectivo", fecha: "2026-08-07", hora: "11:00" }),
     ],
+    movimientos: [],
   };
 
   const quedan = borrarNegocio(datos, a.id);

@@ -116,14 +116,63 @@ export type Venta = {
   movimientoId?: string;
 };
 
+/**
+ * UN MOVIMIENTO DEL NEGOCIO: plata que entra o sale de la caja.
+ *
+ * Es el equivalente del movimiento personal, pero **aparte**, que es toda la idea del Modo
+ * Negocio. Aquí caen tres cosas:
+ *
+ *   · El gasto de insumos que se anota a mano ("S/ 50, compra de pollo").
+ *   · El ingreso de una venta cobrada.
+ *   · Y en el paso siguiente, el Yape que entra y se manda al negocio.
+ *
+ * POR QUÉ NO REUSA EL TIPO DEL MOVIMIENTO PERSONAL
+ *
+ * Porque el personal tiene categoría, comercio, cuenta y etiquetas —cosas de un presupuesto
+ * de casa— y le falta lo único que aquí importa: de qué negocio es. Reusarlo obligaría a
+ * añadirle un campo de negocio, y eso es exactamente la forma que se descartó: con el negocio
+ * dentro del movimiento personal, su plata se cuela en los totales de casa en cuanto alguien
+ * olvide un filtro.
+ */
+export type MovimientoNegocio = {
+  id: string;
+  negocioId: string;
+  tipo: "ingreso" | "gasto";
+  monto: number;
+  metodo: MetodoDeVenta;
+  descripcion: string;
+  /** "AAAA-MM-DD" */
+  fecha: string;
+  /** "HH:MM" */
+  hora: string;
+  /**
+   * MANUAL O AUTOMÁTICO. Lo pidió con esas palabras: *"Origen del movimiento: Manual /
+   * Automático"*.
+   *
+   * En V1 todos son manuales; el automático llega con la captura de Yape en el paso siguiente.
+   */
+  origen: "manual" | "automatico";
+  /** La venta que lo generó, si vino de una venta. */
+  ventaId?: string;
+  /**
+   * EL IDENTIFICADOR DEL AVISO DE ANDROID, para no registrar dos veces el mismo Yape.
+   *
+   * Vacío en V1 porque todavía no entran Yapes aquí. Existe ya porque es lo que evita el
+   * duplicado en el paso siguiente, y añadirlo después obligaría a decidir qué son los
+   * movimientos ya guardados que no lo tienen.
+   */
+  avisoId?: string;
+};
+
 /** Todo lo del negocio junto. Es lo que se guarda y lo que viaja a la nube. */
 export type DatosDelNegocio = {
   negocios: Negocio[];
   productos: Producto[];
   ventas: Venta[];
+  movimientos: MovimientoNegocio[];
 };
 
-export const NEGOCIO_VACIO: DatosDelNegocio = { negocios: [], productos: [], ventas: [] };
+export const NEGOCIO_VACIO: DatosDelNegocio = { negocios: [], productos: [], ventas: [], movimientos: [] };
 
 /**
  * Un identificador propio, distinto del de los movimientos.
@@ -139,15 +188,17 @@ export function nuevoId(prefijo: string): string {
 // ── Guardado en el celular ───────────────────────────────────────────
 
 export async function cargarNegocio(): Promise<DatosDelNegocio> {
-  const [negocios, productos, ventas] = await Promise.all([
+  const [negocios, productos, ventas, movimientos] = await Promise.all([
     loadJSON<Negocio[]>(STORAGE_KEYS.negocios, []),
     loadJSON<Producto[]>(STORAGE_KEYS.productos, []),
     loadJSON<Venta[]>(STORAGE_KEYS.ventas, []),
+    loadJSON<MovimientoNegocio[]>(STORAGE_KEYS.movimientosNegocio, []),
   ]);
   return {
     negocios: Array.isArray(negocios) ? negocios : [],
     productos: Array.isArray(productos) ? productos : [],
     ventas: Array.isArray(ventas) ? ventas : [],
+    movimientos: Array.isArray(movimientos) ? movimientos : [],
   };
 }
 
@@ -161,6 +212,10 @@ export function guardarProductos(productos: Producto[]): void {
 
 export function guardarVentas(ventas: Venta[]): void {
   saveJSON(STORAGE_KEYS.ventas, ventas);
+}
+
+export function guardarMovimientosNegocio(movimientos: MovimientoNegocio[]): void {
+  saveJSON(STORAGE_KEYS.movimientosNegocio, movimientos);
 }
 
 // ── Crear, editar, borrar ────────────────────────────────────────────
@@ -237,6 +292,7 @@ export function borrarNegocio(datos: DatosDelNegocio, id: string): DatosDelNegoc
     negocios: datos.negocios.filter((n) => n.id !== id),
     productos: datos.productos.filter((p) => p.negocioId !== id),
     ventas: datos.ventas.filter((v) => v.negocioId !== id),
+    movimientos: datos.movimientos.filter((m) => m.negocioId !== id),
   };
 }
 
@@ -256,6 +312,39 @@ export function crearVenta(datos: {
     total: totalDeLineas(datos.lineas),
     metodo: datos.metodo,
     estado: "pagado",
+  };
+}
+
+/**
+ * Un movimiento del negocio.
+ *
+ * El monto se redondea a céntimos aquí y no en cada pantalla: con dos sitios redondeando, uno
+ * acaba guardando 45.299999999999996 y ese número se imprime en un total.
+ */
+export function crearMovimientoNegocio(datos: {
+  negocioId: string;
+  tipo: "ingreso" | "gasto";
+  monto: number;
+  metodo: MetodoDeVenta;
+  descripcion: string;
+  fecha: string;
+  hora: string;
+  origen?: "manual" | "automatico";
+  ventaId?: string;
+  avisoId?: string;
+}): MovimientoNegocio {
+  return {
+    id: nuevoId("mov"),
+    negocioId: datos.negocioId,
+    tipo: datos.tipo,
+    monto: Math.round(datos.monto * 100) / 100,
+    metodo: datos.metodo,
+    descripcion: sanitizeName(datos.descripcion),
+    fecha: datos.fecha,
+    hora: datos.hora,
+    origen: datos.origen ?? "manual",
+    ...(datos.ventaId ? { ventaId: datos.ventaId } : {}),
+    ...(datos.avisoId ? { avisoId: datos.avisoId } : {}),
   };
 }
 

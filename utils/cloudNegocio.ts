@@ -57,6 +57,7 @@ export async function bajarNegocio(uid: string): Promise<DatosDelNegocio | null>
       negocios: Array.isArray(data.negocios) ? data.negocios : [],
       productos: Array.isArray(data.productos) ? data.productos : [],
       ventas: Array.isArray(data.ventas) ? data.ventas : [],
+      movimientos: Array.isArray(data.movimientos) ? data.movimientos : [],
     };
   } catch {
     // Sin internet se sigue con lo que hay en el celular. Nunca se borra nada por no haber

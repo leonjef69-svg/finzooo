@@ -84,6 +84,7 @@ export const STORAGE_KEYS = {
   negocios: "finzo:negocios",
   productos: "finzo:productos",
   ventas: "finzo:ventas",
+  movimientosNegocio: "finzo:movimientosNegocio",
 } as const;
 
 // Borra todos los datos de la cuenta de golpe (operación atómica y
@@ -120,6 +121,7 @@ export async function clearAccountData(): Promise<void> {
         STORAGE_KEYS.negocios,
         STORAGE_KEYS.productos,
         STORAGE_KEYS.ventas,
+        STORAGE_KEYS.movimientosNegocio,
       ].map(actualKey)
     );
   } catch {
