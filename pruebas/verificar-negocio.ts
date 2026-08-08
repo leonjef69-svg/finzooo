@@ -28,7 +28,13 @@ import {
   totalDeLineas,
   type DatosDelNegocio,
 } from "@/utils/negocio";
-import { historialDelNegocio, horaVisible, totalesDelNegocio } from "@/utils/negocioTotales";
+import {
+  enElPeriodo,
+  filtrarPorPeriodo,
+  historialDelNegocio,
+  horaVisible,
+  totalesDelNegocio,
+} from "@/utils/negocioTotales";
 import {
   fusionarMovimientosNegocio,
   mandarYapesA,
@@ -511,8 +517,12 @@ console.log("\n--- EL PANEL: ENGANCHE, PANTALLA Y RUTA (paso 4) ---");
   // LAS CUENTAS NO SE ESCRIBEN EN LA PANTALLA. Es EL fallo que mas ha costado en este
   // proyecto: la misma formula en dos sitios, se cambia una y la otra no, y dos pantallas dan
   // numeros distintos del mismo mes.
-  ok(/totalesDelNegocio\(negocioId, ventas, movimientosNegocio\)/.test(pant), "el panel pide sus cuentas hechas");
-  ok(/historialDelNegocio\(negocioId, ventas, movimientosNegocio\)/.test(pant), "y el historial tambien");
+  // Las listas que se le pasan llevan "DelPeriodo" desde la V2 —hoy, este mes o todo— pero lo
+  // que se vigila aqui es lo de siempre: que las cuentas se PIDAN hechas y no se escriban en
+  // la pantalla. Es EL fallo que mas ha costado en este proyecto: la misma formula en dos
+  // sitios, se cambia una y la otra no, y dos pantallas dan numeros distintos del mismo mes.
+  ok(/totalesDelNegocio\(negocioId, /.test(pant), "el panel pide sus cuentas hechas");
+  ok(/historialDelNegocio\(negocioId, /.test(pant), "y el historial tambien");
   ok(!/\.reduce\(/.test(pant), "y no suma dinero por su cuenta");
 
   // EL DOBLE CONTEO, DICHO EN LA PANTALLA. Sin el aviso, el saldo parece equivocado — y un
@@ -869,6 +879,94 @@ console.log("\n--- EL YAPEO QUE ENTRA AL NEGOCIO (paso 5) ---");
   }
   const avisoNegocio = (i18n.match(/"autoCapture\.toastNegocio":/g) ?? []).length;
   ok(avisoNegocio === 3, `el aviso de "entro a tu negocio" esta en los tres idiomas (${avisoNegocio})`);
+}
+
+console.log("\n--- V2: LO DE HOY, LO DEL MES Y TODO ---");
+{
+  // En la V1 el panel sumaba TODO lo registrado desde el primer dia. Un negocio no se lleva
+  // asi: al cerrar se pregunta "cuanto hice hoy", y a fin de mes "cuanto hice este mes".
+  const HOY = "2026-08-08";
+
+  // SE COMPARA EL TEXTO DE LA FECHA, sin restar dias con Date. De las restas de fechas salen
+  // los errores del dia 1 y los saltos de hora; aqui no hay ninguna resta.
+  ok(enElPeriodo("2026-08-08", "hoy", HOY), "lo de hoy entra en hoy");
+  ok(!enElPeriodo("2026-08-07", "hoy", HOY), "lo de ayer no");
+  ok(enElPeriodo("2026-08-01", "mes", HOY), "el dia 1 entra en este mes");
+  ok(enElPeriodo("2026-08-31", "mes", HOY), "y el 31 tambien");
+  ok(!enElPeriodo("2026-07-31", "mes", HOY), "pero el ultimo dia del mes pasado no");
+  ok(!enElPeriodo("2025-08-08", "mes", HOY), "ni el mismo mes de OTRO año");
+  ok(enElPeriodo("2020-01-01", "todo", HOY), "y en 'todo' entra hasta lo mas viejo");
+
+  const venta = (id: string, fecha: string, total: number) => ({
+    id,
+    negocioId: "n1",
+    fecha,
+    hora: "12:00",
+    lineas: [{ productoId: "p1", nombre: "Broster", precio: total, cantidad: 1 }],
+    total,
+    metodo: "efectivo" as const,
+    estado: "pagado" as const,
+  });
+  const ventas = [venta("v1", "2026-08-08", 10), venta("v2", "2026-08-07", 20), venta("v3", "2026-07-30", 100)];
+  const gastoDeHoy = crearMovimientoNegocio({
+    negocioId: "n1",
+    tipo: "gasto",
+    monto: 4,
+    metodo: "efectivo",
+    descripcion: "Gas",
+    fecha: HOY,
+    hora: "08:00",
+  });
+  const gastoViejo = { ...gastoDeHoy, id: "otro", fecha: "2026-07-30" };
+
+  // LOS TOTALES DEL PERIODO, CON NUMEROS.
+  const deHoy = totalesDelNegocio(
+    "n1",
+    filtrarPorPeriodo(ventas, "hoy", HOY),
+    filtrarPorPeriodo([gastoDeHoy, gastoViejo], "hoy", HOY)
+  );
+  ok(deHoy.ventas === 10, `hoy se vendieron 10 (${deHoy.ventas})`);
+  ok(deHoy.cantidadVentas === 1, `y fue 1 venta (${deHoy.cantidadVentas})`);
+  ok(deHoy.gastos === 4, `y se gastaron 4 (${deHoy.gastos})`);
+  ok(deHoy.saldo === 6, `asi que el dia deja 6 (${deHoy.saldo})`);
+
+  const delMes = totalesDelNegocio(
+    "n1",
+    filtrarPorPeriodo(ventas, "mes", HOY),
+    filtrarPorPeriodo([gastoDeHoy, gastoViejo], "mes", HOY)
+  );
+  ok(delMes.ventas === 30, `este mes van 30 (${delMes.ventas})`);
+  ok(delMes.cantidadVentas === 2, `en 2 ventas (${delMes.cantidadVentas})`);
+  // Y NO SE CUELA LO DEL MES PASADO, que es el fallo que haria que el mes nunca empezara de
+  // cero y nadie entendiera por que su "mes" no cuadra con lo que vendio.
+  ok(delMes.ventas !== 130, "sin arrastrar lo del mes pasado");
+
+  const todo = totalesDelNegocio("n1", filtrarPorPeriodo(ventas, "todo", HOY), [gastoDeHoy, gastoViejo]);
+  ok(todo.ventas === 130 && todo.cantidadVentas === 3, "y en 'todo' esta todo");
+  // "todo" devuelve LA MISMA lista, sin copiarla: el panel lo llama en cada dibujo.
+  ok(filtrarPorPeriodo(ventas, "todo", HOY) === ventas, "y 'todo' no copia la lista para nada");
+
+  // EL HISTORIAL MIRA EL MISMO PERIODO QUE LOS TOTALES. Con dos filtros distintos, la pantalla
+  // podria enseñar un saldo de hoy encima de una lista de la semana pasada — y eso no se ve
+  // mirando: se ve cuando las cuentas no cuadran.
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
+  ok(/totalesDelNegocio\(negocioId, ventasDelPeriodo, movimientosDelPeriodo\)/.test(pant), "los totales son del periodo elegido");
+  ok(/historialDelNegocio\(negocioId, ventasDelPeriodo, movimientosDelPeriodo\)/.test(pant), "y el historial, del MISMO periodo");
+  // EMPIEZA EN HOY: es la pregunta que se hace al cerrar el dia.
+  ok(/useState<PeriodoDelPanel>\("hoy"\)/.test(pant), "el panel abre en 'hoy'");
+  // Y el dia de hoy sale del celular, no de la hora de Londres.
+  ok(/ahoraDelNegocio\(\)\.fecha/.test(pant), "y 'hoy' es el dia del celular");
+  // El nombre del numero grande cambia con el periodo: decir "saldo del negocio" encima de lo
+  // de hoy seria mentir.
+  ok(/panel\.saldo\.\$\{periodo\}/.test(pant), "el numero grande dice de que periodo es");
+  // Y el vacio dice de que periodo esta vacio, o parece que se perdio lo de ayer.
+  ok(/panel\.vacio\.\$\{periodo\}/.test(pant), "y el vacio tambien");
+
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  for (const clave of ["periodo.hoy", "periodo.mes", "periodo.todo", "saldo.hoy", "saldo.mes", "vacio.hoy", "vacio.mes"]) {
+    const veces = (i18n.match(new RegExp(`"panel\\.${clave.replace(".", "\\.")}":`, "g")) ?? []).length;
+    ok(veces === 3, `"panel.${clave}" esta en los tres idiomas (${veces})`);
+  }
 }
 
 console.log(fallos === 0 ? "\nTodo bien: los cimientos del Modo Negocio\n" : `\n${fallos} fallos\n`);

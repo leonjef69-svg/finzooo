@@ -24,6 +24,45 @@
 import { type MetodoDeVenta, type MovimientoNegocio, type Venta } from "@/utils/negocio";
 
 /**
+ * QUÉ TROZO DE TIEMPO SE ESTÁ MIRANDO (V2, 08/08/2026).
+ *
+ * En la V1 el panel sumaba todo lo registrado desde el primer día, y se decía en la pantalla
+ * para que nadie lo tomara por un fallo. Pero un negocio no se lleva así: lo que se pregunta
+ * al cerrar es *"¿cuánto hice hoy?"*, y a fin de mes *"¿cuánto hice este mes?"*.
+ */
+export type PeriodoDelPanel = "hoy" | "mes" | "todo";
+
+/**
+ * ¿Esta fecha entra en el trozo que se está mirando?
+ *
+ * SE COMPARA EL TEXTO DE LA FECHA, no se hacen cuentas con días. Las fechas se guardan
+ * "AAAA-MM-DD", así que el mes es comparar los siete primeros caracteres y el día son los
+ * diez. Restar días con Date es de donde salen los errores de "el día 1 del mes" y los saltos
+ * de hora: aquí no hay nada de eso porque no hay ninguna resta.
+ */
+export function enElPeriodo(fecha: string, periodo: PeriodoDelPanel, hoy: string): boolean {
+  if (periodo === "todo") return true;
+  if (periodo === "hoy") return fecha === hoy;
+  return fecha.slice(0, 7) === hoy.slice(0, 7);
+}
+
+/**
+ * Se queda con lo del trozo de tiempo elegido.
+ *
+ * Sirve igual para ventas y para movimientos porque lo único que mira es su fecha. Filtrar
+ * ANTES de sumar —y no dentro de cada cuenta— es lo que hace que el saldo, el número de
+ * ventas y el historial no puedan acabar hablando de periodos distintos.
+ */
+export function filtrarPorPeriodo<T extends { fecha: string }>(
+  items: T[],
+  periodo: PeriodoDelPanel,
+  hoy: string
+): T[] {
+  if (periodo === "todo") return items;
+  return items.filter((i) => enElPeriodo(i.fecha, periodo, hoy));
+}
+
+/**
  * Todo lo que enseña el panel, en números.
  *
  * Las cinco líneas que pidió —ventas, ingresos automáticos, gastos, saldo y cuántas ventas—

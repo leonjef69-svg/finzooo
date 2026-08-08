@@ -244,9 +244,9 @@ con este archivo, cuyas letras raras caen en parte dentro del ASCII.
 **Sigue sin probarse: que un CSV o un Excel real de su banco SÍ se importe.** Es el siguiente
 paso natural y solo hace falta que baje uno.
 
-## MODO NEGOCIO — V1 COMPLETA, SIN PROBAR EN EL CELULAR (08/08/2026)
+## MODO NEGOCIO — V1 TERMINADA Y CONFIRMADA · V2 EN CURSO (08/08/2026)
 
-> ## 👉 LO SIGUIENTE ES QUE ÉL LA PRUEBE, NO ESCRIBIR MÁS CÓDIGO
+> ## 👉 EMPIEZA POR LA V2, AL FINAL DE ESTA SECCIÓN
 >
 > **De qué trata esto:** separar la plata del negocio de la personal, para que un Yape de un
 > cliente y uno de un familiar no acaben en el mismo bolsillo. Él tiene una pollería.
@@ -255,10 +255,15 @@ paso natural y solo hace falta que baje uno.
 > |---|---|
 > | Pasos 1, 2 y 3 | ✅ Terminados, y **confirmados por él en su celular** el 07/08/2026 |
 > | Paso 4 | ✅ **Hecho y publicado el 08/08/2026** (8ago-01, 8ago-02, 8ago-03) |
-> | Paso 5 | ✅ **Hecho y publicado** (8ago-04). Con esto **la V1 está completa** |
+> | Paso 5 | ✅ **Hecho, publicado (8ago-04) y CONFIRMADO POR ÉL EN EL CELULAR** el 08/08/2026 |
 >
-> **LO ÚNICO QUE FALTA ES QUE ÉL LA PRUEBE EN EL CELULAR**, y hasta que lo diga no se empieza
-> la V2. De los pasos 4 y 5 hay pruebas en verde y **ninguna confirmación suya**.
+> **La V1 está terminada.** Él probó el paso 5 con un yapeo de S/ 1 de verdad: *"sí apareció en
+> el negocio, no en mi pantalla de inicio"*. Es la comprobación que importaba — que la plata
+> del negocio no se mezcle con la de casa— y la hizo con Yape real, no con una prueba.
+>
+> **Lo que NO ha probado él todavía:** registrar una venta y anotar un gasto (los pasos 4b y
+> 4c). Las pruebas están en verde y él pidió seguir con la V2 sabiéndolo. Si algo de eso falla
+> cuando lo use, **es lo primero que hay que mirar antes de culpar a la V2**.
 >
 > Compila y las **47 pruebas están en verde**, así que se puede seguir sin arreglar nada
 > primero. Lo que tiene cada paso está detallado en **"Pasos"**, al final de esta sección, con
@@ -514,6 +519,34 @@ está hecho: las tres piezas de abajo son exactamente eso.
    **El modo señuelo no necesitó nada**, y conviene saber por qué: con el señuelo puesto todas
    las claves se leen de `finzo:decoy:*`, así que la lista de negocios sale vacía, nadie recibe
    y el yapeo cae en lo personal del señuelo. Los datos reales del negocio no se tocan.
+
+### V2 — EN CURSO (empezada el 08/08/2026)
+
+Él la pidió con cinco cosas, en sus palabras: **caja del negocio, resumen de ventas, productos
+vendidos (cuánto Broster salió), vinculación entre pagos y ventas, y reportes diarios y
+mensuales.**
+
+Se entrega igual que la V1: **por partes, cada una publicada y con las pruebas en verde**.
+
+| | |
+|---|---|
+| **1. Reportes por día y por mes** | ✅ **8ago-05**, publicado. Sin confirmar por él |
+| 2. Productos vendidos (cuánto Broster salió) | ⏳ Sin empezar |
+| 3. Vinculación pago ↔ venta | ⏳ Sin empezar. **La más delicada** |
+| 4. "Caja del negocio" | ⏳ **HAY QUE PREGUNTARLE QUÉ QUIERE DECIR.** El saldo y el historial ya existen desde el paso 4, así que o ya está hecho, o quiere otra cosa —abrir y cerrar caja, cuánto efectivo hay— y eso no se adivina |
+
+**1. Reportes por día y por mes (8ago-05).** El panel tiene arriba **Hoy · Este mes · Todo**, y
+todo lo de abajo —los totales, el contador de ventas y el historial— es del periodo elegido.
+
+- **Abre en "Hoy"**, no en "Todo": la pregunta de un negocio al cerrar es *"¿cuánto hice hoy?"*.
+- `enElPeriodo()` **compara el texto de la fecha**, no resta días con `Date`. De las restas de
+  fechas salen los errores del día 1 y los saltos de hora; aquí no hay ninguna resta.
+- **Un solo filtro para los totales y para el historial.** Con dos, la pantalla podría enseñar
+  un saldo de hoy encima de una lista de la semana pasada — y eso no se ve mirando: se ve
+  cuando las cuentas no cuadran. Hay una prueba que exige que los dos reciban la misma lista.
+- El nombre del número grande y el texto del vacío **cambian con el periodo**: "saldo del
+  negocio" encima de lo de hoy sería mentira, y "todavía no hay nada registrado" con "Hoy"
+  puesto haría pensar que se perdió lo de ayer.
 
 ## Lo que falta para Play Store
 

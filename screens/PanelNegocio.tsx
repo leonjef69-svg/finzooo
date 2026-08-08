@@ -20,7 +20,14 @@ import { CARD_SHADOW } from "@/constants/style";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import { fmt as fmtConSimbolo, fmtDate } from "@/utils/format";
-import { historialDelNegocio, horaVisible, totalesDelNegocio } from "@/utils/negocioTotales";
+import { ahoraDelNegocio } from "@/utils/negocio";
+import {
+  filtrarPorPeriodo,
+  historialDelNegocio,
+  horaVisible,
+  totalesDelNegocio,
+  type PeriodoDelPanel,
+} from "@/utils/negocioTotales";
 
 /**
  * EL PANEL DE UN NEGOCIO: cómo va la caja y qué pasó hoy.
@@ -72,13 +79,34 @@ export default function PanelNegocio({
    */
   const dinero = (n: number) => fmtConSimbolo(n, currencySymbolFor(negocio?.moneda ?? ""));
 
+  /**
+   * QUÉ TROZO DE TIEMPO SE MIRA. Empieza en HOY, y no en "todo", a propósito: la pregunta de
+   * un negocio al cerrar el día es *"¿cuánto hice hoy?"*. "Todo" sigue estando, pero es la
+   * respuesta que menos se busca y no tiene por qué ser la primera que se ve.
+   */
+  const [periodo, setPeriodo] = useState<PeriodoDelPanel>("hoy");
+  /** El día de HOY según el celular. Ver ahoraDelNegocio: nunca la hora de Londres. */
+  const hoy = ahoraDelNegocio().fecha;
+
+  // SE FILTRA UNA VEZ Y PARA LAS DOS COSAS. Con un filtro para los totales y otro para el
+  // historial, bastaría cambiar uno para que la pantalla enseñara un saldo de hoy encima de
+  // una lista de la semana pasada, y eso no se ve mirando: se ve cuando las cuentas no cuadran.
+  const ventasDelPeriodo = useMemo(
+    () => filtrarPorPeriodo(ventas, periodo, hoy),
+    [ventas, periodo, hoy]
+  );
+  const movimientosDelPeriodo = useMemo(
+    () => filtrarPorPeriodo(movimientosNegocio, periodo, hoy),
+    [movimientosNegocio, periodo, hoy]
+  );
+
   const totales = useMemo(
-    () => totalesDelNegocio(negocioId, ventas, movimientosNegocio),
-    [negocioId, ventas, movimientosNegocio]
+    () => totalesDelNegocio(negocioId, ventasDelPeriodo, movimientosDelPeriodo),
+    [negocioId, ventasDelPeriodo, movimientosDelPeriodo]
   );
   const historial = useMemo(
-    () => historialDelNegocio(negocioId, ventas, movimientosNegocio),
-    [negocioId, ventas, movimientosNegocio]
+    () => historialDelNegocio(negocioId, ventasDelPeriodo, movimientosDelPeriodo),
+    [negocioId, ventasDelPeriodo, movimientosDelPeriodo]
   );
 
   /** Cuál fila se está confirmando para borrar. En la propia fila, como en el resto de la app. */
@@ -114,6 +142,34 @@ export default function PanelNegocio({
           </Text>
         </View>
 
+        {/* HOY · ESTE MES · TODO.
+            Va ARRIBA DEL TODO y no escondido tras un botón: es lo que cambia el significado de
+            cada número de esta pantalla. Un total sin saber de qué días es no dice nada. */}
+        <View className="flex-row gap-2 mb-4">
+          {PERIODOS.map((p) => {
+            const puesto = periodo === p;
+            return (
+              <TouchableOpacity
+                key={p}
+                onPress={() => setPeriodo(p)}
+                className={`flex-1 py-2.5 rounded-xl items-center border-[1.5px] ${
+                  puesto
+                    ? "bg-emerald-600 border-emerald-600"
+                    : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                }`}
+              >
+                <Text
+                  className={`text-[11px] font-bold ${
+                    puesto ? "text-white" : "text-slate-600 dark:text-slate-200"
+                  }`}
+                >
+                  {t(`panel.periodo.${p}`)}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
         {/* EL SALDO ARRIBA Y GRANDE: es el número por el que se abre esta pantalla. */}
         <View
           className="rounded-2xl p-5 bg-emerald-600 mb-4"
@@ -121,7 +177,11 @@ export default function PanelNegocio({
         >
           <View className="flex-row items-center gap-2">
             <Wallet size={14} color="#d1fae5" />
-            <Text className="text-[11px] font-bold text-emerald-50">{t("panel.saldo")}</Text>
+            {/* EL NOMBRE DEL NÚMERO CAMBIA CON EL PERIODO. Decir "saldo del negocio" encima de
+                lo de hoy sería mentir: el saldo es todo, lo de hoy es lo de hoy. */}
+            <Text className="text-[11px] font-bold text-emerald-50">
+              {periodo === "todo" ? t("panel.saldo") : t(`panel.saldo.${periodo}`)}
+            </Text>
           </View>
           <Text className="text-3xl font-extrabold text-white mt-1.5">{dinero(totales.saldo)}</Text>
           <Text className="text-[11px] text-emerald-50 mt-1">
@@ -266,8 +326,10 @@ export default function PanelNegocio({
         {historial.length === 0 ? (
           <View className="rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-slate-700 p-6 items-center">
             <Store size={26} color="#94a3b8" />
+            {/* EL VACÍO DICE DE QUÉ PERIODO ESTÁ VACÍO. "Todavía no hay nada registrado" con
+                "Hoy" puesto haría pensar que se perdió todo lo de ayer. */}
             <Text className="text-xs font-bold text-slate-600 dark:text-slate-200 mt-3">
-              {t("panel.vacioTitulo")}
+              {periodo === "todo" ? t("panel.vacioTitulo") : t(`panel.vacio.${periodo}`)}
             </Text>
             <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-400 text-center mt-1">
               {t("panel.vacioTexto")}
@@ -376,6 +438,9 @@ export default function PanelNegocio({
     </View>
   );
 }
+
+/** Los tres trozos de tiempo, en el orden en que se preguntan: hoy primero. */
+const PERIODOS: PeriodoDelPanel[] = ["hoy", "mes", "todo"];
 
 /** Una línea del resumen: dibujo, nombre y número. Todas iguales, para poder leerlas en columna. */
 function Linea({
