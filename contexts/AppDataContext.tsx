@@ -31,13 +31,16 @@ import {
   borrarNegocio as borrarNegocioYLoSuyo,
   borrarProducto as quitarProductoDeLaLista,
   cargarNegocio,
+  guardarMovimientosNegocio,
   guardarNegocios,
   guardarProductos,
   guardarVentas,
   NEGOCIO_VACIO,
   type DatosDelNegocio,
+  type MovimientoNegocio,
   type Negocio,
   type Producto,
+  type Venta,
 } from "@/utils/negocio";
 import { bajarNegocio, subirNegocio } from "@/utils/cloudNegocio";
 import { activate as activateDecoy, deactivate as deactivateDecoy } from "@/utils/decoyMode";
@@ -260,6 +263,32 @@ type AppDataContextValue = {
   guardarProducto: (producto: Producto) => void;
   /** Borra un producto. NO toca las ventas que lo incluían: ver utils/negocio. */
   quitarProducto: (id: string) => void;
+  /**
+   * Las ventas de TODOS los negocios, igual que los productos: cada pantalla filtra la suya.
+   *
+   * Y NO SE MEZCLAN CON "transactions" NI AQUÍ: son dos listas distintas en el contexto
+   * porque son dos bolsillos distintos en la vida real. Es la decisión de arquitectura de
+   * todo el Modo Negocio, y aquí es donde se podría deshacer sin querer.
+   */
+  ventas: Venta[];
+  /** Crea una venta o reemplaza la que tenga ese id. */
+  guardarVenta: (venta: Venta) => void;
+  /** Borra una venta. La de un cobro que no fue, o la que se registró dos veces. */
+  quitarVenta: (id: string) => void;
+  /**
+   * La plata que entra y sale de la CAJA del negocio: el pollo que se compró, el Yape que
+   * entrará solo en el paso siguiente.
+   *
+   * Se llama "movimientosNegocio" y no "movimientos" a propósito: en esta app "movimiento"
+   * es lo personal —lo que la pantalla de Inicio suma— y dos nombres iguales para dos
+   * bolsillos distintos es justo el descuido que mezclaría la plata del negocio con la de
+   * casa.
+   */
+  movimientosNegocio: MovimientoNegocio[];
+  /** Anota plata que entra o sale de la caja del negocio. */
+  guardarMovimientoNegocio: (movimiento: MovimientoNegocio) => void;
+  /** Borra un movimiento del negocio. */
+  quitarMovimientoNegocio: (id: string) => void;
   setIsPremium: (v: boolean) => void;
   isCloudSynced: boolean;
   // Modo señuelo. Solo los llama la pantalla de bloqueo; ninguna otra parte
@@ -527,6 +556,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       guardarNegocios(negocioDeLaNube.negocios);
       guardarProductos(negocioDeLaNube.productos);
       guardarVentas(negocioDeLaNube.ventas);
+      // Y LA CAJA. Faltaba esta línea: los gastos y los ingresos del negocio bajaban de la
+      // nube, se veían en la pantalla, y al reiniciar la app volvían a estar vacíos porque
+      // nunca se habían escrito en el celular. Es el mismo fallo de las categorías propias,
+      // una lista más abajo.
+      guardarMovimientosNegocio(negocioDeLaNube.movimientos);
     }
     return true;
   }
@@ -790,13 +824,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (ready) saveJSON(STORAGE_KEYS.carryoverCleared, carryoverCleared);
   }, [carryoverCleared, ready]);
-  // EL NEGOCIO, en sus tres claves. Se guardan las tres juntas porque cambian juntas: una
-  // venta toca las ventas, pero borrar un negocio toca las tres a la vez.
+  // EL NEGOCIO, en sus cuatro claves. Se guardan las cuatro juntas porque cambian juntas:
+  // una venta toca las ventas, pero borrar un negocio toca las cuatro a la vez.
   useEffect(() => {
     if (!ready) return;
     guardarNegocios(datosNegocio.negocios);
     guardarProductos(datosNegocio.productos);
     guardarVentas(datosNegocio.ventas);
+    guardarMovimientosNegocio(datosNegocio.movimientos);
   }, [datosNegocio, ready]);
 
   /**
@@ -1443,6 +1478,51 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setDatosNegocio((antes) => ({ ...antes, productos: quitarProductoDeLaLista(antes.productos, id) }));
   }
 
+  /**
+   * Guarda una venta: la crea si es nueva, la reemplaza si ya estaba.
+   *
+   * Una sola función para las dos cosas, por lo mismo que en guardarNegocio y guardarProducto:
+   * con "crear" y "editar" separados basta que una olvide un campo para que corregir una venta
+   * pierda lo que registrarla sí guardaba. Y aquí lo que se perdería es dinero.
+   */
+  function guardarVenta(venta: Venta) {
+    setDatosNegocio((antes) => {
+      const yaEstaba = antes.ventas.some((v) => v.id === venta.id);
+      return {
+        ...antes,
+        ventas: yaEstaba ? antes.ventas.map((v) => (v.id === venta.id ? venta : v)) : [...antes.ventas, venta],
+      };
+    });
+  }
+
+  /**
+   * Borra una venta.
+   *
+   * TIENE QUE PODERSE. Una venta se registra con el cliente delante y en dos toques: se
+   * equivoca cualquiera. Sin poder borrarla, el único arreglo sería registrar otra al revés,
+   * y el historial acabaría contando una historia que no pasó.
+   */
+  function quitarVenta(id: string) {
+    setDatosNegocio((antes) => ({ ...antes, ventas: antes.ventas.filter((v) => v.id !== id) }));
+  }
+
+  /** Anota plata que entra o sale de la caja del negocio. Crear y editar, otra vez juntos. */
+  function guardarMovimientoNegocio(movimiento: MovimientoNegocio) {
+    setDatosNegocio((antes) => {
+      const yaEstaba = antes.movimientos.some((m) => m.id === movimiento.id);
+      return {
+        ...antes,
+        movimientos: yaEstaba
+          ? antes.movimientos.map((m) => (m.id === movimiento.id ? movimiento : m))
+          : [...antes.movimientos, movimiento],
+      };
+    });
+  }
+
+  function quitarMovimientoNegocio(id: string) {
+    setDatosNegocio((antes) => ({ ...antes, movimientos: antes.movimientos.filter((m) => m.id !== id) }));
+  }
+
   function activarPruebaPremium(): boolean {
     if (pruebaYaUsada(pruebaInicio)) return false;
     const inicio = Date.now();
@@ -1663,6 +1743,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         productos: datosNegocio.productos,
         guardarProducto,
         quitarProducto,
+        ventas: datosNegocio.ventas,
+        guardarVenta,
+        quitarVenta,
+        movimientosNegocio: datosNegocio.movimientos,
+        guardarMovimientoNegocio,
+        quitarMovimientoNegocio,
         setIsPremium,
         isCloudSynced: uid !== null,
         enterDecoyMode,

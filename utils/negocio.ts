@@ -35,7 +35,14 @@ export type Negocio = {
   nombre: string;
   /** Restaurante, bodega, peluquería… Texto libre elegido de una lista. */
   categoria: string;
-  /** El símbolo de la moneda ("S/"). Se guarda por negocio: puede no ser la de la app. */
+  /**
+   * La moneda de ESTE negocio, con el mismo código que usa la app ("PEN").
+   *
+   * Se guarda por negocio porque puede no ser la de la casa: alguien lleva sus cuentas en
+   * soles y cobra en dólares. Se guarda el CÓDIGO y no el símbolo, igual que la moneda de la
+   * app, y el "S/" se saca con currencySymbolFor() al mostrarlo — el código lo entiende un
+   * banco, no quien abre la app.
+   */
   moneda: string;
   activo: boolean;
   /**

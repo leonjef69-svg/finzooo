@@ -2,9 +2,10 @@ import { useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { router } from "expo-router";
-import { Store, Plus, Trash2, Check, X, Package } from "lucide-react-native";
+import { Store, Plus, Trash2, Check, X, Package, ChevronRight } from "lucide-react-native";
 import BackButton from "@/components/BackButton";
 import { CARD_SHADOW } from "@/constants/style";
+import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import { crearNegocio, type Negocio } from "@/utils/negocio";
 
@@ -173,7 +174,13 @@ export default function Negocios({ onBack }: { onBack: () => void }) {
                 className="rounded-2xl p-4 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
                 style={CARD_SHADOW}
               >
-                <View className="flex-row items-center gap-3">
+                {/* TOCAR EL NEGOCIO ABRE SU PANEL, y se ve que se puede tocar por la flecha.
+                    Sin la flecha sería un toque escondido, que es lo que se descartó al
+                    editar categorías: quien no lo sepa no encuentra nunca cómo entrar. */}
+                <TouchableOpacity
+                  onPress={() => router.push(`/negocio/${n.id}`)}
+                  className="flex-row items-center gap-3"
+                >
                   <View className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-slate-800 items-center justify-center">
                     <Store size={17} color="#059669" />
                   </View>
@@ -181,11 +188,14 @@ export default function Negocios({ onBack }: { onBack: () => void }) {
                     <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">
                       {n.nombre}
                     </Text>
+                    {/* EL SÍMBOLO, NO EL CÓDIGO. Aquí se guarda "PEN" y lo que se lee es
+                        "S/": el código lo entiende un banco, no quien abre la app. */}
                     <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                      {t(`negocios.cat.${n.categoria}`)} · {n.moneda}
+                      {t(`negocios.cat.${n.categoria}`)} · {currencySymbolFor(n.moneda)}
                     </Text>
                   </View>
-                </View>
+                  <ChevronRight size={16} color="#94a3b8" />
+                </TouchableOpacity>
 
                 {borrando === n.id ? (
                   /* LA CONFIRMACIÓN, CON LO QUE SE PIERDE DICHO. "Se va a borrar" no informa

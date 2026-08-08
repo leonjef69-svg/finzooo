@@ -254,7 +254,7 @@ paso natural y solo hace falta que baje uno.
 > | | |
 > |---|---|
 > | Pasos 1, 2 y 3 | ✅ Terminados, y **confirmados por él en su celular** el 07/08/2026 |
-> | Paso 4 | ⚠️ **A MEDIAS: solo la parte de datos. AQUÍ SE EMPIEZA** |
+> | Paso 4 | ⚠️ **A MEDIAS. Ya está el panel (8ago-01, publicado). Falta REGISTRAR: la pantalla de venta y la de gasto** |
 > | Paso 5 | Sin empezar |
 >
 > Compila y las **47 pruebas están en verde**, así que se puede seguir sin arreglar nada
@@ -386,19 +386,46 @@ está hecho: las tres piezas de abajo son exactamente eso.
    la clase de promesa vacía que se ha estado limpiando todo el día.
 
    **Lo que FALTA, en orden:**
-   1. Engancharlo al contexto (`contexts/AppDataContext.tsx`): `ventas`, `movimientos`,
-      `guardarVenta`, `quitarVenta`, `guardarMovimientoNegocio`. **Copiar el patrón exacto de
-      `guardarNegocio` y `guardarProducto`, que ya están ahí.**
-   2. `utils/negocioTotales.ts` — las cuentas del panel en funciones puras, para poder
-      comprobarlas con números en las pruebas y no leyendo la pantalla.
+   1. ✅ **Enganchado al contexto** (8ago-01): `ventas`, `guardarVenta`, `quitarVenta`,
+      `movimientosNegocio`, `guardarMovimientoNegocio`, `quitarMovimientoNegocio`, con el
+      patrón exacto de `guardarNegocio` y `guardarProducto`.
+
+      Se llama `movimientosNegocio` y **no** `movimientos`, como estaba escrito aquí: en esta
+      app "movimiento" es lo personal —lo que suma la pantalla de Inicio—, y dos nombres
+      iguales para dos bolsillos distintos es justo el descuido que los mezclaría.
+
+      Y de paso **un fallo que ya estaba**: los movimientos del negocio se guardaban en el
+      estado y **no en el celular**, ni al cambiar ni al bajarlos de la nube. Un gasto anotado
+      habría desaparecido al reiniciar la app, sin ningún error. Tiene sus dos pruebas.
+   2. ✅ **`utils/negocioTotales.ts`** (8ago-01) — las cuentas del panel en funciones puras:
+      `totalesDelNegocio`, `historialDelNegocio` y `horaVisible`. Se comprueban con números.
    3. `screens/NuevaVenta.tsx` — elegir productos activos, cantidad, método de pago, y
       registrar. El total sale de `totalDeLineas()`, nunca escrito a mano.
-   4. `screens/PanelNegocio.tsx` — las cinco líneas que pidió (ventas, ingresos automáticos,
-      gastos, saldo, cantidad de ventas) más el historial, y **con la marca 🏪 en cada fila**
-      para que no se confunda con lo personal.
-   5. Rutas `app/negocio/[id].tsx` (panel) y `app/negocio/venta.tsx`, **con candado Premium**
-      igual que `app/negocio/productos.tsx`.
-   6. Textos en los **tres** idiomas y ampliar `pruebas/verificar-negocio.ts`.
+   4. ✅ **`screens/PanelNegocio.tsx`** (8ago-01) — el saldo arriba, las cuatro líneas de
+      dónde sale (ventas, ingresos automáticos, gastos, y los ingresos a mano **solo si los
+      hay**, para que no exista plata guardada que no salga en ninguna línea), el aviso del
+      doble conteo **siempre visible**, y el historial de ventas y movimientos mezclados, lo
+      último arriba.
+
+      **La marca del negocio en cada fila va con el dibujo de la tienda, no con el emoji 🏪**:
+      los emojis se quitaron de la app entera el 03/08/2026 y volver a meter uno haría que la
+      misma cosa se viera de dos maneras. Hay una prueba que no deja entrar emojis ahí.
+
+      **Es el total de TODO lo registrado, sin cortar por fecha, y se dice en la pantalla.**
+      Los reportes por día y por mes son V2 y no se adelantan.
+   5. Ruta `app/negocio/[id].tsx` (panel) ✅ hecha, con candado Premium; falta
+      `app/negocio/venta.tsx`.
+
+      > **OJO: los tipos de las rutas los genera Expo, y estaban desfasados.** `npx tsc` daba
+      > error en una ruta nueva perfectamente correcta. Se regeneran arrancando el servidor
+      > (`npx expo start`) y dejándolo un minuto: escribe `.expo/types/router.d.ts`. Sin eso,
+      > **cualquier** ruta nueva parece rota.
+   6. Textos en los **tres** idiomas ✅ los del panel; y ampliar `pruebas/verificar-negocio.ts`
+      ✅ (de 47 pruebas siguen siendo 47 archivos, con 40 comprobaciones nuevas dentro).
+
+   **También de paso:** la lista de negocios decía `PEN` donde tenía que decir `S/` — guardaba
+   el código de la moneda y lo enseñaba tal cual. El código lo entiende un banco, no quien abre
+   la app.
 
    > **OJO CON UN DOBLE CONTEO, y hay que decirlo en la pantalla.** En V1 una venta cobrada por
    > Yape puede aparecer **dos veces**: como venta y como ingreso automático. Él lo aceptó — es

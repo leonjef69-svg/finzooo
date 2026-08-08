@@ -19,6 +19,7 @@ import path from "path";
 import {
   borrarNegocio,
   borrarProducto,
+  crearMovimientoNegocio,
   crearNegocio,
   crearProducto,
   crearVenta,
@@ -26,6 +27,7 @@ import {
   totalDeLineas,
   type DatosDelNegocio,
 } from "@/utils/negocio";
+import { historialDelNegocio, horaVisible, totalesDelNegocio } from "@/utils/negocioTotales";
 import { STORAGE_KEYS } from "@/utils/storage";
 
 const RAIZ = process.cwd();
@@ -341,6 +343,211 @@ console.log("\n--- PRODUCTOS: ENGANCHE Y PANTALLA (paso 3) ---");
   for (const clave of ["title", "crear", "precio", "repetido", "borrarAviso", "desactivado", "faltaPrecio"]) {
     const veces = (i18n.match(new RegExp(`"productos\\.${clave}":`, "g")) ?? []).length;
     ok(veces === 3, `"productos.${clave}" esta en los tres idiomas (${veces})`);
+  }
+}
+
+console.log("\n--- LAS CUENTAS DEL PANEL (paso 4) ---");
+{
+  // SON DINERO, ASI QUE SE COMPRUEBAN CON NUMEROS. Escritas dentro de la pantalla, la unica
+  // forma de saber si el saldo esta bien seria abrir la app y mirar. Por eso viven en
+  // utils/negocioTotales.
+  const venta = (id: string, negocioId: string, total: number, fecha: string, hora: string) => ({
+    id,
+    negocioId,
+    fecha,
+    hora,
+    lineas: [{ productoId: "p1", nombre: "Broster", precio: total, cantidad: 1 }],
+    total,
+    metodo: "yape" as const,
+    estado: "pagado" as const,
+  });
+  const mov = (
+    id: string,
+    negocioId: string,
+    tipo: "ingreso" | "gasto",
+    monto: number,
+    origen: "manual" | "automatico",
+    hora = "12:00"
+  ) => ({
+    // El id se pone a mano ENCIMA del que genera crearMovimientoNegocio, para poder nombrar
+    // cada movimiento en las comprobaciones de abajo. Se pasa por la funcion de verdad y no se
+    // escribe el objeto a pelo: asi la prueba se entera si manana cambia lo que guarda.
+    ...crearMovimientoNegocio({
+      negocioId,
+      tipo,
+      monto,
+      metodo: "efectivo",
+      descripcion: "Compra de pollo",
+      fecha: "2026-08-08",
+      hora,
+      origen,
+    }),
+    id,
+  });
+
+  const ventas = [
+    venta("v1", "n1", 35, "2026-08-08", "19:30"),
+    venta("v2", "n1", 15, "2026-08-08", "09:05"),
+    // LA DEL OTRO NEGOCIO. Si aparece en las cuentas de n1, la polleria estaria sumando lo
+    // de la bodega y nadie lo notaria hasta que las cuentas no cuadren.
+    venta("v3", "n2", 999, "2026-08-08", "10:00"),
+  ];
+  const movimientos = [
+    mov("m1", "n1", "gasto", 20, "manual", "08:00"),
+    mov("m2", "n1", "ingreso", 50, "automatico", "20:00"),
+    mov("m3", "n2", "gasto", 777, "manual"),
+  ];
+
+  const tot = totalesDelNegocio("n1", ventas, movimientos);
+  ok(tot.ventas === 50, `las ventas del negocio suman 50 (${tot.ventas})`);
+  ok(tot.cantidadVentas === 2, `y son 2 ventas (${tot.cantidadVentas})`);
+  ok(tot.ingresosAutomaticos === 50, `lo que entro solo suma 50 (${tot.ingresosAutomaticos})`);
+  ok(tot.gastos === 20, `y los gastos 20 (${tot.gastos})`);
+  // EL DOBLE CONTEO DE LA V1, A PROPOSITO Y CON AVISO EN PANTALLA: la venta cobrada por Yape
+  // suma como venta Y como ingreso automatico. Descontarlo a ojo seria adivinar que Yape era
+  // de que venta, que es justo lo que el prohibio hasta la V2.
+  ok(tot.saldo === 80, `el saldo son 50 + 50 - 20 = 80 (${tot.saldo})`);
+  // Y NADA DEL OTRO NEGOCIO se cuela: la venta de 999 y el gasto de 777 no aparecen por
+  // ningun lado.
+  ok(tot.ventas !== 1049 && tot.gastos !== 797, "sin nada del otro negocio");
+
+  // LOS CENTIMOS NO PUEDEN SALIR CON COLA. 0.1 + 0.2 dan 0.30000000000000004 en coma
+  // flotante, y ese numero acaba impreso en un total de dinero.
+  const conColas = totalesDelNegocio(
+    "n1",
+    [venta("v1", "n1", 0.1, "2026-08-08", "10:00"), venta("v2", "n1", 0.2, "2026-08-08", "11:00")],
+    []
+  );
+  ok(conColas.ventas === 0.3, `0.10 + 0.20 son 0.30 (${conColas.ventas})`);
+  ok(conColas.saldo === 0.3, `y el saldo tambien (${conColas.saldo})`);
+
+  // Un negocio sin nada da ceros, no rompe ni deja huecos.
+  const vacio = totalesDelNegocio("n9", ventas, movimientos);
+  ok(vacio.ventas === 0 && vacio.saldo === 0 && vacio.cantidadVentas === 0, "un negocio sin nada da ceros");
+
+  const hist = historialDelNegocio("n1", ventas, movimientos);
+  ok(hist.length === 4, `el historial junta ventas y movimientos (${hist.length})`);
+  // LO ULTIMO ARRIBA, Y ORDENADO POR LA HORA DE LA VENTA y no por cuando se guardo: una venta
+  // que se cobro a las 7 y se anoto a las 9 tiene que caer en su sitio.
+  ok(hist[0].id === "m2", `lo mas nuevo arriba: las 8 p.m. (${hist[0].id})`);
+  ok(hist[hist.length - 1].id === "m1", `y lo mas viejo abajo: las 8 a.m. (${hist[hist.length - 1].id})`);
+  // Y NADA DEL OTRO NEGOCIO tampoco aqui.
+  ok(!hist.some((f) => f.id === "v3" || f.id === "m3"), "y no se cuela nada del otro negocio");
+  ok(hist.find((f) => f.id === "m2")?.automatico === true, "se sabe cual lo registro la app sola");
+  ok(hist.find((f) => f.id === "m1")?.clase === "gasto", "y cual es un gasto");
+
+  // EL DETALLE SALE DE LO COPIADO EN LA VENTA, no de la lista de productos de hoy: si el
+  // Broster sube de 15 a 18 o se borra de la carta, la venta de ayer sigue diciendo lo que se
+  // vendio ayer.
+  const conDosLineas = historialDelNegocio(
+    "n1",
+    [
+      {
+        ...venta("v1", "n1", 35, "2026-08-08", "19:30"),
+        lineas: [
+          { productoId: "p1", nombre: "Broster", precio: 15, cantidad: 2 },
+          { productoId: "p2", nombre: "Gaseosa", precio: 5, cantidad: 1 },
+        ],
+      },
+    ],
+    []
+  );
+  ok(conDosLineas[0].detalle === "2 × Broster · 1 × Gaseosa", `"${conDosLineas[0].detalle}"`);
+
+  // LA HORA SE GUARDA EN 24 Y SE LEE EN 12, y las dos mitades hacen falta: en 24 los textos se
+  // ordenan solos (el historial de arriba depende de eso), y en 12 es como se dice la hora en
+  // Peru — "19:30" obliga a hacer la resta mentalmente.
+  ok(horaVisible("19:30") === "7:30 p.m.", `19:30 se lee 7:30 p.m. (${horaVisible("19:30")})`);
+  ok(horaVisible("09:05") === "9:05 a.m.", `09:05 se lee 9:05 a.m. (${horaVisible("09:05")})`);
+  // La medianoche son las 12 a.m., no las 0 a.m.: eso no lo dice nadie.
+  ok(horaVisible("00:15") === "12:15 a.m.", `00:15 se lee 12:15 a.m. (${horaVisible("00:15")})`);
+  ok(horaVisible("12:00") === "12:00 p.m.", `12:00 se lee 12:00 p.m. (${horaVisible("12:00")})`);
+  // Y una hora dañada se enseña tal cual en vez de tumbar la pantalla: es un dato ya guardado,
+  // asi que reventar aqui reventaria en cada arranque.
+  ok(horaVisible("") === "", "una hora vacia no rompe la pantalla");
+}
+
+console.log("\n--- EL PANEL: ENGANCHE, PANTALLA Y RUTA (paso 4) ---");
+{
+  const ctx = fs.readFileSync(path.join(RAIZ, "contexts/AppDataContext.tsx"), "utf8");
+  ok(/function guardarVenta\(/.test(ctx), "se puede registrar una venta");
+  // UNA VENTA SE TIENE QUE PODER BORRAR: se registra con el cliente delante y en dos toques.
+  // Sin borrarla, el unico arreglo seria registrar otra al reves y el historial contaria una
+  // historia que no paso.
+  ok(/function quitarVenta\(/.test(ctx), "y borrarla");
+  ok(/function guardarMovimientoNegocio\(/.test(ctx), "y anotar plata que entra o sale de la caja");
+  ok(/ventas: datosNegocio\.ventas,/.test(ctx), "la pantalla recibe las ventas");
+  ok(/movimientosNegocio: datosNegocio\.movimientos,/.test(ctx), "y los movimientos del negocio");
+
+  // ESTA FALTABA Y ERA UN FALLO DE VERDAD: los movimientos del negocio se guardaban en el
+  // estado y NO en el celular. Al reiniciar la app, los gastos anotados desaparecian sin dar
+  // ningun error. Es el mismo agujero que tuvieron las categorias propias.
+  ok(
+    /guardarMovimientosNegocio\(datosNegocio\.movimientos\)/.test(ctx),
+    "los movimientos del negocio se guardan en el celular"
+  );
+  ok(
+    /guardarMovimientosNegocio\(negocioDeLaNube\.movimientos\)/.test(ctx),
+    "y lo que baja de la nube tambien se escribe"
+  );
+
+  // Al cerrar sesion tampoco puede quedar nada. Esta clave ya estaba en el borrado desde el
+  // primer commit del Modo Negocio —PASA CONTRA LA VERSION ANTERIOR, y se deja escrita
+  // porque ahora si hay datos que borrar ahi.
+  const almacen = fs.readFileSync(path.join(RAIZ, "utils/storage.ts"), "utf8");
+  const borrado = almacen.slice(almacen.indexOf("clearAccountData"));
+  ok(borrado.includes("STORAGE_KEYS.movimientosNegocio,"), "y se borran al cerrar sesion (ya estaba)");
+
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
+
+  // LAS CUENTAS NO SE ESCRIBEN EN LA PANTALLA. Es EL fallo que mas ha costado en este
+  // proyecto: la misma formula en dos sitios, se cambia una y la otra no, y dos pantallas dan
+  // numeros distintos del mismo mes.
+  ok(/totalesDelNegocio\(negocioId, ventas, movimientosNegocio\)/.test(pant), "el panel pide sus cuentas hechas");
+  ok(/historialDelNegocio\(negocioId, ventas, movimientosNegocio\)/.test(pant), "y el historial tambien");
+  ok(!/\.reduce\(/.test(pant), "y no suma dinero por su cuenta");
+
+  // EL DOBLE CONTEO, DICHO EN LA PANTALLA. Sin el aviso, el saldo parece equivocado — y un
+  // numero de dinero que parece equivocado no se vuelve a mirar.
+  ok(/panel\.avisoDoble/.test(pant), "se avisa de que un Yape puede contarse dos veces");
+
+  // LA MARCA DEL NEGOCIO EN CADA FILA, para que ni una linea se confunda con un movimiento
+  // personal. Con el dibujo de la tienda y no con un emoji: los emojis se quitaron de la app
+  // entera el 03/08/2026 porque la misma cosa se veia de dos maneras.
+  ok(/<Store size=\{10\}/.test(pant), "cada fila lleva la marca del negocio");
+  ok(!/[\u{1F300}-\u{1FAFF}]/u.test(pant), "y ningun emoji, como en el resto de la app");
+
+  // EL SIMBOLO DE LA MONEDA DEL NEGOCIO, no el de la app: el negocio guarda la suya desde el
+  // primer dia porque puede no ser la misma.
+  ok(/currencySymbolFor\(negocio\?\.moneda/.test(pant), "el dinero se escribe con la moneda del negocio");
+
+  // Se puede borrar una fila, y se confirma en la propia fila como en el resto de la app.
+  ok(/borrando === f\.id/.test(pant), "se confirma el borrado en la propia fila");
+
+  // La ruta: con candado, y sin negocio se vuelve en vez de enseñar totales de la nada.
+  const ruta = fs.readFileSync(path.join(RAIZ, "app/negocio/[id].tsx"), "utf8");
+  ok(/if \(!isPremium\)/.test(ruta), "el panel tambien es Premium");
+  ok(/if \(!negocio\)/.test(ruta), "y sin negocio se vuelve");
+
+  // Y SE LLEGA A EL. Una pantalla a la que no se llega no existe para nadie. La flecha esta
+  // ahi para que el toque no sea invisible: el toque escondido ya se descarto al editar
+  // categorias.
+  const lista = fs.readFileSync(path.join(RAIZ, "screens/Negocios.tsx"), "utf8");
+  ok(/router\.push\(`\/negocio\/\$\{n\.id\}`\)/.test(lista), "se entra tocando el negocio");
+  ok(/ChevronRight/.test(lista), "y se ve que se puede tocar");
+
+  // Los textos, en los tres idiomas. Una clave que falte no da error: sale su nombre en
+  // pantalla, que es peor que nada.
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  for (const clave of ["title", "saldo", "ventas", "gastos", "avisoDoble", "historial", "vacioTitulo", "proximoPaso"]) {
+    const veces = (i18n.match(new RegExp(`"panel\\.${clave}":`, "g")) ?? []).length;
+    ok(veces === 3, `"panel.${clave}" esta en los tres idiomas (${veces})`);
+  }
+  // Y los metodos de pago del negocio, todos: uno sin texto saldria como "venta.metodo.plin"
+  // en medio de una fila de dinero.
+  for (const m of ["yape", "plin", "efectivo", "transferencia", "tarjeta", "otro"]) {
+    const veces = (i18n.match(new RegExp(`"venta\\.metodo\\.${m}":`, "g")) ?? []).length;
+    ok(veces === 3, `el metodo ${m} esta traducido (${veces})`);
   }
 }
 
