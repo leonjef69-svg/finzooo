@@ -29,7 +29,14 @@ import {
   type DatosDelNegocio,
 } from "@/utils/negocio";
 import { historialDelNegocio, horaVisible, totalesDelNegocio } from "@/utils/negocioTotales";
+import {
+  fusionarMovimientosNegocio,
+  mandarYapesA,
+  negocioQueRecibeYapes,
+  separarLoDelNegocio,
+} from "@/utils/negocioCaptura";
 import { STORAGE_KEYS } from "@/utils/storage";
+import type { Transaction } from "@/types";
 
 const RAIZ = process.cwd();
 
@@ -699,6 +706,169 @@ console.log("\n--- Y LO PERSONAL SIGUE SIN ENTERARSE DE QUE EXISTE EL NEGOCIO --
   // hacer.
   const inicio = fs.readFileSync(path.join(RAIZ, "screens/Home.tsx"), "utf8");
   ok(!/negocio/i.test(inicio), "la pantalla de Inicio no sabe que existe el negocio (ya estaba)");
+}
+
+console.log("\n--- EL YAPEO QUE ENTRA AL NEGOCIO (paso 5) ---");
+{
+  // ES EL UNICO PASO DE LA V1 QUE TOCA UN CAMINO QUE YA FUNCIONABA: el registro automatico de
+  // yapeos, que es de lo mas probado de la app y de lo que mas ha costado arreglar. Asi que lo
+  // primero que se comprueba no es lo nuevo: es que lo viejo siga igual.
+  const receptor = { ...crearNegocio({ nombre: "Mi Polleria", categoria: "restaurante", moneda: "PEN" }), destinoYapes: "negocio" as const };
+  const apagado = crearNegocio({ nombre: "La Bodega", categoria: "bodega", moneda: "PEN" });
+
+  const entra = (id: number, monto: number): Transaction => ({
+    id,
+    type: "income",
+    amount: monto,
+    category: "otros",
+    date: "2026-08-08",
+    method: "yape",
+    description: "Juan Perez",
+    notes: "",
+    time: "7:30 p.m.",
+    account: "yape",
+    origin: "auto",
+  });
+  const sale = (id: number, monto: number): Transaction => ({ ...entra(id, monto), type: "expense" });
+  // La hora del aviso en milisegundos, que es de donde salen la fecha y la hora del negocio.
+  const avisos = { 1: new Date(2026, 7, 8, 19, 30).getTime(), 2: new Date(2026, 7, 8, 20, 0).getTime() };
+
+  // 1. SIN NEGOCIO QUE RECIBA, NO CAMBIA NADA. Es la linea que protege todo lo demas: con el
+  //    interruptor apagado —que es como esta por defecto— la app se comporta igual que antes
+  //    de que este archivo existiera.
+  const comoSiempre = separarLoDelNegocio([entra(1, 15), sale(2, 8)], avisos, undefined, []);
+  ok(comoSiempre.personales.length === 2, "sin negocio receptor, todo sigue en lo personal");
+  ok(comoSiempre.delNegocio.length === 0, "y no se crea nada en ninguna caja");
+
+  // 2. Y CON UN NEGOCIO QUE NO RECIBE, TAMPOCO. Crear un negocio no puede cambiar donde caian
+  //    los yapeos que ya se registraban bien: destinoYapes nace en "personal".
+  ok(negocioQueRecibeYapes([apagado]) === undefined, "un negocio nuevo NO recibe los yapeos");
+  const conNegocioApagado = separarLoDelNegocio([entra(1, 15)], avisos, negocioQueRecibeYapes([apagado]), []);
+  ok(conNegocioApagado.personales.length === 1, "con el interruptor apagado, el yapeo sigue siendo personal");
+
+  // 3. ENCENDIDO: lo que ENTRA va al negocio y lo que SALE se queda en lo personal. Un yapeo
+  //    que TU pagas lo pagaste con tu plata; mandarlo a la caja meteria tu almuerzo entre los
+  //    gastos del local.
+  const repartido = separarLoDelNegocio([entra(1, 15), sale(2, 8)], avisos, receptor, []);
+  ok(repartido.delNegocio.length === 1, `entra uno a la caja (${repartido.delNegocio.length})`);
+  ok(repartido.delNegocio[0].monto === 15, "con su monto");
+  ok(repartido.delNegocio[0].tipo === "ingreso", "como ingreso");
+  ok(repartido.delNegocio[0].origen === "automatico", "y marcado como automatico, no a mano");
+  ok(repartido.delNegocio[0].metodo === "yape", "cobrado por Yape");
+  ok(repartido.delNegocio[0].negocioId === receptor.id, "y en el negocio que recibe");
+  ok(repartido.personales.length === 1 && repartido.personales[0].type === "expense", "lo que TU pagas sigue siendo personal");
+
+  // LA FECHA Y LA HORA SON LAS DEL AVISO, no las de ahora: si la app estuvo dos dias sin
+  // abrirse, el yapeo es del dia que llego. Y en formato "HH:MM", para que el historial se
+  // ordene solo.
+  ok(repartido.delNegocio[0].fecha === "2026-08-08", `la fecha es la del aviso (${repartido.delNegocio[0].fecha})`);
+  ok(repartido.delNegocio[0].hora === "19:30", `y la hora tambien (${repartido.delNegocio[0].hora})`);
+
+  // 4. NO SE REGISTRA DOS VECES EL MISMO YAPEO. Para eso existe avisoId desde el primer
+  //    commit del Modo Negocio. Un ingreso duplicado en una caja no se ve: solo infla el saldo.
+  ok(!!repartido.delNegocio[0].avisoId, "el movimiento queda marcado con su aviso");
+  const otraVez = separarLoDelNegocio([entra(1, 15)], avisos, receptor, repartido.delNegocio);
+  ok(otraVez.delNegocio.length === 0, "el mismo yapeo no entra dos veces");
+  // Y TAMPOCO CAE EN LO PERSONAL al descartarlo: ya esta registrado, en la caja.
+  ok(otraVez.personales.length === 0, "y al descartarlo no se cuela en lo personal");
+
+  // 5. SIN LA MARCA DEL AVISO SE QUEDA EN PERSONAL, que es donde estaria hoy. Meterlo en la
+  //    caja sin poder marcarlo lo dejaria expuesto a entrar otra vez manana.
+  const sinMarca = separarLoDelNegocio([entra(9, 15)], {}, receptor, []);
+  ok(sinMarca.personales.length === 1 && sinMarca.delNegocio.length === 0, "sin marca de aviso se queda en personal");
+
+  // 6. SOLO UN NEGOCIO PUEDE RECIBIR. Con dos, el mismo yapeo tendria dos destinos posibles y
+  //    la respuesta dependeria del orden de la lista, o sea del azar.
+  const dos = mandarYapesA([receptor, apagado], apagado.id, true);
+  ok(dos.filter((n) => n.destinoYapes === "negocio").length === 1, "encender uno apaga los demas");
+  ok(dos.find((n) => n.id === apagado.id)?.destinoYapes === "negocio", "y queda encendido el que se toco");
+  // Apagar el suyo no toca a nadie mas.
+  const ninguno = mandarYapesA(dos, apagado.id, false);
+  ok(ninguno.every((n) => n.destinoYapes === "personal"), "y apagarlo los deja a todos en personal");
+
+  // 7. UN NEGOCIO CERRADO NO RECIBE NADA.
+  ok(negocioQueRecibeYapes([{ ...receptor, activo: false }]) === undefined, "un negocio inactivo no recibe yapeos");
+
+  // 8. LA CAPTURA DEVUELVE DE QUE AVISO VINO CADA MOVIMIENTO. Sin eso no hay marca, y sin
+  //    marca no hay forma de evitar el duplicado. Se comprueba en el archivo porque montar una
+  //    notificacion de verdad aqui seria copiar medio parser.
+  const captura = fs.readFileSync(path.join(RAIZ, "utils/autoCapture.ts"), "utf8");
+  ok(/avisoDe\[id\] = n\.postedAt/.test(captura), "la captura apunta de que aviso vino cada movimiento");
+  ok(/return \{ toAdd, log: log\.slice\(-MAX_LOG\), avisoDe \}/.test(captura), "y lo devuelve");
+  // Y LA CAPTURA SIGUE SIN SABER QUE EXISTEN LOS NEGOCIOS: la marca del aviso va como un dato
+  // aparte, no como un campo del movimiento personal, y el reparto ocurre DESPUES, fuera.
+  //
+  // Se mira que no IMPORTE nada del negocio, no que no aparezca la palabra: la palabra sale en
+  // los comentarios que explican por que la marca existe, y esos comentarios son justo lo que
+  // hay que conservar. Una prueba que prohibiera nombrarlo obligaria a borrar la explicacion.
+  ok(!/from "@\/utils\/negocio/.test(captura), "y la captura no importa nada del negocio");
+
+  // 9. EL ENGANCHE EN EL CONTEXTO, que es donde se reparte de verdad.
+  const ctx = fs.readFileSync(path.join(RAIZ, "contexts/AppDataContext.tsx"), "utf8");
+  ok(/separarLoDelNegocio\(\s*toAdd,/.test(ctx), "al recoger un yapeo se reparte");
+  ok(/setTransactions\(\(prev\) => \[\.\.\.personales, \.\.\.prev\]\)/.test(ctx), "lo personal va a los movimientos de siempre");
+  ok(/movimientos: \[\.\.\.antes\.movimientos, \.\.\.delNegocio\]/.test(ctx), "y lo del negocio a su caja");
+  // EL NEGOCIO TIENE QUE IR EN captureInputs. La recogida corre desde un escuchador montado
+  // una vez: leyendo el estado ahi dentro, un yapeo acabaria en el bolsillo que estaba elegido
+  // al abrir la app y no en el de ahora.
+  ok(/captureInputs\.current = \{ transactions, merchantLearned, t, negocio: datosNegocio \}/.test(ctx), "y se usa el negocio de AHORA, no el de al abrir la app");
+
+  // 10. EL INTERRUPTOR, EN EL PANEL Y NO ESCONDIDO. Es lo que decide donde cae tu plata todos
+  //     los dias: en "editar el negocio" no lo encontraria nadie.
+  const panel = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
+  ok(/mandarYapesAlNegocio\(negocioId, v\)/.test(panel), "el interruptor esta en el panel");
+  ok(/panel\.yapesExplicacion/.test(panel), "y se explica que hace");
+  // Si otro negocio los estaba recibiendo, se dice ANTES de quitarselos.
+  ok(/panel\.yapesOtroNegocio/.test(panel), "y se avisa si se los quitas a otro negocio");
+
+  // 11. EL AGUJERO GORDO DE ESTE PASO: LA APP CERRADA.
+  //
+  // Hay DOS caminos que registran un yapeo. El del contexto corre con Finzo abierta; el de
+  // utils/capturaEnFondo corre con la app CERRADA, despertado por Android, y escribe directo
+  // en el disco. Sin repartir tambien ahi, encender "los yapeos entran a mi negocio" habria
+  // funcionado solo con la app abierta — y con la app cerrada, que es cuando mas yapeos
+  // llegan, la plata del negocio habria seguido cayendo en las cuentas de casa. Sin ningun
+  // error: solo cuentas que no cuadran.
+  const fondo = fs.readFileSync(path.join(RAIZ, "utils/capturaEnFondo.ts"), "utf8");
+  ok(/separarLoDelNegocio\(/.test(fondo), "con la app CERRADA tambien se reparte");
+  ok(/negocioQueRecibeYapes\(/.test(fondo), "y se lee que negocio recibe");
+  ok(/loadJSON<MovimientoNegocio\[\]>\(STORAGE_KEYS\.movimientosNegocio/.test(fondo), "leyendo la caja del disco, que es lo unico que hay con la app cerrada");
+  ok(/saveJSON\(STORAGE_KEYS\.movimientosNegocio, \[\.\.\.caja, \.\.\.delNegocio\]\)/.test(fondo), "y lo del negocio se escribe en su caja");
+  ok(/mergeTransactions\(personales, guardadas\)/.test(fondo), "y en los movimientos personales solo va lo personal");
+
+  // 12. Y LA OTRA MITAD: que la app no PISE lo que se escribio con ella cerrada.
+  //
+  // Es el mismo fallo que ya tuvieron los movimientos y el registro de avisos: la app guarda
+  // la lista entera cada vez que cambia algo, asi que vuelve con su lista vieja en memoria y
+  // el siguiente guardado se lleva por delante el yapeo que entro por fuera.
+  const enMemoria = [crearMovimientoNegocio({ negocioId: "n1", tipo: "gasto", monto: 10, metodo: "efectivo", descripcion: "Gas", fecha: "2026-08-08", hora: "08:00" })];
+  const delDisco = [...enMemoria, crearMovimientoNegocio({ negocioId: "n1", tipo: "ingreso", monto: 15, metodo: "yape", descripcion: "Juan", fecha: "2026-08-08", hora: "19:30", origen: "automatico", avisoId: "aviso_1" })];
+  const juntos = fusionarMovimientosNegocio(enMemoria, delDisco);
+  ok(juntos.length === 2, `se queda con lo de los dos lados (${juntos.length})`);
+  ok(juntos.some((m) => m.avisoId === "aviso_1"), "y no se pierde el yapeo que entro con la app cerrada");
+  // NO DUPLICA lo que ya estaba en los dos sitios.
+  ok(juntos.filter((m) => m.id === enMemoria[0].id).length === 1, "sin duplicar lo que ya estaba");
+  // Y DEVUELVE LA MISMA LISTA si no hay nada nuevo: esto corre cada ocho segundos, y una lista
+  // nueva cada vez volveria a guardar y a SUBIR A LA NUBE el negocio entero sin motivo.
+  ok(fusionarMovimientosNegocio(enMemoria, enMemoria) === enMemoria, "y si no hay nada nuevo devuelve la misma lista, sin repintar ni subir nada");
+
+  const ctxFusion = fs.readFileSync(path.join(RAIZ, "contexts/AppDataContext.tsx"), "utf8");
+  ok(/fusionarMovimientosNegocio\(antes\.movimientos, cajaDelDisco\)/.test(ctxFusion), "y la app junta la caja del disco al recoger");
+  // Y AL REPARTIR SE MIRAN LAS DOS: la de memoria y la que se acaba de leer del disco. El
+  // estado no esta listo hasta el siguiente dibujo, asi que un yapeo que el trabajo de fondo
+  // acabara de anotar volveria a entrar si solo se mirara el estado.
+  ok(
+    /fusionarMovimientosNegocio\(datosDelNegocio\.movimientos, cajaDelDisco\)/.test(ctxFusion),
+    "y no se registra dos veces uno que el trabajo de fondo acabe de anotar"
+  );
+
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  for (const clave of ["yapesTitulo", "yapesAqui", "yapesPersonal", "yapesExplicacion", "yapesOtroNegocio", "yapesActivado"]) {
+    const veces = (i18n.match(new RegExp(`"panel\\.${clave}":`, "g")) ?? []).length;
+    ok(veces === 3, `"panel.${clave}" esta en los tres idiomas (${veces})`);
+  }
+  const avisoNegocio = (i18n.match(/"autoCapture\.toastNegocio":/g) ?? []).length;
+  ok(avisoNegocio === 3, `el aviso de "entro a tu negocio" esta en los tres idiomas (${avisoNegocio})`);
 }
 
 console.log(fallos === 0 ? "\nTodo bien: los cimientos del Modo Negocio\n" : `\n${fallos} fallos\n`);

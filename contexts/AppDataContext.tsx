@@ -43,6 +43,12 @@ import {
   type Venta,
 } from "@/utils/negocio";
 import { bajarNegocio, subirNegocio } from "@/utils/cloudNegocio";
+import {
+  fusionarMovimientosNegocio,
+  mandarYapesA,
+  negocioQueRecibeYapes,
+  separarLoDelNegocio,
+} from "@/utils/negocioCaptura";
 import { activate as activateDecoy, deactivate as deactivateDecoy } from "@/utils/decoyMode";
 // setOverrides y setPropias ya no se usan aqui: al traer los datos de la nube se
 // llama a saveOverrides y savePropias, que ponen la variable de modulo Y escriben
@@ -251,6 +257,13 @@ type AppDataContextValue = {
   guardarNegocio: (negocio: Negocio) => void;
   /** Borra el negocio Y TODO LO SUYO: sus productos y sus ventas. */
   quitarNegocio: (id: string) => void;
+  /**
+   * Manda los yapeos que ENTREN a la caja de este negocio, o los devuelve a lo personal.
+   *
+   * Encender uno apaga los demás: con dos negocios recibiendo, el mismo yapeo tendría dos
+   * destinos y la respuesta dependería del orden de la lista.
+   */
+  mandarYapesAlNegocio: (id: string, activar: boolean) => void;
   /**
    * Los productos de TODOS los negocios. Cada pantalla filtra por el suyo.
    *
@@ -931,9 +944,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // este proyecto usa el compilador de React: si se escribiera al dibujar,
   // el compilador podría saltarse ese paso y la recogida acabaría usando
   // una lista de movimientos vieja (y registrando repetidos).
-  const captureInputs = useRef({ transactions, merchantLearned, t });
+  //
+  // EL NEGOCIO TAMBIÉN VA AQUÍ, y no leído del estado dentro de la recogida: la recogida
+  // corre desde un escuchador y desde un temporizador que se montan una vez, así que ahí
+  // dentro el estado sería el de cuando se montaron. Un yapeo habría acabado en el bolsillo
+  // que estaba elegido al abrir la app, no en el de ahora.
+  const captureInputs = useRef({ transactions, merchantLearned, t, negocio: datosNegocio });
   useEffect(() => {
-    captureInputs.current = { transactions, merchantLearned, t };
+    captureInputs.current = { transactions, merchantLearned, t, negocio: datosNegocio };
   });
   // Evita que dos recogidas se pisen (abrir la app y volver al frente casi
   // a la vez): sin esto, las dos vaciarían el buzón y se duplicaría todo.
@@ -991,15 +1009,35 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (Array.isArray(registro)) {
           setAutoCaptureLog((memoria) => mergeCaptureLog(memoria, registro));
         }
+        // Y LA CAJA DEL NEGOCIO, POR LO MISMO. Desde el paso 5, el trabajo de fondo también
+        // escribe ahí: un yapeo que entra al negocio con la app cerrada quedaría en el disco,
+        // y el siguiente guardado de la app —que tiene su lista de memoria vieja— lo pisaría.
+        const caja = await loadJSON<MovimientoNegocio[]>(STORAGE_KEYS.movimientosNegocio, []);
+        const cajaDelDisco = Array.isArray(caja) ? caja : [];
+        if (cajaDelDisco.length > 0) {
+          setDatosNegocio((antes) => {
+            const juntos = fusionarMovimientosNegocio(antes.movimientos, cajaDelDisco);
+            // La misma referencia si no hay nada nuevo: esto corre cada ocho segundos, y un
+            // objeto nuevo cada vez volvería a guardar y a subir el negocio entero sin motivo.
+            return juntos === antes.movimientos ? antes : { ...antes, movimientos: juntos };
+          });
+        }
+        // SE DEVUELVE, ADEMÁS DE GUARDARSE. Lo de arriba entra en el estado, y el estado no
+        // está listo hasta el siguiente dibujo — pero el reparto de un yapeo ocurre en esta
+        // misma pasada y necesita saber qué hay YA en la caja para no registrarlo dos veces.
+        // Con la lista del estado, un yapeo que el trabajo de fondo acabara de anotar podría
+        // volver a entrar. Un ingreso duplicado en una caja no se ve: solo infla el saldo.
+        return cajaDelDisco;
       } catch {
         // Si no se puede leer, se sigue con lo que hay en memoria. Nunca se
         // borra nada por no haber podido leer.
       }
+      return [] as MovimientoNegocio[];
     }
 
     async function collect() {
       // Antes que nada, recoger lo que se haya escrito por fuera.
-      await recogerDelDisco();
+      const cajaDelDisco = await recogerDelDisco();
 
       if (captureBusy.current) return;
       // El permiso de Android se puede quitar desde los ajustes del sistema
@@ -1018,16 +1056,50 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         const captured = [...aMedias, ...delBuzon];
         if (captured.length === 0) return;
 
-        const { transactions: current, merchantLearned: learned, t: translate } = captureInputs.current;
-        const { toAdd, log } = processCaptured(captured, current, learned, translate);
+        const {
+          transactions: current,
+          merchantLearned: learned,
+          t: translate,
+          negocio: datosDelNegocio,
+        } = captureInputs.current;
+        const { toAdd, log, avisoDe } = processCaptured(captured, current, learned, translate);
+
+        /**
+         * Y AQUÍ SE REPARTE: qué se queda en lo personal y qué entra a la caja del negocio.
+         *
+         * Va DESPUÉS de processCaptured y no dentro: el camino personal —entender el aviso,
+         * descartar repetidos, dejar el registro— sigue haciendo exactamente lo de siempre.
+         * Y si no hay ningún negocio recibiendo yapeos, que es como está por defecto,
+         * separarLoDelNegocio devuelve la lista tal cual entró.
+         */
+        const receptor = negocioQueRecibeYapes(datosDelNegocio.negocios);
+        const { personales, delNegocio } = separarLoDelNegocio(
+          toAdd,
+          avisoDe,
+          receptor,
+          // LA CAJA DE MEMORIA **Y** LA DEL DISCO. Un yapeo que el trabajo de fondo acabara de
+          // anotar está en el disco y todavía no en el estado, y sin juntarlas volvería a
+          // entrar. Ver recogerDelDisco.
+          fusionarMovimientosNegocio(datosDelNegocio.movimientos, cajaDelDisco)
+        );
 
         limpiarPendientes();
         setAutoCaptureLog((prev) => [...prev, ...log].slice(-40));
-        if (toAdd.length > 0) {
-          setTransactions((prev) => [...toAdd, ...prev]);
+        if (personales.length > 0) {
+          setTransactions((prev) => [...personales, ...prev]);
+        }
+        if (delNegocio.length > 0) {
+          setDatosNegocio((antes) => ({ ...antes, movimientos: [...antes.movimientos, ...delNegocio] }));
+        }
+        // UN SOLO AVISO, Y DICE A DÓNDE FUE. Con dos mensajes seguidos —uno por cada
+        // bolsillo— el segundo pisa al primero y no se llega a leer ninguno. Y si no se
+        // dijera a dónde fue, un yapeo que "desaparece" de Inicio parecería un fallo.
+        if (delNegocio.length > 0) {
+          showToast(translate("autoCapture.toastNegocio", { count: delNegocio.length }));
+        } else if (personales.length > 0) {
           showToast(
-            translate(toAdd.length > 1 ? "autoCapture.toastPlural" : "autoCapture.toast", {
-              count: toAdd.length,
+            translate(personales.length > 1 ? "autoCapture.toastPlural" : "autoCapture.toast", {
+              count: personales.length,
             })
           );
         }
@@ -1449,6 +1521,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   /**
+   * A qué bolsillo van los yapeos que entren: a este negocio o a lo personal.
+   *
+   * La cuenta de "solo uno puede recibir" la hace utils/negocioCaptura, no esta función: así
+   * se puede comprobar con una lista de negocios en las pruebas, sin dibujar nada.
+   */
+  function mandarYapesAlNegocio(id: string, activar: boolean) {
+    setDatosNegocio((antes) => ({ ...antes, negocios: mandarYapesA(antes.negocios, id, activar) }));
+  }
+
+  /**
    * Guarda un producto: lo crea si es nuevo, lo reemplaza si ya estaba.
    *
    * Uno solo para las dos cosas, por lo mismo que en guardarNegocio: con "crear" y "editar"
@@ -1740,6 +1822,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         negocios: datosNegocio.negocios,
         guardarNegocio,
         quitarNegocio,
+        mandarYapesAlNegocio,
         productos: datosNegocio.productos,
         guardarProducto,
         quitarProducto,

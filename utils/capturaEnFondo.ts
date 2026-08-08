@@ -1,6 +1,8 @@
 import { flushPendingSaves, loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
 import { mergeTransactions } from "@/utils/mergeTransactions";
+import { negocioQueRecibeYapes, separarLoDelNegocio } from "@/utils/negocioCaptura";
+import type { MovimientoNegocio, Negocio } from "@/utils/negocio";
 import { reserveIdsAbove } from "@/utils/id";
 import * as notificationReader from "@/modules/notification-reader";
 import { translations } from "@/constants/i18n";
@@ -81,11 +83,21 @@ export async function capturarEnFondo(): Promise<number> {
   // ahi la proxima vez que se abre.
   await guardarPendientes(captured);
 
-  const [guardadas, learned, logPrevio, perfil] = await Promise.all([
+  const [guardadas, learned, logPrevio, perfil, negocios, cajaGuardada] = await Promise.all([
     loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []),
     loadJSON<Record<string, string>>(STORAGE_KEYS.merchantLearned, {}),
     loadJSON<CaptureLogEntry[]>(STORAGE_KEYS.autoCaptureLog, []),
     loadJSON<Partial<Profile>>(STORAGE_KEYS.profile, {}),
+    // EL NEGOCIO TAMBIÉN SE LEE AQUÍ, y esto era el agujero del paso 5.
+    //
+    // Este trabajo corre con la app CERRADA, así que no pasa por el reparto que hace el
+    // contexto: sin estas dos líneas, encender "los yapeos entran a mi negocio" habría
+    // funcionado solo con Finzo abierta, y con la app cerrada —que es cuando más yapeos
+    // llegan— la plata del negocio habría seguido cayendo en las cuentas de casa.
+    //
+    // No habría dado ningún error. Habría dado cuentas que no cuadran.
+    loadJSON<Negocio[]>(STORAGE_KEYS.negocios, []),
+    loadJSON<MovimientoNegocio[]>(STORAGE_KEYS.movimientosNegocio, []),
   ]);
 
   // Los identificadores nuevos tienen que ir por encima de los que ya
@@ -100,14 +112,30 @@ export async function capturarEnFondo(): Promise<number> {
   const textos = (translations as Record<string, Record<string, string>>)[idioma] ?? {};
   const traducir = (clave: string) => textos[clave] ?? clave;
 
-  const { toAdd, log } = processCaptured(captured, guardadas, learned, traducir);
+  const { toAdd, log, avisoDe } = processCaptured(captured, guardadas, learned, traducir);
+
+  // Y EL REPARTO, EL MISMO QUE HACE LA APP ABIERTA. Es la misma función a propósito: dos
+  // repartos escritos aparte acabarían decidiendo distinto, y entonces dónde cae tu plata
+  // dependería de si tenías Finzo abierta o no.
+  const caja = Array.isArray(cajaGuardada) ? cajaGuardada : [];
+  const { personales, delNegocio } = separarLoDelNegocio(
+    toAdd,
+    avisoDe,
+    negocioQueRecibeYapes(Array.isArray(negocios) ? negocios : []),
+    caja
+  );
 
   // El registro de lo visto se guarda siempre, aunque no se añada nada: es lo
   // que permite saber después por qué un Yape no entró.
   saveJSON(STORAGE_KEYS.autoCaptureLog, [...logPrevio, ...log].slice(-40));
 
-  if (toAdd.length > 0) {
-    saveJSON(STORAGE_KEYS.transactions, mergeTransactions(toAdd, guardadas));
+  if (personales.length > 0) {
+    saveJSON(STORAGE_KEYS.transactions, mergeTransactions(personales, guardadas));
+  }
+  if (delNegocio.length > 0) {
+    // Se escribe sobre lo que se acaba de leer del disco, no sobre una lista de memoria: aquí
+    // no hay app viva que tenga una lista. Ver la explicación de arriba del archivo.
+    saveJSON(STORAGE_KEYS.movimientosNegocio, [...caja, ...delNegocio]);
   }
 
   // ESTO NO SE PUEDE OLVIDAR. saveJSON no escribe al instante: deja el dato
@@ -122,5 +150,5 @@ export async function capturarEnFondo(): Promise<number> {
   // en cola y lo escribe un momento despues. Aqui no hay ese "momento
   // despues" — Android mata el proceso al terminar.
   await flushPendingSaves();
-  return toAdd.length;
+  return personales.length + delNegocio.length;
 }

@@ -56,6 +56,7 @@ qué está corriendo el celular.
 
 | Código | Qué se arregló |
 |---|---|
+| `8ago-04` | El yapeo que recibes entra solo a la caja del negocio, con su interruptor. **Cierra la V1 del Modo Negocio** |
 | `8ago-03` | Anotar gastos e ingresos en la caja del negocio. **Cierra el paso 4 del Modo Negocio** |
 | `8ago-02` | Registrar ventas del negocio: tocar productos, cantidad y cómo pagaron |
 | `8ago-01` | El panel del negocio: saldo, ventas, gastos e historial |

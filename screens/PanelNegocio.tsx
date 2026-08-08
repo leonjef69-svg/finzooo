@@ -15,6 +15,7 @@ import {
   Zap,
 } from "lucide-react-native";
 import BackButton from "@/components/BackButton";
+import Toggle from "@/components/Toggle";
 import { CARD_SHADOW } from "@/constants/style";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -50,11 +51,17 @@ export default function PanelNegocio({
     movimientosNegocio,
     quitarVenta,
     quitarMovimientoNegocio,
+    mandarYapesAlNegocio,
     showToast,
   } = useAppData();
   const insets = useSafeAreaInsets();
 
   const negocio = negocios.find((n) => n.id === negocioId);
+
+  /** ¿Los yapeos que entren caen en este negocio? */
+  const recibeYapes = negocio?.activo === true && negocio.destinoYapes === "negocio";
+  /** Y si no, ¿los está recibiendo OTRO negocio? Hay que decirlo antes de quitárselos. */
+  const otroRecibe = negocios.find((n) => n.id !== negocioId && n.activo && n.destinoYapes === "negocio");
 
   /**
    * EL DINERO SE ESCRIBE CON LA MONEDA DEL NEGOCIO, no con la de la app.
@@ -207,6 +214,48 @@ export default function PanelNegocio({
               {t("negocios.productos")}
             </Text>
           </TouchableOpacity>
+        </View>
+
+        {/* A QUÉ BOLSILLO VAN LOS YAPEOS QUE ENTREN.
+            Va en el panel y no escondido en "editar el negocio": es lo que cambia dónde cae
+            tu plata todos los días, y una decisión así no puede estar donde no se ve. Empieza
+            APAGADO: crear un negocio no cambia dónde caían los yapeos que ya se registraban
+            bien. */}
+        <View
+          className="rounded-2xl p-4 mt-6 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+          style={CARD_SHADOW}
+        >
+          <View className="flex-row items-center gap-3">
+            <View className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-slate-800 items-center justify-center">
+              <Zap size={17} color="#059669" />
+            </View>
+            <View className="flex-1">
+              <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                {t("panel.yapesTitulo")}
+              </Text>
+              <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                {recibeYapes ? t("panel.yapesAqui") : t("panel.yapesPersonal")}
+              </Text>
+            </View>
+            <Toggle
+              on={recibeYapes}
+              onChange={(v: boolean) => {
+                mandarYapesAlNegocio(negocioId, v);
+                showToast(v ? t("panel.yapesActivado") : t("panel.yapesDesactivado"));
+              }}
+            />
+          </View>
+          <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-400 mt-3">
+            {t("panel.yapesExplicacion")}
+          </Text>
+          {/* SI OTRO NEGOCIO LOS ESTABA RECIBIENDO, HAY QUE DECIRLO ANTES de que se los quite
+              sin avisar. Solo uno puede recibir: con dos, el mismo yapeo tendría dos destinos
+              posibles. */}
+          {!recibeYapes && otroRecibe && (
+            <Text className="text-[11px] leading-5 text-amber-700 dark:text-amber-400 mt-2">
+              {t("panel.yapesOtroNegocio", { nombre: otroRecibe.nombre })}
+            </Text>
+          )}
         </View>
 
         {/* EL HISTORIAL. */}

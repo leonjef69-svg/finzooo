@@ -35,6 +35,17 @@ export type CaptureLogEntry = {
 export type CaptureResult = {
   toAdd: Transaction[];
   log: CaptureLogEntry[];
+  /**
+   * DE QUÉ AVISO VINO CADA MOVIMIENTO: su identificador, y la hora exacta del aviso.
+   *
+   * Se añadió para el Modo Negocio (paso 5): un yapeo que entra a la caja de un negocio se
+   * marca con su aviso para no registrarlo dos veces, y esa marca solo se puede sacar aquí,
+   * que es donde todavía se tiene la notificación delante.
+   *
+   * Va como un dato aparte y NO como un campo del movimiento: el movimiento personal no sabe
+   * que existen los negocios, y esa es la decisión de arquitectura de toda la función.
+   */
+  avisoDe: Record<number, number>;
 };
 
 // Cuántas notificaciones recordamos en el diagnóstico.
@@ -55,6 +66,8 @@ export function processCaptured(
 ): CaptureResult {
   const toAdd: Transaction[] = [];
   const log: CaptureLogEntry[] = [];
+  // De qué aviso salió cada movimiento. Ver CaptureResult.
+  const avisoDe: Record<number, number> = {};
 
   // Un movimiento tuyo no puede ser el "ya registrado" de dos avisos a la
   // vez; si no, dos Yapes iguales el mismo día se descartarían los dos.
@@ -123,8 +136,10 @@ export function processCaptured(
       continue;
     }
 
+    const id = nextId();
+    avisoDe[id] = n.postedAt;
     toAdd.push({
-      id: nextId(),
+      id,
       type: raw.type,
       amount: raw.amount,
       category: suggestCategory(raw.merchant || raw.description, raw.type, merchantLearned),
@@ -143,5 +158,5 @@ export function processCaptured(
     log.push({ at: n.postedAt, text: preview, result: "added", amount: raw.amount });
   }
 
-  return { toAdd, log: log.slice(-MAX_LOG) };
+  return { toAdd, log: log.slice(-MAX_LOG), avisoDe };
 }

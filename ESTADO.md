@@ -244,9 +244,9 @@ con este archivo, cuyas letras raras caen en parte dentro del ASCII.
 **Sigue sin probarse: que un CSV o un Excel real de su banco SÍ se importe.** Es el siguiente
 paso natural y solo hace falta que baje uno.
 
-## MODO NEGOCIO — V1 EN CURSO (07/08/2026)
+## MODO NEGOCIO — V1 COMPLETA, SIN PROBAR EN EL CELULAR (08/08/2026)
 
-> ## 👉 EMPIEZA POR EL PASO 5
+> ## 👉 LO SIGUIENTE ES QUE ÉL LA PRUEBE, NO ESCRIBIR MÁS CÓDIGO
 >
 > **De qué trata esto:** separar la plata del negocio de la personal, para que un Yape de un
 > cliente y uno de un familiar no acaben en el mismo bolsillo. Él tiene una pollería.
@@ -254,14 +254,17 @@ paso natural y solo hace falta que baje uno.
 > | | |
 > |---|---|
 > | Pasos 1, 2 y 3 | ✅ Terminados, y **confirmados por él en su celular** el 07/08/2026 |
-> | Paso 4 | ✅ **Hecho y publicado el 08/08/2026** (8ago-01, 8ago-02, 8ago-03). **Falta que él lo pruebe en el celular** |
-> | Paso 5 | ⏳ **AQUÍ SE EMPIEZA.** El Yape que entra directo a la caja del negocio |
+> | Paso 4 | ✅ **Hecho y publicado el 08/08/2026** (8ago-01, 8ago-02, 8ago-03) |
+> | Paso 5 | ✅ **Hecho y publicado** (8ago-04). Con esto **la V1 está completa** |
+>
+> **LO ÚNICO QUE FALTA ES QUE ÉL LA PRUEBE EN EL CELULAR**, y hasta que lo diga no se empieza
+> la V2. De los pasos 4 y 5 hay pruebas en verde y **ninguna confirmación suya**.
 >
 > Compila y las **47 pruebas están en verde**, así que se puede seguir sin arreglar nada
 > primero. Lo que tiene cada paso está detallado en **"Pasos"**, al final de esta sección, con
 > los archivos concretos y en orden.
 >
-> Última entrega publicada: **8ago-03**.
+> Última entrega publicada: **8ago-04**.
 >
 > **"Confirmado en su celular" no es lo mismo que "las pruebas pasan"**, y en este proyecto la
 > diferencia ha costado días: se han entregado cosas con las pruebas en verde que en el celular
@@ -465,18 +468,52 @@ está hecho: las tres piezas de abajo son exactamente eso.
    > lo que se vincula en V2 — pero el panel tiene que advertirlo, o los números parecerán
    > equivocados.
 
-5. ⏳ **Captura automática al negocio.** Lo único que queda de la V1.
+5. ✅ **Captura automática al negocio (8ago-04, 08/08/2026).** Con esto **la V1 está completa**
+   — a falta de que él la pruebe en el celular.
 
-   El historial propio **ya está hecho** (es el del panel, paso 4), así que lo que falta es
-   solo el enganche: que un yapeo capturado, cuando `destinoYapes` esté en `"negocio"`, caiga
-   en la caja del negocio con `origen: "automatico"` y su `avisoId`, en vez de en los
-   movimientos personales. Y el interruptor para elegirlo, que hoy no existe en ninguna
-   pantalla.
+   Un yapeo que ENTRA cae en la caja del negocio con `origen: "automatico"` y su `avisoId`, en
+   vez de en los movimientos personales. Toda la decisión vive en `utils/negocioCaptura.ts`,
+   fuera del camino personal: `utils/autoCapture.ts` sigue haciendo exactamente lo de siempre
+   y el reparto ocurre **después**, con lo que ya decidió.
 
-   > **Es lo único de la V1 que puede ROMPER algo que ya funciona**, y por eso conviene tratarlo
-   > distinto de los cuatro pasos anteriores: toca el camino de la captura de Yape, que es de lo
-   > más probado de la app y de lo que más ha costado (ver la voz, el espacio duro, los avisos
-   > repetidos). Los pasos 1 a 4 no tocaron ni una línea de lo personal; este sí.
+   **Lo que hay que saber para no deshacerlo sin querer:**
+
+   - **Sin negocio receptor, `separarLoDelNegocio` devuelve la lista tal cual entró.** Esa
+     línea es la que hace que, con el interruptor apagado —como está por defecto—, la app se
+     comporte igual que antes de que el archivo existiera.
+   - **Solo lo que ENTRA.** Un yapeo que él paga es suyo: mandarlo a la caja metería su
+     almuerzo entre los gastos del local.
+   - **Solo UN negocio puede recibir.** Con dos, el mismo yapeo tendría dos destinos y la
+     respuesta dependería del orden de la lista. La regla se aplica al **cambiarlo**
+     (`mandarYapesA`), no al leerlo: si se dejara para la lectura, en el disco quedarían dos.
+   - **El interruptor está en el panel, no en "editar el negocio":** es lo que decide dónde
+     cae su plata a diario.
+
+   > ## EL AGUJERO QUE CASI SE ESCAPA, Y QUE HAY QUE RECORDAR
+   >
+   > **Hay DOS caminos que registran un yapeo, no uno.** El del contexto corre con Finzo
+   > abierta; **`utils/capturaEnFondo.ts` corre con la app CERRADA**, despertado por Android, y
+   > escribe directo en el disco.
+   >
+   > Repartiendo solo en el contexto, encender "los yapeos entran a mi negocio" habría
+   > funcionado **solo con la app abierta** — y con la app cerrada, que es cuando más yapeos
+   > llegan, la plata del negocio habría seguido cayendo en las cuentas de casa. **Sin ningún
+   > error: solo cuentas que no cuadran.** Los dos caminos llaman ahora a la misma función.
+   >
+   > Y su otra mitad: **la app tiene que juntar la caja del disco al volver**
+   > (`fusionarMovimientosNegocio`), o su lista vieja de memoria pisaría el yapeo que entró con
+   > ella cerrada. Es el mismo fallo que ya tuvieron los movimientos personales y el registro
+   > de avisos, por tercera vez. **Cualquier cosa nueva que se guarde y que el trabajo de fondo
+   > pueda escribir necesita las dos mitades.**
+   >
+   > Y una tercera, más fina: al repartir se miran **la caja de memoria Y la del disco**
+   > juntas. El estado no está listo hasta el siguiente dibujo, así que un yapeo que el trabajo
+   > de fondo acabara de anotar habría vuelto a entrar. Un ingreso duplicado en una caja no se
+   > ve: solo infla el saldo.
+
+   **El modo señuelo no necesitó nada**, y conviene saber por qué: con el señuelo puesto todas
+   las claves se leen de `finzo:decoy:*`, así que la lista de negocios sale vacía, nadie recibe
+   y el yapeo cae en lo personal del señuelo. Los datos reales del negocio no se tocan.
 
 ## Lo que falta para Play Store
 
