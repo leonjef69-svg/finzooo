@@ -1,6 +1,7 @@
 import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import { isDecoyActive } from "@/utils/decoyMode";
+import { borrarNegocioDeLaNube } from "@/utils/cloudNegocio";
 import type { Goal, Transaction } from "@/types";
 
 // EL CANDADO DE LA NUBE EN MODO SEÑUELO
@@ -141,4 +142,14 @@ export async function deleteCloudAccount(uid: string): Promise<void> {
   // borrado irreversible no debería depender solo de eso.
   if (isDecoyActive()) throw new Error("No disponible");
   await deleteDoc(doc(db, "users", uid));
+  // Y EL NEGOCIO, QUE VIVE EN OTRO DOCUMENTO. NO QUITAR ESTA LÍNEA.
+  //
+  // El Modo Negocio guarda sus ventas y sus precios en "negocios/{uid}", aparte, porque en
+  // este documento no caben (ver utils/cloudNegocio). Borrar este NO borra aquel: son dos
+  // documentos distintos.
+  //
+  // Sin esta línea, borrar la cuenta dejaría las ventas y los precios del negocio en la nube
+  // para siempre, y nadie se enteraría — el borrado diría que salió bien. Hay una prueba que
+  // exige que los dos se borren aquí.
+  await borrarNegocioDeLaNube(uid);
 }

@@ -65,6 +65,7 @@ const SUITES = [
   { archivo: "verificar-voz-dictado.ts", alias: BASE },
   { archivo: "verificar-contactos.ts", alias: BASE },
   { archivo: "verificar-categorias.ts", alias: EXPO },
+  { archivo: "verificar-negocio.ts", alias: BASE },
   { archivo: "verificar-pdf.ts", alias: BASE },
   { archivo: "verificar-pdf-ilegible.ts", alias: BASE, formato: "cjs" },
   { archivo: "verificar-pdf-mixto.ts", alias: BASE },

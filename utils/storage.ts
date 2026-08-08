@@ -60,6 +60,30 @@ export const STORAGE_KEYS = {
    * a la nube. Ver utils/pruebaPremium.
    */
   pruebaPremium: "finzo:pruebaPremium",
+  /**
+   * MODO NEGOCIO (V1, 07/08/2026). Los negocios, sus productos y sus ventas.
+   *
+   * VAN EN SU PROPIA CLAVE Y NO DENTRO DE "transactions", y eso es la decisión de
+   * arquitectura de todo el Modo Negocio, no un detalle de guardado.
+   *
+   * Lo que se pidió es que la plata del negocio NO se mezcle con la personal *"ni en los
+   * totales"*. Había dos formas de conseguirlo:
+   *
+   *   · Marcar cada movimiento con su negocio, y **filtrar en los 16 sitios** que leen
+   *     movimientos. Si se olvida uno, la plata del negocio se suma a los totales
+   *     personales y no se nota hasta que las cuentas no cuadren.
+   *   · Guardarlos aparte, y que el camino personal no los vea nunca.
+   *
+   * Se eligió lo segundo: así no mezclarse **no depende de acordarse de filtrar**, depende
+   * de que los datos no estén ahí. En una app de dinero eso vale más que la elegancia.
+   *
+   * Y las tres están en el borrado de abajo desde el primer día, por lo que pasó el
+   * 07/08/2026 con las categorías propias: una clave que vive solo en su archivo se queda
+   * fuera del borrado, y la cuenta siguiente hereda los datos de la anterior.
+   */
+  negocios: "finzo:negocios",
+  productos: "finzo:productos",
+  ventas: "finzo:ventas",
 } as const;
 
 // Borra todos los datos de la cuenta de golpe (operación atómica y
@@ -91,6 +115,11 @@ export async function clearAccountData(): Promise<void> {
         // La prueba gratuita también: es de la cuenta que se va, no del aparato.
         // Dejándola, la cuenta siguiente entraría con la prueba ya gastada.
         STORAGE_KEYS.pruebaPremium,
+        // El negocio es de la cuenta, no del aparato: sus ventas y sus precios no pueden
+        // quedar a la vista de quien entre después. Ver la nota en STORAGE_KEYS.
+        STORAGE_KEYS.negocios,
+        STORAGE_KEYS.productos,
+        STORAGE_KEYS.ventas,
       ].map(actualKey)
     );
   } catch {

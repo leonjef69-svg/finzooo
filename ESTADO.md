@@ -244,6 +244,68 @@ con este archivo, cuyas letras raras caen en parte dentro del ASCII.
 **Sigue sin probarse: que un CSV o un Excel real de su banco SÍ se importe.** Es el siguiente
 paso natural y solo hace falta que baje uno.
 
+## MODO NEGOCIO — V1 EN CURSO (07/08/2026)
+
+Separar 🏠 Personal de 🏪 Negocio para que la plata del negocio **no se mezcle con la
+personal, ni en los totales**. El ejemplo que dio: una pollería que recibe un Yape de un
+cliente (negocio) y otro de un familiar (personal).
+
+**Decisiones suyas:** es **Premium**. Y **la nube entra ya en V1**.
+
+**Lo que la V1 NO hace, y es a propósito:** no adivina productos. Un Yape de S/ 15 significa
+*"entraron S/ 15 por Yape"* y nada más — *"En V1 NO quiero que el sistema diga: recibiste
+S/15, entonces vendiste un Broster"*. Eso es V3, con la voz. Tampoco hay inventario ni stock.
+
+### LA DECISIÓN DE ARQUITECTURA: listas separadas, no una marca en el movimiento
+
+Había dos formas de que no se mezclen:
+
+| | |
+|---|---|
+| Marcar cada movimiento con su negocio | Obliga a filtrar en los **16 sitios** que leen movimientos. Un olvido y la plata del negocio se suma a los totales personales — y eso **no se nota hasta que las cuentas no cuadran** |
+| **Guardarlos aparte** (elegida) | El camino personal **no los ve nunca**. No mezclarse deja de depender de acordarse de filtrar |
+
+Se eligió la segunda por lo que pasó el mismo día: analizando Premium **conté cuatro
+funciones bloqueadas cuando eran ocho**. Si me equivoco leyendo 8 sitios, no me fío de mí
+con 16 en una app de dinero. El camino personal **no se toca ni una línea**.
+
+### LA NUBE: un documento aparte, y no por orden
+
+Todo el respaldo de una cuenta vive en **un solo documento** de Firestore, y el tope es
+**1 MB**. Las ventas de una pollería crecen rápido, y pasarse de ese tope **no deja el
+documento a medias: deja sin guardar la cuenta entera**, también lo personal, y en silencio.
+
+El negocio va en `negocios/{uid}`, suelto. **Y no como subcolección**, tampoco por gusto:
+**borrar un documento en Firestore NO borra sus subcolecciones**, así que ahí dentro las
+ventas y los precios habrían quedado huérfanos en la nube al borrar la cuenta — y el borrado
+habría dicho que salió bien.
+
+> **Dos costuras que ya están cosidas, porque son las que este proyecto repite:** el candado
+> del modo señuelo está en la puerta nueva (sin él, el modo hecho para esconder los datos
+> mostraría las ventas reales), y las tres claves están en el borrado al cerrar sesión desde
+> el primer commit (ya pasó con las categorías propias: la cuenta siguiente heredó las de la
+> anterior, con sus fotos).
+
+### Detalles pensados para V2 y V3
+
+- La venta copia **el nombre y el precio**, no solo el id del producto: si sube el Broster de
+  15 a 18, **las ventas de ayer siguen diciendo 15**. Un total histórico que se mueve solo no
+  hay forma de explicarlo.
+- `lineas[]` es una lista desde V1 aunque hoy se venda de a uno: es el enganche de *"dos
+  broster y una gaseosa"* (V3) **sin rehacer la forma de los datos**.
+- `estado` y `movimientoId` existen vacíos: son el enganche de vincular pago↔venta (V2).
+- `destinoYapes` empieza en **"personal"**: crear un negocio **no cambia** dónde caen los
+  Yapes que ya se registraban bien.
+
+### Pasos
+
+1. ✅ **Cimientos** — tipos, guardado, nube con documento aparte, borrado, y
+   `pruebas/verificar-negocio.ts`.
+2. Crear y elegir negocio (pantalla).
+3. Productos.
+4. Ventas y panel del negocio.
+5. Captura automática al negocio, e historial propio.
+
 ## Lo que falta para Play Store
 
 Esto es lo pendiente de verdad, en orden de bloqueo:
