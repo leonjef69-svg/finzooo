@@ -294,10 +294,7 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
   //    usuario ya rechazo por escrito. La prueba esta para que la proxima vez el aviso
   //    llegue antes de entregarlo.
   ok(!/onScroll/.test(codigo), "el resto NO llega al deslizar, llega solo");
-  ok(
-    /setTimeout\(\s*\(\) => \{[\s\S]{0,400}setFilasADibujar/.test(codigo),
-    "y lo trae un reloj, sin que nadie tenga que tocar nada"
-  );
+  ok(/setTimeout\(mirar,/.test(codigo), "y lo trae un reloj, sin que nadie tenga que tocar nada");
 
   // 2. Converge en el catalogo entero. Una tanda que no converge dejaria el catalogo a
   //    medias PARA SIEMPRE, que seria peor que el problema que arregla.
@@ -305,17 +302,40 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
     /Math\.min\(n \+ FILAS_POR_TANDA, CATALOGO_EN_TROZOS\.length\)/.test(codigo),
     "cada tanda suma hasta llegar al catalogo completo, sin pasarse"
   );
-  // Y el reparto no puede quedarse esperando para siempre a que nadie toque: cuando el
-  // dedo aplaza una tanda, tiene que volver a intentarlo.
-  ok(/setReintento\(\(r\) => r \+ 1\)/.test(codigo), "si un dedo aplaza una tanda, se reintenta");
 
-  // 3. El reparto SE PARA MIENTRAS SE TOCA. Es la otra mitad del arreglo: asi el trabajo
-  //    cae en los huecos y no compite nunca con el dedo.
+  // 3. El reparto SE PARA MIENTRAS SE TOCA, y ESPERA SIN REDIBUJAR NADA.
+  //
+  //    AQUI HUBO UN BUCLE Y ERA GRAVE (07/08/2026). La primera version de esta espera tenia
+  //    un estado, "reintento", y al encontrar un dedo reciente hacia setReintento para
+  //    volver a mirar. Eso montaba un bucle:
+  //
+  //      · Pedir volver a mirar es un CAMBIO DE ESTADO, asi que la pantalla se rehacia
+  //        ENTERA.
+  //      · El reloj se rearmaba con espera CERO y disparaba al instante.
+  //      · Seguia habiendo un toque reciente, porque faltaba medio segundo. Vuelta a empezar.
+  //
+  //    Mientras el dedo estaba sobre un icono, la pantalla se rehacia decenas de veces por
+  //    segundo SIN HACER NADA. Reportado como "la pestaña de elegir icono esta lenta, se
+  //    siente raro" — y raro es la palabra exacta: no era trabajo de mas, era trabajo inutil
+  //    ahogando al dedo.
+  //
+  //    Lo que se vigila son las dos mitades del arreglo, porque con una sola el bucle vuelve.
   ok(/ULTIMO_TOQUE\.cuando = Date\.now\(\)/.test(codigo), "se apunta cuando se toco por ultima vez");
   ok(
-    /Date\.now\(\) - ULTIMO_TOQUE\.cuando < QUIETO_MS/.test(codigo),
+    /const falta = QUIETO_MS - \(Date\.now\(\) - ULTIMO_TOQUE\.cuando\)/.test(codigo),
     "y no se arma nada mientras haya un dedo reciente en la pantalla"
   );
+  // MITAD A: se espera LO QUE FALTA, no cero. Con cero se vuelve a mirar para encontrar
+  // exactamente lo mismo, una y otra vez.
+  ok(
+    /if \(falta > 0\) \{\s*reloj = setTimeout\(mirar, falta\);/.test(codigo),
+    "cuando falta espera, se vuelve a mirar EN ESE MOMENTO y no al instante"
+  );
+  // MITAD B: y se espera SIN ESTADO. Volver a mirar no cambia lo que se ve, solo la hora, asi
+  // que no puede redibujar la pantalla. Si alguien vuelve a meter un estado aqui, vuelve el
+  // bucle — y no se rompe nada a la vista, solo se siente raro.
+  ok(!/setReintento/.test(codigo), "y esperar no usa ningun estado, o volveria el bucle");
+  ok(!/reintento\]/.test(codigo), "ni queda en la lista de lo que reejecuta el reparto");
   // Apuntar la hora NO PUEDE ser un estado: si lo fuera, cada toque rehaceria la pantalla,
   // que es justo el coste que se esta quitando.
   ok(

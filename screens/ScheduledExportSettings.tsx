@@ -718,6 +718,33 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
               ))}
             </View>
 
+            {/* LOS GRÁFICOS, SOLO CON PDF.
+                Antes no había forma de tenerlos en el reporte automático: iban apagados y
+                punto. Encenderlos al exportar a mano no llegaba hasta aquí. Pedido el
+                07/08/2026.
+                Solo aparece con PDF elegido porque Excel y CSV no llevan gráficos, y un
+                interruptor que no hace nada es peor que no tenerlo.
+                Viene apagado: ocupan media hoja y empujan la lista a la siguiente. */}
+            {schedule.format === "pdf" && (
+              <View className="flex-row items-center justify-between mb-5 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 p-3.5">
+                <View className="flex-1 pr-3">
+                  <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                    {t("schedExport.graficos")}
+                  </Text>
+                  <Text className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
+                    {t("schedExport.graficosHint")}
+                  </Text>
+                </View>
+                {/* El Toggle de la app y no el del sistema: es el que usa el interruptor
+                    principal de esta misma pantalla, y dos interruptores distintos en la
+                    misma pantalla se ven como un descuido. */}
+                <Toggle
+                  on={schedule.charts ?? false}
+                  onChange={(v: boolean) => update({ charts: v })}
+                />
+              </View>
+            )}
+
             <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
               {t("exportPdf.typeLabel")}
             </Text>

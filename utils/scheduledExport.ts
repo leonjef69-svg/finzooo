@@ -90,6 +90,19 @@ export type ScheduledExport = {
   fileNameMode: FileNameMode;
   /** Nombre escrito a mano, sin extensión. Solo se usa con fileNameMode "custom". */
   fileName: string;
+  /**
+   * Meter los gráficos en el PDF automático.
+   *
+   * Antes iba fijo en apagado, y era coherente con la pantalla de exportar a mano —donde
+   * también vienen apagados— pero dejaba la exportación programada SIN FORMA de tenerlos:
+   * los gráficos se encendían al exportar a mano y esa decisión no llegaba aquí. Pedido el
+   * 07/08/2026.
+   *
+   * Sigue viniendo apagado de fábrica: ocupan media hoja y empujan la lista a la siguiente.
+   * Puede faltar en los ajustes guardados de antes de esta versión, y ahí vale apagado, que
+   * es exactamente como se comportaban.
+   */
+  charts?: boolean;
   /** "AAAA-MM-DD" de la última vez que se guardó sola. Evita repetir. */
   lastAutoRun?: string;
 };
@@ -107,6 +120,7 @@ export const DEFAULT_SCHEDULE: ScheduledExport = {
   destination: "drive",
   fileNameMode: "auto",
   fileName: "",
+  charts: false,
 };
 
 const STORAGE_KEY = "finzo:scheduledExport";

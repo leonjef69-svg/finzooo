@@ -785,6 +785,36 @@ rehacían en cada dibujado. Ahora son un componente memorizado.
 > pista visible de un fallo que solo se SIENTE. Once causas se buscaron midiendo y leyendo;
 > la doceava llegó en una captura de pantalla de algo que se veía mal.
 
+### Decimotercera causa, Y LA METÍ YO: un bucle que redibujaba sin hacer nada (7ago-29)
+
+*"La pestaña de elegir icono está lenta, se siente raro."* **Y "raro" era la palabra
+exacta.** Esta vez la causa no estaba en la librería ni en Android: estaba en mi propio
+cambio de la noche anterior.
+
+La pausa del reparto (7ago-22) tenía un estado, `reintento`, y al encontrar un dedo reciente
+hacía `setReintento(r + 1)` para volver a mirar. Eso montaba un bucle:
+
+1. El reloj mira → hay un toque reciente → pide volver a mirar.
+2. **Pedirlo es un cambio de estado, así que la pantalla se rehace ENTERA.**
+3. El reloj se rearma con espera **cero** → dispara al instante.
+4. Sigue habiendo un toque reciente, porque falta medio segundo → **vuelta al 1**.
+
+Mientras el dedo estaba sobre un icono, la pantalla **se rehacía decenas de veces por
+segundo sin hacer absolutamente nada**. No era trabajo de más: era **trabajo inútil ahogando
+al dedo**, que es justo lo que se siente como "raro" y no como "lento".
+
+Dos cosas lo arreglan y hacen falta las dos:
+
+- **Se espera lo que falta** para cumplir el medio segundo, no cero. Con cero se volvía a
+  mirar para encontrar exactamente lo mismo.
+- **Y se espera sin estado.** El reloj se rearma solo. Volver a mirar no cambia lo que se ve
+  —solo la hora—, así que no puede redibujar nada.
+
+> **La lección, y es la más incómoda de las trece:** el arreglo de ayer causó el fallo de
+> hoy, y once causas de búsqueda me habían entrenado a mirar hacia fuera —la librería,
+> Android, el celular—. Cuando algo empeora **justo después de un arreglo mío**, lo primero
+> que hay que releer es el arreglo.
+
 ### Lo que dejaron las diez causas, por si vuelve a ir lento
 
 Está descartado —no volver a mirarlo—: las clases de NativeWind en las casillas, el
@@ -2311,9 +2341,10 @@ el APK anterior y lo que llegue con la app cerrada.
   probarlo con una de verdad.
 - **El presupuesto mensual no se repite solo** cada mes: hay que volver a
   ponerlo.
-- **La exportación programada sale sin gráficos** desde el 1ago-17, porque no
-  manda ese dato. Es coherente con "gráficos solo si se piden", pero si se
-  quiere que los lleve siempre, necesita su propio interruptor.
+- ~~La exportación programada sale sin gráficos~~ **HECHO el 07/08/2026 (7ago-29).**
+  Tiene su interruptor en la pantalla de exportación automática, solo visible con PDF
+  elegido. Viene **apagado**, y los ajustes guardados de antes de esta versión valen
+  apagado: nadie ve cambiar su documento sin pedirlo.
 
 ---
 

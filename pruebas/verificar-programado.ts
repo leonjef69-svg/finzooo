@@ -915,5 +915,50 @@ console.log("\n--- Y SE PUEDE VER DESDE FUERA QUÉ TRAE EL CELULAR ---");
   ok(info.includes("puedePdfEnFondo()"), "y si trae el conversor de PDF, que es lo que faltaba");
 }
 
+console.log("\n--- LOS GRÁFICOS DEL PDF AUTOMÁTICO SE PUEDEN PEDIR ---");
+{
+  // Pedido el 07/08/2026: *"la exportación programada va sin gráficos (falta su
+  // interruptor)"*. Iban en `false` fijo, y era coherente con la pantalla de exportar a mano
+  // —donde también vienen apagados— pero dejaba la exportación programada SIN FORMA de
+  // tenerlos: encenderlos al exportar a mano no llegaba hasta aquí.
+  const RAIZ = process.cwd();
+  const fondo = fs.readFileSync(path.join(RAIZ, "utils/exportarEnFondo.ts"), "utf8");
+  const ajustes = fs.readFileSync(path.join(RAIZ, "utils/scheduledExport.ts"), "utf8");
+  const pantalla = fs.readFileSync(path.join(RAIZ, "screens/ScheduledExportSettings.tsx"), "utf8");
+
+  // Las tres mitades tienen que estar unidas: el ajuste existe, la pantalla lo cambia, y el
+  // trabajo de fondo lo LEE. Que falte la tercera es el fallo clásico de este proyecto —dos
+  // mitades bien y el fallo en la costura—: el interruptor se movería y el PDF saldría igual.
+  ok(/charts\?: boolean/.test(ajustes), "el ajuste guarda si se quieren los graficos");
+  ok(/update\(\{ charts: v \}\)/.test(pantalla), "la pantalla lo cambia");
+  ok(/charts: schedule\.charts \?\? false/.test(fondo), "y el trabajo de fondo lo LEE de ahi");
+
+  // VIENE APAGADO. Ocupan media hoja y empujan la lista a la siguiente, asi que encenderlos
+  // por su cuenta cambiaria el documento a quien ya lo tenia puesto.
+  ok(/charts: false/.test(ajustes), "y de fabrica viene apagado, como se comportaba antes");
+
+  // Y EL "?? false" NO ES ADORNO: los ajustes guardados antes de esta version no traen este
+  // dato, y sin el valor de respaldo el PDF de esos celulares saldria con graficos de golpe.
+  ok(
+    /schedule\.charts \?\? false/.test(fondo),
+    "los ajustes guardados de antes valen apagado, no cambian solos"
+  );
+
+  // Solo con PDF: Excel y CSV no llevan graficos, y un interruptor que no hace nada es peor
+  // que no tenerlo.
+  ok(
+    /schedule\.format === "pdf" && \(/.test(pantalla),
+    "el interruptor solo sale con PDF elegido"
+  );
+
+  // Y sus dos textos en los tres idiomas. Uno que falte no da error: sale el nombre de la
+  // clave en pantalla.
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  for (const clave of ["graficos", "graficosHint"]) {
+    const veces = (i18n.match(new RegExp(`"schedExport\\.${clave}":`, "g")) ?? []).length;
+    ok(veces === 3, `"${clave}" esta en los tres idiomas (${veces})`);
+  }
+}
+
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

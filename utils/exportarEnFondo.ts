@@ -198,15 +198,21 @@ export async function exportarEnFondo(forzar = false): Promise<ResultadoDeFondo>
       // El MISMO armador que usa la pantalla de exportar a mano, para que el PDF
       // automático y el de a mano sean el mismo documento. Ver reportePdfDatos.
       //
-      // Los gráficos van APAGADOS, igual que de fábrica en la pantalla: ocupan
-      // media hoja y empujan la lista a la siguiente. Quien quiera gráficos los
-      // enciende al exportar a mano.
+      // LOS GRÁFICOS, COMO SE HAYAN DEJADO EN LA PANTALLA DE EXPORTACIÓN AUTOMÁTICA.
+      //
+      // Aquí iba `false` fijo. Era coherente con la pantalla de exportar a mano —donde
+      // también vienen apagados— pero dejaba la exportación programada SIN FORMA de
+      // tenerlos: encenderlos al exportar a mano no llegaba hasta aquí. Pedido el
+      // 07/08/2026.
+      //
+      // El `?? false` es para los ajustes guardados ANTES de esta versión, que no traen
+      // este dato: valen apagado, que es exactamente como se comportaban.
       const html = htmlDelReporte({
         movimientos: delTipo,
         todos: movimientos,
         mes,
         tipo: schedule.type,
-        charts: false,
+        charts: schedule.charts ?? false,
         userName: perfil.userName ?? "",
         nombresDeMes: monthNamesFor(idioma),
         presupuestos: await loadJSON<Record<string, number>>(STORAGE_KEYS.categoryBudgets, {}),

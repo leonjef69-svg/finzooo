@@ -777,26 +777,50 @@ export default function NuevaCategoria({
   const [filasADibujar, setFilasADibujar] = useState(FILAS_AL_ABRIR);
   // Cuando el reparto se posterga por un dedo en la pantalla, hay que volver a mirarlo
   // más tarde. Este contador es lo que hace que el efecto se vuelva a ejecutar.
-  const [reintento, setReintento] = useState(0);
   useEffect(() => {
     if (filasADibujar >= CATALOGO_EN_TROZOS.length) return;
-    const primera = filasADibujar === FILAS_AL_ABRIR;
-    const reloj = setTimeout(
-      () => {
-        // Hay un dedo tocando ahora mismo o lo hubo hace un instante: no es momento de
-        // ponerse a armar nada. Se vuelve a mirar en un rato.
-        if (Date.now() - ULTIMO_TOQUE.cuando < QUIETO_MS) {
-          setReintento((r) => r + 1);
-          return;
-        }
-        setFilasADibujar((n) => Math.min(n + FILAS_POR_TANDA, CATALOGO_EN_TROZOS.length));
-      },
-      // Cero no es "ya mismo": es "en cuanto sueltes el turno". Ahí es donde entra el
-      // toque que estaba esperando.
-      primera ? ESPERA_RESTO_MS : 0
-    );
+
+    /**
+     * ESPERAR SIN REDIBUJAR NADA. AQUÍ HUBO UN BUCLE, Y ERA GRAVE.
+     *
+     * La primera versión de esta espera (7ago-22) tenía un estado, `reintento`, y cuando
+     * encontraba un dedo reciente hacía `setReintento(r + 1)` para volver a mirar. Y eso
+     * montaba un bucle que se comía la pantalla:
+     *
+     *   1. El reloj mira → hay un toque reciente → pide volver a mirar.
+     *   2. Pedirlo es un CAMBIO DE ESTADO, así que la pantalla se rehace ENTERA.
+     *   3. El reloj se vuelve a armar con espera CERO → dispara al instante.
+     *   4. Sigue habiendo un toque reciente (falta medio segundo) → vuelta al 1.
+     *
+     * Resultado: mientras el dedo estaba sobre un icono, la pantalla se rehacía decenas
+     * de veces por segundo **sin hacer absolutamente nada**. Reportado como *"la pestaña
+     * de elegir icono está lenta, se siente raro"* — y raro es la palabra exacta: no era
+     * trabajo de más, era trabajo inútil ahogando al dedo.
+     *
+     * Dos cosas lo arreglan, y hacen falta las dos:
+     *
+     *  · **Se espera lo que falta** para cumplir el medio segundo, no cero. Antes se
+     *    volvía a mirar inmediatamente para encontrar lo mismo.
+     *  · **Y se espera sin estado.** El reloj se rearma solo. Volver a mirar no tiene por
+     *    qué redibujar nada: no ha cambiado lo que se ve, solo la hora.
+     */
+    let reloj: ReturnType<typeof setTimeout>;
+
+    const mirar = () => {
+      const falta = QUIETO_MS - (Date.now() - ULTIMO_TOQUE.cuando);
+      if (falta > 0) {
+        reloj = setTimeout(mirar, falta);
+        return;
+      }
+      setFilasADibujar((n) => Math.min(n + FILAS_POR_TANDA, CATALOGO_EN_TROZOS.length));
+    };
+
+    // La primera espera es lo que dura la animación de entrada. Las siguientes no esperan
+    // nada: el cero no es "ya mismo", es "en cuanto sueltes el turno", y ahí es donde entra
+    // el toque que estaba esperando.
+    reloj = setTimeout(mirar, filasADibujar === FILAS_AL_ABRIR ? ESPERA_RESTO_MS : 0);
     return () => clearTimeout(reloj);
-  }, [filasADibujar, reintento]);
+  }, [filasADibujar]);
 
   function irA(cual: typeof pestana) {
     setPestana(cual);
