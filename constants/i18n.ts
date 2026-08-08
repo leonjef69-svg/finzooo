@@ -486,7 +486,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "premium.pruebaSi": "Sí, activar",
     "premium.pruebaActiva": "Prueba gratuita activa · quedan {horas} h",
     "premium.pruebaUsada": "Ya usaste tu prueba gratuita",
-    "premium.sinCobro": "El pago todavía no está disponible en esta versión.",
+    "premium.sinCobro": "Todavía no se puede pagar. Prueba las funciones gratis por 24 horas.",
+    "premium.llegaPronto": "Llega pronto",
+    "premium.llegaProntoDetalle": "Aún sin precio",
 
     "exportPdf.exportDataTitle": "Exportar movimientos",
     "exportPdf.formatLabel": "Formato",
@@ -1440,7 +1442,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "premium.pruebaSi": "Yes, start it",
     "premium.pruebaActiva": "Free trial running · {horas} h left",
     "premium.pruebaUsada": "You already used your free trial",
-    "premium.sinCobro": "Payment is not available in this version yet.",
+    "premium.sinCobro": "Payment is not available yet. Try the features free for 24 hours.",
+    "premium.llegaPronto": "Coming soon",
+    "premium.llegaProntoDetalle": "No price yet",
 
     "exportPdf.exportDataTitle": "Export transactions",
     "exportPdf.formatLabel": "Format",
@@ -2388,7 +2392,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "premium.pruebaSi": "Sim, ativar",
     "premium.pruebaActiva": "Teste gratuito ativo · faltam {horas} h",
     "premium.pruebaUsada": "Você já usou seu teste gratuito",
-    "premium.sinCobro": "O pagamento ainda não está disponível nesta versão.",
+    "premium.sinCobro": "Ainda não é possível pagar. Teste as funções grátis por 24 horas.",
+    "premium.llegaPronto": "Chega em breve",
+    "premium.llegaProntoDetalle": "Ainda sem preço",
 
     "exportPdf.exportDataTitle": "Exportar movimentos",
     "exportPdf.formatLabel": "Formato",

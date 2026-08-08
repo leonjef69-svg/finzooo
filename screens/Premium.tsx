@@ -8,11 +8,9 @@ import {
   Crown,
   Check,
   CheckCircle2,
-  Rocket,
   Timer,
   TriangleAlert,
 } from "lucide-react-native";
-import { ANUAL_POR_MES, PRECIOS } from "@/constants/precios";
 import { useAppData } from "@/contexts/AppDataContext";
 import { DURACION_PRUEBA_HORAS } from "@/utils/pruebaPremium";
 
@@ -46,17 +44,15 @@ import { DURACION_PRUEBA_HORAS } from "@/utils/pruebaPremium";
 export default function Premium({
   onBack,
   isPremium,
-  onUpgrade,
 }: {
   onBack: () => void;
   isPremium: boolean;
-  onUpgrade: () => void;
 }) {
   const { t, fmt, pruebaInicio, pruebaHoras, activarPruebaPremium, showToast } = useAppData();
   const insets = useSafeAreaInsets();
 
-  /** Mensual o anual. Arranca en mensual, que es el que lleva la promoción. */
-  const [plan, setPlan] = useState<"mensual" | "anual">("mensual");
+  // AQUÍ ESTABA "plan" (mensual o anual), y se fue con el selector de precios: sin precios
+  // que elegir no hay plan que guardar. Vuelve cuando vuelva el cobro.
   /** Si se está preguntando por la prueba gratuita, en la propia pantalla. */
   const [preguntandoPrueba, setPreguntandoPrueba] = useState(false);
 
@@ -129,49 +125,14 @@ export default function Premium({
           <Text className="text-emerald-100 text-sm mt-1">{t("premium.subtitle")}</Text>
         </View>
 
-        {/* EL SELECTOR, ARRIBA.
-            Va antes de las columnas porque decide el precio que se lee dentro: al
-            revés, se leería un precio y luego se descubriría que era el del otro
-            plan. El mensual lleva su etiqueta de promoción. */}
-        <View className="flex-row gap-3 px-5 mb-4">
-          {(["mensual", "anual"] as const).map((cual) => {
-            const activo = plan === cual;
-            return (
-              <TouchableOpacity
-                key={cual}
-                onPress={() => setPlan(cual)}
-                className={`flex-1 rounded-2xl p-3 border-[1.5px] ${
-                  activo ? "bg-emerald-600 border-emerald-400" : "bg-white/5 border-white/15"
-                }`}
-              >
-                <View className="flex-row items-center justify-between">
-                  <Text className={`text-sm font-extrabold ${activo ? "text-white" : "text-white/70"}`}>
-                    {t(cual === "mensual" ? "premium.mensual" : "premium.anual")}
-                  </Text>
-                  {cual === "mensual" && (
-                    <View className="bg-amber-400 rounded-full px-2 py-0.5">
-                      <Text className="text-[9px] font-extrabold text-slate-900">
-                        {t("premium.promo")}
-                      </Text>
-                    </View>
-                  )}
-                </View>
-                <Text className={`text-[11px] leading-4 mt-1 ${activo ? "text-emerald-50" : "text-white/50"}`}>
-                  {cual === "mensual"
-                    ? t("premium.mensualDetalle", {
-                        antes: fmt(PRECIOS.mensualNormal),
-                        ahora: fmt(PRECIOS.mensualPromo),
-                      })
-                    : t("premium.anualDetalle", {
-                        precio: fmt(PRECIOS.anual),
-                        porMes: fmt(ANUAL_POR_MES),
-                      })}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
+        {/* AQUÍ ESTABA EL SELECTOR MENSUAL / ANUAL CON SUS PRECIOS, Y SE QUITÓ (07/08/2026).
+            No por diseño: **el cobro no existe**. No hay Play Billing ni pasarela, así que
+            esos precios eran lo que COSTARÍA, no lo que se cobra — y Google trata como
+            engañoso mostrar un precio y un botón de compra que no cobran. Era el bloqueo
+            número uno para publicar.
+            La comparación de abajo se queda: decir QUÉ trae Premium es informar, no
+            prometer un pago. Lo que no puede estar es el precio ni el botón que compra.
+            Cuando el cobro exista, el selector vuelve del historial: ver ESTADO.md. */}
         {/* LAS DOS COLUMNAS, LADO A LADO.
             Es el cambio que pidió: comparar de un vistazo en vez de recordar la
             lista de arriba mientras se lee la de abajo. */}
@@ -219,21 +180,11 @@ export default function Premium({
                 {t("premium.premiumSectionTitle")}
               </Text>
             </View>
-            <View className="flex-row items-end mt-2">
-              <Text className="text-white text-lg font-extrabold">
-                {fmt(plan === "mensual" ? PRECIOS.mensualPromo : PRECIOS.anual)}
-              </Text>
-              <Text className="text-emerald-100 text-[10px] mb-0.5">
-                {t(plan === "mensual" ? "premium.porMesTresMeses" : "premium.porAno")}
-              </Text>
-            </View>
-            {/* El precio de antes, tachado, SOLO en el plan que lo tiene. En el anual
-                no hay "antes": inventarlo sería un descuento falso. */}
-            {plan === "mensual" && (
-              <Text className="text-emerald-200/60 text-[10px] line-through">
-                {t("premium.antes", { precio: fmt(PRECIOS.mensualNormal) })}
-              </Text>
-            )}
+            {/* Donde iba el precio va lo que de verdad se puede decir hoy. */}
+            <Text className="text-white text-base font-extrabold mt-2">
+              {t("premium.llegaPronto")}
+            </Text>
+            <Text className="text-emerald-100 text-[10px]">{t("premium.llegaProntoDetalle")}</Text>
 
             <Text className="text-emerald-200/70 text-[9px] font-extrabold mt-3 mb-2">
               {t("premium.incluye")}
@@ -257,8 +208,16 @@ export default function Premium({
           </View>
         </View>
 
-        {/* EL BOTÓN GRANDE. Con Premium puesto no dice "adquirir": dice que ya lo
-            tienes, que es lo que hacía la pantalla anterior y hay que conservar. */}
+        {/* AQUÍ ESTABA EL BOTÓN "ADQUIRIR", Y ERA EL BLOQUEO NÚMERO UNO PARA PUBLICAR.
+            Lo que hacía ese botón era `setIsPremium(true)`: **regalaba Premium**. No fingía
+            un pago —eso habría sido peor— y la pantalla lo avisaba con letra pequeña, pero
+            aun así era un botón de compra sobre un precio, sin cobro detrás. Google lo trata
+            como afirmación engañosa y es motivo de rechazo.
+            Ahora no hay botón de compra. Lo que hay es la prueba de 24 horas de abajo, que es
+            la forma honesta de que alguien vea las funciones: se prueba de verdad, no se
+            promete nada, y no se cobra porque todavía no se puede cobrar.
+            Cuando exista Play Billing, el botón vuelve del historial conectado al cobro de
+            verdad — y entonces sí tendrá sentido volver a poner el precio. */}
         <View className="px-5 mt-5">
           {isPremium ? (
             <View className="w-full py-4 rounded-2xl items-center flex-row justify-center gap-2 bg-emerald-500">
@@ -266,25 +225,12 @@ export default function Premium({
               <Text className="text-white font-extrabold">{t("premium.alreadyPremium")}</Text>
             </View>
           ) : (
-            <TouchableOpacity onPress={onUpgrade}>
-              <LinearGradient
-                colors={["#f59e0b", "#d97706"]}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 0 }}
-                className="w-full py-4 rounded-2xl items-center flex-row justify-center gap-2"
-                style={{ borderRadius: 16, overflow: "hidden" }}
-              >
-                <Rocket size={17} color="#ffffff" />
-                <Text className="text-white font-extrabold">{t("premium.adquirir")}</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-          )}
-
-          {/* QUE NO SE COBRA, DICHO. Ver la nota de arriba y constants/precios. */}
-          {!isPremium && (
-            <Text className="text-white/40 text-[10px] text-center mt-2">
-              {t("premium.sinCobro")}
-            </Text>
+            <View className="w-full py-4 rounded-2xl items-center bg-white/10 border border-white/15">
+              <Text className="text-white/90 font-extrabold">{t("premium.llegaPronto")}</Text>
+              <Text className="text-white/50 text-[10px] mt-1 px-6 text-center">
+                {t("premium.sinCobro")}
+              </Text>
+            </View>
           )}
         </View>
 

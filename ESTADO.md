@@ -248,9 +248,18 @@ paso natural y solo hace falta que baje uno.
 
 Esto es lo pendiente de verdad, en orden de bloqueo:
 
-1. **Premium se regala.** No hay Play Billing ni precio en ninguna parte del
-   código: el botón "Actualizar a Premium" llama a `setIsPremium(true)` y ya.
-   O se cobra de verdad o se quita la etiqueta PRO.
+1. ~~Premium se regala~~ **RESUELTO EL 07/08/2026 (7ago-32).** Ya no hay precio ni
+   botón de compra: la pantalla dice **"Llega pronto"** y la forma de ver las funciones
+   es la **prueba de 24 horas**, que se queda por decisión suya. Las **8 funciones
+   siguen siendo Premium** — no se regaló nada.
+
+   **Lo que falta para cobrar de verdad, y es TODO suyo:** cuenta de Play Console, la
+   app subida a una prueba y los productos de suscripción creados allí. Hasta que eso
+   exista, ni una línea del cobro se podría probar.
+
+   **Para recuperar el selector de precios y el botón**, están en el historial hasta el
+   commit anterior a 7ago-32, en `screens/Premium.tsx`, `app/premium.tsx` y
+   `constants/precios.ts`.
 2. **"Sin anuncios" es una promesa vacía** en los textos de Premium: no hay
    anuncios que quitar. Google lo trata como afirmación engañosa.
 3. **Política de privacidad sin URL pública.** Además está desfasada: ahora se

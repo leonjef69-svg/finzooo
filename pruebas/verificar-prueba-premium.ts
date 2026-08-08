@@ -151,13 +151,41 @@ console.log("\n--- LA PANTALLA NO PROMETE UN COBRO QUE NO EXISTE ---");
   // Los precios salen de UN sitio. Los mismos numeros aparecen en cuatro lugares de
   // la pantalla; escritos a mano, cambiar el precio una vez dejaria dos diciendo
   // otra cosa, y un precio que se contradice en una app de dinero se paga caro.
-  ok(pant.includes("PRECIOS."), "los precios salen de un solo sitio");
-  ok(!/9\.9|S\/ ?5\b/.test(pant.replace(/\/\*[\s\S]*?\*\//g, "")), "ninguno escrito a mano en la pantalla");
-  const precios = fs.readFileSync(path.join(RAIZ, "constants/precios.ts"), "utf8");
-  // El "por mes" del plan anual se CALCULA: puesto a mano, cambiar el precio del año
-  // dejaria ese numero diciendo lo de antes, y esa cuenta es justo el argumento de
-  // que el anual sale mas barato.
-  ok(/PRECIOS\.anual \/ 12/.test(precios), "y el por-mes del anual se calcula");
+  // AQUI DECIA "los precios salen de un solo sitio", Y ESO CAMBIO EL 07/08/2026.
+  //
+  // La regla vieja tenia su motivo y conviene dejarlo escrito: los mismos numeros aparecian
+  // en cuatro lugares de la pantalla, y escritos a mano bastaba cambiar uno para que dos
+  // dijeran otra cosa. Un precio que se contradice en una app de dinero se paga caro.
+  //
+  // Pero el fallo era mas grande que la coherencia: NO HAY COBRO. No hay Play Billing ni
+  // pasarela, asi que esos precios eran lo que COSTARIA, y el boton "ADQUIRIR" lo unico que
+  // hacia era regalar Premium (setIsPremium(true)). Google trata como engañoso un precio con
+  // un boton de compra que no cobra, y era el bloqueo NUMERO UNO para publicar.
+  //
+  // Asi que ahora lo que se vigila es lo contrario: QUE NO HAYA PRECIO NI COMPRA.
+  const sinComentarios = pant.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  ok(!/PRECIOS\./.test(sinComentarios), "la pantalla NO muestra ningun precio");
+  ok(
+    !/\b9\.9\b|\bmensualPromo\b|\banualDetalle\b/.test(sinComentarios),
+    "ni un precio escrito a mano ni el selector de planes"
+  );
+
+  // Y LO QUE DE VERDAD IMPORTA: que nadie pueda "comprar" y llevarse Premium gratis. Es lo
+  // que hacia el boton, y es el motivo del rechazo.
+  const ruta = fs.readFileSync(path.join(RAIZ, "app/premium.tsx"), "utf8");
+  const rutaLimpia = ruta.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  ok(!/setIsPremium/.test(rutaLimpia), "y no hay ningun boton que regale Premium");
+  ok(!/premium\.adquirir/.test(sinComentarios), "no queda el boton de adquirir");
+
+  // PERO LA PRUEBA DE 24 HORAS SE QUEDA, y esto es decision suya del 07/08/2026: *"al app de
+  // premium tendra una prueba de 24 horas que finaliza luego de eso para que puedan probar
+  // las funciones que tiene"*.
+  //
+  // Es la mitad que hace que quitar el precio no deje la pantalla en un escaparate inutil:
+  // sin poder pagar Y sin poder probar, las ocho funciones quedarian fuera del alcance de
+  // cualquiera que instale la app.
+  ok(/activarPruebaPremium/.test(pant), "la prueba de 24 horas se queda");
+  ok(/premium\.llegaPronto/.test(sinComentarios), "y se dice que el pago llega pronto");
 
   // "Sin anuncios" ya no se anuncia: no hay anuncios que quitar, asi que era una
   // promesa vacia. Esta en la lista de cosas que bloquean Play Store.
