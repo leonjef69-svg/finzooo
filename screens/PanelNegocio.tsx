@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import {
   Info,
   Package,
+  Plus,
   ShoppingBag,
   Store,
   Trash2,
@@ -174,12 +175,23 @@ export default function PanelNegocio({
           </View>
         </View>
 
+        {/* REGISTRAR UNA VENTA ES LO QUE SE HACE CIEN VECES AL DÍA, así que va primero, solo y
+            en verde. Los productos se ponen una vez y se retocan de vez en cuando: con los dos
+            del mismo tamaño se leerían como igual de importantes. */}
+        <TouchableOpacity
+          onPress={() => router.push({ pathname: "/negocio/venta", params: { id: negocioId } })}
+          className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-600 mt-4"
+        >
+          <Plus size={16} color="#ffffff" />
+          <Text className="text-sm font-bold text-white">{t("venta.registrar")}</Text>
+        </TouchableOpacity>
+
         <TouchableOpacity
           onPress={() => router.push({ pathname: "/negocio/productos", params: { id: negocioId } })}
-          className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 mt-4"
+          className="flex-row items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800 mt-2.5"
         >
           <Package size={15} color="#059669" />
-          <Text className="text-sm font-bold text-slate-700 dark:text-slate-200">
+          <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
             {t("negocios.productos")}
           </Text>
         </TouchableOpacity>

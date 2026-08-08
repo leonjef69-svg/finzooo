@@ -356,6 +356,26 @@ export function crearMovimientoNegocio(datos: {
 }
 
 /**
+ * La fecha y la hora de AHORA, como las guarda el negocio: "AAAA-MM-DD" y "HH:MM".
+ *
+ * NO SE USA toISOString(), y esto no es un capricho. Esa función da la hora de Londres: en
+ * Perú son cinco horas menos, así que **una venta de las 8 de la noche se guardaría con la
+ * fecha de mañana**. En una pollería, las ventas de la noche son la mitad del día, y las
+ * cuentas de hoy saldrían partidas en dos sin que nada dé error.
+ *
+ * La hora va en 24 con el cero delante ("09:05") para que los textos se ordenen solos en el
+ * historial. Enseñarla en "9:05 a.m." es cosa de horaVisible(), al pintar.
+ */
+export function ahoraDelNegocio(ms: number = Date.now()): { fecha: string; hora: string } {
+  const d = new Date(ms);
+  const dos = (n: number) => String(n).padStart(2, "0");
+  return {
+    fecha: `${d.getFullYear()}-${dos(d.getMonth() + 1)}-${dos(d.getDate())}`,
+    hora: `${dos(d.getHours())}:${dos(d.getMinutes())}`,
+  };
+}
+
+/**
  * El total de una venta, CALCULADO de sus líneas.
  *
  * Nunca se escribe a mano en ningún sitio: un total guardado que no cuadre con sus líneas

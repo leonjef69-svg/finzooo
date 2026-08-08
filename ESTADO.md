@@ -254,7 +254,7 @@ paso natural y solo hace falta que baje uno.
 > | | |
 > |---|---|
 > | Pasos 1, 2 y 3 | ✅ Terminados, y **confirmados por él en su celular** el 07/08/2026 |
-> | Paso 4 | ⚠️ **A MEDIAS. Ya está el panel (8ago-01, publicado). Falta REGISTRAR: la pantalla de venta y la de gasto** |
+> | Paso 4 | ⚠️ **CASI. Panel (8ago-01) y registrar ventas (8ago-02), publicados. Falta solo ANOTAR UN GASTO del negocio** |
 > | Paso 5 | Sin empezar |
 >
 > Compila y las **47 pruebas están en verde**, así que se puede seguir sin arreglar nada
@@ -399,8 +399,15 @@ está hecho: las tres piezas de abajo son exactamente eso.
       habría desaparecido al reiniciar la app, sin ningún error. Tiene sus dos pruebas.
    2. ✅ **`utils/negocioTotales.ts`** (8ago-01) — las cuentas del panel en funciones puras:
       `totalesDelNegocio`, `historialDelNegocio` y `horaVisible`. Se comprueban con números.
-   3. `screens/NuevaVenta.tsx` — elegir productos activos, cantidad, método de pago, y
-      registrar. El total sale de `totalDeLineas()`, nunca escrito a mano.
+   3. ✅ **`screens/NuevaVenta.tsx`** (8ago-02) — se toca el producto para sumar uno, hay
+      `−`/`+`, se elige cómo pagaron y se registra. **Solo salen los productos activos.** El
+      total sale de `totalDeLineas()`, la misma función que usa `crearVenta` al guardar, así
+      que el número que se ve y el que queda guardado no pueden ser distintos.
+
+      > **`ahoraDelNegocio()` en `utils/negocio.ts`, y NO `toISOString()`.** Esa da la hora de
+      > Londres: en Perú son cinco horas menos, así que **una venta de las 8 de la noche se
+      > habría guardado con la fecha de mañana**. En una pollería las ventas de la noche son
+      > la mitad del día. Tiene prueba, escrita para que valga en cualquier país.
    4. ✅ **`screens/PanelNegocio.tsx`** (8ago-01) — el saldo arriba, las cuatro líneas de
       dónde sale (ventas, ingresos automáticos, gastos, y los ingresos a mano **solo si los
       hay**, para que no exista plata guardada que no salga en ninguna línea), el aviso del
@@ -413,8 +420,8 @@ está hecho: las tres piezas de abajo son exactamente eso.
 
       **Es el total de TODO lo registrado, sin cortar por fecha, y se dice en la pantalla.**
       Los reportes por día y por mes son V2 y no se adelantan.
-   5. Ruta `app/negocio/[id].tsx` (panel) ✅ hecha, con candado Premium; falta
-      `app/negocio/venta.tsx`.
+   5. ✅ Rutas `app/negocio/[id].tsx` (panel) y `app/negocio/venta.tsx`, las dos con candado
+      Premium y las dos vuelven solas si el negocio ya no existe.
 
       > **OJO: los tipos de las rutas los genera Expo, y estaban desfasados.** `npx tsc` daba
       > error en una ruta nueva perfectamente correcta. Se regeneran arrancando el servidor

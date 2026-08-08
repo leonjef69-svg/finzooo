@@ -17,6 +17,7 @@
 import fs from "fs";
 import path from "path";
 import {
+  ahoraDelNegocio,
   borrarNegocio,
   borrarProducto,
   crearMovimientoNegocio,
@@ -548,6 +549,75 @@ console.log("\n--- EL PANEL: ENGANCHE, PANTALLA Y RUTA (paso 4) ---");
   for (const m of ["yape", "plin", "efectivo", "transferencia", "tarjeta", "otro"]) {
     const veces = (i18n.match(new RegExp(`"venta\\.metodo\\.${m}":`, "g")) ?? []).length;
     ok(veces === 3, `el metodo ${m} esta traducido (${veces})`);
+  }
+}
+
+console.log("\n--- REGISTRAR UNA VENTA (paso 4) ---");
+{
+  // LA FECHA Y LA HORA SON DEL CELULAR, NO DE LONDRES.
+  //
+  // Es el fallo silencioso de esta pantalla: toISOString() da la hora de Londres, y en Peru
+  // son cinco horas menos. Una venta de las 8 de la noche se habria guardado con la fecha de
+  // MANANA, y en una polleria las ventas de la noche son la mitad del dia: las cuentas de hoy
+  // saldrian partidas en dos sin que nada de error.
+  //
+  // Se construye una fecha LOCAL y se exige que salga esa misma fecha local: asi la prueba
+  // vale en cualquier pais y no depende de donde se corra.
+  const laNoche = new Date(2026, 7, 8, 20, 30).getTime();
+  const ahora = ahoraDelNegocio(laNoche);
+  ok(ahora.fecha === "2026-08-08", `una venta de las 8 de la noche es de HOY (${ahora.fecha})`);
+  ok(ahora.hora === "20:30", `y son las 20:30 (${ahora.hora})`);
+  // Con el cero delante, que es lo que deja ordenar el historial comparando textos.
+  const temprano = ahoraDelNegocio(new Date(2026, 7, 8, 9, 5).getTime());
+  ok(temprano.hora === "09:05", `las nueve y cinco se guardan "09:05" (${temprano.hora})`);
+  ok(ahoraDelNegocio(new Date(2026, 0, 3, 0, 0).getTime()).fecha === "2026-01-03", "y el mes y el dia tambien llevan cero");
+
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/NuevaVenta.tsx"), "utf8");
+
+  // SOLO LOS PRODUCTOS ACTIVOS. Es todo el sentido de "desactivar" en vez de "borrar": la
+  // gaseosa que se acabo deja de salir al vender y vuelve manana con su precio y su historia.
+  ok(/p\.negocioId === negocioId && p\.activo/.test(pant), "solo salen los productos activos de ese negocio");
+
+  // EL NOMBRE Y EL PRECIO SE COPIAN EN LA LINEA. Si manana sube el Broster de 15 a 18, esta
+  // venta tiene que seguir diciendo 15.
+  ok(/nombre: p\.nombre,\s*\n\s*precio: p\.precio,/.test(pant), "la venta copia el nombre y el precio");
+
+  // EL TOTAL NO SE ESCRIBE A MANO EN NINGUN SITIO: sale de totalDeLineas, la misma funcion que
+  // usa crearVenta al guardar. Asi el numero que se ve antes de registrar y el que queda
+  // guardado no pueden ser distintos.
+  ok(/const total = totalDeLineas\(lineas\)/.test(pant), "el total se calcula, no se teclea");
+  ok(!/\.reduce\(/.test(pant), "y la pantalla no suma dinero por su cuenta");
+
+  // Sin nada tocado no se registra: una venta de cero no es una venta.
+  ok(/lineas\.length === 0/.test(pant), "no se registra una venta vacia");
+
+  // BAJAR A CERO QUITA EL PRODUCTO de la venta. Dejar un "0 x Broster" obligaria a acordarse
+  // de filtrarlo en cada sitio que lea las lineas.
+  ok(/if \(nueva <= 0\) delete copia\[id\]/.test(pant), "bajar a cero quita el producto");
+
+  // SIN PRODUCTOS NO SE PUEDE VENDER, y se dice con la salida delante: quien llega y ve una
+  // lista vacia no tiene por que saber que los productos se ponen en otra pantalla.
+  ok(/venta\.vacioTitulo/.test(pant), "sin productos activos se explica");
+  ok(/pathname: "\/negocio\/productos"/.test(pant), "y se ofrece ir a ponerlos");
+
+  // EL DOBLE CONTEO SE DICE TAMBIEN AQUI, no solo en el panel: es donde se elige "Yape".
+  ok(/venta\.avisoYape/.test(pant), "se avisa del Yape contado dos veces");
+
+  // La ruta: con candado, y sin negocio se vuelve. Guardar una venta de un negocio que ya no
+  // existe la dejaria huerfana: contando en ningun sitio y sin forma de verla ni de borrarla.
+  const ruta = fs.readFileSync(path.join(RAIZ, "app/negocio/venta.tsx"), "utf8");
+  ok(/if \(!isPremium\)/.test(ruta), "registrar una venta tambien es Premium");
+  ok(/if \(!negocio\)/.test(ruta), "y sin negocio se vuelve");
+
+  // Y SE LLEGA DESDE EL PANEL, que es donde se mira el negocio.
+  const panel = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
+  ok(/pathname: "\/negocio\/venta"/.test(panel), "se entra a vender desde el panel");
+
+  // Los textos, en los tres idiomas.
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  for (const clave of ["title", "total", "registrar", "registrada", "faltaProducto", "vacioTitulo", "avisoYape", "metodoTitulo"]) {
+    const veces = (i18n.match(new RegExp(`"venta\\.${clave}":`, "g")) ?? []).length;
+    ok(veces === 3, `"venta.${clave}" esta en los tres idiomas (${veces})`);
   }
 }
 
