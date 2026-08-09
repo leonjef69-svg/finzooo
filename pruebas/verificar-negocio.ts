@@ -33,7 +33,11 @@ import {
   filtrarPorPeriodo,
   historialDelNegocio,
   horaVisible,
+  diferenciaConElMesPasado,
+  mejorMesDe,
+  mesAnteriorDe,
   productosVendidos,
+  resumenPorMes,
   totalesDelNegocio,
 } from "@/utils/negocioTotales";
 import {
@@ -1068,6 +1072,110 @@ console.log("\n--- QUE NO PAREZCA QUE UN YAPEO SE PERDIO ---");
   for (const clave of ['"negocios\\.rowYapes"', '"autoCapture\\.vanAlNegocio"', '"autoCapture\\.vanAlNegocioTexto"', '"panel\\.misNegocios"']) {
     const veces = (i18n.match(new RegExp(`${clave}:`, "g")) ?? []).length;
     ok(veces === 3, `${clave.replace(/\\\\/g, "")} esta en los tres idiomas (${veces})`);
+  }
+}
+
+console.log("\n--- V2: MES A MES (julio contra agosto) ---");
+{
+  // Lo pidio asi: "una comparativa por ejemplo del mes de julio y mes de agosto para saber
+  // cuanto se gano ese mes".
+
+  // EL SALTO DE ENERO, QUE ES DONDE ESTO SE ROMPE: el mes anterior a "2026-01" es "2025-12",
+  // no "2026-00". Es el error de una linea que dejaria la comparacion vacia justo en enero.
+  ok(mesAnteriorDe("2026-08") === "2026-07", `antes de agosto va julio (${mesAnteriorDe("2026-08")})`);
+  ok(mesAnteriorDe("2026-01") === "2025-12", `y antes de enero, diciembre del año anterior (${mesAnteriorDe("2026-01")})`);
+  ok(mesAnteriorDe("2026-10") === "2026-09", `y el cero delante no se pierde (${mesAnteriorDe("2026-10")})`);
+
+  const venta = (id: string, fecha: string, total: number) => ({
+    id,
+    negocioId: "n1",
+    fecha,
+    hora: "12:00",
+    lineas: [{ productoId: "p1", nombre: "Broster", precio: total, cantidad: 1 }],
+    total,
+    metodo: "efectivo" as const,
+    estado: "pagado" as const,
+  });
+  const gasto = (id: string, fecha: string, monto: number) => ({
+    ...crearMovimientoNegocio({
+      negocioId: "n1",
+      tipo: "gasto",
+      monto,
+      metodo: "efectivo",
+      descripcion: "Pollo",
+      fecha,
+      hora: "08:00",
+    }),
+    id,
+  });
+
+  const resumen = resumenPorMes(
+    "n1",
+    [
+      venta("v1", "2026-08-08", 100),
+      venta("v2", "2026-08-01", 50),
+      venta("v3", "2026-07-15", 200),
+      // La del OTRO negocio no puede contar.
+      { ...venta("v4", "2026-08-08", 999), negocioId: "n2" },
+    ],
+    [gasto("m1", "2026-08-02", 30), gasto("m2", "2026-07-10", 20)]
+  );
+
+  ok(resumen.length === 2, `salen los dos meses (${resumen.length})`);
+  // EL MAS NUEVO PRIMERO, que es como se lee: se mira este mes y se compara con el de antes.
+  ok(resumen[0].mes === "2026-08" && resumen[1].mes === "2026-07", "el mas nuevo arriba");
+  ok(resumen[0].entro === 150 && resumen[0].salio === 30, `agosto: entraron 150, salieron 30 (${resumen[0].entro}, ${resumen[0].salio})`);
+  ok(resumen[0].queda === 120, `y quedaron 120 (${resumen[0].queda})`);
+  ok(resumen[1].queda === 180, `julio dejo 180 (${resumen[1].queda})`);
+  ok(!resumen.some((m) => m.entro === 999), "y no se cuela lo del otro negocio");
+
+  // UN MES EN ROJO ES POSIBLE Y TIENE QUE SALIR EN ROJO, no en cero: un mes en el que se
+  // compro mas de lo que se vendio es informacion, no un error.
+  const enRojo = resumenPorMes("n1", [], [gasto("m1", "2026-08-02", 30)]);
+  ok(enRojo[0].queda === -30, `un mes puede quedar en rojo (${enRojo[0].queda})`);
+
+  // EL TOPE: dos años de negocio serian 24 filas que nadie mira, y el que importa esta arriba.
+  const muchos = resumenPorMes(
+    "n1",
+    Array.from({ length: 12 }, (_, i) => venta(`v${i}`, `2026-${String(i + 1).padStart(2, "0")}-05`, 10)),
+    []
+  );
+  ok(muchos.length === 6, `no salen mas de 6 meses (${muchos.length})`);
+  ok(muchos[0].mes === "2026-12", "y son los 6 mas nuevos");
+
+  // LOS CENTIMOS, sin cola, tambien aqui.
+  const conColas = resumenPorMes("n1", [venta("v1", "2026-08-08", 0.1), venta("v2", "2026-08-09", 0.2)], []);
+  ok(conColas[0].entro === 0.3, `0.10 + 0.20 son 0.30 (${conColas[0].entro})`);
+
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
+  // MIRA TODAS LAS VENTAS, NO LAS DEL PERIODO. Es la unica parte de la pantalla que no obedece
+  // al boton de arriba, y tiene que ser asi: comparar agosto con julio con "Hoy" puesto daria
+  // una sola columna.
+  ok(/resumenPorMes\(negocioId, ventas, movimientosNegocio\)/.test(pant), "el mes a mes mira todos los meses, no solo el periodo elegido");
+  // LA RESTA LA HACE LA APP. Si hay que hacerla de cabeza mirando dos numeros, no se hace.
+  ok(/panel\.comparaMas/.test(pant) && /panel\.comparaMenos/.test(pant), "y dice cuanto mas o menos que el mes pasado");
+  // Y LA RESTA SE PIDE HECHA, no se escribe en la pantalla. Restar dos saldos parece
+  // inofensivo y es por donde vuelve el fallo de siempre: una cuenta de plata dentro de una
+  // pantalla no se puede comprobar sin abrir la app y mirar.
+  ok(/diferenciaConElMesPasado\(meses, hoy\.slice\(0, 7\)\)/.test(pant), "y la resta se pide hecha, no se escribe en la pantalla");
+
+  // LA DIFERENCIA, CON NUMEROS. Y null cuando falta el mes pasado: "no hay con que comparar"
+  // y "quedo igual" son dos frases distintas, y enseñar la segunda cuando es la primera seria
+  // inventar.
+  ok(diferenciaConElMesPasado(resumen, "2026-08") === -60, `agosto va 60 por debajo de julio (${diferenciaConElMesPasado(resumen, "2026-08")})`);
+  ok(diferenciaConElMesPasado(resumen, "2026-07") === null, "sin mes pasado no se compara nada");
+  // Y la barra se mide contra el mejor mes, con suelo en cero: si todos quedaron en rojo, sin
+  // ese suelo saldrian los anchos al reves y el peor mes tendria la barra mas larga.
+  ok(mejorMesDe(resumen) === 180, `el mejor mes fue 180 (${mejorMesDe(resumen)})`);
+  ok(mejorMesDe(enRojo) === 0, `con todos en rojo, el suelo es cero (${mejorMesDe(enRojo)})`);
+  // Con un solo mes no hay nada que comparar: seria un titulo con una fila que repite lo de
+  // arriba.
+  ok(/meses\.length > 1/.test(pant), "no sale con un solo mes");
+
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  for (const clave of ["mesAMes", "mesDetalle", "comparaMas", "comparaMenos", "comparaIgual"]) {
+    const veces = (i18n.match(new RegExp(`"panel\\.${clave}":`, "g")) ?? []).length;
+    ok(veces === 3, `"panel.${clave}" esta en los tres idiomas (${veces})`);
   }
 }
 

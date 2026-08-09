@@ -213,6 +213,106 @@ export function historialDelNegocio(
   return filas.sort((a, b) => `${b.fecha} ${b.hora}`.localeCompare(`${a.fecha} ${a.hora}`));
 }
 
+/** Un mes del negocio: lo que entró, lo que salió y lo que quedó. */
+export type MesDelNegocio = {
+  /** "AAAA-MM" */
+  mes: string;
+  entro: number;
+  salio: number;
+  queda: number;
+};
+
+/**
+ * EL MES ANTERIOR A UNO DADO: "2026-08" → "2026-07".
+ *
+ * Está aparte y con prueba propia por el salto de enero: el mes anterior a "2026-01" es
+ * "2025-12", no "2026-00". Es el error de una línea que hace que en enero la comparación con
+ * el mes pasado salga vacía — y en enero justamente es cuando se mira.
+ */
+export function mesAnteriorDe(mes: string): string {
+  const [anio, numero] = mes.split("-").map(Number);
+  if (!Number.isFinite(anio) || !Number.isFinite(numero)) return mes;
+  if (numero === 1) return `${anio - 1}-12`;
+  return `${anio}-${String(numero - 1).padStart(2, "0")}`;
+}
+
+/**
+ * MES A MES: cuánto entró, cuánto salió y cuánto quedó en cada mes (V2, 08/08/2026).
+ *
+ * Lo pidió así: *"una comparativa por ejemplo del mes de julio y mes de agosto para saber
+ * cuánto se ganó ese mes"*.
+ *
+ * MIRA TODOS LOS MESES A PROPÓSITO, sin filtrar por el periodo elegido arriba en el panel. Es
+ * la única parte de esa pantalla que no obedece a ese botón, y tiene que ser así: comparar
+ * agosto con julio teniendo puesto "Hoy" daría una sola columna.
+ *
+ * "Entró" suma las ventas Y los ingresos, igual que el saldo, así que arrastra el mismo doble
+ * conteo de una venta cobrada por Yape — y por eso el aviso de la pantalla vale también aquí.
+ */
+export function resumenPorMes(
+  negocioId: string,
+  ventas: Venta[],
+  movimientos: MovimientoNegocio[],
+  tope = 6
+): MesDelNegocio[] {
+  const meses = new Map<string, MesDelNegocio>();
+  const dame = (fecha: string) => {
+    const mes = fecha.slice(0, 7);
+    const antes = meses.get(mes) ?? { mes, entro: 0, salio: 0, queda: 0 };
+    meses.set(mes, antes);
+    return antes;
+  };
+
+  for (const v of ventas) {
+    if (v.negocioId !== negocioId) continue;
+    dame(v.fecha).entro += v.total;
+  }
+  for (const m of movimientos) {
+    if (m.negocioId !== negocioId) continue;
+    const fila = dame(m.fecha);
+    if (m.tipo === "ingreso") fila.entro += m.monto;
+    else fila.salio += m.monto;
+  }
+
+  return [...meses.values()]
+    .map((f) => ({
+      mes: f.mes,
+      entro: aCentimos(f.entro),
+      salio: aCentimos(f.salio),
+      queda: aCentimos(f.entro - f.salio),
+    }))
+    // El más nuevo primero, que es como se lee: se mira este mes y se compara con el de antes.
+    .sort((a, b) => b.mes.localeCompare(a.mes))
+    // Con un tope, porque esto va dentro de una pantalla: dos años de negocio serían 24 filas
+    // que nadie va a mirar, y el que importa siempre está arriba.
+    .slice(0, tope);
+}
+
+/**
+ * CUÁNTO MÁS (O MENOS) QUE EL MES PASADO. Devuelve null si falta alguno de los dos meses.
+ *
+ * La resta se hace AQUÍ y no en la pantalla, igual que todo lo demás de este archivo: es
+ * dinero, así que tiene que poder comprobarse con números. Y null no es cero: "no hay mes
+ * pasado con el que comparar" y "quedó igual que el mes pasado" son dos frases distintas, y
+ * enseñar la segunda cuando es la primera sería inventar.
+ */
+export function diferenciaConElMesPasado(meses: MesDelNegocio[], mesActual: string): number | null {
+  const ahora = meses.find((m) => m.mes === mesActual);
+  const antes = meses.find((m) => m.mes === mesAnteriorDe(mesActual));
+  if (!ahora || !antes) return null;
+  return aCentimos(ahora.queda - antes.queda);
+}
+
+/**
+ * El mes que más dejó, para medir las barras contra él.
+ *
+ * Cero si todos quedaron en rojo: una barra no puede medirse contra un número negativo, y sin
+ * este suelo saldrían anchos al revés — el peor mes con la barra más larga.
+ */
+export function mejorMesDe(meses: MesDelNegocio[]): number {
+  return meses.reduce((mayor, m) => Math.max(mayor, m.queda), 0);
+}
+
 /** Un producto en la cuenta de "qué se vendió": cuántos salieron y cuánta plata trajeron. */
 export type ProductoVendido = {
   productoId: string;

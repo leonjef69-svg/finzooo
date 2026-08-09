@@ -22,10 +22,13 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { fmt as fmtConSimbolo, fmtDate } from "@/utils/format";
 import { ahoraDelNegocio } from "@/utils/negocio";
 import {
+  diferenciaConElMesPasado,
   filtrarPorPeriodo,
   historialDelNegocio,
   horaVisible,
+  mejorMesDe,
   productosVendidos,
+  resumenPorMes,
   totalesDelNegocio,
   type PeriodoDelPanel,
 } from "@/utils/negocioTotales";
@@ -114,6 +117,26 @@ export default function PanelNegocio({
     () => productosVendidos(negocioId, ventasDelPeriodo),
     [negocioId, ventasDelPeriodo]
   );
+
+  /**
+   * MES A MES, y con TODAS las ventas, no con las del periodo.
+   *
+   * Es la única parte de esta pantalla que no obedece al botón de arriba, y tiene que ser así:
+   * comparar agosto con julio teniendo puesto "Hoy" daría una sola columna.
+   */
+  const meses = useMemo(
+    () => resumenPorMes(negocioId, ventas, movimientosNegocio),
+    [negocioId, ventas, movimientosNegocio]
+  );
+  /**
+   * Cuánto más (o menos) que el mes pasado, y cuál fue el mejor mes para medir las barras.
+   *
+   * LAS DOS CUENTAS SE PIDEN HECHAS, como todo el dinero de esta pantalla. Restar aquí dos
+   * saldos parece inofensivo y es exactamente por donde vuelve el fallo de siempre: una cuenta
+   * de plata escrita en una pantalla no se puede comprobar sin abrir la app y mirar.
+   */
+  const diferencia = diferenciaConElMesPasado(meses, hoy.slice(0, 7));
+  const mejorMes = mejorMesDe(meses);
 
   /** Cuál fila se está confirmando para borrar. En la propia fila, como en el resto de la app. */
   const [borrando, setBorrando] = useState<string | null>(null);
@@ -332,6 +355,66 @@ export default function PanelNegocio({
           </>
         )}
 
+        {/* MES A MES. Solo sale con DOS meses o más: con uno no hay nada que comparar y sería
+            un título con una fila debajo diciendo lo que ya está arriba. */}
+        {meses.length > 1 && (
+          <>
+            <Text className="text-xs font-bold text-slate-700 dark:text-slate-200 mt-6 mb-3">
+              {t("panel.mesAMes")}
+            </Text>
+
+            {/* LA COMPARACIÓN, EN UNA FRASE. Es lo que preguntó: cuánto ganó este mes contra
+                el pasado. Los números están en la lista, pero la resta la tiene que hacer la
+                app: si hay que hacerla de cabeza, no se hace. */}
+            {diferencia !== null && (
+              <View className="rounded-2xl bg-slate-50 dark:bg-slate-800 p-4 mb-3">
+                <Text className="text-[11px] leading-5 text-slate-600 dark:text-slate-300">
+                  {diferencia > 0
+                    ? t("panel.comparaMas", { dif: dinero(Math.abs(diferencia)) })
+                    : diferencia < 0
+                      ? t("panel.comparaMenos", { dif: dinero(Math.abs(diferencia)) })
+                      : t("panel.comparaIgual")}
+                </Text>
+              </View>
+            )}
+
+            <View
+              className="rounded-2xl bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700 p-4 gap-3.5"
+              style={CARD_SHADOW}
+            >
+              {meses.map((m) => (
+                <View key={m.mes}>
+                  <View className="flex-row items-center gap-3">
+                    <Text className="flex-1 text-xs font-bold text-slate-900 dark:text-slate-100">
+                      {nombreDelMes(m.mes, monthNames)}
+                    </Text>
+                    <Text
+                      className={`text-sm font-bold ${
+                        m.queda < 0 ? "text-rose-500" : "text-emerald-600"
+                      }`}
+                    >
+                      {dinero(m.queda)}
+                    </Text>
+                  </View>
+                  <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    {t("panel.mesDetalle", { entro: dinero(m.entro), salio: dinero(m.salio) })}
+                  </Text>
+                  <View className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 mt-1.5 overflow-hidden">
+                    <View
+                      className={`h-full rounded-full ${m.queda < 0 ? "bg-rose-400" : "bg-emerald-500"}`}
+                      // Un mes en rojo no tiene barra que estirar: se deja el mínimo para que
+                      // la fila no parezca vacía.
+                      style={{
+                        width: `${m.queda > 0 && mejorMes > 0 ? Math.max(4, (m.queda / mejorMes) * 100) : 4}%`,
+                      }}
+                    />
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+
         {/* A QUÉ BOLSILLO VAN LOS YAPEOS QUE ENTREN.
             Va en el panel y no escondido en "editar el negocio": es lo que cambia dónde cae
             tu plata todos los días, y una decisión así no puede estar donde no se ve. Empieza
@@ -493,6 +576,19 @@ export default function PanelNegocio({
       </ScrollView>
     </View>
   );
+}
+
+/**
+ * "2026-07" → "julio 2026", con los nombres del idioma elegido.
+ *
+ * El año se pone SIEMPRE. Sin él, "julio" a principios de enero podría ser el de hace seis
+ * meses o el de hace año y medio, y en una lista de meses seguidos eso se confunde solo.
+ */
+function nombreDelMes(mes: string, monthNames: string[]): string {
+  const [anio, numero] = mes.split("-").map(Number);
+  const nombre = monthNames[numero - 1];
+  if (!nombre) return mes;
+  return `${nombre} ${anio}`;
 }
 
 /** Los tres trozos de tiempo, en el orden en que se preguntan: hoy primero. */

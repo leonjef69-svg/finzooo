@@ -595,6 +595,28 @@ Lo hecho de productos, ventas a mano y gastos **se queda**: no estorba y sirve p
 con calma. Pero **no es el camino principal**, y proponer cosas que dependan de que alguien
 registre cada venta es volver a esta misma conversación.
 
+**5. Mes a mes (8ago-08).** Lo pidió él después del pulido: *"¿habría como una comparativa por
+ejemplo del mes de julio y mes de agosto para saber cuánto se ganó ese mes?"*. Encaja con lo
+que eligió porque **no le pide nada a nadie**: solo lee lo que ya se registró solo.
+
+En el panel, cada mes con lo que entró, lo que salió, lo que quedó y una barra. Y arriba, la
+resta en una frase: *"este mes llevas S/ 60 menos que el mes pasado"*.
+
+- **Es la única parte del panel que NO obedece al botón de arriba**, y tiene que ser así:
+  comparar agosto con julio con "Hoy" puesto daría una sola columna.
+- **`mesAnteriorDe` tiene prueba propia por el salto de enero:** el mes anterior a "2026-01" es
+  "2025-12", no "2026-00". Es el error de una línea que dejaría la comparación vacía justo en
+  enero, que es cuando se mira.
+- **La resta la hace `diferenciaConElMesPasado`, no la pantalla.** El primer intento la escribió
+  dentro del panel y **la prueba de "no suma dinero por su cuenta" lo cazó** — que es
+  exactamente para lo que está.
+- **Devuelve `null` cuando no hay mes pasado**, no cero: *"no hay con qué comparar"* y *"quedó
+  igual"* son dos frases distintas, y enseñar la segunda cuando es la primera sería inventar.
+- **Un mes puede quedar en rojo** y sale en rojo: un mes en el que se compró más de lo que se
+  vendió es información, no un error. Las barras se miden contra el mejor mes **con suelo en
+  cero**, o con todos en rojo saldrían los anchos al revés.
+- Tope de 6 meses: dos años serían 24 filas que nadie mira, y el que importa está arriba.
+
 **4. Pulido del camino sin manos (8ago-07).** Tres cosas, y la primera es la que importa:
 
 - **La pantalla de Registro automático dice a dónde van los yapeos.** Desde que un negocio puede
