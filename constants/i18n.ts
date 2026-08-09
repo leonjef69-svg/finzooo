@@ -444,7 +444,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
       "Para dictar tus gastos, Finzo necesita el micrófono. Puedes darle permiso en los ajustes de Android, en Aplicaciones → Finzo → Permisos.",
 
     "premium.title": "Finzo Premium",
-    "premium.subtitle": "Sin publicidad. Todo tu potencial financiero.",
+    "premium.subtitle": "Todo tu potencial financiero.",
     "premium.freeSectionTitle": "Plan Gratis",
     "premium.premiumSectionTitle": "Plan Premium",
     "premium.freeTransactions": "Movimientos ilimitados",
@@ -1522,7 +1522,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
       "To dictate your expenses, Finzo needs the microphone. You can grant it in Android settings, under Apps → Finzo → Permissions.",
 
     "premium.title": "Finzo Premium",
-    "premium.subtitle": "No ads. Your full financial potential.",
+    "premium.subtitle": "Your full financial potential.",
     "premium.freeSectionTitle": "Free plan",
     "premium.premiumSectionTitle": "Premium plan",
     "premium.freeTransactions": "Unlimited transactions",
@@ -2594,7 +2594,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
       "Para ditar seus gastos, o Finzo precisa do microfone. Você pode conceder nas configurações do Android, em Aplicativos → Finzo → Permissões.",
 
     "premium.title": "Finzo Premium",
-    "premium.subtitle": "Sem anúncios. Todo o seu potencial financeiro.",
+    "premium.subtitle": "Todo o seu potencial financeiro.",
     "premium.freeSectionTitle": "Plano Gratuito",
     "premium.premiumSectionTitle": "Plano Premium",
     "premium.freeTransactions": "Movimentos ilimitados",

@@ -683,13 +683,39 @@ Esto es lo pendiente de verdad, en orden de bloqueo:
    **Para recuperar el selector de precios y el botón**, están en el historial hasta el
    commit anterior a 7ago-32, en `screens/Premium.tsx`, `app/premium.tsx` y
    `constants/precios.ts`.
-2. **"Sin anuncios" es una promesa vacía** en los textos de Premium: no hay
-   anuncios que quitar. Google lo trata como afirmación engañosa.
-3. **Política de privacidad sin URL pública.** Además está desfasada: ahora se
-   guardan también correos, números de teléfono e imágenes de categorías, y
-   tiene que decirlo.
-4. **Falta la página web de borrado de cuenta.** Google la exige aunque la app
-   ya tenga el botón: se pide poder borrar la cuenta *sin* instalar la app.
+2. ~~"Sin anuncios" es una promesa vacía~~ **RESUELTO EL 08/08/2026 (8ago-12).** Fuera de
+   `premium.subtitle` en los tres idiomas. No hay anuncios que quitar, así que cobrarlo era
+   justo lo que Google llama engañoso.
+3. **Política de privacidad: EL TEXTO YA ESTÁ BIEN (8ago-12); falta publicarlo.**
+
+   Estaba desfasada y **decía cosas falsas**: *"no recogemos tu ubicación, contactos, fotos"*
+   cuando la app guarda fotos desde las categorías propias (03/08) y el escáner de boletas. Y
+   **no mencionaba en ninguna línea la lectura de notificaciones**, que es el permiso más
+   delicado de toda la app — la persona lo concede leyendo esa pantalla.
+
+   Ahora la sección 2 es solo eso, entera: que es opcional y viene apagada, que Android no deja
+   dar acceso a los avisos de una sola app, que Finzo filtra antes de guardar y solo mira Yape,
+   que todo se queda en su celular, y que de los avisos de claves no se guarda el texto.
+   También el Modo Negocio, los contactos de envío, el micrófono, Drive y Dropbox.
+4. **Las páginas web YA ESTÁN ESCRITAS (`docs/`); falta que él las publique.**
+
+   `docs/privacidad.html`, `docs/borrar-cuenta.html` e `index.html`, listas para **GitHub Pages
+   desde el repositorio que ya existe** — es gratis y no hace falta contratar nada. Lo único
+   suyo: en GitHub → Settings → Pages, elegir la rama `master` y la carpeta `/docs`.
+
+   Las direcciones quedarían en `https://leonjef69-svg.github.io/finzooo/privacidad.html` y
+   `.../borrar-cuenta.html`, que son las dos que pide el formulario de Play Console.
+
+   > **Hay una prueba nueva, `verificar-legales.mjs`, y vigila algo que ninguna otra vigilaba:
+   > que lo que la app PROMETE y lo que la app HACE coincidan.** Comprueba que no se venda
+   > "sin publicidad", que la política nombre cada dato que de verdad se guarda, que el correo
+   > de contacto sea el mismo en la app y en la web, y que la web nombre el botón de borrar
+   > cuenta **igual que la app** — si la fila dijera otra cosa, quien siga las instrucciones no
+   > lo encuentra y se queda dentro.
+   >
+   > Y de paso cazó un fallo **de la prueba, no del código**: buscaba la ruta de borrado dentro
+   > de `screens/Settings.tsx` cuando vive en `app/(tabs)/settings.tsx`. Se arregló mirando los
+   > dos lados.
 5. **Declarar el lector de notificaciones** en el formulario de permisos
    sensibles, si se mantiene esa función.
 6. **12 probadores × 14 días** en prueba cerrada, para cuentas nuevas de
