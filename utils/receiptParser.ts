@@ -44,10 +44,30 @@ export type ReceiptRead = {
 
 /** Deja un texto comparable: sin tildes, en minúsculas. */
 function soften(text: string): string {
-  return text
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .toLowerCase();
+  return juntarLetrasSueltas(
+    text
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+  );
+}
+
+/**
+ * "t o t a l" → "total". Junta las letras que el papel imprime separadas.
+ *
+ * MUCHAS BOLETAS ESCRIBEN "TOTAL" CON LAS LETRAS SEPARADAS, para que destaque. El lector las
+ * devuelve tal cual —con sus espacios— y entonces la palabra "total" **deja de existir** para
+ * quien la busca. Sin ella no hay ninguna línea que puntúe como total, y el escáner cae en su
+ * red de seguridad: quedarse con la cifra más grande del papel.
+ *
+ * Pasó con una boleta de verdad el 09/08/2026: la app propuso **S/ 2.423,00** por una compra
+ * de S/ 16,50. Los 2423 eran el CÓDIGO del producto, repetido en cada línea.
+ *
+ * Se exigen **tres o más letras sueltas seguidas** a propósito: con dos bastaría para juntar
+ * cosas que están separadas de verdad —"S/ 5 A 6"— y se romperían líneas normales.
+ */
+function juntarLetrasSueltas(texto: string): string {
+  return texto.replace(/\b(?:[a-z]\s){2,}[a-z]\b/g, (trozo) => trozo.replace(/\s+/g, ""));
 }
 
 /**
@@ -118,7 +138,10 @@ const NOT_A_NAME = [
  * se leería como veintiocho soles, que es exactamente el error que ya
  * cometió el micrófono con "gastos de 28 de julio".
  */
-function amountsIn(line: string): number[] {
+/** Un número encontrado en una línea, y si venía con céntimos. */
+type MontoLeido = { valor: number; conCentimos: boolean };
+
+function amountsIn(line: string): MontoLeido[] {
   const clean = line
     .replace(DATE_YMD, " ")
     .replace(DATE_DMY, " ")
@@ -126,7 +149,7 @@ function amountsIn(line: string): number[] {
     .replace(DOC_RE, " ")
     .replace(TIME_RE, " ");
 
-  const out: number[] = [];
+  const out: MontoLeido[] = [];
   // Un monto puede venir pegado a la moneda ("S/11.90") o suelto ("11.90").
   const re = /(?:S\s*\/\.?|US\s*\$|\$|PEN|USD)?\s*(\d[\dOolI|,.]*)/g;
   let m: RegExpExecArray | null;
@@ -152,9 +175,14 @@ function amountsIn(line: string): number[] {
      */
     if (!tieneCentimos && /^(19|20)\d\d$/.test(sinSeparadores)) continue;
     const value = parseAmount(raw);
-    if (value !== null && value > 0 && value < 1_000_000) out.push(value);
+    if (value !== null && value > 0 && value < 1_000_000) out.push({ valor: value, conCentimos: tieneCentimos });
   }
   return out;
+}
+
+/** Solo los números, para quien no necesita saber si traían céntimos. */
+function valoresDe(line: string): number[] {
+  return amountsIn(line).map((a) => a.valor);
 }
 
 /**
@@ -393,7 +421,7 @@ export function parseReceipt(text: string, now: Date = new Date()): ReceiptRead 
   for (const line of lines) {
     const score = scoreAsTotal(soften(line));
     if (score <= 0) continue;
-    const amounts = amountsIn(line);
+    const amounts = valoresDe(line);
     if (amounts.length === 0) continue;
     // El monto de una línea de total es el último: "TOTAL 3 ITEMS S/ 11.90".
     const amount = amounts[amounts.length - 1];
@@ -403,14 +431,31 @@ export function parseReceipt(text: string, now: Date = new Date()): ReceiptRead 
     }
   }
 
-  // Red de seguridad: sin ninguna línea que diga "total", se toma el monto
-  // más grande de la boleta. Acierta a menudo, pero no siempre, así que esto
-  // baja la confianza a "low" y la pantalla pedirá que se revise.
+  /**
+   * Red de seguridad: sin ninguna línea que diga "total", la cifra más grande del papel.
+   *
+   * PERO SOLO ENTRE LAS QUE TIENEN CÉNTIMOS, y esa condición es la que faltaba.
+   *
+   * En una boleta los precios llevan céntimos. Lo que NO los lleva son los códigos de
+   * producto, las cantidades, los números de caja y los años — y esos son casi siempre más
+   * grandes que la compra, así que ganaban el "más grande" sistemáticamente.
+   *
+   * Visto dos veces en dos días con papeles reales: **S/ 2.021** (el año) el 08/08/2026, y
+   * **S/ 2.423** (el código de producto, repetido en las tres líneas) el 09/08/2026 sobre una
+   * compra de S/ 16,50. En los dos casos el número correcto estaba ahí, con sus céntimos, y
+   * perdía contra un número que no era dinero.
+   *
+   * Si NINGUNA cifra tiene céntimos se usan todas: hay boletas —y monedas— sin decimales, y
+   * quedarse sin monto sería peor que arriesgar uno. Por eso esto sigue bajando la confianza y
+   * la pantalla sigue pidiendo que se revise.
+   */
   let guessed = false;
   if (total === null) {
     const all = lines.flatMap(amountsIn);
-    if (all.length > 0) {
-      total = Math.max(...all);
+    const conCentimos = all.filter((a) => a.conCentimos);
+    const candidatos = conCentimos.length > 0 ? conCentimos : all;
+    if (candidatos.length > 0) {
+      total = Math.max(...candidatos.map((a) => a.valor));
       guessed = true;
     }
   }

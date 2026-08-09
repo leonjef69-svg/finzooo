@@ -188,5 +188,54 @@ console.log("\n--- UNA BOLETA PERUANA DE VERDAD (la de la botica) ---");
   ok(botica.docNumber === "B008-00664859", `el numero de boleta (${botica.docNumber})`);
 }
 
+console.log("\n--- UN CODIGO DE PRODUCTO NO ES UN MONTO (la boleta del 09/08/2026) ---");
+{
+  // La escaneo con la camara y la app propuso GUARDAR S/ 2,423.00 por una compra de S/ 16.50.
+  // Los 2423 eran el CODIGO del producto, repetido en las tres lineas.
+  //
+  // Dos causas, y las dos hacian falta:
+  //
+  //   1. "Total" venia con las letras separadas —"T o t a l"—, que es como lo imprimen muchas
+  //      boletas para que destaque. Asi la palabra "total" NO EXISTE para quien la busca, no
+  //      puntua ninguna linea, y el escaner cae en su red de seguridad.
+  //   2. Esa red se quedaba con la cifra mas grande, y un codigo de producto es mas grande que
+  //      casi cualquier compra.
+  const conCodigos = parseReceipt(
+    [
+      "Inkafarma",
+      "InRetail Pharma S.A. - INKA FARMA",
+      "BOLETA ELECTRONICA: B911-0230512",
+      "Codigo  Descripcion       Importe",
+      "2423    Lorem                 1.1",
+      "2423    Ipsum                 2.2",
+      "2423    Dolor sit amet        3.3",
+      "T o t a l                    16.5",
+      "www.inkafarma.com.pe",
+      "GRACIAS POR SU COMPRA",
+    ].join("\n"),
+    AHORA
+  );
+
+  ok(conCodigos.total !== 2423, `el codigo de producto no se cobra (propuso ${conCodigos.total})`);
+  ok(conCodigos.total === 16.5, `el total es 16.50 (${conCodigos.total})`);
+  // Y AL ENCONTRAR LA LINEA DE TOTAL, la lectura deja de ser una adivinanza: la pantalla ya no
+  // tiene que pedir que se revise el monto.
+  ok(conCodigos.confidence !== "low", `y ya no avisa de lectura floja (${conCodigos.confidence})`);
+  ok(conCodigos.merchant === "Inkafarma", `el comercio ("${conCodigos.merchant}")`);
+  ok(conCodigos.docNumber === "B911-0230512", `el numero de boleta (${conCodigos.docNumber})`);
+
+  // LAS LETRAS SUELTAS SE JUNTAN, y no cualquier par de letras: hacen falta TRES seguidas. Con
+  // dos bastaria para pegar cosas que estan separadas de verdad y romper lineas normales.
+  const conEspacios = parseReceipt(["TIENDA", "T O T A L    S/  45.00", "PAN 3.00"].join("\n"), AHORA);
+  ok(conEspacios.total === 45, `"T O T A L" se entiende (${conEspacios.total})`);
+  const dosLetras = parseReceipt(["TIENDA", "S/ 5 A 6 SOLES", "TOTAL 9.00"].join("\n"), AHORA);
+  ok(dosLetras.total === 9, `y dos letras sueltas no se pegan (${dosLetras.total})`);
+
+  // SIN NINGUNA CIFRA CON CENTIMOS se usan todas: hay boletas sin decimales, y quedarse sin
+  // monto seria peor que arriesgar uno.
+  const sinCentimos = parseReceipt(["TIENDA", "ARROZ 5", "ACEITE 12"].join("\n"), AHORA);
+  ok(sinCentimos.total === 12, `sin centimos en ningun sitio, se usa el mayor (${sinCentimos.total})`);
+}
+
 console.log(fallos === 0 ? "\nTodo bien: el escaner no se inventa numeros\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);
