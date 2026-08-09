@@ -2373,13 +2373,42 @@ Del pedido largo quedó fuera lo que no depende de programar más:
   ofrecer un botón que siempre falla manda a buscar un fallo en el celular cuando lo que falta
   es un trámite.
 
+  > ## ⛔ Y EL TRÁMITE ESTÁ BLOQUEADO POR MICROSOFT. NO VOLVER A MANDARLO POR AHÍ.
+  >
+  > **Se intentó el 08/08/2026 y no se pudo pasar**, y no por torpeza: Microsoft **cerró la
+  > puerta**. Al entrar a Registros de aplicaciones con su Hotmail personal, el portal contesta:
+  >
+  > > *"La capacidad de crear aplicaciones fuera de un directorio está en desuso. Para obtener
+  > > su propio directorio, puede unirse al programa para desarrolladores de M365 o registrarse
+  > > en Azure."*
+  >
+  > O sea que ya **no basta una cuenta Microsoft normal**. Hacen falta una de estas dos, y las
+  > dos son un trámite mayor para alguien que no es programador:
+  >
+  > - **Registrarse en Azure** → pide **tarjeta de crédito** para verificar identidad. No cobra
+  >   nada en el plan gratuito, pero hay que ponerla.
+  > - **Programa de desarrolladores de M365** → hay que solicitarlo y lo dan con cuentagotas.
+  >
+  > **Se le recomendó dejarlo y estuvo de acuerdo con el razonamiento:** Dropbox ya hace
+  > exactamente lo mismo y le funciona, y Google Drive también. Poner una tarjeta para tener un
+  > tercer sitio idéntico no compensa.
+  >
+  > **Antes de proponerle OneDrive otra vez, leer esto.** El trabajo de programación NO es el
+  > problema —está hecho y probado—; el problema es un trámite con tarjeta que él ya rechazó.
+  > Si algún día tiene cuenta de Azure por otro motivo, es pegar el identificador y publicar.
+
   **Cuando él dé el identificador: pegarlo en esa constante y publicar. Nada más.**
 
-  Lo que hay que pedirle, exacto: en portal.azure.com → Microsoft Entra ID → Registros de
-  aplicaciones → Nuevo registro, con **cuentas personales de Microsoft**, y añadir
+  Los pasos, por si algún día se desbloquea: portal.azure.com → Microsoft Entra ID → Registros
+  de aplicaciones → Nuevo registro, con **cuentas personales de Microsoft**, y añadir
   `finzo://onedrive` como plataforma **móvil**. Lo que se copia es el "Id. de aplicación
   (cliente)", que es un UUID — hay una prueba que rechaza cualquier otra cosa, porque en esa
   página hay tres identificadores parecidos y copiar el equivocado da un error que no dice cuál.
+  (De hecho pasó: lo primero que se vio en pantalla fue el "Id. de inquilino".)
+
+  **Y un tropiezo del camino, por si se repite:** con varias cuentas Microsoft abiertas en el
+  navegador, Azure entra por la equivocada y sale *"la cuenta no existe en el inquilino"*. Se
+  arregla con una ventana de incógnito.
 
   **Las cuatro diferencias con Dropbox que no se adivinan copiando**, y cada una tiene su
   prueba porque las cuatro fallan solo en el celular y con la app ya conectada: `offline_access`
