@@ -7,6 +7,7 @@ import { GOAL_COLOR_HEX } from "@/constants/colors";
 import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Goal } from "@/types";
+import AvisoSoloLectura from "@/components/AvisoSoloLectura";
 import BackButton from "@/components/BackButton";
 
 export default function SavingsList({
@@ -20,6 +21,7 @@ export default function SavingsList({
   descuadre,
   monthLabel,
   onAllocate,
+  soloLectura = false,
 }: {
   goals: Goal[];
   onBack: () => void;
@@ -31,6 +33,8 @@ export default function SavingsList({
   descuadre: boolean;
   monthLabel: string;
   onAllocate: () => void;
+  /** Se acabó la prueba y ya había metas: se ven enteras, pero no se crea ni se mueve plata. */
+  soloLectura?: boolean;
 }) {
   const { fmt, t } = useAppData();
   const [tab, setTab] = useState<"resumen" | "metas">("resumen");
@@ -41,7 +45,7 @@ export default function SavingsList({
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
         <BackButton onPress={onBack} />
         <Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("savingsList.title")}</Text>
-        {tab === "metas" ? (
+        {tab === "metas" && !soloLectura ? (
           <TouchableOpacity
             onPress={onAdd}
             className="w-10 h-10 rounded-full bg-emerald-600 items-center justify-center"
@@ -70,6 +74,9 @@ export default function SavingsList({
       </View>
 
       <View className="flex-1 px-5 pb-8">
+        {/* POR QUÉ NO SE PUEDE TOCAR NADA, antes que los números: sin esto, los botones que
+            faltan parecen un fallo de la app. */}
+        {soloLectura && <AvisoSoloLectura />}
         {tab === "resumen" && (
           <View>
             <LinearGradient
@@ -132,7 +139,7 @@ export default function SavingsList({
             <Text className="text-xs text-slate-500 dark:text-slate-300 leading-relaxed mt-4 px-1">
               {t("savingsList.explanation")}
             </Text>
-            {libre > 0 && (
+            {libre > 0 && !soloLectura && (
               <TouchableOpacity
                 onPress={onAllocate}
                 className="mt-4 bg-emerald-50 rounded-2xl p-4 flex-row items-center gap-3"

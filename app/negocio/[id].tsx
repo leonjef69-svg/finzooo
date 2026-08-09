@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import PremiumLocked from "@/components/PremiumLocked";
 import PanelNegocio from "@/screens/PanelNegocio";
 import { useAppData } from "@/contexts/AppDataContext";
+import { candadoPremium, puedeTocar } from "@/utils/candado";
 import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
 
 export default function PanelNegocioRoute() {
@@ -10,9 +11,17 @@ export default function PanelNegocioRoute() {
   const blocked = useRedirectIfOrphaned();
   if (blocked) return null;
 
-  // EL CANDADO, igual que en la lista de negocios y en los productos. Va en la puerta de la
-  // pantalla y no dentro: una comprobación de por medio dejaría el panel a medio dibujar.
-  if (!isPremium) {
+  /**
+   * EL CANDADO, PERO SIN DEJAR A NADIE FUERA DE SU PROPIO NEGOCIO.
+   *
+   * Quien ya creó un negocio puede verlo aunque se le acabe la prueba: registrar es lo que
+   * cuesta Premium, mirar lo que ya anotó no. Ver utils/candado.
+   *
+   * Sin negocios no hay nada que enseñar, así que ahí el candado sigue cerrado y hace su
+   * trabajo: explicar para qué sirve Premium en vez de abrir una pantalla vacía.
+   */
+  const estado = candadoPremium(isPremium, negocios.length > 0);
+  if (estado === "cerrado") {
     return (
       <PremiumLocked
         title={t("panel.title")}
@@ -32,5 +41,5 @@ export default function PanelNegocioRoute() {
     return null;
   }
 
-  return <PanelNegocio negocioId={negocio.id} onBack={safeBack} />;
+  return <PanelNegocio negocioId={negocio.id} onBack={safeBack} soloLectura={!puedeTocar(estado)} />;
 }

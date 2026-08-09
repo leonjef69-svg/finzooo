@@ -7,9 +7,17 @@ import { EXPENSE_CATS } from "@/constants/categories";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import { sanitizeAmountInput } from "@/utils/amount";
+import AvisoSoloLectura from "@/components/AvisoSoloLectura";
 import BackButton from "@/components/BackButton";
 
-export default function CategoryBudgets({ onBack }: { onBack: () => void }) {
+export default function CategoryBudgets({
+  onBack,
+  soloLectura = false,
+}: {
+  onBack: () => void;
+  /** Se acabó la prueba y ya había límites puestos: se ven, pero no se cambian. */
+  soloLectura?: boolean;
+}) {
   const { t, fmt, userCurrency, categoryBudgets, categorySpent, updateCategoryBudgets } = useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -23,6 +31,9 @@ export default function CategoryBudgets({ onBack }: { onBack: () => void }) {
   });
 
   function save() {
+    // EL PORTERO, POR SI ALGÚN DÍA QUEDA UN BOTÓN SUELTO. Esconder el botón de guardar basta
+    // hoy, pero esconder no es impedir: esta línea es la que de verdad protege el dato.
+    if (soloLectura) return;
     const newBudgets: Record<string, number> = {};
     Object.entries(amounts).forEach(([id, v]) => {
       const n = parseFloat(v);
@@ -41,6 +52,7 @@ export default function CategoryBudgets({ onBack }: { onBack: () => void }) {
       </View>
 
       <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 20 }}>
+        {soloLectura && <AvisoSoloLectura />}
         <Text className="text-xs text-slate-500 dark:text-slate-300 mb-4">{t("categoryBudgets.subtitle")}</Text>
         <View className="gap-2.5">
           {EXPENSE_CATS.map((c) => {
@@ -64,8 +76,12 @@ export default function CategoryBudgets({ onBack }: { onBack: () => void }) {
                     <Text className="text-slate-500 dark:text-slate-300 text-xs font-bold mr-1">
                       {currencySymbolFor(userCurrency)}
                     </Text>
+                    {/* EN SOLO LECTURA LA CASILLA SE VE Y NO SE ESCRIBE. Se deja a la vista y
+                        no se esconde porque el límite es el dato: sin él, la barra de "llevas
+                        X de Y" no significa nada. */}
                     <TextInput
                       value={amounts[c.id]}
+                      editable={!soloLectura}
                       onChangeText={(v) =>
                         setAmounts((prev) => ({ ...prev, [c.id]: sanitizeAmountInput(v) }))
                       }
@@ -103,14 +119,16 @@ export default function CategoryBudgets({ onBack }: { onBack: () => void }) {
         </View>
       </ScrollView>
 
-      <View
-        className="px-5 py-4 border-t border-slate-200 dark:border-slate-700"
-        style={{ paddingBottom: 16 + insets.bottom }}
-      >
-        <TouchableOpacity onPress={save} className="w-full bg-emerald-600 py-4 rounded-2xl items-center">
-          <Text className="text-white font-bold">{t("common.saveChanges")}</Text>
-        </TouchableOpacity>
-      </View>
+      {!soloLectura && (
+        <View
+          className="px-5 py-4 border-t border-slate-200 dark:border-slate-700"
+          style={{ paddingBottom: 16 + insets.bottom }}
+        >
+          <TouchableOpacity onPress={save} className="w-full bg-emerald-600 py-4 rounded-2xl items-center">
+            <Text className="text-white font-bold">{t("common.saveChanges")}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
 }

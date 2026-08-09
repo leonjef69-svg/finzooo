@@ -14,6 +14,7 @@ import {
   Wallet,
   Zap,
 } from "lucide-react-native";
+import AvisoSoloLectura from "@/components/AvisoSoloLectura";
 import BackButton from "@/components/BackButton";
 import Toggle from "@/components/Toggle";
 import { CARD_SHADOW } from "@/constants/style";
@@ -50,9 +51,18 @@ import {
 export default function PanelNegocio({
   negocioId,
   onBack,
+  soloLectura = false,
 }: {
   negocioId: string;
   onBack: () => void;
+  /**
+   * Se puede mirar pero no tocar: la prueba se acabó y este negocio ya existía.
+   *
+   * Los números y el historial se ven ENTEROS. Lo que desaparece son los botones de registrar,
+   * el de anotar un gasto, el de productos y el interruptor de los yapeos — todo lo que
+   * CAMBIA algo. Ver utils/candado.
+   */
+  soloLectura?: boolean;
 }) {
   const {
     t,
@@ -191,6 +201,10 @@ export default function PanelNegocio({
           </Text>
         </View>
 
+        {/* PRIMERO, POR QUÉ NO SE PUEDE TOCAR NADA. Antes que los números: quien entra y ve los
+            botones desaparecidos sin explicación piensa que la app se rompió. */}
+        {soloLectura && <AvisoSoloLectura />}
+
         {/* HOY · ESTE MES · TODO.
             Va ARRIBA DEL TODO y no escondido tras un botón: es lo que cambia el significado de
             cada número de esta pantalla. Un total sin saber de qué días es no dice nada. */}
@@ -309,7 +323,7 @@ export default function PanelNegocio({
             REGISTRA. En el suyo no —*"el vendedor está enfocado en vender sus productos"*— y
             entonces el botón grande y verde es el que nunca se toca, encima del que sí: anotar
             un gasto. Cambia solo con el uso; no se quita nada. */}
-        {usaVentas ? (
+        {soloLectura ? null : usaVentas ? (
           <TouchableOpacity
             onPress={() => router.push({ pathname: "/negocio/venta", params: { id: negocioId } })}
             className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-600 mt-4"
@@ -332,7 +346,7 @@ export default function PanelNegocio({
             una venta y para la lista de "lo que más vendes". Él lo vio antes que nadie mirando
             su propia pantalla —*"ya no le pondré el nombre broster, yo ya no lo veo
             necesario"*— y tiene razón: el Yape entra solo, con productos o sin ellos. */}
-        {usaVentas && (
+        {usaVentas && !soloLectura && (
           <View className="flex-row gap-2.5 mt-2.5">
             <TouchableOpacity
               onPress={() => router.push({ pathname: "/negocio/movimiento", params: { id: negocioId } })}
@@ -365,7 +379,7 @@ export default function PanelNegocio({
             volverían ni el botón, ni los productos, ni "lo que más vendes"—. Escondido no es
             lo mismo que borrado, y esta línea es la diferencia. */}
         <View className="flex-row justify-center items-center gap-4 py-3">
-          {!usaVentas && (
+          {!usaVentas && !soloLectura && (
             <TouchableOpacity
               onPress={() => router.push({ pathname: "/negocio/venta", params: { id: negocioId } })}
             >
@@ -503,9 +517,14 @@ export default function PanelNegocio({
                 {recibeYapes ? t("panel.yapesAqui") : t("panel.yapesPersonal")}
               </Text>
             </View>
+            {/* EL INTERRUPTOR SE VE PERO NO SE TOCA en solo lectura, y verlo es lo importante:
+                dice a dónde está cayendo la plata AHORA MISMO, que es justo lo que hay que
+                poder comprobar aunque no se pueda cambiar. Esconderlo dejaría a alguien sin
+                saber por qué sus yapeos no aparecen en Inicio. */}
             <Toggle
               on={recibeYapes}
               onChange={(v: boolean) => {
+                if (soloLectura) return;
                 mandarYapesAlNegocio(negocioId, v);
                 showToast(v ? t("panel.yapesActivado") : t("panel.yapesDesactivado"));
               }}
@@ -617,7 +636,9 @@ export default function PanelNegocio({
                         </TouchableOpacity>
                       </View>
                     </View>
-                  ) : (
+                  ) : soloLectura ? null : (
+                    /* BORRAR TAMBIÉN ES CAMBIAR, así que en solo lectura no está. Y aquí importa
+                       más que en los otros botones: lo que se borra es dinero registrado. */
                     <View className="flex-row justify-end mt-2">
                       <TouchableOpacity
                         onPress={() => setBorrando(f.id)}

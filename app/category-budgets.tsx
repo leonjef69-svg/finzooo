@@ -2,14 +2,18 @@ import { router } from "expo-router";
 import CategoryBudgets from "@/screens/CategoryBudgets";
 import PremiumLocked from "@/components/PremiumLocked";
 import { useAppData } from "@/contexts/AppDataContext";
+import { candadoPremium, puedeTocar } from "@/utils/candado";
 import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
 
 export default function CategoryBudgetsRoute() {
-  const { t, isPremium } = useAppData();
+  const { t, isPremium, categoryBudgets } = useAppData();
   const blocked = useRedirectIfOrphaned();
   if (blocked) return null;
 
-  if (!isPremium) {
+  // VER LOS LÍMITES QUE YA PUSISTE ES GRATIS; cambiarlos es Premium. Sin ningún límite puesto
+  // el candado sigue cerrado: la pantalla estaría vacía. Ver utils/candado.
+  const estado = candadoPremium(isPremium, Object.keys(categoryBudgets).length > 0);
+  if (estado === "cerrado") {
     return (
       <PremiumLocked
         title={t("categoryBudgets.title")}
@@ -20,5 +24,5 @@ export default function CategoryBudgetsRoute() {
     );
   }
 
-  return <CategoryBudgets onBack={safeBack} />;
+  return <CategoryBudgets onBack={safeBack} soloLectura={!puedeTocar(estado)} />;
 }

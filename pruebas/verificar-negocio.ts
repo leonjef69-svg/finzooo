@@ -552,7 +552,14 @@ console.log("\n--- EL PANEL: ENGANCHE, PANTALLA Y RUTA (paso 4) ---");
 
   // La ruta: con candado, y sin negocio se vuelve en vez de enseñar totales de la nada.
   const ruta = fs.readFileSync(path.join(RAIZ, "app/negocio/[id].tsx"), "utf8");
-  ok(/if \(!isPremium\)/.test(ruta), "el panel tambien es Premium");
+  // SIGUE SIENDO PREMIUM, pero desde el 08/08/2026 con matiz: quien ya tiene un negocio puede
+  // VERLO aunque se le acabe la prueba —registrar es lo que cuesta, mirar lo suyo no— y el
+  // candado solo se cierra del todo si no hay ningun negocio que enseñar.
+  //
+  // La comprobacion vieja exigia "if (!isPremium)" literal y por eso fallo aqui teniendo el
+  // codigo razon. Quien vigila el detalle es verificar-candado.mjs; esta solo exige que la
+  // puerta siga habiendo.
+  ok(/candadoPremium\(isPremium, /.test(ruta), "el panel tambien es Premium");
   ok(/if \(!negocio\)/.test(ruta), "y sin negocio se vuelve");
 
   // Y SE LLEGA A EL. Una pantalla a la que no se llega no existe para nadie. La flecha esta
@@ -1215,14 +1222,17 @@ console.log("\n--- NADA QUE SEA UN CERO PERMANENTE ---");
   // sirven para elegirlos al registrar una venta y para "lo que mas vendes"; el Yape entra
   // solo, con productos o sin ellos.
   const antesDeProductos = pant.slice(0, pant.indexOf('pathname: "/negocio/productos"'));
-  ok(antesDeProductos.lastIndexOf("{usaVentas && (") > antesDeProductos.lastIndexOf("</View>"), "sin ventas no salen los productos");
+  // La guarda gano un "&& !soloLectura" el 08/08/2026: los productos tampoco salen sin Premium.
+  // Se busca por el trozo que no cambia, para que añadir otra condicion mañana no vuelva a
+  // romper esto sin que nada este mal.
+  ok(antesDeProductos.lastIndexOf("{usaVentas &&") > antesDeProductos.lastIndexOf("</View>"), "sin ventas no salen los productos");
 
   // PERO ESCONDIDO NO ES BORRADO, Y ESA ES LA LINEA QUE LO SEPARA.
   //
   // Sin una puerta de vuelta seria un camino sin retorno: no habria forma de registrar la
   // PRIMERA venta, y sin la primera nunca volverian ni el boton, ni los productos, ni "lo que
   // mas vendes". Queda en gris y chiquito abajo, junto a "Mis negocios".
-  ok(/!usaVentas && \([\s\S]{0,300}pathname: "\/negocio\/venta"/.test(pant), "pero registrar una venta sigue alcanzable, en gris");
+  ok(/!usaVentas &&[\s\S]{0,300}pathname: "\/negocio\/venta"/.test(pant), "pero registrar una venta sigue alcanzable, en gris");
   ok(/pathname: "\/negocio\/movimiento"/.test(pant), "y anotar un gasto tambien");
   // Y los productos, desde la lista de negocios, que es donde se configura cada uno.
   const lista = fs.readFileSync(path.join(RAIZ, "screens/Negocios.tsx"), "utf8");
