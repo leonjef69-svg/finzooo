@@ -17,6 +17,7 @@
 // moneda por defecto, y el formato de comprobante electrónico de SUNAT.
 
 import { parseAmount } from "@/utils/importEngine";
+import { usaCentimos } from "@/constants/currencies";
 
 export type ReceiptRead = {
   /** Nombre del comercio, ya limpio de "S.A.C." y similares. */
@@ -117,8 +118,14 @@ const TIME_LOOSE = /\b([01]?\d|2[0-3])[:.]([0-5]\d)(?::([0-5]\d))?\b/;
  *
  * Se acepta el guion **o** la abreviatura (N, N°, No, Nro), pero **no el espacio a secas**:
  * sin ninguna de las dos señales, un "F001 2026" suelto se leería como número de boleta.
+ *
+ * Y LA SERIE NO SIEMPRE ES UNA LETRA Y TRES NÚMEROS. Se pedía justo eso, y con las boletas de
+ * Ripley el número se perdía: usan **BP01** en tienda y **BTV1** por internet, con dos letras.
+ * Ahora se admiten hasta tres letras seguidas de uno a tres números, que cubre las series
+ * peruanas que se han visto. Sigue exigiéndose que empiece por B, F o E —boleta, factura o
+ * nota— para no confundirla con cualquier código del papel.
  */
-const DOC_RE = /\b([BFEbfe]\s?\d{3})\s*(?:[-–]|N(?:ro|[°ºo])?\.?)\s*[-–]?\s*(\d{1,8})\b/;
+const DOC_RE = /\b([BFEbfe][A-Za-z]{0,2}\s?\d{1,3})\s*(?:[-–]|N(?:ro|[°ºo])?\.?)\s*[-–]?\s*(\d{1,8})\b/;
 // RUC: 11 cifras que empiezan por 10, 15, 17 o 20.
 const RUC_RE = /\b((?:10|15|17|20)\d{9})\b/;
 
@@ -141,7 +148,20 @@ const NOT_A_NAME = [
 /** Un número encontrado en una línea, y si venía con céntimos. */
 type MontoLeido = { valor: number; conCentimos: boolean };
 
-function amountsIn(line: string): MontoLeido[] {
+/**
+ * Saca los números de una línea.
+ *
+ * `conCentimos` dice si en ESTA moneda los precios llevan decimales. Con soles, dólares o
+ * euros sí, y entonces un número largo y redondo es un código. Con pesos chilenos o
+ * colombianos NO los llevan, y aplicar la regla de los soles dejaría la boleta sin ningún
+ * monto. Ver usaCentimos en constants/currencies.
+ *
+ * `enLineaDeTotal` afloja la sospecha sobre los años. En una línea que dice "TOTAL" hay que
+ * creerle: una compra de 2021 pesos chilenos existe, y descartarla por parecerse a un año
+ * dejaría sin monto una boleta que lo decía claramente. Fuera de esa línea se sigue
+ * desconfiando, porque ahí el año gana el "más grande" casi siempre.
+ */
+function amountsIn(line: string, conCentimos = true, enLineaDeTotal = false): MontoLeido[] {
   const clean = line
     .replace(DATE_YMD, " ")
     .replace(DATE_DMY, " ")
@@ -157,9 +177,19 @@ function amountsIn(line: string): MontoLeido[] {
     const raw = repairDigits(m[1]).replace(/[.,]$/, "");
     const sinSeparadores = raw.replace(/[.,]/g, "");
     const tieneCentimos = /[.,]\d{1,2}$/.test(raw);
-    // Un número suelto sin decimales y muy largo no es un precio: es un
-    // código de barras, un número de caja o un teléfono.
-    if (!tieneCentimos && sinSeparadores.length > 4) continue;
+    /**
+     * Un número suelto sin decimales y muy largo no es un precio: es un código de barras, un
+     * número de caja o un teléfono.
+     *
+     * **CUÁNTO ES "MUY LARGO" DEPENDE DE LA MONEDA.** Con soles, cuatro cifras redondas ya son
+     * sospechosas porque un precio de verdad llevaría céntimos. Con pesos chilenos, 659.990 es
+     * el precio de un teléfono — y con el tope de los soles se descartaba, dejando la boleta
+     * entera sin ni un monto que proponer.
+     *
+     * Ocho cifras siguen fuera en las dos: eso ya es un código de barras, no dinero.
+     */
+    const tope = conCentimos ? 4 : 8;
+    if (!tieneCentimos && sinSeparadores.length > tope) continue;
     /**
      * UN AÑO SUELTO NO ES UN MONTO. Cuatro cifras, sin céntimos y entre 1900 y 2100.
      *
@@ -172,8 +202,13 @@ function amountsIn(line: string): MontoLeido[] {
      * casi siempre — es más grande que casi cualquier compra de diario.
      *
      * El filtro de arriba no lo cazaba por poco: mide "más de 4 cifras" y un año tiene 4.
+     *
+     * PERO EN UNA LÍNEA QUE DICE "TOTAL" HAY QUE CREERLE. Una compra de 2021 pesos chilenos
+     * existe, y descartarla por parecerse a un año dejaría sin monto una boleta que lo decía
+     * claramente. La sospecha vale donde nace el problema: en la red de seguridad, donde el
+     * año gana el "más grande" casi siempre.
      */
-    if (!tieneCentimos && /^(19|20)\d\d$/.test(sinSeparadores)) continue;
+    if (!enLineaDeTotal && !tieneCentimos && /^(19|20)\d\d$/.test(sinSeparadores)) continue;
     const value = parseAmount(raw);
     if (value !== null && value > 0 && value < 1_000_000) out.push({ valor: value, conCentimos: tieneCentimos });
   }
@@ -181,8 +216,8 @@ function amountsIn(line: string): MontoLeido[] {
 }
 
 /** Solo los números, para quien no necesita saber si traían céntimos. */
-function valoresDe(line: string): number[] {
-  return amountsIn(line).map((a) => a.valor);
+function valoresDe(line: string, conCentimos = true, enLineaDeTotal = false): number[] {
+  return amountsIn(line, conCentimos, enLineaDeTotal).map((a) => a.valor);
 }
 
 /**
@@ -393,7 +428,19 @@ function findMerchant(lines: string[]): string {
  *
  * `now` se puede pasar para poder probar el resultado sin depender del reloj.
  */
-export function parseReceipt(text: string, now: Date = new Date()): ReceiptRead {
+export function parseReceipt(
+  text: string,
+  now: Date = new Date(),
+  /**
+   * La moneda de la persona, para saber si en su país los precios llevan céntimos.
+   *
+   * Por defecto soles, que es de donde viene la app. Pero Finzo deja elegir pesos chilenos,
+   * colombianos y argentinos, y allí las boletas se escriben sin decimales: con la regla de
+   * los soles puesta, el escáner no encontraría **ni un solo monto**. Ver usaCentimos.
+   */
+  moneda = "PEN"
+): ReceiptRead {
+  const conCentimos = usaCentimos(moneda);
   const lines = (text ?? "")
     .split("\n")
     .map((l) => l.trim())
@@ -422,7 +469,8 @@ export function parseReceipt(text: string, now: Date = new Date()): ReceiptRead 
     const line = lines[i];
     const score = scoreAsTotal(soften(line));
     if (score <= 0) continue;
-    let amounts = valoresDe(line);
+    // En una línea que dice "TOTAL" se le cree al número aunque parezca un año: ver amountsIn.
+    let amounts = valoresDe(line, conCentimos, true);
     /**
      * EL RÓTULO EN UNA LÍNEA Y EL NÚMERO EN LA SIGUIENTE.
      *
@@ -438,7 +486,7 @@ export function parseReceipt(text: string, now: Date = new Date()): ReceiptRead 
     if (amounts.length === 0) {
       const siguiente = (lines[i + 1] ?? "").trim();
       const soloUnMonto = /^(?:S\s*\/\.?|US\s*\$|\$)?\s*[\dOolI|,.]+$/.test(siguiente);
-      amounts = soloUnMonto ? valoresDe(siguiente) : [];
+      amounts = soloUnMonto ? valoresDe(siguiente, conCentimos, true) : [];
       if (amounts.length === 0) continue;
     }
     // El monto de una línea de total es el último: "TOTAL 3 ITEMS S/ 11.90".
@@ -469,9 +517,11 @@ export function parseReceipt(text: string, now: Date = new Date()): ReceiptRead 
    */
   let guessed = false;
   if (total === null) {
-    const all = lines.flatMap(amountsIn);
-    const conCentimos = all.filter((a) => a.conCentimos);
-    const candidatos = conCentimos.length > 0 ? conCentimos : all;
+    const all = lines.flatMap((l) => amountsIn(l, conCentimos));
+    // Con una moneda sin céntimos —pesos chilenos, colombianos— no hay decimales que mirar, y
+    // exigirlos dejaría la lista vacía: ahí valen todas.
+    const conDecimales = conCentimos ? all.filter((a) => a.conCentimos) : [];
+    const candidatos = conDecimales.length > 0 ? conDecimales : all;
     if (candidatos.length > 0) {
       total = Math.max(...candidatos.map((a) => a.valor));
       guessed = true;

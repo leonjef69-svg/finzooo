@@ -20,6 +20,28 @@ export function currencySymbolFor(id: string): string {
   return CURRENCIES.find((c) => c.id === id)?.symbol ?? "S/";
 }
 
+/**
+ * MONEDAS EN LAS QUE LOS PRECIOS NO LLEVAN CÉNTIMOS.
+ *
+ * No es un detalle de formato: **cambia cómo se lee una boleta**. El escáner se apoya en que
+ * un precio lleva decimales para distinguirlo de un código de producto o de un año — eso es lo
+ * que evitó que una compra de S/ 16,50 se guardara como S/ 2.423.
+ *
+ * Pero en Chile un café cuesta **2500** pesos, sin decimales, y en Colombia igual. Con la regla
+ * de los soles puesta, ahí el escáner **descartaría todos los montos** y no propondría nada.
+ * Salió mirando una boleta chilena de verdad el 09/08/2026, y él lo zanjó: *"el escanear tiene
+ * que funcionar en los países que tengo en mi ajuste"*.
+ *
+ * El peso argentino está aquí aunque tenga centavos por ley: con la inflación, los precios del
+ * día a día se escriben enteros desde hace años.
+ */
+const SIN_CENTIMOS = ["CLP", "COP", "ARS"];
+
+/** ¿En esta moneda los precios llevan céntimos? */
+export function usaCentimos(id: string): boolean {
+  return !SIN_CENTIMOS.includes(id);
+}
+
 export function currencyLabelFor(id: string, t: (key: string) => string): string {
   const key = CURRENCIES.find((c) => c.id === id)?.label ?? "currency.PEN";
   return t(key);

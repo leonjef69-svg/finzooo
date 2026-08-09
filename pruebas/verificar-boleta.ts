@@ -291,6 +291,94 @@ console.log("\n--- UNA FACTURA CON TABLA (la del grifo, 09/08/2026) ---");
   );
 }
 
+console.log("\n--- LAS BOLETAS DE LOS OTROS PAISES QUE LA APP OFRECE ---");
+{
+  // "El escanear tiene que funcionar en los paises que tengo en mi ajuste actualmente junto a
+  // sus monedas" (09/08/2026). Salio mirando una boleta chilena: Finzo deja elegir pesos
+  // chilenos, colombianos y argentinos, y ALLI LOS PRECIOS NO LLEVAN CENTIMOS.
+  //
+  // El escaner se apoyaba en los decimales para distinguir un precio de un codigo de producto
+  // —eso es lo que evito que una compra de S/ 16.50 se guardara como S/ 2,423— y con esa regla
+  // puesta en Chile DESCARTABA TODOS LOS MONTOS y no proponia nada.
+
+  const chilena = [
+    "Falabella Retail S.A.",
+    "BOLETA ELECTRONICA N 671174752",
+    "Fecha : 08-10-2020  Hora: 21:27",
+    "CODIGO PROD  DESCRIPCION        MONTO",
+    "190199222434  APPLE-APPLE I     659990",
+    "SUBTOTAL                        659990",
+    "TOTAL                           659990",
+  ].join("\n");
+
+  // CON PESOS CHILENOS se lee. 659.990 es el precio de un telefono, no un codigo.
+  const enPesos = parseReceipt(chilena, AHORA, "CLP");
+  ok(enPesos.total === 659990, `en pesos chilenos el total sale (${enPesos.total})`);
+
+  // Y CON SOLES ESA MISMA BOLETA NO DA MONTO, que es justo lo que tiene que pasar: en soles un
+  // numero de seis cifras sin centimos es un codigo, y creerselo seria peor que no proponer
+  // nada. La regla no se ha aflojado para todos: se ha atado a la moneda.
+  const mismaEnSoles = parseReceipt(chilena, AHORA, "PEN");
+  ok(mismaEnSoles.total !== 659990, `en soles ese numero sigue siendo sospechoso (${mismaEnSoles.total})`);
+
+  // COLOMBIA igual: un almuerzo son 18.000 pesos.
+  const colombiana = parseReceipt(
+    ["RESTAURANTE EL SABOR", "ALMUERZO         18000", "TOTAL            18000"].join("\n"),
+    AHORA,
+    "COP"
+  );
+  ok(colombiana.total === 18000, `en pesos colombianos tambien (${colombiana.total})`);
+
+  // Y EL AÑO SIGUE SIENDO SOSPECHOSO, PERO NO EN LA LINEA DEL TOTAL. Una compra de 2021 pesos
+  // chilenos existe —son dos dolares— y descartarla por parecerse a un año dejaria sin monto
+  // una boleta que lo decia claramente.
+  const dosMilVeintiuno = parseReceipt(
+    ["CAFETERIA", "EMITIDO EN 2021", "TOTAL 2021"].join("\n"),
+    AHORA,
+    "CLP"
+  );
+  ok(dosMilVeintiuno.total === 2021, `en la linea del total se le cree al numero (${dosMilVeintiuno.total})`);
+  // Pero fuera de esa linea se sigue desconfiando: ahi el año gana el "mas grande" casi siempre.
+  const soloElAño = parseReceipt(["CAFETERIA", "EMITIDO EN 2021", "CAFE 900"].join("\n"), AHORA, "CLP");
+  ok(soloElAño.total === 900, `y fuera de ella el año se descarta (${soloElAño.total})`);
+
+  // UN CODIGO DE BARRAS SIGUE FUERA EN LAS DOS MONEDAS: ocho cifras ya no es dinero.
+  const conCodigoBarras = parseReceipt(
+    ["TIENDA", "7501234567890  ARROZ  2500", "TOTAL 2500"].join("\n"),
+    AHORA,
+    "CLP"
+  );
+  ok(conCodigoBarras.total === 2500, `un codigo de barras no se cobra (${conCodigoBarras.total})`);
+
+  // Y LA MONEDA POR DEFECTO SIGUE SIENDO SOLES: la app es peruana y las pruebas de arriba, que
+  // no pasan moneda, tienen que seguir midiendo lo mismo.
+  const porDefecto = parseReceipt(["TIENDA", "TOTAL 12.50"].join("\n"), AHORA);
+  ok(porDefecto.total === 12.5, "sin decir moneda se sigue leyendo como soles");
+}
+
+console.log("\n--- SERIES DE BOLETA CON MAS DE UNA LETRA (Ripley) ---");
+{
+  // Se pedia una letra y tres numeros —B001, F102—, y con las boletas de Ripley el numero se
+  // perdia: usan BP01 en tienda y BTV1 por internet.
+  const tienda = parseReceipt(
+    ["RIPLEY", "TIENDAS POR DEPARTAMENTO RIPLEY S.A.C", "RUC 20337564373", "BOLETA VENTA ELECTRONICA  BP01-4226409", "TOTAL 59.90"].join("\n"),
+    AHORA
+  );
+  ok(tienda.docNumber === "BP01-4226409", `la serie de tienda (${tienda.docNumber})`);
+  ok(tienda.ruc === "20337564373", `y el RUC (${tienda.ruc})`);
+
+  const virtual = parseReceipt(
+    ["TIENDAS POR DEPARTAMENTO RIPLEY S.A.C.", "BOLETA DE VENTA ELECTRONICA", "BTV1 - 5770501", "FECHA DE EMISION: 09/09/2022", "TOTAL 120.00"].join("\n"),
+    AHORA
+  );
+  ok(virtual.docNumber === "BTV1-5770501", `la serie de la tienda virtual (${virtual.docNumber})`);
+  ok(virtual.date === "2022-09-09", `y su fecha (${virtual.date})`);
+
+  // Y LAS DE SIEMPRE SIGUEN VALIENDO: aflojar la forma no puede romper lo que ya funcionaba.
+  const deSiempre = parseReceipt(["TIENDA", "B001-00012345", "TOTAL 10.00"].join("\n"), AHORA);
+  ok(deSiempre.docNumber === "B001-00012345", `la de toda la vida (${deSiempre.docNumber})`);
+}
+
 console.log("\n--- EL RECORTE CAE DONDE SE VE ---");
 {
   // El recortador de Android se cambio por uno propio el 09/08/2026, con este motivo suyo:

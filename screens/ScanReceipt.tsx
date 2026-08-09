@@ -41,7 +41,7 @@ type Stage =
 type Kind = "expense" | "income";
 
 export default function ScanReceipt({ onClose }: { onClose: () => void }) {
-  const { t, fmt, merchantLearned, addOrUpdateTransaction } = useAppData();
+  const { t, fmt, merchantLearned, addOrUpdateTransaction, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
 
   const [stage, setStage] = useState<Stage>("intro");
@@ -126,7 +126,9 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
       return;
     }
 
-    const parsed = parseReceipt(outcome.result.text);
+    // CON SU MONEDA, no con soles a secas: en Chile o Colombia los precios no llevan céntimos,
+    // y con la regla de los soles el escáner no encontraría ni un monto. Ver usaCentimos.
+    const parsed = parseReceipt(outcome.result.text, new Date(), userCurrency);
     setRead(parsed);
     setAmountText(parsed.total !== null ? String(parsed.total) : "");
     setMerchant(parsed.merchant);
