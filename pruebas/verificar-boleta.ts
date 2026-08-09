@@ -238,6 +238,59 @@ console.log("\n--- UN CODIGO DE PRODUCTO NO ES UN MONTO (la boleta del 09/08/202
   ok(sinCentimos.total === 12, `sin centimos en ningun sitio, se usa el mayor (${sinCentimos.total})`);
 }
 
+console.log("\n--- UNA FACTURA CON TABLA (la del grifo, 09/08/2026) ---");
+{
+  // Escaneo la factura de un grifo y la app propuso 25.42, que es el SUBTOTAL. El total era
+  // 30.00. Perder los 4.58 del IGV en cada compra no se nota mirando, se nota a fin de mes.
+  //
+  // La causa es la forma del papel: en una factura con tabla, "IMPORTE TOTAL", "S/" y "30.00"
+  // son TRES CELDAS, y el lector las devuelve en lineas distintas. Asi la linea que dice
+  // "total" se queda sin numero, se descarta, no queda ninguna que puntue, y el escaner cae en
+  // su red de seguridad.
+  const factura = parseReceipt(
+    [
+      "GRIFO SERVITOR S.A.",
+      "R.U.C. N 20334129595",
+      "FACTURA ELECTRONICA",
+      "F102  N 00000383",
+      "Fecha de emision: LIMA , 08 de Septiembre de 2020",
+      "Codigo Cantidad UM Descripcion Valor Unitario Descuentos Sub Total",
+      "05 3.040 GLL Diesel B5 S50 UV centrif. 8.36441 25.42",
+      "Sub Total",
+      "S/ 25.42",
+      "Operacion Gravada:",
+      "S/ 25.42",
+      "I.G.V. 18%",
+      "S/ 4.58",
+      "IMPORTE TOTAL",
+      "S/ 30.00",
+    ].join("\n"),
+    AHORA
+  );
+
+  ok(factura.total === 30, `el total es 30.00 y no el subtotal (${factura.total})`);
+  ok(factura.total !== 25.42, "no se pierde el IGV en cada compra");
+  // Y AL ENCONTRARLO DE VERDAD deja de ser una adivinanza: se quita el aviso de lectura floja.
+  ok(factura.confidence !== "low", `y ya no avisa de lectura floja (${factura.confidence})`);
+  ok(factura.merchant === "GRIFO SERVITOR", `el comercio ("${factura.merchant}")`);
+  ok(factura.docNumber === "F102-00000383", `el numero de la factura (${factura.docNumber})`);
+
+  // SOLO SE MIRA LA LINEA SIGUIENTE SI ES EL NUMERO A SECAS. Aceptar cualquiera con un numero
+  // dentro convertiria un "TOTAL" perdido en el precio del primer producto de debajo.
+  const conProductoDebajo = parseReceipt(
+    ["TIENDA", "TOTAL", "GASEOSA 1L 5.50", "PAN 3.00"].join("\n"),
+    AHORA
+  );
+  // Lo que se mide es que el atajo NO se lo crea. Acaba proponiendo 5.50 igual —la red de
+  // seguridad se queda con la cifra mayor— pero lo hace ADIVINANDO, y por eso sigue avisando
+  // de que la lectura salio floja. La diferencia entre adivinar y dar por bueno es justo lo que
+  // esta prueba tiene que separar.
+  ok(
+    conProductoDebajo.confidence === "low",
+    `un producto debajo de "TOTAL" no se da por bueno (${conProductoDebajo.confidence})`
+  );
+}
+
 console.log("\n--- EL RECORTE CAE DONDE SE VE ---");
 {
   // El recortador de Android se cambio por uno propio el 09/08/2026, con este motivo suyo:

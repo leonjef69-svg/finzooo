@@ -418,11 +418,29 @@ export function parseReceipt(text: string, now: Date = new Date()): ReceiptRead 
   // abajo del papel.
   let bestScore = 0;
   let total: number | null = null;
-  for (const line of lines) {
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
     const score = scoreAsTotal(soften(line));
     if (score <= 0) continue;
-    const amounts = valoresDe(line);
-    if (amounts.length === 0) continue;
+    let amounts = valoresDe(line);
+    /**
+     * EL RÓTULO EN UNA LÍNEA Y EL NÚMERO EN LA SIGUIENTE.
+     *
+     * En las facturas con tabla —las de un grifo, por ejemplo— "IMPORTE TOTAL", "S/" y "30.00"
+     * son tres celdas, y el lector las devuelve a menudo en líneas distintas. Sin esto, la
+     * línea que dice "total" se descarta por no traer número, no queda ninguna que puntúe, y
+     * el escáner cae en su red de seguridad — que es de donde salen los sustos.
+     *
+     * Solo se mira la línea siguiente, y solo si es **el número a secas** (con su S/ si lo
+     * lleva). Aceptar cualquier línea con un número dentro convertiría un "TOTAL" perdido en
+     * el precio del primer producto que viniera debajo.
+     */
+    if (amounts.length === 0) {
+      const siguiente = (lines[i + 1] ?? "").trim();
+      const soloUnMonto = /^(?:S\s*\/\.?|US\s*\$|\$)?\s*[\dOolI|,.]+$/.test(siguiente);
+      amounts = soloUnMonto ? valoresDe(siguiente) : [];
+      if (amounts.length === 0) continue;
+    }
     // El monto de una línea de total es el último: "TOTAL 3 ITEMS S/ 11.90".
     const amount = amounts[amounts.length - 1];
     if (total === null || score >= bestScore) {

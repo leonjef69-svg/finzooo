@@ -47,22 +47,32 @@ export default function RecortarBoleta({
   const dibujo = imagenDentroDelHueco(anchoImagen, altoImagen, hueco.ancho, hueco.alto);
 
   /**
-   * El recuadro mientras el dedo lo mueve.
+   * DE DÓNDE PARTIÓ EL DEDO, y lo que hay en pantalla AHORA MISMO.
    *
-   * Va en una referencia y no en el estado porque el gesto necesita saber DE DÓNDE partió, y el
-   * estado dentro de un gesto se queda con el valor de cuando empezó. Con el estado, arrastrar
-   * daba saltos.
+   * ESTAS TRES REFERENCIAS SON LA DIFERENCIA ENTRE QUE SE MUEVA Y QUE NO, y costaron el primer
+   * intento: *"el recuadro se queda estático, no deja mover"* (09/08/2026).
+   *
+   * El gesto se arma UNA sola vez, al abrir la pantalla. Lo que lea ahí dentro se queda
+   * congelado en el valor de ese primer instante — y en ese instante el recuadro todavía no
+   * existía (era nulo) y la imagen aún no se había medido. Así que el dedo se movía, el gesto
+   * leía "no hay recuadro" y no hacía nada. No fallaba: no llegaba a empezar.
+   *
+   * Con referencias, el gesto lee lo de ahora en vez de lo de entonces.
    */
-   const alEmpezar = useRef<Rect | null>(null);
+  const alEmpezar = useRef<Rect | null>(null);
+  const seleccionAhora = useRef<Rect | null>(null);
+  const dibujoAhora = useRef(dibujo);
+  seleccionAhora.current = seleccion;
+  dibujoAhora.current = dibujo;
 
   function empezar() {
-    alEmpezar.current = seleccion;
+    alEmpezar.current = seleccionAhora.current;
   }
 
   function mover(dx: number, dy: number) {
     const base = alEmpezar.current;
     if (!base) return;
-    setSeleccion(encajar({ ...base, x: base.x + dx, y: base.y + dy }, dibujo));
+    setSeleccion(encajar({ ...base, x: base.x + dx, y: base.y + dy }, dibujoAhora.current));
   }
 
   /** Estira desde una esquina. Las de arriba y las de la izquierda mueven además el origen. */
@@ -81,7 +91,7 @@ export default function RecortarBoleta({
           x: izquierda ? base.x + (base.ancho - ancho) : base.x,
           y: arriba ? base.y + (base.alto - alto) : base.y,
         },
-        dibujo
+        dibujoAhora.current
       )
     );
   }
@@ -95,13 +105,27 @@ export default function RecortarBoleta({
     })
   ).current;
 
-  const gestoEsquina = (esquina: "ai" | "ad" | "bi" | "bd") =>
-    PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: () => true,
-      onPanResponderGrant: () => empezar(),
-      onPanResponderMove: (_e, g) => estirar(esquina, g.dx, g.dy),
-    }).panHandlers;
+  /**
+   * Los cuatro gestos de las esquinas, armados UNA vez.
+   *
+   * Rehacerlos en cada dibujo los cambiaría a mitad de un arrastre —justo cuando el dedo está
+   * encima— y el gesto se corta. Ahora se pueden armar una sola vez porque leen de las
+   * referencias de arriba y no de valores congelados.
+   */
+  const gestosEsquina = useRef(
+    (["ai", "ad", "bi", "bd"] as const).reduce(
+      (acc, esquina) => {
+        acc[esquina] = PanResponder.create({
+          onStartShouldSetPanResponder: () => true,
+          onMoveShouldSetPanResponder: () => true,
+          onPanResponderGrant: () => empezar(),
+          onPanResponderMove: (_e, g) => estirar(esquina, g.dx, g.dy),
+        }).panHandlers;
+        return acc;
+      },
+      {} as Record<"ai" | "ad" | "bi" | "bd", ReturnType<typeof PanResponder.create>["panHandlers"]>
+    )
+  ).current;
 
   async function confirmar() {
     if (!seleccion || trabajando) return;
@@ -197,7 +221,7 @@ export default function RecortarBoleta({
             ).map(([esquina, cx, cy]) => (
               <View
                 key={esquina}
-                {...gestoEsquina(esquina)}
+                {...gestosEsquina[esquina]}
                 style={{ position: "absolute", left: cx - 22, top: cy - 22, width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
               >
                 <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: "#10b981", borderWidth: 3, borderColor: "#ffffff" }} />
