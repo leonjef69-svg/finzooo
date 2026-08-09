@@ -18,6 +18,7 @@
 // > etiqueta sin valor, varias fechas con nombres distintos— con datos inventados. Es la misma
 // > regla que se siguio con su estado de cuenta el 07/08/2026.
 import { parseReceipt } from "@/utils/receiptParser";
+import { encajar, imagenDentroDelHueco, recorteEnPixeles, MINIMO } from "@/utils/recorte";
 
 let fallos = 0;
 function ok(c: boolean, m: string) {
@@ -235,6 +236,63 @@ console.log("\n--- UN CODIGO DE PRODUCTO NO ES UN MONTO (la boleta del 09/08/202
   // monto seria peor que arriesgar uno.
   const sinCentimos = parseReceipt(["TIENDA", "ARROZ 5", "ACEITE 12"].join("\n"), AHORA);
   ok(sinCentimos.total === 12, `sin centimos en ningun sitio, se usa el mayor (${sinCentimos.total})`);
+}
+
+console.log("\n--- EL RECORTE CAE DONDE SE VE ---");
+{
+  // El recortador de Android se cambio por uno propio el 09/08/2026, con este motivo suyo:
+  // "ese cuadro sigue siendo de color blanco, no se ve nada cuando se recorta la imagen". Ese
+  // recuadro lo pintaba el sistema, y su celular lo dibuja en blanco sobre una foto que tambien
+  // es blanca — el papel.
+  //
+  // Lo que se comprueba aqui no es el color: es que el recorte caiga DONDE SE VE. Es el error
+  // clasico de cualquier recortador —la imagen se enseña a 350 puntos y tiene 3000 pixeles— y
+  // no se puede mirar a ojo. Si sale corrido, se lleva el total.
+
+  // Una boleta alta (1000x3000) en una pantalla ancha (400x800): entra a lo alto y sobran
+  // bandas a los lados. Esas bandas son justo lo que hace que todo salga desplazado si no se
+  // descuentan.
+  const dibujo = imagenDentroDelHueco(1000, 3000, 400, 800);
+  ok(Math.abs(dibujo.escala - 800 / 3000) < 1e-9, `la imagen se encoge hasta caber (escala ${dibujo.escala.toFixed(4)})`);
+  ok(Math.round(dibujo.ancho) === 267 && Math.round(dibujo.alto) === 800, `se dibuja ${Math.round(dibujo.ancho)}x${Math.round(dibujo.alto)}`);
+  ok(Math.round(dibujo.x) === 67 && dibujo.y === 0, `centrada, con banda a los lados (x=${Math.round(dibujo.x)})`);
+
+  // TODO EL DIBUJO SELECCIONADO = TODA LA IMAGEN. Si esto falla, cualquier recorte sale mal.
+  const todo = recorteEnPixeles({ x: dibujo.x, y: dibujo.y, ancho: dibujo.ancho, alto: dibujo.alto }, dibujo, 1000, 3000);
+  ok(todo.originX === 0 && todo.originY === 0, `coger todo empieza en la esquina (${todo.originX},${todo.originY})`);
+  ok(todo.width === 1000 && todo.height === 3000, `y coge la imagen entera (${todo.width}x${todo.height})`);
+
+  // LA MITAD DE ABAJO, que en una boleta es donde esta el total.
+  const abajo = recorteEnPixeles(
+    { x: dibujo.x, y: dibujo.alto / 2, ancho: dibujo.ancho, alto: dibujo.alto / 2 },
+    dibujo,
+    1000,
+    3000
+  );
+  ok(abajo.originY === 1500, `la mitad de abajo empieza en el pixel 1500 (${abajo.originY})`);
+  ok(abajo.height === 1500, `y mide 1500 de alto (${abajo.height})`);
+  // Y NO SE OLVIDA LA BANDA: sin descontarla, el recorte saldria corrido a la izquierda.
+  ok(abajo.originX === 0, `sin desplazarse por la banda lateral (${abajo.originX})`);
+
+  // PEDIR UN RECORTE QUE SE SALE HACE FALLAR LA OPERACION ENTERA, y entonces no se recorta
+  // nada y la boleta se lee con la mesa dentro. Se topa a los bordes.
+  const pasado = recorteEnPixeles({ x: -500, y: -500, ancho: 5000, alto: 9000 }, dibujo, 1000, 3000);
+  ok(pasado.originX >= 0 && pasado.originY >= 0, "un recorte que se sale se topa en la esquina");
+  ok(pasado.originX + pasado.width <= 1000 && pasado.originY + pasado.height <= 3000, "y no se pasa de la imagen");
+
+  // EL RECUADRO NO PUEDE SALIRSE NI HACERSE INVISIBLE. Es el MISMO tope que usa el recorte: con
+  // dos topes distintos se podria arrastrar mas alla de la imagen y al guardar saldria otra
+  // cosa, que es el fallo que ya costo una vez en el recortador de las categorias.
+  const fuera = encajar({ x: -100, y: -100, ancho: 50, alto: 50 }, dibujo);
+  ok(fuera.x >= dibujo.x && fuera.y >= dibujo.y, "el recuadro no se sale por arriba");
+  ok(fuera.ancho >= MINIMO && fuera.alto >= MINIMO, `ni se encoge hasta no poder agarrarlo (${fuera.ancho}x${fuera.alto})`);
+  const enorme = encajar({ x: 0, y: 0, ancho: 99999, alto: 99999 }, dibujo);
+  ok(enorme.ancho <= dibujo.ancho && enorme.alto <= dibujo.alto, "ni se hace mas grande que la foto");
+
+  // Y SIN MEDIDAS NO SE REVIENTA: una imagen de tamaño cero devuelve algo usable en vez de
+  // dividir por cero y dejar la pantalla muerta con la foto ya tomada.
+  const vacio = imagenDentroDelHueco(0, 0, 400, 800);
+  ok(vacio.escala === 1 && vacio.ancho === 0, "una imagen sin medidas no rompe las cuentas");
 }
 
 console.log(fallos === 0 ? "\nTodo bien: el escaner no se inventa numeros\n" : `\n${fallos} fallos\n`);

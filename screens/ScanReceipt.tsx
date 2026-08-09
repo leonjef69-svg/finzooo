@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as ImagePicker from "expo-image-picker";
 import { Camera, Check, Image as ImageIcon, RotateCcw, ScanLine, X } from "lucide-react-native";
 import CategoryAvatar from "@/components/CategoryAvatar";
+import RecortarBoleta from "@/components/RecortarBoleta";
 import { EXPENSE_CATS, INCOME_CATS, catInfo } from "@/constants/categories";
 import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -54,6 +55,8 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
   const [date, setDate] = useState("");
   const [kind, setKind] = useState<Kind>("expense");
   const [category, setCategory] = useState("otros");
+  /** La foto tomada y todavía sin recortar. Mientras exista, se enseña el recortador. */
+  const [porRecortar, setPorRecortar] = useState<{ uri: string; ancho: number; alto: number } | null>(null);
 
   // Latido del ícono mientras lee, para que se note que está trabajando.
   const pulse = useRef(new Animated.Value(0)).current;
@@ -80,9 +83,19 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
       const options: ImagePicker.ImagePickerOptions = {
         mediaTypes: ["images"],
         quality: 1,
-        // Recortar antes de leer ayuda mucho: quita la mesa, la mano y el
-        // resto de la foto, que es donde el lector se inventa texto.
-        allowsEditing: true,
+        /**
+         * EL RECORTE YA NO LO HACE ANDROID, y el motivo es suyo (09/08/2026):
+         * *"ese cuadro sigue siendo de color blanco, no se ve nada cuando se recorta la
+         * imagen"*.
+         *
+         * Con `allowsEditing` el recuadro lo pinta el sistema, cada fabricante a su manera, y
+         * el suyo lo dibuja en blanco sobre una foto que también es blanca: el papel. Desde la
+         * app no se podía cambiar ni el color ni el grosor — esa pantalla no era nuestra.
+         *
+         * Recortar sigue haciendo falta: quita la mesa, la mano y el resto de la foto, que es
+         * donde el lector se inventa texto. Ahora lo hace components/RecortarBoleta.
+         */
+        allowsEditing: false,
       };
       const result =
         source === "camera"
@@ -91,6 +104,12 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
 
       if (result.canceled || result.assets.length === 0) return;
       const asset = result.assets[0];
+      // Sin las medidas no hay forma de convertir lo que se ve a píxeles, así que ahí se lee
+      // la foto entera en vez de enseñar un recortador que no podría acertar.
+      if (asset.width && asset.height) {
+        setPorRecortar({ uri: asset.uri, ancho: asset.width, alto: asset.height });
+        return;
+      }
       await run(asset.uri, asset.width, asset.height);
     } catch {
       setStage("failed");
@@ -150,6 +169,23 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
   })();
   const dateValid = isValidISODate(normalizeDateInput(date));
   const canSave = amountValid && dateValid;
+
+  // EL RECORTADOR TAPA LA PANTALLA ENTERA, antes que nada. Va aquí y no dentro del cuerpo para
+  // que no se dibuje media pantalla del escáner debajo mientras se recorta.
+  if (porRecortar) {
+    return (
+      <RecortarBoleta
+        uri={porRecortar.uri}
+        anchoImagen={porRecortar.ancho}
+        altoImagen={porRecortar.alto}
+        onCancelar={() => setPorRecortar(null)}
+        onListo={(uri, ancho, alto) => {
+          setPorRecortar(null);
+          run(uri, ancho, alto);
+        }}
+      />
+    );
+  }
 
   return (
     <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top }}>
