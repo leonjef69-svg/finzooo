@@ -637,6 +637,23 @@ que se ha estado limpiando de esta app todo el proyecto.
   lo mismo dos veces, y encima no se podía tocar. El ojo tachado se queda, que ese sí explica
   por qué un producto no sale al vender.
 
+**7. Y los productos se van con las ventas (8ago-11).** Lo vio él solo, mirando su pantalla:
+*"si ya cuando me llegue una notificación lo registrará automáticamente y ya no le pondré el
+nombre broster, yo ya no lo veo necesario ¿o sí?"*. **Tiene razón, y se le dijo sin rodeos:**
+los productos solo alimentan dos cosas —elegirlos al registrar una venta, y "lo que más
+vendes"— y las dos dependen de registrar ventas a mano. El Yape entra solo, con productos o
+sin ellos.
+
+Se le ofrecieron dos formas y **eligió la A**: que desaparezca solo según el uso, sin un
+interruptor más que mirar. Sin ventas registradas, el panel no enseña ni "Registrar venta" ni
+"Productos" ni "Lo que más vendes".
+
+> **ESCONDIDO NO ES BORRADO, Y HAY UNA LÍNEA QUE LO SEPARA.** Queda un enlace en gris y
+> chiquito abajo, junto a "Mis negocios". Sin él sería **un camino sin retorno**: no habría
+> forma de registrar la *primera* venta, y sin la primera nunca volverían ni el botón, ni los
+> productos, ni la lista. Los productos también siguen alcanzables desde Mis negocios, que es
+> donde se configura cada uno. **Sus datos no se tocan:** Broster y Salchipapa siguen ahí.
+
 **4. Pulido del camino sin manos (8ago-07).** Tres cosas, y la primera es la que importa:
 
 - **La pantalla de Registro automático dice a dónde van los yapeos.** Desde que un negocio puede

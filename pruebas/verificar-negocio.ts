@@ -1209,10 +1209,24 @@ console.log("\n--- NADA QUE SEA UN CERO PERMANENTE ---");
   // EL BOTON GRANDE ES EL QUE SE USA. Sin ventas, "Registrar venta" grande y verde es el que
   // nunca se toca, encima del que si: anotar un gasto.
   ok(/usaVentas \?/.test(pant), "el boton grande cambia segun como se lleve el negocio");
-  // Y NINGUNO DE LOS TRES DESAPARECE: el que no sube arriba baja a la fila de abajo.
-  ok(/pathname: "\/negocio\/venta"/.test(pant), "registrar venta sigue alcanzable");
+
+  // Y LOS PRODUCTOS SE VAN CON LAS VENTAS. Lo vio el mirando su propia pantalla: "ya no le
+  // pondre el nombre broster, yo ya no lo veo necesario". Tiene razon — los productos solo
+  // sirven para elegirlos al registrar una venta y para "lo que mas vendes"; el Yape entra
+  // solo, con productos o sin ellos.
+  const antesDeProductos = pant.slice(0, pant.indexOf('pathname: "/negocio/productos"'));
+  ok(antesDeProductos.lastIndexOf("{usaVentas && (") > antesDeProductos.lastIndexOf("</View>"), "sin ventas no salen los productos");
+
+  // PERO ESCONDIDO NO ES BORRADO, Y ESA ES LA LINEA QUE LO SEPARA.
+  //
+  // Sin una puerta de vuelta seria un camino sin retorno: no habria forma de registrar la
+  // PRIMERA venta, y sin la primera nunca volverian ni el boton, ni los productos, ni "lo que
+  // mas vendes". Queda en gris y chiquito abajo, junto a "Mis negocios".
+  ok(/!usaVentas && \([\s\S]{0,300}pathname: "\/negocio\/venta"/.test(pant), "pero registrar una venta sigue alcanzable, en gris");
   ok(/pathname: "\/negocio\/movimiento"/.test(pant), "y anotar un gasto tambien");
-  ok(/pathname: "\/negocio\/productos"/.test(pant), "y los productos");
+  // Y los productos, desde la lista de negocios, que es donde se configura cada uno.
+  const lista = fs.readFileSync(path.join(RAIZ, "screens/Negocios.tsx"), "utf8");
+  ok(/pathname: "\/negocio\/productos"/.test(lista), "y los productos desde Mis negocios");
 
   // EL OJO DUPLICABA AL INTERRUPTOR. Estaban el ojo abierto Y el interruptor encendido, uno al
   // lado del otro, contando lo mismo dos veces — y el ojo no se puede tocar, asi que ademas

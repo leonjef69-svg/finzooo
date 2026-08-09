@@ -327,48 +327,59 @@ export default function PanelNegocio({
           </TouchableOpacity>
         )}
 
-        {/* LOS OTROS DOS, DEL MISMO TAMAÑO Y DEBAJO. El primero es el que NO subió arriba, para
-            que ninguno de los tres desaparezca de la pantalla.
-
-            Y MIS NEGOCIOS al final: hace falta desde que Ajustes entra directo aquí cuando solo
-            hay un negocio, o crear el segundo —o editar el nombre, o borrarlo— se volvería
-            imposible de encontrar. */}
-        <View className="flex-row gap-2.5 mt-2.5">
-          <TouchableOpacity
-            onPress={() =>
-              router.push(
-                usaVentas
-                  ? { pathname: "/negocio/movimiento", params: { id: negocioId } }
-                  : { pathname: "/negocio/venta", params: { id: negocioId } }
-              )
-            }
-            className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800"
-          >
-            {usaVentas ? (
+        {/* GASTO Y PRODUCTOS, SOLO EN UN NEGOCIO QUE REGISTRA VENTAS.
+            Sin ventas, los productos no alimentan nada: solo sirven para elegirlos al registrar
+            una venta y para la lista de "lo que más vendes". Él lo vio antes que nadie mirando
+            su propia pantalla —*"ya no le pondré el nombre broster, yo ya no lo veo
+            necesario"*— y tiene razón: el Yape entra solo, con productos o sin ellos. */}
+        {usaVentas && (
+          <View className="flex-row gap-2.5 mt-2.5">
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: "/negocio/movimiento", params: { id: negocioId } })}
+              className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800"
+            >
               <TrendingDown size={15} color="#f43f5e" />
-            ) : (
-              <ShoppingBag size={15} color="#059669" />
-            )}
-            <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
-              {usaVentas ? t("caja.rowLabel") : t("venta.registrar")}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            onPress={() => router.push({ pathname: "/negocio/productos", params: { id: negocioId } })}
-            className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800"
-          >
-            <Package size={15} color="#059669" />
-            <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
-              {t("negocios.productos")}
+              <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                {t("caja.rowLabel")}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: "/negocio/productos", params: { id: negocioId } })}
+              className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800"
+            >
+              <Package size={15} color="#059669" />
+              <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                {t("negocios.productos")}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* LAS PUERTAS DISCRETAS.
+            "Mis negocios" hace falta desde que Ajustes entra directo aquí cuando solo hay un
+            negocio, o crear el segundo se volvería imposible de encontrar.
+
+            Y "Registrar una venta" TIENE QUE SEGUIR AQUÍ cuando no se usan las ventas, aunque
+            sea en gris y chiquito: esconderlo del todo lo convertiría en un camino sin
+            retorno —no habría forma de registrar la primera venta, y sin la primera nunca
+            volverían ni el botón, ni los productos, ni "lo que más vendes"—. Escondido no es
+            lo mismo que borrado, y esta línea es la diferencia. */}
+        <View className="flex-row justify-center items-center gap-4 py-3">
+          {!usaVentas && (
+            <TouchableOpacity
+              onPress={() => router.push({ pathname: "/negocio/venta", params: { id: negocioId } })}
+            >
+              <Text className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                {t("venta.registrar")}
+              </Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={() => router.push("/negocio")}>
+            <Text className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+              {t("panel.misNegocios")}
             </Text>
           </TouchableOpacity>
         </View>
-
-        <TouchableOpacity onPress={() => router.push("/negocio")} className="py-3 items-center">
-          <Text className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-            {t("panel.misNegocios")}
-          </Text>
-        </TouchableOpacity>
 
         {/* LO QUE MÁS VENDES, del periodo elegido igual que todo lo demás.
             Solo sale si hubo ventas: una lista vacía con un título encima ocupa sitio y no
