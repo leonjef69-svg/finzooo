@@ -87,7 +87,18 @@ const TIME_RE = /\b([01]?\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?\b/;
 const TIME_LOOSE = /\b([01]?\d|2[0-3])[:.]([0-5]\d)(?::([0-5]\d))?\b/;
 
 // Comprobante electrónico de SUNAT: B001-00123456 (boleta), F001-... (factura).
-const DOC_RE = /\b([BFEbfe]\s?\d{3})\s*[-–]\s*(\d{1,8})\b/;
+/**
+ * El número de la boleta: "B001-00012345".
+ *
+ * ENTRE LA SERIE Y EL NÚMERO NO SIEMPRE HAY UN GUION. Se pedía uno obligatorio, y con la
+ * boleta real de una botica (08/08/2026) el número se quedó vacío: esa lo imprime
+ * **"B008 N° 00664859"**, con la abreviatura de "número" en medio en vez del guion. No es
+ * rareza de una cadena — es de las dos formas más comunes en Perú.
+ *
+ * Se acepta el guion **o** la abreviatura (N, N°, No, Nro), pero **no el espacio a secas**:
+ * sin ninguna de las dos señales, un "F001 2026" suelto se leería como número de boleta.
+ */
+const DOC_RE = /\b([BFEbfe]\s?\d{3})\s*(?:[-–]|N(?:ro|[°ºo])?\.?)\s*[-–]?\s*(\d{1,8})\b/;
 // RUC: 11 cifras que empiezan por 10, 15, 17 o 20.
 const RUC_RE = /\b((?:10|15|17|20)\d{9})\b/;
 
@@ -281,6 +292,18 @@ const LOOKS_LIKE_BUSINESS = [
 function cleanName(line: string): string {
   return line
     .trim()
+    /**
+     * "InRetail Pharma S.A - INKA FARMA" → "INKA FARMA".
+     *
+     * Muchas boletas imprimen el nombre LEGAL y detrás el COMERCIAL, separados por un guion.
+     * El legal no lo ha oído nadie: en la boleta de la botica (08/08/2026) el gasto habría
+     * quedado guardado como "InRetail Pharma", y eso no se encuentra después buscando "inka".
+     *
+     * Solo se corta cuando delante del guion hay una **forma jurídica** (S.A., S.A.C.,
+     * E.I.R.L.…). Sin esa condición, "PANADERIA DON JOSE - SUCURSAL 2" se quedaría en
+     * "SUCURSAL 2", que es peor que no tocar nada.
+     */
+    .replace(/^.*\b(?:S\.?A\.?C?\.?|E\.?I\.?R\.?L\.?|S\.?R\.?L\.?|S\.?A\.?A\.?)\s*[-–]\s*(?=[^\s]*[a-zA-Z]{3})/i, "")
     // Las formas jurídicas no son parte del nombre de la tienda para nadie
     // que no sea un contador.
     .replace(/\s*[.,]?\s*\b(S\.?A\.?C?\.?|E\.?I\.?R\.?L\.?|S\.?R\.?L\.?|S\.?A\.?A\.?)\s*$/i, "")

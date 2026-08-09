@@ -124,5 +124,69 @@ console.log("\n--- Y UNA BOLETA NORMAL SIGUE LEYENDOSE ENTERA ---");
   ok(normal.confidence === "high", `y se lee con confianza alta (${normal.confidence})`);
 }
 
+console.log("\n--- UNA BOLETA PERUANA DE VERDAD (la de la botica) ---");
+{
+  // La trajo el 08/08/2026 como ejemplo de lo que SI quiere escanear: una boleta de compra
+  // peruana, con RUC, IGV y soles. Es el caso para el que existe el escaner, asi que se guarda
+  // entera — con el nombre de quien compro y su documento cambiados, que no hacen falta para
+  // nada y no tienen por que estar en un repositorio publico.
+  const botica = parseReceipt(
+    [
+      "InRetail Pharma S.A - INKA FARMA",
+      "R.U.C.: 20331066703",
+      "CAL, C. Pierola NRO. 108 - Arequipa",
+      "BOLETA DE VENTA ELECTRONICA",
+      "B008 N 00664859",
+      "AREQUIPA - AREQUIPA",
+      "FECHA DE EMISION : 15/06/2023",
+      "CORRELATIVO      : 0983145907",
+      "CAJA/TURNO       : 5 / 2",
+      "TIPO DE MONEDA   : NUEVO SOL",
+      "SENOR            : NOMBRE APELLIDO",
+      "DOC. IDENTIDAD   : 00000000",
+      "Descripcion                Total",
+      "Cant. X Precio Unitario",
+      "PANADOL FORTE TAB          6.00",
+      "     2.00 X 3.00",
+      "ABRILAR JARABE X 100 ML   20.00",
+      "     1.00 X 20.00",
+      "        Redo     S/    0.04",
+      "        Total    S/   26.00",
+      "Op. Exonerada   S/    0.00",
+      "Op. Inafecta    S/    0.00",
+      "Op. Gravada          22.00",
+      "I.G.V.          S/    3.96",
+      "Importe Total   S/   26.00",
+      "Redondeo        S/    0.04",
+      "Donacion        S/    0.00",
+      "Importe a pagar S/   26.00",
+      "SON:    VEINTISEIS CON 00/100 SOLES",
+    ].join("\n"),
+    AHORA
+  );
+
+  // EL TOTAL ES 26.00, y esta boleta lo pone dificil: hay CINCO lineas que dicen "total" o
+  // parecido —Total, Importe Total, Importe a pagar, Op. Gravada, I.G.V.— y dos numeros que
+  // se le acercan (22.00 de la base y 3.96 del impuesto). Coger el gravado seria cobrarse de
+  // menos en cada compra sin que nadie lo note.
+  ok(botica.total === 26, `el total es 26.00 (${botica.total})`);
+  ok(botica.date === "2023-06-15", `la fecha de emision (${botica.date})`);
+  ok(botica.ruc === "20331066703", `el RUC, aunque venga como "R.U.C.:" (${botica.ruc})`);
+  ok(botica.currency === "PEN", "en soles");
+  // EL NOMBRE QUE SE GUARDA TIENE QUE SER EL QUE LA PERSONA RECONOCE. "InRetail Pharma S.A" es
+  // el nombre legal y no lo ha oido nadie; en la boleta, y en la cabeza de quien compro, esto
+  // es Inkafarma. Un gasto que dice "InRetail Pharma" no se encuentra buscando "inka".
+  ok(botica.merchant === "INKA FARMA", `el comercio se reconoce ("${botica.merchant}")`);
+
+  // Y NO SE CORTA CUANDO NO TOCA. Sin exigir la forma juridica delante del guion, una tienda
+  // llamada "PANADERIA DON JOSE - SUCURSAL 2" se quedaria en "SUCURSAL 2", que es peor que no
+  // haber tocado nada.
+  const conGuion = parseReceipt(["PANADERIA DON JOSE - CENTRO", "TOTAL 10.00"].join("\n"), AHORA);
+  ok(conGuion.merchant === "PANADERIA DON JOSE - CENTRO", `un guion sin forma juridica no corta ("${conGuion.merchant}")`);
+  // Y el numero de boleta viene con "N" en medio en vez de un guion, que es como lo imprimen
+  // muchas: sin esto se queda vacio.
+  ok(botica.docNumber === "B008-00664859", `el numero de boleta (${botica.docNumber})`);
+}
+
 console.log(fallos === 0 ? "\nTodo bien: el escaner no se inventa numeros\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);
