@@ -78,6 +78,43 @@ Finzo no es un banco, no mueve dinero y no se conecta a tus cuentas bancarias. E
 
 ---
 
+## Las imágenes de la ficha — FALTAN, y son obligatorias
+
+**Se descubrieron el 09/08/2026, mirando la ficha de Netflix**: *"¿eso ya está listo? ¿está
+dentro de mi plan de fases?"*. No estaba. Es un hueco de esta lista, no suyo.
+
+Google **no deja publicar sin esto**, y no es un adorno: es lo único que ve alguien antes de
+decidir si instala.
+
+| Qué | Medida | Quién |
+|---|---|---|
+| **Icono** | 512 × 512 px, PNG | ✅ **HECHO: `tienda/icono-512.png`** |
+| **Gráfico destacado** | 1024 × 500 px | Hay que diseñarlo. Es la banda de arriba de la ficha |
+| **Capturas de teléfono** | mínimo **2**, hasta 8 | **Suyas**, del celular |
+
+### Qué capturas, y en qué orden
+
+El orden importa: en la ficha solo se ven las dos o tres primeras sin deslizar. Van las que
+explican de qué va la app, no las más bonitas.
+
+1. **Inicio** con movimientos de verdad y el presupuesto del mes — de un vistazo se entiende
+   qué es.
+2. **El registro automático**, con la pantalla de Yape. Es lo que Finzo tiene y las demás no.
+3. **El Modo Negocio**, con el panel y su saldo.
+4. **Reportes** con las gráficas.
+5. **Exportar** a PDF/Excel.
+
+> **NO USAR EL MODO SEÑUELO NI DATOS INVENTADOS FEOS.** Las capturas se hacen con la app llena
+> de movimientos creíbles. Una pantalla vacía en la tienda dice "esto no lo usa nadie".
+>
+> **Y NI UN DATO REAL SUYO**: en esas capturas no puede salir su nombre, su correo, su foto de
+> perfil ni el nombre de quien le yapea. Van a estar públicas para siempre. La forma limpia es
+> usar una cuenta nueva y meterle movimientos de ejemplo.
+
+**Las capturas se toman del celular tal cual** (botón de encender + bajar volumen). Google las
+acepta así, sin marcos ni texto encima. Ponerles texto encima —como Netflix— convierte mejor,
+pero es diseño y se puede dejar para después: primero publicar.
+
 ## Formulario de seguridad de los datos
 
 > **Lo que decide la mayoría de respuestas:** los datos **se recogen** (viajan a Firebase si la
