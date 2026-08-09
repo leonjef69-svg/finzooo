@@ -56,6 +56,7 @@ qué está corriendo el celular.
 
 | Código | Qué se arregló |
 |---|---|
+| `8ago-09` | Dropbox también al exportar a mano, y se conecta desde esa misma pantalla |
 | `8ago-08` | "Mes a mes" en el negocio: julio contra agosto, con cuánto más o menos que el mes pasado |
 | `8ago-07` | El registro automático y Ajustes dicen que tus yapeos van al negocio; con un solo negocio se entra directo a su panel |
 | `8ago-06` | "Lo que más vendes": cuánto salió de cada producto (V2, parte 2) |

@@ -634,6 +634,44 @@ console.log("\n--- DROPBOX: LO QUE NO PUEDE ESTAR MAL ---");
   ok(codigoDeLaVuelta("finzo://dropbox?mycode=NO&code=SI") === "SI", "y no se confunde con otro parámetro parecido");
 }
 
+console.log("\n--- DROPBOX TAMBIEN AL EXPORTAR A MANO ---");
+{
+  // ESTABA A MEDIAS Y AL REVES DE COMO SE USA: Dropbox se ofrecia en la exportacion
+  // AUTOMATICA y no en la de a mano. Subir a mano es lo que se hace primero; lo automatico
+  // viene despues de fiarse. El codigo de subida ya estaba escrito y probado desde el
+  // 05/08/2026 — lo unico que faltaba era poder elegirlo.
+  const RAIZ = process.cwd();
+  const hoja = fs.readFileSync(path.join(RAIZ, "screens/ExportPdfSheet.tsx"), "utf8");
+
+  ok(/id: "dropbox"/.test(hoja), "se puede elegir Dropbox al exportar a mano");
+  ok(/subirADropbox\(file\.uri, file\.fileName\)/.test(hoja), "y sube de verdad");
+
+  // Y SE PUEDE CONECTAR DESDE AQUI. Sin esto, elegir Dropbox y tocar Exportar armaba el
+  // archivo entero para acabar en un aviso que mandaba a OTRA pantalla: el trabajo hecho y la
+  // persona a mitad de camino. Es la leccion de la carpeta del telefono — lo que falta se dice
+  // ANTES de empezar, y con el boton que lo resuelve al lado.
+  ok(/conectarDropbox\(\)/.test(hoja), "se puede autorizar sin salir de la pantalla");
+  ok(/destination === "dropbox" && !dropboxListo/.test(hoja), "y el aviso sale antes de exportar, no despues");
+
+  // SE VUELVE A MIRAR AL ELEGIR DROPBOX, no una sola vez al abrir: se puede autorizar desde la
+  // otra pantalla mientras esta sigue abierta detras, y con una sola lectura seguiria diciendo
+  // que falta conectar.
+  ok(/dropboxConectado\(\)\.then/.test(hoja), "se comprueba si ya esta conectado");
+  const efecto = hoja.slice(hoja.indexOf("if (destination !== \"dropbox\") return;"));
+  ok(/\}, \[destination\]\);/.test(efecto.slice(0, 400)), "y se vuelve a mirar cada vez que se elige");
+
+  // UN PERMISO REVOCADO DESDE LA CUENTA DE DROPBOX solo se descubre al intentar subir. Sin
+  // sacar otra vez el boton, quedaria un aviso sin salida.
+  ok(/DropboxSinConectar\) \{[\s\S]{0,400}setDropboxListo\(false\)/.test(hoja), "y si el permiso se revoco, vuelve a salir el boton");
+
+  // El texto viejo mandaba a la pantalla de exportacion automatica. Ahora se conecta aqui, asi
+  // que mandar a otro sitio seria un paseo para nada.
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  ok(!/"exportPdf\.dropboxMissing": "Conecta tu Dropbox en Exportación automática\."/.test(i18n), "y ya no manda a otra pantalla");
+  const veces = (i18n.match(/"exportPdf\.dropboxConectaAqui":/g) ?? []).length;
+  ok(veces === 3, `el aviso de conectar esta en los tres idiomas (${veces})`);
+}
+
 console.log("\n--- ONEDRIVE: LAS CUATRO TRAMPAS DE MICROSOFT ---");
 {
   // Es una copia de dropbox.ts, y ahi esta el riesgo: lo que se copia se copia bien, y lo que

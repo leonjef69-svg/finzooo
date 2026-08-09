@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { uploadToDrive, DriveNotSignedIn, DriveDenied } from "@/utils/googleDrive";
 import { guardarEnCarpeta, SinCarpeta } from "@/utils/carpetaTelefono";
-import { subirADropbox, DropboxSinConectar } from "@/utils/dropbox";
+import {
+  conectarDropbox,
+  dropboxConectado,
+  subirADropbox,
+  DropboxSinConectar,
+} from "@/utils/dropbox";
 import { archivoCsv, archivoExcel, filasDelReporte } from "@/utils/reporteArchivo";
 import { htmlDelReporte } from "@/utils/reportePdfDatos";
 import {
@@ -24,6 +29,7 @@ import {
   FileSpreadsheet,
   Mail,
   MessageCircle,
+  Package,
   Pencil,
   Share2,
   Sheet,
@@ -193,6 +199,38 @@ export default function ExportPdfSheet({
     setEditandoId(null);
     setContactoId(null);
   }, [destination]);
+
+  /**
+   * ¿Hay una cuenta de Dropbox autorizada?
+   *
+   * Se vuelve a mirar CADA VEZ que se elige Dropbox, no una sola vez al abrir: se puede
+   * autorizar desde la pantalla de exportación automática mientras esta sigue abierta detrás,
+   * y con una sola lectura al abrir seguiría diciendo que falta conectar.
+   */
+  const [dropboxListo, setDropboxListo] = useState(false);
+  useEffect(() => {
+    if (destination !== "dropbox") return;
+    let vivo = true;
+    dropboxConectado().then((c) => {
+      if (vivo) setDropboxListo(c);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [destination]);
+
+  /** Autorizar Dropbox sin salir de aquí. Abre el navegador una vez y ya no vuelve a pedir nada. */
+  async function conectarLaDeDropbox() {
+    try {
+      await conectarDropbox();
+      setDropboxListo(true);
+      showToast(t("schedExport.dropboxReady"));
+    } catch {
+      // Cerrar el navegador a medias entra por aquí, y es lo más normal del mundo: no es un
+      // error que merezca alarma, solo "no quedó conectado".
+      showToast(t("schedExport.dropboxFailed"));
+    }
+  }
 
   // A QUIÉN dijo la voz. Va aparte del de arriba porque este sí tiene que
   // volver a mirar cuando cambia la lista: los contactos se leen del
@@ -537,6 +575,12 @@ export default function ExportPdfSheet({
         } catch (e) {
           // "Sin conectar" tiene salida (ir a autorizar) y el resto no, así que
           // se dicen distinto. Un "no se pudo" genérico no lleva a ningún sitio.
+          if (e instanceof DropboxSinConectar) {
+            // Y SE SACA EL BOTÓN DE CONECTAR. Puede pasar aunque al elegir Dropbox dijera que
+            // estaba listo: si la persona quitó el permiso desde su cuenta de Dropbox, esto
+            // solo se descubre al intentar subir. Sin esta línea quedaría un aviso sin salida.
+            setDropboxListo(false);
+          }
           showToast(
             t(
               e instanceof DropboxSinConectar
@@ -862,6 +906,11 @@ export default function ExportPdfSheet({
               ? ([{ id: "whatsapp", label: t("exportPdf.destWhatsApp"), Icon: MessageCircle }] as const)
               : []),
             { id: "drive", label: t("exportPdf.destDrive"), Icon: Cloud },
+            // DROPBOX. Faltaba aquí y sí estaba en la exportación automática, que es lo raro
+            // al revés: subir a mano es lo que se hace primero, y lo automático viene después
+            // de fiarse. El código de subida ya estaba escrito y probado desde el 05/08/2026;
+            // lo único que no había era la forma de elegirlo.
+            { id: "dropbox", label: t("schedExport.destDropbox"), Icon: Package },
           ] as const).map((opt) => (
             <TouchableOpacity
               key={opt.id}
@@ -886,6 +935,27 @@ export default function ExportPdfSheet({
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* DROPBOX SIN CONECTAR: SE DICE ANTES Y SE ARREGLA AQUÍ MISMO.
+            Sin esto, elegir Dropbox y tocar Exportar armaba el archivo entero para acabar en
+            un aviso que manda a OTRA pantalla — el trabajo hecho y la persona a mitad de
+            camino. Es la lección de la carpeta del teléfono: lo que falta se dice antes de
+            empezar, y con el botón que lo resuelve al lado. */}
+        {destination === "dropbox" && !dropboxListo && (
+          <View className="rounded-xl border-[1.5px] border-amber-500 bg-amber-50 dark:bg-amber-900/20 p-3.5 mb-4">
+            <Text className="text-xs leading-5 text-amber-800 dark:text-amber-200">
+              {t("exportPdf.dropboxConectaAqui")}
+            </Text>
+            <TouchableOpacity
+              onPress={conectarLaDeDropbox}
+              className="mt-2.5 py-2.5 rounded-xl items-center bg-slate-900 dark:bg-white"
+            >
+              <Text className="text-xs font-extrabold text-white dark:text-slate-900">
+                {t("schedExport.dropboxConnect")}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* A QUIÉN.
             Solo para los destinos que necesitan una persona: Drive es tuyo y
