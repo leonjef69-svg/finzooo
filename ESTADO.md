@@ -739,6 +739,25 @@ Esto es lo pendiente de verdad, en orden de bloqueo:
    app subida a una prueba y los productos de suscripción creados allí. Hasta que eso
    exista, ni una línea del cobro se podría probar.
 
+   > **EL ANDAMIO YA ESTÁ PUESTO (8ago-14): `utils/compras.ts`.** Mismo criterio que Dropbox,
+   > OneDrive y los anuncios: los identificadores vacíos, `comprasDisponibles()` en false, y
+   > **el botón de compra no se dibuja**. La pantalla sigue diciendo "Llega pronto", que es la
+   > verdad.
+   >
+   > **Los cinco pasos del día que exista la cuenta están escritos dentro de ese archivo**, que
+   > es donde se van a mirar. Los dos que más se olvidan:
+   >
+   > - **Restaurar compra es OBLIGATORIO** para Google, no un extra. Quien cambia de celular
+   >   tiene que recuperar lo que pagó sin pagarlo dos veces. El botón ya está en la pantalla,
+   >   esperando la función.
+   > - **Premium tendrá que salir de la TIENDA, no del disco.** Hoy `isPremium` se guarda en el
+   >   celular; con cobro real el disco solo puede ser un reflejo, o quien cancele lo tendrá
+   >   para siempre.
+   >
+   > Y dos cosas que la pantalla ya impide: **dos toques seguidos no lanzan dos compras**
+   > (`comprando`), y `comprarPlan()` **falla en vez de devolver que sí** — lo único peor que no
+   > poder cobrar es dar Premium sin haber cobrado, que es justo lo que se quitó en 7ago-32.
+
    **Para recuperar el selector de precios y el botón**, están en el historial hasta el
    commit anterior a 7ago-32, en `screens/Premium.tsx`, `app/premium.tsx` y
    `constants/precios.ts`.

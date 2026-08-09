@@ -13,6 +13,13 @@ import {
 } from "lucide-react-native";
 import { useAppData } from "@/contexts/AppDataContext";
 import { anunciosActivos } from "@/constants/anuncios";
+import { PRECIOS } from "@/constants/precios";
+import {
+  comprarPlan,
+  comprasDisponibles,
+  restaurarCompra,
+  type PlanDeCompra,
+} from "@/utils/compras";
 import { DURACION_PRUEBA_HORAS } from "@/utils/pruebaPremium";
 
 /**
@@ -52,10 +59,40 @@ export default function Premium({
   const { t, fmt, pruebaInicio, pruebaHoras, activarPruebaPremium, showToast } = useAppData();
   const insets = useSafeAreaInsets();
 
-  // AQUÍ ESTABA "plan" (mensual o anual), y se fue con el selector de precios: sin precios
-  // que elegir no hay plan que guardar. Vuelve cuando vuelva el cobro.
   /** Si se está preguntando por la prueba gratuita, en la propia pantalla. */
   const [preguntandoPrueba, setPreguntandoPrueba] = useState(false);
+  /**
+   * Qué plan se está comprando ahora mismo, o null.
+   *
+   * Sirve para APAGAR LOS DOS BOTONES mientras la tienda responde. Sin esto, dos toques
+   * seguidos —que es lo que hace cualquiera cuando algo tarda— lanzan dos compras. En una
+   * pantalla de pago eso no es un parpadeo: es cobrar dos veces.
+   */
+  const [comprando, setComprando] = useState<PlanDeCompra | null>(null);
+
+  async function comprar(plan: PlanDeCompra) {
+    if (comprando) return;
+    setComprando(plan);
+    try {
+      await comprarPlan(plan);
+      // NO SE PONE PREMIUM AQUÍ, y esa es la lección de lo que se quitó el 07/08/2026: aquel
+      // botón hacía setIsPremium(true) sin cobrar nada. Premium tendrá que venir de la tienda,
+      // que es la única que sabe si se pagó de verdad. Ver utils/compras.
+    } catch {
+      showToast(t("premium.compraNoDisponible"));
+    } finally {
+      setComprando(null);
+    }
+  }
+
+  async function restaurar() {
+    try {
+      await restaurarCompra();
+      showToast(t("premium.restaurada"));
+    } catch {
+      showToast(t("premium.compraNoDisponible"));
+    }
+  }
 
   const enPrueba = pruebaHoras > 0;
   const pruebaUsada = pruebaInicio != null;
@@ -232,6 +269,39 @@ export default function Premium({
               <CheckCircle2 size={18} color="#ffffff" />
               <Text className="text-white font-extrabold">{t("premium.alreadyPremium")}</Text>
             </View>
+          ) : comprasDisponibles() ? (
+            /* CUANDO SE PUEDA COBRAR DE VERDAD, VUELVE EL BOTÓN. Y solo entonces: mientras
+               `comprasDisponibles()` sea falso esto no se dibuja, así que no puede aparecer un
+               botón de compra en una versión que no cobra — que es justo lo que se quitó. */
+            <>
+              <View className="flex-row gap-2.5">
+                {(["mensual", "anual"] as const).map((plan) => (
+                  <TouchableOpacity
+                    key={plan}
+                    onPress={() => comprar(plan)}
+                    disabled={comprando !== null}
+                    className={`flex-1 py-4 rounded-2xl items-center ${
+                      comprando === plan ? "bg-white/40" : "bg-white"
+                    }`}
+                  >
+                    <Text className="text-emerald-700 font-extrabold">
+                      {t(`premium.plan.${plan}`)}
+                    </Text>
+                    <Text className="text-emerald-700/70 text-[11px] mt-0.5">
+                      {fmt(plan === "mensual" ? PRECIOS.mensualNormal : PRECIOS.anual)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              {/* RESTAURAR COMPRA NO ES OPCIONAL: Google rechaza las apps de suscripción que no
+                  lo tienen. Quien cambia de celular o reinstala tiene que poder recuperar lo que
+                  pagó sin volver a pagarlo. */}
+              <TouchableOpacity onPress={restaurar} className="py-3 items-center mt-1">
+                <Text className="text-white/70 text-[11px] font-extrabold">
+                  {t("premium.restaurar")}
+                </Text>
+              </TouchableOpacity>
+            </>
           ) : (
             <View className="w-full py-4 rounded-2xl items-center bg-white/10 border border-white/15">
               <Text className="text-white/90 font-extrabold">{t("premium.llegaPronto")}</Text>

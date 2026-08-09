@@ -197,5 +197,56 @@ console.log("\n--- ANUNCIOS: QUIEN PAGA NO LOS VE, Y LO QUE SE DICE DE ELLOS ---
   }
 }
 
+console.log("\n--- EL COBRO: NI REGALAR PREMIUM NI COBRAR DOS VECES ---");
+{
+  const compras = fs.readFileSync(path.join(RAIZ, "utils/compras.ts"), "utf8");
+  const premiumCrudo = fs.readFileSync(path.join(RAIZ, "screens/Premium.tsx"), "utf8");
+  // SIN LOS COMENTARIOS, y hace falta: la explicacion de por que se quito el boton que regalaba
+  // Premium NOMBRA setIsPremium(true), asi que buscarlo a pelo daba una falla leyendo el texto
+  // que cuenta que ya no pasa. Y esos comentarios son justo lo que hay que conservar.
+  const premium = premiumCrudo.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+  // NO PUEDE HABER UN BOTON DE COMPRA EN UNA VERSION QUE NO COBRA.
+  //
+  // Es el bloqueo numero uno que se quito el 07/08/2026: habia un boton "ADQUIRIR" sobre un
+  // precio, y lo que hacia era setIsPremium(true) — REGALAR Premium. Google lo trata como
+  // afirmacion engañosa y era motivo de rechazo.
+  ok(/export function comprasDisponibles/.test(compras), "hay un solo sitio que decide si se puede cobrar");
+  ok(/comprasDisponibles\(\) \?/.test(premium), "y el boton de compra depende de el");
+
+  // Y LO QUE NO PUEDE VOLVER NUNCA: dar Premium sin haber cobrado. Si esta linea reaparece en
+  // la pantalla de Premium, es que alguien volvio a regalarlo.
+  ok(!/setIsPremium\(true\)/.test(premium), "la pantalla de Premium NO se lo regala a nadie");
+
+  // NI COBRAR DOS VECES. Dos toques seguidos —lo que hace cualquiera cuando algo tarda— no
+  // pueden lanzar dos compras. En una pantalla de pago eso no es un parpadeo.
+  ok(/if \(comprando\) return/.test(premium), "dos toques seguidos no lanzan dos compras");
+  ok(/disabled=\{comprando !== null\}/.test(premium), "y los botones se apagan mientras la tienda responde");
+
+  // RESTAURAR COMPRA ES OBLIGATORIO PARA GOOGLE, no opcional: quien cambia de celular o
+  // reinstala tiene que poder recuperar lo que pago sin volver a pagarlo.
+  ok(/export async function restaurarCompra/.test(compras), "se puede restaurar una compra ya pagada");
+  ok(/premium\.restaurar/.test(premium), "y hay boton para hacerlo");
+
+  // MIENTRAS NO HAYA TIENDA, LAS FUNCIONES NO MIENTEN: fallan en vez de devolver que si. Lo
+  // unico peor que no poder cobrar es dar Premium sin haber cobrado.
+  ok(/throw new CompraNoDisponible\(\)/.test(compras), "sin tienda, comprar falla en vez de dar Premium");
+
+  // Y CUANDO EXISTAN LOS IDENTIFICADORES, que no se quede uno solo puesto: con el mensual
+  // escrito y el anual vacio, la pantalla ofreceria dos planes y uno no existiria en la tienda.
+  const mensual = /mensual: "([^"]*)"/.exec(compras)?.[1] ?? "x";
+  const anual = /anual: "([^"]*)"/.exec(compras)?.[1] ?? "x";
+  ok(
+    (mensual === "" && anual === "") || (mensual !== "" && anual !== ""),
+    mensual === "" ? "sin identificadores de la tienda todavia" : "los dos planes tienen identificador"
+  );
+
+  // Los textos, en los tres idiomas.
+  for (const clave of ["plan.mensual", "plan.anual", "restaurar", "restaurada", "compraNoDisponible"]) {
+    const veces = (i18n.match(new RegExp(`"premium\\.${clave.replace(".", "\\.")}":`, "g")) ?? []).length;
+    ok(veces === 3, `"premium.${clave}" esta en los tres idiomas (${veces})`);
+  }
+}
+
 console.log(fallos === 0 ? "\nTodo bien: los textos legales dicen la verdad\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

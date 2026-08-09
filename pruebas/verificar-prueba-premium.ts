@@ -162,9 +162,24 @@ console.log("\n--- LA PANTALLA NO PROMETE UN COBRO QUE NO EXISTE ---");
   // hacia era regalar Premium (setIsPremium(true)). Google trata como engañoso un precio con
   // un boton de compra que no cobra, y era el bloqueo NUMERO UNO para publicar.
   //
-  // Asi que ahora lo que se vigila es lo contrario: QUE NO HAYA PRECIO NI COMPRA.
+  // Y EL 08/08/2026 SE AFINO OTRA VEZ, con su motivo, porque "que no haya precio" dejo de ser
+  // la regla correcta el dia que se preparo el cobro (utils/compras.ts).
+  //
+  // La regla de verdad nunca fue "sin precio": era **sin precio mientras no se pueda cobrar**.
+  // Prohibirlo para siempre obligaria a borrar esta comprobacion el dia que llegue Play
+  // Billing, y una prueba que estorba es una prueba que alguien quita sin leerla.
+  //
+  // Asi que lo que se vigila ahora es que el precio viva DENTRO de la rama de
+  // comprasDisponibles(): si aparece antes de esa condicion, es que alguien volvio a enseñar un
+  // precio en una version que no cobra.
   const sinComentarios = pant.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-  ok(!/PRECIOS\./.test(sinComentarios), "la pantalla NO muestra ningun precio");
+  const dondeLaCondicion = sinComentarios.indexOf("comprasDisponibles()");
+  const dondeElPrecio = sinComentarios.indexOf("PRECIOS.");
+  ok(dondeLaCondicion !== -1, "la pantalla pregunta si se puede cobrar");
+  ok(
+    dondeElPrecio === -1 || dondeElPrecio > dondeLaCondicion,
+    "y ningun precio se enseña fuera de esa condicion"
+  );
   ok(
     !/\b9\.9\b|\bmensualPromo\b|\banualDetalle\b/.test(sinComentarios),
     "ni un precio escrito a mano ni el selector de planes"
