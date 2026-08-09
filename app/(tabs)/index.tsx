@@ -10,6 +10,7 @@ export default function HomeTab() {
     month,
     setMonth,
     budget,
+    budgetHeredado,
     spent,
     income,
     prevBalance,
@@ -24,6 +25,7 @@ export default function HomeTab() {
         month={month}
         setMonth={setMonth}
         budget={budget}
+        budgetHeredado={budgetHeredado}
         spent={spent}
         income={income}
         prevBalance={prevBalance}

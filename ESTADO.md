@@ -3017,8 +3017,13 @@ el APK anterior y lo que llegue con la app cerrada.
 - **Escáner de boletas: EN PAUSA** desde el 30/07/2026, a pedido del usuario.
   Nunca se probó con una boleta real. Antes de darlo por bueno, hay que
   probarlo con una de verdad.
-- **El presupuesto mensual no se repite solo** cada mes: hay que volver a
-  ponerlo.
+- ~~El presupuesto mensual no se repite solo~~ **HECHO el 09/08/2026 (9ago-06).**
+  Se hereda del último mes que se puso a mano, y se hereda **al leer**: no se escribe
+  nada en el disco, así que cambiar el de este mes arregla también los siguientes.
+  Un **cero puesto a mano manda**, porque "este mes no me pongo presupuesto" es una
+  decisión y en los datos guardados se parece muchísimo a "no he puesto nada". Y la
+  tarjeta de Inicio **dice** cuándo el número viene heredado: un número que aparece
+  solo hace desconfiar de una app de dinero.
 - ~~La exportación programada sale sin gráficos~~ **HECHO el 07/08/2026 (7ago-29).**
   Tiene su interruptor en la pantalla de exportación automática, solo visible con PDF
   elegido. Viene **apagado**, y los ajustes guardados de antes de esta versión valen

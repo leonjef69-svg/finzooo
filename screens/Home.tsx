@@ -44,6 +44,7 @@ export default function Home({
   month,
   setMonth,
   budget,
+  budgetHeredado = false,
   spent,
   income,
   prevBalance,
@@ -55,6 +56,8 @@ export default function Home({
   month: Month;
   setMonth: (m: Month) => void;
   budget: number;
+  /** Ese presupuesto viene del mes anterior, nadie lo puso en este. Se dice en la tarjeta. */
+  budgetHeredado?: boolean;
   spent: number;
   income: number;
   prevBalance: number;
@@ -315,6 +318,16 @@ export default function Home({
               >
                 {fmt(budget)}
               </Text>
+              {/* DE DÓNDE SALIÓ ESE NÚMERO, cuando nadie lo escribió en este mes.
+                  Desde el 09/08/2026 el presupuesto se hereda del último mes que se puso, para
+                  no tener que reescribirlo cada 1 de mes. Pero un número que aparece solo, sin
+                  que nadie lo haya puesto, es de las cosas que hacen desconfiar de una app de
+                  dinero: se dice, y tocando la tarjeta se cambia. */}
+              {budgetHeredado && (
+                <Text className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  {t("home.budgetHeredado")}
+                </Text>
+              )}
             </PressableScale>
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(1 * 70).duration(300)} style={{ width: "47%" }}>

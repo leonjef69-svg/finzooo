@@ -55,6 +55,7 @@ import { activate as activateDecoy, deactivate as deactivateDecoy } from "@/util
 // el disco. Con las versiones "set" se quedaban solo en memoria y al reabrir la app
 // volvia el disco vacio — la personalizacion y las categorias propias desaparecian
 // otra vez.
+import { esHeredado, presupuestoDelMes } from "@/utils/presupuestoHeredado";
 import { loadOverrides, saveOverrides, type CategoryOverrides } from "@/utils/categoryCustom";
 import {
   borrar as borrarPropia,
@@ -131,6 +132,13 @@ type AppDataContextValue = {
   setMonth: (m: Month) => void;
   budgets: Record<string, number>;
   budget: number;
+  /**
+   * El presupuesto que se ve viene heredado del mes anterior, no se puso en este.
+   *
+   * La pantalla lo necesita para DECIRLO: un número que aparece solo, sin que nadie lo haya
+   * escrito, es de las cosas que hacen desconfiar de una app de dinero.
+   */
+  budgetHeredado: boolean;
   spent: number;
   income: number;
   prevBalance: number;
@@ -1241,7 +1249,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   const mk = monthKey(month.y, month.m);
-  const budget = budgets[mk] || 0;
+  /**
+   * EL PRESUPUESTO SE HEREDA DEL ÚLTIMO MES QUE SE PUSO A MANO.
+   *
+   * Antes, cada 1 de mes la app amanecía con el presupuesto en cero y había que acordarse de
+   * volver a escribirlo. Con cero, Inicio no puede decir cuánto queda — que es el número por el
+   * que se abre la app.
+   *
+   * Se hereda al LEER, sin escribir nada en el disco: ver utils/presupuestoHeredado.
+   */
+  const budget = presupuestoDelMes(budgets, mk);
+  /** Si ese número viene de otro mes, para poder decirlo en la pantalla. */
+  const budgetHeredado = esHeredado(budgets, mk);
 
   // Estos cálculos recorren TODOS los movimientos guardados, así que solo
   // se vuelven a hacer cuando los movimientos, los presupuestos o el mes
@@ -1793,6 +1812,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         setMonth,
         budgets,
         budget,
+        budgetHeredado,
         spent,
         income,
         prevBalance,
