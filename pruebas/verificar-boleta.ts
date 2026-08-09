@@ -19,6 +19,7 @@
 // > regla que se siguio con su estado de cuenta el 07/08/2026.
 import { parseReceipt } from "@/utils/receiptParser";
 import { encajar, imagenDentroDelHueco, recorteEnPixeles, MINIMO } from "@/utils/recorte";
+import { numeroEnLetras, totalEnLetras } from "@/utils/montoEnLetras";
 
 let fallos = 0;
 function ok(c: boolean, m: string) {
@@ -289,6 +290,77 @@ console.log("\n--- UNA FACTURA CON TABLA (la del grifo, 09/08/2026) ---");
     conProductoDebajo.confidence === "low",
     `un producto debajo de "TOTAL" no se da por bueno (${conProductoDebajo.confidence})`
   );
+}
+
+console.log("\n--- EL TOTAL ESCRITO CON LETRAS: LA SEÑAL QUE NO SE ROMPE ---");
+{
+  // ESTO ES LA SOLUCION DE FONDO, no otro parche, y por eso va antes que todo lo demas al leer.
+  //
+  // Buscar la linea que dice "TOTAL" se rompe de mil maneras, y cada una costo un arreglo
+  // distinto en dos dias: las letras separadas ("T o t a l"), las celdas de una tabla partidas
+  // en lineas, la fila entera sin leer. Y cuando se rompe, el escaner ADIVINA — de ahi salieron
+  // el año (2021) y el codigo de producto (2423) cobrados como si fueran la compra.
+  //
+  // "SON: VEINTISEIS CON 00/100 SOLES" va en su propio renglon, en texto corrido, lejos de las
+  // tablas. Y dice el total sin ambiguedad: no hay que decidir si es el subtotal, el gravado o
+  // el IGV. Esta en sus DOS boletas y es obligatoria en los comprobantes electronicos peruanos.
+
+  ok(numeroEnLetras("veintiseis") === 26, "veintiseis son 26");
+  ok(numeroEnLetras("treinta") === 30, "treinta son 30");
+  ok(numeroEnLetras("ciento veinte") === 120, `ciento veinte son 120 (${numeroEnLetras("ciento veinte")})`);
+  ok(numeroEnLetras("treinta y cinco") === 35, `la "y" es pegamento, no un numero (${numeroEnLetras("treinta y cinco")})`);
+  ok(numeroEnLetras("dos mil quinientos") === 2500, `dos mil quinientos (${numeroEnLetras("dos mil quinientos")})`);
+  ok(numeroEnLetras("mil") === 1000, `"mil" a secas son mil (${numeroEnLetras("mil")})`);
+  // SI APAREGE UNA PALABRA QUE NO ES UN NUMERO SE PARA: es lo que impide que "dos cafes" valga
+  // dos por accidente.
+  ok(numeroEnLetras("hola") === null, "una palabra que no es un numero no vale nada");
+
+  // LAS DOS LINEAS DE SUS BOLETAS, TAL CUAL.
+  const botica = totalEnLetras(["SON:    VEINTISEIS CON 00/100 SOLES"]);
+  ok(botica === 26, `la de la botica: 26.00 (${botica})`);
+  const grifo = totalEnLetras(["Son: TREINTA Y 00/100 SOLES"]);
+  ok(grifo === 30, `la del grifo: 30.00 (${grifo})`);
+
+  // Y CON CENTIMOS DE VERDAD.
+  ok(totalEnLetras(["SON: CIENTO VEINTE CON 50/100 SOLES"]) === 120.5, "ciento veinte con cincuenta");
+  // Sin colas de coma flotante: 26 + 0/100 tiene que dar 26 exacto.
+  ok(Object.is(totalEnLetras(["SON: VEINTISEIS CON 00/100 SOLES"]), 26), "sin colas de decimales");
+  // Sin la fraccion no hay linea que leer, y no se inventa nada.
+  ok(totalEnLetras(["GRACIAS POR SU COMPRA"]) === null, "sin la fraccion de centimos no se lee nada");
+
+  // Y AHORA LO QUE IMPORTA: QUE MANDE SOBRE LA TABLA.
+  //
+  // Esta factura tiene el subtotal bien puesto y el IMPORTE TOTAL partido en celdas que el
+  // lector NO llego a juntar — que es lo que le paso a el. Antes se quedaba con 25.42.
+  const facturaRota = parseReceipt(
+    [
+      "GRIFO SERVITOR S.A.",
+      "Son: TREINTA Y 00/100 SOLES",
+      "Sub Total S/ 25.42",
+      "Operacion Gravada: S/ 25.42",
+      "I.G.V. 18% S/ 4.58",
+      "IMPORTE TOTAL",
+    ].join("\n"),
+    AHORA
+  );
+  ok(facturaRota.total === 30, `con la tabla rota, las letras salvan el total (${facturaRota.total})`);
+  ok(facturaRota.total !== 25.42, "y no se queda con el subtotal");
+  // Y DEJA DE SER UNA ADIVINANZA: la pantalla ya no pide que se revise el monto.
+  ok(facturaRota.confidence !== "low", `sin aviso de lectura floja (${facturaRota.confidence})`);
+
+  // La de la botica igual, con su tabla de importes completa.
+  const boticaEntera = parseReceipt(
+    [
+      "InRetail Pharma S.A. - INKA FARMA",
+      "PANADOL FORTE TAB 6.00",
+      "Op. Gravada 22.00",
+      "I.G.V. S/ 3.96",
+      "Importe a pagar S/ 26.00",
+      "SON:    VEINTISEIS CON 00/100 SOLES",
+    ].join("\n"),
+    AHORA
+  );
+  ok(boticaEntera.total === 26, `la de la botica entera (${boticaEntera.total})`);
 }
 
 console.log("\n--- LAS BOLETAS DE LOS OTROS PAISES QUE LA APP OFRECE ---");

@@ -18,6 +18,7 @@
 
 import { parseAmount } from "@/utils/importEngine";
 import { usaCentimos } from "@/constants/currencies";
+import { totalEnLetras } from "@/utils/montoEnLetras";
 
 export type ReceiptRead = {
   /** Nombre del comercio, ya limpio de "S.A.C." y similares. */
@@ -460,12 +461,32 @@ export function parseReceipt(
   const rucMatch = text.match(RUC_RE);
   const ruc = rucMatch ? rucMatch[1] : "";
 
+  /**
+   * PRIMERO, EL TOTAL ESCRITO CON LETRAS: "SON: VEINTISEIS CON 00/100 SOLES".
+   *
+   * Va ANTES que todo lo demás porque es la señal más fiable del papel, y esa es la lección de
+   * dos días persiguiendo el mismo fallo. Buscar la línea que dice "TOTAL" se rompe de mil
+   * maneras —letras separadas, celdas de tabla partidas, la fila entera sin leer— y cuando se
+   * rompe, el escáner adivina: de ahí salieron el año y el código de producto cobrados como si
+   * fueran la compra.
+   *
+   * Esta línea va en su propio renglón, en texto corrido, lejos de las tablas. Y dice el total
+   * sin ambigüedad: no hay que decidir si es el subtotal, el gravado o el IGV.
+   *
+   * Solo la traen las boletas donde SUNAT la exige, así que abajo sigue todo lo de antes para
+   * las demás. Ver utils/montoEnLetras.
+   */
+  const enLetras = totalEnLetras(lines);
+
   // El total: se puntúan todas las líneas y gana la mejor. Si empatan varias
   // (pasa con "TOTAL" y "TOTAL A PAGAR"), gana la última, que es la de
   // abajo del papel.
   let bestScore = 0;
-  let total: number | null = null;
-  for (let i = 0; i < lines.length; i++) {
+  let total: number | null = enLetras;
+  // CON LAS LETRAS ENCONTRADAS NO SE MIRA NADA MÁS, y hay que decirlo aquí porque el bucle de
+  // abajo pisaría el valor: arranca con la mejor puntuación en cero, así que cualquier línea
+  // que puntúe se lo llevaría por delante. Las letras ganan a los números por lo dicho arriba.
+  for (let i = 0; enLetras === null && i < lines.length; i++) {
     const line = lines[i];
     const score = scoreAsTotal(soften(line));
     if (score <= 0) continue;
