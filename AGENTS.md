@@ -12,6 +12,11 @@ deshacer.
 **[ENTREGAS.md](ENTREGAS.md)** — qué APK y qué actualizaciones se entregaron,
 de qué commit salió cada una y cómo publicar.
 
+**[PLAYSTORE.md](PLAYSTORE.md)** — todo lo que pide el formulario de Play
+Console, ya redactado: descripciones, seguridad de los datos y la
+justificación del lector de notificaciones. Si la app empieza a guardar algo
+nuevo, ese archivo hay que tocarlo también.
+
 Sin leer esos dos se empieza de cero, se rehace lo hecho y se vuelve a
 tropezar con lo mismo.
 

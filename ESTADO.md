@@ -718,6 +718,16 @@ cuando paguen se le quite los anuncios."*
 
 ## Lo que falta para Play Store
 
+> **[PLAYSTORE.md](PLAYSTORE.md) tiene ya redactado todo lo que pide el formulario** (08/08/2026):
+> la descripción corta y la larga con los caracteres contados, el formulario de seguridad de los
+> datos categoría por categoría, el texto para justificar el lector de notificaciones, y las
+> respuestas de la clasificación de contenido. Se escribió **antes** de que existiera la cuenta
+> para que ese día sea copiar y pegar y no redactar bajo presión.
+>
+> Está sacado del código, no de la memoria. **Si la app empieza a guardar algo nuevo, hay que
+> tocarlo:** un formulario de datos que no cuadra con lo que hace la app es motivo de
+> suspensión, y Google lo revisa de verdad.
+
 Esto es lo pendiente de verdad, en orden de bloqueo:
 
 1. ~~Premium se regala~~ **RESUELTO EL 07/08/2026 (7ago-32).** Ya no hay precio ni
