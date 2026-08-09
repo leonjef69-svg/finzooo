@@ -8,6 +8,7 @@ import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 import { carpetaElegida, elegirCarpeta } from "@/utils/carpetaTelefono";
 import { conectarDropbox, dropboxConectado } from "@/utils/dropbox";
+import { conectarOneDrive, onedriveConectado, onedriveDisponible } from "@/utils/onedrive";
 import {
   exportarEnFondo,
   ultimoIntentoEnFondo,
@@ -56,6 +57,8 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
   const [carpeta, setCarpeta] = useState("");
   /** Si ya hay una cuenta de Dropbox autorizada. */
   const [dropbox, setDropbox] = useState(false);
+  /** Y si la hay de OneDrive. */
+  const [onedrive, setOnedrive] = useState(false);
   /**
    * Si ESTE APK sabe exportar con la app cerrada.
    *
@@ -98,6 +101,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
     });
     carpetaElegida().then((c) => alive && setCarpeta(c));
     dropboxConectado().then((c) => alive && setDropbox(c));
+    onedriveConectado().then((c) => alive && setOnedrive(c));
     ultimoIntentoEnFondo().then((u) => alive && setUltimo(u));
     proximaProgramada().then((p) => alive && setProxima(p));
     return () => {
@@ -143,6 +147,17 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
       // Cerrar el navegador a medias entra por aquí, y es lo más normal del
       // mundo: no es un error que merezca alarma, solo "no quedó conectado".
       showToast(t("schedExport.dropboxFailed"));
+    }
+  }
+
+  /** Y OneDrive, exactamente igual. Ver utils/onedrive. */
+  async function conectarLaDeMicrosoft() {
+    try {
+      await conectarOneDrive();
+      setOnedrive(true);
+      showToast(t("schedExport.onedriveReady"));
+    } catch {
+      showToast(t("schedExport.onedriveFailed"));
     }
   }
 
@@ -333,6 +348,15 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
     { id: "folder", label: t("schedExport.destFolder"), Icon: FolderOpen },
     { id: "drive", label: t("exportPdf.destDrive"), Icon: Cloud },
     { id: "dropbox", label: t("schedExport.destDropbox"), Icon: Package },
+    // ONEDRIVE SOLO SI SE PUEDE DE VERDAD.
+    //
+    // Falta el identificador que el dueño tiene que sacar de Azure, y hasta que exista, tocar
+    // "conectar" abriría el navegador para que Microsoft conteste que la app no existe.
+    // Ofrecer una opción que siempre falla es peor que no ofrecerla: manda a buscar un fallo
+    // en el celular cuando lo que falta es un trámite. Ver utils/onedrive.
+    ...(onedriveDisponible()
+      ? [{ id: "onedrive" as const, label: t("schedExport.destOneDrive"), Icon: Cloud }]
+      : []),
   ];
 
   const destLabel = DESTINOS.find((d) => d.id === schedule.destination)?.label ?? "";
@@ -928,6 +952,44 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                   >
                     <Text className="text-xs font-extrabold text-white dark:text-slate-900">
                       {t("schedExport.dropboxConnect")}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )}
+
+            {/* ONEDRIVE. Lo mismo que Dropbox, y a propósito: son el mismo trato —autorizar
+                una vez y el permiso se queda— así que enseñarlos distinto solo confundiría. */}
+            {schedule.destination === "onedrive" && (
+              <View
+                className={`rounded-xl border-[1.5px] p-3.5 mb-5 ${
+                  onedrive
+                    ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-600"
+                    : "bg-amber-50 dark:bg-amber-900/20 border-amber-500"
+                }`}
+              >
+                <Text
+                  className={`text-xs leading-5 ${
+                    onedrive
+                      ? "text-emerald-800 dark:text-emerald-200"
+                      : "text-amber-800 dark:text-amber-200"
+                  }`}
+                >
+                  {t(
+                    !onedrive
+                      ? "schedExport.onedriveMissing"
+                      : saleSolo
+                        ? "schedExport.destinoFondo"
+                        : "schedExport.onedriveNote"
+                  )}
+                </Text>
+                {!onedrive && (
+                  <TouchableOpacity
+                    onPress={conectarLaDeMicrosoft}
+                    className="mt-2.5 py-2.5 rounded-xl items-center bg-slate-900 dark:bg-white"
+                  >
+                    <Text className="text-xs font-extrabold text-white dark:text-slate-900">
+                      {t("schedExport.onedriveConnect")}
                     </Text>
                   </TouchableOpacity>
                 )}

@@ -634,6 +634,88 @@ console.log("\n--- DROPBOX: LO QUE NO PUEDE ESTAR MAL ---");
   ok(codigoDeLaVuelta("finzo://dropbox?mycode=NO&code=SI") === "SI", "y no se confunde con otro parámetro parecido");
 }
 
+console.log("\n--- ONEDRIVE: LAS CUATRO TRAMPAS DE MICROSOFT ---");
+{
+  // Es una copia de dropbox.ts, y ahi esta el riesgo: lo que se copia se copia bien, y lo que
+  // Microsoft hace DISTINTO se cuela sin que nada avise. Estas cuatro son esas diferencias.
+  //
+  // Ninguna se descubre leyendo: las cuatro fallan en el celular, con la app ya conectada, y
+  // con un mensaje que manda a buscar al sitio equivocado.
+  const RAIZ = process.cwd();
+  const crudo = fs.readFileSync(path.join(RAIZ, "utils/onedrive.ts"), "utf8");
+  const codigo = crudo.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+  // 1. offline_access. Sin el, Microsoft devuelve un permiso de UNA HORA y NO devuelve el
+  //    largo: conectar funcionaria, el primer reporte saldria, y el de mañana no. Es el
+  //    equivalente del token_access_type=offline de Dropbox, y no se llama igual.
+  ok(/offline_access/.test(codigo), "se pide offline_access, o el permiso dura una hora");
+
+  // 2. El scope TAMBIEN al renovar. Dropbox no lo necesita; Microsoft si. Sin esto el permiso
+  //    renovado sale sin acceso a la carpeta y la subida falla con un "prohibido" que no se
+  //    entiende, porque conectar SI habia funcionado.
+  const renovar = codigo.slice(codigo.indexOf("grant_type: \"refresh_token\""));
+  ok(/scope: PERMISOS/.test(renovar.slice(0, 400)), "y los permisos se repiten al renovar");
+
+  // 3. PUT, no POST. Microsoft contesta "metodo no permitido" al POST.
+  ok(/httpMethod: "PUT"/.test(codigo), "se sube con PUT");
+  ok(!/httpMethod: "POST"[\s\S]*uploadAsync/.test(codigo), "y no con POST, que Microsoft rechaza");
+
+  // 4. El nombre va DENTRO de la direccion, no en una cabecera como en Dropbox. Y escapado: un
+  //    reporte se llama "Finzo agosto 2026.pdf" y ese espacio partiria la direccion.
+  ok(/special\/approot:\/\$\{encodeURIComponent\(nombre\)\}:\/content/.test(codigo), "el nombre va escapado dentro de la direccion");
+  ok(/conflictBehavior=rename/.test(codigo), "y dos reportes del mismo dia no se pisan");
+
+  // Y LO QUE COMPARTE CON DROPBOX, que tampoco puede estar mal.
+  ok(!/client_secret/.test(codigo), "el secreto NO esta en el codigo");
+  ok(/code_challenge_method=S256/.test(codigo), "se usa PKCE con huella SHA-256");
+  ok(/code_verifier/.test(codigo), "y se manda el numero al azar al canjear");
+  ok(/Files\.ReadWrite\.AppFolder/.test(codigo), "solo se pide la carpeta propia de la app");
+  ok(!/Files\.ReadWrite\.All/.test(codigo), "y NUNCA el OneDrive entero");
+  ok(/SecureStore/.test(codigo), "el permiso guardado va al almacen seguro");
+  ok(!/loadJSON|saveJSON/.test(codigo), "y no a los ajustes de siempre");
+  ok(/status === 400 \|\| respuesta\.status === 401/.test(codigo), "un permiso revocado se detecta");
+  ok(/desconectarOneDrive\(\)/.test(codigo), "y se olvida");
+  // Las tres tentaciones que en el celular no existen. Ver utils/pkce.
+  ok(!/\bbtoa\b/.test(codigo), "no se usa btoa, que en el celular no existe");
+  ok(!/new URL\(/.test(codigo), "ni URL, que esta a medias");
+  ok(!/URLSearchParams/.test(codigo), "ni URLSearchParams");
+
+  // "common" y no "consumers": quien tenga su OneDrive en una cuenta de trabajo se quedaria
+  // fuera sin entender por que.
+  ok(/login\.microsoftonline\.com\/common\//.test(codigo), "acepta cuentas personales y de trabajo");
+
+  // LA OPCION NO SE OFRECE HASTA QUE EXISTA EL IDENTIFICADOR DE AZURE.
+  //
+  // Es lo que impide entregar un boton que siempre falla: sin el identificador, tocar
+  // "conectar" abriria el navegador para que Microsoft conteste que la app no existe — y eso
+  // manda a buscar un fallo en el celular cuando lo que falta es un tramite.
+  ok(/export function onedriveDisponible/.test(codigo), "hay forma de saber si esta disponible");
+  const pantalla = fs.readFileSync(path.join(RAIZ, "screens/ScheduledExportSettings.tsx"), "utf8");
+  ok(/onedriveDisponible\(\)/.test(pantalla), "y la pantalla solo la ofrece si lo esta");
+
+  // Y CUANDO EL IDENTIFICADOR ESTE PUESTO, que sea uno de verdad. Un identificador de Azure es
+  // un UUID; pegar ahi otra cosa —el "id de objeto", o el de directorio— da un error que no
+  // dice cual de los tres se copio mal.
+  const id = /const CLIENT_ID = "([^"]*)"/.exec(codigo)?.[1] ?? "";
+  ok(
+    id === "" || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id),
+    id === "" ? "sin identificador todavia, y por eso no se ofrece" : "el identificador tiene forma de UUID"
+  );
+
+  // El destino tiene que contar como automatico, o el reporte no saldria solo nunca.
+  ok(esDestinoAutomatico("onedrive"), "OneDrive cuenta como destino automatico");
+  // Y alguien tiene que subirlo de verdad: sin esta linea, elegir OneDrive guardaria en Drive.
+  const fondo = fs.readFileSync(path.join(RAIZ, "utils/exportarEnFondo.ts"), "utf8");
+  ok(/destination === "onedrive"[\s\S]{0,120}subirAOneDrive/.test(fondo), "y el reporte se sube de verdad a OneDrive");
+
+  // Los textos, en los tres idiomas.
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  for (const clave of ["destOneDrive", "onedriveConnect", "onedriveMissing", "onedriveNote", "onedriveReady", "onedriveFailed"]) {
+    const veces = (i18n.match(new RegExp(`"schedExport\\.${clave}":`, "g")) ?? []).length;
+    ok(veces === 3, `"${clave}" esta en los tres idiomas (${veces})`);
+  }
+}
+
 console.log("\n--- CADA MOTIVO DE 'NO SE HIZO' TIENE SU TEXTO ---");
 {
   // El trabajo de fondo devuelve un MOTIVO y la pantalla lo enseña. Si a un

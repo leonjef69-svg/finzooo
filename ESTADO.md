@@ -2366,10 +2366,26 @@ Del pedido largo quedó fuera lo que no depende de programar más:
   Android o renderizar el HTML fuera de pantalla con `createPrintDocumentAdapter`.
   Lo segundo es lo que conviene intentar primero: mantiene el diseño actual. Es
   la parte incierta de esta petición y el usuario aceptó dejarla para después.
-- **OneDrive.** Necesita que el dueño de la cuenta registre la app en Azure y dé
-  el identificador; eso no lo puede hacer el código. **Lo demás sí se puede por
-  actualización**, igual que Dropbox: se copia `utils/dropbox.ts` cambiando las
-  tres direcciones y el permiso a `Files.ReadWrite.AppFolder`.
+- **OneDrive.** ✅ **EL CÓDIGO YA ESTÁ HECHO** (`utils/onedrive.ts`, 08/08/2026), enganchado a
+  la pantalla y al envío en segundo plano, con pruebas. **Falta UN dato y es suyo:** el
+  identificador que da Azure al registrar la app. `CLIENT_ID` está vacío y
+  `onedriveDisponible()` devuelve false, así que **la opción no se ofrece en la pantalla** —
+  ofrecer un botón que siempre falla manda a buscar un fallo en el celular cuando lo que falta
+  es un trámite.
+
+  **Cuando él dé el identificador: pegarlo en esa constante y publicar. Nada más.**
+
+  Lo que hay que pedirle, exacto: en portal.azure.com → Microsoft Entra ID → Registros de
+  aplicaciones → Nuevo registro, con **cuentas personales de Microsoft**, y añadir
+  `finzo://onedrive` como plataforma **móvil**. Lo que se copia es el "Id. de aplicación
+  (cliente)", que es un UUID — hay una prueba que rechaza cualquier otra cosa, porque en esa
+  página hay tres identificadores parecidos y copiar el equivocado da un error que no dice cuál.
+
+  **Las cuatro diferencias con Dropbox que no se adivinan copiando**, y cada una tiene su
+  prueba porque las cuatro fallan solo en el celular y con la app ya conectada: `offline_access`
+  (sin él el permiso dura una hora), repetir el scope **al renovar** (Dropbox no lo necesita),
+  **PUT y no POST**, y el nombre del archivo **dentro de la dirección** y escapado, no en una
+  cabecera.
 - **Correo automático.** No se puede enviar correo desde el celular sin abrir la
   app de correo. Hace falta un **servicio de envío** con su clave (Resend,
   SendGrid…) y eso implica un servidor y un coste mensual.

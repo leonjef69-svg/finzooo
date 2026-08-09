@@ -22,6 +22,7 @@ import { File, Paths } from "expo-file-system";
 import { archivoCsv, archivoExcel, filasDelReporte } from "@/utils/reporteArchivo";
 import { guardarEnCarpeta } from "@/utils/carpetaTelefono";
 import { subirADropbox } from "@/utils/dropbox";
+import { subirAOneDrive } from "@/utils/onedrive";
 import { uploadToDrive } from "@/utils/googleDrive";
 import {
   htmlAPdfEnFondo,
@@ -269,6 +270,8 @@ export async function exportarEnFondo(forzar = false): Promise<ResultadoDeFondo>
       await guardarEnCarpeta(archivo.uri, archivo.fileName, archivo.mimeType);
     } else if (schedule.destination === "dropbox") {
       await subirADropbox(archivo.uri, archivo.fileName);
+    } else if (schedule.destination === "onedrive") {
+      await subirAOneDrive(archivo.uri, archivo.fileName);
     } else {
       await uploadToDrive(archivo.uri, archivo.fileName, archivo.mimeType);
     }

@@ -41,7 +41,8 @@ export type ExportDestination =
   | "whatsapp"
   | "drive"
   | "folder"
-  | "dropbox";
+  | "dropbox"
+  | "onedrive";
 
 /**
  * LOS DESTINOS QUE DE VERDAD SE HACEN SOLOS.
@@ -54,6 +55,7 @@ export type ExportDestination =
  *   folder  → la carpeta se elige una vez y el permiso de Android se queda.
  *   dropbox → se autoriza una vez en el navegador y el permiso es de larga
  *             duración, así que después no vuelve a pedir nada.
+ *   onedrive → igual que Dropbox: una autorización y ya. Ver utils/onedrive.
  *
  * Los demás (compartir, correo, Gmail, WhatsApp) abren OTRA aplicación y
  * esperan a que una persona toque enviar. Siguen existiendo para exportar a
@@ -61,7 +63,7 @@ export type ExportDestination =
  * esta pantalla el 05/08/2026, a pedido del usuario: "que todas las opciones en
  * dónde guardarlo sean de manera automática".
  */
-const DESTINOS_AUTOMATICOS = ["drive", "folder", "dropbox"] as const;
+const DESTINOS_AUTOMATICOS = ["drive", "folder", "dropbox", "onedrive"] as const;
 
 export function esDestinoAutomatico(d: ExportDestination): boolean {
   return (DESTINOS_AUTOMATICOS as readonly string[]).includes(d);
