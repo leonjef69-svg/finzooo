@@ -121,9 +121,25 @@ function amountsIn(line: string): number[] {
   let m: RegExpExecArray | null;
   while ((m = re.exec(clean)) !== null) {
     const raw = repairDigits(m[1]).replace(/[.,]$/, "");
+    const sinSeparadores = raw.replace(/[.,]/g, "");
+    const tieneCentimos = /[.,]\d{1,2}$/.test(raw);
     // Un número suelto sin decimales y muy largo no es un precio: es un
     // código de barras, un número de caja o un teléfono.
-    if (!/[.,]\d{1,2}$/.test(raw) && raw.replace(/[.,]/g, "").length > 4) continue;
+    if (!tieneCentimos && sinSeparadores.length > 4) continue;
+    /**
+     * UN AÑO SUELTO NO ES UN MONTO. Cuatro cifras, sin céntimos y entre 1900 y 2100.
+     *
+     * ESTE FALLO SE VIO EN UNA BOLETA DE VERDAD (08/08/2026), y era el peor de los tres: la
+     * app propuso **"Guardar S/ 2.021,00"** por un documento cuya cifra mayor de verdad era
+     * 645,10. Lo que hizo fue coger el año.
+     *
+     * Y no es un caso raro: **toda** boleta lleva el año escrito, así que en cuanto no se
+     * encuentra una línea de "TOTAL" y hay que quedarse con la cifra más grande, el año gana
+     * casi siempre — es más grande que casi cualquier compra de diario.
+     *
+     * El filtro de arriba no lo cazaba por poco: mide "más de 4 cifras" y un año tiene 4.
+     */
+    if (!tieneCentimos && /^(19|20)\d\d$/.test(sinSeparadores)) continue;
     const value = parseAmount(raw);
     if (value !== null && value > 0 && value < 1_000_000) out.push(value);
   }
@@ -195,8 +211,28 @@ function findDate(lines: string[], now: Date): string {
     return "";
   };
 
+  /**
+   * NO TODAS LAS FECHAS DE UN PAPEL VALEN LO MISMO, y por eso se busca en tres pasadas.
+   *
+   * En el documento real del 08/08/2026 había cuatro fechas, y la app cogió la primera que
+   * decía "fecha": **FECHA DE INGRESO**, que era de dos meses antes que la de pago. El
+   * movimiento habría quedado guardado en el mes equivocado — y eso, en una app de
+   * presupuesto mensual, descuadra el mes entero sin que se vea de dónde viene.
+   *
+   * Primero la que dice explícitamente cuándo se emitió o se pagó; luego cualquiera que hable
+   * de fecha, saltando las que se refieren a OTRA cosa (el ingreso a la empresa, un
+   * vencimiento, un nacimiento); y solo al final, cualquier fecha suelta del papel.
+   */
+  const ES_OTRA_FECHA = /ingreso|nacimiento|vencimiento|caducidad|vence/;
+
   for (const line of lines) {
-    if (!/fecha|emision|emitido/.test(soften(line))) continue;
+    if (!/emision|emitido|fecha de pago|f\.?\s*pago/.test(soften(line))) continue;
+    const found = tryLine(line);
+    if (found) return found;
+  }
+  for (const line of lines) {
+    const s = soften(line);
+    if (!/fecha/.test(s) || ES_OTRA_FECHA.test(s)) continue;
     const found = tryLine(line);
     if (found) return found;
   }
@@ -261,6 +297,18 @@ function cleanName(line: string): string {
  * productos, y un paquete de fideos no es el nombre de la tienda.
  */
 function findMerchant(lines: string[]): string {
+  /**
+   * "RAZON SOCIAL: SYG S.A.C" → "SYG". El nombre está DESPUÉS de la etiqueta.
+   *
+   * Va primero porque cuando esa etiqueta aparece, lo que sigue es el nombre de verdad y no
+   * hay que adivinar nada. Visto en una boleta real el 08/08/2026.
+   */
+  for (const line of lines.slice(0, 10)) {
+    const m = /raz[oó]n\s+social\s*:?\s*(.+)/i.exec(line);
+    const valor = m?.[1]?.trim() ?? "";
+    if (valor.length >= 3 && /[a-zA-Z]{3}/.test(valor)) return cleanName(valor);
+  }
+
   const candidates: string[] = [];
   for (const line of lines.slice(0, 8)) {
     const s = soften(line).trim();
@@ -268,6 +316,17 @@ function findMerchant(lines: string[]): string {
     if (NOT_A_NAME.some((word) => s.includes(word))) continue;
     // Al menos tres letras seguidas: descarta códigos y líneas de guiones.
     if (!/[a-z]{3}/.test(s)) continue;
+    /**
+     * UNA ETIQUETA SOLA NO ES EL NOMBRE DE NADIE.
+     *
+     * En la boleta real del 08/08/2026 la app propuso el comercio **"RAZON SoCIAL:"** — se
+     * quedó con el rótulo porque el lector partió la línea y dejó la etiqueta sin su valor.
+     *
+     * Una línea que acaba en dos puntos está anunciando lo que viene después, no diciéndolo.
+     * Descartarla es preferible a guardarla: un movimiento que dice "RAZON SOCIAL:" en el
+     * comercio no se puede ni buscar después.
+     */
+    if (/:\s*$/.test(line.trim())) continue;
     candidates.push(line);
   }
 
