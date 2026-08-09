@@ -103,7 +103,9 @@ export default function Settings({
   onLegal: () => void;
   onVoiceHelp: () => void;
 }) {
-  const { t, isCloudSynced, autoCaptureOn, showToast } = useAppData();
+  const { t, isCloudSynced, autoCaptureOn, showToast, negocios } = useAppData();
+  /** El negocio que se está quedando con los yapeos, si hay alguno. Ver la fila de abajo. */
+  const negocioQueRecibe = negocios.find((n) => n.activo && n.destinoYapes === "negocio");
 
   // Le pide a Android que coloque el widget del micrófono. Si el lanzador
   // del celular no lo permite (algunos que se instalan aparte no lo
@@ -331,7 +333,16 @@ export default function Settings({
         <Row
           Icon={Store}
           label={t("negocios.rowLabel")}
-          onPress={() => router.push("/negocio")}
+          // QUÉ ESTÁ PASANDO, SIN TENER QUE ENTRAR. Si un negocio se está quedando con los
+          // yapeos, eso cambia dónde cae la plata todos los días: no puede estar solo a tres
+          // pantallas de distancia. Y si se apagara sin querer, aquí se nota.
+          hint={negocioQueRecibe ? t("negocios.rowYapes", { nombre: negocioQueRecibe.nombre }) : undefined}
+          // CON UN SOLO NEGOCIO SE ENTRA DIRECTO A SU PANEL. La lista de negocios con un solo
+          // negocio es una pantalla que solo sirve para tocar la única fila que tiene. Con dos
+          // o más sí hace falta elegir.
+          onPress={() =>
+            router.push(negocios.length === 1 ? `/negocio/${negocios[0].id}` : "/negocio")
+          }
           right={
             <View className="bg-amber-50 px-2 py-1 rounded-full">
               <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>

@@ -261,6 +261,9 @@ export default function PanelNegocio({
 
         {/* EL GASTO Y LOS PRODUCTOS, DEL MISMO TAMAÑO Y DEBAJO: se hacen a diario pero no cien
             veces al día como vender. */}
+        {/* MIS NEGOCIOS. Hace falta desde que Ajustes entra directo aquí cuando solo hay un
+            negocio: sin esta puerta, crear el segundo —o editar el nombre, o borrarlo— se
+            volvería imposible de encontrar. */}
         <View className="flex-row gap-2.5 mt-2.5">
           <TouchableOpacity
             onPress={() => router.push({ pathname: "/negocio/movimiento", params: { id: negocioId } })}
@@ -281,6 +284,12 @@ export default function PanelNegocio({
             </Text>
           </TouchableOpacity>
         </View>
+
+        <TouchableOpacity onPress={() => router.push("/negocio")} className="py-3 items-center">
+          <Text className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+            {t("panel.misNegocios")}
+          </Text>
+        </TouchableOpacity>
 
         {/* LO QUE MÁS VENDES, del periodo elegido igual que todo lo demás.
             Solo sale si hubo ventas: una lista vacía con un título encima ocupa sitio y no

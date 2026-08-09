@@ -285,7 +285,10 @@ console.log("\n--- LA PANTALLA, Y QUE EL MODO NEGOCIO ES PREMIUM ---");
 
   // Y se llega desde Ajustes, o la pantalla no existiria para nadie.
   const ajustes = fs.readFileSync(path.join(RAIZ, "screens/Settings.tsx"), "utf8");
-  ok(/router\.push\("\/negocio"\)/.test(ajustes), "se llega desde Ajustes");
+  // Se sigue llegando desde Ajustes, pero ya no siempre a la lista: con un solo negocio se
+  // entra directo a su panel. Lo que esta comprobacion vigila es lo de siempre —que exista la
+  // puerta— y no a cual de las dos pantallas da.
+  ok(/router\.push\([\s\S]{0,160}"\/negocio"/.test(ajustes), "se llega desde Ajustes");
   ok(/negocios\.rowLabel/.test(ajustes), "con su nombre traducido");
 
   // Los textos, en los tres idiomas. Una clave que falte no da error: sale su nombre en
@@ -1032,6 +1035,39 @@ console.log("\n--- V2: CUANTO BROSTER SALIO ---");
   for (const clave of ["vendidos", "vendidosCantidad"]) {
     const veces = (i18n.match(new RegExp(`"panel\\.${clave}":`, "g")) ?? []).length;
     ok(veces === 3, `"panel.${clave}" esta en los tres idiomas (${veces})`);
+  }
+}
+
+console.log("\n--- QUE NO PAREZCA QUE UN YAPEO SE PERDIO ---");
+{
+  // EL FALLO QUE ESTO EVITA, Y QUE ESTE PROYECTO YA HA TENIDO TRES VECES: la pantalla que
+  // existe para diagnosticar tiene la respuesta y no la enseña. Paso con la voz y con el
+  // lector de avisos.
+  //
+  // Desde que un negocio puede quedarse con los yapeos, "no me aparecio el yapeo en Inicio"
+  // tiene una respuesta nueva: SI entro, pero a la caja del negocio. Si la pantalla de
+  // Registro automatico no lo dice, se busca un fallo que no existe.
+  const auto = fs.readFileSync(path.join(RAIZ, "screens/AutoCapture.tsx"), "utf8");
+  ok(/autoCapture\.vanAlNegocio/.test(auto), "el registro automatico dice que los yapeos van al negocio");
+  ok(/n\.activo && n\.destinoYapes === "negocio"/.test(auto), "y mira si de verdad hay uno recibiendo");
+  ok(/router\.push\(`\/negocio\/\$\{negocioQueRecibe\.id\}`\)/.test(auto), "y deja ir a verlo de un toque");
+
+  // Y EN AJUSTES, SIN ENTRAR A NADA. Si se apagara sin querer, aqui se nota.
+  const ajustes = fs.readFileSync(path.join(RAIZ, "screens/Settings.tsx"), "utf8");
+  ok(/negocios\.rowYapes/.test(ajustes), "y Ajustes lo dice sin tener que entrar");
+
+  // CON UN SOLO NEGOCIO SE ENTRA DIRECTO A SU PANEL: la lista con un solo negocio es una
+  // pantalla que solo sirve para tocar la unica fila que tiene.
+  ok(/negocios\.length === 1 \? `\/negocio\/\$\{negocios\[0\]\.id\}` : "\/negocio"/.test(ajustes), "con un solo negocio se entra directo a su panel");
+  // Y LA LISTA SIGUE ALCANZABLE desde el panel, o crear el segundo negocio —o editar el
+  // nombre, o borrarlo— se volveria imposible de encontrar.
+  const panel = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
+  ok(/router\.push\("\/negocio"\)/.test(panel), "y desde el panel se vuelve a la lista de negocios");
+
+  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
+  for (const clave of ['"negocios\\.rowYapes"', '"autoCapture\\.vanAlNegocio"', '"autoCapture\\.vanAlNegocioTexto"', '"panel\\.misNegocios"']) {
+    const veces = (i18n.match(new RegExp(`${clave}:`, "g")) ?? []).length;
+    ok(veces === 3, `${clave.replace(/\\\\/g, "")} esta en los tres idiomas (${veces})`);
   }
 }
 

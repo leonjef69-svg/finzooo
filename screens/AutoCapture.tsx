@@ -3,7 +3,8 @@ import { ScrollView, Text, TouchableOpacity, View,
   Switch,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Zap, ShieldCheck, Check, ChevronRight, Trash2, Smartphone, Activity, RotateCcw, Volume2 } from "lucide-react-native";
+import { Zap, ShieldCheck, Check, ChevronRight, Trash2, Smartphone, Activity, RotateCcw, Volume2, Store } from "lucide-react-native";
+import { router } from "expo-router";
 import * as notificationReader from "@/modules/notification-reader";
 import { useColorScheme } from "nativewind";
 import BackButton from "@/components/BackButton";
@@ -44,7 +45,20 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
     openAutoCaptureSettings,
     autoCaptureLog,
     clearAutoCaptureLog,
+    negocios,
   } = useAppData();
+  /**
+   * ¿HAY UN NEGOCIO QUEDÁNDOSE CON LOS YAPEOS QUE ENTRAN?
+   *
+   * Esta pantalla existe para responder *"¿por qué no me entró el yapeo?"*, y desde el Modo
+   * Negocio hay una respuesta nueva que antes no existía: **sí entró, pero a la caja del
+   * negocio**. Sin decirlo aquí, quien no lo vea en Inicio va a pensar que se perdió — y esta
+   * es justo la pantalla a la que se viene a comprobarlo.
+   *
+   * Ya pasó con la voz y con el lector: la pantalla de diagnóstico tenía la respuesta y no la
+   * enseñaba.
+   */
+  const negocioQueRecibe = negocios.find((n) => n.activo && n.destinoYapes === "negocio");
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const iconColor = colorScheme === "dark" ? "#94a3b8" : "#334155";
@@ -132,6 +146,34 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
             {t("autoCapture.privacyBody")}
           </Text>
         </View>
+
+        {/* A DÓNDE ESTÁN CAYENDO LOS YAPEOS. Ver negocioQueRecibe, arriba: sin esto, un yapeo
+            que entró al negocio parece un yapeo perdido, y esta es la pantalla donde se viene
+            a mirar. */}
+        {negocioQueRecibe && (
+          <View
+            className="rounded-2xl p-4 mb-5 bg-white dark:bg-slate-900 border-[1.5px] border-emerald-300 dark:border-emerald-700"
+            style={CARD_SHADOW}
+          >
+            <View className="flex-row items-center gap-2 mb-2">
+              <Store size={15} color="#059669" />
+              <Text className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                {t("autoCapture.vanAlNegocio", { nombre: negocioQueRecibe.nombre })}
+              </Text>
+            </View>
+            <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-400">
+              {t("autoCapture.vanAlNegocioTexto")}
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.push(`/negocio/${negocioQueRecibe.id}`)}
+              className="mt-3 py-2.5 rounded-xl items-center bg-slate-100 dark:bg-slate-800"
+            >
+              <Text className="text-[11px] font-bold text-slate-600 dark:text-slate-200">
+                {t("autoCapture.verNegocio")}
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {!autoCaptureSupported ? (
           <View

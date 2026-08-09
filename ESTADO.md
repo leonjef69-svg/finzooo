@@ -532,7 +532,7 @@ Se entrega igual que la V1: **por partes, cada una publicada y con las pruebas e
 |---|---|
 | **1. Reportes por día y por mes** | ✅ **8ago-05**, publicado. Sin confirmar por él |
 | **2. Productos vendidos (cuánto Broster salió)** | ✅ **8ago-06**, publicado. Sin confirmar por él |
-| 3. Vinculación pago ↔ venta | ⏳ Sin empezar. **La más delicada** |
+| 3. Vinculación pago ↔ venta | ❌ **DESCARTADA POR ÉL, y el motivo importa** (ver abajo) |
 | 4. "Caja del negocio" | ⏳ **PREGUNTADO Y SIN RESPUESTA.** Se le ofrecieron las tres lecturas —lo que ya existe, abrir y cerrar caja cada día, o separar efectivo de Yape— y **descartó la pregunta y dijo "sigue como estaba planeado"**. Así que se sigue con el resto y **esto queda para preguntárselo otra vez**, no para adivinarlo |
 
 **1. Reportes por día y por mes (8ago-05).** El panel tiene arriba **Hoy · Este mes · Todo**, y
@@ -561,6 +561,52 @@ todo lo demás: cada producto con cuántos salieron, cuánta plata trajeron y un
 - **La barra se mide contra el que más vende**, no contra el total: contra el total, con veinte
   productos todas salen igual de cortas y no se distingue nada.
 - Cuenta también **los productos borrados**: la venta copió su nombre y su precio.
+
+### LA CONVERSACIÓN QUE CAMBIÓ EL RUMBO (08/08/2026) — LEER ANTES DE PROPONER NADA
+
+Al llegar a la vinculación pago↔venta, él preguntó lo que había que preguntar: *"¿el vendedor
+tendrá que registrar las ventas manualmente?"*. Y al confirmárselo, dijo la frase que ordena
+todo lo que venga después:
+
+> *"El vendedor no va a estar haciendo manualmente todo, está enfocado en vender sus productos."*
+
+**Tiene razón, y eso deja sin sentido media V2.** Juntar el Yape con la venta solo sirve si
+alguien registra ventas; si nadie las registra, no hay con qué juntarlo.
+
+**Lo que se le explicó, y hay que volver a explicar si reaparece la idea:**
+
+- Un yapeo trae **cuánto y de quién**. No trae qué se compró. Una venta en efectivo no trae
+  nada. **Ese dato no existe**: o alguien lo dice, o se inventa.
+- Él propuso deducir el producto por el monto (*"si el broster está 10 y me llega un yape de
+  10"*), que es justo lo que había prohibido en la V1. Se le enseñó con sus propios precios que
+  **no funciona ni con precios distintos**: Salchipapa 5 y Hamburguesa 10 → un yape de 10 puede
+  ser una hamburguesa **o dos salchipapas**. La regla real no es "precios distintos", es "que
+  ninguna suma dé el precio de otro", y eso se rompe solo al subir un precio.
+- **La voz siempre encendida tampoco vale**, y esto se le dijo tras ofrecérsela mal: en una
+  pollería con cola oiría a los clientes pidiendo y registraría ventas falsas; y además Android
+  no deja el micrófono abierto en segundo plano —batería y revisión de Google—. La voz sirve
+  **apretando algo primero**, y eso vuelve a ser tocar el celular.
+
+**LO QUE ELIGIÓ:** que la app lleve **solo la plata**, sin que el vendedor toque nada. Es lo que
+ya funciona: el yapeo entra solo a la caja del negocio y ahí están los totales por día y por
+mes. **Y pidió pulir eso en vez de añadir más funciones.**
+
+Lo hecho de productos, ventas a mano y gastos **se queda**: no estorba y sirve para registrar
+con calma. Pero **no es el camino principal**, y proponer cosas que dependan de que alguien
+registre cada venta es volver a esta misma conversación.
+
+**4. Pulido del camino sin manos (8ago-07).** Tres cosas, y la primera es la que importa:
+
+- **La pantalla de Registro automático dice a dónde van los yapeos.** Desde que un negocio puede
+  quedárselos, *"no me apareció el yapeo en Inicio"* tiene una respuesta nueva —sí entró, pero a
+  la caja del negocio— y sin decirla ahí se busca un fallo que no existe. **Es la cuarta vez que
+  este proyecto tropieza con lo mismo:** la pantalla de diagnóstico tenía la respuesta y no la
+  enseñaba (pasó con la voz y con el lector de avisos).
+- **Ajustes lo dice sin entrar**, en la propia fila del Modo Negocio: *"Tus yapeos entran a Mi
+  Pollería"*. Si se apagara sin querer, se nota desde fuera.
+- **Con un solo negocio, Ajustes entra directo a su panel.** La lista con un solo negocio es una
+  pantalla que solo sirve para tocar la única fila que tiene. La lista sigue alcanzable desde el
+  panel ("Mis negocios"), o crear el segundo se volvería imposible de encontrar.
 
 ## Lo que falta para Play Store
 
