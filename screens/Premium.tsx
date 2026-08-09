@@ -287,6 +287,12 @@ export default function Premium({
                     <Text className="text-emerald-700 font-extrabold">
                       {t(`premium.plan.${plan}`)}
                     </Text>
+                    {/* ESTE PRECIO ES PROVISIONAL Y HAY QUE CAMBIARLO AL CONECTAR LA TIENDA.
+                        Sale de constants/precios.ts, que es lo que COSTARÍA. Play Console fija
+                        el precio por país y con su moneda, así que dejar este número acabaría
+                        enseñando S/ 9.90 a alguien a quien Google le va a cobrar otra cosa —y
+                        un precio anunciado que no es el que se cobra es lo que hace que alguien
+                        pida su plata de vuelta—. Es el paso 6 de utils/compras.ts. */}
                     <Text className="text-emerald-700/70 text-[11px] mt-0.5">
                       {fmt(plan === "mensual" ? PRECIOS.mensualNormal : PRECIOS.anual)}
                     </Text>

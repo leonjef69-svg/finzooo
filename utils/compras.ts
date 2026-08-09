@@ -79,8 +79,14 @@ export function comprasDisponibles(): boolean {
  *    que canceló seguiría teniéndolo para siempre.
  * 5. Probarlo con una cuenta de prueba de Play Console, **nunca con la del dueño**: una compra
  *    de verdad se cobra de verdad.
+ * 6. **EL PRECIO QUE SE ENSEÑA TIENE QUE VENIR DE LA TIENDA.** Hoy la pantalla pinta
+ *    `PRECIOS` de constants/precios.ts, que es lo que *costaría*, y sirve mientras no haya
+ *    tienda. Pero Play Console fija el precio **por país y con su moneda**, y lo cambia cuando
+ *    el dueño quiera: dejar el número escrito aquí acabaría enseñando S/ 9.90 a alguien a
+ *    quien Google le va a cobrar otra cosa. Un precio anunciado que no es el que se cobra no
+ *    es un descuido de pantalla — es lo que hace que alguien pida su plata de vuelta.
  */
-export const PASOS_PENDIENTES = 5;
+export const PASOS_PENDIENTES = 6;
 
 /** No se puede comprar todavía: faltan los identificadores de Play Console. */
 export class CompraNoDisponible extends Error {
