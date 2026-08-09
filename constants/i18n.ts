@@ -445,6 +445,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "premium.title": "Finzo Premium",
     "premium.subtitle": "Todo tu potencial financiero.",
+    "premium.subtitleSinAnuncios": "Sin publicidad. Todo tu potencial financiero.",
     "premium.freeSectionTitle": "Plan Gratis",
     "premium.premiumSectionTitle": "Plan Premium",
     "premium.freeTransactions": "Movimientos ilimitados",
@@ -1523,6 +1524,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "premium.title": "Finzo Premium",
     "premium.subtitle": "Your full financial potential.",
+    "premium.subtitleSinAnuncios": "No ads. Your full financial potential.",
     "premium.freeSectionTitle": "Free plan",
     "premium.premiumSectionTitle": "Premium plan",
     "premium.freeTransactions": "Unlimited transactions",
@@ -2595,6 +2597,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "premium.title": "Finzo Premium",
     "premium.subtitle": "Todo o seu potencial financeiro.",
+    "premium.subtitleSinAnuncios": "Sem anúncios. Todo o seu potencial financeiro.",
     "premium.freeSectionTitle": "Plano Gratuito",
     "premium.premiumSectionTitle": "Plano Premium",
     "premium.freeTransactions": "Movimentos ilimitados",

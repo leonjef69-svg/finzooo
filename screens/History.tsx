@@ -3,6 +3,7 @@ import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-nativ
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Search, TrendingDown, TrendingUp, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
+import Anuncio from "@/components/Anuncio";
 import IconBadge from "@/components/IconBadge";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import { catInfo } from "@/constants/categories";
@@ -208,6 +209,15 @@ export default function History({
           </View>
         ))}
       </View>
+
+      {/* EL ANUNCIO VA AQUÍ ABAJO, Y LA ELECCIÓN DEL SITIO IMPORTA.
+          Al final del historial, después de todo: hay que deslizar hasta el fondo para verlo,
+          no tapa ninguna cifra y no se puede tocar por error mientras se busca un movimiento.
+
+          NO en Inicio, encima del "te queda este mes". Es una app de dinero, y un anuncio junto
+          al número por el que se abre la app le quita justo lo que necesita: que se vea seria.
+          Ese sitio no se gana con anuncios; se pierde con ellos. */}
+      <Anuncio />
     </ScrollView>
   );
 }

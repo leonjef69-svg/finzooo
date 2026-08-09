@@ -1,8 +1,28 @@
 // Textos legales de Finzo. Es un borrador redactado en lenguaje simple
 // para cumplir con lo que pide Google Play — no reemplaza la revisión de
 // un abogado si más adelante la app crece o cambia su forma de ganar dinero.
+import { anunciosActivos } from "@/constants/anuncios";
 export const LEGAL_CONTACT_EMAIL = "dinero123xc@gmail.com";
 export const LEGAL_LAST_UPDATED = "8 de agosto de 2026";
+
+/**
+ * LO QUE SE DICE DE LOS ANUNCIOS, Y SOLO CUANDO LOS HAY.
+ *
+ * Esto no es un detalle de estilo: una política de privacidad tiene que describir lo que la
+ * app HACE, no lo que hará algún día. Decir "compartimos con empresas de publicidad" sin tener
+ * anuncios asusta para nada; y al revés —tenerlos y seguir diciendo que no— es exactamente el
+ * fallo que se acaba de arreglar el 08/08/2026, cuando la política juraba que no se recogían
+ * fotos y la app llevaba semanas guardándolas.
+ *
+ * Atado a `anunciosActivos()`, las dos cosas cambian a la vez y no hay forma de que una se
+ * quede atrás. Hay una prueba que lo comprueba en los dos sentidos.
+ */
+const PARRAFO_ANUNCIOS = anunciosActivos()
+  ? `- La versión gratuita muestra anuncios de Google (AdMob). Para elegir qué anuncio enseñarte, Google puede usar datos de tu dispositivo, como un identificador de publicidad. Eso lo gestiona Google, no Finzo: nosotros no le mandamos tus movimientos, ni tus montos, ni nada de lo que anotas en la app.
+- Puedes limitar esa personalización desde los ajustes de tu propio celular (Ajustes de Android → Google → Anuncios).
+- Si contratas Premium, no se muestran anuncios.
+- Aparte de eso, no vendemos ni compartimos tu información con empresas de publicidad.`
+  : `- No vendemos ni compartimos tu información con empresas de publicidad. Finzo no muestra anuncios.`;
 
 export const PRIVACY_POLICY = `Última actualización: ${LEGAL_LAST_UPDATED}
 
@@ -30,7 +50,7 @@ Esta es la parte más delicada y por eso va aparte.
 - Si inicias sesión, también se guarda una copia en la nube usando Firebase (un servicio de Google), para que puedas recuperar tu información si cambias de celular. Esa copia solo es visible para tu propia cuenta.
 
 4. Con quién compartimos tu información
-- No vendemos ni compartimos tu información con empresas de publicidad.
+${PARRAFO_ANUNCIOS}
 - Usamos Firebase (Google) únicamente como proveedor técnico para guardar los datos de forma segura, no como un tercero que use tu información con otros fines.
 - Si TÚ conectas Google Drive, Dropbox o eliges una carpeta de tu celular, se suben ahí los archivos de reporte que tú pidas, y nada más. Finzo solo puede entrar a su propia carpeta.
 - Si TÚ eliges enviar un reporte por correo o WhatsApp, ese archivo va a quien tú indiques, a través de la aplicación que elijas.

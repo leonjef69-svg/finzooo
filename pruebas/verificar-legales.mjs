@@ -30,10 +30,22 @@ const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
 
 console.log("\n--- NADA DE PROMETER LO QUE NO SE DA ---");
 {
-  // NO HAY ANUNCIOS EN FINZO, asi que no se puede vender el quitarlos. Se busca en los textos
-  // que ve la persona, en los tres idiomas.
-  for (const frase of ["Sin publicidad", "Sem anúncios", "No ads"]) {
-    ok(!i18n.includes(frase), `no se promete "${frase}": no hay anuncios que quitar`);
+  // LA REGLA CAMBIO EL MISMO DIA, Y SE DEJA ESCRITO POR QUE.
+  //
+  // La primera version exigia que la frase "Sin publicidad" NO EXISTIERA en los textos. Era
+  // correcta mientras Finzo no tenia anuncios de ninguna clase. Ese mismo 08/08/2026 el
+  // decidio ponerlos —gratis con anuncios, Premium sin ellos— y entonces la frase vuelve a ser
+  // cierta... pero solo cuando los anuncios esten encendidos.
+  //
+  // Asi que lo que se vigila ya no es que la frase no exista: es que la que se ENSEÑA POR
+  // DEFECTO —premium.subtitle, la que se ve mientras no hay anuncios— no la prometa. La otra
+  // (premium.subtitleSinAnuncios) existe y esta atada a anunciosActivos(), y eso se comprueba
+  // mas abajo.
+  const porDefecto = [...i18n.matchAll(/"premium\.subtitle":\s*"([^"]*)"/g)].map((m) => m[1]);
+  ok(porDefecto.length === 3, `el subtitulo por defecto esta en los tres idiomas (${porDefecto.length})`);
+  for (const texto of porDefecto) {
+    const promete = /sin publicidad|sem anúncios|no ads/i.test(texto);
+    ok(!promete, `el subtitulo por defecto no promete quitar anuncios ("${texto}")`);
   }
 }
 
@@ -116,6 +128,73 @@ console.log("\n--- LAS PAGINAS QUE PIDE GOOGLE, Y QUE COINCIDAN CON LA APP ---")
   // "Eliminar cuenta", quien siga las instrucciones no encuentra el boton y se queda dentro.
   const etiqueta = /"settings\.deleteAccount": "([^"]+)"/.exec(i18n)?.[1] ?? "";
   ok(etiqueta !== "" && borrado.includes(etiqueta), `la web nombra el boton igual que la app ("${etiqueta}")`);
+}
+
+console.log("\n--- ANUNCIOS: QUIEN PAGA NO LOS VE, Y LO QUE SE DICE DE ELLOS ---");
+{
+  // Decision suya del 08/08/2026: gratis con anuncios, Premium sin ellos.
+  const anuncios = fs.readFileSync(path.join(RAIZ, "constants/anuncios.ts"), "utf8");
+
+  // LA REGLA QUE NO SE PUEDE ROMPER. Enseñarle un anuncio a alguien que pago no es un fallo de
+  // dibujo: es cobrar por algo que no se entrego, y de eso se entera el usuario antes que
+  // nadie. Por eso la comprobacion vive en UN solo sitio.
+  ok(/export function tocaVerAnuncios/.test(anuncios), "hay un solo sitio que decide quien ve anuncios");
+  ok(/anunciosActivos\(\) && !esPremium/.test(anuncios), "y quien es Premium NO los ve");
+
+  const comp = fs.readFileSync(path.join(RAIZ, "components/Anuncio.tsx"), "utf8");
+  ok(/tocaVerAnuncios\(isPremium\)/.test(comp), "el hueco del anuncio pregunta por esa regla");
+  ok(/if \(!tocaVerAnuncios\(isPremium\)\) return null/.test(comp), "y no dibuja nada si no toca");
+
+  // Y NINGUNA PANTALLA SE SALTA EL COMPONENTE. Con la condicion repetida a mano en cada sitio,
+  // basta que una pantalla nueva se olvide para que un usuario de pago vea publicidad.
+  for (const dir of ["screens", "app"]) {
+    const archivos = [];
+    (function recorrer(d) {
+      for (const e of fs.readdirSync(d, { withFileTypes: true })) {
+        const p = path.join(d, e.name);
+        if (e.isDirectory()) recorrer(p);
+        else if (/\.tsx$/.test(e.name)) archivos.push(p);
+      }
+    })(path.join(RAIZ, dir));
+    const sueltos = archivos.filter((f) => {
+      const txt = fs.readFileSync(f, "utf8");
+      return /BannerAd|react-native-google-mobile-ads/.test(txt);
+    });
+    ok(sueltos.length === 0, `ninguna pantalla de ${dir}/ pone un anuncio por su cuenta`);
+  }
+
+  // MIENTRAS FALTEN LOS IDENTIFICADORES, NO HAY ANUNCIOS NI HUECO. Una funcion a medias que se
+  // ve y no funciona manda a buscar un fallo en el celular cuando lo que falta es un tramite.
+  const appId = /ADMOB_APP_ID = "([^"]*)"/.exec(anuncios)?.[1] ?? "x";
+  const bannerId = /ADMOB_BANNER_ID = "([^"]*)"/.exec(anuncios)?.[1] ?? "x";
+  // Y CUANDO ESTEN, QUE SEAN LOS BUENOS. Son dos identificadores parecidos y distintos: el de
+  // la app lleva VIRGULILLA y el del banner lleva BARRA. Confundirlos da anuncios que nunca
+  // cargan sin decir por que, y es el error mas comun de AdMob.
+  ok(appId === "" || /^ca-app-pub-\d{16}~\d{10}$/.test(appId), appId === "" ? "sin identificador de app todavia" : "el de la app lleva virgulilla");
+  ok(bannerId === "" || /^ca-app-pub-\d{16}\/\d{10}$/.test(bannerId), bannerId === "" ? "sin identificador de banner todavia" : "y el del banner lleva barra");
+
+  // LA POLITICA Y LOS ANUNCIOS, ATADOS AL MISMO INTERRUPTOR.
+  //
+  // Es el fallo que se acaba de arreglar hoy mismo, y por eso se vigila: la politica decia que
+  // no se recogian fotos mientras la app llevaba semanas guardandolas. Aqui seria peor —los
+  // anuncios SI recogen datos— asi que las dos cosas tienen que cambiar a la vez.
+  ok(/anunciosActivos\(\)/.test(legal), "la politica se entera sola de si hay anuncios");
+  const hayAnuncios = appId !== "" && bannerId !== "";
+  if (hayAnuncios) {
+    ok(/AdMob/.test(legal), "con anuncios, la politica los nombra");
+  } else {
+    ok(/Finzo no muestra anuncios/.test(legal), "sin anuncios, la politica dice que no los hay");
+    // Y NO SE PROMETE "SIN PUBLICIDAD" SI NO HAY PUBLICIDAD. La frase existe en los textos,
+    // pero solo se enseña cuando es cierta.
+    const premium = fs.readFileSync(path.join(RAIZ, "screens/Premium.tsx"), "utf8");
+    ok(/anunciosActivos\(\) \? t\("premium\.subtitleSinAnuncios"\)/.test(premium), 'y "sin publicidad" solo se dice si hay publicidad que quitar');
+  }
+
+  // Los dos textos, en los tres idiomas.
+  for (const clave of ["premium.subtitle", "premium.subtitleSinAnuncios"]) {
+    const veces = (i18n.match(new RegExp(`"${clave.replace(".", "\\.")}":`, "g")) ?? []).length;
+    ok(veces === 3, `"${clave}" esta en los tres idiomas (${veces})`);
+  }
 }
 
 console.log(fallos === 0 ? "\nTodo bien: los textos legales dicen la verdad\n" : `\n${fallos} fallos\n`);

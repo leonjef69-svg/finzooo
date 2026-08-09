@@ -667,6 +667,55 @@ interruptor más que mirar. Sin ventas registradas, el panel no enseña ni "Regi
   pantalla que solo sirve para tocar la única fila que tiene. La lista sigue alcanzable desde el
   panel ("Mis negocios"), o crear el segundo se volvería imposible de encontrar.
 
+## ANUNCIOS: GRATIS CON, PREMIUM SIN — decisión suya del 08/08/2026
+
+Preguntó si para monetizar en Play Store hacían falta anuncios. Se le explicó que **no**: su
+app ya está construida para cobrar Premium y solo le falta la cuenta de Play Console. Se le
+recomendó **publicar primero y decidir los anuncios después, con usuarios de verdad y sabiendo
+si alguien paga**, y con los costes por delante: cuenta de AdMob con datos fiscales, APK nuevo,
+y volver a tocar la política de privacidad porque los anuncios **sí** recogen datos.
+
+**Lo confirmó igual, y es su app.** *"Quisiera que hubiera anuncios en gratis y en premium
+cuando paguen se le quite los anuncios."*
+
+**Lo que YA está hecho (8ago-13), todo apagado hasta que existan los identificadores:**
+
+- `constants/anuncios.ts` — los dos identificadores (vacíos), `anunciosActivos()` y
+  `tocaVerAnuncios(esPremium)`.
+- `components/Anuncio.tsx` — el hueco. **Sin identificadores no dibuja NADA**, ni un espacio
+  gris: un hueco reservado es una mancha que nadie entiende y que además mueve la pantalla el
+  día que cargue.
+- Puesto **al final del historial**, y el sitio es una decisión: hay que deslizar hasta el
+  fondo, no tapa ninguna cifra y no se toca por error. **NO en Inicio**, junto al "te queda
+  este mes" — es una app de dinero y ahí un anuncio le quita lo único que necesita, que se vea
+  seria.
+- **"Sin publicidad" vuelve a Premium, pero atado al mismo interruptor**
+  (`premium.subtitleSinAnuncios`): solo se dice cuando hay publicidad que quitar.
+- Y **la política de privacidad también** (`PARRAFO_ANUNCIOS`): con anuncios nombra AdMob y
+  el identificador de publicidad; sin ellos dice que no hay. Las dos cosas cambian a la vez.
+
+> **LA REGLA QUE NO SE PUEDE ROMPER: quien paga NO ve anuncios.** Enseñarle uno a alguien que
+> pagó no es un fallo de dibujo — es cobrar por algo que no se entregó, y de eso se entera el
+> usuario antes que nadie. Por eso la decisión vive en **un solo sitio** y hay una prueba que
+> recorre `screens/` y `app/` para que **ninguna pantalla ponga un anuncio por su cuenta**.
+
+**LO QUE FALTA, y es suyo:**
+
+1. Abrir cuenta en **apps.admob.com**, dar de alta la app y sacar **dos** identificadores.
+   Ojo: son parecidos y distintos — el de la app lleva **virgulilla** (`~`) y el del banner
+   lleva **barra** (`/`). Confundirlos da anuncios que nunca cargan sin decir por qué, y es el
+   error más común. **Hay una prueba que rechaza el formato equivocado.**
+2. Pegarlos en `constants/anuncios.ts` **y el de la app también en `app.json`** (Android lo lee
+   de ahí al arrancar; si falta, la app se cierra sola al abrir).
+3. Instalar `react-native-google-mobile-ads` y **compilar un APK**. Es código de Android: no
+   viaja por actualización.
+
+> **DOS TRAMPAS DOCUMENTADAS PARA ESE APK, porque `prebuild` regenera archivos:**
+> `android/gradle.properties` pierde el `-Xmx4096m -XX:MaxMetaspaceSize=2048m` y la compilación
+> muere con "Metaspace" tras 1.276 de 1.308 tareas; y hay que comprobar que siga el canal de
+> actualizaciones en `app.json` → `updates.requestHeaders`. Las dos están explicadas arriba, en
+> "AHORA SE COMPILA EN LA PC DEL USUARIO".
+
 ## Lo que falta para Play Store
 
 Esto es lo pendiente de verdad, en orden de bloqueo:

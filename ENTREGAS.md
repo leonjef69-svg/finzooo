@@ -56,6 +56,7 @@ qué está corriendo el celular.
 
 | Código | Qué se arregló |
 |---|---|
+| `8ago-13` | Preparado el sitio de los anuncios (gratis con, Premium sin). Apagado hasta tener los identificadores de AdMob y un APK nuevo |
 | `8ago-12` | Fuera "Sin publicidad" (no hay anuncios) y política de privacidad al día: dice lo de la lectura de notificaciones, las fotos y el Modo Negocio |
 | `8ago-11` | Sin ventas registradas, el panel tampoco enseña Productos ni Registrar venta (queda un enlace gris para volver) |
 | `8ago-10` | Fuera del panel lo que era un cero permanente: sin ventas registradas no salen "Ventas", el contador ni el aviso del doble conteo |

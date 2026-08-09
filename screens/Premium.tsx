@@ -12,6 +12,7 @@ import {
   TriangleAlert,
 } from "lucide-react-native";
 import { useAppData } from "@/contexts/AppDataContext";
+import { anunciosActivos } from "@/constants/anuncios";
 import { DURACION_PRUEBA_HORAS } from "@/utils/pruebaPremium";
 
 /**
@@ -122,7 +123,14 @@ export default function Premium({
             <Crown size={26} color="#ffffff" />
           </View>
           <Text className="text-white text-xl font-extrabold">{t("premium.title")}</Text>
-          <Text className="text-emerald-100 text-sm mt-1">{t("premium.subtitle")}</Text>
+          {/* "SIN PUBLICIDAD" SOLO SI HAY PUBLICIDAD QUE QUITAR.
+              Se prometía sin que existiera ni un anuncio, y eso es lo que Google llama
+              afirmación engañosa: se cobraba por retirar algo que nunca estuvo. Con anuncios de
+              verdad en la versión gratuita vuelve a ser cierto — y las dos cosas se encienden
+              juntas, atadas al mismo interruptor, para que no pueda haber una sin la otra. */}
+          <Text className="text-emerald-100 text-sm mt-1">
+            {anunciosActivos() ? t("premium.subtitleSinAnuncios") : t("premium.subtitle")}
+          </Text>
         </View>
 
         {/* AQUÍ ESTABA EL SELECTOR MENSUAL / ANUAL CON SUS PRECIOS, Y SE QUITÓ (07/08/2026).
