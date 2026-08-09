@@ -6,6 +6,7 @@ import * as Updates from "expo-updates";
 import { LEGAL_CONTACT_EMAIL } from "@/constants/legal";
 import { useAppData } from "@/contexts/AppDataContext";
 import BackButton from "@/components/BackButton";
+import Toggle from "@/components/Toggle";
 import * as incomingFile from "@/modules/incoming-file";
 import * as shareToApp from "@/modules/share-to-app";
 import * as textRecognizer from "@/modules/text-recognizer";
@@ -26,12 +27,17 @@ const APP_VERSION = "1.0.0";
  * La versión de la app (1.0.0) no sirve para esto: no cambia entre entregas.
  * Esta sí.
  */
-const CODE_MARKER = "8ago-15";
+const CODE_MARKER = "8ago-16";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
-  const { t, showToast } = useAppData();
+  const { t, showToast, verComoGratis, setVerComoGratis, tienePremiumDeVerdad } = useAppData();
   const insets = useSafeAreaInsets();
   const [checking, setChecking] = useState(false);
+  /** Toques en la marca del código. A los siete aparece el interruptor de "ver como gratis". */
+  const [toques, setToques] = useState(0);
+  // Se enseña a quien tiene Premium de verdad, o a quien ya lo tiene puesto —o no habría forma
+  // de quitárselo—. A alguien sin Premium no le sirve de nada: ya ve la app así.
+  const modoPruebaVisible = toques >= 7 && (tienePremiumDeVerdad || verComoGratis);
   // El motivo exacto del ultimo fallo al actualizar. Se deja escrito en
   // pantalla porque un mensajito que se va solo no sirve para copiarlo.
   const [updateError, setUpdateError] = useState("");
@@ -108,12 +114,36 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
           {/* Estas dos líneas son para poder decir por chat, sin adivinar,
               qué está corriendo el celular: la marca del código y de dónde
               vino. Ver CODE_MARKER. */}
-          <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 mt-1.5" selectable>
-            {t("appInfo.codeMarker", { marker: CODE_MARKER })}
-          </Text>
+          {/* SIETE TOQUES AQUÍ SACAN EL INTERRUPTOR DE "VER COMO GRATIS".
+              Escondido porque a nadie le hace falta y sale en medio de una pantalla que se abre
+              para comprobar la versión, no para tocar ajustes.
+              Y ESCONDIDO NO ES UN CANDADO, así que el interruptor tiene que ser inofensivo por
+              sí mismo: solo QUITA Premium, no lo da. Ver verComoGratis en el contexto. */}
+          <TouchableOpacity activeOpacity={1} onPress={() => setToques((n) => n + 1)}>
+            <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 mt-1.5" selectable>
+              {t("appInfo.codeMarker", { marker: CODE_MARKER })}
+            </Text>
+          </TouchableOpacity>
           <Text className="text-[10px] text-slate-400 mt-0.5" selectable>
             {runningLabel}
           </Text>
+
+          {/* EL INTERRUPTOR DE PRUEBA. Ver los siete toques, arriba. */}
+          {modoPruebaVisible && (
+            <View className="mt-4 mx-5 rounded-2xl border-[1.5px] border-amber-400 bg-amber-50 dark:bg-slate-800 p-4 w-full">
+              <View className="flex-row items-center gap-3">
+                <View className="flex-1">
+                  <Text className="text-xs font-bold text-amber-700 dark:text-amber-400">
+                    {t("appInfo.verComoGratis")}
+                  </Text>
+                  <Text className="text-[11px] leading-5 text-slate-600 dark:text-slate-300 mt-1">
+                    {t("appInfo.verComoGratisTexto")}
+                  </Text>
+                </View>
+                <Toggle on={verComoGratis} onChange={setVerComoGratis} />
+              </View>
+            </View>
+          )}
 
           {/* QUÉ PARTES NATIVAS TRAE ESTE APK.
               Las actualizaciones por internet solo cambian el JavaScript;

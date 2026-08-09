@@ -106,8 +106,13 @@ console.log("\n--- LA PRUEBA NO SE MEZCLA CON EL PREMIUM DE LA CUENTA ---");
   // Lo que ven las pantallas es la SUMA, y se calcula en un solo sitio: si cada
   // pantalla tuviera que acordarse de mirar también la prueba, alguna no lo haría y
   // ahí la prueba no serviría de nada.
+  // El 08/08/2026 se le añadio un tercer factor y por eso ya no se compara la linea entera:
+  // "verComoGratis", el interruptor de Acerca de que sirve para mirar la app como alguien que
+  // no paga. Lo que sigue importando —y es lo que se comprueba— es que la suma se haga en UN
+  // solo sitio, y que ese interruptor solo pueda QUITAR: puesto con un "||" en vez de un "&&"
+  // seria una puerta trasera que regala Premium con siete toques.
   ok(
-    /const isPremium = isPremiumDeLaCuenta \|\| pruebaCorriendo/.test(ctx),
+    /const isPremium = \(isPremiumDeLaCuenta \|\| pruebaCorriendo\) && !verComoGratis/.test(ctx),
     "las pantallas ven el de la cuenta O la prueba"
   );
 

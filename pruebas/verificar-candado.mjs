@@ -116,5 +116,29 @@ console.log("\n--- Y SE DICE POR QUE, QUE ES LO QUE LO SEPARA DE UN FALLO ---");
   }
 }
 
+console.log("\n--- EL INTERRUPTOR DE PRUEBA SOLO PUEDE QUITAR ---");
+{
+  // "Ver la app como alguien sin Premium", escondido tras siete toques en Acerca de. Sirve para
+  // comprobar los candados con los ojos en vez de fiandose del codigo.
+  //
+  // ESCONDIDO NO ES UN CANDADO: siete toques los encuentra cualquiera que lea un foro. Asi que
+  // lo que hace que sea seguro publicarlo no es el escondite, es que SOLO PUEDE QUITAR. Con un
+  // "||" en vez de un "&&" seria una puerta trasera que regala Premium.
+  const ctx = leer("contexts/AppDataContext.tsx");
+  ok(
+    /const isPremium = \(isPremiumDeLaCuenta \|\| pruebaCorriendo\) && !verComoGratis/.test(ctx),
+    "encender 'ver como gratis' solo puede QUITAR Premium, nunca darlo"
+  );
+  // Y NO SE GUARDA EN EL DISCO: un modo de prueba que sobrevive a reiniciar es uno que alguien
+  // deja puesto sin querer y luego no entiende por que su Premium desaparecio.
+  ok(!/STORAGE_KEYS\.verComoGratis|saveJSON\([^)]*verComoGratis/.test(ctx), "y no se guarda: se suelta al cerrar la app");
+
+  const info = leer("screens/AppInfo.tsx");
+  ok(/toques >= 7/.test(info), "hacen falta siete toques para que aparezca");
+  // Y solo a quien tiene algo que quitarse: a alguien sin Premium el interruptor no le hace
+  // nada, asi que enseñarselo solo seria un boton raro en medio de Acerca de.
+  ok(/tienePremiumDeVerdad \|\| verComoGratis/.test(info), "y solo se ofrece a quien tiene Premium de verdad");
+}
+
 console.log(fallos === 0 ? "\nTodo bien: nadie se queda fuera de lo suyo\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

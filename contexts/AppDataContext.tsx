@@ -303,6 +303,15 @@ type AppDataContextValue = {
   /** Borra un movimiento del negocio. */
   quitarMovimientoNegocio: (id: string) => void;
   setIsPremium: (v: boolean) => void;
+  /**
+   * Mirar la app como alguien que no paga. **Solo quita Premium, nunca lo da.**
+   *
+   * `tienePremiumDeVerdad` es lo que hay debajo del disfraz: la pantalla de Acerca de necesita
+   * saberlo para enseñar el interruptor únicamente a quien tiene algo que quitarse.
+   */
+  verComoGratis: boolean;
+  setVerComoGratis: (v: boolean) => void;
+  tienePremiumDeVerdad: boolean;
   isCloudSynced: boolean;
   // Modo señuelo. Solo los llama la pantalla de bloqueo; ninguna otra parte
   // de la app sabe que esto existe, y esa es la idea.
@@ -392,8 +401,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const reloj = setInterval(() => setAhora(Date.now()), 60_000);
     return () => clearInterval(reloj);
   }, [pruebaCorriendo]);
+  /**
+   * VER LA APP COMO ALGUIEN SIN PREMIUM, a propósito y desde Acerca de.
+   *
+   * Existe para poder comprobar los candados con los ojos en vez de fiándose del código: el
+   * 08/08/2026 se cambió qué se puede ver sin Premium, y la única forma de saber si quedó bien
+   * es mirarlo.
+   *
+   * **NO PUEDE DAR PREMIUM A NADIE, y eso es lo que lo hace seguro de publicar.** Solo QUITA.
+   * Un interruptor escondido que lo diera sería una puerta trasera —siete toques y Premium
+   * gratis— y esto es lo contrario: encenderlo solo puede hacer que veas menos.
+   *
+   * No se guarda en el disco: se suelta al cerrar la app. Un modo de prueba que sobrevive a
+   * reiniciar es un modo de prueba que alguien deja puesto sin querer y no entiende por qué su
+   * Premium desapareció.
+   */
+  const [verComoGratis, setVerComoGratis] = useState(false);
+
   /** Lo que ven las pantallas: Premium de la cuenta O prueba corriendo. */
-  const isPremium = isPremiumDeLaCuenta || pruebaCorriendo;
+  const isPremium = (isPremiumDeLaCuenta || pruebaCorriendo) && !verComoGratis;
   // Lo que la persona le enseñó al clasificador de importaciones:
   // { "primax": "transporte", ... }. Ver utils/classifier.ts.
   const [merchantLearned, setMerchantLearned] = useState<Record<string, string>>({});
@@ -1833,6 +1859,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         guardarMovimientoNegocio,
         quitarMovimientoNegocio,
         setIsPremium,
+        verComoGratis,
+        setVerComoGratis,
+        tienePremiumDeVerdad: isPremiumDeLaCuenta || pruebaCorriendo,
         isCloudSynced: uid !== null,
         enterDecoyMode,
         leaveDecoyMode,
