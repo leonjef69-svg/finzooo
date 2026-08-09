@@ -746,14 +746,22 @@ Esto es lo pendiente de verdad, en orden de bloqueo:
    dar acceso a los avisos de una sola app, que Finzo filtra antes de guardar y solo mira Yape,
    que todo se queda en su celular, y que de los avisos de claves no se guarda el texto.
    También el Modo Negocio, los contactos de envío, el micrófono, Drive y Dropbox.
-4. **Las páginas web YA ESTÁN ESCRITAS (`docs/`); falta que él las publique.**
+4. ~~Falta la página web de borrado de cuenta~~ **RESUELTO EL 08/08/2026. LAS DOS PÁGINAS ESTÁN
+   PUBLICADAS Y COMPROBADAS.** Él encendió GitHub Pages (rama `master`, carpeta `/docs`) y las
+   tres direcciones devuelven 200:
 
-   `docs/privacidad.html`, `docs/borrar-cuenta.html` e `index.html`, listas para **GitHub Pages
-   desde el repositorio que ya existe** — es gratis y no hace falta contratar nada. Lo único
-   suyo: en GitHub → Settings → Pages, elegir la rama `master` y la carpeta `/docs`.
+   - **https://leonjef69-svg.github.io/finzooo/privacidad.html**
+   - **https://leonjef69-svg.github.io/finzooo/borrar-cuenta.html**
+   - https://leonjef69-svg.github.io/finzooo/ (índice que enlaza las dos)
 
-   Las direcciones quedarían en `https://leonjef69-svg.github.io/finzooo/privacidad.html` y
-   `.../borrar-cuenta.html`, que son las dos que pide el formulario de Play Console.
+   **Son las dos que pide el formulario de Play Console.** Salen de `docs/` en este mismo
+   repositorio: **editar esos archivos y hacer push las actualiza solas**, no hay nada más que
+   tocar. Es gratis y no hay hosting que mantener.
+
+   > **OJO AL EDITARLAS:** el contenido de `docs/` y el de `constants/legal.ts` cuentan la misma
+   > historia en dos sitios. Si cambia lo que la app guarda, hay que tocar **los dos**.
+   > `verificar-legales.mjs` vigila que el correo de contacto y el nombre del botón de borrar
+   > cuenta coincidan, pero **no puede comparar los textos enteros**.
 
    > **Hay una prueba nueva, `verificar-legales.mjs`, y vigila algo que ninguna otra vigilaba:
    > que lo que la app PROMETE y lo que la app HACE coincidan.** Comprueba que no se venda
