@@ -112,6 +112,26 @@ export default function PanelNegocio({
     () => historialDelNegocio(negocioId, ventasDelPeriodo, movimientosDelPeriodo),
     [negocioId, ventasDelPeriodo, movimientosDelPeriodo]
   );
+  /**
+   * ¿ESTE NEGOCIO REGISTRA VENTAS, ALGUNA VEZ?
+   *
+   * De esto depende media pantalla, y es la lección del 08/08/2026: él decidió que la app
+   * lleve **solo la plata**, sin que el vendedor toque nada —*"el vendedor no va a estar
+   * haciendo manualmente todo, está enfocado en vender sus productos"*—. Con esa forma de
+   * usarla, la línea de "Ventas", el contador de ventas y el aviso del doble conteo son un
+   * cero permanente y un problema imposible: **exactamente la clase de promesa vacía que se ha
+   * estado limpiando de esta app**.
+   *
+   * Se mira en TODAS las ventas y no en las del periodo: si registró ventas el mes pasado y
+   * este no, la línea tiene que seguir ahí — un cero que puede cambiar sí informa.
+   *
+   * No se borra nada: en cuanto registre una venta, todo eso vuelve solo.
+   */
+  const usaVentas = useMemo(
+    () => ventas.some((v) => v.negocioId === negocioId),
+    [ventas, negocioId]
+  );
+
   /** Qué se vendió en ese mismo periodo: *"cuánto Broster salió"*. */
   const vendidos = useMemo(
     () => productosVendidos(negocioId, ventasDelPeriodo),
@@ -213,9 +233,14 @@ export default function PanelNegocio({
             </Text>
           </View>
           <Text className="text-3xl font-extrabold text-white mt-1.5">{dinero(totales.saldo)}</Text>
-          <Text className="text-[11px] text-emerald-50 mt-1">
-            {t("panel.cantidadVentas", { count: totales.cantidadVentas })}
-          </Text>
+          {/* EL CONTADOR DE VENTAS, SOLO SI SE REGISTRAN VENTAS. Ver usaVentas: sin ellas
+              decía "0 ventas registradas" debajo de un saldo de S/ 2, para siempre. Un cero
+              que no puede cambiar no informa: confunde. */}
+          {usaVentas && (
+            <Text className="text-[11px] text-emerald-50 mt-1">
+              {t("panel.cantidadVentas", { count: totales.cantidadVentas })}
+            </Text>
+          )}
         </View>
 
         {/* LAS LÍNEAS, UNA DEBAJO DE OTRA. Cada una dice de dónde sale el saldo de arriba. */}
@@ -223,12 +248,15 @@ export default function PanelNegocio({
           className="rounded-2xl bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700 p-4 gap-3"
           style={CARD_SHADOW}
         >
-          <Linea
-            icono={<ShoppingBag size={15} color="#059669" />}
-            texto={t("panel.ventas")}
-            valor={dinero(totales.ventas)}
-            color="text-emerald-600"
-          />
+          {/* LA LÍNEA DE VENTAS, SOLO SI LAS HAY. Igual que el contador de arriba. */}
+          {usaVentas && (
+            <Linea
+              icono={<ShoppingBag size={15} color="#059669" />}
+              texto={t("panel.ventas")}
+              valor={dinero(totales.ventas)}
+              color="text-emerald-600"
+            />
+          )}
           <Linea
             icono={<Zap size={15} color="#059669" />}
             texto={t("panel.ingresosAutomaticos")}
@@ -254,47 +282,75 @@ export default function PanelNegocio({
           />
         </View>
 
-        {/* EL DOBLE CONTEO, DICHO SIEMPRE Y NO SOLO CUANDO PASA.
-            En V1 una venta cobrada por Yape puede contarse dos veces: como venta y como
-            ingreso automático. Él lo aceptó —vincular las dos cosas es V2— pero callarlo haría
-            que el saldo pareciera equivocado, y un número de dinero que parece equivocado no
-            se vuelve a mirar. */}
-        <View className="rounded-2xl bg-amber-50 dark:bg-slate-800 p-4 mt-4 flex-row gap-2.5">
-          <Info size={14} color="#d97706" />
-          <View className="flex-1">
-            <Text className="text-[11px] font-bold text-amber-700 dark:text-amber-400">
-              {t("panel.avisoTitulo")}
-            </Text>
-            <Text className="text-[11px] leading-5 text-slate-600 dark:text-slate-300 mt-1">
-              {t("panel.avisoDoble")}
-            </Text>
+        {/* EL DOBLE CONTEO, PERO SOLO CUANDO PUEDE PASAR.
+            Una venta cobrada por Yape puede contarse dos veces: como venta y como ingreso
+            automático. Callarlo haría que el saldo pareciera equivocado, y un número de dinero
+            que parece equivocado no se vuelve a mirar.
+
+            PERO SIN VENTAS REGISTRADAS ESO NO PUEDE OCURRIR, y entonces el aviso deja de
+            avisar: es media pantalla de letra explicando un problema imposible, justo encima
+            de los números que sí importan. Vuelve solo en cuanto haya una venta. */}
+        {usaVentas && (
+          <View className="rounded-2xl bg-amber-50 dark:bg-slate-800 p-4 mt-4 flex-row gap-2.5">
+            <Info size={14} color="#d97706" />
+            <View className="flex-1">
+              <Text className="text-[11px] font-bold text-amber-700 dark:text-amber-400">
+                {t("panel.avisoTitulo")}
+              </Text>
+              <Text className="text-[11px] leading-5 text-slate-600 dark:text-slate-300 mt-1">
+                {t("panel.avisoDoble")}
+              </Text>
+            </View>
           </View>
-        </View>
+        )}
 
-        {/* REGISTRAR UNA VENTA ES LO QUE SE HACE CIEN VECES AL DÍA, así que va primero, solo y
-            en verde. Los productos se ponen una vez y se retocan de vez en cuando: con los dos
-            del mismo tamaño se leerían como igual de importantes. */}
-        <TouchableOpacity
-          onPress={() => router.push({ pathname: "/negocio/venta", params: { id: negocioId } })}
-          className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-600 mt-4"
-        >
-          <Plus size={16} color="#ffffff" />
-          <Text className="text-sm font-bold text-white">{t("venta.registrar")}</Text>
-        </TouchableOpacity>
-
-        {/* EL GASTO Y LOS PRODUCTOS, DEL MISMO TAMAÑO Y DEBAJO: se hacen a diario pero no cien
-            veces al día como vender. */}
-        {/* MIS NEGOCIOS. Hace falta desde que Ajustes entra directo aquí cuando solo hay un
-            negocio: sin esta puerta, crear el segundo —o editar el nombre, o borrarlo— se
-            volvería imposible de encontrar. */}
-        <View className="flex-row gap-2.5 mt-2.5">
+        {/* EL BOTÓN GRANDE ES EL QUE SE USA, Y ESO DEPENDE DE CÓMO SE LLEVE EL NEGOCIO.
+            Registrar ventas es lo que se haría cien veces al día EN UN NEGOCIO QUE LAS
+            REGISTRA. En el suyo no —*"el vendedor está enfocado en vender sus productos"*— y
+            entonces el botón grande y verde es el que nunca se toca, encima del que sí: anotar
+            un gasto. Cambia solo con el uso; no se quita nada. */}
+        {usaVentas ? (
+          <TouchableOpacity
+            onPress={() => router.push({ pathname: "/negocio/venta", params: { id: negocioId } })}
+            className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-600 mt-4"
+          >
+            <Plus size={16} color="#ffffff" />
+            <Text className="text-sm font-bold text-white">{t("venta.registrar")}</Text>
+          </TouchableOpacity>
+        ) : (
           <TouchableOpacity
             onPress={() => router.push({ pathname: "/negocio/movimiento", params: { id: negocioId } })}
+            className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-600 mt-4"
+          >
+            <Plus size={16} color="#ffffff" />
+            <Text className="text-sm font-bold text-white">{t("caja.rowLabel")}</Text>
+          </TouchableOpacity>
+        )}
+
+        {/* LOS OTROS DOS, DEL MISMO TAMAÑO Y DEBAJO. El primero es el que NO subió arriba, para
+            que ninguno de los tres desaparezca de la pantalla.
+
+            Y MIS NEGOCIOS al final: hace falta desde que Ajustes entra directo aquí cuando solo
+            hay un negocio, o crear el segundo —o editar el nombre, o borrarlo— se volvería
+            imposible de encontrar. */}
+        <View className="flex-row gap-2.5 mt-2.5">
+          <TouchableOpacity
+            onPress={() =>
+              router.push(
+                usaVentas
+                  ? { pathname: "/negocio/movimiento", params: { id: negocioId } }
+                  : { pathname: "/negocio/venta", params: { id: negocioId } }
+              )
+            }
             className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800"
           >
-            <TrendingDown size={15} color="#f43f5e" />
+            {usaVentas ? (
+              <TrendingDown size={15} color="#f43f5e" />
+            ) : (
+              <ShoppingBag size={15} color="#059669" />
+            )}
             <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
-              {t("caja.rowLabel")}
+              {usaVentas ? t("caja.rowLabel") : t("venta.registrar")}
             </Text>
           </TouchableOpacity>
           <TouchableOpacity

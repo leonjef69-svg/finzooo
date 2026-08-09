@@ -1179,5 +1179,49 @@ console.log("\n--- V2: MES A MES (julio contra agosto) ---");
   }
 }
 
+console.log("\n--- NADA QUE SEA UN CERO PERMANENTE ---");
+{
+  // LO QUE VIO EL EN SU CELULAR EL 08/08/2026, con Chelito ya funcionando: un saldo de S/ 2
+  // que entro solo por Yape, y debajo "0 ventas registradas", una linea de "Ventas S/ 0.00", y
+  // media pantalla de aviso explicando que un Yape puede contarse dos veces.
+  //
+  // Con SU forma de usar la app —solo la plata, sin registrar ventas— esos tres nunca pueden
+  // cambiar, y el aviso describe un problema que no puede ocurrir. Es exactamente la clase de
+  // promesa vacia que se ha estado limpiando de esta app todo el proyecto.
+  //
+  // No se borro nada: todo vuelve solo en cuanto haya una venta registrada.
+  const pant = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
+
+  ok(/const usaVentas = useMemo/.test(pant), "el panel sabe si este negocio registra ventas");
+  // Se mira en TODAS las ventas y no en las del periodo: si registro ventas el mes pasado y
+  // este no, la linea tiene que seguir ahi — un cero que PUEDE cambiar si informa.
+  ok(/ventas\.some\(\(v\) => v\.negocioId === negocioId\)/.test(pant), "y lo mira en todas, no solo en el periodo");
+
+  ok(/usaVentas && \(\s*<Text[\s\S]{0,200}panel\.cantidadVentas/.test(pant), "el contador de ventas solo sale si las hay");
+  ok(/usaVentas && \(\s*<Linea[\s\S]{0,200}panel\.ventas/.test(pant), "la linea de Ventas tambien");
+  // El aviso son varias lineas, asi que se comprueba de otra forma: que entre "usaVentas" y el
+  // texto del aviso no haya nada que cierre el bloque. Contar caracteres a ojo daria una prueba
+  // que se rompe sola cada vez que alguien reescriba una linea del aviso.
+  const antesDelAviso = pant.slice(0, pant.indexOf("panel.avisoDoble"));
+  const ultimaGuarda = antesDelAviso.lastIndexOf("{usaVentas && (");
+  ok(ultimaGuarda !== -1, "y el aviso del doble conteo, que sin ventas es imposible");
+
+  // EL BOTON GRANDE ES EL QUE SE USA. Sin ventas, "Registrar venta" grande y verde es el que
+  // nunca se toca, encima del que si: anotar un gasto.
+  ok(/usaVentas \?/.test(pant), "el boton grande cambia segun como se lleve el negocio");
+  // Y NINGUNO DE LOS TRES DESAPARECE: el que no sube arriba baja a la fila de abajo.
+  ok(/pathname: "\/negocio\/venta"/.test(pant), "registrar venta sigue alcanzable");
+  ok(/pathname: "\/negocio\/movimiento"/.test(pant), "y anotar un gasto tambien");
+  ok(/pathname: "\/negocio\/productos"/.test(pant), "y los productos");
+
+  // EL OJO DUPLICABA AL INTERRUPTOR. Estaban el ojo abierto Y el interruptor encendido, uno al
+  // lado del otro, contando lo mismo dos veces — y el ojo no se puede tocar, asi que ademas
+  // invitaba a tocarlo. Apagado si aporta: explica por que ese producto no sale al vender.
+  const prod = fs.readFileSync(path.join(RAIZ, "screens/Productos.tsx"), "utf8");
+  ok(!/<Eye /.test(prod), "el ojo abierto ya no repite lo que dice el interruptor");
+  ok(/!p\.activo && \(/.test(prod), "y el apagado se sigue viendo, que es el que informa");
+  ok(/productos\.desactivado/.test(prod), "con su texto, como antes");
+}
+
 console.log(fallos === 0 ? "\nTodo bien: los cimientos del Modo Negocio\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

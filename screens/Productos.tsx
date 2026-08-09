@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Package, Plus, Trash2, Check, EyeOff, Eye } from "lucide-react-native";
+import { Package, Plus, Trash2, Check, EyeOff } from "lucide-react-native";
 import BackButton from "@/components/BackButton";
 import Toggle from "@/components/Toggle";
 import { CARD_SHADOW } from "@/constants/style";
@@ -182,19 +182,16 @@ export default function Productos({
                 style={CARD_SHADOW}
               >
                 <View className="flex-row items-center gap-3">
-                  {/* EL DESACTIVADO SE VE DESACTIVADO. Con el mismo aspecto que los demás, la
-                      persona no entendería por qué no le sale al vender. */}
-                  <View
-                    className={`w-10 h-10 rounded-2xl items-center justify-center ${
-                      p.activo ? "bg-emerald-50 dark:bg-slate-800" : "bg-slate-100 dark:bg-slate-800"
-                    }`}
-                  >
-                    {p.activo ? (
-                      <Eye size={16} color="#059669" />
-                    ) : (
+                  {/* EL DIBUJO SOLO CUANDO DICE ALGO, Y AQUÍ SOLO LO DICE APAGADO.
+                      Estaban el ojo abierto Y el interruptor encendido, uno al lado del otro,
+                      contando lo mismo dos veces — y el ojo no se puede tocar, así que además
+                      invitaba a tocarlo. Apagado sí aporta: es lo que explica de un vistazo por
+                      qué ese producto no sale al vender. */}
+                  {!p.activo && (
+                    <View className="w-10 h-10 rounded-2xl items-center justify-center bg-slate-100 dark:bg-slate-800">
                       <EyeOff size={16} color="#94a3b8" />
-                    )}
-                  </View>
+                    </View>
+                  )}
                   <View className="flex-1">
                     <Text
                       className={`text-sm font-bold ${

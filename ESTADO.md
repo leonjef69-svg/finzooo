@@ -617,6 +617,26 @@ resta en una frase: *"este mes llevas S/ 60 menos que el mes pasado"*.
   cero**, o con todos en rojo saldrían los anchos al revés.
 - Tope de 6 meses: dos años serían 24 filas que nadie mira, y el que importa está arriba.
 
+**6. Fuera lo que era un cero permanente (8ago-10).** Él lo pidió con el celular en la mano y
+Chelito ya funcionando: *"me gustaría quitar las cosas que no sirvan o que no tengan alguna
+función"*. Y tenía razón — mandó dos capturas y en ellas se veía un saldo de S/ 2 que había
+entrado solo, y debajo **"0 ventas registradas"**, una línea de **"Ventas S/ 0.00"** y media
+pantalla de aviso explicando que un Yape puede contarse dos veces.
+
+**Con su forma de usar la app, esos tres no pueden cambiar nunca**, y el aviso describe un
+problema que no puede ocurrir sin ventas registradas. Es exactamente la clase de promesa vacía
+que se ha estado limpiando de esta app todo el proyecto.
+
+- `usaVentas` mira **todas** las ventas, no las del periodo: si registró ventas el mes pasado y
+  este no, la línea tiene que seguir ahí. **Un cero que puede cambiar sí informa.**
+- **No se borró nada.** Todo vuelve solo en cuanto haya una venta, y ninguno de los tres
+  botones desaparece: el que no está arriba baja a la fila de abajo.
+- **El botón grande pasa a ser "Gasto"** mientras no se registren ventas: el botón grande y
+  verde tiene que ser el que se usa, no el que nunca se toca.
+- Y en Productos, **fuera el ojo abierto**: estaba al lado del interruptor encendido contando
+  lo mismo dos veces, y encima no se podía tocar. El ojo tachado se queda, que ese sí explica
+  por qué un producto no sale al vender.
+
 **4. Pulido del camino sin manos (8ago-07).** Tres cosas, y la primera es la que importa:
 
 - **La pantalla de Registro automático dice a dónde van los yapeos.** Desde que un negocio puede
