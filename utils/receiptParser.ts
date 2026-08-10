@@ -397,7 +397,21 @@ function findMerchant(lines: string[]): string {
   }
 
   const candidates: string[] = [];
-  for (const line of lines.slice(0, 8)) {
+  for (const original of lines.slice(0, 8)) {
+    /**
+     * EL RUC SE QUITA ANTES DE MIRAR, NO DESPUÉS.
+     *
+     * Muchas boletas imprimen el nombre y el RUC **en la misma línea**: "MI FARMA S.A.C -RUC
+     * 205120090". Esa línea se descartaba entera por llevar la palabra RUC —está en la lista
+     * de lo que no es un nombre— y el comercio acababa siendo el trozo de la dirección de
+     * debajo. En la boleta de Mifarma quedaba guardado como **"CATALINA"**, que es el final de
+     * la calle: un gasto con ese nombre no se encuentra buscando "farmacia" ni "mifarma".
+     *
+     * Quitando el RUC primero, lo que queda —"MI FARMA S.A.C"— sí es el nombre. Y el RUC se
+     * sigue leyendo de su sitio: esto solo cambia lo que se mira para el NOMBRE, no lo que se
+     * guarda.
+     */
+    const line = original.replace(/-?\s*r\.?\s*u\.?\s*c\.?\s*:?\s*\d{8,11}/i, "").trim();
     const s = soften(line).trim();
     if (s.length < 3) continue;
     if (NOT_A_NAME.some((word) => s.includes(word))) continue;

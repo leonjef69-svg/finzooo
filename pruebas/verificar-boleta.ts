@@ -363,6 +363,85 @@ console.log("\n--- EL TOTAL ESCRITO CON LETRAS: LA SEÑAL QUE NO SE ROMPE ---");
   ok(boticaEntera.total === 26, `la de la botica entera (${boticaEntera.total})`);
 }
 
+console.log("\n--- UNA BOLETA DE FARMACIA CON EL ROTULO PARTIDO (Mifarma) ---");
+{
+  // La trajo el 09/08/2026. Tiene una trampa que ninguna de las anteriores tenia: el rotulo
+  // "TOTAL A PAGAR" viene partido en DOS lineas y con una coma en medio —"TOTAL, A" y
+  // "PAGAR: S/ 58.80"—, que es como el lector devuelve un texto centrado a dos columnas.
+  //
+  // El atajo de "el numero esta en la linea siguiente" NO sirve aqui, porque la linea de abajo
+  // no es el numero a secas: lleva la palabra PAGAR delante. Menos mal que esta boleta repite
+  // el total al final, y por ahi si se pilla.
+  const mifarma = parseReceipt(
+    [
+      "Mifarma",
+      "MI FARMA S.A.C -RUC 205120090",
+      "CENTRAL: Cal. Victor Alzamora Nro. 14/Urb. SANTA",
+      "CATALINA",
+      "LA VICTORIA - LIMA TELF: 2130760",
+      "BOLETA ELECTRONICA B123-00039115",
+      "FECHA DE EMISION: 17/03/2022   13:11:40",
+      "NRO DE PEDIDO DE VENTA :0000284112    CAJA",
+      "TURNO 24/1",
+      "CODIGO  DESCRIPCION  CANT. P. UNIT. DSCTO. IMPORTE",
+      "139333  FREDOL GTS IBUPROFENO   FCO 60ML",
+      "     PHARMA S.A.C     1     15.90",
+      "20. OO",
+      "141855  REPRIMAN SOLUCION GOTAS  FCO 400MG /ML",
+      "     QUILAB FARMA     1      8.90",
+      "13.80",
+      "177795  GINGISONA B   FCO 15ML",
+      "     SOLUCION SPRAY   1     25.00",
+      "25.00",
+      "                    TOTAL, A",
+      "PAGAR: S/     58.80",
+      "                    OP. GRAVADAS:",
+      "S/        49.83",
+      "                    IGV -18 %: S/",
+      "8.97",
+      "TOTAL: S/     58.80",
+    ].join("\n"),
+    AHORA
+  );
+
+  ok(mifarma.total === 58.8, `el total es 58.80 (${mifarma.total})`);
+  // NI EL GRAVADO NI EL IGV: son los dos numeros que mas se le parecen y los dos estan debajo.
+  ok(mifarma.total !== 49.83, "y no la base gravada");
+  ok(mifarma.total !== 8.97, "ni el IGV");
+  ok(mifarma.date === "2022-03-17", `la fecha de emision (${mifarma.date})`);
+  ok(mifarma.time === "13:11", `la hora (${mifarma.time})`);
+  ok(mifarma.docNumber === "B123-00039115", `el numero de boleta (${mifarma.docNumber})`);
+  // EL COMERCIO ES EL DE LA MARCA, no la calle ni el barrio. Esta boleta lo pone dificil: la
+  // linea del nombre legal lleva el RUC pegado, y debajo vienen direcciones que empiezan por
+  // palabras normales.
+  ok(/mifarma|mi farma/i.test(mifarma.merchant), `el comercio ("${mifarma.merchant}")`);
+  ok(!/catalina|victoria|central/i.test(mifarma.merchant), "y no una calle ni un barrio");
+
+  // EL CASO DIFICIL DE ESTA MISMA BOLETA: que la camara NO lea el logo.
+  //
+  // "Mifarma" arriba es un DIBUJO, no texto, y el lector unas veces lo saca y otras no. Sin esa
+  // linea, la primera que queda es "MI FARMA S.A.C -RUC 205120090" — que lleva el nombre Y el
+  // RUC pegados. Se descartaba entera por llevar la palabra RUC, y el comercio acababa siendo
+  // "CATALINA": el final de la calle de la linea siguiente.
+  //
+  // Un gasto guardado como "CATALINA" no se encuentra buscando "farmacia" ni "mifarma".
+  const sinLogo = parseReceipt(
+    [
+      "MI FARMA S.A.C -RUC 205120090",
+      "CENTRAL: Cal. Victor Alzamora Nro. 14/Urb. SANTA",
+      "CATALINA",
+      "BOLETA ELECTRONICA B123-00039115",
+      "TOTAL: S/     58.80",
+    ].join("\n"),
+    AHORA
+  );
+  ok(/farma/i.test(sinLogo.merchant), `sin el logo, el nombre sale de la linea del RUC ("${sinLogo.merchant}")`);
+  ok(!/catalina/i.test(sinLogo.merchant), "y no se coge el nombre de la calle");
+  // Y EL RUC SE SIGUE LEYENDO de esa misma linea: quitarlo para buscar el nombre no puede
+  // hacer que se pierda el dato.
+  ok(sinLogo.docNumber === "B123-00039115", "y el numero de boleta sigue saliendo");
+}
+
 console.log("\n--- LAS BOLETAS DE LOS OTROS PAISES QUE LA APP OFRECE ---");
 {
   // "El escanear tiene que funcionar en los paises que tengo en mi ajuste actualmente junto a
