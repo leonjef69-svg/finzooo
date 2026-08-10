@@ -20,6 +20,37 @@ import { parseAmount } from "@/utils/importEngine";
 import { usaCentimos } from "@/constants/currencies";
 import { totalEnLetras } from "@/utils/montoEnLetras";
 
+/**
+ * QUÉ FUNCIONA FUERA DE PERÚ, Y QUÉ NO (revisado el 09/08/2026)
+ *
+ * Él lo preguntó y hay que tenerlo escrito, porque la app deja elegir ocho monedas y no todo
+ * lo de aquí es igual de universal:
+ *
+ * **FUNCIONA EN TODOS LOS PAÍSES QUE LA APP OFRECE:**
+ * - El total. "TOTAL" se escribe igual en español y en portugués, y las palabras que lo
+ *   descartan —subtotal, vuelto, tarjeta— también.
+ * - Los montos, desde el 09/08/2026: si la moneda no usa céntimos (peso chileno, colombiano,
+ *   argentino) se aceptan los enteros. Ver usaCentimos.
+ * - Los impuestos: IGV, IVA, ICMS y "impuesto" a secas.
+ * - El total escrito con letras, si el papel lo trae. La forma "NN/100" es la de toda
+ *   Latinoamérica, no solo peruana.
+ * - La fecha y la hora.
+ *
+ * **SOLO FUNCIONA EN PERÚ, y sale VACÍO en el resto:**
+ * - El **RUC**: se buscan 11 cifras empezando por 10, 15, 17 o 20. El RUT chileno lleva guion y
+ *   dígito verificador, el NIT colombiano y el RFC mexicano son otra cosa.
+ * - El **número de boleta** (B001-00012345): es la forma de SUNAT.
+ *
+ * Los dos son datos de adorno —no se usan para nada del movimiento— así que quedarse sin ellos
+ * no rompe nada. Si algún día importan fuera de Perú, hay que ampliarlos aquí.
+ *
+ * **LO QUE ESTÁ SIN RESOLVER Y CONVIENE SABER:** la fecha se lee **día primero**, que es lo
+ * correcto en toda Latinoamérica y España. Quien use dólares desde Estados Unidos escribe el
+ * mes primero, y ahí "03/04" se leería como 3 de abril en vez de 4 de marzo. No se ha tocado
+ * porque adivinarlo sin saber el país acierta a medias y falla en silencio; si algún día hay
+ * usuarios allí, la pista buena es el país de la cuenta, no el texto de la boleta.
+ */
+
 export type ReceiptRead = {
   /** Nombre del comercio, ya limpio de "S.A.C." y similares. */
   merchant: string;
@@ -246,7 +277,28 @@ function scoreAsTotal(softened: string): number {
   if (/\bsub\s?total\b/.test(softened)) score -= 6;
   if (/vuelto|cambio|recibido|entregado/.test(softened)) score -= 8;
   if (/efectivo|tarjeta|visa|mastercard|yape|plin|credito|debito/.test(softened)) score -= 6;
-  if (/igv|i\.g\.v|gravad|inafect|exonerad|descuent|ahorr|propina/.test(softened)) score -= 5;
+  /**
+   * Los impuestos y las bases: se parecen al total y NO lo son.
+   *
+   * **EL NOMBRE DEL IMPUESTO CAMBIA DE PAÍS, y solo estaba el peruano.** En Perú es IGV; en
+   * Chile, Colombia, México, Argentina y España es **IVA**; en Brasil, ICMS. Finzo deja elegir
+   * las monedas de todos esos, así que la lista tenía que crecer con ellos.
+   *
+   * También "impuesto" a secas y "tax", que es como lo imprimen algunos sistemas.
+   */
+  const mencionaImpuesto = /igv|i\.g\.v|\biva\b|i\.v\.a|icms|impuesto|\btax\b/.test(softened);
+  /**
+   * "TOTAL CON IVA INCLUIDO" **SÍ** ES EL TOTAL, y por poco se rompe al añadir el IVA.
+   *
+   * Nombrar el impuesto no convierte una línea en la del impuesto: media Latinoamérica y España
+   * escriben el total final así. Sin esta salvedad, "TOTAL IVA INCLUIDO 10.000" habría quedado
+   * en −2 y descartado — se habría arreglado el impuesto de un país rompiendo el total de otro.
+   *
+   * Lo que sí es la línea del impuesto es "IVA 19%  1.597", que no dice "incluido".
+   */
+  const vieneIncluido = /inclu/.test(softened);
+  if (mencionaImpuesto && !vieneIncluido) score -= 5;
+  if (/gravad|inafect|exonerad|descuent|ahorr|propina/.test(softened)) score -= 5;
   if (/\bitems?\b|cantidad|unidades/.test(softened)) score -= 4;
 
   return score;

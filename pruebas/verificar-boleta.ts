@@ -505,6 +505,42 @@ console.log("\n--- LAS BOLETAS DE LOS OTROS PAISES QUE LA APP OFRECE ---");
   // no pasan moneda, tienen que seguir midiendo lo mismo.
   const porDefecto = parseReceipt(["TIENDA", "TOTAL 12.50"].join("\n"), AHORA);
   ok(porDefecto.total === 12.5, "sin decir moneda se sigue leyendo como soles");
+
+  // EL IMPUESTO SE LLAMA DISTINTO EN CADA PAIS, y solo estaba el peruano.
+  //
+  // En Peru es IGV; en Chile, Colombia, Mexico, Argentina y España es IVA; en Brasil, ICMS.
+  // Finzo deja elegir las monedas de todos esos. Una linea de impuesto que no se descarta puede
+  // ganar como si fuera el total — y cobrarse el impuesto en vez de la compra.
+  const chilenaConIva = parseReceipt(
+    ["MINIMARKET", "NETO           8403", "IVA 19%        1597", "TOTAL         10000"].join("\n"),
+    AHORA,
+    "CLP"
+  );
+  ok(chilenaConIva.total === 10000, `el IVA no se confunde con el total (${chilenaConIva.total})`);
+  ok(chilenaConIva.total !== 1597, "y no se cobra el impuesto");
+
+  // Y con la palabra escrita de las dos formas.
+  for (const linea of ["I.V.A. 21%  210.00", "IMPUESTO  210.00", "ICMS 18%  210.00"]) {
+    const r = parseReceipt(["TIENDA", linea, "TOTAL 1210.00"].join("\n"), AHORA);
+    ok(r.total === 1210, `"${linea.split(" ")[0]}" se descarta (${r.total})`);
+  }
+
+  // PERO "TOTAL CON IVA INCLUIDO" SI ES EL TOTAL, y por poco se rompe al añadir el impuesto:
+  // media Latinoamerica y España escriben asi el total final. Nombrar el impuesto no convierte
+  // una linea en la del impuesto — sin esta salvedad se habria arreglado un pais rompiendo
+  // otro.
+  //
+  // ESTA COMPROBACION PASA CONTRA LA VERSION ANTERIOR y se deja escrita a proposito: no
+  // descubre un fallo viejo, guarda la puerta que acaba de abrirse.
+  const conIvaIncluido = parseReceipt(
+    ["TIENDA", "SUBTOTAL 8403", "IVA 19% 1597", "TOTAL CON IVA INCLUIDO 10000"].join("\n"),
+    AHORA,
+    "CLP"
+  );
+  ok(conIvaIncluido.total === 10000, `"TOTAL CON IVA INCLUIDO" sigue siendo el total (${conIvaIncluido.total})`);
+
+  const ivaIncl = parseReceipt(["TIENDA", "IVA 21% 210.00", "TOTAL (IVA INCL.) 1210.00"].join("\n"), AHORA);
+  ok(ivaIncl.total === 1210, `y abreviado tambien (${ivaIncl.total})`);
 }
 
 console.log("\n--- SERIES DE BOLETA CON MAS DE UNA LETRA (Ripley) ---");
