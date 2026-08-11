@@ -89,7 +89,7 @@ decidir si instala.
 | Qué | Medida | Quién |
 |---|---|---|
 | **Icono** | 512 × 512 px, PNG | ✅ **HECHO: `tienda/icono-512.png`** |
-| **Gráfico destacado** | 1024 × 500 px | Hay que diseñarlo. Es la banda de arriba de la ficha |
+| **Gráfico destacado** | 1024 × 500 px | ✅ **HECHO: `tienda/destacado-1024x500.png`** (10/08/2026) |
 | **Capturas de teléfono** | mínimo **2**, hasta 8 | **Suyas**, del celular |
 
 ### Qué capturas, y en qué orden
