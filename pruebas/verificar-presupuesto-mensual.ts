@@ -1,87 +1,59 @@
-// QUE EL PRESUPUESTO SIGA VIGENTE EL MES SIGUIENTE.
+// EL PRESUPUESTO NO SE COPIA A NINGUN OTRO MES (10/08/2026)
 //
-// Y sobre todo: que al hacerlo no aparezcan presupuestos de meses que la
-// persona nunca vivio. El Saldo anterior suma los presupuestos de todos los
-// meses previos, asi que inventar uno inventa dinero.
-import { presupuestoAHeredar } from "@/utils/presupuestoMensual";
+// El 09/08 el presupuesto pasó a repetirse solo cada mes. Un día después se pidió deshacerlo:
+// ver "S/ 100" en NOVIEMBRE estando en agosto —un mes sin tocar, con un número sin escribir—
+// desconcertaba mas de lo que ayudaba el ahorro de teclear.
+//
+// TODA ESTA PRUEBA FALLA CONTRA LA VERSION ANTERIOR, que devolvia el ultimo presupuesto puesto
+// a mano cuando el mes no tenia el suyo.
+import { presupuestoDelMes } from "@/utils/presupuestoMensual";
 
 let fallos = 0;
-function ok(c: boolean, m: string) { console.log(`  ${c ? "OK   " : "FALLA"} ${m}`); if (!c) fallos++; }
-
-console.log("\n--- EL CASO DE SIEMPRE: CAMBIA EL MES ---");
-ok(presupuestoAHeredar({ "2026-07": 500 }, "2026-08") === 500, "agosto hereda los 500 de julio");
-ok(presupuestoAHeredar({ "2026-12": 800 }, "2027-01") === 800, "y enero hereda de diciembre, aunque cambie el anio");
-
-console.log("\n--- LO QUE YA TIENE NO SE TOCA ---");
-ok(presupuestoAHeredar({ "2026-07": 500, "2026-08": 300 }, "2026-08") === null, "agosto ya tiene 300: se queda");
-// Cero puesto a mano es una decision, no un hueco.
-ok(presupuestoAHeredar({ "2026-07": 500, "2026-08": 0 }, "2026-08") === null, "un cero puesto a proposito se respeta");
-
-console.log("\n--- DE DONDE SE HEREDA ---");
-{
-  const varios = { "2026-05": 100, "2026-07": 700, "2026-06": 200 };
-  ok(presupuestoAHeredar(varios, "2026-08") === 700, "del mes con presupuesto MAS RECIENTE, no del primero");
-  // Mirando un mes pasado no se hereda de uno posterior.
-  ok(presupuestoAHeredar(varios, "2026-06") === null, "junio ya tiene el suyo");
-  ok(presupuestoAHeredar({ "2026-07": 700 }, "2026-06") === null, "y nunca se hereda de un mes POSTERIOR");
+function ok(c: boolean, m: string) {
+  console.log(`  ${c ? "OK   " : "FALLA"} ${m}`);
+  if (!c) fallos++;
 }
 
-console.log("\n--- CUANDO NO HAY NADA QUE HEREDAR ---");
-ok(presupuestoAHeredar({}, "2026-08") === null, "sin ningun presupuesto, nada");
-ok(presupuestoAHeredar({ "2026-07": 0 }, "2026-08") === null, "un cero no se arrastra: escribirlo o no se ve igual");
-
-console.log("\n--- Y LO IMPORTANTE: NO SE INVENTAN MESES ---");
+console.log("\n--- CADA MES USA EL SUYO Y SOLO EL SUYO ---");
 {
-  // Puso 500 en enero y no abrio la app en seis meses. Solo agosto —el mes
-  // en curso— recibe presupuesto. Si en vez de copiar se heredara al vuelo,
-  // febrero a julio tendrian 500 cada uno y el Saldo anterior subiria 3.000
-  // soles que nunca existieron.
-  const soloEnero = { "2026-01": 500 };
-  ok(presupuestoAHeredar(soloEnero, "2026-08") === 500, "agosto si recibe");
-  // Los del medio siguen sin entrada: esta funcion solo se llama con el mes
-  // en curso, y ninguno de ellos la recibe nunca.
-  ok(Object.keys(soloEnero).length === 1, "y la funcion no escribe nada por su cuenta");
+  const puestos = { "2026-06": 1500, "2026-07": 1800 };
+
+  ok(presupuestoDelMes(puestos, "2026-07") === 1800, "el mes que tiene el suyo usa el suyo");
+  ok(presupuestoDelMes(puestos, "2026-06") === 1500, "y cada uno el suyo, no el del vecino");
+
+  // LO QUE CAMBIA HOY: agosto no tiene presupuesto, y por lo tanto vale cero.
+  ok(presupuestoDelMes(puestos, "2026-08") === 0, `agosto empieza vacio (${presupuestoDelMes(puestos, "2026-08")})`);
+  ok(presupuestoDelMes(puestos, "2026-08") !== 1800, "y NO copia el de julio, que es lo que hacia antes");
+
+  // NOVIEMBRE, QUE ES EL CASO QUE LO DESTAPO. Mirando meses adelante no aparece nada.
+  ok(presupuestoDelMes(puestos, "2026-11") === 0, `noviembre, tres meses adelante, sale en blanco (${presupuestoDelMes(puestos, "2026-11")})`);
+  ok(presupuestoDelMes(puestos, "2027-03") === 0, "y el anio que viene tampoco");
 }
 
-console.log("\n--- LA TARJETA DE LIMITES NO PUEDE CONTRADECIRSE ---");
+console.log("\n--- NI HACIA ATRAS NI DESDE LA NADA ---");
 {
-  // EL FALLO, reportado con captura el 07/08/2026: la tarjeta "Presupuestos por
-  // categoria" decia "Aun no le pusiste limite a ninguna categoria" y justo debajo
-  // "13 categorias sin gastos este mes · € 650.00 sin usar". Las dos a la vez, y
-  // las dos no pueden ser verdad.
-  //
-  // El motivo: ese primer texto se decidia con las categorias que TIENEN GASTO, no
-  // con las que tienen limite. Con trece limites puestos y ningun gasto en ellos,
-  // "no pusiste ninguno" era falso.
-  //
-  // Es el mismo fallo que ya paso en la pantalla de exportacion automatica: dos
-  // textos decidiendo por su cuenta. La regla es la misma: una sola pregunta.
-  const fs = await import("fs");
-  const path = await import("path");
-  const RAIZ = process.cwd();
-  const pant = fs.readFileSync(path.join(RAIZ, "screens/Reports.tsx"), "utf8");
-  const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
-
-  ok(/hayLimites: todos\.length > 0/.test(pant), "'hay limites' se cuenta de los limites, no de los gastos");
-  ok(
-    /t\(hayLimites \? "categoryBudgets\.noneSpentYet" : "categoryBudgets\.noneSet"\)/.test(pant),
-    "y es esa misma respuesta la que elige el texto"
-  );
-  // Los dos textos tienen que existir en los tres idiomas: si falta uno, en
-  // pantalla sale la clave cruda justo cuando alguien mira sus presupuestos.
-  for (const clave of ["categoryBudgets.noneSet", "categoryBudgets.noneSpentYet"]) {
-    const veces = (i18n.match(new RegExp(`"${clave.replace(".", "\\.")}":`, "g")) ?? []).length;
-    ok(veces === 3, `${clave} esta en los tres idiomas (${veces})`);
-  }
-
-  // Y el resumen de las categorias sin gasto no vuelve: se quito a pedido del
-  // usuario ("no se por que me sale eso, quitalo, no me gusta") porque esa tarjeta
-  // contesta "¿como voy con mis limites?" y una lista de las que ni toco no
-  // contesta eso — ademas de que "€ 650.00 sin usar" se leia como dinero
-  // disponible.
-  ok(!i18n.includes("categoryBudgets.untouched"), "el resumen de las intactas no vuelve");
-  ok(!pant.includes("sinGastoTotal"), "ni su cuenta");
+  // El pasado no cambia porque hoy se escriba un numero.
+  ok(presupuestoDelMes({ "2026-07": 700 }, "2026-05") === 0, "mayo no toma nada de julio");
+  ok(presupuestoDelMes({}, "2026-08") === 0, "sin ningun presupuesto puesto, cero");
 }
 
-console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
-process.exit(fallos ? 1 : 0);
+console.log("\n--- UN CERO ESCRITO A MANO SIGUE VALIENDO CERO ---");
+{
+  // "Este mes no me pongo presupuesto" es una decision. Se ve igual que no haber puesto nada,
+  // y ahora ademas da lo mismo: ninguno de los dos hereda de ningun sitio.
+  const conCero = { "2026-07": 1800, "2026-08": 0 };
+  ok(presupuestoDelMes(conCero, "2026-08") === 0, "el cero de agosto se respeta");
+  ok(presupuestoDelMes(conCero, "2026-09") === 0, "y septiembre tampoco saca nada de julio");
+}
+
+console.log("\n--- LAS CLAVES RARAS NO ROMPEN NADA ---");
+{
+  // El guardado ha ido cambiando con los meses y puede tener restos. Pedir un mes que no
+  // existe tiene que dar cero, no reventar.
+  const sucio = { "2026-07": 1800, ultimoMes: 999 } as Record<string, number>;
+  ok(presupuestoDelMes(sucio, "2026-08") === 0, "una clave que no es un mes no se cuela");
+  ok(presupuestoDelMes(sucio, "2026-07") === 1800, "y el mes de verdad sigue funcionando");
+}
+
+console.log(fallos === 0 ? "\nTodo bien: cada mes empieza vacio" : `\n${fallos} fallas`);
+process.exit(fallos === 0 ? 0 : 1);

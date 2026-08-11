@@ -146,9 +146,8 @@ console.log("\n--- LOS HUECOS Y LOS MESES VACIOS ---");
 
 console.log("\n--- LOS PRESUPUESTOS ENTRAN EN CRUDO, SIN HEREDAR ---");
 {
-  // presupuestoDelMes hereda el ultimo puesto a mano para ENSEÑARLO. Aqui no se usa a
-  // proposito: quien puso 500 en enero y no abrio la app en seis meses tendria seis
-  // presupuestos de 500 que nunca existieron, y 3.000 soles salidos de la nada.
+  // Un mes sin presupuesto puesto vale cero, y no se busca en ningun otro mes. Es lo mismo
+  // que hace presupuestoDelMes desde el 10/08/2026, asi que las dos cuentas coinciden.
   const presupuestos = { "2026-01": 500 };
   ok(saldoAnteriorDe("2026-07", presupuestos, [], []) === 500, `solo cuenta el presupuesto que se puso de verdad (${saldoAnteriorDe("2026-07", presupuestos, [], [])})`);
   // Y una clave que no sea un mes no rompe la cuenta ni suma nada.

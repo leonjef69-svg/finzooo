@@ -84,7 +84,6 @@ const SUITES = [
   { archivo: "verificar-claves-ocultas.ts", alias: EXPO },
   { archivo: "verificar-categorias-propias.ts", alias: EXPO },
   { archivo: "verificar-presupuesto-mensual.ts", alias: BASE },
-  { archivo: "verificar-presupuesto-heredado.ts", alias: BASE },
   { archivo: "verificar-saldo-mes.ts", alias: BASE },
   { archivo: "verificar-programado.ts", alias: EXPO },
   { archivo: "verificar-reporte-archivo.ts", alias: EXPO },

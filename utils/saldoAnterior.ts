@@ -25,12 +25,12 @@
 // Por eso ya no vale sumarlo todo de golpe: hay que RECORRER los meses en orden, porque un
 // cero en medio tiene que borrar lo de antes sin borrar lo de después.
 //
-// LOS PRESUPUESTOS SE LEEN EN CRUDO, SIN HERENCIA
+// EN LA CADENA SOLO CUENTAN LOS PRESUPUESTOS QUE SE ESCRIBIERON
 //
-// `presupuestoDelMes` hereda el último presupuesto puesto a mano para ENSEÑARLO. Aquí no se
-// usa, y es a propósito: quien puso 500 en enero y no abrió la app en seis meses tendría de
-// golpe seis presupuestos de 500 que nunca existieron, y 3.000 soles de saldo salidos de la
-// nada. En la cadena solo cuentan los meses que la persona vivió de verdad.
+// Un mes sin presupuesto puesto vale cero aquí, y no se busca en ningún otro mes. Desde el
+// 10/08/2026 `presupuestoDelMes` hace exactamente lo mismo, así que las dos cuentas dicen lo
+// mismo; mientras hubo herencia no lo decían, y un mes futuro enseñaba un disponible que luego
+// no llegaba entero al siguiente.
 
 /** Lo justo de un movimiento para esta cuenta. Nada más hace falta. */
 export type MovimientoDelSaldo = {

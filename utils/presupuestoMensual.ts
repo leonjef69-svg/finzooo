@@ -1,45 +1,35 @@
+// CADA MES EMPIEZA VACÍO, Y EL PRESUPUESTO LO PONE LA PERSONA (10/08/2026)
+//
+// LA VUELTA ATRÁS, Y POR QUÉ
+//
+// El 09/08/2026 se hizo justo lo contrario: el presupuesto se repetía solo cada mes, para no
+// tener que volver a escribirlo doce veces al año. Un día después se pidió deshacerlo.
+//
+// El motivo, dicho por él, fue ver "S/ 100" en NOVIEMBRE estando en agosto — un mes que no
+// había tocado, con un número que no había escrito. Hizo falta un rótulo debajo ("Igual que el
+// mes pasado") para explicar de dónde salía, y ni con el rótulo quedaba claro.
+//
+// Ese rótulo era la señal: si un número necesita una nota al pie para no dar desconfianza, el
+// problema es el número, no la nota. En una app de dinero, lo que no escribió la persona no
+// debería estar ahí.
+//
+// LO QUE ESTO CUESTA, PARA QUE CONSTE
+//
+// Cada 1 de mes la app amanece con el presupuesto en cero, y hay que volver a ponerlo. Es el
+// inconveniente que se arregló el 09/08 y que ahora se acepta a cambio de que ningún mes
+// enseñe cifras que nadie puso. Fue una decisión suya, tomada sabiendo esto.
+//
+// SI ALGÚN DÍA SE QUIERE RECUPERAR, el punto medio que quedó sin probar era heredar solo en el
+// mes en curso y dejar los meses futuros en blanco: lo que confundía era ver el número en
+// meses que todavía no habían llegado.
+
 /**
- * Que el presupuesto siga vigente el mes siguiente, sin volver a ponerlo.
+ * El presupuesto de un mes: el que se escribió para ESE mes, y nada más.
  *
- * EL PROBLEMA
- *
- * Los presupuestos se guardan mes por mes ({ "2026-07": 500 }). Un mes sin su
- * entrada no tiene presupuesto: vale cero. Así que cada 1 de mes había que
- * volver a escribirlo, y hasta hacerlo la pantalla de Inicio decía que no hay
- * presupuesto. Doce veces al año, siempre.
- *
- * POR QUÉ SE COPIA Y NO SE HEREDA AL VUELO
- *
- * Lo evidente sería no guardar nada y, al pedir el presupuesto de un mes sin
- * entrada, devolver el del mes anterior. Se ve bien y rompe las cuentas.
- *
- * El Saldo anterior suma los presupuestos de TODOS los meses previos. Con la
- * herencia al vuelo, alguien que puso 500 en enero y no abrió la app en seis
- * meses tendría de golpe seis presupuestos de 500 que nunca existieron: 3.000
- * soles de saldo salidos de la nada. Es exactamente el tipo de número
- * inventado que hace desconfiar de toda la app.
- *
- * Copiándolo solo al mes en curso, únicamente los meses que la persona vivió
- * de verdad tienen presupuesto. La historia no se toca.
+ * `mes` va como "AAAA-MM", igual que las claves. Un mes sin entrada vale cero, y un cero
+ * escrito a mano vale cero también: las dos cosas se ven igual en pantalla, que es lo que se
+ * quería. No se mira ningún otro mes, ni hacia atrás ni hacia adelante.
  */
-export function presupuestoAHeredar(
-  budgets: Record<string, number>,
-  mesActual: string
-): number | null {
-  // Ya tiene el suyo —aunque sea cero, que es una decisión— no se toca.
-  if (budgets[mesActual] !== undefined) return null;
-
-  // El mes con presupuesto más reciente ANTERIOR a este. Se compara como
-  // texto porque "AAAA-MM" se ordena igual escrito que por fecha.
-  let ultimo: string | null = null;
-  for (const mes of Object.keys(budgets)) {
-    if (mes >= mesActual) continue;
-    if (ultimo === null || mes > ultimo) ultimo = mes;
-  }
-  if (ultimo === null) return null;
-
-  const monto = budgets[ultimo];
-  // Un presupuesto de cero no se arrastra: copiarlo o no dejarlo se ve igual
-  // en pantalla, y no escribir es siempre mejor.
-  return monto > 0 ? monto : null;
+export function presupuestoDelMes(budgets: Record<string, number>, mes: string): number {
+  return budgets[mes] ?? 0;
 }
