@@ -96,6 +96,7 @@ import { mergeTransactions, hayNovedades, mergeCaptureLog } from "@/utils/mergeT
 import { presupuestoAHeredar } from "@/utils/presupuestoMensual";
 import { hayDescuadre, maximoAApartar, saldoLibre, totalApartado } from "@/utils/ahorro";
 import { availableBalance } from "@/utils/finances";
+import { saldoAnteriorDe } from "@/utils/saldoAnterior";
 import * as notificationReader from "@/modules/notification-reader";
 import type { Goal, Month, Profile, Transaction } from "@/types";
 
@@ -1284,55 +1285,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return result;
   }, [transactions, mk]);
 
-  // Lo que sobró (o faltó) de todos los meses ANTERIORES al que se está
-  // viendo: presupuestos + ingresos − gastos de esos meses.
+  // El saldo con el que arranca el mes que se está viendo.
   //
-  // Antes esto recorría la lista completa de movimientos DOS veces por
-  // cada mes con datos. Con varios meses de historial eso se multiplicaba
-  // rápido, y este cálculo se rehace cada vez que cambia un movimiento o
-  // se cambia de mes. Ahora es una sola pasada, con el mismo resultado.
+  // La cuenta NO se escribe aquí: vive en utils/saldoAnterior, que es donde
+  // están explicadas las puertas entre meses y por qué los presupuestos se
+  // leen en crudo. Aquí solo se le pasan los datos.
   //
-  // Poner un mes en cero ROMPE LA CADENA de ahí en adelante.
-  //
-  // El arrastre funciona como un relevo: cada mes le pasa su saldo final
-  // al siguiente. Si un mes se pone en cero, deja de recibir y también
-  // deja de pasar — y como el siguiente ya no recibe nada, tampoco tiene
-  // qué pasar. El relevo queda cortado mientras esa marca siga puesta.
-  //
-  // Ejemplo, poniendo AGOSTO en cero:
-  //    julio       → sin cambios (es anterior al corte)
-  //    agosto      → 0
-  //    septiembre  → 0
-  //    octubre     → 0   ... y así hasta que se restaure agosto
-  //
-  // Al restaurar agosto, la cadena entera se reconstruye sola: no hay que
-  // ir mes por mes.
-  //
-  // Ojo con la diferencia (fue un malentendido real durante el
-  // desarrollo): NO es "septiembre arranca de nuevo desde agosto". Es
-  // "mientras la cadena esté rota, ningún mes posterior arrastra nada".
-  const carryoverBroken = useMemo(
-    () => carryoverCleared.some((cleared) => cleared <= mk),
-    [carryoverCleared, mk]
+  // Antes esto era una suma plana de todo lo anterior, y la marca de "poner
+  // en cero" cortaba con un `alguno <= mes`: una marca en agosto dejaba en
+  // cero agosto, septiembre, octubre y todo lo siguiente. Ahora la marca de
+  // un mes cierra ÚNICAMENTE la puerta que entra a ese mes, y el resultado
+  // real de ese mes sigue su camino al siguiente (10/08/2026).
+  const prevBalance = useMemo(
+    () => saldoAnteriorDe(mk, budgets, transactions, carryoverCleared),
+    [transactions, budgets, mk, carryoverCleared]
   );
 
-  // El botón "restaurar" solo se ofrece en el mes exacto donde se puso la
-  // marca — que es donde tiene sentido quitarla, y desde donde se
-  // reconstruye todo.
+  // El botón "restaurar" se ofrece en el mes que tiene la puerta cerrada,
+  // que es el único desde el que tiene sentido volver a abrirla.
   const carryoverActive = carryoverCleared.includes(mk);
-
-  const prevBalance = useMemo(() => {
-    if (carryoverBroken) return 0;
-    let carry = 0;
-    for (const [monthK, amount] of Object.entries(budgets)) {
-      if (monthK < mk) carry += amount || 0;
-    }
-    for (const tx of transactions) {
-      if (tx.date.slice(0, 7) >= mk) continue;
-      carry += tx.type === "income" ? tx.amount : -tx.amount;
-    }
-    return carry;
-  }, [transactions, budgets, mk, carryoverBroken]);
 
   const autoSavings = budget + income - spent;
 
@@ -1446,22 +1417,26 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     showToast(t("toast.themeUpdated"));
   }
 
-  // "Empezar de cero" desde el mes que se está viendo: el Saldo anterior
-  // pasa a contar solo desde aquí, así que queda en 0 para este mes.
+  // "No pasar el saldo" al mes que se está viendo: ese mes arranca en 0.
+  //
+  // SOLO CIERRA LA PUERTA DE ENTRADA A ESTE MES. El resultado real de este
+  // mes —lo que gane y gaste por su cuenta— pasa al siguiente con toda
+  // normalidad. Si agosto no recibe nada y termina con 150, septiembre
+  // recibe esos 150.
   //
   // No borra NADA: los movimientos, presupuestos y metas de los meses
   // anteriores siguen intactos y se pueden seguir consultando en el
-  // Historial. Lo único que cambia es desde dónde arranca el arrastre.
+  // Historial.
   function resetCarryover() {
     setCarryoverCleared((prev) => (prev.includes(mk) ? prev : [...prev, mk]));
     showToast(t("toast.carryoverReset"));
   }
 
-  // Deshace lo anterior, SOLO en el mes que se está viendo: ese mes vuelve
-  // a sumar su historial completo. Los demás meses puestos en cero siguen
-  // como estaban.
+  // Vuelve a abrir la puerta de entrada a este mes: recibe otra vez el
+  // saldo real del mes anterior. Los demás meses con la puerta cerrada
+  // siguen como estaban — cada uno es su propia decisión.
   //
-  // Existe porque "empezar de cero" es fácil de tocar por curiosidad o por
+  // Existe porque "no pasar saldo" es fácil de tocar por curiosidad o por
   // error, y sin esto no habría forma de volver atrás: al quedar el saldo
   // en 0 el propio botón desaparecía, así que la acción era irreversible
   // desde la app. Como no se borró ningún dato, restaurar es solo dejar de

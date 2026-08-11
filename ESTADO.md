@@ -2840,6 +2840,29 @@ Los mismos 300, no 300 nuevos cada mes.
 Como se recalcula, corregir un gasto de hace tres meses ajusta solos todos los
 meses siguientes.
 
+**Cada puerta entre meses se abre o se cierra por separado (10/08/2026).** El
+botón de la tarjeta 🕒 controla UNA transición: la del mes anterior hacia el mes
+que se está viendo. Viendo agosto controla julio→agosto; viendo septiembre
+controla agosto→septiembre.
+
+```
+JULIO ──🚪──> AGOSTO ──🚪──> SEPTIEMBRE ──🚪──> OCTUBRE
+          ❌            ✅                 ❌
+```
+
+Hasta ese día una marca en agosto dejaba en cero agosto, septiembre, octubre y
+todo lo siguiente, hasta restaurarla. Convertía una decisión pequeña —"lo de
+julio no lo quiero en agosto"— en una decisión permanente sobre meses que aún no
+habían pasado, y septiembre arrancaba de cero aunque agosto hubiera terminado
+con dinero real. Ahora el resultado propio de cada mes sigue su camino siempre:
+si agosto no recibe nada y cierra con 150, septiembre recibe esos 150.
+
+La cuenta está en `utils/saldoAnterior.ts`, aparte del contexto. Hay que
+RECORRER los meses en orden y no sumarlos de golpe, porque un cero en medio
+tiene que borrar lo de antes sin borrar lo de después. Ojo con los meses vacíos
+que tienen la puerta cerrada: si solo se recorrieran los meses con movimientos,
+esa marca se saltaría en silencio.
+
 **Sugerido y sin respuesta: un "Ajustar saldo".** El arrastre es *presupuesto
 menos lo anotado*, no la plata real. Cada gasto sin anotar mete un error que
 nunca se corrige y se acumula: a los doce meses Finzo puede decir S/ 2.400

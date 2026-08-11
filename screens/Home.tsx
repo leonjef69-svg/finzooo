@@ -345,13 +345,15 @@ export default function Home({
               >
                 {fmt(prevBalance)}
               </Text>
-              {/* Un solo botón con dos caras, y siempre referido AL MES
-                  QUE SE ESTÁ VIENDO (cada mes es independiente):
-                  - Si este mes está puesto en cero, ofrece DESHACER. Es
-                    imprescindible que aparezca aquí: al quedar el saldo
+              {/* Un solo botón con dos caras. Controla UNA sola puerta: la
+                  del mes anterior HACIA EL MES QUE SE ESTÁ VIENDO. Viendo
+                  agosto controla julio→agosto; viendo septiembre controla
+                  agosto→septiembre. Nunca más de una.
+                  - Si la puerta de este mes está cerrada, ofrece ABRIRLA.
+                    Es imprescindible que aparezca aquí: al quedar el saldo
                     en 0 no habría ningún otro sitio desde donde volver
                     atrás, y la acción sería irreversible desde la app.
-                  - Si no, y hay algo que poner en cero, ofrece hacerlo.
+                  - Si no, y hay saldo que podría no pasar, ofrece cerrarla.
                   - Si el saldo ya es 0 por sí solo, no se muestra nada:
                     el botón no haría nada y solo estorbaría. */}
               {carryoverActive ? (
