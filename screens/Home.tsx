@@ -10,6 +10,7 @@ import {
   ChevronRight,
   CheckCircle2,
   Circle,
+  Calculator,
   Eraser,
   Eye,
   EyeOff,
@@ -25,12 +26,16 @@ import BudgetRing from "@/components/BudgetRing";
 import IconBadge from "@/components/IconBadge";
 import PressableScale from "@/components/PressableScale";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
-import { catInfo } from "@/constants/categories";
+import { AJUSTE_CAT, catInfo } from "@/constants/categories";
 import { CARD_SHADOW, SALDO_TARJETA, SALDO_VERDE } from "@/constants/style";
-import { fmtDate, monthKey } from "@/utils/format";
+import { fmtDate, horaDe, monthKey } from "@/utils/format";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
-import { sanitizeAmountInput } from "@/utils/amount";
+import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { availableBalance, budgetUsed } from "@/utils/finances";
+import { ajusteNecesario } from "@/utils/ajusteSaldo";
+import { currencySymbolFor } from "@/constants/currencies";
+import { defaultDateForMonth } from "@/utils/date";
+import { nextId } from "@/utils/id";
 import { usePendingImport } from "@/utils/pendingImport";
 import { router } from "expo-router";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -71,6 +76,9 @@ export default function Home({
     carryoverActive,
     resetCarryover,
     restoreCarryover,
+    addOrUpdateTransaction,
+    showToast,
+    userCurrency,
   } = useAppData();
   const [confirmResetCarryover, setConfirmResetCarryover] = useState(false);
   const [confirmRestoreCarryover, setConfirmRestoreCarryover] = useState(false);
@@ -83,11 +91,46 @@ export default function Home({
   const [editingBudget, setEditingBudget] = useState(false);
   const [budgetInput, setBudgetInput] = useState("");
   const [hideBalance, setHideBalance] = useState(false);
+  const [ajustando, setAjustando] = useState(false);
+  const [plataReal, setPlataReal] = useState("");
   const archivoPendiente = usePendingImport();
 
   function startEditBudget() {
     setBudgetInput(String(budget));
     setEditingBudget(true);
+  }
+
+  // CUADRAR LA CAJA. La cuenta vive en utils/ajusteSaldo; aquí solo se pregunta y se anota.
+  function abrirAjuste() {
+    // Se abre con el número que dice la app, ya escrito. Casi siempre lo que hay que cambiar es
+    // poco —unos soles—, y volver a teclear la cifra entera invita a equivocarse.
+    setPlataReal(available.toFixed(2));
+    setAjustando(true);
+  }
+
+  function guardarAjuste() {
+    const ajuste = ajusteNecesario(available, parseAmountInput(plataReal));
+    setAjustando(false);
+    // Ya cuadra: no se anota un movimiento de cero soles, que no habría forma de explicar
+    // después mirando la lista.
+    if (!ajuste) {
+      showToast(t("home.adjustAlready"));
+      return;
+    }
+    addOrUpdateTransaction({
+      id: nextId(),
+      type: ajuste.type,
+      amount: ajuste.amount,
+      category: AJUSTE_CAT.id,
+      // EN EL MES QUE SE ESTÁ VIENDO, no en el de hoy. Cuadrar agosto mirando agosto y que el
+      // movimiento cayera en septiembre dejaría los dos meses mal en vez de uno bien.
+      date: defaultDateForMonth(month),
+      method: "cash",
+      description: t("home.adjustDescription"),
+      notes: "",
+      origin: "manual",
+      time: horaDe(Date.now()),
+    });
   }
   function saveBudgetInline() {
     setBudgetForCurrentMonth(parseFloat(budgetInput) || 0);
@@ -249,6 +292,24 @@ export default function Home({
                     ? t("home.budgetedOf", { amount: "••••" })
                     : t("home.budgetedOf", { amount: fmt(budget) })}
                 </Text>
+                {/* CUADRAR LA CAJA. Ver utils/ajusteSaldo para el porqué.
+                    Va aquí dentro y en pequeño a propósito: es el número que no cuadra el que
+                    trae a alguien a buscar esto, así que tiene que estar pegado al número. Y
+                    pequeño porque se usa de vez en cuando, no todos los días.
+                    Con el saldo tapado no se enseña: no se puede cuadrar contra algo que no
+                    se está viendo. */}
+                {!hideBalance && (
+                  <TouchableOpacity
+                    onPress={abrirAjuste}
+                    hitSlop={8}
+                    className="flex-row items-center gap-1.5 mt-2 self-start"
+                  >
+                    <Calculator size={13} color="#d1fae5" />
+                    <Text className="text-emerald-100 text-[11px] font-bold">
+                      {t("home.adjustBalance")}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </>
             )}
           </View>
@@ -553,6 +614,62 @@ export default function Home({
           restoreCarryover();
         }}
       />
+
+      {/* CUADRAR LA CAJA.
+          Va dibujada aquí dentro y no como una pantalla aparte: son un campo y un botón, y una
+          ruta nueva habría traído su presentación, su animación y su vuelta atrás para eso.
+          Se dice ANTES lo que va a pasar —"se anotará un movimiento por la diferencia"— porque
+          una app de dinero que anota algo sin avisar es una app en la que no se confía. */}
+      {ajustando && (
+        <View className="absolute inset-0 z-50 items-center justify-center px-6">
+          <TouchableOpacity
+            className="absolute inset-0 bg-slate-900/60"
+            activeOpacity={1}
+            onPress={() => setAjustando(false)}
+          />
+          <View className="w-full bg-white dark:bg-slate-900 rounded-2xl p-5 border-[1.5px] border-slate-200 dark:border-slate-700">
+            <Text className="text-base font-extrabold text-slate-900 dark:text-slate-100">
+              {t("home.adjustTitle")}
+            </Text>
+            <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-300 mt-1">
+              {t("home.adjustHint", { amount: fmt(available) })}
+            </Text>
+            <View className="flex-row items-center bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-4 py-3.5 mt-4">
+              <Text className="text-slate-500 dark:text-slate-300 font-bold text-xl mr-1">
+                {currencySymbolFor(userCurrency)}
+              </Text>
+              <TextInput
+                autoFocus
+                keyboardType="decimal-pad"
+                selectTextOnFocus
+                value={plataReal}
+                onChangeText={(v) => setPlataReal(sanitizeAmountInput(v))}
+                placeholder="0.00"
+                placeholderTextColor="#94a3b8"
+                className="flex-1 text-2xl font-extrabold"
+                style={{ padding: 0, color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+              />
+            </View>
+            <Text className="text-[11px] leading-5 text-slate-400 dark:text-slate-500 mt-3">
+              {t("home.adjustExplain")}
+            </Text>
+            <View className="flex-row gap-2.5 mt-5">
+              <TouchableOpacity
+                onPress={() => setAjustando(false)}
+                className="flex-1 py-3.5 rounded-2xl items-center bg-slate-100 dark:bg-slate-800"
+              >
+                <Text className="font-bold text-slate-700 dark:text-slate-200">{t("common.cancel")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={guardarAjuste}
+                className="flex-1 py-3.5 rounded-2xl items-center bg-emerald-600"
+              >
+                <Text className="font-bold text-white">{t("home.adjustConfirm")}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      )}
     </View>
   );
 }

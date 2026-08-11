@@ -89,11 +89,34 @@ export const INCOME_CATS: Category[] = [
 
 export const ALL_CATS = [...EXPENSE_CATS, ...INCOME_CATS];
 
+/**
+ * LA CATEGORÍA DE "AJUSTAR SALDO", que no se elige a mano (10/08/2026).
+ *
+ * Va aparte de las dos listas a propósito: no tiene por qué salir en el selector de categorías
+ * —nadie apunta un gasto de comida como "ajuste"— ni en la pantalla de personalizar. La pone la
+ * app cuando cuadras la caja, y solo ahí.
+ *
+ * Pero SÍ tiene que estar en el índice de abajo. Sin eso, `catInfo("ajuste")` devolvería
+ * "Otros" y el movimiento saldría en la lista con el nombre equivocado — que es justo lo que no
+ * puede pasar con un movimiento que la app se inventa: hay que poder reconocerlo de un vistazo
+ * para poder borrarlo.
+ *
+ * SIRVE PARA LOS DOS SENTIDOS. Si tienes menos de lo que dice la app, el ajuste es un gasto; si
+ * tienes más, un ingreso. La categoría es la misma: lo que cambia es el tipo del movimiento.
+ */
+export const AJUSTE_CAT: Category = {
+  id: "ajuste",
+  label: "category.ajuste",
+  ...dibujo("Calculator"),
+  color: "stone",
+  emoji: "⚖️",
+};
+
 // Índice por id, armado una sola vez al cargar la app. Antes catInfo hacía
 // un .find() —recorrer la lista entera— y se la llama por CADA fila de
 // Inicio, del Historial, de Reportes y del detalle: con las listas
 // desplazándose, eran miles de recorridos por segundo sin necesidad.
-const CATS_BY_ID = new Map(ALL_CATS.map((c) => [c.id, c]));
+const CATS_BY_ID = new Map([...ALL_CATS, AJUSTE_CAT].map((c) => [c.id, c]));
 
 // Categoría de respaldo cuando el id guardado no existe (por ejemplo, un
 // movimiento importado con una categoría que ya no está en la app).
