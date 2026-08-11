@@ -34,6 +34,9 @@ import java.util.concurrent.TimeUnit
  */
 object ProbadorDeVoz {
 
+  /** Cuantas veces se le pregunta al motor por el espanol antes de darlo por perdido. */
+  private const val INTENTOS_DE_IDIOMA = 6
+
   /** El volumen del canal de AVISOS, de 0 a 100. */
   fun volumenDeAvisos(context: Context): Int =
     try {
@@ -49,12 +52,18 @@ object ProbadorDeVoz {
   /**
    * Dice la frase y devuelve que paso.
    *
-   * SE ESPERA A QUE EL MOTOR ARRANQUE, hasta seis segundos. Es lo contrario de lo que hace
+   * SE ESPERA A QUE EL MOTOR ARRANQUE, hasta doce segundos. Es lo contrario de lo que hace
    * el servicio —que encola y sigue— y aqui es lo correcto: si no se espera, la respuesta
    * seria siempre "ok" sin saber si el motor llego a estar listo, que es justo lo que hay
    * que averiguar.
    *
-   * Seis segundos porque arrancar el sistema de voz de Android tarda de dos a cuatro.
+   * ERAN SEIS, Y SE QUEDABAN CORTOS (11/08/2026). Le salio "tu celular no tiene voz
+   * instalada" al primer toque y a la segunda funciono. No le faltaba nada: el sistema de
+   * voz de Android, con el celular recien encendido o tras rato sin usarse, tarda mas de
+   * seis segundos en despertar la primera vez. La segunda ya estaba caliente.
+   *
+   * Decirle a alguien que le falta instalar algo que SI tiene es peor que tardar: se va a
+   * los ajustes a buscar lo que no falta.
    *
    * El motor se suelta siempre al terminar: esto es una prueba a mano, no el camino del
    * yapeo, y dejar un motor vivo por cada toque del boton seria un motor por toque.
@@ -70,7 +79,7 @@ object ProbadorDeVoz {
         estadoDelArranque = estado
         arranco.countDown()
       }
-      if (!arranco.await(6, TimeUnit.SECONDS)) return "sin-motor"
+      if (!arranco.await(12, TimeUnit.SECONDS)) return "sin-motor"
       if (estadoDelArranque != TextToSpeech.SUCCESS) return "sin-motor"
 
       val m = motor ?: return "sin-motor"
@@ -108,8 +117,39 @@ object ProbadorDeVoz {
    *
    * Ahora se prueba es-PE, luego es-ES, luego "es" a secas, y se mira la respuesta cada vez.
    * Si ninguna vale, se dice —"sin-espanol"— en vez de callar.
+   *
+   * Y SE REINTENTA, QUE ES EL ARREGLO DEL 11/08/2026.
+   *
+   * "Se dice que el motor arranco" y "el motor ya sabe que voces tiene" son dos momentos
+   * distintos, y entre uno y otro pasan decimas de segundo. Preguntando en ese hueco,
+   * setLanguage contesta que no hay espanol aunque lo haya — y como el idioma se ponia UNA
+   * sola vez, al arrancar el servicio, ese "no" se quedaba puesto para siempre: la voz
+   * hablaba a un motor sin idioma util y no salia sonido. Un yapeo real, en silencio.
+   *
+   * Es exactamente el sintoma que reporto: el yapeo entro, no sono nada, y al probar la voz a
+   * mano la primera vez fallo y la segunda funciono. La segunda funcionaba porque el motor ya
+   * estaba caliente.
+   *
+   * Se pregunta varias veces durante ~1,5 s antes de darlo por perdido.
    */
   fun ponerEspanol(m: TextToSpeech): Boolean {
+    repeat(INTENTOS_DE_IDIOMA) { intento ->
+      if (intentarEspanol(m)) return true
+      // No en el ultimo: esperar despues del ultimo intento no sirve de nada.
+      if (intento < INTENTOS_DE_IDIOMA - 1) {
+        try {
+          Thread.sleep(300)
+        } catch (e: InterruptedException) {
+          Thread.currentThread().interrupt()
+          return false
+        }
+      }
+    }
+    return false
+  }
+
+  /** Una pasada por los tres idiomas, sin esperar. */
+  private fun intentarEspanol(m: TextToSpeech): Boolean {
     for (idioma in listOf(Locale("es", "PE"), Locale("es", "ES"), Locale("es"))) {
       val resultado =
         try {

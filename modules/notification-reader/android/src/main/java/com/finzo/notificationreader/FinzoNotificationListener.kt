@@ -52,6 +52,16 @@ class FinzoNotificationListener : NotificationListenerService() {
   private val mano = Handler(hiloVoz.looper)
   private var motor: TextToSpeech? = null
   private var vozLista = false
+
+  /**
+   * ¿El motor tiene un espanol utilizable puesto?
+   *
+   * Aparte de `vozLista` a proposito. El motor puede haber arrancado bien —vozLista— y no
+   * tener idioma, y en ese caso hablar no suena. Antes esas dos cosas iban juntas: se
+   * apuntaba "sin-espanol" y se seguia adelante como si nada, asi que la voz le hablaba a un
+   * motor que no podia decir nada. Ver el reintento en vaciarCola.
+   */
+  private var idiomaListo = false
   private val porDecir = ArrayDeque<String>()
 
   // Android avisa por aquí cuando de verdad engancha el servicio. Dar el
@@ -381,9 +391,8 @@ class FinzoNotificationListener : NotificationListenerService() {
           //
           // Si no hay espanol de ninguna clase se deja anotado en vez de callar: asi la
           // pantalla puede decir que falta instalar la voz.
-          if (!ProbadorDeVoz.ponerEspanol(motor ?: return@post)) {
-            anotarVoz("sin-espanol")
-          }
+          idiomaListo = ProbadorDeVoz.ponerEspanol(motor ?: return@post)
+          if (!idiomaListo) anotarVoz("sin-espanol")
           vozLista = true
           vaciarCola()
         } else {
@@ -405,11 +414,47 @@ class FinzoNotificationListener : NotificationListenerService() {
    */
   private fun vaciarCola() {
     val m = motor ?: return
+
+    // SI AL ARRANCAR NO HABIA ESPANOL, SE VUELVE A INTENTAR AHORA (11/08/2026).
+    //
+    // El idioma se ponia UNA sola vez, al encender el motor — que es cuando el motor esta mas
+    // frio y peor contesta. Un "no hay espanol" en ese instante se quedaba puesto para
+    // siempre, porque este motor no se suelta nunca: la voz seguia hablandole a un motor sin
+    // idioma util, y no salia sonido. Un yapeo real, en silencio, con todo lo demas en verde.
+    //
+    // Aqui el motor lleva rato despierto y contesta bien. Es el momento correcto para
+    // preguntar otra vez.
+    if (!idiomaListo) {
+      idiomaListo = ProbadorDeVoz.ponerEspanol(m)
+      if (!idiomaListo) anotarVoz("sin-espanol")
+    }
+
     val params = Bundle().apply {
       putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_NOTIFICATION)
     }
     while (porDecir.isNotEmpty()) {
-      m.speak(porDecir.removeFirst(), TextToSpeech.QUEUE_ADD, params, "finzo-" + System.nanoTime())
+      val frase = porDecir.removeFirst()
+      val resultado =
+        try {
+          m.speak(frase, TextToSpeech.QUEUE_ADD, params, "finzo-" + System.nanoTime())
+        } catch (e: Throwable) {
+          TextToSpeech.ERROR
+        }
+
+      // SE MIRA SI EL MOTOR ACEPTO LA FRASE, que hasta hoy no se miraba.
+      //
+      // El registro decia "hablo" en cuanto se mandaba el texto, hubiera sonado o no. Asi que
+      // la pantalla de diagnostico —la que existe justo para esto— afirmaba que si habia
+      // hablado mientras el celular estaba mudo. Un diagnostico que miente es peor que no
+      // tener ninguno: manda a buscar el fallo donde no esta.
+      if (resultado != TextToSpeech.SUCCESS) {
+        anotarVoz("no-sono")
+        // Y se tira el motor. El siguiente aviso enciende uno nuevo, y con el motor nuevo se
+        // vuelve a pedir el idioma desde cero. Sin esto, un motor que se estropeo a mitad de
+        // la tarde deja la voz muda hasta reiniciar el celular.
+        soltarVoz()
+        return
+      }
     }
   }
 
@@ -422,6 +467,7 @@ class FinzoNotificationListener : NotificationListenerService() {
     }
     motor = null
     vozLista = false
+    idiomaListo = false
     porDecir.clear()
   }
 
