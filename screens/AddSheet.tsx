@@ -426,8 +426,16 @@ export default function AddSheet({
               </View>
               <View className="flex-1">
                 <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("detail.method")}</Text>
+                {/* SE CIERRA EL TECLADO ANTES DE ABRIR LA LISTA (10/08/2026).
+                    Con el teclado arriba —y suele estarlo, porque el monto se escribe justo
+                    antes— la lista de métodos quedaba partida por la mitad: los últimos, Yape y
+                    Plin, caían detrás de las teclas y no había forma de llegar a ellos.
+                    Elegir el método no necesita teclado, así que se quita. */}
                 <TouchableOpacity
-                  onPress={() => setShowMethod(true)}
+                  onPress={() => {
+                    Keyboard.dismiss();
+                    setShowMethod(true);
+                  }}
                   className="flex-row items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-3"
                   style={{ height: FIELD_HEIGHT }}
                 >

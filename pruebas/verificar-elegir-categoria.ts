@@ -401,5 +401,22 @@ console.log("\n--- LOS TEXTOS, EN LOS TRES IDIOMAS ---");
   }
 }
 
+console.log("\n--- LA LISTA DE METODOS DE PAGO NO PUEDE QUEDAR DEBAJO DEL TECLADO ---");
+{
+  // REPORTADO CON LA PANTALLA EN LA MANO (10/08/2026): "el Plin choca con el teclado".
+  //
+  // El monto se escribe justo antes de elegir el metodo, asi que el teclado casi siempre esta
+  // arriba. La lista se abre centrada en la pantalla ENTERA —y esta bien asi, va fuera del
+  // scroll a proposito—, pero las teclas se dibujan encima y tapaban los dos ultimos: Yape y
+  // Plin. No es que estuvieran mal colocados: es que no se llegaba a ellos de ninguna forma.
+  //
+  // Elegir el metodo no necesita teclado. Se cierra al abrir la lista.
+  const abrir = /onPress=\{\(\) => \{\s*Keyboard\.dismiss\(\);\s*setShowMethod\(true\);/.test(add);
+  ok(abrir, "abrir los metodos de pago cierra el teclado primero");
+  // Y la lista sigue FUERA del scroll. Si vuelve dentro, Android la recorta y solo se ven
+  // cuatro de los seis — que es un fallo distinto, ya arreglado, con el mismo sintoma.
+  ok(/showMethod && \(\s*<View className="absolute inset-0/.test(add), "y sigue dibujandose encima de todo, no dentro de la lista");
+}
+
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);
