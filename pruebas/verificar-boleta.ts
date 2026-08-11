@@ -315,6 +315,29 @@ console.log("\n--- EL TOTAL ESCRITO CON LETRAS: LA SEÑAL QUE NO SE ROMPE ---");
   // dos por accidente.
   ok(numeroEnLetras("hola") === null, "una palabra que no es un numero no vale nada");
 
+  // LAS DECENAS PEGADAS, QUE ES COMO LAS IMPRIMEN AQUI (10/08/2026)
+  //
+  // Escaneo un vale del GRIFO JC de 188.41 y la app le registro 100.41. La linea decia
+  // "CIENTO OCHENTIOCHO CON 41/100": "ciento" estaba en la tabla, "ochentiocho" no, y como
+  // entonces se paraba y devolvia lo leido hasta ahi, se quedo con los cien. Con confianza
+  // alta, ademas: ni siquiera salio el aviso amarillo. Es el peor fallo que ha tenido el
+  // escaner, porque un numero a medias no se distingue de uno bueno.
+  ok(numeroEnLetras("ciento ochentiocho") === 188, `ciento ochentiocho son 188 (${numeroEnLetras("ciento ochentiocho")})`);
+  ok(numeroEnLetras("treintiuno") === 31, `treintiuno son 31 (${numeroEnLetras("treintiuno")})`);
+  ok(numeroEnLetras("cuarentidos") === 42, `cuarentidos son 42 (${numeroEnLetras("cuarentidos")})`);
+  ok(numeroEnLetras("noventinueve") === 99, `noventinueve son 99 (${numeroEnLetras("noventinueve")})`);
+  // Y la forma larga tiene que seguir valiendo lo mismo.
+  ok(numeroEnLetras("ochenta y ocho") === 88, "la forma larga sigue igual");
+
+  // ANTES DE DEVOLVER MEDIO NUMERO, MEJOR NO DEVOLVER NADA
+  //
+  // Si el lector se come una palabra, la lectura entera se anula y el escaner se cae al otro
+  // camino —la linea del TOTAL—, que es donde tiene que caerse. Devolver la mitad de la cifra
+  // era cobrar un numero inventado sin avisar.
+  ok(totalEnLetras(["SON: CIENTO XKQZ CON 41/100 SOLES"]) === null, "una palabra ilegible anula la lectura entera");
+  // Pero la moneda escrita en medio no estorba: no es un numero, pero tampoco es basura.
+  ok(totalEnLetras(["SON CIENTO OCHENTIOCHO SOLES CON 41/100"]) === 188.41, `la moneda en medio no estorba (${totalEnLetras(["SON CIENTO OCHENTIOCHO SOLES CON 41/100"])})`);
+
   // LAS DOS LINEAS DE SUS BOLETAS, TAL CUAL.
   const botica = totalEnLetras(["SON:    VEINTISEIS CON 00/100 SOLES"]);
   ok(botica === 26, `la de la botica: 26.00 (${botica})`);
@@ -361,6 +384,44 @@ console.log("\n--- EL TOTAL ESCRITO CON LETRAS: LA SEÑAL QUE NO SE ROMPE ---");
     AHORA
   );
   ok(boticaEntera.total === 26, `la de la botica entera (${boticaEntera.total})`);
+
+  // EL VALE DEL GRIFO ENTERO, QUE ES DE DONDE SALIO TODO ESTO (10/08/2026)
+  //
+  // Un vale de combustible: la cantidad en galones lleva TRES decimales (9.195 x 20.490 =
+  // 188.410), asi que hay tres numeros parecidos al total rondando. Antes devolvia 100.41.
+  const valeGrifo = parseReceipt(
+    [
+      "H & P INGENIERIA LIQUIDA S.A.C.",
+      "GRIFO JC",
+      "RUC: 20538333736 - Telf: 777-0636",
+      "*** VALE DE CREDITO ***",
+      "V001-01878865",
+      "Fecha/Hora: 17/03/2026        20:13:14",
+      "Descripcion----Cant.----P.U.--Pre-Tot",
+      "10005  UND  9.195x   20.490",
+      "DIESEL B5 S50 UV GAL       188.410",
+      "**** TOTAL   S/.        188.41",
+      "Son: CIENTO OCHENTIOCHO CON 41/100 SOLES",
+    ].join("\n"),
+    AHORA
+  );
+  ok(valeGrifo.total === 188.41, `el vale del grifo: 188.41 (${valeGrifo.total})`);
+  ok(valeGrifo.total !== 100.41, "y no la mitad del numero escrito en letras");
+  ok(valeGrifo.date === "2026-03-17", `la fecha del vale (${valeGrifo.date})`);
+
+  // Y AUNQUE EL LECTOR SE COMA EL RENGLON DE LAS LETRAS, la linea del TOTAL lo sostiene.
+  // ESTA PASABA ANTES TAMBIEN: la dejo escrita porque el arreglo de hoy anula la lectura en
+  // letras cuando algo no cuadra, y eso solo es seguro si el otro camino aguanta.
+  const valeSinLetras = parseReceipt(
+    [
+      "GRIFO JC",
+      "10005  UND  9.195x   20.490",
+      "DIESEL B5 S50 UV GAL       188.410",
+      "**** TOTAL   S/.        188.41",
+    ].join("\n"),
+    AHORA
+  );
+  ok(valeSinLetras.total === 188.41, `sin las letras, el TOTAL aguanta (${valeSinLetras.total})`);
 }
 
 console.log("\n--- UNA BOLETA DE FARMACIA CON EL ROTULO PARTIDO (Mifarma) ---");

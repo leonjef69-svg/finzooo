@@ -38,6 +38,29 @@ const PALABRAS: Record<string, number> = {
   ochocientos: 800, ochocientas: 800, novecientos: 900, novecientas: 900,
 };
 
+// LAS DECENAS PEGADAS: "OCHENTIOCHO", NO "OCHENTA Y OCHO"
+//
+// Esta forma es la normal en los comprobantes peruanos —la imprimen así los grifos, las
+// boticas y media SUNAT— y costó una lectura mal cobrada: un vale de grifo de 188,41 se
+// registró como 100,41, porque "ciento" sí estaba en la tabla y "ochentiocho" no.
+//
+// Se generan en vez de escribirse a mano: son sesenta y tres palabras y a mano se olvida una.
+const PEGADAS: Record<string, number> = { treinti: 30, cuarenti: 40, cincuenti: 50, sesenti: 60, setenti: 70, ochenti: 80, noventi: 90 };
+const UNIDADES_PEGADAS: Record<string, number> = { un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5, seis: 6, siete: 7, ocho: 8, nueve: 9 };
+for (const [decena, valorDecena] of Object.entries(PEGADAS)) {
+  for (const [unidad, valorUnidad] of Object.entries(UNIDADES_PEGADAS)) {
+    PALABRAS[decena + unidad] = valorDecena + valorUnidad;
+  }
+}
+
+/**
+ * Palabras que pueden aparecer entre los números sin ser un número: la moneda y el pegamento.
+ *
+ * Hacen falta porque ahora una palabra desconocida ANULA la lectura entera (ver abajo), y
+ * "SON CIENTO OCHENTIOCHO SOLES CON 41/100" tiene que seguir leyéndose.
+ */
+const NO_ESTORBAN = /^(y|con|de|del|la|los|el|soles|sol|nuevos|dolares|dolar|pesos|peso|bolivianos|guaranies|colones|quetzales|centimos|centavos|moneda|nacional|americanos)$/;
+
 /**
  * "ciento veinte" → 120. Devuelve null si no reconoce nada.
  *
@@ -45,17 +68,23 @@ const PALABRAS: Record<string, number> = {
  * 2.500 y "mil" a secas son 1.000. La "y" de "treinta y cinco" se ignora, que es lo que es:
  * un pegamento entre dos números.
  *
- * SI APARECE UNA PALABRA QUE NO ES UN NÚMERO, SE PARA. Es lo que impide que "SON DOS CAFES"
- * acabe valiendo dos: en cuanto deja de haber números, lo que sigue ya no es la cantidad.
+ * SI APARECE UNA PALABRA QUE NO ES UN NÚMERO NI DE LAS DE PEGAR, NO SE DEVUELVE NADA.
+ *
+ * Antes se paraba y se devolvía lo leído hasta ahí, y eso resultó peor que no leer: un vale de
+ * grifo de 188,41 —"CIENTO OCHENTIOCHO CON 41/100"— se registró como 100,41, porque se quedó
+ * con el "ciento" y tiró el resto. Y sin avisar, porque una cifra a medias parece una cifra
+ * buena. Anulando la lectura entera, el escáner se cae al otro camino —la línea del TOTAL— en
+ * vez de cobrar un número inventado.
  */
 export function numeroEnLetras(texto: string): number | null {
-  const palabras = texto.toLowerCase().split(/[\s,]+/).filter(Boolean);
+  // Se parte por todo lo que no sea letra: así "SON:" o "OCHENTIOCHO," llegan limpios.
+  const palabras = texto.toLowerCase().split(/[^a-zñ]+/).filter(Boolean);
   let total = 0;
   let parcial = 0;
   let vistoAlguno = false;
 
   for (const palabra of palabras) {
-    if (palabra === "y") continue;
+    if (NO_ESTORBAN.test(palabra)) continue;
     if (palabra === "mil" || palabra === "miles") {
       // "mil" a secas vale mil; "dos mil" multiplica lo que se llevaba.
       parcial = (parcial === 0 ? 1 : parcial) * 1000;
@@ -65,7 +94,7 @@ export function numeroEnLetras(texto: string): number | null {
       continue;
     }
     const valor = PALABRAS[palabra];
-    if (valor === undefined) break;
+    if (valor === undefined) return null;
     parcial += valor;
     vistoAlguno = true;
   }
