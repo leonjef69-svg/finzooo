@@ -271,7 +271,20 @@ function valoresDe(line: string, conCentimos = true, enLineaDeTotal = false): nu
 function scoreAsTotal(softened: string): number {
   let score = 0;
   if (/\btotal\b/.test(softened)) score += 3;
-  if (/\ba pagar\b|\bimporte\b|\bmonto\b/.test(softened)) score += 2;
+  /**
+   * "PAGAR" a secas, no solo "A PAGAR".
+   *
+   * En la boleta de Mifarma el rótulo viene partido en dos renglones —"TOTAL, A" arriba y
+   * "PAGAR: S/ 58.80" abajo—, que es como el lector devuelve un texto centrado a dos columnas.
+   * La de arriba se queda sin número y la de abajo no puntuaba, porque se exigía la frase
+   * entera "a pagar". Esa boleta se salvaba solo porque repite el total al final; una que no lo
+   * repitiera se habría quedado sin monto.
+   *
+   * Ampliarlo es seguro porque lo que descarta ya está resuelto más abajo: "pagar con tarjeta"
+   * o "forma de pago" caen por la línea de los métodos de pago, que resta más de lo que esto
+   * suma.
+   */
+  if (/\bpagar\b|\bimporte\b|\bmonto\b/.test(softened)) score += 2;
 
   // Lo que NO es el total, aunque lleve la palabra al lado
   if (/\bsub\s?total\b/.test(softened)) score -= 6;

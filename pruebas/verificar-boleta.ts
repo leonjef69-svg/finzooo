@@ -369,9 +369,10 @@ console.log("\n--- UNA BOLETA DE FARMACIA CON EL ROTULO PARTIDO (Mifarma) ---");
   // "TOTAL A PAGAR" viene partido en DOS lineas y con una coma en medio —"TOTAL, A" y
   // "PAGAR: S/ 58.80"—, que es como el lector devuelve un texto centrado a dos columnas.
   //
-  // El atajo de "el numero esta en la linea siguiente" NO sirve aqui, porque la linea de abajo
-  // no es el numero a secas: lleva la palabra PAGAR delante. Menos mal que esta boleta repite
-  // el total al final, y por ahi si se pilla.
+  // El atajo de "el numero esta en la linea siguiente" no sirve aqui, porque la linea de abajo
+  // no es el numero a secas: lleva PAGAR delante. Lo que la salva es que "pagar" PUNTUA por si
+  // sola desde el 09/08/2026 — antes se exigia la frase entera "a pagar" y esta boleta solo se
+  // salvaba de rebote, porque repite el total al final.
   const mifarma = parseReceipt(
     [
       "Mifarma",
@@ -440,6 +441,33 @@ console.log("\n--- UNA BOLETA DE FARMACIA CON EL ROTULO PARTIDO (Mifarma) ---");
   // Y EL RUC SE SIGUE LEYENDO de esa misma linea: quitarlo para buscar el nombre no puede
   // hacer que se pierda el dato.
   ok(sinLogo.docNumber === "B123-00039115", "y el numero de boleta sigue saliendo");
+
+  // EL ROTULO PARTIDO, AHORA SIN LA RED DE ABAJO.
+  //
+  // Esta boleta se salvaba porque repite el total al final. Una que NO lo repitiera se quedaba
+  // sin monto: "TOTAL, A" se queda sin numero y "PAGAR: S/ 58.80" no puntuaba, porque se exigia
+  // la frase entera "a pagar".
+  const soloPartido = parseReceipt(
+    [
+      "MI FARMA S.A.C -RUC 205120090",
+      "GINGISONA B  25.00",
+      "                    TOTAL, A",
+      "PAGAR: S/     58.80",
+      "                    OP. GRAVADAS:",
+      "S/        49.83",
+    ].join("\n"),
+    AHORA
+  );
+  ok(soloPartido.total === 58.8, `con el rotulo partido y sin repetir el total (${soloPartido.total})`);
+  ok(soloPartido.confidence !== "low", `y sin adivinar (${soloPartido.confidence})`);
+
+  // Y "PAGAR" NO SE CONFUNDE CON LA FORMA DE PAGO: esas lineas restan mas de lo que suma la
+  // palabra, asi que ampliarlo no abrio ninguna puerta.
+  const conTarjeta = parseReceipt(
+    ["TIENDA", "PAGAR CON TARJETA VISA 999.00", "TOTAL 45.00"].join("\n"),
+    AHORA
+  );
+  ok(conTarjeta.total === 45, `"pagar con tarjeta" no es el total (${conTarjeta.total})`);
 }
 
 console.log("\n--- LAS BOLETAS DE LOS OTROS PAISES QUE LA APP OFRECE ---");
