@@ -17,7 +17,18 @@ export default function ChooseTransactionTypeRoute() {
   return (
     <AddChooser
       onClose={safeBack}
-      onPick={(type) => router.push(`/transaction/new?type=${type}`)}
+      // EN EL LUGAR DE ESTE PANEL, NO ENCIMA (10/08/2026).
+      //
+      // Antes se apilaba (`push`), así que al guardar había que deshacer DOS pantallas de una
+      // vez —esta y la de "Nuevo movimiento"— para caer en Inicio. Android no sabe animar eso:
+      // las quitaba de golpe, y el cambio a Inicio se sentía brusco, como un corte.
+      //
+      // Poniéndola en su lugar solo queda una pantalla que cerrar, y la anima el sistema: la
+      // hoja se baja y aparece Inicio. Además, "volver" ya cae en Inicio por sí solo, que es lo
+      // que se quería desde el principio y antes había que forzar con `dismissTo`.
+      //
+      // Es lo mismo que ya hacían la voz y el escáner, aquí debajo. Esta era la rara.
+      onPick={(type) => router.replace(`/transaction/new?type=${type}`)}
       onVoice={() => router.replace("/voice")}
       onScan={() => router.replace("/scan-receipt")}
     />

@@ -1,7 +1,7 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import AddSheet from "@/screens/AddSheet";
 import { useAppData } from "@/contexts/AppDataContext";
-import { useRedirectIfOrphaned } from "@/utils/nav";
+import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
 
 export default function NewTransactionRoute() {
   const { type } = useLocalSearchParams<{ type?: string }>();
@@ -9,17 +9,21 @@ export default function NewTransactionRoute() {
   const blocked = useRedirectIfOrphaned();
   if (blocked) return null;
 
-  // Se llega aquí empujado (push) encima de transaction/choose, no en su
-  // lugar (ver ese archivo) — así que "volver" siempre debe saltar directo
-  // a Inicio, nunca de vuelta al panel de elegir tipo.
+  // Se llega aquí EN EL LUGAR del panel de elegir tipo, no encima (ver ese archivo), así que
+  // detrás está Inicio directamente: cerrar es cerrar una sola hoja, y la baja el sistema con
+  // su animación.
+  //
+  // Antes esto era `dismissTo("/(tabs)")`, que deshacía dos pantallas a la vez para saltarse
+  // el panel. Funcionaba, pero Android no anima eso: quitaba las dos de golpe y el cambio a
+  // Inicio se sentía como un corte. Con una sola pantalla que cerrar, `safeBack` basta.
   return (
     <AddSheet
       initialType={type === "income" ? "income" : "expense"}
       currentMonth={month}
-      onClose={() => router.dismissTo("/(tabs)")}
+      onClose={safeBack}
       onSave={(t) => {
         addOrUpdateTransaction(t);
-        router.dismissTo("/(tabs)");
+        safeBack();
       }}
     />
   );

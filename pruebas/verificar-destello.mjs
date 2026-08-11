@@ -64,5 +64,22 @@ console.log("\n--- Y LO QUE YA ESTABA, QUE NO SE PUEDE PERDER ---");
   );
 }
 
+console.log("\n--- Y QUE EL CAMBIO A INICIO NO SE SIENTA COMO UN CORTE (10/08/2026) ---");
+{
+  // Quitado el destello, quedaba lo otro que dijo: "se siente muy brusco al pasar de la
+  // pantalla de gasto a Inicio".
+  //
+  // El panel de elegir tipo se APILABA debajo de "Nuevo movimiento", asi que al guardar habia
+  // que deshacer DOS pantallas de una vez (dismissTo) para caer en Inicio. Android no sabe
+  // animar eso: las quita de golpe. Poniendo el panel EN SU LUGAR en vez de encima, solo queda
+  // una hoja que cerrar y la baja el sistema con su animacion.
+  const elegir = sinComentarios(fs.readFileSync(path.join(RAIZ, "app/transaction/choose.tsx"), "utf8"));
+  const nuevo = sinComentarios(fs.readFileSync(path.join(RAIZ, "app/transaction/new.tsx"), "utf8"));
+
+  ok(/router\.replace\(`\/transaction\/new/.test(elegir), "el panel se cambia por la hoja, no se apila debajo");
+  ok(!/router\.push\(/.test(elegir), "y no queda ningun push en el panel");
+  ok(!/dismissTo/.test(nuevo), "guardar cierra UNA pantalla, sin deshacer dos de golpe");
+}
+
 console.log(fallos === 0 ? "\nTodo bien: ninguna capa se ve blanca" : `\n${fallos} fallas`);
 process.exit(fallos ? 1 : 0);
