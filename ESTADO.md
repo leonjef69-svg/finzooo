@@ -2882,13 +2882,17 @@ cero" ya existe para cortarlo a mano cuando haga falta.
 Más de la mitad es texto que sirve una vez y estorba siempre. Se propuso el
 02/08/2026, con las capturas delante:
 
-- El paso 1, ya concedido, encogido a una línea con su ✓
-- "Avisos vistos: 13.933", el nombre del paquete y "la voz en el último
-  aviso" detrás de un toque: es diagnóstico, no información de uso diario
-- Los textos de los dos interruptores de la voz, a una línea
+- El paso 1, ya concedido, encogido a una línea con su ✓ — **sin hacer.** Muestra
+  el ✓, pero sigue con su título y su línea de abajo.
+- ~~"Avisos vistos: 13.933", el nombre del paquete y "la voz en el último aviso"
+  detrás de un toque~~ **HECHO** — es el bloque `verDetalles` de la pantalla, que
+  era la mitad del bulto.
+- Los textos de los dos interruptores de la voz, a una línea — **sin hacer.**
 
-Quedaría en la mitad de largo sin perder nada. El párrafo de arriba y el de
-privacidad ya se acortaron.
+El párrafo de arriba y el de privacidad ya se acortaron. **Revisado el
+10/08/2026: lo gordo ya está y lo que queda son dos recortes cosméticos.** No
+vale la pena tocar una pantalla que funciona por eso; si vuelve a quejarse de
+que es larga, aquí está lo que falta.
 
 **Y solo Yape.** Decisión del 02/08/2026: fuera Plin y los catorce bancos.
 Ninguno se probó nunca con un movimiento real y el aviso de clave de
@@ -2896,14 +2900,19 @@ Scotiabank se colaba en la pantalla. Para volver a meter uno hace falta un
 aviso REAL suyo — se agrega en `MONEY_APP_HINTS` (Kotlin) y `APPS_ACEPTADAS`
 (`utils/notificationParser.ts`), que una prueba obliga a mantener iguales.
 
-**Pendiente de respuesta del usuario:** el registro de diagnóstico guarda el
-TEXTO de los avisos descartados, y entre ellos van los de clave ("Tu código
-de verificación es 4821"). Queda escrito en el celular (cifrado, local, los
-últimos 40) y a la vista de cualquiera que agarre el celular desbloqueado.
+~~**Pendiente de respuesta del usuario:** el registro de diagnóstico guarda el
+TEXTO de los avisos descartados, y entre ellos van los de clave.~~ **YA ESTABA
+HECHO.** `esAvisoDeSeguridad` (en `utils/notificationParser.ts`) los detecta y
+`utils/autoCapture.ts` guarda la entrada con el texto vacío: el aviso sigue
+apareciendo en la pantalla de diagnóstico —hace falta, por si un yapeo dejara de
+entrar por confundirse con uno de estos— pero sin la frase. Vale para los dos
+caminos, con la app abierta y cerrada, porque los dos pasan por
+`processCaptured`. Lo vigila `pruebas/verificar-claves-ocultas.ts`.
 
-Propuesto el 02/08/2026: seguir anotando que llegó un aviso de seguridad,
-pero sin guardar su texto. Para diagnosticar un yapeo que no entra, el texto
-de un código no sirve de nada. Es solo JavaScript.
+**Este apunte se quedó aquí como pendiente después de arreglarse, y el
+10/08/2026 se le ofreció al usuario como "lo primero que yo haría".** Se
+descubrió al ir a hacerlo. La lección: al cerrar algo, tacharlo AQUÍ en el mismo
+momento — una lista de pendientes que miente cuesta una recomendación equivocada.
 
 Sin probar de verdad: **Plin y los bancos**. Las listas de palabras están
 escritas según cómo suelen redactar sus avisos, pero solo se ha comprobado
