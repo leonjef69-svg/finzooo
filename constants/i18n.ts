@@ -280,7 +280,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "goalForm.createdLabel": "Fecha de creación: {date} (automática)",
 
     "goalPicker.title": "Elige una meta",
-    "goalPicker.subtitle": "Vas a agregar {amount} de tu ahorro del mes",
+    "goalPicker.subtitle": "Tienes {amount} libres este mes. Luego eliges cuánto pasar",
 
     "moveMoney.addTitle": "Agregar dinero",
     "moveMoney.withdrawTitle": "Retirar dinero",
@@ -1371,7 +1371,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "goalForm.createdLabel": "Created on: {date} (automatic)",
 
     "goalPicker.title": "Choose a goal",
-    "goalPicker.subtitle": "You're about to add {amount} from this month's savings",
+    "goalPicker.subtitle": "You have {amount} free this month. You'll choose how much next",
 
     "moveMoney.addTitle": "Add money",
     "moveMoney.withdrawTitle": "Withdraw money",
@@ -2456,7 +2456,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "goalForm.createdLabel": "Data de criação: {date} (automática)",
 
     "goalPicker.title": "Escolha uma meta",
-    "goalPicker.subtitle": "Você vai adicionar {amount} da sua poupança do mês",
+    "goalPicker.subtitle": "Você tem {amount} livres este mês. Depois você escolhe quanto passar",
 
     "moveMoney.addTitle": "Adicionar dinheiro",
     "moveMoney.withdrawTitle": "Retirar dinheiro",

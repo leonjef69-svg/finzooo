@@ -11,6 +11,8 @@ import {
   faltaParaRespaldar,
 } from "@/utils/ahorro";
 import type { Goal } from "@/types";
+import fs from "fs";
+import path from "path";
 
 let fallos = 0;
 function ok(c: boolean, m: string) { console.log(`  ${c ? "OK   " : "FALLA"} ${m}`); if (!c) fallos++; }
@@ -79,6 +81,26 @@ console.log("\n--- LA META CUMPLIDA: EL FINAL FELIZ ---");
   // Es lo que tiene que sentirse al cumplir una meta: no duele, porque ese
   // dinero ya tenia dueno.
   ok(librePrevio === libreDespues, "cumplir una meta NO cambia lo que se puede gastar");
+}
+
+console.log("\n--- ELEGIR LA META NO MUEVE EL DINERO (10/08/2026) ---");
+{
+  // ESTO SE VIO EN EL CELULAR: en "Pasar S/ 200 a una meta", tocar el nombre de una meta movia
+  // los 200 enteros de golpe, sin preguntar cuanto y sin poder deshacerlo en el mismo gesto.
+  // Elegir A DONDE va el dinero y elegir CUANTO son dos decisiones, y ahi eran un solo toque.
+  //
+  // Se mira el codigo de la pantalla porque esto no es una cuenta: es que dos pasos no se
+  // junten en uno. Los comentarios se quitan antes, que si no la propia explicacion de arriba
+  // haria pasar la prueba.
+  const crudo = fs.readFileSync(path.join(process.cwd(), "app", "savings", "picker.tsx"), "utf8");
+  const codigo = crudo.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+
+  ok(!/addMoneyToGoal/.test(codigo), "elegir la meta ya no aparta el dinero por su cuenta");
+  ok(/savings\/move/.test(codigo), "manda a la hoja del monto, que tiene casilla y tope");
+  // Y CON EL MISMO NUMERO QUE LA TARJETA. La tarjeta decia "Pasar S/ 200" y la hoja "vas a
+  // agregar S/ 100": autoSavings deja fuera el saldo anterior y `libre` no.
+  ok(!/autoSavings/.test(codigo), "no usa autoSavings, que decia un numero distinto");
+  ok(/\blibre\b/.test(codigo), "usa `libre`, el mismo que enseña la tarjeta");
 }
 
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
