@@ -18,6 +18,11 @@ export default function TabsLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
+        // El fondo de la pestaña, por debajo de lo que pinta cada pantalla. Sin esto es el
+        // blanco de fábrica de React Navigation, y se veía como un destello al volver aquí
+        // desde "Nuevo movimiento" — el instante entre que la hoja se cierra e Inicio pinta.
+        // Ver la explicación entera en app/_layout.
+        sceneStyle: { backgroundColor: isDark ? "#0f172a" : "#ffffff" },
         tabBarActiveTintColor: "#059669",
         tabBarInactiveTintColor: isDark ? "#94a3b8" : "#475569",
         tabBarStyle: {

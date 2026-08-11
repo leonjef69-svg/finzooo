@@ -1,7 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { AppState, View } from "react-native";
+import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Stack, router, useNavigationContainerRef, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import * as SystemUI from "expo-system-ui";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 import "react-native-reanimated";
@@ -446,11 +448,49 @@ export default function RootLayout() {
   // antes de que React pinte su contenido ya se vea del color correcto.
   const screenBg = colorScheme === "dark" ? "#0f172a" : "#ffffff";
 
+  /**
+   * EL DESTELLO BLANCO AL GUARDAR UN MOVIMIENTO (10/08/2026)
+   *
+   * Al guardar, "Nuevo movimiento" se cierra y se cae a Inicio saltándose el panel de elegir
+   * tipo (`dismissTo`, dos pantallas de una vez). En ese salto se veía un fogonazo blanco, y
+   * en modo oscuro canta muchísimo.
+   *
+   * Las pantallas de tipo modal YA tenían su `contentStyle` con el color del tema — eso se
+   * arregló en su día. Lo que faltaba era todo lo de DEBAJO: cuando la modal se va, lo que
+   * queda a la vista un instante no es Inicio (que todavía no ha pintado), sino los fondos
+   * que trae React Navigation de fábrica, y esos son BLANCOS.
+   *
+   * Son cuatro, y hay que taparlos todos porque el destello aparece en cuanto queda uno:
+   *
+   *   1. El tema de React Navigation, que pinta el hueco entre pantallas.
+   *   2. El `contentStyle` por defecto de las pantallas que no declaran el suyo — Inicio,
+   *      entre ellas, que es justo a donde se cae.
+   *   3. El fondo de la ventana de Android, por debajo de todo (ver el efecto de abajo).
+   *   4. El `sceneStyle` de las pestañas, en app/(tabs)/_layout.
+   */
+  const tema = useMemo(() => {
+    const base = colorScheme === "dark" ? DarkTheme : DefaultTheme;
+    // Solo se cambian los dos colores de fondo. Lo demás se deja como viene: el resto de la
+    // app pinta sus colores a mano, y tocar más aquí sería mover cosas sin motivo.
+    return { ...base, colors: { ...base.colors, background: screenBg, card: screenBg } };
+  }, [colorScheme, screenBg]);
+
+  // EL FONDO DE LA VENTANA DE ANDROID, que está por debajo incluso del tema. Lo pone el
+  // arranque —blanco en claro, negro en oscuro— y ahí se queda. Se le da el color del tema
+  // para que, si alguna vez se ve, se vea del color que toca y no como un parpadeo.
+  useEffect(() => {
+    SystemUI.setBackgroundColorAsync(screenBg).catch(() => {
+      // Si el sistema no deja, no pasa nada: es la última de las cuatro capas y las otras
+      // tres ya tapan el destello. No merece romper el arranque de la app.
+    });
+  }, [screenBg]);
+
   return (
     <SafeAreaProvider>
       <AppDataProvider>
-        <View style={{ flex: 1 }}>
-          <Stack screenOptions={{ headerShown: false }}>
+        <View style={{ flex: 1, backgroundColor: screenBg }}>
+          <ThemeProvider value={tema}>
+          <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: screenBg } }}>
             {/* transaction/new y transaction/[id]/edit muestran AddSheet, una
                 pantalla LLENA y opaca. Van con "modal" normal —no
                 "transparentModal"— porque transparentModal en Android está
@@ -552,6 +592,7 @@ export default function RootLayout() {
               options={{ presentation: "transparentModal", contentStyle: { backgroundColor: "transparent" } }}
             />
           </Stack>
+          </ThemeProvider>
           <GlobalOverlays />
           {/* IncomingFileEffect va ANTES que AppLifecycleEffects, y el orden
               importa de verdad: los dos escuchan el aviso de "la app volvió
