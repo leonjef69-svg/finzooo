@@ -37,7 +37,15 @@ Controla tus gastos y los de tu negocio, en soles. Yape se registra solo.
 **73 caracteres** de los 80 que deja Google. Contado, no estimado — pasarse hace que el
 formulario lo rechace al pegarlo, y ahí se recorta a las prisas.
 
-La descripción completa son **1.399** de los 4.000 permitidos.
+La descripción completa son **1.585** de los 4.000 permitidos.
+
+**En qué países funciona el registro automático, dicho en la propia descripción**
+(añadido el 11/08/2026, a petición suya). Sin esa línea, alguien de México lee "cuando
+te yapeen se anota solo", instala, y esa función no le aparece — porque ahí no hay Yape.
+Eso no es una decepción cualquiera: es una estrella y un comentario diciendo que la
+función principal no existe, y con razón, porque el texto se lo prometió. La app misma ya
+la esconde fuera de Perú y Bolivia (ver utils/dondeHayYape); esto es la otra mitad, la de
+no prometerla antes de instalar.
 
 ---
 
@@ -48,6 +56,8 @@ Finzo es una app de presupuesto pensada para Perú: lleva tus gastos de casa y l
 
 LO QUE HACE SOLO
 Enciende el registro automático y cuando te yapeen, el movimiento se anota sin que toques nada. Funciona incluso con la app cerrada.
+
+Esta parte necesita Yape, así que está disponible en Perú y Bolivia. En los demás países Finzo funciona igual de bien: anotas tus movimientos en dos toques, los dictas o los importas del estado de cuenta de tu banco.
 
 TU DINERO ORDENADO
 • Ingresos y gastos con categorías
