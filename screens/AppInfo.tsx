@@ -27,7 +27,7 @@ const APP_VERSION = "1.0.0";
  * La versión de la app (1.0.0) no sirve para esto: no cambia entre entregas.
  * Esta sí.
  */
-const CODE_MARKER = "12ago-10";
+const CODE_MARKER = "12ago-11";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast, verComoGratis, setVerComoGratis, tienePremiumDeVerdad } = useAppData();

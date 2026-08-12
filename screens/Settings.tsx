@@ -195,18 +195,18 @@ export default function Settings({
       <View className="mx-5 mt-3 bg-white dark:bg-slate-900 rounded-2xl p-3.5 border-[1.5px] border-slate-200 dark:border-slate-700">
         <View className="flex-row items-center gap-3.5">
           <TouchableOpacity onPress={pickPhoto} disabled={pickingPhoto} activeOpacity={0.8}>
-            <View className="w-16 h-16 rounded-full bg-emerald-600 items-center justify-center overflow-hidden">
+            <View className="w-[76px] h-[76px] rounded-full bg-emerald-600 items-center justify-center overflow-hidden">
               {userPhoto ? (
-                <Image source={{ uri: userPhoto }} style={{ width: 64, height: 64 }} />
+                <Image source={{ uri: userPhoto }} style={{ width: 76, height: 76 }} />
               ) : (
-                <Text className="text-white text-xl font-extrabold">{userName[0]}</Text>
+                <Text className="text-white text-2xl font-extrabold">{userName[0]}</Text>
               )}
             </View>
-            <View className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-slate-900 items-center justify-center border-2 border-white">
+            <View className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-slate-900 items-center justify-center border-2 border-white">
               {pickingPhoto ? (
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
-                <Camera size={11} color="#ffffff" />
+                <Camera size={13} color="#ffffff" />
               )}
             </View>
           </TouchableOpacity>
@@ -240,7 +240,7 @@ export default function Settings({
             ) : (
               <View className="flex-row items-center gap-1.5">
                 <Text
-                  className="font-bold text-base flex-shrink"
+                  className="font-bold text-lg flex-shrink"
                   numberOfLines={1}
                   style={{ color: primaryTextColor }}
                 >
@@ -249,9 +249,9 @@ export default function Settings({
                 <TouchableOpacity
                   onPress={startEditName}
                   hitSlop={8}
-                  className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+                  className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
                 >
-                  <Pencil size={13} color="#64748b" />
+                  <Pencil size={15} color="#64748b" />
                 </TouchableOpacity>
               </View>
             )}
