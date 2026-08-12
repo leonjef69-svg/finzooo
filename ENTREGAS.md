@@ -24,6 +24,7 @@ demás llega por actualización.
 
 | Fecha | Commit | Qué trae de nuevo (lo nativo) | Archivo |
 |---|---|---|---|
+| 11/08/2026 | `11ago-06` | **El registro automatico entiende las nueve monedas, no solo soles.** Con un aviso de `Bs 50` la voz no hablaba nunca y el movimiento se perdia sin rastro. Incluye lo del 11ago-05 (la voz dice la moneda, y Bolivia). Reemplaza al de abajo, borrado de Descargas | `finzo-11ago-06.apk` |
 | 11/08/2026 | `11ago-05` | **La voz dice la moneda en vez de deletrearla**: "50 soles", no "S 50". En singular cuando toca. Y **Bolivia** entra como país y el boliviano como moneda. Reemplaza al de abajo, que se borró de Descargas para que no hubiera dos | `finzo-11ago-05.apk` |
 | 11/08/2026 | `11ago-02` | **La voz callaba con un yapeo real.** El idioma se pedía UNA vez, al encender el motor —el instante en que peor contesta— y ese "no hay español" se quedaba puesto para siempre. Ahora se reintenta, y se vuelve a pedir justo antes de hablar. Más el blindaje: vigilante del arranque, motor de repuesto sin perder el aviso, "habló" lo pone el propio motor al empezar, cola con tope, y el volumen de avisos anotado | `finzo-11ago-02.apk` |
 | 06/08/2026 | `0f9fbb8` | **El PDF automático ya no se cuelga de verdad**: se colgaba por ESPERAR la medida del documento, que en una ventana sin pantalla no contesta nunca. Se copia lo que hace expo-print. Y el mismo papel que el PDF de a mano (Carta a 72, no A4 a 300) | `finzo-6ago-10.apk` |
