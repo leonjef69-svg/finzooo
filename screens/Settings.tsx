@@ -182,63 +182,88 @@ export default function Settings({
         <ThemeToggleButton />
       </View>
 
-      <View className="mx-5 mt-3 bg-white dark:bg-slate-900 rounded-2xl p-5 border-[1.5px] border-slate-200 dark:border-slate-700 items-center">
-        <TouchableOpacity onPress={pickPhoto} disabled={pickingPhoto} activeOpacity={0.8}>
-          <View className="w-20 h-20 rounded-full bg-emerald-600 items-center justify-center overflow-hidden">
-            {userPhoto ? (
-              <Image source={{ uri: userPhoto }} style={{ width: 80, height: 80 }} />
-            ) : (
-              <Text className="text-white text-2xl font-extrabold">{userName[0]}</Text>
-            )}
-          </View>
-          <View className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-slate-900 items-center justify-center border-2 border-white">
-            {pickingPhoto ? (
-              <ActivityIndicator size="small" color="#ffffff" />
-            ) : (
-              <Camera size={12} color="#ffffff" />
-            )}
-          </View>
-        </TouchableOpacity>
-        {photoError ? (
-          <Text className="text-rose-500 text-xs font-medium mt-2 text-center">{photoError}</Text>
-        ) : null}
+      {/* LA TARJETA DEL PERFIL, EN HORIZONTAL (12/08/2026).
 
-        {editingName ? (
-          <View className="flex-row items-center gap-2 mt-3">
-            <TextInput
-              value={nameInput}
-              onChangeText={setNameInput}
-              placeholder={t("settings.namePlaceholder")}
-              autoFocus
-              className="text-sm font-bold text-center border-b border-emerald-400 py-1 min-w-[120px]"
-              style={{ color: primaryTextColor }}
-            />
-            <TouchableOpacity
-              onPress={saveName}
-              className="w-7 h-7 rounded-full bg-emerald-600 items-center justify-center"
-            >
-              <Check size={14} color="#ffffff" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={() => setEditingName(false)}
-              className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
-            >
-              <X size={14} color="#64748b" />
-            </TouchableOpacity>
+          Reportado con la captura: *"muy grande ese recuadro con la foto pequeña, se ve raro"*.
+          Y era exactamente eso: la foto, el nombre y el correo iban centrados uno debajo de
+          otro, así que la tarjeta medía casi lo mismo que las cinco filas de Ajustes juntas y
+          la mayor parte era aire alrededor de una foto de 80 px.
+
+          Puestos en fila —foto a la izquierda, nombre y correo al lado— la tarjeta baja a la
+          mitad de alto y la foto deja de verse perdida. No se quita nada: siguen estando la
+          cámara para cambiarla, el lápiz para el nombre y los dos avisos de error. */}
+      <View className="mx-5 mt-3 bg-white dark:bg-slate-900 rounded-2xl p-4 border-[1.5px] border-slate-200 dark:border-slate-700">
+        <View className="flex-row items-center gap-3.5">
+          <TouchableOpacity onPress={pickPhoto} disabled={pickingPhoto} activeOpacity={0.8}>
+            <View className="w-16 h-16 rounded-full bg-emerald-600 items-center justify-center overflow-hidden">
+              {userPhoto ? (
+                <Image source={{ uri: userPhoto }} style={{ width: 64, height: 64 }} />
+              ) : (
+                <Text className="text-white text-xl font-extrabold">{userName[0]}</Text>
+              )}
+            </View>
+            <View className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-slate-900 items-center justify-center border-2 border-white">
+              {pickingPhoto ? (
+                <ActivityIndicator size="small" color="#ffffff" />
+              ) : (
+                <Camera size={11} color="#ffffff" />
+              )}
+            </View>
+          </TouchableOpacity>
+
+          {/* min-w-0 NO ES ADORNO: sin él, un nombre o un correo largo empujan la tarjeta hacia
+              fuera de la pantalla en vez de recortarse con puntos suspensivos. */}
+          <View className="flex-1 min-w-0">
+            {editingName ? (
+              <View className="flex-row items-center gap-2">
+                <TextInput
+                  value={nameInput}
+                  onChangeText={setNameInput}
+                  placeholder={t("settings.namePlaceholder")}
+                  autoFocus
+                  className="flex-1 text-sm font-bold border-b border-emerald-400 py-1"
+                  style={{ color: primaryTextColor }}
+                />
+                <TouchableOpacity
+                  onPress={saveName}
+                  className="w-7 h-7 rounded-full bg-emerald-600 items-center justify-center"
+                >
+                  <Check size={14} color="#ffffff" />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setEditingName(false)}
+                  className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+                >
+                  <X size={14} color="#64748b" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <View className="flex-row items-center gap-1.5">
+                <Text
+                  className="font-bold text-sm flex-shrink"
+                  numberOfLines={1}
+                  style={{ color: primaryTextColor }}
+                >
+                  {userName}
+                </Text>
+                <TouchableOpacity
+                  onPress={startEditName}
+                  className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+                >
+                  <Pencil size={11} color="#64748b" />
+                </TouchableOpacity>
+              </View>
+            )}
+            {nameError ? <Text className="text-rose-500 text-xs font-medium mt-1">{nameError}</Text> : null}
+            <Text className="text-xs text-slate-500 dark:text-slate-300 mt-0.5" numberOfLines={1}>
+              {userEmail}
+            </Text>
           </View>
-        ) : (
-          <View className="flex-row items-center gap-1.5 mt-3">
-            <Text className="font-bold text-sm" style={{ color: primaryTextColor }}>{userName}</Text>
-            <TouchableOpacity
-              onPress={startEditName}
-              className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
-            >
-              <Pencil size={11} color="#64748b" />
-            </TouchableOpacity>
-          </View>
-        )}
-        {nameError ? <Text className="text-rose-500 text-xs font-medium mt-1">{nameError}</Text> : null}
-        <Text className="text-xs text-slate-500 dark:text-slate-300 mt-0.5">{userEmail}</Text>
+        </View>
+
+        {photoError ? (
+          <Text className="text-rose-500 text-xs font-medium mt-2">{photoError}</Text>
+        ) : null}
       </View>
 
       <TouchableOpacity onPress={onPremium} className="mx-5 mt-3 rounded-2xl overflow-hidden">
