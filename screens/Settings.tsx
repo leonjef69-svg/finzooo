@@ -215,26 +215,33 @@ export default function Settings({
               fuera de la pantalla en vez de recortarse con puntos suspensivos. */}
           <View className="flex-1 min-w-0">
             {editingName ? (
+              /* AL EDITAR, TODO DEL MISMO TAMAÑO QUE AL MIRAR (12/08/2026).
+                 Lo vio en cuanto toco el lapiz: el nombre pasaba de 18 a 14 y los botones de 32
+                 a 28, asi que la tarjeta se encogia justo al entrar a escribir. Un campo mas
+                 chico que el texto que sustituye se siente como si la app hubiera cambiado de
+                 pantalla sin avisar — y encima es cuando mas falta hace leer bien. */
               <View className="flex-row items-center gap-2">
                 <TextInput
                   value={nameInput}
                   onChangeText={setNameInput}
                   placeholder={t("settings.namePlaceholder")}
                   autoFocus
-                  className="flex-1 text-sm font-bold border-b border-emerald-400 py-1"
+                  className="flex-1 text-lg font-bold border-b border-emerald-400 py-1"
                   style={{ color: primaryTextColor }}
                 />
                 <TouchableOpacity
                   onPress={saveName}
-                  className="w-7 h-7 rounded-full bg-emerald-600 items-center justify-center"
+                  hitSlop={6}
+                  className="w-9 h-9 rounded-full bg-emerald-600 items-center justify-center"
                 >
-                  <Check size={14} color="#ffffff" />
+                  <Check size={17} color="#ffffff" />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={() => setEditingName(false)}
-                  className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+                  hitSlop={6}
+                  className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
                 >
-                  <X size={14} color="#64748b" />
+                  <X size={17} color="#64748b" />
                 </TouchableOpacity>
               </View>
             ) : (
