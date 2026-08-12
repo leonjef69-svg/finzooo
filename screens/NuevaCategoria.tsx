@@ -19,8 +19,10 @@ import {
   View,
   type ViewStyle,
 } from "react-native";
+import Animated from "react-native-reanimated";
 import { useColorScheme } from "nativewind";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useKeyboardAnimatedPadding } from "@/utils/keyboard";
 import * as ImagePicker from "expo-image-picker";
 import { Camera, Check, ChevronLeft, ImageIcon, Star, Trash2, X } from "lucide-react-native";
 import CategoryAvatar from "@/components/CategoryAvatar";
@@ -714,6 +716,17 @@ export default function NuevaCategoria({
     showToast,
   } = useAppData();
   const insets = useSafeAreaInsets();
+  /**
+   * LOS BOTONES DE ABAJO, ENCIMA DEL TECLADO (12/08/2026).
+   *
+   * El mismo hueco que tenía "Presupuestos por categoría", y por el que se arreglaron las dos a
+   * la vez: aquí se escribe el nombre de la categoría, y con el teclado abierto los botones de
+   * guardar y borrar quedaban debajo. Había que cerrar el teclado a mano para llegar a ellos.
+   *
+   * Se usa la MISMA pieza que "Nuevo movimiento", no una copia: el alto del teclado lo entrega
+   * Reanimated en vez de los avisos de Android, que llegan tarde y hacen saltar la pantalla.
+   */
+  const { animatedPaddingStyle } = useKeyboardAnimatedPadding();
 
   // La que se está editando, si es que se está editando alguna.
   const original = editandoId ? categoriasPropias.find((c) => c.id === editandoId) : undefined;
@@ -1255,7 +1268,10 @@ export default function NuevaCategoria({
   const cuantos = editandoId ? movimientosDeCategoria(editandoId) : 0;
 
   return (
-    <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top }}>
+    <Animated.View
+      className="flex-1 bg-white dark:bg-slate-900"
+      style={[{ paddingTop: insets.top }, animatedPaddingStyle]}
+    >
       <View className="px-5 pt-3 pb-2 flex-row items-center gap-2">
         <TouchableOpacity onPress={onBack} className="w-9 h-9 items-center justify-center -ml-2">
           <ChevronLeft size={24} color="#94a3b8" />
@@ -1722,6 +1738,6 @@ export default function NuevaCategoria({
           }}
         />
       )}
-    </View>
+    </Animated.View>
   );
 }

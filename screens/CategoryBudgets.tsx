@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 import IconBadge from "@/components/IconBadge";
@@ -7,6 +8,7 @@ import { gastosDisponibles } from "@/constants/categories";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import { sanitizeAmountInput } from "@/utils/amount";
+import { useKeyboardAnimatedPadding } from "@/utils/keyboard";
 import AvisoSoloLectura from "@/components/AvisoSoloLectura";
 import BackButton from "@/components/BackButton";
 
@@ -36,6 +38,18 @@ export default function CategoryBudgets({
    *
    * Es el fallo de siempre en este proyecto: dos listas que tenían que ser la misma.
    */
+  /**
+   * EL BOTÓN DE GUARDAR, ENCIMA DEL TECLADO (12/08/2026).
+   *
+   * Pedido suyo con la pantalla en la mano. Al tocar una casilla, el teclado tapaba "Guardar
+   * cambios": había que escribir el monto, CERRAR el teclado y recién ahí guardar. Y quien no
+   * sabía eso pensaba que el botón no estaba, o guardaba a medias.
+   *
+   * Es el mismo hueco que ya tenía "Nuevo movimiento" y que se resolvió ahí — por eso se usa la
+   * MISMA pieza y no una copia: el alto del teclado lo entrega Reanimated, sin pasar por los
+   * avisos de Android que llegaban tarde y hacían saltar la pantalla.
+   */
+  const { animatedPaddingStyle } = useKeyboardAnimatedPadding();
   const categorias = gastosDisponibles();
   const [amounts, setAmounts] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
@@ -59,7 +73,10 @@ export default function CategoryBudgets({
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top }}>
+    <Animated.View
+      className="flex-1 bg-white dark:bg-slate-900"
+      style={[{ paddingTop: insets.top }, animatedPaddingStyle]}
+    >
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
         <BackButton onPress={onBack} />
         <Text className="text-base font-bold" style={{ color: primaryTextColor }}>{t("categoryBudgets.title")}</Text>
@@ -144,6 +161,6 @@ export default function CategoryBudgets({
           </TouchableOpacity>
         </View>
       )}
-    </View>
+    </Animated.View>
   );
 }
