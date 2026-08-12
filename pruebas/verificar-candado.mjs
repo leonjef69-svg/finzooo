@@ -140,5 +140,37 @@ console.log("\n--- EL INTERRUPTOR DE PRUEBA SOLO PUEDE QUITAR ---");
   ok(/tienePremiumDeVerdad \|\| verComoGratis/.test(info), "y solo se ofrece a quien tiene Premium de verdad");
 }
 
+console.log("\n--- EL MICROFONO ES PREMIUM, Y SE VE (11/08/2026) ---");
+{
+  // Lo dijo el: "el microfono es una funcion premium". No estaba escrito en ninguna lista —ni
+  // en la de gratis ni en la de Premium— y por eso funcionaba para todo el mundo.
+  //
+  // SE VE, con su etiqueta, como el resto de las de pago: ese mismo dia probamos a esconderlas
+  // y decidio volver atras, porque quien no las ve no sabe que existen y no paga.
+  const ajustes = leer("screens/Settings.tsx");
+  const antesWidget = ajustes.slice(Math.max(0, ajustes.indexOf("Icon={Mic}") - 300), ajustes.indexOf("Icon={Mic}") + 400);
+  ok(/PRO/.test(antesWidget), "la fila del microfono lleva su etiqueta PRO");
+  ok(/isPremium \? addWidgetToHomeScreen\("round"\) : onPremium\(\)/.test(ajustes), "y sin Premium lleva a la venta, no coloca el widget");
+
+  const antesAyuda = ajustes.slice(ajustes.indexOf("Icon={MessageSquare}"), ajustes.indexOf("Icon={MessageSquare}") + 700);
+  ok(/PRO/.test(antesAyuda), "la ayuda del microfono tambien la lleva");
+  // Y ESA SI SE ABRE SIN PREMIUM, a proposito: leer para que sirve no es usarlo, y es de las
+  // pocas paginas que pueden convencer a alguien de pagar.
+  ok(/onPress=\{onVoiceHelp\}/.test(ajustes), "pero se abre igual: leer no es usar");
+
+  // LAS DOS PUERTAS QUE DE VERDAD LO ABREN.
+  const chooser = leer("screens/AddChooser.tsx");
+  ok(/isPremium \? onVoice : \(\) => router\.push\("\/premium"\)/.test(chooser), "el boton del panel de + pide Premium");
+  ok(/\{!isPremium && \(/.test(chooser), "y se marca con PRO cuando no se tiene");
+
+  // LA QUE CASI SE ESCAPA: el widget del escritorio de Android abre /voice SIN pasar por la
+  // app. Quien lo coloco teniendo Premium se quedaria con un microfono Premium gratis para
+  // siempre, y sin forma de enterarse.
+  const voz = leer("app/voice.tsx");
+  ok(/!isPremium/.test(voz), "la pantalla del microfono comprueba Premium por su cuenta");
+  ok(/router\.replace\("\/premium"\)/.test(voz), "y manda a Premium, no a Inicio");
+  ok(/!ready \|\| !hasOnboarded \|\| !isPremium\) return null/.test(voz), "sin dibujarse ni un instante");
+}
+
 console.log(fallos === 0 ? "\nTodo bien: nadie se queda fuera de lo suyo\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

@@ -378,12 +378,20 @@ export default function Settings({
             coloca el círculo, que es el que ocupa lo mismo que un ícono
             normal; el ancho sigue existiendo en la lista de widgets de
             Android para quien lo prefiera. */}
+        {/* EL MICRÓFONO ES PREMIUM (11/08/2026), dicho por él. Se VE —con su etiqueta, como las
+            demás— y el candado aparece al tocar: es la forma que eligió para todas las de pago.
+            Sin Premium lleva a la pantalla de venta en vez de colocar el widget: poner en el
+            escritorio un botón que luego no deja pasar es peor que no ponerlo. */}
         {voiceWidget.isSupported && (
           <Row
             Icon={Mic}
             label={t("widget.rowLabel")}
-            onPress={() => addWidgetToHomeScreen("round")}
-            right={<ChevronRight size={16} color="#cbd5e1" />}
+            onPress={() => (isPremium ? addWidgetToHomeScreen("round") : onPremium())}
+            right={
+              <View className="bg-amber-50 px-2 py-1 rounded-full">
+                <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
+              </View>
+            }
           />
         )}
         {/* QUE SE LE PUEDE DECIR AL MICROFONO.
@@ -394,8 +402,15 @@ export default function Settings({
         <Row
           Icon={MessageSquare}
           label={t("voiceHelp.rowLabel")}
+          // ESTA SE ABRE AUNQUE NO HAYA PREMIUM, a propósito: leer para qué sirve el micrófono
+          // no es usarlo, y es de las pocas páginas que pueden convencer a alguien de pagar.
+          // Lleva la etiqueta para que nadie se lleve la sorpresa al ir a dictar.
           onPress={onVoiceHelp}
-          right={<ChevronRight size={16} color="#cbd5e1" />}
+          right={
+            <View className="bg-amber-50 px-2 py-1 rounded-full">
+              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
+            </View>
+          }
         />
         <Row
           Icon={Lock}

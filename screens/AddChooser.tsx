@@ -2,6 +2,7 @@ import { Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowUpRight, ArrowDownRight, Mic, ScanLine } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
+import { router } from "expo-router";
 import { useAppData } from "@/contexts/AppDataContext";
 
 export default function AddChooser({
@@ -15,7 +16,7 @@ export default function AddChooser({
   onVoice: () => void;
   onScan: () => void;
 }) {
-  const { t } = useAppData();
+  const { t, isPremium } = useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   return (
@@ -59,14 +60,17 @@ export default function AddChooser({
             <Text className="text-xs text-slate-500 dark:text-slate-300">{t("addChooser.addIncomeHint")}</Text>
           </View>
         </TouchableOpacity>
+        {/* EL MICRÓFONO ES PREMIUM (11/08/2026). Se ve, con su etiqueta, y sin Premium lleva a la
+            pantalla de venta: esta es la puerta que de verdad se usa, y dejarla abierta haría
+            que la etiqueta de Ajustes no significara nada. */}
         <TouchableOpacity
-          onPress={onVoice}
+          onPress={isPremium ? onVoice : () => router.push("/premium")}
           className="w-full flex-row items-center gap-4 bg-violet-50 dark:bg-slate-800 rounded-2xl p-4 mb-3"
         >
           <View className="w-11 h-11 rounded-xl bg-violet-500 items-center justify-center">
             <Mic size={20} color="#ffffff" />
           </View>
-          <View>
+          <View className="flex-1">
             <Text
               className="font-bold text-sm"
               style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
@@ -75,6 +79,11 @@ export default function AddChooser({
             </Text>
             <Text className="text-xs text-slate-500 dark:text-slate-300">{t("addChooser.addVoiceHint")}</Text>
           </View>
+          {!isPremium && (
+            <View className="bg-amber-50 px-2 py-1 rounded-full">
+              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
+            </View>
+          )}
         </TouchableOpacity>
         <TouchableOpacity
           onPress={onScan}
