@@ -15,7 +15,7 @@ y Google lo revisa de verdad.
 
 | | |
 |---|---|
-| Nombre en la tienda | **Fino: Gastos e Ingresos** (23 de 30) |
+| Nombre en la tienda | **Fino: Tus Gastos e Ingresos** (27 de 30) |
 | Nombre bajo el icono | **Fino** |
 | Identificador | `com.finzo.app` |
 | Versión | 1.0.0 |
