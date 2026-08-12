@@ -211,15 +211,19 @@ export default function Settings({
             </View>
           </TouchableOpacity>
 
-          {/* min-w-0 NO ES ADORNO: sin él, un nombre o un correo largo empujan la tarjeta hacia
-              fuera de la pantalla en vez de recortarse con puntos suspensivos. */}
+          {/* EL NOMBRE CENTRADO Y EL LÁPIZ A UN LADO (12/08/2026).
+
+              Pedido suyo. Antes el lápiz iba pegado al nombre, dentro de la misma fila, así que
+              el nombre no podía centrarse: quedaba corrido hacia la izquierda por el ancho del
+              botón. Sacando el lápiz al borde de la tarjeta, el centro es el centro de verdad y
+              el botón sigue a la vista sin meterse en medio.
+
+              min-w-0 NO ES ADORNO: sin él, un nombre o un correo largo empujan la tarjeta fuera
+              de la pantalla en vez de recortarse con puntos suspensivos. */}
           <View className="flex-1 min-w-0">
             {editingName ? (
-              /* AL EDITAR, TODO DEL MISMO TAMAÑO QUE AL MIRAR (12/08/2026).
-                 Lo vio en cuanto toco el lapiz: el nombre pasaba de 18 a 14 y los botones de 32
-                 a 28, asi que la tarjeta se encogia justo al entrar a escribir. Un campo mas
-                 chico que el texto que sustituye se siente como si la app hubiera cambiado de
-                 pantalla sin avisar — y encima es cuando mas falta hace leer bien. */
+              /* AL EDITAR, TODO DEL MISMO TAMAÑO QUE AL MIRAR. El nombre pasaba de 18 a 14 y los
+                 botones de 32 a 28, así que la tarjeta se encogía justo al entrar a escribir. */
               <View className="flex-row items-center gap-2">
                 <TextInput
                   value={nameInput}
@@ -245,28 +249,40 @@ export default function Settings({
                 </TouchableOpacity>
               </View>
             ) : (
-              <View className="flex-row items-center gap-1.5">
+              <View className="items-center">
                 <Text
-                  className="font-bold text-lg flex-shrink"
+                  className="font-bold text-lg text-center"
                   numberOfLines={1}
                   style={{ color: primaryTextColor }}
                 >
                   {userName}
                 </Text>
-                <TouchableOpacity
-                  onPress={startEditName}
-                  hitSlop={8}
-                  className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
-                >
-                  <Pencil size={15} color="#64748b" />
-                </TouchableOpacity>
+                {userEmail ? (
+                  <Text
+                    className="text-xs text-slate-500 dark:text-slate-300 mt-0.5 text-center"
+                    numberOfLines={1}
+                  >
+                    {userEmail}
+                  </Text>
+                ) : null}
               </View>
             )}
-            {nameError ? <Text className="text-rose-500 text-xs font-medium mt-1">{nameError}</Text> : null}
-            <Text className="text-xs text-slate-500 dark:text-slate-300 mt-0.5" numberOfLines={1}>
-              {userEmail}
-            </Text>
+            {nameError ? (
+              <Text className="text-rose-500 text-xs font-medium mt-1 text-center">{nameError}</Text>
+            ) : null}
           </View>
+
+          {/* EL LÁPIZ, EN EL BORDE. Fuera de la fila del nombre para que el centrado sea real.
+              Al editar desaparece: sus botones —aceptar y cancelar— ya están dentro. */}
+          {!editingName && (
+            <TouchableOpacity
+              onPress={startEditName}
+              hitSlop={10}
+              className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+            >
+              <Pencil size={15} color="#64748b" />
+            </TouchableOpacity>
+          )}
         </View>
 
         {photoError ? (
