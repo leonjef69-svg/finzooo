@@ -144,7 +144,12 @@ export default function CategoryBudgets({
                   >
                     {t(c.label)}
                   </Text>
-                  <View className="flex-row items-center bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-3 py-2 w-32">
+                  {/* LA CASILLA DEL MONTO (12/08/2026). Pedido suyo: "el monto debe estar en
+                      el centro y no ser tan grande su recuadro".
+                      De 128 a 104 px de ancho: entra "1,500.00" de sobra, que es mucho mas de
+                      lo que nadie le pone de limite a una categoria en un mes. Y el alto NO se
+                      toca: es donde se escribe, y bajarlo lo vuelve dificil de acertar. */}
+                  <View className="flex-row items-center bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-2.5 py-2 w-[104px]">
                     <Text className="text-slate-500 dark:text-slate-300 text-xs font-bold mr-1">
                       {currencySymbolFor(userCurrency)}
                     </Text>
@@ -160,13 +165,15 @@ export default function CategoryBudgets({
                       keyboardType="decimal-pad"
                       placeholder={t("categoryBudgets.noLimit")}
                       placeholderTextColor="#94a3b8"
-                      className="flex-1 text-sm font-bold"
-                      style={{ color: primaryTextColor }}
+                      className="flex-1 text-sm font-bold text-center"
+                      style={{ color: primaryTextColor, padding: 0 }}
                     />
                   </View>
                 </View>
                 {limit > 0 ? (
-                  <View className="mt-2 pl-[44px]">
+                  /* La barra no puede quedar pegada al borde de abajo: sin ese aire parece
+                     que la tarjeta esta cortada. */
+                  <View className="mt-2 mb-1 pl-[44px]">
                     <View className="flex-row items-center justify-between mb-0.5">
                       <Text className={`text-[11px] font-bold ${over ? "text-rose-500" : "text-slate-500 dark:text-slate-300"}`}>
                         {t("categoryBudgets.spentOfLimit", { spent: fmt(spent), limit: fmt(limit) })}
