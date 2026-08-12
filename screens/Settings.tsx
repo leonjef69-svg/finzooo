@@ -192,7 +192,7 @@ export default function Settings({
           Puestos en fila —foto a la izquierda, nombre y correo al lado— la tarjeta baja a la
           mitad de alto y la foto deja de verse perdida. No se quita nada: siguen estando la
           cámara para cambiarla, el lápiz para el nombre y los dos avisos de error. */}
-      <View className="mx-5 mt-3 bg-white dark:bg-slate-900 rounded-2xl p-4 border-[1.5px] border-slate-200 dark:border-slate-700">
+      <View className="mx-5 mt-3 bg-white dark:bg-slate-900 rounded-2xl p-3.5 border-[1.5px] border-slate-200 dark:border-slate-700">
         <View className="flex-row items-center gap-3.5">
           <TouchableOpacity onPress={pickPhoto} disabled={pickingPhoto} activeOpacity={0.8}>
             <View className="w-16 h-16 rounded-full bg-emerald-600 items-center justify-center overflow-hidden">
@@ -240,7 +240,7 @@ export default function Settings({
             ) : (
               <View className="flex-row items-center gap-1.5">
                 <Text
-                  className="font-bold text-sm flex-shrink"
+                  className="font-bold text-base flex-shrink"
                   numberOfLines={1}
                   style={{ color: primaryTextColor }}
                 >
@@ -248,9 +248,10 @@ export default function Settings({
                 </Text>
                 <TouchableOpacity
                   onPress={startEditName}
-                  className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+                  hitSlop={8}
+                  className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
                 >
-                  <Pencil size={11} color="#64748b" />
+                  <Pencil size={13} color="#64748b" />
                 </TouchableOpacity>
               </View>
             )}
