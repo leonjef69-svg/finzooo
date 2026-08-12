@@ -52,6 +52,27 @@ real y adivinar entre tres causas que se veían igual.
 
 ---
 
+## AAB para Play Store
+
+El archivo que se sube a la tienda. NO es un APK: Google lo recibe y arma un APK a medida
+para cada celular. No se puede instalar a mano.
+
+Se compila igual que el APK pero con `bundleRelease` en vez de `assembleRelease`.
+
+| Fecha | Version | Codigo | Archivo |
+|---|---|---|---|
+| 12/08/2026 | 1.0.0 (versionCode 1) | `11ago-11` | `finzo-1.0.0.aab` |
+
+**LA LLAVE DE FIRMA ES IRREEMPLAZABLE.** Vive en `android/app/finzo.jks` y NO esta en el
+repositorio (esta en .gitignore, y hace bien: el repositorio es publico). Sus contraseñas
+estan en `android/gradle.properties`, que tampoco se sube.
+
+Si se pierde esa llave y no se ha activado la firma de Google, la app NO SE PUEDE ACTUALIZAR
+nunca mas: habria que publicar otra ficha desde cero y perder las descargas y las opiniones.
+Hay que guardarla en dos sitios distintos ANTES de subir nada.
+
+---
+
 ## Actualizaciones (solo JavaScript)
 
 La marca de código sale en Ajustes → Acerca de. Es la forma de saber por chat
