@@ -1,10 +1,11 @@
 import { useMemo } from "react";
-import { ScrollView, Text, useWindowDimensions, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
+  Crown,
   PieChart as PieChartIcon,
   Sparkles,
   Wallet,
@@ -31,9 +32,11 @@ import type { Month, Transaction } from "@/types";
 export default function Reports({
   transactions,
   month,
+  onSeePremium,
 }: {
   transactions: Transaction[];
   month: Month;
+  onSeePremium: () => void;
 }) {
   const {
     fmt,
@@ -397,13 +400,7 @@ export default function Reports({
         </>
       )}
 
-      {/* FINZO IA: SIN PREMIUM NO SALE, NI COMO ANUNCIO (11/08/2026).
-
-          Antes, a quien no pagaba le salia en su sitio una tarjeta negra invitando a Premium.
-          El lo señalo en las capturas junto al resto: no quiere que las funciones de pago se
-          vean, tampoco disfrazadas de anuncio. Queda la tarjeta dorada de Ajustes como unica
-          puerta a Premium. */}
-      {isPremium && (
+      {isPremium ? (
         insights.length > 0 && (
           <LinearGradient
             colors={["#0f172a", "#064e3b"]}
@@ -424,6 +421,20 @@ export default function Reports({
             </View>
           </LinearGradient>
         )
+      ) : (
+        <TouchableOpacity
+          onPress={onSeePremium}
+          className="mx-5 mt-4 flex-row items-center gap-3 bg-slate-900 rounded-3xl p-4"
+        >
+          <View className="w-10 h-10 rounded-xl bg-amber-400/20 items-center justify-center">
+            <Sparkles size={18} color="#fcd34d" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-white font-bold text-sm">Finzo IA</Text>
+            <Text className="text-slate-300 text-[11px]">{t("insights.lockedDescription")}</Text>
+          </View>
+          <Crown size={16} color="#fcd34d" />
+        </TouchableOpacity>
       )}
 
       <View
@@ -458,86 +469,75 @@ export default function Reports({
         )}
       </View>
 
-      {/* PRESUPUESTOS POR CATEGORIA: SOLO SI SE PUEDEN PONER, O SI YA HAY ALGUNO (11/08/2026).
-
-          Esta tarjeta se enseñaba SIEMPRE, pagara o no. Y poner limites es Premium, asi que a
-          quien no paga le salia una tarjeta condenada a estar vacia para siempre — ocupando
-          sitio y prometiendo algo que no podia usar. Salio revisando sus capturas al esconder
-          las filas PRO de Ajustes: la funcion estaba escondida en un sitio y a la vista en otro.
-
-          Si ya tiene limites puestos de antes, se sigue viendo: es la misma promesa de siempre
-          —lo guardado no se pierde de vista— y ahi la tarjeta si dice algo. */}
-      {(isPremium || budgetProgress.length > 0) && (
-        <View
-          className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4"
-          style={CARD_SHADOW}
-        >
-          <Text className="text-sm font-bold mb-1" style={{ color: primaryTextColor }}>{t("categoryBudgets.title")}</Text>
-          {budgetProgress.length === 0 ? (
-            /* LA TARJETA SE CONTRADECÍA, y es lo que reportó el usuario el
-               07/08/2026 con una captura: arriba decía "aún no le pusiste límite a
-               ninguna categoría" y justo debajo "13 categorías sin gastos este mes ·
-               € 650.00 sin usar". Las dos cosas a la vez, y las dos imposibles.
-               El motivo: este texto se decidía con las categorías que TIENEN GASTO,
-               no con las que tienen límite. Con trece límites puestos y ningún gasto
-               en ellos, "no pusiste ninguno" era falso.
-               Es otra vez el mismo fallo de este proyecto —dos textos decidiendo por
-               su cuenta— así que ahora hay una sola pregunta: ¿hay límites o no? */
-            <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-6">
-              {t(hayLimites ? "categoryBudgets.noneSpentYet" : "categoryBudgets.noneSet")}
-            </Text>
-          ) : (
-            <View className="gap-3 mt-2">
-              {budgetProgress.map((b) => {
-                const over = b.pct >= 1;
-                const barColor = over ? "#f43f5e" : b.pct >= 0.7 ? "#f59e0b" : "#10b981";
-                return (
-                  <View key={b.id}>
-                    <View className="flex-row items-center justify-between mb-1">
-                      <Text
-                        className="text-xs font-bold flex-1 mr-2"
-                        style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#334155" }}
-                        numberOfLines={1}
-                      >
-                        {b.name}
-                      </Text>
-                      <Text className={`text-xs font-bold ${over ? "text-rose-500" : "text-slate-500 dark:text-slate-300"}`}>
-                        {t("categoryBudgets.spentOfLimit", { spent: fmt(b.spent), limit: fmt(b.limit) })}
-                      </Text>
-                    </View>
-                    <View className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
-                      <View
-                        className="h-2 rounded-full"
-                        style={{ width: `${Math.min(b.pct, 1) * 100}%`, backgroundColor: barColor }}
-                      />
-                    </View>
-                    {over ? (
-                      <Text className="text-[11px] text-rose-500 font-medium mt-1">
-                        {t("categoryBudgets.overBudget")}
-                      </Text>
-                    ) : null}
+      <View
+        className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4"
+        style={CARD_SHADOW}
+      >
+        <Text className="text-sm font-bold mb-1" style={{ color: primaryTextColor }}>{t("categoryBudgets.title")}</Text>
+        {budgetProgress.length === 0 ? (
+          /* LA TARJETA SE CONTRADECÍA, y es lo que reportó el usuario el
+             07/08/2026 con una captura: arriba decía "aún no le pusiste límite a
+             ninguna categoría" y justo debajo "13 categorías sin gastos este mes ·
+             € 650.00 sin usar". Las dos cosas a la vez, y las dos imposibles.
+             El motivo: este texto se decidía con las categorías que TIENEN GASTO,
+             no con las que tienen límite. Con trece límites puestos y ningún gasto
+             en ellos, "no pusiste ninguno" era falso.
+             Es otra vez el mismo fallo de este proyecto —dos textos decidiendo por
+             su cuenta— así que ahora hay una sola pregunta: ¿hay límites o no? */
+          <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-6">
+            {t(hayLimites ? "categoryBudgets.noneSpentYet" : "categoryBudgets.noneSet")}
+          </Text>
+        ) : (
+          <View className="gap-3 mt-2">
+            {budgetProgress.map((b) => {
+              const over = b.pct >= 1;
+              const barColor = over ? "#f43f5e" : b.pct >= 0.7 ? "#f59e0b" : "#10b981";
+              return (
+                <View key={b.id}>
+                  <View className="flex-row items-center justify-between mb-1">
+                    <Text
+                      className="text-xs font-bold flex-1 mr-2"
+                      style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#334155" }}
+                      numberOfLines={1}
+                    >
+                      {b.name}
+                    </Text>
+                    <Text className={`text-xs font-bold ${over ? "text-rose-500" : "text-slate-500 dark:text-slate-300"}`}>
+                      {t("categoryBudgets.spentOfLimit", { spent: fmt(b.spent), limit: fmt(b.limit) })}
+                    </Text>
                   </View>
-                );
-              })}
-            </View>
-          )}
+                  <View className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <View
+                      className="h-2 rounded-full"
+                      style={{ width: `${Math.min(b.pct, 1) * 100}%`, backgroundColor: barColor }}
+                    />
+                  </View>
+                  {over ? (
+                    <Text className="text-[11px] text-rose-500 font-medium mt-1">
+                      {t("categoryBudgets.overBudget")}
+                    </Text>
+                  ) : null}
+                </View>
+              );
+            })}
+          </View>
+        )}
 
-          {/* AQUÍ HABÍA UN RESUMEN DE LAS CATEGORÍAS SIN GASTO
-              ("13 categorías sin gastos este mes · € 650.00 sin usar · Ver", con la
-              lista desplegable). Se quitó a pedido del usuario el 07/08/2026:
-              *"no sé por qué me sale eso, quítalo, no me gusta"*.
+        {/* AQUÍ HABÍA UN RESUMEN DE LAS CATEGORÍAS SIN GASTO
+            ("13 categorías sin gastos este mes · € 650.00 sin usar · Ver", con la
+            lista desplegable). Se quitó a pedido del usuario el 07/08/2026:
+            *"no sé por qué me sale eso, quítalo, no me gusta"*.
 
-              Se defendía con que "no gastar en algo también es información". Y es
-              verdad, pero el sitio estaba mal: esta tarjeta contesta "¿cómo voy con
-              mis límites?", y una lista de las que ni he tocado no contesta eso —
-              además de que ese "€ 650.00 sin usar" se leía como dinero disponible,
-              justo al lado de un texto que decía que no había ningún límite puesto.
-              Quien quiera ver sus límites los tiene todos en su propia pantalla,
-              "Presupuestos por categoría" (app/category-budgets).
+            Se defendía con que "no gastar en algo también es información". Y es
+            verdad, pero el sitio estaba mal: esta tarjeta contesta "¿cómo voy con
+            mis límites?", y una lista de las que ni he tocado no contesta eso —
+            además de que ese "€ 650.00 sin usar" se leía como dinero disponible,
+            justo al lado de un texto que decía que no había ningún límite puesto.
+            Quien quiera ver sus límites los tiene todos en su propia pantalla,
+            "Presupuestos por categoría" (app/category-budgets).
 
-              No volver a meterlo aquí sin un motivo nuevo. */}
-        </View>
-      )}
+            No volver a meterlo aquí sin un motivo nuevo. */}
+      </View>
 
       <View
         className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4"

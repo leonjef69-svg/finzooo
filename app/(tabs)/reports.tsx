@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import Reports from "@/screens/Reports";
 import { useAppData } from "@/contexts/AppDataContext";
 
@@ -7,6 +8,7 @@ export default function ReportsTab() {
     <Reports
       transactions={transactions}
       month={month}
+      onSeePremium={() => router.push("/premium")}
     />
   );
 }

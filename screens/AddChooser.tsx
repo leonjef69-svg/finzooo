@@ -15,7 +15,7 @@ export default function AddChooser({
   onVoice: () => void;
   onScan: () => void;
 }) {
-  const { t, isPremium } = useAppData();
+  const { t } = useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   return (
@@ -59,27 +59,23 @@ export default function AddChooser({
             <Text className="text-xs text-slate-500 dark:text-slate-300">{t("addChooser.addIncomeHint")}</Text>
           </View>
         </TouchableOpacity>
-        {/* EL MICRÓFONO ES PREMIUM (11/08/2026). Esconderlo solo en Ajustes no serviría: desde
-            aquí se llega igual, y esta es la puerta que de verdad se usa. */}
-        {isPremium && (
-          <TouchableOpacity
-            onPress={onVoice}
-            className="w-full flex-row items-center gap-4 bg-violet-50 dark:bg-slate-800 rounded-2xl p-4 mb-3"
-          >
-            <View className="w-11 h-11 rounded-xl bg-violet-500 items-center justify-center">
-              <Mic size={20} color="#ffffff" />
-            </View>
-            <View>
-              <Text
-                className="font-bold text-sm"
-                style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-              >
-                {t("addChooser.addVoice")}
-              </Text>
-              <Text className="text-xs text-slate-500 dark:text-slate-300">{t("addChooser.addVoiceHint")}</Text>
-            </View>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity
+          onPress={onVoice}
+          className="w-full flex-row items-center gap-4 bg-violet-50 dark:bg-slate-800 rounded-2xl p-4 mb-3"
+        >
+          <View className="w-11 h-11 rounded-xl bg-violet-500 items-center justify-center">
+            <Mic size={20} color="#ffffff" />
+          </View>
+          <View>
+            <Text
+              className="font-bold text-sm"
+              style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+            >
+              {t("addChooser.addVoice")}
+            </Text>
+            <Text className="text-xs text-slate-500 dark:text-slate-300">{t("addChooser.addVoiceHint")}</Text>
+          </View>
+        </TouchableOpacity>
         <TouchableOpacity
           onPress={onScan}
           className="w-full flex-row items-center gap-4 bg-emerald-50 dark:bg-slate-800 rounded-2xl p-4 mb-3"
