@@ -106,7 +106,7 @@ export default function CategoryBudgets({
       <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 20 }}>
         {soloLectura && <AvisoSoloLectura />}
         <Text className="text-xs text-slate-500 dark:text-slate-300 mb-4">{t("categoryBudgets.subtitle")}</Text>
-        <View className="gap-2.5">
+        <View className="gap-2">
           {categorias.map((c) => {
             const limit = categoryBudgets[c.id] || 0;
             const spent = categorySpent[c.id] || 0;
@@ -114,9 +114,15 @@ export default function CategoryBudgets({
             const over = limit > 0 && pct >= 1;
             const barColor = over ? "#f43f5e" : pct >= 0.7 ? "#f59e0b" : "#10b981";
             return (
-              <View key={c.id} className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-3 border-[1.5px] border-slate-200 dark:border-slate-700">
+              /* LA FILA, UN POCO MÁS BAJA (12/08/2026). Pedido suyo: "un poco, pero que no se
+                 deforme". Se recorta SOLO el aire —relleno, hueco entre filas, tamaño del dibujo
+                 y separación de la barra—, unos 14 px por fila.
+                 NO SE TOCA LA CASILLA DEL MONTO ni ningún tamaño de letra: bajarle el alto la
+                 volvería difícil de acertar con el dedo, y encoger la letra es justo lo que se
+                 lee como "se deformó". */
+              <View key={c.id} className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-2.5 border-[1.5px] border-slate-200 dark:border-slate-700">
                 <View className="flex-row items-center gap-3">
-                  <IconBadge Icon={c.icon} color={c.color} size={38} image={c.image} />
+                  <IconBadge Icon={c.icon} color={c.color} size={34} image={c.image} />
                   <Text
                     className="flex-1 text-sm font-bold"
                     style={{ color: primaryTextColor }}
@@ -146,8 +152,8 @@ export default function CategoryBudgets({
                   </View>
                 </View>
                 {limit > 0 ? (
-                  <View className="mt-2.5 pl-[50px]">
-                    <View className="flex-row items-center justify-between mb-1">
+                  <View className="mt-2 pl-[44px]">
+                    <View className="flex-row items-center justify-between mb-0.5">
                       <Text className={`text-[11px] font-bold ${over ? "text-rose-500" : "text-slate-500 dark:text-slate-300"}`}>
                         {t("categoryBudgets.spentOfLimit", { spent: fmt(spent), limit: fmt(limit) })}
                       </Text>
