@@ -75,6 +75,15 @@ class NotificationReaderModule : Module() {
       NotificationStore.setSpeakOutgoing(context, value)
     }
 
+    /**
+     * La moneda elegida, para que la voz diga "soles" y no deletree el simbolo.
+     *
+     * La manda la app; el servicio la lee cuando habla, con Finzo cerrada.
+     */
+    Function("setMoneda") { value: String ->
+      NotificationStore.setMoneda(context, value)
+    }
+
     Function("setEnabled") { value: Boolean ->
       NotificationStore.setEnabled(context, value)
     }

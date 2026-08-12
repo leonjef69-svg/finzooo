@@ -22,6 +22,7 @@ object NotificationStore {
   private const val KEY_ENABLED = "enabled"
   private const val KEY_SPEAK = "speak"
   private const val KEY_SPEAK_OUT = "speak_outgoing"
+  private const val KEY_MONEDA = "moneda"
 
   // ---- Diagnóstico ----
   // Sin esto, cuando no se captura nada es imposible saber por qué: si
@@ -88,6 +89,24 @@ object NotificationStore {
 
   fun setSpeakOutgoing(context: Context, value: Boolean) {
     prefs(context).edit().putBoolean(KEY_SPEAK_OUT, value).apply()
+  }
+
+  /**
+   * La moneda elegida en la app ("PEN", "MXN"...), para poder DECIRLA.
+   *
+   * La voz leia "S/ 1" tal cual y el celular pronunciaba "ese ene uno": el simbolo no es una
+   * palabra. Para cambiarlo por "soles" hay que saber en que pais esta la persona, y este
+   * servicio corre con Finzo CERRADA, sin acceso a los ajustes de la app. Asi que la app lo
+   * deja escrito aqui, cada vez que arranca y cada vez que se cambia la moneda.
+   *
+   * Por defecto soles: es el pais de casa. Y equivocarse aqui solo cambia la palabra que se
+   * oye, nunca el numero.
+   */
+  fun moneda(context: Context): String =
+    prefs(context).getString(KEY_MONEDA, "PEN") ?: "PEN"
+
+  fun setMoneda(context: Context, value: String) {
+    prefs(context).edit().putString(KEY_MONEDA, value).apply()
   }
 
   /** Android conectó (o desconectó) el servicio de notificaciones. */

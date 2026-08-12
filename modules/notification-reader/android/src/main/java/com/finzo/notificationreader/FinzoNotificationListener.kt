@@ -327,7 +327,12 @@ class FinzoNotificationListener : NotificationListenerService() {
       // correcto. Antes se apuntaba "hablo" aqui mismo, asi que el diagnostico juraba que
       // habia hablado con el celular mudo.
       anotarVoz("en-cola")
-      hablar(texto)
+      // EL SIMBOLO DE LA MONEDA, CAMBIADO POR SU PALABRA.
+      //
+      // Yape escribe "S/ 1" y el celular pronunciaba "ese ene uno": un simbolo no es una
+      // palabra. Se hace aqui, sobre el texto que se va a decir, y NO sobre el que se guarda:
+      // en el registro tiene que quedar el aviso tal como llego.
+      hablar(MonedaEnVoz.conPalabras(texto, NotificationStore.moneda(applicationContext)))
     } catch (e: Throwable) {
       // Nunca dejar caer el servicio por no poder hablar.
       anotarVoz("error")

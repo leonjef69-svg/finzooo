@@ -42,6 +42,8 @@ type NativeShape = {
   setSpeakEnabled: (value: boolean) => void;
   isSpeakOutgoing: () => boolean;
   setSpeakOutgoing: (value: boolean) => void;
+  /** La moneda elegida ("PEN", "MXN"...), para que la voz la diga en palabras. */
+  setMoneda: (value: string) => void;
   drain: () => Promise<string>;
   clear: () => Promise<void>;
   stats: () => string;
@@ -283,6 +285,24 @@ export function isSpeakOutgoing(): boolean {
 export function setSpeakOutgoing(value: boolean): void {
   try {
     Native?.setSpeakOutgoing?.(value);
+  } catch {
+    // Igual que arriba.
+  }
+}
+
+/**
+ * Le dice al servicio qué moneda está puesta, para que la voz la DIGA.
+ *
+ * La voz leía "S/ 1" tal cual y el celular pronunciaba "ese ene uno": el símbolo no es una
+ * palabra. Quien habla es el servicio de Android, con Finzo cerrada, así que no puede mirar
+ * los ajustes de la app — hay que dejárselo escrito de antemano.
+ *
+ * Se manda al arrancar la app y cada vez que se cambia la moneda. En un celular con una
+ * versión vieja de la app este método no existe: no pasa nada, se sigue diciendo "soles".
+ */
+export function setMoneda(value: string): void {
+  try {
+    Native?.setMoneda?.(value);
   } catch {
     // Igual que arriba.
   }

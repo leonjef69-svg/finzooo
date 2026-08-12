@@ -811,6 +811,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  /**
+   * LE PASA LA MONEDA AL SERVICIO QUE HABLA (11/08/2026).
+   *
+   * La voz leía "S/ 1" tal cual y el celular pronunciaba "ese ene uno": un símbolo no es una
+   * palabra. Para decir "un sol" hay que saber la moneda, y quien habla es el servicio de
+   * Android —con Finzo cerrada—, que no puede leer los ajustes de la app.
+   *
+   * Así que se le deja escrita: al arrancar y cada vez que cambia. Es un dato suelto y
+   * pequeño, no una copia de los ajustes: lo único que cambia es la palabra que se oye.
+   */
+  useEffect(() => {
+    if (!ready) return;
+    notificationReader.setMoneda(userCurrency);
+  }, [userCurrency, ready]);
+
   // AQUÍ ESTABA EL COPIADO AUTOMÁTICO DEL PRESUPUESTO, quitado el 10/08/2026.
   //
   // Copiaba al mes en curso el último presupuesto puesto a mano, para no tener que escribirlo
