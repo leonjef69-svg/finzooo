@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Tag, Calendar, Wallet2, StickyNote, Trash2, Pencil } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
@@ -12,6 +12,7 @@ import { fmtDate } from "@/utils/format";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Transaction } from "@/types";
 import BackButton from "@/components/BackButton";
+import FotoDelMovimiento from "@/components/FotoDelMovimiento";
 
 export default function Detail({
   transaction,
@@ -24,7 +25,7 @@ export default function Detail({
   onEdit: () => void;
   onDelete: (id: number) => void;
 }) {
-  const { fmt, t, monthNames } = useAppData();
+  const { fmt, t, monthNames, addOrUpdateTransaction } = useAppData();
   const [confirm, setConfirm] = useState(false);
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -47,6 +48,7 @@ export default function Detail({
         <View className="w-10" />
       </View>
 
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 8 }}>
       <View className="px-6 items-center pt-4 pb-6">
         <IconBadge Icon={c.icon} color={c.color} size={64} image={c.image} />
         <Text
@@ -77,7 +79,19 @@ export default function Detail({
         ))}
       </View>
 
-      <View className="mt-auto px-6 pb-8 pt-4 flex-row gap-3">
+      {/* LA FOTO DE LA BOLETA (12/08/2026). Se puede cambiar por otra o quitarla desde aqui:
+          la foto se toma con prisa al pagar y sale movida mas veces de las que uno querria.
+          Cambiarla guarda el movimiento al instante — no hay boton de guardar en esta
+          pantalla, y pedir uno solo para esto seria un paso de mas. */}
+      <View className="px-6 mt-4">
+        <FotoDelMovimiento
+          ruta={transaction.photo}
+          onChange={(ruta) => addOrUpdateTransaction({ ...transaction, photo: ruta })}
+        />
+      </View>
+      </ScrollView>
+
+      <View className="px-6 pb-8 pt-4 flex-row gap-3">
         <TouchableOpacity
           onPress={() => setConfirm(true)}
           className="flex-1 py-3.5 rounded-2xl bg-rose-50 flex-row items-center justify-center gap-2"
