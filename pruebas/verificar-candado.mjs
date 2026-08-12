@@ -140,5 +140,55 @@ console.log("\n--- EL INTERRUPTOR DE PRUEBA SOLO PUEDE QUITAR ---");
   ok(/tienePremiumDeVerdad \|\| verComoGratis/.test(info), "y solo se ofrece a quien tiene Premium de verdad");
 }
 
+console.log("\n--- SIN PREMIUM, LAS FILAS PRO NO SE ENSEÑAN (11/08/2026) ---");
+{
+  // Pedido suyo con las capturas delante: "cuando le doy al boton, ya no deberia aparecer las
+  // funciones PRO en ajustes y en reportes". Antes salian siempre y el candado aparecia al
+  // entrar. Se le advirtio de lo que cuesta —quien no paga ya no descubre que Premium existe
+  // recorriendo Ajustes— y aun asi lo eligio.
+  const ajustes = leer("screens/Settings.tsx");
+
+  // LAS QUE NO GUARDAN NADA SUYO: fuera del todo sin Premium.
+  for (const [icono, nombre] of [
+    ["FileDown", "exportar movimientos"],
+    ["CalendarClock", "exportacion automatica"],
+    ["FileUp", "importar movimientos"],
+    ["Lock", "bloqueo con huella"],
+  ]) {
+    const trozo = ajustes.slice(Math.max(0, ajustes.indexOf(`Icon={${icono}}`) - 120), ajustes.indexOf(`Icon={${icono}}`));
+    ok(/\{isPremium && \(/.test(trozo), `${nombre} se esconde sin Premium`);
+  }
+
+  // ---------------------------------------------------------------------------------------
+  // Y AQUI ESTA EL EQUILIBRIO QUE NO SE PUEDE ROMPER.
+  //
+  // Estas tres SI guardan cosas suyas, y sus pantallas se abren en solo lectura al acabarse
+  // Premium. Esconder la fila le quitaria el UNICO camino para llegar a sus propios datos, y
+  // eso contradice la promesa del 08/08/2026 —"lo guardado no se pierde de vista"— que esta
+  // escrita en el aviso del candado, dos bloques mas arriba en esta misma prueba.
+  //
+  // Son dos decisiones suyas de dias distintos que tiran en direcciones opuestas. Se cumplen
+  // las dos: se esconden mientras esten VACIAS, y aparecen en cuanto tengan algo dentro.
+  // ---------------------------------------------------------------------------------------
+  for (const [icono, nombre] of [
+    ["PieChart", "presupuestos por categoria"],
+    ["PiggyBank", "metas de ahorro"],
+    ["Store", "modo negocio"],
+  ]) {
+    const trozo = ajustes.slice(Math.max(0, ajustes.indexOf(`Icon={${icono}}`) - 160), ajustes.indexOf(`Icon={${icono}}`));
+    ok(/\{conDatos\(/.test(trozo), `${nombre} vuelve a salir si ya tiene algo dentro`);
+  }
+  ok(/const conDatos = \(tieneAlgo: boolean\) => isPremium \|\| tieneAlgo/.test(ajustes), "y 'con datos' es exactamente eso: Premium O algo guardado");
+
+  // REPORTES: la tarjeta de limites por categoria se enseñaba SIEMPRE, pagara o no. Poner
+  // limites es Premium, asi que a quien no paga le salia una tarjeta condenada a estar vacia
+  // para siempre. La funcion estaba escondida en un sitio y a la vista en otro.
+  const reportes = leer("screens/Reports.tsx");
+  ok(
+    /\{\(isPremium \|\| budgetProgress\.length > 0\) && \(/.test(reportes),
+    "en Reportes, los limites por categoria solo si se pueden poner o ya hay alguno"
+  );
+}
+
 console.log(fallos === 0 ? "\nTodo bien: nadie se queda fuera de lo suyo\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

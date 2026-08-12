@@ -103,9 +103,28 @@ export default function Settings({
   onLegal: () => void;
   onVoiceHelp: () => void;
 }) {
-  const { t, isCloudSynced, autoCaptureOn, showToast, negocios } = useAppData();
+  const { t, isCloudSynced, autoCaptureOn, showToast, negocios, goals, categoryBudgets } = useAppData();
   /** El negocio que se está quedando con los yapeos, si hay alguno. Ver la fila de abajo. */
   const negocioQueRecibe = negocios.find((n) => n.activo && n.destinoYapes === "negocio");
+
+  /**
+   * SIN PREMIUM, LAS FILAS PRO NO SE ENSEÑAN (11/08/2026).
+   *
+   * Pedido suyo, con las capturas delante: *"cuando le doy al botón, ya no debería aparecer las
+   * funciones PRO en ajustes y en reportes"*. Antes salían siempre, con su etiqueta, y el
+   * candado aparecía al entrar. Ahora la lista solo muestra lo que se puede usar.
+   *
+   * LO QUE CUESTA, Y SE ACEPTA: quien no paga ya no descubre que Premium existe recorriendo
+   * Ajustes. Le queda la tarjeta dorada de arriba, y nada más. Se le advirtió y lo eligió.
+   *
+   * PERO LO QUE YA ES SUYO NO SE ESCONDE. Metas, límites por categoría y negocios siguen
+   * apareciendo si tienen algo dentro, porque esas pantallas se abren en solo lectura — es la
+   * promesa del 08/08/2026: al acabarse Premium no se pierde de vista lo que ya guardaste.
+   * Esconder la fila sería quitarle el único camino para llegar a sus propios datos.
+   */
+  const conDatos = (tieneAlgo: boolean) => isPremium || tieneAlgo;
+  const tieneLimites = Object.keys(categoryBudgets).length > 0;
+  const tieneMetas = goals.length > 0;
 
   // Le pide a Android que coloque el widget del micrófono. Si el lanzador
   // del celular no lo permite (algunos que se instalan aparte no lo
@@ -278,26 +297,30 @@ export default function Settings({
 
       <View className="px-5 mt-5 gap-2.5">
         <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 px-1">{t("settings.sectionSettings")}</Text>
-        <Row
-          Icon={PieChart}
-          label={t("categoryBudgets.rowLabel")}
-          onPress={onCategoryBudgets}
-          right={
-            <View className="bg-amber-50 px-2 py-1 rounded-full">
-              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
-            </View>
-          }
-        />
-        <Row
-          Icon={FileDown}
-          label={t("exportPdf.exportDataTitle")}
-          onPress={onExportPdf}
-          right={
-            <View className="bg-amber-50 px-2 py-1 rounded-full">
-              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
-            </View>
-          }
-        />
+        {conDatos(tieneLimites) && (
+          <Row
+            Icon={PieChart}
+            label={t("categoryBudgets.rowLabel")}
+            onPress={onCategoryBudgets}
+            right={
+              <View className="bg-amber-50 px-2 py-1 rounded-full">
+                <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
+              </View>
+            }
+          />
+        )}
+        {isPremium && (
+          <Row
+            Icon={FileDown}
+            label={t("exportPdf.exportDataTitle")}
+            onPress={onExportPdf}
+            right={
+              <View className="bg-amber-50 px-2 py-1 rounded-full">
+                <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
+              </View>
+            }
+          />
+        )}
         {/* AQUÍ ESTABA "PERSONALIZAR CATEGORÍAS".
             Quitada a petición del usuario el 03/08/2026: no le servía y
             ocupaba sitio en un menú ya largo.
@@ -306,49 +329,55 @@ export default function Settings({
             la ruta /category-style, y lo que cada quien tuviera
             personalizado se sigue aplicando. Solo se quitó la puerta de
             entrada, que es lo reversible. */}
-        <Row
-          Icon={CalendarClock}
-          label={t("schedExport.settingsRow")}
-          onPress={onScheduledExport}
-          right={
-            <View className="bg-amber-50 px-2 py-1 rounded-full">
-              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
-            </View>
-          }
-        />
-        <Row
-          Icon={FileUp}
-          label={t("importSheet.rowLabel")}
-          onPress={onImport}
-          right={
-            <View className="bg-amber-50 px-2 py-1 rounded-full">
-              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
-            </View>
-          }
-        />
+        {isPremium && (
+          <Row
+            Icon={CalendarClock}
+            label={t("schedExport.settingsRow")}
+            onPress={onScheduledExport}
+            right={
+              <View className="bg-amber-50 px-2 py-1 rounded-full">
+                <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
+              </View>
+            }
+          />
+        )}
+        {isPremium && (
+          <Row
+            Icon={FileUp}
+            label={t("importSheet.rowLabel")}
+            onPress={onImport}
+            right={
+              <View className="bg-amber-50 px-2 py-1 rounded-full">
+                <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
+              </View>
+            }
+          />
+        )}
         {/* MODO NEGOCIO. Va aquí, entre importar y la captura automática, porque es de la
             misma familia: cosas que cambian CÓMO entra el dinero, no ajustes de la cuenta.
             Con la etiqueta PRO igual que las otras Premium: quien la ve sabe antes de tocar
             que va a encontrar un candado. */}
-        <Row
-          Icon={Store}
-          label={t("negocios.rowLabel")}
-          // QUÉ ESTÁ PASANDO, SIN TENER QUE ENTRAR. Si un negocio se está quedando con los
-          // yapeos, eso cambia dónde cae la plata todos los días: no puede estar solo a tres
-          // pantallas de distancia. Y si se apagara sin querer, aquí se nota.
-          hint={negocioQueRecibe ? t("negocios.rowYapes", { nombre: negocioQueRecibe.nombre }) : undefined}
-          // CON UN SOLO NEGOCIO SE ENTRA DIRECTO A SU PANEL. La lista de negocios con un solo
-          // negocio es una pantalla que solo sirve para tocar la única fila que tiene. Con dos
-          // o más sí hace falta elegir.
-          onPress={() =>
-            router.push(negocios.length === 1 ? `/negocio/${negocios[0].id}` : "/negocio")
-          }
-          right={
-            <View className="bg-amber-50 px-2 py-1 rounded-full">
-              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
-            </View>
-          }
-        />
+        {conDatos(negocios.length > 0) && (
+          <Row
+            Icon={Store}
+            label={t("negocios.rowLabel")}
+            // QUÉ ESTÁ PASANDO, SIN TENER QUE ENTRAR. Si un negocio se está quedando con los
+            // yapeos, eso cambia dónde cae la plata todos los días: no puede estar solo a tres
+            // pantallas de distancia. Y si se apagara sin querer, aquí se nota.
+            hint={negocioQueRecibe ? t("negocios.rowYapes", { nombre: negocioQueRecibe.nombre }) : undefined}
+            // CON UN SOLO NEGOCIO SE ENTRA DIRECTO A SU PANEL. La lista de negocios con un solo
+            // negocio es una pantalla que solo sirve para tocar la única fila que tiene. Con dos
+            // o más sí hace falta elegir.
+            onPress={() =>
+              router.push(negocios.length === 1 ? `/negocio/${negocios[0].id}` : "/negocio")
+            }
+            right={
+              <View className="bg-amber-50 px-2 py-1 rounded-full">
+                <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
+              </View>
+            }
+          />
+        )}
         <Row
           Icon={Zap}
           label={t("autoCapture.rowLabel")}
@@ -388,26 +417,30 @@ export default function Settings({
           onPress={onVoiceHelp}
           right={<ChevronRight size={16} color="#cbd5e1" />}
         />
-        <Row
-          Icon={Lock}
-          label={t("lock.rowLabel")}
-          onPress={onAppLock}
-          right={
-            <View className="bg-amber-50 px-2 py-1 rounded-full">
-              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
-            </View>
-          }
-        />
-        <Row
-          Icon={PiggyBank}
-          label={t("settings.savingsGoals")}
-          onPress={onSavings}
-          right={
-            <View className="bg-amber-50 px-2 py-1 rounded-full">
-              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
-            </View>
-          }
-        />
+        {isPremium && (
+          <Row
+            Icon={Lock}
+            label={t("lock.rowLabel")}
+            onPress={onAppLock}
+            right={
+              <View className="bg-amber-50 px-2 py-1 rounded-full">
+                <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
+              </View>
+            }
+          />
+        )}
+        {conDatos(tieneMetas) && (
+          <Row
+            Icon={PiggyBank}
+            label={t("settings.savingsGoals")}
+            onPress={onSavings}
+            right={
+              <View className="bg-amber-50 px-2 py-1 rounded-full">
+                <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
+              </View>
+            }
+          />
+        )}
         {/* EL PAÍS MANDA. Pone el idioma y la moneda de una vez.
             La fila de Idioma se quitó el 03/08/2026 a petición del usuario:
             eligiendo Perú la app tiene que quedar en español y punto, sin un
