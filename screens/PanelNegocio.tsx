@@ -21,6 +21,7 @@ import { CARD_SHADOW } from "@/constants/style";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import { fmt as fmtConSimbolo, fmtDate } from "@/utils/format";
+import { hayRegistroAutomatico } from "@/utils/dondeHayYape";
 import { ahoraDelNegocio } from "@/utils/negocio";
 import {
   diferenciaConElMesPasado,
@@ -74,6 +75,7 @@ export default function PanelNegocio({
     quitarMovimientoNegocio,
     mandarYapesAlNegocio,
     showToast,
+    userCurrency,
   } = useAppData();
   const insets = useSafeAreaInsets();
 
@@ -496,52 +498,61 @@ export default function PanelNegocio({
           </>
         )}
 
+        {/* SOLO DONDE HAY YAPE (11/08/2026).
+
+            Este interruptor decide si los yapeos entran al negocio, y en Colombia o Argentina
+            no hay yapeos que repartir. Ver utils/dondeHayYape: la funcion de registro
+            automatico se esconde entera fuera de Peru y Bolivia, y esta es la otra puerta por
+            la que se llegaba a lo mismo. Esconderla en un sitio y dejarla en otro es la
+            costura donde se cuelan los fallos de este proyecto. */}
         {/* A QUÉ BOLSILLO VAN LOS YAPEOS QUE ENTREN.
             Va en el panel y no escondido en "editar el negocio": es lo que cambia dónde cae
             tu plata todos los días, y una decisión así no puede estar donde no se ve. Empieza
             APAGADO: crear un negocio no cambia dónde caían los yapeos que ya se registraban
             bien. */}
-        <View
-          className="rounded-2xl p-4 mt-6 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
-          style={CARD_SHADOW}
-        >
-          <View className="flex-row items-center gap-3">
-            <View className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-slate-800 items-center justify-center">
-              <Zap size={17} color="#059669" />
+        {hayRegistroAutomatico(userCurrency) && (
+          <View
+            className="rounded-2xl p-4 mt-6 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+            style={CARD_SHADOW}
+          >
+            <View className="flex-row items-center gap-3">
+              <View className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-slate-800 items-center justify-center">
+                <Zap size={17} color="#059669" />
+              </View>
+              <View className="flex-1">
+                <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                  {t("panel.yapesTitulo")}
+                </Text>
+                <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                  {recibeYapes ? t("panel.yapesAqui") : t("panel.yapesPersonal")}
+                </Text>
+              </View>
+              {/* EL INTERRUPTOR SE VE PERO NO SE TOCA en solo lectura, y verlo es lo importante:
+                  dice a dónde está cayendo la plata AHORA MISMO, que es justo lo que hay que
+                  poder comprobar aunque no se pueda cambiar. Esconderlo dejaría a alguien sin
+                  saber por qué sus yapeos no aparecen en Inicio. */}
+              <Toggle
+                on={recibeYapes}
+                onChange={(v: boolean) => {
+                  if (soloLectura) return;
+                  mandarYapesAlNegocio(negocioId, v);
+                  showToast(v ? t("panel.yapesActivado") : t("panel.yapesDesactivado"));
+                }}
+              />
             </View>
-            <View className="flex-1">
-              <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                {t("panel.yapesTitulo")}
-              </Text>
-              <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                {recibeYapes ? t("panel.yapesAqui") : t("panel.yapesPersonal")}
-              </Text>
-            </View>
-            {/* EL INTERRUPTOR SE VE PERO NO SE TOCA en solo lectura, y verlo es lo importante:
-                dice a dónde está cayendo la plata AHORA MISMO, que es justo lo que hay que
-                poder comprobar aunque no se pueda cambiar. Esconderlo dejaría a alguien sin
-                saber por qué sus yapeos no aparecen en Inicio. */}
-            <Toggle
-              on={recibeYapes}
-              onChange={(v: boolean) => {
-                if (soloLectura) return;
-                mandarYapesAlNegocio(negocioId, v);
-                showToast(v ? t("panel.yapesActivado") : t("panel.yapesDesactivado"));
-              }}
-            />
-          </View>
-          <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-400 mt-3">
-            {t("panel.yapesExplicacion")}
-          </Text>
-          {/* SI OTRO NEGOCIO LOS ESTABA RECIBIENDO, HAY QUE DECIRLO ANTES de que se los quite
-              sin avisar. Solo uno puede recibir: con dos, el mismo yapeo tendría dos destinos
-              posibles. */}
-          {!recibeYapes && otroRecibe && (
-            <Text className="text-[11px] leading-5 text-amber-700 dark:text-amber-400 mt-2">
-              {t("panel.yapesOtroNegocio", { nombre: otroRecibe.nombre })}
+            <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-400 mt-3">
+              {t("panel.yapesExplicacion")}
             </Text>
-          )}
-        </View>
+            {/* SI OTRO NEGOCIO LOS ESTABA RECIBIENDO, HAY QUE DECIRLO ANTES de que se los quite
+                sin avisar. Solo uno puede recibir: con dos, el mismo yapeo tendría dos destinos
+                posibles. */}
+            {!recibeYapes && otroRecibe && (
+              <Text className="text-[11px] leading-5 text-amber-700 dark:text-amber-400 mt-2">
+                {t("panel.yapesOtroNegocio", { nombre: otroRecibe.nombre })}
+              </Text>
+            )}
+          </View>
+        )}
 
         {/* EL HISTORIAL. */}
         <Text className="text-xs font-bold text-slate-700 dark:text-slate-200 mt-6 mb-3">

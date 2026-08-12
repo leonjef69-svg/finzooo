@@ -39,6 +39,7 @@ import ThemeToggleButton from "@/components/ThemeToggleButton";
 import Toggle from "@/components/Toggle";
 import { currencyLabelFor } from "@/constants/currencies";
 import { countryFor } from "@/constants/countries";
+import { hayRegistroAutomatico } from "@/utils/dondeHayYape";
 import { useAppData } from "@/contexts/AppDataContext";
 
 // Achica y comprime la foto antes de guardarla, para que no pese mucho
@@ -378,20 +379,25 @@ export default function Settings({
             }
           />
         )}
-        <Row
-          Icon={Zap}
-          label={t("autoCapture.rowLabel")}
-          onPress={onAutoCapture}
-          right={
-            autoCaptureOn ? (
-              <View className="bg-violet-50 px-2 py-1 rounded-full">
-                <Text className="text-[10px] font-extrabold text-violet-500">{t("autoCapture.rowOn")}</Text>
-              </View>
-            ) : (
-              <ChevronRight size={16} color="#cbd5e1" />
-            )
-          }
-        />
+        {/* SOLO DONDE HAY YAPE. Ver utils/dondeHayYape: en Colombia o Argentina esta función no
+            falla, es que no tiene nada que leer, y enseñarla haría que alguien diera el permiso
+            de leer TODAS sus notificaciones para esperar movimientos que no van a llegar. */}
+        {hayRegistroAutomatico(userCurrency) && (
+          <Row
+            Icon={Zap}
+            label={t("autoCapture.rowLabel")}
+            onPress={onAutoCapture}
+            right={
+              autoCaptureOn ? (
+                <View className="bg-violet-50 px-2 py-1 rounded-full">
+                  <Text className="text-[10px] font-extrabold text-violet-500">{t("autoCapture.rowOn")}</Text>
+                </View>
+              ) : (
+                <ChevronRight size={16} color="#cbd5e1" />
+              )
+            }
+          />
+        )}
         {/* Una sola fila, no dos. Antes había una por cada tamaño de
             widget (el círculo y el ancho con texto), y con el mismo icono
             y textos casi iguales se leían como una opción repetida. Esta
