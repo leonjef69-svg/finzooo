@@ -1,8 +1,10 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
+import { router } from "expo-router";
+import { Plus } from "lucide-react-native";
 import IconBadge from "@/components/IconBadge";
 import { gastosDisponibles } from "@/constants/categories";
 import { currencySymbolFor } from "@/constants/currencies";
@@ -20,10 +22,24 @@ export default function CategoryBudgets({
   /** Se acabó la prueba y ya había límites puestos: se ven, pero no se cambian. */
   soloLectura?: boolean;
 }) {
-  const { t, fmt, userCurrency, categoryBudgets, categorySpent, updateCategoryBudgets } = useAppData();
+  const { t, fmt, userCurrency, categoryBudgets, categorySpent, updateCategoryBudgets, categoriasPropias } =
+    useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
+  /**
+   * EL BOTÓN DE GUARDAR, ENCIMA DEL TECLADO (12/08/2026).
+   *
+   * Pedido suyo con la pantalla en la mano. Al tocar una casilla, el teclado tapaba "Guardar
+   * cambios": había que escribir el monto, CERRAR el teclado y recién ahí guardar. Y quien no
+   * sabía eso pensaba que el botón no estaba, o guardaba a medias.
+   *
+   * Es el mismo hueco que ya tenía "Nuevo movimiento" y que se resolvió ahí — por eso se usa la
+   * MISMA pieza y no una copia: el alto del teclado lo entrega Reanimated, sin pasar por los
+   * avisos de Android que llegaban tarde y hacían saltar la pantalla.
+   */
+  const { animatedPaddingStyle } = useKeyboardAnimatedPadding();
+
   /**
    * LAS SUYAS TAMBIÉN, NO SOLO LAS DE FÁBRICA (12/08/2026).
    *
@@ -37,20 +53,15 @@ export default function CategoryBudgets({
    * crea una categoría propia.
    *
    * Es el fallo de siempre en este proyecto: dos listas que tenían que ser la misma.
-   */
-  /**
-   * EL BOTÓN DE GUARDAR, ENCIMA DEL TECLADO (12/08/2026).
    *
-   * Pedido suyo con la pantalla en la mano. Al tocar una casilla, el teclado tapaba "Guardar
-   * cambios": había que escribir el monto, CERRAR el teclado y recién ahí guardar. Y quien no
-   * sabía eso pensaba que el botón no estaba, o guardaba a medias.
-   *
-   * Es el mismo hueco que ya tenía "Nuevo movimiento" y que se resolvió ahí — por eso se usa la
-   * MISMA pieza y no una copia: el alto del teclado lo entrega Reanimated, sin pasar por los
-   * avisos de Android que llegaban tarde y hacían saltar la pantalla.
+   * SE REHACE AL VOLVER DE CREAR UNA. Sin mirar categoriasPropias, la que se acaba de crear no
+   * aparecería hasta cerrar y abrir la pantalla — y desde aquí mismo se crea.
    */
-  const { animatedPaddingStyle } = useKeyboardAnimatedPadding();
-  const categorias = gastosDisponibles();
+  const categorias = useMemo(
+    () => gastosDisponibles(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [categoriasPropias]
+  );
   const [amounts, setAmounts] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
     categorias.forEach((c) => {
@@ -148,6 +159,26 @@ export default function CategoryBudgets({
               </View>
             );
           })}
+
+          {/* CREAR UNA CATEGORÍA SIN SALIR DE AQUÍ (12/08/2026).
+              Pedido suyo: *"esos iconos que tengo en elegir categoría, quiero que estén en
+              presupuesto por categoría"*.
+              Traer aquí el catálogo entero de dibujos habría sido copiar una pantalla de 236
+              casillas dentro de otra. Se lleva a la que ya existe y sabe hacerlo —con su
+              catálogo, sus colores y sus fotos— y al volver, la categoría nueva ya está en esta
+              lista con su casilla, lista para ponerle el límite.
+              En solo lectura no sale: crear es de las cosas que Premium sí cierra. */}
+          {!soloLectura && (
+            <TouchableOpacity
+              onPress={() => router.push("/nueva-categoria")}
+              className="flex-row items-center justify-center gap-2 rounded-2xl border-[1.5px] border-dashed border-slate-300 dark:border-slate-600 py-4"
+            >
+              <Plus size={17} color="#059669" />
+              <Text className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                {t("categoryBudgets.nueva")}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
 

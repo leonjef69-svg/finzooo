@@ -121,6 +121,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "categoryBudgets.title": "Presupuestos por categoría",
     "categoryBudgets.subtitle":
       "Ponle un límite mensual a las categorías que quieras controlar. No es obligatorio ponerle límite a todas.",
+    "categoryBudgets.nueva": "Nueva categoría",
     "categoryBudgets.noLimit": "Sin límite",
     "categoryBudgets.rowLabel": "Presupuestos por categoría",
     "catCustom.rowLabel": "Personalizar categorías",
@@ -1214,6 +1215,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "categoryBudgets.title": "Budgets by category",
     "categoryBudgets.subtitle":
       "Set a monthly limit for the categories you want to keep an eye on. You don't have to set a limit for all of them.",
+    "categoryBudgets.nueva": "New category",
     "categoryBudgets.noLimit": "No limit",
     "categoryBudgets.rowLabel": "Budgets by category",
     "catCustom.rowLabel": "Customise categories",
@@ -2301,6 +2303,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "categoryBudgets.title": "Orçamentos por categoria",
     "categoryBudgets.subtitle":
       "Defina um limite mensal para as categorias que quiser controlar. Não é obrigatório definir um limite para todas.",
+    "categoryBudgets.nueva": "Nova categoria",
     "categoryBudgets.noLimit": "Sem limite",
     "categoryBudgets.rowLabel": "Orçamentos por categoria",
     "catCustom.rowLabel": "Personalizar categorias",
