@@ -3,7 +3,7 @@ import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-nativ
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 import IconBadge from "@/components/IconBadge";
-import { EXPENSE_CATS } from "@/constants/categories";
+import { gastosDisponibles } from "@/constants/categories";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import { sanitizeAmountInput } from "@/utils/amount";
@@ -22,9 +22,24 @@ export default function CategoryBudgets({
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
+  /**
+   * LAS SUYAS TAMBIÉN, NO SOLO LAS DE FÁBRICA (12/08/2026).
+   *
+   * Preguntado por él: *"en presupuesto por categorías solo hay unos pocos iconos; ¿si alguien
+   * quiere elegir alguno que no está ahí?"*.
+   *
+   * Y faltaba algo de verdad. Esta pantalla listaba EXPENSE_CATS —las trece de fábrica—
+   * mientras que anotar un gasto ofrece esas MÁS las que la persona se haya creado. Así que
+   * alguien podía crear "Broster", gastar ahí todos los días, y no poder ponerle un límite: la
+   * categoría existía para gastar y no para controlar. Justo al revés de para lo que uno se
+   * crea una categoría propia.
+   *
+   * Es el fallo de siempre en este proyecto: dos listas que tenían que ser la misma.
+   */
+  const categorias = gastosDisponibles();
   const [amounts, setAmounts] = useState<Record<string, string>>(() => {
     const initial: Record<string, string> = {};
-    EXPENSE_CATS.forEach((c) => {
+    categorias.forEach((c) => {
       initial[c.id] = categoryBudgets[c.id] ? String(categoryBudgets[c.id]) : "";
     });
     return initial;
@@ -55,7 +70,7 @@ export default function CategoryBudgets({
         {soloLectura && <AvisoSoloLectura />}
         <Text className="text-xs text-slate-500 dark:text-slate-300 mb-4">{t("categoryBudgets.subtitle")}</Text>
         <View className="gap-2.5">
-          {EXPENSE_CATS.map((c) => {
+          {categorias.map((c) => {
             const limit = categoryBudgets[c.id] || 0;
             const spent = categorySpent[c.id] || 0;
             const pct = limit > 0 ? spent / limit : 0;
@@ -80,7 +95,7 @@ export default function CategoryBudgets({
                         no se esconde porque el límite es el dato: sin él, la barra de "llevas
                         X de Y" no significa nada. */}
                     <TextInput
-                      value={amounts[c.id]}
+                      value={amounts[c.id] ?? ""}
                       editable={!soloLectura}
                       onChangeText={(v) =>
                         setAmounts((prev) => ({ ...prev, [c.id]: sanitizeAmountInput(v) }))

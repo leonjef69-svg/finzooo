@@ -172,5 +172,27 @@ console.log("\n--- EL MICROFONO ES PREMIUM, Y SE VE (11/08/2026) ---");
   ok(/!ready \|\| !hasOnboarded \|\| !isPremium\) return null/.test(voz), "sin dibujarse ni un instante");
 }
 
+console.log("\n--- LOS LIMITES SE PUEDEN PONER A LAS CATEGORIAS PROPIAS (12/08/2026) ---");
+{
+  // Preguntado por el: "en presupuesto por categorias solo hay unos pocos iconos, ¿si alguien
+  // quiere elegir alguno que no esta ahi?".
+  //
+  // La pantalla de limites listaba EXPENSE_CATS —las trece de fabrica— mientras que anotar un
+  // gasto ofrece esas MAS las propias. Alguien podia crear "Broster", gastar ahi todos los
+  // dias, y no poder ponerle un limite: la categoria existia para gastar y no para controlar.
+  // Justo al reves de para lo que uno se crea una categoria propia.
+  const limites = leer("screens/CategoryBudgets.tsx");
+  ok(/gastosDisponibles\(\)/.test(limites), "los limites ofrecen tambien las categorias propias");
+  ok(!/EXPENSE_CATS\.(map|forEach)/.test(limites), "y ya no se queda solo con las de fabrica");
+
+  // LA MISMA LISTA QUE AL ANOTAR UN GASTO. Si un dia se separan otra vez, vuelve el hueco.
+  const add = leer("screens/AddSheet.tsx");
+  ok(/gastosDisponibles/.test(add), "es la misma lista que ofrece anotar un gasto");
+
+  // Y UNA CATEGORIA CREADA DESPUES DE ABRIR LA PANTALLA no puede dejar su casilla sin valor:
+  // React se queja y el campo deja de responder.
+  ok(/amounts\[c\.id\] \?\? ""/.test(limites), "una categoria nueva no deja la casilla rota");
+}
+
 console.log(fallos === 0 ? "\nTodo bien: nadie se queda fuera de lo suyo\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);
