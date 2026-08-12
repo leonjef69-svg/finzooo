@@ -7,6 +7,7 @@ import { router } from "expo-router";
 import { Plus } from "lucide-react-native";
 import IconBadge from "@/components/IconBadge";
 import { gastosDisponibles } from "@/constants/categories";
+import { CARD_SHADOW } from "@/constants/style";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import { sanitizeAmountInput } from "@/utils/amount";
@@ -106,7 +107,7 @@ export default function CategoryBudgets({
       <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 20 }}>
         {soloLectura && <AvisoSoloLectura />}
         <Text className="text-xs text-slate-500 dark:text-slate-300 mb-4">{t("categoryBudgets.subtitle")}</Text>
-        <View className="gap-2">
+        <View className="gap-3">
           {categorias.map((c) => {
             const limit = categoryBudgets[c.id] || 0;
             const spent = categorySpent[c.id] || 0;
@@ -114,13 +115,26 @@ export default function CategoryBudgets({
             const over = limit > 0 && pct >= 1;
             const barColor = over ? "#f43f5e" : pct >= 0.7 ? "#f59e0b" : "#10b981";
             return (
-              /* LA FILA, UN POCO MÁS BAJA (12/08/2026). Pedido suyo: "un poco, pero que no se
-                 deforme". Se recorta SOLO el aire —relleno, hueco entre filas, tamaño del dibujo
-                 y separación de la barra—, unos 14 px por fila.
-                 NO SE TOCA LA CASILLA DEL MONTO ni ningún tamaño de letra: bajarle el alto la
-                 volvería difícil de acertar con el dedo, y encoger la letra es justo lo que se
-                 lee como "se deformó". */
-              <View key={c.id} className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-2.5 border-[1.5px] border-slate-200 dark:border-slate-700">
+              /* LA FILA: MÁS BAJA, PERO CON EL MISMO CONTORNO QUE EL RESTO (12/08/2026).
+
+                 Primero pidió bajarla "un poco, pero que no se deforme": se recortó SOLO el aire
+                 —relleno, tamaño del dibujo y separación de la barra—, unos 14 px por fila. NO se
+                 toca la casilla del monto ni ningún tamaño de letra: bajarle el alto la volvería
+                 difícil de acertar con el dedo, y encoger la letra es justo lo que se lee como
+                 "se deformó".
+
+                 Después: "los contornos que sean un poquito más gruesos, como los de Ajustes e
+                 Inicio". El grosor ya era el mismo —1,5 px en las tres pantallas—; lo que
+                 cambiaba era el FONDO. Allí las tarjetas son blancas y con sombra, y aquí eran
+                 grises y planas, así que el mismo contorno se perdía contra el fondo.
+
+                 Se igualan: tarjeta blanca con sombra, y la casilla del monto pasa a gris, o
+                 dejaría de leerse como una casilla encima de una tarjeta blanca. */
+              <View
+                key={c.id}
+                className="bg-white dark:bg-slate-900 rounded-2xl p-2.5 border-[1.5px] border-slate-200 dark:border-slate-700"
+                style={CARD_SHADOW}
+              >
                 <View className="flex-row items-center gap-3">
                   <IconBadge Icon={c.icon} color={c.color} size={34} image={c.image} />
                   <Text
@@ -130,7 +144,7 @@ export default function CategoryBudgets({
                   >
                     {t(c.label)}
                   </Text>
-                  <View className="flex-row items-center bg-white dark:bg-slate-900 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-3 py-2 w-32">
+                  <View className="flex-row items-center bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-3 py-2 w-32">
                     <Text className="text-slate-500 dark:text-slate-300 text-xs font-bold mr-1">
                       {currencySymbolFor(userCurrency)}
                     </Text>
