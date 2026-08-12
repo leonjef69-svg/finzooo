@@ -8,6 +8,7 @@ import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.content.ComponentName
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
@@ -63,6 +64,42 @@ class FinzoNotificationListener : NotificationListenerService() {
    */
   private var idiomaListo = false
   private val porDecir = ArrayDeque<String>()
+
+  /**
+   * CUANTAS VECES SE VUELVE A ENCENDER EL MOTOR ANTES DE RENDIRSE.
+   *
+   * El motor de voz de Android es un servicio aparte y el sistema lo puede matar cuando le
+   * hace falta memoria — pasa con el celular lleno de apps abiertas. Cuando eso ocurre, el
+   * motor que Finzo tiene guardado queda inservible: acepta ordenes y no suena nada.
+   *
+   * Rendirse al primer fallo dejaria la voz muda hasta reiniciar el celular. Insistir sin
+   * limite gastaria bateria dando vueltas si de verdad no hay voz instalada. Tres es el
+   * termino medio, y el contador se pone a cero en cuanto se habla bien una vez.
+   */
+  private var reencendidos = 0
+
+  /**
+   * El aviso que se dijo bien la ultima vez ya no cuenta para el limite de arriba.
+   *
+   * Sin esto, tres fallos repartidos a lo largo de un mes agotarian los reintentos y la voz
+   * se quedaria muda para siempre sin que nadie entendiera por que.
+   */
+  private var hablaronBien = false
+
+  /**
+   * EL VIGILANTE DEL ARRANQUE.
+   *
+   * Android promete llamar de vuelta cuando el motor esta listo, y a veces no llama: el
+   * servicio de voz se cuelga, o el sistema lo mata mientras arranca. El motor quedaba creado
+   * pero nunca listo, y como prepararVoz se corta en seco cuando ya hay uno, no se volvia a
+   * intentar JAMAS. Voz muda para siempre, sin un solo error por ningun lado.
+   */
+  private val vigilarArranque = Runnable {
+    if (!vozLista) {
+      anotarVoz("motor-no-arranco")
+      reencender()
+    }
+  }
 
   // Android avisa por aquí cuando de verdad engancha el servicio. Dar el
   // permiso y que el servicio esté CONECTADO son dos cosas distintas: el
@@ -282,7 +319,14 @@ class FinzoNotificationListener : NotificationListenerService() {
         return
       }
 
-      anotarVoz("hablo")
+      // "EN COLA", NO "HABLO".
+      //
+      // Aqui la frase todavia no ha sonado: solo se ha decidido que hay que decirla. El "hablo"
+      // lo pone el propio motor cuando EMPIEZA a hablar (ver escucharAlMotor), y si nunca
+      // empieza, en la pantalla se queda "en-cola" — que es la verdad y ademas apunta al sitio
+      // correcto. Antes se apuntaba "hablo" aqui mismo, asi que el diagnostico juraba que
+      // habia hablado con el celular mudo.
+      anotarVoz("en-cola")
       hablar(texto)
     } catch (e: Throwable) {
       // Nunca dejar caer el servicio por no poder hablar.
@@ -350,12 +394,31 @@ class FinzoNotificationListener : NotificationListenerService() {
   private fun hablar(texto: String) {
     mano.post {
       try {
+        // LA COLA TIENE TOPE.
+        //
+        // Si el motor no llegara a arrancar nunca, cada yapeo iria dejando su frase aqui y la
+        // lista creceria sin fin dentro de un servicio del sistema que puede pasar dias
+        // encendido. Con tope, lo peor que pasa es perder los avisos mas viejos — que a esas
+        // alturas ya no le sirven a nadie: nadie quiere oir a las ocho de la noche el yapeo de
+        // las nueve de la mañana.
+        while (porDecir.size >= MAX_EN_COLA) porDecir.removeFirst()
         porDecir.add(texto)
+
+        // EL VOLUMEN, ANOTADO ANTES DE HABLAR.
+        //
+        // El canal de avisos va aparte del de la musica: el celular puede "sonar bien" con la
+        // musica alta y tener los avisos en cero. La voz habla de verdad y no se oye nada, y
+        // desde fuera se ve igual que un fallo del motor. Se deja apuntado para que la
+        // pantalla de diagnostico señale al volumen y no al motor. NO se corta por esto: puede
+        // haber un auricular conectado con su propio volumen.
+        if (ProbadorDeVoz.volumenDeAvisos(applicationContext) == 0) anotarVoz("sin-volumen")
+
         // Si el motor ya esta caliente —lo normal— se dice AHORA. Si no, se
         // enciende y la frase espera en la cola hasta que termine de arrancar.
         if (vozLista) vaciarCola() else prepararVoz()
       } catch (e: Throwable) {
-        soltarVoz()
+        anotarVoz("error-al-hablar")
+        reencender()
       }
     }
   }
@@ -375,8 +438,21 @@ class FinzoNotificationListener : NotificationListenerService() {
    */
   private fun prepararVoz() {
     if (motor != null) return
+
+    // EL VIGILANTE DEL ARRANQUE.
+    //
+    // Android promete llamar de vuelta cuando el motor esta listo, y a veces no llama: el
+    // servicio de voz se cuelga, o el sistema lo mata mientras arranca. En ese caso el motor
+    // quedaba creado pero nunca listo, y como prepararVoz se corta en seco cuando ya hay un
+    // motor, NO SE VOLVIA A INTENTAR JAMAS. La voz muda para siempre, sin ningun error.
+    //
+    // Si a los veinte segundos no ha arrancado, se tira y se enciende otro. Veinte porque
+    // arrancar tarda de dos a cuatro, y hasta doce con el celular recien encendido.
+    mano.postDelayed(vigilarArranque, 20000)
+
     motor = TextToSpeech(applicationContext) { estado ->
       mano.post {
+        mano.removeCallbacks(vigilarArranque)
         if (estado == TextToSpeech.SUCCESS) {
           // EL IDIOMA, PROBANDO DE LO CONCRETO A LO GENERAL. AQUI HABIA UN FALLO.
           //
@@ -391,13 +467,15 @@ class FinzoNotificationListener : NotificationListenerService() {
           //
           // Si no hay espanol de ninguna clase se deja anotado en vez de callar: asi la
           // pantalla puede decir que falta instalar la voz.
-          idiomaListo = ProbadorDeVoz.ponerEspanol(motor ?: return@post)
+          val m = motor ?: return@post
+          idiomaListo = ProbadorDeVoz.ponerEspanol(m)
           if (!idiomaListo) anotarVoz("sin-espanol")
+          escucharAlMotor(m)
           vozLista = true
           vaciarCola()
         } else {
           anotarVoz("sin-motor")
-          soltarVoz()
+          reencender()
         }
       }
     }
@@ -449,17 +527,89 @@ class FinzoNotificationListener : NotificationListenerService() {
       // tener ninguno: manda a buscar el fallo donde no esta.
       if (resultado != TextToSpeech.SUCCESS) {
         anotarVoz("no-sono")
-        // Y se tira el motor. El siguiente aviso enciende uno nuevo, y con el motor nuevo se
-        // vuelve a pedir el idioma desde cero. Sin esto, un motor que se estropeo a mitad de
-        // la tarde deja la voz muda hasta reiniciar el celular.
-        soltarVoz()
+        // Se devuelve la frase a la cola y se enciende un motor nuevo. Antes se tiraba el
+        // motor Y la frase: el yapeo se perdia para siempre aunque el motor nuevo funcionara
+        // perfectamente. Ahora el aviso se dice con el motor de repuesto.
+        porDecir.addFirst(frase)
+        reencender()
         return
       }
     }
   }
 
+  /**
+   * SE ENTERA DE SI LA FRASE SONO DE VERDAD, y no solo de si se mando.
+   *
+   * Que `speak` devuelva SUCCESS significa "acepto el encargo", no "se oyo". Entre una cosa y
+   * otra el motor puede morirse, quedarse sin la voz descargada o fallar por dentro, y ahi la
+   * app se quedaba tan tranquila creyendo que habia hablado.
+   *
+   * Con esto, "hablo" se apunta cuando el motor EMPIEZA a hablar de verdad, no cuando se le
+   * manda el texto. Es la diferencia entre un diagnostico que ayuda y uno que despista.
+   */
+  private fun escucharAlMotor(m: TextToSpeech) {
+    try {
+      m.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+        override fun onStart(utteranceId: String?) {
+          mano.post {
+            anotarVoz("hablo")
+            // Sono: el motor esta sano y los reintentos vuelven a estar disponibles enteros
+            // para la proxima vez que se estropee, dentro de un mes o de un año.
+            hablaronBien = true
+            reencendidos = 0
+          }
+        }
+
+        override fun onDone(utteranceId: String?) {}
+
+        @Deprecated("Android la pide igual", ReplaceWith(""))
+        override fun onError(utteranceId: String?) {
+          mano.post {
+            anotarVoz("no-sono")
+            reencender()
+          }
+        }
+
+        override fun onError(utteranceId: String?, errorCode: Int) {
+          mano.post {
+            anotarVoz("no-sono")
+            reencender()
+          }
+        }
+      })
+    } catch (e: Throwable) {
+      // Sin el aviso de vuelta se sigue hablando igual: solo se pierde el diagnostico fino.
+    }
+  }
+
+  /**
+   * Tira el motor y enciende otro, SIN PERDER lo que estaba por decir.
+   *
+   * Es la diferencia entre "esta vez no sono" y "ya no vuelve a sonar". El motor de voz es un
+   * servicio aparte que el sistema puede matar cuando le hace falta memoria; cuando pasa, el
+   * que Finzo tiene guardado acepta ordenes y no suena nada. Sin volver a encenderlo, la voz
+   * queda muda hasta reiniciar el celular.
+   *
+   * Con tope de intentos: si de verdad no hay voz instalada, insistir sin parar solo gastaria
+   * bateria. El contador se pone a cero en cuanto se habla bien una vez, asi que unos fallos
+   * sueltos repartidos en meses no dejan la voz apagada para siempre.
+   */
+  private fun reencender() {
+    val pendientes = ArrayList(porDecir)
+    soltarVoz()
+    if (reencendidos >= MAX_REENCENDIDOS && !hablaronBien) {
+      anotarVoz("motor-no-arranca")
+      return
+    }
+    reencendidos++
+    hablaronBien = false
+    porDecir.addAll(pendientes)
+    prepararVoz()
+  }
+
   /** Apaga el motor y tira lo que quedara sin decir. */
   private fun soltarVoz() {
+    mano.removeCallbacks(vigilarArranque)
     try {
       motor?.shutdown()
     } catch (e: Throwable) {
@@ -481,6 +631,17 @@ class FinzoNotificationListener : NotificationListenerService() {
     MONEY_APP_HINTS.any { pkg.contains(it) }
 
   companion object {
+    /**
+     * Cuantas frases como mucho esperan a que arranque el motor.
+     *
+     * Sin tope, un motor que no arrancara nunca iria acumulando una frase por yapeo dentro de
+     * un servicio del sistema que puede pasar dias encendido.
+     */
+    private const val MAX_EN_COLA = 20
+
+    /** Cuantas veces se enciende un motor nuevo antes de rendirse. Ver reencender(). */
+    private const val MAX_REENCENDIDOS = 3
+
     /**
      * Avisos que NO son un movimiento: claves, promociones, encuestas.
      *

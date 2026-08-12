@@ -82,7 +82,17 @@ console.log("\n--- EL MOTOR SE QUEDA CALIENTE: LA VOZ, SIN ESPERA ---");
   // que pasaba un rato. Decision del usuario el 02/08/2026: sin limite, que
   // hable en el momento siempre. Cuesta algo de bateria y se acepta.
   ok(!kt.includes("ESPERA_APAGADO"), "no hay apagado por tiempo");
-  ok(!kt.includes("postDelayed"), "ni nada programado para apagarlo");
+  // ESTA COMPROBACION SE AFINO EL 11/08/2026.
+  //
+  // Antes prohibia CUALQUIER postDelayed, que era una forma barata de decir "nada que apague
+  // el motor pasado un rato". Se quedo corta cuando entro el vigilante del arranque, que usa
+  // postDelayed para lo CONTRARIO: si el motor no arranca en veinte segundos, enciende otro.
+  //
+  // Prohibir la herramienta en vez de la conducta acaba asi: bloqueando un arreglo. Ahora se
+  // prohibe la conducta —que haya un temporizador que apague— y se deja la herramienta.
+  const programados = kt.match(/postDelayed\((\w+)/g) ?? [];
+  const soloElVigilante = programados.every((p) => p.includes("vigilarArranque"));
+  ok(soloElVigilante, `lo unico programado es el vigilante del arranque (${programados.join(", ") || "nada"})`);
 
   // Y se enciende ANTES del primer yapeo, en cuanto Android engancha el
   // servicio. Si se esperara al primer aviso, ese primero seguiria tardando.
