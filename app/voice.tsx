@@ -19,17 +19,27 @@ import { safeBack, useNavigateWhenReady } from "@/utils/nav";
 // La protección que sí hace falta es otra: que nadie acabe dictando gastos
 // sin haber configurado la app. Eso es lo que revisa el bloque de abajo.
 export default function VoiceRoute() {
-  const { ready, hasOnboarded } = useAppData();
+  const { ready, hasOnboarded, isPremium } = useAppData();
 
+  // EL MICRÓFONO ES PREMIUM DESDE EL 11/08/2026, y esta es la puerta que no se puede dejar
+  // abierta. El widget del escritorio de Android abre esta dirección SIN pasar por la app: si
+  // alguien lo colocó cuando tenía Premium y luego se le acaba, el ícono sigue en su pantalla
+  // de inicio. Sin esta comprobación, ese ícono sería un micrófono Premium funcionando gratis
+  // para siempre — y no habría forma de enterarse, porque no se pasa por ninguna pantalla que
+  // lo mire.
   useNavigateWhenReady(
-    ready && !hasOnboarded ? () => router.replace("/onboarding") : null,
-    [ready, hasOnboarded]
+    ready && !hasOnboarded
+      ? () => router.replace("/onboarding")
+      : ready && hasOnboarded && !isPremium
+        ? () => router.replace("/(tabs)")
+        : null,
+    [ready, hasOnboarded, isPremium]
   );
 
   // Mientras se cargan los datos guardados no se dibuja nada: si el
   // micrófono se abriera antes, podría guardar un movimiento en una lista
   // que todavía está vacía y perderse al terminar de cargar.
-  if (!ready || !hasOnboarded) return null;
+  if (!ready || !hasOnboarded || !isPremium) return null;
 
   return <VoiceEntry onClose={safeBack} />;
 }

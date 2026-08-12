@@ -140,54 +140,53 @@ console.log("\n--- EL INTERRUPTOR DE PRUEBA SOLO PUEDE QUITAR ---");
   ok(/tienePremiumDeVerdad \|\| verComoGratis/.test(info), "y solo se ofrece a quien tiene Premium de verdad");
 }
 
-console.log("\n--- SIN PREMIUM, LAS FILAS PRO NO SE ENSEÑAN (11/08/2026) ---");
+console.log("\n--- SIN PREMIUM NO SE ENSEÑA NADA DE PREMIUM (11/08/2026) ---");
 {
-  // Pedido suyo con las capturas delante: "cuando le doy al boton, ya no deberia aparecer las
-  // funciones PRO en ajustes y en reportes". Antes salian siempre y el candado aparecia al
-  // entrar. Se le advirtio de lo que cuesta —quien no paga ya no descubre que Premium existe
-  // recorriendo Ajustes— y aun asi lo eligio.
+  // Pedido DOS veces. La primera lo hice a medias: escondi las filas vacias pero deje visibles
+  // las que ya tenian algo dentro —metas, limites, negocios— para no quitarle el unico camino
+  // hacia sus propios datos. Volvio con las capturas: "SIGUEN SALIENDO LAS FUNCIONES PREMIUM".
+  // Tenia razon en que no era lo que habia pedido. Es su app: fuera todas, tengan datos o no.
   const ajustes = leer("screens/Settings.tsx");
+  ok(!/conDatos/.test(ajustes), "no queda el arreglo a medias de esconder solo las vacias");
 
-  // LAS QUE NO GUARDAN NADA SUYO: fuera del todo sin Premium.
   for (const [icono, nombre] of [
+    ["PieChart", "presupuestos por categoria"],
     ["FileDown", "exportar movimientos"],
     ["CalendarClock", "exportacion automatica"],
     ["FileUp", "importar movimientos"],
-    ["Lock", "bloqueo con huella"],
-  ]) {
-    const trozo = ajustes.slice(Math.max(0, ajustes.indexOf(`Icon={${icono}}`) - 120), ajustes.indexOf(`Icon={${icono}}`));
-    ok(/\{isPremium && \(/.test(trozo), `${nombre} se esconde sin Premium`);
-  }
-
-  // ---------------------------------------------------------------------------------------
-  // Y AQUI ESTA EL EQUILIBRIO QUE NO SE PUEDE ROMPER.
-  //
-  // Estas tres SI guardan cosas suyas, y sus pantallas se abren en solo lectura al acabarse
-  // Premium. Esconder la fila le quitaria el UNICO camino para llegar a sus propios datos, y
-  // eso contradice la promesa del 08/08/2026 —"lo guardado no se pierde de vista"— que esta
-  // escrita en el aviso del candado, dos bloques mas arriba en esta misma prueba.
-  //
-  // Son dos decisiones suyas de dias distintos que tiran en direcciones opuestas. Se cumplen
-  // las dos: se esconden mientras esten VACIAS, y aparecen en cuanto tengan algo dentro.
-  // ---------------------------------------------------------------------------------------
-  for (const [icono, nombre] of [
-    ["PieChart", "presupuestos por categoria"],
-    ["PiggyBank", "metas de ahorro"],
     ["Store", "modo negocio"],
+    ["Lock", "bloqueo con huella"],
+    ["PiggyBank", "metas de ahorro"],
   ]) {
-    const trozo = ajustes.slice(Math.max(0, ajustes.indexOf(`Icon={${icono}}`) - 160), ajustes.indexOf(`Icon={${icono}}`));
-    ok(/\{conDatos\(/.test(trozo), `${nombre} vuelve a salir si ya tiene algo dentro`);
+    const donde = ajustes.indexOf("Icon={" + icono + "}");
+    const antes = ajustes.slice(Math.max(0, donde - 220), donde);
+    ok(/\{isPremium &&/.test(antes), nombre + " se esconde sin Premium");
   }
-  ok(/const conDatos = \(tieneAlgo: boolean\) => isPremium \|\| tieneAlgo/.test(ajustes), "y 'con datos' es exactamente eso: Premium O algo guardado");
 
-  // REPORTES: la tarjeta de limites por categoria se enseñaba SIEMPRE, pagara o no. Poner
-  // limites es Premium, asi que a quien no paga le salia una tarjeta condenada a estar vacia
-  // para siempre. La funcion estaba escondida en un sitio y a la vista en otro.
+  // EL MICROFONO ES PREMIUM, dicho por el: "el microfono es una funcion premium". No estaba
+  // escrito en ninguna lista —ni en la de gratis ni en la de Premium— y por eso salia a todo
+  // el mundo. Son TRES puertas, y la tercera es la que casi se escapa.
+  const antesWidget = ajustes.slice(Math.max(0, ajustes.indexOf("Icon={Mic}") - 220), ajustes.indexOf("Icon={Mic}"));
+  ok(/isPremium && voiceWidget\.isSupported/.test(antesWidget), "el microfono en la pantalla de inicio, escondido");
+  const antesAyuda = ajustes.slice(Math.max(0, ajustes.indexOf("Icon={MessageSquare}") - 220), ajustes.indexOf("Icon={MessageSquare}"));
+  ok(/\{isPremium &&/.test(antesAyuda), "y la ayuda del microfono tambien");
+
+  const chooser = leer("screens/AddChooser.tsx");
+  ok(/\{isPremium &&/.test(chooser), "el boton de voz del panel de + , escondido");
+
+  // LA TERCERA PUERTA: el widget del escritorio de Android abre /voice SIN pasar por la app.
+  // Si alguien lo coloco teniendo Premium y luego se le acaba, ese icono seguiria siendo un
+  // microfono Premium funcionando gratis para siempre, y sin forma de enterarse.
+  const voz = leer("app/voice.tsx");
+  ok(/!isPremium/.test(voz), "y la pantalla del microfono comprueba Premium por su cuenta");
+  ok(/return null/.test(voz), "sin dibujarse ni un instante");
+
+  // FINZO IA: ni siquiera como anuncio. Antes, a quien no pagaba le salia en su sitio una
+  // tarjeta negra invitando a Premium.
   const reportes = leer("screens/Reports.tsx");
-  ok(
-    /\{\(isPremium \|\| budgetProgress\.length > 0\) && \(/.test(reportes),
-    "en Reportes, los limites por categoria solo si se pueden poner o ya hay alguno"
-  );
+  ok(/\{isPremium &&/.test(reportes), "Finzo IA no sale sin Premium");
+  ok(!/insights\.lockedDescription/.test(reportes), "ni disfrazado de anuncio");
+  ok(/\{\(isPremium \|\| budgetProgress\.length > 0\) && \(/.test(reportes), "y los limites por categoria siguen protegidos");
 }
 
 console.log(fallos === 0 ? "\nTodo bien: nadie se queda fuera de lo suyo\n" : `\n${fallos} fallos\n`);

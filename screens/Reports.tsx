@@ -1,11 +1,10 @@
 import { useMemo } from "react";
-import { ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
+import { ScrollView, Text, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
-  Crown,
   PieChart as PieChartIcon,
   Sparkles,
   Wallet,
@@ -32,11 +31,9 @@ import type { Month, Transaction } from "@/types";
 export default function Reports({
   transactions,
   month,
-  onSeePremium,
 }: {
   transactions: Transaction[];
   month: Month;
-  onSeePremium: () => void;
 }) {
   const {
     fmt,
@@ -400,7 +397,13 @@ export default function Reports({
         </>
       )}
 
-      {isPremium ? (
+      {/* FINZO IA: SIN PREMIUM NO SALE, NI COMO ANUNCIO (11/08/2026).
+
+          Antes, a quien no pagaba le salia en su sitio una tarjeta negra invitando a Premium.
+          El lo señalo en las capturas junto al resto: no quiere que las funciones de pago se
+          vean, tampoco disfrazadas de anuncio. Queda la tarjeta dorada de Ajustes como unica
+          puerta a Premium. */}
+      {isPremium && (
         insights.length > 0 && (
           <LinearGradient
             colors={["#0f172a", "#064e3b"]}
@@ -421,20 +424,6 @@ export default function Reports({
             </View>
           </LinearGradient>
         )
-      ) : (
-        <TouchableOpacity
-          onPress={onSeePremium}
-          className="mx-5 mt-4 flex-row items-center gap-3 bg-slate-900 rounded-3xl p-4"
-        >
-          <View className="w-10 h-10 rounded-xl bg-amber-400/20 items-center justify-center">
-            <Sparkles size={18} color="#fcd34d" />
-          </View>
-          <View className="flex-1">
-            <Text className="text-white font-bold text-sm">Finzo IA</Text>
-            <Text className="text-slate-300 text-[11px]">{t("insights.lockedDescription")}</Text>
-          </View>
-          <Crown size={16} color="#fcd34d" />
-        </TouchableOpacity>
       )}
 
       <View

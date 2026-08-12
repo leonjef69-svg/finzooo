@@ -104,28 +104,31 @@ export default function Settings({
   onLegal: () => void;
   onVoiceHelp: () => void;
 }) {
-  const { t, isCloudSynced, autoCaptureOn, showToast, negocios, goals, categoryBudgets } = useAppData();
+  const { t, isCloudSynced, autoCaptureOn, showToast, negocios } = useAppData();
   /** El negocio que se está quedando con los yapeos, si hay alguno. Ver la fila de abajo. */
   const negocioQueRecibe = negocios.find((n) => n.activo && n.destinoYapes === "negocio");
 
   /**
-   * SIN PREMIUM, LAS FILAS PRO NO SE ENSEÑAN (11/08/2026).
+   * SIN PREMIUM NO SE ENSEÑA NADA DE PREMIUM. NADA (11/08/2026).
    *
-   * Pedido suyo, con las capturas delante: *"cuando le doy al botón, ya no debería aparecer las
-   * funciones PRO en ajustes y en reportes"*. Antes salían siempre, con su etiqueta, y el
-   * candado aparecía al entrar. Ahora la lista solo muestra lo que se puede usar.
+   * Pedido dos veces. La primera lo intenté a medias: escondí las filas vacías pero dejé
+   * visibles las que ya tenían algo dentro —metas, límites, negocios— para no quitarle el
+   * único camino hacia sus propios datos, que es la promesa del 08/08/2026.
    *
-   * LO QUE CUESTA, Y SE ACEPTA: quien no paga ya no descubre que Premium existe recorriendo
-   * Ajustes. Le queda la tarjeta dorada de arriba, y nada más. Se le advirtió y lo eligió.
+   * Volvió con las capturas: *"SIGUEN SALIENDO LAS FUNCIONES PREMIUM"*. Tenía razón en que no
+   * era lo que había pedido. Es su app y su decisión: fuera todas, tengan datos o no.
    *
-   * PERO LO QUE YA ES SUYO NO SE ESCONDE. Metas, límites por categoría y negocios siguen
-   * apareciendo si tienen algo dentro, porque esas pantallas se abren en solo lectura — es la
-   * promesa del 08/08/2026: al acabarse Premium no se pierde de vista lo que ya guardaste.
-   * Esconder la fila sería quitarle el único camino para llegar a sus propios datos.
+   * LO QUE ESTO CUESTA, ESCRITO PARA QUE NO SE OLVIDE:
+   *
+   *   · Quien no paga ya no descubre que Premium existe recorriendo Ajustes. Solo le queda la
+   *     tarjeta dorada de arriba.
+   *   · A quien se le acabe la prueba y tuviera metas o un negocio, esas pantallas dejan de
+   *     tener puerta. Los datos NO se borran —siguen guardados y vuelven al pagar— pero deja
+   *     de poder mirarlos. El aviso de "solo lectura" del candado ya casi no se alcanza.
+   *
+   * Se le dijo lo primero antes de hacerlo. Lo segundo salió al hacerlo, y se hace igual
+   * porque lo pidió dos veces y sin matices.
    */
-  const conDatos = (tieneAlgo: boolean) => isPremium || tieneAlgo;
-  const tieneLimites = Object.keys(categoryBudgets).length > 0;
-  const tieneMetas = goals.length > 0;
 
   // Le pide a Android que coloque el widget del micrófono. Si el lanzador
   // del celular no lo permite (algunos que se instalan aparte no lo
@@ -298,7 +301,7 @@ export default function Settings({
 
       <View className="px-5 mt-5 gap-2.5">
         <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 px-1">{t("settings.sectionSettings")}</Text>
-        {conDatos(tieneLimites) && (
+        {isPremium && (
           <Row
             Icon={PieChart}
             label={t("categoryBudgets.rowLabel")}
@@ -358,7 +361,7 @@ export default function Settings({
             misma familia: cosas que cambian CÓMO entra el dinero, no ajustes de la cuenta.
             Con la etiqueta PRO igual que las otras Premium: quien la ve sabe antes de tocar
             que va a encontrar un candado. */}
-        {conDatos(negocios.length > 0) && (
+        {isPremium && (
           <Row
             Icon={Store}
             label={t("negocios.rowLabel")}
@@ -404,7 +407,14 @@ export default function Settings({
             coloca el círculo, que es el que ocupa lo mismo que un ícono
             normal; el ancho sigue existiendo en la lista de widgets de
             Android para quien lo prefiera. */}
-        {voiceWidget.isSupported && (
+        {/* EL MICRÓFONO ES PREMIUM (11/08/2026).
+
+            Dicho por él revisando las capturas: *"el micrófono es una función premium"*. No
+            estaba escrito en ninguna parte —ni en la lista de gratis ni en la de Premium— y
+            por eso salía a todo el mundo. Ahora es Premium en los tres sitios por los que se
+            llega: estas dos filas, el botón del panel de "+" y la propia pantalla del
+            micrófono. Ver app/voice. */}
+        {isPremium && voiceWidget.isSupported && (
           <Row
             Icon={Mic}
             label={t("widget.rowLabel")}
@@ -417,12 +427,14 @@ export default function Settings({
             microfono entiende anotar, preguntar, comparar y exportar, y nada
             de eso se ve en ninguna parte: sin esta pantalla se usa solo para
             lo primero, que es lo unico que se adivina al tocarlo. */}
-        <Row
-          Icon={MessageSquare}
-          label={t("voiceHelp.rowLabel")}
-          onPress={onVoiceHelp}
-          right={<ChevronRight size={16} color="#cbd5e1" />}
-        />
+        {isPremium && (
+          <Row
+            Icon={MessageSquare}
+            label={t("voiceHelp.rowLabel")}
+            onPress={onVoiceHelp}
+            right={<ChevronRight size={16} color="#cbd5e1" />}
+          />
+        )}
         {isPremium && (
           <Row
             Icon={Lock}
@@ -435,7 +447,7 @@ export default function Settings({
             }
           />
         )}
-        {conDatos(tieneMetas) && (
+        {isPremium && (
           <Row
             Icon={PiggyBank}
             label={t("settings.savingsGoals")}
