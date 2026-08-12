@@ -78,6 +78,9 @@ const COLUMN_ALIASES = {
     "fecha", "date", "data", "fecha de operacion", "fecha operacion",
     "fecha de proceso", "fecha proceso", "fec. operacion", "f. operacion",
     "fecha valuta", "fecha mov", "fecha movimiento",
+    // Sueltos y cortos: solo valen si la cabecera dice exactamente eso. Ver el largo minimo
+    // de arriba — "dia" dentro de "gasto diario" se llevaria la columna equivocada.
+    "dia", "day", "fec",
   ],
   description: [
     "descripcion", "description", "descricao", "detalle", "concepto",
@@ -123,14 +126,35 @@ export function normalizeHeader(text: string): string {
     .trim();
 }
 
+/**
+ * Cuántas letras tiene que tener un nombre para buscarlo POR PARTES.
+ *
+ * La búsqueda por partes es la que hace que "Fecha de operaciones" se reconozca como fecha: la
+ * cabecera CONTIENE "fecha". Pero con nombres cortos se vuelve peligrosa — "dia" aparece dentro
+ * de "gasto diario", e "id" dentro de "identidad" y de "unidad". Ahí una columna cualquiera
+ * pasaría por la de la fecha y el archivo entero entraría con fechas inventadas.
+ *
+ * Los cortos solo valen si la cabecera dice EXACTAMENTE eso.
+ */
+const LARGO_MINIMO_PARA_BUSCAR_POR_PARTES = 5;
+
 function findColumnIndex(headers: string[], aliases: readonly string[]): number {
+  // LOS NOMBRES BUSCADOS SE LIMPIAN IGUAL QUE LAS CABECERAS, y esto era un fallo (12/08/2026).
+  //
+  // Las cabeceras pasan por normalizeHeader, que cambia los puntos por espacios: "Fec.
+  // Operación" queda "fec operacion". Pero los nombres de esta lista se comparaban tal cual,
+  // con su punto, así que "fec. operacion" NUNCA podía coincidir con nada — estaba escrito en
+  // la lista y no servía para nada. Lo mismo con "cod. operacion".
+  const buscados = aliases.map((a) => normalizeHeader(a)).filter(Boolean);
+
   // Primero busca coincidencia exacta (más confiable)...
-  for (const alias of aliases) {
+  for (const alias of buscados) {
     const idx = headers.indexOf(alias);
     if (idx !== -1) return idx;
   }
   // ...y si no, que el encabezado contenga el nombre buscado.
-  for (const alias of aliases) {
+  for (const alias of buscados) {
+    if (alias.length < LARGO_MINIMO_PARA_BUSCAR_POR_PARTES) continue;
     const idx = headers.findIndex((h) => h.includes(alias));
     if (idx !== -1) return idx;
   }
