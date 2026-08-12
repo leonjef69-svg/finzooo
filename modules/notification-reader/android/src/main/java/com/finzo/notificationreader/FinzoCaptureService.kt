@@ -6,7 +6,7 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.jstasks.HeadlessJsTaskConfig
 
 /**
- * Despierta a Finzo lo justo para registrar el movimiento, sin abrirla.
+ * Despierta a Fino lo justo para registrar el movimiento, sin abrirla.
  *
  * POR QUE HACE FALTA
  *
@@ -17,7 +17,7 @@ import com.facebook.react.jstasks.HeadlessJsTaskConfig
  *
  * Esto arranca ese lenguaje sin pantalla, corre el trabajo y se apaga. Es lo
  * que convierte el registro automatico en automatico de verdad: antes el
- * aviso se quedaba esperando en el buzon hasta que alguien abria Finzo.
+ * aviso se quedaba esperando en el buzon hasta que alguien abria Fino.
  *
  * SI ANDROID NO LO DESPIERTA, NO SE PIERDE NADA
  *

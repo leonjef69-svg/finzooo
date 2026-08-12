@@ -31,7 +31,7 @@ npx eslint app screens components utils constants contexts modules
 | `exportar` / `programado` | Cuándo toca la exportación automática y qué mes lleva |
 | `panorama` | Las cuentas de Reportes: que el disponible sea el mismo que en Inicio |
 | `bloqueo` / `senuelo` | El PIN, la huella y el modo señuelo |
-| `archivo-entrante` | Compartir un estado de cuenta a Finzo |
+| `archivo-entrante` | Compartir un estado de cuenta a Fino |
 | El resto | Gráficos, etiquetas que no se pisan, resúmenes por día |
 
 ### Auditores (`auditar-*`)

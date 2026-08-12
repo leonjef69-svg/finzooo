@@ -1,7 +1,7 @@
 import { requireOptionalNativeModule } from "expo";
 import { Platform } from "react-native";
 
-/** Un archivo que llegó desde otra aplicación, ya copiado a Finzo. */
+/** Un archivo que llegó desde otra aplicación, ya copiado a Fino. */
 export type IncomingFile = {
   /** Ruta local ("file://..."), lista para leer como cualquier otra. */
   uri: string;
@@ -18,7 +18,7 @@ const Native = requireOptionalNativeModule<NativeShape>("IncomingFile");
 export const isSupported = Platform.OS === "android" && Native != null;
 
 /**
- * Recoge el archivo con el que se abrió Finzo, si lo hubo.
+ * Recoge el archivo con el que se abrió Fino, si lo hubo.
  *
  * Solo lo entrega UNA vez: la segunda llamada devuelve null aunque la app
  * siga abierta. Es lo que evita que el mismo estado de cuenta se importe de

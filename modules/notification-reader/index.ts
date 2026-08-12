@@ -90,7 +90,7 @@ export function openPermissionSettings(): void {
   }
 }
 
-/** ¿La persona encendió la función dentro de Finzo? */
+/** ¿La persona encendió la función dentro de Fino? */
 export function isEnabled(): boolean {
   if (!Native) return false;
   try {
@@ -112,7 +112,7 @@ export function setEnabled(value: boolean): void {
  * Recoge todo lo capturado desde la última vez y vacía el buzón.
  * Devuelve lista vacía si no hay nada o si algo salió mal — nunca lanza,
  * porque se llama cada vez que la app vuelve al frente y un fallo aquí no
- * debe impedir que Finzo se abra.
+ * debe impedir que Fino se abra.
  */
 export async function drain(): Promise<CapturedNotification[]> {
   if (!Native) return [];
@@ -226,7 +226,7 @@ export function abrirAjustesDeSonido(): boolean {
   }
 }
 
-/** Abre la ficha de Finzo en los ajustes, donde se quita el ahorro de bateria. */
+/** Abre la ficha de Fino en los ajustes, donde se quita el ahorro de bateria. */
 export function abrirAjustesDeBateria(): boolean {
   if (!Native?.abrirAjustesDeBateria) return false;
   try {
@@ -249,7 +249,7 @@ export async function clear(): Promise<void> {
  * Si el celular DICE en voz alta lo que acaba de llegar.
  *
  * Lo hace el servicio de notificaciones, no la app: asi suena EN EL MOMENTO
- * en que llega el yapeo, aunque Finzo este cerrada. Hecho desde la app, el
+ * en que llega el yapeo, aunque Fino este cerrada. Hecho desde la app, el
  * aviso llegaria al abrirla —horas despues— y ya no serviria de nada.
  *
  * Falso tambien si el APK es anterior a esto: es codigo nativo y no llega en
@@ -294,7 +294,7 @@ export function setSpeakOutgoing(value: boolean): void {
  * Le dice al servicio qué moneda está puesta, para que la voz la DIGA.
  *
  * La voz leía "S/ 1" tal cual y el celular pronunciaba "ese ene uno": el símbolo no es una
- * palabra. Quien habla es el servicio de Android, con Finzo cerrada, así que no puede mirar
+ * palabra. Quien habla es el servicio de Android, con Fino cerrada, así que no puede mirar
  * los ajustes de la app — hay que dejárselo escrito de antemano.
  *
  * Se manda al arrancar la app y cada vez que se cambia la moneda. En un celular con una

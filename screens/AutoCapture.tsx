@@ -68,7 +68,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
   // volver, y ver si el contador subió sin tener que salir y entrar.
   const [stats, setStats] = useState(() => notificationReader.stats());
   // Los dos interruptores de la voz. Se leen del lado nativo, que es donde
-  // viven: el servicio los consulta aunque Finzo este cerrada.
+  // viven: el servicio los consulta aunque Fino este cerrada.
   const [hablar, setHablar] = useState(() => notificationReader.isSpeakEnabled());
   const [hablarSalidas, setHablarSalidas] = useState(() => notificationReader.isSpeakOutgoing());
   // El diagnóstico viene cerrado: sirve cuando algo falla, no cada día.
@@ -200,7 +200,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                 que hacía falta después: cuando Android suelta el servicio
                 —pasa al instalar una versión nueva encima— el permiso
                 sigue marcado como dado, y el arreglo es apagar y prender
-                Finzo en esa misma pantalla de Android. Con el botón
+                Fino en esa misma pantalla de Android. Con el botón
                 desactivado, la única forma de llegar ahí era buscarla a
                 mano en los ajustes del celular. */}
             <TouchableOpacity
@@ -230,7 +230,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
               <ChevronRight size={16} color="#cbd5e1" />
             </TouchableOpacity>
 
-            {/* Paso 2: el interruptor de Finzo. Sigue disponible aunque el
+            {/* Paso 2: el interruptor de Fino. Sigue disponible aunque el
                 permiso esté dado, para poder parar la captura sin tener que
                 ir a los ajustes de Android. */}
             <View

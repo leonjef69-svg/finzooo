@@ -11,7 +11,7 @@ import android.widget.RemoteViews
 /**
  * El widget del micrófono en la pantalla de inicio del celular.
  *
- * Lo único que hace es abrir Finzo directamente en la pantalla de voz. No
+ * Lo único que hace es abrir Fino directamente en la pantalla de voz. No
  * guarda nada, no lee nada y no se despierta solo: Android lo dibuja una
  * vez y ahí se queda hasta que alguien lo toca.
  *

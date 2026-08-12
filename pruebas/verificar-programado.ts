@@ -83,7 +83,7 @@ console.log("\n--- NOMBRE DEL ARCHIVO ---");
   });
   ok(vacio === "Gastos_2026-07-31.pdf", "si lo escrito se queda en nada, se cae al automático");
   const sinTipo = buildFileName({ mode: "auto", custom: "", typeLabel: "///", dateKey: "2026-07-31", extension: "csv" });
-  ok(sinTipo === "Finzo_2026-07-31.csv", "y si hasta la etiqueta se queda en nada, el archivo se llama Finzo");
+  ok(sinTipo === "Fino_2026-07-31.csv", "y si hasta la etiqueta se queda en nada, el archivo se llama Fino");
 }
 ok(
   buildFileName({ mode: "auto", custom: "", typeLabel: "Todos", dateKey: "2026-07-31", extension: "csv" }).endsWith(".csv"),
@@ -470,7 +470,7 @@ console.log("\n--- EL DESPERTADOR DE ANDROID: LAS COSTURAS ---");
   ok(tope >= 60000, `el tope de tiempo es de al menos un minuto (${tope} ms)`);
 
   // Y corre también con la app en pantalla: con false se saltaría a quien esté
-  // usando Finzo justo a esa hora.
+  // usando Fino justo a esa hora.
   ok(/\btrue\b\s*\)/.test(servicio), "corre también con la app abierta");
 }
 
@@ -699,7 +699,7 @@ console.log("\n--- ONEDRIVE: LAS CUATRO TRAMPAS DE MICROSOFT ---");
   ok(!/httpMethod: "POST"[\s\S]*uploadAsync/.test(codigo), "y no con POST, que Microsoft rechaza");
 
   // 4. El nombre va DENTRO de la direccion, no en una cabecera como en Dropbox. Y escapado: un
-  //    reporte se llama "Finzo agosto 2026.pdf" y ese espacio partiria la direccion.
+  //    reporte se llama "Fino agosto 2026.pdf" y ese espacio partiria la direccion.
   ok(/special\/approot:\/\$\{encodeURIComponent\(nombre\)\}:\/content/.test(codigo), "el nombre va escapado dentro de la direccion");
   ok(/conflictBehavior=rename/.test(codigo), "y dos reportes del mismo dia no se pisan");
 

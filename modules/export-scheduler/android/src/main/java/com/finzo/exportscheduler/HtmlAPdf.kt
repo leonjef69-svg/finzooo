@@ -15,7 +15,7 @@ import java.io.File
  *
  * POR QUE HACE FALTA ESTO
  *
- * El PDF de Finzo se dibuja desde HTML, y a mano se hace con expo-print, que
+ * El PDF de Fino se dibuja desde HTML, y a mano se hace con expo-print, que
  * necesita que la app este en pantalla. Por eso la exportacion automatica solo
  * podia hacer Excel y CSV: el PDF era el unico formato que no salia con la app
  * cerrada, y el usuario lo pidio igualado (06/08/2026).

@@ -136,7 +136,7 @@ function buildPdfHtml(o) {
           <img src="${o.logoDataUri}" style="width:42px;height:42px;border-radius:9px;" />
         </td>
         <td style="padding-bottom:11px;padding-left:10px;vertical-align:middle;">
-          <div style="font-size:19px;font-weight:bold;color:${VERDE};line-height:1.1;">Finzo</div>
+          <div style="font-size:19px;font-weight:bold;color:${VERDE};line-height:1.1;">Fino</div>
           <div style="font-size:10px;color:#64748b;">${esc(o.userName)}</div>
         </td>
         <td style="padding-bottom:11px;text-align:right;vertical-align:middle;">
@@ -184,7 +184,7 @@ function buildPdfHtml(o) {
     </table>
 
     <div style="margin-top:22px;font-size:8px;color:#94a3b8;text-align:center;">
-      ${esc(T.generatedOn)} ${esc(o.generatedAt)} \xB7 Finzo
+      ${esc(T.generatedOn)} ${esc(o.generatedAt)} \xB7 Fino
     </div>
   </body>
 </html>`;

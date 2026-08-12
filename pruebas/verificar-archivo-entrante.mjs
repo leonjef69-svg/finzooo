@@ -1,4 +1,4 @@
-// Comprueba el rescate del archivo que llega desde "Compartir -> Finzo".
+// Comprueba el rescate del archivo que llega desde "Compartir -> Fino".
 //
 // Esto es una SIMULACION del algoritmo de IncomingFileEffect, no el
 // componente de verdad: el componente vive dentro de React y depende de
@@ -7,7 +7,7 @@
 // algoritmo VIEJO y el NUEVO contra el mismo escenario. Si el viejo pasara,
 // la prueba no valdria nada.
 //
-// El escenario es el real: al llegar desde otra app, Finzo arranca de cero.
+// El escenario es el real: al llegar desde otra app, Fino arranca de cero.
 // El efecto corre en cuanto los datos estan listos, y eso pasa ANTES de que
 // el sistema de pantallas pueda recibir ordenes.
 

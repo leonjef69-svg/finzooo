@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   <string name="finzo_widget_label">Log expense</string>
-  <string name="finzo_widget_name">Finzo · Voice entry</string>
+  <string name="finzo_widget_name">Fino · Voice entry</string>
   <string name="finzo_widget_description">Tap and say your expense without opening the app</string>
-  <string name="finzo_widget_round_name">Finzo · Round microphone</string>
+  <string name="finzo_widget_round_name">Fino · Round microphone</string>
   <string name="finzo_widget_round_description">Round button to dictate your expense</string>
 </resources>

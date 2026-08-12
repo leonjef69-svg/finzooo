@@ -16,7 +16,7 @@ import type { Profile, Transaction } from "@/types";
  * Android despierta este trabajo desde el servicio que escucha las
  * notificaciones, sin abrir la app ni enseñar nada. Es lo que convierte el
  * registro automático en automático de verdad: antes el aviso se quedaba
- * esperando en el buzón hasta que alguien abría Finzo, y si pasaban tres días
+ * esperando en el buzón hasta que alguien abría Fino, y si pasaban tres días
  * sin abrirla, tres días sin movimientos.
  *
  * SI ESTO NO CORRE, NO PASA NADA MALO
@@ -92,7 +92,7 @@ export async function capturarEnFondo(): Promise<number> {
     //
     // Este trabajo corre con la app CERRADA, así que no pasa por el reparto que hace el
     // contexto: sin estas dos líneas, encender "los yapeos entran a mi negocio" habría
-    // funcionado solo con Finzo abierta, y con la app cerrada —que es cuando más yapeos
+    // funcionado solo con Fino abierta, y con la app cerrada —que es cuando más yapeos
     // llegan— la plata del negocio habría seguido cayendo en las cuentas de casa.
     //
     // No habría dado ningún error. Habría dado cuentas que no cuadran.
@@ -116,7 +116,7 @@ export async function capturarEnFondo(): Promise<number> {
 
   // Y EL REPARTO, EL MISMO QUE HACE LA APP ABIERTA. Es la misma función a propósito: dos
   // repartos escritos aparte acabarían decidiendo distinto, y entonces dónde cae tu plata
-  // dependería de si tenías Finzo abierta o no.
+  // dependería de si tenías Fino abierta o no.
   const caja = Array.isArray(cajaGuardada) ? cajaGuardada : [];
   const { personales, delNegocio } = separarLoDelNegocio(
     toAdd,

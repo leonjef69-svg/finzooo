@@ -10,7 +10,7 @@
   <application>
     <!--
       Quien recibe el despertador a la hora fijada. No se exporta: solo lo
-      dispara el propio Finzo.
+      dispara el propio Fino.
 
       Y tiene que ser un receptor y no el servicio directamente: desde
       Android 8 una app en segundo plano no puede arrancar un servicio, pero
@@ -40,7 +40,7 @@
     </receiver>
 
     <!--
-      El servicio que despierta a Finzo lo justo para armar el reporte y
+      El servicio que despierta a Fino lo justo para armar el reporte y
       subirlo, sin abrirla ni ensenar nada.
     -->
     <service

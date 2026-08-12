@@ -51,7 +51,7 @@ export type ExportDestination =
  * automática, y el criterio es uno: que NADIE tenga que elegir a quién mandar
  * el archivo ni darle a un botón de enviar.
  *
- *   drive   → la cuenta ya está conectada y la carpeta la crea Finzo.
+ *   drive   → la cuenta ya está conectada y la carpeta la crea Fino.
  *   folder  → la carpeta se elige una vez y el permiso de Android se queda.
  *   dropbox → se autoriza una vez en el navegador y el permiso es de larga
  *             duración, así que después no vuelve a pedir nada.
@@ -247,7 +247,7 @@ export function buildFileName(opts: {
     // Si lo escrito se quedó en nada tras limpiarlo (alguien escribió solo
     // "???"), se cae al automático en vez de generar un archivo sin nombre.
   }
-  const tipo = sanitizeFileName(opts.typeLabel) || "Finzo";
+  const tipo = sanitizeFileName(opts.typeLabel) || "Fino";
   return `${tipo}_${opts.dateKey}.${opts.extension}`;
 }
 
@@ -404,7 +404,7 @@ export function markExported(now: Date): void {
 // Hace falta porque getLastNotificationResponseAsync() no olvida: devuelve el
 // último aviso tocado SIEMPRE, también tres días después y aunque la app se
 // abra normalmente desde el icono. Sin esto, tocar el recordatorio del lunes
-// haría que la pantalla de exportar saltara sola cada vez que se abre Finzo
+// haría que la pantalla de exportar saltara sola cada vez que se abre Fino
 // el resto de la semana.
 //
 // Se guarda la FECHA DE ENTREGA y no el identificador del aviso: un aviso que

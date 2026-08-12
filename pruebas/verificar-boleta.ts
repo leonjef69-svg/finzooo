@@ -534,7 +534,7 @@ console.log("\n--- UNA BOLETA DE FARMACIA CON EL ROTULO PARTIDO (Mifarma) ---");
 console.log("\n--- LAS BOLETAS DE LOS OTROS PAISES QUE LA APP OFRECE ---");
 {
   // "El escanear tiene que funcionar en los paises que tengo en mi ajuste actualmente junto a
-  // sus monedas" (09/08/2026). Salio mirando una boleta chilena: Finzo deja elegir pesos
+  // sus monedas" (09/08/2026). Salio mirando una boleta chilena: Fino deja elegir pesos
   // chilenos, colombianos y argentinos, y ALLI LOS PRECIOS NO LLEVAN CENTIMOS.
   //
   // El escaner se apoyaba en los decimales para distinguir un precio de un codigo de producto
@@ -598,7 +598,7 @@ console.log("\n--- LAS BOLETAS DE LOS OTROS PAISES QUE LA APP OFRECE ---");
   // EL IMPUESTO SE LLAMA DISTINTO EN CADA PAIS, y solo estaba el peruano.
   //
   // En Peru es IGV; en Chile, Colombia, Mexico, Argentina y España es IVA; en Brasil, ICMS.
-  // Finzo deja elegir las monedas de todos esos. Una linea de impuesto que no se descarta puede
+  // Fino deja elegir las monedas de todos esos. Una linea de impuesto que no se descarta puede
   // ganar como si fuera el total — y cobrarse el impuesto en vez de la compra.
   const chilenaConIva = parseReceipt(
     ["MINIMARKET", "NETO           8403", "IVA 19%        1597", "TOTAL         10000"].join("\n"),

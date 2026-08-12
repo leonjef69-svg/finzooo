@@ -110,7 +110,7 @@ console.log("\n--- LOS GRAFICOS DE REPORTES EN EL PDF ---");
   ok(h.includes("May") && h.includes("Jun"), "con sus meses");
   ok(h.includes("Día a día"), "y el gasto diario");
   // Lo que NO tiene que salir, que fue la peticion expresa.
-  ok(!h.includes("Finzo IA"), "NO sale Finzo IA");
+  ok(!h.includes("Fino IA"), "NO sale Fino IA");
   ok(!h.includes("Presupuesto utilizado"), "NI la barra de presupuesto utilizado");
 }
 {

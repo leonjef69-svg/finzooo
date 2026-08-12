@@ -4,7 +4,7 @@
 // Bolivia y sus monedas; si no está en ninguno de los 2, ocúltalo. Ejemplo: yo pongo Colombia
 // o Argentina, no deben poder visualizar ni usar esa función"*.
 //
-// Y es correcto. Finzo lee **avisos de Yape**, y Yape no está en Colombia, Argentina, Chile,
+// Y es correcto. Fino lee **avisos de Yape**, y Yape no está en Colombia, Argentina, Chile,
 // México, Brasil, España ni Estados Unidos. Ahí la función no falla: no tiene nada que leer.
 // Enseñarla es prometer algo que nunca va a pasar, y lo peor de una función así no es que no
 // sirva — es que la persona la enciende, da un permiso de leer TODAS sus notificaciones, y se

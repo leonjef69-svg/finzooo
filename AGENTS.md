@@ -1,4 +1,4 @@
-# Finzo
+# Fino
 
 App de presupuesto personal para Android, en soles peruanos (S/).
 React Native + Expo SDK 54, Expo Router, NativeWind, TypeScript estricto.

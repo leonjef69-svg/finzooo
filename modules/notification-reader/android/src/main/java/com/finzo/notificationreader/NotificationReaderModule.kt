@@ -10,7 +10,7 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 /**
- * Puente entre el servicio de Android (Kotlin) y el resto de Finzo
+ * Puente entre el servicio de Android (Kotlin) y el resto de Fino
  * (JavaScript). No lee notificaciones por su cuenta: solo pregunta por el
  * permiso, enciende o apaga la función, y entrega lo que el servicio dejó
  * en el buzón.
@@ -39,7 +39,7 @@ class NotificationReaderModule : Module() {
     OnStartObserving { enEscucha = this@NotificationReaderModule }
     OnStopObserving { enEscucha = null }
 
-    // ¿La persona le dio a Finzo el acceso a notificaciones en los ajustes
+    // ¿La persona le dio a Fino el acceso a notificaciones en los ajustes
     // de Android? Es un permiso especial: no se puede pedir con un popup,
     // hay que mandarla a la pantalla del sistema.
     Function("isPermissionGranted") { hasNotificationAccess() }
@@ -51,7 +51,7 @@ class NotificationReaderModule : Module() {
       context.startActivity(intent)
     }
 
-    // Interruptor propio de Finzo, independiente del permiso de Android.
+    // Interruptor propio de Fino, independiente del permiso de Android.
     Function("isEnabled") { NotificationStore.isEnabled(context) }
 
     // SOLO PARA SABER QUE APK ESTA INSTALADO.
@@ -78,7 +78,7 @@ class NotificationReaderModule : Module() {
     /**
      * La moneda elegida, para que la voz diga "soles" y no deletree el simbolo.
      *
-     * La manda la app; el servicio la lee cuando habla, con Finzo cerrada.
+     * La manda la app; el servicio la lee cuando habla, con Fino cerrada.
      */
     Function("setMoneda") { value: String ->
       NotificationStore.setMoneda(context, value)
@@ -124,7 +124,7 @@ class NotificationReaderModule : Module() {
     /**
      * El volumen del canal de AVISOS, de 0 a 100.
      *
-     * Va aparte del de multimedia, y es el que usa la voz de Finzo a proposito: asi respeta
+     * Va aparte del de multimedia, y es el que usa la voz de Fino a proposito: asi respeta
      * el silencio del celular como cualquier otra notificacion. El precio es que se puede
      * quedar en cero sin que nadie se de cuenta —el de la musica sigue alto y todo "suena"
      * normal—, y entonces la voz habla y no se oye. Con este numero se puede decir.
@@ -138,7 +138,7 @@ class NotificationReaderModule : Module() {
     Function("abrirAjustesDeSonido") { abrirAjustes(Settings.ACTION_SOUND_SETTINGS) }
 
     /**
-     * Los del ahorro de bateria de Finzo.
+     * Los del ahorro de bateria de Fino.
      *
      * Hace falta porque los Honor, Huawei y Xiaomi cierran los servicios en segundo plano
      * por su cuenta, y con el lector cerrado no hay ni registro ni voz.
@@ -217,7 +217,7 @@ class NotificationReaderModule : Module() {
   /**
    * Android guarda la lista de apps con acceso a notificaciones en un ajuste
    * del sistema, con formato "paquete/clase:paquete/clase". Buscamos si el
-   * paquete de Finzo aparece ahí.
+   * paquete de Fino aparece ahí.
    */
   private fun hasNotificationAccess(): Boolean =
     try {

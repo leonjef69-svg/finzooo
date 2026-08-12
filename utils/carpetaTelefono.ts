@@ -18,7 +18,7 @@
 // ---- LO QUE ESTE PERMISO NO ES ----
 //
 // No es acceso a todo el almacenamiento. Es acceso a UNA carpeta, la que la
-// persona eligió. Finzo no puede leer ni tocar nada fuera de ahí.
+// persona eligió. Fino no puede leer ni tocar nada fuera de ahí.
 
 import { StorageAccessFramework as SAF } from "expo-file-system/legacy";
 import { File } from "expo-file-system";

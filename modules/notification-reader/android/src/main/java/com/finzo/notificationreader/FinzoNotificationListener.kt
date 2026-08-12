@@ -25,7 +25,7 @@ import org.json.JSONObject
  * guarda ni se lee.
  *
  * Nada de lo capturado sale del celular: se guarda en el almacenamiento
- * privado de Finzo y se borra apenas la app lo procesa.
+ * privado de Fino y se borra apenas la app lo procesa.
  */
 class FinzoNotificationListener : NotificationListenerService() {
 
@@ -39,7 +39,7 @@ class FinzoNotificationListener : NotificationListenerService() {
   // Y TODO ESTO EN SU PROPIO HILO, NO EN EL PRINCIPAL.
   //
   // Estaba en el hilo principal, que es el mismo donde Android dibuja y donde
-  // Finzo se despierta para registrar el yapeo. Al llegar un yape pasan las
+  // Fino se despierta para registrar el yapeo. Al llegar un yape pasan las
   // dos cosas a la vez, y hablar se ponia EN LA COLA detras de todo ese
   // trabajo: la notificacion aparecia y la voz llegaba segundos despues.
   //
@@ -70,7 +70,7 @@ class FinzoNotificationListener : NotificationListenerService() {
    *
    * El motor de voz de Android es un servicio aparte y el sistema lo puede matar cuando le
    * hace falta memoria — pasa con el celular lleno de apps abiertas. Cuando eso ocurre, el
-   * motor que Finzo tiene guardado queda inservible: acepta ordenes y no suena nada.
+   * motor que Fino tiene guardado queda inservible: acepta ordenes y no suena nada.
    *
    * Rendirse al primer fallo dejaria la voz muda hasta reiniciar el celular. Insistir sin
    * limite gastaria bateria dando vueltas si de verdad no hay voz instalada. Tres es el
@@ -112,7 +112,7 @@ class FinzoNotificationListener : NotificationListenerService() {
       // EL MOTOR DE VOZ, LISTO DESDE YA.
       //
       // Arrancarlo tarda 2 a 4 segundos: es el sistema de voz de Android
-      // despertandose y cargando el idioma, no Finzo pensando. Si se espera al
+      // despertandose y cargando el idioma, no Fino pensando. Si se espera al
       // primer yapeo, esa espera se oye — la notificacion aparece y la voz
       // llega despues.
       //
@@ -221,7 +221,7 @@ class FinzoNotificationListener : NotificationListenerService() {
   }
 
   /**
-   * Le pide a Android que despierte a Finzo para registrar lo capturado.
+   * Le pide a Android que despierte a Fino para registrar lo capturado.
    *
    * Va en su propio try y aparte del guardado: si esto falla, el aviso YA
    * esta en el buzon. Lo peor que puede pasar es que se registre al abrir la
@@ -247,7 +247,7 @@ class FinzoNotificationListener : NotificationListenerService() {
    * monto, mejor puestos de lo que los pondría cualquier frase armada por
    * nosotros, y sin riesgo de decir un número equivocado.
    *
-   * Va aquí y no en la app porque este servicio corre aunque Finzo esté
+   * Va aquí y no en la app porque este servicio corre aunque Fino esté
    * cerrada. Hecho del otro lado, el aviso llegaría cuando la persona abriera
    * la app —horas después— y ya no serviría de nada.
    */
@@ -592,7 +592,7 @@ class FinzoNotificationListener : NotificationListenerService() {
    *
    * Es la diferencia entre "esta vez no sono" y "ya no vuelve a sonar". El motor de voz es un
    * servicio aparte que el sistema puede matar cuando le hace falta memoria; cuando pasa, el
-   * que Finzo tiene guardado acepta ordenes y no suena nada. Sin volver a encenderlo, la voz
+   * que Fino tiene guardado acepta ordenes y no suena nada. Sin volver a encenderlo, la voz
    * queda muda hasta reiniciar el celular.
    *
    * Con tope de intentos: si de verdad no hay voz instalada, insistir sin parar solo gastaria
@@ -630,7 +630,7 @@ class FinzoNotificationListener : NotificationListenerService() {
    * Apps cuyas notificaciones nos interesan. Se compara por "contiene" y no
    * por el nombre exacto del paquete a propósito: los bancos cambian el
    * nombre de sus apps entre versiones y países, y así seguimos
-   * reconociéndolas sin tener que sacar una versión nueva de Finzo.
+   * reconociéndolas sin tener que sacar una versión nueva de Fino.
    */
   private fun isMoneyApp(pkg: String): Boolean =
     MONEY_APP_HINTS.any { pkg.contains(it) }
@@ -791,7 +791,7 @@ class FinzoNotificationListener : NotificationListenerService() {
      * Y mientras tanto molestaban. El aviso de Scotiabank "Operacion en
      * curso. Hemos generado y autocompletado la clave" se capturaba, se
      * guardaba y salia en la pantalla de diagnostico — un aviso de seguridad
-     * de un banco que Finzo no necesita ni mirar.
+     * de un banco que Fino no necesita ni mirar.
      *
      * Mejor una app que funciona con la que se usa que quince a medias. Para
      * volver a meter uno hace falta un aviso REAL suyo: se agrega su paquete

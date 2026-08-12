@@ -7,7 +7,7 @@
 //
 // ---- SOBRE EL PERMISO QUE SE PIDE ----
 //
-// La app está registrada como "carpeta de aplicaciones", así que Finzo solo
+// La app está registrada como "carpeta de aplicaciones", así que Fino solo
 // puede entrar a SU carpeta (Dropbox/Aplicaciones/<nombre de la app>). No puede
 // leer, listar ni borrar nada más del Dropbox de nadie, aunque quisiera.
 //
@@ -169,7 +169,7 @@ async function permisoDeAhora(): Promise<string> {
 }
 
 /**
- * Sube un archivo ya generado a la carpeta de Finzo en Dropbox.
+ * Sube un archivo ya generado a la carpeta de Fino en Dropbox.
  *
  * Devuelve el nombre con el que quedó, que puede NO ser el que se pidió: con
  * `autorename` Dropbox añade "(1)" si ya había uno igual, y así dos reportes

@@ -62,7 +62,7 @@ console.log("\n--- Y NO SE PISAN POR VENIR DE HILOS DISTINTOS ---");
 
 console.log("\n--- Y ESE HILO NO ES EL DE LA PANTALLA ---");
 {
-  // Estaba en el hilo principal, que es donde Android dibuja y donde Finzo se
+  // Estaba en el hilo principal, que es donde Android dibuja y donde Fino se
   // despierta para registrar el yapeo. Al llegar un yape pasan las dos cosas a
   // la vez, y hablar quedaba EN LA COLA detras de todo ese trabajo: la
   // notificacion aparecia y la voz llegaba segundos despues.
@@ -75,7 +75,7 @@ console.log("\n--- Y ESE HILO NO ES EL DE LA PANTALLA ---");
 console.log("\n--- EL MOTOR SE QUEDA CALIENTE: LA VOZ, SIN ESPERA ---");
 {
   // Arrancar el motor de voz tarda 2 a 4 segundos —es Android despertando su
-  // sistema de voz, no Finzo pensando— y eso se OIA: la notificacion aparecia
+  // sistema de voz, no Fino pensando— y eso se OIA: la notificacion aparecia
   // y la voz llegaba despues.
   //
   // Se apagaba tras un minuto sin usarse, asi que ese retraso volvia cada vez

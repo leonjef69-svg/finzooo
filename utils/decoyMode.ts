@@ -1,6 +1,6 @@
 // MODO SEÑUELO
 //
-// Finzo admite dos PIN. El de verdad abre la app normal. El señuelo abre una
+// Fino admite dos PIN. El de verdad abre la app normal. El señuelo abre una
 // versión con movimientos inventados, para el caso de que alguien obligue a
 // abrir la aplicación: lo que verá es una cuenta creíble pero falsa.
 //

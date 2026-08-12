@@ -1,4 +1,4 @@
-// Los países que Finzo conoce, con su idioma y su moneda.
+// Los países que Fino conoce, con su idioma y su moneda.
 //
 // POR QUÉ EXISTE ESTO
 //

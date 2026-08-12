@@ -270,7 +270,7 @@ export default function Home({
         )}
 
         {/* ESTADO DE CUENTA QUE LLEGÓ Y NO SE LLEGÓ A ABRIR.
-            Es la red de seguridad de "Compartir → Finzo". Si por lo que sea
+            Es la red de seguridad de "Compartir → Fino". Si por lo que sea
             la pantalla de importar no se abrió sola, el archivo NO se pierde
             en silencio: aparece aquí con su nombre y se abre de un toque.
             Antes, cuando algo fallaba, la app se quedaba en Inicio sin decir

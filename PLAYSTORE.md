@@ -15,7 +15,8 @@ y Google lo revisa de verdad.
 
 | | |
 |---|---|
-| Nombre | **Finzo** |
+| Nombre en la tienda | **Fino: Gastos e Ingresos** (23 de 30) |
+| Nombre bajo el icono | **Fino** |
 | Identificador | `com.finzo.app` |
 | Versión | 1.0.0 |
 | Categoría | **Finanzas** |
@@ -52,12 +53,12 @@ no prometerla antes de instalar.
 ## Descripción completa
 
 ```
-Finzo es una app de presupuesto pensada para Perú: lleva tus gastos de casa y los de tu negocio por separado, en soles.
+Fino es una app de presupuesto pensada para Perú: lleva tus gastos de casa y los de tu negocio por separado, en soles.
 
 LO QUE HACE SOLO
 Enciende el registro automático y cuando te yapeen, el movimiento se anota sin que toques nada. Funciona incluso con la app cerrada.
 
-Esta parte necesita Yape, así que está disponible en Perú y Bolivia. En los demás países Finzo funciona igual de bien: anotas tus movimientos en dos toques, los dictas o los importas del estado de cuenta de tu banco.
+Esta parte necesita Yape, así que está disponible en Perú y Bolivia. En los demás países Fino funciona igual de bien: anotas tus movimientos en dos toques, los dictas o los importas del estado de cuenta de tu banco.
 
 TU DINERO ORDENADO
 • Ingresos y gastos con categorías
@@ -83,7 +84,7 @@ Guárdalos en tu celular, en Google Drive o en Dropbox. También puedes programa
 TUS DATOS SON TUYOS
 Se guardan cifrados en tu celular. No vendemos tu información. Puedes borrar tu cuenta entera cuando quieras, desde la app o desde nuestra web.
 
-Finzo no es un banco, no mueve dinero y no se conecta a tus cuentas bancarias. Es tu cuaderno de gastos, pero que hace las cuentas por ti.
+Fino no es un banco, no mueve dinero y no se conecta a tus cuentas bancarias. Es tu cuaderno de gastos, pero que hace las cuentas por ti.
 ```
 
 ---
@@ -109,7 +110,7 @@ explican de qué va la app, no las más bonitas.
 
 1. **Inicio** con movimientos de verdad y el presupuesto del mes — de un vistazo se entiende
    qué es.
-2. **El registro automático**, con la pantalla de Yape. Es lo que Finzo tiene y las demás no.
+2. **El registro automático**, con la pantalla de Yape. Es lo que Fino tiene y las demás no.
 3. **El Modo Negocio**, con el panel y su saldo.
 4. **Reportes** con las gráficas.
 5. **Exportar** a PDF/Excel.
@@ -159,7 +160,7 @@ Google exige justificar `BIND_NOTIFICATION_LISTENER_SERVICE` con la función pri
 **Texto para el formulario:**
 
 ```
-Finzo es una app de control de gastos. El acceso a las notificaciones se usa
+Fino es una app de control de gastos. El acceso a las notificaciones se usa
 para una única función: leer los avisos de pago de Yape y registrar
 automáticamente el movimiento (monto, fecha y contraparte) en el presupuesto
 del usuario, sin que tenga que escribirlo a mano.
@@ -167,7 +168,7 @@ del usuario, sin que tenga que escribirlo a mano.
 Es una función opcional que viene desactivada. Solo funciona si el usuario la
 enciende expresamente dentro de la app y concede el permiso.
 
-Finzo filtra por paquete de origen ANTES de procesar nada: solo se leen los
+Fino filtra por paquete de origen ANTES de procesar nada: solo se leen los
 avisos de Yape. Los avisos de cualquier otra aplicación se descartan sin
 guardarse. Los avisos de códigos de verificación y claves se detectan y su
 texto NO se guarda.

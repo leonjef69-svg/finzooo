@@ -4,7 +4,7 @@
       Registro del widget ante Android.
 
       exported="true" es obligatorio: quien dibuja el widget en la pantalla
-      de inicio es el lanzador del celular, que es otra app. Sin esto, Finzo
+      de inicio es el lanzador del celular, que es otra app. Sin esto, Fino
       no aparecería en la lista de widgets.
 
       No expone nada: este receptor solo sabe pintar un botón y abrir la

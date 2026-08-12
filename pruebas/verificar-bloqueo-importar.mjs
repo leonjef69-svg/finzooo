@@ -1,7 +1,7 @@
-// Compartir un estado de cuenta a Finzo CON EL BLOQUEO PUESTO.
+// Compartir un estado de cuenta a Fino CON EL BLOQUEO PUESTO.
 //
 // El escenario lo describio la persona que usa la app: "descargo mi estado de
-// cuenta, pongo la opcion Finzo, primero me sale para poner mi huella o codigo
+// cuenta, pongo la opcion Fino, primero me sale para poner mi huella o codigo
 // PIN, luego me manda a la pantalla principal". Y tenia razon: el bloqueo era
 // el causante.
 //

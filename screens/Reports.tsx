@@ -410,7 +410,7 @@ export default function Reports({
           >
             <View className="flex-row items-center gap-2 mb-3">
               <Sparkles size={16} color="#fcd34d" />
-              <Text className="text-white font-extrabold text-sm">Finzo IA</Text>
+              <Text className="text-white font-extrabold text-sm">Fino IA</Text>
             </View>
             <View className="gap-2.5">
               {insights.map((msg, i) => (
@@ -430,7 +430,7 @@ export default function Reports({
             <Sparkles size={18} color="#fcd34d" />
           </View>
           <View className="flex-1">
-            <Text className="text-white font-bold text-sm">Finzo IA</Text>
+            <Text className="text-white font-bold text-sm">Fino IA</Text>
             <Text className="text-slate-300 text-[11px]">{t("insights.lockedDescription")}</Text>
           </View>
           <Crown size={16} color="#fcd34d" />

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
   <string name="finzo_widget_label">Anotar gasto</string>
-  <string name="finzo_widget_name">Finzo · Ditar por voz</string>
+  <string name="finzo_widget_name">Fino · Ditar por voz</string>
   <string name="finzo_widget_description">Toque e dite seu gasto sem abrir o app</string>
-  <string name="finzo_widget_round_name">Finzo · Microfone redondo</string>
+  <string name="finzo_widget_round_name">Fino · Microfone redondo</string>
   <string name="finzo_widget_round_description">Botão redondo para ditar seu gasto</string>
 </resources>

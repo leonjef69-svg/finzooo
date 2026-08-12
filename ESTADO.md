@@ -27,7 +27,7 @@ se vuelve peor que no tenerlo, porque se cree.
 
 ## Qué es esto
 
-**Finzo**, una app de presupuesto personal para Android, en soles peruanos
+**Fino**, una app de presupuesto personal para Android, en soles peruanos
 (S/). React Native + Expo SDK 54, Expo Router, NativeWind, TypeScript.
 
 El usuario **no es programador** y escribe en español. Las explicaciones van
@@ -182,7 +182,7 @@ espacio duro, más abajo.
 - **Exportar** a PDF, Excel y CSV; a WhatsApp, Gmail, correo, Drive o el menú
   de compartir, con el destinatario ya puesto
 - Contactos de envío guardados, con editar y borrar
-- Importar estados de cuenta (PDF, Excel, CSV) y archivos compartidos a Finzo
+- Importar estados de cuenta (PDF, Excel, CSV) y archivos compartidos a Fino
 - **Crear tus propias categorías** con dibujo (181 iconos + 55 logos) y color;
   editarlas y borrarlas. Personalizar las de fábrica sigue existiendo pero su
   puerta se quitó de Ajustes.
@@ -496,7 +496,7 @@ está hecho: las tres piezas de abajo son exactamente eso.
 
    > ## EL AGUJERO QUE CASI SE ESCAPA, Y QUE HAY QUE RECORDAR
    >
-   > **Hay DOS caminos que registran un yapeo, no uno.** El del contexto corre con Finzo
+   > **Hay DOS caminos que registran un yapeo, no uno.** El del contexto corre con Fino
    > abierta; **`utils/capturaEnFondo.ts` corre con la app CERRADA**, despertado por Android, y
    > escribe directo en el disco.
    >
@@ -772,7 +772,7 @@ Esto es lo pendiente de verdad, en orden de bloqueo:
    delicado de toda la app — la persona lo concede leyendo esa pantalla.
 
    Ahora la sección 2 es solo eso, entera: que es opcional y viene apagada, que Android no deja
-   dar acceso a los avisos de una sola app, que Finzo filtra antes de guardar y solo mira Yape,
+   dar acceso a los avisos de una sola app, que Fino filtra antes de guardar y solo mira Yape,
    que todo se queda en su celular, y que de los avisos de claves no se guarda el texto.
    También el Modo Negocio, los contactos de envío, el micrófono, Drive y Dropbox.
 4. ~~Falta la página web de borrado de cuenta~~ **RESUELTO EL 08/08/2026. LAS DOS PÁGINAS ESTÁN
@@ -837,7 +837,7 @@ Por eso **todas las marcas viven en un solo archivo**: si alguien reclama,
 quitar una es borrar una línea. Hay una prueba que vigila las dos cosas.
 
 Y nunca en el icono de la app ni en las fotos de la tienda: ahí sí parecería
-que Finzo es oficial de esa marca.
+que Fino es oficial de esa marca.
 
 ### Decisiones que costaron pensarse
 
@@ -1558,7 +1558,7 @@ nada y deja un error apuntado que despista al buscar de verdad.
 ### Y eso explica también la demora
 
 Arrancar el motor de voz de Android tarda **2 a 4 segundos**: es el sistema cargando el
-idioma, no Finzo pensando. Por eso el servicio lo enciende **en cuanto Android lo engancha**
+idioma, no Fino pensando. Por eso el servicio lo enciende **en cuanto Android lo engancha**
 (`onListenerConnected`), para que esté caliente cuando llegue el primer yapeo.
 
 Con el lector desenganchado, **eso nunca pasaba**. El motor estaba frío y la espera se oía.
@@ -1689,7 +1689,7 @@ versiones a propósito: no describen el arreglo, vigilan que no se rompiera nada
 
 ## La pantalla de Premium, rediseñada (07/08/2026)
 
-Pedido con **tres maquetas**: *"cuando le doy click y entre a Finzo Premium quiero ver
+Pedido con **tres maquetas**: *"cuando le doy click y entre a Fino Premium quiero ver
 este diseño de las 3 imágenes"*. Antes era una sola columna —lo gratis y debajo lo
 Premium— y con eso no se puede comparar: para saber qué se gana hay que recordar la
 lista de arriba mientras se lee la de abajo. Tampoco había precio ni forma de probarlo.
@@ -2408,10 +2408,10 @@ se decía en ningún sitio**.
 
 Y las tres notas de destino lo empeoraban, porque **se contradecían en la misma
 frase**: "Con Drive sí es automático **del todo**: la copia se sube sola la
-próxima vez que **abras Finzo**". Las dos mitades no pueden ser verdad a la vez.
+próxima vez que **abras Fino**". Las dos mitades no pueden ser verdad a la vez.
 
 Ahora hay un aviso fijo debajo de la hora —"a esa hora te llega un aviso; el
-archivo se crea solo en cuanto abras Finzo, no a la hora exacta con la app
+archivo se crea solo en cuanto abras Fino, no a la hora exacta con la app
 cerrada"— y las tres notas dicen lo mismo sin prometer de más. Hay una prueba que
 prohíbe que vuelva a aparecer "del todo" / "fully automatic" / "de verdade" en
 esas notas.
@@ -2425,7 +2425,7 @@ semanas después, ni a nadie más que use la app.
 *"La idea es que yo rellene los datos y por ejemplo ponga una hora y que se
 exporte de manera automática, no tenga que hacer nada el usuario."*
 
-Ahora sí. A la hora fijada el archivo se arma y se guarda solo, con Finzo
+Ahora sí. A la hora fijada el archivo se arma y se guarda solo, con Fino
 cerrada. **Solo Excel y CSV**: el PDF se dibuja en una ventana del navegador de
 Android y esa ventana necesita la app en pantalla. Es la única razón.
 
@@ -2464,7 +2464,7 @@ existe cuando la app está cerrada.
 - **Tope de 120 s** y no los 30 del registro de yapes: aquí se sube un archivo
   por internet, y con mala señal 30 s corta la subida a medias.
 - **Corre también con la app en pantalla** (`true`), al contrario que el registro
-  de yapes. Con `false` se saltaría a quien esté usando Finzo a esa hora.
+  de yapes. Con `false` se saltaría a quien esté usando Fino a esa hora.
 - **El día se comprueba otra vez en JavaScript**: un despertador retrasado hasta
   pasada la medianoche haría el reporte de un día que no tocaba.
 - **`proximaEjecucion` vive en JavaScript**, no duplicada en Kotlin. Dos
@@ -2501,7 +2501,7 @@ en vez de reventar al arrancar.
 
 #### Lo que hay que hacer en el celular, una vez
 
-Quitarle a Finzo el **ahorro de batería** en los ajustes de Android. Los Honor y
+Quitarle a Fino el **ahorro de batería** en los ajustes de Android. Los Honor y
 Xiaomi son de los más agresivos matando procesos de fondo, y sin eso pueden
 retrasar o saltarse el reporte. No es algo que el código pueda arreglar.
 
@@ -2807,9 +2807,9 @@ El widget de la pantalla de inicio **ya existía** y ya hacía lo importante:
 abre `finzo://voice` directo y el micrófono empieza a escuchar solo. Eso no se
 toca.
 
-Lo que el usuario quería era que **no se viera Finzo**: la tarjeta flotando
+Lo que el usuario quería era que **no se viera Fino**: la tarjeta flotando
 sobre su fondo de pantalla. Se intentaron dos pasos intermedios —salir de
-Finzo al terminar de dictar, y tapar el fondo con un oscuro opaco— y **el
+Fino al terminar de dictar, y tapar el fondo con un oscuro opaco— y **el
 usuario pidió deshacerlos**. Están revertidos.
 
 **No volver a proponerlos sin preguntar.** Y si algún día se retoma:
@@ -2865,7 +2865,7 @@ esa marca se saltaría en silencio.
 
 **HECHO Y DESHECHO: un "Ajustar saldo" (10 y 11/08/2026).** El arrastre es
 *presupuesto menos lo anotado*, no la plata real. Cada gasto sin anotar mete un
-error que nunca se corrige y se acumula: a los doce meses Finzo puede decir
+error que nunca se corrige y se acumula: a los doce meses Fino puede decir
 S/ 2.400 cuando hay S/ 600.
 
 Se hizo el botón —contar tu plata, decírsela, y que anote la diferencia como un
@@ -2892,6 +2892,37 @@ PRIMERO habría ahorrado la ida y la vuelta.
 —borrarle lo suyo el 1 de enero es mentirle— y le perdona la deuda al que se
 pasó. Al 31 de diciembre no le pasa nada a la plata. El botón de "poner en
 cero" ya existe para cortarlo a mano cuando haga falta.
+
+---
+
+## De Finzo a Fino — el cambio de nombre (12/08/2026)
+
+Decisión suya, mientras llenaba el formulario de Play Console: *"no será finzo, será
+fino"*. Se cambió todo el mismo día, antes de subir nada a la tienda.
+
+**LO QUE CAMBIÓ:** todo lo que ve una persona. Los textos de la app en los tres idiomas,
+la política de privacidad y los términos, las páginas web, el nombre del widget, la
+pantalla de arranque, el gráfico de la tienda y la ficha de Play Store.
+
+**LO QUE NO CAMBIÓ, Y NO PUEDE CAMBIAR SIN ROMPER ALGO:**
+
+| Qué | Sigue diciendo | Qué pasa si se "arregla" |
+|---|---|---|
+| Claves de guardado | `finzo:transactions`… | **Se pierden TODOS los datos de todo el mundo.** La app buscaría en un cajón vacío |
+| Identificador de la app | `com.finzo.app` | La ficha de Play Store deja de reconocer los archivos. No se puede cambiar nunca |
+| Enlace interno | `finzo://voice` | El widget del escritorio deja de abrir el micrófono |
+| Rama de actualizaciones | `slug: finzo` | Los celulares dejan de recibir actualizaciones por internet |
+| Clases de Android | `FinzoCaptureService`… | El Manifest apunta a esos nombres: el servicio no arranca |
+| Tareas de fondo | `"FinzoCapture"` | El nombre tiene que ser el MISMO en Kotlin y en index.js, o el yapeo no se registra con la app cerrada |
+| Llave de firma | `FINZO_STORE_FILE` | Sin ella no se puede compilar ni actualizar la app |
+
+**Nada de eso lo ve nadie.** Son nombres internos, y que digan "finzo" no molesta a ninguna
+persona — pero cambiarlos rompe la app de formas que no dan error hasta que ya es tarde.
+
+Por eso la sustitución se hizo con una regla y no a ojo: **cambiar "Finzo" solo cuando NO le
+sigue una letra.** Eso deja fuera `FinzoCaptureService` y `FinzoCapture` (les sigue una
+mayúscula) y también todo lo que va en minúsculas, que es donde viven las claves y el
+identificador. 389 sustituciones en 91 archivos, y ni una en un sitio peligroso.
 
 ---
 
@@ -2939,7 +2970,7 @@ con Yape. Hoy quedó claro lo que cuesta dar por bueno lo que no se probó.
 
 ## La voz que anuncia los yapeos — hecha el 02/08/2026
 
-El celular dice el nombre y el monto apenas llega el yapeo, aunque Finzo esté
+El celular dice el nombre y el monto apenas llega el yapeo, aunque Fino esté
 cerrada (`FinzoNotificationListener.kt`). Lee el aviso de Yape tal cual, sin
 armar la frase.
 
@@ -3011,7 +3042,7 @@ este APK del de esa misma mañana, que ya traía la voz pero muda.
 presupuesto mensual, saldo anterior automático, buscar, modo claro/oscuro,
 sincronización en la nube.
 
-**Premium:** presupuesto por categoría, metas de ahorro, Finzo IA, exportar
+**Premium:** presupuesto por categoría, metas de ahorro, Fino IA, exportar
 PDF, exportar Excel, importar (Excel/CSV), "sin anuncios".
 
 El candado sí funciona: las pantallas de metas, presupuesto por categoría,
@@ -3135,7 +3166,7 @@ Ver [ENTREGAS.md](ENTREGAS.md).
   usuario y **hay que guardarle dos copias** (nube y USB). Ahí está mejor que
   hoy, porque hoy no se puede tener copia de nada.
 
-  Y mientras Finzo **no esté publicada**, perder la llave solo obliga a
+  Y mientras Fino **no esté publicada**, perder la llave solo obliga a
   desinstalar y reinstalar. El problema serio empieza el día de la publicación.
 - **Los datos del usuario**: movimientos, contactos y presupuestos están solo
   en su celular, cifrados, y en su copia de nube. Nunca en el repositorio.

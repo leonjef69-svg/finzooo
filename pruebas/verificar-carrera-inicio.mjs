@@ -25,7 +25,7 @@ const KEEP_ON_RETURN = ["/auto-capture", "/voice", "/scan-receipt", "/import", "
  *
  * No es que las dos reglas corran en el mismo instante. Es esto:
  *
- *   1. Finzo arranca con el archivo. IncomingFileEffect lo recoge y pide
+ *   1. Fino arranca con el archivo. IncomingFileEffect lo recoge y pide
  *      abrir Importar. La pantalla YA es Importar.
  *   2. El dato de "en que pantalla estoy" va un paso por detras: todavia
  *      dice Inicio, porque se actualiza en el siguiente dibujado.

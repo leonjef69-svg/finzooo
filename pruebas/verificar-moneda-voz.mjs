@@ -4,7 +4,7 @@
 // celular decia "S 1". Un simbolo no es una palabra, y el sistema de voz lo deletrea o se lo
 // salta. Y no vale poner "soles" a secas: la app funciona en varios paises.
 //
-// LA LOGICA VIVE EN KOTLIN —la voz habla con Finzo cerrada, sin JavaScript— asi que aqui se
+// LA LOGICA VIVE EN KOTLIN —la voz habla con Fino cerrada, sin JavaScript— asi que aqui se
 // hacen dos cosas distintas:
 //
 //   1. Se REESCRIBE la misma regla en JavaScript y se prueba con casos de verdad. No es

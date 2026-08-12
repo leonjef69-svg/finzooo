@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Textos del widget. Van aquí y no en los del resto de la app porque el
-  widget vive FUERA de Finzo: Android lo dibuja en la pantalla de inicio
+  widget vive FUERA de Fino: Android lo dibuja en la pantalla de inicio
   aunque la app esté cerrada, así que no puede leer sus traducciones.
 
   El nombre empieza con "finzo_widget_" para que no choque con ningún texto
@@ -12,8 +12,8 @@
 -->
 <resources>
   <string name="finzo_widget_label">Anotar gasto</string>
-  <string name="finzo_widget_name">Finzo · Anotar por voz</string>
+  <string name="finzo_widget_name">Fino · Anotar por voz</string>
   <string name="finzo_widget_description">Toca y dicta tu gasto sin abrir la app</string>
-  <string name="finzo_widget_round_name">Finzo · Micrófono redondo</string>
+  <string name="finzo_widget_round_name">Fino · Micrófono redondo</string>
   <string name="finzo_widget_round_description">Botón redondo para dictar tu gasto</string>
 </resources>

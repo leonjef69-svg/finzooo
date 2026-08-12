@@ -1,7 +1,7 @@
 // CAPTURA AUTOMÁTICA
 //
 // Junta las dos mitades de la función: lo que el celular capturó
-// (modules/notification-reader) y lo que Finzo sabe interpretar
+// (modules/notification-reader) y lo que Fino sabe interpretar
 // (utils/notificationParser), y decide qué se guarda de verdad.
 //
 // Está aparte del contexto de la app para poder probarlo entero sin celular:
@@ -85,7 +85,7 @@ export function processCaptured(
     // ver qué texto falta reconocer—, pero uno de otra app solo ensucia la
     // lista. Y con los de clave es peor: dejaba escrito en el celular
     // "Operación en curso. Hemos generado y autocompletado la clave", de un
-    // banco que Finzo ya ni mira.
+    // banco que Fino ya ni mira.
     if (!esAppVigilada(n.package)) continue;
 
     const preview = `${n.title ?? ""} ${n.text ?? ""}`.trim().slice(0, 160);

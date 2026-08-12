@@ -63,7 +63,7 @@ console.log("\n--- LA APP CERRADA SIGUE REGISTRANDO ---");
   ok(listener.includes("registrarYa()"), "el camino del trabajo de fondo sigue existiendo");
   ok(
     listener.includes("FinzoCaptureService::class.java"),
-    "y sigue apuntando al servicio que despierta a Finzo"
+    "y sigue apuntando al servicio que despierta a Fino"
   );
 }
 

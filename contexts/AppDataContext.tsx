@@ -215,9 +215,9 @@ type AppDataContextValue = {
   // app es false, y la pantalla de ajustes lo explica en vez de mostrar un
   // interruptor que no haría nada.
   autoCaptureSupported: boolean;
-  // ¿Android le dio a Finzo acceso a las notificaciones?
+  // ¿Android le dio a Fino acceso a las notificaciones?
   autoCapturePermission: boolean;
-  // Interruptor propio de Finzo, aparte del permiso de Android.
+  // Interruptor propio de Fino, aparte del permiso de Android.
   autoCaptureOn: boolean;
   setAutoCaptureOn: (value: boolean) => void;
   openAutoCaptureSettings: () => void;
@@ -816,7 +816,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    *
    * La voz leía "S/ 1" tal cual y el celular pronunciaba "ese ene uno": un símbolo no es una
    * palabra. Para decir "un sol" hay que saber la moneda, y quien habla es el servicio de
-   * Android —con Finzo cerrada—, que no puede leer los ajustes de la app.
+   * Android —con Fino cerrada—, que no puede leer los ajustes de la app.
    *
    * Así que se le deja escrita: al arrancar y cada vez que cambia. Es un dato suelto y
    * pequeño, no una copia de los ajustes: lo único que cambia es la palabra que se oye.
@@ -949,7 +949,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // CAPTURA AUTOMÁTICA DESDE NOTIFICACIONES
   // ---------------------------------------------------------------------
   // El servicio de Android va guardando en el celular las notificaciones de
-  // apps de dinero, incluso con Finzo cerrada. Aquí las recogemos cada vez
+  // apps de dinero, incluso con Fino cerrada. Aquí las recogemos cada vez
   // que la app se abre o vuelve al frente — que es justo cuando la persona
   // regresa de Yape.
   //
@@ -1137,7 +1137,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
     // Y CADA POCO, MIENTRAS LA APP ESTE EN PANTALLA.
     //
-    // Sin esto, un yapeo que llega con Finzo abierta no se registraba hasta
+    // Sin esto, un yapeo que llega con Fino abierta no se registraba hasta
     // salir y volver a entrar. El trabajo de fondo no lo toca a proposito
     // —con la app delante lo hace ella, y hacerlo los dos seria registrarlo
     // dos veces— pero la app solo recogia al VOLVER al frente. Estando ya

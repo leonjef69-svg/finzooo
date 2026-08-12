@@ -1,8 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
   <application>
     <!--
-      El servicio que despierta a Finzo lo justo para registrar el movimiento,
-      sin abrirla. No se exporta: solo lo arranca el propio Finzo, desde el
+      El servicio que despierta a Fino lo justo para registrar el movimiento,
+      sin abrirla. No se exporta: solo lo arranca el propio Fino, desde el
       servicio de notificaciones de arriba.
     -->
     <service
@@ -13,7 +13,7 @@
       Servicio que el sistema Android usa para entregarnos las notificaciones.
 
       Sobre "exported=true": es lo que documenta Android para este tipo de
-      servicio, y hace falta para que Finzo aparezca en la lista de "Acceso a
+      servicio, y hace falta para que Fino aparezca en la lista de "Acceso a
       notificaciones" de los ajustes del sistema. No abre ningún agujero: la
       línea "android:permission" de abajo exige BIND_NOTIFICATION_LISTENER_SERVICE,
       un permiso que SOLO tiene el sistema operativo y que ninguna otra app
@@ -22,7 +22,7 @@
     <service
       android:name="com.finzo.notificationreader.FinzoNotificationListener"
       android:exported="true"
-      android:label="Finzo"
+      android:label="Fino"
       android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
       <intent-filter>
         <action android:name="android.service.notification.NotificationListenerService" />

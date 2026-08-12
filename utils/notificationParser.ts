@@ -1,7 +1,7 @@
 // INTÉRPRETE DE NOTIFICACIONES
 //
 // Convierte el texto de una notificación ("Yapeaste S/ 20.00 a Juan Pérez")
-// en un movimiento de Finzo. Está separado del código nativo a propósito:
+// en un movimiento de Fino. Está separado del código nativo a propósito:
 // así se puede probar entero sin celular y sin permisos.
 //
 // Regla de oro: ante la duda, NO registrar. Un movimiento que no se capturó
@@ -40,7 +40,7 @@ const L = "A-Za-zÁÉÍÓÚÑÜáéíóúñü";
 const APPS_ACEPTADAS = ["yape"];
 
 /**
- * ¿Este aviso viene de una app que Finzo mira?
+ * ¿Este aviso viene de una app que Fino mira?
  *
  * Se usa para DESCARTARLO SIN DEJAR RASTRO. No es lo mismo que un aviso de
  * Yape que no se entendió: ese sí tiene que salir en la pantalla, porque es

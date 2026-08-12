@@ -2,7 +2,7 @@
 //
 // EL PROBLEMA QUE ESTO ARREGLA, CONTADO COMO PASARÍA
 //
-// Alguien baja Finzo, activa la prueba de 24 horas, crea su bodega, mete sus productos y anota
+// Alguien baja Fino, activa la prueba de 24 horas, crea su bodega, mete sus productos y anota
 // las ventas de todo un día. Al día siguiente se acaba la prueba y **no puede abrir su propia
 // bodega**. Y tampoco puede pagar para recuperarla, porque el cobro todavía no existe.
 //

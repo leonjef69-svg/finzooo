@@ -246,7 +246,7 @@ console.log("\n--- LA TARJETA VERDE DEL SALDO SE VE IGUAL EN LAS DOS PANTALLAS -
     ok(fuente.includes("SALDO_VERDE"), `${nombre} usa el verde compartido`);
     // Y ninguna puede volver a escribir ESE verde a mano: es como se separaron.
     // Se miran los cuatro tonos que tuvieron las dos versiones, no cualquier
-    // color: la tarjeta de Finzo IA tiene su propio degradado oscuro y ahi esta
+    // color: la tarjeta de Fino IA tiene su propio degradado oscuro y ahi esta
     // bien escrito donde se usa, porque solo hay una.
     const suVerde = ["#059669", "#0f766e", "#065f46", "#047857"].filter((c) =>
       new RegExp(`colors=\\{\\[[^\\]]*${c}`).test(fuente)

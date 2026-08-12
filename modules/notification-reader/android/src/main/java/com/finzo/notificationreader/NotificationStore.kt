@@ -6,10 +6,10 @@ import org.json.JSONObject
 
 /**
  * Buzón donde el servicio va dejando las notificaciones que reconoce como
- * financieras, hasta que Finzo se abre y las recoge.
+ * financieras, hasta que Fino se abre y las recoge.
  *
  * Hace falta guardarlas en disco porque el servicio de Android sigue vivo
- * aunque Finzo esté cerrada: si guardáramos en memoria, todo lo capturado
+ * aunque Fino esté cerrada: si guardáramos en memoria, todo lo capturado
  * mientras la app no estaba abierta se perdería.
  *
  * Todo lo que se guarda aquí se queda EN EL CELULAR. No hay ninguna llamada
@@ -43,7 +43,7 @@ object NotificationStore {
   private const val KEY_LAST_SPEAK = "lastSpeak"
   private const val KEY_LAST_SPEAK_AT = "lastSpeakAt"
 
-  // Tope del buzón. Si alguien no abre Finzo en semanas, preferimos perder
+  // Tope del buzón. Si alguien no abre Fino en semanas, preferimos perder
   // lo más viejo antes que llenarle el almacenamiento del celular.
   private const val MAX_QUEUE = 200
   private const val MAX_SEEN = 300
@@ -52,7 +52,7 @@ object NotificationStore {
     context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
   /**
-   * Interruptor que controla Finzo desde sus ajustes. Va aparte del permiso
+   * Interruptor que controla Fino desde sus ajustes. Va aparte del permiso
    * de Android: aunque el permiso siga concedido, si la persona apaga la
    * función dentro de la app dejamos de capturar de inmediato.
    */
@@ -96,7 +96,7 @@ object NotificationStore {
    *
    * La voz leia "S/ 1" tal cual y el celular pronunciaba "ese ene uno": el simbolo no es una
    * palabra. Para cambiarlo por "soles" hay que saber en que pais esta la persona, y este
-   * servicio corre con Finzo CERRADA, sin acceso a los ajustes de la app. Asi que la app lo
+   * servicio corre con Fino CERRADA, sin acceso a los ajustes de la app. Asi que la app lo
    * deja escrito aqui, cada vez que arranca y cada vez que se cambia la moneda.
    *
    * Por defecto soles: es el pais de casa. Y equivocarse aqui solo cambia la palabra que se
@@ -198,7 +198,7 @@ object NotificationStore {
   /**
    * Entrega lo acumulado y vacía el buzón de una sola vez. Se hace atómico
    * (todo o nada) para que no se pierda nada si llega una notificación justo
-   * en el momento en que Finzo está recogiendo.
+   * en el momento en que Fino está recogiendo.
    */
   @Synchronized
   fun drain(context: Context): String {

@@ -8,11 +8,11 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 /**
- * Puente para que Finzo pueda OFRECER poner el widget en la pantalla de
+ * Puente para que Fino pueda OFRECER poner el widget en la pantalla de
  * inicio, en vez de dejar que cada quien lo busque a mano.
  *
  * A mano el camino es: mantener pulsado en un hueco vacío de la pantalla →
- * "Widgets" → bajar por una lista de decenas de apps → encontrar Finzo →
+ * "Widgets" → bajar por una lista de decenas de apps → encontrar Fino →
  * arrastrarlo. Mucha gente no lo encuentra nunca.
  *
  * Con esto, un botón dentro de la app le pide a Android que lo coloque, y

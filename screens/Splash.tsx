@@ -42,7 +42,7 @@ export default function Splash({ onDone }: { onDone: () => void }) {
       >
         <Wallet size={38} color="#ffffff" strokeWidth={2.2} />
       </Animated.View>
-      <Text className="text-white text-2xl font-extrabold tracking-tight">Finzo</Text>
+      <Text className="text-white text-2xl font-extrabold tracking-tight">Fino</Text>
       <Text className="text-emerald-100 text-xs mt-1 font-medium">{t("splash.tagline")}</Text>
     </LinearGradient>
   );

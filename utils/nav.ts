@@ -44,7 +44,7 @@ export function safeBack() {
 // nunca alcance a VER esa pantalla ni un instante antes de la corrección.
 //
 // `allowed` sirve para los casos en que SÍ es correcto llegar aquí de
-// primeras: cuando Android abre Finzo con un archivo compartido, la app
+// primeras: cuando Android abre Fino con un archivo compartido, la app
 // arranca directo en Importar y no hay nada detrás. Ahí, "no hay pantalla
 // anterior" no es un error, es lo esperado.
 export function useRedirectIfOrphaned(allowed = false) {

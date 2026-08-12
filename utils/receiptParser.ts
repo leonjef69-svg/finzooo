@@ -2,7 +2,7 @@
 //
 // Convierte el texto que sacó el lector de la foto en los datos de un gasto.
 //
-// Es el tercer intérprete de Finzo, y sigue las mismas reglas que los otros
+// Es el tercer intérprete de Fino, y sigue las mismas reglas que los otros
 // dos (utils/voiceParser.ts para la voz, utils/notificationParser.ts para los
 // avisos del banco):
 //
@@ -294,7 +294,7 @@ function scoreAsTotal(softened: string): number {
    * Los impuestos y las bases: se parecen al total y NO lo son.
    *
    * **EL NOMBRE DEL IMPUESTO CAMBIA DE PAÍS, y solo estaba el peruano.** En Perú es IGV; en
-   * Chile, Colombia, México, Argentina y España es **IVA**; en Brasil, ICMS. Finzo deja elegir
+   * Chile, Colombia, México, Argentina y España es **IVA**; en Brasil, ICMS. Fino deja elegir
    * las monedas de todos esos, así que la lista tenía que crecer con ellos.
    *
    * También "impuesto" a secas y "tax", que es como lo imprimen algunos sistemas.
@@ -514,7 +514,7 @@ export function parseReceipt(
   /**
    * La moneda de la persona, para saber si en su país los precios llevan céntimos.
    *
-   * Por defecto soles, que es de donde viene la app. Pero Finzo deja elegir pesos chilenos,
+   * Por defecto soles, que es de donde viene la app. Pero Fino deja elegir pesos chilenos,
    * colombianos y argentinos, y allí las boletas se escriben sin decimales: con la regla de
    * los soles puesta, el escáner no encontraría **ni un solo monto**. Ver usaCentimos.
    */

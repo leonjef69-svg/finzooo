@@ -33,7 +33,7 @@ console.log("\n--- NADA DE PROMETER LO QUE NO SE DA ---");
   // LA REGLA CAMBIO EL MISMO DIA, Y SE DEJA ESCRITO POR QUE.
   //
   // La primera version exigia que la frase "Sin publicidad" NO EXISTIERA en los textos. Era
-  // correcta mientras Finzo no tenia anuncios de ninguna clase. Ese mismo 08/08/2026 el
+  // correcta mientras Fino no tenia anuncios de ninguna clase. Ese mismo 08/08/2026 el
   // decidio ponerlos —gratis con anuncios, Premium sin ellos— y entonces la frase vuelve a ser
   // cierta... pero solo cuando los anuncios esten encendidos.
   //
@@ -183,7 +183,7 @@ console.log("\n--- ANUNCIOS: QUIEN PAGA NO LOS VE, Y LO QUE SE DICE DE ELLOS ---
   if (hayAnuncios) {
     ok(/AdMob/.test(legal), "con anuncios, la politica los nombra");
   } else {
-    ok(/Finzo no muestra anuncios/.test(legal), "sin anuncios, la politica dice que no los hay");
+    ok(/Fino no muestra anuncios/.test(legal), "sin anuncios, la politica dice que no los hay");
     // Y NO SE PROMETE "SIN PUBLICIDAD" SI NO HAY PUBLICIDAD. La frase existe en los textos,
     // pero solo se enseña cuando es cierta.
     const premium = fs.readFileSync(path.join(RAIZ, "screens/Premium.tsx"), "utf8");

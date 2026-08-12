@@ -7,7 +7,7 @@
 //
 // Y mientras tanto estorbaban: el aviso de Scotiabank "Operacion en curso.
 // Hemos generado y autocompletado la clave" se capturaba, se guardaba y salia
-// en la pantalla de diagnostico. Un aviso de seguridad de un banco que Finzo
+// en la pantalla de diagnostico. Un aviso de seguridad de un banco que Fino
 // no necesita ni mirar.
 //
 // POR QUE ESTA PRUEBA

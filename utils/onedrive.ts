@@ -15,8 +15,8 @@
 //
 // ---- SOBRE EL PERMISO QUE SE PIDE ----
 //
-// `Files.ReadWrite.AppFolder`: Finzo solo puede entrar a SU carpeta
-// (OneDrive/Aplicaciones/Finzo). No puede leer, listar ni borrar nada más del OneDrive de
+// `Files.ReadWrite.AppFolder`: Fino solo puede entrar a SU carpeta
+// (OneDrive/Aplicaciones/Fino). No puede leer, listar ni borrar nada más del OneDrive de
 // nadie, aunque quisiera. Es el equivalente exacto de la "carpeta de aplicaciones" de Dropbox.
 //
 // ---- SOBRE EL SECRETO QUE **NO** SE USA ----
@@ -198,7 +198,7 @@ async function permisoDeAhora(): Promise<string> {
 }
 
 /**
- * Sube un archivo ya generado a la carpeta de Finzo en OneDrive.
+ * Sube un archivo ya generado a la carpeta de Fino en OneDrive.
  *
  * Devuelve el nombre con el que quedó, que puede NO ser el que se pidió: con `rename` Microsoft
  * añade un número si ya había uno igual, y así dos reportes del mismo día no se pisan. Es lo
@@ -211,7 +211,7 @@ export async function subirAOneDrive(fileUri: string, nombre: string): Promise<s
   // no en una cabecera como en Dropbox. `special/approot` es la carpeta propia de la app, y los
   // dos puntos de alrededor son los que le dicen a Microsoft que lo de en medio es una ruta.
   //
-  // Y va escapado: un reporte se llama "Finzo agosto 2026.pdf" y ese espacio partiría la
+  // Y va escapado: un reporte se llama "Fino agosto 2026.pdf" y ese espacio partiría la
   // dirección.
   const destino =
     `https://graph.microsoft.com/v1.0/me/drive/special/approot:/${encodeURIComponent(nombre)}:/content` +

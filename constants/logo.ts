@@ -1,4 +1,4 @@
-// Logo de Finzo para el PDF, incrustado como texto.
+// Logo de Fino para el PDF, incrustado como texto.
 //
 // Va incrustado y no como archivo a proposito: expo-print arma el PDF en un
 // WebView aislado que no puede leer archivos del celular ni bajar nada de

@@ -29,7 +29,7 @@ import {
   toDateKey,
 } from "@/utils/scheduledExport";
 
-// Que el aviso de exportación se vea aunque Finzo esté abierta. Por defecto
+// Que el aviso de exportación se vea aunque Fino esté abierta. Por defecto
 // expo-notifications los calla cuando la app está en primer plano, y entonces
 // a quien tenga la app abierta a las 9:00 no le llegaría nada.
 Notifications.setNotificationHandler({
@@ -120,14 +120,14 @@ const KEEP_ON_RETURN = [
  *
  *   IncomingFileEffect dice "abre Importar con este archivo".
  *
- * Compartir un estado de cuenta a Finzo dispara las DOS a la vez: Android
+ * Compartir un estado de cuenta a Fino dispara las DOS a la vez: Android
  * trae la app al frente (regla 1) y le entrega el archivo (regla 2). Y aunque
  * /import está en KEEP_ON_RETURN, esa lista se consulta contra la pantalla en
  * la que la app CREE que está, que en ese instante sigue siendo Inicio: la
  * pantalla de importar acaba de pedirse y todavía no ha llegado. Así que la
  * regla 1 no la reconoce, manda a Inicio, y la importación se va con ella.
  *
- * Desde fuera: tocabas Finzo en el menú de compartir, la app se abría en
+ * Desde fuera: tocabas Fino en el menú de compartir, la app se abría en
  * Inicio, y ahí se acababa todo.
  *
  * Una bandera y no un pathname porque el problema es justo ese: el pathname
@@ -149,8 +149,8 @@ function abriendoArchivoEntrante(): boolean {
 }
 
 /**
- * Abre Importar cuando Finzo se ha lanzado con un archivo desde otra app
- * ("Compartir → Finzo" o "Abrir con → Finzo" sobre un estado de cuenta).
+ * Abre Importar cuando Fino se ha lanzado con un archivo desde otra app
+ * ("Compartir → Fino" o "Abrir con → Fino" sobre un estado de cuenta).
  *
  * Se mira al arrancar y cada vez que la app vuelve al frente: si ya estaba
  * abierta, Android no la reinicia, solo le entrega el archivo nuevo.
@@ -167,11 +167,11 @@ function IncomingFileEffect() {
   // Antes se recogía y, si la navegación aún no estaba lista, se dejaba
   // caer: `return` y a otra cosa. Como el módulo nativo solo lo entrega UNA
   // vez, ese archivo se perdía para siempre. Y era el caso NORMAL, no el
-  // raro: al llegar desde otra app, Finzo arranca de cero y este efecto
+  // raro: al llegar desde otra app, Fino arranca de cero y este efecto
   // corre en cuanto los datos están listos, que es antes de que el sistema
   // de pantallas pueda recibir órdenes.
   //
-  // Desde fuera se veía así: tocas Finzo en el menú de compartir, la app se
+  // Desde fuera se veía así: tocas Fino en el menú de compartir, la app se
   // abre, y no pasa nada. Sin error, sin aviso, sin pantalla de importar.
   const pending = useRef<incomingFile.IncomingFile | null>(null);
 
@@ -340,7 +340,7 @@ function ScheduledExportEffect() {
     // Y al tocarlo con la app CERRADA del todo, que es el caso normal a las
     // 9 de la mañana. Ahí el toque abre la app desde cero, y para cuando el
     // escuchador de arriba queda registrado el aviso ya se entregó: sin esto,
-    // tocar el recordatorio abría Finzo en Inicio y no pasaba nada más. Justo
+    // tocar el recordatorio abría Fino en Inicio y no pasaba nada más. Justo
     // lo que la función entera existe para evitar.
     Notifications.getLastNotificationResponseAsync().then(async (last) => {
       if (!last) return;

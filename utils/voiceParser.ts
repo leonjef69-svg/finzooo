@@ -1,7 +1,7 @@
 // INTÉRPRETE DE VOZ
 //
 // Convierte lo que la persona dijo ("gasté 30 soles en KFC") en un
-// movimiento de Finzo.
+// movimiento de Fino.
 //
 // Es primo del intérprete de notificaciones (utils/notificationParser.ts),
 // pero con reglas propias a propósito: un aviso del banco y una frase

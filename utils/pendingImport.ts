@@ -5,7 +5,7 @@ import { useSyncExternalStore } from "react";
  *
  * POR QUÉ EXISTE ESTA SEGUNDA VÍA
  *
- * Compartir un estado de cuenta a Finzo abría la app y se quedaba en Inicio
+ * Compartir un estado de cuenta a Fino abría la app y se quedaba en Inicio
  * sin hacer nada. Se arreglaron dos causas —el archivo se tiraba, y la regla
  * de "vuelve a Inicio" se comía la pantalla— y aun así volvió a pasar.
  *

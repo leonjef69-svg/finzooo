@@ -150,7 +150,7 @@ export async function biometricKind(): Promise<BiometricKind> {
  * Pide la huella o la cara.
  *
  * `disableDeviceFallback` en true a propósito: si fallara al PIN del celular,
- * el PIN de respaldo de Finzo no serviría para nada. Aquí la única
+ * el PIN de respaldo de Fino no serviría para nada. Aquí la única
  * alternativa es el PIN propio, que es lo que se pidió.
  */
 export async function promptBiometrics(reason: string, cancelLabel: string): Promise<boolean> {

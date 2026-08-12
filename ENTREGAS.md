@@ -39,7 +39,7 @@ demás llega por actualización.
 | 02/08/2026 | `c4b715e` | El celular dice en voz alta quién te yapeó y cuánto (instalado, pero sin el arreglo de arriba) | [APK](https://expo.dev/artifacts/eas/0mgFL8IanSBxIoNpKAsSvW9Flf6y8-Qk1RPOFDVC234.apk) |
 | 01/08/2026 | `8e631a3` | Correo directo a la app predeterminada, sin el menú de "¿con qué aplicación?" | [APK](https://expo.dev/artifacts/eas/PG0k80A7RIXHPhFAsjfe7TQXTprSQJqkZeVrWoGtBGs.apk) |
 | 01/08/2026 | `5a0bcd7` | Elegir la pantalla de WhatsApp y Gmail que sabe leer el destinatario | [APK](https://expo.dev/artifacts/eas/FjIQf0opU7Xgx00fiYmlWaXkfKr6dTti8WVrDZkGYgs.apk) |
-| 01/08/2026 | `51594c7` | Compartir a Finzo, Gmail directo, escáner | [APK](https://expo.dev/artifacts/eas/FBqFLxeSyq0TD5Qh7kIAnrjR1m6WgGkGlitq67pJ_GY.apk) |
+| 01/08/2026 | `51594c7` | Compartir a Fino, Gmail directo, escáner | [APK](https://expo.dev/artifacts/eas/FBqFLxeSyq0TD5Qh7kIAnrjR1m6WgGkGlitq67pJ_GY.apk) |
 
 Cómo saber cuál está instalado: Ajustes → Acerca de → la línea de partes
 nativas. `✓ correo directo` significa el del 1 de agosto o posterior, y

@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Finzo",
+    "name": "Fino",
     "slug": "finzo",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -88,8 +88,8 @@
       [
         "expo-image-picker",
         {
-          "photosPermission": "Finzo necesita tus fotos solo para leer la boleta que elijas. La imagen no sale de tu celular.",
-          "cameraPermission": "Finzo usa la cámara para escanear boletas. La foto se lee dentro de tu celular y no se envía a ningún servidor."
+          "photosPermission": "Fino necesita tus fotos solo para leer la boleta que elijas. La imagen no sale de tu celular.",
+          "cameraPermission": "Fino usa la cámara para escanear boletas. La foto se lee dentro de tu celular y no se envía a ningún servidor."
         }
       ],
       "expo-mail-composer",

@@ -784,7 +784,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     // Panel flotante, no pantalla completa.
     //
     // Antes esto ocupaba toda la pantalla con el fondo de la app, y se
-    // sentía como "me sacó de lo que estaba haciendo y me metió en Finzo".
+    // sentía como "me sacó de lo que estaba haciendo y me metió en Fino".
     // Ahora se ve un panel encima de lo que había, con el resto oscurecido:
     // la misma app, el mismo código, pero se percibe como algo que se abre
     // un momento y se va. Tocar fuera lo cierra.

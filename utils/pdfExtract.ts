@@ -420,7 +420,7 @@ export function seEntiende(texto: string): boolean {
  * Son tres cosas distintas y cada una tiene su salida:
  *
  *   PROTEGIDO — el banco le puso contraseña, normalmente el DNI. Se abre en
- *   el celular porque el visor la pide, pero Finzo no puede leer dentro. Se
+ *   el celular porque el visor la pide, pero Fino no puede leer dentro. Se
  *   arregla guardando una copia sin contraseña.
  *
  *   ESCANEADO — las páginas son fotos, no texto. No hay letras que leer, por

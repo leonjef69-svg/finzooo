@@ -28,7 +28,7 @@
 
     <application>
         <!--
-          El PDF vive en la carpeta privada de Finzo, donde ninguna otra app
+          El PDF vive en la carpeta privada de Fino, donde ninguna otra app
           puede entrar. Este proveedor es lo que permite prestarle el archivo
           a Gmail para ese envío concreto y solo para ese: no se le da acceso
           a la carpeta, se le da una llave de un solo uso para un archivo.

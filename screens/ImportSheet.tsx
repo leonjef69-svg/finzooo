@@ -19,7 +19,7 @@ import { findBestMatch, mergeTransaction, type DuplicateMatch } from "@/utils/du
 import DuplicateReview from "@/screens/DuplicateReview";
 import type { Transaction } from "@/types";
 
-// Un movimiento del banco ya convertido a formato Finzo, junto con la
+// Un movimiento del banco ya convertido a formato Fino, junto con la
 // información de si se parece a algo que ya tienes.
 type Candidate = {
   tx: Transaction; // el movimiento nuevo, listo para guardarse
@@ -41,7 +41,7 @@ export default function ImportSheet({
 }: {
   onClose: () => void;
   /**
-   * Archivo que llegó desde otra app ("Compartir → Finzo"). Si viene, se
+   * Archivo que llegó desde otra app ("Compartir → Fino"). Si viene, se
    * carga solo al abrir la pantalla y no hace falta elegir nada.
    */
   incoming?: { uri: string; name: string } | null;
@@ -80,7 +80,7 @@ export default function ImportSheet({
     // que es exactamente donde se perdía el archivo.
     setPendingImport(null);
     // Sin forzar el tipo. Antes iba "application/pdf" fijo, así que un Excel
-    // o un CSV compartidos a Finzo se leían como si fueran un PDF: el lector
+    // o un CSV compartidos a Fino se leían como si fueran un PDF: el lector
     // de PDF no encontraba nada y salía "no se pudo leer el texto de este
     // PDF" sobre un archivo que ni siquiera era un PDF.
     //
@@ -195,7 +195,7 @@ export default function ImportSheet({
         return;
       }
 
-      // Convertimos cada fila del banco en un movimiento de Finzo y
+      // Convertimos cada fila del banco en un movimiento de Fino y
       // buscamos si se parece a algo que ya tienes. Vamos marcando los
       // que ya se "usaron" para que un movimiento tuyo no se empareje con
       // dos filas del banco a la vez.

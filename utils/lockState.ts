@@ -3,7 +3,7 @@
  *
  * POR QUÉ HACE FALTA SABERLO DESDE FUERA
  *
- * Compartir un estado de cuenta a Finzo con el bloqueo activado hacía esto:
+ * Compartir un estado de cuenta a Fino con el bloqueo activado hacía esto:
  * Android traía la app al frente, el candado aparecía, y mientras la persona
  * ponía su huella o su PIN, el código que abre Importar ya se había rendido.
  * Al desbloquear salía Inicio y del archivo no quedaba rastro.

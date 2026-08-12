@@ -6,12 +6,12 @@ import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
 
 export default function ImportRoute() {
   const { t, isPremium } = useAppData();
-  // Cuando se llega desde "Compartir → Finzo", el archivo viene en la
+  // Cuando se llega desde "Compartir → Fino", el archivo viene en la
   // dirección de la pantalla y se carga solo.
   const { uri, name } = useLocalSearchParams<{ uri?: string; name?: string }>();
   const incoming = uri && name ? { uri, name } : null;
 
-  // Al llegar desde otra app, Finzo arranca DIRECTO aquí y no hay ninguna
+  // Al llegar desde otra app, Fino arranca DIRECTO aquí y no hay ninguna
   // pantalla detrás. El guardián de pantallas huérfanas lo leería como un
   // error y mandaría a Inicio, justo lo contrario de lo que se quiere.
   const blocked = useRedirectIfOrphaned(incoming != null);

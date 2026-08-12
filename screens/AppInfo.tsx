@@ -27,7 +27,7 @@ const APP_VERSION = "1.0.0";
  * La versión de la app (1.0.0) no sirve para esto: no cambia entre entregas.
  * Esta sí.
  */
-const CODE_MARKER = "12ago-08";
+const CODE_MARKER = "12ago-09";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast, verComoGratis, setVerComoGratis, tienePremiumDeVerdad } = useAppData();
@@ -107,7 +107,7 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
           <View className="w-16 h-16 rounded-2xl bg-emerald-600 items-center justify-center mb-4">
             <Wallet size={28} color="#ffffff" strokeWidth={2.2} />
           </View>
-          <Text className="text-xl font-extrabold text-slate-900 dark:text-slate-100">Finzo</Text>
+          <Text className="text-xl font-extrabold text-slate-900 dark:text-slate-100">Fino</Text>
           <Text className="text-xs text-slate-500 dark:text-slate-300 mt-1">
             {t("appInfo.version", { version: APP_VERSION })}
           </Text>

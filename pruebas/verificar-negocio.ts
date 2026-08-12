@@ -848,7 +848,7 @@ console.log("\n--- EL YAPEO QUE ENTRA AL NEGOCIO (paso 5) ---");
 
   // 11. EL AGUJERO GORDO DE ESTE PASO: LA APP CERRADA.
   //
-  // Hay DOS caminos que registran un yapeo. El del contexto corre con Finzo abierta; el de
+  // Hay DOS caminos que registran un yapeo. El del contexto corre con Fino abierta; el de
   // utils/capturaEnFondo corre con la app CERRADA, despertado por Android, y escribe directo
   // en el disco. Sin repartir tambien ahi, encender "los yapeos entran a mi negocio" habria
   // funcionado solo con la app abierta — y con la app cerrada, que es cuando mas yapeos

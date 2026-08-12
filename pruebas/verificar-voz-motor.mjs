@@ -83,7 +83,7 @@ console.log("\n--- AL PROBAR A MANO SE ESPERA LO QUE TARDA UN MOTOR FRIO ---");
 // Pedido asi: *"la voz siempre debe hablar cuando llegue la notificacion de yape, no quiero
 // problemas a futuro... preveen los problemas que puedan suceder"*.
 //
-// El motor de voz de Android no es parte de Finzo: es un servicio aparte que el sistema
+// El motor de voz de Android no es parte de Fino: es un servicio aparte que el sistema
 // enciende, apaga y mata cuando le hace falta memoria. Todo lo de aqui abajo son formas de
 // quedarse mudo QUE NO DAN NINGUN ERROR — que son las peores, porque nadie las busca.
 // ---------------------------------------------------------------------------------------

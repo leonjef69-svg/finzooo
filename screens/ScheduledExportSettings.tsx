@@ -269,8 +269,8 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
    * ¿ESTA configuración sale sola con la app cerrada? UNA sola respuesta.
    *
    * Existe porque la pantalla se contradecía: arriba decía "no puede mandarse
-   * solo con la app cerrada", en medio "se guarda solo aunque Finzo esté
-   * cerrada", y abajo en verde "en cuanto abras Finzo". Tres textos, tres
+   * solo con la app cerrada", en medio "se guarda solo aunque Fino esté
+   * cerrada", y abajo en verde "en cuanto abras Fino". Tres textos, tres
    * versiones, y el usuario leyendo las tres a la vez.
    *
    * Pasó porque cada texto decidía por su cuenta. Ahora todos miran aquí: si
@@ -642,7 +642,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                 que le puse?" con todo ya configurado, y es la pregunta correcta:
                 en ningún sitio se decía. Las notas de cada destino lo explicaban
                 a medias y encima se contradecían — decían "automático del todo"
-                y "la próxima vez que abras Finzo" en la misma frase. */}
+                y "la próxima vez que abras Fino" en la misma frase. */}
             <View className="rounded-xl bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700 p-3.5 mb-5 flex-row gap-2.5">
               <Info size={15} color="#64748b" />
               <View className="flex-1">

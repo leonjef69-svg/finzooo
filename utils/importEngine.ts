@@ -1,7 +1,7 @@
 // MOTOR DE IMPORTACIÓN DE ESTADOS DE CUENTA
 //
 // Lee un archivo exportado por un banco y lo convierte en movimientos de
-// Finzo. Está aparte de la pantalla a propósito: así se puede probar sin
+// Fino. Está aparte de la pantalla a propósito: así se puede probar sin
 // abrir la app y sin tocar nada visual.
 //
 // Está pensado para ser GENÉRICO. Cada banco arma su archivo a su manera
@@ -403,7 +403,7 @@ export function parseStatement(text: string, account?: string): ParseResult {
   return { ok: true, rows, errorCount, headerIndex };
 }
 
-// Convierte el método de pago que dice el banco a uno de los de Finzo.
+// Convierte el método de pago que dice el banco a uno de los de Fino.
 // Si no lo reconoce, deja el texto tal cual (mejor eso que perderlo).
 //
 // Vive aquí, y no en la pantalla de importar, porque la captura automática

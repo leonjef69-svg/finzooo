@@ -6,7 +6,7 @@ import com.facebook.react.bridge.Arguments
 import com.facebook.react.jstasks.HeadlessJsTaskConfig
 
 /**
- * Despierta a Finzo lo justo para armar el reporte y guardarlo, sin abrirla.
+ * Despierta a Fino lo justo para armar el reporte y guardarlo, sin abrirla.
  *
  * POR QUE HACE FALTA
  *
@@ -54,7 +54,7 @@ class FinzoExportService : HeadlessJsTaskService() {
       //
       // Al contrario que el registro de yapes, que pone false porque la app
       // ya lo hace ella al volver al frente. Aqui no: si la persona esta
-      // usando Finzo a las 19:26, el reporte tiene que salir igual. Con false
+      // usando Fino a las 19:26, el reporte tiene que salir igual. Con false
       // se saltaria justo a quien tiene la app abierta a esa hora.
       true
     )

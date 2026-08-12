@@ -536,7 +536,7 @@ export default function ExportPdfSheet({
 
     // TENÍAS CONTACTOS Y NO ELEGISTE A NADIE.
     //
-    // Se avisa antes de salir de Finzo, porque después ya no hay dónde: la
+    // Se avisa antes de salir de Fino, porque después ya no hay dónde: la
     // app de correo o WhatsApp se abren encima y el aviso quedaría detrás.
     //
     // No frena el envío —dejar el destinatario en blanco y escribirlo allí es
@@ -887,7 +887,7 @@ export default function ExportPdfSheet({
 
         {/* DÓNDE VA EL ARCHIVO.
             "Compartir" abre la lista de Android (WhatsApp, correo…). Qué
-            apps salen ahí lo decide Android, no Finzo, y de un celular a
+            apps salen ahí lo decide Android, no Fino, y de un celular a
             otro cambia. "Guardar en Drive" no depende de esa lista: sube el
             archivo directo, sin ventanas de por medio. */}
         <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">

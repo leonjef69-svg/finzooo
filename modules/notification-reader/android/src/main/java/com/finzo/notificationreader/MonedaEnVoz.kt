@@ -12,7 +12,7 @@ package com.finzo.notificationreader
  *
  * POR QUE ESTA EN ANDROID Y NO EN LA APP
  *
- * Porque la voz habla con Finzo CERRADA, desde el servicio que escucha las notificaciones. Ahi
+ * Porque la voz habla con Fino CERRADA, desde el servicio que escucha las notificaciones. Ahi
  * no hay nada de JavaScript corriendo. La moneda elegida se le pasa al servicio cuando la
  * persona la cambia (ver NotificationStore.setMoneda) y aqui se usa.
  *

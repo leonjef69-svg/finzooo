@@ -13,7 +13,7 @@
 
 import { normalizeHeader } from "@/utils/importEngine";
 
-// Comercios conocidos → categoría de Finzo. La clave es un pedazo de
+// Comercios conocidos → categoría de Fino. La clave es un pedazo de
 // texto que debe aparecer en el nombre del comercio (ya normalizado: en
 // minúsculas y sin tildes).
 const MERCHANT_RULES: { match: string; category: string }[] = [

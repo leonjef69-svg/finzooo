@@ -4,7 +4,7 @@
 // compartir: se dice "exporta mayo a Drive" y el PDF aparece en la nube.
 //
 // ---- SOBRE EL PERMISO QUE SE PIDE ----
-// Se pide "drive.file", que es el más pequeño que existe: deja a Finzo ver
+// Se pide "drive.file", que es el más pequeño que existe: deja a Fino ver
 // y tocar ÚNICAMENTE los archivos que ella misma creó. No puede leer, ni
 // listar, ni borrar nada más de tu Drive — ni tus fotos, ni tus
 // documentos, ni las carpetas de nadie.
@@ -18,7 +18,7 @@ import { File } from "expo-file-system";
 
 export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 
-const FOLDER_NAME = "Finzo";
+const FOLDER_NAME = "Fino";
 const FOLDER_MIME = "application/vnd.google-apps.folder";
 
 /** No hay sesión de Google (se entró con correo y contraseña, o sin cuenta). */
@@ -67,7 +67,7 @@ async function requestDriveScope(): Promise<void> {
 type DriveFile = { id: string; name: string; webViewLink?: string };
 
 /**
- * Busca la carpeta "Finzo" en Drive y, si no existe, la crea.
+ * Busca la carpeta "Fino" en Drive y, si no existe, la crea.
  *
  * Con el permiso "drive.file" esta búsqueda solo ve los archivos que creó
  * la propia app, así que encuentra la carpeta que hicimos nosotros y jamás
@@ -141,7 +141,7 @@ async function putFile(
 }
 
 /**
- * Sube un archivo del celular a la carpeta "Finzo" de Google Drive.
+ * Sube un archivo del celular a la carpeta "Fino" de Google Drive.
  * Devuelve los datos del archivo creado, o lanza si no se pudo.
  */
 export async function uploadToDrive(

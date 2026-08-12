@@ -10,39 +10,39 @@ import org.json.JSONObject
 import java.io.File
 
 /**
- * Recoge el archivo con el que se abrió Finzo desde otra aplicación.
+ * Recoge el archivo con el que se abrió Fino desde otra aplicación.
  *
  * Cubre las dos formas en que Android puede mandarnos un archivo:
  *
- *   COMPARTIR ("Compartir → Finzo")  → el archivo llega en un extra del
+ *   COMPARTIR ("Compartir → Fino")  → el archivo llega en un extra del
  *                                      intent, no en su dirección.
- *   ABRIR CON ("Abrir con → Finzo")  → el archivo llega como la dirección
+ *   ABRIR CON ("Abrir con → Fino")  → el archivo llega como la dirección
  *                                      del propio intent.
  *
  * Son sitios distintos y hay que mirar los dos, porque desde fuera se ven
- * igual: la persona elige Finzo en una lista y espera lo mismo.
+ * igual: la persona elige Fino en una lista y espera lo mismo.
  *
  * Lo que se recibe es una dirección "content://" prestada por la otra app,
  * que puede dejar de valer en cualquier momento. Por eso aquí se COPIA el
- * contenido a la carpeta temporal de Finzo y se devuelve una ruta normal:
+ * contenido a la carpeta temporal de Fino y se devuelve una ruta normal:
  * a partir de ahí el archivo es nuestro y el resto de la app lo lee igual
  * que si lo hubiera elegido a mano, incluido el borrado tras leerlo.
  */
 class IncomingFileModule : Module() {
 
   /**
-   * El archivo que llegó con Finzo YA ABIERTA.
+   * El archivo que llegó con Fino YA ABIERTA.
    *
    * Hace falta guardarlo aparte por cómo funciona Android. La pantalla
-   * principal de Finzo es de tipo "singleTask": si la app ya está viva,
+   * principal de Fino es de tipo "singleTask": si la app ya está viva,
    * Android no la abre otra vez, sino que le entrega el archivo nuevo por
    * onNewIntent(). Y ahí está el problema: React Native NO actualiza
    * activity.intent al recibirlo, así que activity.intent se queda con el
    * intent con el que se abrió la app la primera vez —normalmente un
    * "abrir la app" pelado, sin ningún archivo—.
    *
-   * Resultado antes de esto: compartir un estado de cuenta a Finzo cuando
-   * Finzo ya estaba abierta no hacía absolutamente nada. Ni error ni aviso:
+   * Resultado antes de esto: compartir un estado de cuenta a Fino cuando
+   * Fino ya estaba abierta no hacía absolutamente nada. Ni error ni aviso:
    * la app pasaba al frente y se quedaba en Inicio.
    */
   private var pendingIntent: Intent? = null
@@ -131,7 +131,7 @@ class IncomingFileModule : Module() {
       // respaldo de abajo en vez de quedarse sin importación.
     }
     // Sin nombre, se supone PDF: es lo que manda todo banco peruano y lo
-    // único para lo que Finzo se ofrece en la lista de Android.
+    // único para lo que Fino se ofrece en la lista de Android.
     return uri.lastPathSegment?.takeIf { it.contains('.') } ?: "estado-de-cuenta.pdf"
   }
 

@@ -37,7 +37,7 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.
   <circle cx="960" cy="470" r="240" fill="#ffffff" opacity="0.05"/>
   <rect x="76" y="98" width="304" height="304" rx="76" fill="#ffffff" opacity="0.16"/>
   <image x="88" y="110" width="280" height="280" clip-path="url(#redondo)" xlink:href="data:image/png;base64,${icono}"/>
-  <text x="432" y="212" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="104" font-weight="700" fill="#ffffff" letter-spacing="-2">Finzo</text>
+  <text x="432" y="212" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="104" font-weight="700" fill="#ffffff" letter-spacing="-2">Fino</text>
   <text x="436" y="286" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="38" font-weight="600" fill="#ffffff" opacity="0.95">Tus gastos y los de tu negocio,</text>
   <text x="436" y="336" font-family="Segoe UI, Arial, Helvetica, sans-serif" font-size="38" font-weight="600" fill="#ffffff" opacity="0.95">cada uno por su lado.</text>
   <rect x="436" y="374" width="392" height="58" rx="29" fill="#ffffff" opacity="0.18"/>

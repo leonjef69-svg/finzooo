@@ -89,7 +89,7 @@ const SPOKEN_VERBS = [
 ];
 
 // Nombres de categoría tal como los diría una persona → la categoría de
-// Finzo. Ojo: esto NO es lo mismo que el diccionario de classifier.ts.
+// Fino. Ojo: esto NO es lo mismo que el diccionario de classifier.ts.
 // Aquel traduce en QUÉ se gastó ("salchipapa" → comida); este traduce el
 // nombre de la categoría en sí ("comida" → comida), que es lo que se dice
 // al pedir un resumen.
