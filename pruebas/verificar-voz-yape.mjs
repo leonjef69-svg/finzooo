@@ -23,6 +23,11 @@
 // traducir tambien las diferencias del idioma. Si no, miente.
 import fs from "fs";
 import path from "path";
+// Se carga el TypeScript DE VERDAD, no una copia de su regla. Node sabe leerlo directamente
+// desde la version 23, y este archivo no depende de nada de la app, asi que entra solo.
+// Rehacer la regla aqui a mano era lo que tenia esta prueba antes, y se quedo desfasada en
+// silencio en cuanto la regla cambio de sitio.
+import { patronDeMoneda } from "../utils/simbolosDeMoneda.ts";
 
 const RAIZ = process.cwd();
 const KT = path.join(
@@ -200,16 +205,23 @@ console.log("\n--- Y LA REGLA DEL MONTO TAMBIEN ---");
   // La voz y el registro tienen que estar de acuerdo en QUE es un monto. La
   // vez que no lo estuvieron, la app anoto el yapeo y el celular no dijo ni
   // pio — y eso, desde fuera, parece que la voz esta rota.
-  const js = fs.readFileSync(path.join(RAIZ, "utils/notificationParser.ts"), "utf8");
-  const delRegistro = new RegExp(js.match(/const withSymbol = text\.match\(\/(.+?)\/i\);/)[1], "i");
+  // LA REGLA SE ARMA DESDE LA LISTA COMPARTIDA (11/08/2026).
+  //
+  // Antes esta prueba sacaba la expresion recortando el texto del propio archivo, y se rompio
+  // en cuanto la expresion dejo de estar escrita a mano ahi. Ahora las dos partes se arman
+  // desde utils/simbolosDeMoneda, que es la unica lista buena.
+  const delRegistro = new RegExp(`${patronDeMoneda()}\\s*([0-9][\\d.,]*)`, "i");
 
-  const DURO = "\u00a0";
+  const DURO = " ";
   for (const texto of [
     "te envió un pago por S/ 1",
     `te envió un pago por S/${DURO}1`,
     "te yapearon S/. 50.00",
     "te yapearon S/20",
     "te yapearon S / 20",
+    "te enviaron Bs 50",
+    "te enviaron Bs. 50.00",
+    "te enviaron US$ 20",
   ]) {
     const registra = delRegistro.test(texto.toLowerCase());
     const habla = TIENE_MONTO.test(normalizar(texto));

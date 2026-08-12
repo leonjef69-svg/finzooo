@@ -697,8 +697,27 @@ class FinzoNotificationListener : NotificationListenerService() {
      * yapeo y el celular no decia nada.
      *
      * El texto llega ya normalizado, por eso "s/" y no "S/".
+     *
+     * ACEPTA LAS NUEVE MONEDAS DE LA APP, no solo los soles (11/08/2026).
+     *
+     * Salio de una pregunta suya al añadir Bolivia: *"si me pongo la moneda en Bolivia, ¿el
+     * yape llegara igual pero en bolivianos?"*. No: con "Bs 50" esta regla decia que no habia
+     * monto y **la voz no hablaba nunca**. La app ofrecia nueve monedas desde hacia meses y el
+     * lector de avisos entendia una.
+     *
+     * El orden va de mas largo a mas corto a proposito: "us$" tiene que probarse antes que
+     * "$", o "us$ 20" se leeria como un "$" suelto con una "us" colgando delante.
+     *
+     * Y las que son letras —"pen", "bs"— llevan limite de palabra, o "pendiente" y "pensión"
+     * pasarian por montos. Los simbolos que no son letras no lo llevan: entre dos caracteres
+     * no alfabeticos, \b no casa nunca.
+     *
+     * TIENE QUE DECIR LO MISMO QUE utils/simbolosDeMoneda. Hay una prueba que lo comprueba:
+     * si las dos se separan, la app registra el movimiento y el celular se queda callado — o
+     * al reves, que es peor.
      */
-    private val TIENE_MONTO = Regex("(?:s\\s*/\\s*\\.?|pen\\b)\\s*\\d")
+    private val TIENE_MONTO =
+      Regex("(?:col\\$|us\\$|mx\\$|ar\\$|cl\\$|\\bpen|s\\s*/\\s*\\.?|\\bbs\\.?|r\\$|€|\\$)\\s*\\d")
 
     /**
      * Como suena un aviso de plata que ENTRA. Copiada tal cual de

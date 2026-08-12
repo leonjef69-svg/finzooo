@@ -11,6 +11,7 @@
 // Y una palabra que diga si el dinero entró o salió.
 
 import { normalizeHeader, parseAmount, type RawRow } from "@/utils/importEngine";
+import { patronDeMoneda } from "@/utils/simbolosDeMoneda";
 import type { CapturedNotification } from "@/modules/notification-reader";
 
 export type ParseFailure =
@@ -199,13 +200,20 @@ function localDate(ms: number): string {
 }
 
 /**
- * Busca el monto. Acepta "S/ 20", "S/20.00", "S/. 1,250.50" y "PEN 20.00".
+ * Busca el monto. Acepta "S/ 20", "S/20.00", "S/. 1,250.50", "PEN 20.00" y "Bs 50".
+ *
+ * ACEPTA LOS SÍMBOLOS DE LAS NUEVE MONEDAS, no solo los soles (11/08/2026). Antes solo miraba
+ * "S/" y "PEN": un aviso boliviano de "Bs 50" no se reconocía como dinero y el movimiento se
+ * perdía sin dejar rastro. Se salvaba de milagro cuando el monto llevaba céntimos, porque la
+ * segunda regla de aquí abajo acepta "50.00" a secas — así que "Bs 50.00" entraba y "Bs 50"
+ * no. Ver utils/simbolosDeMoneda.
+ *
  * Si no hay símbolo de moneda, solo acepta un número con centavos
  * ("20.00"): un número suelto sin decimales suele ser un número de
  * operación o los últimos dígitos de una tarjeta, no un monto.
  */
 function findAmount(text: string): number | null {
-  const withSymbol = text.match(/(?:s\s*\/\s*\.?|pen\b)\s*([0-9][\d.,]*)/i);
+  const withSymbol = text.match(new RegExp(`${patronDeMoneda()}\\s*([0-9][\\d.,]*)`, "i"));
   if (withSymbol) {
     const value = parseAmount(withSymbol[1]);
     if (value !== null && value !== 0) return Math.abs(value);
