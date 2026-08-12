@@ -2863,11 +2863,30 @@ tiene que borrar lo de antes sin borrar lo de después. Ojo con los meses vacío
 que tienen la puerta cerrada: si solo se recorrieran los meses con movimientos,
 esa marca se saltaría en silencio.
 
-**Sugerido y sin respuesta: un "Ajustar saldo".** El arrastre es *presupuesto
-menos lo anotado*, no la plata real. Cada gasto sin anotar mete un error que
-nunca se corrige y se acumula: a los doce meses Finzo puede decir S/ 2.400
-cuando hay S/ 600. Se propuso poder decirle "en realidad tengo S/ X" y que
-anote la diferencia, como cuadrar caja. Es solo JavaScript.
+**HECHO Y DESHECHO: un "Ajustar saldo" (10 y 11/08/2026).** El arrastre es
+*presupuesto menos lo anotado*, no la plata real. Cada gasto sin anotar mete un
+error que nunca se corrige y se acumula: a los doce meses Finzo puede decir
+S/ 2.400 cuando hay S/ 600.
+
+Se hizo el botón —contar tu plata, decírsela, y que anote la diferencia como un
+movimiento normal— y **se quitó al día siguiente, a petición suya.** Lo tumbaron
+dos preguntas suyas que valen más que el botón:
+
+> *"¿no sería lo mismo que cambiar el presupuesto?"*
+> *"si me olvidé registrar un gasto, ¿no lo podría anotar a mano?"*
+
+La segunda es la buena. **Con el botón "+" ya se anota el gasto olvidado**, y
+además con su categoría, su fecha y su nombre. Al ajuste solo le quedaba un
+caso: cuando NO te acuerdas de qué fue. Una pantalla, una categoría y un
+concepto nuevos para eso.
+
+**El problema sigue existiendo** y no se ha arreglado: se arregla anotando lo que
+faltó. Antes de volver a proponerlo, medir cuánto se desvía de verdad su saldo —
+no proponer la solución de un problema que no se ha medido.
+
+**Y la lección, que es de trato, no de código:** se lo presenté más grande de lo
+que era. Cuando lo acoté a su caso real, él mismo decidió quitarlo. Acotar
+PRIMERO habría ahorrado la ida y la vuelta.
 
 **Descartado: cortar el arrastre por año.** Castiga al que ahorró de verdad
 —borrarle lo suyo el 1 de enero es mentirle— y le perdona la deuda al que se
