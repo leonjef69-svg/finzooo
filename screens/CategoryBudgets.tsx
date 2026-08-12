@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
@@ -39,6 +39,15 @@ export default function CategoryBudgets({
    * avisos de Android que llegaban tarde y hacían saltar la pantalla.
    */
   const { animatedPaddingStyle } = useKeyboardAnimatedPadding();
+
+  // Y SE CIERRA EL TECLADO AL SALIR. Es la otra mitad del arreglo del hueco fantasma: si esta
+  // pantalla se va con el teclado abierto, la SIGUIENTE hereda ese estado. El guardia de
+  // utils/keyboard ya lo tapa, pero las dos capas juntas son las que dejan el hueco en cero.
+  useEffect(() => {
+    return () => {
+      Keyboard.dismiss();
+    };
+  }, []);
 
   /**
    * LAS SUYAS TAMBIÉN, NO SOLO LAS DE FÁBRICA (12/08/2026).

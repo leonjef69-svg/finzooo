@@ -80,5 +80,33 @@ console.log("\n--- EL CONTENEDOR TIENE QUE SER ANIMADO ---");
   }
 }
 
+console.log("\n--- Y NINGUNA HEREDA EL TECLADO DE LA ANTERIOR (12/08/2026) ---");
+{
+  // Reportado con la captura: entrar POR PRIMERA VEZ a "Presupuestos por categoria" y
+  // encontrarse media pantalla vacia debajo del boton, sin haber tocado ningun teclado.
+  //
+  // El valor de useAnimatedKeyboard es COMPARTIDO por toda la app y sobrevive a que la pantalla
+  // que lo usaba se cierre: la siguiente arranca con el ultimo valor conocido, que puede ser
+  // "abierto, 341 px" sin ningun teclado en pantalla.
+  //
+  // ESTABA RESUELTO EN AddSheet, escrito a mano dentro de esa pantalla, y al sacar el mecanismo
+  // a la pieza compartida el arreglo se quedo alli. Asi que "Nuevo movimiento" estaba a salvo y
+  // las tres que vinieron despues, no. El fallo de siempre: la pieza se comparte y la leccion
+  // se queda en la casa vieja.
+  const hook = leerSinComentarios("utils/keyboard.ts");
+  ok(/Keyboard\.isVisible\(\)/.test(hook), "la pieza compartida pregunta si hay un teclado de verdad");
+  ok(/ignorarHeredado/.test(hook), "y descarta la altura heredada mientras no lo haya");
+  // Solo OPENING, no OPEN: "abierto" es justo el estado en el que se queda grabado el valor
+  // viejo, asi que confiar en el devolveria el hueco.
+  ok(/KeyboardState\.OPENING/.test(hook), "y solo vuelve a confiar cuando el teclado se ABRE de verdad");
+
+  // LA OTRA MITAD: cada pantalla cierra el teclado al salir, para no dejarselo puesto a la
+  // siguiente. Las dos capas juntas son las que dejan el hueco en cero.
+  for (const [ruta, nombre] of PANTALLAS) {
+    const txt = leerSinComentarios(ruta);
+    ok(/Keyboard\.dismiss\(\)/.test(txt), `${nombre} cierra el teclado al salir`);
+  }
+}
+
 console.log(fallos === 0 ? "\nTodo bien: el boton de guardar siempre se alcanza" : `\n${fallos} fallas`);
 process.exit(fallos ? 1 : 0);

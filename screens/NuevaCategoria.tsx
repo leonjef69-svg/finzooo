@@ -8,8 +8,7 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import {
-  Image,
+import { Keyboard, Image,
   Pressable,
   ScrollView,
   Text,
@@ -727,6 +726,15 @@ export default function NuevaCategoria({
    * Reanimated en vez de los avisos de Android, que llegan tarde y hacen saltar la pantalla.
    */
   const { animatedPaddingStyle } = useKeyboardAnimatedPadding();
+
+  // Y SE CIERRA EL TECLADO AL SALIR. Es la otra mitad del arreglo del hueco fantasma: si esta
+  // pantalla se va con el teclado abierto, la SIGUIENTE hereda ese estado. El guardia de
+  // utils/keyboard ya lo tapa, pero las dos capas juntas son las que dejan el hueco en cero.
+  useEffect(() => {
+    return () => {
+      Keyboard.dismiss();
+    };
+  }, []);
 
   // La que se está editando, si es que se está editando alguna.
   const original = editandoId ? categoriasPropias.find((c) => c.id === editandoId) : undefined;

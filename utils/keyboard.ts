@@ -4,6 +4,7 @@ import { isRunningInExpoGo } from "expo";
 import {
   KeyboardState,
   useAnimatedKeyboard,
+  useAnimatedReaction,
   useAnimatedStyle,
   useSharedValue,
   withTiming,
@@ -81,9 +82,68 @@ const NOOP = (_fieldId?: string) => {};
 function useKeyboardAnimatedPaddingNative() {
   const keyboard = useAnimatedKeyboard();
 
-  const animatedPaddingStyle = useAnimatedStyle(() => ({
-    paddingBottom: keyboard.state.value === KeyboardState.CLOSED ? 0 : keyboard.height.value,
-  }));
+  /**
+   * EL HUECO FANTASMA AL ABRIR UNA PANTALLA (12/08/2026).
+   *
+   * Reportado con la captura: entrar por primera vez a "Presupuestos por categoría" y
+   * encontrarse media pantalla vacía debajo del botón, sin haber tocado ningún teclado.
+   *
+   * EL VALOR DE `useAnimatedKeyboard` ES COMPARTIDO POR TODA LA APP y sobrevive a que la
+   * pantalla que lo usaba se cierre. Cuando la última se desmonta, Reanimated deja de escuchar
+   * al teclado — y la siguiente arranca con el ÚLTIMO valor conocido, que puede ser "abierto,
+   * 341 px" aunque en pantalla no haya ningún teclado. De ahí el hueco.
+   *
+   * Cerrar el teclado al salir no alcanza: si la pantalla se desmonta antes de que la animación
+   * de cierre termine, lo que queda grabado sigue siendo "abierto".
+   *
+   * ESTO YA ESTABA RESUELTO EN AddSheet, escrito a mano dentro de esa pantalla. Al sacar el
+   * mecanismo a esta pieza compartida, el arreglo se quedó allí — así que "Nuevo movimiento"
+   * estaba a salvo y las tres que vinieron después, no. Es el fallo de siempre: la pieza se
+   * comparte y la lección se queda en la casa vieja.
+   *
+   * Cómo se resuelve: al montar se pregunta con `Keyboard.isVisible()` si hay un teclado DE
+   * VERDAD. Si no lo hay, se ignora cualquier altura heredada hasta que llegue una apertura
+   * real.
+   */
+  const ignorarHeredado = useSharedValue(0);
+
+  const animatedPaddingStyle = useAnimatedStyle(() => {
+    if (ignorarHeredado.value === 1) return { paddingBottom: 0 };
+    const estado = keyboard.state.value;
+    const abierto = estado === KeyboardState.OPENING || estado === KeyboardState.OPEN;
+    return { paddingBottom: abierto ? keyboard.height.value : 0 };
+  });
+
+  /**
+   * En cuanto el teclado empieza a abrirse DE VERDAD, el valor deja de ser heredado.
+   *
+   * Dos detalles que en el primer intento estaban mal, y que se copian tal cual de AddSheet:
+   *
+   *  - Se ignora la PRIMERA lectura (prev === null). Esa primera lectura es exactamente el
+   *    valor heredado que se quiere descartar; actuar sobre ella anularía la protección en el
+   *    mismo instante de abrir la pantalla.
+   *  - Solo cuenta OPENING, no OPEN. "Abierto" es el estado en el que se queda grabado el valor
+   *    viejo; "abriéndose" solo puede venir de una transición real con la pantalla ya montada.
+   */
+  useAnimatedReaction(
+    () => keyboard.state.value,
+    (estado, previo) => {
+      if (previo === null) return;
+      if (estado === KeyboardState.OPENING) {
+        ignorarHeredado.value = 0;
+      }
+    }
+  );
+
+  useEffect(() => {
+    ignorarHeredado.value = Keyboard.isVisible() ? 0 : 1;
+    // Y si Android confirma que el teclado se abrió, se vuelve a confiar en el valor nativo.
+    const sub = Keyboard.addListener("keyboardDidShow", () => {
+      ignorarHeredado.value = 0;
+    });
+    return () => sub.remove();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return {
     animatedPaddingStyle,
