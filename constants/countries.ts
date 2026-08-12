@@ -33,6 +33,7 @@ export const COUNTRIES: Country[] = [
   { id: "CO", label: "country.CO", flag: "🇨🇴", language: "es", currency: "COP" },
   { id: "AR", label: "country.AR", flag: "🇦🇷", language: "es", currency: "ARS" },
   { id: "CL", label: "country.CL", flag: "🇨🇱", language: "es", currency: "CLP" },
+  { id: "BO", label: "country.BO", flag: "🇧🇴", language: "es", currency: "BOB" },
   // Brasil no se podía usar de verdad hasta ahora: el portugués existía como
   // idioma, pero el real no estaba entre las monedas. Un brasileño tenía que
   // llevar sus cuentas en soles o en dólares.

@@ -33,6 +33,7 @@ const MONEDAS = {
   COP: { simbolos: ["COL$", "$"], singular: "peso", plural: "pesos" },
   ARS: { simbolos: ["AR$", "$"], singular: "peso", plural: "pesos" },
   CLP: { simbolos: ["CL$", "$"], singular: "peso", plural: "pesos" },
+  BOB: { simbolos: ["Bs.", "Bs"], singular: "boliviano", plural: "bolivianos" },
   BRL: { simbolos: ["R$"], singular: "real", plural: "reais" },
   EUR: { simbolos: ["€"], singular: "euro", plural: "euros" },
 };
@@ -91,6 +92,8 @@ console.log("\n--- CADA PAIS LO SUYO ---");
   ok(conPalabras("MX$ 200", "MXN") === "200 pesos", "pesos en Mexico");
   ok(conPalabras("R$ 30", "BRL") === "30 reais", "reais en Brasil");
   ok(conPalabras("€ 5", "EUR") === "5 euros", "euros en España");
+  ok(conPalabras("Bs 20", "BOB") === "20 bolivianos", "bolivianos en Bolivia");
+  ok(conPalabras("Bs. 1", "BOB") === "1 boliviano", "y uno solo, en singular");
   ok(conPalabras("US$ 1", "USD") === "1 dolar", "un dolar, en singular");
   // Una moneda que no se conoce NO se toca. Antes que decir la palabra equivocada, callar.
   ok(conPalabras("S/ 1", "JPY") === "S/ 1", "una moneda desconocida se deja igual");

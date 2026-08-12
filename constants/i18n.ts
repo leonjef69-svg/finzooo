@@ -1151,6 +1151,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "country.CO": "Colombia",
     "country.AR": "Argentina",
     "country.CL": "Chile",
+    "country.BO": "Bolivia",
     "country.BR": "Brasil",
     "country.ES": "España",
     "country.US": "Estados Unidos",
@@ -1161,6 +1162,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "currency.COP": "Pesos colombianos",
     "currency.ARS": "Pesos argentinos",
     "currency.CLP": "Pesos chilenos",
+    "currency.BOB": "Bolivianos",
     "currency.EUR": "Euros",
     "currency.subtitle":
       "Elige en qué moneda anotas tus movimientos. Los montos ya guardados no cambian de valor, solo cambia el símbolo con el que se muestran.",
@@ -2236,6 +2238,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "country.CO": "Colombia",
     "country.AR": "Argentina",
     "country.CL": "Chile",
+    "country.BO": "Bolivia",
     "country.BR": "Brazil",
     "country.ES": "Spain",
     "country.US": "United States",
@@ -2246,6 +2249,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "currency.COP": "Colombian Pesos",
     "currency.ARS": "Argentine Pesos",
     "currency.CLP": "Chilean Pesos",
+    "currency.BOB": "Bolivianos",
     "currency.EUR": "Euros",
     "currency.subtitle":
       "Choose the currency you use to track your transactions. Amounts already saved don't change in value, only the symbol they're shown with.",
@@ -3321,6 +3325,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "country.CO": "Colômbia",
     "country.AR": "Argentina",
     "country.CL": "Chile",
+    "country.BO": "Bolívia",
     "country.BR": "Brasil",
     "country.ES": "Espanha",
     "country.US": "Estados Unidos",
@@ -3331,6 +3336,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "currency.COP": "Pesos colombianos",
     "currency.ARS": "Pesos argentinos",
     "currency.CLP": "Pesos chilenos",
+    "currency.BOB": "Bolivianos",
     "currency.EUR": "Euros",
     "currency.subtitle":
       "Escolha em qual moeda você anota suas movimentações. Os valores já salvos não mudam, apenas o símbolo com que são exibidos.",

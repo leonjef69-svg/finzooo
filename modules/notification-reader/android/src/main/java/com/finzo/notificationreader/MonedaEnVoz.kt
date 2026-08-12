@@ -40,6 +40,7 @@ object MonedaEnVoz {
     "COP" to Moneda(listOf("COL$", "$"), "peso", "pesos"),
     "ARS" to Moneda(listOf("AR$", "$"), "peso", "pesos"),
     "CLP" to Moneda(listOf("CL$", "$"), "peso", "pesos"),
+    "BOB" to Moneda(listOf("Bs.", "Bs"), "boliviano", "bolivianos"),
     "BRL" to Moneda(listOf("R$"), "real", "reais"),
     "EUR" to Moneda(listOf("€"), "euro", "euros")
   )

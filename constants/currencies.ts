@@ -7,6 +7,10 @@ export const CURRENCIES = [
   { id: "COP", label: "currency.COP", symbol: "COL$" },
   { id: "ARS", label: "currency.ARS", symbol: "AR$" },
   { id: "CLP", label: "currency.CLP", symbol: "CL$" },
+  // Bolivia entro el 11/08/2026, a peticion suya. El boliviano lleva centavos, asi que NO va
+  // en SIN_CENTIMOS de mas abajo: el escaner puede seguir exigiendo decimales para distinguir
+  // un precio de un codigo de producto.
+  { id: "BOB", label: "currency.BOB", symbol: "Bs" },
   // El real faltaba, y era un hueco de verdad: el portugués ya estaba entre
   // los idiomas, así que un brasileño podía tener la app en su idioma pero
   // tenía que llevar sus cuentas en soles o en dólares.
