@@ -102,6 +102,7 @@ export default function Home({
   );
 
   const [selectMode, setSelectMode] = useState(false);
+  const [confirmandoBorrarTodo, setConfirmandoBorrarTodo] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -131,6 +132,26 @@ export default function Home({
     onBulkDelete(selected);
     setSelected([]);
     setSelectMode(false);
+  }
+
+  /**
+   * BORRAR TODO EL MES, desde el modo de selección (12/08/2026).
+   *
+   * Pedido suyo después de importar dos veces el mismo archivo y quedarse con dieciséis
+   * movimientos: quitarlos de uno en uno era el único camino.
+   *
+   * VA CON UN CARTEL DE CONFIRMACIÓN Y NO SE PUEDE DESHACER, así que el cartel dice CUÁNTOS y
+   * DE QUÉ MES. "¿Borrar todo?" a secas no da para decidir nada; "¿Borrar los 16 movimientos de
+   * diciembre 2025?" sí — y sobre todo deja ver si uno está en el mes que cree.
+   *
+   * Solo borra los del mes que se está viendo, que es lo que hay en la lista de abajo. Borrar
+   * meses que no se ven sería otra cosa y mucho más grave.
+   */
+  function borrarTodoElMes() {
+    onBulkDelete(monthTx.map((m) => m.id));
+    setSelected([]);
+    setSelectMode(false);
+    setConfirmandoBorrarTodo(false);
   }
 
   return (
@@ -405,6 +426,12 @@ export default function Home({
                 >
                   <Trash2 size={21} color="#f43f5e" />
                 </TouchableOpacity>
+                {/* BORRAR TODO. Se enseña solo si hay algo que borrar. */}
+                {monthTx.length > 0 && (
+                  <TouchableOpacity onPress={() => setConfirmandoBorrarTodo(true)} hitSlop={6}>
+                    <Text className="text-base font-bold text-rose-500">{t("home.deleteAll")}</Text>
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity onPress={toggleSelectMode}>
                   <Text className="text-base font-bold text-emerald-600">{t("common.cancel")}</Text>
                 </TouchableOpacity>
@@ -552,6 +579,19 @@ export default function Home({
           setConfirmRestoreCarryover(false);
           restoreCarryover();
         }}
+      />
+
+      {/* BORRAR TODO EL MES. Ver borrarTodoElMes: el cartel dice CUÁNTOS y DE QUÉ MES, porque
+          esto no se puede deshacer y "¿borrar todo?" a secas no da para decidir nada. */}
+      <ConfirmDialog
+        visible={confirmandoBorrarTodo}
+        title={t("home.deleteAllTitle", { count: monthTx.length, month: monthLabel })}
+        message={t("home.deleteAllMessage")}
+        confirmLabel={t("home.deleteAllConfirm")}
+        cancelLabel={t("common.cancel")}
+        danger
+        onCancel={() => setConfirmandoBorrarTodo(false)}
+        onConfirm={borrarTodoElMes}
       />
     </View>
   );

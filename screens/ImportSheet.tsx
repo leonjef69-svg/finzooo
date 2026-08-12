@@ -13,7 +13,7 @@ import { nextId } from "@/utils/id";
 import { accountLabelFor, guessAccount } from "@/constants/accounts";
 import { catInfo } from "@/constants/categories";
 import { fmtDate } from "@/utils/format";
-import { matchMethod, parseStatement, type RawRow } from "@/utils/importEngine";
+import { matchCategory, matchMethod, parseStatement, type RawRow } from "@/utils/importEngine";
 import { suggestCategory } from "@/utils/classifier";
 import { findBestMatch, mergeTransaction, type DuplicateMatch } from "@/utils/duplicates";
 import DuplicateReview from "@/screens/DuplicateReview";
@@ -201,9 +201,25 @@ export default function ImportSheet({
       // dos filas del banco a la vez.
       const matchedIds = new Set<number>();
       const built: Candidate[] = parsed.rows.map((raw) => {
-        // Si el archivo ya trae una categoría reconocible la respetamos;
-        // si no, la adivinamos por el comercio (KFC → comida, etc.).
-        const category = suggestCategory(raw.merchant || raw.description, raw.type, merchantLearned);
+        // LA CATEGORÍA DEL ARCHIVO MANDA, Y ANTES SE TIRABA (12/08/2026).
+        //
+        // El comentario que había aquí decía "si el archivo ya trae una categoría reconocible la
+        // respetamos" — y la línea de debajo no lo hacía: adivinaba SIEMPRE por la descripción.
+        // La columna se leía, se guardaba en categoryRaw y ahí se quedaba. matchCategory existía
+        // y no la llamaba nadie.
+        //
+        // Lo vio él con su propio Excel: la fila decía "Transporte" y el movimiento entró como
+        // "Otros". Alguien que se toma el trabajo de clasificar sus movimientos antes de
+        // importarlos espera que eso sirva de algo.
+        //
+        // El orden es: lo que ESCRIBIÓ una persona primero, lo que adivina la app después. Si la
+        // categoría del archivo no se reconoce —"Alimentación" no es ninguna de las de Fino— se
+        // cae a la adivinanza de siempre, que para "SUPERMERCADO PLAZA" acierta igual.
+        const delArchivo = matchCategory(raw.categoryRaw, raw.type, t);
+        const generica = delArchivo === (raw.type === "expense" ? "otros" : "otro_ingreso");
+        const category = generica
+          ? suggestCategory(raw.merchant || raw.description, raw.type, merchantLearned)
+          : delArchivo;
         const tx: Transaction = {
           id: nextId(),
           type: raw.type,

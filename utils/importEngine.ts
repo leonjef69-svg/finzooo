@@ -293,6 +293,49 @@ export function matchType(raw: string): "expense" | "income" | null {
   return null;
 }
 
+/**
+ * COMO SE LLAMA CADA CATEGORIA EN LOS ARCHIVOS DE VERDAD (12/08/2026).
+ *
+ * Solo se reconocian los nombres EXACTOS de Fino. Pero nadie escribe "comida" en su hoja de
+ * calculo: escribe "alimentacion", que es lo que trae el Excel que el trajo. Y entonces la
+ * categoria que se habia tomado el trabajo de poner acababa en "Otros".
+ *
+ * Aqui van los sinonimos que salen de verdad, no todos los imaginables: cada uno de mas es un
+ * gasto que puede acabar en la categoria equivocada, y eso es peor que en "Otros" — en "Otros"
+ * se ve que falta clasificarlo; en la equivocada, no.
+ */
+const SINONIMOS: Record<string, string> = {
+  alimentacion: "comida",
+  alimentos: "comida",
+  comidas: "comida",
+  restaurante: "comida",
+  supermercado: "comida",
+  mercado: "comida",
+  movilidad: "transporte",
+  pasajes: "transporte",
+  taxi: "transporte",
+  gasolina: "combustible",
+  combustibles: "combustible",
+  luz: "servicios",
+  agua: "servicios",
+  internet: "servicios",
+  telefono: "servicios",
+  recibos: "servicios",
+  ropa: "compras",
+  farmacia: "salud",
+  medicinas: "salud",
+  colegio: "educacion",
+  universidad: "educacion",
+  alquiler: "hogar",
+  trabajo: "salario",
+  sueldo: "salario",
+  sueldos: "salario",
+  planilla: "salario",
+  honorarios: "freelance",
+  venta: "venta",
+  ventas: "venta",
+};
+
 export function matchCategory(
   raw: string,
   type: "expense" | "income",
@@ -305,6 +348,10 @@ export function matchCategory(
     if (byId) return byId.id;
     const byLabel = cats.find((c) => normalizeHeader(t(c.label)) === normalized);
     if (byLabel) return byLabel.id;
+    // Y por sinonimo, PERO solo si el resultado es del tipo que toca: "venta" es categoria de
+    // ingreso, y un gasto que dijera "venta" no puede acabar ahi.
+    const porSinonimo = SINONIMOS[normalized];
+    if (porSinonimo && cats.some((c) => c.id === porSinonimo)) return porSinonimo;
   }
   return type === "expense" ? "otros" : "otro_ingreso";
 }
