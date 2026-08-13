@@ -1,33 +1,47 @@
 // LAS HOJAS DE GOOGLE SALIAN EN GRIS (12/08/2026)
 //
-// Pedido suyo: *"necesito el google sheet funcionando correctamente para probarlo"*. Al importar
-// movimientos, sus hojas de calculo de Google no se podian ni tocar.
+// Pedido suyo: *"necesito el google sheet funcionando correctamente para probarlo"*.
 //
-// EL MOTIVO NO ERA UNA LISTA CORTA DE FORMATOS. Una Hoja de Google NO ES UN ARCHIVO: vive dentro
-// de Drive en un formato propio y no hay bytes que leer. Anadirla a la lista del selector y nada
-// mas habria sido peor que dejarla en gris — se podria elegir, y al elegirla la libreria intenta
-// copiarla con openInputStream, falla, y se lleva por delante la eleccion entera.
+// EL PRIMER INTENTO NO SIRVIO, Y LA LECCION ESTA EN POR QUE. Se escribio la conversion —una
+// Hoja de Google no es un archivo, hay que pedirle a Drive que la convierta— y se anadieron sus
+// formatos a la lista del selector. Todo correcto, y seguia en gris. El motivo era UNA linea
+// dentro de la libreria expo-document-picker:
 //
-// Por eso hay codigo nativo: hay que preguntarle a Drive en que formatos ofrece ese documento y
-// pedirselo convertido. Son dos llamadas de Android que no existen en JavaScript.
+//     addCategory(Intent.CATEGORY_OPENABLE)
+//
+// Significa "enseñame solo lo que se pueda abrir como archivo", y una Hoja de Google no se
+// puede. Con esa linea puesta, Drive la enseña en gris por mucho que se le pidan sus formatos:
+// la lista de tipos no pinta nada. La conversion estaba bien y no llegaba a ejecutarse NUNCA.
+//
+// Por eso Fino abre ahora esa pantalla el mismo, sin esa categoria. Y de paso se quito un
+// bloqueo de la libreria que le costo la noche a el: guarda "hay una eleccion en curso" y si
+// Android no le devuelve el resultado —puede matar la pantalla mientras el selector esta
+// abierto— se queda trabada para siempre, y el boton deja de responder sin decir nada.
 //
 // Lo que vigila esta prueba, por orden de gravedad:
 //
-//   1. Que la conversion siga ahi. Sin ella, todo lo demas sobra.
-//   2. Que la libreria NO copie por su cuenta. Si alguien devuelve copyToCacheDirectory a true,
-//      las hojas vuelven a romperse — y encima calladas, porque el resto seguiria funcionando.
-//   3. Que los formatos de Google solo se ofrezcan si la app sabe convertirlos. Esto protege a
-//      quien tenga la pantalla nueva sobre una app vieja: las actualizaciones por internet no
-//      cambian la parte de Android.
+//   1. Que el selector se abra SIN esa categoria. Es lo unico que hace que la hoja se pueda
+//      tocar; sin ello todo lo demas es decorado.
+//   2. Que ningun fallo sea mudo. Un boton que no reacciona no se puede diagnosticar ni
+//      contando lo que se ve.
+//   3. Que la conversion siga ahi y prefiera CSV.
+//   4. Que en apps viejas no se ofrezcan hojas que no se van a poder abrir.
 import fs from "fs";
 import path from "path";
 
 const RAIZ = process.cwd();
 const leer = (f) => fs.readFileSync(path.join(RAIZ, f), "utf8");
-// Sin esto la prueba se lee a si misma: los comentarios de ahi arriba nombran justo las piezas
-// que se estan buscando, y todo pasaria aunque el codigo estuviera vacio.
+// Sin esto la prueba se lee a si misma: los comentarios del codigo nombran justo las piezas que
+// se estan buscando, y todo pasaria aunque no hubiera nada escrito.
+//
+// SOLO SE QUITAN LOS BLOQUES QUE EMPIEZAN UNA LINEA, y no es un detalle. Buscando "/*" en
+// cualquier posicion, el texto "*/*" —que aparece en el codigo, es como se le pide a Android
+// "cualquier formato"— se toma por el final de un comentario y se borra el codigo que hay en
+// medio. Paso el 12/08/2026: la comprobacion mas importante de esta prueba, la de
+// CATEGORY_OPENABLE, pasaba porque el trozo donde habria estado ya no existia. Una prueba en
+// verde por haber perdido lo que iba a mirar es peor que no tenerla.
 const sinComentarios = (f) =>
-  leer(f).replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  leer(f).replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, "").replace(/^\s*(\/\/|rem ).*$/gim, "");
 
 let fallos = 0;
 function ok(c, m) {
@@ -37,64 +51,91 @@ function ok(c, m) {
 
 const KOTLIN = "modules/incoming-file/android/src/main/java/com/finzo/incomingfile/IncomingFileModule.kt";
 const PANTALLA = "screens/ImportSheet.tsx";
+const PUENTE = "modules/incoming-file/index.ts";
 
-console.log("\n--- SE LE PIDE A DRIVE EL DOCUMENTO CONVERTIDO ---");
+console.log("\n--- EL SELECTOR LO ABRE FINO, SIN CATEGORY_OPENABLE ---");
+{
+  const kotlin = sinComentarios(KOTLIN);
+  ok(/Intent\(Intent\.ACTION_OPEN_DOCUMENT\)/.test(kotlin), "Fino abre la pantalla de elegir archivo");
+
+  // ESTA ES LA COMPROBACION QUE IMPORTA. Si alguien anade esta linea "para hacerlo como la
+  // libreria", las Hojas de Google vuelven a salir en gris y no hay ningun otro sintoma.
+  ok(!/CATEGORY_OPENABLE/.test(kotlin), "y NO le pone CATEGORY_OPENABLE (eso las dejaba en gris)");
+
+  ok(/EXTRA_MIME_TYPES, TIPOS_QUE_SE_OFRECEN/.test(kotlin), "se le pasan los formatos aceptados");
+  ok(/vnd\.google-apps\.spreadsheet/.test(kotlin), "y entre ellos las Hojas de Google");
+
+  // NO PUEDE QUEDARSE TRABADO. Si llega una peticion nueva con otra a medias, la vieja se da
+  // por cancelada. Un boton que deja de responder no se arregla desde la app: hay que
+  // reinstalar, y nadie sabe que ese es el remedio.
+  ok(/eligiendo\?\.resolve\(cancelado\(\)\)/.test(kotlin),
+    "una eleccion a medias no bloquea la siguiente");
+}
+
+console.log("\n--- NINGUN FALLO ES MUDO ---");
+{
+  const kotlin = sinComentarios(KOTLIN);
+  const pantalla = sinComentarios(PANTALLA);
+  const puente = sinComentarios(PUENTE);
+
+  ok(/put\("error", motivo\)/.test(kotlin), "el motivo del fallo viaja hasta la pantalla");
+  ok(/estado === "error"/.test(pantalla), "la pantalla lo distingue de cancelar");
+  ok(/\$\{elegido\.motivo\}/.test(pantalla), "y lo enseña");
+  ok(/catch \(e\) \{[\s\S]{0,120}showToastAndClose/.test(pantalla),
+    "y si revienta algo inesperado, tambien avisa");
+  ok(/estado: "cancelado"/.test(puente), "cancelar no cuenta como fallo");
+}
+
+console.log("\n--- LA CONVERSION SIGUE AHI ---");
 {
   const kotlin = sinComentarios(KOTLIN);
   ok(/getStreamTypes\(uri, "\*\/\*"\)/.test(kotlin), "se pregunta a Drive que formatos tiene");
   ok(/openTypedAssetFileDescriptor\(uri, elegido/.test(kotlin), "y se le pide el que sirve");
-  ok(/AsyncFunction\("traerArchivo"\)/.test(kotlin), "y la pantalla puede llamarlo");
 
-  // PRIMERO EL CAMINO NORMAL. Un CSV o un PDF no tienen nada que convertir: si se empezara por
-  // preguntarle a Drive, cada importacion de las de siempre daria un rodeo para nada.
-  const orden = kotlin.indexOf("copyToCache(uri") < kotlin.indexOf("getStreamTypes");
-  ok(orden, "un archivo normal se copia y ya, sin pasar por Drive");
+  // PRIMERO EL CAMINO NORMAL. Un CSV o un PDF no tienen nada que convertir.
+  ok(kotlin.indexOf("copyToCache(uri") < kotlin.indexOf("getStreamTypes"),
+    "un archivo normal se copia y ya, sin pasar por Drive");
 
-  // CSV ANTES QUE EXCEL. Los dos valen; el CSV es texto plano y pesa mucho menos.
   const formatos = kotlin.match(/FORMATOS_QUE_SIRVEN = listOf\(([\s\S]*?)\)/);
   ok(formatos != null, "la lista de formatos aceptados existe");
   if (formatos) {
     const lista = formatos[1];
-    ok(
-      lista.indexOf("text/csv") < lista.indexOf("spreadsheetml"),
-      "se prefiere CSV antes que Excel"
-    );
+    // CSV ANTES QUE EXCEL. Los dos valen; el CSV es texto plano y pesa mucho menos.
+    ok(lista.indexOf("text/csv") < lista.indexOf("spreadsheetml"), "se prefiere CSV antes que Excel");
     // Drive tambien ofrece PDF de una hoja de calculo. Una tabla convertida en PDF se lee
-    // muchisimo peor que la tabla, y aqui hay tabla: aceptarlo seria elegir el peor camino
-    // teniendo el bueno delante.
+    // muchisimo peor que la tabla: aceptarlo seria elegir el peor camino teniendo el bueno.
     ok(!lista.includes("application/pdf"), "y no se acepta el PDF de una hoja de calculo");
   }
 
   // UN ARCHIVO VACIO NO ES UNA HOJA. Es una conversion que fallo sin avisar, y dejarla pasar
   // acabaria en "el archivo esta vacio" — un error que manda a mirar donde no es.
   ok(/length\(\) == 0L/.test(kotlin), "una conversion que sale vacia se trata como fallo");
+
+  // Y LA COPIA NO VA EN EL HILO DE LA PANTALLA. Una hoja grande se descarga entera de Drive:
+  // hacerlo delante dejaria la app congelada, que es justo el sintoma que se estaba arreglando.
+  ok(/Thread \{/.test(kotlin), "la descarga no congela la pantalla");
 }
 
-console.log("\n--- Y LA LIBRERIA NO COPIA POR SU CUENTA ---");
+console.log("\n--- EN APPS VIEJAS NO SE OFRECE LO QUE NO SE PUEDE ABRIR ---");
 {
+  // Las actualizaciones por internet cambian la pantalla pero NO la parte de Android. Ahi manda
+  // la libreria, con su CATEGORY_OPENABLE: ofrecer una Hoja de Google seria prometer algo que
+  // esa version no puede cumplir.
   const pantalla = sinComentarios(PANTALLA);
-  ok(
-    /copyToCacheDirectory: !puedeTraerArchivos/.test(pantalla),
-    "copyToCacheDirectory ya no va fijo en true"
-  );
-  ok(/traerArchivo\(asset\.uri\)/.test(pantalla), "la copia la hace Fino");
-  ok(/showToastAndClose\(t\("importSheet\.unreadable"\)\)/.test(pantalla), "y si no se puede, avisa");
-}
+  const lista = pantalla.match(/const FORMATOS = \[([\s\S]*?)\]/);
+  ok(lista != null && !lista[1].includes("google-apps"),
+    "la lista de la libreria no incluye documentos de Google");
+  ok(/if \(!puedeElegirArchivo\)/.test(pantalla), "y se usa solo cuando no hay nada mejor");
 
-console.log("\n--- LOS FORMATOS DE GOOGLE SOLO SI SE PUEDEN ABRIR ---");
-{
-  // Una actualizacion por internet cambia la pantalla pero NO la parte de Android. Ofrecer una
-  // Hoja de Google a quien no puede convertirla es prometer algo que la app no sabe cumplir.
-  const pantalla = sinComentarios(PANTALLA);
-  const condicional = /puedeTraerArchivos[\s\S]{0,120}vnd\.google-apps\.spreadsheet/.test(pantalla);
-  ok(condicional, "las hojas de Google solo se ofrecen si la app sabe convertirlas");
+  const puente = sinComentarios(PUENTE);
+  ok(/elegirArchivo\?:/.test(puente), "la funcion nativa se declara opcional");
+  ok(/typeof Native\?\.elegirArchivo === "function"/.test(puente),
+    "y se comprueba de verdad que este, no que la app sea Android");
 
-  const puente = sinComentarios("modules/incoming-file/index.ts");
-  ok(/traerArchivo\?:/.test(puente), "la funcion nativa se declara opcional");
-  ok(
-    /typeof Native\?\.traerArchivo === "function"/.test(puente),
-    "y se comprueba de verdad que este, no que la app sea Android"
-  );
+  // Y SE VE EN INFORMACION. Sin esto no hay forma de saber si un APK trae esta parte, y se
+  // acaba buscando el fallo donde no esta — pasó el 12/08/2026, dos veces.
+  ok(/puedeElegirArchivo \? "✓" : "✗"\} hojas de Google/.test(leer("screens/AppInfo.tsx")),
+    "y se ve en la pantalla de Informacion");
 }
 
 console.log("\n--- EL NOMBRE CONVERTIDO LLEVA EXTENSION ---");
@@ -105,10 +146,13 @@ console.log("\n--- EL NOMBRE CONVERTIDO LLEVA EXTENSION ---");
   const pantalla = sinComentarios(PANTALLA);
   ok(/EXTENSION_CONVERTIDA/.test(pantalla), "hay una tabla de extensiones");
   ok(/"text\/csv": "\.csv"/.test(pantalla), "un CSV convertido se llama .csv");
-  ok(
-    /spreadsheetml\.sheet": "\.xlsx"/.test(pantalla),
-    "y un Excel convertido se llama .xlsx"
-  );
+  ok(/spreadsheetml\.sheet": "\.xlsx"/.test(pantalla), "y un Excel convertido se llama .xlsx");
+
+  // Y AL ELEGIR NO SE SUPONE PDF. El respaldo de compartir es "estado-de-cuenta.pdf" —alli un
+  // archivo sin nombre casi seguro es el extracto de un banco— pero aqui puede ser cualquier
+  // cosa, y llamar PDF a una hoja la manda al lector equivocado.
+  ok(/displayName\(uri, "archivo"\)/.test(sinComentarios(KOTLIN)),
+    "al elegir, un archivo sin nombre no se toma por un PDF");
 }
 
 console.log("\n--- EL AVISO ESTA EN LOS TRES IDIOMAS ---");

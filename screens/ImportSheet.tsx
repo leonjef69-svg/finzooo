@@ -17,7 +17,7 @@ import { matchCategory, matchMethod, parseStatement, type RawRow } from "@/utils
 import { suggestCategory } from "@/utils/classifier";
 import { findBestMatch, mergeTransaction, type DuplicateMatch } from "@/utils/duplicates";
 import DuplicateReview from "@/screens/DuplicateReview";
-import { puedeTraerArchivos, traerArchivo } from "@/modules/incoming-file";
+import { elegirArchivo, puedeElegirArchivo } from "@/modules/incoming-file";
 import type { Transaction } from "@/types";
 
 /**
@@ -106,15 +106,13 @@ export default function ImportSheet({
   }, [incoming]);
 
   /**
-   * QUE FORMATOS SE OFRECEN EN LA PANTALLA DE ANDROID.
+   * QUÉ FORMATOS SE OFRECEN CUANDO ELIGE LA LIBRERÍA DE SIEMPRE.
    *
-   * Lo que no esté en esta lista sale en gris y no se puede tocar.
-   *
-   * Los dos últimos son documentos de Google. Solo se ofrecen si esta versión
-   * de Fino sabe convertirlos (ver traerArchivo): una Hoja de Google no es un
-   * archivo y no se puede leer tal cual. Ofrecerla sin poder abrirla sería
-   * peor que dejarla en gris — el usuario la elige, espera, y le sale un
-   * error sobre algo que la app misma le acaba de ofrecer.
+   * Solo se usa en apps viejas, donde Fino todavía no sabe abrir la pantalla
+   * de Android él mismo. Ahí las Hojas de Google **no se pueden ofrecer**:
+   * salen en gris igualmente —la librería le pone al pedido una categoría que
+   * las descarta, ver elegirArchivo en IncomingFileModule.kt— y ofrecer algo
+   * que no se puede tocar es peor que no ofrecerlo.
    */
   const FORMATOS = [
     "text/csv",
@@ -124,48 +122,45 @@ export default function ImportSheet({
     "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     "application/vnd.ms-excel.sheet.macroEnabled.12",
     "application/pdf",
-    ...(puedeTraerArchivos
-      ? ["application/vnd.google-apps.spreadsheet", "application/vnd.google-apps.document"]
-      : []),
   ];
 
   async function pickFile() {
-    const result = await DocumentPicker.getDocumentAsync({
-      type: FORMATOS,
-      // Que NO copie él. Copia con openInputStream, y con una Hoja de Google
-      // eso falla y se lleva por delante la elección entera: la promesa se
-      // rompe y no queda ni la dirección del archivo para intentar otra cosa.
-      // La copia se hace después, en traerArchivo, que sabe de los dos casos.
-      //
-      // Cuando esta versión de Fino no trae esa parte —una actualización por
-      // internet encima de una app vieja— se deja copiar a él como siempre.
-      copyToCacheDirectory: !puedeTraerArchivos,
-    });
-    if (result.canceled || !result.assets[0]) return;
-    const asset = result.assets[0];
+    // NADA DE ESTO PUEDE FALLAR EN SILENCIO. Antes no existía este try, y
+    // cuando la librería se quedaba trabada con una elección anterior a medias
+    // —le pasó a él el 12/08/2026— tocar el botón no hacía absolutamente nada:
+    // ni error, ni pantalla, ni forma de saber qué estaba pasando.
+    try {
+      if (!puedeElegirArchivo) {
+        const result = await DocumentPicker.getDocumentAsync({
+          type: FORMATOS,
+          copyToCacheDirectory: true,
+        });
+        if (result.canceled || !result.assets[0]) return;
+        const asset = result.assets[0];
+        await loadFile(asset.uri, asset.name, asset.mimeType);
+        return;
+      }
 
-    if (!puedeTraerArchivos) {
-      await loadFile(asset.uri, asset.name, asset.mimeType);
-      return;
-    }
-
-    setLoading(true);
-    const traido = await traerArchivo(asset.uri);
-    if (!traido) {
+      const elegido = await elegirArchivo();
+      if (elegido.estado === "cancelado") return;
+      if (elegido.estado === "error") {
+        showToastAndClose(`${t("importSheet.unreadable")} (${elegido.motivo})`);
+        return;
+      }
+      // Si hubo conversión, manda lo convertido. El nombre de una Hoja de
+      // Google viene sin extensión ("Mis gastos"), y de la extensión depende
+      // que se lea como texto o como Excel: sin esto, un CSV recién convertido
+      // se intentaría abrir como hoja de cálculo y no saldría nada.
+      const extra = EXTENSION_CONVERTIDA[elegido.convertido ?? ""] ?? "";
+      const nombre =
+        extra && !elegido.nombre.toLowerCase().endsWith(extra)
+          ? elegido.nombre + extra
+          : elegido.nombre;
+      await loadFile(elegido.uri, nombre, elegido.convertido ?? undefined);
+    } catch (e) {
       setLoading(false);
-      showToastAndClose(t("importSheet.unreadable"));
-      return;
+      showToastAndClose(`${t("importSheet.unreadable")} (${String(e)})`);
     }
-    // Si hubo conversión, manda lo convertido. El nombre de una Hoja de
-    // Google viene sin extensión ("Mis gastos"), y de la extensión depende
-    // que se lea como texto o como Excel: sin esto, un CSV recién convertido
-    // se intentaría abrir como hoja de cálculo y no saldría nada.
-    const extra = EXTENSION_CONVERTIDA[traido.convertido ?? ""] ?? "";
-    await loadFile(
-      traido.uri,
-      extra && !asset.name.toLowerCase().endsWith(extra) ? asset.name + extra : asset.name,
-      traido.convertido ?? asset.mimeType
-    );
   }
 
   /**

@@ -4,6 +4,7 @@ import android.content.Intent
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
+import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import org.json.JSONObject
@@ -29,6 +30,8 @@ import java.io.File
  * que si lo hubiera elegido a mano, incluido el borrado tras leerlo.
  */
 class IncomingFileModule : Module() {
+  /** Numero cualquiera; solo sirve para reconocer NUESTRA respuesta entre las de Android. */
+  private val CODIGO_ELEGIR = 7311
 
   /**
    * El archivo que llegó con Fino YA ABIERTA.
@@ -46,6 +49,14 @@ class IncomingFileModule : Module() {
    * la app pasaba al frente y se quedaba en Inicio.
    */
   private var pendingIntent: Intent? = null
+
+  /**
+   * La eleccion de archivo que esta abierta ahora mismo, si la hay.
+   *
+   * Hace falta porque la pantalla de Android no devuelve nada al momento: se abre, y el
+   * resultado llega despues por otro camino. Aqui se guarda a quien hay que contestarle.
+   */
+  private var eligiendo: Promise? = null
 
   override fun definition() = ModuleDefinition {
     Name("IncomingFile")
@@ -65,11 +76,32 @@ class IncomingFileModule : Module() {
     // otra vez el mismo estado de cuenta.
     Function("consumePendingFile") { consume() }
 
-    // El archivo que se eligio en la pantalla de Android, ya copiado dentro de Fino. Ver
-    // traerArchivo. Es asincrona porque copia bytes: con un archivo grande, hacerlo en el
-    // hilo de la pantalla la dejaria congelada mientras dura.
-    AsyncFunction("traerArchivo") { uri: String -> traerArchivo(uri) }
+    // Abre la pantalla de Android para elegir un archivo y lo devuelve ya copiado dentro de
+    // Fino —convertido, si era un documento de Google—. Ver elegirArchivo.
+    AsyncFunction("elegirArchivo") { promise: Promise -> elegirArchivo(promise) }
+
+    OnActivityResult { _, (requestCode, resultCode, intent) ->
+      if (requestCode == CODIGO_ELEGIR) responder(resultCode, intent)
+    }
   }
+
+  /**
+   * QUE SE PUEDE ELEGIR EN LA PANTALLA DE ANDROID.
+   *
+   * Lo que no este aqui sale en gris. Los dos ultimos son documentos de Google, y son el motivo
+   * de que Fino abra esta pantalla por su cuenta (ver elegirArchivo).
+   */
+  private val TIPOS_QUE_SE_OFRECEN = arrayOf(
+    "text/csv",
+    "text/comma-separated-values",
+    "text/plain",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel.sheet.macroEnabled.12",
+    "application/pdf",
+    "application/vnd.google-apps.spreadsheet",
+    "application/vnd.google-apps.document",
+  )
 
   /**
    * En que formatos se acepta un documento de Google, del mas comodo al menos.
@@ -131,8 +163,8 @@ class IncomingFileModule : Module() {
    * El nombre que la otra app le da al archivo. Importa mas de lo que
    * parece: de él sale el reconocimiento del banco y si se trata como PDF.
    */
-  private fun displayName(uri: Uri): String {
-    val context = appContext.reactContext ?: return "estado-de-cuenta.pdf"
+  private fun displayName(uri: Uri, siNoHay: String = "estado-de-cuenta.pdf"): String {
+    val context = appContext.reactContext ?: return siNoHay
     try {
       context.contentResolver
         .query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
@@ -151,7 +183,7 @@ class IncomingFileModule : Module() {
     }
     // Sin nombre, se supone PDF: es lo que manda todo banco peruano y lo
     // único para lo que Fino se ofrece en la lista de Android.
-    return uri.lastPathSegment?.takeIf { it.contains('.') } ?: "estado-de-cuenta.pdf"
+    return uri.lastPathSegment?.takeIf { it.contains('.') } ?: siNoHay
   }
 
   private fun copyToCache(uri: Uri, name: String): File? {
@@ -168,80 +200,154 @@ class IncomingFileModule : Module() {
     name.replace(Regex("[^A-Za-z0-9._-]"), "_").takeLast(60)
 
   /**
-   * TRAE A FINO EL ARCHIVO QUE SE ELIGIO EN LA PANTALLA DE ANDROID (12/08/2026).
+   * ABRE LA PANTALLA DE ANDROID PARA ELEGIR UN ARCHIVO (12/08/2026).
    *
-   * Nace de esto: al importar movimientos, las Hojas de calculo de Google salian en gris y no
-   * se podian tocar.
+   * Fino ya tenia con que elegir archivos —expo-document-picker— y aun asi esto esta escrito a
+   * mano. El motivo es UNA linea suya:
    *
-   * POR QUE. Una Hoja de Google NO ES UN ARCHIVO. Vive dentro de Drive en un formato propio y no
-   * hay bytes que leer. Pedirle el contenido con openInputStream —lo que hace todo el mundo,
-   * incluido expo-document-picker— falla siempre. Y falla ADEMAS de la peor manera: la libreria
-   * copia el archivo ella sola antes de devolverlo, asi que reventaba entera y la eleccion se
-   * perdia. Por eso ahora se le pide que NO copie (copyToCacheDirectory: false) y la copia se
-   * hace aqui.
+   *     addCategory(Intent.CATEGORY_OPENABLE)
    *
-   * Los dos caminos, en orden:
+   * Esa categoria significa "enseñame solo lo que se pueda abrir como archivo". Y una Hoja de
+   * Google NO se puede: no es un archivo, vive dentro de Drive en un formato propio. Con esa
+   * linea puesta, Drive la enseña EN GRIS por mucho que se le pidan sus formatos — la lista de
+   * tipos no pinta nada. Ese fue el primer intento del 12/08/2026, y por eso no sirvio: la
+   * conversion estaba bien escrita y no llegaba a ejecutarse nunca.
+   *
+   * Aqui se pide lo mismo SIN esa categoria, y entonces si se puede tocar.
+   *
+   * Y DE PASO SE ARREGLA UN BLOQUEO. Aquella libreria guarda "hay una eleccion en curso" y si
+   * Android no le devuelve el resultado —pasa: el sistema puede matar la pantalla mientras el
+   * selector esta abierto— se queda bloqueada PARA SIEMPRE: todos los toques siguientes fallan
+   * sin decir nada y el boton parece muerto. Le paso a el esa misma noche. Aqui, si llega una
+   * peticion nueva con otra a medias, la vieja se da por cancelada y la nueva sigue: un boton
+   * que no responde no se puede arreglar desde la app.
+   */
+  private fun elegirArchivo(promise: Promise) {
+    val actividad = appContext.currentActivity
+    if (actividad == null) {
+      promise.resolve(fallo("sin-pantalla"))
+      return
+    }
+    // La de antes se da por perdida en vez de rechazar la nueva. Ver arriba.
+    eligiendo?.resolve(cancelado())
+    eligiendo = promise
+    try {
+      val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
+        type = "*/*"
+        putExtra(Intent.EXTRA_MIME_TYPES, TIPOS_QUE_SE_OFRECEN)
+      }
+      actividad.startActivityForResult(intent, CODIGO_ELEGIR)
+    } catch (e: Throwable) {
+      eligiendo = null
+      promise.resolve(fallo("no-se-abrio"))
+    }
+  }
+
+  /**
+   * Contesta a la eleccion que estaba abierta.
+   *
+   * La copia y la conversion van en un hilo aparte a proposito: pueden tardar —una hoja grande
+   * se descarga entera de Drive— y esto corre en el hilo de la pantalla, que se quedaria
+   * congelada mientras dura.
+   */
+  private fun responder(resultCode: Int, intent: Intent?) {
+    val promise = eligiendo ?: return
+    eligiendo = null
+
+    val uri = intent?.data
+    if (resultCode != Activity.RESULT_OK || uri == null) {
+      // Cancelar no es un fallo: se sale de la pantalla y no pasa nada mas.
+      promise.resolve(cancelado())
+      return
+    }
+    Thread {
+      val respuesta = try {
+        traerArchivo(uri)
+      } catch (e: Throwable) {
+        null
+      }
+      promise.resolve(respuesta ?: fallo("no-se-pudo-leer"))
+    }.start()
+  }
+
+  private fun cancelado(): String = JSONObject().put("cancelado", true).toString()
+
+  /**
+   * El motivo viaja hasta la pantalla y se enseña.
+   *
+   * Antes esto no existia y cada fallo era un silencio: se elegia un archivo, no pasaba
+   * absolutamente nada, y no habia forma de saber si el problema era el archivo, el permiso o
+   * la app. Es lo que costo mas tiempo del 12/08/2026.
+   */
+  private fun fallo(motivo: String): String =
+    JSONObject().put("error", motivo).toString()
+
+  /**
+   * TRAE A FINO EL ARCHIVO ELEGIDO, convertido si hace falta.
+   *
+   * Dos caminos, en orden:
    *
    *   1. Lo normal. Un CSV, un Excel o un PDF se abren y se copian, y ya esta.
    *
-   *   2. Si eso no da nada, es un documento de Google. Drive los ofrece convertidos a otros
-   *      formatos: se le pregunta cuales tiene (getStreamTypes) y se le pide el que sirva
-   *      (openTypedAssetFileDescriptor). Esta es la parte que NO se puede escribir en
-   *      JavaScript — son dos llamadas de Android que no estan expuestas— y el unico motivo de
-   *      que esto sea codigo nativo.
+   *   2. Si eso no da nada, es un documento de Google: no hay bytes que leer. Drive los ofrece
+   *      convertidos a otros formatos, asi que se le pregunta cuales tiene (getStreamTypes) y se
+   *      le pide el que sirva (openTypedAssetFileDescriptor). Estas dos llamadas son el motivo
+   *      de que esto sea codigo nativo: no existen en JavaScript.
    *
    * SE PIDE CSV ANTES QUE EXCEL a proposito. Los dos valen, pero el CSV es texto plano: pesa
    * mucho menos y no obliga a arrancar el lector de hojas de calculo para algo que se acaba
    * leyendo como filas y columnas igual.
    *
-   * Devuelve un JSON con la ruta ya escrita y, si hubo conversion, en que formato quedo — quien
-   * llama lo necesita para saber si lo lee como texto o como Excel. Devuelve null si no se pudo:
-   * un dibujo de Google Drawings, por ejemplo, no se convierte a nada que sirva. Nunca lanza.
+   * Devuelve un JSON con la ruta ya escrita, el nombre, y en que formato quedo si hubo
+   * conversion —quien llama lo necesita para saber si lo lee como texto o como hoja de
+   * calculo—. Devuelve null si no se pudo: un dibujo de Google Drawings, por ejemplo, no se
+   * convierte a nada que sirva.
    */
-  private fun traerArchivo(uriTexto: String): String? {
-    return try {
-      val context = appContext.reactContext ?: return null
-      val uri = Uri.parse(uriTexto)
+  private fun traerArchivo(uri: Uri): String? {
+    val context = appContext.reactContext ?: return null
+    // Sin el respaldo ".pdf" de compartir: alli un archivo sin nombre casi seguro es el estado
+    // de cuenta de un banco, pero aqui puede ser cualquier cosa, y llamar PDF a una hoja de
+    // calculo la manda al lector equivocado.
+    val nombre = displayName(uri, "archivo")
 
-      // 1. El camino de siempre.
-      val normal = try {
-        copyToCache(uri, displayName(uri))
-      } catch (e: Throwable) {
-        null
-      }
-      if (normal != null && normal.length() > 0L) {
-        return JSONObject()
-          .put("uri", Uri.fromFile(normal).toString())
-          .put("convertido", JSONObject.NULL)
-          .toString()
-      }
-      normal?.delete()
-
-      // 2. Es un documento de Google: hay que pedirlo convertido.
-      val disponibles = context.contentResolver.getStreamTypes(uri, "*/*") ?: return null
-      val elegido = FORMATOS_QUE_SIRVEN.firstOrNull { querido ->
-        disponibles.any { it.equals(querido, ignoreCase = true) }
-      } ?: return null
-
-      val destino = File(context.cacheDir, "hoja-${System.currentTimeMillis()}")
-      context.contentResolver.openTypedAssetFileDescriptor(uri, elegido, null)?.use { descriptor ->
-        descriptor.createInputStream().use { entrada ->
-          destino.outputStream().use { salida -> entrada.copyTo(salida) }
-        }
-      } ?: return null
-
-      // Un archivo vacio no es una hoja: es una conversion que fallo sin decirlo.
-      if (destino.length() == 0L) {
-        destino.delete()
-        return null
-      }
-      JSONObject()
-        .put("uri", Uri.fromFile(destino).toString())
-        .put("convertido", elegido)
-        .toString()
+    // 1. El camino de siempre.
+    val normal = try {
+      copyToCache(uri, nombre)
     } catch (e: Throwable) {
       null
     }
+    if (normal != null && normal.length() > 0L) {
+      return JSONObject()
+        .put("uri", Uri.fromFile(normal).toString())
+        .put("nombre", nombre)
+        .put("convertido", JSONObject.NULL)
+        .toString()
+    }
+    normal?.delete()
+
+    // 2. Es un documento de Google: hay que pedirlo convertido.
+    val disponibles = context.contentResolver.getStreamTypes(uri, "*/*") ?: return null
+    val elegido = FORMATOS_QUE_SIRVEN.firstOrNull { querido ->
+      disponibles.any { it.equals(querido, ignoreCase = true) }
+    } ?: return null
+
+    val destino = File(context.cacheDir, "hoja-${System.currentTimeMillis()}")
+    context.contentResolver.openTypedAssetFileDescriptor(uri, elegido, null)?.use { descriptor ->
+      descriptor.createInputStream().use { entrada ->
+        destino.outputStream().use { salida -> entrada.copyTo(salida) }
+      }
+    } ?: return null
+
+    // Un archivo vacio no es una hoja: es una conversion que fallo sin decirlo.
+    if (destino.length() == 0L) {
+      destino.delete()
+      return null
+    }
+    return JSONObject()
+      .put("uri", Uri.fromFile(destino).toString())
+      .put("nombre", nombre)
+      .put("convertido", elegido)
+      .toString()
   }
 
 }

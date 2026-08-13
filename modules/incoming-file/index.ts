@@ -11,7 +11,7 @@ export type IncomingFile = {
 
 type NativeShape = {
   consumePendingFile: () => string | null;
-  traerArchivo?: (uri: string) => Promise<string | null>;
+  elegirArchivo?: () => Promise<string | null>;
 };
 
 const Native = requireOptionalNativeModule<NativeShape>("IncomingFile");
@@ -40,49 +40,68 @@ export function consumePendingFile(): IncomingFile | null {
     return null;
   }
 }
-
-/** Un archivo elegido en la pantalla de Android y ya copiado dentro de Fino. */
-export type ArchivoTraido = {
-  /** Ruta local ("file://..."), lista para leer como cualquier otra. */
-  uri: string;
-  /**
-   * En que formato quedo, SOLO si hubo que convertirlo — una Hoja de Google
-   * sale de aqui como "text/csv". Vacio cuando el archivo ya era un archivo.
-   */
-  convertido: string | null;
-};
-
-/**
- * Si esta version de Fino sabe traer archivos ella misma.
- *
- * Hace falta preguntarlo porque las actualizaciones por internet no cambian
- * la parte de Android: alguien puede tener la pantalla nueva encima de una
- * app vieja que todavia no trae esta funcion. Sin esta comprobacion, importar
- * dejaria de funcionar del todo para esa gente.
- */
-export const puedeTraerArchivos =
-  Platform.OS === "android" && typeof Native?.traerArchivo === "function";
+/** Lo que pasó al pedirle a Android que se eligiera un archivo. */
+export type ArchivoElegido =
+  | {
+      estado: "listo";
+      /** Ruta local ("file://..."), lista para leer como cualquier otra. */
+      uri: string;
+      /** El nombre que le da Android. De aquí sale el reconocimiento del banco. */
+      nombre: string;
+      /**
+       * En qué formato quedó, SOLO si hubo que convertirlo — una Hoja de
+       * Google sale de aquí como "text/csv". Vacío cuando ya era un archivo.
+       */
+      convertido: string | null;
+    }
+  | { estado: "cancelado" }
+  | { estado: "error"; motivo: string };
 
 /**
- * Copia dentro de Fino el archivo que se acaba de elegir, y de paso convierte
- * los documentos de Google —que no son archivos y no se pueden leer— a algo
- * que si se pueda. Ver traerArchivo en IncomingFileModule.kt.
+ * Si esta versión de Fino sabe abrir ella misma la pantalla de elegir archivo.
  *
- * Devuelve null si no se pudo. Quien llama tiene que avisar: aqui el usuario
- * acaba de elegir algo a proposito y el silencio no vale.
+ * Hace falta preguntarlo porque las actualizaciones por internet no cambian la
+ * parte de Android: alguien puede tener la pantalla nueva encima de una app
+ * vieja que todavía no trae esto. Sin la comprobación, importar dejaría de
+ * funcionar del todo para esa gente.
  */
-export async function traerArchivo(uri: string): Promise<ArchivoTraido | null> {
-  if (!Native?.traerArchivo) return null;
+export const puedeElegirArchivo =
+  Platform.OS === "android" && typeof Native?.elegirArchivo === "function";
+
+/**
+ * Abre la pantalla de Android para elegir un archivo y lo devuelve ya copiado
+ * dentro de Fino, convertido si era un documento de Google.
+ *
+ * Ver elegirArchivo en IncomingFileModule.kt: está escrito a mano porque la
+ * librería de siempre le pone al pedido una categoría que deja las Hojas de
+ * Google en gris.
+ */
+export async function elegirArchivo(): Promise<ArchivoElegido> {
+  if (!Native?.elegirArchivo) return { estado: "error", motivo: "sin-soporte" };
+  let raw: string | null;
   try {
-    const raw = await Native.traerArchivo(uri);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<ArchivoTraido>;
-    if (typeof parsed.uri !== "string") return null;
+    raw = await Native.elegirArchivo();
+  } catch (e) {
+    // El texto del fallo se enseña. Un error mudo aquí deja al usuario mirando
+    // una pantalla que no reacciona, que es exactamente lo que costó más
+    // tiempo el 12/08/2026.
+    return { estado: "error", motivo: String(e) };
+  }
+  if (!raw) return { estado: "error", motivo: "sin-respuesta" };
+  try {
+    const p = JSON.parse(raw) as Record<string, unknown>;
+    if (p.cancelado === true) return { estado: "cancelado" };
+    if (typeof p.error === "string") return { estado: "error", motivo: p.error };
+    if (typeof p.uri !== "string" || typeof p.nombre !== "string") {
+      return { estado: "error", motivo: "respuesta-rara" };
+    }
     return {
-      uri: parsed.uri,
-      convertido: typeof parsed.convertido === "string" ? parsed.convertido : null,
+      estado: "listo",
+      uri: p.uri,
+      nombre: p.nombre,
+      convertido: typeof p.convertido === "string" ? p.convertido : null,
     };
   } catch {
-    return null;
+    return { estado: "error", motivo: "respuesta-rota" };
   }
 }

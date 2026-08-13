@@ -27,7 +27,7 @@ const APP_VERSION = "1.0.0";
  * La versión de la app (1.0.0) no sirve para esto: no cambia entre entregas.
  * Esta sí.
  */
-const CODE_MARKER = "12ago-18";
+const CODE_MARKER = "12ago-19";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast, verComoGratis, setVerComoGratis, tienePremiumDeVerdad } = useAppData();
@@ -181,7 +181,13 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
                 conversor, así que hay APK con el primero y sin el segundo. Es
                 justo el caso que costó este ida y vuelta. */}
             {puedeExportarEnFondo() ? "✓" : "✗"} reporte solo ·{" "}
-            {puedePdfEnFondo() ? "✓" : "✗"} PDF solo
+            {puedePdfEnFondo() ? "✓" : "✗"} PDF solo ·{" "}
+            {/* La del 12/08/2026, y hizo falta el mismo día. Se entregó un APK
+                que traía esta parte, la app siguió mostrando la pantalla vieja
+                por otro motivo, y no había forma de saber si el problema era
+                que el APK no se había instalado o que el arreglo no servía. Se
+                perdieron dos vueltas en eso. */}
+            {incomingFile.puedeElegirArchivo ? "✓" : "✗"} hojas de Google
           </Text>
 
           <TouchableOpacity
