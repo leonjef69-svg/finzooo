@@ -295,19 +295,79 @@ function piecesToText(pieces: TextPiece[]): string {
   }
   rows.push(cur);
 
-  return rows.map(row => {
+  // Primero se juntan los trozos que son un mismo campo partido. Un texto puede llegar en
+  // varias piezas seguidas —pasa con los acentos y con ciertas fuentes—, y separarlas en
+  // columnas distintas partiría una descripción por la mitad.
+  const celdas: TextPiece[][] = rows.map(row => {
     const byX = [...row].sort((a, b) => a.x - b.x);
-    let line = byX[0].text;
+    const juntas: TextPiece[] = [byX[0]];
     for (let i = 1; i < byX.length; i++) {
+      const anterior = juntas[juntas.length - 1];
       // Estima el fin del fragmento anterior (~5 unidades por carácter)
-      const prevEnd = byX[i - 1].x + byX[i - 1].text.length * 5;
-      const gap = byX[i].x - prevEnd;
-      // Brecha grande → columna nueva (tab); pequeña → mismo campo (espacio)
-      line += gap > 10 ? '\t' : ' ';
-      line += byX[i].text;
+      const finAnterior = anterior.x + anterior.text.length * 5;
+      if (byX[i].x - finAnterior > 10) {
+        juntas.push(byX[i]);
+      } else {
+        anterior.text += ' ' + byX[i].text;
+      }
     }
-    return line.trim();
-  }).filter(Boolean).join('\n');
+    return juntas;
+  });
+
+  /**
+   * LAS CASILLAS VACÍAS TAMBIÉN OCUPAN SITIO (13/08/2026).
+   *
+   * Antes esto pegaba las celdas de cada fila con un tab entre ellas, y ahí estaba el fallo:
+   * en un PDF, una casilla vacía NO EXISTE — no hay texto, no hay nada—. Una fila con Cargo
+   * vacío llegaba con tres celdas en vez de cuatro, y el monto del Abono terminaba en el sitio
+   * del Cargo.
+   *
+   * Se vio con un estado de cuenta de ejemplo: "ABONO SUELDO JULIO — 2450" entraba como GASTO.
+   * Plata que entra anotada como plata que sale, en silencio y en todos los bancos que separan
+   * Cargo y Abono en dos columnas. De los errores que puede tener un cuaderno de gastos, este es
+   * de los peores: no se nota mirando, solo cuando las cuentas no cuadran semanas después.
+   *
+   * Ahora se miran las POSICIONES. La fila con más celdas hace de plantilla —casi siempre la de
+   * los títulos, o una fila completa— y cada celda de las demás cae en la columna que le toca
+   * por dónde empieza. Las columnas sin nada salen vacías, pero salen: el tab que las separa es
+   * lo que mantiene el monto en su sitio.
+   */
+  const plantilla = celdas.reduce((mejor, fila) => (fila.length > mejor.length ? fila : mejor), celdas[0]);
+
+  // Con una sola columna no hay tabla que reconstruir, y con dos el riesgo de equivocarse supera
+  // la ganancia: se deja el texto tal cual venía.
+  if (plantilla.length < 3) {
+    return celdas.map(fila => fila.map(c => c.text).join('\t').trim()).filter(Boolean).join('\n');
+  }
+
+  // La frontera entre dos columnas está a medio camino entre donde empiezan. Un número alineado
+  // a la derecha empieza más adentro que su título, pero nunca antes de esa frontera.
+  const inicios = plantilla.map(c => c.x);
+  const fronteras: number[] = [];
+  for (let i = 1; i < inicios.length; i++) fronteras.push((inicios[i - 1] + inicios[i]) / 2);
+
+  const columnaDe = (x: number): number => {
+    let i = 0;
+    while (i < fronteras.length && x >= fronteras[i]) i++;
+    return i;
+  };
+
+  return celdas
+    .map(fila => {
+      const columnas: string[] = new Array(inicios.length).fill('');
+      for (const celda of fila) {
+        const i = columnaDe(celda.x);
+        // Dos celdas en la misma columna se juntan en vez de pisarse: perder texto es peor que
+        // que una columna traiga de más.
+        columnas[i] = columnas[i] ? `${columnas[i]} ${celda.text}` : celda.text;
+      }
+      // Se recortan las vacías del final: no aportan nada y ensucian las líneas de título.
+      let ultima = columnas.length - 1;
+      while (ultima >= 0 && columnas[ultima] === '') ultima--;
+      return columnas.slice(0, ultima + 1).join('\t').trim();
+    })
+    .filter(Boolean)
+    .join('\n');
 }
 
 // ── Función principal ────────────────────────────────────────────────

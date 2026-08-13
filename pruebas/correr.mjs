@@ -72,6 +72,7 @@ const SUITES = [
   { archivo: "verificar-pdf.ts", alias: BASE },
   { archivo: "verificar-pdf-ilegible.ts", alias: BASE, formato: "cjs" },
   { archivo: "verificar-pdf-mixto.ts", alias: BASE },
+  { archivo: "verificar-pdf-columnas.ts", alias: BASE },
   // SheetJS no funciona empaquetado como modulo moderno: pide el formato
   // antiguo. Es la unica que lo necesita.
   { archivo: "verificar-excel.ts", alias: BASE, formato: "cjs" },
