@@ -68,8 +68,16 @@ function filasDeMovimientos(html: string): number {
 }
 
 /** Lo que hay ANTES de la lista: los graficos. */
+/**
+ * La parte del documento donde viven los graficos.
+ *
+ * Desde el 13/08/2026 van DEBAJO de la lista de movimientos —pedido suyo: con un mes de pocos
+ * movimientos, la primera hoja era casi toda graficos y habia que bajar para ver lo que uno fue
+ * a buscar—. Antes esto cortaba por delante del titulo "MOVIMIENTOS"; ahora corta por detras de
+ * la tabla. Lo que se comprueba es lo mismo: que graficos hay y de que hablan.
+ */
 function zonaDeGraficos(html: string): string {
-  return html.slice(0, html.indexOf("<!-- MOVIMIENTOS -->"));
+  return html.slice(html.indexOf("</tbody>"));
 }
 
 console.log("\n--- LA LISTA DE MOVIMIENTOS SALE ENTERA ---");
@@ -92,7 +100,10 @@ console.log("\n--- UNA SOLA ROSQUILLA, LA DE GASTOS ---");
   // El total de ingresos SI sale, pero en la tarjeta de arriba, no en una
   // rosquilla. Por eso aqui no vale buscar el numero: se mira que no haya un
   // segundo dibujo y que las categorias de ingreso no esten.
-  ok(g.includes("S/ 1500.00"), "el total de ingresos sigue en su tarjeta de arriba");
+  //
+  // Y se busca en el documento ENTERO, no en la zona de graficos: desde que los graficos bajaron
+  // debajo de los movimientos (13/08/2026), esa tarjeta se quedo arriba, que es su sitio.
+  ok(armar(MIXTO).includes("S/ 1500.00"), "el total de ingresos sigue en su tarjeta de arriba");
   ok(g.includes("Comida"), "las categorias de gasto salen");
   ok(!g.includes("Salario"), "y las de ingreso no estan en los graficos");
   // Los titulos avisan de que hablan solo del gasto: sin eso, en un documento

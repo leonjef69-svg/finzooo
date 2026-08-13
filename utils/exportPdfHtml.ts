@@ -653,11 +653,6 @@ export function buildPdfHtml(o: PdfOptions): string {
       </tr>
     </table>
 
-    ${bloqueCategorias}
-    ${bloquePresupuestos}
-    ${bloqueMeses}
-    ${bloqueDias}
-
     <!-- MOVIMIENTOS -->
     <!-- page-break-after:avoid pega el título a su tabla.
          Sin esto el corte de hoja caía justo debajo del título y la primera
@@ -687,6 +682,16 @@ export function buildPdfHtml(o: PdfOptions): string {
         </td>
       </tr>
     </table>
+
+    <!-- LOS GRÁFICOS, DEBAJO DE LOS MOVIMIENTOS (13/08/2026).
+         Pedido suyo: "las gráficas siempre deben estar debajo de los movimientos".
+         Estaban arriba, y con un mes de pocos movimientos la primera hoja era casi toda
+         gráficos: había que bajar para ver lo que se fue a buscar. Los movimientos son el
+         documento; los gráficos, el resumen de lo que ya se leyó. -->
+    ${bloqueCategorias}
+    ${bloquePresupuestos}
+    ${bloqueMeses}
+    ${bloqueDias}
 
     <div style="margin-top:22px;font-size:8px;color:#94a3b8;text-align:center;">
       ${esc(T.generatedOn)} ${esc(o.generatedAt)} · Fino
