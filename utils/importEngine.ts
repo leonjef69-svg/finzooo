@@ -475,6 +475,14 @@ export type ParseResult =
        * movimientos de verdad y basta con poner la fecha en la hoja. Ver el bucle.
        */
       sinFecha: number;
+      /**
+       * Esas mismas filas, enteras salvo la fecha (que va vacia).
+       *
+       * Se devuelven en vez de tirarlas para poder preguntarle a la persona de que mes son. Es
+       * lo unico que se puede hacer con una hoja como la suya: los montos y las categorias estan
+       * escritos, y el mes solo lo sabe quien la lleno.
+       */
+      rowsSinFecha: RawRow[];
       headerIndex: number;
     }
   | { ok: false; reason: "empty" | "noTable" };
@@ -491,6 +499,7 @@ export function parseStatement(text: string, account?: string): ParseResult {
   const rows: RawRow[] = [];
   let errorCount = 0;
   let sinFecha = 0;
+  const rowsSinFecha: RawRow[] = [];
 
   // Lo que el archivo dice de sí mismo antes de empezar la tabla. Ver mesDeclaradoEn.
   const mesDelArchivo = mesDeclaradoEn(lines.slice(0, headerIndex));
@@ -556,7 +565,22 @@ export function parseStatement(text: string, account?: string): ParseResult {
       // la fecha en la hoja—. Una fila sin monto suele ser un hueco o el pie de la tabla, y no
       // hay nada que hacer. Contarlas juntas como "3 con errores" mezcla las dos y no deja
       // actuar sobre ninguna.
-      if (!date && value !== null && value !== 0) sinFecha++;
+      if (!date && value !== null && value !== 0) {
+        sinFecha++;
+        // Se guarda entera menos la fecha. Ver rowsSinFecha.
+        const sinDia = cellAt(map.description);
+        rowsSinFecha.push({
+          date: "",
+          amount: value,
+          type: (map.type !== -1 ? matchType(cellAt(map.type)) : null) ?? typeFromColumns ?? "expense",
+          description: sinDia,
+          merchant: cellAt(map.merchant) || sinDia,
+          reference: cellAt(map.reference),
+          categoryRaw: cellAt(map.category),
+          methodRaw: cellAt(map.method),
+          account,
+        });
+      }
       continue;
     }
 
@@ -580,7 +604,7 @@ export function parseStatement(text: string, account?: string): ParseResult {
     });
   }
 
-  return { ok: true, rows, errorCount, sinFecha, headerIndex };
+  return { ok: true, rows, errorCount, sinFecha, rowsSinFecha, headerIndex };
 }
 
 // Convierte el método de pago que dice el banco a uno de los de Fino.

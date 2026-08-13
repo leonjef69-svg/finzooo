@@ -34,6 +34,71 @@ const EXTENSION_CONVERTIDA: Record<string, string> = {
   "application/vnd.ms-excel": ".xls",
 };
 
+/**
+ * ELEGIR A QUÉ MES VAN LOS MOVIMIENTOS SIN FECHA (13/08/2026).
+ *
+ * Sale de su hoja de control: los montos y las categorías están escritos, y el mes vive en la
+ * cabecera del archivo o en la cabeza de quien la llenó. Tirar esas filas era perder movimientos
+ * de verdad; ponerles la fecha de hoy sería meter gastos viejos en el mes actual y descuadrarle
+ * el presupuesto sin que se note. Lo único honesto es preguntar.
+ *
+ * Se ofrecen los doce meses hacia atrás desde hoy. Hacia adelante no: un gasto que todavía no ha
+ * pasado no se importa de un archivo.
+ */
+function ElegirMes({
+  visible,
+  cuantos,
+  monthNames,
+  t,
+  onCancel,
+  onElegir,
+}: {
+  visible: boolean;
+  cuantos: number;
+  monthNames: string[];
+  t: (k: string, p?: Record<string, string | number>) => string;
+  onCancel: () => void;
+  onElegir: (anio: number, mes: number) => void;
+}) {
+  if (!visible) return null;
+  const hoy = new Date();
+  const meses = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(hoy.getFullYear(), hoy.getMonth() - i, 1);
+    return { anio: d.getFullYear(), mes: d.getMonth() + 1 };
+  });
+  return (
+    <View className="absolute inset-0 items-center justify-center px-8 z-50">
+      <TouchableOpacity className="absolute inset-0 bg-slate-900/50" activeOpacity={1} onPress={onCancel} />
+      <View className="bg-white dark:bg-slate-900 rounded-3xl p-6 w-full max-h-[70%]">
+        <Text className="font-extrabold text-slate-900 dark:text-slate-100 text-base mb-1.5">
+          {t("importSheet.pickMonthTitle", { count: cuantos })}
+        </Text>
+        {/* Se dice el día exacto que se va a poner. "Los meto en agosto" no basta: en Fino un
+            movimiento tiene día, y quien importa tiene derecho a saber cuál antes de aceptar. */}
+        <Text className="text-sm text-slate-600 dark:text-slate-200 mb-4">
+          {t("importSheet.pickMonthMessage")}
+        </Text>
+        <ScrollView className="max-h-64">
+          {meses.map(({ anio, mes }) => (
+            <TouchableOpacity
+              key={`${anio}-${mes}`}
+              onPress={() => onElegir(anio, mes)}
+              className="py-3.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 mb-2"
+            >
+              <Text className="font-bold text-slate-700 dark:text-slate-100">
+                {monthNames[mes - 1]} {anio}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+        <TouchableOpacity onPress={onCancel} className="mt-2 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 items-center">
+          <Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
 // Un movimiento del banco ya convertido a formato Fino, junto con la
 // información de si se parece a algo que ya tienes.
 type Candidate = {
@@ -72,6 +137,17 @@ export default function ImportSheet({
   const [errorCount, setErrorCount] = useState(0);
   /** De las descartadas, cuántas eran movimientos de verdad a los que solo les faltaba la fecha. */
   const [sinFecha, setSinFecha] = useState(0);
+  /** Esas mismas filas, enteras salvo la fecha, esperando a que se elija el mes. */
+  const [rowsSinFecha, setRowsSinFecha] = useState<RawRow[]>([]);
+  const [eligiendoMes, setEligiendoMes] = useState(false);
+  /**
+   * Los movimientos tuyos que ya se emparejaron con una fila del archivo.
+   *
+   * Es un ref y no un estado porque tiene que sobrevivir a la segunda tanda —la de las filas a
+   * las que se les pone el mes a mano—: sin eso, un movimiento tuyo podria emparejarse dos
+   * veces y saldria como repetido cuando no lo es.
+   */
+  const yaEmparejados = useRef<Set<number>>(new Set());
   const [loading, setLoading] = useState(false);
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [reviewing, setReviewing] = useState(false);
@@ -166,6 +242,70 @@ export default function ImportSheet({
   }
 
   /**
+   * Convierte filas del archivo en movimientos de Fino, marcando los que se parecen a algo que
+   * ya tienes.
+   *
+   * Se sacó del cuerpo de loadFile para poder usarla DOS veces sobre el mismo archivo: primero
+   * con las filas que traían fecha, y después con las que solo la tuvieron cuando se eligió el
+   * mes a mano. Copiarla habría bastado hoy y se habría desviado de la otra en el primer arreglo.
+   */
+  function construirCandidatos(raws: RawRow[]): Candidate[] {
+    return raws.map((raw) => {
+      // LA CATEGORÍA DEL ARCHIVO MANDA, Y ANTES SE TIRABA (12/08/2026).
+      //
+      // El comentario que había aquí decía "si el archivo ya trae una categoría reconocible la
+      // respetamos" — y la línea de debajo no lo hacía: adivinaba SIEMPRE por la descripción.
+      // La columna se leía, se guardaba en categoryRaw y ahí se quedaba. matchCategory existía
+      // y no la llamaba nadie.
+      //
+      // Lo vio él con su propio Excel: la fila decía "Transporte" y el movimiento entró como
+      // "Otros". Alguien que se toma el trabajo de clasificar sus movimientos antes de
+      // importarlos espera que eso sirva de algo.
+      //
+      // El orden es: lo que ESCRIBIÓ una persona primero, lo que adivina la app después. Si la
+      // categoría del archivo no se reconoce —"Alimentación" no es ninguna de las de Fino— se
+      // cae a la adivinanza de siempre, que para "SUPERMERCADO PLAZA" acierta igual.
+      const delArchivo = matchCategory(raw.categoryRaw, raw.type, t);
+      const generica = delArchivo === (raw.type === "expense" ? "otros" : "otro_ingreso");
+      const category = generica
+        ? suggestCategory(raw.merchant || raw.description, raw.type, merchantLearned)
+        : delArchivo;
+      const tx: Transaction = {
+        id: nextId(),
+        type: raw.type,
+        amount: raw.amount,
+        category,
+        date: raw.date,
+        method: matchMethod(raw.methodRaw, t),
+        description: raw.description,
+        notes: "",
+        merchant: raw.merchant,
+        reference: raw.reference || undefined,
+        account: raw.account,
+        origin: "imported",
+      };
+      const match = findBestMatch(transactions, raw, yaEmparejados.current);
+      if (match) yaEmparejados.current.add(match.existing.id);
+      return { tx, raw, match };
+    });
+  }
+
+  /**
+   * Mete las filas sin fecha en el mes que se eligió, con día 1.
+   *
+   * El día 1 es una decisión, no un descuido: el archivo no dice ninguno, y hace falta uno para
+   * que el movimiento exista. Se avisa en el cartel antes de elegir.
+   */
+  function ponerlesElMes(anio: number, mes: number) {
+    const fecha = `${anio}-${String(mes).padStart(2, "0")}-01`;
+    const conFecha = rowsSinFecha.map((r) => ({ ...r, date: fecha }));
+    setCandidates((previos) => [...previos, ...construirCandidatos(conFecha)]);
+    setRowsSinFecha([]);
+    setSinFecha(0);
+    setEligiendoMes(false);
+  }
+
+  /**
    * Lee un archivo y lo convierte en candidatos a importar.
    *
    * Se separó de pickFile para que sirva a los dos caminos: el de siempre
@@ -247,60 +387,25 @@ export default function ImportSheet({
         showToastAndClose(isPdf ? t("importSheet.pdfError") : t(parsed.reason === "empty" ? "importSheet.emptyFile" : "importSheet.missingColumns"));
         return;
       }
-      if (parsed.rows.length === 0) {
+      // SE CIERRA SOLO SI NO HAY ABSOLUTAMENTE NADA. Antes bastaba con que ninguna fila
+      // trajera fecha para dar el archivo por vacío y cerrar — que es justo lo que le pasaba a
+      // su hoja de control, donde los montos y las categorías SÍ estaban escritos. Con filas sin
+      // fecha la pantalla se queda abierta para poder preguntarle de qué mes son.
+      if (parsed.rows.length === 0 && parsed.rowsSinFecha.length === 0) {
         showToastAndClose(isPdf ? t("importSheet.pdfError") : t("importSheet.emptyFile"));
         return;
       }
 
-      // Convertimos cada fila del banco en un movimiento de Fino y
-      // buscamos si se parece a algo que ya tienes. Vamos marcando los
-      // que ya se "usaron" para que un movimiento tuyo no se empareje con
-      // dos filas del banco a la vez.
-      const matchedIds = new Set<number>();
-      const built: Candidate[] = parsed.rows.map((raw) => {
-        // LA CATEGORÍA DEL ARCHIVO MANDA, Y ANTES SE TIRABA (12/08/2026).
-        //
-        // El comentario que había aquí decía "si el archivo ya trae una categoría reconocible la
-        // respetamos" — y la línea de debajo no lo hacía: adivinaba SIEMPRE por la descripción.
-        // La columna se leía, se guardaba en categoryRaw y ahí se quedaba. matchCategory existía
-        // y no la llamaba nadie.
-        //
-        // Lo vio él con su propio Excel: la fila decía "Transporte" y el movimiento entró como
-        // "Otros". Alguien que se toma el trabajo de clasificar sus movimientos antes de
-        // importarlos espera que eso sirva de algo.
-        //
-        // El orden es: lo que ESCRIBIÓ una persona primero, lo que adivina la app después. Si la
-        // categoría del archivo no se reconoce —"Alimentación" no es ninguna de las de Fino— se
-        // cae a la adivinanza de siempre, que para "SUPERMERCADO PLAZA" acierta igual.
-        const delArchivo = matchCategory(raw.categoryRaw, raw.type, t);
-        const generica = delArchivo === (raw.type === "expense" ? "otros" : "otro_ingreso");
-        const category = generica
-          ? suggestCategory(raw.merchant || raw.description, raw.type, merchantLearned)
-          : delArchivo;
-        const tx: Transaction = {
-          id: nextId(),
-          type: raw.type,
-          amount: raw.amount,
-          category,
-          date: raw.date,
-          method: matchMethod(raw.methodRaw, t),
-          description: raw.description,
-          notes: "",
-          merchant: raw.merchant,
-          reference: raw.reference || undefined,
-          account: raw.account,
-          origin: "imported",
-        };
-        const match = findBestMatch(transactions, raw, matchedIds);
-        if (match) matchedIds.add(match.existing.id);
-        return { tx, raw, match };
-      });
+      // Se empieza de cero con los emparejamientos: son de este archivo y de ninguno anterior.
+      yaEmparejados.current = new Set();
+      const built: Candidate[] = construirCandidatos(parsed.rows);
 
       setFileName(asset.name);
       setBank(detectedBank);
       setCandidates(built);
       setErrorCount(parsed.errorCount);
       setSinFecha(parsed.sinFecha);
+      setRowsSinFecha(parsed.rowsSinFecha);
     } catch {
       showToastAndClose(readAsPdf ? t("importSheet.pdfError") : isExcel ? t("importSheet.excelError") : t("importSheet.readError"));
     } finally {
@@ -358,6 +463,7 @@ export default function ImportSheet({
     setCandidates([]);
     setErrorCount(0);
     setSinFecha(0);
+    setRowsSinFecha([]);
     setBank(undefined);
     setDone(false);
   }
@@ -493,12 +599,23 @@ export default function ImportSheet({
                   movimientos de verdad que se están perdiendo. Estas son lo segundo, y
                   se arreglan escribiendo la fecha en la hoja. */}
               {sinFecha > 0 && (
-                <View className="flex-row items-center gap-3 bg-amber-50 dark:bg-slate-800 rounded-2xl p-3.5">
+                <TouchableOpacity
+                  onPress={() => setEligiendoMes(true)}
+                  className="flex-row items-center gap-3 bg-amber-50 dark:bg-slate-800 rounded-2xl p-3.5 border-[1.5px] border-amber-300"
+                >
                   <AlertTriangle size={18} color="#f59e0b" />
-                  <Text className="text-sm font-bold text-amber-700 dark:text-slate-100 flex-1">
-                    {t("importSheet.summaryNoDate", { count: sinFecha })}
-                  </Text>
-                </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-bold text-amber-700 dark:text-slate-100">
+                      {t("importSheet.summaryNoDate", { count: sinFecha })}
+                    </Text>
+                    {/* EL AVISO ES EL BOTÓN. Decir "3 sin fecha" y dejarlo ahí obliga a salir,
+                        arreglar el archivo y volver a empezar; y muchas veces el archivo no se
+                        puede arreglar —es de un tercero— o simplemente no lleva fechas. */}
+                    <Text className="text-xs font-bold text-amber-600 dark:text-amber-400 mt-0.5">
+                      {t("importSheet.pickMonthAction")}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
               )}
             </View>
 
@@ -574,6 +691,16 @@ export default function ImportSheet({
           </ScrollView>
         )}
       </View>
+
+      {/* Va el ultimo para quedar por encima de todo lo demas. */}
+      <ElegirMes
+        visible={eligiendoMes}
+        cuantos={sinFecha}
+        monthNames={monthNames}
+        t={t}
+        onCancel={() => setEligiendoMes(false)}
+        onElegir={ponerlesElMes}
+      />
     </View>
   );
 }

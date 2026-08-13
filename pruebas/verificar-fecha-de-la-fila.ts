@@ -17,6 +17,7 @@
 // LO QUE MAS IMPORTA DE AQUI SON LOS LIMITES, no los aciertos. Adivinar una fecha de mas mete
 // movimientos en un mes que no es, o cuela el pie de la tabla como si fuera un gasto — y eso
 // descuadra los totales sin que se vea. Que una fila no entre se nota; que entre mal, no.
+import fs from "fs";
 import { fechaDeDiaSuelto, mesDeclaradoEn, parseStatement } from "@/utils/importEngine";
 
 let fallos = 0;
@@ -121,6 +122,74 @@ console.log("\n--- LA HOJA CON EL MES ARRIBA Y EL DIA EN LA COLUMNA ---");
   if (r.ok && r.rows.length === 2) {
     ok(r.rows[0].date === "2026-01-05", "el 5 es el 5 de enero de 2026");
     ok(r.rows[1].date === "2026-01-07", "y el 7, el 7 de enero");
+  }
+}
+
+console.log("\n--- LAS QUE NO TIENEN FECHA SE GUARDAN PARA PREGUNTAR (13/08/2026) ---");
+{
+  // Pedido suyo. Con su hoja de control no entraba NADA: los montos y las categorias estaban
+  // escritos, y el mes solo lo sabe quien la lleno. Tirarlas era perder movimientos de verdad;
+  // ponerles la fecha de hoy seria meter gastos viejos en el mes actual y descuadrarle el
+  // presupuesto sin que se note. Lo unico honesto es preguntar, y para preguntar hay que
+  // conservarlas.
+  const archivo = [
+    "Fecha,Monto,Tipo de gasto,Descripcion",
+    ",100,Alimentacion,Mercado",
+    ",50,Transporte,Taxi",
+  ].join("\n");
+  const r = parseStatement(archivo);
+  ok(r.ok && r.rows.length === 0, "no entran solas");
+  ok(r.ok && r.rowsSinFecha.length === 2, "pero se guardan las dos para preguntar");
+  if (r.ok && r.rowsSinFecha.length === 2) {
+    // ENTERAS MENOS LA FECHA. Si se perdiera el monto o la categoria al guardarlas, elegir el
+    // mes despues no serviria de nada: entrarian vacias.
+    ok(r.rowsSinFecha[0].amount === 100, "con su monto");
+    ok(r.rowsSinFecha[0].categoryRaw === "Alimentacion", "y con su categoria");
+    ok(r.rowsSinFecha[0].date === "", "y sin fecha, que es lo unico que falta");
+  }
+
+  // Y NO SE GUARDAN LAS QUE NO SON MOVIMIENTOS. Una fila sin monto es un hueco de la hoja o el
+  // pie de la tabla: preguntar por ella seria pedirle a alguien que ordene basura.
+  const conHuecos = ["Fecha,Monto,Descripcion", ",,", ",100,Mercado"].join("\n");
+  const r2 = parseStatement(conHuecos);
+  ok(r2.ok && r2.rowsSinFecha.length === 1, "las filas vacias no se guardan para preguntar");
+}
+
+console.log("\n--- Y LA PANTALLA PREGUNTA EN VEZ DE CERRARSE ---");
+{
+  // ESTO ERA UN CIERRE EN SECO. Bastaba con que ninguna fila trajera fecha para dar el archivo
+  // por vacio, soltar "el archivo esta vacio" y cerrar la pantalla — con su hoja, donde los
+  // montos y las categorias SI estaban escritos. El mensaje ademas era falso: el archivo tenia
+  // datos de sobra.
+  const pantalla = fs
+    .readFileSync("screens/ImportSheet.tsx", "utf8")
+    .replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+
+  ok(
+    /parsed\.rows\.length === 0 && parsed\.rowsSinFecha\.length === 0/.test(pantalla),
+    "solo se cierra si no hay NADA, ni siquiera filas sin fecha"
+  );
+  ok(/setRowsSinFecha\(parsed\.rowsSinFecha\)/.test(pantalla), "las filas sin fecha llegan a la pantalla");
+  ok(/setEligiendoMes\(true\)/.test(pantalla), "y el aviso abre el cartel para elegir el mes");
+  ok(/String\(mes\)\.padStart\(2, "0"\)\}-01/.test(pantalla), "que las mete con el dia 1 del mes elegido");
+
+  // UN MOVIMIENTO TUYO NO PUEDE EMPAREJARSE DOS VECES. Las filas con fecha y las que reciben el
+  // mes a mano se construyen en dos tandas: si cada una empezara con la lista de emparejados en
+  // blanco, el mismo movimiento saldria marcado como repetido en las dos.
+  ok(/yaEmparejados/.test(pantalla), "los emparejamientos se comparten entre las dos tandas");
+
+  // EL DIA 1 SE AVISA ANTES. Es una decision de la app sobre los datos de alguien: se dice en el
+  // cartel, no se descubre despues mirando la lista.
+  const i18n = fs.readFileSync("constants/i18n.ts", "utf8");
+  ok(/día 1 del mes que elijas/.test(i18n), "y se avisa del dia 1 antes de elegir");
+  for (const clave of [
+    "importSheet.pickMonthTitle",
+    "importSheet.pickMonthMessage",
+    "importSheet.pickMonthAction",
+  ]) {
+    const veces = (i18n.match(new RegExp('"' + clave.replace(".", "\\.") + '":', "g")) ?? []).length;
+    ok(veces === 3, `${clave} esta en los tres idiomas (${veces})`);
   }
 }
 

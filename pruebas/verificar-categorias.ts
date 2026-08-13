@@ -91,8 +91,19 @@ console.log("\n--- LO QUE SE VE EN EL MARCO ES LO QUE SE GUARDA ---");
   // cuadraba. Lo que no topaba era la PANTALLA, y eso solo se ve mirando que el
   // arrastre pase por el mismo limitador.
   const cropper = fs.readFileSync(path.join(process.cwd(), "components/ImageCropper.tsx"), "utf8");
-  ok(/setPan\(\s*limitarPan\(/.test(cropper), "el arrastre de la pantalla pasa por el tope");
-  ok(!/setPan\(\{ x: inicio\.x/.test(cropper), "y ya no se mueve libre como antes");
+
+  // Esto miraba "setPan(limitarPan(" hasta el 13/08/2026, cuando el arrastre dejo de pasar por
+  // un estado de React para no hacer temblar la imagen. La forma cambio; lo que se vigila, no:
+  // que la posicion que se pinta salga SIEMPRE del limitador, y nunca del dedo en crudo.
+  const moviendo = cropper.slice(
+    cropper.indexOf("onPanResponderMove"),
+    cropper.indexOf("onPanResponderRelease")
+  );
+  ok(/limitarPan\(/.test(moviendo), "el arrastre de la pantalla pasa por el tope");
+  ok(
+    !/colocar\(\s*gesto\.pan\.x/.test(moviendo) && !/colocar\(g\.dx/.test(moviendo),
+    "y ya no se mueve libre como antes"
+  );
 }
 
 console.log("\n--- LAS MEDIDAS Y LOS PIXELES SALEN DEL MISMO SITIO ---");

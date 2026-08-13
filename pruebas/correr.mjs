@@ -41,6 +41,8 @@ const BASE = {
   // cargan varias pruebas que no tienen nada que ver con el despertador: sin
   // el sustituto se caian todas al arrancar.
   "@/modules/export-scheduler": stub("programador.ts"),
+  // Reanimated arranca su parte nativa al cargarse y tumba el proceso. Ver el sustituto.
+  "react-native-reanimated": stub("reanimated.ts"),
 };
 
 // Y los de las pruebas que cargan modulos de Expo.

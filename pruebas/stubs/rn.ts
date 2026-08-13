@@ -11,6 +11,13 @@
 
 export const Platform = { OS: "android" };
 
+// Lo pide react-native-reanimated por dentro. Llego el 13/08/2026, cuando la pantalla de
+// recortar la foto paso a mover la imagen sin redibujar: sin esto, cinco pruebas que no hablan
+// de imagenes dejaron de compilar.
+export function findNodeHandle(): null {
+  return null;
+}
+
 // --- Componentes: solo tienen que existir ---
 export const View = null;
 export const Text = null;

@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  Image,
   PanResponder,
   Text,
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
 import { Minus, Plus } from "lucide-react-native";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { useBackClose } from "@/utils/useBackClose";
@@ -164,8 +164,43 @@ export default function ImageCropper({
   onDone: (r: CropResult) => void;
   labels: { title: string; hint: string; cancel: string; save: string; error: string };
 }) {
+  /**
+   * DÓNDE ESTÁ LA IMAGEN, EN DOS SITIOS A LA VEZ (13/08/2026).
+   *
+   * Antes esto eran dos useState y la imagen "temblaba" al arrastrarla. El motivo: cada
+   * milímetro de dedo cambiaba el estado, y cada cambio de estado redibuja la pantalla ENTERA
+   * en el hilo de JavaScript — sesenta veces por segundo, con la imagen dentro. En un celular
+   * normal eso no da abasto y se ve a tirones.
+   *
+   * Ahora hay dos copias del mismo dato, y cada una tiene su trabajo:
+   *
+   *   Los VALORES COMPARTIDOS mueven la imagen por su cuenta, sin pasar por React. Ese es el
+   *   camino que hace que se sienta pegada al dedo.
+   *
+   *   Las REFERENCIAS son las que se leen al guardar y al topar el arrastre. Un valor
+   *   compartido también se puede leer, pero mezclar los dos caminos en las cuentas del
+   *   recorte es justo donde se cuelan los desajustes de un píxel.
+   *
+   * El único estado que queda es el del texto "1.0x", y se toca solo cuando ese número cambia
+   * de verdad — no en cada movimiento.
+   */
+  const panSV = { x: useSharedValue(0), y: useSharedValue(0) };
+  const zoomSV = useSharedValue(1);
+  const panRef = useRef({ x: 0, y: 0 });
+  const zoomRef = useRef(1);
   const [zoom, setZoom] = useState(1);
-  const [pan, setPan] = useState({ x: 0, y: 0 });
+
+  /** Mueve la imagen. Lo llaman el arrastre, la pinza y los botones de zoom. */
+  function colocar(x: number, y: number, nuevoZoom: number) {
+    panRef.current = { x, y };
+    zoomRef.current = nuevoZoom;
+    panSV.x.value = x;
+    panSV.y.value = y;
+    zoomSV.value = nuevoZoom;
+    // El texto solo cuando cambia lo que se lee. Redibujar por un cambio invisible sería
+    // volver al temblor de antes por la puerta de atrás.
+    if (Math.round(nuevoZoom * 10) !== Math.round(zoom * 10)) setZoom(nuevoZoom);
+  }
   /** La imagen ya normalizada: la que se enseña Y la que se recorta. */
   const [fuente, setFuente] = useState<{ uri: string; w: number; h: number } | null>(null);
   const [guardando, setGuardando] = useState(false);
@@ -229,8 +264,8 @@ export default function ImageCropper({
 
   function tomarReferencia(dedos: { pageX: number; pageY: number }[], dx: number, dy: number) {
     gesto.dedos = dedos.length;
-    gesto.pan = pan;
-    gesto.zoom = zoom;
+    gesto.pan = panRef.current;
+    gesto.zoom = zoomRef.current;
     gesto.dist = dedos.length >= 2 ? separacion(dedos) : 0;
     gesto.dx = dx;
     gesto.dy = dy;
@@ -250,22 +285,27 @@ export default function ImageCropper({
         if (gesto.dist <= 0) return;
         // La proporción entre lo que se han separado los dedos y lo que estaban
         // al empezar. Separar el doble acerca el doble.
-        setZoom(limitarZoom(gesto.zoom * (separacion(dedos) / gesto.dist)));
+        // AL ACERCAR TAMBIÉN HAY QUE TOPAR EL ARRASTRE: con menos zoom la imagen ocupa menos y
+        // un arrastre que antes valía dejaría un borde vacío dentro del marco.
+        const acercado = limitarZoom(gesto.zoom * (separacion(dedos) / gesto.dist));
+        const dentro = fuente
+          ? limitarPan(fuente.w, fuente.h, acercado, panRef.current.x, panRef.current.y, VENTANA)
+          : panRef.current;
+        colocar(dentro.x, dentro.y, acercado);
         return;
       }
       // Un dedo: mover. Se resta la referencia porque g.dx cuenta desde el
       // principio del gesto, y el gesto pudo empezar con dos dedos.
       if (!fuente) return;
-      setPan(
-        limitarPan(
-          fuente.w,
-          fuente.h,
-          zoom,
-          gesto.pan.x + (g.dx - gesto.dx),
-          gesto.pan.y + (g.dy - gesto.dy),
-          VENTANA
-        )
+      const movido = limitarPan(
+        fuente.w,
+        fuente.h,
+        zoomRef.current,
+        gesto.pan.x + (g.dx - gesto.dx),
+        gesto.pan.y + (g.dy - gesto.dy),
+        VENTANA
       );
+      colocar(movido.x, movido.y, zoomRef.current);
     },
     onPanResponderRelease: () => {
       gesto.dedos = 0;
@@ -280,9 +320,11 @@ export default function ImageCropper({
    * borde vacío.
    */
   function cambiarZoom(hacia: number) {
-    const nuevo = limitarZoom(zoom + hacia);
-    setZoom(nuevo);
-    if (fuente) setPan(limitarPan(fuente.w, fuente.h, nuevo, pan.x, pan.y, VENTANA));
+    const nuevo = limitarZoom(zoomRef.current + hacia);
+    const dentro = fuente
+      ? limitarPan(fuente.w, fuente.h, nuevo, panRef.current.x, panRef.current.y, VENTANA)
+      : panRef.current;
+    colocar(dentro.x, dentro.y, nuevo);
   }
 
   async function guardar() {
@@ -290,7 +332,7 @@ export default function ImageCropper({
     setGuardando(true);
     setError("");
     try {
-      const r = cropRect(fuente.w, fuente.h, zoom, pan.x, pan.y);
+      const r = cropRect(fuente.w, fuente.h, zoomRef.current, panRef.current.x, panRef.current.y);
       // Se recorta la COPIA, no el archivo original: es la que se midió y la
       // que se está enseñando. Recortar el original es justo el fallo que se
       // arregló — las medidas de una y los píxeles del otro.
@@ -313,7 +355,27 @@ export default function ImageCropper({
   }
 
   const escalaBase = fuente ? Math.max(VENTANA / fuente.w, VENTANA / fuente.h) : 1;
-  const escala = escalaBase * zoom;
+  const anchoReal = fuente?.w ?? 1;
+  const altoReal = fuente?.h ?? 1;
+
+  /**
+   * El tamaño y la posición de la imagen, calculados FUERA de React.
+   *
+   * Es la misma cuenta que hacía el render de antes, letra por letra. No se ha tocado a
+   * propósito: cropRect —lo que se guarda de verdad— repite esa cuenta, y las dos tienen que
+   * dar lo mismo o el recorte cae donde no se ve.
+   */
+  const estiloImagen = useAnimatedStyle(() => {
+    const escala = escalaBase * zoomSV.value;
+    return {
+      width: anchoReal * escala,
+      height: altoReal * escala,
+      transform: [
+        { translateX: panSV.x.value - (anchoReal * escala - VENTANA) / 2 },
+        { translateY: panSV.y.value - (altoReal * escala - VENTANA) / 2 },
+      ],
+    };
+  });
 
   return (
     <View className="absolute inset-0 z-50 bg-slate-900/95 items-center justify-center px-6">
@@ -328,18 +390,11 @@ export default function ImageCropper({
         {...arrastre.panHandlers}
       >
         {fuente && (
-          <Image
+          <Animated.Image
             // También la copia. Enseñar el original y recortar la copia sería
             // el mismo desajuste al revés.
             source={{ uri: fuente.uri }}
-            style={{
-              width: fuente.w * escala,
-              height: fuente.h * escala,
-              transform: [
-                { translateX: pan.x - (fuente.w * escala - VENTANA) / 2 },
-                { translateY: pan.y - (fuente.h * escala - VENTANA) / 2 },
-              ],
-            }}
+            style={estiloImagen}
           />
         )}
       </View>
