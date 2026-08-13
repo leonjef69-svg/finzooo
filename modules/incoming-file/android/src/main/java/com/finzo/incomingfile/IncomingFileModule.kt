@@ -105,10 +105,14 @@ class IncomingFileModule : Module() {
   )
 
   /**
-   * En que formatos se acepta un documento de Google, del mas comodo al menos.
+   * En que formatos se PREFIERE un documento de Google, del mas comodo al menos.
    *
-   * Fuera de esta lista no entra nada: Drive tambien ofrece PDF de una hoja de calculo, y un
-   * PDF hecho de una tabla se lee mucho peor que la tabla misma.
+   * El PDF no esta aqui a proposito: Drive tambien ofrece una hoja de calculo en PDF, y una
+   * tabla convertida en PDF se lee mucho peor que la tabla misma.
+   *
+   * Pero NO es una lista de lo unico que se acepta. Si Drive no ofrece ninguno de estos —le
+   * paso a el con un documento del que solo daba PDF— se pide el que haya: leerlo peor es mejor
+   * que no leerlo, y quedarse sin importar por preferir lo bueno es una forma tonta de fallar.
    */
   private val FORMATOS_QUE_SIRVEN = listOf(
     "text/csv",
@@ -236,6 +240,15 @@ class IncomingFileModule : Module() {
       val intent = Intent(Intent.ACTION_OPEN_DOCUMENT).apply {
         type = "*/*"
         putExtra(Intent.EXTRA_MIME_TYPES, TIPOS_QUE_SE_OFRECEN)
+        // EL PERMISO SOBRE EL ARCHIVO, PEDIDO PARA QUE DURE (13/08/2026).
+        //
+        // Sin la segunda bandera, el permiso vive lo que viva la pantalla que abrio el
+        // selector. Y Android recicla pantallas cuando le hace falta memoria —el celular suyo
+        // lo hace rapido, con el selector abierto encima—: al volver, el archivo elegido ya no
+        // se podia ni abrir. Salia "SecurityException" sobre un archivo que estaba ahi, elegido
+        // a proposito, y que segundos antes se veia en la lista.
+        addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+        addFlags(Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION)
       }
       actividad.startActivityForResult(intent, CODIGO_ELEGIR)
     } catch (e: Throwable) {
@@ -261,11 +274,23 @@ class IncomingFileModule : Module() {
       promise.resolve(cancelado())
       return
     }
+    // SE TOMA EL PERMISO AQUI MISMO, antes de nada. Es el momento en que Android lo esta
+    // ofreciendo; unos milisegundos despues, en el hilo de abajo, ya puede ser tarde. Si el
+    // proveedor no da permisos duraderos —algunos no— se sigue igual: el de siempre suele
+    // bastar, y quedarse sin importar por esto seria peor.
+    try {
+      appContext.reactContext
+        ?.contentResolver
+        ?.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION)
+    } catch (e: Throwable) {
+      // Sin permiso duradero, pero con el de la pantalla. Se intenta.
+    }
+
     Thread {
       val respuesta = try {
         traerArchivo(uri)
       } catch (e: Throwable) {
-        null
+        fallo("reventó:${e.javaClass.simpleName}")
       }
       promise.resolve(respuesta ?: fallo("no-se-pudo-leer"))
     }.start()
@@ -370,9 +395,13 @@ class IncomingFileModule : Module() {
     return JSONObject()
       .put("uri", Uri.fromFile(destino).toString())
       .put("nombre", nombre)
-      // Solo cuenta como convertido lo que Fino sabe leer. Con un formato raro se deja en
-      // blanco: que lo decida el nombre del archivo, como con cualquier otro.
-      .put("convertido", if (elegido != null) elegido else JSONObject.NULL)
+      // SE DICE EN QUE FORMATO QUEDO DE VERDAD, sea el preferido o el de respaldo.
+      //
+      // Antes, con un formato de respaldo se dejaba en blanco, y entonces el archivo se leia
+      // segun su nombre —que es el de la hoja, sin extension— asi que un PDF acababa en el
+      // lector de texto y no salia nada. Mentir sobre lo que se trajo solo servia para que el
+      // fallo apareciera mas tarde y mas lejos.
+      .put("convertido", pedido)
       .toString()
   }
 

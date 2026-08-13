@@ -72,6 +72,29 @@ console.log("\n--- EL SELECTOR LO ABRE FINO, SIN CATEGORY_OPENABLE ---");
     "una eleccion a medias no bloquea la siguiente");
 }
 
+console.log("\n--- EL PERMISO SOBRE EL ARCHIVO DURA (13/08/2026) ---");
+{
+  // Le salio "SecurityException" con un archivo que acababa de elegir. El permiso que da la
+  // pantalla de elegir vive lo que viva la pantalla que la abrio, y Android recicla pantallas
+  // cuando le falta memoria —su celular lo hace rapido, y con el selector abierto encima—. Al
+  // volver, el archivo que acababa de elegir a proposito ya no se podia ni abrir.
+  const kotlin = sinComentarios(KOTLIN);
+  ok(/FLAG_GRANT_PERSISTABLE_URI_PERMISSION/.test(kotlin), "se pide un permiso que dure");
+  ok(/takePersistableUriPermission/.test(kotlin), "y se toma al recibir el archivo");
+
+  // ANTES DE COPIAR NADA. Es el momento en que Android lo esta ofreciendo; unos milisegundos
+  // despues, ya dentro del hilo que copia, puede ser tarde.
+  ok(
+    kotlin.indexOf("takePersistableUriPermission") < kotlin.indexOf("Thread {"),
+    "y se toma antes de ponerse a copiar"
+  );
+
+  // Y SE DICE EN QUE FORMATO QUEDO DE VERDAD, sea el preferido o el de respaldo. Con el
+  // respaldo se dejaba en blanco, asi que un PDF traido de Drive acababa en el lector de texto
+  // y no salia nada: el fallo aparecia mas tarde y en otro sitio.
+  ok(/\.put\("convertido", pedido\)/.test(kotlin), "y se dice en que formato quedo de verdad");
+}
+
 console.log("\n--- NINGUN FALLO ES MUDO ---");
 {
   const kotlin = sinComentarios(KOTLIN);
@@ -114,9 +137,10 @@ console.log("\n--- LA CONVERSION SIGUE AHI ---");
     const lista = formatos[1];
     // CSV ANTES QUE EXCEL. Los dos valen; el CSV es texto plano y pesa mucho menos.
     ok(lista.indexOf("text/csv") < lista.indexOf("spreadsheetml"), "se prefiere CSV antes que Excel");
-    // Drive tambien ofrece PDF de una hoja de calculo. Una tabla convertida en PDF se lee
-    // muchisimo peor que la tabla: aceptarlo seria elegir el peor camino teniendo el bueno.
-    ok(!lista.includes("application/pdf"), "y no se acepta el PDF de una hoja de calculo");
+    // El PDF no esta entre los PREFERIDOS: una tabla convertida en PDF se lee muchisimo peor
+    // que la tabla. Pero si es lo unico que Drive ofrece se pide igual —le paso a el—, porque
+    // leerlo peor es mejor que no leerlo.
+    ok(!lista.includes("application/pdf"), "el PDF no es de los preferidos");
   }
 
   // UN ARCHIVO VACIO NO ES UNA HOJA. Es una conversion que fallo sin avisar, y dejarla pasar

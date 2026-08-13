@@ -32,6 +32,9 @@ const EXTENSION_CONVERTIDA: Record<string, string> = {
   "text/plain": ".csv",
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
   "application/vnd.ms-excel": ".xls",
+  // Drive a veces solo ofrece PDF de un documento suyo. Se acepta —el lector de PDF de Fino
+  // sabe sacar una tabla— pero tiene que llamarse .pdf o acabaria en el lector de texto.
+  "application/pdf": ".pdf",
 };
 
 /**
