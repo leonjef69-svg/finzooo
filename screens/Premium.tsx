@@ -21,6 +21,7 @@ import {
   type PlanDeCompra,
 } from "@/utils/compras";
 import { DURACION_PRUEBA_HORAS, diaDeLaFecha, pruebaTerminaEn } from "@/utils/pruebaPremium";
+import { hayRegistroAutomatico } from "@/utils/dondeHayYape";
 
 /**
  * FINZO PREMIUM: las dos columnas, el precio y la prueba gratuita.
@@ -56,7 +57,8 @@ export default function Premium({
   onBack: () => void;
   isPremium: boolean;
 }) {
-  const { t, fmt, monthNames, pruebaInicio, pruebaHoras, activarPruebaPremium, showToast } = useAppData();
+  const { t, fmt, monthNames, userCurrency, pruebaInicio, pruebaHoras, activarPruebaPremium, showToast } =
+    useAppData();
   const insets = useSafeAreaInsets();
 
   /** Si se está preguntando por la prueba gratuita, en la propia pantalla. */
@@ -142,7 +144,14 @@ export default function Premium({
     t("premium.perkExportExcel"),
     t("premium.perkImport"),
     t("premium.perkAutoExport"),
-    t("premium.perkYape"),
+    // EL REGISTRO AUTOMATICO SOLO SE PROMETE DONDE EXISTE (13/08/2026).
+    //
+    // Lee los yapeos de las notificaciones, y Yape solo esta en Peru y Bolivia. El resto de la
+    // app ya lo esconde fuera de ahi —Ajustes y el panel de negocio—, pero esta lista se lo
+    // ofrecia a todo el mundo: alguien en Mexico habria pagado por una funcion que ni siquiera
+    // le aparece despues. Prometer de mas en la pantalla del precio es lo peor que se puede
+    // hacer aqui, y ademas es de lo que Google mira antes de aprobar una app.
+    ...(hayRegistroAutomatico(userCurrency) ? [t("premium.perkYape")] : []),
     t("premium.perkVoice"),
     t("premium.perkLock"),
   ];

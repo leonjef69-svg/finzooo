@@ -18,6 +18,12 @@ import { hayRegistroAutomatico } from "../utils/dondeHayYape.ts";
 
 const RAIZ = process.cwd();
 const leer = (f) => fs.readFileSync(path.join(RAIZ, f), "utf8");
+// Sin los comentarios: los del propio codigo cuentan esta historia y nombran las piezas que se
+// buscan, asi que todo pasaria aunque no quedara nada escrito.
+const leerSinComentarios = (f) =>
+  leer(f)
+    .replace(/^[ \t]*\/\*[\s\S]*?\*\//gm, "")
+    .replace(/^\s*\/\/.*$/gm, "");
 
 let fallos = 0;
 function ok(c, m) {
@@ -69,6 +75,20 @@ console.log("\n--- Y NO SE APAGA NADA DE LO QUE YA ESTABA ---");
   ok(!/setAutoCaptureOn\(false\)|setEnabled\(false\)/.test(ruta), "no apaga la captura al esconderla");
   const util = leer("utils/dondeHayYape.ts");
   ok(!/storage|save|delete/i.test(util), "y la comprobacion no toca nada guardado");
+}
+
+console.log("\n--- Y NO SE PROMETE DONDE NO EXISTE (13/08/2026) ---");
+{
+  // La pantalla del precio se lo ofrecia a TODO EL MUNDO, aunque Ajustes lo escondiera fuera de
+  // Peru y Bolivia. Alguien en Mexico habria pagado por una funcion que despues ni le aparece.
+  // Prometer de mas justo donde se cobra es lo peor que se puede hacer, y es de lo que Google
+  // mira antes de aprobar una app.
+  const premium = leerSinComentarios("screens/Premium.tsx");
+  ok(
+    /hayRegistroAutomatico\(userCurrency\)/.test(premium),
+    "la lista de Premium solo lo nombra donde funciona"
+  );
+  ok(/perkYape/.test(premium), "y el texto sigue estando, no se borro");
 }
 
 console.log(fallos === 0 ? "\nTodo bien: la funcion solo se ve donde tiene sentido" : `\n${fallos} fallas`);
