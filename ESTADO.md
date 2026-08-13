@@ -2958,43 +2958,66 @@ si se usa.
 
 ---
 
-## Las Hojas de Google ya se pueden importar (12ago-18, 12/08/2026) — NECESITA APK
+## Las Hojas de Google ya se pueden importar (12ago-19, 12/08/2026) — NECESITA APK
 
 Salían **en gris** en el selector de Android: se veían y no se podían tocar.
 
-**No era una lista corta de formatos.** Una Hoja de Google **no es un archivo**:
-vive dentro de Drive en un formato propio y no hay bytes que leer. Meterla en la
-lista del selector y nada más habría sido **peor** que dejarla en gris —
-`expo-document-picker` copia el archivo él solo antes de devolverlo, y con una
-hoja esa copia revienta y se lleva por delante la elección entera, sin dejar ni
-la dirección para intentar otra cosa. El usuario habría visto un error después
-de elegir algo que la app misma le ofreció.
+**El primer intento (12ago-18) no sirvió, y el motivo es lo que hay que
+recordar.** Se escribió la conversión —una Hoja de Google no es un archivo, hay
+que pedirle a Drive que la convierta— y se añadieron sus formatos a la lista del
+selector. Todo correcto. Y seguía en gris. La causa era **una línea dentro de
+`expo-document-picker`**:
+
+```kotlin
+addCategory(Intent.CATEGORY_OPENABLE)
+```
+
+Significa *"enséñame solo lo que se pueda abrir como archivo"*, y una Hoja de
+Google no se puede: no tiene bytes, vive dentro de Drive en un formato propio.
+Con esa línea puesta, Drive la enseña en gris **por mucho que se le pidan sus
+formatos** — la lista de tipos no pinta nada. La conversión estaba bien escrita
+y no llegaba a ejecutarse nunca.
+
+La lección: cuando algo sale en gris en el selector, mirar el **intent**, no la
+lista de formatos.
 
 Cómo quedó:
 
-- La librería **ya no copia** (`copyToCacheDirectory: false`). Copia Fino, en
-  `traerArchivo` (`IncomingFileModule.kt`), que conoce los dos casos: si el
-  archivo se abre normal, se copia y ya; si no se abre, es un documento de
-  Google y se le pregunta a Drive en qué formatos lo ofrece (`getStreamTypes`)
-  para pedírselo convertido (`openTypedAssetFileDescriptor`). **Esas dos
-  llamadas son el único motivo de que esto sea código nativo**: no existen en
-  JavaScript.
-- **CSV antes que Excel.** Los dos valen; el CSV es texto plano, pesa mucho
-  menos y no obliga a arrancar el lector de hojas de cálculo.
-- **El PDF de una hoja no se acepta**, aunque Drive lo ofrezca. Una tabla
-  convertida en PDF se lee muchísimo peor que la tabla.
-- Los formatos de Google **solo se ofrecen si esta versión sabe convertirlos**
-  (`puedeTraerArchivos`). Las actualizaciones por internet no cambian la parte
-  de Android: sin esto, quien tuviera la pantalla nueva sobre una app vieja
-  podría elegir una hoja que su app no sabe abrir.
-- Al nombre convertido se le pone extensión (`EXTENSION_CONVERTIDA`). Una hoja
-  se llama "Mis gastos", sin extensión, y de la extensión depende que se lea
-  como texto o como Excel.
+- Fino abre esa pantalla él mismo (`elegirArchivo` en `IncomingFileModule.kt`),
+  con `ACTION_OPEN_DOCUMENT` y **sin** esa categoría.
+- Al volver, el archivo se copia dentro de Fino. Si no se puede abrir, es un
+  documento de Google: se le pregunta a Drive en qué formatos lo ofrece
+  (`getStreamTypes`) y se le pide el que sirva
+  (`openTypedAssetFileDescriptor`). **Esas dos llamadas son el único motivo de
+  que esto sea código nativo.**
+- **CSV antes que Excel**; el PDF de una hoja no se acepta aunque Drive lo
+  ofrezca (una tabla en PDF se lee muchísimo peor que la tabla).
+- La copia va en un hilo aparte: una hoja grande se descarga entera de Drive.
+- Al nombre convertido se le pone extensión (`EXTENSION_CONVERTIDA`): una hoja
+  se llama "Mis gastos", sin extensión, y de eso depende que se lea como texto
+  o como Excel.
+- En Informacion sale **✓ hojas de Google**, para saber si un APK trae esta
+  parte sin adivinarlo.
 
-Lo vigila `pruebas/verificar-hoja-google.mjs`. **Falla entera contra la versión
-anterior** (17 comprobaciones).
+**Y se cayó de paso un bloqueo que costó la noche.** Esa librería guarda "hay
+una elección en curso" y, si Android no le devuelve el resultado —puede matar la
+pantalla mientras el selector está abierto—, se queda trabada **para siempre**:
+todos los toques siguientes fallan sin decir nada y el botón parece muerto. Él lo
+vio como *"le doy click a importar y se queda estático"*. Ahora una elección a
+medias se da por cancelada cuando llega otra, y **ningún fallo es mudo**: el
+motivo viaja desde Kotlin hasta el mensaje de la pantalla, y `pickFile` va dentro
+de un `try`.
 
-**Sin probar con una hoja real todavía** — se le entregó el APK para eso.
+Lo vigila `pruebas/verificar-hoja-google.mjs`.
+
+> **La prueba tenía a su vez un fallo propio**, y merece quedar escrito. Quitaba
+> los bloques `/* */` en cualquier posición, y el texto `"*/*"` que hay en el
+> código —así se le pide a Android "cualquier formato"— se tomaba por el final de
+> un comentario: se borraba justo el trozo donde iba a mirar. La comprobación más
+> importante, la de `CATEGORY_OPENABLE`, pasaba **por haber perdido lo que
+> buscaba**. Ahora solo se quitan los bloques que empiezan una línea.
+
+**Sin probar con una hoja real todavía.**
 
 ## LO SIGUIENTE A HACER
 
