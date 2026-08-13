@@ -73,6 +73,38 @@ export function pruebaYaUsada(inicio: number | null): boolean {
   return inicio != null;
 }
 
+/**
+ * CUÁNDO TERMINA LA PRUEBA, no cuánto le queda.
+ *
+ * Pedido suyo (13/08/2026). Antes solo se decía "quedan 24 h", y eso obliga a hacer la cuenta
+ * mentalmente y encima con un número redondeado hacia arriba: a falta de treinta minutos ponía
+ * "queda 1 h". Una hora concreta se entiende sin pensar y no se puede malinterpretar.
+ *
+ * Devuelve el instante exacto, o null si no hay prueba corriendo.
+ */
+export function pruebaTerminaEn(inicio: number | null, ahora: number): number | null {
+  if (!pruebaVigente(inicio, ahora)) return null;
+  return inicio! + DURACION_PRUEBA_MS;
+}
+
+/**
+ * Si ese instante cae hoy, mañana, o más lejos.
+ *
+ * Se compara por DÍA DEL CALENDARIO, no por horas de diferencia. Son cosas distintas: a las
+ * 11 de la noche, algo que pasa dentro de tres horas es "mañana" aunque falte menos que un
+ * "hoy" de la mañana. Quien lee la pantalla piensa en días, no en restas.
+ */
+export function diaDeLaFecha(cuando: number, ahora: number): "hoy" | "manana" | "otro" {
+  const dia = (t: number) => {
+    const d = new Date(t);
+    return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  };
+  const diferencia = Math.round((dia(cuando) - dia(ahora)) / (24 * 60 * 60 * 1000));
+  if (diferencia <= 0) return "hoy";
+  if (diferencia === 1) return "manana";
+  return "otro";
+}
+
 /** Cuánto le queda, en milisegundos. Cero si no está vigente. */
 export function pruebaRestanteMs(inicio: number | null, ahora: number): number {
   if (!pruebaVigente(inicio, ahora)) return 0;

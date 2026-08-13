@@ -20,7 +20,7 @@ import {
   restaurarCompra,
   type PlanDeCompra,
 } from "@/utils/compras";
-import { DURACION_PRUEBA_HORAS } from "@/utils/pruebaPremium";
+import { DURACION_PRUEBA_HORAS, diaDeLaFecha, pruebaTerminaEn } from "@/utils/pruebaPremium";
 
 /**
  * FINZO PREMIUM: las dos columnas, el precio y la prueba gratuita.
@@ -56,7 +56,7 @@ export default function Premium({
   onBack: () => void;
   isPremium: boolean;
 }) {
-  const { t, fmt, pruebaInicio, pruebaHoras, activarPruebaPremium, showToast } = useAppData();
+  const { t, fmt, monthNames, pruebaInicio, pruebaHoras, activarPruebaPremium, showToast } = useAppData();
   const insets = useSafeAreaInsets();
 
   /** Si se está preguntando por la prueba gratuita, en la propia pantalla. */
@@ -96,6 +96,29 @@ export default function Premium({
 
   const enPrueba = pruebaHoras > 0;
   const pruebaUsada = pruebaInicio != null;
+
+  /**
+   * "Termina mañana a las 3:48 p. m.", ya armado.
+   *
+   * La hora la pone el sistema con el formato del celular: en Perú sale "3:48 p. m." y en otro
+   * sitio saldrá como allí se escriba. Escribirla a mano seria acertar en un pais y fallar en
+   * los demas.
+   */
+  const cuandoTermina = (() => {
+    const ahora = Date.now();
+    const fin = pruebaTerminaEn(pruebaInicio, ahora);
+    if (fin == null) return "";
+    const cuando = new Date(fin);
+    const hora = cuando.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+    const dia = diaDeLaFecha(fin, ahora);
+    if (dia === "hoy") return t("premium.terminaHoy", { hora });
+    if (dia === "manana") return t("premium.terminaManana", { hora });
+    return t("premium.terminaOtro", {
+      hora,
+      dia: cuando.getDate(),
+      mes: monthNames[cuando.getMonth()],
+    });
+  })();
 
   const GRATIS = [
     t("premium.freeTransactions"),
@@ -322,11 +345,20 @@ export default function Premium({
             Solo si no hay Premium y no se ha usado. Con Premium puesto no tendría
             nada que ofrecer, y usada sería un botón que solo puede decir "no". */}
         {enPrueba ? (
-          <View className="mx-5 mt-4 rounded-2xl border border-dashed border-emerald-400/60 py-3 flex-row items-center justify-center gap-2">
-            <Timer size={15} color="#6ee7b7" />
-            <Text className="text-emerald-200 text-xs font-extrabold">
-              {t("premium.pruebaActiva", { horas: pruebaHoras })}
-            </Text>
+          <View className="mx-5 mt-4 rounded-2xl border border-dashed border-emerald-400/60 py-3 items-center">
+            <View className="flex-row items-center justify-center gap-2">
+              <Timer size={15} color="#6ee7b7" />
+              <Text className="text-emerald-200 text-xs font-extrabold">
+                {t("premium.pruebaActiva", { horas: pruebaHoras })}
+              </Text>
+            </View>
+            {/* LA HORA EXACTA, DEBAJO. Pedido suyo: "quedan 24 h" obliga a hacer la cuenta, y
+                encima con un número redondeado hacia arriba —a falta de media hora ponía
+                "queda 1 h"—. Las dos líneas juntas dicen lo mismo de dos formas: la de arriba
+                para saber si corre prisa, esta para saber hasta cuándo. */}
+            {cuandoTermina !== "" && (
+              <Text className="text-emerald-300/90 text-[11px] font-bold mt-1">{cuandoTermina}</Text>
+            )}
           </View>
         ) : !isPremium && !pruebaUsada ? (
           preguntandoPrueba ? (

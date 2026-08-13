@@ -22,6 +22,8 @@ import {
   DURACION_PRUEBA_HORAS,
   DURACION_PRUEBA_MS,
   pruebaHorasRestantes,
+  pruebaTerminaEn,
+  diaDeLaFecha,
   pruebaRestanteMs,
   pruebaVigente,
   pruebaYaUsada,
@@ -210,6 +212,36 @@ console.log("\n--- LA PANTALLA NO PROMETE UN COBRO QUE NO EXISTE ---");
   // "Sin anuncios" ya no se anuncia: no hay anuncios que quitar, asi que era una
   // promesa vacia. Esta en la lista de cosas que bloquean Play Store.
   ok(!pant.includes("premium.perkNoAds"), "y no se promete quitar anuncios que no existen");
+}
+
+console.log("\n--- CUÁNDO TERMINA, NO CUÁNTO QUEDA (13/08/2026) ---");
+{
+  // Pedido suyo. "Quedan 24 h" obliga a hacer la cuenta de cabeza, y encima con un número
+  // redondeado hacia arriba: a falta de media hora ponía "queda 1 h". Una hora concreta se
+  // entiende sin pensar y no se puede malinterpretar.
+  const ACTIVADA = new Date(2026, 7, 13, 15, 48).getTime();
+  ok(
+    pruebaTerminaEn(ACTIVADA, ACTIVADA) === ACTIVADA + DURACION_PRUEBA_MS,
+    "termina 24 horas después de activarla"
+  );
+  ok(pruebaTerminaEn(null, ACTIVADA) === null, "sin prueba activada no hay hora que dar");
+  ok(pruebaTerminaEn(ACTIVADA, ACTIVADA + DURACION_PRUEBA_MS) === null, "y ya caducada, tampoco");
+
+  // HOY Y MAÑANA SE MIDEN POR DÍA DEL CALENDARIO, no por horas de diferencia. A las once de la
+  // noche, algo que pasa dentro de tres horas es MAÑANA aunque falte menos que un "hoy" de la
+  // mañana. Quien lee la pantalla piensa en días, no en restas.
+  const alas = (h: number, dia = 13) => new Date(2026, 7, dia, h, 0).getTime();
+  ok(diaDeLaFecha(alas(23), alas(9)) === "hoy", "las once de la noche de hoy es hoy");
+  ok(diaDeLaFecha(alas(2, 14), alas(23)) === "manana", "y las dos de la madrugada es mañana");
+  ok(diaDeLaFecha(alas(9, 15), alas(9)) === "otro", "pasado mañana no es ni hoy ni mañana");
+
+  // Y LOS TRES TEXTOS EN LOS TRES IDIOMAS. Faltando uno, la pantalla enseñaría la clave cruda
+  // —"premium.terminaManana"— justo debajo del precio.
+  const textos = fs.readFileSync(path.join(process.cwd(), "constants/i18n.ts"), "utf8");
+  for (const clave of ["premium.terminaHoy", "premium.terminaManana", "premium.terminaOtro"]) {
+    const veces = (textos.match(new RegExp(`"${clave.replace(".", "\\.")}":`, "g")) ?? []).length;
+    ok(veces === 3, `${clave} está en los tres idiomas (${veces})`);
+  }
 }
 
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
