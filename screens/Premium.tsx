@@ -135,15 +135,22 @@ export default function Premium({
 
   // La primera línea es "todo lo del plan gratis": sin ella, la columna de Premium
   // se lee como una lista DISTINTA y no como la de al lado más cosas.
-  const PREMIUM = [
-    t("premium.todoElGratis"),
-    t("premium.perkCategoryBudgets"),
-    t("premium.perkSavingsGoals"),
-    t("premium.perkAI"),
-    t("premium.perkExportPdf"),
-    t("premium.perkExportExcel"),
-    t("premium.perkImport"),
-    t("premium.perkAutoExport"),
+  /**
+   * LO QUE TRAE PREMIUM, en el orden que él pidió (13/08/2026).
+   *
+   * Cada línea puede llevar un DETALLE debajo, más pequeño. Los formatos iban dentro del
+   * paréntesis —"Importar movimientos (Excel · CSV · PDF · Hojas de Google)"— y en una tarjeta
+   * que mide media pantalla eso ocupaba tres renglones por línea: la lista se veía deformada y
+   * lo importante, el nombre de la función, quedaba enterrado.
+   */
+  const PREMIUM: { texto: string; detalle?: string }[] = [
+    { texto: t("premium.todoElGratis") },
+    { texto: t("premium.perkAI") },
+    { texto: t("premium.perkCategoryBudgets") },
+    { texto: t("premium.perkExport"), detalle: t("premium.formatosExportar") },
+    { texto: t("premium.perkAutoExport"), detalle: t("premium.formatosExportar") },
+    { texto: t("premium.perkImport"), detalle: t("premium.formatosImportar") },
+    { texto: t("premium.perkBusiness") },
     // EL REGISTRO AUTOMATICO SOLO SE PROMETE DONDE EXISTE (13/08/2026).
     //
     // Lee los yapeos de las notificaciones, y Yape solo esta en Peru y Bolivia. El resto de la
@@ -151,9 +158,10 @@ export default function Premium({
     // ofrecia a todo el mundo: alguien en Mexico habria pagado por una funcion que ni siquiera
     // le aparece despues. Prometer de mas en la pantalla del precio es lo peor que se puede
     // hacer aqui, y ademas es de lo que Google mira antes de aprobar una app.
-    ...(hayRegistroAutomatico(userCurrency) ? [t("premium.perkYape")] : []),
-    t("premium.perkVoice"),
-    t("premium.perkLock"),
+    ...(hayRegistroAutomatico(userCurrency) ? [{ texto: t("premium.perkYape") }] : []),
+    { texto: t("premium.perkVoice") },
+    { texto: t("premium.perkLock") },
+    { texto: t("premium.perkSavingsGoals") },
   ];
 
   function confirmarPrueba() {
@@ -268,9 +276,18 @@ export default function Premium({
             </Text>
             <View className="gap-2">
               {PREMIUM.map((linea) => (
-                <View key={linea} className="flex-row gap-1.5">
-                  <Check size={12} color="#fcd34d" strokeWidth={3} />
-                  <Text className="text-[11px] leading-4 text-white/90 flex-1">{linea}</Text>
+                <View key={linea.texto} className="flex-row gap-1.5">
+                  {/* El visto, alineado con la PRIMERA línea del texto y no con el centro del
+                      bloque: con una función de dos renglones se veía flotando en medio. */}
+                  <View className="pt-0.5">
+                    <Check size={12} color="#fcd34d" strokeWidth={3} />
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-[11px] leading-4 text-white/90">{linea.texto}</Text>
+                    {linea.detalle != null && (
+                      <Text className="text-[9.5px] leading-3.5 text-emerald-200/70">{linea.detalle}</Text>
+                    )}
+                  </View>
                 </View>
               ))}
             </View>
