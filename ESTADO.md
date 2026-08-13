@@ -2926,6 +2926,38 @@ identificador. 389 sustituciones en 91 archivos, y ni una en un sitio peligroso.
 
 ---
 
+## La foto de la boleta — hecha y quitada el 12/08/2026
+
+Pedida y retirada el mismo día. **No se quitó porque estuviera mal: se quitó al ver lo que
+costaba hacerla bien.** Queda escrito para que quien la retome no repita la investigación.
+
+**LO QUE SE HIZO:** tomar foto o elegirla de la galería al anotar un gasto, una etiqueta en la
+lista para los que la llevan, y verla y cambiarla desde el detalle. Funcionaba.
+
+**EL PROBLEMA QUE LO DECIDIÓ:** las fotos no viajaban a la nube. Al cambiar de celular volvían
+los movimientos y no las fotos. Y no por descuido — meterlas en la copia de seguridad la
+rompía: **todo lo que se sube va en UN documento con tope de 1 MB, y pasarse no lo deja a
+medias, lo deja SIN GUARDAR**. Una foto legible pesa 60–90 KB; con doce, esa persona pierde la
+copia de TODO sin enterarse hasta que cambia de teléfono.
+
+**LAS TRES SALIDAS, YA MIRADAS:**
+
+| Camino | Qué pasa |
+|---|---|
+| Foto dentro del movimiento | Revienta la copia de seguridad a la docena de fotos. **Descartado.** |
+| Solo en el celular (lo que se hizo) | Seguro, pero las fotos no viajan. Es lo que él no quiso |
+| **Una foto por documento** | El tope es POR documento, así que 80 KB caben de sobra. Se baja solo al abrir el movimiento. **Es el camino bueno** |
+
+**Y ES GRATIS AL PRINCIPIO:** el plan gratuito da ~1 GB en total entre todos los usuarios, unas
+12.000 fotos de 80 KB. Pasado eso paga el dueño de la app, no la persona que la usa. Para los 12
+probadores sobra de lejos.
+
+**POR QUÉ NO SE HIZO YA:** subir, bajar, funcionar sin internet y no descargar de más son cuatro
+problemas más, y la función todavía no la ha pedido nadie que no sea él. Primero publicar y ver
+si se usa.
+
+---
+
 ## LO SIGUIENTE A HACER
 
 **Propuesto y sin respuesta: aligerar la pantalla de registro automático.**

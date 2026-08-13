@@ -96,7 +96,6 @@ import { presupuestoDelMes } from "@/utils/presupuestoMensual";
 import { hayDescuadre, maximoAApartar, saldoLibre, totalApartado } from "@/utils/ahorro";
 import { availableBalance } from "@/utils/finances";
 import { saldoAnteriorDe } from "@/utils/saldoAnterior";
-import { borrarFoto } from "@/utils/fotoMovimiento";
 import * as notificationReader from "@/modules/notification-reader";
 import type { Goal, Month, Profile, Transaction } from "@/types";
 
@@ -1685,25 +1684,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setMerchantLearned((prev) => learnCategory(merchantText, category, prev));
   }
 
-  /**
-   * BORRAR UN MOVIMIENTO SE LLEVA SU FOTO (12/08/2026).
-   *
-   * La foto es un archivo aparte y el movimiento solo guarda su ruta (ver utils/fotoMovimiento).
-   * Sin esta línea, borrar el gasto dejaría la imagen ocupando sitio en el celular para siempre,
-   * sin que nadie pueda volver a verla ni borrarla desde ninguna pantalla.
-   *
-   * Va en el contexto y no en la pantalla del detalle porque hay DOS caminos para borrar —uno y
-   * varios de golpe— y el segundo no pasa por el detalle.
-   */
   function deleteTransaction(id: number) {
-    borrarFoto(transactions.find((p) => p.id === id)?.photo);
     setTransactions((prev) => prev.filter((p) => p.id !== id));
     showToast(t("toast.transactionDeleted"));
   }
 
   function deleteTransactions(ids: number[]) {
     if (!ids.length) return;
-    for (const p of transactions) if (ids.includes(p.id)) borrarFoto(p.photo);
     setTransactions((prev) => prev.filter((p) => !ids.includes(p.id)));
     showToast(
       t(ids.length > 1 ? "toast.transactionsDeletedPlural" : "toast.transactionsDeleted", {

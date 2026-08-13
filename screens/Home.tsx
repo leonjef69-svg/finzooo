@@ -14,7 +14,6 @@ import {
   Eye,
   EyeOff,
   FileUp,
-  Image as ImageIcon,
   ListChecks,
   RotateCcw,
   Target,
@@ -508,26 +507,13 @@ export default function Home({
                     ))}
                   <IconBadge Icon={c.icon} color={c.color} image={c.image} />
                   <View className="flex-1 min-w-0">
-                    <View className="flex-row items-center gap-1.5">
-                      <Text
-                        className="text-base font-bold flex-shrink"
-                        style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-                        numberOfLines={1}
-                      >
-                        {t2.description || t(c.label)}
-                      </Text>
-                      {/* TIENE FOTO. Pedido suyo: saber desde la lista cuales llevan boleta,
-                          sin tener que entrar uno por uno. Es una marca, no un boton: tocar la
-                          fila ya abre el detalle, que es donde se ve la foto. */}
-                      {t2.photo ? (
-                        <View className="flex-row items-center gap-1 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-full">
-                          <ImageIcon size={11} color="#64748b" />
-                          <Text className="text-[10px] font-bold text-slate-500 dark:text-slate-300">
-                            {t("fotoMov.verEtiqueta")}
-                          </Text>
-                        </View>
-                      ) : null}
-                    </View>
+                    <Text
+                      className="text-base font-bold"
+                      style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                      numberOfLines={1}
+                    >
+                      {t2.description || t(c.label)}
+                    </Text>
                     <Text
                       className="text-sm"
                       style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#334155" }}

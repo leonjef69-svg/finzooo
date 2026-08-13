@@ -36,18 +36,6 @@ export type Transaction = {
   // Código de operación del banco, sirve para no repetir un movimiento.
   reference?: string;
   tags?: string[];
-  /**
-   * LA FOTO DE LA BOLETA: la RUTA del archivo en este celular, no la foto.
-   *
-   * Meterla aquí convertida a texto habría sido lo natural y un desastre: todo lo que se sube a
-   * la nube va en UN documento con tope de 1 MB, y pasarse no lo deja a medias — lo deja SIN
-   * GUARDAR, con los movimientos dentro. Doce fotos y esa persona pierde su copia de seguridad
-   * sin enterarse. Ver utils/fotoMovimiento.
-   *
-   * La ruta viaja a la nube; el archivo no. En otro celular la foto no está, y la pantalla del
-   * detalle lo dice en vez de enseñar un recuadro roto.
-   */
-  photo?: string;
 };
 
 // Los movimientos viejos no tienen "origin". Cuando falta, es porque la

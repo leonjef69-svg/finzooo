@@ -11,7 +11,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X, Check, ChevronDown, ChevronRight, Calendar } from "lucide-react-native";
 import { router } from "expo-router";
 import CategoryAvatar from "@/components/CategoryAvatar";
-import FotoDelMovimiento from "@/components/FotoDelMovimiento";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
 import { currencySymbolFor } from "@/constants/currencies";
 import { methodLabel, PAYMENT_METHODS } from "@/constants/i18n";
@@ -51,7 +50,6 @@ export default function AddSheet({
   );
   const [date, setDate] = useState(transaction?.date || defaultDateForMonth(currentMonth));
   const [method, setMethod] = useState(transaction?.method || "debit");
-  const [photo, setPhoto] = useState<string | undefined>(transaction?.photo);
   const [description, setDescription] = useState(transaction?.description || "");
   const [notes, setNotes] = useState(transaction?.notes || "");
   const [showMethod, setShowMethod] = useState(false);
@@ -479,13 +477,6 @@ export default function AddSheet({
                 style={{ textAlignVertical: "top", color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
               />
             </View>
-
-            {/* LA FOTO DE LA BOLETA (12/08/2026). Va la ULTIMA a proposito: es lo unico
-                opcional de esta pantalla, y ponerla antes de la descripcion empujaria hacia
-                abajo lo que si hay que rellenar. */}
-            <View>
-              <FotoDelMovimiento ruta={photo} onChange={setPhoto} compacto />
-            </View>
           </ScrollView>
 
           {/* Botones: pegados al borde inferior de este contenedor animado.
@@ -518,7 +509,6 @@ export default function AddSheet({
                   category,
                   date,
                   method,
-          photo,
                   description,
                   notes,
                   // La hora se conserva al EDITAR y se pone al crear: si al
