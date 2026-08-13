@@ -90,7 +90,19 @@ console.log("\n--- LA CONVERSION SIGUE AHI ---");
 {
   const kotlin = sinComentarios(KOTLIN);
   ok(/getStreamTypes\(uri, "\*\/\*"\)/.test(kotlin), "se pregunta a Drive que formatos tiene");
-  ok(/openTypedAssetFileDescriptor\(uri, elegido/.test(kotlin), "y se le pide el que sirve");
+  ok(/openTypedAssetFileDescriptor\(uri, pedido/.test(kotlin), "y se le pide el que sirve");
+
+  // SI NINGUNO ES DE LOS BUENOS, SE INTENTA CON EL PRIMERO QUE HAYA. Un formato raro que quiza
+  // no se lea es mejor que rendirse: si sale mal se ve, y rendirse deja sin nada y sin motivo.
+  ok(/val pedido = elegido \?: disponibles\.first\(\)/.test(kotlin),
+    "y si ninguno sirve, se intenta igual con el que ofrezca");
+
+  // CADA FALLO DICE CUAL FUE. "No se pudo leer" a secas costo una entrega entera: no distingue
+  // entre que Drive no ofrezca nada, que ofrezca formatos inutiles o que la conversion salga
+  // vacia, y son tres arreglos distintos.
+  for (const motivo of ["drive-no-ofrece-nada", "conversion-vacia", "drive-no-lo-abre"]) {
+    ok(kotlin.includes(motivo), `el fallo "${motivo}" se distingue de los demas`);
+  }
 
   // PRIMERO EL CAMINO NORMAL. Un CSV o un PDF no tienen nada que convertir.
   ok(kotlin.indexOf("copyToCache(uri") < kotlin.indexOf("getStreamTypes"),

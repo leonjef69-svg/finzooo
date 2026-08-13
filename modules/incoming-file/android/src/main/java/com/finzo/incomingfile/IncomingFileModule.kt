@@ -312,9 +312,15 @@ class IncomingFileModule : Module() {
     val nombre = displayName(uri, "archivo")
 
     // 1. El camino de siempre.
+    //
+    // Se guarda POR QUE fallo, aunque casi siempre no importe: cuando el segundo camino tampoco
+    // sale, este es el unico dato que dice si el archivo no se dejo abrir o si es que no habia
+    // nada que abrir.
+    var porQueNoSeAbrio = "vacio"
     val normal = try {
       copyToCache(uri, nombre)
     } catch (e: Throwable) {
+      porQueNoSeAbrio = e.javaClass.simpleName
       null
     }
     if (normal != null && normal.length() > 0L) {
@@ -327,27 +333,46 @@ class IncomingFileModule : Module() {
     normal?.delete()
 
     // 2. Es un documento de Google: hay que pedirlo convertido.
-    val disponibles = context.contentResolver.getStreamTypes(uri, "*/*") ?: return null
+    //
+    // CADA FALLO DE AQUI ABAJO DICE CUAL FUE, y no es celo: "no se pudo leer" a secas costo una
+    // entrega entera el 12/08/2026. Los motivos llevan dentro lo que Drive contesto, porque sin
+    // eso no hay forma de saber si el problema es que no ofrece nada, que ofrece formatos que no
+    // sirven, o que la conversion sale vacia — y son tres arreglos distintos.
+    val disponibles = context.contentResolver.getStreamTypes(uri, "*/*")
+      ?: return fallo("no-se-abre($porQueNoSeAbrio)-y-drive-no-ofrece-nada")
+    if (disponibles.isEmpty()) return fallo("no-se-abre($porQueNoSeAbrio)-y-lista-vacia")
+
     val elegido = FORMATOS_QUE_SIRVEN.firstOrNull { querido ->
       disponibles.any { it.equals(querido, ignoreCase = true) }
-    } ?: return null
+    }
+    // NINGUNO DE LOS BUENOS, PERO SE INTENTA IGUAL con el primero que ofrezca. Un formato raro
+    // que quiza no se lea es mejor que rendirse: si sale mal, el archivo se lee vacio y el
+    // mensaje lo dice. Rendirse aqui deja al usuario sin nada y sin saber por que.
+    val pedido = elegido ?: disponibles.first()
 
     val destino = File(context.cacheDir, "hoja-${System.currentTimeMillis()}")
-    context.contentResolver.openTypedAssetFileDescriptor(uri, elegido, null)?.use { descriptor ->
-      descriptor.createInputStream().use { entrada ->
-        destino.outputStream().use { salida -> entrada.copyTo(salida) }
-      }
-    } ?: return null
+    try {
+      context.contentResolver.openTypedAssetFileDescriptor(uri, pedido, null)?.use { descriptor ->
+        descriptor.createInputStream().use { entrada ->
+          destino.outputStream().use { salida -> entrada.copyTo(salida) }
+        }
+      } ?: return fallo("drive-no-lo-abre:$pedido")
+    } catch (e: Throwable) {
+      destino.delete()
+      return fallo("drive-fallo:${e.javaClass.simpleName}:$pedido")
+    }
 
     // Un archivo vacio no es una hoja: es una conversion que fallo sin decirlo.
     if (destino.length() == 0L) {
       destino.delete()
-      return null
+      return fallo("conversion-vacia:$pedido")
     }
     return JSONObject()
       .put("uri", Uri.fromFile(destino).toString())
       .put("nombre", nombre)
-      .put("convertido", elegido)
+      // Solo cuenta como convertido lo que Fino sabe leer. Con un formato raro se deja en
+      // blanco: que lo decida el nombre del archivo, como con cualquier otro.
+      .put("convertido", if (elegido != null) elegido else JSONObject.NULL)
       .toString()
   }
 
