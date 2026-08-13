@@ -16,7 +16,7 @@
       }
     },
     "android": {
-      "package": "com.finzo.app",
+      "package": "com.finoapp.gastos",
       "googleServicesFile": "./google-services.json",
       "allowBackup": false,
       "adaptiveIcon": {
