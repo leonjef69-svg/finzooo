@@ -17,7 +17,22 @@ import { matchCategory, matchMethod, parseStatement, type RawRow } from "@/utils
 import { suggestCategory } from "@/utils/classifier";
 import { findBestMatch, mergeTransaction, type DuplicateMatch } from "@/utils/duplicates";
 import DuplicateReview from "@/screens/DuplicateReview";
+import { puedeTraerArchivos, traerArchivo } from "@/modules/incoming-file";
 import type { Transaction } from "@/types";
+
+/**
+ * La extensión que le toca a un documento de Google ya convertido.
+ *
+ * Existe porque el resto de la pantalla decide cómo leer un archivo mirando
+ * su nombre, y una Hoja de Google no tiene extensión ninguna.
+ */
+const EXTENSION_CONVERTIDA: Record<string, string> = {
+  "text/csv": ".csv",
+  "text/comma-separated-values": ".csv",
+  "text/plain": ".csv",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+  "application/vnd.ms-excel": ".xls",
+};
 
 // Un movimiento del banco ya convertido a formato Fino, junto con la
 // información de si se parece a algo que ya tienes.
@@ -90,22 +105,67 @@ export default function ImportSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incoming]);
 
+  /**
+   * QUE FORMATOS SE OFRECEN EN LA PANTALLA DE ANDROID.
+   *
+   * Lo que no esté en esta lista sale en gris y no se puede tocar.
+   *
+   * Los dos últimos son documentos de Google. Solo se ofrecen si esta versión
+   * de Fino sabe convertirlos (ver traerArchivo): una Hoja de Google no es un
+   * archivo y no se puede leer tal cual. Ofrecerla sin poder abrirla sería
+   * peor que dejarla en gris — el usuario la elige, espera, y le sale un
+   * error sobre algo que la app misma le acaba de ofrecer.
+   */
+  const FORMATOS = [
+    "text/csv",
+    "text/comma-separated-values",
+    "text/plain",
+    "application/vnd.ms-excel",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel.sheet.macroEnabled.12",
+    "application/pdf",
+    ...(puedeTraerArchivos
+      ? ["application/vnd.google-apps.spreadsheet", "application/vnd.google-apps.document"]
+      : []),
+  ];
+
   async function pickFile() {
     const result = await DocumentPicker.getDocumentAsync({
-      type: [
-        "text/csv",
-        "text/comma-separated-values",
-        "text/plain",
-        "application/vnd.ms-excel",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/vnd.ms-excel.sheet.macroEnabled.12",
-        "application/pdf",
-      ],
-      copyToCacheDirectory: true,
+      type: FORMATOS,
+      // Que NO copie él. Copia con openInputStream, y con una Hoja de Google
+      // eso falla y se lleva por delante la elección entera: la promesa se
+      // rompe y no queda ni la dirección del archivo para intentar otra cosa.
+      // La copia se hace después, en traerArchivo, que sabe de los dos casos.
+      //
+      // Cuando esta versión de Fino no trae esa parte —una actualización por
+      // internet encima de una app vieja— se deja copiar a él como siempre.
+      copyToCacheDirectory: !puedeTraerArchivos,
     });
     if (result.canceled || !result.assets[0]) return;
     const asset = result.assets[0];
-    await loadFile(asset.uri, asset.name, asset.mimeType);
+
+    if (!puedeTraerArchivos) {
+      await loadFile(asset.uri, asset.name, asset.mimeType);
+      return;
+    }
+
+    setLoading(true);
+    const traido = await traerArchivo(asset.uri);
+    if (!traido) {
+      setLoading(false);
+      showToastAndClose(t("importSheet.unreadable"));
+      return;
+    }
+    // Si hubo conversión, manda lo convertido. El nombre de una Hoja de
+    // Google viene sin extensión ("Mis gastos"), y de la extensión depende
+    // que se lea como texto o como Excel: sin esto, un CSV recién convertido
+    // se intentaría abrir como hoja de cálculo y no saldría nada.
+    const extra = EXTENSION_CONVERTIDA[traido.convertido ?? ""] ?? "";
+    await loadFile(
+      traido.uri,
+      extra && !asset.name.toLowerCase().endsWith(extra) ? asset.name + extra : asset.name,
+      traido.convertido ?? asset.mimeType
+    );
   }
 
   /**

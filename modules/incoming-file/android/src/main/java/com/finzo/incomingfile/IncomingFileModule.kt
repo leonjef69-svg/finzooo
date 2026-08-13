@@ -64,7 +64,26 @@ class IncomingFileModule : Module() {
     // vez. Sin eso, cada vez que la app volviera al frente se importaría
     // otra vez el mismo estado de cuenta.
     Function("consumePendingFile") { consume() }
+
+    // El archivo que se eligio en la pantalla de Android, ya copiado dentro de Fino. Ver
+    // traerArchivo. Es asincrona porque copia bytes: con un archivo grande, hacerlo en el
+    // hilo de la pantalla la dejaria congelada mientras dura.
+    AsyncFunction("traerArchivo") { uri: String -> traerArchivo(uri) }
   }
+
+  /**
+   * En que formatos se acepta un documento de Google, del mas comodo al menos.
+   *
+   * Fuera de esta lista no entra nada: Drive tambien ofrece PDF de una hoja de calculo, y un
+   * PDF hecho de una tabla se lee mucho peor que la tabla misma.
+   */
+  private val FORMATOS_QUE_SIRVEN = listOf(
+    "text/csv",
+    "text/comma-separated-values",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "application/vnd.ms-excel",
+    "text/plain",
+  )
 
   private fun consume(): String? {
     val activity = appContext.currentActivity ?: return null
@@ -147,4 +166,82 @@ class IncomingFileModule : Module() {
   /** Deja el nombre sin nada que pueda salirse de la carpeta temporal. */
   private fun safe(name: String): String =
     name.replace(Regex("[^A-Za-z0-9._-]"), "_").takeLast(60)
+
+  /**
+   * TRAE A FINO EL ARCHIVO QUE SE ELIGIO EN LA PANTALLA DE ANDROID (12/08/2026).
+   *
+   * Nace de esto: al importar movimientos, las Hojas de calculo de Google salian en gris y no
+   * se podian tocar.
+   *
+   * POR QUE. Una Hoja de Google NO ES UN ARCHIVO. Vive dentro de Drive en un formato propio y no
+   * hay bytes que leer. Pedirle el contenido con openInputStream —lo que hace todo el mundo,
+   * incluido expo-document-picker— falla siempre. Y falla ADEMAS de la peor manera: la libreria
+   * copia el archivo ella sola antes de devolverlo, asi que reventaba entera y la eleccion se
+   * perdia. Por eso ahora se le pide que NO copie (copyToCacheDirectory: false) y la copia se
+   * hace aqui.
+   *
+   * Los dos caminos, en orden:
+   *
+   *   1. Lo normal. Un CSV, un Excel o un PDF se abren y se copian, y ya esta.
+   *
+   *   2. Si eso no da nada, es un documento de Google. Drive los ofrece convertidos a otros
+   *      formatos: se le pregunta cuales tiene (getStreamTypes) y se le pide el que sirva
+   *      (openTypedAssetFileDescriptor). Esta es la parte que NO se puede escribir en
+   *      JavaScript — son dos llamadas de Android que no estan expuestas— y el unico motivo de
+   *      que esto sea codigo nativo.
+   *
+   * SE PIDE CSV ANTES QUE EXCEL a proposito. Los dos valen, pero el CSV es texto plano: pesa
+   * mucho menos y no obliga a arrancar el lector de hojas de calculo para algo que se acaba
+   * leyendo como filas y columnas igual.
+   *
+   * Devuelve un JSON con la ruta ya escrita y, si hubo conversion, en que formato quedo — quien
+   * llama lo necesita para saber si lo lee como texto o como Excel. Devuelve null si no se pudo:
+   * un dibujo de Google Drawings, por ejemplo, no se convierte a nada que sirva. Nunca lanza.
+   */
+  private fun traerArchivo(uriTexto: String): String? {
+    return try {
+      val context = appContext.reactContext ?: return null
+      val uri = Uri.parse(uriTexto)
+
+      // 1. El camino de siempre.
+      val normal = try {
+        copyToCache(uri, displayName(uri))
+      } catch (e: Throwable) {
+        null
+      }
+      if (normal != null && normal.length() > 0L) {
+        return JSONObject()
+          .put("uri", Uri.fromFile(normal).toString())
+          .put("convertido", JSONObject.NULL)
+          .toString()
+      }
+      normal?.delete()
+
+      // 2. Es un documento de Google: hay que pedirlo convertido.
+      val disponibles = context.contentResolver.getStreamTypes(uri, "*/*") ?: return null
+      val elegido = FORMATOS_QUE_SIRVEN.firstOrNull { querido ->
+        disponibles.any { it.equals(querido, ignoreCase = true) }
+      } ?: return null
+
+      val destino = File(context.cacheDir, "hoja-${System.currentTimeMillis()}")
+      context.contentResolver.openTypedAssetFileDescriptor(uri, elegido, null)?.use { descriptor ->
+        descriptor.createInputStream().use { entrada ->
+          destino.outputStream().use { salida -> entrada.copyTo(salida) }
+        }
+      } ?: return null
+
+      // Un archivo vacio no es una hoja: es una conversion que fallo sin decirlo.
+      if (destino.length() == 0L) {
+        destino.delete()
+        return null
+      }
+      JSONObject()
+        .put("uri", Uri.fromFile(destino).toString())
+        .put("convertido", elegido)
+        .toString()
+    } catch (e: Throwable) {
+      null
+    }
+  }
+
 }
