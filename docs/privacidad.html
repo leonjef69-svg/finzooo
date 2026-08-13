@@ -1,95 +1,58 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Política de privacidad de Fino</title>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Política de Privacidad · Fino</title>
 <style>
   :root { color-scheme: light dark; }
   body {
-    margin: 0 auto; padding: 32px 20px 64px; max-width: 720px;
-    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    max-width: 720px; margin: 0 auto; padding: 28px 20px 64px;
     line-height: 1.65; color: #0f172a; background: #ffffff;
   }
-  @media (prefers-color-scheme: dark) { body { color: #e2e8f0; background: #0f172a; } }
-  h1 { font-size: 1.6rem; margin-bottom: .25rem; }
-  h2 { font-size: 1.1rem; margin-top: 2rem; }
-  .lead { color: #64748b; margin-top: 0; }
-  ul { padding-left: 1.2rem; }
-  .destacado {
-    border-radius: 14px; padding: 16px 18px; margin: 20px 0;
-    background: #ecfdf5; border: 1.5px solid #059669;
-  }
-  @media (prefers-color-scheme: dark) {
-    .destacado { background: rgba(5,150,105,.12); border-color: #059669; }
-  }
+  header { border-bottom: 3px solid #059669; padding-bottom: 14px; margin-bottom: 26px; }
+  h1 { font-size: 26px; margin: 0 0 4px; }
+  h2 { font-size: 17px; margin: 30px 0 8px; color: #065f46; }
+  .marca { color: #059669; font-weight: 800; font-size: 15px; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 6px; }
   a { color: #059669; }
-  footer { color: #64748b; font-size: .9rem; margin-top: 40px; }
+  nav { margin-top: 40px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 14px; }
+  @media (prefers-color-scheme: dark) {
+    body { color: #e2e8f0; background: #0f172a; }
+    h2 { color: #6ee7b7; }
+    nav { border-top-color: #1e293b; }
+  }
 </style>
 </head>
 <body>
-  <h1>Política de privacidad</h1>
-  <p class="lead">Fino · Última actualización: 8 de agosto de 2026</p>
-
-  <p>
-    Esta política explica qué información recoge Fino, para qué la usa y qué derechos tienes
-    sobre ella. Está escrita en lenguaje simple a propósito.
-  </p>
-
-  <h2>1. Qué información recogemos</h2>
-  <ul>
-    <li><strong>Datos de tu cuenta:</strong> tu nombre y tu correo electrónico al registrarte. Si eliges una foto de perfil, esa foto.</li>
-    <li><strong>Lo que tú anotas:</strong> movimientos (ingresos y gastos), presupuestos, metas de ahorro y, si usas el Modo Negocio, tus negocios, productos, ventas y movimientos del negocio. Fino no se conecta a ningún banco ni tarjeta.</li>
-    <li><strong>Contactos de envío que tú guardas:</strong> los nombres, correos y números de teléfono a los que decidas mandar tus reportes. Los escribes tú; Fino no lee la agenda de tu celular.</li>
-    <li><strong>Fotos que tú eliges:</strong> las imágenes que pongas a tus categorías propias, y las fotos de boletas si usas el escáner.</li>
-    <li><strong>Lo que dices al micrófono</strong>, solo mientras lo tienes apretado, para entender la orden.</li>
-    <li>No recogemos tu ubicación ni leemos la agenda de contactos de tu celular.</li>
-  </ul>
-
-  <h2>2. La lectura de notificaciones (registro automático)</h2>
-  <div class="destacado">
-    Es la parte más delicada de la app y por eso va aparte, explicada entera.
-  </div>
-  <ul>
-    <li><strong>Es opcional y viene apagada.</strong> Solo funciona si tú la enciendes y le das el permiso a Android.</li>
-    <li>Android no permite dar acceso a los avisos de una sola aplicación: el permiso es para todos. Por eso Fino <strong>filtra antes de guardar nada</strong> y solo mira los avisos de Yape.</li>
-    <li>De un aviso de Yape se guarda el monto, quién lo envía o recibe, la fecha y la hora, para crear el movimiento.</li>
-    <li>Todo eso se queda <strong>en tu celular</strong> y en la copia de tu propia cuenta. No se envía a ningún otro sitio ni lo vemos nosotros.</li>
-    <li>La pantalla de diagnóstico guarda el texto de los últimos avisos para poder explicarte por qué uno no se registró. <strong>De los avisos de claves y códigos de verificación no se guarda el texto.</strong></li>
-    <li>Puedes apagarlo cuando quieras desde Ajustes, y borrar ese registro con un botón.</li>
-  </ul>
-
-  <h2>3. Cómo se guarda tu información</h2>
-  <ul>
-    <li>En tu celular, tus datos se guardan <strong>cifrados</strong>: protegidos con una clave, para que no se puedan leer aunque alguien acceda al almacenamiento del teléfono.</li>
-    <li>Si inicias sesión, también se guarda una copia en la nube usando <strong>Firebase</strong> (un servicio de Google), para que puedas recuperar tu información si cambias de celular. Esa copia solo es visible para tu propia cuenta.</li>
-  </ul>
-
-  <h2>4. Con quién compartimos tu información</h2>
-  <ul>
-    <li><strong>No vendemos ni compartimos tu información con empresas de publicidad.</strong></li>
-    <li>Usamos Firebase (Google) únicamente como proveedor técnico para guardar los datos de forma segura, no como un tercero que use tu información con otros fines.</li>
-    <li>Si <strong>tú</strong> conectas Google Drive o Dropbox, o eliges una carpeta de tu celular, se suben ahí los archivos de reporte que tú pidas, y nada más. Fino solo puede entrar a su propia carpeta.</li>
-    <li>Si <strong>tú</strong> eliges enviar un reporte por correo o WhatsApp, ese archivo va a quien tú indiques, a través de la aplicación que elijas.</li>
-    <li>El micrófono usa el servicio de reconocimiento de voz de tu propio celular, que en Android es de Google.</li>
-  </ul>
-
-  <h2>5. Tus derechos</h2>
-  <ul>
-    <li>Puedes revisar y corregir tus datos en cualquier momento dentro de la app.</li>
-    <li>Puedes <strong>eliminar tu cuenta y todos tus datos</strong> (los de tu celular y los de la nube) desde Ajustes → Eliminar cuenta. No se puede deshacer.</li>
-    <li>También puedes pedirlo <strong>sin instalar la app</strong>: ver <a href="borrar-cuenta.html">cómo eliminar tu cuenta</a>.</li>
-    <li>Puedes escribirnos a <a href="mailto:dinero123xc@gmail.com">dinero123xc@gmail.com</a> si tienes dudas sobre tu información.</li>
-  </ul>
-
-  <h2>6. Menores de edad</h2>
-  <p>Fino no está dirigida específicamente a niños ni recoge intencionalmente información de menores de edad.</p>
-
-  <h2>7. Cambios a esta política</h2>
-  <p>Si esta política cambia, actualizaremos la fecha del principio de este documento.</p>
-
-  <footer>
-    Contacto: <a href="mailto:dinero123xc@gmail.com">dinero123xc@gmail.com</a>
-  </footer>
+<header>
+  <div class="marca">Fino</div>
+  <h1>Política de Privacidad</h1>
+</header>
+<p>Última actualización: 8 de agosto de 2026</p>
+<p>Esta Política de Privacidad explica qué información recoge Fino, para qué la usa y qué derechos tienes sobre ella.</p>
+<h2>1. Qué información recogemos</h2>
+<ul><li>Datos de tu cuenta: tu nombre y tu correo electrónico, cuando te registras. Si eliges una foto de perfil, esa foto.</li><li>Lo que tú anotas: tus movimientos (ingresos y gastos), presupuestos, metas de ahorro y, si usas el Modo Negocio, tus negocios, productos, ventas y movimientos del negocio. Fino no se conecta a ningún banco ni tarjeta.</li><li>Contactos de envío que tú guardas: los nombres, correos y números de teléfono a los que decidas mandar tus reportes. Los escribes tú; Fino no lee la agenda de tu celular.</li><li>Fotos que tú eliges: las imágenes que pongas a tus categorías propias, y las fotos de boletas si usas el escáner.</li><li>Lo que dices al micrófono, solo mientras lo tienes apretado, para entender la orden.</li><li>No recogemos tu ubicación ni leemos la agenda de contactos de tu celular.</li></ul>
+<h2>2. La lectura de notificaciones (registro automático)</h2>
+<p>Esta es la parte más delicada y por eso va aparte.</p>
+<ul><li>Es OPCIONAL y viene apagada. Solo funciona si tú la enciendes y le das el permiso a Android.</li><li>Android no permite dar acceso a los avisos de una sola aplicación: el permiso es para todos. Por eso Fino filtra ANTES de guardar nada y solo mira los avisos de Yape.</li><li>De un aviso de Yape se guarda el monto, quién lo envía o recibe, la fecha y la hora, para crear el movimiento.</li><li>Todo eso se queda en TU celular y en la copia de tu propia cuenta. No se envía a ningún otro sitio ni lo vemos nosotros.</li><li>La pantalla de diagnóstico guarda el texto de los últimos avisos para poder explicarte por qué uno no se registró. De los avisos de claves y códigos de verificación NO se guarda el texto.</li><li>Puedes apagarlo cuando quieras desde Ajustes, y borrar ese registro con un botón.</li></ul>
+<h2>3. Cómo se guarda tu información</h2>
+<ul><li>En tu celular, tus datos se guardan cifrados: protegidos con una clave, para que no se puedan leer aunque alguien acceda al almacenamiento del teléfono.</li><li>Si inicias sesión, también se guarda una copia en la nube usando Firebase (un servicio de Google), para que puedas recuperar tu información si cambias de celular. Esa copia solo es visible para tu propia cuenta.</li></ul>
+<h2>4. Con quién compartimos tu información</h2>
+<ul><li>No vendemos ni compartimos tu información con empresas de publicidad. Fino no muestra anuncios.</li><li>Usamos Firebase (Google) únicamente como proveedor técnico para guardar los datos de forma segura, no como un tercero que use tu información con otros fines.</li><li>Si TÚ conectas Google Drive, Dropbox o eliges una carpeta de tu celular, se suben ahí los archivos de reporte que tú pidas, y nada más. Fino solo puede entrar a su propia carpeta.</li><li>Si TÚ eliges enviar un reporte por correo o WhatsApp, ese archivo va a quien tú indiques, a través de la aplicación que elijas.</li><li>El micrófono usa el servicio de reconocimiento de voz de tu propio celular, que en Android es de Google.</li></ul>
+<h2>5. Tus derechos</h2>
+<ul><li>Puedes revisar y corregir tus datos en cualquier momento dentro de la app.</li><li>Puedes eliminar tu cuenta y todos tus datos (los de tu celular y los de la nube) desde Ajustes → Eliminar cuenta. Esta acción no se puede deshacer.</li><li>También puedes pedir que borremos tu cuenta sin instalar la app, escribiéndonos a dinero123xc@gmail.com desde el correo con el que te registraste.</li><li>Puedes escribirnos a dinero123xc@gmail.com si tienes dudas sobre tu información.</li></ul>
+<h2>6. Menores de edad</h2>
+<p>Fino no está dirigida específicamente a niños ni recoge intencionalmente información de menores de edad.</p>
+<h2>7. Cambios a esta política</h2>
+<p>Si esta política cambia, actualizaremos la fecha al inicio de este documento.</p>
+<nav>
+  <a href="./index.html">Inicio</a> ·
+  <a href="./privacidad.html">Política de Privacidad</a> ·
+  <a href="./terminos.html">Términos y Condiciones</a> ·
+  <a href="./borrar-cuenta.html">Eliminar tu cuenta</a>
+</nav>
 </body>
 </html>
