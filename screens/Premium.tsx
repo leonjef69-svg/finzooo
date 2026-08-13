@@ -147,8 +147,11 @@ export default function Premium({
     { texto: t("premium.todoElGratis") },
     { texto: t("premium.perkAI") },
     { texto: t("premium.perkCategoryBudgets") },
-    { texto: t("premium.perkExport"), detalle: t("premium.formatosExportar") },
-    { texto: t("premium.perkAutoExport"), detalle: t("premium.formatosExportar") },
+    // Sin los formatos: en exportar no ayudan a decidir nada —se paga y luego se elige— y solo
+    // alargan la lista. En importar sí, porque ahí la pregunta es si el archivo del banco de uno
+    // va a funcionar.
+    { texto: t("premium.perkExport") },
+    { texto: t("premium.perkAutoExport") },
     { texto: t("premium.perkImport"), detalle: t("premium.formatosImportar") },
     { texto: t("premium.perkBusiness") },
     // EL REGISTRO AUTOMATICO SOLO SE PROMETE DONDE EXISTE (13/08/2026).
