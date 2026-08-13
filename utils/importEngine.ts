@@ -267,6 +267,70 @@ const MONTH_WORDS: Record<string, number> = {
   nov: 11, dic: 12, dec: 12, dez: 12,
 };
 
+/**
+ * EL MES QUE EL PROPIO ARCHIVO DECLARA ARRIBA, si lo declara.
+ *
+ * Sale de su hoja de control (12/08/2026): las filas de gastos no llevan fecha porque el mes ya
+ * está escrito en la cabecera de la hoja — "MES: Enero"— y ahí una columna llena de "enero,
+ * enero, enero" no le sirve a nadie. Quien la llenó no se equivocó; simplemente la fecha vive en
+ * otro sitio.
+ *
+ * Solo se mira lo que hay ANTES de la fila de cabeceras: más abajo son datos, y un movimiento
+ * que diga "pago de enero" no habla del mes del archivo.
+ *
+ * El año, si no aparece, es el de hoy. Es lo que hace cualquiera al escribir "MES: Enero" en una
+ * hoja: hablar del enero de este año.
+ */
+export function mesDeclaradoEn(lineas: string[]): { anio: number; mes: number } | null {
+  const NOMBRES: [RegExp, number][] = [
+    [/\benero?\b/, 1], [/\bfebrero?\b/, 2], [/\bmarzo?\b/, 3], [/\babril\b/, 4],
+    [/\bmayo\b/, 5], [/\bjunio\b/, 6], [/\bjulio\b/, 7], [/\bagosto\b/, 8],
+    [/\bsetiembre\b|\bseptiembre\b/, 9], [/\boctubre\b/, 10], [/\bnoviembre\b/, 11],
+    [/\bdiciembre\b/, 12],
+  ];
+  let mes: number | null = null;
+  let anio: number | null = null;
+  for (const linea of lineas) {
+    const texto = normalizeHeader(linea);
+    if (mes === null) {
+      for (const [patron, numero] of NOMBRES) {
+        if (patron.test(texto)) {
+          mes = numero;
+          break;
+        }
+      }
+    }
+    if (anio === null) {
+      const encontrado = texto.match(/\b(20\d{2})\b/);
+      if (encontrado) anio = Number(encontrado[1]);
+    }
+  }
+  if (mes === null) return null;
+  return { anio: anio ?? new Date().getFullYear(), mes };
+}
+
+/**
+ * Una celda que trae SOLO el número del día ("5"), convertida en fecha de verdad.
+ *
+ * Hace falta cuando la columna se llama "Día" y el mes está en la cabecera del archivo, que es
+ * como se escribe una hoja mensual a mano.
+ *
+ * SIN MES DECLARADO NO SE INVENTA NADA. Un "5" suelto puede ser cualquier cosa —un número de
+ * cuota, un código— y ponerle un mes a dedo metería movimientos en un mes equivocado sin que se
+ * note. Que no entre es mucho menos grave.
+ */
+export function fechaDeDiaSuelto(
+  raw: string,
+  mesDeclarado: { anio: number; mes: number } | null
+): string | null {
+  if (!mesDeclarado) return null;
+  const soloDigitos = (raw || "").trim().match(/^(\d{1,2})$/);
+  if (!soloDigitos) return null;
+  const dia = Number(soloDigitos[1]);
+  if (!isRealDate(mesDeclarado.anio, mesDeclarado.mes, dia)) return null;
+  return `${mesDeclarado.anio}-${String(mesDeclarado.mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+}
+
 // Devuelve la fecha en formato "YYYY-MM-DD", o null si no se entiende.
 export function parseDate(raw: string): string | null {
   const trimmed = (raw || "").trim();
@@ -400,7 +464,19 @@ export type RawRow = {
 };
 
 export type ParseResult =
-  | { ok: true; rows: RawRow[]; errorCount: number; headerIndex: number }
+  | {
+      ok: true;
+      rows: RawRow[];
+      errorCount: number;
+      /**
+       * De las malas, cuantas traian monto pero NINGUNA fecha que se pudiera averiguar.
+       *
+       * Va aparte de errorCount porque son las unicas sobre las que se puede hacer algo: son
+       * movimientos de verdad y basta con poner la fecha en la hoja. Ver el bucle.
+       */
+      sinFecha: number;
+      headerIndex: number;
+    }
   | { ok: false; reason: "empty" | "noTable" };
 
 export function parseStatement(text: string, account?: string): ParseResult {
@@ -414,12 +490,39 @@ export function parseStatement(text: string, account?: string): ParseResult {
   const { headerIndex, map } = header;
   const rows: RawRow[] = [];
   let errorCount = 0;
+  let sinFecha = 0;
+
+  // Lo que el archivo dice de sí mismo antes de empezar la tabla. Ver mesDeclaradoEn.
+  const mesDelArchivo = mesDeclaradoEn(lines.slice(0, headerIndex));
+  // La última fecha que se leyó de verdad, para las filas que no traen ninguna. Ver abajo.
+  let ultimaFecha: string | null = null;
 
   for (let i = headerIndex + 1; i < lines.length; i++) {
     const cells = parseDelimitedLine(lines[i], delimiter);
     const cellAt = (idx: number) => (idx === -1 ? "" : cells[idx] || "");
 
-    const date = parseDate(cellAt(map.date));
+    /**
+     * LA FECHA, POR TRES CAMINOS Y EN ESTE ORDEN.
+     *
+     * Salió de su hoja de control (12/08/2026), donde no había ni una fecha escrita y no se
+     * importaba absolutamente nada. Las tres son formas normales de llenar una hoja a mano; la
+     * app las trataba a todas como "fila mala".
+     *
+     *   1. La fecha escrita, como siempre.
+     *   2. Solo el número del día ("5"), con el mes que declara el archivo arriba.
+     *   3. HEREDADA DE LA FILA DE ARRIBA, y solo si la celda está VACÍA. Es como se escribe una
+     *      hoja de verdad: la fecha una vez y debajo los tres gastos de ese día.
+     *
+     * Que el tercero exija la celda vacía no es un detalle. Una celda con algo que no se
+     * entiende —"TOTAL", "Resumen"— casi nunca es un movimiento: es el pie de la tabla. Heredarle
+     * la fecha de arriba metería la suma del mes como si fuera un gasto más, y eso descuadra los
+     * totales sin que se vea.
+     */
+    const fechaCruda = cellAt(map.date);
+    let date = parseDate(fechaCruda);
+    if (!date) date = fechaDeDiaSuelto(fechaCruda, mesDelArchivo);
+    if (!date && !fechaCruda.trim()) date = ultimaFecha;
+    if (date) ultimaFecha = date;
 
     // El monto puede venir de tres formas: una columna única, o dos
     // columnas separadas de cargo (sale dinero) y abono (entra dinero).
@@ -448,6 +551,12 @@ export function parseStatement(text: string, account?: string): ParseResult {
 
     if (!date || value === null || value === 0) {
       errorCount++;
+      // SE CUENTAN APARTE LAS QUE SOLO LES FALTA LA FECHA. Una fila con monto pero sin fecha es
+      // un movimiento de verdad que se está perdiendo, y hay algo que hacer al respecto —poner
+      // la fecha en la hoja—. Una fila sin monto suele ser un hueco o el pie de la tabla, y no
+      // hay nada que hacer. Contarlas juntas como "3 con errores" mezcla las dos y no deja
+      // actuar sobre ninguna.
+      if (!date && value !== null && value !== 0) sinFecha++;
       continue;
     }
 
@@ -471,7 +580,7 @@ export function parseStatement(text: string, account?: string): ParseResult {
     });
   }
 
-  return { ok: true, rows, errorCount, headerIndex };
+  return { ok: true, rows, errorCount, sinFecha, headerIndex };
 }
 
 // Convierte el método de pago que dice el banco a uno de los de Fino.

@@ -74,6 +74,7 @@ const SUITES = [
   // antiguo. Es la unica que lo necesita.
   { archivo: "verificar-excel.ts", alias: BASE, formato: "cjs" },
   { archivo: "verificar-cabeceras.ts", alias: BASE },
+  { archivo: "verificar-fecha-de-la-fila.ts", alias: BASE },
   { archivo: "verificar-exportar.ts", alias: EXPO },
   { archivo: "verificar-panorama.ts", alias: BASE },
   { archivo: "verificar-fusion.ts", alias: BASE },

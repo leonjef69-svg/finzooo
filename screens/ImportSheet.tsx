@@ -70,6 +70,8 @@ export default function ImportSheet({
   const [bank, setBank] = useState<string | undefined>(undefined);
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [errorCount, setErrorCount] = useState(0);
+  /** De las descartadas, cuántas eran movimientos de verdad a los que solo les faltaba la fecha. */
+  const [sinFecha, setSinFecha] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadingPdf, setLoadingPdf] = useState(false);
   const [reviewing, setReviewing] = useState(false);
@@ -298,6 +300,7 @@ export default function ImportSheet({
       setBank(detectedBank);
       setCandidates(built);
       setErrorCount(parsed.errorCount);
+      setSinFecha(parsed.sinFecha);
     } catch {
       showToastAndClose(readAsPdf ? t("importSheet.pdfError") : isExcel ? t("importSheet.excelError") : t("importSheet.readError"));
     } finally {
@@ -354,6 +357,7 @@ export default function ImportSheet({
     setFileName(null);
     setCandidates([]);
     setErrorCount(0);
+    setSinFecha(0);
     setBank(undefined);
     setDone(false);
   }
@@ -481,6 +485,18 @@ export default function ImportSheet({
                   <AlertTriangle size={18} color="#e11d48" />
                   <Text className="text-sm font-bold text-rose-600 dark:text-slate-100 flex-1">
                     {t("importSheet.summaryErrors", { count: errorCount })}
+                  </Text>
+                </View>
+              )}
+              {/* LAS QUE SOLO LES FALTA LA FECHA, APARTE Y CON QUÉ HACER.
+                  "3 con errores" no deja actuar: no dice si son huecos de la hoja o
+                  movimientos de verdad que se están perdiendo. Estas son lo segundo, y
+                  se arreglan escribiendo la fecha en la hoja. */}
+              {sinFecha > 0 && (
+                <View className="flex-row items-center gap-3 bg-amber-50 dark:bg-slate-800 rounded-2xl p-3.5">
+                  <AlertTriangle size={18} color="#f59e0b" />
+                  <Text className="text-sm font-bold text-amber-700 dark:text-slate-100 flex-1">
+                    {t("importSheet.summaryNoDate", { count: sinFecha })}
                   </Text>
                 </View>
               )}
