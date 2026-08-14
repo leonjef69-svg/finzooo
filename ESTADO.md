@@ -1,6 +1,12 @@
 # Dónde nos quedamos
 
-Actualizado: **7 de agosto de 2026** · Código publicado: **7ago-16**
+Actualizado: **13 de agosto de 2026** · Código publicado: **13ago-08** ·
+APK que tiene él: **fino-13ago-09** (`com.finoapp.gastos`)
+
+> **LO QUE PASA AHORA MISMO: la app está en Google Play Console, a un botón de
+> entrar en revisión.** Todas las declaraciones están hechas, la ficha está
+> completa y el AAB subido. Falta juntar los testers. Ver **"Google Play — dónde
+> quedó todo"**, más abajo: ahí está el estado exacto, campo por campo.
 
 > **PENDIENTE: "Elegir categoría" sigue lenta.** Se arreglaron **seis** causas reales
 > (ver la sección) y el usuario dice *"mejoró un poco pero sigue lento"*. Lo dejó en
@@ -3018,6 +3024,93 @@ Lo vigila `pruebas/verificar-hoja-google.mjs`.
 > buscaba**. Ahora solo se quitan los bloques que empiezan una línea.
 
 **Sin probar con una hoja real todavía.**
+
+## Google Play — dónde quedó todo (13/08/2026)
+
+Este es el mapa para retomar sin volver a preguntarle nada a él.
+
+### El nombre del paquete tuvo que cambiar
+
+`com.finzo.app` **ya estaba tomado** en Google Play, y ese nombre no se libera
+nunca — ni borrando la app que lo usó. La consola lo rechazó al crear la ficha.
+
+Ahora es **`com.finoapp.gastos`**. Cambió el `applicationId` de
+`android/app/build.gradle` y el `package` de `app.json`; el *namespace* de Kotlin
+se quedó en `com.finzo.app` a propósito (solo nombra las clases de dentro).
+
+Para Android es **otra app distinta**: se instala al lado de la vieja y arranca
+vacía. Sus datos vuelven al iniciar sesión, que es lo que hay que decirle a
+cualquiera que lo pruebe.
+
+**Firebase tiene ahora DOS huellas** para ese paquete, y las dos hacen falta:
+
+| Huella | Para qué |
+|---|---|
+| `3D:F8:B6:...:8B:3D` | la llave de `android/app/finzo.jks` — el APK que se instala a mano |
+| `A7:26:B4:88:...:66:37` | la de Google Play, que **re-firma** la app al distribuirla |
+
+Sin la segunda, "Entrar con Google" fallaría **solo en la versión bajada de la
+tienda** y funcionaría en el APK de mano: media hora de buscar un fallo que no
+está en el código. La pareja paquete+huella vive en el servidor de Google, así
+que **añadirla no obliga a recompilar nada**.
+
+### Lo que ya está hecho en la consola
+
+- **Ficha:** nombre "Fino: Tus Gastos e Ingresos", descripciones, icono 512,
+  portada 1024×500 y 5 capturas. Marcado que el icono y la portada se hicieron
+  con IA, porque se hicieron con IA.
+- **Las diez declaraciones de "Contenido de la aplicación"**, todas enviadas.
+  Las que costaron pensar:
+  - **Anuncios: NO.** Hoy es verdad. **Al conectar AdMob hay que volver aquí y
+    cambiarlo, o es motivo de suspensión.**
+  - **Funciones financieras: ninguna.** Fino no presta, no mueve pagos y no se
+    conecta a bancos. No se marcó "asesoramiento financiero" por lo de Fino IA:
+    esa casilla es para asesores de inversión y mete la app en una revisión
+    regulatoria con papeles que él no tiene.
+  - **Seguridad de los datos:** se declara lo que de verdad sale del celular —
+    nombre, correo, ID de usuario, movimientos, fotos y el contenido que escribe
+    el usuario. Los **contactos de envío NO**, porque `sendContacts.ts` los
+    guarda solo en el aparato; los **archivos que se importan tampoco**, porque
+    se leen y se borran ahí mismo. El **audio** sí, pero marcado como *temporal*,
+    y por eso no aparece en la ficha: la voz se transcribe y se descarta.
+- **Canal de prueba cerrada "Alpha"** con los 177 países y el AAB `1 (1.0.0)`
+  subido. La descarga para el usuario queda en **41,8 MB** (Play parte el bundle
+  por tipo de procesador).
+
+### Lo que falta
+
+1. **Los testers.** Google exige **12 aceptados durante 14 días seguidos** antes
+   de dejar publicar. Si uno se sale a mitad, el contador vuelve a cero: por eso
+   se le dijo que junte 20. Hoy la lista tiene dos correos suyos.
+2. **Enviar a revisión**, desde "Resumen de publicación".
+3. **Comprobar que "Entrar con Google" funciona** con el paquete nuevo. Es lo
+   único que el cambio de nombre podía romper, y a él no le llegó a instalar el
+   APK grande —"no se instaló la app"—, así que se le hizo uno de 69 MB con un
+   solo procesador (`-PreactNativeArchitectures=arm64-v8a`).
+
+### La cuenta de prueba para los revisores
+
+Google no puede crear cuentas ni usar pruebas gratuitas, así que hay una cuenta
+de mentira dada de alta en la ficha: **`pina12355xc@gmail.com`** (la contraseña
+está en Play Console, no aquí: este repositorio es público).
+
+**Falta ponerle Premium a mano** en Firestore —`users/{uid}` → `isPremium:
+true`— porque la declaración de la consola promete que esa cuenta da acceso a
+todo, incluido el contenido de pago, y hoy el Premium ni siquiera se puede
+comprar.
+
+### Las páginas web que pide Google
+
+Se generan desde `constants/legal.ts` con `node herramientas/generar-legales.mjs`
+y se publican solas en GitHub Pages, en `docs/`:
+
+- <https://leonjef69-svg.github.io/finzooo/privacidad.html>
+- <https://leonjef69-svg.github.io/finzooo/borrar-cuenta.html> — sirve para las
+  DOS preguntas de la consola: borrar la cuenta entera y borrar solo una parte.
+
+Se generan en vez de escribirse a mano para que no existan dos textos legales
+distintos. Ya pasó una vez, el 08/08/2026: la política juraba que no se recogían
+fotos mientras la app llevaba semanas guardándolas.
 
 ## LO SIGUIENTE A HACER
 
