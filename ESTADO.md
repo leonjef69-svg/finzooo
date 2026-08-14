@@ -3025,6 +3025,51 @@ Lo vigila `pruebas/verificar-hoja-google.mjs`.
 
 **Sin probar con una hoja real todavía.**
 
+## Lo que cambió en la app el 13/08/2026
+
+Todo esto está publicado por internet (13ago-08) salvo lo que dice "necesita APK".
+
+**Importar una hoja llenada a mano.** Un extracto de banco siempre trae la fecha
+en cada línea, y el motor estaba escrito mirando solo eso. Su hoja de control no
+tenía ni una: no entraba nada. Ahora la fecha sale por tres caminos, en orden —
+la escrita, el número del día suelto con el mes que declara el archivo
+("MES: Enero"), y la heredada de la fila de arriba—. Y si aun así no hay ninguna,
+la pantalla **pregunta de qué mes son** en vez de cerrarse diciendo "el archivo
+está vacío", que además era mentira.
+
+Los límites importan más que los aciertos, porque una fecha adivinada de más no
+se ve: sin mes declarado un número suelto NO es una fecha, y solo hereda la celda
+**vacía** —una que diga "TOTAL" es el pie de la tabla, y colarlo metería la suma
+del mes como un gasto—. Está en `pruebas/verificar-fecha-de-la-fila.ts`.
+
+**Un ingreso del PDF entraba como gasto.** En un PDF no hay tabla: hay trozos de
+texto con una posición, y una casilla vacía no deja ningún rastro. Una fila con
+el Cargo vacío llegaba con tres campos en vez de cuatro y el monto del Abono
+caía en el sitio del Cargo. Le pasa a cualquier banco que separe Cargo y Abono,
+que son casi todos, y es de los peores fallos posibles: no se ve mirando la
+lista y aparece semanas después, cuando las cuentas no cuadran. Ahora la fila con
+más celdas hace de plantilla y cada celda cae en su columna por dónde empieza.
+
+**La foto temblaba al encuadrarla.** La posición vivía en `useState` y cambiaba
+en cada milímetro de dedo: cada cambio redibujaba la pantalla entera, sesenta
+veces por segundo. Ahora se mueve con valores compartidos, sin pasar por React.
+La fórmula que la coloca se copió letra por letra porque `cropRect` repite esa
+misma cuenta: si se separan, el recorte cae donde no se ve.
+
+**Cosas más pequeñas:** la prueba gratuita dice a qué hora termina en vez de
+"quedan 24 h"; los gráficos del PDF pasaron debajo de los movimientos; la lista
+de Premium se rehízo con lo que él pidió; y el registro automático solo se
+promete donde existe —Ajustes ya lo escondía fuera de Perú y Bolivia, pero la
+pantalla del precio se lo ofrecía a todo el mundo—.
+
+**Y una trampa del propio proyecto, que costó dos entregas:** dentro del APK
+viaja `app.manifest` con la fecha del código, y Gradle daba por hecha la tarea
+que lo escribe. Llevaba congelada desde el 4 de agosto, así que **cualquier
+actualización por internet le ganaba a un APK recién instalado**: la parte de
+Android era la nueva y la pantalla la vieja, con Información mostrando el código
+viejo — la única prueba disponible decía lo contrario de la verdad. Se borra a
+mano en `android/compilar.bat` y lo vigila `pruebas/verificar-fecha-del-apk.mjs`.
+
 ## Google Play — dónde quedó todo (13/08/2026)
 
 Este es el mapa para retomar sin volver a preguntarle nada a él.
@@ -3113,6 +3158,31 @@ distintos. Ya pasó una vez, el 08/08/2026: la política juraba que no se recog�
 fotos mientras la app llevaba semanas guardándolas.
 
 ## LO SIGUIENTE A HACER
+
+**Por orden, al 13/08/2026:**
+
+1. **Comprobar que "Entrar con Google" funciona** con `com.finoapp.gastos`. Es lo
+   único que el cambio de nombre podía romper. El APK está en sus Descargas
+   (`fino-13ago-09-ligero.apk`, 69 MB, solo arm64 — el de 166 MB no le llegó a
+   instalar y salía "no se instaló la app").
+2. **Ponerle Premium a la cuenta de prueba** en Firestore: `users/{uid}` →
+   `isPremium: true` para `pina12355xc@gmail.com`. La declaración de Play promete
+   que esa cuenta abre todo, incluido lo de pago.
+3. **Los testers** (él los está juntando; se le dijo 20, no 12) y **enviar a
+   revisión** desde Resumen de publicación.
+4. **Después de los 14 días:** conectar los pagos —los seis pasos están escritos
+   en `utils/compras.ts`, y el precio TIENE que venir de la tienda— y AdMob.
+   **Al poner AdMob hay que volver a la declaración de Anuncios y cambiarla a
+   Sí**, o es motivo de suspensión.
+
+**Sin probar nunca con algo real:** el escáner con una boleta (pausado desde el
+30/07) y una importación con un estado de cuenta de banco de verdad. Todo lo que
+se ha probado son archivos de imitación hechos aquí — el de ejemplo está en
+`pruebas/verificar-pdf-columnas.ts`, que arma un PDF a mano.
+
+---
+
+### Lo viejo que sigue pendiente
 
 **Propuesto y sin respuesta: aligerar la pantalla de registro automático.**
 Más de la mitad es texto que sirve una vez y estorba siempre. Se propuso el
