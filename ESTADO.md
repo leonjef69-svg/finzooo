@@ -1,7 +1,11 @@
 # Dónde nos quedamos
 
 Actualizado: **18 de agosto de 2026** · Código publicado: **13ago-08** ·
-APK que tiene él: **fino-13ago-09** (`com.finoapp.gastos`)
+APK que tiene él: **fino-13ago-09-ligero**, instalado y funcionando el
+18/08/2026 (`com.finoapp.gastos`). **Tiene las DOS apps a la vez**: esta y la
+vieja (`com.finzo.app`), que para Android son distintas y se ven las dos con el
+nombre Fino. Al pedirle que compruebe algo, decirle que abra **la que arranca
+vacía**, o mira la que no es.
 
 > **LO QUE PASA AHORA MISMO: la prueba cerrada está EN REVISIÓN** (enviada el
 > 14/08/2026; el panel dice "En revisión" y la app figura como Borrador). Todas
@@ -3144,10 +3148,36 @@ que **añadirla no obliga a recompilar nada**.
    > Y mientras el contador esté en 0, **los 14 días ni han empezado**. Publicar
    > está a 14 días *después* de juntar los 12, no a 14 días de hoy.
 2. ~~Enviar a revisión~~ **HECHO el 14/08/2026.** El panel dice "En revisión".
-3. **Comprobar que "Entrar con Google" funciona** con el paquete nuevo. Es lo
-   único que el cambio de nombre podía romper, y a él no le llegó a instalar el
-   APK grande —"no se instaló la app"—, así que se le hizo uno de 69 MB con un
-   solo procesador (`-PreactNativeArchitectures=arm64-v8a`).
+3. ~~Comprobar que "Entrar con Google" funciona~~ **HECHO Y CONFIRMADO POR ÉL EN
+   EL CELULAR el 18/08/2026.** Instaló `fino-13ago-09-ligero.apk`, abrió la app
+   nueva y entró con Google: *"si entra"*. Era lo único que el cambio de nombre
+   podía romper, así que el riesgo del cambio de paquete queda cerrado.
+
+### PLAY PROTECT BLOQUEA EL APK, y no es un fallo de la app (18/08/2026)
+
+**El síntoma:** al instalar `fino-13ago-09-ligero.apk` sale *"No se instaló la
+app"*. Le pasó con el de 174 MB y con el de 72 MB, así que **no era el tamaño ni
+el procesador** — esa pista se siguió el 13/08 y costó una compilación entera.
+Tampoco era el espacio: tenía 4 GB libres.
+
+**La causa:** `com.finoapp.gastos` **ya está registrado en Google Play**. Cuando
+un nombre de paquete existe en la tienda, Play Protect desconfía de un archivo
+suelto que dice llamarse igual y lo bloquea, porque va firmado con la llave de
+él (`3D:F8:…`) y no con la de Google (`A7:26:B4:…`). **Los APK anteriores
+instalaban bien porque usaban `com.finzo.app`, que nunca llegó a la tienda.**
+
+**La solución, y hay que decirla entera porque toca un ajuste de seguridad:**
+Play Store → su foto → Play Protect → engranaje → apagar *"Analizar apps con
+Play Protect"* → instalar → **volver a encenderlo**.
+
+> **Esto NO afecta a los testers ni a los revisores.** Ellos bajan la app desde
+> Play, firmada por Google, y ahí no hay nada que bloquear. Es un estorbo solo
+> para instalar a mano, que es como se prueba aquí.
+>
+> **Y de aquí en adelante va a pasar SIEMPRE**, con cada APK que se le entregue.
+> Conviene decírselo al dar el enlace, no cuando ya le salió el error: "no se
+> instaló la app" no dice nada y manda a buscar un fallo que no existe. Ya se
+> perdieron dos intentos y una compilación creyendo que era el tamaño.
 
 ### La cuenta de prueba para los revisores
 
@@ -3205,10 +3235,8 @@ fotos mientras la app llevaba semanas guardándolas.
    correr los 14 días. Hoy el panel dice **0 aceptados**. Invitar no basta —cada
    uno abre el enlace de la prueba con su cuenta de Google y acepta—. Se le dijo
    que junte 20, porque si uno se sale el contador vuelve a cero.
-2. **Comprobar que "Entrar con Google" funciona** con `com.finoapp.gastos`. Es lo
-   único que el cambio de nombre podía romper. El APK está en sus Descargas
-   (`fino-13ago-09-ligero.apk`, 69 MB, solo arm64 — el de 166 MB no le llegó a
-   instalar y salía "no se instaló la app").
+2. ~~Comprobar que "Entrar con Google" funciona~~ **HECHO el 18/08/2026.** Ver
+   "Play Protect bloquea el APK", más abajo: instalarlo costó más que probarlo.
 3. ~~Ponerle Premium a la cuenta de prueba~~ **HECHO Y COMPROBADO el
    18/08/2026** (`users/swo5Ufw1i7cOtUOzuYCSZjyLCub2` → `isPremium: true`). Lo
    que **sí falta de esa cuenta es llenarla**: está vacía, y el revisor vería una
