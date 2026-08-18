@@ -108,6 +108,9 @@ class FinzoNotificationListener : NotificationListenerService() {
   override fun onListenerConnected() {
     try {
       NotificationStore.setConnected(applicationContext, true)
+      // Ver `viva`: es lo que permite encender el motor al tocar el interruptor de la voz,
+      // sin esperar a que llegue un yapeo.
+      viva = this
 
       // EL MOTOR DE VOZ, LISTO DESDE YA.
       //
@@ -129,6 +132,10 @@ class FinzoNotificationListener : NotificationListenerService() {
   // Android tira el servicio: no dejar un motor de voz ni un hilo colgando.
   override fun onDestroy() {
     try {
+      // Antes que nada: una referencia a un servicio que Android ya esta tirando lo
+      // mantendria vivo entero. Se compara con `this` porque si Android ya creo el servicio
+      // siguiente, el que manda es ese y no hay que borrarlo.
+      if (viva === this) viva = null
       soltarVoz()
       hiloVoz.quitSafely()
     } catch (e: Throwable) {
@@ -636,6 +643,46 @@ class FinzoNotificationListener : NotificationListenerService() {
     MONEY_APP_HINTS.any { pkg.contains(it) }
 
   companion object {
+    /**
+     * EL SERVICIO VIVO, PARA PODER CALENTAR EL MOTOR DESDE FUERA (18/08/2026)
+     *
+     * EL FALLO: *"me llega la notificacion del yape pero luego de unos segundos habla en voz
+     * alta; antes si hablaba de inmediato"*.
+     *
+     * El motor se encendia en UN SOLO sitio, `onListenerConnected`, y solo **si la voz ya
+     * estaba encendida en ese instante**. En un celular donde la app lleva tiempo eso se
+     * cumple siempre y por eso funcionaba. En una instalacion nueva no: el interruptor de la
+     * voz nace apagado, el servicio se engancha con la voz apagada —motor sin encender— y
+     * cuando la persona la enciende despues **no habia nadie que encendiera el motor**. El
+     * primer yapeo se comia los 2 a 4 segundos que tarda el sistema de voz de Android en
+     * despertar. Le paso justo al instalar la app del paquete nuevo.
+     *
+     * No es un motor que se apague: `prepararVoz` no lo suelta nunca. Es que **nunca se
+     * habia encendido**.
+     *
+     * Se guarda la instancia viva para que el modulo pueda pedir el encendido al cambiar el
+     * interruptor. Es una referencia a un servicio del sistema, asi que **se limpia en
+     * onDestroy**: dejarla colgando mantendria vivo el objeto entero despues de que Android
+     * lo tire.
+     */
+    private var viva: FinzoNotificationListener? = null
+
+    /**
+     * Enciende el motor de voz ya, sin esperar al primer yapeo.
+     *
+     * Lo llama el modulo cuando se ENCIENDE el interruptor de la voz. Si el servicio no esta
+     * enganchado no hace nada, y da igual: cuando Android lo enganche, `onListenerConnected`
+     * lo encendera solo, porque para entonces el interruptor ya estara en si.
+     *
+     * Llamarlo con el motor ya encendido tampoco hace nada (`prepararVoz` se corta en seco
+     * si ya existe), asi que se puede llamar tranquilamente.
+     */
+    @JvmStatic
+    fun calentarMotor() {
+      val servicio = viva ?: return
+      servicio.mano.post { servicio.prepararVoz() }
+    }
+
     /**
      * Cuantas frases como mucho esperan a que arranque el motor.
      *

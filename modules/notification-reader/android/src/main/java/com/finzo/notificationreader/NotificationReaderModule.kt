@@ -67,6 +67,16 @@ class NotificationReaderModule : Module() {
 
     Function("setSpeakEnabled") { value: Boolean ->
       NotificationStore.setSpeakEnabled(context, value)
+      // AL ENCENDERLA, SE ENCIENDE TAMBIEN EL MOTOR (18/08/2026).
+      //
+      // El motor tarda 2 a 4 segundos en despertar y solo se encendia al enganchar el
+      // servicio, si para entonces la voz ya estaba en si. En una instalacion nueva el
+      // interruptor nace apagado, asi que nadie lo encendia nunca y el PRIMER yapeo pagaba
+      // esa espera: "me llega la notificacion y luego de unos segundos habla".
+      //
+      // Encendiendolo aqui, el motor esta caliente desde el momento en que se pide la voz.
+      // El porque entero esta en FinzoNotificationListener.viva.
+      if (value) FinzoNotificationListener.calentarMotor()
     }
 
     Function("isSpeakOutgoing") { NotificationStore.isSpeakOutgoing(context) }
