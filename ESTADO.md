@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **18 de agosto de 2026** · Código publicado: **18ago-02** ·
+Actualizado: **18 de agosto de 2026** · Código publicado: **18ago-03** ·
 APK que tiene él: **fino-13ago-09-ligero**, instalado y funcionando el
 18/08/2026 (`com.finoapp.gastos`). **Tiene las DOS apps a la vez**: esta y la
 vieja (`com.finzo.app`), que para Android son distintas y se ven las dos con el
@@ -3110,10 +3110,30 @@ cuenta, que puede ser otro correo suyo.
   la pantalla vacía **de verdad**: el arreglo habría causado el problema que describe.
   Hay una prueba que comprueba ese orden.
 
-> **Y una cosa que sí se pierde al cambiar de celular, y conviene saberla:** los
-> **contactos de envío** (`finzo:sendContacts`) se guardan solo en el aparato — no están
-> en `STORAGE_KEYS` ni en `cloudSync`. **`PLAYSTORE.md` dice lo contrario** y hay que
-> corregirlo: la declaración de Play afirma que se suben a la nube, y no es verdad.
+### Los contactos de envío se quedaban para la cuenta siguiente (18ago-03)
+
+**Salió de ir a corregir una frase, y era un fallo de privacidad de verdad.**
+`PLAYSTORE.md` decía que los contactos de envío —correos y teléfonos **de otras
+personas**— se suben a la copia de la nube, y mandaba declararlos en el formulario de
+datos de Play. Es falso: se guardan solo en el aparato. La frase venía de un comentario
+del propio `sendContacts.ts` que nunca fue verdad y que se copió sin comprobarla.
+**La consola está bien** — ahí ya se declararon como NO recogidos; el corregido es el
+archivo.
+
+Comprobándolo apareció lo otro: **su clave estaba escrita dentro de `sendContacts.ts`**
+en vez de en `STORAGE_KEYS`, así que **no entraba en el borrado al cerrar sesión**.
+Alguien cerraba sesión, entraba otra cuenta en ese celular, y **heredaba los nombres,
+correos y teléfonos de las personas a las que la anterior le mandaba sus reportes**.
+
+> **Es el mismo agujero que las categorías propias, la personalización y los favoritos
+> el 07/08, y por el mismo motivo exacto: una clave declarada en su propio archivo es una
+> clave que la lista del borrado no conoce. Van cuatro.** La prueba que recorre
+> `STORAGE_KEYS` no podía verla porque la clave no estaba declarada ahí. Ahora sí, y de
+> paso se amplió el bucle que exige que cada archivo lea su clave de la lista común — que
+> es lo único que impide una quinta vez.
+
+**Y lo que hay que decirle a quien cambie de celular:** estos contactos **no vuelven** al
+iniciar sesión. Hay que volver a escribirlos. Es lo único de la app que no viaja.
 
 Lo vigila `pruebas/verificar-copia-vacia.ts`.
 
