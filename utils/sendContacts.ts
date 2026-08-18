@@ -1,4 +1,4 @@
-import { loadJSON, saveJSON } from "@/utils/storage";
+import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 
 /**
  * A quién sueles mandarle tus reportes.
@@ -18,10 +18,18 @@ import { loadJSON, saveJSON } from "@/utils/storage";
  * del correo. Android no permite que una app mande mensajes en nombre de
  * nadie sin que la persona lo confirme, y con esto es mejor que sea así.
  *
- * OJO CON LOS DATOS: aquí se guardan correos y números de teléfono, que son
- * datos personales. Van por el mismo camino cifrado que los movimientos (ver
- * utils/storage) y viajan en la copia de la nube. Si esto llega a Play Store,
- * la política de privacidad tiene que decirlo.
+ * OJO CON LOS DATOS: aquí se guardan correos y números de teléfono **de otras
+ * personas**, que es lo más delicado que guarda la app. Van por el mismo camino
+ * cifrado que los movimientos (ver utils/storage).
+ *
+ * **NO VIAJAN A LA NUBE, Y ESTA LÍNEA DECÍA LO CONTRARIO HASTA EL 18/08/2026.**
+ * Se quedan en el aparato: esta clave no está en `cloudSync`. La frase antigua
+ * —"viajan en la copia de la nube"— se copió tal cual a PLAYSTORE.md, y de ahí
+ * casi acaba en la declaración de datos de Play Console, que es un formulario
+ * donde decir de más también es equivocarse. Se corrigieron los dos.
+ *
+ * Consecuencia práctica, y hay que decírsela a quien cambie de celular: estos
+ * contactos **no vuelven** al iniciar sesión. Hay que volver a escribirlos.
  */
 
 export type SendContactKind = "email" | "whatsapp";
@@ -34,7 +42,14 @@ export type SendContact = {
   value: string;
 };
 
-const STORAGE_KEY = "finzo:sendContacts";
+/**
+ * La clave sale de STORAGE_KEYS y **no se escribe aquí**, aunque el texto sea el mismo.
+ *
+ * Escrita aquí es invisible para el borrado al cerrar sesión, y eso dejó a la cuenta
+ * siguiente heredando los correos y teléfonos de la anterior hasta el 18/08/2026. El
+ * porqué entero está en la nota de `STORAGE_KEYS.sendContacts`.
+ */
+const STORAGE_KEY = STORAGE_KEYS.sendContacts;
 
 export async function loadContacts(): Promise<SendContact[]> {
   const saved = await loadJSON<SendContact[]>(STORAGE_KEY, []);

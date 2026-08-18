@@ -150,9 +150,22 @@ pero es diseño y se puede dejar para después: primero publicar.
 
 **Para las cinco que sí:** marcar **cifrado en tránsito** y **se puede solicitar el borrado**.
 
-> **Los contactos de envío (correos y teléfonos ajenos) van dentro de "Correo electrónico" y
-> "Números de teléfono"**, y hay que declararlos: los escribe la persona, pero se guardan y se
-> suben a su copia en la nube. Que no vengan de la agenda del celular no los vuelve invisibles.
+> **LOS CONTACTOS DE ENVÍO NO SE DECLARAN, Y AQUÍ DECÍA LO CONTRARIO (corregido el
+> 18/08/2026).** Este archivo afirmaba que "se guardan y se suben a su copia en la nube" y
+> mandaba declararlos bajo "Correo electrónico" y "Números de teléfono". **Es falso:**
+> `utils/sendContacts.ts` los guarda solo en el aparato y esa clave no está en `cloudSync`,
+> así que **no salen del celular** y por definición no se "recogen".
+>
+> La frase venía de un comentario del propio `sendContacts.ts` que decía eso mismo y que
+> nunca fue verdad; se copió aquí sin comprobarla contra el código. Los dos están corregidos.
+>
+> **La consola está bien: ahí ya se declararon como NO recogidos.** Si alguien "arregla" este
+> archivo al revés y los declara, estaría prometiéndole a Google que la app sube datos de
+> terceros que en realidad nunca envía — y la declaración tiene que describir la app, no al
+> revés.
+>
+> **Comprobarlo antes de tocar esta línea:** que `sendContacts` no aparezca en
+> `utils/cloudSync.ts` ni en `datosParaLaNube`.
 
 ---
 

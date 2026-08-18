@@ -56,6 +56,24 @@ export const STORAGE_KEYS = {
   categoryCustom: "finzo:categoryCustom",
   iconosFavoritos: "finzo:iconosFavoritos",
   /**
+   * A QUIÉN LE MANDAS LOS REPORTES. **Y ESTA ES LA CUARTA QUE FALTABA** (18/08/2026).
+   *
+   * Vivía como una constante privada dentro de `utils/sendContacts.ts`, así que no estaba
+   * aquí y por eso **no entraba en el borrado al cerrar sesión** — exactamente el mismo
+   * agujero que tuvieron las tres de arriba el 07/08, y por el mismo motivo: una clave
+   * declarada en su propio archivo es una clave que esta lista no conoce.
+   *
+   * Lo que dejaba: alguien cierra sesión, entra otra cuenta en ese celular, y **hereda los
+   * nombres, correos y teléfonos de las personas a las que la anterior le mandaba sus
+   * reportes**. Son datos de terceros, no suyos, y es lo más delicado que guarda la app.
+   *
+   * Se descubrió el 18/08/2026 comprobando otra cosa: si estos contactos viajaban a la nube
+   * (no viajan — se quedan en el aparato, y por eso NO se declaran como recogidos en Play).
+   *
+   * Declarada aquí, la prueba que recorre STORAGE_KEYS obliga sola a que esté en el borrado.
+   */
+  sendContacts: "finzo:sendContacts",
+  /**
    * Cuándo se activó la prueba gratuita de Premium. Solo de este celular: no viaja
    * a la nube. Ver utils/pruebaPremium.
    */
@@ -113,6 +131,9 @@ export async function clearAccountData(): Promise<void> {
         STORAGE_KEYS.categoriasPropias,
         STORAGE_KEYS.categoryCustom,
         STORAGE_KEYS.iconosFavoritos,
+        // Y la cuarta, encontrada el 18/08/2026: son correos y teléfonos de OTRAS
+        // personas. Ver la nota en STORAGE_KEYS.
+        STORAGE_KEYS.sendContacts,
         // La prueba gratuita también: es de la cuenta que se va, no del aparato.
         // Dejándola, la cuenta siguiente entraría con la prueba ya gastada.
         STORAGE_KEYS.pruebaPremium,

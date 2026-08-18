@@ -1097,7 +1097,10 @@ console.log("\n--- AL CERRAR SESION NO SE QUEDA NADA DE LA CUENTA ANTERIOR ---")
 
   // Y las tres claves viven en la lista comun, no cada una en su archivo: es lo que
   // hace que la prueba de arriba pueda verlas.
-  for (const archivo of ["categoriasPropias", "categoryCustom", "iconosFavoritos"]) {
+  // sendContacts entra aquí el 18/08/2026: era la CUARTA con el mismo agujero —su clave
+  // escrita dentro de su propio archivo, invisible para el borrado— y son correos y
+  // teléfonos de otras personas, lo más delicado que guarda la app.
+  for (const archivo of ["categoriasPropias", "categoryCustom", "iconosFavoritos", "sendContacts"]) {
     const suyo = fs.readFileSync(path.join(RAIZ, `utils/${archivo}.ts`), "utf8");
     ok(
       new RegExp(`STORAGE_KEY = STORAGE_KEYS\\.${archivo}`).test(suyo),
