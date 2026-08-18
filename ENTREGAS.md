@@ -59,9 +59,21 @@ para cada celular. No se puede instalar a mano.
 
 Se compila igual que el APK pero con `bundleRelease` en vez de `assembleRelease`.
 
-| Fecha | Version | Codigo | Archivo |
-|---|---|---|---|
-| 12/08/2026 | 1.0.0 (versionCode 1) | `11ago-11` | `finzo-1.0.0.aab` |
+| Fecha | Version | Codigo | Paquete | Archivo |
+|---|---|---|---|---|
+| 13/08/2026 18:28 | 1.0.0 (versionCode 1) | `13ago-09` | **`com.finoapp.gastos`** | `android/app/build/outputs/bundle/release/app-release.aab` (104 MB) — **ES EL QUE ESTA EN PLAY CONSOLE** |
+| 12/08/2026 | 1.0.0 (versionCode 1) | `11ago-11` | `com.finzo.app` | `finzo-1.0.0.aab` — **NUNCA SE SUBIO**: la consola rechazo ese paquete por estar tomado |
+
+> **El AAB del 13/08 se compilo a las 18:28, siete minutos despues del commit que cambia
+> el paquete a `com.finoapp.gastos` (86c8db8, 18:21), asi que lleva el nombre nuevo y el
+> cliente de OAuth nuevo. El APK ligero que tiene el en Descargas se compilo a las 19:45
+> del mismo dia, del mismo codigo.** Esta fila faltaba y la tabla decia que lo subido era
+> el AAB del 12/08, que es de antes del cambio de nombre: quien lo leyera creeria que en
+> la tienda hay un codigo que no esta.
+>
+> **Los dos llevan versionCode 1**, y eso importa: Play no acepta dos subidas con el mismo
+> versionCode. El siguiente AAB que se compile tiene que subirlo a 2 en
+> `android/app/build.gradle` o la consola lo rechaza sin explicar gran cosa.
 
 **LA LLAVE DE FIRMA ES IRREEMPLAZABLE.** Vive en `android/app/finzo.jks` y NO esta en el
 repositorio (esta en .gitignore, y hace bien: el repositorio es publico). Sus contraseñas
