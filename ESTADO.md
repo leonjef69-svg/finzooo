@@ -1,12 +1,18 @@
 # Dónde nos quedamos
 
-Actualizado: **13 de agosto de 2026** · Código publicado: **13ago-08** ·
+Actualizado: **18 de agosto de 2026** · Código publicado: **13ago-08** ·
 APK que tiene él: **fino-13ago-09** (`com.finoapp.gastos`)
 
-> **LO QUE PASA AHORA MISMO: la app está en Google Play Console, a un botón de
-> entrar en revisión.** Todas las declaraciones están hechas, la ficha está
-> completa y el AAB subido. Falta juntar los testers. Ver **"Google Play — dónde
-> quedó todo"**, más abajo: ahí está el estado exacto, campo por campo.
+> **LO QUE PASA AHORA MISMO: la prueba cerrada está EN REVISIÓN** (enviada el
+> 14/08/2026; el panel dice "En revisión" y la app figura como Borrador). Todas
+> las declaraciones están hechas, la ficha está completa y el AAB subido.
+>
+> **Lo que bloquea todo son los testers, y el contador está en CERO:** el panel
+> dice *"0 testers han aceptado participar"*. Sus dos correos están **invitados**,
+> que no es lo mismo que aceptados — cada persona tiene que abrir el enlace de
+> la prueba y darle aceptar. **Los 14 días no han empezado a correr**: el reloj
+> arranca cuando haya 12 aceptados. Ver **"Google Play — dónde quedó todo"**,
+> más abajo.
 
 > **PENDIENTE: "Elegir categoría" sigue lenta.** Se arreglaron **seis** causas reales
 > (ver la sección) y el usuario dice *"mejoró un poco pero sigue lento"*. Lo dejó en
@@ -3124,10 +3130,20 @@ que **añadirla no obliga a recompilar nada**.
 
 ### Lo que falta
 
-1. **Los testers.** Google exige **12 aceptados durante 14 días seguidos** antes
-   de dejar publicar. Si uno se sale a mitad, el contador vuelve a cero: por eso
-   se le dijo que junte 20. Hoy la lista tiene dos correos suyos.
-2. **Enviar a revisión**, desde "Resumen de publicación".
+1. **Los testers, y es LO ÚNICO que bloquea.** Google exige **12 aceptados
+   durante 14 días seguidos** antes de dejar publicar. Si uno se sale a mitad, el
+   contador vuelve a cero: por eso se le dijo que junte 20.
+
+   > **INVITADO NO ES ACEPTADO, y esa confusión ya costó una semana.** Aquí decía
+   > "la lista tiene dos correos suyos" como si fuera avance. El panel del
+   > 18/08/2026 dice **"0 testers han aceptado participar"**: poner un correo en
+   > la lista no cuenta para nada. Cada persona tiene que **abrir el enlace de la
+   > prueba con esa misma cuenta de Google y darle aceptar**. El enlace se copia
+   > en Prueba cerrada → Testers.
+   >
+   > Y mientras el contador esté en 0, **los 14 días ni han empezado**. Publicar
+   > está a 14 días *después* de juntar los 12, no a 14 días de hoy.
+2. ~~Enviar a revisión~~ **HECHO el 14/08/2026.** El panel dice "En revisión".
 3. **Comprobar que "Entrar con Google" funciona** con el paquete nuevo. Es lo
    único que el cambio de nombre podía romper, y a él no le llegó a instalar el
    APK grande —"no se instaló la app"—, así que se le hizo uno de 69 MB con un
@@ -3159,17 +3175,20 @@ fotos mientras la app llevaba semanas guardándolas.
 
 ## LO SIGUIENTE A HACER
 
-**Por orden, al 13/08/2026:**
+**Por orden, al 18/08/2026:**
 
-1. **Comprobar que "Entrar con Google" funciona** con `com.finoapp.gastos`. Es lo
+1. **JUNTAR LOS TESTERS. Es lo único que bloquea la publicación**, y va primero
+   porque es lo que tarda: hasta que no haya **12 aceptados** no empiezan a
+   correr los 14 días. Hoy el panel dice **0 aceptados**. Invitar no basta —cada
+   uno abre el enlace de la prueba con su cuenta de Google y acepta—. Se le dijo
+   que junte 20, porque si uno se sale el contador vuelve a cero.
+2. **Comprobar que "Entrar con Google" funciona** con `com.finoapp.gastos`. Es lo
    único que el cambio de nombre podía romper. El APK está en sus Descargas
    (`fino-13ago-09-ligero.apk`, 69 MB, solo arm64 — el de 166 MB no le llegó a
    instalar y salía "no se instaló la app").
-2. **Ponerle Premium a la cuenta de prueba** en Firestore: `users/{uid}` →
+3. **Ponerle Premium a la cuenta de prueba** en Firestore: `users/{uid}` →
    `isPremium: true` para `pina12355xc@gmail.com`. La declaración de Play promete
    que esa cuenta abre todo, incluido lo de pago.
-3. **Los testers** (él los está juntando; se le dijo 20, no 12) y **enviar a
-   revisión** desde Resumen de publicación.
 4. **Después de los 14 días:** conectar los pagos —los seis pasos están escritos
    en `utils/compras.ts`, y el precio TIENE que venir de la tienda— y AdMob.
    **Al poner AdMob hay que volver a la declaración de Anuncios y cambiarla a

@@ -17,7 +17,7 @@ y Google lo revisa de verdad.
 |---|---|
 | Nombre en la tienda | **Fino: Tus Gastos e Ingresos** (27 de 30) |
 | Nombre bajo el icono | **Fino** |
-| Identificador | `com.finzo.app` |
+| Identificador | **`com.finoapp.gastos`** — `com.finzo.app` ya estaba tomado en Play y ese nombre no se libera nunca. Se cambió el 13/08/2026; el porqué entero está en ESTADO.md |
 | Versión | 1.0.0 |
 | Categoría | **Finanzas** |
 | Público | Mayores de 18 (no dirigida a niños) |
@@ -89,7 +89,7 @@ Fino no es un banco, no mueve dinero y no se conecta a tus cuentas bancarias. Es
 
 ---
 
-## Las imágenes de la ficha — FALTAN, y son obligatorias
+## Las imágenes de la ficha — ✅ TODAS SUBIDAS (13/08/2026)
 
 **Se descubrieron el 09/08/2026, mirando la ficha de Netflix**: *"¿eso ya está listo? ¿está
 dentro de mi plan de fases?"*. No estaba. Es un hueco de esta lista, no suyo.
@@ -101,7 +101,11 @@ decidir si instala.
 |---|---|---|
 | **Icono** | 512 × 512 px, PNG | ✅ **HECHO: `tienda/icono-512.png`** |
 | **Gráfico destacado** | 1024 × 500 px | ✅ **HECHO: `tienda/destacado-1024x500.png`** (10/08/2026) |
-| **Capturas de teléfono** | mínimo **2**, hasta 8 | **Suyas**, del celular |
+| **Capturas de teléfono** | mínimo **2**, hasta 8 | ✅ **HECHO: 5 capturas suyas** (13/08/2026) |
+
+**Y en la consola está marcado que el icono y el gráfico destacado se hicieron con IA**,
+porque se hicieron con IA. Lo que sigue de esta sección se conserva como referencia por si
+hay que rehacer alguna imagen.
 
 ### Qué capturas, y en qué orden
 
