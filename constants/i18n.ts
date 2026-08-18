@@ -988,6 +988,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "auth.passwordLabel": "Contraseña",
 
     "login.welcomeBack": "Bienvenido de nuevo",
+    "login.sinCopiaTitulo": "Esta cuenta no tiene copia guardada",
+    "login.sinCopiaTexto":
+      "No se borró nada: lo que tengas en este celular sigue aquí. Si tus movimientos estaban en otra cuenta, cierra sesión y entra con esa — puede ser otro correo del que usas.",
     "login.subtitle": "Inicia sesión para continuar",
     "login.invalidCredentials": "Verifica tu correo y contraseña",
     "login.forgotPassword": "¿Olvidaste tu contraseña?",
@@ -2113,6 +2116,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "auth.passwordLabel": "Password",
 
     "login.welcomeBack": "Welcome back",
+    "login.sinCopiaTitulo": "This account has no saved backup",
+    "login.sinCopiaTexto":
+      "Nothing was deleted: whatever is on this phone is still here. If your movements were under another account, sign out and use that one — it may be a different email of yours.",
     "login.subtitle": "Sign in to continue",
     "login.invalidCredentials": "Check your email and password",
     "login.forgotPassword": "Forgot your password?",
@@ -3236,6 +3242,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "auth.passwordLabel": "Senha",
 
     "login.welcomeBack": "Bem-vindo de volta",
+    "login.sinCopiaTitulo": "Esta conta não tem cópia salva",
+    "login.sinCopiaTexto":
+      "Nada foi apagado: o que estiver neste celular continua aqui. Se seus movimentos estavam em outra conta, saia e entre com essa — pode ser outro e-mail seu.",
     "login.subtitle": "Entre para continuar",
     "login.invalidCredentials": "Verifique seu e-mail e senha",
     "login.forgotPassword": "Esqueceu sua senha?",
