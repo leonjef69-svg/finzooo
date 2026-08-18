@@ -30,6 +30,23 @@ export type CaptureLogEntry = {
   text: string; // el aviso tal como llegó (recortado)
   result: "added" | "duplicate" | ParseFailure;
   amount?: number;
+  /**
+   * QUIÉN Y EN QUÉ DIRECCIÓN. Los dos existen solo cuando el aviso se entendió.
+   *
+   * Se añadieron el 18/08/2026 para que la pantalla pueda enseñar *"María Quispe · +S/ 50"*
+   * en vez del texto crudo del aviso. Antes solo se guardaba `text`, así que la lista no
+   * tenía más remedio que enseñar la frase entera de Yape —tres renglones por yapeo— y eso
+   * era la mitad de lo que hacía la pantalla ilegible.
+   *
+   * **Se sacan del mismo `raw` que arma el movimiento**, en el mismo instante, y no se
+   * vuelven a calcular: si se dedujeran después leyendo `text`, la lista podría decir un
+   * nombre y el movimiento otro, y no habría forma de saber cuál es el bueno.
+   *
+   * Van opcionales porque un aviso que no se entendió no tiene ninguno de los dos, y ahí
+   * el único dato es su texto. Quien los pinte tiene que aguantar que falten.
+   */
+  name?: string;
+  type?: Transaction["type"];
 };
 
 export type CaptureResult = {
@@ -132,7 +149,14 @@ export function processCaptured(
     const match = findBestMatch(escritosPorMano, raw, matchedIds);
     if (match && match.level === "high") {
       matchedIds.add(match.existing.id);
-      log.push({ at: n.postedAt, text: preview, result: "duplicate", amount: raw.amount });
+      log.push({
+        at: n.postedAt,
+        text: preview,
+        result: "duplicate",
+        amount: raw.amount,
+        name: raw.merchant || raw.description,
+        type: raw.type,
+      });
       continue;
     }
 
@@ -155,7 +179,14 @@ export function processCaptured(
       account: raw.account,
       origin: "auto",
     });
-    log.push({ at: n.postedAt, text: preview, result: "added", amount: raw.amount });
+    log.push({
+      at: n.postedAt,
+      text: preview,
+      result: "added",
+      amount: raw.amount,
+      name: raw.merchant || raw.description,
+      type: raw.type,
+    });
   }
 
   return { toAdd, log: log.slice(-MAX_LOG), avisoDe };
