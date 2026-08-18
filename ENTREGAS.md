@@ -92,6 +92,8 @@ qué está corriendo el celular.
 
 | Código | Qué se arregló |
 |---|---|
+| `18ago-02` | Entrar con una cuenta que no tiene copia en la nube ya lo dice, en vez de enseñar una pantalla vacía que parece "se borró todo" |
+| `18ago-01` | La pantalla de registro automático, sin el muro de texto: un solo bloque de estado, y la lista solo con los yapes |
 | `8ago-13` | Preparado el sitio de los anuncios (gratis con, Premium sin). Apagado hasta tener los identificadores de AdMob y un APK nuevo |
 | `8ago-12` | Fuera "Sin publicidad" (no hay anuncios) y política de privacidad al día: dice lo de la lectura de notificaciones, las fotos y el Modo Negocio |
 | `8ago-11` | Sin ventas registradas, el panel tampoco enseña Productos ni Registrar venta (queda un enlace gris para volver) |

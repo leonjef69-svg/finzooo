@@ -1,6 +1,6 @@
 # Dónde nos quedamos
 
-Actualizado: **18 de agosto de 2026** · Código publicado: **13ago-08** ·
+Actualizado: **18 de agosto de 2026** · Código publicado: **18ago-02** ·
 APK que tiene él: **fino-13ago-09-ligero**, instalado y funcionando el
 18/08/2026 (`com.finoapp.gastos`). **Tiene las DOS apps a la vez**: esta y la
 vieja (`com.finzo.app`), que para Android son distintas y se ven las dos con el
@@ -3034,6 +3034,88 @@ Lo vigila `pruebas/verificar-hoja-google.mjs`.
 > buscaba**. Ahora solo se quitan los bloques que empiezan una línea.
 
 **Sin probar con una hoja real todavía.**
+
+## Lo que cambió en la app el 18/08/2026
+
+Las dos cosas están publicadas por internet (`18ago-02`). Ninguna necesita APK.
+
+### La pantalla de registro automático, sin el muro de texto (18ago-01)
+
+Lo pidió con las capturas delante: *"siento que tiene mucho texto y muchas cosas de
+más; el usuario normal solo quiere usarlo y no leer todo o complicarse por averiguar
+cada botón"*. **Estaba apuntado como pendiente desde el 02/08 y se dejó esperando a
+que volviera a molestar** — ver "Lo viejo que sigue pendiente". Volvió.
+
+El diagnóstico, que es lo que sirve para la próxima pantalla: **mezclaba dos cosas
+distintas.** Configurar se hace una vez; arreglar solo importa cuando algo falla. Las
+dos se veían siempre, también cuando todo funcionaba —que es el 99% de los días—.
+
+- **Arriba, UN bloque que dice el estado en una palabra.** Verde "Todo listo" cuando
+  la cadena entera está bien; ámbar con lo que falta y **el botón que lo arregla
+  dentro del mismo aviso** cuando no. Reemplaza a cinco cosas: el párrafo de arriba,
+  el recuadro de privacidad, los dos pasos numerados y la tarjeta del servicio.
+- **El orden de las causas es el de la cadena real** (sin permiso → apagado →
+  desconectado). Sin permiso el interruptor no hace nada, y apagado da igual que el
+  servicio esté enganchado: enseñar el problema de abajo con el de arriba sin resolver
+  manda a arreglar lo que no toca.
+- **La lista pasa a ser "Últimos yapes" y solo enseña los que movieron plata.**
+  También suyo: *"solo debería salir los yapes, no otras notificaciones"*. La
+  publicidad de Yape ocupaba tres renglones por aviso.
+- **Un "ya lo tenías" CUENTA como yape.** Es un yapeo real, solo que ya anotado a
+  mano; mandarlo abajo lo haría desaparecer de la lista y parecería que no llegó.
+- **Nada se borró.** La publicidad baja a "Avisos que no eran pagos", la privacidad y
+  el diagnóstico quedan detrás de dos enlaces, y los pasos de la voz dentro de "¿Algo
+  no funciona?" en vez de salir solos por tener la voz encendida. Es la regla de
+  siempre —esconder no es borrar— y aquí hacía falta de verdad: si un yapeo dejara de
+  registrarse por confundirse con publicidad, ese es el único sitio donde se ve.
+
+> **EL NOMBRE DEL ENLACE LO CORRIGIÓ ÉL, ANTES DE ENTREGARSE.** La maqueta decía
+> "Descartados · 2" y dijo: *"eso puede confundir al usuario pensando que son los yapes
+> que hicieron"*. Tenía razón — en una app de dinero "descartado" se lee como un pago
+> que no entró. Dice **"Avisos que no eran pagos"**, y hay una prueba que rechaza que
+> vuelva a llamarse solo "Descartados".
+
+**Hizo falta guardar dos datos que no existían:** `name` y `type` en cada entrada del
+registro. Sin ellos la lista no puede decir *"María Quispe · +S/ 50"* y no le queda más
+remedio que enseñar la frase entera de Yape, que era la mitad del problema. **Salen del
+mismo `raw` que arma el movimiento y en el mismo instante:** deducirlos después leyendo
+el texto podría dar un nombre en la lista y otro en el movimiento, sin forma de saber
+cuál vale.
+
+Lo vigila `pruebas/verificar-lista-yapes.ts`.
+
+### "Se borraron mis movimientos" — y no se había borrado nada (18ago-02)
+
+**Media tarde en esto, y el fallo no era el que parecía.** Entró con su cuenta, vio la
+app vacía y dio por hecho que la copia de seguridad había fallado.
+
+**Lo que pasaba de verdad: tiene TRES cuentas** —`leonjef69@gmail.com`,
+`dinero123xc@gmail.com` y `leon_123xc@hotmail.com`— y sus datos estaban a salvo en la
+nube de la tercera. Entraba con la primera. Se encontró mirando Firestore: en `users`
+solo hay dos documentos, y el UID de la cuenta de Google no era ninguno.
+
+**La app no tenía ningún fallo de datos.** Cuando `hydrateFromCloud` no encuentra nada,
+`app/login.tsx` cae en `reloadPersistedData()`: se queda con lo del celular y **no borra
+ni sobrescribe la nube**. Eso se comprobó leyendo el camino entero antes de tocar nada.
+
+**El fallo real era el silencio.** "Esta cuenta no tiene copia" y "la app perdió tus
+datos" se ven idénticos desde fuera: una pantalla vacía. Ahora sale un aviso que empieza
+por lo que de verdad se teme —*no se borró nada*— y sigue con la salida: probar con otra
+cuenta, que puede ser otro correo suyo.
+
+- **Solo se avisa a quien YA usaba la app** (`hasOnboarded`). Al recién llegado, no
+  tener copia es lo normal y el aviso solo asustaría.
+- **El aviso va después de intentar la nube y ANTES de leer el celular**, y esa lectura
+  se sigue haciendo. Si el aviso la reemplazara, entrar con la cuenta equivocada dejaría
+  la pantalla vacía **de verdad**: el arreglo habría causado el problema que describe.
+  Hay una prueba que comprueba ese orden.
+
+> **Y una cosa que sí se pierde al cambiar de celular, y conviene saberla:** los
+> **contactos de envío** (`finzo:sendContacts`) se guardan solo en el aparato — no están
+> en `STORAGE_KEYS` ni en `cloudSync`. **`PLAYSTORE.md` dice lo contrario** y hay que
+> corregirlo: la declaración de Play afirma que se suben a la nube, y no es verdad.
+
+Lo vigila `pruebas/verificar-copia-vacia.ts`.
 
 ## Lo que cambió en la app el 13/08/2026
 
