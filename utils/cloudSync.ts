@@ -3,6 +3,7 @@ import { db } from "@/utils/firebase";
 import { isDecoyActive } from "@/utils/decoyMode";
 import { borrarNegocioDeLaNube } from "@/utils/cloudNegocio";
 import type { Goal, Transaction } from "@/types";
+import type { PagoProgramado } from "@/utils/calendarioPagos";
 
 // EL CANDADO DE LA NUBE EN MODO SEÑUELO
 //
@@ -33,6 +34,11 @@ export type CloudData = {
   categoryBudgets: Record<string, number>;
   transactions: Transaction[];
   goals: Goal[];
+  /**
+   * El calendario de pagos. Opcional: las cuentas de antes del 18/08/2026 no lo tienen, y
+   * sin el "?" leerlas fallaría.
+   */
+  pagosProgramados?: PagoProgramado[];
   isPremium: boolean;
   // Lo que la persona le enseñó al clasificador: "este comercio va en
   // esta categoría". Opcional para no romper cuentas viejas que no lo
@@ -91,6 +97,10 @@ export async function loadCloudData(uid: string): Promise<CloudData | null> {
       categoryBudgets: data.categoryBudgets || {},
       transactions: data.transactions || [],
       goals: data.goals || [],
+      // SE LEE, y no solo se escribe. Ya pasó el 07/08 con las categorías propias: estaban
+      // en el tipo, se subían bien, y aquí no se leían — así que al entrar desde otro
+      // celular volvían vacías, sin dar ningún error.
+      pagosProgramados: data.pagosProgramados || [],
       isPremium: !!data.isPremium,
       merchantLearned: data.merchantLearned || {},
       carryoverCleared: data.carryoverCleared || [],

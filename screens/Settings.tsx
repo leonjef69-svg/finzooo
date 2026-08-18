@@ -376,6 +376,17 @@ export default function Settings({
             </View>
           }
         />
+        {/* CALENDARIO DE PAGOS. Va antes del Modo Negocio y de la captura porque es de la
+            misma familia —cosas que cambian CÓMO entra y sale el dinero— y porque es la
+            única de las tres que sirve a cualquiera, tenga negocio o no.
+            Sin candado PRO: decisión del 18/08/2026. Es la clase de función que hace volver
+            a abrir la app cada semana, y eso es justo lo que hace falta con la app recién
+            publicada y sin usuarios. */}
+        <Row
+          Icon={CalendarClock}
+          label={t("calendario.titulo")}
+          onPress={() => router.push("/calendario")}
+        />
         {/* MODO NEGOCIO. Va aquí, entre importar y la captura automática, porque es de la
             misma familia: cosas que cambian CÓMO entra el dinero, no ajustes de la cuenta.
             Con la etiqueta PRO igual que las otras Premium: quien la ve sabe antes de tocar

@@ -535,6 +535,20 @@ export default function RootLayout() {
                 nativo ya es del color correcto en vez del blanco por defecto,
                 que es la otra mitad de lo que se veía brusco. */}
             <Stack.Screen
+              name="calendario"
+              options={{
+                animation: "slide_from_right",
+                contentStyle: { backgroundColor: screenBg },
+              }}
+            />
+            <Stack.Screen
+              name="calendario/nuevo"
+              options={{
+                animation: "slide_from_right",
+                contentStyle: { backgroundColor: screenBg },
+              }}
+            />
+            <Stack.Screen
               name="nueva-categoria"
               options={{
                 animation: "slide_from_right",

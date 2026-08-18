@@ -42,6 +42,13 @@ import {
   type Producto,
   type Venta,
 } from "@/utils/negocio";
+import {
+  marcarPagado,
+  movimientoDelPago,
+  type PagoProgramado,
+} from "@/utils/calendarioPagos";
+import { reprogramarAvisosDePagos } from "@/utils/avisosDePagos";
+import { nextId } from "@/utils/id";
 import { bajarNegocio, subirNegocio } from "@/utils/cloudNegocio";
 import {
   fusionarMovimientosNegocio,
@@ -227,6 +234,17 @@ type AppDataContextValue = {
   clearAutoCaptureLog: () => void;
 
   goals: Goal[];
+  /**
+   * EL CALENDARIO DE PAGOS (18/08/2026). Netflix, la luz, el agua, el sueldo.
+   *
+   * `marcarPagoDelMes` hace DOS cosas —marca el mes y crea el movimiento— y por eso vive
+   * aquí y no en la pantalla: son las dos mitades de "ya lo pagué", y separadas se acaba
+   * marcando sin anotar o al revés.
+   */
+  pagosProgramados: PagoProgramado[];
+  guardarPagoProgramado: (pago: PagoProgramado) => void;
+  quitarPagoProgramado: (id: string) => void;
+  marcarPagoDelMes: (id: string, mes: string, pagado: boolean) => void;
   addOrUpdateGoal: (g: Goal) => void;
   deleteGoal: (id: number) => void;
   addMoneyToGoal: (amount: number, goalId: number) => void;
@@ -366,6 +384,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [categoriaRecienCreada, setCategoriaRecienCreada] = useState<string | null>(null);
   const [transactions, setTransactions] = useState<Transaction[]>(seedTransactions);
   const [goals, setGoals] = useState<Goal[]>(seedGoals);
+  const [pagosProgramados, setPagosProgramados] = useState<PagoProgramado[]>([]);
   /**
    * El Premium DE LA CUENTA: el que se guarda en el celular y viaja a la nube.
    *
@@ -508,6 +527,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       categoryBudgets,
       transactions,
       goals,
+      pagosProgramados,
       // EL DE LA CUENTA, no el que ven las pantallas: la prueba gratuita no puede
       // subirse como Premium comprado. Si se subiera, al caducar quedaria marcado
       // en la nube y volveria en cualquier celular donde se entrara.
@@ -537,6 +557,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setCategoryBudgets(cloud.categoryBudgets);
     setTransactions(cloud.transactions);
     setGoals(cloud.goals);
+    setPagosProgramados(cloud.pagosProgramados ?? []);
     protectExistingIds(cloud.transactions, cloud.goals);
     setIsPremium(cloud.isPremium);
     setMerchantLearned(cloud.merchantLearned ?? {});
@@ -572,6 +593,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     saveJSON(STORAGE_KEYS.categoryBudgets, cloud.categoryBudgets);
     saveJSON(STORAGE_KEYS.transactions, cloud.transactions);
     saveJSON(STORAGE_KEYS.goals, cloud.goals);
+    saveJSON(STORAGE_KEYS.pagosProgramados, cloud.pagosProgramados ?? []);
     saveJSON(STORAGE_KEYS.isPremium, cloud.isPremium);
     saveJSON(STORAGE_KEYS.merchantLearned, cloud.merchantLearned ?? {});
     saveJSON(STORAGE_KEYS.carryoverCleared, cloud.carryoverCleared ?? []);
@@ -629,6 +651,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       saveJSON(STORAGE_KEYS.transactions, fake);
       saveJSON(STORAGE_KEYS.budgets, { [monthKey(new Date().getFullYear(), new Date().getMonth())]: DECOY_BUDGET });
       saveJSON(STORAGE_KEYS.goals, []);
+      saveJSON(STORAGE_KEYS.pagosProgramados, []);
       saveJSON(STORAGE_KEYS.categoryBudgets, {});
       saveJSON(STORAGE_KEYS.merchantLearned, {});
       saveJSON(STORAGE_KEYS.carryoverCleared, []);
@@ -663,6 +686,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       savedFavoritos,
       savedPrueba,
       savedNegocio,
+      savedPagos,
     ] = await Promise.all([
       loadJSON<Record<string, number>>(STORAGE_KEYS.budgets, {}),
       loadJSON<Record<string, number>>(STORAGE_KEYS.categoryBudgets, {}),
@@ -686,6 +710,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       loadPrueba(),
       // El negocio: sus negocios, productos y ventas. Ver utils/negocio.
       cargarNegocio(),
+      // El calendario de pagos. Ver utils/calendarioPagos.
+      loadJSON<PagoProgramado[]>(STORAGE_KEYS.pagosProgramados, []),
     ]);
     setBudgets(savedBudgets);
     setCategoryBudgets(savedCategoryBudgets);
@@ -695,6 +721,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setPruebaInicio(savedPrueba);
     setTransactions(savedTransactions);
     setGoals(savedGoals);
+    setPagosProgramados(savedPagos);
     protectExistingIds(savedTransactions, savedGoals);
     setIsPremium(savedIsPremium);
     setMerchantLearned(savedLearned);
@@ -848,6 +875,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (ready) saveJSON(STORAGE_KEYS.goals, goals);
   }, [goals, ready]);
+  useEffect(() => {
+    if (!ready) return;
+    saveJSON(STORAGE_KEYS.pagosProgramados, pagosProgramados);
+    /**
+     * LOS AVISOS SE REPROGRAMAN ENTEROS EN CADA CAMBIO, y a propósito.
+     *
+     * Llevar la cuenta de qué aviso corresponde a qué pago —para tocar solo el que cambió—
+     * es un segundo almacén que se puede desincronizar, y cuando eso pasa el fallo es un
+     * aviso que suena de algo ya pagado, o uno que no suena nunca. Son cuatro o cinco
+     * avisos: rehacerlos todos cuesta milésimas y así ninguno puede quedar huérfano.
+     */
+    reprogramarAvisosDePagos(pagosProgramados, t);
+  }, [pagosProgramados, ready, t]);
   useEffect(() => {
     // El de la cuenta. Guardando el que ven las pantallas, activar la prueba
     // dejaria Premium marcado para siempre en este celular.
@@ -1492,6 +1532,57 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * decision de la cuenta. Devuelve si se pudo, para poder avisar.
    */
   /**
+   * EL CALENDARIO DE PAGOS. Guardar crea o reemplaza, con el mismo criterio que un negocio.
+   */
+  function guardarPagoProgramado(pago: PagoProgramado) {
+    setPagosProgramados((antes) =>
+      antes.some((p) => p.id === pago.id)
+        ? antes.map((p) => (p.id === pago.id ? pago : p))
+        : [...antes, pago]
+    );
+  }
+
+  function quitarPagoProgramado(id: string) {
+    setPagosProgramados((antes) => antes.filter((p) => p.id !== id));
+  }
+
+  /**
+   * "YA LO PAGUÉ": MARCA EL MES **Y** ANOTA EL MOVIMIENTO. Las dos cosas, aquí.
+   *
+   * Están juntas porque son las dos mitades de un mismo gesto, y separadas es cuestión de
+   * tiempo que una pantalla haga una y se olvide de la otra: quedaría un recibo en verde que
+   * no aparece en los gastos —o un gasto que la lista sigue pidiendo—. Es el fallo de la
+   * costura, que en este proyecto ya salió con la voz, con las fotos y con los favoritos.
+   *
+   * **Al desmarcar NO se borra el movimiento**, y es deliberado: para entonces puede tener
+   * la categoría cambiada, notas, o haberse editado el monto. Borrarlo se llevaría por
+   * delante trabajo de la persona por haber tocado un interruptor. Desmarcar solo vuelve a
+   * ponerlo en la lista de pendientes.
+   *
+   * Un recordatorio no crea nada: `movimientoDelPago` devuelve null y aquí no se fuerza.
+   */
+  function marcarPagoDelMes(id: string, mes: string, pagado: boolean) {
+    const pago = pagosProgramados.find((p) => p.id === id);
+    if (!pago) return;
+    setPagosProgramados((antes) =>
+      antes.map((p) => (p.id === id ? marcarPagado(p, mes, pagado) : p))
+    );
+    if (!pagado) return;
+    const mov = movimientoDelPago(pago, mes);
+    if (!mov) return;
+    addOrUpdateTransaction({
+      id: nextId(),
+      type: mov.type,
+      amount: mov.amount,
+      category: pago.categoria || (mov.type === "income" ? "salary" : "other"),
+      date: mov.date,
+      method: "",
+      description: mov.description,
+      notes: "",
+    });
+  }
+
+  /**
    * Guarda un negocio: lo crea si es nuevo, lo reemplaza si ya estaba.
    *
    * Uno solo para las dos cosas a propósito. Con "crear" y "editar" separados, cada uno
@@ -1799,6 +1890,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         movimientosDeCategoria,
         transactions,
         addOrUpdateTransaction,
+        pagosProgramados,
+        guardarPagoProgramado,
+        quitarPagoProgramado,
+        marcarPagoDelMes,
         deleteTransaction,
         deleteTransactions,
         commitImport,

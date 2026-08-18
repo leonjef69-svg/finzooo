@@ -74,6 +74,13 @@ export const STORAGE_KEYS = {
    */
   sendContacts: "finzo:sendContacts",
   /**
+   * EL CALENDARIO DE PAGOS (18/08/2026). Netflix, la luz, el agua, el sueldo.
+   *
+   * Es de la CUENTA y no del aparato: quien cambia de celular espera que sus recibos sigan
+   * ahí. Por eso viaja en la copia de la nube y por eso entra en el borrado de más abajo.
+   */
+  pagosProgramados: "finzo:pagosProgramados",
+  /**
    * Cuándo se activó la prueba gratuita de Premium. Solo de este celular: no viaja
    * a la nube. Ver utils/pruebaPremium.
    */
@@ -134,6 +141,9 @@ export async function clearAccountData(): Promise<void> {
         // Y la cuarta, encontrada el 18/08/2026: son correos y teléfonos de OTRAS
         // personas. Ver la nota en STORAGE_KEYS.
         STORAGE_KEYS.sendContacts,
+        // El calendario es de la cuenta: sus recibos no pueden quedar a la vista de quien
+        // entre después en este celular.
+        STORAGE_KEYS.pagosProgramados,
         // La prueba gratuita también: es de la cuenta que se va, no del aparato.
         // Dejándola, la cuenta siguiente entraría con la prueba ya gastada.
         STORAGE_KEYS.pruebaPremium,
