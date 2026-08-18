@@ -3155,10 +3155,33 @@ Google no puede crear cuentas ni usar pruebas gratuitas, así que hay una cuenta
 de mentira dada de alta en la ficha: **`pina12355xc@gmail.com`** (la contraseña
 está en Play Console, no aquí: este repositorio es público).
 
-**Falta ponerle Premium a mano** en Firestore —`users/{uid}` → `isPremium:
-true`— porque la declaración de la consola promete que esa cuenta da acceso a
-todo, incluido el contenido de pago, y hoy el Premium ni siquiera se puede
+~~Falta ponerle Premium a mano~~ **HECHO Y COMPROBADO el 18/08/2026.** Su
+documento es `users/swo5Ufw1i7cOtUOzuYCSZjyLCub2` y dice `isPremium: true`.
+Hacía falta porque la declaración de la consola promete que esa cuenta da acceso
+a todo, incluido el contenido de pago, y hoy el Premium ni siquiera se puede
 comprar.
+
+**Cómo comprobarlo sin tocar nada, que costó explicarlo:** Firebase Console →
+Authentication → buscar el correo → copiar su UID → Firestore → `users` → ese
+UID → mirar `isPremium`. **No sirve abrir la app y ver si Premium está
+encendido:** la prueba gratis de 24 horas desbloquea exactamente las mismas ocho
+funciones (`isPremium = isPremiumDeLaCuenta || pruebaCorriendo`), así que se
+vería igual estando la cuenta en `false`.
+
+> **LO QUE FALTA DE ESA CUENTA, Y NO ES EL PREMIUM: ESTÁ VACÍA.** Su documento
+> tiene dos campos, `hasOnboarded` y `isPremium`, y nada más — ni un movimiento,
+> ni un presupuesto.
+>
+> El revisor de Google va a entrar con ella y ver **una app en blanco**. Con cero
+> movimientos, Reportes, el panorama, los límites y los tres formatos de
+> exportación no tienen nada que enseñar: son justo las funciones que la
+> declaración promete que esa cuenta abre, y desde fuera "vacío" y "roto" se ven
+> igual. Es el mismo error que las capturas de la ficha, donde ya está escrito
+> que una pantalla vacía dice "esto no lo usa nadie".
+>
+> **Lo pendiente:** entrar con esa cuenta y meterle unos 15–20 movimientos
+> creíbles de un par de meses, con un presupuesto puesto. **Ni un dato real
+> suyo**, por lo mismo que en las capturas.
 
 ### Las páginas web que pide Google
 
@@ -3186,9 +3209,10 @@ fotos mientras la app llevaba semanas guardándolas.
    único que el cambio de nombre podía romper. El APK está en sus Descargas
    (`fino-13ago-09-ligero.apk`, 69 MB, solo arm64 — el de 166 MB no le llegó a
    instalar y salía "no se instaló la app").
-3. **Ponerle Premium a la cuenta de prueba** en Firestore: `users/{uid}` →
-   `isPremium: true` para `pina12355xc@gmail.com`. La declaración de Play promete
-   que esa cuenta abre todo, incluido lo de pago.
+3. ~~Ponerle Premium a la cuenta de prueba~~ **HECHO Y COMPROBADO el
+   18/08/2026** (`users/swo5Ufw1i7cOtUOzuYCSZjyLCub2` → `isPremium: true`). Lo
+   que **sí falta de esa cuenta es llenarla**: está vacía, y el revisor vería una
+   app en blanco. Ver "La cuenta de prueba para los revisores".
 4. **Después de los 14 días:** conectar los pagos —los seis pasos están escritos
    en `utils/compras.ts`, y el precio TIENE que venir de la tienda— y AdMob.
    **Al poner AdMob hay que volver a la declaración de Anuncios y cambiarla a
