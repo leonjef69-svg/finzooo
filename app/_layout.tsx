@@ -36,7 +36,9 @@ Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowBanner: true,
     shouldShowList: true,
-    shouldPlaySound: false,
+    // Suena también con la app delante. Iba en false y por eso un aviso que llegaba mientras
+    // Fino estaba abierta aparecía mudo, que desde fuera se ve igual que "no llegó".
+    shouldPlaySound: true,
     shouldSetBadge: false,
   }),
 });

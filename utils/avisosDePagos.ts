@@ -29,6 +29,22 @@ import {
  */
 const MARCA = "calendarioPagos";
 
+/**
+ * EL CANAL DE ANDROID, Y POR QUÉ LLEVA UN NÚMERO AL FINAL.
+ *
+ * **Un canal no se puede cambiar después de creado.** Android lo congela la primera vez, y a
+ * partir de ahí manda lo que decida la persona en los ajustes del sistema: si el código
+ * cambia el sonido, la importancia o la vibración, no pasa absolutamente nada.
+ *
+ * El primero se creó con importancia `DEFAULT` y sin decir nada del sonido, y el aviso
+ * llegaba mudo: *"ya llegó la notificación pero no hace ningún sonido"*. Cambiarlo en el
+ * sitio no habría servido de nada — de ahí el `-v2`.
+ *
+ * **Si alguna vez hay que volver a tocar el sonido o la importancia, hay que subir el
+ * número.** Es lo único que hace que Android se entere.
+ */
+const CANAL = "finzo-pagos-v2";
+
 /** Cuántos meses por delante se programan. Ver `reprogramarAvisosDePagos`. */
 const MESES_POR_DELANTE = 3;
 
@@ -114,10 +130,7 @@ async function hacerlo(
       // Su propio canal, aparte del de la exportación: así se puede silenciar uno sin
       // silenciar el otro desde los ajustes de Android, que es donde la gente los apaga.
       paso = "canal";
-      await Notifications.setNotificationChannelAsync("finzo-pagos", {
-        name: "Calendario de pagos",
-        importance: Notifications.AndroidImportance.DEFAULT,
-      });
+      await prepararCanal();
     }
 
     paso = "retirando";
@@ -142,11 +155,12 @@ async function hacerlo(
           content: {
             title: t("calendario.avisoTitulo", { nombre: pago.nombre }),
             body: textoDelAviso(pago, t),
+            sound: "default",
             data: { [MARCA]: true, pagoId: pago.id, mes },
           },
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
-            channelId: "finzo-pagos",
+            channelId: CANAL,
             date: cuando,
           },
         });
@@ -239,21 +253,19 @@ export async function probarAviso(
       const pedido = await Notifications.requestPermissionsAsync();
       if (!pedido.granted) return "sin-permiso";
     }
-    await Notifications.setNotificationChannelAsync("finzo-pagos", {
-      name: "Calendario de pagos",
-      importance: Notifications.AndroidImportance.DEFAULT,
-    });
+    await prepararCanal();
     // Diez segundos: da tiempo a salir de la app y verlo como se ve de verdad, con la app
     // cerrada. Con la app delante Android lo enseña sin sonido y parecería que falló.
     await Notifications.scheduleNotificationAsync({
       content: {
         title: t("calendario.pruebaTitulo"),
         body: t("calendario.pruebaTexto"),
+        sound: "default",
         data: { [MARCA]: true, prueba: true },
       },
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
-        channelId: "finzo-pagos",
+        channelId: CANAL,
         seconds: 10,
       },
     });
@@ -261,4 +273,22 @@ export async function probarAviso(
   } catch {
     return "error";
   }
+}
+
+/**
+ * Deja el canal listo, con sonido y asomándose por arriba.
+ *
+ * `HIGH` es lo que hace que el aviso se muestre encima de lo que estés haciendo, como el de
+ * Yape. Con `DEFAULT` baja a la barra en silencio y hay que ir a buscarlo — que es justo lo
+ * que no sirve para un recibo que vence hoy.
+ *
+ * Ver `CANAL`: cambiar estos valores sin subir el número del canal no hace nada.
+ */
+async function prepararCanal(): Promise<void> {
+  await Notifications.setNotificationChannelAsync(CANAL, {
+    name: "Calendario de pagos",
+    importance: Notifications.AndroidImportance.HIGH,
+    sound: "default",
+    vibrationPattern: [0, 250, 250, 250],
+  });
 }
