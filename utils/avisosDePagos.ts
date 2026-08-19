@@ -187,3 +187,55 @@ export async function avisosPuestos(): Promise<number> {
     return 0;
   }
 }
+
+/**
+ * PROBAR EL AVISO AHORA MISMO, SIN ESPERAR AL DÍA DEL PAGO.
+ *
+ * Es la respuesta a *"no me llegó ninguna notificación, soluciona el problema de raíz, no
+ * puedo estar con problemas en cada momento"*. Y tenía toda la razón: hasta ahora, comprobar
+ * si los avisos funcionaban costaba **poner una hora y esperar**, y si no sonaba había cuatro
+ * causas posibles y ninguna forma de separarlas. Un día entero por intento.
+ *
+ * Con esto se sabe en diez segundos. Es exactamente lo que ya se hizo con "Probar la voz
+ * ahora" el 07/08, y por el mismo motivo: lo que convierte *"no funciona"* en *"te falta
+ * esto"*.
+ *
+ * Devuelve qué pasó, para poder DECIRLO en la pantalla en vez de callar:
+ *   "listo"      → programado; debe sonar en unos segundos
+ *   "sin-permiso" → Android no deja; hay que concederlo en los ajustes
+ *   "error"       → falló al programarlo
+ */
+export type ResultadoDeLaPrueba = "listo" | "sin-permiso" | "error";
+
+export async function probarAviso(
+  t: (clave: string, valores?: Record<string, string | number>) => string
+): Promise<ResultadoDeLaPrueba> {
+  try {
+    const permiso = await Notifications.getPermissionsAsync();
+    if (!permiso.granted) {
+      const pedido = await Notifications.requestPermissionsAsync();
+      if (!pedido.granted) return "sin-permiso";
+    }
+    await Notifications.setNotificationChannelAsync("finzo-pagos", {
+      name: "Calendario de pagos",
+      importance: Notifications.AndroidImportance.DEFAULT,
+    });
+    // Diez segundos: da tiempo a salir de la app y verlo como se ve de verdad, con la app
+    // cerrada. Con la app delante Android lo enseña sin sonido y parecería que falló.
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: t("calendario.pruebaTitulo"),
+        body: t("calendario.pruebaTexto"),
+        data: { [MARCA]: true, prueba: true },
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        channelId: "finzo-pagos",
+        seconds: 10,
+      },
+    });
+    return "listo";
+  } catch {
+    return "error";
+  }
+}

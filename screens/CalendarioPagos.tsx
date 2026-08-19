@@ -9,7 +9,7 @@
  * Las cuentas NO están aquí: viven en `utils/calendarioPagos.ts`, sin React, para poder
  * comprobarlas con números. Esta pantalla solo dibuja lo que aquéllas deciden.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight, Plus, Bell, ArrowDownLeft, ArrowUpRight } from "lucide-react-native";
@@ -17,7 +17,7 @@ import { router } from "expo-router";
 import BackButton from "@/components/BackButton";
 import { useAppData } from "@/contexts/AppDataContext";
 import { CARD_SHADOW } from "@/constants/style";
-import { avisosPuestos } from "@/utils/avisosDePagos";
+import { probarAviso, type ResultadoDeLaPrueba } from "@/utils/avisosDePagos";
 import {
   cuentaPorEstado,
   cuentaPorTipo,
@@ -55,35 +55,15 @@ function mesAnterior(mes: string): string {
 type Filtro = "todos" | EstadoDelPago;
 
 export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
-  const { t, fmt, monthNames, pagosProgramados, marcarPagoDelMes } = useAppData();
+  const { t, fmt, monthNames, pagosProgramados, marcarPagoDelMes, avisosProgramados } = useAppData();
   const insets = useSafeAreaInsets();
 
   const hoy = useMemo(() => new Date(), []);
   const [mes, setMes] = useState(() => mesDe(hoy));
   const [filtro, setFiltro] = useState<Filtro>("todos");
-  /**
-   * CUÁNTOS AVISOS HAY PUESTOS DE VERDAD, PREGUNTÁNDOSELO A ANDROID.
-   *
-   * Existe porque "no me llegó nada" tiene cuatro causas que desde fuera se ven idénticas:
-   * el permiso denegado, la hora ya pasada, un fallo al programar, o el celular durmiendo la
-   * app. Este número separa la primera mitad de la segunda: si dice 0, el problema está en
-   * la app; si dice 3, está en el celular.
-   *
-   * Es la misma lección que dejó el PDF automático: cuando no se puede ver el estado, lo
-   * primero que hay que entregar es la forma de verlo, no la explicación.
-   */
-  const [puestos, setPuestos] = useState<number | null>(null);
+  const [probando, setProbando] = useState(false);
+  const [resultadoPrueba, setResultadoPrueba] = useState<ResultadoDeLaPrueba | null>(null);
   const [tipo, setTipo] = useState<TipoDeAnotacion | "todos">("todos");
-
-  useEffect(() => {
-    let vivo = true;
-    avisosPuestos().then((n) => {
-      if (vivo) setPuestos(n);
-    });
-    return () => {
-      vivo = false;
-    };
-  }, [pagosProgramados]);
 
   const delMes = pagosDelMes(pagosProgramados, mes);
   const porEstado = cuentaPorEstado(pagosProgramados, mes, hoy);
@@ -386,10 +366,42 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
               })
             )}
 
-            {puestos != null && pagosProgramados.length > 0 && (
-              <Text className="text-[10px] text-slate-400 dark:text-slate-500 mb-2 text-center">
-                {t(puestos === 0 ? "calendario.sinAvisos" : "calendario.avisosPuestos", { n: puestos })}
-              </Text>
+            {/* CUÁNTOS AVISOS HAY PUESTOS, Y EL BOTÓN PARA COMPROBARLO EN DIEZ SEGUNDOS.
+                "No me llegó nada" tenía cuatro causas que desde fuera se ven idénticas, y
+                averiguarlo costaba poner una hora y esperar un día por intento. */}
+            {pagosProgramados.length > 0 && (
+              <View className="mb-2">
+                <Text className="text-[10px] text-slate-400 dark:text-slate-500 text-center">
+                  {avisosProgramados == null
+                    ? ""
+                    : t(avisosProgramados === 0 ? "calendario.sinAvisos" : "calendario.avisosPuestos", {
+                        n: avisosProgramados,
+                      })}
+                </Text>
+                <TouchableOpacity
+                  onPress={async () => {
+                    setProbando(true);
+                    setResultadoPrueba(await probarAviso(t));
+                    setProbando(false);
+                  }}
+                  disabled={probando}
+                  className="flex-row items-center justify-center gap-2 py-2.5 mt-1.5 rounded-xl bg-slate-100 dark:bg-slate-800"
+                >
+                  <Bell size={13} color="#64748b" />
+                  <Text className="text-[11px] font-bold text-slate-600 dark:text-slate-200">
+                    {t(probando ? "calendario.probando" : "calendario.probar")}
+                  </Text>
+                </TouchableOpacity>
+                {resultadoPrueba != null && (
+                  <Text
+                    className={`text-[11px] leading-4 mt-2 ${
+                      resultadoPrueba === "listo" ? "text-emerald-600" : "text-amber-600"
+                    }`}
+                  >
+                    {t(`calendario.prueba.${resultadoPrueba}`)}
+                  </Text>
+                )}
+              </View>
             )}
 
             <TouchableOpacity

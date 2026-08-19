@@ -86,6 +86,24 @@ export default function NuevoPagoProgramado({
   const [horaMM, setHoraMM] = useState((existente?.avisoHora ?? "09:00").split(":")[1]);
 
   const esRecordatorio = tipo === "recordatorio";
+  /**
+   * ¿EL AVISO DE ESTE MES YA PASÓ?
+   *
+   * Se compara la hora elegida con la de ahora. Es el caso que le hizo perder una noche:
+   * elegir el mismo minuto en que se está guardando deja el primer aviso para el mes que
+   * viene, y eso hay que decirlo donde se ve, no en letra chica.
+   */
+  const avisoDeEsteMesYaPaso = (() => {
+    const [aa, mm] = mesVisible.split("-").map(Number);
+    const cuando = new Date(
+      aa,
+      mm - 1,
+      dia - Number(diasAntes || 0),
+      Number(horaHH || 0),
+      Number(horaMM || 0)
+    );
+    return cuando.getTime() <= Date.now();
+  })();
 
   function guardar() {
     const montoNumero = esRecordatorio ? undefined : Number(monto.replace(",", "."));
@@ -295,6 +313,19 @@ export default function NuevoPagoProgramado({
             });
           })()}
         </Text>
+
+        {/* Y SI EL DE ESTE MES YA PASÓ, SE DICE EN ÁMBAR Y NO EN GRIS.
+            Puso el aviso a las 04:22 cuando en el celular eran las 04:22, y el primero que
+            quedaba era el del mes siguiente. Estaba escrito, pero en gris de once puntos
+            debajo de dos campos: se lee cuando ya se está buscando el fallo, no antes. */}
+        {avisoDeEsteMesYaPaso && (
+          <View className="rounded-xl bg-amber-50 dark:bg-amber-950/40 p-3 mb-6 flex-row gap-2.5">
+            <Clock size={15} color="#b45309" />
+            <Text className="flex-1 text-[11px] leading-4 text-amber-800 dark:text-amber-300">
+              {t("calendario.nuevo.yaPaso")}
+            </Text>
+          </View>
+        )}
 
         <TouchableOpacity onPress={guardar} className="h-12 rounded-xl items-center justify-center bg-emerald-600">
           <Text className="text-[14px] font-bold text-white">{t("calendario.nuevo.guardar")}</Text>

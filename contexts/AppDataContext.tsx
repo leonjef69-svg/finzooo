@@ -245,6 +245,8 @@ type AppDataContextValue = {
   guardarPagoProgramado: (pago: PagoProgramado) => void;
   quitarPagoProgramado: (id: string) => void;
   marcarPagoDelMes: (id: string, mes: string, pagado: boolean) => void;
+  /** Cuántos avisos quedaron puestos en la última reprogramación. null = todavía no corrió. */
+  avisosProgramados: number | null;
   addOrUpdateGoal: (g: Goal) => void;
   deleteGoal: (id: number) => void;
   addMoneyToGoal: (amount: number, goalId: number) => void;
@@ -385,6 +387,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>(seedTransactions);
   const [goals, setGoals] = useState<Goal[]>(seedGoals);
   const [pagosProgramados, setPagosProgramados] = useState<PagoProgramado[]>([]);
+  const [avisosProgramados, setAvisosProgramados] = useState<number | null>(null);
   // Ver el efecto que reprograma los avisos: la caja con el traductor de ahora mismo.
   const tRef = useRef<(k: string, v?: Record<string, string | number>) => string>(() => "");
   /**
@@ -904,7 +907,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
      * Va por una caja que siempre tiene la última versión, así que el texto del aviso sigue
      * saliendo en el idioma puesto sin que el idioma dispare este efecto.
      */
-    reprogramarAvisosDePagos(pagosProgramados, (clave, valores) => tRef.current(clave, valores));
+    /**
+     * EL NÚMERO SALE DE AQUÍ, Y NO DE PREGUNTARLE A ANDROID POR SEPARADO.
+     *
+     * La pantalla lo preguntaba por su cuenta al cambiar la lista, y como reprogramar es
+     * asíncrono leía ANTES de que terminara: decía "ningún aviso programado" con los avisos
+     * poniéndose en ese mismo instante. Lo vio él, y lo mandó a buscar un fallo que no
+     * estaba ahí. Guardando lo que devuelve el propio reprogramado, el número no puede
+     * adelantarse a los hechos.
+     */
+    reprogramarAvisosDePagos(pagosProgramados, (clave, valores) => tRef.current(clave, valores))
+      .then(setAvisosProgramados);
   }, [pagosProgramados, ready]);
   useEffect(() => {
     // El de la cuenta. Guardando el que ven las pantallas, activar la prueba
@@ -1912,6 +1925,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         guardarPagoProgramado,
         quitarPagoProgramado,
         marcarPagoDelMes,
+        avisosProgramados,
         deleteTransaction,
         deleteTransactions,
         commitImport,
