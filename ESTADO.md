@@ -3525,6 +3525,28 @@ el APK anterior y lo que llegue con la app cerrada.
 
 ## Pendientes que no bloquean
 
+- **LA VOZ QUE LEE LOS PAGOS DEL CALENDARIO — en pausa, decisión suya (18/08/2026).**
+  Lo propuso él: *"¿se puede poner como opción una voz que te diga pago pendiente, ejemplo
+  Netflix, agua?"*. Se habló entero y lo dejó para después: *"dejemos pendiente eso de la
+  voz"*. Lo que quedó decidido, para no volver a discutirlo:
+
+  - **Necesita APK.** Un aviso programado se dispara sin abrir la app, así que la voz tiene
+    que salir del lado de Android; desde JavaScript solo hablaría con Fino delante.
+  - **Va por el motor y la cola que YA existen** en `FinzoNotificationListener`, nunca por
+    un `TextToSpeech` propio. Él mismo dio con el riesgo: *"¿qué pasaría si me llega un yape
+    a la misma hora que un pago pendiente?"*. Con la cola común hablan uno detrás de otro;
+    con dos motores hablarían encima —que es exactamente lo que pasó el 02/08 con varios
+    yapes seguidos, y costó un APK arreglarlo—.
+  - **La frase, sin cerrar.** Se le ofrecieron tres largos y no eligió. La recomendada era
+    *"Paga Netflix, cincuenta soles"*: corta, dice qué hacer, y **no se confunde con un
+    cobro**. La más corta de todas —*"Netflix, cincuenta soles"*— se descartó por eso mismo:
+    suena igual que un yapeo recibido.
+  - Los montos ya se dicen bien (`MonedaEnVoz`), así que eso no hay que rehacerlo.
+
+  **Va junto con el otro cambio nativo pendiente** —el motor de voz que no se encendía al
+  activar el interruptor (ver "18ago-09")—, en el mismo APK. Son los dos únicos nativos
+  esperando: compilar uno solo para cualquiera de ellos sería gastar una compilación de más.
+
 - **Escáner de boletas: EN PAUSA** desde el 30/07/2026, a pedido del usuario.
   Nunca se probó con una boleta real. Antes de darlo por bueno, hay que
   probarlo con una de verdad.
