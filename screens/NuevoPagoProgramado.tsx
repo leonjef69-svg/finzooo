@@ -5,7 +5,7 @@
  * pagarlo"*. El aviso es de **cada pago** y no un ajuste general: el recibo de la luz y el
  * sueldo no se avisan igual.
  *
- * **LA FECHA SE ELIGE TOCÁNDOLA EN UN CALENDARIO, Y NO HAY "QUÉ DÍA DEL MES".** Lo preguntó
+ * **LA FECHA SE ELIGE EN EL CALENDARIO GRANDE, NO AQUÍ.** Lo preguntó
  * él y tenía razón: *"si puedo escoger libremente en el calendario cualquier fecha, ¿sería
  * necesario que esté la opción qué día de mes?"*. No lo era — eran dos campos para decir lo
  * mismo, y quien llenara uno se quedaba dudando del otro. Ahora se toca un día y ya está; si
@@ -17,13 +17,12 @@
 import { useState } from "react";
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CalendarDays, ChevronLeft, ChevronRight, Clock, Repeat, Trash2 } from "lucide-react-native";
+import { CalendarDays, Clock, Repeat, Trash2 } from "lucide-react-native";
 import BackButton from "@/components/BackButton";
 import Toggle from "@/components/Toggle";
 import { useAppData } from "@/contexts/AppDataContext";
 import {
   mesDe,
-  mesSiguiente,
   validarPago,
   type PagoProgramado,
   type TipoDeAnotacion,
@@ -40,16 +39,14 @@ function dosDigitos(n: number): string {
   return String(n).padStart(2, "0");
 }
 
-function mesAnterior(mes: string): string {
-  const [anio, m] = mes.split("-").map(Number);
-  return m === 1 ? `${anio - 1}-12` : `${anio}-${dosDigitos(m - 1)}`;
-}
-
 export default function NuevoPagoProgramado({
   id,
+  fecha,
   onBack,
 }: {
   id?: string;
+  /** "2026-08-14", el día que se tocó en el calendario grande. */
+  fecha?: string;
   onBack: () => void;
 }) {
   const { t, monthNames, pagosProgramados, guardarPagoProgramado, quitarPagoProgramado } =
@@ -68,11 +65,19 @@ export default function NuevoPagoProgramado({
    */
   const [monto, setMonto] = useState(existente?.monto != null ? String(existente.monto) : "");
 
-  // El mes que se está mirando en el calendario de abajo, y el día elegido.
-  const [mesVisible, setMesVisible] = useState(
-    () => existente?.mesUnico ?? mesDe(hoy)
-  );
-  const [dia, setDia] = useState<number | null>(existente?.dia ?? null);
+  /**
+   * LA FECHA LLEGA HECHA, DEL DÍA QUE SE TOCÓ EN EL CALENDARIO GRANDE.
+   *
+   * Aquí hubo un calendario propio y él lo mandó quitar: *"cuando dije tocar libremente el
+   * calendario me refería a la segunda imagen, no que lo introdujeras"*. Tenía razón — eran
+   * dos calendarios para lo mismo, y el de esta pantalla obligaba a volver a buscar el día
+   * que se acababa de tocar.
+   */
+  const elegida = existente
+    ? `${existente.mesUnico ?? mesDe(hoy)}-${dosDigitos(existente.dia)}`
+    : (fecha ?? `${mesDe(hoy)}-${dosDigitos(hoy.getDate())}`);
+  const mesVisible = elegida.slice(0, 7);
+  const dia = Number(elegida.slice(8));
   const [repite, setRepite] = useState((existente?.repite ?? "mensual") === "mensual");
 
   const [diasAntes, setDiasAntes] = useState(String(existente?.avisoDiasAntes ?? 1));
@@ -80,13 +85,10 @@ export default function NuevoPagoProgramado({
   const [horaMM, setHoraMM] = useState((existente?.avisoHora ?? "09:00").split(":")[1]);
 
   const esRecordatorio = tipo === "recordatorio";
-  const [anioVisible, numeroMesVisible] = mesVisible.split("-").map(Number);
-  const diasEnElMes = new Date(anioVisible, numeroMesVisible, 0).getDate();
-  const primerDia = (new Date(anioVisible, numeroMesVisible - 1, 1).getDay() + 6) % 7;
 
   function guardar() {
     const montoNumero = esRecordatorio ? undefined : Number(monto.replace(",", "."));
-    const check = validarPago(nombre, tipo, montoNumero, dia ?? 0);
+    const check = validarPago(nombre, tipo, montoNumero, dia);
     if (!check.ok) {
       Alert.alert(t("calendario.nuevo.faltaTitulo"), t(`calendario.nuevo.falta.${check.motivo}`));
       return;
@@ -96,7 +98,7 @@ export default function NuevoPagoProgramado({
       nombre: nombre.trim(),
       tipo,
       monto: montoNumero,
-      dia: dia as number,
+      dia,
       repite: repite ? "mensual" : "unica",
       // Solo tiene sentido cuando NO se repite. Guardándolo siempre, apagar y volver a
       // encender la repetición dejaría un mes pegado que nadie puede ver ni cambiar.
@@ -194,60 +196,15 @@ export default function NuevoPagoProgramado({
           </>
         )}
 
-        {/* LA FECHA, TOCÁNDOLA. Es lo que pidió con la captura de un campo de fecha: se ve
-            la fecha entera, no un número suelto que hay que traducir mentalmente. */}
         <Etiqueta texto={t("calendario.nuevo.fecha")} Icono={CalendarDays} />
-        <View className="rounded-xl bg-slate-100 dark:bg-slate-800 px-3 pt-2.5 pb-3 mb-3">
-          <View className="flex-row items-center justify-between mb-1.5">
-            <TouchableOpacity onPress={() => setMesVisible(mesAnterior(mesVisible))} className="p-1.5">
-              <ChevronLeft size={17} color="#94a3b8" />
-            </TouchableOpacity>
-            <Text className="text-[13px] font-bold text-slate-900 dark:text-slate-100">
-              {monthNames[numeroMesVisible - 1]} {anioVisible}
-            </Text>
-            <TouchableOpacity onPress={() => setMesVisible(mesSiguiente(mesVisible))} className="p-1.5">
-              <ChevronRight size={17} color="#94a3b8" />
-            </TouchableOpacity>
-          </View>
-
-          <View className="flex-row mb-1">
-            {["L", "M", "X", "J", "V", "S", "D"].map((d, i) => (
-              <Text key={i} className="flex-1 text-[10px] text-center text-slate-400">
-                {d}
-              </Text>
-            ))}
-          </View>
-          <View className="flex-row flex-wrap">
-            {Array.from({ length: primerDia }).map((_, i) => (
-              <View key={`h${i}`} style={{ width: `${100 / 7}%`, aspectRatio: 1 }} />
-            ))}
-            {Array.from({ length: diasEnElMes }).map((_, i) => {
-              const d = i + 1;
-              const elegido = dia === d;
-              return (
-                <TouchableOpacity
-                  key={d}
-                  onPress={() => setDia(d)}
-                  style={{ width: `${100 / 7}%`, aspectRatio: 1 }}
-                  className="items-center justify-center p-0.5"
-                >
-                  <View
-                    className={`w-full h-full rounded-full items-center justify-center ${
-                      elegido ? "bg-emerald-600" : ""
-                    }`}
-                  >
-                    <Text
-                      className={`text-[12px] ${
-                        elegido ? "text-white font-bold" : "text-slate-700 dark:text-slate-200"
-                      }`}
-                    >
-                      {d}
-                    </Text>
-                  </View>
-                </TouchableOpacity>
-              );
+        <View className="rounded-xl bg-slate-100 dark:bg-slate-800 px-4 h-12 mb-4 flex-row items-center">
+          <Text className="text-[15px] text-slate-900 dark:text-slate-100">
+            {t("calendario.nuevo.fechaLarga", {
+              dia,
+              mes: monthNames[Number(mesVisible.split("-")[1]) - 1],
+              anio: mesVisible.split("-")[0],
             })}
-          </View>
+          </Text>
         </View>
 
         <View className="flex-row items-center gap-3 mb-1">
@@ -258,14 +215,12 @@ export default function NuevoPagoProgramado({
           <Toggle on={repite} onChange={setRepite} />
         </View>
         <Text className="text-[11px] leading-4 text-slate-400 mb-5">
-          {dia == null
-            ? t("calendario.nuevo.eligeDia")
-            : repite
-              ? t("calendario.nuevo.repiteHint", { dia })
-              : t("calendario.nuevo.unaVezHint", {
-                  dia,
-                  mes: monthNames[numeroMesVisible - 1],
-                })}
+          {repite
+            ? t("calendario.nuevo.repiteHint", { dia })
+            : t("calendario.nuevo.unaVezHint", {
+                dia,
+                mes: monthNames[Number(mesVisible.split("-")[1]) - 1],
+              })}
         </Text>
 
         <Etiqueta texto={t("calendario.nuevo.avisarme")} Icono={Clock} />

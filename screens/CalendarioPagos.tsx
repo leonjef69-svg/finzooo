@@ -264,9 +264,27 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                 const dia = i + 1;
                 const color = colorPorDia[dia];
                 const esHoy = esEsteMes && dia === hoy.getDate();
+                /**
+                 * TOCAR UN DÍA. Es lo que él quería decir con "elegir libremente en el
+                 * calendario": si ese día ya tiene algo, se abre para editarlo; si está
+                 * vacío, se crea uno nuevo con la fecha ya puesta.
+                 *
+                 * Así el formulario ya no necesita su propio calendario — tenía uno y lo
+                 * mandó quitar, con razón: eran dos calendarios para lo mismo.
+                 */
+                const deEseDia = visibles.filter(
+                  (p) => Number(fechaEnElMes(p, mes).slice(8)) === dia
+                );
                 return (
-                  <View
+                  <TouchableOpacity
                     key={dia}
+                    onPress={() =>
+                      router.push(
+                        deEseDia.length > 0
+                          ? `/calendario/nuevo?id=${deEseDia[0].id}`
+                          : `/calendario/nuevo?fecha=${mes}-${String(dia).padStart(2, "0")}`
+                      )
+                    }
                     style={{ width: `${100 / 7}%`, aspectRatio: 1 }}
                     className="items-center justify-center p-0.5"
                   >
@@ -291,7 +309,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                         {dia}
                       </Text>
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 );
               })}
             </View>
