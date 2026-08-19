@@ -239,7 +239,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
               {["L", "M", "X", "J", "V", "S", "D"].map((d, i) => (
                 <Text
                   key={i}
-                  className="flex-1 text-[10px] text-center text-slate-400 dark:text-slate-500"
+                  className="flex-1 text-[10px] text-center text-slate-400 dark:text-slate-400"
                 >
                   {d}
                 </Text>
@@ -267,9 +267,15 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                         borderColor: "#94a3b8",
                       }}
                     >
+                      {/* EL COLOR DEL NÚMERO SE DICE SIEMPRE, Y ESTO ERA UN FALLO.
+                          Sin clase de color, React Native pinta el texto en negro por
+                          defecto: en modo oscuro el calendario entero quedaba casi
+                          invisible, con los números del mismo tono que el fondo. Lo vio él
+                          en el celular. Un día con estado sí lleva color propio —blanco
+                          sobre su círculo—, y por eso el `style` sigue mandando ahí. */}
                       <Text
-                        className="text-[11px]"
-                        style={{ color: color ? "#ffffff" : undefined }}
+                        className="text-[11px] text-slate-900 dark:text-slate-100"
+                        style={color ? { color: "#ffffff" } : undefined}
                       >
                         {dia}
                       </Text>

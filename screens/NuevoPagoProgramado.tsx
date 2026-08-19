@@ -17,17 +17,22 @@ import {
   type TipoDeAnotacion,
 } from "@/utils/calendarioPagos";
 
-/** Con cuántos días de antelación se puede avisar. El 0 es "el mismo día". */
-const DIAS_ANTES = [0, 1, 2, 3, 5, 7];
-
 /**
- * Las horas que se ofrecen de un toque.
+ * DÍA Y HORA A MANO, Y NO UNA LISTA DE OPCIONES (18/08/2026)
  *
- * Se descartó un selector de hora libre para la primera versión: son tres toques más para
- * elegir algo que casi siempre es "por la mañana" o "por la noche". Si alguien pide una hora
- * exacta se añade, y el dato ya la admite —`avisoHora` es texto "HH:MM"—.
+ * La primera versión ofrecía seis antelaciones y seis horas en botones. Él las rodeó en la
+ * captura y dijo: *"lo encerrado en azul quítalo y pon para personalizar la hora y fecha"*.
+ * Tenía razón: doce botones ocupaban media pantalla para acabar sin poder poner las 6:30.
+ *
+ * **No se usa el selector de Android** porque eso es `@react-native-community/datetimepicker`,
+ * que es código nativo: obligaría a un APK nuevo para una pantalla que si no viaja por
+ * internet. Con dos campos se escribe cualquier hora y se entrega hoy.
  */
-const HORAS = ["07:00", "09:00", "12:00", "18:00", "20:00", "21:00"];
+function soloNumeros(texto: string, tope: number): string {
+  const limpio = texto.replace(/\D/g, "").slice(0, 2);
+  if (limpio === "") return "";
+  return String(Math.min(Number(limpio), tope));
+}
 
 export default function NuevoPagoProgramado({
   id,
@@ -52,8 +57,11 @@ export default function NuevoPagoProgramado({
    */
   const [monto, setMonto] = useState(existente?.monto != null ? String(existente.monto) : "");
   const [dia, setDia] = useState(String(existente?.dia ?? ""));
-  const [diasAntes, setDiasAntes] = useState(existente?.avisoDiasAntes ?? 1);
-  const [hora, setHora] = useState(existente?.avisoHora ?? "09:00");
+  // Como texto, por lo mismo que el monto: escribir "1" y borrarlo no puede dejar un NaN
+  // debajo del dedo. Se convierten una sola vez, al guardar.
+  const [diasAntes, setDiasAntes] = useState(String(existente?.avisoDiasAntes ?? 1));
+  const [horaHH, setHoraHH] = useState((existente?.avisoHora ?? "09:00").split(":")[0]);
+  const [horaMM, setHoraMM] = useState((existente?.avisoHora ?? "09:00").split(":")[1]);
 
   const esRecordatorio = tipo === "recordatorio";
 
@@ -73,8 +81,10 @@ export default function NuevoPagoProgramado({
       dia: diaNumero,
       repite: "mensual",
       categoria: existente?.categoria,
-      avisoDiasAntes: diasAntes,
-      avisoHora: hora,
+      avisoDiasAntes: Number(diasAntes || 0),
+      // Siempre "HH:MM" con dos dígitos: `cuandoAvisar` lo parte por los dos puntos y un
+      // "9:0" daría una hora válida por casualidad, pero la pantalla enseñaría "9:0".
+      avisoHora: `${(horaHH || "0").padStart(2, "0")}:${(horaMM || "0").padStart(2, "0")}`,
       // Al editar se conservan los meses ya pagados. Perderlos volvería a poner en rojo
       // recibos que la persona ya pagó, solo por haberle cambiado el nombre.
       pagados: existente?.pagados ?? [],
@@ -187,45 +197,54 @@ export default function NuevoPagoProgramado({
         <Text className="text-[11px] font-bold text-slate-500 dark:text-slate-400 mb-2">
           {t("calendario.nuevo.avisarme")}
         </Text>
-        <View className="flex-row flex-wrap gap-2 mb-3">
-          {DIAS_ANTES.map((d) => (
-            <TouchableOpacity
-              key={d}
-              onPress={() => setDiasAntes(d)}
-              className={`px-3 py-2 rounded-xl ${
-                diasAntes === d ? "bg-emerald-600" : "bg-slate-100 dark:bg-slate-800"
-              }`}
-            >
-              <Text
-                className={`text-[12px] ${
-                  diasAntes === d ? "text-white font-bold" : "text-slate-600 dark:text-slate-300"
-                }`}
-              >
-                {d === 0 ? t("calendario.nuevo.mismoDia") : t("calendario.nuevo.diasAntes", { n: d })}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View className="flex-row items-center gap-2 mb-3">
+          <TextInput
+            value={diasAntes}
+            onChangeText={(v) => setDiasAntes(soloNumeros(v, 30))}
+            keyboardType="number-pad"
+            placeholder="0"
+            placeholderTextColor="#94a3b8"
+            className="w-16 rounded-xl px-3 py-3 text-[15px] text-center bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+          />
+          <Text className="text-[13px] text-slate-600 dark:text-slate-300 flex-1">
+            {t("calendario.nuevo.diasAntesTexto")}
+          </Text>
         </View>
 
-        <View className="flex-row flex-wrap gap-2 mb-6">
-          {HORAS.map((h) => (
-            <TouchableOpacity
-              key={h}
-              onPress={() => setHora(h)}
-              className={`px-3 py-2 rounded-xl ${
-                hora === h ? "bg-emerald-600" : "bg-slate-100 dark:bg-slate-800"
-              }`}
-            >
-              <Text
-                className={`text-[12px] ${
-                  hora === h ? "text-white font-bold" : "text-slate-600 dark:text-slate-300"
-                }`}
-              >
-                {h}
-              </Text>
-            </TouchableOpacity>
-          ))}
+        <View className="flex-row items-center gap-2 mb-2">
+          <Text className="text-[13px] text-slate-600 dark:text-slate-300">
+            {t("calendario.nuevo.aLas")}
+          </Text>
+          <TextInput
+            value={horaHH}
+            onChangeText={(v) => setHoraHH(soloNumeros(v, 23))}
+            keyboardType="number-pad"
+            placeholder="09"
+            placeholderTextColor="#94a3b8"
+            className="w-14 rounded-xl px-2 py-3 text-[15px] text-center bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+          />
+          <Text className="text-[15px] text-slate-400">:</Text>
+          <TextInput
+            value={horaMM}
+            onChangeText={(v) => setHoraMM(soloNumeros(v, 59))}
+            keyboardType="number-pad"
+            placeholder="00"
+            placeholderTextColor="#94a3b8"
+            className="w-14 rounded-xl px-2 py-3 text-[15px] text-center bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+          />
         </View>
+        {/* QUÉ VA A PASAR, EN UNA FRASE, ANTES DE GUARDAR. Dos campos sueltos no dicen si el
+            aviso cae el día 13 o el 17; esta línea lo dice con el día ya calculado, que es lo
+            único que la persona quiere comprobar. */}
+        <Text className="text-[11px] leading-4 text-slate-400 mb-6">
+          {t("calendario.nuevo.resumenAviso", {
+            cuando:
+              Number(diasAntes || 0) === 0
+                ? t("calendario.nuevo.mismoDia").toLowerCase()
+                : t("calendario.nuevo.diasAntes", { n: Number(diasAntes) }),
+            hora: `${(horaHH || "0").padStart(2, "0")}:${(horaMM || "0").padStart(2, "0")}`,
+          })}
+        </Text>
 
         <TouchableOpacity onPress={guardar} className="py-3.5 rounded-xl items-center bg-emerald-600">
           <Text className="text-[14px] font-bold text-white">{t("calendario.nuevo.guardar")}</Text>
