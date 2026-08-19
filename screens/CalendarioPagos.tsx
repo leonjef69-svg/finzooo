@@ -139,33 +139,34 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
               >
                 <IconoDelTipo tipo={siguiente.pago.tipo} color={COLOR[estadoEn(siguiente.pago, siguiente.mes, hoy)]} />
               </View>
-              <View className="flex-1">
-                <Text className="text-[14px] text-slate-900 dark:text-slate-100" numberOfLines={1}>
-                  {siguiente.pago.nombre}
-                  {siguiente.pago.monto != null ? ` · ${fmt(siguiente.pago.monto)}` : ""}
-                </Text>
-                {/* CON EL MES CUANDO NO ES ÉSTE, Y ESTO ERA UN FALLO.
-                    Con lo de agosto ya pagado, la tarjeta enseña lo de septiembre — que es lo
-                    correcto— pero decía "el día 14" a secas, justo encima de una fila que
-                    ponía "pagado el 14". Parecían dos cosas que se contradicen. Lo vio él en
-                    su celular. */}
-                <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5" numberOfLines={1}>
-                  {t(siguiente.mes === mesDe(hoy) ? "calendario.avisoA" : "calendario.avisoAOtroMes", {
-                    dia: Number(fechaEnElMes(siguiente.pago, siguiente.mes).slice(8)),
-                    mes: monthNames[Number(siguiente.mes.split("-")[1]) - 1],
-                    hora: siguiente.pago.avisoHora,
-                  })}
-                </Text>
-              </View>
+              <Text className="flex-1 text-[14px] text-slate-900 dark:text-slate-100" numberOfLines={1}>
+                {siguiente.pago.nombre}
+                {siguiente.pago.monto != null ? ` · ${fmt(siguiente.pago.monto)}` : ""}
+              </Text>
               {siguiente.pago.tipo !== "recordatorio" && (
                 <TouchableOpacity
                   onPress={() => marcarPagoDelMes(siguiente.pago.id, siguiente.mes, true)}
-                  className="px-3.5 h-10 rounded-xl items-center justify-center bg-emerald-600"
+                  className="px-3.5 h-9 rounded-xl items-center justify-center bg-emerald-600"
                 >
                   <Text className="text-[12px] font-bold text-white">{t("calendario.yaPague")}</Text>
                 </TouchableOpacity>
               )}
             </View>
+            {/* LA FECHA, EN SU PROPIO RENGLÓN Y A TODO LO ANCHO.
+                Iba dentro de la fila, entre el nombre y el botón, y el botón se la comía:
+                *"el 14 de septiembre aviso a… tapado por el botón de ya lo pagué"*. Con un
+                nombre largo no había ancho para las dos cosas, y quien lo mira necesita la
+                fecha entera, no recortada.
+                Y lleva el mes cuando no es éste, que era otro fallo suyo: con agosto pagado
+                la tarjeta enseña septiembre —correcto— pero decía "el día 14" a secas justo
+                encima de una fila que ponía "pagado el 14", y parecían contradecirse. */}
+            <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-2">
+              {t(siguiente.mes === mesDe(hoy) ? "calendario.avisoA" : "calendario.avisoAOtroMes", {
+                dia: Number(fechaEnElMes(siguiente.pago, siguiente.mes).slice(8)),
+                mes: monthNames[Number(siguiente.mes.split("-")[1]) - 1],
+                hora: siguiente.pago.avisoHora,
+              })}
+            </Text>
           </View>
         )}
 
