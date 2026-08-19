@@ -125,37 +125,47 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
             className="rounded-2xl p-4 mb-4 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
             style={CARD_SHADOW}
           >
-            <Text className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-2.5">
+            <Text className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-2">
               {t("calendario.proximo")}
             </Text>
-            <View className="flex-row items-center gap-3">
+            {/* TODO EN UNA FILA. Antes el botón iba debajo y a lo ancho, así que la tarjeta
+                medía el doble que la información que llevaba dentro: *"hazlo más pequeño, que
+                el botón de ya lo pagué esté al costado, no debajo"*. Al costado también dice
+                mejor a qué pago pertenece. */}
+            <View className="flex-row items-center gap-2.5">
               <View
-                className="w-11 h-11 rounded-xl items-center justify-center"
+                className="w-9 h-9 rounded-lg items-center justify-center"
                 style={{ backgroundColor: COLOR[estadoEn(siguiente.pago, siguiente.mes, hoy)] + "22" }}
               >
                 <IconoDelTipo tipo={siguiente.pago.tipo} color={COLOR[estadoEn(siguiente.pago, siguiente.mes, hoy)]} />
               </View>
               <View className="flex-1">
-                <Text className="text-base text-slate-900 dark:text-slate-100">
+                <Text className="text-[14px] text-slate-900 dark:text-slate-100" numberOfLines={1}>
                   {siguiente.pago.nombre}
                   {siguiente.pago.monto != null ? ` · ${fmt(siguiente.pago.monto)}` : ""}
                 </Text>
-                <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  {t("calendario.avisoA", {
+                {/* CON EL MES CUANDO NO ES ÉSTE, Y ESTO ERA UN FALLO.
+                    Con lo de agosto ya pagado, la tarjeta enseña lo de septiembre — que es lo
+                    correcto— pero decía "el día 14" a secas, justo encima de una fila que
+                    ponía "pagado el 14". Parecían dos cosas que se contradicen. Lo vio él en
+                    su celular. */}
+                <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5" numberOfLines={1}>
+                  {t(siguiente.mes === mesDe(hoy) ? "calendario.avisoA" : "calendario.avisoAOtroMes", {
                     dia: Number(fechaEnElMes(siguiente.pago, siguiente.mes).slice(8)),
+                    mes: monthNames[Number(siguiente.mes.split("-")[1]) - 1],
                     hora: siguiente.pago.avisoHora,
                   })}
                 </Text>
               </View>
+              {siguiente.pago.tipo !== "recordatorio" && (
+                <TouchableOpacity
+                  onPress={() => marcarPagoDelMes(siguiente.pago.id, siguiente.mes, true)}
+                  className="px-3.5 h-10 rounded-xl items-center justify-center bg-emerald-600"
+                >
+                  <Text className="text-[12px] font-bold text-white">{t("calendario.yaPague")}</Text>
+                </TouchableOpacity>
+              )}
             </View>
-            {siguiente.pago.tipo !== "recordatorio" && (
-              <TouchableOpacity
-                onPress={() => marcarPagoDelMes(siguiente.pago.id, siguiente.mes, true)}
-                className="mt-3 py-3 rounded-xl items-center bg-emerald-600"
-              >
-                <Text className="text-[13px] font-bold text-white">{t("calendario.yaPague")}</Text>
-              </TouchableOpacity>
-            )}
           </View>
         )}
 
