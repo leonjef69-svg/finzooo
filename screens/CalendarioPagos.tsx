@@ -55,7 +55,7 @@ function mesAnterior(mes: string): string {
 type Filtro = "todos" | EstadoDelPago;
 
 export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
-  const { t, fmt, monthNames, pagosProgramados, marcarPagoDelMes, avisosProgramados } = useAppData();
+  const { t, fmt, monthNames, pagosProgramados, marcarPagoDelMes, avisosProgramados, avisosFallo } = useAppData();
   const insets = useSafeAreaInsets();
 
   const hoy = useMemo(() => new Date(), []);
@@ -378,6 +378,14 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                         n: avisosProgramados,
                       })}
                 </Text>
+                {/* EL MOTIVO DEL FALLO, SELECCIONABLE PARA PODER COPIARLO.
+                    Sin él, "ningún aviso programado" no dice si fue el permiso, el canal o
+                    el programado en sí, y cada intento cuesta un día. */}
+                {avisosFallo != null && (
+                  <Text selectable className="text-[10px] leading-4 text-rose-500 mt-1 text-center">
+                    {avisosFallo}
+                  </Text>
+                )}
                 <TouchableOpacity
                   onPress={async () => {
                     setProbando(true);

@@ -60,14 +60,29 @@ const MESES_POR_DELANTE = 3;
  * Encadenándolas, la siguiente espera a que la anterior termine. Es una fila, no un candado:
  * ninguna se pierde, solo esperan.
  */
-let enFila: Promise<number> = Promise.resolve(0);
+let enFila: Promise<ResultadoDeProgramar> = Promise.resolve({ puestos: 0 });
+
+/**
+ * QUÉ PASÓ AL PROGRAMAR, Y NO SOLO CUÁNTOS QUEDARON.
+ *
+ * Antes esto devolvía un número y el `catch` convertía cualquier fallo en un 0. Así, "no se
+ * programó ninguno" y "reventó al programarlos" se veían **idénticos** desde la pantalla — y
+ * son problemas distintos con arreglos distintos. Se perdió una noche entera por eso.
+ *
+ * Es exactamente la lección que dejó el PDF automático el 06/08: el `catch` guardaba
+ * "error" y tiraba el mensaje, y el único caso que necesitaba detalle era justo el que lo
+ * perdía.
+ */
+export type ResultadoDeProgramar = { puestos: number; fallo?: string };
 
 export function reprogramarAvisosDePagos(
   lista: PagoProgramado[],
   t: (clave: string, valores?: Record<string, string | number>) => string,
   ahora: Date = new Date()
-): Promise<number> {
-  enFila = enFila.then(() => hacerlo(lista, t, ahora)).catch(() => 0);
+): Promise<ResultadoDeProgramar> {
+  enFila = enFila
+    .then(() => hacerlo(lista, t, ahora))
+    .catch((e) => ({ puestos: 0, fallo: String(e?.message ?? e) }));
   return enFila;
 }
 
@@ -75,7 +90,10 @@ async function hacerlo(
   lista: PagoProgramado[],
   t: (clave: string, valores?: Record<string, string | number>) => string,
   ahora: Date
-): Promise<number> {
+): Promise<ResultadoDeProgramar> {
+  // Cada paso dice dónde está, para que si algo revienta el mensaje diga EN CUÁL. Sin esto,
+  // "cannot read property of undefined" no distingue el permiso del canal ni del programado.
+  let paso = "empezando";
   try {
     // EL PERMISO, Y ESTO FALTABA (18/08/2026).
     //
@@ -87,19 +105,22 @@ async function hacerlo(
     // Se pide al programar y no al abrir la pantalla: la ventana de Android sale cuando ya
     // se entiende para qué sirve —acabas de guardar un recibo— y no nada más entrar.
     if (lista.length > 0) {
+      paso = "permiso";
       const permiso = await Notifications.getPermissionsAsync();
       if (!permiso.granted) {
         const pedido = await Notifications.requestPermissionsAsync();
-        if (!pedido.granted) return 0;
+        if (!pedido.granted) return { puestos: 0, fallo: "sin-permiso" };
       }
       // Su propio canal, aparte del de la exportación: así se puede silenciar uno sin
       // silenciar el otro desde los ajustes de Android, que es donde la gente los apaga.
+      paso = "canal";
       await Notifications.setNotificationChannelAsync("finzo-pagos", {
         name: "Calendario de pagos",
         importance: Notifications.AndroidImportance.DEFAULT,
       });
     }
 
+    paso = "retirando";
     await retirarLosNuestros();
 
     let puestos = 0;
@@ -116,6 +137,7 @@ async function hacerlo(
         // pasada, así que al abrir la app sonarían de golpe todos los de los meses viejos.
         if (cuando.getTime() <= ahora.getTime()) continue;
 
+        paso = `programando ${pago.nombre} de ${mes}`;
         await Notifications.scheduleNotificationAsync({
           content: {
             title: t("calendario.avisoTitulo", { nombre: pago.nombre }),
@@ -132,11 +154,12 @@ async function hacerlo(
       }
       mes = mesSiguiente(mes);
     }
-    return puestos;
-  } catch {
+    return { puestos };
+  } catch (e) {
     // Un aviso que no se pudo programar no puede tumbar la app ni impedir que el pago se
-    // guarde: lo que se guarda es el dato, y el aviso es su consecuencia.
-    return 0;
+    // guarde: lo que se guarda es el dato, y el aviso es su consecuencia. Pero el motivo SÍ
+    // se cuenta, con el paso en el que estaba.
+    return { puestos: 0, fallo: `${paso}: ${String((e as Error)?.message ?? e)}` };
   }
 }
 

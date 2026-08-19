@@ -247,6 +247,8 @@ type AppDataContextValue = {
   marcarPagoDelMes: (id: string, mes: string, pagado: boolean) => void;
   /** Cuántos avisos quedaron puestos en la última reprogramación. null = todavía no corrió. */
   avisosProgramados: number | null;
+  /** Y por qué falló, si falló. Se enseña en pantalla: ver ResultadoDeProgramar. */
+  avisosFallo: string | null;
   addOrUpdateGoal: (g: Goal) => void;
   deleteGoal: (id: number) => void;
   addMoneyToGoal: (amount: number, goalId: number) => void;
@@ -388,6 +390,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [goals, setGoals] = useState<Goal[]>(seedGoals);
   const [pagosProgramados, setPagosProgramados] = useState<PagoProgramado[]>([]);
   const [avisosProgramados, setAvisosProgramados] = useState<number | null>(null);
+  const [avisosFallo, setAvisosFallo] = useState<string | null>(null);
   // Ver el efecto que reprograma los avisos: la caja con el traductor de ahora mismo.
   const tRef = useRef<(k: string, v?: Record<string, string | number>) => string>(() => "");
   /**
@@ -917,7 +920,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
      * adelantarse a los hechos.
      */
     reprogramarAvisosDePagos(pagosProgramados, (clave, valores) => tRef.current(clave, valores))
-      .then(setAvisosProgramados);
+      .then((r) => {
+        setAvisosProgramados(r.puestos);
+        setAvisosFallo(r.fallo ?? null);
+      });
   }, [pagosProgramados, ready]);
   useEffect(() => {
     // El de la cuenta. Guardando el que ven las pantallas, activar la prueba
@@ -1926,6 +1932,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         quitarPagoProgramado,
         marcarPagoDelMes,
         avisosProgramados,
+        avisosFallo,
         deleteTransaction,
         deleteTransactions,
         commitImport,
