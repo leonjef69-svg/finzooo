@@ -385,6 +385,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>(seedTransactions);
   const [goals, setGoals] = useState<Goal[]>(seedGoals);
   const [pagosProgramados, setPagosProgramados] = useState<PagoProgramado[]>([]);
+  // Ver el efecto que reprograma los avisos: la caja con el traductor de ahora mismo.
+  const tRef = useRef<(k: string, v?: Record<string, string | number>) => string>(() => "");
   /**
    * El Premium DE LA CUENTA: el que se guarda en el celular y viaja a la nube.
    *
@@ -483,6 +485,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
     return text;
   }
+
+  // La caja con el traductor de ahora mismo, para quien no puede depender de `t` sin
+  // volver a correr en cada dibujado. Ver el efecto que reprograma los avisos de pagos.
+  tRef.current = t;
 
   const monthNames = monthNamesFor(userLanguage);
 
@@ -886,8 +892,20 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
      * aviso que suena de algo ya pagado, o uno que no suena nunca. Son cuatro o cinco
      * avisos: rehacerlos todos cuesta milésimas y así ninguno puede quedar huérfano.
      */
-    reprogramarAvisosDePagos(pagosProgramados, t);
-  }, [pagosProgramados, ready, t]);
+    /**
+     * `t` NO PUEDE ESTAR EN LAS DEPENDENCIAS, y esto costó un fallo entero.
+     *
+     * `t` se declara dentro del componente, así que es una función nueva en cada dibujado.
+     * Con ella entre las dependencias, este efecto corría decenas de veces seguidas, y como
+     * reprogramar es "retirar y volver a poner", cada pasada retiraba lo que acababa de poner
+     * la anterior. Resultado: **cero avisos programados**, sin ningún error a la vista. Lo
+     * reportó él como *"no me llegó nada"*.
+     *
+     * Va por una caja que siempre tiene la última versión, así que el texto del aviso sigue
+     * saliendo en el idioma puesto sin que el idioma dispare este efecto.
+     */
+    reprogramarAvisosDePagos(pagosProgramados, (clave, valores) => tRef.current(clave, valores));
+  }, [pagosProgramados, ready]);
   useEffect(() => {
     // El de la cuenta. Guardando el que ven las pantallas, activar la prueba
     // dejaria Premium marcado para siempre en este celular.

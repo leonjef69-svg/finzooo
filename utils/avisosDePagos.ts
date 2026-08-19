@@ -45,10 +45,36 @@ const MESES_POR_DELANTE = 3;
  * abriera Fino en cuatro semanas se quedaría sin avisos justo por no usarla, que es cuando
  * más falta hacen. Y no más de tres porque cada uno ocupa un hueco en el sistema.
  */
-export async function reprogramarAvisosDePagos(
+/**
+ * UNA REPROGRAMACIÓN CADA VEZ, EN FILA. **Esto era el fallo del 18/08/2026.**
+ *
+ * Reprogramar son dos pasos: retirar los avisos de antes y volver a ponerlos. Con dos
+ * ejecuciones a la vez, la segunda **retira los que acababa de poner la primera** y el
+ * resultado es cero avisos programados — sin ningún error, y con la pantalla diciendo que
+ * todo está guardado.
+ *
+ * Y pasaba de verdad: el efecto que llama aquí tenía `t` entre sus dependencias, y `t` se
+ * crea de nuevo en cada dibujado del contexto. Así que esto corría decenas de veces seguidas,
+ * cada una pisando a la anterior. Él lo reportó como *"no me llegó nada"*.
+ *
+ * Encadenándolas, la siguiente espera a que la anterior termine. Es una fila, no un candado:
+ * ninguna se pierde, solo esperan.
+ */
+let enFila: Promise<number> = Promise.resolve(0);
+
+export function reprogramarAvisosDePagos(
   lista: PagoProgramado[],
   t: (clave: string, valores?: Record<string, string | number>) => string,
   ahora: Date = new Date()
+): Promise<number> {
+  enFila = enFila.then(() => hacerlo(lista, t, ahora)).catch(() => 0);
+  return enFila;
+}
+
+async function hacerlo(
+  lista: PagoProgramado[],
+  t: (clave: string, valores?: Record<string, string | number>) => string,
+  ahora: Date
 ): Promise<number> {
   try {
     // EL PERMISO, Y ESTO FALTABA (18/08/2026).
@@ -143,5 +169,21 @@ async function retirarLosNuestros(): Promise<void> {
     if (aviso.content?.data?.[MARCA]) {
       await Notifications.cancelScheduledNotificationAsync(aviso.identifier);
     }
+  }
+}
+
+/**
+ * CUÁNTOS AVISOS DEL CALENDARIO ESTÁN PUESTOS AHORA MISMO.
+ *
+ * Lo enseña la pantalla. Un "no me llegó nada" tiene cuatro causas que desde fuera se ven
+ * iguales —permiso denegado, hora ya pasada, fallo al programar, o el celular durmiendo la
+ * app— y este número separa las dos primeras de las dos últimas.
+ */
+export async function avisosPuestos(): Promise<number> {
+  try {
+    const todos = await Notifications.getAllScheduledNotificationsAsync();
+    return todos.filter((a) => a.content?.data?.[MARCA]).length;
+  } catch {
+    return 0;
   }
 }

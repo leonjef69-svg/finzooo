@@ -9,7 +9,7 @@
  * Las cuentas NO están aquí: viven en `utils/calendarioPagos.ts`, sin React, para poder
  * comprobarlas con números. Esta pantalla solo dibuja lo que aquéllas deciden.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight, Plus, Bell, ArrowDownLeft, ArrowUpRight } from "lucide-react-native";
@@ -17,6 +17,7 @@ import { router } from "expo-router";
 import BackButton from "@/components/BackButton";
 import { useAppData } from "@/contexts/AppDataContext";
 import { CARD_SHADOW } from "@/constants/style";
+import { avisosPuestos } from "@/utils/avisosDePagos";
 import {
   cuentaPorEstado,
   cuentaPorTipo,
@@ -60,7 +61,29 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
   const hoy = useMemo(() => new Date(), []);
   const [mes, setMes] = useState(() => mesDe(hoy));
   const [filtro, setFiltro] = useState<Filtro>("todos");
+  /**
+   * CUÁNTOS AVISOS HAY PUESTOS DE VERDAD, PREGUNTÁNDOSELO A ANDROID.
+   *
+   * Existe porque "no me llegó nada" tiene cuatro causas que desde fuera se ven idénticas:
+   * el permiso denegado, la hora ya pasada, un fallo al programar, o el celular durmiendo la
+   * app. Este número separa la primera mitad de la segunda: si dice 0, el problema está en
+   * la app; si dice 3, está en el celular.
+   *
+   * Es la misma lección que dejó el PDF automático: cuando no se puede ver el estado, lo
+   * primero que hay que entregar es la forma de verlo, no la explicación.
+   */
+  const [puestos, setPuestos] = useState<number | null>(null);
   const [tipo, setTipo] = useState<TipoDeAnotacion | "todos">("todos");
+
+  useEffect(() => {
+    let vivo = true;
+    avisosPuestos().then((n) => {
+      if (vivo) setPuestos(n);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, [pagosProgramados]);
 
   const delMes = pagosDelMes(pagosProgramados, mes);
   const porEstado = cuentaPorEstado(pagosProgramados, mes, hoy);
@@ -361,6 +384,12 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                   </TouchableOpacity>
                 );
               })
+            )}
+
+            {puestos != null && pagosProgramados.length > 0 && (
+              <Text className="text-[10px] text-slate-400 dark:text-slate-500 mb-2 text-center">
+                {t(puestos === 0 ? "calendario.sinAvisos" : "calendario.avisosPuestos", { n: puestos })}
+              </Text>
             )}
 
             <TouchableOpacity
