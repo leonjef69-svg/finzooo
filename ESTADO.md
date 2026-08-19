@@ -3525,6 +3525,38 @@ el APK anterior y lo que llegue con la app cerrada.
 
 ## Pendientes que no bloquean
 
+- **SINCRONIZACIÓN AUTOMÁTICA CON GOOGLE SHEETS — en pausa, decisión suya (19/08/2026).**
+  Lo pidió con una especificación larga y detallada: activar una vez, Fino crea la hoja en
+  **su** Drive, y cada movimiento nuevo se añade solo; con cola para cuando no hay internet,
+  ID único contra duplicados, hoja de resumen y colores por formato condicional. Se analizó
+  entero y lo dejó para después. **Lo que ya está averiguado, para no repetirlo:**
+
+  - **El OAuth YA ESTÁ HECHO.** `utils/googleDrive.ts` usa `GoogleSignin` y ya pide
+    `drive.file`. No hace falta backend, ni PKCE, ni pantalla de login nueva. Era lo que más
+    trabajo parecía.
+  - **Y hay que quedarse en `drive.file`, no en el scope `spreadsheets`.** `drive.file` deja
+    crear y editar solo los archivos que crea la app y Google lo trata como **no sensible**;
+    el de Sheets completo es **restringido** y obliga a una auditoría de seguridad que tarda
+    semanas y cuesta dinero. Con `drive.file` se puede crear la hoja y escribir en ella
+    igual. **Esta decisión es la que hace la función viable.**
+  - **La app ya ejecuta JavaScript con el celular cerrado** (`registerHeadlessTask` en
+    `index.js`, para los yapes y la exportación). La subida se cuelga de ahí; no hace falta
+    código nativo nuevo.
+  - **El límite real, y hay que decírselo:** con la app cerrada no se sincroniza *siempre*,
+    solo cuando Android despierta a Fino. Un yape sube casi al instante; un movimiento
+    escrito a mano sin internet sube al abrir la app. Nunca se pierde.
+  - **Coste cero.** La API de Sheets es gratis y el tope es 60 peticiones por minuto y
+    usuario; subiendo por lotes no se roza.
+  - **El estado de sincronización va APARTE del movimiento**, no dentro: metido dentro
+    ensuciaría la copia de Firebase y el tipo `Transaction`, que hoy no sabe nada de esto.
+  - **El ID ya existe** (cada movimiento tiene el suyo): se reutiliza contra los duplicados
+    en vez de inventar otro formato.
+  - **El resumen se hace con FÓRMULAS de Sheets**, no recalculándolo desde la app: así se
+    actualiza solo al llegar filas nuevas.
+
+  Se le recomendó entregarlo por partes —primero crear la hoja y subir movimientos, y el
+  resumen y los colores después—, como se hizo con el Modo Negocio.
+
 - **LA VOZ QUE LEE LOS PAGOS DEL CALENDARIO — en pausa, decisión suya (18/08/2026).**
   Lo propuso él: *"¿se puede poner como opción una voz que te diga pago pendiente, ejemplo
   Netflix, agua?"*. Se habló entero y lo dejó para después: *"dejemos pendiente eso de la
