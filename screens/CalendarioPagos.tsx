@@ -12,12 +12,12 @@
 import { useMemo, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ChevronLeft, ChevronRight, Plus, Bell, ArrowDownLeft, ArrowUpRight } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, Plus, Bell, Volume2, ArrowDownLeft, ArrowUpRight } from "lucide-react-native";
 import { router } from "expo-router";
 import BackButton from "@/components/BackButton";
 import { useAppData } from "@/contexts/AppDataContext";
 import { CARD_SHADOW } from "@/constants/style";
-import { probarAviso, type ResultadoDeLaPrueba } from "@/utils/avisosDePagos";
+import { abrirAjustesDelSonido, probarAviso, type ResultadoDeLaPrueba } from "@/utils/avisosDePagos";
 import {
   cuentaPorEstado,
   cuentaPorTipo,
@@ -63,6 +63,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
   const [filtro, setFiltro] = useState<Filtro>("todos");
   const [probando, setProbando] = useState(false);
   const [resultadoPrueba, setResultadoPrueba] = useState<ResultadoDeLaPrueba | null>(null);
+  const [noSeAbrio, setNoSeAbrio] = useState(false);
   const [tipo, setTipo] = useState<TipoDeAnotacion | "todos">("todos");
 
   const delMes = pagosDelMes(pagosProgramados, mes);
@@ -400,6 +401,23 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                     {t(probando ? "calendario.probando" : "calendario.probar")}
                   </Text>
                 </TouchableOpacity>
+                {/* ELEGIR EL SONIDO. Lleva a la pantalla de Android de este canal, que deja
+                    escoger cualquier tono del celular. Ver abrirAjustesDelSonido: una lista
+                    dentro de Fino solo podría ofrecer los sonidos que trajera la app. */}
+                <TouchableOpacity
+                  onPress={async () => setNoSeAbrio(!(await abrirAjustesDelSonido()))}
+                  className="flex-row items-center justify-center gap-2 py-2.5 mt-1.5 rounded-xl bg-slate-100 dark:bg-slate-800"
+                >
+                  <Volume2 size={13} color="#64748b" />
+                  <Text className="text-[11px] font-bold text-slate-600 dark:text-slate-200">
+                    {t("calendario.elegirSonido")}
+                  </Text>
+                </TouchableOpacity>
+                {noSeAbrio && (
+                  <Text className="text-[11px] leading-4 text-amber-600 mt-2">
+                    {t("calendario.sonidoNoSeAbrio")}
+                  </Text>
+                )}
                 {resultadoPrueba != null && (
                   <Text
                     className={`text-[11px] leading-4 mt-2 ${

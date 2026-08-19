@@ -9,6 +9,8 @@
  * `POST_NOTIFICATIONS` que la app ya declara. **Por eso esto NO necesita un APK nuevo**: no
  * hay ni una línea de código de Android.
  */
+import { Linking, Platform } from "react-native";
+import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
 import {
   cuandoAvisar,
@@ -291,4 +293,43 @@ async function prepararCanal(): Promise<void> {
     sound: "default",
     vibrationPattern: [0, 250, 250, 250],
   });
+}
+
+/**
+ * ABRE LOS AJUSTES DE ANDROID DE **ESTE** CANAL, PARA ELEGIR EL SONIDO.
+ *
+ * Pedido suyo: *"sería bueno que se pueda personalizar el sonido; cada usuario puede elegir
+ * el sonido y saber cuándo le llegue una notificación"*.
+ *
+ * **No se hace una lista de sonidos dentro de Fino, y el motivo importa.** En Android el
+ * sonido pertenece al canal, y un canal no se puede cambiar después de creado: para ofrecer
+ * seis sonidos habría que crear seis canales, y el día que alguien quisiera el séptimo —o
+ * uno suyo— no habría forma de dárselo. Además la app tendría que llevar los archivos de
+ * audio dentro, lo cual es código nativo y otro APK.
+ *
+ * La pantalla de Android ya hace todo eso mejor: deja elegir **cualquier** tono del celular,
+ * la vibración y si se asoma por arriba, y lo recuerda aunque Fino se actualice. Esto solo
+ * abre esa puerta.
+ *
+ * Se usa `Linking.sendIntent`, que es de React Native y no pide nada nativo: por eso llega
+ * por internet como todo lo demás del calendario.
+ *
+ * Devuelve false si no se pudo abrir — hay fabricantes que mueven esa pantalla— para poder
+ * decirlo en vez de dejar un botón que al tocarlo no hace nada.
+ */
+export async function abrirAjustesDelSonido(): Promise<boolean> {
+  if (Platform.OS !== "android") return false;
+  const paquete =
+    Constants.expoConfig?.android?.package ?? "com.finoapp.gastos";
+  try {
+    // El canal tiene que existir antes: Android no abre los ajustes de uno que no ha creado.
+    await prepararCanal();
+    await Linking.sendIntent("android.settings.CHANNEL_NOTIFICATION_SETTINGS", [
+      { key: "android.provider.extra.APP_PACKAGE", value: paquete },
+      { key: "android.provider.extra.CHANNEL_ID", value: CANAL },
+    ]);
+    return true;
+  } catch {
+    return false;
+  }
 }
