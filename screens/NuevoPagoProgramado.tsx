@@ -23,6 +23,7 @@ import Toggle from "@/components/Toggle";
 import { useAppData } from "@/contexts/AppDataContext";
 import {
   mesDe,
+  primerAviso,
   validarPago,
   type PagoProgramado,
   type TipoDeAnotacion,
@@ -262,16 +263,37 @@ export default function NuevoPagoProgramado({
             {t("calendario.nuevo.aLasTexto")}
           </Text>
         </View>
-        {/* QUÉ VA A PASAR, EN UNA FRASE. Dos campos sueltos no dicen si el aviso cae el 13 o
-            el 17; esta línea lo dice ya calculado, que es lo único que se quiere comprobar. */}
+        {/* CUÁNDO VA A SONAR DE VERDAD, CON LA FECHA CALCULADA.
+            Antes decía "te avisaré 1 día antes, a las 09:00" y sonaba bien, pero elegir HOY
+            con un día de antelación pide un aviso de AYER: no se programa —Android lo
+            dispararía al instante— y la persona se queda esperando algo que no va a llegar.
+            Fue justo lo que preguntó: *"le pondré la fecha de hoy, hora 15:55, ¿debería
+            llegarme alguna notificación?"*. Ahora se dice el día exacto del primer aviso, y
+            si ese primer aviso cae el mes que viene, se dice también. */}
         <Text className="text-[11px] leading-4 text-slate-400 mb-6">
-          {t("calendario.nuevo.resumenAviso", {
-            cuando:
-              Number(diasAntes || 0) === 0
-                ? t("calendario.nuevo.mismoDia").toLowerCase()
-                : t("calendario.nuevo.diasAntes", { n: Number(diasAntes) }),
-            hora: `${(horaHH || "0").padStart(2, "0")}:${(horaMM || "0").padStart(2, "0")}`,
-          })}
+          {(() => {
+            const suena = primerAviso(
+              {
+                id: "",
+                nombre,
+                tipo,
+                dia,
+                repite: repite ? "mensual" : "unica",
+                mesUnico: repite ? undefined : mesVisible,
+                avisoDiasAntes: Number(diasAntes || 0),
+                avisoHora: `${(horaHH || "0").padStart(2, "0")}:${(horaMM || "0").padStart(2, "0")}`,
+                pagados: [],
+                creado: 0,
+              },
+              new Date()
+            );
+            if (suena == null) return t("calendario.nuevo.avisoNunca");
+            return t("calendario.nuevo.avisoSuena", {
+              dia: suena.getDate(),
+              mes: monthNames[suena.getMonth()],
+              hora: `${dosDigitos(suena.getHours())}:${dosDigitos(suena.getMinutes())}`,
+            });
+          })()}
         </Text>
 
         <TouchableOpacity onPress={guardar} className="h-12 rounded-xl items-center justify-center bg-emerald-600">

@@ -51,6 +51,29 @@ export async function reprogramarAvisosDePagos(
   ahora: Date = new Date()
 ): Promise<number> {
   try {
+    // EL PERMISO, Y ESTO FALTABA (18/08/2026).
+    //
+    // Desde Android 13 los avisos se piden a mano, y aquí no se pedían: se programaban
+    // perfectamente y no aparecía ninguno. El único sitio que lo pedía era la exportación
+    // automática, así que el calendario solo funcionaba si la persona había configurado
+    // ANTES otra cosa que no tiene nada que ver.
+    //
+    // Se pide al programar y no al abrir la pantalla: la ventana de Android sale cuando ya
+    // se entiende para qué sirve —acabas de guardar un recibo— y no nada más entrar.
+    if (lista.length > 0) {
+      const permiso = await Notifications.getPermissionsAsync();
+      if (!permiso.granted) {
+        const pedido = await Notifications.requestPermissionsAsync();
+        if (!pedido.granted) return 0;
+      }
+      // Su propio canal, aparte del de la exportación: así se puede silenciar uno sin
+      // silenciar el otro desde los ajustes de Android, que es donde la gente los apaga.
+      await Notifications.setNotificationChannelAsync("finzo-pagos", {
+        name: "Calendario de pagos",
+        importance: Notifications.AndroidImportance.DEFAULT,
+      });
+    }
+
     await retirarLosNuestros();
 
     let puestos = 0;
@@ -75,6 +98,7 @@ export async function reprogramarAvisosDePagos(
           },
           trigger: {
             type: Notifications.SchedulableTriggerInputTypes.DATE,
+            channelId: "finzo-pagos",
             date: cuando,
           },
         });

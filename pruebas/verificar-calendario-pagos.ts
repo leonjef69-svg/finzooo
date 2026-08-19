@@ -20,6 +20,7 @@ import {
   movimientoDelPago,
   pagosDelMes,
   proximoPago,
+  primerAviso,
   validarPago,
   type PagoProgramado,
 } from "@/utils/calendarioPagos";
@@ -196,6 +197,35 @@ ok(
   movimientoDelPago(pago({ tipo: "recordatorio", monto: undefined }), "2026-08") === null,
   "y un recordatorio NO crea nada: no tiene monto y no puede tocar las cuentas"
 );
+
+// ---------------------------------------------------------------------------
+// EL PRIMER AVISO QUE VA A SONAR DE VERDAD
+//
+// Es el caso que le confundio a el: elegir HOY con "1 dia antes" pide un aviso de AYER, que
+// no se programa -Android lo disparia al instante-. Sin decirlo, la pantalla promete algo
+// que no va a llegar.
+console.log("\nCuando suena el primer aviso");
+
+// Son las 10:00 del 18 de agosto.
+const AHORA = new Date(2026, 7, 18, 10, 0);
+
+const hoyTarde = primerAviso(pago({ dia: 18, avisoDiasAntes: 0, avisoHora: "15:55" }), AHORA);
+ok(
+  hoyTarde?.getDate() === 18 && hoyTarde.getMonth() === 7,
+  "hoy a las 15:55, con cero dias de antelacion, suena HOY"
+);
+
+const yaPaso = primerAviso(pago({ dia: 18, avisoDiasAntes: 1, avisoHora: "09:00" }), AHORA);
+ok(
+  yaPaso?.getMonth() === 8,
+  "hoy con UN dia de antelacion pedia el aviso de ayer: el primero que suena es el del mes que viene"
+);
+
+const unicoPasado = primerAviso(
+  pago({ dia: 5, repite: "unica", mesUnico: "2026-08", avisoDiasAntes: 0 }),
+  AHORA
+);
+ok(unicoPasado === null, "y un pago de una sola vez cuya fecha ya paso no avisa nunca");
 
 console.log(
   fallos === 0

@@ -209,6 +209,28 @@ export function cuandoAvisar(p: PagoProgramado, mes: string): Date | null {
   return new Date(anio, m - 1, d - p.avisoDiasAntes, hh, mm, 0, 0);
 }
 
+/**
+ * CUÁNDO VA A SONAR EL PRIMER AVISO DE VERDAD.
+ *
+ * Existe porque hay un caso que confunde a cualquiera y no se ve por ningún lado: elegir hoy
+ * con "1 día antes" pide un aviso de **ayer**, y un aviso en el pasado no se programa —Android
+ * lo dispararía al instante—. Sin decirlo, la pantalla promete un aviso que no va a llegar.
+ *
+ * Busca el primer mes, de los próximos doce, cuyo aviso todavía no haya pasado. Devuelve
+ * `null` si es un pago único cuya fecha ya pasó, que es el único caso en que de verdad no
+ * habrá aviso nunca.
+ */
+export function primerAviso(p: PagoProgramado, ahora: Date): Date | null {
+  let mes = mesDe(ahora);
+  for (let i = 0; i < 12; i++) {
+    const cuando = cuandoAvisar(p, mes);
+    if (cuando != null && cuando.getTime() > ahora.getTime()) return cuando;
+    if (p.repite === "unica") return null;
+    mes = mesSiguiente(mes);
+  }
+  return null;
+}
+
 /** Marca o desmarca un mes como pagado. Devuelve una copia; no toca el original. */
 export function marcarPagado(p: PagoProgramado, mes: string, pagado: boolean): PagoProgramado {
   const sinEste = p.pagados.filter((m) => m !== mes);
