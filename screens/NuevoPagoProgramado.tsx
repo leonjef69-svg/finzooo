@@ -114,7 +114,19 @@ export default function NuevoPagoProgramado({
    */
   const [gruposListos, setGruposListos] = useState(GRUPOS_AL_ABRIR);
   useEffect(() => {
-    if (!eligiendoIcono || gruposListos >= TODOS_LOS_GRUPOS.length) return;
+    /**
+     * **AL CERRAR SE VUELVE A EMPEZAR, Y ESTO ERA UN FALLO** (19/08/2026).
+     *
+     * El contador se quedaba en 18 después de la primera vez. Como al cerrar el panel los
+     * dibujos se desmontan, la SEGUNDA apertura montaba los 236 de golpe — justo el tirón
+     * que las tandas venían a quitar. Él lo describió como *"si toco rápido el icono parece
+     * que falla"*: la primera vez iba bien y las siguientes no.
+     */
+    if (!eligiendoIcono) {
+      setGruposListos(GRUPOS_AL_ABRIR);
+      return;
+    }
+    if (gruposListos >= TODOS_LOS_GRUPOS.length) return;
     const id = setTimeout(() => setGruposListos(TODOS_LOS_GRUPOS.length), 250);
     return () => clearTimeout(id);
   }, [eligiendoIcono, gruposListos]);
@@ -265,7 +277,7 @@ export default function NuevoPagoProgramado({
             el cuadro entero, que es de 56, y el lápiz creció a 15. */}
         <View className="flex-row items-center gap-3 mb-3">
           <TouchableOpacity
-            onPress={() => setEligiendoIcono((v) => !v)}
+            onPress={() => setEligiendoIcono(true)}
             className="w-[56px] h-[56px] rounded-2xl items-center justify-center overflow-hidden"
             style={{ backgroundColor: tinta + (oscuro ? "33" : "22") }}
           >
