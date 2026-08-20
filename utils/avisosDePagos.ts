@@ -262,8 +262,15 @@ export async function probarAviso(
       if (!pedido.granted) return "sin-permiso";
     }
     await prepararCanal();
-    // Diez segundos: da tiempo a salir de la app y verlo como se ve de verdad, con la app
-    // cerrada. Con la app delante Android lo enseña sin sonido y parecería que falló.
+    // TRES SEGUNDOS, a petición suya el 19/08/2026 (antes eran diez).
+    //
+    // Diez daban tiempo de sobra a salir de la app y ver el aviso como se ve de verdad. Pero
+    // esperar diez segundos mirando el celular por cada prueba es mucho, y probar es
+    // justamente lo que hay que poder hacer sin pensarlo. Con tres se alcanza a salir si uno
+    // ya sabe que va a salir.
+    //
+    // Si llega con Fino delante, se ve igual pero sin sonido: el sonido lo pone el canal de
+    // Android y ese solo manda con la app detrás.
     await Notifications.scheduleNotificationAsync({
       content: {
         title: t("calendario.pruebaTitulo"),
@@ -274,7 +281,7 @@ export async function probarAviso(
       trigger: {
         type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
         channelId: CANAL,
-        seconds: 10,
+        seconds: 3,
       },
     });
     return "listo";
