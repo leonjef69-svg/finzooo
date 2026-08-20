@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { FlatList, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -41,6 +41,104 @@ import type { Month, Transaction } from "@/types";
 import { useColorScheme } from "nativewind";
 
 const softShadow = CARD_SHADOW;
+
+/* LA FILA, APARTE Y MEMOIZADA.
+   Antes se dibujaba dentro de renderItem, una función nueva en cada pasada, y encima
+   preguntaba `selected.includes(id)` — un recorrido de la lista de seleccionados POR CADA
+   fila. Resultado: marcar un movimiento volvía a dibujar los treinta de la pantalla. Ahora
+   cada fila recibe ya masticado si está marcada, y React solo redibuja la que cambió. */
+const FilaMovimiento = memo(function FilaMovimiento({
+  tx,
+  index,
+  marcada,
+  selectMode,
+  oscuro,
+  fmt,
+  t,
+  monthNames,
+  onPress,
+}: {
+  tx: Transaction;
+  index: number;
+  marcada: boolean;
+  selectMode: boolean;
+  oscuro: boolean;
+  fmt: (n: number) => string;
+  t: (k: string, v?: Record<string, string | number>) => string;
+  monthNames: string[];
+  onPress: (id: number) => void;
+}) {
+  const c = catInfo(tx.category);
+  // La animación de entrada se aplica SOLO a las filas visibles al
+  // abrir (las 8 primeras). Antes se aplicaba a todas, y como las
+  // posteriores llevaban el retardo máximo (400 ms), al desplazarse
+  // cada fila nueva aparecía en blanco durante ese tiempo antes de
+  // dibujarse — se veía como tirones y la lista se sentía pesada.
+  // Las filas de más abajo ya no "entran" animadas: simplemente
+  // están ahí cuando llegas a ellas, que es lo esperable al
+  // desplazar.
+  const Row = index < 8 ? Animated.View : View;
+  const rowProps = index < 8 ? { entering: FadeInDown.delay(index * 50).duration(280) } : {};
+  return (
+    <View className="px-5">
+      <Row {...rowProps}>
+        <PressableScale
+          onPress={() => onPress(tx.id)}
+          // El contorno se ve poco, sobre todo de noche: la tarjeta
+          // es slate-900 y el fondo de la pantalla TAMBIÉN, así que
+          // lo único que las separaba era un borde casi del mismo
+          // color. Se sube medio píxel de grosor y se aclara el
+          // color un tono en cada tema.
+          className={`flex-row items-center gap-3 bg-white dark:bg-noche rounded-2xl p-3 border-[1.5px] mb-2.5 ${
+            marcada
+              ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950"
+              : "border-slate-200 dark:border-noche-borde"
+          }`}
+          style={softShadow}
+        >
+          {selectMode &&
+            (marcada ? (
+              <CheckCircle2 size={22} color="#059669" />
+            ) : (
+              <Circle size={22} color="#cbd5e1" />
+            ))}
+          {/* SU PROPIO DIBUJO SI LO TIENE. Ver Transaction.icono: lo trae un pago del
+              calendario, y la categoria sigue mandando en las cuentas. */}
+          <IconBadge
+            Icon={tx.icono && !esFoto(tx.icono) ? iconoDe(tx.icono) : c.icon}
+            color={c.color}
+            image={esFoto(tx.icono ?? "") ? tx.icono : c.image}
+          />
+          <View className="flex-1 min-w-0">
+            <Text
+              className="text-base font-bold"
+              style={{ color: oscuro ? "#f1f5f9" : "#0f172a" }}
+              numberOfLines={1}
+            >
+              {tx.description || t(c.label)}
+            </Text>
+            <Text className="text-sm" style={{ color: oscuro ? "#f1f5f9" : "#334155" }}>
+              {/* La hora solo si la hay. Los movimientos guardados
+                  antes de esto no la tienen, y los importados de un
+                  estado de cuenta tampoco: el banco solo da la fecha.
+                  Mejor sin hora que con una inventada. */}
+              {t(c.label)} · {fmtDate(tx.date, monthNames)}
+              {tx.time ? ` · ${tx.time}` : ""}
+            </Text>
+          </View>
+          <Text
+            className={`text-base font-extrabold ${
+              tx.type === "expense" ? "text-rose-500" : "text-emerald-600"
+            }`}
+          >
+            {tx.type === "expense" ? "-" : "+"}
+            {fmt(tx.amount)}
+          </Text>
+        </PressableScale>
+      </Row>
+    </View>
+  );
+});
 
 export default function Home({
   userName,
@@ -150,6 +248,37 @@ export default function Home({
   function toggleSelected(id: number) {
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
   }
+
+  /* Un Set en vez de un array: preguntar "¿está marcado este?" pasa de recorrer la lista
+     entera a mirar una sola vez. Con dos marcados da igual; con el mes lleno, no. */
+  const marcadas = useMemo(() => new Set(selected), [selected]);
+
+  const alTocarFila = useCallback(
+    (id: number) => {
+      if (selectMode) toggleSelected(id);
+      else onOpenDetail(id);
+    },
+    // toggleSelected solo usa setSelected, que React garantiza estable.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectMode, onOpenDetail]
+  );
+
+  const dibujarFila = useCallback(
+    ({ item, index }: { item: Transaction; index: number }) => (
+      <FilaMovimiento
+        tx={item}
+        index={index}
+        marcada={marcadas.has(item.id)}
+        selectMode={selectMode}
+        oscuro={colorScheme === "dark"}
+        fmt={fmt}
+        t={t}
+        monthNames={monthNames}
+        onPress={alTocarFila}
+      />
+    ),
+    [marcadas, selectMode, colorScheme, fmt, t, monthNames, alTocarFila]
+  );
   function confirmBulkDelete() {
     onBulkDelete(selected);
     setSelected([]);
@@ -490,79 +619,8 @@ export default function Home({
         initialNumToRender={8}
         maxToRenderPerBatch={8}
         windowSize={7}
-        renderItem={({ item: t2, index }) => {
-          const c = catInfo(t2.category);
-          const isSel = selected.includes(t2.id);
-          // La animación de entrada se aplica SOLO a las filas visibles al
-          // abrir (las 8 primeras). Antes se aplicaba a todas, y como las
-          // posteriores llevaban el retardo máximo (400 ms), al desplazarse
-          // cada fila nueva aparecía en blanco durante ese tiempo antes de
-          // dibujarse — se veía como tirones y la lista se sentía pesada.
-          // Las filas de más abajo ya no "entran" animadas: simplemente
-          // están ahí cuando llegas a ellas, que es lo esperable al
-          // desplazar.
-          const Row = index < 8 ? Animated.View : View;
-          const rowProps =
-            index < 8 ? { entering: FadeInDown.delay(index * 50).duration(280) } : {};
-          return (
-            <View className="px-5">
-              <Row {...rowProps}>
-                <PressableScale
-                  onPress={() => (selectMode ? toggleSelected(t2.id) : onOpenDetail(t2.id))}
-                  // El contorno se ve poco, sobre todo de noche: la tarjeta
-                  // es slate-900 y el fondo de la pantalla TAMBIÉN, así que
-                  // lo único que las separaba era un borde casi del mismo
-                  // color. Se sube medio píxel de grosor y se aclara el
-                  // color un tono en cada tema.
-                  className={`flex-row items-center gap-3 bg-white dark:bg-noche rounded-2xl p-3 border-[1.5px] mb-2.5 ${
-                    isSel
-                      ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950"
-                      : "border-slate-200 dark:border-noche-borde"
-                  }`}
-                  style={softShadow}
-                >
-                  {selectMode &&
-                    (isSel ? (
-                      <CheckCircle2 size={22} color="#059669" />
-                    ) : (
-                      <Circle size={22} color="#cbd5e1" />
-                    ))}
-                  {/* SU PROPIO DIBUJO SI LO TIENE. Ver Transaction.icono: lo trae un pago del
-                      calendario, y la categoria sigue mandando en las cuentas. */}
-                  <IconBadge Icon={t2.icono && !esFoto(t2.icono) ? iconoDe(t2.icono) : c.icon} color={c.color} image={esFoto(t2.icono ?? "") ? t2.icono : c.image} />
-                  <View className="flex-1 min-w-0">
-                    <Text
-                      className="text-base font-bold"
-                      style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-                      numberOfLines={1}
-                    >
-                      {t2.description || t(c.label)}
-                    </Text>
-                    <Text
-                      className="text-sm"
-                      style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#334155" }}
-                    >
-                      {/* La hora solo si la hay. Los movimientos guardados
-                          antes de esto no la tienen, y los importados de un
-                          estado de cuenta tampoco: el banco solo da la fecha.
-                          Mejor sin hora que con una inventada. */}
-                      {t(c.label)} · {fmtDate(t2.date, monthNames)}
-                      {t2.time ? ` · ${t2.time}` : ""}
-                    </Text>
-                  </View>
-                  <Text
-                    className={`text-base font-extrabold ${
-                      t2.type === "expense" ? "text-rose-500" : "text-emerald-600"
-                    }`}
-                  >
-                    {t2.type === "expense" ? "-" : "+"}
-                    {fmt(t2.amount)}
-                  </Text>
-                </PressableScale>
-              </Row>
-            </View>
-          );
-        }}
+        renderItem={dibujarFila}
+        extraData={marcadas}
         ListEmptyComponent={
           <View className="px-5">
             <View className="items-center py-10 bg-white dark:bg-noche rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-noche-borde">
