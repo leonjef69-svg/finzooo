@@ -7,6 +7,19 @@
 export type TransactionOrigin = "manual" | "imported" | "verified" | "merged" | "auto";
 
 export type Transaction = {
+  /**
+   * EL DIBUJO PROPIO DE ESTE MOVIMIENTO, si lo tiene. Opcional a propósito.
+   *
+   * Lo normal es que el dibujo salga de la CATEGORÍA, y así sigue siendo: los reportes, el
+   * PDF y los límites agrupan por categoría, y un movimiento no puede quedarse fuera de eso.
+   * Esto es solo lo que se PINTA.
+   *
+   * Nació el 19/08/2026 con el calendario de pagos: quien le pone el logo de Spotify a su
+   * suscripción espera verlo también en Inicio, y lo pidió dos veces. La categoría se sigue
+   * poniendo igual —"Netflix" cae en entretenimiento— así que las cuentas no cambian; lo
+   * único que cambia es el dibujo de la fila.
+   */
+  icono?: string;
   id: number;
   type: "expense" | "income";
   amount: number;

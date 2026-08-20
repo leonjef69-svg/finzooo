@@ -7,6 +7,8 @@ import Anuncio from "@/components/Anuncio";
 import IconBadge from "@/components/IconBadge";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import { catInfo } from "@/constants/categories";
+import { iconoDe } from "@/constants/iconos";
+import { esFoto } from "@/utils/iconosFavoritos";
 import { methodLabel } from "@/constants/i18n";
 import { CARD_SHADOW } from "@/constants/style";
 import { fmtDate, monthKey } from "@/utils/format";
@@ -173,7 +175,9 @@ export default function History({
                     className="flex-row items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl p-3 border-[1.5px] border-slate-200 dark:border-slate-700"
                     style={CARD_SHADOW}
                   >
-                    <IconBadge Icon={c.icon} color={c.color} image={c.image} />
+                  {/* SU PROPIO DIBUJO SI LO TIENE. Ver Transaction.icono: lo trae un pago del
+                      calendario, y la categoria sigue mandando en las cuentas. */}
+                    <IconBadge Icon={tx.icono && !esFoto(tx.icono) ? iconoDe(tx.icono) : c.icon} color={c.color} image={esFoto(tx.icono ?? "") ? tx.icono : c.image} />
                     <View className="flex-1 min-w-0">
                       <Text
                         className="text-sm font-bold"

@@ -277,68 +277,78 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
             </Text>
           ))}
         </View>
-        <View className="flex-row flex-wrap">
-          {Array.from({ length: primerDia }).map((_, i) => (
-            <View key={`h${i}`} style={{ width: `${100 / 7}%`, aspectRatio: 1 }} />
-          ))}
-          {Array.from({ length: diasEnElMes }).map((_, i) => {
-            const dia = i + 1;
-            const x = porDia[dia];
-            const esHoy = esEsteMes && dia === hoy.getDate();
-            return (
-              <TouchableOpacity
-                key={dia}
-                onPress={() => {
-                  if (!x) {
-                    router.push(`/calendario/nuevo?fecha=${mes}-${String(dia).padStart(2, "0")}`);
-                  } else if (x.n === 1) {
-                    const uno = delMes.find((p) => diaDe(p) === dia);
-                    if (uno) router.push(`/calendario/nuevo?id=${uno.id}`);
-                  } else {
-                    // Con varios NO se abre ninguno: no se sabría cuál abrió. Se enseñan.
-                    setDiaAbierto(diaAbierto === dia ? null : dia);
-                  }
-                }}
-                style={{ width: `${100 / 7}%`, aspectRatio: 1 }}
-                className="items-center justify-center p-0.5"
-              >
-                <View
-                  className="w-full h-full rounded-full items-center justify-center"
-                  style={{ backgroundColor: x ? COLOR[x.estado] : "transparent" }}
+        {/* POR SEMANAS, Y NO POR "FLEX-WRAP".
+            Iba con 31 casillas seguidas de ancho 100/7 % y dejando que se envolvieran solas.
+            Sobre el papel entran siete; en su celular entraban SEIS, y el calendario salió
+            corrido un día entero: *"el calendario se movió"*. Con siete de 14,2857 % basta
+            un pelo de redondeo para que el séptimo no quepa y baje de fila.
+
+            Repartido en semanas de siete con "flex: 1", cada fila reparte lo que hay y no
+            existe el redondeo que sobra. Siete son siete siempre. */}
+        {Array.from({ length: Math.ceil((primerDia + diasEnElMes) / 7) }).map((_, semana) => (
+          <View key={semana} className="flex-row">
+            {Array.from({ length: 7 }).map((__, columna) => {
+              const dia = semana * 7 + columna - primerDia + 1;
+              if (dia < 1 || dia > diasEnElMes) {
+                return <View key={columna} style={{ flex: 1, aspectRatio: 1 }} />;
+              }
+              const x = porDia[dia];
+              const esHoy = esEsteMes && dia === hoy.getDate();
+              return (
+                <TouchableOpacity
+                  key={columna}
+                  onPress={() => {
+                    if (!x) {
+                      router.push(`/calendario/nuevo?fecha=${mes}-${String(dia).padStart(2, "0")}`);
+                    } else if (x.n === 1) {
+                      const uno = delMes.find((p) => diaDe(p) === dia);
+                      if (uno) router.push(`/calendario/nuevo?id=${uno.id}`);
+                    } else {
+                      // Con varios NO se abre ninguno: no se sabría cuál abrió. Se enseñan.
+                      setDiaAbierto(diaAbierto === dia ? null : dia);
+                    }
+                  }}
+                  style={{ flex: 1, aspectRatio: 1 }}
+                  className="items-center justify-center p-0.5"
                 >
-                  <Text
-                    className="text-[12px] text-slate-900 dark:text-slate-100"
-                    style={x ? { color: "#ffffff" } : undefined}
+                  <View
+                    className="w-full h-full rounded-full items-center justify-center"
+                    style={{ backgroundColor: x ? COLOR[x.estado] : "transparent" }}
                   >
-                    {dia}
-                  </Text>
-                  {/* HOY, CON UN PUNTO DEBAJO. Elegido por él entre tres formas: el aro gris
-                      no le gustaba, y el fondo suave desaparecía en cuanto el día tenía un
-                      pago. El punto se ve igual sobre el color. */}
-                  {esHoy && (
-                    <View
-                      style={{
-                        width: 4,
-                        height: 4,
-                        borderRadius: 2,
-                        marginTop: 2,
-                        backgroundColor: x ? "#ffffff" : oscuro ? "#f1f5f9" : "#0f172a",
-                      }}
-                    />
-                  )}
-                  {x && x.n > 1 && (
-                    <View
-                      className="absolute -top-0.5 -right-0.5 px-1 rounded-full bg-slate-900 dark:bg-slate-100 border-2 border-white dark:border-slate-900"
-                      style={{ minWidth: 16, height: 16, alignItems: "center", justifyContent: "center" }}
+                    <Text
+                      className="text-[12px] text-slate-900 dark:text-slate-100"
+                      style={x ? { color: "#ffffff" } : undefined}
                     >
-                      <Text className="text-[9px] font-bold text-white dark:text-slate-900">{x.n}</Text>
-                    </View>
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
+                      {dia}
+                    </Text>
+                    {/* HOY, CON UN PUNTO DEBAJO. Elegido por él entre tres formas: el aro
+                        gris no le gustaba, y el fondo suave desaparecía en cuanto el día
+                        tenía un pago. El punto se ve igual sobre el color. */}
+                    {esHoy && (
+                      <View
+                        style={{
+                          width: 4,
+                          height: 4,
+                          borderRadius: 2,
+                          marginTop: 2,
+                          backgroundColor: x ? "#ffffff" : oscuro ? "#f1f5f9" : "#0f172a",
+                        }}
+                      />
+                    )}
+                    {x && x.n > 1 && (
+                      <View
+                        className="absolute -top-0.5 -right-0.5 px-1 rounded-full bg-slate-900 dark:bg-slate-100 border-2 border-white dark:border-slate-900"
+                        style={{ minWidth: 16, height: 16, alignItems: "center", justifyContent: "center" }}
+                      >
+                        <Text className="text-[9px] font-bold text-white dark:text-slate-900">{x.n}</Text>
+                      </View>
+                    )}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ))}
 
         {/* LA LEYENDA. Sin ella, un círculo ámbar no dice nada la primera vez. */}
         {delMes.length > 0 && (

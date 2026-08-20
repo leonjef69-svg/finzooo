@@ -26,6 +26,8 @@ import IconBadge from "@/components/IconBadge";
 import PressableScale from "@/components/PressableScale";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import { catInfo } from "@/constants/categories";
+import { iconoDe } from "@/constants/iconos";
+import { esFoto } from "@/utils/iconosFavoritos";
 import { CARD_SHADOW, SALDO_TARJETA, SALDO_VERDE } from "@/constants/style";
 import { fmtDate, monthKey } from "@/utils/format";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
@@ -505,7 +507,9 @@ export default function Home({
                     ) : (
                       <Circle size={22} color="#cbd5e1" />
                     ))}
-                  <IconBadge Icon={c.icon} color={c.color} image={c.image} />
+                  {/* SU PROPIO DIBUJO SI LO TIENE. Ver Transaction.icono: lo trae un pago del
+                      calendario, y la categoria sigue mandando en las cuentas. */}
+                  <IconBadge Icon={t2.icono && !esFoto(t2.icono) ? iconoDe(t2.icono) : c.icon} color={c.color} image={esFoto(t2.icono ?? "") ? t2.icono : c.image} />
                   <View className="flex-1 min-w-0">
                     <Text
                       className="text-base font-bold"
