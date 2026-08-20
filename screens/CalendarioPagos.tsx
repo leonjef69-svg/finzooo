@@ -264,7 +264,10 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 16 }}>
+      {/* LO DE ARRIBA SE QUEDA QUIETO: el proximo pago, el mes, el resumen, el calendario
+          y los filtros. Es lo que dice DONDE estas, y perderlo al deslizar era lo que hacia
+          que uno no supiera que mes ni que filtro estaba mirando. */}
+      <View className="px-5">
         {/* TU PRÓXIMO PAGO. Una sola tarjeta, con su botón al costado. Al pagarlo se pone
             verde y dice "Pagado": *"algo que identifique que ya pagó"*. */}
         {/* SIN NADA PENDIENTE, SE DICE. Antes aquí no salía nada y quedaba un hueco donde
@@ -542,7 +545,11 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
             )}
           </View>
         )}
+      </View>
 
+      {/* Y SOLO LA LISTA SE DESLIZA. Es lo que el eligio del dibujo: "me gusta como se
+          desliza solamente las cosas que estan por pagar, pagados, recuerdos". */}
+      <ScrollView className="px-5 flex-1" contentContainerStyle={{ paddingBottom: 10 }}>
         {visibles.map((p) => (
           <Fila
             key={p.id}
