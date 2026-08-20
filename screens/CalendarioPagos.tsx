@@ -97,11 +97,22 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
   const [seleccionando, setSeleccionando] = useState(false);
   const [seleccionados, setSeleccionados] = useState<string[]>([]);
   const [confirmandoBorrar, setConfirmandoBorrar] = useState(false);
+  const [confirmandoBorrarTodo, setConfirmandoBorrarTodo] = useState(false);
 
   function alternarSeleccion(id: string) {
     setSeleccionados((antes) =>
       antes.includes(id) ? antes.filter((x) => x !== id) : [...antes, id]
     );
+  }
+
+  /** Borra los del filtro que se está mirando. Ver el botón: no los del mes entero. */
+  function borrarTodosLosDelFiltro() {
+    const cuantos = visibles.length;
+    for (const p of visibles) quitarPagoProgramado(p.id);
+    showToast(t(cuantos > 1 ? "calendario.borradosPlural" : "calendario.borrados", { n: cuantos }));
+    setSeleccionados([]);
+    setSeleccionando(false);
+    setConfirmandoBorrarTodo(false);
   }
 
   function borrarSeleccionados() {
@@ -164,12 +175,22 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
   });
 
   /**
-   * LA LISTA NO REPITE EL DE LA TARJETA. Era su primera queja del rediseño: *"lo que está
-   * encerrado en la imagen confunde al usuario si hay 2"*. Solo se excluye cuando la tarjeta
-   * habla de ESTE mes; si enseña el de septiembre, el de agosto sigue en su sitio.
+   * LA LISTA LOS ENSEÑA TODOS, TAMBIEN EL DE LA TARJETA. **Esto era un fallo.**
+   *
+   * Antes se excluia el de la tarjeta para no verlo dos veces, y con UN solo pago pendiente
+   * el filtro decia "Por pagar 1" y debajo no aparecia nada: el unico que habia estaba
+   * arriba. El lo encontro al primer intento — *"agrego un pago y en el boton de por pagar le
+   * doy click y no aparece"*.
+   *
+   * La contradiccion de la que se quejo al principio -ver el mismo nombre dos veces- era
+   * otra cosa y ya esta arreglada: la tarjeta enseñaba el recibo del MES SIGUIENTE mientras
+   * la lista lo daba por pagado. Ahora las dos hablan del mismo mes y del mismo estado, asi
+   * que la tarjeta es lo que dice ser: un atajo al primero, no una fila aparte.
+   *
+   * Y asi el numero del filtro y lo que se ve debajo no pueden discrepar, que es lo unico que
+   * no se puede permitir aqui.
    */
-  const enLaTarjeta = siguiente && siguiente.mes === mes ? siguiente.pago.id : null;
-  const visibles = enFiltro.filter((p) => p.id !== enLaTarjeta);
+  const visibles = enFiltro;
 
   const totales = useMemo(() => {
     let pagado = 0;
@@ -235,28 +256,13 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
         {/* EL ENGRANAJE LLEVA A SU PROPIA PANTALLA. Era un panel que se abría encima y
             ocupaba media pantalla principal: *"se ve horrible, me sale prácticamente toda la
             pantalla del calendario"*. */}
-        {seleccionando ? (
-          <TouchableOpacity
-            onPress={() => {
-              setSeleccionando(false);
-              setSeleccionados([]);
-            }}
-            className="w-10 items-end p-1"
-          >
-            <X size={20} color="#94a3b8" />
-          </TouchableOpacity>
-        ) : (
-          <View className="flex-row items-center gap-1">
-            {delMes.length > 0 && (
-              <TouchableOpacity onPress={() => setSeleccionando(true)} className="p-1">
-                <ListChecks size={19} color="#94a3b8" />
-              </TouchableOpacity>
-            )}
-            <TouchableOpacity onPress={() => irUnaVez("/calendario/avisos")} className="p-1">
-              <Settings size={19} color="#94a3b8" />
-            </TouchableOpacity>
-          </View>
-        )}
+        {/* Solo el engranaje. El icono de seleccionar bajó a la fila de debajo de los
+            filtros, que es donde se elige QUÉ se está mirando y por tanto qué se va a
+            borrar: *"tiene que estar debajo de los botones de por pagar, pagados,
+            recuerdos"*. */}
+        <TouchableOpacity onPress={() => irUnaVez("/calendario/avisos")} className="w-10 items-end p-1">
+          <Settings size={19} color="#94a3b8" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
@@ -480,22 +486,61 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
           </View>
         )}
 
-        {seleccionando && (
-          <View className="flex-row items-center justify-between px-1 mb-2">
-            <Text className="text-[13px] font-bold text-slate-900 dark:text-slate-100">
-              {t(seleccionados.length === 1 ? "calendario.elegido" : "calendario.elegidos", {
-                n: seleccionados.length,
-              })}
-            </Text>
-            <TouchableOpacity
-              onPress={() => setConfirmandoBorrar(true)}
-              disabled={seleccionados.length === 0}
-              className={`w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-950 items-center justify-center ${
-                seleccionados.length === 0 ? "opacity-40" : ""
-              }`}
-            >
-              <Trash2 size={19} color="#f43f5e" />
-            </TouchableOpacity>
+        {/* LA FILA DE SELECCIONAR, DEBAJO DE LOS FILTROS.
+            En reposo es solo la palabra "Seleccionar" a la derecha, como en Inicio. Al
+            tocarla, esta misma fila se convierte en cuántos hay elegidos, la papelera,
+            "Borrar todo" y "Cancelar" — sin abrir nada ni mover la pantalla. */}
+        {delMes.length > 0 && (
+          <View className="flex-row items-center justify-between px-1 mb-2.5">
+            {seleccionando ? (
+              <>
+                <Text className="text-[13px] font-bold text-slate-900 dark:text-slate-100">
+                  {t(seleccionados.length === 1 ? "calendario.elegido" : "calendario.elegidos", {
+                    n: seleccionados.length,
+                  })}
+                </Text>
+                <View className="flex-row items-center gap-3">
+                  <TouchableOpacity
+                    onPress={() => setConfirmandoBorrar(true)}
+                    disabled={seleccionados.length === 0}
+                    className={`w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-950 items-center justify-center ${
+                      seleccionados.length === 0 ? "opacity-40" : ""
+                    }`}
+                  >
+                    <Trash2 size={19} color="#f43f5e" />
+                  </TouchableOpacity>
+                  {/* BORRAR TODO: los del filtro que se está mirando, no los del mes entero.
+                      Estando en "Pagados", "borrar todo" tiene que borrar los pagados — que es
+                      lo que se ve— y no llevarse por delante lo que aún queda por pagar. */}
+                  <TouchableOpacity onPress={() => setConfirmandoBorrarTodo(true)} hitSlop={6}>
+                    <Text className="text-[13px] font-bold text-rose-500">
+                      {t("calendario.borrarTodo")}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => {
+                      setSeleccionando(false);
+                      setSeleccionados([]);
+                    }}
+                    hitSlop={6}
+                  >
+                    <Text className="text-[13px] font-bold text-emerald-600">
+                      {t("common.cancel")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            ) : (
+              <>
+                <View />
+                <TouchableOpacity onPress={() => setSeleccionando(true)} className="flex-row items-center gap-1.5">
+                  <ListChecks size={15} color="#94a3b8" />
+                  <Text className="text-[13px] font-bold text-slate-500 dark:text-slate-400">
+                    {t("calendario.seleccionar")}
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         )}
 
@@ -552,6 +597,17 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
         danger
         onConfirm={borrarSeleccionados}
         onCancel={() => setConfirmandoBorrar(false)}
+      />
+
+      <ConfirmDialog
+        visible={confirmandoBorrarTodo}
+        title={t("calendario.borrarTodoTitulo")}
+        message={t("calendario.borrarTextoPlural", { n: visibles.length })}
+        confirmLabel={t("calendario.borrarTodo")}
+        cancelLabel={t("common.cancel")}
+        danger
+        onConfirm={borrarTodosLosDelFiltro}
+        onCancel={() => setConfirmandoBorrarTodo(false)}
       />
     </View>
   );
