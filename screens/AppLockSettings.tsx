@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ChevronLeft, EyeOff, Fingerprint, Info, Lock, ScanFace, ShieldAlert } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, EyeOff, Fingerprint, Info, Lock, ScanFace } from "lucide-react-native";
 import PinPad from "@/components/PinPad";
 import Toggle from "@/components/Toggle";
 import { CARD_SHADOW } from "@/constants/style";
@@ -48,6 +48,7 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
    * Lo que sí se elige es si además se usa la huella. Eso es este interruptor.
    */
   const [conHuella, setConHuella] = useState(true);
+  const [verAyuda, setVerAyuda] = useState(false);
   const [kind, setKind] = useState<BiometricKind>("none");
   const [step, setStep] = useState<Step>("idle");
   const [pin, setPin] = useState("");
@@ -292,89 +293,90 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
                   />
                 </View>
               )}
-            </View>
 
-            {/* Qué método va a pedir este celular en concreto. Decir
-                "huella" en un teléfono que solo tiene reconocimiento facial
-                sería mentir. */}
-            <View className="flex-row items-center gap-2 mt-5 px-1">
-              {kind === "face" ? (
-                <ScanFace size={16} color="#64748b" />
-              ) : (
-                <Fingerprint size={16} color="#64748b" />
-              )}
-              <Text className="text-xs text-slate-500 dark:text-slate-300 flex-1">
-                {kind === "none"
-                  ? t("lock.noBiometric")
-                  : t(kind === "face" ? "lock.hasFace" : "lock.hasFingerprint")}
-              </Text>
-            </View>
-
-            {/* El aviso que de verdad importa: qué pasa si se olvida el PIN.
-                Cambia según haya copia en la nube o no, porque las
-                consecuencias son muy distintas. */}
-            <View className="flex-row gap-2 mt-5 rounded-2xl p-3.5 bg-amber-50 dark:bg-noche-2 border-[1.5px] border-amber-200 dark:border-noche-borde">
-              <ShieldAlert size={16} color="#b45309" />
-              <Text className="flex-1 text-[11px] text-amber-800 dark:text-amber-300 leading-4">
-                {t(isCloudSynced ? "lock.warnWithCloud" : "lock.warnNoCloud")}
-              </Text>
-            </View>
-
-            <Text className="text-[11px] text-slate-400 mt-5 leading-4">{t("lock.graceNote")}</Text>
-
-            {/* EL PIN SEÑUELO. Solo aparece con el bloqueo ya puesto: sin
-                un PIN de verdad no hay nada de lo que ser el señuelo. */}
+            {/* EL PIN SEÑUELO, EN LA MISMA TARJETA. Solo con el bloqueo puesto: sin un PIN
+                de verdad no hay nada de lo que ser el señuelo. */}
             {enabled && (
-              <>
-                <View
-                  className="rounded-3xl p-5 mt-6 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
-                  style={CARD_SHADOW}
-                >
-                  <View className="flex-row items-center gap-3">
-                    <View className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-noche-2 items-center justify-center">
-                      <EyeOff size={20} color="#64748b" />
-                    </View>
-                    <View className="flex-1">
-                      <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                        {t("lock.decoyLabel")}
-                      </Text>
-                      <Text className="text-[11px] text-slate-500 dark:text-slate-300">
-                        {hasDecoy ? t("lock.decoyOn") : t("lock.decoyOff")}
-                      </Text>
-                    </View>
-                    <Toggle
-                      on={hasDecoy}
-                      onChange={(next) => {
-                        setMessage("");
-                        if (next) {
-                          setPin("");
-                          setFirstPin("");
-                          setStep("decoyCreate");
-                        } else {
-                          void clearDecoyPin().then(() => setHasDecoy(false));
-                        }
-                      }}
-                    />
-                  </View>
-                  <Text className="text-[11px] text-slate-500 dark:text-slate-300 leading-4 mt-4">
-                    {t("lock.decoyExplain")}
+              <View className="flex-row items-center gap-3 mt-4 pt-4 border-t-[1.5px] border-slate-100 dark:border-noche-borde">
+                <View className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-noche-2 items-center justify-center">
+                  <EyeOff size={20} color="#64748b" />
+                </View>
+                <View className="flex-1">
+                  <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                    {t("lock.decoyLabel")}
+                  </Text>
+                  <Text className="text-[11px] text-slate-500 dark:text-slate-300">
+                    {hasDecoy ? t("lock.decoyOn") : t("lock.decoyOff")}
                   </Text>
                 </View>
-
-                {/* Los límites, dichos claro. Una función de seguridad que
-                    promete más de lo que da es peor que no tenerla: lleva a
-                    confiarse justo cuando no hay que confiarse. */}
-                <View className="flex-row gap-2 mt-4 rounded-2xl p-3.5 bg-slate-50 dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde">
-                  <Info size={16} color="#64748b" />
-                  <Text className="flex-1 text-[11px] text-slate-600 dark:text-slate-300 leading-4">
-                    {t("lock.decoyLimits")}
-                  </Text>
-                </View>
-              </>
+                <Toggle
+                  on={hasDecoy}
+                  onChange={(next) => {
+                    setMessage("");
+                    if (next) {
+                      setPin("");
+                      setFirstPin("");
+                      setStep("decoyCreate");
+                    } else {
+                      void clearDecoyPin().then(() => setHasDecoy(false));
+                    }
+                  }}
+                />
+              </View>
             )}
+          </View>
+
+          {/* LOS CINCO PÁRRAFOS, DETRÁS DE UN TOQUE (19/08/2026)
+              La pantalla tenía tres interruptores y **cinco bloques de texto**: qué método
+              usa el celular, qué pasa si se olvida el PIN, cuándo se bloquea la app, qué es
+              el señuelo y qué no cubre. Todo cierto y todo de leer una vez.
+
+              Él lo cortó: *"mucho texto, no quiero que haya cosas innecesarias"*. Y uno de
+              esos párrafos además se contradecía con el interruptor de arriba — decía "este
+              celular desbloqueará con tu huella" con la huella apagada.
+
+              No se borra ninguno: un candado que promete más de lo que da es peor que no
+              tenerlo, y los límites del señuelo hay que decirlos. Se leen aquí dentro. */}
+          <TouchableOpacity
+            onPress={() => setVerAyuda((v) => !v)}
+            className="flex-row items-center gap-2.5 py-4 mt-1"
+          >
+            <Info size={17} color="#64748b" />
+            <Text className="flex-1 text-[13px] text-slate-500 dark:text-slate-300">
+              {t("lock.comoFunciona")}
+            </Text>
+            <ChevronRight size={16} color="#94a3b8" />
+          </TouchableOpacity>
+
+          {verAyuda && (
+            <View className="rounded-2xl p-4 bg-slate-50 dark:bg-noche-2">
+              <Ayuda texto={t(isCloudSynced ? "lock.warnWithCloud" : "lock.warnNoCloud")} />
+              <Ayuda texto={t("lock.graceNote")} />
+              <Ayuda
+                texto={t(
+                  kind === "none"
+                    ? "lock.noBiometric"
+                    : kind === "face"
+                      ? "lock.hasFace"
+                      : "lock.hasFingerprint"
+                )}
+              />
+              {enabled && <Ayuda texto={t("lock.decoyExplain")} />}
+              {enabled && <Ayuda texto={t("lock.decoyLimits")} />}
+            </View>
+          )}
           </>
         )}
       </ScrollView>
     </View>
+  );
+}
+
+/** Un párrafo de la ayuda. Uno solo para que los cinco midan y separen igual. */
+function Ayuda({ texto }: { texto: string }) {
+  return (
+    <Text className="text-[12px] leading-5 text-slate-600 dark:text-slate-300 mb-3 last:mb-0">
+      {texto}
+    </Text>
   );
 }
