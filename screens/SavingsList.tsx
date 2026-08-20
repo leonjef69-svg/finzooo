@@ -41,7 +41,7 @@ export default function SavingsList({
   const insets = useSafeAreaInsets();
 
   return (
-    <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
+    <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
         <BackButton onPress={onBack} />
         <Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("savingsList.title")}</Text>
@@ -58,7 +58,7 @@ export default function SavingsList({
       </View>
 
       <View className="px-5 mb-1">
-        <View className="bg-slate-100 dark:bg-slate-800 rounded-xl p-1 flex-row">
+        <View className="bg-slate-100 dark:bg-noche-2 rounded-xl p-1 flex-row">
           {(["resumen", "metas"] as const).map((id) => (
             <TouchableOpacity
               key={id}
@@ -158,7 +158,7 @@ export default function SavingsList({
         {tab === "metas" && (
           <View className="mt-3">
             {goals.length === 0 && (
-              <View className="items-center py-16 px-4 bg-slate-50 dark:bg-slate-800 rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-slate-700">
+              <View className="items-center py-16 px-4 bg-slate-50 dark:bg-noche-2 rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-noche-borde">
                 <Text className="text-slate-500 dark:text-slate-300 text-sm text-center">{t("savingsList.noGoals")}</Text>
               </View>
             )}
@@ -170,7 +170,7 @@ export default function SavingsList({
                   <TouchableOpacity
                     key={g.id}
                     onPress={() => onOpen(g.id)}
-                    className="bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700 rounded-2xl p-4"
+                    className="bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde rounded-2xl p-4"
                     style={CARD_SHADOW}
                   >
                     <View className="flex-row items-center gap-3 mb-3">
@@ -190,7 +190,7 @@ export default function SavingsList({
                       </View>
                       {g.completed && <CheckCircle2 size={18} color="#10b981" />}
                     </View>
-                    <View className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-2">
+                    <View className="w-full h-2 bg-slate-100 dark:bg-noche-2 rounded-full overflow-hidden mb-2">
                       <View
                         className="h-full rounded-full"
                         style={{ width: `${pct}%`, backgroundColor: color.fg }}

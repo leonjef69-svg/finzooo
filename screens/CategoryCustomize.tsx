@@ -96,7 +96,7 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
   const tieneCambios = abierta ? !!categoryOverrides[abierta] : false;
 
   return (
-    <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top }}>
       <View className="px-5 pt-3 pb-2 flex-row items-center gap-2">
         <TouchableOpacity
           onPress={abierta ? () => setAbierta(null) : onBack}
@@ -123,7 +123,7 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
                     key={c.id}
                     onPress={() => setAbierta(c.id)}
                     style={{ width: "31%" }}
-                    className="items-center rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 py-3.5 px-1"
+                    className="items-center rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2 py-3.5 px-1"
                   >
                     <CategoryAvatar id={c.id} size={24} />
                     <Text
@@ -146,7 +146,7 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
             {/* Cómo va a quedar. Antes de tocar nada se ve el resultado, no
                 una descripción de él. */}
             <View
-              className="items-center rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 py-6 mb-5"
+              className="items-center rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-slate-50 dark:bg-noche-2 py-6 mb-5"
               style={CARD_SHADOW}
             >
               <CategoryAvatar id={abierta} size={40} />
@@ -169,7 +169,7 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
               placeholder={original ? t(original.label) : ""}
               placeholderTextColor="#94a3b8"
               maxLength={24}
-              className="border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 mb-5"
+              className="border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-noche-2 mb-5"
             />
 
             <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
@@ -181,7 +181,7 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
             <View className="flex-row gap-2.5 mb-2.5">
               <TouchableOpacity
                 onPress={() => tomarFoto(abierta)}
-                className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2"
               >
                 <CameraIcon size={16} color="#64748b" />
                 <Text className="text-sm font-bold text-slate-600 dark:text-slate-200">
@@ -190,7 +190,7 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => elegirImagen(abierta)}
-                className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2"
               >
                 <ImageIcon size={16} color="#64748b" />
                 <Text className="text-sm font-bold text-slate-600 dark:text-slate-200">
@@ -201,7 +201,7 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
             {cat?.image && (
               <TouchableOpacity
                 onPress={() => cambiar(abierta, { image: null })}
-                className="py-2.5 mb-3 items-center rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700"
+                className="py-2.5 mb-3 items-center rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde"
               >
                 <Text className="text-sm font-bold text-rose-500">{t("catCustom.removeImage")}</Text>
               </TouchableOpacity>
@@ -251,7 +251,7 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
                   setNombre("");
                   showToast(t("catCustom.restored"));
                 }}
-                className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700"
+                className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde"
               >
                 <RotateCcw size={16} color="#64748b" />
                 <Text className="text-sm font-bold text-slate-600 dark:text-slate-200">

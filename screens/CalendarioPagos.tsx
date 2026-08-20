@@ -242,7 +242,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
 
   return (
     <View
-      className="flex-1 bg-white dark:bg-slate-900"
+      className="flex-1 bg-white dark:bg-noche"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
@@ -426,7 +426,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
         )}
 
         {diaAbierto != null && (
-          <View className="mt-4 rounded-2xl p-3 bg-slate-50 dark:bg-slate-800">
+          <View className="mt-4 rounded-2xl p-3 bg-slate-50 dark:bg-noche-2">
             <View className="flex-row items-center justify-between mb-2">
               <Text className="text-[13px] text-slate-900 dark:text-slate-100">
                 {t("calendario.diaConVarias", { dia: diaAbierto, n: delDiaAbierto.length })}
@@ -472,7 +472,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                   className={`flex-1 py-2.5 rounded-xl items-center border-[1.5px] ${
                     activo
                       ? "bg-slate-900 dark:bg-slate-100 border-slate-900 dark:border-slate-100"
-                      : "border-slate-200 dark:border-slate-700"
+                      : "border-slate-200 dark:border-noche-borde"
                   }`}
                 >
                   <Text
@@ -594,14 +594,14 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
           Va sobre el borde de abajo del celular (insets), no sobre el borde de la pantalla:
           en los que tienen barra de gestos, un botón pegado al borde se toca con dificultad. */}
       <View
-        className="px-5 pt-2.5 border-t-[1.5px] border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900"
+        className="px-5 pt-2.5 border-t-[1.5px] border-slate-100 dark:border-noche-borde bg-white dark:bg-noche"
         style={{ paddingBottom: 10 }}
       >
         <TouchableOpacity
           onPress={() => irUnaVez("/calendario/nuevo")}
           disabled={seleccionando}
           className={`flex-row items-center justify-center gap-2 py-3.5 rounded-2xl ${
-            seleccionando ? "bg-slate-200 dark:bg-slate-700" : "bg-emerald-600"
+            seleccionando ? "bg-slate-200 dark:bg-noche-3" : "bg-emerald-600"
           }`}
         >
           <Plus size={17} color={seleccionando ? "#94a3b8" : "#ffffff"} strokeWidth={2.6} />
@@ -644,7 +644,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
 /** Los tres números del resumen. Uno solo para que los tres midan y separen igual. */
 function Cuadro({ texto, valor, color }: { texto: string; valor: string; color: string }) {
   return (
-    <View className="flex-1 rounded-xl py-2.5 px-2 items-center bg-slate-50 dark:bg-slate-800">
+    <View className="flex-1 rounded-xl py-2.5 px-2 items-center bg-slate-50 dark:bg-noche-2">
       <Text className="text-[11px] text-slate-500 dark:text-slate-400 mb-1">{texto}</Text>
       <Text className="text-[14px] font-bold" style={{ color }}>
         {valor}
@@ -686,7 +686,7 @@ function TarjetaProxima({
     <TouchableOpacity
       onPress={onAbrir}
       activeOpacity={0.9}
-      className="rounded-2xl p-3.5 mb-4 bg-slate-50 dark:bg-slate-800"
+      className="rounded-2xl p-3.5 mb-4 bg-slate-50 dark:bg-noche-2"
     >
       <Text className="text-[11px] text-slate-500 dark:text-slate-400 mb-2.5">
         {t("calendario.proximo")}
@@ -760,7 +760,7 @@ function Fila({
     <TouchableOpacity
       onPress={onAbrir}
       activeOpacity={0.9}
-      className="flex-row items-center gap-3 p-3 rounded-2xl mb-2 bg-slate-50 dark:bg-slate-800"
+      className="flex-row items-center gap-3 p-3 rounded-2xl mb-2 bg-slate-50 dark:bg-noche-2"
       style={{ borderLeftWidth: 3, borderLeftColor: color }}
     >
       {/* El círculo de elegir, igual que en Inicio: mismo icono y mismo sitio. */}

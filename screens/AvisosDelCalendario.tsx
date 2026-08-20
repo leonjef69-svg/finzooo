@@ -26,7 +26,7 @@ export default function AvisosDelCalendario({ onBack }: { onBack: () => void }) 
 
   return (
     <View
-      className="flex-1 bg-white dark:bg-slate-900"
+      className="flex-1 bg-white dark:bg-noche"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
@@ -38,7 +38,7 @@ export default function AvisosDelCalendario({ onBack }: { onBack: () => void }) 
       </View>
 
       <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
-        <View className="rounded-2xl p-4 mb-4 bg-slate-50 dark:bg-slate-800">
+        <View className="rounded-2xl p-4 mb-4 bg-slate-50 dark:bg-noche-2">
           <Text className="text-[15px] text-slate-900 dark:text-slate-100">
             {avisosProgramados == null
               ? t("calendario.avisos.calculando")
@@ -65,7 +65,7 @@ export default function AvisosDelCalendario({ onBack }: { onBack: () => void }) 
             setProbando(false);
           }}
           disabled={probando}
-          className="flex-row items-center gap-3 py-4 border-t-[1.5px] border-slate-100 dark:border-slate-800"
+          className="flex-row items-center gap-3 py-4 border-t-[1.5px] border-slate-100 dark:border-noche-borde"
         >
           <Bell size={18} color="#64748b" />
           <Text className="flex-1 text-[14px] text-slate-900 dark:text-slate-100">
@@ -85,7 +85,7 @@ export default function AvisosDelCalendario({ onBack }: { onBack: () => void }) 
 
         <TouchableOpacity
           onPress={async () => setNoSeAbrio(!(await abrirAjustesDelSonido()))}
-          className="flex-row items-center gap-3 py-4 border-t-[1.5px] border-b-[1.5px] border-slate-100 dark:border-slate-800"
+          className="flex-row items-center gap-3 py-4 border-t-[1.5px] border-b-[1.5px] border-slate-100 dark:border-noche-borde"
         >
           <Volume2 size={18} color="#64748b" />
           <Text className="flex-1 text-[14px] text-slate-900 dark:text-slate-100">

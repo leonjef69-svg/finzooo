@@ -71,13 +71,13 @@ export default function DuplicateReview({
 
   return (
     <View
-      className="flex-1 bg-white dark:bg-slate-900"
+      className="flex-1 bg-white dark:bg-noche"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
         <TouchableOpacity
           onPress={onCancel}
-          className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+          className="w-10 h-10 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
         >
           <ChevronLeft size={20} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
         </TouchableOpacity>
@@ -89,13 +89,13 @@ export default function DuplicateReview({
 
       <ScrollView className="flex-1 px-5" contentContainerClassName="pb-4">
         <View className="items-center mb-4 mt-2">
-          <View className="w-14 h-14 rounded-3xl bg-amber-50 dark:bg-slate-800 items-center justify-center mb-3">
+          <View className="w-14 h-14 rounded-3xl bg-amber-50 dark:bg-noche-2 items-center justify-center mb-3">
             <Copy size={24} color="#f59e0b" />
           </View>
           <Text className="font-extrabold text-lg text-center" style={{ color: primaryText }}>
             {t("dupes.title")}
           </Text>
-          <View className="flex-row items-center gap-1.5 mt-2 bg-amber-50 dark:bg-slate-800 px-3 py-1.5 rounded-full">
+          <View className="flex-row items-center gap-1.5 mt-2 bg-amber-50 dark:bg-noche-2 px-3 py-1.5 rounded-full">
             <Text className="text-xs font-bold text-amber-600 dark:text-amber-400">
               {t("dupes.matchLevel", { score })}
             </Text>
@@ -106,7 +106,7 @@ export default function DuplicateReview({
         </View>
 
         {/* Movimiento existente (el tuyo) */}
-        <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4 mb-3">
+        <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4 mb-3">
           <Text className="text-[11px] font-bold text-slate-400 dark:text-slate-400 uppercase mb-2">
             {t("dupes.existing")}
           </Text>
@@ -142,7 +142,7 @@ export default function DuplicateReview({
           </TouchableOpacity>
           <TouchableOpacity
             onPress={() => decide("keepBoth")}
-            className="flex-row items-center gap-3 bg-slate-100 dark:bg-slate-800 rounded-2xl p-4"
+            className="flex-row items-center gap-3 bg-slate-100 dark:bg-noche-2 rounded-2xl p-4"
           >
             <Layers size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
             <Text className="font-bold text-slate-700 dark:text-slate-200 flex-1">{t("dupes.keepBoth")}</Text>

@@ -33,13 +33,13 @@ export default function SavingsDetail({
   const remaining = Math.max(0, goal.target - goal.saved);
 
   return (
-    <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
+    <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
         <BackButton onPress={onBack} />
         <Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("savingsDetail.title")}</Text>
         <TouchableOpacity
           onPress={onEdit}
-          className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+          className="w-10 h-10 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
         >
           <Pencil size={16} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
         </TouchableOpacity>
@@ -58,7 +58,7 @@ export default function SavingsDetail({
         </View>
 
         <View className="px-6 mt-2">
-          <View className="w-full h-3 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden mb-2">
+          <View className="w-full h-3 bg-slate-100 dark:bg-noche-2 rounded-full overflow-hidden mb-2">
             <View className="h-full bg-emerald-500 rounded-full" style={{ width: `${pct}%` }} />
           </View>
           <View className="flex-row items-center justify-between mb-4">
@@ -72,17 +72,17 @@ export default function SavingsDetail({
         </View>
 
         <View className="px-6 flex-row gap-3 mb-3">
-          <View className="flex-1 bg-slate-50 dark:bg-slate-800 rounded-2xl p-3.5">
+          <View className="flex-1 bg-slate-50 dark:bg-noche-2 rounded-2xl p-3.5">
             <Text className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold mb-1">{t("savingsDetail.saved")}</Text>
             <Text className="text-base font-extrabold text-emerald-600">{fmt(goal.saved)}</Text>
           </View>
-          <View className="flex-1 bg-slate-50 dark:bg-slate-800 rounded-2xl p-3.5">
+          <View className="flex-1 bg-slate-50 dark:bg-noche-2 rounded-2xl p-3.5">
             <Text className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold mb-1">{t("savingsDetail.target")}</Text>
             <Text className="text-base font-extrabold text-slate-900 dark:text-slate-100">{fmt(goal.target)}</Text>
           </View>
         </View>
 
-        <View className="px-6 flex-row items-center gap-3 bg-slate-50 dark:bg-slate-800 rounded-2xl p-3.5 mb-5">
+        <View className="px-6 flex-row items-center gap-3 bg-slate-50 dark:bg-noche-2 rounded-2xl p-3.5 mb-5">
           <Calendar size={16} color="#94a3b8" />
           <Text className="text-sm font-semibold text-slate-600 dark:text-slate-300">
             {t("savingsDetail.createdOn", { date: fmtDate(goal.createdDate, monthNames) })}

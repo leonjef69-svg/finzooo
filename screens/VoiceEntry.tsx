@@ -800,7 +800,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
           panel slate-900 se fundía con él y todo parecía una pantalla
           entera en vez de algo flotando encima. */}
       <Animated.View
-        className="w-full rounded-3xl bg-white dark:bg-slate-800 px-5 pt-3 pb-6"
+        className="w-full rounded-3xl bg-white dark:bg-noche-2 px-5 pt-3 pb-6"
         style={[
           CARD_SHADOW,
           // Tope de alto para que la lista de 30 movimientos no se salga de
@@ -817,7 +817,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
         <View className="flex-row justify-end">
           <TouchableOpacity
             onPress={onClose}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
             <X size={16} color="#64748b" />
           </TouchableOpacity>
@@ -905,7 +905,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                     return (
                       <View
                         key={`${row.amount}-${i}`}
-                        className="flex-row items-center gap-3 rounded-2xl p-3.5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+                        className="flex-row items-center gap-3 rounded-2xl p-3.5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
                         style={CARD_SHADOW}
                       >
                         <CategoryAvatar id={cat.id} size={20} />
@@ -928,7 +928,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                         </TouchableOpacity>
                         <TouchableOpacity
                           onPress={() => removeRow(i)}
-                          className="w-7 h-7 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+                          className="w-7 h-7 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
                         >
                           <X size={13} color="#94a3b8" />
                         </TouchableOpacity>
@@ -951,7 +951,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             </TouchableOpacity>
             <TouchableOpacity
               onPress={start}
-              className="w-full flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 mt-2"
+              className="w-full flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 mt-2"
             >
               <RotateCcw size={16} color="#64748b" />
               <Text className="font-bold text-slate-600 dark:text-slate-200">{t("voice.retry")}</Text>
@@ -967,7 +967,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             <Text className="text-xs text-center text-slate-400 mb-4">{`"${heard}"`}</Text>
 
             <View
-              className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+              className="w-full rounded-3xl p-5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
               style={CARD_SHADOW}
             >
               <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 text-center">
@@ -1067,7 +1067,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             </TouchableOpacity>
             <TouchableOpacity
               onPress={start}
-              className="w-full flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 mt-2"
+              className="w-full flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 mt-2"
             >
               <RotateCcw size={16} color="#64748b" />
               <Text className="font-bold text-slate-600 dark:text-slate-200">{t("voice.retry")}</Text>
@@ -1081,7 +1081,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             <Text className="text-xs text-center text-slate-400 mb-4">{`"${heard}"`}</Text>
 
             <View
-              className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+              className="w-full rounded-3xl p-5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
               style={CARD_SHADOW}
             >
               <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 text-center">
@@ -1129,7 +1129,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                                 {fmt(m.value)}
                               </Text>
                             </View>
-                            <View className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                            <View className="h-1.5 rounded-full bg-slate-100 dark:bg-noche-2 overflow-hidden">
                               <View
                                 className={`h-1.5 rounded-full ${
                                   topFocus === "income" ? "bg-emerald-500" : "bg-rose-400"
@@ -1148,7 +1148,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
             <TouchableOpacity
               onPress={start}
-              className="w-full flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 mt-4"
+              className="w-full flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 mt-4"
             >
               <RotateCcw size={16} color="#64748b" />
               <Text className="font-bold text-slate-600 dark:text-slate-200">{t("voice.retry")}</Text>
@@ -1162,7 +1162,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             <Text className="text-xs text-center text-slate-400 mb-4">{`"${heard}"`}</Text>
 
             <View
-              className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+              className="w-full rounded-3xl p-5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
               style={CARD_SHADOW}
             >
               <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 text-center mb-3">
@@ -1207,7 +1207,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                     </View>
                   ))}
 
-                  <View className="h-px bg-slate-100 dark:bg-slate-800 my-3" />
+                  <View className="h-px bg-slate-100 dark:bg-noche-2 my-3" />
 
                   <View className="flex-row items-center">
                     <Text className="w-20 text-[11px] font-bold text-slate-500 dark:text-slate-300">
@@ -1249,7 +1249,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
             <TouchableOpacity
               onPress={start}
-              className="w-full flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 mt-4"
+              className="w-full flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 mt-4"
             >
               <RotateCcw size={16} color="#64748b" />
               <Text className="font-bold text-slate-600 dark:text-slate-200">{t("voice.retry")}</Text>
@@ -1259,7 +1259,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
         {stage === "failed" && (
           <View className="w-full items-center">
-            <View className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center mb-6">
+            <View className="w-20 h-20 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center mb-6">
               <MicOff size={28} color="#94a3b8" />
             </View>
             <Text className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2 text-center">
@@ -1288,7 +1288,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
         {stage === "denied" && (
           <View className="w-full items-center">
-            <View className="w-20 h-20 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center mb-6">
+            <View className="w-20 h-20 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center mb-6">
               <MicOff size={28} color="#94a3b8" />
             </View>
             <Text className="text-lg font-bold text-slate-900 dark:text-slate-100 mb-2 text-center">
@@ -1328,7 +1328,7 @@ function SingleCard({
   const cat = catInfo(category);
   return (
     <View
-      className="w-full rounded-3xl p-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700 items-center"
+      className="w-full rounded-3xl p-5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde items-center"
       style={CARD_SHADOW}
     >
       <View className="mb-1"><CategoryAvatar id={cat.id} size={36} /></View>
@@ -1353,8 +1353,8 @@ function SingleCard({
           onPress={() => onKind("expense")}
           className={`flex-row items-center gap-1.5 px-3.5 py-2 rounded-full border-[1.5px] ${
             kind === "expense"
-              ? "bg-rose-50 dark:bg-slate-800 border-rose-300"
-              : "border-slate-200 dark:border-slate-700"
+              ? "bg-rose-50 dark:bg-noche-2 border-rose-300"
+              : "border-slate-200 dark:border-noche-borde"
           }`}
         >
           <ArrowUpRight size={13} color={kind === "expense" ? "#f43f5e" : "#94a3b8"} />
@@ -1366,8 +1366,8 @@ function SingleCard({
           onPress={() => onKind("income")}
           className={`flex-row items-center gap-1.5 px-3.5 py-2 rounded-full border-[1.5px] ${
             kind === "income"
-              ? "bg-emerald-50 dark:bg-slate-800 border-emerald-300"
-              : "border-slate-200 dark:border-slate-700"
+              ? "bg-emerald-50 dark:bg-noche-2 border-emerald-300"
+              : "border-slate-200 dark:border-noche-borde"
           }`}
         >
           <ArrowDownRight size={13} color={kind === "income" ? "#059669" : "#94a3b8"} />

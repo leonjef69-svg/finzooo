@@ -278,7 +278,7 @@ export default function AddSheet({
     // (ver app/_layout.tsx). Esta View NUNCA cambia de tamaño ni de
     // posición por el teclado: es fija de principio a fin.
     <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-      <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top }}>
+      <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top }}>
         {/* Cabecera: fuera del contenedor animado a propósito, nunca se
             mueve cuando aparece el teclado. */}
         <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
@@ -290,7 +290,7 @@ export default function AddSheet({
           </Text>
           <TouchableOpacity
             onPress={handleClose}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
             <X size={16} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
           </TouchableOpacity>
@@ -298,7 +298,7 @@ export default function AddSheet({
 
         {!transaction && (
           <View className="px-5 mb-3">
-            <View className="bg-slate-100 dark:bg-slate-800 rounded-xl p-1 flex-row">
+            <View className="bg-slate-100 dark:bg-noche-2 rounded-xl p-1 flex-row">
               {(["expense", "income"] as const).map((opt) => (
                 <TouchableOpacity
                   key={opt}
@@ -333,7 +333,7 @@ export default function AddSheet({
           >
             <View>
               <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("addSheet.amount")}</Text>
-              <View className="flex-row items-center bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-4 py-3.5">
+              <View className="flex-row items-center bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4 py-3.5">
                 <Text className="text-slate-500 dark:text-slate-300 font-bold mr-1">{currencySymbolFor(userCurrency)}</Text>
                 <TextInput
                   keyboardType="decimal-pad"
@@ -366,7 +366,7 @@ export default function AddSheet({
                   params: { tipo: type, actual: category },
                 })
               }
-              className="flex-row items-center gap-2.5 bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-3"
+              className="flex-row items-center gap-2.5 bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-3"
               style={{ height: FIELD_HEIGHT }}
             >
               <View
@@ -399,8 +399,8 @@ export default function AddSheet({
               <View className="flex-1">
                 <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("detail.date")}</Text>
                 <View
-                  className={`flex-row items-center gap-2 bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] px-3 ${
-                    dateOk ? "border-slate-200 dark:border-slate-700" : "border-rose-400"
+                  className={`flex-row items-center gap-2 bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] px-3 ${
+                    dateOk ? "border-slate-200 dark:border-noche-borde" : "border-rose-400"
                   }`}
                   style={{ height: FIELD_HEIGHT }}
                 >
@@ -436,7 +436,7 @@ export default function AddSheet({
                     Keyboard.dismiss();
                     setShowMethod(true);
                   }}
-                  className="flex-row items-center justify-between gap-2 bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-3"
+                  className="flex-row items-center justify-between gap-2 bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-3"
                   style={{ height: FIELD_HEIGHT }}
                 >
                   <Text
@@ -459,7 +459,7 @@ export default function AddSheet({
                 onFocus={focusDescription}
                 placeholder={t("addSheet.descriptionPlaceholder")}
                 placeholderTextColor="#94a3b8"
-                className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-4 py-3.5 text-sm"
+                className="w-full bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4 py-3.5 text-sm"
                 style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
               />
             </View>
@@ -473,7 +473,7 @@ export default function AddSheet({
                 placeholderTextColor="#94a3b8"
                 multiline
                 numberOfLines={2}
-                className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-4 py-3 text-sm"
+                className="w-full bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4 py-3 text-sm"
                 style={{ textAlignVertical: "top", color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
               />
             </View>
@@ -484,10 +484,10 @@ export default function AddSheet({
               gestos del sistema) ya no hace falta —el teclado ocupa ese
               espacio— así que se omite para no dejar un hueco vacío de más. */}
           <View
-            className="px-5 py-4 flex-row gap-3 border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+            className="px-5 py-4 flex-row gap-3 border-t border-slate-200 dark:border-noche-borde bg-white dark:bg-noche"
             style={{ paddingBottom: keyboardVisible ? 16 : 16 + insets.bottom }}
           >
-            <TouchableOpacity onPress={handleClose} className="flex-1 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 items-center">
+            <TouchableOpacity onPress={handleClose} className="flex-1 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 items-center">
               <Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -539,7 +539,7 @@ export default function AddSheet({
             activeOpacity={1}
             onPress={() => setShowMethod(false)}
           />
-          <View className="w-full bg-white dark:bg-slate-900 rounded-2xl p-2 border-[1.5px] border-slate-200 dark:border-slate-700">
+          <View className="w-full bg-white dark:bg-noche rounded-2xl p-2 border-[1.5px] border-slate-200 dark:border-noche-borde">
             <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 px-3 pt-2 pb-1">
               {t("detail.method")}
             </Text>
@@ -553,7 +553,7 @@ export default function AddSheet({
                     setShowMethod(false);
                   }}
                   className={`w-full px-3 py-3.5 rounded-xl flex-row items-center justify-between ${
-                    active ? "bg-slate-100 dark:bg-slate-800" : ""
+                    active ? "bg-slate-100 dark:bg-noche-2" : ""
                   }`}
                 >
                   <Text

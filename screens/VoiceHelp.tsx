@@ -76,7 +76,7 @@ export default function VoiceHelp({ onBack }: { onBack: () => void }) {
 
   return (
     <View
-      className="flex-1 bg-white dark:bg-slate-900"
+      className="flex-1 bg-white dark:bg-noche"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
@@ -112,7 +112,7 @@ export default function VoiceHelp({ onBack }: { onBack: () => void }) {
 
                 {/* LO QUE HACE: burbuja gris a la izquierda, la respuesta. */}
                 <View className="flex-row justify-start mt-1.5">
-                  <View className="max-w-[85%] bg-slate-100 dark:bg-slate-800 rounded-2xl rounded-bl-md px-3.5 py-2.5">
+                  <View className="max-w-[85%] bg-slate-100 dark:bg-noche-2 rounded-2xl rounded-bl-md px-3.5 py-2.5">
                     <Text className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
                       {t(ej.hace)}
                     </Text>
@@ -127,7 +127,7 @@ export default function VoiceHelp({ onBack }: { onBack: () => void }) {
             Los ejemplos de arriba enseñan frases enteras; esto enseña que se
             pueden mezclar. Sin verlo, se repiten los ejemplos tal cual y no
             se descubre que se puede pedir otra cosa. */}
-        <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4 mb-5">
+        <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4 mb-5">
           <Text className="text-xs font-extrabold text-slate-700 dark:text-slate-200 mb-1">
             {t("voiceHelp.piecesTitle")}
           </Text>

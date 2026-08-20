@@ -17,7 +17,7 @@ export default function CurrencyPicker({
   const { t } = useAppData();
   const insets = useSafeAreaInsets();
   return (
-    <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
+    <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
         <BackButton onPress={onBack} />
         <Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("settings.currency")}</Text>
@@ -39,11 +39,11 @@ export default function CurrencyPicker({
                 className={`flex-row items-center justify-between rounded-2xl p-4 border-[1.5px] ${
                   selected
                     ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950"
-                    : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900"
+                    : "border-slate-200 dark:border-noche-borde bg-white dark:bg-noche"
                 }`}
               >
                 <View className="flex-row items-center gap-3">
-                  <View className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-slate-800 items-center justify-center">
+                  <View className="w-9 h-9 rounded-xl bg-slate-50 dark:bg-noche-2 items-center justify-center">
                     <Text className="text-sm font-extrabold text-slate-700 dark:text-slate-200">{c.symbol}</Text>
                   </View>
                   <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">{t(c.label)}</Text>

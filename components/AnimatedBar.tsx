@@ -51,7 +51,7 @@ export default function AnimatedBar({
 
   return (
     <View
-      className="bg-slate-100 dark:bg-slate-700 overflow-hidden"
+      className="bg-slate-100 dark:bg-noche-3 overflow-hidden"
       style={{ height, borderRadius: height / 2 }}
     >
       <Animated.View

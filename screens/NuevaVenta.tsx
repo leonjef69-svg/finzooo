@@ -100,7 +100,7 @@ export default function NuevaVenta({
 
   return (
     <View
-      className="flex-1 bg-white dark:bg-slate-900"
+      className="flex-1 bg-white dark:bg-noche"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
@@ -113,7 +113,7 @@ export default function NuevaVenta({
 
       <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
         <View className="flex-row items-start gap-3 mb-5">
-          <View className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-slate-800 items-center justify-center">
+          <View className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-noche-2 items-center justify-center">
             <ShoppingBag size={18} color="#059669" />
           </View>
           <Text className="flex-1 text-xs leading-5 text-slate-500 dark:text-slate-300">
@@ -125,7 +125,7 @@ export default function NuevaVenta({
           /* SIN PRODUCTOS ACTIVOS NO SE PUEDE VENDER, y se dice con la salida delante: quien
              llega aquí y ve una lista vacía no tiene por qué saber que los productos se ponen
              en otra pantalla. */
-          <View className="rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-slate-700 p-6 items-center">
+          <View className="rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-noche-borde p-6 items-center">
             <Package size={26} color="#94a3b8" />
             <Text className="text-xs font-bold text-slate-600 dark:text-slate-200 mt-3">
               {t("venta.vacioTitulo")}
@@ -148,10 +148,10 @@ export default function NuevaVenta({
               return (
                 <View
                   key={p.id}
-                  className={`rounded-2xl p-4 bg-white dark:bg-slate-900 border-[1.5px] ${
+                  className={`rounded-2xl p-4 bg-white dark:bg-noche border-[1.5px] ${
                     cuantos > 0
                       ? "border-emerald-300 dark:border-emerald-700"
-                      : "border-slate-200 dark:border-slate-700"
+                      : "border-slate-200 dark:border-noche-borde"
                   }`}
                   style={CARD_SHADOW}
                 >
@@ -175,7 +175,7 @@ export default function NuevaVenta({
                       {cuantos > 0 && (
                         <TouchableOpacity
                           onPress={() => sumar(p.id, -1)}
-                          className="w-9 h-9 rounded-xl items-center justify-center bg-slate-100 dark:bg-slate-800"
+                          className="w-9 h-9 rounded-xl items-center justify-center bg-slate-100 dark:bg-noche-2"
                         >
                           <Minus size={14} color="#64748b" />
                         </TouchableOpacity>
@@ -224,7 +224,7 @@ export default function NuevaVenta({
                     className={`px-3 py-2 rounded-xl border-[1.5px] ${
                       puesto
                         ? "bg-emerald-600 border-emerald-600"
-                        : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                        : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
                     }`}
                   >
                     <Text
@@ -258,7 +258,7 @@ export default function NuevaVenta({
             {/* LO QUE PASA DESPUÉS, DICHO ANTES: en V1 esta venta y el Yape que la cobró son
                 dos apuntes distintos, y el panel puede enseñar la misma plata dos veces. Se
                 dice aquí y en el panel, porque es donde se mira el número. */}
-            <View className="rounded-2xl bg-slate-50 dark:bg-slate-800 p-4 mt-4">
+            <View className="rounded-2xl bg-slate-50 dark:bg-noche-2 p-4 mt-4">
               <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-400">
                 {t("venta.avisoYape")}
               </Text>

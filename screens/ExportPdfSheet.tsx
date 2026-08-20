@@ -765,11 +765,11 @@ export default function ExportPdfSheet({
           podía exportar. El tope, más el ScrollView de más abajo, dejan el
           botón siempre pegado al borde inferior y todo lo demás se desliza. */}
       <View
-        className="bg-white dark:bg-slate-900 rounded-t-3xl px-5 pt-3"
+        className="bg-white dark:bg-noche rounded-t-3xl px-5 pt-3"
         style={{ maxHeight: "88%", paddingBottom: 20 + insets.bottom }}
       >
         <View className="items-center mb-3">
-          <View className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
+          <View className="w-10 h-1 rounded-full bg-slate-200 dark:bg-noche-3" />
         </View>
         <View className="flex-row items-center justify-between mb-1">
           <Text className="font-extrabold text-slate-900 dark:text-slate-100 text-base">
@@ -777,7 +777,7 @@ export default function ExportPdfSheet({
           </Text>
           <TouchableOpacity
             onPress={onClose}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
             <X size={16} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
           </TouchableOpacity>
@@ -799,7 +799,7 @@ export default function ExportPdfSheet({
           {t("exportPdf.monthLabel")}
         </Text>
         {availableMonths.length === 0 ? (
-          <View className="bg-slate-50 dark:bg-slate-800 rounded-xl px-4 py-3 mb-4">
+          <View className="bg-slate-50 dark:bg-noche-2 rounded-xl px-4 py-3 mb-4">
             <Text className="text-xs text-slate-500 dark:text-slate-300">
               {t("exportPdf.noMonths")}
             </Text>
@@ -818,7 +818,7 @@ export default function ExportPdfSheet({
                 className={`px-4 py-2.5 rounded-xl border-[1.5px] ${
                   selectedMk === key
                     ? "bg-emerald-600 border-emerald-600"
-                    : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                    : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
                 }`}
               >
                 <Text
@@ -844,7 +844,7 @@ export default function ExportPdfSheet({
               className={`flex-1 flex-row items-center justify-center gap-2 py-3 rounded-xl border-[1.5px] ${
                 format === opt.id
                   ? "bg-emerald-600 border-emerald-600"
-                  : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                  : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
               }`}
             >
               <opt.Icon
@@ -865,7 +865,7 @@ export default function ExportPdfSheet({
         <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
           {t("exportPdf.typeLabel")}
         </Text>
-        <View className="bg-slate-100 dark:bg-slate-800 rounded-xl p-1 flex-row mb-4">
+        <View className="bg-slate-100 dark:bg-noche-2 rounded-xl p-1 flex-row mb-4">
           {TYPE_OPTIONS.map((opt) => (
             <TouchableOpacity
               key={opt.id}
@@ -918,7 +918,7 @@ export default function ExportPdfSheet({
               className={`flex-row items-center justify-center gap-1.5 px-3.5 py-3 rounded-xl border-[1.5px] ${
                 destination === opt.id
                   ? "bg-emerald-600 border-emerald-600"
-                  : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                  : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
               }`}
             >
               <opt.Icon
@@ -977,7 +977,7 @@ export default function ExportPdfSheet({
                   className={`flex-row items-center rounded-xl border-[1.5px] ${
                     contactoId === c.id
                       ? "bg-emerald-600 border-emerald-600"
-                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                      : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
                   }`}
                 >
                   <TouchableOpacity
@@ -1021,7 +1021,7 @@ export default function ExportPdfSheet({
               ))}
               <TouchableOpacity
                 onPress={() => { setEditandoId(null); setNuevoNombre(""); setNuevoValor(""); setAgregando(true); }}
-                className="px-3.5 py-2.5 rounded-xl border-[1.5px] border-dashed border-slate-300 dark:border-slate-600"
+                className="px-3.5 py-2.5 rounded-xl border-[1.5px] border-dashed border-slate-300 dark:border-noche-borde"
               >
                 <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
                   {t("exportPdf.addContact")}
@@ -1037,14 +1037,14 @@ export default function ExportPdfSheet({
             </Text>
 
             {agregando && (
-              <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 mb-4">
+              <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-slate-50 dark:bg-noche-2 p-4 mb-4">
                 <TextInput
                   value={nuevoNombre}
                   onChangeText={setNuevoNombre}
                   placeholder={t("exportPdf.contactName")}
                   placeholderTextColor="#94a3b8"
                   maxLength={30}
-                  className="border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900 mb-2"
+                  className="border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-noche mb-2"
                 />
                 <TextInput
                   value={nuevoValor}
@@ -1058,7 +1058,7 @@ export default function ExportPdfSheet({
                   keyboardType={destination === "whatsapp" ? "phone-pad" : "email-address"}
                   autoCapitalize="none"
                   maxLength={60}
-                  className="border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900"
+                  className="border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-noche"
                 />
                 {/* EL NÚMERO TAL COMO SE VA A USAR.
                     Un número mal escrito no da ningún error: WhatsApp abre un
@@ -1081,7 +1081,7 @@ export default function ExportPdfSheet({
                 <View className="flex-row gap-2.5 mt-3">
                   <TouchableOpacity
                     onPress={cerrarFormulario}
-                    className="flex-1 py-2.5 rounded-xl items-center border-[1.5px] border-slate-200 dark:border-slate-700"
+                    className="flex-1 py-2.5 rounded-xl items-center border-[1.5px] border-slate-200 dark:border-noche-borde"
                   >
                     <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
                       {t("common.cancel")}
@@ -1109,7 +1109,7 @@ export default function ExportPdfSheet({
             className={`flex-row items-center gap-3 rounded-xl border-[1.5px] px-4 py-3 mb-4 ${
               charts
                 ? "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-600"
-                : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
             }`}
           >
             <BarChart3 size={17} color={charts ? "#059669" : colorScheme === "dark" ? "#94a3b8" : "#475569"} />
@@ -1127,7 +1127,7 @@ export default function ExportPdfSheet({
             </View>
             <View
               className={`w-5 h-5 rounded-md border-[1.5px] items-center justify-center ${
-                charts ? "bg-emerald-600 border-emerald-600" : "border-slate-300 dark:border-slate-600"
+                charts ? "bg-emerald-600 border-emerald-600" : "border-slate-300 dark:border-noche-borde"
               }`}
             >
               {charts && <Text className="text-white text-[11px] font-extrabold">✓</Text>}
@@ -1141,7 +1141,7 @@ export default function ExportPdfSheet({
             tipo mal elegidos el número también se ve razonable, y el error
             se descubría al abrir el archivo o, peor, cuando ya lo había
             recibido otra persona. Ahora se ven antes de mandarlo. */}
-        <View className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 mb-4">
+        <View className="bg-slate-50 dark:bg-noche-2 rounded-2xl p-4 mb-4">
           <View className="flex-row items-end justify-between">
             <View>
               <Text className="text-xs text-slate-500 dark:text-slate-300">
@@ -1162,7 +1162,7 @@ export default function ExportPdfSheet({
           </View>
 
           {monthTx.length > 0 && (
-            <View className="mt-3 border-t-[1.5px] border-slate-200 dark:border-slate-700 pt-1">
+            <View className="mt-3 border-t-[1.5px] border-slate-200 dark:border-noche-borde pt-1">
               {monthTx.slice(0, PREVIEW_LIMIT).map((tx) => {
                 const c = catInfo(tx.category);
                 return (
@@ -1215,7 +1215,7 @@ export default function ExportPdfSheet({
         {format === "pdf" && monthTx.length > 0 && (
           <TouchableOpacity
             onPress={() => setPreviewHtml(construirHtml())}
-            className="w-full mt-3 py-3.5 rounded-2xl items-center flex-row justify-center gap-2 border-[1.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+            className="w-full mt-3 py-3.5 rounded-2xl items-center flex-row justify-center gap-2 border-[1.5px] border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2"
           >
             <Eye size={17} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
             <Text className="text-slate-600 dark:text-slate-200 font-bold">

@@ -40,7 +40,7 @@ export default function Detail({
   ];
 
   return (
-    <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
+    <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
         <BackButton onPress={onBack} />
         <Text className="text-base font-bold" style={{ color: primaryTextColor }}>{t("detail.title")}</Text>
@@ -65,8 +65,8 @@ export default function Detail({
 
       <View className="px-6 gap-3">
         {rows.map(({ Icon, label, value }) => (
-          <View key={label} className="flex-row items-center gap-3 bg-slate-50 dark:bg-slate-800 rounded-2xl p-3.5">
-            <View className="w-9 h-9 rounded-xl bg-white dark:bg-slate-900 items-center justify-center border-[1.5px] border-slate-200 dark:border-slate-700">
+          <View key={label} className="flex-row items-center gap-3 bg-slate-50 dark:bg-noche-2 rounded-2xl p-3.5">
+            <View className="w-9 h-9 rounded-xl bg-white dark:bg-noche items-center justify-center border-[1.5px] border-slate-200 dark:border-noche-borde">
               <Icon size={16} color="#64748b" />
             </View>
             <View>

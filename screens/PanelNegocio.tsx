@@ -182,7 +182,7 @@ export default function PanelNegocio({
 
   return (
     <View
-      className="flex-1 bg-white dark:bg-slate-900"
+      className="flex-1 bg-white dark:bg-noche"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
@@ -195,7 +195,7 @@ export default function PanelNegocio({
 
       <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
         <View className="flex-row items-start gap-3 mb-5">
-          <View className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-slate-800 items-center justify-center">
+          <View className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-noche-2 items-center justify-center">
             <Store size={18} color="#059669" />
           </View>
           <Text className="flex-1 text-xs leading-5 text-slate-500 dark:text-slate-300">
@@ -220,7 +220,7 @@ export default function PanelNegocio({
                 className={`flex-1 py-2.5 rounded-xl items-center border-[1.5px] ${
                   puesto
                     ? "bg-emerald-600 border-emerald-600"
-                    : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                    : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
                 }`}
               >
                 <Text
@@ -261,7 +261,7 @@ export default function PanelNegocio({
 
         {/* LAS LÍNEAS, UNA DEBAJO DE OTRA. Cada una dice de dónde sale el saldo de arriba. */}
         <View
-          className="rounded-2xl bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700 p-4 gap-3"
+          className="rounded-2xl bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde p-4 gap-3"
           style={CARD_SHADOW}
         >
           {/* LA LÍNEA DE VENTAS, SOLO SI LAS HAY. Igual que el contador de arriba. */}
@@ -307,7 +307,7 @@ export default function PanelNegocio({
             avisar: es media pantalla de letra explicando un problema imposible, justo encima
             de los números que sí importan. Vuelve solo en cuanto haya una venta. */}
         {usaVentas && (
-          <View className="rounded-2xl bg-amber-50 dark:bg-slate-800 p-4 mt-4 flex-row gap-2.5">
+          <View className="rounded-2xl bg-amber-50 dark:bg-noche-2 p-4 mt-4 flex-row gap-2.5">
             <Info size={14} color="#d97706" />
             <View className="flex-1">
               <Text className="text-[11px] font-bold text-amber-700 dark:text-amber-400">
@@ -352,7 +352,7 @@ export default function PanelNegocio({
           <View className="flex-row gap-2.5 mt-2.5">
             <TouchableOpacity
               onPress={() => router.push({ pathname: "/negocio/movimiento", params: { id: negocioId } })}
-              className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800"
+              className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-noche-2"
             >
               <TrendingDown size={15} color="#f43f5e" />
               <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
@@ -361,7 +361,7 @@ export default function PanelNegocio({
             </TouchableOpacity>
             <TouchableOpacity
               onPress={() => router.push({ pathname: "/negocio/productos", params: { id: negocioId } })}
-              className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-slate-800"
+              className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-noche-2"
             >
               <Package size={15} color="#059669" />
               <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
@@ -406,7 +406,7 @@ export default function PanelNegocio({
               {t("panel.vendidos")}
             </Text>
             <View
-              className="rounded-2xl bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700 p-4 gap-3.5"
+              className="rounded-2xl bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde p-4 gap-3.5"
               style={CARD_SHADOW}
             >
               {vendidos.map((p) => (
@@ -426,7 +426,7 @@ export default function PanelNegocio({
                   {/* LA BARRA ES CONTRA EL QUE MÁS VENDE, no contra el total: comparada con el
                       total, con veinte productos todas las barras salen igual de cortas y no
                       se distingue nada. Así se lee de un vistazo quién manda. */}
-                  <View className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 mt-1.5 overflow-hidden">
+                  <View className="h-1.5 rounded-full bg-slate-100 dark:bg-noche-2 mt-1.5 overflow-hidden">
                     <View
                       className="h-full rounded-full bg-emerald-500"
                       style={{ width: `${Math.max(4, (p.total / vendidos[0].total) * 100)}%` }}
@@ -450,7 +450,7 @@ export default function PanelNegocio({
                 el pasado. Los números están en la lista, pero la resta la tiene que hacer la
                 app: si hay que hacerla de cabeza, no se hace. */}
             {diferencia !== null && (
-              <View className="rounded-2xl bg-slate-50 dark:bg-slate-800 p-4 mb-3">
+              <View className="rounded-2xl bg-slate-50 dark:bg-noche-2 p-4 mb-3">
                 <Text className="text-[11px] leading-5 text-slate-600 dark:text-slate-300">
                   {diferencia > 0
                     ? t("panel.comparaMas", { dif: dinero(Math.abs(diferencia)) })
@@ -462,7 +462,7 @@ export default function PanelNegocio({
             )}
 
             <View
-              className="rounded-2xl bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700 p-4 gap-3.5"
+              className="rounded-2xl bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde p-4 gap-3.5"
               style={CARD_SHADOW}
             >
               {meses.map((m) => (
@@ -482,7 +482,7 @@ export default function PanelNegocio({
                   <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                     {t("panel.mesDetalle", { entro: dinero(m.entro), salio: dinero(m.salio) })}
                   </Text>
-                  <View className="h-1.5 rounded-full bg-slate-100 dark:bg-slate-800 mt-1.5 overflow-hidden">
+                  <View className="h-1.5 rounded-full bg-slate-100 dark:bg-noche-2 mt-1.5 overflow-hidden">
                     <View
                       className={`h-full rounded-full ${m.queda < 0 ? "bg-rose-400" : "bg-emerald-500"}`}
                       // Un mes en rojo no tiene barra que estirar: se deja el mínimo para que
@@ -512,11 +512,11 @@ export default function PanelNegocio({
             bien. */}
         {hayRegistroAutomatico(userCurrency) && (
           <View
-            className="rounded-2xl p-4 mt-6 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+            className="rounded-2xl p-4 mt-6 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
             style={CARD_SHADOW}
           >
             <View className="flex-row items-center gap-3">
-              <View className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-slate-800 items-center justify-center">
+              <View className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-noche-2 items-center justify-center">
                 <Zap size={17} color="#059669" />
               </View>
               <View className="flex-1">
@@ -560,7 +560,7 @@ export default function PanelNegocio({
         </Text>
 
         {historial.length === 0 ? (
-          <View className="rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-slate-700 p-6 items-center">
+          <View className="rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-noche-borde p-6 items-center">
             <Store size={26} color="#94a3b8" />
             {/* EL VACÍO DICE DE QUÉ PERIODO ESTÁ VACÍO. "Todavía no hay nada registrado" con
                 "Hoy" puesto haría pensar que se perdió todo lo de ayer. */}
@@ -578,13 +578,13 @@ export default function PanelNegocio({
               return (
                 <View
                   key={f.id}
-                  className="rounded-2xl p-4 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+                  className="rounded-2xl p-4 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
                   style={CARD_SHADOW}
                 >
                   <View className="flex-row items-center gap-3">
                     <View
                       className={`w-9 h-9 rounded-2xl items-center justify-center ${
-                        entra ? "bg-emerald-50 dark:bg-slate-800" : "bg-rose-50 dark:bg-slate-800"
+                        entra ? "bg-emerald-50 dark:bg-noche-2" : "bg-rose-50 dark:bg-noche-2"
                       }`}
                     >
                       {f.clase === "venta" ? (
@@ -624,14 +624,14 @@ export default function PanelNegocio({
                   </View>
 
                   {borrando === f.id ? (
-                    <View className="mt-3 pt-3 border-t-[1.5px] border-slate-100 dark:border-slate-700">
+                    <View className="mt-3 pt-3 border-t-[1.5px] border-slate-100 dark:border-noche-borde">
                       <Text className="text-[11px] leading-5 text-rose-600 dark:text-rose-400">
                         {t("panel.borrarAviso")}
                       </Text>
                       <View className="flex-row gap-2.5 mt-3">
                         <TouchableOpacity
                           onPress={() => setBorrando(null)}
-                          className="flex-1 py-2.5 rounded-xl items-center bg-slate-100 dark:bg-slate-800"
+                          className="flex-1 py-2.5 rounded-xl items-center bg-slate-100 dark:bg-noche-2"
                         >
                           <Text className="text-[11px] font-bold text-slate-600 dark:text-slate-200">
                             {t("nuevaCat.cancelar")}
@@ -667,7 +667,7 @@ export default function PanelNegocio({
 
         {/* LO QUE TODAVÍA NO HACE, DICHO AQUÍ. Es la lección de la pantalla de exportar: un
             límite que no se cuenta se toma por un fallo y se busca durante horas. */}
-        <View className="rounded-2xl bg-slate-50 dark:bg-slate-800 p-4 mt-5">
+        <View className="rounded-2xl bg-slate-50 dark:bg-noche-2 p-4 mt-5">
           <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-400">
             {t("panel.proximoPaso")}
           </Text>

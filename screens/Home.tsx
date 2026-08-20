@@ -177,7 +177,7 @@ export default function Home({
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-slate-900">
+    <View className="flex-1 bg-white dark:bg-noche">
       {/* PARTE FIJA
           El saludo, el mes, el presupuesto y el resumen se quedan quietos:
           antes formaban la cabecera de la lista y se iban hacia arriba al
@@ -197,7 +197,7 @@ export default function Home({
           </View>
           <View className="flex-row items-center gap-2">
             <ThemeToggleButton />
-            <TouchableOpacity className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center">
+            <TouchableOpacity className="w-10 h-10 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center">
               <Bell size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
               <View className="absolute top-2 right-2 w-1.5 h-1.5 bg-rose-500 rounded-full" />
             </TouchableOpacity>
@@ -207,11 +207,11 @@ export default function Home({
         <View className="flex-row items-center justify-center gap-5 mt-2 mb-4">
           <TouchableOpacity
             onPress={() => shiftMonth(-1)}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
             <ChevronLeft size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
           </TouchableOpacity>
-          <View className="px-5 py-1.5 rounded-full bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700">
+          <View className="px-5 py-1.5 rounded-full bg-slate-50 dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde">
             <Text
               className="font-bold text-base text-center"
               numberOfLines={1}
@@ -222,7 +222,7 @@ export default function Home({
           </View>
           <TouchableOpacity
             onPress={() => shiftMonth(1)}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
             <ChevronRight size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
           </TouchableOpacity>
@@ -303,7 +303,7 @@ export default function Home({
             // Mismo contorno de 1.5 que las tarjetas de justo debajo. Era el
             // único recuadro de esta pantalla sin ninguno: al lado de las
             // tarjetas con borde, parecía hundido en el fondo.
-            className="mx-5 mt-3 flex-row items-center justify-center gap-2 bg-slate-100 dark:bg-slate-800 rounded-2xl py-3 border-[1.5px] border-slate-200 dark:border-slate-700"
+            className="mx-5 mt-3 flex-row items-center justify-center gap-2 bg-slate-100 dark:bg-noche-2 rounded-2xl py-3 border-[1.5px] border-slate-200 dark:border-noche-borde"
           >
             <Target size={19} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
             <Text className="text-base font-bold text-slate-700 dark:text-slate-200">
@@ -345,7 +345,7 @@ export default function Home({
           <Animated.View entering={FadeInDown.delay(0 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
               onPress={startEditBudget}
-              className="bg-sky-50 dark:bg-slate-800 rounded-2xl p-4 border-[1.5px] border-sky-100 dark:border-slate-700"
+              className="bg-sky-50 dark:bg-noche-2 rounded-2xl p-4 border-[1.5px] border-sky-100 dark:border-noche-borde"
               style={softShadow}
             >
               <Text className="text-base mb-1">💰</Text>
@@ -362,7 +362,7 @@ export default function Home({
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(1 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
-              className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4 border-[1.5px] border-slate-200 dark:border-slate-700"
+              className="bg-slate-50 dark:bg-noche-2 rounded-2xl p-4 border-[1.5px] border-slate-200 dark:border-noche-borde"
               style={softShadow}
             >
               <Text className="text-base mb-1">🕒</Text>
@@ -398,7 +398,7 @@ export default function Home({
                 <TouchableOpacity
                   onPress={() => setConfirmResetCarryover(true)}
                   hitSlop={10}
-                  className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-slate-200/70 dark:bg-slate-700 items-center justify-center"
+                  className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-slate-200/70 dark:bg-noche-3 items-center justify-center"
                 >
                   <Eraser size={14} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
                 </TouchableOpacity>
@@ -407,7 +407,7 @@ export default function Home({
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(2 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
-              className="bg-rose-50 dark:bg-slate-800 rounded-2xl p-4 border-[1.5px] border-rose-100 dark:border-slate-700"
+              className="bg-rose-50 dark:bg-noche-2 rounded-2xl p-4 border-[1.5px] border-rose-100 dark:border-noche-borde"
               style={softShadow}
             >
               <Text className="text-base mb-1">📉</Text>
@@ -417,7 +417,7 @@ export default function Home({
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(3 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
-              className="bg-emerald-50 dark:bg-slate-800 rounded-2xl p-4 border-[1.5px] border-emerald-100 dark:border-slate-700"
+              className="bg-emerald-50 dark:bg-noche-2 rounded-2xl p-4 border-[1.5px] border-emerald-100 dark:border-noche-borde"
               style={softShadow}
             >
               <Text className="text-base mb-1">📈</Text>
@@ -514,10 +514,10 @@ export default function Home({
                   // lo único que las separaba era un borde casi del mismo
                   // color. Se sube medio píxel de grosor y se aclara el
                   // color un tono en cada tema.
-                  className={`flex-row items-center gap-3 bg-white dark:bg-slate-900 rounded-2xl p-3 border-[1.5px] mb-2.5 ${
+                  className={`flex-row items-center gap-3 bg-white dark:bg-noche rounded-2xl p-3 border-[1.5px] mb-2.5 ${
                     isSel
                       ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950"
-                      : "border-slate-200 dark:border-slate-700"
+                      : "border-slate-200 dark:border-noche-borde"
                   }`}
                   style={softShadow}
                 >
@@ -565,7 +565,7 @@ export default function Home({
         }}
         ListEmptyComponent={
           <View className="px-5">
-            <View className="items-center py-10 bg-white dark:bg-slate-900 rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-slate-700">
+            <View className="items-center py-10 bg-white dark:bg-noche rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-noche-borde">
               <Text className="text-slate-500 dark:text-slate-300 text-sm">{t("home.noTransactions")}</Text>
             </View>
           </View>

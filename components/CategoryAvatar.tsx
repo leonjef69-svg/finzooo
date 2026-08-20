@@ -39,7 +39,7 @@ export default function CategoryAvatar({
   return (
     <View
       style={{ width: lado, height: lado, borderRadius: lado / 2 }}
-      className="overflow-hidden bg-slate-100 dark:bg-slate-700"
+      className="overflow-hidden bg-slate-100 dark:bg-noche-3"
     >
       <Image source={{ uri: c.image }} style={{ width: lado, height: lado }} />
     </View>

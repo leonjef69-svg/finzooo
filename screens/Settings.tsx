@@ -189,7 +189,7 @@ export default function Settings({
 
   return (
     <ScrollView
-      className="flex-1 bg-white dark:bg-slate-900"
+      className="flex-1 bg-white dark:bg-noche"
       contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 112 }}
     >
       <View className="px-5 pt-3 pb-1 flex-row items-center justify-between">
@@ -207,7 +207,7 @@ export default function Settings({
           Puestos en fila —foto a la izquierda, nombre y correo al lado— la tarjeta baja a la
           mitad de alto y la foto deja de verse perdida. No se quita nada: siguen estando la
           cámara para cambiarla, el lápiz para el nombre y los dos avisos de error. */}
-      <View className="mx-5 mt-3 bg-white dark:bg-slate-900 rounded-2xl p-3.5 border-[1.5px] border-slate-200 dark:border-slate-700">
+      <View className="mx-5 mt-3 bg-white dark:bg-noche rounded-2xl p-3.5 border-[1.5px] border-slate-200 dark:border-noche-borde">
         <View className="flex-row items-center gap-3.5">
           <TouchableOpacity onPress={pickPhoto} disabled={pickingPhoto} activeOpacity={0.8}>
             <View className="w-[76px] h-[76px] rounded-full bg-emerald-600 items-center justify-center overflow-hidden">
@@ -258,7 +258,7 @@ export default function Settings({
                 <TouchableOpacity
                   onPress={() => setEditingName(false)}
                   hitSlop={6}
-                  className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+                  className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
                 >
                   <X size={17} color="#64748b" />
                 </TouchableOpacity>
@@ -293,7 +293,7 @@ export default function Settings({
             <TouchableOpacity
               onPress={startEditName}
               hitSlop={10}
-              className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+              className="w-8 h-8 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
             >
               <Pencil size={15} color="#64748b" />
             </TouchableOpacity>
@@ -326,8 +326,8 @@ export default function Settings({
       </TouchableOpacity>
 
       {isCloudSynced && (
-        <View className="mx-5 mt-3 flex-row items-center gap-3 bg-emerald-50 dark:bg-slate-800 rounded-2xl p-3.5 border-[1.5px] border-emerald-100 dark:border-slate-700">
-          <View className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-slate-700 items-center justify-center">
+        <View className="mx-5 mt-3 flex-row items-center gap-3 bg-emerald-50 dark:bg-noche-2 rounded-2xl p-3.5 border-[1.5px] border-emerald-100 dark:border-noche-borde">
+          <View className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-noche-3 items-center justify-center">
             <Cloud size={16} color="#059669" />
           </View>
           <View className="flex-1">

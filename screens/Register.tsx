@@ -82,7 +82,7 @@ export default function Register({
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-white dark:bg-slate-900"
+      className="flex-1 bg-white dark:bg-noche"
     >
       <ScrollView
         contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 32 + insets.bottom }}

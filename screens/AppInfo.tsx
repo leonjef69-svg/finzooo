@@ -27,7 +27,7 @@ const APP_VERSION = "1.0.0";
  * La versión de la app (1.0.0) no sirve para esto: no cambia entre entregas.
  * Esta sí.
  */
-const CODE_MARKER = "19ago-15";
+const CODE_MARKER = "19ago-16";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast, verComoGratis, setVerComoGratis, tienePremiumDeVerdad } = useAppData();
@@ -95,7 +95,7 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
     t("appInfo.whatsNewItem3"),
   ];
   return (
-    <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
+    <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
         <BackButton onPress={onBack} />
         <Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("appInfo.title")}</Text>
@@ -130,7 +130,7 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
 
           {/* EL INTERRUPTOR DE PRUEBA. Ver los siete toques, arriba. */}
           {modoPruebaVisible && (
-            <View className="mt-4 mx-5 rounded-2xl border-[1.5px] border-amber-400 bg-amber-50 dark:bg-slate-800 p-4 w-full">
+            <View className="mt-4 mx-5 rounded-2xl border-[1.5px] border-amber-400 bg-amber-50 dark:bg-noche-2 p-4 w-full">
               <View className="flex-row items-center gap-3">
                 <View className="flex-1">
                   <Text className="text-xs font-bold text-amber-700 dark:text-amber-400">
@@ -193,7 +193,7 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
           <TouchableOpacity
             onPress={checkForUpdate}
             disabled={checking}
-            className="flex-row items-center gap-2 mt-4 px-4 py-2.5 rounded-full bg-slate-100 dark:bg-slate-800"
+            className="flex-row items-center gap-2 mt-4 px-4 py-2.5 rounded-full bg-slate-100 dark:bg-noche-2"
           >
             <RefreshCw size={14} color="#64748b" />
             <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
@@ -225,7 +225,7 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
           </Text>
         </View>
 
-        <View className="h-px bg-slate-100 dark:bg-slate-800 mx-6 mt-8 mb-6" />
+        <View className="h-px bg-slate-100 dark:bg-noche-2 mx-6 mt-8 mb-6" />
 
         <View className="px-6">
           <View className="flex-row items-center gap-2 mb-3">

@@ -448,10 +448,13 @@ function ThemedStatusBar() {
 
 export default function RootLayout() {
   const { colorScheme } = useColorScheme();
-  // Mismo color que bg-white / dark:bg-slate-900 (Tailwind). Se usa como
+  // Mismo color que bg-white / dark:bg-noche (Tailwind). Se usa como
   // fondo nativo de las pantallas de tipo "modal", para que el instante
   // antes de que React pinte su contenido ya se vea del color correcto.
-  const screenBg = colorScheme === "dark" ? "#0f172a" : "#ffffff";
+  // NEGRO EN MODO OSCURO (19/08/2026). Ver la paleta "noche" en tailwind.config.js: el
+  // fondo nativo tiene que ser el MISMO que el de las pantallas, o en el instante previo a
+  // que React pinte se ve un rectangulo azul detras del negro.
+  const screenBg = colorScheme === "dark" ? "#000000" : "#ffffff";
 
   /**
    * EL DESTELLO BLANCO AL GUARDAR UN MOVIMIENTO (10/08/2026)

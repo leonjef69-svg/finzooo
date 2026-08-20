@@ -32,7 +32,7 @@ export default function ThemeToggleButton() {
   return (
     <TouchableOpacity
       onPress={() => updateThemeMode(enOscuro ? "light" : "dark")}
-      className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+      className="w-10 h-10 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
     >
       {enOscuro ? <Sun size={18} color="#fbbf24" /> : <Moon size={18} color="#475569" />}
     </TouchableOpacity>

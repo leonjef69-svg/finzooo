@@ -185,7 +185,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
 
   return (
     <View
-      className="flex-1 bg-white dark:bg-slate-900"
+      className="flex-1 bg-white dark:bg-noche"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
@@ -199,7 +199,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
       <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
         {!autoCaptureSupported ? (
           <View
-            className="rounded-2xl p-4 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+            className="rounded-2xl p-4 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
             style={CARD_SHADOW}
           >
             <View className="flex-row items-center gap-2 mb-2">
@@ -269,7 +269,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                 a mirar. */}
             {negocioQueRecibe && (
               <View
-                className="rounded-2xl p-4 mb-5 bg-white dark:bg-slate-900 border-[1.5px] border-emerald-300 dark:border-emerald-700"
+                className="rounded-2xl p-4 mb-5 bg-white dark:bg-noche border-[1.5px] border-emerald-300 dark:border-emerald-700"
                 style={CARD_SHADOW}
               >
                 <View className="flex-row items-center gap-2 mb-2">
@@ -283,7 +283,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                 </Text>
                 <TouchableOpacity
                   onPress={() => router.push(`/negocio/${negocioQueRecibe.id}`)}
-                  className="mt-3 py-2.5 rounded-xl items-center bg-slate-100 dark:bg-slate-800"
+                  className="mt-3 py-2.5 rounded-xl items-center bg-slate-100 dark:bg-noche-2"
                 >
                   <Text className="text-[11px] font-bold text-slate-600 dark:text-slate-200">
                     {t("autoCapture.verNegocio")}
@@ -296,7 +296,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                 Sus nombres ya dicen lo que hacen. El párrafo que llevaba cada uno era la otra
                 mitad del texto que sobraba, y ninguno se lee dos veces. */}
             <View
-              className="rounded-2xl bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+              className="rounded-2xl bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
               style={CARD_SHADOW}
             >
               <View className="flex-row items-center justify-between p-4">
@@ -310,7 +310,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                   actualización. Enseñar un interruptor que no hace nada sería peor. */}
               {notificationReader.canSpeak && (
                 <>
-                  <View className="flex-row items-center justify-between p-4 border-t-[1.5px] border-slate-100 dark:border-slate-700">
+                  <View className="flex-row items-center justify-between p-4 border-t-[1.5px] border-slate-100 dark:border-noche-borde">
                     <Text className="text-[13px] font-bold text-slate-900 dark:text-slate-100 flex-1 pr-3">
                       {t("autoCapture.speakTitle")}
                     </Text>
@@ -327,7 +327,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
 
                   {/* La segunda solo tiene sentido con la primera encendida. */}
                   {hablar && (
-                    <View className="flex-row items-center justify-between p-4 border-t-[1.5px] border-slate-100 dark:border-slate-700">
+                    <View className="flex-row items-center justify-between p-4 border-t-[1.5px] border-slate-100 dark:border-noche-borde">
                       <Text className="text-[13px] font-bold text-slate-900 dark:text-slate-100 flex-1 pr-3">
                         {t("autoCapture.speakOutTitle")}
                       </Text>
@@ -368,7 +368,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
             </View>
 
             <View
-              className="rounded-2xl px-4 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+              className="rounded-2xl px-4 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
               style={CARD_SHADOW}
             >
               {yapes.length === 0 ? (
@@ -380,7 +380,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                   <View
                     key={`${entry.at}-${i}`}
                     className={`flex-row items-center gap-3 py-3.5 ${
-                      i > 0 ? "border-t-[1.5px] border-slate-100 dark:border-slate-800" : ""
+                      i > 0 ? "border-t-[1.5px] border-slate-100 dark:border-noche-borde" : ""
                     }`}
                   >
                     <View
@@ -424,7 +424,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
               )}
 
               {descartados.length > 0 && (
-                <View className="border-t-[1.5px] border-slate-100 dark:border-slate-800">
+                <View className="border-t-[1.5px] border-slate-100 dark:border-noche-borde">
                   {/* "Descartados" a secas se probó y se cambió antes de entregarlo: en una app
                       de dinero se lee como pagos que no entraron. Dice qué son. */}
                   <TouchableOpacity
@@ -476,7 +476,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
             <View className="mt-6">
               <TouchableOpacity
                 onPress={() => setVerQueSeLee((v) => !v)}
-                className="flex-row items-center justify-between py-3.5 border-b-[1.5px] border-slate-100 dark:border-slate-800"
+                className="flex-row items-center justify-between py-3.5 border-b-[1.5px] border-slate-100 dark:border-noche-borde"
               >
                 <View className="flex-row items-center gap-2.5 flex-1 pr-3">
                   <ShieldCheck size={15} color="#94a3b8" />
@@ -524,7 +524,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                       las separan. "Avisos vistos" cuenta TODAS las notificaciones del celular,
                       de cualquier app, antes de filtrar nada — solo el número, nunca el
                       contenido. */}
-                  <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4 mt-4">
+                  <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4 mt-4">
                     <Text className="text-xs font-bold text-slate-700 dark:text-slate-200 mb-3">
                       {t("autoCapture.statusTitle")}
                     </Text>
@@ -639,7 +639,7 @@ function PasosDeLaVoz() {
   }
 
   return (
-    <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4 mt-4">
+    <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4 mt-4">
       <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
         {t("autoCapture.pasos.titulo")}
       </Text>
@@ -711,7 +711,7 @@ function BotonDePaso({ texto, onPress }: { texto: string; onPress: () => void })
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="flex-row items-center justify-between py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-slate-800"
+      className="flex-row items-center justify-between py-2.5 px-3 rounded-xl bg-slate-100 dark:bg-noche-2"
     >
       <Text className="text-[11px] font-bold text-slate-600 dark:text-slate-200 flex-1 pr-2">
         {texto}

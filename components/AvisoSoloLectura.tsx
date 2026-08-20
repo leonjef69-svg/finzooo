@@ -17,7 +17,7 @@ import { useAppData } from "@/contexts/AppDataContext";
 export default function AvisoSoloLectura() {
   const { t } = useAppData();
   return (
-    <View className="rounded-2xl bg-amber-50 dark:bg-slate-800 border-[1.5px] border-amber-400 p-4 mb-4 flex-row gap-2.5">
+    <View className="rounded-2xl bg-amber-50 dark:bg-noche-2 border-[1.5px] border-amber-400 p-4 mb-4 flex-row gap-2.5">
       <Eye size={15} color="#d97706" />
       <View className="flex-1">
         <Text className="text-[11px] font-bold text-amber-700 dark:text-amber-400">

@@ -215,10 +215,10 @@ export default function AppLockGate() {
 
   return (
     <View
-      className="absolute inset-0 z-50 bg-white dark:bg-slate-900 items-center justify-center px-6"
+      className="absolute inset-0 z-50 bg-white dark:bg-noche items-center justify-center px-6"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom + 20 }}
     >
-      <View className="w-16 h-16 rounded-3xl bg-emerald-50 dark:bg-slate-800 items-center justify-center mb-4">
+      <View className="w-16 h-16 rounded-3xl bg-emerald-50 dark:bg-noche-2 items-center justify-center mb-4">
         <Lock size={28} color="#059669" />
       </View>
       <Text className="text-lg font-extrabold text-slate-900 dark:text-slate-100 mb-1">

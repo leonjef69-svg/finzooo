@@ -363,7 +363,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
   const freqLabel = FRECUENCIAS.find((f) => f.id === schedule.frequency)?.label ?? "";
 
   return (
-    <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top }}>
       <View className="px-5 pt-3 pb-2 flex-row items-center gap-2">
         <TouchableOpacity onPress={onBack} className="w-9 h-9 items-center justify-center -ml-2">
           <ChevronLeft size={24} color="#94a3b8" />
@@ -380,7 +380,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
             para apagarlo: apagar algo no debería estar escondido dentro de
             la lista de cómo encenderlo. */}
         <View
-          className="rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4 mb-4 flex-row items-center gap-3"
+          className="rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2 p-4 mb-4 flex-row items-center gap-3"
           style={CARD_SHADOW}
         >
           <View className="flex-1">
@@ -403,7 +403,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
             no va a pasar, tiene que saberlo ANTES de confiar en ello y no un mes
             después. Y si SÍ va a pasar, decir lo contrario es igual de malo:
             este cuadro decía que no se podía cuando ya se podía. */}
-        <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 mb-5">
+        <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-slate-50 dark:bg-noche-2 p-4 mb-5">
           <View className="flex-row gap-2.5">
             <Info size={16} color="#64748b" />
             <Text className="flex-1 text-xs text-slate-600 dark:text-slate-300 leading-5">
@@ -430,7 +430,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                   className={`px-4 py-2.5 rounded-xl border-[1.5px] ${
                     schedule.frequency === f.id
                       ? "bg-emerald-600 border-emerald-600"
-                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                      : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
                   }`}
                 >
                   <Text
@@ -457,7 +457,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                       className={`flex-1 py-2.5 rounded-xl border-[1.5px] items-center ${
                         schedule.weekday === d
                           ? "bg-emerald-600 border-emerald-600"
-                          : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                          : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
                       }`}
                     >
                       <Text
@@ -493,7 +493,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                         className={`flex-1 py-2.5 rounded-xl border-[1.5px] items-center ${
                           puesto
                             ? "bg-emerald-600 border-emerald-600"
-                            : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                            : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
                         }`}
                       >
                         <Text
@@ -531,7 +531,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                       className={`w-11 py-2.5 rounded-xl border-[1.5px] items-center ${
                         schedule.day === d
                           ? "bg-emerald-600 border-emerald-600"
-                          : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                          : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
                       }`}
                     >
                       <Text
@@ -565,7 +565,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                 className={`px-3.5 py-2.5 rounded-xl border-[1.5px] ${
                   horaPersonal
                     ? "bg-emerald-600 border-emerald-600"
-                    : "bg-white dark:bg-slate-800 border-dashed border-slate-400 dark:border-slate-500"
+                    : "bg-white dark:bg-noche-2 border-dashed border-slate-400 dark:border-slate-500"
                 }`}
               >
                 <Text
@@ -590,7 +590,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                     className={`px-3.5 py-2.5 rounded-xl border-[1.5px] ${
                       elegida
                         ? "bg-emerald-600 border-emerald-600"
-                        : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                        : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
                     }`}
                   >
                     <Text
@@ -619,7 +619,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                   maxLength={2}
                   placeholder="03"
                   placeholderTextColor="#94a3b8"
-                  className="w-16 text-center border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl py-2.5 text-sm font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800"
+                  className="w-16 text-center border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl py-2.5 text-sm font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-noche-2"
                 />
                 <Text className="text-lg font-extrabold text-slate-400">:</Text>
                 <TextInput
@@ -629,7 +629,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                   maxLength={2}
                   placeholder="15"
                   placeholderTextColor="#94a3b8"
-                  className="w-16 text-center border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl py-2.5 text-sm font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800"
+                  className="w-16 text-center border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl py-2.5 text-sm font-bold text-slate-900 dark:text-slate-100 bg-white dark:bg-noche-2"
                 />
                 <Text className="text-[11px] text-slate-500 dark:text-slate-400 flex-1">
                   {t("schedExport.timeCustomHint")}
@@ -643,7 +643,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                 en ningún sitio se decía. Las notas de cada destino lo explicaban
                 a medias y encima se contradecían — decían "automático del todo"
                 y "la próxima vez que abras Fino" en la misma frase. */}
-            <View className="rounded-xl bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700 p-3.5 mb-5 flex-row gap-2.5">
+            <View className="rounded-xl bg-slate-50 dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde p-3.5 mb-5 flex-row gap-2.5">
               <Info size={15} color="#64748b" />
               <View className="flex-1">
                 <Text className="text-[11px] leading-5 text-slate-600 dark:text-slate-300">
@@ -728,7 +728,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                   className={`flex-1 py-3 rounded-xl border-[1.5px] items-center ${
                     schedule.format === f.id
                       ? "bg-emerald-600 border-emerald-600"
-                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                      : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
                   }`}
                 >
                   <Text
@@ -750,7 +750,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                 interruptor que no hace nada es peor que no tenerlo.
                 Viene apagado: ocupan media hoja y empujan la lista a la siguiente. */}
             {schedule.format === "pdf" && (
-              <View className="flex-row items-center justify-between mb-5 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 p-3.5">
+              <View className="flex-row items-center justify-between mb-5 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde p-3.5">
                 <View className="flex-1 pr-3">
                   <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
                     {t("schedExport.graficos")}
@@ -772,7 +772,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
             <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
               {t("exportPdf.typeLabel")}
             </Text>
-            <View className="bg-slate-100 dark:bg-slate-800 rounded-xl p-1 flex-row mb-5">
+            <View className="bg-slate-100 dark:bg-noche-2 rounded-xl p-1 flex-row mb-5">
               {([
                 { id: "all", label: t("exportPdf.all") },
                 { id: "expense", label: t("exportPdf.expenses") },
@@ -814,7 +814,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                   className={`flex-1 py-3 rounded-xl border-[1.5px] items-center ${
                     schedule.fileNameMode === o.id
                       ? "bg-emerald-600 border-emerald-600"
-                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                      : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
                   }`}
                 >
                   <Text
@@ -842,7 +842,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                 placeholder={t("schedExport.filePlaceholder")}
                 placeholderTextColor="#94a3b8"
                 maxLength={60}
-                className="border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800 mb-2"
+                className="border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-noche-2 mb-2"
               />
             )}
 
@@ -861,7 +861,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                   className={`flex-row items-center gap-1.5 px-3.5 py-3 rounded-xl border-[1.5px] ${
                     schedule.destination === o.id
                       ? "bg-emerald-600 border-emerald-600"
-                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                      : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
                   }`}
                 >
                   <o.Icon size={15} color={schedule.destination === o.id ? "#ffffff" : "#64748b"} />
@@ -1001,7 +1001,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                 formato, qué exporta y a dónde va — que es justo lo que se
                 olvida entre una visita y la siguiente. */}
             <View
-              className="rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4 mb-4"
+              className="rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-slate-50 dark:bg-noche-2 p-4 mb-4"
               style={CARD_SHADOW}
             >
               <Text className="text-xs font-extrabold text-slate-900 dark:text-slate-100 mb-2.5">
@@ -1044,7 +1044,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
               disabled={probando}
               className={`w-full py-4 rounded-2xl items-center flex-row justify-center gap-2 border-[1.5px] ${
                 probando
-                  ? "border-slate-300 bg-slate-100 dark:border-slate-600 dark:bg-slate-800"
+                  ? "border-slate-300 bg-slate-100 dark:border-noche-borde dark:bg-noche-2"
                   : "border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20"
               }`}
             >

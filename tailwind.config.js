@@ -13,7 +13,34 @@ module.exports = {
     },
   ],
   theme: {
-    extend: {},
+    extend: {
+      /**
+       * EL MODO OSCURO, EN NEGRO (19/08/2026)
+       *
+       * Antes era el azul pizarra de Tailwind (slate-900 y slate-800) y el no lo queria:
+       * *"no me gusta como se ve actualmente el modo oscuro"*. Se le enseñaron cuatro
+       * paletas dibujadas y eligio esta.
+       *
+       * Su celular es OLED: un pixel negro de verdad se APAGA, asi que se ve mas nitido y
+       * gasta menos bateria. Y el problema real de la anterior se va con esto — el fondo y
+       * las tarjetas casi no se distinguian, porque slate-900 y slate-800 estan a un paso.
+       *
+       * **Van con nombre propio y NO se toca la escala slate.** Cambiar slate-900 habria
+       * movido tambien el texto del modo claro, que usa ese mismo tono: dos modos distintos
+       * colgando del mismo numero es como se rompe uno arreglando el otro.
+       */
+      colors: {
+        noche: {
+          DEFAULT: "#000000",
+          // Las tarjetas. Lo justo para despegarse del negro sin dejar de ser oscuro.
+          2: "#161616",
+          // Lo que va encima de una tarjeta: un campo, un boton apagado.
+          3: "#242424",
+          // Las lineas. Mas claras que las tarjetas o no se ven.
+          borde: "#2e2e2e",
+        },
+      },
+    },
   },
   plugins: [],
 };

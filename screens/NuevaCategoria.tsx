@@ -1277,7 +1277,7 @@ export default function NuevaCategoria({
 
   return (
     <Animated.View
-      className="flex-1 bg-white dark:bg-slate-900"
+      className="flex-1 bg-white dark:bg-noche"
       style={[{ paddingTop: insets.top }, animatedPaddingStyle]}
     >
       <View className="px-5 pt-3 pb-2 flex-row items-center gap-2">
@@ -1317,7 +1317,7 @@ export default function NuevaCategoria({
             <TouchableOpacity
               onPress={alternarFavorito}
               className={`w-10 h-10 rounded-full items-center justify-center border-[1.5px] ${
-                esFav ? "bg-amber-100 border-amber-400" : "border-slate-300 dark:border-slate-600"
+                esFav ? "bg-amber-100 border-amber-400" : "border-slate-300 dark:border-noche-borde"
               }`}
             >
               <Star
@@ -1340,7 +1340,7 @@ export default function NuevaCategoria({
             placeholder={t("nuevaCat.nombrePlaceholder")}
             placeholderTextColor="#94a3b8"
             maxLength={24}
-            className="border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800"
+            className="border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-noche-2"
           />
           {/* Dos categorías del mismo tipo llamadas igual no se pueden
             distinguir al anotar un gasto: se elige una al azar y los totales
@@ -1366,7 +1366,7 @@ export default function NuevaCategoria({
               CADA gasto: elegir una categoría que ya existe.
               Solo aparece cuando se vino a elegir. Al editar "Broster" una lista
               para elegir otra no tendría ningún sentido. */}
-        <View className="flex-row mx-5 mt-5 mb-1 border-b-[1.5px] border-slate-200 dark:border-slate-700">
+        <View className="flex-row mx-5 mt-5 mb-1 border-b-[1.5px] border-slate-200 dark:border-noche-borde">
           {(eligiendo
             ? (["tuyas", "icono", "favoritos", "color"] as const)
             : (["icono", "favoritos", "color"] as const)
@@ -1503,7 +1503,7 @@ export default function NuevaCategoria({
                           <View className="flex-row gap-2.5 mt-3">
                             <TouchableOpacity
                               onPress={() => setBorrando(null)}
-                              className="flex-1 py-2.5 rounded-xl items-center border-[1.5px] border-slate-300 dark:border-slate-600"
+                              className="flex-1 py-2.5 rounded-xl items-center border-[1.5px] border-slate-300 dark:border-noche-borde"
                             >
                               <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
                                 {t("nuevaCat.cancelar")}
@@ -1622,14 +1622,14 @@ export default function NuevaCategoria({
                 <TouchableOpacity
                   onPress={tomarFoto}
                   style={{ width: lado, height: lado }}
-                  className="rounded-2xl items-center justify-center bg-slate-50 dark:bg-slate-800 border-[1.5px] border-dashed border-slate-300 dark:border-slate-600"
+                  className="rounded-2xl items-center justify-center bg-slate-50 dark:bg-noche-2 border-[1.5px] border-dashed border-slate-300 dark:border-noche-borde"
                 >
                   <Camera size={22} color="#64748b" strokeWidth={2.2} />
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={elegirDeGaleria}
                   style={{ width: lado, height: lado }}
-                  className="rounded-2xl items-center justify-center bg-slate-50 dark:bg-slate-800 border-[1.5px] border-dashed border-slate-300 dark:border-slate-600"
+                  className="rounded-2xl items-center justify-center bg-slate-50 dark:bg-noche-2 border-[1.5px] border-dashed border-slate-300 dark:border-noche-borde"
                 >
                   <ImageIcon size={22} color="#64748b" strokeWidth={2.2} />
                 </TouchableOpacity>
@@ -1687,7 +1687,7 @@ export default function NuevaCategoria({
               <View className="flex-row gap-2.5 mt-3">
                 <TouchableOpacity
                   onPress={() => setConfirmandoBorrado(false)}
-                  className="flex-1 py-2.5 rounded-xl items-center border-[1.5px] border-slate-300 dark:border-slate-600"
+                  className="flex-1 py-2.5 rounded-xl items-center border-[1.5px] border-slate-300 dark:border-noche-borde"
                 >
                   <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
                     {t("nuevaCat.cancelar")}
@@ -1717,7 +1717,7 @@ export default function NuevaCategoria({
           onPress={guardar}
           disabled={!puedeGuardar}
           className={`py-4 rounded-2xl items-center ${
-            puedeGuardar ? "bg-emerald-600" : "bg-slate-200 dark:bg-slate-800"
+            puedeGuardar ? "bg-emerald-600" : "bg-slate-200 dark:bg-noche-2"
           }`}
         >
           <Text className={`font-extrabold ${puedeGuardar ? "text-white" : "text-slate-400"}`}>

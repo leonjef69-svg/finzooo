@@ -18,7 +18,7 @@ export default function HomeTab() {
   } = useAppData();
 
   return (
-    <View className="flex-1 bg-white dark:bg-slate-900">
+    <View className="flex-1 bg-white dark:bg-noche">
       <Home
         userName={userName}
         month={month}

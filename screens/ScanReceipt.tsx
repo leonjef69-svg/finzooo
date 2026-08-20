@@ -190,7 +190,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top }}>
       <View className="px-5 pt-3 pb-2 flex-row items-center justify-between">
         <Text className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
           {t("scan.title")}
@@ -206,7 +206,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
             decirlo claro en vez de mostrar un botón que no haría nada. */}
         {!isSupported ? (
           <View
-            className="rounded-3xl p-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+            className="rounded-3xl p-5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
             style={CARD_SHADOW}
           >
             <Text className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-2">
@@ -219,7 +219,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
         ) : stage === "intro" ? (
           <>
             <View className="items-center py-6">
-              <View className="w-20 h-20 rounded-3xl bg-emerald-50 dark:bg-slate-800 items-center justify-center mb-4">
+              <View className="w-20 h-20 rounded-3xl bg-emerald-50 dark:bg-noche-2 items-center justify-center mb-4">
                 <ScanLine size={34} color="#059669" />
               </View>
               <Text className="text-sm text-center text-slate-500 dark:text-slate-300 leading-5 px-4">
@@ -237,7 +237,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
 
             <TouchableOpacity
               onPress={() => pick("gallery")}
-              className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 mt-3"
+              className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 mt-3"
             >
               <ImageIcon size={16} color="#64748b" />
               <Text className="font-bold text-slate-600 dark:text-slate-200">
@@ -255,7 +255,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
               style={{
                 transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.15] }) }],
               }}
-              className="w-20 h-20 rounded-3xl bg-emerald-50 dark:bg-slate-800 items-center justify-center mb-5"
+              className="w-20 h-20 rounded-3xl bg-emerald-50 dark:bg-noche-2 items-center justify-center mb-5"
             >
               <ScanLine size={34} color="#059669" />
             </Animated.View>
@@ -274,7 +274,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
             </Text>
             <TouchableOpacity
               onPress={() => setStage("intro")}
-              className="flex-row items-center justify-center gap-2 py-3.5 px-6 rounded-2xl bg-slate-100 dark:bg-slate-800"
+              className="flex-row items-center justify-center gap-2 py-3.5 px-6 rounded-2xl bg-slate-100 dark:bg-noche-2"
             >
               <RotateCcw size={16} color="#64748b" />
               <Text className="font-bold text-slate-600 dark:text-slate-200">{t("scan.retry")}</Text>
@@ -286,7 +286,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
                 resultado: se muestra igual, pero avisando, porque casi
                 siempre hay algo aprovechable aunque falte el total. */}
             {read?.confidence !== "high" && (
-              <View className="rounded-2xl p-3.5 mb-4 bg-amber-50 dark:bg-slate-800 border-[1.5px] border-amber-200 dark:border-slate-700">
+              <View className="rounded-2xl p-3.5 mb-4 bg-amber-50 dark:bg-noche-2 border-[1.5px] border-amber-200 dark:border-noche-borde">
                 <Text className="text-xs text-amber-800 dark:text-amber-300 leading-5">
                   {t(read?.confidence === "low" ? "scan.checkLow" : "scan.checkMedium")}
                 </Text>
@@ -294,7 +294,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
             )}
 
             <View
-              className="rounded-3xl p-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+              className="rounded-3xl p-5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
               style={CARD_SHADOW}
             >
               {/* Gasto o ingreso */}
@@ -309,9 +309,9 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
                     className={`flex-1 py-2.5 rounded-full border-[1.5px] items-center ${
                       kind === k
                         ? k === "expense"
-                          ? "bg-rose-50 dark:bg-slate-800 border-rose-300"
-                          : "bg-emerald-50 dark:bg-slate-800 border-emerald-300"
-                        : "border-slate-200 dark:border-slate-700"
+                          ? "bg-rose-50 dark:bg-noche-2 border-rose-300"
+                          : "bg-emerald-50 dark:bg-noche-2 border-emerald-300"
+                        : "border-slate-200 dark:border-noche-borde"
                     }`}
                   >
                     <Text
@@ -385,8 +385,8 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
                       onPress={() => setCategory(c.id)}
                       className={`flex-row items-center gap-1.5 px-3 py-2 rounded-full border-[1.5px] ${
                         category === c.id
-                          ? "bg-emerald-50 dark:bg-slate-800 border-emerald-400"
-                          : "border-slate-200 dark:border-slate-700"
+                          ? "bg-emerald-50 dark:bg-noche-2 border-emerald-400"
+                          : "border-slate-200 dark:border-noche-borde"
                       }`}
                     >
                       <CategoryAvatar id={c.id} size={14} />
@@ -407,7 +407,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
               onPress={save}
               disabled={!canSave}
               className={`flex-row items-center justify-center gap-2 py-4 rounded-2xl mt-4 ${
-                canSave ? "bg-emerald-600" : "bg-slate-200 dark:bg-slate-800"
+                canSave ? "bg-emerald-600" : "bg-slate-200 dark:bg-noche-2"
               }`}
             >
               <Check size={18} color={canSave ? "#ffffff" : "#94a3b8"} />
@@ -420,7 +420,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
 
             <TouchableOpacity
               onPress={() => setStage("intro")}
-              className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 mt-2"
+              className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 mt-2"
             >
               <RotateCcw size={16} color="#64748b" />
               <Text className="font-bold text-slate-600 dark:text-slate-200">{t("scan.another")}</Text>

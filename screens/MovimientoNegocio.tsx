@@ -73,7 +73,7 @@ export default function MovimientoNegocio({
 
   return (
     <View
-      className="flex-1 bg-white dark:bg-slate-900"
+      className="flex-1 bg-white dark:bg-noche"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
@@ -97,7 +97,7 @@ export default function MovimientoNegocio({
             className={`flex-1 py-3.5 rounded-2xl items-center flex-row justify-center gap-2 border-[1.5px] ${
               tipo === "gasto"
                 ? "bg-rose-500 border-rose-500"
-                : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
             }`}
           >
             <TrendingDown size={15} color={tipo === "gasto" ? "#ffffff" : "#94a3b8"} />
@@ -114,7 +114,7 @@ export default function MovimientoNegocio({
             className={`flex-1 py-3.5 rounded-2xl items-center flex-row justify-center gap-2 border-[1.5px] ${
               tipo === "ingreso"
                 ? "bg-emerald-600 border-emerald-600"
-                : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
             }`}
           >
             <TrendingUp size={15} color={tipo === "ingreso" ? "#ffffff" : "#94a3b8"} />
@@ -129,7 +129,7 @@ export default function MovimientoNegocio({
         </View>
 
         <View
-          className="rounded-2xl p-4 mt-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+          className="rounded-2xl p-4 mt-5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
           style={CARD_SHADOW}
         >
           <Text className="text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">
@@ -142,7 +142,7 @@ export default function MovimientoNegocio({
             placeholderTextColor="#94a3b8"
             keyboardType="decimal-pad"
             maxLength={9}
-            className="border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800"
+            className="border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-noche-2"
           />
 
           <Text className="text-xs font-bold text-slate-700 dark:text-slate-200 mt-4 mb-1.5">
@@ -154,7 +154,7 @@ export default function MovimientoNegocio({
             placeholder={t("caja.descripcionPlaceholder")}
             placeholderTextColor="#94a3b8"
             maxLength={40}
-            className="border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800"
+            className="border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-noche-2"
           />
 
           <Text className="text-xs font-bold text-slate-700 dark:text-slate-200 mt-4 mb-2.5">
@@ -170,7 +170,7 @@ export default function MovimientoNegocio({
                   className={`px-3 py-2 rounded-xl border-[1.5px] ${
                     puesto
                       ? "bg-emerald-600 border-emerald-600"
-                      : "bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700"
+                      : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
                   }`}
                 >
                   <Text
@@ -198,7 +198,7 @@ export default function MovimientoNegocio({
 
         {/* QUE ESTO NO TOCA LO PERSONAL, DICHO. Es lo que la persona necesita saber para
             fiarse: la compra de pollo no le va a aparecer entre los gastos de casa. */}
-        <View className="rounded-2xl bg-slate-50 dark:bg-slate-800 p-4 mt-4">
+        <View className="rounded-2xl bg-slate-50 dark:bg-noche-2 p-4 mt-4">
           <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-400">
             {t("caja.avisoSeparado")}
           </Text>

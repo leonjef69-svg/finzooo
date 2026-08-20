@@ -92,7 +92,7 @@ export default function Productos({
 
   return (
     <View
-      className="flex-1 bg-white dark:bg-slate-900"
+      className="flex-1 bg-white dark:bg-noche"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
@@ -105,7 +105,7 @@ export default function Productos({
 
       <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
         <View className="flex-row items-start gap-3 mb-5">
-          <View className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-slate-800 items-center justify-center">
+          <View className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-noche-2 items-center justify-center">
             <Package size={18} color="#059669" />
           </View>
           <Text className="flex-1 text-xs leading-5 text-slate-500 dark:text-slate-300">
@@ -115,7 +115,7 @@ export default function Productos({
 
         {enEdicion && (
           <View
-            className="rounded-2xl p-4 mb-5 bg-white dark:bg-slate-900 border-[1.5px] border-emerald-300 dark:border-emerald-700"
+            className="rounded-2xl p-4 mb-5 bg-white dark:bg-noche border-[1.5px] border-emerald-300 dark:border-emerald-700"
             style={CARD_SHADOW}
           >
             <Text className="text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">
@@ -127,7 +127,7 @@ export default function Productos({
               placeholder={t("productos.nombrePlaceholder")}
               placeholderTextColor="#94a3b8"
               maxLength={30}
-              className="border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800"
+              className="border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-noche-2"
             />
 
             <Text className="text-xs font-bold text-slate-700 dark:text-slate-200 mt-4 mb-1.5">
@@ -140,13 +140,13 @@ export default function Productos({
               placeholderTextColor="#94a3b8"
               keyboardType="decimal-pad"
               maxLength={9}
-              className="border-[1.5px] border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-800"
+              className="border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-noche-2"
             />
 
             <View className="flex-row gap-2.5 mt-5">
               <TouchableOpacity
                 onPress={() => setEnEdicion(null)}
-                className="flex-1 py-3 rounded-xl items-center bg-slate-100 dark:bg-slate-800"
+                className="flex-1 py-3 rounded-xl items-center bg-slate-100 dark:bg-noche-2"
               >
                 <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
                   {t("nuevaCat.cancelar")}
@@ -164,7 +164,7 @@ export default function Productos({
         )}
 
         {mios.length === 0 && !enEdicion ? (
-          <View className="rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-slate-700 p-6 items-center">
+          <View className="rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-noche-borde p-6 items-center">
             <Package size={26} color="#94a3b8" />
             <Text className="text-xs font-bold text-slate-600 dark:text-slate-200 mt-3">
               {t("productos.vacioTitulo")}
@@ -178,7 +178,7 @@ export default function Productos({
             {mios.map((p) => (
               <View
                 key={p.id}
-                className="rounded-2xl p-4 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+                className="rounded-2xl p-4 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
                 style={CARD_SHADOW}
               >
                 <View className="flex-row items-center gap-3">
@@ -188,7 +188,7 @@ export default function Productos({
                       invitaba a tocarlo. Apagado sí aporta: es lo que explica de un vistazo por
                       qué ese producto no sale al vender. */}
                   {!p.activo && (
-                    <View className="w-10 h-10 rounded-2xl items-center justify-center bg-slate-100 dark:bg-slate-800">
+                    <View className="w-10 h-10 rounded-2xl items-center justify-center bg-slate-100 dark:bg-noche-2">
                       <EyeOff size={16} color="#94a3b8" />
                     </View>
                   )}
@@ -219,7 +219,7 @@ export default function Productos({
                 </View>
 
                 {borrando === p.id ? (
-                  <View className="mt-3 pt-3 border-t-[1.5px] border-slate-100 dark:border-slate-700">
+                  <View className="mt-3 pt-3 border-t-[1.5px] border-slate-100 dark:border-noche-borde">
                     {/* LO QUE NO PASA, DICHO. Sin esto, quien borre un producto puede pensar
                         que se le van las ventas de la semana, y no se le van. */}
                     <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-400">
@@ -228,7 +228,7 @@ export default function Productos({
                     <View className="flex-row gap-2.5 mt-3">
                       <TouchableOpacity
                         onPress={() => setBorrando(null)}
-                        className="flex-1 py-2.5 rounded-xl items-center bg-slate-100 dark:bg-slate-800"
+                        className="flex-1 py-2.5 rounded-xl items-center bg-slate-100 dark:bg-noche-2"
                       >
                         <Text className="text-[11px] font-bold text-slate-600 dark:text-slate-200">
                           {t("nuevaCat.cancelar")}
@@ -252,7 +252,7 @@ export default function Productos({
                   <View className="flex-row gap-2 mt-3">
                     <TouchableOpacity
                       onPress={() => abrirEdicion(p)}
-                      className="flex-1 py-2.5 rounded-xl items-center bg-slate-100 dark:bg-slate-800"
+                      className="flex-1 py-2.5 rounded-xl items-center bg-slate-100 dark:bg-noche-2"
                     >
                       <Text className="text-[11px] font-bold text-slate-600 dark:text-slate-200">
                         {t("negocios.editar")}
@@ -282,7 +282,7 @@ export default function Productos({
         )}
 
         {mios.length > 0 && (
-          <View className="rounded-2xl bg-slate-50 dark:bg-slate-800 p-4 mt-5">
+          <View className="rounded-2xl bg-slate-50 dark:bg-noche-2 p-4 mt-5">
             <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-400">
               {t("productos.proximoPaso")}
             </Text>

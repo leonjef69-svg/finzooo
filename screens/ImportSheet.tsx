@@ -72,7 +72,7 @@ function ElegirMes({
   return (
     <View className="absolute inset-0 items-center justify-center px-8 z-50">
       <TouchableOpacity className="absolute inset-0 bg-slate-900/50" activeOpacity={1} onPress={onCancel} />
-      <View className="bg-white dark:bg-slate-900 rounded-3xl p-6 w-full max-h-[70%]">
+      <View className="bg-white dark:bg-noche rounded-3xl p-6 w-full max-h-[70%]">
         <Text className="font-extrabold text-slate-900 dark:text-slate-100 text-base mb-1.5">
           {t("importSheet.pickMonthTitle", { count: cuantos })}
         </Text>
@@ -86,7 +86,7 @@ function ElegirMes({
             <TouchableOpacity
               key={`${anio}-${mes}`}
               onPress={() => onElegir(anio, mes)}
-              className="py-3.5 px-4 rounded-xl bg-slate-100 dark:bg-slate-800 mb-2"
+              className="py-3.5 px-4 rounded-xl bg-slate-100 dark:bg-noche-2 mb-2"
             >
               <Text className="font-bold text-slate-700 dark:text-slate-100">
                 {monthNames[mes - 1]} {anio}
@@ -94,7 +94,7 @@ function ElegirMes({
             </TouchableOpacity>
           ))}
         </ScrollView>
-        <TouchableOpacity onPress={onCancel} className="mt-2 py-3 rounded-xl bg-slate-100 dark:bg-slate-800 items-center">
+        <TouchableOpacity onPress={onCancel} className="mt-2 py-3 rounded-xl bg-slate-100 dark:bg-noche-2 items-center">
           <Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text>
         </TouchableOpacity>
       </View>
@@ -488,11 +488,11 @@ export default function ImportSheet({
     <View className="absolute inset-0 z-40 justify-end">
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
-        className="bg-white dark:bg-slate-900 rounded-t-3xl px-5 pt-3"
+        className="bg-white dark:bg-noche rounded-t-3xl px-5 pt-3"
         style={{ paddingBottom: 32 + insets.bottom, maxHeight: "88%" }}
       >
         <View className="items-center mb-3">
-          <View className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
+          <View className="w-10 h-1 rounded-full bg-slate-200 dark:bg-noche-3" />
         </View>
         <View className="flex-row items-center justify-between mb-1">
           <Text className="font-extrabold text-base" style={{ color: primaryText }}>
@@ -500,7 +500,7 @@ export default function ImportSheet({
           </Text>
           <TouchableOpacity
             onPress={onClose}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
             <X size={16} color={iconMuted} />
           </TouchableOpacity>
@@ -524,7 +524,7 @@ export default function ImportSheet({
             <TouchableOpacity
               onPress={pickFile}
               disabled={loading}
-              className="w-full py-8 rounded-2xl items-center border-2 border-dashed border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-800"
+              className="w-full py-8 rounded-2xl items-center border-2 border-dashed border-slate-300 dark:border-noche-borde bg-slate-50 dark:bg-noche-2"
             >
               {loading ? (
                 <>
@@ -558,7 +558,7 @@ export default function ImportSheet({
           </>
         ) : (
           <ScrollView>
-            <View className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-3.5 mb-3">
+            <View className="bg-slate-50 dark:bg-noche-2 rounded-2xl p-3.5 mb-3">
               <Text className="text-xs font-semibold text-slate-500 dark:text-slate-300" numberOfLines={1}>
                 {fileName}
               </Text>
@@ -582,7 +582,7 @@ export default function ImportSheet({
                 </Text>
               </View>
               {dupes.length > 0 && (
-                <View className="flex-row items-center gap-3 bg-amber-50 dark:bg-slate-800 rounded-2xl p-3.5">
+                <View className="flex-row items-center gap-3 bg-amber-50 dark:bg-noche-2 rounded-2xl p-3.5">
                   <Copy size={18} color="#f59e0b" />
                   <Text className="text-sm font-bold text-amber-700 dark:text-slate-100 flex-1">
                     {t("importSheet.summaryDupes", { count: dupes.length })}
@@ -590,7 +590,7 @@ export default function ImportSheet({
                 </View>
               )}
               {errorCount > 0 && (
-                <View className="flex-row items-center gap-3 bg-rose-50 dark:bg-slate-800 rounded-2xl p-3.5">
+                <View className="flex-row items-center gap-3 bg-rose-50 dark:bg-noche-2 rounded-2xl p-3.5">
                   <AlertTriangle size={18} color="#e11d48" />
                   <Text className="text-sm font-bold text-rose-600 dark:text-slate-100 flex-1">
                     {t("importSheet.summaryErrors", { count: errorCount })}
@@ -604,7 +604,7 @@ export default function ImportSheet({
               {sinFecha > 0 && (
                 <TouchableOpacity
                   onPress={() => setEligiendoMes(true)}
-                  className="flex-row items-center gap-3 bg-amber-50 dark:bg-slate-800 rounded-2xl p-3.5 border-[1.5px] border-amber-300"
+                  className="flex-row items-center gap-3 bg-amber-50 dark:bg-noche-2 rounded-2xl p-3.5 border-[1.5px] border-amber-300"
                 >
                   <AlertTriangle size={18} color="#f59e0b" />
                   <View className="flex-1">
@@ -632,12 +632,12 @@ export default function ImportSheet({
             <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
               {t("importSheet.previewTitle")}
             </Text>
-            <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 overflow-hidden mb-4">
+            <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde overflow-hidden mb-4">
               {candidates.slice(0, PREVIEW_LIMIT).map((c, i) => (
                 <View
                   key={c.tx.id}
                   className={`flex-row items-center gap-2.5 px-3 py-2.5 ${
-                    i > 0 ? "border-t border-slate-100 dark:border-slate-800" : ""
+                    i > 0 ? "border-t border-slate-100 dark:border-noche-borde" : ""
                   }`}
                 >
                   <Text className="text-[11px] text-slate-400 w-14">{fmtDate(c.tx.date, monthNames)}</Text>
@@ -666,7 +666,7 @@ export default function ImportSheet({
                 </View>
               ))}
               {candidates.length > PREVIEW_LIMIT && (
-                <Text className="text-[11px] text-slate-400 text-center py-2.5 border-t border-slate-100 dark:border-slate-800">
+                <Text className="text-[11px] text-slate-400 text-center py-2.5 border-t border-slate-100 dark:border-noche-borde">
                   {t("importSheet.previewMore", { count: candidates.length - PREVIEW_LIMIT })}
                 </Text>
               )}
@@ -675,14 +675,14 @@ export default function ImportSheet({
             <View className="flex-row gap-3">
               <TouchableOpacity
                 onPress={reset}
-                className="w-12 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 items-center justify-center"
+                className="w-12 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 items-center justify-center"
               >
                 <X size={18} color={iconMuted} />
               </TouchableOpacity>
               {dupes.length > 0 && (
                 <TouchableOpacity
                   onPress={() => setReviewing(true)}
-                  className="flex-1 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 items-center"
+                  className="flex-1 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 items-center"
                 >
                   <Text className="font-bold text-slate-600 dark:text-slate-200">{t("importSheet.reviewButton")}</Text>
                 </TouchableOpacity>

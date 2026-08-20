@@ -52,14 +52,14 @@ export default function GoalFormSheet({
     >
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
-        className="bg-white dark:bg-slate-900 rounded-t-3xl px-5 pt-3"
+        className="bg-white dark:bg-noche rounded-t-3xl px-5 pt-3"
         style={{
           maxHeight: "100%",
           paddingBottom: keyboardVisible ? 20 : 32 + insets.bottom,
         }}
       >
         <View className="items-center mb-3">
-          <View className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
+          <View className="w-10 h-1 rounded-full bg-slate-200 dark:bg-noche-3" />
         </View>
         <View className="flex-row items-center justify-between mb-4">
           <Text className="font-extrabold text-slate-900 dark:text-slate-100 text-base">
@@ -67,7 +67,7 @@ export default function GoalFormSheet({
           </Text>
           <TouchableOpacity
             onPress={onClose}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
             <X size={16} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
           </TouchableOpacity>
@@ -82,12 +82,12 @@ export default function GoalFormSheet({
               onBlur={() => onFieldBlur("name")}
               placeholder={t("goalForm.namePlaceholder")}
               placeholderTextColor="#94a3b8"
-              className="w-full bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-4 py-3.5 text-sm font-semibold text-slate-900 dark:text-slate-100"
+              className="w-full bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4 py-3.5 text-sm font-semibold text-slate-900 dark:text-slate-100"
             />
           </View>
           <View>
             <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("goalForm.targetLabel")}</Text>
-            <View className="flex-row items-center bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-4 py-3.5">
+            <View className="flex-row items-center bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4 py-3.5">
               <Text className="text-slate-500 dark:text-slate-300 font-bold mr-1">{currencySymbolFor(userCurrency)}</Text>
               <TextInput
                 keyboardType="decimal-pad"
@@ -106,7 +106,7 @@ export default function GoalFormSheet({
           </Text>
         </View>
         <View className="flex-row gap-3 mt-6">
-          <TouchableOpacity onPress={onClose} className="flex-1 py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 items-center">
+          <TouchableOpacity onPress={onClose} className="flex-1 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 items-center">
             <Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text>
           </TouchableOpacity>
           <TouchableOpacity

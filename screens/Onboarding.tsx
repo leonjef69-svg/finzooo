@@ -18,7 +18,7 @@ export default function Onboarding({ onFinish }: { onFinish: () => void }) {
   const insets = useSafeAreaInsets();
 
   return (
-    <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
+    <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <View className="flex-row justify-end px-5 pt-3">
         <TouchableOpacity activeOpacity={0.6} onPress={onFinish}>
           <Text className="text-sm font-semibold text-slate-500 dark:text-slate-300">{t("onboarding.skip")}</Text>
@@ -43,7 +43,7 @@ export default function Onboarding({ onFinish }: { onFinish: () => void }) {
         {SLIDES.map((_, idx) => (
           <View
             key={idx}
-            className={`h-1.5 rounded-full ${idx === i ? "w-6 bg-emerald-600" : "w-1.5 bg-slate-200 dark:bg-slate-700"}`}
+            className={`h-1.5 rounded-full ${idx === i ? "w-6 bg-emerald-600" : "w-1.5 bg-slate-200 dark:bg-noche-3"}`}
           />
         ))}
       </View>

@@ -136,7 +136,7 @@ export default function DailyBarsChart({
         </Text>
         <TouchableOpacity
           onPress={() => setShowAmounts((v) => !v)}
-          className="px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800"
+          className="px-3 py-1.5 rounded-full bg-slate-100 dark:bg-noche-2"
         >
           <Text className="text-[11px] font-bold text-slate-600 dark:text-slate-200">
             {showAmounts ? hideAmountsLabel : showAmountsLabel}

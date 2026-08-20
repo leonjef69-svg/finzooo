@@ -24,17 +24,17 @@ export default function GoalPickerSheet({
     <View className="absolute inset-0 z-40 justify-end">
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
-        className="bg-white dark:bg-slate-900 rounded-t-3xl px-5 pt-3"
+        className="bg-white dark:bg-noche rounded-t-3xl px-5 pt-3"
         style={{ maxHeight: "80%", paddingBottom: 32 + insets.bottom }}
       >
         <View className="items-center mb-3">
-          <View className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
+          <View className="w-10 h-1 rounded-full bg-slate-200 dark:bg-noche-3" />
         </View>
         <View className="flex-row items-center justify-between mb-1">
           <Text className="font-extrabold text-slate-900 dark:text-slate-100 text-base">{t("goalPicker.title")}</Text>
           <TouchableOpacity
             onPress={onClose}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-slate-800 items-center justify-center"
+            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
             <X size={16} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
           </TouchableOpacity>
@@ -50,7 +50,7 @@ export default function GoalPickerSheet({
               <TouchableOpacity
                 key={g.id}
                 onPress={() => onPick(g.id)}
-                className="flex-row items-center gap-3 bg-slate-50 dark:bg-slate-800 rounded-2xl p-3.5"
+                className="flex-row items-center gap-3 bg-slate-50 dark:bg-noche-2 rounded-2xl p-3.5"
               >
                 <View
                   className="w-10 h-10 rounded-xl items-center justify-center"

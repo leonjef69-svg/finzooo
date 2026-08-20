@@ -40,7 +40,7 @@ export default function PdfPreview({
 
   return (
     <View
-      className="absolute inset-0 z-50 bg-slate-100 dark:bg-slate-900"
+      className="absolute inset-0 z-50 bg-slate-100 dark:bg-noche"
       style={{ paddingTop: insets.top }}
     >
       <View className="flex-row items-center justify-between px-5 py-3">
@@ -51,13 +51,13 @@ export default function PdfPreview({
         </View>
         <TouchableOpacity
           onPress={onClose}
-          className="w-9 h-9 rounded-full bg-white dark:bg-slate-800 items-center justify-center"
+          className="w-9 h-9 rounded-full bg-white dark:bg-noche-2 items-center justify-center"
         >
           <X size={16} color="#475569" />
         </TouchableOpacity>
       </View>
 
-      <View className="flex-1 bg-white dark:bg-slate-800 mx-3 mb-3 rounded-2xl overflow-hidden">
+      <View className="flex-1 bg-white dark:bg-noche-2 mx-3 mb-3 rounded-2xl overflow-hidden">
         <WebView
           source={{ html }}
           onLoadEnd={() => setCargando(false)}
@@ -76,7 +76,7 @@ export default function PdfPreview({
           style={{ backgroundColor: "#ffffff" }}
         />
         {cargando && (
-          <View className="absolute inset-0 items-center justify-center bg-white dark:bg-slate-800">
+          <View className="absolute inset-0 items-center justify-center bg-white dark:bg-noche-2">
             <ActivityIndicator size="large" color="#059669" />
           </View>
         )}

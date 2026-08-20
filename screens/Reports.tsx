@@ -262,7 +262,7 @@ export default function Reports({
 
   return (
     <ScrollView
-      className="flex-1 bg-white dark:bg-slate-900"
+      className="flex-1 bg-white dark:bg-noche"
       contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 112 }}
     >
       <View className="px-5 pt-3 pb-1 flex-row items-start justify-between">
@@ -317,7 +317,7 @@ export default function Reports({
               Ahora se ve la cuenta entera, línea por línea, y cierra. De paso
               se acaba el "Presupuesto d..." recortado por falta de sitio. */}
           <View
-            className="mx-5 mt-2.5 rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 flex-row"
+            className="mx-5 mt-2.5 rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2 flex-row"
             style={CARD_SHADOW}
           >
             {[
@@ -337,7 +337,7 @@ export default function Reports({
               <View
                 key={i}
                 className={`flex-1 items-center py-3 px-1 ${
-                  i > 0 ? "border-l-[1.5px] border-slate-200 dark:border-slate-700" : ""
+                  i > 0 ? "border-l-[1.5px] border-slate-200 dark:border-noche-borde" : ""
                 }`}
               >
                 <c.Icon size={15} color={c.color} />
@@ -370,7 +370,7 @@ export default function Reports({
               barra de progreso no mide nada y un 0% engañaría. */}
           {budget > 0 && (
             <View
-              className="mx-5 mt-2.5 rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-4"
+              className="mx-5 mt-2.5 rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2 p-4"
               style={CARD_SHADOW}
             >
               <View className="flex-row items-center justify-between mb-2">
@@ -438,7 +438,7 @@ export default function Reports({
       )}
 
       <View
-        className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4"
+        className="mx-5 mt-4 bg-white dark:bg-noche rounded-3xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4"
         style={CARD_SHADOW}
       >
         <Text className="text-sm font-bold mb-1" style={{ color: primaryTextColor }}>{t("reports.byCategory")}</Text>
@@ -470,7 +470,7 @@ export default function Reports({
       </View>
 
       <View
-        className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4"
+        className="mx-5 mt-4 bg-white dark:bg-noche rounded-3xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4"
         style={CARD_SHADOW}
       >
         <Text className="text-sm font-bold mb-1" style={{ color: primaryTextColor }}>{t("categoryBudgets.title")}</Text>
@@ -506,7 +506,7 @@ export default function Reports({
                       {t("categoryBudgets.spentOfLimit", { spent: fmt(b.spent), limit: fmt(b.limit) })}
                     </Text>
                   </View>
-                  <View className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <View className="h-2 rounded-full bg-slate-100 dark:bg-noche-2 overflow-hidden">
                     <View
                       className="h-2 rounded-full"
                       style={{ width: `${Math.min(b.pct, 1) * 100}%`, backgroundColor: barColor }}
@@ -540,7 +540,7 @@ export default function Reports({
       </View>
 
       <View
-        className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4"
+        className="mx-5 mt-4 bg-white dark:bg-noche rounded-3xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4"
         style={CARD_SHADOW}
       >
         <Text className="text-sm font-bold mb-2" style={{ color: primaryTextColor }}>{t("reports.byMonth")}</Text>
@@ -554,7 +554,7 @@ export default function Reports({
       </View>
 
       <View
-        className="mx-5 mt-4 bg-white dark:bg-slate-900 rounded-3xl border-[1.5px] border-slate-200 dark:border-slate-700 p-4"
+        className="mx-5 mt-4 bg-white dark:bg-noche rounded-3xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4"
         style={CARD_SHADOW}
       >
         <Text className="text-sm font-bold" style={{ color: primaryTextColor }}>{t("reports.byDayTitle")}</Text>

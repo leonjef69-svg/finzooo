@@ -41,7 +41,7 @@ export default function VerifyEmail({
 
   return (
     <View
-      className="flex-1 bg-white dark:bg-slate-900 px-6 justify-center"
+      className="flex-1 bg-white dark:bg-noche px-6 justify-center"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <View className="items-center mb-8">

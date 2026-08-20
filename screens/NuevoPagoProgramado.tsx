@@ -241,7 +241,7 @@ export default function NuevoPagoProgramado({
 
   return (
     <View
-      className="flex-1 bg-white dark:bg-slate-900"
+      className="flex-1 bg-white dark:bg-noche"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
@@ -259,7 +259,7 @@ export default function NuevoPagoProgramado({
               key={x}
               onPress={() => setTipo(x)}
               className={`flex-1 py-2.5 rounded-xl items-center ${
-                tipo === x ? "bg-slate-900 dark:bg-slate-100" : "bg-slate-100 dark:bg-slate-800"
+                tipo === x ? "bg-slate-900 dark:bg-slate-100" : "bg-slate-100 dark:bg-noche-2"
               }`}
             >
               <Text
@@ -292,7 +292,7 @@ export default function NuevoPagoProgramado({
             ) : (
               <Dibujo size={28} color={tinta} strokeWidth={2.2} />
             )}
-            <View className="absolute bottom-0 right-0 w-[22px] h-[22px] rounded-tl-xl items-center justify-center bg-white/90 dark:bg-slate-900/90">
+            <View className="absolute bottom-0 right-0 w-[22px] h-[22px] rounded-tl-xl items-center justify-center bg-white/90 dark:bg-noche/90">
               <Pencil size={13} color="#475569" />
             </View>
           </TouchableOpacity>
@@ -311,7 +311,7 @@ export default function NuevoPagoProgramado({
             color"*. Antes era una parrilla de 236 dibujos sin orden ninguno, y el primero
             que salía era el de comida: nadie encuentra ahí un maletín. */}
         {eligiendoIcono && (
-          <View className="rounded-2xl p-3 mb-3 bg-slate-50 dark:bg-slate-800">
+          <View className="rounded-2xl p-3 mb-3 bg-slate-50 dark:bg-noche-2">
             <View className="flex-row items-center justify-between mb-2.5">
               <View className="flex-row flex-1">
                 {(["dibujo", "foto", "color"] as const).map((x) => (
@@ -333,7 +333,7 @@ export default function NuevoPagoProgramado({
               </View>
               <TouchableOpacity
                 onPress={() => setEligiendoIcono(false)}
-                className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900"
+                className="px-3 py-1.5 rounded-lg bg-white dark:bg-noche"
               >
                 <Text className="text-[12px] font-bold text-slate-600 dark:text-slate-200">
                   {t("calendario.nuevo.listo")}
@@ -383,7 +383,7 @@ export default function NuevoPagoProgramado({
                 {esFoto(icono ?? "") && (
                   <TouchableOpacity
                     onPress={() => setIconoElegido(null)}
-                    className="py-2.5 mt-2.5 rounded-xl items-center bg-white dark:bg-slate-900"
+                    className="py-2.5 mt-2.5 rounded-xl items-center bg-white dark:bg-noche"
                   >
                     <Text className="text-[12px] font-bold text-rose-600">
                       {t("calendario.nuevo.quitarFoto")}
@@ -448,7 +448,7 @@ export default function NuevoPagoProgramado({
           </View>
         </View>
 
-        <View className="flex-row items-center gap-2.5 py-3.5 border-t-[1.5px] border-slate-100 dark:border-slate-800">
+        <View className="flex-row items-center gap-2.5 py-3.5 border-t-[1.5px] border-slate-100 dark:border-noche-borde">
           <Repeat size={17} color="#64748b" />
           <Text className="flex-1 text-[14px] text-slate-900 dark:text-slate-100">
             {t(repeticion.clave, {
@@ -465,7 +465,7 @@ export default function NuevoPagoProgramado({
             que se come el borde.
             Ahora el titulo sube a su renglon y los dos campos se reparten el ancho a mitades,
             asi que ninguno puede quedarse sin sitio por mucho que crezca el otro. */}
-        <View className="py-3.5 border-t-[1.5px] border-b-[1.5px] border-slate-100 dark:border-slate-800 mb-5">
+        <View className="py-3.5 border-t-[1.5px] border-b-[1.5px] border-slate-100 dark:border-noche-borde mb-5">
           <View className="flex-row items-center gap-2.5 mb-3">
             <Bell size={17} color="#64748b" />
             <Text className="text-[14px] text-slate-900 dark:text-slate-100">
@@ -532,7 +532,7 @@ function BotonFoto({ texto, onPress }: { texto: string; onPress: () => void }) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="flex-1 py-3 rounded-xl items-center bg-white dark:bg-slate-900"
+      className="flex-1 py-3 rounded-xl items-center bg-white dark:bg-noche"
     >
       <Text className="text-[12px] font-bold text-slate-600 dark:text-slate-200">{texto}</Text>
     </TouchableOpacity>
@@ -573,7 +573,7 @@ const Casilla = memo(function Casilla({
       className="items-center justify-center p-1"
     >
       <View
-        className="w-full h-full rounded-xl items-center justify-center bg-white dark:bg-slate-900"
+        className="w-full h-full rounded-xl items-center justify-center bg-white dark:bg-noche"
         style={puesto ? { backgroundColor: tinta } : undefined}
       >
         <D size={22} color={puesto ? "#ffffff" : "#64748b"} strokeWidth={2} />

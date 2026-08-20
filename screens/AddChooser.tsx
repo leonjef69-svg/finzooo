@@ -22,13 +22,13 @@ export default function AddChooser({
   return (
     <View className="absolute inset-0 z-40 justify-end">
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
-      <View className="bg-white dark:bg-slate-900 rounded-t-3xl px-5 pt-3" style={{ paddingBottom: 32 + insets.bottom }}>
+      <View className="bg-white dark:bg-noche rounded-t-3xl px-5 pt-3" style={{ paddingBottom: 32 + insets.bottom }}>
         <View className="items-center mb-4">
-          <View className="w-10 h-1 rounded-full bg-slate-200 dark:bg-slate-700" />
+          <View className="w-10 h-1 rounded-full bg-slate-200 dark:bg-noche-3" />
         </View>
         <TouchableOpacity
           onPress={() => onPick("expense")}
-          className="w-full flex-row items-center gap-4 bg-rose-50 dark:bg-slate-800 rounded-2xl p-4 mb-3"
+          className="w-full flex-row items-center gap-4 bg-rose-50 dark:bg-noche-2 rounded-2xl p-4 mb-3"
         >
           <View className="w-11 h-11 rounded-xl bg-rose-500 items-center justify-center">
             <ArrowUpRight size={20} color="#ffffff" />
@@ -45,7 +45,7 @@ export default function AddChooser({
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => onPick("income")}
-          className="w-full flex-row items-center gap-4 bg-emerald-50 dark:bg-slate-800 rounded-2xl p-4 mb-3"
+          className="w-full flex-row items-center gap-4 bg-emerald-50 dark:bg-noche-2 rounded-2xl p-4 mb-3"
         >
           <View className="w-11 h-11 rounded-xl bg-emerald-600 items-center justify-center">
             <ArrowDownRight size={20} color="#ffffff" />
@@ -65,7 +65,7 @@ export default function AddChooser({
             que la etiqueta de Ajustes no significara nada. */}
         <TouchableOpacity
           onPress={isPremium ? onVoice : () => router.push("/premium")}
-          className="w-full flex-row items-center gap-4 bg-violet-50 dark:bg-slate-800 rounded-2xl p-4 mb-3"
+          className="w-full flex-row items-center gap-4 bg-violet-50 dark:bg-noche-2 rounded-2xl p-4 mb-3"
         >
           <View className="w-11 h-11 rounded-xl bg-violet-500 items-center justify-center">
             <Mic size={20} color="#ffffff" />
@@ -87,7 +87,7 @@ export default function AddChooser({
         </TouchableOpacity>
         <TouchableOpacity
           onPress={onScan}
-          className="w-full flex-row items-center gap-4 bg-emerald-50 dark:bg-slate-800 rounded-2xl p-4 mb-3"
+          className="w-full flex-row items-center gap-4 bg-emerald-50 dark:bg-noche-2 rounded-2xl p-4 mb-3"
         >
           <View className="w-11 h-11 rounded-xl bg-emerald-700 items-center justify-center">
             <ScanLine size={20} color="#ffffff" />
@@ -102,7 +102,7 @@ export default function AddChooser({
             <Text className="text-xs text-slate-500 dark:text-slate-300">{t("addChooser.addScanHint")}</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity onPress={onClose} className="w-full py-3.5 rounded-2xl bg-slate-100 dark:bg-slate-800 items-center mt-1">
+        <TouchableOpacity onPress={onClose} className="w-full py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 items-center mt-1">
           <Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text>
         </TouchableOpacity>
       </View>

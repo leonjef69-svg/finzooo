@@ -48,7 +48,7 @@ export default function GoogleButton({
       activeOpacity={0.85}
       onPress={onPress}
       disabled={disabled || loading}
-      className={`w-full py-4 rounded-2xl items-center justify-center flex-row gap-3 bg-white dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700 ${
+      className={`w-full py-4 rounded-2xl items-center justify-center flex-row gap-3 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde ${
         disabled || loading ? "opacity-70" : ""
       }`}
     >
@@ -69,9 +69,9 @@ export default function GoogleButton({
 export function OrDivider({ label }: { label: string }) {
   return (
     <View className="flex-row items-center gap-3 my-5">
-      <View className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+      <View className="flex-1 h-px bg-slate-200 dark:bg-noche-3" />
       <Text className="text-xs text-slate-400 dark:text-slate-400">{label}</Text>
-      <View className="flex-1 h-px bg-slate-200 dark:bg-slate-700" />
+      <View className="flex-1 h-px bg-slate-200 dark:bg-noche-3" />
     </View>
   );
 }

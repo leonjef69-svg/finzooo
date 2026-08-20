@@ -95,7 +95,7 @@ export default function CategoryBudgets({
 
   return (
     <Animated.View
-      className="flex-1 bg-white dark:bg-slate-900"
+      className="flex-1 bg-white dark:bg-noche"
       style={[{ paddingTop: insets.top }, animatedPaddingStyle]}
     >
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
@@ -132,7 +132,7 @@ export default function CategoryBudgets({
                  dejaría de leerse como una casilla encima de una tarjeta blanca. */
               <View
                 key={c.id}
-                className="bg-white dark:bg-slate-900 rounded-2xl p-2.5 border-[1.5px] border-slate-200 dark:border-slate-700"
+                className="bg-white dark:bg-noche rounded-2xl p-2.5 border-[1.5px] border-slate-200 dark:border-noche-borde"
                 style={CARD_SHADOW}
               >
                 <View className="flex-row items-center gap-3">
@@ -149,7 +149,7 @@ export default function CategoryBudgets({
                       De 128 a 104 px de ancho: entra "1,500.00" de sobra, que es mucho mas de
                       lo que nadie le pone de limite a una categoria en un mes. Y el alto NO se
                       toca: es donde se escribe, y bajarlo lo vuelve dificil de acertar. */}
-                  <View className="flex-row items-center bg-slate-50 dark:bg-slate-800 rounded-xl border-[1.5px] border-slate-200 dark:border-slate-700 px-2.5 py-2 w-[104px]">
+                  <View className="flex-row items-center bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-2.5 py-2 w-[104px]">
                     <Text className="text-slate-500 dark:text-slate-300 text-xs font-bold mr-1">
                       {currencySymbolFor(userCurrency)}
                     </Text>
@@ -179,7 +179,7 @@ export default function CategoryBudgets({
                         {t("categoryBudgets.spentOfLimit", { spent: fmt(spent), limit: fmt(limit) })}
                       </Text>
                     </View>
-                    <View className="h-1.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                    <View className="h-1.5 rounded-full bg-slate-200 dark:bg-noche-3 overflow-hidden">
                       <View
                         className="h-1.5 rounded-full"
                         style={{ width: `${Math.min(pct, 1) * 100}%`, backgroundColor: barColor }}
@@ -207,7 +207,7 @@ export default function CategoryBudgets({
           {!soloLectura && (
             <TouchableOpacity
               onPress={() => router.push("/nueva-categoria")}
-              className="flex-row items-center justify-center gap-2 rounded-2xl border-[1.5px] border-dashed border-slate-300 dark:border-slate-600 py-4"
+              className="flex-row items-center justify-center gap-2 rounded-2xl border-[1.5px] border-dashed border-slate-300 dark:border-noche-borde py-4"
             >
               <Plus size={17} color="#059669" />
               <Text className="text-sm font-bold text-emerald-700 dark:text-emerald-400">
@@ -220,7 +220,7 @@ export default function CategoryBudgets({
 
       {!soloLectura && (
         <View
-          className="px-5 py-4 border-t border-slate-200 dark:border-slate-700"
+          className="px-5 py-4 border-t border-slate-200 dark:border-noche-borde"
           style={{ paddingBottom: 16 + insets.bottom }}
         >
           <TouchableOpacity onPress={save} className="w-full bg-emerald-600 py-4 rounded-2xl items-center">

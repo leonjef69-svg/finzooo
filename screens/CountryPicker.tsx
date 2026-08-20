@@ -25,7 +25,7 @@ export default function CountryPicker({
 
   return (
     <View
-      className="flex-1 bg-white dark:bg-slate-900"
+      className="flex-1 bg-white dark:bg-noche"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
@@ -54,7 +54,7 @@ export default function CountryPicker({
                 className={`flex-row items-center gap-3 rounded-2xl p-4 border-[1.5px] ${
                   selected
                     ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20"
-                    : "border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800"
+                    : "border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2"
                 }`}
               >
                 <Text className="text-2xl">{c.flag}</Text>
@@ -79,7 +79,7 @@ export default function CountryPicker({
             con soles, por ejemplo— no se marca ninguno, y aquí se explica por
             qué en vez de dejar la pantalla sin nada señalado. */}
         {!actual && (
-          <View className="mt-4 rounded-2xl border-[1.5px] border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 p-4">
+          <View className="mt-4 rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-slate-50 dark:bg-noche-2 p-4">
             <Text className="text-xs text-slate-600 dark:text-slate-300 leading-5">
               {t("country.custom", {
                 language: languageLabelFor(userLanguage),

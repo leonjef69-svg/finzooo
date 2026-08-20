@@ -200,7 +200,7 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
               : "";
 
   return (
-    <View className="flex-1 bg-white dark:bg-slate-900" style={{ paddingTop: insets.top }}>
+    <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top }}>
       <View className="px-5 pt-3 pb-2 flex-row items-center gap-2">
         <TouchableOpacity
           onPress={step === "idle" ? onBack : reset}
@@ -228,11 +228,11 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
         ) : (
           <>
             <View
-              className="rounded-3xl p-5 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+              className="rounded-3xl p-5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
               style={CARD_SHADOW}
             >
               <View className="flex-row items-center gap-3">
-                <View className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-slate-800 items-center justify-center">
+                <View className="w-11 h-11 rounded-xl bg-emerald-50 dark:bg-noche-2 items-center justify-center">
                   <Lock size={20} color="#059669" />
                 </View>
                 <View className="flex-1">
@@ -266,7 +266,7 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
             {/* El aviso que de verdad importa: qué pasa si se olvida el PIN.
                 Cambia según haya copia en la nube o no, porque las
                 consecuencias son muy distintas. */}
-            <View className="flex-row gap-2 mt-5 rounded-2xl p-3.5 bg-amber-50 dark:bg-slate-800 border-[1.5px] border-amber-200 dark:border-slate-700">
+            <View className="flex-row gap-2 mt-5 rounded-2xl p-3.5 bg-amber-50 dark:bg-noche-2 border-[1.5px] border-amber-200 dark:border-noche-borde">
               <ShieldAlert size={16} color="#b45309" />
               <Text className="flex-1 text-[11px] text-amber-800 dark:text-amber-300 leading-4">
                 {t(isCloudSynced ? "lock.warnWithCloud" : "lock.warnNoCloud")}
@@ -280,11 +280,11 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
             {enabled && (
               <>
                 <View
-                  className="rounded-3xl p-5 mt-6 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
+                  className="rounded-3xl p-5 mt-6 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
                   style={CARD_SHADOW}
                 >
                   <View className="flex-row items-center gap-3">
-                    <View className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-slate-800 items-center justify-center">
+                    <View className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-noche-2 items-center justify-center">
                       <EyeOff size={20} color="#64748b" />
                     </View>
                     <View className="flex-1">
@@ -317,7 +317,7 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
                 {/* Los límites, dichos claro. Una función de seguridad que
                     promete más de lo que da es peor que no tenerla: lleva a
                     confiarse justo cuando no hay que confiarse. */}
-                <View className="flex-row gap-2 mt-4 rounded-2xl p-3.5 bg-slate-50 dark:bg-slate-800 border-[1.5px] border-slate-200 dark:border-slate-700">
+                <View className="flex-row gap-2 mt-4 rounded-2xl p-3.5 bg-slate-50 dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde">
                   <Info size={16} color="#64748b" />
                   <Text className="flex-1 text-[11px] text-slate-600 dark:text-slate-300 leading-4">
                     {t("lock.decoyLimits")}

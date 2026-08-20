@@ -82,7 +82,7 @@ export default function PinPad({
                 ? "bg-rose-500"
                 : i < value.length
                   ? "bg-emerald-600"
-                  : "bg-slate-200 dark:bg-slate-700"
+                  : "bg-slate-200 dark:bg-noche-3"
             }`}
           />
         ))}
@@ -173,7 +173,7 @@ function Key({
       // como mínimo para poder tocar algo sin fallar.
       style={{ width, height: 64 }}
       className={`items-center justify-center rounded-2xl ${
-        plain ? "" : "bg-slate-100 dark:bg-slate-800"
+        plain ? "" : "bg-slate-100 dark:bg-noche-2"
       }`}
     >
       {children}
