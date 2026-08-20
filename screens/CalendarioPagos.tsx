@@ -71,7 +71,7 @@ function mesAnterior(mes: string): string {
 type Filtro = "porPagar" | "pagados" | "recuerdos";
 
 export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
-  const { t, fmt, monthNames, pagosProgramados, marcarPagoDelMes } = useAppData();
+  const { t, fmt, monthNames, pagosProgramados, marcarPagoDelMes, showToast } = useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const oscuro = colorScheme === "dark";
@@ -82,23 +82,32 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
   /** El día tocado, cuando tiene varias cosas. Ver el bloque de abajo. */
   const [diaAbierto, setDiaAbierto] = useState<number | null>(null);
   /**
-   * EL PAGO QUE SE ACABA DE MARCAR, PARA QUE SE VEA QUE FUNCIONÓ.
+   * PAGAR ES UN SOLO TOQUE, Y LA CONFIRMACIÓN VA ABAJO.
    *
-   * **Esto era un fallo de verdad, y le costó cuatro pagos.** Al tocar "Pagar", la tarjeta
-   * saltaba al SIGUIENTE pago en el mismo instante: desde fuera se ve igual que si el botón
-   * no hubiera hecho nada, así que se vuelve a tocar. Él lo contó como *"¿por qué tengo que
-   * hacerlo 2 veces?"* y acabó con los cuatro pagos del mes marcados sin quererlo.
+   * Aquí hubo dos intentos antes de acertar, y los dos los cortó él:
    *
-   * Ahora la tarjeta se queda en verde diciendo "Pagado" unos segundos, y solo después pasa
-   * al siguiente. El botón desaparece mientras tanto, así que un segundo toque no puede
-   * pagar nada.
+   * 1. Al principio la tarjeta saltaba al siguiente pago **en el mismo instante**. Desde
+   *    fuera eso se ve igual que si el botón no hubiera hecho nada, así que se vuelve a
+   *    tocar: *"¿por qué tengo que hacerlo 2 veces?"*. Acabó con los cuatro pagos del mes
+   *    marcados sin querer.
+   * 2. Después la tarjeta se quedaba unos segundos en verde diciendo "Pagado". Tampoco:
+   *    *"no me gusta que tenga que darle 2 click de pagar para que se cierre, confunde"*.
+   *    Una tarjeta que se queda quieta después de tocarla parece que espera otro toque.
+   *
+   * Lo que faltaba en los dos era **decirlo en otro sitio**. Ahora la tarjeta pasa al
+   * siguiente al momento —que es lo que uno espera— y la confirmación sale abajo, donde ya
+   * salen las de toda la app. Se ve que funcionó sin que nada se quede a medias.
    */
-  const [recienPagado, setRecienPagado] = useState<string | null>(null);
-
   function pagar(id: string, mesDelPago: string) {
+    const p = pagosProgramados.find((x) => x.id === id);
     marcarPagoDelMes(id, mesDelPago, true);
-    setRecienPagado(id);
-    setTimeout(() => setRecienPagado((x) => (x === id ? null : x)), 2500);
+    if (p) {
+      showToast(
+        p.monto != null
+          ? t("calendario.pagadoAviso", { nombre: p.nombre, monto: fmt(p.monto) })
+          : t("calendario.pagadoAvisoSinMonto", { nombre: p.nombre })
+      );
+    }
   }
 
   const delMes = pagosDelMes(pagosProgramados, mes);
@@ -210,7 +219,6 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
             monthNames={monthNames}
             oscuro={oscuro}
             onPagar={() => pagar(siguiente.pago.id, siguiente.mes)}
-            recienPagado={recienPagado === siguiente.pago.id}
             onAbrir={() => router.push(`/calendario/nuevo?id=${siguiente.pago.id}`)}
           />
         )}
@@ -450,7 +458,6 @@ function TarjetaProxima({
   oscuro,
   onPagar,
   onAbrir,
-  recienPagado,
 }: {
   pago: PagoProgramado;
   mes: string;
@@ -461,9 +468,8 @@ function TarjetaProxima({
   oscuro: boolean;
   onPagar: () => void;
   onAbrir: () => void;
-  recienPagado: boolean;
 }) {
-  const estado = recienPagado ? ("pagado" as EstadoDelPago) : estadoEn(pago, mes, hoy);
+  const estado = estadoEn(pago, mes, hoy);
   const color = COLOR[estado];
   const suColor = (pago.color && COLOR_HEX_600[pago.color]) || color;
   const Dibujo = iconoDe(pago.icono || iconoSugerido(pago.nombre, pago.tipo));
@@ -476,7 +482,7 @@ function TarjetaProxima({
       className="rounded-2xl p-3.5 mb-4 bg-slate-50 dark:bg-slate-800"
     >
       <Text className="text-[11px] text-slate-500 dark:text-slate-400 mb-2.5">
-        {t(recienPagado ? "calendario.yaEstaPagado" : "calendario.proximo")}
+        {t("calendario.proximo")}
       </Text>
       <View className="flex-row items-center gap-3">
         <View
@@ -502,24 +508,13 @@ function TarjetaProxima({
             })}
           </Text>
         </View>
-        {/* Pagado: el botón se va y queda el check. Así un segundo toque no puede pagar
-            otra cosa, que es justo lo que le pasó. */}
-        {recienPagado ? (
-          <View className="flex-row items-center gap-1.5 px-3 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/40">
-            <Check size={15} color="#059669" strokeWidth={3} />
-            <Text className="text-[13px] font-bold text-emerald-700 dark:text-emerald-300">
-              {t("calendario.pagado")}
-            </Text>
-          </View>
-        ) : (
-          pago.tipo !== "recordatorio" && (
-            <TouchableOpacity
-              onPress={onPagar}
-              className="px-4 h-10 rounded-xl items-center justify-center bg-emerald-600"
-            >
-              <Text className="text-[13px] font-bold text-white">{t("calendario.pagar")}</Text>
-            </TouchableOpacity>
-          )
+        {pago.tipo !== "recordatorio" && (
+          <TouchableOpacity
+            onPress={onPagar}
+            className="px-4 h-10 rounded-xl items-center justify-center bg-emerald-600"
+          >
+            <Text className="text-[13px] font-bold text-white">{t("calendario.pagar")}</Text>
+          </TouchableOpacity>
         )}
       </View>
     </TouchableOpacity>
