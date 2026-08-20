@@ -23,11 +23,10 @@
 import { useMemo, useState } from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ChevronLeft, ChevronRight, Check, CheckCircle2, Circle, ListChecks, Settings, Trash2, X } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, Check, CheckCircle2, Circle, ListChecks, Plus, Settings, Trash2, X } from "lucide-react-native";
 import { irUnaVez } from "@/utils/nav";
 import { useColorScheme } from "nativewind";
 import BackButton from "@/components/BackButton";
-import FAB from "@/components/FAB";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { useAppData } from "@/contexts/AppDataContext";
 import { iconoDe } from "@/constants/iconos";
@@ -265,7 +264,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 16 }}>
         {/* TU PRÓXIMO PAGO. Una sola tarjeta, con su botón al costado. Al pagarlo se pone
             verde y dice "Pagado": *"algo que identifique que ya pagó"*. */}
         {/* SIN NADA PENDIENTE, SE DICE. Antes aquí no salía nada y quedaba un hueco donde
@@ -575,15 +574,37 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
 
       </ScrollView>
 
-      {/* EL BOTÓN DE AGREGAR, FLOTANDO.
-          Estaba al final de la lista, y él vio lo que eso significa: *"si yo agrego 100
-          recordatorios, pagos, ingresos, no voy a estar bajando con mi celular para agregar
-          un nuevo pago"*. Con veinte recibos el botón ya queda fuera de la pantalla.
+      {/* EL BOTÓN DE AGREGAR, PEGADO ABAJO Y CON SU NOMBRE.
+          Primero estuvo al final de la lista, y con veinte recibos quedaba fuera de la
+          pantalla: *"si yo agrego 100 recordatorios, pagos, ingresos, no voy a estar bajando
+          con mi celular"*. Luego fue el botón redondo de Inicio, y tampoco: *"quita ese +,
+          donde podrías poner un botón de agregar visible para el usuario"*.
 
-          Es el mismo botón redondo de Inicio, en el mismo sitio: agregar se hace igual en
-          toda la app. Se esconde mientras se está seleccionando, que ahí lo que se hace es
-          borrar. */}
-      {!seleccionando && <FAB onPress={() => irUnaVez("/calendario/nuevo")} />}
+          Pegado abajo cumple las dos cosas: se ve siempre, tengas 3 pagos o 100, y dice lo
+          que hace. Mientras se selecciona se apaga — ahí lo que se hace es borrar, y un botón
+          verde en medio invita a tocar lo que no toca.
+
+          Va sobre el borde de abajo del celular (insets), no sobre el borde de la pantalla:
+          en los que tienen barra de gestos, un botón pegado al borde se toca con dificultad. */}
+      <View
+        className="px-5 pt-2.5 border-t-[1.5px] border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900"
+        style={{ paddingBottom: 10 }}
+      >
+        <TouchableOpacity
+          onPress={() => irUnaVez("/calendario/nuevo")}
+          disabled={seleccionando}
+          className={`flex-row items-center justify-center gap-2 py-3.5 rounded-2xl ${
+            seleccionando ? "bg-slate-200 dark:bg-slate-700" : "bg-emerald-600"
+          }`}
+        >
+          <Plus size={17} color={seleccionando ? "#94a3b8" : "#ffffff"} strokeWidth={2.6} />
+          <Text
+            className={`text-[14px] font-bold ${seleccionando ? "text-slate-400" : "text-white"}`}
+          >
+            {t("calendario.agregar")}
+          </Text>
+        </TouchableOpacity>
+      </View>
 
       <ConfirmDialog
         visible={confirmandoBorrar}
