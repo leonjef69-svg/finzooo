@@ -1646,6 +1646,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       method: "",
       description: mov.description,
       notes: "",
+      /**
+       * Y SU DIBUJO. Ver `Transaction.icono`: la categoría de arriba manda en las cuentas —
+       * reportes, PDF, límites— y esto solo en lo que se pinta en la fila.
+       *
+       * **Esta línea faltaba, y por eso él vio el fallo tres veces.** Se dio por puesta en el
+       * 19ago-08 y no llegó a aplicarse; el resto del camino —el campo en el tipo, el render
+       * en Inicio y en el Historial— sí estaba, así que todo parecía hecho y no se veía nada.
+       */
+      icono: pago.icono,
     });
   }
 

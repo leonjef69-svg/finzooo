@@ -18,7 +18,7 @@
  * La fecha llega hecha del calendario grande — aquí hubo uno propio y él lo mandó quitar:
  * *"cuando dije tocar libremente el calendario me refería a la segunda imagen"*.
  */
-import { useEffect, useState } from "react";
+import { memo, useCallback, useEffect, useState } from "react";
 import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
@@ -141,6 +141,12 @@ export default function NuevoPagoProgramado({
   const [diasAntes, setDiasAntes] = useState(String(existente?.avisoDiasAntes ?? 1));
   const [horaHH, setHoraHH] = useState((existente?.avisoHora ?? "09:00").split(":")[0]);
   const [horaMM, setHoraMM] = useState((existente?.avisoHora ?? "09:00").split(":")[1]);
+
+  /**
+   * Estable entre dibujados: ver `Casilla`. Con una función nueva cada vez, la memorización
+   * de las 236 casillas no serviría de nada — es la mitad que se olvida.
+   */
+  const elegirDibujo = useCallback((x: string) => setIconoElegido(x), []);
 
   const esRecordatorio = tipo === "recordatorio";
   const icono = iconoElegido ?? iconoSugerido(nombre, tipo);
@@ -351,38 +357,15 @@ export default function NuevoPagoProgramado({
                           {titulo}
                         </Text>
                         <View className="flex-row flex-wrap">
-                          {suyos.map((x) => {
-                            const D = iconoDe(x);
-                            const puesto = x === icono;
-                            return (
-                              <TouchableOpacity
-                                key={x}
-                                /**
-                                 * TOCAR MARCA, NO CIERRA.
-                                 *
-                                 * Cerraba al primer toque: *"quiero seleccionar libremente
-                                 * cualquier icono pero no me deja, le doy click a un icono y
-                                 * automaticamente lo selecciona"*. Con el panel cerrandose
-                                 * no hay forma de comparar dos ni de cambiar de idea sin
-                                 * volver a abrir.
-                                 *
-                                 * **Es la misma leccion del 07/08 con las categorias**, y
-                                 * esta escrita en ESTADO: tocar una la marca, y volver es
-                                 * cosa de "Aplicar". Se cierra con la X o con Listo.
-                                 */
-                                onPress={() => setIconoElegido(x)}
-                                style={{ width: "20%", aspectRatio: 1 }}
-                                className="items-center justify-center p-1"
-                              >
-                                <View
-                                  className="w-full h-full rounded-xl items-center justify-center bg-white dark:bg-slate-900"
-                                  style={puesto ? { backgroundColor: tinta } : undefined}
-                                >
-                                  <D size={22} color={puesto ? "#ffffff" : "#64748b"} strokeWidth={2} />
-                                </View>
-                              </TouchableOpacity>
-                            );
-                          })}
+                          {suyos.map((x) => (
+                            <Casilla
+                              key={x}
+                              id={x}
+                              puesto={x === icono}
+                              tinta={tinta}
+                              onPress={elegirDibujo}
+                            />
+                          ))}
                         </View>
                       </View>
                     );
@@ -555,3 +538,46 @@ function BotonFoto({ texto, onPress }: { texto: string; onPress: () => void }) {
     </TouchableOpacity>
   );
 }
+
+/**
+ * UNA CASILLA DEL CATÁLOGO, MEMORIZADA.
+ *
+ * **Sin esto, tocar un dibujo rehacía los 236.** Cambiar el elegido es un cambio de estado
+ * de la pantalla, y la parrilla entera cuelga de ella: cada toque volvía a construir las 236
+ * casillas, y cada dibujo es una letra que Android tiene que medir. Él lo notó enseguida:
+ * *"al seleccionar diferentes iconos hay como una lentitud, se siente raro, como un retraso
+ * de unos segundos"*.
+ *
+ * Memorizada, un toque rehace **dos**: la que suelta la marca y la que la toma. Es
+ * exactamente lo que se hizo con la cuadrícula de categorías el 07/08 —y por lo mismo—, con
+ * una diferencia que allí costó una entrega entera: **la función que se le pasa tiene que ser
+ * estable**. Con una función nueva en cada dibujado, memorizar no sirve de nada; por eso el
+ * `onPress` de aquí recibe el id y quien lo llama usa `useCallback`.
+ */
+const Casilla = memo(function Casilla({
+  id,
+  puesto,
+  tinta,
+  onPress,
+}: {
+  id: string;
+  puesto: boolean;
+  tinta: string;
+  onPress: (id: string) => void;
+}) {
+  const D = iconoDe(id);
+  return (
+    <TouchableOpacity
+      onPress={() => onPress(id)}
+      style={{ width: "20%", aspectRatio: 1 }}
+      className="items-center justify-center p-1"
+    >
+      <View
+        className="w-full h-full rounded-xl items-center justify-center bg-white dark:bg-slate-900"
+        style={puesto ? { backgroundColor: tinta } : undefined}
+      >
+        <D size={22} color={puesto ? "#ffffff" : "#64748b"} strokeWidth={2} />
+      </View>
+    </TouchableOpacity>
+  );
+});
