@@ -12,6 +12,7 @@
 import { Linking, Platform } from "react-native";
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
+import { loadJSON, saveJSON } from "@/utils/storage";
 import {
   cuandoAvisar,
   estadoEn,
@@ -137,6 +138,11 @@ async function hacerlo(
 
     paso = "retirando";
     await retirarLosNuestros();
+
+    // APAGADOS DESDE AJUSTES: se retiran los que hubiera y no se pone ninguno. Se comprueba
+    // DESPUES de retirar, no antes, para que apagar el interruptor limpie de verdad lo que ya
+    // estaba programado en vez de dejarlo sonando.
+    if (!(await avisosEncendidos())) return { puestos: 0 };
 
     let puestos = 0;
     let mes = mesDe(ahora);
@@ -332,4 +338,28 @@ export async function abrirAjustesDelSonido(): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/**
+ * EL INTERRUPTOR GENERAL DE AVISOS (19/08/2026)
+ *
+ * Existía en Ajustes desde hace meses y **no hacía absolutamente nada**: era un `useState`
+ * suelto dentro de la pantalla. Lo preguntó él —*"tenemos en ajustes una opción de
+ * notificación, eso sirve, está de adorno, hace algo?"*— y no, no hacía nada.
+ *
+ * Es justo lo que este proyecto lleva meses limpiando: un botón que promete y no cumple. Con
+ * el calendario mandando avisos de verdad, ya tiene algo que apagar.
+ *
+ * **Apagarlo retira los avisos puestos y no deja poner más**; encenderlo los vuelve a
+ * programar solos, sin que haya que tocar cada pago. No borra ningún pago: solo decide si
+ * suenan.
+ */
+const CLAVE_AVISOS = "finzo:avisosEncendidos";
+
+export async function avisosEncendidos(): Promise<boolean> {
+  return loadJSON<boolean>(CLAVE_AVISOS, true);
+}
+
+export function guardarAvisosEncendidos(valor: boolean): void {
+  saveJSON(CLAVE_AVISOS, valor);
 }

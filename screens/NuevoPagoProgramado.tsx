@@ -19,7 +19,9 @@
  * *"cuando dije tocar libremente el calendario me refería a la segunda imagen"*.
  */
 import { useState } from "react";
-import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Bell, CalendarDays, Pencil, Repeat, Trash2, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
@@ -27,9 +29,12 @@ import BackButton from "@/components/BackButton";
 import Toggle from "@/components/Toggle";
 import { useAppData } from "@/contexts/AppDataContext";
 import { TODOS_LOS_GRUPOS, iconoDe } from "@/constants/iconos";
+import { esFoto } from "@/utils/iconosFavoritos";
+import { COLOR_HEX_600 } from "@/constants/colors";
 import {
   iconoSugerido,
   mesDe,
+  soloMonto,
   textoDeRepeticion,
   validarPago,
   type TipoDeAnotacion,
@@ -83,6 +88,9 @@ export default function NuevoPagoProgramado({
    */
   const [iconoElegido, setIconoElegido] = useState<string | null>(existente?.icono ?? null);
   const [eligiendoIcono, setEligiendoIcono] = useState(false);
+  const [pestana, setPestana] = useState<"dibujo" | "foto" | "color">("dibujo");
+  const [color, setColor] = useState<string | null>(existente?.color ?? null);
+  const [buscando, setBuscando] = useState("");
 
   const elegida = existente
     ? `${existente.mesUnico ?? mesDe(hoy)}-${dosDigitos(existente.dia)}`
@@ -98,9 +106,46 @@ export default function NuevoPagoProgramado({
   const esRecordatorio = tipo === "recordatorio";
   const icono = iconoElegido ?? iconoSugerido(nombre, tipo);
   const Dibujo = iconoDe(icono);
-  const tinta = TINTA[tipo];
+  const tinta = (color && COLOR_HEX_600[color]) || TINTA[tipo];
   const repeticion = textoDeRepeticion(dia, repite);
   const campo = oscuro ? "bg-slate-800" : "bg-slate-100";
+
+  /**
+   * LA FOTO, RECORTADA A UN CUADRADO Y ACHICADA A 256.
+   *
+   * Se guarda dentro del propio pago como texto `data:`, igual que hacen las categorías
+   * propias. A 256 px y calidad 0.7 son unos 18 KB: bastante para un dibujo de 56 puntos y
+   * poco para el celular.
+   *
+   * `allowsEditing` con `aspect` cuadrado usa el recortador de Android. Es el mismo camino
+   * que ya usa la foto de perfil en Ajustes; el recortador propio de las categorías es más
+   * fino pero arrastra media pantalla de código, y aquí el dibujo se ve a 56 puntos.
+   */
+  async function tomarFoto(conCamara: boolean) {
+    const permiso = conCamara
+      ? await ImagePicker.requestCameraPermissionsAsync()
+      : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) return;
+    const r = conCamara
+      ? await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.8 })
+      : await ImagePicker.launchImageLibraryAsync({
+          mediaTypes: ["images"],
+          allowsEditing: true,
+          aspect: [1, 1],
+          quality: 0.8,
+        });
+    if (r.canceled || !r.assets[0]) return;
+    try {
+      const ctx = ImageManipulator.manipulate(r.assets[0].uri).resize({ width: 256, height: 256 });
+      const hecha = await ctx.renderAsync();
+      const guardada = await hecha.saveAsync({ base64: true, compress: 0.7, format: SaveFormat.JPEG });
+      setIconoElegido(`data:image/jpeg;base64,${guardada.base64}`);
+      setEligiendoIcono(false);
+    } catch {
+      // Si la foto no se pudo preparar, se deja el dibujo que hubiera. Un pago sin foto
+      // funciona igual; uno que no se puede guardar, no.
+    }
+  }
 
   function guardar() {
     const montoNumero = esRecordatorio ? undefined : Number(monto.replace(",", "."));
@@ -120,6 +165,7 @@ export default function NuevoPagoProgramado({
       // Se guarda el que se ve, sugerido o elegido: si se guardara solo el elegido, un pago
       // sin tocar el lápiz saldría en la lista con el dibujo de reserva y no con su rayo.
       icono,
+      color: color ?? undefined,
       categoria: existente?.categoria,
       avisoDiasAntes: Number(diasAntes || 0),
       avisoHora: `${(horaHH || "0").padStart(2, "0")}:${(horaMM || "0").padStart(2, "0")}`,
@@ -185,16 +231,24 @@ export default function NuevoPagoProgramado({
         </View>
 
         {/* EL DIBUJO Y EL NOMBRE, EN LA MISMA FILA. El dibujo sale del nombre mientras se
-            escribe; el lápiz solo hace falta cuando no acierta. */}
+            escribe; tocarlo abre el selector.
+            **TOCAR EL DIBUJO YA LO ABRE, y el lápiz solo es la señal de que se puede.** Antes
+            el lápiz era de 11 puntos: *"el icono del lápiz hazlo más grande, o con solo tocar
+            el icono ya se pueda editar"*. Se hicieron las dos cosas — el sitio que se toca es
+            el cuadro entero, que es de 56, y el lápiz creció a 15. */}
         <View className="flex-row items-center gap-3 mb-3">
           <TouchableOpacity
             onPress={() => setEligiendoIcono((v) => !v)}
-            className="w-[52px] h-[52px] rounded-2xl items-center justify-center"
+            className="w-[56px] h-[56px] rounded-2xl items-center justify-center overflow-hidden"
             style={{ backgroundColor: tinta + (oscuro ? "33" : "22") }}
           >
-            <Dibujo size={26} color={tinta} strokeWidth={2.2} />
-            <View className="absolute -bottom-1 -right-1 w-[21px] h-[21px] rounded-full items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
-              <Pencil size={11} color="#64748b" />
+            {esFoto(icono ?? "") ? (
+              <Image source={{ uri: icono }} style={{ width: 56, height: 56 }} />
+            ) : (
+              <Dibujo size={28} color={tinta} strokeWidth={2.2} />
+            )}
+            <View className="absolute bottom-0 right-0 w-[22px] h-[22px] rounded-tl-xl items-center justify-center bg-white/90 dark:bg-slate-900/90">
+              <Pencil size={13} color="#475569" />
             </View>
           </TouchableOpacity>
           <TextInput
@@ -206,45 +260,134 @@ export default function NuevoPagoProgramado({
           />
         </View>
 
+        {/* EL SELECTOR, EN TRES PESTAÑAS.
+            Pedido suyo: *"que se pueda elegir una foto o tomar foto, aparte los iconos deben
+            estar por su categoría —trabajo: salgan los iconos de trabajo— y elegir el
+            color"*. Antes era una parrilla de 236 dibujos sin orden ninguno, y el primero
+            que salía era el de comida: nadie encuentra ahí un maletín. */}
         {eligiendoIcono && (
           <View className="rounded-2xl p-3 mb-3 bg-slate-50 dark:bg-slate-800">
-            <View className="flex-row items-center justify-between mb-2">
-              <Text className="text-[12px] text-slate-500 dark:text-slate-400">
-                {t("calendario.nuevo.elegirDibujo")}
-              </Text>
+            <View className="flex-row items-center justify-between mb-2.5">
+              <View className="flex-row flex-1">
+                {(["dibujo", "foto", "color"] as const).map((x) => (
+                  <TouchableOpacity
+                    key={x}
+                    onPress={() => setPestana(x)}
+                    className="px-3 py-1.5 mr-1 rounded-lg"
+                    style={{ backgroundColor: pestana === x ? tinta : "transparent" }}
+                  >
+                    <Text
+                      className={`text-[12px] ${
+                        pestana === x ? "text-white font-bold" : "text-slate-500 dark:text-slate-400"
+                      }`}
+                    >
+                      {t(`calendario.nuevo.pestana.${x}`)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
               <TouchableOpacity onPress={() => setEligiendoIcono(false)} className="p-1">
                 <X size={16} color="#94a3b8" />
               </TouchableOpacity>
             </View>
-            {/* Los mismos 236 dibujos de las categorías, no otros: dos catálogos distintos
-                para lo mismo es uno que se queda atrás. Con alto máximo para que la lista de
-                abajo no se pierda de vista mientras se elige. */}
-            <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled>
-              <View className="flex-row flex-wrap">
-                {TODOS_LOS_GRUPOS.flatMap((g) => g.iconos).map((x) => {
-                  const D = iconoDe(x);
-                  const puesto = x === icono;
-                  return (
-                    <TouchableOpacity
-                      key={x}
-                      onPress={() => {
-                        setIconoElegido(x);
-                        setEligiendoIcono(false);
-                      }}
-                      style={{ width: "20%", aspectRatio: 1 }}
-                      className="items-center justify-center p-1"
-                    >
-                      <View
-                        className="w-full h-full rounded-xl items-center justify-center"
-                        style={{ backgroundColor: puesto ? tinta : "transparent" }}
-                      >
-                        <D size={22} color={puesto ? "#ffffff" : "#64748b"} strokeWidth={2} />
+
+            {pestana === "dibujo" && (
+              <>
+                <TextInput
+                  value={buscando}
+                  onChangeText={setBuscando}
+                  placeholder={t("calendario.nuevo.buscarDibujo")}
+                  placeholderTextColor="#94a3b8"
+                  className="h-9 rounded-xl px-3 mb-1 text-[13px] bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
+                />
+                {/* CON SU TÍTULO CADA GRUPO. Son los mismos 236 de las categorías —dos
+                    catálogos para lo mismo es uno que se queda atrás— pero ordenados, que es
+                    lo que faltaba. El alto máximo deja ver la lista de abajo mientras se
+                    elige. */}
+                <ScrollView style={{ maxHeight: 260 }} nestedScrollEnabled>
+                  {TODOS_LOS_GRUPOS.map((g) => {
+                    const titulo = t(g.titulo);
+                    const busca = buscando.trim().toLowerCase();
+                    const suyos = busca === "" ? g.iconos : titulo.toLowerCase().includes(busca) ? g.iconos : [];
+                    if (suyos.length === 0) return null;
+                    return (
+                      <View key={g.titulo}>
+                        <Text className="text-[11px] text-slate-400 dark:text-slate-500 mt-2.5 mb-1.5">
+                          {titulo}
+                        </Text>
+                        <View className="flex-row flex-wrap">
+                          {suyos.map((x) => {
+                            const D = iconoDe(x);
+                            const puesto = x === icono;
+                            return (
+                              <TouchableOpacity
+                                key={x}
+                                onPress={() => {
+                                  setIconoElegido(x);
+                                  setEligiendoIcono(false);
+                                }}
+                                style={{ width: "20%", aspectRatio: 1 }}
+                                className="items-center justify-center p-1"
+                              >
+                                <View
+                                  className="w-full h-full rounded-xl items-center justify-center bg-white dark:bg-slate-900"
+                                  style={puesto ? { backgroundColor: tinta } : undefined}
+                                >
+                                  <D size={22} color={puesto ? "#ffffff" : "#64748b"} strokeWidth={2} />
+                                </View>
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
                       </View>
-                    </TouchableOpacity>
-                  );
-                })}
+                    );
+                  })}
+                </ScrollView>
+              </>
+            )}
+
+            {pestana === "foto" && (
+              <View>
+                <View className="flex-row gap-2.5">
+                  <BotonFoto texto={t("calendario.nuevo.tomarFoto")} onPress={() => tomarFoto(true)} />
+                  <BotonFoto texto={t("calendario.nuevo.galeria")} onPress={() => tomarFoto(false)} />
+                </View>
+                {esFoto(icono ?? "") && (
+                  <TouchableOpacity
+                    onPress={() => setIconoElegido(null)}
+                    className="py-2.5 mt-2.5 rounded-xl items-center bg-white dark:bg-slate-900"
+                  >
+                    <Text className="text-[12px] font-bold text-rose-600">
+                      {t("calendario.nuevo.quitarFoto")}
+                    </Text>
+                  </TouchableOpacity>
+                )}
+                {/* Se dice que la foto no viaja: quien cambie de celular y no lo sepa creería
+                    que se perdió. Ver pagosParaLaNube — el documento tiene tope de 1 MB. */}
+                <Text className="text-[11px] leading-4 text-slate-400 mt-2.5">
+                  {t("calendario.nuevo.fotoNota")}
+                </Text>
               </View>
-            </ScrollView>
+            )}
+
+            {pestana === "color" && (
+              <View className="flex-row flex-wrap gap-2.5 py-1">
+                {Object.keys(COLOR_HEX_600).map((k) => (
+                  <TouchableOpacity
+                    key={k}
+                    onPress={() => setColor(k)}
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 18,
+                      backgroundColor: COLOR_HEX_600[k],
+                      borderWidth: color === k ? 3 : 0,
+                      borderColor: oscuro ? "#f1f5f9" : "#0f172a",
+                    }}
+                  />
+                ))}
+              </View>
+            )}
           </View>
         )}
 
@@ -254,7 +397,7 @@ export default function NuevoPagoProgramado({
               <Text className="text-[13px] text-slate-400 mr-1.5">S/</Text>
               <TextInput
                 value={monto}
-                onChangeText={setMonto}
+                onChangeText={(v) => setMonto(soloMonto(v))}
                 keyboardType="decimal-pad"
                 placeholder="0.00"
                 placeholderTextColor="#94a3b8"
@@ -288,38 +431,48 @@ export default function NuevoPagoProgramado({
           <Toggle on={repite} onChange={setRepite} />
         </View>
 
-        <View className="flex-row items-center gap-2.5 py-3.5 border-t-[1.5px] border-b-[1.5px] border-slate-100 dark:border-slate-800 mb-5">
-          <Bell size={17} color="#64748b" />
-          <Text className="flex-1 text-[14px] text-slate-900 dark:text-slate-100">
-            {t("calendario.nuevo.avisarme")}
-          </Text>
-          <View className={`flex-row items-center rounded-xl px-2 ${campo}`}>
-            <TextInput
-              value={diasAntes}
-              onChangeText={(v) => setDiasAntes(soloNumeros(v, 30))}
-              keyboardType="number-pad"
-              placeholder="0"
-              placeholderTextColor="#94a3b8"
-              className="w-7 py-2 text-[14px] text-center text-slate-900 dark:text-slate-100"
-            />
-            <Text className="text-[12px] text-slate-500 dark:text-slate-400 pr-1">
-              {t("calendario.nuevo.diasCorto")}
+        {/* EL AVISO, EN SU PROPIO RENGLON Y CON LOS DOS CAMPOS ANCHOS.
+            Iba todo en una fila -campana, "AVISAME", los dias y la hora- y en su celular la
+            hora salia cortada: se leia ")9:)0". Con cinco cosas en una linea, la ultima es la
+            que se come el borde.
+            Ahora el titulo sube a su renglon y los dos campos se reparten el ancho a mitades,
+            asi que ninguno puede quedarse sin sitio por mucho que crezca el otro. */}
+        <View className="py-3.5 border-t-[1.5px] border-b-[1.5px] border-slate-100 dark:border-slate-800 mb-5">
+          <View className="flex-row items-center gap-2.5 mb-3">
+            <Bell size={17} color="#64748b" />
+            <Text className="text-[14px] text-slate-900 dark:text-slate-100">
+              {t("calendario.nuevo.avisarme")}
             </Text>
           </View>
-          <View className={`flex-row items-center rounded-xl px-2 ${campo}`}>
-            <TextInput
-              value={horaHH}
-              onChangeText={(v) => setHoraHH(soloNumeros(v, 23))}
-              keyboardType="number-pad"
-              className="w-6 py-2 text-[14px] text-center text-slate-900 dark:text-slate-100"
-            />
-            <Text className="text-[14px] text-slate-400">:</Text>
-            <TextInput
-              value={horaMM}
-              onChangeText={(v) => setHoraMM(soloNumeros(v, 59))}
-              keyboardType="number-pad"
-              className="w-6 py-2 text-[14px] text-center text-slate-900 dark:text-slate-100"
-            />
+          <View className="flex-row gap-2.5">
+            <View className={`flex-1 h-[46px] rounded-xl flex-row items-center justify-center ${campo}`}>
+              <TextInput
+                value={diasAntes}
+                onChangeText={(v) => setDiasAntes(soloNumeros(v, 30))}
+                keyboardType="number-pad"
+                placeholder="0"
+                placeholderTextColor="#94a3b8"
+                className="w-8 text-[17px] text-center text-slate-900 dark:text-slate-100"
+              />
+              <Text className="text-[13px] text-slate-500 dark:text-slate-400">
+                {t("calendario.nuevo.diasCorto")}
+              </Text>
+            </View>
+            <View className={`flex-1 h-[46px] rounded-xl flex-row items-center justify-center ${campo}`}>
+              <TextInput
+                value={horaHH}
+                onChangeText={(v) => setHoraHH(soloNumeros(v, 23))}
+                keyboardType="number-pad"
+                className="w-8 text-[17px] text-center text-slate-900 dark:text-slate-100"
+              />
+              <Text className="text-[17px] text-slate-400">:</Text>
+              <TextInput
+                value={horaMM}
+                onChangeText={(v) => setHoraMM(soloNumeros(v, 59))}
+                keyboardType="number-pad"
+                className="w-8 text-[17px] text-center text-slate-900 dark:text-slate-100"
+              />
+            </View>
           </View>
         </View>
 
@@ -343,5 +496,17 @@ export default function NuevoPagoProgramado({
         )}
       </ScrollView>
     </View>
+  );
+}
+
+/** Los dos botones de la pestaña de foto. Uno solo para que midan y separen igual. */
+function BotonFoto({ texto, onPress }: { texto: string; onPress: () => void }) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      className="flex-1 py-3 rounded-xl items-center bg-white dark:bg-slate-900"
+    >
+      <Text className="text-[12px] font-bold text-slate-600 dark:text-slate-200">{texto}</Text>
+    </TouchableOpacity>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -40,6 +40,7 @@ import Toggle from "@/components/Toggle";
 import { currencyLabelFor } from "@/constants/currencies";
 import { countryFor } from "@/constants/countries";
 import { hayRegistroAutomatico } from "@/utils/dondeHayYape";
+import { avisosEncendidos, guardarAvisosEncendidos } from "@/utils/avisosDePagos";
 import { useAppData } from "@/contexts/AppDataContext";
 
 // Achica y comprime la foto antes de guardarla, para que no pese mucho
@@ -104,7 +105,7 @@ export default function Settings({
   onLegal: () => void;
   onVoiceHelp: () => void;
 }) {
-  const { t, isCloudSynced, autoCaptureOn, showToast, negocios } = useAppData();
+  const { t, isCloudSynced, autoCaptureOn, showToast, negocios, reprogramarAvisos } = useAppData();
   /** El negocio que se está quedando con los yapeos, si hay alguno. Ver la fila de abajo. */
   const negocioQueRecibe = negocios.find((n) => n.activo && n.destinoYapes === "negocio");
 
@@ -118,7 +119,21 @@ export default function Settings({
   }
   const { colorScheme } = useColorScheme();
   const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
+  /**
+   * EL INTERRUPTOR DE AVISOS, QUE HASTA HOY NO HACÍA NADA (19/08/2026).
+   *
+   * Era un `useState` suelto: se movía y se quedaba ahí. Lo preguntó él —*"tenemos en
+   * ajustes una opción de notificación, eso sirve, está de adorno, hace algo?"*— y la
+   * respuesta era que no. Es justo lo que este proyecto lleva meses quitando: un botón que
+   * promete y no cumple.
+   *
+   * Ahora manda de verdad sobre los avisos del calendario: apagarlo retira los que estén
+   * puestos, encenderlo los vuelve a programar solos. No borra ningún pago.
+   */
   const [notif, setNotif] = useState(true);
+  useEffect(() => {
+    avisosEncendidos().then(setNotif);
+  }, []);
   // Qué país corresponde al idioma y la moneda puestos. Puede no haber
   // ninguno si alguien los ajustó por separado a una combinación que no es
   // de ningún país; ahí la fila sale sin nombre en vez de mentir.
@@ -517,7 +532,23 @@ export default function Settings({
             derecha hace lo mismo y está a la vista en cuatro pantallas.
             Ahora recorre los tres modos —claro, oscuro y automático—, así que
             no se pierde ninguna opción al quitar esta pantalla. */}
-        <Row Icon={Bell} label={t("settings.notifications")} right={<Toggle on={notif} onChange={setNotif} />} />
+        <Row
+          Icon={Bell}
+          label={t("settings.notifications")}
+          hint={t(notif ? "settings.notificationsOn" : "settings.notificationsOff")}
+          right={
+            <Toggle
+              on={notif}
+              onChange={(v) => {
+                setNotif(v);
+                guardarAvisosEncendidos(v);
+                // Se reprograma en el acto: apagar tiene que callar los avisos AHORA, no la
+                // próxima vez que se toque un pago.
+                reprogramarAvisos();
+              }}
+            />
+          }
+        />
       </View>
 
       <View className="px-5 mt-5 gap-2.5">

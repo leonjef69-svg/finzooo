@@ -22,6 +22,7 @@ import {
   proximoPago,
   cuandoTexto,
   iconoSugerido,
+  soloMonto,
   primerAviso,
   textoDeRepeticion,
   validarPago,
@@ -297,6 +298,28 @@ ok(
 );
 ok(textoDeRepeticion(30, true).clave === "calendario.repite.casiUltimo", "el 30 si necesita su aclaracion");
 ok(textoDeRepeticion(25, false).clave === "calendario.repite.unaVez", "y sin repetir, se dice que es una sola vez");
+
+// ---------------------------------------------------------------------------
+// EL MONTO QUE NO ES UN NUMERO
+//
+// Escribio "#" en el monto y esas letras llegaron hasta la pantalla de Inicio, entre el
+// dinero de verdad. La causa: Number("#") da NaN, y NaN <= 0 es FALSE, asi que la
+// comprobacion lo dejaba pasar. Es de los fallos peores que hay en una app de dinero, porque
+// no da ningun error: se guarda, se suma, y ensucia los totales.
+console.log("\nUn monto que no es un numero");
+
+ok(validarPago("Luz", "pago", Number("#"), 5).ok === false, "un monto NaN NO se guarda");
+ok(validarPago("Luz", "pago", NaN, 5).ok === false, "dicho de otra forma: NaN se rechaza");
+ok(validarPago("Luz", "pago", Infinity, 5).ok === false, "e infinito tampoco es un monto");
+ok(validarPago("Luz", "pago", 90, 5).ok === true, "y un numero de verdad si");
+
+ok(soloMonto("12#") === "12", "el # se cae al escribir");
+ok(soloMonto("abc") === "", "y las letras tambien");
+ok(soloMonto("12,50") === "12.50", "la coma vale como el punto: en Peru se escribe de las dos formas");
+ok(soloMonto("12.5.7") === "12.57", "dos puntos no hacen dos decimales: solo hay una parte decimal");
+ok(soloMonto("12.555") === "12.55", "y como mucho dos decimales, que los centimos no tienen tres cifras");
+ok(soloMonto("12.") === "12.", "se puede quedar a medias mientras se escribe, sin saltar bajo el dedo");
+ok(Number.isFinite(Number(soloMonto("12,50"))), "lo que sale de aqui siempre se puede convertir a numero");
 
 console.log(
   fallos === 0

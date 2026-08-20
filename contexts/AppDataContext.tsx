@@ -249,6 +249,11 @@ type AppDataContextValue = {
   avisosProgramados: number | null;
   /** Y por qué falló, si falló. Se enseña en pantalla: ver ResultadoDeProgramar. */
   avisosFallo: string | null;
+  /**
+   * Vuelve a poner los avisos ahora mismo. Lo llama el interruptor de Ajustes: apagarlo
+   * tiene que callar los avisos EN EL ACTO, no la próxima vez que se toque un pago.
+   */
+  reprogramarAvisos: () => void;
   addOrUpdateGoal: (g: Goal) => void;
   deleteGoal: (id: number) => void;
   addMoneyToGoal: (amount: number, goalId: number) => void;
@@ -1571,6 +1576,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   /**
    * EL CALENDARIO DE PAGOS. Guardar crea o reemplaza, con el mismo criterio que un negocio.
    */
+  function reprogramarAvisos() {
+    reprogramarAvisosDePagos(pagosProgramados, (clave, valores) => tRef.current(clave, valores))
+      .then((r) => {
+        setAvisosProgramados(r.puestos);
+        setAvisosFallo(r.fallo ?? null);
+      });
+  }
+
   function guardarPagoProgramado(pago: PagoProgramado) {
     setPagosProgramados((antes) =>
       antes.some((p) => p.id === pago.id)
@@ -1933,6 +1946,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         marcarPagoDelMes,
         avisosProgramados,
         avisosFallo,
+        reprogramarAvisos,
         deleteTransaction,
         deleteTransactions,
         commitImport,

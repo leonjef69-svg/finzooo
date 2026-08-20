@@ -1,3 +1,4 @@
+import { esFoto } from "@/utils/iconosFavoritos";
 /**
  * EL CALENDARIO DE PAGOS — las cuentas, sin React ni Android (18/08/2026)
  *
@@ -40,7 +41,18 @@ export type PagoProgramado = {
   mesUnico?: string;
   /** La categoría del movimiento que se crea al marcarlo pagado. */
   categoria?: string;
+  /**
+   * EL DIBUJO. Puede ser un identificador del catalogo ("Zap", "marca:spotify") **o una foto
+   * suya**, guardada como texto `data:image/jpeg;...`. Se distinguen con `esFoto`.
+   *
+   * Una foto pesa unos 18 KB. Todo el respaldo de la cuenta va en UN documento con tope de
+   * 1 MB compartido con los movimientos, asi que **las fotos de los pagos no viajan a la
+   * nube** (ver `paraLaNube`): quien cambie de celular recupera sus pagos con el dibujo del
+   * catalogo. Es la misma decision que ya se tomo con los iconos favoritos.
+   */
   icono?: string;
+  /** El color del dibujo, como clave de COLOR_HEX_600. Sin el, se usa el del tipo. */
+  color?: string;
   /** 0 = el mismo día. */
   avisoDiasAntes: number;
   /** "09:00", en hora del celular. */
@@ -252,7 +264,22 @@ export function validarPago(
 ): { ok: true } | { ok: false; motivo: "nombre" | "monto" | "dia" } {
   if (nombre.trim().length === 0) return { ok: false, motivo: "nombre" };
   if (!Number.isInteger(dia) || dia < 1 || dia > 31) return { ok: false, motivo: "dia" };
-  if (tipo !== "recordatorio" && (monto == null || monto <= 0)) {
+  /**
+   * **NaN NO ES "MENOR O IGUAL QUE CERO", Y AHI ESTABA EL FALLO** (19/08/2026).
+   *
+   * `Number("#")` da NaN, y `NaN <= 0` es **false**: la comprobación lo dejaba pasar tal
+   * cual. El pago se guardaba con monto NaN, el resumen del mes sumaba NaN y en la pantalla
+   * salia `S/ NaN.undefined`; peor todavia, al marcarlo pagado se creaba un movimiento con
+   * monto NaN y esas letras aparecian en Inicio, entre el dinero de verdad.
+   *
+   * Lo reporto el: *"puse un monto y un #, y al llegar a la pantalla de inicio salio letras
+   * que no dicen error pero tampoco deberian estar ahi"*.
+   *
+   * `Number.isFinite` es la unica comprobacion que rechaza NaN e Infinity a la vez. La
+   * pantalla ademas ya no deja teclear otra cosa, pero eso es una cortesia: **la regla vive
+   * aqui**, que es por donde pasa todo lo que se guarda.
+   */
+  if (tipo !== "recordatorio" && (monto == null || !Number.isFinite(monto) || monto <= 0)) {
     return { ok: false, motivo: "monto" };
   }
   return { ok: true };
@@ -429,4 +456,41 @@ export function textoDeRepeticion(
   if (dia === 31) return { clave: "calendario.repite.ultimoDia" };
   if (dia === 29 || dia === 30) return { clave: "calendario.repite.casiUltimo", dia };
   return { clave: "calendario.repite.cadaMes", dia };
+}
+
+/**
+ * DEJA SOLO LO QUE PUEDE SER UN MONTO, MIENTRAS SE ESCRIBE.
+ *
+ * Nacio de un "#" que llego hasta la pantalla de Inicio. El teclado numerico de Android **no
+ * impide** escribir otra cosa: hay teclados que traen simbolos, esta el pegar, y esta el
+ * dictado por voz. Fiarse del tipo de teclado es fiarse de algo que no controlamos.
+ *
+ * Se admite **una sola** coma o punto, porque en Peru se escribe "12,50" tanto como "12.50",
+ * y como mucho dos decimales: los centimos no llegan a tres cifras y dejarlo abierto solo
+ * sirve para que un dedo torpe guarde 12.5555.
+ *
+ * Se deja como TEXTO y no se convierte a numero aqui: convertir en cada tecla haria que
+ * escribir "12." saltara bajo el dedo. La conversion es una sola, al guardar.
+ */
+export function soloMonto(texto: string): string {
+  const limpio = texto.replace(/[^0-9.,]/g, "").replace(/,/g, ".");
+  const trozos = limpio.split(".");
+  if (trozos.length === 1) return trozos[0].slice(0, 9);
+  return trozos[0].slice(0, 9) + "." + trozos.slice(1).join("").slice(0, 2);
+}
+
+
+/**
+ * QUITA LAS FOTOS ANTES DE SUBIR A LA NUBE.
+ *
+ * El documento de la cuenta tiene un tope de **1 MB compartido con los movimientos**, y
+ * pasarse no lo deja a medias: **lo deja sin guardar**, y con él los gastos. Una foto son
+ * unos 18 KB; treinta pagos con foto se comen medio megabyte en dibujos.
+ *
+ * El pago viaja igual, solo que sin la foto: al abrirlo en otro celular sale el dibujo que
+ * le toque por su nombre. Perder un dibujo es molesto; perder los movimientos, grave. Misma
+ * decisión que en `utils/iconosFavoritos`.
+ */
+export function pagosParaLaNube(lista: PagoProgramado[]): PagoProgramado[] {
+  return lista.map((p) => (esFoto(p.icono ?? "") ? { ...p, icono: undefined } : p));
 }

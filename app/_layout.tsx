@@ -109,6 +109,9 @@ const KEEP_ON_RETURN = [
   "/scheduled-export",
   "/category-style",
   "/nueva-categoria",
+  // El pago del calendario tambien saca fotos: sin esto, al volver de la camara se perdian
+  // el nombre y el monto a medio escribir. Lo cazo auditar-pantallas-externas.
+  "/calendario/nuevo",
 ];
 
 /**

@@ -21,15 +21,16 @@
  * comprobarlas con números.
  */
 import { useMemo, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Bell, ChevronLeft, ChevronRight, Check, Plus, Settings, Volume2, X } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, Check, Plus, Settings, X } from "lucide-react-native";
 import { router } from "expo-router";
 import { useColorScheme } from "nativewind";
 import BackButton from "@/components/BackButton";
 import { useAppData } from "@/contexts/AppDataContext";
 import { iconoDe } from "@/constants/iconos";
-import { abrirAjustesDelSonido, probarAviso, type ResultadoDeLaPrueba } from "@/utils/avisosDePagos";
+import { esFoto } from "@/utils/iconosFavoritos";
+import { COLOR_HEX_600 } from "@/constants/colors";
 import {
   cuandoTexto,
   cuentaPorEstado,
@@ -70,8 +71,7 @@ function mesAnterior(mes: string): string {
 type Filtro = "porPagar" | "pagados" | "recuerdos";
 
 export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
-  const { t, fmt, monthNames, pagosProgramados, marcarPagoDelMes, avisosProgramados, avisosFallo } =
-    useAppData();
+  const { t, fmt, monthNames, pagosProgramados, marcarPagoDelMes } = useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const oscuro = colorScheme === "dark";
@@ -81,10 +81,25 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
   const [filtro, setFiltro] = useState<Filtro>("porPagar");
   /** El día tocado, cuando tiene varias cosas. Ver el bloque de abajo. */
   const [diaAbierto, setDiaAbierto] = useState<number | null>(null);
-  const [ajustes, setAjustes] = useState(false);
-  const [probando, setProbando] = useState(false);
-  const [resultadoPrueba, setResultadoPrueba] = useState<ResultadoDeLaPrueba | null>(null);
-  const [noSeAbrio, setNoSeAbrio] = useState(false);
+  /**
+   * EL PAGO QUE SE ACABA DE MARCAR, PARA QUE SE VEA QUE FUNCIONÓ.
+   *
+   * **Esto era un fallo de verdad, y le costó cuatro pagos.** Al tocar "Pagar", la tarjeta
+   * saltaba al SIGUIENTE pago en el mismo instante: desde fuera se ve igual que si el botón
+   * no hubiera hecho nada, así que se vuelve a tocar. Él lo contó como *"¿por qué tengo que
+   * hacerlo 2 veces?"* y acabó con los cuatro pagos del mes marcados sin quererlo.
+   *
+   * Ahora la tarjeta se queda en verde diciendo "Pagado" unos segundos, y solo después pasa
+   * al siguiente. El botón desaparece mientras tanto, así que un segundo toque no puede
+   * pagar nada.
+   */
+  const [recienPagado, setRecienPagado] = useState<string | null>(null);
+
+  function pagar(id: string, mesDelPago: string) {
+    marcarPagoDelMes(id, mesDelPago, true);
+    setRecienPagado(id);
+    setTimeout(() => setRecienPagado((x) => (x === id ? null : x)), 2500);
+  }
 
   const delMes = pagosDelMes(pagosProgramados, mes);
   const porEstado = cuentaPorEstado(pagosProgramados, mes, hoy);
@@ -117,10 +132,13 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
     let pagado = 0;
     let vencido = 0;
     for (const p of delMes) {
-      if (p.tipo !== "pago" || p.monto == null) continue;
+      // Number.isFinite y no un "!= null": un monto NaN -que ya se coló una vez- hacía que
+      // el total entero saliera como "S/ NaN.undefined" en la pantalla. La regla de verdad
+      // está en validarPago; esto es el cinturón, por si ya hay uno guardado de antes.
+      if (p.tipo !== "pago" || !Number.isFinite(p.monto)) continue;
       const e = estadoDe(p);
-      if (e === "pagado") pagado += p.monto;
-      if (e === "vencido") vencido += p.monto;
+      if (e === "pagado") pagado += p.monto as number;
+      if (e === "vencido") vencido += p.monto as number;
     }
     return { pagado, vencido, porPagar: falta - vencido };
   }, [delMes, falta, mes, hoy]);
@@ -171,66 +189,15 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
         </Text>
         {/* EL ENGRANAJE guarda lo que se mira una vez —probar el aviso, elegir el sonido y
             cuántos hay puestos— y que hasta hoy ocupaba sitio en la pantalla todos los días. */}
-        <TouchableOpacity onPress={() => setAjustes((v) => !v)} className="w-10 items-end p-1">
+        {/* EL ENGRANAJE LLEVA A SU PROPIA PANTALLA. Era un panel que se abría encima y
+            ocupaba media pantalla principal: *"se ve horrible, me sale prácticamente toda la
+            pantalla del calendario"*. */}
+        <TouchableOpacity onPress={() => router.push("/calendario/avisos")} className="w-10 items-end p-1">
           <Settings size={19} color="#94a3b8" />
         </TouchableOpacity>
       </View>
 
       <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
-        {ajustes && (
-          <View className="rounded-2xl p-3.5 mb-4 bg-slate-50 dark:bg-slate-800">
-            <Text className="text-[11px] text-slate-500 dark:text-slate-400 mb-2.5">
-              {avisosProgramados == null
-                ? ""
-                : t(avisosProgramados === 0 ? "calendario.sinAvisos" : "calendario.avisosPuestos", {
-                    n: avisosProgramados,
-                  })}
-            </Text>
-            {avisosFallo != null && (
-              <Text selectable className="text-[10px] leading-4 text-rose-500 mb-2">
-                {avisosFallo}
-              </Text>
-            )}
-            <TouchableOpacity
-              onPress={async () => {
-                setProbando(true);
-                setResultadoPrueba(await probarAviso(t));
-                setProbando(false);
-              }}
-              disabled={probando}
-              className="flex-row items-center justify-center gap-2 py-2.5 rounded-xl bg-white dark:bg-slate-900 mb-2"
-            >
-              <Bell size={14} color="#64748b" />
-              <Text className="text-[12px] font-bold text-slate-600 dark:text-slate-200">
-                {t(probando ? "calendario.probando" : "calendario.probar")}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              onPress={async () => setNoSeAbrio(!(await abrirAjustesDelSonido()))}
-              className="flex-row items-center justify-center gap-2 py-2.5 rounded-xl bg-white dark:bg-slate-900"
-            >
-              <Volume2 size={14} color="#64748b" />
-              <Text className="text-[12px] font-bold text-slate-600 dark:text-slate-200">
-                {t("calendario.elegirSonido")}
-              </Text>
-            </TouchableOpacity>
-            {resultadoPrueba != null && (
-              <Text
-                className={`text-[11px] leading-4 mt-2.5 ${
-                  resultadoPrueba === "listo" ? "text-emerald-600" : "text-amber-600"
-                }`}
-              >
-                {t(`calendario.prueba.${resultadoPrueba}`)}
-              </Text>
-            )}
-            {noSeAbrio && (
-              <Text className="text-[11px] leading-4 text-amber-600 mt-2">
-                {t("calendario.sonidoNoSeAbrio")}
-              </Text>
-            )}
-          </View>
-        )}
-
         {/* TU PRÓXIMO PAGO. Una sola tarjeta, con su botón al costado. Al pagarlo se pone
             verde y dice "Pagado": *"algo que identifique que ya pagó"*. */}
         {siguiente && (
@@ -242,7 +209,8 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
             fmt={fmt}
             monthNames={monthNames}
             oscuro={oscuro}
-            onPagar={() => marcarPagoDelMes(siguiente.pago.id, siguiente.mes, true)}
+            onPagar={() => pagar(siguiente.pago.id, siguiente.mes)}
+            recienPagado={recienPagado === siguiente.pago.id}
             onAbrir={() => router.push(`/calendario/nuevo?id=${siguiente.pago.id}`)}
           />
         )}
@@ -379,7 +347,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                 fmt={fmt}
                 t={t}
                 oscuro={oscuro}
-                onPagar={() => marcarPagoDelMes(p.id, mes, true)}
+                onPagar={() => pagar(p.id, mes)}
                 onAbrir={() => router.push(`/calendario/nuevo?id=${p.id}`)}
               />
             ))}
@@ -428,7 +396,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
             fmt={fmt}
             t={t}
             oscuro={oscuro}
-            onPagar={() => marcarPagoDelMes(p.id, mes, true)}
+            onPagar={() => pagar(p.id, mes)}
             onAbrir={() => router.push(`/calendario/nuevo?id=${p.id}`)}
           />
         ))}
@@ -482,6 +450,7 @@ function TarjetaProxima({
   oscuro,
   onPagar,
   onAbrir,
+  recienPagado,
 }: {
   pago: PagoProgramado;
   mes: string;
@@ -492,9 +461,11 @@ function TarjetaProxima({
   oscuro: boolean;
   onPagar: () => void;
   onAbrir: () => void;
+  recienPagado: boolean;
 }) {
-  const estado = estadoEn(pago, mes, hoy);
+  const estado = recienPagado ? ("pagado" as EstadoDelPago) : estadoEn(pago, mes, hoy);
   const color = COLOR[estado];
+  const suColor = (pago.color && COLOR_HEX_600[pago.color]) || color;
   const Dibujo = iconoDe(pago.icono || iconoSugerido(pago.nombre, pago.tipo));
   const x = cuandoTexto(pago, mes, hoy);
   const f = x.fecha ? x.fecha.split("-").map(Number) : null;
@@ -505,14 +476,18 @@ function TarjetaProxima({
       className="rounded-2xl p-3.5 mb-4 bg-slate-50 dark:bg-slate-800"
     >
       <Text className="text-[11px] text-slate-500 dark:text-slate-400 mb-2.5">
-        {t("calendario.proximo")}
+        {t(recienPagado ? "calendario.yaEstaPagado" : "calendario.proximo")}
       </Text>
       <View className="flex-row items-center gap-3">
         <View
-          className="w-[42px] h-[42px] rounded-xl items-center justify-center"
+          className="w-[42px] h-[42px] rounded-xl items-center justify-center overflow-hidden"
           style={{ backgroundColor: color + (oscuro ? "33" : "22") }}
         >
-          <Dibujo size={21} color={color} strokeWidth={2.2} />
+          {esFoto(pago.icono ?? "") ? (
+            <Image source={{ uri: pago.icono }} style={{ width: 42, height: 42 }} />
+          ) : (
+            <Dibujo size={21} color={suColor} strokeWidth={2.2} />
+          )}
         </View>
         <View className="flex-1">
           <Text className="text-[15px] text-slate-900 dark:text-slate-100" numberOfLines={1}>
@@ -527,13 +502,24 @@ function TarjetaProxima({
             })}
           </Text>
         </View>
-        {pago.tipo !== "recordatorio" && (
-          <TouchableOpacity
-            onPress={onPagar}
-            className="px-4 h-10 rounded-xl items-center justify-center bg-emerald-600"
-          >
-            <Text className="text-[13px] font-bold text-white">{t("calendario.pagar")}</Text>
-          </TouchableOpacity>
+        {/* Pagado: el botón se va y queda el check. Así un segundo toque no puede pagar
+            otra cosa, que es justo lo que le pasó. */}
+        {recienPagado ? (
+          <View className="flex-row items-center gap-1.5 px-3 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900/40">
+            <Check size={15} color="#059669" strokeWidth={3} />
+            <Text className="text-[13px] font-bold text-emerald-700 dark:text-emerald-300">
+              {t("calendario.pagado")}
+            </Text>
+          </View>
+        ) : (
+          pago.tipo !== "recordatorio" && (
+            <TouchableOpacity
+              onPress={onPagar}
+              className="px-4 h-10 rounded-xl items-center justify-center bg-emerald-600"
+            >
+              <Text className="text-[13px] font-bold text-white">{t("calendario.pagar")}</Text>
+            </TouchableOpacity>
+          )
         )}
       </View>
     </TouchableOpacity>
@@ -561,6 +547,7 @@ function Fila({
   onAbrir: () => void;
 }) {
   const color = COLOR[estado];
+  const suColor = (pago.color && COLOR_HEX_600[pago.color]) || color;
   const Dibujo = iconoDe(pago.icono || iconoSugerido(pago.nombre, pago.tipo));
   const pagado = estado === "pagado";
   return (
@@ -571,10 +558,14 @@ function Fila({
       style={{ borderLeftWidth: 3, borderLeftColor: color }}
     >
       <View
-        className="w-[38px] h-[38px] rounded-xl items-center justify-center"
+        className="w-[38px] h-[38px] rounded-xl items-center justify-center overflow-hidden"
         style={{ backgroundColor: color + (oscuro ? "33" : "22") }}
       >
-        <Dibujo size={20} color={color} strokeWidth={2.2} />
+        {esFoto(pago.icono ?? "") ? (
+          <Image source={{ uri: pago.icono }} style={{ width: 38, height: 38 }} />
+        ) : (
+          <Dibujo size={20} color={suColor} strokeWidth={2.2} />
+        )}
       </View>
       <View className="flex-1">
         <Text
