@@ -264,9 +264,20 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
         </TouchableOpacity>
       </View>
 
-      {/* LO DE ARRIBA SE QUEDA QUIETO: el proximo pago, el mes, el resumen, el calendario
-          y los filtros. Es lo que dice DONDE estas, y perderlo al deslizar era lo que hacia
-          que uno no supiera que mes ni que filtro estaba mirando. */}
+      {/* TODO SE DESLIZA JUNTO, Y LOS FILTROS SE QUEDAN PEGADOS ARRIBA.
+          Antes el calendario ocupaba sitio fijo y a la lista le quedaba una franja de dos
+          dedos: *"se ve poquito, al momento de deslizar hacia abajo se ve feo"*. Ahora al
+          bajar sube todo —próximo pago, mes, cuadrícula— y la lista se queda con la pantalla
+          entera.
+
+          Lo que NO se va es la fila de filtros (stickyHeaderIndices): se queda clavada arriba
+          mientras se desliza. Eso era el motivo de tenerlo todo quieto —no saber qué estás
+          mirando— y se resuelve dejando pegado solo eso, que es lo único que hacía falta. */}
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingBottom: 10 }}
+        stickyHeaderIndices={[1]}
+      >
       <View className="px-5">
         {/* TU PRÓXIMO PAGO. Una sola tarjeta, con su botón al costado. Al pagarlo se pone
             verde y dice "Pagado": *"algo que identifique que ya pagó"*. */}
@@ -455,6 +466,11 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
           </View>
         )}
 
+      </View>
+
+      {/* LA FILA PEGADA. Lleva su propio fondo porque, al quedarse clavada, la lista pasa
+          por debajo: sin fondo se verían los pagos cruzando los botones. */}
+      <View className="px-5 pt-1 bg-white dark:bg-noche">
         {delMes.length > 0 && (
           <View className="flex-row gap-2 mt-5 mb-3">
             {(["porPagar", "pagados", "recuerdos"] as Filtro[]).map((f) => {
@@ -547,9 +563,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
         )}
       </View>
 
-      {/* Y SOLO LA LISTA SE DESLIZA. Es lo que el eligio del dibujo: "me gusta como se
-          desliza solamente las cosas que estan por pagar, pagados, recuerdos". */}
-      <ScrollView className="px-5 flex-1" contentContainerStyle={{ paddingBottom: 10 }}>
+      <View className="px-5">
         {visibles.map((p) => (
           <Fila
             key={p.id}
@@ -579,6 +593,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
           </Text>
         )}
 
+      </View>
       </ScrollView>
 
       {/* EL BOTÓN DE AGREGAR, PEGADO ABAJO Y CON SU NOMBRE.
