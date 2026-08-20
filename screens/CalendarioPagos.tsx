@@ -23,10 +23,12 @@
 import { useMemo, useState } from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ChevronLeft, ChevronRight, Check, Plus, Settings, X } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, Check, CheckCircle2, Circle, ListChecks, Settings, Trash2, X } from "lucide-react-native";
 import { irUnaVez } from "@/utils/nav";
 import { useColorScheme } from "nativewind";
 import BackButton from "@/components/BackButton";
+import FAB from "@/components/FAB";
+import ConfirmDialog from "@/components/ConfirmDialog";
 import { useAppData } from "@/contexts/AppDataContext";
 import { iconoDe } from "@/constants/iconos";
 import { esFoto } from "@/utils/iconosFavoritos";
@@ -71,7 +73,8 @@ function mesAnterior(mes: string): string {
 type Filtro = "porPagar" | "pagados" | "recuerdos";
 
 export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
-  const { t, fmt, monthNames, pagosProgramados, marcarPagoDelMes, showToast } = useAppData();
+  const { t, fmt, monthNames, pagosProgramados, marcarPagoDelMes, quitarPagoProgramado, showToast } =
+    useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const oscuro = colorScheme === "dark";
@@ -81,6 +84,37 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
   const [filtro, setFiltro] = useState<Filtro>("porPagar");
   /** El día tocado, cuando tiene varias cosas. Ver el bloque de abajo. */
   const [diaAbierto, setDiaAbierto] = useState<number | null>(null);
+  /**
+   * BORRAR VARIOS DE UNA VEZ, COMO EN INICIO.
+   *
+   * Pedido suyo: *"al igual que en la pantalla de inicio de nuevos movimientos, que haya un
+   * icono para seleccionar y borrar"*. Con veinte recibos, quitar los viejos de uno en uno
+   * —abrir, bajar hasta Borrar, confirmar, volver— son cinco toques por cada uno.
+   *
+   * Se copia el modo de Inicio a propósito: mismo icono, mismo círculo, mismo sitio. Dos
+   * formas distintas de seleccionar en la misma app son dos cosas que aprender.
+   */
+  const [seleccionando, setSeleccionando] = useState(false);
+  const [seleccionados, setSeleccionados] = useState<string[]>([]);
+  const [confirmandoBorrar, setConfirmandoBorrar] = useState(false);
+
+  function alternarSeleccion(id: string) {
+    setSeleccionados((antes) =>
+      antes.includes(id) ? antes.filter((x) => x !== id) : [...antes, id]
+    );
+  }
+
+  function borrarSeleccionados() {
+    for (const id of seleccionados) quitarPagoProgramado(id);
+    showToast(
+      t(seleccionados.length > 1 ? "calendario.borradosPlural" : "calendario.borrados", {
+        n: seleccionados.length,
+      })
+    );
+    setSeleccionados([]);
+    setSeleccionando(false);
+    setConfirmandoBorrar(false);
+  }
   /**
    * PAGAR ES UN SOLO TOQUE, Y LA CONFIRMACIÓN VA ABAJO.
    *
@@ -201,9 +235,28 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
         {/* EL ENGRANAJE LLEVA A SU PROPIA PANTALLA. Era un panel que se abría encima y
             ocupaba media pantalla principal: *"se ve horrible, me sale prácticamente toda la
             pantalla del calendario"*. */}
-        <TouchableOpacity onPress={() => irUnaVez("/calendario/avisos")} className="w-10 items-end p-1">
-          <Settings size={19} color="#94a3b8" />
-        </TouchableOpacity>
+        {seleccionando ? (
+          <TouchableOpacity
+            onPress={() => {
+              setSeleccionando(false);
+              setSeleccionados([]);
+            }}
+            className="w-10 items-end p-1"
+          >
+            <X size={20} color="#94a3b8" />
+          </TouchableOpacity>
+        ) : (
+          <View className="flex-row items-center gap-1">
+            {delMes.length > 0 && (
+              <TouchableOpacity onPress={() => setSeleccionando(true)} className="p-1">
+                <ListChecks size={19} color="#94a3b8" />
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity onPress={() => irUnaVez("/calendario/avisos")} className="p-1">
+              <Settings size={19} color="#94a3b8" />
+            </TouchableOpacity>
+          </View>
+        )}
       </View>
 
       <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
@@ -384,7 +437,11 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                 t={t}
                 oscuro={oscuro}
                 onPagar={() => pagar(p.id, mes)}
-                onAbrir={() => irUnaVez(`/calendario/nuevo?id=${p.id}`)}
+                onAbrir={() =>
+                  seleccionando ? alternarSeleccion(p.id) : irUnaVez(`/calendario/nuevo?id=${p.id}`)
+                }
+                seleccionando={seleccionando}
+                elegido={seleccionados.includes(p.id)}
               />
             ))}
           </View>
@@ -423,6 +480,25 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
           </View>
         )}
 
+        {seleccionando && (
+          <View className="flex-row items-center justify-between px-1 mb-2">
+            <Text className="text-[13px] font-bold text-slate-900 dark:text-slate-100">
+              {t(seleccionados.length === 1 ? "calendario.elegido" : "calendario.elegidos", {
+                n: seleccionados.length,
+              })}
+            </Text>
+            <TouchableOpacity
+              onPress={() => setConfirmandoBorrar(true)}
+              disabled={seleccionados.length === 0}
+              className={`w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-950 items-center justify-center ${
+                seleccionados.length === 0 ? "opacity-40" : ""
+              }`}
+            >
+              <Trash2 size={19} color="#f43f5e" />
+            </TouchableOpacity>
+          </View>
+        )}
+
         {visibles.map((p) => (
           <Fila
             key={p.id}
@@ -433,7 +509,11 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
             t={t}
             oscuro={oscuro}
             onPagar={() => pagar(p.id, mes)}
-            onAbrir={() => irUnaVez(`/calendario/nuevo?id=${p.id}`)}
+            onAbrir={() =>
+              seleccionando ? alternarSeleccion(p.id) : irUnaVez(`/calendario/nuevo?id=${p.id}`)
+            }
+            seleccionando={seleccionando}
+            elegido={seleccionados.includes(p.id)}
           />
         ))}
 
@@ -448,16 +528,31 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
           </Text>
         )}
 
-        <TouchableOpacity
-          onPress={() => irUnaVez("/calendario/nuevo")}
-          className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 mt-1"
-        >
-          <Plus size={16} color="#64748b" />
-          <Text className="text-[13px] text-slate-500 dark:text-slate-400">
-            {t("calendario.agregar")}
-          </Text>
-        </TouchableOpacity>
       </ScrollView>
+
+      {/* EL BOTÓN DE AGREGAR, FLOTANDO.
+          Estaba al final de la lista, y él vio lo que eso significa: *"si yo agrego 100
+          recordatorios, pagos, ingresos, no voy a estar bajando con mi celular para agregar
+          un nuevo pago"*. Con veinte recibos el botón ya queda fuera de la pantalla.
+
+          Es el mismo botón redondo de Inicio, en el mismo sitio: agregar se hace igual en
+          toda la app. Se esconde mientras se está seleccionando, que ahí lo que se hace es
+          borrar. */}
+      {!seleccionando && <FAB onPress={() => irUnaVez("/calendario/nuevo")} />}
+
+      <ConfirmDialog
+        visible={confirmandoBorrar}
+        title={t("calendario.borrarTitulo")}
+        message={t(
+          seleccionados.length > 1 ? "calendario.borrarTextoPlural" : "calendario.borrarTexto",
+          { n: seleccionados.length }
+        )}
+        confirmLabel={t("calendario.nuevo.borrar")}
+        cancelLabel={t("common.cancel")}
+        danger
+        onConfirm={borrarSeleccionados}
+        onCancel={() => setConfirmandoBorrar(false)}
+      />
     </View>
   );
 }
@@ -559,6 +654,8 @@ function Fila({
   oscuro,
   onPagar,
   onAbrir,
+  seleccionando,
+  elegido,
 }: {
   pago: PagoProgramado;
   estado: EstadoDelPago;
@@ -568,6 +665,8 @@ function Fila({
   oscuro: boolean;
   onPagar: () => void;
   onAbrir: () => void;
+  seleccionando: boolean;
+  elegido: boolean;
 }) {
   const color = COLOR[estado];
   const suColor = (pago.color && COLOR_HEX_600[pago.color]) || color;
@@ -580,6 +679,9 @@ function Fila({
       className="flex-row items-center gap-3 p-3 rounded-2xl mb-2 bg-slate-50 dark:bg-slate-800"
       style={{ borderLeftWidth: 3, borderLeftColor: color }}
     >
+      {/* El círculo de elegir, igual que en Inicio: mismo icono y mismo sitio. */}
+      {seleccionando &&
+        (elegido ? <CheckCircle2 size={22} color="#059669" /> : <Circle size={22} color="#cbd5e1" />)}
       <View
         className="w-[38px] h-[38px] rounded-xl items-center justify-center overflow-hidden"
         style={{ backgroundColor: color + (oscuro ? "33" : "22") }}
@@ -610,7 +712,7 @@ function Fila({
             {fmt(pago.monto)}
           </Text>
         )}
-        {pago.tipo !== "recordatorio" &&
+        {!seleccionando && pago.tipo !== "recordatorio" &&
           (pagado ? (
             <View className="mt-1.5">
               <Check size={20} color={COLOR.pagado} strokeWidth={3} />

@@ -26,6 +26,7 @@ import IconBadge from "@/components/IconBadge";
 import PressableScale from "@/components/PressableScale";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import { catInfo } from "@/constants/categories";
+import { estadoEn, fechaEnElMes, mesDe } from "@/utils/calendarioPagos";
 import { iconoDe } from "@/constants/iconos";
 import { esFoto } from "@/utils/iconosFavoritos";
 import { CARD_SHADOW, SALDO_TARJETA, SALDO_VERDE } from "@/constants/style";
@@ -73,6 +74,7 @@ export default function Home({
     carryoverActive,
     resetCarryover,
     restoreCarryover,
+    pagosProgramados,
   } = useAppData();
   const [confirmResetCarryover, setConfirmResetCarryover] = useState(false);
   const [confirmRestoreCarryover, setConfirmRestoreCarryover] = useState(false);
@@ -102,6 +104,24 @@ export default function Home({
         .sort(compararMovimientos),
     [transactions, mk]
   );
+
+  /**
+   * ¿HAY ALGO QUE PAGAR YA? Es lo que enciende el punto rojo de la campana.
+   *
+   * Solo lo VENCIDO y lo de HOY. Un recibo que vence en cinco días no es una urgencia, y si
+   * el punto se encendiera con él estaría encendido casi siempre — que es exactamente lo que
+   * pasaba antes, cuando era fijo, y por eso no significaba nada.
+   */
+  const hayPagosUrgentes = useMemo(() => {
+    const hoy = new Date();
+    const mesAhora = mesDe(hoy);
+    return pagosProgramados.some((p) => {
+      if (p.tipo === "recordatorio") return false;
+      const e = estadoEn(p, mesAhora, hoy);
+      if (e === "vencido") return true;
+      return e === "pendiente" && fechaEnElMes(p, mesAhora).slice(8) === String(hoy.getDate()).padStart(2, "0");
+    });
+  }, [pagosProgramados]);
 
   const [selectMode, setSelectMode] = useState(false);
   const [confirmandoBorrarTodo, setConfirmandoBorrarTodo] = useState(false);
