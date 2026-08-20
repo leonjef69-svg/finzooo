@@ -1,110 +1,163 @@
 /**
- * EL CALENDARIO DE PAGOS (18/08/2026)
+ * EL CALENDARIO DE PAGOS (18/08/2026, rediseñado el 19)
  *
  * Lo pidió así: *"un calendario para que la gente pueda poner en una fecha el monto —mi
  * suscripción de Netflix, el recibo del agua o la luz— y pueda personalizar qué día y a qué
  * hora me avise para pagarlo"*, con *"colores que digan por ejemplo verde pagado, otro color
- * pendiente"*, y **filtros arriba**: *"Todos | Pendientes | Pagados | Vencidos"*.
+ * pendiente"*.
+ *
+ * **EL REDISEÑO DEL 19/08 salió de cuatro cosas que vio él en su celular:**
+ *
+ * 1. *"¿Por qué arriba hay un próximo pago y abajo otro? O sea, ¿hay 2?"* — la tarjeta de
+ *    arriba repetía una fila de la lista. Ahora **la lista excluye el de la tarjeta**.
+ * 2. *"No quiero deformidades, algo más grande que otro, que el texto se pueda leer."* Todas
+ *    las filas miden lo mismo y los tamaños de letra son tres en toda la pantalla.
+ * 3. *"El 19, el 21… no tiene sentido esas letras."* Ahora dice **hoy**, **mañana**, **en 3
+ *    días** o el día con su fecha. Ver `cuandoTexto`.
+ * 4. *"Cada color tiene una identificación."* Hay una leyenda bajo el calendario: sin ella,
+ *    un círculo ámbar no dice nada la primera vez que se entra.
  *
  * Las cuentas NO están aquí: viven en `utils/calendarioPagos.ts`, sin React, para poder
- * comprobarlas con números. Esta pantalla solo dibuja lo que aquéllas deciden.
+ * comprobarlas con números.
  */
 import { useMemo, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ChevronLeft, ChevronRight, Plus, Bell, Volume2, ArrowDownLeft, ArrowUpRight } from "lucide-react-native";
+import { Bell, ChevronLeft, ChevronRight, Check, Plus, Settings, Volume2, X } from "lucide-react-native";
 import { router } from "expo-router";
+import { useColorScheme } from "nativewind";
 import BackButton from "@/components/BackButton";
 import { useAppData } from "@/contexts/AppDataContext";
-import { CARD_SHADOW } from "@/constants/style";
+import { iconoDe } from "@/constants/iconos";
 import { abrirAjustesDelSonido, probarAviso, type ResultadoDeLaPrueba } from "@/utils/avisosDePagos";
 import {
+  cuandoTexto,
   cuentaPorEstado,
-  cuentaPorTipo,
   estadoEn,
   faltaPorPagar,
   fechaEnElMes,
-  hayVariosTipos,
+  iconoSugerido,
   mesDe,
   mesSiguiente,
   pagosDelMes,
   proximoPago,
   type EstadoDelPago,
-  type TipoDeAnotacion,
+  type PagoProgramado,
 } from "@/utils/calendarioPagos";
 
 /**
  * LOS TRES COLORES, EN UN SOLO SITIO.
  *
  * Verde pagado, ámbar por pagar, rojo se pasó — con sus palabras. Escritos en cada sitio
- * donde se usan, cambiar uno dejaría el punto del calendario de un color y la franja de su
+ * donde se usan, cambiar uno dejaría el círculo del calendario de un color y la franja de su
  * fila de otro, para el mismo pago.
  */
 const COLOR: Record<EstadoDelPago, string> = {
   pagado: "#059669",
-  pendiente: "#f59e0b",
+  pendiente: "#d97706",
   vencido: "#e11d48",
 };
 
-/** "2026-08" → el mes anterior. La otra mitad de `mesSiguiente`. */
+/** Qué gana cuando un día tiene varias cosas: lo vencido manda, y lo pagado es lo último. */
+const URGENCIA: EstadoDelPago[] = ["pagado", "pendiente", "vencido"];
+
 function mesAnterior(mes: string): string {
   const [anio, m] = mes.split("-").map(Number);
   return m === 1 ? `${anio - 1}-12` : `${anio}-${String(m - 1).padStart(2, "0")}`;
 }
 
-type Filtro = "todos" | EstadoDelPago;
+/** Los filtros de arriba, con sus palabras: *"lo que falta por pagar, lo que se pagó y recordatorios"*. */
+type Filtro = "porPagar" | "pagados" | "recuerdos";
 
 export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
-  const { t, fmt, monthNames, pagosProgramados, marcarPagoDelMes, avisosProgramados, avisosFallo } = useAppData();
+  const { t, fmt, monthNames, pagosProgramados, marcarPagoDelMes, avisosProgramados, avisosFallo } =
+    useAppData();
   const insets = useSafeAreaInsets();
+  const { colorScheme } = useColorScheme();
+  const oscuro = colorScheme === "dark";
 
   const hoy = useMemo(() => new Date(), []);
   const [mes, setMes] = useState(() => mesDe(hoy));
-  const [filtro, setFiltro] = useState<Filtro>("todos");
+  const [filtro, setFiltro] = useState<Filtro>("porPagar");
+  /** El día tocado, cuando tiene varias cosas. Ver el bloque de abajo. */
+  const [diaAbierto, setDiaAbierto] = useState<number | null>(null);
+  const [ajustes, setAjustes] = useState(false);
   const [probando, setProbando] = useState(false);
   const [resultadoPrueba, setResultadoPrueba] = useState<ResultadoDeLaPrueba | null>(null);
   const [noSeAbrio, setNoSeAbrio] = useState(false);
-  const [tipo, setTipo] = useState<TipoDeAnotacion | "todos">("todos");
 
   const delMes = pagosDelMes(pagosProgramados, mes);
   const porEstado = cuentaPorEstado(pagosProgramados, mes, hoy);
-  const porTipo = cuentaPorTipo(pagosProgramados, mes);
   const falta = faltaPorPagar(pagosProgramados, mes, hoy);
   const siguiente = proximoPago(pagosProgramados, hoy);
 
-  /**
-   * LA MISMA LISTA PARA EL CALENDARIO Y PARA LAS FILAS.
-   *
-   * Con dos filtrados distintos, tocar "Vencidos" podría dejar el calendario enseñando todos
-   * los días encendidos y la lista solo uno — y eso no se ve mirando: se ve cuando alguien
-   * dice que la app le miente. Ya se tomó esta misma decisión en el panel del negocio.
-   */
-  const visibles = delMes.filter(
-    (p) =>
-      (filtro === "todos" || estadoEn(p, mes, hoy) === filtro) &&
-      (tipo === "todos" || p.tipo === tipo)
-  );
+  function estadoDe(p: PagoProgramado) {
+    return estadoEn(p, mes, hoy);
+  }
+  function diaDe(p: PagoProgramado) {
+    return Number(fechaEnElMes(p, mes).slice(8));
+  }
 
-  // Qué color lleva cada día del calendario. Si un día tiene dos, manda el más urgente:
-  // vencido sobre pendiente, y pendiente sobre pagado.
-  const colorPorDia = useMemo(() => {
-    const orden: EstadoDelPago[] = ["pagado", "pendiente", "vencido"];
-    const mapa: Record<number, EstadoDelPago> = {};
-    for (const p of visibles) {
-      const fecha = fechaEnElMes(p, mes);
-      if (fecha === "") continue;
-      const dia = Number(fecha.slice(8));
-      const est = estadoEn(p, mes, hoy);
-      if (mapa[dia] == null || orden.indexOf(est) > orden.indexOf(mapa[dia])) mapa[dia] = est;
+  const enFiltro = delMes.filter((p) => {
+    const e = estadoDe(p);
+    if (filtro === "pagados") return e === "pagado";
+    if (filtro === "recuerdos") return p.tipo === "recordatorio";
+    return e !== "pagado" && p.tipo !== "recordatorio";
+  });
+
+  /**
+   * LA LISTA NO REPITE EL DE LA TARJETA. Era su primera queja del rediseño: *"lo que está
+   * encerrado en la imagen confunde al usuario si hay 2"*. Solo se excluye cuando la tarjeta
+   * habla de ESTE mes; si enseña el de septiembre, el de agosto sigue en su sitio.
+   */
+  const enLaTarjeta = siguiente && siguiente.mes === mes ? siguiente.pago.id : null;
+  const visibles = enFiltro.filter((p) => p.id !== enLaTarjeta);
+
+  const totales = useMemo(() => {
+    let pagado = 0;
+    let vencido = 0;
+    for (const p of delMes) {
+      if (p.tipo !== "pago" || p.monto == null) continue;
+      const e = estadoDe(p);
+      if (e === "pagado") pagado += p.monto;
+      if (e === "vencido") vencido += p.monto;
+    }
+    return { pagado, vencido, porPagar: falta - vencido };
+  }, [delMes, falta, mes, hoy]);
+
+  /** Qué color y cuántas cosas tiene cada día. El color es el del más urgente. */
+  const porDia = useMemo(() => {
+    const mapa: Record<number, { estado: EstadoDelPago; n: number }> = {};
+    for (const p of delMes) {
+      const d = diaDe(p);
+      const e = estadoDe(p);
+      const antes = mapa[d];
+      if (!antes) mapa[d] = { estado: e, n: 1 };
+      else {
+        mapa[d] = {
+          estado: URGENCIA.indexOf(e) > URGENCIA.indexOf(antes.estado) ? e : antes.estado,
+          n: antes.n + 1,
+        };
+      }
     }
     return mapa;
-  }, [visibles, mes, hoy]);
+  }, [delMes, mes, hoy]);
 
   const [anio, numeroMes] = mes.split("-").map(Number);
   const diasEnElMes = new Date(anio, numeroMes, 0).getDate();
-  // Lunes primero, como el calendario de aquí. getDay() da 0 para domingo.
   const primerDia = (new Date(anio, numeroMes - 1, 1).getDay() + 6) % 7;
   const esEsteMes = mes === mesDe(hoy);
+  const delDiaAbierto = diaAbierto == null ? [] : delMes.filter((p) => diaDe(p) === diaAbierto);
+
+  function textoCuando(p: PagoProgramado) {
+    const x = cuandoTexto(p, mes, hoy);
+    const f = x.fecha ? x.fecha.split("-").map(Number) : null;
+    return t(x.clave, {
+      dias: x.dias ?? 0,
+      dia: f ? f[2] : 0,
+      mes: f ? monthNames[f[1] - 1] : "",
+    });
+  }
 
   return (
     <View
@@ -116,373 +169,447 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
         <Text className="text-base font-bold text-slate-900 dark:text-slate-100">
           {t("calendario.titulo")}
         </Text>
-        <View className="w-10" />
+        {/* EL ENGRANAJE guarda lo que se mira una vez —probar el aviso, elegir el sonido y
+            cuántos hay puestos— y que hasta hoy ocupaba sitio en la pantalla todos los días. */}
+        <TouchableOpacity onPress={() => setAjustes((v) => !v)} className="w-10 items-end p-1">
+          <Settings size={19} color="#94a3b8" />
+        </TouchableOpacity>
       </View>
 
       <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
-        {/* TU PRÓXIMO PAGO, ARRIBA Y EN GRANDE.
-            Es la pregunta de quien abre esta pantalla —"¿qué me toca ahora?"— y contestarla
-            sin que haya que buscar en la lista es lo que separa un calendario de una tabla.
-            Manda lo vencido sobre lo que viene: ver proximoPago. */}
-        {siguiente && (
-          <View
-            className="rounded-2xl p-4 mb-4 bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700"
-            style={CARD_SHADOW}
-          >
-            <Text className="text-[10px] font-bold text-slate-400 dark:text-slate-500 mb-2">
-              {t("calendario.proximo")}
+        {ajustes && (
+          <View className="rounded-2xl p-3.5 mb-4 bg-slate-50 dark:bg-slate-800">
+            <Text className="text-[11px] text-slate-500 dark:text-slate-400 mb-2.5">
+              {avisosProgramados == null
+                ? ""
+                : t(avisosProgramados === 0 ? "calendario.sinAvisos" : "calendario.avisosPuestos", {
+                    n: avisosProgramados,
+                  })}
             </Text>
-            {/* TODO EN UNA FILA. Antes el botón iba debajo y a lo ancho, así que la tarjeta
-                medía el doble que la información que llevaba dentro: *"hazlo más pequeño, que
-                el botón de ya lo pagué esté al costado, no debajo"*. Al costado también dice
-                mejor a qué pago pertenece. */}
-            <View className="flex-row items-center gap-2.5">
-              <View
-                className="w-9 h-9 rounded-lg items-center justify-center"
-                style={{ backgroundColor: COLOR[estadoEn(siguiente.pago, siguiente.mes, hoy)] + "22" }}
-              >
-                <IconoDelTipo tipo={siguiente.pago.tipo} color={COLOR[estadoEn(siguiente.pago, siguiente.mes, hoy)]} />
-              </View>
-              <Text className="flex-1 text-[14px] text-slate-900 dark:text-slate-100" numberOfLines={1}>
-                {siguiente.pago.nombre}
-                {siguiente.pago.monto != null ? ` · ${fmt(siguiente.pago.monto)}` : ""}
+            {avisosFallo != null && (
+              <Text selectable className="text-[10px] leading-4 text-rose-500 mb-2">
+                {avisosFallo}
               </Text>
-              {siguiente.pago.tipo !== "recordatorio" && (
-                <TouchableOpacity
-                  onPress={() => marcarPagoDelMes(siguiente.pago.id, siguiente.mes, true)}
-                  className="px-3.5 h-9 rounded-xl items-center justify-center bg-emerald-600"
-                >
-                  <Text className="text-[12px] font-bold text-white">{t("calendario.yaPague")}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            {/* LA FECHA, EN SU PROPIO RENGLÓN Y A TODO LO ANCHO.
-                Iba dentro de la fila, entre el nombre y el botón, y el botón se la comía:
-                *"el 14 de septiembre aviso a… tapado por el botón de ya lo pagué"*. Con un
-                nombre largo no había ancho para las dos cosas, y quien lo mira necesita la
-                fecha entera, no recortada.
-                Y lleva el mes cuando no es éste, que era otro fallo suyo: con agosto pagado
-                la tarjeta enseña septiembre —correcto— pero decía "el día 14" a secas justo
-                encima de una fila que ponía "pagado el 14", y parecían contradecirse. */}
-            <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-2">
-              {t(siguiente.mes === mesDe(hoy) ? "calendario.avisoA" : "calendario.avisoAOtroMes", {
-                dia: Number(fechaEnElMes(siguiente.pago, siguiente.mes).slice(8)),
-                mes: monthNames[Number(siguiente.mes.split("-")[1]) - 1],
-                hora: siguiente.pago.avisoHora,
-              })}
-            </Text>
+            )}
+            <TouchableOpacity
+              onPress={async () => {
+                setProbando(true);
+                setResultadoPrueba(await probarAviso(t));
+                setProbando(false);
+              }}
+              disabled={probando}
+              className="flex-row items-center justify-center gap-2 py-2.5 rounded-xl bg-white dark:bg-slate-900 mb-2"
+            >
+              <Bell size={14} color="#64748b" />
+              <Text className="text-[12px] font-bold text-slate-600 dark:text-slate-200">
+                {t(probando ? "calendario.probando" : "calendario.probar")}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={async () => setNoSeAbrio(!(await abrirAjustesDelSonido()))}
+              className="flex-row items-center justify-center gap-2 py-2.5 rounded-xl bg-white dark:bg-slate-900"
+            >
+              <Volume2 size={14} color="#64748b" />
+              <Text className="text-[12px] font-bold text-slate-600 dark:text-slate-200">
+                {t("calendario.elegirSonido")}
+              </Text>
+            </TouchableOpacity>
+            {resultadoPrueba != null && (
+              <Text
+                className={`text-[11px] leading-4 mt-2.5 ${
+                  resultadoPrueba === "listo" ? "text-emerald-600" : "text-amber-600"
+                }`}
+              >
+                {t(`calendario.prueba.${resultadoPrueba}`)}
+              </Text>
+            )}
+            {noSeAbrio && (
+              <Text className="text-[11px] leading-4 text-amber-600 mt-2">
+                {t("calendario.sonidoNoSeAbrio")}
+              </Text>
+            )}
           </View>
         )}
 
-        <View
-          className="rounded-2xl bg-white dark:bg-slate-900 border-[1.5px] border-slate-200 dark:border-slate-700 overflow-hidden"
-          style={CARD_SHADOW}
-        >
-          <View className="px-4 pt-3.5 pb-3">
-            <View className="flex-row items-center justify-between mb-3">
-              <TouchableOpacity onPress={() => setMes(mesAnterior(mes))} className="p-1">
-                <ChevronLeft size={19} color="#94a3b8" />
-              </TouchableOpacity>
-              <View className="items-center">
-                <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                  {monthNames[numeroMes - 1]} {anio}
-                </Text>
-                {falta > 0 && (
-                  <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                    {t("calendario.teFaltan", { monto: fmt(falta) })}
-                  </Text>
-                )}
-              </View>
-              <TouchableOpacity onPress={() => setMes(mesSiguiente(mes))} className="p-1">
-                <ChevronRight size={19} color="#94a3b8" />
-              </TouchableOpacity>
+        {/* TU PRÓXIMO PAGO. Una sola tarjeta, con su botón al costado. Al pagarlo se pone
+            verde y dice "Pagado": *"algo que identifique que ya pagó"*. */}
+        {siguiente && (
+          <TarjetaProxima
+            pago={siguiente.pago}
+            mes={siguiente.mes}
+            hoy={hoy}
+            t={t}
+            fmt={fmt}
+            monthNames={monthNames}
+            oscuro={oscuro}
+            onPagar={() => marcarPagoDelMes(siguiente.pago.id, siguiente.mes, true)}
+            onAbrir={() => router.push(`/calendario/nuevo?id=${siguiente.pago.id}`)}
+          />
+        )}
+
+        <View className="flex-row items-center justify-between mb-3">
+          <TouchableOpacity onPress={() => { setMes(mesAnterior(mes)); setDiaAbierto(null); }} className="p-1.5">
+            <ChevronLeft size={19} color="#94a3b8" />
+          </TouchableOpacity>
+          <Text className="text-[15px] font-bold text-slate-900 dark:text-slate-100">
+            {monthNames[numeroMes - 1]} {anio}
+          </Text>
+          <TouchableOpacity onPress={() => { setMes(mesSiguiente(mes)); setDiaAbierto(null); }} className="p-1.5">
+            <ChevronRight size={19} color="#94a3b8" />
+          </TouchableOpacity>
+        </View>
+
+        {/* EL RESUMEN DEL MES, que también pidió. Tres números y una barra: de un vistazo se
+            sabe cuánto falta, cuánto se lleva y si se pasó algo. */}
+        {delMes.length > 0 && (
+          <>
+            <View className="flex-row gap-2 mb-2.5">
+              <Cuadro texto={t("calendario.resumen.porPagar")} valor={fmt(totales.porPagar)} color={COLOR.pendiente} />
+              <Cuadro texto={t("calendario.resumen.pagado")} valor={fmt(totales.pagado)} color={COLOR.pagado} />
+              <Cuadro texto={t("calendario.resumen.vencido")} valor={fmt(totales.vencido)} color={COLOR.vencido} />
             </View>
-
-            {/* LOS FILTROS, CON SU NÚMERO Y SIN LOS VACÍOS.
-                El número contesta sin tocarlos: un filtro que no dice cuántos hay obliga a
-                probarlos todos. Y el que está a cero no se dibuja — tocarlo solo podría
-                dejar la pantalla en blanco. */}
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-1">
-              <View className="flex-row gap-1.5 px-1">
-                <Chip
-                  texto={t("calendario.filtro.todos")}
-                  activo={filtro === "todos"}
-                  onPress={() => setFiltro("todos")}
-                />
-                {(["pendiente", "vencido", "pagado"] as EstadoDelPago[])
-                  .filter((e) => porEstado[e] > 0)
-                  .map((e) => (
-                    <Chip
-                      key={e}
-                      texto={`${t(`calendario.filtro.${e}`)} ${porEstado[e]}`}
-                      color={COLOR[e]}
-                      activo={filtro === e}
-                      onPress={() => setFiltro(filtro === e ? "todos" : e)}
-                    />
-                  ))}
-              </View>
-            </ScrollView>
-
-            {/* LA SEGUNDA FILA SOLO CON MÁS DE UN TIPO. Con solo pagos, estos botones no
-                pueden cambiar nada de lo que se ve: son tres estorbos. Va más chica y sin
-                borde a propósito — la de arriba es la de cada día, ésta es de afinar. */}
-            {hayVariosTipos(pagosProgramados, mes) && (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-1 mt-1.5">
-                <View className="flex-row gap-1.5 px-1">
-                  {(["pago", "ingreso", "recordatorio"] as TipoDeAnotacion[])
-                    .filter((x) => porTipo[x] > 0)
-                    .map((x) => (
-                      <TouchableOpacity
-                        key={x}
-                        onPress={() => setTipo(tipo === x ? "todos" : x)}
-                        className={`px-2.5 py-1 rounded-full ${
-                          tipo === x ? "bg-slate-200 dark:bg-slate-700" : "bg-slate-50 dark:bg-slate-800"
-                        }`}
-                      >
-                        <Text className="text-[11px] text-slate-500 dark:text-slate-300">
-                          {t(`calendario.tipo.${x}`)} {porTipo[x]}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
-                </View>
-              </ScrollView>
-            )}
-          </View>
-
-          <View className="px-4 pb-3.5">
-            <View className="flex-row mb-1.5">
-              {["L", "M", "X", "J", "V", "S", "D"].map((d, i) => (
-                <Text
-                  key={i}
-                  className="flex-1 text-[10px] text-center text-slate-400 dark:text-slate-400"
-                >
-                  {d}
-                </Text>
+            <View className="flex-row h-1.5 rounded-full overflow-hidden mb-4">
+              {(["pagado", "pendiente", "vencido"] as EstadoDelPago[]).map((e) => (
+                <View key={e} style={{ flex: Math.max(porEstado[e], 0), backgroundColor: COLOR[e] }} />
               ))}
             </View>
-            <View className="flex-row flex-wrap">
-              {Array.from({ length: primerDia }).map((_, i) => (
-                <View key={`h${i}`} style={{ width: `${100 / 7}%`, aspectRatio: 1 }} />
-              ))}
-              {Array.from({ length: diasEnElMes }).map((_, i) => {
-                const dia = i + 1;
-                const color = colorPorDia[dia];
-                const esHoy = esEsteMes && dia === hoy.getDate();
-                /**
-                 * TOCAR UN DÍA. Es lo que él quería decir con "elegir libremente en el
-                 * calendario": si ese día ya tiene algo, se abre para editarlo; si está
-                 * vacío, se crea uno nuevo con la fecha ya puesta.
-                 *
-                 * Así el formulario ya no necesita su propio calendario — tenía uno y lo
-                 * mandó quitar, con razón: eran dos calendarios para lo mismo.
-                 */
-                const deEseDia = visibles.filter(
-                  (p) => Number(fechaEnElMes(p, mes).slice(8)) === dia
-                );
-                return (
-                  <TouchableOpacity
-                    key={dia}
-                    onPress={() =>
-                      router.push(
-                        deEseDia.length > 0
-                          ? `/calendario/nuevo?id=${deEseDia[0].id}`
-                          : `/calendario/nuevo?fecha=${mes}-${String(dia).padStart(2, "0")}`
-                      )
-                    }
-                    style={{ width: `${100 / 7}%`, aspectRatio: 1 }}
-                    className="items-center justify-center p-0.5"
-                  >
-                    <View
-                      className="w-full h-full rounded-full items-center justify-center"
-                      style={{
-                        backgroundColor: color ? COLOR[color] : "transparent",
-                        borderWidth: !color && esHoy ? 1.5 : 0,
-                        borderColor: "#94a3b8",
-                      }}
-                    >
-                      {/* EL COLOR DEL NÚMERO SE DICE SIEMPRE, Y ESTO ERA UN FALLO.
-                          Sin clase de color, React Native pinta el texto en negro por
-                          defecto: en modo oscuro el calendario entero quedaba casi
-                          invisible, con los números del mismo tono que el fondo. Lo vio él
-                          en el celular. Un día con estado sí lleva color propio —blanco
-                          sobre su círculo—, y por eso el `style` sigue mandando ahí. */}
-                      <Text
-                        className="text-[11px] text-slate-900 dark:text-slate-100"
-                        style={color ? { color: "#ffffff" } : undefined}
-                      >
-                        {dia}
-                      </Text>
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
+          </>
+        )}
 
-          <View className="px-4 pb-4">
-            {visibles.length === 0 ? (
-              <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-400 py-3">
-                {t(delMes.length === 0 ? "calendario.vacio" : "calendario.vacioFiltro")}
-              </Text>
-            ) : (
-              visibles.map((p) => {
-                const estado = estadoEn(p, mes, hoy);
-                const dia = Number(fechaEnElMes(p, mes).slice(8));
-                return (
-                  <TouchableOpacity
-                    key={p.id}
-                    onPress={() => router.push(`/calendario/nuevo?id=${p.id}`)}
-                    className="flex-row items-center gap-3 p-3 rounded-xl mb-2 bg-slate-50 dark:bg-slate-800"
-                    style={{ borderLeftWidth: 3, borderLeftColor: COLOR[estado] }}
-                  >
-                    <IconoDelTipo tipo={p.tipo} color={COLOR[estado]} />
-                    <View className="flex-1">
-                      <Text
-                        className={`text-[13px] ${
-                          estado === "pagado"
-                            ? "text-slate-400 dark:text-slate-500"
-                            : "text-slate-900 dark:text-slate-100"
-                        }`}
-                      >
-                        {p.nombre}
-                      </Text>
-                      <Text className="text-[11px] mt-0.5" style={{ color: COLOR[estado] }}>
-                        {t(`calendario.estado.${estado}`, { dia })}
-                      </Text>
-                    </View>
-                    {p.monto != null ? (
-                      <Text
-                        className={`text-[14px] ${
-                          estado === "pagado" ? "text-slate-400" : "text-slate-900 dark:text-slate-100"
-                        }`}
-                      >
-                        {p.tipo === "ingreso" ? "+" : "−"}
-                        {fmt(p.monto)}
-                      </Text>
-                    ) : (
-                      <Text className="text-[11px] text-slate-400">{t("calendario.sinMonto")}</Text>
-                    )}
-                  </TouchableOpacity>
-                );
-              })
-            )}
-
-            {/* CUÁNTOS AVISOS HAY PUESTOS, Y EL BOTÓN PARA COMPROBARLO EN DIEZ SEGUNDOS.
-                "No me llegó nada" tenía cuatro causas que desde fuera se ven idénticas, y
-                averiguarlo costaba poner una hora y esperar un día por intento. */}
-            {pagosProgramados.length > 0 && (
-              <View className="mb-2">
-                <Text className="text-[10px] text-slate-400 dark:text-slate-500 text-center">
-                  {avisosProgramados == null
-                    ? ""
-                    : t(avisosProgramados === 0 ? "calendario.sinAvisos" : "calendario.avisosPuestos", {
-                        n: avisosProgramados,
-                      })}
-                </Text>
-                {/* EL MOTIVO DEL FALLO, SELECCIONABLE PARA PODER COPIARLO.
-                    Sin él, "ningún aviso programado" no dice si fue el permiso, el canal o
-                    el programado en sí, y cada intento cuesta un día. */}
-                {avisosFallo != null && (
-                  <Text selectable className="text-[10px] leading-4 text-rose-500 mt-1 text-center">
-                    {avisosFallo}
-                  </Text>
-                )}
-                <TouchableOpacity
-                  onPress={async () => {
-                    setProbando(true);
-                    setResultadoPrueba(await probarAviso(t));
-                    setProbando(false);
-                  }}
-                  disabled={probando}
-                  className="flex-row items-center justify-center gap-2 py-2.5 mt-1.5 rounded-xl bg-slate-100 dark:bg-slate-800"
+        <View className="flex-row mb-1.5">
+          {["L", "M", "X", "J", "V", "S", "D"].map((d, i) => (
+            <Text key={i} className="flex-1 text-[11px] text-center text-slate-400 dark:text-slate-400">
+              {d}
+            </Text>
+          ))}
+        </View>
+        <View className="flex-row flex-wrap">
+          {Array.from({ length: primerDia }).map((_, i) => (
+            <View key={`h${i}`} style={{ width: `${100 / 7}%`, aspectRatio: 1 }} />
+          ))}
+          {Array.from({ length: diasEnElMes }).map((_, i) => {
+            const dia = i + 1;
+            const x = porDia[dia];
+            const esHoy = esEsteMes && dia === hoy.getDate();
+            return (
+              <TouchableOpacity
+                key={dia}
+                onPress={() => {
+                  if (!x) {
+                    router.push(`/calendario/nuevo?fecha=${mes}-${String(dia).padStart(2, "0")}`);
+                  } else if (x.n === 1) {
+                    const uno = delMes.find((p) => diaDe(p) === dia);
+                    if (uno) router.push(`/calendario/nuevo?id=${uno.id}`);
+                  } else {
+                    // Con varios NO se abre ninguno: no se sabría cuál abrió. Se enseñan.
+                    setDiaAbierto(diaAbierto === dia ? null : dia);
+                  }
+                }}
+                style={{ width: `${100 / 7}%`, aspectRatio: 1 }}
+                className="items-center justify-center p-0.5"
+              >
+                <View
+                  className="w-full h-full rounded-full items-center justify-center"
+                  style={{ backgroundColor: x ? COLOR[x.estado] : "transparent" }}
                 >
-                  <Bell size={13} color="#64748b" />
-                  <Text className="text-[11px] font-bold text-slate-600 dark:text-slate-200">
-                    {t(probando ? "calendario.probando" : "calendario.probar")}
-                  </Text>
-                </TouchableOpacity>
-                {/* ELEGIR EL SONIDO. Lleva a la pantalla de Android de este canal, que deja
-                    escoger cualquier tono del celular. Ver abrirAjustesDelSonido: una lista
-                    dentro de Fino solo podría ofrecer los sonidos que trajera la app. */}
-                <TouchableOpacity
-                  onPress={async () => setNoSeAbrio(!(await abrirAjustesDelSonido()))}
-                  className="flex-row items-center justify-center gap-2 py-2.5 mt-1.5 rounded-xl bg-slate-100 dark:bg-slate-800"
-                >
-                  <Volume2 size={13} color="#64748b" />
-                  <Text className="text-[11px] font-bold text-slate-600 dark:text-slate-200">
-                    {t("calendario.elegirSonido")}
-                  </Text>
-                </TouchableOpacity>
-                {noSeAbrio && (
-                  <Text className="text-[11px] leading-4 text-amber-600 mt-2">
-                    {t("calendario.sonidoNoSeAbrio")}
-                  </Text>
-                )}
-                {resultadoPrueba != null && (
                   <Text
-                    className={`text-[11px] leading-4 mt-2 ${
-                      resultadoPrueba === "listo" ? "text-emerald-600" : "text-amber-600"
+                    className="text-[12px] text-slate-900 dark:text-slate-100"
+                    style={x ? { color: "#ffffff" } : undefined}
+                  >
+                    {dia}
+                  </Text>
+                  {/* HOY, CON UN PUNTO DEBAJO. Elegido por él entre tres formas: el aro gris
+                      no le gustaba, y el fondo suave desaparecía en cuanto el día tenía un
+                      pago. El punto se ve igual sobre el color. */}
+                  {esHoy && (
+                    <View
+                      style={{
+                        width: 4,
+                        height: 4,
+                        borderRadius: 2,
+                        marginTop: 2,
+                        backgroundColor: x ? "#ffffff" : oscuro ? "#f1f5f9" : "#0f172a",
+                      }}
+                    />
+                  )}
+                  {x && x.n > 1 && (
+                    <View
+                      className="absolute -top-0.5 -right-0.5 px-1 rounded-full bg-slate-900 dark:bg-slate-100 border-2 border-white dark:border-slate-900"
+                      style={{ minWidth: 16, height: 16, alignItems: "center", justifyContent: "center" }}
+                    >
+                      <Text className="text-[9px] font-bold text-white dark:text-slate-900">{x.n}</Text>
+                    </View>
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* LA LEYENDA. Sin ella, un círculo ámbar no dice nada la primera vez. */}
+        {delMes.length > 0 && (
+          <View className="flex-row justify-center gap-4 mt-3">
+            {(["pagado", "pendiente", "vencido"] as EstadoDelPago[]).map((e) => (
+              <View key={e} className="flex-row items-center gap-1.5">
+                <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: COLOR[e] }} />
+                <Text className="text-[11px] text-slate-500 dark:text-slate-400">
+                  {t(`calendario.leyenda.${e}`)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {diaAbierto != null && (
+          <View className="mt-4 rounded-2xl p-3 bg-slate-50 dark:bg-slate-800">
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="text-[13px] text-slate-900 dark:text-slate-100">
+                {t("calendario.diaConVarias", { dia: diaAbierto, n: delDiaAbierto.length })}
+              </Text>
+              <TouchableOpacity onPress={() => setDiaAbierto(null)} className="p-1">
+                <X size={15} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+            {delDiaAbierto.map((p) => (
+              <Fila
+                key={p.id}
+                pago={p}
+                estado={estadoDe(p)}
+                cuando={textoCuando(p)}
+                fmt={fmt}
+                t={t}
+                oscuro={oscuro}
+                onPagar={() => marcarPagoDelMes(p.id, mes, true)}
+                onAbrir={() => router.push(`/calendario/nuevo?id=${p.id}`)}
+              />
+            ))}
+          </View>
+        )}
+
+        {delMes.length > 0 && (
+          <View className="flex-row gap-2 mt-5 mb-3">
+            {(["porPagar", "pagados", "recuerdos"] as Filtro[]).map((f) => {
+              const n =
+                f === "pagados"
+                  ? porEstado.pagado
+                  : f === "recuerdos"
+                    ? delMes.filter((p) => p.tipo === "recordatorio").length
+                    : delMes.filter((p) => estadoDe(p) !== "pagado" && p.tipo !== "recordatorio").length;
+              const activo = filtro === f;
+              return (
+                <TouchableOpacity
+                  key={f}
+                  onPress={() => setFiltro(f)}
+                  className={`flex-1 py-2.5 rounded-xl items-center border-[1.5px] ${
+                    activo
+                      ? "bg-slate-900 dark:bg-slate-100 border-slate-900 dark:border-slate-100"
+                      : "border-slate-200 dark:border-slate-700"
+                  }`}
+                >
+                  <Text
+                    className={`text-[12px] ${
+                      activo ? "text-white dark:text-slate-900" : "text-slate-500 dark:text-slate-300"
                     }`}
                   >
-                    {t(`calendario.prueba.${resultadoPrueba}`)}
+                    {t(`calendario.filtro.${f}`)} {n}
                   </Text>
-                )}
-              </View>
-            )}
-
-            <TouchableOpacity
-              onPress={() => router.push("/calendario/nuevo")}
-              className="flex-row items-center justify-center gap-2 py-3 rounded-xl border border-dashed border-slate-300 dark:border-slate-600 mt-1"
-            >
-              <Plus size={15} color="#94a3b8" />
-              <Text className="text-[12px] text-slate-500 dark:text-slate-400">
-                {t("calendario.agregar")}
-              </Text>
-            </TouchableOpacity>
+                </TouchableOpacity>
+              );
+            })}
           </View>
-        </View>
+        )}
+
+        {visibles.map((p) => (
+          <Fila
+            key={p.id}
+            pago={p}
+            estado={estadoDe(p)}
+            cuando={textoCuando(p)}
+            fmt={fmt}
+            t={t}
+            oscuro={oscuro}
+            onPagar={() => marcarPagoDelMes(p.id, mes, true)}
+            onAbrir={() => router.push(`/calendario/nuevo?id=${p.id}`)}
+          />
+        ))}
+
+        {delMes.length === 0 && (
+          <Text className="text-[12px] leading-5 text-slate-500 dark:text-slate-400 my-4">
+            {t("calendario.vacio")}
+          </Text>
+        )}
+        {delMes.length > 0 && visibles.length === 0 && diaAbierto == null && (
+          <Text className="text-[12px] leading-5 text-slate-500 dark:text-slate-400 mb-3">
+            {t("calendario.vacioFiltro")}
+          </Text>
+        )}
+
+        <TouchableOpacity
+          onPress={() => router.push("/calendario/nuevo")}
+          className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 mt-1"
+        >
+          <Plus size={16} color="#64748b" />
+          <Text className="text-[13px] text-slate-500 dark:text-slate-400">
+            {t("calendario.agregar")}
+          </Text>
+        </TouchableOpacity>
       </ScrollView>
     </View>
   );
 }
 
-/** El dibujo de cada tipo: sale plata, entra plata, o solo un aviso. */
-function IconoDelTipo({ tipo, color }: { tipo: TipoDeAnotacion; color: string }) {
-  if (tipo === "ingreso") return <ArrowDownLeft size={19} color={color} />;
-  if (tipo === "recordatorio") return <Bell size={19} color={color} />;
-  return <ArrowUpRight size={19} color={color} />;
+/** Los tres números del resumen. Uno solo para que los tres midan y separen igual. */
+function Cuadro({ texto, valor, color }: { texto: string; valor: string; color: string }) {
+  return (
+    <View className="flex-1 rounded-xl py-2.5 px-2 items-center bg-slate-50 dark:bg-slate-800">
+      <Text className="text-[11px] text-slate-500 dark:text-slate-400 mb-1">{texto}</Text>
+      <Text className="text-[14px] font-bold" style={{ color }}>
+        {valor}
+      </Text>
+    </View>
+  );
 }
 
-function Chip({
-  texto,
-  activo,
-  color,
-  onPress,
+type T = (k: string, v?: Record<string, string | number>) => string;
+
+function TarjetaProxima({
+  pago,
+  mes,
+  hoy,
+  t,
+  fmt,
+  monthNames,
+  oscuro,
+  onPagar,
+  onAbrir,
 }: {
-  texto: string;
-  activo: boolean;
-  color?: string;
-  onPress: () => void;
+  pago: PagoProgramado;
+  mes: string;
+  hoy: Date;
+  t: T;
+  fmt: (n: number) => string;
+  monthNames: string[];
+  oscuro: boolean;
+  onPagar: () => void;
+  onAbrir: () => void;
 }) {
+  const estado = estadoEn(pago, mes, hoy);
+  const color = COLOR[estado];
+  const Dibujo = iconoDe(pago.icono || iconoSugerido(pago.nombre, pago.tipo));
+  const x = cuandoTexto(pago, mes, hoy);
+  const f = x.fecha ? x.fecha.split("-").map(Number) : null;
   return (
     <TouchableOpacity
-      onPress={onPress}
-      className={`flex-row items-center gap-1.5 px-3 py-1.5 rounded-full ${
-        activo
-          ? "bg-slate-900 dark:bg-slate-100"
-          : "border-[1.5px] border-slate-200 dark:border-slate-700"
-      }`}
+      onPress={onAbrir}
+      activeOpacity={0.9}
+      className="rounded-2xl p-3.5 mb-4 bg-slate-50 dark:bg-slate-800"
     >
-      {color && !activo && (
-        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: color }} />
-      )}
-      <Text
-        className={`text-[12px] ${
-          activo ? "text-white dark:text-slate-900" : "text-slate-500 dark:text-slate-300"
-        }`}
-      >
-        {texto}
+      <Text className="text-[11px] text-slate-500 dark:text-slate-400 mb-2.5">
+        {t("calendario.proximo")}
       </Text>
+      <View className="flex-row items-center gap-3">
+        <View
+          className="w-[42px] h-[42px] rounded-xl items-center justify-center"
+          style={{ backgroundColor: color + (oscuro ? "33" : "22") }}
+        >
+          <Dibujo size={21} color={color} strokeWidth={2.2} />
+        </View>
+        <View className="flex-1">
+          <Text className="text-[15px] text-slate-900 dark:text-slate-100" numberOfLines={1}>
+            {pago.nombre}
+            {pago.monto != null ? ` · ${fmt(pago.monto)}` : ""}
+          </Text>
+          <Text className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5" numberOfLines={1}>
+            {t(x.clave, {
+              dias: x.dias ?? 0,
+              dia: f ? f[2] : 0,
+              mes: f ? monthNames[f[1] - 1] : "",
+            })}
+          </Text>
+        </View>
+        {pago.tipo !== "recordatorio" && (
+          <TouchableOpacity
+            onPress={onPagar}
+            className="px-4 h-10 rounded-xl items-center justify-center bg-emerald-600"
+          >
+            <Text className="text-[13px] font-bold text-white">{t("calendario.pagar")}</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+/** Una fila de la lista. Todas iguales: mismo alto, mismo dibujo, mismos tres tamaños. */
+function Fila({
+  pago,
+  estado,
+  cuando,
+  fmt,
+  t,
+  oscuro,
+  onPagar,
+  onAbrir,
+}: {
+  pago: PagoProgramado;
+  estado: EstadoDelPago;
+  cuando: string;
+  fmt: (n: number) => string;
+  t: T;
+  oscuro: boolean;
+  onPagar: () => void;
+  onAbrir: () => void;
+}) {
+  const color = COLOR[estado];
+  const Dibujo = iconoDe(pago.icono || iconoSugerido(pago.nombre, pago.tipo));
+  const pagado = estado === "pagado";
+  return (
+    <TouchableOpacity
+      onPress={onAbrir}
+      activeOpacity={0.9}
+      className="flex-row items-center gap-3 p-3 rounded-2xl mb-2 bg-slate-50 dark:bg-slate-800"
+      style={{ borderLeftWidth: 3, borderLeftColor: color }}
+    >
+      <View
+        className="w-[38px] h-[38px] rounded-xl items-center justify-center"
+        style={{ backgroundColor: color + (oscuro ? "33" : "22") }}
+      >
+        <Dibujo size={20} color={color} strokeWidth={2.2} />
+      </View>
+      <View className="flex-1">
+        <Text
+          className={`text-[14px] ${pagado ? "text-slate-400 dark:text-slate-500" : "text-slate-900 dark:text-slate-100"}`}
+          numberOfLines={1}
+        >
+          {pago.nombre}
+        </Text>
+        <Text className="text-[12px] mt-0.5" style={{ color: pagado ? "#94a3b8" : color }} numberOfLines={1}>
+          {cuando}
+        </Text>
+      </View>
+      <View className="items-end">
+        {pago.monto != null && (
+          <Text
+            className={`text-[15px] ${pagado ? "text-slate-400" : "text-slate-900 dark:text-slate-100"}`}
+          >
+            {pago.tipo === "ingreso" ? "+" : "−"}
+            {fmt(pago.monto)}
+          </Text>
+        )}
+        {pago.tipo !== "recordatorio" &&
+          (pagado ? (
+            <View className="mt-1.5">
+              <Check size={20} color={COLOR.pagado} strokeWidth={3} />
+            </View>
+          ) : (
+            <TouchableOpacity
+              onPress={onPagar}
+              className="mt-1.5 px-3 py-1.5 rounded-lg bg-emerald-600"
+            >
+              <Text className="text-[12px] font-bold text-white">{t("calendario.pagar")}</Text>
+            </TouchableOpacity>
+          ))}
+      </View>
     </TouchableOpacity>
   );
 }

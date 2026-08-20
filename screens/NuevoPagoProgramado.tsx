@@ -1,35 +1,47 @@
 /**
- * AGREGAR O EDITAR UN PAGO DEL CALENDARIO (18/08/2026)
+ * AGREGAR O EDITAR UN PAGO DEL CALENDARIO (18/08/2026, rediseñado el 19)
  *
  * Aquí se cumple lo que pidió: *"pueda yo personalizar qué día y hora me avise para
- * pagarlo"*. El aviso es de **cada pago** y no un ajuste general: el recibo de la luz y el
- * sueldo no se avisan igual.
+ * pagarlo"*. El aviso es de **cada pago** y no un ajuste general.
  *
- * **LA FECHA SE ELIGE EN EL CALENDARIO GRANDE, NO AQUÍ.** Lo preguntó
- * él y tenía razón: *"si puedo escoger libremente en el calendario cualquier fecha, ¿sería
- * necesario que esté la opción qué día de mes?"*. No lo era — eran dos campos para decir lo
- * mismo, y quien llenara uno se quedaba dudando del otro. Ahora se toca un día y ya está; si
- * el pago se repite, ese día es el de todos los meses.
+ * **EL REDISEÑO DEL 19/08, con sus palabras:** *"que el usuario tenga la menor interacción,
+ * intuitiva, quitar el exceso de texto que no sirve, que el usuario pueda agregarle un icono
+ * personalizado"*. De nueve bloques quedaron cinco:
  *
- * No se usa el selector de Android porque es `@react-native-community/datetimepicker`, que
- * es código nativo: obligaría a un APK nuevo para una pantalla que así viaja por internet.
+ * - **Fuera los seis títulos en mayúsculas.** El sitio y el dibujo ya dicen qué es cada campo.
+ * - **Fuera las tres notas al pie**: la del día 31, la de la repetición y la del primer aviso.
+ *   La del 31 sobra porque ahora se dice "el último día de cada mes", que es lo que es.
+ * - **Monto y fecha van juntos**, y los días y la hora del aviso en un solo renglón.
+ * - **El dibujo se pone SOLO al escribir el nombre** (`iconoSugerido`). En el caso normal,
+ *   agregar un pago son cero toques de más; el lápiz está para cuando no acierta.
+ *
+ * La fecha llega hecha del calendario grande — aquí hubo uno propio y él lo mandó quitar:
+ * *"cuando dije tocar libremente el calendario me refería a la segunda imagen"*.
  */
 import { useState } from "react";
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { CalendarDays, Clock, Repeat, Trash2 } from "lucide-react-native";
+import { Bell, CalendarDays, Pencil, Repeat, Trash2, X } from "lucide-react-native";
+import { useColorScheme } from "nativewind";
 import BackButton from "@/components/BackButton";
 import Toggle from "@/components/Toggle";
 import { useAppData } from "@/contexts/AppDataContext";
+import { TODOS_LOS_GRUPOS, iconoDe } from "@/constants/iconos";
 import {
+  iconoSugerido,
   mesDe,
-  primerAviso,
+  textoDeRepeticion,
   validarPago,
-  type PagoProgramado,
   type TipoDeAnotacion,
 } from "@/utils/calendarioPagos";
 
-/** Deja solo dígitos y no deja pasarse del tope. Para los días y la hora. */
+/** El color con el que se pinta el dibujo, según el tipo. Los mismos tres de la otra pantalla. */
+const TINTA: Record<TipoDeAnotacion, string> = {
+  pago: "#d97706",
+  ingreso: "#059669",
+  recordatorio: "#64748b",
+};
+
 function soloNumeros(texto: string, tope: number): string {
   const limpio = texto.replace(/\D/g, "").slice(0, 2);
   if (limpio === "") return "";
@@ -53,27 +65,25 @@ export default function NuevoPagoProgramado({
   const { t, monthNames, pagosProgramados, guardarPagoProgramado, quitarPagoProgramado } =
     useAppData();
   const insets = useSafeAreaInsets();
+  const { colorScheme } = useColorScheme();
+  const oscuro = colorScheme === "dark";
 
   const existente = pagosProgramados.find((p) => p.id === id);
   const hoy = new Date();
 
   const [nombre, setNombre] = useState(existente?.nombre ?? "");
   const [tipo, setTipo] = useState<TipoDeAnotacion>(existente?.tipo ?? "pago");
-  /**
-   * El monto se teclea como TEXTO y se convierte una sola vez, al guardar. Como número,
-   * escribir "12." daría saltos bajo el dedo. Y la coma vale como el punto, porque en Perú se
-   * escribe "12,50" tanto como "12.50". Misma decisión que en el precio de un producto.
-   */
   const [monto, setMonto] = useState(existente?.monto != null ? String(existente.monto) : "");
-
   /**
-   * LA FECHA LLEGA HECHA, DEL DÍA QUE SE TOCÓ EN EL CALENDARIO GRANDE.
+   * EL DIBUJO ELEGIDO A MANO, SI SE ELIGIÓ. `null` quiere decir *"el que decida el nombre"*.
    *
-   * Aquí hubo un calendario propio y él lo mandó quitar: *"cuando dije tocar libremente el
-   * calendario me refería a la segunda imagen, no que lo introdujeras"*. Tenía razón — eran
-   * dos calendarios para lo mismo, y el de esta pantalla obligaba a volver a buscar el día
-   * que se acababa de tocar.
+   * Guardar aquí el sugerido desde el principio rompería lo que hace agradable a esto: al
+   * corregir el nombre —de "Luz" a "Luz del depa"— el dibujo se quedaría clavado en el
+   * primero que salió. Con `null`, sigue al nombre hasta que alguien decide otra cosa.
    */
+  const [iconoElegido, setIconoElegido] = useState<string | null>(existente?.icono ?? null);
+  const [eligiendoIcono, setEligiendoIcono] = useState(false);
+
   const elegida = existente
     ? `${existente.mesUnico ?? mesDe(hoy)}-${dosDigitos(existente.dia)}`
     : (fecha ?? `${mesDe(hoy)}-${dosDigitos(hoy.getDate())}`);
@@ -86,24 +96,11 @@ export default function NuevoPagoProgramado({
   const [horaMM, setHoraMM] = useState((existente?.avisoHora ?? "09:00").split(":")[1]);
 
   const esRecordatorio = tipo === "recordatorio";
-  /**
-   * ¿EL AVISO DE ESTE MES YA PASÓ?
-   *
-   * Se compara la hora elegida con la de ahora. Es el caso que le hizo perder una noche:
-   * elegir el mismo minuto en que se está guardando deja el primer aviso para el mes que
-   * viene, y eso hay que decirlo donde se ve, no en letra chica.
-   */
-  const avisoDeEsteMesYaPaso = (() => {
-    const [aa, mm] = mesVisible.split("-").map(Number);
-    const cuando = new Date(
-      aa,
-      mm - 1,
-      dia - Number(diasAntes || 0),
-      Number(horaHH || 0),
-      Number(horaMM || 0)
-    );
-    return cuando.getTime() <= Date.now();
-  })();
+  const icono = iconoElegido ?? iconoSugerido(nombre, tipo);
+  const Dibujo = iconoDe(icono);
+  const tinta = TINTA[tipo];
+  const repeticion = textoDeRepeticion(dia, repite);
+  const campo = oscuro ? "bg-slate-800" : "bg-slate-100";
 
   function guardar() {
     const montoNumero = esRecordatorio ? undefined : Number(monto.replace(",", "."));
@@ -112,27 +109,23 @@ export default function NuevoPagoProgramado({
       Alert.alert(t("calendario.nuevo.faltaTitulo"), t(`calendario.nuevo.falta.${check.motivo}`));
       return;
     }
-    const pago: PagoProgramado = {
+    guardarPagoProgramado({
       id: existente?.id ?? `pago_${Date.now()}`,
       nombre: nombre.trim(),
       tipo,
       monto: montoNumero,
       dia,
       repite: repite ? "mensual" : "unica",
-      // Solo tiene sentido cuando NO se repite. Guardándolo siempre, apagar y volver a
-      // encender la repetición dejaría un mes pegado que nadie puede ver ni cambiar.
       mesUnico: repite ? undefined : mesVisible,
+      // Se guarda el que se ve, sugerido o elegido: si se guardara solo el elegido, un pago
+      // sin tocar el lápiz saldría en la lista con el dibujo de reserva y no con su rayo.
+      icono,
       categoria: existente?.categoria,
       avisoDiasAntes: Number(diasAntes || 0),
-      // Siempre "HH:MM" con dos dígitos: `cuandoAvisar` lo parte por los dos puntos, y un
-      // "9:0" daría una hora válida por casualidad pero la pantalla enseñaría "9:0".
       avisoHora: `${(horaHH || "0").padStart(2, "0")}:${(horaMM || "0").padStart(2, "0")}`,
-      // Al editar se conservan los meses ya pagados. Perderlos volvería a poner en rojo
-      // recibos que la persona ya pagó, solo por haberle cambiado el nombre.
       pagados: existente?.pagados ?? [],
       creado: existente?.creado ?? Date.now(),
-    };
-    guardarPagoProgramado(pago);
+    });
     onBack();
   }
 
@@ -169,7 +162,6 @@ export default function NuevoPagoProgramado({
       </View>
 
       <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
-        <Etiqueta texto={t("calendario.nuevo.queEs")} />
         <View className="flex-row gap-2 mb-4">
           {(["pago", "ingreso", "recordatorio"] as TipoDeAnotacion[]).map((x) => (
             <TouchableOpacity
@@ -180,8 +172,10 @@ export default function NuevoPagoProgramado({
               }`}
             >
               <Text
-                className={`text-[12px] font-bold ${
-                  tipo === x ? "text-white dark:text-slate-900" : "text-slate-600 dark:text-slate-300"
+                className={`text-[13px] ${
+                  tipo === x
+                    ? "text-white dark:text-slate-900 font-bold"
+                    : "text-slate-600 dark:text-slate-300"
                 }`}
               >
                 {t(`calendario.tipo.${x}`)}
@@ -190,145 +184,150 @@ export default function NuevoPagoProgramado({
           ))}
         </View>
 
-        <Etiqueta texto={t("calendario.nuevo.nombre")} />
-        <TextInput
-          value={nombre}
-          onChangeText={setNombre}
-          placeholder={t("calendario.nuevo.nombreEjemplo")}
-          placeholderTextColor="#94a3b8"
-          className="rounded-xl px-4 h-12 mb-4 text-[15px] bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-        />
+        {/* EL DIBUJO Y EL NOMBRE, EN LA MISMA FILA. El dibujo sale del nombre mientras se
+            escribe; el lápiz solo hace falta cuando no acierta. */}
+        <View className="flex-row items-center gap-3 mb-3">
+          <TouchableOpacity
+            onPress={() => setEligiendoIcono((v) => !v)}
+            className="w-[52px] h-[52px] rounded-2xl items-center justify-center"
+            style={{ backgroundColor: tinta + (oscuro ? "33" : "22") }}
+          >
+            <Dibujo size={26} color={tinta} strokeWidth={2.2} />
+            <View className="absolute -bottom-1 -right-1 w-[21px] h-[21px] rounded-full items-center justify-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700">
+              <Pencil size={11} color="#64748b" />
+            </View>
+          </TouchableOpacity>
+          <TextInput
+            value={nombre}
+            onChangeText={setNombre}
+            placeholder={t("calendario.nuevo.nombreEjemplo")}
+            placeholderTextColor="#94a3b8"
+            className={`flex-1 h-[52px] rounded-2xl px-4 text-[16px] ${campo} text-slate-900 dark:text-slate-100`}
+          />
+        </View>
 
-        {/* Un recordatorio NO lleva monto: si lo llevara sería un pago, y la diferencia entre
-            los dos es justo que uno toca las cuentas y el otro no. */}
-        {!esRecordatorio && (
-          <>
-            <Etiqueta texto={t("calendario.nuevo.monto")} />
-            <TextInput
-              value={monto}
-              onChangeText={setMonto}
-              keyboardType="decimal-pad"
-              placeholder="0.00"
-              placeholderTextColor="#94a3b8"
-              className="rounded-xl px-4 h-12 mb-4 text-[15px] bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-            />
-          </>
+        {eligiendoIcono && (
+          <View className="rounded-2xl p-3 mb-3 bg-slate-50 dark:bg-slate-800">
+            <View className="flex-row items-center justify-between mb-2">
+              <Text className="text-[12px] text-slate-500 dark:text-slate-400">
+                {t("calendario.nuevo.elegirDibujo")}
+              </Text>
+              <TouchableOpacity onPress={() => setEligiendoIcono(false)} className="p-1">
+                <X size={16} color="#94a3b8" />
+              </TouchableOpacity>
+            </View>
+            {/* Los mismos 236 dibujos de las categorías, no otros: dos catálogos distintos
+                para lo mismo es uno que se queda atrás. Con alto máximo para que la lista de
+                abajo no se pierda de vista mientras se elige. */}
+            <ScrollView style={{ maxHeight: 220 }} nestedScrollEnabled>
+              <View className="flex-row flex-wrap">
+                {TODOS_LOS_GRUPOS.flatMap((g) => g.iconos).map((x) => {
+                  const D = iconoDe(x);
+                  const puesto = x === icono;
+                  return (
+                    <TouchableOpacity
+                      key={x}
+                      onPress={() => {
+                        setIconoElegido(x);
+                        setEligiendoIcono(false);
+                      }}
+                      style={{ width: "20%", aspectRatio: 1 }}
+                      className="items-center justify-center p-1"
+                    >
+                      <View
+                        className="w-full h-full rounded-xl items-center justify-center"
+                        style={{ backgroundColor: puesto ? tinta : "transparent" }}
+                      >
+                        <D size={22} color={puesto ? "#ffffff" : "#64748b"} strokeWidth={2} />
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </ScrollView>
+          </View>
         )}
 
-        <Etiqueta texto={t("calendario.nuevo.fecha")} Icono={CalendarDays} />
-        <View className="rounded-xl bg-slate-100 dark:bg-slate-800 px-4 h-12 mb-4 flex-row items-center">
-          <Text className="text-[15px] text-slate-900 dark:text-slate-100">
-            {t("calendario.nuevo.fechaLarga", {
-              dia,
-              mes: monthNames[Number(mesVisible.split("-")[1]) - 1],
-              anio: mesVisible.split("-")[0],
-            })}
-          </Text>
-        </View>
-
-        <View className="flex-row items-center gap-3 mb-1">
-          <Repeat size={16} color="#94a3b8" />
-          <Text className="flex-1 text-[13px] text-slate-700 dark:text-slate-200">
-            {t("calendario.nuevo.repite")}
-          </Text>
-          <Toggle on={repite} onChange={setRepite} />
-        </View>
-        <Text className="text-[11px] leading-4 text-slate-400 mb-5">
-          {repite
-            ? t("calendario.nuevo.repiteHint", { dia })
-            : t("calendario.nuevo.unaVezHint", {
+        <View className="flex-row gap-2.5 mb-3">
+          {!esRecordatorio && (
+            <View className={`flex-1 h-[50px] rounded-2xl px-4 flex-row items-center ${campo}`}>
+              <Text className="text-[13px] text-slate-400 mr-1.5">S/</Text>
+              <TextInput
+                value={monto}
+                onChangeText={setMonto}
+                keyboardType="decimal-pad"
+                placeholder="0.00"
+                placeholderTextColor="#94a3b8"
+                className="flex-1 text-[16px] text-slate-900 dark:text-slate-100"
+              />
+            </View>
+          )}
+          <View
+            className={`h-[50px] rounded-2xl px-4 flex-row items-center gap-2 ${campo} ${
+              esRecordatorio ? "flex-1" : "flex-[1.15]"
+            }`}
+          >
+            <CalendarDays size={16} color="#64748b" />
+            <Text className="text-[15px] text-slate-900 dark:text-slate-100">
+              {t("calendario.nuevo.fechaCorta", {
                 dia,
                 mes: monthNames[Number(mesVisible.split("-")[1]) - 1],
               })}
-        </Text>
-
-        <Etiqueta texto={t("calendario.nuevo.avisarme")} Icono={Clock} />
-        <View className="flex-row items-center gap-2.5 mb-2.5">
-          <TextInput
-            value={diasAntes}
-            onChangeText={(v) => setDiasAntes(soloNumeros(v, 30))}
-            keyboardType="number-pad"
-            placeholder="0"
-            placeholderTextColor="#94a3b8"
-            className="w-14 h-12 rounded-xl text-[15px] text-center bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
-          />
-          <Text className="flex-1 text-[13px] text-slate-600 dark:text-slate-300">
-            {t("calendario.nuevo.diasAntesTexto")}
-          </Text>
+            </Text>
+          </View>
         </View>
 
-        <View className="flex-row items-center gap-2.5 mb-2">
-          <View className="flex-row items-center">
+        <View className="flex-row items-center gap-2.5 py-3.5 border-t-[1.5px] border-slate-100 dark:border-slate-800">
+          <Repeat size={17} color="#64748b" />
+          <Text className="flex-1 text-[14px] text-slate-900 dark:text-slate-100">
+            {t(repeticion.clave, {
+              dia: repeticion.dia ?? dia,
+              mes: monthNames[Number(mesVisible.split("-")[1]) - 1],
+            })}
+          </Text>
+          <Toggle on={repite} onChange={setRepite} />
+        </View>
+
+        <View className="flex-row items-center gap-2.5 py-3.5 border-t-[1.5px] border-b-[1.5px] border-slate-100 dark:border-slate-800 mb-5">
+          <Bell size={17} color="#64748b" />
+          <Text className="flex-1 text-[14px] text-slate-900 dark:text-slate-100">
+            {t("calendario.nuevo.avisarme")}
+          </Text>
+          <View className={`flex-row items-center rounded-xl px-2 ${campo}`}>
+            <TextInput
+              value={diasAntes}
+              onChangeText={(v) => setDiasAntes(soloNumeros(v, 30))}
+              keyboardType="number-pad"
+              placeholder="0"
+              placeholderTextColor="#94a3b8"
+              className="w-7 py-2 text-[14px] text-center text-slate-900 dark:text-slate-100"
+            />
+            <Text className="text-[12px] text-slate-500 dark:text-slate-400 pr-1">
+              {t("calendario.nuevo.diasCorto")}
+            </Text>
+          </View>
+          <View className={`flex-row items-center rounded-xl px-2 ${campo}`}>
             <TextInput
               value={horaHH}
               onChangeText={(v) => setHoraHH(soloNumeros(v, 23))}
               keyboardType="number-pad"
-              placeholder="09"
-              placeholderTextColor="#94a3b8"
-              className="w-14 h-12 rounded-xl text-[15px] text-center bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+              className="w-6 py-2 text-[14px] text-center text-slate-900 dark:text-slate-100"
             />
-            <Text className="text-[15px] text-slate-400 px-1.5">:</Text>
+            <Text className="text-[14px] text-slate-400">:</Text>
             <TextInput
               value={horaMM}
               onChangeText={(v) => setHoraMM(soloNumeros(v, 59))}
               keyboardType="number-pad"
-              placeholder="00"
-              placeholderTextColor="#94a3b8"
-              className="w-14 h-12 rounded-xl text-[15px] text-center bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-slate-100"
+              className="w-6 py-2 text-[14px] text-center text-slate-900 dark:text-slate-100"
             />
           </View>
-          <Text className="flex-1 text-[13px] text-slate-600 dark:text-slate-300">
-            {t("calendario.nuevo.aLasTexto")}
-          </Text>
         </View>
-        {/* CUÁNDO VA A SONAR DE VERDAD, CON LA FECHA CALCULADA.
-            Antes decía "te avisaré 1 día antes, a las 09:00" y sonaba bien, pero elegir HOY
-            con un día de antelación pide un aviso de AYER: no se programa —Android lo
-            dispararía al instante— y la persona se queda esperando algo que no va a llegar.
-            Fue justo lo que preguntó: *"le pondré la fecha de hoy, hora 15:55, ¿debería
-            llegarme alguna notificación?"*. Ahora se dice el día exacto del primer aviso, y
-            si ese primer aviso cae el mes que viene, se dice también. */}
-        <Text className="text-[11px] leading-4 text-slate-400 mb-6">
-          {(() => {
-            const suena = primerAviso(
-              {
-                id: "",
-                nombre,
-                tipo,
-                dia,
-                repite: repite ? "mensual" : "unica",
-                mesUnico: repite ? undefined : mesVisible,
-                avisoDiasAntes: Number(diasAntes || 0),
-                avisoHora: `${(horaHH || "0").padStart(2, "0")}:${(horaMM || "0").padStart(2, "0")}`,
-                pagados: [],
-                creado: 0,
-              },
-              new Date()
-            );
-            if (suena == null) return t("calendario.nuevo.avisoNunca");
-            return t("calendario.nuevo.avisoSuena", {
-              dia: suena.getDate(),
-              mes: monthNames[suena.getMonth()],
-              hora: `${dosDigitos(suena.getHours())}:${dosDigitos(suena.getMinutes())}`,
-            });
-          })()}
-        </Text>
 
-        {/* Y SI EL DE ESTE MES YA PASÓ, SE DICE EN ÁMBAR Y NO EN GRIS.
-            Puso el aviso a las 04:22 cuando en el celular eran las 04:22, y el primero que
-            quedaba era el del mes siguiente. Estaba escrito, pero en gris de once puntos
-            debajo de dos campos: se lee cuando ya se está buscando el fallo, no antes. */}
-        {avisoDeEsteMesYaPaso && (
-          <View className="rounded-xl bg-amber-50 dark:bg-amber-950/40 p-3 mb-6 flex-row gap-2.5">
-            <Clock size={15} color="#b45309" />
-            <Text className="flex-1 text-[11px] leading-4 text-amber-800 dark:text-amber-300">
-              {t("calendario.nuevo.yaPaso")}
-            </Text>
-          </View>
-        )}
-
-        <TouchableOpacity onPress={guardar} className="h-12 rounded-xl items-center justify-center bg-emerald-600">
-          <Text className="text-[14px] font-bold text-white">{t("calendario.nuevo.guardar")}</Text>
+        <TouchableOpacity
+          onPress={guardar}
+          className="h-[50px] rounded-2xl items-center justify-center bg-emerald-600"
+        >
+          <Text className="text-[15px] font-bold text-white">{t("calendario.nuevo.guardar")}</Text>
         </TouchableOpacity>
 
         {existente && (
@@ -343,23 +342,6 @@ export default function NuevoPagoProgramado({
           </TouchableOpacity>
         )}
       </ScrollView>
-    </View>
-  );
-}
-
-/** El título de cada bloque, con su dibujo cuando lo tiene. Uno solo para que los seis midan
- *  y separen igual: escritos a mano, cada uno acababa con su propio margen. */
-function Etiqueta({
-  texto,
-  Icono,
-}: {
-  texto: string;
-  Icono?: React.ComponentType<{ size: number; color: string }>;
-}) {
-  return (
-    <View className="flex-row items-center gap-1.5 mb-2">
-      {Icono && <Icono size={13} color="#94a3b8" />}
-      <Text className="text-[11px] font-bold text-slate-500 dark:text-slate-400">{texto}</Text>
     </View>
   );
 }

@@ -281,3 +281,152 @@ export function movimientoDelPago(
     description: p.nombre,
   };
 }
+
+/**
+ * EL DIBUJO QUE LE PEGA AL NOMBRE, SIN QUE HAYA QUE ELEGIRLO (19/08/2026)
+ *
+ * Pedido suyo: *"que el usuario pueda agregarle un icono personalizado a su recordatorio,
+ * pago, ingreso"*, junto con *"que el usuario tenga la menor interacción"*. Las dos cosas a
+ * la vez se resuelven así: **el icono aparece solo al escribir el nombre**, y el lápiz lo
+ * cambia si no acierta. En el caso normal son cero toques.
+ *
+ * Las palabras van **sin tildes y en minúscula** porque así llega lo que se compara: quien
+ * escribe "Luz" y quien escribe "LUZ" tienen que ver el mismo rayo.
+ *
+ * **Se busca por trozo y no por igualdad**: "recibo de luz" y "luz del mes" tienen que dar
+ * el rayo igual. Y el orden importa — gana la primera que encaja, así que las palabras más
+ * específicas van antes: "internet" antes que "net" no, pero "netflix" antes que "net" sí.
+ */
+const DIBUJO_POR_PALABRA: [string, string][] = [
+  // Marcas primero: son las más concretas y las que más ilusión hacen.
+  ["netflix", "marca:youtube"],
+  ["spotify", "marca:spotify"],
+  ["youtube", "marca:youtube"],
+  ["disney", "marca:youtube"],
+  ["amazon", "marca:amazon"],
+  ["prime", "marca:amazon"],
+  ["steam", "marca:steam"],
+  ["playstation", "marca:playstation"],
+  ["xbox", "marca:xbox"],
+  ["discord", "marca:discord"],
+  ["whatsapp", "marca:whatsapp"],
+  // Servicios de casa.
+  ["luz", "Zap"],
+  ["electric", "Zap"],
+  ["recibo de agua", "Droplet"],
+  ["agua", "Droplet"],
+  ["gas", "Flame"],
+  ["internet", "Wifi"],
+  ["wifi", "Wifi"],
+  ["cable", "MonitorSmartphone"],
+  ["telefono", "Phone"],
+  ["celular", "Smartphone"],
+  ["plan", "Smartphone"],
+  // Casa y vida.
+  ["alquiler", "Home"],
+  ["renta", "Home"],
+  ["casa", "Home"],
+  ["colegio", "School"],
+  ["universidad", "School"],
+  ["matricula", "School"],
+  ["pension", "School"],
+  ["seguro", "ShieldCheck"],
+  ["salud", "HeartPulse"],
+  ["clinica", "HeartPulse"],
+  ["gimnasio", "Dumbbell"],
+  ["gym", "Dumbbell"],
+  ["auto", "Car"],
+  ["carro", "Car"],
+  ["gasolina", "Fuel"],
+  ["mascota", "PawPrint"],
+  ["perro", "Dog"],
+  ["gato", "Cat"],
+  // Dinero.
+  ["sueldo", "Wallet"],
+  ["salario", "Wallet"],
+  ["pago", "Wallet"],
+  ["prestamo", "Landmark"],
+  ["tarjeta", "CreditCard"],
+  ["banco", "Landmark"],
+];
+
+/** Con qué se queda cuando ninguna palabra encaja. Uno por tipo, para que nunca salga vacío. */
+const DIBUJO_POR_DEFECTO: Record<TipoDeAnotacion, string> = {
+  pago: "Wallet",
+  ingreso: "TrendingUp",
+  recordatorio: "Bell",
+};
+
+/** Quita tildes y mayúsculas, que es la única forma de que "Água" y "agua" se comparen igual. */
+function sinTildes(texto: string): string {
+  return texto
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "");
+}
+
+export function iconoSugerido(nombre: string, tipo: TipoDeAnotacion): string {
+  const limpio = sinTildes(nombre);
+  for (const [palabra, dibujo] of DIBUJO_POR_PALABRA) {
+    if (limpio.includes(palabra)) return dibujo;
+  }
+  return DIBUJO_POR_DEFECTO[tipo];
+}
+
+/**
+ * QUÉ DICE EL RENGLÓN DE DEBAJO DEL NOMBRE, EN LENGUAJE DE PERSONA.
+ *
+ * Antes decía *"el 19"* y *"se pasó el 5"*, y él lo cortó en seco: *"no tiene sentido esas
+ * letras"*. Tenía razón — un número suelto obliga a mirar el calendario y restar. Ahora dice
+ * **hoy**, **mañana**, **en 3 días** o el día de la semana con su fecha, que es como lo diría
+ * cualquiera.
+ *
+ * Devuelve la clave y sus valores en vez del texto ya hecho: traducir es cosa de la pantalla,
+ * y así esto se puede comprobar con números en las pruebas, sin idioma de por medio.
+ *
+ * **El verbo cambia con el tipo**, y no es un adorno: un sueldo no "vence", llega. Un
+ * recordatorio tampoco vence: avisa.
+ */
+export function cuandoTexto(
+  p: PagoProgramado,
+  mes: string,
+  hoy: Date
+): { clave: string; dias?: number; fecha?: string } {
+  const estado = estadoEn(p, mes, hoy);
+  const fecha = fechaEnElMes(p, mes);
+  if (fecha === "") return { clave: "calendario.cuando.sinFecha" };
+
+  if (estado === "pagado") return { clave: `calendario.cuando.pagado.${p.tipo}`, fecha };
+
+  // Días entre hoy y el día del pago. Se cuenta a mediodía a propósito: comparando a las
+  // 00:00 un cambio de horario puede dar 0,99 días y "mañana" se convertiría en "hoy".
+  const [aa, mm, dd] = fecha.split("-").map(Number);
+  const alMediodia = new Date(aa, mm - 1, dd, 12).getTime();
+  const hoyAlMediodia = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 12).getTime();
+  const dias = Math.round((alMediodia - hoyAlMediodia) / 86400000);
+
+  if (dias < 0) return { clave: "calendario.cuando.vencio", dias: -dias };
+  if (dias === 0) return { clave: `calendario.cuando.hoy.${p.tipo}` };
+  if (dias === 1) return { clave: `calendario.cuando.manana.${p.tipo}` };
+  if (dias <= 6) return { clave: `calendario.cuando.enDias.${p.tipo}`, dias };
+  return { clave: `calendario.cuando.fecha.${p.tipo}`, fecha };
+}
+
+/**
+ * CÓMO SE CUENTA LA REPETICIÓN, SIN NOTA AL PIE.
+ *
+ * El texto viejo era *"Todos los 31 de cada mes. En los meses que no tienen ese día, el
+ * último."* — dos frases para explicar un recorte. Con el 31 no hace falta explicar nada:
+ * **el 31 de cada mes ES el último día**, así que se llama por su nombre y la nota sobra.
+ *
+ * El 29 y el 30 son los únicos que siguen necesitando la aclaración, y son raros.
+ */
+export function textoDeRepeticion(
+  dia: number,
+  repite: boolean
+): { clave: string; dia?: number } {
+  if (!repite) return { clave: "calendario.repite.unaVez", dia };
+  if (dia === 31) return { clave: "calendario.repite.ultimoDia" };
+  if (dia === 29 || dia === 30) return { clave: "calendario.repite.casiUltimo", dia };
+  return { clave: "calendario.repite.cadaMes", dia };
+}

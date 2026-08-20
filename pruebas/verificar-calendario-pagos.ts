@@ -20,7 +20,10 @@ import {
   movimientoDelPago,
   pagosDelMes,
   proximoPago,
+  cuandoTexto,
+  iconoSugerido,
   primerAviso,
+  textoDeRepeticion,
   validarPago,
   type PagoProgramado,
 } from "@/utils/calendarioPagos";
@@ -226,6 +229,74 @@ const unicoPasado = primerAviso(
   AHORA
 );
 ok(unicoPasado === null, "y un pago de una sola vez cuya fecha ya paso no avisa nunca");
+
+// ---------------------------------------------------------------------------
+// EL DIBUJO QUE SE SUGIERE SOLO
+//
+// Es lo que hace que agregar un pago sean cero toques de mas: se escribe "Luz" y el rayo
+// aparece. Si esto falla no se rompe nada -sale el dibujo por defecto- pero se pierde justo
+// la parte que hacia la pantalla agradable.
+console.log("\nEl dibujo que sale solo");
+
+ok(iconoSugerido("Luz", "pago") === "Zap", "«Luz» trae el rayo");
+ok(iconoSugerido("LUZ", "pago") === "Zap", "y da igual en mayusculas");
+ok(iconoSugerido("Recibo de luz", "pago") === "Zap", "y dentro de una frase");
+ok(iconoSugerido("Agua", "pago") === "Droplet", "«Agua» trae la gota");
+ok(iconoSugerido("Água", "pago") === "Droplet", "con tilde tambien: se comparan sin tildes");
+ok(iconoSugerido("Internet", "pago") === "Wifi", "«Internet» trae el wifi");
+ok(iconoSugerido("Spotify", "pago") === "marca:spotify", "una marca trae su logo");
+ok(iconoSugerido("Mi sueldo", "ingreso") === "Wallet", "«sueldo» trae la billetera");
+ok(iconoSugerido("Cualquier cosa", "pago") === "Wallet", "sin coincidencia, el de los pagos");
+ok(iconoSugerido("Cualquier cosa", "ingreso") === "TrendingUp", "el de los ingresos");
+ok(iconoSugerido("Cualquier cosa", "recordatorio") === "Bell", "y el de los recordatorios");
+// Nunca puede devolver vacio: la fila se quedaria sin dibujo y con un hueco.
+for (const t of ["pago", "ingreso", "recordatorio"] as const) {
+  ok(iconoSugerido("", t).length > 0, `nunca devuelve vacio (${t})`);
+}
+
+// ---------------------------------------------------------------------------
+// EL RENGLON DE DEBAJO DEL NOMBRE
+//
+// Decia "el 19" y "se paso el 5", y el lo corto: "no tiene sentido esas letras". Un numero
+// suelto obliga a mirar el calendario y restar.
+console.log("\nQue dice debajo del nombre");
+
+const HOY19 = new Date(2026, 7, 19);
+ok(cuandoTexto(pago({ dia: 19 }), "2026-08", HOY19).clave === "calendario.cuando.hoy.pago", "el de hoy dice HOY");
+ok(cuandoTexto(pago({ dia: 20 }), "2026-08", HOY19).clave === "calendario.cuando.manana.pago", "el de mañana dice MAÑANA");
+const enTres = cuandoTexto(pago({ dia: 22 }), "2026-08", HOY19);
+ok(enTres.clave === "calendario.cuando.enDias.pago" && enTres.dias === 3, "el del 22 dice EN 3 DIAS");
+ok(
+  cuandoTexto(pago({ dia: 30 }), "2026-08", HOY19).clave === "calendario.cuando.fecha.pago",
+  "y a mas de una semana ya se dice la fecha, que contar once dias no lo hace nadie"
+);
+const vencio = cuandoTexto(pago({ dia: 5 }), "2026-08", HOY19);
+ok(vencio.clave === "calendario.cuando.vencio" && vencio.dias === 14, "lo vencido dice cuantos dias hace");
+ok(
+  cuandoTexto(pago({ dia: 5, pagados: ["2026-08"] }), "2026-08", HOY19).clave === "calendario.cuando.pagado.pago",
+  "y lo pagado lo dice, sin importar la fecha"
+);
+// EL VERBO CAMBIA CON EL TIPO: un sueldo no "vence", llega.
+ok(
+  cuandoTexto(pago({ dia: 19, tipo: "ingreso" }), "2026-08", HOY19).clave === "calendario.cuando.hoy.ingreso",
+  "un ingreso usa su propio verbo: no vence, llega"
+);
+ok(
+  cuandoTexto(pago({ dia: 19, tipo: "recordatorio" }), "2026-08", HOY19).clave === "calendario.cuando.hoy.recordatorio",
+  "y un recordatorio el suyo"
+);
+
+// ---------------------------------------------------------------------------
+// COMO SE CUENTA LA REPETICION
+console.log("\nComo se cuenta que se repite");
+
+ok(textoDeRepeticion(25, true).clave === "calendario.repite.cadaMes", "el 25 se repite el 25");
+ok(
+  textoDeRepeticion(31, true).clave === "calendario.repite.ultimoDia",
+  "el 31 se llama «el ultimo dia», que es lo que es: asi la nota al pie del recorte sobra"
+);
+ok(textoDeRepeticion(30, true).clave === "calendario.repite.casiUltimo", "el 30 si necesita su aclaracion");
+ok(textoDeRepeticion(25, false).clave === "calendario.repite.unaVez", "y sin repetir, se dice que es una sola vez");
 
 console.log(
   fallos === 0
