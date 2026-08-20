@@ -23,7 +23,7 @@ import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } fro
 import * as ImagePicker from "expo-image-picker";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Bell, CalendarDays, Pencil, Repeat, Trash2, X } from "lucide-react-native";
+import { Bell, CalendarDays, Pencil, Repeat, Trash2 } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import BackButton from "@/components/BackButton";
 import Toggle from "@/components/Toggle";
@@ -325,8 +325,13 @@ export default function NuevoPagoProgramado({
                   </TouchableOpacity>
                 ))}
               </View>
-              <TouchableOpacity onPress={() => setEligiendoIcono(false)} className="p-1">
-                <X size={16} color="#94a3b8" />
+              <TouchableOpacity
+                onPress={() => setEligiendoIcono(false)}
+                className="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-900"
+              >
+                <Text className="text-[12px] font-bold text-slate-600 dark:text-slate-200">
+                  {t("calendario.nuevo.listo")}
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -352,10 +357,20 @@ export default function NuevoPagoProgramado({
                             return (
                               <TouchableOpacity
                                 key={x}
-                                onPress={() => {
-                                  setIconoElegido(x);
-                                  setEligiendoIcono(false);
-                                }}
+                                /**
+                                 * TOCAR MARCA, NO CIERRA.
+                                 *
+                                 * Cerraba al primer toque: *"quiero seleccionar libremente
+                                 * cualquier icono pero no me deja, le doy click a un icono y
+                                 * automaticamente lo selecciona"*. Con el panel cerrandose
+                                 * no hay forma de comparar dos ni de cambiar de idea sin
+                                 * volver a abrir.
+                                 *
+                                 * **Es la misma leccion del 07/08 con las categorias**, y
+                                 * esta escrita en ESTADO: tocar una la marca, y volver es
+                                 * cosa de "Aplicar". Se cierra con la X o con Listo.
+                                 */
+                                onPress={() => setIconoElegido(x)}
                                 style={{ width: "20%", aspectRatio: 1 }}
                                 className="items-center justify-center p-1"
                               >

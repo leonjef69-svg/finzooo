@@ -8,6 +8,8 @@
 // aviso que cae en el mes anterior, el salto de año y el pago único que no debe repetirse.
 // Los cuatro son errores de una línea que solo aparecen en una fecha concreta del calendario,
 // y para entonces ya se le prometió a alguien que le íbamos a avisar de su recibo.
+import fs from "fs";
+import path from "path";
 import {
   cuandoAvisar,
   cuentaPorEstado,
@@ -262,7 +264,10 @@ ok(iconoSugerido("Spotify", "pago") === "marca:spotify", "una marca trae su logo
 ok(iconoSugerido("Mi sueldo", "ingreso") === "Wallet", "«sueldo» trae la billetera");
 ok(iconoSugerido("Cualquier cosa", "pago") === "Wallet", "sin coincidencia, el de los pagos");
 ok(iconoSugerido("Cualquier cosa", "ingreso") === "TrendingUp", "el de los ingresos");
-ok(iconoSugerido("Cualquier cosa", "recordatorio") === "Bell", "y el de los recordatorios");
+ok(
+  iconoSugerido("Cualquier cosa", "recordatorio") === "CalendarClock",
+  "y el de los recordatorios — era «Bell», que NO existe en el catalogo y salia como los tres puntos"
+);
 // Nunca puede devolver vacio: la fila se quedaria sin dibujo y con un hueco.
 for (const t of ["pago", "ingreso", "recordatorio"] as const) {
   ok(iconoSugerido("", t).length > 0, `nunca devuelve vacio (${t})`);
@@ -349,6 +354,42 @@ ok(
   movNetflix?.description !== "" && movNetflix?.description != null,
   "y nunca llega sin nombre: sin el, el clasificador no tendria por donde empezar"
 );
+
+// ---------------------------------------------------------------------------
+// TODOS LOS DIBUJOS QUE SE SUGIEREN TIENEN QUE EXISTIR
+//
+// UN NOMBRE MAL ESCRITO NO DA NINGUN ERROR: iconoDe cae en su dibujo de reserva -los tres
+// puntos- y desde fuera se ve igual que "no se puso ninguno". Paso el 19/08/2026 con tres
+// -Bell, Home y ShieldCheck, que no existen en el catalogo-, y el resultado fue que los
+// recordatorios, el alquiler y el seguro salian con los tres puntos en Inicio y en el
+// Historial. El lo reporto como "los iconos no aparecen".
+//
+// Es el mismo tipo de comprobacion que ya protege a las 173 categorias contra la tipografia.
+console.log("\nLos dibujos sugeridos existen todos");
+
+const fuente = fs.readFileSync(path.join(process.cwd(), "constants", "iconos.tsx"), "utf8");
+const genericos = fuente.slice(
+  fuente.indexOf("const GENERICOS"),
+  fuente.indexOf("export const NOMBRES_EN_TIPOGRAFIA")
+);
+const disponibles = new Set([...genericos.matchAll(/(\w+):\s*"/g)].map((m) => m[1]));
+ok(disponibles.size > 100, "se leyo el catalogo de dibujos");
+
+const nombres = [
+  "Luz", "Agua", "Gas", "Internet", "Wifi", "Cable", "Telefono", "Celular", "Plan",
+  "Alquiler", "Renta", "Casa", "Colegio", "Universidad", "Matricula", "Pension",
+  "Seguro", "Salud", "Clinica", "Gimnasio", "Gym", "Auto", "Carro", "Gasolina",
+  "Mascota", "Perro", "Gato", "Sueldo", "Salario", "Prestamo", "Tarjeta", "Banco",
+  "Cualquier cosa",
+];
+let malos: string[] = [];
+for (const n of nombres) {
+  for (const tipo of ["pago", "ingreso", "recordatorio"] as const) {
+    const id = iconoSugerido(n, tipo);
+    if (!id.startsWith("marca:") && !disponibles.has(id)) malos.push(`${n}/${tipo} -> ${id}`);
+  }
+}
+ok(malos.length === 0, `todos los dibujos sugeridos existen${malos.length ? ": falta " + malos.join(", ") : ""}`);
 
 console.log(
   fallos === 0

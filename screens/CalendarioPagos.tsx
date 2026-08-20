@@ -24,7 +24,7 @@ import { useMemo, useState } from "react";
 import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight, Check, Plus, Settings, X } from "lucide-react-native";
-import { router } from "expo-router";
+import { irUnaVez } from "@/utils/nav";
 import { useColorScheme } from "nativewind";
 import BackButton from "@/components/BackButton";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -201,7 +201,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
         {/* EL ENGRANAJE LLEVA A SU PROPIA PANTALLA. Era un panel que se abría encima y
             ocupaba media pantalla principal: *"se ve horrible, me sale prácticamente toda la
             pantalla del calendario"*. */}
-        <TouchableOpacity onPress={() => router.push("/calendario/avisos")} className="w-10 items-end p-1">
+        <TouchableOpacity onPress={() => irUnaVez("/calendario/avisos")} className="w-10 items-end p-1">
           <Settings size={19} color="#94a3b8" />
         </TouchableOpacity>
       </View>
@@ -237,7 +237,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
             monthNames={monthNames}
             oscuro={oscuro}
             onPagar={() => pagar(siguiente.pago.id, siguiente.mes)}
-            onAbrir={() => router.push(`/calendario/nuevo?id=${siguiente.pago.id}`)}
+            onAbrir={() => irUnaVez(`/calendario/nuevo?id=${siguiente.pago.id}`)}
           />
         )}
 
@@ -299,10 +299,10 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                   key={columna}
                   onPress={() => {
                     if (!x) {
-                      router.push(`/calendario/nuevo?fecha=${mes}-${String(dia).padStart(2, "0")}`);
+                      irUnaVez(`/calendario/nuevo?fecha=${mes}-${String(dia).padStart(2, "0")}`);
                     } else if (x.n === 1) {
                       const uno = delMes.find((p) => diaDe(p) === dia);
-                      if (uno) router.push(`/calendario/nuevo?id=${uno.id}`);
+                      if (uno) irUnaVez(`/calendario/nuevo?id=${uno.id}`);
                     } else {
                       // Con varios NO se abre ninguno: no se sabría cuál abrió. Se enseñan.
                       setDiaAbierto(diaAbierto === dia ? null : dia);
@@ -384,7 +384,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                 t={t}
                 oscuro={oscuro}
                 onPagar={() => pagar(p.id, mes)}
-                onAbrir={() => router.push(`/calendario/nuevo?id=${p.id}`)}
+                onAbrir={() => irUnaVez(`/calendario/nuevo?id=${p.id}`)}
               />
             ))}
           </View>
@@ -433,7 +433,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
             t={t}
             oscuro={oscuro}
             onPagar={() => pagar(p.id, mes)}
-            onAbrir={() => router.push(`/calendario/nuevo?id=${p.id}`)}
+            onAbrir={() => irUnaVez(`/calendario/nuevo?id=${p.id}`)}
           />
         ))}
 
@@ -449,7 +449,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
         )}
 
         <TouchableOpacity
-          onPress={() => router.push("/calendario/nuevo")}
+          onPress={() => irUnaVez("/calendario/nuevo")}
           className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl border border-dashed border-slate-300 dark:border-slate-600 mt-1"
         >
           <Plus size={16} color="#64748b" />

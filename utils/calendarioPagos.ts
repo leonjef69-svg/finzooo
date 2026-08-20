@@ -359,14 +359,14 @@ const DIBUJO_POR_PALABRA: [string, string][] = [
   ["celular", "Smartphone"],
   ["plan", "Smartphone"],
   // Casa y vida.
-  ["alquiler", "Home"],
-  ["renta", "Home"],
-  ["casa", "Home"],
+  ["alquiler", "House"],
+  ["renta", "House"],
+  ["casa", "House"],
   ["colegio", "School"],
   ["universidad", "School"],
   ["matricula", "School"],
   ["pension", "School"],
-  ["seguro", "ShieldCheck"],
+  ["seguro", "Shield"],
   ["salud", "HeartPulse"],
   ["clinica", "HeartPulse"],
   ["gimnasio", "Dumbbell"],
@@ -390,7 +390,7 @@ const DIBUJO_POR_PALABRA: [string, string][] = [
 const DIBUJO_POR_DEFECTO: Record<TipoDeAnotacion, string> = {
   pago: "Wallet",
   ingreso: "TrendingUp",
-  recordatorio: "Bell",
+  recordatorio: "CalendarClock",
 };
 
 /** Quita tildes y mayúsculas, que es la única forma de que "Água" y "agua" se comparen igual. */

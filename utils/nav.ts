@@ -81,3 +81,30 @@ export function useNavigateWhenReady(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 }
+
+/**
+ * ABRIR UNA PANTALLA SIN QUE UN DOBLE TOQUE ABRA DOS (19/08/2026)
+ *
+ * Reportado por él: *"en la pantalla de calendario le di rápidamente varias veces click en
+ * agregar un pago y se abrieron 3 pantallas de nuevo pago"*.
+ *
+ * Es el fallo clásico de `router.push`: cada toque apila una pantalla, y mientras la primera
+ * está entrando —la animación dura unos 300 ms— el botón sigue debajo del dedo. Nadie quiere
+ * abrir la misma pantalla tres veces; los toques de más son de impaciencia, no una orden.
+ *
+ * Medio segundo es la ventana: cubre de sobra la animación y no llega a estorbar a quien
+ * abre, vuelve y quiere entrar otra vez.
+ *
+ * **La hora del último viaje vive en una variable de módulo y NO en un estado.** Con un
+ * estado, cada toque redibujaría la pantalla entera — que es justo el trabajo que sobra
+ * cuando lo que se está tratando de arreglar es un dedo rápido. Es la misma decisión que se
+ * tomó con la pausa del reparto de iconos el 07/08.
+ */
+let ultimoViaje = 0;
+
+export function irUnaVez(ruta: Parameters<typeof router.push>[0]): void {
+  const ahora = Date.now();
+  if (ahora - ultimoViaje < 500) return;
+  ultimoViaje = ahora;
+  router.push(ruta);
+}
