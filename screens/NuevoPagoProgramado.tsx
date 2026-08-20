@@ -18,7 +18,7 @@
  * La fecha llega hecha del calendario grande — aquí hubo uno propio y él lo mandó quitar:
  * *"cuando dije tocar libremente el calendario me refería a la segunda imagen"*.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Alert, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
@@ -52,6 +52,15 @@ function soloNumeros(texto: string, tope: number): string {
   if (limpio === "") return "";
   return String(Math.min(Number(limpio), tope));
 }
+
+/**
+ * Cuántos grupos se dibujan en el primer instante al abrir el selector.
+ *
+ * Cuatro son unos 70 dibujos: más de tres pantallas, así que lo que se ve está completo desde
+ * el principio. Subirlo devuelve el tirón; bajarlo deja hueco a un deslizón rápido. Es el
+ * mismo número que se afinó para el catálogo de categorías.
+ */
+const GRUPOS_AL_ABRIR = 4;
 
 function dosDigitos(n: number): string {
   return String(n).padStart(2, "0");
@@ -90,7 +99,25 @@ export default function NuevoPagoProgramado({
   const [eligiendoIcono, setEligiendoIcono] = useState(false);
   const [pestana, setPestana] = useState<"dibujo" | "foto" | "color">("dibujo");
   const [color, setColor] = useState<string | null>(existente?.color ?? null);
-  const [buscando, setBuscando] = useState("");
+  /**
+   * CUÁNTOS GRUPOS SE DIBUJAN YA, Y POR QUÉ NO LOS 18 DE GOLPE.
+   *
+   * *"Al darle click en el icono parece que fallara los primeros intentos, luego va bien."*
+   * Son **236 dibujos**, y cada uno es una letra que Android tiene que medir: montarlos todos
+   * en el mismo instante en que se abre el panel atropella al dedo.
+   *
+   * **Esto ya pasó con las categorías y está resuelto desde el 07/08** (ver ESTADO,
+   * "EL CATÁLOGO EN DOS TANDAS"): los primeros grupos entran de una —lo que se ve está
+   * completo desde el primer momento— y el resto llega solo unos milisegundos después, fuera
+   * de la vista. **No es cargar al deslizar**, que es lo que él ya rechazó entonces: *"los
+   * iconos ya deberían estar ahí fijos"*.
+   */
+  const [gruposListos, setGruposListos] = useState(GRUPOS_AL_ABRIR);
+  useEffect(() => {
+    if (!eligiendoIcono || gruposListos >= TODOS_LOS_GRUPOS.length) return;
+    const id = setTimeout(() => setGruposListos(TODOS_LOS_GRUPOS.length), 250);
+    return () => clearTimeout(id);
+  }, [eligiendoIcono, gruposListos]);
 
   const elegida = existente
     ? `${existente.mesUnico ?? mesDe(hoy)}-${dosDigitos(existente.dia)}`
@@ -293,23 +320,14 @@ export default function NuevoPagoProgramado({
 
             {pestana === "dibujo" && (
               <>
-                <TextInput
-                  value={buscando}
-                  onChangeText={setBuscando}
-                  placeholder={t("calendario.nuevo.buscarDibujo")}
-                  placeholderTextColor="#94a3b8"
-                  className="h-9 rounded-xl px-3 mb-1 text-[13px] bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100"
-                />
                 {/* CON SU TÍTULO CADA GRUPO. Son los mismos 236 de las categorías —dos
                     catálogos para lo mismo es uno que se queda atrás— pero ordenados, que es
                     lo que faltaba. El alto máximo deja ver la lista de abajo mientras se
                     elige. */}
                 <ScrollView style={{ maxHeight: 260 }} nestedScrollEnabled>
-                  {TODOS_LOS_GRUPOS.map((g) => {
+                  {TODOS_LOS_GRUPOS.slice(0, gruposListos).map((g) => {
                     const titulo = t(g.titulo);
-                    const busca = buscando.trim().toLowerCase();
-                    const suyos = busca === "" ? g.iconos : titulo.toLowerCase().includes(busca) ? g.iconos : [];
-                    if (suyos.length === 0) return null;
+                    const suyos = g.iconos;
                     return (
                       <View key={g.titulo}>
                         <Text className="text-[11px] text-slate-400 dark:text-slate-500 mt-2.5 mb-1.5">
