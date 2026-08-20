@@ -163,13 +163,26 @@ ok(
 const sinVencidos = [pago({ id: "2", nombre: "Luz", dia: 18 }), pago({ id: "6", nombre: "Cable", dia: 25 })];
 ok(proximoPago(sinVencidos, HOY)?.pago.nombre === "Luz", "sin vencidos, el más cercano");
 
-// El día 29 lo que viene ya no está en este mes: si solo se mirara el mes actual, la tarjeta
-// de arriba se quedaría vacía justo los días en que más sirve.
+// LA REGLA CAMBIO EL 19/08/2026, Y SE CAMBIA CON SU MOTIVO ESCRITO.
+//
+// Antes esta prueba exigia lo contrario: que el dia 29, con agosto pagado, la tarjeta pasara
+// a enseñar lo de septiembre para no quedarse vacia. La razon era buena y aun asi el
+// resultado era peor, porque con un pago MENSUAL el de septiembre es el mismo recibo: al
+// pagar la luz de agosto salia otra vez "Luz, S/ 90, Pagar", identico, y parecia que el
+// toque no habia hecho nada. El lo reporto dos veces como "tengo que dar 2 toques", y el
+// segundo toque no repetia: pagaba septiembre por adelantado sin decirlo.
+//
+// Ahora la tarjeta solo habla de ESTE mes. Cuando no queda nada, la pantalla dice que se
+// esta al dia — que es la verdad y ademas contesta algo.
 const finDeMes = new Date(2026, 7, 29);
 const soloDia5 = [pago({ id: "1", nombre: "Agua", dia: 5, pagados: ["2026-08"] })];
 ok(
-  proximoPago(soloDia5, finDeMes)?.mes === "2026-09",
-  "el día 29, con lo de agosto pagado, ya enseña lo de septiembre"
+  proximoPago(soloDia5, finDeMes) === null,
+  "con todo lo del mes pagado NO se adelanta al mes siguiente: pagar dos veces el mismo recibo era demasiado facil"
+);
+ok(
+  proximoPago([pago({ id: "7", nombre: "Cable", dia: 30 })], finDeMes)?.mes === "2026-08",
+  "y lo que aun queda de este mes sigue saliendo"
 );
 ok(proximoPago([], HOY) === null, "y sin nada que pagar, no hay tarjeta");
 

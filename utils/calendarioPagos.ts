@@ -172,16 +172,25 @@ export function hayVariosTipos(lista: PagoProgramado[], mes: string): boolean {
 }
 
 /**
- * EL QUE VA ARRIBA EN GRANDE: el siguiente que hay que pagar.
+ * EL QUE VA ARRIBA EN GRANDE: el siguiente que hay que pagar **de ESTE mes**.
  *
  * **Lo vencido manda sobre lo que viene.** Si se te pasó el agua el 5 y la luz vence el 18,
- * el que tiene que salir grande es el agua: es el que cuesta dinero dejar ahí.
+ * el que sale grande es el agua: es el que cuesta dinero dejar ahí.
  *
- * Mira este mes y el siguiente, porque el día 29 lo que viene ya no está en este mes y la
- * tarjeta se quedaría vacía justo en los días en que más sirve.
+ * **Y SOLO MIRA ESTE MES. Esto era un fallo, y de los que engañan.**
+ *
+ * Antes miraba también el siguiente, para que la tarjeta no se quedara vacía a fin de mes.
+ * Pero con un pago mensual eso hacía algo peor: al pagar la luz de agosto, la tarjeta pasaba
+ * a enseñar **la luz de septiembre** — mismo nombre, mismo monto, mismo botón—, así que desde
+ * fuera parecía que el toque no había hecho nada. Él lo contó dos veces: *"no me gusta que
+ * tenga que dar 2 toques en pagar"*. Y el segundo toque no repetía nada: **pagaba el mes
+ * siguiente por adelantado**, sin que nada lo dijera.
+ *
+ * Cuando no queda nada de este mes, la pantalla enseña que se está al día, que es la verdad
+ * y además es una respuesta. Ver `CalendarioPagos`.
  */
 export function proximoPago(lista: PagoProgramado[], hoy: Date): { pago: PagoProgramado; mes: string } | null {
-  const meses = [mesDe(hoy), mesSiguiente(mesDe(hoy))];
+  const meses = [mesDe(hoy)];
   const candidatos: { pago: PagoProgramado; mes: string; fecha: string; estado: EstadoDelPago }[] = [];
   for (const mes of meses) {
     for (const p of pagosDelMes(lista, mes)) {

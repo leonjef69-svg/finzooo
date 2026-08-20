@@ -209,6 +209,24 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
       <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
         {/* TU PRÓXIMO PAGO. Una sola tarjeta, con su botón al costado. Al pagarlo se pone
             verde y dice "Pagado": *"algo que identifique que ya pagó"*. */}
+        {/* SIN NADA PENDIENTE, SE DICE. Antes aquí no salía nada y quedaba un hueco donde
+            estaba la tarjeta; peor: hasta el 19/08 se enseñaba el mismo recibo del mes que
+            viene, y pagarlo dos veces era un toque. Decir "estás al día" contesta la pregunta
+            con la que se entra y no invita a adelantar nada. */}
+        {!siguiente && delMes.length > 0 && (
+          <View className="rounded-2xl p-4 mb-4 flex-row items-center gap-3 bg-emerald-50 dark:bg-emerald-950/40">
+            <Check size={22} color="#059669" strokeWidth={3} />
+            <View className="flex-1">
+              <Text className="text-[14px] font-bold text-emerald-800 dark:text-emerald-300">
+                {t("calendario.alDia")}
+              </Text>
+              <Text className="text-[12px] text-emerald-700 dark:text-emerald-400 mt-0.5">
+                {t("calendario.alDiaTexto")}
+              </Text>
+            </View>
+          </View>
+        )}
+
         {siguiente && (
           <TarjetaProxima
             pago={siguiente.pago}
