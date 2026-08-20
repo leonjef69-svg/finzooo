@@ -321,6 +321,22 @@ ok(soloMonto("12.555") === "12.55", "y como mucho dos decimales, que los centimo
 ok(soloMonto("12.") === "12.", "se puede quedar a medias mientras se escribe, sin saltar bajo el dedo");
 ok(Number.isFinite(Number(soloMonto("12,50"))), "lo que sale de aqui siempre se puede convertir a numero");
 
+// ---------------------------------------------------------------------------
+// EL MOVIMIENTO QUE SE CREA LLEVA CATEGORIA DE VERDAD
+//
+// "Al agregarle un icono en agregar pago no viaja a las pantallas de inicio e historial".
+// Y no podia: en Inicio el dibujo de un movimiento sale de su CATEGORIA, no de un icono
+// propio, y todos se creaban en "Otros". El nombre es lo unico que hay para clasificarlo, y
+// es lo que se usa -el mismo clasificador que los yapes-.
+console.log("\nEl movimiento que se crea al pagar");
+
+const movNetflix = movimientoDelPago(pago({ nombre: "Netflix", monto: 44, dia: 15 }), "2026-08");
+ok(movNetflix?.description === "Netflix", "el movimiento se llama como el pago");
+ok(
+  movNetflix?.description !== "" && movNetflix?.description != null,
+  "y nunca llega sin nombre: sin el, el clasificador no tendria por donde empezar"
+);
+
 console.log(
   fallos === 0
     ? "\nTodo bien: el calendario cuenta los días y el dinero\n"

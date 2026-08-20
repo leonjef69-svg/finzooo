@@ -49,6 +49,7 @@ import {
 } from "@/utils/calendarioPagos";
 import { reprogramarAvisosDePagos } from "@/utils/avisosDePagos";
 import { nextId } from "@/utils/id";
+import { suggestCategory } from "@/utils/classifier";
 import { bajarNegocio, subirNegocio } from "@/utils/cloudNegocio";
 import {
   fusionarMovimientosNegocio,
@@ -1624,7 +1625,23 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       id: nextId(),
       type: mov.type,
       amount: mov.amount,
-      category: pago.categoria || (mov.type === "income" ? "salary" : "other"),
+      /**
+       * LA CATEGORÍA SALE DEL NOMBRE, CON EL MISMO CLASIFICADOR QUE LOS YAPES.
+       *
+       * **Esto era un fallo suyo del 19/08:** *"al agregarle un icono en agregar pago no
+       * viaja a las pantallas de inicio e historial"*. Y no podía viajar — en Inicio el
+       * dibujo de un movimiento sale de su CATEGORÍA, no de un icono propio, y aquí se
+       * estaba creando todo en "Otros".
+       *
+       * No se le puso un icono suelto al movimiento a propósito: los reportes, el PDF y los
+       * límites agrupan por categoría, así que un movimiento con dibujo pero sin categoría
+       * de verdad saldría bonito en Inicio y suelto en todo lo demás.
+       *
+       * Con el clasificador, "Netflix" cae en entretenimiento y "Luz" en servicios: el
+       * dibujo sale solo y además las cuentas del mes cuadran.
+       */
+      category:
+        pago.categoria || suggestCategory(pago.nombre, mov.type, merchantLearned),
       date: mov.date,
       method: "",
       description: mov.description,
