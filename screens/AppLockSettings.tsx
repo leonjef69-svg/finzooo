@@ -15,6 +15,8 @@ import {
   hasDecoyPin,
   isLockEnabled,
   setDecoyPin,
+  usaHuella,
+  guardarUsaHuella,
   verifyPin,
   type BiometricKind,
 } from "@/utils/appLock";
@@ -33,6 +35,19 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
 
   const [enabled, setEnabled] = useState(false);
   const [hasDecoy, setHasDecoy] = useState(false);
+  /**
+   * ¿SE USA LA HUELLA, O SE ENTRA SIEMPRE CON EL PIN? (19/08/2026)
+   *
+   * Antes no se preguntaba: si el celular tenía huella, se usaba, y la pantalla se llamaba
+   * "Bloqueo con huella" aunque lo primero que hacía era pedir un PIN. Él lo cortó: *"te
+   * falta la opción PIN, tienes que agregarle un botón; no es que automáticamente seleccione
+   * huella y a fuerza tenga que poner un código PIN"*.
+   *
+   * **El PIN se sigue creando siempre, y hay que decir por qué**: una huella falla —dedo
+   * mojado, funda, sensor rayado— y sin nada detrás uno se queda fuera de su propio dinero.
+   * Lo que sí se elige es si además se usa la huella. Eso es este interruptor.
+   */
+  const [conHuella, setConHuella] = useState(true);
   const [kind, setKind] = useState<BiometricKind>("none");
   const [step, setStep] = useState<Step>("idle");
   const [pin, setPin] = useState("");
@@ -43,15 +58,17 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [on, biometric, decoy] = await Promise.all([
+      const [on, biometric, decoy, huella] = await Promise.all([
         isLockEnabled(),
         biometricKind(),
         hasDecoyPin(),
+        usaHuella(),
       ]);
       if (!alive) return;
       setEnabled(on);
       setKind(biometric);
       setHasDecoy(decoy);
+      setConHuella(huella);
     })();
     return () => {
       alive = false;
@@ -245,6 +262,36 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
                 </View>
                 <Toggle on={enabled} onChange={toggle} />
               </View>
+
+              {/* LA HUELLA, COMO UNA ELECCIÓN Y NO COMO UN HECHO.
+                  Solo aparece con el candado puesto y en un celular que la tenga: en uno que
+                  no, sería un interruptor que no puede hacer nada. */}
+              {enabled && kind !== "none" && (
+                <View className="flex-row items-center gap-3 mt-4 pt-4 border-t-[1.5px] border-slate-100 dark:border-noche-borde">
+                  <View className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-noche-2 items-center justify-center">
+                    {kind === "face" ? (
+                      <ScanFace size={20} color="#64748b" />
+                    ) : (
+                      <Fingerprint size={20} color="#64748b" />
+                    )}
+                  </View>
+                  <View className="flex-1">
+                    <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">
+                      {t(kind === "face" ? "lock.usarCara" : "lock.usarHuella")}
+                    </Text>
+                    <Text className="text-[11px] text-slate-500 dark:text-slate-300">
+                      {t(conHuella ? "lock.huellaOn" : "lock.huellaOff")}
+                    </Text>
+                  </View>
+                  <Toggle
+                    on={conHuella}
+                    onChange={(v) => {
+                      setConHuella(v);
+                      guardarUsaHuella(v);
+                    }}
+                  />
+                </View>
+              )}
             </View>
 
             {/* Qué método va a pedir este celular en concreto. Decir

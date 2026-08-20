@@ -258,3 +258,29 @@ export async function verifyPin(pin: string): Promise<PinMatch> {
   if (decoy && attempt === decoy) return "decoy";
   return null;
 }
+
+/**
+ * ¿SE USA LA HUELLA, O SOLO EL PIN? (19/08/2026)
+ *
+ * Hasta hoy no se preguntaba: si el celular tenía huella, se usaba. Y la pantalla se llamaba
+ * *"Bloqueo con huella"* aunque lo primero que hacía al encenderla era pedir un PIN. Él lo
+ * dijo tal cual: *"te falta la opción PIN, tienes que agregarle un botón; no es que
+ * automáticamente seleccione huella y a fuerza tenga que poner un código PIN"*.
+ *
+ * **El PIN sigue haciendo falta siempre, y eso no es un capricho:** una huella falla —con el
+ * dedo mojado, con una funda, cuando el sensor se raya— y sin nada detrás la persona se
+ * queda fuera de su propio dinero. Lo que sí se puede elegir es si la huella se usa o si se
+ * entra siempre con el PIN. Eso es lo que guarda esto.
+ *
+ * Por defecto **sí**, que es como se comportaba hasta ahora: nadie tiene que ir a encender
+ * algo para que su app siga funcionando igual que ayer.
+ */
+const KEY_HUELLA = "finzo:lock:usaHuella";
+
+export async function usaHuella(): Promise<boolean> {
+  return (await read(KEY_HUELLA)) !== "0";
+}
+
+export async function guardarUsaHuella(valor: boolean): Promise<void> {
+  await write(KEY_HUELLA, valor ? "1" : "0");
+}

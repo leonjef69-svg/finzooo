@@ -10,6 +10,7 @@ import {
   GRACE_MS,
   PIN_LENGTH,
   biometricKind,
+  usaHuella,
   isLockEnabled,
   olvidarSalida,
   promptBiometrics,
@@ -82,7 +83,8 @@ export default function AppLockGate() {
         // Si ya no vale, se borra: una marca vieja no tiene por qué quedarse
         // ahí esperando.
         if (!reciente) void olvidarSalida();
-        setKind(await biometricKind());
+        // Ver usaHuella: quien la apagó en Ajustes entra siempre con el PIN.
+        setKind((await usaHuella()) ? await biometricKind() : "none");
       } else {
         setLocked(false);
       }
