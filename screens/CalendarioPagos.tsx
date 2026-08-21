@@ -547,20 +547,12 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
               />
             ))}
 
-            {/* AGREGAR OTRO EN ESTE MISMO DÍA, con la fecha ya puesta.
-                Es la mitad del arreglo: el día enseña lo que tiene, y desde ahí se le añade
-                lo que falta sin salir ni volver a elegir el 30 a mano. */}
-            <TouchableOpacity
-              onPress={() =>
-                irUnaVez(`/calendario/nuevo?fecha=${mes}-${String(diaAbierto).padStart(2, "0")}`)
-              }
-              className="flex-row items-center justify-center gap-1.5 mt-1 py-2.5 rounded-xl border-[1.5px] border-dashed border-slate-300 dark:border-noche-borde"
-            >
-              <Plus size={15} color="#059669" strokeWidth={2.6} />
-              <Text className="text-[13px] font-bold text-emerald-600">
-                {t("calendario.agregarEnEsteDia", { dia: diaAbierto })}
-              </Text>
-            </TouchableOpacity>
+            {/* NO HAY BOTÓN DE AGREGAR AQUÍ DENTRO, Y ES A PROPÓSITO.
+                Lo hubo un rato y él lo cortó: *"que le puedas dar en agregar un pago en el
+                botón que ya existe y no crear otro"*. Tiene razón — dos botones verdes que
+                hacen lo mismo, uno encima del otro, son dos cosas que decidir en vez de una.
+                Mientras hay un día abierto, el de abajo se hace cargo: cambia su texto y
+                agrega EN ESE DÍA. Ver el botón al final de la pantalla. */}
           </View>
         )}
 
@@ -725,7 +717,17 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
         style={{ paddingBottom: 10 }}
       >
         <TouchableOpacity
-          onPress={() => irUnaVez("/calendario/nuevo")}
+          /* CON UN DÍA ABIERTO, ESTE BOTÓN AGREGA EN ESE DÍA.
+             Es el mismo botón de siempre, en el mismo sitio, y solo cambia lo que dice: si
+             estás mirando el 30, dice "Agregar un pago el 30" y llega al formulario con la
+             fecha puesta. Cerrando el día vuelve a ser el de siempre. */
+          onPress={() =>
+            irUnaVez(
+              diaAbierto == null
+                ? "/calendario/nuevo"
+                : `/calendario/nuevo?fecha=${mes}-${String(diaAbierto).padStart(2, "0")}`
+            )
+          }
           disabled={seleccionando}
           className={`flex-row items-center justify-center gap-2 py-3.5 rounded-2xl ${
             seleccionando ? "bg-slate-200 dark:bg-noche-3" : "bg-emerald-600"
@@ -735,7 +737,9 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
           <Text
             className={`text-[14px] font-bold ${seleccionando ? "text-slate-400" : "text-white"}`}
           >
-            {t("calendario.agregar")}
+            {diaAbierto == null
+              ? t("calendario.agregar")
+              : t("calendario.agregarEnEsteDia", { dia: diaAbierto })}
           </Text>
         </TouchableOpacity>
       </View>
