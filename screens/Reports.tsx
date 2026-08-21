@@ -183,7 +183,10 @@ export default function Reports({
   // cero no aporta nada al gráfico: solo ocupa espacio y hace que las barras
   // de los meses con datos se vean más chicas de lo que son.
   const barData = useMemo(() => {
-    return [2, 1, 0]
+    // DOCE MESES, NO TRES. Con tres no se ve si un gasto subió o si es lo de siempre; con el
+    // año entero sí. Los que no caben en la pantalla se alcanzan deslizando de lado, y el
+    // gráfico se abre por el final, en el mes que se está mirando.
+    return [11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0]
       .map((back) => {
         let m = month.m - back;
         let y = month.y;
@@ -549,7 +552,7 @@ export default function Reports({
             {t("reports.noMonthsWithSpending")}
           </Text>
         ) : (
-          <BarChartSimple data={barData} fmt={fmt} />
+          <BarChartSimple data={barData} fmt={fmt} width={windowWidth - 72} />
         )}
       </View>
 

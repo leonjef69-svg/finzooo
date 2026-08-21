@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 // Espacio a la izquierda para los montos del eje, y alturas del dibujo.
 const AXIS_W = 42;
@@ -8,6 +8,8 @@ const LABEL_BAND = 22; // sitio libre arriba para los montos escritos
 const DAYS_H = 18; // sitio abajo para los números de los días
 const AMOUNT_FONT = 10;
 const DAY_FONT = 10;
+/** Lo mínimo que se le da a un día para que su número quepa y su barra se pueda tocar. */
+const COL_MIN = 24;
 
 export type DayBar = { day: number; amount: number };
 
@@ -61,8 +63,9 @@ export function labelStep(maxLabelW: number, colW: number): number {
  * acababan debajo de la barra equivocada y los montos, uno encima de otro o
  * directamente sin escribir.
  *
- * Con las barras que de verdad tienen algo que contar, cada una tiene sitio
- * de sobra para su día y su monto, y no hay nada que empujar ni descartar.
+ * Y aunque solo salgan los días con gasto, un mes movido son veintitantos y
+ * la pantalla tampoco da: por eso cada día tiene un ancho mínimo (COL_MIN) y
+ * lo que no entra se alcanza deslizando de lado, con el eje quieto.
  */
 export default function DailyBarsChart({
   data,
@@ -94,7 +97,22 @@ export default function DailyBarsChart({
   const plotW = Math.max(1, width - AXIS_W - 6);
   const STEPS = 4;
   const top = niceMax(Math.max(...data.map((d) => d.amount), 0), STEPS);
-  const colW = plotW / data.length;
+
+  /**
+   * CUANDO NO CABEN, SE DESLIZA DE LADO.
+   *
+   * Un mes movido tiene veintitantos días con gasto, y repartir la pantalla entre todos deja
+   * columnas de 12 px: la barra es un palito y el número del día no entra, así que había que
+   * saltarse etiquetas. Dándole a cada día un ancho mínimo cómodo, el dibujo se hace más
+   * ancho que la tarjeta y lo que sobra se alcanza arrastrando con el dedo. Todos los días
+   * conservan su número y su barra se puede tocar.
+   *
+   * Los montos de la izquierda NO se deslizan: se quedan fijos, porque un eje que se va de la
+   * pantalla deja de servir para leer las alturas.
+   */
+  const anchoDibujo = Math.max(plotW, data.length * COL_MIN);
+  const hayQueDeslizar = anchoDibujo > plotW;
+  const colW = anchoDibujo / data.length;
 
   const hOf = (amount: number) => Math.max(5, (amount / top) * PLOT_H);
   const yOfValue = (v: number) => PLOT_H * (1 - v / top);
@@ -164,6 +182,20 @@ export default function DailyBarsChart({
           );
         })}
 
+        <ScrollView
+          horizontal
+          scrollEnabled={hayQueDeslizar}
+          showsHorizontalScrollIndicator={false}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: AXIS_W,
+            width: plotW,
+            height: LABEL_BAND + PLOT_H + DAYS_H,
+          }}
+          contentContainerStyle={{ width: anchoDibujo }}
+        >
+        <View style={{ width: anchoDibujo, height: LABEL_BAND + PLOT_H + DAYS_H }}>
         {/* Rejilla: una raya por cada monto del eje */}
         {Array.from({ length: STEPS + 1 }, (_, k) => (
           <View
@@ -171,8 +203,8 @@ export default function DailyBarsChart({
             style={{
               position: "absolute",
               top: LABEL_BAND + yOfValue((top / STEPS) * k),
-              left: AXIS_W,
-              width: plotW,
+              left: 0,
+              width: anchoDibujo,
               height: 1,
               backgroundColor: "#94a3b8",
               opacity: k === 0 ? 0.35 : 0.15,
@@ -185,8 +217,8 @@ export default function DailyBarsChart({
           style={{
             position: "absolute",
             top: LABEL_BAND,
-            left: AXIS_W,
-            width: plotW,
+            left: 0,
+            width: anchoDibujo,
             height: PLOT_H,
             flexDirection: "row",
             alignItems: "flex-end",
@@ -256,8 +288,8 @@ export default function DailyBarsChart({
           style={{
             position: "absolute",
             top: LABEL_BAND,
-            left: AXIS_W,
-            width: plotW,
+            left: 0,
+            width: anchoDibujo,
             height: PLOT_H,
             flexDirection: "row",
           }}
@@ -271,6 +303,8 @@ export default function DailyBarsChart({
             />
           ))}
         </View>
+        </View>
+        </ScrollView>
       </View>
     </View>
   );

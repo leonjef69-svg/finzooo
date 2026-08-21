@@ -60,8 +60,44 @@ const COLOR: Record<EstadoDelPago, string> = {
   vencido: "#e11d48",
 };
 
-/** Qué gana cuando un día tiene varias cosas: lo vencido manda, y lo pagado es lo último. */
-const URGENCIA: EstadoDelPago[] = ["pagado", "pendiente", "vencido"];
+/**
+ * EL COLOR DE UN DÍA DEL CALENDARIO, QUE YA NO ES SOLO SU ESTADO.
+ *
+ * Con Ingresos y Recuerdos como categorías propias, un día tiene que decir *qué* hay en él y
+ * no solo si está pagado: *"si yo pongo un ingreso el 30, ese 30 debería ponerse verde, y así
+ * con todos los demás"*.
+ */
+type ColorDeDia = "recuerdos" | "pagados" | "ingresos" | "porPagar" | "vencido";
+
+const COLOR_DIA: Record<ColorDeDia, string> = {
+  recuerdos: "#2563eb",
+  pagados: "#7c6cf0",
+  ingresos: "#059669",
+  porPagar: "#d97706",
+  vencido: "#e11d48",
+};
+
+/**
+ * Qué gana cuando un día tiene varias cosas. **Manda lo que aún te falta**, en este orden de
+ * menos a más: un recuerdo, algo ya pagado, un ingreso, algo por pagar, algo vencido.
+ *
+ * La razón es para qué se mira el calendario: si el 20 tienes un recibo vencido y otro ya
+ * pagado, ese día tiene que verse rojo. El globito con el número dice que hay más de una cosa
+ * y al tocarlo se ven todas.
+ */
+const URGENCIA_DIA: ColorDeDia[] = ["recuerdos", "pagados", "ingresos", "porPagar", "vencido"];
+
+/**
+ * En qué color cae un pago. **Vive fuera del componente a propósito**: lo usan el día del
+ * calendario, la franja de la fila y la tarjeta de arriba, y con la regla escrita en tres
+ * sitios bastaría con tocar uno para que el mismo pago saliera de dos colores distintos.
+ */
+function colorDe(pago: PagoProgramado, estado: EstadoDelPago): ColorDeDia {
+  if (pago.tipo === "recordatorio") return "recuerdos";
+  if (pago.tipo === "ingreso") return "ingresos";
+  if (estado === "pagado") return "pagados";
+  return estado === "vencido" ? "vencido" : "porPagar";
+}
 
 function mesAnterior(mes: string): string {
   const [anio, m] = mes.split("-").map(Number);
@@ -69,7 +105,26 @@ function mesAnterior(mes: string): string {
 }
 
 /** Los filtros de arriba, con sus palabras: *"lo que falta por pagar, lo que se pagó y recordatorios"*. */
-type Filtro = "porPagar" | "pagados" | "recuerdos";
+type Filtro = "porPagar" | "ingresos" | "pagados" | "recuerdos";
+
+const FILTROS: Filtro[] = ["porPagar", "ingresos", "pagados", "recuerdos"];
+
+/**
+ * UN COLOR POR FILTRO, Y NINGUNO REPETIDO.
+ *
+ * Hasta hoy lo pagado era verde. Al aparecer Ingresos hubo que repartir de nuevo: el verde
+ * significa en toda la app *entra plata* —Inicio, Historial—, así que le toca a Ingresos, y
+ * lo pagado pasa a morado. Se descartó el gris: *"otro color para pagados aparte de gris"*.
+ *
+ * El morado no se parece a ninguno de los otros cuatro, que es lo único que se le pide a un
+ * color aquí: distinguirse de un vistazo, sin leer.
+ */
+const COLOR_FILTRO: Record<Filtro, string> = {
+  porPagar: "#d97706",
+  ingresos: "#059669",
+  pagados: "#7c6cf0",
+  recuerdos: "#2563eb",
+};
 
 export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
   const { t, fmt, monthNames, pagosProgramados, marcarPagoDelMes, quitarPagoProgramado, showToast } =
@@ -166,12 +221,26 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
     return Number(fechaEnElMes(p, mes).slice(8));
   }
 
-  const enFiltro = delMes.filter((p) => {
-    const e = estadoDe(p);
-    if (filtro === "pagados") return e === "pagado";
-    if (filtro === "recuerdos") return p.tipo === "recordatorio";
-    return e !== "pagado" && p.tipo !== "recordatorio";
-  });
+  /**
+   * QUÉ ENSEÑA CADA BOTÓN.
+   *
+   * "Por pagar" son gastos: los ingresos salieron de ahí al tener botón propio. Antes vivían
+   * mezclados y él no los encontraba —*"en nuevo pago le pongo ingreso, ¿en qué botón está?
+   * no lo veo"*—, porque un sueldo bajo el rótulo "por pagar" no es donde nadie lo busca.
+   *
+   * Un ingreso ya cobrado sigue contando como ingreso y no salta a "Pagados": lo que se
+   * pregunta ahí es *qué recibos ya cumplí*, y un sueldo no es un recibo.
+   */
+  function pasaElFiltro(p: PagoProgramado, f: Filtro): boolean {
+    if (f === "recuerdos") return p.tipo === "recordatorio";
+    if (f === "ingresos") return p.tipo === "ingreso";
+    if (f === "pagados") return p.tipo === "pago" && estadoDe(p) === "pagado";
+    return p.tipo === "pago" && estadoDe(p) !== "pagado";
+  }
+
+  const cuantosHay = (f: Filtro) => delMes.filter((p) => pasaElFiltro(p, f)).length;
+
+  const enFiltro = delMes.filter((p) => pasaElFiltro(p, filtro));
 
   /**
    * LA LISTA LOS ENSEÑA TODOS, TAMBIEN EL DE LA TARJETA. **Esto era un fallo.**
@@ -208,20 +277,21 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
 
   /** Qué color y cuántas cosas tiene cada día. El color es el del más urgente. */
   const porDia = useMemo(() => {
-    const mapa: Record<number, { estado: EstadoDelPago; n: number }> = {};
+    const mapa: Record<number, { color: ColorDeDia; n: number }> = {};
     for (const p of delMes) {
       const d = diaDe(p);
-      const e = estadoDe(p);
+      const c = colorDe(p, estadoDe(p));
       const antes = mapa[d];
-      if (!antes) mapa[d] = { estado: e, n: 1 };
+      if (!antes) mapa[d] = { color: c, n: 1 };
       else {
         mapa[d] = {
-          estado: URGENCIA.indexOf(e) > URGENCIA.indexOf(antes.estado) ? e : antes.estado,
+          color: URGENCIA_DIA.indexOf(c) > URGENCIA_DIA.indexOf(antes.color) ? c : antes.color,
           n: antes.n + 1,
         };
       }
     }
     return mapa;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [delMes, mes, hoy]);
 
   const [anio, numeroMes] = mes.split("-").map(Number);
@@ -385,7 +455,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                 >
                   <View
                     className="w-full h-full rounded-full items-center justify-center"
-                    style={{ backgroundColor: x ? COLOR[x.estado] : "transparent" }}
+                    style={{ backgroundColor: x ? COLOR_DIA[x.color] : "transparent" }}
                   >
                     <Text
                       className="text-[12px] text-slate-900 dark:text-slate-100"
@@ -409,10 +479,13 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                     )}
                     {x && x.n > 1 && (
                       <View
-                        className="absolute -top-0.5 -right-0.5 px-1 rounded-full bg-slate-900 dark:bg-slate-100 border-2 border-white dark:border-slate-900"
-                        style={{ minWidth: 16, height: 16, alignItems: "center", justifyContent: "center" }}
+                        // Un par de píxeles más y letra de 11: *"ese número dentro de su
+                        // circulito tiene que ser más visible, un poquito más grande pero no
+                        // tanto"*. El borde del color del fondo es lo que lo despega del día.
+                        className="absolute -top-1 -right-1 px-1 rounded-full bg-slate-900 dark:bg-slate-100 border-2 border-white dark:border-noche"
+                        style={{ minWidth: 18, height: 18, alignItems: "center", justifyContent: "center" }}
                       >
-                        <Text className="text-[9px] font-bold text-white dark:text-slate-900">{x.n}</Text>
+                        <Text className="text-[11px] font-bold text-white dark:text-slate-900">{x.n}</Text>
                       </View>
                     )}
                   </View>
@@ -422,17 +495,17 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
           </View>
         ))}
 
-        {/* LA LEYENDA. Sin ella, un círculo ámbar no dice nada la primera vez. */}
+        {/* LA LEYENDA, AHORA DE UN SOLO COLOR.
+            Antes repetía los tres; ahora los botones de abajo llevan cada uno su nombre Y su
+            color, así que enumerarlos otra vez es decir dos veces lo mismo. El rojo es el
+            único que no tiene botón —no es una categoría, es un estado de "por pagar"— y por
+            eso se queda. */}
         {delMes.length > 0 && (
-          <View className="flex-row justify-center gap-4 mt-3">
-            {(["pagado", "pendiente", "vencido"] as EstadoDelPago[]).map((e) => (
-              <View key={e} className="flex-row items-center gap-1.5">
-                <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: COLOR[e] }} />
-                <Text className="text-[11px] text-slate-500 dark:text-slate-400">
-                  {t(`calendario.leyenda.${e}`)}
-                </Text>
-              </View>
-            ))}
+          <View className="flex-row justify-center items-center gap-1.5 mt-3">
+            <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: COLOR_DIA.vencido }} />
+            <Text className="text-[11px] text-slate-500 dark:text-slate-400">
+              {t("calendario.leyenda.vencido")}
+            </Text>
           </View>
         )}
 
@@ -471,32 +544,46 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
       {/* LA FILA PEGADA. Lleva su propio fondo porque, al quedarse clavada, la lista pasa
           por debajo: sin fondo se verían los pagos cruzando los botones. */}
       <View className="px-5 pt-1 bg-white dark:bg-noche">
+        {/* UNA SOLA BARRA, NO CUATRO BOTONES SUELTOS.
+            Con tres cabían separados; al entrar Ingresos ya no: *"4 botones me parece mucho,
+            en todo caso un poco más pequeño o mejor acomodado"*. Pegados y sin bordes propios
+            ocupan lo mismo que los tres de antes y se leen como una pieza.
+
+            EL NÚMERO VA DEBAJO DEL NOMBRE. Primero se probó como globito en la esquina y se
+            montaba sobre el botón vecino: *"se ve apretado y distorsionado, no se puede
+            distinguir bien"*. Debajo no se pisa nada, el nombre queda entero y el número
+            grande.
+
+            EL FONDO DE COLOR SOLO EN EL QUE SE TOCA. El color de cada categoría está siempre
+            presente —en su número—, pero el fondo pintado significa una única cosa: cuál
+            estás mirando. Pintando los cuatro haría falta un aro encima para decir cuál es el
+            activo, que es justo el ruido que se quería quitar. */}
         {delMes.length > 0 && (
-          <View className="flex-row gap-2 mt-5 mb-3">
-            {(["porPagar", "pagados", "recuerdos"] as Filtro[]).map((f) => {
-              const n =
-                f === "pagados"
-                  ? porEstado.pagado
-                  : f === "recuerdos"
-                    ? delMes.filter((p) => p.tipo === "recordatorio").length
-                    : delMes.filter((p) => estadoDe(p) !== "pagado" && p.tipo !== "recordatorio").length;
+          <View className="flex-row rounded-2xl p-1 mt-4 mb-2.5 bg-slate-100 dark:bg-noche-2">
+            {FILTROS.map((f) => {
+              const n = cuantosHay(f);
               const activo = filtro === f;
+              const color = COLOR_FILTRO[f];
               return (
                 <TouchableOpacity
                   key={f}
                   onPress={() => setFiltro(f)}
-                  className={`flex-1 py-2.5 rounded-xl items-center border-[1.5px] ${
-                    activo
-                      ? "bg-slate-900 dark:bg-slate-100 border-slate-900 dark:border-slate-100"
-                      : "border-slate-200 dark:border-noche-borde"
-                  }`}
+                  className="flex-1 py-1.5 rounded-xl items-center"
+                  style={activo ? { backgroundColor: color } : undefined}
                 >
                   <Text
-                    className={`text-[12px] ${
-                      activo ? "text-white dark:text-slate-900" : "text-slate-500 dark:text-slate-300"
+                    className={`text-[11px] ${
+                      activo ? "text-white font-bold" : "text-slate-500 dark:text-slate-400"
                     }`}
+                    numberOfLines={1}
                   >
-                    {t(`calendario.filtro.${f}`)} {n}
+                    {t(`calendario.filtro.${f}`)}
+                  </Text>
+                  <Text
+                    className="text-[14px] font-extrabold"
+                    style={{ color: activo ? "#ffffff" : color }}
+                  >
+                    {n}
                   </Text>
                 </TouchableOpacity>
               );
@@ -692,7 +779,7 @@ function TarjetaProxima({
   onAbrir: () => void;
 }) {
   const estado = estadoEn(pago, mes, hoy);
-  const color = COLOR[estado];
+  const color = COLOR_DIA[colorDe(pago, estado)];
   const suColor = (pago.color && COLOR_HEX_600[pago.color]) || color;
   const Dibujo = iconoDe(pago.icono || iconoSugerido(pago.nombre, pago.tipo));
   const x = cuandoTexto(pago, mes, hoy);
@@ -767,7 +854,7 @@ function Fila({
   seleccionando: boolean;
   elegido: boolean;
 }) {
-  const color = COLOR[estado];
+  const color = COLOR_DIA[colorDe(pago, estado)];
   const suColor = (pago.color && COLOR_HEX_600[pago.color]) || color;
   const Dibujo = iconoDe(pago.icono || iconoSugerido(pago.nombre, pago.tipo));
   const pagado = estado === "pagado";
