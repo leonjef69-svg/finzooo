@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { irUnaVez } from "@/utils/nav";
 import History from "@/screens/History";
 import { useAppData } from "@/contexts/AppDataContext";
 
@@ -8,7 +8,7 @@ export default function HistoryTab() {
     <History
       transactions={transactions}
       month={month}
-      onOpenDetail={(id) => router.push(`/transaction/${id}`)}
+      onOpenDetail={(id) => irUnaVez(`/transaction/${id}`)}
     />
   );
 }

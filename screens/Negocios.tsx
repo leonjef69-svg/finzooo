@@ -1,7 +1,7 @@
 import { useState } from "react";
+import { irUnaVez } from "@/utils/nav";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
 import { Store, Plus, Trash2, Check, X, Package, ChevronRight } from "lucide-react-native";
 import BackButton from "@/components/BackButton";
 import { CARD_SHADOW } from "@/constants/style";
@@ -178,7 +178,7 @@ export default function Negocios({ onBack }: { onBack: () => void }) {
                     Sin la flecha sería un toque escondido, que es lo que se descartó al
                     editar categorías: quien no lo sepa no encuentra nunca cómo entrar. */}
                 <TouchableOpacity
-                  onPress={() => router.push(`/negocio/${n.id}`)}
+                  onPress={() => irUnaVez(`/negocio/${n.id}`)}
                   className="flex-row items-center gap-3"
                 >
                   <View className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-noche-2 items-center justify-center">
@@ -234,7 +234,7 @@ export default function Negocios({ onBack }: { onBack: () => void }) {
                         negocio. Editar el nombre se hace una vez. Con los dos del mismo color
                         se leerían como igual de importantes. */}
                     <TouchableOpacity
-                      onPress={() => router.push({ pathname: "/negocio/productos", params: { id: n.id } })}
+                      onPress={() => irUnaVez({ pathname: "/negocio/productos", params: { id: n.id } })}
                       className="flex-1 py-2.5 rounded-xl items-center bg-emerald-600 flex-row justify-center gap-1.5"
                     >
                       <Package size={13} color="#ffffff" />

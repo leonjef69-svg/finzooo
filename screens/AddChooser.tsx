@@ -1,8 +1,8 @@
 import { Text, TouchableOpacity, View } from "react-native";
+import { irUnaVez } from "@/utils/nav";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowUpRight, ArrowDownRight, Mic, ScanLine } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
-import { router } from "expo-router";
 import { useAppData } from "@/contexts/AppDataContext";
 
 export default function AddChooser({
@@ -64,7 +64,7 @@ export default function AddChooser({
             pantalla de venta: esta es la puerta que de verdad se usa, y dejarla abierta haría
             que la etiqueta de Ajustes no significara nada. */}
         <TouchableOpacity
-          onPress={isPremium ? onVoice : () => router.push("/premium")}
+          onPress={isPremium ? onVoice : () => irUnaVez("/premium")}
           className="w-full flex-row items-center gap-4 bg-violet-50 dark:bg-noche-2 rounded-2xl p-4 mb-3"
         >
           <View className="w-11 h-11 rounded-xl bg-violet-500 items-center justify-center">

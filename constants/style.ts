@@ -62,3 +62,24 @@ export const SALDO_TARJETA = {
   borderWidth: 1.5,
   borderColor: "rgba(255,255,255,0.45)",
 };
+
+/**
+ * LOS COLORES DEL MODO OSCURO, PARA LO QUE NO PUEDE USAR CLASES.
+ *
+ * La barra de pestañas y algunos estilos se pintan con `backgroundColor` a mano, porque
+ * React Navigation y StyleSheet no entienden las clases de NativeWind. Hasta el 21/08/2026
+ * esos sitios llevaban el color ESCRITO A MANO —#0f172a, el azul de antes—, así que al pasar
+ * el modo oscuro a carbón se quedaron con el color viejo: *"te faltó esa y de repente otras
+ * más"*. La barra de abajo siguió azul con toda la app en gris.
+ *
+ * Estos valores son los mismos de `noche` en tailwind.config.js. Cambiar uno sin el otro
+ * vuelve a partir la app en dos colores, y hay una prueba que lo vigila.
+ */
+export const NOCHE = {
+  fondo: "#121212",
+  tarjeta: "#1e1e1e",
+  encima: "#2a2a2a",
+  borde: "#2f2f2f",
+  texto: "#f1f5f9",
+  textoSuave: "#94a3b8",
+} as const;

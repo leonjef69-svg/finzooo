@@ -292,7 +292,7 @@ console.log("\n--- LA PANTALLA, Y QUE EL MODO NEGOCIO ES PREMIUM ---");
   // Se sigue llegando desde Ajustes, pero ya no siempre a la lista: con un solo negocio se
   // entra directo a su panel. Lo que esta comprobacion vigila es lo de siempre —que exista la
   // puerta— y no a cual de las dos pantallas da.
-  ok(/router\.push\([\s\S]{0,160}"\/negocio"/.test(ajustes), "se llega desde Ajustes");
+  ok(/irUnaVez\([\s\S]{0,160}"\/negocio"/.test(ajustes), "se llega desde Ajustes");
   ok(/negocios\.rowLabel/.test(ajustes), "con su nombre traducido");
 
   // Los textos, en los tres idiomas. Una clave que falte no da error: sale su nombre en
@@ -566,7 +566,7 @@ console.log("\n--- EL PANEL: ENGANCHE, PANTALLA Y RUTA (paso 4) ---");
   // ahi para que el toque no sea invisible: el toque escondido ya se descarto al editar
   // categorias.
   const lista = fs.readFileSync(path.join(RAIZ, "screens/Negocios.tsx"), "utf8");
-  ok(/router\.push\(`\/negocio\/\$\{n\.id\}`\)/.test(lista), "se entra tocando el negocio");
+  ok(/irUnaVez\(`\/negocio\/\$\{n\.id\}`\)/.test(lista), "se entra tocando el negocio");
   ok(/ChevronRight/.test(lista), "y se ve que se puede tocar");
 
   // Los textos, en los tres idiomas. Una clave que falte no da error: sale su nombre en
@@ -1061,7 +1061,7 @@ console.log("\n--- QUE NO PAREZCA QUE UN YAPEO SE PERDIO ---");
   const auto = fs.readFileSync(path.join(RAIZ, "screens/AutoCapture.tsx"), "utf8");
   ok(/autoCapture\.vanAlNegocio/.test(auto), "el registro automatico dice que los yapeos van al negocio");
   ok(/n\.activo && n\.destinoYapes === "negocio"/.test(auto), "y mira si de verdad hay uno recibiendo");
-  ok(/router\.push\(`\/negocio\/\$\{negocioQueRecibe\.id\}`\)/.test(auto), "y deja ir a verlo de un toque");
+  ok(/irUnaVez\(`\/negocio\/\$\{negocioQueRecibe\.id\}`\)/.test(auto), "y deja ir a verlo de un toque");
 
   // Y EN AJUSTES, SIN ENTRAR A NADA. Si se apagara sin querer, aqui se nota.
   const ajustes = fs.readFileSync(path.join(RAIZ, "screens/Settings.tsx"), "utf8");
@@ -1073,7 +1073,7 @@ console.log("\n--- QUE NO PAREZCA QUE UN YAPEO SE PERDIO ---");
   // Y LA LISTA SIGUE ALCANZABLE desde el panel, o crear el segundo negocio —o editar el
   // nombre, o borrarlo— se volveria imposible de encontrar.
   const panel = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
-  ok(/router\.push\("\/negocio"\)/.test(panel), "y desde el panel se vuelve a la lista de negocios");
+  ok(/irUnaVez\("\/negocio"\)/.test(panel), "y desde el panel se vuelve a la lista de negocios");
 
   const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
   for (const clave of ['"negocios\\.rowYapes"', '"autoCapture\\.vanAlNegocio"', '"autoCapture\\.vanAlNegocioTexto"', '"panel\\.misNegocios"']) {

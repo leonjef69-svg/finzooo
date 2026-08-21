@@ -1,8 +1,7 @@
-import { router } from "expo-router";
 import PremiumLocked from "@/components/PremiumLocked";
 import Negocios from "@/screens/Negocios";
 import { useAppData } from "@/contexts/AppDataContext";
-import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
+import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
 
 export default function NegocioRoute() {
   const { t, isPremium } = useAppData();
@@ -20,7 +19,7 @@ export default function NegocioRoute() {
         title={t("negocios.title")}
         description={t("negocios.lockedDescription")}
         onBack={safeBack}
-        onSeePremium={() => router.push("/premium")}
+        onSeePremium={() => irUnaVez("/premium")}
       />
     );
   }

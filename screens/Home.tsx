@@ -1,4 +1,5 @@
 import { memo, useCallback, useMemo, useState } from "react";
+import { irUnaVez } from "@/utils/nav";
 import { FlatList, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -36,7 +37,6 @@ import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { sanitizeAmountInput } from "@/utils/amount";
 import { availableBalance, budgetUsed } from "@/utils/finances";
 import { usePendingImport } from "@/utils/pendingImport";
-import { router } from "expo-router";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
 import { useColorScheme } from "nativewind";
@@ -463,7 +463,7 @@ export default function Home({
         {archivoPendiente && (
           <TouchableOpacity
             onPress={() =>
-              router.push({
+              irUnaVez({
                 pathname: "/import",
                 params: { uri: archivoPendiente.uri, name: archivoPendiente.name },
               })

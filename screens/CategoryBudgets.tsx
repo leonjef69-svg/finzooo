@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import { irUnaVez } from "@/utils/nav";
 import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
-import { router } from "expo-router";
 import { Plus } from "lucide-react-native";
 import IconBadge from "@/components/IconBadge";
 import { gastosDisponibles } from "@/constants/categories";
@@ -206,7 +206,7 @@ export default function CategoryBudgets({
               En solo lectura no sale: crear es de las cosas que Premium sí cierra. */}
           {!soloLectura && (
             <TouchableOpacity
-              onPress={() => router.push("/nueva-categoria")}
+              onPress={() => irUnaVez("/nueva-categoria")}
               className="flex-row items-center justify-center gap-2 rounded-2xl border-[1.5px] border-dashed border-slate-300 dark:border-noche-borde py-4"
             >
               <Plus size={17} color="#059669" />

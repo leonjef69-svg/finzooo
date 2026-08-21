@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
+import { irUnaVez } from "@/utils/nav";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
 import { Check, Minus, Package, Plus, ShoppingBag } from "lucide-react-native";
 import BackButton from "@/components/BackButton";
 import { CARD_SHADOW } from "@/constants/style";
@@ -134,7 +134,7 @@ export default function NuevaVenta({
               {t("venta.vacioTexto")}
             </Text>
             <TouchableOpacity
-              onPress={() => router.push({ pathname: "/negocio/productos", params: { id: negocioId } })}
+              onPress={() => irUnaVez({ pathname: "/negocio/productos", params: { id: negocioId } })}
               className="flex-row items-center justify-center gap-2 py-3 px-5 rounded-2xl bg-emerald-600 mt-4"
             >
               <Package size={14} color="#ffffff" />

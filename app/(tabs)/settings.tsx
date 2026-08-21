@@ -1,4 +1,5 @@
 import { router } from "expo-router";
+import { irUnaVez } from "@/utils/nav";
 import Settings from "@/screens/Settings";
 import { useAppData } from "@/contexts/AppDataContext";
 
@@ -20,29 +21,29 @@ export default function SettingsTab() {
       userPhoto={userPhoto}
       onSaveProfile={updateProfileInfo}
       userCurrency={userCurrency}
-      onCurrency={() => router.push("/currency")}
+      onCurrency={() => irUnaVez("/currency")}
       userLanguage={userLanguage}
-      onLanguage={() => router.push("/language")}
-      onCountry={() => router.push("/country")}
+      onLanguage={() => irUnaVez("/language")}
+      onCountry={() => irUnaVez("/country")}
       isPremium={isPremium}
-      onCategoryBudgets={() => router.push("/category-budgets")}
-      onCategoryStyle={() => router.push("/category-style")}
-      onExportPdf={() => router.push("/export-pdf")}
-      onScheduledExport={() => router.push("/scheduled-export")}
-      onImport={() => router.push("/import")}
-      onAutoCapture={() => router.push("/auto-capture")}
+      onCategoryBudgets={() => irUnaVez("/category-budgets")}
+      onCategoryStyle={() => irUnaVez("/category-style")}
+      onExportPdf={() => irUnaVez("/export-pdf")}
+      onScheduledExport={() => irUnaVez("/scheduled-export")}
+      onImport={() => irUnaVez("/import")}
+      onAutoCapture={() => irUnaVez("/auto-capture")}
       onLogout={async () => {
         await logout();
         router.replace("/login");
       }}
-      onPremium={() => router.push("/premium")}
-      onSavings={() => router.push("/savings")}
-      onAppLock={() => router.push("/app-lock")}
-      onChangePassword={() => router.push("/change-password")}
-      onDeleteAccount={() => router.push("/delete-account")}
-      onAbout={() => router.push("/about")}
-      onVoiceHelp={() => router.push("/voice-help")}
-      onLegal={() => router.push("/legal")}
+      onPremium={() => irUnaVez("/premium")}
+      onSavings={() => irUnaVez("/savings")}
+      onAppLock={() => irUnaVez("/app-lock")}
+      onChangePassword={() => irUnaVez("/change-password")}
+      onDeleteAccount={() => irUnaVez("/delete-account")}
+      onAbout={() => irUnaVez("/about")}
+      onVoiceHelp={() => irUnaVez("/voice-help")}
+      onLegal={() => irUnaVez("/legal")}
     />
   );
 }

@@ -1,8 +1,8 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import ExportPdfSheet from "@/screens/ExportPdfSheet";
 import PremiumLocked from "@/components/PremiumLocked";
 import { useAppData } from "@/contexts/AppDataContext";
-import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
+import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
 
 export default function ExportPdfRoute() {
   const { t, isPremium } = useAppData();
@@ -28,7 +28,7 @@ export default function ExportPdfRoute() {
         title={t("exportPdf.exportDataTitle")}
         description={t("exportPdf.lockedDescription")}
         onBack={safeBack}
-        onSeePremium={() => router.push("/premium")}
+        onSeePremium={() => irUnaVez("/premium")}
       />
     );
   }

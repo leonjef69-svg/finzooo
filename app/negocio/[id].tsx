@@ -1,9 +1,9 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import PremiumLocked from "@/components/PremiumLocked";
 import PanelNegocio from "@/screens/PanelNegocio";
 import { useAppData } from "@/contexts/AppDataContext";
 import { candadoPremium, puedeTocar } from "@/utils/candado";
-import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
+import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
 
 export default function PanelNegocioRoute() {
   const { t, isPremium, negocios } = useAppData();
@@ -27,7 +27,7 @@ export default function PanelNegocioRoute() {
         title={t("panel.title")}
         description={t("negocios.lockedDescription")}
         onBack={safeBack}
-        onSeePremium={() => router.push("/premium")}
+        onSeePremium={() => irUnaVez("/premium")}
       />
     );
   }

@@ -122,7 +122,7 @@ console.log("\n--- LAS PAGINAS QUE PIDE GOOGLE, Y QUE COINCIDAN CON LA APP ---")
   const ajustes = fs.readFileSync(path.join(RAIZ, "screens/Settings.tsx"), "utf8");
   const pestana = fs.readFileSync(path.join(RAIZ, "app/(tabs)/settings.tsx"), "utf8");
   ok(/settings\.deleteAccount/.test(ajustes), "Ajustes tiene la fila de eliminar cuenta");
-  ok(/router\.push\("\/delete-account"\)/.test(pestana), "y lleva a la pantalla de borrado");
+  ok(/irUnaVez\("\/delete-account"\)/.test(pestana), "y lleva a la pantalla de borrado");
 
   // Y QUE SE LLAME IGUAL EN LA WEB QUE EN LA APP. Si la fila dijera "Cerrar mi cuenta" y la web
   // "Eliminar cuenta", quien siga las instrucciones no encuentra el boton y se queda dentro.

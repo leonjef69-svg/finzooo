@@ -1,5 +1,5 @@
-import { router } from "expo-router";
 import { View } from "react-native";
+import { irUnaVez } from "@/utils/nav";
 import Home from "@/screens/Home";
 import FAB from "@/components/FAB";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -28,10 +28,10 @@ export default function HomeTab() {
         income={income}
         prevBalance={prevBalance}
         transactions={transactions}
-        onOpenDetail={(id) => router.push(`/transaction/${id}`)}
+        onOpenDetail={(id) => irUnaVez(`/transaction/${id}`)}
         onBulkDelete={deleteTransactions}
       />
-      <FAB onPress={() => router.push("/transaction/choose")} />
+      <FAB onPress={() => irUnaVez("/transaction/choose")} />
     </View>
   );
 }

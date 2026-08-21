@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
+import { irUnaVez } from "@/utils/nav";
 import { ScrollView, Text, TouchableOpacity, View,
   Switch,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ShieldCheck, Check, ChevronRight, ChevronDown, Trash2, Smartphone, ArrowDownLeft, ArrowUpRight, AlertTriangle, RotateCcw, Volume2, Store, Wrench } from "lucide-react-native";
-import { router } from "expo-router";
 import * as notificationReader from "@/modules/notification-reader";
 import { useColorScheme } from "nativewind";
 import BackButton from "@/components/BackButton";
@@ -282,7 +282,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                   {t("autoCapture.vanAlNegocioTexto")}
                 </Text>
                 <TouchableOpacity
-                  onPress={() => router.push(`/negocio/${negocioQueRecibe.id}`)}
+                  onPress={() => irUnaVez(`/negocio/${negocioQueRecibe.id}`)}
                   className="mt-3 py-2.5 rounded-xl items-center bg-slate-100 dark:bg-noche-2"
                 >
                   <Text className="text-[11px] font-bold text-slate-600 dark:text-slate-200">

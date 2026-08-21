@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { irUnaVez } from "@/utils/nav";
 import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -33,7 +34,6 @@ import {
 } from "lucide-react-native";
 import * as voiceWidget from "@/modules/voice-widget";
 import { useColorScheme } from "nativewind";
-import { router } from "expo-router";
 import Row from "@/components/Row";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import Toggle from "@/components/Toggle";
@@ -435,7 +435,7 @@ export default function Settings({
         <Row
           Icon={CalendarClock}
           label={t("calendario.titulo")}
-          onPress={() => router.push("/calendario")}
+          onPress={() => irUnaVez("/calendario")}
         />
         {/* MODO NEGOCIO. Va aquí, entre importar y la captura automática, porque es de la
             misma familia: cosas que cambian CÓMO entra el dinero, no ajustes de la cuenta.
@@ -452,7 +452,7 @@ export default function Settings({
           // negocio es una pantalla que solo sirve para tocar la única fila que tiene. Con dos
           // o más sí hace falta elegir.
           onPress={() =>
-            router.push(negocios.length === 1 ? `/negocio/${negocios[0].id}` : "/negocio")
+            irUnaVez(negocios.length === 1 ? `/negocio/${negocios[0].id}` : "/negocio")
           }
           right={
             <View className="bg-amber-50 px-2 py-1 rounded-full">

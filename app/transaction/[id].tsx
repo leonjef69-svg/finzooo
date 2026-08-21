@@ -1,7 +1,7 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import Detail from "@/screens/Detail";
 import { useAppData } from "@/contexts/AppDataContext";
-import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
+import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
 
 export default function TransactionDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -14,7 +14,7 @@ export default function TransactionDetailRoute() {
     <Detail
       transaction={transaction}
       onBack={safeBack}
-      onEdit={() => router.push(`/transaction/${id}/edit`)}
+      onEdit={() => irUnaVez(`/transaction/${id}/edit`)}
       onDelete={(txId) => {
         deleteTransaction(txId);
         safeBack();

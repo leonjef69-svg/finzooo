@@ -1,8 +1,7 @@
-import { router } from "expo-router";
 import ScheduledExportSettings from "@/screens/ScheduledExportSettings";
 import PremiumLocked from "@/components/PremiumLocked";
 import { useAppData } from "@/contexts/AppDataContext";
-import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
+import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
 
 export default function ScheduledExportRoute() {
   const { t, isPremium } = useAppData();
@@ -17,7 +16,7 @@ export default function ScheduledExportRoute() {
         title={t("schedExport.title")}
         description={t("exportPdf.lockedDescription")}
         onBack={safeBack}
-        onSeePremium={() => router.push("/premium")}
+        onSeePremium={() => irUnaVez("/premium")}
       />
     );
   }

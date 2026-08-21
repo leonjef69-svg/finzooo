@@ -1,8 +1,8 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import PremiumLocked from "@/components/PremiumLocked";
 import Productos from "@/screens/Productos";
 import { useAppData } from "@/contexts/AppDataContext";
-import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
+import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
 
 export default function ProductosRoute() {
   const { t, isPremium, negocios } = useAppData();
@@ -17,7 +17,7 @@ export default function ProductosRoute() {
         title={t("productos.title")}
         description={t("negocios.lockedDescription")}
         onBack={safeBack}
-        onSeePremium={() => router.push("/premium")}
+        onSeePremium={() => irUnaVez("/premium")}
       />
     );
   }

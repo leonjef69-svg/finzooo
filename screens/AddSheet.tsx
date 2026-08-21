@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { irUnaVez } from "@/utils/nav";
 import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated, {
   KeyboardState,
@@ -9,7 +10,6 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X, Check, ChevronDown, ChevronRight, Calendar } from "lucide-react-native";
-import { router } from "expo-router";
 import CategoryAvatar from "@/components/CategoryAvatar";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
 import { currencySymbolFor } from "@/constants/currencies";
@@ -361,7 +361,7 @@ export default function AddSheet({
                 lleva el movimiento. */}
             <TouchableOpacity
               onPress={() =>
-                router.push({
+                irUnaVez({
                   pathname: "/nueva-categoria",
                   params: { tipo: type, actual: category },
                 })

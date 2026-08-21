@@ -1,5 +1,5 @@
 import { Text, TouchableOpacity, View } from "react-native";
-import { router } from "expo-router";
+import { irUnaVez } from "@/utils/nav";
 import { Eye } from "lucide-react-native";
 import { useAppData } from "@/contexts/AppDataContext";
 
@@ -27,7 +27,7 @@ export default function AvisoSoloLectura() {
           {t("candado.soloVerTexto")}
         </Text>
         <TouchableOpacity
-          onPress={() => router.push("/premium")}
+          onPress={() => irUnaVez("/premium")}
           className="mt-2.5 py-2.5 rounded-xl items-center bg-slate-900 dark:bg-white"
         >
           <Text className="text-[11px] font-extrabold text-white dark:text-slate-900">

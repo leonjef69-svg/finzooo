@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import { irUnaVez } from "@/utils/nav";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
 import { Check, ChevronLeft, Cloud, FolderOpen, Info, Package, Play } from "lucide-react-native";
 import Toggle from "@/components/Toggle";
 import { CARD_SHADOW } from "@/constants/style";
@@ -293,7 +293,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
    */
   async function probarAhora() {
     if (!saleSolo) {
-      router.push({
+      irUnaVez({
         pathname: "/export-pdf",
         params: {
           month: monthForSchedule(schedule, new Date()),

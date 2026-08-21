@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
+import { irUnaVez } from "@/utils/nav";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { router } from "expo-router";
 import {
   Info,
   Package,
@@ -327,7 +327,7 @@ export default function PanelNegocio({
             un gasto. Cambia solo con el uso; no se quita nada. */}
         {soloLectura ? null : usaVentas ? (
           <TouchableOpacity
-            onPress={() => router.push({ pathname: "/negocio/venta", params: { id: negocioId } })}
+            onPress={() => irUnaVez({ pathname: "/negocio/venta", params: { id: negocioId } })}
             className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-600 mt-4"
           >
             <Plus size={16} color="#ffffff" />
@@ -335,7 +335,7 @@ export default function PanelNegocio({
           </TouchableOpacity>
         ) : (
           <TouchableOpacity
-            onPress={() => router.push({ pathname: "/negocio/movimiento", params: { id: negocioId } })}
+            onPress={() => irUnaVez({ pathname: "/negocio/movimiento", params: { id: negocioId } })}
             className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-600 mt-4"
           >
             <Plus size={16} color="#ffffff" />
@@ -351,7 +351,7 @@ export default function PanelNegocio({
         {usaVentas && !soloLectura && (
           <View className="flex-row gap-2.5 mt-2.5">
             <TouchableOpacity
-              onPress={() => router.push({ pathname: "/negocio/movimiento", params: { id: negocioId } })}
+              onPress={() => irUnaVez({ pathname: "/negocio/movimiento", params: { id: negocioId } })}
               className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-noche-2"
             >
               <TrendingDown size={15} color="#f43f5e" />
@@ -360,7 +360,7 @@ export default function PanelNegocio({
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => router.push({ pathname: "/negocio/productos", params: { id: negocioId } })}
+              onPress={() => irUnaVez({ pathname: "/negocio/productos", params: { id: negocioId } })}
               className="flex-1 flex-row items-center justify-center gap-2 py-3 rounded-2xl bg-slate-100 dark:bg-noche-2"
             >
               <Package size={15} color="#059669" />
@@ -383,14 +383,14 @@ export default function PanelNegocio({
         <View className="flex-row justify-center items-center gap-4 py-3">
           {!usaVentas && !soloLectura && (
             <TouchableOpacity
-              onPress={() => router.push({ pathname: "/negocio/venta", params: { id: negocioId } })}
+              onPress={() => irUnaVez({ pathname: "/negocio/venta", params: { id: negocioId } })}
             >
               <Text className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
                 {t("venta.registrar")}
               </Text>
             </TouchableOpacity>
           )}
-          <TouchableOpacity onPress={() => router.push("/negocio")}>
+          <TouchableOpacity onPress={() => irUnaVez("/negocio")}>
             <Text className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
               {t("panel.misNegocios")}
             </Text>

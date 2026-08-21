@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
+import { irUnaVez } from "@/utils/nav";
 import { AppState, View } from "react-native";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Stack, router, useNavigationContainerRef, usePathname } from "expo-router";
@@ -235,7 +236,7 @@ function IncomingFileEffect() {
       // Se suelta ANTES de navegar: si el push fallara, insistir en bucle
       // sería peor que perder la importación.
       pending.current = null;
-      router.push({ pathname: "/import", params: { uri: file.uri, name: file.name } });
+      irUnaVez({ pathname: "/import", params: { uri: file.uri, name: file.name } });
       return true;
     }
 
@@ -320,7 +321,7 @@ function ScheduledExportEffect() {
       if (response.notification.request.content.data?.screen !== "export") return;
       loadSchedule().then(async (s) => {
         if (!navigationRef.isReady()) return;
-        router.push({
+        irUnaVez({
           pathname: "/export-pdf",
           params: {
             month: monthForSchedule(s, new Date()),
@@ -371,7 +372,7 @@ function ScheduledExportEffect() {
         // en bucle. Perder una copia es molesto; repetirla sin parar hasta
         // que alguien lo note, peor.
         saveSchedule({ ...s, lastAutoRun: claveDeEjecucion(s, now) });
-        router.push({
+        irUnaVez({
           pathname: "/export-pdf",
           params: {
             month: monthForSchedule(s, now),

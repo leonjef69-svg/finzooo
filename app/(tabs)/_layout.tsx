@@ -1,4 +1,5 @@
 import { Tabs } from "expo-router";
+import { NOCHE } from "@/constants/style";
 import {
   Home as HomeIcon,
   History as HistoryIcon,
@@ -22,12 +23,13 @@ export default function TabsLayout() {
         // blanco de fábrica de React Navigation, y se veía como un destello al volver aquí
         // desde "Nuevo movimiento" — el instante entre que la hoja se cierra e Inicio pinta.
         // Ver la explicación entera en app/_layout.
-        sceneStyle: { backgroundColor: isDark ? "#0f172a" : "#ffffff" },
+        // Ver NOCHE en constants/style: el color NO se escribe aqui a mano.
+        sceneStyle: { backgroundColor: isDark ? NOCHE.fondo : "#ffffff" },
         tabBarActiveTintColor: "#059669",
-        tabBarInactiveTintColor: isDark ? "#94a3b8" : "#475569",
+        tabBarInactiveTintColor: isDark ? NOCHE.textoSuave : "#475569",
         tabBarStyle: {
-          backgroundColor: isDark ? "#0f172a" : "#ffffff",
-          borderTopColor: isDark ? "#334155" : "#cbd5e1",
+          backgroundColor: isDark ? NOCHE.fondo : "#ffffff",
+          borderTopColor: isDark ? NOCHE.borde : "#cbd5e1",
           borderTopWidth: 1,
           height: 58 + insets.bottom,
           paddingTop: 8,

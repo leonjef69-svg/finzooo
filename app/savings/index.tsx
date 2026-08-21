@@ -1,9 +1,8 @@
-import { router } from "expo-router";
 import PremiumLocked from "@/components/PremiumLocked";
 import SavingsList from "@/screens/SavingsList";
 import { useAppData } from "@/contexts/AppDataContext";
 import { candadoPremium, puedeTocar } from "@/utils/candado";
-import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
+import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
 
 export default function SavingsIndexRoute() {
   const { t, isPremium, goals, disponible, apartado, libre, descuadre, monthLabel } = useAppData();
@@ -19,7 +18,7 @@ export default function SavingsIndexRoute() {
         title={t("savingsList.title")}
         description={t("savingsLocked.description")}
         onBack={safeBack}
-        onSeePremium={() => router.push("/premium")}
+        onSeePremium={() => irUnaVez("/premium")}
       />
     );
   }
@@ -28,8 +27,8 @@ export default function SavingsIndexRoute() {
     <SavingsList
       goals={goals}
       onBack={safeBack}
-      onAdd={() => router.push("/savings/form")}
-      onOpen={(id) => router.push(`/savings/${id}`)}
+      onAdd={() => irUnaVez("/savings/form")}
+      onOpen={(id) => irUnaVez(`/savings/${id}`)}
       disponible={disponible}
       apartado={apartado}
       libre={libre}
@@ -37,8 +36,8 @@ export default function SavingsIndexRoute() {
       monthLabel={monthLabel}
       soloLectura={!puedeTocar(estado)}
       onAllocate={() => {
-        if (goals.length === 0) router.push("/savings/form");
-        else router.push("/savings/picker");
+        if (goals.length === 0) irUnaVez("/savings/form");
+        else irUnaVez("/savings/picker");
       }}
     />
   );

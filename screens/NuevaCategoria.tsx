@@ -1,3 +1,4 @@
+import { NOCHE } from "@/constants/style";
 import {
   Fragment,
   memo,
@@ -256,9 +257,9 @@ function casillaNormal(lado: number, oscuro: boolean): ViewStyle {
     borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: oscuro ? "#1e293b" : "#f8fafc",
+    backgroundColor: oscuro ? NOCHE.tarjeta : "#f8fafc",
     borderWidth: 1.5,
-    borderColor: oscuro ? "#334155" : "#e2e8f0",
+    borderColor: oscuro ? NOCHE.borde : "#e2e8f0",
   };
 }
 

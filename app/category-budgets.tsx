@@ -1,9 +1,8 @@
-import { router } from "expo-router";
 import CategoryBudgets from "@/screens/CategoryBudgets";
 import PremiumLocked from "@/components/PremiumLocked";
 import { useAppData } from "@/contexts/AppDataContext";
 import { candadoPremium, puedeTocar } from "@/utils/candado";
-import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
+import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
 
 export default function CategoryBudgetsRoute() {
   const { t, isPremium, categoryBudgets } = useAppData();
@@ -19,7 +18,7 @@ export default function CategoryBudgetsRoute() {
         title={t("categoryBudgets.title")}
         description={t("categoryBudgets.lockedDescription")}
         onBack={safeBack}
-        onSeePremium={() => router.push("/premium")}
+        onSeePremium={() => irUnaVez("/premium")}
       />
     );
   }

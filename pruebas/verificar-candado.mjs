@@ -96,7 +96,7 @@ console.log("\n--- Y SE DICE POR QUE, QUE ES LO QUE LO SEPARA DE UN FALLO ---");
   ok(/candado\.soloVerTitulo/.test(aviso), "hay un aviso que lo explica");
   // Y LLEVA LA SALIDA AL LADO: un aviso que dice lo que no se puede hacer y no dice como
   // arreglarlo deja a la persona igual de atascada, solo que informada.
-  ok(/router\.push\("\/premium"\)/.test(aviso), "y lleva a Premium desde ahi mismo");
+  ok(/irUnaVez\("\/premium"\)/.test(aviso), "y lleva a Premium desde ahi mismo");
 
   for (const [ruta, nombre] of [
     ["screens/PanelNegocio.tsx", "el panel"],
@@ -160,7 +160,7 @@ console.log("\n--- EL MICROFONO ES PREMIUM, Y SE VE (11/08/2026) ---");
 
   // LAS DOS PUERTAS QUE DE VERDAD LO ABREN.
   const chooser = leer("screens/AddChooser.tsx");
-  ok(/isPremium \? onVoice : \(\) => router\.push\("\/premium"\)/.test(chooser), "el boton del panel de + pide Premium");
+  ok(/isPremium \? onVoice : \(\) => irUnaVez\("\/premium"\)/.test(chooser), "el boton del panel de + pide Premium");
   ok(/\{!isPremium && \(/.test(chooser), "y se marca con PRO cuando no se tiene");
 
   // LA QUE CASI SE ESCAPA: el widget del escritorio de Android abre /voice SIN pasar por la
@@ -197,7 +197,7 @@ console.log("\n--- LOS LIMITES SE PUEDEN PONER A LAS CATEGORIAS PROPIAS (12/08/2
   // categoria, quiero que esten en presupuesto por categoria". Traer el catalogo entero —236
   // casillas— dentro de esta pantalla habria sido copiar una pantalla dentro de otra: se lleva
   // a la que ya sabe hacerlo, y al volver la categoria nueva ya esta aqui con su casilla.
-  ok(/router\.push\("\/nueva-categoria"\)/.test(limites), "se puede crear una categoria sin salir de los limites");
+  ok(/irUnaVez\("\/nueva-categoria"\)/.test(limites), "se puede crear una categoria sin salir de los limites");
   ok(/\[categoriasPropias\]/.test(limites), "y al volver aparece sola, sin cerrar la pantalla");
   // En solo lectura no sale: crear es de las cosas que Premium si cierra.
   const trozoNueva = limites.slice(Math.max(0, limites.indexOf("/nueva-categoria") - 300), limites.indexOf("/nueva-categoria"));
