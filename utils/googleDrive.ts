@@ -23,8 +23,14 @@ const FOLDER_MIME = "application/vnd.google-apps.folder";
 
 /** No hay sesión de Google (se entró con correo y contraseña, o sin cuenta). */
 export class DriveNotSignedIn extends Error {
-  constructor() {
-    super("not-signed-in");
+  /**
+   * El motivo viaja en el mensaje A PROPÓSITO. La pantalla de exportación automática lo
+   * escribe tal cual, y hasta hoy solo decía "not-signed-in": eso no distingue entre "nunca
+   * entró con Google", "la cuenta ya no está en el celular" y "Play Services falló". Con el
+   * motivo dentro, el celular dice qué pasó en vez de tener que suponerlo.
+   */
+  constructor(motivo = "not-signed-in") {
+    super(motivo);
     this.name = "DriveNotSignedIn";
   }
 }
@@ -67,17 +73,45 @@ export function hasGoogleSession(): boolean {
 async function asegurarSesion(): Promise<void> {
   if (hasGoogleSession()) return;
   try {
-    await GoogleSignin.signInSilently();
-  } catch {
-    // Sin sesión guardada. Lo dice el aviso de abajo, que es el único sitio donde se decide.
+    const r = (await GoogleSignin.signInSilently()) as { type?: string } | undefined;
+    if (r?.type === "success") return;
+    ultimoTropiezo = r?.type ?? "sin-respuesta";
+  } catch (e) {
+    ultimoTropiezo = String((e as Error)?.message ?? e);
   }
-  if (!hasGoogleSession()) throw new DriveNotSignedIn();
+  /* AQUÍ NO SE DECIDE NADA, Y ES ADREDE.
+     Aunque recuperar no haya salido, se sigue: quien de verdad sabe si hay una sesión
+     utilizable es `getTokens()`, porque habla con Google Play en vez de mirar una memoria de
+     la app. Cortar aquí es lo que hacía el código viejo, y por eso decía "no has entrado" a
+     quien sí había entrado. */
 }
 
+/**
+ * El último error de la recuperación, para poder ENSEÑARLO.
+ *
+ * La pantalla de exportación automática escribe el error tal cual, y ahí se vio
+ * `DriveNotSignedIn: not-signed-in` — un mensaje que solo decía "no hay sesión" sin decir por
+ * qué, así que hubo que adivinar dos veces. Guardando el motivo real, la próxima vez el
+ * propio celular dice qué pasó.
+ */
+let ultimoTropiezo: string | null = null;
+
 async function currentToken(): Promise<string> {
-  const { accessToken } = await GoogleSignin.getTokens();
-  if (!accessToken) throw new DriveNotSignedIn();
-  return accessToken;
+  try {
+    const { accessToken } = await GoogleSignin.getTokens();
+    if (!accessToken) throw new DriveNotSignedIn("sin-token" + motivo());
+    return accessToken;
+  } catch (e) {
+    if (e instanceof DriveNotSignedIn) throw e;
+    // ESTE es el sitio que de verdad sabe si hay sesión utilizable: pedir el token habla con
+    // Google Play, no con una memoria de la app. Su error dice lo que pasa —cuenta quitada
+    // del celular, Play Services sin actualizar, red caída— y se enseña tal cual.
+    throw new DriveNotSignedIn(String((e as Error)?.message ?? e) + motivo());
+  }
+}
+
+function motivo(): string {
+  return ultimoTropiezo ? ` (recuperar: ${ultimoTropiezo})` : "";
 }
 
 /**
