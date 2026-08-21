@@ -40,7 +40,7 @@ import { useColorScheme } from "nativewind";
 import { catInfo } from "@/constants/categories";
 import PdfPreview from "@/components/PdfPreview";
 import { monthKey, fmtDate } from "@/utils/format";
-import { buildFileName, markExported, type ExportDestination } from "@/utils/scheduledExport";
+import { buildFileName, markExported, type ExportDestination, type FileNameMode } from "@/utils/scheduledExport";
 import {
   isGmailInstalled,
   isWhatsAppInstalled,
@@ -137,6 +137,21 @@ export default function ExportPdfSheet({
   //
   // Por voz se encienden diciendo "graficos".
   const [charts, setCharts] = useState(initialCharts ?? false);
+
+  /**
+   * CÓMO SE LLAMA EL ARCHIVO. Pedido suyo: *"agrégale 2 opciones: nombre automático o
+   * personalizado"*.
+   *
+   * En automático sale `Gastos_2026-08.pdf`, que es lo que había siempre. Personalizado es
+   * para cuando el archivo va a otra persona y el nombre tiene que decirle algo —"Recibos
+   * agosto para el contador"— o para quien ya tiene su propia forma de ordenarlos.
+   *
+   * **La extensión no se escribe ni se puede quitar.** Un PDF llamado "cuentas" sin `.pdf` no
+   * lo abre nadie en Windows, y ese fallo se descubre cuando ya está enviado. La pone
+   * `buildFileName`, junto con la limpieza de los caracteres que Android no admite.
+   */
+  const [nombreModo, setNombreModo] = useState<FileNameMode>("auto");
+  const [nombrePropio, setNombrePropio] = useState("");
   // Se pregunta una vez al abrir. Es falso también cuando el APK es anterior
   // a esta función, porque la parte que habla con Gmail es código nativo y no
   // llega en las actualizaciones por internet.
@@ -392,8 +407,8 @@ export default function ExportPdfSheet({
   function nombreDeArchivo(extension: "pdf" | "xlsx" | "csv"): string {
     if (forcedName) return forcedName;
     return buildFileName({
-      mode: "auto",
-      custom: "",
+      mode: nombreModo,
+      custom: nombrePropio,
       typeLabel:
         exportType === "expense"
           ? t("exportPdf.expenses")
@@ -1098,6 +1113,56 @@ export default function ExportPdfSheet({
             )}
           </>
         )}
+
+        {/* CÓMO SE LLAMA EL ARCHIVO. Ver `nombreModo`. */}
+        <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
+          {t("exportPdf.nameLabel")}
+        </Text>
+        <View className="flex-row gap-2 mb-2">
+          {(["auto", "custom"] as FileNameMode[]).map((m) => {
+            const activo = nombreModo === m;
+            return (
+              <TouchableOpacity
+                key={m}
+                onPress={() => setNombreModo(m)}
+                className={`flex-1 py-2.5 rounded-xl border-[1.5px] items-center ${
+                  activo
+                    ? "bg-emerald-600 border-emerald-600"
+                    : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
+                }`}
+              >
+                <Text
+                  className={`text-xs font-bold ${
+                    activo ? "text-white" : "text-slate-600 dark:text-slate-200"
+                  }`}
+                >
+                  {t(m === "auto" ? "exportPdf.nameAuto" : "exportPdf.nameCustom")}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {nombreModo === "custom" && (
+          <TextInput
+            value={nombrePropio}
+            onChangeText={setNombrePropio}
+            placeholder={t("exportPdf.namePlaceholder")}
+            placeholderTextColor="#94a3b8"
+            maxLength={60}
+            className="rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 mb-2"
+          />
+        )}
+
+        {/* CÓMO VA A QUEDAR, ANTES DE EXPORTAR.
+            Se enseña el nombre YA LIMPIO y con su extensión, que es lo que de verdad va a
+            salir. Sin esto, quien escriba "Agosto: gastos/varios" no se entera de que los dos
+            puntos y la barra no caben en un nombre de archivo hasta que ve el archivo. */}
+        <Text className="text-[11px] text-slate-500 dark:text-slate-400 mb-4" numberOfLines={1}>
+          {t("exportPdf.namePreview", {
+            name: nombreDeArchivo(format),
+          })}
+        </Text>
 
         {/* GRÁFICOS.
             Solo tiene sentido en PDF: un CSV es una tabla de números que se
