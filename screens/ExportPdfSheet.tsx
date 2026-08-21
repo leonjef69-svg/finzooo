@@ -17,6 +17,9 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { Keyboard } from "react-native";
+import Animated from "react-native-reanimated";
+import { useKeyboardAnimatedPadding } from "@/utils/keyboard";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Print from "expo-print";
 import * as Sharing from "expo-sharing";
@@ -118,6 +121,11 @@ export default function ExportPdfSheet({
   const { t, transactions, month, monthNames, fmt, userName, userEmail, showToast, categoryBudgets } =
     useAppData();
   const insets = useSafeAreaInsets();
+  const { animatedPaddingStyle, onFieldFocus, onFieldBlur } = useKeyboardAnimatedPadding();
+  /* Al cerrar sin avisarle al teclado, el sistema puede quedarse creyendo "sigue abierto" y la
+     SIGUIENTE hoja hereda un hueco del tamaño de un teclado que no existe. El porqué completo
+     está en AddSheet.tsx. */
+  useEffect(() => () => Keyboard.dismiss(), []);
   const { colorScheme } = useColorScheme();
   const [exportType, setExportType] = useState<ExportType>(initialType ?? "all");
   const [format, setFormat] = useState<ExportFormat>(initialFormat ?? "pdf");
@@ -772,7 +780,21 @@ export default function ExportPdfSheet({
   if (silent) return null;
 
   return (
-    <View className="absolute inset-0 z-40 justify-end">
+    /* EL TECLADO YA NO TAPA LA HOJA.
+       Al añadir el nombre personalizado apareció el fallo de siempre: se toca "Personalizado",
+       sale el campo, sale el teclado — y el campo queda debajo del teclado. *"Soluciona ese
+       problema del teclado, no deja escribir"*.
+
+       Esta hoja era la única con campos de texto que no usaba `useKeyboardAnimatedPadding`.
+       Se aguantaba porque los campos que ya había —el nombre y el número de un contacto— están
+       arriba del todo y el teclado no llegaba a taparlos. El nombre del archivo está mucho más
+       abajo, y ahí ya no se aguanta.
+
+       El porqué de este mecanismo, y los seis intentos que no funcionaron antes, están en
+       utils/keyboard.ts. Aquí solo se usa, igual que en AddSheet, GoalFormSheet y las demás. */
+    <Animated.View
+      style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "flex-end", zIndex: 40 }, animatedPaddingStyle]}
+    >
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       {/* La hoja no puede pasar del 88% de la pantalla. Con la vista previa
           dentro, en un celular corto el botón de exportar se salía por abajo
@@ -805,6 +827,9 @@ export default function ExportPdfSheet({
           style={{ flexShrink: 1 }}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={{ paddingBottom: 4 }}
+          /* Con el teclado abierto, un toque en un boton se comia cerrando el teclado y habia
+             que tocarlo dos veces. "handled" deja pasar el toque a la primera. */
+          keyboardShouldPersistTaps="handled"
         >
 
         {/* Selector de mes. En fila con desplazamiento horizontal en vez de
@@ -1173,6 +1198,8 @@ export default function ExportPdfSheet({
             placeholder={t("exportPdf.namePlaceholder")}
             placeholderTextColor="#94a3b8"
             maxLength={60}
+            onFocus={() => onFieldFocus("nombre")}
+            onBlur={() => onFieldBlur("nombre")}
             className="rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2 px-4 py-3 text-sm text-slate-900 dark:text-slate-100 mb-2"
           />
         )}
@@ -1347,6 +1374,6 @@ export default function ExportPdfSheet({
           onClose={() => setPreviewHtml(null)}
         />
       )}
-    </View>
+    </Animated.View>
   );
 }
