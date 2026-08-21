@@ -882,7 +882,9 @@ function TarjetaProxima({
             onPress={onPagar}
             className="px-4 h-10 rounded-xl items-center justify-center bg-emerald-600"
           >
-            <Text className="text-[13px] font-bold text-white">{t("calendario.pagar")}</Text>
+            <Text className="text-[13px] font-bold text-white">
+              {t(pago.tipo === "ingreso" ? "calendario.cobrar" : "calendario.pagar")}
+            </Text>
           </TouchableOpacity>
         )}
       </View>
@@ -970,7 +972,14 @@ function Fila({
               onPress={onPagar}
               className="mt-1.5 px-3 py-1.5 rounded-lg bg-emerald-600"
             >
-              <Text className="text-[12px] font-bold text-white">{t("calendario.pagar")}</Text>
+              {/* UN SUELDO NO SE PAGA, SE COBRA (20/08/2026).
+                  El boton decia "Pagar" tambien en los ingresos: *"un ingreso sale el boton,
+                  no deberia"*. El boton hace falta —es lo que convierte el sueldo en un
+                  movimiento de verdad cuando llega— pero con esa palabra dice lo contrario de
+                  lo que hace. Cambia la palabra, no el boton. */}
+              <Text className="text-[12px] font-bold text-white">
+                {t(pago.tipo === "ingreso" ? "calendario.cobrar" : "calendario.pagar")}
+              </Text>
             </TouchableOpacity>
           ))}
       </View>

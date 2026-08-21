@@ -105,7 +105,7 @@ export default function Settings({
   onLegal: () => void;
   onVoiceHelp: () => void;
 }) {
-  const { t, isCloudSynced, respaldoAlDia, autoCaptureOn, showToast, negocios, reprogramarAvisos } =
+  const { t, isCloudSynced, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios, reprogramarAvisos } =
     useAppData();
   /** El negocio que se está quedando con los yapeos, si hay alguno. Ver la fila de abajo. */
   const negocioQueRecibe = negocios.find((n) => n.activo && n.destinoYapes === "negocio");
@@ -359,7 +359,12 @@ export default function Settings({
                 respaldoAlDia ? "text-emerald-600 dark:text-slate-300" : "text-amber-700 dark:text-slate-300"
               }`}
             >
-              {t(respaldoAlDia ? "settings.backupDescription" : "settings.backupFailedHint")}
+              {respaldoAlDia
+                ? t("settings.backupDescription")
+                : /* EL MOTIVO, ESCRITO TAL CUAL. Sin el, "no se pudo guardar" no da para
+                     hacer nada: no distingue entre falta de internet, permisos o que no
+                     quepa. Con el, la propia pantalla dice que pasa. */
+                  `${t("settings.backupFailedHint")} (${respaldoFallo ?? "?"})`}
             </Text>
           </View>
         </View>
