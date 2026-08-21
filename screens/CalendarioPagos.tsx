@@ -440,13 +440,16 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                 <TouchableOpacity
                   key={columna}
                   onPress={() => {
+                    /* UN DÍA CON ALGO ABRE SU LISTA, TENGA UNA COSA O CINCO.
+                       Antes, con una sola, tocar el día abría ESE pago para editarlo — y
+                       entonces no había manera de ponerle un segundo desde el calendario:
+                       *"en el día 30 le quiero agregar 2 o más pagos, no se puede"*. Se podía
+                       por el botón verde de abajo eligiendo la fecha a mano, que es
+                       justo el rodeo que el calendario existe para ahorrar.
+                       Ahora el día siempre enseña lo que tiene y su botón de agregar. */
                     if (!x) {
                       irUnaVez(`/calendario/nuevo?fecha=${mes}-${String(dia).padStart(2, "0")}`);
-                    } else if (x.n === 1) {
-                      const uno = delMes.find((p) => diaDe(p) === dia);
-                      if (uno) irUnaVez(`/calendario/nuevo?id=${uno.id}`);
                     } else {
-                      // Con varios NO se abre ninguno: no se sabría cuál abrió. Se enseñan.
                       setDiaAbierto(diaAbierto === dia ? null : dia);
                     }
                   }}
@@ -505,7 +508,10 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
           <View className="mt-4 rounded-2xl p-3 bg-slate-50 dark:bg-noche-2">
             <View className="flex-row items-center justify-between mb-2">
               <Text className="text-[13px] text-slate-900 dark:text-slate-100">
-                {t("calendario.diaConVarias", { dia: diaAbierto, n: delDiaAbierto.length })}
+                {/* "1 cosas" no lo dice nadie. */}
+                {delDiaAbierto.length === 1
+                  ? t("calendario.diaConUna", { dia: diaAbierto })
+                  : t("calendario.diaConVarias", { dia: diaAbierto, n: delDiaAbierto.length })}
               </Text>
               <TouchableOpacity onPress={() => setDiaAbierto(null)} className="p-1">
                 <X size={15} color="#94a3b8" />
@@ -528,6 +534,21 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                 elegido={seleccionados.includes(p.id)}
               />
             ))}
+
+            {/* AGREGAR OTRO EN ESTE MISMO DÍA, con la fecha ya puesta.
+                Es la mitad del arreglo: el día enseña lo que tiene, y desde ahí se le añade
+                lo que falta sin salir ni volver a elegir el 30 a mano. */}
+            <TouchableOpacity
+              onPress={() =>
+                irUnaVez(`/calendario/nuevo?fecha=${mes}-${String(diaAbierto).padStart(2, "0")}`)
+              }
+              className="flex-row items-center justify-center gap-1.5 mt-1 py-2.5 rounded-xl border-[1.5px] border-dashed border-slate-300 dark:border-noche-borde"
+            >
+              <Plus size={15} color="#059669" strokeWidth={2.6} />
+              <Text className="text-[13px] font-bold text-emerald-600">
+                {t("calendario.agregarEnEsteDia", { dia: diaAbierto })}
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
 
