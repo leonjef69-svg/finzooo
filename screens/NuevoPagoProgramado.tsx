@@ -62,6 +62,21 @@ function soloNumeros(texto: string, tope: number): string {
  */
 const GRUPOS_AL_ABRIR = 4;
 
+/**
+ * CUÁNTOS GRUPOS ENTRAN EN CADA TANDA POSTERIOR, Y POR QUÉ NO TODOS JUNTOS.
+ *
+ * Hasta el 20/08 había DOS tandas: 4 grupos al abrir y, 250 ms después, los 18 de golpe. Esa
+ * segunda tanda montaba unos 170 dibujos en un solo dibujado, y mientras Android lo hace no
+ * atiende a nada más: si el dedo tocaba justo ahí, el toque se quedaba esperando a que
+ * terminara. Él lo vio en el peor momento, el de recién entrar: *"le doy al icono y le quiero
+ * dar a elegir cualquier icono, se demora unos segundos"*.
+ *
+ * De dos en dos son unos 25 dibujos por tanda —un suspiro— y entre tanda y tanda el dedo
+ * manda. Se tarda un pelo más en tenerlos todos, pero eso pasa fuera de la vista; lo que se
+ * nota es que la pantalla nunca se queda dura.
+ */
+const GRUPOS_POR_TANDA = 2;
+
 function dosDigitos(n: number): string {
   return String(n).padStart(2, "0");
 }
@@ -127,7 +142,14 @@ export default function NuevoPagoProgramado({
       return;
     }
     if (gruposListos >= TODOS_LOS_GRUPOS.length) return;
-    const id = setTimeout(() => setGruposListos(TODOS_LOS_GRUPOS.length), 250);
+    // La primera espera es más larga: deja que el panel acabe de abrirse antes de ponerse a
+    // montar nada. Las siguientes van seguidas, que es lo que hace que no se note.
+    const espera = gruposListos === GRUPOS_AL_ABRIR ? 250 : 40;
+    const id = setTimeout(
+      () =>
+        setGruposListos((n) => Math.min(n + GRUPOS_POR_TANDA, TODOS_LOS_GRUPOS.length)),
+      espera
+    );
     return () => clearTimeout(id);
   }, [eligiendoIcono, gruposListos]);
 
