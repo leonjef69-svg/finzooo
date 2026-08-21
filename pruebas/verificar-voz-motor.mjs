@@ -147,5 +147,39 @@ console.log("\n--- EL VOLUMEN DE AVISOS EN CERO SE APUNTA ---");
   ok(/anotarVoz\("sin-volumen"\)/.test(servicio), "y se apunta para que la pantalla lo señale");
 }
 
+console.log("\n--- LA VOZ SE ELIGE, NO SE DEJA AL AZAR ---");
+{
+  /* EL FALLO (21/08/2026): *"suena algo chillona, como de un nino medio raro"*.
+
+     setLanguage dice QUE IDIOMA y deja que Android elija CUAL de sus voces usar. Los
+     celulares traen varias -unas descargadas y buenas, otras comprimidas de reserva- y la que
+     elige por su cuenta suele ser la mas pequena: la que suena metalica y aguda.
+
+     Ahora se mira la lista y se escoge. Se vigila aqui porque desde fuera no se distingue:
+     las dos "hablan en espanol", solo que una da verguenza. */
+  ok(/fun mejorVozEspanola/.test(probador), "hay una funcion que elige la voz");
+  ok(/m\.voice = elegida/.test(probador), "y se la pone al motor de verdad");
+  ok(/it\.locale\?\.language == "es"/.test(probador), "solo entre las espanolas");
+  ok(/\bquality\b/.test(probador), "manda la calidad de la voz");
+  ok(
+    /isNetworkConnectionRequired/.test(probador),
+    "y se prefiere una que no necesite internet: un yapeo llega igual sin senal"
+  );
+  ok(
+    /"PE" -> 5/.test(probador) && /"ES" -> 1/.test(probador),
+    "y el pais desempata, con Espana la ultima"
+  );
+
+  // El tono tambien: otra app pudo dejarlo cambiado en el motor, que es compartido.
+  ok(/setPitch\(1\.0f\)/.test(probador), "el tono se pone a mano");
+  ok(/setSpeechRate\(1\.0f\)/.test(probador), "y la velocidad tambien");
+
+  // Y que no se caiga si el motor no sabe contestar: en moviles viejos getVoices revienta.
+  ok(
+    /m\.voices \?: return false/.test(probador),
+    "si el motor no publica sus voces, se sigue con la que haya en vez de romperse"
+  );
+}
+
 console.log(fallos === 0 ? "\nTodo bien: la voz no se queda muda en silencio" : `\n${fallos} fallas`);
 process.exit(fallos ? 1 : 0);

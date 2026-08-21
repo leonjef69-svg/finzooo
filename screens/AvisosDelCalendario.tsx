@@ -107,13 +107,30 @@ export default function AvisosDelCalendario({ onBack }: { onBack: () => void }) 
             setResultado(await probarAviso(t));
             setProbando(false);
           }}
-          disabled={probando}
-          className="flex-row items-center gap-3 py-4 border-t-[1.5px] border-slate-100 dark:border-noche-borde"
+          /* APAGADO CUANDO LOS AVISOS ESTAN APAGADOS (21/08/2026).
+             Lo encontro el: apago el interruptor, toco probar, Y SONO IGUAL —*"apago la
+             opcion de avisos de pago e igual me lee la notificacion, no le encuentro
+             sentido"*. Con razon: un interruptor que no cambia nada de lo que ves no
+             parece un interruptor, parece un adorno.
+             La prueba se salta el interruptor a proposito -comprueba que Android deje
+             sonar a Fino, no si hay avisos puestos- pero eso no se veia por ningun lado.
+             Ahora, con los avisos apagados, el boton se apaga y dice por que. */
+          disabled={probando || !encendidos}
+          className={`flex-row items-center gap-3 py-4 border-t-[1.5px] border-slate-100 dark:border-noche-borde ${
+            encendidos ? "" : "opacity-40"
+          }`}
         >
           <Bell size={18} color="#64748b" />
-          <Text className="flex-1 text-[14px] text-slate-900 dark:text-slate-100">
-            {t(probando ? "calendario.probando" : "calendario.probar")}
-          </Text>
+          <View className="flex-1">
+            <Text className="text-[14px] text-slate-900 dark:text-slate-100">
+              {t(probando ? "calendario.probando" : "calendario.probar")}
+            </Text>
+            {!encendidos && (
+              <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                {t("calendario.probarApagado")}
+              </Text>
+            )}
+          </View>
           <ChevronRight size={17} color="#cbd5e1" />
         </TouchableOpacity>
         {resultado != null && (

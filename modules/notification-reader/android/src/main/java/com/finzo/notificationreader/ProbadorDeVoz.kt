@@ -148,6 +148,66 @@ object ProbadorDeVoz {
     return false
   }
 
+  /**
+   * ELIGE LA VOZ, NO SOLO EL IDIOMA (21/08/2026).
+   *
+   * EL FALLO: *"suena algo chillona, como de un nino medio raro"*.
+   *
+   * `setLanguage` dice QUE IDIOMA, y deja que Android elija CUAL de las voces de ese idioma
+   * usar. Casi todos los celulares traen varias —unas descargadas y buenas, otras comprimidas
+   * de reserva— y la que elige por su cuenta suele ser la mas pequena, que es justo la que
+   * suena metalica y aguda.
+   *
+   * Aqui se mira la lista y se escoge a mano. Se prefiere, por este orden:
+   *   1. La de MEJOR CALIDAD que haya.
+   *   2. Que NO necesite internet: una voz de red calla cuando no hay senal, y un yapeo
+   *      llega igual sin datos.
+   *   3. Que el pais sea de America antes que el de Espana, para que no diga "cincuenta"
+   *      con la z castellana a alguien de Peru.
+   *
+   * Si no se puede elegir —moviles viejos, o el motor todavia no publica sus voces— no pasa
+   * nada: se queda la que Android hubiera puesto, que es como estaba antes.
+   */
+  private fun mejorVozEspanola(m: TextToSpeech): Boolean {
+    val voces =
+      try {
+        m.voices ?: return false
+      } catch (e: Throwable) {
+        // getVoices revienta en algunos motores mientras arrancan.
+        return false
+      }
+
+    val espanolas = voces.filter { it.locale?.language == "es" }
+    if (espanolas.isEmpty()) return false
+
+    // Puntos por pais: lo de aca arriba, y Espana la ultima de las espanolas.
+    fun puntosDePais(pais: String): Int =
+      when (pais.uppercase(Locale.ROOT)) {
+        "PE" -> 5
+        "MX", "US", "419" -> 4
+        "CO", "AR", "CL" -> 3
+        "" -> 2
+        "ES" -> 1
+        else -> 2
+      }
+
+    val elegida =
+      espanolas.maxByOrNull { v ->
+        val calidad = try { v.quality } catch (e: Throwable) { 0 }
+        val red = try { v.isNetworkConnectionRequired } catch (e: Throwable) { false }
+        val pais = try { v.locale?.country ?: "" } catch (e: Throwable) { "" }
+        // La calidad manda; no depender de internet vale mucho; el pais desempata.
+        calidad * 100 + (if (red) 0 else 50) + puntosDePais(pais)
+      } ?: return false
+
+    return try {
+      m.voice = elegida
+      true
+    } catch (e: Throwable) {
+      false
+    }
+  }
+
   /** Una pasada por los tres idiomas, sin esperar. */
   private fun intentarEspanol(m: TextToSpeech): Boolean {
     for (idioma in listOf(Locale("es", "PE"), Locale("es", "ES"), Locale("es"))) {
@@ -161,6 +221,16 @@ object ProbadorDeVoz {
         resultado == TextToSpeech.LANG_COUNTRY_AVAILABLE ||
         resultado == TextToSpeech.LANG_COUNTRY_VAR_AVAILABLE
       ) {
+        /* EL TONO, PUESTO A MANO. Un motor puede venir con el tono o la velocidad cambiados
+           por otra app —los lectores de pantalla los tocan— y eso se queda pegado al motor,
+           no a quien lo cambio. Ponerlos aqui garantiza que Fino suene siempre igual. */
+        try {
+          m.setPitch(1.0f)
+          m.setSpeechRate(1.0f)
+        } catch (e: Throwable) {
+          // Si no se puede, se habla igual con lo que haya.
+        }
+        mejorVozEspanola(m)
         return true
       }
     }
