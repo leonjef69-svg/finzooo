@@ -495,19 +495,11 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
           </View>
         ))}
 
-        {/* LA LEYENDA, AHORA DE UN SOLO COLOR.
-            Antes repetía los tres; ahora los botones de abajo llevan cada uno su nombre Y su
-            color, así que enumerarlos otra vez es decir dos veces lo mismo. El rojo es el
-            único que no tiene botón —no es una categoría, es un estado de "por pagar"— y por
-            eso se queda. */}
-        {delMes.length > 0 && (
-          <View className="flex-row justify-center items-center gap-1.5 mt-3">
-            <View style={{ width: 9, height: 9, borderRadius: 5, backgroundColor: COLOR_DIA.vencido }} />
-            <Text className="text-[11px] text-slate-500 dark:text-slate-400">
-              {t("calendario.leyenda.vencido")}
-            </Text>
-          </View>
-        )}
+        {/* SIN LEYENDA. Hasta el 20/08 aquí había una fila de puntitos explicando los colores,
+            primero tres y luego solo el rojo. Se quitó entera: los cuatro botones de abajo ya
+            dicen nombre y color, y el rojo se entiende solo —la fila vencida lo lleva en la
+            franja y dice "se pasó el 4" con todas sus letras. Una leyenda que repite lo que
+            ya está escrito dos centímetros más abajo es sitio gastado. */}
 
         {diaAbierto != null && (
           <View className="mt-4 rounded-2xl p-3 bg-slate-50 dark:bg-noche-2">
