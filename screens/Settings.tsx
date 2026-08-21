@@ -105,7 +105,8 @@ export default function Settings({
   onLegal: () => void;
   onVoiceHelp: () => void;
 }) {
-  const { t, isCloudSynced, autoCaptureOn, showToast, negocios, reprogramarAvisos } = useAppData();
+  const { t, isCloudSynced, respaldoAlDia, autoCaptureOn, showToast, negocios, reprogramarAvisos } =
+    useAppData();
   /** El negocio que se está quedando con los yapeos, si hay alguno. Ver la fila de abajo. */
   const negocioQueRecibe = negocios.find((n) => n.activo && n.destinoYapes === "negocio");
 
@@ -325,17 +326,40 @@ export default function Settings({
         </LinearGradient>
       </TouchableOpacity>
 
+      {/* EL CARTEL DICE LO QUE DE VERDAD PASO CON LA ULTIMA SUBIDA.
+          Hasta el 20/08/2026 solo miraba `isCloudSynced`, que es "hay sesion iniciada" — asi
+          que decia "Tus datos estan respaldados" aunque la subida llevara semanas fallando.
+          Un respaldo que miente es peor que no tener respaldo: con el segundo, uno guarda una
+          copia por su cuenta. */}
       {isCloudSynced && (
-        <View className="mx-5 mt-3 flex-row items-center gap-3 bg-emerald-50 dark:bg-noche-2 rounded-2xl p-3.5 border-[1.5px] border-emerald-100 dark:border-noche-borde">
-          <View className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-noche-3 items-center justify-center">
-            <Cloud size={16} color="#059669" />
+        <View
+          className={`mx-5 mt-3 flex-row items-center gap-3 rounded-2xl p-3.5 border-[1.5px] ${
+            respaldoAlDia
+              ? "bg-emerald-50 dark:bg-noche-2 border-emerald-100 dark:border-noche-borde"
+              : "bg-amber-50 dark:bg-noche-2 border-amber-200 dark:border-noche-borde"
+          }`}
+        >
+          <View
+            className={`w-9 h-9 rounded-xl items-center justify-center ${
+              respaldoAlDia ? "bg-emerald-100 dark:bg-noche-3" : "bg-amber-100 dark:bg-noche-3"
+            }`}
+          >
+            <Cloud size={16} color={respaldoAlDia ? "#059669" : "#d97706"} />
           </View>
           <View className="flex-1">
-            <Text className="text-sm font-bold text-emerald-700 dark:text-slate-100">
-              {t("settings.backupActive")}
+            <Text
+              className={`text-sm font-bold ${
+                respaldoAlDia ? "text-emerald-700 dark:text-slate-100" : "text-amber-700 dark:text-slate-100"
+              }`}
+            >
+              {t(respaldoAlDia ? "settings.backupActive" : "settings.backupFailed")}
             </Text>
-            <Text className="text-[11px] text-emerald-600 dark:text-slate-300">
-              {t("settings.backupDescription")}
+            <Text
+              className={`text-[11px] ${
+                respaldoAlDia ? "text-emerald-600 dark:text-slate-300" : "text-amber-700 dark:text-slate-300"
+              }`}
+            >
+              {t(respaldoAlDia ? "settings.backupDescription" : "settings.backupFailedHint")}
             </Text>
           </View>
         </View>

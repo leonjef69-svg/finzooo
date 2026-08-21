@@ -48,20 +48,12 @@ import {
 } from "@/utils/calendarioPagos";
 
 /**
- * LOS TRES COLORES, EN UN SOLO SITIO.
+ * LOS COLORES, EN UN SOLO SITIO. **Uno, no dos.**
  *
- * Verde pagado, ámbar por pagar, rojo se pasó — con sus palabras. Escritos en cada sitio
- * donde se usan, cambiar uno dejaría el círculo del calendario de un color y la franja de su
- * fila de otro, para el mismo pago.
- */
-const COLOR: Record<EstadoDelPago, string> = {
-  pagado: "#059669",
-  pendiente: "#d97706",
-  vencido: "#e11d48",
-};
-
-/**
- * EL COLOR DE UN DÍA DEL CALENDARIO, QUE YA NO ES SOLO SU ESTADO.
+ * Aquí hubo dos tablas durante unas horas el 20/08/2026 —la vieja de tres estados y esta— y
+ * ya habían empezado a discrepar: el resumen de arriba pintaba "Pagado" de verde mientras el
+ * botón "Pagados" y las filas lo pintaban de morado. El mismo estado, dos colores, la misma
+ * pantalla. Hay una prueba que cuenta las tablas para que no vuelva a pasar.
  *
  * Con Ingresos y Recuerdos como categorías propias, un día tiene que decir *qué* hay en él y
  * no solo si está pagado: *"si yo pongo un ingreso el 30, ese 30 debería ponerse verde, y así
@@ -110,21 +102,16 @@ type Filtro = "porPagar" | "ingresos" | "pagados" | "recuerdos";
 const FILTROS: Filtro[] = ["porPagar", "ingresos", "pagados", "recuerdos"];
 
 /**
- * UN COLOR POR FILTRO, Y NINGUNO REPETIDO.
+ * EL COLOR DE UN FILTRO ES EL MISMO COLOR DE SIEMPRE. **No hay segunda tabla.**
  *
- * Hasta hoy lo pagado era verde. Al aparecer Ingresos hubo que repartir de nuevo: el verde
- * significa en toda la app *entra plata* —Inicio, Historial—, así que le toca a Ingresos, y
- * lo pagado pasa a morado. Se descartó el gris: *"otro color para pagados aparte de gris"*.
+ * La hubo durante unas horas el 20/08/2026, y ya había empezado a discrepar: el resumen de
+ * arriba pintaba "Pagado" de VERDE mientras el botón "Pagados" y las filas lo pintaban de
+ * MORADO — el mismo estado de dos colores en la misma pantalla, que es justo lo que la regla
+ * de los colores existe para impedir. Dos tablas con lo mismo son una que se queda atrás.
  *
- * El morado no se parece a ninguno de los otros cuatro, que es lo único que se le pide a un
- * color aquí: distinguirse de un vistazo, sin leer.
+ * Las claves de `Filtro` coinciden a propósito con las de `ColorDeDia`.
  */
-const COLOR_FILTRO: Record<Filtro, string> = {
-  porPagar: "#d97706",
-  ingresos: "#059669",
-  pagados: "#7c6cf0",
-  recuerdos: "#2563eb",
-};
+const COLOR_FILTRO = (f: Filtro): string => COLOR_DIA[f];
 
 export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
   const { t, fmt, monthNames, pagosProgramados, marcarPagoDelMes, quitarPagoProgramado, showToast } =
@@ -210,7 +197,18 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
   }
 
   const delMes = pagosDelMes(pagosProgramados, mes);
-  const porEstado = cuentaPorEstado(pagosProgramados, mes, hoy);
+  /** Cuantos GASTOS hay en cada estado. Solo para la barra de debajo del resumen. */
+  const gastosPorEstado = useMemo(() => {
+    const cuenta = { pagados: 0, porPagar: 0, vencido: 0 };
+    for (const p of pagosDelMes(pagosProgramados, mes)) {
+      if (p.tipo !== "pago") continue;
+      const e = estadoEn(p, mes, hoy);
+      if (e === "pagado") cuenta.pagados++;
+      else if (e === "vencido") cuenta.vencido++;
+      else cuenta.porPagar++;
+    }
+    return cuenta;
+  }, [pagosProgramados, mes, hoy]);
   const falta = faltaPorPagar(pagosProgramados, mes, hoy);
   const siguiente = proximoPago(pagosProgramados, hoy);
 
@@ -409,13 +407,21 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
         {delMes.length > 0 && (
           <>
             <View className="flex-row gap-2 mb-2.5">
-              <Cuadro texto={t("calendario.resumen.porPagar")} valor={fmt(totales.porPagar)} color={COLOR.pendiente} />
-              <Cuadro texto={t("calendario.resumen.pagado")} valor={fmt(totales.pagado)} color={COLOR.pagado} />
-              <Cuadro texto={t("calendario.resumen.vencido")} valor={fmt(totales.vencido)} color={COLOR.vencido} />
+              {/* MISMOS COLORES QUE LOS BOTONES Y LAS FILAS. Hasta el 20/08 "Pagado" salia
+                  aqui de verde y abajo de morado: el mismo estado, dos colores, la misma
+                  pantalla. Ahora los tres salen de COLOR_DIA, que es la unica tabla. */}
+              <Cuadro texto={t("calendario.resumen.porPagar")} valor={fmt(totales.porPagar)} color={COLOR_DIA.porPagar} />
+              <Cuadro texto={t("calendario.resumen.pagado")} valor={fmt(totales.pagado)} color={COLOR_DIA.pagados} />
+              <Cuadro texto={t("calendario.resumen.vencido")} valor={fmt(totales.vencido)} color={COLOR_DIA.vencido} />
             </View>
+            {/* LA BARRA MIDE LOS TRES CUADROS DE ARRIBA, ASI QUE CUENTA LO MISMO QUE ELLOS.
+                Usaba `cuentaPorEstado`, que cuenta TODO lo del mes — y desde que existen los
+                ingresos y los recuerdos eso metia en la barra cosas que no son un recibo: un
+                recordatorio sin monto ocupaba su trozo como si fuera plata. Los cuadros de
+                arriba siempre fueron solo de gastos; ahora la barra tambien. */}
             <View className="flex-row h-1.5 rounded-full overflow-hidden mb-4">
-              {(["pagado", "pendiente", "vencido"] as EstadoDelPago[]).map((e) => (
-                <View key={e} style={{ flex: Math.max(porEstado[e], 0), backgroundColor: COLOR[e] }} />
+              {(["pagados", "porPagar", "vencido"] as const).map((c) => (
+                <View key={c} style={{ flex: Math.max(gastosPorEstado[c], 0), backgroundColor: COLOR_DIA[c] }} />
               ))}
             </View>
           </>
@@ -564,7 +570,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
             {FILTROS.map((f) => {
               const n = cuantosHay(f);
               const activo = filtro === f && diaAbierto == null;
-              const color = COLOR_FILTRO[f];
+              const color = COLOR_FILTRO(f);
               return (
                 <TouchableOpacity
                   key={f}
@@ -955,7 +961,9 @@ function Fila({
         {!seleccionando && pago.tipo !== "recordatorio" &&
           (pagado ? (
             <View className="mt-1.5">
-              <Check size={20} color={COLOR.pagado} strokeWidth={3} />
+              {/* Verde de "todo bien", no el color de la categoría Pagados: esto confirma
+                  que no queda nada, no clasifica nada. */}
+              <Check size={20} color="#059669" strokeWidth={3} />
             </View>
           ) : (
             <TouchableOpacity

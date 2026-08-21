@@ -188,7 +188,11 @@ console.log("\n--- Y VIAJAN A LA COPIA DE LA CUENTA ---");
   //
   // Ahora se ancla en la LINEA EXACTA que sube los datos de la cuenta, que es lo unico que
   // identifica ese efecto y no otro. Si mañana entra una tercera subida, sigue valiendo.
-  const laSubidaDeLaCuenta = ctx.lastIndexOf("saveCloudData(uid, datosParaLaNube());");
+  //  · Y el 20/08/2026 fallo una TERCERA vez, por incluir el punto y coma en el ancla: la
+  //    subida paso a mirar como fue —`saveCloudData(...).then(...)`— para poder decir si la
+  //    copia se guardo, y el punto y coma dejo de estar pegado. Se ancla en la llamada sin
+  //    el, que es lo que de verdad identifica a este efecto.
+  const laSubidaDeLaCuenta = ctx.lastIndexOf("saveCloudData(uid, datosParaLaNube())");
   ok(laSubidaDeLaCuenta > 0, "se encontro la subida de los datos de la cuenta");
   const desdeLaSubida = ctx.slice(laSubidaDeLaCuenta);
   const deps = /\}, \[[\s\S]*?\]\);/.exec(desdeLaSubida)?.[0] ?? "";

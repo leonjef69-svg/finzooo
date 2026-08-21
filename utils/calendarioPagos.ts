@@ -194,6 +194,12 @@ export function proximoPago(lista: PagoProgramado[], hoy: Date): { pago: PagoPro
   const candidatos: { pago: PagoProgramado; mes: string; fecha: string; estado: EstadoDelPago }[] = [];
   for (const mes of meses) {
     for (const p of pagosDelMes(lista, mes)) {
+      /* SOLO GASTOS, Y ESTO ERA UN FALLO (20/08/2026).
+         Aquí entraba cualquier cosa del mes sin pagar, así que la tarjeta que dice "TU PRÓXIMO
+         PAGO" podía enseñar el sueldo —con un botón verde de "Pagar" al lado, para plata que
+         se va a RECIBIR— o un recordatorio como "llamar al banco", que no se paga ni se deja
+         de pagar. Un sueldo no es un pago y un recordatorio tampoco. */
+      if (p.tipo !== "pago") continue;
       const estado = estadoEn(p, mes, hoy);
       if (estado === "pagado") continue;
       candidatos.push({ pago: p, mes, fecha: fechaEnElMes(p, mes), estado });

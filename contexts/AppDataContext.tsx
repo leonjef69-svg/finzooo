@@ -45,6 +45,7 @@ import {
 import {
   marcarPagado,
   movimientoDelPago,
+  pagosParaLaNube,
   type PagoProgramado,
 } from "@/utils/calendarioPagos";
 import { reprogramarAvisosDePagos } from "@/utils/avisosDePagos";
@@ -343,6 +344,10 @@ type AppDataContextValue = {
   setVerComoGratis: (v: boolean) => void;
   tienePremiumDeVerdad: boolean;
   isCloudSynced: boolean;
+  /** La ultima subida a la nube termino bien. NO es lo mismo que tener sesion iniciada. */
+  respaldoAlDia: boolean;
+  /** Por que fallo la ultima subida, para poder decirlo en vez de callarlo. */
+  respaldoFallo: string | null;
   // Modo señuelo. Solo los llama la pantalla de bloqueo; ninguna otra parte
   // de la app sabe que esto existe, y esa es la idea.
   enterDecoyMode: () => Promise<void>;
@@ -428,6 +433,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * que leen movimientos. Ver utils/negocio.
    */
   const [datosNegocio, setDatosNegocio] = useState<DatosDelNegocio>(NEGOCIO_VACIO);
+
+  /** El motivo del ultimo fallo al subir, o null si la ultima subida salio bien. */
+  const [respaldoFallo, setRespaldoFallo] = useState<string | null>(null);
 
   const [ahora, setAhora] = useState(() => Date.now());
   const pruebaCorriendo = pruebaVigente(pruebaInicio, ahora);
@@ -546,7 +554,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       categoryBudgets,
       transactions,
       goals,
-      pagosProgramados,
+      /* SIN LAS FOTOS, IGUAL QUE LOS FAVORITOS DE AQUÍ ABAJO. **Esto estaba escrito y sin
+         conectar (20/08/2026).** `pagosParaLaNube` existía, con su explicación, y no la
+         llamaba nadie: los pagos subían con la foto pegada. Una foto son unos 18 KB en texto,
+         y este documento tiene un tope de 1 MB COMPARTIDO CON LOS MOVIMIENTOS. Pasarse no lo
+         guarda a medias: no guarda nada — ni los gastos. O sea que treinta pagos con foto
+         propia dejaban la copia de seguridad muerta sin decir una palabra. */
+      pagosProgramados: pagosParaLaNube(pagosProgramados),
       // EL DE LA CUENTA, no el que ven las pantallas: la prueba gratuita no puede
       // subirse como Premium comprado. Si se subiera, al caducar quedaria marcado
       // en la nube y volveria en cualquier celular donde se entrara.
@@ -985,7 +999,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!(ready && hasOnboarded && uid)) return;
     const timer = setTimeout(() => {
-      saveCloudData(uid, datosParaLaNube());
+      /* SE MIRA COMO FUE. Antes se lanzaba y se olvidaba, y el cartel de Ajustes decia
+         "Tus datos estan respaldados" solo por haber iniciado sesion — aunque la subida
+         llevara semanas fallando. Ver utils/cloudSync. */
+      void saveCloudData(uid, datosParaLaNube()).then((r) =>
+        setRespaldoFallo(r.ok ? null : r.motivo)
+      );
     }, 1500);
     return () => clearTimeout(timer);
     // datosParaLaNube se queda FUERA de esta lista a propósito. Es una función que
@@ -2017,6 +2036,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setVerComoGratis,
     tienePremiumDeVerdad: isPremiumDeLaCuenta || pruebaCorriendo,
     isCloudSynced: uid !== null,
+    /* "Respaldados" quiere decir que la ULTIMA subida termino bien, no que haya sesion
+       iniciada. Ver el cartel de Ajustes y utils/cloudSync. */
+    respaldoAlDia: uid !== null && respaldoFallo === null,
+    respaldoFallo,
     enterDecoyMode,
     leaveDecoyMode,
     celebrateGoal,

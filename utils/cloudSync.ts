@@ -130,16 +130,66 @@ export async function loadCloudData(uid: string): Promise<CloudData | null> {
 // intentar subir de nuevo la próxima vez que algo cambie. Devuelve la
 // promesa por si quien la llama necesita esperar a que termine (por
 // ejemplo, antes de cerrar sesión) en vez de solo "lanzarla y olvidarla".
-export function saveCloudData(uid: string, data: CloudData): Promise<void> {
+export async function saveCloudData(uid: string, data: CloudData): Promise<ResultadoNube> {
   // Ver el candado explicado arriba: subir aquí borraría el respaldo real.
-  if (isDecoyActive()) return Promise.resolve();
+  if (isDecoyActive()) return { ok: true };
   // Firestore RECHAZA cualquier campo cuyo valor sea "undefined" y tira el
   // guardado entero. Como los movimientos ahora tienen campos opcionales
   // (comercio, cuenta, referencia...), uno vacío podría hacer que la copia
   // en la nube fallara en silencio y la persona nunca se enterara.
   // Este paso los quita: JSON.stringify descarta las claves con undefined.
-  const clean = JSON.parse(JSON.stringify(data)) as CloudData;
-  return setDoc(doc(db, "users", uid), clean).catch(() => {});
+  let clean = JSON.parse(JSON.stringify(data)) as CloudData;
+
+  /* SI NO CABE, SE SUBE SIN FOTOS ANTES QUE NO SUBIR NADA (20/08/2026).
+     El documento tiene un tope duro de 1 MB y pasarse no lo guarda a medias: **no guarda
+     nada**, ni los movimientos. Las fotos propias de las categorías son `data:image/jpeg;
+     base64,...` — unos 18 KB cada una— así que un puñado de ellas se come el presupuesto
+     entero y tumba la copia de TODO lo demás.
+     Perder una foto es molesto; perder los gastos, grave. Misma decisión que en
+     `pagosParaLaNube` y en `utils/iconosFavoritos`, ahora también cuando aprieta. */
+  if (pesa(clean) > TOPE_SEGURO) clean = sinFotos(clean);
+
+  /* Y SI AUN ASÍ NO CABE, SE DICE. Antes esto era `.catch(() => {})`: el guardado podía estar
+     fallando desde hacía semanas y la pantalla seguía diciendo "Tus datos están respaldados",
+     porque ese cartel solo miraba si había sesión iniciada. Un respaldo que miente es peor
+     que no tener respaldo: con el segundo, uno guarda una copia por su cuenta. */
+  if (pesa(clean) > LIMITE_FIRESTORE) return { ok: false, motivo: "demasiado-grande" };
+
+  try {
+    await setDoc(doc(db, "users", uid), clean);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, motivo: String((e as Error)?.message ?? e) };
+  }
+}
+
+/** Cómo fue el último intento de subir. Ver el cartel de "respaldados" en Ajustes. */
+export type ResultadoNube = { ok: true } | { ok: false; motivo: string };
+
+/** El tope de Firestore es 1 MB por documento. */
+const LIMITE_FIRESTORE = 1_000_000;
+/** Con margen: los nombres de los campos y el formato de Firestore también ocupan. */
+const TOPE_SEGURO = 800_000;
+
+function pesa(data: CloudData): number {
+  return JSON.stringify(data).length;
+}
+
+/** Quita todo lo que sea una foto pegada, que es lo único que pesa de verdad aquí. */
+function sinFotos(data: CloudData): CloudData {
+  const esFoto = (v?: string | null) => typeof v === "string" && v.startsWith("data:");
+  const overrides: CloudData["categoryOverrides"] = {};
+  for (const [k, v] of Object.entries(data.categoryOverrides ?? {})) {
+    overrides[k] = esFoto(v.image) ? { ...v, image: undefined } : v;
+  }
+  return {
+    ...data,
+    userPhoto: esFoto(data.userPhoto) ? null : data.userPhoto,
+    categoryOverrides: overrides,
+    categoriasPropias: (data.categoriasPropias ?? []).map((c) =>
+      esFoto(c.image) ? { ...c, image: undefined } : c
+    ),
+  };
 }
 
 // Borra por completo el documento de esta cuenta en la nube (se usa al

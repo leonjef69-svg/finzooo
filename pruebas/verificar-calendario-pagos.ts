@@ -188,6 +188,20 @@ ok(
 );
 ok(proximoPago([], HOY) === null, "y sin nada que pagar, no hay tarjeta");
 
+/* LA TARJETA DICE "TU PRÓXIMO PAGO", ASÍ QUE SOLO ENSEÑA PAGOS (20/08/2026).
+   Aquí entraba cualquier cosa del mes sin pagar: el sueldo salía bajo ese título y con un
+   botón verde de "Pagar" al lado —para plata que se va a RECIBIR— y un recordatorio como
+   "llamar al banco" salía igual, sin ser algo que se pague ni se deje de pagar. */
+const soloOtros = [
+  pago({ id: "8", nombre: "Sueldo", dia: 10, monto: 1200, tipo: "ingreso" }),
+  pago({ id: "9", nombre: "Llamar al banco", dia: 12, monto: undefined, tipo: "recordatorio" }),
+];
+ok(proximoPago(soloOtros, HOY) === null, "un sueldo y un recordatorio NO son 'tu próximo pago'");
+ok(
+  proximoPago([...soloOtros, pago({ id: "10", nombre: "Luz", dia: 18 })], HOY)?.pago.nombre === "Luz",
+  "y con un recibo de por medio, la tarjeta enseña el recibo y no el sueldo"
+);
+
 // ---------------------------------------------------------------------------
 console.log("\nQué se puede guardar");
 
@@ -390,6 +404,30 @@ for (const n of nombres) {
   }
 }
 ok(malos.length === 0, `todos los dibujos sugeridos existen${malos.length ? ": falta " + malos.join(", ") : ""}`);
+
+// ---------------------------------------------------------------------------
+console.log("\nUn color, una cosa");
+
+/* CADA ESTADO, DE UN SOLO COLOR EN TODA LA PANTALLA (20/08/2026).
+   Durante unas horas hubo DOS tablas de colores en CalendarioPagos: el resumen de arriba
+   pintaba "Pagado" de verde mientras el boton "Pagados" y las filas lo pintaban de morado. El
+   mismo estado, dos colores, la misma pantalla — que es justo lo que la regla de los colores
+   existe para impedir.
+
+   Se mira el codigo escrito porque lo que se vigila es que no vuelva a haber una SEGUNDA
+   tabla: con dos, una se queda atras y nadie se entera hasta verlo en el celular. */
+{
+  const pantalla = fs.readFileSync(
+    path.join(process.cwd(), "screens", "CalendarioPagos.tsx"),
+    "utf8"
+  );
+  const tablas = [...pantalla.matchAll(/const\s+COLOR[A-Z_]*\s*:\s*Record</g)].length;
+  ok(tablas === 1, `hay UNA sola tabla de colores, no ${tablas}`);
+  ok(
+    !/COLOR\[|COLOR\.pendiente|COLOR\.vencido|COLOR\.pagado/.test(pantalla),
+    "y nadie usa ya la tabla vieja de tres estados"
+  );
+}
 
 console.log(
   fallos === 0
