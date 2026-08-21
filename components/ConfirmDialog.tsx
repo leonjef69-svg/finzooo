@@ -27,7 +27,7 @@ export default function ConfirmDialog({
         activeOpacity={1}
         onPress={onCancel}
       />
-      <View className="bg-white dark:bg-noche rounded-3xl p-6 w-full">
+      <View className="bg-white dark:bg-noche-2 rounded-3xl p-6 w-full">
         <Text className="font-extrabold text-slate-900 dark:text-slate-100 text-base mb-1.5">{title}</Text>
         <Text className="text-sm text-slate-600 dark:text-slate-200 mb-5">{message}</Text>
         <View className="flex-row gap-3">

@@ -246,7 +246,7 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
         ) : (
           <>
             <View
-              className="rounded-3xl p-5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
+              className="rounded-3xl p-5 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
               style={CARD_SHADOW}
             >
               <View className="flex-row items-center gap-3">

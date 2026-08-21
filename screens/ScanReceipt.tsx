@@ -206,7 +206,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
             decirlo claro en vez de mostrar un botón que no haría nada. */}
         {!isSupported ? (
           <View
-            className="rounded-3xl p-5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
+            className="rounded-3xl p-5 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
             style={CARD_SHADOW}
           >
             <Text className="text-sm font-bold text-slate-900 dark:text-slate-100 mb-2">
@@ -294,7 +294,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
             )}
 
             <View
-              className="rounded-3xl p-5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
+              className="rounded-3xl p-5 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
               style={CARD_SHADOW}
             >
               {/* Gasto o ingreso */}

@@ -148,7 +148,7 @@ export default function NuevaVenta({
               return (
                 <View
                   key={p.id}
-                  className={`rounded-2xl p-4 bg-white dark:bg-noche border-[1.5px] ${
+                  className={`rounded-2xl p-4 bg-white dark:bg-noche-2 border-[1.5px] ${
                     cuantos > 0
                       ? "border-emerald-300 dark:border-emerald-700"
                       : "border-slate-200 dark:border-noche-borde"

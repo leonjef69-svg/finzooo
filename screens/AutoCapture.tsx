@@ -199,7 +199,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
       <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
         {!autoCaptureSupported ? (
           <View
-            className="rounded-2xl p-4 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
+            className="rounded-2xl p-4 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
             style={CARD_SHADOW}
           >
             <View className="flex-row items-center gap-2 mb-2">
@@ -269,7 +269,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                 a mirar. */}
             {negocioQueRecibe && (
               <View
-                className="rounded-2xl p-4 mb-5 bg-white dark:bg-noche border-[1.5px] border-emerald-300 dark:border-emerald-700"
+                className="rounded-2xl p-4 mb-5 bg-white dark:bg-noche-2 border-[1.5px] border-emerald-300 dark:border-emerald-700"
                 style={CARD_SHADOW}
               >
                 <View className="flex-row items-center gap-2 mb-2">
@@ -296,7 +296,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                 Sus nombres ya dicen lo que hacen. El párrafo que llevaba cada uno era la otra
                 mitad del texto que sobraba, y ninguno se lee dos veces. */}
             <View
-              className="rounded-2xl bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
+              className="rounded-2xl bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
               style={CARD_SHADOW}
             >
               <View className="flex-row items-center justify-between p-4">
@@ -368,7 +368,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
             </View>
 
             <View
-              className="rounded-2xl px-4 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
+              className="rounded-2xl px-4 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
               style={CARD_SHADOW}
             >
               {yapes.length === 0 ? (

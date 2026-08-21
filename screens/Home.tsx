@@ -90,7 +90,7 @@ const FilaMovimiento = memo(function FilaMovimiento({
           // lo único que las separaba era un borde casi del mismo
           // color. Se sube medio píxel de grosor y se aclara el
           // color un tono en cada tema.
-          className={`flex-row items-center gap-3 bg-white dark:bg-noche rounded-2xl p-3 border-[1.5px] mb-2.5 ${
+          className={`flex-row items-center gap-3 bg-white dark:bg-noche-2 rounded-2xl p-3 border-[1.5px] mb-2.5 ${
             marcada
               ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950"
               : "border-slate-200 dark:border-noche-borde"
@@ -636,7 +636,7 @@ export default function Home({
         extraData={marcadas}
         ListEmptyComponent={
           <View className="px-5">
-            <View className="items-center py-10 bg-white dark:bg-noche rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-noche-borde">
+            <View className="items-center py-10 bg-white dark:bg-noche-2 rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-noche-borde">
               <Text className="text-slate-500 dark:text-slate-300 text-sm">{t("home.noTransactions")}</Text>
             </View>
           </View>

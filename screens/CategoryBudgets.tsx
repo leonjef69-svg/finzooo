@@ -132,7 +132,7 @@ export default function CategoryBudgets({
                  dejaría de leerse como una casilla encima de una tarjeta blanca. */
               <View
                 key={c.id}
-                className="bg-white dark:bg-noche rounded-2xl p-2.5 border-[1.5px] border-slate-200 dark:border-noche-borde"
+                className="bg-white dark:bg-noche-2 rounded-2xl p-2.5 border-[1.5px] border-slate-200 dark:border-noche-borde"
                 style={CARD_SHADOW}
               >
                 <View className="flex-row items-center gap-3">

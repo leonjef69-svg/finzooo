@@ -24,7 +24,7 @@ export default function GoalPickerSheet({
     <View className="absolute inset-0 z-40 justify-end">
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
-        className="bg-white dark:bg-noche rounded-t-3xl px-5 pt-3"
+        className="bg-white dark:bg-noche-2 rounded-t-3xl px-5 pt-3"
         style={{ maxHeight: "80%", paddingBottom: 32 + insets.bottom }}
       >
         <View className="items-center mb-3">

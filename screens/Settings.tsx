@@ -208,7 +208,7 @@ export default function Settings({
           Puestos en fila —foto a la izquierda, nombre y correo al lado— la tarjeta baja a la
           mitad de alto y la foto deja de verse perdida. No se quita nada: siguen estando la
           cámara para cambiarla, el lápiz para el nombre y los dos avisos de error. */}
-      <View className="mx-5 mt-3 bg-white dark:bg-noche rounded-2xl p-3.5 border-[1.5px] border-slate-200 dark:border-noche-borde">
+      <View className="mx-5 mt-3 bg-white dark:bg-noche-2 rounded-2xl p-3.5 border-[1.5px] border-slate-200 dark:border-noche-borde">
         <View className="flex-row items-center gap-3.5">
           <TouchableOpacity onPress={pickPhoto} disabled={pickingPhoto} activeOpacity={0.8}>
             <View className="w-[76px] h-[76px] rounded-full bg-emerald-600 items-center justify-center overflow-hidden">

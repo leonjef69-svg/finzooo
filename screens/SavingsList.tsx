@@ -170,7 +170,7 @@ export default function SavingsList({
                   <TouchableOpacity
                     key={g.id}
                     onPress={() => onOpen(g.id)}
-                    className="bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde rounded-2xl p-4"
+                    className="bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde rounded-2xl p-4"
                     style={CARD_SHADOW}
                   >
                     <View className="flex-row items-center gap-3 mb-3">

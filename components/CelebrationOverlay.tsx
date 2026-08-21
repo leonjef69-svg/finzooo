@@ -17,7 +17,7 @@ export default function CelebrationOverlay({
       onPress={onClose}
     >
       <View className="absolute inset-0 bg-slate-900/60" />
-      <View className="bg-white dark:bg-noche rounded-3xl p-7 w-full items-center">
+      <View className="bg-white dark:bg-noche-2 rounded-3xl p-7 w-full items-center">
         <Text style={{ fontSize: 48 }} className="mb-3">
           🎉
         </Text>

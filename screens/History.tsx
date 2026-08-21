@@ -50,7 +50,7 @@ const Fila = memo(function Fila({
       // Mismo contorno que las filas de Inicio: medio píxel más
       // de grosor y un tono más claro, porque la tarjeta y el
       // fondo de la pantalla son del mismo color en oscuro.
-      className="flex-row items-center gap-3 bg-white dark:bg-noche rounded-2xl p-3 border-[1.5px] border-slate-200 dark:border-noche-borde mb-2.5"
+      className="flex-row items-center gap-3 bg-white dark:bg-noche-2 rounded-2xl p-3 border-[1.5px] border-slate-200 dark:border-noche-borde mb-2.5"
       style={CARD_SHADOW}
     >
       {/* SU PROPIO DIBUJO SI LO TIENE. Ver Transaction.icono: lo trae un pago del
@@ -227,7 +227,7 @@ export default function History({
           <View className="px-5 mt-3 flex-row gap-2.5 mb-4">
             {(filter === "all" || filter === "expense") && (
               <View
-                className="flex-1 flex-row items-center gap-3 bg-rose-50 dark:bg-noche rounded-2xl p-3.5 border-[1.5px] border-rose-100 dark:border-noche-borde"
+                className="flex-1 flex-row items-center gap-3 bg-rose-50 dark:bg-noche-2 rounded-2xl p-3.5 border-[1.5px] border-rose-100 dark:border-noche-borde"
                 style={CARD_SHADOW}
               >
                 <View className="w-9 h-9 rounded-xl bg-rose-100 items-center justify-center">
@@ -243,7 +243,7 @@ export default function History({
             )}
             {(filter === "all" || filter === "income") && (
               <View
-                className="flex-1 flex-row items-center gap-3 bg-emerald-50 dark:bg-noche rounded-2xl p-3.5 border-[1.5px] border-emerald-100 dark:border-noche-borde"
+                className="flex-1 flex-row items-center gap-3 bg-emerald-50 dark:bg-noche-2 rounded-2xl p-3.5 border-[1.5px] border-emerald-100 dark:border-noche-borde"
                 style={CARD_SHADOW}
               >
                 <View className="w-9 h-9 rounded-xl bg-emerald-100 items-center justify-center">
@@ -262,7 +262,7 @@ export default function History({
       }
       ListEmptyComponent={
         <View className="px-5">
-          <View className="items-center py-16 bg-white dark:bg-noche rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-noche-borde px-6">
+          <View className="items-center py-16 bg-white dark:bg-noche-2 rounded-2xl border-[1.5px] border-dashed border-slate-200 dark:border-noche-borde px-6">
             <Text className="text-slate-500 dark:text-slate-300 text-sm text-center">
               {search.trim()
                 ? t("history.noSearchResults", { query: search.trim() })

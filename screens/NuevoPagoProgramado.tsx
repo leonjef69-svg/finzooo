@@ -314,7 +314,7 @@ export default function NuevoPagoProgramado({
             ) : (
               <Dibujo size={28} color={tinta} strokeWidth={2.2} />
             )}
-            <View className="absolute bottom-0 right-0 w-[22px] h-[22px] rounded-tl-xl items-center justify-center bg-white/90 dark:bg-noche/90">
+            <View className="absolute bottom-0 right-0 w-[22px] h-[22px] rounded-tl-xl items-center justify-center bg-white/90 dark:bg-noche-2/90">
               <Pencil size={13} color="#475569" />
             </View>
           </TouchableOpacity>
@@ -355,7 +355,7 @@ export default function NuevoPagoProgramado({
               </View>
               <TouchableOpacity
                 onPress={() => setEligiendoIcono(false)}
-                className="px-3 py-1.5 rounded-lg bg-white dark:bg-noche"
+                className="px-3 py-1.5 rounded-lg bg-white dark:bg-noche-2"
               >
                 <Text className="text-[12px] font-bold text-slate-600 dark:text-slate-200">
                   {t("calendario.nuevo.listo")}
@@ -405,7 +405,7 @@ export default function NuevoPagoProgramado({
                 {esFoto(icono ?? "") && (
                   <TouchableOpacity
                     onPress={() => setIconoElegido(null)}
-                    className="py-2.5 mt-2.5 rounded-xl items-center bg-white dark:bg-noche"
+                    className="py-2.5 mt-2.5 rounded-xl items-center bg-white dark:bg-noche-2"
                   >
                     <Text className="text-[12px] font-bold text-rose-600">
                       {t("calendario.nuevo.quitarFoto")}
@@ -554,7 +554,7 @@ function BotonFoto({ texto, onPress }: { texto: string; onPress: () => void }) {
   return (
     <TouchableOpacity
       onPress={onPress}
-      className="flex-1 py-3 rounded-xl items-center bg-white dark:bg-noche"
+      className="flex-1 py-3 rounded-xl items-center bg-white dark:bg-noche-2"
     >
       <Text className="text-[12px] font-bold text-slate-600 dark:text-slate-200">{texto}</Text>
     </TouchableOpacity>
@@ -595,7 +595,7 @@ const Casilla = memo(function Casilla({
       className="items-center justify-center p-1"
     >
       <View
-        className="w-full h-full rounded-xl items-center justify-center bg-white dark:bg-noche"
+        className="w-full h-full rounded-xl items-center justify-center bg-white dark:bg-noche-2"
         style={puesto ? { backgroundColor: tinta } : undefined}
       >
         <D size={22} color={puesto ? "#ffffff" : "#64748b"} strokeWidth={2} />

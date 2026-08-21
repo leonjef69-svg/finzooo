@@ -484,7 +484,7 @@ export default function AddSheet({
               gestos del sistema) ya no hace falta —el teclado ocupa ese
               espacio— así que se omite para no dejar un hueco vacío de más. */}
           <View
-            className="px-5 py-4 flex-row gap-3 border-t border-slate-200 dark:border-noche-borde bg-white dark:bg-noche"
+            className="px-5 py-4 flex-row gap-3 border-t border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2"
             style={{ paddingBottom: keyboardVisible ? 16 : 16 + insets.bottom }}
           >
             <TouchableOpacity onPress={handleClose} className="flex-1 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 items-center">
@@ -539,7 +539,7 @@ export default function AddSheet({
             activeOpacity={1}
             onPress={() => setShowMethod(false)}
           />
-          <View className="w-full bg-white dark:bg-noche rounded-2xl p-2 border-[1.5px] border-slate-200 dark:border-noche-borde">
+          <View className="w-full bg-white dark:bg-noche-2 rounded-2xl p-2 border-[1.5px] border-slate-200 dark:border-noche-borde">
             <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 px-3 pt-2 pb-1">
               {t("detail.method")}
             </Text>

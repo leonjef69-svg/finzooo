@@ -90,7 +90,7 @@ export default function Negocios({ onBack }: { onBack: () => void }) {
             datos hace perder de vista la lista que se está construyendo. */}
         {enEdicion && (
           <View
-            className="rounded-2xl p-4 mb-5 bg-white dark:bg-noche border-[1.5px] border-emerald-300 dark:border-emerald-700"
+            className="rounded-2xl p-4 mb-5 bg-white dark:bg-noche-2 border-[1.5px] border-emerald-300 dark:border-emerald-700"
             style={CARD_SHADOW}
           >
             <Text className="text-xs font-bold text-slate-700 dark:text-slate-200 mb-1.5">
@@ -171,7 +171,7 @@ export default function Negocios({ onBack }: { onBack: () => void }) {
             {negocios.map((n) => (
               <View
                 key={n.id}
-                className="rounded-2xl p-4 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
+                className="rounded-2xl p-4 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
                 style={CARD_SHADOW}
               >
                 {/* TOCAR EL NEGOCIO ABRE SU PANEL, y se ve que se puede tocar por la flecha.

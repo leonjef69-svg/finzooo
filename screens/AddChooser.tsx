@@ -22,7 +22,7 @@ export default function AddChooser({
   return (
     <View className="absolute inset-0 z-40 justify-end">
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
-      <View className="bg-white dark:bg-noche rounded-t-3xl px-5 pt-3" style={{ paddingBottom: 32 + insets.bottom }}>
+      <View className="bg-white dark:bg-noche-2 rounded-t-3xl px-5 pt-3" style={{ paddingBottom: 32 + insets.bottom }}>
         <View className="items-center mb-4">
           <View className="w-10 h-1 rounded-full bg-slate-200 dark:bg-noche-3" />
         </View>

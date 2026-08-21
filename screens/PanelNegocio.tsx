@@ -261,7 +261,7 @@ export default function PanelNegocio({
 
         {/* LAS LÍNEAS, UNA DEBAJO DE OTRA. Cada una dice de dónde sale el saldo de arriba. */}
         <View
-          className="rounded-2xl bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde p-4 gap-3"
+          className="rounded-2xl bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde p-4 gap-3"
           style={CARD_SHADOW}
         >
           {/* LA LÍNEA DE VENTAS, SOLO SI LAS HAY. Igual que el contador de arriba. */}
@@ -406,7 +406,7 @@ export default function PanelNegocio({
               {t("panel.vendidos")}
             </Text>
             <View
-              className="rounded-2xl bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde p-4 gap-3.5"
+              className="rounded-2xl bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde p-4 gap-3.5"
               style={CARD_SHADOW}
             >
               {vendidos.map((p) => (
@@ -462,7 +462,7 @@ export default function PanelNegocio({
             )}
 
             <View
-              className="rounded-2xl bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde p-4 gap-3.5"
+              className="rounded-2xl bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde p-4 gap-3.5"
               style={CARD_SHADOW}
             >
               {meses.map((m) => (
@@ -512,7 +512,7 @@ export default function PanelNegocio({
             bien. */}
         {hayRegistroAutomatico(userCurrency) && (
           <View
-            className="rounded-2xl p-4 mt-6 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
+            className="rounded-2xl p-4 mt-6 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
             style={CARD_SHADOW}
           >
             <View className="flex-row items-center gap-3">
@@ -578,7 +578,7 @@ export default function PanelNegocio({
               return (
                 <View
                   key={f.id}
-                  className="rounded-2xl p-4 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
+                  className="rounded-2xl p-4 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
                   style={CARD_SHADOW}
                 >
                   <View className="flex-row items-center gap-3">

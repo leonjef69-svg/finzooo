@@ -802,7 +802,7 @@ export default function ExportPdfSheet({
           podía exportar. El tope, más el ScrollView de más abajo, dejan el
           botón siempre pegado al borde inferior y todo lo demás se desliza. */}
       <View
-        className="bg-white dark:bg-noche rounded-t-3xl px-5 pt-3"
+        className="bg-white dark:bg-noche-2 rounded-t-3xl px-5 pt-3"
         style={{ maxHeight: "88%", paddingBottom: 20 + insets.bottom }}
       >
         <View className="items-center mb-3">
@@ -1107,7 +1107,7 @@ export default function ExportPdfSheet({
                   placeholder={t("exportPdf.contactName")}
                   placeholderTextColor="#94a3b8"
                   maxLength={30}
-                  className="border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-noche mb-2"
+                  className="border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-noche-2 mb-2"
                 />
                 <TextInput
                   value={nuevoValor}
@@ -1121,7 +1121,7 @@ export default function ExportPdfSheet({
                   keyboardType={destination === "whatsapp" ? "phone-pad" : "email-address"}
                   autoCapitalize="none"
                   maxLength={60}
-                  className="border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-noche"
+                  className="border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-noche-2"
                 />
                 {/* EL NÚMERO TAL COMO SE VA A USAR.
                     Un número mal escrito no da ningún error: WhatsApp abre un

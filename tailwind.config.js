@@ -30,14 +30,27 @@ module.exports = {
        * colgando del mismo numero es como se rompe uno arreglando el otro.
        */
       colors: {
+        /*
+         * EL MODO OSCURO, EN CARBON. Antes era negro puro (#000000) y el problema no era el
+         * color: era que LA TARJETA Y EL FONDO ERAN LO MISMO. Lo unico que las separaba era un
+         * borde delgado, asi que la pantalla se veia plana y las filas se confundian entre si.
+         *
+         * Ahora la tarjeta es un tono mas clara que el fondo y se distingue sola, sin depender
+         * del borde. Es lo que hacen casi todas las apps, y es lo que eligio el (21/08/2026)
+         * viendo las cuatro opciones dibujadas.
+         *
+         * El gris es neutro a proposito: en una app de dinero, el unico color fuerte de la
+         * pantalla tiene que ser el del saldo.
+         */
         noche: {
-          DEFAULT: "#000000",
-          // Las tarjetas. Lo justo para despegarse del negro sin dejar de ser oscuro.
-          2: "#161616",
+          // El fondo de la pantalla.
+          DEFAULT: "#121212",
+          // Las tarjetas y las filas. UN TONO MAS CLARO QUE EL FONDO: esa es toda la idea.
+          2: "#1e1e1e",
           // Lo que va encima de una tarjeta: un campo, un boton apagado.
-          3: "#242424",
+          3: "#2a2a2a",
           // Las lineas. Mas claras que las tarjetas o no se ven.
-          borde: "#2e2e2e",
+          borde: "#2f2f2f",
         },
       },
     },

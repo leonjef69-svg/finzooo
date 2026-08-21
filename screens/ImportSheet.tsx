@@ -72,7 +72,7 @@ function ElegirMes({
   return (
     <View className="absolute inset-0 items-center justify-center px-8 z-50">
       <TouchableOpacity className="absolute inset-0 bg-slate-900/50" activeOpacity={1} onPress={onCancel} />
-      <View className="bg-white dark:bg-noche rounded-3xl p-6 w-full max-h-[70%]">
+      <View className="bg-white dark:bg-noche-2 rounded-3xl p-6 w-full max-h-[70%]">
         <Text className="font-extrabold text-slate-900 dark:text-slate-100 text-base mb-1.5">
           {t("importSheet.pickMonthTitle", { count: cuantos })}
         </Text>
@@ -488,7 +488,7 @@ export default function ImportSheet({
     <View className="absolute inset-0 z-40 justify-end">
       <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
-        className="bg-white dark:bg-noche rounded-t-3xl px-5 pt-3"
+        className="bg-white dark:bg-noche-2 rounded-t-3xl px-5 pt-3"
         style={{ paddingBottom: 32 + insets.bottom, maxHeight: "88%" }}
       >
         <View className="items-center mb-3">

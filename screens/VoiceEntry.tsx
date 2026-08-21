@@ -905,7 +905,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                     return (
                       <View
                         key={`${row.amount}-${i}`}
-                        className="flex-row items-center gap-3 rounded-2xl p-3.5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
+                        className="flex-row items-center gap-3 rounded-2xl p-3.5 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
                         style={CARD_SHADOW}
                       >
                         <CategoryAvatar id={cat.id} size={20} />
@@ -967,7 +967,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             <Text className="text-xs text-center text-slate-400 mb-4">{`"${heard}"`}</Text>
 
             <View
-              className="w-full rounded-3xl p-5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
+              className="w-full rounded-3xl p-5 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
               style={CARD_SHADOW}
             >
               <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 text-center">
@@ -1081,7 +1081,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             <Text className="text-xs text-center text-slate-400 mb-4">{`"${heard}"`}</Text>
 
             <View
-              className="w-full rounded-3xl p-5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
+              className="w-full rounded-3xl p-5 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
               style={CARD_SHADOW}
             >
               <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 text-center">
@@ -1162,7 +1162,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             <Text className="text-xs text-center text-slate-400 mb-4">{`"${heard}"`}</Text>
 
             <View
-              className="w-full rounded-3xl p-5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde"
+              className="w-full rounded-3xl p-5 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
               style={CARD_SHADOW}
             >
               <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 text-center mb-3">
@@ -1328,7 +1328,7 @@ function SingleCard({
   const cat = catInfo(category);
   return (
     <View
-      className="w-full rounded-3xl p-5 bg-white dark:bg-noche border-[1.5px] border-slate-200 dark:border-noche-borde items-center"
+      className="w-full rounded-3xl p-5 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde items-center"
       style={CARD_SHADOW}
     >
       <View className="mb-1"><CategoryAvatar id={cat.id} size={36} /></View>

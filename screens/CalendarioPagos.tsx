@@ -728,7 +728,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
           Va sobre el borde de abajo del celular (insets), no sobre el borde de la pantalla:
           en los que tienen barra de gestos, un botón pegado al borde se toca con dificultad. */}
       <View
-        className="px-5 pt-2.5 border-t-[1.5px] border-slate-100 dark:border-noche-borde bg-white dark:bg-noche"
+        className="px-5 pt-2.5 border-t-[1.5px] border-slate-100 dark:border-noche-borde bg-white dark:bg-noche-2"
         style={{ paddingBottom: 10 }}
       >
         <TouchableOpacity

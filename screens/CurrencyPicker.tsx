@@ -39,7 +39,7 @@ export default function CurrencyPicker({
                 className={`flex-row items-center justify-between rounded-2xl p-4 border-[1.5px] ${
                   selected
                     ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950"
-                    : "border-slate-200 dark:border-noche-borde bg-white dark:bg-noche"
+                    : "border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2"
                 }`}
               >
                 <View className="flex-row items-center gap-3">
