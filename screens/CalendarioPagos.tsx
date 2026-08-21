@@ -456,9 +456,21 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                   style={{ flex: 1, aspectRatio: 1 }}
                   className="items-center justify-center p-0.5"
                 >
+                  {/* CUADRADO PRIMERO Y CÍRCULO DESPUÉS: eso era el fallo.
+                      La casilla es `w-full h-full` dentro de un padre cuyo alto sale de su
+                      `aspectRatio`, o sea que el ancho se sabe en una pasada y el alto en la
+                      siguiente. Entre las dos, `rounded-full` redondeaba un rectángulo — y se
+                      veía el cuadrado antes de cerrarse: *"sale como un cuadro, luego se
+                      vuelve un círculo"*. Poniéndole a ESTA vista su propio `aspectRatio`,
+                      nace cuadrada en cuanto se conoce el ancho y no hay paso intermedio. */}
                   <View
-                    className="w-full h-full rounded-full items-center justify-center"
-                    style={{ backgroundColor: x ? COLOR_DIA[x.color] : "transparent" }}
+                    className="items-center justify-center"
+                    style={{
+                      width: "100%",
+                      aspectRatio: 1,
+                      borderRadius: 999,
+                      backgroundColor: x ? COLOR_DIA[x.color] : "transparent",
+                    }}
                   >
                     <Text
                       className="text-[12px] text-slate-900 dark:text-slate-100"
@@ -572,7 +584,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
             estás mirando. Pintando los cuatro haría falta un aro encima para decir cuál es el
             activo, que es justo el ruido que se quería quitar. */}
         {delMes.length > 0 && (
-          <View className="flex-row rounded-2xl p-1 mt-4 mb-2.5 bg-slate-100 dark:bg-noche-2">
+          <View className="flex-row rounded-2xl p-1 mt-0.5 mb-2 bg-slate-100 dark:bg-noche-2">
             {FILTROS.map((f) => {
               const n = cuantosHay(f);
               const activo = filtro === f;
@@ -609,7 +621,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
             tocarla, esta misma fila se convierte en cuántos hay elegidos, la papelera,
             "Borrar todo" y "Cancelar" — sin abrir nada ni mover la pantalla. */}
         {delMes.length > 0 && (
-          <View className="flex-row items-center justify-between px-1 mb-2.5">
+          <View className="flex-row items-center justify-between px-1 mb-2">
             {seleccionando ? (
               <>
                 <Text className="text-[13px] font-bold text-slate-900 dark:text-slate-100">
@@ -801,10 +813,26 @@ function TarjetaProxima({
     <TouchableOpacity
       onPress={onAbrir}
       activeOpacity={0.9}
-      className="rounded-2xl p-3.5 mb-4 bg-slate-50 dark:bg-noche-2"
+      /* EL FONDO LO PONE EL PAGO, NO LA PANTALLA.
+         Antes era el mismo gris de cualquier caja y la tarjeta se perdía entre lo demás:
+         *"le podrías agregar como un fondo"*. Ahora lleva un velo del color de su estado
+         —ámbar si falta, rojo si se pasó, verde si es un ingreso— con su borde del mismo
+         tono. Un vistazo y ya sabes si vas bien o mal, sin leer nada.
+
+         Muy suave a propósito (un 12% de color): el botón verde de Pagar tiene que seguir
+         siendo lo más llamativo de la tarjeta. */
+      className="rounded-2xl p-3.5 mb-4 border"
+      style={{ backgroundColor: color + (oscuro ? "22" : "14"), borderColor: color + (oscuro ? "44" : "33") }}
     >
-      <Text className="text-[11px] text-slate-500 dark:text-slate-400 mb-2.5">
-        {t("calendario.proximo")}
+      {/* EL RÓTULO, EN VERSALITAS Y DEL COLOR DEL PAGO.
+          Era gris y del mismo tamaño que la fecha de abajo, así que competía con ella.
+          En mayúsculas pequeñas y separadas ya no se lee como una frase más: se lee como un
+          título, que es lo que es. */}
+      <Text
+        className="text-[10px] font-extrabold mb-2.5"
+        style={{ color, letterSpacing: 1.1 }}
+      >
+        {t("calendario.proximo").toUpperCase()}
       </Text>
       <View className="flex-row items-center gap-3">
         <View
