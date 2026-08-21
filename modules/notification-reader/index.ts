@@ -40,6 +40,8 @@ type NativeShape = {
   setEnabled: (value: boolean) => void;
   isSpeakEnabled: () => boolean;
   setSpeakEnabled: (value: boolean) => void;
+  /** Enciende el motor de voz ya. Ver calentarVoz en el modulo de Android. */
+  calentarVoz: () => void;
   isSpeakOutgoing: () => boolean;
   setSpeakOutgoing: (value: boolean) => void;
   /** La moneda elegida ("PEN", "MXN"...), para que la voz la diga en palabras. */
@@ -261,6 +263,21 @@ export function isSpeakEnabled(): boolean {
     return Native.isSpeakEnabled();
   } catch {
     return false;
+  }
+}
+
+/**
+ * Enciende el motor de voz sin esperar al primer yapeo.
+ *
+ * Se llama al arrancar la app y cada vez que vuelve al frente: el motor tarda 2 a 4 segundos
+ * en despertar, y quien va a yapear casi siempre pasa por aqui antes. Si el APK es anterior a
+ * esto, la funcion no existe y no pasa nada — por eso el "?.".
+ */
+export function calentarVoz(): void {
+  try {
+    Native?.calentarVoz?.();
+  } catch {
+    // Un motor que no se pudo adelantar habla igual, solo que un poco despues.
   }
 }
 

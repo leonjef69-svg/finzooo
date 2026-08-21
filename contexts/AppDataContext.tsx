@@ -1288,6 +1288,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       try {
         if (!notificationReader.isPermissionGranted()) return;
         notificationReader.requestRebind();
+        /* Y DE PASO SE ENCIENDE EL MOTOR DE VOZ (21/08/2026).
+           *"Quiero que desde el primer yape sea al instante, no que recién al 2 sea
+           instante."* El motor tarda 2 a 4 segundos en despertar y ya se encendía al
+           enganchar el servicio, pero recién instalada la app Android tarda un momento en
+           engancharlo — y un yapeo en esos segundos pagaba la espera.
+           Quien va a yapear casi siempre abre Fino antes, o la tiene abierta detrás. Aquí ya
+           está caliente para cuando llegue. Encenderlo dos veces no hace nada. */
+        notificationReader.calentarVoz();
       } catch {
         // Una reconexión que falla no puede impedir que la app arranque.
       }

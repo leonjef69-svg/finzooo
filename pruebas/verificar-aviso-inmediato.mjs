@@ -150,5 +150,37 @@ console.log("\n--- Y LA APP PIDE SOLA QUE VUELVAN A ENGANCHAR EL LECTOR ---");
   );
 }
 
+console.log("\n--- EL MOTOR SE CALIENTA AL ABRIR LA APP ---");
+{
+  /* EL PEDIDO (21/08/2026): *"quiero que desde el primer yape sea al instante, no que recien
+     al 2 yape sea instante"*.
+
+     El motor tarda 2 a 4 segundos en despertar. Ya se encendia en dos sitios -al enganchar el
+     servicio y al encender el interruptor- y aun asi quedaba un hueco: recien instalada la
+     app, Android tarda un momento en reenganchar el servicio, y un yapeo en esos segundos
+     pagaba la espera entera.
+
+     Ahora tambien se enciende al arrancar la app y al volver al frente, que es justo lo que
+     se hace antes de ir a Yape. */
+  const ctx = fs.readFileSync(path.join(RAIZ, "contexts/AppDataContext.tsx"), "utf8");
+  ok(ctx.includes("notificationReader.calentarVoz()"), "la app enciende el motor al arrancar");
+  const dentro = ctx.slice(ctx.indexOf("function reengancharLector"), ctx.indexOf("function reengancharLector") + 900);
+  ok(/calentarVoz/.test(dentro), "y lo hace donde ya se reengancha el lector, que corre tambien al volver al frente");
+
+  const puente = fs.readFileSync(path.join(RAIZ, "modules/notification-reader/index.ts"), "utf8");
+  ok(/export function calentarVoz/.test(puente), "el puente la expone");
+  ok(puente.includes("Native?.calentarVoz?.()"), "y aguanta un APK viejo que no la tenga");
+
+  const modulo = fs.readFileSync(
+    path.join(RAIZ, "modules/notification-reader/android/src/main/java/com/finzo/notificationreader/NotificationReaderModule.kt"),
+    "utf8"
+  );
+  ok(modulo.includes('Function("calentarVoz")'), "y Android la implementa");
+  ok(
+    modulo.includes("isSpeakEnabled(context)) FinzoNotificationListener.calentarMotor()"),
+    "solo si la voz esta encendida: no se gasta bateria en quien no la usa"
+  );
+}
+
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

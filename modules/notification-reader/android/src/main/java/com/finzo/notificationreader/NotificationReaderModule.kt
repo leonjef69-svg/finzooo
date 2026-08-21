@@ -79,6 +79,25 @@ class NotificationReaderModule : Module() {
       if (value) FinzoNotificationListener.calentarMotor()
     }
 
+    /**
+     * ENCIENDE EL MOTOR DE VOZ SIN ESPERAR A NADA (21/08/2026).
+     *
+     * EL PEDIDO: *"quiero que desde el primer yape sea al instante, no que recien al 2 yape
+     * sea instante"*.
+     *
+     * El motor ya se encendia en dos sitios —al enganchar el servicio y al encender el
+     * interruptor— y aun asi quedaba un hueco: recien instalada la app, Android tarda un
+     * momento en reenganchar el servicio, y un yapeo en esos segundos pagaba la espera de 2 a
+     * 4 segundos que tarda el sistema de voz en despertar.
+     *
+     * Con esto la app puede encenderlo tambien al abrirse y cada vez que vuelve al frente,
+     * que es justo lo que se hace antes de ir a Yape. Llamarlo con el motor ya encendido no
+     * hace nada, asi que se puede llamar cuantas veces sea.
+     */
+    Function("calentarVoz") {
+      if (NotificationStore.isSpeakEnabled(context)) FinzoNotificationListener.calentarMotor()
+    }
+
     Function("isSpeakOutgoing") { NotificationStore.isSpeakOutgoing(context) }
 
     Function("setSpeakOutgoing") { value: Boolean ->
