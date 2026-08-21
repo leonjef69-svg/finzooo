@@ -8,17 +8,69 @@ rules_version = '2';
 //
 // Sin reglas correctas, CUALQUIER persona en internet podría leer o borrar
 // los movimientos de todos los usuarios, aunque la app se vea bien.
+//
+// ---------------------------------------------------------------------------
+// LO QUE PASÓ EL 21/08/2026, Y POR QUÉ HAY UNA PRUEBA VIGILANDO ESTO
+// ---------------------------------------------------------------------------
+// La copia de seguridad llevaba semanas fallando en silencio. El motivo estaba
+// aquí: la lista `hasOnly` de abajo tenía ONCE campos y la app ya mandaba
+// DIECISÉIS. `hasOnly` significa "el documento solo puede tener estas claves",
+// así que al llegar `pagosProgramados` —o el calendario, o las categorías
+// propias— Firestore rechazaba **la escritura entera**, no el campo de más.
+//
+// Cada función nueva que guardaba algo rompía el respaldo, y no se notaba
+// porque la subida se tragaba el error. Se veía como "todo bien" hasta que
+// alguien entraba en otro celular.
+//
+// La lista de abajo tiene que coincidir EXACTAMENTE con `CloudData` en
+// utils/cloudSync.ts. Ya no depende de acordarse: `verificar-reglas-nube`
+// compara las dos y falla si se separan. Si esa prueba se queja, hay que
+// publicar este archivo otra vez en la consola.
 service cloud.firestore {
   match /databases/{database}/documents {
 
     // Cada persona guarda todo en un solo documento: users/{su-id}
     match /users/{userId} {
 
-      // Solo puedes leer/escribir TU propio documento, y solo si iniciaste
+      // Solo puedes leer/borrar TU propio documento, y solo si iniciaste
       // sesión Y confirmaste tu correo.
-      allow read, write: if request.auth != null
-                      && request.auth.uid == userId
-                      && request.auth.token.email_verified == true;
+      allow read, delete: if request.auth != null
+                       && request.auth.uid == userId
+                       && request.auth.token.email_verified == true;
+
+      allow create, update: if request.auth != null
+                         && request.auth.uid == userId
+                         && request.auth.token.email_verified == true
+                         && request.resource.data.keys().hasOnly([
+                              'hasOnboarded', 'userName', 'userPhoto', 'userCurrency',
+                              'userLanguage', 'budgets', 'categoryBudgets', 'transactions',
+                              'goals', 'pagosProgramados', 'isPremium', 'merchantLearned',
+                              'categoryOverrides', 'categoriasPropias', 'carryoverCleared',
+                              'iconosFavoritos'
+                            ])
+                         // Los que van siempre.
+                         && request.resource.data.hasOnboarded is bool
+                         && request.resource.data.userName is string
+                         && (request.resource.data.userPhoto is string || request.resource.data.userPhoto == null)
+                         && request.resource.data.userCurrency is string
+                         && request.resource.data.userLanguage is string
+                         && request.resource.data.budgets is map
+                         && request.resource.data.categoryBudgets is map
+                         && request.resource.data.transactions is list
+                         && request.resource.data.goals is list
+                         && request.resource.data.isPremium is bool
+                         // Y LOS OPCIONALES, COMPROBADOS SOLO SI VIENEN.
+                         //
+                         // Son opcionales de verdad: una cuenta creada antes de esa función no
+                         // los tiene, y JSON.stringify quita las claves vacías antes de subir.
+                         // Exigirlos a secas rechazaría a esas cuentas — el mismo fallo de
+                         // arriba con otro disfraz.
+                         && (!('merchantLearned' in request.resource.data) || request.resource.data.merchantLearned is map)
+                         && (!('pagosProgramados' in request.resource.data) || request.resource.data.pagosProgramados is list)
+                         && (!('categoryOverrides' in request.resource.data) || request.resource.data.categoryOverrides is map)
+                         && (!('categoriasPropias' in request.resource.data) || request.resource.data.categoriasPropias is list)
+                         && (!('carryoverCleared' in request.resource.data) || request.resource.data.carryoverCleared is list)
+                         && (!('iconosFavoritos' in request.resource.data) || request.resource.data.iconosFavoritos is list);
     }
 
     // EL MODO NEGOCIO, QUE VIVE EN SU PROPIO DOCUMENTO. **Faltaba (21/08/2026).**
@@ -28,8 +80,9 @@ service cloud.firestore {
     // ninguna regla para ese sitio, así que caía en el "todo cerrado" de más abajo: Firestore
     // rechazaba cada intento y la copia del negocio no se hizo NUNCA.
     //
-    // No se notaba porque esa subida también se traga sus errores. Mismas condiciones que el
-    // documento personal: tuyo, con sesión y con el correo confirmado.
+    // Sin lista de campos a propósito: es lo que acaba de costar semanas de respaldo. Las tres
+    // condiciones que de verdad protegen —es tuyo, hay sesión y el correo está confirmado— se
+    // quedan igual que arriba.
     match /negocios/{userId} {
       allow read, write: if request.auth != null
                       && request.auth.uid == userId
