@@ -115,7 +115,7 @@ export default function ExportPdfSheet({
   // TypeScript diera por imposible un caso que sí ocurre.
   destination?: ExportDestination;
 }) {
-  const { t, transactions, month, monthNames, fmt, userName, showToast, categoryBudgets } =
+  const { t, transactions, month, monthNames, fmt, userName, userEmail, showToast, categoryBudgets } =
     useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -950,6 +950,29 @@ export default function ExportPdfSheet({
             </TouchableOpacity>
           ))}
         </View>
+
+        {/* EN QUÉ DRIVE, DICHO ANTES DE TOCAR NADA.
+            **Esto viene de un fallo real que costó una tarde de suposiciones (20/08/2026).**
+            No podía guardar en Drive, y el aviso decía *"entra a Fino con tu cuenta de
+            Google"* estando ya dentro con ella. Lo encontró él: *"la cuenta que estaba en
+            Fino no era la misma que la que tenía en mi Drive en el celular"*.
+
+            El archivo va SIEMPRE al Drive de la cuenta con la que se entró a Fino, no al de
+            la cuenta que uno tiene abierta en el celular. Cuando son la misma no hay nada que
+            explicar; cuando no lo son, no hay manera de adivinarlo — el archivo aparece en un
+            Drive que no se está mirando, o no aparece.
+
+            Decir el correo lo resuelve sin ningún aviso de error, y antes: quien lo lea y no
+            reconozca ese correo ya sabe qué pasa. Se sigue la misma regla que Dropbox aquí
+            abajo: lo que hace falta saber se dice ANTES de armar el archivo. */}
+        {destination === "drive" && !!userEmail && (
+          <View className="flex-row items-center gap-2 rounded-xl bg-slate-50 dark:bg-noche-2 px-3.5 py-3 mb-4">
+            <Cloud size={15} color="#94a3b8" />
+            <Text className="flex-1 text-[11px] leading-4 text-slate-500 dark:text-slate-400">
+              {t("exportPdf.driveAccount", { email: userEmail })}
+            </Text>
+          </View>
+        )}
 
         {/* DROPBOX SIN CONECTAR: SE DICE ANTES Y SE ARREGLA AQUÍ MISMO.
             Sin esto, elegir Dropbox y tocar Exportar armaba el archivo entero para acabar en
