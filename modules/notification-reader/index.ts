@@ -23,6 +23,19 @@ export type ReaderStats = {
   totalSeen: number;
   lastPackage: string;
   lastAt: number;
+  /**
+   * CUANTOS AVISOS DE UNA APP DE DINERO, Y CUANDO EL ULTIMO.
+   *
+   * Aparte del total a proposito: `lastPackage` guarda solo la ULTIMA app, asi que un Yape
+   * quedaba tapado por el WhatsApp siguiente y no habia forma de saber si habia llegado.
+   * "Yape aviso y no supimos leerlo" y "Yape no aviso" son dos problemas distintos con dos
+   * arreglos distintos, y desde la pantalla se veian igual.
+   */
+  moneySeen: number;
+  lastMoneyPackage: string;
+  lastMoneyAt: number;
+  /** Las ultimas apps que avisaron, por nombre corto y separadas por coma. */
+  ultimasApps: string;
   enabled: boolean;
   queued: number;
   // Por qué la voz habló o se calló con el último aviso: "hablo",
@@ -139,6 +152,10 @@ export function stats(): ReaderStats {
     totalSeen: 0,
     lastPackage: "",
     lastAt: 0,
+    moneySeen: 0,
+    lastMoneyPackage: "",
+    lastMoneyAt: 0,
+    ultimasApps: "",
     enabled: false,
     queued: 0,
     lastSpeak: "",

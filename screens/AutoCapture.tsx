@@ -557,6 +557,33 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                       </Text>
                     ) : null}
 
+                    {/* ¿HA AVISADO YAPE ALGUNA VEZ? LA PREGUNTA QUE FALTABA (21/08/2026).
+                        Su pantalla decia "888 avisos vistos, ultimo com.whatsapp" y con eso no
+                        se puede saber si Yape aviso y quedo tapado por el WhatsApp siguiente, o
+                        si Yape no aviso nunca. Son dos problemas distintos —uno es leer el
+                        texto, el otro es que no hay texto que leer— y se veian igual.
+                        Ahora se cuenta aparte: o dice cuantos han llegado, o dice que ninguno. */}
+                    <View className="flex-row items-center justify-between mt-2">
+                      <Text className="text-[11px] text-slate-500 dark:text-slate-300">
+                        {t("autoCapture.statusMoney")}
+                      </Text>
+                      <Text
+                        className={`text-[11px] font-bold ${
+                          stats.moneySeen > 0 ? "text-emerald-600" : "text-amber-600"
+                        }`}
+                      >
+                        {stats.moneySeen > 0 ? stats.moneySeen : t("autoCapture.statusMoneyNone")}
+                      </Text>
+                    </View>
+
+                    {/* Y las ultimas apps que avisaron: asi, tras yapearse, se ve al momento si
+                        Yape aparecio en la lista o no. Solo el nombre, nunca el texto. */}
+                    {stats.ultimasApps !== "" && (
+                      <Text selectable className="text-[10px] leading-4 text-slate-400 mt-2">
+                        {t("autoCapture.statusUltimas")}: {stats.ultimasApps.split(",").join(" · ")}
+                      </Text>
+                    )}
+
                     {/* POR QUÉ HABLÓ O SE CALLÓ. */}
                     {motivoVoz !== "" && (
                       <Text className="text-[10px] text-slate-400 mt-2">

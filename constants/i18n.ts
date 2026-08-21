@@ -938,6 +938,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "autoCapture.statusOn": "Conectado",
     "autoCapture.statusOff": "Desconectado",
     "autoCapture.statusSeen": "Avisos vistos (de todas las apps)",
+    "autoCapture.statusMoney": "Avisos de Yape",
+    "autoCapture.statusMoneyNone": "ninguno",
+    "autoCapture.statusUltimas": "Ultimas apps que avisaron",
     "autoCapture.statusLast": "Último: {app}",
     "autoCapture.statusHelpNone":
       "Está en cero: Android todavía no le pasa ningún aviso a Fino. Revisa el paso 1, y si ya está dado, apaga y prende el acceso de Fino en la lista de Android.",
@@ -2224,6 +2227,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "autoCapture.statusOn": "Connected",
     "autoCapture.statusOff": "Disconnected",
     "autoCapture.statusSeen": "Alerts seen (from all apps)",
+    "autoCapture.statusMoney": "Yape notifications",
+    "autoCapture.statusMoneyNone": "none",
+    "autoCapture.statusUltimas": "Last apps that notified",
     "autoCapture.statusLast": "Last: {app}",
     "autoCapture.statusHelpNone":
       "It's at zero: Android isn't passing any alerts to Fino yet. Check step 1, and if it's already granted, switch Fino off and on in Android's list.",
@@ -3508,6 +3514,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "autoCapture.statusOn": "Conectado",
     "autoCapture.statusOff": "Desconectado",
     "autoCapture.statusSeen": "Avisos vistos (de todos os apps)",
+    "autoCapture.statusMoney": "Avisos do Yape",
+    "autoCapture.statusMoneyNone": "nenhum",
+    "autoCapture.statusUltimas": "Ultimos apps que avisaram",
     "autoCapture.statusLast": "Último: {app}",
     "autoCapture.statusHelpNone":
       "Está em zero: o Android ainda não passa nenhum aviso ao Fino. Revise o passo 1 e, se já estiver concedido, desligue e ligue o acesso do Fino na lista do Android.",

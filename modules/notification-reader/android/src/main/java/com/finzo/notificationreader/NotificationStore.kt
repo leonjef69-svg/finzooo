@@ -36,6 +36,26 @@ object NotificationStore {
   private const val KEY_LAST_PKG = "lastPkg"
   private const val KEY_LAST_AT = "lastAt"
 
+  /**
+   * SI ALGUNA VEZ LLEGO UN AVISO DE UNA APP DE DINERO, Y CUANDO (21/08/2026).
+   *
+   * EL HUECO QUE COSTO UNA TARDE: `noteSeen` guardaba SOLO la ultima app. Su pantalla decia
+   * "888 avisos vistos, ultimo com.whatsapp" — y con eso no hay forma de saber si Yape aviso
+   * y quedo tapado por el WhatsApp siguiente, o si Yape no aviso nunca. Son dos problemas
+   * distintos con dos arreglos distintos, y desde fuera se ven igual.
+   *
+   * Guardando esto aparte, la pregunta se contesta sola: o dice "hace 2 minutos" —y entonces
+   * el fallo esta en leer el texto— o dice "nunca" —y entonces Yape no esta avisando, que no
+   * es algo que Fino pueda arreglar desde dentro.
+   */
+  private const val KEY_LAST_MONEY_PKG = "lastMoneyPkg"
+  private const val KEY_LAST_MONEY_AT = "lastMoneyAt"
+  private const val KEY_MONEY_SEEN = "moneySeen"
+
+  /** Las ultimas apps que avisaron, separadas por coma. Solo el nombre, nunca el texto. */
+  private const val KEY_ULTIMAS = "ultimasApps"
+  private const val CUANTAS_ULTIMAS = 8
+
   // Por qué la voz hablo o se callo la ultima vez. Sin esto, "no dijo nada"
   // se ve exactamente igual con la voz apagada, con un monto que no se
   // reconocio, o con un aviso que se tomo por un pago tuyo: tres problemas
@@ -157,6 +177,10 @@ object NotificationStore {
       put("connectedAt", p.getLong(KEY_CONNECTED_AT, 0L))
       put("totalSeen", p.getInt(KEY_TOTAL_SEEN, 0))
       put("lastPackage", p.getString(KEY_LAST_PKG, "") ?: "")
+      put("moneySeen", p.getInt(KEY_MONEY_SEEN, 0))
+      put("lastMoneyPackage", p.getString(KEY_LAST_MONEY_PKG, "") ?: "")
+      put("lastMoneyAt", p.getLong(KEY_LAST_MONEY_AT, 0L))
+      put("ultimasApps", p.getString(KEY_ULTIMAS, "") ?: "")
       put("lastAt", p.getLong(KEY_LAST_AT, 0L))
       put("enabled", p.getBoolean(KEY_ENABLED, false))
       put("queued", readArray(p.getString(KEY_QUEUE, null)).length())

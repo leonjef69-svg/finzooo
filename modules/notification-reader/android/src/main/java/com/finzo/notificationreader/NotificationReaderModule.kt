@@ -148,7 +148,23 @@ class NotificationReaderModule : Module() {
      *   "sin-espanol" -> tiene voz, pero no en espanol
      *   "sin-volumen" -> todo listo, pero el volumen de notificaciones esta en cero
      */
-    AsyncFunction("probarVoz") { texto: String -> ProbadorDeVoz.probar(context, texto) }
+    /**
+     * SE PRUEBA CON EL MOTOR DE VERDAD SI LO HAY. Ver decirConElMotorVivo: crear uno nuevo
+     * para la prueba la hacia tardar siempre, y daba una idea equivocada de lo que pasa con un
+     * yapeo real.
+     *
+     * El volumen se mira igual en los dos caminos: es la causa que mas despista —el celular
+     * suena con la musica y tiene los avisos en cero— y no depende del motor.
+     */
+    AsyncFunction("probarVoz") { texto: String ->
+      if (ProbadorDeVoz.volumenDeAvisos(context) == 0) {
+        "sin-volumen"
+      } else if (FinzoNotificationListener.decirConElMotorVivo(texto)) {
+        "ok"
+      } else {
+        ProbadorDeVoz.probar(context, texto)
+      }
+    }
 
     /**
      * El volumen del canal de AVISOS, de 0 a 100.

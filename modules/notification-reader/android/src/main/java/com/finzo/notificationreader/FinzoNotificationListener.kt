@@ -677,6 +677,32 @@ class FinzoNotificationListener : NotificationListenerService() {
      * Llamarlo con el motor ya encendido tampoco hace nada (`prepararVoz` se corta en seco
      * si ya existe), asi que se puede llamar tranquilamente.
      */
+    /**
+     * DICE LA FRASE CON EL MOTOR QUE YA ESTA CALIENTE (21/08/2026).
+     *
+     * EL FALLO: *"al probar la voz ahora de registro automatico habla luego de varios
+     * segundos"*.
+     *
+     * El boton de probar creaba un motor NUEVO cada vez, esperaba hasta doce segundos a que
+     * arrancara, hablaba y lo apagaba. O sea que tardaba SIEMPRE, por construccion — y no por
+     * un fallo del camino de los yapes, que usa un motor que ya esta despierto.
+     *
+     * Eso convertia la prueba en algo peor que inutil: es el boton con el que uno juzga si la
+     * voz funciona, y se comportaba distinto que lo que iba a pasar de verdad. Quien lo tocaba
+     * concluia que la voz llegaba tarde cuando no era cierto.
+     *
+     * Ahora la prueba pasa por aqui: el mismo motor, la misma cola y la misma voz que un
+     * yapeo. Si el servicio no esta enganchado o el motor aun no arranco, se devuelve null y
+     * el probador hace lo de siempre — que ahi si hace falta, porque no hay nada caliente.
+     */
+    @JvmStatic
+    fun decirConElMotorVivo(texto: String): Boolean {
+      val servicio = viva ?: return false
+      if (!servicio.vozLista) return false
+      servicio.mano.post { servicio.hablar(texto) }
+      return true
+    }
+
     @JvmStatic
     fun calentarMotor() {
       val servicio = viva ?: return
