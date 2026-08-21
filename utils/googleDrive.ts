@@ -37,13 +37,41 @@ export class DriveDenied extends Error {
   }
 }
 
-/** ¿Hay una cuenta de Google conectada en este celular? */
+/** ¿Hay una cuenta de Google conectada EN ESTA EJECUCIÓN de la app? Ver `asegurarSesion`. */
 export function hasGoogleSession(): boolean {
   try {
     return GoogleSignin.getCurrentUser() != null;
   } catch {
     return false;
   }
+}
+
+/**
+ * RECUPERA LA SESIÓN DE GOOGLE AL VOLVER A ABRIR LA APP. **Esto era el fallo (20/08/2026).**
+ *
+ * `getCurrentUser()` no mira la cuenta del celular: devuelve lo que la librería tiene
+ * guardado EN MEMORIA, y eso solo se llena cuando alguien entra con `signIn()`. Al cerrar y
+ * volver a abrir Fino, la memoria arranca vacía — así que devolvía `null` aunque la persona
+ * hubiera entrado con Google y siguiera perfectamente conectada.
+ *
+ * Consecuencia: guardar en Drive solo funcionaba en la MISMA sesión en la que se pulsó
+ * "Entrar con Google". Después siempre fallaba, y con un mensaje que además desorientaba
+ * —*"Para guardar en Drive, entra a Fino con tu cuenta de Google"*, estando ya dentro con
+ * ella—. La exportación automática, que corre justo al abrir la app, no acertaba nunca:
+ * *"está fallando, creo, no exporta de manera automática"*.
+ *
+ * `signInSilently()` es lo que devuelve esa sesión a la memoria, sin enseñar ninguna ventana
+ * ni pedir nada. Si de verdad no hay cuenta —se entró con correo y contraseña, o se cerró
+ * sesión— no encuentra nada y entonces sí, el error es el correcto.
+ */
+async function asegurarSesion(): Promise<void> {
+  if (hasGoogleSession()) return;
+  try {
+    await GoogleSignin.signInSilently();
+  } catch {
+    // Sin sesión guardada. Lo dice el aviso de abajo, que es el único sitio donde se decide.
+  }
+  if (!hasGoogleSession()) throw new DriveNotSignedIn();
 }
 
 async function currentToken(): Promise<string> {
@@ -149,7 +177,7 @@ export async function uploadToDrive(
   name: string,
   mimeType: string
 ): Promise<DriveFile> {
-  if (!hasGoogleSession()) throw new DriveNotSignedIn();
+  await asegurarSesion();
 
   const base64 = await new File(fileUri).base64();
   let token = await currentToken();

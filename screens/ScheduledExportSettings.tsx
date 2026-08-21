@@ -651,11 +651,13 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                       app. Son dos promesas distintas y hay que decir la que
                       corresponde a ESTE celular: quien tenga un APK anterior
                       recibe el texto nuevo y no la función. */}
-                  {t(
-                    enFondo && schedule.format !== "pdf"
-                      ? "schedExport.fondoSi"
-                      : "schedExport.timeWhatHappens"
-                  )}
+                  {/* SE PREGUNTA `saleSolo`, LA MISMA CONDICIÓN QUE LA CAJA DE ARRIBA.
+                      Aquí decía `enFondo && format !== "pdf"`, que es casi lo mismo pero no
+                      lo mismo: con el APK que SÍ sabe armar el PDF sin pantalla, arriba salía
+                      *"lo guarda sola, con la app cerrada"* y aquí abajo *"se crea en cuanto
+                      abras Fino"*. Las dos frases a la vez, en la misma pantalla, sobre lo
+                      mismo. Con una sola condición no pueden discrepar. */}
+                  {t(saleSolo ? "schedExport.fondoSi" : "schedExport.timeWhatHappens")}
                 </Text>
                 {/* Y el PDF no se puede armar con la app cerrada, así que quien
                     tenga el despertador y elija PDF tiene que saberlo aquí, al
