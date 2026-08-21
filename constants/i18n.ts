@@ -1307,6 +1307,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "method.cash": "Efectivo",
     "method.debit": "Tarjeta débito",
+    "method.debitShort": "Débito",
+    "method.creditShort": "Crédito",
+    "method.transferShort": "Transfer.",
     "method.credit": "Tarjeta crédito",
     "method.transfer": "Transferencia",
 
@@ -2584,6 +2587,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "method.cash": "Cash",
     "method.debit": "Debit card",
+    "method.debitShort": "Debit",
+    "method.creditShort": "Credit",
+    "method.transferShort": "Transfer",
     "method.credit": "Credit card",
     "method.transfer": "Transfer",
 
@@ -3861,6 +3867,9 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "method.cash": "Dinheiro",
     "method.debit": "Cartão de débito",
+    "method.debitShort": "Débito",
+    "method.creditShort": "Crédito",
+    "method.transferShort": "Transfer.",
     "method.credit": "Cartão de crédito",
     "method.transfer": "Transferência",
 

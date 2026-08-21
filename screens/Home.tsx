@@ -124,7 +124,12 @@ const FilaMovimiento = memo(function FilaMovimiento({
                 lado, asi que repetirla era gastar el sitio que necesitaba el metodo. */}
             <View className="flex-row items-center gap-1.5 mt-0.5">
               <EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} />
-              <Text className="text-sm shrink" style={{ color: oscuro ? "#f1f5f9" : "#334155" }} numberOfLines={1}>
+              {/* 11 px y `shrink`: LA HORA ES LA QUE CEDE.
+                  Con un monto muy largo -S/ 125,000.00- los cuatro datos ya no entran, y algo
+                  tiene que ceder. Que sea la hora: un monto cortado es grave, no sabrias
+                  cuanto gastaste; una hora a medias no le hace daño a nadie y completa esta a
+                  un toque, en el detalle. */}
+              <Text className="text-[11px] shrink" style={{ color: oscuro ? "#f1f5f9" : "#334155" }} numberOfLines={1}>
                 {/* La hora solo si la hay. Los movimientos guardados
                     antes de esto no la tienen, y los importados de un
                     estado de cuenta tampoco: el banco solo da la fecha.

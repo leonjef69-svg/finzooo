@@ -28,6 +28,16 @@ const COLORES: Record<string, { fondo: string; tinta: string; Icono: typeof Wall
 
 const POR_DEFECTO = { fondo: "#f1f5f9", tinta: "#475569", Icono: Wallet };
 
+/**
+ * Los que tienen una versión corta para la pastilla. Los que no están aquí —Efectivo, Yape,
+ * Plin— ya son cortos de por sí y usan su nombre de siempre.
+ */
+const CORTOS: Record<string, string> = {
+  debit: "method.debitShort",
+  credit: "method.creditShort",
+  transfer: "method.transferShort",
+};
+
 /** Los mismos colores pero apagados, para que no griten sobre el negro. */
 const OSCURO: Record<string, string> = {
   cash: "#94a3b8",
@@ -59,7 +69,14 @@ export default function EtiquetaMetodo({
     >
       <Icono size={10} color={color} strokeWidth={2.4} />
       <Text className="text-[10px] font-bold ml-1" style={{ color }} numberOfLines={1}>
-        {methodLabel(metodo, t)}
+        {/* EL NOMBRE CORTO, Y SOLO AQUÍ.
+            *"Se ve apretado la fecha y la hora"*: con "Tarjeta débito" en la pastilla ya no
+            entraban los cuatro datos de la fila y la hora se cortaba con puntos suspensivos.
+            Y sobraban letras, no espacio: el icono de al lado ya dice que es una tarjeta, así
+            que "Débito" no pierde nada y ocupa la mitad.
+            En el detalle del movimiento y en los filtros sigue el nombre completo — ahí hay
+            sitio de sobra y conviene la palabra entera. */}
+        {CORTOS[metodo] ? t(CORTOS[metodo]) : methodLabel(metodo, t)}
       </Text>
     </View>
   );

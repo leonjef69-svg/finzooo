@@ -75,7 +75,8 @@ const Fila = memo(function Fila({
             nombre y el dibujo. */}
         <View className="flex-row items-center gap-1.5 mt-0.5">
           <EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} />
-          <Text className="text-xs shrink" style={{ color: oscuro ? "#f1f5f9" : "#64748b" }} numberOfLines={1}>
+          {/* Mismo tamaño que en Inicio, y la hora cede igual. Ver la nota de alla. */}
+          <Text className="text-[11px] shrink" style={{ color: oscuro ? "#f1f5f9" : "#64748b" }} numberOfLines={1}>
             {/* La hora solo si la hay. Aquí la fecha ya va arriba
                 como título del grupo, así que basta con la hora:
                 repetir el día en cada fila sería decir dos veces
