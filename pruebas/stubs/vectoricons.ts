@@ -5,6 +5,7 @@
 // esbuild no sabe empaquetar eso: sin esto, cinco pruebas que ni siquiera
 // hablan de iconos dejaban de compilar con "No loader is configured for .ttf".
 import glifos from "@/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/glyphmaps/MaterialCommunityIcons.json";
+import glifosMarcas from "@/node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/glyphmaps/FontAwesome5Free.json";
 
 const icono = () => null;
 
@@ -25,7 +26,23 @@ const conTipografia = Object.assign(icono, {
   loadFont: () => Promise.resolve(),
 });
 
-export const FontAwesome5 = icono;
+/**
+ * Y LAS MARCAS IGUAL, DESDE EL 20/08/2026.
+ *
+ * Ese dia constants/iconos dejo tambien de usar el componente de Expo para los logos, por lo
+ * mismo que los genericos. Ahora pide la tabla de letras de marcas y la tipografia.
+ *
+ * `font` es un mapa "familia -> archivo .ttf"; aqui vale un numero cualquiera, porque el
+ * sustituto de expo-font ni lo mira. Lo que importa es que la CLAVE sea la misma familia que
+ * devuelve getFontFamily, o al pedir la tipografia se pediria "undefined".
+ */
+const conTipografiaDeMarcas = Object.assign(() => null, {
+  getRawGlyphMap: () => glifosMarcas as Record<string, number>,
+  getFontFamily: () => "fontawesome5-brand",
+  font: { "fontawesome5-brand": 1 },
+});
+
+export const FontAwesome5 = conTipografiaDeMarcas;
 export const FontAwesome6 = icono;
 export const FontAwesome = icono;
 export const Ionicons = icono;

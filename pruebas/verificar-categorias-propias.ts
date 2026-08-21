@@ -853,6 +853,68 @@ console.log("\n--- LA LETRA SE PINTA DIRECTA, SIN EL COMPONENTE DE EXPO ---");
   ]) {
     ok(codigo.includes(detalle), `se conserva ${detalle}`);
   }
+
+  // 6. LAS MARCAS, POR LO MISMO Y CON UN AGRAVANTE (20/08/2026).
+  //
+  // El 07/08 se sacó a los genéricos del componente de Expo y las 55 marcas se quedaron con
+  // él. El usuario siguió viendo la lentitud: *"ya probé, sigue lenta"*. Y aquí era peor que
+  // en los genéricos, porque `FontAwesome5` NO TIENE `loadFont()` —es un juego de cuatro
+  // tipografías y la API no lo expone—, así que la de marcas no la pedía nadie nunca: los 55
+  // logos se dibujaban vacíos, la pedían cada uno por su cuenta y se redibujaban solos.
+  //
+  // Se vigila igual que arriba, y con la misma razón: hecho de las dos maneras se ve idéntico.
+  const dentroDelLogo = codigo.slice(codigo.indexOf("const Logo"), codigo.indexOf("const Dibujo"));
+  ok(
+    /<Text\b/.test(dentroDelLogo) && /fontFamily:\s*FAMILIA_MARCAS/.test(dentroDelLogo),
+    "el logo pinta un <Text> con la tipografia de marcas, no el componente de Expo"
+  );
+  ok(
+    /if\s*\(\s*!letra\s*\|\|\s*!Font\.isLoaded/.test(dentroDelLogo),
+    "y si la tipografia de marcas no esta lista se usa el de Expo de reserva"
+  );
+  ok(
+    /Font\.loadAsync\(\{[\s\S]*FAMILIA_MARCAS/.test(codigo),
+    "la tipografia de marcas se pide al cargar el archivo (FontAwesome5 no trae loadFont)"
+  );
+
+  // Y que cada marca del catalogo TENGA su letra. Un nombre mal escrito no da error:
+  // la casilla sale vacia y nadie se entera hasta que alguien la mira.
+  const glifosMarcas = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        RAIZ,
+        "node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/glyphmaps/FontAwesome5Free.json"
+      ),
+      "utf8"
+    )
+  ) as Record<string, number>;
+  const metaMarcas = JSON.parse(
+    fs.readFileSync(
+      path.join(
+        RAIZ,
+        "node_modules/@expo/vector-icons/build/vendor/react-native-vector-icons/glyphmaps/FontAwesome5Free_meta.json"
+      ),
+      "utf8"
+    )
+  ) as Record<string, string[]>;
+  const { TODOS_LOS_GRUPOS: grupos3 } =
+    require("@/constants/iconos") as typeof import("@/constants/iconos");
+  const marcas = grupos3
+    .flatMap((g) => g.iconos)
+    .filter((id) => id.startsWith("marca:"))
+    .map((id) => id.slice("marca:".length));
+  const sinLetra = marcas.filter((n) => typeof glifosMarcas[n] !== "number");
+  ok(
+    sinLetra.length === 0,
+    `las ${marcas.length} marcas tienen letra${sinLetra.length ? " — sin letra: " + sinLetra.join(", ") : ""}`
+  );
+  // Y que sean DE MARCA: una que estuviera en otro estilo saldria en blanco, porque la
+  // tipografia que se carga aqui es solo la de marcas.
+  const noSonMarca = marcas.filter((n) => !(metaMarcas.brands ?? []).includes(n));
+  ok(
+    noSonMarca.length === 0,
+    `y todas estan en la tipografia de marcas${noSonMarca.length ? " — no lo estan: " + noSonMarca.join(", ") : ""}`
+  );
 }
 
 console.log("\n--- LAS MEDIDAS DE LA CUADRICULA CUADRAN ---");

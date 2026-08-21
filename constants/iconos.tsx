@@ -78,15 +78,71 @@ export function esMarca(id: string): boolean {
  */
 const LOGOS_HECHOS = new Map<string, IconComponent>();
 
+/**
+ * LA TIPOGRAFÍA DE LAS MARCAS, PEDIDA AL ARRANCAR. NO QUITAR.
+ *
+ * **Esto era el resto de la lentitud del catálogo (20/08/2026).** El 07/08 se sacó a los
+ * genéricos del componente de Expo por lento, y ahí se paró; las 55 marcas se quedaron con
+ * él. Y encima con un agravante que los genéricos no tenían: `MaterialCommunityIcons` trae
+ * un `loadFont()` que se llamaba al arrancar, pero `FontAwesome5` **no tiene ninguno** —es un
+ * juego de cuatro tipografías y la API no lo expone—, así que nadie pedía la de marcas nunca.
+ *
+ * Consecuencia: la primera vez que se abría el catálogo, cada uno de los 55 logos descubría
+ * por su cuenta que la tipografía no estaba, se dibujaba VACÍO, la pedía y se volvía a
+ * dibujar solo. Son 55 peticiones y 55 redibujados sueltos justo cuando el dedo quiere tocar
+ * algo — los segundos que él seguía viendo después del arreglo de las tandas.
+ *
+ * Aquí se pide una sola vez, al cargar este archivo. Viene dentro del APK: no hay descarga.
+ */
+const FAMILIA_MARCAS = FontAwesome5.getFontFamily("brand");
+const GLIFOS_MARCAS = FontAwesome5.getRawGlyphMap("brand") as Record<string, number>;
+void Font.loadAsync({
+  [FAMILIA_MARCAS]: (FontAwesome5 as unknown as { font: Record<string, number> }).font[
+    FAMILIA_MARCAS
+  ],
+});
+
+/**
+ * Y SE PINTA LA LETRA DIRECTAMENTE, igual que los genéricos.
+ *
+ * Un logo de esta tipografía también es una letra. Por el componente de Expo salían TRES
+ * piezas anidadas por casilla —el de varios estilos, el que elige y el de dentro— más el
+ * texto; aquí sale una. El número de letra se calcula una vez, al crear el logo.
+ *
+ * Si la tipografía no estuviera lista todavía, se cae al componente de Expo, que sabe
+ * esperarla. Es lo único que aquel hacía y esto no.
+ */
 function logo(nombre: string): IconComponent {
   const guardado = LOGOS_HECHOS.get(nombre);
   if (guardado) return guardado;
+
+  const codigo = GLIFOS_MARCAS[nombre];
+  const letra = typeof codigo === "number" ? String.fromCodePoint(codigo) : "";
 
   // Se ignora strokeWidth: un logo es una silueta rellena, no un trazo.
   const Logo: ComponentType<{ size?: number; color?: string; strokeWidth?: number }> = ({
     size = 20,
     color = "#475569",
-  }) => <FontAwesome5 name={nombre} size={size} color={color} brand />;
+  }) => {
+    if (!letra || !Font.isLoaded(FAMILIA_MARCAS)) {
+      return <FontAwesome5 name={nombre} size={size} color={color} brand />;
+    }
+    return (
+      <Text
+        selectable={false}
+        allowFontScaling={false}
+        style={{
+          fontFamily: FAMILIA_MARCAS,
+          fontSize: size,
+          color,
+          fontWeight: "normal",
+          fontStyle: "normal",
+        }}
+      >
+        {letra}
+      </Text>
+    );
+  };
   Logo.displayName = "Logo" + nombre;
   LOGOS_HECHOS.set(nombre, Logo);
   return Logo;
