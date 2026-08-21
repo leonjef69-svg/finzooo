@@ -62,6 +62,8 @@ const EXPO = {
  * otras que no hacen nada, para poder comprobar las CUENTAS con Node.
  */
 const SUITES = [
+  // La caja de React se cambia por una de mentira: ver stubs/react.ts.
+  { archivo: "verificar-valor-estable.ts", alias: { ...BASE, react: stub("react.ts") } },
   { archivo: "verificar-voz-exportar.ts", alias: BASE },
   { archivo: "verificar-orden-voz.ts", alias: BASE },
   { archivo: "verificar-voz-dictado.ts", alias: BASE },
