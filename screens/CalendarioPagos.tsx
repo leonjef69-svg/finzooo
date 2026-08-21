@@ -242,6 +242,9 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
 
   const enFiltro = delMes.filter((p) => pasaElFiltro(p, filtro));
 
+  /** Lo que hay en el día tocado. Vacío mientras no hay ninguno abierto. */
+  const delDiaAbierto = diaAbierto == null ? [] : delMes.filter((p) => diaDe(p) === diaAbierto);
+
   /**
    * LA LISTA LOS ENSEÑA TODOS, TAMBIEN EL DE LA TARJETA. **Esto era un fallo.**
    *
@@ -258,7 +261,14 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
    * Y asi el numero del filtro y lo que se ve debajo no pueden discrepar, que es lo unico que
    * no se puede permitir aqui.
    */
-  const visibles = enFiltro;
+  /**
+   * Y CON UN DÍA ABIERTO, LA LISTA ES LA DE ESE DÍA.
+   *
+   * Sin filtrar por nada más: quien toca el 20 quiere ver **todo** lo del 20 —los recibos, el
+   * sueldo y los recordatorios—, no lo del 20 que además cumpla el botón que estuviera
+   * marcado. Por eso los botones se apagan mientras tanto.
+   */
+  const visibles = diaAbierto == null ? enFiltro : delDiaAbierto;
 
   const totales = useMemo(() => {
     let pagado = 0;
@@ -298,7 +308,6 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
   const diasEnElMes = new Date(anio, numeroMes, 0).getDate();
   const primerDia = (new Date(anio, numeroMes - 1, 1).getDay() + 6) % 7;
   const esEsteMes = mes === mesDe(hoy);
-  const delDiaAbierto = diaAbierto == null ? [] : delMes.filter((p) => diaDe(p) === diaAbierto);
 
   function textoCuando(p: PagoProgramado) {
     const x = cuandoTexto(p, mes, hoy);
@@ -516,45 +525,15 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
             franja y dice "se pasó el 4" con todas sus letras. Una leyenda que repite lo que
             ya está escrito dos centímetros más abajo es sitio gastado. */}
 
-        {diaAbierto != null && (
-          <View className="mt-4 rounded-2xl p-3 bg-slate-50 dark:bg-noche-2">
-            <View className="flex-row items-center justify-between mb-2">
-              <Text className="text-[13px] text-slate-900 dark:text-slate-100">
-                {/* "1 cosas" no lo dice nadie. */}
-                {delDiaAbierto.length === 1
-                  ? t("calendario.diaConUna", { dia: diaAbierto })
-                  : t("calendario.diaConVarias", { dia: diaAbierto, n: delDiaAbierto.length })}
-              </Text>
-              <TouchableOpacity onPress={() => setDiaAbierto(null)} className="p-1">
-                <X size={15} color="#94a3b8" />
-              </TouchableOpacity>
-            </View>
-            {delDiaAbierto.map((p) => (
-              <Fila
-                key={p.id}
-                pago={p}
-                estado={estadoDe(p)}
-                cuando={textoCuando(p)}
-                fmt={fmt}
-                t={t}
-                oscuro={oscuro}
-                onPagar={() => pagar(p.id, mes)}
-                onAbrir={() =>
-                  seleccionando ? alternarSeleccion(p.id) : irUnaVez(`/calendario/nuevo?id=${p.id}`)
-                }
-                seleccionando={seleccionando}
-                elegido={seleccionados.includes(p.id)}
-              />
-            ))}
+        {/* AQUÍ NO SE ABRE NADA AL TOCAR UN DÍA, Y ESA ES LA GRACIA.
+            Hasta el 20/08 el día abría su propio recuadro entre el calendario y los botones.
+            Dos problemas: empujaba media pantalla hacia abajo, y un pago del 20 salía DOS
+            VECES —en el recuadro y en la lista de siempre—, que es exactamente de lo que se
+            había quejado al principio con la tarjeta de arriba.
 
-            {/* NO HAY BOTÓN DE AGREGAR AQUÍ DENTRO, Y ES A PROPÓSITO.
-                Lo hubo un rato y él lo cortó: *"que le puedas dar en agregar un pago en el
-                botón que ya existe y no crear otro"*. Tiene razón — dos botones verdes que
-                hacen lo mismo, uno encima del otro, son dos cosas que decidir en vez de una.
-                Mientras hay un día abierto, el de abajo se hace cargo: cambia su texto y
-                agrega EN ESE DÍA. Ver el botón al final de la pantalla. */}
-          </View>
-        )}
+            Ahora el día manda sobre la lista que ya existe: tocas el 20 y esa misma lista, en
+            el mismo sitio, pasa a enseñar las cosas del 20. Ver `visibles` y el chip que sale
+            junto a "Seleccionar". Una sola lista, nada repetido, nada que se mueva. */}
 
       </View>
 
@@ -576,15 +555,26 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
             estás mirando. Pintando los cuatro haría falta un aro encima para decir cuál es el
             activo, que es justo el ruido que se quería quitar. */}
         {delMes.length > 0 && (
-          <View className="flex-row rounded-2xl p-1 mt-0.5 mb-2 bg-slate-100 dark:bg-noche-2">
+          <View
+            /* APAGADOS MIENTRAS SE MIRA UN DÍA. No están filtrando nada en ese momento —manda
+               el día— y dejarlos encendidos haría creer que sí. */
+            className="flex-row rounded-2xl p-1 mt-0.5 mb-2 bg-slate-100 dark:bg-noche-2"
+            style={diaAbierto == null ? undefined : { opacity: 0.4 }}
+          >
             {FILTROS.map((f) => {
               const n = cuantosHay(f);
-              const activo = filtro === f;
+              const activo = filtro === f && diaAbierto == null;
               const color = COLOR_FILTRO[f];
               return (
                 <TouchableOpacity
                   key={f}
-                  onPress={() => setFiltro(f)}
+                  /* Tocar un botón con un día abierto cierra el día: se pide ver el mes
+                     entero por ese lado, y dejar las dos cosas a la vez sería mentir sobre
+                     cuál manda. */
+                  onPress={() => {
+                    setFiltro(f);
+                    setDiaAbierto(null);
+                  }}
                   className="flex-1 py-1.5 rounded-xl items-center"
                   style={activo ? { backgroundColor: color } : undefined}
                 >
@@ -654,7 +644,26 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
               </>
             ) : (
               <>
-                <View />
+                {/* EL CHIP DEL DÍA ABIERTO, que además es el botón de cerrarlo.
+                    Ocupa el hueco que ya había a la izquierda de "Seleccionar", así que
+                    abrir un día no añade ninguna fila nueva a la pantalla. Sin día abierto
+                    no hay chip y el hueco vuelve a estar vacío, como siempre. */}
+                {diaAbierto == null ? (
+                  <View />
+                ) : (
+                  <TouchableOpacity
+                    onPress={() => setDiaAbierto(null)}
+                    className="flex-row items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 dark:bg-slate-100"
+                  >
+                    <Text className="text-[12px] font-bold text-white dark:text-slate-900">
+                      {/* "1 cosas" no lo dice nadie. */}
+                      {delDiaAbierto.length === 1
+                        ? t("calendario.diaConUna", { dia: diaAbierto })
+                        : t("calendario.diaConVarias", { dia: diaAbierto, n: delDiaAbierto.length })}
+                    </Text>
+                    <X size={13} color={oscuro ? "#0f172a" : "#ffffff"} strokeWidth={3} />
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity onPress={() => setSeleccionando(true)} className="flex-row items-center gap-1.5">
                   <ListChecks size={15} color="#94a3b8" />
                   <Text className="text-[13px] font-bold text-slate-500 dark:text-slate-400">
