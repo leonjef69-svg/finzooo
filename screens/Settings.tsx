@@ -567,23 +567,14 @@ export default function Settings({
             derecha hace lo mismo y está a la vista en cuatro pantallas.
             Ahora recorre los tres modos —claro, oscuro y automático—, así que
             no se pierde ninguna opción al quitar esta pantalla. */}
-        <Row
-          Icon={Bell}
-          label={t("settings.notifications")}
-          hint={t(notif ? "settings.notificationsOn" : "settings.notificationsOff")}
-          right={
-            <Toggle
-              on={notif}
-              onChange={(v) => {
-                setNotif(v);
-                guardarAvisosEncendidos(v);
-                // Se reprograma en el acto: apagar tiene que callar los avisos AHORA, no la
-                // próxima vez que se toque un pago.
-                reprogramarAvisos();
-              }}
-            />
-          }
-        />
+        {/* LA FILA DE "NOTIFICACIONES" SE FUE AL CALENDARIO (21/08/2026).
+            Mandaba SOLO sobre los avisos del calendario, pero desde aqui parecia mandar sobre
+            todo: la app tiene cuatro cosas que avisan —el calendario, la voz de los yapes, la
+            exportacion automatica y las metas— y cada una lleva su propio interruptor donde
+            vive. Apagar este creyendo apagarlas todas era una sorpresa esperando.
+            Y encima el resto de esos avisos —probarlos, el sonido, cuantos hay puestos— ya
+            estaba en el engranaje del calendario: una sola cosa repartida en dos pantallas.
+            Ahora esta entera alli. Idea suya. */}
       </View>
 
       <View className="px-5 mt-5 gap-2.5">

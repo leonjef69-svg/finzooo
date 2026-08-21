@@ -53,3 +53,8 @@ tmp/
 # cambio de una linea hasta darse cuenta de que la culpa es de esto.
 modules/*/android/build/
 modules/*/android/.cxx/
+
+# Los APK no van al repositorio: pesan 165 MB y git guarda TODAS las versiones
+# para siempre. Diez entregas serian 1,6 GB que se bajan enteros en cada clon.
+# Ver ENTREGAS.md: se comparten como archivo, no por aqui.
+*.apk
