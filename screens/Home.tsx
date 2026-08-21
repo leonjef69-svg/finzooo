@@ -22,6 +22,7 @@ import {
 } from "lucide-react-native";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import BudgetRing from "@/components/BudgetRing";
+import EtiquetaMetodo from "@/components/EtiquetaMetodo";
 import IconBadge from "@/components/IconBadge";
 import PressableScale from "@/components/PressableScale";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
@@ -117,14 +118,21 @@ const FilaMovimiento = memo(function FilaMovimiento({
             >
               {tx.description || t(c.label)}
             </Text>
-            <Text className="text-sm" style={{ color: oscuro ? "#f1f5f9" : "#334155" }}>
-              {/* La hora solo si la hay. Los movimientos guardados
-                  antes de esto no la tienen, y los importados de un
-                  estado de cuenta tampoco: el banco solo da la fecha.
-                  Mejor sin hora que con una inventada. */}
-              {t(c.label)} · {fmtDate(tx.date, monthNames)}
-              {tx.time ? ` · ${tx.time}` : ""}
-            </Text>
+            {/* CON QUE SE PAGO, DELANTE DE LA FECHA. Ver components/EtiquetaMetodo: estaba
+                guardado desde siempre y solo se veia abriendo el movimiento.
+                Y se quita la categoria de aqui: la dicen ya el nombre y el dibujo de al
+                lado, asi que repetirla era gastar el sitio que necesitaba el metodo. */}
+            <View className="flex-row items-center gap-1.5 mt-0.5">
+              <EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} />
+              <Text className="text-sm shrink" style={{ color: oscuro ? "#f1f5f9" : "#334155" }} numberOfLines={1}>
+                {/* La hora solo si la hay. Los movimientos guardados
+                    antes de esto no la tienen, y los importados de un
+                    estado de cuenta tampoco: el banco solo da la fecha.
+                    Mejor sin hora que con una inventada. */}
+                {fmtDate(tx.date, monthNames)}
+                {tx.time ? ` · ${tx.time}` : ""}
+              </Text>
+            </View>
           </View>
           <Text
             className={`text-base font-extrabold ${

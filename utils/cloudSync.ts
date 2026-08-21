@@ -159,8 +159,27 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
     await setDoc(doc(db, "users", uid), clean);
     return { ok: true };
   } catch (e) {
-    return { ok: false, motivo: String((e as Error)?.message ?? e) };
+    return { ok: false, motivo: motivoLegible(e) };
   }
+}
+
+/**
+ * TRADUCE EL ERROR DE FIRESTORE A ALGO QUE SE PUEDA HACER.
+ *
+ * El 21/08/2026 el cartel enseñó *"Missing or insufficient permissions"* y hubo que ir a leer
+ * las reglas para entender qué pasaba. Ese texto es para quien programa; a quien usa la app
+ * no le dice ni qué falló ni qué hacer.
+ *
+ * Ese error concreto tiene dos causas y ninguna es un fallo del celular: o las reglas de
+ * seguridad no están publicadas en Firebase, o el correo de la cuenta no está confirmado —las
+ * reglas exigen `email_verified`, así que hasta que se confirme, Firestore rechaza cada
+ * escritura. Se dice lo segundo porque es lo único que la persona puede resolver.
+ */
+function motivoLegible(e: unknown): string {
+  const crudo = String((e as { code?: string })?.code ?? (e as Error)?.message ?? e);
+  if (/permission-denied|insufficient permissions/i.test(crudo)) return "permisos";
+  if (/unavailable|network|offline/i.test(crudo)) return "sin-internet";
+  return crudo;
 }
 
 /** Cómo fue el último intento de subir. Ver el cartel de "respaldados" en Ajustes. */

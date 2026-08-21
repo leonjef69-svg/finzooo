@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Search, TrendingDown, TrendingUp, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import Anuncio from "@/components/Anuncio";
+import EtiquetaMetodo from "@/components/EtiquetaMetodo";
 import IconBadge from "@/components/IconBadge";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import { catInfo } from "@/constants/categories";
@@ -67,14 +68,21 @@ const Fila = memo(function Fila({
         >
           {tx.description || t(c.label)}
         </Text>
-        <Text className="text-xs" style={{ color: oscuro ? "#f1f5f9" : "#64748b" }}>
-          {/* La hora solo si la hay. Aquí la fecha ya va arriba
-              como título del grupo, así que basta con la hora:
-              repetir el día en cada fila sería decir dos veces
-              lo mismo. */}
-          {t(c.label)} · {methodLabel(tx.method, t)}
-          {tx.time ? ` · ${tx.time}` : ""}
-        </Text>
+        {/* LA MISMA ETIQUETA QUE EN INICIO. Aqui el metodo ya salia, pero escrito de
+            corrido entre la categoria y la hora: se leia como una frase y no se distinguia de
+            un vistazo. Ahora es la misma pieza que alla —*"no te olvides que historial
+            tambien"*—, y se quita la categoria por lo mismo que en Inicio: ya la dicen el
+            nombre y el dibujo. */}
+        <View className="flex-row items-center gap-1.5 mt-0.5">
+          <EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} />
+          <Text className="text-xs shrink" style={{ color: oscuro ? "#f1f5f9" : "#64748b" }} numberOfLines={1}>
+            {/* La hora solo si la hay. Aquí la fecha ya va arriba
+                como título del grupo, así que basta con la hora:
+                repetir el día en cada fila sería decir dos veces
+                lo mismo. */}
+            {tx.time || t(c.label)}
+          </Text>
+        </View>
       </View>
       <Text
         className={`text-sm font-extrabold ${

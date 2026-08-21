@@ -364,7 +364,13 @@ export default function Settings({
                 : /* EL MOTIVO, ESCRITO TAL CUAL. Sin el, "no se pudo guardar" no da para
                      hacer nada: no distingue entre falta de internet, permisos o que no
                      quepa. Con el, la propia pantalla dice que pasa. */
-                  `${t("settings.backupFailedHint")} (${respaldoFallo ?? "?"})`}
+                  t(
+                    respaldoFallo === "permisos"
+                      ? "settings.backupNoPermission"
+                      : respaldoFallo === "sin-internet"
+                        ? "settings.backupNoInternet"
+                        : "settings.backupFailedHint"
+                  )}
             </Text>
           </View>
         </View>
