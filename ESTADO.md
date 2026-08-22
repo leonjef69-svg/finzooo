@@ -1,6 +1,102 @@
 # Dónde nos quedamos
 
-Actualizado: **18 de agosto de 2026** · Código publicado: **18ago-03** ·
+Actualizado: **21 de agosto de 2026** · APK que tiene él: **finzo-21ago**,
+compilado EN SU PC (`android\compilar.bat`) e instalado y funcionando esa noche.
+
+> ## 21/08/2026 — EL DÍA QUE SALIERON LOS FALLOS SILENCIOSOS
+>
+> Ocho arreglos, y los tres primeros llevaban semanas rotos **sin que nada lo
+> dijera**. Es el hilo del día: lo que falla en silencio no se descubre solo.
+>
+> ### 1. La copia de seguridad no se hacía. Ni una sola vez en semanas.
+>
+> Las reglas publicadas en Firebase tenían una lista `hasOnly` con **11 campos**
+> y la app manda **16**. `hasOnly` significa "el documento solo puede tener estas
+> claves", así que al llegar `pagosProgramados` —o `categoryOverrides`,
+> `categoriasPropias`, `carryoverCleared`, `iconosFavoritos`— Firestore rechazaba
+> **la escritura entera**, no el campo de más.
+>
+> O sea: **cada función nueva que guardaba algo rompía el respaldo de todo lo
+> demás.** Y no se notaba porque `saveCloudData` hacía `.catch(() => {})`.
+>
+> Faltaba además la regla de `negocios/{uid}`: el Modo Negocio nunca se respaldó.
+>
+> **Arreglado:** `firestore.rules` con los 16 campos y el segundo documento. **Lo
+> publicó él en la consola** (es un paso manual; el archivo aquí no hace nada).
+> Con prueba: `verificar-reglas-nube` compara la lista contra `CloudData`.
+>
+> ### 2. Y el cartel decía que sí se hacía.
+>
+> "Tus datos están respaldados" solo miraba si había sesión iniciada. Ahora mira
+> el resultado de la última subida y se pone ámbar si falló, con el motivo
+> traducido ("permisos", "sin-internet") en vez del error en inglés.
+>
+> **Fue ese cartel el que destapó lo anterior.** Sin él, se habría descubierto el
+> día que entrara en otro celular.
+>
+> ### 3. El registro automático de Yape, mudo desde el 6 de agosto.
+>
+> No era un fallo nuevo: su APK era del 6 de agosto y desde entonces había
+> **siete arreglos de la voz** que nunca llegaron, porque son Kotlin y no viajan
+> en las actualizaciones por internet. Uno se llama literalmente *"la voz callaba
+> con un yapeo real"*.
+>
+> **Con el APK del 21 quedó funcionando: lee al instante y ya no suena chillona.**
+>
+> Lo que se añadió ese día:
+> · La voz **se elige** (calidad, que no necesite internet, acento de América
+>   antes que el de España) en vez de dejar que Android escoja. Su celular dice
+>   "Español (Perú) no se soporta", así que caía en cualquiera.
+> · El motor se enciende también **al abrir la app**, no solo al enganchar el
+>   servicio: *"quiero que desde el primer yape sea al instante"*.
+> · **El botón "Probar la voz" mentía**: creaba un motor nuevo cada vez, así que
+>   tardaba SIEMPRE. Es el botón con el que uno juzga si la voz funciona. Ahora
+>   usa el motor caliente.
+> · Diagnóstico nuevo: **cuántos avisos de apps de dinero han llegado**. Antes
+>   solo se guardaba la última app, así que un Yape quedaba tapado por el WhatsApp
+>   siguiente y no había forma de saber si había llegado.
+>
+> ### 4. Un toque abría dos pantallas, en 61 sitios.
+>
+> `irUnaVez` existía desde el 19/08 pero solo se usaba en las 5 llamadas del
+> calendario, que fue donde él lo reportó **la primera vez**. Ahora las 66 pasan
+> por ahí. Es el fallo del día: **una regla aplicada donde se vio el problema y
+> no donde vale**.
+>
+> ### 5. El modo oscuro, de negro puro a carbón.
+>
+> El problema no era el color: **la tarjeta y el fondo eran el mismo `#000000`**,
+> y solo las separaba un borde. Ahora fondo `#121212` y tarjetas `#1e1e1e`.
+>
+> Hubo que separar las dos cosas en el código: las 59 tarjetas usaban la misma
+> clase que el fondo de las 42 pantallas.
+>
+> Y salieron **tres colores escritos a mano** que se quedaron atrás: la barra de
+> pestañas (azul), el fondo nativo de `app/_layout` (negro) y un campo de Nueva
+> categoría. Ahora todos beben de `NOCHE` en `constants/style`.
+>
+> ### 6, 7 y 8 — lo demás
+>
+> · **Rendimiento:** el contexto ya no redibuja la app entera en cada cambio
+>   (`utils/valorEstable`, sin lista de dependencias que mantener), e Historial
+>   pasó a lista virtualizada. Y las 55 marcas del catálogo de iconos dejaron de
+>   usar el componente lento de Expo — eso era la lentitud que quedaba.
+> · **Calendario:** botón de Ingresos, un color por tipo sin repetir, días
+>   pintados por lo que tienen, varios pagos el mismo día, y los avisos enteros en
+>   su pantalla (el interruptor estaba en Ajustes y el resto en el calendario).
+> · **Filas:** el método de pago se ve en Inicio e Historial. Exportar: nombre de
+>   archivo automático o personalizado.
+>
+> ### La auditoría del día encontró 5 fallos más
+>
+> `pagosParaLaNube` escrita y sin llamar (las fotos subían a la nube), el cartel
+> que mentía, "Tu próximo pago" enseñando el sueldo con botón de Pagar, dos tablas
+> de colores discrepando, y la barra del resumen contando recordatorios.
+>
+> **Pruebas: 69 y 7 auditores.** Nuevas ese día: `verificar-reglas-nube`,
+> `verificar-valor-estable` y `verificar-doble-toque`.
+
+Actualizado antes: **18 de agosto de 2026** · Código publicado: **18ago-03** ·
 APK que tiene él: **fino-13ago-09-ligero**, instalado y funcionando el
 18/08/2026 (`com.finoapp.gastos`). **Tiene las DOS apps a la vez**: esta y la
 vieja (`com.finzo.app`), que para Android son distintas y se ven las dos con el
