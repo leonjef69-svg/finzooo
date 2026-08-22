@@ -343,17 +343,35 @@ console.log("\n--- LOS 236 DIBUJOS NO SE REHACEN EN CADA LETRA ---");
     "y esa hora no vive en un estado, para que apuntarla no redibuje nada"
   );
 
-  // 4. La tanda tiene que ser CHICA. Lo que un toque espera en el peor caso es lo que
-  //    dura UNA tanda, no lo que duran todas: si alguien sube este numero buscando que
-  //    acabe antes, vuelve la espera. Se cuenta con numeros.
-  //
-  //    Esta vigila un numero y no un cambio, asi que pasa sola: lo que hace es impedir que
-  //    MAÑANA FILAS_POR_TANDA suba a 20 "para que acabe antes".
+  /* 4. LA TANDA TIENE QUE CABER EN UN SUSPIRO, Y EL TOPE SE MIDE EN LO QUE CUESTA UN
+        DIBUJO, no en un numero suelto.
+
+        El tope era 10 dibujos, y salio de cuando cada uno era un componente de Expo con
+        estado. Con eso, diez ya se notaban.
+
+        El 21/08/2026 subio a 40, y no por impaciencia: los genericos pintan una letra suelta
+        desde el 07/08 y las marcas desde el 21/08, asi que un dibujo pasó de tres componentes
+        anidados a un <Text>. Y el reparto tenia un precio escondido: cada tanda es un cambio
+        de estado, o sea un redibujado de la pantalla ENTERA. Con tandas de dos filas eran 28
+        redibujados reconciliando una lista cada vez mas larga — trabajo al cuadrado. Con ocho
+        filas son 7.
+
+        LA COMPROBACION SIGUE SIENDO LA MISMA IDEA: que nadie ponga "todas de golpe". Lo que
+        cambia es el numero, y cambia atado a una razon escrita. Si los dibujos vuelven a ser
+        caros, esto tiene que volver a bajar. */
   ok(FILAS_POR_TANDA >= 1, "la tanda trae al menos una fila, o no avanzaria nunca");
   ok(
-    FILAS_POR_TANDA * POR_FILA <= 10,
-    `la tanda son ${FILAS_POR_TANDA * POR_FILA} dibujos como mucho (tope 10)`
+    FILAS_POR_TANDA * POR_FILA <= 40,
+    `la tanda son ${FILAS_POR_TANDA * POR_FILA} dibujos como mucho (tope 40)`
   );
+
+  // Y que siga habiendo reparto: sin tope por arriba, "de golpe" volveria por la puerta de
+  // atras poniendo un numero enorme.
+  {
+    const trozos = CATALOGO_EN_TROZOS.length;
+    const tandas = Math.ceil((trozos - FILAS_AL_ABRIR) / FILAS_POR_TANDA);
+    ok(tandas >= 3, `el catalogo se sigue repartiendo en tandas (${tandas}), no de una vez`);
+  }
 
   // Y AL REPARTIR POR FILAS NO SE PUEDE PERDER NI REPETIR NADA. Es el riesgo real de
   // cambiar de grupos a filas, y es de los que no se ven: sobraria o faltaria un dibujo en

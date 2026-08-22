@@ -71,8 +71,32 @@ export const GRUPOS_AL_ABRIR = 4;
  *
  * Una fila son siempre cinco. Con dos filas, un toque espera como mucho lo que cuestan
  * **diez dibujos** — no veinticinco, y no doscientos veintitrés.
+ *
+ * ---------------------------------------------------------------------------------------
+ * DE DOS A OCHO (21/08/2026): EL REPARTO SE HABIA VUELTO MAS CARO QUE EL PROBLEMA
+ * ---------------------------------------------------------------------------------------
+ * *"No se siente tan lenta pero podría mejorar."*
+ *
+ * Todo lo de arriba se decidió cuando **cada dibujo era caro**: un componente de Expo con
+ * estado, que si la tipografía no estaba lista se dibujaba vacío, la pedía y se redibujaba
+ * solo. Con eso, partir el trabajo en trozos diminutos era lo correcto.
+ *
+ * Eso YA NO ES ASI. Los genéricos pintan una letra suelta desde el 07/08 y **las marcas
+ * desde el 21/08**. Un dibujo pasó de costar tres componentes anidados a costar un `<Text>`.
+ *
+ * Y el reparto tiene un precio que no se veía: **cada tanda es un cambio de estado, o sea
+ * un redibujado de la pantalla ENTERA.** Con 46 filas de dos en dos son **28 redibujados**,
+ * y cada uno reconcilia una lista más larga que el anterior. Las filas están memorizadas
+ * —su contenido no se rehace— pero la reconciliación crece igual. Es trabajo al cuadrado.
+ *
+ * Con ocho: **7 redibujados en vez de 28**, y cada tanda monta 40 dibujos que ahora son
+ * baratos. Se cambia el número, no el mecanismo: la protección del dedo (`ULTIMO_TOQUE`)
+ * y la primera tanda grande siguen igual, porque esas sí siguen valiendo.
+ *
+ * **Si alguna vez los dibujos vuelven a ser caros, este número tiene que volver a bajar.**
+ * Está atado a eso, no a un gusto.
  */
-export const FILAS_POR_TANDA = 2;
+export const FILAS_POR_TANDA = 8;
 
 /**
  * El lado de una casilla para que las cinco llenen justo el ancho.
