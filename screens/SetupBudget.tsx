@@ -33,7 +33,7 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
         <View className="flex-row items-center justify-center bg-slate-50 dark:bg-noche-2 rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4 py-5">
           <Text className="text-slate-500 dark:text-slate-300 font-bold text-xl mr-1">{currencySymbolFor(userCurrency)}</Text>
           <TextInput
-            autoFocus
+            disableFullscreenUI            autoFocus
             keyboardType="decimal-pad"
             value={amount}
             onChangeText={(v) => setAmount(sanitizeAmountInput(v))}

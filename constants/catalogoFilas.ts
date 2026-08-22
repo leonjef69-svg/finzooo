@@ -99,13 +99,33 @@ export const GRUPOS_AL_ABRIR = 4;
 export const FILAS_POR_TANDA = 8;
 
 /**
+ * Lo mas grande que puede ser una casilla del catalogo.
+ *
+ * EN HORIZONTAL LAS CINCO SE VOLVIAN ENORMES (21/08/2026). El lado se repartia el ancho entre
+ * cinco SIN TOPE: en vertical sale una casilla comoda, pero al girar el celular el ancho casi
+ * se duplica y salian cinco cuadrados gigantes con un iconito diminuto en medio. Se veian tres
+ * dibujos por pantalla donde antes habia veinte.
+ *
+ * No se notaba porque la app estaba atada al vertical; al soltarla para que gire —lo que pedia
+ * Google para pantallas grandes— salio a la luz.
+ *
+ * 72 es lo que mide una casilla en un celular normal, asi que en vertical NADA CAMBIA. Lo que
+ * cambia es que en horizontal deja de crecer, y el ancho que sobra se reparte como aire entre
+ * columnas en vez de inflar los dibujos.
+ */
+export const LADO_MAXIMO = 72;
+
+/**
  * El lado de una casilla para que las cinco llenen justo el ancho.
  *
  * Se calcula en vez de fijarse: con una medida fija, las cinco casillas no
  * llegaban al borde y sobraba un vacío a la derecha.
  */
 export const LADO_DE = (anchoPantalla: number) =>
-  (anchoPantalla - MARGEN_LATERAL * 2 - SEPARACION * (POR_FILA - 1)) / POR_FILA;
+  Math.min(
+    (anchoPantalla - MARGEN_LATERAL * 2 - SEPARACION * (POR_FILA - 1)) / POR_FILA,
+    LADO_MAXIMO
+  );
 
 /** Lo que ocupa una fila: la casilla más el hueco de debajo. */
 export const ALTO_FILA_DE = (anchoPantalla: number) => LADO_DE(anchoPantalla) + SEPARACION;

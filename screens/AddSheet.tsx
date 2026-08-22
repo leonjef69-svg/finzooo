@@ -336,6 +336,7 @@ export default function AddSheet({
               <View className="flex-row items-center bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4 py-3.5">
                 <Text className="text-slate-500 dark:text-slate-300 font-bold mr-1">{currencySymbolFor(userCurrency)}</Text>
                 <TextInput
+                  disableFullscreenUI
                   keyboardType="decimal-pad"
                   value={amount}
                   onChangeText={(v) => setAmount(sanitizeAmountInput(v))}
@@ -406,6 +407,7 @@ export default function AddSheet({
                 >
                   <Calendar size={16} color={dateOk ? "#94a3b8" : "#fb7185"} />
                   <TextInput
+                    disableFullscreenUI
                     value={date}
                     onChangeText={setDate}
                     // Al salir del campo se acomoda sola: si escribiste
@@ -454,6 +456,7 @@ export default function AddSheet({
             <View onLayout={(e) => setDescriptionY(e.nativeEvent.layout.y)}>
               <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("addSheet.description")}</Text>
               <TextInput
+                disableFullscreenUI
                 value={description}
                 onChangeText={setDescription}
                 onFocus={focusDescription}
@@ -466,6 +469,7 @@ export default function AddSheet({
             <View>
               <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("addSheet.notesOptional")}</Text>
               <TextInput
+                disableFullscreenUI
                 value={notes}
                 onChangeText={setNotes}
                 onFocus={focusNotes}

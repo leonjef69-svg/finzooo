@@ -242,7 +242,7 @@ export default function Settings({
                  botones de 32 a 28, así que la tarjeta se encogía justo al entrar a escribir. */
               <View className="flex-row items-center gap-2">
                 <TextInput
-                  value={nameInput}
+                  disableFullscreenUI                  value={nameInput}
                   onChangeText={setNameInput}
                   placeholder={t("settings.namePlaceholder")}
                   autoFocus

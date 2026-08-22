@@ -97,7 +97,7 @@ export default function Negocios({ onBack }: { onBack: () => void }) {
               {t("negocios.nombre")}
             </Text>
             <TextInput
-              value={enEdicion.nombre}
+              disableFullscreenUI              value={enEdicion.nombre}
               onChangeText={(v) => setEnEdicion({ ...enEdicion, nombre: v })}
               placeholder={t("negocios.nombrePlaceholder")}
               placeholderTextColor="#94a3b8"

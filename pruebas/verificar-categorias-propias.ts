@@ -949,19 +949,33 @@ console.log("\n--- LAS MEDIDAS DE LA CUADRICULA CUADRAN ---");
     POR_FILA: porFila,
     SEPARACION: sep,
     altoDeLasFilas,
+    LADO_MAXIMO: ladoMaximo,
   } = require("@/constants/catalogoFilas") as typeof import("@/constants/catalogoFilas");
   // Los grupos vienen de su propio archivo: hubo un momento en que existieron
   // dos "TODOS_LOS_GRUPOS", uno en cada sitio. Dos listas de lo mismo es una
   // que se queda atras.
   const { TODOS_LOS_GRUPOS: grupos } = require("@/constants/iconos") as typeof import("@/constants/iconos");
 
-  // 1. Las cinco casillas mas los huecos mas los margenes llenan JUSTO el ancho.
-  //    Si sobra, se ve el vacio a la derecha que el usuario reporto; si falta,
-  //    la quinta casilla se sale.
+  /* 1. LAS CINCO CASILLAS LLENAN EL ANCHO... HASTA EL TOPE.
+        Si sobra sitio en un celular normal, se ve el vacio a la derecha que el usuario
+        reporto; si falta, la quinta casilla se sale.
+
+        PERO YA NO PUEDEN CRECER SIN FIN (21/08/2026). Al soltar la orientacion para que la app
+        gire, en horizontal el ancho casi se duplica y las cinco casillas se volvian gigantes:
+        cinco cuadrados enormes con un iconito diminuto en medio, tres dibujos por pantalla.
+
+        Asi que la regla ahora tiene dos mitades: por debajo del tope llenan justo -que es el
+        caso de cualquier celular en vertical, y por eso ahi no cambia nada-, y por encima se
+        quedan en el tope y el ancho que sobra se reparte como aire. */
   for (const ancho of [320, 360, 393, 412, 480, 600]) {
     const lado = ladoDe(ancho);
     const ocupado = lado * porFila + sep * (porFila - 1) + margen * 2;
-    ok(Math.abs(ocupado - ancho) < 0.001, `en ${ancho} de ancho las cinco casillas llenan justo`);
+    if (lado < ladoMaximo) {
+      ok(Math.abs(ocupado - ancho) < 0.001, `en ${ancho} de ancho las cinco casillas llenan justo`);
+    } else {
+      ok(ocupado <= ancho + 0.001, `en ${ancho} de ancho las casillas no se salen (tope ${ladoMaximo})`);
+    }
+    ok(lado <= ladoMaximo + 0.001, `en ${ancho} de ancho ninguna casilla pasa del tope`);
     ok(lado > 0, `y el lado sale positivo en ${ancho}`);
     ok(altoFilaDe(ancho) === lado + sep, `y la fila mide la casilla mas su hueco en ${ancho}`);
   }

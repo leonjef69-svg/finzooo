@@ -122,7 +122,7 @@ export default function Productos({
               {t("productos.nombre")}
             </Text>
             <TextInput
-              value={enEdicion.nombre}
+              disableFullscreenUI              value={enEdicion.nombre}
               onChangeText={(v) => setEnEdicion({ ...enEdicion, nombre: v })}
               placeholder={t("productos.nombrePlaceholder")}
               placeholderTextColor="#94a3b8"
@@ -134,7 +134,7 @@ export default function Productos({
               {t("productos.precio")}
             </Text>
             <TextInput
-              value={precioTexto}
+              disableFullscreenUI              value={precioTexto}
               onChangeText={setPrecioTexto}
               placeholder="0.00"
               placeholderTextColor="#94a3b8"

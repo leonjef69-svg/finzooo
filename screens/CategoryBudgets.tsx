@@ -157,7 +157,7 @@ export default function CategoryBudgets({
                         no se esconde porque el límite es el dato: sin él, la barra de "llevas
                         X de Y" no significa nada. */}
                     <TextInput
-                      value={amounts[c.id] ?? ""}
+                      disableFullscreenUI                      value={amounts[c.id] ?? ""}
                       editable={!soloLectura}
                       onChangeText={(v) =>
                         setAmounts((prev) => ({ ...prev, [c.id]: sanitizeAmountInput(v) }))

@@ -163,7 +163,7 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
               {t("catCustom.name")}
             </Text>
             <TextInput
-              value={nombre}
+              disableFullscreenUI              value={nombre}
               onChangeText={setNombre}
               onBlur={() => cambiar(abierta, { name: sanitizeName(nombre) || null })}
               placeholder={original ? t(original.label) : ""}

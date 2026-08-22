@@ -196,7 +196,7 @@ export default function History({
             <View className="flex-row items-center gap-2 bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-3 py-2.5">
               <Search size={16} color="#94a3b8" />
               <TextInput
-                value={search}
+                disableFullscreenUI                value={search}
                 onChangeText={setSearch}
                 placeholder={t("history.searchPlaceholder")}
                 placeholderTextColor="#94a3b8"

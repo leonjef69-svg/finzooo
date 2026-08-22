@@ -1102,7 +1102,7 @@ export default function ExportPdfSheet({
             {agregando && (
               <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-slate-50 dark:bg-noche-2 p-4 mb-4">
                 <TextInput
-                  value={nuevoNombre}
+                  disableFullscreenUI                  value={nuevoNombre}
                   onChangeText={setNuevoNombre}
                   placeholder={t("exportPdf.contactName")}
                   placeholderTextColor="#94a3b8"
@@ -1110,7 +1110,7 @@ export default function ExportPdfSheet({
                   className="border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-noche-2 mb-2"
                 />
                 <TextInput
-                  value={nuevoValor}
+                  disableFullscreenUI                  value={nuevoValor}
                   onChangeText={setNuevoValor}
                   placeholder={
                     destination === "whatsapp"
@@ -1193,7 +1193,7 @@ export default function ExportPdfSheet({
 
         {nombreModo === "custom" && (
           <TextInput
-            value={nombrePropio}
+            disableFullscreenUI            value={nombrePropio}
             onChangeText={setNombrePropio}
             placeholder={t("exportPdf.namePlaceholder")}
             placeholderTextColor="#94a3b8"

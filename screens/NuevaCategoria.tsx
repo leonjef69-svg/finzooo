@@ -1336,7 +1336,7 @@ export default function NuevaCategoria({
 
         <View className="px-5">
           <TextInput
-            value={nombre}
+            disableFullscreenUI            value={nombre}
             onChangeText={setNombre}
             placeholder={t("nuevaCat.nombrePlaceholder")}
             placeholderTextColor="#94a3b8"

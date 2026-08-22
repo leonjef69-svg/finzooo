@@ -76,7 +76,7 @@ export default function GoalFormSheet({
           <View>
             <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("goalForm.nameLabel")}</Text>
             <TextInput
-              value={name}
+              disableFullscreenUI              value={name}
               onChangeText={setName}
               onFocus={() => onFieldFocus("name")}
               onBlur={() => onFieldBlur("name")}
@@ -90,7 +90,7 @@ export default function GoalFormSheet({
             <View className="flex-row items-center bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4 py-3.5">
               <Text className="text-slate-500 dark:text-slate-300 font-bold mr-1">{currencySymbolFor(userCurrency)}</Text>
               <TextInput
-                keyboardType="decimal-pad"
+                disableFullscreenUI                keyboardType="decimal-pad"
                 value={target}
                 onChangeText={(v) => setTarget(sanitizeAmountInput(v))}
                 onFocus={() => onFieldFocus("target")}

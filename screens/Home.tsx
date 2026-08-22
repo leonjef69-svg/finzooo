@@ -405,7 +405,7 @@ export default function Home({
             {editingBudget ? (
               <View className="flex-row items-center gap-2 mt-1">
                 <TextInput
-                  value={budgetInput}
+                  disableFullscreenUI                  value={budgetInput}
                   onChangeText={(v) => setBudgetInput(sanitizeAmountInput(v))}
                   keyboardType="decimal-pad"
                   autoFocus

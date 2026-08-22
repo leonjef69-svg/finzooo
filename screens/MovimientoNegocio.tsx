@@ -136,7 +136,7 @@ export default function MovimientoNegocio({
             {t("caja.monto")}
           </Text>
           <TextInput
-            value={montoTexto}
+            disableFullscreenUI            value={montoTexto}
             onChangeText={setMontoTexto}
             placeholder="0.00"
             placeholderTextColor="#94a3b8"
@@ -149,7 +149,7 @@ export default function MovimientoNegocio({
             {t("caja.descripcion")}
           </Text>
           <TextInput
-            value={descripcion}
+            disableFullscreenUI            value={descripcion}
             onChangeText={setDescripcion}
             placeholder={t("caja.descripcionPlaceholder")}
             placeholderTextColor="#94a3b8"

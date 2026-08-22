@@ -613,7 +613,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
             {horaPersonal && (
               <View className="flex-row items-center gap-2 mb-5">
                 <TextInput
-                  value={horaTexto}
+                  disableFullscreenUI                  value={horaTexto}
                   onChangeText={(v) => escribirHora(v, "hora")}
                   keyboardType="number-pad"
                   maxLength={2}
@@ -623,7 +623,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                 />
                 <Text className="text-lg font-extrabold text-slate-400">:</Text>
                 <TextInput
-                  value={minutoTexto}
+                  disableFullscreenUI                  value={minutoTexto}
                   onChangeText={(v) => escribirHora(v, "minuto")}
                   keyboardType="number-pad"
                   maxLength={2}
@@ -832,7 +832,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
 
             {schedule.fileNameMode === "custom" && (
               <TextInput
-                value={schedule.fileName}
+                disableFullscreenUI                value={schedule.fileName}
                 onChangeText={(v) => {
                   // Se guarda al escribir pero NO se reprograma el aviso en
                   // cada letra: el nombre no cambia cuándo suena. update()

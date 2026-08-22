@@ -331,7 +331,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
 
               <Field label={t("scan.fieldAmount")}>
                 <TextInput
-                  value={amountText}
+                  disableFullscreenUI                  value={amountText}
                   onChangeText={setAmountText}
                   keyboardType="decimal-pad"
                   placeholder="0.00"
@@ -342,7 +342,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
 
               <Field label={t("scan.fieldMerchant")}>
                 <TextInput
-                  value={merchant}
+                  disableFullscreenUI                  value={merchant}
                   onChangeText={(text) => {
                     setMerchant(text);
                     setCategory(suggestCategory(text, kind, merchantLearned));
@@ -355,7 +355,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
 
               <Field label={t("scan.fieldDate")}>
                 <TextInput
-                  value={date}
+                  disableFullscreenUI                  value={date}
                   onChangeText={setDate}
                   placeholder="AAAA-MM-DD"
                   placeholderTextColor="#94a3b8"

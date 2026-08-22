@@ -33,7 +33,7 @@ export default function AuthField({
         }`}
       >
         <TextInput
-          value={value}
+          disableFullscreenUI          value={value}
           onChangeText={onChange}
           placeholder={placeholder}
           placeholderTextColor="#94a3b8"

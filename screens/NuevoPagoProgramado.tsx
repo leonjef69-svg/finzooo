@@ -319,7 +319,7 @@ export default function NuevoPagoProgramado({
             </View>
           </TouchableOpacity>
           <TextInput
-            value={nombre}
+            disableFullscreenUI            value={nombre}
             onChangeText={setNombre}
             placeholder={t("calendario.nuevo.nombreEjemplo")}
             placeholderTextColor="#94a3b8"
@@ -446,7 +446,7 @@ export default function NuevoPagoProgramado({
             <View className={`flex-1 h-[50px] rounded-2xl px-4 flex-row items-center ${campo}`}>
               <Text className="text-[13px] text-slate-400 mr-1.5">S/</Text>
               <TextInput
-                value={monto}
+                disableFullscreenUI                value={monto}
                 onChangeText={(v) => setMonto(soloMonto(v))}
                 keyboardType="decimal-pad"
                 placeholder="0.00"
@@ -497,7 +497,7 @@ export default function NuevoPagoProgramado({
           <View className="flex-row gap-2.5">
             <View className={`flex-1 h-[46px] rounded-xl flex-row items-center justify-center ${campo}`}>
               <TextInput
-                value={diasAntes}
+                disableFullscreenUI                value={diasAntes}
                 onChangeText={(v) => setDiasAntes(soloNumeros(v, 30))}
                 keyboardType="number-pad"
                 placeholder="0"
@@ -510,14 +510,14 @@ export default function NuevoPagoProgramado({
             </View>
             <View className={`flex-1 h-[46px] rounded-xl flex-row items-center justify-center ${campo}`}>
               <TextInput
-                value={horaHH}
+                disableFullscreenUI                value={horaHH}
                 onChangeText={(v) => setHoraHH(soloNumeros(v, 23))}
                 keyboardType="number-pad"
                 className="w-8 text-[17px] text-center text-slate-900 dark:text-slate-100"
               />
               <Text className="text-[17px] text-slate-400">:</Text>
               <TextInput
-                value={horaMM}
+                disableFullscreenUI                value={horaMM}
                 onChangeText={(v) => setHoraMM(soloNumeros(v, 59))}
                 keyboardType="number-pad"
                 className="w-8 text-[17px] text-center text-slate-900 dark:text-slate-100"

@@ -21,7 +21,14 @@
  * comprobarlas con números.
  */
 import { useMemo, useState } from "react";
-import { Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import {
+  Image,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChevronLeft, ChevronRight, Check, CheckCircle2, Circle, ListChecks, Plus, Settings, Trash2, X } from "lucide-react-native";
 import { irUnaVez } from "@/utils/nav";
@@ -119,6 +126,23 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const oscuro = colorScheme === "dark";
+
+  /**
+   * EL LADO DE UN DIA, CON TOPE (21/08/2026).
+   *
+   * La casilla era `flex: 1` con `aspectRatio: 1`: cuadrada y repartiendose el ancho entre
+   * siete. En vertical sale un circulo comodo. **En horizontal, el ancho es casi el doble, y
+   * como la casilla es cuadrada el alto crece igual**: los dias se convertian en circulos
+   * enormes que se comian la pantalla y dejaban ver dos filas.
+   *
+   * No se veia porque la app estaba atada al vertical. Al soltarla para que gire —lo que pedia
+   * Google para pantallas grandes— salio a la luz.
+   *
+   * Con tope, el dia mide lo mismo gire como gire; lo que cambia es el aire entre columnas,
+   * que es lo que debe cambiar.
+   */
+  const { width: anchoPantalla } = useWindowDimensions();
+  const ladoDia = Math.min((anchoPantalla - 40) / 7, 46);
 
   const hoy = useMemo(() => new Date(), []);
   const [mes, setMes] = useState(() => mesDe(hoy));
@@ -447,7 +471,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
             {Array.from({ length: 7 }).map((__, columna) => {
               const dia = semana * 7 + columna - primerDia + 1;
               if (dia < 1 || dia > diasEnElMes) {
-                return <View key={columna} style={{ flex: 1, aspectRatio: 1 }} />;
+                return <View key={columna} style={{ flex: 1, height: ladoDia }} />;
               }
               const x = porDia[dia];
               const esHoy = esEsteMes && dia === hoy.getDate();
@@ -468,7 +492,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                       setDiaAbierto(diaAbierto === dia ? null : dia);
                     }
                   }}
-                  style={{ flex: 1, aspectRatio: 1 }}
+                  style={{ flex: 1, height: ladoDia }}
                   className="items-center justify-center p-0.5"
                 >
                   {/* CUADRADO PRIMERO Y CÍRCULO DESPUÉS: eso era el fallo.
@@ -481,8 +505,8 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                   <View
                     className="items-center justify-center"
                     style={{
-                      width: "100%",
-                      aspectRatio: 1,
+                      width: ladoDia - 4,
+                      height: ladoDia - 4,
                       borderRadius: 999,
                       backgroundColor: x ? COLOR_DIA[x.color] : "transparent",
                     }}
