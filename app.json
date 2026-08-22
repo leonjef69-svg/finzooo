@@ -3,7 +3,7 @@
     "name": "Fino",
     "slug": "finzo",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "finzo",
     "userInterfaceStyle": "automatic",
@@ -62,7 +62,8 @@
       ],
       "runtimeVersion": {
         "policy": "appVersion"
-      }
+      },
+      "resizeableActivity": true
     },
     "web": {
       "output": "static",
