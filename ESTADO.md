@@ -96,12 +96,16 @@ compilado EN SU PC (`android\compilar.bat`) e instalado y funcionando esa noche.
 > **Pruebas: 69 y 7 auditores.** Nuevas ese día: `verificar-reglas-nube`,
 > `verificar-valor-estable` y `verificar-doble-toque`.
 
-Actualizado antes: **18 de agosto de 2026** · Código publicado: **18ago-03** ·
-APK que tiene él: **fino-13ago-09-ligero**, instalado y funcionando el
-18/08/2026 (`com.finoapp.gastos`). **Tiene las DOS apps a la vez**: esta y la
-vieja (`com.finzo.app`), que para Android son distintas y se ven las dos con el
-nombre Fino. Al pedirle que compruebe algo, decirle que abra **la que arranca
-vacía**, o mira la que no es.
+Actualizado antes: **18 de agosto de 2026** · Código publicado: **18ago-03**.
+
+> ~~**Tiene las DOS apps a la vez**: esta y la vieja (`com.finzo.app`). Al pedirle
+> que compruebe algo, decirle que abra la que arranca vacía.~~
+> **RESUELTO EL 21/08/2026: desinstaló la vieja.** Ya solo tiene
+> `com.finoapp.gastos`, así que lo que él mire es lo que hay.
+>
+> Esto costó tiempo mientras duró: se le pedía comprobar un arreglo, abría la
+> app equivocada y decía que no había cambiado. Se deja escrito porque es la
+> primera sospecha si vuelve a pasar que "no cambia nada" tras actualizar.
 
 > **LO QUE PASA AHORA MISMO: la prueba cerrada está EN REVISIÓN** (enviada el
 > 14/08/2026; el panel dice "En revisión" y la app figura como Borrador). Todas
