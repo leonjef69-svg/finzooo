@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
+import { NOCHE } from "@/constants/style";
 import { irUnaVez } from "@/utils/nav";
 import { AppState, View } from "react-native";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
@@ -452,10 +453,17 @@ export default function RootLayout() {
   // Mismo color que bg-white / dark:bg-noche (Tailwind). Se usa como
   // fondo nativo de las pantallas de tipo "modal", para que el instante
   // antes de que React pinte su contenido ya se vea del color correcto.
-  // NEGRO EN MODO OSCURO (19/08/2026). Ver la paleta "noche" en tailwind.config.js: el
-  // fondo nativo tiene que ser el MISMO que el de las pantallas, o en el instante previo a
-  // que React pinte se ve un rectangulo azul detras del negro.
-  const screenBg = colorScheme === "dark" ? "#000000" : "#ffffff";
+  // EL COLOR SALE DE `NOCHE`, NO SE ESCRIBE AQUI (21/08/2026).
+  //
+  // Este es el fondo NATIVO: lo que se ve en el instante antes de que React pinte nada. Tiene
+  // que ser el MISMO que el de las pantallas, o en ese instante aparece un rectangulo de otro
+  // color por detras.
+  //
+  // Aqui ponia "#000000", de cuando el modo oscuro era negro puro. Al pasar a carbon se quedo
+  // atras —*"por que aparece ese color del antiguo fondo?"*— porque el color estaba escrito a
+  // mano en vez de salir de un sitio comun. Es el mismo fallo que dejo la barra de pestañas
+  // azul, y por eso ahora los dos beben de `NOCHE`.
+  const screenBg = colorScheme === "dark" ? NOCHE.fondo : "#ffffff";
 
   /**
    * EL DESTELLO BLANCO AL GUARDAR UN MOVIMIENTO (10/08/2026)

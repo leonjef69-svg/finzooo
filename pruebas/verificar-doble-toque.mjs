@@ -95,23 +95,33 @@ console.log("\n--- EL COLOR DEL MODO OSCURO SALE DE UN SOLO SITIO ---");
     ok(claro(deTw[3]) > claro(deTw[2]), "y lo que va encima, mas claro que la tarjeta");
   }
 
-  /* Y que nadie vuelva a escribir el azul viejo como fondo DEL MODO OSCURO.
-     Se mira que el azul este en la rama de oscuro, no en cualquier sitio: #0f172a sigue
-     siendo el color correcto del TEXTO en modo claro, y de un punto que tiene que contrastar
-     con un fondo claro. Sin esta precision, la prueba señalaba tres usos legitimos del
-     calendario y habria acabado desactivada por pesada, que es como mueren las pruebas. */
-  const conAzul = [];
+  /* NINGUN FONDO DEL MODO OSCURO SE ESCRIBE A MANO.
+     Antes esto solo buscaba el azul viejo (#0f172a), y por eso se le escapo el negro puro
+     (#000000) que habia quedado en app/_layout como fondo nativo de las pantallas: el color
+     que se ve en el instante antes de que React pinte. El resultado era una app en carbon con
+     un rectangulo de otro color asomando —*"por que aparece ese color del antiguo fondo?"*.
+
+     Buscar UN color concreto solo encuentra el fallo que ya conoces. Ahora se busca la FORMA:
+     cualquier color oscuro puesto en la rama de oscuro que no venga de NOCHE.
+
+     Se miran los colores de fondo, no los de texto: en modo claro el texto SI es #0f172a y
+     eso es correcto. */
+  const aMano = [];
   for (const rel of archivos) {
     const txt = fs.readFileSync(path.join(RAIZ, rel), "utf8");
-    for (const m of txt.matchAll(
-      /backgroundColor:[^,;\n]*(?:oscuro|isDark|=== "dark")\s*\?\s*"#0f172a"/gi
-    )) {
-      conAzul.push(rel);
+    const patron =
+      /(?:backgroundColor|screenBg|background)\s*[:=][^;\n]*(?:oscuro|isDark|colorScheme === "dark")\s*\?\s*"(#[0-9a-fA-F]{6})"/g;
+    for (const m of txt.matchAll(patron)) {
+      const hex = m[1].toLowerCase();
+      const n = parseInt(hex.slice(1), 16);
+      const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+      // Solo los oscuros: un fondo de color (un verde, un ambar) es otra cosa.
+      if (r < 70 && g < 70 && b < 90) aMano.push(rel + " (" + hex + ")");
     }
   }
   ok(
-    conAzul.length === 0,
-    `nadie pinta un fondo con el azul viejo${conAzul.length ? " — lo hacen: " + [...new Set(conAzul)].join(", ") : ""}`
+    aMano.length === 0,
+    `ningun fondo oscuro escrito a mano${aMano.length ? " — los hay en: " + [...new Set(aMano)].join(", ") : ""}`
   );
 }
 
