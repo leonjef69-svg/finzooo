@@ -67,14 +67,17 @@ const NUM_WORDS: Record<string, number> = {
 const INCOME_VERBS = [
   "recibi", "me pagaron", "me pago", "cobre", "gane", "me depositaron",
   "me deposito", "me transfirieron", "me dieron", "entro", "ingreso",
-  "me llego", "me yapearon",
+  "me llego", "me yapearon", "me cayo", "me mandaron", "me enviaron",
+  "me abonaron", "vendi", "venta", "sueldo", "salario", "honorarios",
+  "devolucion",
 ];
 
 // Salió dinero. Solo se usan para decidir el tipo de CADA movimiento
 // cuando en una misma frase se mezclan gastos e ingresos.
 const EXPENSE_VERBS = [
-  "gaste", "pague", "compre", "invert", "me costo", "costo", "se me fue",
-  "salio", "yapee", "consumi", "deposite", "retire",
+  "gaste", "pague", "compre", "inverti", "inversion", "me costo", "costo", "se me fue",
+  "salio", "yapee", "consumi", "deposite", "retire", "almorce",
+  "desayune", "cene", "merende", "abone", "cancele",
 ];
 
 // Palabras que separan el monto del comercio, o que sobran en una frase
@@ -99,8 +102,53 @@ const ARTICLES = new Set(["la", "el", "los", "las", "lo"]);
 const PHRASE_ROOTS = [
   "gast", "pag", "compr", "invert", "cost", "recib", "cobr",
   "gan", "deposit", "ingres", "retir", "yape", "consum", "transfir",
+  "almorz", "almorc", "desayun", "cen", "merend", "abon", "cancel", "mandaron", "enviaron", "cayo",
   "hoy", "ayer", "anteayer", "manana", "hace", "dia", "semana", "mes",
 ];
+
+/**
+ * Medio de pago dicho de manera natural. Antes el intérprete oía
+ * "pagué 20 con tarjeta" o "me yapearon 30", pero la pantalla guardaba
+ * SIEMPRE efectivo. Eso hacía que la voz perdiera un dato que la persona
+ * sí había dado.
+ */
+function findMethod(normalized: string): string {
+  if (normalized.includes("tarjeta de credito") || normalized.includes("tarjeta credito")) return "credit";
+  if (normalized.includes("tarjeta de debito") || normalized.includes("tarjeta debito")) return "debit";
+  if (normalized.includes("yape")) return "yape";
+  if (normalized.includes("plin")) return "plin";
+  if (normalized.includes("transfer") || normalized.includes("deposit") || normalized.includes("abono")) {
+    return "transfer";
+  }
+  if (normalized.includes("efectivo") || normalized.includes("cash")) return "cash";
+  return "";
+}
+
+/** Cuando el verbo ocupa el lugar del nombre, lo convierte en algo útil. */
+function naturalDescription(normalized: string): string {
+  if (hasCue(normalized, "almorce")) return "Almuerzo";
+  if (hasCue(normalized, "desayune")) return "Desayuno";
+  if (hasCue(normalized, "merende")) return "Merienda";
+  if (hasCue(normalized, "cene")) return "Cena";
+  if (normalized.includes("yape")) return "Yape";
+  if (normalized.includes("plin")) return "Plin";
+  if (normalized.includes("abono")) return "Abono";
+  return "";
+}
+
+/** Evita que una palabra corta coincida dentro de otra ("cene" en "almacenes"). */
+function hasCue(normalized: string, cue: string): boolean {
+  return ` ${normalized} `.includes(` ${cue} `);
+}
+
+/** En una frase mezclada manda el verbo más cercano al monto. */
+function lastSaidType(normalized: string): "expense" | "income" | null {
+  const padded = ` ${normalized} `;
+  const incomeAt = Math.max(...INCOME_VERBS.map((v) => padded.lastIndexOf(` ${v} `)));
+  const expenseAt = Math.max(...EXPENSE_VERBS.map((v) => padded.lastIndexOf(` ${v} `)));
+  if (incomeAt < 0 && expenseAt < 0) return null;
+  return incomeAt > expenseAt ? "income" : "expense";
+}
 
 /**
  * Deja una palabra en su forma comparable: sin tildes, en minúsculas y sin
@@ -525,8 +573,8 @@ export function parseVoice(transcript: string, now: Date = new Date()): VoicePar
   // Tipo general de la frase. Sin verbo reconocible se asume gasto: es lo
   // que la gente registra el 90% de las veces, y la pantalla de
   // confirmación deja cambiarlo de un toque antes de guardar.
-  const saidIncome = INCOME_VERBS.some((v) => normalized.includes(v));
-  const saidExpense = EXPENSE_VERBS.some((v) => normalized.includes(v));
+  const saidIncome = INCOME_VERBS.some((v) => hasCue(normalized, v));
+  const saidExpense = EXPENSE_VERBS.some((v) => hasCue(normalized, v));
   const overall: "expense" | "income" = saidIncome ? "income" : "expense";
 
   // Una fecha con día y mes manda ("el 28 de julio"). Un día sin mes cae en
@@ -565,16 +613,14 @@ export function parseVoice(transcript: string, now: Date = new Date()): VoicePar
       if (!merchant && index === 0) {
         merchant = findMerchant(maskedRaw.slice(0, hit.start), maskedTokens.slice(0, hit.start));
       }
+      if (!merchant) merchant = naturalDescription(normalized);
 
       // Las palabras justo ANTES de este monto mandan sobre su tipo, para
       // frases mezcladas como "recibí 500 de sueldo y gasté 20 en pan".
       // Si ahí no hay ningún verbo, vale el tipo general de la frase.
       const before = tokens.slice(hits[index - 1]?.end ?? 0, hit.start).join(" ");
-      const type = INCOME_VERBS.some((v) => before.includes(v))
-        ? "income"
-        : EXPENSE_VERBS.some((v) => before.includes(v))
-          ? "expense"
-          : overall;
+      const method = findMethod(tokens.slice(hits[index - 1]?.end ?? 0, nextStart).join(" "));
+      const type = lastSaidType(before) ?? overall;
 
       return {
         date,
@@ -584,8 +630,38 @@ export function parseVoice(transcript: string, now: Date = new Date()): VoicePar
         merchant,
         reference: "",
         categoryRaw: "",
-        methodRaw: "",
+        methodRaw: method,
       };
     }),
+  };
+}
+
+/**
+ * Corrige el movimiento que está en la confirmación sin obligar a repetirlo
+ * entero. Entiende respuestas cortas como "no, eran 30", "fue ingreso" o
+ * "con tarjeta de débito".
+ */
+export function applyVoiceCorrection(
+  row: RawRow,
+  transcript: string
+): { row: RawRow; type?: "expense" | "income" } | null {
+  const rawWords = (transcript ?? "").trim().split(/\s+/).filter(Boolean);
+  if (rawWords.length === 0) return null;
+  const tokens = rawWords.map(soften);
+  const normalized = tokens.join(" ");
+  const amount = findAmounts(tokens)[0]?.value;
+  const method = findMethod(normalized);
+  const income = INCOME_VERBS.some((v) => hasCue(normalized, v)) || hasCue(normalized, "fue ingreso");
+  const expense = EXPENSE_VERBS.some((v) => hasCue(normalized, v)) || hasCue(normalized, "fue gasto");
+
+  if (amount === undefined && !method && !income && !expense) return null;
+  return {
+    row: {
+      ...row,
+      amount: amount ?? row.amount,
+      methodRaw: method || row.methodRaw,
+      type: income ? "income" : expense ? "expense" : row.type,
+    },
+    type: income ? "income" : expense ? "expense" : undefined,
   };
 }

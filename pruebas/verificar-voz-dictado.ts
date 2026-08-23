@@ -21,7 +21,7 @@
 // los yapes seguidos.
 import fs from "fs";
 import path from "path";
-import { parseVoice } from "@/utils/voiceParser";
+import { applyVoiceCorrection, parseVoice } from "@/utils/voiceParser";
 
 const RAIZ = process.cwd();
 
@@ -147,6 +147,56 @@ console.log("\n--- LO QUE YA ANDABA SIGUE ANDANDO ---");
   // La fecha se tacha antes de buscar montos, o el 28 seria un gasto de S/ 28.
   const conFecha = parseVoice("gasté 20 el 28 de julio", AHORA);
   ok(conFecha.ok && conFecha.rows.length === 1 && conFecha.rows[0].date === "2026-07-28", "la fecha no se cuenta como monto");
+}
+
+console.log("\n--- HABLAR NATURAL, SIN APRENDER COMANDOS ---");
+{
+  const sueldo = parseVoice("sueldo 1500", AHORA);
+  ok(sueldo.ok && sueldo.rows[0].type === "income", "«sueldo 1500» es ingreso");
+
+  const yape = parseVoice("me cayó un yape de 30", AHORA);
+  ok(
+    yape.ok && yape.rows[0].type === "income" && yape.rows[0].methodRaw === "yape",
+    "«me cayó un yape de 30» entiende ingreso y medio"
+  );
+
+  const almuerzo = parseVoice("almorcé por 20", AHORA);
+  ok(
+    almuerzo.ok && almuerzo.rows[0].type === "expense" && almuerzo.rows[0].description === "Almuerzo",
+    "«almorcé por 20» no necesita una fórmula"
+  );
+
+  const tarjeta = parseVoice("pagué 40 con tarjeta de débito", AHORA);
+  ok(tarjeta.ok && tarjeta.rows[0].methodRaw === "debit", "guarda tarjeta de débito");
+
+  const transferencia = parseVoice("recibí 100 por transferencia", AHORA);
+  ok(
+    transferencia.ok && transferencia.rows[0].methodRaw === "transfer",
+    "guarda una transferencia"
+  );
+
+  const mezclados = parseVoice("gasté 10 en pan en efectivo y 20 en leche por yape", AHORA);
+  ok(
+    mezclados.ok && mezclados.rows[0].methodRaw === "cash" && mezclados.rows[1].methodRaw === "yape",
+    "cada movimiento conserva su propio medio de pago"
+  );
+}
+
+console.log("\n--- CORREGIR SIN REPETIR TODO ---");
+{
+  const base = parseVoice("gasté 20 en taxi", AHORA);
+  if (!base.ok) {
+    ok(false, "hay un movimiento base para corregir");
+  } else {
+    const monto = applyVoiceCorrection(base.rows[0], "no, eran 30");
+    ok(monto?.row.amount === 30, "«no, eran 30» cambia solo el monto");
+
+    const tipo = applyVoiceCorrection(base.rows[0], "fue ingreso");
+    ok(tipo?.row.type === "income", "«fue ingreso» cambia solo el tipo");
+
+    const metodo = applyVoiceCorrection(base.rows[0], "con tarjeta de crédito");
+    ok(metodo?.row.methodRaw === "credit", "«con tarjeta de crédito» cambia solo el medio");
+  }
 }
 
 console.log("\n--- LA PANTALLA NO SE CIERRA EN EL PRIMER TROZO ---");

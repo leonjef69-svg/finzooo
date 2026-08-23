@@ -26,6 +26,8 @@ La versión 1.0.4 añade:
 - Verificación de correo sin carga infinita y aviso de Spam.
 - Inicio, reportes y gráficos adaptados para monedas grandes.
 - Saludo sin mostrar el correo completo.
+- Dictado más natural, preguntas cuando falta el monto y correcciones por voz.
+- Métodos de pago reconocidos y guardados desde el dictado.
 
 La firma real de Google Play ya está registrada en Firebase y el acceso con
 Google fue comprobado en un teléfono.

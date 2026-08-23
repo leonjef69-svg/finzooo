@@ -5,7 +5,7 @@ import { router } from "expo-router";
 import { Mic, MicOff, Check, RotateCcw, X, ArrowUpRight, ArrowDownRight } from "lucide-react-native";
 import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "expo-speech-recognition";
 import { useAppData } from "@/contexts/AppDataContext";
-import { type VoiceFailure } from "@/utils/voiceParser";
+import { applyVoiceCorrection, type VoiceFailure } from "@/utils/voiceParser";
 import { parseVoiceCommand } from "@/utils/voiceCommand";
 import { suggestCategory } from "@/utils/classifier";
 import CategoryAvatar from "@/components/CategoryAvatar";
@@ -114,6 +114,13 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   // porque el aviso de "terminé" de Android puede llegar con la copia vieja
   // del texto, y entonces se perdería justo la frase que la persona dijo.
   const heardRef = useRef("");
+  // Si la persona dijo "almuerzo" pero olvidó el monto, la siguiente
+  // respuesta ("20") completa ESA frase. Antes tenía que empezar de cero.
+  const pendingAmountPhrase = useRef("");
+  // Una corrección corta se aplica al movimiento que se estaba mostrando:
+  // "no, eran 30", "fue ingreso" o "con tarjeta".
+  const correctionRow = useRef<RawRow | null>(null);
+  const correctionKind = useRef<Kind>("expense");
 
   /**
    * LO DICHO, POR TROZOS. AQUÍ ESTABA EL FALLO GORDO DEL MICRÓFONO.
@@ -405,7 +412,30 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
       relojCierre.current = null;
     }
 
-    const command = parseVoiceCommand(text);
+    const spoken = text.trim();
+
+    if (correctionRow.current) {
+      const base = correctionRow.current;
+      const corrected = applyVoiceCorrection(base, spoken);
+      correctionRow.current = null;
+      if (corrected) {
+        const kind = corrected.type ?? correctionKind.current;
+        setRows([corrected.row]);
+        setKinds([kind]);
+        setTypeSaid(Boolean(corrected.type) || typeSaid);
+        setHeard(spoken);
+        setStage("confirm");
+        return;
+      }
+      setFailure("noAmount");
+      setStage("failed");
+      return;
+    }
+
+    const completeText = pendingAmountPhrase.current
+      ? `${pendingAmountPhrase.current} ${spoken}`.trim()
+      : spoken;
+    const command = parseVoiceCommand(completeText);
 
     // Exportar: el archivo se genera solo y se abre el menú de compartir,
     // sin tocar nada más. Antes solo dejaba la pantalla lista, por si el
@@ -461,10 +491,13 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
 
     const parsed = command.parsed;
     if (!parsed.ok) {
+      if (parsed.reason === "noAmount" && completeText) pendingAmountPhrase.current = completeText;
       setFailure(parsed.reason);
       setStage("failed");
       return;
     }
+    pendingAmountPhrase.current = "";
+    setHeard(completeText);
     setRows(parsed.rows);
     setKinds(parsed.rows.map((r) => r.type));
     setTypeSaid(parsed.typeSaid);
@@ -598,6 +631,14 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     setKinds((prev) => prev.filter((_, i) => i !== index));
   }
 
+  function correctByVoice() {
+    if (rows.length !== 1) return;
+    correctionRow.current = rows[0];
+    correctionKind.current = kinds[0];
+    pendingAmountPhrase.current = "";
+    start();
+  }
+
   function save() {
     if (rows.length === 0) return;
     rows.forEach((row, i) => {
@@ -609,7 +650,10 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
         amount: row.amount,
         category,
         date: row.date,
-        method: "cash",
+        // El método que la persona sí dijo: "con tarjeta", "por Yape",
+        // "en efectivo". Si no dijo ninguno, efectivo sigue siendo el
+        // valor seguro de siempre.
+        method: row.methodRaw || "cash",
         description: row.description || t(catInfo(category).label),
         notes: "",
         // La hora de ahora: es cuando se dicta.
@@ -950,11 +994,13 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={start}
+              onPress={single ? correctByVoice : start}
               className="w-full flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 mt-2"
             >
               <RotateCcw size={16} color="#64748b" />
-              <Text className="font-bold text-slate-600 dark:text-slate-200">{t("voice.retry")}</Text>
+              <Text className="font-bold text-slate-600 dark:text-slate-200">
+                {t(single ? "voice.correct" : "voice.retry")}
+              </Text>
             </TouchableOpacity>
             <Text className="text-[10px] text-center text-slate-400 mt-3 leading-4">
               {t(single ? "voice.editHint" : "voice.manyHint")}
@@ -1277,11 +1323,16 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             ) : null}
             <View className="h-3" />
             <TouchableOpacity
-              onPress={start}
+              onPress={() => {
+                if (failure !== "noAmount") pendingAmountPhrase.current = "";
+                start();
+              }}
               className="w-full flex-row items-center justify-center gap-2 py-4 rounded-2xl bg-violet-500"
             >
               <RotateCcw size={18} color="#ffffff" />
-              <Text className="text-white font-bold">{t("voice.retry")}</Text>
+              <Text className="text-white font-bold">
+                {t(failure === "noAmount" ? "voice.answerAmount" : "voice.retry")}
+              </Text>
             </TouchableOpacity>
           </View>
         )}

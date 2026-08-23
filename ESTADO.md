@@ -43,6 +43,11 @@ de Contraseña, distingue las causas y no muestra error cuando el usuario cancel
 - Inicio y Reportes usan cantidades compactas en espacios pequeños.
 - Gráficos, leyendas y ejes reservan espacio para monedas grandes.
 - El saludo nunca muestra el correo electrónico completo.
+- El micrófono entiende frases naturales como «almorcé por 20», «sueldo
+  1500» o «me cayó un Yape de 30».
+- Si falta el monto, Fino lo pregunta sin obligar a repetir toda la frase.
+- El usuario puede corregir monto, tipo o método de pago con la voz.
+- El dictado conserva efectivo, tarjeta, transferencia, Yape o Plin.
 
 ## Registro automático
 
