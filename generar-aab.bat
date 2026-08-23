@@ -32,6 +32,7 @@ if errorlevel 1 exit /b 1
 
 node -e "const fs=require('fs'),a=require('./app.json').expo,p='android/app/build.gradle';let s=fs.readFileSync(p,'utf8');s=s.replace(/versionCode\s+\d+/, 'versionCode '+a.android.versionCode).replace(/versionName\s+\x22[^\x22]+\x22/, 'versionName \x22'+a.version+'\x22');fs.writeFileSync(p,s)"
 if errorlevel 1 exit /b 1
+for /f "delims=" %%V in ('node -p "require('./app.json').expo.version"') do set "APP_VERSION=%%V"
 
 > android\local.properties echo sdk.dir=%ANDROID_HOME:\=/%
 del /q android\app\build\generated\assets\createReleaseUpdatesResources\app.manifest 2>nul
@@ -46,8 +47,8 @@ if errorlevel 1 (
   exit /b 1
 )
 
-copy /Y "app\build\outputs\bundle\release\app-release.aab" "%USERPROFILE%\Downloads\Fino-1.0.2.aab" >nul
+copy /Y "app\build\outputs\bundle\release\app-release.aab" "%USERPROFILE%\Downloads\Fino-%APP_VERSION%.aab" >nul
 echo.
-echo LISTO: Fino-1.0.2.aab esta en Descargas.
-explorer /select,"%USERPROFILE%\Downloads\Fino-1.0.2.aab"
+echo LISTO: Fino-%APP_VERSION%.aab esta en Descargas.
+explorer /select,"%USERPROFILE%\Downloads\Fino-%APP_VERSION%.aab"
 pause
