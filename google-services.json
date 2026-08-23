@@ -22,6 +22,14 @@
           }
         },
         {
+          "client_id": "133168544890-gov3tsiaf5sua97ogr0sq8sn0ch07g64.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.finoapp.gastos",
+            "certificate_hash": "251613db754cae260052f7e00b8f8192fe02355a"
+          }
+        },
+        {
           "client_id": "133168544890-hhr5vv2b7k2nc81n2lfh2jav2a063902.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
