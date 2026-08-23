@@ -44,6 +44,12 @@ El usuario **no es programador** y escribe en español. Las respuestas van en
 español llano: nada de "estado", "props", "efecto", "race condition". Se dice
 qué se veía mal, por qué pasaba y qué se hizo.
 
+El usuario también pidió que el agente haga directamente todo lo que esté a su
+alcance y entregue el resultado. Solo se le deja una acción cuando depende de su
+sesión, su computadora o una confirmación personal. En ese caso se juntan los
+pasos imprescindibles y se elige el camino más corto; no se convierte una tarea
+automática en una cadena de instrucciones manuales.
+
 ## Expo HAS CHANGED
 
 Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/
@@ -76,7 +82,7 @@ Y las pruebas, que ahora corren con un solo comando:
 node pruebas/correr.mjs
 ```
 
-Son **47 pruebas y 7 auditores** (07/08/2026). Ver [pruebas/LEEME.md](pruebas/LEEME.md).
+Son **72 pruebas y 7 auditores** (23/08/2026). Ver [pruebas/LEEME.md](pruebas/LEEME.md).
 El número sube: lo que no puede bajar es que estén todas en verde.
 
 Cada prueba nueva tiene que **fallar contra la versión anterior**: una que
@@ -104,3 +110,7 @@ duro y en Java no. El porqué entero está en ESTADO.md.
    sea el mismo— deja dos enlaces en su pantalla, y eso ya confundió tres
    veces el 02/08/2026. No des el enlace hasta tener el arreglo hecho. El
    porqué está en ESTADO.md.
+
+En la computadora autorizada, `generar-aab.bat` sincroniza la versión nativa,
+configura Java y Android, genera el AAB y deja un único archivo con nombre claro
+en Descargas. Usarlo evita repetir manualmente la preparación de cada entrega.

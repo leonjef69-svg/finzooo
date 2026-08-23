@@ -161,15 +161,16 @@ class FinzoNotificationListener : NotificationListenerService() {
     // de funcionar en silencio. Por eso todo va dentro de un try.
     try {
       val pkg = sbn.packageName?.lowercase() ?: return
+      val esAppDeDinero = isMoneyApp(pkg)
 
       // Se anota ANTES de cualquier filtro: solo el nombre del paquete y la
       // hora, nunca el contenido. Es lo que permite distinguir "el servicio
       // no arrancó" de "arrancó pero no reconoce la app del banco" — dos
       // problemas que desde la pantalla se ven exactamente igual.
-      NotificationStore.noteSeen(applicationContext, pkg)
+      NotificationStore.noteSeen(applicationContext, pkg, esAppDeDinero)
 
       if (!NotificationStore.isEnabled(applicationContext)) return
-      if (!isMoneyApp(pkg)) return
+      if (!esAppDeDinero) return
 
       val extras = sbn.notification?.extras ?: return
       val title = extras.getCharSequence(Notification.EXTRA_TITLE)?.toString()?.trim() ?: ""

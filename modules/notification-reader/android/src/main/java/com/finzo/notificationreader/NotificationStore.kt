@@ -146,13 +146,32 @@ object NotificationStore {
    * guarda el nombre del paquete y la hora — nunca el contenido.
    */
   @Synchronized
-  fun noteSeen(context: Context, pkg: String) {
+  fun noteSeen(context: Context, pkg: String, esAppDeDinero: Boolean) {
     val p = prefs(context)
-    p.edit()
+    val anteriores = (p.getString(KEY_ULTIMAS, "") ?: "")
+      .split(",")
+      .map { it.trim() }
+      .filter { it.isNotBlank() && it != pkg }
+    val ultimas = (anteriores + pkg).takeLast(CUANTAS_ULTIMAS).joinToString(",")
+
+    val cambio = p.edit()
       .putInt(KEY_TOTAL_SEEN, p.getInt(KEY_TOTAL_SEEN, 0) + 1)
       .putString(KEY_LAST_PKG, pkg)
       .putLong(KEY_LAST_AT, System.currentTimeMillis())
-      .apply()
+      .putString(KEY_ULTIMAS, ultimas)
+
+    // Esta marca usa EXACTAMENTE el mismo resultado que el filtro del servicio.
+    // Antes la pantalla mostraba siempre "ninguno": las claves existían, pero nadie
+    // las escribía. Eso hacía imposible distinguir un Yape no recibido de uno recibido
+    // cuyo texto cambió.
+    if (esAppDeDinero) {
+      cambio
+        .putInt(KEY_MONEY_SEEN, p.getInt(KEY_MONEY_SEEN, 0) + 1)
+        .putString(KEY_LAST_MONEY_PKG, pkg)
+        .putLong(KEY_LAST_MONEY_AT, System.currentTimeMillis())
+    }
+
+    cambio.apply()
   }
 
   /**

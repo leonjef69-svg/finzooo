@@ -1,6 +1,6 @@
 # Estado actual de Fino
 
-Actualizado: **22 de agosto de 2026**.
+Actualizado: **23 de agosto de 2026**.
 
 Este archivo es el resumen público para retomar el proyecto sin empezar de cero.
 No contiene correos, identificadores de usuarios, credenciales, huellas completas,
@@ -24,14 +24,14 @@ Paquete de Android: `com.finoapp.gastos`.
 
 ## Versión que está en Google Play
 
-La prueba cerrada tiene actualmente el AAB **1.0.0**, `versionCode 1`.
-Ese AAB es anterior a varias mejoras recientes.
+La prueba cerrada tiene actualmente el AAB **1.0.1**, `versionCode 2`.
+Fue publicado para testers el 22 de agosto de 2026.
 
-La siguiente entrega ya está preparada en el código:
+La siguiente corrección está preparada en el código:
 
-- Versión: **1.0.1**.
-- `versionCode`: **2**.
-- Marca visible: **22ago-02**.
+- Versión: **1.0.2**.
+- `versionCode`: **3**.
+- Marca visible: **23ago-01**.
 - Estado: pendiente de generar el AAB firmado y subirlo a la misma prueba cerrada.
 
 La llave privada de firma no vive en el repositorio. El AAB debe generarse en la
@@ -59,9 +59,9 @@ El código quedó corregido:
 - La operación espera a que el acceso termine correctamente.
 - Existe la prueba `verificar-acceso-google` para evitar que regrese el problema.
 
-La corrección todavía no está en el AAB 1.0.0 de Play. Llegará con el AAB 1.0.1.
+La corrección está incluida en el AAB 1.0.1 disponible para testers.
 
-## Cambios recientes ya incluidos en 1.0.1
+## Cambios recientes incluidos en 1.0.1
 
 - Copia de seguridad de Firestore corregida para todos los campos actuales.
 - Respaldo del Modo Negocio corregido.
@@ -85,9 +85,13 @@ Android y registrar movimientos sin abrir la app.
 Estado actual:
 
 - El servicio puede conectarse y contar avisos.
-- Existe diagnóstico separado para avisos de aplicaciones de dinero.
-- Falta probar en un teléfono real si los avisos de Yape llegan al servicio en
-  todos los modelos y configuraciones de batería.
+- La prueba real confirmó que el servicio recibe otros avisos, pero el contador
+  especial de Yape de 1.0.1 siempre mostraba “ninguno” porque no estaba conectado
+  al lector nativo.
+- La versión 1.0.2 conecta ese contador al mismo filtro que usa la captura y guarda
+  las últimas aplicaciones observadas, sin guardar el contenido de sus avisos.
+- Existe una prueba automática que comprueba esa unión para que no vuelva a quedar
+  una pantalla de diagnóstico desconectada.
 - Solo deben guardarse pagos reales; publicidad y otros avisos se descartan.
 
 Los correos y avisos de bancos diferentes no deben incorporarse sin diseñar
@@ -122,8 +126,8 @@ de 24 horas para comprobar las funciones.
 
 - Conseguir al menos 12 testers que acepten la prueba cerrada.
 - Mantenerlos en la prueba durante el periodo exigido por Google.
-- Generar y subir el AAB 1.0.1.
-- Actualizar la app de los testers desde Google Play.
+- Generar y subir el AAB 1.0.2 para terminar el diagnóstico real de Yape.
+- Actualizar la app de los testers desde Google Play cuando se publique.
 - Añadir datos de ejemplo a la cuenta preparada para la revisión, sin publicar
   sus credenciales en GitHub.
 - Enviar la versión cuando Play Console habilite el siguiente paso.
@@ -137,7 +141,7 @@ enlace de invitación, aceptar y descargar la app con la misma cuenta de Google.
 
 - TypeScript: aprobado.
 - ESLint: sin errores; quedan advertencias antiguas no bloqueantes.
-- Pruebas: **71 aprobadas**.
+- Pruebas: **72 aprobadas**.
 - Auditores: **7 aprobados**.
 
 Comando principal:
@@ -162,6 +166,6 @@ Antes de publicar también se ejecutan TypeScript y ESLint, como indica
 
 ## Próximo paso exacto
 
-Subir estos cambios al repositorio oficial, actualizar la copia local autorizada,
-generar el AAB firmado 1.0.1 y subirlo a la prueba cerrada. Después, los testers
-solo tendrán que pulsar **Actualizar** en Google Play.
+Publicar la corrección 1.0.2 y repetir un Yape real. La pantalla deberá indicar
+si Android entregó el aviso de Yape; con ese dato se sabrá si falta reconocer el
+texto o si el aviso nunca llegó al lector.

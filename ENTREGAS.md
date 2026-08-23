@@ -7,17 +7,15 @@ identificadores privados y datos de firma no se guardan en GitHub.
 
 | Fecha | Versión | Estado |
 |---|---|---|
-| 13/08/2026 | 1.0.0 | Disponible en la prueba cerrada |
-
-Esta versión es anterior a varios cambios recientes.
+| 22/08/2026 | 1.0.1 | Disponible en la prueba cerrada |
 
 ## Próxima versión
 
 | Fecha preparada | Versión | Marca visible | Estado |
 |---|---|---|---|
-| 22/08/2026 | 1.0.1 | `22ago-02` | Código aprobado; falta generar y subir el AAB firmado |
+| 23/08/2026 | 1.0.2 | `23ago-01` | Corrige el diagnóstico de avisos de Yape |
 
-Incluye:
+La versión disponible 1.0.1 incluye:
 
 - Diagnóstico correcto del acceso con Google.
 - Copia de seguridad y Modo Negocio corregidos.
@@ -26,11 +24,15 @@ Incluye:
 - Compatibilidad con giro, pantallas grandes y borde a borde.
 - Todos los cambios acumulados después del AAB 1.0.0.
 
+La corrección 1.0.2 conecta el contador de avisos de Yape al lector nativo y
+guarda los últimos nombres de paquetes observados. No guarda el contenido de
+avisos ajenos.
+
 Calidad comprobada:
 
 - TypeScript aprobado.
 - ESLint sin errores.
-- 71 pruebas aprobadas.
+- 72 pruebas aprobadas.
 - 7 auditores aprobados.
 
 ## Cómo reconocer una entrega
@@ -39,7 +41,7 @@ La marca de código se muestra dentro de Fino en:
 
 **Ajustes → Acerca de**
 
-La versión 1.0.1 debe mostrar `22ago-02`.
+La versión 1.0.2 debe mostrar `23ago-01`.
 
 ## Reglas de publicación
 
@@ -52,7 +54,7 @@ La versión 1.0.1 debe mostrar `22ago-02`.
 
 ## Próximo paso
 
-Generar el AAB firmado 1.0.1, subirlo a la prueba cerrada y pedir a los testers
-que pulsen **Actualizar** en Google Play.
+Generar el AAB firmado 1.0.2, subirlo a la prueba cerrada y repetir una prueba
+real de Yape.
 
 El detalle funcional y los asuntos pendientes están en `ESTADO.md`.
