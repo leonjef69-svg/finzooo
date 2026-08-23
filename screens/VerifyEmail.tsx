@@ -71,6 +71,9 @@ export default function VerifyEmail({
           {"\n"}
           {t("verifyEmail.openToConfirm")}
         </Text>
+        <Text className="text-xs text-amber-700 dark:text-amber-300 text-center mt-3">
+          {t("verifyEmail.spamHint")}
+        </Text>
       </View>
 
       {message ? <Text className="text-xs text-center text-slate-600 dark:text-slate-200 mb-4">{message}</Text> : null}

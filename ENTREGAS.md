@@ -1,65 +1,54 @@
 # Entregas de Fino
 
-Resumen público de versiones. Los enlaces de artefactos, credenciales,
-identificadores privados y datos de firma no se guardan en GitHub.
+Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Versión disponible en Google Play
 
 | Fecha | Versión | Estado |
 |---|---|---|
-| 22/08/2026 | 1.0.1 | Disponible en la prueba cerrada |
+| 23/08/2026 | 1.0.3 | Disponible en la prueba cerrada |
 
 ## Próxima versión
 
 | Fecha preparada | Versión | Marca visible | Estado |
 |---|---|---|---|
-| 23/08/2026 | 1.0.2 | `23ago-02` | Corrige Google G10 y el diagnóstico de Yape |
+| 23/08/2026 | 1.0.4 | `23ago-06` | Entrada, correo y monedas adaptables |
 
-La versión disponible 1.0.1 incluye:
+La versión 1.0.3 contiene el acceso Google con diagnóstico, copia de seguridad,
+Modo Negocio, registro automático, voz, rendimiento, calendario, exportación,
+modo oscuro carbón y compatibilidad con pantallas modernas.
 
-- Diagnóstico correcto del acceso con Google.
-- Copia de seguridad y Modo Negocio corregidos.
-- Mejoras de rendimiento, calendario, exportación y voz.
-- Modo oscuro carbón.
-- Compatibilidad con giro, pantallas grandes y borde a borde.
-- Todos los cambios acumulados después del AAB 1.0.0.
+La versión 1.0.4 añade:
 
-La corrección 1.0.2 conecta el contador de avisos de Yape al lector nativo y
-guarda los últimos nombres de paquetes observados. No guarda el contenido de
-avisos ajenos.
+- Bienvenida con identidad de Fino.
+- País y moneda detectados, editables y conservados durante el registro.
+- Permiso de avisos antes del registro.
+- Verificación de correo sin carga infinita y aviso de Spam.
+- Inicio, reportes y gráficos adaptados para monedas grandes.
+- Saludo sin mostrar el correo completo.
 
-También usa la tercera firma de Android registrada en Firebase. El generador
-toma automáticamente de Descargas la configuración privada más reciente antes
-de crear el AAB, para que “Continuar con Google” funcione en instalaciones de
-Play, sin publicar ese archivo en GitHub.
+La firma real de Google Play ya está registrada en Firebase y el acceso con
+Google fue comprobado en un teléfono.
 
 Calidad comprobada:
 
 - TypeScript aprobado.
 - ESLint sin errores.
-- 72 pruebas aprobadas.
+- 76 pruebas aprobadas.
 - 7 auditores aprobados.
 
-## Cómo reconocer una entrega
+## Cómo reconocer la entrega
 
-La marca de código se muestra dentro de Fino en:
+En **Ajustes → Acerca de**, la versión 1.0.4 muestra `23ago-06`.
 
-**Ajustes → Acerca de**
+## Publicación
 
-La versión 1.0.2 debe mostrar `23ago-02`.
-
-## Reglas de publicación
-
-- Cada AAB nuevo debe aumentar su número interno de versión.
-- El archivo firmado se genera únicamente en el entorno privado autorizado.
-- Las llaves y contraseñas nunca se suben al repositorio.
-- Los testers reciben la nueva versión como una actualización normal de Google Play.
-- No es necesario desinstalar la aplicación para actualizarla.
-- No compartir dos archivos instalables distintos al mismo tiempo.
+- Cada AAB aumenta su número interno.
+- El AAB firmado se genera únicamente en el equipo autorizado.
+- Los testers actualizan desde Google Play sin desinstalar.
+- No se comparten dos instalables diferentes al mismo tiempo.
 
 ## Próximo paso
 
-Generar el AAB firmado 1.0.2, subirlo a la prueba cerrada y repetir una prueba
-real de Yape.
-
-El detalle funcional y los asuntos pendientes están en `ESTADO.md`.
+Generar `Fino-1.0.4.aab`, subirlo a prueba cerrada y probar una instalación
+nueva desde bienvenida hasta el acceso.

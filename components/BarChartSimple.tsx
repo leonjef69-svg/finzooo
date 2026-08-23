@@ -6,7 +6,8 @@ import { ScrollView, Text, TouchableOpacity, View } from "react-native";
  * no cabe ni "S/ 1,240.00" ni el nombre del mes. Se le da a cada uno el sitio que necesita y
  * lo que no entre se alcanza deslizando de lado.
  */
-const COL_W = 58;
+// Las cantidades compactas de monedas grandes necesitan un poco más de ancho.
+const COL_W = 72;
 
 export default function BarChartSimple({
   data,

@@ -220,7 +220,12 @@ export async function exportarEnFondo(forzar = false): Promise<ResultadoDeFondo>
         // El MISMO formateador que usa la app, con la moneda del perfil. Uno
         // hecho aquí a mano ("S/ 12.50") saldría distinto del de la pantalla en
         // cuanto alguien cambie el formato en un sitio y no en el otro.
-        fmt: (n) => formatAmount(n, currencySymbolFor(perfil.userCurrency ?? "PEN")),
+        fmt: (n) =>
+          formatAmount(
+            n,
+            currencySymbolFor(perfil.userCurrency ?? "PEN"),
+            perfil.userCurrency ?? "PEN"
+          ),
         titulo: t(
           schedule.type === "expense"
             ? "exportPdf.pdfTitleExpenses"

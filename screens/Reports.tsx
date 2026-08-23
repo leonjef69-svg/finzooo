@@ -40,6 +40,7 @@ export default function Reports({
 }) {
   const {
     fmt,
+    fmtCompact,
     t,
     monthNames,
     userLanguage,
@@ -298,7 +299,7 @@ export default function Reports({
             <Text className="text-emerald-100 text-xs font-semibold">
               {t("home.availableBalance")}
             </Text>
-            <Text className="text-white text-4xl font-extrabold mt-0.5">
+            <Text className="text-white text-4xl font-extrabold mt-0.5" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58}>
               {fmt(resumen.disponible)}
             </Text>
             <View className="flex-row items-center gap-1.5 mt-2">
@@ -356,7 +357,7 @@ export default function Reports({
                   numberOfLines={1}
                   adjustsFontSizeToFit
                 >
-                  {fmt(c.value)}
+                  {fmtCompact(c.value)}
                 </Text>
               </View>
             ))}
@@ -376,11 +377,11 @@ export default function Reports({
               className="mx-5 mt-2.5 rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2 p-4"
               style={CARD_SHADOW}
             >
-              <View className="flex-row items-center justify-between mb-2">
-                <Text className="text-xs font-bold" style={{ color: primaryTextColor }}>
+              <View className="flex-row items-start justify-between mb-2 gap-2">
+                <Text className="text-xs font-bold flex-shrink" style={{ color: primaryTextColor }}>
                   {t("reports.budgetUsed")}
                 </Text>
-                <Text className="text-[11px] text-slate-500 dark:text-slate-400">
+                <Text className="text-[11px] text-slate-500 dark:text-slate-400 text-right flex-1" numberOfLines={2}>
                   {fmt(spent)} {t("reports.ofBudget")} {fmt(budget)}
                 </Text>
               </View>
@@ -450,7 +451,7 @@ export default function Reports({
         ) : (
           <>
             <View className="items-center py-2">
-              <DonutChart data={pieData} fmt={fmt} />
+              <DonutChart data={pieData} fmt={fmtCompact} />
             </View>
             <View className="gap-2 mt-2">
               {pieData.map((e, i) => (
@@ -462,8 +463,8 @@ export default function Reports({
                   >
                     {e.name}
                   </Text>
-                  <Text className="text-xs text-slate-500 dark:text-slate-300">
-                    {fmt(e.value)} · {totalExpense ? Math.round((e.value / totalExpense) * 100) : 0}%
+                  <Text className="text-xs text-slate-500 dark:text-slate-300 flex-shrink text-right" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+                    {fmtCompact(e.value)} · {totalExpense ? Math.round((e.value / totalExpense) * 100) : 0}%
                   </Text>
                 </View>
               ))}
@@ -552,7 +553,7 @@ export default function Reports({
             {t("reports.noMonthsWithSpending")}
           </Text>
         ) : (
-          <BarChartSimple data={barData} fmt={fmt} width={windowWidth - 72} />
+          <BarChartSimple data={barData} fmt={fmtCompact} width={windowWidth - 72} />
         )}
       </View>
 
@@ -570,6 +571,7 @@ export default function Reports({
             <DailyBarsChart
               data={daily.bars}
               fmt={fmt}
+              fmtAxis={(value) => fmtCompact(value).replace(/\s+/g, "")}
               width={windowWidth - 72}
               today={daily.today}
               hint={t("reports.byDayHint")}

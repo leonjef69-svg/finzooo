@@ -3,6 +3,7 @@ import { reload, sendEmailVerification } from "@firebase/auth";
 import VerifyEmail from "@/screens/VerifyEmail";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
+import { withTimeout } from "@/utils/withTimeout";
 
 export default function VerifyEmailRoute() {
   const { hasOnboarded, reloadPersistedData, hydrateFromCloud, logout } = useAppData();
@@ -13,16 +14,16 @@ export default function VerifyEmailRoute() {
       onCheckAgain={async () => {
         const user = auth.currentUser;
         if (!user) return false;
-        await reload(user);
+        await withTimeout(reload(user));
         if (!user.emailVerified) return false;
 
-        const gotCloudData = await hydrateFromCloud(user.uid);
+        const gotCloudData = await withTimeout(hydrateFromCloud(user.uid));
         if (gotCloudData) {
           router.replace("/(tabs)");
           return true;
         }
         if (hasOnboarded) {
-          await reloadPersistedData();
+          await withTimeout(reloadPersistedData());
           router.replace("/(tabs)");
         } else {
           router.replace("/setup");
@@ -31,7 +32,7 @@ export default function VerifyEmailRoute() {
       }}
       onResend={async () => {
         if (auth.currentUser) {
-          await sendEmailVerification(auth.currentUser);
+          await withTimeout(sendEmailVerification(auth.currentUser));
         }
       }}
       onLogout={async () => {

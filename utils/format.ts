@@ -3,12 +3,34 @@
 // siempre se vea igual: "S/ 1,234.56". El símbolo SIEMPRE se recibe como
 // parámetro (no se guarda "por fuera" de React) para garantizar que se
 // actualice de inmediato en toda la app cuando alguien cambia su moneda.
-export function fmt(n: number, symbol: string) {
+import { usaCentimos } from "@/constants/currencies";
+
+const PUNTO_PARA_MILES = new Set(["CLP", "COP", "ARS", "BRL", "EUR"]);
+
+export function fmt(n: number, symbol: string, currencyId = "PEN") {
   const sign = n < 0 ? "-" : "";
   const abs = Math.abs(n);
-  const [intPart, decPart] = abs.toFixed(2).split(".");
-  const withThousands = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return `${sign}${symbol} ${withThousands}.${decPart}`;
+  const decimals = usaCentimos(currencyId) ? 2 : 0;
+  const [intPart, decPart] = abs.toFixed(decimals).split(".");
+  const thousands = PUNTO_PARA_MILES.has(currencyId) ? "." : ",";
+  const decimal = thousands === "." ? "," : ".";
+  const withThousands = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, thousands);
+  return `${sign}${symbol} ${withThousands}${decPart == null ? "" : `${decimal}${decPart}`}`;
+}
+
+/** Formato corto para tarjetas y gráficos estrechos. */
+export function fmtCompact(n: number, symbol: string, currencyId = "PEN") {
+  const sign = n < 0 ? "-" : "";
+  const abs = Math.abs(n);
+  if (abs < 1000) return fmt(n, symbol, currencyId);
+  const divisor = abs >= 1_000_000 ? 1_000_000 : 1_000;
+  const suffix = divisor === 1_000_000 ? "M" : "mil";
+  const scaled = abs / divisor;
+  const digits = scaled >= 100 || Number.isInteger(scaled) ? 0 : 1;
+  const shortNumber = scaled
+    .toFixed(digits)
+    .replace(".", PUNTO_PARA_MILES.has(currencyId) ? "," : ".");
+  return `${sign}${symbol} ${shortNumber} ${suffix}`;
 }
 
 export function monthKey(y: number, m: number) {

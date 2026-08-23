@@ -103,6 +103,9 @@ function GlobalOverlays() {
 // hacer al volver, tiene que estar en esta lista. Lo comprueba el auditor
 // auditar-pantallas-externas.mjs, para que no se vuelva a olvidar.
 const KEEP_ON_RETURN = [
+  // La bienvenida pide permiso de avisos antes del registro. Al volver del
+  // cuadro de Android debe conservar país, moneda y el paso actual.
+  "/onboarding",
   "/auto-capture",
   "/voice",
   "/scan-receipt",

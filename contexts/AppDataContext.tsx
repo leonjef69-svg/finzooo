@@ -88,7 +88,7 @@ import {
   savePrueba,
 } from "@/utils/pruebaPremium";
 import { DECOY_BUDGET, buildDecoyTransactions } from "@/utils/decoySeed";
-import { fmt as formatAmount, monthKey } from "@/utils/format";
+import { fmt as formatAmount, fmtCompact as formatCompactAmount, monthKey } from "@/utils/format";
 import { reserveIdsAbove } from "@/utils/id";
 import { learnCategory } from "@/utils/classifier";
 import { auth } from "@/utils/firebase";
@@ -130,9 +130,11 @@ type AppDataContextValue = {
   userCurrency: string;
   updateCurrency: (id: string) => void;
   fmt: (n: number) => string;
+  fmtCompact: (n: number) => string;
   userLanguage: string;
   updateLanguage: (id: string) => void;
   updateCountry: (language: string, currency: string) => void;
+  setInitialCountry: (language: string, currency: string) => void;
   t: (key: string, vars?: Record<string, string | number>) => string;
   monthNames: string[];
   themeMode: ThemeMode;
@@ -486,7 +488,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // la usa a través del contexto, así que se actualiza en el mismo
   // instante en que cambia userCurrency, sin pasos intermedios.
   function fmt(n: number) {
-    return formatAmount(n, currencySymbolFor(userCurrency));
+    return formatAmount(n, currencySymbolFor(userCurrency), userCurrency);
+  }
+
+  function fmtCompact(n: number) {
+    return formatCompactAmount(n, currencySymbolFor(userCurrency), userCurrency);
   }
 
   // Traduce un texto según el idioma elegido. Si falta esa traducción en
@@ -854,11 +860,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setThemeMode(savedTheme);
       colorScheme.set(savedTheme);
       const profile = await loadJSON<Profile | null>(STORAGE_KEYS.profile, null);
-      if (profile?.hasOnboarded) {
-        setUserName(profile.userName);
+      // País y moneda se eligen ANTES de crear la cuenta. Android puede
+      // cerrar Fino mientras la persona abre el correo de verificación; al
+      // volver hay que restaurar esa elección aunque el setup aún no haya
+      // terminado. Antes solo se leía el perfil si hasOnboarded era true y
+      // Chile podía volver silenciosamente a soles.
+      if (profile) {
+        setUserName(profile.userName || "");
+        setUserEmail(profile.userEmail || "");
         setUserPhoto(profile.userPhoto ?? null);
         setUserCurrency(profile.userCurrency || "PEN");
         setUserLanguage(profile.userLanguage || "es");
+      }
+      if (profile?.hasOnboarded) {
         setHasOnboarded(true);
         await reloadPersistedData();
       }
@@ -1503,6 +1517,20 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     );
   }
 
+  /** Guarda la elección previa al registro sin dar por terminado el setup. */
+  function setInitialCountry(language: string, currency: string) {
+    setUserLanguage(language);
+    setUserCurrency(currency);
+    saveJSON(STORAGE_KEYS.profile, {
+      userName,
+      userEmail,
+      userPhoto,
+      userCurrency: currency,
+      userLanguage: language,
+      hasOnboarded: false,
+    });
+  }
+
   function updateThemeMode(mode: ThemeMode) {
     setThemeMode(mode);
     colorScheme.set(mode);
@@ -1957,6 +1985,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     updateCurrency,
     updateCountry,
     fmt,
+    fmtCompact,
+    setInitialCountry,
     userLanguage,
     updateLanguage,
     t,

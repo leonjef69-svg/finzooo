@@ -2,7 +2,8 @@ import { useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 
 // Espacio a la izquierda para los montos del eje, y alturas del dibujo.
-const AXIS_W = 42;
+// Da espacio a monedas largas como CL$, COP$ o AR$ sin partir las cifras.
+const AXIS_W = 64;
 const PLOT_H = 140;
 const LABEL_BAND = 22; // sitio libre arriba para los montos escritos
 const DAYS_H = 18; // sitio abajo para los números de los días
@@ -70,6 +71,7 @@ export function labelStep(maxLabelW: number, colW: number): number {
 export default function DailyBarsChart({
   data,
   fmt,
+  fmtAxis,
   width,
   today,
   hint,
@@ -80,6 +82,7 @@ export default function DailyBarsChart({
   /** Solo los días con gasto, en orden. */
   data: DayBar[];
   fmt: (n: number) => string;
+  fmtAxis: (n: number) => string;
   width: number;
   /** Día de hoy, para resaltar su barra. 0 si el mes ya pasó. */
   today: number;
@@ -177,7 +180,7 @@ export default function DailyBarsChart({
               }}
               className="text-[9px] text-slate-400 text-right"
             >
-              {fmt(v)}
+              {fmtAxis(v)}
             </Text>
           );
         })}

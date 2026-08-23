@@ -68,7 +68,7 @@ export default function DonutChart({
         <Text className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold" numberOfLines={1}>
           {active ? active.name : "Total"}
         </Text>
-        <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{fmt(active ? active.value : total)}</Text>
+        <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100 text-center" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>{fmt(active ? active.value : total)}</Text>
       </View>
     </View>
   );

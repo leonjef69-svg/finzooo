@@ -37,6 +37,7 @@ import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { sanitizeAmountInput } from "@/utils/amount";
 import { availableBalance, budgetUsed } from "@/utils/finances";
 import { usePendingImport } from "@/utils/pendingImport";
+import { friendlyName } from "@/utils/friendlyName";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
 import { useColorScheme } from "nativewind";
@@ -178,6 +179,7 @@ export default function Home({
 }) {
   const {
     fmt,
+    fmtCompact,
     t,
     monthNames,
     monthLabel,
@@ -334,7 +336,7 @@ export default function Home({
               className="text-lg font-extrabold"
               style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
             >
-              {userName.split(" ")[0]} 👋
+              {friendlyName(userName)} 👋
             </Text>
           </View>
           <View className="flex-row items-center gap-2">
@@ -426,10 +428,20 @@ export default function Home({
               </View>
             ) : (
               <>
-                <Text className="text-white text-3xl font-extrabold tracking-tight">
+                <Text
+                  className="text-white text-3xl font-extrabold tracking-tight"
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.62}
+                >
                   {hideBalance ? "• • • • • •" : fmt(available)}
                 </Text>
-                <Text className="text-emerald-100 text-[11px] mt-1">
+                <Text
+                  className="text-emerald-100 text-[11px] mt-1"
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.72}
+                >
                   {hideBalance
                     ? t("home.budgetedOf", { amount: "••••" })
                     : t("home.budgetedOf", { amount: fmt(budget) })}
@@ -497,8 +509,11 @@ export default function Home({
               <Text
                 className="text-lg font-extrabold"
                 style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.72}
               >
-                {fmt(budget)}
+                {fmtCompact(budget)}
               </Text>
             </PressableScale>
           </Animated.View>
@@ -514,8 +529,11 @@ export default function Home({
               <Text
                 className={`text-lg font-extrabold ${prevBalance >= 0 ? "" : "text-rose-500"}`}
                 style={prevBalance >= 0 ? { color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" } : undefined}
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.72}
               >
-                {fmt(prevBalance)}
+                {fmtCompact(prevBalance)}
               </Text>
               {/* Un solo botón con dos caras. Controla UNA sola puerta: la
                   del mes anterior HACIA EL MES QUE SE ESTÁ VIENDO. Viendo
@@ -554,7 +572,14 @@ export default function Home({
             >
               <Text className="text-base mb-1">📉</Text>
               <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">{t("home.spent")}</Text>
-              <Text className="text-lg font-extrabold text-rose-500">{fmt(spent)}</Text>
+              <Text
+                className="text-lg font-extrabold text-rose-500"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.72}
+              >
+                {fmtCompact(spent)}
+              </Text>
             </PressableScale>
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(3 * 70).duration(300)} style={{ width: "47%" }}>
@@ -564,7 +589,14 @@ export default function Home({
             >
               <Text className="text-base mb-1">📈</Text>
               <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">{t("home.income")}</Text>
-              <Text className="text-lg font-extrabold text-emerald-600">{fmt(income)}</Text>
+              <Text
+                className="text-lg font-extrabold text-emerald-600"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.72}
+              >
+                {fmtCompact(income)}
+              </Text>
             </PressableScale>
           </Animated.View>
         </View>
