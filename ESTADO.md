@@ -31,7 +31,7 @@ La siguiente corrección está preparada en el código:
 
 - Versión: **1.0.2**.
 - `versionCode`: **3**.
-- Marca visible: **23ago-01**.
+- Marca visible: **23ago-02**.
 - Estado: pendiente de generar el AAB firmado y subirlo a la misma prueba cerrada.
 
 La llave privada de firma no vive en el repositorio. El AAB debe generarse en la
@@ -59,7 +59,12 @@ El código quedó corregido:
 - La operación espera a que el acceso termine correctamente.
 - Existe la prueba `verificar-acceso-google` para evitar que regrese el problema.
 
-La corrección está incluida en el AAB 1.0.1 disponible para testers.
+La explicación del error está incluida en el AAB 1.0.1 disponible para testers.
+La prueba real mostró el código G10: el archivo usado para compilar incluía dos
+firmas de Android, pero Firebase ya tenía tres. La configuración privada
+descargada el 23/08/2026 ya incluye las tres. El generador del AAB toma
+automáticamente de Descargas el archivo más reciente y lo copia a Android antes
+de compilar, sin publicarlo en GitHub. La corrección completa irá en 1.0.2.
 
 ## Cambios recientes incluidos en 1.0.1
 
@@ -126,7 +131,7 @@ de 24 horas para comprobar las funciones.
 
 - Conseguir al menos 12 testers que acepten la prueba cerrada.
 - Mantenerlos en la prueba durante el periodo exigido por Google.
-- Generar y subir el AAB 1.0.2 para terminar el diagnóstico real de Yape.
+- Generar y subir el AAB 1.0.2 para corregir G10 y terminar el diagnóstico real de Yape.
 - Actualizar la app de los testers desde Google Play cuando se publique.
 - Añadir datos de ejemplo a la cuenta preparada para la revisión, sin publicar
   sus credenciales en GitHub.

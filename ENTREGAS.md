@@ -13,7 +13,7 @@ identificadores privados y datos de firma no se guardan en GitHub.
 
 | Fecha preparada | Versión | Marca visible | Estado |
 |---|---|---|---|
-| 23/08/2026 | 1.0.2 | `23ago-01` | Corrige el diagnóstico de avisos de Yape |
+| 23/08/2026 | 1.0.2 | `23ago-02` | Corrige Google G10 y el diagnóstico de Yape |
 
 La versión disponible 1.0.1 incluye:
 
@@ -28,6 +28,11 @@ La corrección 1.0.2 conecta el contador de avisos de Yape al lector nativo y
 guarda los últimos nombres de paquetes observados. No guarda el contenido de
 avisos ajenos.
 
+También usa la tercera firma de Android registrada en Firebase. El generador
+toma automáticamente de Descargas la configuración privada más reciente antes
+de crear el AAB, para que “Continuar con Google” funcione en instalaciones de
+Play, sin publicar ese archivo en GitHub.
+
 Calidad comprobada:
 
 - TypeScript aprobado.
@@ -41,7 +46,7 @@ La marca de código se muestra dentro de Fino en:
 
 **Ajustes → Acerca de**
 
-La versión 1.0.2 debe mostrar `23ago-01`.
+La versión 1.0.2 debe mostrar `23ago-02`.
 
 ## Reglas de publicación
 

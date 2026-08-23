@@ -50,6 +50,14 @@ for (const archivo of ["Register.tsx", "Login.tsx"]) {
   );
 }
 
+console.log("\n--- EL AAB USA LA CONFIGURACIÓN RECIÉN DESCARGADA ---");
+const generador = fs.readFileSync(path.join(process.cwd(), "generar-aab.bat"), "utf8");
+ok(
+  /Downloads\\google-services\*\.json/i.test(generador) &&
+    /copy \/Y "%FIREBASE_CONFIG%" "android\\app\\google-services\.json"/i.test(generador),
+  "el generador toma de Descargas la configuración privada más reciente"
+);
+
 console.log(
   fallos ? `\n${fallos} con problemas` : "\nTodo bien: el acceso con Google explica el fallo real"
 );
