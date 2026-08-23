@@ -16,7 +16,6 @@ for (const handler of ["handleCheck", "handleResend"]) {
 }
 
 assert.match(screen, /disabled=\{checking \|\| resending\}/);
-assert.match(translations, /"verifyEmail\.checkFailed"/);
-assert.match(translations, /"verifyEmail\.resendFailed"/);
+assert.match(translations, /"verifyEmail\.notDetected"/);
 
 console.log("✓ La verificación del correo nunca queda cargando para siempre.");
