@@ -58,6 +58,23 @@ ok(
   "el generador toma de Descargas la configuración privada más reciente"
 );
 
+// La firma de la aplicación que entrega Google Play debe existir tanto en la
+// configuración de respaldo como en la que Gradle usa al crear el AAB. Si
+// falta, Google Play Services responde G10 aunque el botón y Firebase estén
+// bien escritos.
+const PLAY_SIGNING_SHA1 = "251613db754cae260052f7e00b8f8192fe02355a";
+for (const archivo of ["google-services.json", "android/app/google-services.json"]) {
+  const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), archivo), "utf8"));
+  const app = config.client.find(
+    (client: { client_info?: { android_client_info?: { package_name?: string } } }) =>
+      client.client_info?.android_client_info?.package_name === "com.finoapp.gastos"
+  );
+  const firmas = (app?.oauth_client ?? []).map(
+    (client: { android_info?: { certificate_hash?: string } }) => client.android_info?.certificate_hash
+  );
+  ok(firmas.includes(PLAY_SIGNING_SHA1), `${archivo}: incluye la firma que usa Google Play`);
+}
+
 console.log(
   fallos ? `\n${fallos} con problemas` : "\nTodo bien: el acceso con Google explica el fallo real"
 );
