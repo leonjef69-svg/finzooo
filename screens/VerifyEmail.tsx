@@ -33,7 +33,7 @@ export default function VerifyEmail({
     } catch {
       // Un fallo de red o de Firebase no puede dejar a la persona mirando
       // un círculo para siempre. El botón vuelve a estar disponible abajo.
-      setMessage(t("verifyEmail.checkFailed"));
+      setMessage(t("verifyEmail.notDetected"));
     } finally {
       setChecking(false);
     }
@@ -47,7 +47,7 @@ export default function VerifyEmail({
       await onResend();
       setMessage(t("verifyEmail.resent"));
     } catch {
-      setMessage(t("verifyEmail.resendFailed"));
+      setMessage(t("verifyEmail.notDetected"));
     } finally {
       setResending(false);
     }
