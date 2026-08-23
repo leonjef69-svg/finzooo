@@ -17,13 +17,14 @@ import GoogleButton, { OrDivider } from "@/components/GoogleButton";
 import { auth } from "@/utils/firebase";
 import { firebaseErrorMessage } from "@/utils/firebaseErrors";
 import { GoogleSignInCancelled, signInWithGoogle } from "@/utils/googleAuth";
+import { googleSignInErrorMessage } from "@/utils/googleSignInError";
 import { useAppData } from "@/contexts/AppDataContext";
 
 export default function Login({
   onLoggedIn,
   onGoRegister,
 }: {
-  onLoggedIn: () => void;
+  onLoggedIn: () => void | Promise<void>;
   onGoRegister: () => void;
 }) {
   const { t } = useAppData();
@@ -32,9 +33,11 @@ export default function Login({
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
+  const [googleError, setGoogleError] = useState("");
   const insets = useSafeAreaInsets();
 
   async function submit() {
+    setGoogleError("");
     if (!email || pass.length < 6) {
       setError(t("login.invalidCredentials"));
       return;
@@ -54,16 +57,16 @@ export default function Login({
 
   async function loginWithGoogle() {
     setError("");
+    setGoogleError("");
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
-      onLoggedIn();
+      await onLoggedIn();
     } catch (err) {
       // Cancelar no es un fallo: si la persona cerró la ventana de Google
       // a propósito, mostrarle un error rojo sería confuso.
       if (err instanceof GoogleSignInCancelled) return;
-      const code = (err as { code?: string })?.code || "";
-      setError(code ? firebaseErrorMessage(code) : t("login.googleError"));
+      setGoogleError(googleSignInErrorMessage(err));
     } finally {
       setGoogleLoading(false);
     }
@@ -155,6 +158,11 @@ export default function Login({
           loading={googleLoading}
           disabled={loading}
         />
+        {googleError ? (
+          <Text className="text-rose-500 text-xs font-medium text-center mt-3">
+            {googleError}
+          </Text>
+        ) : null}
 
         {/* gap-1: la separación con "Regístrate" la pone el diseño. Antes
             venía de un espacio al final del propio texto traducido, donde

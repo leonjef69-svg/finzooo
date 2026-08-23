@@ -20,11 +20,11 @@ nuevo, ese archivo hay que tocarlo también.
 Sin leer esos dos se empieza de cero, se rehace lo hecho y se vuelve a
 tropezar con lo mismo.
 
-## La carpeta del proyecto es C:\finzo, y solo esa
+## Trabajar únicamente en la carpeta activa del repositorio
 
-Existe también `C:\Users\User\Videos\Fino control de gastos diarios`, con la
+Existe también una carpeta antigua de planificación fuera del proyecto, con la
 planificación de julio y **su propio CLAUDE.md**. Ahí no hay código: el proyecto
-se mudó a `C:\finzo` porque Windows no admite rutas de más de 260 caracteres y
+se mudó a una ruta corta porque Windows no admite rutas de más de 260 caracteres y
 desde Videos **la compilación del APK se moría**. Abrir esa carpeta por error es
 trabajar sobre una copia muerta leyendo instrucciones de hace tres semanas.
 

@@ -1,4 +1,8 @@
-import { GoogleSignin } from "@react-native-google-signin/google-signin";
+import {
+  GoogleSignin,
+  isErrorWithCode,
+  statusCodes,
+} from "@react-native-google-signin/google-signin";
 import { GoogleAuthProvider, signInWithCredential } from "@firebase/auth";
 import { auth } from "@/utils/firebase";
 
@@ -43,9 +47,19 @@ export async function signInWithGoogle(): Promise<void> {
   // poco claro en vez de un mensaje entendible.
   await GoogleSignin.hasPlayServices({ showPlayServicesUpdateDialog: true });
 
-  const response = await GoogleSignin.signIn();
-  if (response.type === "cancelled") {
-    throw new GoogleSignInCancelled();
+  let response;
+  try {
+    response = await GoogleSignin.signIn();
+    if (response.type === "cancelled") {
+      throw new GoogleSignInCancelled();
+    }
+  } catch (error) {
+    // La versión nueva devuelve "cancelled", pero algunos celulares todavía
+    // lo arrojan como código nativo. Los dos caminos deben comportarse igual.
+    if (isErrorWithCode(error) && error.code === statusCodes.SIGN_IN_CANCELLED) {
+      throw new GoogleSignInCancelled();
+    }
+    throw error;
   }
 
   const idToken = response.data.idToken;
