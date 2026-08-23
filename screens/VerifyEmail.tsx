@@ -22,21 +22,35 @@ export default function VerifyEmail({
   const insets = useSafeAreaInsets();
 
   async function handleCheck() {
+    if (checking || resending) return;
     setChecking(true);
     setMessage("");
-    const verified = await onCheckAgain();
-    setChecking(false);
-    if (!verified) {
-      setMessage(t("verifyEmail.notDetected"));
+    try {
+      const verified = await onCheckAgain();
+      if (!verified) {
+        setMessage(t("verifyEmail.notDetected"));
+      }
+    } catch {
+      // Un fallo de red o de Firebase no puede dejar a la persona mirando
+      // un círculo para siempre. El botón vuelve a estar disponible abajo.
+      setMessage(t("verifyEmail.checkFailed"));
+    } finally {
+      setChecking(false);
     }
   }
 
   async function handleResend() {
+    if (checking || resending) return;
     setResending(true);
     setMessage("");
-    await onResend();
-    setResending(false);
-    setMessage(t("verifyEmail.resent"));
+    try {
+      await onResend();
+      setMessage(t("verifyEmail.resent"));
+    } catch {
+      setMessage(t("verifyEmail.resendFailed"));
+    } finally {
+      setResending(false);
+    }
   }
 
   return (
@@ -64,7 +78,7 @@ export default function VerifyEmail({
       <TouchableOpacity
         activeOpacity={0.85}
         onPress={handleCheck}
-        disabled={checking}
+        disabled={checking || resending}
         className={`w-full bg-emerald-600 py-4 rounded-2xl items-center justify-center ${
           checking ? "opacity-70" : ""
         }`}
@@ -79,7 +93,7 @@ export default function VerifyEmail({
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={handleResend}
-        disabled={resending}
+        disabled={checking || resending}
         className="mt-4 items-center py-2"
       >
         <Text className="text-sm text-emerald-600 font-bold">
