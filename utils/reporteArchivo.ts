@@ -103,6 +103,44 @@ export function archivoExcel(
 ): ArchivoGenerado {
   const wb = XLSX.utils.book_new();
   const hoja = XLSX.utils.aoa_to_sheet(filas);
+  // Formato visual: el reporte debe poder leerse de un vistazo, no ser una
+  // cuadrícula gris. SheetJS conserva estos estilos al escribir el .xlsx.
+  const encabezado = {
+    fill: { fgColor: { rgb: "0F766E" } },
+    font: { bold: true, color: { rgb: "FFFFFF" } },
+    alignment: { horizontal: "center", vertical: "center" },
+  };
+  const gasto = { font: { color: { rgb: "BE123C" } }, numFmt: '#,##0.00;[Red]-#,##0.00' };
+  const ingreso = { font: { color: { rgb: "047857" } }, numFmt: '#,##0.00;[Green]#,##0.00' };
+  const total = {
+    fill: { fgColor: { rgb: "D1FAE5" } },
+    font: { bold: true, color: { rgb: "065F46" } },
+    numFmt: '#,##0.00;[Red]-#,##0.00',
+  };
+  const rango = hoja["!ref"] ?? "A1:E1";
+  const fin = XLSX.utils.decode_range(rango).e.r;
+  for (let col = 0; col < 5; col++) {
+    const celda = hoja[XLSX.utils.encode_cell({ r: 0, c: col })];
+    if (celda) celda.s = encabezado;
+  }
+  // La fila inmediatamente anterior a la última es la separación; la última
+  // siempre es el total que arma filasDelReporte.
+  const filaTotal = fin;
+  for (let col = 0; col < 5; col++) {
+    const celda = hoja[XLSX.utils.encode_cell({ r: filaTotal, c: col })];
+    if (celda) celda.s = total;
+  }
+  for (let fila = 1; fila < filaTotal; fila++) {
+    const monto = hoja[XLSX.utils.encode_cell({ r: fila, c: 4 })];
+    if (monto && typeof monto.v === "number") monto.s = monto.v < 0 ? gasto : ingreso;
+    if (fila % 2 === 0) {
+      for (let col = 0; col < 4; col++) {
+        const celda = hoja[XLSX.utils.encode_cell({ r: fila, c: col })];
+        if (celda) celda.s = { fill: { fgColor: { rgb: "F0FDFA" } } };
+      }
+    }
+  }
+  hoja["!autofilter"] = { ref: `A1:E${Math.max(1, filaTotal - 2)}` };
   // Anchos de columna, o la descripción sale cortada y hay que arrastrar cada
   // borde a mano al abrirlo.
   hoja["!cols"] = [{ wch: 16 }, { wch: 16 }, { wch: 34 }, { wch: 14 }, { wch: 12 }];
@@ -110,7 +148,7 @@ export function archivoExcel(
   // el archivo no abre, y el error no dice por qué.
   XLSX.utils.book_append_sheet(wb, hoja, nombreDeLaHoja.slice(0, 31));
 
-  const bytes = new Uint8Array(XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer);
+  const bytes = new Uint8Array(XLSX.write(wb, { type: "array", bookType: "xlsx", cellStyles: true }) as ArrayBuffer);
   return {
     uri: escribir(fileName, bytes),
     mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
