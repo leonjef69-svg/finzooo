@@ -6,7 +6,9 @@ const context = fs.readFileSync("contexts/AppDataContext.tsx", "utf8");
 
 assert.match(onboarding, /deviceLocale/);
 assert.match(onboarding, /requestPermissionsAsync/);
-assert.match(onboarding, /COUNTRIES/);
+assert.match(onboarding, /countriesFor/);
+assert.match(onboarding, /countryLabelFor/);
+assert.match(onboarding, /country\.id, country\.language, country\.currency/);
 assert.match(onboarding, /Cambiar|changeCountry/);
 assert.match(context, /setInitialCountry/);
 assert.match(context, /hasOnboarded:\s*false/);

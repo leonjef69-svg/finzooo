@@ -8,5 +8,5 @@ export function deviceCountry(): Country {
   // país y terminaba poniendo Perú. Buscamos la región real de dos letras.
   const parts = locale.split(/[-_]/);
   const region = [...parts].reverse().find((part) => /^[A-Za-z]{2}$/.test(part))?.toUpperCase();
-  return countryById(region || "") ?? COUNTRIES[0];
+  return countryById(region || "") ?? countryById("PE") ?? COUNTRIES[0];
 }

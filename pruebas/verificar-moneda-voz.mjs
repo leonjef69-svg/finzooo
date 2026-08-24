@@ -10,9 +10,9 @@
 //   1. Se REESCRIBE la misma regla en JavaScript y se prueba con casos de verdad. No es
 //      probar el codigo de Android, es probar la REGLA: que "S/ 1" sea "1 sol" y "S/ 50" sea
 //      "50 soles". Si la regla esta mal aqui, esta mal alli.
-//   2. Se comprueba que las dos listas de monedas —la de la app y la de Android— digan lo
-//      mismo. Estan repetidas por obligacion, y una moneda añadida en un lado y no en el otro
-//      volveria a deletrear el simbolo sin que nadie se enterara.
+//   2. Se comprueba que las monedas que Android sabe pronunciar sigan ofrecidas por la app.
+//      La app ofrece el catálogo mundial; Android solo necesita nombres especiales para las
+//      monedas cuyos avisos automáticos reconoce actualmente.
 import fs from "fs";
 import path from "path";
 
@@ -113,21 +113,18 @@ console.log("\n--- Y SI NO HAY MONTO, NO SE INVENTA NADA ---");
   ok(conPalabras("Paga con S/ en Yape", "PEN") === "Paga con S/ en Yape", "ni una S/ sin numero");
 }
 
-console.log("\n--- LAS DOS LISTAS DE MONEDAS DICEN LO MISMO ---");
+console.log("\n--- LAS MONEDAS DE VOZ EXISTEN EN EL CATALOGO MUNDIAL ---");
 {
-  // Estan repetidas por obligacion: el servicio corre sin JavaScript. Una moneda añadida en
-  // la app y no en Android volveria a deletrear el simbolo, y solo se notaria con un yapeo
-  // real de ese pais — es decir, nunca desde aqui.
+  // El servicio corre sin JavaScript y conoce solo las monedas de los avisos que procesa.
+  // Todas ellas sí deben existir en el catálogo mundial de la app.
   const kotlin = fs.readFileSync(path.join(KT, "MonedaEnVoz.kt"), "utf8");
   const enKotlin = [...kotlin.matchAll(/"([A-Z]{3})" to Moneda/g)].map((m) => m[1]).sort();
   const app = fs.readFileSync(path.join(RAIZ, "constants/currencies.ts"), "utf8");
-  const enApp = [...app.matchAll(/\{ id: "([A-Z]{3})"/g)].map((m) => m[1]).sort();
+  const enApp = app.match(/const CODES = `([^`]+)`/)?.[1].trim().split(/\s+/).sort() ?? [];
 
   ok(enApp.length > 0 && enKotlin.length > 0, `se leyeron las dos listas (app ${enApp.length}, Android ${enKotlin.length})`);
-  const faltan = enApp.filter((c) => !enKotlin.includes(c));
-  ok(faltan.length === 0, `ninguna moneda de la app le falta a la voz (${faltan.join(", ") || "ninguna"})`);
   const sobran = enKotlin.filter((c) => !enApp.includes(c));
-  ok(sobran.length === 0, `y la voz no conoce monedas que la app no ofrece (${sobran.join(", ") || "ninguna"})`);
+  ok(sobran.length === 0, `la voz no conoce monedas que la app no ofrece (${sobran.join(", ") || "ninguna"})`);
   // Y las de la prueba, que son la tercera copia.
   const enPrueba = Object.keys(MONEDAS).sort();
   ok(enPrueba.join() === enKotlin.join(), "y la lista de esta prueba va con las otras dos");

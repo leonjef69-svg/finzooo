@@ -4,7 +4,7 @@
 node pruebas/correr.mjs
 ```
 
-Desde la raíz del proyecto. Tarda unos segundos y sale **26 pruebas y 5
+Desde la raíz del proyecto. Tarda unos segundos y sale **77 pruebas y 7
 auditores**. Si algo falla, dice cuál y en qué.
 
 Antes de publicar cualquier cosa, además:
@@ -30,6 +30,7 @@ npx eslint app screens components utils constants contexts modules
 | `excel` / `excel-export` | Leer y escribir .xlsx, con las fechas sin correrse un día |
 | `exportar` / `programado` | Cuándo toca la exportación automática y qué mes lleva |
 | `panorama` | Las cuentas de Reportes: que el disponible sea el mismo que en Inicio |
+| `paises-monedas` | Catálogo mundial completo, sin monedas ausentes ni cambios peligrosos en Firestore |
 | `bloqueo` / `senuelo` | El PIN, la huella y el modo señuelo |
 | `archivo-entrante` | Compartir un estado de cuenta a Fino |
 | El resto | Gráficos, etiquetas que no se pisan, resúmenes por día |

@@ -38,7 +38,7 @@ import Row from "@/components/Row";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import Toggle from "@/components/Toggle";
 import { currencyLabelFor } from "@/constants/currencies";
-import { countryFor } from "@/constants/countries";
+import { countryFor, countryLabelFor } from "@/constants/countries";
 import { hayRegistroAutomatico } from "@/utils/dondeHayYape";
 import { avisosEncendidos, guardarAvisosEncendidos } from "@/utils/avisosDePagos";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -105,7 +105,7 @@ export default function Settings({
   onLegal: () => void;
   onVoiceHelp: () => void;
 }) {
-  const { t, isCloudSynced, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios, reprogramarAvisos } =
+  const { t, userCountry, isCloudSynced, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios, reprogramarAvisos } =
     useAppData();
   /** El negocio que se está quedando con los yapeos, si hay alguno. Ver la fila de abajo. */
   const negocioQueRecibe = negocios.find((n) => n.activo && n.destinoYapes === "negocio");
@@ -138,7 +138,7 @@ export default function Settings({
   // Qué país corresponde al idioma y la moneda puestos. Puede no haber
   // ninguno si alguien los ajustó por separado a una combinación que no es
   // de ningún país; ahí la fila sale sin nombre en vez de mentir.
-  const paisActual = countryFor(userLanguage, userCurrency);
+  const paisActual = countryFor(userLanguage, userCurrency, userCountry);
   const insets = useSafeAreaInsets();
 
   const [pickingPhoto, setPickingPhoto] = useState(false);
@@ -553,13 +553,13 @@ export default function Settings({
             en /language por si algún día se repone. */}
         <Row
           Icon={MapPin}
-          label={`${t("settings.country")}${paisActual ? ` · ${t(paisActual.label)}` : ""}`}
+          label={`${t("settings.country")}${paisActual ? ` · ${countryLabelFor(paisActual, userLanguage)}` : ""}`}
           onPress={onCountry}
           right={<ChevronRight size={16} color="#cbd5e1" />}
         />
         <Row
           Icon={Coins}
-          label={`${t("settings.currency")} · ${currencyLabelFor(userCurrency, t)}`}
+          label={`${t("settings.currency")} · ${currencyLabelFor(userCurrency, t, userLanguage)}`}
           onPress={onCurrency}
           right={<ChevronRight size={16} color="#cbd5e1" />}
         />

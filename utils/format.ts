@@ -3,14 +3,14 @@
 // siempre se vea igual: "S/ 1,234.56". El símbolo SIEMPRE se recibe como
 // parámetro (no se guarda "por fuera" de React) para garantizar que se
 // actualice de inmediato en toda la app cuando alguien cambia su moneda.
-import { usaCentimos } from "@/constants/currencies";
+import { currencyDecimals } from "@/constants/currencies";
 
 const PUNTO_PARA_MILES = new Set(["CLP", "COP", "ARS", "BRL", "EUR"]);
 
 export function fmt(n: number, symbol: string, currencyId = "PEN") {
   const sign = n < 0 ? "-" : "";
   const abs = Math.abs(n);
-  const decimals = usaCentimos(currencyId) ? 2 : 0;
+  const decimals = currencyDecimals(currencyId);
   const [intPart, decPart] = abs.toFixed(decimals).split(".");
   const thousands = PUNTO_PARA_MILES.has(currencyId) ? "." : ",";
   const decimal = thousands === "." ? "," : ".";

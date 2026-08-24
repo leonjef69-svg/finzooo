@@ -12,7 +12,7 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 | Fecha preparada | Versión | Marca visible | Estado |
 |---|---|---|---|
-| 23/08/2026 | 1.0.4 | `23ago-06` | Entrada, correo y monedas adaptables |
+| 23/08/2026 | 1.0.4 | `23ago-07` | Entrada y catálogo mundial de países y monedas |
 
 La versión 1.0.3 contiene el acceso Google con diagnóstico, copia de seguridad,
 Modo Negocio, registro automático, voz, rendimiento, calendario, exportación,
@@ -22,6 +22,8 @@ La versión 1.0.4 añade:
 
 - Bienvenida con identidad de Fino.
 - País y moneda detectados, editables y conservados durante el registro.
+- Búsqueda entre 250 países o territorios y 154 monedas.
+- Perfiles antiguos y copias de Firestore compatibles con la ampliación.
 - Permiso de avisos antes del registro.
 - Verificación de correo sin carga infinita y aviso de Spam.
 - Inicio, reportes y gráficos adaptados para monedas grandes.
@@ -36,12 +38,12 @@ Calidad comprobada:
 
 - TypeScript aprobado.
 - ESLint sin errores.
-- 76 pruebas aprobadas.
+- 77 pruebas aprobadas.
 - 7 auditores aprobados.
 
 ## Cómo reconocer la entrega
 
-En **Ajustes → Acerca de**, la versión 1.0.4 muestra `23ago-06`.
+En **Ajustes → Acerca de**, la versión 1.0.4 muestra `23ago-07`.
 
 ## Publicación
 

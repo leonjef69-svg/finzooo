@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import * as Notifications from "expo-notifications";
-import { Bell, ChevronRight, Landmark, ReceiptText, Sparkles, WalletCards } from "lucide-react-native";
-import { COUNTRIES, type Country } from "@/constants/countries";
+import { Bell, ChevronRight, Landmark, ReceiptText, Search, Sparkles, WalletCards } from "lucide-react-native";
+import { countriesFor, countryLabelFor, type Country } from "@/constants/countries";
 import { currencyLabelFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import { deviceCountry } from "@/utils/deviceLocale";
@@ -14,11 +14,12 @@ export default function Onboarding({ onFinish }: { onFinish: () => void }) {
   const [step, setStep] = useState(0);
   const [country, setCountry] = useState<Country>(() => deviceCountry());
   const [choosing, setChoosing] = useState(false);
+  const [countryQuery, setCountryQuery] = useState("");
   const [asking, setAsking] = useState(false);
   const insets = useSafeAreaInsets();
 
   function nextStep() {
-    if (step === 1) setInitialCountry(country.language, country.currency);
+    if (step === 1) setInitialCountry(country.id, country.language, country.currency);
     setStep(step + 1);
   }
 
@@ -71,16 +72,37 @@ export default function Onboarding({ onFinish }: { onFinish: () => void }) {
             <Text className="text-sm text-slate-600 mb-6">{t("onboarding.countryBody")}</Text>
             <View className="bg-white rounded-[28px] p-5">
               <Text className="text-5xl mb-3">{country.flag}</Text>
-              <Text className="text-xl font-extrabold text-slate-900">{t(country.label)}</Text>
-              <Text className="text-sm text-slate-500 mt-1">{currencyLabelFor(country.currency, t)} · {country.currency}</Text>
+              <Text className="text-xl font-extrabold text-slate-900">{countryLabelFor(country, country.language)}</Text>
+              <Text className="text-sm text-slate-500 mt-1">{currencyLabelFor(country.currency, t, country.language)} · {country.currency}</Text>
               <TouchableOpacity onPress={() => setChoosing((v) => !v)} className="mt-5 rounded-2xl bg-slate-100 py-3 items-center">
                 <Text className="font-bold text-emerald-700">{t("onboarding.changeCountry")}</Text>
               </TouchableOpacity>
             </View>
             {choosing && <View className="mt-3 bg-white rounded-3xl p-2">
-              {COUNTRIES.map((item) => <TouchableOpacity key={item.id} onPress={() => { setCountry(item); setChoosing(false); }} className="flex-row items-center px-3 py-3 rounded-2xl">
-                <Text className="text-2xl mr-3">{item.flag}</Text><Text className="flex-1 font-semibold text-slate-800">{t(item.label)}</Text><Text className="text-xs text-slate-500">{item.currency}</Text>
-              </TouchableOpacity>)}
+              <View className="flex-row items-center rounded-2xl bg-slate-100 px-3 mb-1">
+                <Search size={17} color="#94a3b8" />
+                <TextInput value={countryQuery} onChangeText={setCountryQuery}
+                  placeholder={t("country.search")} placeholderTextColor="#94a3b8"
+                  autoCorrect={false} disableFullscreenUI
+                  className="flex-1 py-3 px-2 text-sm text-slate-900" />
+              </View>
+              <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={{ maxHeight: 290 }}>
+                {countriesFor(country.language)
+                  .filter((item) => {
+                    const query = countryQuery.trim().toLocaleLowerCase(country.language);
+                    if (!query) return true;
+                    return countryLabelFor(item, country.language).toLocaleLowerCase(country.language).includes(query)
+                      || item.id.toLowerCase().includes(query)
+                      || item.currency.toLowerCase().includes(query);
+                  })
+                  .map((item) => <TouchableOpacity key={item.id}
+                    onPress={() => { setCountry(item); setCountryQuery(""); setChoosing(false); }}
+                    className="flex-row items-center px-3 py-3 rounded-2xl">
+                    <Text className="text-2xl mr-3">{item.flag}</Text>
+                    <Text className="flex-1 font-semibold text-slate-800">{countryLabelFor(item, country.language)}</Text>
+                    <Text className="text-xs text-slate-500">{item.currency}</Text>
+                  </TouchableOpacity>)}
+              </ScrollView>
             </View>}
           </ScrollView>
         ) : (

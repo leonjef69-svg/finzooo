@@ -7,7 +7,7 @@ const daily = fs.readFileSync("components/DailyBarsChart.tsx", "utf8");
 const home = fs.readFileSync("screens/Home.tsx", "utf8");
 const friendlyName = fs.readFileSync("utils/friendlyName.ts", "utf8");
 
-assert.match(formato, /usaCentimos/);
+assert.match(formato, /currencyDecimals/);
 assert.match(formato, /fmtCompact/);
 assert.match(formato, /PUNTO_PARA_MILES/);
 assert.match(formato, /"CLP"/);

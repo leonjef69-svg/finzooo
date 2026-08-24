@@ -17,7 +17,7 @@ Paquete Android: `com.finoapp.gastos`.
 
 - Disponible en prueba cerrada: **1.0.3**, `versionCode 4`.
 - Próxima corrección: **1.0.4**, `versionCode 5`.
-- Marca visible de 1.0.4: **23ago-06**.
+- Marca visible de 1.0.4: **23ago-07**.
 - El AAB firmado solo se genera en la computadora autorizada.
 
 ## Acceso con Google
@@ -34,6 +34,12 @@ de Contraseña, distingue las causas y no muestra error cuando el usuario cancel
 
 - Bienvenida breve, cálida y con identidad de Fino.
 - Detección automática de país y moneda, con opción para cambiarlos.
+- Catálogo mundial con 250 países o territorios y 154 monedas, ambos con
+  búsqueda y nombres localizados.
+- El país se guarda localmente sin cambiar el formato de la copia en Firestore;
+  los perfiles anteriores siguen funcionando.
+- Las monedas respetan 0, 2 o 3 decimales y el escáner conserva el tratamiento
+  cotidiano de pesos argentinos y colombianos.
 - La elección se conserva aunque Android cierre Fino al verificar el correo.
 - Solicitud del permiso de avisos antes del formulario de cuenta.
 - La bienvenida conserva su paso al volver del permiso de Android.
@@ -88,7 +94,7 @@ aceptar y descargar con la misma cuenta de Google.
 
 - TypeScript: aprobado.
 - ESLint: sin errores; quedan advertencias antiguas no bloqueantes.
-- Pruebas: **76 aprobadas**.
+- Pruebas: **77 aprobadas**.
 - Auditores: **7 aprobados**.
 
 Comando principal: `node pruebas/correr.mjs`.

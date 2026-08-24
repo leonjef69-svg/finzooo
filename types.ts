@@ -67,6 +67,9 @@ export type Profile = {
   userPhoto: string | null;
   userCurrency: string;
   userLanguage: string;
+  // Es local a este celular. Opcional para que perfiles creados antes de
+  // 1.0.4 sigan abriendo sin migraciones ni cambios en Firestore.
+  userCountry?: string;
   hasOnboarded: boolean;
 };
 

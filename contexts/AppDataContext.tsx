@@ -19,6 +19,7 @@ import { AppState } from "react-native";
 import { colorScheme } from "nativewind";
 import { seedTransactions, seedGoals } from "@/constants/seed";
 import { currencySymbolFor } from "@/constants/currencies";
+import { countryById, countryFor } from "@/constants/countries";
 import { monthNamesFor, translations } from "@/constants/i18n";
 import {
   clearAccountData,
@@ -132,9 +133,10 @@ type AppDataContextValue = {
   fmt: (n: number) => string;
   fmtCompact: (n: number) => string;
   userLanguage: string;
+  userCountry: string;
   updateLanguage: (id: string) => void;
-  updateCountry: (language: string, currency: string) => void;
-  setInitialCountry: (language: string, currency: string) => void;
+  updateCountry: (country: string, language: string, currency: string) => void;
+  setInitialCountry: (country: string, language: string, currency: string) => void;
   t: (key: string, vars?: Record<string, string | number>) => string;
   monthNames: string[];
   themeMode: ThemeMode;
@@ -377,6 +379,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
   const [userCurrency, setUserCurrency] = useState("PEN");
   const [userLanguage, setUserLanguage] = useState("es");
+  const [userCountry, setUserCountry] = useState("PE");
   const [themeMode, setThemeMode] = useState<ThemeMode>("system");
   const [month, setMonth] = useState<Month>(currentRealMonth);
   const [budgets, setBudgets] = useState<Record<string, number>>({});
@@ -592,6 +595,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setUserPhoto(cloud.userPhoto);
     setUserCurrency(cloud.userCurrency);
     setUserLanguage(cloud.userLanguage);
+    const localCountry = countryById(userCountry);
+    const restoredCountry = localCountry?.currency === cloud.userCurrency
+      ? localCountry.id
+      : countryFor(cloud.userLanguage, cloud.userCurrency)?.id ?? "PE";
+    setUserCountry(restoredCountry);
     setBudgets(cloud.budgets);
     setCategoryBudgets(cloud.categoryBudgets);
     setTransactions(cloud.transactions);
@@ -626,6 +634,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       userPhoto: cloud.userPhoto,
       userCurrency: cloud.userCurrency,
       userLanguage: cloud.userLanguage,
+      userCountry: restoredCountry,
       hasOnboarded: true,
     });
     saveJSON(STORAGE_KEYS.budgets, cloud.budgets);
@@ -795,6 +804,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setUserPhoto(null);
     setUserCurrency("PEN");
     setUserLanguage("es");
+    setUserCountry("PE");
     setBudgets({});
     setCategoryBudgets({});
     setTransactions([]);
@@ -840,6 +850,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setUserPhoto(null);
     setUserCurrency("PEN");
     setUserLanguage("es");
+    setUserCountry("PE");
     setBudgets({});
     setCategoryBudgets({});
     setTransactions([]);
@@ -871,6 +882,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         setUserPhoto(profile.userPhoto ?? null);
         setUserCurrency(profile.userCurrency || "PEN");
         setUserLanguage(profile.userLanguage || "es");
+        setUserCountry(
+          profile.userCountry ||
+            countryFor(profile.userLanguage || "es", profile.userCurrency || "PEN")?.id ||
+            "PE"
+        );
       }
       if (profile?.hasOnboarded) {
         setHasOnboarded(true);
@@ -1444,6 +1460,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       userPhoto,
       userCurrency,
       userLanguage,
+      userCountry,
       hasOnboarded: true,
     });
   }
@@ -1457,6 +1474,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       userPhoto: photo,
       userCurrency,
       userLanguage,
+      userCountry,
       hasOnboarded: true,
     });
     showToast(t("toast.profileUpdated"));
@@ -1464,12 +1482,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   function updateCurrency(id: string) {
     setUserCurrency(id);
+    // Una moneda elegida por separado ya no representa necesariamente al
+    // país anterior. Dejamos el país personalizado en vez de mostrar uno falso.
+    setUserCountry("");
     saveJSON(STORAGE_KEYS.profile, {
       userName,
       userEmail,
       userPhoto,
       userCurrency: id,
       userLanguage,
+      userCountry: "",
       hasOnboarded: true,
     });
     showToast(t("toast.currencyUpdated"));
@@ -1483,6 +1505,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       userPhoto,
       userCurrency,
       userLanguage: id,
+      userCountry,
       hasOnboarded: true,
     });
     showToast(translations[id as keyof typeof translations]?.["toast.languageUpdated"] || "Idioma actualizado");
@@ -1500,15 +1523,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * Y un solo mensajito, en el idioma NUEVO: dos avisos seguidos por una sola
    * decisión sobran.
    */
-  function updateCountry(language: string, currency: string) {
+  function updateCountry(country: string, language: string, currency: string) {
     setUserLanguage(language);
     setUserCurrency(currency);
+    setUserCountry(country);
     saveJSON(STORAGE_KEYS.profile, {
       userName,
       userEmail,
       userPhoto,
       userCurrency: currency,
       userLanguage: language,
+      userCountry: country,
       hasOnboarded: true,
     });
     showToast(
@@ -1518,15 +1543,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   /** Guarda la elección previa al registro sin dar por terminado el setup. */
-  function setInitialCountry(language: string, currency: string) {
+  function setInitialCountry(country: string, language: string, currency: string) {
     setUserLanguage(language);
     setUserCurrency(currency);
+    setUserCountry(country);
     saveJSON(STORAGE_KEYS.profile, {
       userName,
       userEmail,
       userPhoto,
       userCurrency: currency,
       userLanguage: language,
+      userCountry: country,
       hasOnboarded: false,
     });
   }
@@ -1988,6 +2015,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     fmtCompact,
     setInitialCountry,
     userLanguage,
+    userCountry,
     updateLanguage,
     t,
     monthNames,
