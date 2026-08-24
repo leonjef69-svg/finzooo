@@ -54,8 +54,9 @@ function conPalabras(texto, moneda) {
   let salida = texto;
   for (const simbolo of [...m.simbolos].sort((a, b) => b.length - a.length)) {
     const patron = new RegExp(escapar(simbolo) + "\\s*(\\d+(?:[.,]\\d+)?)", "g");
-    salida = salida.replace(patron, (_, numero) => `${numero} ${esUno(numero) ? m.singular : m.plural}`);
+    salida = salida.replace(patron, (_, numero) => esUno(numero) ? `un ${m.singular}` : `${numero} ${m.plural}`);
   }
+  if (salida !== texto) salida = salida.replace(/\bpago\s+por\s+/gi, "pago de ");
   return salida;
 }
 
@@ -64,17 +65,17 @@ console.log("\n--- EL AVISO DE YAPE, TAL COMO LLEGA ---");
   // El de verdad, copiado de su pantalla (sin el nombre).
   const aviso = "Confirmacion de Pago Yape! te envio un pago por S/ 1";
   const dicho = conPalabras(aviso, "PEN");
-  ok(dicho.endsWith("1 sol"), `un sol, no "S 1" (${dicho.slice(-12)})`);
+  ok(dicho.endsWith("pago de un sol"), `dice "pago de un sol" (${dicho.slice(-20)})`);
   ok(!dicho.includes("S/"), "y el simbolo desaparece del todo");
 }
 
 console.log("\n--- SINGULAR Y PLURAL ---");
 {
-  ok(conPalabras("S/ 1", "PEN") === "1 sol", "1 sol");
+  ok(conPalabras("S/ 1", "PEN") === "un sol", "un sol, no uno sol");
   ok(conPalabras("S/ 50", "PEN") === "50 soles", "50 soles");
   // "1.00" es uno igual. Se mira el numero escrito, no convertido: el separador decimal
   // cambia de pais y una conversion mal hecha diria "1 sol" donde hay 1,50.
-  ok(conPalabras("S/ 1.00", "PEN") === "1.00 sol", `1.00 tambien es singular (${conPalabras("S/ 1.00", "PEN")})`);
+  ok(conPalabras("S/ 1.00", "PEN") === "un sol", `1.00 tambien es singular (${conPalabras("S/ 1.00", "PEN")})`);
   ok(conPalabras("S/ 1.50", "PEN") === "1.50 soles", `pero 1.50 no (${conPalabras("S/ 1.50", "PEN")})`);
   ok(conPalabras("S/ 0", "PEN") === "0 soles", "cero va en plural, como se dice");
 }
@@ -93,8 +94,8 @@ console.log("\n--- CADA PAIS LO SUYO ---");
   ok(conPalabras("R$ 30", "BRL") === "30 reais", "reais en Brasil");
   ok(conPalabras("€ 5", "EUR") === "5 euros", "euros en España");
   ok(conPalabras("Bs 20", "BOB") === "20 bolivianos", "bolivianos en Bolivia");
-  ok(conPalabras("Bs. 1", "BOB") === "1 boliviano", "y uno solo, en singular");
-  ok(conPalabras("US$ 1", "USD") === "1 dolar", "un dolar, en singular");
+  ok(conPalabras("Bs. 1", "BOB") === "un boliviano", "un boliviano, en singular");
+  ok(conPalabras("US$ 1", "USD") === "un dolar", "un dolar, en singular");
   // Una moneda que no se conoce NO se toca. Antes que decir la palabra equivocada, callar.
   ok(conPalabras("S/ 1", "JPY") === "S/ 1", "una moneda desconocida se deja igual");
 }
@@ -118,6 +119,8 @@ console.log("\n--- LAS MONEDAS DE VOZ EXISTEN EN EL CATALOGO MUNDIAL ---");
   // El servicio corre sin JavaScript y conoce solo las monedas de los avisos que procesa.
   // Todas ellas sí deben existir en el catálogo mundial de la app.
   const kotlin = fs.readFileSync(path.join(KT, "MonedaEnVoz.kt"), "utf8");
+  ok(/if \(esUno\(numero\)\) "un " \+ m\.singular/.test(kotlin), "Android dice un sol y no uno sol");
+  ok(/pago\\s\+por/.test(kotlin), "Android convierte pago por en pago de solo para la voz");
   const enKotlin = [...kotlin.matchAll(/"([A-Z]{3})" to Moneda/g)].map((m) => m[1]).sort();
   const app = fs.readFileSync(path.join(RAIZ, "constants/currencies.ts"), "utf8");
   const enApp = app.match(/const CODES = `([^`]+)`/)?.[1].trim().split(/\s+/).sort() ?? [];

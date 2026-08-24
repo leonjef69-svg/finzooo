@@ -17,7 +17,7 @@ Paquete Android: `com.finoapp.gastos`.
 
 - Disponible en prueba cerrada: **1.0.3**, `versionCode 4`.
 - Próxima corrección: **1.0.4**, `versionCode 5`.
-- Marca visible de 1.0.4: **23ago-07**.
+- Marca visible de 1.0.4: **23ago-08**.
 - El AAB firmado solo se genera en la computadora autorizada.
 
 ## Acceso con Google
@@ -54,6 +54,8 @@ de Contraseña, distingue las causas y no muestra error cuando el usuario cancel
 - Si falta el monto, Fino lo pregunta sin obligar a repetir toda la frase.
 - El usuario puede corregir monto, tipo o método de pago con la voz.
 - El dictado conserva efectivo, tarjeta, transferencia, Yape o Plin.
+- La voz del registro automático dice «un pago de un sol», no «un pago por
+  uno sol», sin cambiar la detección ni el movimiento guardado.
 
 ## Registro automático
 

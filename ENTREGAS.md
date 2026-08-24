@@ -12,7 +12,7 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 | Fecha preparada | Versión | Marca visible | Estado |
 |---|---|---|---|
-| 23/08/2026 | 1.0.4 | `23ago-07` | Entrada y catálogo mundial de países y monedas |
+| 23/08/2026 | 1.0.4 | `23ago-08` | Entrada, catálogo mundial y voz natural para un sol |
 
 La versión 1.0.3 contiene el acceso Google con diagnóstico, copia de seguridad,
 Modo Negocio, registro automático, voz, rendimiento, calendario, exportación,
@@ -30,6 +30,7 @@ La versión 1.0.4 añade:
 - Saludo sin mostrar el correo completo.
 - Dictado más natural, preguntas cuando falta el monto y correcciones por voz.
 - Métodos de pago reconocidos y guardados desde el dictado.
+- La voz del Yape dice «un pago de un sol» sin tocar el registro automático.
 
 La firma real de Google Play ya está registrada en Firebase y el acceso con
 Google fue comprobado en un teléfono.
@@ -43,7 +44,7 @@ Calidad comprobada:
 
 ## Cómo reconocer la entrega
 
-En **Ajustes → Acerca de**, la versión 1.0.4 muestra `23ago-07`.
+En **Ajustes → Acerca de**, la versión 1.0.4 muestra `23ago-08`.
 
 ## Publicación
 

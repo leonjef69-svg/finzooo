@@ -18,9 +18,10 @@ package com.finzo.notificationreader
  *
  * LO QUE NO HACE, A PROPOSITO
  *
- * No toca los numeros. "S/ 2.50" queda "2.50 soles" y no "2 soles con 50 centimos": convertir
+ * No convierte cantidades. "S/ 2.50" queda "2.50 soles" y no "2 soles con 50 centimos": convertir
  * cifras es la clase de arreglo bonito que un dia dice un monto equivocado, y un monto
- * equivocado dicho en voz alta es peor que un simbolo mal leido.
+ * equivocado dicho en voz alta es peor que un simbolo mal leido. La unica excepcion es el
+ * uno exacto: se dice "un sol", porque leer el digito hace que Android diga "uno sol".
  */
 object MonedaEnVoz {
 
@@ -52,7 +53,7 @@ object MonedaEnVoz {
    * Cambia el simbolo por la palabra, dejando el numero donde estaba.
    *
    * "Te yapearon S/ 50 de Juan" -> "Te yapearon 50 soles de Juan"
-   * "Te yapearon S/ 1 de Juan"  -> "Te yapearon 1 sol de Juan"
+   * "Te yapearon S/ 1 de Juan"  -> "Te yapearon un sol de Juan"
    *
    * EL SIMBOLO VA DELANTE Y LA PALABRA DETRAS. En español el simbolo se escribe antes del
    * numero pero se dice despues, y por eso no basta con sustituir una cosa por otra: hay que
@@ -63,6 +64,7 @@ object MonedaEnVoz {
   fun conPalabras(texto: String, moneda: String): String {
     val m = MONEDAS[moneda] ?: return texto
     var salida = texto
+    var cambioMonto = false
 
     // Los simbolos van de mas largo a mas corto: si "S/" se cambiara antes que "S/.", el
     // punto quedaria suelto en medio de la frase.
@@ -70,8 +72,16 @@ object MonedaEnVoz {
       val patron = Regex(Regex.escape(simbolo) + """\s*(\d+(?:[.,]\d+)?)""")
       salida = patron.replace(salida) { encontrado ->
         val numero = encontrado.groupValues[1]
-        numero + " " + (if (esUno(numero)) m.singular else m.plural)
+        cambioMonto = true
+        if (esUno(numero)) "un " + m.singular else numero + " " + m.plural
       }
+    }
+
+    // Yape escribe "un pago por S/ 1". Una vez que el monto ya esta identificado, para la
+    // voz suena natural como "un pago de un sol". Esto solo modifica lo pronunciado: el aviso
+    // original, el analisis y el movimiento guardado siguen exactamente iguales.
+    if (cambioMonto) {
+      salida = Regex("""(?i)\bpago\s+por\s+""").replace(salida, "pago de ")
     }
     return salida
   }
