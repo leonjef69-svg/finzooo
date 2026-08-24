@@ -1,125 +1,339 @@
-import { useState } from "react";
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
+import { useMemo, useState } from "react";
+import {
+  FlatList,
+  Image,
+  Modal,
+  Platform,
+  StatusBar,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import * as Notifications from "expo-notifications";
-import { Bell, ChevronRight, Landmark, ReceiptText, Search, Sparkles, WalletCards } from "lucide-react-native";
+import { Check, Search, X } from "lucide-react-native";
 import { countriesFor, countryLabelFor, type Country } from "@/constants/countries";
-import { currencyLabelFor } from "@/constants/currencies";
+import { CURRENCIES, currencyLabelFor, currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import { deviceCountry } from "@/utils/deviceLocale";
 
-export default function Onboarding({ onFinish }: { onFinish: () => void }) {
-  const { t, setInitialCountry } = useAppData();
-  const [step, setStep] = useState(0);
-  const [country, setCountry] = useState<Country>(() => deviceCountry());
-  const [choosing, setChoosing] = useState(false);
-  const [countryQuery, setCountryQuery] = useState("");
-  const [asking, setAsking] = useState(false);
-  const insets = useSafeAreaInsets();
+const TOTAL_STEPS = 3;
+const LAST_STEP = TOTAL_STEPS - 1;
 
-  function nextStep() {
-    if (step === 1) setInitialCountry(country.id, country.language, country.currency);
-    setStep(step + 1);
+const PANELS = [
+  require("../assets/images/onboarding/welcome.png"),
+  require("../assets/images/onboarding/setup.png"),
+  require("../assets/images/onboarding/access.png"),
+] as const;
+
+type Props = {
+  onGoogle: () => Promise<void>;
+  onCreateAccount: () => void;
+  onLogin: () => void;
+};
+
+type PickerKind = "country" | "currency";
+
+export default function Onboarding({ onGoogle, onCreateAccount, onLogin }: Props) {
+  const { setInitialCountry, t } = useAppData();
+  const detectedCountry = useMemo(deviceCountry, []);
+  const [step, setStep] = useState(0);
+  const [country, setCountry] = useState<Country>(detectedCountry);
+  const [currency, setCurrency] = useState(detectedCountry.currency);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
+  const [countryModalVisible, setCountryModalVisible] = useState(false);
+  const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
+  const [query, setQuery] = useState("");
+  const [googleError, setGoogleError] = useState("");
+  const [googleLoading, setGoogleLoading] = useState(false);
+
+  const language = country.language || "es";
+  const countries = useMemo(() => countriesFor(language), [language]);
+  const countryName = countryLabelFor(country, language);
+  const currencyName = currencyLabelFor(currency, t, language);
+
+  async function continueFromSetup() {
+    setInitialCountry(country.id, country.language, currency);
+    if (notificationsEnabled) {
+      try {
+        if (Platform.OS === "android") {
+          await Notifications.setNotificationChannelAsync("default", {
+            name: "Avisos de Fino",
+            importance: Notifications.AndroidImportance.DEFAULT,
+          });
+        }
+        await Notifications.requestPermissionsAsync();
+      } catch {
+        // El permiso también puede activarse después desde Ajustes.
+      }
+    }
+    setStep(LAST_STEP);
   }
 
-  async function allowNotifications() {
-    if (asking) return;
-    setAsking(true);
+  async function continueWithGoogle() {
+    setGoogleError("");
+    setGoogleLoading(true);
     try {
-      await Notifications.setNotificationChannelAsync("default", {
-        name: "Fino",
-        importance: Notifications.AndroidImportance.DEFAULT,
-      });
-      await Notifications.requestPermissionsAsync();
+      await onGoogle();
+    } catch (error) {
+      setGoogleError(error instanceof Error ? error.message : "No se pudo entrar con Google.");
     } finally {
-      setAsking(false);
-      onFinish();
+      setGoogleLoading(false);
     }
   }
 
+  function changeCountry(country: Country) {
+    setCountry(country);
+    setCurrency(country.currency);
+    setInitialCountry(country.id, country.language, country.currency);
+    setCountryModalVisible(false);
+    setQuery("");
+  }
+
+  function selectCurrency(next: string) {
+    setCurrency(next);
+    setCurrencyModalVisible(false);
+    setQuery("");
+  }
+
   return (
-    <LinearGradient colors={["#fff7ed", "#ecfdf5", "#dbeafe"]} className="flex-1">
-      <View className="flex-1" style={{ paddingTop: insets.top + 10, paddingBottom: insets.bottom + 16 }}>
-        {step === 0 ? (
-          <View className="flex-1 px-6 justify-center">
-            <View className="h-60 overflow-hidden rounded-[32px] bg-emerald-600 mb-7">
-              <View className="absolute top-6 right-7 w-14 h-14 rounded-full bg-amber-300" />
-              <View className="absolute -bottom-10 -left-12 w-60 h-44 rounded-full bg-emerald-800" />
-              <View className="absolute -bottom-16 right-[-25px] w-64 h-52 rounded-full bg-teal-700" />
-              <View className="absolute bottom-7 left-8 right-8 flex-row items-end gap-2">
-                {[42, 68, 52, 86, 60].map((h, i) => <View key={i} className="flex-1 rounded-t-md bg-white/90" style={{ height: h }} />)}
-              </View>
-              <View className="absolute top-7 left-7 px-4 py-3 rounded-2xl bg-white flex-row items-center gap-2">
-                <WalletCards size={22} color="#059669" />
-                <Text className="font-extrabold text-slate-900">Fino</Text>
-              </View>
-            </View>
-            <Text className="text-3xl font-black text-slate-900 mb-3">{t("onboarding.welcomeTitle")}</Text>
-            <Text className="text-base leading-6 text-slate-600">{t("onboarding.welcomeBody")}</Text>
-            <View className="flex-row gap-2 mt-6">
-              {[[ReceiptText, t("onboarding.auto")], [Landmark, t("onboarding.budget")], [Sparkles, t("onboarding.insights")]].map(([Icon, label]: any, i) => (
-                <View key={i} className="flex-1 bg-white/80 rounded-2xl p-3 items-center gap-2">
-                  <Icon size={20} color="#059669" />
-                  <Text className="text-[11px] font-bold text-slate-700 text-center">{label}</Text>
-                </View>
-              ))}
-            </View>
+    <View className="flex-1 bg-[#f8f3e9]">
+      <StatusBar hidden />
+      <Image source={PANELS[step]} resizeMode="stretch" className="absolute inset-0 w-full h-full" />
+
+      {step === 0 ? (
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel="Empezar"
+          activeOpacity={0.82}
+          onPress={() => setStep(1)}
+          style={{ position: "absolute", left: "7%", right: "7%", bottom: "2%", height: "8%" }}
+        />
+      ) : null}
+
+      {step === 1 ? (
+        <>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={`País: ${countryName}`}
+            onPress={() => setCountryModalVisible(true)}
+            style={{ position: "absolute", left: "8%", right: "8%", top: "43%", height: "10%" }}
+          />
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={`Moneda: ${currencyName}`}
+            onPress={() => setCurrencyModalVisible(true)}
+            style={{ position: "absolute", left: "8%", right: "8%", top: "54%", height: "10%" }}
+          />
+          <TouchableOpacity
+            accessibilityRole="switch"
+            accessibilityState={{ checked: notificationsEnabled }}
+            accessibilityLabel="Activar los avisos"
+            onPress={() => setNotificationsEnabled((value) => !value)}
+            style={{ position: "absolute", left: "8%", right: "8%", top: "66%", height: "15%" }}
+          />
+
+          <View
+            pointerEvents="none"
+            style={{ position: "absolute", right: "11%", top: "45.2%", width: "38%", height: "5.5%", backgroundColor: "#fffdf4", justifyContent: "center", alignItems: "flex-end", paddingRight: 18 }}
+          >
+            <Text numberOfLines={1} adjustsFontSizeToFit className="text-[18px] font-bold text-[#082f64]">{countryName}</Text>
           </View>
-        ) : step === 1 ? (
-          <ScrollView className="flex-1 px-6" contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}>
-            <Text className="text-3xl font-black text-slate-900 mb-2">{t("onboarding.countryTitle")}</Text>
-            <Text className="text-sm text-slate-600 mb-6">{t("onboarding.countryBody")}</Text>
-            <View className="bg-white rounded-[28px] p-5">
-              <Text className="text-5xl mb-3">{country.flag}</Text>
-              <Text className="text-xl font-extrabold text-slate-900">{countryLabelFor(country, country.language)}</Text>
-              <Text className="text-sm text-slate-500 mt-1">{currencyLabelFor(country.currency, t, country.language)} · {country.currency}</Text>
-              <TouchableOpacity onPress={() => setChoosing((v) => !v)} className="mt-5 rounded-2xl bg-slate-100 py-3 items-center">
-                <Text className="font-bold text-emerald-700">{t("onboarding.changeCountry")}</Text>
-              </TouchableOpacity>
-            </View>
-            {choosing && <View className="mt-3 bg-white rounded-3xl p-2">
-              <View className="flex-row items-center rounded-2xl bg-slate-100 px-3 mb-1">
-                <Search size={17} color="#94a3b8" />
-                <TextInput value={countryQuery} onChangeText={setCountryQuery}
-                  placeholder={t("country.search")} placeholderTextColor="#94a3b8"
-                  autoCorrect={false} disableFullscreenUI
-                  className="flex-1 py-3 px-2 text-sm text-slate-900" />
-              </View>
-              <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" style={{ maxHeight: 290 }}>
-                {countriesFor(country.language)
-                  .filter((item) => {
-                    const query = countryQuery.trim().toLocaleLowerCase(country.language);
-                    if (!query) return true;
-                    return countryLabelFor(item, country.language).toLocaleLowerCase(country.language).includes(query)
-                      || item.id.toLowerCase().includes(query)
-                      || item.currency.toLowerCase().includes(query);
-                  })
-                  .map((item) => <TouchableOpacity key={item.id}
-                    onPress={() => { setCountry(item); setCountryQuery(""); setChoosing(false); }}
-                    className="flex-row items-center px-3 py-3 rounded-2xl">
-                    <Text className="text-2xl mr-3">{item.flag}</Text>
-                    <Text className="flex-1 font-semibold text-slate-800">{countryLabelFor(item, country.language)}</Text>
-                    <Text className="text-xs text-slate-500">{item.currency}</Text>
-                  </TouchableOpacity>)}
-              </ScrollView>
-            </View>}
-          </ScrollView>
-        ) : (
-          <View className="flex-1 px-6 justify-center">
-            <View className="w-20 h-20 rounded-[28px] bg-emerald-600 items-center justify-center mb-7"><Bell size={36} color="white" /></View>
-            <Text className="text-3xl font-black text-slate-900 mb-3">{t("onboarding.notificationsTitle")}</Text>
-            <Text className="text-base leading-6 text-slate-600 mb-7">{t("onboarding.notificationsBody")}</Text>
-            <View className="bg-white/80 rounded-3xl p-5"><Text className="font-bold text-slate-900">{t("onboarding.notificationsPromise")}</Text></View>
+          <View
+            pointerEvents="none"
+            style={{ position: "absolute", right: "11%", top: "56.1%", width: "47%", height: "5.5%", backgroundColor: "#fffdf4", justifyContent: "center", alignItems: "flex-end", paddingRight: 18 }}
+          >
+            <Text numberOfLines={1} adjustsFontSizeToFit className="text-[17px] font-bold text-[#082f64]">
+              {currencyName} ({currencySymbolFor(currency)})
+            </Text>
           </View>
-        )}
-        <View className="px-6 pt-4">
-          <TouchableOpacity onPress={() => step < 2 ? nextStep() : allowNotifications()} className="bg-emerald-600 rounded-2xl py-4 flex-row justify-center items-center gap-2">
-            <Text className="text-white font-extrabold">{step === 2 ? (asking ? t("onboarding.allowing") : t("onboarding.allow")) : t("onboarding.next")}</Text><ChevronRight size={18} color="white" />
-          </TouchableOpacity>
-          {step === 2 && <TouchableOpacity onPress={onFinish} className="py-3 items-center"><Text className="text-sm font-semibold text-slate-500">{t("onboarding.later")}</Text></TouchableOpacity>}
+          {!notificationsEnabled ? (
+            <View pointerEvents="none" style={{ position: "absolute", right: "10.5%", top: "72.1%", width: 55, height: 32, borderRadius: 18, backgroundColor: "#cbd5e1", justifyContent: "center", padding: 3 }}>
+              <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: "white" }} />
+            </View>
+          ) : null}
+
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Continuar"
+            activeOpacity={0.82}
+            onPress={continueFromSetup}
+            style={{ position: "absolute", left: "7%", right: "7%", bottom: "2%", height: "8%" }}
+          />
+        </>
+      ) : null}
+
+      {step === LAST_STEP ? (
+        <>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Continuar con Google"
+            disabled={googleLoading}
+            activeOpacity={0.82}
+            onPress={continueWithGoogle}
+            style={{ position: "absolute", left: "7%", right: "7%", top: "47%", height: "9%" }}
+          />
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Crear cuenta"
+            activeOpacity={0.82}
+            onPress={onCreateAccount}
+            style={{ position: "absolute", left: "7%", right: "7%", top: "57%", height: "8%" }}
+          />
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="Ya tengo una cuenta"
+            activeOpacity={0.82}
+            onPress={onLogin}
+            style={{ position: "absolute", left: "25%", right: "25%", top: "66%", height: "6%" }}
+          />
+          {googleError ? (
+            <View style={{ position: "absolute", left: "8%", right: "8%", bottom: "5%", borderRadius: 14, backgroundColor: "rgba(255,255,255,0.94)", padding: 12 }}>
+              <Text className="text-center text-sm font-semibold text-red-600">{googleError}</Text>
+            </View>
+          ) : null}
+        </>
+      ) : null}
+
+      <PickerModal
+        kind="country"
+        visible={countryModalVisible}
+        query={query}
+        setQuery={setQuery}
+        onClose={() => { setCountryModalVisible(false); setQuery(""); }}
+        countries={countries}
+        selected={country.id}
+        language={language}
+        onCountry={changeCountry}
+        onCurrency={selectCurrency}
+      />
+      <PickerModal
+        kind="currency"
+        visible={currencyModalVisible}
+        query={query}
+        setQuery={setQuery}
+        onClose={() => { setCurrencyModalVisible(false); setQuery(""); }}
+        countries={countries}
+        selected={currency}
+        language={language}
+        onCountry={changeCountry}
+        onCurrency={selectCurrency}
+      />
+    </View>
+  );
+}
+
+function PickerModal({
+  kind,
+  visible,
+  query,
+  setQuery,
+  onClose,
+  countries,
+  selected,
+  language,
+  onCountry,
+  onCurrency,
+}: {
+  kind: PickerKind;
+  visible: boolean;
+  query: string;
+  setQuery: (value: string) => void;
+  onClose: () => void;
+  countries: Country[];
+  selected: string;
+  language: string;
+  onCountry: (country: Country) => void;
+  onCurrency: (currency: string) => void;
+}) {
+  const { t } = useAppData();
+  const normalized = query.trim().toLocaleLowerCase();
+  const filteredCountries = countries.filter((item) =>
+    `${countryLabelFor(item, language)} ${item.id}`.toLocaleLowerCase().includes(normalized)
+  );
+  const filteredCurrencies = CURRENCIES.filter((item) =>
+    `${currencyLabelFor(item.id, t, language)} ${item.id} ${item.symbol}`.toLocaleLowerCase().includes(normalized)
+  );
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+      <View className="flex-1 justify-end bg-black/40">
+        <View className="h-[78%] rounded-t-[28px] bg-[#fffdf4] px-5 pt-5">
+          <View className="mb-4 flex-row items-center justify-between">
+            <Text className="text-2xl font-extrabold text-[#082f64]">{kind === "country" ? "Elige tu país" : "Elige tu moneda"}</Text>
+            <TouchableOpacity accessibilityLabel="Cerrar" onPress={onClose} className="h-10 w-10 items-center justify-center rounded-full bg-slate-100">
+              <X size={22} color="#082f64" />
+            </TouchableOpacity>
+          </View>
+          <View className="mb-3 flex-row items-center rounded-2xl border border-slate-200 bg-white px-4 py-3">
+            <Search size={20} color="#64748b" />
+            <TextInput
+              disableFullscreenUI
+              accessibilityLabel="Buscar"
+              value={query}
+              onChangeText={setQuery}
+              autoCapitalize="none"
+              autoCorrect={false}
+              placeholder="Busca por nombre o código"
+              placeholderTextColor="#64748b"
+              className="ml-3 flex-1 text-base text-[#082f64]"
+            />
+          </View>
+          {kind === "country" ? (
+            <FlatList
+              data={filteredCountries}
+              keyExtractor={(item) => item.id}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => (
+                <PickerRow
+                  icon={item.flag}
+                  label={countryLabelFor(item, language)}
+                  code={item.id}
+                  active={selected === item.id}
+                  onPress={() => onCountry(item)}
+                />
+              )}
+            />
+          ) : (
+            <FlatList
+              data={filteredCurrencies}
+              keyExtractor={(item) => item.id}
+              keyboardShouldPersistTaps="handled"
+              renderItem={({ item }) => (
+                <PickerRow
+                  icon={item.symbol}
+                  label={currencyLabelFor(item.id, t, language)}
+                  code={item.id}
+                  active={selected === item.id}
+                  onPress={() => onCurrency(item.id)}
+                />
+              )}
+            />
+          )}
         </View>
       </View>
-    </LinearGradient>
+    </Modal>
+  );
+}
+
+function PickerRow({ icon, label, code, active, onPress }: {
+  icon: string;
+  label: string;
+  code: string;
+  active: boolean;
+  onPress: () => void;
+}) {
+  return (
+    <TouchableOpacity
+      onPress={onPress}
+      className="mb-2 flex-row items-center rounded-2xl border border-slate-200 bg-white px-4 py-4"
+    >
+      <Text className="w-12 text-2xl">{icon}</Text>
+      <View className="flex-1">
+        <Text className="text-base font-bold text-[#082f64]">{label}</Text>
+        <Text className="text-sm text-slate-500">{code}</Text>
+      </View>
+      {active ? <Check size={22} color="#059669" /> : null}
+    </TouchableOpacity>
   );
 }

@@ -6,13 +6,13 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 | Fecha | Versión | Estado |
 |---|---|---|
-| 23/08/2026 | 1.0.3 | Disponible en la prueba cerrada |
+| 23/08/2026 | 1.0.4 | Disponible en la prueba cerrada |
 
 ## Próxima versión
 
 | Fecha preparada | Versión | Marca visible | Estado |
 |---|---|---|---|
-| 23/08/2026 | 1.0.4 | `23ago-08` | Entrada, catálogo mundial y voz natural para un sol |
+| 23/08/2026 | 1.0.5 | `23ago-09` | Inicio exacto de tres pantallas aprobado |
 
 La versión 1.0.3 contiene el acceso Google con diagnóstico, copia de seguridad,
 Modo Negocio, registro automático, voz, rendimiento, calendario, exportación,
@@ -32,6 +32,16 @@ La versión 1.0.4 añade:
 - Métodos de pago reconocidos y guardados desde el dictado.
 - La voz del Yape dice «un pago de un sol» sin tocar el registro automático.
 
+La versión 1.0.5 añade:
+
+- Exactamente tres pantallas iniciales, creadas a partir de los tres paneles
+  del diseño aprobado, sin aproximaciones visuales.
+- Eliminación del recorrido anterior de cinco pantallas.
+- Botones reales sobre el diseño para país, moneda, avisos, Google, crear
+  cuenta e iniciar sesión.
+- País y moneda siguen siendo editables y los avisos solicitan el permiso real
+  de Android sin bloquear el acceso si el usuario lo rechaza.
+
 La firma real de Google Play ya está registrada en Firebase y el acceso con
 Google fue comprobado en un teléfono.
 
@@ -39,12 +49,12 @@ Calidad comprobada:
 
 - TypeScript aprobado.
 - ESLint sin errores.
-- 77 pruebas aprobadas.
+- 78 pruebas aprobadas.
 - 7 auditores aprobados.
 
 ## Cómo reconocer la entrega
 
-En **Ajustes → Acerca de**, la versión 1.0.4 muestra `23ago-08`.
+En **Ajustes → Acerca de**, la versión 1.0.5 muestra `23ago-09`.
 
 ## Publicación
 
@@ -55,5 +65,5 @@ En **Ajustes → Acerca de**, la versión 1.0.4 muestra `23ago-08`.
 
 ## Próximo paso
 
-Generar `Fino-1.0.4.aab`, subirlo a prueba cerrada y probar una instalación
+Generar `Fino-1.0.5.aab`, subirlo a prueba cerrada y probar una instalación
 nueva desde bienvenida hasta el acceso.

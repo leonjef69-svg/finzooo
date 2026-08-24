@@ -15,9 +15,9 @@ Paquete Android: `com.finoapp.gastos`.
 
 ## Versiones
 
-- Disponible en prueba cerrada: **1.0.3**, `versionCode 4`.
-- Próxima corrección: **1.0.4**, `versionCode 5`.
-- Marca visible de 1.0.4: **23ago-08**.
+- Disponible en prueba cerrada: **1.0.4**, `versionCode 5`.
+- Próxima corrección: **1.0.5**, `versionCode 6`.
+- Marca visible de 1.0.5: **23ago-09**.
 - El AAB firmado solo se genera en la computadora autorizada.
 
 ## Acceso con Google
@@ -30,7 +30,7 @@ teléfono. No existe una lista de Firebase que limite quién puede crear cuenta.
 El código también muestra los errores de Google debajo de su botón, no debajo
 de Contraseña, distingue las causas y no muestra error cuando el usuario cancela.
 
-## Correcciones preparadas en 1.0.4
+## Correcciones preparadas en 1.0.4 y 1.0.5
 
 - Bienvenida breve, cálida y con identidad de Fino.
 - Detección automática de país y moneda, con opción para cambiarlos.
@@ -56,6 +56,12 @@ de Contraseña, distingue las causas y no muestra error cuando el usuario cancel
 - El dictado conserva efectivo, tarjeta, transferencia, Yape o Plin.
 - La voz del registro automático dice «un pago de un sol», no «un pago por
   uno sol», sin cambiar la detección ni el movimiento guardado.
+- El inicio queda reducido a exactamente tres pantallas, usando los tres
+  paneles exactos del diseño aprobado: bienvenida, configuración y acceso.
+- Se eliminan del recorrido las pantallas antiguas de presentación, país,
+  avisos y formulario que aparecían como cinco pasos separados.
+- Los controles dibujados de país, moneda, avisos y acceso son zonas táctiles
+  reales y conservan toda la lógica existente.
 
 ## Registro automático
 
@@ -83,7 +89,7 @@ El cobro Premium aún no está habilitado; existe una prueba local de 24 horas.
 
 ## Google Play: qué falta
 
-- Generar y subir el AAB 1.0.4 a la misma prueba cerrada.
+- Generar y subir el AAB 1.0.5 a la misma prueba cerrada.
 - Pedir a los testers que actualicen desde Google Play.
 - Conseguir al menos 12 testers aceptados y mantener el periodo exigido.
 - Completar la cuenta preparada para revisión con datos de ejemplo.
@@ -96,7 +102,7 @@ aceptar y descargar con la misma cuenta de Google.
 
 - TypeScript: aprobado.
 - ESLint: sin errores; quedan advertencias antiguas no bloqueantes.
-- Pruebas: **77 aprobadas**.
+- Pruebas: **78 aprobadas**.
 - Auditores: **7 aprobados**.
 
 Comando principal: `node pruebas/correr.mjs`.
@@ -113,5 +119,5 @@ Comando principal: `node pruebas/correr.mjs`.
 
 ## Próximo paso exacto
 
-Generar el AAB 1.0.4 con `generar-aab.bat`, subirlo a prueba cerrada y probar
+Generar el AAB 1.0.5 con `generar-aab.bat`, subirlo a prueba cerrada y probar
 una instalación nueva desde bienvenida hasta el acceso.

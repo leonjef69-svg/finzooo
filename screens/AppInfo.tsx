@@ -13,7 +13,7 @@ import * as textRecognizer from "@/modules/text-recognizer";
 import * as notificationReader from "@/modules/notification-reader";
 import { puedeExportarEnFondo, puedePdfEnFondo } from "@/modules/export-scheduler";
 
-const APP_VERSION = "1.0.4";
+const APP_VERSION = "1.0.5";
 
 /**
  * Marca de la versión del CÓDIGO, no de la app.
@@ -24,10 +24,10 @@ const APP_VERSION = "1.0.4";
  * mismo fallo. Sin saber qué código se estaba ejecutando, cada arreglo era a
  * ciegas — y podía estar ya hecho.
  *
- * La versión de la app (1.0.4) no sirve para esto: no cambia entre entregas.
+ * La versión de la app (1.0.5) no sirve para esto: no cambia entre entregas.
  * Esta sí.
  */
-const CODE_MARKER = "23ago-08";
+const CODE_MARKER = "23ago-09";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast, verComoGratis, setVerComoGratis, tienePremiumDeVerdad } = useAppData();

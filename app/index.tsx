@@ -1,17 +1,14 @@
-import { useState } from "react";
+import { View } from "react-native";
 import { router } from "expo-router";
-import Splash from "@/screens/Splash";
 import { useAppData } from "@/contexts/AppDataContext";
 import { useNavigateWhenReady } from "@/utils/nav";
 
 export default function Index() {
   const { ready, hasOnboarded } = useAppData();
-  const [timerDone, setTimerDone] = useState(false);
-
   useNavigateWhenReady(
-    timerDone && ready ? () => router.dismissTo(hasOnboarded ? "/(tabs)" : "/onboarding") : null,
-    [timerDone, ready, hasOnboarded]
+    ready ? () => router.dismissTo(hasOnboarded ? "/(tabs)" : "/onboarding") : null,
+    [ready, hasOnboarded]
   );
 
-  return <Splash onDone={() => setTimerDone(true)} />;
+  return <View className="flex-1 bg-[#f8f3e9]" />;
 }
