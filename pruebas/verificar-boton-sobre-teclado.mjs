@@ -80,6 +80,18 @@ console.log("\n--- EL CONTENEDOR TIENE QUE SER ANIMADO ---");
   }
 }
 
+console.log("\n--- CANCELAR SE RECONOCE COMO BOTON EN MODO OSCURO (23/08/2026) ---");
+{
+  // Reportado con una captura real: el fondo de «Cancelar» se mezclaba con la barra inferior
+  // y el texto parecia estar suelto. Un botón secundario no necesita ser verde, pero sí debe
+  // conservar un contorno visible junto al botón principal.
+  const nuevoMovimiento = leerSinComentarios("screens/AddSheet.tsx");
+  ok(
+    /onPress=\{handleClose\}[\s\S]{0,220}border-\[1\.5px\][\s\S]{0,120}dark:border-slate-500/.test(nuevoMovimiento),
+    "Cancelar conserva un contorno visible también de noche"
+  );
+}
+
 console.log("\n--- Y NINGUNA HEREDA EL TECLADO DE LA ANTERIOR (12/08/2026) ---");
 {
   // Reportado con la captura: entrar POR PRIMERA VEZ a "Presupuestos por categoria" y

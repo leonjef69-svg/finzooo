@@ -491,7 +491,10 @@ export default function AddSheet({
             className="px-5 py-4 flex-row gap-3 border-t border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2"
             style={{ paddingBottom: keyboardVisible ? 16 : 16 + insets.bottom }}
           >
-            <TouchableOpacity onPress={handleClose} className="flex-1 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 items-center">
+            <TouchableOpacity
+              onPress={handleClose}
+              className="flex-1 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 border-[1.5px] border-slate-300 dark:border-slate-500 items-center"
+            >
               <Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
