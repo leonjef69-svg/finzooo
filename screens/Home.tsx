@@ -341,9 +341,16 @@ export default function Home({
           </View>
           <View className="flex-row items-center gap-2">
             <ThemeToggleButton />
-            <TouchableOpacity className="w-10 h-10 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center">
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={t("calendario.titulo")}
+              onPress={() => irUnaVez("/calendario")}
+              className="w-10 h-10 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
+            >
               <Bell size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
-              <View className="absolute top-2 right-2 w-1.5 h-1.5 bg-rose-500 rounded-full" />
+              {hayPagosUrgentes ? (
+                <View className="absolute top-2 right-2 w-1.5 h-1.5 bg-rose-500 rounded-full" />
+              ) : null}
             </TouchableOpacity>
           </View>
         </View>
