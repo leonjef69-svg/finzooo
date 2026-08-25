@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { FlatList, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check, Search } from "lucide-react-native";
 import { countriesFor, countryFor, countryLabelFor } from "@/constants/countries";
@@ -44,9 +44,22 @@ export default function CountryPicker({ onBack, onSelect }: {
             className="flex-1 py-3 px-3 text-sm text-slate-900 dark:text-slate-100" />
         </View>
       </View>
-      <ScrollView className="px-5" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 32 }}>
-        <View className="gap-2.5">
-          {countries.map((country) => {
+      <FlatList
+        data={countries}
+        keyExtractor={(country) => country.id}
+        keyboardShouldPersistTaps="handled"
+        initialNumToRender={10}
+        windowSize={5}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+        ItemSeparatorComponent={() => <View className="h-2.5" />}
+        ListFooterComponent={!actual && !query ? (
+          <View className="mt-4 rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-slate-50 dark:bg-noche-2 p-4">
+            <Text className="text-xs text-slate-600 dark:text-slate-300 leading-5">
+              {t("country.custom", { language: languageLabelFor(userLanguage), currency: currencySymbolFor(userCurrency) })}
+            </Text>
+          </View>
+        ) : null}
+        renderItem={({ item: country }) => {
             const selected = actual?.id === country.id;
             return (
               <TouchableOpacity key={country.id}
@@ -64,16 +77,8 @@ export default function CountryPicker({ onBack, onSelect }: {
                 {selected && <Check size={18} color="#059669" />}
               </TouchableOpacity>
             );
-          })}
-        </View>
-        {!actual && !query && (
-          <View className="mt-4 rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-slate-50 dark:bg-noche-2 p-4">
-            <Text className="text-xs text-slate-600 dark:text-slate-300 leading-5">
-              {t("country.custom", { language: languageLabelFor(userLanguage), currency: currencySymbolFor(userCurrency) })}
-            </Text>
-          </View>
-        )}
-      </ScrollView>
+        }}
+      />
     </View>
   );
 }

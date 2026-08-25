@@ -107,6 +107,12 @@ aceptar y descargar con la misma cuenta de Google.
 
 Comando principal: `node pruebas/correr.mjs`.
 
+## En preparación
+
+- País y moneda ahora usan listas virtualizadas: no dibujan los cientos de
+  opciones a la vez, por lo que abrirlas y buscar debe ser inmediato incluso
+  en celulares modestos.
+
 ## Reglas para continuar
 
 1. Leer `AGENTS.md`, este archivo y `ENTREGAS.md`.

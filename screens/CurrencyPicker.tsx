@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { FlatList, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check, Search } from "lucide-react-native";
 import { CURRENCIES, currencyLabelFor } from "@/constants/currencies";
@@ -41,9 +41,15 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
             className="flex-1 py-3 px-3 text-sm text-slate-900 dark:text-slate-100" />
         </View>
       </View>
-      <ScrollView className="px-5" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 32 }}>
-        <View className="gap-2.5">
-          {currencies.map((currency) => {
+      <FlatList
+        data={currencies}
+        keyExtractor={(currency) => currency.id}
+        keyboardShouldPersistTaps="handled"
+        initialNumToRender={10}
+        windowSize={5}
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+        ItemSeparatorComponent={() => <View className="h-2.5" />}
+        renderItem={({ item: currency }) => {
             const selected = currency.id === current;
             return (
               <TouchableOpacity key={currency.id} onPress={() => { onSelect(currency.id); onBack(); }}
@@ -62,9 +68,8 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
                 {selected && <Check size={18} color="#059669" />}
               </TouchableOpacity>
             );
-          })}
-        </View>
-      </ScrollView>
+        }}
+      />
     </View>
   );
 }
