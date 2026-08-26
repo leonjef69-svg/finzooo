@@ -125,6 +125,19 @@ export async function loadCloudData(uid: string): Promise<CloudData | null> {
   }
 }
 
+// Durante la prueba cerrada damos Premium manual en Firebase.
+// Si el celular todavía tiene una copia vieja con isPremium:false, no debe pisar ese true.
+export function conservarPremiumManual(
+  actualEnLaNube: { isPremium?: unknown } | null,
+  siguiente: CloudData
+): CloudData {
+  if (siguiente.isPremium) return siguiente;
+  if (actualEnLaNube?.isPremium === true) {
+    return { ...siguiente, isPremium: true };
+  }
+  return siguiente;
+}
+
 // Sube los datos actuales a la nube. Si no hay internet, falla en
 // silencio — los datos ya están a salvo en este celular y se van a
 // intentar subir de nuevo la próxima vez que algo cambie. Devuelve la
@@ -156,7 +169,12 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
   if (pesa(clean) > LIMITE_FIRESTORE) return { ok: false, motivo: "demasiado-grande" };
 
   try {
-    await setDoc(doc(db, "users", uid), clean);
+    const ref = doc(db, "users", uid);
+    if (!clean.isPremium) {
+      const snap = await getDoc(ref);
+      clean = conservarPremiumManual(snap.exists() ? snap.data() : null, clean);
+    }
+    await setDoc(ref, clean);
     return { ok: true };
   } catch (e) {
     return { ok: false, motivo: motivoLegible(e) };
