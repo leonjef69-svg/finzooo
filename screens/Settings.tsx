@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { irUnaVez } from "@/utils/nav";
 import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,7 +19,6 @@ import {
   PieChart,
   Coins,
   MapPin,
-  Bell,
   KeyRound,
   Pencil,
   UserX,
@@ -36,11 +35,9 @@ import * as voiceWidget from "@/modules/voice-widget";
 import { useColorScheme } from "nativewind";
 import Row from "@/components/Row";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
-import Toggle from "@/components/Toggle";
 import { currencyLabelFor } from "@/constants/currencies";
 import { countryFor, countryLabelFor } from "@/constants/countries";
 import { hayRegistroAutomatico } from "@/utils/dondeHayYape";
-import { avisosEncendidos, guardarAvisosEncendidos } from "@/utils/avisosDePagos";
 import { useAppData } from "@/contexts/AppDataContext";
 
 // Achica y comprime la foto antes de guardarla, para que no pese mucho
@@ -105,7 +102,7 @@ export default function Settings({
   onLegal: () => void;
   onVoiceHelp: () => void;
 }) {
-  const { t, userCountry, isCloudSynced, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios, reprogramarAvisos } =
+  const { t, userCountry, isCloudSynced, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios } =
     useAppData();
   /** El negocio que se está quedando con los yapeos, si hay alguno. Ver la fila de abajo. */
   const negocioQueRecibe = negocios.find((n) => n.activo && n.destinoYapes === "negocio");
@@ -120,21 +117,6 @@ export default function Settings({
   }
   const { colorScheme } = useColorScheme();
   const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
-  /**
-   * EL INTERRUPTOR DE AVISOS, QUE HASTA HOY NO HACÍA NADA (19/08/2026).
-   *
-   * Era un `useState` suelto: se movía y se quedaba ahí. Lo preguntó él —*"tenemos en
-   * ajustes una opción de notificación, eso sirve, está de adorno, hace algo?"*— y la
-   * respuesta era que no. Es justo lo que este proyecto lleva meses quitando: un botón que
-   * promete y no cumple.
-   *
-   * Ahora manda de verdad sobre los avisos del calendario: apagarlo retira los que estén
-   * puestos, encenderlo los vuelve a programar solos. No borra ningún pago.
-   */
-  const [notif, setNotif] = useState(true);
-  useEffect(() => {
-    avisosEncendidos().then(setNotif);
-  }, []);
   // Qué país corresponde al idioma y la moneda puestos. Puede no haber
   // ninguno si alguien los ajustó por separado a una combinación que no es
   // de ningún país; ahí la fila sale sin nombre en vez de mentir.

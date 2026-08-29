@@ -27,7 +27,6 @@ const catFaltan = catLabels.filter((k) => !claves.has(k));
 check("etiquetas de categoria", catFaltan.length === 0, catFaltan.join(", ") || `${catLabels.length} revisadas`);
 
 // Resultados del diagnostico de Yape: t(`autoCapture.result.${x}`)
-const auto = fs.readFileSync(path.join(ROOT, "utils/autoCapture.ts"), "utf8");
 const parser = fs.readFileSync(path.join(ROOT, "utils/notificationParser.ts"), "utf8");
 const resultados = new Set(["added", "duplicate"]);
 for (const m of parser.matchAll(/\|\s*"(notMoney|noAmount|noDirection)"/g)) resultados.add(m[1]);
@@ -57,7 +56,7 @@ function walk(dir, out = []) {
     if (["node_modules", ".git", ".expo", "android", "ios", "dist"].includes(name)) continue;
     const full = path.join(dir, name);
     if (fs.statSync(full).isDirectory()) walk(full, out);
-    else if (/\.tsx?$/.test(name)) out.push(full);
+    else if (/\.[cm]?[jt]sx?$/.test(name)) out.push(full);
   }
   return out;
 }
@@ -76,8 +75,11 @@ for (const [file, text] of contenidos) {
     const nombre = m[1] || m[2] || m[3];
     let usos = 0;
     for (const [otro, texto] of contenidos) {
-      if (otro === file) continue;
-      if (new RegExp(`\\b${nombre}\\b`).test(texto)) usos++;
+      const coincidencias = texto.match(new RegExp(`\\b${nombre}\\b`, "g"))?.length ?? 0;
+      // En su propio archivo, una coincidencia es la declaración. Las demás
+      // son usos reales: una ayuda interna no es código muerto solo porque no
+      // forme parte de la API pública.
+      usos += otro === file ? Math.max(0, coincidencias - 1) : coincidencias;
     }
     if (usos === 0) {
       console.log(`  SIN USAR  ${nombre}  en ${rel}`);

@@ -51,8 +51,8 @@ import {
 } from "@/utils/calendarioPagos";
 import { reprogramarAvisosDePagos } from "@/utils/avisosDePagos";
 import { useValorEstable } from "@/utils/valorEstable";
-import { nextId } from "@/utils/id";
-import { suggestCategory } from "@/utils/classifier";
+import { nextId, reserveIdsAbove } from "@/utils/id";
+import { learnCategory, suggestCategory } from "@/utils/classifier";
 import { bajarNegocio, subirNegocio } from "@/utils/cloudNegocio";
 import {
   fusionarMovimientosNegocio,
@@ -90,8 +90,6 @@ import {
 } from "@/utils/pruebaPremium";
 import { DECOY_BUDGET, buildDecoyTransactions } from "@/utils/decoySeed";
 import { fmt as formatAmount, fmtCompact as formatCompactAmount, monthKey } from "@/utils/format";
-import { reserveIdsAbove } from "@/utils/id";
-import { learnCategory } from "@/utils/classifier";
 import { auth } from "@/utils/firebase";
 import { signOutFromGoogle } from "@/utils/googleAuth";
 import {

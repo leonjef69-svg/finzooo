@@ -162,11 +162,6 @@ export function ingresosDisponibles(): Category[] {
   return [...INCOME_CATS, ...getPropias().filter((p) => p.tipo === "income").map(comoCategoria)];
 }
 
-/** Todas, en el mismo orden en que se enseñan. */
-export function todasDisponibles(): Category[] {
-  return [...gastosDisponibles(), ...ingresosDisponibles()];
-}
-
 export function catInfo(id: string): Category {
   // PRIMERO las propias: su id nunca choca con las de la app —llevan su
   // prefijo— así que buscar aquí no puede tapar ninguna de fábrica.

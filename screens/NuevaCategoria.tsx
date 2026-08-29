@@ -1,4 +1,4 @@
-import { NOCHE } from "@/constants/style";
+import { CARD_SHADOW, NOCHE } from "@/constants/style";
 import {
   Fragment,
   memo,
@@ -39,7 +39,6 @@ import {
 } from "@/constants/catalogoFilas";
 import { COLOR_HEX_100, COLOR_HEX_500, COLOR_HEX_600 } from "@/constants/colors";
 import { iconoDe, TODOS_LOS_GRUPOS } from "@/constants/iconos";
-import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 
 import { esPropia, nombreRepetido } from "@/utils/categoriasPropias";

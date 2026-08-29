@@ -1,6 +1,6 @@
 # Estado actual de Fino
 
-Actualizado: **23 de agosto de 2026**.
+Actualizado: **28 de agosto de 2026**.
 
 Este archivo permite retomar el proyecto sin empezar de cero. No contiene
 credenciales, correos, UID, huellas completas ni datos privados de testers.
@@ -101,9 +101,15 @@ aceptar y descargar con la misma cuenta de Google.
 ## Estado de calidad
 
 - TypeScript: aprobado.
-- ESLint: sin errores; quedan advertencias antiguas no bloqueantes.
-- Pruebas: **78 aprobadas**.
+- ESLint: aprobado sin errores ni advertencias en el código de la app.
+- Expo Doctor: **18 de 18 comprobaciones aprobadas**.
+- Pruebas: **80 aprobadas**.
 - Auditores: **7 aprobados**.
+- El lector de Excel usa SheetJS 0.20.3 desde su distribución oficial; se
+  retiró la versión 0.18.5 afectada por dos vulnerabilidades conocidas.
+- `npm audit` conserva avisos transitivos del conjunto de herramientas de
+  Expo SDK 54. Resolverlos exige migrar de SDK y no se debe forzar sin probar
+  esa actualización mayor. No hay vulnerabilidades críticas.
 
 Comando principal: `node pruebas/correr.mjs`.
 

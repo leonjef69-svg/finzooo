@@ -53,10 +53,6 @@ export function getOverride(id: string): CategoryOverride | undefined {
   return overrides[id];
 }
 
-export function getAllOverrides(): CategoryOverrides {
-  return overrides;
-}
-
 /**
  * Pone la tabla entera. La usan el arranque y la llegada de datos de la nube.
  * No guarda: guardar es cosa de quien decide, no de quien recibe.
@@ -106,12 +102,6 @@ export function applyChange(
   else siguiente[id] = nuevo;
 
   return siguiente;
-}
-
-/** ¿Tiene algún cambio esta categoría? */
-export function isCustomized(id: string): boolean {
-  const o = overrides[id];
-  return !!o && Object.keys(o).length > 0;
 }
 
 /**

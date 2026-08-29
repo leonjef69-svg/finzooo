@@ -11,13 +11,13 @@ import { archivoCsv, archivoExcel, filasDelReporte } from "@/utils/reporteArchiv
 import { htmlDelReporte } from "@/utils/reportePdfDatos";
 import {
   ActivityIndicator,
+  Keyboard,
   ScrollView,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
-import { Keyboard } from "react-native";
 import Animated from "react-native-reanimated";
 import { useKeyboardAnimatedPadding } from "@/utils/keyboard";
 import { useSafeAreaInsets } from "react-native-safe-area-context";

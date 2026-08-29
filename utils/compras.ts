@@ -86,8 +86,6 @@ export function comprasDisponibles(): boolean {
  *    quien Google le va a cobrar otra cosa. Un precio anunciado que no es el que se cobra no
  *    es un descuido de pantalla — es lo que hace que alguien pida su plata de vuelta.
  */
-export const PASOS_PENDIENTES = 6;
-
 /** No se puede comprar todavía: faltan los identificadores de Play Console. */
 export class CompraNoDisponible extends Error {
   constructor() {

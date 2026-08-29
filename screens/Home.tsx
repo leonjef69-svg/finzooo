@@ -274,7 +274,6 @@ export default function Home({
       else onOpenDetail(id);
     },
     // toggleSelected solo usa setSelected, que React garantiza estable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [selectMode, onOpenDetail]
   );
 

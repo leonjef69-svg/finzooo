@@ -63,8 +63,7 @@
       ],
       "runtimeVersion": {
         "policy": "appVersion"
-      },
-      "resizeableActivity": true
+      }
     },
     "web": {
       "output": "static",

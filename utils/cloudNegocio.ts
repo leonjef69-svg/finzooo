@@ -21,7 +21,7 @@
 import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import { isDecoyActive } from "@/utils/decoyMode";
-import { NEGOCIO_VACIO, type DatosDelNegocio } from "@/utils/negocio";
+import type { DatosDelNegocio } from "@/utils/negocio";
 
 /**
  * EL CANDADO DEL MODO SEÑUELO, OTRA VEZ. NO QUITARLO.
@@ -86,6 +86,3 @@ export async function borrarNegocioDeLaNube(uid: string): Promise<void> {
   if (elSeñueloBloquea()) throw new Error("No disponible");
   await deleteDoc(documento(uid));
 }
-
-/** Lo que se guarda cuando no hay nada: sirve para no repetir el vacío en cada sitio. */
-export const SIN_NEGOCIO = NEGOCIO_VACIO;

@@ -28,12 +28,3 @@ export const PRECIOS = {
   /** El plan de un año, de una sola vez. */
   anual: 50,
 } as const;
-
-/**
- * Lo que sale por mes el plan anual.
- *
- * Se CALCULA y no se escribe: puesto a mano, cambiar el precio del año dejaría el
- * "≈ 4.17/mes" diciendo lo de antes, y esa cuenta es justo el argumento de que el
- * anual sale más barato. Doce meses, no los de la promoción.
- */
-export const ANUAL_POR_MES = PRECIOS.anual / 12;

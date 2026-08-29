@@ -41,7 +41,6 @@ import { esFoto } from "@/utils/iconosFavoritos";
 import { COLOR_HEX_600 } from "@/constants/colors";
 import {
   cuandoTexto,
-  cuentaPorEstado,
   estadoEn,
   faltaPorPagar,
   fechaEnElMes,
@@ -300,7 +299,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
       // el total entero saliera como "S/ NaN.undefined" en la pantalla. La regla de verdad
       // está en validarPago; esto es el cinturón, por si ya hay uno guardado de antes.
       if (p.tipo !== "pago" || !Number.isFinite(p.monto)) continue;
-      const e = estadoDe(p);
+      const e = estadoEn(p, mes, hoy);
       if (e === "pagado") pagado += p.monto as number;
       if (e === "vencido") vencido += p.monto as number;
     }
@@ -311,8 +310,8 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
   const porDia = useMemo(() => {
     const mapa: Record<number, { color: ColorDeDia; n: number }> = {};
     for (const p of delMes) {
-      const d = diaDe(p);
-      const c = colorDe(p, estadoDe(p));
+      const d = Number(fechaEnElMes(p, mes).slice(8));
+      const c = colorDe(p, estadoEn(p, mes, hoy));
       const antes = mapa[d];
       if (!antes) mapa[d] = { color: c, n: 1 };
       else {
@@ -323,7 +322,6 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
       }
     }
     return mapa;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [delMes, mes, hoy]);
 
   const [anio, numeroMes] = mes.split("-").map(Number);
