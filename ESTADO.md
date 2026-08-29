@@ -1,6 +1,6 @@
 # Estado actual de Fino
 
-Actualizado: **28 de agosto de 2026**.
+Actualizado: **29 de agosto de 2026**.
 
 Este archivo permite retomar el proyecto sin empezar de cero. No contiene
 credenciales, correos, UID, huellas completas ni datos privados de testers.
@@ -118,6 +118,72 @@ Comando principal: `node pruebas/correr.mjs`.
 - País y moneda ahora usan listas virtualizadas: no dibujan los cientos de
   opciones a la vez, por lo que abrirlas y buscar debe ser inmediato incluso
   en celulares modestos.
+
+## Pendientes actuales
+
+Esta lista reemplaza los pendientes antiguos que hablaban de dos carpetas o de
+rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
+`master`.
+
+### Correcciones y comprobaciones antes del próximo AAB
+
+- Corregir la fila `Diario / Semanal / Mensual / Personalizado`: en celulares
+  estrechos `Personalizado` cae solo a una segunda fila. Debe quedar ordenada
+  como 2 × 2 en pantallas estrechas y como una sola fila cuando haya espacio.
+- Probar esa adaptación con pantalla pequeña, mediana y grande, letra ampliada
+  y escala de pantalla aumentada.
+- Probar en un teléfono real el nuevo selector mensual: solo muestra meses con
+  movimientos y `Probar ahora` exporta el mes elegido. En el emulador ya quedó
+  comprobado.
+- Confirmar la sincronización Firebase en los dos sentidos entre un teléfono y
+  el emulador usando la misma cuenta: crear un movimiento en cada dispositivo
+  y comprobar que aparece en el otro sin duplicarse ni perder datos.
+- Revisar la entregabilidad del correo de verificación para reducir que llegue
+  a Spam. La app ya avisa dónde buscarlo y no queda cargando, pero falta evaluar
+  dominio/remitente y plantilla antes de prometer bandeja principal.
+- Verificar el caso del tester al que Google Play mostró «Tu versión de Android
+  no es compatible con este artículo»: comprobar su versión de Android, el
+  catálogo de dispositivos excluidos y el AAB activo.
+- Repetir el recorrido completo en una instalación limpia: Google, correo
+  existente, cuenta nueva, verificación, permisos, país, moneda, presupuesto,
+  restauración de nube y entrada a Inicio.
+- Confirmar en Firebase, Google Play App Signing y el AAB final que siguen
+  registradas las firmas necesarias para Google. El acceso G10 ya fue corregido
+  y probado, pero debe validarse otra vez con la entrega final de Play.
+- Ejecutar TypeScript, ESLint, Expo Doctor, las 80 pruebas y los 7 auditores
+  después de la corrección responsive y antes de compilar.
+
+### Publicación en Google Play
+
+- Definir la versión siguiente, aumentar `versionCode` y actualizar
+  `CODE_MARKER`.
+- Generar un único AAB firmado en la computadora autorizada, probarlo y subirlo
+  a la misma prueba cerrada.
+- Preparar una cuenta de revisión con datos de ejemplo y comprobar que no
+  exponga datos personales.
+- Pedir a los testers que actualicen desde Google Play y prueben los recorridos
+  principales.
+- Alcanzar al menos 12 testers aceptados, mantener el periodo exigido por Play
+  Console y enviar la app a revisión cuando el panel lo permita.
+
+### Funciones e integraciones todavía incompletas
+
+- Activar compras reales de Premium. Hoy no existe cobro: falta cerrar precios,
+  beneficios, productos de Google Play Billing, restauración de compras y
+  pruebas de compra/cancelación.
+- Registrar Fino en Microsoft Azure y colocar el identificador público para
+  habilitar OneDrive. El código está preparado, pero `CLIENT_ID` sigue vacío y
+  la opción se oculta correctamente.
+- Revisar los PDF bancarios concretos que algún usuario no pudo importar; hace
+  falta conservar una muestra sin datos privados para reproducir cada formato.
+- Diseñar antes de ampliar el registro automático desde Yape hacia Plin y
+  bancos: permisos, privacidad, formatos reales, falsos positivos y duplicados.
+- Evaluar lectura de correos solo después de definir consentimiento, privacidad,
+  seguridad, duplicados y coste. No está implementada.
+- Definir CI/CD gratuito para pruebas y controles; los AAB firmados deben seguir
+  generándose únicamente en el equipo autorizado.
+- Los avisos transitivos no críticos de `npm audit` dependen de Expo SDK 54.
+  Revisarlos al migrar de SDK, sin forzar una actualización mayor antes del AAB.
 
 ## Reglas para continuar
 
