@@ -132,6 +132,11 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
   como 2 × 2 en pantallas estrechas y como una sola fila cuando haya espacio.
 - Probar esa adaptación con pantalla pequeña, mediana y grande, letra ampliada
   y escala de pantalla aumentada.
+- Mejorar el selector de monedas para enseñar primero el símbolo junto con el
+  código ISO, por ejemplo `S/ · PEN`, `$ · USD` y `€ · EUR`. No ocultar el ISO
+  por completo: distintas monedas comparten símbolos como `$` y se volverían
+  indistinguibles. Comprobar también símbolos largos y monedas de 0 o 3
+  decimales en pantallas estrechas.
 - Probar en un teléfono real el nuevo selector mensual: solo muestra meses con
   movimientos y `Probar ahora` exporta el mes elegido. En el emulador ya quedó
   comprobado.
