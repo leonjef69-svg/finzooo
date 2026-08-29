@@ -38,7 +38,7 @@ function hhmm(h: number, m: number) {
 }
 
 export default function ScheduledExportSettings({ onBack }: { onBack: () => void }) {
-  const { t, showToast } = useAppData();
+  const { t, showToast, transactions, monthNames } = useAppData();
   const insets = useSafeAreaInsets();
 
   const [schedule, setSchedule] = useState<ScheduledExport>(DEFAULT_SCHEDULE);
@@ -83,6 +83,25 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
    * igual: se toca otra vez, y otra, y se hacen tres copias del mismo reporte.
    */
   const [probando, setProbando] = useState(false);
+  /** Mes usado únicamente por "Probar ahora" cuando la frecuencia es mensual. */
+  const availableMonths = useMemo(() => {
+    const months = new Set(transactions.map((tx) => tx.date.slice(0, 7)));
+    return Array.from(months).sort().reverse();
+  }, [transactions]);
+  const [testMonth, setTestMonth] = useState("");
+
+  useEffect(() => {
+    if (availableMonths.length === 0) {
+      setTestMonth("");
+      return;
+    }
+    if (!availableMonths.includes(testMonth)) setTestMonth(availableMonths[0]);
+  }, [availableMonths, testMonth]);
+
+  function monthLabel(key: string) {
+    const [year, month] = key.split("-").map(Number);
+    return `${monthNames[month - 1]} ${year}`;
+  }
 
   useEffect(() => {
     let alive = true;
@@ -292,11 +311,12 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
    * — porque entonces eso es exactamente lo que va a pasar a la hora.
    */
   async function probarAhora() {
+    const mesDePrueba = schedule.frequency === "monthly" ? testMonth : undefined;
     if (!saleSolo) {
       irUnaVez({
         pathname: "/export-pdf",
         params: {
-          month: monthForSchedule(schedule, new Date()),
+          month: mesDePrueba || monthForSchedule(schedule, new Date()),
           format: schedule.format,
           type: schedule.type,
           dest: schedule.destination,
@@ -314,7 +334,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
     // fondo los lee DEL DISCO. Sin esto, probar justo después de cambiar la hora
     // o el destino probaría con los valores anteriores.
     await flushPendingSaves();
-    const resultado = await exportarEnFondo(true);
+    const resultado = await exportarEnFondo(true, mesDePrueba);
     setProbando(false);
     showToast(
       t(resultado === "hecho" ? "schedExport.testOk" : "schedExport.testFail", {
@@ -512,6 +532,43 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
 
             {schedule.frequency === "monthly" && (
               <>
+                <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
+                  {t("schedExport.monthToExport")}
+                </Text>
+                {availableMonths.length === 0 ? (
+                  <View className="bg-slate-50 dark:bg-noche-2 rounded-xl px-4 py-3 mb-5">
+                    <Text className="text-xs text-slate-500 dark:text-slate-300">
+                      {t("exportPdf.noMonths")}
+                    </Text>
+                  </View>
+                ) : (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={{ gap: 8, paddingRight: 8 }}
+                    className="mb-5"
+                  >
+                    {availableMonths.map((key) => (
+                      <TouchableOpacity
+                        key={key}
+                        onPress={() => setTestMonth(key)}
+                        className={`px-4 py-2.5 rounded-xl border-[1.5px] ${
+                          testMonth === key
+                            ? "bg-emerald-600 border-emerald-600"
+                            : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
+                        }`}
+                      >
+                        <Text
+                          className={`text-sm font-bold ${
+                            testMonth === key ? "text-white" : "text-slate-600 dark:text-slate-200"
+                          }`}
+                        >
+                          {monthLabel(key)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                )}
                 <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
                   {t("schedExport.dayLabel")}
                 </Text>

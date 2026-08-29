@@ -134,7 +134,10 @@ function reprogramar(schedule: ScheduledExport): void {
  *   Forzando NO se apunta el reporte como hecho: si se apuntara, probar a las
  *   tres de la tarde se llevaría por delante el reporte de verdad de las siete.
  */
-export async function exportarEnFondo(forzar = false): Promise<ResultadoDeFondo> {
+export async function exportarEnFondo(
+  forzar = false,
+  mesForzado?: string
+): Promise<ResultadoDeFondo> {
   const schedule = await loadSchedule();
   reprogramar(schedule);
 
@@ -166,7 +169,12 @@ export async function exportarEnFondo(forzar = false): Promise<ResultadoDeFondo>
 
     // El mes que toca, con la misma regla que usa la app: un reporte mensual
     // que sale el día 1 trae el mes que TERMINÓ, no el que acaba de empezar.
-    const mes = monthForSchedule(schedule, ahora);
+    // El mes elegido desde "Probar ahora" solo vale para esa prueba. El trabajo
+    // programado sigue tomando el último mes terminado para no repetir siempre
+    // un mes antiguo cada vez que llegue la fecha mensual.
+    const mes = forzar && /^\d{4}-\d{2}$/.test(mesForzado ?? "")
+      ? mesForzado!
+      : monthForSchedule(schedule, ahora);
     const delMes = movimientos.filter((tx) => tx.date.slice(0, 7) === mes);
     const delTipo =
       schedule.type === "all" ? delMes : delMes.filter((tx) => tx.type === schedule.type);

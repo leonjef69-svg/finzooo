@@ -828,15 +828,26 @@ console.log("\n--- 'PROBAR AHORA' PRUEBA EL CAMINO QUE VA A CORRER ---");
   const pant = fs.readFileSync(path.join(RAIZ, "screens/ScheduledExportSettings.tsx"), "utf8");
   const fondo = fs.readFileSync(path.join(RAIZ, "utils/exportarEnFondo.ts"), "utf8");
 
-  ok(pant.includes("exportarEnFondo(true)"), "probar llama al MISMO trabajo del despertador");
+  ok(
+    /exportarEnFondo\(true,\s*mesDePrueba\)/.test(pant),
+    "probar llama al MISMO trabajo del despertador"
+  );
   // Y solo cuando de verdad va a salir solo. Si no puede, lo que va a pasar a la
   // hora ES abrir la pantalla, así que probar eso es lo correcto.
   ok(/if \(!saleSolo\) \{[\s\S]{0,200}?pathname: "\/export-pdf"/.test(pant), "y si no sale solo, prueba lo que sí pasará");
   // Los ajustes se guardan agrupados con un retardo y el trabajo los lee DEL
   // DISCO: sin volcarlos, probar tras cambiar la hora probaría la hora anterior.
   ok(
-    /flushPendingSaves\(\);\s*\r?\n\s*const resultado = await exportarEnFondo\(true\)/.test(pant),
+    /flushPendingSaves\(\);\s*\r?\n\s*const resultado = await exportarEnFondo\(true,\s*mesDePrueba\)/.test(pant),
     "volcando antes los ajustes al disco, para no probar los de antes"
+  );
+  ok(
+    pant.includes("availableMonths") && pant.includes("setTestMonth(key)"),
+    "el mensual deja elegir solo entre meses que tienen movimientos"
+  );
+  ok(
+    /forzar && \/\^\\d\{4\}-\\d\{2\}\$\//.test(fondo) && fondo.includes("mesForzado!"),
+    "el mes elegido solo cambia la prueba manual"
   );
   ok(pant.includes("probando"), "y el botón se bloquea mientras corre, para no hacer tres copias");
 
