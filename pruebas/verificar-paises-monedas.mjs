@@ -18,7 +18,7 @@ const check = (condition, message) => {
 const countriesSource = read("constants/countries.ts");
 const currenciesSource = read("constants/currencies.ts");
 const countries = countriesSource.match(/const DATA = `([\s\S]*?)`\.trim/)?.[1]
-  .trim().split("\n").map((row) => row.split("|")) ?? [];
+  .trim().split(/\r?\n/).map((row) => row.split("|")) ?? [];
 const currencies = new Set(
   currenciesSource.match(/const CODES = `([^`]+)`/)?.[1].trim().split(/\s+/) ?? []
 );
