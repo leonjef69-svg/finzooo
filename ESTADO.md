@@ -137,6 +137,16 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
   por completo: distintas monedas comparten símbolos como `$` y se volverían
   indistinguibles. Comprobar también símbolos largos y monedas de 0 o 3
   decimales en pantallas estrechas.
+- Adaptar los métodos de pago de `Registrar gasto` al país configurado: `Plin`
+  solo debe aparecer para Perú; `Yape` solo para Perú y Bolivia. En los demás
+  países deben ocultarse sin borrar ni modificar movimientos antiguos que ya
+  tengan esos métodos. Mantener las alternativas universales como efectivo,
+  tarjeta y transferencia.
+- Dar más visibilidad a las acciones del saldo anterior: resaltar su tarjeta
+  con un color coherente con Fino y hacer más grandes y reconocibles los iconos
+  de borrar y revertir. Añadir color/contraste y una zona táctil suficiente para
+  que el usuario descubra que puede usarlos, sin confundir una acción destructiva
+  con una acción normal.
 - Probar en un teléfono real el nuevo selector mensual: solo muestra meses con
   movimientos y `Probar ahora` exporta el mes elegido. En el emulador ya quedó
   comprobado.
