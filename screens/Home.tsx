@@ -506,12 +506,14 @@ export default function Home({
             <PressableScale
               onPress={startEditBudget}
               className="bg-sky-50 dark:bg-noche-2 rounded-2xl p-4 border-[1.5px] border-sky-100 dark:border-noche-borde"
-              style={softShadow}
+              style={[softShadow, { minHeight: 108 }]}
             >
-              <Text className="text-base mb-1">💰</Text>
-              <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">
-                {t("home.monthlyBudget")}
-              </Text>
+              <View className="flex-row items-center gap-2 mb-2">
+                <Text className="text-base">💰</Text>
+                <Text className="flex-1 text-xs text-slate-600 dark:text-slate-200 font-semibold" numberOfLines={2}>
+                  {t("home.monthlyBudget")}
+                </Text>
+              </View>
               <Text
                 className="text-lg font-extrabold"
                 style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
@@ -526,12 +528,31 @@ export default function Home({
           <Animated.View entering={FadeInDown.delay(1 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
               className="bg-amber-50 dark:bg-noche-2 rounded-2xl p-4 border-[1.5px] border-amber-200 dark:border-amber-800"
-              style={softShadow}
+              style={[softShadow, { minHeight: 108 }]}
             >
-              <Text className="text-base mb-1">🕒</Text>
-              <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">
-                {t("home.previousBalance")}
-              </Text>
+              <View className="flex-row items-center gap-2 mb-2">
+                <Text className="text-base">🕒</Text>
+                <Text className="flex-1 text-xs text-slate-600 dark:text-slate-200 font-semibold" numberOfLines={2}>
+                  {t("home.previousBalance")}
+                </Text>
+                {carryoverActive ? (
+                  <TouchableOpacity
+                    onPress={() => setConfirmRestoreCarryover(true)}
+                    hitSlop={10}
+                    className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900 items-center justify-center border border-emerald-300 dark:border-emerald-700"
+                  >
+                    <RotateCcw size={19} color="#059669" />
+                  </TouchableOpacity>
+                ) : prevBalance !== 0 ? (
+                  <TouchableOpacity
+                    onPress={() => setConfirmResetCarryover(true)}
+                    hitSlop={10}
+                    className="w-9 h-9 rounded-full bg-rose-100 dark:bg-rose-950 items-center justify-center border border-rose-300 dark:border-rose-800"
+                  >
+                    <Eraser size={19} color="#e11d48" />
+                  </TouchableOpacity>
+                ) : null}
+              </View>
               <Text
                 className={`text-lg font-extrabold ${prevBalance >= 0 ? "" : "text-rose-500"}`}
                 style={prevBalance >= 0 ? { color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" } : undefined}
@@ -541,43 +562,19 @@ export default function Home({
               >
                 {fmtCompact(prevBalance)}
               </Text>
-              {/* Un solo botón con dos caras. Controla UNA sola puerta: la
-                  del mes anterior HACIA EL MES QUE SE ESTÁ VIENDO. Viendo
-                  agosto controla julio→agosto; viendo septiembre controla
-                  agosto→septiembre. Nunca más de una.
-                  - Si la puerta de este mes está cerrada, ofrece ABRIRLA.
-                    Es imprescindible que aparezca aquí: al quedar el saldo
-                    en 0 no habría ningún otro sitio desde donde volver
-                    atrás, y la acción sería irreversible desde la app.
-                  - Si no, y hay saldo que podría no pasar, ofrece cerrarla.
-                  - Si el saldo ya es 0 por sí solo, no se muestra nada:
-                    el botón no haría nada y solo estorbaría. */}
-              {carryoverActive ? (
-                <TouchableOpacity
-                  onPress={() => setConfirmRestoreCarryover(true)}
-                  hitSlop={10}
-                  className="absolute top-2 right-2 w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900 items-center justify-center border border-emerald-300 dark:border-emerald-700"
-                >
-                  <RotateCcw size={19} color="#059669" />
-                </TouchableOpacity>
-              ) : prevBalance !== 0 ? (
-                <TouchableOpacity
-                  onPress={() => setConfirmResetCarryover(true)}
-                  hitSlop={10}
-                  className="absolute top-2 right-2 w-9 h-9 rounded-full bg-rose-100 dark:bg-rose-950 items-center justify-center border border-rose-300 dark:border-rose-800"
-                >
-                  <Eraser size={19} color="#e11d48" />
-                </TouchableOpacity>
-              ) : null}
             </PressableScale>
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(2 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
               className="bg-rose-50 dark:bg-noche-2 rounded-2xl p-4 border-[1.5px] border-rose-100 dark:border-noche-borde"
-              style={softShadow}
+              style={[softShadow, { minHeight: 108 }]}
             >
-              <Text className="text-base mb-1">📉</Text>
-              <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">{t("home.spent")}</Text>
+              <View className="flex-row items-center gap-2 mb-2">
+                <Text className="text-base">📉</Text>
+                <Text className="flex-1 text-xs text-slate-600 dark:text-slate-200 font-semibold" numberOfLines={2}>
+                  {t("home.spent")}
+                </Text>
+              </View>
               <Text
                 className="text-lg font-extrabold text-rose-500"
                 numberOfLines={1}
@@ -591,10 +588,14 @@ export default function Home({
           <Animated.View entering={FadeInDown.delay(3 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
               className="bg-emerald-50 dark:bg-noche-2 rounded-2xl p-4 border-[1.5px] border-emerald-100 dark:border-noche-borde"
-              style={softShadow}
+              style={[softShadow, { minHeight: 108 }]}
             >
-              <Text className="text-base mb-1">📈</Text>
-              <Text className="text-xs text-slate-600 dark:text-slate-200 font-semibold mb-1">{t("home.income")}</Text>
+              <View className="flex-row items-center gap-2 mb-2">
+                <Text className="text-base">📈</Text>
+                <Text className="flex-1 text-xs text-slate-600 dark:text-slate-200 font-semibold" numberOfLines={2}>
+                  {t("home.income")}
+                </Text>
+              </View>
               <Text
                 className="text-lg font-extrabold text-emerald-600"
                 numberOfLines={1}
