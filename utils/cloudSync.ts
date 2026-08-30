@@ -4,6 +4,7 @@ import { isDecoyActive } from "@/utils/decoyMode";
 import { borrarNegocioDeLaNube } from "@/utils/cloudNegocio";
 import type { Goal, Transaction } from "@/types";
 import type { PagoProgramado } from "@/utils/calendarioPagos";
+import { mergeTransactions } from "@/utils/mergeTransactions";
 
 // EL CANDADO DE LA NUBE EN MODO SEÑUELO
 //
@@ -33,6 +34,7 @@ export type CloudData = {
   budgets: Record<string, number>;
   categoryBudgets: Record<string, number>;
   transactions: Transaction[];
+  deletedTransactionIds?: number[];
   goals: Goal[];
   /**
    * El calendario de pagos. Opcional: las cuentas de antes del 18/08/2026 no lo tienen, y
@@ -97,6 +99,7 @@ export async function loadCloudData(uid: string): Promise<CloudData | null> {
       budgets: data.budgets || {},
       categoryBudgets: data.categoryBudgets || {},
       transactions: data.transactions || [],
+      deletedTransactionIds: data.deletedTransactionIds || [],
       goals: data.goals || [],
       // SE LEE, y no solo se escribe. Ya pasó el 07/08 con las categorías propias: estaban
       // en el tipo, se subían bien, y aquí no se leían — así que al entrar desde otro
@@ -172,9 +175,14 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
 
   try {
     const ref = doc(db, "users", uid);
-    if (!clean.isPremium) {
-      const snap = await getDoc(ref);
-      clean = conservarPremiumManual(snap.exists() ? snap.data() : null, clean);
+    const snap = await getDoc(ref);
+    const actual = snap.exists() ? snap.data() : null;
+    clean = conservarPremiumManual(actual, clean);
+    if (actual) {
+      const borrados = [...new Set([...(actual.deletedTransactionIds || []), ...(clean.deletedTransactionIds || [])])];
+      clean.deletedTransactionIds = borrados;
+      clean.transactions = mergeTransactions(clean.transactions, actual.transactions || [])
+        .filter((tx) => !borrados.includes(tx.id));
     }
     await setDoc(ref, clean);
     return { ok: true };

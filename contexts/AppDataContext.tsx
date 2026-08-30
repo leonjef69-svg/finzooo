@@ -472,6 +472,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Meses cuyo "Saldo anterior" se muestra en cero ("AAAA-MM"), cada uno
   // independiente del resto. Lo maneja el botón de Inicio.
   const [carryoverCleared, setCarryoverCleared] = useState<string[]>([]);
+  const [deletedTransactionIds, setDeletedTransactionIds] = useState<number[]>([]);
   // Captura automática desde notificaciones. El estado real vive en el
   // módulo nativo (sobrevive a que la app se cierre); aquí solo tenemos un
   // reflejo para pintar la pantalla de ajustes.
@@ -560,6 +561,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       budgets,
       categoryBudgets,
       transactions,
+      deletedTransactionIds,
       goals,
       /* SIN LAS FOTOS, IGUAL QUE LOS FAVORITOS DE AQUÍ ABAJO. **Esto estaba escrito y sin
          conectar (20/08/2026).** `pagosParaLaNube` existía, con su explicación, y no la
@@ -601,7 +603,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setUserCountry(restoredCountry);
     setBudgets(cloud.budgets);
     setCategoryBudgets(cloud.categoryBudgets);
-    setTransactions(cloud.transactions);
+    const borrados = cloud.deletedTransactionIds ?? [];
+    setDeletedTransactionIds(borrados);
+    setTransactions(cloud.transactions.filter((tx) => !borrados.includes(tx.id)));
     setGoals(cloud.goals);
     setPagosProgramados(cloud.pagosProgramados ?? []);
     protectExistingIds(cloud.transactions, cloud.goals);
@@ -642,6 +646,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     saveJSON(STORAGE_KEYS.budgets, cloud.budgets);
     saveJSON(STORAGE_KEYS.categoryBudgets, cloud.categoryBudgets);
     saveJSON(STORAGE_KEYS.transactions, cloud.transactions);
+    saveJSON(STORAGE_KEYS.deletedTransactionIds, borrados);
     saveJSON(STORAGE_KEYS.goals, cloud.goals);
     saveJSON(STORAGE_KEYS.pagosProgramados, cloud.pagosProgramados ?? []);
     saveJSON(STORAGE_KEYS.isPremium, cloud.isPremium);
@@ -727,6 +732,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       savedBudgets,
       savedCategoryBudgets,
       savedTransactions,
+      savedDeletedTransactionIds,
       savedGoals,
       savedIsPremium,
       savedLearned,
@@ -741,6 +747,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       loadJSON<Record<string, number>>(STORAGE_KEYS.budgets, {}),
       loadJSON<Record<string, number>>(STORAGE_KEYS.categoryBudgets, {}),
       loadJSON<Transaction[]>(STORAGE_KEYS.transactions, seedTransactions),
+      loadJSON<number[]>(STORAGE_KEYS.deletedTransactionIds, []),
       loadJSON<Goal[]>(STORAGE_KEYS.goals, seedGoals),
       loadJSON<boolean>(STORAGE_KEYS.isPremium, false),
       loadJSON<Record<string, string>>(STORAGE_KEYS.merchantLearned, {}),
@@ -769,7 +776,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setCategoriasPropiasState(savedPropias);
     setIconosFavoritosState(savedFavoritos);
     setPruebaInicio(savedPrueba);
-    setTransactions(savedTransactions);
+    setDeletedTransactionIds(savedDeletedTransactionIds);
+    setTransactions(savedTransactions.filter((tx) => !savedDeletedTransactionIds.includes(tx.id)));
     setGoals(savedGoals);
     setPagosProgramados(savedPagos);
     protectExistingIds(savedTransactions, savedGoals);
@@ -810,6 +818,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setBudgets({});
     setCategoryBudgets({});
     setTransactions([]);
+    setDeletedTransactionIds([]);
     setGoals([]);
     setIsPremium(false);
     setDatosNegocio(NEGOCIO_VACIO);
@@ -856,6 +865,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setBudgets({});
     setCategoryBudgets({});
     setTransactions([]);
+    setDeletedTransactionIds([]);
     setGoals([]);
     setIsPremium(false);
     setDatosNegocio(NEGOCIO_VACIO);
@@ -989,6 +999,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (ready) saveJSON(STORAGE_KEYS.carryoverCleared, carryoverCleared);
   }, [carryoverCleared, ready]);
+  useEffect(() => {
+    if (ready) saveJSON(STORAGE_KEYS.deletedTransactionIds, deletedTransactionIds);
+  }, [deletedTransactionIds, ready]);
   // EL NEGOCIO, en sus cuatro claves. Se guardan las cuatro juntas porque cambian juntas:
   // una venta toca las ventas, pero borrar un negocio toca las cuatro a la vez.
   useEffect(() => {
@@ -1073,6 +1086,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // modulo — ver iconosFavoritos arriba.
     iconosFavoritos,
     carryoverCleared,
+    deletedTransactionIds,
   ]);
 
   // Al entrar y cada vez que Fino vuelve al frente, recoge primero los
@@ -1084,17 +1098,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const sincronizarMovimientos = async () => {
       const cloud = await loadCloudData(uid);
       if (!alive || !cloud) return;
-      setTransactions((locales) => mergeTransactions(locales, cloud.transactions));
+      const borrados = [...new Set([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])])];
+      setDeletedTransactionIds((actuales) =>
+        actuales.length === borrados.length && actuales.every((id) => borrados.includes(id))
+          ? actuales
+          : borrados
+      );
+      setTransactions((locales) =>
+        mergeTransactions(locales, cloud.transactions).filter((tx) => !borrados.includes(tx.id))
+      );
     };
     void sincronizarMovimientos();
-    const sub = AppState.addEventListener("change", (state) => {
-      if (state === "active") void sincronizarMovimientos();
-    });
     return () => {
       alive = false;
-      sub.remove();
     };
-  }, [ready, hasOnboarded, uid]);
+  }, [ready, hasOnboarded, uid, deletedTransactionIds]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -1366,6 +1384,20 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // plano — los Honor y Huawei aprietan el ahorro de batería. Ver reengancharLector.
       reengancharLector();
       collect();
+      if (uid) {
+        void loadCloudData(uid).then((cloud) => {
+          if (!cloud) return;
+          const borrados = [...new Set([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])])];
+          setDeletedTransactionIds((actuales) =>
+            actuales.length === borrados.length && actuales.every((id) => borrados.includes(id))
+              ? actuales
+              : borrados
+          );
+          setTransactions((locales) =>
+            mergeTransactions(locales, cloud.transactions).filter((tx) => !borrados.includes(tx.id))
+          );
+        });
+      }
     });
     return () => {
       clearInterval(cada);
@@ -1374,7 +1406,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     };
     // Solo depende de si la app ya está lista: los datos que necesita los
     // lee de captureInputs en el momento de recoger.
-  }, [ready, hasOnboarded]);
+  }, [ready, hasOnboarded, uid, deletedTransactionIds]);
 
   function setAutoCaptureOn(value: boolean) {
     notificationReader.setEnabled(value);
@@ -1959,12 +1991,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteTransaction(id: number) {
+    setDeletedTransactionIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
     setTransactions((prev) => prev.filter((p) => p.id !== id));
     showToast(t("toast.transactionDeleted"));
   }
 
   function deleteTransactions(ids: number[]) {
     if (!ids.length) return;
+    setDeletedTransactionIds((prev) => [...new Set([...prev, ...ids])]);
     setTransactions((prev) => prev.filter((p) => !ids.includes(p.id)));
     showToast(
       t(ids.length > 1 ? "toast.transactionsDeletedPlural" : "toast.transactionsDeleted", {

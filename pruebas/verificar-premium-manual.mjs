@@ -20,7 +20,7 @@ if (!archivo.includes("const snap = await getDoc(ref);")) {
   fallos.push("saveCloudData no lee el documento actual antes de subir false.");
 }
 
-if (!archivo.includes("clean = conservarPremiumManual(snap.exists() ? snap.data() : null, clean);")) {
+if (!archivo.includes("clean = conservarPremiumManual(actual, clean);")) {
   fallos.push("saveCloudData no aplica la protección antes de setDoc.");
 }
 
