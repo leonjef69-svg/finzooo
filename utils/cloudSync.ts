@@ -40,6 +40,7 @@ export type CloudData = {
    */
   pagosProgramados?: PagoProgramado[];
   isPremium: boolean;
+  premiumTrialStartedAt?: number;
   // Lo que la persona le enseñó al clasificador: "este comercio va en
   // esta categoría". Opcional para no romper cuentas viejas que no lo
   // tienen guardado todavía.
@@ -102,6 +103,7 @@ export async function loadCloudData(uid: string): Promise<CloudData | null> {
       // celular volvían vacías, sin dar ningún error.
       pagosProgramados: data.pagosProgramados || [],
       isPremium: !!data.isPremium,
+      premiumTrialStartedAt: typeof data.premiumTrialStartedAt === "number" ? data.premiumTrialStartedAt : undefined,
       merchantLearned: data.merchantLearned || {},
       carryoverCleared: data.carryoverCleared || [],
       // ESTAS DOS SE SUBÍAN Y NO SE BAJABAN, y eso era un fallo de verdad

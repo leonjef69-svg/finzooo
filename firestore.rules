@@ -44,7 +44,7 @@ service cloud.firestore {
                          && request.resource.data.keys().hasOnly([
                               'hasOnboarded', 'userName', 'userPhoto', 'userCurrency',
                               'userLanguage', 'budgets', 'categoryBudgets', 'transactions',
-                              'goals', 'pagosProgramados', 'isPremium', 'merchantLearned',
+                              'goals', 'pagosProgramados', 'isPremium', 'premiumTrialStartedAt', 'merchantLearned',
                               'categoryOverrides', 'categoriasPropias', 'carryoverCleared',
                               'iconosFavoritos'
                             ])
@@ -69,6 +69,13 @@ service cloud.firestore {
                               || (exists(/databases/$(database)/documents/users/$(userId))
                                 && request.resource.data.isPremium == resource.data.isPremium)
                             )
+                         && (!('premiumTrialStartedAt' in request.resource.data)
+                              || request.resource.data.premiumTrialStartedAt is number)
+                         && (!exists(/databases/$(database)/documents/users/$(userId))
+                              || !('premiumTrialStartedAt' in resource.data)
+                              || (('premiumTrialStartedAt' in request.resource.data)
+                                && request.resource.data.premiumTrialStartedAt
+                                  == resource.data.premiumTrialStartedAt))
                          // Y LOS OPCIONALES, COMPROBADOS SOLO SI VIENEN.
                          //
                          // Son opcionales de verdad: una cuenta creada antes de esa función no

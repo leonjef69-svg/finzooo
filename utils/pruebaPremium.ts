@@ -9,19 +9,16 @@
 // Son dos cosas separadas a propósito:
 //
 //   · el Premium "de la cuenta", que es el que se guarda y viaja a la nube;
-//   · esta prueba, que es solo un momento apuntado en ESTE celular.
+//   · esta prueba, cuyo inicio también viaja con la cuenta para que reinstalar
+//     o cambiar de celular no permita usarla otra vez.
 //
 // La pantalla ve UNA sola respuesta —"¿tiene Premium ahora mismo?"— que es la suma
 // de las dos. Si estuvieran mezcladas, al caducar la prueba se apagaría también el
 // Premium de quien ya lo tenía: alguien que lo tiene desde antes tocaría "probar"
 // por curiosidad y al día siguiente lo habría perdido.
 //
-// SOLO EN ESTE CELULAR, Y ES DELIBERADO
-//
-// No viaja a la nube. Sincronizarla haría que la prueba consumida en un teléfono
-// bloqueara la de otro, y también lo contrario según quién suba último. Un regalo de
-// 24 horas no merece esa complicación; lo peor que pasa es que alguien con dos
-// teléfonos lo pruebe dos veces.
+// El disco permite usarla sin conexión; la copia de la cuenta evita reiniciarla
+// borrando los datos de la aplicación.
 
 import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 

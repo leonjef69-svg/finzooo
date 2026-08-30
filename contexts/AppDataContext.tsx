@@ -572,6 +572,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // subirse como Premium comprado. Si se subiera, al caducar quedaria marcado
       // en la nube y volveria en cualquier celular donde se entrara.
       isPremium: isPremiumDeLaCuenta,
+      premiumTrialStartedAt: pruebaInicio ?? undefined,
       merchantLearned,
       categoryOverrides,
       categoriasPropias,
@@ -605,6 +606,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setPagosProgramados(cloud.pagosProgramados ?? []);
     protectExistingIds(cloud.transactions, cloud.goals);
     setIsPremium(cloud.isPremium);
+    const pruebaRestaurada = cloud.premiumTrialStartedAt ?? pruebaInicio;
+    setPruebaInicio(pruebaRestaurada);
+    savePrueba(pruebaRestaurada);
     setMerchantLearned(cloud.merchantLearned ?? {});
     // La personalizacion va a los DOS sitios: a la variable de modulo que
     // consulta catInfo, y al estado que provoca el redibujado. Solo con el
@@ -1054,6 +1058,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     transactions,
     goals,
     isPremium,
+    pruebaInicio,
     merchantLearned,
     // Sin esto, personalizar una categoria se quedaba solo en el celular:
     // la subida a la nube no se rehacia y al entrar desde otro telefono
