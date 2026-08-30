@@ -1070,6 +1070,27 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     carryoverCleared,
   ]);
 
+  // Al entrar y cada vez que Fino vuelve al frente, recoge primero los
+  // movimientos que otro dispositivo haya subido. Se fusionan por id: nunca
+  // se sustituye la lista local completa por una copia posiblemente antigua.
+  useEffect(() => {
+    if (!(ready && hasOnboarded && uid)) return;
+    let alive = true;
+    const sincronizarMovimientos = async () => {
+      const cloud = await loadCloudData(uid);
+      if (!alive || !cloud) return;
+      setTransactions((locales) => mergeTransactions(locales, cloud.transactions));
+    };
+    void sincronizarMovimientos();
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") void sincronizarMovimientos();
+    });
+    return () => {
+      alive = false;
+      sub.remove();
+    };
+  }, [ready, hasOnboarded, uid]);
+
   function showToast(msg: string) {
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
