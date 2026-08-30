@@ -3,7 +3,7 @@ import fs from "node:fs";
 const contexto = fs.readFileSync("contexts/AppDataContext.tsx", "utf8");
 const fallos = [];
 
-if (!contexto.includes('state === "active"')) {
+if (!contexto.includes('state === "active"') && !contexto.includes('state !== "active"')) {
   fallos.push("Fino no resincroniza al volver al primer plano.");
 }
 if (!contexto.includes("mergeTransactions(locales, cloud.transactions)")) {

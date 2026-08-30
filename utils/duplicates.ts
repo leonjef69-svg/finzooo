@@ -173,6 +173,10 @@ export function findBestMatch(
     // Un movimiento tuyo no puede ser el duplicado de dos filas del
     // banco a la vez.
     if (alreadyMatchedIds.has(existing.id)) continue;
+    // Un cargo bancario puede demorarse algunos días, pero no meses. Evitar
+    // comparar años enteros de historial hace que archivos grandes no traben
+    // celulares modestos y también reduce falsos parecidos por monto/comercio.
+    if (daysBetween(existing.date, incoming.date) > 14) continue;
     const match = scoreMatch(existing, incoming);
     if (match.level === "new") continue;
     if (!best || match.score > best.score) best = match;
