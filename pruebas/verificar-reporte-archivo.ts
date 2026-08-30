@@ -9,10 +9,12 @@
 // convierte un gasto en ingreso, un monto como texto deja el Excel sin poder
 // sumar, y una coma sin escapar parte una fila en dos y enseña movimientos que
 // no existen.
-import { csvDeFilas, csvEscape, filasDelReporte } from "@/utils/reporteArchivo";
+import { aplicarEstilosExcel, csvDeFilas, csvEscape, filasDelReporte } from "@/utils/reporteArchivo";
 import { htmlDelReporte } from "@/utils/reportePdfDatos";
 import { setPropias } from "@/utils/categoriasPropias";
 import type { Transaction } from "@/types";
+import * as XLSX from "xlsx";
+import { strFromU8, unzipSync } from "fflate";
 
 let fallos = 0;
 function ok(c: boolean, m: string) {
@@ -75,6 +77,33 @@ console.log("\n--- LOS MONTOS: SIGNO Y TIPO ---");
   // sin tocar nada. Con texto, Excel enseña un triangulito y no suma.
   ok(typeof filas[1][4] === "number", "y como número, no como texto");
   ok(typeof filas[4][4] === "number", "el total también");
+}
+
+console.log("\n--- EL EXCEL FINAL CONSERVA LOS COLORES ---");
+{
+  const filas = [
+    ["Fecha", "Categoría", "Descripción", "Método", "Monto"],
+    ["1 ago.", "Comida", "Almuerzo", "Efectivo", -12.5],
+    ["2 ago.", "Sueldo", "Pago", "Transferencia", 100],
+    [],
+    ["Total", "", "", "", 87.5],
+  ];
+  const libro = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet(filas), "Movimientos");
+  const base = new Uint8Array(
+    XLSX.write(libro, { type: "array", bookType: "xlsx" }) as ArrayBuffer
+  );
+  const final = aplicarEstilosExcel(base, filas);
+  const partes = unzipSync(final);
+  const estilos = strFromU8(partes["xl/styles.xml"]);
+  const hoja = strFromU8(partes["xl/worksheets/sheet1.xml"]);
+
+  ok(estilos.includes('fgColor rgb="FF0F766E"'), "la cabecera lleva fondo verde en el archivo final");
+  ok(estilos.includes('color rgb="FFFFFFFF"'), "y texto blanco");
+  ok(/<c r="A1" s="1"/.test(hoja) && /<c r="E1" s="1"/.test(hoja), "las cinco cabeceras usan ese estilo");
+  ok(/<c r="E2" s="2"/.test(hoja), "los gastos usan el color de gasto");
+  ok(/<c r="E3" s="3"/.test(hoja), "los ingresos usan el color de ingreso");
+  ok(/<c r="A5" s="4"/.test(hoja) && /<c r="E5" s="4"/.test(hoja), "la fila total queda resaltada");
 }
 
 console.log("\n--- UNA DESCRIPCIÓN VACÍA NO ROMPE LA FILA ---");

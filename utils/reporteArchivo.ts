@@ -19,6 +19,7 @@
 
 import { File, Paths } from "expo-file-system";
 import * as XLSX from "xlsx";
+import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import { catInfo } from "@/constants/categories";
 import { methodLabel } from "@/constants/i18n";
 import { fmtDate } from "@/utils/format";
@@ -103,44 +104,7 @@ export function archivoExcel(
 ): ArchivoGenerado {
   const wb = XLSX.utils.book_new();
   const hoja = XLSX.utils.aoa_to_sheet(filas);
-  // Formato visual: el reporte debe poder leerse de un vistazo, no ser una
-  // cuadrícula gris. SheetJS conserva estos estilos al escribir el .xlsx.
-  const encabezado = {
-    fill: { fgColor: { rgb: "0F766E" } },
-    font: { bold: true, color: { rgb: "FFFFFF" } },
-    alignment: { horizontal: "center", vertical: "center" },
-  };
-  const gasto = { font: { color: { rgb: "BE123C" } }, numFmt: '#,##0.00;[Red]-#,##0.00' };
-  const ingreso = { font: { color: { rgb: "047857" } }, numFmt: '#,##0.00;[Green]#,##0.00' };
-  const total = {
-    fill: { fgColor: { rgb: "D1FAE5" } },
-    font: { bold: true, color: { rgb: "065F46" } },
-    numFmt: '#,##0.00;[Red]-#,##0.00',
-  };
-  const rango = hoja["!ref"] ?? "A1:E1";
-  const fin = XLSX.utils.decode_range(rango).e.r;
-  for (let col = 0; col < 5; col++) {
-    const celda = hoja[XLSX.utils.encode_cell({ r: 0, c: col })];
-    if (celda) celda.s = encabezado;
-  }
-  // La fila inmediatamente anterior a la última es la separación; la última
-  // siempre es el total que arma filasDelReporte.
-  const filaTotal = fin;
-  for (let col = 0; col < 5; col++) {
-    const celda = hoja[XLSX.utils.encode_cell({ r: filaTotal, c: col })];
-    if (celda) celda.s = total;
-  }
-  for (let fila = 1; fila < filaTotal; fila++) {
-    const monto = hoja[XLSX.utils.encode_cell({ r: fila, c: 4 })];
-    if (monto && typeof monto.v === "number") monto.s = monto.v < 0 ? gasto : ingreso;
-    if (fila % 2 === 0) {
-      for (let col = 0; col < 4; col++) {
-        const celda = hoja[XLSX.utils.encode_cell({ r: fila, c: col })];
-        if (celda) celda.s = { fill: { fgColor: { rgb: "F0FDFA" } } };
-      }
-    }
-  }
-  hoja["!autofilter"] = { ref: `A1:E${Math.max(1, filaTotal - 2)}` };
+  hoja["!autofilter"] = { ref: `A1:E${Math.max(1, filas.length - 2)}` };
   // Anchos de columna, o la descripción sale cortada y hay que arrastrar cada
   // borde a mano al abrirlo.
   hoja["!cols"] = [{ wch: 16 }, { wch: 16 }, { wch: 34 }, { wch: 14 }, { wch: 12 }];
@@ -148,12 +112,84 @@ export function archivoExcel(
   // el archivo no abre, y el error no dice por qué.
   XLSX.utils.book_append_sheet(wb, hoja, nombreDeLaHoja.slice(0, 31));
 
-  const bytes = new Uint8Array(XLSX.write(wb, { type: "array", bookType: "xlsx", cellStyles: true }) as ArrayBuffer);
+  const sinEstilos = new Uint8Array(XLSX.write(wb, { type: "array", bookType: "xlsx" }) as ArrayBuffer);
+  const bytes = aplicarEstilosExcel(sinEstilos, filas);
   return {
     uri: escribir(fileName, bytes),
     mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
     fileName,
   };
+}
+
+/**
+ * Mete los estilos directamente en el XLSX (que internamente es un ZIP de XML).
+ *
+ * La edición comunitaria actual de SheetJS lee estilos, pero descarta `celda.s`
+ * al escribir. Eso dejó una prueba verde y un archivo real sin colores. Hacerlo
+ * aquí evita cambiar a una versión antigua de terceros y permite comprobar el
+ * resultado final, no el objeto que había antes de guardarlo.
+ */
+export function aplicarEstilosExcel(
+  bytes: Uint8Array,
+  filas: (string | number)[][]
+): Uint8Array {
+  const archivos = unzipSync(bytes);
+  const rutaHoja = "xl/worksheets/sheet1.xml";
+  const rutaEstilos = "xl/styles.xml";
+  const hojaOriginal = archivos[rutaHoja];
+  if (!hojaOriginal) return bytes;
+
+  let hoja = strFromU8(hojaOriginal);
+  const poner = (ref: string, estilo: number) => {
+    const patron = new RegExp(`<c r="${ref}"(?![^>]*\\ss=)`);
+    hoja = hoja.replace(patron, `<c r="${ref}" s="${estilo}"`);
+  };
+
+  for (const col of ["A", "B", "C", "D", "E"]) poner(`${col}1`, 1);
+  const filaTotal = filas.length;
+  for (let i = 1; i < filas.length - 2; i++) {
+    const filaExcel = i + 1;
+    if (i % 2 === 0) {
+      for (const col of ["A", "B", "C", "D"]) poner(`${col}${filaExcel}`, 5);
+    }
+    const monto = filas[i]?.[4];
+    if (typeof monto === "number") poner(`E${filaExcel}`, monto < 0 ? 2 : 3);
+  }
+  for (const col of ["A", "B", "C", "D", "E"]) poner(`${col}${filaTotal}`, 4);
+
+  // Índices: 0 normal, 1 cabecera, 2 gasto, 3 ingreso, 4 total, 5 fila alterna.
+  const estilos = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <numFmts count="1"><numFmt numFmtId="164" formatCode="#,##0.00;[Red]-#,##0.00"/></numFmts>
+  <fonts count="5">
+    <font><sz val="12"/><name val="Calibri"/></font>
+    <font><b/><color rgb="FFFFFFFF"/><sz val="12"/><name val="Calibri"/></font>
+    <font><color rgb="FFBE123C"/><sz val="12"/><name val="Calibri"/></font>
+    <font><color rgb="FF047857"/><sz val="12"/><name val="Calibri"/></font>
+    <font><b/><color rgb="FF065F46"/><sz val="12"/><name val="Calibri"/></font>
+  </fonts>
+  <fills count="4">
+    <fill><patternFill patternType="none"/></fill>
+    <fill><patternFill patternType="gray125"/></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FF0F766E"/><bgColor indexed="64"/></patternFill></fill>
+    <fill><patternFill patternType="solid"><fgColor rgb="FFD1FAE5"/><bgColor indexed="64"/></patternFill></fill>
+  </fills>
+  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs count="6">
+    <xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>
+    <xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1" applyAlignment="1"><alignment horizontal="center" vertical="center"/></xf>
+    <xf numFmtId="164" fontId="2" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/>
+    <xf numFmtId="164" fontId="3" fillId="0" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1"/>
+    <xf numFmtId="164" fontId="4" fillId="3" borderId="0" xfId="0" applyNumberFormat="1" applyFont="1" applyFill="1"/>
+    <xf numFmtId="0" fontId="0" fillId="3" borderId="0" xfId="0" applyFill="1"/>
+  </cellXfs>
+  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`;
+
+  archivos[rutaHoja] = strToU8(hoja);
+  archivos[rutaEstilos] = strToU8(estilos);
+  return zipSync(archivos, { level: 6 });
 }
 
 /**
