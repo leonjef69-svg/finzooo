@@ -505,10 +505,10 @@ export default function Home({
           <Animated.View entering={FadeInDown.delay(0 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
               onPress={startEditBudget}
-              className="bg-sky-50 dark:bg-noche-2 rounded-2xl p-4 border-[1.5px] border-sky-100 dark:border-noche-borde"
-              style={[softShadow, { minHeight: 108 }]}
+              className="bg-sky-50 dark:bg-noche-2 rounded-2xl px-3 py-3 border-[1.5px] border-sky-100 dark:border-noche-borde"
+              style={[softShadow, { minHeight: 84 }]}
             >
-              <View className="flex-row items-center gap-2 mb-2">
+              <View className="flex-row items-center gap-2 mb-1">
                 <Text className="text-base">💰</Text>
                 <Text className="flex-1 text-xs text-slate-600 dark:text-slate-200 font-semibold" numberOfLines={2}>
                   {t("home.monthlyBudget")}
@@ -527,10 +527,10 @@ export default function Home({
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(1 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
-              className="bg-amber-50 dark:bg-noche-2 rounded-2xl p-4 border-[1.5px] border-amber-200 dark:border-amber-800"
-              style={[softShadow, { minHeight: 108 }]}
+              className="bg-amber-50 dark:bg-noche-2 rounded-2xl px-3 py-3 border-[1.5px] border-amber-200 dark:border-amber-800"
+              style={[softShadow, { minHeight: 84 }]}
             >
-              <View className="flex-row items-center gap-2 mb-2">
+              <View className="flex-row items-center gap-2 mb-1">
                 <Text className="text-base">🕒</Text>
                 <Text className="flex-1 text-xs text-slate-600 dark:text-slate-200 font-semibold" numberOfLines={2}>
                   {t("home.previousBalance")}
@@ -539,17 +539,17 @@ export default function Home({
                   <TouchableOpacity
                     onPress={() => setConfirmRestoreCarryover(true)}
                     hitSlop={10}
-                    className="w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900 items-center justify-center border border-emerald-300 dark:border-emerald-700"
+                    className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900 items-center justify-center border border-emerald-300 dark:border-emerald-700"
                   >
-                    <RotateCcw size={19} color="#059669" />
+                    <RotateCcw size={17} color="#059669" />
                   </TouchableOpacity>
                 ) : prevBalance !== 0 ? (
                   <TouchableOpacity
                     onPress={() => setConfirmResetCarryover(true)}
                     hitSlop={10}
-                    className="w-9 h-9 rounded-full bg-rose-100 dark:bg-rose-950 items-center justify-center border border-rose-300 dark:border-rose-800"
+                    className="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-950 items-center justify-center border border-rose-300 dark:border-rose-800"
                   >
-                    <Eraser size={19} color="#e11d48" />
+                    <Eraser size={17} color="#e11d48" />
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -566,10 +566,10 @@ export default function Home({
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(2 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
-              className="bg-rose-50 dark:bg-noche-2 rounded-2xl p-4 border-[1.5px] border-rose-100 dark:border-noche-borde"
-              style={[softShadow, { minHeight: 108 }]}
+              className="bg-rose-50 dark:bg-noche-2 rounded-2xl px-3 py-3 border-[1.5px] border-rose-100 dark:border-noche-borde"
+              style={[softShadow, { minHeight: 84 }]}
             >
-              <View className="flex-row items-center gap-2 mb-2">
+              <View className="flex-row items-center gap-2 mb-1">
                 <Text className="text-base">📉</Text>
                 <Text className="flex-1 text-xs text-slate-600 dark:text-slate-200 font-semibold" numberOfLines={2}>
                   {t("home.spent")}
@@ -587,10 +587,10 @@ export default function Home({
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(3 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
-              className="bg-emerald-50 dark:bg-noche-2 rounded-2xl p-4 border-[1.5px] border-emerald-100 dark:border-noche-borde"
-              style={[softShadow, { minHeight: 108 }]}
+              className="bg-emerald-50 dark:bg-noche-2 rounded-2xl px-3 py-3 border-[1.5px] border-emerald-100 dark:border-noche-borde"
+              style={[softShadow, { minHeight: 84 }]}
             >
-              <View className="flex-row items-center gap-2 mb-2">
+              <View className="flex-row items-center gap-2 mb-1">
                 <Text className="text-base">📈</Text>
                 <Text className="flex-1 text-xs text-slate-600 dark:text-slate-200 font-semibold" numberOfLines={2}>
                   {t("home.income")}
