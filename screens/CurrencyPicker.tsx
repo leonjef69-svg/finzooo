@@ -61,8 +61,10 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
                     <Text className="text-xs font-extrabold text-slate-700 dark:text-slate-200">{currency.symbol}</Text>
                   </View>
                   <View className="flex-1">
-                    <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">{currency.name}</Text>
-                    <Text className="text-[11px] text-slate-500 dark:text-slate-400">{currency.id}</Text>
+                    <Text className="text-sm font-bold text-slate-900 dark:text-slate-100" numberOfLines={1}>{currency.name}</Text>
+                    <Text className="text-[11px] font-semibold text-slate-500 dark:text-slate-400" numberOfLines={1}>
+                      {currency.symbol} · {currency.id}
+                    </Text>
                   </View>
                 </View>
                 {selected && <Check size={18} color="#059669" />}

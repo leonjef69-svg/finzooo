@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { irUnaVez } from "@/utils/nav";
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check, ChevronLeft, Cloud, FolderOpen, Info, Package, Play } from "lucide-react-native";
 import Toggle from "@/components/Toggle";
@@ -38,6 +38,8 @@ function hhmm(h: number, m: number) {
 }
 
 export default function ScheduledExportSettings({ onBack }: { onBack: () => void }) {
+  const { width } = useWindowDimensions();
+  const frecuenciaEstrecha = width < 390;
   const { t, showToast, transactions, monthNames } = useAppData();
   const insets = useSafeAreaInsets();
 
@@ -452,6 +454,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                       ? "bg-emerald-600 border-emerald-600"
                       : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
                   }`}
+                  style={frecuenciaEstrecha ? { width: "48%", alignItems: "center" } : undefined}
                 >
                   <Text
                     className={`text-sm font-bold ${

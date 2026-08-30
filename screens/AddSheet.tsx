@@ -39,7 +39,7 @@ export default function AddSheet({
   onClose: () => void;
   onSave: (t: Transaction) => void;
 }) {
-  const { userCurrency, t, categoriasPropias, categoriaRecienCreada, olvidarCategoriaRecienCreada } =
+  const { userCurrency, userCountry, t, categoriasPropias, categoriaRecienCreada, olvidarCategoriaRecienCreada } =
     useAppData();
   const [type, setType] = useState<"expense" | "income">(
     initialType || transaction?.type || "expense"
@@ -65,6 +65,14 @@ export default function AddSheet({
     () => (type === "expense" ? gastosDisponibles() : ingresosDisponibles()),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [type, categoriasPropias]
+  );
+
+  const metodosDisponibles = useMemo(
+    () => PAYMENT_METHODS.filter((m) =>
+      (m.id !== "plin" || userCountry === "PE")
+      && (m.id !== "yape" || userCountry === "PE" || userCountry === "BO")
+    ),
+    [userCountry]
   );
 
   // La categoría que llega de la otra pantalla: la que se acaba de elegir en
@@ -550,7 +558,7 @@ export default function AddSheet({
             <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 px-3 pt-2 pb-1">
               {t("detail.method")}
             </Text>
-            {PAYMENT_METHODS.map((m) => {
+            {metodosDisponibles.map((m) => {
               const active = m.id === method;
               return (
                 <TouchableOpacity

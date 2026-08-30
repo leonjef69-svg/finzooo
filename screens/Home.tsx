@@ -525,7 +525,7 @@ export default function Home({
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(1 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
-              className="bg-slate-50 dark:bg-noche-2 rounded-2xl p-4 border-[1.5px] border-slate-200 dark:border-noche-borde"
+              className="bg-amber-50 dark:bg-noche-2 rounded-2xl p-4 border-[1.5px] border-amber-200 dark:border-amber-800"
               style={softShadow}
             >
               <Text className="text-base mb-1">🕒</Text>
@@ -556,17 +556,17 @@ export default function Home({
                 <TouchableOpacity
                   onPress={() => setConfirmRestoreCarryover(true)}
                   hitSlop={10}
-                  className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900 items-center justify-center"
+                  className="absolute top-2 right-2 w-9 h-9 rounded-full bg-emerald-100 dark:bg-emerald-900 items-center justify-center border border-emerald-300 dark:border-emerald-700"
                 >
-                  <RotateCcw size={14} color="#059669" />
+                  <RotateCcw size={19} color="#059669" />
                 </TouchableOpacity>
               ) : prevBalance !== 0 ? (
                 <TouchableOpacity
                   onPress={() => setConfirmResetCarryover(true)}
                   hitSlop={10}
-                  className="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-slate-200/70 dark:bg-noche-3 items-center justify-center"
+                  className="absolute top-2 right-2 w-9 h-9 rounded-full bg-rose-100 dark:bg-rose-950 items-center justify-center border border-rose-300 dark:border-rose-800"
                 >
-                  <Eraser size={14} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+                  <Eraser size={19} color="#e11d48" />
                 </TouchableOpacity>
               ) : null}
             </PressableScale>
