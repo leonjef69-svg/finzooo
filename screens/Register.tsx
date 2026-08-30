@@ -1,6 +1,7 @@
 import { useState } from "react";
 import {
   ActivityIndicator,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -85,12 +86,15 @@ export default function Register({
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-white dark:bg-noche"
+      className="flex-1 bg-[#17100c]"
     >
+      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" className="absolute inset-0 h-full w-full" />
+      <View className="absolute inset-0 bg-black/40" />
       <ScrollView
         contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 32 + insets.bottom }}
         keyboardShouldPersistTaps="handled"
       >
+        <View className="mx-4 my-6 rounded-[28px] bg-white/95 pb-8">
         <View className="px-6 pt-8 pb-4">
           <View className="w-12 h-12 rounded-2xl bg-emerald-600 items-center justify-center mb-5">
             <Wallet size={22} color="#ffffff" />
@@ -165,6 +169,7 @@ export default function Register({
               <Text className="text-sm text-emerald-600 font-bold">{t("register.login")}</Text>
             </TouchableOpacity>
           </View>
+        </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

@@ -1,12 +1,12 @@
 import { useState } from "react";
 import { Image, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
 import * as Notifications from "expo-notifications";
-import { router } from "expo-router";
 import { Bell, ChevronRight, Globe2, Target } from "lucide-react-native";
 import { currencySymbolFor } from "@/constants/currencies";
 import { countryById } from "@/constants/countries";
 import { useAppData } from "@/contexts/AppDataContext";
 import { sanitizeAmountInput } from "@/utils/amount";
+import { irUnaVez } from "@/utils/nav";
 
 export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => void }) {
   const { userCurrency, userCountry, t, monthNames } = useAppData();
@@ -41,8 +41,8 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
         </Text>
       </View>
 
-      <TouchableOpacity onPress={() => router.push("/country")} className="mb-2 flex-row items-center rounded-2xl bg-white border border-slate-200 px-4 py-3"><Globe2 size={20} color="#d97706" /><Text className="ml-3 flex-1 font-bold text-slate-900">País</Text><Text className="mr-2 text-slate-600">{countryById(userCountry)?.name ?? userCountry}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
-      <TouchableOpacity onPress={() => router.push("/currency")} className="mb-2 flex-row items-center rounded-2xl bg-white border border-slate-200 px-4 py-3"><Text className="text-xl">💰</Text><Text className="ml-3 flex-1 font-bold text-slate-900">Moneda</Text><Text className="mr-2 text-slate-600">{currencySymbolFor(userCurrency)} · {userCurrency}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
+      <TouchableOpacity onPress={() => irUnaVez("/country")} className="mb-2 flex-row items-center rounded-2xl bg-white border border-slate-200 px-4 py-3"><Globe2 size={20} color="#d97706" /><Text className="ml-3 flex-1 font-bold text-slate-900">País</Text><Text className="mr-2 text-slate-600">{countryById(userCountry)?.name ?? userCountry}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
+      <TouchableOpacity onPress={() => irUnaVez("/currency")} className="mb-2 flex-row items-center rounded-2xl bg-white border border-slate-200 px-4 py-3"><Text className="text-xl">💰</Text><Text className="ml-3 flex-1 font-bold text-slate-900">Moneda</Text><Text className="mr-2 text-slate-600">{currencySymbolFor(userCurrency)} · {userCurrency}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
       <TouchableOpacity onPress={enableNotifications} className="mb-4 flex-row items-center rounded-2xl bg-white border border-slate-200 px-4 py-3"><Bell size={20} color="#7c3aed" /><Text className="ml-3 flex-1 font-bold text-slate-900">Avisos</Text><Text className={notificationsEnabled ? "font-bold text-emerald-600" : "text-slate-500"}>{notificationsEnabled ? "Activado" : "Desactivado"}</Text></TouchableOpacity>
 
       <View>

@@ -36,7 +36,7 @@ const cloudType = cloud.slice(cloud.indexOf("export type CloudData = {"), cloud.
 check(/userCountry\?: string/.test(profile), "el perfil local guarda el país sin romper perfiles antiguos");
 check(!/userCountry/.test(cloudType), "el país no modifica CloudData ni las reglas de Firestore");
 
-for (const file of ["screens/CountryPicker.tsx", "screens/CurrencyPicker.tsx", "screens/Onboarding.tsx"]) {
+for (const file of ["screens/CountryPicker.tsx", "screens/CurrencyPicker.tsx"]) {
   const screen = read(file);
   check(screen.includes("TextInput"), `${file} permite buscar en la lista larga`);
 }

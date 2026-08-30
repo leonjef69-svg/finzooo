@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MailCheck } from "lucide-react-native";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -55,9 +55,12 @@ export default function VerifyEmail({
 
   return (
     <View
-      className="flex-1 bg-white dark:bg-noche px-6 justify-center"
+      className="flex-1 bg-[#17100c] px-6 justify-center"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
+      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" className="absolute inset-0 h-full w-full" />
+      <View className="absolute inset-0 bg-black/45" />
+      <View className="rounded-[28px] bg-white/95 p-6">
       <View className="items-center mb-8">
         <View className="w-16 h-16 rounded-3xl bg-emerald-50 items-center justify-center mb-6">
           <MailCheck size={30} color="#059669" />
@@ -107,6 +110,7 @@ export default function VerifyEmail({
       <TouchableOpacity activeOpacity={0.7} onPress={onLogout} className="mt-4 items-center py-2">
         <Text className="text-sm text-slate-500 dark:text-slate-300">{t("verifyEmail.useOtherAccount")}</Text>
       </TouchableOpacity>
+      </View>
     </View>
   );
 }

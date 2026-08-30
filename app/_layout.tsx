@@ -106,6 +106,7 @@ const KEEP_ON_RETURN = [
   // La bienvenida pide permiso de avisos antes del registro. Al volver del
   // cuadro de Android debe conservar país, moneda y el paso actual.
   "/onboarding",
+  "/setup",
   "/auto-capture",
   "/voice",
   "/scan-receipt",
