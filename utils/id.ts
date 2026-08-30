@@ -5,15 +5,16 @@
 // existía y TERMINABA REEMPLAZANDO un movimiento viejo en vez de agregarse
 // (addOrUpdateTransaction entiende "mismo número" como "esto es una edición").
 //
-// Ahora usamos la hora exacta del celular (milisegundos desde 1970), que no
-// se repite entre sesiones. Si se piden varios números dentro del mismo
-// milisegundo (por ejemplo al importar un archivo con muchas filas), se suma
-// 1 para que igual salgan todos distintos y en orden.
+// La hora sola puede coincidir en dos celulares. Por eso reservamos 12 bits
+// aleatorios (4096 posibilidades) dentro de cada milisegundo. El resultado
+// sigue siendo un número seguro de JavaScript y conserva el orden temporal,
+// pero dos dispositivos ya no generan automáticamente el mismo identificador.
 let lastId = 0;
 
 export function nextId(): number {
   const now = Date.now();
-  lastId = now > lastId ? now : lastId + 1;
+  const candidato = now * 4096 + Math.floor(Math.random() * 4096);
+  lastId = candidato > lastId ? candidato : lastId + 1;
   return lastId;
 }
 
