@@ -98,6 +98,18 @@ console.log("\n--- Y LO DE SIEMPRE SIGUE CERRADO ---");
   ok(sinCorreo.length === 0, "y todas exigen el correo confirmado");
 }
 
+console.log("\n--- PREMIUM NO SE PUEDE REGALAR DESDE EL CELULAR ---");
+{
+  ok(
+    reglas.includes("request.resource.data.isPremium == false"),
+    "una cuenta nueva empieza sin Premium"
+  );
+  ok(
+    reglas.includes("request.resource.data.isPremium == resource.data.isPremium"),
+    "el celular no puede cambiar el Premium existente"
+  );
+}
+
 console.log(
   fallos ? `\n${fallos} con problemas` : "\nTodo bien: las reglas y la app hablan de lo mismo"
 );

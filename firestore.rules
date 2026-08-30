@@ -59,6 +59,16 @@ service cloud.firestore {
                          && request.resource.data.transactions is list
                          && request.resource.data.goals is list
                          && request.resource.data.isPremium is bool
+                         // Premium nunca lo concede el celular. Una cuenta nueva empieza
+                         // sin Premium y, después, el cliente solo puede conservar el valor
+                         // que ya exista. La consola/servidor administrativo sigue pudiendo
+                         // activarlo para testers y, más adelante, tras validar una compra.
+                         && (
+                              (!exists(/databases/$(database)/documents/users/$(userId))
+                                && request.resource.data.isPremium == false)
+                              || (exists(/databases/$(database)/documents/users/$(userId))
+                                && request.resource.data.isPremium == resource.data.isPremium)
+                            )
                          // Y LOS OPCIONALES, COMPROBADOS SOLO SI VIENEN.
                          //
                          // Son opcionales de verdad: una cuenta creada antes de esa función no
