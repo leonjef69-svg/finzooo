@@ -19,6 +19,7 @@ import CelebrationOverlay from "@/components/CelebrationOverlay";
 import Toast from "@/components/Toast";
 import * as incomingFile from "@/modules/incoming-file";
 import * as Notifications from "expo-notifications";
+import { Sentry } from "@/utils/sentry";
 import {
   alreadyHandledTap,
   buildFileName,
@@ -452,7 +453,7 @@ function ThemedStatusBar() {
   return <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />;
 }
 
-export default function RootLayout() {
+function RootLayout() {
   const { colorScheme } = useColorScheme();
   // Mismo color que bg-white / dark:bg-noche (Tailwind). Se usa como
   // fondo nativo de las pantallas de tipo "modal", para que el instante
@@ -649,3 +650,5 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
+
+export default Sentry.wrap(RootLayout);

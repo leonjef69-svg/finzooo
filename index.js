@@ -10,6 +10,7 @@
 // encontraría nada que ejecutar.
 import { AppRegistry } from "react-native";
 
+import { Sentry } from "./utils/sentry";
 import "expo-router/entry";
 
 import { capturarEnFondo } from "./utils/capturaEnFondo";
@@ -21,7 +22,8 @@ import { exportarEnFondo } from "./utils/exportarEnFondo";
 AppRegistry.registerHeadlessTask("FinzoCapture", () => async () => {
   try {
     await capturarEnFondo();
-  } catch {
+  } catch (error) {
+    Sentry.captureException(error);
     // Nunca dejar que esto reviente. Si algo sale mal, lo capturado sigue en
     // el buzón y la app lo recoge al abrirse, que es lo que pasaba antes de
     // que este trabajo existiera.
@@ -35,7 +37,8 @@ AppRegistry.registerHeadlessTask("FinzoCapture", () => async () => {
 AppRegistry.registerHeadlessTask("FinzoExport", () => async () => {
   try {
     await exportarEnFondo();
-  } catch {
+  } catch (error) {
+    Sentry.captureException(error);
     // Igual que el de arriba: si algo sale mal queda el aviso a la hora y el
     // reporte al abrir la app, que es el comportamiento de siempre.
   }

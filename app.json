@@ -108,6 +108,7 @@
     },
     "extra": {
       "router": {},
+      "sentryDsn": "https://82a04bb3fc33224547618fe7dfa5b2c5@o4511998384799744.ingest.de.sentry.io/4511998426808400",
       "eas": {
         "projectId": "f0c230a1-8bf6-4b65-a12d-24054597e161"
       }
