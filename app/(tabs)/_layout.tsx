@@ -1,4 +1,8 @@
 import { Tabs } from "expo-router";
+import { BottomTabBar } from "@react-navigation/bottom-tabs";
+import { View } from "react-native";
+import FAB from "@/components/FAB";
+import { irUnaVez } from "@/utils/nav";
 import { NOCHE } from "@/constants/style";
 import {
   Home as HomeIcon,
@@ -17,6 +21,14 @@ export default function TabsLayout() {
   const insets = useSafeAreaInsets();
   return (
     <Tabs
+      tabBar={(props) => (
+        <View style={{ position: "relative" }}>
+          <BottomTabBar {...props} />
+          <View style={{ position: "absolute", left: "50%", marginLeft: -28, top: 1, zIndex: 50 }}>
+            <FAB onPress={() => irUnaVez("/transaction/choose")} />
+          </View>
+        </View>
+      )}
       screenOptions={{
         headerShown: false,
         // El fondo de la pestaña, por debajo de lo que pinta cada pantalla. Sin esto es el
@@ -34,6 +46,8 @@ export default function TabsLayout() {
           height: 58 + insets.bottom,
           paddingTop: 8,
           paddingBottom: insets.bottom + 8,
+          zIndex: 0,
+          elevation: 0,
         },
         tabBarLabelStyle: { fontSize: 10, fontWeight: "700" },
       }}

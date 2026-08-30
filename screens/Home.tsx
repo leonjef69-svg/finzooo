@@ -1,15 +1,31 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import BudgetRing from "@/components/BudgetRing";
+import ConfirmDialog from "@/components/ConfirmDialog";
+import EtiquetaMetodo from "@/components/EtiquetaMetodo";
+import IconBadge from "@/components/IconBadge";
+import PressableScale from "@/components/PressableScale";
+import ThemeToggleButton from "@/components/ThemeToggleButton";
+import { catInfo } from "@/constants/categories";
+import { iconoDe } from "@/constants/iconos";
+import { CARD_SHADOW, SALDO_TARJETA, SALDO_VERDE } from "@/constants/style";
+import { useAppData } from "@/contexts/AppDataContext";
+import type { Month, Transaction } from "@/types";
+import { sanitizeAmountInput } from "@/utils/amount";
+import { estadoEn, fechaEnElMes, mesDe } from "@/utils/calendarioPagos";
+import { availableBalance, budgetUsed } from "@/utils/finances";
+import { fmtDate, monthKey } from "@/utils/format";
+import { friendlyName } from "@/utils/friendlyName";
+import { esFoto } from "@/utils/iconosFavoritos";
 import { irUnaVez } from "@/utils/nav";
-import { FlatList, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { compararMovimientos } from "@/utils/ordenarMovimientos";
+import { usePendingImport } from "@/utils/pendingImport";
 import { LinearGradient } from "expo-linear-gradient";
-import Animated, { FadeInDown } from "react-native-reanimated";
 import {
   Bell,
+  CreditCard,
   Check,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
-  CheckCircle2,
   Circle,
   Eraser,
   Eye,
@@ -21,26 +37,11 @@ import {
   Trash2,
   X,
 } from "lucide-react-native";
-import ConfirmDialog from "@/components/ConfirmDialog";
-import BudgetRing from "@/components/BudgetRing";
-import EtiquetaMetodo from "@/components/EtiquetaMetodo";
-import IconBadge from "@/components/IconBadge";
-import PressableScale from "@/components/PressableScale";
-import ThemeToggleButton from "@/components/ThemeToggleButton";
-import { catInfo } from "@/constants/categories";
-import { estadoEn, fechaEnElMes, mesDe } from "@/utils/calendarioPagos";
-import { iconoDe } from "@/constants/iconos";
-import { esFoto } from "@/utils/iconosFavoritos";
-import { CARD_SHADOW, SALDO_TARJETA, SALDO_VERDE } from "@/constants/style";
-import { fmtDate, monthKey } from "@/utils/format";
-import { compararMovimientos } from "@/utils/ordenarMovimientos";
-import { sanitizeAmountInput } from "@/utils/amount";
-import { availableBalance, budgetUsed } from "@/utils/finances";
-import { usePendingImport } from "@/utils/pendingImport";
-import { friendlyName } from "@/utils/friendlyName";
-import { useAppData } from "@/contexts/AppDataContext";
-import type { Month, Transaction } from "@/types";
 import { useColorScheme } from "nativewind";
+import { memo, useCallback, useMemo, useState } from "react";
+import { FlatList, Text, TextInput, TouchableOpacity, View } from "react-native";
+import Animated, { FadeInDown } from "react-native-reanimated";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const softShadow = CARD_SHADOW;
 
@@ -328,6 +329,9 @@ export default function Home({
           todos, y para volver a mirar el saldo había que subir otra vez.
           Ahora solo se desliza la lista, por debajo. */}
       <View style={{ paddingTop: insets.top }}>
+        <TouchableOpacity onPress={() => irUnaVez('/credit')} className="mx-5 mt-3 flex-row items-center justify-between rounded-2xl bg-emerald-700 px-4 py-3">
+          <View className="flex-row items-center"><CreditCard size={20} color="#fff" /><Text className="ml-2 font-bold text-white">Línea de crédito</Text></View><ChevronRight size={20} color="#fff" />
+        </TouchableOpacity>
         <View className="px-5 pt-2 pb-1 flex-row items-center justify-between">
           <View>
             <Text className="text-sm text-slate-500 dark:text-slate-300 font-medium">{t("home.greeting")}</Text>
@@ -506,7 +510,7 @@ export default function Home({
             <PressableScale
               onPress={startEditBudget}
               className="bg-sky-50 dark:bg-noche-2 rounded-2xl px-3 py-3 border-[1.5px] border-sky-100 dark:border-noche-borde"
-              style={[softShadow, { minHeight: 84 }]}
+              style={[softShadow, { minHeight: 90 }]}
             >
               <View className="flex-row items-center gap-2 mb-1">
                 <Text className="text-base">💰</Text>
@@ -528,7 +532,7 @@ export default function Home({
           <Animated.View entering={FadeInDown.delay(1 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
               className="bg-amber-50 dark:bg-noche-2 rounded-2xl px-3 py-3 border-[1.5px] border-amber-200 dark:border-amber-800"
-              style={[softShadow, { minHeight: 84 }]}
+              style={[softShadow, { minHeight: 90 }]}
             >
               <View className="flex-row items-center gap-2 mb-1">
                 <Text className="text-base">🕒</Text>
@@ -567,7 +571,7 @@ export default function Home({
           <Animated.View entering={FadeInDown.delay(2 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
               className="bg-rose-50 dark:bg-noche-2 rounded-2xl px-3 py-3 border-[1.5px] border-rose-100 dark:border-noche-borde"
-              style={[softShadow, { minHeight: 84 }]}
+              style={[softShadow, { minHeight: 90 }]}
             >
               <View className="flex-row items-center gap-2 mb-1">
                 <Text className="text-base">📉</Text>
@@ -588,7 +592,7 @@ export default function Home({
           <Animated.View entering={FadeInDown.delay(3 * 70).duration(300)} style={{ width: "47%" }}>
             <PressableScale
               className="bg-emerald-50 dark:bg-noche-2 rounded-2xl px-3 py-3 border-[1.5px] border-emerald-100 dark:border-noche-borde"
-              style={[softShadow, { minHeight: 84 }]}
+              style={[softShadow, { minHeight: 90 }]}
             >
               <View className="flex-row items-center gap-2 mb-1">
                 <Text className="text-base">📈</Text>
