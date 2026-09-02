@@ -1,4 +1,3 @@
-import BudgetRing from "@/components/BudgetRing";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import EtiquetaMetodo from "@/components/EtiquetaMetodo";
 import IconBadge from "@/components/IconBadge";
@@ -160,8 +159,8 @@ export default function Home({
   month,
   setMonth,
   budget,
-  spent,
-  income,
+  spent: _spent,
+  income: _income,
   prevBalance,
   transactions,
   onOpenDetail,
@@ -195,8 +194,6 @@ export default function Home({
   // El cálculo vive en utils/finances.ts y no aquí. Reportes enseña el mismo
   // "Disponible", y con la fórmula copiada en dos sitios bastaría con tocar
   // una para que las dos pantallas mostraran saldos distintos del mismo mes.
-  const available = availableBalance({ budget, prevBalance, income, spent });
-  const pct = budgetUsed({ budget, prevBalance, income, spent }) * 100;
   const mk = monthKey(month.y, month.m);
   const [editingBudget, setEditingBudget] = useState(false);
   const [budgetInput, setBudgetInput] = useState("");
@@ -214,10 +211,24 @@ export default function Home({
   const monthTx = useMemo(
     () =>
       transactions
-        .filter((t) => t.date.startsWith(mk))
+        .filter((t) => t.date.startsWith(mk) && t.method !== "credit")
         .sort(compararMovimientos),
     [transactions, mk]
   );
+  const mainSpent = useMemo(() => monthTx.filter((t) => t.type === "expense").reduce((sum,t)=>sum+t.amount,0), [monthTx]);
+  const mainIncome = useMemo(() => monthTx.filter((t) => t.type === "income").reduce((sum,t)=>sum+t.amount,0), [monthTx]);
+  const available = availableBalance({ budget, prevBalance, income: mainIncome, spent: mainSpent });
+  const pct = budgetUsed({ budget, prevBalance, income: mainIncome, spent: mainSpent }) * 100;
+  const visiblePct = Math.max(0, Math.min(100, pct));
+  const progressColor = pct >= 100 ? "#fb7185" : pct >= 80 ? "#fbbf24" : "#6ee7b7";
+  const budgetStatus =
+    pct >= 100
+      ? { label: "Excedido", color: "#fff1f2", background: "#e11d48" }
+      : pct >= 90
+        ? { label: "Casi al límite", color: "#7c2d12", background: "#fbbf24" }
+        : pct >= 70
+          ? { label: "Atención", color: "#78350f", background: "#fde68a" }
+          : { label: "En control", color: "#065f46", background: "#a7f3d0" };
 
   /**
    * ¿HAY ALGO QUE PAGAR YA? Es lo que enciende el punto rojo de la campana.
@@ -329,9 +340,6 @@ export default function Home({
           todos, y para volver a mirar el saldo había que subir otra vez.
           Ahora solo se desliza la lista, por debajo. */}
       <View style={{ paddingTop: insets.top }}>
-        <TouchableOpacity onPress={() => irUnaVez('/credit')} className="mx-5 mt-3 flex-row items-center justify-between rounded-2xl bg-emerald-700 px-4 py-3">
-          <View className="flex-row items-center"><CreditCard size={20} color="#fff" /><Text className="ml-2 font-bold text-white">Línea de crédito</Text></View><ChevronRight size={20} color="#fff" />
-        </TouchableOpacity>
         <View className="px-5 pt-2 pb-1 flex-row items-center justify-between">
           <View>
             <Text className="text-sm text-slate-500 dark:text-slate-300 font-medium">{t("home.greeting")}</Text>
@@ -392,73 +400,92 @@ export default function Home({
           // app/, screens/ y components/, así que un "rounded-[32px]" escrito en
           // constants/ no existe y la esquina desaparece sin ningún error. Ya pasó.
           // Ver la nota en constants/style.
-          className="mx-5 p-5 flex-row items-center gap-4"
+          className="mx-5 px-5 py-4"
           style={SALDO_TARJETA}
         >
-          <BudgetRing pct={pct} />
-          <View className="flex-1">
-            <View className="flex-row items-center justify-between">
-              <Text className="text-emerald-100 text-xs font-semibold">
-                {editingBudget ? t("home.monthlyBudget") : t("home.availableBalance")}
-              </Text>
-              {!editingBudget && (
-                <TouchableOpacity
-                  onPress={() => setHideBalance((v) => !v)}
-                  className="w-6 h-6 items-center justify-center"
-                >
-                  {hideBalance ? (
-                    <EyeOff size={15} color="#d1fae5" />
-                  ) : (
-                    <Eye size={15} color="#d1fae5" />
-                  )}
-                </TouchableOpacity>
-              )}
+          <View className="flex-row items-center justify-between">
+            <Text className="text-sm font-bold text-emerald-100">
+              {editingBudget ? t("home.monthlyBudget") : t("home.availableBalance")}
+            </Text>
+            {!editingBudget && (
+              <TouchableOpacity
+                onPress={() => setHideBalance((v) => !v)}
+                className="h-7 w-7 items-center justify-center"
+              >
+                {hideBalance ? (
+                  <EyeOff size={16} color="#d1fae5" />
+                ) : (
+                  <Eye size={16} color="#d1fae5" />
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+          {editingBudget ? (
+            <View className="mt-1 flex-row items-center gap-2">
+              <TextInput
+                disableFullscreenUI
+                value={budgetInput}
+                onChangeText={(v) => setBudgetInput(sanitizeAmountInput(v))}
+                keyboardType="decimal-pad"
+                autoFocus
+                className="flex-1 border-b border-white/40 py-0.5 text-2xl font-extrabold text-white"
+              />
+              <TouchableOpacity
+                onPress={saveBudgetInline}
+                className="h-[40px] w-[40px] items-center justify-center rounded-full bg-white/25"
+              >
+                <Check size={20} color="#ffffff" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => setEditingBudget(false)}
+                className="h-[40px] w-[40px] items-center justify-center rounded-full bg-white/15"
+              >
+                <X size={20} color="#ffffff" />
+              </TouchableOpacity>
             </View>
-            {editingBudget ? (
-              <View className="flex-row items-center gap-2 mt-1">
-                <TextInput
-                  disableFullscreenUI                  value={budgetInput}
-                  onChangeText={(v) => setBudgetInput(sanitizeAmountInput(v))}
-                  keyboardType="decimal-pad"
-                  autoFocus
-                  className="text-white text-2xl font-extrabold flex-1 border-b border-white/40 py-0.5"
-                />
-                <TouchableOpacity
-                  onPress={saveBudgetInline}
-                  className="w-[42px] h-[42px] rounded-full bg-white/25 items-center justify-center"
-                >
-                  <Check size={21} color="#ffffff" />
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => setEditingBudget(false)}
-                  className="w-[42px] h-[42px] rounded-full bg-white/15 items-center justify-center"
-                >
-                  <X size={21} color="#ffffff" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <>
+          ) : (
+            <>
+              <View className="mt-0.5 flex-row items-center justify-between gap-3">
                 <Text
-                  className="text-white text-3xl font-extrabold tracking-tight"
+                  className="min-w-0 flex-1 text-3xl font-extrabold tracking-tight text-white"
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.62}
                 >
                   {hideBalance ? "• • • • • •" : fmt(available)}
                 </Text>
-                <Text
-                  className="text-emerald-100 text-[11px] mt-1"
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.72}
+                <View
+                  style={{ backgroundColor: budgetStatus.background }}
+                  className="rounded-full px-3 py-1.5"
                 >
-                  {hideBalance
-                    ? t("home.budgetedOf", { amount: "••••" })
-                    : t("home.budgetedOf", { amount: fmt(budget) })}
-                </Text>
-              </>
-            )}
-          </View>
+                  <Text
+                    style={{ color: budgetStatus.color }}
+                    className="text-xs font-extrabold"
+                  >
+                    {budgetStatus.label} · {Math.round(visiblePct)}%
+                  </Text>
+                </View>
+              </View>
+              <Text
+                className="mt-0.5 text-[13px] font-medium text-emerald-100"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.72}
+              >
+                de {hideBalance ? "••••" : fmt(budget)} presupuestado
+              </Text>
+              <View className="mt-3 h-2 overflow-hidden rounded-full bg-white/25">
+                <View
+                  style={{
+                    width: `${visiblePct}%`,
+                    height: "100%",
+                    borderRadius: 999,
+                    backgroundColor: progressColor,
+                  }}
+                />
+              </View>
+            </>
+          )}
         </LinearGradient>
 
         {!editingBudget && (
@@ -475,6 +502,22 @@ export default function Home({
             </Text>
           </TouchableOpacity>
         )}
+
+        <TouchableOpacity
+          onPress={() => irUnaVez("/credit")}
+          className="mx-5 mt-3 flex-row items-center justify-between rounded-2xl border-[1.5px] border-teal-200 bg-teal-50 dark:bg-noche-2 dark:border-teal-800 px-4 py-3"
+        >
+          <View className="flex-row items-center gap-3">
+            <View className="h-9 w-9 items-center justify-center rounded-xl bg-teal-600">
+              <CreditCard size={19} color="#fff" />
+            </View>
+            <View>
+              <Text className="font-extrabold text-teal-900 dark:text-teal-100">Tarjeta de crédito</Text>
+              <Text className="text-[11px] text-teal-700 dark:text-teal-300">Cuotas, fechas y pagos</Text>
+            </View>
+          </View>
+          <ChevronRight size={20} color="#0f766e" />
+        </TouchableOpacity>
 
         {/* ESTADO DE CUENTA QUE LLEGÓ Y NO SE LLEGÓ A ABRIR.
             Es la red de seguridad de "Compartir → Fino". Si por lo que sea
@@ -585,7 +628,7 @@ export default function Home({
                 adjustsFontSizeToFit
                 minimumFontScale={0.72}
               >
-                {fmtCompact(spent)}
+                  {fmtCompact(mainSpent)}
               </Text>
             </PressableScale>
           </Animated.View>
@@ -606,7 +649,7 @@ export default function Home({
                 adjustsFontSizeToFit
                 minimumFontScale={0.72}
               >
-                {fmtCompact(income)}
+                  {fmtCompact(mainIncome)}
               </Text>
             </PressableScale>
           </Animated.View>

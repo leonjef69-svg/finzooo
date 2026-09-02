@@ -105,6 +105,7 @@ import { presupuestoDelMes } from "@/utils/presupuestoMensual";
 import { hayDescuadre, maximoAApartar, saldoLibre, totalApartado } from "@/utils/ahorro";
 import { availableBalance } from "@/utils/finances";
 import { saldoAnteriorDe } from "@/utils/saldoAnterior";
+import { unlinkCreditPaymentsForHomeTransactions } from "@/utils/creditStore";
 import * as notificationReader from "@/modules/notification-reader";
 import type { Goal, Month, Profile, Transaction } from "@/types";
 
@@ -473,6 +474,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // independiente del resto. Lo maneja el botón de Inicio.
   const [carryoverCleared, setCarryoverCleared] = useState<string[]>([]);
   const [deletedTransactionIds, setDeletedTransactionIds] = useState<number[]>([]);
+  const deletedTransactionIdsRef = useRef<number[]>([]);
+  useEffect(() => {
+    deletedTransactionIdsRef.current = deletedTransactionIds;
+  }, [deletedTransactionIds]);
   // Captura automática desde notificaciones. El estado real vive en el
   // módulo nativo (sobrevive a que la app se cierre); aquí solo tenemos un
   // reflejo para pintar la pantalla de ajustes.
@@ -1193,9 +1198,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []),
           loadJSON<CaptureLogEntry[]>(STORAGE_KEYS.autoCaptureLog, []),
         ]);
-        setTransactions((memoria) =>
-          hayNovedades(memoria, guardadas) ? mergeTransactions(memoria, guardadas) : memoria
-        );
+        // El disco puede conservar durante unos milisegundos la lista anterior
+        // porque el guardado está agrupado. Nunca reincorporamos identificadores
+        // que la persona ya borró, aunque todavía aparezcan en esa copia vieja.
+        const deleted = new Set(deletedTransactionIdsRef.current);
+        const savedActive = guardadas.filter((tx) => !deleted.has(tx.id));
+        setTransactions((memoria) => {
+          const memoryActive = memoria.filter((tx) => !deleted.has(tx.id));
+          return hayNovedades(memoryActive, savedActive)
+            ? mergeTransactions(memoryActive, savedActive)
+            : memoryActive;
+        });
         // Y EL REGISTRO DE AVISOS, IGUAL.
         //
         // Se leía del disco UNA sola vez, al arrancar. El trabajo de fondo
@@ -1991,14 +2004,24 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteTransaction(id: number) {
-    setDeletedTransactionIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    void unlinkCreditPaymentsForHomeTransactions([id]);
+    setDeletedTransactionIds((prev) => {
+      const next = prev.includes(id) ? prev : [...prev, id];
+      deletedTransactionIdsRef.current = next;
+      return next;
+    });
     setTransactions((prev) => prev.filter((p) => p.id !== id));
     showToast(t("toast.transactionDeleted"));
   }
 
   function deleteTransactions(ids: number[]) {
     if (!ids.length) return;
-    setDeletedTransactionIds((prev) => [...new Set([...prev, ...ids])]);
+    void unlinkCreditPaymentsForHomeTransactions(ids);
+    setDeletedTransactionIds((prev) => {
+      const next = [...new Set([...prev, ...ids])];
+      deletedTransactionIdsRef.current = next;
+      return next;
+    });
     setTransactions((prev) => prev.filter((p) => !ids.includes(p.id)));
     showToast(
       t(ids.length > 1 ? "toast.transactionsDeletedPlural" : "toast.transactionsDeleted", {

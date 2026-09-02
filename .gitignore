@@ -44,6 +44,8 @@ app-example
 
 # Restos de empaquetar las pruebas
 tmp/
+.npm-cache/
+.tmp-fino-*
 
 # Lo que deja la compilacion local de Android.
 #

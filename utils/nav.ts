@@ -1,6 +1,15 @@
 import { useEffect, useState } from "react";
 import { router, useNavigationContainerRef } from "expo-router";
 
+// `isReady()` puede conservar un `true` viejo durante Fast Refresh, cuando el
+// contenedor anterior ya se desmontó y el nuevo todavía no tiene árbol. La
+// clave del estado raíz confirma que el Stack actual sí está montado.
+export function isNavigationMounted(
+  navigationRef: ReturnType<typeof useNavigationContainerRef>
+): boolean {
+  return navigationRef.isReady() && Boolean(navigationRef.getRootState()?.key);
+}
+
 // Espera activamente a que el sistema de navegación esté LISTO de verdad
 // (no solo "existe", sino "puede recibir órdenes de navegar" — son dos
 // cosas distintas y esa diferencia fue la causa del error anterior).
@@ -9,10 +18,20 @@ function whenNavigationReady(
   action: () => void
 ) {
   let cancelled = false;
+  let readyChecks = 0;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   function attempt() {
     if (cancelled) return;
-    if (!navigationRef.isReady()) {
-      setTimeout(attempt, 50);
+    if (!isNavigationMounted(navigationRef)) {
+      readyChecks = 0;
+      timer = setTimeout(attempt, 50);
+      return;
+    }
+    // Dos comprobaciones consecutivas evitan navegar en el instante intermedio
+    // en que Expo Router está reemplazando el contenedor durante una recarga.
+    readyChecks++;
+    if (readyChecks < 2) {
+      timer = setTimeout(attempt, 50);
       return;
     }
     action();
@@ -20,6 +39,7 @@ function whenNavigationReady(
   attempt();
   return () => {
     cancelled = true;
+    if (timer) clearTimeout(timer);
   };
 }
 

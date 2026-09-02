@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { NOCHE } from "@/constants/style";
-import { irUnaVez } from "@/utils/nav";
+import { irUnaVez, isNavigationMounted } from "@/utils/nav";
 import { AppState, View } from "react-native";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Stack, router, useNavigationContainerRef, usePathname } from "expo-router";
@@ -114,6 +114,7 @@ const KEEP_ON_RETURN = [
   "/import",
   "/export-pdf",
   "/scheduled-export",
+  "/credit-card-settings",
   "/category-style",
   "/nueva-categoria",
   // El pago del calendario tambien saca fotos: sin esto, al volver de la camara se perdian
@@ -238,7 +239,7 @@ function IncomingFileEffect() {
       // después de desbloquear, que es cuando se puede ver.
       if (isAppLocked()) return false;
 
-      if (!hasOnboarded || !navigationRef.isReady()) return false;
+      if (!hasOnboarded || !isNavigationMounted(navigationRef)) return false;
       // Se suelta ANTES de navegar: si el push fallara, insistir en bucle
       // sería peor que perder la importación.
       pending.current = null;
@@ -326,7 +327,7 @@ function ScheduledExportEffect() {
     function abrirExportar(response: Notifications.NotificationResponse) {
       if (response.notification.request.content.data?.screen !== "export") return;
       loadSchedule().then(async (s) => {
-        if (!navigationRef.isReady()) return;
+        if (!isNavigationMounted(navigationRef)) return;
         irUnaVez({
           pathname: "/export-pdf",
           params: {
@@ -372,7 +373,7 @@ function ScheduledExportEffect() {
       loadSchedule().then((s) => {
         const now = new Date();
         if (!isAutoRunDue(s, now)) return;
-        if (!navigationRef.isReady()) return;
+        if (!isNavigationMounted(navigationRef)) return;
         // Se apunta ANTES de exportar, no después. Si se apuntara después y
         // la subida fallara a medias, al reabrir la app volvería a intentarlo
         // en bucle. Perder una copia es molesto; repetirla sin parar hasta
@@ -423,7 +424,7 @@ function AppLifecycleEffects() {
   useEffect(() => {
     const sub = AppState.addEventListener("change", (nextState) => {
       const cameFromBackground = /inactive|background/.test(prevState.current);
-      if (cameFromBackground && nextState === "active" && hasOnboarded && navigationRef.isReady()) {
+      if (cameFromBackground && nextState === "active" && hasOnboarded && isNavigationMounted(navigationRef)) {
         // Si viene un archivo de fuera, la app no vuelve a Inicio: está a
         // punto de abrir Importar. Consultar KEEP_ON_RETURN aquí no bastaría
         // —esa lista se compara con la pantalla en la que la app cree estar,

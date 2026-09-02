@@ -74,6 +74,13 @@ const SUITES = [
   { archivo: "verificar-lista-yapes.ts", alias: BASE },
   { archivo: "verificar-copia-vacia.ts", alias: BASE },
   { archivo: "verificar-calendario-pagos.ts", alias: BASE },
+  {
+    archivo: "verificar-tarjeta-credito.ts",
+    alias: {
+      ...EXPO,
+      "@react-native-async-storage/async-storage": stub("async-storage.ts"),
+    },
+  },
   { archivo: "verificar-boleta.ts", alias: BASE },
   { archivo: "verificar-pdf.ts", alias: BASE },
   { archivo: "verificar-pdf-ilegible.ts", alias: BASE, formato: "cjs" },
