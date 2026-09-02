@@ -52,7 +52,7 @@ export type CreditInstallment = {
 export type CreditPaymentRecord = {
   id: string;
   amount: number;
-  status: "processing" | "confirmed";
+  status: "confirmed" | "legacy-pending";
   createdAt: string;
   method: string;
   homeTransactionId?: number;
@@ -72,12 +72,75 @@ export const EMPTY_CREDIT_STATE: CreditState = {
   installments: [],
 };
 
+type StoredPaymentRecord = Omit<CreditPaymentRecord, "status"> & {
+  status?: string;
+};
+
+type StoredInstallment = Omit<CreditInstallment, "payments"> & {
+  payments?: StoredPaymentRecord[];
+};
+
+type StoredCreditState = Partial<Omit<CreditState, "installments">> & {
+  installments?: StoredInstallment[];
+};
+
+/**
+ * Conserva internamente cualquier estado antiguo distinto de "confirmed" sin
+ * contarlo como pago. No aparece como una función disponible ni se convierte
+ * en pago: la deuda queda pendiente hasta registrar uno realmente confirmado.
+ */
+export function normalizeCreditState(value: unknown): CreditState {
+  const stored =
+    value && typeof value === "object" ? (value as StoredCreditState) : {};
+  const installments = (stored.installments ?? []).map((item) => {
+    if (!item.payments?.some((payment) => payment.status !== "confirmed"))
+      return item as CreditInstallment;
+
+    const payments: CreditPaymentRecord[] = item.payments.map((payment) => ({
+      ...payment,
+      status:
+        payment.status === "confirmed" ? "confirmed" : "legacy-pending",
+    }));
+    const confirmedPayments = payments.filter(
+      (payment) => payment.status === "confirmed",
+    );
+    const confirmed = confirmedPayments.reduce(
+      (sum, payment) => sum + Number(payment.amount),
+      0,
+    );
+    const paid = confirmed >= Number(item.amount) - 0.005;
+    const latest = [...confirmedPayments].sort((a, b) =>
+      a.createdAt.localeCompare(b.createdAt),
+    )[confirmedPayments.length - 1];
+
+    return {
+      ...item,
+      payments,
+      paid,
+      paidAt: paid ? latest?.createdAt : undefined,
+      paidMethod: latest?.method ?? item.paidMethod,
+      homeTransactionId: latest?.homeTransactionId ?? item.homeTransactionId,
+      homeCurrency: latest?.homeCurrency ?? item.homeCurrency,
+      homeAmount: latest?.homeAmount ?? item.homeAmount,
+    };
+  });
+
+  return {
+    cards: (stored.cards ?? []).map((card) => ({
+      ...card,
+      // Las tarjetas anteriores al selector mundial nacieron en soles.
+      // Fijarlas evita que cambien si luego cambia la moneda de la cuenta.
+      currency: card.currency ?? "PEN",
+    })),
+    purchases: stored.purchases ?? [],
+    installments,
+  };
+}
+
 export async function loadCreditState(): Promise<CreditState> {
   try {
     const raw = await AsyncStorage.getItem(KEY);
-    return raw
-      ? { ...EMPTY_CREDIT_STATE, ...JSON.parse(raw) }
-      : EMPTY_CREDIT_STATE;
+    return raw ? normalizeCreditState(JSON.parse(raw)) : EMPTY_CREDIT_STATE;
   } catch {
     return EMPTY_CREDIT_STATE;
   }
@@ -135,12 +198,6 @@ export function outstandingAmount(item: CreditInstallment) {
   return Math.max(0, Number(item.amount) - confirmedPaidAmount(item));
 }
 
-export function processingAmount(item: CreditInstallment) {
-  return (item.payments ?? [])
-    .filter((payment) => payment.status === "processing")
-    .reduce((sum, payment) => sum + Number(payment.amount), 0);
-}
-
 /**
  * Mantiene Inicio y las tarjetas sincronizados. Si se borra de Inicio un gasto
  * que representaba un pago de tarjeta, se retira solo ese pago: la compra se
@@ -193,6 +250,16 @@ export async function unlinkCreditPaymentsForHomeTransactions(ids: number[]) {
 
 export function makeId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
+}
+
+export function cardHasFinancialActivity(
+  state: CreditState,
+  cardId: string,
+) {
+  return (
+    state.purchases.some((purchase) => purchase.cardId === cardId) ||
+    state.installments.some((installment) => installment.cardId === cardId)
+  );
 }
 
 export function cardTotals(state: CreditState, cardId: string) {

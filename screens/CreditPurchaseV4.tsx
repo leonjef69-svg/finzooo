@@ -79,7 +79,7 @@ export default function CreditPurchaseV4() {
   const datesConfigured = Boolean(card?.closingDay && card?.paymentDay);
   const symbol = currencySymbolFor(card?.currency ?? "PEN");
   const homeSymbol = currencySymbolFor(userCurrency);
-  const differentCurrency = (card?.currency ?? userCurrency) !== userCurrency;
+  const differentCurrency = (card?.currency ?? "PEN") !== userCurrency;
   const total = Number(amount.replace(",", ".")) || 0;
   const qty = kind === "installments" ? Math.max(1, Number(count) || 1) : 1;
   const each =

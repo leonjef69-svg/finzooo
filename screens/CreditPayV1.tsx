@@ -6,7 +6,6 @@ import {
   loadCreditState,
   makeId,
   outstandingAmount,
-  processingAmount,
   saveCreditState,
 } from "@/utils/creditStore";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -49,14 +48,6 @@ export default function CreditPayV1() {
       setMethod(
         savedPurchase?.balanceMode === "separate" ? "external" : "fino",
       );
-      const savedQuota = value.installments
-        .filter((quota) => quota.purchaseId === purchaseId && !quota.paid)
-        .sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0];
-      const processing = savedQuota ? processingAmount(savedQuota) : 0;
-      if (processing > 0) {
-        setPaymentMode("other");
-        setCustomAmount(String(processing));
-      }
     });
   }, [purchaseId]);
   const source = state.cards.find((c) => c.id === cardId);
@@ -80,8 +71,7 @@ export default function CreditPayV1() {
       : paymentMode === "minimum"
         ? minimumAmount
         : Number(customAmount.replace(",", ".")) || 0;
-  const inProcess = nextQuota ? processingAmount(nextQuota) : 0;
-  const cardCurrency = source?.currency ?? userCurrency ?? "PEN";
+  const cardCurrency = source?.currency ?? "PEN";
   const cardSymbol = currencySymbolFor(cardCurrency);
   const homeSymbol = currencySymbolFor(userCurrency);
   const differentCurrency = cardCurrency !== userCurrency;
@@ -90,7 +80,7 @@ export default function CreditPayV1() {
     : amount;
   const otherCards = state.cards.filter((c) => c.id !== cardId);
   const targetCard = otherCards.find((card) => card.id === targetId);
-  const targetCurrency = targetCard?.currency ?? userCurrency;
+  const targetCurrency = targetCard?.currency ?? "PEN";
   const targetSymbol = currencySymbolFor(targetCurrency);
   const differentTargetCurrency =
     Boolean(targetCard) && targetCurrency !== cardCurrency;
@@ -181,12 +171,7 @@ export default function CreditPayV1() {
             homeTransactionId,
             homeCurrency: method === "fino" ? userCurrency : undefined,
             homeAmount: method === "fino" ? amountFromHome : undefined,
-            payments: [
-              ...(q.payments ?? []).filter(
-                (payment) => payment.status !== "processing",
-              ),
-              paymentRecord,
-            ],
+            payments: [...(q.payments ?? []), paymentRecord],
           }
         : q,
     );
@@ -266,11 +251,6 @@ export default function CreditPayV1() {
           {cardSymbol} {pendingAmount.toFixed(2)}
         </Text>
       </View>
-      {inProcess > 0 && (
-        <Text className="mt-3 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm font-semibold text-amber-800">
-          Hay {cardSymbol} {inProcess.toFixed(2)} en proceso. Confírmalo solo cuando el banco lo registre.
-        </Text>
-      )}
       <Text className="mt-5 font-bold">¿Cuánto pagarás?</Text>
       <View className="mt-2 flex-row gap-2">
         <Choice
@@ -397,8 +377,8 @@ export default function CreditPayV1() {
               >
                 <Text className="font-extrabold">{card.bank}</Text>
                 <Text className="text-xs text-slate-500">
-                  {currencySymbolFor(card.currency ?? userCurrency)} ·{" "}
-                  {card.currency ?? userCurrency}
+                  {currencySymbolFor(card.currency ?? "PEN")} ·{" "}
+                  {card.currency ?? "PEN"}
                 </Text>
               </TouchableOpacity>
             ))

@@ -1,9 +1,10 @@
 import {
   addMonthsDue,
+  cardHasFinancialActivity,
   cardTotals,
   dueDateForPurchase,
   outstandingAmount,
-  processingAmount,
+  normalizeCreditState,
   type CreditInstallment,
   type CreditState,
 } from "@/utils/creditStore";
@@ -77,11 +78,9 @@ const installment: CreditInstallment = {
   paid: false,
   payments: [
     { id: "ok", amount: 30, status: "confirmed", createdAt: "2027-01-01", method: "Fino" },
-    { id: "wait", amount: 20, status: "processing", createdAt: "2027-01-01", method: "Fino" },
   ],
 };
 ok(outstandingAmount(installment) === 70, "un pago confirmado reduce correctamente la deuda");
-ok(processingAmount(installment) === 20, "un pago en proceso se informa sin descontarlo dos veces");
 const state: CreditState = {
   cards: [card],
   purchases: [
@@ -92,6 +91,34 @@ const state: CreditState = {
 const totals = cardTotals(state, "card");
 ok(totals.debt === 70, "la deuda sigue visible aunque falten las fechas de la tarjeta");
 ok(totals.next === undefined, "una compra sin fecha no aparece como vencimiento inventado");
+ok(cardHasFinancialActivity(state, "card"), "la moneda se bloquea cuando la tarjeta ya tiene movimientos");
+ok(
+  !cardHasFinancialActivity({ ...state, purchases: [], installments: [] }, "card"),
+  "la moneda puede elegirse mientras la tarjeta no tenga movimientos",
+);
+
+const normalized = normalizeCreditState({
+  ...state,
+  installments: [
+    {
+      ...installment,
+      payments: [
+        ...installment.payments!,
+        { id: "old", amount: 20, status: "processing", createdAt: "2027-01-02", method: "Fino" },
+      ],
+    },
+  ],
+});
+ok(
+  normalized.installments[0].payments?.length === 2 &&
+    normalized.installments[0].payments?.[1]?.status === "legacy-pending" &&
+    outstandingAmount(normalized.installments[0]) === 70,
+  "un registro antiguo se conserva sin marcarlo como pagado",
+);
+ok(
+  normalized.cards[0].currency === "PEN",
+  "una tarjeta antigua sin moneda queda fijada en soles",
+);
 
 if (fallos) process.exit(1);
 console.log("Tarjeta de crédito: fechas, avisos y pagos correctos.");

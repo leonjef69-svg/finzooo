@@ -1,4 +1,5 @@
 import {
+  cardHasFinancialActivity,
   CreditState,
   EMPTY_CREDIT_STATE,
   dueDateForPurchase,
@@ -85,6 +86,11 @@ export default function CreditCardSettingsV1() {
   const [currency, setCurrency] = useState(userCurrency || "PEN");
   const [currencyPickerOpen, setCurrencyPickerOpen] = useState(false);
   const [currencyQuery, setCurrencyQuery] = useState("");
+  const originalCard = state.cards.find((card) => card.id === cardId);
+  const originalCurrency = originalCard?.currency ?? "PEN";
+  const currencyLocked = Boolean(
+    cardId && cardHasFinancialActivity(state, cardId),
+  );
   const suggestedCurrencies = useMemo(() => {
     const extras =
       userCurrency === "PEN"
@@ -116,7 +122,7 @@ export default function CreditCardSettingsV1() {
       if (card) {
         setBank(card.bank);
         setLimit(String(card.limit));
-        setCurrency(card.currency ?? userCurrency ?? "PEN");
+        setCurrency(card.currency ?? "PEN");
         setClosingDay(card.closingDay ? String(card.closingDay) : "");
         setPaymentDay(card.paymentDay ? String(card.paymentDay) : "");
         setCutoff(card.paymentCutoffTime ?? "");
@@ -184,6 +190,11 @@ export default function CreditCardSettingsV1() {
       time = `${reminderHour.padStart(2, "0")}:${reminderMinute.padStart(2, "0")}`,
       cutDays = Number(cutReminderDays) || 0,
       cutTime = `${cutReminderHour.padStart(2, "0")}:${cutReminderMinute.padStart(2, "0")}`;
+    if (currencyLocked && currency !== originalCurrency)
+      return Alert.alert(
+        "Moneda protegida",
+        "Esta tarjeta ya tiene movimientos. Para evitar cambiar el significado de sus montos, conserva su moneda o crea otra tarjeta.",
+      );
     const hasOnlyOneCardDate = Boolean(close) !== Boolean(pay);
     const hasOnlyOneMembershipValue = Boolean(goal) !== Boolean(membershipStart);
     if (membershipStart && !isValidMembershipDate(membershipStart))
@@ -356,8 +367,15 @@ export default function CreditCardSettingsV1() {
         <View className="flex-1">
           <Text className="mb-1 mt-3 text-xs font-semibold">Moneda *</Text>
           <TouchableOpacity
-            onPress={() => setCurrencyPickerOpen(true)}
-            className="min-h-[52px] flex-row items-center justify-between rounded-xl border border-slate-300 bg-white px-3"
+            onPress={() =>
+              currencyLocked
+                ? Alert.alert(
+                    "Moneda protegida",
+                    "No puede cambiarse porque esta tarjeta ya tiene movimientos. Si necesitas otra moneda, crea otra tarjeta.",
+                  )
+                : setCurrencyPickerOpen(true)
+            }
+            className={`min-h-[52px] flex-row items-center justify-between rounded-xl border px-3 ${currencyLocked ? "border-slate-200 bg-slate-100" : "border-slate-300 bg-white"}`}
           >
             <View className="mr-1 flex-1">
               <Text numberOfLines={1} className="text-sm font-extrabold text-slate-800">
@@ -367,7 +385,10 @@ export default function CreditCardSettingsV1() {
                 {currencyLabelFor(currency, t, userLanguage)}
               </Text>
             </View>
-            <ChevronDown size={16} color="#64748b" />
+            <ChevronDown
+              size={16}
+              color={currencyLocked ? "#94a3b8" : "#64748b"}
+            />
           </TouchableOpacity>
         </View>
       </View>
@@ -375,8 +396,15 @@ export default function CreditCardSettingsV1() {
         {suggestedCurrencies.map((code) => (
             <TouchableOpacity
               key={code}
-              onPress={() => setCurrency(code)}
-              className={`flex-1 rounded-xl border px-2 py-2 ${currency === code ? "border-teal-600 bg-teal-50" : "border-slate-200 bg-white"}`}
+              onPress={() => {
+                if (currencyLocked)
+                  return Alert.alert(
+                    "Moneda protegida",
+                    "No puede cambiarse porque esta tarjeta ya tiene movimientos.",
+                  );
+                setCurrency(code);
+              }}
+              className={`flex-1 rounded-xl border px-2 py-2 ${currencyLocked ? "border-slate-200 bg-slate-100 opacity-60" : currency === code ? "border-teal-600 bg-teal-50" : "border-slate-200 bg-white"}`}
             >
               <Text
                 className={`text-center text-xs font-extrabold ${currency === code ? "text-teal-700" : "text-slate-600"}`}
@@ -386,6 +414,11 @@ export default function CreditCardSettingsV1() {
             </TouchableOpacity>
           ))}
       </View>
+      {currencyLocked && (
+        <Text className="mt-1 text-[11px] font-semibold text-slate-500">
+          Moneda bloqueada para proteger los montos de tus movimientos.
+        </Text>
+      )}
       <View className="flex-row gap-3">
         <View className="flex-1">
           <DayField
@@ -422,7 +455,7 @@ export default function CreditCardSettingsV1() {
         placeholder="Opcional · puedes actualizarlo cada mes"
       />
       <Modal
-        visible={currencyPickerOpen}
+        visible={currencyPickerOpen && !currencyLocked}
         animationType="slide"
         onRequestClose={() => setCurrencyPickerOpen(false)}
       >
@@ -454,6 +487,13 @@ export default function CreditCardSettingsV1() {
             renderItem={({ item }) => (
               <TouchableOpacity
                 onPress={() => {
+                  if (currencyLocked) {
+                    setCurrencyPickerOpen(false);
+                    return Alert.alert(
+                      "Moneda protegida",
+                      "No puede cambiarse porque esta tarjeta ya tiene movimientos.",
+                    );
+                  }
                   setCurrency(item.id);
                   setCurrencyPickerOpen(false);
                   setCurrencyQuery("");

@@ -5,11 +5,9 @@ import {
   confirmedPaidAmount,
   loadCreditState,
   outstandingAmount,
-  processingAmount,
 } from "@/utils/creditStore";
 import { irUnaVez } from "@/utils/nav";
 import { currencySymbolFor } from "@/constants/currencies";
-import { useAppData } from "@/contexts/AppDataContext";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -33,7 +31,6 @@ const MONTHS = [
 type CalendarFilter = "all" | "installments" | "paid" | "overdue";
 
 export default function CreditCalendarV3() {
-  const { userCurrency } = useAppData();
   const router = useRouter();
   const { cardId } = useLocalSearchParams<{ cardId?: string }>();
   const [state, setState] = useState<CreditState>(EMPTY_CREDIT_STATE);
@@ -50,7 +47,7 @@ export default function CreditCalendarV3() {
   );
   const card = state.cards.find((item) => item.id === cardId) ?? state.cards[0];
   const datesConfigured = Boolean(card?.closingDay && card?.paymentDay);
-  const symbol = currencySymbolFor(card?.currency ?? userCurrency ?? "PEN");
+  const symbol = currencySymbolFor(card?.currency ?? "PEN");
   const items = useMemo(
     () =>
       card ? state.installments.filter((item) => item.cardId === card.id) : [],
@@ -647,13 +644,6 @@ export default function CreditCalendarV3() {
   );
 }
 function status(item: CreditInstallment) {
-  if (processingAmount(item) > 0 && !item.paid)
-    return {
-      label: "En proceso",
-      box: "bg-amber-100",
-      text: "text-amber-700",
-      dot: "#d97706",
-    };
   if (item.paid)
     return {
       label: "Pagada",

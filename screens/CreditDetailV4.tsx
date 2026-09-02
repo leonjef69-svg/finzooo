@@ -4,7 +4,6 @@ import {
   cardTotals,
   loadCreditState,
   outstandingAmount,
-  processingAmount,
   saveCreditState,
 } from "@/utils/creditStore";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -353,13 +352,6 @@ export default function CreditDetailV4() {
                     </Text>
                     <Text numberOfLines={1} className="text-[13px] text-slate-500">
                       {formatDateTime(p.createdAt)}
-                      {quotas.some(
-                        (quota) =>
-                          quota.purchaseId === p.id &&
-                          processingAmount(quota) > 0,
-                      )
-                        ? " · Pago en proceso"
-                        : ""}
                     </Text>
                   </View>
                   <View className="w-[44%] max-w-[160px] items-stretch">

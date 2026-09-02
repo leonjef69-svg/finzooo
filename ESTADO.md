@@ -1,6 +1,6 @@
 # Estado actual de Fino
 
-Actualizado: **29 de agosto de 2026**.
+Actualizado: **1 de septiembre de 2026**.
 
 Este archivo permite retomar el proyecto sin empezar de cero. No contiene
 credenciales, correos, UID, huellas completas ni datos privados de testers.
@@ -103,7 +103,7 @@ aceptar y descargar con la misma cuenta de Google.
 - TypeScript: aprobado.
 - ESLint: aprobado sin errores ni advertencias en el código de la app.
 - Expo Doctor: **18 de 18 comprobaciones aprobadas**.
-- Pruebas: **80 aprobadas**.
+- Pruebas: **87 aprobadas**.
 - Auditores: **7 aprobados**.
 - El lector de Excel usa SheetJS 0.20.3 desde su distribución oficial; se
   retiró la versión 0.18.5 afectada por dos vulnerabilidades conocidas.
@@ -118,6 +118,12 @@ Comando principal: `node pruebas/correr.mjs`.
 - País y moneda ahora usan listas virtualizadas: no dibujan los cientos de
   opciones a la vez, por lo que abrirlas y buscar debe ser inmediato incluso
   en celulares modestos.
+- La moneda de una tarjeta de crédito queda bloqueada cuando ya tiene
+  movimientos. Así una deuda en soles nunca puede mostrarse como dólares solo
+  por cambiar su etiqueta; para otra moneda se crea otra tarjeta.
+- Se retiró de la interfaz el estado de pago «En proceso», que ninguna pantalla
+  podía crear. Si aparece en datos antiguos, se conserva internamente sin
+  convertirlo en pago: la deuda queda pendiente hasta registrar uno confirmado.
 
 ## Pendientes actuales
 
@@ -165,7 +171,7 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 - Confirmar en Firebase, Google Play App Signing y el AAB final que siguen
   registradas las firmas necesarias para Google. El acceso G10 ya fue corregido
   y probado, pero debe validarse otra vez con la entrega final de Play.
-- Ejecutar TypeScript, ESLint, Expo Doctor, las 80 pruebas y los 7 auditores
+- Ejecutar TypeScript, ESLint, Expo Doctor, las 87 pruebas y los 7 auditores
   después de la corrección responsive y antes de compilar.
 
 ### Publicación en Google Play
