@@ -15,7 +15,7 @@ assert.match(reports, /fmtCompact/);
 assert.match(reports, /minimumFontScale/);
 assert.match(daily, /fmtAxis/);
 assert.match(home, /friendlyName/);
-assert.match(home, /fmtCompact/);
+assert.match(home, /adjustsFontSizeToFit/);
 assert.match(friendlyName, /includes\("@"\)/);
 
 console.log("✓ Las monedas grandes usan formato compacto y no deforman reportes.");

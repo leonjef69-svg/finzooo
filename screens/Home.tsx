@@ -179,7 +179,6 @@ export default function Home({
 }) {
   const {
     fmt,
-    fmtCompact,
     t,
     monthNames,
     monthLabel,
@@ -568,7 +567,7 @@ export default function Home({
                 adjustsFontSizeToFit
                 minimumFontScale={0.72}
               >
-                {fmtCompact(budget)}
+                {fmt(budget)}
               </Text>
             </PressableScale>
           </Animated.View>
@@ -607,7 +606,7 @@ export default function Home({
                 adjustsFontSizeToFit
                 minimumFontScale={0.72}
               >
-                {fmtCompact(prevBalance)}
+                {fmt(prevBalance)}
               </Text>
             </PressableScale>
           </Animated.View>
@@ -628,7 +627,7 @@ export default function Home({
                 adjustsFontSizeToFit
                 minimumFontScale={0.72}
               >
-                  {fmtCompact(mainSpent)}
+                  {fmt(mainSpent)}
               </Text>
             </PressableScale>
           </Animated.View>
@@ -649,7 +648,7 @@ export default function Home({
                 adjustsFontSizeToFit
                 minimumFontScale={0.72}
               >
-                  {fmtCompact(mainIncome)}
+                  {fmt(mainIncome)}
               </Text>
             </PressableScale>
           </Animated.View>
