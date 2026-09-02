@@ -20,25 +20,7 @@
 
 import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
 import { db } from "@/utils/firebase";
-import { isDecoyActive } from "@/utils/decoyMode";
 import type { DatosDelNegocio } from "@/utils/negocio";
-
-/**
- * EL CANDADO DEL MODO SEÑUELO, OTRA VEZ. NO QUITARLO.
- *
- * El de utils/cloudSync está puesto en "la única puerta que da a Firestore". Esta es una
- * puerta NUEVA, así que necesita el mismo candado o el señuelo dejaría de servir por aquí:
- *
- *   SUBIR  → con el señuelo puesto, subir pisaría el respaldo real del negocio.
- *   BAJAR  → traería las ventas y los precios REALES y los mostraría dentro del señuelo, o
- *            sea que el modo hecho para esconder los datos los enseñaría.
- *
- * Es exactamente el fallo que este proyecto repite: dos mitades que por separado están bien
- * y el fallo en la costura entre ellas. Hay una prueba que exige el candado en las dos.
- */
-function elSeñueloBloquea(): boolean {
-  return isDecoyActive();
-}
 
 /** Dónde vive el negocio de esta cuenta. */
 function documento(uid: string) {
@@ -46,7 +28,6 @@ function documento(uid: string) {
 }
 
 export async function bajarNegocio(uid: string): Promise<DatosDelNegocio | null> {
-  if (elSeñueloBloquea()) return null;
   try {
     const snap = await getDoc(documento(uid));
     if (!snap.exists()) return null;
@@ -67,7 +48,6 @@ export async function bajarNegocio(uid: string): Promise<DatosDelNegocio | null>
 }
 
 export function subirNegocio(uid: string, datos: DatosDelNegocio): Promise<void> {
-  if (elSeñueloBloquea()) return Promise.resolve();
   // Firestore RECHAZA cualquier campo con valor "undefined" y tira el guardado entero. La
   // venta tiene "movimientoId" opcional —vacío en toda la V1—, así que sin esta limpieza el
   // respaldo del negocio fallaría en silencio desde el primer día. Es el mismo paso que hace
@@ -83,6 +63,5 @@ export function subirNegocio(uid: string, datos: DatosDelNegocio): Promise<void>
  * ventas y sus precios en la nube sería peor que no borrarla.
  */
 export async function borrarNegocioDeLaNube(uid: string): Promise<void> {
-  if (elSeñueloBloquea()) throw new Error("No disponible");
   await deleteDoc(documento(uid));
 }

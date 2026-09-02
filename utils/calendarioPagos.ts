@@ -65,6 +65,8 @@ export type PagoProgramado = {
    * app cerrada—. Así, "¿pagué la luz de julio?" se contesta mirando, y el historial queda.
    */
   pagados: string[];
+  /** Movimiento creado automáticamente para cada mes, evita duplicarlo al desmarcar y marcar. */
+  movimientos?: Record<string, number>;
   creado: number;
 };
 

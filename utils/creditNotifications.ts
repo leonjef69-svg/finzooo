@@ -1,7 +1,7 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import type { CreditState } from "@/utils/creditStore";
-import { currencySymbolFor } from "@/constants/currencies";
+import { formatCreditMoney } from "@/utils/creditMoney";
 
 const MARK = "creditPayments";
 const CHANNEL = "finzo-credit-payments-v1";
@@ -13,7 +13,7 @@ function localDateKey(date: Date) {
 export function cutReminderDates(
   card: CreditState["cards"][number],
   nowDate = new Date(),
-  count = 6,
+  count = 12,
 ) {
   if (!card.closingDay || count <= 0) return [];
   const [hour, minute] = (card.cutReminderTime ?? "09:00")
@@ -91,6 +91,7 @@ async function sync(state: CreditState) {
       (installment) =>
         !installment.paid &&
         outstandingAmount(installment) > 0 &&
+        /^\d{4}-\d{2}-\d{2}$/.test(installment.dueDate) &&
         enabledCards.some((card) => card.id === installment.cardId),
     )
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
@@ -159,11 +160,11 @@ async function sync(state: CreditState) {
     );
     notificationDate.setHours(hour || 0, minute || 0, 0, 0);
     if (notificationDate.getTime() <= now) continue;
-    const symbol = currencySymbolFor(card.currency ?? "PEN");
+    const currency = card.currency ?? "PEN";
     await Notifications.scheduleNotificationAsync({
       content: {
         title: `Próximo pago · ${card.bank}`,
-        body: `${purchase?.description ?? "Compra"}: ${symbol} ${outstandingAmount(installment).toFixed(2)} vence el ${installment.dueDate}${card.paymentCutoffTime ? ` antes de ${card.paymentCutoffTime}` : ""}.`,
+        body: `${purchase?.description ?? "Compra"}: ${formatCreditMoney(outstandingAmount(installment), currency)} vence el ${installment.dueDate}${card.paymentCutoffTime ? ` antes de ${card.paymentCutoffTime}` : ""}.`,
         sound: "default",
         data: {
           [MARK]: true,

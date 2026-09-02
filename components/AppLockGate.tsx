@@ -4,7 +4,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Lock } from "lucide-react-native";
 import PinPad from "@/components/PinPad";
 import { useAppData } from "@/contexts/AppDataContext";
-import { isDecoyActive } from "@/utils/decoyMode";
 import { setAppLocked } from "@/utils/lockState";
 import {
   GRACE_MS,
@@ -13,6 +12,7 @@ import {
   usaHuella,
   isLockEnabled,
   olvidarSalida,
+  pinRetryAfterMs,
   promptBiometrics,
   recordarSalida,
   salioHaceNada,
@@ -31,7 +31,7 @@ import {
  * bastaría con el botón de "atrás" de Android para saltársela.
  */
 export default function AppLockGate() {
-  const { t, ready, enterDecoyMode, leaveDecoyMode } = useAppData();
+  const { t, ready } = useAppData();
   const insets = useSafeAreaInsets();
 
   const [enabled, setEnabled] = useState(false);
@@ -40,6 +40,18 @@ export default function AppLockGate() {
   const [pin, setPin] = useState("");
   const [error, setError] = useState(false);
   const [failures, setFailures] = useState(0);
+  const [retrySeconds, setRetrySeconds] = useState(0);
+
+  useEffect(() => {
+    if (!locked) return;
+    const refresh = () =>
+      pinRetryAfterMs().then((value) =>
+        setRetrySeconds(Math.ceil(value / 1000)),
+      );
+    void refresh();
+    const timer = setInterval(refresh, 1000);
+    return () => clearInterval(timer);
+  }, [locked]);
 
   // Mientras el cuadro de la huella está abierto, Android manda la app a
   // "inactive". Sin esta marca, el propio cuadro contaría como "se fue de la
@@ -94,18 +106,7 @@ export default function AppLockGate() {
     };
   }, []);
 
-  // ESTANDO EN EL SEÑUELO NO SE OFRECE LA HUELLA.
-  //
-  // El caso: alguien obliga a abrir la app, se escribe el PIN señuelo, y
-  // deja el teléfono un rato. La app se rebloquea. Si entonces apareciera el
-  // cuadro de la huella, bastaría con "pon el dedo" para que se abriera la
-  // cuenta DE VERDAD delante de quien esté mirando — y toda esta función no
-  // habría servido de nada.
-  //
-  // Dentro del señuelo solo se puede entrar con PIN. Y no se nota, porque en
-  // un celular sin huella registrada la pantalla se ve exactamente así.
-  const inDecoy = isDecoyActive();
-  const offerBiometrics = kind !== "none" && !inDecoy;
+  const offerBiometrics = kind !== "none";
 
   const askBiometrics = useCallback(async () => {
     if (!offerBiometrics || prompting.current) return;
@@ -113,13 +114,11 @@ export default function AppLockGate() {
     const ok = await promptBiometrics(t("lock.prompt"), t("lock.usePin"));
     prompting.current = false;
     if (ok) {
-      // La huella es del dueño, así que abre la cuenta real.
-      await leaveDecoyMode();
       setLocked(false);
       setPin("");
       setFailures(0);
     }
-  }, [offerBiometrics, t, leaveDecoyMode]);
+  }, [offerBiometrics, t]);
 
   // Se pide la huella sola en cuanto aparece la pantalla: lo normal es no
   // tener que tocar nada.
@@ -157,35 +156,26 @@ export default function AppLockGate() {
 
   // Comprobar el PIN en cuanto se completa: no hace falta botón de aceptar.
   useEffect(() => {
-    if (pin.length !== PIN_LENGTH) return;
+    if (pin.length !== PIN_LENGTH || retrySeconds > 0) return;
     let alive = true;
     (async () => {
       const match = await verifyPin(pin);
       if (!alive) return;
 
-      // El PIN señuelo abre la cuenta falsa. Desde fuera se ve EXACTAMENTE
-      // igual que abrir la de verdad: mismo tiempo, misma animación, ningún
-      // aviso. Cualquier diferencia —un parpadeo distinto, un mensaje, un
-      // segundo de más— delataría que este PIN no es el bueno.
-      if (match === "decoy") {
-        await enterDecoyMode();
-        if (!alive) return;
-        setLocked(false);
-        setPin("");
-        setError(false);
-        setFailures(0);
-        return;
-      }
-
       if (match === "real") {
-        // Si se venía del señuelo (la app se bloqueó estando dentro), hay
-        // que volver a la cuenta real antes de destapar la pantalla.
-        await leaveDecoyMode();
-        if (!alive) return;
         setLocked(false);
         setPin("");
         setError(false);
         setFailures(0);
+      } else if (match === "locked") {
+        setError(true);
+        setFailures((n) => Math.max(5, n + 1));
+        setRetrySeconds(Math.ceil((await pinRetryAfterMs()) / 1000));
+        setTimeout(() => {
+          if (!alive) return;
+          setPin("");
+          setError(false);
+        }, 500);
       } else {
         setError(true);
         setFailures((n) => n + 1);
@@ -200,8 +190,7 @@ export default function AppLockGate() {
     return () => {
       alive = false;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pin]);
+  }, [pin, retrySeconds]);
 
   // Se avisa al resto de la app de si el candado está puesto. Lo usa la
   // apertura de un estado de cuenta compartido: mientras esto sea cierto no
@@ -232,11 +221,17 @@ export default function AppLockGate() {
 
       <PinPad
         value={pin}
-        onChange={setPin}
+        onChange={(value) => retrySeconds === 0 && setPin(value)}
         error={error}
         biometric={offerBiometrics ? kind : "none"}
         onBiometric={() => void askBiometrics()}
       />
+
+      {retrySeconds > 0 && (
+        <Text className="mt-4 text-center text-xs font-bold text-rose-500">
+          Demasiados intentos. Intenta de nuevo en {retrySeconds} s.
+        </Text>
+      )}
 
       {/* Solo después de varios intentos. Antes de eso, sugerir que se
           reinstale la app asusta más de lo que ayuda: lo normal es haberse

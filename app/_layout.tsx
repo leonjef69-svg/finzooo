@@ -357,6 +357,7 @@ function ScheduledExportEffect() {
     // lo que la función entera existe para evitar.
     Notifications.getLastNotificationResponseAsync().then(async (last) => {
       if (!last) return;
+      if (last.notification.request.content.data?.screen !== "export") return;
       // Ese método no olvida nunca: devuelve el último aviso tocado aunque
       // hayan pasado días y aunque ahora se esté abriendo la app desde el
       // icono. Se comprueba que no se haya atendido ya, o la pantalla de
@@ -404,6 +405,36 @@ function ScheduledExportEffect() {
 
     return () => sub.remove();
   }, [ready, hasOnboarded, isPremium, navigationRef, t]);
+
+  return null;
+}
+
+/** Abre directamente el calendario de la tarjeta al tocar uno de sus avisos. */
+function CreditNotificationEffect() {
+  const { ready, hasOnboarded } = useAppData();
+  const navigationRef = useNavigationContainerRef();
+
+  useEffect(() => {
+    if (!ready || !hasOnboarded) return;
+    const openCredit = (response: Notifications.NotificationResponse) => {
+      const data = response.notification.request.content.data;
+      if (!data?.creditPayments || typeof data.cardId !== "string") return;
+      if (!isNavigationMounted(navigationRef)) return;
+      irUnaVez({
+        pathname: "/credit-calendar",
+        params: { cardId: data.cardId },
+      });
+    };
+    const sub = Notifications.addNotificationResponseReceivedListener(openCredit);
+    Notifications.getLastNotificationResponseAsync().then(async (last) => {
+      if (!last?.notification.request.content.data?.creditPayments) return;
+      const when = last.notification.date;
+      if (await alreadyHandledTap(when)) return;
+      markTapHandled(when);
+      openCredit(last);
+    });
+    return () => sub.remove();
+  }, [ready, hasOnboarded, navigationRef]);
 
   return null;
 }
@@ -640,6 +671,7 @@ function RootLayout() {
           <IncomingFileEffect />
           <AppLifecycleEffects />
           <ScheduledExportEffect />
+          <CreditNotificationEffect />
           {/* Va aquí, el último de todos, para quedar POR ENCIMA de todo lo
               demás — incluidos los paneles modales. Si fuera una pantalla de
               navegación, bastaría el botón "atrás" de Android para

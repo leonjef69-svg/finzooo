@@ -3,8 +3,10 @@ import {
   cardHasFinancialActivity,
   cardTotals,
   dueDateForPurchase,
+  mergeCreditBackups,
   outstandingAmount,
   normalizeCreditState,
+  type CreditBackupV1,
   type CreditInstallment,
   type CreditState,
 } from "@/utils/creditStore";
@@ -28,6 +30,14 @@ ok(
 ok(
   dueDateForPurchase(new Date(2027, 0, 26), 0, 25, 15) === "2027-03-15",
   "una compra posterior al corte pasa al siguiente periodo",
+);
+ok(
+  dueDateForPurchase(new Date(2027, 0, 2), 0, 4, 15) === "2027-01-15",
+  "si el pago viene después del corte, una compra previa vence ese mismo mes",
+);
+ok(
+  dueDateForPurchase(new Date(2027, 0, 5), 0, 4, 15) === "2027-02-15",
+  "después del corte avanza exactamente un periodo",
 );
 ok(
   dueDateForPurchase(new Date(2027, 0, 10), 0, 25, undefined) === "",
@@ -118,6 +128,34 @@ ok(
 ok(
   normalized.cards[0].currency === "PEN",
   "una tarjeta antigua sin moneda queda fijada en soles",
+);
+
+console.log("\nSincronización entre teléfonos");
+const localBackup: CreditBackupV1 = {
+  version: 1,
+  updatedAt: 30,
+  state: { cards: [card], purchases: [], installments: [] },
+  changedAt: { cards: { card: 10 }, purchases: {}, installments: {} },
+  deletedAt: { cards: {}, purchases: { borrada: 30 }, installments: {} },
+};
+const remoteBackup: CreditBackupV1 = {
+  version: 1,
+  updatedAt: 20,
+  state: {
+    cards: [{ ...card, id: "remote", bank: "Otro banco" }],
+    purchases: [
+      { id: "borrada", cardId: "remote", description: "Vieja", total: 50, installments: 1, createdAt: "2027-01-01" },
+    ],
+    installments: [],
+  },
+  changedAt: { cards: { remote: 20 }, purchases: { borrada: 20 }, installments: {} },
+  deletedAt: { cards: {}, purchases: {}, installments: {} },
+};
+const merged = mergeCreditBackups(localBackup, remoteBackup);
+ok(merged.state.cards.length === 2, "las tarjetas de dos teléfonos se conservan");
+ok(
+  !merged.state.purchases.some((purchase) => purchase.id === "borrada"),
+  "un borrado más reciente no reaparece desde otro teléfono",
 );
 
 if (fallos) process.exit(1);

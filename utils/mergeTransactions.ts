@@ -58,6 +58,18 @@ export function hayNovedades(enMemoria: Transaction[], guardadas: Transaction[])
   return guardadas.some((t) => !conocidas.has(t.id));
 }
 
+/**
+ * Los borrados evitan que otro teléfono resucite movimientos antiguos, pero
+ * no deben crecer para siempre. Los identificadores salen del tiempo, así que
+ * conservar los 5.000 más recientes cubre años de uso sin inflar la copia.
+ */
+export function pruneDeletedTransactionIds(ids: number[], limit = 5000) {
+  return [...new Set(ids)]
+    .filter(Number.isFinite)
+    .sort((a, b) => b - a)
+    .slice(0, limit);
+}
+
 // Cuántos avisos se recuerdan. El mismo tope que usa processCaptured: si
 // aquí fuera otro, la lista crecería o se recortaría de dos maneras
 // distintas según quién la escribiera.

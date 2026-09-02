@@ -14,11 +14,17 @@ import {
   currencySymbolFor,
 } from "@/constants/currencies";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import {
+  creditMoneyPlaceholder,
+  parseCreditMoneyInput,
+  sanitizeCreditMoneyInput,
+} from "@/utils/creditMoney";
 import * as Notifications from "expo-notifications";
 import { ArrowLeft, Check, ChevronDown, Search, Trash2 } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  ActivityIndicator,
   FlatList,
   Linking,
   Modal,
@@ -66,6 +72,7 @@ export default function CreditCardSettingsV1() {
   }>();
   const creating = mode === "create" || !cardId;
   const [state, setState] = useState<CreditState>(EMPTY_CREDIT_STATE);
+  const [loaded, setLoaded] = useState(false);
   const [bank, setBank] = useState("");
   const [limit, setLimit] = useState("");
   const [closingDay, setClosingDay] = useState("");
@@ -152,6 +159,7 @@ export default function CreditCardSettingsV1() {
         setCutReminderHour(cutH);
         setCutReminderMinute(cutM);
       }
+      setLoaded(true);
     });
   }, [cardId, userCurrency]);
   async function toggleReminder(
@@ -178,13 +186,15 @@ export default function CreditCardSettingsV1() {
       );
     setEnabled(true);
   }
-  async function save() {
-    const lim = Number(limit.replace(",", ".")),
+  async function save(recalculateDates = false, datesReviewed = false) {
+    const lim = parseCreditMoneyInput(limit, currency) ?? 0,
       close = closingDay ? Number(closingDay) : undefined,
       pay = paymentDay ? Number(paymentDay) : undefined,
-      goal = monthlyGoal ? Number(monthlyGoal.replace(",", ".")) : undefined,
+      goal = monthlyGoal
+        ? (parseCreditMoneyInput(monthlyGoal, currency) ?? Number.NaN)
+        : undefined,
       minimum = minimumPayment
-        ? Number(minimumPayment.replace(",", "."))
+        ? (parseCreditMoneyInput(minimumPayment, currency) ?? Number.NaN)
         : undefined,
       days = Number(reminderDays) || 0,
       time = `${reminderHour.padStart(2, "0")}:${reminderMinute.padStart(2, "0")}`,
@@ -209,9 +219,9 @@ export default function CreditCardSettingsV1() {
       (close !== undefined && (close < 1 || close > 31)) ||
       (pay !== undefined && (pay < 1 || pay > 31)) ||
       hasOnlyOneCardDate ||
-      (goal !== undefined && goal <= 0) ||
+      (goal !== undefined && (!Number.isFinite(goal) || goal <= 0)) ||
       hasOnlyOneMembershipValue ||
-      (minimum !== undefined && minimum <= 0) ||
+      (minimum !== undefined && (!Number.isFinite(minimum) || minimum <= 0)) ||
       !/^$|^([01]?\d|2[0-3]):[0-5]\d$/.test(cutoff) ||
       (Boolean(cutoff) && !pay) ||
       days < 0 ||
@@ -236,6 +246,29 @@ export default function CreditCardSettingsV1() {
                 : "Hay un dato inválido.",
       );
     if (saving.current) return;
+    const datesChanged =
+      !creating &&
+      (originalCard?.closingDay !== close || originalCard?.paymentDay !== pay);
+    const pendingForCard = state.installments.filter(
+      (quota) => quota.cardId === cardId && !quota.paid,
+    );
+    if (datesChanged && pendingForCard.length > 0 && !datesReviewed) {
+      return Alert.alert(
+        "Cambiaste las fechas",
+        `Hay ${pendingForCard.length} pago${pendingForCard.length === 1 ? "" : "s"} pendiente${pendingForCard.length === 1 ? "" : "s"}. ¿Quieres conservar sus vencimientos o recalcularlos con las nuevas fechas?`,
+        [
+          {
+            text: "Conservar",
+            onPress: () => void save(false, true),
+          },
+          {
+            text: "Recalcular",
+            onPress: () => void save(true, true),
+          },
+          { text: "Cancelar", style: "cancel" },
+        ],
+      );
+    }
     saving.current = true;
     const resolvedId = cardId ?? makeId("card");
     const cardData = {
@@ -266,29 +299,39 @@ export default function CreditCardSettingsV1() {
         : state.cards.map((card) =>
             card.id === resolvedId ? { ...card, ...cardData } : card,
           ),
-      installments: state.installments.map((quota) => {
-        if (quota.cardId !== resolvedId || quota.paid) return quota;
-        const purchase = state.purchases.find(
-          (item) => item.id === quota.purchaseId,
-        );
-        if (!purchase) return quota;
-        return {
-          ...quota,
-          dueDate: dueDateForPurchase(
-            new Date(purchase.createdAt),
-            quota.number - 1,
-            close,
-            pay,
-          ),
-        };
-      }),
+      installments: recalculateDates
+        ? state.installments.map((quota) => {
+            if (quota.cardId !== resolvedId || quota.paid) return quota;
+            const purchase = state.purchases.find(
+              (item) => item.id === quota.purchaseId,
+            );
+            if (!purchase) return quota;
+            return {
+              ...quota,
+              dueDate: dueDateForPurchase(
+                new Date(purchase.createdAt),
+                quota.number - 1,
+                close,
+                pay,
+              ),
+            };
+          })
+        : state.installments,
     };
-    await saveCreditState(next);
-    const reminderId = `credit-card-${resolvedId}`;
-    // Retira el recordatorio mensual antiguo. Los avisos de tarjeta ahora se
-    // programan desde cada cuota pendiente real al guardar el estado.
-    quitarPagoProgramado(reminderId);
-    router.back();
+    try {
+      await saveCreditState(next);
+      const reminderId = `credit-card-${resolvedId}`;
+      // Retira el recordatorio mensual antiguo. Los avisos de tarjeta ahora se
+      // programan desde cada cuota pendiente real al guardar el estado.
+      quitarPagoProgramado(reminderId);
+      router.back();
+    } catch {
+      saving.current = false;
+      Alert.alert(
+        "No se pudo guardar",
+        "Revisa el espacio del teléfono e inténtalo nuevamente.",
+      );
+    }
   }
   function askDelete() {
     if (!cardId) return;
@@ -316,24 +359,38 @@ export default function CreditCardSettingsV1() {
           text: "Eliminar",
           style: "destructive",
           onPress: async () => {
-            await saveCreditState({
-              ...state,
-              cards: state.cards.filter((c) => c.id !== cardId),
-              purchases: state.purchases.filter((p) => p.cardId !== cardId),
-              installments: state.installments.filter(
-                (q) => q.cardId !== cardId,
-              ),
-            });
-            if (linkedIds.length) deleteTransactions(linkedIds);
-            quitarPagoProgramado(`credit-card-${cardId}`);
-            router.replace("/credit");
+            try {
+              await saveCreditState({
+                ...state,
+                cards: state.cards.filter((c) => c.id !== cardId),
+                purchases: state.purchases.filter((p) => p.cardId !== cardId),
+                installments: state.installments.filter(
+                  (q) => q.cardId !== cardId,
+                ),
+              });
+              if (linkedIds.length) deleteTransactions(linkedIds);
+              quitarPagoProgramado(`credit-card-${cardId}`);
+              router.replace("/credit");
+            } catch {
+              Alert.alert("No se pudo eliminar", "Inténtalo nuevamente.");
+            }
           },
         },
       ],
     );
   }
+  if (!loaded)
+    return (
+      <View className="flex-1 items-center justify-center bg-slate-50">
+        <ActivityIndicator color="#0f766e" />
+        <Text className="mt-2 text-sm text-slate-500">Cargando tarjeta…</Text>
+      </View>
+    );
   return (
-    <ScrollView className="flex-1 bg-slate-50 px-4 pt-12">
+    <ScrollView
+      className="flex-1 bg-slate-50 px-4 pt-12"
+      keyboardShouldPersistTaps="handled"
+    >
       <View className="flex-row items-center">
         <TouchableOpacity
           onPress={() => router.back()}
@@ -353,15 +410,18 @@ export default function CreditCardSettingsV1() {
       <Field
         label="Banco *"
         value={bank}
-        onChangeText={(v: string) => setBank(v.replace(/[0-9]/g, ""))}
+        onChangeText={(v: string) => setBank(v.slice(0, 80))}
       />
       <View className="flex-row gap-3">
         <View className="flex-[2]">
           <Field
             label="Límite de crédito *"
             value={limit}
-            onChangeText={(v: string) => setLimit(money(v))}
+            onChangeText={(v: string) =>
+              setLimit(sanitizeCreditMoneyInput(v))
+            }
             keyboardType="decimal-pad"
+            placeholder={creditMoneyPlaceholder(currency)}
           />
         </View>
         <View className="flex-1">
@@ -450,7 +510,9 @@ export default function CreditCardSettingsV1() {
       <Field
         label="Pago mínimo indicado por el banco"
         value={minimumPayment}
-        onChangeText={(v: string) => setMinimumPayment(money(v))}
+        onChangeText={(v: string) =>
+          setMinimumPayment(sanitizeCreditMoneyInput(v))
+        }
         keyboardType="decimal-pad"
         placeholder="Opcional · puedes actualizarlo cada mes"
       />
@@ -568,7 +630,9 @@ export default function CreditCardSettingsV1() {
         <Field
           label="Consumo mínimo por mes"
           value={monthlyGoal}
-          onChangeText={(v: string) => setMonthlyGoal(money(v))}
+          onChangeText={(v: string) =>
+            setMonthlyGoal(sanitizeCreditMoneyInput(v))
+          }
           keyboardType="decimal-pad"
           placeholder="Opcional"
         />
@@ -584,8 +648,10 @@ export default function CreditCardSettingsV1() {
         </Text>
       </View>
       <TouchableOpacity
-        onPress={save}
+        onPress={() => void save()}
         className="mt-5 rounded-xl bg-teal-600 p-4"
+        accessibilityRole="button"
+        accessibilityLabel={creating ? "Guardar tarjeta" : "Guardar cambios"}
       >
         <Text className="text-center font-extrabold text-white">
           {creating ? "Guardar tarjeta" : "Guardar cambios"}
@@ -726,7 +792,4 @@ function DayField({ label, value, onChange }: any) {
 }
 function digits(value: string, max: number) {
   return value.replace(/\D/g, "").slice(0, max);
-}
-function money(value: string) {
-  return value.replace(/[^0-9.,]/g, "");
 }

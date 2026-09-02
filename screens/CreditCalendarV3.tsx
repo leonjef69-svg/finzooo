@@ -7,11 +7,26 @@ import {
   outstandingAmount,
 } from "@/utils/creditStore";
 import { irUnaVez } from "@/utils/nav";
-import { currencySymbolFor } from "@/constants/currencies";
+import {
+  buildCreditCalendarEvents,
+  creditLocalDateKey,
+  creditTimestampDateKey,
+} from "@/utils/creditCalendar";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import {
+  formatCreditMoney,
+  formatCreditMoneyCompact,
+} from "@/utils/creditMoney";
 
 const DAYS = ["D", "L", "M", "M", "J", "V", "S"];
 const MONTHS = [
@@ -34,6 +49,7 @@ export default function CreditCalendarV3() {
   const router = useRouter();
   const { cardId } = useLocalSearchParams<{ cardId?: string }>();
   const [state, setState] = useState<CreditState>(EMPTY_CREDIT_STATE);
+  const [loaded, setLoaded] = useState(false);
   const [cursor, setCursor] = useState(() => new Date());
   const [selectedDay, setSelectedDay] = useState<number | null>(() =>
     new Date().getDate(),
@@ -42,12 +58,15 @@ export default function CreditCalendarV3() {
   const [filter, setFilter] = useState<CalendarFilter>("all");
   useFocusEffect(
     useCallback(() => {
-      loadCreditState().then(setState);
+      loadCreditState().then((value) => {
+        setState(value);
+        setLoaded(true);
+      });
     }, []),
   );
   const card = state.cards.find((item) => item.id === cardId) ?? state.cards[0];
   const datesConfigured = Boolean(card?.closingDay && card?.paymentDay);
-  const symbol = currencySymbolFor(card?.currency ?? "PEN");
+  const cardCurrency = card?.currency ?? "PEN";
   const items = useMemo(
     () =>
       card ? state.installments.filter((item) => item.cardId === card.id) : [],
@@ -65,24 +84,44 @@ export default function CreditCalendarV3() {
         (item.paid &&
           !item.payments?.length &&
           item.paidAt &&
-          paymentDateKey(item.paidAt).startsWith(monthKey)),
+          creditTimestampDateKey(item.paidAt).startsWith(monthKey)),
     )
     .sort((a, b) => (a.paidAt ?? "").localeCompare(b.paidAt ?? ""));
-  const today = localDateKey(new Date());
+  const today = creditLocalDateKey(new Date());
+  const belongsToVisibleMonth = (item: CreditInstallment) =>
+    item.dueDate.startsWith(monthKey) ||
+    (!item.dueDate &&
+      creditTimestampDateKey(
+        purchases.get(item.purchaseId)?.createdAt ?? "",
+      ).startsWith(monthKey));
   const pendingSingleItems = items
-    .filter((item) => item.total === 1 && !item.paid && outstandingAmount(item) > 0)
+    .filter(
+      (item) =>
+        item.total === 1 &&
+        !item.paid &&
+        outstandingAmount(item) > 0 &&
+        belongsToVisibleMonth(item),
+    )
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   const pendingInstallmentItems = items
-    .filter((item) => item.total > 1 && !item.paid && outstandingAmount(item) > 0)
+    .filter(
+      (item) =>
+        item.total > 1 &&
+        !item.paid &&
+        outstandingAmount(item) > 0 &&
+        belongsToVisibleMonth(item),
+    )
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
-  const overdueItems = datesConfigured
-    ? items
-        .filter(
-          (item) =>
-            !item.paid && item.dueDate < today && outstandingAmount(item) > 0,
-        )
-        .sort((a, b) => a.dueDate.localeCompare(b.dueDate))
-    : [];
+  const overdueItems = items
+    .filter(
+      (item) =>
+        !item.paid &&
+        /^\d{4}-\d{2}-\d{2}$/.test(item.dueDate) &&
+        item.dueDate < today &&
+        item.dueDate.startsWith(monthKey) &&
+        outstandingAmount(item) > 0,
+    )
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate));
   const filterCounts = {
     all: pendingSingleItems.length,
     installments: pendingInstallmentItems.length,
@@ -97,7 +136,7 @@ export default function CreditCalendarV3() {
         : filter === "overdue"
           ? overdueItems
           : pendingSingleItems;
-  const allCalendarEvents = calendarEvents(items, purchases, datesConfigured);
+  const allCalendarEvents = buildCreditCalendarEvents(items, purchases);
   const selectedDateKey =
     selectedDay === null
       ? null
@@ -119,7 +158,11 @@ export default function CreditCalendarV3() {
   const selectedPaidItems = Array.from(
     new Map(
       selectedEvents
-        .filter((event) => event.kind === "payment")
+        .filter(
+          (event) =>
+            event.kind === "payment" ||
+            (event.kind === "purchase" && event.item.paid),
+        )
         .map((event) => [event.item.id, event.item]),
     ).values(),
   );
@@ -149,12 +192,16 @@ export default function CreditCalendarV3() {
   }
   useEffect(() => {
     if (selectedDay !== null) setFilter(firstFilterWithMovements());
-    // Se recalcula al cargar los movimientos; los cambios manuales del filtro
-    // no deben volver a activar esta selección automática.
+    // También se recalcula al volver al mes actual. Antes se marcaba hoy, pero
+    // podía quedar activa la barra que se había usado en otro mes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state]);
+  }, [state, monthKey, selectedDay]);
   const selectedEventsForFilter = selectedEvents.filter((event) => {
-    if (filter === "paid") return event.kind === "payment";
+    if (filter === "paid")
+      return (
+        event.kind === "payment" ||
+        (event.kind === "purchase" && event.item.paid)
+      );
     if (filter === "overdue")
       return (
         event.kind === "due" &&
@@ -199,7 +246,12 @@ export default function CreditCalendarV3() {
     ];
   }, [cursor]);
   const totalPendingAmount = items
-    .filter((item) => !item.paid && outstandingAmount(item) > 0)
+    .filter(
+      (item) =>
+        !item.paid &&
+        outstandingAmount(item) > 0 &&
+        belongsToVisibleMonth(item),
+    )
     .reduce(
     (sum, item) => sum + outstandingAmount(item),
     0,
@@ -212,11 +264,14 @@ export default function CreditCalendarV3() {
     (sum, item) => sum + outstandingAmount(item),
     0,
   );
-  const nextUrgent = datesConfigured
-    ? [...items]
-        .filter((item) => !item.paid)
-        .sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0]
-    : undefined;
+  const nextUrgent = [...items]
+    .filter(
+      (item) =>
+        !item.paid &&
+        outstandingAmount(item) > 0 &&
+        /^\d{4}-\d{2}-\d{2}$/.test(item.dueDate),
+    )
+    .sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0];
   function changeMonth(delta: number) {
     const nextCursor = new Date(
       cursor.getFullYear(),
@@ -263,6 +318,13 @@ export default function CreditCalendarV3() {
       params: { cardId: card.id, convertId: item.purchaseId },
     });
   }
+  if (!loaded)
+    return (
+      <View className="flex-1 items-center justify-center bg-slate-50">
+        <ActivityIndicator color="#0f766e" />
+        <Text className="mt-2 text-sm text-slate-500">Cargando calendario…</Text>
+      </View>
+    );
   return (
     <ScrollView className="flex-1 bg-slate-50 px-4 pt-14">
       <View className="flex-row items-center">
@@ -309,7 +371,7 @@ export default function CreditCalendarV3() {
               className="mt-1 font-extrabold text-slate-900"
             >
               {purchases.get(nextUrgent.purchaseId)?.description ?? "Compra"} ·{" "}
-              {symbol} {outstandingAmount(nextUrgent).toFixed(2)}
+              {formatCreditMoney(outstandingAmount(nextUrgent), cardCurrency)}
             </Text>
             <Text className="text-xs font-semibold text-amber-700">
               Vence {formatDueDate(nextUrgent.dueDate)} ·{" "}
@@ -343,17 +405,17 @@ export default function CreditCalendarV3() {
       <View className="mt-3 flex-row gap-2">
         <Summary
           label="Por pagar"
-          value={`${symbol} ${totalPendingAmount.toFixed(2)}`}
+          value={formatCreditMoneyCompact(totalPendingAmount, cardCurrency, 13)}
           color="amber"
         />
         <Summary
           label="Pagado"
-          value={`${symbol} ${monthPaidAmount.toFixed(2)}`}
+          value={formatCreditMoneyCompact(monthPaidAmount, cardCurrency, 13)}
           color="emerald"
         />
         <Summary
           label="Se pasó"
-          value={`${symbol} ${totalOverdueAmount.toFixed(2)}`}
+          value={formatCreditMoneyCompact(totalOverdueAmount, cardCurrency, 13)}
           color="rose"
         />
       </View>
@@ -431,7 +493,9 @@ export default function CreditCalendarV3() {
                         event.item.total > 1,
                     );
                     const hasPaid = events.some(
-                      (event) => event.kind === "payment",
+                      (event) =>
+                        event.kind === "payment" ||
+                        (event.kind === "purchase" && event.item.paid),
                     );
                     const hasOverdue = events.some(
                       (event) =>
@@ -550,8 +614,23 @@ export default function CreditCalendarV3() {
           const hasPaymentOnSelectedDate = selectedEvents.some(
             (event) => event.item.id === item.id && event.kind === "payment",
           );
+          const hasPaidPurchaseOnSelectedDate = selectedEvents.some(
+            (event) =>
+              event.item.id === item.id &&
+              event.kind === "purchase" &&
+              event.item.paid,
+          );
           const purchase = purchases.get(item.purchaseId);
           const expanded = expandedId === item.id;
+          const displayedAmount = selectedDateKey
+            ? hasPaymentOnSelectedDate
+              ? paidDuringDate(item, selectedDateKey)
+              : hasPaidPurchaseOnSelectedDate
+                ? (purchase?.total ?? confirmedPaidAmount(item))
+                : outstandingAmount(item)
+            : filter === "paid"
+              ? paidDuringMonth(item, monthKey)
+              : outstandingAmount(item);
           return (
             <TouchableOpacity
               activeOpacity={0.8}
@@ -573,17 +652,9 @@ export default function CreditCalendarV3() {
                 <View className="max-w-[65%] flex-row items-center gap-1.5">
                   <Text
                     numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.65}
                     className={`mr-1 font-extrabold ${filter === "paid" || hasPaymentOnSelectedDate ? "text-emerald-700" : "text-slate-900"}`}
                   >
-                    {symbol}{" "}
-                    {((filter === "paid" || hasPaymentOnSelectedDate)
-                      ? selectedDateKey
-                        ? paidDuringDate(item, selectedDateKey)
-                        : paidDuringMonth(item, monthKey)
-                      : outstandingAmount(item)
-                    ).toFixed(2)}
+                    {formatCreditMoneyCompact(displayedAmount, cardCurrency, 14)}
                   </Text>
                   {!item.paid && (
                     <>
@@ -618,7 +689,7 @@ export default function CreditCalendarV3() {
               {expanded && (
                 <View className="mt-2 border-t border-slate-100 pt-2">
                   <Text className="text-xs text-slate-500">
-                    Vence: {item.dueDate}
+                    Vence: {item.dueDate || "Sin configurar"}
                   </Text>
                   {item.paid && (
                     <Text className="mt-1 text-xs font-semibold text-emerald-700">
@@ -651,7 +722,14 @@ function status(item: CreditInstallment) {
       text: "text-emerald-700",
       dot: "#059669",
     };
-  const today = localDateKey(new Date());
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(item.dueDate))
+    return {
+      label: "Sin fecha",
+      box: "bg-slate-100",
+      text: "text-slate-600",
+      dot: "#64748b",
+    };
+  const today = creditLocalDateKey(new Date());
   if (item.dueDate < today)
     return {
       label: "Vencida",
@@ -676,24 +754,18 @@ function status(item: CreditInstallment) {
     dot: "#0284c7",
   };
 }
-function localDateKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
-}
-function paymentDateKey(value: string) {
-  return localDateKey(new Date(value));
-}
 function confirmedPaymentsInMonth(item: CreditInstallment, monthKey: string) {
   return (item.payments ?? []).filter(
     (payment) =>
       payment.status === "confirmed" &&
-      paymentDateKey(payment.createdAt).startsWith(monthKey),
+      creditTimestampDateKey(payment.createdAt).startsWith(monthKey),
   );
 }
 function paidDuringMonth(item: CreditInstallment, monthKey: string) {
   const records = confirmedPaymentsInMonth(item, monthKey);
   if (records.length)
     return records.reduce((sum, payment) => sum + payment.amount, 0);
-  return item.paidAt && paymentDateKey(item.paidAt).startsWith(monthKey)
+  return item.paidAt && creditTimestampDateKey(item.paidAt).startsWith(monthKey)
     ? confirmedPaidAmount(item)
     : 0;
 }
@@ -701,55 +773,13 @@ function paidDuringDate(item: CreditInstallment, dateKey: string) {
   const records = (item.payments ?? []).filter(
     (payment) =>
       payment.status === "confirmed" &&
-      paymentDateKey(payment.createdAt) === dateKey,
+      creditTimestampDateKey(payment.createdAt) === dateKey,
   );
   if (records.length)
     return records.reduce((sum, payment) => sum + payment.amount, 0);
-  return item.paidAt && paymentDateKey(item.paidAt) === dateKey
+  return item.paidAt && creditTimestampDateKey(item.paidAt) === dateKey
     ? confirmedPaidAmount(item)
     : 0;
-}
-function calendarEvents(
-  items: CreditInstallment[],
-  purchases: Map<string, { createdAt: string }>,
-  datesConfigured: boolean,
-) {
-  return items.flatMap((item) => {
-    const payments = (item.payments ?? [])
-      .filter((payment) => payment.status === "confirmed")
-      .map((payment) => ({
-        item,
-        date: paymentDateKey(payment.createdAt),
-        kind: "payment" as const,
-      }));
-    if (!payments.length && item.paid && item.paidAt) {
-      payments.push({
-        item,
-        date: paymentDateKey(item.paidAt),
-        kind: "payment" as const,
-      });
-    }
-    const purchase = purchases.get(item.purchaseId);
-    const purchaseEvent =
-      !item.paid && item.number === 1 && purchase?.createdAt
-        ? [
-            {
-              item,
-              date: paymentDateKey(purchase.createdAt),
-              kind: "purchase" as const,
-            },
-          ]
-        : [];
-    return item.paid
-      ? payments
-      : [
-          ...purchaseEvent,
-          ...payments,
-          ...(datesConfigured && item.dueDate
-            ? [{ item, date: item.dueDate, kind: "due" as const }]
-            : []),
-        ];
-  });
 }
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("es-PE", {
@@ -796,8 +826,6 @@ function Summary({
       <Text className={`text-[10px] font-bold ${text}`}>{label}</Text>
       <Text
         numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.65}
         className={`font-extrabold ${text}`}
       >
         {value}

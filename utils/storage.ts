@@ -1,25 +1,5 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { decryptText, encryptText } from "@/utils/encryption";
-import { isDecoyActive } from "@/utils/decoyMode";
-
-/**
- * Traduce una clave según el modo en que esté la app.
- *
- * Esta línea es todo el modo señuelo, del lado del guardado. Con el señuelo
- * encendido, "finzo:transactions" pasa a ser "finzo:decoy:transactions", y a
- * partir de ahí la app entera —Inicio, Historial, Reportes, exportar, el
- * escáner— trabaja sobre otro conjunto de datos sin enterarse de nada.
- *
- * Se hace aquí, en el punto más bajo, y no en cada pantalla, precisamente
- * para que ninguna pantalla pueda olvidarse. Todo lo que se guarda pasa por
- * estas funciones; no hay ninguna otra puerta.
- *
- * Los datos reales quedan intactos bajo sus claves de siempre: el señuelo no
- * los borra ni los toca, solo mira a otro lado.
- */
-function actualKey(key: string): string {
-  return isDecoyActive() ? key.replace(/^finzo:/, "finzo:decoy:") : key;
-}
 
 export const STORAGE_KEYS = {
   profile: "finzo:profile",
@@ -82,6 +62,11 @@ export const STORAGE_KEYS = {
    */
   pagosProgramados: "finzo:pagosProgramados",
   /**
+   * Tarjetas, compras, cuotas y pagos relacionados. Es información de la
+   * cuenta: se cifra y se borra al cerrar sesión.
+   */
+  creditCards: "finzo:creditCards",
+  /**
    * Cuándo se activó la prueba gratuita de Premium. Solo de este celular: no viaja
    * a la nube. Ver utils/pruebaPremium.
    */
@@ -113,6 +98,14 @@ export const STORAGE_KEYS = {
   movimientosNegocio: "finzo:movimientosNegocio",
 } as const;
 
+/** Retira automáticamente los datos falsos que dejaron versiones antiguas. */
+export async function clearRetiredAlternateData(): Promise<void> {
+  const obsoleteKeys = Object.values(STORAGE_KEYS).map((key) =>
+    key.replace(/^finzo:/, "finzo:decoy:"),
+  );
+  await AsyncStorage.multiRemove(obsoleteKeys).catch(() => undefined);
+}
+
 // Borra todos los datos de la cuenta de golpe (operación atómica y
 // esperada). themeMode se conserva porque es preferencia del dispositivo,
 // no de la cuenta.
@@ -121,9 +114,7 @@ export async function clearAccountData(): Promise<void> {
   // está cerrando y, si llegaran después del borrado, volverían a escribir
   // en el celular los datos que acabamos de eliminar.
   discardPendingSaves();
-  try {
-    await AsyncStorage.multiRemove(
-      [
+  const accountKeys = [
         STORAGE_KEYS.profile,
         STORAGE_KEYS.budgets,
         STORAGE_KEYS.categoryBudgets,
@@ -146,6 +137,7 @@ export async function clearAccountData(): Promise<void> {
         // El calendario es de la cuenta: sus recibos no pueden quedar a la vista de quien
         // entre después en este celular.
         STORAGE_KEYS.pagosProgramados,
+        STORAGE_KEYS.creditCards,
         // La prueba gratuita también: es de la cuenta que se va, no del aparato.
         // Dejándola, la cuenta siguiente entraría con la prueba ya gastada.
         STORAGE_KEYS.pruebaPremium,
@@ -155,25 +147,47 @@ export async function clearAccountData(): Promise<void> {
         STORAGE_KEYS.productos,
         STORAGE_KEYS.ventas,
         STORAGE_KEYS.movimientosNegocio,
-      ].map(actualKey)
-    );
+      ];
+  // Las claves con el prefijo antiguo se incluyen para limpiar también
+  // cualquier dato falso que haya quedado de versiones anteriores.
+  const allKeys = Array.from(new Set(accountKeys.flatMap((key) => [
+    key,
+    key.replace(/^finzo:/, "finzo:decoy:"),
+  ])));
+  try {
+    await AsyncStorage.multiRemove(allKeys);
+    // La primera versión del módulo de tarjetas guardaba fuera del almacén
+    // central. Se retira también al cerrar sesión para que nunca pase a la
+    // siguiente cuenta, incluso si todavía no alcanzó a migrarse.
+    await AsyncStorage.removeItem("@fino/credit-v1");
   } catch {
-    // Si falla el borrado, los saveJSON individuales de abajo sirven de
-    // respaldo — la cuenta sigue sin datos relevantes.
+    // Algunos fabricantes fallan al borrar muchas claves juntas. Se vuelve
+    // a intentar una por una para no dejar datos de la cuenta anterior.
+    await Promise.allSettled(
+      [...allKeys, "@fino/credit-v1"].map((key) =>
+        AsyncStorage.removeItem(key),
+      ),
+    );
   }
 }
 
 export async function loadJSON<T>(key: string, fallback: T): Promise<T> {
   try {
-    const raw = await AsyncStorage.getItem(actualKey(key));
+    const raw = await AsyncStorage.getItem(key);
     if (raw == null) return fallback;
     const decrypted = await decryptText(raw);
     if (decrypted != null) {
-      return JSON.parse(decrypted) as T;
+      const parsed = JSON.parse(decrypted) as T;
+      // Los datos AES-CBC antiguos siguen siendo legibles, pero se actualizan
+      // en segundo plano al formato autenticado v2 en la primera lectura.
+      if (!raw.startsWith("v2:")) saveJSON(key, parsed);
+      return parsed;
     }
     // Dato guardado antes de activar el cifrado: lo leemos tal cual por
     // esta vez (la próxima vez que se guarde, va a quedar cifrado).
-    return JSON.parse(raw) as T;
+    const parsed = JSON.parse(raw) as T;
+    saveJSON(key, parsed);
+    return parsed;
   } catch {
     return fallback;
   }
@@ -207,12 +221,28 @@ function writeNow(key: string, value: unknown): Promise<void> {
     });
 }
 
+/**
+ * Variante inmediata y comprobable para datos que una pantalla espera haber
+ * guardado antes de volver atrás. También cancela una escritura anterior en
+ * cola para impedir que llegue después y pise el valor nuevo.
+ */
+export async function saveJSONNow(key: string, value: unknown): Promise<boolean> {
+  const target = key;
+  const timer = pendingTimers.get(target);
+  if (timer) clearTimeout(timer);
+  pendingTimers.delete(target);
+  pendingValues.delete(target);
+  try {
+    const encrypted = await encryptText(JSON.stringify(value));
+    await AsyncStorage.setItem(target, encrypted);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function saveJSON(key: string, value: unknown): void {
-  // La clave se traduce AQUÍ, al entrar en la cola, y no al escribir. Es
-  // deliberado: si se tradujera al final, un guardado encolado justo antes
-  // de cambiar de modo se escribiría en el almacén equivocado — datos
-  // reales dentro del señuelo, o al revés.
-  const target = actualKey(key);
+  const target = key;
   pendingValues.set(target, value);
 
   const existing = pendingTimers.get(target);

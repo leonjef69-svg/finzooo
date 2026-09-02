@@ -119,7 +119,7 @@ explican de qué va la app, no las más bonitas.
 4. **Reportes** con las gráficas.
 5. **Exportar** a PDF/Excel.
 
-> **NO USAR EL MODO SEÑUELO NI DATOS INVENTADOS FEOS.** Las capturas se hacen con la app llena
+> **NO USAR DATOS INVENTADOS FEOS.** Las capturas se hacen con la app llena
 > de movimientos creíbles. Una pantalla vacía en la tienda dice "esto no lo usa nadie".
 >
 > **Y NI UN DATO REAL SUYO**: en esas capturas no puede salir su nombre, su correo, su foto de

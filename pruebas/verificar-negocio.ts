@@ -11,8 +11,7 @@
 //      hasta que las cuentas no cuadran.
 //   2. Que borre sus datos al cerrar sesión. Ya pasó el 07/08/2026 con las categorías propias:
 //      la cuenta siguiente heredó las de la anterior, con sus fotos.
-//   3. Que la nube del negocio sea OTRO documento, con el candado del señuelo, y que borrar
-//      la cuenta borre los dos.
+//   3. Que la nube del negocio sea OTRO documento y que borrar la cuenta borre los dos.
 //   4. Que los totales de una venta salgan de sus líneas y que el precio quede copiado.
 import fs from "fs";
 import path from "path";
@@ -106,18 +105,6 @@ console.log("\n--- LA NUBE DEL NEGOCIO ES OTRO DOCUMENTO ---");
   ok(/doc\(db, "negocios", uid\)/.test(nube), "el negocio se guarda en negocios/{uid}");
   ok(!/doc\(db, "users"/.test(nube), "y NO en el documento de la cuenta, que tiene tope de 1 MB");
 
-  // EL CANDADO DEL SEÑUELO, EN LA PUERTA NUEVA.
-  //
-  // El de cloudSync esta puesto "en la unica puerta que da a Firestore". Esta es otra puerta:
-  // sin el candado, con el señuelo puesto se subiria encima del respaldo real y —peor— se
-  // bajarian las ventas y los precios de verdad para mostrarlos DENTRO del señuelo. O sea que
-  // el modo hecho para esconder los datos los enseñaria.
-  ok(/isDecoyActive/.test(nube), "la puerta nueva tiene el candado del modo señuelo");
-  const subir = nube.slice(nube.indexOf("export function subirNegocio"));
-  ok(/elSeñueloBloquea\(\)\) return Promise\.resolve\(\)/.test(subir.slice(0, 400)), "no sube con el señuelo puesto");
-  const bajar = nube.slice(nube.indexOf("export async function bajarNegocio"));
-  ok(/elSeñueloBloquea\(\)\) return null/.test(bajar.slice(0, 300)), "y no baja tampoco");
-
   // Firestore rechaza "undefined" y tira el guardado entero. La venta tiene movimientoId
   // opcional —vacio en toda la V1—, asi que sin limpiarlo el respaldo fallaria en silencio
   // desde el primer dia.
@@ -132,6 +119,7 @@ console.log("\n--- LA NUBE DEL NEGOCIO ES OTRO DOCUMENTO ---");
   const borrarCuenta = cuenta.slice(cuenta.indexOf("export async function deleteCloudAccount"));
   ok(/deleteDoc\(doc\(db, "users", uid\)\)/.test(borrarCuenta), "borra el documento de la cuenta");
   ok(/borrarNegocioDeLaNube\(uid\)/.test(borrarCuenta), "Y TAMBIEN el del negocio");
+  ok(/deleteCreditCloudAccount\(uid\)/.test(borrarCuenta), "Y el respaldo separado de las tarjetas");
 }
 
 console.log("\n--- LAS CUENTAS DE UNA VENTA ---");

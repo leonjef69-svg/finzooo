@@ -14,6 +14,13 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { nextId } from "@/utils/id";
 import { irUnaVez } from "@/utils/nav";
 import {
+  creditMoneyEpsilon,
+  creditMoneyPlaceholder,
+  formatCreditMoney,
+  parseCreditMoneyInput,
+  sanitizeCreditMoneyInput,
+} from "@/utils/creditMoney";
+import {
   ArrowLeft,
   CalendarDays,
   ReceiptText,
@@ -23,6 +30,7 @@ import {
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  ActivityIndicator,
   ScrollView,
   Text,
   TextInput,
@@ -42,6 +50,7 @@ export default function CreditPurchaseV4() {
     editId?: string;
   }>();
   const [state, setState] = useState<CreditState>(EMPTY_CREDIT_STATE);
+  const [loaded, setLoaded] = useState(false);
   const [kind, setKind] = useState<"pending" | "paid" | "installments">(
     convertId ? "installments" : "pending",
   );
@@ -73,18 +82,23 @@ export default function CreditPurchaseV4() {
             setInstallmentAmount(String(currentQuota.amount));
         }
       }
+      setLoaded(true);
     });
   }, [convertId, editId]);
   const card = state.cards.find((c) => c.id === cardId);
   const datesConfigured = Boolean(card?.closingDay && card?.paymentDay);
-  const symbol = currencySymbolFor(card?.currency ?? "PEN");
+  const cardCurrency = card?.currency ?? "PEN";
   const homeSymbol = currencySymbolFor(userCurrency);
   const differentCurrency = (card?.currency ?? "PEN") !== userCurrency;
-  const total = Number(amount.replace(",", ".")) || 0;
-  const qty = kind === "installments" ? Math.max(1, Number(count) || 1) : 1;
+  const total = parseCreditMoneyInput(amount, cardCurrency) ?? 0;
+  const parsedQty = Number(count);
+  const qty =
+    kind === "installments" && Number.isInteger(parsedQty)
+      ? Math.min(60, Math.max(1, parsedQty))
+      : 1;
   const each =
     kind === "installments"
-      ? Number(installmentAmount.replace(",", ".")) || 0
+      ? parseCreditMoneyInput(installmentAmount, cardCurrency) ?? 0
       : total;
   const existingPurchase = state.purchases.find(
     (purchase) => purchase.id === (convertId ?? editId),
@@ -145,16 +159,16 @@ export default function CreditPurchaseV4() {
     if (
       kind !== "paid" &&
       !hasRelatedPayments &&
-      newDebt > availableForPurchase + 0.005
+      newDebt > availableForPurchase + creditMoneyEpsilon(cardCurrency)
     ) {
       return Alert.alert(
         "Límite insuficiente",
-        `Esta compra generaría ${symbol} ${newDebt.toFixed(2)} de deuda y tienes ${symbol} ${Math.max(0, availableForPurchase).toFixed(2)} disponibles.`,
+        `Esta compra generaría ${formatCreditMoney(newDebt, cardCurrency)} de deuda y tienes ${formatCreditMoney(Math.max(0, availableForPurchase), cardCurrency)} disponibles.`,
       );
     }
     if (saving.current) return;
     const amountFromHome = differentCurrency
-      ? Number(homeAmount.replace(",", ".")) || 0
+      ? parseCreditMoneyInput(homeAmount, userCurrency) ?? 0
       : total;
     if (kind === "paid" && paidMethod === "fino" && amountFromHome <= 0)
       return Alert.alert(
@@ -164,22 +178,25 @@ export default function CreditPurchaseV4() {
     if (
       kind === "paid" &&
       paidMethod === "fino" &&
-      amountFromHome > disponible + 0.005
+      amountFromHome > disponible + creditMoneyEpsilon(userCurrency)
     )
       return Alert.alert(
         "Saldo insuficiente",
-        `Tu saldo disponible en Inicio es ${homeSymbol} ${disponible.toFixed(2)}. Puedes elegir Pago externo.`,
+        `Tu saldo disponible en Inicio es ${formatCreditMoney(disponible, userCurrency)}. Puedes elegir Pago externo.`,
       );
     saving.current = true;
-    const id = convertId ?? editId ?? makeId("purchase"),
-      now = new Date();
-    if (editId && hasRelatedPayments) {
+    try {
+      const id = convertId ?? editId ?? makeId("purchase"),
+        now = new Date();
+      if (editId && hasRelatedPayments) {
       const firstPrevious = previousQuotas[0];
       const changedFinancialData =
-        Math.abs(total - Number(existingPurchase?.total ?? 0)) > 0.005 ||
+        Math.abs(total - Number(existingPurchase?.total ?? 0)) >
+          creditMoneyEpsilon(cardCurrency) ||
         qty !== existingPurchase?.installments ||
         (qty > 1 &&
-          Math.abs(each - Number(firstPrevious?.amount ?? 0)) > 0.005);
+          Math.abs(each - Number(firstPrevious?.amount ?? 0)) >
+            creditMoneyEpsilon(cardCurrency));
       if (changedFinancialData) {
         saving.current = false;
         return Alert.alert(
@@ -200,10 +217,10 @@ export default function CreditPurchaseV4() {
             : purchase,
         ),
       });
-      router.back();
-      return;
-    }
-    const purchase = {
+        router.back();
+        return;
+      }
+      const purchase = {
       id,
       cardId: card.id,
       description: desc.trim(),
@@ -269,25 +286,42 @@ export default function CreditPurchaseV4() {
       ...state.installments.filter((q) => q.purchaseId !== id),
       ...quotas,
     ];
-    if (kind === "paid" && paidMethod === "fino" && homeTransactionId) {
-      addOrUpdateTransaction({
-        id: homeTransactionId,
-        type: "expense",
-        amount: amountFromHome,
-        category: "otros",
-        date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
-        time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
-        method: "credit-card-payment",
-        description: `Pago tarjeta ${card.bank}`,
-        notes: desc.trim(),
-        origin: "manual",
-      });
+      await saveCreditState({ ...state, purchases, installments });
+      if (kind === "paid" && paidMethod === "fino" && homeTransactionId) {
+        addOrUpdateTransaction({
+          id: homeTransactionId,
+          type: "expense",
+          amount: amountFromHome,
+          category: "otros",
+          date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+          time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
+          method: "credit-card-payment",
+          description: `Pago tarjeta ${card.bank}`,
+          notes: desc.trim(),
+          origin: "manual",
+        });
+      }
+      router.back();
+    } catch {
+      saving.current = false;
+      Alert.alert(
+        "No se pudo guardar",
+        "Revisa el espacio del teléfono e inténtalo nuevamente.",
+      );
     }
-    await saveCreditState({ ...state, purchases, installments });
-    router.back();
   }
+  if (!loaded)
+    return (
+      <View className="flex-1 items-center justify-center bg-slate-50">
+        <ActivityIndicator color="#0f766e" />
+        <Text className="mt-2 text-sm text-slate-500">Cargando compra…</Text>
+      </View>
+    );
   return (
-    <ScrollView className="flex-1 bg-slate-50 px-4 pt-12">
+    <ScrollView
+      className="flex-1 bg-slate-50 px-4 pt-12"
+      keyboardShouldPersistTaps="handled"
+    >
       <View className="flex-row items-center">
         <TouchableOpacity
           onPress={() => router.back()}
@@ -371,9 +405,11 @@ export default function CreditPurchaseV4() {
           <Field
             label="Monto original"
             value={amount}
-            onChangeText={(v: string) => setAmount(money(v))}
+            onChangeText={(v: string) =>
+              setAmount(sanitizeCreditMoneyInput(v))
+            }
             keyboardType="decimal-pad"
-            placeholder="0.00"
+            placeholder={creditMoneyPlaceholder(cardCurrency)}
           />
         </View>
         {kind === "installments" ? (
@@ -395,7 +431,7 @@ export default function CreditPurchaseV4() {
                 month: "short",
                 hour: "numeric",
                 minute: "2-digit",
-              }).format(new Date())}
+              }).format(purchaseDate)}
             />
           </View>
         )}
@@ -428,9 +464,11 @@ export default function CreditPurchaseV4() {
             <Field
               label={`Monto descontado en ${userCurrency}`}
               value={homeAmount}
-              onChangeText={(v: string) => setHomeAmount(money(v))}
+              onChangeText={(v: string) =>
+                setHomeAmount(sanitizeCreditMoneyInput(v))
+              }
               keyboardType="decimal-pad"
-              placeholder={`${homeSymbol} 0.00`}
+              placeholder={`${homeSymbol} ${creditMoneyPlaceholder(userCurrency)}`}
             />
           )}
           <Text className="mt-2 text-xs text-emerald-800">
@@ -460,9 +498,11 @@ export default function CreditPurchaseV4() {
           <Field
             label="Cuota mensual indicada por el banco"
             value={installmentAmount}
-            onChangeText={(v: string) => setInstallmentAmount(money(v))}
+            onChangeText={(v: string) =>
+              setInstallmentAmount(sanitizeCreditMoneyInput(v))
+            }
             keyboardType="decimal-pad"
-            placeholder="Ej. 45.25"
+            placeholder={creditMoneyPlaceholder(cardCurrency)}
           />
           <ReadOnly
             label="Fecha y hora"
@@ -471,7 +511,7 @@ export default function CreditPurchaseV4() {
               month: "short",
               hour: "numeric",
               minute: "2-digit",
-            }).format(new Date())}
+            }).format(purchaseDate)}
           />
         </>
       )}
@@ -504,8 +544,8 @@ export default function CreditPurchaseV4() {
             <Text className="ml-2 font-extrabold">Cuotas y vencimientos</Text>
           </View>
           <Text className="mt-1 text-sm text-slate-500">
-            {qty} pagos de {symbol} {each.toFixed(2)} · Total a pagar {symbol}{" "}
-            {(each * qty).toFixed(2)}
+            {qty} pagos de {formatCreditMoney(each, cardCurrency)} · Total a pagar{" "}
+            {formatCreditMoney(each * qty, cardCurrency)}
           </Text>
           {preview.map((p) => (
             <View
@@ -523,6 +563,8 @@ export default function CreditPurchaseV4() {
       <TouchableOpacity
         onPress={save}
         className="mt-5 rounded-xl bg-teal-600 p-4"
+        accessibilityRole="button"
+        accessibilityLabel="Guardar compra"
       >
         <Text className="text-center font-extrabold text-white">
           {convertId
@@ -588,7 +630,4 @@ function PurchaseIcon({ name }: { name: PurchaseIconName }) {
 }
 function digits(value: string, max: number) {
   return value.replace(/\D/g, "").slice(0, max);
-}
-function money(value: string) {
-  return value.replace(/[^0-9.,]/g, "");
 }

@@ -2,7 +2,6 @@ import {
   CreditState,
   EMPTY_CREDIT_STATE,
   confirmedPaidAmount,
-  dueDateForPurchase,
   loadCreditState,
   makeId,
   outstandingAmount,
@@ -10,12 +9,20 @@ import {
 } from "@/utils/creditStore";
 import { useAppData } from "@/contexts/AppDataContext";
 import { currencySymbolFor } from "@/constants/currencies";
+import {
+  creditMoneyPlaceholder,
+  creditMoneyEpsilon,
+  formatCreditMoney,
+  parseCreditMoneyInput,
+  sanitizeCreditMoneyInput,
+} from "@/utils/creditMoney";
 import { nextId } from "@/utils/id";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
+  ActivityIndicator,
   ScrollView,
   Text,
   TextInput,
@@ -32,14 +39,11 @@ export default function CreditPayV1() {
     purchaseId: string;
   }>();
   const [state, setState] = useState<CreditState>(EMPTY_CREDIT_STATE);
-  const [method, setMethod] = useState<"fino" | "card" | "external">("fino");
+  const [loaded, setLoaded] = useState(false);
+  const [method, setMethod] = useState<"fino" | "external">("fino");
   const [account, setAccount] = useState("");
-  const [targetId, setTargetId] = useState("");
   const [homeAmount, setHomeAmount] = useState("");
-  const [targetAmount, setTargetAmount] = useState("");
-  const [paymentMode, setPaymentMode] = useState<"full" | "minimum" | "other">(
-    "full",
-  );
+  const [paymentMode, setPaymentMode] = useState<"full" | "other">("full");
   const [customAmount, setCustomAmount] = useState("");
   useEffect(() => {
     loadCreditState().then((value) => {
@@ -48,6 +52,7 @@ export default function CreditPayV1() {
       setMethod(
         savedPurchase?.balanceMode === "separate" ? "external" : "fino",
       );
+      setLoaded(true);
     });
   }, [purchaseId]);
   const source = state.cards.find((c) => c.id === cardId);
@@ -61,31 +66,16 @@ export default function CreditPayV1() {
   );
   const nextQuota = pending[0];
   const pendingAmount = nextQuota ? outstandingAmount(nextQuota) : 0;
-  const minimumAmount = Math.min(
-    source?.statementMinimumPayment ?? pendingAmount,
-    pendingAmount,
-  );
+  const cardCurrency = source?.currency ?? "PEN";
   const amount =
     paymentMode === "full"
       ? pendingAmount
-      : paymentMode === "minimum"
-        ? minimumAmount
-        : Number(customAmount.replace(",", ".")) || 0;
-  const cardCurrency = source?.currency ?? "PEN";
+      : parseCreditMoneyInput(customAmount, cardCurrency) ?? 0;
   const cardSymbol = currencySymbolFor(cardCurrency);
   const homeSymbol = currencySymbolFor(userCurrency);
   const differentCurrency = cardCurrency !== userCurrency;
   const amountFromHome = differentCurrency
-    ? Number(homeAmount.replace(",", ".")) || 0
-    : amount;
-  const otherCards = state.cards.filter((c) => c.id !== cardId);
-  const targetCard = otherCards.find((card) => card.id === targetId);
-  const targetCurrency = targetCard?.currency ?? "PEN";
-  const targetSymbol = currencySymbolFor(targetCurrency);
-  const differentTargetCurrency =
-    Boolean(targetCard) && targetCurrency !== cardCurrency;
-  const amountForTarget = differentTargetCurrency
-    ? Number(targetAmount.replace(",", ".")) || 0
+    ? parseCreditMoneyInput(homeAmount, userCurrency) ?? 0
     : amount;
   async function confirm(reviewed = false) {
     if (!nextQuota)
@@ -93,42 +83,36 @@ export default function CreditPayV1() {
         "Sin pagos pendientes",
         "Este movimiento ya está pagado.",
       );
-    if (amount <= 0 || amount > pendingAmount + 0.005)
+    if (
+      amount <= 0 ||
+      amount > pendingAmount + creditMoneyEpsilon(cardCurrency)
+    )
       return Alert.alert(
         "Monto inválido",
-        `El pago debe ser mayor que cero y no superar ${cardSymbol} ${pendingAmount.toFixed(2)}.`,
-      );
-    if (method === "card" && !targetId)
-      return Alert.alert(
-        "Elige una tarjeta",
-        "Selecciona la tarjeta que asumirá el pago.",
-      );
-    if (method === "card" && differentTargetCurrency && amountForTarget <= 0)
-      return Alert.alert(
-        "Indica el monto convertido",
-        `Escribe cuánto cargará la tarjeta en ${targetCurrency}.`,
+        `El pago debe ser mayor que cero y no superar ${formatCreditMoney(pendingAmount, cardCurrency)}.`,
       );
     if (method === "fino" && differentCurrency && amountFromHome <= 0)
       return Alert.alert(
         "Indica el monto descontado",
         `Escribe cuánto saldrá de tu saldo en ${userCurrency}.`,
       );
-    if (method === "fino" && amountFromHome > disponible + 0.005)
+    if (
+      method === "fino" &&
+      amountFromHome > disponible + creditMoneyEpsilon(userCurrency)
+    )
       return Alert.alert(
         "Saldo insuficiente",
-        `Tu saldo disponible en Inicio es ${homeSymbol} ${disponible.toFixed(2)}. Puedes registrar el pago como externo o elegir otro monto.`,
+        `Tu saldo disponible en Inicio es ${formatCreditMoney(disponible, userCurrency)}. Puedes registrar el pago como externo o elegir otro monto.`,
       );
     if (!reviewed) {
       const origin =
         method === "fino"
-          ? `Saldo de Fino: ${homeSymbol} ${amountFromHome.toFixed(2)}`
-          : method === "card"
-            ? `${targetCard?.bank ?? "Otra tarjeta"}: ${targetSymbol} ${amountForTarget.toFixed(2)}`
-            : account.trim() || "Pago externo";
+          ? `Saldo de Fino: ${formatCreditMoney(amountFromHome, userCurrency)}`
+          : account.trim() || "Pago externo";
       const remaining = Math.max(0, pendingAmount - amount);
       return Alert.alert(
         "Revisar pago",
-        `Pagarás: ${cardSymbol} ${amount.toFixed(2)}\nOrigen: ${origin}\nQuedará pendiente: ${cardSymbol} ${remaining.toFixed(2)}${method === "fino" ? `\nSaldo de Inicio después: ${homeSymbol} ${(disponible - amountFromHome).toFixed(2)}` : ""}`,
+        `Pagarás: ${formatCreditMoney(amount, cardCurrency)}\nOrigen: ${origin}\nQuedará pendiente: ${formatCreditMoney(remaining, cardCurrency)}${method === "fino" ? `\nSaldo de Inicio después: ${formatCreditMoney(disponible - amountFromHome, userCurrency)}` : ""}`,
         [
           { text: "Volver", style: "cancel" },
           {
@@ -144,12 +128,11 @@ export default function CreditPayV1() {
     const paidMethod =
       method === "fino"
         ? "Saldo de Fino"
-        : method === "card"
-          ? "Otra tarjeta"
-          : account.trim() || "Pago externo";
+        : account.trim() || "Pago externo";
     const homeTransactionId = method === "fino" ? nextId() : undefined;
     const confirmedAfter = confirmedPaidAmount(nextQuota) + amount;
-    const fullyPaid = confirmedAfter >= nextQuota.amount - 0.005;
+    const fullyPaid =
+      confirmedAfter >= nextQuota.amount - creditMoneyEpsilon(cardCurrency);
     const paymentRecord = {
       id: makeId("payment"),
       amount,
@@ -160,8 +143,7 @@ export default function CreditPayV1() {
       homeCurrency: method === "fino" ? userCurrency : undefined,
       homeAmount: method === "fino" ? amountFromHome : undefined,
     };
-    let purchases = state.purchases;
-    let installments = state.installments.map((q) =>
+    const installments = state.installments.map((q) =>
       q.id === nextQuota.id
         ? {
             ...q,
@@ -175,60 +157,38 @@ export default function CreditPayV1() {
           }
         : q,
     );
-    if (method === "fino" && homeTransactionId) {
-      addOrUpdateTransaction({
-        id: homeTransactionId,
-        type: "expense",
-        amount: amountFromHome,
-        category: "otros",
-        date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
-        time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
-        method: "credit-card-payment",
-        description: `Pago tarjeta ${source?.bank ?? ""}`.trim(),
-        notes: `${purchase?.description ?? "Compra"}${nextQuota.total > 1 ? ` · Cuota ${nextQuota.number} de ${nextQuota.total}` : ""}`,
-        origin: "manual",
-      });
-    }
-    if (method === "card") {
-      const target = state.cards.find((c) => c.id === targetId);
-      if (!target) {
-        saving.current = false;
-        return;
+    try {
+      await saveCreditState({ ...state, installments });
+      if (method === "fino" && homeTransactionId) {
+        addOrUpdateTransaction({
+          id: homeTransactionId,
+          type: "expense",
+          amount: amountFromHome,
+          category: "otros",
+          date: `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`,
+          time: `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`,
+          method: "credit-card-payment",
+          description: `Pago tarjeta ${source?.bank ?? ""}`.trim(),
+          notes: `${purchase?.description ?? "Compra"}${nextQuota.total > 1 ? ` · Cuota ${nextQuota.number} de ${nextQuota.total}` : ""}`,
+          origin: "manual",
+        });
       }
-      const transferId = makeId("purchase");
-      purchases = [
-        ...purchases,
-        {
-          id: transferId,
-          cardId: target.id,
-          description: `Pago de ${source?.bank ?? "tarjeta"}`,
-          total: amountForTarget,
-          installments: 1,
-          createdAt: now.toISOString(),
-        },
-      ];
-      installments = [
-        ...installments,
-        {
-          id: makeId("quota-1"),
-          purchaseId: transferId,
-          cardId: target.id,
-          number: 1,
-          total: 1,
-          amount: amountForTarget,
-          dueDate: dueDateForPurchase(
-            now,
-            0,
-            target.closingDay,
-            target.paymentDay,
-          ),
-          paid: false,
-        },
-      ];
+      router.back();
+    } catch {
+      saving.current = false;
+      Alert.alert(
+        "No se pudo guardar el pago",
+        "Revisa el espacio del teléfono e inténtalo nuevamente.",
+      );
     }
-    await saveCreditState({ ...state, purchases, installments });
-    router.back();
   }
+  if (!loaded)
+    return (
+      <View className="flex-1 items-center justify-center bg-slate-50">
+        <ActivityIndicator color="#0f766e" />
+        <Text className="mt-2 text-sm text-slate-500">Cargando pago…</Text>
+      </View>
+    );
   return (
     <ScrollView className="flex-1 bg-slate-50 px-5 pt-14">
       <View className="flex-row items-center">
@@ -248,7 +208,7 @@ export default function CreditPayV1() {
       <View className="mt-6 rounded-3xl bg-teal-700 p-5">
         <Text className="text-white/70">Monto pendiente</Text>
         <Text className="text-3xl font-extrabold text-white">
-          {cardSymbol} {pendingAmount.toFixed(2)}
+          {formatCreditMoney(pendingAmount, cardCurrency)}
         </Text>
       </View>
       <Text className="mt-5 font-bold">¿Cuánto pagarás?</Text>
@@ -258,13 +218,6 @@ export default function CreditPayV1() {
           label="Todo"
           onPress={() => setPaymentMode("full")}
         />
-        {source?.statementMinimumPayment ? (
-          <Choice
-            active={paymentMode === "minimum"}
-            label={`Mínimo ${cardSymbol} ${minimumAmount.toFixed(2)}`}
-            onPress={() => setPaymentMode("minimum")}
-          />
-        ) : null}
         <Choice
           active={paymentMode === "other"}
           label="Otro monto"
@@ -278,10 +231,10 @@ export default function CreditPayV1() {
             disableFullscreenUI
             value={customAmount}
             onChangeText={(value) =>
-              setCustomAmount(value.replace(/[^0-9.,]/g, ""))
+              setCustomAmount(sanitizeCreditMoneyInput(value))
             }
             keyboardType="decimal-pad"
-            placeholder="0.00"
+            placeholder={creditMoneyPlaceholder(cardCurrency)}
             className="flex-1 p-3 text-base"
           />
         </View>
@@ -292,11 +245,6 @@ export default function CreditPayV1() {
           active={method === "fino"}
           label="Saldo de Fino"
           onPress={() => setMethod("fino")}
-        />
-        <Choice
-          active={method === "card"}
-          label="Otra tarjeta"
-          onPress={() => setMethod("card")}
         />
         <Choice
           active={method === "external"}
@@ -319,18 +267,18 @@ export default function CreditPayV1() {
                 disableFullscreenUI
                 value={homeAmount}
                 onChangeText={(value) =>
-                  setHomeAmount(value.replace(/[^0-9.,]/g, ""))
+                  setHomeAmount(sanitizeCreditMoneyInput(value))
                 }
                 keyboardType="decimal-pad"
-                placeholder="0.00"
+                placeholder={creditMoneyPlaceholder(userCurrency)}
                 className="flex-1 p-3"
               />
             </View>
             {amountFromHome > 0 && (
               <View className="mt-2">
                 <Text className="text-xs font-bold text-emerald-800">
-                  Pagar {cardSymbol} {amount.toFixed(2)} descontará {homeSymbol}{" "}
-                  {amountFromHome.toFixed(2)}
+                  Pagar {formatCreditMoney(amount, cardCurrency)} descontará{" "}
+                  {formatCreditMoney(amountFromHome, userCurrency)}
                 </Text>
                 <Text className="mt-1 text-[10px] text-emerald-700">
                   Tipo de cambio: 1 {cardCurrency} ={" "}
@@ -341,7 +289,7 @@ export default function CreditPayV1() {
           </View>
         ) : (
           <Text className="mt-3 rounded-xl bg-emerald-50 p-3 text-xs text-emerald-800">
-            Se descontará {homeSymbol} {amount.toFixed(2)} del saldo de Inicio.
+            Se descontará {formatCreditMoney(amount, userCurrency)} del saldo de Inicio.
           </Text>
         ))}
       {method === "external" && (
@@ -357,58 +305,6 @@ export default function CreditPayV1() {
           <Text className="mt-2 text-xs text-slate-500">
             Solo marcará el pago. No modificará el saldo de Inicio.
           </Text>
-        </View>
-      )}
-      {method === "card" && (
-        <View className="mt-4">
-          {otherCards.length === 0 ? (
-            <Text className="rounded-2xl bg-amber-50 p-4 text-amber-800">
-              Agrega otra tarjeta para usar esta opción.
-            </Text>
-          ) : (
-            otherCards.map((card) => (
-              <TouchableOpacity
-                key={card.id}
-                onPress={() => {
-                  setTargetId(card.id);
-                  setTargetAmount("");
-                }}
-                className={`mb-3 rounded-2xl border p-4 ${targetId === card.id ? "border-teal-600 bg-teal-50" : "border-slate-200 bg-white"}`}
-              >
-                <Text className="font-extrabold">{card.bank}</Text>
-                <Text className="text-xs text-slate-500">
-                  {currencySymbolFor(card.currency ?? "PEN")} ·{" "}
-                  {card.currency ?? "PEN"}
-                </Text>
-              </TouchableOpacity>
-            ))
-          )}
-          {differentTargetCurrency && (
-            <View className="rounded-xl bg-cyan-50 p-3">
-              <Text className="text-xs font-bold text-cyan-900">
-                Monto que cargará {targetCard?.bank} en {targetCurrency}
-              </Text>
-              <View className="mt-2 flex-row items-center rounded-xl bg-white px-3">
-                <Text className="font-extrabold">{targetSymbol}</Text>
-                <TextInput
-                  disableFullscreenUI
-                  value={targetAmount}
-                  onChangeText={(value) =>
-                    setTargetAmount(value.replace(/[^0-9.,]/g, ""))
-                  }
-                  keyboardType="decimal-pad"
-                  placeholder="0.00"
-                  className="flex-1 p-3"
-                />
-              </View>
-              {amountForTarget > 0 && (
-                <Text className="mt-2 text-[10px] text-cyan-800">
-                  1 {cardCurrency} = {(amountForTarget / amount).toFixed(4)}{" "}
-                  {targetCurrency}
-                </Text>
-              )}
-            </View>
-          )}
         </View>
       )}
       <TouchableOpacity

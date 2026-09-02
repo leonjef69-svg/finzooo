@@ -108,6 +108,19 @@ service cloud.firestore {
                       && request.auth.token.email_verified == true;
     }
 
+    // Tarjetas de crédito: documento separado para no acercar la copia
+    // principal al límite de 1 MB. Solo la cuenta dueña puede leerlo.
+    match /creditCards/{userId} {
+      allow read, delete: if request.auth != null
+                       && request.auth.uid == userId
+                       && request.auth.token.email_verified == true;
+      allow create, update: if request.auth != null
+                         && request.auth.uid == userId
+                         && request.auth.token.email_verified == true
+                         && request.resource.data.keys().hasOnly(['backup'])
+                         && request.resource.data.backup is map;
+    }
+
     // Todo lo demás queda cerrado por defecto.
     match /{document=**} {
       allow read, write: if false;

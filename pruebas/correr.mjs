@@ -79,8 +79,10 @@ const SUITES = [
     alias: {
       ...EXPO,
       "@react-native-async-storage/async-storage": stub("async-storage.ts"),
+      "@/utils/creditCloud": stub("credit-cloud.ts"),
     },
   },
+  { archivo: "verificar-tarjeta-credito-ux.ts", alias: BASE },
   { archivo: "verificar-boleta.ts", alias: BASE },
   { archivo: "verificar-pdf.ts", alias: BASE },
   { archivo: "verificar-pdf-ilegible.ts", alias: BASE, formato: "cjs" },

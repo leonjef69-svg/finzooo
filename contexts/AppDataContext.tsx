@@ -23,7 +23,7 @@ import { countryById, countryFor } from "@/constants/countries";
 import { monthNamesFor, translations } from "@/constants/i18n";
 import {
   clearAccountData,
-  flushPendingSaves,
+  clearRetiredAlternateData,
   loadJSON,
   saveJSON,
   STORAGE_KEYS,
@@ -60,7 +60,6 @@ import {
   negocioQueRecibeYapes,
   separarLoDelNegocio,
 } from "@/utils/negocioCaptura";
-import { activate as activateDecoy, deactivate as deactivateDecoy } from "@/utils/decoyMode";
 // setOverrides y setPropias ya no se usan aqui: al traer los datos de la nube se
 // llama a saveOverrides y savePropias, que ponen la variable de modulo Y escriben
 // el disco. Con las versiones "set" se quedaban solo en memoria y al reabrir la app
@@ -88,7 +87,6 @@ import {
   pruebaYaUsada,
   savePrueba,
 } from "@/utils/pruebaPremium";
-import { DECOY_BUDGET, buildDecoyTransactions } from "@/utils/decoySeed";
 import { fmt as formatAmount, fmtCompact as formatCompactAmount, monthKey } from "@/utils/format";
 import { auth } from "@/utils/firebase";
 import { signOutFromGoogle } from "@/utils/googleAuth";
@@ -100,7 +98,12 @@ import {
 } from "@/utils/cloudSync";
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
 import { limpiarPendientes, pendientesDeCaptura } from "@/utils/capturaEnFondo";
-import { mergeTransactions, hayNovedades, mergeCaptureLog } from "@/utils/mergeTransactions";
+import {
+  mergeTransactions,
+  hayNovedades,
+  mergeCaptureLog,
+  pruneDeletedTransactionIds,
+} from "@/utils/mergeTransactions";
 import { presupuestoDelMes } from "@/utils/presupuestoMensual";
 import { hayDescuadre, maximoAApartar, saldoLibre, totalApartado } from "@/utils/ahorro";
 import { availableBalance } from "@/utils/finances";
@@ -351,11 +354,6 @@ type AppDataContextValue = {
   respaldoAlDia: boolean;
   /** Por que fallo la ultima subida, para poder decirlo en vez de callarlo. */
   respaldoFallo: string | null;
-  // Modo señuelo. Solo los llama la pantalla de bloqueo; ninguna otra parte
-  // de la app sabe que esto existe, y esa es la idea.
-  enterDecoyMode: () => Promise<void>;
-  leaveDecoyMode: () => Promise<void>;
-
   celebrateGoal: string | null;
   clearCelebration: () => void;
 
@@ -405,6 +403,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>(seedTransactions);
   const [goals, setGoals] = useState<Goal[]>(seedGoals);
   const [pagosProgramados, setPagosProgramados] = useState<PagoProgramado[]>([]);
+  const pagosEnCurso = useRef(new Set<string>());
   const [avisosProgramados, setAvisosProgramados] = useState<number | null>(null);
   const [avisosFallo, setAvisosFallo] = useState<string | null>(null);
   // Ver el efecto que reprograma los avisos: la caja con el traductor de ahora mismo.
@@ -608,7 +607,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setUserCountry(restoredCountry);
     setBudgets(cloud.budgets);
     setCategoryBudgets(cloud.categoryBudgets);
-    const borrados = cloud.deletedTransactionIds ?? [];
+    const borrados = pruneDeletedTransactionIds(cloud.deletedTransactionIds ?? []);
     setDeletedTransactionIds(borrados);
     setTransactions(cloud.transactions.filter((tx) => !borrados.includes(tx.id)));
     setGoals(cloud.goals);
@@ -685,51 +684,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       guardarMovimientosNegocio(negocioDeLaNube.movimientos);
     }
     return true;
-  }
-
-  /**
-   * Entra en el modo señuelo: la app pasa a leer y escribir en un almacén
-   * aparte y deja de hablar con la nube.
-   *
-   * El orden importa y no es intercambiable:
-   *
-   *  1. Se escribe YA lo que estuviera en cola. Son cambios de la cuenta
-   *     REAL; si se quedaran encolados, se escribirían después del cambio de
-   *     modo y acabarían dentro del señuelo — datos de verdad guardados en
-   *     el almacén falso, y perdidos del bueno.
-   *  2. Se enciende el interruptor. A partir de aquí todo va al otro lado.
-   *  3. Si es la primera vez, se siembran los movimientos inventados.
-   *  4. Se recargan los datos, que ahora salen del almacén del señuelo.
-   */
-  async function enterDecoyMode() {
-    await flushPendingSaves();
-    activateDecoy();
-
-    const existing = await loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []);
-    if (existing.length === 0) {
-      const fake = buildDecoyTransactions();
-      saveJSON(STORAGE_KEYS.transactions, fake);
-      saveJSON(STORAGE_KEYS.budgets, { [monthKey(new Date().getFullYear(), new Date().getMonth())]: DECOY_BUDGET });
-      saveJSON(STORAGE_KEYS.goals, []);
-      saveJSON(STORAGE_KEYS.pagosProgramados, []);
-      saveJSON(STORAGE_KEYS.categoryBudgets, {});
-      saveJSON(STORAGE_KEYS.merchantLearned, {});
-      saveJSON(STORAGE_KEYS.carryoverCleared, []);
-      // El señuelo NO es Premium. Si lo fuera, quien mire podría entrar a
-      // Ajustes → Bloqueo y encontrarse la pantalla del PIN, que es
-      // justamente lo que no debe existir en esta versión de la app.
-      saveJSON(STORAGE_KEYS.isPremium, false);
-      await flushPendingSaves();
-    }
-
-    await reloadPersistedData();
-  }
-
-  /** Vuelve a la cuenta real. Solo desde la pantalla de bloqueo. */
-  async function leaveDecoyMode() {
-    await flushPendingSaves();
-    deactivateDecoy();
-    await reloadPersistedData();
   }
 
   async function reloadPersistedData() {
@@ -884,6 +838,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     async function init() {
+      await clearRetiredAlternateData();
       const savedTheme = await loadJSON<ThemeMode>(STORAGE_KEYS.themeMode, "system");
       setThemeMode(savedTheme);
       colorScheme.set(savedTheme);
@@ -1103,7 +1058,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const sincronizarMovimientos = async () => {
       const cloud = await loadCloudData(uid);
       if (!alive || !cloud) return;
-      const borrados = [...new Set([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])])];
+      const borrados = pruneDeletedTransactionIds([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])]);
       setDeletedTransactionIds((actuales) =>
         actuales.length === borrados.length && actuales.every((id) => borrados.includes(id))
           ? actuales
@@ -1400,7 +1355,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       if (uid) {
         void loadCloudData(uid).then((cloud) => {
           if (!cloud) return;
-          const borrados = [...new Set([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])])];
+          const borrados = pruneDeletedTransactionIds([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])]);
           setDeletedTransactionIds((actuales) =>
             actuales.length === borrados.length && actuales.every((id) => borrados.includes(id))
               ? actuales
@@ -1767,14 +1722,41 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   function marcarPagoDelMes(id: string, mes: string, pagado: boolean) {
     const pago = pagosProgramados.find((p) => p.id === id);
     if (!pago) return;
+    const operationKey = `${id}:${mes}`;
+    if (pagosEnCurso.current.has(operationKey)) return;
+    pagosEnCurso.current.add(operationKey);
+    setTimeout(() => pagosEnCurso.current.delete(operationKey), 700);
+
+    const movementId = pago.movimientos?.[mes];
+    const movementStillExists =
+      movementId != null && transactions.some((tx) => tx.id === movementId);
+    const mov = pagado ? movimientoDelPago(pago, mes) : null;
+    const nextMovementId =
+      pagado && mov && !movementStillExists ? nextId() : movementId;
     setPagosProgramados((antes) =>
-      antes.map((p) => (p.id === id ? marcarPagado(p, mes, pagado) : p))
+      antes.map((p) => {
+        if (p.id !== id) return p;
+        const marked = marcarPagado(p, mes, pagado);
+        if (!pagado) {
+          const movimientos = { ...(p.movimientos ?? {}) };
+          delete movimientos[mes];
+          return { ...marked, movimientos };
+        }
+        if (nextMovementId == null) return marked;
+        return {
+          ...marked,
+          movimientos: { ...(p.movimientos ?? {}), [mes]: nextMovementId },
+        };
+      })
     );
-    if (!pagado) return;
-    const mov = movimientoDelPago(pago, mes);
+    if (!pagado) {
+      if (movementStillExists && movementId != null) deleteTransaction(movementId);
+      return;
+    }
+    if (movementStillExists || nextMovementId == null) return;
     if (!mov) return;
     addOrUpdateTransaction({
-      id: nextId(),
+      id: nextMovementId,
       type: mov.type,
       amount: mov.amount,
       /**
@@ -1974,8 +1956,27 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function addOrUpdateTransaction(t2: Transaction) {
-    const isEdit = transactions.some((p) => p.id === t2.id);
-    setTransactions((prev) => (isEdit ? prev.map((p) => (p.id === t2.id ? t2 : p)) : [t2, ...prev]));
+    const existing = transactions.find((p) => p.id === t2.id);
+    const isEdit = Boolean(existing);
+    // Un movimiento creado por un pago de tarjeta tiene su monto y fecha
+    // enlazados al registro de la tarjeta. Editarlos solo desde Inicio dejaría
+    // dos verdades distintas; esos campos se corrigen desde Tarjeta de crédito.
+    const safeTransaction =
+      existing?.method === "credit-card-payment"
+        ? {
+            ...t2,
+            type: existing.type,
+            amount: existing.amount,
+            date: existing.date,
+            time: existing.time,
+            method: existing.method,
+          }
+        : t2;
+    setTransactions((prev) =>
+      isEdit
+        ? prev.map((p) => (p.id === safeTransaction.id ? safeTransaction : p))
+        : [safeTransaction, ...prev],
+    );
     showToast(isEdit ? t("toast.transactionUpdated") : t("toast.transactionSaved"));
   }
 
@@ -2006,7 +2007,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   function deleteTransaction(id: number) {
     void unlinkCreditPaymentsForHomeTransactions([id]);
     setDeletedTransactionIds((prev) => {
-      const next = prev.includes(id) ? prev : [...prev, id];
+      const next = pruneDeletedTransactionIds(prev.includes(id) ? prev : [...prev, id]);
       deletedTransactionIdsRef.current = next;
       return next;
     });
@@ -2018,7 +2019,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (!ids.length) return;
     void unlinkCreditPaymentsForHomeTransactions(ids);
     setDeletedTransactionIds((prev) => {
-      const next = [...new Set([...prev, ...ids])];
+      const next = pruneDeletedTransactionIds([...prev, ...ids]);
       deletedTransactionIdsRef.current = next;
       return next;
     });
@@ -2187,8 +2188,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
        iniciada. Ver el cartel de Ajustes y utils/cloudSync. */
     respaldoAlDia: uid !== null && respaldoFallo === null,
     respaldoFallo,
-    enterDecoyMode,
-    leaveDecoyMode,
     celebrateGoal,
     clearCelebration: () => setCelebrateGoal(null),
     toast,

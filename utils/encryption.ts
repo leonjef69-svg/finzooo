@@ -62,7 +62,22 @@ export async function encryptText(plaintext: string): Promise<string> {
   const key = CryptoJS.enc.Hex.parse(keyHex);
   const iv = await secureRandomWordArray(16);
   const encrypted = CryptoJS.AES.encrypt(plaintext, key, { iv });
-  return `${iv.toString(CryptoJS.enc.Hex)}:${encrypted.toString()}`;
+  const ivHex = iv.toString(CryptoJS.enc.Hex);
+  const cipherPart = encrypted.toString();
+  // AES-CBC oculta el contenido, pero por sí solo no detecta alteraciones.
+  // El HMAC impide aceptar como válido un dato manipulado o dañado.
+  const mac = CryptoJS.HmacSHA256(`${ivHex}:${cipherPart}`, key).toString(
+    CryptoJS.enc.Hex,
+  );
+  return `v2:${ivHex}:${cipherPart}:${mac}`;
+}
+
+function constantTimeEqual(left: string, right: string) {
+  if (left.length !== right.length) return false;
+  let difference = 0;
+  for (let index = 0; index < left.length; index += 1)
+    difference |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  return difference === 0;
 }
 
 // Descifra un texto cifrado con encryptText(). Si el texto no se pudo
@@ -70,10 +85,22 @@ export async function encryptText(plaintext: string): Promise<string> {
 // activar el cifrado, o está dañado), devuelve null en vez de fallar.
 export async function decryptText(ciphertext: string): Promise<string | null> {
   try {
-    const [ivHex, cipherPart] = ciphertext.split(":");
+    const parts = ciphertext.split(":");
+    const authenticated = parts[0] === "v2";
+    const ivHex = authenticated ? parts[1] : parts[0];
+    const cipherPart = authenticated ? parts[2] : parts[1];
+    const storedMac = authenticated ? parts[3] : undefined;
     if (!ivHex || !cipherPart) return null;
     const keyHex = await getOrCreateKey();
     const key = CryptoJS.enc.Hex.parse(keyHex);
+    if (authenticated) {
+      if (!storedMac) return null;
+      const expectedMac = CryptoJS.HmacSHA256(
+        `${ivHex}:${cipherPart}`,
+        key,
+      ).toString(CryptoJS.enc.Hex);
+      if (!constantTimeEqual(storedMac, expectedMac)) return null;
+    }
     const iv = CryptoJS.enc.Hex.parse(ivHex);
     const decrypted = CryptoJS.AES.decrypt(cipherPart, key, { iv });
     const text = decrypted.toString(CryptoJS.enc.Utf8);

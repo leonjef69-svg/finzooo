@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ChevronLeft, ChevronRight, EyeOff, Fingerprint, Info, Lock, ScanFace } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, Fingerprint, Info, Lock, ScanFace } from "lucide-react-native";
 import PinPad from "@/components/PinPad";
 import Toggle from "@/components/Toggle";
 import { CARD_SHADOW } from "@/constants/style";
@@ -9,12 +9,9 @@ import { useAppData } from "@/contexts/AppDataContext";
 import {
   PIN_LENGTH,
   biometricKind,
-  clearDecoyPin,
   disableLock,
   enableLock,
-  hasDecoyPin,
   isLockEnabled,
-  setDecoyPin,
   usaHuella,
   guardarUsaHuella,
   verifyPin,
@@ -25,16 +22,13 @@ type Step =
   | "idle" // viendo el interruptor
   | "create" // eligiendo un PIN nuevo
   | "confirm" // repitiéndolo
-  | "verify" // comprobando el actual para poder apagarlo
-  | "decoyCreate" // eligiendo el PIN señuelo
-  | "decoyConfirm"; // repitiéndolo
+  | "verify"; // comprobando el actual para poder apagarlo
 
 export default function AppLockSettings({ onBack }: { onBack: () => void }) {
   const { t, isCloudSynced } = useAppData();
   const insets = useSafeAreaInsets();
 
   const [enabled, setEnabled] = useState(false);
-  const [hasDecoy, setHasDecoy] = useState(false);
   /**
    * ¿SE USA LA HUELLA, O SE ENTRA SIEMPRE CON EL PIN? (19/08/2026)
    *
@@ -59,16 +53,14 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
   useEffect(() => {
     let alive = true;
     (async () => {
-      const [on, biometric, decoy, huella] = await Promise.all([
+      const [on, biometric, huella] = await Promise.all([
         isLockEnabled(),
         biometricKind(),
-        hasDecoyPin(),
         usaHuella(),
       ]);
       if (!alive) return;
       setEnabled(on);
       setKind(biometric);
-      setHasDecoy(decoy);
       setConHuella(huella);
     })();
     return () => {
@@ -126,55 +118,12 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
         return;
       }
 
-      if (step === "decoyCreate") {
-        setFirstPin(pin);
-        setPin("");
-        setStep("decoyConfirm");
-        return;
-      }
-
-      if (step === "decoyConfirm") {
-        if (pin !== firstPin) {
-          setError(true);
-          setMessage(t("lock.mismatch"));
-          setTimeout(() => {
-            if (!alive) return;
-            setPin("");
-            setFirstPin("");
-            setError(false);
-            setStep("decoyCreate");
-          }, 700);
-          return;
-        }
-        const ok = await setDecoyPin(pin);
-        if (!alive) return;
-        if (ok) {
-          setHasDecoy(true);
-          setMessage("");
-          reset();
-        } else {
-          // El único motivo real: es el mismo PIN que el de verdad. Entonces
-          // no habría señuelo, solo la falsa sensación de tenerlo.
-          setError(true);
-          setMessage(t("lock.decoySame"));
-          setTimeout(() => {
-            if (!alive) return;
-            setPin("");
-            setFirstPin("");
-            setError(false);
-            setStep("decoyCreate");
-          }, 900);
-        }
-        return;
-      }
-
       if (step === "verify") {
         const ok = await verifyPin(pin);
         if (!alive) return;
         if (ok === "real") {
           await disableLock();
           setEnabled(false);
-          setHasDecoy(false);
           setMessage("");
           reset();
         } else {
@@ -211,11 +160,7 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
         ? t("lock.stepConfirm")
         : step === "verify"
           ? t("lock.stepVerify")
-          : step === "decoyCreate"
-            ? t("lock.stepDecoyCreate")
-            : step === "decoyConfirm"
-              ? t("lock.stepDecoyConfirm")
-              : "";
+          : "";
 
   return (
     <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top }}>
@@ -293,50 +238,17 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
                   />
                 </View>
               )}
-
-            {/* EL PIN SEÑUELO, EN LA MISMA TARJETA. Solo con el bloqueo puesto: sin un PIN
-                de verdad no hay nada de lo que ser el señuelo. */}
-            {enabled && (
-              <View className="flex-row items-center gap-3 mt-4 pt-4 border-t-[1.5px] border-slate-100 dark:border-noche-borde">
-                <View className="w-11 h-11 rounded-xl bg-slate-100 dark:bg-noche-2 items-center justify-center">
-                  <EyeOff size={20} color="#64748b" />
-                </View>
-                <View className="flex-1">
-                  <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">
-                    {t("lock.decoyLabel")}
-                  </Text>
-                  <Text className="text-[11px] text-slate-500 dark:text-slate-300">
-                    {hasDecoy ? t("lock.decoyOn") : t("lock.decoyOff")}
-                  </Text>
-                </View>
-                <Toggle
-                  on={hasDecoy}
-                  onChange={(next) => {
-                    setMessage("");
-                    if (next) {
-                      setPin("");
-                      setFirstPin("");
-                      setStep("decoyCreate");
-                    } else {
-                      void clearDecoyPin().then(() => setHasDecoy(false));
-                    }
-                  }}
-                />
-              </View>
-            )}
           </View>
 
           {/* LOS CINCO PÁRRAFOS, DETRÁS DE UN TOQUE (19/08/2026)
-              La pantalla tenía tres interruptores y **cinco bloques de texto**: qué método
-              usa el celular, qué pasa si se olvida el PIN, cuándo se bloquea la app, qué es
-              el señuelo y qué no cubre. Todo cierto y todo de leer una vez.
+              La pantalla tenía varios bloques de texto sobre el método, la recuperación
+              del PIN y cuándo se bloquea la app. Todo cierto y todo de leer una vez.
 
               Él lo cortó: *"mucho texto, no quiero que haya cosas innecesarias"*. Y uno de
               esos párrafos además se contradecía con el interruptor de arriba — decía "este
               celular desbloqueará con tu huella" con la huella apagada.
 
-              No se borra ninguno: un candado que promete más de lo que da es peor que no
-              tenerlo, y los límites del señuelo hay que decirlos. Se leen aquí dentro. */}
+              La explicación completa se conserva dentro de esta ayuda. */}
           <TouchableOpacity
             onPress={() => setVerAyuda((v) => !v)}
             className="flex-row items-center gap-2.5 py-4 mt-1"
@@ -361,8 +273,6 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
                       : "lock.hasFingerprint"
                 )}
               />
-              {enabled && <Ayuda texto={t("lock.decoyExplain")} />}
-              {enabled && <Ayuda texto={t("lock.decoyLimits")} />}
             </View>
           )}
           </>

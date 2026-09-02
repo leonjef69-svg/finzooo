@@ -30,7 +30,6 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { loadJSON, saveJSON } from "@/utils/storage";
-import { isDecoyActive } from "@/utils/decoyMode";
 import { cancelarExportacion, programarExportacion } from "@/modules/export-scheduler";
 
 export type ExportFrequency = "daily" | "weekly" | "monthly" | "custom";
@@ -283,11 +282,6 @@ export async function applySchedule(
   schedule: ScheduledExport,
   texts: { title: string; body: string }
 ): Promise<boolean> {
-  // Dentro del modo señuelo no se toca nada. Programar un aviso desde la
-  // cuenta falsa dejaría rastro de la real —o al revés— y además el aviso
-  // sobreviviría a salir del señuelo.
-  if (isDecoyActive()) return false;
-
   await cancelByTag(TAG);
   // Y se retiran los segundos avisos de "todavía no exportaste" que pudiera
   // haber dejado programados una versión anterior. Ese aviso se quitó el

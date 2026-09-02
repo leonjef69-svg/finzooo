@@ -53,6 +53,8 @@ export default function AddSheet({
   const [description, setDescription] = useState(transaction?.description || "");
   const [notes, setNotes] = useState(transaction?.notes || "");
   const [showMethod, setShowMethod] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const submittingRef = useRef(false);
   const insets = useSafeAreaInsets();
   const scrollRef = useRef<ScrollView>(null);
   const [descriptionY, setDescriptionY] = useState(0);
@@ -277,6 +279,9 @@ export default function AddSheet({
   }
 
   function handleSave(t: Transaction) {
+    if (submittingRef.current) return;
+    submittingRef.current = true;
+    setSubmitting(true);
     exitAfterKeyboardHidden(() => onSave(t));
   }
 
@@ -506,7 +511,7 @@ export default function AddSheet({
               <Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text>
             </TouchableOpacity>
             <TouchableOpacity
-              disabled={!valid}
+              disabled={!valid || submitting}
               onPress={() =>
                 handleSave({
                   // Conserva los campos que esta pantalla no edita: de dónde
@@ -534,7 +539,7 @@ export default function AddSheet({
               }
               className={`flex-1 py-3.5 rounded-2xl items-center ${
                 type === "expense" ? "bg-rose-500" : "bg-emerald-600"
-              } ${!valid ? "opacity-40" : ""}`}
+              } ${!valid || submitting ? "opacity-40" : ""}`}
             >
               <Text className="font-bold text-white">{t("common.save")}</Text>
             </TouchableOpacity>

@@ -31,6 +31,7 @@ export default function Detail({
   const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
   if (!transaction) return null;
   const c = catInfo(transaction.category);
+  const linkedCreditPayment = transaction.method === "credit-card-payment";
 
   const rows = [
     { Icon: Tag, label: t("detail.category"), value: t(c.label) },
@@ -85,13 +86,17 @@ export default function Detail({
           <Trash2 size={16} color="#f43f5e" />
           <Text className="font-bold text-rose-500">{t("common.delete")}</Text>
         </TouchableOpacity>
-        <TouchableOpacity
-          onPress={onEdit}
-          className="flex-1 py-3.5 rounded-2xl bg-slate-900 flex-row items-center justify-center gap-2"
-        >
-          <Pencil size={16} color="#ffffff" />
-          <Text className="font-bold text-white">{t("common.edit")}</Text>
-        </TouchableOpacity>
+        {!linkedCreditPayment && (
+          <TouchableOpacity
+            onPress={onEdit}
+            className="flex-1 py-3.5 rounded-2xl bg-slate-900 flex-row items-center justify-center gap-2"
+            accessibilityRole="button"
+            accessibilityLabel={t("common.edit")}
+          >
+            <Pencil size={16} color="#ffffff" />
+            <Text className="font-bold text-white">{t("common.edit")}</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <ConfirmDialog

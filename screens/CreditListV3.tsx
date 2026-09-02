@@ -5,17 +5,35 @@ import {
   loadCreditState,
 } from "@/utils/creditStore";
 import { irUnaVez } from "@/utils/nav";
-import { currencySymbolFor } from "@/constants/currencies";
+import {
+  formatCreditMoney,
+  formatCreditMoneyCompact,
+} from "@/utils/creditMoney";
 import { useFocusEffect } from "expo-router";
 import { CreditCard, Plus } from "lucide-react-native";
 import { useCallback, useState } from "react";
-import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 export default function CreditListV3() {
   const [state, setState] = useState<CreditState>(EMPTY_CREDIT_STATE);
+  const [loaded, setLoaded] = useState(false);
   useFocusEffect(
     useCallback(() => {
-      loadCreditState().then(setState);
+      let active = true;
+      loadCreditState().then((value) => {
+        if (!active) return;
+        setState(value);
+        setLoaded(true);
+      });
+      return () => {
+        active = false;
+      };
     }, []),
   );
   return (
@@ -36,12 +54,21 @@ export default function CreditListV3() {
               })
             }
             className="rounded-full bg-teal-600 p-3"
+            accessibilityRole="button"
+            accessibilityLabel="Agregar otra tarjeta"
           >
             <Plus color="white" />
           </TouchableOpacity>
         )}
       </View>
-      {state.cards.length === 0 ? (
+      {!loaded ? (
+        <View className="mt-10 items-center">
+          <ActivityIndicator color="#0f766e" />
+          <Text className="mt-2 text-sm text-slate-500">
+            Cargando tus tarjetas…
+          </Text>
+        </View>
+      ) : state.cards.length === 0 ? (
         <View className="mt-6 items-center rounded-2xl bg-white p-6">
           <CreditCard size={38} color="#0f766e" />
           <Text className="mt-3 text-lg font-extrabold">
@@ -58,6 +85,8 @@ export default function CreditListV3() {
               })
             }
             className="mt-4 rounded-xl bg-teal-600 px-5 py-3"
+            accessibilityRole="button"
+            accessibilityLabel="Agregar mi primera tarjeta"
           >
             <Text className="font-extrabold text-white">Agregar tarjeta</Text>
           </TouchableOpacity>
@@ -65,7 +94,8 @@ export default function CreditListV3() {
       ) : (
         state.cards.map((card) => {
           const totals = cardTotals(state, card.id);
-          const symbol = currencySymbolFor(card.currency ?? "PEN");
+          const currency = card.currency ?? "PEN";
+          const available = card.limit - totals.debt;
           return (
             <TouchableOpacity
               key={card.id}
@@ -77,6 +107,9 @@ export default function CreditListV3() {
               }
               style={{ backgroundColor: card.color }}
               className="mt-3 rounded-2xl p-4"
+              accessibilityRole="button"
+              accessibilityLabel={`${card.bank}. Disponible ${formatCreditMoney(available, currency)}. Deuda ${formatCreditMoney(totals.debt, currency)}.`}
+              accessibilityHint="Abre los detalles de esta tarjeta"
             >
               <View className="flex-row items-center justify-between">
                 <Text
@@ -92,21 +125,17 @@ export default function CreditListV3() {
                   <Text className="text-xs text-white/80">Disponible</Text>
                   <Text
                     numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.55}
-                    className="text-2xl font-extrabold text-white"
+                    className="text-xl font-extrabold text-white"
                   >
-                    {symbol} {(card.limit - totals.debt).toFixed(2)}
+                    {formatCreditMoneyCompact(available, currency)}
                   </Text>
                 </View>
                 <View className="flex-1">
                   <Text
                     numberOfLines={1}
-                    adjustsFontSizeToFit
-                    minimumFontScale={0.65}
                     className="text-right text-xs text-white/80"
                   >
-                    Deuda {symbol} {totals.debt.toFixed(2)}
+                    Deuda {formatCreditMoneyCompact(totals.debt, currency, 13)}
                   </Text>
                   <Text
                     numberOfLines={1}

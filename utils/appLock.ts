@@ -21,10 +21,11 @@ import * as SecureStore from "expo-secure-store";
 const KEY_ENABLED = "finzo.lock.enabled";
 const KEY_HASH = "finzo.lock.hash";
 const KEY_SALT = "finzo.lock.salt";
-// El PIN señuelo. El nombre de la clave es a propósito anodino: quien mire
-// el cajón cifrado con herramientas no debería poder deducir de un vistazo
-// que existe un segundo PIN, y menos aún cuál de los dos es el de verdad.
-const KEY_DECOY = "finzo.lock.alt";
+// Clave de una función retirada. Se elimina al actualizar o apagar el
+// bloqueo para que no quede información obsoleta en el cajón cifrado.
+const KEY_LEGACY_ALTERNATE_PIN = "finzo.lock.alt";
+const KEY_FAILED_ATTEMPTS = "finzo.lock.failedAttempts";
+const KEY_LOCK_UNTIL = "finzo.lock.lockUntil";
 
 export const PIN_LENGTH = 4;
 
@@ -167,6 +168,7 @@ export async function promptBiometrics(reason: string, cancelLabel: string): Pro
 }
 
 export async function isLockEnabled(): Promise<boolean> {
+  void remove(KEY_LEGACY_ALTERNATE_PIN);
   return (await read(KEY_ENABLED)) === "1";
 }
 
@@ -202,60 +204,55 @@ export async function enableLock(pin: string): Promise<boolean> {
   return (await isLockEnabled()) && (await hasPin());
 }
 
-/** Apaga el bloqueo y borra los dos PIN. */
+/** Apaga el bloqueo y borra el PIN. */
 export async function disableLock(): Promise<void> {
   await remove(KEY_ENABLED);
   await remove(KEY_HASH);
   await remove(KEY_SALT);
-  await remove(KEY_DECOY);
+  await remove(KEY_LEGACY_ALTERNATE_PIN);
+  await remove(KEY_FAILED_ATTEMPTS);
+  await remove(KEY_LOCK_UNTIL);
 }
 
-/** ¿Hay un PIN señuelo configurado? */
-export async function hasDecoyPin(): Promise<boolean> {
-  return (await read(KEY_DECOY)) !== null;
+export type PinMatch = "real" | "locked" | null;
+
+export async function pinRetryAfterMs(now = Date.now()): Promise<number> {
+  const until = Number(await read(KEY_LOCK_UNTIL));
+  return Number.isFinite(until) ? Math.max(0, until - now) : 0;
 }
 
-/**
- * Guarda el PIN señuelo. Comparte la misma sal que el de verdad, así que
- * de lo guardado tampoco se puede volver al PIN.
- *
- * Devuelve false si es igual al PIN real: entonces no habría señuelo
- * ninguno, solo la falsa sensación de tenerlo.
- */
-export async function setDecoyPin(pin: string): Promise<boolean> {
-  if (pin.length !== PIN_LENGTH) return false;
-  const salt = await read(KEY_SALT);
-  if (!salt) return false;
-  const hash = await hashPin(pin, salt);
-  if (hash === (await read(KEY_HASH))) return false;
-  await write(KEY_DECOY, hash);
-  return (await read(KEY_DECOY)) === hash;
+async function clearPinFailures() {
+  await remove(KEY_FAILED_ATTEMPTS);
+  await remove(KEY_LOCK_UNTIL);
 }
 
-export async function clearDecoyPin(): Promise<void> {
-  await remove(KEY_DECOY);
+async function recordPinFailure(now = Date.now()) {
+  const previous = Number(await read(KEY_FAILED_ATTEMPTS));
+  const failures = Number.isFinite(previous) ? previous + 1 : 1;
+  await write(KEY_FAILED_ATTEMPTS, String(failures));
+  if (failures >= 5) {
+    // Crece con los intentos: 30 s, 60 s, 2 min... con tope de 15 min.
+    const delay = Math.min(15 * 60_000, 30_000 * 2 ** Math.min(5, failures - 5));
+    await write(KEY_LOCK_UNTIL, String(now + delay));
+    return true;
+  }
+  return false;
 }
 
-/** Cuál de los dos PIN se escribió, si alguno. */
-export type PinMatch = "real" | "decoy" | null;
-
-/**
- * Comprueba el PIN y dice CUÁL era.
- *
- * El real se mira primero. Si por un descuido al configurarlo los dos
- * acabaran siendo el mismo, gana el de verdad: quedarse encerrado fuera de
- * los datos propios sería peor que quedarse sin señuelo.
- */
+/** Comprueba el PIN real y aplica el bloqueo progresivo tras varios fallos. */
 export async function verifyPin(pin: string): Promise<PinMatch> {
-  const [hash, salt, decoy] = await Promise.all([
+  if ((await pinRetryAfterMs()) > 0) return "locked";
+  const [hash, salt] = await Promise.all([
     read(KEY_HASH),
     read(KEY_SALT),
-    read(KEY_DECOY),
   ]);
   if (!salt) return null;
   const attempt = await hashPin(pin, salt);
-  if (hash && attempt === hash) return "real";
-  if (decoy && attempt === decoy) return "decoy";
+  if (hash && attempt === hash) {
+    await clearPinFailures();
+    return "real";
+  }
+  if (await recordPinFailure()) return "locked";
   return null;
 }
 

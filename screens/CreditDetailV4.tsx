@@ -7,7 +7,11 @@ import {
   saveCreditState,
 } from "@/utils/creditStore";
 import { useAppData } from "@/contexts/AppDataContext";
-import { currencySymbolFor } from "@/constants/currencies";
+import {
+  formatCreditMoney,
+  formatCreditMoneyCompact,
+} from "@/utils/creditMoney";
+import { membershipProgress } from "@/utils/creditMembership";
 import { irUnaVez } from "@/utils/nav";
 import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
 import {
@@ -25,7 +29,14 @@ import {
   Trophy,
 } from "lucide-react-native";
 import { useCallback, useMemo, useState } from "react";
-import { Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 
 type Tab = "movements" | "paid" | "installments";
 
@@ -34,12 +45,16 @@ export default function CreditDetailV4() {
   const { deleteTransactions } = useAppData();
   const { cardId } = useLocalSearchParams<{ cardId: string }>();
   const [state, setState] = useState<CreditState>(EMPTY_CREDIT_STATE);
+  const [loaded, setLoaded] = useState(false);
   const [tab, setTab] = useState<Tab>("movements");
   const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   useFocusEffect(
     useCallback(() => {
-      loadCreditState().then(setState);
+      loadCreditState().then((value) => {
+        setState(value);
+        setLoaded(true);
+      });
     }, []),
   );
   const card = state.cards.find((c) => c.id === cardId);
@@ -98,6 +113,18 @@ export default function CreditDetailV4() {
       value.includes(id) ? value.filter((item) => item !== id) : [...value, id],
     );
   }
+  function paymentSummary(purchaseId: string) {
+    const related = quotas.filter((quota) => quota.purchaseId === purchaseId);
+    const pending = related.reduce(
+      (sum, quota) => sum + outstandingAmount(quota),
+      0,
+    );
+    const paid = related.reduce(
+      (sum, quota) => sum + Math.max(0, quota.amount - outstandingAmount(quota)),
+      0,
+    );
+    return { paid, pending };
+  }
   function askDelete() {
     if (selected.length === 0) return;
     const linkedIds = Array.from(
@@ -140,13 +167,20 @@ export default function CreditDetailV4() {
       ],
     );
   }
+  if (!loaded)
+    return (
+      <View className="flex-1 items-center justify-center bg-slate-50">
+        <ActivityIndicator color="#0f766e" />
+        <Text className="mt-2 text-sm text-slate-500">Cargando tarjeta…</Text>
+      </View>
+    );
   if (!card || !totals)
     return (
       <View className="flex-1 items-center justify-center">
         <Text>Tarjeta no encontrada</Text>
       </View>
     );
-  const symbol = currencySymbolFor(card.currency ?? "PEN");
+  const cardCurrency = card.currency ?? "PEN";
   const currentCardId = card.id;
   const datesConfigured = Boolean(card.closingDay && card.paymentDay);
   function openInstallments(purchaseId: string) {
@@ -205,16 +239,14 @@ export default function CreditDetailV4() {
         <Text className="text-sm text-white/80">Crédito disponible</Text>
         <Text
           numberOfLines={1}
-          adjustsFontSizeToFit
-          minimumFontScale={0.55}
           className="text-2xl font-extrabold text-white"
         >
-          {symbol} {(card.limit - totals.debt).toFixed(2)}
+          {formatCreditMoneyCompact(card.limit - totals.debt, cardCurrency)}
         </Text>
         <View className="mt-3 flex-row">
-          <Metric label="Límite" value={card.limit} symbol={symbol} />
-          <Metric label="Deuda" value={totals.debt} symbol={symbol} />
-          <Metric label="Estado de cuenta" value={totals.monthPayment} symbol={symbol} />
+          <Metric label="Límite" value={card.limit} currency={cardCurrency} />
+          <Metric label="Deuda" value={totals.debt} currency={cardCurrency} />
+          <Metric label="Estado de cuenta" value={totals.monthPayment} currency={cardCurrency} />
         </View>
         {card.closingDay && (
           <Text className="mt-2 text-[11px] font-semibold text-white/80">
@@ -222,12 +254,16 @@ export default function CreditDetailV4() {
             {card.paymentDay ? ` · Pagar hasta: día ${card.paymentDay}` : ""}
           </Text>
         )}
+        {card.statementMinimumPayment ? (
+          <Text className="mt-1 text-[11px] font-semibold text-white/80">
+            Pago mínimo del estado de cuenta: {formatCreditMoney(card.statementMinimumPayment, cardCurrency)}
+          </Text>
+        ) : null}
       </View>
       <MembershipCard
         card={card}
         purchases={purchases}
-        quotas={quotas}
-        symbol={symbol}
+        currency={cardCurrency}
         onPress={() =>
           irUnaVez({
             pathname: "/credit-card-settings",
@@ -250,7 +286,7 @@ export default function CreditDetailV4() {
             <Text className="text-[15px] font-extrabold">Próximo vencimiento</Text>
             <Text className="text-[13px] text-slate-500">
               {totals.next
-                ? `${totals.next.dueDate} · ${symbol} ${totals.next.amount.toFixed(2)}`
+                ? `${totals.next.dueDate} · ${formatCreditMoney(outstandingAmount(totals.next), cardCurrency)}`
                 : totals.debt > 0 && (!card.closingDay || !card.paymentDay)
                   ? "Configura corte y pago para calcularlo"
                   : "Sin pagos pendientes"}
@@ -353,22 +389,27 @@ export default function CreditDetailV4() {
                     <Text numberOfLines={1} className="text-[13px] text-slate-500">
                       {formatDateTime(p.createdAt)}
                     </Text>
+                    {paymentSummary(p.id).paid > 0 && (
+                      <Text className="text-[11px] font-semibold text-emerald-700">
+                        Pagado {formatCreditMoney(paymentSummary(p.id).paid, cardCurrency)} · Falta{" "}
+                        {formatCreditMoney(paymentSummary(p.id).pending, cardCurrency)}
+                      </Text>
+                    )}
                   </View>
                   <View className="w-[44%] max-w-[160px] items-stretch">
                     <Text
                       numberOfLines={1}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.55}
                       className="text-right font-extrabold text-rose-600"
                     >
-                      {symbol}{" "}
-                      {quotas
+                      {formatCreditMoney(
+                        quotas
                         .filter((quota) => quota.purchaseId === p.id)
                         .reduce(
                           (sum, quota) => sum + outstandingAmount(quota),
                           0,
-                        )
-                        .toFixed(2)}
+                        ),
+                        cardCurrency,
+                      )}
                     </Text>
                     {!selecting && (
                       <View className="mt-1 flex-row gap-1.5">
@@ -434,7 +475,7 @@ export default function CreditDetailV4() {
                         title={p.description}
                         subtitle={`Pagado · ${last?.paidAt ? formatDateTime(last.paidAt) : (last?.dueDate ?? "")}`}
                         amount={all.reduce((sum, q) => sum + q.amount, 0)}
-                        symbol={symbol}
+                        currency={cardCurrency}
                         green
                       />
                     </View>
@@ -478,7 +519,7 @@ export default function CreditDetailV4() {
                   </View>
                   <View>
                     <Text className="text-right font-extrabold">
-                      {symbol} {next ? outstandingAmount(next).toFixed(2) : "0.00"}
+                      {formatCreditMoney(next ? outstandingAmount(next) : 0, cardCurrency)}
                     </Text>
                     <Text className="text-right text-xs font-bold text-amber-600">
                       {pending.length} pendientes
@@ -517,7 +558,7 @@ export default function CreditDetailV4() {
     </ScrollView>
   );
 }
-function Metric({ label, value, symbol }: any) {
+function Metric({ label, value, currency }: any) {
   return (
     <View className="mr-2 flex-1">
       <Text numberOfLines={1} className="text-[10px] text-white/70">
@@ -525,11 +566,9 @@ function Metric({ label, value, symbol }: any) {
       </Text>
       <Text
         numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.5}
         className="font-extrabold text-white"
       >
-        {symbol} {Number(value).toFixed(2)}
+        {formatCreditMoneyCompact(Number(value), currency, 12)}
       </Text>
     </View>
   );
@@ -558,7 +597,7 @@ function Empty({ text }: { text: string }) {
     </Text>
   );
 }
-function Row({ title, subtitle, amount, green, symbol }: any) {
+function Row({ title, subtitle, amount, green, currency }: any) {
   return (
     <View className="flex-row items-center">
       <View className="mr-3 flex-1">
@@ -576,11 +615,9 @@ function Row({ title, subtitle, amount, green, symbol }: any) {
       </View>
       <Text
         numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.55}
         className={`max-w-[38%] font-extrabold ${green ? "text-emerald-600" : "text-rose-600"}`}
       >
-        {symbol} {Number(amount).toFixed(2)}
+        {formatCreditMoneyCompact(Number(amount), currency, 14)}
       </Text>
     </View>
   );
@@ -595,44 +632,18 @@ function formatDateTime(value: string) {
     .format(new Date(value))
     .replace(",", "");
 }
-function MembershipCard({ card, purchases, quotas, onPress, symbol }: any) {
+function MembershipCard({ card, purchases, onPress, currency }: any) {
   const goal = Number(card.membershipMonthlyGoal) || 0;
-  const start = card.membershipStartDate
-    ? new Date(`${card.membershipStartDate}T12:00:00`)
-    : new Date();
-  const currentKey = new Date().toISOString().slice(0, 7);
-  const months = Array.from(
-    { length: 12 },
-    (_, i) =>
-      `${new Date(start.getFullYear(), start.getMonth() + i, 1).getFullYear()}-${String(new Date(start.getFullYear(), start.getMonth() + i, 1).getMonth() + 1).padStart(2, "0")}`,
-  );
-  const purchaseIds = new Set(purchases.map((p: any) => p.id));
-  const paid = quotas.flatMap((q: any) => {
-    if (!purchaseIds.has(q.purchaseId)) return [];
-    const records = (q.payments ?? [])
-      .filter((payment: any) => payment.status === "confirmed")
-      .map((payment: any) => ({
-        amount: Number(payment.amount),
-        paidAt: payment.createdAt,
-      }));
-    if (records.length) return records;
-    return q.paid && q.paidAt
-      ? [{ amount: Number(q.amount), paidAt: q.paidAt }]
-      : [];
-  });
-  const paidByMonth = (key: string) =>
-    paid
-      .filter((q: any) => q.paidAt.startsWith(key))
-      .reduce((sum: number, q: any) => sum + Number(q.amount), 0);
-  const sums = months.map(paidByMonth);
-  const completed =
-    goal > 0 ? sums.filter((value: number) => value >= goal).length : 0;
-  const elapsed = months.filter((key) => key < currentKey).length;
-  const missed = Math.max(0, elapsed - completed);
-  const current = paidByMonth(currentKey);
-  const ratio = goal > 0 ? Math.min(1, current / goal) : 0;
+  const progress =
+    goal > 0 && card.membershipStartDate
+      ? membershipProgress(purchases, goal, card.membershipStartDate)
+      : null;
+  const completed = progress?.completed ?? 0;
+  const missed = progress?.missed ?? 0;
+  const current = progress?.current ?? 0;
+  const ratio = progress?.ratio ?? 0;
   const displayedCurrent = goal > 0 ? Math.min(current, goal) : current;
-  const excess = goal > 0 ? Math.max(0, current - goal) : 0;
+  const excess = progress?.excess ?? 0;
   const mood =
     ratio >= 1
       ? {
@@ -704,11 +715,10 @@ function MembershipCard({ card, purchases, quotas, onPress, symbol }: any) {
         {goal > 0 && (
           <Text
             numberOfLines={1}
-            adjustsFontSizeToFit
-            minimumFontScale={0.6}
             className={`ml-2 max-w-[36%] font-extrabold ${mood.text}`}
           >
-            {symbol} {displayedCurrent.toFixed(2)} / {goal.toFixed(2)}
+            {formatCreditMoneyCompact(displayedCurrent, currency, 12)} /{" "}
+            {formatCreditMoneyCompact(goal, currency, 12)}
           </Text>
         )}
       </View>
@@ -723,7 +733,7 @@ function MembershipCard({ card, purchases, quotas, onPress, symbol }: any) {
       <Text className={`mt-1 text-[10px] font-semibold ${mood.text}`}>
         {completed} de 12 meses completados
         {excess > 0
-          ? ` · Superaste la meta por ${symbol} ${excess.toFixed(2)}`
+          ? ` · Superaste la meta por ${formatCreditMoney(excess, currency)}`
           : ""}
       </Text>
     </TouchableOpacity>
