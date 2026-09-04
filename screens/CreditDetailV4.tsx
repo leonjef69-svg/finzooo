@@ -2,6 +2,7 @@ import {
   CreditState,
   EMPTY_CREDIT_STATE,
   cardTotals,
+  installmentCurrency,
   loadCreditState,
   outstandingAmount,
   saveCreditState,
@@ -125,6 +126,9 @@ export default function CreditDetailV4() {
     );
     return { paid, pending };
   }
+  function purchaseCurrency(purchaseId: string) {
+    return state.purchases.find((purchase) => purchase.id === purchaseId)?.currency ?? card?.currency ?? "PEN";
+  }
   function askDelete() {
     if (selected.length === 0) return;
     const linkedIds = Array.from(
@@ -236,7 +240,11 @@ export default function CreditDetailV4() {
         style={{ backgroundColor: card.color }}
         className="mt-4 rounded-2xl p-4"
       >
-        <Text className="text-sm text-white/80">Crédito disponible</Text>
+        <Text className="text-sm text-white/80">
+          {Object.entries(totals.debtsByCurrency).some(([currency, amount]) => currency !== cardCurrency && amount > 0)
+            ? "Disponible estimado · hay otras monedas"
+            : "Crédito disponible"}
+        </Text>
         <Text
           numberOfLines={1}
           className="text-2xl font-extrabold text-white"
@@ -245,9 +253,16 @@ export default function CreditDetailV4() {
         </Text>
         <View className="mt-3 flex-row">
           <Metric label="Límite" value={card.limit} currency={cardCurrency} />
-          <Metric label="Deuda" value={totals.debt} currency={cardCurrency} />
+          <Metric label={`Deuda ${cardCurrency}`} value={totals.debt} currency={cardCurrency} />
           <Metric label="Estado de cuenta" value={totals.monthPayment} currency={cardCurrency} />
         </View>
+        {Object.entries(totals.debtsByCurrency)
+          .filter(([currency, amount]) => currency !== cardCurrency && amount > 0)
+          .map(([currency, amount]) => (
+            <Text key={currency} className="mt-1 text-[11px] font-semibold text-white/90">
+              Deuda aparte: {formatCreditMoney(amount, currency)} · no se convierte automáticamente
+            </Text>
+          ))}
         {card.closingDay && (
           <Text className="mt-2 text-[11px] font-semibold text-white/80">
             Corte: día {card.closingDay}
@@ -262,7 +277,7 @@ export default function CreditDetailV4() {
       </View>
       <MembershipCard
         card={card}
-        purchases={purchases}
+        purchases={purchases.filter((purchase) => (purchase.currency ?? cardCurrency) === cardCurrency)}
         currency={cardCurrency}
         onPress={() =>
           irUnaVez({
@@ -286,8 +301,8 @@ export default function CreditDetailV4() {
             <Text className="text-[15px] font-extrabold">Próximo vencimiento</Text>
             <Text className="text-[13px] text-slate-500">
               {totals.next
-                ? `${totals.next.dueDate} · ${formatCreditMoney(outstandingAmount(totals.next), cardCurrency)}`
-                : totals.debt > 0 && (!card.closingDay || !card.paymentDay)
+                ? `${totals.next.dueDate} · ${formatCreditMoney(outstandingAmount(totals.next), installmentCurrency(totals.next, state))}`
+                : Object.values(totals.debtsByCurrency).some((amount) => amount > 0) && (!card.closingDay || !card.paymentDay)
                   ? "Configura corte y pago para calcularlo"
                   : "Sin pagos pendientes"}
             </Text>
@@ -391,8 +406,8 @@ export default function CreditDetailV4() {
                     </Text>
                     {paymentSummary(p.id).paid > 0 && (
                       <Text className="text-[11px] font-semibold text-emerald-700">
-                        Pagado {formatCreditMoney(paymentSummary(p.id).paid, cardCurrency)} · Falta{" "}
-                        {formatCreditMoney(paymentSummary(p.id).pending, cardCurrency)}
+                        Pagado {formatCreditMoney(paymentSummary(p.id).paid, purchaseCurrency(p.id))} · Falta{" "}
+                        {formatCreditMoney(paymentSummary(p.id).pending, purchaseCurrency(p.id))}
                       </Text>
                     )}
                   </View>
@@ -408,7 +423,7 @@ export default function CreditDetailV4() {
                           (sum, quota) => sum + outstandingAmount(quota),
                           0,
                         ),
-                        cardCurrency,
+                        purchaseCurrency(p.id),
                       )}
                     </Text>
                     {!selecting && (
@@ -475,7 +490,7 @@ export default function CreditDetailV4() {
                         title={p.description}
                         subtitle={`Pagado · ${last?.paidAt ? formatDateTime(last.paidAt) : (last?.dueDate ?? "")}`}
                         amount={all.reduce((sum, q) => sum + q.amount, 0)}
-                        currency={cardCurrency}
+                        currency={purchaseCurrency(p.id)}
                         green
                       />
                     </View>
@@ -519,7 +534,7 @@ export default function CreditDetailV4() {
                   </View>
                   <View>
                     <Text className="text-right font-extrabold">
-                      {formatCreditMoney(next ? outstandingAmount(next) : 0, cardCurrency)}
+                      {formatCreditMoney(next ? outstandingAmount(next) : 0, next ? installmentCurrency(next, state) : cardCurrency)}
                     </Text>
                     <Text className="text-right text-xs font-bold text-amber-600">
                       {pending.length} pendientes

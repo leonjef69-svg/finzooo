@@ -124,6 +124,10 @@ Comando principal: `node pruebas/correr.mjs`.
 - Se retiró de la interfaz el estado de pago «En proceso», que ninguna pantalla
   podía crear. Si aparece en datos antiguos, se conserva internamente sin
   convertirlo en pago: la deuda queda pendiente hasta registrar uno confirmado.
+- Las tarjetas distinguen la moneda del límite de la moneda real de cada compra.
+  Por ejemplo, una línea de US$ 500 puede guardar y pagar una compra de S/ 120.
+  Las deudas se muestran separadas por moneda y Fino nunca suma ni convierte
+  monedas diferentes sin un monto real indicado por la persona.
 
 ## Pendientes actuales
 

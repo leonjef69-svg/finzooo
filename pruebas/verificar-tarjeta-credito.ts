@@ -3,6 +3,7 @@ import {
   cardHasFinancialActivity,
   cardTotals,
   dueDateForPurchase,
+  installmentCurrency,
   mergeCreditBackups,
   outstandingAmount,
   normalizeCreditState,
@@ -128,6 +129,33 @@ ok(
 ok(
   normalized.cards[0].currency === "PEN",
   "una tarjeta antigua sin moneda queda fijada en soles",
+);
+ok(
+  normalized.purchases[0].currency === "PEN" &&
+    normalized.installments[0].currency === "PEN",
+  "las compras antiguas conservan la moneda que tenía su tarjeta",
+);
+
+console.log("\nTarjeta con límite y compras en monedas diferentes");
+const mixedState: CreditState = {
+  cards: [{ ...card, currency: "USD", limit: 500 }],
+  purchases: [
+    { ...state.purchases[0], currency: "PEN", total: 120 },
+    { id: "p2", cardId: "card", description: "Compra USD", total: 20, currency: "USD", installments: 1, createdAt: "2027-01-02" },
+  ],
+  installments: [
+    { ...installment, amount: 120, currency: "PEN", payments: [] },
+    { ...installment, id: "q2", purchaseId: "p2", amount: 20, currency: "USD", payments: [] },
+  ],
+};
+const mixedTotals = cardTotals(mixedState, "card");
+ok(
+  mixedTotals.debt === 20 && mixedTotals.debtsByCurrency.PEN === 120 && mixedTotals.debtsByCurrency.USD === 20,
+  "no suma soles con dólares ni descuenta una deuda en soles de un límite en dólares",
+);
+ok(
+  installmentCurrency(mixedState.installments[0], mixedState) === "PEN",
+  "cada cuota conserva la moneda real de su compra",
 );
 
 console.log("\nSincronización entre teléfonos");

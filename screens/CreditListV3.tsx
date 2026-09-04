@@ -96,6 +96,9 @@ export default function CreditListV3() {
           const totals = cardTotals(state, card.id);
           const currency = card.currency ?? "PEN";
           const available = card.limit - totals.debt;
+          const otherDebts = Object.entries(totals.debtsByCurrency).filter(
+            ([debtCurrency, amount]) => debtCurrency !== currency && amount > 0,
+          );
           return (
             <TouchableOpacity
               key={card.id}
@@ -108,7 +111,7 @@ export default function CreditListV3() {
               style={{ backgroundColor: card.color }}
               className="mt-3 rounded-2xl p-4"
               accessibilityRole="button"
-              accessibilityLabel={`${card.bank}. Disponible ${formatCreditMoney(available, currency)}. Deuda ${formatCreditMoney(totals.debt, currency)}.`}
+              accessibilityLabel={`${card.bank}. Disponible ${formatCreditMoney(available, currency)}. Deuda ${formatCreditMoney(totals.debt, currency)}.${otherDebts.length ? ` Además tiene deuda en ${otherDebts.map(([code]) => code).join(", ")}.` : ""}`}
               accessibilityHint="Abre los detalles de esta tarjeta"
             >
               <View className="flex-row items-center justify-between">
@@ -122,7 +125,9 @@ export default function CreditListV3() {
               </View>
               <View className="mt-3 flex-row items-end">
                 <View className="mr-3 flex-1">
-                  <Text className="text-xs text-white/80">Disponible</Text>
+                  <Text className="text-xs text-white/80">
+                    {otherDebts.length ? "Disponible estimado" : "Disponible"}
+                  </Text>
                   <Text
                     numberOfLines={1}
                     className="text-xl font-extrabold text-white"
@@ -137,6 +142,11 @@ export default function CreditListV3() {
                   >
                     Deuda {formatCreditMoneyCompact(totals.debt, currency, 13)}
                   </Text>
+                  {otherDebts.length > 0 && (
+                    <Text numberOfLines={1} className="mt-1 text-right text-[10px] font-semibold text-white/90">
+                      + deuda en {otherDebts.map(([code]) => code).join(", ")}
+                    </Text>
+                  )}
                   <Text
                     numberOfLines={1}
                     className="mt-1 text-right text-xs text-white/80"

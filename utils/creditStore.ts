@@ -28,6 +28,8 @@ export type CreditPurchase = {
   cardId: string;
   description: string;
   total: number;
+  /** Moneda real en la que el banco registró esta compra. */
+  currency?: string;
   installments: number;
   createdAt: string;
   balanceMode?: "fino" | "separate";
@@ -41,6 +43,8 @@ export type CreditInstallment = {
   number: number;
   total: number;
   amount: number;
+  /** Moneda de la deuda. No necesariamente coincide con la del límite. */
+  currency?: string;
   dueDate: string;
   paid: boolean;
   paidAt?: string;
@@ -115,7 +119,29 @@ type StoredCreditState = Partial<Omit<CreditState, "installments">> & {
 export function normalizeCreditState(value: unknown): CreditState {
   const stored =
     value && typeof value === "object" ? (value as StoredCreditState) : {};
-  const installments = (stored.installments ?? []).map((item) => {
+  const cards = (stored.cards ?? []).map((card) => ({
+    ...card,
+    // Las tarjetas anteriores al selector mundial nacieron en soles.
+    currency: card.currency ?? "PEN",
+  }));
+  const cardCurrencies = new Map(cards.map((card) => [card.id, card.currency ?? "PEN"]));
+  const purchases = (stored.purchases ?? []).map((purchase) => ({
+    ...purchase,
+    // Los datos antiguos sí usaban la moneda única de la tarjeta.
+    currency: purchase.currency ?? cardCurrencies.get(purchase.cardId) ?? "PEN",
+  }));
+  const purchaseCurrencies = new Map(
+    purchases.map((purchase) => [purchase.id, purchase.currency ?? "PEN"]),
+  );
+  const installments = (stored.installments ?? []).map((storedItem) => {
+    const item = {
+      ...storedItem,
+      currency:
+        storedItem.currency ??
+        purchaseCurrencies.get(storedItem.purchaseId) ??
+        cardCurrencies.get(storedItem.cardId) ??
+        "PEN",
+    };
     if (!item.payments?.some((payment) => payment.status !== "confirmed"))
       return item as CreditInstallment;
 
@@ -149,13 +175,8 @@ export function normalizeCreditState(value: unknown): CreditState {
   });
 
   return {
-    cards: (stored.cards ?? []).map((card) => ({
-      ...card,
-      // Las tarjetas anteriores al selector mundial nacieron en soles.
-      // Fijarlas evita que cambien si luego cambia la moneda de la cuenta.
-      currency: card.currency ?? "PEN",
-    })),
-    purchases: stored.purchases ?? [],
+    cards,
+    purchases,
     installments,
   };
 }
@@ -530,13 +551,38 @@ export function cardTotals(
   const pending = state.installments.filter(
     (i) => i.cardId === cardId && !i.paid,
   );
-  const debt = pending.reduce((sum, i) => sum + outstandingAmount(i), 0);
+  const card = state.cards.find((item) => item.id === cardId);
+  const limitCurrency = card?.currency ?? "PEN";
+  const debtsByCurrency: Record<string, number> = {};
+  for (const item of pending) {
+    const currency = item.currency ?? limitCurrency;
+    debtsByCurrency[currency] =
+      (debtsByCurrency[currency] ?? 0) + outstandingAmount(item);
+  }
+  // Solo la deuda en la moneda del límite puede restarse sin inventar un cambio.
+  const debt = debtsByCurrency[limitCurrency] ?? 0;
   const month = localMonthKey(now);
   const monthPayment = pending
-    .filter((i) => i.dueDate.startsWith(month))
+    .filter(
+      (i) =>
+        i.dueDate.startsWith(month) &&
+        (i.currency ?? limitCurrency) === limitCurrency,
+    )
     .reduce((sum, i) => sum + outstandingAmount(i), 0);
   const next = pending
     .filter((item) => /^\d{4}-\d{2}-\d{2}$/.test(item.dueDate))
     .sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0];
-  return { debt, monthPayment, next };
+  return { debt, monthPayment, next, debtsByCurrency };
+}
+
+export function installmentCurrency(
+  item: Pick<CreditInstallment, "currency" | "purchaseId" | "cardId">,
+  state: Pick<CreditState, "cards" | "purchases">,
+) {
+  return (
+    item.currency ??
+    state.purchases.find((purchase) => purchase.id === item.purchaseId)?.currency ??
+    state.cards.find((card) => card.id === item.cardId)?.currency ??
+    "PEN"
+  );
 }

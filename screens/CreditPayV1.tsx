@@ -2,6 +2,7 @@ import {
   CreditState,
   EMPTY_CREDIT_STATE,
   confirmedPaidAmount,
+  installmentCurrency,
   loadCreditState,
   makeId,
   outstandingAmount,
@@ -66,7 +67,9 @@ export default function CreditPayV1() {
   );
   const nextQuota = pending[0];
   const pendingAmount = nextQuota ? outstandingAmount(nextQuota) : 0;
-  const cardCurrency = source?.currency ?? "PEN";
+  const cardCurrency = nextQuota
+    ? installmentCurrency(nextQuota, state)
+    : purchase?.currency ?? source?.currency ?? "PEN";
   const amount =
     paymentMode === "full"
       ? pendingAmount
@@ -256,7 +259,7 @@ export default function CreditPayV1() {
         (differentCurrency ? (
           <View className="mt-3 rounded-xl bg-emerald-50 p-3">
             <Text className="text-xs font-bold text-emerald-900">
-              La tarjeta está en {cardCurrency} y Fino en {userCurrency}
+              Esta deuda está en {cardCurrency} y Fino en {userCurrency}
             </Text>
             <Text className="mb-1 mt-2 text-xs text-emerald-800">
               ¿Cuánto descontará realmente el banco?

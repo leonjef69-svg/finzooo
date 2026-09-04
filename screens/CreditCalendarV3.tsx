@@ -3,6 +3,7 @@ import {
   CreditState,
   EMPTY_CREDIT_STATE,
   confirmedPaidAmount,
+  installmentCurrency,
   loadCreditState,
   outstandingAmount,
 } from "@/utils/creditStore";
@@ -66,7 +67,6 @@ export default function CreditCalendarV3() {
   );
   const card = state.cards.find((item) => item.id === cardId) ?? state.cards[0];
   const datesConfigured = Boolean(card?.closingDay && card?.paymentDay);
-  const cardCurrency = card?.currency ?? "PEN";
   const items = useMemo(
     () =>
       card ? state.installments.filter((item) => item.cardId === card.id) : [],
@@ -245,25 +245,16 @@ export default function CreditCalendarV3() {
       ...Array.from({ length: count }, (_, index) => index + 1),
     ];
   }, [cursor]);
-  const totalPendingAmount = items
+  const pendingForMonth = items
     .filter(
       (item) =>
         !item.paid &&
         outstandingAmount(item) > 0 &&
         belongsToVisibleMonth(item),
-    )
-    .reduce(
-    (sum, item) => sum + outstandingAmount(item),
-    0,
-  );
-  const monthPaidAmount = paidInMonth.reduce(
-    (sum, item) => sum + paidDuringMonth(item, monthKey),
-    0,
-  );
-  const totalOverdueAmount = overdueItems.reduce(
-    (sum, item) => sum + outstandingAmount(item),
-    0,
-  );
+    );
+  const totalPendingAmount = groupedMoney(pendingForMonth, state, card?.currency ?? "PEN", outstandingAmount);
+  const monthPaidAmount = groupedMoney(paidInMonth, state, card?.currency ?? "PEN", (item) => paidDuringMonth(item, monthKey));
+  const totalOverdueAmount = groupedMoney(overdueItems, state, card?.currency ?? "PEN", outstandingAmount);
   const nextUrgent = [...items]
     .filter(
       (item) =>
@@ -371,7 +362,7 @@ export default function CreditCalendarV3() {
               className="mt-1 font-extrabold text-slate-900"
             >
               {purchases.get(nextUrgent.purchaseId)?.description ?? "Compra"} ·{" "}
-              {formatCreditMoney(outstandingAmount(nextUrgent), cardCurrency)}
+              {formatCreditMoney(outstandingAmount(nextUrgent), installmentCurrency(nextUrgent, state))}
             </Text>
             <Text className="text-xs font-semibold text-amber-700">
               Vence {formatDueDate(nextUrgent.dueDate)} ·{" "}
@@ -405,17 +396,17 @@ export default function CreditCalendarV3() {
       <View className="mt-3 flex-row gap-2">
         <Summary
           label="Por pagar"
-          value={formatCreditMoneyCompact(totalPendingAmount, cardCurrency, 13)}
+          value={totalPendingAmount}
           color="amber"
         />
         <Summary
           label="Pagado"
-          value={formatCreditMoneyCompact(monthPaidAmount, cardCurrency, 13)}
+          value={monthPaidAmount}
           color="emerald"
         />
         <Summary
           label="Se pasó"
-          value={formatCreditMoneyCompact(totalOverdueAmount, cardCurrency, 13)}
+          value={totalOverdueAmount}
           color="rose"
         />
       </View>
@@ -654,7 +645,7 @@ export default function CreditCalendarV3() {
                     numberOfLines={1}
                     className={`mr-1 font-extrabold ${filter === "paid" || hasPaymentOnSelectedDate ? "text-emerald-700" : "text-slate-900"}`}
                   >
-                    {formatCreditMoneyCompact(displayedAmount, cardCurrency, 14)}
+                    {formatCreditMoneyCompact(displayedAmount, installmentCurrency(item, state), 14)}
                   </Text>
                   {!item.paid && (
                     <>
@@ -780,6 +771,22 @@ function paidDuringDate(item: CreditInstallment, dateKey: string) {
   return item.paidAt && creditTimestampDateKey(item.paidAt) === dateKey
     ? confirmedPaidAmount(item)
     : 0;
+}
+function groupedMoney(
+  items: CreditInstallment[],
+  state: CreditState,
+  fallbackCurrency: string,
+  amountFor: (item: CreditInstallment) => number,
+) {
+  const totals: Record<string, number> = {};
+  for (const item of items) {
+    const currency = installmentCurrency(item, state);
+    totals[currency] = (totals[currency] ?? 0) + amountFor(item);
+  }
+  const entries = Object.entries(totals).filter(([, amount]) => amount > 0);
+  if (!entries.length) return formatCreditMoney(0, fallbackCurrency);
+  if (entries.length > 1) return `${entries.length} monedas`;
+  return formatCreditMoneyCompact(entries[0][1], entries[0][0], 13);
 }
 function formatDateTime(value: string) {
   return new Intl.DateTimeFormat("es-PE", {

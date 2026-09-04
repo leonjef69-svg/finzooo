@@ -160,7 +160,7 @@ async function sync(state: CreditState) {
     );
     notificationDate.setHours(hour || 0, minute || 0, 0, 0);
     if (notificationDate.getTime() <= now) continue;
-    const currency = card.currency ?? "PEN";
+    const currency = installment.currency ?? purchase?.currency ?? card.currency ?? "PEN";
     await Notifications.scheduleNotificationAsync({
       content: {
         title: `Próximo pago · ${card.bank}`,

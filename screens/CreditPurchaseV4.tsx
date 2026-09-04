@@ -9,7 +9,7 @@ import {
   saveCreditState,
 } from "@/utils/creditStore";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { currencySymbolFor } from "@/constants/currencies";
+import { CURRENCIES, currencyLabelFor, currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import { nextId } from "@/utils/id";
 import { irUnaVez } from "@/utils/nav";
@@ -23,6 +23,8 @@ import {
 import {
   ArrowLeft,
   CalendarDays,
+  Check,
+  ChevronDown,
   ReceiptText,
   ShoppingBag,
   Utensils,
@@ -31,6 +33,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   ActivityIndicator,
+  FlatList,
+  Modal,
   ScrollView,
   Text,
   TextInput,
@@ -43,7 +47,7 @@ const ICONS: PurchaseIconName[] = ["shopping", "service", "food"];
 export default function CreditPurchaseV4() {
   const router = useRouter();
   const saving = useRef(false);
-  const { addOrUpdateTransaction, disponible, userCurrency } = useAppData();
+  const { addOrUpdateTransaction, disponible, userCurrency, userLanguage, t } = useAppData();
   const { cardId, convertId, editId } = useLocalSearchParams<{
     cardId: string;
     convertId?: string;
@@ -61,6 +65,9 @@ export default function CreditPurchaseV4() {
   const [balanceMode, setBalanceMode] = useState<"fino" | "separate">("fino");
   const [paidMethod, setPaidMethod] = useState<"fino" | "external">("fino");
   const [homeAmount, setHomeAmount] = useState("");
+  const [purchaseCurrency, setPurchaseCurrency] = useState(userCurrency || "PEN");
+  const [currencyPickerOpen, setCurrencyPickerOpen] = useState(false);
+  const [currencyQuery, setCurrencyQuery] = useState("");
   const [icon, setIcon] = useState<PurchaseIconName>("shopping");
   useEffect(() => {
     loadCreditState().then((value) => {
@@ -72,6 +79,7 @@ export default function CreditPurchaseV4() {
         if (current) {
           setDesc(current.description);
           setAmount(String(current.total));
+          setPurchaseCurrency(current.currency ?? value.cards.find((c) => c.id === current.cardId)?.currency ?? "PEN");
           setBalanceMode(current.balanceMode ?? "fino");
           setKind(convertId ? "installments" : current.installments > 1 ? "installments" : "pending");
           setCount(String(current.installments || 1));
@@ -87,9 +95,15 @@ export default function CreditPurchaseV4() {
   }, [convertId, editId]);
   const card = state.cards.find((c) => c.id === cardId);
   const datesConfigured = Boolean(card?.closingDay && card?.paymentDay);
-  const cardCurrency = card?.currency ?? "PEN";
+  const limitCurrency = card?.currency ?? "PEN";
+  const cardCurrency = purchaseCurrency;
   const homeSymbol = currencySymbolFor(userCurrency);
-  const differentCurrency = (card?.currency ?? "PEN") !== userCurrency;
+  const differentCurrency = purchaseCurrency !== userCurrency;
+  const currencyOptions = useMemo(() => {
+    const query = currencyQuery.trim().toLocaleLowerCase(userLanguage);
+    return CURRENCIES.map((item) => ({ ...item, name: currencyLabelFor(item.id, t, userLanguage) }))
+      .filter((item) => !query || item.id.toLowerCase().includes(query) || item.symbol.toLocaleLowerCase(userLanguage).includes(query) || item.name.toLocaleLowerCase(userLanguage).includes(query));
+  }, [currencyQuery, t, userLanguage]);
   const total = parseCreditMoneyInput(amount, cardCurrency) ?? 0;
   const parsedQty = Number(count);
   const qty =
@@ -152,11 +166,13 @@ export default function CreditPurchaseV4() {
       (quota) => quota.paid || (quota.payments?.length ?? 0) > 0,
     );
     const previousDebt = previousQuotas
+      .filter((quota) => (quota.currency ?? existingPurchase?.currency ?? limitCurrency) === limitCurrency)
       .reduce((sum, quota) => sum + outstandingAmount(quota), 0);
     const availableForPurchase =
       card.limit - cardTotals(state, card.id).debt + previousDebt;
     const newDebt = each * qty;
     if (
+      purchaseCurrency === limitCurrency &&
       kind !== "paid" &&
       !hasRelatedPayments &&
       newDebt > availableForPurchase + creditMoneyEpsilon(cardCurrency)
@@ -191,6 +207,7 @@ export default function CreditPurchaseV4() {
       if (editId && hasRelatedPayments) {
       const firstPrevious = previousQuotas[0];
       const changedFinancialData =
+        purchaseCurrency !== (existingPurchase?.currency ?? limitCurrency) ||
         Math.abs(total - Number(existingPurchase?.total ?? 0)) >
           creditMoneyEpsilon(cardCurrency) ||
         qty !== existingPurchase?.installments ||
@@ -225,6 +242,7 @@ export default function CreditPurchaseV4() {
       cardId: card.id,
       description: desc.trim(),
       total,
+      currency: purchaseCurrency,
       installments: qty,
       createdAt:
         state.purchases.find((p) => p.id === id)?.createdAt ??
@@ -246,6 +264,7 @@ export default function CreditPurchaseV4() {
       number: q.number,
       total: qty,
       amount: each,
+      currency: purchaseCurrency,
       dueDate: q.date,
       paid: kind === "paid",
       paidAt: kind === "paid" ? now.toISOString() : undefined,
@@ -436,6 +455,19 @@ export default function CreditPurchaseV4() {
           </View>
         )}
       </View>
+      <Text className="mt-2 font-bold">Moneda de esta compra</Text>
+      <TouchableOpacity
+        onPress={() => setCurrencyPickerOpen(true)}
+        className="mt-1 min-h-[48px] flex-row items-center justify-between rounded-xl border border-slate-300 bg-white px-3"
+        accessibilityRole="button"
+        accessibilityLabel={`Moneda de compra ${purchaseCurrency}`}
+      >
+        <View>
+          <Text className="font-extrabold">{currencySymbolFor(purchaseCurrency)} · {purchaseCurrency}</Text>
+          <Text className="text-xs text-slate-500">El límite está en {limitCurrency}</Text>
+        </View>
+        <ChevronDown size={19} color="#64748b" />
+      </TouchableOpacity>
       {card?.closingDay && (
         <Text className="mt-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800">
           {afterCut
@@ -576,6 +608,32 @@ export default function CreditPurchaseV4() {
                 : "Guardar compra"}
         </Text>
       </TouchableOpacity>
+      <Modal visible={currencyPickerOpen} animationType="slide" onRequestClose={() => setCurrencyPickerOpen(false)}>
+        <View className="flex-1 bg-slate-50 px-4 pt-12">
+          <View className="flex-row items-center justify-between">
+            <Text className="text-xl font-extrabold">Moneda de la compra</Text>
+            <TouchableOpacity onPress={() => setCurrencyPickerOpen(false)} className="rounded-xl bg-slate-200 px-3 py-2">
+              <Text className="font-bold">Cerrar</Text>
+            </TouchableOpacity>
+          </View>
+          <TextInput disableFullscreenUI value={currencyQuery} onChangeText={setCurrencyQuery} placeholder="Buscar moneda o código" className="my-3 rounded-xl border border-slate-300 bg-white p-3" />
+          <FlatList
+            data={currencyOptions}
+            keyExtractor={(item) => item.id}
+            keyboardShouldPersistTaps="handled"
+            renderItem={({ item }) => (
+              <TouchableOpacity
+                onPress={() => { setPurchaseCurrency(item.id); setCurrencyPickerOpen(false); setCurrencyQuery(""); }}
+                className={`mb-2 flex-row items-center rounded-xl border p-3 ${purchaseCurrency === item.id ? "border-teal-600 bg-teal-50" : "border-slate-300 bg-white"}`}
+              >
+                <Text className="mr-3 w-20 font-extrabold">{item.symbol} · {item.id}</Text>
+                <Text className="flex-1 text-slate-600">{item.name}</Text>
+                {purchaseCurrency === item.id && <Check size={19} color="#0d9488" />}
+              </TouchableOpacity>
+            )}
+          />
+        </View>
+      </Modal>
       <View className="h-16" />
     </ScrollView>
   );

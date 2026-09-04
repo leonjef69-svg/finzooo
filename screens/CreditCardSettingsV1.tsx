@@ -425,7 +425,7 @@ export default function CreditCardSettingsV1() {
           />
         </View>
         <View className="flex-1">
-          <Text className="mb-1 mt-3 text-xs font-semibold">Moneda *</Text>
+          <Text className="mb-1 mt-3 text-xs font-semibold">Moneda del límite *</Text>
           <TouchableOpacity
             onPress={() =>
               currencyLocked
