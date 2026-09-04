@@ -126,8 +126,9 @@ Comando principal: `node pruebas/correr.mjs`.
   convertirlo en pago: la deuda queda pendiente hasta registrar uno confirmado.
 - Las tarjetas distinguen la moneda del límite de la moneda real de cada compra.
   Por ejemplo, una línea de US$ 500 puede guardar y pagar una compra de S/ 120.
-  Las deudas se muestran separadas por moneda y Fino nunca suma ni convierte
-  monedas diferentes sin un monto real indicado por la persona.
+  Cuando difieren, Fino pide el monto real que el banco descontó del límite;
+  así actualiza el crédito disponible y lo libera proporcionalmente al pagar.
+  Las deudas se muestran separadas y nunca se inventa un tipo de cambio.
 
 ## Pendientes actuales
 

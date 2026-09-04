@@ -30,6 +30,8 @@ export type CreditPurchase = {
   total: number;
   /** Moneda real en la que el banco registró esta compra. */
   currency?: string;
+  /** Monto real que esta compra consumió del límite, en la moneda de la tarjeta. */
+  limitAmount?: number;
   installments: number;
   createdAt: string;
   balanceMode?: "fino" | "separate";
@@ -45,6 +47,8 @@ export type CreditInstallment = {
   amount: number;
   /** Moneda de la deuda. No necesariamente coincide con la del límite. */
   currency?: string;
+  /** Parte del límite consumida por esta cuota, en la moneda de la tarjeta. */
+  limitAmount?: number;
   dueDate: string;
   paid: boolean;
   paidAt?: string;
@@ -129,9 +133,18 @@ export function normalizeCreditState(value: unknown): CreditState {
     ...purchase,
     // Los datos antiguos sí usaban la moneda única de la tarjeta.
     currency: purchase.currency ?? cardCurrencies.get(purchase.cardId) ?? "PEN",
+    limitAmount:
+      purchase.limitAmount ??
+      ((purchase.currency ?? cardCurrencies.get(purchase.cardId) ?? "PEN") ===
+      (cardCurrencies.get(purchase.cardId) ?? "PEN")
+        ? purchase.total
+        : undefined),
   }));
   const purchaseCurrencies = new Map(
     purchases.map((purchase) => [purchase.id, purchase.currency ?? "PEN"]),
+  );
+  const purchaseLimitAmounts = new Map(
+    purchases.map((purchase) => [purchase.id, purchase.limitAmount]),
   );
   const installments = (stored.installments ?? []).map((storedItem) => {
     const item = {
@@ -141,6 +154,15 @@ export function normalizeCreditState(value: unknown): CreditState {
         purchaseCurrencies.get(storedItem.purchaseId) ??
         cardCurrencies.get(storedItem.cardId) ??
         "PEN",
+      limitAmount:
+        storedItem.limitAmount ??
+        ((storedItem.currency ?? purchaseCurrencies.get(storedItem.purchaseId)) ===
+        (cardCurrencies.get(storedItem.cardId) ?? "PEN")
+          ? storedItem.amount
+          : purchaseLimitAmounts.get(storedItem.purchaseId) != null
+            ? Number(purchaseLimitAmounts.get(storedItem.purchaseId)) /
+              Math.max(1, storedItem.total)
+            : undefined),
     };
     if (!item.payments?.some((payment) => payment.status !== "confirmed"))
       return item as CreditInstallment;
@@ -559,8 +581,15 @@ export function cardTotals(
     debtsByCurrency[currency] =
       (debtsByCurrency[currency] ?? 0) + outstandingAmount(item);
   }
-  // Solo la deuda en la moneda del límite puede restarse sin inventar un cambio.
-  const debt = debtsByCurrency[limitCurrency] ?? 0;
+  // Usa el descuento real informado por el banco. Al pagar parcialmente se
+  // libera la misma proporción del límite, sin recalcular ningún tipo de cambio.
+  const debt = pending.reduce((sum, item) => {
+    const remaining = outstandingAmount(item);
+    const limitAmount =
+      item.limitAmount ??
+      ((item.currency ?? limitCurrency) === limitCurrency ? item.amount : 0);
+    return sum + (item.amount > 0 ? limitAmount * (remaining / item.amount) : 0);
+  }, 0);
   const month = localMonthKey(now);
   const monthPayment = pending
     .filter(

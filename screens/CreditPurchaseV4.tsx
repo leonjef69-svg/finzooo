@@ -66,6 +66,7 @@ export default function CreditPurchaseV4() {
   const [paidMethod, setPaidMethod] = useState<"fino" | "external">("fino");
   const [homeAmount, setHomeAmount] = useState("");
   const [purchaseCurrency, setPurchaseCurrency] = useState(userCurrency || "PEN");
+  const [limitAmount, setLimitAmount] = useState("");
   const [currencyPickerOpen, setCurrencyPickerOpen] = useState(false);
   const [currencyQuery, setCurrencyQuery] = useState("");
   const [icon, setIcon] = useState<PurchaseIconName>("shopping");
@@ -80,6 +81,7 @@ export default function CreditPurchaseV4() {
           setDesc(current.description);
           setAmount(String(current.total));
           setPurchaseCurrency(current.currency ?? value.cards.find((c) => c.id === current.cardId)?.currency ?? "PEN");
+          setLimitAmount(current.limitAmount != null ? String(current.limitAmount) : "");
           setBalanceMode(current.balanceMode ?? "fino");
           setKind(convertId ? "installments" : current.installments > 1 ? "installments" : "pending");
           setCount(String(current.installments || 1));
@@ -105,6 +107,10 @@ export default function CreditPurchaseV4() {
       .filter((item) => !query || item.id.toLowerCase().includes(query) || item.symbol.toLocaleLowerCase(userLanguage).includes(query) || item.name.toLocaleLowerCase(userLanguage).includes(query));
   }, [currencyQuery, t, userLanguage]);
   const total = parseCreditMoneyInput(amount, cardCurrency) ?? 0;
+  const parsedLimitAmount =
+    purchaseCurrency === limitCurrency
+      ? total
+      : parseCreditMoneyInput(limitAmount, limitCurrency) ?? 0;
   const parsedQty = Number(count);
   const qty =
     kind === "installments" && Number.isInteger(parsedQty)
@@ -154,6 +160,11 @@ export default function CreditPurchaseV4() {
         "Revisa los datos",
         "Completa descripción, monto, meses y monto de cada cuota.",
       );
+    if (kind !== "paid" && purchaseCurrency !== limitCurrency && parsedLimitAmount <= 0)
+      return Alert.alert(
+        "Falta el descuento del límite",
+        `Escribe cuánto descontó realmente el banco de tu línea en ${limitCurrency}.`,
+      );
     if (kind === "installments" && (!card.closingDay || !card.paymentDay))
       return Alert.alert(
         "Configura las fechas",
@@ -166,20 +177,26 @@ export default function CreditPurchaseV4() {
       (quota) => quota.paid || (quota.payments?.length ?? 0) > 0,
     );
     const previousDebt = previousQuotas
-      .filter((quota) => (quota.currency ?? existingPurchase?.currency ?? limitCurrency) === limitCurrency)
-      .reduce((sum, quota) => sum + outstandingAmount(quota), 0);
+      .reduce(
+        (sum, quota) =>
+          sum +
+          (quota.amount > 0
+            ? Number(quota.limitAmount ?? quota.amount) *
+              (outstandingAmount(quota) / quota.amount)
+            : 0),
+        0,
+      );
     const availableForPurchase =
       card.limit - cardTotals(state, card.id).debt + previousDebt;
-    const newDebt = each * qty;
+    const newDebt = parsedLimitAmount;
     if (
-      purchaseCurrency === limitCurrency &&
       kind !== "paid" &&
       !hasRelatedPayments &&
       newDebt > availableForPurchase + creditMoneyEpsilon(cardCurrency)
     ) {
       return Alert.alert(
         "Límite insuficiente",
-        `Esta compra generaría ${formatCreditMoney(newDebt, cardCurrency)} de deuda y tienes ${formatCreditMoney(Math.max(0, availableForPurchase), cardCurrency)} disponibles.`,
+        `Esta compra usaría ${formatCreditMoney(newDebt, limitCurrency)} de tu límite y tienes ${formatCreditMoney(Math.max(0, availableForPurchase), limitCurrency)} disponibles.`,
       );
     }
     if (saving.current) return;
@@ -208,6 +225,8 @@ export default function CreditPurchaseV4() {
       const firstPrevious = previousQuotas[0];
       const changedFinancialData =
         purchaseCurrency !== (existingPurchase?.currency ?? limitCurrency) ||
+        Math.abs(parsedLimitAmount - Number(existingPurchase?.limitAmount ?? existingPurchase?.total ?? 0)) >
+          creditMoneyEpsilon(limitCurrency) ||
         Math.abs(total - Number(existingPurchase?.total ?? 0)) >
           creditMoneyEpsilon(cardCurrency) ||
         qty !== existingPurchase?.installments ||
@@ -243,6 +262,7 @@ export default function CreditPurchaseV4() {
       description: desc.trim(),
       total,
       currency: purchaseCurrency,
+      limitAmount: parsedLimitAmount,
       installments: qty,
       createdAt:
         state.purchases.find((p) => p.id === id)?.createdAt ??
@@ -265,6 +285,7 @@ export default function CreditPurchaseV4() {
       total: qty,
       amount: each,
       currency: purchaseCurrency,
+      limitAmount: parsedLimitAmount / qty,
       dueDate: q.date,
       paid: kind === "paid",
       paidAt: kind === "paid" ? now.toISOString() : undefined,
@@ -468,6 +489,22 @@ export default function CreditPurchaseV4() {
         </View>
         <ChevronDown size={19} color="#64748b" />
       </TouchableOpacity>
+      {kind !== "paid" && purchaseCurrency !== limitCurrency && (
+        <View className="mt-2 rounded-2xl border border-amber-300 bg-amber-50 p-3">
+          <Field
+            label={`¿Cuánto descontó de tu límite en ${limitCurrency}?`}
+            value={limitAmount}
+            onChangeText={(value: string) =>
+              setLimitAmount(sanitizeCreditMoneyInput(value))
+            }
+            keyboardType="decimal-pad"
+            placeholder={`${currencySymbolFor(limitCurrency)} ${creditMoneyPlaceholder(limitCurrency)}`}
+          />
+          <Text className="mt-1 text-xs text-amber-800">
+            Copia el monto real que muestra tu banco. Fino no inventará el tipo de cambio.
+          </Text>
+        </View>
+      )}
       {card?.closingDay && (
         <Text className="mt-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold text-sky-800">
           {afterCut

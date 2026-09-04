@@ -140,22 +140,35 @@ console.log("\nTarjeta con límite y compras en monedas diferentes");
 const mixedState: CreditState = {
   cards: [{ ...card, currency: "USD", limit: 500 }],
   purchases: [
-    { ...state.purchases[0], currency: "PEN", total: 120 },
+    { ...state.purchases[0], currency: "PEN", total: 120, limitAmount: 34 },
     { id: "p2", cardId: "card", description: "Compra USD", total: 20, currency: "USD", installments: 1, createdAt: "2027-01-02" },
   ],
   installments: [
-    { ...installment, amount: 120, currency: "PEN", payments: [] },
+    { ...installment, amount: 120, currency: "PEN", limitAmount: 34, payments: [] },
     { ...installment, id: "q2", purchaseId: "p2", amount: 20, currency: "USD", payments: [] },
   ],
 };
 const mixedTotals = cardTotals(mixedState, "card");
 ok(
-  mixedTotals.debt === 20 && mixedTotals.debtsByCurrency.PEN === 120 && mixedTotals.debtsByCurrency.USD === 20,
-  "no suma soles con dólares ni descuenta una deuda en soles de un límite en dólares",
+  mixedTotals.debt === 54 && mixedTotals.debtsByCurrency.PEN === 120 && mixedTotals.debtsByCurrency.USD === 20,
+  "el límite usa la conversión real del banco sin sumar soles con dólares",
 );
 ok(
   installmentCurrency(mixedState.installments[0], mixedState) === "PEN",
   "cada cuota conserva la moneda real de su compra",
+);
+const partiallyPaidMixed = {
+  ...mixedState,
+  installments: [
+    {
+      ...mixedState.installments[0],
+      payments: [{ id: "half", amount: 60, status: "confirmed" as const, createdAt: "2027-01-03", method: "Fino" }],
+    },
+  ],
+};
+ok(
+  cardTotals(partiallyPaidMixed, "card").debt === 17,
+  "un pago parcial libera la misma proporción del límite convertido",
 );
 
 console.log("\nSincronización entre teléfonos");
