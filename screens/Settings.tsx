@@ -190,21 +190,21 @@ export default function Settings({
           Puestos en fila —foto a la izquierda, nombre y correo al lado— la tarjeta baja a la
           mitad de alto y la foto deja de verse perdida. No se quita nada: siguen estando la
           cámara para cambiarla, el lápiz para el nombre y los dos avisos de error. */}
-      <View className="mx-5 mt-3 bg-white dark:bg-noche-2 rounded-2xl p-3.5 border-[1.5px] border-slate-200 dark:border-noche-borde">
-        <View className="flex-row items-center gap-3.5">
+      <View className="mx-5 mt-2.5 bg-white dark:bg-noche-2 rounded-2xl px-3 py-2.5 border-[1.5px] border-slate-200 dark:border-noche-borde">
+        <View className="flex-row items-center gap-3">
           <TouchableOpacity onPress={pickPhoto} disabled={pickingPhoto} activeOpacity={0.8}>
-            <View className="w-[76px] h-[76px] rounded-full bg-emerald-600 items-center justify-center overflow-hidden">
+            <View className="w-[62px] h-[62px] rounded-full bg-emerald-600 items-center justify-center overflow-hidden">
               {userPhoto ? (
-                <Image source={{ uri: userPhoto }} style={{ width: 76, height: 76 }} />
+                <Image source={{ uri: userPhoto }} style={{ width: 62, height: 62 }} />
               ) : (
-                <Text className="text-white text-2xl font-extrabold">{userName[0]}</Text>
+                <Text className="text-white text-xl font-extrabold">{userName[0]}</Text>
               )}
             </View>
-            <View className="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-slate-900 items-center justify-center border-2 border-white">
+            <View className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-slate-900 items-center justify-center border-2 border-white">
               {pickingPhoto ? (
                 <ActivityIndicator size="small" color="#ffffff" />
               ) : (
-                <Camera size={13} color="#ffffff" />
+                <Camera size={12} color="#ffffff" />
               )}
             </View>
           </TouchableOpacity>
@@ -288,19 +288,19 @@ export default function Settings({
         ) : null}
       </View>
 
-      <TouchableOpacity onPress={onPremium} className="mx-5 mt-3 rounded-2xl overflow-hidden">
+      <TouchableOpacity onPress={onPremium} className="mx-5 mt-2.5 rounded-2xl overflow-hidden">
         <LinearGradient
           colors={["#fbbf24", "#f59e0b"]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 0 }}
-          className="flex-row items-center gap-3 p-4"
+          className="flex-row items-center gap-2.5 px-3.5 py-3"
         >
           <Crown size={20} color="#ffffff" />
           <View className="flex-1">
             <Text className="font-extrabold text-white text-sm">
               {isPremium ? t("settings.premiumActive") : t("settings.becomePremium")}
             </Text>
-            <Text className="text-[11px] text-amber-50">
+            <Text className="text-xs leading-4 text-amber-50">
               {isPremium ? t("settings.premiumThanks") : t("settings.premiumUnlock")}
             </Text>
           </View>
@@ -315,14 +315,14 @@ export default function Settings({
           copia por su cuenta. */}
       {isCloudSynced && (
         <View
-          className={`mx-5 mt-3 flex-row items-center gap-3 rounded-2xl p-3.5 border-[1.5px] ${
+          className={`mx-5 mt-2.5 flex-row items-center gap-2.5 rounded-2xl px-3 py-2.5 border-[1.5px] ${
             respaldoAlDia
               ? "bg-emerald-50 dark:bg-noche-2 border-emerald-100 dark:border-noche-borde"
               : "bg-amber-50 dark:bg-noche-2 border-amber-200 dark:border-noche-borde"
           }`}
         >
           <View
-            className={`w-9 h-9 rounded-xl items-center justify-center ${
+            className={`w-8 h-8 rounded-xl items-center justify-center ${
               respaldoAlDia ? "bg-emerald-100 dark:bg-noche-3" : "bg-amber-100 dark:bg-noche-3"
             }`}
           >
@@ -337,7 +337,7 @@ export default function Settings({
               {t(respaldoAlDia ? "settings.backupActive" : "settings.backupFailed")}
             </Text>
             <Text
-              className={`text-[11px] ${
+              className={`text-xs leading-4 ${
                 respaldoAlDia ? "text-emerald-600 dark:text-slate-300" : "text-amber-700 dark:text-slate-300"
               }`}
             >
@@ -358,7 +358,7 @@ export default function Settings({
         </View>
       )}
 
-      <View className="px-5 mt-5 gap-2.5">
+      <View className="px-5 mt-3.5 gap-2.5">
         <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 px-1">{t("settings.sectionSettings")}</Text>
         <Row
           Icon={PieChart}
