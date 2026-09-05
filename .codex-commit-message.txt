@@ -1,3 +1,0 @@
-Agrega categorías rápidas al nuevo movimiento
-
-Reduce la altura del monto y permite elegir categorías, iconos y favoritos sin abandonar el formulario.

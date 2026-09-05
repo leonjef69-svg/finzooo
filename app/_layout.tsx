@@ -117,6 +117,9 @@ const KEEP_ON_RETURN = [
   "/credit-card-settings",
   "/category-style",
   "/nueva-categoria",
+  // Nuevo movimiento y su edición abren cámara/galería para usar una foto
+  // como dibujo sin perder el monto ni los demás datos al regresar.
+  "/transaction/new",
   // El pago del calendario tambien saca fotos: sin esto, al volver de la camara se perdian
   // el nombre y el monto a medio escribir. Lo cazo auditar-pantallas-externas.
   "/calendario/nuevo",
@@ -461,7 +464,8 @@ function AppLifecycleEffects() {
         // —esa lista se compara con la pantalla en la que la app cree estar,
         // que en este instante sigue siendo Inicio porque la de importar
         // todavía no ha llegado—. Ver la explicación en la bandera.
-        if (!abriendoArchivoEntrante() && !KEEP_ON_RETURN.includes(pathnameRef.current)) {
+        const editandoMovimiento = /^\/transaction\/[^/]+\/edit$/.test(pathnameRef.current);
+        if (!abriendoArchivoEntrante() && !KEEP_ON_RETURN.includes(pathnameRef.current) && !editandoMovimiento) {
           router.dismissTo("/(tabs)");
         }
       }

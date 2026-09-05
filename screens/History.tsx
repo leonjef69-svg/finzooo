@@ -57,7 +57,7 @@ const Fila = memo(function Fila({
           calendario, y la categoria sigue mandando en las cuentas. */}
       <IconBadge
         Icon={tx.icono && !esFoto(tx.icono) ? iconoDe(tx.icono) : c.icon}
-        color={c.color}
+        color={tx.iconColor ?? c.color}
         image={esFoto(tx.icono ?? "") ? tx.icono : c.image}
       />
       <View className="flex-1 min-w-0">

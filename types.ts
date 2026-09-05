@@ -20,6 +20,8 @@ export type Transaction = {
    * único que cambia es el dibujo de la fila.
    */
   icono?: string;
+  /** Color propio del dibujo de este movimiento. */
+  iconColor?: string;
   id: number;
   type: "expense" | "income";
   amount: number;

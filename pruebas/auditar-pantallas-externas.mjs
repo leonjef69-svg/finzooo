@@ -49,6 +49,10 @@ const ABREN_OTRA_APP = [
 // Pantallas que abren otra app pero NO necesitan seguir abiertas al volver,
 // porque su trabajo ya termino antes de salir.
 const EXCEPCIONES = {
+  // AddSheet tiene dos rutas. /transaction/new está en KEEP_ON_RETURN y la
+  // edición dinámica /transaction/:id/edit se protege por patrón en _layout.
+  "AddSheet.tsx":
+    "nuevo movimiento está en KEEP_ON_RETURN y la edición se protege por patrón dinámico",
   // ExportPdfSheet estuvo aquí y era un error. El razonamiento era "comparte
   // el PDF cuando ya está generado, así que al volver no le queda nada por
   // hacer". Falso: lo que queda por hacer es SEGUIR AHÍ. Quien cierra el

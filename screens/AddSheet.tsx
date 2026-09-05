@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import * as ImagePicker from "expo-image-picker";
 import { irUnaVez } from "@/utils/nav";
 import { Image, Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated, {
@@ -9,10 +10,11 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X, Check, ChevronDown, ChevronRight, Calendar, Star } from "lucide-react-native";
+import { X, Check, ChevronDown, ChevronRight, Calendar, Star, Camera, ImageIcon } from "lucide-react-native";
 import CategoryAvatar from "@/components/CategoryAvatar";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
 import { currencySymbolFor } from "@/constants/currencies";
+import { COLOR_HEX_600 } from "@/constants/colors";
 import { methodLabel, PAYMENT_METHODS } from "@/constants/i18n";
 import { useAppData } from "@/contexts/AppDataContext";
 import { defaultDateForMonth, isValidISODate, normalizeDateInput } from "@/utils/date";
@@ -20,7 +22,7 @@ import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { nextId } from "@/utils/id";
 import { horaDe } from "@/utils/format";
 import { iconoDe, TODOS_LOS_GRUPOS } from "@/constants/iconos";
-import { esFoto, getFavoritos } from "@/utils/iconosFavoritos";
+import { alternar, esFoto, getFavoritos } from "@/utils/iconosFavoritos";
 import type { Month, Transaction } from "@/types";
 import { useColorScheme } from "nativewind";
 
@@ -41,7 +43,7 @@ export default function AddSheet({
   onClose: () => void;
   onSave: (t: Transaction) => void;
 }) {
-  const { userCurrency, userCountry, t, categoriasPropias, categoriaRecienCreada, olvidarCategoriaRecienCreada } =
+  const { userCurrency, userCountry, t, categoriasPropias, categoriaRecienCreada, olvidarCategoriaRecienCreada, guardarFavoritos, showToast } =
     useAppData();
   const [type, setType] = useState<"expense" | "income">(
     initialType || transaction?.type || "expense"
@@ -51,6 +53,11 @@ export default function AddSheet({
     transaction?.category || (type === "expense" ? "comida" : "salario")
   );
   const [icono, setIcono] = useState<string | undefined>(transaction?.icono);
+  const [iconColor, setIconColor] = useState(
+    transaction?.iconColor ?? catInfo(transaction?.category ?? (initialType === "income" ? "salario" : "comida")).color
+  );
+  const [iconoConColores, setIconoConColores] = useState<string | null>(null);
+  const [favoritos, setFavoritosLocales] = useState(() => getFavoritos());
   const [date, setDate] = useState(transaction?.date || defaultDateForMonth(currentMonth));
   const [method, setMethod] = useState(transaction?.method || "debit");
   const [description, setDescription] = useState(transaction?.description || "");
@@ -89,6 +96,40 @@ export default function AddSheet({
     );
     return grupo?.iconos ?? TODOS_LOS_GRUPOS[TODOS_LOS_GRUPOS.length - 1].iconos;
   }
+
+  function cambiarFavorito(id: string) {
+    const siguientes = alternar(favoritos, id);
+    setFavoritosLocales(siguientes);
+    guardarFavoritos(siguientes);
+  }
+
+  function aplicarFoto(categoryId: string, asset: ImagePicker.ImagePickerAsset) {
+    if (!asset.base64) return;
+    setCategory(categoryId);
+    setIcono(`data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`);
+  }
+
+  async function tomarFoto(categoryId: string) {
+    const permiso = await ImagePicker.requestCameraPermissionsAsync();
+    if (!permiso.granted) {
+      showToast(t("catCustom.cameraPermission"));
+      return;
+    }
+    const resultado = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.7, base64: true });
+    if (!resultado.canceled && resultado.assets[0]) aplicarFoto(categoryId, resultado.assets[0]);
+  }
+
+  async function elegirDeGaleria(categoryId: string) {
+    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permiso.granted) {
+      showToast(t("settings.photoPermission"));
+      return;
+    }
+    const resultado = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.7, base64: true });
+    if (!resultado.canceled && resultado.assets[0]) aplicarFoto(categoryId, resultado.assets[0]);
+  }
+
+  const coloresRapidos = ["rose", "orange", "amber", "green", "emerald", "teal", "blue", "violet", "pink", "slate"];
 
   const metodosDisponibles = useMemo(
     () => PAYMENT_METHODS.filter((m) =>
@@ -373,7 +414,7 @@ export default function AddSheet({
               <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("addSheet.amount")}</Text>
               <View
                 className="flex-row items-center bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4"
-                style={{ height: 56 }}
+                style={{ height: 48 }}
               >
                 <Text className="text-slate-500 dark:text-slate-300 font-bold mr-1">{currencySymbolFor(userCurrency)}</Text>
                 <TextInput
@@ -383,7 +424,7 @@ export default function AddSheet({
                   onChangeText={(v) => setAmount(sanitizeAmountInput(v))}
                   placeholder="0.00"
                   placeholderTextColor="#94a3b8"
-                  className="flex-1 text-lg font-extrabold"
+                  className="flex-1 text-base font-extrabold"
                   style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
                 />
               </View>
@@ -395,26 +436,43 @@ export default function AddSheet({
               </Text>
               {categoriasRapidas.map((cat) => {
                 const activa = cat.id === category;
+                const IconoElegido = activa && icono && !esFoto(icono) ? iconoDe(icono) : null;
                 return (
                   <View key={cat.id} className="gap-1.5">
+                    <View className="flex-row items-center justify-between gap-2">
                     <TouchableOpacity
                       onPress={() => {
                         setCategory(cat.id);
                         setIcono(cat.iconoNombre);
                       }}
-                      className={`self-start flex-row items-center gap-1.5 rounded-full border px-3 py-1.5 ${
+                      className={`flex-row items-center gap-1.5 rounded-full border px-3 py-1.5 ${
                         activa
                           ? "bg-emerald-50 border-emerald-500 dark:bg-emerald-950"
                           : "bg-slate-50 border-slate-200 dark:bg-noche-2 dark:border-noche-borde"
                       }`}
                     >
-                      <CategoryAvatar id={cat.id} size={15} />
+                        {activa && esFoto(icono ?? "") ? (
+                          <Image source={{ uri: icono }} className="w-5 h-5 rounded-full" />
+                        ) : IconoElegido ? (
+                          <IconoElegido size={15} color={COLOR_HEX_600[iconColor] ?? "#059669"} />
+                        ) : (
+                          <CategoryAvatar id={cat.id} size={15} />
+                        )}
                       <Text
                         className={`text-xs font-bold ${activa ? "text-emerald-700 dark:text-emerald-300" : "text-slate-700 dark:text-slate-200"}`}
                       >
                         {t(cat.label)}
                       </Text>
                     </TouchableOpacity>
+                    <View className="flex-row gap-1.5">
+                      <TouchableOpacity accessibilityLabel={t("catCustom.takePhoto")} onPress={() => void tomarFoto(cat.id)} className="w-8 h-8 rounded-full items-center justify-center border border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde">
+                        <Camera size={15} color={colorScheme === "dark" ? "#cbd5e1" : "#475569"} />
+                      </TouchableOpacity>
+                      <TouchableOpacity accessibilityLabel={t("catCustom.pickImage")} onPress={() => void elegirDeGaleria(cat.id)} className="w-8 h-8 rounded-full items-center justify-center border border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde">
+                        <ImageIcon size={15} color={colorScheme === "dark" ? "#cbd5e1" : "#475569"} />
+                      </TouchableOpacity>
+                    </View>
+                    </View>
                     <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
@@ -424,13 +482,20 @@ export default function AddSheet({
                         const Icono = iconoDe(id);
                         const marcado = activa && icono === id;
                         return (
+                          <View key={id} className="w-11 h-11">
                           <TouchableOpacity
-                            key={id}
                             onPress={() => {
                               setCategory(cat.id);
-                              setIcono(id);
+                              if (activa && icono === id) {
+                                setIcono(undefined);
+                                setIconoConColores(null);
+                              } else {
+                                setIcono(id);
+                                setIconColor(cat.color);
+                                setIconoConColores(id);
+                              }
                             }}
-                            className={`w-10 h-10 rounded-xl items-center justify-center border ${
+                            className={`w-10 h-10 mt-1 rounded-xl items-center justify-center border ${
                               marcado
                                 ? "bg-emerald-50 border-emerald-500 dark:bg-emerald-950"
                                 : "bg-slate-50 border-slate-200 dark:bg-noche-2 dark:border-noche-borde"
@@ -438,9 +503,31 @@ export default function AddSheet({
                           >
                             <Icono size={20} color={marcado ? "#059669" : colorScheme === "dark" ? "#cbd5e1" : "#475569"} />
                           </TouchableOpacity>
+                          <TouchableOpacity
+                            accessibilityLabel={favoritos.includes(id) ? t("nuevaCat.favQuitado") : t("nuevaCat.favGuardado")}
+                            onPress={() => cambiarFavorito(id)}
+                            className="absolute right-0 top-0 w-5 h-5 rounded-full items-center justify-center bg-white dark:bg-noche-1 border border-amber-300"
+                          >
+                            <Star size={11} color="#f59e0b" fill={favoritos.includes(id) ? "#f59e0b" : "transparent"} />
+                          </TouchableOpacity>
+                          </View>
                         );
                       })}
                     </ScrollView>
+                    {activa && iconoConColores === icono && !esFoto(icono ?? "") ? (
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 9, paddingRight: 16 }}>
+                        {coloresRapidos.map((color) => (
+                          <TouchableOpacity
+                            key={color}
+                            accessibilityLabel={color}
+                            onPress={() => setIconColor(color)}
+                            className={`w-7 h-7 rounded-full items-center justify-center border-2 ${iconColor === color ? "border-slate-900 dark:border-white" : "border-transparent"}`}
+                          >
+                            <View className="w-5 h-5 rounded-full" style={{ backgroundColor: COLOR_HEX_600[color] }} />
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    ) : null}
                   </View>
                 );
               })}
@@ -453,9 +540,9 @@ export default function AddSheet({
                       {t("nuevaCat.tabFavoritos")}
                     </Text>
                   </View>
-                  {getFavoritos().length > 0 ? (
+                  {favoritos.length > 0 ? (
                     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                      {getFavoritos().map((id) => {
+                      {favoritos.map((id) => {
                         const marcado = icono === id;
                         const Icono = esFoto(id) ? null : iconoDe(id);
                         return (
@@ -619,6 +706,7 @@ export default function AddSheet({
                   amount: parseAmountInput(amount),
                   category,
                   icono,
+                  iconColor,
                   date,
                   method,
                   description,

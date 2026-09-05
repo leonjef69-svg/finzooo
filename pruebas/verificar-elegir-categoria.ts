@@ -70,8 +70,15 @@ console.log("\n--- EN NUEVO MOVIMIENTO HAY ATAJOS SIN PERDER EL CATALOGO ---");
   ok(addLimpio.includes("horizontal"), "los iconos se deslizan horizontalmente");
   ok(addLimpio.includes("iconosRelacionados(cat.id)"), "cada categoria enseña sus propios iconos");
   ok(addLimpio.includes("getFavoritos()"), "los favoritos tambien estan a mano");
+  ok(addLimpio.includes("alternar(favoritos, id)"), "cada icono se puede marcar o quitar de favoritos");
+  ok(addLimpio.includes("guardarFavoritos(siguientes)"), "la estrella guarda el cambio de favoritos");
+  ok(addLimpio.includes("tomarFoto(cat.id)"), "cada categoria ofrece camara a su costado");
+  ok(addLimpio.includes("elegirDeGaleria(cat.id)"), "cada categoria ofrece galeria a su costado");
+  ok(addLimpio.includes("setIconoConColores(id)"), "tocar un icono abre su fila de colores");
+  ok(addLimpio.includes("setIconoConColores(null)"), "volver a tocarlo cierra los colores");
+  ok(addLimpio.includes("iconColor,"), "el movimiento conserva el color elegido");
   ok(/category,\s*icono,/.test(addLimpio), "el movimiento guarda la categoria y el icono elegidos");
-  ok(/style=\{\{ height: 56 \}\}/.test(addLimpio), "el campo de monto queda compacto sin achicar el numero");
+  ok(/style=\{\{ height: 48 \}\}/.test(addLimpio), "el campo de monto queda realmente compacto");
 }
 
 console.log("\n--- Y DETRAS HAY UNA SOLA PANTALLA, NO DOS ---");

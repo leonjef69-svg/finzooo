@@ -52,9 +52,11 @@ de Contraseña, distingue las causas y no muestra error cuando el usuario cancel
   enteras. Las cantidades antiguas mayores se muestran abreviadas, nunca como
   notación científica ni con textos de error dentro de las tarjetas.
 - Nuevo movimiento permite elegir sin salir entre tres categorías rápidas,
-  recorrer horizontalmente sus iconos, reutilizar favoritos y abrir el catálogo
-  completo con «Ver todas». El campo de monto ocupa menos alto sin reducir el
-  tamaño de la cifra.
+  recorrer horizontalmente sus iconos, marcar cada dibujo con una estrella,
+  reutilizar favoritos y abrir Cámara o Galería junto a cada categoría. También
+  conserva «Ver todas» para el catálogo completo y el campo de monto tiene una
+  altura compacta de 48 px. Al elegir un dibujo su categoría sube primero y se
+  abre una paleta horizontal; otro toque lo desmarca y oculta la paleta.
 - El saludo nunca muestra el correo electrónico completo.
 - El micrófono entiende frases naturales como «almorcé por 20», «sueldo
   1500» o «me cayó un Yape de 30».
