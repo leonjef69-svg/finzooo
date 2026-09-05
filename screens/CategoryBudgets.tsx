@@ -10,7 +10,7 @@ import { gastosDisponibles } from "@/constants/categories";
 import { CARD_SHADOW } from "@/constants/style";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
-import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
+import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { useKeyboardAnimatedPadding } from "@/utils/keyboard";
 import AvisoSoloLectura from "@/components/AvisoSoloLectura";
 import BackButton from "@/components/BackButton";
@@ -144,12 +144,9 @@ export default function CategoryBudgets({
                   >
                     {t(c.label)}
                   </Text>
-                  {/* LA CASILLA DEL MONTO (12/08/2026). Pedido suyo: "el monto debe estar en
-                      el centro y no ser tan grande su recuadro".
-                      De 128 a 104 px de ancho: entra "1,500.00" de sobra, que es mucho mas de
-                      lo que nadie le pone de limite a una categoria en un mes. Y el alto NO se
-                      toca: es donde se escribe, y bajarlo lo vuelve dificil de acertar. */}
-                  <View className="flex-row items-center bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-2.5 py-2 w-[104px]">
+                  {/* 128 px da aire a monedas y cifras largas sin aumentar el alto
+                      de la tarjeta; el nombre aprovecha el espacio restante. */}
+                  <View className="flex-row items-center bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-2.5 py-2 w-[128px]">
                     <Text className="text-slate-500 dark:text-slate-300 text-xs font-bold mr-1">
                       {currencySymbolFor(userCurrency)}
                     </Text>
@@ -160,7 +157,7 @@ export default function CategoryBudgets({
                       disableFullscreenUI                      value={amounts[c.id] ?? ""}
                       editable={!soloLectura}
                       onChangeText={(v) =>
-                        setAmounts((prev) => ({ ...prev, [c.id]: sanitizeAmountInput(v) }))
+                        setAmounts((prev) => ({ ...prev, [c.id]: sanitizeSafeAmountInput(v) }))
                       }
                       keyboardType="decimal-pad"
                       placeholder={t("categoryBudgets.noLimit")}

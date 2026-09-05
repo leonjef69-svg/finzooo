@@ -7,6 +7,8 @@ import {
 } from "@/utils/amount";
 import { fmt, fmtCompact } from "@/utils/format";
 import { parseCreditMoneyInput } from "@/utils/creditMoney";
+import fs from "node:fs";
+import path from "node:path";
 
 assert.equal(
   sanitizeAmountInput("12312211111111111111111111112"),
@@ -30,6 +32,17 @@ assert.equal(
   sanitizeSafeAmountInput("9000000000000.9"),
   "9000000000000",
   "un decimal sobre el maximo debe ignorarse sin cambiar la parte entera",
+);
+
+const categoryBudgets = fs.readFileSync(
+  path.join(process.cwd(), "screens/CategoryBudgets.tsx"),
+  "utf8",
+);
+assert.match(categoryBudgets, /w-\[128px\]/, "el limite por categoria tiene mas espacio");
+assert.match(
+  categoryBudgets,
+  /sanitizeSafeAmountInput\(v\)/,
+  "el limite por categoria no se bloquea al escribir rapido",
 );
 
 for (const shown of [

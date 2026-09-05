@@ -171,6 +171,8 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 - Los campos de monto ya no aceptan una última cifra que supere el máximo
   seguro. Antes trece nueves dejaban `Guardar` desactivado hasta borrar; ahora
   esa última cifra simplemente no entra y el monto visible siempre es guardable.
+- En `Presupuestos por categoría`, la casilla del límite aumentó de 104 a 128 px
+  y usa la misma protección al escribir rápidamente que `Nuevo movimiento`.
 
 ### Correcciones y comprobaciones antes del próximo AAB
 
