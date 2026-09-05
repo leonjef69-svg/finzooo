@@ -539,7 +539,7 @@ export default function Home({
           </TouchableOpacity>
         )}
 
-        <View className="flex-row flex-wrap gap-2 px-5 mt-3">
+        <View className="flex-row flex-wrap gap-2.5 px-5 mt-3">
           <Animated.View entering={FadeInDown.delay(0 * 70).duration(300)} style={{ flexBasis: "48%", flexGrow: 1 }}>
             <PressableScale
               onPress={startEditBudget}
