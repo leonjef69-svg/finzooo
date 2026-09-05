@@ -13,6 +13,13 @@ assert.match(formato, /PUNTO_PARA_MILES/);
 assert.match(formato, /"CLP"/);
 assert.match(reports, /fmtCompact/);
 assert.match(reports, /minimumFontScale/);
+// La muestra llena debe ser solo de desarrollo y alimentar ambas gráficas
+// sin crear movimientos ficticios ni reemplazar las cuentas del reporte.
+assert.match(reports, /__DEV__\s*&&/);
+assert.match(reports, /Array\.from\(\{ length: 31 \}/);
+assert.match(reports, /shownBarData/);
+assert.match(reports, /shownDaily/);
+assert.doesNotMatch(reports, /setTransactions\([^)]*preview/i);
 assert.match(daily, /fmtAxis/);
 assert.match(home, /friendlyName/);
 assert.match(home, /adjustsFontSizeToFit/);

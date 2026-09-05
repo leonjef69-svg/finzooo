@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -55,6 +55,9 @@ export default function Reports({
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const { colorScheme } = useColorScheme();
+  // Vista puramente visual para comprobar las gráficas llenas. No crea
+  // movimientos, no cambia saldos y desaparece de las versiones publicadas.
+  const [chartPreview, setChartPreview] = useState(false);
   const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
   const mk = monthKey(month.y, month.m);
 
@@ -230,6 +233,35 @@ export default function Reports({
     return { bars, today: isCurrentMonth ? now.getDate() : 0 };
   }, [transactions, mk, month.y, month.m]);
 
+  const previewBarData = useMemo(
+    () =>
+      monthNames.map((name, index) => ({
+        label: name.slice(0, 3),
+        // Montos deliberadamente distintos, incluidos algunos grandes, para
+        // comprobar alturas, etiquetas y desplazamiento sin ensuciar los datos.
+        value: [
+          185_000, 2_600_000, 740_000, 8_800_000_000, 1_350_000_000,
+          12_400_000_000, 3_100_000_000, 26_500_000_000, 7_900_000_000,
+          51_200_000_000, 18_700_000_000, 39_600_000_000,
+        ][index],
+      })),
+    [monthNames],
+  );
+
+  const previewDaily = useMemo(
+    () =>
+      Array.from({ length: 31 }, (_, index) => {
+        const day = index + 1;
+        // Patrón irregular para que haya barras bajas, medias y altas juntas.
+        const amount = ((day * 37) % 17 + 1) * 620_000_000 + (day % 6) * 95_000_000;
+        return { day, amount };
+      }),
+    [],
+  );
+
+  const shownBarData = chartPreview ? previewBarData : barData;
+  const shownDaily = chartPreview ? previewDaily : daily.bars;
+
   // EL RESUMEN DE ARRIBA.
   //
   // Todo lo de aquí sale de los movimientos y los presupuestos que ya están
@@ -278,6 +310,25 @@ export default function Reports({
         </View>
         <ThemeToggleButton />
       </View>
+
+      {__DEV__ && (
+        <TouchableOpacity
+          onPress={() => setChartPreview((value) => !value)}
+          className={`mx-5 mt-3 self-start rounded-full border px-3 py-2 ${
+            chartPreview
+              ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950"
+              : "border-slate-200 bg-slate-50 dark:border-noche-borde dark:bg-noche-2"
+          }`}
+        >
+          <Text
+            className={`text-xs font-bold ${
+              chartPreview ? "text-emerald-700 dark:text-emerald-300" : "text-slate-600 dark:text-slate-200"
+            }`}
+          >
+            {chartPreview ? t("reports.chartPreviewOff") : t("reports.chartPreviewOn")}
+          </Text>
+        </TouchableOpacity>
+      )}
 
       {/* PANORAMA DEL MES (Premium).
           Cada cifra de aquí sale de utils/finances.ts, con los movimientos y
@@ -548,12 +599,12 @@ export default function Reports({
         style={CARD_SHADOW}
       >
         <Text className="text-sm font-bold mb-2" style={{ color: primaryTextColor }}>{t("reports.byMonth")}</Text>
-        {barData.length === 0 ? (
+        {shownBarData.length === 0 ? (
           <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">
             {t("reports.noMonthsWithSpending")}
           </Text>
         ) : (
-          <BarChartSimple data={barData} fmt={fmtCompact} width={windowWidth - 72} />
+          <BarChartSimple data={shownBarData} fmt={fmtCompact} width={windowWidth - 72} />
         )}
       </View>
 
@@ -562,18 +613,18 @@ export default function Reports({
         style={CARD_SHADOW}
       >
         <Text className="text-sm font-bold" style={{ color: primaryTextColor }}>{t("reports.byDayTitle")}</Text>
-        {daily.bars.length === 0 ? (
+        {shownDaily.length === 0 ? (
           <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">
             {t("reports.noDataThisMonth")}
           </Text>
         ) : (
           <View className="mt-2">
             <DailyBarsChart
-              data={daily.bars}
+              data={shownDaily}
               fmt={fmt}
               fmtAxis={(value) => fmtCompact(value).replace(/\s+/g, "")}
               width={windowWidth - 72}
-              today={daily.today}
+              today={chartPreview ? 0 : daily.today}
               hint={t("reports.byDayHint")}
               // Tocar un día sin gasto decía "S/ 0.00", que parece un fallo
               // de la app más que una respuesta.
