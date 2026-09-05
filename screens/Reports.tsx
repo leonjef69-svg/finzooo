@@ -148,7 +148,7 @@ export default function Reports({
       if (dayOfMonth >= 3) {
         const projected = (totalExpense / dayOfMonth) * daysInMonth;
         if (projected > budget * 1.05) {
-          list.push(t("insights.projection", { amount: fmt(projected - budget) }));
+          list.push(t("insights.projection", { amount: fmtCompact(projected - budget) }));
         }
       }
     }
@@ -158,7 +158,7 @@ export default function Reports({
       const suggestion = topCat[1] * 0.2;
       if (suggestion >= 10) {
         const c = catInfo(topCat[0]);
-        list.push(t("insights.savingsTip", { amount: fmt(suggestion), category: t(c.label) }));
+        list.push(t("insights.savingsTip", { amount: fmtCompact(suggestion), category: t(c.label) }));
       }
     }
 
@@ -295,6 +295,45 @@ export default function Reports({
         <ThemeToggleButton />
       </View>
 
+      {/* Fino IA abre el reporte: es la conclusión, y las gráficas de abajo
+          explican de dónde sale. Compacto para que no empuje el análisis. */}
+      {isPremium ? (
+        insights.length > 0 && (
+          <LinearGradient
+            colors={["#0f172a", "#064e3b"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            className="mx-5 mt-3 rounded-2xl px-3.5 py-3"
+          >
+            <View className="flex-row items-center gap-1.5 mb-1.5">
+              <Sparkles size={14} color="#fcd34d" />
+              <Text className="text-white font-extrabold text-xs">Fino IA</Text>
+            </View>
+            <View className="gap-1">
+              {insights.map((msg, i) => (
+                <Text key={i} className="text-emerald-50 text-[11px] leading-4">
+                  • {msg}
+                </Text>
+              ))}
+            </View>
+          </LinearGradient>
+        )
+      ) : (
+        <TouchableOpacity
+          onPress={onSeePremium}
+          className="mx-5 mt-3 flex-row items-center gap-2.5 bg-slate-900 rounded-2xl px-3.5 py-3"
+        >
+          <View className="w-8 h-8 rounded-lg bg-amber-400/20 items-center justify-center">
+            <Sparkles size={16} color="#fcd34d" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-white font-bold text-xs">Fino IA</Text>
+            <Text className="text-slate-300 text-[10px]" numberOfLines={2}>{t("insights.lockedDescription")}</Text>
+          </View>
+          <Crown size={15} color="#fcd34d" />
+        </TouchableOpacity>
+      )}
+
       {__DEV__ && (
         <TouchableOpacity
           onPress={() => setChartPreview((value) => !value)}
@@ -350,43 +389,6 @@ export default function Reports({
             </View>
           )}
         </>
-      )}
-
-      {isPremium ? (
-        insights.length > 0 && (
-          <LinearGradient
-            colors={["#0f172a", "#064e3b"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            className="mx-5 mt-4 rounded-3xl p-4"
-          >
-            <View className="flex-row items-center gap-2 mb-3">
-              <Sparkles size={16} color="#fcd34d" />
-              <Text className="text-white font-extrabold text-sm">Fino IA</Text>
-            </View>
-            <View className="gap-2.5">
-              {insights.map((msg, i) => (
-                <Text key={i} className="text-emerald-50 text-xs leading-relaxed">
-                  • {msg}
-                </Text>
-              ))}
-            </View>
-          </LinearGradient>
-        )
-      ) : (
-        <TouchableOpacity
-          onPress={onSeePremium}
-          className="mx-5 mt-4 flex-row items-center gap-3 bg-slate-900 rounded-3xl p-4"
-        >
-          <View className="w-10 h-10 rounded-xl bg-amber-400/20 items-center justify-center">
-            <Sparkles size={18} color="#fcd34d" />
-          </View>
-          <View className="flex-1">
-            <Text className="text-white font-bold text-sm">Fino IA</Text>
-            <Text className="text-slate-300 text-[11px]">{t("insights.lockedDescription")}</Text>
-          </View>
-          <Crown size={16} color="#fcd34d" />
-        </TouchableOpacity>
       )}
 
       <View
@@ -499,20 +501,6 @@ export default function Reports({
         className="mx-5 mt-4 bg-white dark:bg-noche-2 rounded-3xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4"
         style={CARD_SHADOW}
       >
-        <Text className="text-sm font-bold mb-2" style={{ color: primaryTextColor }}>{t("reports.byMonth")}</Text>
-        {shownBarData.length === 0 ? (
-          <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">
-            {t("reports.noMonthsWithSpending")}
-          </Text>
-        ) : (
-          <BarChartSimple data={shownBarData} fmt={fmtCompact} width={windowWidth - 72} />
-        )}
-      </View>
-
-      <View
-        className="mx-5 mt-4 bg-white dark:bg-noche-2 rounded-3xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4"
-        style={CARD_SHADOW}
-      >
         <Text className="text-sm font-bold" style={{ color: primaryTextColor }}>{t("reports.byDayTitle")}</Text>
         {shownDaily.length === 0 ? (
           <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">
@@ -527,8 +515,6 @@ export default function Reports({
               width={windowWidth - 72}
               today={chartPreview ? 0 : daily.today}
               hint={t("reports.byDayHint")}
-              // Tocar un día sin gasto decía "S/ 0.00", que parece un fallo
-              // de la app más que una respuesta.
               formatSelected={(day, amount) =>
                 amount > 0
                   ? t("reports.byDaySelected", { day, month: monthNames[month.m], amount: fmt(amount) })
@@ -538,6 +524,20 @@ export default function Reports({
               hideAmountsLabel={t("reports.byDayHideAmounts")}
             />
           </View>
+        )}
+      </View>
+
+      <View
+        className="mx-5 mt-4 bg-white dark:bg-noche-2 rounded-3xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4"
+        style={CARD_SHADOW}
+      >
+        <Text className="text-sm font-bold mb-2" style={{ color: primaryTextColor }}>{t("reports.byMonth")}</Text>
+        {shownBarData.length === 0 ? (
+          <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">
+            {t("reports.noMonthsWithSpending")}
+          </Text>
+        ) : (
+          <BarChartSimple data={shownBarData} fmt={fmtCompact} width={windowWidth - 72} />
         )}
       </View>
     </ScrollView>
