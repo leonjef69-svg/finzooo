@@ -153,6 +153,17 @@ Esta lista reemplaza los pendientes antiguos que hablaban de dos carpetas o de
 rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 `master`.
 
+### Selector de iconos compacto (05/09/2026)
+
+- La pestaña `Ícono` de `Elegir categoría` tiene los 18 grupos repartidos en
+  tres franjas horizontales, sin rótulos de fila. En un celular se ven cerca de
+  cuatro filtros por franja y cada una se desliza para mostrar los restantes.
+- Al tocar un filtro se muestran debajo únicamente sus iconos; `Todos` recupera
+  el catálogo completo. La cuadrícula continúa desplazándose verticalmente.
+- Estrella, cámara y galería quedaron juntas al lado de la vista previa para no
+  gastar una sección adicional. Si hay una foto, aparece una acción compacta
+  para quitarla.
+
 ### Correcciones y comprobaciones antes del próximo AAB
 
 - Corregir la fila `Diario / Semanal / Mensual / Personalizado`: en celulares

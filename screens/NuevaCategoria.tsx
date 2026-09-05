@@ -12,6 +12,7 @@ import {
 import { Keyboard, Image,
   Pressable,
   ScrollView,
+  ScrollView as HorizontalScrollView,
   Text,
   TextInput,
   TouchableOpacity,
@@ -30,6 +31,7 @@ import ImageCropper from "@/components/ImageCropper";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
 import {
   ALTO_TITULO,
+  CATALOGO_EN_FILAS,
   CATALOGO_EN_TROZOS,
   enFilas,
   FILAS_AL_ABRIR,
@@ -195,6 +197,14 @@ const COLORES = [
   "pink",
   "stone",
   "slate",
+];
+
+const TODOS_ID = "__todos__";
+const FILTROS_DE_ICONOS = [TODOS_ID, ...TODOS_LOS_GRUPOS.map((grupo) => grupo.titulo)];
+const FILAS_DE_FILTROS = [
+  FILTROS_DE_ICONOS.slice(0, 7),
+  FILTROS_DE_ICONOS.slice(7, 13),
+  FILTROS_DE_ICONOS.slice(13),
 ];
 
 /**
@@ -801,6 +811,7 @@ export default function NuevaCategoria({
    * dice que elegir se le hace pesado, lo que hay que cambiar es esta línea.
    */
   const [pestana, setPestana] = useState<"tuyas" | "icono" | "favoritos" | "color">("icono");
+  const [filtroDeIconos, setFiltroDeIconos] = useState(TODOS_ID);
 
   /**
    * QUÉ PESTAÑAS SE HAN LLEGADO A ABRIR. Cada una se construye la PRIMERA vez que se
@@ -1328,6 +1339,18 @@ export default function NuevaCategoria({
                 strokeWidth={2.2}
               />
             </TouchableOpacity>
+            <TouchableOpacity
+              onPress={tomarFoto}
+              className="w-10 h-10 rounded-xl items-center justify-center border-[1.5px] border-dashed border-slate-300 dark:border-noche-borde"
+            >
+              <Camera size={19} color="#64748b" strokeWidth={2.2} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={elegirDeGaleria}
+              className="w-10 h-10 rounded-xl items-center justify-center border-[1.5px] border-dashed border-slate-300 dark:border-noche-borde"
+            >
+              <ImageIcon size={19} color="#64748b" strokeWidth={2.2} />
+            </TouchableOpacity>
           </View>
           <Text className="text-sm font-bold text-slate-900 dark:text-slate-100 mt-2.5">
             {limpio || t("nuevaCat.sinNombre")}
@@ -1602,71 +1625,88 @@ export default function NuevaCategoria({
         {vistas.has("icono") && (
           <View style={pestana === "icono" ? PESTANA_A_LA_VISTA : PESTANA_ESCONDIDA}>
             <View className="px-5">
-              {/* TU PROPIA FOTO, PRIMERO.
-              Va arriba del catálogo y no en una pestaña aparte porque es otra
-              forma de contestar la misma pregunta —"¿con qué dibujo?"—, y una
-              pestaña más la esconde. Son casillas del mismo tamaño que las
-              demás para que se lean como parte de la misma elección. */}
-              <View style={{ height: ALTO_TITULO, justifyContent: "center" }}>
+              <View className="pt-3 pb-1.5">
                 <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
-                  {t("nuevaCat.tuFoto")}
+                  {t("nuevaCat.filtrarIconos")}
                 </Text>
               </View>
-              <View
-                style={{
-                  flexDirection: "row",
-                  height: lado,
-                  gap: SEPARACION,
-                  marginBottom: SEPARACION,
-                }}
-              >
-                <TouchableOpacity
-                  onPress={tomarFoto}
-                  style={{ width: lado, height: lado }}
-                  className="rounded-2xl items-center justify-center bg-slate-50 dark:bg-noche-2 border-[1.5px] border-dashed border-slate-300 dark:border-noche-borde"
+              {FILAS_DE_FILTROS.map((fila, indice) => (
+                <HorizontalScrollView
+                  key={indice}
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={{ gap: 6, paddingRight: 12 }}
+                  style={{ marginBottom: 6 }}
                 >
-                  <Camera size={22} color="#64748b" strokeWidth={2.2} />
-                </TouchableOpacity>
+                  {fila.map((item) => {
+                    const elegido = filtroDeIconos === item;
+                    return (
+                      <TouchableOpacity
+                        key={item}
+                        onPress={() => setFiltroDeIconos(item)}
+                        style={{ width: 82, height: 30 }}
+                        className={`rounded-full items-center justify-center border-[1.5px] px-2 ${
+                          elegido
+                            ? "bg-emerald-50 border-emerald-500 dark:bg-emerald-900/25"
+                            : "bg-slate-50 border-slate-200 dark:bg-noche-2 dark:border-noche-borde"
+                        }`}
+                      >
+                        <Text
+                          numberOfLines={1}
+                          className={`text-[10px] font-bold ${
+                            elegido ? "text-emerald-700 dark:text-emerald-300" : "text-slate-600 dark:text-slate-300"
+                          }`}
+                        >
+                          {item === TODOS_ID ? t("nuevaCat.todosIconos") : titulos[item]}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </HorizontalScrollView>
+              ))}
+
+              {foto && (
                 <TouchableOpacity
-                  onPress={elegirDeGaleria}
-                  style={{ width: lado, height: lado }}
-                  className="rounded-2xl items-center justify-center bg-slate-50 dark:bg-noche-2 border-[1.5px] border-dashed border-slate-300 dark:border-noche-borde"
+                  onPress={() => setFoto(undefined)}
+                  className="self-start mb-1.5 px-3 h-8 rounded-full flex-row items-center gap-1.5 justify-center bg-rose-50 border border-rose-200 dark:bg-rose-900/20 dark:border-rose-800"
                 >
-                  <ImageIcon size={22} color="#64748b" strokeWidth={2.2} />
+                  <X size={14} color="#e11d48" strokeWidth={2.4} />
+                  <Text className="text-[10px] font-bold text-rose-600 dark:text-rose-300">
+                    {t("nuevaCat.quitarFoto")}
+                  </Text>
                 </TouchableOpacity>
-                {/* La foto puesta, y encima la forma de sacarla. Sin esto, quien
-                pone una foto no encuentra cómo volver a un dibujo: elegir un
-                icono no la quitaría, porque la foto manda. */}
-                {foto && (
-                  <TouchableOpacity
-                    onPress={() => setFoto(undefined)}
-                    style={{ width: lado, height: lado }}
-                    className={`rounded-2xl items-center justify-center overflow-hidden border-2 border-${color}-500`}
-                  >
-                    <Image source={{ uri: foto }} style={{ width: lado, height: lado }} />
-                    <View className="absolute inset-0 items-center justify-center bg-slate-900/45">
-                      <X size={20} color="#ffffff" strokeWidth={2.6} />
-                    </View>
-                  </TouchableOpacity>
-                )}
-              </View>
+              )}
 
               {/* LOS PRIMEROS GRUPOS AL ABRIR, Y EL RESTO EN TANDAS DE DOS FILAS.
                   Ver la nota larga de filasADibujar. Llegan solas, sin deslizar. */}
-              {CATALOGO_EN_TROZOS.slice(0, filasADibujar).map((trozo, f) => (
-                // Un fragmento y no una vista: envolver cada fila en su propia vista
-                // añadiría 46 vistas que no pintan nada, y de eso justamente se trata.
-                <Fragment key={f}>
-                  {trozo.titulo !== null && <TituloDeGrupo texto={titulos[trozo.titulo]} />}
-                  <Fila
-                    iconos={trozo.fila}
-                    normal={aspectoGris}
-                    lado={lado}
-                    onElegir={setIcono}
-                    onCancelar={cancelarMarca}
-                  />
-                </Fragment>
-              ))}
+              {filtroDeIconos === TODOS_ID
+                ? CATALOGO_EN_TROZOS.slice(0, filasADibujar).map((trozo, f) => (
+                    <Fragment key={f}>
+                      {trozo.titulo !== null && <TituloDeGrupo texto={titulos[trozo.titulo]} />}
+                      <Fila
+                        iconos={trozo.fila}
+                        normal={aspectoGris}
+                        lado={lado}
+                        onElegir={setIcono}
+                        onCancelar={cancelarMarca}
+                      />
+                    </Fragment>
+                  ))
+                : CATALOGO_EN_FILAS.filter((grupo) => grupo.titulo === filtroDeIconos).map((grupo) => (
+                    <Fragment key={grupo.titulo}>
+                      <TituloDeGrupo texto={titulos[grupo.titulo]} />
+                      {grupo.filas.map((fila, indice) => (
+                        <Fila
+                          key={indice}
+                          iconos={fila}
+                          normal={aspectoGris}
+                          lado={lado}
+                          onElegir={setIcono}
+                          onCancelar={cancelarMarca}
+                        />
+                      ))}
+                    </Fragment>
+                  ))}
             </View>
           </View>
         )}

@@ -134,6 +134,32 @@ console.log("\n--- LA PANTALLA SE ABRE EN EL CATALOGO ---");
   ok(!pantLimpia.includes("elegirCat.oCrea"), "no queda la raya de o crea una nueva");
   ok(!pantLimpia.includes("stickyHeaderIndices"), "ni el bloque pegado que hizo falta con ella");
   ok(!pantLimpia.includes("scrollTo("), "ni el salto hasta el formulario");
+
+  ok(pantLimpia.includes("FILAS_DE_FILTROS"), "el catalogo tiene filtros compactos");
+  ok(
+    /const FILAS_DE_FILTROS = \[\s*FILTROS_DE_ICONOS\.slice\(0, 7\),\s*FILTROS_DE_ICONOS\.slice\(7, 13\),\s*FILTROS_DE_ICONOS\.slice\(13\),\s*\]/.test(pantLimpia),
+    "los 18 grupos se reparten en tres filas sin repetirlos"
+  );
+  ok(
+    /FILAS_DE_FILTROS\.map[\s\S]{0,240}<HorizontalScrollView[\s\S]{0,100}horizontal/.test(pantLimpia),
+    "cada fila de filtros se desliza horizontalmente"
+  );
+  ok(
+    /onPress=\{\(\) => setFiltroDeIconos\(item\)\}/.test(pantLimpia),
+    "tocar un filtro cambia el grupo visible"
+  );
+  ok(
+    /CATALOGO_EN_FILAS\.filter\(\(grupo\) => grupo\.titulo === filtroDeIconos\)/.test(pantLimpia),
+    "el filtro enseña solo los iconos de la categoria elegida"
+  );
+  ok(
+    /filtroDeIconos === TODOS_ID[\s\S]{0,100}CATALOGO_EN_TROZOS/.test(pantLimpia),
+    "Todos conserva el catalogo completo"
+  );
+  ok(
+    /<Star[\s\S]{0,700}<Camera[\s\S]{0,450}<ImageIcon/.test(pantLimpia),
+    "favorito, camara y galeria quedan juntos junto a la vista previa"
+  );
 }
 
 console.log("\n--- Y ELEGIR UNA QUE YA EXISTE SIGUE ESTANDO, EN SU PESTAÑA ---");
