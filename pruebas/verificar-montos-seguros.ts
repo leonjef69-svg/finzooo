@@ -38,7 +38,7 @@ const categoryBudgets = fs.readFileSync(
   path.join(process.cwd(), "screens/CategoryBudgets.tsx"),
   "utf8",
 );
-assert.match(categoryBudgets, /w-\[128px\]/, "el limite por categoria tiene mas espacio");
+assert.match(categoryBudgets, /w-\[152px\]/, "el limite por categoria aprovecha el espacio disponible");
 assert.match(
   categoryBudgets,
   /sanitizeSafeAmountInput\(v\)/,

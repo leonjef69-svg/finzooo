@@ -144,9 +144,9 @@ export default function CategoryBudgets({
                   >
                     {t(c.label)}
                   </Text>
-                  {/* 128 px da aire a monedas y cifras largas sin aumentar el alto
+                  {/* 152 px aprovecha el espacio libre para monedas y cifras largas sin aumentar el alto
                       de la tarjeta; el nombre aprovecha el espacio restante. */}
-                  <View className="flex-row items-center bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-2.5 py-2 w-[128px]">
+                  <View className="flex-row items-center bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-2.5 py-2 w-[152px]">
                     <Text className="text-slate-500 dark:text-slate-300 text-xs font-bold mr-1">
                       {currencySymbolFor(userCurrency)}
                     </Text>
