@@ -135,27 +135,43 @@ console.log("\n--- LA PANTALLA SE ABRE EN EL CATALOGO ---");
   ok(!pantLimpia.includes("stickyHeaderIndices"), "ni el bloque pegado que hizo falta con ella");
   ok(!pantLimpia.includes("scrollTo("), "ni el salto hasta el formulario");
 
-  ok(pantLimpia.includes("FILAS_DE_FILTROS"), "el catalogo tiene filtros compactos");
+  ok(pantLimpia.includes("filasDeFiltros"), "el catalogo tiene filtros compactos");
   ok(
-    /const FILAS_DE_FILTROS = \[\s*FILTROS_DE_ICONOS\.slice\(0, 7\),\s*FILTROS_DE_ICONOS\.slice\(7, 13\),\s*FILTROS_DE_ICONOS\.slice\(13\),\s*\]/.test(pantLimpia),
-    "los 18 grupos se reparten en tres filas sin repetirlos"
+    /function repartirFiltros[\s\S]{0,300}return \[ids\.slice\(0, porFila\), ids\.slice\(porFila, porFila \* 2\), ids\.slice\(porFila \* 2\)\]/.test(pantLimpia),
+    "los filtros se reparten en tres filas sin repetirlos"
   );
   ok(
-    /FILAS_DE_FILTROS\.map[\s\S]{0,240}<HorizontalScrollView[\s\S]{0,100}horizontal/.test(pantLimpia),
+    /filasDeFiltros\.map[\s\S]{0,240}<HorizontalScrollView[\s\S]{0,100}horizontal/.test(pantLimpia),
     "cada fila de filtros se desliza horizontalmente"
+  );
+  ok(
+    /tipo === "expense" \? GRUPOS_DE_GASTO : GRUPOS_DE_INGRESO/.test(pantLimpia),
+    "Gasto e Ingreso usan grupos de iconos diferentes"
+  );
+  ok(
+    /GRUPOS_DE_GASTO[\s\S]{0,180}titulo !== "iconos\.dinero"/.test(pantLimpia),
+    "Gasto no ofrece el grupo financiero de Ingreso"
+  );
+  ok(
+    /const GRUPOS_DE_INGRESO = \[[\s\S]{0,350}"iconos\.dinero"[\s\S]{0,350}"iconos\.otros"/.test(pantLimpia),
+    "Ingreso conserva los grupos utiles para salario, venta, beca y otros"
   );
   ok(
     /onPress=\{\(\) => setFiltroDeIconos\(item\)\}/.test(pantLimpia),
     "tocar un filtro cambia el grupo visible"
   );
   ok(
-    /CATALOGO_EN_FILAS\.filter\(\(grupo\) => grupo\.titulo === filtroDeIconos\)/.test(pantLimpia),
+    /catalogoDelTipo\.filter\(\(grupo\) => grupo\.titulo === filtroDeIconos\)/.test(pantLimpia),
     "el filtro enseña solo los iconos de la categoria elegida"
   );
   ok(
-    /filtroDeIconos === TODOS_ID[\s\S]{0,100}CATALOGO_EN_TROZOS/.test(pantLimpia),
-    "Todos conserva el catalogo completo"
+    /filtroDeIconos === TODOS_ID[\s\S]{0,100}trozosDelTipo/.test(pantLimpia),
+    "Todos conserva el catalogo completo del tipo de movimiento"
   );
+  ok(pantLimpia.includes("adjustsFontSizeToFit"), "los nombres largos caben en su filtro");
+  ok(pantLimpia.includes("nuevaCat.deslizaFiltros"), "la pantalla avisa que los filtros se deslizan");
+  ok(pantLimpia.includes("nuevaCat.abrirCamara"), "la camara tiene una descripcion accesible");
+  ok(pantLimpia.includes("nuevaCat.abrirGaleria"), "la galeria tiene una descripcion accesible");
   ok(
     /<Star[\s\S]{0,700}<Camera[\s\S]{0,450}<ImageIcon/.test(pantLimpia),
     "favorito, camara y galeria quedan juntos junto a la vista previa"

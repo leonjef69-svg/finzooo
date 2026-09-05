@@ -200,12 +200,25 @@ const COLORES = [
 ];
 
 const TODOS_ID = "__todos__";
-const FILTROS_DE_ICONOS = [TODOS_ID, ...TODOS_LOS_GRUPOS.map((grupo) => grupo.titulo)];
-const FILAS_DE_FILTROS = [
-  FILTROS_DE_ICONOS.slice(0, 7),
-  FILTROS_DE_ICONOS.slice(7, 13),
-  FILTROS_DE_ICONOS.slice(13),
+const GRUPOS_DE_GASTO = TODOS_LOS_GRUPOS
+  .map((grupo) => grupo.titulo)
+  .filter((titulo) => titulo !== "iconos.dinero");
+const GRUPOS_DE_INGRESO = [
+  "iconos.dinero",
+  "iconos.compras",
+  "iconos.educacion",
+  "iconos.hogar",
+  "iconos.otros",
+  "iconos.tiendas",
+  "iconos.apps",
+  "iconos.tecnologia",
+  "iconos.redes",
 ];
+
+function repartirFiltros(ids: string[]): string[][] {
+  const porFila = Math.ceil(ids.length / 3);
+  return [ids.slice(0, porFila), ids.slice(porFila, porFila * 2), ids.slice(porFila * 2)];
+}
 
 /**
  * El aspecto de una casilla, ya calculado. Ver por qué en AspectoCasilla.
@@ -812,6 +825,28 @@ export default function NuevaCategoria({
    */
   const [pestana, setPestana] = useState<"tuyas" | "icono" | "favoritos" | "color">("icono");
   const [filtroDeIconos, setFiltroDeIconos] = useState(TODOS_ID);
+  const gruposDelTipo = useMemo(
+    () => (tipo === "expense" ? GRUPOS_DE_GASTO : GRUPOS_DE_INGRESO),
+    [tipo],
+  );
+  const filasDeFiltros = useMemo(
+    () => repartirFiltros([TODOS_ID, ...gruposDelTipo]),
+    [gruposDelTipo],
+  );
+  const catalogoDelTipo = useMemo(
+    () => CATALOGO_EN_FILAS.filter((grupo) => gruposDelTipo.includes(grupo.titulo)),
+    [gruposDelTipo],
+  );
+  const trozosDelTipo = useMemo(
+    () =>
+      catalogoDelTipo.flatMap((grupo) =>
+        grupo.filas.map((fila, indice) => ({
+          titulo: indice === 0 ? grupo.titulo : null,
+          fila,
+        })),
+      ),
+    [catalogoDelTipo],
+  );
 
   /**
    * QUÉ PESTAÑAS SE HAN LLEGADO A ABRIR. Cada una se construye la PRIMERA vez que se
@@ -1341,12 +1376,16 @@ export default function NuevaCategoria({
             </TouchableOpacity>
             <TouchableOpacity
               onPress={tomarFoto}
+              accessibilityRole="button"
+              accessibilityLabel={t("nuevaCat.abrirCamara")}
               className="w-10 h-10 rounded-xl items-center justify-center border-[1.5px] border-dashed border-slate-300 dark:border-noche-borde"
             >
               <Camera size={19} color="#64748b" strokeWidth={2.2} />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={elegirDeGaleria}
+              accessibilityRole="button"
+              accessibilityLabel={t("nuevaCat.abrirGaleria")}
               className="w-10 h-10 rounded-xl items-center justify-center border-[1.5px] border-dashed border-slate-300 dark:border-noche-borde"
             >
               <ImageIcon size={19} color="#64748b" strokeWidth={2.2} />
@@ -1625,12 +1664,15 @@ export default function NuevaCategoria({
         {vistas.has("icono") && (
           <View style={pestana === "icono" ? PESTANA_A_LA_VISTA : PESTANA_ESCONDIDA}>
             <View className="px-5">
-              <View className="pt-3 pb-1.5">
+              <View className="pt-3 pb-1.5 flex-row items-center justify-between">
                 <Text className="text-xs font-bold text-slate-500 dark:text-slate-300">
                   {t("nuevaCat.filtrarIconos")}
                 </Text>
+                <Text className="text-[9px] text-slate-400 dark:text-slate-500">
+                  {t("nuevaCat.deslizaFiltros")}
+                </Text>
               </View>
-              {FILAS_DE_FILTROS.map((fila, indice) => (
+              {filasDeFiltros.map((fila, indice) => (
                 <HorizontalScrollView
                   key={indice}
                   horizontal
@@ -1653,6 +1695,8 @@ export default function NuevaCategoria({
                       >
                         <Text
                           numberOfLines={1}
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.78}
                           className={`text-[10px] font-bold ${
                             elegido ? "text-emerald-700 dark:text-emerald-300" : "text-slate-600 dark:text-slate-300"
                           }`}
@@ -1680,7 +1724,7 @@ export default function NuevaCategoria({
               {/* LOS PRIMEROS GRUPOS AL ABRIR, Y EL RESTO EN TANDAS DE DOS FILAS.
                   Ver la nota larga de filasADibujar. Llegan solas, sin deslizar. */}
               {filtroDeIconos === TODOS_ID
-                ? CATALOGO_EN_TROZOS.slice(0, filasADibujar).map((trozo, f) => (
+                ? trozosDelTipo.slice(0, filasADibujar).map((trozo, f) => (
                     <Fragment key={f}>
                       {trozo.titulo !== null && <TituloDeGrupo texto={titulos[trozo.titulo]} />}
                       <Fila
@@ -1692,7 +1736,7 @@ export default function NuevaCategoria({
                       />
                     </Fragment>
                   ))
-                : CATALOGO_EN_FILAS.filter((grupo) => grupo.titulo === filtroDeIconos).map((grupo) => (
+                : catalogoDelTipo.filter((grupo) => grupo.titulo === filtroDeIconos).map((grupo) => (
                     <Fragment key={grupo.titulo}>
                       <TituloDeGrupo texto={titulos[grupo.titulo]} />
                       {grupo.filas.map((fila, indice) => (

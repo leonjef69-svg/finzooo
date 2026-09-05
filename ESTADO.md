@@ -159,10 +159,13 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
   tres franjas horizontales, sin rótulos de fila. En un celular se ven cerca de
   cuatro filtros por franja y cada una se desliza para mostrar los restantes.
 - Al tocar un filtro se muestran debajo únicamente sus iconos; `Todos` recupera
-  el catálogo completo. La cuadrícula continúa desplazándose verticalmente.
+  el catálogo completo correspondiente. Gasto e Ingreso ya no comparten todos
+  los filtros: cada tipo ofrece únicamente grupos adecuados a su uso. La
+  cuadrícula continúa desplazándose verticalmente.
 - Estrella, cámara y galería quedaron juntas al lado de la vista previa para no
   gastar una sección adicional. Si hay una foto, aparece una acción compacta
-  para quitarla.
+  para quitarla. Cámara y galería tienen además una descripción para lectores
+  de pantalla, y el encabezado avisa que las franjas se pueden deslizar.
 
 ### Correcciones y comprobaciones antes del próximo AAB
 
