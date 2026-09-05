@@ -112,8 +112,9 @@ export function useNavigateWhenReady(
  * está entrando —la animación dura unos 300 ms— el botón sigue debajo del dedo. Nadie quiere
  * abrir la misma pantalla tres veces; los toques de más son de impaciencia, no una orden.
  *
- * Medio segundo es la ventana: cubre de sobra la animación y no llega a estorbar a quien
- * abre, vuelve y quiere entrar otra vez.
+ * Un segundo y medio es la ventana. Medio segundo resultó insuficiente en
+ * celulares donde montar la pantalla y terminar la animación tarda más: el
+ * botón de atrás seguía recibiendo un segundo toque y apilaba otra copia.
  *
  * **La hora del último viaje vive en una variable de módulo y NO en un estado.** Con un
  * estado, cada toque redibujaría la pantalla entera — que es justo el trabajo que sobra
@@ -121,10 +122,11 @@ export function useNavigateWhenReady(
  * tomó con la pausa del reparto de iconos el 07/08.
  */
 let ultimoViaje = 0;
+const BLOQUEO_NAVEGACION_MS = 1500;
 
 export function irUnaVez(ruta: Parameters<typeof router.push>[0]): void {
   const ahora = Date.now();
-  if (ahora - ultimoViaje < 500) return;
+  if (ahora - ultimoViaje < BLOQUEO_NAVEGACION_MS) return;
   ultimoViaje = ahora;
   router.push(ruta);
 }

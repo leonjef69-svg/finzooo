@@ -44,7 +44,7 @@ console.log("\n--- NINGUNA PANTALLA SE ABRE CON router.push A PELO ---");
 {
   /* `router.push` apila una pantalla por toque, y mientras la primera entra —la animación dura
      unos 300 ms— el botón sigue debajo del dedo. Los toques de más son impaciencia, no una
-     orden de abrir tres veces lo mismo. `irUnaVez` los ignora durante medio segundo. */
+     orden de abrir tres veces lo mismo. `irUnaVez` los ignora mientras termina la navegación. */
   const malos = [];
   for (const rel of archivos) {
     const txt = fs.readFileSync(path.join(RAIZ, rel), "utf8");
@@ -59,7 +59,8 @@ console.log("\n--- NINGUNA PANTALLA SE ABRE CON router.push A PELO ---");
   // otro nombre.
   const nav = fs.readFileSync(path.join(RAIZ, "utils/nav.ts"), "utf8");
   ok(/export function irUnaVez/.test(nav), "irUnaVez existe");
-  ok(/ahora - ultimoViaje < 500/.test(nav), "y descarta los toques de los siguientes 500 ms");
+  ok(/BLOQUEO_NAVEGACION_MS = 1500/.test(nav), "la protección cubre también celulares lentos");
+  ok(/ahora - ultimoViaje < BLOQUEO_NAVEGACION_MS/.test(nav), "y descarta los toques mientras abre la pantalla");
   ok(
     /^let ultimoViaje = 0;/m.test(nav),
     "con la hora en una variable de modulo, no en un estado: un estado redibujaria la pantalla en cada toque"
