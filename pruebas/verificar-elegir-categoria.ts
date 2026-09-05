@@ -1,4 +1,4 @@
-// UN SOLO BOTON "ELEGIR CATEGORIA", Y UNA SOLA PANTALLA DETRAS
+// CATEGORIAS RAPIDAS EN EL MOVIMIENTO, Y UNA SOLA PANTALLA COMPLETA DETRAS
 //
 // Pedido el 06/08/2026, con la pantalla en la mano: "quiero que solo quede un
 // boton que diga Elegir categoria y todo lo que esta en azul desaparezca, que
@@ -56,34 +56,22 @@ const pantLimpia = sinComentarios(pant);
 const ruta = fs.readFileSync(path.join(RAIZ, "app/nueva-categoria.tsx"), "utf8");
 const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
 
-console.log("\n--- EN NUEVO MOVIMIENTO SOLO QUEDA EL BOTON ---");
+console.log("\n--- EN NUEVO MOVIMIENTO HAY ATAJOS SIN PERDER EL CATALOGO ---");
 {
-  ok(addLimpio.includes("addSheet.chooseCategory"), "hay un boton que dice Elegir categoria");
+  ok(addLimpio.includes("addSheet.quickCategories"), "hay categorias rapidas en el movimiento");
   ok(
     /pathname: "\/nueva-categoria",\s*\r?\n?\s*params: \{ tipo: type, actual: category \}/.test(addLimpio),
-    "y abre la pantalla pasandole la categoria que lleva puesta"
+    "Ver todas abre el catalogo pasandole la categoria actual"
   );
-
-  // Lo que tenia que desaparecer, una por una. Son las cuatro piezas que el
-  // usuario marco en azul.
-  ok(!/cats\s*\n?\s*\.filter\(/.test(addLimpio), "la cuadricula de casillas ya no esta");
-  ok(!addLimpio.includes("showAllCats"), "ni el Ver mas que escondia la mitad");
-  ok(!addLimpio.includes("nuevaCat.boton"), "ni el cuadrito Nueva");
-  ok(!addLimpio.includes("nuevaCat.editarEsta"), "ni el enlace de editar");
-
-  // El boton dice QUE categoria lleva el movimiento. Sin eso habria que abrirlo
-  // para saberlo, y elegir pasaria de un toque a tres solo para mirar.
   ok(
-    /cats\.find\(\(c\) => c\.id === category\)/.test(addLimpio),
-    "el boton enseña la categoria que esta puesta ahora"
+    /\.slice\(0, 3\)/.test(addLimpio),
+    "solo aparecen tres categorias rapidas para conservar espacio"
   );
-  ok(/CategoryAvatar id=\{category\}/.test(addLimpio), "con su dibujo, igual que en el resto de la app");
-
-  // "Ver mas" y "Ver menos" se quedaron sin dueño al irse la cuadricula. Un
-  // texto guardado que nadie usa es lo que hace que dentro de un año nadie sepa
-  // si se puede tocar.
-  ok(!i18n.includes("addSheet.seeMore"), "y los textos del Ver mas se fueron con el");
-  ok(!i18n.includes("addSheet.seeLess"), "los dos, no solo uno");
+  ok(addLimpio.includes("horizontal"), "los iconos se deslizan horizontalmente");
+  ok(addLimpio.includes("iconosRelacionados(cat.id)"), "cada categoria enseña sus propios iconos");
+  ok(addLimpio.includes("getFavoritos()"), "los favoritos tambien estan a mano");
+  ok(/category,\s*icono,/.test(addLimpio), "el movimiento guarda la categoria y el icono elegidos");
+  ok(/style=\{\{ height: 56 \}\}/.test(addLimpio), "el campo de monto queda compacto sin achicar el numero");
 }
 
 console.log("\n--- Y DETRAS HAY UNA SOLA PANTALLA, NO DOS ---");
@@ -395,7 +383,7 @@ console.log("\n--- LOS TEXTOS, EN LOS TRES IDIOMAS ---");
   // Una clave que falta no revienta: el traductor devuelve la clave, y en
   // pantalla sale "elegirCat.tuyas". Se descubre solo si alguien mira la app en
   // ese idioma.
-  for (const clave of ["elegirCat.title", "elegirCat.tuyas", "addSheet.chooseCategory"]) {
+  for (const clave of ["elegirCat.title", "elegirCat.tuyas", "addSheet.quickCategories", "addSheet.viewAllCategories"]) {
     const veces = (i18n.match(new RegExp(`"${clave.replace(".", "\\.")}":`, "g")) ?? []).length;
     ok(veces === 3, `${clave} esta en los tres idiomas (${veces})`);
   }

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { irUnaVez } from "@/utils/nav";
-import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Image, Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated, {
   KeyboardState,
   useAnimatedKeyboard,
@@ -9,7 +9,7 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X, Check, ChevronDown, ChevronRight, Calendar } from "lucide-react-native";
+import { X, Check, ChevronDown, ChevronRight, Calendar, Star } from "lucide-react-native";
 import CategoryAvatar from "@/components/CategoryAvatar";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
 import { currencySymbolFor } from "@/constants/currencies";
@@ -19,6 +19,8 @@ import { defaultDateForMonth, isValidISODate, normalizeDateInput } from "@/utils
 import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { nextId } from "@/utils/id";
 import { horaDe } from "@/utils/format";
+import { iconoDe, TODOS_LOS_GRUPOS } from "@/constants/iconos";
+import { esFoto, getFavoritos } from "@/utils/iconosFavoritos";
 import type { Month, Transaction } from "@/types";
 import { useColorScheme } from "nativewind";
 
@@ -48,6 +50,7 @@ export default function AddSheet({
   const [category, setCategory] = useState(
     transaction?.category || (type === "expense" ? "comida" : "salario")
   );
+  const [icono, setIcono] = useState<string | undefined>(transaction?.icono);
   const [date, setDate] = useState(transaction?.date || defaultDateForMonth(currentMonth));
   const [method, setMethod] = useState(transaction?.method || "debit");
   const [description, setDescription] = useState(transaction?.description || "");
@@ -69,6 +72,24 @@ export default function AddSheet({
     [type, categoriasPropias]
   );
 
+  // La elegida siempre va primero. Así, cuando alguien vuelve de "Ver todas"
+  // con Salud, esa categoría ocupa inmediatamente uno de los tres accesos
+  // rápidos sin borrar lo que ya escribió en el movimiento.
+  const categoriasRapidas = useMemo(() => {
+    const elegida = cats.find((c) => c.id === category);
+    return [elegida, ...cats.filter((c) => c.id !== category)].filter(
+      (c): c is NonNullable<typeof c> => Boolean(c)
+    ).slice(0, 3);
+  }, [cats, category]);
+
+  function iconosRelacionados(categoryId: string): string[] {
+    const info = catInfo(categoryId);
+    const grupo = TODOS_LOS_GRUPOS.find((g) =>
+      info.iconoNombre ? g.iconos.includes(info.iconoNombre) : false
+    );
+    return grupo?.iconos ?? TODOS_LOS_GRUPOS[TODOS_LOS_GRUPOS.length - 1].iconos;
+  }
+
   const metodosDisponibles = useMemo(
     () => PAYMENT_METHODS.filter((m) =>
       (m.id !== "plin" || userCountry === "PE")
@@ -88,11 +109,15 @@ export default function AddSheet({
   useEffect(() => {
     if (!categoriaRecienCreada) return;
     setCategory(categoriaRecienCreada);
+    // Al volver de "Ver todas", adopta también el dibujo de esa categoría.
+    // El movimiento conserva así exactamente lo que la persona acaba de elegir.
+    setIcono(catInfo(categoriaRecienCreada).iconoNombre);
     olvidarCategoriaRecienCreada();
   }, [categoriaRecienCreada, olvidarCategoriaRecienCreada]);
 
   useEffect(() => {
     if (!transaction) setCategory(type === "expense" ? "comida" : "salario");
+    if (!transaction) setIcono(undefined);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
 
@@ -341,12 +366,15 @@ export default function AddSheet({
           <ScrollView
             ref={scrollRef}
             className="flex-1 px-5"
-            contentContainerClassName="gap-4 pb-5"
+            contentContainerClassName="gap-3 pb-5"
             keyboardShouldPersistTaps="handled"
           >
             <View>
               <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("addSheet.amount")}</Text>
-              <View className="flex-row items-center bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4 py-3.5">
+              <View
+                className="flex-row items-center bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4"
+                style={{ height: 56 }}
+              >
                 <Text className="text-slate-500 dark:text-slate-300 font-bold mr-1">{currencySymbolFor(userCurrency)}</Text>
                 <TextInput
                   disableFullscreenUI
@@ -361,49 +389,112 @@ export default function AddSheet({
               </View>
             </View>
 
-            {/* CATEGORÍA: UN SOLO BOTÓN.
-                Aquí había una cuadrícula de doce casillas más "Nueva", "Ver
-                más" y "Editar esta". Se comía media pantalla, y para llegar a
-                la fecha, la descripción y las notas había que desplazarse.
-                El usuario lo pidió así el 06/08/2026: que quedara solo un
-                botón. Todo lo que estaba aquí se mudó a "Elegir categoría", que
-                es la misma pantalla del catálogo de dibujos: se elige una de las
-                que ya hay, o se baja y se crea. Ninguna función se perdió, y de
-                paso se ven TODAS sin el "Ver más" que escondía las de abajo.
-                El botón enseña la que está puesta ahora. Sin eso sería un botón
-                que no dice nada, y habría que abrirlo para saber qué categoría
-                lleva el movimiento. */}
-            <TouchableOpacity
-              onPress={() =>
-                irUnaVez({
-                  pathname: "/nueva-categoria",
-                  params: { tipo: type, actual: category },
-                })
-              }
-              className="flex-row items-center gap-2.5 bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-3"
-              style={{ height: FIELD_HEIGHT }}
-            >
-              <View
-                className={`w-8 h-8 rounded-xl items-center justify-center bg-${catInfo(category).color}-100`}
-              >
-                <CategoryAvatar id={category} size={17} />
+            <View className="gap-2">
+              <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200">
+                {t("addSheet.quickCategories")}
+              </Text>
+              {categoriasRapidas.map((cat) => {
+                const activa = cat.id === category;
+                return (
+                  <View key={cat.id} className="gap-1.5">
+                    <TouchableOpacity
+                      onPress={() => {
+                        setCategory(cat.id);
+                        setIcono(cat.iconoNombre);
+                      }}
+                      className={`self-start flex-row items-center gap-1.5 rounded-full border px-3 py-1.5 ${
+                        activa
+                          ? "bg-emerald-50 border-emerald-500 dark:bg-emerald-950"
+                          : "bg-slate-50 border-slate-200 dark:bg-noche-2 dark:border-noche-borde"
+                      }`}
+                    >
+                      <CategoryAvatar id={cat.id} size={15} />
+                      <Text
+                        className={`text-xs font-bold ${activa ? "text-emerald-700 dark:text-emerald-300" : "text-slate-700 dark:text-slate-200"}`}
+                      >
+                        {t(cat.label)}
+                      </Text>
+                    </TouchableOpacity>
+                    <ScrollView
+                      horizontal
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={{ gap: 8, paddingRight: 16 }}
+                    >
+                      {iconosRelacionados(cat.id).map((id) => {
+                        const Icono = iconoDe(id);
+                        const marcado = activa && icono === id;
+                        return (
+                          <TouchableOpacity
+                            key={id}
+                            onPress={() => {
+                              setCategory(cat.id);
+                              setIcono(id);
+                            }}
+                            className={`w-10 h-10 rounded-xl items-center justify-center border ${
+                              marcado
+                                ? "bg-emerald-50 border-emerald-500 dark:bg-emerald-950"
+                                : "bg-slate-50 border-slate-200 dark:bg-noche-2 dark:border-noche-borde"
+                            }`}
+                          >
+                            <Icono size={20} color={marcado ? "#059669" : colorScheme === "dark" ? "#cbd5e1" : "#475569"} />
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </View>
+                );
+              })}
+
+              <View className="flex-row items-center gap-2 pt-0.5">
+                <View className="flex-1 min-w-0">
+                  <View className="flex-row items-center gap-1 mb-1">
+                    <Star size={14} color="#f59e0b" />
+                    <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                      {t("nuevaCat.tabFavoritos")}
+                    </Text>
+                  </View>
+                  {getFavoritos().length > 0 ? (
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+                      {getFavoritos().map((id) => {
+                        const marcado = icono === id;
+                        const Icono = esFoto(id) ? null : iconoDe(id);
+                        return (
+                          <TouchableOpacity
+                            key={id}
+                            onPress={() => setIcono(id)}
+                            className={`w-9 h-9 rounded-xl items-center justify-center overflow-hidden border ${
+                              marcado ? "border-amber-500 bg-amber-50" : "border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde"
+                            }`}
+                          >
+                            {esFoto(id) ? (
+                              <Image source={{ uri: id }} className="w-full h-full" />
+                            ) : Icono ? (
+                              <Icono size={18} color={marcado ? "#d97706" : colorScheme === "dark" ? "#cbd5e1" : "#475569"} />
+                            ) : null}
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  ) : (
+                    <Text className="text-[11px] text-slate-400">—</Text>
+                  )}
+                </View>
+                <TouchableOpacity
+                  onPress={() =>
+                    irUnaVez({
+                      pathname: "/nueva-categoria",
+                      params: { tipo: type, actual: category },
+                    })
+                  }
+                  className="flex-row items-center gap-1 rounded-full border border-slate-300 dark:border-noche-borde px-3 py-2"
+                >
+                  <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
+                    {t("addSheet.viewAllCategories")}
+                  </Text>
+                  <ChevronRight size={14} color="#94a3b8" />
+                </TouchableOpacity>
               </View>
-              <Text
-                className="text-sm font-bold flex-1"
-                style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-                numberOfLines={1}
-              >
-                {t("addSheet.chooseCategory")}
-              </Text>
-              {/* Se busca en "cats" y no directo en catInfo porque una categoría
-                  personalizada lleva su nombre escrito a mano, y el traductor
-                  devuelve tal cual lo que no reconoce. Así sale bien en los dos
-                  casos. */}
-              <Text className="text-sm font-semibold text-slate-500 dark:text-slate-300" numberOfLines={1}>
-                {t(cats.find((c) => c.id === category)?.label ?? catInfo(category).label)}
-              </Text>
-              <ChevronRight size={15} color="#94a3b8" />
-            </TouchableOpacity>
+            </View>
 
             {/* Fecha y Método comparten FIELD_HEIGHT. Sin esa altura fija se
                 veían de distinto tamaño: en Android un campo de escritura trae
@@ -527,6 +618,7 @@ export default function AddSheet({
                   type,
                   amount: parseAmountInput(amount),
                   category,
+                  icono,
                   date,
                   method,
                   description,

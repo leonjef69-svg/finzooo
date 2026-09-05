@@ -51,6 +51,10 @@ de Contraseña, distingue las causas y no muestra error cuando el usuario cancel
 - Todos los formularios monetarios comparten un máximo seguro de 13 cifras
   enteras. Las cantidades antiguas mayores se muestran abreviadas, nunca como
   notación científica ni con textos de error dentro de las tarjetas.
+- Nuevo movimiento permite elegir sin salir entre tres categorías rápidas,
+  recorrer horizontalmente sus iconos, reutilizar favoritos y abrir el catálogo
+  completo con «Ver todas». El campo de monto ocupa menos alto sin reducir el
+  tamaño de la cifra.
 - El saludo nunca muestra el correo electrónico completo.
 - El micrófono entiende frases naturales como «almorcé por 20», «sueldo
   1500» o «me cayó un Yape de 30».
