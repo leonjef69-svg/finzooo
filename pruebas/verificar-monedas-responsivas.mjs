@@ -20,6 +20,7 @@ assert.match(reports, /Array\.from\(\{ length: 31 \}/);
 assert.match(reports, /shownBarData/);
 assert.match(reports, /shownDaily/);
 assert.doesNotMatch(reports, /setTransactions\([^)]*preview/i);
+assert.match(reports, /\? "<1%"/, "los gastos pequeños no se muestran falsamente como 0%");
 assert.match(daily, /fmtAxis/);
 assert.match(home, /friendlyName/);
 assert.match(home, /adjustsFontSizeToFit/);

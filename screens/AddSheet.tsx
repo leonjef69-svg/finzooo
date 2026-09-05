@@ -21,7 +21,7 @@ import { defaultDateForMonth, isValidISODate, normalizeDateInput } from "@/utils
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { nextId } from "@/utils/id";
 import { horaDe } from "@/utils/format";
-import { iconoDe, TODOS_LOS_GRUPOS } from "@/constants/iconos";
+import { iconoDe, iconosParaCategoria } from "@/constants/iconos";
 import { alternar, esFoto, getFavoritos } from "@/utils/iconosFavoritos";
 import { esPropia } from "@/utils/categoriasPropias";
 import { sanitizeName } from "@/utils/categoryCustom";
@@ -137,10 +137,7 @@ export default function AddSheet({
 
   function iconosRelacionados(categoryId: string): string[] {
     const info = catInfo(categoryId);
-    const grupo = TODOS_LOS_GRUPOS.find((g) =>
-      info.iconoNombre ? g.iconos.includes(info.iconoNombre) : false
-    );
-    return grupo?.iconos ?? TODOS_LOS_GRUPOS[TODOS_LOS_GRUPOS.length - 1].iconos;
+    return iconosParaCategoria(categoryId, info.iconoNombre);
   }
 
   function cambiarFavorito(id: string) {

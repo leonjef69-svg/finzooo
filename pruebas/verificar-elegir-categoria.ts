@@ -98,6 +98,17 @@ console.log("\n--- EN NUEVO MOVIMIENTO HAY ATAJOS SIN PERDER EL CATALOGO ---");
   ok(/style=\{\{ height: 48 \}\}/.test(addLimpio), "el campo de monto queda realmente compacto");
 }
 
+console.log("\n--- CADA CATEGORIA TIENE UNA FILA PROPIA DE ICONOS ---");
+{
+  const { EXPENSE_CATS, INCOME_CATS } = require("@/constants/categories") as typeof import("@/constants/categories");
+  const { iconosParaCategoria } = require("@/constants/iconos") as typeof import("@/constants/iconos");
+  for (const [tipo, categorias] of [["gasto", EXPENSE_CATS], ["ingreso", INCOME_CATS]] as const) {
+    const firmas = categorias.map((c) => iconosParaCategoria(c.id, c.iconoNombre).join("|"));
+    ok(new Set(firmas).size === firmas.length, `ninguna categoria de ${tipo} repite toda la fila`);
+    ok(firmas.every((fila) => fila.split("|").length >= 8), `cada categoria de ${tipo} ofrece al menos ocho iconos`);
+  }
+}
+
 
 console.log("\n--- Y DETRAS HAY UNA SOLA PANTALLA, NO DOS ---");
 {

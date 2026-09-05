@@ -412,7 +412,11 @@ export default function Reports({
                     {e.name}
                   </Text>
                   <Text className="text-xs text-slate-500 dark:text-slate-300 flex-shrink text-right" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
-                    {fmtCompact(e.value)} · {totalExpense ? Math.round((e.value / totalExpense) * 100) : 0}%
+                    {fmtCompact(e.value)} · {totalExpense
+                      ? (e.value / totalExpense) * 100 < 1
+                        ? "<1%"
+                        : `${Math.round((e.value / totalExpense) * 100)}%`
+                      : "0%"}
                   </Text>
                 </View>
               ))}

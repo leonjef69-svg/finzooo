@@ -388,3 +388,49 @@ const GRUPOS_MARCAS: GrupoIconos[] = [
 ];
 
 export const TODOS_LOS_GRUPOS: GrupoIconos[] = [...GRUPOS_GENERICOS, ...GRUPOS_MARCAS];
+
+/**
+ * Selección corta propia de cada categoría para Nuevo movimiento.
+ *
+ * Antes se buscaba solamente el grupo que contenía el icono principal. Por
+ * eso Salario y Freelance acababan mostrando exactamente la misma fila de
+ * veinte dibujos de dinero. Estas filas son distintas a propósito: pueden
+ * compartir un dibujo razonable, pero ninguna categoría de fábrica repite la
+ * selección completa de otra.
+ */
+const ICONOS_POR_CATEGORIA: Readonly<Record<string, readonly string[]>> = {
+  comida: ["Utensils", "UtensilsCrossed", "Coffee", "Pizza", "Sandwich", "CakeSlice", "Apple", "Soup"],
+  transporte: ["Car", "Bus", "TrainFront", "Plane", "Bike", "CarTaxiFront", "TramFront", "Ship"],
+  compras: ["ShoppingBag", "ShoppingCart", "ShoppingBasket", "Store", "Tag", "Gift", "Package", "Shirt"],
+  entretenimiento: ["Film", "Music", "Tv", "Ticket", "Drama", "Guitar", "PartyPopper", "Radio"],
+  videojuegos: ["Gamepad2", "Dices", "Puzzle", "Headphones", "Tv", "Ticket", "marca:steam", "marca:playstation"],
+  salud: ["HeartPulse", "Pill", "Stethoscope", "Syringe", "Cross", "Activity", "Bandage", "Hospital"],
+  servicios: ["Zap", "Droplet", "Flame", "Wifi", "Phone", "Smartphone", "Router", "Cloud"],
+  combustible: ["Fuel", "Car", "Truck", "CarTaxiFront", "Flame", "Receipt", "Wallet", "MapPin"],
+  suscripciones: ["Repeat", "CalendarClock", "CreditCard", "Receipt", "Phone", "Tv", "Music", "Cloud"],
+  educacion: ["GraduationCap", "Book", "Library", "Pencil", "NotebookPen", "School", "Calculator", "Microscope"],
+  mascotas: ["PawPrint", "Dog", "Cat", "Bird", "Bone", "Rabbit", "Turtle", "Heart"],
+  hogar: ["House", "Sofa", "Bed", "Lamp", "Refrigerator", "WashingMachine", "ShowerHead", "Wrench"],
+  otros: ["Ellipsis", "Star", "Heart", "Bookmark", "Flag", "Calendar", "Clock", "Sparkles"],
+  salario: ["Briefcase", "Banknote", "Calendar", "Landmark", "Wallet", "BadgeDollarSign", "Receipt", "Coins"],
+  freelance: ["Laptop", "Handshake", "User", "Users", "CalendarClock", "ChartColumn", "Camera", "Palette"],
+  regalo: ["Gift", "PartyPopper", "Heart", "Star", "Package", "Users", "Sparkles", "CakeSlice"],
+  inversiones: ["TrendingUp", "ChartColumn", "ChartPie", "Coins", "Landmark", "Percent", "PiggyBank", "Trophy"],
+  venta: ["Tag", "Tags", "Store", "ShoppingBag", "Package", "Handshake", "Banknote", "Receipt"],
+  otro_ingreso: ["PlusCircle", "Banknote", "Coins", "Wallet", "HandCoins", "Receipt", "Sparkles", "Ellipsis"],
+  premios: ["Crown", "Trophy", "Medal", "BadgeDollarSign", "Star", "Gift", "Sparkles", "Banknote"],
+  prestamo: ["HandCoins", "Handshake", "Banknote", "Wallet", "CreditCard", "CalendarClock", "Receipt", "Landmark"],
+  dividendos: ["ChartColumn", "ChartPie", "TrendingUp", "Percent", "Coins", "Landmark", "BadgeDollarSign", "Calendar"],
+  alquiler: ["Key", "House", "DoorOpen", "CalendarClock", "Banknote", "Receipt", "Handshake", "Store"],
+  cripto: ["Coins", "TrendingUp", "Wallet", "ChartColumn", "ChartPie", "Rocket", "Shield", "Gem"],
+  beca: ["GraduationCap", "School", "Book", "Library", "Medal", "Banknote", "NotebookPen", "Trophy"],
+};
+
+export function iconosParaCategoria(categoryId: string, iconoPrincipal?: string): string[] {
+  const propios = ICONOS_POR_CATEGORIA[categoryId];
+  if (propios) return [...propios];
+  const grupo = TODOS_LOS_GRUPOS.find((g) =>
+    iconoPrincipal ? g.iconos.includes(iconoPrincipal) : false
+  );
+  return [...(grupo?.iconos ?? TODOS_LOS_GRUPOS[TODOS_LOS_GRUPOS.length - 1].iconos)];
+}
