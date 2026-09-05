@@ -74,12 +74,19 @@ console.log("\n--- EN NUEVO MOVIMIENTO HAY ATAJOS SIN PERDER EL CATALOGO ---");
   ok(addLimpio.includes("guardarFavoritos(siguientes)"), "la estrella guarda el cambio de favoritos");
   ok(addLimpio.includes("tomarFoto(cat.id)"), "cada categoria ofrece camara a su costado");
   ok(addLimpio.includes("elegirDeGaleria(cat.id)"), "cada categoria ofrece galeria a su costado");
+  ok(addLimpio.includes("onLongPress={() => abrirCambioDeCategoria(indice)}"), "mantener pulsada permite reemplazar la categoria");
+  ok(addLimpio.includes("<Repeat2"), "el icono de cambio hace visible esa funcion");
+  ok(addLimpio.includes("<Pencil"), "cada categoria tiene acceso para cambiar su nombre");
+  ok(addLimpio.includes("siguientes[indice] = categoriaRecienCreada"), "la elegida reemplaza solo la posicion indicada");
+  ok(!addLimpio.includes("const elegida = cats.find((c) => c.id === category)"), "elegir iconos no reordena las categorias");
   ok(addLimpio.includes("setIconoConColores(id)"), "tocar un icono abre su fila de colores");
   ok(addLimpio.includes("setIconoConColores(null)"), "volver a tocarlo cierra los colores");
   ok(addLimpio.includes("iconColor,"), "el movimiento conserva el color elegido");
   ok(/category,\s*icono,/.test(addLimpio), "el movimiento guarda la categoria y el icono elegidos");
   ok(/style=\{\{ height: 48 \}\}/.test(addLimpio), "el campo de monto queda realmente compacto");
 }
+
+ok(ruta.includes('editarDirecto={editar === "1"}'), "el lapiz abre la categoria directamente en edicion");
 
 console.log("\n--- Y DETRAS HAY UNA SOLA PANTALLA, NO DOS ---");
 {

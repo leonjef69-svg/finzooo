@@ -57,6 +57,9 @@ de Contraseña, distingue las causas y no muestra error cuando el usuario cancel
   conserva «Ver todas» para el catálogo completo y el campo de monto tiene una
   altura compacta de 48 px. Al elegir un dibujo su categoría sube primero y se
   abre una paleta horizontal; otro toque lo desmarca y oculta la paleta.
+- Las tres categorías rápidas mantienen su posición al elegir dibujos. Cada una
+  muestra ⇄ para reemplazarla (también con pulsación larga) y un lápiz para
+  cambiar directamente su nombre, además de Cámara y Galería.
 - La navegación bloquea durante 1,5 segundos los toques repetidos: botones como
   «Ver todas» no pueden apilar dos copias de la misma pantalla en celulares lentos.
 - El saludo nunca muestra el correo electrónico completo.

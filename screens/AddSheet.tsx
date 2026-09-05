@@ -10,7 +10,7 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X, Check, ChevronDown, ChevronRight, Calendar, Star, Camera, ImageIcon } from "lucide-react-native";
+import { X, Check, ChevronDown, ChevronRight, Calendar, Star, Camera, ImageIcon, Repeat2, Pencil } from "lucide-react-native";
 import CategoryAvatar from "@/components/CategoryAvatar";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
 import { currencySymbolFor } from "@/constants/currencies";
@@ -58,6 +58,11 @@ export default function AddSheet({
   );
   const [iconoConColores, setIconoConColores] = useState<string | null>(null);
   const [favoritos, setFavoritosLocales] = useState(() => getFavoritos());
+  const [idsRapidos, setIdsRapidos] = useState<Record<"expense" | "income", string[]>>({
+    expense: ["comida", "transporte", "compras"],
+    income: ["salario", "freelance", "regalo"],
+  });
+  const lugarAReemplazar = useRef<number | null>(null);
   const [date, setDate] = useState(transaction?.date || defaultDateForMonth(currentMonth));
   const [method, setMethod] = useState(transaction?.method || "debit");
   const [description, setDescription] = useState(transaction?.description || "");
@@ -79,15 +84,25 @@ export default function AddSheet({
     [type, categoriasPropias]
   );
 
-  // La elegida siempre va primero. Así, cuando alguien vuelve de "Ver todas"
-  // con Salud, esa categoría ocupa inmediatamente uno de los tres accesos
-  // rápidos sin borrar lo que ya escribió en el movimiento.
+  // Las tres posiciones son estables: elegir un dibujo no debe hacer saltar
+  // Comida al lugar de Transporte. Solo cambian cuando la persona usa ⇄ o
+  // mantiene presionada expresamente una categoría.
   const categoriasRapidas = useMemo(() => {
-    const elegida = cats.find((c) => c.id === category);
-    return [elegida, ...cats.filter((c) => c.id !== category)].filter(
-      (c): c is NonNullable<typeof c> => Boolean(c)
-    ).slice(0, 3);
-  }, [cats, category]);
+    const elegidas = idsRapidos[type]
+      .map((id) => cats.find((c) => c.id === id))
+      .filter((c): c is NonNullable<typeof c> => Boolean(c));
+    return [...elegidas, ...cats.filter((c) => !elegidas.some((e) => e.id === c.id))].slice(0, 3);
+  }, [cats, idsRapidos, type]);
+
+  function abrirCambioDeCategoria(indice: number) {
+    lugarAReemplazar.current = indice;
+    irUnaVez({ pathname: "/nueva-categoria", params: { tipo: type, actual: category } });
+  }
+
+  function abrirCambioDeNombre(categoryId: string) {
+    lugarAReemplazar.current = null;
+    irUnaVez({ pathname: "/nueva-categoria", params: { tipo: type, actual: categoryId, editar: "1" } });
+  }
 
   function iconosRelacionados(categoryId: string): string[] {
     const info = catInfo(categoryId);
@@ -149,12 +164,21 @@ export default function AddSheet({
   // enseña la que esté puesta, sea de fábrica o propia.
   useEffect(() => {
     if (!categoriaRecienCreada) return;
+    if (lugarAReemplazar.current !== null) {
+      const indice = lugarAReemplazar.current;
+      setIdsRapidos((anteriores) => {
+        const siguientes = [...anteriores[type]];
+        siguientes[indice] = categoriaRecienCreada;
+        return { ...anteriores, [type]: siguientes };
+      });
+      lugarAReemplazar.current = null;
+    }
     setCategory(categoriaRecienCreada);
     // Al volver de "Ver todas", adopta también el dibujo de esa categoría.
     // El movimiento conserva así exactamente lo que la persona acaba de elegir.
     setIcono(catInfo(categoriaRecienCreada).iconoNombre);
     olvidarCategoriaRecienCreada();
-  }, [categoriaRecienCreada, olvidarCategoriaRecienCreada]);
+  }, [categoriaRecienCreada, olvidarCategoriaRecienCreada, type]);
 
   useEffect(() => {
     if (!transaction) setCategory(type === "expense" ? "comida" : "salario");
@@ -434,7 +458,7 @@ export default function AddSheet({
               <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200">
                 {t("addSheet.quickCategories")}
               </Text>
-              {categoriasRapidas.map((cat) => {
+              {categoriasRapidas.map((cat, indice) => {
                 const activa = cat.id === category;
                 const IconoElegido = activa && icono && !esFoto(icono) ? iconoDe(icono) : null;
                 return (
@@ -445,7 +469,9 @@ export default function AddSheet({
                         setCategory(cat.id);
                         setIcono(cat.iconoNombre);
                       }}
-                      className={`flex-row items-center gap-1.5 rounded-full border px-3 py-1.5 ${
+                      onLongPress={() => abrirCambioDeCategoria(indice)}
+                      delayLongPress={450}
+                      className={`flex-row items-center gap-1 rounded-full border px-2.5 py-1.5 shrink ${
                         activa
                           ? "bg-emerald-50 border-emerald-500 dark:bg-emerald-950"
                           : "bg-slate-50 border-slate-200 dark:bg-noche-2 dark:border-noche-borde"
@@ -464,11 +490,17 @@ export default function AddSheet({
                         {t(cat.label)}
                       </Text>
                     </TouchableOpacity>
-                    <View className="flex-row gap-1.5">
-                      <TouchableOpacity accessibilityLabel={t("catCustom.takePhoto")} onPress={() => void tomarFoto(cat.id)} className="w-8 h-8 rounded-full items-center justify-center border border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde">
+                    <View className="flex-row gap-1">
+                      <TouchableOpacity accessibilityLabel={t("addSheet.changeQuickCategory")} onPress={() => abrirCambioDeCategoria(indice)} className="w-7 h-7 rounded-full items-center justify-center border border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde">
+                        <Repeat2 size={13} color="#64748b" />
+                      </TouchableOpacity>
+                      <TouchableOpacity accessibilityLabel={t("addSheet.renameCategory")} onPress={() => abrirCambioDeNombre(cat.id)} className="w-7 h-7 rounded-full items-center justify-center border border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde">
+                        <Pencil size={13} color="#64748b" />
+                      </TouchableOpacity>
+                      <TouchableOpacity accessibilityLabel={t("catCustom.takePhoto")} onPress={() => void tomarFoto(cat.id)} className="w-7 h-7 rounded-full items-center justify-center border border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde">
                         <Camera size={15} color={colorScheme === "dark" ? "#cbd5e1" : "#475569"} />
                       </TouchableOpacity>
-                      <TouchableOpacity accessibilityLabel={t("catCustom.pickImage")} onPress={() => void elegirDeGaleria(cat.id)} className="w-8 h-8 rounded-full items-center justify-center border border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde">
+                      <TouchableOpacity accessibilityLabel={t("catCustom.pickImage")} onPress={() => void elegirDeGaleria(cat.id)} className="w-7 h-7 rounded-full items-center justify-center border border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde">
                         <ImageIcon size={15} color={colorScheme === "dark" ? "#cbd5e1" : "#475569"} />
                       </TouchableOpacity>
                     </View>
@@ -567,12 +599,13 @@ export default function AddSheet({
                   )}
                 </View>
                 <TouchableOpacity
-                  onPress={() =>
+                  onPress={() => {
+                    lugarAReemplazar.current = null;
                     irUnaVez({
                       pathname: "/nueva-categoria",
                       params: { tipo: type, actual: category },
                     })
-                  }
+                  }}
                   className="flex-row items-center gap-1 rounded-full border border-slate-300 dark:border-noche-borde px-3 py-2"
                 >
                   <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
