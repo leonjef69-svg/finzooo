@@ -43,6 +43,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const softShadow = CARD_SHADOW;
 
+// Oculta temporalmente el acceso mientras se define una conversión de moneda
+// confiable. La pantalla, los datos y el flujo permanecen intactos para poder
+// reactivarlos sin reconstruir la función.
+const MOSTRAR_TARJETA_CREDITO = false;
+
 /* LA FILA, APARTE Y MEMOIZADA.
    Antes se dibujaba dentro de renderItem, una función nueva en cada pasada, y encima
    preguntaba `selected.includes(id)` — un recorrido de la lista de seleccionados POR CADA
@@ -494,21 +499,23 @@ export default function Home({
           </TouchableOpacity>
         )}
 
-        <TouchableOpacity
-          onPress={() => irUnaVez("/credit")}
-          className="mx-5 mt-3 flex-row items-center justify-between rounded-2xl border-[1.5px] border-teal-200 bg-teal-50 dark:bg-noche-2 dark:border-teal-800 px-4 py-3"
-        >
-          <View className="flex-row items-center gap-3">
-            <View className="h-9 w-9 items-center justify-center rounded-xl bg-teal-600">
-              <CreditCard size={19} color="#fff" />
+        {MOSTRAR_TARJETA_CREDITO && (
+          <TouchableOpacity
+            onPress={() => irUnaVez("/credit")}
+            className="mx-5 mt-3 flex-row items-center justify-between rounded-2xl border-[1.5px] border-teal-200 bg-teal-50 dark:bg-noche-2 dark:border-teal-800 px-4 py-3"
+          >
+            <View className="flex-row items-center gap-3">
+              <View className="h-9 w-9 items-center justify-center rounded-xl bg-teal-600">
+                <CreditCard size={19} color="#fff" />
+              </View>
+              <View>
+                <Text className="font-extrabold text-teal-900 dark:text-teal-100">Tarjeta de crédito</Text>
+                <Text className="text-[11px] text-teal-700 dark:text-teal-300">Cuotas, fechas y pagos</Text>
+              </View>
             </View>
-            <View>
-              <Text className="font-extrabold text-teal-900 dark:text-teal-100">Tarjeta de crédito</Text>
-              <Text className="text-[11px] text-teal-700 dark:text-teal-300">Cuotas, fechas y pagos</Text>
-            </View>
-          </View>
-          <ChevronRight size={20} color="#0f766e" />
-        </TouchableOpacity>
+            <ChevronRight size={20} color="#0f766e" />
+          </TouchableOpacity>
+        )}
 
         {/* ESTADO DE CUENTA QUE LLEGÓ Y NO SE LLEGÓ A ABRIR.
             Es la red de seguridad de "Compartir → Fino". Si por lo que sea

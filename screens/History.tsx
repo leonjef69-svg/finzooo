@@ -227,7 +227,7 @@ export default function History({
           {/* Los totales usan todo el ancho: Ingresos arriba y Gastos abajo.
               Así un monto largo no compite por espacio con otra tarjeta y la
               columna sigue siendo compacta en teléfonos estrechos. */}
-          <View className="px-5 mt-3 gap-2 mb-3">
+          <View className="px-5 mt-3 gap-3 mb-3">
             {(filter === "all" || filter === "income") && (
               <View
                 className="w-full flex-row items-center gap-2.5 bg-emerald-50 dark:bg-noche-2 rounded-xl px-3 py-2.5 border-[1.5px] border-emerald-100 dark:border-noche-borde"
