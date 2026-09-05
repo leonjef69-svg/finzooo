@@ -166,6 +166,11 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
   gastar una sección adicional. Si hay una foto, aparece una acción compacta
   para quitarla. Cámara y galería tienen además una descripción para lectores
   de pantalla, y el encabezado avisa que las franjas se pueden deslizar.
+- El editor de nombre dentro de `Nuevo movimiento` mide 42 px y centra el texto
+  explícitamente en Android; guardar y cancelar tienen la misma altura.
+- Los campos de monto ya no aceptan una última cifra que supere el máximo
+  seguro. Antes trece nueves dejaban `Guardar` desactivado hasta borrar; ahora
+  esa última cifra simplemente no entra y el monto visible siempre es guardable.
 
 ### Correcciones y comprobaciones antes del próximo AAB
 

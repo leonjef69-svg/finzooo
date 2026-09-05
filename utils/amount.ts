@@ -38,6 +38,24 @@ export function sanitizeAmountInput(raw: string): string {
     : `${safeInteger}.${fraction.slice(0, 3)}`;
 }
 
+/**
+ * Limpia un campo interactivo y evita que su valor visible supere el máximo.
+ * La validación estricta de datos importados sigue en parseAmountInput: aquí se
+ * corrige únicamente la experiencia al teclear.
+ */
+export function sanitizeSafeAmountInput(raw: string): string {
+  let safe = sanitizeAmountInput(raw);
+  let recortoExceso = false;
+  while (safe && Number(safe) > MAX_MONEY_AMOUNT) {
+    recortoExceso = true;
+    const dot = safe.indexOf(".");
+    if (dot !== -1 && dot < safe.length - 1) safe = safe.slice(0, -1);
+    else if (safe.endsWith(".")) safe = safe.slice(0, -1);
+    else safe = safe.slice(0, -1);
+  }
+  return recortoExceso && safe.endsWith(".") ? safe.slice(0, -1) : safe;
+}
+
 export function isSafeMoneyAmount(value: number): boolean {
   return Number.isFinite(value) && Math.abs(value) <= MAX_MONEY_AMOUNT;
 }

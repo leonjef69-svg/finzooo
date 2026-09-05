@@ -18,7 +18,7 @@ import { COLOR_HEX_600 } from "@/constants/colors";
 import { methodLabel, PAYMENT_METHODS } from "@/constants/i18n";
 import { useAppData } from "@/contexts/AppDataContext";
 import { defaultDateForMonth, isValidISODate, normalizeDateInput } from "@/utils/date";
-import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
+import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { nextId } from "@/utils/id";
 import { horaDe } from "@/utils/format";
 import { iconoDe, TODOS_LOS_GRUPOS } from "@/constants/iconos";
@@ -467,7 +467,7 @@ export default function AddSheet({
                   disableFullscreenUI
                   keyboardType="decimal-pad"
                   value={amount}
-                  onChangeText={(v) => setAmount(sanitizeAmountInput(v))}
+                  onChangeText={(v) => setAmount(sanitizeSafeAmountInput(v))}
                   placeholder="0.00"
                   placeholderTextColor="#94a3b8"
                   className="flex-1 text-base font-extrabold"
@@ -528,20 +528,29 @@ export default function AddSheet({
                     </View>
                     </View>
                     {renombrando === cat.id ? (
-                      <View className="flex-row items-center gap-1.5">
+                      <View className="flex-row items-center gap-2">
                         <TextInput
                           disableFullscreenUI
                           autoFocus
                           value={nombreTemporal}
                           onChangeText={setNombreTemporal}
                           maxLength={24}
-                          className="flex-1 h-9 rounded-xl border border-emerald-400 bg-white dark:bg-noche-2 px-3 text-sm text-slate-900 dark:text-slate-100"
+                          className="flex-1 rounded-xl border border-emerald-400 bg-white dark:bg-noche-2 px-3 text-sm text-slate-900 dark:text-slate-100"
+                          style={{ height: 42, paddingVertical: 0, textAlignVertical: "center" }}
                         />
-                        <TouchableOpacity onPress={() => guardarNombre(cat.id)} className="w-8 h-8 rounded-full bg-emerald-600 items-center justify-center">
-                          <Check size={16} color="#ffffff" />
+                        <TouchableOpacity
+                          accessibilityLabel={t("nuevaCat.guardar")}
+                          onPress={() => guardarNombre(cat.id)}
+                          className="w-[42px] h-[42px] rounded-full bg-emerald-600 items-center justify-center"
+                        >
+                          <Check size={18} color="#ffffff" />
                         </TouchableOpacity>
-                        <TouchableOpacity onPress={() => setRenombrando(null)} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center">
-                          <X size={16} color="#64748b" />
+                        <TouchableOpacity
+                          accessibilityLabel={t("nuevaCat.cancelar")}
+                          onPress={() => setRenombrando(null)}
+                          className="w-[42px] h-[42px] rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
+                        >
+                          <X size={18} color="#64748b" />
                         </TouchableOpacity>
                       </View>
                     ) : null}

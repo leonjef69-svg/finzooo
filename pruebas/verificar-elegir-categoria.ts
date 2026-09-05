@@ -82,6 +82,14 @@ console.log("\n--- EN NUEVO MOVIMIENTO HAY ATAJOS SIN PERDER EL CATALOGO ---");
   ok(addLimpio.includes("reemplazarCategoria(indice, opcion.id)"), "la elegida reemplaza solo la posicion indicada");
   ok(addLimpio.includes("renombrando === cat.id"), "el nombre se edita en la misma fila");
   ok(addLimpio.includes("guardarNombre(cat.id)"), "el nombre se guarda sin abrir otra pantalla");
+  ok(
+    /height: 42, paddingVertical: 0, textAlignVertical: "center"/.test(addLimpio),
+    "el campo para renombrar no corta ni desalinea el texto en Android"
+  );
+  ok(
+    /w-\[42px\] h-\[42px\][\s\S]{0,180}<Check/.test(addLimpio),
+    "guardar nombre tiene la misma altura que el campo"
+  );
   ok(!addLimpio.includes("const elegida = cats.find((c) => c.id === category)"), "elegir iconos no reordena las categorias");
   ok(addLimpio.includes("setIconoConColores(id)"), "tocar un icono abre su fila de colores");
   ok(addLimpio.includes("setIconoConColores(null)"), "volver a tocarlo cierra los colores");
