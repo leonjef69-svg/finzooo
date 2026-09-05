@@ -40,7 +40,7 @@ import {
   SEPARACION,
 } from "@/constants/catalogoFilas";
 import { COLOR_HEX_100, COLOR_HEX_500, COLOR_HEX_600 } from "@/constants/colors";
-import { iconoDe, TODOS_LOS_GRUPOS } from "@/constants/iconos";
+import { iconoDe, iconosParaCategoria, TODOS_LOS_GRUPOS } from "@/constants/iconos";
 import { useAppData } from "@/contexts/AppDataContext";
 
 import { esPropia, nombreRepetido } from "@/utils/categoriasPropias";
@@ -830,8 +830,10 @@ export default function NuevaCategoria({
     [tipo],
   );
   const filasDeFiltros = useMemo(
-    () => repartirFiltros([TODOS_ID, ...gruposDelTipo]),
-    [gruposDelTipo],
+    // Aquí van las categorías reales (Comida, Transporte...), no los grupos
+    // técnicos del catálogo. Al tocar una se muestran sus dibujos relacionados.
+    () => repartirFiltros([TODOS_ID, ...cats.map((categoria) => categoria.id)]),
+    [cats],
   );
   const catalogoDelTipo = useMemo(
     () => CATALOGO_EN_FILAS.filter((grupo) => gruposDelTipo.includes(grupo.titulo)),
@@ -847,6 +849,11 @@ export default function NuevaCategoria({
       ),
     [catalogoDelTipo],
   );
+  const filasDeCategoriaElegida = useMemo(() => {
+    if (filtroDeIconos === TODOS_ID) return [];
+    const info = catInfo(filtroDeIconos);
+    return enFilas(iconosParaCategoria(filtroDeIconos, info.iconoNombre));
+  }, [filtroDeIconos]);
 
   /**
    * QUÉ PESTAÑAS SE HAN LLEGADO A ABRIR. Cada una se construye la PRIMERA vez que se
@@ -1701,7 +1708,7 @@ export default function NuevaCategoria({
                             elegido ? "text-emerald-700 dark:text-emerald-300" : "text-slate-600 dark:text-slate-300"
                           }`}
                         >
-                          {item === TODOS_ID ? t("nuevaCat.todosIconos") : titulos[item]}
+                          {item === TODOS_ID ? t("nuevaCat.todosIconos") : t(catInfo(item).label)}
                         </Text>
                       </TouchableOpacity>
                     );
@@ -1736,10 +1743,10 @@ export default function NuevaCategoria({
                       />
                     </Fragment>
                   ))
-                : catalogoDelTipo.filter((grupo) => grupo.titulo === filtroDeIconos).map((grupo) => (
-                    <Fragment key={grupo.titulo}>
-                      <TituloDeGrupo texto={titulos[grupo.titulo]} />
-                      {grupo.filas.map((fila, indice) => (
+                : (
+                    <Fragment>
+                      <TituloDeGrupo texto={t(catInfo(filtroDeIconos).label)} />
+                      {filasDeCategoriaElegida.map((fila, indice) => (
                         <Fila
                           key={indice}
                           iconos={fila}
@@ -1750,7 +1757,7 @@ export default function NuevaCategoria({
                         />
                       ))}
                     </Fragment>
-                  ))}
+                  )}
             </View>
           </View>
         )}

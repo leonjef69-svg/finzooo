@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 const formato = fs.readFileSync("utils/format.ts", "utf8");
 const reports = fs.readFileSync("screens/Reports.tsx", "utf8");
 const daily = fs.readFileSync("components/DailyBarsChart.tsx", "utf8");
+const donut = fs.readFileSync("components/DonutChart.tsx", "utf8");
 const home = fs.readFileSync("screens/Home.tsx", "utf8");
 const friendlyName = fs.readFileSync("utils/friendlyName.ts", "utf8");
 
@@ -22,6 +23,7 @@ assert.match(reports, /shownDaily/);
 assert.doesNotMatch(reports, /setTransactions\([^)]*preview/i);
 assert.match(reports, /\? "<1%"/, "los gastos pequeños no se muestran falsamente como 0%");
 assert.match(daily, /fmtAxis/);
+assert.match(donut, /MIN_VISIBLE_FRACTION/, "la dona conserva visibles los segmentos menores al 1%");
 assert.match(home, /friendlyName/);
 assert.match(home, /adjustsFontSizeToFit/);
 assert.match(friendlyName, /includes\("@"\)/);

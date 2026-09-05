@@ -4,6 +4,11 @@ import Svg, { Circle } from "react-native-svg";
 
 type Slice = { name: string; value: number; color: string };
 
+// Un segmento real menor al 1 % puede medir menos de un píxel y desaparecer
+// visualmente. La dona le reserva apenas este mínimo; la leyenda y el centro
+// siguen mostrando el monto y porcentaje verdaderos.
+const MIN_VISIBLE_FRACTION = 0.012;
+
 export default function DonutChart({
   data,
   size = 160,
@@ -15,6 +20,8 @@ export default function DonutChart({
 }) {
   const [selected, setSelected] = useState<number | null>(null);
   const total = data.reduce((s, d) => s + d.value, 0);
+  const visualValues = data.map((d) => Math.max(d.value, total * MIN_VISIBLE_FRACTION));
+  const visualTotal = visualValues.reduce((sum, value) => sum + value, 0);
   const r = size / 2 - 12;
   const c = 2 * Math.PI * r;
   const center = size / 2;
@@ -28,11 +35,11 @@ export default function DonutChart({
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
         {data.map((d, i) => {
-          const fraction = d.value / total;
+          const fraction = visualValues[i] / visualTotal;
           const dash = fraction * c;
           const gap = c - dash;
-          const rotation = (offsetAcc / total) * 360 - 90;
-          offsetAcc += d.value;
+          const rotation = (offsetAcc / visualTotal) * 360 - 90;
+          offsetAcc += visualValues[i];
           const isActive = selected === i;
           return (
             <Circle

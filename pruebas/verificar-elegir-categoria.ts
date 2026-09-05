@@ -164,8 +164,8 @@ console.log("\n--- LA PANTALLA SE ABRE EN EL CATALOGO ---");
     "cada fila de filtros se desliza horizontalmente"
   );
   ok(
-    /tipo === "expense" \? GRUPOS_DE_GASTO : GRUPOS_DE_INGRESO/.test(pantLimpia),
-    "Gasto e Ingreso usan grupos de iconos diferentes"
+    /repartirFiltros\(\[TODOS_ID, \.\.\.cats\.map\(\(categoria\) => categoria\.id\)\]\)/.test(pantLimpia),
+    "los filtros muestran las categorias reales del tipo de movimiento"
   );
   ok(
     /GRUPOS_DE_GASTO[\s\S]{0,180}titulo !== "iconos\.dinero"/.test(pantLimpia),
@@ -177,11 +177,11 @@ console.log("\n--- LA PANTALLA SE ABRE EN EL CATALOGO ---");
   );
   ok(
     /onPress=\{\(\) => setFiltroDeIconos\(item\)\}/.test(pantLimpia),
-    "tocar un filtro cambia el grupo visible"
+    "tocar un filtro cambia la categoria visible"
   );
   ok(
-    /catalogoDelTipo\.filter\(\(grupo\) => grupo\.titulo === filtroDeIconos\)/.test(pantLimpia),
-    "el filtro enseña solo los iconos de la categoria elegida"
+    /iconosParaCategoria\(filtroDeIconos, info\.iconoNombre\)/.test(pantLimpia),
+    "el filtro enseña solo los iconos relacionados con la categoria elegida"
   );
   ok(
     /filtroDeIconos === TODOS_ID[\s\S]{0,100}trozosDelTipo/.test(pantLimpia),
