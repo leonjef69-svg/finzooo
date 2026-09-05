@@ -72,6 +72,7 @@ console.log("\n--- EN NUEVO MOVIMIENTO HAY ATAJOS SIN PERDER EL CATALOGO ---");
   ok(addLimpio.includes("getFavoritos()"), "los favoritos tambien estan a mano");
   ok(addLimpio.includes("alternar(favoritos, id)"), "cada icono se puede marcar o quitar de favoritos");
   ok(addLimpio.includes("guardarFavoritos(siguientes)"), "la estrella guarda el cambio de favoritos");
+  ok(/nuevaCat\.favQuitado[\s\S]{0,160}cambiarFavorito\(id\)/.test(addLimpio), "la fila Favoritos permite quitar cada icono directamente");
   ok(addLimpio.includes("tomarFoto(cat.id)"), "cada categoria ofrece camara a su costado");
   ok(addLimpio.includes("elegirDeGaleria(cat.id)"), "cada categoria ofrece galeria a su costado");
   ok(addLimpio.includes("onLongPress={() => abrirCambioDeCategoria(indice)}"), "mantener pulsada permite reemplazar la categoria");

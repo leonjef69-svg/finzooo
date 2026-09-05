@@ -632,19 +632,27 @@ export default function AddSheet({
                         const marcado = icono === id;
                         const Icono = esFoto(id) ? null : iconoDe(id);
                         return (
-                          <TouchableOpacity
-                            key={id}
-                            onPress={() => setIcono(id)}
-                            className={`w-9 h-9 rounded-xl items-center justify-center overflow-hidden border ${
-                              marcado ? "border-amber-500 bg-amber-50" : "border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde"
-                            }`}
-                          >
-                            {esFoto(id) ? (
-                              <Image source={{ uri: id }} className="w-full h-full" />
-                            ) : Icono ? (
-                              <Icono size={18} color={marcado ? "#d97706" : colorScheme === "dark" ? "#cbd5e1" : "#475569"} />
-                            ) : null}
-                          </TouchableOpacity>
+                          <View key={id} className="w-11 h-11">
+                            <TouchableOpacity
+                              onPress={() => setIcono(id)}
+                              className={`w-9 h-9 mt-1 rounded-xl items-center justify-center overflow-hidden border ${
+                                marcado ? "border-amber-500 bg-amber-50" : "border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde"
+                              }`}
+                            >
+                              {esFoto(id) ? (
+                                <Image source={{ uri: id }} className="w-full h-full" />
+                              ) : Icono ? (
+                                <Icono size={18} color={marcado ? "#d97706" : colorScheme === "dark" ? "#cbd5e1" : "#475569"} />
+                              ) : null}
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              accessibilityLabel={t("nuevaCat.favQuitado")}
+                              onPress={() => cambiarFavorito(id)}
+                              className="absolute right-0 top-0 w-5 h-5 rounded-full items-center justify-center bg-white dark:bg-noche-1 border border-amber-300"
+                            >
+                              <Star size={11} color="#f59e0b" fill="#f59e0b" />
+                            </TouchableOpacity>
+                          </View>
                         );
                       })}
                     </ScrollView>

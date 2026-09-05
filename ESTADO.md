@@ -61,6 +61,8 @@ de Contraseña, distingue las causas y no muestra error cuando el usuario cancel
   muestra ⇄ para desplegar ahí mismo todas las opciones (también con pulsación
   larga) y un lápiz para editar el nombre en la misma fila, sin abrir otra
   pantalla; Cámara y Galería permanecen al costado.
+- Cada dibujo de la fila Favoritos lleva su estrella naranja: tocarla lo quita
+  inmediatamente de Favoritos sin borrarlo del catálogo ni de los movimientos.
 - La navegación bloquea durante 1,5 segundos los toques repetidos: botones como
   «Ver todas» no pueden apilar dos copias de la misma pantalla en celulares lentos.
 - El saludo nunca muestra el correo electrónico completo.
