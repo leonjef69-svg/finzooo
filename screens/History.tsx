@@ -224,36 +224,43 @@ export default function History({
             ))}
           </View>
 
-          <View className="px-5 mt-3 flex-row gap-2.5 mb-4">
-            {(filter === "all" || filter === "expense") && (
-              <View
-                className="flex-1 flex-row items-center gap-3 bg-rose-50 dark:bg-noche-2 rounded-2xl p-3.5 border-[1.5px] border-rose-100 dark:border-noche-borde"
-                style={CARD_SHADOW}
-              >
-                <View className="w-9 h-9 rounded-xl bg-rose-100 items-center justify-center">
-                  <TrendingDown size={17} color="#e11d48" />
-                </View>
-                <View className="flex-1 min-w-0">
-                  <Text className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold" numberOfLines={1}>
-                    {t("history.totalExpense")}
-                  </Text>
-                  <Text className="text-base font-extrabold text-rose-500">{fmt(totalExpense)}</Text>
-                </View>
-              </View>
-            )}
+          {/* Los totales usan todo el ancho: Ingresos arriba y Gastos abajo.
+              Así un monto largo no compite por espacio con otra tarjeta y la
+              columna sigue siendo compacta en teléfonos estrechos. */}
+          <View className="px-5 mt-3 gap-2 mb-3">
             {(filter === "all" || filter === "income") && (
               <View
-                className="flex-1 flex-row items-center gap-3 bg-emerald-50 dark:bg-noche-2 rounded-2xl p-3.5 border-[1.5px] border-emerald-100 dark:border-noche-borde"
+                className="w-full flex-row items-center gap-2.5 bg-emerald-50 dark:bg-noche-2 rounded-xl px-3 py-2.5 border-[1.5px] border-emerald-100 dark:border-noche-borde"
                 style={CARD_SHADOW}
               >
-                <View className="w-9 h-9 rounded-xl bg-emerald-100 items-center justify-center">
-                  <TrendingUp size={17} color="#059669" />
+                <View className="w-8 h-8 rounded-lg bg-emerald-100 items-center justify-center">
+                  <TrendingUp size={16} color="#059669" />
                 </View>
                 <View className="flex-1 min-w-0">
                   <Text className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold" numberOfLines={1}>
                     {t("history.totalIncome")}
                   </Text>
-                  <Text className="text-base font-extrabold text-emerald-600">{fmt(totalIncome)}</Text>
+                  <Text className="text-base font-extrabold text-emerald-600" numberOfLines={1}>
+                    {fmt(totalIncome)}
+                  </Text>
+                </View>
+              </View>
+            )}
+            {(filter === "all" || filter === "expense") && (
+              <View
+                className="w-full flex-row items-center gap-2.5 bg-rose-50 dark:bg-noche-2 rounded-xl px-3 py-2.5 border-[1.5px] border-rose-100 dark:border-noche-borde"
+                style={CARD_SHADOW}
+              >
+                <View className="w-8 h-8 rounded-lg bg-rose-100 items-center justify-center">
+                  <TrendingDown size={16} color="#e11d48" />
+                </View>
+                <View className="flex-1 min-w-0">
+                  <Text className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold" numberOfLines={1}>
+                    {t("history.totalExpense")}
+                  </Text>
+                  <Text className="text-base font-extrabold text-rose-500" numberOfLines={1}>
+                    {fmt(totalExpense)}
+                  </Text>
                 </View>
               </View>
             )}
