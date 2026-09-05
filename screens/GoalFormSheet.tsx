@@ -4,7 +4,7 @@ import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
 import { nextId } from "@/utils/id";
-import { sanitizeAmountInput } from "@/utils/amount";
+import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { useKeyboardAnimatedPadding } from "@/utils/keyboard";
 import { fmtDate } from "@/utils/format";
 import { currencySymbolFor } from "@/constants/currencies";
@@ -24,7 +24,7 @@ export default function GoalFormSheet({
   const { userCurrency, t, monthNames } = useAppData();
   const [name, setName] = useState(goal?.name || "");
   const [target, setTarget] = useState(goal ? String(goal.target) : "");
-  const valid = name.trim().length > 0 && parseFloat(target) > 0;
+  const valid = name.trim().length > 0 && parseAmountInput(target) > 0;
   const createdDate = goal?.createdDate || new Date().toISOString().slice(0, 10);
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -115,7 +115,7 @@ export default function GoalFormSheet({
               onSave({
                 id: goal?.id || nextId(),
                 name: name.trim(),
-                target: parseFloat(target),
+                target: parseAmountInput(target),
                 saved: goal?.saved || 0,
                 createdDate,
                 completed: goal ? goal.completed : false,

@@ -25,6 +25,7 @@ import { prepareForOcr } from "@/utils/receiptPreprocess";
 import { parseReceipt, type ReceiptRead } from "@/utils/receiptParser";
 import { isValidISODate, normalizeDateInput } from "@/utils/date";
 import type { Transaction } from "@/types";
+import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 
 /** Hoy en formato interno, en hora local. */
 function todayISO(): string {
@@ -139,8 +140,8 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
   }
 
   function save() {
-    const amount = Number(amountText.replace(",", "."));
-    if (!isFinite(amount) || amount <= 0) return;
+    const amount = parseAmountInput(amountText);
+    if (amount <= 0) return;
     const iso = normalizeDateInput(date);
     // El campo de fecha es texto libre. Ya hubo un fallo por esto: guardar
     // una fecha imposible tumbaba la app al intentar mostrar ese movimiento
@@ -166,8 +167,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
 
   const cats = kind === "expense" ? EXPENSE_CATS : INCOME_CATS;
   const amountValid = (() => {
-    const n = Number(amountText.replace(",", "."));
-    return isFinite(n) && n > 0;
+    return parseAmountInput(amountText) > 0;
   })();
   const dateValid = isValidISODate(normalizeDateInput(date));
   const canSave = amountValid && dateValid;
@@ -332,7 +332,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
               <Field label={t("scan.fieldAmount")}>
                 <TextInput
                   disableFullscreenUI                  value={amountText}
-                  onChangeText={setAmountText}
+                  onChangeText={(value) => setAmountText(sanitizeAmountInput(value))}
                   keyboardType="decimal-pad"
                   placeholder="0.00"
                   placeholderTextColor="#94a3b8"
@@ -413,7 +413,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
               <Check size={18} color={canSave ? "#ffffff" : "#94a3b8"} />
               <Text className={`font-bold ${canSave ? "text-white" : "text-slate-400"}`}>
                 {canSave
-                  ? t("scan.save", { amount: fmt(Number(amountText.replace(",", "."))) })
+                  ? t("scan.save", { amount: fmt(parseAmountInput(amountText)) })
                   : t("scan.saveDisabled")}
               </Text>
             </TouchableOpacity>

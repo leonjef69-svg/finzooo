@@ -10,7 +10,7 @@ import { gastosDisponibles } from "@/constants/categories";
 import { CARD_SHADOW } from "@/constants/style";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
-import { sanitizeAmountInput } from "@/utils/amount";
+import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { useKeyboardAnimatedPadding } from "@/utils/keyboard";
 import AvisoSoloLectura from "@/components/AvisoSoloLectura";
 import BackButton from "@/components/BackButton";
@@ -86,7 +86,7 @@ export default function CategoryBudgets({
     if (soloLectura) return;
     const newBudgets: Record<string, number> = {};
     Object.entries(amounts).forEach(([id, v]) => {
-      const n = parseFloat(v);
+      const n = parseAmountInput(v);
       if (n > 0) newBudgets[id] = n;
     });
     updateCategoryBudgets(newBudgets);

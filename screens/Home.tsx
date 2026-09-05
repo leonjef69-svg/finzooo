@@ -8,7 +8,7 @@ import { iconoDe } from "@/constants/iconos";
 import { CARD_SHADOW, SALDO_TARJETA, SALDO_VERDE } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
-import { sanitizeAmountInput } from "@/utils/amount";
+import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { estadoEn, fechaEnElMes, mesDe } from "@/utils/calendarioPagos";
 import { availableBalance, budgetUsed } from "@/utils/finances";
 import { fmtDate, monthKey } from "@/utils/format";
@@ -204,7 +204,7 @@ export default function Home({
     setEditingBudget(true);
   }
   function saveBudgetInline() {
-    setBudgetForCurrentMonth(parseFloat(budgetInput) || 0);
+    setBudgetForCurrentMonth(parseAmountInput(budgetInput));
     setEditingBudget(false);
   }
   const monthTx = useMemo(

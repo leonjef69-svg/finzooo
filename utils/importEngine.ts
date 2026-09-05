@@ -11,6 +11,7 @@
 
 import { EXPENSE_CATS, INCOME_CATS } from "@/constants/categories";
 import { PAYMENT_METHODS } from "@/constants/i18n";
+import { isSafeMoneyAmount } from "@/utils/amount";
 
 // ---------------------------------------------------------------------
 // 1. LECTURA DEL ARCHIVO
@@ -250,7 +251,7 @@ export function parseAmount(raw: string): number | null {
   }
 
   const n = parseFloat(normalized);
-  if (isNaN(n)) return null;
+  if (isNaN(n) || !isSafeMoneyAmount(n)) return null;
   return isNegative ? -n : n;
 }
 

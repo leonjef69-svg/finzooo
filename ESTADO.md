@@ -48,6 +48,9 @@ de Contraseña, distingue las causas y no muestra error cuando el usuario cancel
 - CLP, COP y ARS se muestran sin centavos y con separadores locales.
 - Inicio y Reportes usan cantidades compactas en espacios pequeños.
 - Gráficos, leyendas y ejes reservan espacio para monedas grandes.
+- Todos los formularios monetarios comparten un máximo seguro de 13 cifras
+  enteras. Las cantidades antiguas mayores se muestran abreviadas, nunca como
+  notación científica ni con textos de error dentro de las tarjetas.
 - El saludo nunca muestra el correo electrónico completo.
 - El micrófono entiende frases naturales como «almorcé por 20», «sueldo
   1500» o «me cayó un Yape de 30».

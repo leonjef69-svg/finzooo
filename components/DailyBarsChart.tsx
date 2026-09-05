@@ -125,12 +125,11 @@ export default function DailyBarsChart({
   // media pantalla no dice nada que no diga una de 28px.
   const barW = Math.max(6, Math.min(28, colW - 8));
 
-  // Los montos van con su formato completo ("S/ 36.00") si caben; si no,
-  // solo el número. La moneda ya la dice el eje de la izquierda.
-  const anchoCompleto = Math.max(...data.map((d) => textWidthScreen(fmt(d.amount), AMOUNT_FONT)));
-  const usarCompleto = anchoCompleto <= colW;
-  const amountText = (n: number) =>
-    usarCompleto ? fmt(n) : Number.isInteger(n) ? String(n) : n.toFixed(2);
+  // Los montos pasan siempre por el formato monetario para que una cifra
+  // grande nunca se convierta en notación científica.
+  // Incluso sin espacio se conserva el formateador compacto. Convertir el
+  // número directamente a texto hacía aparecer valores como "1e+54".
+  const amountText = (n: number) => fmt(n);
 
   const anchoMonto = Math.max(...data.map((d) => textWidthScreen(amountText(d.amount), AMOUNT_FONT)));
   const pasoMonto = labelStep(anchoMonto, colW);

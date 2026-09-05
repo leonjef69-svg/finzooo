@@ -108,6 +108,7 @@ import { presupuestoDelMes } from "@/utils/presupuestoMensual";
 import { hayDescuadre, maximoAApartar, saldoLibre, totalApartado } from "@/utils/ahorro";
 import { availableBalance } from "@/utils/finances";
 import { saldoAnteriorDe } from "@/utils/saldoAnterior";
+import { isSafeMoneyAmount } from "@/utils/amount";
 import { unlinkCreditPaymentsForHomeTransactions } from "@/utils/creditStore";
 import * as notificationReader from "@/modules/notification-reader";
 import type { Goal, Month, Profile, Transaction } from "@/types";
@@ -1619,6 +1620,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function setBudgetForCurrentMonth(amount: number) {
+    if (!isSafeMoneyAmount(amount) || amount < 0) {
+      showToast("El monto supera el máximo permitido");
+      return;
+    }
     setBudgets((b) => ({ ...b, [mk]: amount }));
     showToast(t("toast.budgetUpdated"));
   }
@@ -1951,11 +1956,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function updateCategoryBudgets(newBudgets: Record<string, number>) {
+    if (Object.values(newBudgets).some((amount) => !isSafeMoneyAmount(amount) || amount < 0)) {
+      showToast("Uno de los montos supera el máximo permitido");
+      return;
+    }
     setCategoryBudgets(newBudgets);
     showToast(t("toast.budgetUpdated"));
   }
 
   function addOrUpdateTransaction(t2: Transaction) {
+    if (!isSafeMoneyAmount(t2.amount) || t2.amount <= 0) {
+      showToast("El monto supera el máximo permitido");
+      return;
+    }
     const existing = transactions.find((p) => p.id === t2.id);
     const isEdit = Boolean(existing);
     // Un movimiento creado por un pago de tarjeta tiene su monto y fecha

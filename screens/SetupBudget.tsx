@@ -5,7 +5,7 @@ import { Bell, ChevronRight, Globe2, Target } from "lucide-react-native";
 import { currencySymbolFor } from "@/constants/currencies";
 import { countryById } from "@/constants/countries";
 import { useAppData } from "@/contexts/AppDataContext";
-import { sanitizeAmountInput } from "@/utils/amount";
+import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { irUnaVez } from "@/utils/nav";
 
 export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => void }) {
@@ -14,7 +14,7 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const now = new Date();
   const monthLabel = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
-  const parsed = parseFloat(amount) || 0;
+  const parsed = parseAmountInput(amount);
   const disabled = !amount || parsed <= 0;
 
   async function enableNotifications() {

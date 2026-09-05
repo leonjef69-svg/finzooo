@@ -13,6 +13,13 @@
 //
 // Al estar en un solo sitio, el arreglo vale para toda la app y no puede
 // volver a quedar a medias en una pantalla.
+/**
+ * Máximo común para todas las monedas. Conserva precisión incluso en monedas
+ * de tres decimales y sigue cubriendo hasta nueve billones de unidades.
+ */
+export const MAX_MONEY_AMOUNT = 9_000_000_000_000;
+export const MAX_MONEY_INTEGER_DIGITS = 13;
+
 export function sanitizeAmountInput(raw: string): string {
   // La coma se trata como separador decimal, no se descarta.
   let s = raw.replace(/,/g, ".").replace(/[^0-9.]/g, "");
@@ -24,12 +31,20 @@ export function sanitizeAmountInput(raw: string): string {
     s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, "");
   }
 
-  return s;
+  const [integer = "", fraction] = s.split(".");
+  const safeInteger = integer.slice(0, MAX_MONEY_INTEGER_DIGITS);
+  return fraction == null
+    ? safeInteger
+    : `${safeInteger}.${fraction.slice(0, 3)}`;
+}
+
+export function isSafeMoneyAmount(value: number): boolean {
+  return Number.isFinite(value) && Math.abs(value) <= MAX_MONEY_AMOUNT;
 }
 
 // Convierte a número lo ya limpiado. Devuelve 0 ante cualquier cosa que no
 // sea un número válido, para que nunca se guarde NaN en un movimiento.
 export function parseAmountInput(raw: string): number {
   const n = parseFloat(sanitizeAmountInput(raw));
-  return Number.isFinite(n) ? n : 0;
+  return isSafeMoneyAmount(n) ? n : 0;
 }

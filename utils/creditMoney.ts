@@ -3,8 +3,9 @@ import {
   currencySymbolFor,
 } from "@/constants/currencies";
 import { fmt } from "@/utils/format";
+import { MAX_MONEY_AMOUNT } from "@/utils/amount";
 
-const MAX_INPUT_LENGTH = 32;
+const MAX_INPUT_LENGTH = 18;
 
 /**
  * Conserva únicamente los caracteres que puede usar un monto escrito. La
@@ -24,7 +25,7 @@ function validThousands(value: string, separator: string) {
 }
 
 function safeAmount(value: number, currencyId: string) {
-  if (!Number.isFinite(value) || value < 0) return null;
+  if (!Number.isFinite(value) || value < 0 || value > MAX_MONEY_AMOUNT) return null;
   const factor = 10 ** currencyDecimals(currencyId);
   if (value > Number.MAX_SAFE_INTEGER / factor) return null;
   return value;

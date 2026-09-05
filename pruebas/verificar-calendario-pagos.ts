@@ -349,7 +349,8 @@ ok(soloMonto("12#") === "12", "el # se cae al escribir");
 ok(soloMonto("abc") === "", "y las letras tambien");
 ok(soloMonto("12,50") === "12.50", "la coma vale como el punto: en Peru se escribe de las dos formas");
 ok(soloMonto("12.5.7") === "12.57", "dos puntos no hacen dos decimales: solo hay una parte decimal");
-ok(soloMonto("12.555") === "12.55", "y como mucho dos decimales, que los centimos no tienen tres cifras");
+ok(soloMonto("12.5555") === "12.555", "admite tres decimales para las monedas que los utilizan");
+ok(soloMonto("12345678901234") === "1234567890123", "detiene el monto en trece cifras enteras");
 ok(soloMonto("12.") === "12.", "se puede quedar a medias mientras se escribe, sin saltar bajo el dedo");
 ok(Number.isFinite(Number(soloMonto("12,50"))), "lo que sale de aqui siempre se puede convertir a numero");
 

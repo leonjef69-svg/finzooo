@@ -317,7 +317,7 @@ console.log("\n--- PRODUCTOS: ENGANCHE Y PANTALLA (paso 3) ---");
   ok(/const \[precioTexto, setPrecioTexto\] = useState\(""\)/.test(pant), "el precio se teclea como texto");
   // Y LA COMA VALE: en Peru se escribe "12,50" tanto como "12.50", y rechazarlo seria rechazar
   // la forma en que la mitad de la gente escribe un precio.
-  ok(/precioTexto\.replace\(",", "\."\)/.test(pant), "y la coma vale como el punto");
+  ok(/parseAmountInput\(precioTexto\)/.test(pant), "y la coma vale como el punto con el límite monetario común");
   // A dos decimales, o un precio con cola de coma flotante acaba impreso en un total.
   ok(/Math\.round\(precio \* 100\) \/ 100/.test(pant), "y se redondea a centimos");
   // Un precio de cero o negativo no es un precio.
@@ -668,7 +668,7 @@ console.log("\n--- ANOTAR UN GASTO O UN INGRESO EN LA CAJA (paso 4) ---");
   // de un producto: como numero, escribir "12." o "12,5" daria saltos bajo el dedo.
   ok(/const \[montoTexto, setMontoTexto\] = useState\(""\)/.test(pant), "el monto se teclea como texto");
   // Y LA COMA VALE COMO EL PUNTO: en Peru se escribe "12,50" tanto como "12.50".
-  ok(/montoTexto\.replace\(",", "\."\)/.test(pant), "y la coma vale como el punto");
+  ok(/parseAmountInput\(montoTexto\)/.test(pant), "y la coma vale como el punto con el límite monetario común");
   // Cero o negativo no es un monto.
   ok(/monto <= 0/.test(pant), "no se admite cero ni negativo");
 

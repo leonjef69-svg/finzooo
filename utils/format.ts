@@ -4,10 +4,47 @@
 // parámetro (no se guarda "por fuera" de React) para garantizar que se
 // actualice de inmediato en toda la app cuando alguien cambia su moneda.
 import { currencyDecimals } from "@/constants/currencies";
+import { MAX_MONEY_AMOUNT } from "@/utils/amount";
 
 const PUNTO_PARA_MILES = new Set(["CLP", "COP", "ARS", "BRL", "EUR"]);
 
+const UNIDADES_GRANDES: Record<number, string> = {
+  3: "mil",
+  6: "M",
+  9: "mil M",
+  12: "bill.",
+  15: "mil bill.",
+  18: "trill.",
+  21: "mil trill.",
+  24: "cuatrill.",
+  27: "mil cuatrill.",
+  30: "quintill.",
+  33: "mil quintill.",
+  36: "sextill.",
+  39: "mil sextill.",
+  42: "septill.",
+  45: "mil septill.",
+  48: "octill.",
+  51: "mil octill.",
+  54: "nonill.",
+  57: "mil nonill.",
+  60: "decill.",
+};
+
+function montoMuyGrande(n: number, symbol: string, currencyId: string) {
+  if (!Number.isFinite(n)) return `${symbol} 0`;
+  const abs = Math.abs(n);
+  const exponent = Math.max(3, Math.floor(Math.log10(abs) / 3) * 3);
+  const scaled = abs / 10 ** exponent;
+  const digits = scaled >= 100 || Number.isInteger(scaled) ? 0 : 1;
+  const decimal = PUNTO_PARA_MILES.has(currencyId) ? "," : ".";
+  return `${n < 0 ? "-" : ""}${symbol} ${scaled.toFixed(digits).replace(".", decimal)} ${UNIDADES_GRANDES[exponent] ?? `×10^${exponent}`}`;
+}
+
 export function fmt(n: number, symbol: string, currencyId = "PEN") {
+  if (!Number.isFinite(n)) return `${symbol} 0`;
+  if (Math.abs(n) > MAX_MONEY_AMOUNT)
+    return montoMuyGrande(n, symbol, currencyId);
   const sign = n < 0 ? "-" : "";
   const abs = Math.abs(n);
   const decimals = currencyDecimals(currencyId);
@@ -20,11 +57,28 @@ export function fmt(n: number, symbol: string, currencyId = "PEN") {
 
 /** Formato corto para tarjetas y gráficos estrechos. */
 export function fmtCompact(n: number, symbol: string, currencyId = "PEN") {
+  if (!Number.isFinite(n)) return `${symbol} 0`;
+  if (Math.abs(n) > MAX_MONEY_AMOUNT)
+    return montoMuyGrande(n, symbol, currencyId);
   const sign = n < 0 ? "-" : "";
   const abs = Math.abs(n);
   if (abs < 1000) return fmt(n, symbol, currencyId);
-  const divisor = abs >= 1_000_000 ? 1_000_000 : 1_000;
-  const suffix = divisor === 1_000_000 ? "M" : "mil";
+  const divisor =
+    abs >= 1_000_000_000_000
+      ? 1_000_000_000_000
+      : abs >= 1_000_000_000
+        ? 1_000_000_000
+        : abs >= 1_000_000
+          ? 1_000_000
+          : 1_000;
+  const suffix =
+    divisor === 1_000_000_000_000
+      ? "bill."
+      : divisor === 1_000_000_000
+        ? "mil M"
+        : divisor === 1_000_000
+          ? "M"
+          : "mil";
   const scaled = abs / divisor;
   const digits = scaled >= 100 || Number.isInteger(scaled) ? 0 : 1;
   const shortNumber = scaled

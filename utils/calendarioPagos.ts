@@ -296,7 +296,10 @@ export function validarPago(
    * pantalla ademas ya no deja teclear otra cosa, pero eso es una cortesia: **la regla vive
    * aqui**, que es por donde pasa todo lo que se guarda.
    */
-  if (tipo !== "recordatorio" && (monto == null || !Number.isFinite(monto) || monto <= 0)) {
+  if (
+    tipo !== "recordatorio" &&
+    (monto == null || !isSafeMoneyAmount(monto) || monto <= 0)
+  ) {
     return { ok: false, motivo: "monto" };
   }
   return { ok: true };
@@ -492,8 +495,8 @@ export function textoDeRepeticion(
 export function soloMonto(texto: string): string {
   const limpio = texto.replace(/[^0-9.,]/g, "").replace(/,/g, ".");
   const trozos = limpio.split(".");
-  if (trozos.length === 1) return trozos[0].slice(0, 9);
-  return trozos[0].slice(0, 9) + "." + trozos.slice(1).join("").slice(0, 2);
+  if (trozos.length === 1) return trozos[0].slice(0, 13);
+  return trozos[0].slice(0, 13) + "." + trozos.slice(1).join("").slice(0, 3);
 }
 
 
@@ -511,3 +514,4 @@ export function soloMonto(texto: string): string {
 export function pagosParaLaNube(lista: PagoProgramado[]): PagoProgramado[] {
   return lista.map((p) => (esFoto(p.icono ?? "") ? { ...p, icono: undefined } : p));
 }
+import { isSafeMoneyAmount } from "@/utils/amount";

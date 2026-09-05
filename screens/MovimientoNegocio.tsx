@@ -6,6 +6,7 @@ import BackButton from "@/components/BackButton";
 import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 import { ahoraDelNegocio, crearMovimientoNegocio, type MetodoDeVenta } from "@/utils/negocio";
+import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 
 /**
  * ANOTAR PLATA QUE ENTRA O SALE DE LA CAJA (Modo Negocio V1, paso 4, 08/08/2026).
@@ -47,8 +48,8 @@ export default function MovimientoNegocio({
   function guardar() {
     // La coma vale como el punto: en Perú se escribe "12,50" tanto como "12.50", y rechazarlo
     // sería rechazar la forma en que la mitad de la gente escribe una cantidad.
-    const monto = Number(montoTexto.replace(",", "."));
-    if (!Number.isFinite(monto) || monto <= 0) {
+    const monto = parseAmountInput(montoTexto);
+    if (monto <= 0) {
       showToast(t("caja.faltaMonto"));
       return;
     }
@@ -137,11 +138,11 @@ export default function MovimientoNegocio({
           </Text>
           <TextInput
             disableFullscreenUI            value={montoTexto}
-            onChangeText={setMontoTexto}
+            onChangeText={(value) => setMontoTexto(sanitizeAmountInput(value))}
             placeholder="0.00"
             placeholderTextColor="#94a3b8"
             keyboardType="decimal-pad"
-            maxLength={9}
+            maxLength={17}
             className="border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-noche-2"
           />
 

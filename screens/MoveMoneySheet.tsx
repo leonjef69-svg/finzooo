@@ -6,7 +6,7 @@ import { X } from "lucide-react-native";
 import ConfirmDialog from "@/components/ConfirmDialog";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
-import { sanitizeAmountInput } from "@/utils/amount";
+import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { useKeyboardAnimatedPadding } from "@/utils/keyboard";
 import type { Goal } from "@/types";
 import { useColorScheme } from "nativewind";
@@ -26,7 +26,7 @@ export default function MoveMoneySheet({
   const [amount, setAmount] = useState("");
   const [confirming, setConfirming] = useState(false);
   const isAdd = mode === "add";
-  const amt = parseFloat(amount) || 0;
+  const amt = parseAmountInput(amount);
   // EL TOPE QUE FALTABA.
   //
   // Apartar solo subia un numero dentro de la meta, sin mirar nada: con

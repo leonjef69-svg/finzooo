@@ -7,6 +7,7 @@ import Toggle from "@/components/Toggle";
 import { CARD_SHADOW } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 import { crearProducto, productoRepetido, type Producto } from "@/utils/negocio";
+import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 
 /**
  * Los productos de un negocio, con su precio.
@@ -79,8 +80,8 @@ export default function Productos({
     }
     // La coma también vale: en Perú se escribe "12,50" tanto como "12.50", y rechazarlo sería
     // rechazar la forma en que la mitad de la gente escribe un precio.
-    const precio = Number(precioTexto.replace(",", "."));
-    if (!Number.isFinite(precio) || precio <= 0) {
+    const precio = parseAmountInput(precioTexto);
+    if (precio <= 0) {
       showToast(t("productos.faltaPrecio"));
       return;
     }
@@ -135,11 +136,11 @@ export default function Productos({
             </Text>
             <TextInput
               disableFullscreenUI              value={precioTexto}
-              onChangeText={setPrecioTexto}
+              onChangeText={(value) => setPrecioTexto(sanitizeAmountInput(value))}
               placeholder="0.00"
               placeholderTextColor="#94a3b8"
               keyboardType="decimal-pad"
-              maxLength={9}
+              maxLength={17}
               className="border-[1.5px] border-slate-200 dark:border-noche-borde rounded-xl px-4 py-3 text-sm text-slate-900 dark:text-slate-100 bg-white dark:bg-noche-2"
             />
 
