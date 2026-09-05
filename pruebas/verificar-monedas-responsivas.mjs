@@ -34,7 +34,12 @@ assert.ok(
 );
 assert.match(daily, /fmtAxis/);
 assert.match(donut, /MIN_VISIBLE_FRACTION/, "la dona conserva visibles los segmentos menores al 1%");
-assert.match(home, /friendlyName/);
+assert.doesNotMatch(home, /home\.greeting|friendlyName\(userName\)/, "Inicio no desperdicia alto con un saludo");
+assert.match(home, /w-\[140px\]/, "el mes tiene un ancho compacto y estable en la cabecera");
+assert.ok(
+  home.indexOf("<ThemeToggleButton />") < home.lastIndexOf("<Bell"),
+  "apariencia y avisos quedan en esquinas opuestas",
+);
 assert.match(home, /adjustsFontSizeToFit/);
 assert.match(friendlyName, /includes\("@"\)/);
 

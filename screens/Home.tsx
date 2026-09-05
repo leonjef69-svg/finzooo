@@ -12,7 +12,6 @@ import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { estadoEn, fechaEnElMes, mesDe } from "@/utils/calendarioPagos";
 import { availableBalance, budgetUsed } from "@/utils/finances";
 import { fmtDate, monthKey } from "@/utils/format";
-import { friendlyName } from "@/utils/friendlyName";
 import { esFoto } from "@/utils/iconosFavoritos";
 import { irUnaVez } from "@/utils/nav";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
@@ -155,7 +154,6 @@ const FilaMovimiento = memo(function FilaMovimiento({
 });
 
 export default function Home({
-  userName,
   month,
   setMonth,
   budget,
@@ -333,59 +331,53 @@ export default function Home({
   return (
     <View className="flex-1 bg-white dark:bg-noche">
       {/* PARTE FIJA
-          El saludo, el mes, el presupuesto y el resumen se quedan quietos:
+          El mes, el presupuesto y el resumen se quedan quietos:
           antes formaban la cabecera de la lista y se iban hacia arriba al
           desplazar, así que para llegar a los movimientos había que pasarlos
           todos, y para volver a mirar el saldo había que subir otra vez.
           Ahora solo se desliza la lista, por debajo. */}
       <View style={{ paddingTop: insets.top }}>
-        <View className="px-5 pt-2 pb-1 flex-row items-center justify-between">
-          <View>
-            <Text className="text-sm text-slate-500 dark:text-slate-300 font-medium">{t("home.greeting")}</Text>
-            <Text
-              className="text-lg font-extrabold"
-              style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-            >
-              {friendlyName(userName)} 👋
-            </Text>
-          </View>
-          <View className="flex-row items-center gap-2">
-            <ThemeToggleButton />
+        <View className="px-5 pt-1.5 pb-2 flex-row items-center justify-between">
+          <ThemeToggleButton />
+
+          <View className="flex-row items-center gap-1">
             <TouchableOpacity
               accessibilityRole="button"
-              accessibilityLabel={t("calendario.titulo")}
-              onPress={() => irUnaVez("/calendario")}
-              className="w-10 h-10 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
+              onPress={() => shiftMonth(-1)}
+              className="w-7 h-9 items-center justify-center"
             >
-              <Bell size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
-              {hayPagosUrgentes ? (
-                <View className="absolute top-2 right-2 w-1.5 h-1.5 bg-rose-500 rounded-full" />
-              ) : null}
+              <ChevronLeft size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+            </TouchableOpacity>
+            <View className="w-[140px] py-1.5 rounded-full bg-slate-50 dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde">
+              <Text
+                className="font-bold text-sm text-center px-1"
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                minimumFontScale={0.82}
+                style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+              >
+                {monthNames[month.m]} {month.y}
+              </Text>
+            </View>
+            <TouchableOpacity
+              accessibilityRole="button"
+              onPress={() => shiftMonth(1)}
+              className="w-7 h-9 items-center justify-center"
+            >
+              <ChevronRight size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
             </TouchableOpacity>
           </View>
-        </View>
 
-        <View className="flex-row items-center justify-center gap-5 mt-2 mb-4">
           <TouchableOpacity
-            onPress={() => shiftMonth(-1)}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
+            accessibilityRole="button"
+            accessibilityLabel={t("calendario.titulo")}
+            onPress={() => irUnaVez("/calendario")}
+            className="w-10 h-10 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
-            <ChevronLeft size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
-          </TouchableOpacity>
-          <View className="px-5 py-1.5 rounded-full bg-slate-50 dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde">
-            <Text
-              className="font-bold text-base text-center"
-              numberOfLines={1}
-              style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-            >
-              {monthNames[month.m]} {month.y}
-            </Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => shiftMonth(1)}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
-          >
-            <ChevronRight size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+            <Bell size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+            {hayPagosUrgentes ? (
+              <View className="absolute top-2 right-2 w-1.5 h-1.5 bg-rose-500 rounded-full" />
+            ) : null}
           </TouchableOpacity>
         </View>
 
