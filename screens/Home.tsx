@@ -539,12 +539,12 @@ export default function Home({
           </TouchableOpacity>
         )}
 
-        <View className="flex-row flex-wrap gap-3 px-5 mt-4">
-          <Animated.View entering={FadeInDown.delay(0 * 70).duration(300)} style={{ width: "47%" }}>
+        <View className="flex-row flex-wrap gap-2 px-5 mt-3">
+          <Animated.View entering={FadeInDown.delay(0 * 70).duration(300)} style={{ flexBasis: "48%", flexGrow: 1 }}>
             <PressableScale
               onPress={startEditBudget}
-              className="bg-sky-50 dark:bg-noche-2 rounded-2xl px-3 py-3 border-[1.5px] border-sky-100 dark:border-noche-borde"
-              style={[softShadow, { minHeight: 90 }]}
+              className="bg-sky-50 dark:bg-noche-2 rounded-2xl px-3 py-2.5 border-[1.5px] border-sky-100 dark:border-noche-borde justify-center"
+              style={[softShadow, { minHeight: 78 }]}
             >
               <View className="flex-row items-center gap-2 mb-1">
                 <Text className="text-base">💰</Text>
@@ -563,10 +563,10 @@ export default function Home({
               </Text>
             </PressableScale>
           </Animated.View>
-          <Animated.View entering={FadeInDown.delay(1 * 70).duration(300)} style={{ width: "47%" }}>
+          <Animated.View entering={FadeInDown.delay(1 * 70).duration(300)} style={{ flexBasis: "48%", flexGrow: 1 }}>
             <PressableScale
-              className="bg-amber-50 dark:bg-noche-2 rounded-2xl px-3 py-3 border-[1.5px] border-amber-200 dark:border-amber-800"
-              style={[softShadow, { minHeight: 90 }]}
+              className="bg-amber-50 dark:bg-noche-2 rounded-2xl px-3 py-2.5 border-[1.5px] border-amber-200 dark:border-amber-800 justify-center"
+              style={[softShadow, { minHeight: 78 }]}
             >
               <View className="flex-row items-center gap-2 mb-1">
                 <Text className="text-base">🕒</Text>
@@ -577,17 +577,17 @@ export default function Home({
                   <TouchableOpacity
                     onPress={() => setConfirmRestoreCarryover(true)}
                     hitSlop={10}
-                    className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900 items-center justify-center border border-emerald-300 dark:border-emerald-700"
+                    className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900 items-center justify-center border border-emerald-300 dark:border-emerald-700"
                   >
-                    <RotateCcw size={17} color="#059669" />
+                    <RotateCcw size={15} color="#059669" />
                   </TouchableOpacity>
                 ) : prevBalance !== 0 ? (
                   <TouchableOpacity
                     onPress={() => setConfirmResetCarryover(true)}
                     hitSlop={10}
-                    className="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-950 items-center justify-center border border-rose-300 dark:border-rose-800"
+                    className="w-7 h-7 rounded-full bg-rose-100 dark:bg-rose-950 items-center justify-center border border-rose-300 dark:border-rose-800"
                   >
-                    <Eraser size={17} color="#e11d48" />
+                    <Eraser size={15} color="#e11d48" />
                   </TouchableOpacity>
                 ) : null}
               </View>
@@ -602,10 +602,10 @@ export default function Home({
               </Text>
             </PressableScale>
           </Animated.View>
-          <Animated.View entering={FadeInDown.delay(2 * 70).duration(300)} style={{ width: "47%" }}>
+          <Animated.View entering={FadeInDown.delay(2 * 70).duration(300)} style={{ flexBasis: "48%", flexGrow: 1 }}>
             <PressableScale
-              className="bg-rose-50 dark:bg-noche-2 rounded-2xl px-3 py-3 border-[1.5px] border-rose-100 dark:border-noche-borde"
-              style={[softShadow, { minHeight: 90 }]}
+              className="bg-rose-50 dark:bg-noche-2 rounded-2xl px-3 py-2.5 border-[1.5px] border-rose-100 dark:border-noche-borde justify-center"
+              style={[softShadow, { minHeight: 78 }]}
             >
               <View className="flex-row items-center gap-2 mb-1">
                 <Text className="text-base">📉</Text>
@@ -623,10 +623,10 @@ export default function Home({
               </Text>
             </PressableScale>
           </Animated.View>
-          <Animated.View entering={FadeInDown.delay(3 * 70).duration(300)} style={{ width: "47%" }}>
+          <Animated.View entering={FadeInDown.delay(3 * 70).duration(300)} style={{ flexBasis: "48%", flexGrow: 1 }}>
             <PressableScale
-              className="bg-emerald-50 dark:bg-noche-2 rounded-2xl px-3 py-3 border-[1.5px] border-emerald-100 dark:border-noche-borde"
-              style={[softShadow, { minHeight: 90 }]}
+              className="bg-emerald-50 dark:bg-noche-2 rounded-2xl px-3 py-2.5 border-[1.5px] border-emerald-100 dark:border-noche-borde justify-center"
+              style={[softShadow, { minHeight: 78 }]}
             >
               <View className="flex-row items-center gap-2 mb-1">
                 <Text className="text-base">📈</Text>
@@ -646,7 +646,7 @@ export default function Home({
           </Animated.View>
         </View>
 
-        <View className="px-5 mt-6 mb-2 flex-row items-center justify-between">
+        <View className="px-5 mt-3 mb-2 flex-row items-center justify-between">
           {selectMode ? (
             <>
               <Text
