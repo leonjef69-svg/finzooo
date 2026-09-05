@@ -204,16 +204,10 @@ console.log("\n--- LOS CUATRO ESTADOS DEL TEXTO ---");
   ok(budgetLeft({ budget: 100, prevBalance: 0, income: 0, spent: 100 }) === 0, "en el limite exacto no queda nada ni se paso nadie");
 }
 
-console.log("\n--- LA TARJETA VERDE DEL SALDO SE VE IGUAL EN LAS DOS PANTALLAS ---");
+console.log("\n--- LA TARJETA VERDE DEL SALDO SOLO SE MUESTRA EN INICIO ---");
 {
-  // Hay dos: la de Inicio y la del Panorama en Reportes. Ensenan el MISMO numero
-  // con el MISMO titulo, asi que son la misma tarjeta en dos sitios.
-  //
-  // Estaban distintas y se veia. El usuario mando las dos capturas juntas el
-  // 07/08/2026: "redondea las esquinas y los bordes emparejalos al igual que los
-  // demas, y ponle un color que vaya de acorde, no ese aparente blanco que se ve
-  // feo". El aspecto estaba escrito a mano en cada pantalla, se arreglo en una, y
-  // la otra se quedo atras — el fallo que este proyecto repite.
+  // Reportes ya no repite el saldo ni sus cuatro cifras: esos datos pertenecen
+  // a Inicio. Conservamos aquí la protección visual de la única tarjeta restante.
   const fs = await import("fs");
   const path = await import("path");
   const RAIZ = process.cwd();
@@ -241,7 +235,7 @@ console.log("\n--- LA TARJETA VERDE DEL SALDO SE VE IGUAL EN LAS DOS PANTALLAS -
   const estiloLimpio = estilo.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   ok(!/rounded-\[/.test(estiloLimpio), "sin clases de Tailwind aqui, que no se generan");
 
-  for (const [nombre, fuente] of [["Inicio", inicio], ["Reportes", reportes]] as const) {
+  for (const [nombre, fuente] of [["Inicio", inicio]] as const) {
     ok(fuente.includes("style={SALDO_TARJETA}"), `${nombre} usa el aspecto compartido`);
     ok(fuente.includes("SALDO_VERDE"), `${nombre} usa el verde compartido`);
     // Y ninguna puede volver a escribir ESE verde a mano: es como se separaron.
@@ -253,6 +247,8 @@ console.log("\n--- LA TARJETA VERDE DEL SALDO SE VE IGUAL EN LAS DOS PANTALLAS -
     );
     ok(suVerde.length === 0, `${nombre} no lleva el verde del saldo escrito a mano`);
   }
+  ok(!reportes.includes("style={SALDO_TARJETA}"), "Reportes no repite la tarjeta de saldo");
+  ok(!reportes.includes('t("reports.formula")'), "Reportes no repite las cuatro cifras de Inicio");
 }
 
 console.log("\n--- NINGUNA CLASE DE TAILWIND FUERA DE DONDE SE LEEN ---");

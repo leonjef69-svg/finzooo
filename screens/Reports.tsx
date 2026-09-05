@@ -3,12 +3,8 @@ import { ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from "r
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import {
-  ArrowDownCircle,
-  ArrowUpCircle,
   Crown,
-  PieChart as PieChartIcon,
   Sparkles,
-  Wallet,
 } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import DonutChart from "@/components/DonutChart";
@@ -18,14 +14,9 @@ import AnimatedBar from "@/components/AnimatedBar";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
 import { catInfo } from "@/constants/categories";
 import { COLOR_HEX_600 } from "@/constants/colors";
-import { CARD_SHADOW, SALDO_TARJETA, SALDO_VERDE } from "@/constants/style";
+import { CARD_SHADOW } from "@/constants/style";
 import { monthKey } from "@/utils/format";
-import {
-  availableBalance,
-  budgetLeft,
-  budgetUsed,
-  health,
-} from "@/utils/finances";
+import { budgetLeft, budgetUsed, health } from "@/utils/finances";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
 
@@ -276,19 +267,12 @@ export default function Reports({
   const resumen = useMemo(() => {
     const cifras = { budget, spent, income, prevBalance };
     return {
-      disponible: availableBalance(cifras),
       usado: budgetUsed(cifras),
       restante: budgetLeft(cifras),
       salud: health(cifras),
     };
   }, [budget, spent, income, prevBalance]);
 
-  const SALUD_TEXTO: Record<string, string> = {
-    good: t("reports.healthGood"),
-    tight: t("reports.healthTight"),
-    over: t("reports.healthOver"),
-    unknown: t("reports.healthUnknown"),
-  };
   const SALUD_COLOR: Record<string, string> = {
     good: "#34d399",
     tight: "#fbbf24",
@@ -330,97 +314,10 @@ export default function Reports({
         </TouchableOpacity>
       )}
 
-      {/* PANORAMA DEL MES (Premium).
-          Cada cifra de aquí sale de utils/finances.ts, con los movimientos y
-          presupuestos guardados. Nada es de ejemplo. */}
+      {/* En Reportes no repetimos el saldo ni las cuatro cifras de Inicio.
+          Aquí empieza directamente el análisis del mes. */}
       {isPremium && (
         <>
-          <LinearGradient
-            colors={[...SALDO_VERDE]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            // Mismo aspecto que la tarjeta del saldo en Inicio: es el MISMO número
-            // con el MISMO título en otra pantalla, así que no puede verse
-            // distinto. Aquí iba con un verde más apagado, menos esquina y —lo que
-            // se veía feo— sin recortar el degradado.
-            // Por "style" y no por clases: ver la nota en constants/style.
-            className="mx-5 mt-4 px-5 py-4"
-            style={SALDO_TARJETA}
-          >
-            <Text className="text-emerald-100 text-xs font-semibold">
-              {t("home.availableBalance")}
-            </Text>
-            <Text className="text-white text-4xl font-extrabold mt-0.5" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58}>
-              {fmt(resumen.disponible)}
-            </Text>
-            <View className="flex-row items-center gap-1.5 mt-2">
-              <View
-                className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: SALUD_COLOR[resumen.salud] }}
-              />
-              <Text className="text-emerald-50 text-xs">{SALUD_TEXTO[resumen.salud]}</Text>
-            </View>
-          </LinearGradient>
-
-          {/* DE DÓNDE SALE EL DISPONIBLE.
-              Antes esto eran cuatro casillas en fila: presupuesto, gastos,
-              ingresos y disponible. Y no sumaban a la vista — 100 − 50 + 3 da
-              53, no 284— porque faltaba el saldo que viene arrastrado de los
-              meses anteriores, que en ese caso era la mayor parte del total.
-              Cuatro números correctos que no cuadran entre sí se leen como
-              números inventados, y con razón.
-              Ahora se ve la cuenta entera, línea por línea, y cierra. De paso
-              se acaba el "Presupuesto d..." recortado por falta de sitio. */}
-          <View
-            className="mx-5 mt-2.5 rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2 flex-row"
-            style={CARD_SHADOW}
-          >
-            {[
-              // La casilla que estaba antes en este sitio repetía el
-              // "Disponible" que ya sale en grande justo encima, y a cambio
-              // faltaba el saldo arrastrado de los meses anteriores — que
-              // aquí eran 231 de los 284, la mayor parte del total.
-              //
-              // Por eso las cuatro cifras no sumaban: 100 − 50 + 3 daba 53 y
-              // arriba ponía 284. Cambiando la casilla repetida por la que
-              // faltaba, las cuatro suman EXACTAMENTE el número de arriba.
-              { label: t("home.previousBalance"), value: prevBalance, Icon: Wallet, color: "#64748b" },
-              { label: t("reports.budgetShort"), value: budget, Icon: PieChartIcon, color: "#0ea5e9" },
-              { label: t("exportPdf.income"), value: income, Icon: ArrowUpCircle, color: "#059669" },
-              { label: t("exportPdf.expenses"), value: spent, Icon: ArrowDownCircle, color: "#e11d48" },
-            ].map((c, i) => (
-              <View
-                key={i}
-                className={`flex-1 items-center py-3 px-1 ${
-                  i > 0 ? "border-l-[1.5px] border-slate-200 dark:border-noche-borde" : ""
-                }`}
-              >
-                <c.Icon size={15} color={c.color} />
-                <Text
-                  className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 text-center"
-                  numberOfLines={1}
-                >
-                  {c.label}
-                </Text>
-                <Text
-                  className="text-[11px] font-extrabold mt-0.5 text-center"
-                  style={{ color: primaryTextColor }}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                >
-                  {fmtCompact(c.value)}
-                </Text>
-              </View>
-            ))}
-          </View>
-
-          {/* La cuenta, escrita. Una línea pequeña, pero es la que convierte
-              cuatro cifras sueltas en algo comprobable de un vistazo: se
-              suman las de arriba y tiene que dar el número grande. */}
-          <Text className="text-[10px] text-slate-400 dark:text-slate-500 text-center mt-1.5 px-5">
-            {t("reports.formula")}
-          </Text>
-
           {/* Presupuesto utilizado. Solo si hay presupuesto: sin él, una
               barra de progreso no mide nada y un 0% engañaría. */}
           {budget > 0 && (
