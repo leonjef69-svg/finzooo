@@ -23,6 +23,8 @@ import { nextId } from "@/utils/id";
 import { horaDe } from "@/utils/format";
 import { iconoDe, TODOS_LOS_GRUPOS } from "@/constants/iconos";
 import { alternar, esFoto, getFavoritos } from "@/utils/iconosFavoritos";
+import { esPropia } from "@/utils/categoriasPropias";
+import { sanitizeName } from "@/utils/categoryCustom";
 import type { Month, Transaction } from "@/types";
 import { useColorScheme } from "nativewind";
 
@@ -43,7 +45,7 @@ export default function AddSheet({
   onClose: () => void;
   onSave: (t: Transaction) => void;
 }) {
-  const { userCurrency, userCountry, t, categoriasPropias, categoriaRecienCreada, olvidarCategoriaRecienCreada, guardarFavoritos, showToast } =
+  const { userCurrency, userCountry, t, categoriasPropias, categoriaRecienCreada, olvidarCategoriaRecienCreada, guardarFavoritos, showToast, categoryOverrides, updateCategoryOverrides, editarCategoria } =
     useAppData();
   const [type, setType] = useState<"expense" | "income">(
     initialType || transaction?.type || "expense"
@@ -62,7 +64,9 @@ export default function AddSheet({
     expense: ["comida", "transporte", "compras"],
     income: ["salario", "freelance", "regalo"],
   });
-  const lugarAReemplazar = useRef<number | null>(null);
+  const [cambiandoLugar, setCambiandoLugar] = useState<number | null>(null);
+  const [renombrando, setRenombrando] = useState<string | null>(null);
+  const [nombreTemporal, setNombreTemporal] = useState("");
   const [date, setDate] = useState(transaction?.date || defaultDateForMonth(currentMonth));
   const [method, setMethod] = useState(transaction?.method || "debit");
   const [description, setDescription] = useState(transaction?.description || "");
@@ -95,13 +99,40 @@ export default function AddSheet({
   }, [cats, idsRapidos, type]);
 
   function abrirCambioDeCategoria(indice: number) {
-    lugarAReemplazar.current = indice;
-    irUnaVez({ pathname: "/nueva-categoria", params: { tipo: type, actual: category } });
+    setRenombrando(null);
+    setCambiandoLugar((actual) => actual === indice ? null : indice);
   }
 
   function abrirCambioDeNombre(categoryId: string) {
-    lugarAReemplazar.current = null;
-    irUnaVez({ pathname: "/nueva-categoria", params: { tipo: type, actual: categoryId, editar: "1" } });
+    setCambiandoLugar(null);
+    setRenombrando(categoryId);
+    setNombreTemporal(t(catInfo(categoryId).label));
+  }
+
+  function reemplazarCategoria(indice: number, nuevaId: string) {
+    setIdsRapidos((anteriores) => {
+      const siguientes = [...anteriores[type]];
+      const otroLugar = siguientes.indexOf(nuevaId);
+      if (otroLugar >= 0) [siguientes[indice], siguientes[otroLugar]] = [siguientes[otroLugar], siguientes[indice]];
+      else siguientes[indice] = nuevaId;
+      return { ...anteriores, [type]: siguientes };
+    });
+    setCategory(nuevaId);
+    setIcono(catInfo(nuevaId).iconoNombre);
+    setIconColor(catInfo(nuevaId).color);
+    setCambiandoLugar(null);
+  }
+
+  function guardarNombre(categoryId: string) {
+    const limpio = sanitizeName(nombreTemporal);
+    if (!limpio) return;
+    if (esPropia(categoryId)) editarCategoria(categoryId, { nombre: limpio });
+    else updateCategoryOverrides({
+      ...categoryOverrides,
+      [categoryId]: { ...categoryOverrides[categoryId], name: limpio },
+    });
+    setRenombrando(null);
+    showToast(t("nuevaCat.guardada"));
   }
 
   function iconosRelacionados(categoryId: string): string[] {
@@ -164,21 +195,12 @@ export default function AddSheet({
   // enseña la que esté puesta, sea de fábrica o propia.
   useEffect(() => {
     if (!categoriaRecienCreada) return;
-    if (lugarAReemplazar.current !== null) {
-      const indice = lugarAReemplazar.current;
-      setIdsRapidos((anteriores) => {
-        const siguientes = [...anteriores[type]];
-        siguientes[indice] = categoriaRecienCreada;
-        return { ...anteriores, [type]: siguientes };
-      });
-      lugarAReemplazar.current = null;
-    }
     setCategory(categoriaRecienCreada);
     // Al volver de "Ver todas", adopta también el dibujo de esa categoría.
     // El movimiento conserva así exactamente lo que la persona acaba de elegir.
     setIcono(catInfo(categoriaRecienCreada).iconoNombre);
     olvidarCategoriaRecienCreada();
-  }, [categoriaRecienCreada, olvidarCategoriaRecienCreada, type]);
+  }, [categoriaRecienCreada, olvidarCategoriaRecienCreada]);
 
   useEffect(() => {
     if (!transaction) setCategory(type === "expense" ? "comida" : "salario");
@@ -505,6 +527,38 @@ export default function AddSheet({
                       </TouchableOpacity>
                     </View>
                     </View>
+                    {renombrando === cat.id ? (
+                      <View className="flex-row items-center gap-1.5">
+                        <TextInput
+                          disableFullscreenUI
+                          autoFocus
+                          value={nombreTemporal}
+                          onChangeText={setNombreTemporal}
+                          maxLength={24}
+                          className="flex-1 h-9 rounded-xl border border-emerald-400 bg-white dark:bg-noche-2 px-3 text-sm text-slate-900 dark:text-slate-100"
+                        />
+                        <TouchableOpacity onPress={() => guardarNombre(cat.id)} className="w-8 h-8 rounded-full bg-emerald-600 items-center justify-center">
+                          <Check size={16} color="#ffffff" />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setRenombrando(null)} className="w-8 h-8 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center">
+                          <X size={16} color="#64748b" />
+                        </TouchableOpacity>
+                      </View>
+                    ) : null}
+                    {cambiandoLugar === indice ? (
+                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7, paddingRight: 16 }}>
+                        {cats.map((opcion) => (
+                          <TouchableOpacity
+                            key={opcion.id}
+                            onPress={() => reemplazarCategoria(indice, opcion.id)}
+                            className={`flex-row items-center gap-1 rounded-full border px-2.5 py-1.5 ${opcion.id === cat.id ? "border-emerald-500 bg-emerald-50" : "border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde"}`}
+                          >
+                            <CategoryAvatar id={opcion.id} size={14} />
+                            <Text className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">{t(opcion.label)}</Text>
+                          </TouchableOpacity>
+                        ))}
+                      </ScrollView>
+                    ) : null}
                     <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
@@ -600,7 +654,8 @@ export default function AddSheet({
                 </View>
                 <TouchableOpacity
                   onPress={() => {
-                    lugarAReemplazar.current = null;
+                    setCambiandoLugar(null);
+                    setRenombrando(null);
                     irUnaVez({
                       pathname: "/nueva-categoria",
                       params: { tipo: type, actual: category },

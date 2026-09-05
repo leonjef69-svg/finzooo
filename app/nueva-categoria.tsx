@@ -29,11 +29,10 @@ import { safeBack } from "@/utils/nav";
  * distintas. Ver elegirCategoriaEnMovimiento.
  */
 export default function NuevaCategoriaRoute() {
-  const { tipo, id, actual, editar } = useLocalSearchParams<{
+  const { tipo, id, actual } = useLocalSearchParams<{
     tipo?: string;
     id?: string;
     actual?: string;
-    editar?: string;
   }>();
   const { elegirCategoriaEnMovimiento } = useAppData();
   const suTipo = tipo === "income" ? "income" : "expense";
@@ -43,7 +42,6 @@ export default function NuevaCategoriaRoute() {
       tipo={suTipo}
       editandoId={id}
       actual={actual}
-      editarDirecto={editar === "1"}
       onBack={safeBack}
       onCreada={() => router.back()}
       // Sin "actual" no hay lista de la que elegir, así que tampoco hace falta

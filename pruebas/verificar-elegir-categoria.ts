@@ -77,7 +77,10 @@ console.log("\n--- EN NUEVO MOVIMIENTO HAY ATAJOS SIN PERDER EL CATALOGO ---");
   ok(addLimpio.includes("onLongPress={() => abrirCambioDeCategoria(indice)}"), "mantener pulsada permite reemplazar la categoria");
   ok(addLimpio.includes("<Repeat2"), "el icono de cambio hace visible esa funcion");
   ok(addLimpio.includes("<Pencil"), "cada categoria tiene acceso para cambiar su nombre");
-  ok(addLimpio.includes("siguientes[indice] = categoriaRecienCreada"), "la elegida reemplaza solo la posicion indicada");
+  ok(addLimpio.includes("cambiandoLugar === indice"), "las opciones se abren dentro del movimiento");
+  ok(addLimpio.includes("reemplazarCategoria(indice, opcion.id)"), "la elegida reemplaza solo la posicion indicada");
+  ok(addLimpio.includes("renombrando === cat.id"), "el nombre se edita en la misma fila");
+  ok(addLimpio.includes("guardarNombre(cat.id)"), "el nombre se guarda sin abrir otra pantalla");
   ok(!addLimpio.includes("const elegida = cats.find((c) => c.id === category)"), "elegir iconos no reordena las categorias");
   ok(addLimpio.includes("setIconoConColores(id)"), "tocar un icono abre su fila de colores");
   ok(addLimpio.includes("setIconoConColores(null)"), "volver a tocarlo cierra los colores");
@@ -86,7 +89,6 @@ console.log("\n--- EN NUEVO MOVIMIENTO HAY ATAJOS SIN PERDER EL CATALOGO ---");
   ok(/style=\{\{ height: 48 \}\}/.test(addLimpio), "el campo de monto queda realmente compacto");
 }
 
-ok(ruta.includes('editarDirecto={editar === "1"}'), "el lapiz abre la categoria directamente en edicion");
 
 console.log("\n--- Y DETRAS HAY UNA SOLA PANTALLA, NO DOS ---");
 {

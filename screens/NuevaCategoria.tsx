@@ -678,7 +678,6 @@ export default function NuevaCategoria({
   tipo,
   editandoId,
   actual,
-  editarDirecto = false,
   onBack,
   onCreada,
   onElegir,
@@ -691,8 +690,6 @@ export default function NuevaCategoria({
    * lista y para saber si se puede ofrecer "Editar «X»".
    */
   actual?: string;
-  /** Abre con la categoría actual ya cargada para cambiarle el nombre. */
-  editarDirecto?: boolean;
   onBack: () => void;
   /** Se avisa con el id para poder dejarla ya elegida en el movimiento. */
   onCreada: (id: string) => void;
@@ -1098,13 +1095,6 @@ export default function NuevaCategoria({
     setComoEra({ nombre: suNombre, icono: suIcono, color: info.color, foto: info.image });
   }
 
-  // El lápiz de Nuevo movimiento entra directamente con esa categoría lista
-  // para editar. El selector normal sigue abriendo vacío para poder elegir otra.
-  useEffect(() => {
-    if (editarDirecto && actual) elegirDeLaLista(actual);
-    // Solo debe ocurrir al montar; repetirlo pisaría lo que la persona escribe.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   async function tomarFoto() {
     const permiso = await ImagePicker.requestCameraPermissionsAsync();
