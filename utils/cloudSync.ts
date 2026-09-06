@@ -4,6 +4,7 @@ import { borrarNegocioDeLaNube } from "@/utils/cloudNegocio";
 import { deleteCreditCloudAccount } from "@/utils/creditCloud";
 import type { Goal, Transaction } from "@/types";
 import type { PagoProgramado } from "@/utils/calendarioPagos";
+import { utf8ByteLength } from "@/utils/utf8";
 import {
   mergeTransactions,
   pruneDeletedTransactionIds,
@@ -218,7 +219,7 @@ const LIMITE_FIRESTORE = 1_000_000;
 const TOPE_SEGURO = 800_000;
 
 function pesa(data: CloudData): number {
-  return JSON.stringify(data).length;
+  return utf8ByteLength(JSON.stringify(data));
 }
 
 /** Quita todo lo que sea una foto pegada, que es lo único que pesa de verdad aquí. */
