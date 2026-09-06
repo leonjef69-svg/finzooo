@@ -44,7 +44,7 @@ service cloud.firestore {
                          && request.resource.data.keys().hasOnly([
                               'hasOnboarded', 'userName', 'userPhoto', 'userCurrency',
                               'userLanguage', 'budgets', 'categoryBudgets', 'transactions', 'deletedTransactionIds',
-                              'goals', 'pagosProgramados', 'isPremium', 'premiumTrialStartedAt', 'merchantLearned',
+                              'goals', 'deletedGoalIds', 'pagosProgramados', 'isPremium', 'premiumTrialStartedAt', 'merchantLearned',
                               'categoryOverrides', 'categoriasPropias', 'carryoverCleared',
                               'iconosFavoritos'
                             ])
@@ -60,6 +60,8 @@ service cloud.firestore {
                          && (!('deletedTransactionIds' in request.resource.data)
                               || request.resource.data.deletedTransactionIds is list)
                          && request.resource.data.goals is list
+                         && (!('deletedGoalIds' in request.resource.data)
+                              || request.resource.data.deletedGoalIds is list)
                          && request.resource.data.isPremium is bool
                          // Premium nunca lo concede el celular. Una cuenta nueva empieza
                          // sin Premium y, después, el cliente solo puede conservar el valor

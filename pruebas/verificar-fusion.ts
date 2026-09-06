@@ -4,8 +4,13 @@
 // escriba —el servicio que registra un yapeo con la app cerrada— la lista de
 // memoria se queda vieja y el siguiente guardado la pisa: el movimiento
 // desaparece sin dejar rastro. Esto comprueba que eso no pase.
-import { mergeTransactions, hayNovedades } from "@/utils/mergeTransactions";
-import type { Transaction } from "@/types";
+import {
+  mergeGoals,
+  mergeTransactions,
+  hayNovedades,
+  pruneDeletedGoalIds,
+} from "@/utils/mergeTransactions";
+import type { Goal, Transaction } from "@/types";
 
 let fallos = 0;
 function ok(c: boolean, m: string) { console.log(`  ${c ? "OK   " : "FALLA"} ${m}`); if (!c) fallos++; }
@@ -21,6 +26,19 @@ function tx(id: number, date: string, amount: number, description = ""): Transac
     notes: "",
     method: "cash",
   };
+}
+
+function goal(id: number, name: string, saved = 0): Goal {
+  return { id, name, saved, target: 100, createdDate: "2026-09-05", completed: false };
+}
+
+console.log("\n--- LAS METAS DE DOS CELULARES NO SE PIERDEN NI REAPARECEN ---");
+{
+  const juntas = mergeGoals([goal(2, "Viaje", 20)], [goal(1, "Laptop"), goal(2, "Viaje viejo")]);
+  ok(juntas.length === 2, "se conservan las metas de ambos celulares");
+  ok(juntas.find((g) => g.id === 2)?.saved === 20, "gana el cambio reciente del celular");
+  const borradas = pruneDeletedGoalIds([1, 1]);
+  ok(juntas.filter((g) => !borradas.includes(g.id)).every((g) => g.id !== 1), "una meta eliminada no reaparece");
 }
 
 console.log("\n--- EL YAPEO REGISTRADO CON LA APP CERRADA NO SE PIERDE ---");

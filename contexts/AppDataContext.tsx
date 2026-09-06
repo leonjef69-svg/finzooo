@@ -100,9 +100,11 @@ import {
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
 import { limpiarPendientes, pendientesDeCaptura } from "@/utils/capturaEnFondo";
 import {
+  mergeGoals,
   mergeTransactions,
   hayNovedades,
   mergeCaptureLog,
+  pruneDeletedGoalIds,
   pruneDeletedTransactionIds,
 } from "@/utils/mergeTransactions";
 import { presupuestoDelMes } from "@/utils/presupuestoMensual";
@@ -475,6 +477,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // independiente del resto. Lo maneja el botón de Inicio.
   const [carryoverCleared, setCarryoverCleared] = useState<string[]>([]);
   const [deletedTransactionIds, setDeletedTransactionIds] = useState<number[]>([]);
+  const [deletedGoalIds, setDeletedGoalIds] = useState<number[]>([]);
   const deletedTransactionIdsRef = useRef<number[]>([]);
   useEffect(() => {
     deletedTransactionIdsRef.current = deletedTransactionIds;
@@ -569,6 +572,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       transactions,
       deletedTransactionIds,
       goals,
+      deletedGoalIds,
       /* SIN LAS FOTOS, IGUAL QUE LOS FAVORITOS DE AQUÍ ABAJO. **Esto estaba escrito y sin
          conectar (20/08/2026).** `pagosParaLaNube` existía, con su explicación, y no la
          llamaba nadie: los pagos subían con la foto pegada. Una foto son unos 18 KB en texto,
@@ -610,9 +614,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setBudgets(cloud.budgets);
     setCategoryBudgets(cloud.categoryBudgets);
     const borrados = pruneDeletedTransactionIds(cloud.deletedTransactionIds ?? []);
+    const metasBorradas = pruneDeletedGoalIds(cloud.deletedGoalIds ?? []);
     setDeletedTransactionIds(borrados);
     setTransactions(cloud.transactions.filter((tx) => !borrados.includes(tx.id)));
-    setGoals(cloud.goals);
+    setDeletedGoalIds(metasBorradas);
+    setGoals(cloud.goals.filter((goal) => !metasBorradas.includes(goal.id)));
     setPagosProgramados(cloud.pagosProgramados ?? []);
     protectExistingIds(cloud.transactions, cloud.goals);
     setIsPremium(cloud.isPremium);
@@ -653,7 +659,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     saveJSON(STORAGE_KEYS.categoryBudgets, cloud.categoryBudgets);
     saveJSON(STORAGE_KEYS.transactions, cloud.transactions);
     saveJSON(STORAGE_KEYS.deletedTransactionIds, borrados);
-    saveJSON(STORAGE_KEYS.goals, cloud.goals);
+    saveJSON(STORAGE_KEYS.goals, cloud.goals.filter((goal) => !metasBorradas.includes(goal.id)));
+    saveJSON(STORAGE_KEYS.deletedGoalIds, metasBorradas);
     saveJSON(STORAGE_KEYS.pagosProgramados, cloud.pagosProgramados ?? []);
     saveJSON(STORAGE_KEYS.isPremium, cloud.isPremium);
     saveJSON(STORAGE_KEYS.merchantLearned, cloud.merchantLearned ?? {});
@@ -695,6 +702,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       savedTransactions,
       savedDeletedTransactionIds,
       savedGoals,
+      savedDeletedGoalIds,
       savedIsPremium,
       savedLearned,
       savedCarryoverCleared,
@@ -710,6 +718,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       loadJSON<Transaction[]>(STORAGE_KEYS.transactions, seedTransactions),
       loadJSON<number[]>(STORAGE_KEYS.deletedTransactionIds, []),
       loadJSON<Goal[]>(STORAGE_KEYS.goals, seedGoals),
+      loadJSON<number[]>(STORAGE_KEYS.deletedGoalIds, []),
       loadJSON<boolean>(STORAGE_KEYS.isPremium, false),
       loadJSON<Record<string, string>>(STORAGE_KEYS.merchantLearned, {}),
       loadJSON<string[]>(STORAGE_KEYS.carryoverCleared, []),
@@ -739,7 +748,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setPruebaInicio(savedPrueba);
     setDeletedTransactionIds(savedDeletedTransactionIds);
     setTransactions(savedTransactions.filter((tx) => !savedDeletedTransactionIds.includes(tx.id)));
-    setGoals(savedGoals);
+    setDeletedGoalIds(savedDeletedGoalIds);
+    setGoals(savedGoals.filter((goal) => !savedDeletedGoalIds.includes(goal.id)));
     setPagosProgramados(savedPagos);
     protectExistingIds(savedTransactions, savedGoals);
     setIsPremium(savedIsPremium);
@@ -780,6 +790,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setCategoryBudgets({});
     setTransactions([]);
     setDeletedTransactionIds([]);
+    setDeletedGoalIds([]);
     setGoals([]);
     setIsPremium(false);
     setDatosNegocio(NEGOCIO_VACIO);
@@ -827,6 +838,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setCategoryBudgets({});
     setTransactions([]);
     setDeletedTransactionIds([]);
+    setDeletedGoalIds([]);
     setGoals([]);
     setIsPremium(false);
     setDatosNegocio(NEGOCIO_VACIO);
@@ -912,6 +924,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (ready) saveJSON(STORAGE_KEYS.goals, goals);
   }, [goals, ready]);
+  useEffect(() => {
+    if (ready) saveJSON(STORAGE_KEYS.deletedGoalIds, deletedGoalIds);
+  }, [deletedGoalIds, ready]);
   useEffect(() => {
     if (!ready) return;
     saveJSON(STORAGE_KEYS.pagosProgramados, pagosProgramados);
@@ -1049,6 +1064,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     iconosFavoritos,
     carryoverCleared,
     deletedTransactionIds,
+    deletedGoalIds,
   ]);
 
   // Al entrar y cada vez que Fino vuelve al frente, recoge primero los
@@ -1061,6 +1077,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       const cloud = await loadCloudData(uid);
       if (!alive || !cloud) return;
       const borrados = pruneDeletedTransactionIds([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])]);
+      const metasBorradas = pruneDeletedGoalIds([...deletedGoalIds, ...(cloud.deletedGoalIds ?? [])]);
       setDeletedTransactionIds((actuales) =>
         actuales.length === borrados.length && actuales.every((id) => borrados.includes(id))
           ? actuales
@@ -1069,12 +1086,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setTransactions((locales) =>
         mergeTransactions(locales, cloud.transactions).filter((tx) => !borrados.includes(tx.id))
       );
+      setDeletedGoalIds(metasBorradas);
+      setGoals((locales) =>
+        mergeGoals(locales, cloud.goals).filter((goal) => !metasBorradas.includes(goal.id))
+      );
     };
     void sincronizarMovimientos();
     return () => {
       alive = false;
     };
-  }, [ready, hasOnboarded, uid, deletedTransactionIds]);
+  }, [ready, hasOnboarded, uid, deletedTransactionIds, deletedGoalIds]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -1366,6 +1387,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         void loadCloudData(uid).then((cloud) => {
           if (!cloud) return;
           const borrados = pruneDeletedTransactionIds([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])]);
+          const metasBorradas = pruneDeletedGoalIds([...deletedGoalIds, ...(cloud.deletedGoalIds ?? [])]);
           setDeletedTransactionIds((actuales) =>
             actuales.length === borrados.length && actuales.every((id) => borrados.includes(id))
               ? actuales
@@ -1373,6 +1395,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           );
           setTransactions((locales) =>
             mergeTransactions(locales, cloud.transactions).filter((tx) => !borrados.includes(tx.id))
+          );
+          setDeletedGoalIds(metasBorradas);
+          setGoals((locales) =>
+            mergeGoals(locales, cloud.goals).filter((goal) => !metasBorradas.includes(goal.id))
           );
         });
       }
@@ -1384,7 +1410,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     };
     // Solo depende de si la app ya está lista: los datos que necesita los
     // lee de captureInputs en el momento de recoger.
-  }, [ready, hasOnboarded, uid, deletedTransactionIds]);
+  }, [ready, hasOnboarded, uid, deletedTransactionIds, deletedGoalIds]);
 
   function setAutoCaptureOn(value: boolean) {
     notificationReader.setEnabled(value);
@@ -2062,6 +2088,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteGoal(id: number) {
+    setDeletedGoalIds((prev) => pruneDeletedGoalIds([...prev, id]));
     setGoals((prev) => prev.filter((g) => g.id !== id));
     showToast(t("toast.goalDeleted"));
   }

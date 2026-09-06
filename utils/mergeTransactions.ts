@@ -1,4 +1,4 @@
-import type { Transaction } from "@/types";
+import type { Goal, Transaction } from "@/types";
 import type { CaptureLogEntry } from "@/utils/autoCapture";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 
@@ -64,6 +64,20 @@ export function hayNovedades(enMemoria: Transaction[], guardadas: Transaction[])
  * conservar los 5.000 más recientes cubre años de uso sin inflar la copia.
  */
 export function pruneDeletedTransactionIds(ids: number[], limit = 5000) {
+  return [...new Set(ids)]
+    .filter(Number.isFinite)
+    .sort((a, b) => b - a)
+    .slice(0, limit);
+}
+
+export function mergeGoals(locales: Goal[], remotas: Goal[]): Goal[] {
+  const porId = new Map<number, Goal>();
+  for (const goal of remotas) porId.set(goal.id, goal);
+  for (const goal of locales) porId.set(goal.id, goal);
+  return [...porId.values()].sort((a, b) => b.id - a.id);
+}
+
+export function pruneDeletedGoalIds(ids: number[], limit = 1000) {
   return [...new Set(ids)]
     .filter(Number.isFinite)
     .sort((a, b) => b - a)

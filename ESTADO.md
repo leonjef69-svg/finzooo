@@ -59,6 +59,9 @@ de Contraseña, distingue las causas y no muestra error cuando el usuario cancel
 - Si Android no puede guardar localmente —por ejemplo, porque el teléfono se
   quedó sin espacio— la app ya no presenta el cambio como un éxito silencioso:
   muestra un aviso traducido y permite volver a intentarlo.
+- Las metas eliminadas quedan registradas en el celular y en Firebase. Al usar
+  la misma cuenta en dos teléfonos, las metas nuevas se combinan y una meta
+  borrada no reaparece por una copia antigua del otro dispositivo.
 - Nuevo movimiento permite elegir sin salir entre tres categorías rápidas,
   recorrer horizontalmente sus iconos, marcar cada dibujo con una estrella,
   reutilizar favoritos y abrir Cámara o Galería junto a cada categoría. También
@@ -128,7 +131,7 @@ aceptar y descargar con la misma cuenta de Google.
 - TypeScript: aprobado.
 - ESLint: aprobado sin errores ni advertencias en el código de la app.
 - Expo Doctor: **18 de 18 comprobaciones aprobadas**.
-- Pruebas: **92 aprobadas**.
+- Pruebas: **93 aprobadas**.
 - Auditores: **7 aprobados**.
 - El lector de Excel usa SheetJS 0.20.3 desde su distribución oficial; se
   retiró la versión 0.18.5 afectada por dos vulnerabilidades conocidas.

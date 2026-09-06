@@ -6,7 +6,9 @@ import type { Goal, Transaction } from "@/types";
 import type { PagoProgramado } from "@/utils/calendarioPagos";
 import { utf8ByteLength } from "@/utils/utf8";
 import {
+  mergeGoals,
   mergeTransactions,
+  pruneDeletedGoalIds,
   pruneDeletedTransactionIds,
 } from "@/utils/mergeTransactions";
 
@@ -21,6 +23,7 @@ export type CloudData = {
   transactions: Transaction[];
   deletedTransactionIds?: number[];
   goals: Goal[];
+  deletedGoalIds?: number[];
   /**
    * El calendario de pagos. Opcional: las cuentas de antes del 18/08/2026 no lo tienen, y
    * sin el "?" leerlas fallaría.
@@ -84,6 +87,7 @@ export async function loadCloudData(uid: string): Promise<CloudData | null> {
       transactions: data.transactions || [],
       deletedTransactionIds: data.deletedTransactionIds || [],
       goals: data.goals || [],
+      deletedGoalIds: data.deletedGoalIds || [],
       // SE LEE, y no solo se escribe. Ya pasó el 07/08 con las categorías propias: estaban
       // en el tipo, se subían bien, y aquí no se leían — así que al entrar desde otro
       // celular volvían vacías, sin dar ningún error.
@@ -170,11 +174,19 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
           ...(siguiente.deletedTransactionIds || []),
         ]);
         const idsBorrados = new Set(borrados);
+        const metasBorradas = pruneDeletedGoalIds([
+          ...(actual.deletedGoalIds || []),
+          ...(siguiente.deletedGoalIds || []),
+        ]);
+        const idsMetasBorradas = new Set(metasBorradas);
         siguiente = {
           ...siguiente,
           deletedTransactionIds: borrados,
           transactions: mergeTransactions(siguiente.transactions, actual.transactions || [])
             .filter((tx) => !idsBorrados.has(tx.id)),
+          deletedGoalIds: metasBorradas,
+          goals: mergeGoals(siguiente.goals, actual.goals || [])
+            .filter((goal) => !idsMetasBorradas.has(goal.id)),
         };
       }
 
