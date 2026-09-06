@@ -1,7 +1,0 @@
-Mejora resumen y acceso Premium de espacios
-
-- muestra ingresos y gastos en Cajas y Familia
-- adapta textos y montos largos a tarjetas compactas
-- reserva crear e invitar familias para Premium
-- mantiene el acceso por codigo para miembros gratuitos
-- refuerza las mismas condiciones en Firebase
