@@ -62,6 +62,8 @@ de Contraseña, distingue las causas y no muestra error cuando el usuario cancel
 - Las metas eliminadas quedan registradas en el celular y en Firebase. Al usar
   la misma cuenta en dos teléfonos, las metas nuevas se combinan y una meta
   borrada no reaparece por una copia antigua del otro dispositivo.
+- Las cuatro frecuencias de exportación se ordenan 2 × 2 en celulares pequeños
+  o con letra ampliada, y aprovechan una sola fila únicamente cuando hay espacio.
 - Nuevo movimiento permite elegir sin salir entre tres categorías rápidas,
   recorrer horizontalmente sus iconos, marcar cada dibujo con una estrella,
   reutilizar favoritos y abrir Cámara o Galería junto a cada categoría. También
@@ -131,7 +133,7 @@ aceptar y descargar con la misma cuenta de Google.
 - TypeScript: aprobado.
 - ESLint: aprobado sin errores ni advertencias en el código de la app.
 - Expo Doctor: **18 de 18 comprobaciones aprobadas**.
-- Pruebas: **93 aprobadas**.
+- Pruebas: **94 aprobadas**.
 - Auditores: **7 aprobados**.
 - El lector de Excel usa SheetJS 0.20.3 desde su distribución oficial; se
   retiró la versión 0.18.5 afectada por dos vulnerabilidades conocidas.
@@ -187,11 +189,6 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 
 ### Correcciones y comprobaciones antes del próximo AAB
 
-- Corregir la fila `Diario / Semanal / Mensual / Personalizado`: en celulares
-  estrechos `Personalizado` cae solo a una segunda fila. Debe quedar ordenada
-  como 2 × 2 en pantallas estrechas y como una sola fila cuando haya espacio.
-- Probar esa adaptación con pantalla pequeña, mediana y grande, letra ampliada
-  y escala de pantalla aumentada.
 - Mejorar el selector de monedas para enseñar primero el símbolo junto con el
   código ISO, por ejemplo `S/ · PEN`, `$ · USD` y `€ · EUR`. No ocultar el ISO
   por completo: distintas monedas comparten símbolos como `$` y se volverían

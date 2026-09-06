@@ -16,6 +16,7 @@ import {
 } from "@/utils/exportarEnFondo";
 import { puedeExportarEnFondo, puedePdfEnFondo } from "@/modules/export-scheduler";
 import { flushPendingSaves } from "@/utils/storage";
+import { columnasFrecuenciaExportacion } from "@/utils/responsiveLayout";
 import {
   DEFAULT_SCHEDULE,
   MAX_MONTH_DAY,
@@ -38,8 +39,8 @@ function hhmm(h: number, m: number) {
 }
 
 export default function ScheduledExportSettings({ onBack }: { onBack: () => void }) {
-  const { width } = useWindowDimensions();
-  const frecuenciaEstrecha = width < 390;
+  const { width, fontScale } = useWindowDimensions();
+  const columnasFrecuencia = columnasFrecuenciaExportacion(width, fontScale);
   const { t, showToast, transactions, monthNames } = useAppData();
   const insets = useSafeAreaInsets();
 
@@ -454,9 +455,16 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                       ? "bg-emerald-600 border-emerald-600"
                       : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
                   }`}
-                  style={frecuenciaEstrecha ? { width: "48%", alignItems: "center" } : undefined}
+                  style={
+                    columnasFrecuencia === 2
+                      ? { width: "48%", alignItems: "center" }
+                      : { flex: 1, alignItems: "center" }
+                  }
                 >
                   <Text
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.85}
                     className={`text-sm font-bold ${
                       schedule.frequency === f.id ? "text-white" : "text-slate-600 dark:text-slate-200"
                     }`}
