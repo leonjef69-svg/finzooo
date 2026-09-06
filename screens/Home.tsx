@@ -342,7 +342,7 @@ export default function Home({
           desplazar, así que para llegar a los movimientos había que pasarlos
           todos, y para volver a mirar el saldo había que subir otra vez.
           Ahora solo se desliza la lista, por debajo. */}
-      <View style={{ paddingTop: insets.top }}>
+      <View style={{ paddingTop: insets.top + 6 }}>
         <View className="px-5 pt-2.5 pb-2 flex-row items-center justify-between">
           <ThemeToggleButton />
 

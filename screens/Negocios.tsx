@@ -4,7 +4,6 @@ import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-nativ
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Store, Plus, Trash2, Check, X, Package, ChevronRight } from "lucide-react-native";
 import BackButton from "@/components/BackButton";
-import SpaceSwitcher from "@/components/SpaceSwitcher";
 import { CARD_SHADOW } from "@/constants/style";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -76,7 +75,6 @@ export default function Negocios({ onBack }: { onBack: () => void }) {
         <View className="w-10" />
       </View>
 
-      <SpaceSwitcher active="boxes" />
 
       <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
         <View className="flex-row items-start gap-3 mb-5">

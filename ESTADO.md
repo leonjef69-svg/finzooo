@@ -1,6 +1,6 @@
 # Estado actual de Fino
 
-Actualizado: **1 de septiembre de 2026**.
+Actualizado: **6 de septiembre de 2026**.
 
 Este archivo permite retomar el proyecto sin empezar de cero. No contiene
 credenciales, correos, UID, huellas completas ni datos privados de testers.
@@ -50,9 +50,14 @@ de Contraseña, distingue las causas y no muestra error cuando el usuario cancel
   acciones de borrar y restaurar tienen mayor tamaño, contraste, significado
   visual diferente y una descripción para lectores de pantalla.
 - Inicio muestra un selector compacto entre Personal, Familia y Cajas. Personal
-  conserva el presupuesto actual; Cajas abre los negocios que ya guardan su
-  dinero por separado. Familia tiene una pantalla identificable, pero todavía
-  no guarda ni comparte datos hasta implementar invitaciones y permisos seguros.
+  conserva el presupuesto actual; Cajas tiene una pantalla propia, totalmente
+  separada de Modo negocio, para crear cajas, anotar ingresos y gastos y consultar
+  el saldo y el historial de cada una. Se guarda en el teléfono y, con sesión
+  iniciada, en un documento propio de Firebase. Familia tiene una pantalla
+  identificable, pero todavía no guarda ni comparte datos hasta implementar
+  invitaciones y permisos seguros.
+- La cabecera de Inicio respeta el área segura y añade 6 px de aire para que los
+  controles superiores no rocen el borde físico del celular.
 - La elección se conserva aunque Android cierre Fino al verificar el correo.
 - Solicitud del permiso de avisos antes del formulario de cuenta.
 - La bienvenida conserva su paso al volver del permiso de Android.

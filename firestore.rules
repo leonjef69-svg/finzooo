@@ -110,6 +110,14 @@ service cloud.firestore {
                       && request.auth.token.email_verified == true;
     }
 
+    // Cajas personales independientes. No son negocios y viven en su propio
+    // documento para que sus movimientos no se mezclen con ninguno de los dos.
+    match /cajas/{userId} {
+      allow read, write: if request.auth != null
+                      && request.auth.uid == userId
+                      && request.auth.token.email_verified == true;
+    }
+
     // Tarjetas de crédito: documento separado para no acercar la copia
     // principal al límite de 1 MB. Solo la cuenta dueña puede leerlo.
     match /creditCards/{userId} {

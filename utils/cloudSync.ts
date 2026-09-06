@@ -1,6 +1,7 @@
 import { deleteDoc, doc, getDoc, runTransaction } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import { borrarNegocioDeLaNube } from "@/utils/cloudNegocio";
+import { borrarCajasDeLaNube } from "@/utils/cloudCajas";
 import { deleteCreditCloudAccount } from "@/utils/creditCloud";
 import type { Goal, Transaction } from "@/types";
 import type { PagoProgramado } from "@/utils/calendarioPagos";
@@ -266,6 +267,8 @@ export async function deleteCloudAccount(uid: string): Promise<void> {
   // para siempre, y nadie se enteraría — el borrado diría que salió bien. Hay una prueba que
   // exige que los dos se borren aquí.
   await borrarNegocioDeLaNube(uid);
+  // Cajas es otro espacio y otro documento; borrar la cuenta también debe retirarlo.
+  await borrarCajasDeLaNube(uid);
   // Las tarjetas usan un documento separado para no acercar el respaldo
   // principal al límite de Firestore. Eliminar la cuenta debe borrar ambos.
   await deleteCreditCloudAccount(uid);

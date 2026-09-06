@@ -1,6 +1,6 @@
 import { Boxes, UserRound, UsersRound } from "lucide-react-native";
 import { Text, TouchableOpacity, View } from "react-native";
-import { router } from "expo-router";
+import { router, type Href } from "expo-router";
 import { useAppData } from "@/contexts/AppDataContext";
 
 export type FinoSpace = "personal" | "family" | "boxes";
@@ -14,8 +14,8 @@ const OPTIONS = [
 /**
  * Selector central de espacios.
  *
- * Personal conserva la app financiera actual. Cajas abre el dinero separado de
- * los negocios que ya existe. Familia tiene una pantalla propia, pero todavía
+ * Personal conserva la app financiera actual. Cajas administra dinero separado
+ * sin convertirlo en un negocio. Familia tiene una pantalla propia, pero todavía
  * no permite guardar ni compartir: primero deben existir permisos reales en la
  * nube para que nunca se enseñen datos privados a una persona equivocada.
  */
@@ -26,7 +26,7 @@ export default function SpaceSwitcher({ active }: { active: FinoSpace }) {
     if (id === active) return;
     if (id === "personal") router.replace("/(tabs)");
     else if (id === "family") router.replace("/family");
-    else router.replace("/negocio");
+    else router.replace("/boxes" as Href);
   }
 
   return (

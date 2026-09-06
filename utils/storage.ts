@@ -97,6 +97,9 @@ export const STORAGE_KEYS = {
   productos: "finzo:productos",
   ventas: "finzo:ventas",
   movimientosNegocio: "finzo:movimientosNegocio",
+  // Cajas de dinero independientes. No reutilizan Modo Negocio: una caja puede
+  // ser Casa, Viaje o Ana y solo contiene entradas y salidas propias.
+  cajasDinero: "finzo:cajasDinero",
 } as const;
 
 /** Retira automáticamente los datos falsos que dejaron versiones antiguas. */
@@ -149,6 +152,7 @@ export async function clearAccountData(): Promise<void> {
         STORAGE_KEYS.productos,
         STORAGE_KEYS.ventas,
         STORAGE_KEYS.movimientosNegocio,
+        STORAGE_KEYS.cajasDinero,
       ];
   // Las claves con el prefijo antiguo se incluyen para limpiar también
   // cualquier dato falso que haya quedado de versiones anteriores.
