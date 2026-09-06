@@ -38,6 +38,18 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/familySpaces/$(familyId)/members/$(request.auth.uid));
     }
 
+    function premiumUser(userId) {
+      return exists(/databases/$(database)/documents/users/$(userId))
+        && (
+          get(/databases/$(database)/documents/users/$(userId)).data.isPremium == true
+          || (
+            get(/databases/$(database)/documents/users/$(userId)).data.premiumTrialStartedAt is number
+            && get(/databases/$(database)/documents/users/$(userId)).data.premiumTrialStartedAt
+              + 24 * 60 * 60 * 1000 > request.time.toMillis()
+          )
+        );
+    }
+
     // Cada persona guarda todo en un solo documento: users/{su-id}
     match /users/{userId} {
 
@@ -132,7 +144,8 @@ service cloud.firestore {
     match /familySpaces/{familyId} {
       allow create: if verified()
                     && request.resource.data.ownerUid == request.auth.uid
-                    && request.resource.data.nombre is string;
+                    && request.resource.data.nombre is string
+                    && premiumUser(request.auth.uid);
       allow read: if familyMember(familyId);
       allow update, delete: if familyMember(familyId)
                             && resource.data.ownerUid == request.auth.uid;
@@ -176,6 +189,8 @@ service cloud.firestore {
                     && request.resource.data.createdBy == request.auth.uid
                     && request.resource.data.familyId is string
                     && familyMember(request.resource.data.familyId)
+                    && get(/databases/$(database)/documents/familySpaces/$(request.resource.data.familyId)).data.ownerUid == request.auth.uid
+                    && premiumUser(request.auth.uid)
                     && request.resource.data.expiresAt > request.time.toMillis();
       allow update, delete: if verified() && resource.data.createdBy == request.auth.uid;
     }

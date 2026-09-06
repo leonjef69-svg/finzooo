@@ -69,6 +69,13 @@ export default function Cajas() {
     () => datos.movimientos.filter((item) => item.cajaId === cajaId).sort((a, b) => b.creadoEn - a.creadoEn),
     [cajaId, datos.movimientos],
   );
+  const resumen = useMemo(() => movimientos.reduce(
+    (total, item) => ({
+      ingresos: total.ingresos + (item.tipo === "ingreso" ? item.monto : 0),
+      gastos: total.gastos + (item.tipo === "gasto" ? item.monto : 0),
+    }),
+    { ingresos: 0, gastos: 0 },
+  ), [movimientos]);
 
   function crearCaja() {
     const nombre = nuevoNombre.trim().slice(0, 30);
@@ -172,10 +179,15 @@ export default function Cajas() {
         ) : (
           <>
             <TouchableOpacity onPress={() => setLista(true)} className="mb-2 mt-1 flex-row items-center gap-2 py-2"><ArrowLeftRight size={16} color="#0d9488" /><Text className="text-xs font-bold text-teal-700 dark:text-teal-300">{t("boxes.all")}</Text></TouchableOpacity>
-            <View className="rounded-3xl bg-teal-600 px-5 py-5">
-              <Text className="text-sm font-bold text-teal-100">{caja.nombre}</Text>
-              <Text className="mt-1 text-3xl font-extrabold text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{fmt(saldoCaja(caja.id, datos.movimientos))}</Text>
-              <Text className="mt-1 text-xs text-teal-100">{currencySymbolFor(userCurrency)} · {userCurrency}</Text>
+            <View className="rounded-3xl bg-teal-600 px-5 py-4">
+              <Text className="text-base font-bold text-teal-100">{caja.nombre}</Text>
+              <Text className="text-[28px] font-extrabold text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58}>{fmt(saldoCaja(caja.id, datos.movimientos))}</Text>
+              <View className="mt-2 flex-row items-center border-t border-teal-400/60 pt-2">
+                <View className="flex-1"><Text className="text-xs font-semibold text-teal-100">{t("boxes.income")}</Text><Text className="text-sm font-extrabold text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{fmt(resumen.ingresos)}</Text></View>
+                <View className="mx-3 h-8 w-px bg-teal-400/70" />
+                <View className="flex-1"><Text className="text-xs font-semibold text-teal-100">{t("boxes.expense")}</Text><Text className="text-sm font-extrabold text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{fmt(resumen.gastos)}</Text></View>
+                <Text className="ml-3 text-xs text-teal-100">{currencySymbolFor(userCurrency)} · {userCurrency}</Text>
+              </View>
             </View>
             <View className="mt-3 flex-row gap-3">
               <TouchableOpacity onPress={() => setAnotando("ingreso")} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-100"><ArrowUp size={18} color="#047857" /><Text className="font-bold text-emerald-700">{t("boxes.income")}</Text></TouchableOpacity>
@@ -196,8 +208,8 @@ export default function Cajas() {
             {movimientos.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t("boxes.noMovements")}</Text> : movimientos.map((item) => (
               <View key={item.id} className="mb-2 flex-row items-center rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde">
                 <View className={`h-9 w-9 items-center justify-center rounded-xl ${item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
-                <View className="ml-3 flex-1"><Text className="font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text><Text className="text-[11px] text-slate-500">{item.fecha}</Text></View>
-                <Text className={`mr-2 font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text>
+                <View className="ml-3 flex-1"><Text className="text-[15px] font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text><Text className="text-xs text-slate-500">{item.fecha}</Text></View>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-2 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text>
                 <TouchableOpacity accessibilityLabel={t("common.delete")} onPress={() => borrarMovimiento(item.id)} className="h-10 w-10 items-center justify-center"><Trash2 size={17} color="#e11d48" /></TouchableOpacity>
               </View>
             ))}
