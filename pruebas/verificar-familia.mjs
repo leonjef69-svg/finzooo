@@ -15,9 +15,12 @@ assert.match(rules, /function familyMember\(familyId\)/, "cada lectura comprueba
 assert.match(rules, /allow list: if false;/, "nadie puede recorrer todos los códigos");
 assert.match(rules, /expiresAt > request\.time\.toMillis\(\)/, "un código vencido no permite entrar");
 assert.match(rules, /request\.resource\.data\.inviteCode/, "la membresía exige la invitación usada");
+assert.match(rules, /function premiumUser\(userId\)/, "crear e invitar está protegido por Premium en Firebase");
 assert.match(cloud, /familyUsers/, "el espacio se recupera al cambiar de celular");
+assert.match(cloud, /export async function renombrarFamilia/, "el propietario puede guardar el nuevo nombre en la nube");
 assert.match(cloud, /serverTimestamp\(\)/, "los movimientos usan la hora confiable de Firebase");
 assert.match(screen, /sanitizeSafeAmountInput/, "Familia conserva el límite seguro para montos");
+assert.match(screen, /owner \? editandoNombre/, "solo el propietario ve los controles para editar el nombre");
 assert.match(deletion, /borrarVinculoFamiliaDeCuenta/, "eliminar la cuenta también retira su membresía familiar");
 
 console.log("Familia: invitaciones, membresía, vencimiento y privacidad verificados.");

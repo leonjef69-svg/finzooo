@@ -179,10 +179,10 @@ export default function Cajas() {
         ) : (
           <>
             <TouchableOpacity onPress={() => setLista(true)} className="mb-2 mt-1 flex-row items-center gap-2 py-2"><ArrowLeftRight size={16} color="#0d9488" /><Text className="text-xs font-bold text-teal-700 dark:text-teal-300">{t("boxes.all")}</Text></TouchableOpacity>
-            <View className="rounded-3xl bg-teal-600 px-5 py-4">
+            <View className="rounded-3xl bg-teal-600 px-4 py-3">
               <Text className="text-base font-bold text-teal-100">{caja.nombre}</Text>
-              <Text className="text-[28px] font-extrabold text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58}>{fmt(saldoCaja(caja.id, datos.movimientos))}</Text>
-              <View className="mt-2 flex-row items-center border-t border-teal-400/60 pt-2">
+              <Text className="text-[26px] font-extrabold leading-8 text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58}>{fmt(saldoCaja(caja.id, datos.movimientos))}</Text>
+              <View className="mt-1.5 flex-row items-center border-t border-teal-400/60 pt-1.5">
                 <View className="flex-1"><Text className="text-xs font-semibold text-teal-100">{t("boxes.income")}</Text><Text className="text-sm font-extrabold text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{fmt(resumen.ingresos)}</Text></View>
                 <View className="mx-3 h-8 w-px bg-teal-400/70" />
                 <View className="flex-1"><Text className="text-xs font-semibold text-teal-100">{t("boxes.expense")}</Text><Text className="text-sm font-extrabold text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{fmt(resumen.gastos)}</Text></View>

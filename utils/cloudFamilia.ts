@@ -10,6 +10,7 @@ import {
   runTransaction,
   serverTimestamp,
   setDoc,
+  updateDoc,
 } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import { crearCodigoFamilia } from "@/utils/familia";
@@ -73,6 +74,10 @@ export async function crearInvitacionFamilia(uid: string, familiaId: string): Pr
     creadoEn: serverTimestamp(),
   });
   return codigo;
+}
+
+export async function renombrarFamilia(familiaId: string, nombre: string): Promise<void> {
+  await updateDoc(doc(db, "familySpaces", familiaId), { nombre: nombre.trim().slice(0, 35) });
 }
 
 export async function unirseAFamilia(uid: string, nombre: string, codigoCrudo: string): Promise<EspacioFamilia> {
