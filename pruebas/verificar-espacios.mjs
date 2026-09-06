@@ -22,7 +22,8 @@ assert.match(home, /<SpaceSwitcher active="personal"/);
 assert.match(boxes, /<SpaceSwitcher active="boxes"/);
 assert.doesNotMatch(business, /<SpaceSwitcher active="boxes"/, "Modo negocio no se presenta como una caja");
 assert.match(family, /<SpaceSwitcher active="family"/);
-assert.match(family, /family\.security/, "Familia no simula un guardado inseguro");
+assert.match(family, /crearFamilia/, "Familia permite crear un espacio real");
+assert.match(family, /unirseAFamilia/, "Familia permite entrar mediante invitación");
 assert.match(route, /screens\/Family/);
 assert.match(boxesRoute, /screens\/Cajas/);
 

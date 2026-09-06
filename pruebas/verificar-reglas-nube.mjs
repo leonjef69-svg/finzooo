@@ -88,12 +88,18 @@ console.log("\n--- Y LO DE SIEMPRE SIGUE CERRADO ---");
     "todo lo que no este nombrado queda cerrado"
   );
   const permisos = [...reglas.matchAll(/allow [a-z, ]+: if ([^;]+);/g)].map((m) => m[1]);
+  ok(
+    /function verified\(\) \{[\s\S]*request\.auth != null[\s\S]*email_verified == true/.test(reglas),
+    "el comprobador compartido exige sesión y correo confirmado"
+  );
   const abiertos = permisos.filter(
-    (p) => !p.includes("request.auth.uid == userId") && !p.includes("false")
+    (p) => !p.includes("request.auth.uid == userId") && !p.includes("verified()")
+      && !p.includes("familyMember(") && !p.includes("false")
   );
   ok(abiertos.length === 0, "ninguna regla deja escribir en el documento de otra persona");
   const sinCorreo = permisos.filter(
-    (p) => p.includes("request.auth.uid == userId") && !p.includes("email_verified")
+    (p) => p.includes("request.auth.uid == userId")
+      && !p.includes("email_verified") && !p.includes("verified()")
   );
   ok(sinCorreo.length === 0, "y todas exigen el correo confirmado");
 }

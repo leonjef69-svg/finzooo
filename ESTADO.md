@@ -54,8 +54,10 @@ de Contraseña, distingue las causas y no muestra error cuando el usuario cancel
   separada de Modo negocio, para crear cajas, anotar ingresos y gastos y consultar
   el saldo y el historial de cada una. Se guarda en el teléfono y, con sesión
   iniciada, en un documento propio de Firebase. Familia tiene una pantalla
-  identificable, pero todavía no guarda ni comparte datos hasta implementar
-  invitaciones y permisos seguros.
+  real: permite crear un espacio, invitar mediante un código aleatorio de ocho
+  caracteres que vence en siete días, entrar como miembro, ver participantes y
+  registrar ingresos o gastos compartidos. Sus datos viven separados y Firebase
+  exige membresía válida para leerlos; conocer la dirección del espacio no basta.
 - La cabecera de Inicio respeta el área segura y añade 6 px de aire para que los
   controles superiores no rocen el borde físico del celular.
 - La elección se conserva aunque Android cierre Fino al verificar el correo.
