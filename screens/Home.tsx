@@ -572,29 +572,33 @@ export default function Home({
           </Animated.View>
           <Animated.View entering={FadeInDown.delay(1 * 70).duration(300)} style={{ flexBasis: "48%", flexGrow: 1 }}>
             <PressableScale
-              className="bg-amber-50 dark:bg-noche-2 rounded-2xl px-3 py-2.5 border-[1.5px] border-amber-200 dark:border-amber-800 justify-center"
+              className="bg-teal-50 dark:bg-teal-950/30 rounded-2xl px-3 py-2.5 border-[1.5px] border-teal-300 dark:border-teal-800 justify-center"
               style={[softShadow, { minHeight: 78 }]}
             >
               <View className="flex-row items-center gap-2 mb-1">
                 <Text className="text-base">🕒</Text>
-                <Text className="flex-1 text-xs text-slate-600 dark:text-slate-200 font-semibold" numberOfLines={2}>
+                <Text className="flex-1 text-xs text-teal-800 dark:text-teal-200 font-bold" numberOfLines={2}>
                   {t("home.previousBalance")}
                 </Text>
                 {carryoverActive ? (
                   <TouchableOpacity
                     onPress={() => setConfirmRestoreCarryover(true)}
-                    hitSlop={10}
-                    className="w-7 h-7 rounded-full bg-emerald-100 dark:bg-emerald-900 items-center justify-center border border-emerald-300 dark:border-emerald-700"
+                    accessibilityRole="button"
+                    accessibilityLabel={t("home.restoreCarryoverConfirm")}
+                    hitSlop={6}
+                    className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900 items-center justify-center border-[1.5px] border-emerald-400 dark:border-emerald-600"
                   >
-                    <RotateCcw size={15} color="#059669" />
+                    <RotateCcw size={20} strokeWidth={2.5} color="#047857" />
                   </TouchableOpacity>
                 ) : prevBalance !== 0 ? (
                   <TouchableOpacity
                     onPress={() => setConfirmResetCarryover(true)}
-                    hitSlop={10}
-                    className="w-7 h-7 rounded-full bg-rose-100 dark:bg-rose-950 items-center justify-center border border-rose-300 dark:border-rose-800"
+                    accessibilityRole="button"
+                    accessibilityLabel={t("home.resetCarryoverConfirm")}
+                    hitSlop={6}
+                    className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950 items-center justify-center border-[1.5px] border-rose-400 dark:border-rose-700"
                   >
-                    <Eraser size={15} color="#e11d48" />
+                    <Eraser size={20} strokeWidth={2.5} color="#be123c" />
                   </TouchableOpacity>
                 ) : null}
               </View>
