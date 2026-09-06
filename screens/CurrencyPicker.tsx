@@ -53,18 +53,24 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
             const selected = currency.id === current;
             return (
               <TouchableOpacity key={currency.id} onPress={() => { onSelect(currency.id); onBack(); }}
+                accessibilityRole="button"
+                accessibilityLabel={`${currency.symbol} · ${currency.id}. ${currency.name}`}
                 className={`flex-row items-center justify-between rounded-2xl p-4 border-[1.5px] ${selected
                   ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950"
                   : "border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2"}`}>
                 <View className="flex-row items-center gap-3 flex-1">
-                  <View className="w-12 h-9 rounded-xl bg-slate-50 dark:bg-noche-2 items-center justify-center">
-                    <Text className="text-xs font-extrabold text-slate-700 dark:text-slate-200">{currency.symbol}</Text>
+                  <View className="w-[92px] h-9 rounded-xl bg-slate-50 dark:bg-noche-2 items-center justify-center px-2">
+                    <Text
+                      className="w-full text-center text-xs font-extrabold text-slate-700 dark:text-slate-200"
+                      numberOfLines={1}
+                      adjustsFontSizeToFit
+                      minimumFontScale={0.72}
+                    >
+                      {currency.symbol} · {currency.id}
+                    </Text>
                   </View>
                   <View className="flex-1">
                     <Text className="text-sm font-bold text-slate-900 dark:text-slate-100" numberOfLines={1}>{currency.name}</Text>
-                    <Text className="text-[11px] font-semibold text-slate-500 dark:text-slate-400" numberOfLines={1}>
-                      {currency.symbol} · {currency.id}
-                    </Text>
                   </View>
                 </View>
                 {selected && <Check size={18} color="#059669" />}

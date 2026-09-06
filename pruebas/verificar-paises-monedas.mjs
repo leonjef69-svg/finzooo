@@ -41,5 +41,14 @@ for (const file of ["screens/CountryPicker.tsx", "screens/CurrencyPicker.tsx"]) 
   check(screen.includes("TextInput"), `${file} permite buscar en la lista larga`);
 }
 
+const currencyPicker = read("screens/CurrencyPicker.tsx");
+check(
+  /\{currency\.symbol\}\s*·\s*\{currency\.id\}/.test(currencyPicker),
+  "el selector muestra juntos el símbolo y el código ISO",
+);
+check(/adjustsFontSizeToFit/.test(currencyPicker), "los símbolos largos caben en pantallas estrechas");
+check(/minimumFontScale=\{0\.72\}/.test(currencyPicker), "el código ISO nunca desaparece por falta de ancho");
+check(/accessibilityLabel=\{`\$\{currency\.symbol\} · \$\{currency\.id\}/.test(currencyPicker), "el lector de pantalla anuncia símbolo y código");
+
 console.log(failures ? `${failures} comprobaciones fallaron` : `Catálogo mundial correcto: ${countries.length} países y ${currencies.size} monedas`);
 process.exit(failures ? 1 : 0);

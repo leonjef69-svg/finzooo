@@ -40,6 +40,9 @@ de Contraseña, distingue las causas y no muestra error cuando el usuario cancel
   los perfiles anteriores siguen funcionando.
 - Las monedas respetan 0, 2 o 3 decimales y el escáner conserva el tratamiento
   cotidiano de pesos argentinos y colombianos.
+- El selector muestra símbolo y código ISO juntos (`S/ · PEN`, `US$ · USD`,
+  `€ · EUR`); reduce el texto de símbolos largos sin ocultar el código y lo
+  anuncia completo al lector de pantalla.
 - La elección se conserva aunque Android cierre Fino al verificar el correo.
 - Solicitud del permiso de avisos antes del formulario de cuenta.
 - La bienvenida conserva su paso al volver del permiso de Android.
@@ -189,11 +192,6 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 
 ### Correcciones y comprobaciones antes del próximo AAB
 
-- Mejorar el selector de monedas para enseñar primero el símbolo junto con el
-  código ISO, por ejemplo `S/ · PEN`, `$ · USD` y `€ · EUR`. No ocultar el ISO
-  por completo: distintas monedas comparten símbolos como `$` y se volverían
-  indistinguibles. Comprobar también símbolos largos y monedas de 0 o 3
-  decimales en pantallas estrechas.
 - Adaptar los métodos de pago de `Registrar gasto` al país configurado: `Plin`
   solo debe aparecer para Perú; `Yape` solo para Perú y Bolivia. En los demás
   países deben ocultarse sin borrar ni modificar movimientos antiguos que ya
