@@ -27,6 +27,7 @@ import {
   loadJSON,
   saveJSON,
   STORAGE_KEYS,
+  subscribeStorageWriteErrors,
 } from "@/utils/storage";
 import {
   borrarNegocio as borrarNegocioYLoSuyo,
@@ -1080,6 +1081,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(""), 2200);
   }
+
+  useEffect(() => {
+    return subscribeStorageWriteErrors(() => {
+      setToast(tRef.current("toast.localSaveFailed"));
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+      toastTimer.current = setTimeout(() => setToast(""), 4_500);
+    });
+  }, []);
 
   // ---------------------------------------------------------------------
   // CAPTURA AUTOMÁTICA DESDE NOTIFICACIONES

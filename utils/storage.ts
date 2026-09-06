@@ -211,13 +211,32 @@ const DEBOUNCE_MS = 400;
 
 const pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const pendingValues = new Map<string, unknown>();
+type StorageWriteErrorListener = () => void;
+let storageWriteErrorListener: StorageWriteErrorListener | null = null;
+let lastStorageWriteErrorAt = 0;
+
+/** Permite que la interfaz avise si Android no pudo guardar un cambio. */
+export function subscribeStorageWriteErrors(listener: StorageWriteErrorListener): () => void {
+  storageWriteErrorListener = listener;
+  return () => {
+    if (storageWriteErrorListener === listener) storageWriteErrorListener = null;
+  };
+}
+
+function reportStorageWriteError(): void {
+  const now = Date.now();
+  // Varias partes de una misma acción se guardan juntas. Un solo aviso es
+  // suficiente y evita llenar la pantalla con el mismo error.
+  if (now - lastStorageWriteErrorAt < 5_000) return;
+  lastStorageWriteErrorAt = now;
+  storageWriteErrorListener?.();
+}
 
 function writeNow(key: string, value: unknown): Promise<void> {
   return encryptText(JSON.stringify(value))
     .then((encrypted) => AsyncStorage.setItem(key, encrypted))
     .catch(() => {
-      // Si falla el guardado (ej. sin espacio), la app sigue funcionando
-      // normalmente, solo que ese cambio no quedó guardado.
+      reportStorageWriteError();
     });
 }
 
@@ -237,6 +256,7 @@ export async function saveJSONNow(key: string, value: unknown): Promise<boolean>
     await AsyncStorage.setItem(target, encrypted);
     return true;
   } catch {
+    reportStorageWriteError();
     return false;
   }
 }
