@@ -94,7 +94,7 @@ console.log("\n--- Y LO DE SIEMPRE SIGUE CERRADO ---");
   );
   const abiertos = permisos.filter(
     (p) => !p.includes("request.auth.uid == userId") && !p.includes("verified()")
-      && !p.includes("familyMember(") && !p.includes("false")
+      && !p.includes("familyMember(") && !p.includes("boxMember(") && !p.includes("false")
   );
   ok(abiertos.length === 0, "ninguna regla deja escribir en el documento de otra persona");
   const sinCorreo = permisos.filter(

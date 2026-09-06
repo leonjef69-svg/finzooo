@@ -50,6 +50,11 @@ service cloud.firestore {
         );
     }
 
+    function boxMember(boxId) {
+      return verified()
+        && exists(/databases/$(database)/documents/boxSpaces/$(boxId)/members/$(request.auth.uid));
+    }
+
     // Cada persona guarda todo en un solo documento: users/{su-id}
     match /users/{userId} {
 
@@ -198,6 +203,60 @@ service cloud.firestore {
     // Índice privado que permite recuperar el espacio familiar al cambiar de celular.
     // No concede acceso al espacio; las reglas anteriores siguen comprobando membresía.
     match /familyUsers/{userId} {
+      allow read, write: if verified() && request.auth.uid == userId;
+    }
+
+    // Una caja compartida es independiente de Personal, Familia y Negocio.
+    // Cada miembro puede ver y anotar movimientos; solo el dueño Premium invita.
+    match /boxSpaces/{boxId} {
+      allow create: if verified()
+                    && request.resource.data.ownerUid == request.auth.uid
+                    && request.resource.data.nombre is string
+                    && premiumUser(request.auth.uid);
+      allow read: if boxMember(boxId);
+      allow update, delete: if boxMember(boxId)
+                            && resource.data.ownerUid == request.auth.uid;
+
+      match /members/{userId} {
+        allow read: if boxMember(boxId);
+        allow create: if verified() && userId == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && ((get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid
+                && request.resource.data.rol == 'owner')
+            || (request.resource.data.rol == 'member'
+                && request.resource.data.inviteCode is string
+                && exists(/databases/$(database)/documents/boxInvites/$(request.resource.data.inviteCode))
+                && get(/databases/$(database)/documents/boxInvites/$(request.resource.data.inviteCode)).data.boxId == boxId
+                && get(/databases/$(database)/documents/boxInvites/$(request.resource.data.inviteCode)).data.expiresAt > request.time.toMillis()));
+        allow delete: if verified() && (userId == request.auth.uid
+          || get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid);
+      }
+
+      match /movements/{movementId} {
+        allow read: if boxMember(boxId);
+        allow create: if boxMember(boxId)
+          && request.resource.data.creadoPor == request.auth.uid
+          && request.resource.data.tipo in ['ingreso', 'gasto']
+          && request.resource.data.monto is number
+          && request.resource.data.monto > 0;
+        allow delete: if boxMember(boxId);
+      }
+    }
+
+    match /boxInvites/{code} {
+      allow get: if verified();
+      allow list: if false;
+      allow create: if verified()
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.boxId is string
+        && boxMember(request.resource.data.boxId)
+        && get(/databases/$(database)/documents/boxSpaces/$(request.resource.data.boxId)).data.ownerUid == request.auth.uid
+        && premiumUser(request.auth.uid)
+        && request.resource.data.expiresAt > request.time.toMillis();
+      allow update, delete: if verified() && resource.data.createdBy == request.auth.uid;
+    }
+
+    match /boxUsers/{userId}/spaces/{boxId} {
       allow read, write: if verified() && request.auth.uid == userId;
     }
 
