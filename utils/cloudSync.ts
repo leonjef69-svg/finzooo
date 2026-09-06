@@ -1,4 +1,4 @@
-import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
+import { deleteDoc, doc, getDoc, runTransaction } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import { borrarNegocioDeLaNube } from "@/utils/cloudNegocio";
 import { deleteCreditCloudAccount } from "@/utils/creditCloud";
@@ -155,16 +155,34 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
 
   try {
     const ref = doc(db, "users", uid);
-    const snap = await getDoc(ref);
-    const actual = snap.exists() ? snap.data() : null;
-    clean = conservarPremiumManual(actual, clean);
-    if (actual) {
-      const borrados = pruneDeletedTransactionIds([...(actual.deletedTransactionIds || []), ...(clean.deletedTransactionIds || [])]);
-      clean.deletedTransactionIds = borrados;
-      clean.transactions = mergeTransactions(clean.transactions, actual.transactions || [])
-        .filter((tx) => !borrados.includes(tx.id));
-    }
-    await setDoc(ref, clean);
+    // Lectura y escritura deben ser una sola operación. Con getDoc + setDoc,
+    // dos teléfonos podían leer la misma copia, añadir cosas diferentes y el
+    // último en guardar borraba silenciosamente lo que acababa de subir el otro.
+    // Firestore repite esta función si el documento cambia mientras se prepara.
+    await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(ref);
+      const actual = snap.exists() ? snap.data() : null;
+      let siguiente = conservarPremiumManual(actual, clean);
+      if (actual) {
+        const borrados = pruneDeletedTransactionIds([
+          ...(actual.deletedTransactionIds || []),
+          ...(siguiente.deletedTransactionIds || []),
+        ]);
+        const idsBorrados = new Set(borrados);
+        siguiente = {
+          ...siguiente,
+          deletedTransactionIds: borrados,
+          transactions: mergeTransactions(siguiente.transactions, actual.transactions || [])
+            .filter((tx) => !idsBorrados.has(tx.id)),
+        };
+      }
+
+      // La fusión puede añadir movimientos que llegaron desde otro teléfono.
+      // Se vuelve a medir aquí porque el tamaño anterior a la fusión ya no basta.
+      if (pesa(siguiente) > TOPE_SEGURO) siguiente = sinFotos(siguiente);
+      if (pesa(siguiente) > LIMITE_FIRESTORE) throw new Error("demasiado-grande");
+      transaction.set(ref, siguiente);
+    });
     return { ok: true };
   } catch (e) {
     return { ok: false, motivo: motivoLegible(e) };
@@ -185,6 +203,7 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
  */
 function motivoLegible(e: unknown): string {
   const crudo = String((e as { code?: string })?.code ?? (e as Error)?.message ?? e);
+  if (/demasiado-grande/i.test(crudo)) return "demasiado-grande";
   if (/permission-denied|insufficient permissions/i.test(crudo)) return "permisos";
   if (/unavailable|network|offline/i.test(crudo)) return "sin-internet";
   return crudo;

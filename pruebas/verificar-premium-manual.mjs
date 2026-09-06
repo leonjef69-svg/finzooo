@@ -16,12 +16,12 @@ if (!archivo.includes("return { ...siguiente, isPremium: true };")) {
   fallos.push("No se conserva isPremium:true cuando ya estaba en la nube.");
 }
 
-if (!archivo.includes("const snap = await getDoc(ref);")) {
-  fallos.push("saveCloudData no lee el documento actual antes de subir false.");
+if (!archivo.includes("const snap = await transaction.get(ref);")) {
+  fallos.push("saveCloudData no lee el documento actual dentro de la operación atómica.");
 }
 
-if (!archivo.includes("clean = conservarPremiumManual(actual, clean);")) {
-  fallos.push("saveCloudData no aplica la protección antes de setDoc.");
+if (!archivo.includes("let siguiente = conservarPremiumManual(actual, clean);")) {
+  fallos.push("saveCloudData no protege Premium antes de escribir.");
 }
 
 if (fallos.length) {

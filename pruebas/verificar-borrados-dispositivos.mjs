@@ -5,8 +5,8 @@ const contexto = fs.readFileSync("contexts/AppDataContext.tsx", "utf8");
 const fallos = [];
 
 if (!nube.includes("deletedTransactionIds?: number[]")) fallos.push("La nube no recuerda borrados.");
-if (!nube.includes("mergeTransactions(clean.transactions, actual.transactions")) fallos.push("Una subida todavía puede borrar movimientos remotos.");
-if (!nube.includes("!borrados.includes(tx.id)")) fallos.push("Los movimientos borrados pueden reaparecer.");
+if (!nube.includes("mergeTransactions(siguiente.transactions, actual.transactions")) fallos.push("Una subida todavía puede borrar movimientos remotos.");
+if (!nube.includes("!idsBorrados.has(tx.id)")) fallos.push("Los movimientos borrados pueden reaparecer.");
 if (!contexto.includes("setDeletedTransactionIds((prev)")) fallos.push("Borrar en la app no deja una marca sincronizable.");
 
 if (fallos.length) {
