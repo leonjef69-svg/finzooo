@@ -49,6 +49,10 @@ de Contraseña, distingue las causas y no muestra error cuando el usuario cancel
 - La tarjeta de saldo anterior se distingue con el color principal de Fino. Sus
   acciones de borrar y restaurar tienen mayor tamaño, contraste, significado
   visual diferente y una descripción para lectores de pantalla.
+- Inicio muestra un selector compacto entre Personal, Familia y Cajas. Personal
+  conserva el presupuesto actual; Cajas abre los negocios que ya guardan su
+  dinero por separado. Familia tiene una pantalla identificable, pero todavía
+  no guarda ni comparte datos hasta implementar invitaciones y permisos seguros.
 - La elección se conserva aunque Android cierre Fino al verificar el correo.
 - Solicitud del permiso de avisos antes del formulario de cuenta.
 - La bienvenida conserva su paso al volver del permiso de Android.

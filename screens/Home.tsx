@@ -3,6 +3,7 @@ import EtiquetaMetodo from "@/components/EtiquetaMetodo";
 import IconBadge from "@/components/IconBadge";
 import PressableScale from "@/components/PressableScale";
 import ThemeToggleButton from "@/components/ThemeToggleButton";
+import SpaceSwitcher from "@/components/SpaceSwitcher";
 import { catInfo } from "@/constants/categories";
 import { iconoDe } from "@/constants/iconos";
 import { CARD_SHADOW, SALDO_TARJETA, SALDO_VERDE } from "@/constants/style";
@@ -385,6 +386,8 @@ export default function Home({
             ) : null}
           </TouchableOpacity>
         </View>
+
+        <SpaceSwitcher active="personal" />
 
         <LinearGradient
           colors={[...SALDO_VERDE]}
