@@ -44,6 +44,7 @@ service cloud.firestore {
           get(/databases/$(database)/documents/users/$(userId)).data.isPremium == true
           || (
             get(/databases/$(database)/documents/users/$(userId)).data.premiumTrialStartedAt is number
+            && get(/databases/$(database)/documents/users/$(userId)).data.premiumTrialStartedAt <= request.time.toMillis()
             && get(/databases/$(database)/documents/users/$(userId)).data.premiumTrialStartedAt
               + 24 * 60 * 60 * 1000 > request.time.toMillis()
           )
@@ -215,13 +216,15 @@ service cloud.firestore {
                     && premiumUser(request.auth.uid);
       allow read: if boxMember(boxId);
       allow update, delete: if boxMember(boxId)
-                            && resource.data.ownerUid == request.auth.uid;
+                            && resource.data.ownerUid == request.auth.uid
+                            && (request.method == 'delete' || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre']));
 
       match /members/{userId} {
         allow read: if boxMember(boxId);
+        allow get: if verified() && userId == request.auth.uid;
         allow create: if verified() && userId == request.auth.uid
           && request.resource.data.uid == request.auth.uid
-          && ((get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid
+          && ((getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid
                 && request.resource.data.rol == 'owner')
             || (request.resource.data.rol == 'member'
                 && request.resource.data.inviteCode is string
@@ -234,11 +237,13 @@ service cloud.firestore {
 
       match /movements/{movementId} {
         allow read: if boxMember(boxId);
-        allow create: if boxMember(boxId)
+        allow create: if verified() && (boxMember(boxId)
+          || getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid)
           && request.resource.data.creadoPor == request.auth.uid
           && request.resource.data.tipo in ['ingreso', 'gasto']
           && request.resource.data.monto is number
-          && request.resource.data.monto > 0;
+          && request.resource.data.monto > 0
+          && request.resource.data.monto <= 9000000000000;
         allow delete: if boxMember(boxId);
       }
     }

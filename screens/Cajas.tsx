@@ -12,7 +12,7 @@ import {
   type DatosCajas,
 } from "@/utils/cajas";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
-import { safeBack } from "@/utils/nav";
+import { irUnaVez, safeBack } from "@/utils/nav";
 import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 import { ArrowDown, ArrowLeftRight, ArrowUp, Boxes, Check, Plus, Trash2, X } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
@@ -33,6 +33,7 @@ export default function Cajas() {
   const [lista, setLista] = useState(true);
   const [cajaId, setCajaId] = useState<string | null>(null);
   const [nuevoNombre, setNuevoNombre] = useState("");
+  const [montoInicial, setMontoInicial] = useState("");
   const [creando, setCreando] = useState(false);
   const [anotando, setAnotando] = useState<"ingreso" | "gasto" | null>(null);
   const [monto, setMonto] = useState("");
@@ -81,8 +82,17 @@ export default function Cajas() {
     const nombre = nuevoNombre.trim().slice(0, 30);
     if (!nombre) return;
     const nueva = { id: nuevoIdCaja("caja"), nombre, creadaEn: Date.now() };
-    setDatos((antes) => ({ ...antes, cajas: [...antes.cajas, nueva] }));
+    const inicial = parseAmountInput(montoInicial);
+    setDatos((antes) => ({
+      ...antes,
+      cajas: [...antes.cajas, nueva],
+      movimientos: inicial > 0 ? [...antes.movimientos, {
+        id: nuevoIdCaja("mov"), cajaId: nueva.id, tipo: "ingreso", monto: inicial,
+        descripcion: t("boxes.initialExternal"), fecha: fechaLocal(), creadoEn: Date.now(),
+      }] : antes.movimientos,
+    }));
     setNuevoNombre("");
+    setMontoInicial("");
     setCreando(false);
     setCajaId(nueva.id);
     setLista(false);
@@ -146,6 +156,7 @@ export default function Cajas() {
         {!ready ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : lista || !caja ? (
           <>
             <Text className="mb-3 mt-2 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("boxes.subtitle")}</Text>
+            <TouchableOpacity onPress={() => irUnaVez("/shared-boxes")} className="mb-3 min-h-12 items-center justify-center rounded-xl bg-emerald-600"><Text className="text-base font-bold text-white">{t("boxes.shared")}</Text></TouchableOpacity>
             {datos.cajas.map((item) => (
               <TouchableOpacity
                 key={item.id}
@@ -167,10 +178,15 @@ export default function Cajas() {
               </View>
             ) : null}
             {creando ? (
-              <View className="mt-2 flex-row items-center gap-2">
+              <View className="mt-2 gap-2">
+                <View className="flex-row items-center gap-2">
                 <TextInput disableFullscreenUI value={nuevoNombre} onChangeText={setNuevoNombre} maxLength={30} autoFocus placeholder={t("boxes.namePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 flex-1 rounded-xl border-[1.5px] border-teal-400 px-4 text-slate-900 dark:text-slate-100" />
                 <TouchableOpacity onPress={crearCaja} className="h-12 w-12 items-center justify-center rounded-xl bg-emerald-600"><Check size={20} color="#fff" /></TouchableOpacity>
                 <TouchableOpacity onPress={() => setCreando(false)} className="h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><X size={20} color="#64748b" /></TouchableOpacity>
+                </View>
+                <Text className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.initialAmount")}</Text>
+                <TextInput disableFullscreenUI value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
+                <Text className="text-xs text-slate-500 dark:text-slate-300">{t("boxes.externalHelp")}</Text>
               </View>
             ) : (
               <TouchableOpacity onPress={() => setCreando(true)} className="mt-4 min-h-12 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-600"><Plus size={19} color="#fff" /><Text className="font-extrabold text-white">{t("boxes.create")}</Text></TouchableOpacity>

@@ -182,6 +182,16 @@ Comando principal: `node pruebas/correr.mjs`.
 
 ## Pendientes actuales
 
+### Cajas compartidas (06/09/2026)
+
+- Cajas permite un monto inicial de dinero externo; no descuenta Personal.
+- La ruta `/shared-boxes` permite crear, unirse con código y registrar movimientos
+  compartidos. Guarda la moneda de la caja y escucha los movimientos en directo.
+- Corregido el acceso antes de la membresía y la creación atómica de caja y dueño.
+- Pendiente: transferencias enlazadas con Personal, gestión de miembros y cierre,
+  migración de cajas privadas y prueba real con dos cuentas. No presentar el flujo
+  completo como terminado ni afirmar visibilidad en el emulador sin comprobarla.
+
 Esta lista reemplaza los pendientes antiguos que hablaban de dos carpetas o de
 rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 `master`.

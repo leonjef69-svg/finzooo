@@ -132,6 +132,11 @@ pero es diseño y se puede dejar para después: primero publicar.
 
 ## Formulario de seguridad de los datos
 
+En los espacios compartidos de Familia y Cajas, el nombre de miembro y los
+movimientos ingresados en ese espacio se muestran a los participantes autorizados.
+Los datos personales fuera del espacio no se muestran a los invitados. Actualizar
+la política y revisar la declaración de la tienda antes de distribuir esta función.
+
 > **Lo que decide la mayoría de respuestas:** los datos **se recogen** (viajan a Firebase si la
 > persona inicia sesión) y **no se comparten** con terceros. Todo va **cifrado en tránsito** y
 > **se puede pedir el borrado**. Nada de esto es opcional en el formulario y equivocarse aquí

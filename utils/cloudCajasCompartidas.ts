@@ -1,15 +1,17 @@
 import {
   addDoc, collection, doc, getDoc, getDocs, orderBy, query,
-  runTransaction, serverTimestamp, setDoc,
+  runTransaction, serverTimestamp, setDoc, onSnapshot,
 } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import { crearCodigoFamilia } from "@/utils/familia";
+import { isSafeMoneyAmount } from "@/utils/amount";
 
 export type CajaCompartida = {
   id: string;
   nombre: string;
   ownerUid: string;
   creadaEn: number;
+  currency: string;
 };
 
 export type MovimientoCajaCompartida = {
@@ -29,7 +31,7 @@ const alNumero = (value: unknown): number => {
 };
 
 function desdeDocumento(id: string, data: Record<string, unknown>): CajaCompartida {
-  return { id, nombre: String(data.nombre || "Caja"), ownerUid: String(data.ownerUid || ""), creadaEn: alNumero(data.creadaEn) };
+  return { id, nombre: String(data.nombre || "Caja"), ownerUid: String(data.ownerUid || ""), creadaEn: alNumero(data.creadaEn), currency: String(data.currency || "PEN") };
 }
 
 export async function listarCajasCompartidas(uid: string): Promise<CajaCompartida[]> {
@@ -41,15 +43,20 @@ export async function listarCajasCompartidas(uid: string): Promise<CajaCompartid
   return cajas.filter((caja): caja is CajaCompartida => caja !== null).sort((a, b) => b.creadaEn - a.creadaEn);
 }
 
-export async function crearCajaCompartida(uid: string, nombrePersona: string, nombre: string): Promise<CajaCompartida> {
+export async function crearCajaCompartida(uid: string, nombrePersona: string, nombre: string, montoInicial = 0, currency = "PEN"): Promise<CajaCompartida> {
   const ref = doc(collection(db, "boxSpaces"));
   const limpia = nombre.trim().slice(0, 30);
+  if (!limpia || !isSafeMoneyAmount(montoInicial) || montoInicial < 0) throw new Error("invalid-input");
   await runTransaction(db, async transaction => {
-    transaction.set(ref, { nombre: limpia, ownerUid: uid, creadaEn: serverTimestamp() });
+    transaction.set(ref, { nombre: limpia, ownerUid: uid, currency, creadaEn: serverTimestamp() });
     transaction.set(doc(db, "boxSpaces", ref.id, "members", uid), { uid, nombre: nombrePersona, rol: "owner", unidoEn: serverTimestamp() });
     transaction.set(doc(db, "boxUsers", uid, "spaces", ref.id), { boxId: ref.id, unidoEn: serverTimestamp() });
+    if (montoInicial > 0) transaction.set(doc(db, "boxSpaces", ref.id, "movements", "initial"), {
+      tipo: "ingreso", monto: montoInicial, descripcion: "", fecha: new Date().toLocaleDateString("sv-SE"),
+      creadoPor: uid, creadoEn: serverTimestamp(),
+    });
   });
-  return { id: ref.id, nombre: limpia, ownerUid: uid, creadaEn: Date.now() };
+  return { id: ref.id, nombre: limpia, ownerUid: uid, creadaEn: Date.now(), currency };
 }
 
 export async function crearInvitacionCaja(uid: string, boxId: string): Promise<string> {
@@ -63,12 +70,14 @@ export async function unirseACaja(uid: string, nombre: string, codigoCrudo: stri
   const invitacion = await getDoc(doc(db, "boxInvites", codigo));
   if (!invitacion.exists() || Number(invitacion.data().expiresAt || 0) < Date.now()) throw new Error("invalid-code");
   const boxId = String(invitacion.data().boxId || "");
-  const caja = await getDoc(doc(db, "boxSpaces", boxId));
-  if (!caja.exists()) throw new Error("invalid-code");
   await runTransaction(db, async transaction => {
-    transaction.set(doc(db, "boxSpaces", boxId, "members", uid), { uid, nombre, rol: "member", inviteCode: codigo, unidoEn: serverTimestamp() });
+    const memberRef = doc(db, "boxSpaces", boxId, "members", uid);
+    const member = await transaction.get(memberRef);
+    if (!member.exists()) transaction.set(memberRef, { uid, nombre, rol: "member", inviteCode: codigo, unidoEn: serverTimestamp() });
     transaction.set(doc(db, "boxUsers", uid, "spaces", boxId), { boxId, unidoEn: serverTimestamp() });
   });
+  const caja = await getDoc(doc(db, "boxSpaces", boxId));
+  if (!caja.exists()) throw new Error("invalid-code");
   return desdeDocumento(caja.id, caja.data());
 }
 
@@ -78,5 +87,12 @@ export async function listarMovimientosCajaCompartida(boxId: string): Promise<Mo
 }
 
 export async function guardarMovimientoCajaCompartida(boxId: string, uid: string, movimiento: Omit<MovimientoCajaCompartida, "id" | "creadoPor" | "creadoEn">): Promise<void> {
+  if (!isSafeMoneyAmount(movimiento.monto) || movimiento.monto <= 0) throw new Error("invalid-amount");
   await addDoc(collection(db, "boxSpaces", boxId, "movements"), { ...movimiento, creadoPor: uid, creadoEn: serverTimestamp() });
+}
+
+export function escucharMovimientosCaja(boxId: string, recibir: (items: MovimientoCajaCompartida[]) => void, error: () => void) {
+  return onSnapshot(query(collection(db, "boxSpaces", boxId, "movements"), orderBy("creadoEn", "desc")), snap => {
+    recibir(snap.docs.map(item => ({ id: item.id, tipo: item.data().tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(item.data().monto || 0), descripcion: String(item.data().descripcion || ""), fecha: String(item.data().fecha || ""), creadoPor: String(item.data().creadoPor || ""), creadoEn: alNumero(item.data().creadoEn) })));
+  }, error);
 }
