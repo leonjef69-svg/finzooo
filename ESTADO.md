@@ -184,6 +184,13 @@ Comando principal: `node pruebas/correr.mjs`.
 
 ### Cajas compartidas (06/09/2026)
 
+- Familia y ambas vistas de Cajas muestran totales táctiles que filtran el historial
+  y permiten volver a todos. Los registros nuevos guardan método de pago; los antiguos
+  sin método no reciben uno inventado. Yape/Plin siguen las restricciones por país.
+- El propietario puede cerrar Familia mediante confirmación: queda inactiva, se
+  bloquean nuevos movimientos/invitaciones y se conserva el historial. El cierre se
+  observa en otros clientes activos. No equivale a borrar permanentemente los datos.
+
 - Cajas permite un monto inicial de dinero externo; no descuenta Personal.
 - La ruta `/shared-boxes` permite crear, unirse con código y registrar movimientos
   compartidos. Guarda la moneda de la caja y escucha los movimientos en directo.

@@ -1,3 +1,5 @@
+import { SpaceTotals, SpacePaymentMethod, SpaceFilterReset, type MovementFilter } from "@/components/SpaceMovementControls";
+import { methodLabel } from "@/constants/i18n";
 import BackButton from "@/components/BackButton";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
 import { currencySymbolFor } from "@/constants/currencies";
@@ -37,6 +39,8 @@ export default function Cajas() {
   const [creando, setCreando] = useState(false);
   const [anotando, setAnotando] = useState<"ingreso" | "gasto" | null>(null);
   const [monto, setMonto] = useState("");
+  const [method, setMethod] = useState("cash");
+  const [filter, setFilter] = useState<MovementFilter>(null);
   const [descripcion, setDescripcion] = useState("");
   const [borrandoCaja, setBorrandoCaja] = useState(false);
   const [ready, setReady] = useState(false);
@@ -78,6 +82,7 @@ export default function Cajas() {
     { ingresos: 0, gastos: 0 },
   ), [movimientos]);
 
+  const visibles = movimientos.filter(item => !filter || item.tipo === filter);
   function crearCaja() {
     const nombre = nuevoNombre.trim().slice(0, 30);
     if (!nombre) return;
@@ -107,6 +112,7 @@ export default function Cajas() {
       id: nuevoIdCaja("mov"),
       cajaId: caja.id,
       tipo: anotando,
+      method,
       monto: valor,
       descripcion: descripcion.trim().slice(0, 60),
       fecha: fechaLocal(),
@@ -198,12 +204,8 @@ export default function Cajas() {
             <View className="rounded-3xl bg-teal-600 px-4 py-3">
               <Text className="text-base font-bold text-teal-100">{caja.nombre}</Text>
               <Text className="text-[26px] font-extrabold leading-8 text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58}>{fmt(saldoCaja(caja.id, datos.movimientos))}</Text>
-              <View className="mt-1.5 flex-row items-center border-t border-teal-400/60 pt-1.5">
-                <View className="flex-1"><Text className="text-xs font-semibold text-teal-100">{t("boxes.income")}</Text><Text className="text-sm font-extrabold text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{fmt(resumen.ingresos)}</Text></View>
-                <View className="mx-3 h-8 w-px bg-teal-400/70" />
-                <View className="flex-1"><Text className="text-xs font-semibold text-teal-100">{t("boxes.expense")}</Text><Text className="text-sm font-extrabold text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>{fmt(resumen.gastos)}</Text></View>
-                <Text className="ml-3 text-xs text-teal-100">{currencySymbolFor(userCurrency)} · {userCurrency}</Text>
-              </View>
+              <SpaceTotals income={resumen.ingresos} expense={resumen.gastos} filter={filter} onFilter={setFilter} format={fmt} />
+              <Text className="mt-1 text-xs text-teal-100">{currencySymbolFor(userCurrency)} · {userCurrency}</Text>
             </View>
             <View className="mt-3 flex-row gap-3">
               <TouchableOpacity onPress={() => setAnotando("ingreso")} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-100"><ArrowUp size={18} color="#047857" /><Text className="font-bold text-emerald-700">{t("boxes.income")}</Text></TouchableOpacity>
@@ -214,6 +216,7 @@ export default function Cajas() {
                 <Text className="mb-2 text-sm font-extrabold text-slate-800 dark:text-slate-100">{anotando === "ingreso" ? t("boxes.newIncome") : t("boxes.newExpense")}</Text>
                 <TextInput disableFullscreenUI value={monto} onChangeText={(value) => setMonto(sanitizeSafeAmountInput(value))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border-[1.5px] border-slate-200 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
                 <TextInput disableFullscreenUI value={descripcion} onChangeText={setDescripcion} maxLength={60} placeholder={t("boxes.description")} placeholderTextColor="#94a3b8" className="mt-2 h-12 rounded-xl border-[1.5px] border-slate-200 px-4 text-slate-900 dark:text-slate-100" />
+                <SpacePaymentMethod value={method} onChange={setMethod} />
                 <View className="mt-3 flex-row gap-2">
                   <TouchableOpacity onPress={() => setAnotando(null)} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text></TouchableOpacity>
                   <TouchableOpacity onPress={guardarMovimiento} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-emerald-600"><Text className="font-bold text-white">{t("common.save")}</Text></TouchableOpacity>
@@ -221,10 +224,11 @@ export default function Cajas() {
               </View>
             ) : null}
             <Text className="mb-2 mt-5 font-extrabold text-slate-900 dark:text-slate-100">{t("boxes.history")}</Text>
-            {movimientos.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t("boxes.noMovements")}</Text> : movimientos.map((item) => (
+            <SpaceFilterReset filter={filter} onReset={() => setFilter(null)} />
+            {visibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "boxes.noMovements")}</Text> : visibles.map((item) => (
               <View key={item.id} className="mb-2 flex-row items-center rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde">
                 <View className={`h-9 w-9 items-center justify-center rounded-xl ${item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
-                <View className="ml-3 flex-1"><Text className="text-[15px] font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text><Text className="text-xs text-slate-500">{item.fecha}</Text></View>
+                <View className="ml-3 flex-1"><Text className="text-[15px] font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View>
                 <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-2 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text>
                 <TouchableOpacity accessibilityLabel={t("common.delete")} onPress={() => borrarMovimiento(item.id)} className="h-10 w-10 items-center justify-center"><Trash2 size={17} color="#e11d48" /></TouchableOpacity>
               </View>

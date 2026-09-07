@@ -38,6 +38,10 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/familySpaces/$(familyId)/members/$(request.auth.uid));
     }
 
+    function familyOpen(familyId) {
+      return get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('closed', false) == false;
+    }
+
     function premiumUser(userId) {
       return exists(/databases/$(database)/documents/users/$(userId))
         && (
@@ -153,13 +157,20 @@ service cloud.firestore {
                     && request.resource.data.nombre is string
                     && premiumUser(request.auth.uid);
       allow read: if familyMember(familyId);
-      allow update, delete: if familyMember(familyId)
-                            && resource.data.ownerUid == request.auth.uid;
+      allow update: if familyMember(familyId)
+                    && resource.data.ownerUid == request.auth.uid
+                    && resource.data.get('closed', false) == false
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'closed'])
+                    && request.resource.data.nombre is string
+                    && request.resource.data.nombre.size() > 0
+                    && request.resource.data.nombre.size() <= 35
+                    && request.resource.data.get('closed', false) is bool;
 
       match /members/{userId} {
         allow read: if familyMember(familyId);
         allow create: if verified()
                       && userId == request.auth.uid
+                      && familyOpen(familyId)
                       && request.resource.data.uid == request.auth.uid
                       && (
                         (get(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid
@@ -179,12 +190,12 @@ service cloud.firestore {
 
       match /movements/{movementId} {
         allow read: if familyMember(familyId);
-        allow create: if familyMember(familyId)
+        allow create: if familyMember(familyId) && familyOpen(familyId)
                       && request.resource.data.creadoPor == request.auth.uid
                       && request.resource.data.tipo in ['ingreso', 'gasto']
                       && request.resource.data.monto is number
                       && request.resource.data.monto > 0;
-        allow delete: if familyMember(familyId);
+        allow delete: if familyMember(familyId) && familyOpen(familyId);
       }
     }
 
@@ -195,6 +206,7 @@ service cloud.firestore {
                     && request.resource.data.createdBy == request.auth.uid
                     && request.resource.data.familyId is string
                     && familyMember(request.resource.data.familyId)
+                    && familyOpen(request.resource.data.familyId)
                     && get(/databases/$(database)/documents/familySpaces/$(request.resource.data.familyId)).data.ownerUid == request.auth.uid
                     && premiumUser(request.auth.uid)
                     && request.resource.data.expiresAt > request.time.toMillis();

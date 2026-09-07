@@ -10,6 +10,7 @@ export type MovimientoCaja = {
   tipo: "ingreso" | "gasto";
   monto: number;
   descripcion: string;
+  method?: string;
   fecha: string;
   creadoEn: number;
 };

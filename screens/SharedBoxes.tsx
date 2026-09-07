@@ -1,3 +1,5 @@
+import { SpaceTotals, SpacePaymentMethod, SpaceFilterReset, type MovementFilter } from "@/components/SpaceMovementControls";
+import { methodLabel } from "@/constants/i18n";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View, Share } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -19,6 +21,8 @@ export default function SharedBoxes() {
   const [modo, setModo] = useState<"crear" | "unir" | "ingreso" | "gasto" | null>(null);
   const [nombre, setNombre] = useState("");
   const [monto, setMonto] = useState("");
+  const [method, setMethod] = useState("cash");
+  const [filter, setFilter] = useState<MovementFilter>(null);
   const [codigo, setCodigo] = useState("");
   const [invitacion, setInvitacion] = useState("");
   const [busy, setBusy] = useState(false);
@@ -40,6 +44,7 @@ export default function SharedBoxes() {
   }, [caja]);
   const ingresos = movimientos.filter(item => item.tipo === "ingreso").reduce((sum, item) => sum + item.monto, 0);
   const gastos = movimientos.filter(item => item.tipo === "gasto").reduce((sum, item) => sum + item.monto, 0);
+  const visibles = movimientos.filter(item => !filter || item.tipo === filter);
   function limpiar() { setModo(null); setNombre(""); setMonto(""); setCodigo(""); }
   async function ejecutar(action: () => Promise<void>) {
     if (lock.current) return;
@@ -60,7 +65,7 @@ export default function SharedBoxes() {
       setCajas(items => [nueva, ...items.filter(item => item.id !== nueva.id)]); setCaja(nueva);
     } else if (caja && (modo === "ingreso" || modo === "gasto")) {
       const valor = parseAmountInput(monto); if (valor <= 0) return;
-      await guardarMovimientoCajaCompartida(caja.id, uid, { tipo: modo, monto: valor, descripcion: nombre.trim(), fecha: new Date().toLocaleDateString("sv-SE") });
+      await guardarMovimientoCajaCompartida(caja.id, uid, { tipo: modo, monto: valor, descripcion: nombre.trim(), fecha: new Date().toLocaleDateString("sv-SE"), method });
     }
     limpiar();
   });
@@ -75,7 +80,7 @@ export default function SharedBoxes() {
           <View className="mb-3 flex-row gap-2">{boton(t("family.createPremium"), () => { if (isPremium) { limpiar(); setModo("crear"); } else irUnaVez("/premium"); })}{boton(t("boxes.join"), () => { limpiar(); setModo("unir"); })}</View>
           {cajas.map(item => <TouchableOpacity key={item.id} onPress={() => { limpiar(); setCaja(item); }} className="mb-2 rounded-2xl border border-slate-200 p-4 dark:border-noche-borde"><Text className="text-base font-bold text-slate-900 dark:text-white">{item.nombre}</Text></TouchableOpacity>)}
         </> : <>
-          <View className="rounded-2xl bg-emerald-600 p-4"><Text className="text-base font-bold text-white">{caja.nombre}</Text><Text adjustsFontSizeToFit numberOfLines={1} className="text-[26px] font-extrabold text-white">{fmt(ingresos - gastos)}</Text><View className="mt-2 flex-row gap-3"><View className="flex-1"><Text className="text-sm text-white">{t("boxes.income")}</Text><Text adjustsFontSizeToFit numberOfLines={1} className="font-bold text-white">{fmt(ingresos)}</Text></View><View className="flex-1"><Text className="text-sm text-white">{t("boxes.expense")}</Text><Text adjustsFontSizeToFit numberOfLines={1} className="font-bold text-white">{fmt(gastos)}</Text></View></View></View>
+          <View className="rounded-2xl bg-emerald-600 p-4"><Text className="text-base font-bold text-white">{caja.nombre}</Text><Text adjustsFontSizeToFit numberOfLines={1} className="text-[26px] font-extrabold text-white">{fmt(ingresos - gastos)}</Text><SpaceTotals income={ingresos} expense={gastos} filter={filter} onFilter={setFilter} format={fmt} /></View>
           <View className="my-3 flex-row gap-2">{boton(t("boxes.income"), () => { limpiar(); setModo("ingreso"); })}{boton(t("boxes.expense"), () => { limpiar(); setModo("gasto"); })}</View>
           {caja.ownerUid === uid ? <TouchableOpacity disabled={busy} onPress={() => { if (!isPremium) { irUnaVez("/premium"); return; } void ejecutar(async () => setInvitacion(await crearInvitacionCaja(uid, caja.id))); }} className="min-h-12 items-center justify-center"><Text className="text-sm font-bold text-teal-700 dark:text-teal-300">{t("family.invite")}</Text></TouchableOpacity> : null}
           {invitacion ? <TouchableOpacity onPress={() => void Share.share({ message: invitacion })} className="rounded-xl bg-emerald-50 p-3"><Text selectable className="text-center text-xl font-bold text-emerald-800">{invitacion}</Text><Text className="text-center text-sm text-slate-600">{t("family.codeExpires")}</Text></TouchableOpacity> : null}
@@ -83,9 +88,12 @@ export default function SharedBoxes() {
         {modo ? <View className="my-3 gap-2 rounded-2xl border border-slate-200 p-3 dark:border-noche-borde">
           <TextInput disableFullscreenUI editable={!busy} value={modo === "unir" ? codigo : nombre} onChangeText={value => modo === "unir" ? setCodigo(value.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 8)) : setNombre(value)} maxLength={modo === "unir" ? 8 : modo === "crear" ? 30 : 60} placeholder={t(modo === "unir" ? "family.codePlaceholder" : modo === "crear" ? "boxes.namePlaceholder" : "boxes.description")} placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-3 text-base text-slate-900 dark:text-white" />
           {modo !== "unir" ? <><TextInput disableFullscreenUI editable={!busy} value={monto} onChangeText={value => setMonto(sanitizeSafeAmountInput(value))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-3 text-lg text-slate-900 dark:text-white" />{modo === "crear" ? <Text className="text-sm text-slate-500">{t("boxes.externalHelp")}</Text> : null}</> : null}
+          {modo === "ingreso" || modo === "gasto" ? <SpacePaymentMethod value={method} onChange={setMethod} disabled={busy} /> : null}
           <View className="flex-row gap-2">{boton(t("common.cancel"), limpiar)}{boton(busy ? t("common.loading") : t("common.save"), guardar)}</View>
         </View> : null}
-        {caja ? movimientos.map(item => <View key={item.id} className="mb-2 rounded-xl border border-slate-200 p-3 dark:border-noche-borde"><View className="flex-row gap-3"><Text numberOfLines={1} className="flex-1 text-base font-bold text-slate-900 dark:text-white">{item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text numberOfLines={1} adjustsFontSizeToFit className="max-w-[50%] text-base font-bold text-teal-600">{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></View><Text className="text-xs text-slate-500">{item.fecha}</Text></View>) : null}
+        <SpaceFilterReset filter={filter} onReset={() => setFilter(null)} />
+        {caja && visibles.length === 0 ? <Text className="py-3 text-sm text-slate-500">{t("spaces.noResults")}</Text> : null}
+        {caja ? visibles.map(item => <View key={item.id} className="mb-2 rounded-xl border border-slate-200 p-3 dark:border-noche-borde"><View className="flex-row gap-3"><Text numberOfLines={1} className="flex-1 text-base font-bold text-slate-900 dark:text-white">{item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text numberOfLines={1} adjustsFontSizeToFit className="max-w-[50%] text-base font-bold text-teal-600">{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></View><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View>) : null}
       </>}
     </ScrollView>
   </View>;

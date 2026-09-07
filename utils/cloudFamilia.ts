@@ -11,6 +11,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  onSnapshot,
 } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import { crearCodigoFamilia } from "@/utils/familia";
@@ -33,6 +34,7 @@ export type MovimientoFamilia = {
   tipo: "ingreso" | "gasto";
   monto: number;
   descripcion: string;
+  method?: string;
   fecha: string;
   creadoEn: number;
   creadoPor: string;
@@ -53,6 +55,7 @@ export async function cargarFamiliaActiva(uid: string): Promise<EspacioFamilia |
   const espacio = await getDoc(doc(db, "familySpaces", familyId));
   if (!espacio.exists()) return null;
   const data = espacio.data();
+  if (data.closed === true) return null;
   return { id: espacio.id, nombre: String(data.nombre || "Familia"), ownerUid: String(data.ownerUid), creadoEn: alNumero(data.creadoEn) };
 }
 
@@ -78,6 +81,22 @@ export async function crearInvitacionFamilia(uid: string, familiaId: string): Pr
 
 export async function renombrarFamilia(familiaId: string, nombre: string): Promise<void> {
   await updateDoc(doc(db, "familySpaces", familiaId), { nombre: nombre.trim().slice(0, 35) });
+}
+
+export async function cerrarFamilia(uid: string, familiaId: string): Promise<void> {
+  await runTransaction(db, async transaction => {
+    const ref = doc(db, "familySpaces", familiaId);
+    const snap = await transaction.get(ref);
+    if (!snap.exists() || snap.data().ownerUid !== uid) throw new Error("not-owner");
+    transaction.update(ref, { closed: true });
+    transaction.set(doc(db, "familyUsers", uid), { activeFamilyId: "" }, { merge: true });
+  });
+}
+
+export function observarCierreFamilia(familiaId: string, cerrado: () => void, error: () => void) {
+  return onSnapshot(doc(db, "familySpaces", familiaId), snap => {
+    if (!snap.exists() || snap.data().closed === true) cerrado();
+  }, error);
 }
 
 export async function unirseAFamilia(uid: string, nombre: string, codigoCrudo: string): Promise<EspacioFamilia> {
@@ -112,7 +131,7 @@ export async function listarMovimientosFamilia(familyId: string): Promise<Movimi
   const snap = await getDocs(query(collection(db, "familySpaces", familyId, "movements"), orderBy("creadoEn", "desc")));
   return snap.docs.map((item) => {
     const data = item.data();
-    return { id: item.id, tipo: data.tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(data.monto || 0), descripcion: String(data.descripcion || ""), fecha: String(data.fecha || ""), creadoEn: alNumero(data.creadoEn), creadoPor: String(data.creadoPor || "") };
+    return { id: item.id, tipo: data.tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(data.monto || 0), descripcion: String(data.descripcion || ""), method: typeof data.method === "string" ? data.method : undefined, fecha: String(data.fecha || ""), creadoEn: alNumero(data.creadoEn), creadoPor: String(data.creadoPor || "") };
   });
 }
 
