@@ -39,7 +39,8 @@ service cloud.firestore {
     }
 
     function familyOpen(familyId) {
-      return get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('closed', false) == false;
+      return get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('closed', false) == false
+        && get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('closing', false) == false;
     }
 
     function premiumUser(userId) {
@@ -58,6 +59,11 @@ service cloud.firestore {
     function boxMember(boxId) {
       return verified()
         && exists(/databases/$(database)/documents/boxSpaces/$(boxId)/members/$(request.auth.uid));
+    }
+
+    function boxOpen(boxId) {
+      return get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('closed', false) == false
+        && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('closing', false) == false;
     }
 
     // Cada persona guarda todo en un solo documento: users/{su-id}
@@ -160,11 +166,12 @@ service cloud.firestore {
       allow update: if familyMember(familyId)
                     && resource.data.ownerUid == request.auth.uid
                     && resource.data.get('closed', false) == false
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'closed'])
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'closed', 'closing'])
                     && request.resource.data.nombre is string
                     && request.resource.data.nombre.size() > 0
                     && request.resource.data.nombre.size() <= 35
-                    && request.resource.data.get('closed', false) is bool;
+                    && request.resource.data.get('closed', false) is bool
+                    && request.resource.data.get('closing', false) is bool;
 
       match /members/{userId} {
         allow read: if familyMember(familyId);
@@ -220,7 +227,9 @@ service cloud.firestore {
     // Índice privado que permite recuperar el espacio familiar al cambiar de celular.
     // No concede acceso al espacio; las reglas anteriores siguen comprobando membresía.
     match /familyUsers/{userId} {
-      allow read, write: if verified() && request.auth.uid == userId;
+      allow read, create, update: if verified() && request.auth.uid == userId;
+      allow delete: if verified() && (request.auth.uid == userId
+        || get(/databases/$(database)/documents/familySpaces/$(resource.data.activeFamilyId)).data.ownerUid == request.auth.uid);
     }
 
     // Una caja compartida es independiente de Personal, Familia y Negocio.
@@ -233,7 +242,9 @@ service cloud.firestore {
       allow read: if boxMember(boxId);
       allow update, delete: if boxMember(boxId)
                             && resource.data.ownerUid == request.auth.uid
-                            && (request.method == 'delete' || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'migrationComplete']));
+                            && (request.method == 'delete' || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'migrationComplete', 'closed', 'closing']))
+                            && request.resource.data.get('closed', false) is bool
+                            && request.resource.data.get('closing', false) is bool;
 
       match /members/{userId} {
         allow read: if boxMember(boxId);
@@ -253,7 +264,7 @@ service cloud.firestore {
 
       match /movements/{movementId} {
         allow read: if boxMember(boxId);
-        allow create: if verified() && (boxMember(boxId)
+        allow create: if verified() && boxOpen(boxId) && (boxMember(boxId)
           || getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid)
           && request.resource.data.creadoPor == request.auth.uid
           && request.resource.data.tipo in ['ingreso', 'gasto']
@@ -273,6 +284,7 @@ service cloud.firestore {
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.boxId is string
         && boxMember(request.resource.data.boxId)
+        && boxOpen(request.resource.data.boxId)
         && get(/databases/$(database)/documents/boxSpaces/$(request.resource.data.boxId)).data.ownerUid == request.auth.uid
         && premiumUser(request.auth.uid)
         && request.resource.data.expiresAt > request.time.toMillis();
@@ -280,7 +292,9 @@ service cloud.firestore {
     }
 
     match /boxUsers/{userId}/spaces/{boxId} {
-      allow read, write: if verified() && request.auth.uid == userId;
+      allow read, create, update: if verified() && request.auth.uid == userId;
+      allow delete: if verified() && (request.auth.uid == userId
+        || get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid);
     }
 
     // Tarjetas de crédito: documento separado para no acercar la copia

@@ -15,6 +15,8 @@ export type MovimientoCaja = {
   creadoEn: number;
   /** Débito de Personal que financió este ingreso, si corresponde. */
   personalTransactionId?: number;
+  /** Parte de este gasto que volvió a Personal. */
+  personalReturnAmount?: number;
 };
 
 export type DatosCajas = {

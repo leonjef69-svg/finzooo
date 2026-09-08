@@ -29,6 +29,8 @@ const sharedCloud = fs.readFileSync("utils/cloudCajasCompartidas.ts", "utf8");
 const rules = fs.readFileSync("firestore.rules", "utf8");
 const deletion = fs.readFileSync("utils/cloudSync.ts", "utf8");
 const screen = fs.readFileSync("screens/Cajas.tsx", "utf8");
+const sharedScreen = fs.readFileSync("screens/SharedBoxes.tsx", "utf8");
+const context = fs.readFileSync("contexts/AppDataContext.tsx", "utf8");
 assert.match(storage, /cajasDinero/, "las cajas se guardan aparte");
 assert.match(cloud, /doc\(db, "cajas", uid\)/, "las cajas usan un documento propio en la nube");
 assert.match(rules, /match \/cajas\/\{userId\}/, "la nube protege las cajas por propietario");
@@ -41,5 +43,11 @@ assert.match(sharedCloud, /await updateDoc\(ref, \{ migrationComplete: true \}\)
 assert.match(sharedCloud, /inicio \+= 400/, "una caja grande se copia en lotes admitidos por Firebase");
 assert.match(screen, /Solo después de terminar toda la copia se retira la versión privada/, "la pantalla no borra la caja si falla la migración");
 assert.match(screen, /crearInvitacionCaja\(uid, compartida\.id\)/, "compartir genera el código para la persona invitada");
+assert.match(sharedCloud, /export async function listarMiembrosCaja/, "la caja compartida puede mostrar sus miembros");
+assert.match(sharedCloud, /export async function quitarMiembroCaja/, "el propietario puede retirar el acceso de un miembro");
+assert.match(sharedCloud, /export async function cerrarCajaCompartida/, "una caja compartida puede cerrarse de forma explícita");
+assert.match(sharedScreen, /Math\.max\(0, Math\.min\(saldo, aportadoDesdePersonal\)\)/, "solo vuelve a Personal dinero aportado que aún queda en la caja");
+assert.match(sharedScreen, /Math\.abs\(saldo\) > 0\.000001/, "una caja con saldo pendiente no se puede cerrar");
+assert.match(context, /transfersOut \+ transfersIn/, "devolver dinero aumenta Personal sin contarlo como un ingreso nuevo");
 
 console.log("Cajas: saldo, borrado, guardado separado y privacidad verificados.");

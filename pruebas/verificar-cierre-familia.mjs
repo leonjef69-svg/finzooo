@@ -5,6 +5,7 @@ import vm from "node:vm";
 // Run the real cloud module against a transactional in-memory Firestore boundary.
 const documents = new Map();
 let failCommit = false;
+let addedDocuments = 0;
 const snap = ref => ({ exists: () => documents.has(ref), data: () => documents.get(ref), id: ref.split("/").pop() });
 const api = {
   doc: (_db, ...parts) => parts.join("/"),
@@ -14,7 +15,8 @@ const api = {
   orderBy: () => null,
   query: ref => ref,
   serverTimestamp: () => 1,
-  addDoc: async (ref, value) => documents.set(ref + "/movement", value),
+  addDoc: async (ref, value) => documents.set(ref + `/movement${++addedDocuments}`, value),
+  updateDoc: async (ref, value) => documents.set(ref, { ...documents.get(ref), ...value }),
   runTransaction: async (_db, callback) => {
     const staged = new Map();
     await callback({
@@ -41,10 +43,13 @@ assert.equal(documents.get("familySpaces/f").closed, undefined);
 failCommit = false;
 await cloud.guardarMovimientoFamilia("f", "owner", { tipo: "gasto", monto: 20, descripcion: "Dinner", fecha: "2026-09-06", method: "debit" });
 assert.equal((await cloud.listarMovimientosFamilia("f"))[0].method, "debit");
+await assert.rejects(() => cloud.cerrarFamilia("owner", "f"), /balance-not-zero/);
+assert.equal(documents.get("familySpaces/f").closed, undefined);
+await cloud.guardarMovimientoFamilia("f", "owner", { tipo: "ingreso", monto: 20, descripcion: "Refund", fecha: "2026-09-06", method: "cash" });
 await cloud.cerrarFamilia("owner", "f");
 assert.equal(documents.get("familySpaces/f").closed, true);
 assert.equal(documents.get("familyUsers/owner").activeFamilyId, "");
-assert.equal(documents.get("familySpaces/f/movements/movement").monto, 20);
+assert.equal(documents.get("familySpaces/f/movements/movement1").monto, 20);
 documents.set("familyUsers/guest", { activeFamilyId: "f" });
 assert.equal(await cloud.cargarFamiliaActiva("guest"), null);
 console.log("Cierre familiar: propietario, operación atómica, historial conservado y método de pago verificados.");

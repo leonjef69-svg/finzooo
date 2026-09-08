@@ -684,8 +684,8 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     // pequeña debajo. Antes el protagonista era SIEMPRE el gasto, así que
     // pedir un resumen de ingresos mostraba gastos.
     const wantsIncome = summaryFocus === "income";
-    const all = monthTx.filter((tx) => (wantsIncome ? tx.type === "income" : tx.type === "expense"));
-    const other = monthTx.filter((tx) => (wantsIncome ? tx.type === "expense" : tx.type === "income"));
+    const all = monthTx.filter((tx) => !tx.internalTransfer && (wantsIncome ? tx.type === "income" : tx.type === "expense"));
+    const other = monthTx.filter((tx) => !tx.internalTransfer && (wantsIncome ? tx.type === "expense" : tx.type === "income"));
 
     // Si se pidió una categoría, el resumen es SOLO de esa.
     const main = summaryCategory ? all.filter((tx) => tx.category === summaryCategory) : all;
@@ -741,6 +741,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   function totalsByMonth(): Map<string, { expense: number; income: number }> {
     const map = new Map<string, { expense: number; income: number }>();
     for (const tx of transactions) {
+      if (tx.internalTransfer) continue;
       const key = tx.date.slice(0, 7);
       const acc = map.get(key) ?? { expense: 0, income: 0 };
       if (tx.type === "income") acc.income += tx.amount;

@@ -25,6 +25,9 @@ assert.match(screen, /owner \? editandoNombre/, "solo el propietario ve los cont
 assert.match(screen, /setOrigenDinero\(origin\)/, "los ingresos familiares permiten elegir dinero externo o Personal");
 assert.match(screen, /personalOwnerUid: uid/, "el aporte familiar recuerda a qué propietario pertenece");
 assert.match(screen, /deleteTransaction\(item\.personalTransactionId\)/, "el dueño recupera en Personal un aporte familiar que elimina");
+assert.match(cloud, /export async function quitarMiembroFamilia/, "el propietario puede retirar miembros de Familia");
+assert.match(screen, /Math\.max\(0, Math\.min\(saldo, aportadoDesdePersonal\)\)/, "Familia solo devuelve a Personal el aporte que todavía queda");
+assert.match(screen, /Math\.abs\(saldo\) > 0\.000001/, "Familia no puede cerrarse dejando un saldo perdido");
 assert.match(deletion, /borrarVinculoFamiliaDeCuenta/, "eliminar la cuenta también retira su membresía familiar");
 
 console.log("Familia: invitaciones, membresía, vencimiento y privacidad verificados.");

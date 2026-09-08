@@ -66,6 +66,7 @@ export function htmlDelReporte(d: DatosDelPdf): string {
       methodLabel: methodLabel(tx.method, t),
       amount: tx.amount,
       type: tx.type,
+      internalTransfer: Boolean(tx.internalTransfer),
     };
   });
 
@@ -78,7 +79,7 @@ export function htmlDelReporte(d: DatosDelPdf): string {
   // meses.
   const gastadoPorCategoria: Record<string, number> = {};
   for (const tx of todos) {
-    if (tx.type !== "expense" || !tx.date.startsWith(mes)) continue;
+    if (tx.type !== "expense" || tx.internalTransfer || !tx.date.startsWith(mes)) continue;
     gastadoPorCategoria[tx.category] = (gastadoPorCategoria[tx.category] || 0) + tx.amount;
   }
   const limites = Object.entries(presupuestos)

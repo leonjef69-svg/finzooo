@@ -205,8 +205,13 @@ Comando principal: `node pruebas/correr.mjs`.
   retira la caja privada cuando la copia terminó; una migración interrumpida no
   aparece como una caja compartida vacía.
 - Corregido el acceso antes de la membresía y la creación atómica de caja y dueño.
-- Pendiente: gestión de miembros y cierre con devolución del saldo restante,
-  y prueba real con dos cuentas. No presentar el flujo
+- Familia y Cajas compartidas muestran sus miembros. El propietario puede retirar
+  invitados; un invitado puede salir sin borrar el espacio ni afectar a los demás.
+- Los espacios calculan cuánto del saldo restante proviene realmente de Personal y
+  solo permiten devolver hasta ese importe. La devolución aumenta el disponible,
+  pero no se presenta como un ingreso nuevo. Un espacio no puede cerrarse mientras
+  conserve saldo, evitando que el dinero desaparezca por error.
+- Pendiente: prueba real con dos cuentas. No presentar el flujo
   completo como terminado ni afirmar visibilidad en el emulador sin comprobarla.
 
 Esta lista reemplaza los pendientes antiguos que hablaban de dos carpetas o de

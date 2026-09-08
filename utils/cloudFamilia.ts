@@ -12,6 +12,7 @@ import {
   setDoc,
   updateDoc,
   onSnapshot,
+  writeBatch,
 } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import { crearCodigoFamilia } from "@/utils/familia";
@@ -41,6 +42,7 @@ export type MovimientoFamilia = {
   /** Débito enlazado en Personal; solo pertenece al dueño que hizo el aporte. */
   personalTransactionId?: number;
   personalOwnerUid?: string;
+  personalReturnAmount?: number;
 };
 
 const alNumero = (value: unknown): number => {
@@ -87,13 +89,26 @@ export async function renombrarFamilia(familiaId: string, nombre: string): Promi
 }
 
 export async function cerrarFamilia(uid: string, familiaId: string): Promise<void> {
+  const ref = doc(db, "familySpaces", familiaId);
   await runTransaction(db, async transaction => {
-    const ref = doc(db, "familySpaces", familiaId);
     const snap = await transaction.get(ref);
     if (!snap.exists() || snap.data().ownerUid !== uid) throw new Error("not-owner");
-    transaction.update(ref, { closed: true });
-    transaction.set(doc(db, "familyUsers", uid), { activeFamilyId: "" }, { merge: true });
+    transaction.update(ref, { closing: true });
   });
+  try {
+    const movimientos = await listarMovimientosFamilia(familiaId);
+    const saldo = movimientos.reduce((sum, item) => sum + (item.tipo === "ingreso" ? item.monto : -item.monto), 0);
+    if (Math.abs(saldo) > 0.000001) throw new Error("balance-not-zero");
+    await runTransaction(db, async transaction => {
+      const snap = await transaction.get(ref);
+      if (!snap.exists() || snap.data().ownerUid !== uid || snap.data().closing !== true) throw new Error("not-owner");
+      transaction.update(ref, { closed: true, closing: false });
+      transaction.set(doc(db, "familyUsers", uid), { activeFamilyId: "" }, { merge: true });
+    });
+  } catch (error) {
+    await updateDoc(ref, { closing: false }).catch(() => {});
+    throw error;
+  }
 }
 
 export function observarCierreFamilia(familiaId: string, cerrado: () => void, error: () => void) {
@@ -134,7 +149,7 @@ export async function listarMovimientosFamilia(familyId: string): Promise<Movimi
   const snap = await getDocs(query(collection(db, "familySpaces", familyId, "movements"), orderBy("creadoEn", "desc")));
   return snap.docs.map((item) => {
     const data = item.data();
-    return { id: item.id, tipo: data.tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(data.monto || 0), descripcion: String(data.descripcion || ""), method: typeof data.method === "string" ? data.method : undefined, fecha: String(data.fecha || ""), creadoEn: alNumero(data.creadoEn), creadoPor: String(data.creadoPor || ""), personalTransactionId: typeof data.personalTransactionId === "number" ? data.personalTransactionId : undefined, personalOwnerUid: typeof data.personalOwnerUid === "string" ? data.personalOwnerUid : undefined };
+    return { id: item.id, tipo: data.tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(data.monto || 0), descripcion: String(data.descripcion || ""), method: typeof data.method === "string" ? data.method : undefined, fecha: String(data.fecha || ""), creadoEn: alNumero(data.creadoEn), creadoPor: String(data.creadoPor || ""), personalTransactionId: typeof data.personalTransactionId === "number" ? data.personalTransactionId : undefined, personalOwnerUid: typeof data.personalOwnerUid === "string" ? data.personalOwnerUid : undefined, personalReturnAmount: typeof data.personalReturnAmount === "number" ? data.personalReturnAmount : undefined };
   });
 }
 
@@ -151,6 +166,13 @@ export async function salirDeFamilia(uid: string, familyId: string): Promise<voi
     transaction.delete(doc(db, "familySpaces", familyId, "members", uid));
     transaction.set(doc(db, "familyUsers", uid), { activeFamilyId: "" }, { merge: true });
   });
+}
+
+export async function quitarMiembroFamilia(familyId: string, memberUid: string): Promise<void> {
+  const lote = writeBatch(db);
+  lote.delete(doc(db, "familySpaces", familyId, "members", memberUid));
+  lote.delete(doc(db, "familyUsers", memberUid));
+  await lote.commit();
 }
 
 export async function borrarVinculoFamiliaDeCuenta(uid: string): Promise<void> {

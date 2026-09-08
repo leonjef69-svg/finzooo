@@ -24,6 +24,7 @@ export type PdfTx = {
   methodLabel: string;
   amount: number;
   type: "expense" | "income";
+  internalTransfer?: boolean;
 };
 
 export type PdfTexts = {
@@ -127,7 +128,7 @@ export function byCategory(
   const sums = new Map<string, { color: string; amount: number }>();
   let total = 0;
   for (const tx of txs) {
-    if (tx.type !== type) continue;
+    if (tx.type !== type || tx.internalTransfer) continue;
     total += tx.amount;
     const prev = sums.get(tx.categoryLabel);
     if (prev) prev.amount += tx.amount;
@@ -143,7 +144,7 @@ export function byCategory(
 export function byDay(txs: PdfTx[], type: "expense" | "income", daysInMonth: number): number[] {
   const out = new Array(daysInMonth).fill(0);
   for (const tx of txs) {
-    if (tx.type !== type) continue;
+    if (tx.type !== type || tx.internalTransfer) continue;
     if (tx.day < 1 || tx.day > daysInMonth) continue;
     out[tx.day - 1] += tx.amount;
   }
@@ -450,8 +451,8 @@ export function cabeApretando(alto: number): boolean {
 export function buildPdfHtml(o: PdfOptions): string {
   const { texts: T, fmt } = o;
 
-  const ingresos = o.txs.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0);
-  const gastos = o.txs.filter((t) => t.type === "expense").reduce((s, t) => s + t.amount, 0);
+  const ingresos = o.txs.filter((t) => t.type === "income" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0);
+  const gastos = o.txs.filter((t) => t.type === "expense" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0);
   const balance = ingresos - gastos;
 
   // Los gráficos describen los gastos, que es lo que casi siempre se quiere

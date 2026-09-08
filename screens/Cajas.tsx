@@ -85,6 +85,12 @@ export default function Cajas() {
     }),
     { ingresos: 0, gastos: 0 },
   ), [movimientos]);
+  const saldoActual = caja ? saldoCaja(caja.id, datos.movimientos) : 0;
+  const aportadoDesdePersonal = movimientos.reduce((sum, item) => {
+    if (item.tipo === "ingreso" && item.personalTransactionId != null) return sum + item.monto;
+    return sum - (item.personalReturnAmount || 0);
+  }, 0);
+  const devolvibleAPersonal = Math.max(0, Math.min(saldoActual, aportadoDesdePersonal));
 
   const visibles = movimientos.filter(item => !filter || item.tipo === filter);
   function sacarDePersonal(valor: number, destino: string, link: string): number {
@@ -171,6 +177,7 @@ export default function Cajas() {
 
   function borrarCaja() {
     if (!caja) return;
+    if (Math.abs(saldoActual) > 0.000001) { showToast(t("boxes.closeBalance")); setBorrandoCaja(false); return; }
     const idsMovimientos = datos.movimientos.filter((item) => item.cajaId === caja.id).map((item) => item.id);
     setDatos((antes) => ({
       ...antes,
@@ -183,6 +190,14 @@ export default function Cajas() {
     setLista(true);
     setBorrandoCaja(false);
     showToast(t("boxes.deleted"));
+  }
+
+  function devolverAPersonal() {
+    if (!caja || devolvibleAPersonal <= 0) return;
+    const movimientoId = nuevoIdCaja("mov");
+    const personalId = nextId();
+    setDatos(antes => ({ ...antes, movimientos: [...antes.movimientos, { id: movimientoId, cajaId: caja.id, tipo: "gasto", monto: devolvibleAPersonal, descripcion: t("boxes.returnToPersonal"), method: "transfer", fecha: fechaLocal(), creadoEn: Date.now(), personalTransactionId: personalId, personalReturnAmount: devolvibleAPersonal }] }));
+    addOrUpdateTransaction({ id: personalId, type: "income", amount: devolvibleAPersonal, category: "otros", date: fechaLocal(), time: horaDe(Date.now()), method: "transfer", description: t("boxes.returnFrom", { name: caja.nombre }), notes: "", origin: "manual", internalTransfer: "box", internalTransferLink: movimientoId });
   }
 
   async function compartirCaja() {
@@ -267,7 +282,7 @@ export default function Cajas() {
             <TouchableOpacity onPress={() => setLista(true)} className="mb-2 mt-1 flex-row items-center gap-2 py-2"><ArrowLeftRight size={16} color="#0d9488" /><Text className="text-xs font-bold text-teal-700 dark:text-teal-300">{t("boxes.all")}</Text></TouchableOpacity>
             <View className="rounded-3xl bg-teal-600 px-4 py-3">
               <Text className="text-base font-bold text-teal-100">{caja.nombre}</Text>
-              <Text className="text-[26px] font-extrabold leading-8 text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58}>{fmt(saldoCaja(caja.id, datos.movimientos))}</Text>
+              <Text className="text-[26px] font-extrabold leading-8 text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58}>{fmt(saldoActual)}</Text>
               <SpaceTotals income={resumen.ingresos} expense={resumen.gastos} filter={filter} onFilter={setFilter} format={fmt} />
             </View>
             <View className="mt-3 flex-row gap-3">
@@ -287,6 +302,7 @@ export default function Cajas() {
                 </View>
               </View>
             ) : null}
+            {devolvibleAPersonal > 0 ? <TouchableOpacity onPress={devolverAPersonal} className="mt-3 min-h-11 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("boxes.returnAmount", { amount: fmt(devolvibleAPersonal) })}</Text></TouchableOpacity> : null}
             <Text className="mb-2 mt-5 font-extrabold text-slate-900 dark:text-slate-100">{t("boxes.history")}</Text>
             <SpaceFilterReset filter={filter} onReset={() => setFilter(null)} />
             {visibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "boxes.noMovements")}</Text> : visibles.map((item) => (

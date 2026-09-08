@@ -1,5 +1,5 @@
 import {
-  addDoc, collection, doc, getDoc, getDocs, orderBy, query,
+  addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query,
   runTransaction, serverTimestamp, setDoc, onSnapshot, updateDoc, writeBatch,
 } from "firebase/firestore";
 import { db } from "@/utils/firebase";
@@ -26,7 +26,10 @@ export type MovimientoCajaCompartida = {
   creadoEn: number;
   personalTransactionId?: number;
   personalOwnerUid?: string;
+  personalReturnAmount?: number;
 };
+
+export type MiembroCajaCompartida = { uid: string; nombre: string; rol: "owner" | "member" };
 
 const alNumero = (value: unknown): number => {
   if (typeof value === "number") return value;
@@ -42,7 +45,7 @@ export async function listarCajasCompartidas(uid: string): Promise<CajaCompartid
   const enlaces = await getDocs(collection(db, "boxUsers", uid, "spaces"));
   const cajas = await Promise.all(enlaces.docs.map(async enlace => {
     const caja = await getDoc(doc(db, "boxSpaces", enlace.id));
-    return caja.exists() && caja.data().migrationComplete !== false ? desdeDocumento(caja.id, caja.data()) : null;
+    return caja.exists() && caja.data().migrationComplete !== false && caja.data().closed !== true ? desdeDocumento(caja.id, caja.data()) : null;
   }));
   return cajas.filter((caja): caja is CajaCompartida => caja !== null).sort((a, b) => b.creadaEn - a.creadaEn);
 }
@@ -92,6 +95,7 @@ export async function compartirCajaExistente(
         tipo: item.tipo, monto: item.monto, descripcion: item.descripcion, fecha: item.fecha,
         ...(item.method ? { method: item.method } : {}), creadoPor: uid, creadoEn: item.creadoEn,
         ...(item.personalTransactionId != null ? { personalTransactionId: item.personalTransactionId, personalOwnerUid: uid } : {}),
+        ...(item.personalReturnAmount != null ? { personalReturnAmount: item.personalReturnAmount } : {}),
       });
     }
     await lote.commit();
@@ -124,7 +128,7 @@ export async function unirseACaja(uid: string, nombre: string, codigoCrudo: stri
 
 export async function listarMovimientosCajaCompartida(boxId: string): Promise<MovimientoCajaCompartida[]> {
   const snap = await getDocs(query(collection(db, "boxSpaces", boxId, "movements"), orderBy("creadoEn", "desc")));
-  return snap.docs.map(item => ({ id: item.id, tipo: item.data().tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(item.data().monto || 0), descripcion: String(item.data().descripcion || ""), method: typeof item.data().method === "string" ? item.data().method : undefined, fecha: String(item.data().fecha || ""), creadoPor: String(item.data().creadoPor || ""), creadoEn: alNumero(item.data().creadoEn), personalTransactionId: typeof item.data().personalTransactionId === "number" ? item.data().personalTransactionId : undefined, personalOwnerUid: typeof item.data().personalOwnerUid === "string" ? item.data().personalOwnerUid : undefined }));
+  return snap.docs.map(item => ({ id: item.id, tipo: item.data().tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(item.data().monto || 0), descripcion: String(item.data().descripcion || ""), method: typeof item.data().method === "string" ? item.data().method : undefined, fecha: String(item.data().fecha || ""), creadoPor: String(item.data().creadoPor || ""), creadoEn: alNumero(item.data().creadoEn), personalTransactionId: typeof item.data().personalTransactionId === "number" ? item.data().personalTransactionId : undefined, personalOwnerUid: typeof item.data().personalOwnerUid === "string" ? item.data().personalOwnerUid : undefined, personalReturnAmount: typeof item.data().personalReturnAmount === "number" ? item.data().personalReturnAmount : undefined }));
 }
 
 export async function guardarMovimientoCajaCompartida(boxId: string, uid: string, movimiento: Omit<MovimientoCajaCompartida, "id" | "creadoPor" | "creadoEn">): Promise<void> {
@@ -132,8 +136,65 @@ export async function guardarMovimientoCajaCompartida(boxId: string, uid: string
   await addDoc(collection(db, "boxSpaces", boxId, "movements"), { ...movimiento, creadoPor: uid, creadoEn: serverTimestamp() });
 }
 
+export async function borrarMovimientoCajaCompartida(boxId: string, movementId: string): Promise<void> {
+  await deleteDoc(doc(db, "boxSpaces", boxId, "movements", movementId));
+}
+
+export async function listarMiembrosCaja(boxId: string): Promise<MiembroCajaCompartida[]> {
+  const snap = await getDocs(collection(db, "boxSpaces", boxId, "members"));
+  return snap.docs.map(item => ({ uid: item.id, nombre: String(item.data().nombre || "Miembro"), rol: item.data().rol === "owner" ? "owner" : "member" }));
+}
+
+export async function salirDeCaja(uid: string, boxId: string): Promise<void> {
+  const lote = writeBatch(db);
+  lote.delete(doc(db, "boxSpaces", boxId, "members", uid));
+  lote.delete(doc(db, "boxUsers", uid, "spaces", boxId));
+  await lote.commit();
+}
+
+export async function quitarMiembroCaja(boxId: string, memberUid: string): Promise<void> {
+  const lote = writeBatch(db);
+  lote.delete(doc(db, "boxSpaces", boxId, "members", memberUid));
+  lote.delete(doc(db, "boxUsers", memberUid, "spaces", boxId));
+  await lote.commit();
+}
+
+export async function cerrarCajaCompartida(uid: string, boxId: string): Promise<void> {
+  const ref = doc(db, "boxSpaces", boxId);
+  await runTransaction(db, async transaction => {
+    const snap = await transaction.get(ref);
+    if (!snap.exists() || snap.data().ownerUid !== uid) throw new Error("not-owner");
+    transaction.update(ref, { closing: true });
+  });
+  try {
+    const movimientos = await listarMovimientosCajaCompartida(boxId);
+    const saldo = movimientos.reduce((sum, item) => sum + (item.tipo === "ingreso" ? item.monto : -item.monto), 0);
+    if (Math.abs(saldo) > 0.000001) throw new Error("balance-not-zero");
+    await runTransaction(db, async transaction => {
+      const snap = await transaction.get(ref);
+      if (!snap.exists() || snap.data().ownerUid !== uid || snap.data().closing !== true) throw new Error("not-owner");
+      transaction.update(ref, { closed: true, closing: false });
+    });
+  } catch (error) {
+    await updateDoc(ref, { closing: false }).catch(() => {});
+    throw error;
+  }
+  const miembros = await getDocs(collection(db, "boxSpaces", boxId, "members"));
+  for (let inicio = 0; inicio < miembros.docs.length; inicio += 400) {
+    const lote = writeBatch(db);
+    for (const member of miembros.docs.slice(inicio, inicio + 400)) lote.delete(doc(db, "boxUsers", member.id, "spaces", boxId));
+    await lote.commit();
+  }
+}
+
+export function observarCierreCaja(boxId: string, cerrado: () => void, error: () => void) {
+  return onSnapshot(doc(db, "boxSpaces", boxId), snap => {
+    if (!snap.exists() || snap.data().closed === true) cerrado();
+  }, error);
+}
+
 export function escucharMovimientosCaja(boxId: string, recibir: (items: MovimientoCajaCompartida[]) => void, error: () => void) {
   return onSnapshot(query(collection(db, "boxSpaces", boxId, "movements"), orderBy("creadoEn", "desc")), snap => {
-    recibir(snap.docs.map(item => ({ id: item.id, tipo: item.data().tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(item.data().monto || 0), descripcion: String(item.data().descripcion || ""), method: typeof item.data().method === "string" ? item.data().method : undefined, fecha: String(item.data().fecha || ""), creadoPor: String(item.data().creadoPor || ""), creadoEn: alNumero(item.data().creadoEn), personalTransactionId: typeof item.data().personalTransactionId === "number" ? item.data().personalTransactionId : undefined, personalOwnerUid: typeof item.data().personalOwnerUid === "string" ? item.data().personalOwnerUid : undefined })));
+    recibir(snap.docs.map(item => ({ id: item.id, tipo: item.data().tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(item.data().monto || 0), descripcion: String(item.data().descripcion || ""), method: typeof item.data().method === "string" ? item.data().method : undefined, fecha: String(item.data().fecha || ""), creadoPor: String(item.data().creadoPor || ""), creadoEn: alNumero(item.data().creadoEn), personalTransactionId: typeof item.data().personalTransactionId === "number" ? item.data().personalTransactionId : undefined, personalOwnerUid: typeof item.data().personalOwnerUid === "string" ? item.data().personalOwnerUid : undefined, personalReturnAmount: typeof item.data().personalReturnAmount === "number" ? item.data().personalReturnAmount : undefined })));
   }, error);
 }

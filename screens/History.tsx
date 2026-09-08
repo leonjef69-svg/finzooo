@@ -126,7 +126,7 @@ export default function History({
   const { totalExpense, totalIncome } = useMemo(() => {
     return {
       totalExpense: allMonthTx.filter((t) => t.type === "expense" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0),
-      totalIncome: allMonthTx.filter((t) => t.type === "income").reduce((s, t) => s + t.amount, 0),
+      totalIncome: allMonthTx.filter((t) => t.type === "income" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0),
     };
   }, [allMonthTx]);
 
