@@ -36,7 +36,7 @@ assert.match(cloud, /doc\(db, "cajas", uid\)/, "las cajas usan un documento prop
 assert.match(rules, /match \/cajas\/\{userId\}/, "la nube protege las cajas por propietario");
 assert.match(deletion, /borrarCajasDeLaNube/, "al eliminar la cuenta también se eliminan sus cajas");
 assert.match(screen, /internalTransferLink: link/, "el débito de Personal queda enlazado con el ingreso de la caja");
-assert.match(screen, /deleteTransaction\(movimiento\.personalTransactionId\)/, "borrar un aporte enlazado también restaura Personal");
+assert.match(screen, /deleteLinkedTransferTransaction\(movimiento\.personalTransactionId\)/, "borrar un aporte enlazado también restaura Personal desde su caja");
 assert.match(sharedCloud, /export async function compartirCajaExistente/, "una caja existente se comparte sin crear otra desde cero");
 assert.match(sharedCloud, /migrationComplete: false/, "una copia incompleta nunca reemplaza la caja privada");
 assert.match(sharedCloud, /await updateDoc\(ref, \{ migrationComplete: true \}\)/, "la caja solo queda compartida después de copiar todos sus movimientos");
@@ -49,5 +49,7 @@ assert.match(sharedCloud, /export async function cerrarCajaCompartida/, "una caj
 assert.match(sharedScreen, /Math\.max\(0, Math\.min\(saldo, aportadoDesdePersonal\)\)/, "solo vuelve a Personal dinero aportado que aún queda en la caja");
 assert.match(sharedScreen, /Math\.abs\(saldo\) > 0\.000001/, "una caja con saldo pendiente no se puede cerrar");
 assert.match(context, /transfersOut \+ transfersIn/, "devolver dinero aumenta Personal sin contarlo como un ingreso nuevo");
+assert.match(context, /transaction\?\.internalTransfer/, "una transferencia enlazada no se puede borrar directamente desde Personal");
+assert.match(context, /deleteLinkedTransferTransaction/, "Familia y Cajas conservan una vía controlada para borrar ambos lados");
 
 console.log("Cajas: saldo, borrado, guardado separado y privacidad verificados.");

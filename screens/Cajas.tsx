@@ -31,7 +31,7 @@ function fechaLocal(): string {
 }
 
 export default function Cajas() {
-  const { t, fmt, showToast, disponible, addOrUpdateTransaction, deleteTransaction, isPremium, userName, userCurrency } = useAppData();
+  const { t, fmt, showToast, disponible, addOrUpdateTransaction, deleteLinkedTransferTransaction, isPremium, userName, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
   const [datos, setDatos] = useState<DatosCajas>(CAJAS_VACIAS);
   const [lista, setLista] = useState(true);
@@ -167,7 +167,7 @@ export default function Cajas() {
 
   function borrarMovimiento(id: string) {
     const movimiento = datos.movimientos.find((item) => item.id === id);
-    if (movimiento?.personalTransactionId != null) deleteTransaction(movimiento.personalTransactionId);
+    if (movimiento?.personalTransactionId != null) deleteLinkedTransferTransaction(movimiento.personalTransactionId);
     setDatos((antes) => ({
       ...antes,
       movimientos: antes.movimientos.filter((item) => item.id !== id),

@@ -32,6 +32,7 @@ export default function Detail({
   if (!transaction) return null;
   const c = catInfo(transaction.category);
   const linkedCreditPayment = transaction.method === "credit-card-payment";
+  const managedTransfer = Boolean(transaction.internalTransfer);
 
   const rows = [
     { Icon: Tag, label: t("detail.category"), value: t(c.label) },
@@ -78,7 +79,13 @@ export default function Detail({
         ))}
       </View>
 
-      <View className="mt-auto px-6 pb-8 pt-4 flex-row gap-3">
+      {managedTransfer ? (
+        <View className="mt-auto mx-6 mb-8 rounded-2xl bg-teal-50 px-4 py-3 dark:bg-teal-950">
+          <Text className="text-center text-sm font-semibold text-teal-700 dark:text-teal-200">
+            {t("detail.transferManagedInSpace")}
+          </Text>
+        </View>
+      ) : <View className="mt-auto px-6 pb-8 pt-4 flex-row gap-3">
         <TouchableOpacity
           onPress={() => setConfirm(true)}
           className="flex-1 py-3.5 rounded-2xl bg-rose-50 flex-row items-center justify-center gap-2"
@@ -97,7 +104,7 @@ export default function Detail({
             <Text className="font-bold text-white">{t("common.edit")}</Text>
           </TouchableOpacity>
         )}
-      </View>
+      </View>}
 
       <ConfirmDialog
         visible={confirm}

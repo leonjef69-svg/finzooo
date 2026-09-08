@@ -372,6 +372,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "detail.notes": "Notas",
     "detail.noNotes": "Sin notas",
     "detail.confirmDeleteTitle": "¿Eliminar movimiento?",
+    "detail.transferManagedInSpace": "Esta transferencia se administra desde su Familia o Caja para mantener ambos saldos correctos.",
 
     "addSheet.newTitle": "Nuevo movimiento",
     "addSheet.editTitle": "Editar movimiento",
@@ -1426,6 +1427,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "toast.transactionSaved": "Movimiento guardado",
     "toast.localSaveFailed": "No se pudo guardar en el teléfono. Libera espacio y vuelve a intentarlo.",
     "toast.transactionDeleted": "Movimiento eliminado",
+    "toast.transferManagedInSpace": "Administra esta transferencia desde su Familia o Caja",
     "toast.transactionsDeleted": "{count} movimiento eliminado",
     "toast.transactionsDeletedPlural": "{count} movimientos eliminados",
     "toast.goalSaved": "Meta guardada",
@@ -1796,6 +1798,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "detail.notes": "Notes",
     "detail.noNotes": "No notes",
     "detail.confirmDeleteTitle": "Delete this transaction?",
+    "detail.transferManagedInSpace": "Manage this transfer from its Family or Box so both balances stay correct.",
 
     "addSheet.newTitle": "New transaction",
     "addSheet.editTitle": "Edit transaction",
@@ -2840,6 +2843,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "toast.transactionSaved": "Transaction saved",
     "toast.localSaveFailed": "Could not save on this phone. Free up space and try again.",
     "toast.transactionDeleted": "Transaction deleted",
+    "toast.transferManagedInSpace": "Manage this transfer from its Family or Box",
     "toast.transactionsDeleted": "{count} transaction deleted",
     "toast.transactionsDeletedPlural": "{count} transactions deleted",
     "toast.goalSaved": "Goal saved",
@@ -3210,6 +3214,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "detail.notes": "Notas",
     "detail.noNotes": "Sem notas",
     "detail.confirmDeleteTitle": "Excluir esta movimentação?",
+    "detail.transferManagedInSpace": "Gerencie esta transferência pela Família ou Caixa para manter os dois saldos corretos.",
 
     "addSheet.newTitle": "Nova movimentação",
     "addSheet.editTitle": "Editar movimentação",
@@ -4254,6 +4259,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "toast.transactionSaved": "Movimentação salva",
     "toast.localSaveFailed": "Não foi possível salvar no celular. Libere espaço e tente novamente.",
     "toast.transactionDeleted": "Movimentação excluída",
+    "toast.transferManagedInSpace": "Gerencie esta transferência pela Família ou Caixa",
     "toast.transactionsDeleted": "{count} movimentação excluída",
     "toast.transactionsDeletedPlural": "{count} movimentações excluídas",
     "toast.goalSaved": "Meta salva",

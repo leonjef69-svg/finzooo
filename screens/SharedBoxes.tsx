@@ -16,7 +16,7 @@ import { LogOut, Trash2, UserMinus, UsersRound } from "lucide-react-native";
 import { borrarMovimientoCajaCompartida, cerrarCajaCompartida, crearInvitacionCaja, escucharMovimientosCaja, guardarMovimientoCajaCompartida, listarCajasCompartidas, listarMiembrosCaja, observarCierreCaja, quitarMiembroCaja, salirDeCaja, unirseACaja, type CajaCompartida, type MiembroCajaCompartida, type MovimientoCajaCompartida } from "@/utils/cloudCajasCompartidas";
 
 export default function SharedBoxes() {
-  const { t, userCurrency, isPremium, userName, showToast, addOrUpdateTransaction, deleteTransaction } = useAppData();
+  const { t, userCurrency, isPremium, userName, showToast, addOrUpdateTransaction, deleteLinkedTransferTransaction } = useAppData();
   const insets = useSafeAreaInsets();
   const { join } = useLocalSearchParams<{ join?: string }>();
   const [cajas, setCajas] = useState<CajaCompartida[]>([]);
@@ -85,7 +85,7 @@ export default function SharedBoxes() {
   const borrar = (item: MovimientoCajaCompartida) => ejecutar(async () => {
     if (!caja) return;
     await borrarMovimientoCajaCompartida(caja.id, item.id);
-    if (item.personalOwnerUid === uid && item.personalTransactionId != null) deleteTransaction(item.personalTransactionId);
+    if (item.personalOwnerUid === uid && item.personalTransactionId != null) deleteLinkedTransferTransaction(item.personalTransactionId);
   });
   const devolverAPersonal = () => ejecutar(async () => {
     if (!uid || !caja || devolvibleAPersonal <= 0) return;

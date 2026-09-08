@@ -224,6 +224,8 @@ type AppDataContextValue = {
   transactions: Transaction[];
   addOrUpdateTransaction: (t: Transaction) => void;
   deleteTransaction: (id: number) => void;
+  /** Solo para Familia/Cajas al borrar el movimiento enlazado en su origen. */
+  deleteLinkedTransferTransaction: (id: number) => void;
   deleteTransactions: (ids: number[]) => void;
   commitImport: (toAdd: Transaction[], toReplace: Transaction[]) => void;
 
@@ -2054,18 +2056,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setMerchantLearned((prev) => learnCategory(merchantText, category, prev));
   }
 
-  function deleteTransaction(id: number) {
-    void unlinkCreditPaymentsForHomeTransactions([id]);
-    setDeletedTransactionIds((prev) => {
-      const next = pruneDeletedTransactionIds(prev.includes(id) ? prev : [...prev, id]);
-      deletedTransactionIdsRef.current = next;
-      return next;
-    });
-    setTransactions((prev) => prev.filter((p) => p.id !== id));
-    showToast(t("toast.transactionDeleted"));
-  }
-
-  function deleteTransactions(ids: number[]) {
+  function removeTransactions(ids: number[]) {
     if (!ids.length) return;
     void unlinkCreditPaymentsForHomeTransactions(ids);
     setDeletedTransactionIds((prev) => {
@@ -2074,9 +2065,34 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       return next;
     });
     setTransactions((prev) => prev.filter((p) => !ids.includes(p.id)));
+  }
+
+  function deleteTransaction(id: number) {
+    const transaction = transactions.find((item) => item.id === id);
+    if (transaction?.internalTransfer) {
+      showToast(t("toast.transferManagedInSpace"));
+      return;
+    }
+    removeTransactions([id]);
+    showToast(t("toast.transactionDeleted"));
+  }
+
+  function deleteLinkedTransferTransaction(id: number) {
+    removeTransactions([id]);
+    showToast(t("toast.transactionDeleted"));
+  }
+
+  function deleteTransactions(ids: number[]) {
+    const protectedIds = new Set(transactions.filter((item) => item.internalTransfer).map((item) => item.id));
+    const deletableIds = ids.filter((id) => !protectedIds.has(id));
+    if (!deletableIds.length) {
+      if (ids.length) showToast(t("toast.transferManagedInSpace"));
+      return;
+    }
+    removeTransactions(deletableIds);
     showToast(
-      t(ids.length > 1 ? "toast.transactionsDeletedPlural" : "toast.transactionsDeleted", {
-        count: ids.length,
+      t(deletableIds.length > 1 ? "toast.transactionsDeletedPlural" : "toast.transactionsDeleted", {
+        count: deletableIds.length,
       })
     );
   }
@@ -2196,6 +2212,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     avisosFallo,
     reprogramarAvisos,
     deleteTransaction,
+    deleteLinkedTransferTransaction,
     deleteTransactions,
     commitImport,
     merchantLearned,

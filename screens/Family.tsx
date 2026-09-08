@@ -22,7 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const fechaHoy = () => new Date().toLocaleDateString("sv-SE");
 
 export default function Family() {
-  const { t, fmt, userName, showToast, isPremium, disponible, addOrUpdateTransaction, deleteTransaction } = useAppData();
+  const { t, fmt, userName, showToast, isPremium, disponible, addOrUpdateTransaction, deleteLinkedTransferTransaction } = useAppData();
   const insets = useSafeAreaInsets();
   const [familia, setFamilia] = useState<EspacioFamilia | null>(null);
   const [miembros, setMiembros] = useState<MiembroFamilia[]>([]);
@@ -161,7 +161,7 @@ export default function Family() {
     setMonto(""); setDescripcion(""); setOrigenDinero("externo"); setTipo(null); await recargar(); showToast(t("family.movementSaved"));
   });
 
-  const borrar = (item: MovimientoFamilia) => ejecutar(async () => { if (familia) { await borrarMovimientoFamilia(familia.id, item.id); if (item.personalOwnerUid === auth.currentUser?.uid && item.personalTransactionId != null) deleteTransaction(item.personalTransactionId); await recargar(); } });
+  const borrar = (item: MovimientoFamilia) => ejecutar(async () => { if (familia) { await borrarMovimientoFamilia(familia.id, item.id); if (item.personalOwnerUid === auth.currentUser?.uid && item.personalTransactionId != null) deleteLinkedTransferTransaction(item.personalTransactionId); await recargar(); } });
   const salir = () => ejecutar(async () => {
     const uid = auth.currentUser?.uid; if (!uid || !familia || owner) return;
     await salirDeFamilia(uid, familia.id); setFamilia(null); setMiembros([]); setMovimientos([]); showToast(t("family.left"));

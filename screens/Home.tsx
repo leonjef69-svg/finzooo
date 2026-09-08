@@ -275,9 +275,10 @@ export default function Home({
     setSelectMode((v) => !v);
     setSelected([]);
   }
-  function toggleSelected(id: number) {
+  const toggleSelected = useCallback((id: number) => {
+    if (transactions.find((item) => item.id === id)?.internalTransfer) return;
     setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }
+  }, [transactions]);
 
   /* Un Set en vez de un array: preguntar "¿está marcado este?" pasa de recorrer la lista
      entera a mirar una sola vez. Con dos marcados da igual; con el mes lleno, no. */
@@ -288,8 +289,7 @@ export default function Home({
       if (selectMode) toggleSelected(id);
       else onOpenDetail(id);
     },
-    // toggleSelected solo usa setSelected, que React garantiza estable.
-    [selectMode, onOpenDetail]
+    [selectMode, onOpenDetail, toggleSelected]
   );
 
   const dibujarFila = useCallback(
@@ -328,7 +328,7 @@ export default function Home({
    * meses que no se ven sería otra cosa y mucho más grave.
    */
   function borrarTodoElMes() {
-    onBulkDelete(monthTx.map((m) => m.id));
+    onBulkDelete(monthTx.filter((m) => !m.internalTransfer).map((m) => m.id));
     setSelected([]);
     setSelectMode(false);
     setConfirmandoBorrarTodo(false);

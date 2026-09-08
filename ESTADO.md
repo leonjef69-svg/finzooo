@@ -211,6 +211,9 @@ Comando principal: `node pruebas/correr.mjs`.
   solo permiten devolver hasta ese importe. La devolución aumenta el disponible,
   pero no se presenta como un ingreso nuevo. Un espacio no puede cerrarse mientras
   conserve saldo, evitando que el dinero desaparezca por error.
+- Las transferencias enlazadas ya no se pueden editar ni borrar desde Personal,
+  tampoco mediante selección múltiple. Se administran desde la Familia o Caja que
+  posee el otro lado del movimiento, evitando saldos descuadrados.
 - Pendiente: prueba real con dos cuentas. No presentar el flujo
   completo como terminado ni afirmar visibilidad en el emulador sin comprobarla.
 
