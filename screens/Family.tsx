@@ -4,6 +4,8 @@ import BackButton from "@/components/BackButton";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
 import { useAppData } from "@/contexts/AppDataContext";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
+import { horaDe } from "@/utils/format";
+import { nextId } from "@/utils/id";
 import { auth } from "@/utils/firebase";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import {
@@ -20,7 +22,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 const fechaHoy = () => new Date().toLocaleDateString("sv-SE");
 
 export default function Family() {
-  const { t, fmt, userName, showToast, isPremium } = useAppData();
+  const { t, fmt, userName, showToast, isPremium, disponible, addOrUpdateTransaction } = useAppData();
   const insets = useSafeAreaInsets();
   const [familia, setFamilia] = useState<EspacioFamilia | null>(null);
   const [miembros, setMiembros] = useState<MiembroFamilia[]>([]);
@@ -30,6 +32,8 @@ export default function Family() {
   const [modo, setModo] = useState<"crear" | "unir" | null>(null);
   const [nombre, setNombre] = useState("");
   const [codigo, setCodigo] = useState("");
+  const [montoInicial, setMontoInicial] = useState("");
+  const [origenInicial, setOrigenInicial] = useState<"personal" | "externo">("externo");
   const [invitacion, setInvitacion] = useState("");
   const [tipo, setTipo] = useState<"ingreso" | "gasto" | null>(null);
   const [monto, setMonto] = useState("");
@@ -90,9 +94,27 @@ export default function Family() {
   const crear = () => ejecutar(async () => {
     if (!isPremium) { irUnaVez("/premium"); return; }
     const uid = auth.currentUser?.uid; const value = nombre.trim().slice(0, 35);
-    if (!uid || !value) return;
-    await crearFamilia(uid, userName || t("family.member"), value);
-    setModo(null); setNombre(""); await recargar(); showToast(t("family.created"));
+    const initial = parseAmountInput(montoInicial);
+    if (!uid || !value || (origenInicial === "personal" && initial > disponible)) {
+      if (origenInicial === "personal" && initial > disponible) showToast(t("family.notEnoughPersonal"));
+      return;
+    }
+    const nueva = await crearFamilia(uid, userName || t("family.member"), value);
+    if (initial > 0) {
+      await guardarMovimientoFamilia(nueva.id, uid, {
+        tipo: "ingreso", monto: initial,
+        descripcion: t(origenInicial === "personal" ? "family.initialFromPersonal" : "family.initialExternal"),
+        fecha: fechaHoy(), method: origenInicial === "personal" ? "transfer" : "cash",
+      });
+      if (origenInicial === "personal") {
+        addOrUpdateTransaction({
+          id: nextId(), type: "expense", amount: initial, category: "otros", date: fechaHoy(),
+          time: horaDe(Date.now()), method: "transfer", description: t("family.transferTo", { name: value }),
+          notes: "", origin: "manual", internalTransfer: "family",
+        });
+      }
+    }
+    setModo(null); setNombre(""); setMontoInicial(""); setOrigenInicial("externo"); await recargar(); showToast(t("family.created"));
   });
 
   const unir = () => ejecutar(async () => {
@@ -154,7 +176,7 @@ export default function Family() {
       {cargando ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : !auth.currentUser ? <Text className="mt-6 text-center text-slate-600 dark:text-slate-300">{t("family.loginRequired")}</Text> : !familia ? <>
         <View className="mt-3 items-center rounded-3xl border-[1.5px] border-emerald-200 bg-emerald-50 px-5 py-6 dark:border-emerald-800 dark:bg-emerald-950/30"><View className="h-14 w-14 items-center justify-center rounded-2xl bg-emerald-600"><UsersRound size={27} color="#fff" /></View><Text className="mt-3 text-center text-lg font-extrabold text-slate-900 dark:text-slate-100">{t("family.startTitle")}</Text><Text className="mt-1 text-center text-sm leading-5 text-slate-600 dark:text-slate-300">{t("family.startBody")}</Text></View>
         <View className="mt-4 flex-row gap-3"><TouchableOpacity onPress={() => isPremium ? setModo("crear") : irUnaVez("/premium")} className={`min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl ${isPremium ? "bg-emerald-600" : "bg-amber-500"}`}><Plus size={18} color="#fff" /><Text className="font-bold text-white">{isPremium ? t("family.create") : t("family.createPremium")}</Text></TouchableOpacity><TouchableOpacity onPress={() => setModo("unir")} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-slate-100 dark:bg-noche-2"><UserPlus size={18} color="#0d9488" /><Text className="font-bold text-teal-700 dark:text-teal-300">{t("family.join")}</Text></TouchableOpacity></View>
-        {modo ? <View className="mt-4 rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde"><TextInput disableFullscreenUI autoFocus value={modo === "crear" ? nombre : codigo} onChangeText={modo === "crear" ? setNombre : value => setCodigo(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8))} maxLength={modo === "crear" ? 35 : 8} autoCapitalize={modo === "crear" ? "sentences" : "characters"} placeholder={t(modo === "crear" ? "family.namePlaceholder" : "family.codePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 rounded-xl border-[1.5px] border-emerald-400 px-4 text-slate-900 dark:text-slate-100" /><View className="mt-3 flex-row gap-2"><TouchableOpacity onPress={() => setModo(null)} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><X size={19} color="#64748b" /></TouchableOpacity><TouchableOpacity onPress={modo === "crear" ? crear : unir} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-emerald-600"><Check size={19} color="#fff" /></TouchableOpacity></View></View> : null}
+        {modo ? <View className="mt-4 rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde"><TextInput disableFullscreenUI autoFocus value={modo === "crear" ? nombre : codigo} onChangeText={modo === "crear" ? setNombre : value => setCodigo(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8))} maxLength={modo === "crear" ? 35 : 8} autoCapitalize={modo === "crear" ? "sentences" : "characters"} placeholder={t(modo === "crear" ? "family.namePlaceholder" : "family.codePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 rounded-xl border-[1.5px] border-emerald-400 px-4 text-slate-900 dark:text-slate-100" />{modo === "crear" ? <><TextInput disableFullscreenUI value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value))} keyboardType="decimal-pad" placeholder={t("family.initialAmount")} placeholderTextColor="#94a3b8" className="mt-2 h-12 rounded-xl border-[1.5px] border-emerald-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" /><Text className="mb-1 mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">{t("family.moneyOrigin")}</Text><View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} onPress={() => setOrigenInicial(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenInicial === origin ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "family.fromPersonal" : "family.externalMoney")}</Text></TouchableOpacity>)}</View>{origenInicial === "personal" ? <Text className="mt-1 text-[11px] text-slate-500">{t("family.personalAvailable", { amount: fmt(disponible) })}</Text> : null}</> : null}<View className="mt-3 flex-row gap-2"><TouchableOpacity onPress={() => { setModo(null); setMontoInicial(""); }} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><X size={19} color="#64748b" /></TouchableOpacity><TouchableOpacity onPress={modo === "crear" ? crear : unir} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-emerald-600"><Check size={19} color="#fff" /></TouchableOpacity></View></View> : null}
       </> : <>
         <View className="mt-2 rounded-3xl bg-emerald-600 px-4 py-3"><View className="flex-row items-center"><View className="flex-1">{editandoNombre ? <TextInput disableFullscreenUI autoFocus value={nuevoNombre} onChangeText={setNuevoNombre} maxLength={35} selectTextOnFocus className="h-9 rounded-xl bg-white px-3 text-base font-bold text-slate-900" /> : <Text numberOfLines={1} className="text-base font-bold text-emerald-100">{familia.nombre}</Text>}</View>{owner ? editandoNombre ? <View className="ml-2 flex-row"><TouchableOpacity accessibilityLabel={t("common.save")} onPress={guardarNombre} className="h-9 w-9 items-center justify-center rounded-xl bg-white"><Check size={18} color="#059669" /></TouchableOpacity><TouchableOpacity accessibilityLabel={t("common.cancel")} onPress={() => { setEditandoNombre(false); setNuevoNombre(""); }} className="ml-1 h-9 w-9 items-center justify-center rounded-xl bg-emerald-700"><X size={18} color="#fff" /></TouchableOpacity></View> : <TouchableOpacity accessibilityLabel={t("family.editName")} onPress={() => { setNuevoNombre(familia.nombre); setEditandoNombre(true); }} className="ml-2 h-9 w-9 items-center justify-center rounded-xl bg-emerald-700"><Pencil size={17} color="#fff" /></TouchableOpacity> : null}</View><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58} className="text-[26px] font-extrabold leading-8 text-white">{fmt(saldo)}</Text><Text className="text-xs leading-4 text-emerald-100">{t("family.sharedBalance")}</Text><SpaceTotals income={resumen.ingresos} expense={resumen.gastos} filter={filter} onFilter={setFilter} format={fmt} /></View>
         <View className="mt-3 flex-row gap-3"><TouchableOpacity onPress={() => setTipo("ingreso")} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-100"><ArrowUp size={18} color="#047857" /><Text className="font-bold text-emerald-700">{t("boxes.income")}</Text></TouchableOpacity><TouchableOpacity onPress={() => setTipo("gasto")} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-rose-100"><ArrowDown size={18} color="#be123c" /><Text className="font-bold text-rose-700">{t("boxes.expense")}</Text></TouchableOpacity></View>

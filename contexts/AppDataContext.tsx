@@ -1449,11 +1449,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Estos cálculos recorren TODOS los movimientos guardados, así que solo
   // se vuelven a hacer cuando los movimientos, los presupuestos o el mes
   // elegido cambian de verdad — no en cada pequeño cambio de pantalla.
-  const { spent, income } = useMemo(() => {
+  const { spent, income, transfers } = useMemo(() => {
     const mTx = transactions.filter((t) => t.date.startsWith(mk));
-    const s = mTx.filter((t) => t.type === "expense").reduce((sum, t) => sum + t.amount, 0);
+    const s = mTx.filter((t) => t.type === "expense" && !t.internalTransfer).reduce((sum, t) => sum + t.amount, 0);
+    const transfers = mTx.filter((t) => t.type === "expense" && t.internalTransfer).reduce((sum, t) => sum + t.amount, 0);
     const i = mTx.filter((t) => t.type === "income").reduce((sum, t) => sum + t.amount, 0);
-    return { spent: s, income: i };
+    return { spent: s, income: i, transfers };
   }, [transactions, mk]);
 
   // Cuánto se ha gastado este mes en cada categoría (solo gastos), para
@@ -1461,7 +1462,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const categorySpent = useMemo(() => {
     const result: Record<string, number> = {};
     transactions
-      .filter((t) => t.date.startsWith(mk) && t.type === "expense")
+      .filter((t) => t.date.startsWith(mk) && t.type === "expense" && !t.internalTransfer)
       .forEach((t) => {
         result[t.category] = (result[t.category] || 0) + t.amount;
       });
@@ -1502,7 +1503,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // paso: una pantalla decia un numero y otra decia otro del mismo mes,
   // porque una de las dos copias se cambio y la otra no. Con una sola no
   // pueden discrepar.
-  const disponible = availableBalance({ budget, prevBalance, income, spent });
+  const disponible = availableBalance({ budget, prevBalance, income, spent }) - transfers;
   const apartado = useMemo(() => totalApartado(goals), [goals]);
   const libre = saldoLibre(disponible, apartado);
   const descuadre = hayDescuadre(disponible, apartado);

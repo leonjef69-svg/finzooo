@@ -58,7 +58,7 @@ export function htmlDelReporte(d: DatosDelPdf): string {
     return {
       dateLabel: fmtDate(tx.date, nombresDeMes),
       timeLabel: tx.time || "-",
-      typeLabel: t(tx.type === "expense" ? "addSheet.expense" : "addSheet.income"),
+      typeLabel: t(tx.internalTransfer ? "exportPdf.transfer" : tx.type === "expense" ? "addSheet.expense" : "addSheet.income"),
       day: Number(tx.date.slice(8, 10)),
       categoryLabel: t(c.label),
       categoryColor: c.color,
@@ -119,7 +119,7 @@ export function htmlDelReporte(d: DatosDelPdf): string {
       const fecha = new Date(y, m - 1 - atras, 1);
       const clave = monthKey(fecha.getFullYear(), fecha.getMonth());
       const total = todos
-        .filter((tx) => tx.type === "expense" && tx.date.startsWith(clave))
+        .filter((tx) => tx.type === "expense" && !tx.internalTransfer && tx.date.startsWith(clave))
         .reduce((s, tx) => s + tx.amount, 0);
       return { label: nombresDeMes[fecha.getMonth()].slice(0, 3), value: total };
     })

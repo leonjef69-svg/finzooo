@@ -218,7 +218,7 @@ export default function Home({
         .sort(compararMovimientos),
     [transactions, mk]
   );
-  const mainSpent = useMemo(() => monthTx.filter((t) => t.type === "expense").reduce((sum,t)=>sum+t.amount,0), [monthTx]);
+  const mainSpent = useMemo(() => monthTx.filter((t) => t.type === "expense" && !t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
   const mainIncome = useMemo(() => monthTx.filter((t) => t.type === "income").reduce((sum,t)=>sum+t.amount,0), [monthTx]);
   const available = availableBalance({ budget, prevBalance, income: mainIncome, spent: mainSpent });
   const pct = budgetUsed({ budget, prevBalance, income: mainIncome, spent: mainSpent }) * 100;

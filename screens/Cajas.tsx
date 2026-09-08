@@ -2,7 +2,6 @@ import { SpaceTotals, SpacePaymentMethod, SpaceFilterReset, type MovementFilter 
 import { methodLabel } from "@/constants/i18n";
 import BackButton from "@/components/BackButton";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
-import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
 import { bajarCajas, subirCajas } from "@/utils/cloudCajas";
@@ -29,7 +28,7 @@ function fechaLocal(): string {
 }
 
 export default function Cajas() {
-  const { t, fmt, userCurrency, showToast } = useAppData();
+  const { t, fmt, showToast } = useAppData();
   const insets = useSafeAreaInsets();
   const [datos, setDatos] = useState<DatosCajas>(CAJAS_VACIAS);
   const [lista, setLista] = useState(true);
@@ -205,7 +204,6 @@ export default function Cajas() {
               <Text className="text-base font-bold text-teal-100">{caja.nombre}</Text>
               <Text className="text-[26px] font-extrabold leading-8 text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58}>{fmt(saldoCaja(caja.id, datos.movimientos))}</Text>
               <SpaceTotals income={resumen.ingresos} expense={resumen.gastos} filter={filter} onFilter={setFilter} format={fmt} />
-              <Text className="mt-1 text-xs text-teal-100">{currencySymbolFor(userCurrency)} · {userCurrency}</Text>
             </View>
             <View className="mt-3 flex-row gap-3">
               <TouchableOpacity onPress={() => setAnotando("ingreso")} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-100"><ArrowUp size={18} color="#047857" /><Text className="font-bold text-emerald-700">{t("boxes.income")}</Text></TouchableOpacity>

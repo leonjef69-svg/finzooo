@@ -81,7 +81,7 @@ export default function Reports({
   }, [categoryBudgets, categorySpent, userLanguage]);
 
   const { pieData, totalExpense } = useMemo(() => {
-    const expenses = transactions.filter((t) => t.date.startsWith(mk) && t.type === "expense");
+    const expenses = transactions.filter((t) => t.date.startsWith(mk) && t.type === "expense" && !t.internalTransfer);
     const byCat: Record<string, number> = {};
     expenses.forEach((t) => {
       byCat[t.category] = (byCat[t.category] || 0) + t.amount;
@@ -120,7 +120,7 @@ export default function Reports({
         }
         const key = monthKey(y, m);
         const sp = transactions
-          .filter((t) => t.type === "expense" && t.date.startsWith(key))
+          .filter((t) => t.type === "expense" && !t.internalTransfer && t.date.startsWith(key))
           .reduce((s, t) => s + t.amount, 0);
         return { label: monthNames[m].slice(0, 3), value: sp };
       })
@@ -137,7 +137,7 @@ export default function Reports({
   const daily = useMemo(() => {
     const porDia = new Map<number, number>();
     for (const tx of transactions) {
-      if (tx.type !== "expense" || !tx.date.startsWith(mk)) continue;
+      if (tx.type !== "expense" || tx.internalTransfer || !tx.date.startsWith(mk)) continue;
       const d = Number(tx.date.slice(8, 10));
       porDia.set(d, (porDia.get(d) ?? 0) + tx.amount);
     }

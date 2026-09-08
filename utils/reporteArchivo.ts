@@ -62,7 +62,7 @@ export function filasDelReporte(datos: DatosDelReporte): (string | number)[][] {
     return [
       fmtDate(tx.date, nombresDeMes),
       tx.time || "-",
-      t(tx.type === "expense" ? "addSheet.expense" : "addSheet.income"),
+      t(tx.internalTransfer ? "exportPdf.transfer" : tx.type === "expense" ? "addSheet.expense" : "addSheet.income"),
       t(c.label),
       tx.description || "",
       methodLabel(tx.method, t),

@@ -10,14 +10,22 @@ export function SpaceTotals({ income, expense, filter, onFilter, format }: {
   onFilter: (value: MovementFilter) => void; format: (value: number) => string;
 }) {
   const { t } = useAppData();
-  return <View className="mt-2 flex-row gap-2 border-t border-white/30 pt-2">
-    {(["ingreso", "gasto"] as const).map(type => <TouchableOpacity
-      key={type} accessibilityRole="button" accessibilityState={{ selected: filter === type }}
-      onPress={() => onFilter(filter === type ? null : type)}
-      className={`min-h-12 flex-1 rounded-xl px-2 py-1 ${filter === type ? "bg-black/15" : ""}`}
-    ><Text className="text-sm font-semibold text-white">{t(type === "ingreso" ? "history.totalIncome" : "spaces.totalExpense")}</Text>
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} className="text-base font-bold text-white">{format(type === "ingreso" ? income : expense)}</Text>
-    </TouchableOpacity>)}
+  const total = (type: "ingreso" | "gasto", amount: number) => <TouchableOpacity
+    accessibilityRole="button" accessibilityState={{ selected: filter === type }}
+    accessibilityHint={t("spaces.tapToFilter")}
+    onPress={() => onFilter(filter === type ? null : type)}
+    className={`min-h-12 flex-1 justify-center rounded-xl px-2 py-1 ${filter === type ? "bg-black/15" : ""}`}
+  >
+    <Text className="text-xs font-semibold text-white">{t(type === "ingreso" ? "history.totalIncome" : "spaces.totalExpense")} ›</Text>
+    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} className="text-base font-bold text-white">{format(amount)}</Text>
+  </TouchableOpacity>;
+  return <View className="mt-2 border-t border-white/30 pt-1.5">
+    <Text className="mb-0.5 text-center text-[10px] font-medium text-white/80">{t("spaces.tapToFilter")}</Text>
+    <View className="flex-row items-stretch">
+      {total("ingreso", income)}
+      <View className="my-1 w-px bg-white/40" />
+      {total("gasto", expense)}
+    </View>
   </View>;
 }
 

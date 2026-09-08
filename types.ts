@@ -30,6 +30,8 @@ export type Transaction = {
   method: string;
   description: string;
   notes: string;
+  /** Movimiento interno: reduce Personal, pero no cuenta como consumo. */
+  internalTransfer?: "family" | "box";
 
   // ---- Campos nuevos (importación de estados de cuenta) ----
   // TODOS son opcionales a propósito: los movimientos que ya estaban
