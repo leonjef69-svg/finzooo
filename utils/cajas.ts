@@ -13,6 +13,8 @@ export type MovimientoCaja = {
   method?: string;
   fecha: string;
   creadoEn: number;
+  /** Débito de Personal que financió este ingreso, si corresponde. */
+  personalTransactionId?: number;
 };
 
 export type DatosCajas = {

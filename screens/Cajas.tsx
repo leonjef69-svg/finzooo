@@ -30,7 +30,7 @@ function fechaLocal(): string {
 }
 
 export default function Cajas() {
-  const { t, fmt, showToast, disponible, addOrUpdateTransaction } = useAppData();
+  const { t, fmt, showToast, disponible, addOrUpdateTransaction, deleteTransaction } = useAppData();
   const insets = useSafeAreaInsets();
   const [datos, setDatos] = useState<DatosCajas>(CAJAS_VACIAS);
   const [lista, setLista] = useState(true);
@@ -85,12 +85,14 @@ export default function Cajas() {
   ), [movimientos]);
 
   const visibles = movimientos.filter(item => !filter || item.tipo === filter);
-  function sacarDePersonal(valor: number, destino: string) {
+  function sacarDePersonal(valor: number, destino: string, link: string): number {
+    const id = nextId();
     addOrUpdateTransaction({
-      id: nextId(), type: "expense", amount: valor, category: "otros", date: fechaLocal(),
+      id, type: "expense", amount: valor, category: "otros", date: fechaLocal(),
       time: horaDe(Date.now()), method: "transfer", description: t("boxes.transferTo", { name: destino }),
-      notes: "", origin: "manual", internalTransfer: "box",
+      notes: "", origin: "manual", internalTransfer: "box", internalTransferLink: link,
     });
+    return id;
   }
 
   function crearCaja() {
@@ -102,16 +104,19 @@ export default function Cajas() {
       showToast(t("boxes.notEnoughPersonal"));
       return;
     }
+    const movimientoId = nuevoIdCaja("mov");
+    const personalTransactionId = inicial > 0 && origenDinero === "personal"
+      ? sacarDePersonal(inicial, nombre, movimientoId)
+      : undefined;
     setDatos((antes) => ({
       ...antes,
       cajas: [...antes.cajas, nueva],
       movimientos: inicial > 0 ? [...antes.movimientos, {
-        id: nuevoIdCaja("mov"), cajaId: nueva.id, tipo: "ingreso", monto: inicial,
+        id: movimientoId, cajaId: nueva.id, tipo: "ingreso", monto: inicial,
         descripcion: t(origenDinero === "personal" ? "boxes.initialFromPersonal" : "boxes.initialExternal"),
-        method: origenDinero === "personal" ? "transfer" : "cash", fecha: fechaLocal(), creadoEn: Date.now(),
+        method: origenDinero === "personal" ? "transfer" : "cash", fecha: fechaLocal(), creadoEn: Date.now(), personalTransactionId,
       }] : antes.movimientos,
     }));
-    if (inicial > 0 && origenDinero === "personal") sacarDePersonal(inicial, nombre);
     setNuevoNombre("");
     setMontoInicial("");
     setOrigenDinero("externo");
@@ -129,8 +134,12 @@ export default function Cajas() {
       showToast(t("boxes.notEnoughPersonal"));
       return;
     }
+    const movimientoId = nuevoIdCaja("mov");
+    const personalTransactionId = anotando === "ingreso" && origenDinero === "personal"
+      ? sacarDePersonal(valor, caja.nombre, movimientoId)
+      : undefined;
     const movimiento = {
-      id: nuevoIdCaja("mov"),
+      id: movimientoId,
       cajaId: caja.id,
       tipo: anotando,
       method: anotando === "ingreso" && origenDinero === "personal" ? "transfer" : method,
@@ -138,9 +147,9 @@ export default function Cajas() {
       descripcion: descripcion.trim().slice(0, 60) || (anotando === "ingreso" ? t(origenDinero === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney") : ""),
       fecha: fechaLocal(),
       creadoEn: Date.now(),
+      personalTransactionId,
     };
     setDatos((antes) => ({ ...antes, movimientos: [...antes.movimientos, movimiento] }));
-    if (anotando === "ingreso" && origenDinero === "personal") sacarDePersonal(valor, caja.nombre);
     setMonto("");
     setDescripcion("");
     setOrigenDinero("externo");
@@ -149,6 +158,8 @@ export default function Cajas() {
   }
 
   function borrarMovimiento(id: string) {
+    const movimiento = datos.movimientos.find((item) => item.id === id);
+    if (movimiento?.personalTransactionId != null) deleteTransaction(movimiento.personalTransactionId);
     setDatos((antes) => ({
       ...antes,
       movimientos: antes.movimientos.filter((item) => item.id !== id),

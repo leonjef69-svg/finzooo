@@ -38,6 +38,9 @@ export type MovimientoFamilia = {
   fecha: string;
   creadoEn: number;
   creadoPor: string;
+  /** Débito enlazado en Personal; solo pertenece al dueño que hizo el aporte. */
+  personalTransactionId?: number;
+  personalOwnerUid?: string;
 };
 
 const alNumero = (value: unknown): number => {
@@ -131,7 +134,7 @@ export async function listarMovimientosFamilia(familyId: string): Promise<Movimi
   const snap = await getDocs(query(collection(db, "familySpaces", familyId, "movements"), orderBy("creadoEn", "desc")));
   return snap.docs.map((item) => {
     const data = item.data();
-    return { id: item.id, tipo: data.tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(data.monto || 0), descripcion: String(data.descripcion || ""), method: typeof data.method === "string" ? data.method : undefined, fecha: String(data.fecha || ""), creadoEn: alNumero(data.creadoEn), creadoPor: String(data.creadoPor || "") };
+    return { id: item.id, tipo: data.tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(data.monto || 0), descripcion: String(data.descripcion || ""), method: typeof data.method === "string" ? data.method : undefined, fecha: String(data.fecha || ""), creadoEn: alNumero(data.creadoEn), creadoPor: String(data.creadoPor || ""), personalTransactionId: typeof data.personalTransactionId === "number" ? data.personalTransactionId : undefined, personalOwnerUid: typeof data.personalOwnerUid === "string" ? data.personalOwnerUid : undefined };
   });
 }
 

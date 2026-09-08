@@ -27,9 +27,12 @@ const storage = fs.readFileSync("utils/storage.ts", "utf8");
 const cloud = fs.readFileSync("utils/cloudCajas.ts", "utf8");
 const rules = fs.readFileSync("firestore.rules", "utf8");
 const deletion = fs.readFileSync("utils/cloudSync.ts", "utf8");
+const screen = fs.readFileSync("screens/Cajas.tsx", "utf8");
 assert.match(storage, /cajasDinero/, "las cajas se guardan aparte");
 assert.match(cloud, /doc\(db, "cajas", uid\)/, "las cajas usan un documento propio en la nube");
 assert.match(rules, /match \/cajas\/\{userId\}/, "la nube protege las cajas por propietario");
 assert.match(deletion, /borrarCajasDeLaNube/, "al eliminar la cuenta también se eliminan sus cajas");
+assert.match(screen, /internalTransferLink: link/, "el débito de Personal queda enlazado con el ingreso de la caja");
+assert.match(screen, /deleteTransaction\(movimiento\.personalTransactionId\)/, "borrar un aporte enlazado también restaura Personal");
 
 console.log("Cajas: saldo, borrado, guardado separado y privacidad verificados.");

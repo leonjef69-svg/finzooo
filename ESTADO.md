@@ -192,6 +192,11 @@ Comando principal: `node pruebas/correr.mjs`.
   observa en otros clientes activos. No equivale a borrar permanentemente los datos.
 
 - Cajas permite un monto inicial de dinero externo; no descuenta Personal.
+- Los aportes desde Personal hacia Familia o una Caja quedan enlazados en ambos
+  lados. Al borrar ese aporte, el débito correspondiente también se retira de
+  Personal; en Familia, ningún otro miembro puede borrar el aporte del dueño.
+  Los ingresos posteriores de Familia también permiten elegir entre dinero
+  externo y Personal, con la misma comprobación de saldo disponible.
 - La ruta `/shared-boxes` permite crear, unirse con código y registrar movimientos
   compartidos. Guarda la moneda de la caja y escucha los movimientos en directo.
 - Corregido el acceso antes de la membresía y la creación atómica de caja y dueño.

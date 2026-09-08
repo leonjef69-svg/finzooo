@@ -195,7 +195,11 @@ service cloud.firestore {
                       && request.resource.data.tipo in ['ingreso', 'gasto']
                       && request.resource.data.monto is number
                       && request.resource.data.monto > 0;
-        allow delete: if familyMember(familyId) && familyOpen(familyId);
+        allow delete: if familyMember(familyId) && familyOpen(familyId)
+                      // Un aporte salido de Personal solo lo puede deshacer
+                      // la misma cuenta que puso ese dinero.
+                      && (resource.data.get('personalOwnerUid', '') == ''
+                        || resource.data.personalOwnerUid == request.auth.uid);
       }
     }
 
