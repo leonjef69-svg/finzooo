@@ -13,6 +13,8 @@ import {
   type DatosCajas,
 } from "@/utils/cajas";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
+import { horaDe } from "@/utils/format";
+import { nextId } from "@/utils/id";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 import { ArrowDown, ArrowLeftRight, ArrowUp, Boxes, Check, Plus, Trash2, X } from "lucide-react-native";
@@ -28,13 +30,14 @@ function fechaLocal(): string {
 }
 
 export default function Cajas() {
-  const { t, fmt, showToast } = useAppData();
+  const { t, fmt, showToast, disponible, addOrUpdateTransaction } = useAppData();
   const insets = useSafeAreaInsets();
   const [datos, setDatos] = useState<DatosCajas>(CAJAS_VACIAS);
   const [lista, setLista] = useState(true);
   const [cajaId, setCajaId] = useState<string | null>(null);
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [montoInicial, setMontoInicial] = useState("");
+  const [origenDinero, setOrigenDinero] = useState<"externo" | "personal">("externo");
   const [creando, setCreando] = useState(false);
   const [anotando, setAnotando] = useState<"ingreso" | "gasto" | null>(null);
   const [monto, setMonto] = useState("");
@@ -82,21 +85,36 @@ export default function Cajas() {
   ), [movimientos]);
 
   const visibles = movimientos.filter(item => !filter || item.tipo === filter);
+  function sacarDePersonal(valor: number, destino: string) {
+    addOrUpdateTransaction({
+      id: nextId(), type: "expense", amount: valor, category: "otros", date: fechaLocal(),
+      time: horaDe(Date.now()), method: "transfer", description: t("boxes.transferTo", { name: destino }),
+      notes: "", origin: "manual", internalTransfer: "box",
+    });
+  }
+
   function crearCaja() {
     const nombre = nuevoNombre.trim().slice(0, 30);
     if (!nombre) return;
     const nueva = { id: nuevoIdCaja("caja"), nombre, creadaEn: Date.now() };
     const inicial = parseAmountInput(montoInicial);
+    if (origenDinero === "personal" && inicial > disponible) {
+      showToast(t("boxes.notEnoughPersonal"));
+      return;
+    }
     setDatos((antes) => ({
       ...antes,
       cajas: [...antes.cajas, nueva],
       movimientos: inicial > 0 ? [...antes.movimientos, {
         id: nuevoIdCaja("mov"), cajaId: nueva.id, tipo: "ingreso", monto: inicial,
-        descripcion: t("boxes.initialExternal"), fecha: fechaLocal(), creadoEn: Date.now(),
+        descripcion: t(origenDinero === "personal" ? "boxes.initialFromPersonal" : "boxes.initialExternal"),
+        method: origenDinero === "personal" ? "transfer" : "cash", fecha: fechaLocal(), creadoEn: Date.now(),
       }] : antes.movimientos,
     }));
+    if (inicial > 0 && origenDinero === "personal") sacarDePersonal(inicial, nombre);
     setNuevoNombre("");
     setMontoInicial("");
+    setOrigenDinero("externo");
     setCreando(false);
     setCajaId(nueva.id);
     setLista(false);
@@ -107,19 +125,25 @@ export default function Cajas() {
     if (!caja || !anotando) return;
     const valor = parseAmountInput(monto);
     if (!(valor > 0)) return;
+    if (anotando === "ingreso" && origenDinero === "personal" && valor > disponible) {
+      showToast(t("boxes.notEnoughPersonal"));
+      return;
+    }
     const movimiento = {
       id: nuevoIdCaja("mov"),
       cajaId: caja.id,
       tipo: anotando,
-      method,
+      method: anotando === "ingreso" && origenDinero === "personal" ? "transfer" : method,
       monto: valor,
-      descripcion: descripcion.trim().slice(0, 60),
+      descripcion: descripcion.trim().slice(0, 60) || (anotando === "ingreso" ? t(origenDinero === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney") : ""),
       fecha: fechaLocal(),
       creadoEn: Date.now(),
     };
     setDatos((antes) => ({ ...antes, movimientos: [...antes.movimientos, movimiento] }));
+    if (anotando === "ingreso" && origenDinero === "personal") sacarDePersonal(valor, caja.nombre);
     setMonto("");
     setDescripcion("");
+    setOrigenDinero("externo");
     setAnotando(null);
     showToast(t("boxes.movementSaved"));
   }
@@ -191,7 +215,9 @@ export default function Cajas() {
                 </View>
                 <Text className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.initialAmount")}</Text>
                 <TextInput disableFullscreenUI value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
-                <Text className="text-xs text-slate-500 dark:text-slate-300">{t("boxes.externalHelp")}</Text>
+                <Text className="text-xs font-semibold text-slate-600 dark:text-slate-300">{t("boxes.moneyOrigin")}</Text>
+                <View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} onPress={() => setOrigenDinero(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenDinero === origin ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text></TouchableOpacity>)}</View>
+                {origenDinero === "personal" ? <Text className="text-[11px] text-slate-500">{t("boxes.personalAvailable", { amount: fmt(disponible) })}</Text> : null}
               </View>
             ) : (
               <TouchableOpacity onPress={() => setCreando(true)} className="mt-4 min-h-12 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-600"><Plus size={19} color="#fff" /><Text className="font-extrabold text-white">{t("boxes.create")}</Text></TouchableOpacity>
@@ -206,7 +232,7 @@ export default function Cajas() {
               <SpaceTotals income={resumen.ingresos} expense={resumen.gastos} filter={filter} onFilter={setFilter} format={fmt} />
             </View>
             <View className="mt-3 flex-row gap-3">
-              <TouchableOpacity onPress={() => setAnotando("ingreso")} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-100"><ArrowUp size={18} color="#047857" /><Text className="font-bold text-emerald-700">{t("boxes.income")}</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => { setOrigenDinero("externo"); setAnotando("ingreso"); }} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-100"><ArrowUp size={18} color="#047857" /><Text className="font-bold text-emerald-700">{t("boxes.income")}</Text></TouchableOpacity>
               <TouchableOpacity onPress={() => setAnotando("gasto")} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-rose-100"><ArrowDown size={18} color="#be123c" /><Text className="font-bold text-rose-700">{t("boxes.expense")}</Text></TouchableOpacity>
             </View>
             {anotando ? (
@@ -214,7 +240,8 @@ export default function Cajas() {
                 <Text className="mb-2 text-sm font-extrabold text-slate-800 dark:text-slate-100">{anotando === "ingreso" ? t("boxes.newIncome") : t("boxes.newExpense")}</Text>
                 <TextInput disableFullscreenUI value={monto} onChangeText={(value) => setMonto(sanitizeSafeAmountInput(value))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border-[1.5px] border-slate-200 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
                 <TextInput disableFullscreenUI value={descripcion} onChangeText={setDescripcion} maxLength={60} placeholder={t("boxes.description")} placeholderTextColor="#94a3b8" className="mt-2 h-12 rounded-xl border-[1.5px] border-slate-200 px-4 text-slate-900 dark:text-slate-100" />
-                <SpacePaymentMethod value={method} onChange={setMethod} />
+                {anotando === "ingreso" ? <><Text className="mb-1 mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">{t("boxes.moneyOrigin")}</Text><View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} onPress={() => setOrigenDinero(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenDinero === origin ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text></TouchableOpacity>)}</View>{origenDinero === "personal" ? <Text className="mt-1 text-[11px] text-slate-500">{t("boxes.personalAvailable", { amount: fmt(disponible) })}</Text> : null}</> : null}
+                {anotando !== "ingreso" || origenDinero === "externo" ? <SpacePaymentMethod value={method} onChange={setMethod} /> : null}
                 <View className="mt-3 flex-row gap-2">
                   <TouchableOpacity onPress={() => setAnotando(null)} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text></TouchableOpacity>
                   <TouchableOpacity onPress={guardarMovimiento} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-emerald-600"><Text className="font-bold text-white">{t("common.save")}</Text></TouchableOpacity>
