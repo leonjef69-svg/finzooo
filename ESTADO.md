@@ -199,9 +199,14 @@ Comando principal: `node pruebas/correr.mjs`.
   externo y Personal, con la misma comprobación de saldo disponible.
 - La ruta `/shared-boxes` permite crear, unirse con código y registrar movimientos
   compartidos. Guarda la moneda de la caja y escucha los movimientos en directo.
+- Una caja privada se puede convertir en compartida desde su propia pantalla, sin
+  mostrar un segundo botón de creación. La copia conserva historial, métodos,
+  moneda y vínculos con Personal, trabaja en lotes seguros para Firebase y solo
+  retira la caja privada cuando la copia terminó; una migración interrumpida no
+  aparece como una caja compartida vacía.
 - Corregido el acceso antes de la membresía y la creación atómica de caja y dueño.
-- Pendiente: transferencias enlazadas con Personal, gestión de miembros y cierre,
-  migración de cajas privadas y prueba real con dos cuentas. No presentar el flujo
+- Pendiente: gestión de miembros y cierre con devolución del saldo restante,
+  y prueba real con dos cuentas. No presentar el flujo
   completo como terminado ni afirmar visibilidad en el emulador sin comprobarla.
 
 Esta lista reemplaza los pendientes antiguos que hablaban de dos carpetas o de

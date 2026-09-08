@@ -233,7 +233,7 @@ service cloud.firestore {
       allow read: if boxMember(boxId);
       allow update, delete: if boxMember(boxId)
                             && resource.data.ownerUid == request.auth.uid
-                            && (request.method == 'delete' || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre']));
+                            && (request.method == 'delete' || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'migrationComplete']));
 
       match /members/{userId} {
         allow read: if boxMember(boxId);
@@ -260,7 +260,9 @@ service cloud.firestore {
           && request.resource.data.monto is number
           && request.resource.data.monto > 0
           && request.resource.data.monto <= 9000000000000;
-        allow delete: if boxMember(boxId);
+        allow delete: if boxMember(boxId)
+                      && (resource.data.get('personalOwnerUid', '') == ''
+                        || resource.data.personalOwnerUid == request.auth.uid);
       }
     }
 

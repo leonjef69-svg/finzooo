@@ -25,6 +25,7 @@ assert.deepEqual(unido.movimientos.map((movimiento) => movimiento.id), ["i2"], "
 
 const storage = fs.readFileSync("utils/storage.ts", "utf8");
 const cloud = fs.readFileSync("utils/cloudCajas.ts", "utf8");
+const sharedCloud = fs.readFileSync("utils/cloudCajasCompartidas.ts", "utf8");
 const rules = fs.readFileSync("firestore.rules", "utf8");
 const deletion = fs.readFileSync("utils/cloudSync.ts", "utf8");
 const screen = fs.readFileSync("screens/Cajas.tsx", "utf8");
@@ -34,5 +35,11 @@ assert.match(rules, /match \/cajas\/\{userId\}/, "la nube protege las cajas por 
 assert.match(deletion, /borrarCajasDeLaNube/, "al eliminar la cuenta también se eliminan sus cajas");
 assert.match(screen, /internalTransferLink: link/, "el débito de Personal queda enlazado con el ingreso de la caja");
 assert.match(screen, /deleteTransaction\(movimiento\.personalTransactionId\)/, "borrar un aporte enlazado también restaura Personal");
+assert.match(sharedCloud, /export async function compartirCajaExistente/, "una caja existente se comparte sin crear otra desde cero");
+assert.match(sharedCloud, /migrationComplete: false/, "una copia incompleta nunca reemplaza la caja privada");
+assert.match(sharedCloud, /await updateDoc\(ref, \{ migrationComplete: true \}\)/, "la caja solo queda compartida después de copiar todos sus movimientos");
+assert.match(sharedCloud, /inicio \+= 400/, "una caja grande se copia en lotes admitidos por Firebase");
+assert.match(screen, /Solo después de terminar toda la copia se retira la versión privada/, "la pantalla no borra la caja si falla la migración");
+assert.match(screen, /crearInvitacionCaja\(uid, compartida\.id\)/, "compartir genera el código para la persona invitada");
 
 console.log("Cajas: saldo, borrado, guardado separado y privacidad verificados.");

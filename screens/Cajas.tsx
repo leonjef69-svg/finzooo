@@ -5,6 +5,7 @@ import SpaceSwitcher from "@/components/SpaceSwitcher";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
 import { bajarCajas, subirCajas } from "@/utils/cloudCajas";
+import { compartirCajaExistente, crearInvitacionCaja } from "@/utils/cloudCajasCompartidas";
 import {
   CAJAS_VACIAS,
   fusionarCajas,
@@ -19,7 +20,7 @@ import { irUnaVez, safeBack } from "@/utils/nav";
 import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 import { ArrowDown, ArrowLeftRight, ArrowUp, Boxes, Check, Plus, Trash2, X } from "lucide-react-native";
 import { useEffect, useMemo, useState } from "react";
-import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ScrollView, Share, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 function fechaLocal(): string {
@@ -30,7 +31,7 @@ function fechaLocal(): string {
 }
 
 export default function Cajas() {
-  const { t, fmt, showToast, disponible, addOrUpdateTransaction, deleteTransaction } = useAppData();
+  const { t, fmt, showToast, disponible, addOrUpdateTransaction, deleteTransaction, isPremium, userName, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
   const [datos, setDatos] = useState<DatosCajas>(CAJAS_VACIAS);
   const [lista, setLista] = useState(true);
@@ -46,6 +47,7 @@ export default function Cajas() {
   const [descripcion, setDescripcion] = useState("");
   const [borrandoCaja, setBorrandoCaja] = useState(false);
   const [ready, setReady] = useState(false);
+  const [compartiendo, setCompartiendo] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -183,6 +185,32 @@ export default function Cajas() {
     showToast(t("boxes.deleted"));
   }
 
+  async function compartirCaja() {
+    const uid = auth.currentUser?.uid;
+    if (!uid || !caja || compartiendo) return;
+    if (!isPremium) { irUnaVez("/premium"); return; }
+    setCompartiendo(true);
+    try {
+      const compartida = await compartirCajaExistente(uid, userName || t("family.member"), caja, movimientos, userCurrency);
+      const codigo = await crearInvitacionCaja(uid, compartida.id);
+      // Solo después de terminar toda la copia se retira la versión privada.
+      // Los débitos enlazados de Personal se conservan porque ahora apuntan a
+      // los mismos movimientos dentro de la caja compartida.
+      const ids = movimientos.map(item => item.id);
+      setDatos(antes => ({
+        ...antes,
+        cajas: antes.cajas.filter(item => item.id !== caja.id),
+        movimientos: antes.movimientos.filter(item => item.cajaId !== caja.id),
+        cajasBorradas: [...new Set([...antes.cajasBorradas, caja.id])],
+        movimientosBorrados: [...new Set([...antes.movimientosBorrados, ...ids])],
+      }));
+      setCajaId(null); setLista(true);
+      await Share.share({ message: t("boxes.shareMessage", { name: caja.nombre, code: codigo }) });
+      irUnaVez("/shared-boxes");
+    } catch { showToast(t("family.connectionError")); }
+    finally { setCompartiendo(false); }
+  }
+
   return (
     <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top + 6, paddingBottom: insets.bottom }}>
       <View className="flex-row items-center justify-between px-5 pb-3">
@@ -272,6 +300,7 @@ export default function Cajas() {
             {borrandoCaja ? (
               <View className="mt-5 rounded-2xl bg-rose-50 p-3"><Text className="text-xs text-rose-700">{t("boxes.deleteWarning")}</Text><View className="mt-3 flex-row gap-2"><TouchableOpacity onPress={() => setBorrandoCaja(false)} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-white"><Text className="font-bold text-slate-600">{t("common.cancel")}</Text></TouchableOpacity><TouchableOpacity onPress={borrarCaja} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-rose-600"><Text className="font-bold text-white">{t("common.delete")}</Text></TouchableOpacity></View></View>
             ) : <TouchableOpacity onPress={() => setBorrandoCaja(true)} className="mt-5 min-h-11 flex-row items-center justify-center gap-2"><Trash2 size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("boxes.delete")}</Text></TouchableOpacity>}
+            {auth.currentUser ? <TouchableOpacity disabled={compartiendo} onPress={() => void compartirCaja()} className="mt-2 min-h-11 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Text className="font-bold text-teal-700 dark:text-teal-300">{compartiendo ? t("common.loading") : `${t("boxes.share")}${isPremium ? "" : " · Premium"}`}</Text></TouchableOpacity> : null}
           </>
         )}
       </ScrollView>
