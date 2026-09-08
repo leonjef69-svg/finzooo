@@ -14,6 +14,8 @@
 export type PdfTx = {
   /** Fecha ya escrita para leer ("12 de julio"). */
   dateLabel: string;
+  timeLabel?: string;
+  typeLabel?: string;
   /** Día del mes, 1..31. Lo usa el gráfico diario. */
   day: number;
   categoryLabel: string;
@@ -26,6 +28,8 @@ export type PdfTx = {
 
 export type PdfTexts = {
   colDate: string;
+  colTime?: string;
+  colType?: string;
   colCategory: string;
   colDescription: string;
   colMethod: string;
@@ -500,6 +504,8 @@ export function buildPdfHtml(o: PdfOptions): string {
       return `
         <tr>
           <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;white-space:nowrap;">${esc(tx.dateLabel)}</td>
+          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;white-space:nowrap;">${esc(tx.timeLabel || "-")}</td>
+          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;white-space:nowrap;">${esc(tx.typeLabel || (tx.type === "expense" ? T.expenses : T.income))}</td>
           <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;white-space:nowrap;">
             <span style="display:inline-block;width:7px;height:7px;border-radius:4px;background:${tx.categoryColor};margin-right:5px;"></span>${esc(tx.categoryLabel)}
           </td>
@@ -666,6 +672,8 @@ export function buildPdfHtml(o: PdfOptions): string {
       <thead>
         <tr style="background:#f1f5f9;">
           <th style="text-align:left;padding:7px 8px;border-bottom:1.5px solid #cbd5e1;">${esc(T.colDate)}</th>
+          <th style="text-align:left;padding:7px 8px;border-bottom:1.5px solid #cbd5e1;">${esc(T.colTime || "Hora")}</th>
+          <th style="text-align:left;padding:7px 8px;border-bottom:1.5px solid #cbd5e1;">${esc(T.colType || "Tipo")}</th>
           <th style="text-align:left;padding:7px 8px;border-bottom:1.5px solid #cbd5e1;">${esc(T.colCategory)}</th>
           <th style="text-align:left;padding:7px 8px;border-bottom:1.5px solid #cbd5e1;">${esc(T.colDescription)}</th>
           <th style="text-align:left;padding:7px 8px;border-bottom:1.5px solid #cbd5e1;">${esc(T.colMethod)}</th>

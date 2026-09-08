@@ -162,7 +162,7 @@ export default function Cajas() {
         {!ready ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : lista || !caja ? (
           <>
             <Text className="mb-3 mt-2 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("boxes.subtitle")}</Text>
-            <TouchableOpacity onPress={() => irUnaVez("/shared-boxes")} className="mb-3 min-h-12 items-center justify-center rounded-xl bg-emerald-600"><Text className="text-base font-bold text-white">{t("boxes.shared")}</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => irUnaVez("/shared-boxes?join=1")} className="mb-3 min-h-12 items-center justify-center rounded-xl border border-emerald-500 bg-emerald-50 dark:bg-emerald-950"><Text className="text-base font-bold text-emerald-700 dark:text-emerald-300">{t("boxes.join")}</Text></TouchableOpacity>
             {datos.cajas.map((item) => (
               <TouchableOpacity
                 key={item.id}

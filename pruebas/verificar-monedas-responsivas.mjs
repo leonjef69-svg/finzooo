@@ -22,12 +22,7 @@ assert.match(reports, /shownBarData/);
 assert.match(reports, /shownDaily/);
 assert.doesNotMatch(reports, /setTransactions\([^)]*preview/i);
 assert.match(reports, /\? "<1%"/, "los gastos pequeños no se muestran falsamente como 0%");
-assert.match(reports, /insights\.projection[\s\S]{0,100}fmtCompact/, "Fino IA abrevia proyecciones grandes");
-assert.match(reports, /insights\.savingsTip[\s\S]{0,100}fmtCompact/, "Fino IA abrevia ahorros grandes");
-assert.ok(
-  reports.indexOf("Fino IA abre el reporte") < reports.indexOf("Presupuesto utilizado."),
-  "Fino IA aparece antes del resto del análisis",
-);
+assert.ok(!reports.includes("Fino IA"), "Reportes ya no muestra Fino IA");
 assert.ok(
   reports.lastIndexOf('t("reports.byDayTitle")') < reports.lastIndexOf('t("reports.byMonth")'),
   "el gasto diario aparece antes del gasto mensual",

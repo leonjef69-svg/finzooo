@@ -1,7 +1,7 @@
 import { Text, TouchableOpacity, View } from "react-native";
 import { irUnaVez } from "@/utils/nav";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ArrowUpRight, ArrowDownRight, Mic, ScanLine } from "lucide-react-native";
+import { ArrowUpRight, Mic, ScanLine } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import { useAppData } from "@/contexts/AppDataContext";
 
@@ -28,9 +28,9 @@ export default function AddChooser({
         </View>
         <TouchableOpacity
           onPress={() => onPick("expense")}
-          className="w-full flex-row items-center gap-4 bg-rose-50 dark:bg-noche-2 rounded-2xl p-4 mb-3"
+          className="w-full flex-row items-center gap-4 bg-emerald-50 dark:bg-noche-2 rounded-2xl p-4 mb-3"
         >
-          <View className="w-11 h-11 rounded-xl bg-rose-500 items-center justify-center">
+          <View className="w-11 h-11 rounded-xl bg-emerald-600 items-center justify-center">
             <ArrowUpRight size={20} color="#ffffff" />
           </View>
           <View>
@@ -38,26 +38,9 @@ export default function AddChooser({
               className="font-bold text-sm"
               style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
             >
-              {t("addChooser.addExpense")}
+              {t("addChooser.register")}
             </Text>
-            <Text className="text-xs text-slate-500 dark:text-slate-300">{t("addChooser.addExpenseHint")}</Text>
-          </View>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={() => onPick("income")}
-          className="w-full flex-row items-center gap-4 bg-emerald-50 dark:bg-noche-2 rounded-2xl p-4 mb-3"
-        >
-          <View className="w-11 h-11 rounded-xl bg-emerald-600 items-center justify-center">
-            <ArrowDownRight size={20} color="#ffffff" />
-          </View>
-          <View>
-            <Text
-              className="font-bold text-sm"
-              style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-            >
-              {t("addChooser.addIncome")}
-            </Text>
-            <Text className="text-xs text-slate-500 dark:text-slate-300">{t("addChooser.addIncomeHint")}</Text>
+            <Text className="text-xs text-slate-500 dark:text-slate-300">{t("addChooser.registerHint")}</Text>
           </View>
         </TouchableOpacity>
         {/* EL MICRÓFONO ES PREMIUM (11/08/2026). Se ve, con su etiqueta, y sin Premium lleva a la

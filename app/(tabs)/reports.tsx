@@ -1,5 +1,4 @@
 import Reports from "@/screens/Reports";
-import { irUnaVez } from "@/utils/nav";
 import { useAppData } from "@/contexts/AppDataContext";
 
 export default function ReportsTab() {
@@ -8,7 +7,6 @@ export default function ReportsTab() {
     <Reports
       transactions={transactions}
       month={month}
-      onSeePremium={() => irUnaVez("/premium")}
     />
   );
 }

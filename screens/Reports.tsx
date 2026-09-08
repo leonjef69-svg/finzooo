@@ -1,11 +1,6 @@
 import { useMemo, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
-import {
-  Crown,
-  Sparkles,
-} from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import DonutChart from "@/components/DonutChart";
 import BarChartSimple from "@/components/BarChartSimple";
@@ -23,11 +18,9 @@ import type { Month, Transaction } from "@/types";
 export default function Reports({
   transactions,
   month,
-  onSeePremium,
 }: {
   transactions: Transaction[];
   month: Month;
-  onSeePremium: () => void;
 }) {
   const {
     fmt,
@@ -101,70 +94,6 @@ export default function Reports({
     return { pieData: pie, totalExpense: total };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactions, mk, userLanguage]);
-
-  const insights = useMemo(() => {
-    const list: string[] = [];
-    const now = new Date();
-    const isCurrentMonth = month.y === now.getFullYear() && month.m === now.getMonth();
-    const iso = (d: Date) => d.toISOString().slice(0, 10);
-
-    const day0 = new Date(now);
-    const day7Ago = new Date(day0);
-    day7Ago.setDate(day0.getDate() - 7);
-    const day8Ago = new Date(day7Ago);
-    day8Ago.setDate(day7Ago.getDate() - 1);
-    const day14Ago = new Date(day0);
-    day14Ago.setDate(day0.getDate() - 14);
-
-    function sumByCategory(fromISO: string, toISO: string) {
-      const result: Record<string, number> = {};
-      transactions
-        .filter((tx) => tx.type === "expense" && tx.date >= fromISO && tx.date <= toISO)
-        .forEach((tx) => {
-          result[tx.category] = (result[tx.category] || 0) + tx.amount;
-        });
-      return result;
-    }
-
-    const thisWeek = sumByCategory(iso(day7Ago), iso(day0));
-    const lastWeek = sumByCategory(iso(day14Ago), iso(day8Ago));
-
-    let bestCat: { id: string; pct: number } | null = null;
-    for (const [catId, amt] of Object.entries(thisWeek)) {
-      const prev = lastWeek[catId] || 0;
-      if (prev >= 10) {
-        const pct = Math.round(((amt - prev) / prev) * 100);
-        if (pct >= 20 && (!bestCat || pct > bestCat.pct)) bestCat = { id: catId, pct };
-      }
-    }
-    if (bestCat) {
-      const c = catInfo(bestCat.id);
-      list.push(t("insights.categoryUp", { category: t(c.label), pct: bestCat.pct }));
-    }
-
-    if (isCurrentMonth && budget > 0) {
-      const dayOfMonth = now.getDate();
-      const daysInMonth = new Date(month.y, month.m + 1, 0).getDate();
-      if (dayOfMonth >= 3) {
-        const projected = (totalExpense / dayOfMonth) * daysInMonth;
-        if (projected > budget * 1.05) {
-          list.push(t("insights.projection", { amount: fmtCompact(projected - budget) }));
-        }
-      }
-    }
-
-    const topCat = Object.entries(categorySpent).sort((a, b) => b[1] - a[1])[0];
-    if (topCat && topCat[1] > 0) {
-      const suggestion = topCat[1] * 0.2;
-      if (suggestion >= 10) {
-        const c = catInfo(topCat[0]);
-        list.push(t("insights.savingsTip", { amount: fmtCompact(suggestion), category: t(c.label) }));
-      }
-    }
-
-    return list.slice(0, 3);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transactions, month, budget, categorySpent, totalExpense, userLanguage]);
 
   // Los 3 meses que terminan en el mes que se está viendo.
   //
@@ -295,45 +224,6 @@ export default function Reports({
         <ThemeToggleButton />
       </View>
 
-      {/* Fino IA abre el reporte: es la conclusión, y las gráficas de abajo
-          explican de dónde sale. Compacto para que no empuje el análisis. */}
-      {isPremium ? (
-        insights.length > 0 && (
-          <LinearGradient
-            colors={["#0f172a", "#064e3b"]}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-            className="mx-5 mt-3 rounded-2xl px-3.5 py-3"
-          >
-            <View className="flex-row items-center gap-1.5 mb-1.5">
-              <Sparkles size={14} color="#fcd34d" />
-              <Text className="text-white font-extrabold text-xs">Fino IA</Text>
-            </View>
-            <View className="gap-1">
-              {insights.map((msg, i) => (
-                <Text key={i} className="text-emerald-50 text-[11px] leading-4">
-                  • {msg}
-                </Text>
-              ))}
-            </View>
-          </LinearGradient>
-        )
-      ) : (
-        <TouchableOpacity
-          onPress={onSeePremium}
-          className="mx-5 mt-3 flex-row items-center gap-2.5 bg-slate-900 rounded-2xl px-3.5 py-3"
-        >
-          <View className="w-8 h-8 rounded-lg bg-amber-400/20 items-center justify-center">
-            <Sparkles size={16} color="#fcd34d" />
-          </View>
-          <View className="flex-1">
-            <Text className="text-white font-bold text-xs">Fino IA</Text>
-            <Text className="text-slate-300 text-[10px]" numberOfLines={2}>{t("insights.lockedDescription")}</Text>
-          </View>
-          <Crown size={15} color="#fcd34d" />
-        </TouchableOpacity>
-      )}
-
       {__DEV__ && (
         <TouchableOpacity
           onPress={() => setChartPreview((value) => !value)}
@@ -355,6 +245,33 @@ export default function Reports({
 
       {/* En Reportes no repetimos el saldo ni las cuatro cifras de Inicio.
           Aquí empieza directamente el análisis del mes. */}
+      <View
+        className="mx-5 mt-3 bg-white dark:bg-noche-2 rounded-3xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4"
+        style={CARD_SHADOW}
+      >
+        <Text className="text-sm font-bold mb-1" style={{ color: primaryTextColor }}>{t("reports.byCategory")}</Text>
+        {pieData.length === 0 ? (
+          <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">{t("reports.noDataThisMonth")}</Text>
+        ) : (
+          <>
+            <View className="items-center py-2">
+              <DonutChart data={pieData} fmt={fmtCompact} />
+            </View>
+            <View className="gap-2 mt-2">
+              {pieData.map((e, i) => (
+                <View key={i} className="flex-row items-center gap-2">
+                  <View className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: e.color }} />
+                  <Text className="text-xs font-medium flex-1" style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#475569" }}>{e.name}</Text>
+                  <Text className="text-xs text-slate-500 dark:text-slate-300 flex-shrink text-right" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+                    {fmtCompact(e.value)} · {totalExpense ? (e.value / totalExpense) * 100 < 1 ? "<1%" : `${Math.round((e.value / totalExpense) * 100)}%` : "0%"}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+      </View>
+
       {isPremium && (
         <>
           {/* Presupuesto utilizado. Solo si hay presupuesto: sin él, una
@@ -390,42 +307,6 @@ export default function Reports({
           )}
         </>
       )}
-
-      <View
-        className="mx-5 mt-4 bg-white dark:bg-noche-2 rounded-3xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4"
-        style={CARD_SHADOW}
-      >
-        <Text className="text-sm font-bold mb-1" style={{ color: primaryTextColor }}>{t("reports.byCategory")}</Text>
-        {pieData.length === 0 ? (
-          <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">{t("reports.noDataThisMonth")}</Text>
-        ) : (
-          <>
-            <View className="items-center py-2">
-              <DonutChart data={pieData} fmt={fmtCompact} />
-            </View>
-            <View className="gap-2 mt-2">
-              {pieData.map((e, i) => (
-                <View key={i} className="flex-row items-center gap-2">
-                  <View className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: e.color }} />
-                  <Text
-                    className="text-xs font-medium flex-1"
-                    style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#475569" }}
-                  >
-                    {e.name}
-                  </Text>
-                  <Text className="text-xs text-slate-500 dark:text-slate-300 flex-shrink text-right" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
-                    {fmtCompact(e.value)} · {totalExpense
-                      ? (e.value / totalExpense) * 100 < 1
-                        ? "<1%"
-                        : `${Math.round((e.value / totalExpense) * 100)}%`
-                      : "0%"}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </>
-        )}
-      </View>
 
       <View
         className="mx-5 mt-4 bg-white dark:bg-noche-2 rounded-3xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4"

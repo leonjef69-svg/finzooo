@@ -66,6 +66,7 @@ export default function AddSheet({
   });
   const [cambiandoLugar, setCambiandoLugar] = useState<number | null>(null);
   const [renombrando, setRenombrando] = useState<string | null>(null);
+  const [categoriaConIconos, setCategoriaConIconos] = useState<string | null>(null);
   const [nombreTemporal, setNombreTemporal] = useState("");
   const [date, setDate] = useState(transaction?.date || defaultDateForMonth(currentMonth));
   const [method, setMethod] = useState(transaction?.method || "debit");
@@ -202,6 +203,7 @@ export default function AddSheet({
   useEffect(() => {
     if (!transaction) setCategory(type === "expense" ? "comida" : "salario");
     if (!transaction) setIcono(undefined);
+    setCategoriaConIconos(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
 
@@ -487,6 +489,7 @@ export default function AddSheet({
                       onPress={() => {
                         setCategory(cat.id);
                         setIcono(cat.iconoNombre);
+                        setCategoriaConIconos((actual) => actual === cat.id ? null : cat.id);
                       }}
                       onLongPress={() => abrirCambioDeCategoria(indice)}
                       delayLongPress={450}
@@ -565,7 +568,7 @@ export default function AddSheet({
                         ))}
                       </ScrollView>
                     ) : null}
-                    <ScrollView
+                    {categoriaConIconos === cat.id ? <ScrollView
                       horizontal
                       showsHorizontalScrollIndicator={false}
                       contentContainerStyle={{ gap: 8, paddingRight: 16 }}
@@ -605,7 +608,7 @@ export default function AddSheet({
                           </View>
                         );
                       })}
-                    </ScrollView>
+                    </ScrollView> : null}
                     {activa && iconoConColores === icono && !esFoto(icono ?? "") ? (
                       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 9, paddingRight: 16 }}>
                         {coloresRapidos.map((color) => (

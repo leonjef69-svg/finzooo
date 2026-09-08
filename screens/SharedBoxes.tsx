@@ -3,6 +3,7 @@ import { methodLabel } from "@/constants/i18n";
 import { useEffect, useRef, useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View, Share } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useLocalSearchParams } from "expo-router";
 import { useAppData } from "@/contexts/AppDataContext";
 import BackButton from "@/components/BackButton";
 import { fmt as formatAmount } from "@/utils/format";
@@ -10,15 +11,16 @@ import { currencySymbolFor } from "@/constants/currencies";
 import { auth } from "@/utils/firebase";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
-import { crearCajaCompartida, crearInvitacionCaja, escucharMovimientosCaja, guardarMovimientoCajaCompartida, listarCajasCompartidas, unirseACaja, type CajaCompartida, type MovimientoCajaCompartida } from "@/utils/cloudCajasCompartidas";
+import { crearInvitacionCaja, escucharMovimientosCaja, guardarMovimientoCajaCompartida, listarCajasCompartidas, unirseACaja, type CajaCompartida, type MovimientoCajaCompartida } from "@/utils/cloudCajasCompartidas";
 
 export default function SharedBoxes() {
   const { t, userCurrency, isPremium, userName, showToast } = useAppData();
   const insets = useSafeAreaInsets();
+  const { join } = useLocalSearchParams<{ join?: string }>();
   const [cajas, setCajas] = useState<CajaCompartida[]>([]);
   const [caja, setCaja] = useState<CajaCompartida | null>(null);
   const [movimientos, setMovimientos] = useState<MovimientoCajaCompartida[]>([]);
-  const [modo, setModo] = useState<"crear" | "unir" | "ingreso" | "gasto" | null>(null);
+  const [modo, setModo] = useState<"unir" | "ingreso" | "gasto" | null>(join === "1" ? "unir" : null);
   const [nombre, setNombre] = useState("");
   const [monto, setMonto] = useState("");
   const [method, setMethod] = useState("cash");
@@ -54,12 +56,7 @@ export default function SharedBoxes() {
   }
   const guardar = () => ejecutar(async () => {
     if (!uid) return;
-    if (modo === "crear") {
-      if (!isPremium) { irUnaVez("/premium"); return; }
-      if (!nombre.trim()) return;
-      const nueva = await crearCajaCompartida(uid, userName, nombre, parseAmountInput(monto), userCurrency);
-      setCajas(items => [nueva, ...items]); setCaja(nueva);
-    } else if (modo === "unir") {
+    if (modo === "unir") {
       if (codigo.length !== 8) return;
       const nueva = await unirseACaja(uid, userName, codigo);
       setCajas(items => [nueva, ...items.filter(item => item.id !== nueva.id)]); setCaja(nueva);
@@ -77,7 +74,7 @@ export default function SharedBoxes() {
     <ScrollView className="px-4" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 32 }}>
       {!uid ? <Text className="text-slate-600 dark:text-slate-200">{t("boxes.loginRequired")}</Text> : <>
         {!caja ? <>
-          <View className="mb-3 flex-row gap-2">{boton(t("family.createPremium"), () => { if (isPremium) { limpiar(); setModo("crear"); } else irUnaVez("/premium"); })}{boton(t("boxes.join"), () => { limpiar(); setModo("unir"); })}</View>
+          <View className="mb-3 flex-row gap-2">{boton(t("boxes.join"), () => { limpiar(); setModo("unir"); })}</View>
           {cajas.map(item => <TouchableOpacity key={item.id} onPress={() => { limpiar(); setCaja(item); }} className="mb-2 rounded-2xl border border-slate-200 p-4 dark:border-noche-borde"><Text className="text-base font-bold text-slate-900 dark:text-white">{item.nombre}</Text></TouchableOpacity>)}
         </> : <>
           <View className="rounded-2xl bg-emerald-600 p-4"><Text className="text-base font-bold text-white">{caja.nombre}</Text><Text adjustsFontSizeToFit numberOfLines={1} className="text-[26px] font-extrabold text-white">{fmt(ingresos - gastos)}</Text><SpaceTotals income={ingresos} expense={gastos} filter={filter} onFilter={setFilter} format={fmt} /></View>
@@ -86,8 +83,8 @@ export default function SharedBoxes() {
           {invitacion ? <TouchableOpacity onPress={() => void Share.share({ message: invitacion })} className="rounded-xl bg-emerald-50 p-3"><Text selectable className="text-center text-xl font-bold text-emerald-800">{invitacion}</Text><Text className="text-center text-sm text-slate-600">{t("family.codeExpires")}</Text></TouchableOpacity> : null}
         </>}
         {modo ? <View className="my-3 gap-2 rounded-2xl border border-slate-200 p-3 dark:border-noche-borde">
-          <TextInput disableFullscreenUI editable={!busy} value={modo === "unir" ? codigo : nombre} onChangeText={value => modo === "unir" ? setCodigo(value.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 8)) : setNombre(value)} maxLength={modo === "unir" ? 8 : modo === "crear" ? 30 : 60} placeholder={t(modo === "unir" ? "family.codePlaceholder" : modo === "crear" ? "boxes.namePlaceholder" : "boxes.description")} placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-3 text-base text-slate-900 dark:text-white" />
-          {modo !== "unir" ? <><TextInput disableFullscreenUI editable={!busy} value={monto} onChangeText={value => setMonto(sanitizeSafeAmountInput(value))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-3 text-lg text-slate-900 dark:text-white" />{modo === "crear" ? <Text className="text-sm text-slate-500">{t("boxes.externalHelp")}</Text> : null}</> : null}
+          <TextInput disableFullscreenUI editable={!busy} value={modo === "unir" ? codigo : nombre} onChangeText={value => modo === "unir" ? setCodigo(value.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 8)) : setNombre(value)} maxLength={modo === "unir" ? 8 : 60} placeholder={t(modo === "unir" ? "family.codePlaceholder" : "boxes.description")} placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-3 text-base text-slate-900 dark:text-white" />
+          {modo !== "unir" ? <TextInput disableFullscreenUI editable={!busy} value={monto} onChangeText={value => setMonto(sanitizeSafeAmountInput(value))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-3 text-lg text-slate-900 dark:text-white" /> : null}
           {modo === "ingreso" || modo === "gasto" ? <SpacePaymentMethod value={method} onChange={setMethod} disabled={busy} /> : null}
           <View className="flex-row gap-2">{boton(t("common.cancel"), limpiar)}{boton(busy ? t("common.loading") : t("common.save"), guardar)}</View>
         </View> : null}

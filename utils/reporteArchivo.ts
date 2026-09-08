@@ -49,6 +49,8 @@ export function filasDelReporte(datos: DatosDelReporte): (string | number)[][] {
   const { movimientos, total, nombresDeMes, t } = datos;
   const cabecera = [
     t("exportPdf.colDate"),
+    t("exportPdf.colTime"),
+    t("exportPdf.colType"),
     t("exportPdf.colCategory"),
     t("exportPdf.colDescription"),
     t("exportPdf.colMethod"),
@@ -59,13 +61,15 @@ export function filasDelReporte(datos: DatosDelReporte): (string | number)[][] {
     const montoConSigno = tx.type === "expense" ? -tx.amount : tx.amount;
     return [
       fmtDate(tx.date, nombresDeMes),
+      tx.time || "-",
+      t(tx.type === "expense" ? "addSheet.expense" : "addSheet.income"),
       t(c.label),
       tx.description || "",
       methodLabel(tx.method, t),
       montoConSigno,
     ];
   });
-  return [cabecera, ...filas, [], [t("exportPdf.total"), "", "", "", total]];
+  return [cabecera, ...filas, [], [t("exportPdf.total"), "", "", "", "", "", total]];
 }
 
 /**

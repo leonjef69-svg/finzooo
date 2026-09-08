@@ -36,6 +36,7 @@ const gasto: Transaction = {
   date: "2026-08-05",
   method: "cash",
   notes: "",
+  time: "1:15 p.m.",
 };
 const ingreso: Transaction = {
   id: 2,
@@ -60,10 +61,12 @@ console.log("\n--- LAS FILAS DEL REPORTE ---");
 
   ok(filas.length === 5, `cabecera, dos movimientos, una vacía y el total (${filas.length})`);
   ok(filas[0][0] === "exportPdf.colDate", "la primera fila es la cabecera");
-  ok(filas[0].length === 5, "con cinco columnas");
+  ok(filas[0].length === 7, "con fecha, hora, tipo y las demás columnas");
+  ok(filas[1][1] === "1:15 p.m.", "incluye la hora del movimiento");
+  ok(filas[1][2] === "addSheet.expense", "indica si es gasto o ingreso");
   ok(filas[3].length === 0, "hay una fila vacía antes del total, para que se lea separado");
   ok(filas[4][0] === "exportPdf.total", "y la última es el total");
-  ok(filas[4][4] === 87.5, "con el total que se le pasó");
+  ok(filas[4][6] === 87.5, "con el total que se le pasó");
 }
 
 console.log("\n--- LOS MONTOS: SIGNO Y TIPO ---");
@@ -71,12 +74,12 @@ console.log("\n--- LOS MONTOS: SIGNO Y TIPO ---");
   const filas = filasDelReporte({ movimientos: [gasto, ingreso], total: 87.5, nombresDeMes: MESES, t });
   // El signo es lo que distingue un gasto de un ingreso en la hoja. Al revés,
   // el reporte dice lo contrario de lo que pasó.
-  ok(filas[1][4] === -12.5, `un gasto va en negativo (${filas[1][4]})`);
-  ok(filas[2][4] === 100, `un ingreso va en positivo (${filas[2][4]})`);
+  ok(filas[1][6] === -12.5, `un gasto va en negativo (${filas[1][6]})`);
+  ok(filas[2][6] === 100, `un ingreso va en positivo (${filas[2][6]})`);
   // Y como NÚMERO, no como texto: es lo que permite sumar y ordenar en Excel
   // sin tocar nada. Con texto, Excel enseña un triangulito y no suma.
-  ok(typeof filas[1][4] === "number", "y como número, no como texto");
-  ok(typeof filas[4][4] === "number", "el total también");
+  ok(typeof filas[1][6] === "number", "y como número, no como texto");
+  ok(typeof filas[4][6] === "number", "el total también");
 }
 
 console.log("\n--- EL EXCEL FINAL CONSERVA LOS COLORES ---");
@@ -109,8 +112,8 @@ console.log("\n--- EL EXCEL FINAL CONSERVA LOS COLORES ---");
 console.log("\n--- UNA DESCRIPCIÓN VACÍA NO ROMPE LA FILA ---");
 {
   const filas = filasDelReporte({ movimientos: [ingreso], total: 100, nombresDeMes: MESES, t });
-  ok(filas[1][2] === "", "sin descripción queda la celda vacía, no 'undefined'");
-  ok(filas[1].length === 5, "y la fila sigue teniendo sus cinco columnas");
+  ok(filas[1][4] === "", "sin descripción queda la celda vacía, no 'undefined'");
+  ok(filas[1].length === 7, "y la fila conserva todas sus columnas");
 }
 
 console.log("\n--- EL CSV: DECIMALES Y ESCAPADO ---");

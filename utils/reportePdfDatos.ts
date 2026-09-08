@@ -57,6 +57,8 @@ export function htmlDelReporte(d: DatosDelPdf): string {
     const c = catInfo(tx.category);
     return {
       dateLabel: fmtDate(tx.date, nombresDeMes),
+      timeLabel: tx.time || "-",
+      typeLabel: t(tx.type === "expense" ? "addSheet.expense" : "addSheet.income"),
       day: Number(tx.date.slice(8, 10)),
       categoryLabel: t(c.label),
       categoryColor: c.color,
@@ -144,6 +146,8 @@ export function htmlDelReporte(d: DatosDelPdf): string {
     generatedAt: fmtDate(toDateKey(new Date()), nombresDeMes),
     texts: {
       colDate: t("exportPdf.colDate"),
+      colTime: t("exportPdf.colTime"),
+      colType: t("exportPdf.colType"),
       colCategory: t("exportPdf.colCategory"),
       colDescription: t("exportPdf.colDescription"),
       colMethod: t("exportPdf.colMethod"),
