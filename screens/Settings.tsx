@@ -76,6 +76,7 @@ export default function Settings({
   onAbout,
   onLegal,
   onVoiceHelp,
+  onTelegram,
 }: {
   userName: string;
   userEmail: string;
@@ -102,6 +103,7 @@ export default function Settings({
   onAbout: () => void;
   onLegal: () => void;
   onVoiceHelp: () => void;
+  onTelegram: () => void;
 }) {
   const { t, userCountry, isCloudSynced, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios } =
     useAppData();
@@ -500,6 +502,16 @@ export default function Settings({
           // no es usarlo, y es de las pocas páginas que pueden convencer a alguien de pagar.
           // Lleva la etiqueta para que nadie se lleve la sorpresa al ir a dictar.
           onPress={onVoiceHelp}
+          right={
+            <View className="bg-amber-50 px-2 py-1 rounded-full">
+              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
+            </View>
+          }
+        />
+        <Row
+          Icon={MessageSquare}
+          label={t("telegram.rowLabel")}
+          onPress={() => (isPremium ? onTelegram() : onPremium())}
           right={
             <View className="bg-amber-50 px-2 py-1 rounded-full">
               <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>

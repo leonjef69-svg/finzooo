@@ -137,6 +137,11 @@ movimientos ingresados en ese espacio se muestran a los participantes autorizado
 Los datos personales fuera del espacio no se muestran a los invitados. La política
 pública ya describe este funcionamiento y debe coincidir con la declaración de la tienda.
 
+La integración opcional con Telegram aún no está en la versión de Play. Antes de
+incluirla en un AAB hay que actualizar el formulario: el texto enviado al bot y el
+identificador del chat se procesan para registrar movimientos. La política dentro
+de la app ya lo explica. No publicar esa función conservando una declaración anterior.
+
 > **Lo que decide la mayoría de respuestas:** los datos **se recogen** (viajan a Firebase si la
 > persona inicia sesión) y **no se comparten** con terceros. Todo va **cifrado en tránsito** y
 > **se puede pedir el borrado**. Nada de esto es opcional en el formulario y equivocarse aquí

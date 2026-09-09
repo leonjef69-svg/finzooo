@@ -1,6 +1,6 @@
 # Estado actual de Fino
 
-Actualizado: **8 de septiembre de 2026**.
+Actualizado: **9 de septiembre de 2026**.
 
 Este archivo permite retomar el proyecto sin empezar de cero. No contiene
 credenciales, correos, UID, huellas completas ni datos privados de testers.
@@ -17,8 +17,20 @@ Paquete Android: `com.finoapp.gastos`.
 
 - Disponible en prueba cerrada: **1.0.4**, `versionCode 5`.
 - Próxima corrección: **1.0.6**, `versionCode 7`.
-- Marca visible de 1.0.6: **08sep-auditoria-pre-play**.
+- Marca visible de 1.0.6: **09sep-telegram-seguro**.
 - El AAB firmado solo se genera en la computadora autorizada.
+
+## Telegram preparado
+
+- Existe una pantalla Premium en Ajustes para vincular la cuenta con un código
+  aleatorio de un solo uso que vence en diez minutos.
+- El bot interpreta órdenes explícitas, enseña el resumen y exige confirmación;
+  no usa inteligencia artificial ni guarda el token en la app o el repositorio.
+- Puede probarse localmente sin Blaze mientras la computadora permanezca
+  encendida. Para funcionar permanentemente se desplegará la función cuando se
+  active Blaze, después de la aprobación de Google Play.
+- Falta publicar las reglas nuevas, configurar los secretos y hacer la prueba
+  real con el bot. Esas acciones cambian Firebase y requieren autorización.
 
 ## Acceso con Google
 

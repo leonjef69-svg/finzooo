@@ -43,6 +43,7 @@ export default function SettingsTab() {
       onDeleteAccount={() => irUnaVez("/delete-account")}
       onAbout={() => irUnaVez("/about")}
       onVoiceHelp={() => irUnaVez("/voice-help")}
+      onTelegram={() => irUnaVez("/telegram" as never)}
       onLegal={() => irUnaVez("/legal")}
     />
   );

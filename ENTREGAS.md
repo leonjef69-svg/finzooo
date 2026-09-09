@@ -14,6 +14,7 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 |---|---|---|---|
 | 23/08/2026 | 1.0.5 | `23ago-09` | Inicio exacto de tres pantallas aprobado |
 | 08/09/2026 | 1.0.6 | `08sep-auditoria-pre-play` | Auditoría integral previa a Play Store |
+| 09/09/2026 | 1.0.6 | `09sep-telegram-seguro` | Integración segura de Telegram preparada para prueba local |
 
 La versión 1.0.3 contiene el acceso Google con diagnóstico, copia de seguridad,
 Modo Negocio, registro automático, voz, rendimiento, calendario, exportación,
@@ -50,6 +51,10 @@ La versión 1.0.6 añade la auditoría previa a Play Store: operaciones atómica
 en espacios compartidos, borrado completo de cuentas y espacios propios,
 reautenticación de Google, reglas estrictas, permisos mínimos y dependencias
 compatibles con Expo SDK 54.
+
+También deja preparada la primera integración de Telegram: vínculo Premium por
+código temporal, confirmación obligatoria, desconexión desde Fino, intérprete
+determinista y ejecución local o mediante una función protegida por secretos.
 
 Calidad comprobada:
 

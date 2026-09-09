@@ -3,7 +3,7 @@
 // un abogado si más adelante la app crece o cambia su forma de ganar dinero.
 import { anunciosActivos } from "@/constants/anuncios";
 export const LEGAL_CONTACT_EMAIL = "dinero123xc@gmail.com";
-export const LEGAL_LAST_UPDATED = "8 de agosto de 2026";
+export const LEGAL_LAST_UPDATED = "9 de septiembre de 2026";
 
 /**
  * LO QUE SE DICE DE LOS ANUNCIOS, Y SOLO CUANDO LOS HAY.
@@ -34,6 +34,7 @@ Esta Política de Privacidad explica qué información recoge Fino, para qué la
 - Contactos de envío que tú guardas: los nombres, correos y números de teléfono a los que decidas mandar tus reportes. Los escribes tú; Fino no lee la agenda de tu celular.
 - Fotos que tú eliges: las imágenes que pongas a tus categorías propias, y las fotos de boletas si usas el escáner.
 - Lo que dices al micrófono, solo mientras lo tienes apretado, para entender la orden.
+- Si conectas Telegram, el texto que envías al bot, tu identificador de chat y el movimiento que confirmas.
 - No recogemos tu ubicación ni leemos la agenda de contactos de tu celular.
 
 2. La lectura de notificaciones (registro automático)
@@ -54,6 +55,7 @@ ${PARRAFO_ANUNCIOS}
 - Usamos Firebase (Google) únicamente como proveedor técnico para guardar los datos de forma segura, no como un tercero que use tu información con otros fines.
 - Si TÚ conectas Google Drive, Dropbox o eliges una carpeta de tu celular, se suben ahí los archivos de reporte que tú pidas, y nada más. Fino solo puede entrar a su propia carpeta.
 - Si TÚ eliges enviar un reporte por correo o WhatsApp, ese archivo va a quien tú indiques, a través de la aplicación que elijas.
+- Si TÚ conectas Telegram, Telegram recibe los mensajes que escribes y las confirmaciones que Fino te responde. La conexión es opcional y puedes desconectarla desde Ajustes.
 - El micrófono usa el servicio de reconocimiento de voz de tu propio celular, que en Android es de Google.
 
 5. Tus derechos

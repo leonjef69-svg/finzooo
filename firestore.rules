@@ -423,6 +423,31 @@ service cloud.firestore {
                          && request.resource.data.backup is map;
     }
 
+    // Telegram: el celular solo crea un código temporal para SU cuenta.
+    // Las conexiones, borradores y movimientos los administra exclusivamente
+    // la función del servidor, que usa Admin SDK y no depende de estas reglas.
+    match /telegramLinkRequests/{code} {
+      allow create: if verified()
+        && premiumUser(request.auth.uid)
+        && request.resource.data.keys().hasOnly(['uid', 'createdAtMs', 'expiresAtMs', 'used'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.used == false
+        && request.resource.data.createdAtMs is number
+        && request.resource.data.expiresAtMs is number
+        && request.resource.data.expiresAtMs > request.time.toMillis()
+        && request.resource.data.expiresAtMs <= request.time.toMillis() + 10 * 60 * 1000;
+      allow get, delete: if verified() && resource.data.uid == request.auth.uid;
+      allow update: if false;
+    }
+
+    match /telegramUsers/{userId} {
+      allow read, delete: if verified() && request.auth.uid == userId;
+      allow create, update: if false;
+    }
+
+    match /telegramConnections/{chatId} { allow read, write: if false; }
+    match /telegramDrafts/{chatId} { allow read, write: if false; }
+
     // Todo lo demás queda cerrado por defecto.
     match /{document=**} {
       allow read, write: if false;
