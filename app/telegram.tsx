@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Linking, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { router } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Crypto from "expo-crypto";
@@ -10,6 +10,7 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { auth, db } from "@/utils/firebase";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+const TELEGRAM_BOT_USERNAME = "dotero2bot";
 function makeCode() {
   return Array.from(Crypto.getRandomBytes(6), (byte) => ALPHABET[byte % ALPHABET.length]).join("");
 }
@@ -37,6 +38,7 @@ export default function TelegramScreen() {
     try {
       await setDoc(doc(db, "telegramLinkRequests", next), { uid, createdAtMs: now, expiresAtMs: now + 10 * 60_000, used: false });
       setCode(next);
+      await Linking.openURL(`https://t.me/${TELEGRAM_BOT_USERNAME}?start=link_${next}`);
     } catch {
       showToast("No se pudo generar el código. Revisa tu conexión.");
     }
@@ -75,12 +77,11 @@ export default function TelegramScreen() {
               <Text className="mt-2 text-sm text-slate-500">{t("telegram.step2")}</Text>
               {code ? (
                 <View className="mt-4 rounded-xl bg-slate-100 p-4 dark:bg-noche-2">
-                  <Text selectable className="text-center text-2xl font-black tracking-widest text-slate-900 dark:text-white">{code}</Text>
-                  <Text className="mt-2 text-center text-xs text-slate-500">{t("telegram.expires")}</Text>
+                  <Text className="text-center text-sm font-bold text-emerald-600">{t("telegram.opened")}</Text>
                 </View>
               ) : null}
               <TouchableOpacity onPress={generate} className="mt-4 rounded-xl bg-emerald-500 p-3">
-                <Text className="text-center font-black text-white">{t(code ? "telegram.regenerate" : "telegram.generate")}</Text>
+                <Text className="text-center font-black text-white">{t(code ? "telegram.reopen" : "telegram.connect")}</Text>
               </TouchableOpacity>
             </>
           )}

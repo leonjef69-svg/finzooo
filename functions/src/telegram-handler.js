@@ -2,7 +2,7 @@
 
 const crypto = require("node:crypto");
 const { Buffer } = require("node:buffer");
-const { parseMovement } = require("./telegram-parser");
+const { parseLinkCode, parseMovement } = require("./telegram-parser");
 
 const MAX_USER_BYTES = 850_000;
 const LINK_MINUTES = 10;
@@ -107,8 +107,8 @@ async function handleTelegramUpdate({ db, token, update }) {
       return;
     }
     const text = String(message?.text || "").trim();
-    const codeMatch = text.match(/^\/vincular\s+([A-Z0-9]{6})$/i);
-    if (codeMatch) return await link(db, token, chatId, codeMatch[1]);
+    const linkCode = parseLinkCode(text);
+    if (linkCode) return await link(db, token, chatId, linkCode);
     if (/^\/start\b/i.test(text)) return await send(token, chatId, "Hola. Vincula tu cuenta desde Fino y luego usa: gasto 100 comida o ingreso 1500 salario.");
     const connection = await connectionFor(db, chatId);
     if (!connection) return await send(token, chatId, "Primero vincula Telegram desde Ajustes → Telegram en Fino.");

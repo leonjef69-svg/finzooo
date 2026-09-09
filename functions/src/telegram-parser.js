@@ -49,4 +49,9 @@ function parseMovement(text) {
   return { type, amount, category, description, method: "Telegram" };
 }
 
-module.exports = { parseMovement, cleanAmount };
+function parseLinkCode(text) {
+  const match = String(text || "").trim().match(/^(?:\/vincular\s+|\/start\s+link_)([A-Z0-9]{6})$/i);
+  return match ? match[1].toUpperCase() : null;
+}
+
+module.exports = { parseMovement, cleanAmount, parseLinkCode };
