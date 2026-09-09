@@ -3,7 +3,11 @@ import {
   isErrorWithCode,
   statusCodes,
 } from "@react-native-google-signin/google-signin";
-import { GoogleAuthProvider, signInWithCredential } from "@firebase/auth";
+import {
+  GoogleAuthProvider,
+  reauthenticateWithCredential,
+  signInWithCredential,
+} from "@firebase/auth";
 import { auth } from "@/utils/firebase";
 
 // "ID de cliente web" del proyecto de Firebase (Authentication > Google >
@@ -41,7 +45,7 @@ export class GoogleSignInCancelled extends Error {
 //
 // Nota: las cuentas de Google llegan con el correo ya verificado, así que
 // estos usuarios se saltan la pantalla de "verifica tu correo".
-export async function signInWithGoogle(): Promise<void> {
+async function googleCredential() {
   // Comprueba que el celular tenga los servicios de Google al día. Sin
   // esto, en un celular sin Play Services el fallo sería un error nativo
   // poco claro en vez de un mensaje entendible.
@@ -69,7 +73,19 @@ export async function signInWithGoogle(): Promise<void> {
     throw new Error("Google no devolvió el identificador de la cuenta.");
   }
 
-  await signInWithCredential(auth, GoogleAuthProvider.credential(idToken));
+  return GoogleAuthProvider.credential(idToken);
+}
+
+export async function signInWithGoogle(): Promise<void> {
+  await signInWithCredential(auth, await googleCredential());
+}
+
+// Una cuenta creada con Google no tiene contraseña de Fino. Para confirmar
+// una operación delicada se vuelve a abrir el selector seguro de Google.
+export async function reauthenticateWithGoogle(): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error("No hay una sesión activa.");
+  await reauthenticateWithCredential(user, await googleCredential());
 }
 
 // Cierra también la sesión del lado de Google. Sin esto, la próxima vez

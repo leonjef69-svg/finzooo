@@ -14,6 +14,7 @@ const api = {
   getDocs: async ref => ({ docs: [...documents.keys()].filter(key => key.startsWith(ref + "/")).map(snap) }),
   orderBy: () => null,
   query: ref => ref,
+  arrayUnion: (...values) => values,
   serverTimestamp: () => 1,
   addDoc: async (ref, value) => documents.set(ref + `/movement${++addedDocuments}`, value),
   updateDoc: async (ref, value) => documents.set(ref, { ...documents.get(ref), ...value }),
@@ -34,6 +35,7 @@ vm.runInNewContext(compiled.outputFiles[0].text, { module, exports: module.expor
 const cloud = module.exports;
 documents.set("familySpaces/f", { ownerUid: "owner", nombre: "Family" });
 documents.set("familyUsers/owner", { activeFamilyId: "f" });
+documents.set("familySpaces/f/members/owner", { uid: "owner", rol: "owner" });
 await assert.rejects(() => cloud.cerrarFamilia("guest", "f"));
 assert.equal(documents.get("familySpaces/f").closed, undefined);
 failCommit = true;

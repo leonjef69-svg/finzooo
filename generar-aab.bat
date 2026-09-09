@@ -17,6 +17,17 @@ if not exist "%ANDROID_HOME%" (
   pause
   exit /b 1
 )
+
+rem Regenera la configuración nativa desde app.json. Sin este paso, la carpeta
+rem Android podía conservar permisos o plugins de una versión anterior aunque
+rem el proyecto ya estuviera corregido.
+call node_modules\.bin\expo.cmd prebuild --platform android --no-install
+if errorlevel 1 (
+  echo ERROR: No se pudo actualizar la configuracion Android.
+  pause
+  exit /b 1
+)
+
 set "FIREBASE_CONFIG="
 for /f "delims=" %%F in ('dir /b /a-d /o-d "%USERPROFILE%\Downloads\google-services*.json" 2^>nul') do if not defined FIREBASE_CONFIG set "FIREBASE_CONFIG=%USERPROFILE%\Downloads\%%F"
 if not defined FIREBASE_CONFIG set "FIREBASE_CONFIG=google-services.json"

@@ -6,6 +6,7 @@ import AuthField from "@/components/AuthField";
 import { firebaseErrorMessage } from "@/utils/firebaseErrors";
 import { useAppData } from "@/contexts/AppDataContext";
 import BackButton from "@/components/BackButton";
+import { auth } from "@/utils/firebase";
 
 export default function DeleteAccount({
   onBack,
@@ -19,9 +20,10 @@ export default function DeleteAccount({
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const usaContrasena = auth.currentUser?.providerData.some(provider => provider.providerId === "password") ?? true;
 
   async function submit() {
-    if (!password) {
+    if (usaContrasena && !password) {
       setError(t("deleteAccount.passwordError"));
       return;
     }
@@ -58,14 +60,18 @@ export default function DeleteAccount({
         </View>
 
         <View className="px-6 gap-4 mt-8">
-          <AuthField
-            label={t("deleteAccount.confirmLabel")}
-            type="password"
-            value={password}
-            onChange={setPassword}
-            placeholder="••••••••"
-            error={error}
-          />
+          {usaContrasena ? (
+            <AuthField
+              label={t("deleteAccount.confirmLabel")}
+              type="password"
+              value={password}
+              onChange={setPassword}
+              placeholder="••••••••"
+              error={error}
+            />
+          ) : error ? (
+            <Text className="text-sm text-rose-500 text-center">{error}</Text>
+          ) : null}
 
           <TouchableOpacity
             activeOpacity={0.85}

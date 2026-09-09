@@ -46,7 +46,14 @@ console.log("\n--- LOS CAMPOS DE LA APP Y LOS DE LAS REGLAS SON LOS MISMOS ---")
   const deLaApp = [...tipo.matchAll(/^ {2}([a-zA-Z]+)\??:/gm)].map((m) => m[1]);
   ok(deLaApp.length > 10, `se leyeron los campos de CloudData (${deLaApp.length})`);
 
-  const lista = /hasOnly\(\[([\s\S]*?)\]\)/.exec(reglas)?.[1] ?? "";
+  // Hay otras listas hasOnly para movimientos compartidos. Se toma solo la
+  // del documento users/{uid}; usar la primera del archivo haría que una regla
+  // nueva y correcta pareciera haber roto el respaldo personal.
+  const bloqueUsuario = reglas.slice(
+    reglas.indexOf("match /users/{userId}"),
+    reglas.indexOf("match /negocios/{userId}")
+  );
+  const lista = /hasOnly\(\[([\s\S]*?)\]\)/.exec(bloqueUsuario)?.[1] ?? "";
   const deLasReglas = [...lista.matchAll(/'([a-zA-Z]+)'/g)].map((m) => m[1]);
   ok(deLasReglas.length > 10, `se leyó la lista de las reglas (${deLasReglas.length})`);
 

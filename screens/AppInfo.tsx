@@ -3,6 +3,7 @@ import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Sparkles, Wallet, RefreshCw } from "lucide-react-native";
 import * as Updates from "expo-updates";
+import Constants from "expo-constants";
 import { LEGAL_CONTACT_EMAIL } from "@/constants/legal";
 import { useAppData } from "@/contexts/AppDataContext";
 import BackButton from "@/components/BackButton";
@@ -13,7 +14,7 @@ import * as textRecognizer from "@/modules/text-recognizer";
 import * as notificationReader from "@/modules/notification-reader";
 import { puedeExportarEnFondo, puedePdfEnFondo } from "@/modules/export-scheduler";
 
-const APP_VERSION = "1.0.5";
+const APP_VERSION = Constants.expoConfig?.version ?? "1.0.6";
 
 /**
  * Marca de la versión del CÓDIGO, no de la app.
@@ -24,10 +25,10 @@ const APP_VERSION = "1.0.5";
  * mismo fallo. Sin saber qué código se estaba ejecutando, cada arreglo era a
  * ciegas — y podía estar ya hecho.
  *
- * La versión de la app (1.0.5) no sirve para esto: no cambia entre entregas.
+ * La versión comercial no sirve para distinguir dos ajustes de la misma entrega.
  * Esta sí.
  */
-const CODE_MARKER = "08sep-transferencias-protegidas";
+const CODE_MARKER = "08sep-auditoria-pre-play";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast, verComoGratis, setVerComoGratis, tienePremiumDeVerdad } = useAppData();

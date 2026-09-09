@@ -1325,7 +1325,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "deleteAccount.title": "Eliminar cuenta",
     "deleteAccount.warningTitle": "Esta acción no se puede deshacer",
     "deleteAccount.warningBody":
-      "Se borrará tu cuenta, tu presupuesto, todos tus movimientos y tus metas de ahorro, tanto de este celular como de la nube. No hay forma de recuperarlos después.",
+      "Se borrarán tu cuenta y todos tus datos personales de este celular y de la nube. También se eliminarán las Familias y Cajas que creaste. Las anotaciones hechas en espacios de otra persona se conservan para sus miembros, pero quedan sin tu nombre ni vínculo con tu cuenta.",
     "deleteAccount.passwordError": "Ingresa tu contraseña para confirmar",
     "deleteAccount.confirmLabel": "Confirma tu contraseña actual",
     "deleteAccount.submit": "Eliminar mi cuenta para siempre",
@@ -2743,7 +2743,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "deleteAccount.title": "Delete account",
     "deleteAccount.warningTitle": "This action cannot be undone",
     "deleteAccount.warningBody":
-      "Your account, budget, all transactions, and savings goals will be deleted, both from this phone and the cloud. There's no way to recover them afterward.",
+      "Your account and personal data will be deleted from this phone and the cloud. Families and Boxes you created will also be deleted. Entries made in someone else's space remain for its members, but without your name or a link to your account.",
     "deleteAccount.passwordError": "Enter your password to confirm",
     "deleteAccount.confirmLabel": "Confirm your current password",
     "deleteAccount.submit": "Delete my account forever",
@@ -4159,7 +4159,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "deleteAccount.title": "Excluir conta",
     "deleteAccount.warningTitle": "Esta ação não pode ser desfeita",
     "deleteAccount.warningBody":
-      "Sua conta, orçamento, todas as movimentações e metas de poupança serão excluídas, tanto deste celular quanto da nuvem. Não há como recuperá-los depois.",
+      "Sua conta e seus dados pessoais serão excluídos deste celular e da nuvem. Famílias e Caixas que você criou também serão excluídas. Registros feitos no espaço de outra pessoa permanecem para os membros, mas sem seu nome nem vínculo com sua conta.",
     "deleteAccount.passwordError": "Digite sua senha para confirmar",
     "deleteAccount.confirmLabel": "Confirme sua senha atual",
     "deleteAccount.submit": "Excluir minha conta para sempre",

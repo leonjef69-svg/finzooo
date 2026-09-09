@@ -90,7 +90,7 @@ import {
 } from "@/utils/pruebaPremium";
 import { fmt as formatAmount, fmtCompact as formatCompactAmount, monthKey } from "@/utils/format";
 import { auth } from "@/utils/firebase";
-import { signOutFromGoogle } from "@/utils/googleAuth";
+import { reauthenticateWithGoogle, signOutFromGoogle } from "@/utils/googleAuth";
 import {
   deleteCloudAccount,
   loadCloudData,
@@ -809,7 +809,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // haga estos cambios si te dejaste la sesión abierta en otro celular.
   async function reauthenticate(currentPassword: string) {
     const user = auth.currentUser;
-    if (!user || !user.email) throw new Error("No hay una sesión activa.");
+    if (!user) throw new Error("No hay una sesión activa.");
+    const usaContrasena = user.providerData.some(provider => provider.providerId === "password");
+    if (!usaContrasena) {
+      await reauthenticateWithGoogle();
+      return user;
+    }
+    if (!user.email) throw new Error("La cuenta no tiene un correo válido.");
     const credential = EmailAuthProvider.credential(user.email, currentPassword);
     await reauthenticateWithCredential(user, credential);
     return user;

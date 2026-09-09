@@ -134,8 +134,8 @@ pero es diseño y se puede dejar para después: primero publicar.
 
 En los espacios compartidos de Familia y Cajas, el nombre de miembro y los
 movimientos ingresados en ese espacio se muestran a los participantes autorizados.
-Los datos personales fuera del espacio no se muestran a los invitados. Actualizar
-la política y revisar la declaración de la tienda antes de distribuir esta función.
+Los datos personales fuera del espacio no se muestran a los invitados. La política
+pública ya describe este funcionamiento y debe coincidir con la declaración de la tienda.
 
 > **Lo que decide la mayoría de respuestas:** los datos **se recogen** (viajan a Firebase si la
 > persona inicia sesión) y **no se comparten** con terceros. Todo va **cifrado en tránsito** y
@@ -152,6 +152,7 @@ la política y revisar la declaración de la tienda antes de distribuir esta fun
 | **Información financiera del usuario** *(otra)* | Sí | No | Funciones de la app |
 | **Mensajes en la app** *(otros: contenido de notificaciones)* | Sí | No | Funciones de la app |
 | **Grabaciones de voz** | **No se recoge** | — | Se procesa en el celular y no se guarda |
+| **Diagnóstico de fallos y rendimiento** | Sí | No | Analítica y funcionamiento de la app (Sentry) |
 
 **Para las cinco que sí:** marcar **cifrado en tránsito** y **se puede solicitar el borrado**.
 
@@ -214,9 +215,11 @@ Ajustes → Registro automático → encender el interruptor → conceder el per
 | `CAMERA` | Escanear boletas para leer el monto |
 | `RECORD_AUDIO` | Dictar movimientos por voz |
 | `POST_NOTIFICATIONS` | Avisar de la exportación programada |
-| `READ/WRITE_EXTERNAL_STORAGE` | Guardar los reportes en la carpeta que elija |
 | `USE_BIOMETRIC` / `USE_FINGERPRINT` | Bloquear la app con huella |
-| `SYSTEM_ALERT_WINDOW` | El acceso rápido de voz |
+
+`READ_EXTERNAL_STORAGE`, `WRITE_EXTERNAL_STORAGE` y `SYSTEM_ALERT_WINDOW` están
+bloqueados expresamente. Los reportes usan el selector moderno de Android y el
+acceso rápido de voz es un widget; ninguno necesita esos permisos amplios.
 
 ---
 

@@ -12,7 +12,7 @@ assert.equal(codes.size, 200, "los códigos de prueba no se repiten");
 for (const code of codes) assert.match(code, /^[A-HJ-NP-Z2-9]{8}$/, "el código evita caracteres confusos");
 
 assert.match(rules, /function familyMember\(familyId\)/, "cada lectura comprueba la membresía");
-assert.match(rules, /allow list: if false;/, "nadie puede recorrer todos los códigos");
+assert.match(rules, /allow list: if verified\(\) && resource\.data\.createdBy == request\.auth\.uid;/, "solo el creador puede buscar sus propios códigos para eliminarlos");
 assert.match(rules, /expiresAt > request\.time\.toMillis\(\)/, "un código vencido no permite entrar");
 assert.match(rules, /request\.resource\.data\.inviteCode/, "la membresía exige la invitación usada");
 assert.match(rules, /function premiumUser\(userId\)/, "crear e invitar está protegido por Premium en Firebase");

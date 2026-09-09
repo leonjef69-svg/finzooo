@@ -197,6 +197,7 @@ console.log("\n--- COMPARACIONES SOSPECHOSAS ---");
           /[^=!<>]==[^=]/.test(l) &&
           !/===|!==/.test(l) &&
           !/==\s*null/.test(l) &&
+          !/where\([^)]*["']==["']/.test(l) &&
           !/base64|data:image/.test(l)
         ) {
           fallo(`${rel}:${i + 1}`, `comparacion con == : ${l.trim().slice(0, 60)}`);

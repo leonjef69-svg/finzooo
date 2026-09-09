@@ -1,6 +1,6 @@
 # Estado actual de Fino
 
-Actualizado: **6 de septiembre de 2026**.
+Actualizado: **8 de septiembre de 2026**.
 
 Este archivo permite retomar el proyecto sin empezar de cero. No contiene
 credenciales, correos, UID, huellas completas ni datos privados de testers.
@@ -16,8 +16,8 @@ Paquete Android: `com.finoapp.gastos`.
 ## Versiones
 
 - Disponible en prueba cerrada: **1.0.4**, `versionCode 5`.
-- Próxima corrección: **1.0.5**, `versionCode 6`.
-- Marca visible de 1.0.5: **23ago-09**.
+- Próxima corrección: **1.0.6**, `versionCode 7`.
+- Marca visible de 1.0.6: **08sep-auditoria-pre-play**.
 - El AAB firmado solo se genera en la computadora autorizada.
 
 ## Acceso con Google
@@ -139,7 +139,8 @@ El cobro Premium aún no está habilitado; existe una prueba local de 24 horas.
 
 ## Google Play: qué falta
 
-- Generar y subir el AAB 1.0.5 a la misma prueba cerrada.
+- Publicar las reglas de Firestore auditadas y probar Familia/Cajas con dos cuentas.
+- Generar y subir el AAB 1.0.6 a la misma prueba cerrada.
 - Pedir a los testers que actualicen desde Google Play.
 - Conseguir al menos 12 testers aceptados y mantener el periodo exigido.
 - Completar la cuenta preparada para revisión con datos de ejemplo.
@@ -309,5 +310,5 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 
 ## Próximo paso exacto
 
-Generar el AAB 1.0.5 con `generar-aab.bat`, subirlo a prueba cerrada y probar
-una instalación nueva desde bienvenida hasta el acceso.
+Después de publicar y probar las reglas auditadas, generar el AAB 1.0.6 con
+`generar-aab.bat`, subirlo a prueba cerrada y probar una instalación nueva.

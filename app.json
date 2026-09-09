@@ -32,6 +32,11 @@
         "android.permission.CAMERA",
         "android.permission.POST_NOTIFICATIONS"
       ],
+      "blockedPermissions": [
+        "android.permission.READ_EXTERNAL_STORAGE",
+        "android.permission.WRITE_EXTERNAL_STORAGE",
+        "android.permission.SYSTEM_ALERT_WINDOW"
+      ],
       "intentFilters": [
         {
           "action": "SEND",
@@ -100,7 +105,8 @@
           "icon": "./assets/images/icon.png",
           "color": "#059669"
         }
-      ]
+      ],
+      "./plugins/with-modern-android-bars"
     ],
     "experiments": {
       "typedRoutes": true,

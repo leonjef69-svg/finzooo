@@ -39,6 +39,7 @@ import { currencyLabelFor } from "@/constants/currencies";
 import { countryFor, countryLabelFor } from "@/constants/countries";
 import { hayRegistroAutomatico } from "@/utils/dondeHayYape";
 import { useAppData } from "@/contexts/AppDataContext";
+import { auth } from "@/utils/firebase";
 
 // Achica y comprime la foto antes de guardarla, para que no pese mucho
 // (así se guarda rápido y no ocupa espacio de más en la nube).
@@ -122,6 +123,7 @@ export default function Settings({
   // de ningún país; ahí la fila sale sin nombre en vez de mentir.
   const paisActual = countryFor(userLanguage, userCurrency, userCountry);
   const insets = useSafeAreaInsets();
+  const usaContrasena = auth.currentUser?.providerData.some(provider => provider.providerId === "password") ?? true;
 
   const [pickingPhoto, setPickingPhoto] = useState(false);
   const [photoError, setPhotoError] = useState("");
@@ -561,12 +563,14 @@ export default function Settings({
 
       <View className="px-5 mt-5 gap-2.5">
         <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 px-1">{t("settings.sectionAccount")}</Text>
-        <Row
-          Icon={KeyRound}
-          label={t("settings.changePassword")}
-          onPress={onChangePassword}
-          right={<ChevronRight size={16} color="#cbd5e1" />}
-        />
+        {usaContrasena ? (
+          <Row
+            Icon={KeyRound}
+            label={t("settings.changePassword")}
+            onPress={onChangePassword}
+            right={<ChevronRight size={16} color="#cbd5e1" />}
+          />
+        ) : null}
         <Row Icon={UserX} label={t("settings.deleteAccount")} onPress={onDeleteAccount} danger />
         <Row Icon={LogOut} label={t("settings.logout")} onPress={onLogout} danger />
       </View>

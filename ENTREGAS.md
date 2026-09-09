@@ -13,6 +13,7 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 | Fecha preparada | Versión | Marca visible | Estado |
 |---|---|---|---|
 | 23/08/2026 | 1.0.5 | `23ago-09` | Inicio exacto de tres pantallas aprobado |
+| 08/09/2026 | 1.0.6 | `08sep-auditoria-pre-play` | Auditoría integral previa a Play Store |
 
 La versión 1.0.3 contiene el acceso Google con diagnóstico, copia de seguridad,
 Modo Negocio, registro automático, voz, rendimiento, calendario, exportación,
@@ -45,16 +46,21 @@ La versión 1.0.5 añade:
 La firma real de Google Play ya está registrada en Firebase y el acceso con
 Google fue comprobado en un teléfono.
 
+La versión 1.0.6 añade la auditoría previa a Play Store: operaciones atómicas
+en espacios compartidos, borrado completo de cuentas y espacios propios,
+reautenticación de Google, reglas estrictas, permisos mínimos y dependencias
+compatibles con Expo SDK 54.
+
 Calidad comprobada:
 
 - TypeScript aprobado.
 - ESLint sin errores.
-- 78 pruebas aprobadas.
+- Más de 100 pruebas aprobadas.
 - 7 auditores aprobados.
 
 ## Cómo reconocer la entrega
 
-En **Ajustes → Acerca de**, la versión 1.0.5 muestra `23ago-09`.
+En **Ajustes → Acerca de**, la versión 1.0.6 muestra `08sep-auditoria-pre-play`.
 
 ## Publicación
 
@@ -65,5 +71,5 @@ En **Ajustes → Acerca de**, la versión 1.0.5 muestra `23ago-09`.
 
 ## Próximo paso
 
-Generar `Fino-1.0.5.aab`, subirlo a prueba cerrada y probar una instalación
-nueva desde bienvenida hasta el acceso.
+Publicar las reglas auditadas, probar Familia/Cajas con dos cuentas y después
+generar `Fino-1.0.6.aab` para la prueba cerrada.

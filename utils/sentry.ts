@@ -7,7 +7,9 @@ const dsn =
 
 Sentry.init({
   dsn,
-  enabled: Boolean(dsn),
+  // Los fallos de desarrollo no deben mezclarse con problemas reales ni
+  // enviar diagnósticos desde el emulador del equipo de trabajo.
+  enabled: !__DEV__ && Boolean(dsn),
   tracesSampleRate: 0.2,
 });
 

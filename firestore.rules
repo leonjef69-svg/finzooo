@@ -40,7 +40,8 @@ service cloud.firestore {
 
     function familyOpen(familyId) {
       return get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('closed', false) == false
-        && get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('closing', false) == false;
+        && get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('closing', false) == false
+        && get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('deleting', false) == false;
     }
 
     function premiumUser(userId) {
@@ -63,7 +64,51 @@ service cloud.firestore {
 
     function boxOpen(boxId) {
       return get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('closed', false) == false
-        && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('closing', false) == false;
+        && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('closing', false) == false
+        && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == false;
+    }
+
+    function boxOpenAfter(boxId) {
+      return getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('closed', false) == false
+        && getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('closing', false) == false
+        && getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == false;
+    }
+
+    // Forma exacta de un movimiento compartido. Evita cantidades imposibles,
+    // textos gigantes y, sobre todo, que otro miembro falsifique el enlace con
+    // el saldo Personal de una cuenta ajena.
+    function validSharedMovement(data) {
+      return data.keys().hasOnly([
+          'tipo', 'monto', 'descripcion', 'method', 'fecha', 'creadoPor',
+          'creadoEn', 'personalTransactionId', 'personalOwnerUid',
+          'personalReturnAmount'
+        ])
+        && data.tipo in ['ingreso', 'gasto']
+        && data.monto is number
+        && data.monto > 0
+        && data.monto <= 9000000000000
+        && data.descripcion is string
+        && data.descripcion.size() <= 120
+        && data.fecha is string
+        && data.fecha.size() <= 10
+        && data.creadoPor == request.auth.uid
+        && (data.creadoEn is timestamp || data.creadoEn is number)
+        && (!('method' in data) || (data.method is string && data.method.size() <= 40))
+        && (
+          (!('personalTransactionId' in data) && !('personalOwnerUid' in data))
+          || (
+            data.personalTransactionId is number
+            && data.personalTransactionId > 0
+            && data.personalOwnerUid == request.auth.uid
+          )
+        )
+        && (!('personalReturnAmount' in data)
+          || (
+            'personalTransactionId' in data
+            && data.personalReturnAmount is number
+            && data.personalReturnAmount > 0
+            && data.personalReturnAmount <= data.monto
+          ));
     }
 
     // Cada persona guarda todo en un solo documento: users/{su-id}
@@ -161,29 +206,43 @@ service cloud.firestore {
       allow create: if verified()
                     && request.resource.data.ownerUid == request.auth.uid
                     && request.resource.data.nombre is string
+                    && request.resource.data.nombre.size() > 0
+                    && request.resource.data.nombre.size() <= 35
+                    && request.resource.data.creadoEn is timestamp
+                    && request.resource.data.keys().hasOnly(['nombre', 'ownerUid', 'creadoEn'])
                     && premiumUser(request.auth.uid);
       allow read: if familyMember(familyId);
       allow update: if familyMember(familyId)
                     && resource.data.ownerUid == request.auth.uid
-                    && resource.data.get('closed', false) == false
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'closed', 'closing'])
+                    && (resource.data.get('closed', false) == false
+                      || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleting'])
+                        && request.resource.data.get('deleting', false) == true))
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'closed', 'closing', 'deleting'])
                     && request.resource.data.nombre is string
                     && request.resource.data.nombre.size() > 0
                     && request.resource.data.nombre.size() <= 35
                     && request.resource.data.get('closed', false) is bool
-                    && request.resource.data.get('closing', false) is bool;
+                    && request.resource.data.get('closing', false) is bool
+                    && request.resource.data.get('deleting', false) is bool;
+      allow delete: if verified()
+                    && resource.data.ownerUid == request.auth.uid
+                    && resource.data.get('deleting', false) == true;
 
       match /members/{userId} {
         allow read: if familyMember(familyId);
         allow create: if verified()
                       && userId == request.auth.uid
-                      && familyOpen(familyId)
                       && request.resource.data.uid == request.auth.uid
+                      && request.resource.data.nombre is string
+                      && request.resource.data.nombre.size() <= 60
+                      && request.resource.data.unidoEn is timestamp
+                      && request.resource.data.keys().hasOnly(['uid', 'nombre', 'rol', 'inviteCode', 'unidoEn'])
                       && (
-                        (get(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid
+                        (getAfter(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid
                           && request.resource.data.rol == 'owner')
                         || (
                           request.resource.data.rol == 'member'
+                          && familyOpen(familyId)
                           && request.resource.data.inviteCode is string
                           && exists(/databases/$(database)/documents/familyInvites/$(request.resource.data.inviteCode))
                           && get(/databases/$(database)/documents/familyInvites/$(request.resource.data.inviteCode)).data.familyId == familyId
@@ -198,21 +257,30 @@ service cloud.firestore {
       match /movements/{movementId} {
         allow read: if familyMember(familyId);
         allow create: if familyMember(familyId) && familyOpen(familyId)
-                      && request.resource.data.creadoPor == request.auth.uid
-                      && request.resource.data.tipo in ['ingreso', 'gasto']
-                      && request.resource.data.monto is number
-                      && request.resource.data.monto > 0;
-        allow delete: if familyMember(familyId) && familyOpen(familyId)
+                      && validSharedMovement(request.resource.data);
+        allow update: if familyMember(familyId)
+                      && resource.data.creadoPor == request.auth.uid
+                      && request.resource.data.creadoPor == 'deleted'
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['creadoPor', 'personalOwnerUid'])
+                      && (!('personalOwnerUid' in request.resource.data)
+                        || request.resource.data.personalOwnerUid == 'deleted');
+        allow delete: if familyMember(familyId)
+                      && (familyOpen(familyId)
+                        || get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('deleting', false) == true)
                       // Un aporte salido de Personal solo lo puede deshacer
                       // la misma cuenta que puso ese dinero.
-                      && (resource.data.get('personalOwnerUid', '') == ''
-                        || resource.data.personalOwnerUid == request.auth.uid);
+                      && (
+                        (get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('deleting', false) == true
+                          && get(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid)
+                        || resource.data.get('personalOwnerUid', '') == ''
+                        || resource.data.personalOwnerUid == request.auth.uid
+                      );
       }
     }
 
     match /familyInvites/{code} {
       allow get: if verified();
-      allow list: if false;
+      allow list: if verified() && resource.data.createdBy == request.auth.uid;
       allow create: if verified()
                     && request.resource.data.createdBy == request.auth.uid
                     && request.resource.data.familyId is string
@@ -227,7 +295,18 @@ service cloud.firestore {
     // Índice privado que permite recuperar el espacio familiar al cambiar de celular.
     // No concede acceso al espacio; las reglas anteriores siguen comprobando membresía.
     match /familyUsers/{userId} {
-      allow read, create, update: if verified() && request.auth.uid == userId;
+      allow read, create: if verified() && request.auth.uid == userId;
+      allow update: if verified() && (
+        request.auth.uid == userId
+        || (
+          resource.data.activeFamilyId is string
+          && resource.data.activeFamilyId.size() > 0
+          && get(/databases/$(database)/documents/familySpaces/$(resource.data.activeFamilyId)).data.ownerUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['activeFamilyId', 'closedFamilyIds'])
+          && request.resource.data.activeFamilyId == ''
+          && request.resource.data.closedFamilyIds is list
+        )
+      );
       allow delete: if verified() && (request.auth.uid == userId
         || get(/databases/$(database)/documents/familySpaces/$(resource.data.activeFamilyId)).data.ownerUid == request.auth.uid);
     }
@@ -238,22 +317,45 @@ service cloud.firestore {
       allow create: if verified()
                     && request.resource.data.ownerUid == request.auth.uid
                     && request.resource.data.nombre is string
+                    && request.resource.data.nombre.size() > 0
+                    && request.resource.data.nombre.size() <= 30
+                    && request.resource.data.currency is string
+                    && request.resource.data.currency.size() == 3
+                    && request.resource.data.creadaEn is timestamp
+                    && (!('migrationComplete' in request.resource.data)
+                      || request.resource.data.migrationComplete is bool)
+                    && request.resource.data.keys().hasOnly(['nombre', 'ownerUid', 'currency', 'creadaEn', 'migrationComplete'])
                     && premiumUser(request.auth.uid);
       allow read: if boxMember(boxId);
-      allow update, delete: if boxMember(boxId)
-                            && resource.data.ownerUid == request.auth.uid
-                            && (request.method == 'delete' || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'migrationComplete', 'closed', 'closing']))
-                            && request.resource.data.get('closed', false) is bool
-                            && request.resource.data.get('closing', false) is bool;
+      allow update: if boxMember(boxId)
+                    && resource.data.ownerUid == request.auth.uid
+                    && (resource.data.get('closed', false) == false
+                      || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleting'])
+                        && request.resource.data.get('deleting', false) == true))
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'migrationComplete', 'closed', 'closing', 'deleting'])
+                    && request.resource.data.nombre is string
+                    && request.resource.data.nombre.size() > 0
+                    && request.resource.data.nombre.size() <= 30
+                    && request.resource.data.get('closed', false) is bool
+                    && request.resource.data.get('closing', false) is bool
+                    && request.resource.data.get('deleting', false) is bool;
+      allow delete: if verified()
+                    && resource.data.ownerUid == request.auth.uid
+                    && resource.data.get('deleting', false) == true;
 
       match /members/{userId} {
         allow read: if boxMember(boxId);
         allow get: if verified() && userId == request.auth.uid;
         allow create: if verified() && userId == request.auth.uid
           && request.resource.data.uid == request.auth.uid
+          && request.resource.data.nombre is string
+          && request.resource.data.nombre.size() <= 60
+          && request.resource.data.unidoEn is timestamp
+          && request.resource.data.keys().hasOnly(['uid', 'nombre', 'rol', 'inviteCode', 'unidoEn'])
           && ((getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid
                 && request.resource.data.rol == 'owner')
             || (request.resource.data.rol == 'member'
+                && boxOpen(boxId)
                 && request.resource.data.inviteCode is string
                 && exists(/databases/$(database)/documents/boxInvites/$(request.resource.data.inviteCode))
                 && get(/databases/$(database)/documents/boxInvites/$(request.resource.data.inviteCode)).data.boxId == boxId
@@ -264,22 +366,33 @@ service cloud.firestore {
 
       match /movements/{movementId} {
         allow read: if boxMember(boxId);
-        allow create: if verified() && boxOpen(boxId) && (boxMember(boxId)
-          || getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid)
-          && request.resource.data.creadoPor == request.auth.uid
-          && request.resource.data.tipo in ['ingreso', 'gasto']
-          && request.resource.data.monto is number
-          && request.resource.data.monto > 0
-          && request.resource.data.monto <= 9000000000000;
+        allow create: if verified() && (
+          (boxMember(boxId) && boxOpen(boxId))
+          || (getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid
+            && boxOpenAfter(boxId))
+        )
+          && validSharedMovement(request.resource.data);
+        allow update: if boxMember(boxId)
+                      && resource.data.creadoPor == request.auth.uid
+                      && request.resource.data.creadoPor == 'deleted'
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['creadoPor', 'personalOwnerUid'])
+                      && (!('personalOwnerUid' in request.resource.data)
+                        || request.resource.data.personalOwnerUid == 'deleted');
         allow delete: if boxMember(boxId)
-                      && (resource.data.get('personalOwnerUid', '') == ''
-                        || resource.data.personalOwnerUid == request.auth.uid);
+                      && (boxOpen(boxId)
+                        || get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == true)
+                      && (
+                        (get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == true
+                          && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid)
+                        || resource.data.get('personalOwnerUid', '') == ''
+                        || resource.data.personalOwnerUid == request.auth.uid
+                      );
       }
     }
 
     match /boxInvites/{code} {
       allow get: if verified();
-      allow list: if false;
+      allow list: if verified() && resource.data.createdBy == request.auth.uid;
       allow create: if verified()
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.boxId is string

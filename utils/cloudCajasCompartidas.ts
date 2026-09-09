@@ -1,6 +1,7 @@
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query,
   runTransaction, serverTimestamp, setDoc, onSnapshot, updateDoc, writeBatch,
+  where,
 } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import { crearCodigoFamilia } from "@/utils/familia";
@@ -116,8 +117,10 @@ export async function unirseACaja(uid: string, nombre: string, codigoCrudo: stri
   if (!invitacion.exists() || Number(invitacion.data().expiresAt || 0) < Date.now()) throw new Error("invalid-code");
   const boxId = String(invitacion.data().boxId || "");
   await runTransaction(db, async transaction => {
+    const boxRef = doc(db, "boxSpaces", boxId);
     const memberRef = doc(db, "boxSpaces", boxId, "members", uid);
-    const member = await transaction.get(memberRef);
+    const [box, member] = await Promise.all([transaction.get(boxRef), transaction.get(memberRef)]);
+    if (!box.exists() || box.data().closed === true || box.data().closing === true || box.data().migrationComplete === false) throw new Error("invalid-code");
     if (!member.exists()) transaction.set(memberRef, { uid, nombre, rol: "member", inviteCode: codigo, unidoEn: serverTimestamp() });
     transaction.set(doc(db, "boxUsers", uid, "spaces", boxId), { boxId, unidoEn: serverTimestamp() });
   });
@@ -179,11 +182,65 @@ export async function cerrarCajaCompartida(uid: string, boxId: string): Promise<
     await updateDoc(ref, { closing: false }).catch(() => {});
     throw error;
   }
-  const miembros = await getDocs(collection(db, "boxSpaces", boxId, "members"));
-  for (let inicio = 0; inicio < miembros.docs.length; inicio += 400) {
-    const lote = writeBatch(db);
-    for (const member of miembros.docs.slice(inicio, inicio + 400)) lote.delete(doc(db, "boxUsers", member.id, "spaces", boxId));
-    await lote.commit();
+  // Los vínculos se conservan ocultos: listarCajasCompartidas filtra las
+  // cerradas. Así la eliminación posterior de cualquier cuenta todavía puede
+  // localizar el espacio y retirar su identidad o purgarlo si era el dueño.
+}
+
+/** Retira al usuario de cajas ajenas y elimina por completo las que creó. */
+export async function borrarCajasCompartidasDeCuenta(uid: string): Promise<void> {
+  const enlaces = await getDocs(collection(db, "boxUsers", uid, "spaces"));
+  for (const enlace of enlaces.docs) {
+    const boxId = enlace.id;
+    const boxRef = doc(db, "boxSpaces", boxId);
+    const box = await getDoc(boxRef);
+    if (!box.exists()) {
+      await deleteDoc(enlace.ref);
+      continue;
+    }
+    if (box.data().ownerUid !== uid) {
+      const propios = await getDocs(query(collection(db, "boxSpaces", boxId, "movements"), where("creadoPor", "==", uid)));
+      for (let inicio = 0; inicio < propios.docs.length; inicio += 400) {
+        const lote = writeBatch(db);
+        for (const item of propios.docs.slice(inicio, inicio + 400)) {
+          lote.update(item.ref, {
+            creadoPor: "deleted",
+            ...(item.data().personalOwnerUid === uid ? { personalOwnerUid: "deleted" } : {}),
+          });
+        }
+        await lote.commit();
+      }
+      const lote = writeBatch(db);
+      lote.delete(doc(db, "boxSpaces", boxId, "members", uid));
+      lote.delete(enlace.ref);
+      await lote.commit();
+      continue;
+    }
+    await updateDoc(boxRef, { deleting: true });
+    const [movimientos, miembros, invitaciones] = await Promise.all([
+      getDocs(collection(db, "boxSpaces", boxId, "movements")),
+      getDocs(collection(db, "boxSpaces", boxId, "members")),
+      getDocs(query(collection(db, "boxInvites"), where("createdBy", "==", uid), where("boxId", "==", boxId))),
+    ]);
+    for (let inicio = 0; inicio < movimientos.docs.length; inicio += 400) {
+      const lote = writeBatch(db);
+      for (const item of movimientos.docs.slice(inicio, inicio + 400)) lote.delete(item.ref);
+      await lote.commit();
+    }
+    for (let inicio = 0; inicio < miembros.docs.length; inicio += 200) {
+      const lote = writeBatch(db);
+      for (const member of miembros.docs.slice(inicio, inicio + 200)) {
+        lote.delete(doc(db, "boxUsers", member.id, "spaces", boxId));
+        lote.delete(member.ref);
+      }
+      await lote.commit();
+    }
+    for (let inicio = 0; inicio < invitaciones.docs.length; inicio += 400) {
+      const lote = writeBatch(db);
+      for (const invite of invitaciones.docs.slice(inicio, inicio + 400)) lote.delete(invite.ref);
+      await lote.commit();
+    }
+    await deleteDoc(boxRef);
   }
 }
 
