@@ -6,7 +6,7 @@
 //
 // TODA ESTA PRUEBA FALLA CONTRA LA VERSION ANTERIOR, que devolvia el ultimo presupuesto puesto
 // a mano cuando el mes no tenia el suyo.
-import { presupuestoDelMes, transferidoPendienteDelMes } from "@/utils/presupuestoMensual";
+import { presupuestoCubreTransferencias, presupuestoDelMes, transferidoPendienteDelMes } from "@/utils/presupuestoMensual";
 
 let fallos = 0;
 function ok(c: boolean, m: string) {
@@ -64,6 +64,8 @@ console.log("\n--- EL DINERO TRANSFERIDO SIGUE RESPALDADO ---");
     { date: "2026-07-31", type: "expense" as const, amount: 900, internalTransfer: "box" },
   ];
   ok(transferidoPendienteDelMes(movimientos, "2026-08") === 200, "solo cuenta lo que todavía permanece fuera de Personal");
+  ok(presupuestoCubreTransferencias(400, movimientos, "2026-08"), "se puede reducir el presupuesto si todavía cubre la transferencia");
+  ok(!presupuestoCubreTransferencias(50, movimientos, "2026-08"), "no se puede dejar el presupuesto por debajo del dinero transferido");
   ok(transferidoPendienteDelMes([
     ...movimientos,
     { date: "2026-08-08", type: "income" as const, amount: 200, internalTransfer: "family" },

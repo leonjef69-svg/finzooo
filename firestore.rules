@@ -107,7 +107,13 @@ service cloud.firestore {
             'personalTransactionId' in data
             && data.personalReturnAmount is number
             && data.personalReturnAmount > 0
-            && data.personalReturnAmount <= data.monto
+            && data.personalReturnAmount == data.monto
+          ))
+        && (!('personalTransactionId' in data)
+          || (
+            data.method == 'transfer'
+            && ((data.tipo == 'ingreso' && !('personalReturnAmount' in data))
+              || (data.tipo == 'gasto' && 'personalReturnAmount' in data))
           ));
     }
 
@@ -257,7 +263,9 @@ service cloud.firestore {
       match /movements/{movementId} {
         allow read: if familyMember(familyId);
         allow create: if familyMember(familyId) && familyOpen(familyId)
-                      && validSharedMovement(request.resource.data);
+                      && validSharedMovement(request.resource.data)
+                      && (!('personalTransactionId' in request.resource.data)
+                        || getAfter(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid);
         allow update: if familyMember(familyId)
                       && resource.data.creadoPor == request.auth.uid
                       && request.resource.data.creadoPor == 'deleted'
@@ -272,8 +280,11 @@ service cloud.firestore {
                       && (
                         (get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('deleting', false) == true
                           && get(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid)
-                        || resource.data.get('personalOwnerUid', '') == ''
-                        || resource.data.personalOwnerUid == request.auth.uid
+                        || (resource.data.get('personalOwnerUid', '') == ''
+                          && (resource.data.creadoPor == request.auth.uid
+                            || get(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid))
+                        || ('personalOwnerUid' in resource.data
+                          && resource.data.personalOwnerUid == request.auth.uid)
                       );
       }
     }
@@ -371,7 +382,9 @@ service cloud.firestore {
           || (getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid
             && boxOpenAfter(boxId))
         )
-          && validSharedMovement(request.resource.data);
+          && validSharedMovement(request.resource.data)
+          && (!('personalTransactionId' in request.resource.data)
+            || getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid);
         allow update: if boxMember(boxId)
                       && resource.data.creadoPor == request.auth.uid
                       && request.resource.data.creadoPor == 'deleted'
@@ -384,8 +397,11 @@ service cloud.firestore {
                       && (
                         (get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == true
                           && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid)
-                        || resource.data.get('personalOwnerUid', '') == ''
-                        || resource.data.personalOwnerUid == request.auth.uid
+                        || (resource.data.get('personalOwnerUid', '') == ''
+                          && (resource.data.creadoPor == request.auth.uid
+                            || get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid))
+                        || ('personalOwnerUid' in resource.data
+                          && resource.data.personalOwnerUid == request.auth.uid)
                       );
       }
     }

@@ -31,6 +31,8 @@ const deletion = fs.readFileSync("utils/cloudSync.ts", "utf8");
 const screen = fs.readFileSync("screens/Cajas.tsx", "utf8");
 const sharedScreen = fs.readFileSync("screens/SharedBoxes.tsx", "utf8");
 const context = fs.readFileSync("contexts/AppDataContext.tsx", "utf8");
+const finances = fs.readFileSync("utils/finances.ts", "utf8");
+const home = fs.readFileSync("screens/Home.tsx", "utf8");
 assert.match(storage, /cajasDinero/, "las cajas se guardan aparte");
 assert.match(cloud, /doc\(db, "cajas", uid\)/, "las cajas usan un documento propio en la nube");
 assert.match(rules, /match \/cajas\/\{userId\}/, "la nube protege las cajas por propietario");
@@ -48,7 +50,8 @@ assert.match(sharedCloud, /export async function quitarMiembroCaja/, "el propiet
 assert.match(sharedCloud, /export async function cerrarCajaCompartida/, "una caja compartida puede cerrarse de forma explícita");
 assert.match(sharedScreen, /Math\.max\(0, Math\.min\(saldo, aportadoDesdePersonal\)\)/, "solo vuelve a Personal dinero aportado que aún queda en la caja");
 assert.match(sharedScreen, /Math\.abs\(saldo\) > 0\.000001/, "una caja con saldo pendiente no se puede cerrar");
-assert.match(context, /transfersOut \+ transfersIn/, "devolver dinero aumenta Personal sin contarlo como un ingreso nuevo");
+assert.match(finances, /availableBalance\(f\) - f\.transfersOut \+ f\.transfersIn/, "devolver dinero aumenta Personal sin contarlo como un ingreso nuevo");
+assert.match(home, /availablePersonalBalance/, "Inicio descuenta lo enviado a Familia y Cajas");
 assert.match(context, /transaction\?\.internalTransfer/, "una transferencia enlazada no se puede borrar directamente desde Personal");
 assert.match(context, /deleteLinkedTransferTransaction/, "Familia y Cajas conservan una vía controlada para borrar ambos lados");
 

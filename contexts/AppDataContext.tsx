@@ -107,9 +107,9 @@ import {
   pruneDeletedGoalIds,
   pruneDeletedTransactionIds,
 } from "@/utils/mergeTransactions";
-import { presupuestoDelMes, transferidoPendienteDelMes } from "@/utils/presupuestoMensual";
+import { presupuestoCubreTransferencias, presupuestoDelMes, transferidoPendienteDelMes } from "@/utils/presupuestoMensual";
 import { hayDescuadre, maximoAApartar, saldoLibre, totalApartado } from "@/utils/ahorro";
-import { availableBalance } from "@/utils/finances";
+import { availablePersonalBalance } from "@/utils/finances";
 import { saldoAnteriorDe } from "@/utils/saldoAnterior";
 import { isSafeMoneyAmount } from "@/utils/amount";
 import { unlinkCreditPaymentsForHomeTransactions } from "@/utils/creditStore";
@@ -1512,7 +1512,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // paso: una pantalla decia un numero y otra decia otro del mismo mes,
   // porque una de las dos copias se cambio y la otra no. Con una sola no
   // pueden discrepar.
-  const disponible = availableBalance({ budget, prevBalance, income, spent }) - transfersOut + transfersIn;
+  const disponible = availablePersonalBalance({ budget, prevBalance, income, spent, transfersOut, transfersIn });
   const apartado = useMemo(() => totalApartado(goals), [goals]);
   const libre = saldoLibre(disponible, apartado);
   const descuadre = hayDescuadre(disponible, apartado);
@@ -1669,8 +1669,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       showToast("El monto supera el máximo permitido");
       return;
     }
-    if (amount === 0 && transferidoPendienteDelMes(transactions, mk) > 0.005) {
-      showToast(t("toast.budgetHasTransfers"));
+    if (!presupuestoCubreTransferencias(amount, transactions, mk)) {
+      showToast(t("toast.budgetBelowTransfers", {
+        amount: fmt(transferidoPendienteDelMes(transactions, mk)),
+      }));
       return;
     }
     setBudgets((b) => ({ ...b, [mk]: amount }));

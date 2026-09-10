@@ -72,6 +72,9 @@ test("solo se recuerda información mínima y segura del espacio", () => {
   assert.deepEqual(safeSpace({ kind: "box", id: 7, name: "Caja emergencia", currency: "PEN", ownerUid: "privado" }), {
     kind: "box", id: "7", name: "Caja emergencia", currency: "PEN",
   });
+  assert.deepEqual(safeSpace({ kind: "family", id: 8, name: "Casa", currency: "PEN", canTransfer: true, ownerUid: "privado" }), {
+    kind: "family", id: "8", name: "Casa", currency: "PEN", canTransfer: true,
+  });
 });
 
 test("cada actualización de Telegram genera una identidad estable y segura", () => {

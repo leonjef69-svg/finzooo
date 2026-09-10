@@ -38,6 +38,24 @@ export function availableBalance(f: MonthFigures): number {
   return f.budget + f.prevBalance + f.income - f.spent;
 }
 
+export type PersonalMonthFigures = MonthFigures & {
+  /** Dinero enviado durante el mes a Familia o Cajas. */
+  transfersOut: number;
+  /** Dinero devuelto durante el mes desde Familia o Cajas. */
+  transfersIn: number;
+};
+
+/**
+ * Saldo real de Personal, incluyendo el dinero que ahora está en otro espacio.
+ *
+ * Los envíos internos no son consumo y las devoluciones no son ingresos nuevos,
+ * pero ambos sí cambian cuánto dinero queda disponible en Personal. Esta cuenta
+ * debe ser única para que Inicio, el contexto y Telegram no diverjan.
+ */
+export function availablePersonalBalance(f: PersonalMonthFigures): number {
+  return availableBalance(f) - f.transfersOut + f.transfersIn;
+}
+
 /** Qué parte del presupuesto se lleva gastada, de 0 a 1. Sin presupuesto, 0. */
 export function budgetUsed(f: MonthFigures): number {
   if (f.budget <= 0) return 0;

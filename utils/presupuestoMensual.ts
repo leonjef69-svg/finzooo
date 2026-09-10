@@ -55,3 +55,15 @@ export function transferidoPendienteDelMes(
     );
   return Math.max(0, neto);
 }
+
+/**
+ * Impide que el presupuesto que respaldó una transferencia quede por debajo
+ * del dinero que todavía permanece en Familia o Cajas.
+ */
+export function presupuestoCubreTransferencias(
+  presupuesto: number,
+  transactions: MovimientoTransferido[],
+  mes: string,
+): boolean {
+  return presupuesto + 0.005 >= transferidoPendienteDelMes(transactions, mes);
+}

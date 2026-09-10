@@ -1430,6 +1430,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "toast.themeUpdated": "Apariencia actualizada",
     "toast.budgetUpdated": "Presupuesto actualizado",
     "toast.budgetHasTransfers": "Primero devuelve a Personal el dinero de Familia o Cajas.",
+    "toast.budgetBelowTransfers": "El presupuesto debe ser al menos {amount}. Primero devuelve el dinero de Familia o Cajas.",
     "toast.carryoverReset": "Este mes empieza sin saldo anterior",
     "home.resetCarryoverTitle": "¿No pasar el saldo anterior a {month}?",
     "home.resetCarryoverMessage":
@@ -2863,6 +2864,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "toast.themeUpdated": "Appearance updated",
     "toast.budgetUpdated": "Budget updated",
     "toast.budgetHasTransfers": "First return the money from Family or Boxes to Personal.",
+    "toast.budgetBelowTransfers": "The budget must be at least {amount}. First return the money from Family or Boxes.",
     "toast.carryoverReset": "This month starts with no previous balance",
     "home.resetCarryoverTitle": "Don't carry the previous balance into {month}?",
     "home.resetCarryoverMessage":
@@ -4296,6 +4298,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "toast.themeUpdated": "Aparência atualizada",
     "toast.budgetUpdated": "Orçamento atualizado",
     "toast.budgetHasTransfers": "Primeiro devolva para Pessoal o dinheiro da Família ou das Caixas.",
+    "toast.budgetBelowTransfers": "O orçamento deve ser de pelo menos {amount}. Primeiro devolva o dinheiro da Família ou das Caixas.",
     "toast.carryoverReset": "Este mês começa sem saldo anterior",
     "home.resetCarryoverTitle": "Não passar o saldo anterior para {month}?",
     "home.resetCarryoverMessage":

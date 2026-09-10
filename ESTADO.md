@@ -13,6 +13,25 @@ Firebase Authentication, Firestore y módulos Android propios.
 
 Paquete Android: `com.finoapp.gastos`.
 
+## Auditoría de Personal, Familia y Cajas (10/09/2026)
+
+- Inicio y el cálculo interno usan una sola cuenta para el saldo de Personal:
+  transferir a Familia o Cajas lo reduce y una devolución lo restaura, sin
+  presentar la transferencia como gasto o ingreso nuevo.
+- El presupuesto del mes ya no puede reducirse por debajo del dinero de ese
+  mes que todavía permanece transferido. Por ejemplo, con S/ 100 fuera, S/ 400
+  sigue siendo válido pero S/ 50 se rechaza hasta devolver la diferencia.
+- Solo el propietario puede enlazar su saldo Personal con Familia o una caja
+  compartida. Un invitado puede registrar movimientos comunes, pero no dejar
+  dinero propio atrapado en un espacio que no administra.
+- Un miembro solo puede borrar sus movimientos comunes; el propietario también
+  puede administrarlos. Nadie puede borrar la transferencia Personal de otra
+  cuenta.
+- Un vínculo antiguo o dañado de una caja ya no impide cargar las demás cajas
+  válidas. Telegram aplica las mismas reglas de propiedad.
+- Las reglas de Firestore validan que una transferencia enlazada use el método
+  Transferencia, la dirección correcta y una devolución por el monto declarado.
+
 ## Versiones
 
 - Disponible en prueba cerrada: **1.0.4**, `versionCode 5`.

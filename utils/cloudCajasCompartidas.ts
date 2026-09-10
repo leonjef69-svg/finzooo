@@ -45,8 +45,13 @@ function desdeDocumento(id: string, data: Record<string, unknown>): CajaComparti
 export async function listarCajasCompartidas(uid: string): Promise<CajaCompartida[]> {
   const enlaces = await getDocs(collection(db, "boxUsers", uid, "spaces"));
   const cajas = await Promise.all(enlaces.docs.map(async enlace => {
-    const caja = await getDoc(doc(db, "boxSpaces", enlace.id));
-    return caja.exists() && caja.data().migrationComplete !== false && caja.data().closed !== true ? desdeDocumento(caja.id, caja.data()) : null;
+    try {
+      const caja = await getDoc(doc(db, "boxSpaces", enlace.id));
+      return caja.exists() && caja.data().migrationComplete !== false && caja.data().closed !== true ? desdeDocumento(caja.id, caja.data()) : null;
+    } catch {
+      // Un vínculo antiguo o dañado no debe ocultar las demás cajas válidas.
+      return null;
+    }
   }));
   return cajas.filter((caja): caja is CajaCompartida => caja !== null).sort((a, b) => b.creadaEn - a.creadaEn);
 }

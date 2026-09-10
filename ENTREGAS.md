@@ -64,8 +64,12 @@ El formulario breve y la confirmación de Telegram muestran monto, descripción 
 método de pago verticalmente, evitando que textos o cifras largas queden apretados.
 Las transferencias de Personal hacia Familia o Cajas se confirman con monto,
 origen, saldo posterior y destino en líneas independientes.
-El presupuesto no puede borrarse mientras conserve dinero transferido en Familia
-o Cajas; Fino pide devolverlo primero para mantener los saldos coherentes.
+El presupuesto no puede borrarse ni reducirse por debajo del dinero que conserva
+transferido en Familia o Cajas; Fino pide devolverlo primero para mantener los
+saldos coherentes. Inicio descuenta esas transferencias de Personal y las vuelve
+a sumar cuando se devuelven. Los miembros invitados no pueden enlazar su saldo
+Personal ni borrar movimientos ajenos; el propietario administra los movimientos
+comunes y Telegram respeta las mismas restricciones.
 
 Calidad comprobada:
 

@@ -81,7 +81,7 @@ const saveUndo = (db, chatId, action) => db.collection("telegramUndo").doc(Strin
 async function getUndo(db, chatId) { const snap = await db.collection("telegramUndo").doc(String(chatId)).get(); return snap.exists && snap.data().expiresAtMs >= Date.now() ? snap.data() : null; }
 
 function safeSpace(space) {
-  return { kind: space.kind, id: String(space.id), name: String(space.name).slice(0, 35), currency: String(space.currency || "PEN") };
+  return { kind: space.kind, id: String(space.id), name: String(space.name).slice(0, 35), currency: String(space.currency || "PEN"), ...(space.canTransfer === true ? { canTransfer: true } : {}) };
 }
 async function remember(db, chatId, space, extra = {}) {
   await db.collection("telegramConnections").doc(String(chatId)).set({ lastSpace: safeSpace(space), ...extra }, { merge: true });
@@ -114,7 +114,7 @@ async function activeFamily(db, uid, currency = "PEN") {
   if (!id) return null;
   const [space, member] = await Promise.all([db.collection("familySpaces").doc(id).get(), db.collection("familySpaces").doc(id).collection("members").doc(uid).get()]);
   if (!space.exists || !member.exists || [space.data().closed, space.data().closing, space.data().deleting].includes(true)) return null;
-  return { kind: "family", id, name: String(space.data().nombre || "Familia"), currency: String(space.data().currency || currency) };
+  return { kind: "family", id, name: String(space.data().nombre || "Familia"), currency: String(space.data().currency || currency), canTransfer: space.data().ownerUid === uid };
 }
 
 async function boxesFor(db, uid) {
@@ -122,7 +122,7 @@ async function boxesFor(db, uid) {
   const boxes = await Promise.all(links.docs.slice(0, 20).map(async item => {
     const [space, member] = await Promise.all([db.collection("boxSpaces").doc(item.id).get(), db.collection("boxSpaces").doc(item.id).collection("members").doc(uid).get()]);
     if (!space.exists || !member.exists || [space.data().closed, space.data().closing, space.data().deleting].includes(true) || space.data().migrationComplete === false) return null;
-    return { kind: "box", id: item.id, name: String(space.data().nombre || "Caja"), currency: String(space.data().currency || "PEN") };
+    return { kind: "box", id: item.id, name: String(space.data().nombre || "Caja"), currency: String(space.data().currency || "PEN"), canTransfer: space.data().ownerUid === uid };
   }));
   return boxes.filter(Boolean);
 }
@@ -142,7 +142,7 @@ async function resolveRememberedSpace(db, connection) {
 
 function spaceKeyboard(space, personalCurrency) {
   const rows = [[{ text: "➖ Gasto", callback_data: "new:expense" }, { text: "➕ Ingreso", callback_data: "new:income" }]];
-  if (space.kind !== "personal" && space.currency === personalCurrency) rows.push([{ text: "↗️ Transferir desde Personal", callback_data: "transfer" }]);
+  if (space.kind !== "personal" && space.canTransfer === true && space.currency === personalCurrency) rows.push([{ text: "↗️ Transferir desde Personal", callback_data: "transfer" }]);
   rows.push([{ text: "⬅️ Cambiar espacio", callback_data: "menu" }]);
   return { inline_keyboard: rows };
 }
@@ -301,7 +301,7 @@ async function confirmTransfer(db, token, chatId, connection, nonce, operationId
     const [user, space, member, connectionSnap, statusSnap] = await Promise.all([tx.get(userRef), tx.get(spaceRef), tx.get(memberRef), tx.get(connectionRef), tx.get(statusRef)]);
     assertLiveConnection(connectionSnap, statusSnap, connection.uid, chatId);
     if (!user.exists || !premium(user.data())) throw new Error("NOT_PREMIUM");
-    if (!space.exists || !member.exists || [space.data().closed, space.data().closing, space.data().deleting].includes(true) || space.data().migrationComplete === false) throw new Error("SPACE_UNAVAILABLE");
+    if (!space.exists || !member.exists || space.data().ownerUid !== connection.uid || [space.data().closed, space.data().closing, space.data().deleting].includes(true) || space.data().migrationComplete === false) throw new Error("SPACE_UNAVAILABLE");
     if (flow.space.currency !== String(user.data().userCurrency || "PEN")) throw new Error("CURRENCY_MISMATCH");
     if (personalFigures(user.data()).balance < flow.amount) throw new Error("INSUFFICIENT");
     const transactions = Array.isArray(user.data().transactions) ? user.data().transactions : [];
@@ -424,7 +424,7 @@ async function callbackAction(db, token, chatId, data, connection, operationId) 
   }
   if (data === "transfer") {
     const space = flow?.kind === "session" ? flow.space : await resolveRememberedSpace(db, connection);
-    if (space.kind === "personal") throw new Error("SPACE_UNAVAILABLE");
+    if (space.kind === "personal" || space.canTransfer !== true) throw new Error("SPACE_UNAVAILABLE");
     if (space.currency !== String(connection.user.userCurrency || "PEN")) throw new Error("CURRENCY_MISMATCH");
     await saveFlow(db, chatId, { kind: "transfer", step: "transfer_amount", uid: connection.uid, space });
     return send(token, chatId, `¿Cuánto quieres pasar de Personal a ${space.name}?\nEjemplo: 300`);

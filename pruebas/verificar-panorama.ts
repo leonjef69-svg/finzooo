@@ -13,6 +13,7 @@
 // enseña ningun porcentaje.
 import {
   availableBalance,
+  availablePersonalBalance,
   budgetLeft,
   budgetUsed,
   changeVsPrevious,
@@ -28,6 +29,13 @@ let fallos = 0;
 function ok(cond: boolean, msg: string) {
   console.log(`  ${cond ? "OK   " : "FALLA"} ${msg}`);
   if (!cond) fallos++;
+}
+
+console.log("\n--- TRANSFERIR CAMBIA PERSONAL, NO EL CONSUMO ---");
+{
+  const saldo = availablePersonalBalance({ budget: 500, prevBalance: 0, income: 0, spent: 0, transfersOut: 300, transfersIn: 0 });
+  ok(saldo === 200, "enviar 300 desde Personal reduce su saldo de 500 a 200");
+  ok(availablePersonalBalance({ budget: 500, prevBalance: 0, income: 0, spent: 0, transfersOut: 300, transfersIn: 100 }) === 300, "una devolución vuelve a sumar solo en Personal");
 }
 
 type Tx = { date: string; type: "expense" | "income"; amount: number };
