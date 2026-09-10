@@ -1,0 +1,56 @@
+"use strict";
+
+const test = require("node:test");
+const assert = require("node:assert/strict");
+const {
+  amountDescription,
+  personalFigures,
+  previousBalance,
+  sharedFigures,
+} = require("../src/telegram-guided-handler");
+
+test("monto y descripción viajan juntos en un solo mensaje", () => {
+  assert.deepEqual(amountDescription("S/ 20 almuerzo", "expense"), {
+    amount: 20,
+    description: "almuerzo",
+  });
+  assert.equal(amountDescription("almuerzo", "expense"), null);
+});
+
+test("saldo anterior respeta los cortes mensuales de Fino", () => {
+  const data = {
+    budgets: { "2026-06": 100, "2026-07": 200, "2026-08": 300 },
+    transactions: [
+      { date: "2026-06-02", type: "expense", amount: 20 },
+      { date: "2026-07-02", type: "income", amount: 10 },
+      { date: "2026-08-02", type: "expense", amount: 50 },
+    ],
+    carryoverCleared: ["2026-07"],
+  };
+  assert.equal(previousBalance(data, "2026-09"), 460);
+});
+
+test("totales compartidos no mezclan ingreso y gasto", () => {
+  assert.deepEqual(sharedFigures([
+    { tipo: "ingreso", monto: 100 },
+    { tipo: "gasto", monto: 35 },
+  ]), { income: 100, spent: 35, balance: 65 });
+});
+
+test("Personal funciona sin presupuesto y excluye transferencias del consumo", () => {
+  const today = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit",
+  }).format(new Date());
+  const figures = personalFigures({
+    budgets: {}, carryoverCleared: [],
+    transactions: [
+      { date: today, type: "income", amount: 100 },
+      { date: today, type: "expense", amount: 20 },
+      { date: today, type: "expense", amount: 30, internalTransfer: "box" },
+    ],
+  });
+  assert.equal(figures.budget, 0);
+  assert.equal(figures.income, 100);
+  assert.equal(figures.spent, 20);
+  assert.equal(figures.balance, 50);
+});

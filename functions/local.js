@@ -2,7 +2,7 @@
 
 const { applicationDefault, initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
-const { handleTelegramUpdate } = require("./src/telegram-handler");
+const { handleTelegramUpdate } = require("./src/telegram-guided-handler");
 
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) throw new Error("Falta TELEGRAM_BOT_TOKEN en el entorno. No lo escribas dentro del código.");

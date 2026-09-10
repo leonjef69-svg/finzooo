@@ -24,13 +24,20 @@ Paquete Android: `com.finoapp.gastos`.
 
 - Existe una pantalla Premium en Ajustes para vincular la cuenta con un código
   aleatorio de un solo uso que vence en diez minutos.
-- El bot interpreta órdenes explícitas, enseña el resumen y exige confirmación;
-  no usa inteligencia artificial ni guarda el token en la app o el repositorio.
+- El bot abre un menú compacto con Personal, Familia y Cajas. Antes de registrar
+  muestra el saldo, los ingresos y los gastos reales del espacio; en Personal
+  también muestra el presupuesto o «Sin definir».
+- El registro guiado pide monto y descripción juntos para evitar una pantalla
+  adicional, después categoría, método de pago y confirmación. También conserva
+  el atajo escrito «gasto 20 comida» para quien prefiera ir más rápido.
+- Familia y Cajas se comprueban otra vez contra la membresía activa antes de leer
+  o guardar. El servidor no confía únicamente en el botón que pulsó la persona.
+- El bot no usa inteligencia artificial ni guarda el token en la app o el repositorio.
 - Puede probarse localmente sin Blaze mientras la computadora permanezca
   encendida. Para funcionar permanentemente se desplegará la función cuando se
   active Blaze, después de la aprobación de Google Play.
-- Falta publicar las reglas nuevas, configurar los secretos y hacer la prueba
-  real con el bot. Esas acciones cambian Firebase y requieren autorización.
+- Falta reiniciar el bot local y hacer la prueba real desde el teléfono. Para el
+  servicio permanente todavía faltan Blaze, secretos y webhook de producción.
 
 ## Acceso con Google
 

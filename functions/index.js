@@ -4,7 +4,7 @@ const { onRequest } = require("firebase-functions/v2/https");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
-const { handleTelegramUpdate } = require("./src/telegram-handler");
+const { handleTelegramUpdate } = require("./src/telegram-guided-handler");
 
 initializeApp();
 const TELEGRAM_BOT_TOKEN = defineSecret("TELEGRAM_BOT_TOKEN");

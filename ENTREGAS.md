@@ -55,6 +55,8 @@ compatibles con Expo SDK 54.
 También deja preparada la primera integración de Telegram: vínculo Premium por
 código temporal, confirmación obligatoria, desconexión desde Fino, intérprete
 determinista y ejecución local o mediante una función protegida por secretos.
+El bot local añade un menú compacto de Personal, Familia y Cajas, lee los totales
+reales de Fino y permite registrar con un formulario breve o una frase rápida.
 
 Calidad comprobada:
 
