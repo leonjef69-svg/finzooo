@@ -1,4 +1,0 @@
-feat: añade flujo guiado y compacto a Telegram
-
-Muestra Personal, Familia y Cajas con sus totales reales, reduce pasos al
-registrar y vuelve a validar membresías antes de guardar movimientos.
