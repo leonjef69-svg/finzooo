@@ -30,8 +30,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function CreditPayV1() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const saving = useRef(false);
   const { addOrUpdateTransaction, userCurrency, disponible } = useAppData();
@@ -193,7 +195,12 @@ export default function CreditPayV1() {
       </View>
     );
   return (
-    <ScrollView className="flex-1 bg-slate-50 px-5 pt-14">
+    <ScrollView
+      className="flex-1 bg-slate-50 px-5"
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 20 }}
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
+    >
       <View className="flex-row items-center">
         <TouchableOpacity
           onPress={() => router.back()}
@@ -210,7 +217,7 @@ export default function CreditPayV1() {
       </View>
       <View className="mt-6 rounded-3xl bg-teal-700 p-5">
         <Text className="text-white/70">Monto pendiente</Text>
-        <Text className="text-3xl font-extrabold text-white">
+        <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.55} className="text-3xl font-extrabold text-white">
           {formatCreditMoney(pendingAmount, cardCurrency)}
         </Text>
       </View>

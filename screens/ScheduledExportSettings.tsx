@@ -396,7 +396,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 40 }}>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 40 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         {/* EL INTERRUPTOR PRINCIPAL.
             Va primero y solo. Antes la pantalla arrancaba directamente con
             las opciones y había que buscar "Nunca" entre las frecuencias

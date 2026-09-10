@@ -53,7 +53,7 @@ console.log("\n--- Y LAS CUENTAS SIGUEN SIENDO LAS MISMAS ---");
   // alla de donde el recorte puede llegar, lo que se ve y lo que se guarda dejarian de coincidir.
   ok(/limitarPan\(/.test(codigo), "el arrastre se sigue topando con limitarPan");
   ok(
-    /cropRect\(fuente\.w, fuente\.h, zoomRef\.current, panRef\.current\.x, panRef\.current\.y\)/.test(codigo),
+    /cropRect\(fuente\.w, fuente\.h, zoomRef\.current, panRef\.current\.x, panRef\.current\.y, ventana\)/.test(codigo),
     "y lo que se guarda se lee de las referencias, no de un estado que va con retraso"
   );
 
@@ -61,8 +61,8 @@ console.log("\n--- Y LAS CUENTAS SIGUEN SIENDO LAS MISMAS ---");
   // que se usaba antes: es la unica forma de saber que el paso a valores compartidos no cambio
   // el encuadre por el camino.
   ok(
-    /transform: \[\s*\{ translateX: panSV\.x\.value - \(anchoReal \* escala - VENTANA\) \/ 2 \}/.test(codigo),
-    "la imagen se coloca con la formula de siempre"
+    /transform: \[\s*\{ translateX: panSV\.x\.value - \(anchoReal \* escala - ventana\) \/ 2 \}/.test(codigo),
+    "la imagen se coloca con la misma formula y el tamaño real del marco"
   );
 }
 

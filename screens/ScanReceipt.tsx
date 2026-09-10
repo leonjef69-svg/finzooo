@@ -200,7 +200,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
         </TouchableOpacity>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 40 }}>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 40 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         {/* El escáner es código nativo: no llega con "Buscar actualización".
             Con un APK anterior a esta función el módulo no existe, y hay que
             decirlo claro en vez de mostrar un botón que no haría nada. */}

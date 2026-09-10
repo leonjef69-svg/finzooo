@@ -109,7 +109,7 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
         </Text>
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 40 }}>
+      <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 40 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         {abierta === null ? (
           <>
             <Text className="text-xs text-slate-500 dark:text-slate-300 mb-4">

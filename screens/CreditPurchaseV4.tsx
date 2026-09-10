@@ -41,10 +41,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type PurchaseIconName = "shopping" | "service" | "food";
 const ICONS: PurchaseIconName[] = ["shopping", "service", "food"];
 export default function CreditPurchaseV4() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const saving = useRef(false);
   const { addOrUpdateTransaction, disponible, userCurrency, userLanguage, t } = useAppData();
@@ -359,8 +361,10 @@ export default function CreditPurchaseV4() {
     );
   return (
     <ScrollView
-      className="flex-1 bg-slate-50 px-4 pt-12"
+      className="flex-1 bg-slate-50 px-4"
+      contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 }}
       keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
     >
       <View className="flex-row items-center">
         <TouchableOpacity
@@ -646,7 +650,7 @@ export default function CreditPurchaseV4() {
         </Text>
       </TouchableOpacity>
       <Modal visible={currencyPickerOpen} animationType="slide" onRequestClose={() => setCurrencyPickerOpen(false)}>
-        <View className="flex-1 bg-slate-50 px-4 pt-12">
+        <View className="flex-1 bg-slate-50 px-4" style={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 }}>
           <View className="flex-row items-center justify-between">
             <Text className="text-xl font-extrabold">Moneda de la compra</Text>
             <TouchableOpacity onPress={() => setCurrencyPickerOpen(false)} className="rounded-xl bg-slate-200 px-3 py-2">

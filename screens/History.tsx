@@ -180,6 +180,7 @@ export default function History({
       maxToRenderPerBatch={10}
       windowSize={7}
       keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
       ListHeaderComponent={
         <View>
           <View className="px-5 pt-3 pb-1 flex-row items-start justify-between">
@@ -240,7 +241,7 @@ export default function History({
                   <Text className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold" numberOfLines={1}>
                     {t("history.totalIncome")}
                   </Text>
-                  <Text className="text-base font-extrabold text-emerald-600" numberOfLines={1}>
+                  <Text className="text-base font-extrabold text-emerald-600" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
                     {fmt(totalIncome)}
                   </Text>
                 </View>
@@ -258,7 +259,7 @@ export default function History({
                   <Text className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold" numberOfLines={1}>
                     {t("history.totalExpense")}
                   </Text>
-                  <Text className="text-base font-extrabold text-rose-500" numberOfLines={1}>
+                  <Text className="text-base font-extrabold text-rose-500" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
                     {fmt(totalExpense)}
                   </Text>
                 </View>

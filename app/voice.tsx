@@ -1,5 +1,4 @@
 import { router } from "expo-router";
-import VoiceEntry from "@/screens/VoiceEntry";
 import { useAppData } from "@/contexts/AppDataContext";
 import { safeBack, useNavigateWhenReady } from "@/utils/nav";
 
@@ -43,5 +42,11 @@ export default function VoiceRoute() {
   // que todavía está vacía y perderse al terminar de cargar.
   if (!ready || !hasOnboarded || !isPremium) return null;
 
+  // Expo Router inspecciona todas las rutas al arrancar. Si VoiceEntry se
+  // importara arriba, Expo Go intentaría cargar el módulo nativo de voz que
+  // solo existe en la compilación instalada y toda la app quedaría en rojo,
+  // aunque nadie hubiera abierto el micrófono. Se carga recién aquí.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const VoiceEntry = require("@/screens/VoiceEntry").default as typeof import("@/screens/VoiceEntry").default;
   return <VoiceEntry onClose={safeBack} />;
 }

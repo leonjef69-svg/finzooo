@@ -45,6 +45,7 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
         data={currencies}
         keyExtractor={(currency) => currency.id}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
         initialNumToRender={10}
         windowSize={5}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}

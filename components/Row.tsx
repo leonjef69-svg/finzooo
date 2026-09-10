@@ -31,21 +31,24 @@ export default function Row({
     <TouchableOpacity
       onPress={onPress}
       disabled={!onPress}
+      accessibilityRole={onPress ? "button" : undefined}
+      accessibilityLabel={label}
       className="w-full flex-row items-center gap-3 bg-white dark:bg-noche-2 rounded-2xl p-4 border-[1.5px] border-slate-200 dark:border-noche-borde"
       style={CARD_SHADOW}
     >
       <View className={`w-9 h-9 rounded-xl items-center justify-center ${danger ? "bg-rose-50" : "bg-slate-50 dark:bg-noche-2"}`}>
         <Icon size={16} color={danger ? "#f43f5e" : "#64748b"} />
       </View>
-      <View className="flex-1">
+      <View className="flex-1 min-w-0">
         <Text
           className={`text-left text-sm font-bold ${danger ? "text-rose-500" : ""}`}
           style={!danger ? { color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" } : undefined}
+          numberOfLines={2}
         >
           {label}
         </Text>
         {hint ? (
-          <Text className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5" numberOfLines={1}>
+          <Text className="text-[11px] text-emerald-600 dark:text-emerald-400 mt-0.5" numberOfLines={2}>
             {hint}
           </Text>
         ) : null}

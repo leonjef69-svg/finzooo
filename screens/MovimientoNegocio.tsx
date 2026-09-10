@@ -85,7 +85,7 @@ export default function MovimientoNegocio({
         <View className="w-10" />
       </View>
 
-      <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <Text className="text-xs leading-5 text-slate-500 dark:text-slate-300 mb-5">
           {t("caja.subtitle")}
         </Text>

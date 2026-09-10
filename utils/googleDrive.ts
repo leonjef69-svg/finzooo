@@ -13,8 +13,8 @@
 // programar (por ejemplo, para buscar una carpeta hecha a mano). No hay
 // ninguna razón para que una app de presupuesto vea tu Drive entero.
 
-import { GoogleSignin } from "@react-native-google-signin/google-signin";
 import { File } from "expo-file-system";
+import { getGoogleSignInNative } from "@/utils/googleSignInNative";
 
 export const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 
@@ -46,6 +46,7 @@ export class DriveDenied extends Error {
 /** ¿Hay una cuenta de Google conectada EN ESTA EJECUCIÓN de la app? Ver `asegurarSesion`. */
 export function hasGoogleSession(): boolean {
   try {
+    const { GoogleSignin } = getGoogleSignInNative();
     return GoogleSignin.getCurrentUser() != null;
   } catch {
     return false;
@@ -73,6 +74,7 @@ export function hasGoogleSession(): boolean {
 async function asegurarSesion(): Promise<void> {
   if (hasGoogleSession()) return;
   try {
+    const { GoogleSignin } = getGoogleSignInNative();
     const r = (await GoogleSignin.signInSilently()) as { type?: string } | undefined;
     if (r?.type === "success") return;
     ultimoTropiezo = r?.type ?? "sin-respuesta";
@@ -98,6 +100,7 @@ let ultimoTropiezo: string | null = null;
 
 async function currentToken(): Promise<string> {
   try {
+    const { GoogleSignin } = getGoogleSignInNative();
     const { accessToken } = await GoogleSignin.getTokens();
     if (!accessToken) throw new DriveNotSignedIn("sin-token" + motivo());
     return accessToken;
@@ -122,6 +125,7 @@ function motivo(): string {
  * ver ninguna ventana nunca más.
  */
 async function requestDriveScope(): Promise<void> {
+  const { GoogleSignin } = getGoogleSignInNative();
   const result = await GoogleSignin.addScopes({ scopes: [DRIVE_SCOPE] });
   if (!result) throw new DriveDenied();
 }

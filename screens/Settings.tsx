@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { irUnaVez } from "@/utils/nav";
-import { ActivityIndicator, Image, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import * as ImagePicker from "expo-image-picker";
@@ -178,6 +178,8 @@ export default function Settings({
     <ScrollView
       className="flex-1 bg-white dark:bg-noche"
       contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 112 }}
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
     >
       <View className="px-5 pt-3 pb-1 flex-row items-center justify-between">
         <Text className="text-xl font-extrabold" style={{ color: primaryTextColor }}>{t("settings.title")}</Text>
@@ -452,7 +454,7 @@ export default function Settings({
             ESTA SÍ SE ESCONDE, y no se toca al devolver las demás: es lo único que de verdad
             no existe fuera de Perú y Bolivia. Las Premium se ven en todas partes porque se
             pueden comprar en todas partes. */}
-        {hayRegistroAutomatico(userCurrency) && (
+        {Platform.OS === "android" && hayRegistroAutomatico(userCurrency) && (
           <Row
             Icon={Zap}
             label={t("autoCapture.rowLabel")}
@@ -478,7 +480,7 @@ export default function Settings({
             demás— y el candado aparece al tocar: es la forma que eligió para todas las de pago.
             Sin Premium lleva a la pantalla de venta en vez de colocar el widget: poner en el
             escritorio un botón que luego no deja pasar es peor que no ponerlo. */}
-        {voiceWidget.isSupported && (
+        {Platform.OS === "android" && voiceWidget.isSupported && (
           <Row
             Icon={Mic}
             label={t("widget.rowLabel")}

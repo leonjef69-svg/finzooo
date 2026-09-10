@@ -57,7 +57,7 @@ export default function TelegramScreen() {
         <BackButton onPress={() => router.back()} />
         <Text className="ml-3 text-xl font-black text-slate-900 dark:text-white">{t("telegram.title")}</Text>
       </View>
-      <ScrollView contentContainerStyle={{ padding: 16, gap: 14 }}>
+      <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24, gap: 14 }}>
         <View className="rounded-3xl bg-emerald-500 p-5">
           <MessageSquare size={28} color="white" />
           <Text className="mt-3 text-xl font-black text-white">{t("telegram.hero")}</Text>

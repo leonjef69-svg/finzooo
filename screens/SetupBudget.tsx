@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Image, Platform, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Image, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
 import { Bell, ChevronRight, Globe2, Target } from "lucide-react-native";
 import { currencySymbolFor } from "@/constants/currencies";
@@ -12,6 +13,7 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
   const { userCurrency, userCountry, t, monthNames } = useAppData();
   const [amount, setAmount] = useState("");
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const insets = useSafeAreaInsets();
   const now = new Date();
   const monthLabel = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
   const parsed = parseAmountInput(amount);
@@ -27,9 +29,22 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
   }
 
   return (
-    <View className="flex-1 bg-[#17100c] px-6 justify-center">
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      className="flex-1 bg-[#17100c]"
+    >
       <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" className="absolute inset-0 h-full w-full" />
       <View className="absolute inset-0 bg-black/45" />
+      <ScrollView
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: "center",
+          paddingHorizontal: 24,
+          paddingTop: insets.top + 16,
+          paddingBottom: insets.bottom + 24,
+        }}
+      >
       <View className="rounded-[28px] bg-white/95 p-5">
       <View className="items-center mb-8">
         <View className="w-16 h-16 rounded-3xl bg-emerald-50 items-center justify-center mb-6">
@@ -75,6 +90,7 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
         <Text className="text-white font-bold">{t("setup.start")}</Text>
       </TouchableOpacity>
       </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

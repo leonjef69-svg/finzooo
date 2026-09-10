@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { Plus, Sparkles, PiggyBank, CheckCircle2 } from "lucide-react-native";
@@ -38,7 +38,9 @@ export default function SavingsList({
 }) {
   const { fmt, t } = useAppData();
   const [tab, setTab] = useState<"resumen" | "metas">("resumen");
+  const [goalLimit, setGoalLimit] = useState(40);
   const insets = useSafeAreaInsets();
+  useEffect(() => setGoalLimit(40), [goals.length, tab]);
 
   return (
     <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
@@ -73,7 +75,15 @@ export default function SavingsList({
         </View>
       </View>
 
-      <View className="flex-1 px-5 pb-8">
+      <ScrollView
+        className="flex-1"
+        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+        scrollEventThrottle={160}
+        onScroll={({ nativeEvent }) => {
+          const cercaDelFinal = nativeEvent.layoutMeasurement.height + nativeEvent.contentOffset.y >= nativeEvent.contentSize.height - 240;
+          if (cercaDelFinal && goalLimit < goals.length) setGoalLimit(limit => Math.min(limit + 40, goals.length));
+        }}
+      >
         {/* POR QUÉ NO SE PUEDE TOCAR NADA, antes que los números: sin esto, los botones que
             faltan parecen un fallo de la app. */}
         {soloLectura && <AvisoSoloLectura />}
@@ -99,20 +109,20 @@ export default function SavingsList({
                   {t("savingsList.freeTitle", { month: monthLabel })}
                 </Text>
               </View>
-              <Text className={`text-3xl font-extrabold ${libre >= 0 ? "text-white" : "text-rose-200"}`}>
+              <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.55} className={`text-3xl font-extrabold ${libre >= 0 ? "text-white" : "text-rose-200"}`}>
                 {fmt(libre)}
               </Text>
 
               {/* De dónde sale ese número, con las dos piezas a la vista. Sin
                   esto es un número más que hay que creerse. */}
               <View className="flex-row gap-4 mt-3 pt-3 border-t border-emerald-400/30">
-                <View>
+                <View className="flex-1 min-w-0">
                   <Text className="text-emerald-100 text-[10px]">{t("savingsList.availableLabel")}</Text>
-                  <Text className="text-white text-sm font-bold">{fmt(disponible)}</Text>
+                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className="text-white text-sm font-bold">{fmt(disponible)}</Text>
                 </View>
-                <View>
+                <View className="flex-1 min-w-0">
                   <Text className="text-emerald-100 text-[10px]">{t("savingsList.setAsideLabel")}</Text>
-                  <Text className="text-white text-sm font-bold">− {fmt(apartado)}</Text>
+                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className="text-white text-sm font-bold">− {fmt(apartado)}</Text>
                 </View>
               </View>
             </LinearGradient>
@@ -163,7 +173,7 @@ export default function SavingsList({
               </View>
             )}
             <View className="gap-3">
-              {goals.map((g, i) => {
+              {goals.slice(0, goalLimit).map((g, i) => {
                 const pct = g.target > 0 ? Math.min(100, (g.saved / g.target) * 100) : 0;
                 const color = GOAL_COLOR_HEX[i % GOAL_COLOR_HEX.length];
                 return (
@@ -197,7 +207,7 @@ export default function SavingsList({
                       />
                     </View>
                     <View className="flex-row items-center justify-between">
-                      <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200">
+                      <Text numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75} className="mr-2 flex-1 text-xs font-semibold text-slate-600 dark:text-slate-200">
                         {t("savingsList.savedOfTarget", { saved: fmt(g.saved), target: fmt(g.target) })}
                       </Text>
                       <Text className="text-xs font-extrabold" style={{ color: color.fg }}>
@@ -210,7 +220,7 @@ export default function SavingsList({
             </View>
           </View>
         )}
-      </View>
+      </ScrollView>
     </View>
   );
 }

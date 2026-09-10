@@ -274,7 +274,7 @@ export default function NuevoPagoProgramado({
         <View className="w-10" />
       </View>
 
-      <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <View className="flex-row gap-2 mb-4">
           {(["pago", "ingreso", "recordatorio"] as TipoDeAnotacion[]).map((x) => (
             <TouchableOpacity

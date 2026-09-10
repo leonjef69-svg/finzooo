@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, Text, TouchableOpacity, View } from "react-native";
+import { AppState, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Lock } from "lucide-react-native";
 import PinPad from "@/components/PinPad";
@@ -206,9 +206,19 @@ export default function AppLockGate() {
 
   return (
     <View
-      className="absolute inset-0 z-50 bg-white dark:bg-noche items-center justify-center px-6"
+      className="absolute inset-0 z-50 bg-white dark:bg-noche"
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom + 20 }}
     >
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{
+          flexGrow: 1,
+          alignItems: "center",
+          justifyContent: "center",
+          paddingHorizontal: 24,
+          paddingVertical: 20,
+        }}
+      >
       <View className="w-16 h-16 rounded-3xl bg-emerald-50 dark:bg-noche-2 items-center justify-center mb-4">
         <Lock size={28} color="#059669" />
       </View>
@@ -249,6 +259,7 @@ export default function AppLockGate() {
           </Text>
         </TouchableOpacity>
       )}
+      </ScrollView>
     </View>
   );
 }

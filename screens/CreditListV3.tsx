@@ -19,8 +19,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function CreditListV3() {
+  const insets = useSafeAreaInsets();
   const [state, setState] = useState<CreditState>(EMPTY_CREDIT_STATE);
   const [loaded, setLoaded] = useState(false);
   useFocusEffect(
@@ -37,7 +39,10 @@ export default function CreditListV3() {
     }, []),
   );
   return (
-    <ScrollView className="flex-1 bg-slate-50 px-4 pt-12">
+    <ScrollView
+      className="flex-1 bg-slate-50 px-4"
+      contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 }}
+    >
       <View className="flex-row items-center justify-between">
         <View>
           <Text className="text-2xl font-extrabold">Mis tarjetas</Text>

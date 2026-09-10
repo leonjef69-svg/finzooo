@@ -43,7 +43,12 @@ export default function AuthField({
           className="flex-1 text-sm text-slate-900 dark:text-slate-100"
         />
         {isPassword && (
-          <TouchableOpacity onPress={() => setShow(!show)}>
+          <TouchableOpacity
+            onPress={() => setShow(!show)}
+            accessibilityRole="button"
+            accessibilityLabel={show ? "Ocultar contraseña" : "Mostrar contraseña"}
+            hitSlop={10}
+          >
             {show ? <EyeOff size={17} color="#94a3b8" /> : <Eye size={17} color="#94a3b8" />}
           </TouchableOpacity>
         )}

@@ -4,6 +4,7 @@ import {
   PanResponder,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue } from "react-native-reanimated";
@@ -164,6 +165,15 @@ export default function ImageCropper({
   onDone: (r: CropResult) => void;
   labels: { title: string; hint: string; cancel: string; save: string; error: string };
 }) {
+  const { width: screenWidth, height: screenHeight } = useWindowDimensions();
+  // En vertical conserva el marco aprobado de 240. En una pantalla baja u
+  // horizontal se reduce lo justo para que también quepan título, zoom y
+  // botones; las cuentas de recorte reciben exactamente este mismo tamaño.
+  const ventana = Math.min(
+    VENTANA,
+    Math.max(128, screenWidth - 48),
+    Math.max(128, screenHeight - 300),
+  );
   /**
    * DÓNDE ESTÁ LA IMAGEN, EN DOS SITIOS A LA VEZ (13/08/2026).
    *
@@ -289,7 +299,7 @@ export default function ImageCropper({
         // un arrastre que antes valía dejaría un borde vacío dentro del marco.
         const acercado = limitarZoom(gesto.zoom * (separacion(dedos) / gesto.dist));
         const dentro = fuente
-          ? limitarPan(fuente.w, fuente.h, acercado, panRef.current.x, panRef.current.y, VENTANA)
+          ? limitarPan(fuente.w, fuente.h, acercado, panRef.current.x, panRef.current.y, ventana)
           : panRef.current;
         colocar(dentro.x, dentro.y, acercado);
         return;
@@ -303,7 +313,7 @@ export default function ImageCropper({
         zoomRef.current,
         gesto.pan.x + (g.dx - gesto.dx),
         gesto.pan.y + (g.dy - gesto.dy),
-        VENTANA
+        ventana
       );
       colocar(movido.x, movido.y, zoomRef.current);
     },
@@ -322,7 +332,7 @@ export default function ImageCropper({
   function cambiarZoom(hacia: number) {
     const nuevo = limitarZoom(zoomRef.current + hacia);
     const dentro = fuente
-      ? limitarPan(fuente.w, fuente.h, nuevo, panRef.current.x, panRef.current.y, VENTANA)
+      ? limitarPan(fuente.w, fuente.h, nuevo, panRef.current.x, panRef.current.y, ventana)
       : panRef.current;
     colocar(dentro.x, dentro.y, nuevo);
   }
@@ -332,7 +342,7 @@ export default function ImageCropper({
     setGuardando(true);
     setError("");
     try {
-      const r = cropRect(fuente.w, fuente.h, zoomRef.current, panRef.current.x, panRef.current.y);
+      const r = cropRect(fuente.w, fuente.h, zoomRef.current, panRef.current.x, panRef.current.y, ventana);
       // Se recorta la COPIA, no el archivo original: es la que se midió y la
       // que se está enseñando. Recortar el original es justo el fallo que se
       // arregló — las medidas de una y los píxeles del otro.
@@ -354,7 +364,7 @@ export default function ImageCropper({
     }
   }
 
-  const escalaBase = fuente ? Math.max(VENTANA / fuente.w, VENTANA / fuente.h) : 1;
+  const escalaBase = fuente ? Math.max(ventana / fuente.w, ventana / fuente.h) : 1;
   const anchoReal = fuente?.w ?? 1;
   const altoReal = fuente?.h ?? 1;
 
@@ -371,8 +381,8 @@ export default function ImageCropper({
       width: anchoReal * escala,
       height: altoReal * escala,
       transform: [
-        { translateX: panSV.x.value - (anchoReal * escala - VENTANA) / 2 },
-        { translateY: panSV.y.value - (altoReal * escala - VENTANA) / 2 },
+        { translateX: panSV.x.value - (anchoReal * escala - ventana) / 2 },
+        { translateY: panSV.y.value - (altoReal * escala - ventana) / 2 },
       ],
     };
   });
@@ -385,7 +395,7 @@ export default function ImageCropper({
       {/* EL MARCO, con la forma exacta del icono. Lo que quede dentro es lo que
           se recorta y lo que se verá. Ver REDONDEO. */}
       <View
-        style={{ width: VENTANA, height: VENTANA, borderRadius: VENTANA * REDONDEO }}
+        style={{ width: ventana, height: ventana, borderRadius: ventana * REDONDEO }}
         className="overflow-hidden bg-slate-800 border-[3px] border-white"
         {...arrastre.panHandlers}
       >

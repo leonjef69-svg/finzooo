@@ -76,7 +76,7 @@ export default function Negocios({ onBack }: { onBack: () => void }) {
       </View>
 
 
-      <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
+      <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
         <View className="flex-row items-start gap-3 mb-5">
           <View className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-noche-2 items-center justify-center">
             <Store size={18} color="#059669" />

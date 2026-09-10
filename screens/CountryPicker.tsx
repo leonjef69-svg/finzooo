@@ -48,6 +48,7 @@ export default function CountryPicker({ onBack, onSelect }: {
         data={countries}
         keyExtractor={(country) => country.id}
         keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
         initialNumToRender={10}
         windowSize={5}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
@@ -68,8 +69,8 @@ export default function CountryPicker({ onBack, onSelect }: {
                   ? "border-emerald-600 bg-emerald-50 dark:bg-emerald-900/20"
                   : "border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2"}`}>
                 <Text className="text-2xl">{country.flag}</Text>
-                <View className="flex-1">
-                  <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">{countryLabelFor(country, userLanguage)}</Text>
+                <View className="flex-1 min-w-0">
+                  <Text numberOfLines={2} className="text-sm font-bold text-slate-900 dark:text-slate-100">{countryLabelFor(country, userLanguage)}</Text>
                   <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
                     {languageLabelFor(country.language)} · {country.currency} · {currencySymbolFor(country.currency)}
                   </Text>

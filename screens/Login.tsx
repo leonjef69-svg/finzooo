@@ -150,19 +150,20 @@ export default function Login({
           )}
         </TouchableOpacity>
 
-        <OrDivider label={t("login.or")} />
-
-        <GoogleButton
-          label={t("login.withGoogle")}
-          onPress={loginWithGoogle}
-          loading={googleLoading}
-          disabled={loading}
-        />
-        {googleError ? (
-          <Text className="text-rose-500 text-xs font-medium text-center mt-3">
-            {googleError}
-          </Text>
-        ) : null}
+        {Platform.OS === "android" ? <>
+          <OrDivider label={t("login.or")} />
+          <GoogleButton
+            label={t("login.withGoogle")}
+            onPress={loginWithGoogle}
+            loading={googleLoading}
+            disabled={loading}
+          />
+          {googleError ? (
+            <Text className="text-rose-500 text-xs font-medium text-center mt-3">
+              {googleError}
+            </Text>
+          ) : null}
+        </> : null}
 
         {/* gap-1: la separación con "Regístrate" la pone el diseño. Antes
             venía de un espacio al final del propio texto traducido, donde

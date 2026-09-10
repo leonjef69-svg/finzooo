@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Keyboard, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X } from "lucide-react-native";
@@ -61,6 +61,7 @@ export default function GoalFormSheet({
         <View className="items-center mb-3">
           <View className="w-10 h-1 rounded-full bg-slate-200 dark:bg-noche-3" />
         </View>
+        <ScrollView keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
         <View className="flex-row items-center justify-between mb-4">
           <Text className="font-extrabold text-slate-900 dark:text-slate-100 text-base">
             {goal ? t("goalForm.editTitle") : t("goalForm.newTitle")}
@@ -126,6 +127,7 @@ export default function GoalFormSheet({
             <Text className="font-bold text-white">{t("common.save")}</Text>
           </TouchableOpacity>
         </View>
+        </ScrollView>
       </View>
     </Animated.View>
   );

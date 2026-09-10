@@ -44,6 +44,7 @@ export default function Cajas() {
   const [monto, setMonto] = useState("");
   const [method, setMethod] = useState("cash");
   const [filter, setFilter] = useState<MovementFilter>(null);
+  const [movementLimit, setMovementLimit] = useState(60);
   const [descripcion, setDescripcion] = useState("");
   const [borrandoCaja, setBorrandoCaja] = useState(false);
   const [ready, setReady] = useState(false);
@@ -74,6 +75,7 @@ export default function Cajas() {
   }, [datos, ready]);
 
   const caja = datos.cajas.find((item) => item.id === cajaId);
+  useEffect(() => setMovementLimit(60), [cajaId, filter]);
   const movimientos = useMemo(
     () => datos.movimientos.filter((item) => item.cajaId === cajaId).sort((a, b) => b.creadoEn - a.creadoEn),
     [cajaId, datos.movimientos],
@@ -235,7 +237,17 @@ export default function Cajas() {
       </View>
       <SpaceSwitcher active="boxes" />
 
-      <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 36 }} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        className="flex-1 px-5"
+        contentContainerStyle={{ paddingBottom: 36 }}
+        keyboardShouldPersistTaps="handled"
+        automaticallyAdjustKeyboardInsets
+        scrollEventThrottle={160}
+        onScroll={({ nativeEvent }) => {
+          const cercaDelFinal = nativeEvent.layoutMeasurement.height + nativeEvent.contentOffset.y >= nativeEvent.contentSize.height - 240;
+          if (cercaDelFinal && movementLimit < visibles.length) setMovementLimit(limit => Math.min(limit + 60, visibles.length));
+        }}
+      >
         {!ready ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : lista || !caja ? (
           <>
             <Text className="mb-3 mt-2 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("boxes.subtitle")}</Text>
@@ -305,7 +317,7 @@ export default function Cajas() {
             {devolvibleAPersonal > 0 ? <TouchableOpacity onPress={devolverAPersonal} className="mt-3 min-h-11 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("boxes.returnAmount", { amount: fmt(devolvibleAPersonal) })}</Text></TouchableOpacity> : null}
             <Text className="mb-2 mt-5 font-extrabold text-slate-900 dark:text-slate-100">{t("boxes.history")}</Text>
             <SpaceFilterReset filter={filter} onReset={() => setFilter(null)} />
-            {visibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "boxes.noMovements")}</Text> : visibles.map((item) => (
+            {visibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "boxes.noMovements")}</Text> : visibles.slice(0, movementLimit).map((item) => (
               <View key={item.id} className="mb-2 flex-row items-center rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde">
                 <View className={`h-9 w-9 items-center justify-center rounded-xl ${item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
                 <View className="ml-3 flex-1"><Text className="text-[15px] font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View>

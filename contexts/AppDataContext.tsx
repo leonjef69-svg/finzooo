@@ -888,7 +888,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }
       setReady(true);
     }
-    init();
+    init().catch(() => {
+      // Una lectura local inesperadamente dañada no debe dejar la primera
+      // apertura en una pantalla vacía para siempre. Las lecturas normales
+      // ya tienen sus propios valores seguros; esto cubre el último recurso.
+      setReady(true);
+    });
     // Esto debe ejecutarse UNA sola vez, al abrir la app. Si añadiéramos
     // reloadPersistedData a la lista, se volvería a ejecutar en cada
     // recarga y pisaría los datos que la persona esté editando.

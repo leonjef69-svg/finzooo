@@ -24,6 +24,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   formatCreditMoney,
   formatCreditMoneyCompact,
@@ -47,6 +48,7 @@ const MONTHS = [
 type CalendarFilter = "all" | "installments" | "paid" | "overdue";
 
 export default function CreditCalendarV3() {
+  const insets = useSafeAreaInsets();
   const router = useRouter();
   const { cardId } = useLocalSearchParams<{ cardId?: string }>();
   const [state, setState] = useState<CreditState>(EMPTY_CREDIT_STATE);
@@ -317,7 +319,10 @@ export default function CreditCalendarV3() {
       </View>
     );
   return (
-    <ScrollView className="flex-1 bg-slate-50 px-4 pt-14">
+    <ScrollView
+      className="flex-1 bg-slate-50 px-4"
+      contentContainerStyle={{ paddingTop: insets.top + 16, paddingBottom: insets.bottom + 20 }}
+    >
       <View className="flex-row items-center">
         <TouchableOpacity
           onPress={() => router.back()}
@@ -833,6 +838,8 @@ function Summary({
       <Text className={`text-[10px] font-bold ${text}`}>{label}</Text>
       <Text
         numberOfLines={1}
+        adjustsFontSizeToFit
+        minimumFontScale={0.65}
         className={`font-extrabold ${text}`}
       >
         {value}

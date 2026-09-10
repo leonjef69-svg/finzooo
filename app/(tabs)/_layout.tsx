@@ -1,6 +1,6 @@
 import { Tabs } from "expo-router";
 import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
-import { Text, TouchableOpacity, View } from "react-native";
+import { Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { irUnaVez } from "@/utils/nav";
 import { NOCHE } from "@/constants/style";
 import {
@@ -94,6 +94,10 @@ function FinoTabBar({
   onAdd: () => void;
 }) {
   const routes = state.routes;
+  const { width, fontScale } = useWindowDimensions();
+  const barHeight = fontScale > 1.3 ? 78 : 68;
+  const centerWidth = width < 350 ? 54 : 62;
+  const centerMargin = width < 350 ? 4 : 7;
   const renderTab = (route: (typeof routes)[number], index: number) => {
     const focused = state.index === index;
     const options = descriptors[route.key].options;
@@ -114,7 +118,7 @@ function FinoTabBar({
         key={route.key}
         accessibilityRole="button"
         accessibilityState={focused ? { selected: true } : {}}
-        accessibilityLabel={options.tabBarAccessibilityLabel}
+        accessibilityLabel={options.tabBarAccessibilityLabel ?? label}
         activeOpacity={0.7}
         onPress={() => {
           const event = navigation.emit({
@@ -131,7 +135,7 @@ function FinoTabBar({
         }
         style={{
           flex: 1,
-          height: 64,
+          height: barHeight - 4,
           alignItems: "center",
           justifyContent: "center",
           paddingTop: 5,
@@ -156,7 +160,7 @@ function FinoTabBar({
   return (
     <View
       style={{
-        height: 68 + bottomInset,
+          height: barHeight + bottomInset,
         paddingBottom: bottomInset,
         backgroundColor: isDark ? NOCHE.fondo : "#ffffff",
         borderTopColor: isDark ? NOCHE.borde : "#cbd5e1",
@@ -165,7 +169,7 @@ function FinoTabBar({
     >
       <View
         style={{
-          height: 68,
+          height: barHeight,
           flexDirection: "row",
           alignItems: "center",
           paddingHorizontal: 5,
@@ -174,13 +178,13 @@ function FinoTabBar({
         {routes.slice(0, 2).map((route, index) => renderTab(route, index))}
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Registrar gasto"
+          accessibilityLabel="Registrar movimiento"
           activeOpacity={0.86}
           onPress={onAdd}
           style={{
-            width: 62,
+            width: centerWidth,
             height: 46,
-            marginHorizontal: 7,
+            marginHorizontal: centerMargin,
             marginTop: -7,
             borderRadius: 15,
             alignItems: "center",

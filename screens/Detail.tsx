@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Tag, Calendar, Wallet2, StickyNote, Trash2, Pencil } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
@@ -49,9 +49,13 @@ export default function Detail({
         <View className="w-10" />
       </View>
 
+      <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 16 }}>
       <View className="px-6 items-center pt-4 pb-6">
         <IconBadge Icon={c.icon} color={c.color} size={64} image={c.image} />
         <Text
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.62}
           className={`text-3xl font-extrabold mt-4 ${
             transaction.type === "expense" ? "text-rose-500" : "text-emerald-600"
           }`}
@@ -71,13 +75,14 @@ export default function Detail({
             <View className="w-9 h-9 rounded-xl bg-white dark:bg-noche-2 items-center justify-center border-[1.5px] border-slate-200 dark:border-noche-borde">
               <Icon size={16} color="#64748b" />
             </View>
-            <View>
+            <View className="flex-1 min-w-0">
               <Text className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold">{label}</Text>
               <Text className="text-sm font-bold" style={{ color: primaryTextColor }}>{value}</Text>
             </View>
           </View>
         ))}
       </View>
+      </ScrollView>
 
       {managedTransfer ? (
         <View className="mt-auto mx-6 mb-8 rounded-2xl bg-teal-50 px-4 py-3 dark:bg-teal-950">

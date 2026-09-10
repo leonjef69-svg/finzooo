@@ -150,8 +150,8 @@ console.log("\n--- EL MARCO TIENE LA FORMA DEL ICONO ---");
   // circulo y en la lista aparecia con las esquinas puestas. Lo pidio el usuario
   // el 05/08/2026: "que se aparezca el espacio de todo lo que aparecera".
   const cropper = fs.readFileSync(path.join(process.cwd(), "components/ImageCropper.tsx"), "utf8");
-  ok(!/borderRadius: VENTANA \/ 2/.test(cropper), "el marco ya no es un circulo");
-  ok(/borderRadius: VENTANA \* REDONDEO/.test(cropper), "sino la forma de la casilla");
+  ok(!/borderRadius: (?:VENTANA|ventana) \/ 2/.test(cropper), "el marco ya no es un circulo");
+  ok(/borderRadius: ventana \* REDONDEO/.test(cropper), "sino la forma de la casilla, incluso cuando la pantalla es pequeña");
   // La proporcion sale de las casillas reales: 16 de redondeo en una de ~55, y
   // 24 en la vista previa de 80. Si se va lejos de eso, deja de ser un anticipo.
   const redondeo = Number(/const REDONDEO = ([\d.]+)/.exec(cropper)?.[1] ?? "0");

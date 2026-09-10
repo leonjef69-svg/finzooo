@@ -15,6 +15,7 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 | 23/08/2026 | 1.0.5 | `23ago-09` | Inicio exacto de tres pantallas aprobado |
 | 08/09/2026 | 1.0.6 | `08sep-auditoria-pre-play` | Auditoría integral previa a Play Store |
 | 09/09/2026 | 1.0.6 | `09sep-telegram-seguro` | Integración segura de Telegram preparada para prueba local |
+| 10/09/2026 | 1.0.6 | `10sep-responsive-android-ios` | Correcciones responsive para Android y iPhone listas en código |
 
 La versión 1.0.3 contiene el acceso Google con diagnóstico, copia de seguridad,
 Modo Negocio, registro automático, voz, rendimiento, calendario, exportación,
@@ -71,6 +72,14 @@ a sumar cuando se devuelven. Los miembros invitados no pueden enlazar su saldo
 Personal ni borrar movimientos ajenos; el propietario administra los movimientos
 comunes y Telegram respeta las mismas restricciones.
 
+La auditoría responsive corrige áreas seguras, scroll, teclado, textos y montos
+largos, modales, listas extensas, barra inferior, recorte de imágenes y pantallas
+de primera apertura. También deja configurado el identificador de iOS, limita
+la primera entrega de Apple a iPhone y evita cargar funciones nativas de Android
+en plataformas o entornos que no las incluyen. La revisión automática pasó; la
+validación física de cámara, permisos y teclado de iPhone queda pendiente hasta
+contar con un iPhone o una compilación generada desde macOS.
+
 Calidad comprobada:
 
 - TypeScript aprobado.
@@ -80,7 +89,7 @@ Calidad comprobada:
 
 ## Cómo reconocer la entrega
 
-En **Ajustes → Acerca de**, la versión 1.0.6 muestra `08sep-auditoria-pre-play`.
+En **Ajustes → Acerca de**, la versión 1.0.6 muestra `10sep-responsive-android-ios`.
 
 ## Publicación
 
@@ -91,5 +100,5 @@ En **Ajustes → Acerca de**, la versión 1.0.6 muestra `08sep-auditoria-pre-pla
 
 ## Próximo paso
 
-Publicar las reglas auditadas, probar Familia/Cajas con dos cuentas y después
-generar `Fino-1.0.6.aab` para la prueba cerrada.
+Probar Familia/Cajas con dos cuentas, generar la siguiente actualización Android
+y, cuando haya acceso a macOS/Apple Developer, crear y probar la compilación iOS.

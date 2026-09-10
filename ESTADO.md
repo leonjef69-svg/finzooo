@@ -32,11 +32,30 @@ Paquete Android: `com.finoapp.gastos`.
 - Las reglas de Firestore validan que una transferencia enlazada use el método
   Transferencia, la dirección correcta y una devolución por el monto declarado.
 
+## Auditoría responsive Android + iPhone (10/09/2026)
+
+- Primera apertura, acceso, registro, verificación, configuración, bloqueo,
+  detalles y formularios largos ahora respetan el área segura, permiten scroll
+  y no quedan tapados por el teclado.
+- Tarjetas, totales, diálogos y movimientos soportan cantidades y textos largos.
+  Las listas extensas se muestran por bloques o virtualizadas para no congelar
+  teléfonos con muchos datos.
+- La barra inferior, los totales de Familia/Cajas y el recorte de imágenes se
+  adaptan al ancho disponible y al tamaño de letra del sistema.
+- iOS ya tiene el identificador `com.finoapp.gastos` y está limitado a iPhone
+  por ahora. En iOS se ofrece acceso con correo; Google, escáner, captura
+  automática y widget de voz se muestran únicamente donde están configurados.
+- La carga de Google y del micrófono es diferida: Expo Go puede abrir la app sin
+  los módulos nativos que solo existen en el AAB o en una compilación propia.
+- La comprobación automática cubre Android e iOS. La prueba final del teclado,
+  permisos, cámara y zonas físicas de iPhone sigue pendiente de un iPhone o una
+  compilación ejecutada desde macOS.
+
 ## Versiones
 
 - Disponible en prueba cerrada: **1.0.4**, `versionCode 5`.
 - Próxima corrección: **1.0.6**, `versionCode 7`.
-- Marca visible de 1.0.6: **09sep-telegram-seguro**.
+- Marca visible de 1.0.6: **10sep-responsive-android-ios**.
 - El AAB firmado solo se genera en la computadora autorizada.
 
 ## Telegram preparado
@@ -206,7 +225,7 @@ aceptar y descargar con la misma cuenta de Google.
 - TypeScript: aprobado.
 - ESLint: aprobado sin errores ni advertencias en el código de la app.
 - Expo Doctor: **18 de 18 comprobaciones aprobadas**.
-- Pruebas: **101 aprobadas** más **15 específicas de Telegram**.
+- Pruebas: **102 aprobadas** más **7 auditores integrales**.
 - Auditores: **7 aprobados**.
 - El lector de Excel usa SheetJS 0.20.3 desde su distribución oficial; se
   retiró la versión 0.18.5 afectada por dos vulnerabilidades conocidas.

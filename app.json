@@ -9,7 +9,8 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true,
+      "bundleIdentifier": "com.finoapp.gastos",
+      "supportsTablet": false,
       "infoPlist": {
         "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition.",
         "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone."
@@ -89,7 +90,7 @@
         }
       ],
       "expo-secure-store",
-      "@react-native-google-signin/google-signin",
+      "./plugins/with-google-signin-android",
       "expo-speech-recognition",
       [
         "expo-image-picker",

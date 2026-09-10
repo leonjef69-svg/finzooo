@@ -34,6 +34,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const COLORS = ["#0f766e", "#2563eb", "#7c3aed", "#ea580c"];
 
@@ -57,6 +58,7 @@ function formatMembershipDate(value: string) {
 }
 
 export default function CreditCardSettingsV1() {
+  const insets = useSafeAreaInsets();
   const saving = useRef(false);
   const {
     userCurrency,
@@ -388,8 +390,10 @@ export default function CreditCardSettingsV1() {
     );
   return (
     <ScrollView
-      className="flex-1 bg-slate-50 px-4 pt-12"
+      className="flex-1 bg-slate-50 px-4"
+      contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 }}
       keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
     >
       <View className="flex-row items-center">
         <TouchableOpacity
@@ -521,7 +525,10 @@ export default function CreditCardSettingsV1() {
         animationType="slide"
         onRequestClose={() => setCurrencyPickerOpen(false)}
       >
-        <View className="flex-1 bg-slate-50 px-4 pb-6 pt-12">
+        <View
+          className="flex-1 bg-slate-50 px-4"
+          style={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 24 }}
+        >
           <View className="flex-row items-center justify-between">
             <Text className="text-xl font-extrabold">Elegir moneda</Text>
             <TouchableOpacity

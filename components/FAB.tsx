@@ -2,7 +2,7 @@ import { TouchableOpacity } from "react-native";
 import Animated, { ZoomIn } from "react-native-reanimated";
 import { Plus } from "lucide-react-native";
 
-export default function FAB({ onPress }: { onPress: () => void }) {
+export default function FAB({ onPress, accessibilityLabel = "Agregar" }: { onPress: () => void; accessibilityLabel?: string }) {
   return (
     <Animated.View
       entering={ZoomIn.duration(400).springify()}
@@ -11,6 +11,8 @@ export default function FAB({ onPress }: { onPress: () => void }) {
     >
       <TouchableOpacity
         onPress={onPress}
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
         activeOpacity={0.85}
         className="w-14 h-14 rounded-full bg-emerald-600 items-center justify-center border-2 border-white"
         style={{

@@ -38,10 +38,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 type Tab = "movements" | "paid" | "installments";
 
 export default function CreditDetailV4() {
+  const insets = useSafeAreaInsets();
   const nativeRouter = useRouter();
   const { deleteTransactions } = useAppData();
   const { cardId } = useLocalSearchParams<{ cardId: string }>();
@@ -210,7 +212,10 @@ export default function CreditDetailV4() {
     });
   }
   return (
-    <ScrollView className="flex-1 bg-slate-50 px-4 pt-12">
+    <ScrollView
+      className="flex-1 bg-slate-50 px-4"
+      contentContainerStyle={{ paddingTop: insets.top + 12, paddingBottom: insets.bottom + 20 }}
+    >
       <View className="flex-row items-center">
         <TouchableOpacity
           onPress={() => nativeRouter.back()}

@@ -28,6 +28,7 @@ export default function SharedBoxes() {
   const [monto, setMonto] = useState("");
   const [method, setMethod] = useState("cash");
   const [filter, setFilter] = useState<MovementFilter>(null);
+  const [movementLimit, setMovementLimit] = useState(60);
   const [codigo, setCodigo] = useState("");
   const [invitacion, setInvitacion] = useState("");
   const [busy, setBusy] = useState(false);
@@ -48,6 +49,7 @@ export default function SharedBoxes() {
     void listarMiembrosCaja(caja.id).then(setMiembros).catch(() => errorRef.current());
     return escucharMovimientosCaja(caja.id, setMovimientos, () => errorRef.current());
   }, [caja]);
+  useEffect(() => setMovementLimit(60), [caja?.id, filter]);
   useEffect(() => {
     if (!caja) return;
     return observarCierreCaja(caja.id, () => { setCajas(items => items.filter(item => item.id !== caja.id)); setCaja(null); setMovimientos([]); setMiembros([]); }, () => errorRef.current());
@@ -109,13 +111,23 @@ export default function SharedBoxes() {
   }
   return <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top + 6, paddingBottom: insets.bottom }}>
     <View className="flex-row items-center gap-3 px-4 pb-3"><BackButton onPress={() => { if (caja) { setCaja(null); limpiar(); setInvitacion(""); } else safeBack(); }} /><Text className="text-base font-bold text-slate-900 dark:text-white">{t("boxes.shared")}</Text></View>
-    <ScrollView className="px-4" keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 32 }}>
+    <ScrollView
+      className="px-4"
+      keyboardShouldPersistTaps="handled"
+      automaticallyAdjustKeyboardInsets
+      contentContainerStyle={{ paddingBottom: 32 }}
+      scrollEventThrottle={160}
+      onScroll={({ nativeEvent }) => {
+        const cercaDelFinal = nativeEvent.layoutMeasurement.height + nativeEvent.contentOffset.y >= nativeEvent.contentSize.height - 240;
+        if (cercaDelFinal && movementLimit < visibles.length) setMovementLimit(limit => Math.min(limit + 60, visibles.length));
+      }}
+    >
       {!uid ? <Text className="text-slate-600 dark:text-slate-200">{t("boxes.loginRequired")}</Text> : <>
         {!caja ? <>
           <View className="mb-3 flex-row gap-2">{boton(t("boxes.join"), () => { limpiar(); setModo("unir"); })}</View>
           {cajas.map(item => <TouchableOpacity key={item.id} onPress={() => { limpiar(); setCaja(item); }} className="mb-2 rounded-2xl border border-slate-200 p-4 dark:border-noche-borde"><Text className="text-base font-bold text-slate-900 dark:text-white">{item.nombre}</Text></TouchableOpacity>)}
         </> : <>
-          <View className="rounded-2xl bg-emerald-600 p-4"><Text className="text-base font-bold text-white">{caja.nombre}</Text><Text adjustsFontSizeToFit numberOfLines={1} className="text-[26px] font-extrabold text-white">{fmt(saldo)}</Text><SpaceTotals income={ingresos} expense={gastos} filter={filter} onFilter={setFilter} format={fmt} /></View>
+          <View className="rounded-2xl bg-emerald-600 p-4"><Text className="text-base font-bold text-white" numberOfLines={2}>{caja.nombre}</Text><Text adjustsFontSizeToFit minimumFontScale={0.58} numberOfLines={1} className="text-[26px] font-extrabold text-white">{fmt(saldo)}</Text><SpaceTotals income={ingresos} expense={gastos} filter={filter} onFilter={setFilter} format={fmt} /></View>
           <View className="my-3 flex-row gap-2">{boton(t("boxes.income"), () => { limpiar(); setModo("ingreso"); })}{boton(t("boxes.expense"), () => { limpiar(); setModo("gasto"); })}</View>
           {caja.ownerUid === uid ? <TouchableOpacity disabled={busy} onPress={() => { if (!isPremium) { irUnaVez("/premium"); return; } void ejecutar(async () => setInvitacion(await crearInvitacionCaja(uid, caja.id))); }} className="min-h-12 items-center justify-center"><Text className="text-sm font-bold text-teal-700 dark:text-teal-300">{t("family.invite")}</Text></TouchableOpacity> : null}
           {invitacion ? <TouchableOpacity onPress={() => void Share.share({ message: invitacion })} className="rounded-xl bg-emerald-50 p-3"><Text selectable className="text-center text-xl font-bold text-emerald-800">{invitacion}</Text><Text className="text-center text-sm text-slate-600">{t("family.codeExpires")}</Text></TouchableOpacity> : null}
@@ -130,7 +142,7 @@ export default function SharedBoxes() {
         </View> : null}
         <SpaceFilterReset filter={filter} onReset={() => setFilter(null)} />
         {caja && visibles.length === 0 ? <Text className="py-3 text-sm text-slate-500">{t("spaces.noResults")}</Text> : null}
-        {caja ? visibles.map(item => { const puedeBorrar = item.personalOwnerUid ? item.personalOwnerUid === uid : owner || item.creadoPor === uid; return <View key={item.id} className="mb-2 rounded-xl border border-slate-200 p-3 dark:border-noche-borde"><View className="flex-row items-center gap-2"><View className="flex-1"><View className="flex-row gap-3"><Text numberOfLines={1} className="flex-1 text-base font-bold text-slate-900 dark:text-white">{item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text numberOfLines={1} adjustsFontSizeToFit className="max-w-[50%] text-base font-bold text-teal-600">{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></View><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View>{puedeBorrar ? <TouchableOpacity accessibilityLabel={t("common.delete")} onPress={() => void borrar(item)} className="h-9 w-9 items-center justify-center"><Trash2 size={15} color="#e11d48" /></TouchableOpacity> : <View className="h-9 w-9" />}</View></View>; }) : null}
+        {caja ? visibles.slice(0, movementLimit).map(item => { const puedeBorrar = item.personalOwnerUid ? item.personalOwnerUid === uid : owner || item.creadoPor === uid; return <View key={item.id} className="mb-2 rounded-xl border border-slate-200 p-3 dark:border-noche-borde"><View className="flex-row items-center gap-2"><View className="flex-1"><View className="flex-row gap-3"><Text numberOfLines={1} className="flex-1 text-base font-bold text-slate-900 dark:text-white">{item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className="max-w-[50%] text-base font-bold text-teal-600">{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></View><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View>{puedeBorrar ? <TouchableOpacity accessibilityLabel={t("common.delete")} onPress={() => void borrar(item)} className="h-9 w-9 items-center justify-center"><Trash2 size={15} color="#e11d48" /></TouchableOpacity> : <View className="h-9 w-9" />}</View></View>; }) : null}
         {caja && !owner ? <TouchableOpacity onPress={salir} className="mt-3 min-h-11 flex-row items-center justify-center gap-2"><LogOut size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("boxes.leave")}</Text></TouchableOpacity> : null}
         {caja && owner ? <TouchableOpacity onPress={cerrar} className="mt-3 min-h-11 flex-row items-center justify-center gap-2"><Trash2 size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("boxes.close")}</Text></TouchableOpacity> : null}
       </>}

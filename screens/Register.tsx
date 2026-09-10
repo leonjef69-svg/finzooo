@@ -148,19 +148,20 @@ export default function Register({
             )}
           </TouchableOpacity>
 
-          <OrDivider label={t("login.or")} />
-
-          <GoogleButton
-            label={t("login.withGoogle")}
-            onPress={registerWithGoogle}
-            loading={googleLoading}
-            disabled={loading}
-          />
-          {googleError ? (
-            <Text className="text-rose-500 text-xs font-medium text-center mt-3">
-              {googleError}
-            </Text>
-          ) : null}
+          {Platform.OS === "android" ? <>
+            <OrDivider label={t("login.or")} />
+            <GoogleButton
+              label={t("login.withGoogle")}
+              onPress={registerWithGoogle}
+              loading={googleLoading}
+              disabled={loading}
+            />
+            {googleError ? (
+              <Text className="text-rose-500 text-xs font-medium text-center mt-3">
+                {googleError}
+              </Text>
+            ) : null}
+          </> : null}
 
           {/* gap-1: ver la nota del mismo bloque en Login.tsx. */}
           <View className="flex-row justify-center gap-1 mt-5">

@@ -1,4 +1,4 @@
-import { Text, TouchableOpacity, View } from "react-native";
+import { FlatList, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X, PiggyBank } from "lucide-react-native";
 import { GOAL_COLOR_HEX } from "@/constants/colors";
@@ -42,8 +42,15 @@ export default function GoalPickerSheet({
         <Text className="text-xs text-slate-500 dark:text-slate-300 mb-4">
           {t("goalPicker.subtitle", { amount: fmt(amount) })}
         </Text>
-        <View className="gap-2.5">
-          {goals.map((g, i) => {
+        <FlatList
+          data={goals}
+          keyExtractor={(goal) => String(goal.id)}
+          showsVerticalScrollIndicator={false}
+          initialNumToRender={12}
+          maxToRenderPerBatch={12}
+          windowSize={7}
+          ItemSeparatorComponent={() => <View className="h-2.5" />}
+          renderItem={({ item: g, index: i }) => {
             const pct = g.target > 0 ? Math.min(100, (g.saved / g.target) * 100) : 0;
             const color = GOAL_COLOR_HEX[i % GOAL_COLOR_HEX.length];
             return (
@@ -62,15 +69,15 @@ export default function GoalPickerSheet({
                   <Text className="text-sm font-bold text-slate-900 dark:text-slate-100" numberOfLines={1}>
                     {g.name}
                   </Text>
-                  <Text className="text-xs text-slate-500 dark:text-slate-300">
+                  <Text numberOfLines={2} className="text-xs text-slate-500 dark:text-slate-300">
                     {t("savingsList.savedOfTarget", { saved: fmt(g.saved), target: fmt(g.target) })} ·{" "}
                     {Math.round(pct)}%
                   </Text>
                 </View>
               </TouchableOpacity>
             );
-          })}
-        </View>
+          }}
+        />
       </View>
     </View>
   );
