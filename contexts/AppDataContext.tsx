@@ -107,7 +107,7 @@ import {
   pruneDeletedGoalIds,
   pruneDeletedTransactionIds,
 } from "@/utils/mergeTransactions";
-import { presupuestoDelMes } from "@/utils/presupuestoMensual";
+import { presupuestoDelMes, transferidoPendienteDelMes } from "@/utils/presupuestoMensual";
 import { hayDescuadre, maximoAApartar, saldoLibre, totalApartado } from "@/utils/ahorro";
 import { availableBalance } from "@/utils/finances";
 import { saldoAnteriorDe } from "@/utils/saldoAnterior";
@@ -1667,6 +1667,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   function setBudgetForCurrentMonth(amount: number) {
     if (!isSafeMoneyAmount(amount) || amount < 0) {
       showToast("El monto supera el máximo permitido");
+      return;
+    }
+    if (amount === 0 && transferidoPendienteDelMes(transactions, mk) > 0.005) {
+      showToast(t("toast.budgetHasTransfers"));
       return;
     }
     setBudgets((b) => ({ ...b, [mk]: amount }));

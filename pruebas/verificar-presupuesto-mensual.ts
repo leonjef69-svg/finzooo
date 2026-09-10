@@ -6,7 +6,7 @@
 //
 // TODA ESTA PRUEBA FALLA CONTRA LA VERSION ANTERIOR, que devolvia el ultimo presupuesto puesto
 // a mano cuando el mes no tenia el suyo.
-import { presupuestoDelMes } from "@/utils/presupuestoMensual";
+import { presupuestoDelMes, transferidoPendienteDelMes } from "@/utils/presupuestoMensual";
 
 let fallos = 0;
 function ok(c: boolean, m: string) {
@@ -53,6 +53,21 @@ console.log("\n--- LAS CLAVES RARAS NO ROMPEN NADA ---");
   const sucio = { "2026-07": 1800, ultimoMes: 999 } as Record<string, number>;
   ok(presupuestoDelMes(sucio, "2026-08") === 0, "una clave que no es un mes no se cuela");
   ok(presupuestoDelMes(sucio, "2026-07") === 1800, "y el mes de verdad sigue funcionando");
+}
+
+console.log("\n--- EL DINERO TRANSFERIDO SIGUE RESPALDADO ---");
+{
+  const movimientos = [
+    { date: "2026-08-05", type: "expense" as const, amount: 300, internalTransfer: "family" },
+    { date: "2026-08-06", type: "income" as const, amount: 100, internalTransfer: "family" },
+    { date: "2026-08-07", type: "expense" as const, amount: 50 },
+    { date: "2026-07-31", type: "expense" as const, amount: 900, internalTransfer: "box" },
+  ];
+  ok(transferidoPendienteDelMes(movimientos, "2026-08") === 200, "solo cuenta lo que todavía permanece fuera de Personal");
+  ok(transferidoPendienteDelMes([
+    ...movimientos,
+    { date: "2026-08-08", type: "income" as const, amount: 200, internalTransfer: "family" },
+  ], "2026-08") === 0, "al devolver todo ya se puede quitar el presupuesto");
 }
 
 console.log(fallos === 0 ? "\nTodo bien: cada mes empieza vacio" : `\n${fallos} fallas`);

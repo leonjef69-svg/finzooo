@@ -33,3 +33,25 @@
 export function presupuestoDelMes(budgets: Record<string, number>, mes: string): number {
   return budgets[mes] ?? 0;
 }
+
+type MovimientoTransferido = {
+  date: string;
+  type: "income" | "expense";
+  amount: number;
+  internalTransfer?: unknown;
+};
+
+/** Dinero del mes que sigue colocado en Familia o Cajas. */
+export function transferidoPendienteDelMes(
+  transactions: MovimientoTransferido[],
+  mes: string,
+): number {
+  const neto = transactions
+    .filter((movimiento) => movimiento.date.startsWith(mes) && movimiento.internalTransfer)
+    .reduce(
+      (total, movimiento) =>
+        total + (movimiento.type === "expense" ? movimiento.amount : -movimiento.amount),
+      0,
+    );
+  return Math.max(0, neto);
+}

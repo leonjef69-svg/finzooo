@@ -245,6 +245,9 @@ Comando principal: `node pruebas/correr.mjs`.
   solo permiten devolver hasta ese importe. La devolución aumenta el disponible,
   pero no se presenta como un ingreso nuevo. Un espacio no puede cerrarse mientras
   conserve saldo, evitando que el dinero desaparezca por error.
+- No se puede borrar el presupuesto mensual mientras parte de ese dinero continúe
+  transferida a Familia o Cajas. Primero debe devolverse a Personal; así el saldo no
+  queda negativo por eliminar la base que respaldaba una transferencia activa.
 - Las transferencias enlazadas ya no se pueden editar ni borrar desde Personal,
   tampoco mediante selección múltiple. Se administran desde la Familia o Caja que
   posee el otro lado del movimiento, evitando saldos descuadrados.
