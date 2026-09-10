@@ -60,6 +60,8 @@ reales de Fino y permite registrar desde una sola línea. Recuerda el último
 espacio y método, ofrece corrección y deshacer, y transfiere de Personal a
 Familia o Cajas mediante una operación enlazada y confirmada. Los totales se
 muestran separados y el texto rápido acepta sus datos en cualquier orden.
+El formulario breve y la confirmación de Telegram muestran monto, descripción y
+método de pago verticalmente, evitando que textos o cifras largas queden apretados.
 
 Calidad comprobada:
 

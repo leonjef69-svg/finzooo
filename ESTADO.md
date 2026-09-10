@@ -1,6 +1,6 @@
 # Estado actual de Fino
 
-Actualizado: **9 de septiembre de 2026**.
+Actualizado: **10 de septiembre de 2026**.
 
 Este archivo permite retomar el proyecto sin empezar de cero. No contiene
 credenciales, correos, UID, huellas completas ni datos privados de testers.
@@ -31,6 +31,8 @@ Paquete Android: `com.finoapp.gastos`.
 - El espacio elegido queda recordado. Gasto o Ingreso pide una sola línea como
   «20 almuerzo Yape» en un aviso breve; monto, descripción y método pueden
   escribirse en cualquier orden. Deduce categoría y método sin IA y guarda inmediatamente.
+  El aviso y la confirmación presentan monto, descripción y método de pago en
+  líneas separadas para que se entiendan al instante y admitan cifras largas.
   Después ofrece Otro gasto, Otro ingreso, Más opciones, Cambiar espacio y
   Deshacer; no obliga a volver al inicio después de cada movimiento.
 - También acepta frases directas como «pagué 20 taxi en efectivo». Si se omite

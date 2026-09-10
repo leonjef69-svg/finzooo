@@ -255,10 +255,23 @@ function afterSaveKeyboard(action) {
   return { inline_keyboard: rows };
 }
 
+function quickPrompt(space, type) {
+  const isExpense = type === "expense";
+  return `${isExpense ? "➖ Gasto" : "➕ Ingreso"} en ${space.name}\n\nMonto:\nDescripción:\nMétodo de pago:\n\nEjemplo: ${isExpense ? "20 almuerzo Yape" : "500 sueldo Transferencia"}`;
+}
+
+function savedMovementMessage(space, movement, label = "Guardado") {
+  const description = String(movement.description || "Sin descripción").trim();
+  const shownDescription = description.charAt(0).toUpperCase() + description.slice(1);
+  const kind = movement.type === "expense" ? "Gasto" : "Ingreso";
+  const heading = label === "Guardado" ? `${kind} guardado` : label;
+  return `✅ ${heading} en ${space.name}\n\nMonto: ${money(movement.amount, space.currency)}\nDescripción: ${shownDescription}\nMétodo de pago: ${METHOD_NAMES[movement.method] || movement.method}`;
+}
+
 async function postSave(db, token, chatId, connection, space, movement, action, label = "Guardado") {
   const lastMethods = { ...(connection.settings?.lastMethods || {}), [movement.type]: movement.method };
   await Promise.all([saveUndo(db, chatId, action), db.collection("telegramDrafts").doc(String(chatId)).delete().catch(() => {}), remember(db, chatId, space, { lastMethods })]);
-  return send(token, chatId, `✅ ${label} en ${space.name}\n${movement.type === "expense" ? "Gasto" : "Ingreso"}: ${money(movement.amount, space.currency)}\n${movement.description} · ${METHOD_NAMES[movement.method] || movement.method}`, afterSaveKeyboard(action));
+  return send(token, chatId, savedMovementMessage(space, movement, label), afterSaveKeyboard(action));
 }
 async function registerQuick(db, token, chatId, connection, space, movement, operationId) {
   const action = await saveSimpleMovement(db, chatId, connection, space, movement, operationId);
@@ -375,8 +388,7 @@ async function editLast(db, token, chatId, connection, flow, method) {
 async function beginQuick(db, token, chatId, connection, space, type) {
   if (!["expense", "income"].includes(type)) throw new Error("EXPIRED");
   await saveFlow(db, chatId, { kind: "quick", step: "quick", uid: connection.uid, space: safeSpace(space), type });
-  const fallback = METHOD_NAMES[quickOptions(connection, type).fallbackMethod] || "Efectivo";
-  return send(token, chatId, `${type === "expense" ? "➖ Gasto" : "➕ Ingreso"} · ${space.name}\nMonto, descripción y método.\nEj.: 20 almuerzo Yape\nCualquier orden. Sin método: ${fallback}.`);
+  return send(token, chatId, quickPrompt(space, type));
 }
 async function cancelToSpace(db, token, chatId, connection, heading = "Operación cancelada.") {
   return showSpace(db, token, chatId, connection, await resolveRememberedSpace(db, connection), heading);
@@ -470,4 +482,4 @@ async function handleTelegramUpdate({ db, token, update }) {
   }
 }
 
-module.exports = { handleTelegramUpdate, premium, previousBalance, personalFigures, sharedFigures, amountDescription, allowedMethods, safeSpace, operationKey, personalIdForOperation };
+module.exports = { handleTelegramUpdate, premium, previousBalance, personalFigures, sharedFigures, amountDescription, allowedMethods, safeSpace, operationKey, personalIdForOperation, quickPrompt, savedMovementMessage };

@@ -11,6 +11,8 @@ const {
   safeSpace,
   operationKey,
   personalIdForOperation,
+  quickPrompt,
+  savedMovementMessage,
 } = require("../src/telegram-guided-handler");
 
 test("monto y descripción viajan juntos en un solo mensaje", () => {
@@ -76,4 +78,16 @@ test("cada actualización de Telegram genera una identidad estable y segura", ()
   assert.equal(personalIdForOperation("12345"), personalIdForOperation("12345"));
   assert.ok(Number.isSafeInteger(personalIdForOperation("12345")));
   assert.notEqual(personalIdForOperation("12345"), personalIdForOperation("12346"));
+});
+
+test("el aviso rápido presenta los tres datos en vertical y conserva un solo mensaje", () => {
+  assert.equal(quickPrompt({ name: "Personal" }, "expense"), "➖ Gasto en Personal\n\nMonto:\nDescripción:\nMétodo de pago:\n\nEjemplo: 20 almuerzo Yape");
+  assert.equal(quickPrompt({ name: "Familia" }, "income"), "➕ Ingreso en Familia\n\nMonto:\nDescripción:\nMétodo de pago:\n\nEjemplo: 500 sueldo Transferencia");
+});
+
+test("la confirmación guardada separa monto descripción y método", () => {
+  assert.equal(savedMovementMessage(
+    { name: "Personal", currency: "PEN" },
+    { type: "expense", amount: 100, description: "comida", method: "yape" },
+  ), "✅ Gasto guardado en Personal\n\nMonto: S/ 100.00\nDescripción: Comida\nMétodo de pago: Yape");
 });
