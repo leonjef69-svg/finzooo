@@ -7,6 +7,10 @@ const {
   personalFigures,
   previousBalance,
   sharedFigures,
+  allowedMethods,
+  safeSpace,
+  operationKey,
+  personalIdForOperation,
 } = require("../src/telegram-guided-handler");
 
 test("monto y descripción viajan juntos en un solo mensaje", () => {
@@ -53,4 +57,23 @@ test("Personal funciona sin presupuesto y excluye transferencias del consumo", (
   assert.equal(figures.income, 100);
   assert.equal(figures.spent, 20);
   assert.equal(figures.balance, 50);
+});
+
+test("Yape y Plin respetan el país configurado en Fino", () => {
+  assert.deepEqual(allowedMethods("PE"), ["cash", "debit", "credit", "transfer", "yape", "plin"]);
+  assert.deepEqual(allowedMethods("BO"), ["cash", "debit", "credit", "transfer", "yape"]);
+  assert.deepEqual(allowedMethods("MX"), ["cash", "debit", "credit", "transfer"]);
+});
+
+test("solo se recuerda información mínima y segura del espacio", () => {
+  assert.deepEqual(safeSpace({ kind: "box", id: 7, name: "Caja emergencia", currency: "PEN", ownerUid: "privado" }), {
+    kind: "box", id: "7", name: "Caja emergencia", currency: "PEN",
+  });
+});
+
+test("cada actualización de Telegram genera una identidad estable y segura", () => {
+  assert.equal(operationKey(12345), "12345");
+  assert.equal(personalIdForOperation("12345"), personalIdForOperation("12345"));
+  assert.ok(Number.isSafeInteger(personalIdForOperation("12345")));
+  assert.notEqual(personalIdForOperation("12345"), personalIdForOperation("12346"));
 });

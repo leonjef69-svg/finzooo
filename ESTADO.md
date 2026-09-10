@@ -27,16 +27,24 @@ Paquete Android: `com.finoapp.gastos`.
 - El bot abre un menú compacto con Personal, Familia y Cajas. Antes de registrar
   muestra el saldo, los ingresos y los gastos reales del espacio; en Personal
   también muestra el presupuesto o «Sin definir».
-- El registro guiado pide monto y descripción juntos para evitar una pantalla
-  adicional, después categoría, método de pago y confirmación. También conserva
-  el atajo escrito «gasto 20 comida» para quien prefiera ir más rápido.
+- El espacio elegido queda recordado. Gasto o Ingreso pide una sola línea como
+  «20 almuerzo Yape», deduce categoría y método sin IA y guarda inmediatamente.
+  Después ofrece Otro gasto, Otro ingreso, Más opciones, Cambiar espacio y
+  Deshacer; no obliga a volver al inicio después de cada movimiento.
+- También acepta frases directas como «pagué 20 taxi en efectivo». Si se omite
+  el método reutiliza el último de ese tipo; Más opciones permite corregirlo y,
+  en Personal, también corregir la categoría.
+- Familia y Cajas permiten transferir desde Personal. La confirmación muestra
+  ambos saldos y la operación enlazada se escribe de forma atómica: nunca se
+  descuenta un lado sin acreditar el otro. Los reintentos de Telegram llevan una
+  identidad estable para no duplicar movimientos.
 - Familia y Cajas se comprueban otra vez contra la membresía activa antes de leer
   o guardar. El servidor no confía únicamente en el botón que pulsó la persona.
 - El bot no usa inteligencia artificial ni guarda el token en la app o el repositorio.
 - Puede probarse localmente sin Blaze mientras la computadora permanezca
   encendida. Para funcionar permanentemente se desplegará la función cuando se
   active Blaze, después de la aprobación de Google Play.
-- Falta reiniciar el bot local y hacer la prueba real desde el teléfono. Para el
+- Falta hacer la prueba real completa desde el teléfono. Para el
   servicio permanente todavía faltan Blaze, secretos y webhook de producción.
 
 ## Acceso con Google
@@ -173,7 +181,7 @@ aceptar y descargar con la misma cuenta de Google.
 - TypeScript: aprobado.
 - ESLint: aprobado sin errores ni advertencias en el código de la app.
 - Expo Doctor: **18 de 18 comprobaciones aprobadas**.
-- Pruebas: **94 aprobadas**.
+- Pruebas: **101 aprobadas** más **15 específicas de Telegram**.
 - Auditores: **7 aprobados**.
 - El lector de Excel usa SheetJS 0.20.3 desde su distribución oficial; se
   retiró la versión 0.18.5 afectada por dos vulnerabilidades conocidas.

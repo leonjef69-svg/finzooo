@@ -56,7 +56,9 @@ También deja preparada la primera integración de Telegram: vínculo Premium po
 código temporal, confirmación obligatoria, desconexión desde Fino, intérprete
 determinista y ejecución local o mediante una función protegida por secretos.
 El bot local añade un menú compacto de Personal, Familia y Cajas, lee los totales
-reales de Fino y permite registrar con un formulario breve o una frase rápida.
+reales de Fino y permite registrar desde una sola línea. Recuerda el último
+espacio y método, ofrece corrección y deshacer, y transfiere de Personal a
+Familia o Cajas mediante una operación enlazada y confirmada.
 
 Calidad comprobada:
 

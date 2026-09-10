@@ -1,3 +1,4 @@
+import { isSafeMoneyAmount } from "@/utils/amount";
 import { esFoto } from "@/utils/iconosFavoritos";
 /**
  * EL CALENDARIO DE PAGOS — las cuentas, sin React ni Android (18/08/2026)
@@ -514,4 +515,3 @@ export function soloMonto(texto: string): string {
 export function pagosParaLaNube(lista: PagoProgramado[]): PagoProgramado[] {
   return lista.map((p) => (esFoto(p.icono ?? "") ? { ...p, icono: undefined } : p));
 }
-import { isSafeMoneyAmount } from "@/utils/amount";
