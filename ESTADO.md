@@ -33,6 +33,8 @@ Paquete Android: `com.finoapp.gastos`.
   escribirse en cualquier orden. Deduce categoría y método sin IA y guarda inmediatamente.
   El aviso y la confirmación presentan monto, descripción y método de pago en
   líneas separadas para que se entiendan al instante y admitan cifras largas.
+  La confirmación de transferencias también usa una línea por dato: monto,
+  origen, saldo posterior y destino; ninguna cifra comparte línea con otra.
   Después ofrece Otro gasto, Otro ingreso, Más opciones, Cambiar espacio y
   Deshacer; no obliga a volver al inicio después de cada movimiento.
 - También acepta frases directas como «pagué 20 taxi en efectivo». Si se omite

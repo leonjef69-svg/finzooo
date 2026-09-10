@@ -13,6 +13,7 @@ const {
   personalIdForOperation,
   quickPrompt,
   savedMovementMessage,
+  transferConfirmationMessage,
 } = require("../src/telegram-guided-handler");
 
 test("monto y descripción viajan juntos en un solo mensaje", () => {
@@ -90,4 +91,10 @@ test("la confirmación guardada separa monto descripción y método", () => {
     { name: "Personal", currency: "PEN" },
     { type: "expense", amount: 100, description: "comida", method: "yape" },
   ), "✅ Gasto guardado en Personal\n\nMonto: S/ 100.00\nDescripción: Comida\nMétodo de pago: Yape");
+});
+
+test("la transferencia se confirma con textos cortos y verticales", () => {
+  assert.equal(transferConfirmationMessage(
+    { name: "Caja Ana", currency: "PEN" }, 300, 500,
+  ), "↗️ Confirmar transferencia\n\nMonto: S/ 300.00\nDesde: Personal\nSaldo después: S/ 200.00\nPara: Caja Ana");
 });

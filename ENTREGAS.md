@@ -62,6 +62,8 @@ Familia o Cajas mediante una operación enlazada y confirmada. Los totales se
 muestran separados y el texto rápido acepta sus datos en cualquier orden.
 El formulario breve y la confirmación de Telegram muestran monto, descripción y
 método de pago verticalmente, evitando que textos o cifras largas queden apretados.
+Las transferencias de Personal hacia Familia o Cajas se confirman con monto,
+origen, saldo posterior y destino en líneas independientes.
 
 Calidad comprobada:
 

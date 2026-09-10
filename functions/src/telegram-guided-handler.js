@@ -284,7 +284,11 @@ async function showTransferConfirmation(db, token, chatId, connection, flow, val
   if (value.amount > available) throw new Error("INSUFFICIENT");
   const nonce = crypto.randomBytes(5).toString("hex"), next = { ...flow, step: "transfer_confirm", amount: value.amount, description: value.description, nonce };
   await saveFlow(db, chatId, next);
-  return send(token, chatId, `Transferir ${money(value.amount, flow.space.currency)} desde Personal a ${flow.space.name}?\n\nPersonal: ${money(available, flow.space.currency)} → ${money(available - value.amount, flow.space.currency)}\n${flow.space.name}: +${money(value.amount, flow.space.currency)}`, { inline_keyboard: [[{ text: "✅ Transferir", callback_data: `transfer_ok:${nonce}` }, { text: "Cancelar", callback_data: "cancel" }]] });
+  return send(token, chatId, transferConfirmationMessage(flow.space, value.amount, available), { inline_keyboard: [[{ text: "✅ Transferir", callback_data: `transfer_ok:${nonce}` }, { text: "Cancelar", callback_data: "cancel" }]] });
+}
+
+function transferConfirmationMessage(space, amount, available) {
+  return `↗️ Confirmar transferencia\n\nMonto: ${money(amount, space.currency)}\nDesde: Personal\nSaldo después: ${money(available - amount, space.currency)}\nPara: ${space.name}`;
 }
 
 async function confirmTransfer(db, token, chatId, connection, nonce, operationId) {
@@ -482,4 +486,4 @@ async function handleTelegramUpdate({ db, token, update }) {
   }
 }
 
-module.exports = { handleTelegramUpdate, premium, previousBalance, personalFigures, sharedFigures, amountDescription, allowedMethods, safeSpace, operationKey, personalIdForOperation, quickPrompt, savedMovementMessage };
+module.exports = { handleTelegramUpdate, premium, previousBalance, personalFigures, sharedFigures, amountDescription, allowedMethods, safeSpace, operationKey, personalIdForOperation, quickPrompt, savedMovementMessage, transferConfirmationMessage };
