@@ -158,7 +158,7 @@ async function showSpace(db, token, chatId, connection, space, heading = "") {
   await Promise.all([saveFlow(db, chatId, { kind: "session", uid: connection.uid, space: safeSpace(space) }), remember(db, chatId, space)]);
   const budget = space.kind === "personal" ? `\n🎯 Presupuesto: ${figures.budget > 0 ? money(figures.budget, space.currency) : "Sin definir"}` : "";
   const prefix = heading ? `${heading}\n\n` : "";
-  return send(token, chatId, `${prefix}📌 ${space.name}\n💰 Saldo: ${money(figures.balance, space.currency)}${budget}\n🟢 Ingresos: ${money(figures.income, space.currency)} · 🔴 Gastos: ${money(figures.spent, space.currency)}`, spaceKeyboard(space, String(connection.user.userCurrency || "PEN")));
+  return send(token, chatId, `${prefix}📌 ${space.name}\n💰 Saldo: ${money(figures.balance, space.currency)}${budget}\n🟢 Ingresos: ${money(figures.income, space.currency)}\n🔴 Gastos: ${money(figures.spent, space.currency)}`, spaceKeyboard(space, String(connection.user.userCurrency || "PEN")));
 }
 
 function amountDescription(text, type) {
@@ -376,7 +376,7 @@ async function beginQuick(db, token, chatId, connection, space, type) {
   if (!["expense", "income"].includes(type)) throw new Error("EXPIRED");
   await saveFlow(db, chatId, { kind: "quick", step: "quick", uid: connection.uid, space: safeSpace(space), type });
   const fallback = METHOD_NAMES[quickOptions(connection, type).fallbackMethod] || "Efectivo";
-  return send(token, chatId, `${type === "expense" ? "Gasto" : "Ingreso"} en ${space.name}.\nEscribe monto, descripción y método en una línea:\n20 almuerzo Yape\n\nSi omites el método usaré ${fallback}.`);
+  return send(token, chatId, `${type === "expense" ? "➖ Gasto" : "➕ Ingreso"} · ${space.name}\nMonto, descripción y método.\nEj.: 20 almuerzo Yape\nCualquier orden. Sin método: ${fallback}.`);
 }
 async function cancelToSpace(db, token, chatId, connection, heading = "Operación cancelada.") {
   return showSpace(db, token, chatId, connection, await resolveRememberedSpace(db, connection), heading);

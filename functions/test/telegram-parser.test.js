@@ -22,6 +22,13 @@ test("registra monto, descripción y método desde una sola línea", () => {
   });
 });
 
+test("acepta monto, descripción y método en cualquier orden", () => {
+  const expected = { type: "expense", amount: 20, category: "comida", description: "almuerzo", method: "yape" };
+  assert.deepEqual(parseQuickEntry("Yape almuerzo 20", "expense", { country: "PE" }), expected);
+  assert.deepEqual(parseQuickEntry("almuerzo 20 Yape", "expense", { country: "PE" }), expected);
+  assert.deepEqual(parseQuickEntry("20, almuerzo, Yape", "expense", { country: "PE" }), expected);
+});
+
 test("entiende frases directas sin inteligencia artificial", () => {
   assert.deepEqual(parseNaturalMovement("Pagué 18 taxi en efectivo", { country: "PE" }), {
     type: "expense", amount: 18, category: "transporte", description: "taxi", method: "cash",

@@ -58,7 +58,8 @@ determinista y ejecución local o mediante una función protegida por secretos.
 El bot local añade un menú compacto de Personal, Familia y Cajas, lee los totales
 reales de Fino y permite registrar desde una sola línea. Recuerda el último
 espacio y método, ofrece corrección y deshacer, y transfiere de Personal a
-Familia o Cajas mediante una operación enlazada y confirmada.
+Familia o Cajas mediante una operación enlazada y confirmada. Los totales se
+muestran separados y el texto rápido acepta sus datos en cualquier orden.
 
 Calidad comprobada:
 

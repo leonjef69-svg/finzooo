@@ -26,9 +26,11 @@ Paquete Android: `com.finoapp.gastos`.
   aleatorio de un solo uso que vence en diez minutos.
 - El bot abre un menú compacto con Personal, Familia y Cajas. Antes de registrar
   muestra el saldo, los ingresos y los gastos reales del espacio; en Personal
-  también muestra el presupuesto o «Sin definir».
+  también muestra el presupuesto o «Sin definir». Ingresos y Gastos ocupan líneas
+  separadas para que ninguna cifra larga quede apretada.
 - El espacio elegido queda recordado. Gasto o Ingreso pide una sola línea como
-  «20 almuerzo Yape», deduce categoría y método sin IA y guarda inmediatamente.
+  «20 almuerzo Yape» en un aviso breve; monto, descripción y método pueden
+  escribirse en cualquier orden. Deduce categoría y método sin IA y guarda inmediatamente.
   Después ofrece Otro gasto, Otro ingreso, Más opciones, Cambiar espacio y
   Deshacer; no obliga a volver al inicio después de cada movimiento.
 - También acepta frases directas como «pagué 20 taxi en efectivo». Si se omite

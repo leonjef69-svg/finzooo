@@ -79,15 +79,15 @@ function inferCategory(type, text, customCategories = []) {
 function stripMethod(text, method) {
   if (!METHODS.some(([id]) => id === method)) return String(text || "").trim();
   return String(text || "")
-    .replace(/(?:^|\s)(?:tarjeta\s+de\s+)?(?:d[eé]bito|cr[eé]dito)(?=$|\s)/ig, " ")
-    .replace(/(?:^|\s)(?:transferencia(?:\s+bancaria)?|efectivo|cash|yape|plin)(?=$|\s)/ig, " ")
+    .replace(/(?:^|[\s,;])(?:tarjeta\s+de\s+)?(?:d[eé]bito|cr[eé]dito)(?=$|[\s,;.])/ig, " ")
+    .replace(/(?:^|[\s,;])(?:transferencia(?:\s+bancaria)?|efectivo|cash|yape|plin)(?=$|[\s,;.])/ig, " ")
     .replace(/\s+/g, " ").trim();
 }
 
 function parseQuickEntry(text, type, options = {}) {
   if (!["expense", "income"].includes(type)) return null;
   let value = String(text || "").trim().replace(/\s+/g, " ");
-  const amountMatch = value.match(/(?:^|\s)(?:s\/?\s*)?([\d.,]+)(?=$|\s)/i);
+  const amountMatch = value.match(/(?:^|[\s,;])(?:s\/?\s*)?([\d.,]+)(?=$|[\s,;])/i);
   if (!amountMatch) return null;
   const amount = cleanAmount(amountMatch[1]);
   if (amount === null) return null;
@@ -95,7 +95,8 @@ function parseQuickEntry(text, type, options = {}) {
   value = value.replace(amountMatch[0], " ");
   value = stripMethod(value, method)
     .replace(/^(?:gasto|gast[eé]|pagu[eé]|compr[eé]|ingreso|ingres[eé]|cobr[eé]|recib[ií])\s+/i, "")
-    .replace(/^(?:por|de|en|con)\s+/i, "").replace(/\s+(?:por|de|en|con)$/i, "").replace(/\s+/g, " ").trim();
+    .replace(/^(?:por|de|en|con)\s+/i, "").replace(/\s+(?:por|de|en|con)$/i, "")
+    .replace(/^[\s,.;:-]+|[\s,.;:-]+$/g, "").replace(/\s+/g, " ").trim();
   const description = value.slice(0, 120) || (type === "expense" ? "Gasto desde Telegram" : "Ingreso desde Telegram");
   return { type, amount, category: inferCategory(type, description, options.customCategories), description, method };
 }
