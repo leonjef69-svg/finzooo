@@ -1,4 +1,4 @@
-// Comprueba el documento que se exporta: los graficos nuevos y la rosquilla.
+// Comprueba el documento que se exporta: resumen y gráficos compactos.
 import {
   ANCHO_MAX_BARRA,
   buildPdfHtml,
@@ -103,9 +103,9 @@ console.log("\n--- LOS GRAFICOS DE REPORTES EN EL PDF ---");
   const h = html([tx({ amount: 99 }), tx({ amount: 70, categoryLabel: "Transporte" })], true, limites, meses);
 
   ok(h.includes("Reparto por categoría"), "sale el reparto por categoría");
-  ok(h.includes("<svg"), "y con su rosquilla dibujada, no como imagen");
+  ok(!h.includes('<svg width="156"'), "usa barras legibles y no una rosquilla que quite espacio");
   ok(h.includes("Presupuestos por categoría"), "salen los presupuestos por categoría");
-  ok(h.includes("S/ 99.00 / S/ 100.00"), "con lo gastado y el límite de cada uno");
+  ok(h.includes("S/ 99.00") && h.includes("de S/ 100.00"), "con lo gastado, el límite y su porcentaje");
   ok(h.includes("Gasto por mes"), "sale el gasto por mes");
   ok(h.includes("May") && h.includes("Jun"), "con sus meses");
   ok(h.includes("Día a día"), "y el gasto diario");
@@ -145,6 +145,28 @@ console.log("\n--- SIN GRAFICOS SE VA TODO ---");
   ok(h.includes("Total"), "y el total también");
 }
 
+console.log("\n--- EL FILTRO NO MEZCLA EL RESUMEN CON LAS FILAS ---");
+{
+  const h = buildPdfHtml({
+    logoDataUri: "data:image/png;base64,AAAA",
+    userName: "Diana",
+    title: "Reporte de ingresos",
+    monthLabel: "Julio 2026",
+    txs: [tx({ type: "income", amount: 40, categoryLabel: "Salario" })],
+    daysInMonth: 31,
+    fmt,
+    texts: TEXTS,
+    charts: true,
+    categoryBudgets: [],
+    monthly: [],
+    generatedAt: "31 de julio",
+    summary: { available: 70, income: 40, expenses: 90, result: -50 },
+  });
+  ok(h.includes("Salario"), "un PDF filtrado a ingresos grafica sus ingresos aunque el mes completo tenga gastos");
+  ok(h.includes("Total: <span style=\"color:#059669;\">S/ 40.00</span>"), "el total inferior suma solo las filas exportadas");
+  ok(h.includes("S/ -50.00"), "el resultado mensual completo permanece separado en el resumen");
+}
+
 console.log("\n--- LA VISTA PREVIA ES EL MISMO DOCUMENTO ---");
 {
   // La pantalla llama a construirHtml() para las dos cosas. Aqui se comprueba
@@ -168,14 +190,14 @@ console.log("\n--- EL MONTO SOBRE CADA BARRA DEL GASTO DIARIO ---");
   const h = html([tx({ day: 3, amount: 10 }), tx({ day: 31, amount: 1234.56 })]);
   ok(h.includes("S/ 10.00"), "sale el monto del día 3");
   ok(h.includes("S/ 1234.56"), "y el del día 31, entero y sin recortar");
-  ok(h.includes(">3</text>") && h.includes(">31</text>"), "y debajo el número de cada día");
+  ok(h.includes("Día 3") && h.includes("Día 31"), "y cada monto queda en una fila con su día");
 }
 {
   // Los días sin gasto ya no ocupan columna: es lo que hace que quepa el
   // monto. Con dos días de gasto se dibujan dos columnas, no treinta y una.
   const h = html([tx({ day: 3, amount: 10 }), tx({ day: 31, amount: 20 })]);
-  const barras = (h.match(/<rect [^>]*rx="2"/g) || []).length;
-  ok(barras === 2, `se dibujan 2 barras y no 31 (salieron ${barras})`);
+  const filasDia = (h.match(/<td style="width:18%;[^>]*>Día /g) || []).length;
+  ok(filasDia === 2, `se dibujan 2 filas y no 31 (salieron ${filasDia})`);
 }
 {
   // Con pocos días los montos van tumbados; con muchos, de pie. Girarlos es
@@ -202,7 +224,7 @@ console.log("\n--- EL MONTO SOBRE CADA BARRA DEL GASTO DIARIO ---");
   ok(L.barW >= 4, "y nunca desaparece");
 }
 
-console.log("\n--- LAS COLUMNAS POR MES TAMPOCO SE HACEN GIGANTES ---");
+console.log("\n--- LOS MESES TAMPOCO SE HACEN GIGANTES ---");
 {
   // EL FALLO, reportado con captura el 07/08/2026: *"las barras tienen un tamaño
   // desproporcional, deberían tener un tamaño normal"*. Con dos meses, cada
@@ -218,15 +240,9 @@ console.log("\n--- LAS COLUMNAS POR MES TAMPOCO SE HACEN GIGANTES ---");
     { label: "Ago", value: 50 },
   ]);
 
-  // Cada columna tiene que llevar su tope de ancho, y centrada: sin el centrado,
-  // el tope la deja pegada a la izquierda de su casilla y se ve torcida.
-  const conTope = (dosMeses.match(new RegExp(`max-width:${ANCHO_MAX_BARRA}px;margin:0 auto`, "g")) ?? []).length;
-  ok(conTope === 2, `las dos columnas del mes llevan tope y van centradas (${conTope})`);
-
-  // Y ninguna barra del gráfico por mes puede quedarse sin tope. Se busca el
-  // patrón contrario: un alto puesto sin ancho máximo delante.
-  const sinTope = /<div style="background:#059669;height:\d+px/.test(dosMeses);
-  ok(!sinTope, "y no queda ninguna sin él");
+  const filas = (dosMeses.match(/font-size:9px;color:#475569;">(?:Jul|Ago)/g) ?? []).length;
+  ok(filas === 2, `los dos meses van en filas independientes (${filas})`);
+  ok(!dosMeses.includes("height:70px"), "y ninguna barra crece hasta ocupar media hoja");
 }
 
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);

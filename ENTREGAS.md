@@ -16,6 +16,7 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 | 08/09/2026 | 1.0.6 | `08sep-auditoria-pre-play` | Auditoría integral previa a Play Store |
 | 09/09/2026 | 1.0.6 | `09sep-telegram-seguro` | Integración segura de Telegram preparada para prueba local |
 | 10/09/2026 | 1.0.6 | `10sep-responsive-android-ios` | Correcciones responsive para Android y iPhone listas en código |
+| 10/09/2026 | 1.0.6 | `10sep-exportes-por-espacio` | PDF profesional y exportación separada para Personal, Familia y Cajas |
 
 La versión 1.0.3 contiene el acceso Google con diagnóstico, copia de seguridad,
 Modo Negocio, registro automático, voz, rendimiento, calendario, exportación,

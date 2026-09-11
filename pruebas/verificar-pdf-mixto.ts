@@ -89,13 +89,14 @@ console.log("\n--- LA LISTA DE MOVIMIENTOS SALE ENTERA ---");
   ok(html.includes("-S/ 50.00"), "y el gasto con su menos");
 }
 
-console.log("\n--- UNA SOLA ROSQUILLA, LA DE GASTOS ---");
+console.log("\n--- UN SOLO REPARTO COMPACTO, EL DE GASTOS ---");
 {
   // Lo pedido: la lista con las dos cosas, y de grafico solo el gasto por
   // categoria. Una rosquilla entera para dos categorias de ingreso empujaba
   // la lista a la hoja siguiente a cambio de dos lineas de informacion.
   const g = zonaDeGraficos(armar(MIXTO));
-  ok((g.match(/<svg width="156"/g) || []).length === 1, "una sola rosquilla en los graficos");
+  ok(!g.includes('<svg width="156"'), "no usa una rosquilla que quite media hoja");
+  ok((g.match(/Reparto por categoria/g) || []).length === 1, "hay un solo reparto por categoría");
   ok(g.includes("S/ 145.00"), "y es la de gastos: su total son los 145");
   // El total de ingresos SI sale, pero en la tarjeta de arriba, no en una
   // rosquilla. Por eso aqui no vale buscar el numero: se mira que no haya un
@@ -149,10 +150,7 @@ console.log("\n--- SOLO INGRESOS SIGUE FUNCIONANDO ---");
   ok(!html.includes("Comida"), "y ni rastro de los gastos");
   // Con un solo lado no hace falta distinguir nada: vuelve el titulo normal.
   ok(g.includes("Reparto por categoria") && !g.includes("· Gastos"), "con un solo tipo dentro, el titulo va sin aclaracion");
-  // Una sola rosquilla: la de ingresos. La palabra "Gastos" sale igual en la
-  // tarjeta de totales de arriba, asi que buscarla no serviria para saber si
-  // hay un bloque de gastos vacio dibujado.
-  ok((g.match(/<svg width="156"/g) || []).length === 1, "una sola rosquilla, la de ingresos");
+  ok(!g.includes('<svg width="156"'), "el reparto de ingresos también usa barras compactas");
 }
 
 console.log("\n--- SOLO GASTOS SIGUE FUNCIONANDO ---");
@@ -192,8 +190,8 @@ console.log("\n--- Y APRETAR CAMBIA EL DOCUMENTO DE VERDAD ---");
   const suelto = armar(MIXTO);
   ok(apretado.includes("padding:3px 8px"), "las filas van mas juntas");
   ok(suelto.includes("padding:6px 8px"), "y con pocos movimientos siguen sueltas");
-  ok(apretado.includes('<svg width="124"'), "la rosquilla se encoge");
-  ok(suelto.includes('<svg width="156"'), "y con sitio de sobra se queda grande");
+  ok(!apretado.includes('<svg width="124"'), "el documento apretado no reserva espacio para rosquillas");
+  ok(!suelto.includes('<svg width="156"'), "y el documento suelto tampoco desperdicia ese espacio");
   ok(apretado.includes("margin-top:11px"), "los bloques se acercan");
   ok(suelto.includes("margin-top:20px"), "o no, si no hace falta");
   // Lo que NUNCA cambia: la informacion.

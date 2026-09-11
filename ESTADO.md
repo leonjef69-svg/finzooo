@@ -13,6 +13,20 @@ Firebase Authentication, Firestore y módulos Android propios.
 
 Paquete Android: `com.finoapp.gastos`.
 
+## Exportaciones por espacio y PDF profesional (10/09/2026)
+
+- La exportación manual y automática permite elegir Personal, la Familia activa
+  o una Caja concreta. PDF, Excel y CSV usan exactamente el mismo espacio y no
+  mezclan movimientos entre ellos.
+- El PDF muestra arriba el saldo disponible y, cuando corresponde, presupuesto,
+  saldo anterior, ingresos, gastos y resultado del mes. El total inferior sigue
+  representando únicamente las filas exportadas.
+- Los gráficos usan barras horizontales compactas y abreviación K/M/B/T para que
+  números extremos no deformen la página. La tabla ajusta textos largos y repite
+  sus encabezados si continúa en otra hoja.
+- Si un espacio configurado para exportación automática deja de estar disponible,
+  Fino lo informa y no sustituye silenciosamente sus datos por los de Personal.
+
 ## Auditoría de Personal, Familia y Cajas (10/09/2026)
 
 - Inicio y el cálculo interno usan una sola cuenta para el saldo de Personal:

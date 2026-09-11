@@ -28,7 +28,7 @@ const APP_VERSION = Constants.expoConfig?.version ?? "1.0.6";
  * La versión comercial no sirve para distinguir dos ajustes de la misma entrega.
  * Esta sí.
  */
-const CODE_MARKER = "10sep-responsive-android-ios";
+const CODE_MARKER = "10sep-exportes-por-espacio";
 
 export default function AppInfo({ onBack }: { onBack: () => void }) {
   const { t, showToast, verComoGratis, setVerComoGratis, tienePremiumDeVerdad } = useAppData();

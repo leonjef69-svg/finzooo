@@ -15,8 +15,6 @@
 
 import { loadJSON, saveJSON, flushPendingSaves, STORAGE_KEYS } from "@/utils/storage";
 import { monthNamesFor, translations } from "@/constants/i18n";
-import { currencySymbolFor } from "@/constants/currencies";
-import { fmt as formatAmount } from "@/utils/format";
 import { htmlDelReporte } from "@/utils/reportePdfDatos";
 import { File, Paths } from "expo-file-system";
 import { archivoCsv, archivoExcel, filasDelReporte } from "@/utils/reporteArchivo";
@@ -44,6 +42,11 @@ import {
   type ScheduledExport,
 } from "@/utils/scheduledExport";
 import type { Profile, Transaction } from "@/types";
+import {
+  cargarEspaciosExportables,
+  formateadorDelEspacio,
+  resumenFinanciero,
+} from "@/utils/exportSpaces";
 
 /**
  * Por qué no se hizo el reporte, para poder saberlo después.
@@ -62,6 +65,7 @@ type ResultadoDeFondo =
   | "pdf-vacio"
   | "destino-no-automatico"
   | "sin-movimientos"
+  | "espacio-no-disponible"
   | "error";
 
 const CLAVE_ULTIMO = "finzo:exportacionEnFondo.ultimo";
@@ -158,14 +162,27 @@ export async function exportarEnFondo(
   if (!esDestinoAutomatico(schedule.destination)) return await apuntar("destino-no-automatico");
 
   try {
-    const [movimientos, perfil] = await Promise.all([
+    const [movimientosPersonales, perfil, budgets, carryoverCleared] = await Promise.all([
       loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []),
       loadJSON<Partial<Profile>>(STORAGE_KEYS.profile, {}),
+      loadJSON<Record<string, number>>(STORAGE_KEYS.budgets, {}),
+      loadJSON<string[]>(STORAGE_KEYS.carryoverCleared, []),
     ]);
 
     const idioma = perfil.userLanguage ?? "es";
     const textos = (translations as Record<string, Record<string, string>>)[idioma] ?? {};
     const t = (clave: string) => textos[clave] ?? clave;
+    const espacios = await cargarEspaciosExportables(
+      movimientosPersonales,
+      perfil.userCurrency ?? "PEN",
+      t("spaces.personal"),
+      t("spaces.family"),
+      t("spaces.boxes"),
+    );
+    const espacio = espacios.find((item) => item.id === (schedule.spaceId || "personal"));
+    if (!espacio) return await apuntar("espacio-no-disponible");
+    const movimientos = espacio.transactions;
+    const fmtEspacio = formateadorDelEspacio(espacio);
 
     // El mes que toca, con la misma regla que usa la app: un reporte mensual
     // que sale el día 1 trae el mes que TERMINÓ, no el que acaba de empezar.
@@ -197,7 +214,7 @@ export async function exportarEnFondo(
     const fileName = buildFileName({
       mode: schedule.fileNameMode,
       custom: schedule.fileName,
-      typeLabel: etiquetaTipo,
+      typeLabel: `${etiquetaTipo} - ${espacio.name}`,
       dateKey: toDateKey(ahora),
       extension: schedule.format,
     });
@@ -224,16 +241,10 @@ export async function exportarEnFondo(
         charts: schedule.charts ?? false,
         userName: perfil.userName ?? "",
         nombresDeMes: monthNamesFor(idioma),
-        presupuestos: await loadJSON<Record<string, number>>(STORAGE_KEYS.categoryBudgets, {}),
-        // El MISMO formateador que usa la app, con la moneda del perfil. Uno
-        // hecho aquí a mano ("S/ 12.50") saldría distinto del de la pantalla en
-        // cuanto alguien cambie el formato en un sitio y no en el otro.
-        fmt: (n) =>
-          formatAmount(
-            n,
-            currencySymbolFor(perfil.userCurrency ?? "PEN"),
-            perfil.userCurrency ?? "PEN"
-          ),
+        presupuestos: espacio.kind === "personal"
+          ? await loadJSON<Record<string, number>>(STORAGE_KEYS.categoryBudgets, {})
+          : {},
+        fmt: fmtEspacio,
         titulo: t(
           schedule.type === "expense"
             ? "exportPdf.pdfTitleExpenses"
@@ -242,6 +253,8 @@ export async function exportarEnFondo(
               : "exportPdf.pdfTitleAll"
         ),
         etiquetaDelMes: `${monthNamesFor(idioma)[Number(mes.slice(5, 7)) - 1]} ${mes.slice(0, 4)}`,
+        nombreDelEspacio: espacio.name,
+        resumen: resumenFinanciero(espacio, mes, budgets, carryoverCleared),
         t,
       });
       // La ruta se arma con la MISMA pieza que usa el Excel (new File(Paths.cache,

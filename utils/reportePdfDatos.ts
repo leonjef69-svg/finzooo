@@ -19,6 +19,7 @@ import { methodLabel } from "@/constants/i18n";
 import { LOGO_DATA_URI } from "@/constants/logo";
 import { fmtDate, monthKey } from "@/utils/format";
 import { buildPdfHtml, type PdfTx } from "@/utils/exportPdfHtml";
+import type { ExportFinancialSummary } from "@/utils/exportSpaces";
 import { toDateKey } from "@/utils/scheduledExport";
 import type { Transaction } from "@/types";
 
@@ -43,6 +44,9 @@ type DatosDelPdf = {
   titulo: string;
   /** El mes en palabras ("Julio 2026"). */
   etiquetaDelMes: string;
+  /** Bolsillo exacto que se está exportando; nunca se mezclan entre sí. */
+  nombreDelEspacio?: string;
+  resumen?: ExportFinancialSummary;
   t: (clave: string, valores?: Record<string, string | number>) => string;
 };
 
@@ -69,6 +73,11 @@ export function htmlDelReporte(d: DatosDelPdf): string {
       internalTransfer: Boolean(tx.internalTransfer),
     };
   });
+  const resumen = d.resumen ?? (() => {
+    const income = movimientos.filter((item) => item.type === "income" && !item.internalTransfer).reduce((sum, item) => sum + item.amount, 0);
+    const expenses = movimientos.filter((item) => item.type === "expense" && !item.internalTransfer).reduce((sum, item) => sum + item.amount, 0);
+    return { available: income - expenses, income, expenses, result: income - expenses };
+  })();
 
   // Los límites por categoría, con lo gastado DEL MES ELEGIDO.
   //
@@ -131,6 +140,7 @@ export function htmlDelReporte(d: DatosDelPdf): string {
     userName: d.userName,
     title: d.titulo,
     monthLabel: d.etiquetaDelMes,
+    spaceName: d.nombreDelEspacio || t("spaces.personal"),
     txs: pdfTxs,
     daysInMonth,
     fmt: d.fmt,
@@ -145,6 +155,7 @@ export function htmlDelReporte(d: DatosDelPdf): string {
     // Greenwich, y Perú va cinco horas por detrás. Un PDF exportado a las 8 de
     // la noche del 30 habría salido fechado el 31.
     generatedAt: fmtDate(toDateKey(new Date()), nombresDeMes),
+    summary: resumen,
     texts: {
       colDate: t("exportPdf.colDate"),
       colTime: t("exportPdf.colTime"),
@@ -157,6 +168,11 @@ export function htmlDelReporte(d: DatosDelPdf): string {
       income: t("exportPdf.income"),
       expenses: t("exportPdf.expenses"),
       balance: t("exportPdf.balance"),
+      available: t("exportPdf.available"),
+      budget: t("exportPdf.budget"),
+      previousBalance: t("exportPdf.previousBalance"),
+      periodResult: t("exportPdf.periodResult"),
+      space: t("exportPdf.space"),
       byCategory: t("exportPdf.chartByCategory"),
       byCategoryBudget: t("categoryBudgets.rowLabel"),
       byMonth: t("reports.byMonth"),

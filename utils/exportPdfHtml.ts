@@ -39,6 +39,11 @@ export type PdfTexts = {
   income: string;
   expenses: string;
   balance: string;
+  available?: string;
+  budget?: string;
+  previousBalance?: string;
+  periodResult?: string;
+  space?: string;
   byCategory: string;
   byCategoryBudget: string;
   byMonth: string;
@@ -63,6 +68,7 @@ export type PdfOptions = {
   userName: string;
   title: string;
   monthLabel: string;
+  spaceName?: string;
   txs: PdfTx[];
   daysInMonth: number;
   /** Formatea un monto con su moneda ("S/ 1,234.50"). */
@@ -76,6 +82,14 @@ export type PdfOptions = {
   monthly: PdfMonth[];
   /** Fecha de generación, ya escrita. */
   generatedAt: string;
+  summary?: {
+    available: number;
+    income: number;
+    expenses: number;
+    result: number;
+    budget?: number;
+    previousBalance?: number;
+  };
 };
 
 const VERDE = "#059669";
@@ -99,6 +113,33 @@ const ROJO = "#e11d48";
  * que este proyecto repite. Compartiendo el número no puede volver a pasar.
  */
 export const ANCHO_MAX_BARRA = 30;
+
+/**
+ * Los gráficos necesitan una cifra que se lea de un vistazo. El valor exacto
+ * sigue en la tabla de movimientos; aquí se abrevia únicamente cuando ocuparía
+ * más que su columna. K, M, B y T evitan que una cifra enorme empuje la barra
+ * y las demás etiquetas fuera de la hoja.
+ */
+export function compactChartAmount(amount: number, fmt: (n: number) => string): string {
+  const exacto = fmt(amount);
+  if (exacto.length <= 14) return exacto;
+
+  const absoluto = Math.abs(amount);
+  const unidades = [
+    { valor: 1e12, sufijo: "T" },
+    { valor: 1e9, sufijo: "B" },
+    { valor: 1e6, sufijo: "M" },
+    { valor: 1e3, sufijo: "K" },
+  ];
+  const unidad = unidades.find((u) => absoluto >= u.valor);
+  if (!unidad) return exacto;
+
+  const escalado = amount / unidad.valor;
+  const decimales = Math.abs(escalado) >= 100 ? 0 : Math.abs(escalado) >= 10 ? 1 : 2;
+  const numero = escalado.toFixed(decimales).replace(/\.0+$|(?<=\.[0-9])0$/g, "");
+  const moneda = exacto.replace(/[\d\s.,'’\-]/g, "").trim();
+  return `${moneda ? `${moneda} ` : ""}${numero} ${unidad.sufijo}`;
+}
 
 /**
  * Escapa el texto que escribió la persona antes de meterlo en el HTML.
@@ -193,46 +234,6 @@ export function donutSlice(
   ].join(" ");
 }
 
-/**
- * La rosquilla de gastos por categoría, igual que la de Reportes.
- *
- * Va en SVG y no como imagen: un PDF se imprime y se le hace zoom, y una
- * imagen se ve pastosa. Dibujado así se mantiene nítido a cualquier tamaño.
- */
-function rosquilla(
-  filas: { label: string; color: string; amount: number; share: number }[],
-  total: number,
-  fmt: (n: number) => string,
-  totalLabel: string,
-  /** Lado del dibujo. Se encoge cuando el documento va justo de hoja. */
-  lado = 156
-): string {
-  // Todo se mide contra el lado para que encoja entero y no a trozos.
-  const CX = lado / 2;
-  const CY = lado / 2;
-  const R_FUERA = lado * 0.423;
-  const R_DENTRO = lado * 0.282;
-
-  let acumulado = 0;
-  const trozos = filas
-    .map((f) => {
-      const desde = acumulado;
-      acumulado += f.share;
-      // Una categoría que no llega al medio grado no se dibuja: saldría como
-      // una raya sobre el borde y ensuciaría el resto.
-      if (f.share < 0.0015) return "";
-      return `<path d="${donutSlice(desde, acumulado, CX, CY, R_FUERA, R_DENTRO)}" fill="${f.color}" />`;
-    })
-    .join("");
-
-  return `
-    <svg width="${lado}" height="${lado}" viewBox="0 0 ${lado} ${lado}">
-      ${trozos}
-      <text x="${CX}" y="${CY - 4}" text-anchor="middle" font-size="9" fill="#64748b">${esc(totalLabel)}</text>
-      <text x="${CX}" y="${CY + 11}" text-anchor="middle" font-size="13" font-weight="bold" fill="#0f172a">${esc(fmt(total))}</text>
-    </svg>`;
-}
-
 /** Los límites por categoría: cuánto se lleva de cada uno. */
 function barrasPresupuesto(filas: PdfCategoryBudget[], fmt: (n: number) => string): string {
   return filas
@@ -243,14 +244,15 @@ function barrasPresupuesto(filas: PdfCategoryBudget[], fmt: (n: number) => strin
       const color = f.spent > f.limit ? ROJO : f.color;
       return `
         <tr>
-          <td style="padding:3px 8px 3px 0;font-size:10px;white-space:nowrap;">${esc(f.name)}</td>
-          <td style="padding:3px 0;width:100%;">
-            <div style="background:#f1f5f9;border-radius:3px;height:10px;">
-              <div style="background:${color};width:${(parte * 100).toFixed(1)}%;height:10px;border-radius:3px;"></div>
+          <td style="padding:5px 10px 5px 0;font-size:9px;width:24%;overflow-wrap:anywhere;">${esc(f.name)}</td>
+          <td style="padding:5px 0;width:52%;vertical-align:middle;">
+            <div style="background:#e2e8f0;border-radius:5px;height:8px;overflow:hidden;">
+              <div style="background:${color};width:${(parte * 100).toFixed(1)}%;height:8px;border-radius:5px;"></div>
             </div>
           </td>
-          <td style="padding:3px 0 3px 8px;font-size:9px;text-align:right;white-space:nowrap;color:#64748b;">
-            ${esc(fmt(f.spent))} / ${esc(fmt(f.limit))}
+          <td style="padding:5px 0 5px 10px;width:24%;font-size:8px;text-align:right;color:#475569;line-height:1.35;">
+            <strong style="color:${color};">${esc(compactChartAmount(f.spent, fmt))}</strong><br />
+            de ${esc(compactChartAmount(f.limit, fmt))} · ${Math.round((f.limit > 0 ? f.spent / f.limit : 0) * 100)}%
           </td>
         </tr>`;
     })
@@ -261,26 +263,21 @@ function barrasPresupuesto(filas: PdfCategoryBudget[], fmt: (n: number) => strin
 function barrasPorMes(meses: PdfMonth[], fmt: (n: number) => string): string {
   const max = Math.max(...meses.map((m) => m.value), 0);
   if (max <= 0) return "";
-  const columnas = meses
+  const filas = meses
     .map((m) => {
-      const alto = Math.max(3, Math.round((m.value / max) * 70));
-      // La columna va CENTRADA y con tope de ancho. Sin el tope se estiraba hasta
-      // llenar su casilla, y con dos meses eso es media hoja por barra: dos
-      // bloques enormes en vez de dos columnas. Ver ANCHO_MAX_BARRA.
-      return `<td style="vertical-align:bottom;padding:0 10px;text-align:center;">
-          <div style="font-size:9px;color:#334155;margin-bottom:3px;">${esc(fmt(m.value))}</div>
-          <div style="max-width:${ANCHO_MAX_BARRA}px;margin:0 auto;background:${VERDE};height:${alto}px;border-radius:3px 3px 0 0;"></div>
-        </td>`;
+      const ancho = Math.max(2, (m.value / max) * 100);
+      return `<tr>
+        <td style="width:18%;padding:5px 10px 5px 0;font-size:9px;color:#475569;">${esc(m.label)}</td>
+        <td style="width:58%;padding:5px 0;vertical-align:middle;">
+          <div style="height:8px;background:#e2e8f0;border-radius:5px;overflow:hidden;">
+            <div style="height:8px;width:${ancho.toFixed(1)}%;background:${VERDE};border-radius:5px;"></div>
+          </div>
+        </td>
+        <td style="width:24%;padding:5px 0 5px 10px;text-align:right;font-size:9px;font-weight:bold;color:#0f766e;">${esc(compactChartAmount(m.value, fmt))}</td>
+      </tr>`;
     })
     .join("");
-  const etiquetas = meses
-    .map((m) => `<td style="text-align:center;font-size:9px;color:#64748b;padding-top:4px;">${esc(m.label)}</td>`)
-    .join("");
-  return `
-    <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
-      <tr style="height:86px;">${columnas}</tr>
-      <tr>${etiquetas}</tr>
-    </table>`;
+  return `<table style="width:100%;border-collapse:collapse;table-layout:fixed;">${filas}</table>`;
 }
 
 function barrasPorCategoria(
@@ -295,14 +292,17 @@ function barrasPorCategoria(
     .map(
       (f) => `
         <tr>
-          <td style="padding:3px 8px 3px 0;font-size:10px;white-space:nowrap;">${esc(f.label)}</td>
-          <td style="padding:3px 0;width:100%;">
-            <div style="background:#f1f5f9;border-radius:3px;height:11px;">
-              <div style="background:${f.color};width:${(f.share * 100).toFixed(1)}%;height:11px;border-radius:3px;"></div>
+          <td style="padding:5px 10px 5px 0;font-size:9px;width:24%;overflow-wrap:anywhere;">
+            <span style="display:inline-block;width:7px;height:7px;border-radius:4px;background:${f.color};margin-right:5px;"></span>${esc(f.label)}
+          </td>
+          <td style="padding:5px 0;width:52%;vertical-align:middle;">
+            <div style="background:#e2e8f0;border-radius:5px;height:8px;overflow:hidden;">
+              <div style="background:${f.color};width:${(f.share * 100).toFixed(1)}%;height:8px;border-radius:5px;"></div>
             </div>
           </td>
-          <td style="padding:3px 0 3px 8px;font-size:10px;text-align:right;white-space:nowrap;font-weight:bold;">${esc(fmt(f.amount))}</td>
-          <td style="padding:3px 0 3px 6px;font-size:9px;text-align:right;white-space:nowrap;color:#64748b;">${Math.round(f.share * 100)}%</td>
+          <td style="padding:5px 0 5px 10px;width:24%;font-size:9px;text-align:right;font-weight:bold;line-height:1.35;">
+            ${esc(compactChartAmount(f.amount, fmt))}<br /><span style="font-size:8px;font-weight:normal;color:#64748b;">${Math.round(f.share * 100)}%</span>
+          </td>
         </tr>`
     )
     .join("");
@@ -377,34 +377,21 @@ function barrasPorDia(
   const max = Math.max(...dias.map((d) => d.amount));
   if (max <= 0) return "";
 
-  const ANCHO = 535;
-  const ALTO_BARRAS = 64;
-  const etiquetas = dias.map((d) => fmt(d.amount));
-  const { colW, barW, girar, espacioArriba } = dailyLayout(dias.length, etiquetas);
-
-  const baseY = espacioArriba + ALTO_BARRAS;
-  const alto = baseY + 16;
-
-  const piezas = dias
-    .map((d, i) => {
-      const cx = i * colW + colW / 2;
-      const h = Math.max(2, (d.amount / max) * ALTO_BARRAS);
-      const y = baseY - h;
-      const texto = esc(etiquetas[i]);
-      const monto = girar
-        ? `<text x="${cx.toFixed(1)}" y="${(y - 4).toFixed(1)}" font-size="7" fill="#334155" text-anchor="start" transform="rotate(-90 ${cx.toFixed(1)} ${(y - 4).toFixed(1)})">${texto}</text>`
-        : `<text x="${cx.toFixed(1)}" y="${(y - 4).toFixed(1)}" font-size="7" fill="#334155" text-anchor="middle">${texto}</text>`;
-      return `
-        <rect x="${(cx - barW / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="${color}" />
-        ${monto}
-        <text x="${cx.toFixed(1)}" y="${(baseY + 11).toFixed(1)}" font-size="7" fill="#94a3b8" text-anchor="middle">${d.day}</text>`;
+  const filas = dias
+    .map((d) => {
+      const ancho = Math.max(2, (d.amount / max) * 100);
+      return `<tr>
+        <td style="width:18%;padding:5px 10px 5px 0;font-size:9px;color:#475569;">Día ${d.day}</td>
+        <td style="width:58%;padding:5px 0;vertical-align:middle;">
+          <div style="height:8px;background:#e2e8f0;border-radius:5px;overflow:hidden;">
+            <div style="height:8px;width:${ancho.toFixed(1)}%;background:${color};border-radius:5px;"></div>
+          </div>
+        </td>
+        <td style="width:24%;padding:5px 0 5px 10px;text-align:right;font-size:9px;font-weight:bold;color:${color};">${esc(compactChartAmount(d.amount, fmt))}</td>
+      </tr>`;
     })
     .join("");
-
-  return `<svg width="100%" viewBox="0 0 ${ANCHO} ${alto.toFixed(0)}">
-      <line x1="0" y1="${baseY}" x2="${ANCHO}" y2="${baseY}" stroke="#e2e8f0" stroke-width="1" />
-      ${piezas}
-    </svg>`;
+  return `<table style="width:100%;border-collapse:collapse;table-layout:fixed;">${filas}</table>`;
 }
 
 /**
@@ -425,10 +412,10 @@ export function alturaEstimada(p: {
   movimientos: number;
 }): number {
   let alto = 120; // cabecera con el logo + las tres tarjetas de totales
-  if (p.categorias > 0) alto += 40 + Math.max(156, p.categorias * 17);
+  if (p.categorias > 0) alto += 34 + p.categorias * 20;
   if (p.presupuestos > 0) alto += 34 + p.presupuestos * 20;
-  if (p.meses > 1) alto += 34 + 110;
-  if (p.dias > 0) alto += 34 + 150;
+  if (p.meses > 1) alto += 34 + p.meses * 20;
+  if (p.dias > 0) alto += 34 + p.dias * 20;
   alto += 52 + p.movimientos * 26 + 44; // título, filas y la línea de Total
   return alto;
 }
@@ -451,14 +438,29 @@ export function cabeApretando(alto: number): boolean {
 export function buildPdfHtml(o: PdfOptions): string {
   const { texts: T, fmt } = o;
 
-  const ingresos = o.txs.filter((t) => t.type === "income" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0);
-  const gastos = o.txs.filter((t) => t.type === "expense" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0);
-  const balance = ingresos - gastos;
+  const ingresosCalculados = o.txs.filter((t) => t.type === "income" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0);
+  const gastosCalculados = o.txs.filter((t) => t.type === "expense" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0);
+  const resumen = o.summary ?? {
+    available: ingresosCalculados - gastosCalculados,
+    income: ingresosCalculados,
+    expenses: gastosCalculados,
+    result: ingresosCalculados - gastosCalculados,
+  };
+  const ingresos = resumen.income;
+  const gastos = resumen.expenses;
+  const balance = resumen.result;
+  const totalSeleccionado = o.txs.reduce(
+    (suma, tx) => suma + (tx.type === "expense" ? -tx.amount : tx.amount),
+    0
+  );
 
   // Los gráficos describen los gastos, que es lo que casi siempre se quiere
   // mirar. La excepción es un reporte que solo trae ingresos: ahí graficar
   // gastos daría una hoja en blanco.
-  const foco: "expense" | "income" = gastos > 0 ? "expense" : "income";
+  const gastosGraficables = o.txs
+    .filter((tx) => tx.type === "expense" && !tx.internalTransfer)
+    .reduce((suma, tx) => suma + tx.amount, 0);
+  const foco: "expense" | "income" = gastosGraficables > 0 ? "expense" : "income";
   const colorFoco = foco === "expense" ? ROJO : VERDE;
 
   // Los dos repartos, cada uno con sus categorias. Antes solo se calculaba
@@ -496,7 +498,6 @@ export function buildPdfHtml(o: PdfOptions): string {
   );
   const sep = apretar ? 11 : 20;
   const padFila = apretar ? "3px 8px" : "6px 8px";
-  const ladoRosquilla = apretar ? 124 : 156;
 
   const filas = o.txs
     .map((tx) => {
@@ -506,27 +507,42 @@ export function buildPdfHtml(o: PdfOptions): string {
         <tr>
           <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;white-space:nowrap;">${esc(tx.dateLabel)}</td>
           <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;white-space:nowrap;">${esc(tx.timeLabel || "-")}</td>
-          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;white-space:nowrap;">${esc(tx.typeLabel || (tx.type === "expense" ? T.expenses : T.income))}</td>
-          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;white-space:nowrap;">
+          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere;">${esc(tx.typeLabel || (tx.type === "expense" ? T.expenses : T.income))}</td>
+          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere;">
             <span style="display:inline-block;width:7px;height:7px;border-radius:4px;background:${tx.categoryColor};margin-right:5px;"></span>${esc(tx.categoryLabel)}
           </td>
-          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;">${esc(tx.description || "-")}</td>
-          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;white-space:nowrap;">${esc(tx.methodLabel)}</td>
-          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;text-align:right;white-space:nowrap;color:${color};font-weight:bold;">${signo}${esc(fmt(tx.amount))}</td>
+          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere;">${esc(tx.description || "-")}</td>
+          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere;">${esc(tx.methodLabel)}</td>
+          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;text-align:right;white-space:nowrap;color:${color};font-weight:bold;">${signo}${esc(compactChartAmount(tx.amount, fmt))}</td>
         </tr>`;
     })
     .join("");
 
-  const tarjeta = (etiqueta: string, monto: string, color: string) => `
-    <td style="width:33.3%;padding:0 4px;">
-      <div style="border:1.5px solid #e2e8f0;border-radius:10px;padding:9px 11px;">
+  const tarjeta = (etiqueta: string, monto: string, color: string, width = "25%") => `
+    <td style="width:${width};padding:0 4px 8px 4px;vertical-align:top;">
+      <div style="border:1px solid #e2e8f0;border-radius:9px;padding:8px 10px;background:#fff;">
         <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.4px;">${esc(etiqueta)}</div>
-        <div style="font-size:15px;font-weight:bold;color:${color};margin-top:2px;">${esc(monto)}</div>
+        <div style="font-size:13px;font-weight:bold;color:${color};margin-top:3px;white-space:nowrap;">${esc(monto)}</div>
       </div>
     </td>`;
 
-  // La rosquilla va al lado de la lista, no debajo: así el bloque entero cabe
-  // en el alto de la propia rosquilla y no se come media hoja.
+  const tarjetasResumen =
+    resumen.budget == null && resumen.previousBalance == null
+      ? `<tr>
+          ${tarjeta(T.income, compactChartAmount(ingresos, fmt), VERDE, "33.33%")}
+          ${tarjeta(T.expenses, compactChartAmount(gastos, fmt), ROJO, "33.33%")}
+          ${tarjeta(T.periodResult || T.balance, compactChartAmount(balance, fmt), balance < 0 ? ROJO : VERDE, "33.33%")}
+        </tr>`
+      : `<tr>
+          ${resumen.budget == null ? "" : tarjeta(T.budget || "Presupuesto", compactChartAmount(resumen.budget, fmt), "#0f172a")}
+          ${resumen.previousBalance == null ? "" : tarjeta(T.previousBalance || "Saldo anterior", compactChartAmount(resumen.previousBalance, fmt), "#0f766e")}
+          ${tarjeta(T.income, compactChartAmount(ingresos, fmt), VERDE)}
+          ${tarjeta(T.expenses, compactChartAmount(gastos, fmt), ROJO)}
+        </tr>
+        <tr>
+          ${tarjeta(T.periodResult || T.balance, compactChartAmount(balance, fmt), balance < 0 ? ROJO : VERDE, "25%")}
+        </tr>`;
+
   const totalGastoCats = catsGasto.reduce((s, c) => s + c.amount, 0);
   const totalIngresoCats = catsIngreso.reduce((s, c) => s + c.amount, 0);
   /**
@@ -545,16 +561,10 @@ export function buildPdfHtml(o: PdfOptions): string {
     lista.length === 0
       ? ""
       : `
-      <div style="page-break-inside:avoid;margin-top:${sep}px;">
+      <div style="margin-top:${sep}px;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;page-break-inside:avoid;">
         <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(titulo)}</div>
-        <table style="width:100%;border-collapse:collapse;">
-          <tr>
-            <td style="width:${ladoRosquilla + 14}px;vertical-align:middle;">${rosquilla(lista, total, fmt, T.total, ladoRosquilla)}</td>
-            <td style="vertical-align:middle;padding-left:6px;">
-              <table style="width:100%;border-collapse:collapse;">${barrasPorCategoria(lista, fmt)}</table>
-            </td>
-          </tr>
-        </table>
+        <div style="font-size:8px;color:#64748b;margin-bottom:5px;">${esc(T.total)}: <strong style="color:#334155;">${esc(compactChartAmount(total, fmt))}</strong></div>
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed;">${barrasPorCategoria(lista, fmt)}</table>
       </div>`;
 
   // UNA SOLA ROSQUILLA, LA DE GASTOS.
@@ -582,7 +592,7 @@ export function buildPdfHtml(o: PdfOptions): string {
   const bloquePresupuestos =
     o.charts && o.categoryBudgets.length > 0
       ? `
-      <div style="page-break-inside:avoid;margin-top:${sep}px;">
+      <div style="margin-top:${sep}px;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;page-break-inside:avoid;">
         <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(T.byCategoryBudget)}</div>
         <table style="width:100%;border-collapse:collapse;">${barrasPresupuesto(o.categoryBudgets, fmt)}</table>
       </div>`
@@ -591,7 +601,7 @@ export function buildPdfHtml(o: PdfOptions): string {
   const bloqueMeses =
     o.charts && o.monthly.length > 1
       ? `
-      <div style="page-break-inside:avoid;margin-top:${sep}px;">
+      <div style="margin-top:${sep}px;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;page-break-inside:avoid;">
         <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(T.byMonth)}</div>
         ${barrasPorMes(o.monthly, fmt)}
       </div>`
@@ -600,7 +610,7 @@ export function buildPdfHtml(o: PdfOptions): string {
   const bloqueDias =
     hayDias
       ? `
-      <div style="page-break-inside:avoid;margin-top:${sep}px;">
+      <div style="margin-top:${sep}px;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;page-break-inside:avoid;">
         <!-- Con las dos cosas dentro, el título dice de cuál son las columnas.
              Este gráfico sigue siendo de gasto: los ingresos de un mes son
              dos o tres días sueltos y un gráfico diario de eso serían tres
@@ -618,7 +628,7 @@ export function buildPdfHtml(o: PdfOptions): string {
   <head>
     <meta charset="utf-8" />
     <style>
-      @page { margin: 30px 30px 44px 30px; }
+      @page { size: A4; margin: 30px 30px 44px 30px; }
       body {
         font-family: -apple-system, Helvetica, Arial, sans-serif;
         color: #0f172a;
@@ -647,17 +657,20 @@ export function buildPdfHtml(o: PdfOptions): string {
         <td style="padding-bottom:11px;text-align:right;vertical-align:middle;">
           <div style="font-size:13px;font-weight:bold;">${esc(o.title)}</div>
           <div style="font-size:10px;color:#64748b;">${esc(o.monthLabel)}</div>
+          <div style="font-size:9px;color:#0f766e;margin-top:2px;">${esc(T.space || "Espacio")}: ${esc(o.spaceName || "Personal")}</div>
         </td>
       </tr>
     </table>
 
-    <!-- RESUMEN -->
-    <table style="width:100%;border-collapse:collapse;margin:15px -4px 0 -4px;">
-      <tr>
-        ${tarjeta(T.income, fmt(ingresos), VERDE)}
-        ${tarjeta(T.expenses, fmt(gastos), ROJO)}
-        ${tarjeta(T.balance, fmt(balance), balance < 0 ? ROJO : VERDE)}
-      </tr>
+    <!-- SALDO PRINCIPAL -->
+    <div style="margin-top:14px;border-radius:11px;background:#ecfdf5;border:1px solid #a7f3d0;padding:11px 13px;">
+      <div style="font-size:9px;color:#047857;text-transform:uppercase;letter-spacing:.5px;font-weight:bold;">${esc(T.available || "Saldo disponible")}</div>
+      <div style="font-size:22px;line-height:1.2;font-weight:800;color:${resumen.available < 0 ? ROJO : VERDE};margin-top:2px;">${esc(compactChartAmount(resumen.available, fmt))}</div>
+    </div>
+
+    <!-- RESUMEN DEL MES -->
+    <table style="width:calc(100% + 8px);border-collapse:collapse;margin:10px -4px 0 -4px;table-layout:fixed;">
+      ${tarjetasResumen}
     </table>
 
     <!-- MOVIMIENTOS -->
@@ -669,7 +682,12 @@ export function buildPdfHtml(o: PdfOptions): string {
     <div style="font-size:11px;font-weight:bold;color:#334155;margin:${sep + 2}px 0 7px 0;page-break-after:avoid;">
       ${esc(T.movements)} (${o.txs.length})
     </div>
-    <table style="width:100%;border-collapse:collapse;font-size:10px;">
+    <table style="width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed;">
+      <colgroup>
+        <col style="width:10%;" /><col style="width:9%;" /><col style="width:11%;" />
+        <col style="width:14%;" /><col style="width:28%;" /><col style="width:15%;" />
+        <col style="width:13%;" />
+      </colgroup>
       <thead>
         <tr style="background:#f1f5f9;">
           <th style="text-align:left;padding:7px 8px;border-bottom:1.5px solid #cbd5e1;">${esc(T.colDate)}</th>
@@ -687,7 +705,7 @@ export function buildPdfHtml(o: PdfOptions): string {
     <table style="width:100%;border-collapse:collapse;margin-top:11px;">
       <tr>
         <td style="text-align:right;font-size:13px;font-weight:bold;padding-top:7px;border-top:2px solid #334155;">
-          ${esc(T.total)}: <span style="color:${balance < 0 ? ROJO : VERDE};">${esc(fmt(balance))}</span>
+          ${esc(T.total)}: <span style="color:${totalSeleccionado < 0 ? ROJO : VERDE};">${esc(compactChartAmount(totalSeleccionado, fmt))}</span>
         </td>
       </tr>
     </table>

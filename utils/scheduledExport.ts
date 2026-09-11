@@ -87,6 +87,8 @@ export type ScheduledExport = {
   day: number;
   format: ExportFormat;
   type: ExportType;
+  /** Personal, una Familia o una Caja concreta. */
+  spaceId?: string;
   destination: ExportDestination;
   fileNameMode: FileNameMode;
   /** Nombre escrito a mano, sin extensión. Solo se usa con fileNameMode "custom". */
@@ -118,6 +120,7 @@ export const DEFAULT_SCHEDULE: ScheduledExport = {
   day: 1,
   format: "pdf",
   type: "all",
+  spaceId: "personal",
   destination: "drive",
   fileNameMode: "auto",
   fileName: "",
@@ -156,6 +159,7 @@ export async function loadSchedule(): Promise<ScheduledExport> {
   // el ajuste guardado apuntaría a una opción que ya no sale en la pantalla:
   // se vería sin destino elegido y la exportación automática no haría nada.
   if (!esDestinoAutomatico(merged.destination)) merged.destination = "drive";
+  if (typeof merged.spaceId !== "string" || !merged.spaceId) merged.spaceId = "personal";
   // Y la hora, por si llega de una versión futura o de una copia estropeada:
   // una hora inválida deja el aviso sin programar, sin error y sin señal.
   merged.hour = horaValida(merged.hour, DEFAULT_SCHEDULE.hour);

@@ -16,6 +16,7 @@ import {
 } from "@/utils/exportarEnFondo";
 import { puedeExportarEnFondo, puedePdfEnFondo } from "@/modules/export-scheduler";
 import { flushPendingSaves } from "@/utils/storage";
+import { cargarEspaciosExportables, type ExportSpace } from "@/utils/exportSpaces";
 import { columnasFrecuenciaExportacion } from "@/utils/responsiveLayout";
 import {
   DEFAULT_SCHEDULE,
@@ -41,7 +42,7 @@ function hhmm(h: number, m: number) {
 export default function ScheduledExportSettings({ onBack }: { onBack: () => void }) {
   const { width, fontScale } = useWindowDimensions();
   const columnasFrecuencia = columnasFrecuenciaExportacion(width, fontScale);
-  const { t, showToast, transactions, monthNames } = useAppData();
+  const { t, showToast, transactions, monthNames, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
 
   const [schedule, setSchedule] = useState<ScheduledExport>(DEFAULT_SCHEDULE);
@@ -86,11 +87,13 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
    * igual: se toca otra vez, y otra, y se hacen tres copias del mismo reporte.
    */
   const [probando, setProbando] = useState(false);
+  const [espacios, setEspacios] = useState<ExportSpace[]>([{ id: "personal", kind: "personal", name: t("spaces.personal"), currency: userCurrency, transactions }]);
+  const espacio = espacios.find((item) => item.id === (schedule.spaceId || "personal"));
   /** Mes usado únicamente por "Probar ahora" cuando la frecuencia es mensual. */
   const availableMonths = useMemo(() => {
-    const months = new Set(transactions.map((tx) => tx.date.slice(0, 7)));
+    const months = new Set((espacio?.transactions ?? []).map((tx) => tx.date.slice(0, 7)));
     return Array.from(months).sort().reverse();
-  }, [transactions]);
+  }, [espacio]);
   const [testMonth, setTestMonth] = useState("");
 
   useEffect(() => {
@@ -130,6 +133,13 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
       alive = false;
     };
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+    void cargarEspaciosExportables(transactions, userCurrency, t("spaces.personal"), t("spaces.family"), t("spaces.boxes"))
+      .then((lista) => { if (alive) setEspacios(lista); });
+    return () => { alive = false; };
+  }, [transactions, userCurrency, t]);
 
   /**
    * Lo que se escribe en las casillas de la hora.
@@ -324,6 +334,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
           type: schedule.type,
           dest: schedule.destination,
           name: nombreArchivo,
+          space: schedule.spaceId || "personal",
           auto: "1",
         },
       });
@@ -474,6 +485,23 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                 </TouchableOpacity>
               ))}
             </View>
+
+            <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
+              {t("exportPdf.spaceLabel")}
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }} className="mb-5">
+              {espacios.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  onPress={() => update({ spaceId: item.id })}
+                  className={`px-4 py-2.5 rounded-xl border-[1.5px] ${(schedule.spaceId || "personal") === item.id ? "bg-emerald-600 border-emerald-600" : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"}`}
+                >
+                  <Text numberOfLines={1} className={`max-w-40 text-sm font-bold ${(schedule.spaceId || "personal") === item.id ? "text-white" : "text-slate-600 dark:text-slate-200"}`}>
+                    {item.kind === "family" ? `${t("spaces.family")} · ${item.name}` : item.kind === "personal" ? item.name : `${t("exportPdf.boxPrefix")} · ${item.name}`}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
 
             {schedule.frequency === "weekly" && (
               <>

@@ -63,6 +63,13 @@ import {
   type SendContact,
 } from "@/utils/sendContacts";
 import { useAppData } from "@/contexts/AppDataContext";
+import {
+  cargarEspaciosExportables,
+  formateadorDelEspacio,
+  resumenFinanciero,
+  type ExportSpace,
+} from "@/utils/exportSpaces";
+import { loadJSON, STORAGE_KEYS } from "@/utils/storage";
 
 // Cuántos movimientos se dibujan en la vista previa. El PDF los lleva todos;
 // esto es solo lo que se ve antes de decidir. Con cincuenta ya se comprueba
@@ -83,6 +90,7 @@ export default function ExportPdfSheet({
   silent,
   fileName: forcedName,
   recipientName,
+  initialSpaceId,
 }: {
   onClose: () => void;
   // Mes "AAAA-MM" con el que abrir ya elegido. Lo usa la orden por voz
@@ -109,6 +117,8 @@ export default function ExportPdfSheet({
    * que es lo que pasaba antes de poder decirlo.
    */
   recipientName?: string;
+  /** Espacio guardado por la exportación automática. */
+  initialSpaceId?: string;
   // Dónde va el archivo: "share" abre el menú de compartir de Android,
   // "mail" abre la aplicación de correo con el archivo ya adjunto, y
   // "drive", "dropbox" y "folder" lo guardan sin ninguna ventana de por medio.
@@ -118,7 +128,7 @@ export default function ExportPdfSheet({
   // TypeScript diera por imposible un caso que sí ocurre.
   destination?: ExportDestination;
 }) {
-  const { t, transactions, month, monthNames, fmt, userName, userEmail, showToast, categoryBudgets } =
+  const { t, transactions, month, monthNames, userName, userEmail, userCurrency, showToast, categoryBudgets, budgets } =
     useAppData();
   const insets = useSafeAreaInsets();
   const { animatedPaddingStyle, onFieldFocus, onFieldBlur } = useKeyboardAnimatedPadding();
@@ -145,6 +155,25 @@ export default function ExportPdfSheet({
   //
   // Por voz se encienden diciendo "graficos".
   const [charts, setCharts] = useState(initialCharts ?? false);
+  const [espacios, setEspacios] = useState<ExportSpace[]>([{ id: "personal", kind: "personal", name: t("spaces.personal"), currency: userCurrency, transactions }]);
+  const [espacioId, setEspacioId] = useState(initialSpaceId || "personal");
+  const [espaciosCargando, setEspaciosCargando] = useState(true);
+  const [carryoverCleared, setCarryoverCleared] = useState<string[]>([]);
+
+  useEffect(() => {
+    let vivo = true;
+    void Promise.all([
+      cargarEspaciosExportables(transactions, userCurrency, t("spaces.personal"), t("spaces.family"), t("spaces.boxes")),
+      loadJSON<string[]>(STORAGE_KEYS.carryoverCleared, []),
+    ]).then(([lista, cortes]) => {
+      if (!vivo) return;
+      setEspacios(lista);
+      setCarryoverCleared(cortes);
+      setEspacioId((actual) => lista.some((item) => item.id === actual) ? actual : "personal");
+      setEspaciosCargando(false);
+    });
+    return () => { vivo = false; };
+  }, [transactions, userCurrency, t]);
 
   /**
    * CÓMO SE LLAMA EL ARCHIVO. Pedido suyo: *"agrégale 2 opciones: nombre automático o
@@ -361,10 +390,14 @@ export default function ExportPdfSheet({
   // elegirlo solo llevaría a un "0 movimientos" y a un botón que no hace
   // nada. Ojo: NO se filtra por el tipo elegido abajo (Gastos/Ingresos), o
   // los meses irían apareciendo y desapareciendo al cambiar ese selector.
+  const espacio = espacios.find((item) => item.id === espacioId) ?? espacios[0];
+  const movimientosDelEspacio = useMemo(() => espacio?.transactions ?? [], [espacio]);
+  const fmt = espacio ? formateadorDelEspacio(espacio) : (() => "-");
+
   const availableMonths = useMemo(() => {
-    const months = new Set(transactions.map((tx) => tx.date.slice(0, 7)));
+    const months = new Set(movimientosDelEspacio.map((tx) => tx.date.slice(0, 7)));
     return Array.from(months).sort().reverse();
-  }, [transactions]);
+  }, [movimientosDelEspacio]);
 
   // El mes que se venía viendo puede no estar en la lista (si está vacío),
   // así que en ese caso se cae al más reciente que sí tenga movimientos.
@@ -395,7 +428,7 @@ export default function ExportPdfSheet({
     { id: "csv", label: "CSV", Icon: Sheet },
   ];
 
-  const monthTx = transactions
+  const monthTx = movimientosDelEspacio
     .filter((tx) => tx.date.startsWith(selectedMk))
     .filter((tx) => exportType === "all" || tx.type === exportType)
     .sort((a, b) => (a.date < b.date ? -1 : 1));
@@ -418,11 +451,11 @@ export default function ExportPdfSheet({
       mode: nombreModo,
       custom: nombrePropio,
       typeLabel:
-        exportType === "expense"
+        `${exportType === "expense"
           ? t("exportPdf.expenses")
           : exportType === "income"
             ? t("exportPdf.income")
-            : t("exportPdf.all"),
+            : t("exportPdf.all")} - ${espacio?.name || t("spaces.personal")}`,
       dateKey: selectedMk,
       extension,
     });
@@ -449,16 +482,23 @@ export default function ExportPdfSheet({
   function construirHtml(): string {
     return htmlDelReporte({
       movimientos: monthTx,
-      todos: transactions,
+      todos: movimientosDelEspacio,
       mes: selectedMk,
       tipo: exportType,
       charts,
       userName,
       nombresDeMes: monthNames,
-      presupuestos: categoryBudgets,
+      presupuestos: espacio?.kind === "personal" ? categoryBudgets : {},
       fmt,
       titulo: reportTitleFor(exportType),
       etiquetaDelMes: selectedMonthLabel,
+      nombreDelEspacio: espacio?.name || t("spaces.personal"),
+      resumen: resumenFinanciero(
+        espacio ?? espacios[0],
+        selectedMk,
+        budgets,
+        carryoverCleared,
+      ),
       t,
     });
   }
@@ -745,7 +785,7 @@ export default function ExportPdfSheet({
   const autoFired = useRef(false);
   useEffect(() => {
     if (!autoExport || autoFired.current || !initialMonth) return;
-    if (availableMonths.length === 0) return;
+    if (espaciosCargando || availableMonths.length === 0) return;
 
     // Si la voz dijo A QUIÉN, hay que esperar a que los contactos terminen
     // de cargarse.
@@ -772,7 +812,7 @@ export default function ExportPdfSheet({
       if (silent) onClose();
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autoExport, initialMonth, availableMonths, recipientName, contactosCargados]);
+  }, [autoExport, initialMonth, availableMonths, recipientName, contactosCargados, espaciosCargando]);
 
   // La copia automática a Drive no dibuja nada. El trabajo lo hacen los
   // efectos de arriba, que corren igual: un componente que devuelve null
@@ -831,6 +871,29 @@ export default function ExportPdfSheet({
              que tocarlo dos veces. "handled" deja pasar el toque a la primera. */
           keyboardShouldPersistTaps="handled"
         >
+
+        <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">
+          {t("exportPdf.spaceLabel")}
+        </Text>
+        {espaciosCargando ? (
+          <View className="bg-slate-50 dark:bg-noche-2 rounded-xl px-4 py-3 mb-4">
+            <Text className="text-xs text-slate-500 dark:text-slate-300">{t("common.loading")}</Text>
+          </View>
+        ) : (
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }} className="mb-4">
+            {espacios.map((item) => (
+              <TouchableOpacity
+                key={item.id}
+                onPress={() => setEspacioId(item.id)}
+                className={`px-4 py-2.5 rounded-xl border-[1.5px] ${espacioId === item.id ? "bg-emerald-600 border-emerald-600" : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"}`}
+              >
+                <Text numberOfLines={1} className={`max-w-40 text-sm font-bold ${espacioId === item.id ? "text-white" : "text-slate-600 dark:text-slate-200"}`}>
+                  {item.kind === "family" ? `${t("spaces.family")} · ${item.name}` : item.kind === "personal" ? item.name : `${t("exportPdf.boxPrefix")} · ${item.name}`}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        )}
 
         {/* Selector de mes. En fila con desplazamiento horizontal en vez de
             una lista desplegable: así se ven varios meses de un vistazo y se

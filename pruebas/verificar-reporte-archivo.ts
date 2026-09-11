@@ -189,5 +189,38 @@ console.log("\n--- EN EL PDF, SOLO LOS LIMITES CON GASTO ---");
   ok(sinNinguna.includes("Almuerzo"), "y el resto del reporte sigue ahi");
 }
 
+console.log("\n--- RESUMEN FINANCIERO CLARO EN EL PDF ---");
+{
+  const html = htmlDelReporte({
+    movimientos: [gasto],
+    todos: [gasto],
+    mes: "2026-08",
+    tipo: "all",
+    charts: true,
+    userName: "Diana",
+    nombresDeMes: MESES,
+    presupuestos: {},
+    fmt: (n: number) => `S/ ${n.toFixed(2)}`,
+    titulo: "Reporte",
+    etiquetaDelMes: "Agosto 2026",
+    nombreDelEspacio: "Caja Ana",
+    resumen: {
+      available: 400,
+      budget: 500,
+      previousBalance: 20,
+      income: 30,
+      expenses: 150,
+      result: -120,
+    },
+    t,
+  });
+  ok(html.includes("Caja Ana"), "dice exactamente qué espacio se exportó");
+  ok(html.includes("exportPdf.available") && html.includes("S/ 400.00"), "el saldo disponible aparece como dato principal");
+  ok(html.includes("exportPdf.budget") && html.includes("S/ 500.00"), "muestra el presupuesto por separado");
+  ok(html.includes("exportPdf.previousBalance") && html.includes("S/ 20.00"), "muestra el saldo anterior por separado");
+  ok(html.includes("exportPdf.periodResult") && html.includes("S/ -120.00"), "el resultado del mes no se confunde con el saldo");
+  ok(!html.includes("height:70px"), "ningún gráfico ocupa media hoja por una sola barra");
+}
+
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);
