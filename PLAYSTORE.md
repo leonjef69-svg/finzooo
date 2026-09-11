@@ -137,10 +137,10 @@ movimientos ingresados en ese espacio se muestran a los participantes autorizado
 Los datos personales fuera del espacio no se muestran a los invitados. La política
 pública ya describe este funcionamiento y debe coincidir con la declaración de la tienda.
 
-La integración opcional con Telegram aún no está en la versión de Play. Antes de
-incluirla en un AAB hay que actualizar el formulario: el texto enviado al bot y el
-identificador del chat se procesan para registrar movimientos. La política dentro
-de la app ya lo explica. No publicar esa función conservando una declaración anterior.
+La integración opcional con Telegram está incluida en el código de la próxima
+versión, aunque todavía no se ha desplegado su servidor. Antes de subir ese AAB hay
+que actualizar el formulario: el texto enviado al bot y el identificador del chat
+se procesan para registrar movimientos. Las políticas pública e interna ya lo explican.
 
 > **Lo que decide la mayoría de respuestas:** los datos **se recogen** (viajan a Firebase si la
 > persona inicia sesión) y **no se comparten** con terceros. Todo va **cifrado en tránsito** y
@@ -156,6 +156,7 @@ de la app ya lo explica. No publicar esa función conservando una declaración a
 | **Fotos** | Sí | No | Funciones de la app (foto de perfil, dibujos de categorías, boletas) |
 | **Información financiera del usuario** *(otra)* | Sí | No | Funciones de la app |
 | **Mensajes en la app** *(otros: contenido de notificaciones)* | Sí | No | Funciones de la app |
+| **IDs de usuario** *(identificador de chat de Telegram, si se conecta)* | Sí | No | Funciones de la app · Gestión de la cuenta |
 | **Grabaciones de voz** | **No se recoge** | — | Se procesa en el celular y no se guarda |
 | **Diagnóstico de fallos y rendimiento** | Sí | No | Analítica y funcionamiento de la app (Sentry) |
 

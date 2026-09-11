@@ -5,7 +5,7 @@ import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
 
 export default function SavingsDetailRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { goals, deleteGoal } = useAppData();
+  const { goals, deleteGoal, isPremium } = useAppData();
   const goal = goals.find((g) => String(g.id) === id);
   const blocked = useRedirectIfOrphaned();
   if (blocked) return null;
@@ -14,13 +14,14 @@ export default function SavingsDetailRoute() {
     <SavingsDetail
       goal={goal}
       onBack={safeBack}
-      onEdit={() => irUnaVez(`/savings/form?id=${id}`)}
+      onEdit={() => irUnaVez(isPremium ? `/savings/form?id=${id}` : "/premium")}
       onDelete={(goalId) => {
+        if (!isPremium) return irUnaVez("/premium");
         deleteGoal(goalId);
         router.replace("/savings");
       }}
-      onAdd={() => irUnaVez(`/savings/move?id=${id}&mode=add`)}
-      onWithdraw={() => irUnaVez(`/savings/move?id=${id}&mode=withdraw`)}
+      onAdd={() => irUnaVez(isPremium ? `/savings/move?id=${id}&mode=add` : "/premium")}
+      onWithdraw={() => irUnaVez(isPremium ? `/savings/move?id=${id}&mode=withdraw` : "/premium")}
     />
   );
 }

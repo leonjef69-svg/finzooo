@@ -14,7 +14,18 @@ const {
   quickPrompt,
   savedMovementMessage,
   transferConfirmationMessage,
+  localDate,
+  localTime,
+  validTimeZone,
 } = require("../src/telegram-guided-handler");
+
+test("Telegram respeta la zona horaria del celular", () => {
+  const instant = new Date("2026-09-11T02:30:00.000Z");
+  assert.equal(localDate({ timeZone: "America/Lima" }, instant), "2026-09-10");
+  assert.equal(localTime({ timeZone: "America/Lima" }, instant), "21:30");
+  assert.equal(localDate({ timeZone: "Europe/Madrid" }, instant), "2026-09-11");
+  assert.equal(validTimeZone("zona-inventada"), "America/Lima");
+});
 
 test("monto y descripción viajan juntos en un solo mensaje", () => {
   assert.deepEqual(amountDescription("S/ 20 almuerzo", "expense"), {

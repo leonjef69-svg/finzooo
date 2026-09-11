@@ -74,6 +74,30 @@ service cloud.firestore {
         && getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == false;
     }
 
+    function familyOwnerPremium(familyId) {
+      return premiumUser(
+        get(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid
+      );
+    }
+
+    function familyOwnerPremiumAfter(familyId) {
+      return premiumUser(
+        getAfter(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid
+      );
+    }
+
+    function boxOwnerPremium(boxId) {
+      return premiumUser(
+        get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid
+      );
+    }
+
+    function boxOwnerPremiumAfter(boxId) {
+      return premiumUser(
+        getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid
+      );
+    }
+
     // Forma exacta de un movimiento compartido. Evita cantidades imposibles,
     // textos gigantes y, sobre todo, que otro miembro falsifique el enlace con
     // el saldo Personal de una cuenta ajena.
@@ -248,7 +272,8 @@ service cloud.firestore {
                           && request.resource.data.rol == 'owner')
                         || (
                           request.resource.data.rol == 'member'
-                          && familyOpen(familyId)
+                           && familyOpen(familyId)
+                           && familyOwnerPremium(familyId)
                           && request.resource.data.inviteCode is string
                           && exists(/databases/$(database)/documents/familyInvites/$(request.resource.data.inviteCode))
                           && get(/databases/$(database)/documents/familyInvites/$(request.resource.data.inviteCode)).data.familyId == familyId
@@ -263,10 +288,12 @@ service cloud.firestore {
       match /movements/{movementId} {
         allow read: if familyMember(familyId);
         allow create: if familyMember(familyId) && familyOpen(familyId)
+                      && familyOwnerPremiumAfter(familyId)
                       && validSharedMovement(request.resource.data)
                       && (!('personalTransactionId' in request.resource.data)
                         || getAfter(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid);
         allow update: if familyMember(familyId)
+                      && familyOwnerPremium(familyId)
                       && resource.data.creadoPor == request.auth.uid
                       && request.resource.data.creadoPor == 'deleted'
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['creadoPor', 'personalOwnerUid'])
@@ -300,7 +327,9 @@ service cloud.firestore {
                     && get(/databases/$(database)/documents/familySpaces/$(request.resource.data.familyId)).data.ownerUid == request.auth.uid
                     && premiumUser(request.auth.uid)
                     && request.resource.data.expiresAt > request.time.toMillis();
-      allow update, delete: if verified() && resource.data.createdBy == request.auth.uid;
+      // El destino y el vencimiento de una invitación no pueden alterarse.
+      allow update: if false;
+      allow delete: if verified() && resource.data.createdBy == request.auth.uid;
     }
 
     // Índice privado que permite recuperar el espacio familiar al cambiar de celular.
@@ -366,7 +395,8 @@ service cloud.firestore {
           && ((getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid
                 && request.resource.data.rol == 'owner')
             || (request.resource.data.rol == 'member'
-                && boxOpen(boxId)
+                 && boxOpen(boxId)
+                 && boxOwnerPremium(boxId)
                 && request.resource.data.inviteCode is string
                 && exists(/databases/$(database)/documents/boxInvites/$(request.resource.data.inviteCode))
                 && get(/databases/$(database)/documents/boxInvites/$(request.resource.data.inviteCode)).data.boxId == boxId
@@ -382,10 +412,12 @@ service cloud.firestore {
           || (getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid
             && boxOpenAfter(boxId))
         )
+          && boxOwnerPremiumAfter(boxId)
           && validSharedMovement(request.resource.data)
           && (!('personalTransactionId' in request.resource.data)
             || getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid);
         allow update: if boxMember(boxId)
+                      && boxOwnerPremium(boxId)
                       && resource.data.creadoPor == request.auth.uid
                       && request.resource.data.creadoPor == 'deleted'
                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['creadoPor', 'personalOwnerUid'])
@@ -417,7 +449,8 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/boxSpaces/$(request.resource.data.boxId)).data.ownerUid == request.auth.uid
         && premiumUser(request.auth.uid)
         && request.resource.data.expiresAt > request.time.toMillis();
-      allow update, delete: if verified() && resource.data.createdBy == request.auth.uid;
+      allow update: if false;
+      allow delete: if verified() && resource.data.createdBy == request.auth.uid;
     }
 
     match /boxUsers/{userId}/spaces/{boxId} {
@@ -445,7 +478,9 @@ service cloud.firestore {
     match /telegramLinkRequests/{code} {
       allow create: if verified()
         && premiumUser(request.auth.uid)
-        && request.resource.data.keys().hasOnly(['uid', 'createdAtMs', 'expiresAtMs', 'used'])
+        && request.resource.data.keys().hasOnly(['uid', 'createdAtMs', 'expiresAtMs', 'used', 'country', 'timeZone'])
+        && (!('country' in request.resource.data) || (request.resource.data.country is string && request.resource.data.country.matches('^[A-Z]{2}$')))
+        && (!('timeZone' in request.resource.data) || (request.resource.data.timeZone is string && request.resource.data.timeZone.size() <= 100))
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.used == false
         && request.resource.data.createdAtMs is number

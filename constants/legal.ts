@@ -3,7 +3,7 @@
 // un abogado si más adelante la app crece o cambia su forma de ganar dinero.
 import { anunciosActivos } from "@/constants/anuncios";
 export const LEGAL_CONTACT_EMAIL = "dinero123xc@gmail.com";
-export const LEGAL_LAST_UPDATED = "9 de septiembre de 2026";
+export const LEGAL_LAST_UPDATED = "11 de septiembre de 2026";
 
 /**
  * LO QUE SE DICE DE LOS ANUNCIOS, Y SOLO CUANDO LOS HAY.
@@ -31,10 +31,12 @@ Esta Política de Privacidad explica qué información recoge Fino, para qué la
 1. Qué información recogemos
 - Datos de tu cuenta: tu nombre y tu correo electrónico, cuando te registras. Si eliges una foto de perfil, esa foto.
 - Lo que tú anotas: tus movimientos (ingresos y gastos), presupuestos, metas de ahorro y, si usas el Modo Negocio, tus negocios, productos, ventas y movimientos del negocio. Fino no se conecta a ningún banco ni tarjeta.
+- Si usas Familia o Cajas compartidas: el nombre con el que participas, los movimientos del espacio y su método de pago. Solo sus miembros autorizados pueden verlos.
 - Contactos de envío que tú guardas: los nombres, correos y números de teléfono a los que decidas mandar tus reportes. Los escribes tú; Fino no lee la agenda de tu celular.
 - Fotos que tú eliges: las imágenes que pongas a tus categorías propias, y las fotos de boletas si usas el escáner.
 - Lo que dices al micrófono, solo mientras lo tienes apretado, para entender la orden.
 - Si conectas Telegram, el texto que envías al bot, tu identificador de chat y el movimiento que confirmas.
+- Información técnica de errores y rendimiento (como versión de la app, modelo del dispositivo y lugar del fallo) mediante Sentry. Fino configura estos reportes sin tu identidad, solicitudes de red ni datos adicionales de la aplicación.
 - No recogemos tu ubicación ni leemos la agenda de contactos de tu celular.
 
 2. La lectura de notificaciones (registro automático)
@@ -47,12 +49,12 @@ Esta es la parte más delicada y por eso va aparte.
 - Puedes apagarlo cuando quieras desde Ajustes, y borrar ese registro con un botón.
 
 3. Cómo se guarda tu información
-- En tu celular, tus datos se guardan cifrados: protegidos con una clave, para que no se puedan leer aunque alguien acceda al almacenamiento del teléfono.
-- Si inicias sesión, también se guarda una copia en la nube usando Firebase (un servicio de Google), para que puedas recuperar tu información si cambias de celular. Esa copia solo es visible para tu propia cuenta.
+- En tu celular, la información principal de tu cuenta se guarda cifrada. La cola temporal del registro automático se mantiene dentro del almacenamiento privado de Fino protegido por Android y no se incluye en copias de seguridad del sistema.
+- Si inicias sesión, también se guarda una copia en la nube usando Firebase (un servicio de Google), para que puedas recuperar tu información si cambias de celular. Tus datos personales solo son visibles para tu cuenta; lo que anotes en Familia o una Caja compartida también es visible para sus miembros.
 
 4. Con quién compartimos tu información
 ${PARRAFO_ANUNCIOS}
-- Usamos Firebase (Google) únicamente como proveedor técnico para guardar los datos de forma segura, no como un tercero que use tu información con otros fines.
+- Usamos Firebase (Google) para la cuenta y la copia segura, y Sentry para recibir diagnósticos técnicos de fallos.
 - Si TÚ conectas Google Drive, Dropbox o eliges una carpeta de tu celular, se suben ahí los archivos de reporte que tú pidas, y nada más. Fino solo puede entrar a su propia carpeta.
 - Si TÚ eliges enviar un reporte por correo o WhatsApp, ese archivo va a quien tú indiques, a través de la aplicación que elijas.
 - Si TÚ conectas Telegram, Telegram recibe los mensajes que escribes y las confirmaciones que Fino te responde. La conexión es opcional y puedes desconectarla desde Ajustes.

@@ -769,7 +769,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // se espera esto, cerrar sesión muy rápido después de un cambio
     // podía "perderlo": ya no quedaba ni en el celular (se borra abajo)
     // ni en la nube (no le había dado tiempo de subir).
-    if (uid) await saveCloudData(uid, datosParaLaNube());
+    if (uid) {
+      const respaldo = await saveCloudData(uid, datosParaLaNube());
+      if (!respaldo.ok) {
+        throw new Error("No se pudo respaldar tu información. Tu sesión y tus datos se conservaron. Revisa tu conexión y vuelve a intentarlo.");
+      }
+    }
     // También hay que salir del lado de Google. Si no, la próxima vez que
     // alguien pulse "Continuar con Google" entraría directo con la última
     // cuenta usada, sin poder elegir otra — un problema real en un celular
@@ -2115,6 +2120,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function addOrUpdateGoal(g: Goal) {
+    if (!isPremium) return;
     setGoals((prev) => {
       const exists = prev.some((p) => p.id === g.id);
       return exists ? prev.map((p) => (p.id === g.id ? g : p)) : [g, ...prev];
@@ -2123,12 +2129,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function deleteGoal(id: number) {
+    if (!isPremium) return;
     setDeletedGoalIds((prev) => pruneDeletedGoalIds([...prev, id]));
     setGoals((prev) => prev.filter((g) => g.id !== id));
     showToast(t("toast.goalDeleted"));
   }
 
   function addMoneyToGoal(amount: number, goalId: number) {
+    if (!isPremium) return;
     const goal = goals.find((g) => g.id === goalId);
     if (!goal) return;
     const newSaved = goal.saved + amount;
@@ -2145,6 +2153,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function withdrawMoneyFromGoal(goalId: number, amount: number) {
+    if (!isPremium) return;
     const goal = goals.find((g) => g.id === goalId);
     if (!goal) return;
     const newSaved = Math.max(0, goal.saved - amount);

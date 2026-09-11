@@ -11,9 +11,17 @@ const EXPENSE_CATS = [["comida", "Comida"], ["transporte", "Transporte"], ["comp
 const INCOME_CATS = [["salario", "Salario"], ["freelance", "Freelance"], ["venta", "Venta"], ["regalo", "Regalo"], ["inversiones", "Inversiones"], ["otro_ingreso", "Otros"]];
 const METHOD_NAMES = { cash: "Efectivo", debit: "Débito", credit: "Crédito", transfer: "Transferencia", yape: "Yape", plin: "Plin" };
 
-const date = () => new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-const time = () => new Intl.DateTimeFormat("en-GB", { timeZone: "America/Lima", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date());
-const monthKey = () => date().slice(0, 7);
+function validTimeZone(value) {
+  try { new Intl.DateTimeFormat("en", { timeZone: value || "America/Lima" }).format(); return value || "America/Lima"; }
+  catch { return "America/Lima"; }
+}
+function localDate(data = {}, now = new Date()) {
+  const parts = new Intl.DateTimeFormat("en", { timeZone: validTimeZone(data.timeZone), year: "numeric", month: "2-digit", day: "2-digit" }).formatToParts(now);
+  const part = name => parts.find(item => item.type === name).value;
+  return `${part("year")}-${part("month")}-${part("day")}`;
+}
+const time = (data = {}, now = new Date()) => new Intl.DateTimeFormat("en-GB", { timeZone: validTimeZone(data.timeZone), hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
+const monthKey = data => localDate(data).slice(0, 7);
 const premium = (data, now = Date.now()) => data?.isPremium === true || (Number.isFinite(data?.premiumTrialStartedAt) && data.premiumTrialStartedAt <= now && data.premiumTrialStartedAt + 86_400_000 > now);
 
 function api(token, method, body) {
@@ -47,7 +55,7 @@ function previousBalance(data, until) {
 }
 
 function personalFigures(data) {
-  const month = monthKey(), txs = (Array.isArray(data.transactions) ? data.transactions : []).filter(item => String(item.date || "").startsWith(month));
+  const month = monthKey(data), txs = (Array.isArray(data.transactions) ? data.transactions : []).filter(item => String(item.date || "").startsWith(month));
   const spent = txs.filter(item => item.type === "expense" && !item.internalTransfer).reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const income = txs.filter(item => item.type === "income" && !item.internalTransfer).reduce((sum, item) => sum + Number(item.amount || 0), 0);
   const out = txs.filter(item => item.type === "expense" && item.internalTransfer).reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -71,7 +79,7 @@ async function connectionFor(db, chatId) {
   const settings = connection.data(), uid = settings.uid;
   const [status, user] = await Promise.all([db.collection("telegramUsers").doc(uid).get(), db.collection("users").doc(uid).get()]);
   return status.exists && status.data().active === true && status.data().chatId === String(chatId) && user.exists && premium(user.data())
-    ? { uid, user: user.data(), settings }
+    ? { uid, user: { ...user.data(), userCountry: settings.country || "PE", timeZone: validTimeZone(settings.timeZone) }, settings }
     : null;
 }
 
@@ -97,7 +105,7 @@ async function link(db, token, chatId, code) {
     if (!user.exists || !premium(user.data())) throw new Error("NOT_PREMIUM");
     if (oldStatus.exists && oldStatus.data().chatId !== String(chatId)) tx.delete(db.collection("telegramConnections").doc(oldStatus.data().chatId));
     if (occupied.exists && occupied.data().uid !== uid) tx.delete(db.collection("telegramUsers").doc(occupied.data().uid));
-    tx.set(connectionRef, { uid, linkedAtMs: Date.now() });
+    tx.set(connectionRef, { uid, linkedAtMs: Date.now(), country: request.data().country || "PE", timeZone: validTimeZone(request.data().timeZone) });
     tx.set(statusRef, { active: true, chatId: String(chatId), linkedAtMs: Date.now() });
     tx.update(ref, { used: true, usedAtMs: Date.now() });
   });
@@ -114,7 +122,8 @@ async function activeFamily(db, uid, currency = "PEN") {
   if (!id) return null;
   const [space, member] = await Promise.all([db.collection("familySpaces").doc(id).get(), db.collection("familySpaces").doc(id).collection("members").doc(uid).get()]);
   if (!space.exists || !member.exists || [space.data().closed, space.data().closing, space.data().deleting].includes(true)) return null;
-  return { kind: "family", id, name: String(space.data().nombre || "Familia"), currency: String(space.data().currency || currency), canTransfer: space.data().ownerUid === uid };
+  const owner = await db.collection("users").doc(space.data().ownerUid).get();
+  return { kind: "family", id, name: String(space.data().nombre || "Familia"), currency: String(space.data().currency || currency), canTransfer: space.data().ownerUid === uid, writable: owner.exists && premium(owner.data()) };
 }
 
 async function boxesFor(db, uid) {
@@ -122,7 +131,8 @@ async function boxesFor(db, uid) {
   const boxes = await Promise.all(links.docs.slice(0, 20).map(async item => {
     const [space, member] = await Promise.all([db.collection("boxSpaces").doc(item.id).get(), db.collection("boxSpaces").doc(item.id).collection("members").doc(uid).get()]);
     if (!space.exists || !member.exists || [space.data().closed, space.data().closing, space.data().deleting].includes(true) || space.data().migrationComplete === false) return null;
-    return { kind: "box", id: item.id, name: String(space.data().nombre || "Caja"), currency: String(space.data().currency || "PEN"), canTransfer: space.data().ownerUid === uid };
+    const owner = await db.collection("users").doc(space.data().ownerUid).get();
+    return { kind: "box", id: item.id, name: String(space.data().nombre || "Caja"), currency: String(space.data().currency || "PEN"), canTransfer: space.data().ownerUid === uid, writable: owner.exists && premium(owner.data()) };
   }));
   return boxes.filter(Boolean);
 }
@@ -141,8 +151,9 @@ async function resolveRememberedSpace(db, connection) {
 }
 
 function spaceKeyboard(space, personalCurrency) {
-  const rows = [[{ text: "➖ Gasto", callback_data: "new:expense" }, { text: "➕ Ingreso", callback_data: "new:income" }]];
-  if (space.kind !== "personal" && space.canTransfer === true && space.currency === personalCurrency) rows.push([{ text: "↗️ Transferir desde Personal", callback_data: "transfer" }]);
+  const rows = [];
+  if (space.kind === "personal" || space.writable !== false) rows.push([{ text: "➖ Gasto", callback_data: "new:expense" }, { text: "➕ Ingreso", callback_data: "new:income" }]);
+  if (space.kind !== "personal" && space.writable !== false && space.canTransfer === true && space.currency === personalCurrency) rows.push([{ text: "↗️ Transferir desde Personal", callback_data: "transfer" }]);
   rows.push([{ text: "⬅️ Cambiar espacio", callback_data: "menu" }]);
   return { inline_keyboard: rows };
 }
@@ -158,7 +169,8 @@ async function showSpace(db, token, chatId, connection, space, heading = "") {
   await Promise.all([saveFlow(db, chatId, { kind: "session", uid: connection.uid, space: safeSpace(space) }), remember(db, chatId, space)]);
   const budget = space.kind === "personal" ? `\n🎯 Presupuesto: ${figures.budget > 0 ? money(figures.budget, space.currency) : "Sin definir"}` : "";
   const prefix = heading ? `${heading}\n\n` : "";
-  return send(token, chatId, `${prefix}📌 ${space.name}\n💰 Saldo: ${money(figures.balance, space.currency)}${budget}\n🟢 Ingresos: ${money(figures.income, space.currency)}\n🔴 Gastos: ${money(figures.spent, space.currency)}`, spaceKeyboard(space, String(connection.user.userCurrency || "PEN")));
+  const readOnly = space.kind !== "personal" && space.writable === false ? "\n🔒 Solo lectura: el Premium del propietario venció." : "";
+  return send(token, chatId, `${prefix}📌 ${space.name}\n💰 Saldo: ${money(figures.balance, space.currency)}${budget}\n🟢 Ingresos: ${money(figures.income, space.currency)}\n🔴 Gastos: ${money(figures.spent, space.currency)}${readOnly}`, spaceKeyboard(space, String(connection.user.userCurrency || "PEN")));
 }
 
 function amountDescription(text, type) {
@@ -223,7 +235,7 @@ async function saveSimpleMovement(db, chatId, connection, space, movement, opera
       if (!user.exists || !premium(user.data())) throw new Error("NOT_PREMIUM");
       const data = user.data(), transactions = Array.isArray(data.transactions) ? data.transactions : [];
       const id = personalIdForOperation(key);
-      saved = { id, type: movement.type, amount: movement.amount, category: movement.category, date: date(), time: time(), method: movement.method, description: movement.description, notes: "", origin: "manual" };
+      saved = { id, type: movement.type, amount: movement.amount, category: movement.category, date: localDate(connection.user), time: time(connection.user), method: movement.method, description: movement.description, notes: "", origin: "manual" };
       action = { uid: connection.uid, kind: "movement", space: safeSpace(space), personalTransactionId: id, movement: saved };
       if (!claimOperation(tx, chatConnectionRef, connectionSnap.data() || {}, key)) return;
       if (transactions.some(item => item.id === id)) throw new Error("DUPLICATE_ID");
@@ -234,13 +246,15 @@ async function saveSimpleMovement(db, chatId, connection, space, movement, opera
     return action;
   }
   const root = space.kind === "family" ? "familySpaces" : "boxSpaces", spaceRef = db.collection(root).doc(space.id), movementRef = spaceRef.collection("movements").doc(`telegram_${key}`);
-  const saved = { tipo: movement.type === "income" ? "ingreso" : "gasto", monto: movement.amount, descripcion: movement.description, method: movement.method, fecha: date(), creadoPor: connection.uid, creadoEn: FieldValue.serverTimestamp() };
+  const saved = { tipo: movement.type === "income" ? "ingreso" : "gasto", monto: movement.amount, descripcion: movement.description, method: movement.method, fecha: localDate(connection.user), creadoPor: connection.uid, creadoEn: FieldValue.serverTimestamp() };
   const action = { uid: connection.uid, kind: "movement", space: safeSpace(space), sharedMovementId: movementRef.id, movement: { ...saved, creadoEn: Date.now() } };
   await db.runTransaction(async tx => {
     const statusRef = db.collection("telegramUsers").doc(connection.uid);
     const [spaceSnap, member, connectionSnap, statusSnap] = await Promise.all([tx.get(spaceRef), tx.get(spaceRef.collection("members").doc(connection.uid)), tx.get(chatConnectionRef), tx.get(statusRef)]);
     assertLiveConnection(connectionSnap, statusSnap, connection.uid, chatId);
     if (!spaceSnap.exists || !member.exists || [spaceSnap.data().closed, spaceSnap.data().closing, spaceSnap.data().deleting].includes(true) || spaceSnap.data().migrationComplete === false) throw new Error("SPACE_UNAVAILABLE");
+    const owner = await tx.get(db.collection("users").doc(spaceSnap.data().ownerUid));
+    if (!owner.exists || !premium(owner.data())) throw new Error("OWNER_NOT_PREMIUM");
     if (!claimOperation(tx, chatConnectionRef, connectionSnap.data() || {}, key)) return;
     tx.set(movementRef, saved);
   });
@@ -303,15 +317,15 @@ async function confirmTransfer(db, token, chatId, connection, nonce, operationId
     if (!user.exists || !premium(user.data())) throw new Error("NOT_PREMIUM");
     if (!space.exists || !member.exists || space.data().ownerUid !== connection.uid || [space.data().closed, space.data().closing, space.data().deleting].includes(true) || space.data().migrationComplete === false) throw new Error("SPACE_UNAVAILABLE");
     if (flow.space.currency !== String(user.data().userCurrency || "PEN")) throw new Error("CURRENCY_MISMATCH");
-    if (personalFigures(user.data()).balance < flow.amount) throw new Error("INSUFFICIENT");
+    if (personalFigures({ ...user.data(), timeZone: connection.user.timeZone }).balance < flow.amount) throw new Error("INSUFFICIENT");
     const transactions = Array.isArray(user.data().transactions) ? user.data().transactions : [];
     if (!claimOperation(tx, connectionRef, connectionSnap.data() || {}, key)) return;
     if (transactions.some(item => item.id === personalTransactionId)) throw new Error("DUPLICATE_ID");
-    const personalMovement = { id: personalTransactionId, type: "expense", amount: flow.amount, category: "otros", date: date(), time: time(), method: "transfer", description: `Transferencia a ${flow.space.name}`, notes: "", origin: "manual", internalTransfer: flow.space.kind, internalTransferLink: flow.space.id };
+    const personalMovement = { id: personalTransactionId, type: "expense", amount: flow.amount, category: "otros", date: localDate(connection.user), time: time(connection.user), method: "transfer", description: `Transferencia a ${flow.space.name}`, notes: "", origin: "manual", internalTransfer: flow.space.kind, internalTransferLink: flow.space.id };
     const next = [...transactions, personalMovement];
     if (Buffer.byteLength(JSON.stringify({ ...user.data(), transactions: next }), "utf8") > MAX_USER_BYTES) throw new Error("TOO_LARGE");
     tx.update(userRef, { transactions: next });
-    tx.set(movementRef, { tipo: "ingreso", monto: flow.amount, descripcion: flow.description === "Ingreso desde Telegram" ? "Transferencia desde Personal" : flow.description, method: "transfer", fecha: date(), creadoPor: connection.uid, creadoEn: FieldValue.serverTimestamp(), personalTransactionId, personalOwnerUid: connection.uid });
+    tx.set(movementRef, { tipo: "ingreso", monto: flow.amount, descripcion: flow.description === "Ingreso desde Telegram" ? "Transferencia desde Personal" : flow.description, method: "transfer", fecha: localDate(connection.user), creadoPor: connection.uid, creadoEn: FieldValue.serverTimestamp(), personalTransactionId, personalOwnerUid: connection.uid });
   });
   const movement = { type: "income", amount: flow.amount, description: flow.description === "Ingreso desde Telegram" ? "Transferencia desde Personal" : flow.description, method: "transfer" };
   return postSave(db, token, chatId, connection, flow.space, movement, action, "Transferencia realizada");
@@ -481,9 +495,9 @@ async function handleTelegramUpdate({ db, token, update }) {
     if (movement) return registerQuick(db, token, chatId, connection, await resolveRememberedSpace(db, connection), movement, update.update_id);
     return send(token, chatId, "Escribe, por ejemplo: gasto 20 almuerzo Yape. También puedes usar /menu.");
   } catch (error) {
-    const messages = { INVALID_CODE: "El código no existe o venció.", NOT_PREMIUM: "Esta conexión requiere Premium activo.", NOT_LINKED: "Conecta Telegram desde Ajustes en Fino.", EXPIRED: "La operación venció. Empieza nuevamente.", TOO_LARGE: "Tu respaldo alcanzó su límite.", SPACE_UNAVAILABLE: "Ese espacio ya no está disponible.", INSUFFICIENT: "No hay saldo suficiente en Personal.", CURRENCY_MISMATCH: "No puedo transferir entre monedas diferentes sin inventar un tipo de cambio.", NOTHING_TO_UNDO: "Ya no hay un movimiento reciente que pueda deshacerse.", NOTHING_TO_EDIT: "Ya no hay un movimiento reciente que pueda corregirse." };
+    const messages = { INVALID_CODE: "El código no existe o venció.", NOT_PREMIUM: "Esta conexión requiere Premium activo.", OWNER_NOT_PREMIUM: "Este espacio está en solo lectura porque el Premium del propietario venció.", NOT_LINKED: "Conecta Telegram desde Ajustes en Fino.", EXPIRED: "La operación venció. Empieza nuevamente.", TOO_LARGE: "Tu respaldo alcanzó su límite.", SPACE_UNAVAILABLE: "Ese espacio ya no está disponible.", INSUFFICIENT: "No hay saldo suficiente en Personal.", CURRENCY_MISMATCH: "No puedo transferir entre monedas diferentes sin inventar un tipo de cambio.", NOTHING_TO_UNDO: "Ya no hay un movimiento reciente que pueda deshacerse.", NOTHING_TO_EDIT: "Ya no hay un movimiento reciente que pueda corregirse." };
     return send(token, chatId, messages[error.message] || "No pude completar la operación. Intenta nuevamente.");
   }
 }
 
-module.exports = { handleTelegramUpdate, premium, previousBalance, personalFigures, sharedFigures, amountDescription, allowedMethods, safeSpace, operationKey, personalIdForOperation, quickPrompt, savedMovementMessage, transferConfirmationMessage };
+module.exports = { handleTelegramUpdate, premium, previousBalance, personalFigures, sharedFigures, amountDescription, allowedMethods, safeSpace, operationKey, personalIdForOperation, quickPrompt, savedMovementMessage, transferConfirmationMessage, localDate, localTime: time, validTimeZone };

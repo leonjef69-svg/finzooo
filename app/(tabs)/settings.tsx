@@ -13,6 +13,7 @@ export default function SettingsTab() {
     userLanguage,
     isPremium,
     logout,
+    showToast,
   } = useAppData();
   return (
     <Settings
@@ -33,8 +34,12 @@ export default function SettingsTab() {
       onImport={() => irUnaVez("/import")}
       onAutoCapture={() => irUnaVez("/auto-capture")}
       onLogout={async () => {
-        await logout();
-        router.replace("/login");
+        try {
+          await logout();
+          router.replace("/login");
+        } catch (error) {
+          showToast(error instanceof Error ? error.message : "No se pudo cerrar sesión. Vuelve a intentarlo.");
+        }
       }}
       onPremium={() => irUnaVez("/premium")}
       onSavings={() => irUnaVez("/savings")}

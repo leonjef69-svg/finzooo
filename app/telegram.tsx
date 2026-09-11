@@ -17,7 +17,7 @@ function makeCode() {
 
 export default function TelegramScreen() {
   const insets = useSafeAreaInsets();
-  const { isPremium, showToast, t } = useAppData();
+  const { isPremium, showToast, t, userCountry } = useAppData();
   const uid = auth.currentUser?.uid;
   const [connected, setConnected] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -36,7 +36,8 @@ export default function TelegramScreen() {
     const next = makeCode();
     const now = Date.now();
     try {
-      await setDoc(doc(db, "telegramLinkRequests", next), { uid, createdAtMs: now, expiresAtMs: now + 10 * 60_000, used: false });
+      const timeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Lima";
+      await setDoc(doc(db, "telegramLinkRequests", next), { uid, createdAtMs: now, expiresAtMs: now + 10 * 60_000, used: false, country: userCountry, timeZone });
       setCode(next);
       await Linking.openURL(`https://t.me/${TELEGRAM_BOT_USERNAME}?start=link_${next}`);
     } catch {
@@ -46,9 +47,13 @@ export default function TelegramScreen() {
 
   async function disconnect() {
     if (!uid) return;
-    await deleteDoc(doc(db, "telegramUsers", uid));
-    setCode("");
-    showToast(t("telegram.disconnected"));
+    try {
+      await deleteDoc(doc(db, "telegramUsers", uid));
+      setCode("");
+      showToast(t("telegram.disconnected"));
+    } catch {
+      showToast(t("telegram.disconnectError"));
+    }
   }
 
   return (

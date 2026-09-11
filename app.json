@@ -12,8 +12,8 @@
       "bundleIdentifier": "com.finoapp.gastos",
       "supportsTablet": false,
       "infoPlist": {
-        "NSSpeechRecognitionUsageDescription": "Allow $(PRODUCT_NAME) to use speech recognition.",
-        "NSMicrophoneUsageDescription": "Allow $(PRODUCT_NAME) to use the microphone."
+        "NSSpeechRecognitionUsageDescription": "Fino usa el reconocimiento de voz solo cuando dictas un movimiento o una orden.",
+        "NSMicrophoneUsageDescription": "Fino usa el micrófono solo mientras dictas un movimiento o una orden."
       }
     },
     "android": {
@@ -124,7 +124,7 @@
     "updates": {
       "url": "https://u.expo.dev/f0c230a1-8bf6-4b65-a12d-24054597e161",
       "requestHeaders": {
-        "expo-channel-name": "preview"
+        "expo-channel-name": "production"
       }
     },
     "runtimeVersion": {

@@ -1,7 +1,8 @@
 import { router } from "expo-router";
 import GoalPickerSheet from "@/screens/GoalPickerSheet";
+import PremiumLocked from "@/components/PremiumLocked";
 import { useAppData } from "@/contexts/AppDataContext";
-import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
+import { irUnaVez, safeBack, useRedirectIfOrphaned } from "@/utils/nav";
 
 // ELEGIR LA META NO ES DECIDIR CUÁNTO (10/08/2026)
 //
@@ -21,9 +22,10 @@ export default function SavingsPickerRoute() {
   // arriba decía "Pasar S/ 200 a una meta" y esta hoja decía "vas a agregar S/ 100", porque
   // autoSavings deja fuera el saldo anterior y `libre` no. Es el mismo fallo que ya se arregló
   // en la tarjeta de Ahorro y que se coló aquí.
-  const { goals, libre } = useAppData();
+  const { goals, libre, isPremium, t } = useAppData();
   const blocked = useRedirectIfOrphaned();
   if (blocked) return null;
+  if (!isPremium) return <PremiumLocked title={t("savingsList.title")} description={t("savingsLocked.description")} onBack={safeBack} onSeePremium={() => irUnaVez("/premium")} />;
 
   return (
     <GoalPickerSheet
