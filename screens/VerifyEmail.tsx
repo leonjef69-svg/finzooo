@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { ActivityIndicator, Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { MailCheck } from "lucide-react-native";
 import { useAppData } from "@/contexts/AppDataContext";
 
 export default function VerifyEmail({
@@ -56,14 +55,18 @@ export default function VerifyEmail({
   return (
     <View className="flex-1 bg-[#17100c]">
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" className="absolute inset-0 h-full w-full" />
-      <View className="absolute inset-0 bg-black/45" />
+      <Image
+        source={require("../assets/images/onboarding/fino-sunset-background.png")}
+        resizeMode="cover"
+        className="absolute inset-0 h-full w-full"
+        style={{ transform: [{ scale: 1.12 }, { translateY: 70 }] }}
+      />
+      <View className="absolute inset-0 bg-black/40" />
       <ScrollView
         contentContainerStyle={{
           flexGrow: 1,
-          justifyContent: "center",
-          paddingHorizontal: 24,
-          paddingTop: insets.top + 16,
+          paddingHorizontal: 20,
+          paddingTop: insets.top + 120,
           paddingBottom: insets.bottom + 24,
         }}
       >
@@ -73,13 +76,11 @@ export default function VerifyEmail({
           {t("verifyEmail.title")}
         </Text>
         <Text className="text-base font-semibold text-white/90 mb-7">Te enviamos un enlace</Text>
-        <View className="w-32 h-24 rounded-[28px] bg-white/95 items-center justify-center mb-7 shadow-lg">
-          <MailCheck size={58} color="#d97706" />
-        </View>
-        <View className="w-full rounded-2xl bg-white/95 px-5 py-4">
-          <Text className="text-sm text-center text-slate-600">{t("verifyEmail.sentTo")}</Text>
+        <Text className="mb-7 text-[92px] leading-[106px]">✉️</Text>
+        <View className="w-full rounded-2xl bg-white/95 px-6 py-5">
+          <Text className="text-base text-center text-slate-600">{t("verifyEmail.sentTo")}</Text>
           <Text numberOfLines={1} adjustsFontSizeToFit className="mt-1 text-center font-extrabold text-slate-900">{email}</Text>
-          <Text className="mt-2 text-xs text-center text-slate-500">{t("verifyEmail.spamHint")}</Text>
+          <Text className="mt-2 text-sm text-center text-slate-500">{t("verifyEmail.spamHint")}</Text>
         </View>
       </View>
 

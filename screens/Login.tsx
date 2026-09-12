@@ -9,6 +9,7 @@ import {
   StatusBar,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -37,6 +38,7 @@ export default function Login({
   const [error, setError] = useState("");
   const [googleError, setGoogleError] = useState("");
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
 
   async function submit() {
     setGoogleError("");
@@ -97,18 +99,23 @@ export default function Login({
       className="flex-1 bg-[#17100c]"
     >
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" className="absolute inset-0 h-full w-full" />
+      <Image
+        source={require("../assets/images/onboarding/fino-sunset-background.png")}
+        resizeMode="cover"
+        className="absolute inset-0 h-full w-full"
+        style={{ transform: [{ scale: 1.08 }, { translateY: -120 }] }}
+      />
       <View className="absolute inset-0 bg-black/45" />
       <ScrollView
         contentContainerStyle={{
           flexGrow: 1,
-          paddingHorizontal: 16,
-          paddingTop: insets.top + 150,
+          paddingHorizontal: 0,
+          paddingTop: insets.top + 245,
           paddingBottom: insets.bottom + 24,
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="rounded-[30px] bg-white/95 px-6 pt-8 pb-7">
+        <View className="rounded-t-[30px] bg-white/95 px-6 pt-8 pb-7" style={{ minHeight: Math.max(610, height - insets.top - 245) }}>
           <View className="w-12 h-12 rounded-2xl bg-amber-500 items-center justify-center mb-5">
             <Wallet size={22} color="#ffffff" />
           </View>

@@ -8,6 +8,7 @@ import {
   StatusBar,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -45,6 +46,7 @@ export default function Register({
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState("");
   const insets = useSafeAreaInsets();
+  const { height } = useWindowDimensions();
 
   async function registerWithGoogle() {
     setErrors({});
@@ -90,13 +92,18 @@ export default function Register({
       className="flex-1 bg-[#17100c]"
     >
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" className="absolute inset-0 h-full w-full" />
+      <Image
+        source={require("../assets/images/onboarding/fino-sunset-background.png")}
+        resizeMode="cover"
+        className="absolute inset-0 h-full w-full"
+        style={{ transform: [{ scale: 1.08 }, { translateY: -120 }] }}
+      />
       <View className="absolute inset-0 bg-black/40" />
       <ScrollView
-        contentContainerStyle={{ paddingTop: insets.top + 145, paddingBottom: 32 + insets.bottom }}
+        contentContainerStyle={{ paddingTop: insets.top + 245, paddingBottom: insets.bottom }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="mx-4 rounded-[30px] bg-white/95 pb-8">
+        <View className="rounded-t-[30px] bg-white/95 pb-8" style={{ minHeight: Math.max(650, height - insets.top - 245) }}>
         <View className="px-6 pt-8 pb-4">
           <View className="w-12 h-12 rounded-2xl bg-amber-500 items-center justify-center mb-5">
             <Wallet size={22} color="#ffffff" />

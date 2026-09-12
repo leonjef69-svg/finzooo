@@ -63,7 +63,7 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
                   ? "border-amber-500 bg-amber-50"
                   : "border-white/50 bg-white/95"}`}>
                 <View className="flex-row items-center gap-3 flex-1">
-                  <View className="w-[92px] h-9 rounded-xl bg-amber-50 items-center justify-center px-2">
+                  <View className={`${currency.name === currency.id ? "flex-1" : "w-[92px]"} h-9 rounded-xl bg-amber-50 items-center justify-center px-2`}>
                     <Text
                       className="w-full text-center text-xs font-extrabold text-slate-700"
                       numberOfLines={1}
@@ -73,9 +73,9 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
                       {currency.symbol === currency.id ? currency.id : `${currency.symbol} · ${currency.id}`}
                     </Text>
                   </View>
-                  <View className="flex-1">
-                    <Text className="text-sm font-bold text-slate-900" numberOfLines={1}>{currency.name === currency.id ? `Moneda ${currency.id}` : currency.name}</Text>
-                  </View>
+                  {currency.name !== currency.id ? <View className="flex-1">
+                    <Text className="text-sm font-bold text-slate-900" numberOfLines={1}>{currency.name}</Text>
+                  </View> : null}
                 </View>
                 {selected && <Check size={18} color="#d97706" />}
               </TouchableOpacity>

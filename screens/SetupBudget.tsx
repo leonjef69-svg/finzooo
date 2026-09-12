@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
@@ -8,6 +9,8 @@ import { countryById } from "@/constants/countries";
 import { useAppData } from "@/contexts/AppDataContext";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { irUnaVez } from "@/utils/nav";
+
+const SETUP_NOTIFICATIONS_KEY = "@fino/setup-notifications-enabled";
 
 export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => void }) {
   const { userCurrency, userCountry, t, monthNames } = useAppData();
@@ -20,7 +23,9 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
   const disabled = !amount || parsed <= 0;
 
   useEffect(() => {
-    Notifications.getPermissionsAsync().then((result) => setNotificationsEnabled(result.granted)).catch(() => setNotificationsEnabled(false));
+    Promise.all([AsyncStorage.getItem(SETUP_NOTIFICATIONS_KEY), Notifications.getPermissionsAsync()])
+      .then(([enabledByUser, permission]) => setNotificationsEnabled(enabledByUser === "true" && permission.granted))
+      .catch(() => setNotificationsEnabled(false));
   }, []);
 
   async function enableNotifications() {
@@ -37,6 +42,7 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
       }
       const result = await Notifications.requestPermissionsAsync();
       setNotificationsEnabled(result.granted);
+      if (result.granted) await AsyncStorage.setItem(SETUP_NOTIFICATIONS_KEY, "true");
     } catch { setNotificationsEnabled(false); }
   }
 
@@ -46,8 +52,8 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
       className="flex-1 bg-[#17100c]"
     >
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" blurRadius={12} className="absolute inset-0 h-full w-full" />
-      <View className="absolute inset-0 bg-black/55" />
+      <Image source={require("../assets/images/onboarding/fino-person-background.png")} resizeMode="cover" blurRadius={8} className="absolute inset-0 h-full w-full" />
+      <View className="absolute inset-0 bg-black/45" />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{

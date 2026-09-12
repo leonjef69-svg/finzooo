@@ -21,7 +21,12 @@ export default function Onboarding({ onGoogle, onCreateAccount, onLogin }: Props
   return (
     <View className="flex-1 bg-[#17100c]">
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image source={require("../assets/images/onboarding/fino-person-background.png")} resizeMode="cover" className="absolute inset-0 h-full w-full" />
+      <Image
+        source={require("../assets/images/onboarding/fino-person-background.png")}
+        resizeMode="cover"
+        className="absolute inset-0 h-full w-full"
+        style={{ transform: [{ scale: 1.34 }, { translateY: -82 }] }}
+      />
       <View className="absolute inset-0 bg-black/20" />
       <ScrollView
         contentContainerStyle={{
