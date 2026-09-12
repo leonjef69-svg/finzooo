@@ -3,6 +3,7 @@ import { FlatList, Image, StatusBar, Text, TextInput, TouchableOpacity, View } f
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check, Search } from "lucide-react-native";
 import { CURRENCIES, currencyLabelFor } from "@/constants/currencies";
+import { countriesFor, countryLabelFor } from "@/constants/countries";
 import { useAppData } from "@/contexts/AppDataContext";
 import BackButton from "@/components/BackButton";
 
@@ -16,8 +17,16 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
   const insets = useSafeAreaInsets();
   const currencies = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase(userLanguage);
+    const countries = countriesFor(userLanguage);
     return CURRENCIES
-      .map((currency) => ({ ...currency, name: currencyLabelFor(currency.id, t, userLanguage) }))
+      .map((currency) => {
+        const translated = currencyLabelFor(currency.id, t, userLanguage);
+        const country = countries.find((candidate) => candidate.currency === currency.id);
+        const name = translated === currency.id && country
+          ? `${userLanguage === "en" ? "Currency of" : userLanguage === "pt" ? "Moeda de" : "Moneda de"} ${countryLabelFor(country, userLanguage)}`
+          : translated;
+        return { ...currency, name };
+      })
       .filter((currency) => !normalized
         || currency.name.toLocaleLowerCase(userLanguage).includes(normalized)
         || currency.id.toLowerCase().includes(normalized)
@@ -27,8 +36,8 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
   return (
     <View className="flex-1 bg-[#17100c]" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image source={require("../assets/images/onboarding/fino-person-background.png")} resizeMode="cover" blurRadius={9} className="absolute inset-0 h-full w-full" />
-      <View className="absolute inset-0 bg-black/50" />
+      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" blurRadius={5} className="absolute inset-0 h-full w-full" />
+      <View className="absolute inset-0 bg-black/55" />
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
         <BackButton onPress={onBack} onDark />
         <Text className="text-base font-bold text-white">{t("settings.currency")}</Text>

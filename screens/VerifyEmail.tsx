@@ -60,11 +60,11 @@ export default function VerifyEmail({
         source={require("../assets/images/onboarding/fino-sunset-background.png")}
         resizeMode="cover"
         className="absolute inset-0 h-full w-full"
-        style={{ transform: [{ scale: 1.12 }, { translateY: 70 }] }}
+        style={{ transform: [{ scale: 1.06 }, { translateY: 20 }] }}
       />
       <LinearGradient
-        colors={["rgba(0,0,0,0.18)", "rgba(12,8,5,0.42)", "rgba(12,8,5,0.82)"]}
-        locations={[0, 0.58, 1]}
+        colors={["rgba(0,0,0,0.12)", "rgba(20,10,4,0.28)", "rgba(24,12,5,0.48)"]}
+        locations={[0, 0.62, 1]}
         className="absolute inset-0"
       />
       <ScrollView

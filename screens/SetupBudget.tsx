@@ -7,10 +7,11 @@ import { Bell, ChevronRight, Globe2, WalletCards } from "lucide-react-native";
 import { currencySymbolFor } from "@/constants/currencies";
 import { countryById } from "@/constants/countries";
 import { useAppData } from "@/contexts/AppDataContext";
+import { auth } from "@/utils/firebase";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { irUnaVez } from "@/utils/nav";
 
-const SETUP_NOTIFICATIONS_KEY = "@fino/setup-notifications-enabled";
+const notificationKey = () => `@fino/setup-notifications-enabled:${auth.currentUser?.uid ?? "local"}`;
 
 export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => void }) {
   const { userCurrency, userCountry, t, monthNames } = useAppData();
@@ -26,12 +27,12 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
     async function refreshNotificationState() {
       try {
         const [enabledByUser, permission] = await Promise.all([
-          AsyncStorage.getItem(SETUP_NOTIFICATIONS_KEY),
+          AsyncStorage.getItem(notificationKey()),
           Notifications.getPermissionsAsync(),
         ]);
         const enabled = (enabledByUser === "true" || enabledByUser === "pending") && permission.granted;
         setNotificationsEnabled(enabled);
-        if (enabled && enabledByUser !== "true") await AsyncStorage.setItem(SETUP_NOTIFICATIONS_KEY, "true");
+        if (enabled && enabledByUser !== "true") await AsyncStorage.setItem(notificationKey(), "true");
       } catch {
         setNotificationsEnabled(false);
       }
@@ -50,7 +51,7 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
     }
     try {
       if (Platform.OS === "android") await Notifications.setNotificationChannelAsync("default", { name: "Avisos de Fino", importance: Notifications.AndroidImportance.DEFAULT });
-      await AsyncStorage.setItem(SETUP_NOTIFICATIONS_KEY, "pending");
+      await AsyncStorage.setItem(notificationKey(), "pending");
       await Linking.openSettings();
     } catch { setNotificationsEnabled(false); }
   }
@@ -61,8 +62,8 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
       className="flex-1 bg-[#17100c]"
     >
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image source={require("../assets/images/onboarding/fino-person-background.png")} resizeMode="cover" blurRadius={8} className="absolute inset-0 h-full w-full" />
-      <View className="absolute inset-0 bg-black/45" />
+      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" blurRadius={12} className="absolute inset-0 h-full w-full" />
+      <View className="absolute inset-0 bg-black/55" />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
@@ -91,7 +92,8 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
             <Text className="font-bold text-slate-900">Presupuesto</Text>
             <Text className="text-[10px] text-slate-500">{monthLabel}</Text>
           </View>
-          <Text className="ml-auto text-slate-500 font-bold text-base mr-1">{currencySymbolFor(userCurrency)}</Text>
+          <View className="ml-auto w-[148px] flex-row items-center justify-end">
+          <Text className="text-slate-500 font-bold text-sm mr-1">{currencySymbolFor(userCurrency)}</Text>
           <TextInput
             disableFullscreenUI
             keyboardType="decimal-pad"
@@ -105,8 +107,10 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
             placeholder="0.00"
             placeholderTextColor="#94a3b8"
             maxFontSizeMultiplier={1.15}
-            className={`${amount.length > 11 ? "text-sm" : amount.length > 8 ? "text-base" : "text-xl"} min-w-0 flex-1 font-extrabold text-slate-900 text-right`}
+            style={{ fontSize: amount.length > 12 ? 11 : amount.length > 9 ? 13 : amount.length > 7 ? 16 : 20 }}
+            className="min-w-0 flex-1 font-extrabold text-slate-900 text-right"
           />
+          </View>
         </View>
 
       <TouchableOpacity
