@@ -10,9 +10,9 @@ export default function RegisterRoute() {
       onRegistered={(name, email) => {
         setUserName(name);
         setUserEmail(email);
-        // Antes de dejarla usar la app, tiene que confirmar su correo
-        // (le acabamos de mandar el enlace de verificación).
-        router.replace("/verify-email");
+        // Orden temporal para revisar todas las pantallas del flujo inicial:
+        // primero configura Fino y después confirma el correo.
+        router.replace("/setup");
       }}
       // Con Google la cuenta ya viene con el correo verificado, así que no
       // pasa por /verify-email: sigue el mismo camino que un inicio de

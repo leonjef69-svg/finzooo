@@ -1,6 +1,7 @@
 import { router } from "expo-router";
 import SetupBudget from "@/screens/SetupBudget";
 import { useAppData } from "@/contexts/AppDataContext";
+import { auth } from "@/utils/firebase";
 
 export default function SetupRoute() {
   const { completeOnboarding } = useAppData();
@@ -8,7 +9,7 @@ export default function SetupRoute() {
     <SetupBudget
       onSaved={(amount) => {
         completeOnboarding(amount);
-        router.replace("/(tabs)");
+        router.replace(auth.currentUser && !auth.currentUser.emailVerified ? "/verify-email" : "/(tabs)");
       }}
     />
   );
