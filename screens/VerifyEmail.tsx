@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ActivityIndicator, Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { useAppData } from "@/contexts/AppDataContext";
 
 export default function VerifyEmail({
@@ -61,7 +62,11 @@ export default function VerifyEmail({
         className="absolute inset-0 h-full w-full"
         style={{ transform: [{ scale: 1.12 }, { translateY: 70 }] }}
       />
-      <View className="absolute inset-0 bg-black/40" />
+      <LinearGradient
+        colors={["rgba(0,0,0,0.18)", "rgba(12,8,5,0.42)", "rgba(12,8,5,0.82)"]}
+        locations={[0, 0.58, 1]}
+        className="absolute inset-0"
+      />
       <ScrollView
         contentContainerStyle={{
           flexGrow: 1,

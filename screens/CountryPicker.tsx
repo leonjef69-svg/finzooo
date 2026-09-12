@@ -30,8 +30,8 @@ export default function CountryPicker({ onBack, onSelect }: {
   return (
     <View className="flex-1 bg-[#17100c]" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" blurRadius={14} className="absolute inset-0 h-full w-full" />
-      <View className="absolute inset-0 bg-black/60" />
+      <Image source={require("../assets/images/onboarding/fino-person-background.png")} resizeMode="cover" blurRadius={9} className="absolute inset-0 h-full w-full" />
+      <View className="absolute inset-0 bg-black/50" />
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
         <BackButton onPress={onBack} onDark />
         <Text className="text-base font-bold text-white">{t("settings.country")}</Text>
@@ -74,10 +74,10 @@ export default function CountryPicker({ onBack, onSelect }: {
                 <Text className="text-2xl">{country.flag}</Text>
                 <View className="flex-1 min-w-0">
                   <Text numberOfLines={2} className="text-sm font-bold text-slate-900">{countryLabelFor(country, userLanguage)}</Text>
-                  <Text className="text-[11px] text-slate-500 mt-0.5">
-                    {currencySymbolFor(country.currency) === country.currency ? `Moneda: ${country.currency}` : `Moneda: ${currencySymbolFor(country.currency)} · ${country.currency}`}
-                  </Text>
                 </View>
+                <Text className="text-xs font-bold text-slate-500">
+                  {currencySymbolFor(country.currency) === country.currency ? country.currency : `${country.currency} (${currencySymbolFor(country.currency)})`}
+                </Text>
                 {selected && <Check size={18} color="#d97706" />}
               </TouchableOpacity>
             );

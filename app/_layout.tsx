@@ -549,6 +549,13 @@ function RootLayout() {
         <View style={{ flex: 1, backgroundColor: screenBg }}>
           <ThemeProvider value={tema}>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: screenBg } }}>
+            <Stack.Screen name="onboarding" options={{ animation: "fade", contentStyle: { backgroundColor: "#17100c" } }} />
+            <Stack.Screen name="login" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
+            <Stack.Screen name="register" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
+            <Stack.Screen name="verify-email" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
+            <Stack.Screen name="setup" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
+            <Stack.Screen name="country" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
+            <Stack.Screen name="currency" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
             {/* transaction/new y transaction/[id]/edit muestran AddSheet, una
                 pantalla LLENA y opaca. Van con "modal" normal —no
                 "transparentModal"— porque transparentModal en Android está

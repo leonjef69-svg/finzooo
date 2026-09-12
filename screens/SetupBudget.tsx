@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { AppState, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
 import { Bell, ChevronRight, Globe2, WalletCards } from "lucide-react-native";
@@ -23,9 +23,24 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
   const disabled = !amount || parsed <= 0;
 
   useEffect(() => {
-    Promise.all([AsyncStorage.getItem(SETUP_NOTIFICATIONS_KEY), Notifications.getPermissionsAsync()])
-      .then(([enabledByUser, permission]) => setNotificationsEnabled(enabledByUser === "true" && permission.granted))
-      .catch(() => setNotificationsEnabled(false));
+    async function refreshNotificationState() {
+      try {
+        const [enabledByUser, permission] = await Promise.all([
+          AsyncStorage.getItem(SETUP_NOTIFICATIONS_KEY),
+          Notifications.getPermissionsAsync(),
+        ]);
+        const enabled = (enabledByUser === "true" || enabledByUser === "pending") && permission.granted;
+        setNotificationsEnabled(enabled);
+        if (enabled && enabledByUser !== "true") await AsyncStorage.setItem(SETUP_NOTIFICATIONS_KEY, "true");
+      } catch {
+        setNotificationsEnabled(false);
+      }
+    }
+    refreshNotificationState();
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "active") refreshNotificationState();
+    });
+    return () => subscription.remove();
   }, []);
 
   async function enableNotifications() {
@@ -35,14 +50,8 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
     }
     try {
       if (Platform.OS === "android") await Notifications.setNotificationChannelAsync("default", { name: "Avisos de Fino", importance: Notifications.AndroidImportance.DEFAULT });
-      const current = await Notifications.getPermissionsAsync();
-      if (!current.canAskAgain && !current.granted) {
-        await Linking.openSettings();
-        return;
-      }
-      const result = await Notifications.requestPermissionsAsync();
-      setNotificationsEnabled(result.granted);
-      if (result.granted) await AsyncStorage.setItem(SETUP_NOTIFICATIONS_KEY, "true");
+      await AsyncStorage.setItem(SETUP_NOTIFICATIONS_KEY, "pending");
+      await Linking.openSettings();
     } catch { setNotificationsEnabled(false); }
   }
 

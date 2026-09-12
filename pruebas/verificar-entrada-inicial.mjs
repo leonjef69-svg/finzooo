@@ -4,7 +4,10 @@ import assert from "node:assert/strict";
 const onboarding = fs.readFileSync("screens/SetupBudget.tsx", "utf8");
 const context = fs.readFileSync("contexts/AppDataContext.tsx", "utf8");
 
-assert.match(onboarding, /requestPermissionsAsync/);
+assert.match(onboarding, /Linking\.openSettings/);
+assert.match(onboarding, /SETUP_NOTIFICATIONS_KEY/);
+assert.match(onboarding, /AppState\.addEventListener/);
+assert.match(onboarding, /permission\.granted/);
 assert.match(onboarding, /\/country/);
 assert.match(onboarding, /\/currency/);
 assert.match(context, /setInitialCountry/);

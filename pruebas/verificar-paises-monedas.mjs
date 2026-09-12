@@ -43,12 +43,13 @@ for (const file of ["screens/CountryPicker.tsx", "screens/CurrencyPicker.tsx"]) 
 
 const currencyPicker = read("screens/CurrencyPicker.tsx");
 check(
-  currencyPicker.includes('currency.symbol === currency.id ? currency.id : `${currency.symbol} · ${currency.id}`'),
-  "el selector muestra símbolo y código ISO sin repetirlos cuando son iguales",
+  currencyPicker.includes('currency.symbol === currency.id ? "" : ` (${currency.symbol})`')
+    && currencyPicker.includes('{currency.id}</Text>'),
+  "el selector separa nombre, símbolo y código ISO sin duplicarlos",
 );
 check(/adjustsFontSizeToFit/.test(currencyPicker), "los símbolos largos caben en pantallas estrechas");
 check(/minimumFontScale=\{0\.72\}/.test(currencyPicker), "el código ISO nunca desaparece por falta de ancho");
-check(/accessibilityLabel=\{`\$\{currency\.symbol\} · \$\{currency\.id\}/.test(currencyPicker), "el lector de pantalla anuncia símbolo y código");
+check(/accessibilityLabel=\{currency\.name === currency\.id/.test(currencyPicker), "el lector de pantalla anuncia la moneda sin repeticiones");
 
 console.log(failures ? `${failures} comprobaciones fallaron` : `Catálogo mundial correcto: ${countries.length} países y ${currencies.size} monedas`);
 process.exit(failures ? 1 : 0);

@@ -27,8 +27,8 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
   return (
     <View className="flex-1 bg-[#17100c]" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" blurRadius={14} className="absolute inset-0 h-full w-full" />
-      <View className="absolute inset-0 bg-black/60" />
+      <Image source={require("../assets/images/onboarding/fino-person-background.png")} resizeMode="cover" blurRadius={9} className="absolute inset-0 h-full w-full" />
+      <View className="absolute inset-0 bg-black/50" />
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
         <BackButton onPress={onBack} onDark />
         <Text className="text-base font-bold text-white">{t("settings.currency")}</Text>
@@ -58,24 +58,15 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
             return (
               <TouchableOpacity key={currency.id} onPress={() => { onSelect(currency.id); onBack(); }}
                 accessibilityRole="button"
-                accessibilityLabel={`${currency.symbol} · ${currency.id}. ${currency.name}`}
+                accessibilityLabel={currency.name === currency.id ? currency.id : `${currency.name}. ${currency.symbol}. ${currency.id}`}
                 className={`flex-row items-center justify-between rounded-2xl p-4 border-[1.5px] ${selected
                   ? "border-amber-500 bg-amber-50"
                   : "border-white/50 bg-white/95"}`}>
-                <View className="flex-row items-center gap-3 flex-1">
-                  <View className={`${currency.name === currency.id ? "flex-1" : "w-[92px]"} h-9 rounded-xl bg-amber-50 items-center justify-center px-2`}>
-                    <Text
-                      className="w-full text-center text-xs font-extrabold text-slate-700"
-                      numberOfLines={1}
-                      adjustsFontSizeToFit
-                      minimumFontScale={0.72}
-                    >
-                      {currency.symbol === currency.id ? currency.id : `${currency.symbol} · ${currency.id}`}
-                    </Text>
-                  </View>
-                  {currency.name !== currency.id ? <View className="flex-1">
-                    <Text className="text-sm font-bold text-slate-900" numberOfLines={1}>{currency.name}</Text>
-                  </View> : null}
+                <View className="flex-row items-center gap-3 flex-1 min-w-0">
+                  <Text className="flex-1 text-sm font-bold text-slate-900" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
+                    {currency.name === currency.id ? currency.id : `${currency.name}${currency.symbol === currency.id ? "" : ` (${currency.symbol})`}`}
+                  </Text>
+                  {currency.name !== currency.id ? <Text className="text-xs font-extrabold text-slate-500">{currency.id}</Text> : null}
                 </View>
                 {selected && <Check size={18} color="#d97706" />}
               </TouchableOpacity>
