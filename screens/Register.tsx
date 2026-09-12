@@ -5,6 +5,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StatusBar,
   Text,
   TouchableOpacity,
   View,
@@ -88,6 +89,7 @@ export default function Register({
       behavior={Platform.OS === "ios" ? "padding" : undefined}
       className="flex-1 bg-[#17100c]"
     >
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" className="absolute inset-0 h-full w-full" />
       <View className="absolute inset-0 bg-black/40" />
       <ScrollView
@@ -96,11 +98,11 @@ export default function Register({
       >
         <View className="mx-4 my-6 rounded-[28px] bg-white/95 pb-8">
         <View className="px-6 pt-8 pb-4">
-          <View className="w-12 h-12 rounded-2xl bg-emerald-600 items-center justify-center mb-5">
+          <View className="w-12 h-12 rounded-2xl bg-amber-500 items-center justify-center mb-5">
             <Wallet size={22} color="#ffffff" />
           </View>
-          <Text className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{t("register.title")}</Text>
-          <Text className="text-sm text-slate-500 dark:text-slate-300 mt-1">{t("register.subtitle")}</Text>
+          <Text className="text-2xl font-extrabold text-slate-900">{t("register.title")}</Text>
+          <Text className="text-sm text-slate-500 mt-1">{t("register.subtitle")}</Text>
         </View>
 
         <View className="px-6 gap-4 mt-2">
@@ -110,6 +112,7 @@ export default function Register({
             onChange={setName}
             placeholder={t("register.namePlaceholder")}
             error={errors.name}
+            light
           />
           <AuthField
             label={t("auth.emailLabel")}
@@ -118,6 +121,7 @@ export default function Register({
             placeholder={t("auth.emailPlaceholder")}
             error={errors.email}
             keyboardType="email-address"
+            light
           />
           <AuthField
             label={t("auth.passwordLabel")}
@@ -126,6 +130,7 @@ export default function Register({
             onChange={setPass}
             placeholder="••••••••"
             error={errors.pass}
+            light
           />
           {errors.general ? (
             <Text className="text-rose-500 text-xs font-medium text-center">{errors.general}</Text>
@@ -137,7 +142,7 @@ export default function Register({
             activeOpacity={0.85}
             onPress={submit}
             disabled={loading}
-            className={`w-full bg-emerald-600 py-4 rounded-2xl items-center justify-center ${
+            className={`w-full bg-amber-500 py-4 rounded-2xl items-center justify-center ${
               loading ? "opacity-70" : ""
             }`}
           >
@@ -155,6 +160,7 @@ export default function Register({
               onPress={registerWithGoogle}
               loading={googleLoading}
               disabled={loading}
+              light
             />
             {googleError ? (
               <Text className="text-rose-500 text-xs font-medium text-center mt-3">
@@ -165,9 +171,9 @@ export default function Register({
 
           {/* gap-1: ver la nota del mismo bloque en Login.tsx. */}
           <View className="flex-row justify-center gap-1 mt-5">
-            <Text className="text-sm text-slate-500 dark:text-slate-300">{t("register.haveAccount")}</Text>
+            <Text className="text-sm text-slate-500">{t("register.haveAccount")}</Text>
             <TouchableOpacity onPress={onGoLogin}>
-              <Text className="text-sm text-emerald-600 font-bold">{t("register.login")}</Text>
+              <Text className="text-sm text-amber-600 font-bold">{t("register.login")}</Text>
             </TouchableOpacity>
           </View>
         </View>

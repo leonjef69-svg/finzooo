@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { ActivityIndicator, Image, Platform, ScrollView, StatusBar, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { ShieldCheck } from "lucide-react-native";
+import { BellRing, ChartNoAxesCombined, ReceiptText, ShieldCheck } from "lucide-react-native";
 
 type Props = { onGoogle: () => Promise<void>; onCreateAccount: () => void; onLogin: () => void };
 
@@ -37,16 +37,31 @@ export default function Onboarding({ onGoogle, onCreateAccount, onLogin }: Props
           <Text className="mt-2 text-2xl font-extrabold text-center text-white">Tu dinero bajo control</Text>
           <Text className="mt-1 text-base font-semibold text-white/90">Simple, rápido y claro</Text>
         </View>
-        <View className="rounded-[28px] bg-black/35 p-3">
+        <View className="flex-row flex-wrap justify-between gap-y-3 px-1">
+          <Feature icon={<BellRing size={22} color="#15803d" />} title="Registro" subtitle="Automático" />
+          <Feature icon={<ReceiptText size={22} color="#e11d48" />} title="Comida" subtitle="S/ 45" />
+          <Feature icon={<ChartNoAxesCombined size={22} color="#6d28d9" />} title="Presupuesto" subtitle="S/ 500" />
+          <Feature icon={<ShieldCheck size={22} color="#15803d" />} title="Ahorro" subtitle="S/ 120" />
+        </View>
+        <View className="rounded-[28px] bg-black/30 p-3">
           {Platform.OS === "android" ? <TouchableOpacity accessibilityRole="button" accessibilityLabel="Continuar con Google" disabled={googleLoading} onPress={continueWithGoogle} className="h-14 rounded-2xl bg-white flex-row items-center justify-center">
             {googleLoading ? <ActivityIndicator color="#0f766e" /> : <><Text className="mr-3 text-2xl font-extrabold text-[#4285F4]">G</Text><Text className="text-base font-extrabold text-slate-900">Continuar con Google</Text></>}
           </TouchableOpacity> : null}
-          <TouchableOpacity onPress={onCreateAccount} className={`${Platform.OS === "android" ? "mt-3" : ""} h-14 rounded-2xl bg-emerald-600 items-center justify-center`}><Text className="text-base font-extrabold text-white">Crear cuenta</Text></TouchableOpacity>
+          <TouchableOpacity onPress={onCreateAccount} className={`${Platform.OS === "android" ? "mt-3" : ""} h-14 rounded-2xl bg-amber-500 items-center justify-center`}><Text className="text-base font-extrabold text-white">Crear cuenta</Text></TouchableOpacity>
           <TouchableOpacity onPress={onLogin} className="h-12 items-center justify-center"><Text className="text-sm font-bold text-white underline">Ya tengo una cuenta</Text></TouchableOpacity>
           <View className="mt-1 flex-row items-center justify-center rounded-2xl bg-white/90 px-4 py-3"><ShieldCheck size={21} color="#d97706" /><Text className="ml-2 text-sm font-semibold text-slate-800">Tus datos, solo tuyos.</Text></View>
           {googleError ? <Text className="mt-2 text-center text-xs font-bold text-red-200">{googleError}</Text> : null}
         </View>
       </ScrollView>
+    </View>
+  );
+}
+
+function Feature({ icon, title, subtitle }: { icon: ReactNode; title: string; subtitle: string }) {
+  return (
+    <View className="w-[48%] min-h-16 flex-row items-center rounded-2xl bg-white/95 px-3 py-2">
+      {icon}
+      <View className="ml-2 flex-1"><Text numberOfLines={1} className="text-xs font-extrabold text-slate-800">{title}</Text><Text numberOfLines={1} className="text-xs font-bold text-slate-500">{subtitle}</Text></View>
     </View>
   );
 }

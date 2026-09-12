@@ -10,6 +10,7 @@ type Props = {
   placeholder?: string;
   error?: string;
   keyboardType?: "default" | "email-address";
+  light?: boolean;
 };
 
 export default function AuthField({
@@ -20,16 +21,17 @@ export default function AuthField({
   placeholder,
   error,
   keyboardType = "default",
+  light = false,
 }: Props) {
   const [show, setShow] = useState(false);
   const isPassword = type === "password";
 
   return (
     <View>
-      <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{label}</Text>
+      <Text className={`text-xs font-semibold mb-1.5 ${light ? "text-slate-700" : "text-slate-600 dark:text-slate-200"}`}>{label}</Text>
       <View
-        className={`flex-row items-center bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] px-4 py-3.5 ${
-          error ? "border-rose-400" : "border-slate-200 dark:border-noche-borde"
+        className={`flex-row items-center rounded-xl border-[1.5px] px-4 py-3.5 ${light ? "bg-white" : "bg-slate-50 dark:bg-noche-2"} ${
+          error ? "border-rose-400" : light ? "border-slate-300" : "border-slate-200 dark:border-noche-borde"
         }`}
       >
         <TextInput
@@ -40,7 +42,7 @@ export default function AuthField({
           secureTextEntry={isPassword && !show}
           keyboardType={keyboardType}
           autoCapitalize="none"
-          className="flex-1 text-sm text-slate-900 dark:text-slate-100"
+          className={`flex-1 text-sm ${light ? "text-slate-900" : "text-slate-900 dark:text-slate-100"}`}
         />
         {isPassword && (
           <TouchableOpacity

@@ -2,9 +2,11 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  StatusBar,
   Text,
   TouchableOpacity,
   View,
@@ -92,33 +94,36 @@ export default function Login({
   return (
     <KeyboardAvoidingView
       behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-white dark:bg-noche"
+      className="flex-1 bg-[#17100c]"
     >
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
+      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" className="absolute inset-0 h-full w-full" />
+      <View className="absolute inset-0 bg-black/45" />
       <ScrollView
         contentContainerStyle={{
           flexGrow: 1,
           justifyContent: "center",
-          paddingHorizontal: 24,
-          paddingTop: insets.top,
-          paddingBottom: insets.bottom,
+          paddingHorizontal: 16,
+          paddingTop: insets.top + 16,
+          paddingBottom: insets.bottom + 24,
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <View>
-          <View className="w-14 h-14 rounded-2xl bg-emerald-600 items-center justify-center mb-6">
-            <Wallet size={26} color="#ffffff" />
+        <View className="rounded-[28px] bg-white/95 px-6 pt-8 pb-7">
+          <View className="w-12 h-12 rounded-2xl bg-amber-500 items-center justify-center mb-5">
+            <Wallet size={22} color="#ffffff" />
           </View>
-          <Text className="text-2xl font-extrabold text-slate-900 dark:text-slate-100">{t("login.welcomeBack")}</Text>
-          <Text className="text-sm text-slate-500 dark:text-slate-300 mt-1 mb-7">{t("login.subtitle")}</Text>
-        </View>
+          <Text className="text-2xl font-extrabold text-slate-900">{t("login.welcomeBack")}</Text>
+          <Text className="text-sm text-slate-500 mt-1 mb-7">{t("login.subtitle")}</Text>
 
-        <View className="gap-4">
+          <View className="gap-4">
           <AuthField
             label={t("auth.emailLabel")}
             value={email}
             onChange={setEmail}
             placeholder={t("auth.emailPlaceholder")}
             keyboardType="email-address"
+            light
           />
           <AuthField
             label={t("auth.passwordLabel")}
@@ -126,10 +131,11 @@ export default function Login({
             value={pass}
             onChange={setPass}
             placeholder="••••••••"
+            light
           />
           {error ? <Text className="text-rose-500 text-xs font-medium -mt-2">{error}</Text> : null}
           <TouchableOpacity onPress={forgotPassword}>
-            <Text className="text-right text-xs font-semibold text-emerald-600">
+            <Text className="text-right text-xs font-semibold text-amber-600">
               {t("login.forgotPassword")}
             </Text>
           </TouchableOpacity>
@@ -139,7 +145,7 @@ export default function Login({
           activeOpacity={0.85}
           onPress={submit}
           disabled={loading}
-          className={`w-full mt-7 bg-emerald-600 py-4 rounded-2xl items-center justify-center ${
+          className={`w-full mt-7 bg-amber-500 py-4 rounded-2xl items-center justify-center ${
             loading ? "opacity-70" : ""
           }`}
         >
@@ -157,6 +163,7 @@ export default function Login({
             onPress={loginWithGoogle}
             loading={googleLoading}
             disabled={loading}
+            light
           />
           {googleError ? (
             <Text className="text-rose-500 text-xs font-medium text-center mt-3">
@@ -169,10 +176,11 @@ export default function Login({
             venía de un espacio al final del propio texto traducido, donde
             no se ve y cualquiera lo borraría sin saber que hacía falta. */}
         <View className="flex-row justify-center gap-1 mt-6 pb-6">
-          <Text className="text-sm text-slate-500 dark:text-slate-300">{t("login.noAccount")}</Text>
+          <Text className="text-sm text-slate-500">{t("login.noAccount")}</Text>
           <TouchableOpacity onPress={onGoRegister}>
-            <Text className="text-sm text-emerald-600 font-bold">{t("login.register")}</Text>
+            <Text className="text-sm text-amber-600 font-bold">{t("login.register")}</Text>
           </TouchableOpacity>
+          </View>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

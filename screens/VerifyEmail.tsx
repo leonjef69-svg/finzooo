@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ActivityIndicator, Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MailCheck } from "lucide-react-native";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -55,6 +55,7 @@ export default function VerifyEmail({
 
   return (
     <View className="flex-1 bg-[#17100c]">
+      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" className="absolute inset-0 h-full w-full" />
       <View className="absolute inset-0 bg-black/45" />
       <ScrollView
@@ -68,8 +69,8 @@ export default function VerifyEmail({
       >
       <View className="rounded-[28px] bg-white/95 p-6">
       <View className="items-center mb-8">
-        <View className="w-16 h-16 rounded-3xl bg-emerald-50 items-center justify-center mb-6">
-          <MailCheck size={30} color="#059669" />
+        <View className="w-16 h-16 rounded-3xl bg-amber-50 items-center justify-center mb-6">
+          <MailCheck size={30} color="#d97706" />
         </View>
         <Text className="text-xl font-extrabold text-slate-900 dark:text-slate-100 mb-2 text-center">
           {t("verifyEmail.title")}
@@ -91,7 +92,7 @@ export default function VerifyEmail({
         activeOpacity={0.85}
         onPress={handleCheck}
         disabled={checking || resending}
-        className={`w-full bg-emerald-600 py-4 rounded-2xl items-center justify-center ${
+        className={`w-full bg-amber-500 py-4 rounded-2xl items-center justify-center ${
           checking ? "opacity-70" : ""
         }`}
       >
@@ -108,7 +109,7 @@ export default function VerifyEmail({
         disabled={checking || resending}
         className="mt-4 items-center py-2"
       >
-        <Text className="text-sm text-emerald-600 font-bold">
+        <Text className="text-sm text-amber-600 font-bold">
           {resending ? t("verifyEmail.resending") : t("verifyEmail.resendButton")}
         </Text>
       </TouchableOpacity>

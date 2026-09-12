@@ -37,18 +37,20 @@ export default function GoogleButton({
   onPress,
   loading = false,
   disabled = false,
+  light = false,
 }: {
   label: string;
   onPress: () => void;
   loading?: boolean;
   disabled?: boolean;
+  light?: boolean;
 }) {
   return (
     <TouchableOpacity
       activeOpacity={0.85}
       onPress={onPress}
       disabled={disabled || loading}
-      className={`w-full py-4 rounded-2xl items-center justify-center flex-row gap-3 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde ${
+      className={`w-full py-4 rounded-2xl items-center justify-center flex-row gap-3 bg-white ${light ? "border-slate-300" : "dark:bg-noche-2 border-slate-200 dark:border-noche-borde"} border-[1.5px] ${
         disabled || loading ? "opacity-70" : ""
       }`}
     >
@@ -57,7 +59,7 @@ export default function GoogleButton({
       ) : (
         <>
           <GoogleLogo />
-          <Text className="font-bold text-slate-700 dark:text-slate-100">{label}</Text>
+          <Text className={`font-bold ${light ? "text-slate-800" : "text-slate-700 dark:text-slate-100"}`}>{label}</Text>
         </>
       )}
     </TouchableOpacity>
