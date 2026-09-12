@@ -102,14 +102,13 @@ export default function Login({
       <ScrollView
         contentContainerStyle={{
           flexGrow: 1,
-          justifyContent: "center",
           paddingHorizontal: 16,
-          paddingTop: insets.top + 16,
+          paddingTop: insets.top + 150,
           paddingBottom: insets.bottom + 24,
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="rounded-[28px] bg-white/95 px-6 pt-8 pb-7">
+        <View className="rounded-[30px] bg-white/95 px-6 pt-8 pb-7">
           <View className="w-12 h-12 rounded-2xl bg-amber-500 items-center justify-center mb-5">
             <Wallet size={22} color="#ffffff" />
           </View>

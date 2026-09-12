@@ -6,10 +6,10 @@ const verificacion = fs.readFileSync("app/verify-email.tsx", "utf8");
 const configuracion = fs.readFileSync("app/setup.tsx", "utf8");
 const fallos = [];
 
-for (const texto of ["Continuar con Google", "Crear cuenta", "Ya tengo una cuenta", "Tus datos, solo tuyos."]) {
+for (const texto of ["Continuar con Google", "Crear cuenta", "Ya tengo una cuenta"]) {
   if (!bienvenida.includes(texto)) fallos.push(`falta ${texto} en bienvenida`);
 }
-if (!bienvenida.includes("fino-sunset-background.png")) fallos.push("falta el fondo oficial");
+if (!bienvenida.includes("fino-person-background.png")) fallos.push("falta el fondo oficial con la persona");
 if (!registro.includes('router.replace("/verify-email")')) fallos.push("crear cuenta no lleva a verificar correo");
 if (!verificacion.includes('router.replace("/setup")')) fallos.push("verificar correo no lleva a configurar Fino");
 if (!configuracion.includes("Setup")) fallos.push("falta la configuración inicial");

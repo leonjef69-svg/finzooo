@@ -93,10 +93,10 @@ export default function Register({
       <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" className="absolute inset-0 h-full w-full" />
       <View className="absolute inset-0 bg-black/40" />
       <ScrollView
-        contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 32 + insets.bottom }}
+        contentContainerStyle={{ paddingTop: insets.top + 145, paddingBottom: 32 + insets.bottom }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="mx-4 my-6 rounded-[28px] bg-white/95 pb-8">
+        <View className="mx-4 rounded-[30px] bg-white/95 pb-8">
         <View className="px-6 pt-8 pb-4">
           <View className="w-12 h-12 rounded-2xl bg-amber-500 items-center justify-center mb-5">
             <Wallet size={22} color="#ffffff" />

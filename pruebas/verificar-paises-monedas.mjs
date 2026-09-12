@@ -43,8 +43,8 @@ for (const file of ["screens/CountryPicker.tsx", "screens/CurrencyPicker.tsx"]) 
 
 const currencyPicker = read("screens/CurrencyPicker.tsx");
 check(
-  /\{currency\.symbol\}\s*·\s*\{currency\.id\}/.test(currencyPicker),
-  "el selector muestra juntos el símbolo y el código ISO",
+  currencyPicker.includes('currency.symbol === currency.id ? currency.id : `${currency.symbol} · ${currency.id}`'),
+  "el selector muestra símbolo y código ISO sin repetirlos cuando son iguales",
 );
 check(/adjustsFontSizeToFit/.test(currencyPicker), "los símbolos largos caben en pantallas estrechas");
 check(/minimumFontScale=\{0\.72\}/.test(currencyPicker), "el código ISO nunca desaparece por falta de ancho");

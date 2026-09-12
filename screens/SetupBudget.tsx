@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
-import { Image, KeyboardAvoidingView, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
-import { Bell, ChevronRight, Globe2, Target } from "lucide-react-native";
+import { Bell, ChevronRight, Globe2, WalletCards } from "lucide-react-native";
 import { currencySymbolFor } from "@/constants/currencies";
 import { countryById } from "@/constants/countries";
 import { useAppData } from "@/contexts/AppDataContext";
-import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
+import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { irUnaVez } from "@/utils/nav";
 
 export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => void }) {
@@ -24,9 +24,17 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
   }, []);
 
   async function enableNotifications() {
-    if (notificationsEnabled) return;
+    if (notificationsEnabled) {
+      await Linking.openSettings();
+      return;
+    }
     try {
       if (Platform.OS === "android") await Notifications.setNotificationChannelAsync("default", { name: "Avisos de Fino", importance: Notifications.AndroidImportance.DEFAULT });
+      const current = await Notifications.getPermissionsAsync();
+      if (!current.canAskAgain && !current.granted) {
+        await Linking.openSettings();
+        return;
+      }
       const result = await Notifications.requestPermissionsAsync();
       setNotificationsEnabled(result.granted);
     } catch { setNotificationsEnabled(false); }
@@ -38,8 +46,8 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
       className="flex-1 bg-[#17100c]"
     >
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" className="absolute inset-0 h-full w-full" />
-      <View className="absolute inset-0 bg-black/45" />
+      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" blurRadius={12} className="absolute inset-0 h-full w-full" />
+      <View className="absolute inset-0 bg-black/55" />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
@@ -52,9 +60,6 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
       >
       <View>
       <View className="items-center mb-7">
-        <View className="w-16 h-16 rounded-3xl bg-amber-50 items-center justify-center mb-5">
-          <Target size={30} color="#d97706" />
-        </View>
         <Text className="text-2xl font-extrabold text-white mb-2 text-center">Configura Fino</Text>
         <Text className="text-sm text-white/90 leading-relaxed text-center px-2">
           {t("setup.subtitle")}
@@ -63,26 +68,31 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
 
       <TouchableOpacity onPress={() => irUnaVez("/country")} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Globe2 size={20} color="#d97706" /><Text className="ml-3 flex-1 font-bold text-slate-900">País</Text><Text className="mr-2 text-slate-600">{countryById(userCountry)?.name ?? userCountry}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
       <TouchableOpacity onPress={() => irUnaVez("/currency")} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Text className="text-xl">💰</Text><Text className="ml-3 flex-1 font-bold text-slate-900">Moneda</Text><Text className="mr-2 text-slate-600">{currencySymbolFor(userCurrency)} · {userCurrency}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
-      <TouchableOpacity onPress={enableNotifications} className="mb-5 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Bell size={20} color="#7c3aed" /><Text className="ml-3 flex-1 font-bold text-slate-900">Avisos</Text><Text className={notificationsEnabled ? "font-bold text-emerald-600" : "text-slate-500"}>{notificationsEnabled ? "Activado" : "Desactivado"}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
+      <TouchableOpacity onPress={enableNotifications} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Bell size={20} color="#7c3aed" /><Text className="ml-3 flex-1 font-bold text-slate-900">Avisos</Text><Text className={notificationsEnabled ? "font-bold text-emerald-600" : "text-slate-500"}>{notificationsEnabled ? "Activado" : "Desactivado"}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
 
-      <View>
-        <Text className="text-xs font-semibold text-white/75 text-center mb-2">{monthLabel}</Text>
-        <Text className="text-xs font-semibold text-white mb-1.5 text-center">
-          {t("setup.monthlyBudget")}
-        </Text>
-        <View className="flex-row items-center justify-center bg-white/95 rounded-2xl px-4 py-5">
-          <Text className="text-slate-500 font-bold text-xl mr-1">{currencySymbolFor(userCurrency)}</Text>
+        <View className="flex-row items-center bg-white/95 rounded-2xl px-4 py-3.5">
+          <WalletCards size={20} color="#d97706" />
+          <View className="ml-3 mr-2">
+            <Text className="font-bold text-slate-900">Presupuesto</Text>
+            <Text className="text-[10px] text-slate-500">{monthLabel}</Text>
+          </View>
+          <Text className="ml-auto text-slate-500 font-bold text-base mr-1">{currencySymbolFor(userCurrency)}</Text>
           <TextInput
-            disableFullscreenUI            autoFocus
+            disableFullscreenUI
             keyboardType="decimal-pad"
             value={amount}
-            onChangeText={(v) => setAmount(sanitizeAmountInput(v))}
+            onChangeText={(v) => {
+              const safe = sanitizeSafeAmountInput(v);
+              const [whole = "", decimals] = safe.split(".");
+              const normalized = whole.replace(/^0+(?=\d)/, "");
+              setAmount(decimals === undefined ? normalized : `${normalized || "0"}.${decimals}`);
+            }}
             placeholder="0.00"
             placeholderTextColor="#94a3b8"
-            className="text-3xl font-extrabold text-slate-900 text-center w-40"
+            maxFontSizeMultiplier={1.15}
+            className={`${amount.length > 11 ? "text-sm" : amount.length > 8 ? "text-base" : "text-xl"} min-w-0 flex-1 font-extrabold text-slate-900 text-right`}
           />
         </View>
-      </View>
 
       <TouchableOpacity
         activeOpacity={0.85}

@@ -67,26 +67,23 @@ export default function VerifyEmail({
           paddingBottom: insets.bottom + 24,
         }}
       >
-      <View className="rounded-[28px] bg-white/95 p-6">
-      <View className="items-center mb-8">
-        <View className="w-16 h-16 rounded-3xl bg-amber-50 items-center justify-center mb-6">
-          <MailCheck size={30} color="#d97706" />
-        </View>
-        <Text className="text-xl font-extrabold text-slate-900 dark:text-slate-100 mb-2 text-center">
+      <View>
+      <View className="items-center mb-7">
+        <Text className="text-3xl font-extrabold text-white mb-1 text-center">
           {t("verifyEmail.title")}
         </Text>
-        <Text className="text-sm text-slate-600 dark:text-slate-200 leading-relaxed text-center px-2">
-          {t("verifyEmail.sentTo")}{"\n"}
-          <Text className="font-bold text-slate-700 dark:text-slate-200">{email}</Text>
-          {"\n"}
-          {t("verifyEmail.openToConfirm")}
-        </Text>
-        <Text className="text-xs text-amber-700 dark:text-amber-300 text-center mt-3">
-          {t("verifyEmail.spamHint")}
-        </Text>
+        <Text className="text-base font-semibold text-white/90 mb-7">Te enviamos un enlace</Text>
+        <View className="w-32 h-24 rounded-[28px] bg-white/95 items-center justify-center mb-7 shadow-lg">
+          <MailCheck size={58} color="#d97706" />
+        </View>
+        <View className="w-full rounded-2xl bg-white/95 px-5 py-4">
+          <Text className="text-sm text-center text-slate-600">{t("verifyEmail.sentTo")}</Text>
+          <Text numberOfLines={1} adjustsFontSizeToFit className="mt-1 text-center font-extrabold text-slate-900">{email}</Text>
+          <Text className="mt-2 text-xs text-center text-slate-500">{t("verifyEmail.spamHint")}</Text>
+        </View>
       </View>
 
-      {message ? <Text className="text-xs text-center text-slate-600 dark:text-slate-200 mb-4">{message}</Text> : null}
+      {message ? <Text className="text-xs text-center text-white mb-4">{message}</Text> : null}
 
       <TouchableOpacity
         activeOpacity={0.85}
@@ -107,15 +104,15 @@ export default function VerifyEmail({
         activeOpacity={0.7}
         onPress={handleResend}
         disabled={checking || resending}
-        className="mt-4 items-center py-2"
+        className="mt-3 rounded-2xl border-2 border-amber-400 items-center py-3.5"
       >
-        <Text className="text-sm text-amber-600 font-bold">
+        <Text className="text-sm text-amber-300 font-bold">
           {resending ? t("verifyEmail.resending") : t("verifyEmail.resendButton")}
         </Text>
       </TouchableOpacity>
 
       <TouchableOpacity activeOpacity={0.7} onPress={onLogout} className="mt-4 items-center py-2">
-        <Text className="text-sm text-slate-500 dark:text-slate-300">{t("verifyEmail.useOtherAccount")}</Text>
+        <Text className="text-sm font-semibold text-white">{t("verifyEmail.useOtherAccount")}</Text>
       </TouchableOpacity>
       </View>
       </ScrollView>
