@@ -6,7 +6,7 @@ import {
   // aunque sí existe y funciona correctamente en el celular real.
   // @ts-expect-error — getReactNativePersistence sí existe en la versión para React Native.
   getReactNativePersistence,
-} from "@firebase/auth";
+} from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { encryptedAsyncStorage } from "@/utils/encryptedAsyncStorage";
 

@@ -29,6 +29,9 @@ check(currencies.size >= 150, `deben existir las monedas del catálogo; hay ${cu
 const missing = countries.filter(([, , currency]) => !currencies.has(currency));
 check(missing.length === 0, `faltan monedas para: ${missing.map(([id]) => id).join(", ")}`);
 check(/ZERO_DECIMALS/.test(currenciesSource) && /THREE_DECIMALS/.test(currenciesSource), "se respetan monedas de 0 y 3 decimales");
+check(/SPANISH_NAMES/.test(currenciesSource), "Android tiene nombres reales en español aunque Intl.DisplayNames no exista");
+check(/AED: "Dírham de Emiratos Árabes Unidos"/.test(currenciesSource), "AED no se presenta como una moneda genérica del país");
+check(/PEN: "Sol peruano"/.test(currenciesSource), "PEN se presenta como Sol peruano");
 
 const profile = read("types.ts");
 const cloud = read("utils/cloudSync.ts");

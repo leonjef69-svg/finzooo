@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { reload, sendEmailVerification } from "@firebase/auth";
+import { reload, sendEmailVerification } from "firebase/auth";
 import VerifyEmail from "@/screens/VerifyEmail";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";

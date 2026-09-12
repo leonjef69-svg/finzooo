@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { ActivityIndicator, Image, Platform, ScrollView, StatusBar, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, ImageBackground, Platform, ScrollView, StatusBar, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BellRing, ChartNoAxesCombined, ReceiptText, ShieldCheck } from "lucide-react-native";
 
@@ -19,15 +19,15 @@ export default function Onboarding({ onGoogle, onCreateAccount, onLogin }: Props
   }
 
   return (
-    <View className="flex-1 bg-[#17100c]">
+    <ImageBackground
+      source={require("../assets/images/onboarding/fino-person-background.png")}
+      resizeMode="cover"
+      className="flex-1 bg-[#17100c]"
+      style={{ flex: 1 }}
+      imageStyle={{ transform: [{ scale: 1.34 }, { translateY: -82 }] }}
+    >
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image
-        source={require("../assets/images/onboarding/fino-person-background.png")}
-        resizeMode="cover"
-        className="absolute inset-0 h-full w-full"
-        style={{ transform: [{ scale: 1.34 }, { translateY: -82 }] }}
-      />
-      <View className="absolute inset-0 bg-black/20" />
+      <View pointerEvents="none" className="absolute inset-0 bg-black/20" />
       <ScrollView
         contentContainerStyle={{
           flexGrow: 1,
@@ -57,7 +57,7 @@ export default function Onboarding({ onGoogle, onCreateAccount, onLogin }: Props
           {googleError ? <Text className="mt-2 text-center text-xs font-bold text-red-200">{googleError}</Text> : null}
         </View>
       </ScrollView>
-    </View>
+    </ImageBackground>
   );
 }
 

@@ -62,8 +62,14 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
       className="flex-1 bg-[#17100c]"
     >
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" blurRadius={12} className="absolute inset-0 h-full w-full" />
-      <View className="absolute inset-0 bg-black/55" />
+      <Image
+        source={require("../assets/images/onboarding/fino-sunset-background.png")}
+        resizeMode="cover"
+        blurRadius={7}
+        className="absolute inset-0 h-full w-full"
+        style={{ transform: [{ scale: 1.3 }, { translateY: 150 }] }}
+      />
+      <View className="absolute inset-0 bg-black/35" />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{

@@ -14,7 +14,7 @@ import {
   reauthenticateWithCredential,
   signOut,
   updatePassword,
-} from "@firebase/auth";
+} from "firebase/auth";
 import { AppState } from "react-native";
 import { colorScheme } from "nativewind";
 import { seedTransactions, seedGoals } from "@/constants/seed";

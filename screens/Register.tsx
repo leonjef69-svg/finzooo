@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Image,
+  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -12,8 +13,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Wallet } from "lucide-react-native";
-import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "@firebase/auth";
+import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
 import AuthField from "@/components/AuthField";
 import GoogleButton, { OrDivider } from "@/components/GoogleButton";
 import { auth } from "@/utils/firebase";
@@ -45,8 +45,15 @@ export default function Register({
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState("");
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
+
+  useEffect(() => {
+    const show = Keyboard.addListener("keyboardDidShow", () => setKeyboardVisible(true));
+    const hide = Keyboard.addListener("keyboardDidHide", () => setKeyboardVisible(false));
+    return () => { show.remove(); hide.remove(); };
+  }, []);
 
   async function registerWithGoogle() {
     setErrors({});
@@ -100,19 +107,18 @@ export default function Register({
       />
       <View className="absolute inset-0 bg-black/40" />
       <ScrollView
-        contentContainerStyle={{ paddingTop: insets.top + 245, paddingBottom: insets.bottom }}
+        contentContainerStyle={{ paddingTop: insets.top + 215, paddingBottom: insets.bottom }}
         keyboardShouldPersistTaps="handled"
+        scrollEnabled={height < 700 || keyboardVisible}
+        bounces={false}
       >
-        <View className="rounded-t-[30px] bg-white/95 pb-8" style={{ minHeight: Math.max(650, height - insets.top - 245) }}>
-        <View className="px-6 pt-8 pb-4">
-          <View className="w-12 h-12 rounded-2xl bg-amber-500 items-center justify-center mb-5">
-            <Wallet size={22} color="#ffffff" />
-          </View>
+        <View className="rounded-t-[30px] bg-white/95 pb-4" style={{ minHeight: Math.max(600, height - insets.top - 215) }}>
+        <View className="px-6 pt-7 pb-3">
           <Text className="text-2xl font-extrabold text-slate-900">{t("register.title")}</Text>
           <Text className="text-sm text-slate-500 mt-1">{t("register.subtitle")}</Text>
         </View>
 
-        <View className="px-6 gap-4 mt-2">
+        <View className="px-6 gap-3 mt-1">
           <AuthField
             label={t("register.nameLabel")}
             value={name}
@@ -144,7 +150,7 @@ export default function Register({
           ) : null}
         </View>
 
-        <View className="px-6 mt-8">
+        <View className="px-6 mt-5">
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={submit}
@@ -177,7 +183,7 @@ export default function Register({
           </> : null}
 
           {/* gap-1: ver la nota del mismo bloque en Login.tsx. */}
-          <View className="flex-row justify-center gap-1 mt-5">
+          <View className="flex-row justify-center gap-1 mt-4">
             <Text className="text-sm text-slate-500">{t("register.haveAccount")}</Text>
             <TouchableOpacity onPress={onGoLogin}>
               <Text className="text-sm text-amber-600 font-bold">{t("register.login")}</Text>

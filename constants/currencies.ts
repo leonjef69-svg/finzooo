@@ -9,6 +9,52 @@ const SYMBOLS: Record<string, string> = {
   TWD: "NT$", USD: "US$", VND: "₫", ZAR: "R",
 };
 
+/* Hermes no incluye Intl.DisplayNames en todos los Android compatibles.
+ * Este respaldo evita códigos solos o nombres inventados a partir de países. */
+const SPANISH_NAMES: Record<string, string> = {
+  AED: "Dírham de Emiratos Árabes Unidos", AFN: "Afgani afgano", ALL: "Lek albanés",
+  AMD: "Dram armenio", ANG: "Florín antillano", AOA: "Kuanza angoleño", ARS: "Peso argentino",
+  AUD: "Dólar australiano", AWG: "Florín arubeño", AZN: "Manat azerbaiyano",
+  BAM: "Marco convertible de Bosnia y Herzegovina", BBD: "Dólar barbadense", BDT: "Taka bangladesí",
+  BGN: "Leva búlgara", BHD: "Dinar bareiní", BIF: "Franco burundés", BMD: "Dólar bermudeño",
+  BND: "Dólar bruneano", BOB: "Boliviano", BRL: "Real brasileño", BSD: "Dólar bahameño",
+  BTN: "Gultrum butanés", BWP: "Pula botsuano", BYN: "Rublo bielorruso", BZD: "Dólar beliceño",
+  CAD: "Dólar canadiense", CDF: "Franco congoleño", CHF: "Franco suizo", CLP: "Peso chileno",
+  CNY: "Yuan renminbi", COP: "Peso colombiano", CRC: "Colón costarricense", CUP: "Peso cubano",
+  CVE: "Escudo de Cabo Verde", CZK: "Corona checa", DJF: "Franco yibutiano", DKK: "Corona danesa",
+  DOP: "Peso dominicano", DZD: "Dinar argelino", EGP: "Libra egipcia", ERN: "Nakfa eritreo",
+  ETB: "Bir etíope", EUR: "Euro", FJD: "Dólar fiyiano", FKP: "Libra malvinense",
+  GBP: "Libra esterlina", GEL: "Lari georgiano", GHS: "Cedi ghanés", GIP: "Libra gibraltareña",
+  GMD: "Dalasi gambiano", GNF: "Franco guineano", GTQ: "Quetzal guatemalteco", GYD: "Dólar guyanés",
+  HKD: "Dólar hongkonés", HNL: "Lempira hondureño", HTG: "Gurde haitiano", HUF: "Forinto húngaro",
+  IDR: "Rupia indonesia", ILS: "Nuevo séquel israelí", INR: "Rupia india", IQD: "Dinar iraquí",
+  IRR: "Rial iraní", ISK: "Corona islandesa", JMD: "Dólar jamaicano", JOD: "Dinar jordano",
+  JPY: "Yen japonés", KES: "Chelín keniano", KGS: "Som kirguís", KHR: "Riel camboyano",
+  KMF: "Franco comorense", KPW: "Won norcoreano", KRW: "Won surcoreano", KWD: "Dinar kuwaití",
+  KYD: "Dólar de las Islas Caimán", KZT: "Tengue kazajo", LAK: "Kip laosiano", LBP: "Libra libanesa",
+  LKR: "Rupia esrilanquesa", LRD: "Dólar liberiano", LSL: "Loti lesotense", LYD: "Dinar libio",
+  MAD: "Dírham marroquí", MDL: "Leu moldavo", MGA: "Ariari malgache", MKD: "Dinar macedonio",
+  MMK: "Kiat de Myanmar", MNT: "Tugrik mongol", MOP: "Pataca macaense", MRU: "Uguiya mauritano",
+  MUR: "Rupia mauriciana", MVR: "Rufiya maldiva", MWK: "Kuacha malauí", MXN: "Peso mexicano",
+  MYR: "Ringit malasio", MZN: "Metical mozambiqueño", NAD: "Dólar namibio", NGN: "Naira nigeriano",
+  NIO: "Córdoba oro", NOK: "Corona noruega", NPR: "Rupia nepalí", NZD: "Dólar neozelandés",
+  OMR: "Rial omaní", PAB: "Balboa panameño", PEN: "Sol peruano", PGK: "Kina papú",
+  PHP: "Peso filipino", PKR: "Rupia pakistaní", PLN: "Esloti polaco", PYG: "Guaraní paraguayo",
+  QAR: "Rial catarí", RON: "Leu rumano", RSD: "Dinar serbio", RUB: "Rublo ruso",
+  RWF: "Franco ruandés", SAR: "Rial saudí", SBD: "Dólar salomonense", SCR: "Rupia seychellense",
+  SDG: "Libra sudanesa", SEK: "Corona sueca", SGD: "Dólar singapurense", SHP: "Libra de Santa Elena",
+  SLE: "Leona sierraleonesa", SOS: "Chelín somalí", SRD: "Dólar surinamés", SSP: "Libra sursudanesa",
+  STN: "Dobra santotomense", SYP: "Libra siria", SZL: "Lilangeni esuatiní", THB: "Bat tailandés",
+  TJS: "Somoni tayiko", TMT: "Manat turcomano", TND: "Dinar tunecino", TOP: "Paanga tongano",
+  TRY: "Lira turca", TTD: "Dólar de Trinidad y Tobago", TWD: "Nuevo dólar taiwanés",
+  TZS: "Chelín tanzano", UAH: "Grivna ucraniana", UGX: "Chelín ugandés",
+  USD: "Dólar estadounidense", UYU: "Peso uruguayo", UZS: "Sum uzbeko", VES: "Bolívar venezolano",
+  VND: "Dong vietnamita", VUV: "Vatu vanuatense", WST: "Tala samoano",
+  XAF: "Franco CFA de África Central", XCD: "Dólar del Caribe Oriental",
+  XOF: "Franco CFA de África Occidental", XPF: "Franco CFP", YER: "Rial yemení",
+  ZAR: "Rand sudafricano", ZMW: "Kuacha zambiano", ZWG: "Oro zimbabuense",
+};
+
 export type CurrencyId = string;
 
 export const CURRENCIES = CODES.split(" ").map((id) => ({
@@ -48,6 +94,7 @@ export function currencyLabelFor(
   t: (key: string) => string,
   language = "es"
 ): string {
+  if (language.toLowerCase().startsWith("es") && SPANISH_NAMES[id]) return SPANISH_NAMES[id];
   const key = `currency.${id}`;
   const translated = t(key);
   if (translated !== key) return translated;

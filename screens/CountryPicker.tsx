@@ -30,8 +30,8 @@ export default function CountryPicker({ onBack, onSelect }: {
   return (
     <View className="flex-1 bg-[#17100c]" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" blurRadius={5} className="absolute inset-0 h-full w-full" />
-      <View className="absolute inset-0 bg-black/55" />
+      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" blurRadius={4} className="absolute inset-0 h-full w-full" style={{ transform: [{ scale: 1.18 }, { translateY: 70 }] }} />
+      <View className="absolute inset-0 bg-black/40" />
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
         <BackButton onPress={onBack} onDark />
         <Text className="text-base font-bold text-white">{t("settings.country")}</Text>

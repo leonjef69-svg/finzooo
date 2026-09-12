@@ -2,7 +2,7 @@ import {
   GoogleAuthProvider,
   reauthenticateWithCredential,
   signInWithCredential,
-} from "@firebase/auth";
+} from "firebase/auth";
 import { auth } from "@/utils/firebase";
 import { configureGoogleSignIn, getGoogleSignInNative } from "@/utils/googleSignInNative";
 
