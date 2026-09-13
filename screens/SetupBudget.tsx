@@ -4,8 +4,8 @@ import { AppState, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, S
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
 import { Bell, ChevronRight, Globe2, WalletCards } from "lucide-react-native";
-import { currencySymbolFor } from "@/constants/currencies";
-import { countryById } from "@/constants/countries";
+import { currencyDecimals, currencySymbolFor } from "@/constants/currencies";
+import { countryById, countryLabelFor } from "@/constants/countries";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
@@ -14,7 +14,7 @@ import { irUnaVez } from "@/utils/nav";
 const notificationKey = () => `@fino/setup-notifications-enabled:${auth.currentUser?.uid ?? "local"}`;
 
 export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => void }) {
-  const { userCurrency, userCountry, t, monthNames } = useAppData();
+  const { userCurrency, userLanguage, userCountry, t, monthNames } = useAppData();
   const [amount, setAmount] = useState("");
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const insets = useSafeAreaInsets();
@@ -63,13 +63,11 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
     >
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <Image
-        source={require("../assets/images/onboarding/fino-sunset-background.png")}
+        source={require("../assets/images/onboarding/fino-settings-background.png")}
         resizeMode="cover"
-        blurRadius={7}
         className="absolute inset-0 h-full w-full"
-        style={{ transform: [{ scale: 1.3 }, { translateY: 150 }] }}
       />
-      <View className="absolute inset-0 bg-black/35" />
+      <View className="absolute inset-0 bg-black/40" />
       <ScrollView
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{
@@ -82,20 +80,20 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
       >
       <View>
       <View className="items-center mb-7">
-        <Text className="text-2xl font-extrabold text-white mb-2 text-center">Configura Fino</Text>
+        <Text className="text-2xl font-extrabold text-white mb-2 text-center">{t("setup.configureTitle")}</Text>
         <Text className="text-sm text-white/90 leading-relaxed text-center px-2">
           {t("setup.subtitle")}
         </Text>
       </View>
 
-      <TouchableOpacity onPress={() => irUnaVez("/country")} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Globe2 size={20} color="#d97706" /><Text className="ml-3 flex-1 font-bold text-slate-900">País</Text><Text className="mr-2 text-slate-600">{countryById(userCountry)?.name ?? userCountry}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
-      <TouchableOpacity onPress={() => irUnaVez("/currency")} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Text className="text-xl">💰</Text><Text className="ml-3 flex-1 font-bold text-slate-900">Moneda</Text><Text className="mr-2 text-slate-600">{currencySymbolFor(userCurrency)} · {userCurrency}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
-      <TouchableOpacity onPress={enableNotifications} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Bell size={20} color="#7c3aed" /><Text className="ml-3 flex-1 font-bold text-slate-900">Avisos</Text><Text className={notificationsEnabled ? "font-bold text-emerald-600" : "text-slate-500"}>{notificationsEnabled ? "Activado" : "Desactivado"}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
+      <TouchableOpacity onPress={() => irUnaVez("/country")} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Globe2 size={20} color="#d97706" /><Text className="ml-3 flex-1 font-bold text-slate-900">{t("settings.country")}</Text><Text numberOfLines={1} className="max-w-[45%] mr-2 text-slate-600">{countryById(userCountry) ? countryLabelFor(countryById(userCountry)!, userLanguage) : t("country.customShort")}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
+      <TouchableOpacity onPress={() => irUnaVez("/currency")} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Text className="text-xl">💰</Text><Text className="ml-3 flex-1 font-bold text-slate-900">{t("settings.currency")}</Text><Text className="mr-2 text-slate-600">{currencySymbolFor(userCurrency)} · {userCurrency}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
+      <TouchableOpacity onPress={enableNotifications} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Bell size={20} color="#7c3aed" /><Text className="ml-3 flex-1 font-bold text-slate-900">{t("settings.notifications")}</Text><Text className={notificationsEnabled ? "font-bold text-emerald-600" : "text-slate-500"}>{t(notificationsEnabled ? "setup.notificationsOn" : "setup.notificationsOff")}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
 
         <View className="flex-row items-center bg-white/95 rounded-2xl px-4 py-3.5">
           <WalletCards size={20} color="#d97706" />
           <View className="ml-3 mr-2">
-            <Text className="font-bold text-slate-900">Presupuesto</Text>
+            <Text className="font-bold text-slate-900">{t("setup.monthlyBudget")}</Text>
             <Text className="text-[10px] text-slate-500">{monthLabel}</Text>
           </View>
           <View className="ml-auto w-[148px] flex-row items-center justify-end">
@@ -106,7 +104,9 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
             value={amount}
             onChangeText={(v) => {
               const safe = sanitizeSafeAmountInput(v);
-              const [whole = "", decimals] = safe.split(".");
+              const [whole = "", rawDecimals] = safe.split(".");
+              const allowedDecimals = currencyDecimals(userCurrency);
+              const decimals = allowedDecimals > 0 ? rawDecimals?.slice(0, allowedDecimals) : undefined;
               const normalized = whole.replace(/^0+(?=\d)/, "");
               setAmount(decimals === undefined ? normalized : `${normalized || "0"}.${decimals}`);
             }}

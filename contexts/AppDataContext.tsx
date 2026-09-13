@@ -1562,16 +1562,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   function updateCurrency(id: string) {
     setUserCurrency(id);
-    // Una moneda elegida por separado ya no representa necesariamente al
-    // país anterior. Dejamos el país personalizado en vez de mostrar uno falso.
-    setUserCountry("");
+    // Cambiar cómo se muestran los montos no cambia el país real del usuario.
+    // El país también controla métodos locales (Yape/Plin) y Telegram.
     saveJSON(STORAGE_KEYS.profile, {
       userName,
       userEmail,
       userPhoto,
       userCurrency: id,
       userLanguage,
-      userCountry: "",
+      userCountry,
       hasOnboarded: true,
     });
     showToast(t("toast.currencyUpdated"));

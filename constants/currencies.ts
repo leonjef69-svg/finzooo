@@ -1,12 +1,12 @@
 /** Monedas activas usadas por el catálogo mundial de países. */
-const CODES = `AED AFN ALL AMD ANG AOA ARS AUD AWG AZN BAM BBD BDT BGN BHD BIF BMD BND BOB BRL BSD BTN BWP BYN BZD CAD CDF CHF CLP CNY COP CRC CUP CVE CZK DJF DKK DOP DZD EGP ERN ETB EUR FJD FKP GBP GEL GHS GIP GMD GNF GTQ GYD HKD HNL HTG HUF IDR ILS INR IQD IRR ISK JMD JOD JPY KES KGS KHR KMF KPW KRW KWD KYD KZT LAK LBP LKR LRD LSL LYD MAD MDL MGA MKD MMK MNT MOP MRU MUR MVR MWK MXN MYR MZN NAD NGN NIO NOK NPR NZD OMR PAB PEN PGK PHP PKR PLN PYG QAR RON RSD RUB RWF SAR SBD SCR SDG SEK SGD SHP SLE SOS SRD SSP STN SYP SZL THB TJS TMT TND TOP TRY TTD TWD TZS UAH UGX USD UYU UZS VES VND VUV WST XAF XCD XOF XPF YER ZAR ZMW ZWG`;
+const CODES = `AED AFN ALL AMD ANG AOA ARS AUD AWG AZN BAM BBD BDT BGN BHD BIF BMD BND BOB BRL BSD BTN BWP BYN BZD CAD CDF CHF CLP CNY COP CRC CUP CVE CZK DJF DKK DOP DZD EGP ERN ETB EUR FJD FKP GBP GEL GHS GIP GMD GNF GTQ GYD HKD HNL HTG HUF IDR ILS INR IQD IRR ISK JMD JOD JPY KES KGS KHR KMF KPW KRW KWD KYD KZT LAK LBP LKR LRD LSL LYD MAD MDL MGA MKD MMK MNT MOP MRU MUR MVR MWK MXN MYR MZN NAD NGN NIO NOK NPR NZD OMR PAB PEN PGK PHP PKR PLN PYG QAR RON RSD RUB RWF SAR SBD SCR SDG SEK SGD SHP SLE SOS SRD SSP STN SYP SZL THB TJS TMT TND TOP TRY TTD TWD TZS UAH UGX USD UYU UZS VES VND VUV WST XAF XCD XCG XOF XPF YER ZAR ZMW ZWG`;
 
 const SYMBOLS: Record<string, string> = {
   ARS: "AR$", AUD: "A$", BOB: "Bs", BRL: "R$", CAD: "C$", CHF: "CHF",
   CLP: "CL$", CNY: "¥", COP: "COL$", EUR: "€", GBP: "£", HKD: "HK$",
   IDR: "Rp", ILS: "₪", INR: "₹", JPY: "¥", KRW: "₩", MXN: "MX$",
   NGN: "₦", PEN: "S/", PHP: "₱", RUB: "₽", THB: "฿", TRY: "₺",
-  TWD: "NT$", USD: "US$", VND: "₫", ZAR: "R",
+  TWD: "NT$", USD: "US$", VND: "₫", XCG: "Cg", ZAR: "R",
 };
 
 /* Hermes no incluye Intl.DisplayNames en todos los Android compatibles.
@@ -50,7 +50,7 @@ const SPANISH_NAMES: Record<string, string> = {
   TZS: "Chelín tanzano", UAH: "Grivna ucraniana", UGX: "Chelín ugandés",
   USD: "Dólar estadounidense", UYU: "Peso uruguayo", UZS: "Sum uzbeko", VES: "Bolívar venezolano",
   VND: "Dong vietnamita", VUV: "Vatu vanuatense", WST: "Tala samoano",
-  XAF: "Franco CFA de África Central", XCD: "Dólar del Caribe Oriental",
+  XAF: "Franco CFA de África Central", XCD: "Dólar del Caribe Oriental", XCG: "Florín caribeño",
   XOF: "Franco CFA de África Occidental", XPF: "Franco CFP", YER: "Rial yemení",
   ZAR: "Rand sudafricano", ZMW: "Kuacha zambiano", ZWG: "Oro zimbabuense",
 };

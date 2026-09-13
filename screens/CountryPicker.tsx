@@ -30,8 +30,8 @@ export default function CountryPicker({ onBack, onSelect }: {
   return (
     <View className="flex-1 bg-[#17100c]" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" blurRadius={4} className="absolute inset-0 h-full w-full" style={{ transform: [{ scale: 1.18 }, { translateY: 70 }] }} />
-      <View className="absolute inset-0 bg-black/40" />
+      <Image source={require("../assets/images/onboarding/fino-settings-background.png")} resizeMode="cover" className="absolute inset-0 h-full w-full" />
+      <View className="absolute inset-0 bg-black/45" />
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
         <BackButton onPress={onBack} onDark />
         <Text className="text-base font-bold text-white">{t("settings.country")}</Text>
@@ -56,6 +56,7 @@ export default function CountryPicker({ onBack, onSelect }: {
         windowSize={5}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
         ItemSeparatorComponent={() => <View className="h-2.5" />}
+        ListEmptyComponent={<Text className="mt-8 text-center text-sm font-semibold text-white">{t("common.noResults")}</Text>}
         ListFooterComponent={!actual && !query ? (
           <View className="mt-4 rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-slate-50 dark:bg-noche-2 p-4">
             <Text className="text-xs text-slate-600 dark:text-slate-300 leading-5">
@@ -68,6 +69,8 @@ export default function CountryPicker({ onBack, onSelect }: {
             return (
               <TouchableOpacity key={country.id}
                 onPress={() => { onSelect(country.id, country.language, country.currency); onBack(); }}
+                accessibilityRole="button"
+                accessibilityLabel={`${countryLabelFor(country, userLanguage)}. ${country.currency}. ${selected ? t("common.selected") : ""}`}
                 className={`flex-row items-center gap-3 rounded-2xl p-4 border-[1.5px] ${selected
                   ? "border-amber-500 bg-amber-50"
                   : "border-white/50 bg-white/95"}`}>

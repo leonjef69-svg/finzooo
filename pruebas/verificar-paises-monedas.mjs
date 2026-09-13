@@ -32,6 +32,10 @@ check(/ZERO_DECIMALS/.test(currenciesSource) && /THREE_DECIMALS/.test(currencies
 check(/SPANISH_NAMES/.test(currenciesSource), "Android tiene nombres reales en español aunque Intl.DisplayNames no exista");
 check(/AED: "Dírham de Emiratos Árabes Unidos"/.test(currenciesSource), "AED no se presenta como una moneda genérica del país");
 check(/PEN: "Sol peruano"/.test(currenciesSource), "PEN se presenta como Sol peruano");
+check(/XCG: "Florín caribeño"/.test(currenciesSource), "XCG usa el nombre actual del florín caribeño");
+check(/BG\|Bulgaria\|EUR/.test(countriesSource), "Bulgaria usa euro desde 2026");
+check(/CW\|Curaçao\|XCG/.test(countriesSource) && /SX\|Sint Maarten\|XCG/.test(countriesSource), "Curaçao y Sint Maarten usan XCG");
+check(/SPANISH_COUNTRY_NAMES/.test(countriesSource), "Android muestra los países en español aunque Intl.DisplayNames no exista");
 
 const profile = read("types.ts");
 const cloud = read("utils/cloudSync.ts");
@@ -50,9 +54,12 @@ check(
     && currencyPicker.includes('{currency.id}</Text>'),
   "el selector separa nombre, símbolo y código ISO sin duplicarlos",
 );
-check(/adjustsFontSizeToFit/.test(currencyPicker), "los símbolos largos caben en pantallas estrechas");
-check(/minimumFontScale=\{0\.72\}/.test(currencyPicker), "el código ISO nunca desaparece por falta de ancho");
+check(/numberOfLines=\{2\}/.test(currencyPicker), "los nombres largos usan dos líneas sin encogerse demasiado");
 check(/accessibilityLabel=\{currency\.name === currency\.id/.test(currencyPicker), "el lector de pantalla anuncia la moneda sin repeticiones");
+
+const appData = read("contexts/AppDataContext.tsx");
+const updateCurrency = appData.slice(appData.indexOf("function updateCurrency"), appData.indexOf("function updateLanguage"));
+check(/userCountry,/.test(updateCurrency) && !/setUserCountry\(""\)/.test(updateCurrency), "cambiar moneda conserva el país y sus métodos locales");
 
 console.log(failures ? `${failures} comprobaciones fallaron` : `Catálogo mundial correcto: ${countries.length} países y ${currencies.size} monedas`);
 process.exit(failures ? 1 : 0);

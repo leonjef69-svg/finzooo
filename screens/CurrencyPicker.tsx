@@ -27,8 +27,8 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
   return (
     <View className="flex-1 bg-[#17100c]" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image source={require("../assets/images/onboarding/fino-sunset-background.png")} resizeMode="cover" blurRadius={4} className="absolute inset-0 h-full w-full" style={{ transform: [{ scale: 1.18 }, { translateY: 70 }] }} />
-      <View className="absolute inset-0 bg-black/40" />
+      <Image source={require("../assets/images/onboarding/fino-settings-background.png")} resizeMode="cover" className="absolute inset-0 h-full w-full" />
+      <View className="absolute inset-0 bg-black/45" />
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
         <BackButton onPress={onBack} onDark />
         <Text className="text-base font-bold text-white">{t("settings.currency")}</Text>
@@ -53,6 +53,7 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
         windowSize={5}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
         ItemSeparatorComponent={() => <View className="h-2.5" />}
+        ListEmptyComponent={<Text className="mt-8 text-center text-sm font-semibold text-white">{t("common.noResults")}</Text>}
         renderItem={({ item: currency }) => {
             const selected = currency.id === current;
             return (
@@ -63,7 +64,7 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
                   ? "border-amber-500 bg-amber-50"
                   : "border-white/50 bg-white/95"}`}>
                 <View className="flex-row items-center gap-3 flex-1 min-w-0">
-                  <Text className="flex-1 text-sm font-bold text-slate-900" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72}>
+                  <Text className="flex-1 text-sm font-bold leading-5 text-slate-900" numberOfLines={2}>
                     {currency.name === currency.id ? currency.id : `${currency.name}${currency.symbol === currency.id ? "" : ` (${currency.symbol})`}`}
                   </Text>
                   {currency.name !== currency.id ? <Text className="text-xs font-extrabold text-slate-500">{currency.id}</Text> : null}
