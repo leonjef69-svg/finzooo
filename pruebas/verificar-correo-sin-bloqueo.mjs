@@ -6,6 +6,7 @@ const screen = fs.readFileSync("screens/VerifyEmail.tsx", "utf8");
 const translations = fs.readFileSync("constants/i18n.ts", "utf8");
 
 assert.match(route, /withTimeout/);
+assert.match(screen, /fino-email-background-v2\.png/, "Correo usa el fondo corregido sin follaje borroso");
 assert.match(screen, /verifyEmail\.spamHint/);
 assert.match(translations, /"verifyEmail\.spamHint"/);
 

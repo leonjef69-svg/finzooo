@@ -32,6 +32,7 @@ check(/ZERO_DECIMALS/.test(currenciesSource) && /THREE_DECIMALS/.test(currencies
 check(/SPANISH_NAMES/.test(currenciesSource), "Android tiene nombres reales en español aunque Intl.DisplayNames no exista");
 check(/AED: "Dírham de Emiratos Árabes Unidos"/.test(currenciesSource), "AED no se presenta como una moneda genérica del país");
 check(/PEN: "Sol peruano"/.test(currenciesSource), "PEN se presenta como Sol peruano");
+check(/AED: "د\.إ"/.test(currenciesSource) && /AFN: "؋"/.test(currenciesSource), "las monedas mundiales muestran símbolos reales junto al nombre");
 check(/XCG: "Florín caribeño"/.test(currenciesSource), "XCG usa el nombre actual del florín caribeño");
 check(/BG\|Bulgaria\|EUR/.test(countriesSource), "Bulgaria usa euro desde 2026");
 check(/CW\|Curaçao\|XCG/.test(countriesSource) && /SX\|Sint Maarten\|XCG/.test(countriesSource), "Curaçao y Sint Maarten usan XCG");

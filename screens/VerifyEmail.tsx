@@ -57,13 +57,12 @@ export default function VerifyEmail({
     <View className="flex-1 bg-[#17100c]">
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <Image
-        source={require("../assets/images/onboarding/fino-sunset-background.png")}
+        source={require("../assets/images/onboarding/fino-email-background-v2.png")}
         resizeMode="cover"
         className="absolute inset-0 h-full w-full"
-        style={{ transform: [{ scale: 1.06 }, { translateY: 20 }] }}
       />
       <LinearGradient
-        colors={["rgba(0,0,0,0.12)", "rgba(20,10,4,0.28)", "rgba(24,12,5,0.48)"]}
+        colors={["rgba(0,0,0,0.12)", "rgba(20,10,4,0.24)", "rgba(24,12,5,0.34)"]}
         locations={[0, 0.62, 1]}
         className="absolute inset-0"
       />

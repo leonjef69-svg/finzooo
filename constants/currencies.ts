@@ -2,11 +2,32 @@
 const CODES = `AED AFN ALL AMD ANG AOA ARS AUD AWG AZN BAM BBD BDT BGN BHD BIF BMD BND BOB BRL BSD BTN BWP BYN BZD CAD CDF CHF CLP CNY COP CRC CUP CVE CZK DJF DKK DOP DZD EGP ERN ETB EUR FJD FKP GBP GEL GHS GIP GMD GNF GTQ GYD HKD HNL HTG HUF IDR ILS INR IQD IRR ISK JMD JOD JPY KES KGS KHR KMF KPW KRW KWD KYD KZT LAK LBP LKR LRD LSL LYD MAD MDL MGA MKD MMK MNT MOP MRU MUR MVR MWK MXN MYR MZN NAD NGN NIO NOK NPR NZD OMR PAB PEN PGK PHP PKR PLN PYG QAR RON RSD RUB RWF SAR SBD SCR SDG SEK SGD SHP SLE SOS SRD SSP STN SYP SZL THB TJS TMT TND TOP TRY TTD TWD TZS UAH UGX USD UYU UZS VES VND VUV WST XAF XCD XCG XOF XPF YER ZAR ZMW ZWG`;
 
 const SYMBOLS: Record<string, string> = {
-  ARS: "AR$", AUD: "A$", BOB: "Bs", BRL: "R$", CAD: "C$", CHF: "CHF",
-  CLP: "CL$", CNY: "¥", COP: "COL$", EUR: "€", GBP: "£", HKD: "HK$",
-  IDR: "Rp", ILS: "₪", INR: "₹", JPY: "¥", KRW: "₩", MXN: "MX$",
-  NGN: "₦", PEN: "S/", PHP: "₱", RUB: "₽", THB: "฿", TRY: "₺",
-  TWD: "NT$", USD: "US$", VND: "₫", XCG: "Cg", ZAR: "R",
+  AED: "د.إ", AFN: "؋", ALL: "L", AMD: "֏", ANG: "ƒ", AOA: "Kz",
+  ARS: "AR$", AUD: "A$", AWG: "Afl.", AZN: "₼", BAM: "KM", BBD: "Bds$",
+  BDT: "৳", BGN: "лв", BHD: "د.ب", BIF: "FBu", BMD: "BD$", BND: "B$",
+  BOB: "Bs", BRL: "R$", BSD: "B$", BTN: "Nu.", BWP: "P", BYN: "Br",
+  BZD: "BZ$", CAD: "C$", CDF: "FC", CHF: "CHF", CLP: "CL$", CNY: "¥",
+  COP: "COL$", CRC: "₡", CUP: "CUP$", CVE: "Esc", CZK: "Kč", DJF: "Fdj",
+  DKK: "kr", DOP: "RD$", DZD: "دج", EGP: "E£", ERN: "Nfk", ETB: "Br",
+  EUR: "€", FJD: "FJ$", FKP: "£", GBP: "£", GEL: "₾", GHS: "GH₵",
+  GIP: "£", GMD: "D", GNF: "FG", GTQ: "Q", GYD: "G$", HKD: "HK$",
+  HNL: "L", HTG: "G", HUF: "Ft", IDR: "Rp", ILS: "₪", INR: "₹",
+  IQD: "ع.د", IRR: "﷼", ISK: "kr", JMD: "J$", JOD: "د.ا", JPY: "¥",
+  KES: "KSh", KGS: "⃀", KHR: "៛", KMF: "CF", KPW: "₩", KRW: "₩",
+  KWD: "د.ك", KYD: "CI$", KZT: "₸", LAK: "₭", LBP: "L£", LKR: "Rs",
+  LRD: "L$", LSL: "L", LYD: "ل.د", MAD: "د.م.", MDL: "L", MGA: "Ar",
+  MKD: "ден", MMK: "K", MNT: "₮", MOP: "MOP$", MRU: "UM", MUR: "Rs",
+  MVR: "Rf", MWK: "MK", MXN: "MX$", MYR: "RM", MZN: "MT", NAD: "N$",
+  NGN: "₦", NIO: "C$", NOK: "kr", NPR: "Rs", NZD: "NZ$", OMR: "ر.ع.",
+  PAB: "B/.", PEN: "S/", PGK: "K", PHP: "₱", PKR: "Rs", PLN: "zł",
+  PYG: "₲", QAR: "ر.ق", RON: "lei", RSD: "дин.", RUB: "₽", RWF: "RF",
+  SAR: "ر.س", SBD: "SI$", SCR: "SR", SDG: "ج.س.", SEK: "kr", SGD: "S$",
+  SHP: "£", SLE: "Le", SOS: "Sh", SRD: "SRD$", SSP: "SS£", STN: "Db",
+  SYP: "£", SZL: "L", THB: "฿", TJS: "SM", TMT: "m", TND: "د.ت",
+  TOP: "T$", TRY: "₺", TTD: "TT$", TWD: "NT$", TZS: "Sh", UAH: "₴",
+  UGX: "USh", USD: "US$", UYU: "$U", UZS: "soʻm", VES: "Bs.", VND: "₫",
+  VUV: "VT", WST: "WS$", XAF: "FCFA", XCD: "EC$", XCG: "Cg.", XOF: "F CFA",
+  XPF: "CFPF", YER: "﷼", ZAR: "R", ZMW: "ZK", ZWG: "ZiG",
 };
 
 /* Hermes no incluye Intl.DisplayNames en todos los Android compatibles.

@@ -14,7 +14,7 @@ function ok(condition: boolean, message: string) {
 
 console.log("\nMontos mundiales de tarjetas");
 ok(formatCreditMoney(1234, "JPY") === "¥ 1,234", "JPY no inventa centavos");
-ok(formatCreditMoney(1.235, "KWD") === "KWD 1.235", "KWD conserva tres decimales");
+ok(formatCreditMoney(1.235, "KWD") === "د.ك 1.235", "KWD conserva su símbolo y tres decimales");
 ok(
   formatCreditMoneyCompact(1359, "PEN") === "S/ 1,359.00",
   "un monto normal conserva su valor exacto",
