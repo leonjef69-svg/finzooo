@@ -865,11 +865,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     async function init() {
-      await clearRetiredAlternateData();
-      const savedTheme = await loadJSON<ThemeMode>(STORAGE_KEYS.themeMode, "system");
+      // Estas tres lecturas no dependen entre sí. Hacerlas una detrás de otra
+      // alargaba cada arranque con la suma de tres esperas del almacenamiento.
+      // Los movimientos siguen cargándose antes de `ready`: no se sacrifica
+      // seguridad de datos por mostrar Inicio antes de tiempo.
+      const [, savedTheme, profile] = await Promise.all([
+        clearRetiredAlternateData(),
+        loadJSON<ThemeMode>(STORAGE_KEYS.themeMode, "system"),
+        loadJSON<Profile | null>(STORAGE_KEYS.profile, null),
+      ]);
       setThemeMode(savedTheme);
       colorScheme.set(savedTheme);
-      const profile = await loadJSON<Profile | null>(STORAGE_KEYS.profile, null);
       // País y moneda se eligen ANTES de crear la cuenta. Android puede
       // cerrar Fino mientras la persona abre el correo de verificación; al
       // volver hay que restaurar esa elección aunque el setup aún no haya

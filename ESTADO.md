@@ -17,6 +17,8 @@ Actualizado: **13 de septiembre de 2026**.
 - Acceso, registro, cierre de sesión, retroceso y las altas locales de Caja ignoran
   pulsaciones repetidas. Volver desde avisos, Google o Telegram conserva el trabajo
   de la pantalla actual en vez de mandar inesperadamente a Inicio.
+- El arranque lee perfil, tema y limpieza antigua en paralelo, pero conserva la barrera
+  que recupera movimientos y presupuestos antes de mostrar Inicio para no guardar vacíos.
 
 Este archivo permite retomar el proyecto sin empezar de cero. No contiene
 credenciales, correos, UID, huellas completas ni datos privados de testers.

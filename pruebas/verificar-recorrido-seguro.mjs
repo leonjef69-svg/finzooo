@@ -10,6 +10,7 @@ const register = leer("screens/Register.tsx");
 const settings = leer("app/(tabs)/settings.tsx");
 const layout = leer("app/_layout.tsx");
 const cajas = leer("screens/Cajas.tsx");
+const context = leer("contexts/AppDataContext.tsx");
 
 assert.match(country, /onBack=\{safeBack\}/, "País vuelve al lugar desde el que se abrió");
 assert.match(currency, /onBack=\{safeBack\}/, "Moneda vuelve al lugar desde el que se abrió");
@@ -22,5 +23,6 @@ for (const ruta of ["/calendario/avisos", "/change-password", "/delete-account",
   assert.ok(layout.includes(`"${ruta}"`), `${ruta} se conserva al volver de otra aplicación`);
 }
 assert.match(cajas, /tomarAccionLocal/, "Caja bloquea altas y devoluciones repetidas");
+assert.match(context, /Promise\.all\(\[\s*clearRetiredAlternateData\(\),\s*loadJSON<ThemeMode>/, "el arranque lee en paralelo lo que es independiente");
 
 console.log("Recorrido seguro: regresos correctos y acciones únicas verificados.");
