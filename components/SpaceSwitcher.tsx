@@ -1,7 +1,7 @@
 import { Boxes, UserRound, UsersRound } from "lucide-react-native";
 import { Text, TouchableOpacity, View } from "react-native";
-import { router, type Href } from "expo-router";
 import { useAppData } from "@/contexts/AppDataContext";
+import { reemplazarUnaVez } from "@/utils/nav";
 
 export type FinoSpace = "personal" | "family" | "boxes";
 
@@ -24,9 +24,9 @@ export default function SpaceSwitcher({ active }: { active: FinoSpace }) {
 
   function open(id: FinoSpace) {
     if (id === active) return;
-    if (id === "personal") router.replace("/(tabs)");
-    else if (id === "family") router.replace("/family");
-    else router.replace("/boxes" as Href);
+    if (id === "personal") reemplazarUnaVez("/(tabs)");
+    else if (id === "family") reemplazarUnaVez("/family");
+    else reemplazarUnaVez("/boxes");
   }
 
   return (

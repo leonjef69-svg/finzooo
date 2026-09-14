@@ -130,3 +130,15 @@ export function irUnaVez(ruta: Parameters<typeof router.push>[0]): void {
   ultimoViaje = ahora;
   router.push(ruta);
 }
+
+/**
+ * La misma protección para selectores que CAMBIAN de espacio en vez de apilar
+ * una pantalla. Sin esto, dos toques rápidos podían ordenar dos reemplazos y el
+ * segundo terminaba ganando cuando el primero todavía estaba montándose.
+ */
+export function reemplazarUnaVez(ruta: Parameters<typeof router.replace>[0]): void {
+  const ahora = Date.now();
+  if (ahora - ultimoViaje < BLOQUEO_NAVEGACION_MS) return;
+  ultimoViaje = ahora;
+  router.replace(ruta);
+}

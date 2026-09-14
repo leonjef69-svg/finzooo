@@ -1,6 +1,17 @@
 # Estado actual de Fino
 
-Actualizado: **10 de septiembre de 2026**.
+Actualizado: **13 de septiembre de 2026**.
+
+## Cambio rápido entre Personal, Familia y Cajas (13/09/2026)
+
+- El selector de espacios también bloquea el doble toque: dos pulsaciones no
+  pueden ordenar dos cambios de pantalla mientras Android sigue animando el primero.
+- Cajas enseña inmediatamente la copia del teléfono y consulta Firebase después;
+  ya no deja la pantalla esperando a internet. Si se anota algo durante esa consulta,
+  la respuesta remota se fusiona con lo nuevo en vez de reemplazarlo.
+- Familia conserva en memoria, solo mientras Fino está abierto, la última vista ya
+  validada. Al volver se muestra de inmediato y se actualiza silenciosamente desde
+  Firebase; una respuesta antigua no puede imponerse a una actualización posterior.
 
 Este archivo permite retomar el proyecto sin empezar de cero. No contiene
 credenciales, correos, UID, huellas completas ni datos privados de testers.

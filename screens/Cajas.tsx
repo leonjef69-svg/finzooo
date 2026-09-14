@@ -23,6 +23,11 @@ import { useEffect, useMemo, useState } from "react";
 import { ScrollView, Share, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+// Cambiar de Personal a Familia y volver a Cajas desmonta estas pantallas.
+// Conservamos la última copia ya pintada para no reconstruir una pantalla
+// vacía en cada cambio. La nube sigue actualizándola en segundo plano.
+let cajasEnMemoria: DatosCajas | null = null;
+
 function fechaLocal(): string {
   const ahora = new Date();
   const mes = String(ahora.getMonth() + 1).padStart(2, "0");
@@ -33,7 +38,7 @@ function fechaLocal(): string {
 export default function Cajas() {
   const { t, fmt, showToast, disponible, addOrUpdateTransaction, deleteLinkedTransferTransaction, isPremium, userName, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
-  const [datos, setDatos] = useState<DatosCajas>(CAJAS_VACIAS);
+  const [datos, setDatos] = useState<DatosCajas>(() => cajasEnMemoria ?? CAJAS_VACIAS);
   const [lista, setLista] = useState(true);
   const [cajaId, setCajaId] = useState<string | null>(null);
   const [nuevoNombre, setNuevoNombre] = useState("");
@@ -47,32 +52,45 @@ export default function Cajas() {
   const [movementLimit, setMovementLimit] = useState(60);
   const [descripcion, setDescripcion] = useState("");
   const [borrandoCaja, setBorrandoCaja] = useState(false);
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(cajasEnMemoria !== null);
+  const [cloudReady, setCloudReady] = useState(false);
   const [compartiendo, setCompartiendo] = useState(false);
 
   useEffect(() => {
     let alive = true;
     void (async () => {
       const local = await loadJSON<DatosCajas>(STORAGE_KEYS.cajasDinero, CAJAS_VACIAS);
-      const uid = auth.currentUser?.uid;
-      const remoto = uid ? await bajarCajas(uid) : null;
-      const unidos = remoto ? fusionarCajas(local, remoto) : local;
       if (!alive) return;
-      setDatos(unidos);
+      const visible = cajasEnMemoria ? fusionarCajas(local, cajasEnMemoria) : local;
+      cajasEnMemoria = visible;
+      setDatos(visible);
       setReady(true);
-      void saveJSON(STORAGE_KEYS.cajasDinero, unidos);
+
+      const uid = auth.currentUser?.uid;
+      const remoto = uid ? await bajarCajas(uid).catch(() => null) : null;
+      if (!alive) return;
+      setDatos(actual => {
+        // Si la persona anotó algo mientras llegaba la nube, se fusiona con
+        // el estado ACTUAL. Usar `visible` aquí podría borrar ese toque rápido.
+        const unidos = remoto ? fusionarCajas(actual, remoto) : actual;
+        cajasEnMemoria = unidos;
+        void saveJSON(STORAGE_KEYS.cajasDinero, unidos);
+        return unidos;
+      });
+      setCloudReady(true);
     })();
     return () => { alive = false; };
   }, []);
 
   useEffect(() => {
-    if (!ready) return;
+    cajasEnMemoria = datos;
+    if (!ready || !cloudReady) return;
     void saveJSON(STORAGE_KEYS.cajasDinero, datos);
     const uid = auth.currentUser?.uid;
     if (!uid) return;
     const timer = setTimeout(() => { void subirCajas(uid, datos); }, 700);
     return () => clearTimeout(timer);
-  }, [datos, ready]);
+  }, [datos, ready, cloudReady]);
 
   const caja = datos.cajas.find((item) => item.id === cajaId);
   useEffect(() => setMovementLimit(60), [cajaId, filter]);

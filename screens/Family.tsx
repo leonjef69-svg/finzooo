@@ -21,13 +21,26 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const fechaHoy = () => new Date().toLocaleDateString("sv-SE");
 
+type FamiliaEnMemoria = {
+  familia: EspacioFamilia | null;
+  miembros: MiembroFamilia[];
+  movimientos: MovimientoFamilia[];
+};
+
+// Familia vive en Firebase, pero no debe volver a aparecer vacía cada vez que
+// se cambia de espacio. Esta copia dura únicamente mientras Fino está abierto;
+// al entrar se enseña al instante y después se valida silenciosamente en nube.
+const familiaEnMemoria = new Map<string, FamiliaEnMemoria>();
+
 export default function Family() {
   const { t, fmt, userName, showToast, isPremium, disponible, addOrUpdateTransaction, deleteLinkedTransferTransaction } = useAppData();
   const insets = useSafeAreaInsets();
-  const [familia, setFamilia] = useState<EspacioFamilia | null>(null);
-  const [miembros, setMiembros] = useState<MiembroFamilia[]>([]);
-  const [movimientos, setMovimientos] = useState<MovimientoFamilia[]>([]);
-  const [cargando, setCargando] = useState(true);
+  const uidAlAbrir = auth.currentUser?.uid ?? "";
+  const copiaInicial = uidAlAbrir ? familiaEnMemoria.get(uidAlAbrir) : undefined;
+  const [familia, setFamilia] = useState<EspacioFamilia | null>(copiaInicial?.familia ?? null);
+  const [miembros, setMiembros] = useState<MiembroFamilia[]>(copiaInicial?.miembros ?? []);
+  const [movimientos, setMovimientos] = useState<MovimientoFamilia[]>(copiaInicial?.movimientos ?? []);
+  const [cargando, setCargando] = useState(!copiaInicial);
   const [ocupado, setOcupado] = useState(false);
   const [modo, setModo] = useState<"crear" | "unir" | null>(null);
   const [nombre, setNombre] = useState("");
@@ -45,26 +58,39 @@ export default function Family() {
   const [editandoNombre, setEditandoNombre] = useState(false);
   const [nuevoNombre, setNuevoNombre] = useState("");
   const actionLock = useRef(false);
+  const reloadId = useRef(0);
   const tRef = useRef(t);
   const toastRef = useRef(showToast);
   tRef.current = t;
   toastRef.current = showToast;
 
   const recargar = useCallback(async () => {
+    const pedido = ++reloadId.current;
     const uid = auth.currentUser?.uid;
     if (!uid) { setCargando(false); return; }
     try {
       const activa = await cargarFamiliaActiva(uid);
+      if (pedido !== reloadId.current) return;
       setFamilia(activa);
       if (activa) {
         const [people, movements] = await Promise.all([listarMiembrosFamilia(activa.id), listarMovimientosFamilia(activa.id)]);
+        if (pedido !== reloadId.current) return;
         setMiembros(people); setMovimientos(movements);
-      } else { setMiembros([]); setMovimientos([]); }
+        familiaEnMemoria.set(uid, { familia: activa, miembros: people, movimientos: movements });
+      } else {
+        setMiembros([]); setMovimientos([]);
+        familiaEnMemoria.set(uid, { familia: null, miembros: [], movimientos: [] });
+      }
     } catch { toastRef.current(tRef.current("family.connectionError")); }
     finally { setCargando(false); }
   }, []);
 
   useEffect(() => { void recargar(); }, [recargar]);
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!uid || cargando) return;
+    familiaEnMemoria.set(uid, { familia, miembros, movimientos });
+  }, [cargando, familia, miembros, movimientos]);
   const familiaId = familia?.id;
   useEffect(() => setMovementLimit(60), [familiaId, filter]);
   useEffect(() => {
