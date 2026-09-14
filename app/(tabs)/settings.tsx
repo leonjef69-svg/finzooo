@@ -1,9 +1,11 @@
 import { router } from "expo-router";
+import { useRef } from "react";
 import { irUnaVez } from "@/utils/nav";
 import Settings from "@/screens/Settings";
 import { useAppData } from "@/contexts/AppDataContext";
 
 export default function SettingsTab() {
+  const cerrandoSesion = useRef(false);
   const {
     userName,
     userEmail,
@@ -34,11 +36,14 @@ export default function SettingsTab() {
       onImport={() => irUnaVez("/import")}
       onAutoCapture={() => irUnaVez("/auto-capture")}
       onLogout={async () => {
+        if (cerrandoSesion.current) return;
+        cerrandoSesion.current = true;
         try {
           await logout();
           router.replace("/login");
         } catch (error) {
           showToast(error instanceof Error ? error.message : "No se pudo cerrar sesión. Vuelve a intentarlo.");
+          cerrandoSesion.current = false;
         }
       }}
       onPremium={() => irUnaVez("/premium")}

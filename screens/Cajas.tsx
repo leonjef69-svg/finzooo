@@ -19,7 +19,7 @@ import { nextId } from "@/utils/id";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 import { ArrowDown, ArrowLeftRight, ArrowUp, Boxes, Check, Plus, Trash2, X } from "lucide-react-native";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, Share, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -55,6 +55,14 @@ export default function Cajas() {
   const [ready, setReady] = useState(cajasEnMemoria !== null);
   const [cloudReady, setCloudReady] = useState(false);
   const [compartiendo, setCompartiendo] = useState(false);
+  const accionLocalEnCurso = useRef(false);
+
+  function tomarAccionLocal(): boolean {
+    if (accionLocalEnCurso.current) return false;
+    accionLocalEnCurso.current = true;
+    setTimeout(() => { accionLocalEnCurso.current = false; }, 700);
+    return true;
+  }
 
   useEffect(() => {
     let alive = true;
@@ -132,6 +140,7 @@ export default function Cajas() {
       showToast(t("boxes.notEnoughPersonal"));
       return;
     }
+    if (!tomarAccionLocal()) return;
     const movimientoId = nuevoIdCaja("mov");
     const personalTransactionId = inicial > 0 && origenDinero === "personal"
       ? sacarDePersonal(inicial, nombre, movimientoId)
@@ -162,6 +171,7 @@ export default function Cajas() {
       showToast(t("boxes.notEnoughPersonal"));
       return;
     }
+    if (!tomarAccionLocal()) return;
     const movimientoId = nuevoIdCaja("mov");
     const personalTransactionId = anotando === "ingreso" && origenDinero === "personal"
       ? sacarDePersonal(valor, caja.nombre, movimientoId)
@@ -214,6 +224,7 @@ export default function Cajas() {
 
   function devolverAPersonal() {
     if (!caja || devolvibleAPersonal <= 0) return;
+    if (!tomarAccionLocal()) return;
     const movimientoId = nuevoIdCaja("mov");
     const personalId = nextId();
     setDatos(antes => ({ ...antes, movimientos: [...antes.movimientos, { id: movimientoId, cajaId: caja.id, tipo: "gasto", monto: devolvibleAPersonal, descripcion: t("boxes.returnToPersonal"), method: "transfer", fecha: fechaLocal(), creadoEn: Date.now(), personalTransactionId: personalId, personalReturnAmount: devolvibleAPersonal }] }));

@@ -114,7 +114,11 @@ const KEEP_ON_RETURN = [
   "/import",
   "/export-pdf",
   "/scheduled-export",
+  "/calendario/avisos",
   "/credit-card-settings",
+  "/change-password",
+  "/delete-account",
+  "/telegram",
   "/category-style",
   "/nueva-categoria",
   // Nuevo movimiento y su edición abren cámara/galería para usar una foto

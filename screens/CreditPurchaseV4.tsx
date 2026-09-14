@@ -12,7 +12,7 @@ import { useLocalSearchParams, useRouter } from "expo-router";
 import { CURRENCIES, currencyLabelFor, currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import { nextId } from "@/utils/id";
-import { irUnaVez } from "@/utils/nav";
+import { irUnaVez, volverUnaVez } from "@/utils/nav";
 import {
   creditMoneyEpsilon,
   creditMoneyPlaceholder,
@@ -255,7 +255,7 @@ export default function CreditPurchaseV4() {
             : purchase,
         ),
       });
-        router.back();
+        volverUnaVez();
         return;
       }
       const purchase = {
@@ -343,7 +343,7 @@ export default function CreditPurchaseV4() {
           origin: "manual",
         });
       }
-      router.back();
+      volverUnaVez();
     } catch {
       saving.current = false;
       Alert.alert(
@@ -368,7 +368,7 @@ export default function CreditPurchaseV4() {
     >
       <View className="flex-row items-center">
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={volverUnaVez}
           className="rounded-full bg-white p-2"
         >
           <ArrowLeft color="#0f766e" />

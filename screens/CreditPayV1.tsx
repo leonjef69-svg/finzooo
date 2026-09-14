@@ -9,6 +9,7 @@ import {
   saveCreditState,
 } from "@/utils/creditStore";
 import { useAppData } from "@/contexts/AppDataContext";
+import { volverUnaVez } from "@/utils/nav";
 import { currencySymbolFor } from "@/constants/currencies";
 import {
   creditMoneyPlaceholder,
@@ -178,7 +179,7 @@ export default function CreditPayV1() {
           origin: "manual",
         });
       }
-      router.back();
+      volverUnaVez();
     } catch {
       saving.current = false;
       Alert.alert(
@@ -203,7 +204,7 @@ export default function CreditPayV1() {
     >
       <View className="flex-row items-center">
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={volverUnaVez}
           className="rounded-full bg-white p-2"
         >
           <ArrowLeft color="#0f766e" />

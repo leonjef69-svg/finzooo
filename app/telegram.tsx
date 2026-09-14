@@ -8,6 +8,7 @@ import { MessageSquare, ShieldCheck } from "lucide-react-native";
 import BackButton from "@/components/BackButton";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth, db } from "@/utils/firebase";
+import { volverUnaVez } from "@/utils/nav";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const TELEGRAM_BOT_USERNAME = "dotero2bot";
@@ -59,7 +60,7 @@ export default function TelegramScreen() {
   return (
     <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top }}>
       <View className="flex-row items-center px-4 py-2">
-        <BackButton onPress={() => router.back()} />
+        <BackButton onPress={volverUnaVez} />
         <Text className="ml-3 text-xl font-black text-slate-900 dark:text-white">{t("telegram.title")}</Text>
       </View>
       <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 24, gap: 14 }}>

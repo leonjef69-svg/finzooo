@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -37,29 +37,35 @@ export default function Login({
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const [googleError, setGoogleError] = useState("");
+  const authBusy = useRef(false);
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
 
   async function submit() {
+    if (authBusy.current) return;
     setGoogleError("");
     if (!email || pass.length < 6) {
       setError(t("login.invalidCredentials"));
       return;
     }
     setError("");
+    authBusy.current = true;
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email.trim(), pass);
-      onLoggedIn();
+      await onLoggedIn();
     } catch (err) {
       const code = (err as { code?: string })?.code || "";
       setError(firebaseErrorMessage(code));
     } finally {
+      authBusy.current = false;
       setLoading(false);
     }
   }
 
   async function loginWithGoogle() {
+    if (authBusy.current) return;
+    authBusy.current = true;
     setError("");
     setGoogleError("");
     setGoogleLoading(true);
@@ -72,6 +78,7 @@ export default function Login({
       if (err instanceof GoogleSignInCancelled) return;
       setGoogleError(googleSignInErrorMessage(err));
     } finally {
+      authBusy.current = false;
       setGoogleLoading(false);
     }
   }

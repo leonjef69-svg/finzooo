@@ -8,6 +8,7 @@ import {
   saveCreditState,
 } from "@/utils/creditStore";
 import { useAppData } from "@/contexts/AppDataContext";
+import { volverUnaVez } from "@/utils/nav";
 import {
   CURRENCIES,
   currencyLabelFor,
@@ -326,7 +327,7 @@ export default function CreditCardSettingsV1() {
       // Retira el recordatorio mensual antiguo. Los avisos de tarjeta ahora se
       // programan desde cada cuota pendiente real al guardar el estado.
       quitarPagoProgramado(reminderId);
-      router.back();
+      volverUnaVez();
     } catch {
       saving.current = false;
       Alert.alert(
@@ -397,7 +398,7 @@ export default function CreditCardSettingsV1() {
     >
       <View className="flex-row items-center">
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={volverUnaVez}
           className="rounded-full bg-white p-2"
         >
           <ArrowLeft color="#0f766e" />

@@ -60,6 +60,7 @@ console.log("\n--- NINGUNA PANTALLA SE ABRE CON router.push A PELO ---");
   const nav = fs.readFileSync(path.join(RAIZ, "utils/nav.ts"), "utf8");
   ok(/export function irUnaVez/.test(nav), "irUnaVez existe");
   ok(/export function reemplazarUnaVez/.test(nav), "los cambios entre Personal, Familia y Cajas también están protegidos");
+  ok(/export function volverUnaVez/.test(nav), "volver tampoco puede cerrar dos pantallas con un doble toque");
   ok(/BLOQUEO_NAVEGACION_MS = 1500/.test(nav), "la protección cubre también celulares lentos");
   ok(/ahora - ultimoViaje < BLOQUEO_NAVEGACION_MS/.test(nav), "y descarta los toques mientras abre la pantalla");
   ok(

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
@@ -46,6 +46,7 @@ export default function Register({
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState("");
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const authBusy = useRef(false);
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
 
@@ -56,6 +57,8 @@ export default function Register({
   }, []);
 
   async function registerWithGoogle() {
+    if (authBusy.current) return;
+    authBusy.current = true;
     setErrors({});
     setGoogleError("");
     setGoogleLoading(true);
@@ -66,11 +69,13 @@ export default function Register({
       if (err instanceof GoogleSignInCancelled) return;
       setGoogleError(googleSignInErrorMessage(err));
     } finally {
+      authBusy.current = false;
       setGoogleLoading(false);
     }
   }
 
   async function submit() {
+    if (authBusy.current) return;
     setGoogleError("");
     const e: Errors = {};
     if (name.trim().length < 2) e.name = t("register.nameError");
@@ -79,6 +84,7 @@ export default function Register({
     setErrors(e);
     if (Object.keys(e).length) return;
 
+    authBusy.current = true;
     setLoading(true);
     try {
       const credential = await createUserWithEmailAndPassword(auth, email.trim(), pass);
@@ -89,6 +95,7 @@ export default function Register({
       const code = (err as { code?: string })?.code || "";
       setErrors({ general: firebaseErrorMessage(code) });
     } finally {
+      authBusy.current = false;
       setLoading(false);
     }
   }

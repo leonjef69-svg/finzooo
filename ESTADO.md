@@ -12,6 +12,11 @@ Actualizado: **13 de septiembre de 2026**.
 - Familia conserva en memoria, solo mientras Fino está abierto, la última vista ya
   validada. Al volver se muestra de inmediato y se actualiza silenciosamente desde
   Firebase; una respuesta antigua no puede imponerse a una actualización posterior.
+- País y Moneda vuelven al lugar real desde el que se abrieron; ya no envían a una
+  persona que estaba en Ajustes hacia la configuración inicial.
+- Acceso, registro, cierre de sesión, retroceso y las altas locales de Caja ignoran
+  pulsaciones repetidas. Volver desde avisos, Google o Telegram conserva el trabajo
+  de la pantalla actual en vez de mandar inesperadamente a Inicio.
 
 Este archivo permite retomar el proyecto sin empezar de cero. No contiene
 credenciales, correos, UID, huellas completas ni datos privados de testers.

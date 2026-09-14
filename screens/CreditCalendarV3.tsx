@@ -7,7 +7,7 @@ import {
   loadCreditState,
   outstandingAmount,
 } from "@/utils/creditStore";
-import { irUnaVez } from "@/utils/nav";
+import { irUnaVez, volverUnaVez } from "@/utils/nav";
 import {
   buildCreditCalendarEvents,
   creditLocalDateKey,
@@ -325,7 +325,7 @@ export default function CreditCalendarV3() {
     >
       <View className="flex-row items-center">
         <TouchableOpacity
-          onPress={() => router.back()}
+          onPress={volverUnaVez}
           className="rounded-full bg-white p-2"
         >
           <ArrowLeft color="#0f766e" />

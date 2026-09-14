@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useAppData } from "@/contexts/AppDataContext";
 import NuevaCategoria from "@/screens/NuevaCategoria";
-import { safeBack } from "@/utils/nav";
+import { safeBack, volverUnaVez } from "@/utils/nav";
 
 /**
  * Elegir la categoría de un movimiento, o crear una propia.
@@ -43,7 +43,7 @@ export default function NuevaCategoriaRoute() {
       editandoId={id}
       actual={actual}
       onBack={safeBack}
-      onCreada={() => router.back()}
+      onCreada={volverUnaVez}
       // Sin "actual" no hay lista de la que elegir, así que tampoco hace falta
       // esto: es lo que distingue "vengo a poner la categoría de este gasto" de
       // "vengo a crear una".
@@ -51,7 +51,7 @@ export default function NuevaCategoriaRoute() {
         actual
           ? (elegida) => {
               elegirCategoriaEnMovimiento(elegida);
-              router.back();
+              volverUnaVez();
             }
           : undefined
       }

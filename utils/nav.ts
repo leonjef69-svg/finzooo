@@ -122,6 +122,7 @@ export function useNavigateWhenReady(
  * tomó con la pausa del reparto de iconos el 07/08.
  */
 let ultimoViaje = 0;
+let ultimoRetroceso = 0;
 const BLOQUEO_NAVEGACION_MS = 1500;
 
 export function irUnaVez(ruta: Parameters<typeof router.push>[0]): void {
@@ -141,4 +142,11 @@ export function reemplazarUnaVez(ruta: Parameters<typeof router.replace>[0]): vo
   if (ahora - ultimoViaje < BLOQUEO_NAVEGACION_MS) return;
   ultimoViaje = ahora;
   router.replace(ruta);
+}
+
+export function volverUnaVez(): void {
+  const ahora = Date.now();
+  if (ahora - ultimoRetroceso < BLOQUEO_NAVEGACION_MS) return;
+  ultimoRetroceso = ahora;
+  safeBack();
 }

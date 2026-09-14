@@ -1,12 +1,20 @@
 import { TouchableOpacity } from "react-native";
 import { ChevronLeft } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
+import { useRef } from "react";
 
 export default function BackButton({ onPress, onDark = false }: { onPress: () => void; onDark?: boolean }) {
   const { colorScheme } = useColorScheme();
+  const ultimoToque = useRef(0);
+  function volver() {
+    const ahora = Date.now();
+    if (ahora - ultimoToque.current < 1000) return;
+    ultimoToque.current = ahora;
+    onPress();
+  }
   return (
     <TouchableOpacity
-      onPress={onPress}
+      onPress={volver}
       accessibilityRole="button"
       accessibilityLabel="Volver"
       hitSlop={8}
