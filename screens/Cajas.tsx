@@ -15,10 +15,11 @@ import {
 } from "@/utils/cajas";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { horaDe } from "@/utils/format";
+import { canSpendFromSpace, canUndoContribution, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
-import { ArrowDown, ArrowLeftRight, ArrowUp, Boxes, Check, Plus, Trash2, X } from "lucide-react-native";
+import { ArrowDown, ArrowLeftRight, ArrowUp, Boxes, Check, Pencil, Plus, Trash2, X } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ScrollView, Share, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -36,7 +37,7 @@ function fechaLocal(): string {
 }
 
 export default function Cajas() {
-  const { t, fmt, showToast, disponible, addOrUpdateTransaction, deleteLinkedTransferTransaction, isPremium, userName, userCurrency } = useAppData();
+  const { t, fmt, showToast, disponible, transactions, addOrUpdateTransaction, deleteLinkedTransferTransaction, repairLinkedTransferTransactions, isPremium, userName, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
   const [datos, setDatos] = useState<DatosCajas>(() => cajasEnMemoria ?? CAJAS_VACIAS);
   const [lista, setLista] = useState(true);
@@ -51,6 +52,7 @@ export default function Cajas() {
   const [filter, setFilter] = useState<MovementFilter>(null);
   const [movementLimit, setMovementLimit] = useState(60);
   const [descripcion, setDescripcion] = useState("");
+  const [editandoAporteId, setEditandoAporteId] = useState<string | null>(null);
   const [borrandoCaja, setBorrandoCaja] = useState(false);
   const [ready, setReady] = useState(cajasEnMemoria !== null);
   const [cloudReady, setCloudReady] = useState(false);
@@ -114,11 +116,31 @@ export default function Cajas() {
     { ingresos: 0, gastos: 0 },
   ), [movimientos]);
   const saldoActual = caja ? saldoCaja(caja.id, datos.movimientos) : 0;
-  const aportadoDesdePersonal = movimientos.reduce((sum, item) => {
-    if (item.tipo === "ingreso" && item.personalTransactionId != null) return sum + item.monto;
-    return sum - (item.personalReturnAmount || 0);
-  }, 0);
-  const devolvibleAPersonal = Math.max(0, Math.min(saldoActual, aportadoDesdePersonal));
+  const devolvibleAPersonal = returnableToPersonal(movimientos);
+
+  // Repara automáticamente cualquiera de las dos mitades que haya quedado
+  // huérfana por un cierre entre ambos guardados.
+  useEffect(() => {
+    if (!ready) return;
+    const movimientosPorId = new Map(datos.movimientos.map(item => [item.id, item]));
+    const upserts = datos.movimientos.flatMap(item => {
+      if (item.personalTransactionId == null || transactions.some(tx => tx.id === item.personalTransactionId)) return [];
+      const cajaDelMovimiento = datos.cajas.find(c => c.id === item.cajaId);
+      const esRetorno = item.tipo === "gasto" && (item.personalReturnAmount || 0) > 0;
+      return [{
+        id: item.personalTransactionId,
+        type: esRetorno ? "income" as const : "expense" as const,
+        amount: esRetorno ? item.personalReturnAmount! : item.monto,
+        category: "otros", date: item.fecha, time: horaDe(item.creadoEn), method: "transfer",
+        description: esRetorno ? t("boxes.returnFrom", { name: cajaDelMovimiento?.nombre || "" }) : t("boxes.transferTo", { name: cajaDelMovimiento?.nombre || "" }),
+        notes: "", origin: "manual" as const, internalTransfer: "box" as const, internalTransferLink: item.id,
+      }];
+    });
+    const orphanIds = transactions
+      .filter(tx => tx.internalTransfer === "box" && tx.internalTransferLink?.startsWith("mov-") && !movimientosPorId.has(tx.internalTransferLink))
+      .map(tx => tx.id);
+    if (upserts.length || orphanIds.length) repairLinkedTransferTransactions(upserts, orphanIds);
+  }, [datos.cajas, datos.movimientos, ready, repairLinkedTransferTransactions, t, transactions]);
 
   const visibles = movimientos.filter(item => !filter || item.tipo === filter);
   function sacarDePersonal(valor: number, destino: string, link: string): number {
@@ -167,8 +189,25 @@ export default function Cajas() {
     if (!caja || !anotando) return;
     const valor = parseAmountInput(monto);
     if (!(valor > 0)) return;
+    const aporteEditado = editandoAporteId ? movimientos.find(item => item.id === editandoAporteId) : undefined;
+    if (aporteEditado?.personalTransactionId != null) {
+      const minimo = minimumContributionAmount(movimientos, aporteEditado);
+      if (valor < minimo - 0.005) { showToast(t("boxes.contributionUsed")); return; }
+      if (valor - aporteEditado.monto > disponible) { showToast(t("boxes.notEnoughPersonal")); return; }
+      if (!tomarAccionLocal()) return;
+      const personal = transactions.find(tx => tx.id === aporteEditado.personalTransactionId);
+      setDatos(antes => ({ ...antes, movimientos: antes.movimientos.map(item => item.id === aporteEditado.id ? { ...item, monto: valor, descripcion: descripcion.trim().slice(0, 60) || item.descripcion } : item) }));
+      if (personal) addOrUpdateTransaction({ ...personal, amount: valor });
+      setMonto(""); setDescripcion(""); setEditandoAporteId(null); setAnotando(null);
+      showToast(t("boxes.movementSaved"));
+      return;
+    }
     if (anotando === "ingreso" && origenDinero === "personal" && valor > disponible) {
       showToast(t("boxes.notEnoughPersonal"));
+      return;
+    }
+    if (anotando === "gasto" && !canSpendFromSpace(movimientos, valor)) {
+      showToast(t("boxes.notEnoughSpace"));
       return;
     }
     if (!tomarAccionLocal()) return;
@@ -191,12 +230,17 @@ export default function Cajas() {
     setMonto("");
     setDescripcion("");
     setOrigenDinero("externo");
+    setEditandoAporteId(null);
     setAnotando(null);
     showToast(t("boxes.movementSaved"));
   }
 
   function borrarMovimiento(id: string) {
     const movimiento = datos.movimientos.find((item) => item.id === id);
+    if (movimiento?.tipo === "ingreso" && movimiento.personalTransactionId != null && !canUndoContribution(movimientos, movimiento)) {
+      showToast(t("boxes.contributionUsed"));
+      return;
+    }
     if (movimiento?.personalTransactionId != null) deleteLinkedTransferTransaction(movimiento.personalTransactionId);
     setDatos((antes) => ({
       ...antes,
@@ -338,12 +382,13 @@ export default function Cajas() {
                 {anotando === "ingreso" ? <><Text className="mb-1 mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">{t("boxes.moneyOrigin")}</Text><View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} onPress={() => setOrigenDinero(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenDinero === origin ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text></TouchableOpacity>)}</View>{origenDinero === "personal" ? <Text className="mt-1 text-[11px] text-slate-500">{t("boxes.personalAvailable", { amount: fmt(disponible) })}</Text> : null}</> : null}
                 {anotando !== "ingreso" || origenDinero === "externo" ? <SpacePaymentMethod value={method} onChange={setMethod} /> : null}
                 <View className="mt-3 flex-row gap-2">
-                  <TouchableOpacity onPress={() => setAnotando(null)} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => { setAnotando(null); setEditandoAporteId(null); }} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text></TouchableOpacity>
                   <TouchableOpacity onPress={guardarMovimiento} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-emerald-600"><Text className="font-bold text-white">{t("common.save")}</Text></TouchableOpacity>
                 </View>
               </View>
             ) : null}
             {devolvibleAPersonal > 0 ? <TouchableOpacity onPress={devolverAPersonal} className="mt-3 min-h-11 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("boxes.returnAmount", { amount: fmt(devolvibleAPersonal) })}</Text></TouchableOpacity> : null}
+            {Math.abs(saldoActual) < 0.005 ? <View className="mt-3 flex-row gap-2"><TouchableOpacity onPress={() => { setOrigenDinero("externo"); setAnotando("ingreso"); }} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-emerald-600"><Text className="font-bold text-white">{t("boxes.addMoney")}</Text></TouchableOpacity><TouchableOpacity onPress={() => setBorrandoCaja(true)} className="min-h-11 flex-1 items-center justify-center rounded-xl border border-rose-300"><Text className="font-bold text-rose-600">{t("boxes.close")}</Text></TouchableOpacity></View> : null}
             <Text className="mb-2 mt-5 font-extrabold text-slate-900 dark:text-slate-100">{t("boxes.history")}</Text>
             <SpaceFilterReset filter={filter} onReset={() => setFilter(null)} />
             {visibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "boxes.noMovements")}</Text> : visibles.slice(0, movementLimit).map((item) => (
@@ -351,6 +396,7 @@ export default function Cajas() {
                 <View className={`h-9 w-9 items-center justify-center rounded-xl ${item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
                 <View className="ml-3 flex-1"><Text className="text-[15px] font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View>
                 <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-2 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text>
+                {item.tipo === "ingreso" && item.personalTransactionId != null ? <TouchableOpacity accessibilityLabel={t("common.edit")} onPress={() => { setEditandoAporteId(item.id); setAnotando("ingreso"); setOrigenDinero("personal"); setMonto(String(item.monto)); setDescripcion(item.descripcion); }} className="h-10 w-10 items-center justify-center"><Pencil size={16} color="#0d9488" /></TouchableOpacity> : null}
                 <TouchableOpacity accessibilityLabel={t("common.delete")} onPress={() => borrarMovimiento(item.id)} className="h-10 w-10 items-center justify-center"><Trash2 size={17} color="#e11d48" /></TouchableOpacity>
               </View>
             ))}

@@ -43,7 +43,7 @@ import type { Profile, Transaction } from "@/types";
  */
 const CLAVE_PENDIENTES = "finzo:capturaPendiente";
 
-async function guardarPendientes(items: unknown[]): Promise<void> {
+export async function guardarPendientes(items: unknown[]): Promise<void> {
   saveJSON(CLAVE_PENDIENTES, items);
   await flushPendingSaves();
 }
@@ -150,5 +150,6 @@ export async function capturarEnFondo(): Promise<number> {
   // en cola y lo escribe un momento despues. Aqui no hay ese "momento
   // despues" — Android mata el proceso al terminar.
   await flushPendingSaves();
+  await notificationReader.ackDrain();
   return personales.length + delNegocio.length;
 }

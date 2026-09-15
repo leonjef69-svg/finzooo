@@ -5,11 +5,12 @@ import SpaceSwitcher from "@/components/SpaceSwitcher";
 import { useAppData } from "@/contexts/AppDataContext";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { horaDe } from "@/utils/format";
+import { canSpendFromSpace, canUndoContribution, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
 import { auth } from "@/utils/firebase";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import {
-  borrarMovimientoFamilia, cargarFamiliaActiva, crearFamilia, crearInvitacionFamilia,
+  actualizarMovimientoFamilia, borrarMovimientoFamilia, cargarFamiliaActiva, crearFamilia, crearInvitacionFamilia,
   guardarMovimientoFamilia, listarMiembrosFamilia, listarMovimientosFamilia,
   cerrarFamilia, observarCierreFamilia, quitarMiembroFamilia, renombrarFamilia, salirDeFamilia, unirseAFamilia, type EspacioFamilia, type MiembroFamilia,
   type MovimientoFamilia,
@@ -33,7 +34,7 @@ type FamiliaEnMemoria = {
 const familiaEnMemoria = new Map<string, FamiliaEnMemoria>();
 
 export default function Family() {
-  const { t, fmt, userName, showToast, isPremium, disponible, addOrUpdateTransaction, deleteLinkedTransferTransaction } = useAppData();
+  const { t, fmt, userName, showToast, isPremium, disponible, transactions, addOrUpdateTransaction, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
   const insets = useSafeAreaInsets();
   const uidAlAbrir = auth.currentUser?.uid ?? "";
   const copiaInicial = uidAlAbrir ? familiaEnMemoria.get(uidAlAbrir) : undefined;
@@ -55,6 +56,7 @@ export default function Family() {
   const [filter, setFilter] = useState<MovementFilter>(null);
   const [movementLimit, setMovementLimit] = useState(60);
   const [descripcion, setDescripcion] = useState("");
+  const [editandoAporteId, setEditandoAporteId] = useState<string | null>(null);
   const [editandoNombre, setEditandoNombre] = useState(false);
   const [nuevoNombre, setNuevoNombre] = useState("");
   const actionLock = useRef(false);
@@ -110,12 +112,18 @@ export default function Family() {
   ), [movimientos]);
   const visibles = movimientos.filter(item => !filter || item.tipo === filter);
   const owner = familia?.ownerUid === auth.currentUser?.uid;
-  const aportadoDesdePersonal = movimientos.reduce((sum, item) => {
-    if (item.personalOwnerUid !== auth.currentUser?.uid) return sum;
-    if (item.tipo === "ingreso" && item.personalTransactionId != null) return sum + item.monto;
-    return sum - (item.personalReturnAmount || 0);
-  }, 0);
-  const devolvibleAPersonal = owner ? Math.max(0, Math.min(saldo, aportadoDesdePersonal)) : 0;
+  const devolvibleAPersonal = returnableToPersonal(movimientos, auth.currentUser?.uid);
+
+  useEffect(() => {
+    const uid = auth.currentUser?.uid;
+    if (!familia || !uid || cargando) return;
+    const upserts = movimientos.flatMap(item => {
+      if (item.personalOwnerUid !== uid || item.personalTransactionId == null || transactions.some(tx => tx.id === item.personalTransactionId)) return [];
+      const esRetorno = item.tipo === "gasto" && (item.personalReturnAmount || 0) > 0;
+      return [{ id: item.personalTransactionId, type: esRetorno ? "income" as const : "expense" as const, amount: esRetorno ? item.personalReturnAmount! : item.monto, category: "otros", date: item.fecha, time: horaDe(item.creadoEn), method: "transfer", description: esRetorno ? t("family.returnFrom", { name: familia.nombre }) : t("family.transferTo", { name: familia.nombre }), notes: "", origin: "manual" as const, internalTransfer: "family" as const, internalTransferLink: item.id }];
+    });
+    if (upserts.length) repairLinkedTransferTransactions(upserts);
+  }, [cargando, familia, movimientos, repairLinkedTransferTransactions, t, transactions]);
 
   async function ejecutar(action: () => Promise<void>) {
     if (actionLock.current) return;
@@ -137,7 +145,7 @@ export default function Family() {
     const nueva = await crearFamilia(uid, userName || t("family.member"), value);
     if (initial > 0) {
       const personalTransactionId = origenInicial === "personal" ? nextId() : undefined;
-      await guardarMovimientoFamilia(nueva.id, uid, {
+      const movementId = await guardarMovimientoFamilia(nueva.id, uid, {
         tipo: "ingreso", monto: initial,
         descripcion: t(origenInicial === "personal" ? "family.initialFromPersonal" : "family.initialExternal"),
         fecha: fechaHoy(), method: origenInicial === "personal" ? "transfer" : "cash",
@@ -147,7 +155,7 @@ export default function Family() {
         addOrUpdateTransaction({
           id: personalTransactionId!, type: "expense", amount: initial, category: "otros", date: fechaHoy(),
           time: horaDe(Date.now()), method: "transfer", description: t("family.transferTo", { name: value }),
-          notes: "", origin: "manual", internalTransfer: "family", internalTransferLink: nueva.id,
+          notes: "", origin: "manual", internalTransfer: "family", internalTransferLink: movementId,
         });
       }
     }
@@ -182,15 +190,30 @@ export default function Family() {
   const guardar = () => ejecutar(async () => {
     const uid = auth.currentUser?.uid; const value = parseAmountInput(monto);
     if (!uid || !familia || !tipo || !(value > 0)) return;
+    const aporteEditado = editandoAporteId ? movimientos.find(item => item.id === editandoAporteId) : undefined;
+    if (aporteEditado?.personalTransactionId != null) {
+      const minimo = minimumContributionAmount(movimientos, aporteEditado, uid);
+      if (value < minimo - 0.005) { showToast(t("family.contributionUsed")); return; }
+      if (value - aporteEditado.monto > disponible) { showToast(t("family.notEnoughPersonal")); return; }
+      await actualizarMovimientoFamilia(familia.id, aporteEditado.id, value, descripcion || aporteEditado.descripcion);
+      const personal = transactions.find(tx => tx.id === aporteEditado.personalTransactionId);
+      if (personal) addOrUpdateTransaction({ ...personal, amount: value });
+      setMonto(""); setDescripcion(""); setEditandoAporteId(null); setTipo(null); await recargar();
+      return;
+    }
     const desdePersonal = tipo === "ingreso" && owner && origenDinero === "personal";
     if (desdePersonal && value > disponible) { showToast(t("family.notEnoughPersonal")); return; }
+    if (tipo === "gasto" && !canSpendFromSpace(movimientos, value)) { showToast(t("family.notEnoughSpace")); return; }
     const personalTransactionId = desdePersonal ? nextId() : undefined;
-    await guardarMovimientoFamilia(familia.id, uid, { tipo, monto: value, descripcion: descripcion.trim().slice(0, 60) || (tipo === "ingreso" ? t(desdePersonal ? "family.initialFromPersonal" : "family.externalMoney") : ""), fecha: fechaHoy(), method: personalTransactionId != null ? "transfer" : method, ...(personalTransactionId != null ? { personalTransactionId, personalOwnerUid: uid } : {}) });
-    if (personalTransactionId != null) addOrUpdateTransaction({ id: personalTransactionId, type: "expense", amount: value, category: "otros", date: fechaHoy(), time: horaDe(Date.now()), method: "transfer", description: t("family.transferTo", { name: familia.nombre }), notes: "", origin: "manual", internalTransfer: "family", internalTransferLink: familia.id });
+    const movementId = await guardarMovimientoFamilia(familia.id, uid, { tipo, monto: value, descripcion: descripcion.trim().slice(0, 60) || (tipo === "ingreso" ? t(desdePersonal ? "family.initialFromPersonal" : "family.externalMoney") : ""), fecha: fechaHoy(), method: personalTransactionId != null ? "transfer" : method, ...(personalTransactionId != null ? { personalTransactionId, personalOwnerUid: uid } : {}) });
+    if (personalTransactionId != null) addOrUpdateTransaction({ id: personalTransactionId, type: "expense", amount: value, category: "otros", date: fechaHoy(), time: horaDe(Date.now()), method: "transfer", description: t("family.transferTo", { name: familia.nombre }), notes: "", origin: "manual", internalTransfer: "family", internalTransferLink: movementId });
     setMonto(""); setDescripcion(""); setOrigenDinero("externo"); setTipo(null); await recargar(); showToast(t("family.movementSaved"));
   });
 
-  const borrar = (item: MovimientoFamilia) => ejecutar(async () => { if (familia) { await borrarMovimientoFamilia(familia.id, item.id); if (item.personalOwnerUid === auth.currentUser?.uid && item.personalTransactionId != null) deleteLinkedTransferTransaction(item.personalTransactionId); await recargar(); } });
+  const borrar = (item: MovimientoFamilia) => ejecutar(async () => { if (familia) {
+    if (item.tipo === "ingreso" && item.personalTransactionId != null && !canUndoContribution(movimientos, item, item.personalOwnerUid)) { showToast(t("family.contributionUsed")); return; }
+    await borrarMovimientoFamilia(familia.id, item.id); if (item.personalOwnerUid === auth.currentUser?.uid && item.personalTransactionId != null) deleteLinkedTransferTransaction(item.personalTransactionId); await recargar();
+  } });
   const salir = () => ejecutar(async () => {
     const uid = auth.currentUser?.uid; if (!uid || !familia || owner) return;
     await salirDeFamilia(uid, familia.id); setFamilia(null); setMiembros([]); setMovimientos([]); showToast(t("family.left"));
@@ -199,8 +222,8 @@ export default function Family() {
     const uid = auth.currentUser?.uid;
     if (!uid || !familia || devolvibleAPersonal <= 0) return;
     const personalId = nextId();
-    await guardarMovimientoFamilia(familia.id, uid, { tipo: "gasto", monto: devolvibleAPersonal, descripcion: t("family.returnToPersonal"), fecha: fechaHoy(), method: "transfer", personalTransactionId: personalId, personalOwnerUid: uid, personalReturnAmount: devolvibleAPersonal });
-    addOrUpdateTransaction({ id: personalId, type: "income", amount: devolvibleAPersonal, category: "otros", date: fechaHoy(), time: horaDe(Date.now()), method: "transfer", description: t("family.returnFrom", { name: familia.nombre }), notes: "", origin: "manual", internalTransfer: "family", internalTransferLink: familia.id });
+    const movementId = await guardarMovimientoFamilia(familia.id, uid, { tipo: "gasto", monto: devolvibleAPersonal, descripcion: t("family.returnToPersonal"), fecha: fechaHoy(), method: "transfer", personalTransactionId: personalId, personalOwnerUid: uid, personalReturnAmount: devolvibleAPersonal });
+    addOrUpdateTransaction({ id: personalId, type: "income", amount: devolvibleAPersonal, category: "otros", date: fechaHoy(), time: horaDe(Date.now()), method: "transfer", description: t("family.returnFrom", { name: familia.nombre }), notes: "", origin: "manual", internalTransfer: "family", internalTransferLink: movementId });
     await recargar();
   });
   const quitar = (member: MiembroFamilia) => {
@@ -246,10 +269,21 @@ export default function Family() {
         <View className="mt-3 flex-row gap-3"><TouchableOpacity onPress={() => { setOrigenDinero("externo"); setTipo("ingreso"); }} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-100"><ArrowUp size={18} color="#047857" /><Text className="font-bold text-emerald-700">{t("boxes.income")}</Text></TouchableOpacity><TouchableOpacity onPress={() => setTipo("gasto")} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-rose-100"><ArrowDown size={18} color="#be123c" /><Text className="font-bold text-rose-700">{t("boxes.expense")}</Text></TouchableOpacity></View>
         {tipo ? <View className="mt-3 rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde"><TextInput disableFullscreenUI value={monto} onChangeText={value => setMonto(sanitizeSafeAmountInput(value))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border-[1.5px] border-slate-200 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" /><TextInput disableFullscreenUI value={descripcion} onChangeText={setDescripcion} maxLength={60} placeholder={t("boxes.description")} placeholderTextColor="#94a3b8" className="mt-2 h-12 rounded-xl border-[1.5px] border-slate-200 px-4 text-slate-900 dark:text-slate-100" />{tipo === "ingreso" && owner ? <><Text className="mb-1 mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">{t("family.moneyOrigin")}</Text><View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} onPress={() => setOrigenDinero(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenDinero === origin ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "family.fromPersonal" : "family.externalMoney")}</Text></TouchableOpacity>)}</View>{origenDinero === "personal" ? <Text className="mt-1 text-[11px] text-slate-500">{t("family.personalAvailable", { amount: fmt(disponible) })}</Text> : null}</> : null}{tipo !== "ingreso" || !owner || origenDinero === "externo" ? <SpacePaymentMethod value={method} onChange={setMethod} disabled={ocupado} /> : null}<View className="mt-3 flex-row gap-2"><TouchableOpacity onPress={() => setTipo(null)} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text></TouchableOpacity><TouchableOpacity onPress={guardar} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-emerald-600"><Text className="font-bold text-white">{t("common.save")}</Text></TouchableOpacity></View></View> : null}
         {devolvibleAPersonal > 0 ? <TouchableOpacity disabled={ocupado} onPress={() => void devolverAPersonal()} className="mt-3 min-h-11 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("family.returnAmount", { amount: fmt(devolvibleAPersonal) })}</Text></TouchableOpacity> : null}
+        {Math.abs(saldo) < 0.005 && owner ? <View className="mt-3 flex-row gap-2"><TouchableOpacity onPress={() => { setOrigenDinero("externo"); setTipo("ingreso"); }} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-emerald-600"><Text className="font-bold text-white">{t("boxes.addMoney")}</Text></TouchableOpacity><TouchableOpacity onPress={confirmarCierre} className="min-h-11 flex-1 items-center justify-center rounded-xl border border-rose-300"><Text className="font-bold text-rose-600">{t("family.close")}</Text></TouchableOpacity></View> : null}
         <View className="mt-4 rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde"><View className="flex-row items-center justify-between"><Text className="font-extrabold text-slate-900 dark:text-slate-100">{t("family.members")} · {miembros.length}</Text>{owner ? <TouchableOpacity onPress={invitar} className="min-h-10 flex-row items-center gap-1 rounded-xl bg-teal-50 px-3 dark:bg-teal-950"><UserPlus size={16} color="#0d9488" /><Text className="text-xs font-bold text-teal-700 dark:text-teal-300">{isPremium ? t("family.invite") : t("family.invitePremium")}</Text></TouchableOpacity> : null}</View>{invitacion ? <View className="mt-3 rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950"><Text className="text-xs text-slate-600 dark:text-slate-300">{t("family.shareCode")}</Text><Text selectable className="mt-1 text-center text-2xl font-extrabold tracking-[4px] text-emerald-700 dark:text-emerald-300">{invitacion}</Text><Text className="mt-1 text-center text-[11px] text-slate-500">{t("family.codeExpires")}</Text></View> : null}<View className="mt-2">{miembros.map(item => <View key={item.uid} className="min-h-9 flex-row items-center rounded-full bg-slate-100 pl-3 dark:bg-noche-2"><Text numberOfLines={1} className="flex-1 text-xs font-bold text-slate-700 dark:text-slate-200">{item.nombre}{item.rol === "owner" ? " · ★" : ""}</Text>{owner && item.rol !== "owner" ? <TouchableOpacity accessibilityLabel={t("family.removeMember")} onPress={() => quitar(item)} className="h-9 w-9 items-center justify-center"><UserMinus size={15} color="#e11d48" /></TouchableOpacity> : null}</View>)}</View></View>
         <Text className="mb-2 mt-5 font-extrabold text-slate-900 dark:text-slate-100">{t("family.history")}</Text>
         <SpaceFilterReset filter={filter} onReset={() => setFilter(null)} />
-        {visibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "family.noMovements")}</Text> : visibles.slice(0, movementLimit).map(item => { const puedeBorrar = item.personalOwnerUid ? item.personalOwnerUid === auth.currentUser?.uid : owner || item.creadoPor === auth.currentUser?.uid; return <View key={item.id} className="mb-2 flex-row items-center rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde"><View className={`h-9 w-9 items-center justify-center rounded-xl ${item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View><View className="ml-3 flex-1"><Text numberOfLines={1} className="text-[15px] font-bold text-slate-800 dark:text-slate-100">{item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-1 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text>{puedeBorrar ? <TouchableOpacity onPress={() => void borrar(item)} className="h-10 w-10 items-center justify-center"><Trash2 size={16} color="#e11d48" /></TouchableOpacity> : <View className="h-10 w-10" />}</View>; })}
+        {visibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "family.noMovements")}</Text> : visibles.slice(0, movementLimit).map(item => {
+          const puedeBorrar = item.personalOwnerUid ? item.personalOwnerUid === auth.currentUser?.uid : owner || item.creadoPor === auth.currentUser?.uid;
+          const puedeEditarAporte = item.tipo === "ingreso" && item.personalOwnerUid === auth.currentUser?.uid && item.personalTransactionId != null;
+          return <View key={item.id} className="mb-2 flex-row items-center rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde">
+            <View className={`h-9 w-9 items-center justify-center rounded-xl ${item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
+            <View className="ml-3 flex-1"><Text numberOfLines={1} className="text-[15px] font-bold text-slate-800 dark:text-slate-100">{item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-1 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text>
+            {puedeEditarAporte ? <TouchableOpacity onPress={() => { setEditandoAporteId(item.id); setTipo("ingreso"); setOrigenDinero("personal"); setMonto(String(item.monto)); setDescripcion(item.descripcion); }} className="h-10 w-10 items-center justify-center"><Pencil size={16} color="#0d9488" /></TouchableOpacity> : null}
+            {puedeBorrar ? <TouchableOpacity onPress={() => void borrar(item)} className="h-10 w-10 items-center justify-center"><Trash2 size={16} color="#e11d48" /></TouchableOpacity> : <View className="h-10 w-10" />}
+          </View>;
+        })}
         {owner ? <TouchableOpacity disabled={ocupado} onPress={confirmarCierre} className="mt-5 min-h-11 flex-row items-center justify-center gap-2"><Trash2 size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("family.close")}</Text></TouchableOpacity> : <TouchableOpacity onPress={salir} className="mt-5 min-h-11 flex-row items-center justify-center gap-2"><LogOut size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("family.leave")}</Text></TouchableOpacity>}
       </>}
     </ScrollView>

@@ -26,7 +26,10 @@ assert.match(screen, /setOrigenDinero\(origin\)/, "los ingresos familiares permi
 assert.match(screen, /personalOwnerUid: uid/, "el aporte familiar recuerda a qué propietario pertenece");
 assert.match(screen, /deleteLinkedTransferTransaction\(item\.personalTransactionId\)/, "el dueño recupera en Personal un aporte familiar que elimina desde Familia");
 assert.match(cloud, /export async function quitarMiembroFamilia/, "el propietario puede retirar miembros de Familia");
-assert.match(screen, /Math\.max\(0, Math\.min\(saldo, aportadoDesdePersonal\)\)/, "Familia solo devuelve a Personal el aporte que todavía queda");
+assert.match(screen, /returnableToPersonal\(movimientos, auth\.currentUser\?\.uid\)/, "Familia solo devuelve a Personal el aporte que todavía queda");
+assert.match(screen, /canSpendFromSpace\(movimientos, value\)/, "Familia impide gastar más que su saldo");
+assert.match(screen, /minimumContributionAmount/, "editar un aporte familiar respeta lo ya utilizado");
+assert.match(screen, /repairLinkedTransferTransactions/, "Familia repara transferencias huérfanas");
 assert.match(screen, /Math\.abs\(saldo\) > 0\.000001/, "Familia no puede cerrarse dejando un saldo perdido");
 assert.match(deletion, /borrarVinculoFamiliaDeCuenta/, "eliminar la cuenta también retira su membresía familiar");
 

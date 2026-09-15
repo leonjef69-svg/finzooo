@@ -105,6 +105,14 @@ export function processCaptured(
     // banco que Fino ya ni mira.
     if (!esAppVigilada(n.package)) continue;
 
+    // Un lote reclamado se vuelve a entregar hasta que el guardado confirma.
+    // Esta identidad hace que repetirlo sea seguro incluso si Android mata el
+    // proceso entre escribir el movimiento y confirmar el buzón.
+    const captureId = n.captureId || `${n.package}|${n.postedAt}|${n.title}|${n.text}`;
+    if (existing.some((tx) => tx.captureId === captureId) || toAdd.some((tx) => tx.captureId === captureId)) {
+      continue;
+    }
+
     const preview = `${n.title ?? ""} ${n.text ?? ""}`.trim().slice(0, 160);
     const parsed = parseNotification(n);
 
@@ -178,6 +186,7 @@ export function processCaptured(
       merchant: raw.merchant || undefined,
       account: raw.account,
       origin: "auto",
+      captureId,
     });
     log.push({
       at: n.postedAt,

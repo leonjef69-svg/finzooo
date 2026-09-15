@@ -178,9 +178,15 @@ export async function listarMovimientosFamilia(familyId: string): Promise<Movimi
   });
 }
 
-export async function guardarMovimientoFamilia(familyId: string, uid: string, movimiento: Omit<MovimientoFamilia, "id" | "creadoEn" | "creadoPor">): Promise<void> {
+export async function guardarMovimientoFamilia(familyId: string, uid: string, movimiento: Omit<MovimientoFamilia, "id" | "creadoEn" | "creadoPor">): Promise<string> {
   if (!isSafeMoneyAmount(movimiento.monto) || movimiento.monto <= 0) throw new Error("invalid-amount");
-  await addDoc(collection(db, "familySpaces", familyId, "movements"), { ...movimiento, creadoPor: uid, creadoEn: serverTimestamp() });
+  const ref = await addDoc(collection(db, "familySpaces", familyId, "movements"), { ...movimiento, creadoPor: uid, creadoEn: serverTimestamp() });
+  return ref.id;
+}
+
+export async function actualizarMovimientoFamilia(familyId: string, movementId: string, monto: number, descripcion: string): Promise<void> {
+  if (!isSafeMoneyAmount(monto) || monto <= 0) throw new Error("invalid-amount");
+  await updateDoc(doc(db, "familySpaces", familyId, "movements", movementId), { monto, descripcion: descripcion.trim().slice(0, 60) });
 }
 
 export async function borrarMovimientoFamilia(familyId: string, movementId: string): Promise<void> {

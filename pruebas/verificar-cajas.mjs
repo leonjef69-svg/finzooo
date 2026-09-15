@@ -48,7 +48,10 @@ assert.match(screen, /crearInvitacionCaja\(uid, compartida\.id\)/, "compartir ge
 assert.match(sharedCloud, /export async function listarMiembrosCaja/, "la caja compartida puede mostrar sus miembros");
 assert.match(sharedCloud, /export async function quitarMiembroCaja/, "el propietario puede retirar el acceso de un miembro");
 assert.match(sharedCloud, /export async function cerrarCajaCompartida/, "una caja compartida puede cerrarse de forma explícita");
-assert.match(sharedScreen, /Math\.max\(0, Math\.min\(saldo, aportadoDesdePersonal\)\)/, "solo vuelve a Personal dinero aportado que aún queda en la caja");
+assert.match(sharedScreen, /returnableToPersonal\(movimientos, uid\)/, "solo vuelve a Personal dinero aportado que aún queda en la caja");
+assert.match(screen, /canSpendFromSpace\(movimientos, valor\)/, "una caja impide gastar más que su saldo");
+assert.match(screen, /minimumContributionAmount/, "editar un aporte respeta la parte ya utilizada");
+assert.match(screen, /repairLinkedTransferTransactions/, "las cajas reparan transferencias huérfanas");
 assert.match(sharedScreen, /Math\.abs\(saldo\) > 0\.000001/, "una caja con saldo pendiente no se puede cerrar");
 assert.match(finances, /availableBalance\(f\) - f\.transfersOut \+ f\.transfersIn/, "devolver dinero aumenta Personal sin contarlo como un ingreso nuevo");
 assert.match(home, /availablePersonalBalance/, "Inicio descuenta lo enviado a Familia y Cajas");

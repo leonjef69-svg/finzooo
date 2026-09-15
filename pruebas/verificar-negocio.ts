@@ -819,12 +819,12 @@ console.log("\n--- EL YAPEO QUE ENTRA AL NEGOCIO (paso 5) ---");
   // 9. EL ENGANCHE EN EL CONTEXTO, que es donde se reparte de verdad.
   const ctx = fs.readFileSync(path.join(RAIZ, "contexts/AppDataContext.tsx"), "utf8");
   ok(/separarLoDelNegocio\(\s*toAdd,/.test(ctx), "al recoger un yapeo se reparte");
-  ok(/setTransactions\(\(prev\) => \[\.\.\.personales, \.\.\.prev\]\)/.test(ctx), "lo personal va a los movimientos de siempre");
-  ok(/movimientos: \[\.\.\.antes\.movimientos, \.\.\.delNegocio\]/.test(ctx), "y lo del negocio a su caja");
+  ok(/setTransactions\(siguientesPersonales\)/.test(ctx), "lo personal va a los movimientos persistidos");
+  ok(/movimientos: siguientesNegocio/.test(ctx), "y lo del negocio a su caja persistida");
   // EL NEGOCIO TIENE QUE IR EN captureInputs. La recogida corre desde un escuchador montado
   // una vez: leyendo el estado ahi dentro, un yapeo acabaria en el bolsillo que estaba elegido
   // al abrir la app y no en el de ahora.
-  ok(/captureInputs\.current = \{ transactions, merchantLearned, t, negocio: datosNegocio \}/.test(ctx), "y se usa el negocio de AHORA, no el de al abrir la app");
+  ok(/captureInputs\.current = \{ transactions, merchantLearned, t, negocio: datosNegocio(?:, [^}]+)? \}/.test(ctx), "y se usa el negocio de AHORA, no el de al abrir la app");
 
   // 10. EL INTERRUPTOR, EN EL PANEL Y NO ESCONDIDO. Es lo que decide donde cae tu plata todos
   //     los dias: en "editar el negocio" no lo encontraria nadie.

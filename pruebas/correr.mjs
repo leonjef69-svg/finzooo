@@ -15,7 +15,9 @@ import path from "path";
 
 const RAIZ = process.cwd();
 const DIR = path.join(RAIZ, "pruebas");
-const TMP = path.join(DIR, ".tmp");
+// Un directorio nuevo por ejecución evita que un antivirus o una ejecución
+// anterior deje bloqueados los archivos compilados de Windows.
+const TMP = path.join(DIR, `.tmp-${process.pid}`);
 
 if (!fs.existsSync(path.join(RAIZ, "app.json"))) {
   console.error("Hay que correrlo desde la raiz del proyecto.");
@@ -108,6 +110,7 @@ const SUITES = [
   { archivo: "verificar-categorias-propias.ts", alias: EXPO },
   { archivo: "verificar-presupuesto-mensual.ts", alias: BASE },
   { archivo: "verificar-saldo-mes.ts", alias: BASE },
+  { archivo: "verificar-transferencias-enlazadas.ts", alias: BASE },
   { archivo: "verificar-programado.ts", alias: EXPO },
   { archivo: "verificar-reporte-archivo.ts", alias: EXPO },
   { archivo: "verificar-favoritos.ts", alias: EXPO },
@@ -130,6 +133,8 @@ const AUDITORES = fs
   .filter((f) => /^auditar-.*\.mjs$/.test(f))
   .sort();
 
+const FILTRO = process.argv[2] || process.env.FINO_TEST || "";
+
 /** Corre un .mjs suelto y cuenta si paso. */
 function correrSuelto(archivo) {
   const nombre = archivo.replace(/\.mjs$/, "");
@@ -149,7 +154,7 @@ let fallos = 0;
 const rotas = [];
 
 console.log("\n=== PRUEBAS ===\n");
-for (const s of SUITES) {
+for (const s of SUITES.filter(s => !FILTRO || s.archivo.includes(FILTRO))) {
   const nombre = s.archivo.replace(/\.ts$/, "");
   const salida = path.join(TMP, nombre + (s.formato === "cjs" ? ".cjs" : ".mjs"));
   try {
@@ -180,15 +185,16 @@ for (const s of SUITES) {
   } catch (e) {
     console.log(`  FALLA       ${nombre}`);
     console.log(String(e.stdout || "").split("\n").filter((l) => l.includes("FALLA")).slice(0, 6).join("\n"));
+    console.log(String(e.stderr || ""));
     rotas.push(nombre);
     fallos++;
   }
 }
 
-for (const f of SUELTAS) correrSuelto(f);
+for (const f of SUELTAS.filter(f => !FILTRO || f.includes(FILTRO))) correrSuelto(f);
 
 console.log("\n=== AUDITORES ===\n");
-for (const a of AUDITORES) correrSuelto(a);
+for (const a of AUDITORES.filter(a => !FILTRO || a.includes(FILTRO))) correrSuelto(a);
 
 console.log("");
 if (fallos === 0) {
@@ -198,4 +204,5 @@ if (fallos === 0) {
 } else {
   console.log(`${fallos} con problemas: ${rotas.join(", ")}\n`);
 }
+try { fs.rmSync(TMP, { recursive: true, force: true }); } catch {}
 process.exit(fallos ? 1 : 0);

@@ -26,6 +26,7 @@ import {
   clearRetiredAlternateData,
   loadJSON,
   saveJSON,
+  saveJSONNow,
   STORAGE_KEYS,
   subscribeStorageWriteErrors,
 } from "@/utils/storage";
@@ -98,7 +99,7 @@ import {
   type CloudData,
 } from "@/utils/cloudSync";
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
-import { limpiarPendientes, pendientesDeCaptura } from "@/utils/capturaEnFondo";
+import { guardarPendientes, limpiarPendientes, pendientesDeCaptura } from "@/utils/capturaEnFondo";
 import {
   mergeGoals,
   mergeTransactions,
@@ -226,6 +227,8 @@ type AppDataContextValue = {
   deleteTransaction: (id: number) => void;
   /** Solo para Familia/Cajas al borrar el movimiento enlazado en su origen. */
   deleteLinkedTransferTransaction: (id: number) => void;
+  /** Repara pares enlazados sin mostrar una cadena de avisos. */
+  repairLinkedTransferTransactions: (upserts: Transaction[], deleteIds?: number[]) => void;
   deleteTransactions: (ids: number[]) => void;
   commitImport: (toAdd: Transaction[], toReplace: Transaction[]) => void;
 
@@ -1161,9 +1164,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // corre desde un escuchador y desde un temporizador que se montan una vez, así que ahí
   // dentro el estado sería el de cuando se montaron. Un yapeo habría acabado en el bolsillo
   // que estaba elegido al abrir la app, no en el de ahora.
-  const captureInputs = useRef({ transactions, merchantLearned, t, negocio: datosNegocio });
+  const captureInputs = useRef({ transactions, merchantLearned, t, negocio: datosNegocio, autoCaptureLog });
   useEffect(() => {
-    captureInputs.current = { transactions, merchantLearned, t, negocio: datosNegocio };
+    captureInputs.current = { transactions, merchantLearned, t, negocio: datosNegocio, autoCaptureLog };
   });
   // Evita que dos recogidas se pisen (abrir la app y volver al frente casi
   // a la vez): sin esto, las dos vaciarían el buzón y se duplicaría todo.
@@ -1273,16 +1276,24 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         // no lo veria nadie nunca.
         const delBuzon = await notificationReader.drain();
         const aMedias = (await pendientesDeCaptura()) as typeof delBuzon;
-        const captured = [...aMedias, ...delBuzon];
+        const captured = [...new Map([...aMedias, ...delBuzon].map(item => [item.captureId || `${item.package}|${item.postedAt}|${item.title}|${item.text}`, item])).values()];
         if (captured.length === 0) return;
+        await guardarPendientes(captured);
 
         const {
           transactions: current,
           merchantLearned: learned,
           t: translate,
           negocio: datosDelNegocio,
+          autoCaptureLog: logEnMemoria,
         } = captureInputs.current;
-        const { toAdd, log, avisoDe } = processCaptured(captured, current, learned, translate);
+        const [transactionsDelDisco, logDelDisco] = await Promise.all([
+          loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []),
+          loadJSON<CaptureLogEntry[]>(STORAGE_KEYS.autoCaptureLog, []),
+        ]);
+        const basePersonal = mergeTransactions(current, transactionsDelDisco);
+        const baseLog = mergeCaptureLog(logEnMemoria, logDelDisco);
+        const { toAdd, log, avisoDe } = processCaptured(captured, basePersonal, learned, translate);
 
         /**
          * Y AQUÍ SE REPARTE: qué se queda en lo personal y qué entra a la caja del negocio.
@@ -1303,13 +1314,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           fusionarMovimientosNegocio(datosDelNegocio.movimientos, cajaDelDisco)
         );
 
+        const siguienteLog = [...baseLog, ...log].slice(-40);
+        const siguientesPersonales = mergeTransactions(personales, basePersonal);
+        const siguientesNegocio = [...fusionarMovimientosNegocio(datosDelNegocio.movimientos, cajaDelDisco), ...delNegocio];
+        // Persistencia comprobable antes de confirmar el lote nativo. Así no
+        // existe una ventana donde el buzón ya se borró y el movimiento vive
+        // únicamente en memoria de React.
+        const guardados = await Promise.all([
+          saveJSONNow(STORAGE_KEYS.autoCaptureLog, siguienteLog),
+          personales.length > 0 ? saveJSONNow(STORAGE_KEYS.transactions, siguientesPersonales) : Promise.resolve(true),
+          delNegocio.length > 0 ? saveJSONNow(STORAGE_KEYS.movimientosNegocio, siguientesNegocio) : Promise.resolve(true),
+        ]);
+        if (guardados.some(ok => !ok)) throw new Error("capture-not-persisted");
         limpiarPendientes();
-        setAutoCaptureLog((prev) => [...prev, ...log].slice(-40));
+        setAutoCaptureLog(siguienteLog);
         if (personales.length > 0) {
-          setTransactions((prev) => [...personales, ...prev]);
+          setTransactions(siguientesPersonales);
         }
         if (delNegocio.length > 0) {
-          setDatosNegocio((antes) => ({ ...antes, movimientos: [...antes.movimientos, ...delNegocio] }));
+          setDatosNegocio((antes) => ({ ...antes, movimientos: siguientesNegocio }));
         }
         // UN SOLO AVISO, Y DICE A DÓNDE FUE. Con dos mensajes seguidos —uno por cada
         // bolsillo— el segundo pisa al primero y no se llega a leer ninguno. Y si no se
@@ -1323,6 +1346,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             })
           );
         }
+        // El lote nativo solo desaparece después de que la captura llegó al
+        // estado protegido de la app. Si el proceso cae antes, vuelve a
+        // entregarse y captureId impide duplicarlo.
+        await notificationReader.ackDrain();
       } catch {
         // Un fallo aquí no debe impedir que la app se abra. Lo capturado
         // sigue en el buzón del celular y se reintenta la próxima vez.
@@ -2109,6 +2136,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     showToast(t("toast.transactionDeleted"));
   }
 
+  function repairLinkedTransferTransactions(upserts: Transaction[], deleteIds: number[] = []) {
+    if (deleteIds.length) removeTransactions(deleteIds);
+    if (!upserts.length) return;
+    setTransactions(prev => {
+      const replacements = new Map(upserts.map(item => [item.id, item]));
+      const repaired = prev.map(item => replacements.get(item.id) ?? item);
+      const known = new Set(prev.map(item => item.id));
+      return [...upserts.filter(item => !known.has(item.id)), ...repaired];
+    });
+  }
+
   function deleteTransactions(ids: number[]) {
     const protectedIds = new Set(transactions.filter((item) => item.internalTransfer).map((item) => item.id));
     const deletableIds = ids.filter((id) => !protectedIds.has(id));
@@ -2244,6 +2282,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     reprogramarAvisos,
     deleteTransaction,
     deleteLinkedTransferTransaction,
+    repairLinkedTransferTransactions,
     deleteTransactions,
     commitImport,
     merchantLearned,

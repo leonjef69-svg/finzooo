@@ -63,7 +63,18 @@ class FinzoNotificationListener : NotificationListenerService() {
    * motor que no podia decir nada. Ver el reintento en vaciarCola.
    */
   private var idiomaListo = false
-  private val porDecir = ArrayDeque<String>()
+  private data class FrasePendiente(val texto: String, var intentos: Int = 0)
+  private val porDecir = ArrayDeque<FrasePendiente>()
+  private var hablando: FrasePendiente? = null
+  private var idHablando: String? = null
+
+  /** Si el motor acepta una frase pero no informa progreso, se reemplaza. */
+  private val vigilarFrase = Runnable {
+    if (hablando != null) {
+      anotarVoz("motor-bloqueado")
+      reencender()
+    }
+  }
 
   /**
    * CUANTAS VECES SE VUELVE A ENCENDER EL MOTOR ANTES DE RENDIRSE.
@@ -183,17 +194,17 @@ class FinzoNotificationListener : NotificationListenerService() {
       if (title.isBlank() && body.isBlank()) return
 
       val item = JSONObject().apply {
+        put("captureId", "$pkg|${sbn.key}|${sbn.postTime}")
         put("package", sbn.packageName)
         put("title", title)
         put("text", body)
         put("postedAt", sbn.postTime)
       }
 
-      // La clave junta app + textos + el segundo en que llegó. Si Android
-      // reenvía la misma notificación actualizada, la clave coincide y no se
-      // duplica; dos Yapes distintos del mismo monto en segundos diferentes
-      // sí entran los dos.
-      val dedupeKey = "$pkg|$title|$body|${sbn.postTime / 1000}"
+      // La identidad nativa y el milisegundo separan dos Yapes reales iguales,
+      // incluso si llegan dentro del mismo segundo. Una actualización del
+      // mismo aviso conserva key/postTime y no se duplica.
+      val dedupeKey = "$pkg|${sbn.key}|${sbn.postTime}|$title|$body"
 
       val esNueva = NotificationStore.add(applicationContext, item, dedupeKey)
 
@@ -415,7 +426,7 @@ class FinzoNotificationListener : NotificationListenerService() {
         // alturas ya no le sirven a nadie: nadie quiere oir a las ocho de la noche el yapeo de
         // las nueve de la mañana.
         while (porDecir.size >= MAX_EN_COLA) porDecir.removeFirst()
-        porDecir.add(texto)
+        porDecir.add(FrasePendiente(texto))
 
         // EL VOLUMEN, ANOTADO ANTES DE HABLAR.
         //
@@ -505,6 +516,7 @@ class FinzoNotificationListener : NotificationListenerService() {
    */
   private fun vaciarCola() {
     val m = motor ?: return
+    if (hablando != null || porDecir.isEmpty()) return
 
     // SI AL ARRANCAR NO HABIA ESPANOL, SE VUELVE A INTENTAR AHORA (11/08/2026).
     //
@@ -523,11 +535,15 @@ class FinzoNotificationListener : NotificationListenerService() {
     val params = Bundle().apply {
       putInt(TextToSpeech.Engine.KEY_PARAM_STREAM, AudioManager.STREAM_NOTIFICATION)
     }
-    while (porDecir.isNotEmpty()) {
-      val frase = porDecir.removeFirst()
+    val frase = porDecir.removeFirst()
+    val utteranceId = "finzo-" + System.nanoTime()
+    hablando = frase
+    idHablando = utteranceId
+    mano.removeCallbacks(vigilarFrase)
+    mano.postDelayed(vigilarFrase, 15000)
       val resultado =
         try {
-          m.speak(frase, TextToSpeech.QUEUE_ADD, params, "finzo-" + System.nanoTime())
+          m.speak(frase.texto, TextToSpeech.QUEUE_FLUSH, params, utteranceId)
         } catch (e: Throwable) {
           TextToSpeech.ERROR
         }
@@ -540,14 +556,9 @@ class FinzoNotificationListener : NotificationListenerService() {
       // tener ninguno: manda a buscar el fallo donde no esta.
       if (resultado != TextToSpeech.SUCCESS) {
         anotarVoz("no-sono")
-        // Se devuelve la frase a la cola y se enciende un motor nuevo. Antes se tiraba el
-        // motor Y la frase: el yapeo se perdia para siempre aunque el motor nuevo funcionara
-        // perfectamente. Ahora el aviso se dice con el motor de repuesto.
-        porDecir.addFirst(frase)
         reencender()
         return
       }
-    }
   }
 
   /**
@@ -565,19 +576,33 @@ class FinzoNotificationListener : NotificationListenerService() {
       m.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
         override fun onStart(utteranceId: String?) {
           mano.post {
+            if (utteranceId != idHablando) return@post
             anotarVoz("hablo")
             // Sono: el motor esta sano y los reintentos vuelven a estar disponibles enteros
             // para la proxima vez que se estropee, dentro de un mes o de un año.
             hablaronBien = true
             reencendidos = 0
+            // Un callback onStart sin onDone también puede dejar la cola
+            // bloqueada; se concede un minuto para terminar.
+            mano.removeCallbacks(vigilarFrase)
+            mano.postDelayed(vigilarFrase, 60000)
           }
         }
 
-        override fun onDone(utteranceId: String?) {}
+        override fun onDone(utteranceId: String?) {
+          mano.post {
+            if (utteranceId != idHablando) return@post
+            mano.removeCallbacks(vigilarFrase)
+            hablando = null
+            idHablando = null
+            vaciarCola()
+          }
+        }
 
         @Deprecated("Android la pide igual", ReplaceWith(""))
         override fun onError(utteranceId: String?) {
           mano.post {
+            if (utteranceId != idHablando) return@post
             anotarVoz("no-sono")
             reencender()
           }
@@ -585,6 +610,7 @@ class FinzoNotificationListener : NotificationListenerService() {
 
         override fun onError(utteranceId: String?, errorCode: Int) {
           mano.post {
+            if (utteranceId != idHablando) return@post
             anotarVoz("no-sono")
             reencender()
           }
@@ -608,21 +634,34 @@ class FinzoNotificationListener : NotificationListenerService() {
    * sueltos repartidos en meses no dejan la voz apagada para siempre.
    */
   private fun reencender() {
-    val pendientes = ArrayList(porDecir)
+    val pendientes = ArrayList<FrasePendiente>()
+    hablando?.let { actual ->
+      actual.intentos++
+      if (actual.intentos <= MAX_INTENTOS_FRASE) pendientes.add(actual)
+      else anotarVoz("frase-agotada")
+    }
+    pendientes.addAll(porDecir)
     soltarVoz()
+    porDecir.addAll(pendientes)
     if (reencendidos >= MAX_REENCENDIDOS && !hablaronBien) {
       anotarVoz("motor-no-arranca")
+      // No se pierde la frase: se deja esperando y se prueba de nuevo cuando
+      // Android haya tenido tiempo de recuperar su servicio de voz.
+      mano.postDelayed({
+        reencendidos = 0
+        prepararVoz()
+      }, 300000)
       return
     }
     reencendidos++
     hablaronBien = false
-    porDecir.addAll(pendientes)
     prepararVoz()
   }
 
   /** Apaga el motor y tira lo que quedara sin decir. */
   private fun soltarVoz() {
     mano.removeCallbacks(vigilarArranque)
+    mano.removeCallbacks(vigilarFrase)
     try {
       motor?.shutdown()
     } catch (e: Throwable) {
@@ -631,6 +670,8 @@ class FinzoNotificationListener : NotificationListenerService() {
     motor = null
     vozLista = false
     idiomaListo = false
+    hablando = null
+    idHablando = null
     porDecir.clear()
   }
 
@@ -640,8 +681,7 @@ class FinzoNotificationListener : NotificationListenerService() {
    * nombre de sus apps entre versiones y países, y así seguimos
    * reconociéndolas sin tener que sacar una versión nueva de Fino.
    */
-  private fun isMoneyApp(pkg: String): Boolean =
-    MONEY_APP_HINTS.any { pkg.contains(it) }
+  private fun isMoneyApp(pkg: String): Boolean = pkg == YAPE_PACKAGE
 
   companion object {
     /**
@@ -710,6 +750,9 @@ class FinzoNotificationListener : NotificationListenerService() {
       servicio.mano.post { servicio.prepararVoz() }
     }
 
+    @JvmStatic
+    fun estaVivo(): Boolean = viva != null
+
     /**
      * Cuantas frases como mucho esperan a que arranque el motor.
      *
@@ -720,6 +763,7 @@ class FinzoNotificationListener : NotificationListenerService() {
 
     /** Cuantas veces se enciende un motor nuevo antes de rendirse. Ver reencender(). */
     private const val MAX_REENCENDIDOS = 3
+    private const val MAX_INTENTOS_FRASE = 3
 
     /**
      * Avisos que NO son un movimiento: claves, promociones, encuestas.
@@ -875,6 +919,6 @@ class FinzoNotificationListener : NotificationListenerService() {
      * "yape" tambien cubre "com.bcp.innovacxion.yapeapp", que es el paquete
      * de verdad de la app.
      */
-    private val MONEY_APP_HINTS = listOf("yape")
+    const val YAPE_PACKAGE = "com.bcp.innovacxion.yapeapp"
   }
 }

@@ -139,9 +139,15 @@ export async function listarMovimientosCajaCompartida(boxId: string): Promise<Mo
   return snap.docs.map(item => ({ id: item.id, tipo: item.data().tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(item.data().monto || 0), descripcion: String(item.data().descripcion || ""), method: typeof item.data().method === "string" ? item.data().method : undefined, fecha: String(item.data().fecha || ""), creadoPor: String(item.data().creadoPor || ""), creadoEn: alNumero(item.data().creadoEn), personalTransactionId: typeof item.data().personalTransactionId === "number" ? item.data().personalTransactionId : undefined, personalOwnerUid: typeof item.data().personalOwnerUid === "string" ? item.data().personalOwnerUid : undefined, personalReturnAmount: typeof item.data().personalReturnAmount === "number" ? item.data().personalReturnAmount : undefined }));
 }
 
-export async function guardarMovimientoCajaCompartida(boxId: string, uid: string, movimiento: Omit<MovimientoCajaCompartida, "id" | "creadoPor" | "creadoEn">): Promise<void> {
+export async function guardarMovimientoCajaCompartida(boxId: string, uid: string, movimiento: Omit<MovimientoCajaCompartida, "id" | "creadoPor" | "creadoEn">): Promise<string> {
   if (!isSafeMoneyAmount(movimiento.monto) || movimiento.monto <= 0) throw new Error("invalid-amount");
-  await addDoc(collection(db, "boxSpaces", boxId, "movements"), { ...movimiento, creadoPor: uid, creadoEn: serverTimestamp() });
+  const ref = await addDoc(collection(db, "boxSpaces", boxId, "movements"), { ...movimiento, creadoPor: uid, creadoEn: serverTimestamp() });
+  return ref.id;
+}
+
+export async function actualizarMovimientoCajaCompartida(boxId: string, movementId: string, monto: number, descripcion: string): Promise<void> {
+  if (!isSafeMoneyAmount(monto) || monto <= 0) throw new Error("invalid-amount");
+  await updateDoc(doc(db, "boxSpaces", boxId, "movements", movementId), { monto, descripcion: descripcion.trim().slice(0, 60) });
 }
 
 export async function borrarMovimientoCajaCompartida(boxId: string, movementId: string): Promise<void> {

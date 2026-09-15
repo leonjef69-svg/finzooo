@@ -294,11 +294,18 @@ service cloud.firestore {
                         || getAfter(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid);
         allow update: if familyMember(familyId)
                       && familyOwnerPremium(familyId)
-                      && resource.data.creadoPor == request.auth.uid
-                      && request.resource.data.creadoPor == 'deleted'
-                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['creadoPor', 'personalOwnerUid'])
-                      && (!('personalOwnerUid' in request.resource.data)
-                        || request.resource.data.personalOwnerUid == 'deleted');
+                      && (
+                        (resource.data.creadoPor == request.auth.uid
+                          && request.resource.data.creadoPor == 'deleted'
+                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['creadoPor', 'personalOwnerUid'])
+                          && (!('personalOwnerUid' in request.resource.data)
+                            || request.resource.data.personalOwnerUid == 'deleted'))
+                        || (resource.data.personalOwnerUid == request.auth.uid
+                          && request.resource.data.personalOwnerUid == request.auth.uid
+                          && request.resource.data.personalTransactionId == resource.data.personalTransactionId
+                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['monto', 'descripcion'])
+                          && validSharedMovement(request.resource.data))
+                      );
         allow delete: if familyMember(familyId)
                       && (familyOpen(familyId)
                         || get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('deleting', false) == true)
@@ -418,11 +425,18 @@ service cloud.firestore {
             || getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid);
         allow update: if boxMember(boxId)
                       && boxOwnerPremium(boxId)
-                      && resource.data.creadoPor == request.auth.uid
-                      && request.resource.data.creadoPor == 'deleted'
-                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['creadoPor', 'personalOwnerUid'])
-                      && (!('personalOwnerUid' in request.resource.data)
-                        || request.resource.data.personalOwnerUid == 'deleted');
+                      && (
+                        (resource.data.creadoPor == request.auth.uid
+                          && request.resource.data.creadoPor == 'deleted'
+                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['creadoPor', 'personalOwnerUid'])
+                          && (!('personalOwnerUid' in request.resource.data)
+                            || request.resource.data.personalOwnerUid == 'deleted'))
+                        || (resource.data.personalOwnerUid == request.auth.uid
+                          && request.resource.data.personalOwnerUid == request.auth.uid
+                          && request.resource.data.personalTransactionId == resource.data.personalTransactionId
+                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['monto', 'descripcion'])
+                          && validSharedMovement(request.resource.data))
+                      );
         allow delete: if boxMember(boxId)
                       && (boxOpen(boxId)
                         || get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == true)

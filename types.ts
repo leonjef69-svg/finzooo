@@ -54,6 +54,8 @@ export type Transaction = {
   time?: string;
   // Código de operación del banco, sirve para no repetir un movimiento.
   reference?: string;
+  /** Identificador estable del aviso nativo; hace idempotente la captura. */
+  captureId?: string;
   tags?: string[];
 };
 

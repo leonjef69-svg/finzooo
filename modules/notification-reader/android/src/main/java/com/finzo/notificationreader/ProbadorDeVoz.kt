@@ -2,11 +2,14 @@ package com.finzo.notificationreader
 
 import android.content.Context
 import android.media.AudioManager
+import android.app.NotificationManager
+import android.media.AudioDeviceInfo
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import java.util.Locale
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
+import org.json.JSONObject
 
 /**
  * PROBAR LA VOZ AHORA MISMO, Y DECIR QUE FALTA SI NO SE OYE.
@@ -47,6 +50,37 @@ object ProbadorDeVoz {
       // Si no se puede saber, se dice que hay volumen: mas vale no acusar al volumen de un
       // problema que puede ser otro.
       100
+    }
+
+  /** Estado completo de las causas de silencio que Android sí permite consultar. */
+  fun diagnosticoAudio(context: Context): String =
+    try {
+      val audio = context.getSystemService(Context.AUDIO_SERVICE) as AudioManager
+      val avisos = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+      val salidas = audio.getDevices(AudioManager.GET_DEVICES_OUTPUTS)
+      val bluetooth = salidas.any { it.type == AudioDeviceInfo.TYPE_BLUETOOTH_A2DP || it.type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO || it.type == AudioDeviceInfo.TYPE_BLE_HEADSET || it.type == AudioDeviceInfo.TYPE_BLE_SPEAKER }
+      val cable = salidas.any { it.type == AudioDeviceInfo.TYPE_WIRED_HEADPHONES || it.type == AudioDeviceInfo.TYPE_WIRED_HEADSET || it.type == AudioDeviceInfo.TYPE_USB_HEADSET }
+      val modo = when (audio.ringerMode) {
+        AudioManager.RINGER_MODE_NORMAL -> "normal"
+        AudioManager.RINGER_MODE_VIBRATE -> "vibrate"
+        AudioManager.RINGER_MODE_SILENT -> "silent"
+        else -> "unknown"
+      }
+      JSONObject().apply {
+        put("notificationVolume", volumenDeAvisos(context))
+        put("ringerMode", modo)
+        put("doNotDisturb", avisos.currentInterruptionFilter != NotificationManager.INTERRUPTION_FILTER_ALL)
+        put("bluetoothOutput", bluetooth)
+        put("wiredOutput", cable)
+      }.toString()
+    } catch (e: Throwable) {
+      JSONObject().apply {
+        put("notificationVolume", volumenDeAvisos(context))
+        put("ringerMode", "unknown")
+        put("doNotDisturb", false)
+        put("bluetoothOutput", false)
+        put("wiredOutput", false)
+      }.toString()
     }
 
   /**

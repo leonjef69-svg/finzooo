@@ -43,8 +43,8 @@ console.log("\n--- UN SOLO MOTOR DE VOZ ---");
 console.log("\n--- LAS FRASES HACEN COLA ---");
 {
   ok(kt.includes("porDecir"), "hay una cola de frases pendientes");
-  ok(kt.includes("QUEUE_ADD"), "se encolan, no se pisan");
-  ok(/porDecir\.add\(texto\)/.test(kt), "cada aviso entra en la cola");
+  ok(/if \(hablando != null \|\| porDecir\.isEmpty\(\)\) return/.test(kt), "solo una frase entra al motor cada vez");
+  ok(/porDecir\.add\(FrasePendiente\(texto\)\)/.test(kt), "cada aviso entra en la cola");
 
   // Lo que llega mientras el motor arranca no se puede perder: arrancar tarda,
   // y en una rafaga los primeros avisos caen justo en ese hueco.
@@ -91,8 +91,8 @@ console.log("\n--- EL MOTOR SE QUEDA CALIENTE: LA VOZ, SIN ESPERA ---");
   // Prohibir la herramienta en vez de la conducta acaba asi: bloqueando un arreglo. Ahora se
   // prohibe la conducta —que haya un temporizador que apague— y se deja la herramienta.
   const programados = kt.match(/postDelayed\((\w+)/g) ?? [];
-  const soloElVigilante = programados.every((p) => p.includes("vigilarArranque"));
-  ok(soloElVigilante, `lo unico programado es el vigilante del arranque (${programados.join(", ") || "nada"})`);
+  const soloRecuperacion = programados.every((p) => p.includes("vigilarArranque") || p.includes("vigilarFrase"));
+  ok(soloRecuperacion && kt.includes("reencendidos = 0"), `los temporizadores solo vigilan y recuperan (${programados.join(", ") || "nada"})`);
 
   // Y se enciende ANTES del primer yapeo, en cuanto Android engancha el
   // servicio. Si se esperara al primer aviso, ese primero seguiria tardando.

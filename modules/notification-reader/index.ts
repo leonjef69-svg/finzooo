@@ -4,6 +4,7 @@ import { Platform } from "react-native";
 // Una notificación tal como la capturó el servicio de Android, todavía sin
 // interpretar.
 export type CapturedNotification = {
+  captureId?: string;
   package: string;
   title: string;
   text: string;
@@ -60,12 +61,14 @@ type NativeShape = {
   /** La moneda elegida ("PEN", "MXN"...), para que la voz la diga en palabras. */
   setMoneda: (value: string) => void;
   drain: () => Promise<string>;
+  ackDrain: () => Promise<void>;
   clear: () => Promise<void>;
   stats: () => string;
   requestRebind: () => boolean;
   vozSinEspera: () => boolean;
   probarVoz: (texto: string) => Promise<string>;
   volumenDeAvisos: () => number;
+  diagnosticoAudio: () => string;
   abrirAjustesDeVoz: () => boolean;
   abrirAjustesDeSonido: () => boolean;
   abrirAjustesDeBateria: () => boolean;
@@ -142,6 +145,29 @@ export async function drain(): Promise<CapturedNotification[]> {
   } catch {
     return [];
   }
+}
+
+/** Borra el lote nativo únicamente después de haberlo persistido. */
+export async function ackDrain(): Promise<void> {
+  try {
+    await Native?.ackDrain?.();
+  } catch {
+    // Se volverá a entregar y captureId evita registrarlo dos veces.
+  }
+}
+
+export type AudioDiagnostic = {
+  notificationVolume: number;
+  ringerMode: "normal" | "vibrate" | "silent" | "unknown";
+  doNotDisturb: boolean;
+  bluetoothOutput: boolean;
+  wiredOutput: boolean;
+};
+
+export function diagnosticoAudio(): AudioDiagnostic {
+  const fallback: AudioDiagnostic = { notificationVolume: -1, ringerMode: "unknown", doNotDisturb: false, bluetoothOutput: false, wiredOutput: false };
+  if (!Native?.diagnosticoAudio) return fallback;
+  try { return { ...fallback, ...JSON.parse(Native.diagnosticoAudio()) }; } catch { return fallback; }
 }
 
 /** Estado del servicio. Nunca lanza: si algo falla, devuelve todo en cero. */

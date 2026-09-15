@@ -102,10 +102,10 @@ console.log("\n--- SI EL MOTOR SE MUERE A MITAD, SE REEMPLAZA SIN PERDER EL AVIS
 {
   const rec = servicio.slice(servicio.indexOf("private fun reencender"));
   ok(/private fun reencender/.test(servicio), "se puede encender un motor de repuesto");
-  ok(/val pendientes = ArrayList\(porDecir\)/.test(rec), "guardando lo que estaba por decir");
+  ok(/hablando\?\.let/.test(rec), "guardando también la frase que ya estaba dentro del motor");
   ok(/porDecir\.addAll\(pendientes\)/.test(rec), "y devolviendolo a la cola del motor nuevo");
-  // El yapeo que fallo se vuelve a poner el PRIMERO, no se tira.
-  ok(/porDecir\.addFirst\(frase\)/.test(servicio), "el aviso que fallo se reintenta, no se pierde");
+  ok(/vigilarFrase/.test(servicio) && /motor-bloqueado/.test(servicio), "una frase aceptada pero bloqueada tiene vigilante");
+  ok(/MAX_INTENTOS_FRASE/.test(servicio), "cada frase conserva sus propios reintentos");
   // Con tope, para no dar vueltas eternas si de verdad no hay voz instalada...
   ok(/MAX_REENCENDIDOS/.test(servicio), "con un tope de intentos");
   // ...pero el tope se reinicia al hablar bien: tres fallos repartidos en meses no pueden

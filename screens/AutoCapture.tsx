@@ -106,6 +106,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
   // segundos mientras la pantalla esté abierta, para poder hacer un Yape,
   // volver, y ver si el contador subió sin tener que salir y entrar.
   const [stats, setStats] = useState(() => notificationReader.stats());
+  const [audio, setAudio] = useState(() => notificationReader.diagnosticoAudio());
   // Los dos interruptores de la voz. Se leen del lado nativo, que es donde
   // viven: el servicio los consulta aunque Fino este cerrada.
   const [hablar, setHablar] = useState(() => notificationReader.isSpeakEnabled());
@@ -129,6 +130,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
     if (!autoCaptureSupported) return;
     const timer = setInterval(() => {
       setStats(notificationReader.stats());
+      setAudio(notificationReader.diagnosticoAudio());
       setAhora(Date.now());
     }, 3000);
     return () => clearInterval(timer);
@@ -173,14 +175,25 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
     "sin-direccion": "autoCapture.speak.sinDireccion",
     "no-es-movimiento": "autoCapture.speak.noEsMovimiento",
     "sin-texto": "autoCapture.speak.sinTexto",
+    "en-cola": "autoCapture.speak.enCola",
+    "error-al-hablar": "autoCapture.speak.errorAlHablar",
+    "motor-no-arranca": "autoCapture.speak.motorNoArranca",
+    "motor-no-arranco": "autoCapture.speak.motorNoArranco",
+    "no-sono": "autoCapture.speak.noSono",
+    "sin-espanol": "autoCapture.speak.sinEspanol",
+    "sin-motor": "autoCapture.speak.sinMotor",
+    "sin-volumen": "autoCapture.speak.sinVolumen",
+    "motor-bloqueado": "autoCapture.speak.motorBloqueado",
+    "frase-agotada": "autoCapture.speak.fraseAgotada",
+    "lector-no-reconecto": "autoCapture.speak.lectorNoReconecto",
     error: "autoCapture.speak.error",
   };
   const claveVoz = MOTIVOS_VOZ[stats.lastSpeak];
   // CON LA HORA. Sin ella el motivo no sirve para lo que se hizo: al mirarlo
   // no se sabe si habla del aviso que se acaba de recibir o de uno de hace
   // media hora, que es justo la pregunta que hay que responder.
-  const motivoVoz = claveVoz
-    ? t(claveVoz) + (stats.lastSpeakAt > 0 ? ` · ${horaDe(stats.lastSpeakAt)}` : "")
+  const motivoVoz = stats.lastSpeak
+    ? (claveVoz ? t(claveVoz) : stats.lastSpeak) + (stats.lastSpeakAt > 0 ? ` · ${horaDe(stats.lastSpeakAt)}` : "")
     : "";
 
   return (
@@ -588,6 +601,18 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                     {motivoVoz !== "" && (
                       <Text className="text-[10px] text-slate-400 mt-2">
                         {t("autoCapture.speakLast")}: {motivoVoz}
+                      </Text>
+                    )}
+                    {(audio.notificationVolume === 0 || audio.ringerMode !== "normal" || audio.doNotDisturb || audio.bluetoothOutput || audio.wiredOutput) && (
+                      <Text className="mt-2 text-[10px] leading-4 text-amber-600">
+                        {[
+                          audio.notificationVolume === 0 ? t("autoCapture.audio.noVolume") : "",
+                          audio.ringerMode === "silent" ? t("autoCapture.audio.silent") : "",
+                          audio.ringerMode === "vibrate" ? t("autoCapture.audio.vibrate") : "",
+                          audio.doNotDisturb ? t("autoCapture.audio.dnd") : "",
+                          audio.bluetoothOutput ? t("autoCapture.audio.bluetooth") : "",
+                          audio.wiredOutput ? t("autoCapture.audio.wired") : "",
+                        ].filter(Boolean).join(" · ")}
                       </Text>
                     )}
 

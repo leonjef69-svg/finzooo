@@ -88,15 +88,13 @@ console.log("\n--- LAS DOS LISTAS DICEN LO MISMO ---");
   );
   const ts = fs.readFileSync(path.join(RAIZ, "utils/notificationParser.ts"), "utf8");
 
-  const enKotlin = [...(kt.slice(kt.indexOf("MONEY_APP_HINTS = listOf(")).match(/listOf\(([^)]*)\)/)?.[1] ?? "").matchAll(/"([^"]+)"/g)].map((m) => m[1]);
-  const enApp = [...(ts.slice(ts.indexOf("const APPS_ACEPTADAS = [")).match(/\[([^\]]*)\]/)?.[1] ?? "").matchAll(/"([^"]+)"/g)].map((m) => m[1]);
+  const enKotlin = kt.match(/YAPE_PACKAGE\s*=\s*"([^"]+)"/)?.[1] ?? "";
+  const enApp = ts.match(/PAQUETE_OFICIAL_YAPE\s*=\s*"([^"]+)"/)?.[1] ?? "";
 
-  ok(enKotlin.length > 0 && enApp.length > 0, `se leyeron las dos listas (${enKotlin.join(",")} / ${enApp.join(",")})`);
-  ok(
-    enKotlin.slice().sort().join(",") === enApp.slice().sort().join(","),
-    "el servicio y la app vigilan exactamente las mismas apps"
-  );
-  ok(enApp.join(",") === "yape", "y hoy es solo Yape");
+  ok(enKotlin.length > 0 && enApp.length > 0, `se leyeron ambos paquetes (${enKotlin} / ${enApp})`);
+  ok(enKotlin === enApp, "el servicio y la app aceptan exactamente el mismo paquete");
+  ok(enApp === "com.bcp.innovacxion.yapeapp", "y es únicamente el paquete oficial de Yape");
+  ok(!parseNotification(aviso("com.ejemplo.yape.falso", "Te yapearon S/ 20")).ok, "una app ajena con la palabra yape no entra");
 }
 
 console.log("\n--- LA COMPROBACION VA EN LOS DOS LADOS ---");

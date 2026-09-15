@@ -34,10 +34,10 @@ const L = "A-Za-zÁÉÍÓÚÑÜáéíóúñü";
  * captura avisos que la app tira —o al revés— y desde fuera eso se ve como
  * que el registro automático falla sin motivo.
  *
- * Se compara por "contiene" y no por el nombre exacto: el paquete real de
- * Yape es "com.bcp.innovacxion.yapeapp".
+ * Se compara por el nombre exacto para que una app ajena con "yape" en su
+ * paquete no pueda inyectar movimientos.
  */
-const APPS_ACEPTADAS = ["yape"];
+const PAQUETE_OFICIAL_YAPE = "com.bcp.innovacxion.yapeapp";
 
 /**
  * ¿Este aviso viene de una app que Fino mira?
@@ -50,7 +50,7 @@ const APPS_ACEPTADAS = ["yape"];
  */
 export function esAppVigilada(pkg: string): boolean {
   const p = (pkg ?? "").toLowerCase();
-  return APPS_ACEPTADAS.some((app) => p.includes(app));
+  return p === PAQUETE_OFICIAL_YAPE;
 }
 
 // Avisos que traen un monto pero NO son un movimiento. La lista es corta a

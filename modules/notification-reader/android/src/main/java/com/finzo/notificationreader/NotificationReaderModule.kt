@@ -121,13 +121,18 @@ class NotificationReaderModule : Module() {
     // El resultado es texto JSON; quien llama lo convierte a objetos.
     AsyncFunction("drain") { NotificationStore.drain(context) }
 
+    // El lote no desaparece hasta que JavaScript confirma que ya lo guardó.
+    AsyncFunction("ackDrain") { NotificationStore.ackDrain(context) }
+
     AsyncFunction("clear") { NotificationStore.clear(context) }
 
     // Diagnóstico, como texto JSON: si el servicio está conectado, cuántas
     // notificaciones ha visto en total (de cualquier app), cuál fue la
     // última y cuántas quedan por recoger. Es lo que permite saber POR QUÉ
     // no se captura nada, en vez de mirar una pantalla vacía.
-    Function("stats") { NotificationStore.stats(context) }
+    Function("stats") { NotificationStore.stats(context, FinzoNotificationListener.estaVivo()) }
+
+    Function("diagnosticoAudio") { ProbadorDeVoz.diagnosticoAudio(context) }
 
     // Le pide a Android que vuelva a enganchar el servicio. Es el arreglo
     // habitual cuando deja de capturar después de actualizar la app: el

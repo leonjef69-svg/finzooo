@@ -18,6 +18,7 @@ import org.json.JSONObject
 object NotificationStore {
   private const val PREFS = "finzo_notification_reader"
   private const val KEY_QUEUE = "queue"
+  private const val KEY_IN_FLIGHT = "inFlight"
   private const val KEY_SEEN = "seen"
   private const val KEY_ENABLED = "enabled"
   private const val KEY_SPEAK = "speak"
@@ -189,10 +190,10 @@ object NotificationStore {
   }
 
   /** Todo el diagnóstico junto, como texto JSON. */
-  fun stats(context: Context): String {
+  fun stats(context: Context, connectedNow: Boolean? = null): String {
     val p = prefs(context)
     return JSONObject().apply {
-      put("connected", p.getBoolean(KEY_CONNECTED, false))
+      put("connected", connectedNow ?: p.getBoolean(KEY_CONNECTED, false))
       put("connectedAt", p.getLong(KEY_CONNECTED_AT, 0L))
       put("totalSeen", p.getInt(KEY_TOTAL_SEEN, 0))
       put("lastPackage", p.getString(KEY_LAST_PKG, "") ?: "")
@@ -202,7 +203,7 @@ object NotificationStore {
       put("ultimasApps", p.getString(KEY_ULTIMAS, "") ?: "")
       put("lastAt", p.getLong(KEY_LAST_AT, 0L))
       put("enabled", p.getBoolean(KEY_ENABLED, false))
-      put("queued", readArray(p.getString(KEY_QUEUE, null)).length())
+      put("queued", readArray(p.getString(KEY_QUEUE, null)).length() + readArray(p.getString(KEY_IN_FLIGHT, null)).length())
       put("lastSpeak", p.getString(KEY_LAST_SPEAK, "") ?: "")
       put("lastSpeakAt", p.getLong(KEY_LAST_SPEAK_AT, 0L))
     }.toString()
@@ -239,16 +240,27 @@ object NotificationStore {
   }
 
   /**
-   * Entrega lo acumulado y vacía el buzón de una sola vez. Se hace atómico
-   * (todo o nada) para que no se pierda nada si llega una notificación justo
-   * en el momento en que Fino está recogiendo.
+   * Reclama el lote sin borrarlo. Si la app o el trabajo de fondo mueren a
+   * mitad del guardado, la siguiente ejecución recibe exactamente el mismo
+   * lote. Solo [ackDrain] lo elimina después de persistir los movimientos.
    */
   @Synchronized
   fun drain(context: Context): String {
     val p = prefs(context)
+    val pendiente = p.getString(KEY_IN_FLIGHT, null)
+    if (!pendiente.isNullOrBlank() && readArray(pendiente).length() > 0) return pendiente
     val queue = p.getString(KEY_QUEUE, null) ?: "[]"
-    p.edit().putString(KEY_QUEUE, "[]").apply()
+    p.edit()
+      .putString(KEY_QUEUE, "[]")
+      .putString(KEY_IN_FLIGHT, queue)
+      .commit()
     return queue
+  }
+
+  /** Confirma que el último lote reclamado ya quedó guardado. */
+  @Synchronized
+  fun ackDrain(context: Context) {
+    prefs(context).edit().putString(KEY_IN_FLIGHT, "[]").commit()
   }
 
   /** Borra todo: buzón y memoria de lo ya visto. */
@@ -256,6 +268,7 @@ object NotificationStore {
   fun clear(context: Context) {
     prefs(context).edit()
       .putString(KEY_QUEUE, "[]")
+      .putString(KEY_IN_FLIGHT, "[]")
       .putString(KEY_SEEN, "[]")
       .apply()
   }
