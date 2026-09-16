@@ -2,7 +2,7 @@
   "expo": {
     "name": "Fino",
     "slug": "finzo",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "orientation": "default",
     "icon": "./assets/images/icon.png",
     "scheme": "finzo",
@@ -18,7 +18,7 @@
     },
     "android": {
       "package": "com.finoapp.gastos",
-      "versionCode": 8,
+      "versionCode": 9,
       "googleServicesFile": "./google-services.json",
       "allowBackup": false,
       "adaptiveIcon": {
