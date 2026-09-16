@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { useAppData } from "@/contexts/AppDataContext";
 import NuevaCategoria from "@/screens/NuevaCategoria";
 import { safeBack, volverUnaVez } from "@/utils/nav";
