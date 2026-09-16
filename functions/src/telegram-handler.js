@@ -3,16 +3,13 @@
 const crypto = require("node:crypto");
 const { Buffer } = require("node:buffer");
 const { parseLinkCode, parseMovement } = require("./telegram-parser");
+const { premium, premiumForUser } = require("./premium-entitlement");
 
 const MAX_USER_BYTES = 850_000;
 const LINK_MINUTES = 10;
 
 function limaDate() {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-}
-
-function premium(data, now = Date.now()) {
-  return data?.isPremium === true || (Number.isFinite(data?.premiumTrialStartedAt) && data.premiumTrialStartedAt <= now && data.premiumTrialStartedAt + 86_400_000 > now);
 }
 
 function telegramApi(token, method, body) {
@@ -48,7 +45,7 @@ async function link(db, token, chatId, code) {
     const [user, oldStatus, occupiedConnection] = await Promise.all([
       tx.get(userRef), tx.get(statusRef), tx.get(connectionRef),
     ]);
-    if (!user.exists || !premium(user.data())) throw new Error("NOT_PREMIUM");
+    if (!user.exists || !(await premiumForUser(db, uid, user.data(), tx))) throw new Error("NOT_PREMIUM");
     // Una cuenta y un chat solo pueden tener una conexión activa. Al volver a
     // vincular se revocan ambos extremos anteriores dentro de la misma operación.
     if (oldStatus.exists && oldStatus.data().chatId !== String(chatId)) {
@@ -76,7 +73,7 @@ async function confirm(db, token, chatId, nonce) {
     const [status, draft, user] = await Promise.all([tx.get(statusRef), tx.get(draftRef), tx.get(userRef)]);
     if (!status.exists || status.data().active !== true || status.data().chatId !== String(chatId)) throw new Error("NOT_LINKED");
     if (!draft.exists || draft.data().nonce !== nonce || draft.data().expiresAtMs < Date.now()) throw new Error("EXPIRED");
-    if (!user.exists || !premium(user.data())) throw new Error("NOT_PREMIUM");
+    if (!user.exists || !(await premiumForUser(db, uid, user.data(), tx))) throw new Error("NOT_PREMIUM");
     const data = user.data();
     const transactions = Array.isArray(data.transactions) ? data.transactions : [];
     let id = Date.now() * 4096 + crypto.randomInt(4096);

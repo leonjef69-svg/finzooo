@@ -53,9 +53,11 @@ import { hayRegistroAutomatico } from "@/utils/dondeHayYape";
 export default function Premium({
   onBack,
   isPremium,
+  isTesterPremium,
 }: {
   onBack: () => void;
   isPremium: boolean;
+  isTesterPremium: boolean;
 }) {
   const { t, fmt, monthNames, userCurrency, pruebaInicio, pruebaHoras, activarPruebaPremium, showToast } =
     useAppData();
@@ -254,7 +256,7 @@ export default function Premium({
             {!isPremium && (
               <View className="bg-emerald-50 rounded-xl py-2 items-center mt-4">
                 <Text className="text-emerald-700 text-[11px] font-extrabold">
-                  {t("premium.planActual")}
+                  {t(isTesterPremium ? "premium.testerPlan" : "premium.planActual")}
                 </Text>
               </View>
             )}
@@ -297,7 +299,7 @@ export default function Premium({
             {isPremium && (
               <View className="bg-emerald-500/25 rounded-xl py-2 items-center mt-4">
                 <Text className="text-emerald-100 text-[11px] font-extrabold">
-                  {t("premium.planActual")}
+                  {t(isTesterPremium ? "premium.testerPlan" : "premium.planActual")}
                 </Text>
               </View>
             )}
@@ -318,7 +320,9 @@ export default function Premium({
           {isPremium ? (
             <View className="w-full py-4 rounded-2xl items-center flex-row justify-center gap-2 bg-emerald-500">
               <CheckCircle2 size={18} color="#ffffff" />
-              <Text className="text-white font-extrabold">{t("premium.alreadyPremium")}</Text>
+              <Text className="text-white font-extrabold">
+                {t(isTesterPremium ? "premium.testerActive" : "premium.alreadyPremium")}
+              </Text>
             </View>
           ) : comprasDisponibles() ? (
             /* CUANDO SE PUEDA COBRAR DE VERDAD, VUELVE EL BOTÓN. Y solo entonces: mientras

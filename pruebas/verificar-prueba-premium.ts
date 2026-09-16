@@ -114,8 +114,8 @@ console.log("\n--- LA PRUEBA NO SE MEZCLA CON EL PREMIUM DE LA CUENTA ---");
   // solo sitio, y que ese interruptor solo pueda QUITAR: puesto con un "||" en vez de un "&&"
   // seria una puerta trasera que regala Premium con siete toques.
   ok(
-    /const isPremium = \(isPremiumDeLaCuenta \|\| pruebaCorriendo\) && !verComoGratis/.test(ctx),
-    "las pantallas ven el de la cuenta O la prueba"
+    /const isPremium = \(isPremiumDeLaCuenta \|\| pruebaCorriendo \|\| testerPremium\.active\) && !verComoGratis/.test(ctx),
+    "las pantallas ven compra, prueba o Premium de tester"
   );
 
   // Y lo que SE GUARDA es solo el de la cuenta. Guardando la suma, activar la prueba

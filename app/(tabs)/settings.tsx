@@ -14,6 +14,7 @@ export default function SettingsTab() {
     userCurrency,
     userLanguage,
     isPremium,
+    isTesterPremium,
     logout,
     showToast,
   } = useAppData();
@@ -29,6 +30,7 @@ export default function SettingsTab() {
       onLanguage={() => irUnaVez("/language")}
       onCountry={() => irUnaVez("/country")}
       isPremium={isPremium}
+      isTesterPremium={isTesterPremium}
       onCategoryBudgets={() => irUnaVez("/category-budgets")}
       onCategoryStyle={() => irUnaVez("/category-style")}
       onExportPdf={() => irUnaVez("/export-pdf")}

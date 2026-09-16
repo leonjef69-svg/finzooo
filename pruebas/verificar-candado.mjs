@@ -126,7 +126,7 @@ console.log("\n--- EL INTERRUPTOR DE PRUEBA SOLO PUEDE QUITAR ---");
   // "||" en vez de un "&&" seria una puerta trasera que regala Premium.
   const ctx = leer("contexts/AppDataContext.tsx");
   ok(
-    /const isPremium = \(isPremiumDeLaCuenta \|\| pruebaCorriendo\) && !verComoGratis/.test(ctx),
+    /const isPremium = \(isPremiumDeLaCuenta \|\| pruebaCorriendo \|\| testerPremium\.active\) && !verComoGratis/.test(ctx),
     "encender 'ver como gratis' solo puede QUITAR Premium, nunca darlo"
   );
   // Y NO SE GUARDA EN EL DISCO: un modo de prueba que sobrevive a reiniciar es uno que alguien

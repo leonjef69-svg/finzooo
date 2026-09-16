@@ -61,6 +61,7 @@ export default function Settings({
   onLanguage,
   onCountry,
   isPremium,
+  isTesterPremium,
   onCategoryBudgets,
   onCategoryStyle,
   onExportPdf,
@@ -88,6 +89,7 @@ export default function Settings({
   onLanguage: () => void;
   onCountry: () => void;
   isPremium: boolean;
+  isTesterPremium: boolean;
   onCategoryBudgets: () => void;
   onCategoryStyle: () => void;
   onExportPdf: () => void;
@@ -304,10 +306,14 @@ export default function Settings({
           <Crown size={20} color="#ffffff" />
           <View className="flex-1">
             <Text className="font-extrabold text-white text-sm">
-              {isPremium ? t("settings.premiumActive") : t("settings.becomePremium")}
+              {isTesterPremium
+                ? t("settings.testerPremiumActive")
+                : isPremium ? t("settings.premiumActive") : t("settings.becomePremium")}
             </Text>
             <Text className="text-xs leading-4 text-amber-50">
-              {isPremium ? t("settings.premiumThanks") : t("settings.premiumUnlock")}
+              {isTesterPremium
+                ? t("settings.testerPremiumThanks")
+                : isPremium ? t("settings.premiumThanks") : t("settings.premiumUnlock")}
             </Text>
           </View>
           <ChevronRight size={16} color="#ffffff" />

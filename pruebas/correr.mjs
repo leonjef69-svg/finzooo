@@ -64,6 +64,7 @@ const EXPO = {
  * otras que no hacen nada, para poder comprobar las CUENTAS con Node.
  */
 const SUITES = [
+  { archivo: "verificar-premium-tester.ts", alias: BASE },
   { archivo: "verificar-acceso-google.ts", alias: BASE },
   // La caja de React se cambia por una de mentira: ver stubs/react.ts.
   { archivo: "verificar-valor-estable.ts", alias: { ...BASE, react: stub("react.ts") } },

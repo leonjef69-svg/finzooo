@@ -3,7 +3,7 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
 
 export default function PremiumRoute() {
-  const { isPremium } = useAppData();
+  const { isPremium, isTesterPremium } = useAppData();
   const blocked = useRedirectIfOrphaned();
   if (blocked) return null;
   // AQUÍ ESTABA EL "onUpgrade" QUE REGALABA PREMIUM, Y SE QUITÓ (07/08/2026).
@@ -18,5 +18,5 @@ export default function PremiumRoute() {
   // Lo que sí queda es la prueba de 24 horas, que es la forma honesta de que alguien vea las
   // funciones. Decisión del usuario el 07/08/2026: *"al app de premium tendrá una prueba de
   // 24 horas que finaliza luego de eso para que puedan probar las funciones que tiene"*.
-  return <Premium onBack={safeBack} isPremium={isPremium} />;
+  return <Premium onBack={safeBack} isPremium={isPremium} isTesterPremium={isTesterPremium} />;
 }

@@ -98,6 +98,8 @@ import {
   saveCloudData,
   type CloudData,
 } from "@/utils/cloudSync";
+import { subscribeTesterPremium } from "@/utils/testerPremium";
+import { TESTER_PREMIUM_INACTIVE, type TesterPremiumState } from "@/utils/testerPremiumState";
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
 import { guardarPendientes, limpiarPendientes, pendientesDeCaptura } from "@/utils/capturaEnFondo";
 import {
@@ -285,6 +287,8 @@ type AppDataContextValue = {
    * alguna se quedaria sin hacerlo y ahi la prueba no serviria de nada.
    */
   isPremium: boolean;
+  isTesterPremium: boolean;
+  testerPremiumGrantedAt: number | null;
   /** Cuando empezo la prueba gratuita, o null si no se ha usado. */
   pruebaInicio: number | null;
   /** Cuantas horas le quedan a la prueba. Cero si no hay ninguna corriendo. */
@@ -426,6 +430,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * siempre, y al caducar se apagaría también el de quien ya lo tenía de antes.
    */
   const [isPremiumDeLaCuenta, setIsPremium] = useState(false);
+  const [testerPremium, setTesterPremium] = useState<TesterPremiumState>(TESTER_PREMIUM_INACTIVE);
   /** Cuándo se activó la prueba gratuita, o null. Solo de este celular. */
   const [pruebaInicio, setPruebaInicio] = useState<number | null>(null);
   /**
@@ -473,8 +478,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    */
   const [verComoGratis, setVerComoGratis] = useState(false);
 
-  /** Lo que ven las pantallas: Premium de la cuenta O prueba corriendo. */
-  const isPremium = (isPremiumDeLaCuenta || pruebaCorriendo) && !verComoGratis;
+  /** Compra, prueba o concesión administrativa. Las tres fuentes siguen separadas. */
+  const isPremium = (isPremiumDeLaCuenta || pruebaCorriendo || testerPremium.active) && !verComoGratis;
   // Lo que la persona le enseñó al clasificador de importaciones:
   // { "primax": "transporte", ... }. Ver utils/classifier.ts.
   const [merchantLearned, setMerchantLearned] = useState<Record<string, string>>({});
@@ -541,6 +546,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     });
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    setTesterPremium(TESTER_PREMIUM_INACTIVE);
+    if (!uid) return;
+    return subscribeTesterPremium(uid, setTesterPremium);
+  }, [uid]);
 
   // Cada vez que cargamos datos ya guardados, avisamos al generador de
   // números cuál es el más alto que ya existe. Así un movimiento nuevo
@@ -803,6 +814,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setDeletedGoalIds([]);
     setGoals([]);
     setIsPremium(false);
+    setTesterPremium(TESTER_PREMIUM_INACTIVE);
     setDatosNegocio(NEGOCIO_VACIO);
     // La prueba gratuita tambien se suelta: el disco ya se limpio, pero lo que
     // esta en memoria sobrevive y la cuenta siguiente entraria con la prueba de la
@@ -857,6 +869,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setDeletedGoalIds([]);
     setGoals([]);
     setIsPremium(false);
+    setTesterPremium(TESTER_PREMIUM_INACTIVE);
     setDatosNegocio(NEGOCIO_VACIO);
     // La prueba gratuita tambien se suelta: el disco ya se limpio, pero lo que
     // esta en memoria sobrevive y la cuenta siguiente entraria con la prueba de la
@@ -1074,7 +1087,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     categoryBudgets,
     transactions,
     goals,
-    isPremium,
+    isPremiumDeLaCuenta,
     pruebaInicio,
     merchantLearned,
     // Sin esto, personalizar una categoria se quedaba solo en el celular:
@@ -2301,6 +2314,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     addMoneyToGoal,
     withdrawMoneyFromGoal,
     isPremium,
+    isTesterPremium: testerPremium.active,
+    testerPremiumGrantedAt: testerPremium.grantedAt,
     pruebaInicio,
     pruebaHoras: pruebaHorasRestantes(pruebaInicio, ahora),
     activarPruebaPremium,
@@ -2320,7 +2335,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setIsPremium,
     verComoGratis,
     setVerComoGratis,
-    tienePremiumDeVerdad: isPremiumDeLaCuenta || pruebaCorriendo,
+    tienePremiumDeVerdad: isPremiumDeLaCuenta || pruebaCorriendo || testerPremium.active,
     isCloudSynced: uid !== null,
     /* "Respaldados" quiere decir que la ULTIMA subida termino bien, no que haya sesion
        iniciada. Ver el cartel de Ajustes y utils/cloudSync. */

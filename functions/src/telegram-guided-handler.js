@@ -4,6 +4,7 @@ const crypto = require("node:crypto");
 const { Buffer } = require("node:buffer");
 const { FieldValue } = require("firebase-admin/firestore");
 const { cleanAmount, parseLinkCode, parseNaturalMovement, parseQuickEntry } = require("./telegram-parser");
+const { premium, premiumForUser } = require("./premium-entitlement");
 
 const FLOW_MS = 10 * 60_000;
 const MAX_USER_BYTES = 850_000;
@@ -22,8 +23,6 @@ function localDate(data = {}, now = new Date()) {
 }
 const time = (data = {}, now = new Date()) => new Intl.DateTimeFormat("en-GB", { timeZone: validTimeZone(data.timeZone), hour: "2-digit", minute: "2-digit", hour12: false }).format(now);
 const monthKey = data => localDate(data).slice(0, 7);
-const premium = (data, now = Date.now()) => data?.isPremium === true || (Number.isFinite(data?.premiumTrialStartedAt) && data.premiumTrialStartedAt <= now && data.premiumTrialStartedAt + 86_400_000 > now);
-
 function api(token, method, body) {
   return fetch(`https://api.telegram.org/bot${token}/${method}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body), signal: AbortSignal.timeout(10_000) })
     .then(async response => {
@@ -78,7 +77,7 @@ async function connectionFor(db, chatId) {
   if (!connection.exists) return null;
   const settings = connection.data(), uid = settings.uid;
   const [status, user] = await Promise.all([db.collection("telegramUsers").doc(uid).get(), db.collection("users").doc(uid).get()]);
-  return status.exists && status.data().active === true && status.data().chatId === String(chatId) && user.exists && premium(user.data())
+  return status.exists && status.data().active === true && status.data().chatId === String(chatId) && user.exists && await premiumForUser(db, uid, user.data())
     ? { uid, user: { ...user.data(), userCountry: settings.country || "PE", timeZone: validTimeZone(settings.timeZone) }, settings }
     : null;
 }
@@ -102,7 +101,7 @@ async function link(db, token, chatId, code) {
     if (!request.exists || request.data().used || request.data().expiresAtMs < Date.now()) throw new Error("INVALID_CODE");
     const uid = request.data().uid, userRef = db.collection("users").doc(uid), statusRef = db.collection("telegramUsers").doc(uid), connectionRef = db.collection("telegramConnections").doc(String(chatId));
     const [user, oldStatus, occupied] = await Promise.all([tx.get(userRef), tx.get(statusRef), tx.get(connectionRef)]);
-    if (!user.exists || !premium(user.data())) throw new Error("NOT_PREMIUM");
+    if (!user.exists || !(await premiumForUser(db, uid, user.data(), tx))) throw new Error("NOT_PREMIUM");
     if (oldStatus.exists && oldStatus.data().chatId !== String(chatId)) tx.delete(db.collection("telegramConnections").doc(oldStatus.data().chatId));
     if (occupied.exists && occupied.data().uid !== uid) tx.delete(db.collection("telegramUsers").doc(occupied.data().uid));
     tx.set(connectionRef, { uid, linkedAtMs: Date.now(), country: request.data().country || "PE", timeZone: validTimeZone(request.data().timeZone) });
@@ -123,7 +122,7 @@ async function activeFamily(db, uid, currency = "PEN") {
   const [space, member] = await Promise.all([db.collection("familySpaces").doc(id).get(), db.collection("familySpaces").doc(id).collection("members").doc(uid).get()]);
   if (!space.exists || !member.exists || [space.data().closed, space.data().closing, space.data().deleting].includes(true)) return null;
   const owner = await db.collection("users").doc(space.data().ownerUid).get();
-  return { kind: "family", id, name: String(space.data().nombre || "Familia"), currency: String(space.data().currency || currency), canTransfer: space.data().ownerUid === uid, writable: owner.exists && premium(owner.data()) };
+  return { kind: "family", id, name: String(space.data().nombre || "Familia"), currency: String(space.data().currency || currency), canTransfer: space.data().ownerUid === uid, writable: owner.exists && await premiumForUser(db, space.data().ownerUid, owner.data()) };
 }
 
 async function boxesFor(db, uid) {
@@ -132,7 +131,7 @@ async function boxesFor(db, uid) {
     const [space, member] = await Promise.all([db.collection("boxSpaces").doc(item.id).get(), db.collection("boxSpaces").doc(item.id).collection("members").doc(uid).get()]);
     if (!space.exists || !member.exists || [space.data().closed, space.data().closing, space.data().deleting].includes(true) || space.data().migrationComplete === false) return null;
     const owner = await db.collection("users").doc(space.data().ownerUid).get();
-    return { kind: "box", id: item.id, name: String(space.data().nombre || "Caja"), currency: String(space.data().currency || "PEN"), canTransfer: space.data().ownerUid === uid, writable: owner.exists && premium(owner.data()) };
+    return { kind: "box", id: item.id, name: String(space.data().nombre || "Caja"), currency: String(space.data().currency || "PEN"), canTransfer: space.data().ownerUid === uid, writable: owner.exists && await premiumForUser(db, space.data().ownerUid, owner.data()) };
   }));
   return boxes.filter(Boolean);
 }
@@ -232,7 +231,7 @@ async function saveSimpleMovement(db, chatId, connection, space, movement, opera
       const ref = db.collection("users").doc(connection.uid), statusRef = db.collection("telegramUsers").doc(connection.uid);
       const [user, connectionSnap, statusSnap] = await Promise.all([tx.get(ref), tx.get(chatConnectionRef), tx.get(statusRef)]);
       assertLiveConnection(connectionSnap, statusSnap, connection.uid, chatId);
-      if (!user.exists || !premium(user.data())) throw new Error("NOT_PREMIUM");
+      if (!user.exists || !(await premiumForUser(db, connection.uid, user.data(), tx))) throw new Error("NOT_PREMIUM");
       const data = user.data(), transactions = Array.isArray(data.transactions) ? data.transactions : [];
       const id = personalIdForOperation(key);
       saved = { id, type: movement.type, amount: movement.amount, category: movement.category, date: localDate(connection.user), time: time(connection.user), method: movement.method, description: movement.description, notes: "", origin: "manual" };
@@ -254,7 +253,7 @@ async function saveSimpleMovement(db, chatId, connection, space, movement, opera
     assertLiveConnection(connectionSnap, statusSnap, connection.uid, chatId);
     if (!spaceSnap.exists || !member.exists || [spaceSnap.data().closed, spaceSnap.data().closing, spaceSnap.data().deleting].includes(true) || spaceSnap.data().migrationComplete === false) throw new Error("SPACE_UNAVAILABLE");
     const owner = await tx.get(db.collection("users").doc(spaceSnap.data().ownerUid));
-    if (!owner.exists || !premium(owner.data())) throw new Error("OWNER_NOT_PREMIUM");
+    if (!owner.exists || !(await premiumForUser(db, spaceSnap.data().ownerUid, owner.data(), tx))) throw new Error("OWNER_NOT_PREMIUM");
     if (!claimOperation(tx, chatConnectionRef, connectionSnap.data() || {}, key)) return;
     tx.set(movementRef, saved);
   });
@@ -314,7 +313,7 @@ async function confirmTransfer(db, token, chatId, connection, nonce, operationId
     const userRef = db.collection("users").doc(connection.uid), memberRef = spaceRef.collection("members").doc(connection.uid), connectionRef = db.collection("telegramConnections").doc(String(chatId)), statusRef = db.collection("telegramUsers").doc(connection.uid);
     const [user, space, member, connectionSnap, statusSnap] = await Promise.all([tx.get(userRef), tx.get(spaceRef), tx.get(memberRef), tx.get(connectionRef), tx.get(statusRef)]);
     assertLiveConnection(connectionSnap, statusSnap, connection.uid, chatId);
-    if (!user.exists || !premium(user.data())) throw new Error("NOT_PREMIUM");
+    if (!user.exists || !(await premiumForUser(db, connection.uid, user.data(), tx))) throw new Error("NOT_PREMIUM");
     if (!space.exists || !member.exists || space.data().ownerUid !== connection.uid || [space.data().closed, space.data().closing, space.data().deleting].includes(true) || space.data().migrationComplete === false) throw new Error("SPACE_UNAVAILABLE");
     if (flow.space.currency !== String(user.data().userCurrency || "PEN")) throw new Error("CURRENCY_MISMATCH");
     if (personalFigures({ ...user.data(), timeZone: connection.user.timeZone }).balance < flow.amount) throw new Error("INSUFFICIENT");
