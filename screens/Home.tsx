@@ -485,19 +485,6 @@ export default function Home({
                   }}
                 />
               </View>
-              <View className="mt-3 flex-row flex-wrap rounded-2xl bg-black/10 px-3 py-2">
-                {[
-                  [t("home.monthlyBudget"), budget],
-                  [t("home.income"), mainIncome],
-                  [t("home.transferred"), transfersOut - transfersIn],
-                  [t("home.availableBalance"), available],
-                ].map(([label, value]) => (
-                  <View key={String(label)} className="w-1/2 py-1">
-                    <Text className="text-[10px] font-semibold text-emerald-100">{String(label)}</Text>
-                    <Text numberOfLines={1} adjustsFontSizeToFit className="pr-2 text-[13px] font-extrabold text-white">{hideBalance ? "••••" : fmt(Number(value))}</Text>
-                  </View>
-                ))}
-              </View>
             </>
           )}
         </LinearGradient>

@@ -7,6 +7,12 @@ export type LinkedSpaceMovement = {
   personalReturnAmount?: number;
 };
 
+export type PersonalLinkedTransfer = {
+  id: number;
+  internalTransfer?: "family" | "box";
+  internalTransferLink?: string;
+};
+
 const CENT = 0.005;
 
 export function balanceOfSpace(items: LinkedSpaceMovement[]): number {
@@ -48,4 +54,24 @@ export function minimumContributionAmount(items: LinkedSpaceMovement[], contribu
 
 export function totalAcrossPersonalAndSpace(personal: number, items: LinkedSpaceMovement[]): number {
   return personal + balanceOfSpace(items);
+}
+
+/**
+ * Localiza la mitad de Personal cuyo movimiento de destino ya no existe.
+ *
+ * `counterpartLoaded` evita borrar nada mientras Familia/Caja todavía está
+ * cargando. Cuando ya terminó la lectura, una transferencia sin vínculo o con
+ * un vínculo inexistente es huérfana y puede reconciliarse de forma segura.
+ */
+export function orphanedPersonalTransferIds(
+  transactions: PersonalLinkedTransfer[],
+  kind: "family" | "box",
+  validMovementIds: Iterable<string>,
+  counterpartLoaded: boolean,
+): number[] {
+  if (!counterpartLoaded) return [];
+  const valid = new Set(validMovementIds);
+  return transactions
+    .filter(item => item.internalTransfer === kind && (!item.internalTransferLink || !valid.has(item.internalTransferLink)))
+    .map(item => item.id);
 }

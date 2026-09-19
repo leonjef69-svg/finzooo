@@ -5,7 +5,7 @@ import SpaceSwitcher from "@/components/SpaceSwitcher";
 import { useAppData } from "@/contexts/AppDataContext";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { horaDe } from "@/utils/format";
-import { canSpendFromSpace, canUndoContribution, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
+import { canSpendFromSpace, canUndoContribution, minimumContributionAmount, orphanedPersonalTransferIds, returnableToPersonal } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
 import { auth } from "@/utils/firebase";
 import { irUnaVez, safeBack } from "@/utils/nav";
@@ -116,13 +116,23 @@ export default function Family() {
 
   useEffect(() => {
     const uid = auth.currentUser?.uid;
-    if (!familia || !uid || cargando) return;
+    if (!uid || cargando) return;
+    const validMovementIds = familia
+      ? movimientos
+          .filter(item => item.personalOwnerUid === uid && item.personalTransactionId != null)
+          .map(item => item.id)
+      : [];
+    const orphanIds = orphanedPersonalTransferIds(transactions, "family", validMovementIds, true);
+    if (!familia) {
+      if (orphanIds.length) repairLinkedTransferTransactions([], orphanIds);
+      return;
+    }
     const upserts = movimientos.flatMap(item => {
       if (item.personalOwnerUid !== uid || item.personalTransactionId == null || transactions.some(tx => tx.id === item.personalTransactionId)) return [];
       const esRetorno = item.tipo === "gasto" && (item.personalReturnAmount || 0) > 0;
       return [{ id: item.personalTransactionId, type: esRetorno ? "income" as const : "expense" as const, amount: esRetorno ? item.personalReturnAmount! : item.monto, category: "otros", date: item.fecha, time: horaDe(item.creadoEn), method: "transfer", description: esRetorno ? t("family.returnFrom", { name: familia.nombre }) : t("family.transferTo", { name: familia.nombre }), notes: "", origin: "manual" as const, internalTransfer: "family" as const, internalTransferLink: item.id }];
     });
-    if (upserts.length) repairLinkedTransferTransactions(upserts);
+    if (upserts.length || orphanIds.length) repairLinkedTransferTransactions(upserts, orphanIds);
   }, [cargando, familia, movimientos, repairLinkedTransferTransactions, t, transactions]);
 
   async function ejecutar(action: () => Promise<void>) {

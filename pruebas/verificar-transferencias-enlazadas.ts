@@ -3,6 +3,7 @@ import {
   canSpendFromSpace,
   canUndoContribution,
   minimumContributionAmount,
+  orphanedPersonalTransferIds,
   returnableToPersonal,
   totalAcrossPersonalAndSpace,
 } from "@/utils/linkedTransfers";
@@ -29,5 +30,15 @@ igual(minimumContributionAmount(usado, aporte), 50, "no se reduce por debajo del
 const devuelto = [...usado, { id: "retorno", tipo: "gasto" as const, monto: 100, personalTransactionId: 11, personalReturnAmount: 100 }];
 igual(returnableToPersonal(devuelto), 50, "una devolución no puede repetirse");
 igual(totalAcrossPersonalAndSpace(400, devuelto), 450, "devolver conserva el total restante después del gasto real");
+
+const personales = [
+  { id: 21, internalTransfer: "family" as const, internalTransferLink: "familia-vigente" },
+  { id: 22, internalTransfer: "family" as const, internalTransferLink: "familia-borrada" },
+  { id: 23, internalTransfer: "family" as const },
+  { id: 24, internalTransfer: "box" as const, internalTransferLink: "caja-vigente" },
+];
+igual(orphanedPersonalTransferIds(personales, "family", ["familia-vigente"], false).length, 0, "no repara antes de terminar la carga");
+igual(orphanedPersonalTransferIds(personales, "family", ["familia-vigente"], true).join(","), "22,23", "detecta vínculos borrados y transferencias antiguas sin vínculo");
+igual(orphanedPersonalTransferIds(personales, "family", [], true).join(","), "21,22,23", "sin familia activa limpia todas sus transferencias huérfanas");
 
 console.log("Transferencias: conservación, sobregiro, devolución, borrado y edición verificados.");
