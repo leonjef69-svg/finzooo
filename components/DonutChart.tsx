@@ -33,10 +33,11 @@ export default function DonutChart({ data }: { data: Slice[] }) {
   const { colorScheme } = useColorScheme();
   const total = data.reduce((sum, item) => sum + item.value, 0);
   const count = data.length;
-  // Se aprovecha el alto disponible de la tarjeta: los círculos pueden ser
-  // legibles aun cuando haya bastantes categorías, sin quedar pegados.
-  const bubble = count >= 16 ? 44 : count >= 9 ? 50 : count >= 7 ? 62 : 70;
-  const radius = count >= 16 ? 54 : count >= 12 ? 58 : count >= 9 ? 62 : count >= 7 ? 66 : 70;
+  // No hay posiciones ni tamaños fijos por categoría. Al añadir o quitar una,
+  // todo se reequilibra gradualmente: pocas categorías ganan presencia y una
+  // lista extensa se compacta sin que se superpongan sus rótulos.
+  const bubble = count <= 7 ? 62 : Math.max(44, Math.min(70, Math.round(74 - count * 2.2)));
+  const radius = Math.max(54, Math.min(70, Math.round(80 - count * 1.6)));
   const orbitX = WIDTH / 2 - bubble / 2 - 5;
   // En vez de dibujar un círculo vertical enorme, se abre la composición hacia
   // los lados. Conserva la separación de los rótulos y reduce 60 px de alto.
