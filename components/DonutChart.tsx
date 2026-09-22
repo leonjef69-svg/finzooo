@@ -35,7 +35,7 @@ export default function DonutChart({ data }: { data: Slice[] }) {
   const count = data.length;
   // Se aprovecha el alto disponible de la tarjeta: los círculos pueden ser
   // legibles aun cuando haya bastantes categorías, sin quedar pegados.
-  const bubble = count >= 16 ? 44 : count >= 12 ? 50 : count >= 9 ? 56 : count >= 7 ? 62 : 70;
+  const bubble = count >= 16 ? 44 : count >= 9 ? 50 : count >= 7 ? 62 : 70;
   const radius = count >= 16 ? 54 : count >= 12 ? 58 : count >= 9 ? 62 : count >= 7 ? 66 : 70;
   const orbitX = WIDTH / 2 - bubble / 2 - 5;
   // En vez de dibujar un círculo vertical enorme, se abre la composición hacia
@@ -44,7 +44,6 @@ export default function DonutChart({ data }: { data: Slice[] }) {
   const visualValues = data.map((item) => Math.max(item.value, total * MIN_VISIBLE_FRACTION));
   const visualTotal = visualValues.reduce((sum, value) => sum + value, 0);
   const circumference = 2 * Math.PI * radius;
-  const sectorStep = (Math.PI * 2) / count;
   let accumulated = 0;
   const sectors = visualValues.map((value) => {
     const start = -Math.PI / 2 + (accumulated / visualTotal) * Math.PI * 2;
@@ -52,14 +51,14 @@ export default function DonutChart({ data }: { data: Slice[] }) {
     accumulated += value;
     return { start, middle, value };
   });
-  // Las burbujas se colocan equidistantes para no chocar, ancladas al segmento
-  // más grande. Es el referente visual principal y queda junto a su color; las
-  // demás mantienen el mismo orden que los segmentos, sin líneas cruzadas.
-  const mainSectorIndex = sectors.reduce(
-    (largest, sector, index) => (sector.value > sectors[largest].value ? index : largest),
-    0,
-  );
-  const slotOrigin = sectors[mainSectorIndex].middle - mainSectorIndex * sectorStep;
+  // Cada círculo mira primero al centro de SU segmento, no a una posición
+  // arbitraria. Cuando dos categorías pequeñas están juntas, se separan solo
+  // lo necesario para que no se toquen; así las líneas son cortas y legibles.
+  const minimumLabelGap = bubble >= 62 ? 0.52 : bubble >= 50 ? 0.42 : 0.36;
+  const bubbleAngles = sectors.reduce<number[]>((angles, sector, index) => {
+    if (index === 0) return [sector.middle];
+    return [...angles, Math.max(sector.middle, angles[index - 1] + minimumLabelGap)];
+  }, []);
 
   if (total <= 0) return null;
 
@@ -68,7 +67,7 @@ export default function DonutChart({ data }: { data: Slice[] }) {
       <Svg width={WIDTH} height={HEIGHT} viewBox={`0 0 ${WIDTH} ${HEIGHT}`}>
         {data.map((item, index) => {
           const sector = sectors[index];
-          const bubbleAngle = slotOrigin + index * sectorStep;
+          const bubbleAngle = bubbleAngles[index];
           const bubbleX = CENTER_X + Math.cos(bubbleAngle) * orbitX;
           const bubbleY = CENTER_Y + Math.sin(bubbleAngle) * orbitY;
           // La línea empieza exactamente en el centro del segmento del mismo
@@ -125,7 +124,7 @@ export default function DonutChart({ data }: { data: Slice[] }) {
       </Svg>
 
       {data.map((item, index) => {
-        const bubbleAngle = slotOrigin + index * sectorStep;
+        const bubbleAngle = bubbleAngles[index];
         const left = CENTER_X + Math.cos(bubbleAngle) * orbitX - bubble / 2;
         const top = CENTER_Y + Math.sin(bubbleAngle) * orbitY - bubble / 2;
         const Icon = item.Icon;
