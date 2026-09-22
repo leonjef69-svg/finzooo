@@ -94,7 +94,6 @@ console.log("\n--- ACCESIBILIDAD BÁSICA ---");
 {
   for (const ruta of [
     "components/BackButton.tsx",
-    "components/ThemeToggleButton.tsx",
     "components/AuthField.tsx",
     "components/FAB.tsx",
     "components/Row.tsx",

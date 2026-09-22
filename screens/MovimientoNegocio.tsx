@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check, TrendingDown, TrendingUp } from "lucide-react-native";
@@ -44,8 +44,11 @@ export default function MovimientoNegocio({
   const [montoTexto, setMontoTexto] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [metodo, setMetodo] = useState<MetodoDeVenta>("efectivo");
+  const guardando = useRef(false);
+  const [enGuardado, setEnGuardado] = useState(false);
 
   function guardar() {
+    if (guardando.current) return;
     // La coma vale como el punto: en Perú se escribe "12,50" tanto como "12.50", y rechazarlo
     // sería rechazar la forma en que la mitad de la gente escribe una cantidad.
     const monto = parseAmountInput(montoTexto);
@@ -53,6 +56,8 @@ export default function MovimientoNegocio({
       showToast(t("caja.faltaMonto"));
       return;
     }
+    guardando.current = true;
+    setEnGuardado(true);
     const { fecha, hora } = ahoraDelNegocio();
     guardarMovimientoNegocio(
       crearMovimientoNegocio({
@@ -188,8 +193,9 @@ export default function MovimientoNegocio({
         </View>
 
         <TouchableOpacity
+          disabled={enGuardado}
           onPress={guardar}
-          className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-900 dark:bg-slate-100 mt-5"
+          className={`flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-900 dark:bg-slate-100 mt-5 ${enGuardado ? "opacity-60" : ""}`}
         >
           <Check size={16} color="#ffffff" />
           <Text className="text-sm font-bold text-white dark:text-slate-900">

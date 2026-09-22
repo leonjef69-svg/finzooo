@@ -69,6 +69,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   const { t, fmt, userLanguage, monthNames, transactions, merchantLearned, addOrUpdateTransaction, showToast } =
     useAppData();
   const insets = useSafeAreaInsets();
+  const saveLock = useRef(false);
 
   const [stage, setStage] = useState<Stage>("listening");
   // Mes del que se pidió el resumen ("AAAA-MM") y si se pidió de lo que
@@ -640,7 +641,9 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
   }
 
   function save() {
+    if (saveLock.current) return;
     if (rows.length === 0) return;
+    saveLock.current = true;
     rows.forEach((row, i) => {
       const kind = kinds[i];
       const category = categoryOf(row, kind);
@@ -986,6 +989,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             )}
 
             <TouchableOpacity
+              disabled={saveLock.current}
               onPress={save}
               className="w-full flex-row items-center justify-center gap-2 py-4 rounded-2xl bg-violet-500 mt-4"
             >

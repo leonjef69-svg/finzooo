@@ -2,11 +2,12 @@ import { useMemo, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
+import { TrendingDown, TrendingUp } from "lucide-react-native";
 import DonutChart from "@/components/DonutChart";
 import BarChartSimple from "@/components/BarChartSimple";
 import DailyBarsChart from "@/components/DailyBarsChart";
 import AnimatedBar from "@/components/AnimatedBar";
-import ThemeToggleButton from "@/components/ThemeToggleButton";
+import MonthSelector from "@/components/MonthSelector";
 import { catInfo } from "@/constants/categories";
 import { COLOR_HEX_600 } from "@/constants/colors";
 import { CARD_SHADOW } from "@/constants/style";
@@ -18,9 +19,11 @@ import type { Month, Transaction } from "@/types";
 export default function Reports({
   transactions,
   month,
+  setMonth,
 }: {
   transactions: Transaction[];
   month: Month;
+  setMonth: (month: Month) => void;
 }) {
   const {
     fmt,
@@ -42,6 +45,7 @@ export default function Reports({
   // Vista puramente visual para comprobar las gráficas llenas. No crea
   // movimientos, no cambia saldos y desaparece de las versiones publicadas.
   const [chartPreview, setChartPreview] = useState(false);
+  const [categoryType, setCategoryType] = useState<"expense" | "income">("expense");
   const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
   const mk = monthKey(month.y, month.m);
 
@@ -80,20 +84,29 @@ export default function Reports({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [categoryBudgets, categorySpent, userLanguage]);
 
-  const { pieData, totalExpense } = useMemo(() => {
-    const expenses = transactions.filter((t) => t.date.startsWith(mk) && t.type === "expense" && !t.internalTransfer);
+  const availableMonths = useMemo(
+    () => Array.from(new Set(transactions.filter((t) => /^\d{4}-\d{2}-\d{2}$/.test(t.date)).map((t) => t.date.slice(0, 7)))).sort().reverse(),
+    [transactions],
+  );
+
+  const { pieData, totalCategory } = useMemo(() => {
+    const typedTransactions = transactions.filter(
+      (transaction) => transaction.date.startsWith(mk) && transaction.type === categoryType && !transaction.internalTransfer,
+    );
     const byCat: Record<string, number> = {};
-    expenses.forEach((t) => {
+    typedTransactions.forEach((t) => {
       byCat[t.category] = (byCat[t.category] || 0) + t.amount;
     });
-    const pie = Object.entries(byCat).map(([id, value]) => {
-      const c = catInfo(id);
-      return { name: t(c.label), value, color: COLOR_HEX_600[c.color] || "#64748b" };
-    });
-    const total = expenses.reduce((s, t) => s + t.amount, 0);
-    return { pieData: pie, totalExpense: total };
+    const pie = Object.entries(byCat)
+      .map(([id, value]) => {
+        const c = catInfo(id);
+        return { id, name: t(c.label), value, color: COLOR_HEX_600[c.color] || "#64748b", Icon: c.icon };
+      })
+      .sort((a, b) => b.value - a.value);
+    const total = typedTransactions.reduce((s, t) => s + t.amount, 0);
+    return { pieData: pie, totalCategory: total };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [transactions, mk, userLanguage]);
+  }, [transactions, mk, userLanguage, categoryType]);
 
   // Los 3 meses que terminan en el mes que se está viendo.
   //
@@ -214,14 +227,11 @@ export default function Reports({
       className="flex-1 bg-white dark:bg-noche"
       contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 112 }}
     >
-      <View className="px-5 pt-3 pb-1 flex-row items-start justify-between">
+      <View className="px-5 pt-3 pb-1 flex-row items-start justify-between gap-3">
         <View>
           <Text className="text-xl font-extrabold" style={{ color: primaryTextColor }}>{t("reports.title")}</Text>
-          <Text className="text-xs text-slate-500 dark:text-slate-300">
-            {monthNames[month.m]} {month.y}
-          </Text>
         </View>
-        <ThemeToggleButton />
+        <MonthSelector month={month} months={availableMonths} monthNames={monthNames} onChange={setMonth} />
       </View>
 
       {__DEV__ && (
@@ -249,13 +259,35 @@ export default function Reports({
         className="mx-5 mt-3 bg-white dark:bg-noche-2 rounded-3xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4"
         style={CARD_SHADOW}
       >
-        <Text className="text-sm font-bold mb-1" style={{ color: primaryTextColor }}>{t("reports.byCategory")}</Text>
+        <View className="mb-1 flex-row items-center justify-between gap-3">
+          <Text className="flex-1 text-sm font-bold" style={{ color: primaryTextColor }}>
+            {t(categoryType === "expense" ? "reports.byCategory" : "reports.incomeByCategory")}
+          </Text>
+          <View className="flex-row rounded-xl bg-slate-100 p-1 dark:bg-noche">
+            <TouchableOpacity
+              onPress={() => setCategoryType("income")}
+              accessibilityRole="button"
+              accessibilityLabel={t("reports.showIncome")}
+              className={`h-8 w-9 items-center justify-center rounded-lg ${categoryType === "income" ? "bg-emerald-600" : ""}`}
+            >
+              <TrendingUp size={16} color={categoryType === "income" ? "#fff" : "#059669"} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setCategoryType("expense")}
+              accessibilityRole="button"
+              accessibilityLabel={t("reports.showExpenses")}
+              className={`h-8 w-9 items-center justify-center rounded-lg ${categoryType === "expense" ? "bg-rose-500" : ""}`}
+            >
+              <TrendingDown size={16} color={categoryType === "expense" ? "#fff" : "#e11d48"} />
+            </TouchableOpacity>
+          </View>
+        </View>
         {pieData.length === 0 ? (
           <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">{t("reports.noDataThisMonth")}</Text>
         ) : (
           <>
             <View className="items-center py-2">
-              <DonutChart data={pieData} fmt={fmtCompact} />
+              <DonutChart data={pieData} />
             </View>
             <View className="gap-2 mt-2">
               {pieData.map((e, i) => (
@@ -263,7 +295,7 @@ export default function Reports({
                   <View className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: e.color }} />
                   <Text className="text-xs font-medium flex-1" style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#475569" }}>{e.name}</Text>
                   <Text className="text-xs text-slate-500 dark:text-slate-300 flex-shrink text-right" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
-                    {fmtCompact(e.value)} · {totalExpense ? (e.value / totalExpense) * 100 < 1 ? "<1%" : `${Math.round((e.value / totalExpense) * 100)}%` : "0%"}
+                    {fmtCompact(e.value)} · {totalCategory ? (e.value / totalCategory) * 100 < 1 ? "<1%" : `${Math.round((e.value / totalCategory) * 100)}%` : "0%"}
                   </Text>
                 </View>
               ))}

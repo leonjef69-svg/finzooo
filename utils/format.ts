@@ -52,7 +52,10 @@ export function fmt(n: number, symbol: string, currencyId = "PEN") {
   const thousands = PUNTO_PARA_MILES.has(currencyId) ? "." : ",";
   const decimal = thousands === "." ? "," : ".";
   const withThousands = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, thousands);
-  return `${sign}${symbol} ${withThousands}${decPart == null ? "" : `${decimal}${decPart}`}`;
+  // En soles, “S/ 500.00” no aporta información si no hubo céntimos y ocupa
+  // espacio valioso en las tarjetas. El valor almacenado no se altera.
+  const ocultarCentimosVacios = currencyId === "PEN" && Number.isInteger(abs);
+  return `${sign}${symbol} ${withThousands}${decPart == null || ocultarCentimosVacios ? "" : `${decimal}${decPart}`}`;
 }
 
 /** Formato corto para tarjetas y gráficos estrechos. */

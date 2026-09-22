@@ -3,7 +3,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppState, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
-import { Bell, ChevronRight, Globe2, WalletCards } from "lucide-react-native";
+import { Bell, ChevronRight, Globe2, Moon, Sun, WalletCards } from "lucide-react-native";
 import { currencyDecimals, currencySymbolFor } from "@/constants/currencies";
 import { countryById, countryLabelFor } from "@/constants/countries";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -14,7 +14,7 @@ import { irUnaVez } from "@/utils/nav";
 const notificationKey = () => `@fino/setup-notifications-enabled:${auth.currentUser?.uid ?? "local"}`;
 
 export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => void }) {
-  const { userCurrency, userLanguage, userCountry, t, monthNames } = useAppData();
+  const { userCurrency, userLanguage, userCountry, t, monthNames, themeMode, updateThemeMode } = useAppData();
   const [amount, setAmount] = useState("");
   const [notificationsEnabled, setNotificationsEnabled] = useState(false);
   const insets = useSafeAreaInsets();
@@ -89,6 +89,30 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
       <TouchableOpacity onPress={() => irUnaVez("/country")} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Globe2 size={20} color="#d97706" /><Text className="ml-3 flex-1 font-bold text-slate-900">{t("settings.country")}</Text><Text numberOfLines={1} className="max-w-[45%] mr-2 text-slate-600">{countryById(userCountry) ? countryLabelFor(countryById(userCountry)!, userLanguage) : t("country.customShort")}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
       <TouchableOpacity onPress={() => irUnaVez("/currency")} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Text className="text-xl">💰</Text><Text className="ml-3 flex-1 font-bold text-slate-900">{t("settings.currency")}</Text><Text className="mr-2 text-slate-600">{currencySymbolFor(userCurrency)} · {userCurrency}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
       <TouchableOpacity onPress={enableNotifications} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Bell size={20} color="#7c3aed" /><Text className="ml-3 flex-1 font-bold text-slate-900">{t("settings.notifications")}</Text><Text className={notificationsEnabled ? "font-bold text-emerald-600" : "text-slate-500"}>{t(notificationsEnabled ? "setup.notificationsOn" : "setup.notificationsOff")}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
+
+      <View className="mb-3 rounded-2xl bg-white/95 px-4 py-3.5">
+        <View className="flex-row items-center justify-between">
+          <Text className="font-bold text-slate-900">{t("setup.appearance")}</Text>
+          <View className="flex-row rounded-xl bg-slate-100 p-1">
+            <TouchableOpacity
+              onPress={() => updateThemeMode("light")}
+              accessibilityRole="button"
+              accessibilityLabel={t("setup.lightAppearance")}
+              className={`h-9 w-12 items-center justify-center rounded-lg ${themeMode === "light" ? "bg-amber-400" : ""}`}
+            >
+              <Sun size={17} color={themeMode === "light" ? "#ffffff" : "#64748b"} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => updateThemeMode("dark")}
+              accessibilityRole="button"
+              accessibilityLabel={t("setup.darkAppearance")}
+              className={`h-9 w-12 items-center justify-center rounded-lg ${themeMode === "dark" ? "bg-slate-800" : ""}`}
+            >
+              <Moon size={17} color={themeMode === "dark" ? "#ffffff" : "#64748b"} />
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
 
         <View className="flex-row items-center bg-white/95 rounded-2xl px-4 py-3.5">
           <WalletCards size={20} color="#d97706" />

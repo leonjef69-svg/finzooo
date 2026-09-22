@@ -52,7 +52,7 @@ assert.match(sharedScreen, /returnableToPersonal\(movimientos, uid\)/, "solo vue
 assert.match(screen, /canSpendFromSpace\(movimientos, valor\)/, "una caja impide gastar más que su saldo");
 assert.match(screen, /minimumContributionAmount/, "editar un aporte respeta la parte ya utilizada");
 assert.match(screen, /repairLinkedTransferTransactions/, "las cajas reparan transferencias huérfanas");
-assert.match(sharedScreen, /Math\.abs\(saldo\) > 0\.000001/, "una caja con saldo pendiente no se puede cerrar");
+assert.match(sharedScreen, /canCloseLinkedSpace\(movimientos\)/, "una caja no se cierra si deja saldo o aportes de Personal pendientes");
 assert.match(finances, /availableBalance\(f\) - f\.transfersOut \+ f\.transfersIn/, "devolver dinero aumenta Personal sin contarlo como un ingreso nuevo");
 assert.match(home, /availablePersonalBalance/, "Inicio descuenta lo enviado a Familia y Cajas");
 assert.match(context, /transaction\?\.internalTransfer/, "una transferencia enlazada no se puede borrar directamente desde Personal");

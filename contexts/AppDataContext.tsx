@@ -2152,6 +2152,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   function repairLinkedTransferTransactions(upserts: Transaction[], deleteIds: number[] = []) {
     if (deleteIds.length) removeTransactions(deleteIds);
     if (!upserts.length) return;
+    // Si Familia/Caja conserva el vínculo válido, su contraparte de Personal
+    // no puede seguir marcada como borrada: ese tombstone la ocultaría de
+    // nuevo durante la siguiente sincronización. Solo se retiran los IDs que
+    // acabamos de reconstruir desde una fuente enlazada y verificada.
+    const restoredIds = new Set(upserts.map(item => item.id));
+    setDeletedTransactionIds(prev => {
+      const next = prev.filter(id => !restoredIds.has(id));
+      return next.length === prev.length ? prev : next;
+    });
     setTransactions(prev => {
       const replacements = new Map(upserts.map(item => [item.id, item]));
       const repaired = prev.map(item => replacements.get(item.id) ?? item);

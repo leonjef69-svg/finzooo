@@ -2,8 +2,8 @@ import { deleteDoc, doc, getDoc, runTransaction } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import { borrarNegocioDeLaNube } from "@/utils/cloudNegocio";
 import { borrarCajasDeLaNube } from "@/utils/cloudCajas";
-import { borrarVinculoFamiliaDeCuenta } from "@/utils/cloudFamilia";
-import { borrarCajasCompartidasDeCuenta } from "@/utils/cloudCajasCompartidas";
+import { borrarVinculoFamiliaDeCuenta, validarBorradoFamiliasDeCuenta } from "@/utils/cloudFamilia";
+import { borrarCajasCompartidasDeCuenta, validarBorradoCajasCompartidasDeCuenta } from "@/utils/cloudCajasCompartidas";
 import { deleteCreditCloudAccount } from "@/utils/creditCloud";
 import type { Goal, Transaction } from "@/types";
 import type { PagoProgramado } from "@/utils/calendarioPagos";
@@ -259,6 +259,12 @@ function sinFotos(data: CloudData): CloudData {
 // falta saber si funcionó, porque no queremos borrar la cuenta de
 // inicio de sesión si sus datos no se pudieron borrar primero.
 export async function deleteCloudAccount(uid: string): Promise<void> {
+  // Primero se valida TODO lo compartido. Si hay aportes personales sin
+  // devolver, se aborta antes de borrar cualquier documento de la cuenta.
+  await Promise.all([
+    validarBorradoCajasCompartidasDeCuenta(uid),
+    validarBorradoFamiliasDeCuenta(uid),
+  ]);
   // Primero se limpia lo compartido. Si el usuario era dueño se elimina el
   // espacio completo; si solo era miembro, se retira su acceso sin afectar
   // el historial que pertenece al resto del grupo.

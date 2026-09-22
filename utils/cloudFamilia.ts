@@ -19,6 +19,7 @@ import {
 import { db } from "@/utils/firebase";
 import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
+import { canCloseLinkedSpace } from "@/utils/linkedTransfers";
 
 export type EspacioFamilia = {
   id: string;
@@ -67,6 +68,27 @@ export async function cargarFamiliaActiva(uid: string): Promise<EspacioFamilia |
   return { id: espacio.id, nombre: String(data.nombre || "Familia"), ownerUid: String(data.ownerUid), creadoEn: alNumero(data.creadoEn) };
 }
 
+async function leerFamilia(familyId: string): Promise<EspacioFamilia | null> {
+  const espacio = await getDoc(doc(db, "familySpaces", familyId));
+  if (!espacio.exists() || espacio.data().closed === true) return null;
+  const data = espacio.data();
+  return { id: espacio.id, nombre: String(data.nombre || "Familia"), ownerUid: String(data.ownerUid), creadoEn: alNumero(data.creadoEn) };
+}
+
+/** Todas las familias del usuario. El índice antiguo se conserva como respaldo
+ * para que ninguna familia creada antes de esta actualización desaparezca. */
+export async function listarFamilias(uid: string): Promise<EspacioFamilia[]> {
+  const [indice, espacios] = await Promise.all([
+    getDoc(doc(db, "familyUsers", uid)),
+    getDocs(collection(db, "familyUsers", uid, "spaces")),
+  ]);
+  const ids = new Set(espacios.docs.map(item => item.id));
+  const legacyId = indice.exists() ? String(indice.data().activeFamilyId || "") : "";
+  if (legacyId) ids.add(legacyId);
+  const familias = (await Promise.all([...ids].map(leerFamilia))).filter((item): item is EspacioFamilia => item !== null);
+  return familias.sort((a, b) => b.creadoEn - a.creadoEn);
+}
+
 export async function crearFamilia(uid: string, nombrePersona: string, nombreFamilia: string): Promise<EspacioFamilia> {
   const ref = doc(collection(db, "familySpaces"));
   const nombre = nombreFamilia.trim().slice(0, 35);
@@ -74,6 +96,7 @@ export async function crearFamilia(uid: string, nombrePersona: string, nombreFam
   await runTransaction(db, async transaction => {
     transaction.set(ref, { nombre, ownerUid: uid, creadoEn: serverTimestamp() });
     transaction.set(doc(db, "familySpaces", ref.id, "members", uid), { uid, nombre: nombrePersona.trim().slice(0, 60), rol: "owner", unidoEn: serverTimestamp() });
+    transaction.set(doc(db, "familyUsers", uid, "spaces", ref.id), { familyId: ref.id, unidoEn: serverTimestamp() });
     transaction.set(doc(db, "familyUsers", uid), { activeFamilyId: ref.id }, { merge: true });
   });
   return { id: ref.id, nombre, ownerUid: uid, creadoEn: Date.now() };
@@ -103,8 +126,7 @@ export async function cerrarFamilia(uid: string, familiaId: string): Promise<voi
   });
   try {
     const movimientos = await listarMovimientosFamilia(familiaId);
-    const saldo = movimientos.reduce((sum, item) => sum + (item.tipo === "ingreso" ? item.monto : -item.monto), 0);
-    if (Math.abs(saldo) > 0.000001) throw new Error("balance-not-zero");
+    if (!canCloseLinkedSpace(movimientos)) throw new Error("unsettled-personal-contributions");
     const miembros = await getDocs(collection(db, "familySpaces", familiaId, "members"));
     if (miembros.size > 450) throw new Error("too-many-members");
     await runTransaction(db, async transaction => {
@@ -115,6 +137,7 @@ export async function cerrarFamilia(uid: string, familiaId: string): Promise<voi
       if (!snap.exists() || snap.data().ownerUid !== uid || snap.data().closing !== true) throw new Error("not-owner");
       transaction.update(ref, { closed: true, closing: false });
       miembros.docs.forEach((member, index) => {
+        transaction.delete(doc(db, "familyUsers", member.id, "spaces", familiaId));
         if (!indices[index]?.exists() || String(indices[index].data().activeFamilyId || "") !== familiaId) return;
         transaction.set(doc(db, "familyUsers", member.id), {
           activeFamilyId: "",
@@ -146,10 +169,8 @@ export async function unirseAFamilia(uid: string, nombre: string, codigoCrudo: s
   const indexRef = doc(db, "familyUsers", uid);
   let resultado: EspacioFamilia | null = null;
   await runTransaction(db, async transaction => {
-    const [family, index] = await Promise.all([transaction.get(familyRef), transaction.get(indexRef)]);
+    const family = await transaction.get(familyRef);
     if (!family.exists() || family.data().closed === true || family.data().closing === true) throw new Error("invalid-code");
-    const activeFamilyId = index.exists() ? String(index.data().activeFamilyId || "") : "";
-    if (activeFamilyId && activeFamilyId !== familyId) throw new Error("already-in-family");
     const familyData = family.data();
     resultado = { id: family.id, nombre: String(familyData.nombre || "Familia"), ownerUid: String(familyData.ownerUid), creadoEn: alNumero(familyData.creadoEn) };
     transaction.set(doc(db, "familySpaces", familyId, "members", uid), {
@@ -160,6 +181,7 @@ export async function unirseAFamilia(uid: string, nombre: string, codigoCrudo: s
       unidoEn: serverTimestamp(),
     });
     transaction.set(indexRef, { activeFamilyId: familyId }, { merge: true });
+    transaction.set(doc(db, "familyUsers", uid, "spaces", familyId), { familyId, unidoEn: serverTimestamp() });
   });
   if (!resultado) throw new Error("invalid-code");
   return resultado;
@@ -189,6 +211,15 @@ export async function actualizarMovimientoFamilia(familyId: string, movementId: 
   await updateDoc(doc(db, "familySpaces", familyId, "movements", movementId), { monto, descripcion: descripcion.trim().slice(0, 60) });
 }
 
+/** Vincula de una sola vez un aporte familiar antiguo con su débito de Personal. */
+export async function vincularMovimientoPersonalFamilia(familyId: string, movementId: string, transactionId: number, uid: string): Promise<void> {
+  if (!Number.isSafeInteger(transactionId) || transactionId <= 0) throw new Error("invalid-transaction-id");
+  await updateDoc(doc(db, "familySpaces", familyId, "movements", movementId), {
+    personalTransactionId: transactionId,
+    personalOwnerUid: uid,
+  });
+}
+
 export async function borrarMovimientoFamilia(familyId: string, movementId: string): Promise<void> {
   await deleteDoc(doc(db, "familySpaces", familyId, "movements", movementId));
 }
@@ -196,7 +227,10 @@ export async function borrarMovimientoFamilia(familyId: string, movementId: stri
 export async function salirDeFamilia(uid: string, familyId: string): Promise<void> {
   await runTransaction(db, async (transaction) => {
     transaction.delete(doc(db, "familySpaces", familyId, "members", uid));
-    transaction.set(doc(db, "familyUsers", uid), { activeFamilyId: "" }, { merge: true });
+    transaction.delete(doc(db, "familyUsers", uid, "spaces", familyId));
+    const indexRef = doc(db, "familyUsers", uid);
+    const index = await transaction.get(indexRef);
+    if (index.exists() && String(index.data().activeFamilyId || "") === familyId) transaction.set(indexRef, { activeFamilyId: "" }, { merge: true });
   });
 }
 
@@ -205,19 +239,43 @@ export async function quitarMiembroFamilia(familyId: string, memberUid: string):
   await runTransaction(db, async transaction => {
     const index = await transaction.get(indexRef);
     transaction.delete(doc(db, "familySpaces", familyId, "members", memberUid));
+    transaction.delete(doc(db, "familyUsers", memberUid, "spaces", familyId));
     if (index.exists() && String(index.data().activeFamilyId || "") === familyId) {
       transaction.set(indexRef, { activeFamilyId: "" }, { merge: true });
     }
   });
 }
 
+/** Comprueba antes de iniciar un borrado de cuenta que el dueño no vaya a
+ * eliminar dinero de Personal que sigue sin devolver. Se ejecuta como
+ * preflight para que la limpieza de otros datos no quede a medias. */
+export async function validarBorradoFamiliasDeCuenta(uid: string): Promise<void> {
+  const index = await getDoc(doc(db, "familyUsers", uid));
+  const data = index.exists() ? index.data() : {};
+  const propios = await getDocs(collection(db, "familyUsers", uid, "spaces"));
+  const ids = new Set<string>([
+    String(data.activeFamilyId || ""),
+    ...(Array.isArray(data.closedFamilyIds) ? data.closedFamilyIds.map(String) : []),
+    ...propios.docs.map(item => item.id),
+  ].filter(Boolean));
+  for (const familyId of ids) {
+    const family = await getDoc(doc(db, "familySpaces", familyId));
+    if (!family.exists() || family.data().ownerUid !== uid) continue;
+    if (!canCloseLinkedSpace(await listarMovimientosFamilia(familyId))) {
+      throw new Error("unsettled-personal-contributions");
+    }
+  }
+}
+
 export async function borrarVinculoFamiliaDeCuenta(uid: string): Promise<void> {
   const indexRef = doc(db, "familyUsers", uid);
   const index = await getDoc(indexRef);
   const data = index.exists() ? index.data() : {};
+  const propios = await getDocs(collection(db, "familyUsers", uid, "spaces"));
   const ids = new Set<string>([
     String(data.activeFamilyId || ""),
     ...(Array.isArray(data.closedFamilyIds) ? data.closedFamilyIds.map(String) : []),
+    ...propios.docs.map(item => item.id),
   ].filter(Boolean));
   for (const familyId of ids) {
     const familyRef = doc(db, "familySpaces", familyId);
@@ -238,6 +296,8 @@ export async function borrarVinculoFamiliaDeCuenta(uid: string): Promise<void> {
       await deleteDoc(doc(db, "familySpaces", familyId, "members", uid));
       continue;
     }
+    const movimientosParaValidar = await listarMovimientosFamilia(familyId);
+    if (!canCloseLinkedSpace(movimientosParaValidar)) throw new Error("unsettled-personal-contributions");
     await updateDoc(familyRef, { deleting: true });
     const [movimientos, miembros, invitaciones] = await Promise.all([
       getDocs(collection(db, "familySpaces", familyId, "movements")),

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { irUnaVez } from "@/utils/nav";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -52,6 +52,8 @@ export default function NuevaVenta({
   /** Cuántos van de cada producto. Vacío al empezar. */
   const [cantidades, setCantidades] = useState<Record<string, number>>({});
   const [metodo, setMetodo] = useState<MetodoDeVenta>("efectivo");
+  const registrando = useRef(false);
+  const [guardando, setGuardando] = useState(false);
 
   function sumar(id: string, cuanto: number) {
     setCantidades((antes) => {
@@ -87,10 +89,13 @@ export default function NuevaVenta({
   const total = totalDeLineas(lineas);
 
   function registrar() {
+    if (registrando.current) return;
     if (lineas.length === 0) {
       showToast(t("venta.faltaProducto"));
       return;
     }
+    registrando.current = true;
+    setGuardando(true);
     // LA FECHA Y LA HORA DEL CELULAR, no las de Londres. Ver ahoraDelNegocio.
     const { fecha, hora } = ahoraDelNegocio();
     guardarVenta(crearVenta({ negocioId, lineas, metodo, fecha, hora }));
@@ -246,8 +251,9 @@ export default function NuevaVenta({
             </View>
 
             <TouchableOpacity
+              disabled={guardando}
               onPress={registrar}
-              className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-900 dark:bg-slate-100 mt-4"
+              className={`flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-slate-900 dark:bg-slate-100 mt-4 ${guardando ? "opacity-60" : ""}`}
             >
               <Check size={16} color="#ffffff" />
               <Text className="text-sm font-bold text-white dark:text-slate-900">

@@ -24,9 +24,10 @@ const api = {
       get: async ref => snap(ref),
       update: (ref, value) => staged.set(ref, { ...documents.get(ref), ...value }),
       set: (ref, value) => staged.set(ref, { ...documents.get(ref), ...value }),
+      delete: ref => staged.set(ref, undefined),
     });
     if (failCommit) throw Error("offline");
-    staged.forEach((value, ref) => documents.set(ref, value));
+    staged.forEach((value, ref) => value === undefined ? documents.delete(ref) : documents.set(ref, value));
   },
 };
 const compiled = buildSync({ entryPoints: ["utils/cloudFamilia.ts"], bundle: true, write: false, platform: "node", format: "cjs", external: ["firebase/firestore", "@/utils/firebase", "@/utils/familia"] });
@@ -45,7 +46,7 @@ assert.equal(documents.get("familySpaces/f").closed, undefined);
 failCommit = false;
 await cloud.guardarMovimientoFamilia("f", "owner", { tipo: "gasto", monto: 20, descripcion: "Dinner", fecha: "2026-09-06", method: "debit" });
 assert.equal((await cloud.listarMovimientosFamilia("f"))[0].method, "debit");
-await assert.rejects(() => cloud.cerrarFamilia("owner", "f"), /balance-not-zero/);
+await assert.rejects(() => cloud.cerrarFamilia("owner", "f"), /unsettled-personal-contributions/);
 assert.equal(documents.get("familySpaces/f").closed, undefined);
 await cloud.guardarMovimientoFamilia("f", "owner", { tipo: "ingreso", monto: 20, descripcion: "Refund", fecha: "2026-09-06", method: "cash" });
 await cloud.cerrarFamilia("owner", "f");

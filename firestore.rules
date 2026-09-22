@@ -319,6 +319,16 @@ service cloud.firestore {
                           && request.resource.data.personalTransactionId == resource.data.personalTransactionId
                           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['monto', 'descripcion'])
                           && validSharedMovement(request.resource.data))
+                        // Migración única de los aportes antiguos que Fino
+                        // guardó antes de crear el vínculo con Personal.
+                        || (!('personalTransactionId' in resource.data)
+                          && !('personalOwnerUid' in resource.data)
+                          && resource.data.creadoPor == request.auth.uid
+                          && request.resource.data.personalOwnerUid == request.auth.uid
+                          && request.resource.data.personalTransactionId is number
+                          && request.resource.data.personalTransactionId > 0
+                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['personalTransactionId', 'personalOwnerUid'])
+                          && validSharedMovement(request.resource.data))
                       );
         allow delete: if familyMember(familyId)
                       && (familyOpen(familyId)
@@ -370,6 +380,18 @@ service cloud.firestore {
       );
       allow delete: if verified() && (request.auth.uid == userId
         || get(/databases/$(database)/documents/familySpaces/$(resource.data.activeFamilyId)).data.ownerUid == request.auth.uid);
+
+      // Un usuario puede pertenecer a varias familias. Este índice no concede
+      // acceso: las reglas de familySpaces siguen validando la membresía.
+      match /spaces/{familyId} {
+        allow read: if verified() && request.auth.uid == userId;
+        allow create, update: if verified() && request.auth.uid == userId
+          && request.resource.data.keys().hasOnly(['familyId', 'unidoEn'])
+          && request.resource.data.familyId == familyId
+          && request.resource.data.unidoEn is timestamp;
+        allow delete: if verified() && (request.auth.uid == userId
+          || get(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid);
+      }
     }
 
     // Una caja compartida es independiente de Personal, Familia y Negocio.

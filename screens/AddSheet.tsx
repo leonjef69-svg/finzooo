@@ -749,33 +749,33 @@ export default function AddSheet({
               </View>
             </View>
 
-            <View onLayout={(e) => setDescriptionY(e.nativeEvent.layout.y)}>
-              <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("addSheet.description")}</Text>
-              <TextInput
-                disableFullscreenUI
-                value={description}
-                onChangeText={setDescription}
-                onFocus={focusDescription}
-                placeholder={t("addSheet.descriptionPlaceholder")}
-                placeholderTextColor="#94a3b8"
-                className="w-full bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4 py-3.5 text-sm"
-                style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-              />
-            </View>
-            <View>
-              <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("addSheet.notesOptional")}</Text>
-              <TextInput
-                disableFullscreenUI
-                value={notes}
-                onChangeText={setNotes}
-                onFocus={focusNotes}
-                placeholder={t("addSheet.notesPlaceholder")}
-                placeholderTextColor="#94a3b8"
-                multiline
-                numberOfLines={2}
-                className="w-full bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4 py-3 text-sm"
-                style={{ textAlignVertical: "top", color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-              />
+            <View className="flex-row gap-3">
+              <View className="min-w-0 flex-1" onLayout={(e) => setDescriptionY(e.nativeEvent.layout.y)}>
+                <Text className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-200">{t("addSheet.description")}</Text>
+                <TextInput
+                  disableFullscreenUI
+                  value={description}
+                  onChangeText={setDescription}
+                  onFocus={focusDescription}
+                  placeholder={t("addSheet.descriptionPlaceholder")}
+                  placeholderTextColor="#94a3b8"
+                  className="w-full rounded-xl border-[1.5px] border-slate-200 bg-slate-50 px-3 py-3.5 text-sm dark:border-noche-borde dark:bg-noche-2"
+                  style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                />
+              </View>
+              <View className="min-w-0 flex-1">
+                <Text className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-200">{t("addSheet.notesOptional")}</Text>
+                <TextInput
+                  disableFullscreenUI
+                  value={notes}
+                  onChangeText={setNotes}
+                  onFocus={focusNotes}
+                  placeholder={t("addSheet.notesPlaceholder")}
+                  placeholderTextColor="#94a3b8"
+                  className="w-full rounded-xl border-[1.5px] border-slate-200 bg-slate-50 px-3 py-3.5 text-sm dark:border-noche-borde dark:bg-noche-2"
+                  style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                />
+              </View>
             </View>
           </ScrollView>
 

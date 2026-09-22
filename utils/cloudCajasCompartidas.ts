@@ -6,6 +6,7 @@ import {
 import { db } from "@/utils/firebase";
 import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
+import { canCloseLinkedSpace } from "@/utils/linkedTransfers";
 import type { Caja, MovimientoCaja } from "@/utils/cajas";
 
 export type CajaCompartida = {
@@ -182,8 +183,7 @@ export async function cerrarCajaCompartida(uid: string, boxId: string): Promise<
   });
   try {
     const movimientos = await listarMovimientosCajaCompartida(boxId);
-    const saldo = movimientos.reduce((sum, item) => sum + (item.tipo === "ingreso" ? item.monto : -item.monto), 0);
-    if (Math.abs(saldo) > 0.000001) throw new Error("balance-not-zero");
+    if (!canCloseLinkedSpace(movimientos)) throw new Error("unsettled-personal-contributions");
     await runTransaction(db, async transaction => {
       const snap = await transaction.get(ref);
       if (!snap.exists() || snap.data().ownerUid !== uid || snap.data().closing !== true) throw new Error("not-owner");
@@ -196,6 +196,19 @@ export async function cerrarCajaCompartida(uid: string, boxId: string): Promise<
   // Los vínculos se conservan ocultos: listarCajasCompartidas filtra las
   // cerradas. Así la eliminación posterior de cualquier cuenta todavía puede
   // localizar el espacio y retirar su identidad o purgarlo si era el dueño.
+}
+
+/** Preflight del borrado de cuenta: no permite borrar una caja del dueño si
+ * aún contiene aportes personales sin devolución. */
+export async function validarBorradoCajasCompartidasDeCuenta(uid: string): Promise<void> {
+  const enlaces = await getDocs(collection(db, "boxUsers", uid, "spaces"));
+  for (const enlace of enlaces.docs) {
+    const caja = await getDoc(doc(db, "boxSpaces", enlace.id));
+    if (!caja.exists() || caja.data().ownerUid !== uid) continue;
+    if (!canCloseLinkedSpace(await listarMovimientosCajaCompartida(enlace.id))) {
+      throw new Error("unsettled-personal-contributions");
+    }
+  }
 }
 
 /** Retira al usuario de cajas ajenas y elimina por completo las que creó. */
@@ -227,6 +240,8 @@ export async function borrarCajasCompartidasDeCuenta(uid: string): Promise<void>
       await lote.commit();
       continue;
     }
+    const movimientosParaValidar = await listarMovimientosCajaCompartida(boxId);
+    if (!canCloseLinkedSpace(movimientosParaValidar)) throw new Error("unsettled-personal-contributions");
     await updateDoc(boxRef, { deleting: true });
     const [movimientos, miembros, invitaciones] = await Promise.all([
       getDocs(collection(db, "boxSpaces", boxId, "movements")),

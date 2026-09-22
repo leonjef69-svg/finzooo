@@ -62,10 +62,10 @@ console.log("\n--- NINGUNA PANTALLA SE ABRE CON router.push A PELO ---");
   ok(/export function reemplazarUnaVez/.test(nav), "los cambios entre Personal, Familia y Cajas también están protegidos");
   ok(/export function volverUnaVez/.test(nav), "volver tampoco puede cerrar dos pantallas con un doble toque");
   ok(/BLOQUEO_NAVEGACION_MS = 1500/.test(nav), "la protección cubre también celulares lentos");
-  ok(/ahora - ultimoViaje < BLOQUEO_NAVEGACION_MS/.test(nav), "y descarta los toques mientras abre la pantalla");
+  ok(/ahora - anterior < BLOQUEO_NAVEGACION_MS/.test(nav), "y descarta los toques repetidos mientras abre la misma pantalla");
   ok(
-    /^let ultimoViaje = 0;/m.test(nav),
-    "con la hora en una variable de modulo, no en un estado: un estado redibujaria la pantalla en cada toque"
+    /^const ultimosViajes = new Map/m.test(nav),
+    "con marcas por ruta en un módulo, no en estado: no redibuja y tampoco bloquea otra navegación válida"
   );
 }
 

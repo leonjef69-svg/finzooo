@@ -34,7 +34,6 @@ import {
 import * as voiceWidget from "@/modules/voice-widget";
 import { useColorScheme } from "nativewind";
 import Row from "@/components/Row";
-import ThemeToggleButton from "@/components/ThemeToggleButton";
 import { currencyLabelFor } from "@/constants/currencies";
 import { countryFor, countryLabelFor } from "@/constants/countries";
 import { hayRegistroAutomatico } from "@/utils/dondeHayYape";
@@ -185,7 +184,6 @@ export default function Settings({
     >
       <View className="px-5 pt-3 pb-1 flex-row items-center justify-between">
         <Text className="text-xl font-extrabold" style={{ color: primaryTextColor }}>{t("settings.title")}</Text>
-        <ThemeToggleButton />
       </View>
 
       {/* LA TARJETA DEL PERFIL, EN HORIZONTAL (12/08/2026).
@@ -567,10 +565,8 @@ export default function Settings({
           onPress={onCurrency}
           right={<ChevronRight size={16} color="#cbd5e1" />}
         />
-        {/* La fila de Apariencia se quitó: el botón de sol/luna de arriba a la
-            derecha hace lo mismo y está a la vista en cuatro pantallas.
-            Ahora recorre los tres modos —claro, oscuro y automático—, así que
-            no se pierde ninguna opción al quitar esta pantalla. */}
+        {/* La apariencia se decide una sola vez durante la configuración inicial.
+            No se repite un icono de sol/luna dentro de la navegación diaria. */}
         {/* LA FILA DE "NOTIFICACIONES" SE FUE AL CALENDARIO (21/08/2026).
             Mandaba SOLO sobre los avisos del calendario, pero desde aqui parecia mandar sobre
             todo: la app tiene cuatro cosas que avisan —el calendario, la voz de los yapes, la

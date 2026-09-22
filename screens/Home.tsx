@@ -2,7 +2,6 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import EtiquetaMetodo from "@/components/EtiquetaMetodo";
 import IconBadge from "@/components/IconBadge";
 import PressableScale from "@/components/PressableScale";
-import ThemeToggleButton from "@/components/ThemeToggleButton";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
 import { catInfo } from "@/constants/categories";
 import { iconoDe } from "@/constants/iconos";
@@ -14,12 +13,14 @@ import { estadoEn, fechaEnElMes, mesDe } from "@/utils/calendarioPagos";
 import { availablePersonalBalance, budgetUsed } from "@/utils/finances";
 import { fmtDate, monthKey } from "@/utils/format";
 import { esFoto } from "@/utils/iconosFavoritos";
+import { netTransferredFromPersonal } from "@/utils/linkedTransfers";
 import { irUnaVez } from "@/utils/nav";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { usePendingImport } from "@/utils/pendingImport";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Bell,
+  Boxes,
   CreditCard,
   Check,
   CheckCircle2,
@@ -34,6 +35,7 @@ import {
   RotateCcw,
   Target,
   Trash2,
+  UsersRound,
   X,
 } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
@@ -124,35 +126,29 @@ const FilaMovimiento = memo(function FilaMovimiento({
             >
               {tx.description || t(c.label)}
             </Text>
-            {/* CON QUE SE PAGO, DELANTE DE LA FECHA. Ver components/EtiquetaMetodo: estaba
-                guardado desde siempre y solo se veia abriendo el movimiento.
-                Y se quita la categoria de aqui: la dicen ya el nombre y el dibujo de al
-                lado, asi que repetirla era gastar el sitio que necesitaba el metodo. */}
-            <View className="flex-row items-center gap-1.5 mt-0.5">
+            <Text className="mt-0.5 text-[11px] font-semibold" style={{ color: oscuro ? "#cbd5e1" : "#475569" }} numberOfLines={1}>
+              {t(c.label)}
+            </Text>
+            <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#94a3b8" : "#64748b" }} numberOfLines={1}>
+              {fmtDate(tx.date, monthNames)}{tx.time ? ` · ${tx.time}` : ""}
+            </Text>
+          </View>
+          <View className="items-end self-stretch justify-start">
+            <Text
+              className={`text-base font-extrabold ${
+                tx.type === "expense" ? "text-rose-500" : "text-emerald-600"
+              }`}
+              numberOfLines={1}
+              adjustsFontSizeToFit
+              minimumFontScale={0.72}
+            >
+              {tx.type === "expense" ? "-" : "+"}
+              {fmt(tx.amount)}
+            </Text>
+            <View className="mt-1">
               <EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} />
-              {/* 11 px y `shrink`: LA HORA ES LA QUE CEDE.
-                  Con un monto muy largo -S/ 125,000.00- los cuatro datos ya no entran, y algo
-                  tiene que ceder. Que sea la hora: un monto cortado es grave, no sabrias
-                  cuanto gastaste; una hora a medias no le hace daño a nadie y completa esta a
-                  un toque, en el detalle. */}
-              <Text className="text-[11px] shrink" style={{ color: oscuro ? "#f1f5f9" : "#334155" }} numberOfLines={1}>
-                {/* La hora solo si la hay. Los movimientos guardados
-                    antes de esto no la tienen, y los importados de un
-                    estado de cuenta tampoco: el banco solo da la fecha.
-                    Mejor sin hora que con una inventada. */}
-                {fmtDate(tx.date, monthNames)}
-                {tx.time ? ` · ${tx.time}` : ""}
-              </Text>
             </View>
           </View>
-          <Text
-            className={`text-base font-extrabold ${
-              tx.type === "expense" ? "text-rose-500" : "text-emerald-600"
-            }`}
-          >
-            {tx.type === "expense" ? "-" : "+"}
-            {fmt(tx.amount)}
-          </Text>
         </PressableScale>
       </Row>
     </View>
@@ -222,6 +218,20 @@ export default function Home({
   const mainIncome = useMemo(() => monthTx.filter((t) => t.type === "income" && !t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
   const transfersOut = useMemo(() => monthTx.filter((t) => t.type === "expense" && t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
   const transfersIn = useMemo(() => monthTx.filter((t) => t.type === "income" && t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
+  // Estas cifras no pertenecen a un mes: muestran el neto que Personal ha
+  // transferido a cada tipo de espacio. Toda salida enlazada nació al elegir
+  // "Desde Personal" y toda entrada enlazada es una devolución; el dinero
+  // externo no crea una mitad en Personal y por eso no entra en la cuenta.
+  const netInBoxes = useMemo(() => netTransferredFromPersonal(transactions, "box"), [transactions]);
+  const netInFamily = useMemo(() => netTransferredFromPersonal(transactions, "family"), [transactions]);
+  const heldInSpaces = useMemo(() => [
+    ...(netInBoxes > 0 ? [{ key: "box", label: t("home.boxNet"), amount: netInBoxes, Icon: Boxes, tone: { background: "bg-teal-50 dark:bg-noche-2", border: "border-teal-200 dark:border-teal-800", icon: "#0d9488", text: "text-teal-700 dark:text-teal-300" } }] : []),
+    ...(netInFamily > 0 ? [{ key: "family", label: t("home.familyNet"), amount: netInFamily, Icon: UsersRound, tone: { background: "bg-violet-50 dark:bg-noche-2", border: "border-violet-200 dark:border-violet-800", icon: "#7c3aed", text: "text-violet-700 dark:text-violet-300" } }] : []),
+  ], [netInBoxes, netInFamily, t]);
+  const heldSpacesVertical = useMemo(
+    () => heldInSpaces.length === 2 && heldInSpaces.some(item => Math.trunc(Math.abs(item.amount)).toString().length >= 8),
+    [heldInSpaces],
+  );
   const available = availablePersonalBalance({ budget, prevBalance, income: mainIncome, spent: mainSpent, transfersOut, transfersIn });
   const pct = budgetUsed({ budget, prevBalance, income: mainIncome, spent: mainSpent }) * 100;
   const visiblePct = Math.max(0, Math.min(100, pct));
@@ -346,7 +356,7 @@ export default function Home({
           Ahora solo se desliza la lista, por debajo. */}
       <View style={{ paddingTop: insets.top + 6 }}>
         <View className="px-5 pt-2.5 pb-2 flex-row items-center justify-between">
-          <ThemeToggleButton />
+          <View className="h-10 w-10" />
 
           <View className="flex-row items-center gap-1">
             <TouchableOpacity
@@ -488,6 +498,37 @@ export default function Home({
             </>
           )}
         </LinearGradient>
+
+        {!editingBudget && heldInSpaces.length > 0 && (
+          <View className={`mx-5 mt-3 gap-2.5 ${heldSpacesVertical ? "" : "flex-row"}`}>
+            {heldInSpaces.map(({ key, label, amount, Icon, tone }) => (
+              <View
+                key={key}
+                className={`${tone.background} ${tone.border} ${heldSpacesVertical ? "w-full" : "flex-1"} justify-center rounded-2xl border-[1.5px] px-3 py-2`}
+                style={[softShadow, { minHeight: 70 }]}
+              >
+                <View className="mb-1 flex-row items-center gap-2">
+                  <Icon size={17} color={tone.icon} />
+                  <Text className={`text-xs font-semibold ${tone.text}`} numberOfLines={1}>
+                    {label}
+                  </Text>
+                  <Text className="flex-1 text-xs font-medium text-slate-500 dark:text-slate-300" numberOfLines={1}>
+                    · {t("home.transferredFromPersonal")}
+                  </Text>
+                </View>
+                <Text
+                  className="text-lg font-extrabold"
+                  style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.52}
+                >
+                  {fmt(amount)}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
 
         {!editingBudget && (
           <TouchableOpacity

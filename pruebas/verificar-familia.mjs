@@ -21,7 +21,7 @@ assert.match(cloud, /familyUsers/, "el espacio se recupera al cambiar de celular
 assert.match(cloud, /export async function renombrarFamilia/, "el propietario puede guardar el nuevo nombre en la nube");
 assert.match(cloud, /serverTimestamp\(\)/, "los movimientos usan la hora confiable de Firebase");
 assert.match(screen, /sanitizeSafeAmountInput/, "Familia conserva el límite seguro para montos");
-assert.match(screen, /owner \? editandoNombre/, "solo el propietario ve los controles para editar el nombre");
+assert.match(screen, /owner \? <TouchableOpacity accessibilityLabel="Opciones de familia"/, "solo el propietario ve las opciones de familia");
 assert.match(screen, /setOrigenDinero\(origin\)/, "los ingresos familiares permiten elegir dinero externo o Personal");
 assert.match(screen, /personalOwnerUid: uid/, "el aporte familiar recuerda a qué propietario pertenece");
 assert.match(screen, /deleteLinkedTransferTransaction\(item\.personalTransactionId\)/, "el dueño recupera en Personal un aporte familiar que elimina desde Familia");
@@ -30,7 +30,7 @@ assert.match(screen, /returnableToPersonal\(movimientos, auth\.currentUser\?\.ui
 assert.match(screen, /canSpendFromSpace\(movimientos, value\)/, "Familia impide gastar más que su saldo");
 assert.match(screen, /minimumContributionAmount/, "editar un aporte familiar respeta lo ya utilizado");
 assert.match(screen, /repairLinkedTransferTransactions/, "Familia repara transferencias huérfanas");
-assert.match(screen, /Math\.abs\(saldo\) > 0\.000001/, "Familia no puede cerrarse dejando un saldo perdido");
+assert.match(screen, /canCloseLinkedSpace\(movimientos\)/, "Familia no puede cerrarse dejando saldo o aportes de Personal pendientes");
 assert.match(deletion, /borrarVinculoFamiliaDeCuenta/, "eliminar la cuenta también retira su membresía familiar");
 
 console.log("Familia: invitaciones, membresía, vencimiento y privacidad verificados.");

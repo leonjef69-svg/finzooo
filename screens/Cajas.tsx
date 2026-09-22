@@ -19,9 +19,9 @@ import { canSpendFromSpace, canUndoContribution, minimumContributionAmount, retu
 import { nextId } from "@/utils/id";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
-import { ArrowDown, ArrowLeftRight, ArrowUp, Boxes, Check, Pencil, Plus, Trash2, X } from "lucide-react-native";
+import { ArrowDown, ArrowLeftRight, ArrowUp, Boxes, Check, ListChecks, MoreVertical, Plus, Trash2, UserPlus, X } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ScrollView, Share, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 // Cambiar de Personal a Familia y volver a Cajas desmonta estas pantallas.
@@ -57,6 +57,13 @@ export default function Cajas() {
   const [ready, setReady] = useState(cajasEnMemoria !== null);
   const [cloudReady, setCloudReady] = useState(false);
   const [compartiendo, setCompartiendo] = useState(false);
+  const [menuAbierto, setMenuAbierto] = useState(false);
+  const [editandoNombreCaja, setEditandoNombreCaja] = useState(false);
+  const [nombreCajaEdicion, setNombreCajaEdicion] = useState("");
+  const [seleccionando, setSeleccionando] = useState(false);
+  const [seleccionados, setSeleccionados] = useState<string[]>([]);
+  const [seleccionandoCajas, setSeleccionandoCajas] = useState(false);
+  const [cajasSeleccionadas, setCajasSeleccionadas] = useState<string[]>([]);
   const accionLocalEnCurso = useRef(false);
 
   function tomarAccionLocal(): boolean {
@@ -248,6 +255,43 @@ export default function Cajas() {
       movimientosBorrados: [...new Set([...antes.movimientosBorrados, id])],
     }));
   }
+  function borrarSeleccionados(ids = seleccionados) {
+    const items = movimientos.filter(item => ids.includes(item.id));
+    if (items.some(item => item.tipo === "ingreso" && item.personalTransactionId != null && !canUndoContribution(movimientos, item))) { showToast(t("boxes.contributionUsed")); return; }
+    for (const item of items) borrarMovimiento(item.id);
+    setSeleccionados([]); setSeleccionando(false);
+  }
+  function confirmarBorrarTodo() {
+    if (!visibles.length) return;
+    Alert.alert("Borrar todos los movimientos", `Se eliminarán los ${visibles.length} movimientos que se muestran. Esta acción no se puede deshacer.`, [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: "Borrar todo", style: "destructive", onPress: () => borrarSeleccionados(visibles.map(item => item.id)) },
+    ]);
+  }
+  function borrarCajas(ids = cajasSeleccionadas) {
+    const candidatas = datos.cajas.filter(item => ids.includes(item.id));
+    if (!candidatas.length) return;
+    if (candidatas.some(item => Math.abs(saldoCaja(item.id, datos.movimientos)) > 0.000001)) {
+      showToast("Primero deja en cero el saldo de cada caja seleccionada.");
+      return;
+    }
+    const idsMovimientos = datos.movimientos.filter(item => ids.includes(item.cajaId)).map(item => item.id);
+    setDatos(antes => ({
+      ...antes,
+      cajas: antes.cajas.filter(item => !ids.includes(item.id)),
+      movimientos: antes.movimientos.filter(item => !ids.includes(item.cajaId)),
+      cajasBorradas: [...new Set([...antes.cajasBorradas, ...ids])],
+      movimientosBorrados: [...new Set([...antes.movimientosBorrados, ...idsMovimientos])],
+    }));
+    setCajasSeleccionadas([]); setSeleccionandoCajas(false);
+  }
+  function confirmarBorrarTodasLasCajas() {
+    if (!datos.cajas.length) return;
+    Alert.alert("Borrar todas las cajas", `Se eliminarán las ${datos.cajas.length} cajas. Solo se pueden borrar cajas con saldo S/ 0.00.`, [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: "Borrar todo", style: "destructive", onPress: () => borrarCajas(datos.cajas.map(item => item.id)) },
+    ]);
+  }
 
   function borrarCaja() {
     if (!caja) return;
@@ -264,6 +308,13 @@ export default function Cajas() {
     setLista(true);
     setBorrandoCaja(false);
     showToast(t("boxes.deleted"));
+  }
+  function guardarNombreCaja() {
+    if (!caja) return;
+    const nombre = nombreCajaEdicion.trim().slice(0, 30);
+    if (!nombre) return;
+    setDatos(prev => ({ ...prev, cajas: prev.cajas.map(item => item.id === caja.id ? { ...item, nombre } : item) }));
+    setEditandoNombreCaja(false); setMenuAbierto(false); showToast(t("boxes.movementSaved"));
   }
 
   function devolverAPersonal() {
@@ -295,8 +346,9 @@ export default function Cajas() {
         movimientosBorrados: [...new Set([...antes.movimientosBorrados, ...ids])],
       }));
       setCajaId(null); setLista(true);
-      await Share.share({ message: t("boxes.shareMessage", { name: caja.nombre, code: codigo }) });
-      irUnaVez("/shared-boxes");
+      // La caja se vuelve compartida antes de crear el código. Se abre con el
+      // código ya visible, en vez de lanzar el cuadro antiguo de "Compartir".
+      irUnaVez({ pathname: "/shared-boxes", params: { boxId: compartida.id, invitation: codigo } });
     } catch { showToast(t("family.connectionError")); }
     finally { setCompartiendo(false); }
   }
@@ -324,20 +376,44 @@ export default function Cajas() {
         {!ready ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : lista || !caja ? (
           <>
             <Text className="mb-3 mt-2 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("boxes.subtitle")}</Text>
-            <TouchableOpacity onPress={() => irUnaVez("/shared-boxes?join=1")} className="mb-3 min-h-12 items-center justify-center rounded-xl border border-emerald-500 bg-emerald-50 dark:bg-emerald-950"><Text className="text-base font-bold text-emerald-700 dark:text-emerald-300">{t("boxes.join")}</Text></TouchableOpacity>
+            <View className="mb-3 flex-row gap-3">
+              <TouchableOpacity onPress={() => setCreando(true)} className="min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-600"><Plus size={18} color="#fff" /><Text className="font-bold text-white">Crear</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => irUnaVez("/shared-boxes?join=1")} className="min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950"><UserPlus size={18} color="#0d9488" /><Text className="font-bold text-teal-700 dark:text-teal-300">Unirme</Text></TouchableOpacity>
+            </View>
+            {datos.cajas.length > 0 ? <View className="mb-2 flex-row items-center justify-between">
+              {seleccionandoCajas ? <>
+                <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{cajasSeleccionadas.length} {cajasSeleccionadas.length === 1 ? "seleccionada" : "seleccionadas"}</Text>
+                <View className="flex-row items-center gap-3">
+                  <TouchableOpacity accessibilityLabel="Eliminar cajas seleccionadas" disabled={!cajasSeleccionadas.length} onPress={() => borrarCajas()} className={`h-9 w-9 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950 ${!cajasSeleccionadas.length ? "opacity-40" : ""}`}><Trash2 size={19} color="#f43f5e" /></TouchableOpacity>
+                  <TouchableOpacity onPress={confirmarBorrarTodasLasCajas} hitSlop={6}><Text className="text-sm font-bold text-rose-500">Borrar todo</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => { setSeleccionandoCajas(false); setCajasSeleccionadas([]); }} hitSlop={6}><Text className="text-sm font-bold text-emerald-600">{t("common.cancel")}</Text></TouchableOpacity>
+                </View>
+              </> : <>
+                <Text className="text-sm font-bold text-slate-700 dark:text-slate-200">Mis cajas</Text>
+                <TouchableOpacity onPress={() => { setSeleccionandoCajas(true); setCajasSeleccionadas([]); }} className="flex-row items-center gap-1"><ListChecks size={16} color="#059669" /><Text className="text-sm font-bold text-emerald-600">Seleccionar</Text></TouchableOpacity>
+              </>}
+            </View> : null}
             {datos.cajas.map((item) => (
-              <TouchableOpacity
+              (() => {
+                const ultimoIngreso = datos.movimientos
+                  .filter(movimiento => movimiento.cajaId === item.id && movimiento.tipo === "ingreso")
+                  .sort((a, b) => b.creadoEn - a.creadoEn)[0];
+                const origen = ultimoIngreso?.personalTransactionId != null ? "personal" : "externo";
+                return <TouchableOpacity
                 key={item.id}
-                onPress={() => { setCajaId(item.id); setLista(false); }}
-                className="mb-3 flex-row items-center rounded-2xl border-[1.5px] border-slate-200 bg-white p-4 dark:border-noche-borde dark:bg-noche-2"
+                disabled={!seleccionandoCajas && creando}
+                onPress={() => seleccionandoCajas ? setCajasSeleccionadas(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id]) : (setCajaId(item.id), setLista(false))}
+                className={`mb-3 min-h-[86px] flex-row items-center rounded-2xl border-[1.5px] bg-white p-4 dark:bg-noche-2 ${cajasSeleccionadas.includes(item.id) ? "border-teal-500 bg-teal-50 dark:border-teal-500 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}
               >
                 <View className="h-11 w-11 items-center justify-center rounded-2xl bg-teal-50 dark:bg-teal-950"><Boxes size={20} color="#0d9488" /></View>
                 <View className="ml-3 flex-1">
                   <Text className="font-extrabold text-slate-900 dark:text-slate-100">{item.nombre}</Text>
                   <Text className="mt-0.5 text-xs font-bold text-teal-700 dark:text-teal-300">{fmt(saldoCaja(item.id, datos.movimientos))}</Text>
+                  {ultimoIngreso ? <Text className="mt-0.5 text-xs font-medium text-slate-500 dark:text-slate-300">{t(origen === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text> : null}
                 </View>
-                <ArrowLeftRight size={17} color="#64748b" />
-              </TouchableOpacity>
+                {seleccionandoCajas ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${cajasSeleccionadas.includes(item.id) ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : <ArrowLeftRight size={17} color="#64748b" />}
+              </TouchableOpacity>;
+              })()
             ))}
             {datos.cajas.length === 0 && !creando ? (
               <View className="items-center rounded-2xl border-[1.5px] border-dashed border-slate-300 px-5 py-7 dark:border-noche-borde">
@@ -358,21 +434,19 @@ export default function Cajas() {
                 <View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} onPress={() => setOrigenDinero(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenDinero === origin ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text></TouchableOpacity>)}</View>
                 {origenDinero === "personal" ? <Text className="text-[11px] text-slate-500">{t("boxes.personalAvailable", { amount: fmt(disponible) })}</Text> : null}
               </View>
-            ) : (
-              <TouchableOpacity onPress={() => setCreando(true)} className="mt-4 min-h-12 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-600"><Plus size={19} color="#fff" /><Text className="font-extrabold text-white">{t("boxes.create")}</Text></TouchableOpacity>
-            )}
+            ) : null}
           </>
         ) : (
           <>
             <TouchableOpacity onPress={() => setLista(true)} className="mb-2 mt-1 flex-row items-center gap-2 py-2"><ArrowLeftRight size={16} color="#0d9488" /><Text className="text-xs font-bold text-teal-700 dark:text-teal-300">{t("boxes.all")}</Text></TouchableOpacity>
             <View className="rounded-3xl bg-teal-600 px-4 py-3">
-              <Text className="text-base font-bold text-teal-100">{caja.nombre}</Text>
+              <View className="flex-row items-center"><Text className="flex-1 text-base font-bold text-teal-100">{caja.nombre}</Text><TouchableOpacity accessibilityLabel="Opciones de caja" onPress={() => irUnaVez({ pathname: "/box-settings", params: { boxId: caja.id } })} className="h-10 w-10 items-center justify-center rounded-xl bg-teal-700"><MoreVertical size={20} color="#fff" /></TouchableOpacity></View>
               <Text className="text-[26px] font-extrabold leading-8 text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58}>{fmt(saldoActual)}</Text>
               <SpaceTotals income={resumen.ingresos} expense={resumen.gastos} filter={filter} onFilter={setFilter} format={fmt} />
             </View>
             <View className="mt-3 flex-row gap-3">
-              <TouchableOpacity onPress={() => { setOrigenDinero("externo"); setAnotando("ingreso"); }} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-100"><ArrowUp size={18} color="#047857" /><Text className="font-bold text-emerald-700">{t("boxes.income")}</Text></TouchableOpacity>
-              <TouchableOpacity onPress={() => setAnotando("gasto")} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-rose-100"><ArrowDown size={18} color="#be123c" /><Text className="font-bold text-rose-700">{t("boxes.expense")}</Text></TouchableOpacity>
+              <TouchableOpacity style={{ flexBasis: 0 }} onPress={() => { setOrigenDinero("externo"); setAnotando("ingreso"); }} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-100"><ArrowUp size={18} color="#047857" /><Text className="font-bold text-emerald-700">{t("boxes.income")}</Text></TouchableOpacity>
+              <TouchableOpacity style={{ flexBasis: 0 }} onPress={() => setAnotando("gasto")} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-rose-100"><ArrowDown size={18} color="#be123c" /><Text className="font-bold text-rose-700">{t("boxes.expense")}</Text></TouchableOpacity>
             </View>
             {anotando ? (
               <View className="mt-3 rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde">
@@ -388,22 +462,32 @@ export default function Cajas() {
               </View>
             ) : null}
             {devolvibleAPersonal > 0 ? <TouchableOpacity onPress={devolverAPersonal} className="mt-3 min-h-11 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("boxes.returnAmount", { amount: fmt(devolvibleAPersonal) })}</Text></TouchableOpacity> : null}
-            {Math.abs(saldoActual) < 0.005 ? <View className="mt-3 flex-row gap-2"><TouchableOpacity onPress={() => { setOrigenDinero("externo"); setAnotando("ingreso"); }} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-emerald-600"><Text className="font-bold text-white">{t("boxes.addMoney")}</Text></TouchableOpacity><TouchableOpacity onPress={() => setBorrandoCaja(true)} className="min-h-11 flex-1 items-center justify-center rounded-xl border border-rose-300"><Text className="font-bold text-rose-600">{t("boxes.close")}</Text></TouchableOpacity></View> : null}
-            <Text className="mb-2 mt-5 font-extrabold text-slate-900 dark:text-slate-100">{t("boxes.history")}</Text>
+            {Math.abs(saldoActual) < 0.005 ? <TouchableOpacity onPress={() => { setOrigenDinero("externo"); setAnotando("ingreso"); }} className="mt-3 min-h-11 items-center justify-center rounded-xl bg-emerald-600"><Text className="font-bold text-white">{t("boxes.addMoney")}</Text></TouchableOpacity> : null}
+            <View className="mb-2 mt-5 flex-row items-center justify-between">
+              {seleccionando ? <>
+                <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{seleccionados.length} {seleccionados.length === 1 ? "seleccionado" : "seleccionados"}</Text>
+                <View className="flex-row items-center gap-3">
+                  <TouchableOpacity accessibilityLabel="Eliminar seleccionados" disabled={!seleccionados.length} onPress={() => borrarSeleccionados()} className={`h-9 w-9 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950 ${!seleccionados.length ? "opacity-40" : ""}`}><Trash2 size={19} color="#f43f5e" /></TouchableOpacity>
+                  <TouchableOpacity onPress={confirmarBorrarTodo} hitSlop={6}><Text className="text-sm font-bold text-rose-500">Borrar todo</Text></TouchableOpacity>
+                  <TouchableOpacity onPress={() => { setSeleccionando(false); setSeleccionados([]); }} hitSlop={6}><Text className="text-sm font-bold text-emerald-600">{t("common.cancel")}</Text></TouchableOpacity>
+                </View>
+              </> : <>
+                <Text className="font-extrabold text-slate-900 dark:text-slate-100">{t("boxes.history")}</Text>
+                <View className="flex-row items-center gap-2"><TouchableOpacity accessibilityLabel="Invitar a esta caja" disabled={compartiendo} onPress={() => void compartirCaja()} className="h-10 w-10 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><UserPlus size={18} color="#0d9488" /></TouchableOpacity><TouchableOpacity onPress={() => { setSeleccionando(true); setSeleccionados([]); }} className="flex-row items-center gap-1"><ListChecks size={16} color="#059669" /><Text className="text-sm font-bold text-emerald-600">Seleccionar</Text></TouchableOpacity></View>
+              </>}
+            </View>
             <SpaceFilterReset filter={filter} onReset={() => setFilter(null)} />
             {visibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "boxes.noMovements")}</Text> : visibles.slice(0, movementLimit).map((item) => (
-              <View key={item.id} className="mb-2 flex-row items-center rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde">
+              <TouchableOpacity key={item.id} disabled={!seleccionando} onPress={() => setSeleccionados(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id])} className={`mb-2 flex-row items-center rounded-2xl border-[1.5px] p-3 dark:border-noche-borde ${seleccionados.includes(item.id) ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200"}`}>
                 <View className={`h-9 w-9 items-center justify-center rounded-xl ${item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
                 <View className="ml-3 flex-1"><Text className="text-[15px] font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View>
                 <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-2 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text>
-                {item.tipo === "ingreso" && item.personalTransactionId != null ? <TouchableOpacity accessibilityLabel={t("common.edit")} onPress={() => { setEditandoAporteId(item.id); setAnotando("ingreso"); setOrigenDinero("personal"); setMonto(String(item.monto)); setDescripcion(item.descripcion); }} className="h-10 w-10 items-center justify-center"><Pencil size={16} color="#0d9488" /></TouchableOpacity> : null}
-                <TouchableOpacity accessibilityLabel={t("common.delete")} onPress={() => borrarMovimiento(item.id)} className="h-10 w-10 items-center justify-center"><Trash2 size={17} color="#e11d48" /></TouchableOpacity>
-              </View>
+                {seleccionando ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${seleccionados.includes(item.id) ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : null}
+              </TouchableOpacity>
             ))}
             {borrandoCaja ? (
               <View className="mt-5 rounded-2xl bg-rose-50 p-3"><Text className="text-xs text-rose-700">{t("boxes.deleteWarning")}</Text><View className="mt-3 flex-row gap-2"><TouchableOpacity onPress={() => setBorrandoCaja(false)} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-white"><Text className="font-bold text-slate-600">{t("common.cancel")}</Text></TouchableOpacity><TouchableOpacity onPress={borrarCaja} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-rose-600"><Text className="font-bold text-white">{t("common.delete")}</Text></TouchableOpacity></View></View>
-            ) : <TouchableOpacity onPress={() => setBorrandoCaja(true)} className="mt-5 min-h-11 flex-row items-center justify-center gap-2"><Trash2 size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("boxes.delete")}</Text></TouchableOpacity>}
-            {auth.currentUser ? <TouchableOpacity disabled={compartiendo} onPress={() => void compartirCaja()} className="mt-2 min-h-11 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Text className="font-bold text-teal-700 dark:text-teal-300">{compartiendo ? t("common.loading") : `${t("boxes.share")}${isPremium ? "" : " · Premium"}`}</Text></TouchableOpacity> : null}
+            ) : null}
           </>
         )}
       </ScrollView>

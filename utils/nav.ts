@@ -121,14 +121,27 @@ export function useNavigateWhenReady(
  * cuando lo que se está tratando de arreglar es un dedo rápido. Es la misma decisión que se
  * tomó con la pausa del reparto de iconos el 07/08.
  */
-let ultimoViaje = 0;
+const ultimosViajes = new Map<string, number>();
 let ultimoRetroceso = 0;
 const BLOQUEO_NAVEGACION_MS = 1500;
 
-export function irUnaVez(ruta: Parameters<typeof router.push>[0]): void {
+function claveDeRuta(ruta: Parameters<typeof router.push>[0]): string {
+  if (typeof ruta === "string") return ruta;
+  const params = ruta.params ? JSON.stringify(ruta.params) : "";
+  return `${ruta.pathname}?${params}`;
+}
+
+function seNavegoHacePoco(accion: "push" | "replace", ruta: Parameters<typeof router.push>[0]): boolean {
   const ahora = Date.now();
-  if (ahora - ultimoViaje < BLOQUEO_NAVEGACION_MS) return;
-  ultimoViaje = ahora;
+  const clave = `${accion}:${claveDeRuta(ruta)}`;
+  const anterior = ultimosViajes.get(clave) ?? 0;
+  if (ahora - anterior < BLOQUEO_NAVEGACION_MS) return true;
+  ultimosViajes.set(clave, ahora);
+  return false;
+}
+
+export function irUnaVez(ruta: Parameters<typeof router.push>[0]): void {
+  if (seNavegoHacePoco("push", ruta)) return;
   router.push(ruta);
 }
 
@@ -138,9 +151,7 @@ export function irUnaVez(ruta: Parameters<typeof router.push>[0]): void {
  * segundo terminaba ganando cuando el primero todavía estaba montándose.
  */
 export function reemplazarUnaVez(ruta: Parameters<typeof router.replace>[0]): void {
-  const ahora = Date.now();
-  if (ahora - ultimoViaje < BLOQUEO_NAVEGACION_MS) return;
-  ultimoViaje = ahora;
+  if (seNavegoHacePoco("replace", ruta)) return;
   router.replace(ruta);
 }
 

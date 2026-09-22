@@ -32,6 +32,11 @@ export default function DeleteAccount({
     try {
       await onConfirm(password);
     } catch (err) {
+      if ((err as Error)?.message === "unsettled-personal-contributions") {
+        setError(t("deleteAccount.unsettledContributions"));
+        setLoading(false);
+        return;
+      }
       const code = (err as { code?: string })?.code || "";
       setError(firebaseErrorMessage(code));
       setLoading(false);

@@ -1,18 +1,19 @@
 import { memo, useCallback, useMemo, useState } from "react";
-import { FlatList, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Search, TrendingDown, TrendingUp, X } from "lucide-react-native";
+import { Search, SlidersHorizontal, TrendingDown, TrendingUp, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import Anuncio from "@/components/Anuncio";
 import EtiquetaMetodo from "@/components/EtiquetaMetodo";
 import IconBadge from "@/components/IconBadge";
-import ThemeToggleButton from "@/components/ThemeToggleButton";
+import MonthSelector from "@/components/MonthSelector";
 import { catInfo } from "@/constants/categories";
 import { iconoDe } from "@/constants/iconos";
 import { esFoto } from "@/utils/iconosFavoritos";
 import { methodLabel } from "@/constants/i18n";
 import { CARD_SHADOW } from "@/constants/style";
 import { fmtDate, monthKey } from "@/utils/format";
+import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
@@ -100,10 +101,12 @@ const Fila = memo(function Fila({
 export default function History({
   transactions,
   month,
+  setMonth,
   onOpenDetail,
 }: {
   transactions: Transaction[];
   month: Month;
+  setMonth: (month: Month) => void;
   onOpenDetail: (id: number) => void;
 }) {
   const { fmt, t, monthNames, userLanguage } = useAppData();
@@ -116,12 +119,27 @@ export default function History({
   ] as const;
   const [filter, setFilter] = useState<"all" | "expense" | "income">("all");
   const [search, setSearch] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [minAmount, setMinAmount] = useState("");
+  const [maxAmount, setMaxAmount] = useState("");
   const insets = useSafeAreaInsets();
   const mk = monthKey(month.y, month.m);
   const allMonthTx = useMemo(
     () => transactions.filter((t) => t.date.startsWith(mk)),
     [transactions, mk]
   );
+  const availableMonths = useMemo(
+    () => Array.from(new Set(transactions.filter((transaction) => /^\d{4}-\d{2}-\d{2}$/.test(transaction.date)).map((transaction) => transaction.date.slice(0, 7)))).sort().reverse(),
+    [transactions],
+  );
+  const categoriesForMonth = useMemo(
+    () => Array.from(new Set(allMonthTx.map((transaction) => transaction.category))).sort((a, b) => t(catInfo(a).label).localeCompare(t(catInfo(b).label))),
+    [allMonthTx, t, userLanguage],
+  );
+  const parsedMinAmount = parseAmountInput(minAmount);
+  const parsedMaxAmount = parseAmountInput(maxAmount);
+  const hasAdvancedFilters = Boolean(categoryFilter || minAmount || maxAmount);
 
   const { totalExpense, totalIncome } = useMemo(() => {
     return {
@@ -129,11 +147,17 @@ export default function History({
       totalIncome: allMonthTx.filter((t) => t.type === "income" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0),
     };
   }, [allMonthTx]);
+  const showIncomeTotal = totalIncome > 0 && (filter === "all" || filter === "income");
+  const showExpenseTotal = totalExpense > 0 && (filter === "all" || filter === "expense");
+  const totalHasMoreThanEightFigures = (amount: number) => Math.trunc(Math.abs(amount)).toString().length >= 8;
+  const totalsVertical = showIncomeTotal && showExpenseTotal && (totalHasMoreThanEightFigures(totalIncome) || totalHasMoreThanEightFigures(totalExpense));
 
   const renglones = useMemo<Renglon[]>(() => {
     const query = search.trim().toLowerCase();
     const monthTx = allMonthTx
       .filter((t) => filter === "all" || t.type === filter)
+      .filter((tx) => !categoryFilter || tx.category === categoryFilter)
+      .filter((tx) => (!minAmount || tx.amount >= parsedMinAmount) && (!maxAmount || tx.amount <= parsedMaxAmount))
       .filter((tx) => {
         if (!query) return true;
         const c = catInfo(tx.category);
@@ -152,7 +176,7 @@ export default function History({
     });
     return salida;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allMonthTx, filter, search, userLanguage]);
+  }, [allMonthTx, filter, search, userLanguage, categoryFilter, minAmount, maxAmount, parsedMinAmount, parsedMaxAmount]);
 
   const dibujar = useCallback(
     ({ item }: { item: Renglon }) =>
@@ -183,14 +207,11 @@ export default function History({
       automaticallyAdjustKeyboardInsets
       ListHeaderComponent={
         <View>
-          <View className="px-5 pt-3 pb-1 flex-row items-start justify-between">
+          <View className="px-5 pt-3 pb-1 flex-row items-start justify-between gap-3">
             <View>
               <Text className="text-xl font-extrabold text-slate-900 dark:text-slate-100">{t("history.title")}</Text>
-              <Text className="text-xs text-slate-500 dark:text-slate-300">
-                {monthNames[month.m]} {month.y}
-              </Text>
             </View>
-            <ThemeToggleButton />
+            <MonthSelector month={month} months={availableMonths} monthNames={monthNames} onChange={setMonth} />
           </View>
 
           <View className="px-5 mt-3">
@@ -208,8 +229,65 @@ export default function History({
                   <X size={16} color="#94a3b8" />
                 </TouchableOpacity>
               )}
+              <TouchableOpacity
+                onPress={() => setShowFilters((open) => !open)}
+                accessibilityRole="button"
+                accessibilityLabel={t("history.advancedFilters")}
+                className={`h-8 w-8 items-center justify-center rounded-lg ${hasAdvancedFilters || showFilters ? "bg-emerald-100 dark:bg-emerald-950" : ""}`}
+              >
+                <SlidersHorizontal size={16} color={hasAdvancedFilters || showFilters ? "#059669" : "#94a3b8"} />
+              </TouchableOpacity>
             </View>
           </View>
+
+          {showFilters ? (
+            <View className="mx-5 mt-2 rounded-2xl border-[1.5px] border-slate-200 bg-slate-50 p-3 dark:border-noche-borde dark:bg-noche-2">
+              <View className="mb-2 flex-row items-center justify-between">
+                <Text className="text-xs font-extrabold text-slate-700 dark:text-slate-100">{t("history.advancedFilters")}</Text>
+                {hasAdvancedFilters ? (
+                  <TouchableOpacity onPress={() => { setCategoryFilter(""); setMinAmount(""); setMaxAmount(""); }}>
+                    <Text className="text-xs font-bold text-emerald-600">{t("history.clearFilters")}</Text>
+                  </TouchableOpacity>
+                ) : null}
+              </View>
+              <Text className="mb-1.5 text-[11px] font-semibold text-slate-500 dark:text-slate-300">{t("history.categoryFilter")}</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 4 }}>
+                <TouchableOpacity onPress={() => setCategoryFilter("")} className={`rounded-full px-3 py-2 ${!categoryFilter ? "bg-emerald-600" : "bg-white dark:bg-noche"}`}>
+                  <Text className={`text-xs font-bold ${!categoryFilter ? "text-white" : "text-slate-600 dark:text-slate-200"}`}>{t("history.allCategories")}</Text>
+                </TouchableOpacity>
+                {categoriesForMonth.map((id) => {
+                  const selected = categoryFilter === id;
+                  return (
+                    <TouchableOpacity key={id} onPress={() => setCategoryFilter(selected ? "" : id)} className={`rounded-full px-3 py-2 ${selected ? "bg-emerald-600" : "bg-white dark:bg-noche"}`}>
+                      <Text className={`text-xs font-bold ${selected ? "text-white" : "text-slate-600 dark:text-slate-200"}`}>{t(catInfo(id).label)}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+              <Text className="mb-1.5 mt-3 text-[11px] font-semibold text-slate-500 dark:text-slate-300">{t("history.amountRange")}</Text>
+              <View className="flex-row items-center gap-2">
+                <TextInput
+                  disableFullscreenUI
+                  value={minAmount}
+                  onChangeText={(value) => setMinAmount(sanitizeAmountInput(value))}
+                  keyboardType="decimal-pad"
+                  placeholder={t("history.minAmount")}
+                  placeholderTextColor="#94a3b8"
+                  className="min-w-0 flex-1 rounded-xl border-[1.5px] border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 dark:border-noche-borde dark:bg-noche dark:text-slate-100"
+                />
+                <Text className="text-xs font-bold text-slate-400">—</Text>
+                <TextInput
+                  disableFullscreenUI
+                  value={maxAmount}
+                  onChangeText={(value) => setMaxAmount(sanitizeAmountInput(value))}
+                  keyboardType="decimal-pad"
+                  placeholder={t("history.maxAmount")}
+                  placeholderTextColor="#94a3b8"
+                  className="min-w-0 flex-1 rounded-xl border-[1.5px] border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 dark:border-noche-borde dark:bg-noche dark:text-slate-100"
+                />
+              </View>
+            </View>
+          ) : null}
 
           <View className="px-5 mt-3 flex-row gap-2">
             {FILTERS.map(({ id, label }) => (
@@ -225,13 +303,10 @@ export default function History({
             ))}
           </View>
 
-          {/* Los totales usan todo el ancho: Ingresos arriba y Gastos abajo.
-              Así un monto largo no compite por espacio con otra tarjeta y la
-              columna sigue siendo compacta en teléfonos estrechos. */}
-          <View className="px-5 mt-3 gap-3 mb-3">
-            {(filter === "all" || filter === "income") && (
+          {(showIncomeTotal || showExpenseTotal) ? <View className={`px-5 mt-3 mb-3 ${totalsVertical ? "gap-3" : "flex-row gap-3"}`}>
+            {showIncomeTotal && (
               <View
-                className="w-full flex-row items-center gap-2.5 bg-emerald-50 dark:bg-noche-2 rounded-xl px-3 py-2.5 border-[1.5px] border-emerald-100 dark:border-noche-borde"
+                className={`${totalsVertical ? "w-full" : "flex-1"} flex-row items-center gap-2.5 bg-emerald-50 dark:bg-noche-2 rounded-xl px-3 py-2.5 border-[1.5px] border-emerald-100 dark:border-noche-borde`}
                 style={CARD_SHADOW}
               >
                 <View className="w-8 h-8 rounded-lg bg-emerald-100 items-center justify-center">
@@ -247,9 +322,9 @@ export default function History({
                 </View>
               </View>
             )}
-            {(filter === "all" || filter === "expense") && (
+            {showExpenseTotal && (
               <View
-                className="w-full flex-row items-center gap-2.5 bg-rose-50 dark:bg-noche-2 rounded-xl px-3 py-2.5 border-[1.5px] border-rose-100 dark:border-noche-borde"
+                className={`${totalsVertical ? "w-full" : "flex-1"} flex-row items-center gap-2.5 bg-rose-50 dark:bg-noche-2 rounded-xl px-3 py-2.5 border-[1.5px] border-rose-100 dark:border-noche-borde`}
                 style={CARD_SHADOW}
               >
                 <View className="w-8 h-8 rounded-lg bg-rose-100 items-center justify-center">
@@ -265,7 +340,7 @@ export default function History({
                 </View>
               </View>
             )}
-          </View>
+          </View> : null}
         </View>
       }
       ListEmptyComponent={

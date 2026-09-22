@@ -13,6 +13,19 @@ export type PersonalLinkedTransfer = {
   internalTransferLink?: string;
 };
 
+/** La mitad que vive en Personal de una transferencia a un espacio. */
+export type PersonalTransferMovement = PersonalLinkedTransfer & {
+  type: "expense" | "income";
+  amount: number;
+};
+
+/** Datos mínimos de un aporte familiar antiguo, previo al vínculo doble. */
+export type LegacyFamilyContribution = LinkedSpaceMovement & {
+  descripcion: string;
+  method?: string;
+  creadoPor: string;
+};
+
 const CENT = 0.005;
 
 export function balanceOfSpace(items: LinkedSpaceMovement[]): number {
@@ -29,6 +42,31 @@ export function netFromPersonal(items: LinkedSpaceMovement[], ownerUid?: string)
 
 export function returnableToPersonal(items: LinkedSpaceMovement[], ownerUid?: string): number {
   return Math.max(0, Math.min(balanceOfSpace(items), netFromPersonal(items, ownerUid)));
+}
+
+/**
+ * Un espacio no se puede cerrar solo porque su saldo global sea cero. Si un
+ * aporte de Personal se gastó, cerrar el espacio borraría su contraparte y
+ * haría que reaparezca en Personal. Cada aporte enlazado debe volver primero
+ * a la cuenta que lo puso.
+ */
+export function hasUnreturnedPersonalContributions(items: LinkedSpaceMovement[]): boolean {
+  // Los vínculos antiguos no tenían `personalOwnerUid`. Siguen siendo dinero
+  // salido de Personal y no se puede permitir que el cierre los haga
+  // desaparecer solo porque les falte ese dato nuevo.
+  if (items.some(item => item.personalTransactionId != null && !item.personalOwnerUid)) {
+    return netFromPersonal(items) > CENT;
+  }
+  const contributors = new Set(
+    items
+      .filter(item => item.personalTransactionId != null && item.personalOwnerUid)
+      .map(item => item.personalOwnerUid!),
+  );
+  return [...contributors].some(uid => netFromPersonal(items, uid) > CENT);
+}
+
+export function canCloseLinkedSpace(items: LinkedSpaceMovement[]): boolean {
+  return Math.abs(balanceOfSpace(items)) <= CENT && !hasUnreturnedPersonalContributions(items);
 }
 
 export function canSpendFromSpace(items: LinkedSpaceMovement[], amount: number): boolean {
@@ -54,6 +92,48 @@ export function minimumContributionAmount(items: LinkedSpaceMovement[], contribu
 
 export function totalAcrossPersonalAndSpace(personal: number, items: LinkedSpaceMovement[]): number {
   return personal + balanceOfSpace(items);
+}
+
+/**
+ * Dinero de Personal que sigue dentro de un tipo de espacio.
+ *
+ * Una salida enlazada es un aporte hecho desde Personal; una entrada enlazada
+ * es una devolución. No se miran ingresos externos porque nunca generan una
+ * mitad enlazada en Personal. Se redondea a centavos al final para que una
+ * suma como 0.1 + 0.2 no deje una tarjeta visible por un residuo decimal.
+ */
+export function netTransferredFromPersonal(
+  movements: PersonalTransferMovement[],
+  kind: "family" | "box",
+): number {
+  const net = movements.reduce((sum, item) => {
+    if (item.internalTransfer !== kind || !Number.isFinite(item.amount) || item.amount <= 0) return sum;
+    return sum + (item.type === "expense" ? item.amount : -item.amount);
+  }, 0);
+  return Math.max(0, Math.round(net * 100) / 100);
+}
+
+/**
+ * Los primeros espacios Familia guardaban el origen solo como texto. Solo se
+ * migra el texto exacto que Fino generaba, hecho por la propia cuenta y con
+ * método transferencia; así un ingreso externo de un banco nunca se convierte
+ * por error en una salida de Personal.
+ */
+export function isTrustedLegacyFamilyContribution(item: LegacyFamilyContribution, uid: string): boolean {
+  const labels = new Set([
+    "Monto inicial desde Personal",
+    "Desde Personal",
+    "Initial amount from Personal",
+    "From Personal",
+    "Valor inicial de Pessoal",
+    "De Pessoal",
+  ]);
+  return item.tipo === "ingreso"
+    && item.method === "transfer"
+    && item.creadoPor === uid
+    && item.personalTransactionId == null
+    && item.personalOwnerUid == null
+    && labels.has(item.descripcion.trim());
 }
 
 /**

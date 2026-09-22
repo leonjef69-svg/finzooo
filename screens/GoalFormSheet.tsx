@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -24,6 +24,8 @@ export default function GoalFormSheet({
   const { userCurrency, t, monthNames } = useAppData();
   const [name, setName] = useState(goal?.name || "");
   const [target, setTarget] = useState(goal ? String(goal.target) : "");
+  const saveLock = useRef(false);
+  const [guardando, setGuardando] = useState(false);
   const valid = name.trim().length > 0 && parseAmountInput(target) > 0;
   const createdDate = goal?.createdDate || new Date().toISOString().slice(0, 10);
   const insets = useSafeAreaInsets();
@@ -111,8 +113,11 @@ export default function GoalFormSheet({
             <Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            disabled={!valid}
-            onPress={() =>
+            disabled={!valid || guardando}
+            onPress={() => {
+              if (saveLock.current) return;
+              saveLock.current = true;
+              setGuardando(true);
               onSave({
                 id: goal?.id || nextId(),
                 name: name.trim(),
@@ -120,9 +125,9 @@ export default function GoalFormSheet({
                 saved: goal?.saved || 0,
                 createdDate,
                 completed: goal ? goal.completed : false,
-              })
-            }
-            className={`flex-1 py-3.5 rounded-2xl bg-emerald-600 items-center ${!valid ? "opacity-40" : ""}`}
+              });
+            }}
+            className={`flex-1 py-3.5 rounded-2xl bg-emerald-600 items-center ${!valid || guardando ? "opacity-40" : ""}`}
           >
             <Text className="font-bold text-white">{t("common.save")}</Text>
           </TouchableOpacity>
