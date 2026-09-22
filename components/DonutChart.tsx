@@ -1,6 +1,6 @@
 import { useState, type ComponentType } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
-import Svg, { Circle, Line } from "react-native-svg";
+import Svg, { Circle, Path } from "react-native-svg";
 
 type Slice = {
   id: string;
@@ -45,13 +45,19 @@ export default function DonutChart({ data }: { data: Slice[] }) {
           const bubbleY = CENTER_Y + Math.sin(angle) * orbitY;
           const ringX = CENTER_X + Math.cos(angle) * (radius + 10);
           const ringY = CENTER_Y + Math.sin(angle) * (radius + 10);
+          // No son radios rectos: cada enlace sale tangente a la rosquilla y
+          // se curva hacia su círculo, como una llamada visual ordenada.
+          const tangentX = -Math.sin(angle);
+          const tangentY = Math.cos(angle);
+          const bend = (index % 2 === 0 ? 1 : -1) * Math.min(30, 13 + count);
+          const controlOneX = ringX + tangentX * bend;
+          const controlOneY = ringY + tangentY * bend;
+          const controlTwoX = bubbleX - tangentX * bend * 0.55;
+          const controlTwoY = bubbleY - tangentY * bend * 0.55;
           return (
-            <Line
+            <Path
               key={`line-${item.id}`}
-              x1={ringX}
-              y1={ringY}
-              x2={bubbleX}
-              y2={bubbleY}
+              d={`M ${ringX} ${ringY} C ${controlOneX} ${controlOneY}, ${controlTwoX} ${controlTwoY}, ${bubbleX} ${bubbleY}`}
               stroke={item.color}
               strokeWidth={2}
               strokeOpacity={0.82}
