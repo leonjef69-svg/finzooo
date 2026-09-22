@@ -1,6 +1,7 @@
 import { useState, type ComponentType } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
+import { useColorScheme } from "nativewind";
 
 type Slice = {
   id: string;
@@ -12,7 +13,7 @@ type Slice = {
 
 const MIN_VISIBLE_FRACTION = 0.012;
 const WIDTH = 316;
-const HEIGHT = 360;
+const HEIGHT = 380;
 const CENTER_X = WIDTH / 2;
 const CENTER_Y = HEIGHT / 2;
 
@@ -23,12 +24,13 @@ const CENTER_Y = HEIGHT / 2;
  */
 export default function DonutChart({ data }: { data: Slice[] }) {
   const [selected, setSelected] = useState<string | null>(null);
+  const { colorScheme } = useColorScheme();
   const total = data.reduce((sum, item) => sum + item.value, 0);
   const count = data.length;
   // Se aprovecha el alto disponible de la tarjeta: los círculos pueden ser
   // legibles aun cuando haya bastantes categorías, sin quedar pegados.
-  const bubble = count >= 12 ? 44 : count >= 9 ? 50 : count >= 7 ? 58 : 68;
-  const radius = count >= 12 ? 54 : count >= 9 ? 58 : count >= 7 ? 62 : 68;
+  const bubble = count >= 16 ? 44 : count >= 12 ? 50 : count >= 9 ? 54 : count >= 7 ? 62 : 70;
+  const radius = count >= 16 ? 54 : count >= 12 ? 58 : count >= 9 ? 62 : count >= 7 ? 66 : 70;
   const orbitX = WIDTH / 2 - bubble / 2 - 5;
   const orbitY = HEIGHT / 2 - bubble / 2 - 5;
   const visualValues = data.map((item) => Math.max(item.value, total * MIN_VISIBLE_FRACTION));
@@ -99,8 +101,8 @@ export default function DonutChart({ data }: { data: Slice[] }) {
         const top = CENTER_Y + Math.sin(angle) * orbitY - bubble / 2;
         const Icon = item.Icon;
         const percentage = (item.value / total) * 100;
-        const iconSize = bubble >= 50 ? 20 : bubble >= 42 ? 17 : 14;
-        const textSize = bubble >= 50 ? 13 : bubble >= 42 ? 11 : 9;
+        const iconSize = bubble >= 62 ? 22 : bubble >= 50 ? 19 : bubble >= 44 ? 16 : 14;
+        const textSize = bubble >= 62 ? 14 : bubble >= 50 ? 12 : bubble >= 44 ? 10 : 9;
         return (
           <TouchableOpacity
             key={`bubble-${item.id}`}
@@ -116,13 +118,13 @@ export default function DonutChart({ data }: { data: Slice[] }) {
               borderRadius: bubble / 2,
               borderWidth: 2.25,
               borderColor: item.color,
-              backgroundColor: "#171719",
+              backgroundColor: colorScheme === "dark" ? "#171719" : "#ffffff",
               alignItems: "center",
               justifyContent: "center",
             }}
           >
             {Icon ? <Icon size={iconSize} color={item.color} strokeWidth={2.35} /> : null}
-            <Text style={{ marginTop: 1, color: "#ffffff", fontSize: textSize, fontWeight: "800" }}>
+            <Text numberOfLines={1} style={{ marginTop: 2, color: colorScheme === "dark" ? "#ffffff" : "#0f172a", fontSize: textSize, fontWeight: "800" }}>
               {percentage < 1 ? "<1%" : `${Math.round(percentage)}%`}
             </Text>
           </TouchableOpacity>
