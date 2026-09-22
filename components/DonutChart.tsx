@@ -12,7 +12,7 @@ type Slice = {
 
 const MIN_VISIBLE_FRACTION = 0.012;
 const WIDTH = 316;
-const HEIGHT = 300;
+const HEIGHT = 360;
 const CENTER_X = WIDTH / 2;
 const CENTER_Y = HEIGHT / 2;
 
@@ -25,8 +25,10 @@ export default function DonutChart({ data }: { data: Slice[] }) {
   const [selected, setSelected] = useState<string | null>(null);
   const total = data.reduce((sum, item) => sum + item.value, 0);
   const count = data.length;
-  const bubble = count >= 12 ? 36 : count >= 9 ? 42 : count >= 7 ? 48 : 54;
-  const radius = count >= 12 ? 48 : count >= 9 ? 52 : 58;
+  // Se aprovecha el alto disponible de la tarjeta: los círculos pueden ser
+  // legibles aun cuando haya bastantes categorías, sin quedar pegados.
+  const bubble = count >= 12 ? 44 : count >= 9 ? 50 : count >= 7 ? 58 : 68;
+  const radius = count >= 12 ? 54 : count >= 9 ? 58 : count >= 7 ? 62 : 68;
   const orbitX = WIDTH / 2 - bubble / 2 - 5;
   const orbitY = HEIGHT / 2 - bubble / 2 - 5;
   const visualValues = data.map((item) => Math.max(item.value, total * MIN_VISIBLE_FRACTION));
@@ -59,7 +61,7 @@ export default function DonutChart({ data }: { data: Slice[] }) {
               key={`line-${item.id}`}
               d={`M ${ringX} ${ringY} C ${controlOneX} ${controlOneY}, ${controlTwoX} ${controlTwoY}, ${bubbleX} ${bubbleY}`}
               stroke={item.color}
-              strokeWidth={2}
+              strokeWidth={1.15}
               strokeOpacity={0.82}
             />
           );
