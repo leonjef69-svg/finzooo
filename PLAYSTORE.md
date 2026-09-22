@@ -18,11 +18,11 @@ y Google lo revisa de verdad.
 | Nombre en la tienda | **Fino: Tus Gastos e Ingresos** (27 de 30) |
 | Nombre bajo el icono | **Fino** |
 | Identificador | **`com.finoapp.gastos`** — `com.finzo.app` ya estaba tomado en Play y ese nombre no se libera nunca. Se cambió el 13/08/2026; el porqué entero está en ESTADO.md |
-| Versión | 1.0.0 |
+| Versión | 1.0.8 (`versionCode 10`) |
 | Categoría | **Finanzas** |
 | Público | Mayores de 18 (no dirigida a niños) |
 | País principal | Perú |
-| Precio | Gratis, con compras dentro de la app |
+| Precio | Gratis; las compras dentro de la app todavía no están habilitadas |
 | Correo de contacto | dinero123xc@gmail.com |
 | Política de privacidad | https://leonjef69-svg.github.io/finzooo/privacidad.html |
 | Borrado de cuenta | https://leonjef69-svg.github.io/finzooo/borrar-cuenta.html |

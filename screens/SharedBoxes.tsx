@@ -1,7 +1,7 @@
 import { SpaceTotals, SpacePaymentMethod, SpaceFilterReset, type MovementFilter } from "@/components/SpaceMovementControls";
 import { methodLabel } from "@/constants/i18n";
 import { useEffect, useRef, useState } from "react";
-import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View, Share } from "react-native";
+import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -13,8 +13,9 @@ import { irUnaVez, safeBack } from "@/utils/nav";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { nextId } from "@/utils/id";
 import { canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
+import { actualizarAportePersonal, borrarAportePersonal } from "@/utils/personalContribution";
 import { LogOut, Pencil, Trash2, UserMinus, UserPlus, UsersRound } from "lucide-react-native";
-import { actualizarMovimientoCajaCompartida, borrarMovimientoCajaCompartida, cerrarCajaCompartida, crearInvitacionCaja, escucharMovimientosCaja, guardarMovimientoCajaCompartida, listarCajasCompartidas, listarMiembrosCaja, observarCierreCaja, quitarMiembroCaja, salirDeCaja, unirseACaja, type CajaCompartida, type MiembroCajaCompartida, type MovimientoCajaCompartida } from "@/utils/cloudCajasCompartidas";
+import { borrarMovimientoCajaCompartida, cerrarCajaCompartida, crearInvitacionCaja, escucharMovimientosCaja, guardarMovimientoCajaCompartida, listarCajasCompartidas, listarMiembrosCaja, observarCierreCaja, quitarMiembroCaja, salirDeCaja, unirseACaja, type CajaCompartida, type MiembroCajaCompartida, type MovimientoCajaCompartida } from "@/utils/cloudCajasCompartidas";
 
 export default function SharedBoxes() {
   const { t, userCurrency, isPremium, userName, showToast, disponible, transactions, addOrUpdateTransaction, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
@@ -100,7 +101,7 @@ export default function SharedBoxes() {
         const minimo = minimumContributionAmount(movimientos, aporteEditado, uid);
         if (valor < minimo - 0.005) { showToast(t("boxes.contributionUsed")); return; }
         if (valor - aporteEditado.monto > disponible) { showToast(t("boxes.notEnoughPersonal")); return; }
-        await actualizarMovimientoCajaCompartida(caja.id, aporteEditado.id, valor, nombre || aporteEditado.descripcion);
+        await actualizarAportePersonal("box", caja.id, aporteEditado.id, valor, nombre || aporteEditado.descripcion);
         const personal = transactions.find(tx => tx.id === aporteEditado.personalTransactionId);
         if (personal) addOrUpdateTransaction({ ...personal, amount: valor });
         setEditandoAporteId(null); limpiar(); return;
@@ -113,7 +114,8 @@ export default function SharedBoxes() {
   const borrar = (item: MovimientoCajaCompartida) => ejecutar(async () => {
     if (!caja) return;
     if (item.tipo === "ingreso" && item.personalTransactionId != null && !canUndoContribution(movimientos, item, item.personalOwnerUid)) { showToast(t("boxes.contributionUsed")); return; }
-    await borrarMovimientoCajaCompartida(caja.id, item.id);
+    if (item.personalTransactionId != null) await borrarAportePersonal("box", caja.id, item.id);
+    else await borrarMovimientoCajaCompartida(caja.id, item.id);
     if (item.personalOwnerUid === uid && item.personalTransactionId != null) deleteLinkedTransferTransaction(item.personalTransactionId);
   });
   const devolverAPersonal = () => ejecutar(async () => {

@@ -28,4 +28,19 @@ function contributionLimits(movements, uid, original) {
   };
 }
 
-module.exports = { CENT, contributionLimits };
+/** Un espacio solo se puede cerrar o purgar cuando no queda saldo ni aportes pendientes. */
+function canCloseLinkedSpace(movements) {
+  if (Math.abs(balance(movements)) > CENT) return false;
+  const contributors = new Set(
+    movements
+      .filter(movement => typeof movement.personalTransactionId === "number" && typeof movement.personalOwnerUid === "string")
+      .map(movement => movement.personalOwnerUid),
+  );
+  return [...contributors].every(uid => personalNet(movements, uid) <= CENT);
+}
+
+function hasUnreturnedPersonalContribution(movements, uid) {
+  return personalNet(movements, uid) > CENT;
+}
+
+module.exports = { CENT, contributionLimits, canCloseLinkedSpace, hasUnreturnedPersonalContribution };

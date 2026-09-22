@@ -106,7 +106,7 @@ export default function History({
   setMonth: (month: Month) => void;
   onOpenDetail: (id: number) => void;
 }) {
-  const { fmt, t, monthNames, userLanguage } = useAppData();
+  const { fmt, t, monthNames } = useAppData();
   const { colorScheme } = useColorScheme();
   const oscuro = colorScheme === "dark";
   const FILTERS = [
@@ -132,7 +132,7 @@ export default function History({
   );
   const categoriesForMonth = useMemo(
     () => Array.from(new Set(allMonthTx.map((transaction) => transaction.category))).sort((a, b) => t(catInfo(a).label).localeCompare(t(catInfo(b).label))),
-    [allMonthTx, t, userLanguage],
+    [allMonthTx, t],
   );
   const parsedMinAmount = parseAmountInput(minAmount);
   const parsedMaxAmount = parseAmountInput(maxAmount);
@@ -172,8 +172,7 @@ export default function History({
       salida.push({ clave: `m:${tx.id}`, tipo: "fila", tx });
     });
     return salida;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allMonthTx, filter, search, userLanguage, categoryFilter, minAmount, maxAmount, parsedMinAmount, parsedMaxAmount]);
+  }, [allMonthTx, filter, search, categoryFilter, minAmount, maxAmount, parsedMinAmount, parsedMaxAmount, t]);
 
   const dibujar = useCallback(
     ({ item }: { item: Renglon }) =>

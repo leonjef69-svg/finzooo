@@ -19,7 +19,8 @@ import {
 import { db } from "@/utils/firebase";
 import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
-import { canCloseLinkedSpace } from "@/utils/linkedTransfers";
+import { canCloseLinkedSpace, hasUnreturnedPersonalContribution } from "@/utils/linkedTransfers";
+import { cerrarEspacioCompartido, prepararBorradoEspacioCompartido, salirEspacioCompartido } from "@/utils/personalContribution";
 
 export type EspacioFamilia = {
   id: string;
@@ -118,36 +119,19 @@ export async function renombrarFamilia(familiaId: string, nombre: string): Promi
 }
 
 export async function cerrarFamilia(uid: string, familiaId: string): Promise<void> {
-  const ref = doc(db, "familySpaces", familiaId);
-  await runTransaction(db, async transaction => {
-    const snap = await transaction.get(ref);
-    if (!snap.exists() || snap.data().ownerUid !== uid) throw new Error("not-owner");
-    transaction.update(ref, { closing: true });
-  });
-  try {
-    const movimientos = await listarMovimientosFamilia(familiaId);
-    if (!canCloseLinkedSpace(movimientos)) throw new Error("unsettled-personal-contributions");
-    const miembros = await getDocs(collection(db, "familySpaces", familiaId, "members"));
-    if (miembros.size > 450) throw new Error("too-many-members");
-    await runTransaction(db, async transaction => {
-      const [snap, ...indices] = await Promise.all([
-        transaction.get(ref),
-        ...miembros.docs.map(member => transaction.get(doc(db, "familyUsers", member.id))),
-      ]);
-      if (!snap.exists() || snap.data().ownerUid !== uid || snap.data().closing !== true) throw new Error("not-owner");
-      transaction.update(ref, { closed: true, closing: false });
-      miembros.docs.forEach((member, index) => {
-        transaction.delete(doc(db, "familyUsers", member.id, "spaces", familiaId));
-        if (!indices[index]?.exists() || String(indices[index].data().activeFamilyId || "") !== familiaId) return;
-        transaction.set(doc(db, "familyUsers", member.id), {
-          activeFamilyId: "",
-          closedFamilyIds: arrayUnion(familiaId),
-        }, { merge: true });
-      });
+  if (!uid) throw new Error("not-authenticated");
+  await cerrarEspacioCompartido("family", familiaId);
+  const miembros = await getDocs(collection(db, "familySpaces", familiaId, "members"));
+  for (let inicio = 0; inicio < miembros.docs.length; inicio += 200) {
+    const grupo = miembros.docs.slice(inicio, inicio + 200);
+    const indices = await Promise.all(grupo.map(member => getDoc(doc(db, "familyUsers", member.id))));
+    const lote = writeBatch(db);
+    grupo.forEach((member, index) => {
+      lote.delete(doc(db, "familyUsers", member.id, "spaces", familiaId));
+      if (!indices[index]?.exists() || String(indices[index].data().activeFamilyId || "") !== familiaId) return;
+      lote.set(doc(db, "familyUsers", member.id), { activeFamilyId: "", closedFamilyIds: arrayUnion(familiaId) }, { merge: true });
     });
-  } catch (error) {
-    await updateDoc(ref, { closing: false }).catch(() => {});
-    throw error;
+    await lote.commit();
   }
 }
 
@@ -206,11 +190,6 @@ export async function guardarMovimientoFamilia(familyId: string, uid: string, mo
   return ref.id;
 }
 
-export async function actualizarMovimientoFamilia(familyId: string, movementId: string, monto: number, descripcion: string): Promise<void> {
-  if (!isSafeMoneyAmount(monto) || monto <= 0) throw new Error("invalid-amount");
-  await updateDoc(doc(db, "familySpaces", familyId, "movements", movementId), { monto, descripcion: descripcion.trim().slice(0, 60) });
-}
-
 /** Vincula de una sola vez un aporte familiar antiguo con su débito de Personal. */
 export async function vincularMovimientoPersonalFamilia(familyId: string, movementId: string, transactionId: number, uid: string): Promise<void> {
   if (!Number.isSafeInteger(transactionId) || transactionId <= 0) throw new Error("invalid-transaction-id");
@@ -225,25 +204,12 @@ export async function borrarMovimientoFamilia(familyId: string, movementId: stri
 }
 
 export async function salirDeFamilia(uid: string, familyId: string): Promise<void> {
-  await runTransaction(db, async (transaction) => {
-    transaction.delete(doc(db, "familySpaces", familyId, "members", uid));
-    transaction.delete(doc(db, "familyUsers", uid, "spaces", familyId));
-    const indexRef = doc(db, "familyUsers", uid);
-    const index = await transaction.get(indexRef);
-    if (index.exists() && String(index.data().activeFamilyId || "") === familyId) transaction.set(indexRef, { activeFamilyId: "" }, { merge: true });
-  });
+  if (!uid) throw new Error("not-authenticated");
+  await salirEspacioCompartido("family", familyId);
 }
 
 export async function quitarMiembroFamilia(familyId: string, memberUid: string): Promise<void> {
-  const indexRef = doc(db, "familyUsers", memberUid);
-  await runTransaction(db, async transaction => {
-    const index = await transaction.get(indexRef);
-    transaction.delete(doc(db, "familySpaces", familyId, "members", memberUid));
-    transaction.delete(doc(db, "familyUsers", memberUid, "spaces", familyId));
-    if (index.exists() && String(index.data().activeFamilyId || "") === familyId) {
-      transaction.set(indexRef, { activeFamilyId: "" }, { merge: true });
-    }
-  });
+  await salirEspacioCompartido("family", familyId, memberUid);
 }
 
 /** Comprueba antes de iniciar un borrado de cuenta que el dueño no vaya a
@@ -260,8 +226,12 @@ export async function validarBorradoFamiliasDeCuenta(uid: string): Promise<void>
   ].filter(Boolean));
   for (const familyId of ids) {
     const family = await getDoc(doc(db, "familySpaces", familyId));
-    if (!family.exists() || family.data().ownerUid !== uid) continue;
-    if (!canCloseLinkedSpace(await listarMovimientosFamilia(familyId))) {
+    if (!family.exists()) continue;
+    const movimientos = await listarMovimientosFamilia(familyId);
+    const invalido = family.data().ownerUid === uid
+      ? !canCloseLinkedSpace(movimientos)
+      : hasUnreturnedPersonalContribution(movimientos, uid);
+    if (invalido) {
       throw new Error("unsettled-personal-contributions");
     }
   }
@@ -282,23 +252,12 @@ export async function borrarVinculoFamiliaDeCuenta(uid: string): Promise<void> {
     const family = await getDoc(familyRef);
     if (!family.exists()) continue;
     if (family.data().ownerUid !== uid) {
-      const propios = await getDocs(query(collection(db, "familySpaces", familyId, "movements"), where("creadoPor", "==", uid)));
-      for (let inicio = 0; inicio < propios.docs.length; inicio += 400) {
-        const lote = writeBatch(db);
-        for (const item of propios.docs.slice(inicio, inicio + 400)) {
-          lote.update(item.ref, {
-            creadoPor: "deleted",
-            ...(item.data().personalOwnerUid === uid ? { personalOwnerUid: "deleted" } : {}),
-          });
-        }
-        await lote.commit();
-      }
-      await deleteDoc(doc(db, "familySpaces", familyId, "members", uid));
+      await salirEspacioCompartido("family", familyId);
       continue;
     }
     const movimientosParaValidar = await listarMovimientosFamilia(familyId);
     if (!canCloseLinkedSpace(movimientosParaValidar)) throw new Error("unsettled-personal-contributions");
-    await updateDoc(familyRef, { deleting: true });
+    await prepararBorradoEspacioCompartido("family", familyId);
     const [movimientos, miembros, invitaciones] = await Promise.all([
       getDocs(collection(db, "familySpaces", familyId, "movements")),
       getDocs(collection(db, "familySpaces", familyId, "members")),

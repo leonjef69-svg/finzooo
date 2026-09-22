@@ -2,6 +2,7 @@ import {
   balanceOfSpace,
   canSpendFromSpace,
   canCloseLinkedSpace,
+  hasUnreturnedPersonalContribution,
   canUndoContribution,
   isTrustedLegacyFamilyContribution,
   minimumContributionAmount,
@@ -16,7 +17,7 @@ function igual(actual: unknown, esperado: unknown, mensaje: string) {
   if (actual !== esperado) throw new Error(`${mensaje}: ${actual} !== ${esperado}`);
 }
 
-const aporte = { id: "aporte", tipo: "ingreso" as const, monto: 200, personalTransactionId: 10 };
+const aporte = { id: "aporte", tipo: "ingreso" as const, monto: 200, personalTransactionId: 10, personalOwnerUid: "yo" };
 const intacto = [aporte];
 igual(balanceOfSpace(intacto), 200, "el espacio recibe el aporte");
 igual(totalAcrossPersonalAndSpace(300, intacto), 500, "transferir conserva el total");
@@ -31,6 +32,7 @@ igual(returnableToPersonal(usado), 150, "solo se devuelve lo que sigue disponibl
 igual(canUndoContribution(usado, aporte), false, "no se borra un aporte parcialmente usado");
 igual(minimumContributionAmount(usado, aporte), 50, "no se reduce por debajo del dinero utilizado");
 igual(hasUnreturnedPersonalContributions(usado), true, "un aporte Personal gastado sigue pendiente de devolución");
+igual(hasUnreturnedPersonalContribution(usado, "yo"), true, "el preflight detecta el aporte pendiente del miembro que quiere salir");
 igual(canCloseLinkedSpace(usado), false, "un espacio no se cierra aunque luego se lleve el saldo a cero sin devolver a Personal");
 
 const devuelto = [...usado, { id: "retorno", tipo: "gasto" as const, monto: 100, personalTransactionId: 11, personalReturnAmount: 100 }];

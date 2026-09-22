@@ -6,6 +6,7 @@ const rules = fs.readFileSync("firestore.rules", "utf8");
 const cloud = fs.readFileSync("utils/cloudFamilia.ts", "utf8");
 const screen = fs.readFileSync("screens/Family.tsx", "utf8");
 const deletion = fs.readFileSync("utils/cloudSync.ts", "utf8");
+const server = fs.readFileSync("functions/index.js", "utf8");
 
 const codes = new Set(Array.from({ length: 200 }, crearCodigoFamilia));
 assert.equal(codes.size, 200, "los códigos de prueba no se repiten");
@@ -30,7 +31,8 @@ assert.match(screen, /returnableToPersonal\(movimientos, auth\.currentUser\?\.ui
 assert.match(screen, /canSpendFromSpace\(movimientos, value\)/, "Familia impide gastar más que su saldo");
 assert.match(screen, /minimumContributionAmount/, "editar un aporte familiar respeta lo ya utilizado");
 assert.match(screen, /repairLinkedTransferTransactions/, "Familia repara transferencias huérfanas");
-assert.match(screen, /canCloseLinkedSpace\(movimientos\)/, "Familia no puede cerrarse dejando saldo o aportes de Personal pendientes");
+assert.match(cloud, /cerrarEspacioCompartido\("family", familiaId\)/, "Familia delega el cierre al servidor");
+assert.match(server, /exports\.manageLinkedSpace[\s\S]*canCloseLinkedSpace\(movements\)/, "el servidor impide cerrar con saldo o aportes Personal pendientes");
 assert.match(deletion, /borrarVinculoFamiliaDeCuenta/, "eliminar la cuenta también retira su membresía familiar");
 
 console.log("Familia: invitaciones, membresía, vencimiento y privacidad verificados.");

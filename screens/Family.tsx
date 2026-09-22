@@ -5,20 +5,22 @@ import SpaceSwitcher from "@/components/SpaceSwitcher";
 import { useAppData } from "@/contexts/AppDataContext";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { horaDe } from "@/utils/format";
-import { canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, isTrustedLegacyFamilyContribution, minimumContributionAmount, orphanedPersonalTransferIds, returnableToPersonal } from "@/utils/linkedTransfers";
+import { canSpendFromSpace, canUndoContribution, isTrustedLegacyFamilyContribution, minimumContributionAmount, orphanedPersonalTransferIds, returnableToPersonal } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
 import { auth } from "@/utils/firebase";
 import { irUnaVez, safeBack } from "@/utils/nav";
+import { actualizarAportePersonal, borrarAportePersonal } from "@/utils/personalContribution";
 import {
-  actualizarMovimientoFamilia, borrarMovimientoFamilia, cargarFamiliaActiva, crearFamilia, crearInvitacionFamilia, listarFamilias,
+  borrarMovimientoFamilia, cargarFamiliaActiva, crearFamilia, crearInvitacionFamilia, listarFamilias,
   guardarMovimientoFamilia, listarMiembrosFamilia, listarMovimientosFamilia, vincularMovimientoPersonalFamilia,
-  cerrarFamilia, observarCierreFamilia, quitarMiembroFamilia, renombrarFamilia, salirDeFamilia, unirseAFamilia, type EspacioFamilia, type MiembroFamilia,
+  observarCierreFamilia, salirDeFamilia, unirseAFamilia, type EspacioFamilia, type MiembroFamilia,
   type MovimientoFamilia,
 } from "@/utils/cloudFamilia";
-import { ArrowDown, ArrowLeftRight, ArrowUp, Check, ListChecks, MoreVertical, Plus, RefreshCw, Trash2, UserMinus, UserPlus, UsersRound, X } from "lucide-react-native";
+import { ArrowDown, ArrowLeftRight, ArrowUp, Check, ListChecks, LogOut, MoreVertical, Plus, RefreshCw, Trash2, UserPlus, UsersRound, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "expo-router";
 
 const fechaHoy = () => new Date().toLocaleDateString("sv-SE");
 
@@ -66,12 +68,8 @@ export default function Family() {
   const [movementLimit, setMovementLimit] = useState(60);
   const [descripcion, setDescripcion] = useState("");
   const [editandoAporteId, setEditandoAporteId] = useState<string | null>(null);
-  const [editandoNombre, setEditandoNombre] = useState(false);
-  const [menuAbierto, setMenuAbierto] = useState(false);
-  const [verMiembros, setVerMiembros] = useState(false);
   const [seleccionando, setSeleccionando] = useState(false);
   const [seleccionados, setSeleccionados] = useState<string[]>([]);
-  const [nuevoNombre, setNuevoNombre] = useState("");
   const actionLock = useRef(false);
   // Evita dos reparaciones mientras Firestore confirma el nuevo vínculo.
   const legacyRepairIds = useRef(new Set<string>());
@@ -119,7 +117,7 @@ export default function Family() {
     finally { setCargando(false); }
   }, []);
 
-  useEffect(() => { void recargar(); }, [recargar]);
+  useFocusEffect(useCallback(() => { void recargar(); }, [recargar]));
   useEffect(() => {
     const uid = auth.currentUser?.uid;
     if (!uid || cargando) return;
@@ -131,10 +129,10 @@ export default function Family() {
     if (!familiaId) return;
     return observarCierreFamilia(familiaId, () => {
       setFamilia(null); setMovimientos([]); setMiembros([]); setTipo(null);
-      setInvitacion(""); setEditandoNombre(false); setFilter(null);
+      setInvitacion(""); setFilter(null);
       setVerTodas(true); void recargar();
     }, () => toastRef.current(tRef.current("family.connectionError")));
-  }, [familiaId]);
+  }, [familiaId, recargar]);
   const saldo = useMemo(() => movimientos.reduce((sum, item) => sum + (item.tipo === "ingreso" ? item.monto : -item.monto), 0), [movimientos]);
   const resumen = useMemo(() => movimientos.reduce(
     (total, item) => ({
@@ -250,16 +248,6 @@ export default function Family() {
     setInvitacion(await crearInvitacionFamilia(uid, familia.id));
   });
 
-  const guardarNombre = () => ejecutar(async () => {
-    const value = nuevoNombre.trim().slice(0, 35);
-    if (!familia || !owner || !value) return;
-    await renombrarFamilia(familia.id, value);
-    setFamilia({ ...familia, nombre: value });
-    setEditandoNombre(false);
-    setNuevoNombre("");
-    showToast(t("family.renamed"));
-  });
-
   const guardar = () => ejecutar(async () => {
     const uid = auth.currentUser?.uid; const value = parseAmountInput(monto);
     if (!uid || !familia || !tipo || !(value > 0)) return;
@@ -268,7 +256,7 @@ export default function Family() {
       const minimo = minimumContributionAmount(movimientos, aporteEditado, uid);
       if (value < minimo - 0.005) { showToast(t("family.contributionUsed")); return; }
       if (value - aporteEditado.monto > disponible) { showToast(t("family.notEnoughPersonal")); return; }
-      await actualizarMovimientoFamilia(familia.id, aporteEditado.id, value, descripcion || aporteEditado.descripcion);
+      await actualizarAportePersonal("family", familia.id, aporteEditado.id, value, descripcion || aporteEditado.descripcion);
       const personal = transactions.find(tx => tx.id === aporteEditado.personalTransactionId);
       if (personal) addOrUpdateTransaction({ ...personal, amount: value });
       setMonto(""); setDescripcion(""); setEditandoAporteId(null); setTipo(null); await recargar();
@@ -283,15 +271,6 @@ export default function Family() {
     setMonto(""); setDescripcion(""); setOrigenDinero("externo"); setTipo(null); await recargar(); showToast(t("family.movementSaved"));
   });
 
-  const borrar = (item: MovimientoFamilia) => ejecutar(async () => { if (familia) {
-    if (item.tipo === "ingreso" && item.personalTransactionId != null && !canUndoContribution(movimientos, item, item.personalOwnerUid)) { showToast(t("family.contributionUsed")); return; }
-    await borrarMovimientoFamilia(familia.id, item.id);
-    if (item.personalOwnerUid === auth.currentUser?.uid && item.personalTransactionId != null) deleteLinkedTransferTransaction(item.personalTransactionId); await recargar();
-  } });
-  const salir = () => ejecutar(async () => {
-    const uid = auth.currentUser?.uid; if (!uid || !familia || owner) return;
-    await salirDeFamilia(uid, familia.id); setFamilia(null); setMiembros([]); setMovimientos([]); showToast(t("family.left"));
-  });
   const devolverAPersonal = () => ejecutar(async () => {
     const uid = auth.currentUser?.uid;
     if (!uid || !familia || devolvibleAPersonal <= 0) return;
@@ -300,22 +279,16 @@ export default function Family() {
     addOrUpdateTransaction({ id: personalId, type: "income", amount: devolvibleAPersonal, category: "otros", date: fechaHoy(), time: horaDe(Date.now()), method: "transfer", description: t("family.returnFrom", { name: familia.nombre }), notes: "", origin: "manual", internalTransfer: "family", internalTransferLink: movementId });
     await recargar();
   });
-  const quitar = (member: MiembroFamilia) => {
-    if (!familia || !owner || member.rol === "owner") return;
-    Alert.alert(t("family.removeMember"), member.nombre, [{ text: t("common.cancel"), style: "cancel" }, { text: t("common.delete"), style: "destructive", onPress: () => void ejecutar(async () => { await quitarMiembroFamilia(familia.id, member.uid); setMiembros(items => items.filter(item => item.uid !== member.uid)); }) }]);
-  };
-
-  const confirmarCierre = () => {
-    if (!owner || ocupado || !familia) return;
-    if (!canCloseLinkedSpace(movimientos)) { showToast(t("family.closeBalance")); return; }
-    const id = familia.id;
-    Alert.alert(t("family.close"), t("family.closeWarning"), [
+  const salir = () => {
+    const uid = auth.currentUser?.uid;
+    if (!uid || !familia || owner) return;
+    const familyId = familia.id;
+    Alert.alert(t("family.leave"), t("family.leaveWarning"), [
       { text: t("common.cancel"), style: "cancel" },
-      { text: t("family.close"), style: "destructive", onPress: () => void ejecutar(async () => {
-        const uid = auth.currentUser?.uid; if (!uid) return;
-        await cerrarFamilia(uid, id);
+      { text: t("family.leave"), style: "destructive", onPress: () => void ejecutar(async () => {
+        await salirDeFamilia(uid, familyId);
         setFamilia(null); setMiembros([]); setMovimientos([]); setTipo(null); setInvitacion("");
-        showToast(t("family.closed"));
+        setVerTodas(true); await recargar(); showToast(t("family.left"));
       }) },
     ]);
   };
@@ -327,7 +300,8 @@ export default function Family() {
       showToast(t("family.contributionUsed")); return;
     }
     for (const item of items) {
-      await borrarMovimientoFamilia(familia.id, item.id);
+      if (item.personalTransactionId != null) await borrarAportePersonal("family", familia.id, item.id);
+      else await borrarMovimientoFamilia(familia.id, item.id);
       if (item.personalOwnerUid === auth.currentUser?.uid && item.personalTransactionId != null) deleteLinkedTransferTransaction(item.personalTransactionId);
     }
     setSeleccionados([]); setSeleccionando(false); await recargar();
@@ -394,6 +368,7 @@ export default function Family() {
             {seleccionando ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${seleccionados.includes(item.id) ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : null}
           </TouchableOpacity>;
         })}
+        {!owner ? <TouchableOpacity disabled={ocupado} onPress={salir} className="mt-3 min-h-11 flex-row items-center justify-center gap-2"><LogOut size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("family.leave")}</Text></TouchableOpacity> : null}
       </>}
     </ScrollView>
   </View>;

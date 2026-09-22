@@ -1,6 +1,23 @@
 # Estado actual de Fino
 
-Actualizado: **13 de septiembre de 2026**.
+Actualizado: **22 de septiembre de 2026**.
+
+## Auditoría integral y protección de espacios (22/09/2026)
+
+- La edición, reducción y eliminación de aportes de Personal en Familia y Caja
+  pasan por Cloud Functions; las reglas ya no permiten saltarse esa validación
+  escribiendo directamente en Firestore.
+- Cerrar, borrar, abandonar un espacio o retirar a un miembro también valida en
+  servidor que no queden aportes personales pendientes. El borrado de cuenta
+  hace esta comprobación completa antes de modificar otros datos.
+- Los ajustes ya no pueden abrir por error la primera familia cuando reciben un
+  identificador inválido, y Familia/Cajas recargan sus nombres y listas al volver.
+- Se eliminó código sin uso, se corrigieron textos de administración en los tres
+  idiomas y Expo Doctor vuelve a aprobar sus 18 comprobaciones.
+- `npm audit` no encontró vulnerabilidades críticas y las Functions quedaron en
+  cero avisos. La app conserva 9 altas y 18 moderadas dentro del toolchain de
+  Expo/Metro; npm solo propone resolverlas migrando de SDK 54 a Expo 57, cambio
+  mayor que debe hacerse como una entrega separada, no con `audit fix --force`.
 
 ## Cambio rápido entre Personal, Familia y Cajas (13/09/2026)
 
@@ -85,9 +102,10 @@ Paquete Android: `com.finoapp.gastos`.
 
 ## Versiones
 
-- Disponible en prueba cerrada: **1.0.4**, `versionCode 5`.
-- Próxima corrección: **1.0.6**, `versionCode 7`.
-- Marca visible de 1.0.6: **10sep-responsive-android-ios**.
+- Disponible en prueba cerrada: **1.0.8**, `versionCode 10`.
+- Marca visible de 1.0.8: **14sep-yape-transferencias-seguras**.
+- Las correcciones del 22/09 están en código y requieren desplegar reglas y
+  funciones antes de preparar un nuevo AAB.
 - El AAB firmado solo se genera en la computadora autorizada.
 
 ## Telegram preparado
@@ -242,8 +260,8 @@ El cobro Premium aún no está habilitado; existe una prueba local de 24 horas.
 
 ## Google Play: qué falta
 
-- Publicar las reglas de Firestore auditadas y probar Familia/Cajas con dos cuentas.
-- Generar y subir el AAB 1.0.6 a la misma prueba cerrada.
+- Publicar las reglas y Cloud Functions auditadas y probar Familia/Cajas con dos cuentas.
+- Definir la siguiente versión, aumentar su `versionCode` y subir un nuevo AAB a la misma prueba cerrada.
 - Pedir a los testers que actualicen desde Google Play.
 - Conseguir al menos 12 testers aceptados y mantener el periodo exigido.
 - Completar la cuenta preparada para revisión con datos de ejemplo.
@@ -416,5 +434,6 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 
 ## Próximo paso exacto
 
-Después de publicar y probar las reglas auditadas, generar el AAB 1.0.6 con
-`generar-aab.bat`, subirlo a prueba cerrada y probar una instalación nueva.
+Después de publicar y probar las reglas y funciones auditadas, definir la
+siguiente versión, generar su AAB con `generar-aab.bat`, subirlo a prueba
+cerrada y probar una instalación nueva.

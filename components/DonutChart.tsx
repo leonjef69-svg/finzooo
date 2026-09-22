@@ -139,6 +139,7 @@ export default function DonutChart({ data }: { data: Slice[] }) {
         return (
           <TouchableOpacity
             key={`bubble-${item.id}`}
+            className="bg-white dark:bg-noche-2"
             onPress={() => setSelected((current) => (current === item.id ? null : item.id))}
             accessibilityRole="button"
             accessibilityLabel={`${item.name}: ${percentage < 1 ? "menos de 1" : Math.round(percentage)} por ciento`}
@@ -151,7 +152,6 @@ export default function DonutChart({ data }: { data: Slice[] }) {
               borderRadius: bubble / 2,
               borderWidth: 2.25,
               borderColor: item.color,
-              backgroundColor: colorScheme === "dark" ? "#171719" : "#ffffff",
               alignItems: "center",
               justifyContent: "center",
             }}

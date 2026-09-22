@@ -65,17 +65,16 @@ export function hasUnreturnedPersonalContributions(items: LinkedSpaceMovement[])
   return [...contributors].some(uid => netFromPersonal(items, uid) > CENT);
 }
 
+export function hasUnreturnedPersonalContribution(items: LinkedSpaceMovement[], ownerUid: string): boolean {
+  return netFromPersonal(items, ownerUid) > CENT;
+}
+
 export function canCloseLinkedSpace(items: LinkedSpaceMovement[]): boolean {
   return Math.abs(balanceOfSpace(items)) <= CENT && !hasUnreturnedPersonalContributions(items);
 }
 
 export function canSpendFromSpace(items: LinkedSpaceMovement[], amount: number): boolean {
   return Number.isFinite(amount) && amount > 0 && amount <= balanceOfSpace(items) + CENT;
-}
-
-/** Cuánto de los aportes personales ya fue consumido dentro del espacio. */
-export function personalMoneyUsed(items: LinkedSpaceMovement[], ownerUid?: string): number {
-  return Math.max(0, netFromPersonal(items, ownerUid) - Math.max(0, balanceOfSpace(items)));
 }
 
 /** Un aporte solo puede deshacerse entero si ese dinero sigue dentro. */

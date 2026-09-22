@@ -11,3 +11,15 @@ export async function actualizarAportePersonal(kind: SpaceKind, spaceId: string,
 export async function borrarAportePersonal(kind: SpaceKind, spaceId: string, movementId: string): Promise<void> {
   await httpsCallable(functions, "changePersonalContribution")({ kind, spaceId, movementId, action: "delete" });
 }
+
+export async function cerrarEspacioCompartido(kind: SpaceKind, spaceId: string): Promise<void> {
+  await httpsCallable(functions, "manageLinkedSpace")({ kind, spaceId, action: "close" });
+}
+
+export async function prepararBorradoEspacioCompartido(kind: SpaceKind, spaceId: string): Promise<void> {
+  await httpsCallable(functions, "manageLinkedSpace")({ kind, spaceId, action: "prepare-delete" });
+}
+
+export async function salirEspacioCompartido(kind: SpaceKind, spaceId: string, targetUid?: string): Promise<void> {
+  await httpsCallable(functions, "leaveLinkedSpace")({ kind, spaceId, ...(targetUid ? { targetUid } : {}) });
+}

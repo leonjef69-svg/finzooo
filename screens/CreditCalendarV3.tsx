@@ -13,7 +13,7 @@ import {
   creditLocalDateKey,
   creditTimestampDateKey,
 } from "@/utils/creditCalendar";
-import { useFocusEffect, useLocalSearchParams, useRouter } from "expo-router";
+import { useFocusEffect, useLocalSearchParams } from "expo-router";
 import { ArrowLeft, ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -49,7 +49,6 @@ type CalendarFilter = "all" | "installments" | "paid" | "overdue";
 
 export default function CreditCalendarV3() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const { cardId } = useLocalSearchParams<{ cardId?: string }>();
   const [state, setState] = useState<CreditState>(EMPTY_CREDIT_STATE);
   const [loaded, setLoaded] = useState(false);

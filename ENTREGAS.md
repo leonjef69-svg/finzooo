@@ -6,7 +6,7 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 | Fecha | Versión | Estado |
 |---|---|---|
-| 23/08/2026 | 1.0.4 | Disponible en la prueba cerrada |
+| 19/09/2026 | 1.0.8 | Disponible en la prueba cerrada (`versionCode 10`) |
 
 ## Próxima versión
 
@@ -17,6 +17,8 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 | 09/09/2026 | 1.0.6 | `09sep-telegram-seguro` | Integración segura de Telegram preparada para prueba local |
 | 10/09/2026 | 1.0.6 | `10sep-responsive-android-ios` | Correcciones responsive para Android y iPhone listas en código |
 | 10/09/2026 | 1.0.6 | `10sep-exportes-por-espacio` | PDF profesional y exportación separada para Personal, Familia y Cajas |
+| 19/09/2026 | 1.0.8 | `14sep-yape-transferencias-seguras` | Versión disponible para testers en Google Play |
+| 22/09/2026 | 1.0.8 | Sin nuevo AAB | Auditoría integral y protección de aportes corregidas en código |
 
 La versión 1.0.3 contiene el acceso Google con diagnóstico, copia de seguridad,
 Modo Negocio, registro automático, voz, rendimiento, calendario, exportación,
@@ -90,7 +92,7 @@ Calidad comprobada:
 
 ## Cómo reconocer la entrega
 
-En **Ajustes → Acerca de**, la versión 1.0.6 muestra `10sep-responsive-android-ios`.
+En **Ajustes → Acerca de**, la versión 1.0.8 publicada muestra `14sep-yape-transferencias-seguras`.
 
 ## Publicación
 

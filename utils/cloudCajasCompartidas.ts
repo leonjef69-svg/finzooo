@@ -6,7 +6,8 @@ import {
 import { db } from "@/utils/firebase";
 import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
-import { canCloseLinkedSpace } from "@/utils/linkedTransfers";
+import { canCloseLinkedSpace, hasUnreturnedPersonalContribution } from "@/utils/linkedTransfers";
+import { cerrarEspacioCompartido, prepararBorradoEspacioCompartido, salirEspacioCompartido } from "@/utils/personalContribution";
 import type { Caja, MovimientoCaja } from "@/utils/cajas";
 
 export type CajaCompartida = {
@@ -55,22 +56,6 @@ export async function listarCajasCompartidas(uid: string): Promise<CajaCompartid
     }
   }));
   return cajas.filter((caja): caja is CajaCompartida => caja !== null).sort((a, b) => b.creadaEn - a.creadaEn);
-}
-
-export async function crearCajaCompartida(uid: string, nombrePersona: string, nombre: string, montoInicial = 0, currency = "PEN"): Promise<CajaCompartida> {
-  const ref = doc(collection(db, "boxSpaces"));
-  const limpia = nombre.trim().slice(0, 30);
-  if (!limpia || !isSafeMoneyAmount(montoInicial) || montoInicial < 0) throw new Error("invalid-input");
-  await runTransaction(db, async transaction => {
-    transaction.set(ref, { nombre: limpia, ownerUid: uid, currency, creadaEn: serverTimestamp() });
-    transaction.set(doc(db, "boxSpaces", ref.id, "members", uid), { uid, nombre: nombrePersona, rol: "owner", unidoEn: serverTimestamp() });
-    transaction.set(doc(db, "boxUsers", uid, "spaces", ref.id), { boxId: ref.id, unidoEn: serverTimestamp() });
-    if (montoInicial > 0) transaction.set(doc(db, "boxSpaces", ref.id, "movements", "initial"), {
-      tipo: "ingreso", monto: montoInicial, descripcion: "", fecha: new Date().toLocaleDateString("sv-SE"),
-      creadoPor: uid, creadoEn: serverTimestamp(),
-    });
-  });
-  return { id: ref.id, nombre: limpia, ownerUid: uid, creadaEn: Date.now(), currency };
 }
 
 /**
@@ -146,11 +131,6 @@ export async function guardarMovimientoCajaCompartida(boxId: string, uid: string
   return ref.id;
 }
 
-export async function actualizarMovimientoCajaCompartida(boxId: string, movementId: string, monto: number, descripcion: string): Promise<void> {
-  if (!isSafeMoneyAmount(monto) || monto <= 0) throw new Error("invalid-amount");
-  await updateDoc(doc(db, "boxSpaces", boxId, "movements", movementId), { monto, descripcion: descripcion.trim().slice(0, 60) });
-}
-
 export async function borrarMovimientoCajaCompartida(boxId: string, movementId: string): Promise<void> {
   await deleteDoc(doc(db, "boxSpaces", boxId, "movements", movementId));
 }
@@ -161,38 +141,17 @@ export async function listarMiembrosCaja(boxId: string): Promise<MiembroCajaComp
 }
 
 export async function salirDeCaja(uid: string, boxId: string): Promise<void> {
-  const lote = writeBatch(db);
-  lote.delete(doc(db, "boxSpaces", boxId, "members", uid));
-  lote.delete(doc(db, "boxUsers", uid, "spaces", boxId));
-  await lote.commit();
+  if (!uid) throw new Error("not-authenticated");
+  await salirEspacioCompartido("box", boxId);
 }
 
 export async function quitarMiembroCaja(boxId: string, memberUid: string): Promise<void> {
-  const lote = writeBatch(db);
-  lote.delete(doc(db, "boxSpaces", boxId, "members", memberUid));
-  lote.delete(doc(db, "boxUsers", memberUid, "spaces", boxId));
-  await lote.commit();
+  await salirEspacioCompartido("box", boxId, memberUid);
 }
 
 export async function cerrarCajaCompartida(uid: string, boxId: string): Promise<void> {
-  const ref = doc(db, "boxSpaces", boxId);
-  await runTransaction(db, async transaction => {
-    const snap = await transaction.get(ref);
-    if (!snap.exists() || snap.data().ownerUid !== uid) throw new Error("not-owner");
-    transaction.update(ref, { closing: true });
-  });
-  try {
-    const movimientos = await listarMovimientosCajaCompartida(boxId);
-    if (!canCloseLinkedSpace(movimientos)) throw new Error("unsettled-personal-contributions");
-    await runTransaction(db, async transaction => {
-      const snap = await transaction.get(ref);
-      if (!snap.exists() || snap.data().ownerUid !== uid || snap.data().closing !== true) throw new Error("not-owner");
-      transaction.update(ref, { closed: true, closing: false });
-    });
-  } catch (error) {
-    await updateDoc(ref, { closing: false }).catch(() => {});
-    throw error;
-  }
+  if (!uid) throw new Error("not-authenticated");
+  await cerrarEspacioCompartido("box", boxId);
   // Los vínculos se conservan ocultos: listarCajasCompartidas filtra las
   // cerradas. Así la eliminación posterior de cualquier cuenta todavía puede
   // localizar el espacio y retirar su identidad o purgarlo si era el dueño.
@@ -204,8 +163,12 @@ export async function validarBorradoCajasCompartidasDeCuenta(uid: string): Promi
   const enlaces = await getDocs(collection(db, "boxUsers", uid, "spaces"));
   for (const enlace of enlaces.docs) {
     const caja = await getDoc(doc(db, "boxSpaces", enlace.id));
-    if (!caja.exists() || caja.data().ownerUid !== uid) continue;
-    if (!canCloseLinkedSpace(await listarMovimientosCajaCompartida(enlace.id))) {
+    if (!caja.exists()) continue;
+    const movimientos = await listarMovimientosCajaCompartida(enlace.id);
+    const invalido = caja.data().ownerUid === uid
+      ? !canCloseLinkedSpace(movimientos)
+      : hasUnreturnedPersonalContribution(movimientos, uid);
+    if (invalido) {
       throw new Error("unsettled-personal-contributions");
     }
   }
@@ -223,26 +186,12 @@ export async function borrarCajasCompartidasDeCuenta(uid: string): Promise<void>
       continue;
     }
     if (box.data().ownerUid !== uid) {
-      const propios = await getDocs(query(collection(db, "boxSpaces", boxId, "movements"), where("creadoPor", "==", uid)));
-      for (let inicio = 0; inicio < propios.docs.length; inicio += 400) {
-        const lote = writeBatch(db);
-        for (const item of propios.docs.slice(inicio, inicio + 400)) {
-          lote.update(item.ref, {
-            creadoPor: "deleted",
-            ...(item.data().personalOwnerUid === uid ? { personalOwnerUid: "deleted" } : {}),
-          });
-        }
-        await lote.commit();
-      }
-      const lote = writeBatch(db);
-      lote.delete(doc(db, "boxSpaces", boxId, "members", uid));
-      lote.delete(enlace.ref);
-      await lote.commit();
+      await salirEspacioCompartido("box", boxId);
       continue;
     }
     const movimientosParaValidar = await listarMovimientosCajaCompartida(boxId);
     if (!canCloseLinkedSpace(movimientosParaValidar)) throw new Error("unsettled-personal-contributions");
-    await updateDoc(boxRef, { deleting: true });
+    await prepararBorradoEspacioCompartido("box", boxId);
     const [movimientos, miembros, invitaciones] = await Promise.all([
       getDocs(collection(db, "boxSpaces", boxId, "movements")),
       getDocs(collection(db, "boxSpaces", boxId, "members")),

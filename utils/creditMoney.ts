@@ -81,10 +81,6 @@ export function parseCreditMoneyInput(
   return safeAmount(Number(normalized), currencyId);
 }
 
-export function isSafeCreditAmount(value: number, currencyId = "PEN") {
-  return safeAmount(value, currencyId) !== null;
-}
-
 export function creditMoneyEpsilon(currencyId = "PEN") {
   return 0.5 / 10 ** currencyDecimals(currencyId);
 }
@@ -125,15 +121,4 @@ export function formatCreditMoneyCompact(
     : ".";
   const number = scaled.toFixed(digits).replace(".", decimal);
   return `${value < 0 ? "-" : ""}${currencySymbolFor(currencyId)} ${number} ${unit.suffix}`;
-}
-
-export function isCreditMoneyCompacted(
-  value: number,
-  currencyId = "PEN",
-  maxCharacters = 17,
-) {
-  return (
-    formatCreditMoneyCompact(value, currencyId, maxCharacters) !==
-    formatCreditMoney(value, currencyId)
-  );
 }

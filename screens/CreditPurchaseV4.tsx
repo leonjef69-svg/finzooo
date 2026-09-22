@@ -8,7 +8,7 @@ import {
   outstandingAmount,
   saveCreditState,
 } from "@/utils/creditStore";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { CURRENCIES, currencyLabelFor, currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import { nextId } from "@/utils/id";
@@ -47,7 +47,6 @@ type PurchaseIconName = "shopping" | "service" | "food";
 const ICONS: PurchaseIconName[] = ["shopping", "service", "food"];
 export default function CreditPurchaseV4() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const saving = useRef(false);
   const { addOrUpdateTransaction, disponible, userCurrency, userLanguage, t } = useAppData();
   const { cardId, convertId, editId } = useLocalSearchParams<{

@@ -14,7 +14,7 @@ import * as textRecognizer from "@/modules/text-recognizer";
 import * as notificationReader from "@/modules/notification-reader";
 import { puedeExportarEnFondo, puedePdfEnFondo } from "@/modules/export-scheduler";
 
-const APP_VERSION = Constants.expoConfig?.version ?? "1.0.6";
+const APP_VERSION = Constants.expoConfig?.version ?? "1.0.8";
 
 /**
  * Marca de la versión del CÓDIGO, no de la app.

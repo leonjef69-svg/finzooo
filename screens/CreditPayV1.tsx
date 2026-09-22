@@ -19,7 +19,7 @@ import {
   sanitizeCreditMoneyInput,
 } from "@/utils/creditMoney";
 import { nextId } from "@/utils/id";
-import { useLocalSearchParams, useRouter } from "expo-router";
+import { useLocalSearchParams } from "expo-router";
 import { ArrowLeft } from "lucide-react-native";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -35,7 +35,6 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function CreditPayV1() {
   const insets = useSafeAreaInsets();
-  const router = useRouter();
   const saving = useRef(false);
   const { addOrUpdateTransaction, userCurrency, disponible } = useAppData();
   const { cardId, purchaseId } = useLocalSearchParams<{

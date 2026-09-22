@@ -6,6 +6,7 @@ import vm from "node:vm";
 const documents = new Map();
 let failCommit = false;
 let addedDocuments = 0;
+let callableUid = "";
 const snap = ref => ({ exists: () => documents.has(ref), data: () => documents.get(ref), id: ref.split("/").pop() });
 const api = {
   doc: (_db, ...parts) => parts.join("/"),
@@ -29,17 +30,45 @@ const api = {
     if (failCommit) throw Error("offline");
     staged.forEach((value, ref) => value === undefined ? documents.delete(ref) : documents.set(ref, value));
   },
+  writeBatch: () => {
+    const staged = new Map();
+    return {
+      update: (ref, value) => staged.set(ref, { ...documents.get(ref), ...value }),
+      set: (ref, value) => staged.set(ref, { ...documents.get(ref), ...value }),
+      delete: ref => staged.set(ref, undefined),
+      commit: async () => {
+        if (failCommit) throw Error("offline");
+        staged.forEach((value, ref) => value === undefined ? documents.delete(ref) : documents.set(ref, value));
+      },
+    };
+  },
 };
-const compiled = buildSync({ entryPoints: ["utils/cloudFamilia.ts"], bundle: true, write: false, platform: "node", format: "cjs", external: ["firebase/firestore", "@/utils/firebase", "@/utils/familia"] });
+const contributionApi = {
+  cerrarEspacioCompartido: async (_kind, familyId) => {
+    const family = documents.get(`familySpaces/${familyId}`);
+    if (!family || family.ownerUid !== callableUid) throw Error("not-owner");
+    if (failCommit) throw Error("offline");
+    const prefix = `familySpaces/${familyId}/movements/`;
+    const movements = [...documents.entries()].filter(([key]) => key.startsWith(prefix)).map(([, value]) => value);
+    const balance = movements.reduce((sum, item) => sum + (item.tipo === "ingreso" ? item.monto : -item.monto), 0);
+    if (Math.abs(balance) > 0.005) throw Error("unsettled-personal-contributions");
+    documents.set(`familySpaces/${familyId}`, { ...family, closed: true, closing: false });
+  },
+  prepararBorradoEspacioCompartido: async () => {},
+  salirEspacioCompartido: async () => {},
+};
+const compiled = buildSync({ entryPoints: ["utils/cloudFamilia.ts"], bundle: true, write: false, platform: "node", format: "cjs", external: ["firebase/firestore", "@/utils/firebase", "@/utils/familia", "@/utils/personalContribution"] });
 const module = { exports: {} };
-vm.runInNewContext(compiled.outputFiles[0].text, { module, exports: module.exports, require: id => id === "firebase/firestore" ? api : id === "@/utils/firebase" ? { db: {} } : { crearCodigoFamilia: () => "TESTCODE" } });
+vm.runInNewContext(compiled.outputFiles[0].text, { module, exports: module.exports, require: id => id === "firebase/firestore" ? api : id === "@/utils/firebase" ? { db: {} } : id === "@/utils/personalContribution" ? contributionApi : { crearCodigoFamilia: () => "TESTCODE" } });
 const cloud = module.exports;
 documents.set("familySpaces/f", { ownerUid: "owner", nombre: "Family" });
 documents.set("familyUsers/owner", { activeFamilyId: "f" });
 documents.set("familySpaces/f/members/owner", { uid: "owner", rol: "owner" });
+callableUid = "guest";
 await assert.rejects(() => cloud.cerrarFamilia("guest", "f"));
 assert.equal(documents.get("familySpaces/f").closed, undefined);
 failCommit = true;
+callableUid = "owner";
 await assert.rejects(() => cloud.cerrarFamilia("owner", "f"));
 assert.equal(documents.get("familyUsers/owner").activeFamilyId, "f");
 assert.equal(documents.get("familySpaces/f").closed, undefined);

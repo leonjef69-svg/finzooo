@@ -20,9 +20,10 @@ import { nextId } from "@/utils/id";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 import { ArrowDown, ArrowLeftRight, ArrowUp, Boxes, Check, ListChecks, MoreVertical, Plus, Trash2, UserPlus, X } from "lucide-react-native";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useFocusEffect } from "expo-router";
 
 // Cambiar de Personal a Familia y volver a Cajas desmonta estas pantallas.
 // Conservamos la última copia ya pintada para no reconstruir una pantalla
@@ -53,13 +54,9 @@ export default function Cajas() {
   const [movementLimit, setMovementLimit] = useState(60);
   const [descripcion, setDescripcion] = useState("");
   const [editandoAporteId, setEditandoAporteId] = useState<string | null>(null);
-  const [borrandoCaja, setBorrandoCaja] = useState(false);
   const [ready, setReady] = useState(cajasEnMemoria !== null);
   const [cloudReady, setCloudReady] = useState(false);
   const [compartiendo, setCompartiendo] = useState(false);
-  const [menuAbierto, setMenuAbierto] = useState(false);
-  const [editandoNombreCaja, setEditandoNombreCaja] = useState(false);
-  const [nombreCajaEdicion, setNombreCajaEdicion] = useState("");
   const [seleccionando, setSeleccionando] = useState(false);
   const [seleccionados, setSeleccionados] = useState<string[]>([]);
   const [seleccionandoCajas, setSeleccionandoCajas] = useState(false);
@@ -73,8 +70,9 @@ export default function Cajas() {
     return true;
   }
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
     let alive = true;
+    setCloudReady(false);
     void (async () => {
       const local = await loadJSON<DatosCajas>(STORAGE_KEYS.cajasDinero, CAJAS_VACIAS);
       if (!alive) return;
@@ -97,7 +95,7 @@ export default function Cajas() {
       setCloudReady(true);
     })();
     return () => { alive = false; };
-  }, []);
+  }, []));
 
   useEffect(() => {
     cajasEnMemoria = datos;
@@ -293,30 +291,6 @@ export default function Cajas() {
     ]);
   }
 
-  function borrarCaja() {
-    if (!caja) return;
-    if (Math.abs(saldoActual) > 0.000001) { showToast(t("boxes.closeBalance")); setBorrandoCaja(false); return; }
-    const idsMovimientos = datos.movimientos.filter((item) => item.cajaId === caja.id).map((item) => item.id);
-    setDatos((antes) => ({
-      ...antes,
-      cajas: antes.cajas.filter((item) => item.id !== caja.id),
-      movimientos: antes.movimientos.filter((item) => item.cajaId !== caja.id),
-      cajasBorradas: [...new Set([...antes.cajasBorradas, caja.id])],
-      movimientosBorrados: [...new Set([...antes.movimientosBorrados, ...idsMovimientos])],
-    }));
-    setCajaId(null);
-    setLista(true);
-    setBorrandoCaja(false);
-    showToast(t("boxes.deleted"));
-  }
-  function guardarNombreCaja() {
-    if (!caja) return;
-    const nombre = nombreCajaEdicion.trim().slice(0, 30);
-    if (!nombre) return;
-    setDatos(prev => ({ ...prev, cajas: prev.cajas.map(item => item.id === caja.id ? { ...item, nombre } : item) }));
-    setEditandoNombreCaja(false); setMenuAbierto(false); showToast(t("boxes.movementSaved"));
-  }
-
   function devolverAPersonal() {
     if (!caja || devolvibleAPersonal <= 0) return;
     if (!tomarAccionLocal()) return;
@@ -485,9 +459,6 @@ export default function Cajas() {
                 {seleccionando ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${seleccionados.includes(item.id) ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : null}
               </TouchableOpacity>
             ))}
-            {borrandoCaja ? (
-              <View className="mt-5 rounded-2xl bg-rose-50 p-3"><Text className="text-xs text-rose-700">{t("boxes.deleteWarning")}</Text><View className="mt-3 flex-row gap-2"><TouchableOpacity onPress={() => setBorrandoCaja(false)} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-white"><Text className="font-bold text-slate-600">{t("common.cancel")}</Text></TouchableOpacity><TouchableOpacity onPress={borrarCaja} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-rose-600"><Text className="font-bold text-white">{t("common.delete")}</Text></TouchableOpacity></View></View>
-            ) : null}
           </>
         )}
       </ScrollView>

@@ -258,16 +258,12 @@ service cloud.firestore {
       allow read: if familyMember(familyId);
       allow update: if familyMember(familyId)
                     && resource.data.ownerUid == request.auth.uid
-                    && (resource.data.get('closed', false) == false
-                      || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleting'])
-                        && request.resource.data.get('deleting', false) == true))
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'closed', 'closing', 'deleting'])
+                    && resource.data.get('closed', false) == false
+                    && resource.data.get('deleting', false) == false
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre'])
                     && request.resource.data.nombre is string
                     && request.resource.data.nombre.size() > 0
-                    && request.resource.data.nombre.size() <= 35
-                    && request.resource.data.get('closed', false) is bool
-                    && request.resource.data.get('closing', false) is bool
-                    && request.resource.data.get('deleting', false) is bool;
+                    && request.resource.data.nombre.size() <= 35;
       allow delete: if verified()
                     && resource.data.ownerUid == request.auth.uid
                     && resource.data.get('deleting', false) == true;
@@ -295,8 +291,8 @@ service cloud.firestore {
                         )
                       );
         allow delete: if verified()
-                      && (userId == request.auth.uid
-                        || get(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid);
+                      && get(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid
+                      && get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('deleting', false) == true;
       }
 
       match /movements/{movementId} {
@@ -314,11 +310,6 @@ service cloud.firestore {
                           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['creadoPor', 'personalOwnerUid'])
                           && (!('personalOwnerUid' in request.resource.data)
                             || request.resource.data.personalOwnerUid == 'deleted'))
-                        || (resource.data.personalOwnerUid == request.auth.uid
-                          && request.resource.data.personalOwnerUid == request.auth.uid
-                          && request.resource.data.personalTransactionId == resource.data.personalTransactionId
-                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['monto', 'descripcion'])
-                          && validSharedMovement(request.resource.data))
                         // Migración única de los aportes antiguos que Fino
                         // guardó antes de crear el vínculo con Personal.
                         || (!('personalTransactionId' in resource.data)
@@ -341,8 +332,6 @@ service cloud.firestore {
                         || (resource.data.get('personalOwnerUid', '') == ''
                           && (resource.data.creadoPor == request.auth.uid
                             || get(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid))
-                        || ('personalOwnerUid' in resource.data
-                          && resource.data.personalOwnerUid == request.auth.uid)
                       );
       }
     }
@@ -389,8 +378,10 @@ service cloud.firestore {
           && request.resource.data.keys().hasOnly(['familyId', 'unidoEn'])
           && request.resource.data.familyId == familyId
           && request.resource.data.unidoEn is timestamp;
-        allow delete: if verified() && (request.auth.uid == userId
-          || get(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid);
+        allow delete: if verified()
+          && get(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid
+          && (get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('closed', false) == true
+            || get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('deleting', false) == true);
       }
     }
 
@@ -412,16 +403,12 @@ service cloud.firestore {
       allow read: if boxMember(boxId);
       allow update: if boxMember(boxId)
                     && resource.data.ownerUid == request.auth.uid
-                    && (resource.data.get('closed', false) == false
-                      || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['deleting'])
-                        && request.resource.data.get('deleting', false) == true))
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'migrationComplete', 'closed', 'closing', 'deleting'])
+                    && resource.data.get('closed', false) == false
+                    && resource.data.get('deleting', false) == false
+                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'migrationComplete'])
                     && request.resource.data.nombre is string
                     && request.resource.data.nombre.size() > 0
-                    && request.resource.data.nombre.size() <= 30
-                    && request.resource.data.get('closed', false) is bool
-                    && request.resource.data.get('closing', false) is bool
-                    && request.resource.data.get('deleting', false) is bool;
+                    && request.resource.data.nombre.size() <= 30;
       allow delete: if verified()
                     && resource.data.ownerUid == request.auth.uid
                     && resource.data.get('deleting', false) == true;
@@ -444,8 +431,9 @@ service cloud.firestore {
                 && exists(/databases/$(database)/documents/boxInvites/$(request.resource.data.inviteCode))
                 && get(/databases/$(database)/documents/boxInvites/$(request.resource.data.inviteCode)).data.boxId == boxId
                 && get(/databases/$(database)/documents/boxInvites/$(request.resource.data.inviteCode)).data.expiresAt > request.time.toMillis()));
-        allow delete: if verified() && (userId == request.auth.uid
-          || get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid);
+        allow delete: if verified()
+          && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid
+          && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == true;
       }
 
       match /movements/{movementId} {
@@ -467,11 +455,6 @@ service cloud.firestore {
                           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['creadoPor', 'personalOwnerUid'])
                           && (!('personalOwnerUid' in request.resource.data)
                             || request.resource.data.personalOwnerUid == 'deleted'))
-                        || (resource.data.personalOwnerUid == request.auth.uid
-                          && request.resource.data.personalOwnerUid == request.auth.uid
-                          && request.resource.data.personalTransactionId == resource.data.personalTransactionId
-                          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['monto', 'descripcion'])
-                          && validSharedMovement(request.resource.data))
                       );
         allow delete: if boxMember(boxId)
                       && (boxOpen(boxId)
@@ -482,8 +465,6 @@ service cloud.firestore {
                         || (resource.data.get('personalOwnerUid', '') == ''
                           && (resource.data.creadoPor == request.auth.uid
                             || get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid))
-                        || ('personalOwnerUid' in resource.data
-                          && resource.data.personalOwnerUid == request.auth.uid)
                       );
       }
     }
@@ -505,8 +486,9 @@ service cloud.firestore {
 
     match /boxUsers/{userId}/spaces/{boxId} {
       allow read, create, update: if verified() && request.auth.uid == userId;
-      allow delete: if verified() && (request.auth.uid == userId
-        || get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid);
+      allow delete: if verified()
+        && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid
+        && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == true;
     }
 
     // Tarjetas de crédito: documento separado para no acercar la copia
