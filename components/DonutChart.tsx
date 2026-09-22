@@ -60,6 +60,7 @@ export default function DonutChart({ data }: { data: Slice[] }) {
             <Path
               key={`line-${item.id}`}
               d={`M ${ringX} ${ringY} C ${controlOneX} ${controlOneY}, ${controlTwoX} ${controlTwoY}, ${bubbleX} ${bubbleY}`}
+              fill="none"
               stroke={item.color}
               strokeWidth={1.15}
               strokeOpacity={0.82}
