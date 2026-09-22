@@ -19,12 +19,8 @@ const HEIGHT = 320;
 const CENTER_X = WIDTH / 2;
 const CENTER_Y = 156;
 
-function anglePromedio(angulos: number[]) {
-  const vector = angulos.reduce(
-    (total, angulo) => ({ x: total.x + Math.cos(angulo), y: total.y + Math.sin(angulo) }),
-    { x: 0, y: 0 },
-  );
-  return Math.atan2(vector.y, vector.x);
+function diferenciaAngular(desde: number, hasta: number) {
+  return Math.atan2(Math.sin(hasta - desde), Math.cos(hasta - desde));
 }
 
 /**
@@ -56,10 +52,14 @@ export default function DonutChart({ data }: { data: Slice[] }) {
     accumulated += value;
     return { start, middle, value };
   });
-  // Las burbujas se colocan en posiciones equidistantes para no chocar, pero
-  // se rota toda la rueda hasta que cada una quede lo más cerca posible de su
-  // propio segmento. De esa forma el orden se conserva y las líneas no cruzan.
-  const slotOrigin = anglePromedio(sectors.map((sector, index) => sector.middle - index * sectorStep));
+  // Las burbujas se colocan equidistantes para no chocar, ancladas al segmento
+  // más grande. Es el referente visual principal y queda junto a su color; las
+  // demás mantienen el mismo orden que los segmentos, sin líneas cruzadas.
+  const mainSectorIndex = sectors.reduce(
+    (largest, sector, index) => (sector.value > sectors[largest].value ? index : largest),
+    0,
+  );
+  const slotOrigin = sectors[mainSectorIndex].middle - mainSectorIndex * sectorStep;
 
   if (total <= 0) return null;
 
@@ -80,7 +80,9 @@ export default function DonutChart({ data }: { data: Slice[] }) {
           // se curva hacia su círculo, como una llamada visual ordenada.
           const tangentX = -Math.sin(sector.middle);
           const tangentY = Math.cos(sector.middle);
-          const bend = (index % 2 === 0 ? 1 : -1) * Math.min(30, 13 + count);
+          // Una curva mínima orientada hacia su propia burbuja: nunca se
+          // alterna por índice porque eso creaba zigzags que confundían colores.
+          const bend = Math.max(-14, Math.min(14, diferenciaAngular(sector.middle, bubbleAngle) * 8));
           const controlOneX = ringX + tangentX * bend;
           const controlOneY = ringY + tangentY * bend;
           const controlTwoX = bubbleX - tangentX * bend * 0.55;
