@@ -19,6 +19,14 @@ const HEIGHT = 320;
 const CENTER_X = WIDTH / 2;
 const CENTER_Y = 156;
 
+function anglePromedio(angulos: number[]) {
+  const vector = angulos.reduce(
+    (total, angulo) => ({ x: total.x + Math.cos(angulo), y: total.y + Math.sin(angulo) }),
+    { x: 0, y: 0 },
+  );
+  return Math.atan2(vector.y, vector.x);
+}
+
 /**
  * Todas las categorías quedan visibles alrededor de la rosquilla. Cuando hay
  * más categorías, tanto los círculos como la rosquilla se compactan un poco;
@@ -40,7 +48,18 @@ export default function DonutChart({ data }: { data: Slice[] }) {
   const visualValues = data.map((item) => Math.max(item.value, total * MIN_VISIBLE_FRACTION));
   const visualTotal = visualValues.reduce((sum, value) => sum + value, 0);
   const circumference = 2 * Math.PI * radius;
-  let offset = 0;
+  const sectorStep = (Math.PI * 2) / count;
+  let accumulated = 0;
+  const sectors = visualValues.map((value) => {
+    const start = -Math.PI / 2 + (accumulated / visualTotal) * Math.PI * 2;
+    const middle = start + (value / visualTotal) * Math.PI;
+    accumulated += value;
+    return { start, middle, value };
+  });
+  // Las burbujas se colocan en posiciones equidistantes para no chocar, pero
+  // se rota toda la rueda hasta que cada una quede lo más cerca posible de su
+  // propio segmento. De esa forma el orden se conserva y las líneas no cruzan.
+  const slotOrigin = anglePromedio(sectors.map((sector, index) => sector.middle - index * sectorStep));
 
   if (total <= 0) return null;
 
@@ -48,15 +67,19 @@ export default function DonutChart({ data }: { data: Slice[] }) {
     <View style={{ width: WIDTH, height: HEIGHT, maxWidth: "100%" }}>
       <Svg width={WIDTH} height={HEIGHT} viewBox={`0 0 ${WIDTH} ${HEIGHT}`}>
         {data.map((item, index) => {
-          const angle = -Math.PI / 2 + (index / count) * Math.PI * 2;
-          const bubbleX = CENTER_X + Math.cos(angle) * orbitX;
-          const bubbleY = CENTER_Y + Math.sin(angle) * orbitY;
-          const ringX = CENTER_X + Math.cos(angle) * (radius + 10);
-          const ringY = CENTER_Y + Math.sin(angle) * (radius + 10);
+          const sector = sectors[index];
+          const bubbleAngle = slotOrigin + index * sectorStep;
+          const bubbleX = CENTER_X + Math.cos(bubbleAngle) * orbitX;
+          const bubbleY = CENTER_Y + Math.sin(bubbleAngle) * orbitY;
+          // La línea empieza exactamente en el centro del segmento del mismo
+          // color. Antes salía de una posición fija, por eso parecía pertenecer
+          // a otra categoría cuando los montos tenían tamaños distintos.
+          const ringX = CENTER_X + Math.cos(sector.middle) * (radius + 11);
+          const ringY = CENTER_Y + Math.sin(sector.middle) * (radius + 11);
           // No son radios rectos: cada enlace sale tangente a la rosquilla y
           // se curva hacia su círculo, como una llamada visual ordenada.
-          const tangentX = -Math.sin(angle);
-          const tangentY = Math.cos(angle);
+          const tangentX = -Math.sin(sector.middle);
+          const tangentY = Math.cos(sector.middle);
           const bend = (index % 2 === 0 ? 1 : -1) * Math.min(30, 13 + count);
           const controlOneX = ringX + tangentX * bend;
           const controlOneY = ringY + tangentY * bend;
@@ -74,11 +97,11 @@ export default function DonutChart({ data }: { data: Slice[] }) {
           );
         })}
         {data.map((item, index) => {
-          const fraction = visualValues[index] / visualTotal;
+          const sector = sectors[index];
+          const fraction = sector.value / visualTotal;
           const dash = fraction * circumference;
           const gap = circumference - dash;
-          const rotation = (offset / visualTotal) * 360 - 90;
-          offset += visualValues[index];
+          const rotation = (sector.start / Math.PI) * 180;
           const active = selected === item.id;
           return (
             <Circle
@@ -100,9 +123,9 @@ export default function DonutChart({ data }: { data: Slice[] }) {
       </Svg>
 
       {data.map((item, index) => {
-        const angle = -Math.PI / 2 + (index / count) * Math.PI * 2;
-        const left = CENTER_X + Math.cos(angle) * orbitX - bubble / 2;
-        const top = CENTER_Y + Math.sin(angle) * orbitY - bubble / 2;
+        const bubbleAngle = slotOrigin + index * sectorStep;
+        const left = CENTER_X + Math.cos(bubbleAngle) * orbitX - bubble / 2;
+        const top = CENTER_Y + Math.sin(bubbleAngle) * orbitY - bubble / 2;
         const Icon = item.Icon;
         const percentage = (item.value / total) * 100;
         const iconSize = bubble >= 62 ? 22 : bubble >= 50 ? 19 : bubble >= 44 ? 16 : 14;
