@@ -12,10 +12,12 @@ type Slice = {
 };
 
 const MIN_VISIBLE_FRACTION = 0.012;
-const WIDTH = 316;
-const HEIGHT = 380;
+// El gráfico usa casi todo el ancho de la tarjeta. Así las llamadas laterales
+// tienen aire y no se necesita una tarjeta innecesariamente alta.
+const WIDTH = 340;
+const HEIGHT = 320;
 const CENTER_X = WIDTH / 2;
-const CENTER_Y = HEIGHT / 2;
+const CENTER_Y = 156;
 
 /**
  * Todas las categorías quedan visibles alrededor de la rosquilla. Cuando hay
@@ -29,10 +31,12 @@ export default function DonutChart({ data }: { data: Slice[] }) {
   const count = data.length;
   // Se aprovecha el alto disponible de la tarjeta: los círculos pueden ser
   // legibles aun cuando haya bastantes categorías, sin quedar pegados.
-  const bubble = count >= 16 ? 44 : count >= 12 ? 50 : count >= 9 ? 54 : count >= 7 ? 62 : 70;
+  const bubble = count >= 16 ? 44 : count >= 12 ? 50 : count >= 9 ? 56 : count >= 7 ? 62 : 70;
   const radius = count >= 16 ? 54 : count >= 12 ? 58 : count >= 9 ? 62 : count >= 7 ? 66 : 70;
   const orbitX = WIDTH / 2 - bubble / 2 - 5;
-  const orbitY = HEIGHT / 2 - bubble / 2 - 5;
+  // En vez de dibujar un círculo vertical enorme, se abre la composición hacia
+  // los lados. Conserva la separación de los rótulos y reduce 60 px de alto.
+  const orbitY = 112 + (70 - bubble) * 0.4;
   const visualValues = data.map((item) => Math.max(item.value, total * MIN_VISIBLE_FRACTION));
   const visualTotal = visualValues.reduce((sum, value) => sum + value, 0);
   const circumference = 2 * Math.PI * radius;
