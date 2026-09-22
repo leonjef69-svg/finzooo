@@ -37,7 +37,6 @@ export default function Reports({
     spent,
     income,
     prevBalance,
-    isPremium,
   } = useAppData();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
@@ -289,56 +288,23 @@ export default function Reports({
             <View className="items-center py-2">
               <DonutChart data={pieData} />
             </View>
-            <View className="gap-2 mt-2">
-              {pieData.map((e, i) => (
-                <View key={i} className="flex-row items-center gap-2">
-                  <View className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: e.color }} />
-                  <Text className="text-xs font-medium flex-1" style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#475569" }}>{e.name}</Text>
-                  <Text className="text-xs text-slate-500 dark:text-slate-300 flex-shrink text-right" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
-                    {fmtCompact(e.value)} · {totalCategory ? (e.value / totalCategory) * 100 < 1 ? "<1%" : `${Math.round((e.value / totalCategory) * 100)}%` : "0%"}
-                  </Text>
-                </View>
-              ))}
+            <View className="mt-1 rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-noche">
+              <View className="mb-2 flex-row items-center justify-between gap-3">
+                <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
+                  {t(categoryType === "expense" ? "reports.totalSpent" : "reports.totalIncome")}
+                </Text>
+                <Text className={`text-sm font-extrabold ${categoryType === "expense" ? "text-rose-500" : "text-emerald-600"}`} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+                  {fmt(totalCategory)}
+                </Text>
+              </View>
+              <AnimatedBar
+                pct={categoryType === "expense" && budget > 0 ? resumen.usado : 1}
+                color={categoryType === "expense" && budget > 0 ? SALUD_COLOR[resumen.salud] : "#10b981"}
+              />
             </View>
           </>
         )}
       </View>
-
-      {isPremium && (
-        <>
-          {/* Presupuesto utilizado. Solo si hay presupuesto: sin él, una
-              barra de progreso no mide nada y un 0% engañaría. */}
-          {budget > 0 && (
-            <View
-              className="mx-5 mt-2.5 rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2 p-4"
-              style={CARD_SHADOW}
-            >
-              <View className="flex-row items-start justify-between mb-2 gap-2">
-                <Text className="text-xs font-bold flex-shrink" style={{ color: primaryTextColor }}>
-                  {t("reports.budgetUsed")}
-                </Text>
-                <Text className="text-[11px] text-slate-500 dark:text-slate-400 text-right flex-1" numberOfLines={2}>
-                  {fmt(spent)} {t("reports.ofBudget")} {fmt(budget)}
-                </Text>
-              </View>
-              {/* La barra se mueve sola al cambiar los gastos, con 600 ms de
-                  recorrido. Antes saltaba de golpe: el dato era correcto pero
-                  el salto instantáneo del 50 al 60 no se veía. */}
-              <AnimatedBar pct={resumen.usado} color={SALUD_COLOR[resumen.salud]} />
-              {/* Cuatro estados, no dos. Justo al llegar al 100% no queda
-                  nada ni se ha pasado nadie: "aún te quedan S/ 0.00" suena a
-                  error, y decir que se pasó cuando no se pasó es falso. */}
-              <Text className="text-[11px] mt-2 text-slate-500 dark:text-slate-400">
-                {resumen.restante > 0
-                  ? t("reports.budgetLeft", { amount: fmt(resumen.restante) })
-                  : resumen.restante === 0
-                    ? t("reports.budgetExact")
-                    : t("reports.budgetOver", { amount: fmt(Math.abs(resumen.restante)) })}
-              </Text>
-            </View>
-          )}
-        </>
-      )}
 
       <View
         className="mx-5 mt-4 bg-white dark:bg-noche-2 rounded-3xl border-[1.5px] border-slate-200 dark:border-noche-borde p-4"

@@ -78,6 +78,10 @@ const FilaMovimiento = memo(function FilaMovimiento({
   onPress: (id: number) => void;
 }) {
   const c = catInfo(tx.category);
+  const title = tx.description || t(c.label);
+  // Si la persona dejó como descripción el mismo nombre de la categoría,
+  // mostrar ambos renglones es una repetición, no información adicional.
+  const repeatsCategory = title.trim().localeCompare(t(c.label).trim(), undefined, { sensitivity: "accent" }) === 0;
   // La animación de entrada se aplica SOLO a las filas visibles al
   // abrir (las 8 primeras). Antes se aplicaba a todas, y como las
   // posteriores llevaban el retardo máximo (400 ms), al desplazarse
@@ -124,11 +128,13 @@ const FilaMovimiento = memo(function FilaMovimiento({
               style={{ color: oscuro ? "#f1f5f9" : "#0f172a" }}
               numberOfLines={1}
             >
-              {tx.description || t(c.label)}
+              {title}
             </Text>
-            <Text className="mt-0.5 text-[11px] font-semibold" style={{ color: oscuro ? "#cbd5e1" : "#475569" }} numberOfLines={1}>
-              {t(c.label)}
-            </Text>
+            {!repeatsCategory ? (
+              <Text className="mt-0.5 text-[11px] font-semibold" style={{ color: oscuro ? "#cbd5e1" : "#475569" }} numberOfLines={1}>
+                {t(c.label)}
+              </Text>
+            ) : null}
             <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#94a3b8" : "#64748b" }} numberOfLines={1}>
               {fmtDate(tx.date, monthNames)}{tx.time ? ` · ${tx.time}` : ""}
             </Text>

@@ -21,7 +21,7 @@ assert.match(reports, /Array\.from\(\{ length: 31 \}/);
 assert.match(reports, /shownBarData/);
 assert.match(reports, /shownDaily/);
 assert.doesNotMatch(reports, /setTransactions\([^)]*preview/i);
-assert.match(reports, /\? "<1%"/, "los gastos pequeños no se muestran falsamente como 0%");
+assert.match(donut, /percentage < 1 \? "<1%"/, "los gastos pequeños no se muestran falsamente como 0%");
 assert.ok(!reports.includes("Fino IA"), "Reportes ya no muestra Fino IA");
 assert.ok(
   reports.lastIndexOf('t("reports.byDayTitle")') < reports.lastIndexOf('t("reports.byMonth")'),
@@ -31,10 +31,7 @@ assert.match(daily, /fmtAxis/);
 assert.match(donut, /MIN_VISIBLE_FRACTION/, "la dona conserva visibles los segmentos menores al 1%");
 assert.doesNotMatch(home, /home\.greeting|friendlyName\(userName\)/, "Inicio no desperdicia alto con un saludo");
 assert.match(home, /w-\[140px\]/, "el mes tiene un ancho compacto y estable en la cabecera");
-assert.ok(
-  home.indexOf("<ThemeToggleButton />") < home.lastIndexOf("<Bell"),
-  "apariencia y avisos quedan en esquinas opuestas",
-);
+assert.doesNotMatch(home, /ThemeToggleButton/, "Inicio no repite un icono para cambiar la apariencia");
 assert.match(home, /adjustsFontSizeToFit/);
 assert.match(friendlyName, /includes\("@"\)/);
 
