@@ -69,31 +69,28 @@ const Fila = memo(function Fila({
         >
           {tx.description || t(c.label)}
         </Text>
-        {/* LA MISMA ETIQUETA QUE EN INICIO. Aqui el metodo ya salia, pero escrito de
-            corrido entre la categoria y la hora: se leia como una frase y no se distinguia de
-            un vistazo. Ahora es la misma pieza que alla —*"no te olvides que historial
-            tambien"*—, y se quita la categoria por lo mismo que en Inicio: ya la dicen el
-            nombre y el dibujo. */}
-        <View className="flex-row items-center gap-1.5 mt-0.5">
+        {/* El método pertenece visualmente al monto: ambos describen el pago.
+            Aquí queda la hora, en el espacio que antes ocupaba el método. */}
+        <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#f1f5f9" : "#64748b" }} numberOfLines={1}>
+          {tx.time || t(c.label)}
+        </Text>
+      </View>
+      <View className="items-end self-stretch justify-start">
+        <Text
+          className={`text-sm font-extrabold ${
+            tx.type === "expense" ? "text-rose-500" : "text-emerald-600"
+          }`}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.72}
+        >
+          {tx.type === "expense" ? "-" : "+"}
+          {fmt(tx.amount)}
+        </Text>
+        <View className="mt-1">
           <EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} />
-          {/* Mismo tamaño que en Inicio, y la hora cede igual. Ver la nota de alla. */}
-          <Text className="text-[11px] shrink" style={{ color: oscuro ? "#f1f5f9" : "#64748b" }} numberOfLines={1}>
-            {/* La hora solo si la hay. Aquí la fecha ya va arriba
-                como título del grupo, así que basta con la hora:
-                repetir el día en cada fila sería decir dos veces
-                lo mismo. */}
-            {tx.time || t(c.label)}
-          </Text>
         </View>
       </View>
-      <Text
-        className={`text-sm font-extrabold ${
-          tx.type === "expense" ? "text-rose-500" : "text-emerald-600"
-        }`}
-      >
-        {tx.type === "expense" ? "-" : "+"}
-        {fmt(tx.amount)}
-      </Text>
     </TouchableOpacity>
   );
 });
