@@ -76,21 +76,25 @@ export default function DonutChart({ data }: { data: Slice[] }) {
           // a otra categoría cuando los montos tenían tamaños distintos.
           const ringX = CENTER_X + Math.cos(sector.middle) * (radius + 11);
           const ringY = CENTER_Y + Math.sin(sector.middle) * (radius + 11);
-          // No son radios rectos: cada enlace sale tangente a la rosquilla y
-          // se curva hacia su círculo, como una llamada visual ordenada.
-          const tangentX = -Math.sin(sector.middle);
-          const tangentY = Math.cos(sector.middle);
-          // Una curva mínima orientada hacia su propia burbuja: nunca se
-          // alterna por índice porque eso creaba zigzags que confundían colores.
-          const bend = Math.max(-14, Math.min(14, diferenciaAngular(sector.middle, bubbleAngle) * 8));
-          const controlOneX = ringX + tangentX * bend;
-          const controlOneY = ringY + tangentY * bend;
-          const controlTwoX = bubbleX - tangentX * bend * 0.55;
-          const controlTwoY = bubbleY - tangentY * bend * 0.55;
+          // El enlace termina en el borde del círculo (nunca lo atraviesa) y
+          // se curva apenas cuando dos categorías son vecinas. Esta geometría
+          // evita los rizos que antes aparecían con varias categorías azules.
+          const lineX = bubbleX - ringX;
+          const lineY = bubbleY - ringY;
+          const lineLength = Math.max(1, Math.hypot(lineX, lineY));
+          const directionX = lineX / lineLength;
+          const directionY = lineY / lineLength;
+          const bubbleEdgeX = bubbleX - directionX * (bubble / 2 + 1);
+          const bubbleEdgeY = bubbleY - directionY * (bubble / 2 + 1);
+          const bend = Math.max(-10, Math.min(10, diferenciaAngular(sector.middle, bubbleAngle) * 5));
+          const middleX = (ringX + bubbleEdgeX) / 2;
+          const middleY = (ringY + bubbleEdgeY) / 2;
+          const controlX = middleX - directionY * bend;
+          const controlY = middleY + directionX * bend;
           return (
             <Path
               key={`line-${item.id}`}
-              d={`M ${ringX} ${ringY} C ${controlOneX} ${controlOneY}, ${controlTwoX} ${controlTwoY}, ${bubbleX} ${bubbleY}`}
+              d={`M ${ringX} ${ringY} Q ${controlX} ${controlY}, ${bubbleEdgeX} ${bubbleEdgeY}`}
               fill="none"
               stroke={item.color}
               strokeWidth={1.15}
