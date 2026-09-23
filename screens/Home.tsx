@@ -13,7 +13,7 @@ import { estadoEn, fechaEnElMes, mesDe } from "@/utils/calendarioPagos";
 import { availablePersonalBalance, budgetUsed } from "@/utils/finances";
 import { fmtDate, monthKey } from "@/utils/format";
 import { esFoto } from "@/utils/iconosFavoritos";
-import { netTransferredFromPersonal, personalTransferStatuses, type TransferStatus } from "@/utils/linkedTransfers";
+import { compactPersonalTransferRows, netTransferredFromPersonal, personalTransferStatuses, type TransferGroupSummary, type TransferStatus } from "@/utils/linkedTransfers";
 import { irUnaVez } from "@/utils/nav";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { usePendingImport } from "@/utils/pendingImport";
@@ -68,6 +68,7 @@ const FilaMovimiento = memo(function FilaMovimiento({
   monthNames,
   onPress,
   transferStatus,
+  transferGroup,
 }: {
   tx: Transaction;
   index: number;
@@ -77,13 +78,16 @@ const FilaMovimiento = memo(function FilaMovimiento({
   fmt: (n: number) => string;
   t: (k: string, v?: Record<string, string | number>) => string;
   monthNames: string[];
-  onPress: (id: number) => void;
+  onPress: (id: number, grouped: boolean) => void;
   transferStatus?: TransferStatus;
+  transferGroup?: TransferGroupSummary;
 }) {
   const c = catInfo(tx.category);
   const isTransfer = Boolean(tx.internalTransfer);
   const spaceName = tx.internalTransferSpaceName || t(tx.internalTransfer === "family" ? "spaces.family" : "spaces.boxes");
-  const title = isTransfer
+  const title = transferGroup
+    ? t("transfer.groupTitle", { name: spaceName })
+    : isTransfer
     ? t(tx.type === "expense" ? "transfer.personalToSpace" : "transfer.spaceToPersonal", { name: spaceName })
     : tx.description || t(c.label);
   // Si la persona dejó como descripción el mismo nombre de la categoría,
@@ -103,7 +107,7 @@ const FilaMovimiento = memo(function FilaMovimiento({
     <View className="px-5">
       <Row {...rowProps}>
         <PressableScale
-          onPress={() => onPress(tx.id)}
+          onPress={() => onPress(tx.id, Boolean(transferGroup))}
           // El contorno se ve poco, sobre todo de noche: la tarjeta
           // es slate-900 y el fondo de la pantalla TAMBIÉN, así que
           // lo único que las separaba era un borde casi del mismo
@@ -139,7 +143,7 @@ const FilaMovimiento = memo(function FilaMovimiento({
             </Text>
             {isTransfer ? (
               <Text className="mt-0.5 text-[11px] font-semibold text-blue-600 dark:text-blue-300" numberOfLines={1}>
-                {t("transfer.internal")} · {t(`transfer.${transferStatus || (tx.type === "income" ? "returned" : "pending")}`)}
+                {t("transfer.internal")} · {t(`transfer.${transferGroup?.status || transferStatus || (tx.type === "income" ? "returned" : "pending")}`)}
               </Text>
             ) : !repeatsCategory ? (
               <Text className="mt-0.5 text-[11px] font-semibold" style={{ color: oscuro ? "#cbd5e1" : "#475569" }} numberOfLines={1}>
@@ -147,7 +151,9 @@ const FilaMovimiento = memo(function FilaMovimiento({
               </Text>
             ) : null}
             <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#94a3b8" : "#64748b" }} numberOfLines={1}>
-              {fmtDate(tx.date, monthNames)}{tx.time ? ` · ${tx.time}` : ""}
+              {transferGroup
+                ? t("transfer.summaryLine", { sent: fmt(transferGroup.sent), returned: fmt(transferGroup.returned) })
+                : `${fmtDate(tx.date, monthNames)}${tx.time ? ` · ${tx.time}` : ""}`}
             </Text>
           </View>
           <View className="items-end self-stretch justify-start">
@@ -157,8 +163,8 @@ const FilaMovimiento = memo(function FilaMovimiento({
               adjustsFontSizeToFit
               minimumFontScale={0.72}
             >
-              {isTransfer ? (tx.type === "expense" ? "→ " : "↩ ") : tx.type === "expense" ? "-" : "+"}
-              {fmt(tx.amount)}
+              {transferGroup ? "↔ " : isTransfer ? (tx.type === "expense" ? "→ " : "↩ ") : tx.type === "expense" ? "-" : "+"}
+              {fmt(transferGroup?.pending ?? tx.amount)}
             </Text>
             {!isTransfer ? <View className="mt-1"><EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} /></View> : null}
           </View>
@@ -232,6 +238,7 @@ export default function Home({
   const transfersOut = useMemo(() => monthTx.filter((t) => t.type === "expense" && t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
   const transfersIn = useMemo(() => monthTx.filter((t) => t.type === "income" && t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
   const transferStatuses = useMemo(() => personalTransferStatuses(transactions), [transactions]);
+  const compactMonthRows = useMemo(() => compactPersonalTransferRows(monthTx), [monthTx]);
   // Estas cifras no pertenecen a un mes: muestran el neto que Personal ha
   // transferido a cada tipo de espacio. Toda salida enlazada nació al elegir
   // "Desde Personal" y toda entrada enlazada es una devolución; el dinero
@@ -311,26 +318,28 @@ export default function Home({
   const marcadas = useMemo(() => new Set(selected), [selected]);
 
   const alTocarFila = useCallback(
-    (id: number) => {
+    (id: number, grouped: boolean) => {
       if (selectMode) toggleSelected(id);
+      else if (grouped) irUnaVez({ pathname: "/(tabs)/history", params: { transfer: "1" } });
       else onOpenDetail(id);
     },
     [selectMode, onOpenDetail, toggleSelected]
   );
 
   const dibujarFila = useCallback(
-    ({ item, index }: { item: Transaction; index: number }) => (
+    ({ item: row, index }: { item: ReturnType<typeof compactPersonalTransferRows<Transaction>>[number]; index: number }) => (
       <FilaMovimiento
-        tx={item}
+        tx={row.item}
         index={index}
-        marcada={marcadas.has(item.id)}
+        marcada={marcadas.has(row.item.id)}
         selectMode={selectMode}
         oscuro={colorScheme === "dark"}
         fmt={fmt}
         t={t}
         monthNames={monthNames}
         onPress={alTocarFila}
-        transferStatus={item.type === "income" && item.internalTransfer ? "returned" : transferStatuses.get(item.id)}
+        transferStatus={row.item.type === "income" && row.item.internalTransfer ? "returned" : transferStatuses.get(row.item.id)}
+        transferGroup={row.transferGroup}
       />
     ),
     [marcadas, selectMode, colorScheme, fmt, t, monthNames, alTocarFila, transferStatuses]
@@ -770,8 +779,8 @@ export default function Home({
       </View>
 
       <FlatList
-        data={monthTx}
-        keyExtractor={(t) => String(t.id)}
+        data={compactMonthRows}
+        keyExtractor={(row) => row.key}
         // flex-1: ocupa todo lo que sobra bajo la parte fija. Sin esto, la
         // lista se estira solo hasta donde llegue su contenido y con pocos
         // movimientos deja un hueco raro.

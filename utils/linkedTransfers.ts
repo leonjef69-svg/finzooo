@@ -10,6 +10,16 @@ export type LinkedSpaceMovement = {
 
 export type TransferAllocation = { transactionId: number; amount: number };
 export type TransferStatus = "pending" | "partial" | "returned";
+export type TransferGroupSummary = {
+  key: string;
+  sent: number;
+  returned: number;
+  pending: number;
+  count: number;
+  status: TransferStatus;
+  spaceName?: string;
+};
+export type CompactTransferRow<T> = { key: string; item: T; transferGroup?: TransferGroupSummary };
 
 export type PersonalLinkedTransfer = {
   id: number;
@@ -18,6 +28,7 @@ export type PersonalLinkedTransfer = {
   internalTransfer?: "family" | "box";
   internalTransferLink?: string;
   internalTransferSpaceId?: string;
+  internalTransferSpaceName?: string;
   internalTransferAllocations?: TransferAllocation[];
 };
 
@@ -136,6 +147,62 @@ export function personalTransferStatuses(items: PersonalLinkedTransfer[]): Map<n
     result.set(item.id, returned >= (item.amount || 0) - CENT ? "returned" : returned > CENT ? "partial" : "pending");
   }
   return result;
+}
+
+/**
+ * La lista normal enseña una sola tarjeta por destino. Los movimientos reales
+ * no se modifican: el filtro Transferencias puede seguir mostrándolos uno a uno.
+ */
+export function compactPersonalTransferRows<T extends PersonalTransferMovement>(items: T[]): CompactTransferRow<T>[] {
+  const summaries = new Map<string, TransferGroupSummary>();
+  for (const item of items) {
+    if (!item.internalTransfer || !Number.isFinite(item.amount) || item.amount <= 0) continue;
+    const identity = item.internalTransferSpaceId || item.internalTransferSpaceName || "legacy";
+    const key = `${item.internalTransfer}:${identity}`;
+    const current = summaries.get(key) || { key, sent: 0, returned: 0, pending: 0, count: 0, status: "pending" as const, spaceName: item.internalTransferSpaceName };
+    if (item.type === "expense") current.sent = money(current.sent + item.amount);
+    else current.returned = money(current.returned + item.amount);
+    current.count += 1;
+    current.spaceName ||= item.internalTransferSpaceName;
+    summaries.set(key, current);
+  }
+  for (const summary of summaries.values()) {
+    summary.pending = money(Math.max(0, summary.sent - summary.returned));
+    summary.status = summary.pending <= CENT ? "returned" : summary.returned > CENT ? "partial" : "pending";
+  }
+  const emitted = new Set<string>();
+  return items.flatMap(item => {
+    if (!item.internalTransfer) return [{ key: `movement:${item.id}`, item }];
+    const identity = item.internalTransferSpaceId || item.internalTransferSpaceName || "legacy";
+    const key = `${item.internalTransfer}:${identity}`;
+    if (emitted.has(key)) return [];
+    emitted.add(key);
+    return [{ key: `transfer:${key}`, item, transferGroup: summaries.get(key) }];
+  });
+}
+
+/** Una Familia o Caja abierta resume todos sus pares Personal ↔ espacio. */
+export function compactLinkedTransferRows<T extends LinkedSpaceMovement>(items: T[]): CompactTransferRow<T>[] {
+  const linked = items.filter(isLinkedSpaceTransfer);
+  if (!linked.length) return items.map(item => ({ key: `movement:${item.id}`, item }));
+  const sent = money(linked.filter(item => !isLinkedSpaceReturn(item)).reduce((sum, item) => sum + item.monto, 0));
+  const returned = money(linked.filter(isLinkedSpaceReturn).reduce((sum, item) => sum + (item.personalReturnAmount || item.monto), 0));
+  const pending = money(Math.max(0, sent - returned));
+  const summary: TransferGroupSummary = {
+    key: "space",
+    sent,
+    returned,
+    pending,
+    count: linked.length,
+    status: pending <= CENT ? "returned" : returned > CENT ? "partial" : "pending",
+  };
+  let emitted = false;
+  return items.flatMap(item => {
+    if (!isLinkedSpaceTransfer(item)) return [{ key: `movement:${item.id}`, item }];
+    if (emitted) return [];
+    emitted = true;
+    return [{ key: "transfer:space", item, transferGroup: summary }];
+  });
 }
 
 export function balanceOfSpace(items: LinkedSpaceMovement[]): number {

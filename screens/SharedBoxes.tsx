@@ -12,7 +12,7 @@ import { auth } from "@/utils/firebase";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { nextId } from "@/utils/id";
-import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
+import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
 import { actualizarAportePersonal, borrarAportePersonal } from "@/utils/personalContribution";
 import { ArrowRightLeft, LogOut, Pencil, Trash2, UserMinus, UserPlus, UsersRound } from "lucide-react-native";
 import { borrarMovimientoCajaCompartida, cerrarCajaCompartida, crearInvitacionCaja, escucharMovimientosCaja, guardarMovimientoCajaCompartida, listarCajasCompartidas, listarMiembrosCaja, observarCierreCaja, quitarMiembroCaja, salirDeCaja, unirseACaja, type CajaCompartida, type MiembroCajaCompartida, type MovimientoCajaCompartida } from "@/utils/cloudCajasCompartidas";
@@ -72,6 +72,9 @@ export default function SharedBoxes() {
   const transferCount = useMemo(() => movimientos.filter(isLinkedSpaceTransfer).length, [movimientos]);
   const visibles = movimientos.filter(item => !filter
     || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter));
+  const filasVisibles = filter
+    ? visibles.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }))
+    : compactLinkedTransferRows(visibles);
   const owner = caja?.ownerUid === uid;
   const saldo = movimientos.reduce((sum, item) => sum + (item.tipo === "ingreso" ? item.monto : -item.monto), 0);
   const devolvibleAPersonal = returnableToPersonal(movimientos, uid);
@@ -159,7 +162,7 @@ export default function SharedBoxes() {
       scrollEventThrottle={160}
       onScroll={({ nativeEvent }) => {
         const cercaDelFinal = nativeEvent.layoutMeasurement.height + nativeEvent.contentOffset.y >= nativeEvent.contentSize.height - 240;
-        if (cercaDelFinal && movementLimit < visibles.length) setMovementLimit(limit => Math.min(limit + 60, visibles.length));
+        if (cercaDelFinal && movementLimit < filasVisibles.length) setMovementLimit(limit => Math.min(limit + 60, filasVisibles.length));
       }}
     >
       {!uid ? <Text className="text-slate-600 dark:text-slate-200">{t("boxes.loginRequired")}</Text> : <>
@@ -183,16 +186,16 @@ export default function SharedBoxes() {
           <View className="flex-row gap-2">{boton(t("common.cancel"), limpiar)}{boton(busy ? t("common.loading") : t("common.save"), guardar)}</View>
         </View> : null}
         <SpaceFilterReset filter={filter} onReset={() => setFilter(null)} />
-        {caja && visibles.length === 0 ? <Text className="py-3 text-sm text-slate-500">{t("spaces.noResults")}</Text> : null}
-        {caja ? visibles.slice(0, movementLimit).map(item => {
+        {caja && filasVisibles.length === 0 ? <Text className="py-3 text-sm text-slate-500">{t("spaces.noResults")}</Text> : null}
+        {caja ? filasVisibles.slice(0, movementLimit).map(({ key, item, transferGroup }) => {
           const puedeBorrar = item.personalOwnerUid ? item.personalOwnerUid === uid : owner || item.creadoPor === uid;
           const puedeEditarAporte = item.tipo === "ingreso" && item.personalOwnerUid === uid && item.personalTransactionId != null;
           const transferencia = isLinkedSpaceTransfer(item);
           const retorno = isLinkedSpaceReturn(item);
-          const estado = retorno ? "returned" : item.personalTransactionId != null
+          const estado = transferGroup?.status || (retorno ? "returned" : item.personalTransactionId != null
             ? transferLedger.progressByTransactionId.get(item.personalTransactionId)?.status || "pending"
-            : "pending";
-          return <View key={item.id} className="mb-2 rounded-xl border border-slate-200 p-3 dark:border-noche-borde"><View className="flex-row items-center gap-2">{transferencia ? <View className="h-9 w-9 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-950"><ArrowRightLeft size={17} color="#2563eb" /></View> : null}<View className="flex-1"><View className="flex-row gap-3"><Text numberOfLines={1} className="flex-1 text-base font-bold text-slate-900 dark:text-white">{transferencia ? t(retorno ? "transfer.spaceToPersonal" : "transfer.personalToSpace", { name: caja.nombre }) : item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`max-w-[50%] text-base font-bold ${transferencia ? "text-blue-600 dark:text-blue-300" : "text-teal-600"}`}>{transferencia ? (retorno ? "↩ " : "→ ") : item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></View><Text className={`text-xs ${transferencia ? "font-semibold text-blue-600 dark:text-blue-300" : "text-slate-500"}`}>{transferencia ? `${t("transfer.internal")} · ${t(`transfer.${estado}`)} · ${item.fecha}` : `${item.fecha}${item.method ? ` · ${methodLabel(item.method, t)}` : ""}`}</Text></View>{puedeEditarAporte ? <TouchableOpacity onPress={() => { setEditandoAporteId(item.id); setModo("ingreso"); setMonto(String(item.monto)); setNombre(item.descripcion); }} className="h-9 w-9 items-center justify-center"><Pencil size={15} color="#0d9488" /></TouchableOpacity> : null}{puedeBorrar ? <TouchableOpacity accessibilityLabel={t("common.delete")} onPress={() => void borrar(item)} className="h-9 w-9 items-center justify-center"><Trash2 size={15} color="#e11d48" /></TouchableOpacity> : <View className="h-9 w-9" />}</View></View>;
+            : "pending");
+          return <TouchableOpacity key={key} disabled={!transferGroup} onPress={() => setFilter("transferencia")} className="mb-2 rounded-xl border border-slate-200 p-3 dark:border-noche-borde"><View className="flex-row items-center gap-2">{transferencia ? <View className="h-9 w-9 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-950"><ArrowRightLeft size={17} color="#2563eb" /></View> : null}<View className="flex-1"><View className="flex-row gap-3"><Text numberOfLines={1} className="flex-1 text-base font-bold text-slate-900 dark:text-white">{transferGroup ? t("transfer.groupTitle", { name: caja.nombre }) : transferencia ? t(retorno ? "transfer.spaceToPersonal" : "transfer.personalToSpace", { name: caja.nombre }) : item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`max-w-[50%] text-base font-bold ${transferencia ? "text-blue-600 dark:text-blue-300" : "text-teal-600"}`}>{transferGroup ? "↔ " : transferencia ? (retorno ? "↩ " : "→ ") : item.tipo === "ingreso" ? "+" : "-"}{fmt(transferGroup?.pending ?? item.monto)}</Text></View><Text className={`text-xs ${transferencia ? "font-semibold text-blue-600 dark:text-blue-300" : "text-slate-500"}`}>{transferGroup ? `${t(`transfer.${estado}`)} · ${t("transfer.summaryLine", { sent: fmt(transferGroup.sent), returned: fmt(transferGroup.returned) })}` : transferencia ? `${t("transfer.internal")} · ${t(`transfer.${estado}`)} · ${item.fecha}` : `${item.fecha}${item.method ? ` · ${methodLabel(item.method, t)}` : ""}`}</Text></View>{!transferGroup && puedeEditarAporte ? <TouchableOpacity onPress={() => { setEditandoAporteId(item.id); setModo("ingreso"); setMonto(String(item.monto)); setNombre(item.descripcion); }} className="h-9 w-9 items-center justify-center"><Pencil size={15} color="#0d9488" /></TouchableOpacity> : null}{!transferGroup && puedeBorrar ? <TouchableOpacity accessibilityLabel={t("common.delete")} onPress={() => void borrar(item)} className="h-9 w-9 items-center justify-center"><Trash2 size={15} color="#e11d48" /></TouchableOpacity> : <View className="h-9 w-9" />}</View></TouchableOpacity>;
         }) : null}
         {caja && !owner ? <TouchableOpacity onPress={salir} className="mt-3 min-h-11 flex-row items-center justify-center gap-2"><LogOut size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("boxes.leave")}</Text></TouchableOpacity> : null}
         {caja && owner ? <TouchableOpacity onPress={cerrar} className="mt-3 min-h-11 flex-row items-center justify-center gap-2"><Trash2 size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("boxes.close")}</Text></TouchableOpacity> : null}

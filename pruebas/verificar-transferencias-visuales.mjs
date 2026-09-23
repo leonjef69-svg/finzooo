@@ -17,11 +17,14 @@ assert.match(home, /text-blue-600[\s\S]*transfer\.internal/, "Inicio pinta e ide
 assert.match(detail, /transfer\.notIncomeExpense/, "el detalle explica que una transferencia no es ingreso ni gasto");
 assert.match(history, /filter === "transfer" \? Boolean\(t\.internalTransfer\)/, "el filtro separa transferencias de ingresos y gastos");
 assert.match(controls, /"transferencia"[\s\S]*SpaceTransferFilter/, "Familia y Caja comparten un filtro exclusivo de transferencias");
+assert.match(home, /compactPersonalTransferRows\(monthTx\)/, "Inicio agrupa transferencias por familia o caja");
+assert.match(history, /filter === "all"[\s\S]*compactPersonalTransferRows/, "Historial agrupa por defecto y conserva el filtro con el detalle completo");
 
 for (const [nombre, codigo] of [["Familia", family], ["Caja", boxes], ["Caja compartida", sharedBoxes]]) {
   assert.match(codigo, /!isLinkedSpaceTransfer\(item\) && item\.tipo === "ingreso"/, `${nombre} excluye transferencias del total de ingresos`);
   assert.match(codigo, /!isLinkedSpaceTransfer\(item\) && item\.tipo === "gasto"/, `${nombre} excluye devoluciones del total de gastos`);
   assert.match(codigo, /transfer\.personalToSpace[\s\S]*transfer\.spaceToPersonal|transfer\.spaceToPersonal[\s\S]*transfer\.personalToSpace/, `${nombre} muestra la dirección Personal ↔ espacio`);
+  assert.match(codigo, /compactLinkedTransferRows/, `${nombre} resume los pares de transferencia en una sola tarjeta`);
 }
 
 assert.match(sharedBoxes, /const saldo = movimientos\.reduce/, "la caja compartida conserva las transferencias en su saldo disponible");

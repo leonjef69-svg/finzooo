@@ -5,7 +5,7 @@ import SpaceSwitcher from "@/components/SpaceSwitcher";
 import { useAppData } from "@/contexts/AppDataContext";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { horaDe } from "@/utils/format";
-import { allocatePersonalReturn, canSpendFromSpace, canUndoContribution, isLinkedSpaceReturn, isLinkedSpaceTransfer, isTrustedLegacyFamilyContribution, linkedTransferLedger, minimumContributionAmount, orphanedPersonalTransferIds, returnableToPersonal } from "@/utils/linkedTransfers";
+import { allocatePersonalReturn, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, isTrustedLegacyFamilyContribution, linkedTransferLedger, minimumContributionAmount, orphanedPersonalTransferIds, returnableToPersonal } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
 import { auth } from "@/utils/firebase";
 import { irUnaVez, safeBack } from "@/utils/nav";
@@ -140,6 +140,9 @@ export default function Family() {
   ), [movimientos]);
   const visibles = movimientos.filter(item => !filter
     || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter));
+  const filasVisibles = filter
+    ? visibles.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }))
+    : compactLinkedTransferRows(visibles);
   const owner = familia?.ownerUid === auth.currentUser?.uid;
   const devolvibleAPersonal = returnableToPersonal(movimientos, auth.currentUser?.uid);
 
@@ -345,7 +348,7 @@ export default function Family() {
       scrollEventThrottle={160}
       onScroll={({ nativeEvent }) => {
         const cercaDelFinal = nativeEvent.layoutMeasurement.height + nativeEvent.contentOffset.y >= nativeEvent.contentSize.height - 240;
-        if (cercaDelFinal && movementLimit < visibles.length) setMovementLimit(limit => Math.min(limit + 60, visibles.length));
+        if (cercaDelFinal && movementLimit < filasVisibles.length) setMovementLimit(limit => Math.min(limit + 60, filasVisibles.length));
       }}
     >
       {cargando ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : !auth.currentUser ? <Text className="mt-6 text-center text-slate-600 dark:text-slate-300">{t("family.loginRequired")}</Text> : verTodas ? <>
@@ -381,17 +384,17 @@ export default function Family() {
         </View>
         {invitacion ? <View className="mb-3 rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950"><Text className="text-xs text-slate-600 dark:text-slate-300">{t("family.shareCode")}</Text><Text selectable className="mt-1 text-center text-2xl font-extrabold tracking-[4px] text-emerald-700 dark:text-emerald-300">{invitacion}</Text><Text className="mt-1 text-center text-[11px] text-slate-500">Mantén presionado el código para copiarlo.</Text></View> : null}
         <SpaceFilterReset filter={filter} onReset={() => setFilter(null)} />
-        {visibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "family.noMovements")}</Text> : visibles.slice(0, movementLimit).map(item => {
+        {filasVisibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "family.noMovements")}</Text> : filasVisibles.slice(0, movementLimit).map(({ key, item, transferGroup }) => {
           const transferencia = isLinkedSpaceTransfer(item);
           const retorno = isLinkedSpaceReturn(item);
-          const estado = retorno ? "returned" : item.personalTransactionId != null
+          const estado = transferGroup?.status || (retorno ? "returned" : item.personalTransactionId != null
             ? transferLedger.progressByTransactionId.get(item.personalTransactionId)?.status || "pending"
-            : "pending";
-          return <TouchableOpacity key={item.id} disabled={!seleccionando} onPress={() => seleccionar(item.id)} className={`mb-2 flex-row items-center rounded-2xl border-[1.5px] p-3 dark:border-noche-borde ${seleccionados.includes(item.id) ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200"}`}>
+            : "pending");
+          return <TouchableOpacity key={key} disabled={transferGroup ? seleccionando : !seleccionando} onPress={() => transferGroup ? setFilter("transferencia") : seleccionar(item.id)} className={`mb-2 flex-row items-center rounded-2xl border-[1.5px] p-3 dark:border-noche-borde ${seleccionados.includes(item.id) ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200"}`}>
             <View className={`h-9 w-9 items-center justify-center rounded-xl ${transferencia ? "bg-blue-100 dark:bg-blue-950" : item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{transferencia ? <ArrowRightLeft size={17} color="#2563eb" /> : item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
-            <View className="ml-3 flex-1"><Text numberOfLines={1} className="text-[15px] font-bold text-slate-800 dark:text-slate-100">{transferencia ? t(retorno ? "transfer.spaceToPersonal" : "transfer.personalToSpace", { name: familia.nombre }) : item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text className={`text-xs ${transferencia ? "font-semibold text-blue-600 dark:text-blue-300" : "text-slate-500"}`}>{transferencia ? `${t("transfer.internal")} · ${t(`transfer.${estado}`)} · ${item.fecha}` : `${item.fecha}${item.method ? ` · ${methodLabel(item.method, t)}` : ""}`}</Text></View>
-            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-1 max-w-[38%] text-[15px] font-extrabold ${transferencia ? "text-blue-600 dark:text-blue-300" : item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{transferencia ? (retorno ? "↩ " : "→ ") : item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text>
-            {seleccionando ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${seleccionados.includes(item.id) ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : null}
+            <View className="ml-3 flex-1"><Text numberOfLines={1} className="text-[15px] font-bold text-slate-800 dark:text-slate-100">{transferGroup ? t("transfer.groupTitle", { name: familia.nombre }) : transferencia ? t(retorno ? "transfer.spaceToPersonal" : "transfer.personalToSpace", { name: familia.nombre }) : item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text className={`text-xs ${transferencia ? "font-semibold text-blue-600 dark:text-blue-300" : "text-slate-500"}`}>{transferGroup ? `${t(`transfer.${estado}`)} · ${t("transfer.summaryLine", { sent: fmt(transferGroup.sent), returned: fmt(transferGroup.returned) })}` : transferencia ? `${t("transfer.internal")} · ${t(`transfer.${estado}`)} · ${item.fecha}` : `${item.fecha}${item.method ? ` · ${methodLabel(item.method, t)}` : ""}`}</Text></View>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-1 max-w-[38%] text-[15px] font-extrabold ${transferencia ? "text-blue-600 dark:text-blue-300" : item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{transferGroup ? "↔ " : transferencia ? (retorno ? "↩ " : "→ ") : item.tipo === "ingreso" ? "+" : "-"}{fmt(transferGroup?.pending ?? item.monto)}</Text>
+            {seleccionando && !transferGroup ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${seleccionados.includes(item.id) ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : null}
           </TouchableOpacity>;
         })}
         {!owner ? <TouchableOpacity disabled={ocupado} onPress={salir} className="mt-3 min-h-11 flex-row items-center justify-center gap-2"><LogOut size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("family.leave")}</Text></TouchableOpacity> : null}

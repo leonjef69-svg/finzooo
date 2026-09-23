@@ -3,6 +3,8 @@ import {
   allocatePersonalReturn,
   canSpendFromSpace,
   canCloseLinkedSpace,
+  compactLinkedTransferRows,
+  compactPersonalTransferRows,
   hasUnreturnedPersonalContribution,
   canUndoContribution,
   isTrustedLegacyFamilyContribution,
@@ -94,6 +96,20 @@ igual(ledgerParcial.progressByTransactionId.get(101)?.status, "partial", "el apo
 igual(ledgerParcial.progressByTransactionId.get(101)?.remaining, 30, "el estado conserva el monto todavía pendiente");
 igual(ledgerParcial.progressByTransactionId.get(102)?.status, "pending", "el siguiente aporte continúa Pendiente");
 igual(JSON.stringify(allocatePersonalReturn(historialEnlazado, 60, "yo")), JSON.stringify([{ transactionId: 101, amount: 30 }, { transactionId: 102, amount: 30 }]), "la siguiente devolución se enlaza con los aportes exactos");
+const resumenDelEspacio = compactLinkedTransferRows(historialEnlazado);
+igual(resumenDelEspacio.length, 1, "la lista normal compacta aportes y devoluciones en una tarjeta");
+igual(resumenDelEspacio[0].transferGroup?.sent, 80, "la tarjeta agrupada conserva todo lo enviado");
+igual(resumenDelEspacio[0].transferGroup?.returned, 20, "la tarjeta agrupada conserva todo lo devuelto");
+igual(resumenDelEspacio[0].transferGroup?.pending, 60, "la tarjeta agrupada muestra solo lo pendiente");
+
+const resumenPersonalPorDestino = compactPersonalTransferRows([
+  { id: 401, type: "expense" as const, amount: 100, internalTransfer: "family" as const, internalTransferSpaceId: "familia-a", internalTransferSpaceName: "Casa" },
+  { id: 402, type: "income" as const, amount: 100, internalTransfer: "family" as const, internalTransferSpaceId: "familia-a", internalTransferSpaceName: "Casa" },
+  { id: 403, type: "expense" as const, amount: 10, internalTransfer: "family" as const, internalTransferSpaceId: "familia-b", internalTransferSpaceName: "Viaje" },
+]);
+igual(resumenPersonalPorDestino.length, 2, "Personal muestra una tarjeta por familia o caja");
+igual(resumenPersonalPorDestino[0].transferGroup?.status, "returned", "la familia liquidada queda resumida como Devuelta");
+igual(resumenPersonalPorDestino[1].transferGroup?.pending, 10, "la otra familia conserva su saldo Pendiente");
 
 const historialDeDosPersonas = [
   { id: "aporte-otra", tipo: "ingreso" as const, monto: 40, creadoEn: 1, personalTransactionId: 301, personalOwnerUid: "otra" },

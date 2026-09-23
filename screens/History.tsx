@@ -1,4 +1,4 @@
-import { memo, useCallback, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ArrowRightLeft, Search, SlidersHorizontal, TrendingDown, TrendingUp, X } from "lucide-react-native";
@@ -15,9 +15,10 @@ import { CARD_SHADOW } from "@/constants/style";
 import { fmtDate, monthKey } from "@/utils/format";
 import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
-import { personalTransferStatuses, type TransferStatus } from "@/utils/linkedTransfers";
+import { compactPersonalTransferRows, personalTransferStatuses, type TransferGroupSummary, type TransferStatus } from "@/utils/linkedTransfers";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
+import { useLocalSearchParams } from "expo-router";
 
 /* UNA SOLA LISTA, NO UN MURO.
    Antes esta pantalla era un ScrollView con dos map() anidados: se construían de golpe
@@ -27,7 +28,7 @@ import type { Month, Transaction } from "@/types";
    después. La pantalla se abre igual de rápido con 20 movimientos que con 2000. */
 type Renglon =
   | { clave: string; tipo: "fecha"; fecha: string }
-  | { clave: string; tipo: "fila"; tx: Transaction };
+  | { clave: string; tipo: "fila"; tx: Transaction; transferGroup?: TransferGroupSummary };
 
 /* La fila se declara FUERA del componente y memoizada. Dentro se volvería a crear en cada
    dibujado y React la trataría como un tipo distinto cada vez: tiraría todas las filas y
@@ -39,6 +40,8 @@ const Fila = memo(function Fila({
   oscuro,
   onOpenDetail,
   transferStatus,
+  transferGroup,
+  onOpenTransferGroup,
 }: {
   tx: Transaction;
   fmt: (n: number) => string;
@@ -46,16 +49,20 @@ const Fila = memo(function Fila({
   oscuro: boolean;
   onOpenDetail: (id: number) => void;
   transferStatus?: TransferStatus;
+  transferGroup?: TransferGroupSummary;
+  onOpenTransferGroup: () => void;
 }) {
   const c = catInfo(tx.category);
   const isTransfer = Boolean(tx.internalTransfer);
   const spaceName = tx.internalTransferSpaceName || t(tx.internalTransfer === "family" ? "spaces.family" : "spaces.boxes");
-  const title = isTransfer
+  const title = transferGroup
+    ? t("transfer.groupTitle", { name: spaceName })
+    : isTransfer
     ? t(tx.type === "expense" ? "transfer.personalToSpace" : "transfer.spaceToPersonal", { name: spaceName })
     : tx.description || t(c.label);
   return (
     <TouchableOpacity
-      onPress={() => onOpenDetail(tx.id)}
+      onPress={() => transferGroup ? onOpenTransferGroup() : onOpenDetail(tx.id)}
       // Mismo contorno que las filas de Inicio: medio píxel más
       // de grosor y un tono más claro, porque la tarjeta y el
       // fondo de la pantalla son del mismo color en oscuro.
@@ -80,7 +87,7 @@ const Fila = memo(function Fila({
         {/* El método pertenece visualmente al monto: ambos describen el pago.
             Aquí queda la hora, en el espacio que antes ocupaba el método. */}
         <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#f1f5f9" : "#64748b" }} numberOfLines={1}>
-          {isTransfer ? `${t("transfer.internal")} · ${t(`transfer.${transferStatus || (tx.type === "income" ? "returned" : "pending")}`)}` : tx.time || t(c.label)}
+          {isTransfer ? `${t("transfer.internal")} · ${t(`transfer.${transferGroup?.status || transferStatus || (tx.type === "income" ? "returned" : "pending")}`)}` : tx.time || t(c.label)}
         </Text>
       </View>
       <View className="items-end self-stretch justify-start">
@@ -90,9 +97,10 @@ const Fila = memo(function Fila({
           adjustsFontSizeToFit
           minimumFontScale={0.72}
         >
-          {isTransfer ? (tx.type === "expense" ? "→ " : "↩ ") : tx.type === "expense" ? "-" : "+"}
-          {fmt(tx.amount)}
+          {transferGroup ? "↔ " : isTransfer ? (tx.type === "expense" ? "→ " : "↩ ") : tx.type === "expense" ? "-" : "+"}
+          {fmt(transferGroup?.pending ?? tx.amount)}
         </Text>
+        {transferGroup ? <Text className="mt-1 max-w-[150px] text-right text-[10px] text-slate-500 dark:text-slate-300" numberOfLines={2}>{t("transfer.summaryLine", { sent: fmt(transferGroup.sent), returned: fmt(transferGroup.returned) })}</Text> : null}
         {!isTransfer ? <View className="mt-1"><EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} /></View> : null}
       </View>
     </TouchableOpacity>
@@ -111,6 +119,7 @@ export default function History({
   onOpenDetail: (id: number) => void;
 }) {
   const { fmt, t, monthNames } = useAppData();
+  const { transfer } = useLocalSearchParams<{ transfer?: string }>();
   const { colorScheme } = useColorScheme();
   const oscuro = colorScheme === "dark";
   const FILTERS = [
@@ -143,6 +152,9 @@ export default function History({
   const parsedMaxAmount = parseAmountInput(maxAmount);
   const hasAdvancedFilters = Boolean(categoryFilter || minAmount || maxAmount);
   const transferStatuses = useMemo(() => personalTransferStatuses(transactions), [transactions]);
+  useEffect(() => {
+    if (transfer === "1") setFilter("transfer");
+  }, [transfer]);
 
   const { totalExpense, totalIncome } = useMemo(() => {
     return {
@@ -168,14 +180,17 @@ export default function History({
         return haystack.includes(query);
       })
       .sort(compararMovimientos);
+    const compactRows = filter === "all"
+      ? compactPersonalTransferRows(monthTx)
+      : monthTx.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }));
     const salida: Renglon[] = [];
     let ultimaFecha = "";
-    monthTx.forEach((tx) => {
+    compactRows.forEach(({ key, item: tx, transferGroup }) => {
       if (tx.date !== ultimaFecha) {
         ultimaFecha = tx.date;
         salida.push({ clave: `f:${tx.date}`, tipo: "fecha", fecha: tx.date });
       }
-      salida.push({ clave: `m:${tx.id}`, tipo: "fila", tx });
+      salida.push({ clave: key, tipo: "fila", tx, transferGroup });
     });
     return salida;
   }, [allMonthTx, filter, search, categoryFilter, minAmount, maxAmount, parsedMinAmount, parsedMaxAmount, t]);
@@ -188,7 +203,7 @@ export default function History({
         </Text>
       ) : (
         <View className="px-5">
-          <Fila tx={item.tx} fmt={fmt} t={t} oscuro={oscuro} onOpenDetail={onOpenDetail} transferStatus={item.tx.type === "income" && item.tx.internalTransfer ? "returned" : transferStatuses.get(item.tx.id)} />
+          <Fila tx={item.tx} fmt={fmt} t={t} oscuro={oscuro} onOpenDetail={onOpenDetail} onOpenTransferGroup={() => setFilter("transfer")} transferStatus={item.tx.type === "income" && item.tx.internalTransfer ? "returned" : transferStatuses.get(item.tx.id)} transferGroup={item.transferGroup} />
         </View>
       ),
     [fmt, t, oscuro, onOpenDetail, monthNames, transferStatuses]
