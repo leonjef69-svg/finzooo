@@ -70,6 +70,11 @@ igual(netTransferredFromPersonal(resumenPersonal, "box"), 9_000_000_000_170, "Ca
 igual(netTransferredFromPersonal(resumenPersonal, "family"), 200, "Familia conserva su saldo neto separado");
 igual(netTransferredFromPersonal([{ id: 38, type: "income", amount: 20, internalTransfer: "box" }], "box"), 0, "una devolución sin aporte no deja tarjeta negativa");
 igual(netTransferredFromPersonal([{ id: 39, type: "expense", amount: 0.1, internalTransfer: "family" }, { id: 40, type: "expense", amount: 0.2, internalTransfer: "family" }, { id: 41, type: "income", amount: 0.3, internalTransfer: "family" }], "family"), 0, "los decimales no dejan una tarjeta fantasma");
+igual(netTransferredFromPersonal([
+  { id: 42, type: "expense", amount: 100, internalTransfer: "family", internalTransferSpaceId: "familia-a" },
+  { id: 43, type: "income", amount: 150, internalTransfer: "family", internalTransferSpaceId: "familia-a" },
+  { id: 44, type: "expense", amount: 10, internalTransfer: "family", internalTransferSpaceId: "familia-b" },
+], "family"), 10, "una devolución excedente de otra familia no oculta la tarjeta del aporte pendiente");
 
 const legado = { id: "legado", tipo: "ingreso" as const, monto: 100, descripcion: "Monto inicial desde Personal", method: "transfer", creadoPor: "yo" };
 igual(isTrustedLegacyFamilyContribution(legado, "yo"), true, "migra solo el aporte familiar antiguo generado por Fino");

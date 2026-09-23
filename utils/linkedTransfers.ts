@@ -17,6 +17,7 @@ export type PersonalLinkedTransfer = {
   amount?: number;
   internalTransfer?: "family" | "box";
   internalTransferLink?: string;
+  internalTransferSpaceId?: string;
   internalTransferAllocations?: TransferAllocation[];
 };
 
@@ -214,11 +215,17 @@ export function netTransferredFromPersonal(
   movements: PersonalTransferMovement[],
   kind: "family" | "box",
 ): number {
-  const net = movements.reduce((sum, item) => {
-    if (item.internalTransfer !== kind || !Number.isFinite(item.amount) || item.amount <= 0) return sum;
-    return sum + (item.type === "expense" ? item.amount : -item.amount);
-  }, 0);
-  return Math.max(0, Math.round(net * 100) / 100);
+  const netBySpace = new Map<string, number>();
+  for (const item of movements) {
+    if (item.internalTransfer !== kind || !Number.isFinite(item.amount) || item.amount <= 0) continue;
+    // Los registros antiguos sin espacio siguen conciliándose entre sí, pero
+    // una devolución excedente de un espacio nunca oculta saldo de otro.
+    const spaceId = item.internalTransferSpaceId || `legacy:${kind}`;
+    const next = (netBySpace.get(spaceId) || 0) + (item.type === "expense" ? item.amount : -item.amount);
+    netBySpace.set(spaceId, next);
+  }
+  const net = [...netBySpace.values()].reduce((sum, amount) => sum + Math.max(0, amount), 0);
+  return Math.round(net * 100) / 100;
 }
 
 /**
