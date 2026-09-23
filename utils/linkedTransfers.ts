@@ -2,15 +2,22 @@ export type LinkedSpaceMovement = {
   id: string;
   tipo: "ingreso" | "gasto";
   monto: number;
+  creadoEn?: number;
   personalTransactionId?: number;
   personalOwnerUid?: string;
   personalReturnAmount?: number;
 };
 
+export type TransferAllocation = { transactionId: number; amount: number };
+export type TransferStatus = "pending" | "partial" | "returned";
+
 export type PersonalLinkedTransfer = {
   id: number;
+  type?: "expense" | "income";
+  amount?: number;
   internalTransfer?: "family" | "box";
   internalTransferLink?: string;
+  internalTransferAllocations?: TransferAllocation[];
 };
 
 /** La mitad que vive en Personal de una transferencia a un espacio. */
@@ -27,6 +34,108 @@ export type LegacyFamilyContribution = LinkedSpaceMovement & {
 };
 
 const CENT = 0.005;
+const money = (value: number) => Math.round(value * 100) / 100;
+
+export function isLinkedSpaceTransfer(item: LinkedSpaceMovement): boolean {
+  return item.personalTransactionId != null || (item.personalReturnAmount || 0) > 0;
+}
+
+export function isLinkedSpaceReturn(item: LinkedSpaceMovement): boolean {
+  return item.tipo === "gasto" && item.personalTransactionId != null && (item.personalReturnAmount || 0) > 0;
+}
+
+/**
+ * Une aportes y devoluciones sin exigir campos nuevos en Firestore. Las
+ * devoluciones se aplican en orden a los aportes más antiguos de esa persona.
+ * Así los datos anteriores obtienen el mismo estado que los nuevos.
+ */
+export function linkedTransferLedger(items: LinkedSpaceMovement[], ownerUid?: string): {
+  allocationsByReturnId: Map<string, TransferAllocation[]>;
+  progressByTransactionId: Map<number, { returned: number; remaining: number; status: TransferStatus }>;
+} {
+  const ordered = [...items]
+    .filter(item => !ownerUid || item.personalOwnerUid === ownerUid)
+    .sort((a, b) => (a.creadoEn || 0) - (b.creadoEn || 0) || a.id.localeCompare(b.id));
+  const contributions = new Map<number, { amount: number; returned: number; ownerUid?: string }>();
+  const order: number[] = [];
+  const allocationsByReturnId = new Map<string, TransferAllocation[]>();
+
+  for (const item of ordered) {
+    if (item.tipo === "ingreso" && item.personalTransactionId != null) {
+      if (!contributions.has(item.personalTransactionId)) order.push(item.personalTransactionId);
+      contributions.set(item.personalTransactionId, { amount: money(item.monto), returned: 0, ownerUid: item.personalOwnerUid });
+      continue;
+    }
+    if (!isLinkedSpaceReturn(item)) continue;
+    let available = money(item.personalReturnAmount || item.monto);
+    const allocations: TransferAllocation[] = [];
+    for (const transactionId of order) {
+      if (available <= CENT) break;
+      const contribution = contributions.get(transactionId);
+      if (!contribution) continue;
+      // A return only settles contributions from the same person. Otherwise,
+      // one member's return could change another member's transfer status.
+      if (contribution.ownerUid !== item.personalOwnerUid) continue;
+      const remaining = money(Math.max(0, contribution.amount - contribution.returned));
+      const applied = money(Math.min(remaining, available));
+      if (applied <= CENT) continue;
+      contribution.returned = money(contribution.returned + applied);
+      available = money(available - applied);
+      allocations.push({ transactionId, amount: applied });
+    }
+    allocationsByReturnId.set(item.id, allocations);
+  }
+
+  const progressByTransactionId = new Map<number, { returned: number; remaining: number; status: TransferStatus }>();
+  for (const [transactionId, contribution] of contributions) {
+    const returned = money(Math.min(contribution.amount, contribution.returned));
+    const remaining = money(Math.max(0, contribution.amount - returned));
+    progressByTransactionId.set(transactionId, {
+      returned,
+      remaining,
+      status: remaining <= CENT ? "returned" : returned > CENT ? "partial" : "pending",
+    });
+  }
+  return { allocationsByReturnId, progressByTransactionId };
+}
+
+/** Distribución que debe guardar la próxima devolución en Personal. */
+export function allocatePersonalReturn(items: LinkedSpaceMovement[], amount: number, ownerUid?: string): TransferAllocation[] {
+  const ledger = linkedTransferLedger(items, ownerUid);
+  const orderedContributions = [...items]
+    .filter(item => (!ownerUid || item.personalOwnerUid === ownerUid) && item.tipo === "ingreso" && item.personalTransactionId != null)
+    .sort((a, b) => (a.creadoEn || 0) - (b.creadoEn || 0) || a.id.localeCompare(b.id));
+  let available = money(amount);
+  const result: TransferAllocation[] = [];
+  for (const item of orderedContributions) {
+    if (available <= CENT) break;
+    const progress = ledger.progressByTransactionId.get(item.personalTransactionId!);
+    const remaining = progress?.remaining ?? money(item.monto);
+    const applied = money(Math.min(remaining, available));
+    if (applied <= CENT) continue;
+    result.push({ transactionId: item.personalTransactionId!, amount: applied });
+    available = money(available - applied);
+  }
+  return result;
+}
+
+export function personalTransferStatuses(items: PersonalLinkedTransfer[]): Map<number, TransferStatus> {
+  const returnedById = new Map<number, number>();
+  for (const item of items) {
+    if (item.type !== "income" || !item.internalTransfer || !Array.isArray(item.internalTransferAllocations)) continue;
+    for (const allocation of item.internalTransferAllocations) {
+      if (!Number.isFinite(allocation.transactionId) || !Number.isFinite(allocation.amount) || allocation.amount <= 0) continue;
+      returnedById.set(allocation.transactionId, money((returnedById.get(allocation.transactionId) || 0) + allocation.amount));
+    }
+  }
+  const result = new Map<number, TransferStatus>();
+  for (const item of items) {
+    if (item.type !== "expense" || !item.internalTransfer || !Number.isFinite(item.amount) || (item.amount || 0) <= 0) continue;
+    const returned = returnedById.get(item.id) || 0;
+    result.set(item.id, returned >= (item.amount || 0) - CENT ? "returned" : returned > CENT ? "partial" : "pending");
+  }
+  return result;
+}
 
 export function balanceOfSpace(items: LinkedSpaceMovement[]): number {
   return items.reduce((sum, item) => sum + (item.tipo === "ingreso" ? item.monto : -item.monto), 0);

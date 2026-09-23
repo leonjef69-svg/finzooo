@@ -1,4 +1,4 @@
-import { SpaceTotals, SpacePaymentMethod, SpaceFilterReset, type MovementFilter } from "@/components/SpaceMovementControls";
+import { SpaceTotals, SpacePaymentMethod, SpaceFilterReset, SpaceTransferFilter, type MovementFilter } from "@/components/SpaceMovementControls";
 import { methodLabel } from "@/constants/i18n";
 import BackButton from "@/components/BackButton";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
@@ -15,11 +15,11 @@ import {
 } from "@/utils/cajas";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { horaDe } from "@/utils/format";
-import { canSpendFromSpace, canUndoContribution, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
+import { allocatePersonalReturn, canSpendFromSpace, canUndoContribution, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
-import { ArrowDown, ArrowLeftRight, ArrowUp, Boxes, Check, ListChecks, MoreVertical, Plus, Trash2, UserPlus, X } from "lucide-react-native";
+import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Boxes, Check, ListChecks, MoreVertical, Plus, Trash2, UserPlus, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -113,10 +113,12 @@ export default function Cajas() {
     () => datos.movimientos.filter((item) => item.cajaId === cajaId).sort((a, b) => b.creadoEn - a.creadoEn),
     [cajaId, datos.movimientos],
   );
+  const transferLedger = useMemo(() => linkedTransferLedger(movimientos), [movimientos]);
+  const transferCount = useMemo(() => movimientos.filter(isLinkedSpaceTransfer).length, [movimientos]);
   const resumen = useMemo(() => movimientos.reduce(
     (total, item) => ({
-      ingresos: total.ingresos + (item.tipo === "ingreso" ? item.monto : 0),
-      gastos: total.gastos + (item.tipo === "gasto" ? item.monto : 0),
+      ingresos: total.ingresos + (!isLinkedSpaceTransfer(item) && item.tipo === "ingreso" ? item.monto : 0),
+      gastos: total.gastos + (!isLinkedSpaceTransfer(item) && item.tipo === "gasto" ? item.monto : 0),
     }),
     { ingresos: 0, gastos: 0 },
   ), [movimientos]);
@@ -129,31 +131,47 @@ export default function Cajas() {
     if (!ready) return;
     const movimientosPorId = new Map(datos.movimientos.map(item => [item.id, item]));
     const upserts = datos.movimientos.flatMap(item => {
-      if (item.personalTransactionId == null || transactions.some(tx => tx.id === item.personalTransactionId)) return [];
+      if (item.personalTransactionId == null) return [];
       const cajaDelMovimiento = datos.cajas.find(c => c.id === item.cajaId);
       const esRetorno = item.tipo === "gasto" && (item.personalReturnAmount || 0) > 0;
-      return [{
+      const itemsCaja = datos.movimientos.filter(movement => movement.cajaId === item.cajaId);
+      const allocations = esRetorno ? linkedTransferLedger(itemsCaja).allocationsByReturnId.get(item.id) || [] : undefined;
+      const canonical = {
         id: item.personalTransactionId,
         type: esRetorno ? "income" as const : "expense" as const,
         amount: esRetorno ? item.personalReturnAmount! : item.monto,
         category: "otros", date: item.fecha, time: horaDe(item.creadoEn), method: "transfer",
         description: esRetorno ? t("boxes.returnFrom", { name: cajaDelMovimiento?.nombre || "" }) : t("boxes.transferTo", { name: cajaDelMovimiento?.nombre || "" }),
         notes: "", origin: "manual" as const, internalTransfer: "box" as const, internalTransferLink: item.id,
-      }];
+        internalTransferSpaceId: item.cajaId, internalTransferSpaceName: cajaDelMovimiento?.nombre || "Caja",
+        ...(allocations ? { internalTransferAllocations: allocations } : {}),
+      };
+      const current = transactions.find(tx => tx.id === item.personalTransactionId);
+      if (current?.internalTransfer === "box" && current.internalTransferLink === item.id
+        && current.type === canonical.type && current.amount === canonical.amount
+        && current.internalTransferSpaceId === item.cajaId
+        && current.internalTransferSpaceName === canonical.internalTransferSpaceName
+        && JSON.stringify(current.internalTransferAllocations || []) === JSON.stringify(allocations || [])) return [];
+      return [canonical];
     });
     const orphanIds = transactions
-      .filter(tx => tx.internalTransfer === "box" && tx.internalTransferLink?.startsWith("mov-") && !movimientosPorId.has(tx.internalTransferLink))
+      .filter(tx => tx.internalTransfer === "box"
+        && tx.internalTransferLink?.startsWith("mov-")
+        && (!tx.internalTransferSpaceId || tx.internalTransferSpaceId.startsWith("caja-"))
+        && !movimientosPorId.has(tx.internalTransferLink))
       .map(tx => tx.id);
     if (upserts.length || orphanIds.length) repairLinkedTransferTransactions(upserts, orphanIds);
   }, [datos.cajas, datos.movimientos, ready, repairLinkedTransferTransactions, t, transactions]);
 
-  const visibles = movimientos.filter(item => !filter || item.tipo === filter);
-  function sacarDePersonal(valor: number, destino: string, link: string): number {
+  const visibles = movimientos.filter(item => !filter
+    || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter));
+  function sacarDePersonal(valor: number, destino: string, spaceId: string, link: string): number {
     const id = nextId();
     addOrUpdateTransaction({
       id, type: "expense", amount: valor, category: "otros", date: fechaLocal(),
       time: horaDe(Date.now()), method: "transfer", description: t("boxes.transferTo", { name: destino }),
       notes: "", origin: "manual", internalTransfer: "box", internalTransferLink: link,
+      internalTransferSpaceId: spaceId, internalTransferSpaceName: destino,
     });
     return id;
   }
@@ -170,7 +188,7 @@ export default function Cajas() {
     if (!tomarAccionLocal()) return;
     const movimientoId = nuevoIdCaja("mov");
     const personalTransactionId = inicial > 0 && origenDinero === "personal"
-      ? sacarDePersonal(inicial, nombre, movimientoId)
+      ? sacarDePersonal(inicial, nombre, nueva.id, movimientoId)
       : undefined;
     setDatos((antes) => ({
       ...antes,
@@ -218,7 +236,7 @@ export default function Cajas() {
     if (!tomarAccionLocal()) return;
     const movimientoId = nuevoIdCaja("mov");
     const personalTransactionId = anotando === "ingreso" && origenDinero === "personal"
-      ? sacarDePersonal(valor, caja.nombre, movimientoId)
+      ? sacarDePersonal(valor, caja.nombre, caja.id, movimientoId)
       : undefined;
     const movimiento = {
       id: movimientoId,
@@ -296,8 +314,9 @@ export default function Cajas() {
     if (!tomarAccionLocal()) return;
     const movimientoId = nuevoIdCaja("mov");
     const personalId = nextId();
+    const allocations = allocatePersonalReturn(movimientos, devolvibleAPersonal);
     setDatos(antes => ({ ...antes, movimientos: [...antes.movimientos, { id: movimientoId, cajaId: caja.id, tipo: "gasto", monto: devolvibleAPersonal, descripcion: t("boxes.returnToPersonal"), method: "transfer", fecha: fechaLocal(), creadoEn: Date.now(), personalTransactionId: personalId, personalReturnAmount: devolvibleAPersonal }] }));
-    addOrUpdateTransaction({ id: personalId, type: "income", amount: devolvibleAPersonal, category: "otros", date: fechaLocal(), time: horaDe(Date.now()), method: "transfer", description: t("boxes.returnFrom", { name: caja.nombre }), notes: "", origin: "manual", internalTransfer: "box", internalTransferLink: movimientoId });
+    addOrUpdateTransaction({ id: personalId, type: "income", amount: devolvibleAPersonal, category: "otros", date: fechaLocal(), time: horaDe(Date.now()), method: "transfer", description: t("boxes.returnFrom", { name: caja.nombre }), notes: "", origin: "manual", internalTransfer: "box", internalTransferLink: movimientoId, internalTransferSpaceId: caja.id, internalTransferSpaceName: caja.nombre, internalTransferAllocations: allocations });
   }
 
   async function compartirCaja() {
@@ -308,6 +327,15 @@ export default function Cajas() {
     try {
       const compartida = await compartirCajaExistente(uid, userName || t("family.member"), caja, movimientos, userCurrency);
       const codigo = await crearInvitacionCaja(uid, compartida.id);
+      const idsPersonales = new Set(movimientos.flatMap(item => item.personalTransactionId == null ? [] : [item.personalTransactionId]));
+      const enlacesMigrados = transactions
+        .filter(item => idsPersonales.has(item.id) && item.internalTransfer === "box")
+        .map(item => ({
+          ...item,
+          internalTransferSpaceId: compartida.id,
+          internalTransferSpaceName: compartida.nombre,
+        }));
+      if (enlacesMigrados.length) repairLinkedTransferTransactions(enlacesMigrados);
       // Solo después de terminar toda la copia se retira la versión privada.
       // Los débitos enlazados de Personal se conservan porque ahora apuntan a
       // los mismos movimientos dentro de la caja compartida.
@@ -368,12 +396,7 @@ export default function Cajas() {
               </>}
             </View> : null}
             {datos.cajas.map((item) => (
-              (() => {
-                const ultimoIngreso = datos.movimientos
-                  .filter(movimiento => movimiento.cajaId === item.id && movimiento.tipo === "ingreso")
-                  .sort((a, b) => b.creadoEn - a.creadoEn)[0];
-                const origen = ultimoIngreso?.personalTransactionId != null ? "personal" : "externo";
-                return <TouchableOpacity
+              <TouchableOpacity
                 key={item.id}
                 disabled={!seleccionandoCajas && creando}
                 onPress={() => seleccionandoCajas ? setCajasSeleccionadas(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id]) : (setCajaId(item.id), setLista(false))}
@@ -383,11 +406,9 @@ export default function Cajas() {
                 <View className="ml-3 flex-1">
                   <Text className="font-extrabold text-slate-900 dark:text-slate-100">{item.nombre}</Text>
                   <Text className="mt-0.5 text-xs font-bold text-teal-700 dark:text-teal-300">{fmt(saldoCaja(item.id, datos.movimientos))}</Text>
-                  {ultimoIngreso ? <Text className="mt-0.5 text-xs font-medium text-slate-500 dark:text-slate-300">{t(origen === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text> : null}
                 </View>
                 {seleccionandoCajas ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${cajasSeleccionadas.includes(item.id) ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : <ArrowLeftRight size={17} color="#64748b" />}
-              </TouchableOpacity>;
-              })()
+              </TouchableOpacity>
             ))}
             {datos.cajas.length === 0 && !creando ? (
               <View className="items-center rounded-2xl border-[1.5px] border-dashed border-slate-300 px-5 py-7 dark:border-noche-borde">
@@ -418,6 +439,7 @@ export default function Cajas() {
               <Text className="text-[26px] font-extrabold leading-8 text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58}>{fmt(saldoActual)}</Text>
               <SpaceTotals income={resumen.ingresos} expense={resumen.gastos} filter={filter} onFilter={setFilter} format={fmt} />
             </View>
+            <SpaceTransferFilter count={transferCount} filter={filter} onFilter={setFilter} />
             <View className="mt-3 flex-row gap-3">
               <TouchableOpacity style={{ flexBasis: 0 }} onPress={() => { setOrigenDinero("externo"); setAnotando("ingreso"); }} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-100"><ArrowUp size={18} color="#047857" /><Text className="font-bold text-emerald-700">{t("boxes.income")}</Text></TouchableOpacity>
               <TouchableOpacity style={{ flexBasis: 0 }} onPress={() => setAnotando("gasto")} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-rose-100"><ArrowDown size={18} color="#be123c" /><Text className="font-bold text-rose-700">{t("boxes.expense")}</Text></TouchableOpacity>
@@ -451,14 +473,21 @@ export default function Cajas() {
               </>}
             </View>
             <SpaceFilterReset filter={filter} onReset={() => setFilter(null)} />
-            {visibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "boxes.noMovements")}</Text> : visibles.slice(0, movementLimit).map((item) => (
+            {visibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "boxes.noMovements")}</Text> : visibles.slice(0, movementLimit).map((item) => {
+              const transferencia = isLinkedSpaceTransfer(item);
+              const retorno = isLinkedSpaceReturn(item);
+              const estado = retorno ? "returned" : item.personalTransactionId != null
+                ? transferLedger.progressByTransactionId.get(item.personalTransactionId)?.status || "pending"
+                : "pending";
+              return (
               <TouchableOpacity key={item.id} disabled={!seleccionando} onPress={() => setSeleccionados(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id])} className={`mb-2 flex-row items-center rounded-2xl border-[1.5px] p-3 dark:border-noche-borde ${seleccionados.includes(item.id) ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200"}`}>
-                <View className={`h-9 w-9 items-center justify-center rounded-xl ${item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
-                <View className="ml-3 flex-1"><Text className="text-[15px] font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View>
-                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-2 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text>
+                <View className={`h-9 w-9 items-center justify-center rounded-xl ${transferencia ? "bg-blue-100 dark:bg-blue-950" : item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{transferencia ? <ArrowRightLeft size={17} color="#2563eb" /> : item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
+                <View className="ml-3 flex-1"><Text className="text-[15px] font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{transferencia ? t(retorno ? "transfer.spaceToPersonal" : "transfer.personalToSpace", { name: caja.nombre }) : item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text><Text className={`text-xs ${transferencia ? "font-semibold text-blue-600 dark:text-blue-300" : "text-slate-500"}`}>{transferencia ? `${t("transfer.internal")} · ${t(`transfer.${estado}`)} · ${item.fecha}` : `${item.fecha}${item.method ? ` · ${methodLabel(item.method, t)}` : ""}`}</Text></View>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-2 max-w-[38%] text-[15px] font-extrabold ${transferencia ? "text-blue-600 dark:text-blue-300" : item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{transferencia ? (retorno ? "↩ " : "→ ") : item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text>
                 {seleccionando ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${seleccionados.includes(item.id) ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : null}
               </TouchableOpacity>
-            ))}
+              );
+            })}
           </>
         )}
       </ScrollView>

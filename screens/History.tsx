@@ -1,7 +1,7 @@
 import { memo, useCallback, useMemo, useState } from "react";
 import { FlatList, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Search, SlidersHorizontal, TrendingDown, TrendingUp, X } from "lucide-react-native";
+import { ArrowRightLeft, Search, SlidersHorizontal, TrendingDown, TrendingUp, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import Anuncio from "@/components/Anuncio";
 import EtiquetaMetodo from "@/components/EtiquetaMetodo";
@@ -15,6 +15,7 @@ import { CARD_SHADOW } from "@/constants/style";
 import { fmtDate, monthKey } from "@/utils/format";
 import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
+import { personalTransferStatuses, type TransferStatus } from "@/utils/linkedTransfers";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
 
@@ -37,14 +38,21 @@ const Fila = memo(function Fila({
   t,
   oscuro,
   onOpenDetail,
+  transferStatus,
 }: {
   tx: Transaction;
   fmt: (n: number) => string;
   t: (k: string, v?: Record<string, string | number>) => string;
   oscuro: boolean;
   onOpenDetail: (id: number) => void;
+  transferStatus?: TransferStatus;
 }) {
   const c = catInfo(tx.category);
+  const isTransfer = Boolean(tx.internalTransfer);
+  const spaceName = tx.internalTransferSpaceName || t(tx.internalTransfer === "family" ? "spaces.family" : "spaces.boxes");
+  const title = isTransfer
+    ? t(tx.type === "expense" ? "transfer.personalToSpace" : "transfer.spaceToPersonal", { name: spaceName })
+    : tx.description || t(c.label);
   return (
     <TouchableOpacity
       onPress={() => onOpenDetail(tx.id)}
@@ -57,9 +65,9 @@ const Fila = memo(function Fila({
       {/* SU PROPIO DIBUJO SI LO TIENE. Ver Transaction.icono: lo trae un pago del
           calendario, y la categoria sigue mandando en las cuentas. */}
       <IconBadge
-        Icon={tx.icono && !esFoto(tx.icono) ? iconoDe(tx.icono) : c.icon}
-        color={tx.iconColor ?? c.color}
-        image={esFoto(tx.icono ?? "") ? tx.icono : c.image}
+        Icon={isTransfer ? ArrowRightLeft : tx.icono && !esFoto(tx.icono) ? iconoDe(tx.icono) : c.icon}
+        color={isTransfer ? "#2563eb" : tx.iconColor ?? c.color}
+        image={isTransfer ? undefined : esFoto(tx.icono ?? "") ? tx.icono : c.image}
       />
       <View className="flex-1 min-w-0">
         <Text
@@ -67,29 +75,25 @@ const Fila = memo(function Fila({
           style={{ color: oscuro ? "#f1f5f9" : "#0f172a" }}
           numberOfLines={1}
         >
-          {tx.description || t(c.label)}
+          {title}
         </Text>
         {/* El método pertenece visualmente al monto: ambos describen el pago.
             Aquí queda la hora, en el espacio que antes ocupaba el método. */}
         <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#f1f5f9" : "#64748b" }} numberOfLines={1}>
-          {tx.time || t(c.label)}
+          {isTransfer ? `${t("transfer.internal")} · ${t(`transfer.${transferStatus || (tx.type === "income" ? "returned" : "pending")}`)}` : tx.time || t(c.label)}
         </Text>
       </View>
       <View className="items-end self-stretch justify-start">
         <Text
-          className={`text-sm font-extrabold ${
-            tx.type === "expense" ? "text-rose-500" : "text-emerald-600"
-          }`}
+          className={`text-sm font-extrabold ${isTransfer ? "text-blue-600 dark:text-blue-300" : tx.type === "expense" ? "text-rose-500" : "text-emerald-600"}`}
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.72}
         >
-          {tx.type === "expense" ? "-" : "+"}
+          {isTransfer ? (tx.type === "expense" ? "→ " : "↩ ") : tx.type === "expense" ? "-" : "+"}
           {fmt(tx.amount)}
         </Text>
-        <View className="mt-1">
-          <EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} />
-        </View>
+        {!isTransfer ? <View className="mt-1"><EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} /></View> : null}
       </View>
     </TouchableOpacity>
   );
@@ -113,8 +117,9 @@ export default function History({
     { id: "all", label: t("history.filterAll") },
     { id: "expense", label: t("history.filterExpense") },
     { id: "income", label: t("history.filterIncome") },
+    { id: "transfer", label: t("history.filterTransfer") },
   ] as const;
-  const [filter, setFilter] = useState<"all" | "expense" | "income">("all");
+  const [filter, setFilter] = useState<"all" | "expense" | "income" | "transfer">("all");
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState("");
@@ -137,6 +142,7 @@ export default function History({
   const parsedMinAmount = parseAmountInput(minAmount);
   const parsedMaxAmount = parseAmountInput(maxAmount);
   const hasAdvancedFilters = Boolean(categoryFilter || minAmount || maxAmount);
+  const transferStatuses = useMemo(() => personalTransferStatuses(transactions), [transactions]);
 
   const { totalExpense, totalIncome } = useMemo(() => {
     return {
@@ -152,7 +158,7 @@ export default function History({
   const renglones = useMemo<Renglon[]>(() => {
     const query = search.trim().toLowerCase();
     const monthTx = allMonthTx
-      .filter((t) => filter === "all" || t.type === filter)
+      .filter((t) => filter === "all" || (filter === "transfer" ? Boolean(t.internalTransfer) : !t.internalTransfer && t.type === filter))
       .filter((tx) => !categoryFilter || tx.category === categoryFilter)
       .filter((tx) => (!minAmount || tx.amount >= parsedMinAmount) && (!maxAmount || tx.amount <= parsedMaxAmount))
       .filter((tx) => {
@@ -182,10 +188,10 @@ export default function History({
         </Text>
       ) : (
         <View className="px-5">
-          <Fila tx={item.tx} fmt={fmt} t={t} oscuro={oscuro} onOpenDetail={onOpenDetail} />
+          <Fila tx={item.tx} fmt={fmt} t={t} oscuro={oscuro} onOpenDetail={onOpenDetail} transferStatus={item.tx.type === "income" && item.tx.internalTransfer ? "returned" : transferStatuses.get(item.tx.id)} />
         </View>
       ),
-    [fmt, t, oscuro, onOpenDetail, monthNames]
+    [fmt, t, oscuro, onOpenDetail, monthNames, transferStatuses]
   );
 
   return (
@@ -285,7 +291,7 @@ export default function History({
             </View>
           ) : null}
 
-          <View className="px-5 mt-3 flex-row gap-2">
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 20, marginTop: 12 }}>
             {FILTERS.map(({ id, label }) => (
               <TouchableOpacity
                 key={id}
@@ -297,7 +303,7 @@ export default function History({
                 </Text>
               </TouchableOpacity>
             ))}
-          </View>
+          </ScrollView>
 
           {(showIncomeTotal || showExpenseTotal) ? <View className={`px-5 mt-3 mb-3 ${totalsVertical ? "gap-3" : "flex-row gap-3"}`}>
             {showIncomeTotal && (

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Tag, Calendar, Wallet2, StickyNote, Trash2, Pencil } from "lucide-react-native";
+import { ArrowRightLeft, Tag, Calendar, Wallet2, StickyNote, Trash2, Pencil } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import IconBadge from "@/components/IconBadge";
 import OriginBadge from "@/components/OriginBadge";
@@ -12,6 +12,7 @@ import { fmtDate } from "@/utils/format";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Transaction } from "@/types";
 import BackButton from "@/components/BackButton";
+import { personalTransferStatuses } from "@/utils/linkedTransfers";
 
 export default function Detail({
   transaction,
@@ -24,7 +25,7 @@ export default function Detail({
   onEdit: () => void;
   onDelete: (id: number) => void;
 }) {
-  const { fmt, t, monthNames } = useAppData();
+  const { fmt, t, monthNames, transactions } = useAppData();
   const [confirm, setConfirm] = useState(false);
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -33,9 +34,16 @@ export default function Detail({
   const c = catInfo(transaction.category);
   const linkedCreditPayment = transaction.method === "credit-card-payment";
   const managedTransfer = Boolean(transaction.internalTransfer);
+  const transferStatus = managedTransfer
+    ? transaction.type === "income" ? "returned" : personalTransferStatuses(transactions).get(transaction.id) || "pending"
+    : null;
+  const transferSpace = transaction.internalTransferSpaceName || t(transaction.internalTransfer === "family" ? "spaces.family" : "spaces.boxes");
+  const transferDirection = transaction.type === "expense"
+    ? t("transfer.personalToSpace", { name: transferSpace })
+    : t("transfer.spaceToPersonal", { name: transferSpace });
 
   const rows = [
-    { Icon: Tag, label: t("detail.category"), value: t(c.label) },
+    { Icon: managedTransfer ? ArrowRightLeft : Tag, label: managedTransfer ? t("transfer.internal") : t("detail.category"), value: managedTransfer ? transferDirection : t(c.label) },
     { Icon: Calendar, label: t("detail.date"), value: fmtDate(transaction.date, monthNames) },
     { Icon: Wallet2, label: t("detail.method"), value: methodLabel(transaction.method, t) },
     { Icon: StickyNote, label: t("detail.notes"), value: transaction.notes || t("detail.noNotes") },
@@ -51,19 +59,18 @@ export default function Detail({
 
       <ScrollView className="flex-1" contentContainerStyle={{ paddingBottom: 16 }}>
       <View className="px-6 items-center pt-4 pb-6">
-        <IconBadge Icon={c.icon} color={c.color} size={64} image={c.image} />
+        <IconBadge Icon={managedTransfer ? ArrowRightLeft : c.icon} color={managedTransfer ? "#2563eb" : c.color} size={64} image={managedTransfer ? undefined : c.image} />
         <Text
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.62}
-          className={`text-3xl font-extrabold mt-4 ${
-            transaction.type === "expense" ? "text-rose-500" : "text-emerald-600"
-          }`}
+          className={`text-3xl font-extrabold mt-4 ${managedTransfer ? "text-blue-600 dark:text-blue-300" : transaction.type === "expense" ? "text-rose-500" : "text-emerald-600"}`}
         >
-          {transaction.type === "expense" ? "-" : "+"}
+          {managedTransfer ? (transaction.type === "expense" ? "→ " : "↩ ") : transaction.type === "expense" ? "-" : "+"}
           {fmt(transaction.amount)}
         </Text>
-        <Text className="text-slate-500 dark:text-slate-300 text-sm mt-1">{transaction.description || t(c.label)}</Text>
+        <Text className="text-slate-500 dark:text-slate-300 text-sm mt-1">{managedTransfer ? transferDirection : transaction.description || t(c.label)}</Text>
+        {managedTransfer ? <Text className="mt-2 text-sm font-bold text-blue-600 dark:text-blue-300">{t(`transfer.${transferStatus}`)} · {t("transfer.notIncomeExpense")}</Text> : null}
         <View className="mt-3">
           <OriginBadge transaction={transaction} hideManual />
         </View>

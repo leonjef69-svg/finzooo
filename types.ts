@@ -34,6 +34,15 @@ export type Transaction = {
   internalTransfer?: "family" | "box";
   /** Identifica el movimiento equivalente dentro de Familia o Cajas. */
   internalTransferLink?: string;
+  /** Espacio al que salió o desde el que volvió el dinero. */
+  internalTransferSpaceId?: string;
+  internalTransferSpaceName?: string;
+  /**
+   * Reparte una devolución entre los aportes originales que está cerrando.
+   * Es opcional para que las transferencias anteriores sigan abriendo; al
+   * visitar su Familia/Caja Fino puede reconstruirlo desde el libro completo.
+   */
+  internalTransferAllocations?: { transactionId: number; amount: number }[];
 
   // ---- Campos nuevos (importación de estados de cuenta) ----
   // TODOS son opcionales a propósito: los movimientos que ya estaban

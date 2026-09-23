@@ -13,7 +13,7 @@ import { estadoEn, fechaEnElMes, mesDe } from "@/utils/calendarioPagos";
 import { availablePersonalBalance, budgetUsed } from "@/utils/finances";
 import { fmtDate, monthKey } from "@/utils/format";
 import { esFoto } from "@/utils/iconosFavoritos";
-import { netTransferredFromPersonal } from "@/utils/linkedTransfers";
+import { netTransferredFromPersonal, personalTransferStatuses, type TransferStatus } from "@/utils/linkedTransfers";
 import { irUnaVez } from "@/utils/nav";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { usePendingImport } from "@/utils/pendingImport";
@@ -31,6 +31,7 @@ import {
   Eye,
   EyeOff,
   FileUp,
+  ArrowRightLeft,
   ListChecks,
   RotateCcw,
   Target,
@@ -66,6 +67,7 @@ const FilaMovimiento = memo(function FilaMovimiento({
   t,
   monthNames,
   onPress,
+  transferStatus,
 }: {
   tx: Transaction;
   index: number;
@@ -76,9 +78,14 @@ const FilaMovimiento = memo(function FilaMovimiento({
   t: (k: string, v?: Record<string, string | number>) => string;
   monthNames: string[];
   onPress: (id: number) => void;
+  transferStatus?: TransferStatus;
 }) {
   const c = catInfo(tx.category);
-  const title = tx.description || t(c.label);
+  const isTransfer = Boolean(tx.internalTransfer);
+  const spaceName = tx.internalTransferSpaceName || t(tx.internalTransfer === "family" ? "spaces.family" : "spaces.boxes");
+  const title = isTransfer
+    ? t(tx.type === "expense" ? "transfer.personalToSpace" : "transfer.spaceToPersonal", { name: spaceName })
+    : tx.description || t(c.label);
   // Si la persona dejó como descripción el mismo nombre de la categoría,
   // mostrar ambos renglones es una repetición, no información adicional.
   const repeatsCategory = title.trim().localeCompare(t(c.label).trim(), undefined, { sensitivity: "accent" }) === 0;
@@ -118,9 +125,9 @@ const FilaMovimiento = memo(function FilaMovimiento({
           {/* SU PROPIO DIBUJO SI LO TIENE. Ver Transaction.icono: lo trae un pago del
               calendario, y la categoria sigue mandando en las cuentas. */}
           <IconBadge
-            Icon={tx.icono && !esFoto(tx.icono) ? iconoDe(tx.icono) : c.icon}
-            color={tx.iconColor ?? c.color}
-            image={esFoto(tx.icono ?? "") ? tx.icono : c.image}
+            Icon={isTransfer ? ArrowRightLeft : tx.icono && !esFoto(tx.icono) ? iconoDe(tx.icono) : c.icon}
+            color={isTransfer ? "#2563eb" : tx.iconColor ?? c.color}
+            image={isTransfer ? undefined : esFoto(tx.icono ?? "") ? tx.icono : c.image}
           />
           <View className="flex-1 min-w-0">
             <Text
@@ -130,7 +137,11 @@ const FilaMovimiento = memo(function FilaMovimiento({
             >
               {title}
             </Text>
-            {!repeatsCategory ? (
+            {isTransfer ? (
+              <Text className="mt-0.5 text-[11px] font-semibold text-blue-600 dark:text-blue-300" numberOfLines={1}>
+                {t("transfer.internal")} · {t(`transfer.${transferStatus || (tx.type === "income" ? "returned" : "pending")}`)}
+              </Text>
+            ) : !repeatsCategory ? (
               <Text className="mt-0.5 text-[11px] font-semibold" style={{ color: oscuro ? "#cbd5e1" : "#475569" }} numberOfLines={1}>
                 {t(c.label)}
               </Text>
@@ -141,19 +152,15 @@ const FilaMovimiento = memo(function FilaMovimiento({
           </View>
           <View className="items-end self-stretch justify-start">
             <Text
-              className={`text-base font-extrabold ${
-                tx.type === "expense" ? "text-rose-500" : "text-emerald-600"
-              }`}
+              className={`text-base font-extrabold ${isTransfer ? "text-blue-600 dark:text-blue-300" : tx.type === "expense" ? "text-rose-500" : "text-emerald-600"}`}
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.72}
             >
-              {tx.type === "expense" ? "-" : "+"}
+              {isTransfer ? (tx.type === "expense" ? "→ " : "↩ ") : tx.type === "expense" ? "-" : "+"}
               {fmt(tx.amount)}
             </Text>
-            <View className="mt-1">
-              <EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} />
-            </View>
+            {!isTransfer ? <View className="mt-1"><EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} /></View> : null}
           </View>
         </PressableScale>
       </Row>
@@ -224,6 +231,7 @@ export default function Home({
   const mainIncome = useMemo(() => monthTx.filter((t) => t.type === "income" && !t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
   const transfersOut = useMemo(() => monthTx.filter((t) => t.type === "expense" && t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
   const transfersIn = useMemo(() => monthTx.filter((t) => t.type === "income" && t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
+  const transferStatuses = useMemo(() => personalTransferStatuses(transactions), [transactions]);
   // Estas cifras no pertenecen a un mes: muestran el neto que Personal ha
   // transferido a cada tipo de espacio. Toda salida enlazada nació al elegir
   // "Desde Personal" y toda entrada enlazada es una devolución; el dinero
@@ -322,9 +330,10 @@ export default function Home({
         t={t}
         monthNames={monthNames}
         onPress={alTocarFila}
+        transferStatus={item.type === "income" && item.internalTransfer ? "returned" : transferStatuses.get(item.id)}
       />
     ),
-    [marcadas, selectMode, colorScheme, fmt, t, monthNames, alTocarFila]
+    [marcadas, selectMode, colorScheme, fmt, t, monthNames, alTocarFila, transferStatuses]
   );
   function confirmBulkDelete() {
     onBulkDelete(selected);

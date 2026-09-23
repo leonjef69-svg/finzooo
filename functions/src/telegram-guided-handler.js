@@ -65,9 +65,13 @@ function personalFigures(data) {
 
 function sharedFigures(items) {
   return items.reduce((result, item) => {
-    if (item.tipo === "ingreso") result.income += Number(item.monto || 0);
-    else result.spent += Number(item.monto || 0);
-    result.balance = result.income - result.spent;
+    const amount = Number(item.monto || 0);
+    const internalTransfer = item.personalTransactionId != null || Number(item.personalReturnAmount || 0) > 0;
+    if (!internalTransfer) {
+      if (item.tipo === "ingreso") result.income += amount;
+      else result.spent += amount;
+    }
+    result.balance += item.tipo === "ingreso" ? amount : -amount;
     return result;
   }, { income: 0, spent: 0, balance: 0 });
 }
@@ -320,7 +324,7 @@ async function confirmTransfer(db, token, chatId, connection, nonce, operationId
     const transactions = Array.isArray(user.data().transactions) ? user.data().transactions : [];
     if (!claimOperation(tx, connectionRef, connectionSnap.data() || {}, key)) return;
     if (transactions.some(item => item.id === personalTransactionId)) throw new Error("DUPLICATE_ID");
-    const personalMovement = { id: personalTransactionId, type: "expense", amount: flow.amount, category: "otros", date: localDate(connection.user), time: time(connection.user), method: "transfer", description: `Transferencia a ${flow.space.name}`, notes: "", origin: "manual", internalTransfer: flow.space.kind, internalTransferLink: flow.space.id };
+    const personalMovement = { id: personalTransactionId, type: "expense", amount: flow.amount, category: "otros", date: localDate(connection.user), time: time(connection.user), method: "transfer", description: `Transferencia a ${flow.space.name}`, notes: "", origin: "manual", internalTransfer: flow.space.kind, internalTransferLink: movementRef.id, internalTransferSpaceId: flow.space.id, internalTransferSpaceName: flow.space.name };
     const next = [...transactions, personalMovement];
     if (Buffer.byteLength(JSON.stringify({ ...user.data(), transactions: next }), "utf8") > MAX_USER_BYTES) throw new Error("TOO_LARGE");
     tx.update(userRef, { transactions: next });
@@ -357,7 +361,7 @@ async function undoLast(db, token, chatId, connection) {
       if (action.kind === "transfer") {
         if (movement.data().personalOwnerUid !== connection.uid || movement.data().personalTransactionId !== action.personalTransactionId) throw new Error("NOTHING_TO_UNDO");
         const transactions = Array.isArray(user.data()?.transactions) ? user.data().transactions : [];
-        const linked = transactions.find(item => item.id === action.personalTransactionId && item.internalTransfer === action.space.kind && item.internalTransferLink === action.space.id);
+        const linked = transactions.find(item => item.id === action.personalTransactionId && item.internalTransfer === action.space.kind && [action.space.id, action.sharedMovementId].includes(item.internalTransferLink));
         if (!linked) throw new Error("NOTHING_TO_UNDO");
         tx.update(userRef, { transactions: transactions.filter(item => item.id !== action.personalTransactionId) });
       } else if (movement.data().tipo !== action.movement.tipo || Number(movement.data().monto) !== Number(action.movement.monto)) throw new Error("NOTHING_TO_UNDO");

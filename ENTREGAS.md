@@ -105,3 +105,14 @@ En **Ajustes → Acerca de**, la versión 1.0.8 publicada muestra `14sep-yape-tr
 
 Probar Familia/Cajas con dos cuentas, generar la siguiente actualización Android
 y, cuando haya acceso a macOS/Apple Developer, crear y probar la compilación iOS.
+
+## 2026-09-22 · Transferencias como tercer tipo
+
+Personal, Familia, Caja e Historial distinguen las transferencias internas con
+color azul, dirección y estado. Las devoluciones se enlazan con los aportes
+originales sin convertirse en ingresos o gastos; totales, gráficas, exportación
+y Telegram respetan la separación. Se conservó compatibilidad con movimientos
+anteriores y con la conversión de cajas privadas a compartidas.
+
+Validación: TypeScript, ESLint, 109 pruebas, 7 auditores y 29 pruebas de funciones
+aprobados. No se generó AAB en esta entrega.

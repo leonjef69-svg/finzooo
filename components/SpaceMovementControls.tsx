@@ -2,7 +2,7 @@ import { ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from "r
 import { useAppData } from "@/contexts/AppDataContext";
 import { PAYMENT_METHODS } from "@/constants/i18n";
 
-export type MovementFilter = "ingreso" | "gasto" | null;
+export type MovementFilter = "ingreso" | "gasto" | "transferencia" | null;
 
 export function SpaceTotals({ income, expense, filter, onFilter, format }: {
   income: number; expense: number; filter: MovementFilter;
@@ -37,6 +37,24 @@ export function SpaceTotals({ income, expense, filter, onFilter, format }: {
       {hasExpense ? total("gasto", expense) : null}
     </View>
   </View>;
+}
+
+export function SpaceTransferFilter({ count, filter, onFilter }: {
+  count: number;
+  filter: MovementFilter;
+  onFilter: (value: MovementFilter) => void;
+}) {
+  const { t } = useAppData();
+  if (count <= 0) return null;
+  const selected = filter === "transferencia";
+  return <TouchableOpacity
+    accessibilityRole="button"
+    accessibilityState={{ selected }}
+    onPress={() => onFilter(selected ? null : "transferencia")}
+    className={`mt-2 min-h-10 flex-row items-center justify-center rounded-xl border px-3 ${selected ? "border-blue-500 bg-blue-100 dark:bg-blue-950" : "border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/40"}`}
+  >
+    <Text className="text-xs font-extrabold text-blue-700 dark:text-blue-300">{t("transfer.filter")} · {count}</Text>
+  </TouchableOpacity>;
 }
 
 export function SpacePaymentMethod({ value, onChange, disabled = false }: {

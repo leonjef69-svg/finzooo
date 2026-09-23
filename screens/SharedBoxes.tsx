@@ -1,6 +1,6 @@
-import { SpaceTotals, SpacePaymentMethod, SpaceFilterReset, type MovementFilter } from "@/components/SpaceMovementControls";
+import { SpaceTotals, SpacePaymentMethod, SpaceFilterReset, SpaceTransferFilter, type MovementFilter } from "@/components/SpaceMovementControls";
 import { methodLabel } from "@/constants/i18n";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
@@ -12,9 +12,9 @@ import { auth } from "@/utils/firebase";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { nextId } from "@/utils/id";
-import { canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
+import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
 import { actualizarAportePersonal, borrarAportePersonal } from "@/utils/personalContribution";
-import { LogOut, Pencil, Trash2, UserMinus, UserPlus, UsersRound } from "lucide-react-native";
+import { ArrowRightLeft, LogOut, Pencil, Trash2, UserMinus, UserPlus, UsersRound } from "lucide-react-native";
 import { borrarMovimientoCajaCompartida, cerrarCajaCompartida, crearInvitacionCaja, escucharMovimientosCaja, guardarMovimientoCajaCompartida, listarCajasCompartidas, listarMiembrosCaja, observarCierreCaja, quitarMiembroCaja, salirDeCaja, unirseACaja, type CajaCompartida, type MiembroCajaCompartida, type MovimientoCajaCompartida } from "@/utils/cloudCajasCompartidas";
 
 export default function SharedBoxes() {
@@ -66,21 +66,31 @@ export default function SharedBoxes() {
     if (!caja) return;
     return observarCierreCaja(caja.id, () => { setCajas(items => items.filter(item => item.id !== caja.id)); setCaja(null); setMovimientos([]); setMiembros([]); }, () => errorRef.current());
   }, [caja]);
-  const ingresos = movimientos.filter(item => item.tipo === "ingreso").reduce((sum, item) => sum + item.monto, 0);
-  const gastos = movimientos.filter(item => item.tipo === "gasto").reduce((sum, item) => sum + item.monto, 0);
-  const visibles = movimientos.filter(item => !filter || item.tipo === filter);
+  const ingresos = movimientos.filter(item => !isLinkedSpaceTransfer(item) && item.tipo === "ingreso").reduce((sum, item) => sum + item.monto, 0);
+  const gastos = movimientos.filter(item => !isLinkedSpaceTransfer(item) && item.tipo === "gasto").reduce((sum, item) => sum + item.monto, 0);
+  const transferLedger = useMemo(() => linkedTransferLedger(movimientos), [movimientos]);
+  const transferCount = useMemo(() => movimientos.filter(isLinkedSpaceTransfer).length, [movimientos]);
+  const visibles = movimientos.filter(item => !filter
+    || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter));
   const owner = caja?.ownerUid === uid;
-  const saldo = ingresos - gastos;
+  const saldo = movimientos.reduce((sum, item) => sum + (item.tipo === "ingreso" ? item.monto : -item.monto), 0);
   const devolvibleAPersonal = returnableToPersonal(movimientos, uid);
   useEffect(() => {
     if (!caja || !uid) return;
     const upserts = movimientos.flatMap(item => {
-      if (item.personalOwnerUid !== uid || item.personalTransactionId == null || transactions.some(tx => tx.id === item.personalTransactionId)) return [];
+      if (item.personalOwnerUid !== uid || item.personalTransactionId == null) return [];
       const esRetorno = item.tipo === "gasto" && (item.personalReturnAmount || 0) > 0;
-      return [{ id: item.personalTransactionId, type: esRetorno ? "income" as const : "expense" as const, amount: esRetorno ? item.personalReturnAmount! : item.monto, category: "otros", date: item.fecha, time: horaDe(item.creadoEn), method: "transfer", description: esRetorno ? t("boxes.returnFrom", { name: caja.nombre }) : t("boxes.transferTo", { name: caja.nombre }), notes: "", origin: "manual" as const, internalTransfer: "box" as const, internalTransferLink: item.id }];
+      const allocations = esRetorno ? transferLedger.allocationsByReturnId.get(item.id) || [] : undefined;
+      const canonical = { id: item.personalTransactionId, type: esRetorno ? "income" as const : "expense" as const, amount: esRetorno ? item.personalReturnAmount! : item.monto, category: "otros", date: item.fecha, time: horaDe(item.creadoEn), method: "transfer", description: esRetorno ? t("boxes.returnFrom", { name: caja.nombre }) : t("boxes.transferTo", { name: caja.nombre }), notes: "", origin: "manual" as const, internalTransfer: "box" as const, internalTransferLink: item.id, internalTransferSpaceId: caja.id, internalTransferSpaceName: caja.nombre, ...(allocations ? { internalTransferAllocations: allocations } : {}) };
+      const current = transactions.find(tx => tx.id === item.personalTransactionId);
+      if (current?.internalTransfer === "box" && current.internalTransferLink === item.id
+        && current.type === canonical.type && current.amount === canonical.amount
+        && current.internalTransferSpaceId === caja.id && current.internalTransferSpaceName === caja.nombre
+        && JSON.stringify(current.internalTransferAllocations || []) === JSON.stringify(allocations || [])) return [];
+      return [canonical];
     });
     if (upserts.length) repairLinkedTransferTransactions(upserts);
-  }, [caja, movimientos, repairLinkedTransferTransactions, t, transactions, uid]);
+  }, [caja, movimientos, repairLinkedTransferTransactions, t, transactions, transferLedger, uid]);
   function limpiar() { setModo(null); setNombre(""); setMonto(""); setCodigo(""); }
   async function ejecutar(action: () => Promise<void>) {
     if (lock.current) return;
@@ -121,12 +131,13 @@ export default function SharedBoxes() {
   const devolverAPersonal = () => ejecutar(async () => {
     if (!uid || !caja || devolvibleAPersonal <= 0) return;
     const personalId = nextId();
+    const allocations = allocatePersonalReturn(movimientos, devolvibleAPersonal, uid);
     const movementId = await guardarMovimientoCajaCompartida(caja.id, uid, {
       tipo: "gasto", monto: devolvibleAPersonal, descripcion: t("boxes.returnToPersonal"),
       fecha: new Date().toLocaleDateString("sv-SE"), method: "transfer",
       personalTransactionId: personalId, personalOwnerUid: uid, personalReturnAmount: devolvibleAPersonal,
     });
-    addOrUpdateTransaction({ id: personalId, type: "income", amount: devolvibleAPersonal, category: "otros", date: new Date().toLocaleDateString("sv-SE"), time: horaDe(Date.now()), method: "transfer", description: t("boxes.returnFrom", { name: caja.nombre }), notes: "", origin: "manual", internalTransfer: "box", internalTransferLink: movementId });
+    addOrUpdateTransaction({ id: personalId, type: "income", amount: devolvibleAPersonal, category: "otros", date: new Date().toLocaleDateString("sv-SE"), time: horaDe(Date.now()), method: "transfer", description: t("boxes.returnFrom", { name: caja.nombre }), notes: "", origin: "manual", internalTransfer: "box", internalTransferLink: movementId, internalTransferSpaceId: caja.id, internalTransferSpaceName: caja.nombre, internalTransferAllocations: allocations });
   });
   const salir = () => { if (!uid || !caja || owner) return; Alert.alert(t("boxes.leave"), t("boxes.leaveWarning"), [{ text: t("common.cancel"), style: "cancel" }, { text: t("boxes.leave"), style: "destructive", onPress: () => void ejecutar(async () => { await salirDeCaja(uid, caja.id); setCajas(items => items.filter(item => item.id !== caja.id)); setCaja(null); }) }]); };
   const quitar = (member: MiembroCajaCompartida) => { if (!caja || !owner || member.rol === "owner") return; Alert.alert(t("boxes.removeMember"), member.nombre, [{ text: t("common.cancel"), style: "cancel" }, { text: t("common.delete"), style: "destructive", onPress: () => void ejecutar(async () => { await quitarMiembroCaja(caja.id, member.uid); setMiembros(items => items.filter(item => item.uid !== member.uid)); }) }]); };
@@ -157,6 +168,7 @@ export default function SharedBoxes() {
           {cajas.map(item => <TouchableOpacity key={item.id} onPress={() => { limpiar(); setCaja(item); }} className="mb-2 rounded-2xl border border-slate-200 p-4 dark:border-noche-borde"><Text className="text-base font-bold text-slate-900 dark:text-white">{item.nombre}</Text></TouchableOpacity>)}
         </> : <>
           <View className="rounded-2xl bg-emerald-600 p-4"><Text className="text-base font-bold text-white" numberOfLines={2}>{caja.nombre}</Text><Text adjustsFontSizeToFit minimumFontScale={0.58} numberOfLines={1} className="text-[26px] font-extrabold text-white">{fmt(saldo)}</Text><SpaceTotals income={ingresos} expense={gastos} filter={filter} onFilter={setFilter} format={fmt} /></View>
+          <SpaceTransferFilter count={transferCount} filter={filter} onFilter={setFilter} />
           <View className="my-3 flex-row gap-2">{boton(t("boxes.income"), () => { limpiar(); setModo("ingreso"); })}{boton(t("boxes.expense"), () => { limpiar(); setModo("gasto"); })}</View>
           {caja.ownerUid === uid ? <View className="mb-3 flex-row items-center justify-between"><Text className="font-extrabold text-slate-900 dark:text-white">Movimientos de caja</Text><TouchableOpacity accessibilityLabel="Invitar a esta caja" disabled={busy} onPress={() => { if (!isPremium) { irUnaVez("/premium"); return; } void ejecutar(async () => setInvitacion(await crearInvitacionCaja(uid, caja.id))); }} className="h-10 w-10 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><UserPlus size={18} color="#0d9488" /></TouchableOpacity></View> : null}
           {invitacion ? <View className="mb-3 rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950"><Text className="text-xs text-slate-600 dark:text-slate-300">Código de invitación</Text><Text selectable className="mt-1 text-center text-2xl font-extrabold tracking-[4px] text-emerald-700 dark:text-emerald-300">{invitacion}</Text><Text className="mt-1 text-center text-[11px] text-slate-500">Mantén presionado el código para copiarlo.</Text></View> : null}
@@ -175,7 +187,12 @@ export default function SharedBoxes() {
         {caja ? visibles.slice(0, movementLimit).map(item => {
           const puedeBorrar = item.personalOwnerUid ? item.personalOwnerUid === uid : owner || item.creadoPor === uid;
           const puedeEditarAporte = item.tipo === "ingreso" && item.personalOwnerUid === uid && item.personalTransactionId != null;
-          return <View key={item.id} className="mb-2 rounded-xl border border-slate-200 p-3 dark:border-noche-borde"><View className="flex-row items-center gap-2"><View className="flex-1"><View className="flex-row gap-3"><Text numberOfLines={1} className="flex-1 text-base font-bold text-slate-900 dark:text-white">{item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className="max-w-[50%] text-base font-bold text-teal-600">{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></View><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View>{puedeEditarAporte ? <TouchableOpacity onPress={() => { setEditandoAporteId(item.id); setModo("ingreso"); setMonto(String(item.monto)); setNombre(item.descripcion); }} className="h-9 w-9 items-center justify-center"><Pencil size={15} color="#0d9488" /></TouchableOpacity> : null}{puedeBorrar ? <TouchableOpacity accessibilityLabel={t("common.delete")} onPress={() => void borrar(item)} className="h-9 w-9 items-center justify-center"><Trash2 size={15} color="#e11d48" /></TouchableOpacity> : <View className="h-9 w-9" />}</View></View>;
+          const transferencia = isLinkedSpaceTransfer(item);
+          const retorno = isLinkedSpaceReturn(item);
+          const estado = retorno ? "returned" : item.personalTransactionId != null
+            ? transferLedger.progressByTransactionId.get(item.personalTransactionId)?.status || "pending"
+            : "pending";
+          return <View key={item.id} className="mb-2 rounded-xl border border-slate-200 p-3 dark:border-noche-borde"><View className="flex-row items-center gap-2">{transferencia ? <View className="h-9 w-9 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-950"><ArrowRightLeft size={17} color="#2563eb" /></View> : null}<View className="flex-1"><View className="flex-row gap-3"><Text numberOfLines={1} className="flex-1 text-base font-bold text-slate-900 dark:text-white">{transferencia ? t(retorno ? "transfer.spaceToPersonal" : "transfer.personalToSpace", { name: caja.nombre }) : item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`max-w-[50%] text-base font-bold ${transferencia ? "text-blue-600 dark:text-blue-300" : "text-teal-600"}`}>{transferencia ? (retorno ? "↩ " : "→ ") : item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></View><Text className={`text-xs ${transferencia ? "font-semibold text-blue-600 dark:text-blue-300" : "text-slate-500"}`}>{transferencia ? `${t("transfer.internal")} · ${t(`transfer.${estado}`)} · ${item.fecha}` : `${item.fecha}${item.method ? ` · ${methodLabel(item.method, t)}` : ""}`}</Text></View>{puedeEditarAporte ? <TouchableOpacity onPress={() => { setEditandoAporteId(item.id); setModo("ingreso"); setMonto(String(item.monto)); setNombre(item.descripcion); }} className="h-9 w-9 items-center justify-center"><Pencil size={15} color="#0d9488" /></TouchableOpacity> : null}{puedeBorrar ? <TouchableOpacity accessibilityLabel={t("common.delete")} onPress={() => void borrar(item)} className="h-9 w-9 items-center justify-center"><Trash2 size={15} color="#e11d48" /></TouchableOpacity> : <View className="h-9 w-9" />}</View></View>;
         }) : null}
         {caja && !owner ? <TouchableOpacity onPress={salir} className="mt-3 min-h-11 flex-row items-center justify-center gap-2"><LogOut size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("boxes.leave")}</Text></TouchableOpacity> : null}
         {caja && owner ? <TouchableOpacity onPress={cerrar} className="mt-3 min-h-11 flex-row items-center justify-center gap-2"><Trash2 size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("boxes.close")}</Text></TouchableOpacity> : null}

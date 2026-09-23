@@ -55,6 +55,15 @@ test("totales compartidos no mezclan ingreso y gasto", () => {
   ]), { income: 100, spent: 35, balance: 65 });
 });
 
+test("totales compartidos excluyen transferencias internas pero conservan el saldo", () => {
+  assert.deepEqual(sharedFigures([
+    { tipo: "ingreso", monto: 100, personalTransactionId: 10, personalOwnerUid: "yo" },
+    { tipo: "gasto", monto: 40, personalTransactionId: 11, personalOwnerUid: "yo", personalReturnAmount: 40 },
+    { tipo: "ingreso", monto: 20 },
+    { tipo: "gasto", monto: 5 },
+  ]), { income: 20, spent: 5, balance: 75 });
+});
+
 test("Personal funciona sin presupuesto y excluye transferencias del consumo", () => {
   const today = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Lima", year: "numeric", month: "2-digit", day: "2-digit",

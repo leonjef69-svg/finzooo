@@ -183,8 +183,8 @@ export function resumenFinanciero(
     };
   }
 
-  const income = delMes.filter((item) => item.type === "income").reduce((sum, item) => sum + item.amount, 0);
-  const expenses = delMes.filter((item) => item.type === "expense").reduce((sum, item) => sum + item.amount, 0);
+  const income = delMes.filter((item) => item.type === "income" && !item.internalTransfer).reduce((sum, item) => sum + item.amount, 0);
+  const expenses = delMes.filter((item) => item.type === "expense" && !item.internalTransfer).reduce((sum, item) => sum + item.amount, 0);
   const finDeMes = `${mes}-31`;
   const available = espacio.transactions
     .filter((item) => item.date <= finDeMes)

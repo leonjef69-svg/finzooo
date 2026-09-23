@@ -1,14 +1,19 @@
 import {
   balanceOfSpace,
+  allocatePersonalReturn,
   canSpendFromSpace,
   canCloseLinkedSpace,
   hasUnreturnedPersonalContribution,
   canUndoContribution,
   isTrustedLegacyFamilyContribution,
   minimumContributionAmount,
+  isLinkedSpaceReturn,
+  isLinkedSpaceTransfer,
+  linkedTransferLedger,
   netTransferredFromPersonal,
   hasUnreturnedPersonalContributions,
   orphanedPersonalTransferIds,
+  personalTransferStatuses,
   returnableToPersonal,
   totalAcrossPersonalAndSpace,
 } from "@/utils/linkedTransfers";
@@ -72,4 +77,35 @@ igual(isTrustedLegacyFamilyContribution({ ...legado, descripcion: "Dinero extern
 igual(isTrustedLegacyFamilyContribution({ ...legado, creadoPor: "otra-persona" }, "yo"), false, "no toma el aporte de otra persona");
 igual(isTrustedLegacyFamilyContribution({ ...legado, personalTransactionId: 9 }, "yo"), false, "no repite una migración ya enlazada");
 
-console.log("Transferencias: conservación, sobregiro, devolución, borrado y edición verificados.");
+const historialEnlazado = [
+  { id: "aporte-1", tipo: "ingreso" as const, monto: 50, creadoEn: 1, personalTransactionId: 101, personalOwnerUid: "yo" },
+  { id: "aporte-2", tipo: "ingreso" as const, monto: 30, creadoEn: 2, personalTransactionId: 102, personalOwnerUid: "yo" },
+  { id: "devolucion-1", tipo: "gasto" as const, monto: 20, creadoEn: 3, personalTransactionId: 201, personalOwnerUid: "yo", personalReturnAmount: 20 },
+];
+const ledgerParcial = linkedTransferLedger(historialEnlazado, "yo");
+igual(isLinkedSpaceTransfer(historialEnlazado[0]), true, "el aporte se reconoce como transferencia y no como ingreso");
+igual(isLinkedSpaceReturn(historialEnlazado[2]), true, "la devolución se reconoce como transferencia y no como gasto");
+igual(ledgerParcial.progressByTransactionId.get(101)?.status, "partial", "el aporte original cambia a Parcial");
+igual(ledgerParcial.progressByTransactionId.get(101)?.remaining, 30, "el estado conserva el monto todavía pendiente");
+igual(ledgerParcial.progressByTransactionId.get(102)?.status, "pending", "el siguiente aporte continúa Pendiente");
+igual(JSON.stringify(allocatePersonalReturn(historialEnlazado, 60, "yo")), JSON.stringify([{ transactionId: 101, amount: 30 }, { transactionId: 102, amount: 30 }]), "la siguiente devolución se enlaza con los aportes exactos");
+
+const historialDeDosPersonas = [
+  { id: "aporte-otra", tipo: "ingreso" as const, monto: 40, creadoEn: 1, personalTransactionId: 301, personalOwnerUid: "otra" },
+  { id: "aporte-yo", tipo: "ingreso" as const, monto: 50, creadoEn: 2, personalTransactionId: 302, personalOwnerUid: "yo" },
+  { id: "devolucion-yo", tipo: "gasto" as const, monto: 20, creadoEn: 3, personalTransactionId: 303, personalOwnerUid: "yo", personalReturnAmount: 20 },
+];
+const ledgerCompartido = linkedTransferLedger(historialDeDosPersonas);
+igual(ledgerCompartido.progressByTransactionId.get(301)?.status, "pending", "la devolución de un miembro no cambia el aporte de otra persona");
+igual(ledgerCompartido.progressByTransactionId.get(302)?.status, "partial", "el historial completo enlaza la devolución con su verdadero propietario");
+
+const estadosPersonales = personalTransferStatuses([
+  { id: 101, type: "expense", amount: 50, internalTransfer: "family" },
+  { id: 102, type: "expense", amount: 30, internalTransfer: "family" },
+  { id: 201, type: "income", amount: 20, internalTransfer: "family", internalTransferAllocations: [{ transactionId: 101, amount: 20 }] },
+  { id: 202, type: "income", amount: 60, internalTransfer: "family", internalTransferAllocations: [{ transactionId: 101, amount: 30 }, { transactionId: 102, amount: 30 }] },
+]);
+igual(estadosPersonales.get(101), "returned", "Personal marca como Devuelta la transferencia liquidada");
+igual(estadosPersonales.get(102), "returned", "una devolución puede cerrar más de un aporte sin perder el vínculo");
+
+console.log("Transferencias: tercer tipo, estados, vínculos, conservación, sobregiro, devolución, borrado y edición verificados.");

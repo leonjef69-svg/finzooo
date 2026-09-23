@@ -403,6 +403,17 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 - Alcanzar al menos 12 testers aceptados, mantener el periodo exigido por Play
   Console y enviar la app a revisión cuando el panel lo permita.
 
+### Transferencias internas
+
+- Personal, Familia y Caja muestran las transferencias como un tercer tipo azul,
+  con dirección, fecha y estados Pendiente, Parcial o Devuelta.
+- Las devoluciones crean un movimiento nuevo y quedan repartidas y enlazadas a
+  los aportes originales de la misma persona.
+- Las transferencias afectan el saldo del bolsillo, pero no los totales ni las
+  gráficas de ingresos y gastos. El dinero externo continúa como ingreso normal.
+- Los movimientos antiguos se reconstruyen al abrir su Familia o Caja; convertir
+  una caja privada en compartida conserva sus enlaces.
+
 ### Funciones e integraciones todavía incompletas
 
 - Activar compras reales de Premium. Hoy no existe cobro: falta cerrar precios,
