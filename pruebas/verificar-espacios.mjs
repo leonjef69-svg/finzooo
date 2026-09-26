@@ -8,6 +8,7 @@ const business = fs.readFileSync("screens/Negocios.tsx", "utf8");
 const family = fs.readFileSync("screens/Family.tsx", "utf8");
 const route = fs.readFileSync("app/family.tsx", "utf8");
 const boxesRoute = fs.readFileSync("app/boxes.tsx", "utf8");
+const boxesMemory = fs.readFileSync("utils/cajasMemoria.ts", "utf8");
 
 for (const id of ["personal", "family", "boxes"]) {
   assert.match(switcher, new RegExp(`id: "${id}"`), `existe el espacio ${id}`);
@@ -26,7 +27,8 @@ assert.match(family, /<SpaceSwitcher active="family"/);
 assert.match(family, /crearFamilia/, "Familia permite crear un espacio real");
 assert.match(family, /unirseAFamilia/, "Familia permite entrar mediante invitación");
 assert.match(family, /familiaEnMemoria/, "Familia conserva lo ya mostrado mientras actualiza la nube");
-assert.match(boxes, /cajasEnMemoria/, "Cajas conserva lo ya mostrado al cambiar de espacio");
+assert.match(boxes, /leerCajasEnMemoria/, "Cajas conserva lo ya mostrado al cambiar de espacio");
+assert.match(boxesMemory, /limpiarCajasEnMemoria/, "la caché de Cajas se puede vaciar al cambiar de cuenta");
 assert.match(boxes, /setReady\(true\)[\s\S]*bajarCajas/, "Cajas muestra primero la copia local y consulta la nube después");
 assert.match(route, /screens\/Family/);
 assert.match(boxesRoute, /screens\/Cajas/);

@@ -19,10 +19,11 @@ import {
 } from "@/utils/cajas";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { horaDe } from "@/utils/format";
-import { allocatePersonalReturn, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
+import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
+import { guardarCajasEnMemoria, leerCajasEnMemoria } from "@/utils/cajasMemoria";
 import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Boxes, Check, ListChecks, MoreVertical, Plus, Trash2, UserPlus, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -32,8 +33,6 @@ import { useFocusEffect } from "expo-router";
 // Cambiar de Personal a Familia y volver a Cajas desmonta estas pantallas.
 // Conservamos la última copia ya pintada para no reconstruir una pantalla
 // vacía en cada cambio. La nube sigue actualizándola en segundo plano.
-let cajasEnMemoria: DatosCajas | null = null;
-
 function fechaLocal(): string {
   const ahora = new Date();
   const mes = String(ahora.getMonth() + 1).padStart(2, "0");
@@ -44,7 +43,7 @@ function fechaLocal(): string {
 export default function Cajas() {
   const { t, fmt, showToast, disponible, transactions, addOrUpdateTransaction, deleteLinkedTransferTransaction, repairLinkedTransferTransactions, isPremium, userName, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
-  const [datos, setDatos] = useState<DatosCajas>(() => cajasEnMemoria ?? CAJAS_VACIAS);
+  const [datos, setDatos] = useState<DatosCajas>(() => leerCajasEnMemoria() ?? CAJAS_VACIAS);
   const [lista, setLista] = useState(true);
   const [cajaId, setCajaId] = useState<string | null>(null);
   const [nuevoNombre, setNuevoNombre] = useState("");
@@ -61,7 +60,7 @@ export default function Cajas() {
   const [movementDate, setMovementDate] = useState(fechaLocal());
   const [notes, setNotes] = useState("");
   const [editandoAporteId, setEditandoAporteId] = useState<string | null>(null);
-  const [ready, setReady] = useState(cajasEnMemoria !== null);
+  const [ready, setReady] = useState(leerCajasEnMemoria() !== null);
   const [cloudReady, setCloudReady] = useState(false);
   const [compartiendo, setCompartiendo] = useState(false);
   const [seleccionando, setSeleccionando] = useState(false);
@@ -83,8 +82,9 @@ export default function Cajas() {
     void (async () => {
       const local = await loadJSON<DatosCajas>(STORAGE_KEYS.cajasDinero, CAJAS_VACIAS);
       if (!alive) return;
-      const visible = cajasEnMemoria ? fusionarCajas(local, cajasEnMemoria) : local;
-      cajasEnMemoria = visible;
+      const memoria = leerCajasEnMemoria();
+      const visible = memoria ? fusionarCajas(local, memoria) : local;
+      guardarCajasEnMemoria(visible);
       setDatos(visible);
       setReady(true);
 
@@ -95,7 +95,7 @@ export default function Cajas() {
         // Si la persona anotó algo mientras llegaba la nube, se fusiona con
         // el estado ACTUAL. Usar `visible` aquí podría borrar ese toque rápido.
         const unidos = remoto ? fusionarCajas(actual, remoto) : actual;
-        cajasEnMemoria = unidos;
+        guardarCajasEnMemoria(unidos);
         void saveJSON(STORAGE_KEYS.cajasDinero, unidos);
         return unidos;
       });
@@ -105,7 +105,7 @@ export default function Cajas() {
   }, []));
 
   useEffect(() => {
-    cajasEnMemoria = datos;
+    guardarCajasEnMemoria(datos);
     if (!ready || !cloudReady) return;
     void saveJSON(STORAGE_KEYS.cajasDinero, datos);
     const uid = auth.currentUser?.uid;
@@ -133,7 +133,9 @@ export default function Cajas() {
   // Repara automáticamente cualquiera de las dos mitades que haya quedado
   // huérfana por un cierre entre ambos guardados.
   useEffect(() => {
-    if (!ready) return;
+    // En un teléfono nuevo Personal puede llegar antes que las Cajas. Hasta
+    // que la nube termine de responder, una contraparte ausente no es huérfana.
+    if (!ready || !cloudReady) return;
     const movimientosPorId = new Map(datos.movimientos.map(item => [item.id, item]));
     const upserts = datos.movimientos.flatMap(item => {
       if (item.personalTransactionId == null) return [];
@@ -166,7 +168,7 @@ export default function Cajas() {
         && !movimientosPorId.has(tx.internalTransferLink))
       .map(tx => tx.id);
     if (upserts.length || orphanIds.length) repairLinkedTransferTransactions(upserts, orphanIds);
-  }, [datos.cajas, datos.movimientos, ready, repairLinkedTransferTransactions, t, transactions]);
+  }, [datos.cajas, datos.movimientos, ready, cloudReady, repairLinkedTransferTransactions, t, transactions]);
 
   const visibles = movimientos.filter(item => !filter
     || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter));
@@ -300,8 +302,8 @@ export default function Cajas() {
   function borrarCajas(ids = cajasSeleccionadas) {
     const candidatas = datos.cajas.filter(item => ids.includes(item.id));
     if (!candidatas.length) return;
-    if (candidatas.some(item => Math.abs(saldoCaja(item.id, datos.movimientos)) > 0.000001)) {
-      showToast("Primero deja en cero el saldo de cada caja seleccionada.");
+    if (candidatas.some(item => !canCloseLinkedSpace(datos.movimientos.filter(movement => movement.cajaId === item.id)))) {
+      showToast(t("boxes.closeBalance"));
       return;
     }
     const idsMovimientos = datos.movimientos.filter(item => ids.includes(item.cajaId)).map(item => item.id);

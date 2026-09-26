@@ -183,6 +183,13 @@ export function saveSchedule(schedule: ScheduledExport): void {
   saveJSON(STORAGE_KEY, schedule);
 }
 
+/** Retira avisos y el despertador nativo de la cuenta que cerró sesión. */
+export async function cancelarProgramacionAlCerrarSesion(): Promise<void> {
+  await cancelByTag(TAG);
+  await cancelByTag(TAG_VIEJO_REPESCA);
+  cancelarExportacion();
+}
+
 /**
  * El día más alto que se puede elegir para la programación mensual.
  *

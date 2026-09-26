@@ -153,6 +153,16 @@ export async function clearAccountData(): Promise<void> {
         STORAGE_KEYS.ventas,
         STORAGE_KEYS.movimientosNegocio,
         STORAGE_KEYS.cajasDinero,
+        // Integraciones y tareas que pertenecen a la cuenta, aunque sus claves
+        // vivan fuera del almacén principal.
+        "finzo:scheduledExport",
+        "finzo:scheduledExport.proxima",
+        "finzo:scheduledExport.lastExport",
+        "finzo:scheduledExport.lastTap",
+        "finzo:exportacionEnFondo.ultimo",
+        "finzo:carpetaExportacion",
+        "finzo:capturaPendiente",
+        "finzo:avisosEncendidos",
       ];
   // Las claves con el prefijo antiguo se incluyen para limpiar también
   // cualquier dato falso que haya quedado de versiones anteriores.

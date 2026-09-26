@@ -107,7 +107,7 @@ export async function onedriveConectado(): Promise<boolean> {
 
 // Se olvida la cuenta. Igual que en Dropbox: solo la llama permisoDeAhora, cuando Microsoft
 // contesta que el permiso ya no vale.
-async function desconectarOneDrive(): Promise<void> {
+export async function desconectarOneDrive(): Promise<void> {
   await SecureStore.deleteItemAsync(CLAVE_REFRESH);
 }
 

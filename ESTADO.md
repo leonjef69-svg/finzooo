@@ -1,5 +1,21 @@
 # Estado actual de Fino
 
+## Auditoría externa — bloqueantes corregidos en código (26/09/2026)
+
+- Unirse a una Familia o Caja compartida ya crea primero la membresía validada
+  por la invitación y lee el espacio después; no intenta leer datos protegidos
+  antes de tener permiso.
+- Cerrar sesión pide confirmación y limpia también categorías, calendario,
+  Cajas en memoria, PIN, buzón de Yape, avisos, exportación programada y las
+  conexiones con Dropbox/OneDrive para que una cuenta nueva no herede nada.
+- Una Caja privada no se puede borrar si conserva aportes de Personal sin
+  devolver, aunque su saldo total sea cero. La reparación de vínculos espera a
+  que termine de llegar la copia de Cajas de la nube.
+- Una cuenta con correo pendiente vuelve siempre a Verificar correo al reabrir;
+  ya no puede acumular datos sin respaldo entrando directamente a Inicio.
+- Validación: TypeScript, ESLint, 110 pruebas y 7 auditores aprobados.
+- No se publicaron reglas, Functions, AAB ni actualización de Google Play.
+
 ## Rediseño de movimientos Familia/Caja (25/09/2026)
 
 - Preparados los movimientos con barra inferior, formulario aparte, filtros y categorías.

@@ -67,13 +67,14 @@ import {
 // el disco. Con las versiones "set" se quedaban solo en memoria y al reabrir la app
 // volvia el disco vacio — la personalizacion y las categorias propias desaparecian
 // otra vez.
-import { loadOverrides, saveOverrides, type CategoryOverrides } from "@/utils/categoryCustom";
+import { loadOverrides, saveOverrides, setOverrides, type CategoryOverrides } from "@/utils/categoryCustom";
 import {
   borrar as borrarPropia,
   crear as crearPropia,
   editar as editarPropia,
   loadPropias,
   savePropias,
+  setPropias,
   type CategoriaPropia,
 } from "@/utils/categoriasPropias";
 import {
@@ -81,6 +82,7 @@ import {
   loadFavoritos,
   paraLaNube,
   saveFavoritos,
+  setFavoritos,
 } from "@/utils/iconosFavoritos";
 import {
   loadPrueba,
@@ -117,12 +119,20 @@ import { saldoAnteriorDe } from "@/utils/saldoAnterior";
 import { isSafeMoneyAmount } from "@/utils/amount";
 import { unlinkCreditPaymentsForHomeTransactions } from "@/utils/creditStore";
 import * as notificationReader from "@/modules/notification-reader";
+import { cancelarProgramacionAlCerrarSesion } from "@/utils/scheduledExport";
+import { desconectarDropbox } from "@/utils/dropbox";
+import { desconectarOneDrive } from "@/utils/onedrive";
+import { disableLock } from "@/utils/appLock";
+import { setPendingImport } from "@/utils/pendingImport";
+import { limpiarCajasEnMemoria } from "@/utils/cajasMemoria";
 import type { Goal, Month, Profile, Transaction } from "@/types";
 
 export type ThemeMode = "light" | "dark" | "system";
 
 type AppDataContextValue = {
   ready: boolean;
+  authReady: boolean;
+  needsEmailVerification: boolean;
   hasOnboarded: boolean;
   completeOnboarding: (budgetAmount: number) => void;
   reloadPersistedData: () => Promise<void>;
@@ -383,6 +393,8 @@ function currentRealMonth(): Month {
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
+  const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
   const [hasOnboarded, setHasOnboarded] = useState(false);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -543,6 +555,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUid(user && user.emailVerified ? user.uid : null);
+      setNeedsEmailVerification(!!user && !user.emailVerified);
+      setAuthReady(true);
     });
     return unsubscribe;
   }, []);
@@ -795,6 +809,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // compartido, y confuso al probar con varias cuentas.
     await signOutFromGoogle();
     await signOut(auth);
+    // Todo lo que puede seguir actuando fuera del estado de React también
+    // pertenece a la cuenta que sale: avisos, alarmas, permisos de destinos,
+    // PIN y buzón nativo. Se intenta limpiar todo aunque una integración falle.
+    notificationReader.setEnabled(false);
+    await Promise.allSettled([
+      reprogramarAvisosDePagos([], tRef.current),
+      cancelarProgramacionAlCerrarSesion(),
+      desconectarDropbox(),
+      desconectarOneDrive(),
+      disableLock(),
+      notificationReader.clear(),
+    ]);
+    limpiarPendientes();
+    setPendingImport(null);
+    limpiarCajasEnMemoria();
     // Borra todos los datos de la cuenta de forma atómica y esperada
     // ANTES de actualizar el estado. Si la app se cierra en este momento,
     // AsyncStorage ya está limpio y no hay riesgo de que al reabrir la
@@ -809,19 +838,34 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setUserCountry("PE");
     setBudgets({});
     setCategoryBudgets({});
+    setCategoryOverridesState({});
+    setOverrides({});
+    setCategoriasPropiasState([]);
+    setPropias([]);
+    setIconosFavoritosState([]);
+    setFavoritos([]);
+    setCategoriaRecienCreada(null);
     setTransactions([]);
     setDeletedTransactionIds([]);
     setDeletedGoalIds([]);
     setGoals([]);
+    setPagosProgramados([]);
+    setAvisosProgramados(0);
+    setAvisosFallo(null);
     setIsPremium(false);
     setTesterPremium(TESTER_PREMIUM_INACTIVE);
     setDatosNegocio(NEGOCIO_VACIO);
+    setAutoCaptureOnState(false);
+    setAutoCaptureLog([]);
     // La prueba gratuita tambien se suelta: el disco ya se limpio, pero lo que
     // esta en memoria sobrevive y la cuenta siguiente entraria con la prueba de la
     // anterior a medio correr.
     setPruebaInicio(null);
     setMerchantLearned({});
     setCarryoverCleared([]);
+    setRespaldoFallo(null);
+    setCelebrateGoal(null);
+    setVerComoGratis(false);
   }
 
   // Antes de cambiar la contraseña o borrar la cuenta, Firebase exige
@@ -2235,6 +2279,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
      cambiado. Ahora solo se despierta a quien de verdad tiene algo nuevo que enseñar. */
   const valor = useValorEstable({
     ready,
+    authReady,
+    needsEmailVerification,
     hasOnboarded,
     completeOnboarding,
     reloadPersistedData,

@@ -19,7 +19,9 @@ assert.match(pantallaFamilia, /tipo === "ingreso" && owner && origenDinero === "
 assert.match(rules, /&& boxOpen\(boxId\)/, "una invitación no abre una caja cerrada");
 assert.match(rules, /resource\.data\.get\('deleting', false\) == true/, "solo un borrado de cuenta autorizado puede purgar un espacio");
 assert.match(familia, /await runTransaction\(db, async transaction => \{[\s\S]*transaction\.set\(ref,[\s\S]*familyUsers/, "crear una familia es una operación indivisible");
-assert.match(cajas, /box\.data\(\)\.closed === true/, "el cliente rechaza una caja cerrada aunque conserve el código");
+assert.match(rules, /allow create:[\s\S]*&& boxOpen\(boxId\)/, "las reglas rechazan una caja cerrada aunque conserve el código");
+const unionCaja = cajas.slice(cajas.indexOf("export async function unirseACaja"), cajas.indexOf("export async function listarMovimientosCajaCompartida"));
+assert.doesNotMatch(unionCaja, /transaction\.get\(boxRef\)/, "un invitado no intenta leer la caja antes de ser miembro");
 assert.match(sync, /borrarCajasCompartidasDeCuenta\(uid\)/, "eliminar la cuenta también limpia sus cajas compartidas");
 assert.match(google, /reauthenticateWithGoogle/, "las cuentas Google pueden confirmar el borrado sin una contraseña inexistente");
 assert.match(eliminar, /usaContrasena \?/, "la pantalla solo exige contraseña a quien realmente usa una");

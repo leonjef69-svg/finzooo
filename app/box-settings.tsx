@@ -1,8 +1,9 @@
 import BackButton from "@/components/BackButton";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
-import { fusionarCajas, normalizarCajas, saldoCaja, type DatosCajas } from "@/utils/cajas";
+import { fusionarCajas, normalizarCajas, type DatosCajas } from "@/utils/cajas";
 import { bajarCajas, subirCajas } from "@/utils/cloudCajas";
+import { canCloseLinkedSpace } from "@/utils/linkedTransfers";
 import { safeBack } from "@/utils/nav";
 import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 import { Check } from "lucide-react-native";
@@ -41,7 +42,8 @@ export default function BoxSettings() {
   };
   const eliminar = () => {
     if (!datos || !caja) return;
-    if (Math.abs(saldoCaja(caja.id, datos.movimientos)) > 0.000001) { showToast(t("boxes.closeBalance")); return; }
+    const movimientosCaja = datos.movimientos.filter(item => item.cajaId === caja.id);
+    if (!canCloseLinkedSpace(movimientosCaja)) { showToast(t("boxes.closeBalance")); return; }
     Alert.alert(t("boxes.delete"), t("boxes.deleteWarning"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("boxes.delete"), style: "destructive", onPress: () => void (async () => {

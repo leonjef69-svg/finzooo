@@ -153,12 +153,13 @@ export async function unirseAFamilia(uid: string, nombre: string, codigoCrudo: s
   const familyId = String(data.familyId || "");
   const familyRef = doc(db, "familySpaces", familyId);
   const indexRef = doc(db, "familyUsers", uid);
-  let resultado: EspacioFamilia | null = null;
   await runTransaction(db, async transaction => {
-    const family = await transaction.get(familyRef);
-    if (!family.exists() || family.data().closed === true || family.data().closing === true) throw new Error("invalid-code");
-    const familyData = family.data();
-    resultado = { id: family.id, nombre: String(familyData.nombre || "Familia"), ownerUid: String(familyData.ownerUid), creadoEn: alNumero(familyData.creadoEn) };
+    // Antes se leía familyRef aquí para obtener el nombre. Las reglas protegen
+    // ese documento para miembros, así que una persona con una invitación válida
+    // todavía no podía leerlo y nunca alcanzaba a crear su membresía. La propia
+    // regla de creación comprueba invitación, vencimiento, espacio abierto y
+    // Premium del propietario; primero se crea la membresía y recién después se
+    // lee el espacio ya autorizado.
     transaction.set(doc(db, "familySpaces", familyId, "members", uid), {
       uid,
       nombre: nombre.trim().slice(0, 60),
@@ -169,8 +170,10 @@ export async function unirseAFamilia(uid: string, nombre: string, codigoCrudo: s
     transaction.set(indexRef, { activeFamilyId: familyId }, { merge: true });
     transaction.set(doc(db, "familyUsers", uid, "spaces", familyId), { familyId, unidoEn: serverTimestamp() });
   });
-  if (!resultado) throw new Error("invalid-code");
-  return resultado;
+  const family = await getDoc(familyRef);
+  if (!family.exists()) throw new Error("invalid-code");
+  const familyData = family.data();
+  return { id: family.id, nombre: String(familyData.nombre || "Familia"), ownerUid: String(familyData.ownerUid), creadoEn: alNumero(familyData.creadoEn) };
 }
 
 export async function listarMiembrosFamilia(familyId: string): Promise<MiembroFamilia[]> {

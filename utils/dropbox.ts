@@ -77,10 +77,9 @@ export async function dropboxConectado(): Promise<boolean> {
   return (await SecureStore.getItemAsync(CLAVE_REFRESH)) !== null;
 }
 
-// Se olvida la cuenta. Sin "export" porque nadie la desconecta a mano todavía:
-// el único que la llama es permisoDeAhora, cuando Dropbox contesta que el
-// permiso ya no vale. El día que haya un botón de desconectar, se exporta.
-async function desconectarDropbox(): Promise<void> {
+// Se olvida la cuenta. También se usa al cerrar sesión para que la cuenta
+// siguiente del mismo teléfono nunca exporte al Dropbox de la anterior.
+export async function desconectarDropbox(): Promise<void> {
   await SecureStore.deleteItemAsync(CLAVE_REFRESH);
 }
 

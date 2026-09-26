@@ -111,11 +111,11 @@ export async function unirseACaja(uid: string, nombre: string, codigoCrudo: stri
   if (!invitacion.exists() || Number(invitacion.data().expiresAt || 0) < Date.now()) throw new Error("invalid-code");
   const boxId = String(invitacion.data().boxId || "");
   await runTransaction(db, async transaction => {
-    const boxRef = doc(db, "boxSpaces", boxId);
     const memberRef = doc(db, "boxSpaces", boxId, "members", uid);
-    const [box, member] = await Promise.all([transaction.get(boxRef), transaction.get(memberRef)]);
-    if (!box.exists() || box.data().closed === true || box.data().closing === true || box.data().migrationComplete === false) throw new Error("invalid-code");
-    if (!member.exists()) transaction.set(memberRef, { uid, nombre, rol: "member", inviteCode: codigo, unidoEn: serverTimestamp() });
+    // Igual que Familia: antes de existir la membresía las reglas no dejan leer
+    // ni el espacio ni sus miembros. La regla de creación valida el código, el
+    // vencimiento, el estado del espacio y el Premium del dueño.
+    transaction.set(memberRef, { uid, nombre: nombre.trim().slice(0, 60), rol: "member", inviteCode: codigo, unidoEn: serverTimestamp() });
     transaction.set(doc(db, "boxUsers", uid, "spaces", boxId), { boxId, unidoEn: serverTimestamp() });
   });
   const caja = await getDoc(doc(db, "boxSpaces", boxId));

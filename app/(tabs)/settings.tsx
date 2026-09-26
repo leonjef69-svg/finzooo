@@ -1,5 +1,6 @@
 import { router } from "expo-router";
 import { useRef } from "react";
+import { Alert } from "react-native";
 import { irUnaVez } from "@/utils/nav";
 import Settings from "@/screens/Settings";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -37,16 +38,29 @@ export default function SettingsTab() {
       onScheduledExport={() => irUnaVez("/scheduled-export")}
       onImport={() => irUnaVez("/import")}
       onAutoCapture={() => irUnaVez("/auto-capture")}
-      onLogout={async () => {
+      onLogout={() => {
         if (cerrandoSesion.current) return;
-        cerrandoSesion.current = true;
-        try {
-          await logout();
-          router.replace("/login");
-        } catch (error) {
-          showToast(error instanceof Error ? error.message : "No se pudo cerrar sesión. Vuelve a intentarlo.");
-          cerrandoSesion.current = false;
-        }
+        Alert.alert(
+          "Cerrar sesión",
+          "Se quitarán de este teléfono tus datos, avisos, PIN y conexiones de exportación. Antes, Fino intentará guardar la copia en tu cuenta.",
+          [
+            { text: "Cancelar", style: "cancel" },
+            {
+              text: "Cerrar sesión",
+              style: "destructive",
+              onPress: () => void (async () => {
+                cerrandoSesion.current = true;
+                try {
+                  await logout();
+                  router.replace("/login");
+                } catch (error) {
+                  showToast(error instanceof Error ? error.message : "No se pudo cerrar sesión. Vuelve a intentarlo.");
+                  cerrandoSesion.current = false;
+                }
+              })(),
+            },
+          ],
+        );
       }}
       onPremium={() => irUnaVez("/premium")}
       onSavings={() => irUnaVez("/savings")}
