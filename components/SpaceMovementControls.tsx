@@ -5,6 +5,40 @@ import { PAYMENT_METHODS } from "@/constants/i18n";
 
 export type MovementFilter = "ingreso" | "gasto" | "transferencia" | null;
 
+export function SpaceOverviewTotals({ income, expense, filter, onFilter, format }: {
+  income: number;
+  expense: number;
+  filter: MovementFilter;
+  onFilter: (value: MovementFilter) => void;
+  format: (value: number) => string;
+}) {
+  const { t } = useAppData();
+  const { width, fontScale } = useWindowDimensions();
+  const hasIncome = income > 0;
+  const hasExpense = expense > 0;
+  if (!hasIncome && !hasExpense) return null;
+  const vertical = hasIncome && hasExpense && (
+    Math.trunc(income).toString().length >= 8
+    || Math.trunc(expense).toString().length >= 8
+    || width / fontScale < 330
+  );
+  const card = (type: "ingreso" | "gasto", amount: number) => <TouchableOpacity
+    key={type}
+    accessibilityRole="button"
+    accessibilityState={{ selected: filter === type }}
+    onPress={() => onFilter(filter === type ? null : type)}
+    className={`min-h-[70px] justify-center rounded-2xl border-[1.5px] px-3 py-2.5 ${type === "ingreso" ? "border-emerald-300 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950/40" : "border-rose-300 bg-rose-50 dark:border-rose-800 dark:bg-rose-950/35"}`}
+    style={{ flex: vertical ? undefined : 1 }}
+  >
+    <Text numberOfLines={1} className={`text-xs font-bold ${type === "ingreso" ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}`}>{t(type === "ingreso" ? "history.totalIncome" : "spaces.totalExpense")}</Text>
+    <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`text-lg font-extrabold ${type === "ingreso" ? "text-emerald-800 dark:text-emerald-200" : "text-rose-800 dark:text-rose-200"}`}>{format(amount)}</Text>
+  </TouchableOpacity>;
+  return <View className={`mt-2 gap-2 ${vertical ? "" : "flex-row"}`}>
+    {hasIncome ? card("ingreso", income) : null}
+    {hasExpense ? card("gasto", expense) : null}
+  </View>;
+}
+
 export function SpaceFilteredTotal({ filter, amount, format }: {
   filter: "ingreso" | "gasto";
   amount: number;

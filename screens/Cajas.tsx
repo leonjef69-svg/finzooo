@@ -1,8 +1,9 @@
-import { SpaceFilteredTotal, SpacePaymentMethod, SpaceFilterReset, SpaceTransferFilter, type MovementFilter } from "@/components/SpaceMovementControls";
+import { SpaceOverviewTotals, SpacePaymentMethod, type MovementFilter } from "@/components/SpaceMovementControls";
 import { methodLabel } from "@/constants/i18n";
 import BackButton from "@/components/BackButton";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
 import SpaceActionBar from "@/components/SpaceActionBar";
+import SpaceTransferAmounts from "@/components/SpaceTransferAmounts";
 import SpaceMovementFields, { validSpaceDate } from "@/components/SpaceMovementFields";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
@@ -118,8 +119,6 @@ export default function Cajas() {
     () => datos.movimientos.filter((item) => item.cajaId === cajaId).sort((a, b) => b.creadoEn - a.creadoEn),
     [cajaId, datos.movimientos],
   );
-  const transferLedger = useMemo(() => linkedTransferLedger(movimientos), [movimientos]);
-  const transferCount = useMemo(() => movimientos.filter(isLinkedSpaceTransfer).length, [movimientos]);
   const resumen = useMemo(() => movimientos.reduce(
     (total, item) => ({
       ingresos: total.ingresos + (!isLinkedSpaceTransfer(item) && item.tipo === "ingreso" ? item.monto : 0),
@@ -451,6 +450,7 @@ export default function Cajas() {
               <View className="flex-row items-center"><Text className="flex-1 text-base font-bold text-teal-100">{caja.nombre}</Text><TouchableOpacity accessibilityLabel="Opciones de caja" onPress={() => irUnaVez({ pathname: "/box-settings", params: { boxId: caja.id } })} className="h-10 w-10 items-center justify-center rounded-xl bg-teal-700"><MoreVertical size={20} color="#fff" /></TouchableOpacity></View>
               <Text className="text-[26px] font-extrabold leading-8 text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58}>{fmt(saldoActual)}</Text>
             </View>
+            <SpaceOverviewTotals income={resumen.ingresos} expense={resumen.gastos} filter={filter} onFilter={setFilter} format={fmt} />
             {devolvibleAPersonal > 0 ? <TouchableOpacity onPress={devolverAPersonal} className="mt-2 min-h-11 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("boxes.returnAmount", { amount: fmt(devolvibleAPersonal) })}</Text></TouchableOpacity> : null}
             <Modal visible={Boolean(anotando)} animationType="slide" onRequestClose={() => setAnotando(null)}>
               <ScrollView className="flex-1 bg-white px-5 dark:bg-noche" contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 30 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
@@ -468,7 +468,7 @@ export default function Cajas() {
               </View>
               </ScrollView>
             </Modal>
-            <View className="mb-2 mt-5 flex-row items-center justify-between">
+            <View className="mb-2 mt-5 flex-row items-center justify-between gap-2">
               {seleccionando ? <>
                 <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{seleccionados.length} {seleccionados.length === 1 ? "seleccionado" : "seleccionados"}</Text>
                 <View className="flex-row items-center gap-3">
@@ -477,24 +477,19 @@ export default function Cajas() {
                   <TouchableOpacity onPress={() => { setSeleccionando(false); setSeleccionados([]); }} hitSlop={6}><Text className="text-sm font-bold text-emerald-600">{t("common.cancel")}</Text></TouchableOpacity>
                 </View>
               </> : <>
-                <Text className="font-extrabold text-slate-900 dark:text-slate-100">{t("boxes.history")}</Text>
-                <View className="flex-row items-center gap-2"><TouchableOpacity accessibilityLabel="Invitar a esta caja" disabled={compartiendo} onPress={() => void compartirCaja()} className="h-10 w-10 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><UserPlus size={18} color="#0d9488" /></TouchableOpacity><TouchableOpacity onPress={() => { setSeleccionando(true); setSeleccionados([]); }} className="flex-row items-center gap-1"><ListChecks size={16} color="#059669" /><Text className="text-sm font-bold text-emerald-600">Seleccionar</Text></TouchableOpacity></View>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Mostrar todos los movimientos de caja" onPress={() => setFilter(null)} className="min-h-10 min-w-0 flex-1 justify-center"><Text numberOfLines={2} className={`text-[15px] font-extrabold ${filter === "ingreso" ? "text-emerald-700 dark:text-emerald-300" : filter === "gasto" ? "text-rose-700 dark:text-rose-300" : "text-slate-900 dark:text-slate-100"}`}>{t("boxes.history")}</Text></TouchableOpacity>
+                <View className="flex-row items-center gap-2"><TouchableOpacity accessibilityRole="button" accessibilityLabel="Filtrar ingresos de caja" accessibilityState={{ selected: filter === "ingreso" }} onPress={() => setFilter("ingreso")} className={`h-10 w-10 items-center justify-center rounded-xl ${filter === "ingreso" ? "bg-emerald-200" : "bg-emerald-50"}`}><Text className="text-[22px] font-extrabold text-emerald-700">+</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" accessibilityLabel="Filtrar gastos de caja" accessibilityState={{ selected: filter === "gasto" }} onPress={() => setFilter("gasto")} className={`h-10 w-10 items-center justify-center rounded-xl ${filter === "gasto" ? "bg-rose-200" : "bg-rose-50"}`}><Text className="text-[22px] font-extrabold text-rose-700">−</Text></TouchableOpacity></View>
+                <TouchableOpacity accessibilityLabel="Invitar a esta caja" disabled={compartiendo} onPress={() => void compartirCaja()} className="h-10 w-10 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><UserPlus size={19} color="#0d9488" /></TouchableOpacity>
+                <TouchableOpacity accessibilityLabel="Seleccionar movimientos de caja" onPress={() => { setSeleccionando(true); setSeleccionados([]); }} className="min-h-10 flex-row items-center gap-1"><ListChecks size={18} color="#059669" /><Text className="text-[15px] font-bold text-emerald-600">Seleccionar</Text></TouchableOpacity>
               </>}
             </View>
-            <SpaceFilterReset filter={filter} onReset={() => setFilter(null)} />
-            {filter === "ingreso" || filter === "gasto" ? <SpaceFilteredTotal filter={filter} amount={filter === "ingreso" ? resumen.ingresos : resumen.gastos} format={fmt} /> : null}
-            <SpaceTransferFilter count={transferCount} filter={filter} onFilter={setFilter} />
             {filasVisibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "boxes.noMovements")}</Text> : filasVisibles.slice(0, movementLimit).map(({ key, item, transferGroup }) => {
               const transferencia = isLinkedSpaceTransfer(item);
               const retorno = isLinkedSpaceReturn(item);
-              const estado = transferGroup?.status || (retorno ? "returned" : item.personalTransactionId != null
-                ? transferLedger.progressByTransactionId.get(item.personalTransactionId)?.status || "pending"
-                : "pending");
               return (
               <TouchableOpacity key={key} disabled={transferGroup ? seleccionando : !seleccionando} onPress={() => transferGroup ? setFilter("transferencia") : setSeleccionados(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id])} className={`mb-2 flex-row items-center rounded-2xl border-[1.5px] p-3 dark:border-noche-borde ${seleccionados.includes(item.id) ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200"}`}>
                 <View className={`h-9 w-9 items-center justify-center rounded-xl ${transferencia ? "bg-blue-100 dark:bg-blue-950" : item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{transferencia ? <ArrowRightLeft size={17} color="#2563eb" /> : item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
-                <View className="ml-3 flex-1"><Text className="text-[15px] font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{transferencia ? `Personal (${caja.nombre})` : item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text><Text className={`text-xs ${transferencia ? "font-semibold text-blue-600 dark:text-blue-300" : "text-slate-500"}`}>{transferGroup ? `Enviado ${fmt(transferGroup.sent)} · Devuelto ${fmt(transferGroup.returned)} · ${t(`transfer.${estado}`)}` : transferencia ? `Transferencia de ${retorno ? caja.nombre : "Personal"} a ${retorno ? "Personal" : caja.nombre} · ${retorno ? "Devuelto" : "Enviado"} · ${item.fecha}` : `${item.fecha}${item.method ? ` · ${methodLabel(item.method, t)}` : ""}`}</Text></View>
-                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-2 max-w-[38%] text-[15px] font-extrabold ${transferencia ? "text-blue-600 dark:text-blue-300" : item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{transferGroup ? "↔ " : transferencia ? (retorno ? "↩ " : "→ ") : item.tipo === "ingreso" ? "+" : "-"}{fmt(transferGroup?.pending ?? item.monto)}</Text>
+                {transferencia ? <View className="ml-3 flex-1"><SpaceTransferAmounts title={caja.nombre} sentLabel="Recibido de Personal" returnedLabel="Devuelto a Personal" sent={transferGroup?.sent ?? (retorno ? 0 : item.monto)} returned={transferGroup?.returned ?? (retorno ? item.monto : 0)} format={fmt} /></View> : <><View className="ml-3 flex-1"><Text className="text-[15px] font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-2 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></>}
                 {seleccionando && !transferGroup ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${seleccionados.includes(item.id) ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : null}
               </TouchableOpacity>
               );
@@ -502,7 +497,7 @@ export default function Cajas() {
           </>
         )}
       </ScrollView>
-      {!lista && caja ? <SpaceActionBar filter={filter} onFilter={setFilter} onAdd={() => { setOrigenDinero("externo"); setCategory("otros"); setMovementDate(fechaLocal()); setAnotando("gasto"); }} /> : null}
+      {!lista && caja ? <SpaceActionBar onAdd={() => { setOrigenDinero("externo"); setCategory("otros"); setMovementDate(fechaLocal()); setAnotando("gasto"); }} /> : null}
     </View>
   );
 }

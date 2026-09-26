@@ -419,6 +419,11 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
   gráficas de ingresos y gastos. El dinero externo continúa como ingreso normal.
 - Los movimientos antiguos se reconstruyen al abrir su Familia o Caja; convertir
   una caja privada en compartida conserva sus enlaces.
+- En Personal, Familia y Caja, el historial agrupa cada transferencia por espacio:
+  enseña el monto enviado/recibido y solo muestra «Devuelto» cuando hubo una
+  devolución. Los filtros +/− separan ingresos y gastos; tocar el título
+  restaura todos los movimientos. Familia y Caja sitúan sus totales bajo el saldo
+  y dejan el botón + como acción inferior principal.
 
 ### Funciones e integraciones todavía incompletas
 

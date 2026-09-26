@@ -3,6 +3,7 @@ import EtiquetaMetodo from "@/components/EtiquetaMetodo";
 import IconBadge from "@/components/IconBadge";
 import PressableScale from "@/components/PressableScale";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
+import SpaceTransferAmounts from "@/components/SpaceTransferAmounts";
 import { catInfo } from "@/constants/categories";
 import { iconoDe } from "@/constants/iconos";
 import { CARD_SHADOW, SALDO_TARJETA, SALDO_VERDE } from "@/constants/style";
@@ -13,7 +14,7 @@ import { estadoEn, fechaEnElMes, mesDe } from "@/utils/calendarioPagos";
 import { availablePersonalBalance, budgetUsed } from "@/utils/finances";
 import { fmtDate, monthKey } from "@/utils/format";
 import { esFoto } from "@/utils/iconosFavoritos";
-import { compactPersonalTransferRows, personalTransferStatuses, type TransferGroupSummary, type TransferStatus } from "@/utils/linkedTransfers";
+import { compactPersonalTransferRows, type TransferGroupSummary } from "@/utils/linkedTransfers";
 import { irUnaVez } from "@/utils/nav";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { usePendingImport } from "@/utils/pendingImport";
@@ -65,7 +66,6 @@ const FilaMovimiento = memo(function FilaMovimiento({
   t,
   monthNames,
   onPress,
-  transferStatus,
   transferGroup,
 }: {
   tx: Transaction;
@@ -77,14 +77,13 @@ const FilaMovimiento = memo(function FilaMovimiento({
   t: (k: string, v?: Record<string, string | number>) => string;
   monthNames: string[];
   onPress: (id: number, grouped: boolean) => void;
-  transferStatus?: TransferStatus;
   transferGroup?: TransferGroupSummary;
 }) {
   const c = catInfo(tx.category);
   const isTransfer = Boolean(tx.internalTransfer);
   const spaceName = tx.internalTransferSpaceName || t(tx.internalTransfer === "family" ? "spaces.family" : "spaces.boxes");
   const title = isTransfer
-    ? `Personal (${spaceName})`
+    ? spaceName
     : tx.description || t(c.label);
   // Si la persona dejó como descripción el mismo nombre de la categoría,
   // mostrar ambos renglones es una repetición, no información adicional.
@@ -129,7 +128,14 @@ const FilaMovimiento = memo(function FilaMovimiento({
             color={isTransfer ? "#2563eb" : tx.iconColor ?? c.color}
             image={isTransfer ? undefined : esFoto(tx.icono ?? "") ? tx.icono : c.image}
           />
-          <View className="flex-1 min-w-0">
+          {isTransfer ? <SpaceTransferAmounts
+            title={title}
+            sentLabel={`Enviado a ${tx.internalTransfer === "family" ? "Familia" : "Caja"}`}
+            returnedLabel="Devuelto"
+            sent={transferGroup?.sent ?? (tx.type === "expense" ? tx.amount : 0)}
+            returned={transferGroup?.returned ?? (tx.type === "income" ? tx.amount : 0)}
+            format={fmt}
+          /> : <><View className="flex-1 min-w-0">
             <Text
               className="text-base font-bold"
               style={{ color: oscuro ? "#f1f5f9" : "#0f172a" }}
@@ -137,13 +143,7 @@ const FilaMovimiento = memo(function FilaMovimiento({
             >
               {title}
             </Text>
-            {isTransfer ? (
-              <Text className="mt-0.5 text-[11px] font-semibold text-blue-600 dark:text-blue-300" numberOfLines={1}>
-                {transferGroup
-                  ? `Enviado ${fmt(transferGroup.sent)} · Devuelto ${fmt(transferGroup.returned)}`
-                  : `Transferencia de ${tx.type === "expense" ? "Personal" : spaceName} a ${tx.type === "expense" ? spaceName : "Personal"} · ${tx.type === "expense" ? "Enviado" : "Devuelto"}`}
-              </Text>
-            ) : !repeatsCategory ? (
+            {!repeatsCategory ? (
               <Text className="mt-0.5 text-[11px] font-semibold" style={{ color: oscuro ? "#cbd5e1" : "#475569" }} numberOfLines={1}>
                 {t(c.label)}
               </Text>
@@ -154,16 +154,15 @@ const FilaMovimiento = memo(function FilaMovimiento({
           </View>
           <View className="items-end self-stretch justify-start">
             <Text
-              className={`text-base font-extrabold ${isTransfer ? "text-blue-600 dark:text-blue-300" : tx.type === "expense" ? "text-rose-500" : "text-emerald-600"}`}
+              className={`text-base font-extrabold ${tx.type === "expense" ? "text-rose-500" : "text-emerald-600"}`}
               numberOfLines={1}
               adjustsFontSizeToFit
               minimumFontScale={0.72}
             >
-              {isTransfer ? (tx.type === "expense" ? "→ " : "↩ ") : tx.type === "expense" ? "-" : "+"}
-              {fmt(transferGroup?.pending ?? tx.amount)}
+              {tx.type === "expense" ? "-" : "+"}{fmt(tx.amount)}
             </Text>
-            {!isTransfer ? <View className="mt-1"><EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} /></View> : null}
-          </View>
+            <View className="mt-1"><EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} /></View>
+          </View></>}
         </PressableScale>
       </Row>
     </View>
@@ -233,8 +232,17 @@ export default function Home({
   const mainIncome = useMemo(() => monthTx.filter((t) => t.type === "income" && !t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
   const transfersOut = useMemo(() => monthTx.filter((t) => t.type === "expense" && t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
   const transfersIn = useMemo(() => monthTx.filter((t) => t.type === "income" && t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
-  const transferStatuses = useMemo(() => personalTransferStatuses(transactions), [transactions]);
-  const compactMonthRows = useMemo(() => compactPersonalTransferRows(monthTx), [monthTx]);
+  const compactMonthRows = useMemo(() => {
+    const acrossMonths = new Map(compactPersonalTransferRows(transactions)
+      .flatMap(row => row.transferGroup ? [[row.transferGroup.key, row.transferGroup] as const] : []));
+    return compactPersonalTransferRows(monthTx).map(row => row.transferGroup
+      ? { ...row, transferGroup: acrossMonths.get(row.transferGroup.key) || row.transferGroup }
+      : row);
+  }, [monthTx, transactions]);
+  const [recentFilter, setRecentFilter] = useState<"income" | "expense" | null>(null);
+  const visibleRecentRows = useMemo(() => recentFilter
+    ? compactMonthRows.filter(row => !row.item.internalTransfer && row.item.type === recentFilter)
+    : compactMonthRows, [compactMonthRows, recentFilter]);
   // Estas cifras no pertenecen a un mes: muestran el neto que Personal ha
   // transferido a cada tipo de espacio. Toda salida enlazada nació al elegir
   // "Desde Personal" y toda entrada enlazada es una devolución; el dinero
@@ -324,11 +332,10 @@ export default function Home({
         t={t}
         monthNames={monthNames}
         onPress={alTocarFila}
-        transferStatus={row.item.type === "income" && row.item.internalTransfer ? "returned" : transferStatuses.get(row.item.id)}
         transferGroup={row.transferGroup}
       />
     ),
-    [marcadas, selectMode, colorScheme, fmt, t, monthNames, alTocarFila, transferStatuses]
+    [marcadas, selectMode, colorScheme, fmt, t, monthNames, alTocarFila]
   );
   function confirmBulkDelete() {
     onBulkDelete(selected);
@@ -682,7 +689,7 @@ export default function Home({
           </Animated.View>
         </View>
 
-        <View className="px-5 mt-3 mb-2 flex-row items-center justify-between">
+        <View className="px-4 mt-3 mb-2 flex-row items-center justify-between gap-3">
           {selectMode ? (
             <>
               <Text
@@ -716,16 +723,12 @@ export default function Home({
             </>
           ) : (
             <>
-              <Text
-                className="font-extrabold text-base"
-                style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-              >
-                {t("home.recentTransactions")}
-              </Text>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel="Mostrar todos los movimientos recientes" onPress={() => setRecentFilter(null)} className="min-w-0 flex-1 justify-center"><Text numberOfLines={2} className={`text-[15px] font-extrabold ${recentFilter === "income" ? "text-emerald-700 dark:text-emerald-300" : recentFilter === "expense" ? "text-rose-700 dark:text-rose-300" : "text-slate-900 dark:text-slate-100"}`}>{t("home.recentTransactions")}</Text></TouchableOpacity>
+              <View className="flex-row items-center gap-2"><TouchableOpacity accessibilityRole="button" accessibilityLabel="Filtrar ingresos personales" accessibilityState={{ selected: recentFilter === "income" }} onPress={() => setRecentFilter("income")} className={`h-10 w-10 items-center justify-center rounded-xl ${recentFilter === "income" ? "bg-emerald-200" : "bg-emerald-50"}`}><Text className="text-[22px] font-extrabold text-emerald-700">+</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" accessibilityLabel="Filtrar gastos personales" accessibilityState={{ selected: recentFilter === "expense" }} onPress={() => setRecentFilter("expense")} className={`h-10 w-10 items-center justify-center rounded-xl ${recentFilter === "expense" ? "bg-rose-200" : "bg-rose-50"}`}><Text className="text-[22px] font-extrabold text-rose-700">−</Text></TouchableOpacity></View>
               {monthTx.length > 0 && (
-                <TouchableOpacity onPress={toggleSelectMode} className="flex-row items-center gap-1">
-                  <ListChecks size={16} color="#059669" />
-                  <Text className="text-sm font-bold text-emerald-600">{t("common.select")}</Text>
+                <TouchableOpacity onPress={toggleSelectMode} className="min-h-10 flex-row items-center gap-1.5">
+                  <ListChecks size={18} color="#059669" />
+                  <Text className="text-[15px] font-bold text-emerald-600">{t("common.select")}</Text>
                 </TouchableOpacity>
               )}
             </>
@@ -734,7 +737,7 @@ export default function Home({
       </View>
 
       <FlatList
-        data={compactMonthRows}
+        data={visibleRecentRows}
         keyExtractor={(row) => row.key}
         // flex-1: ocupa todo lo que sobra bajo la parte fija. Sin esto, la
         // lista se estira solo hasta donde llegue su contenido y con pocos
