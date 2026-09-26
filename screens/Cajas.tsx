@@ -1,6 +1,7 @@
 import { SpaceOverviewTotals, SpacePaymentMethod, type MovementFilter } from "@/components/SpaceMovementControls";
 import { methodLabel } from "@/constants/i18n";
 import BackButton from "@/components/BackButton";
+import MovementAllButton from "@/components/MovementAllButton";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
 import SpaceActionBar from "@/components/SpaceActionBar";
 import SpaceTransferAmounts from "@/components/SpaceTransferAmounts";
@@ -477,7 +478,7 @@ export default function Cajas() {
                   <TouchableOpacity onPress={() => { setSeleccionando(false); setSeleccionados([]); }} hitSlop={6}><Text className="text-sm font-bold text-emerald-600">{t("common.cancel")}</Text></TouchableOpacity>
                 </View>
               </> : <>
-                <TouchableOpacity accessibilityRole="button" accessibilityLabel="Mostrar todos los movimientos de caja" onPress={() => setFilter(null)} className="min-h-10 min-w-0 flex-1 justify-center"><Text numberOfLines={2} className={`text-[15px] font-extrabold ${filter === "ingreso" ? "text-emerald-700 dark:text-emerald-300" : filter === "gasto" ? "text-rose-700 dark:text-rose-300" : "text-slate-900 dark:text-slate-100"}`}>{t("boxes.history")}</Text></TouchableOpacity>
+                <MovementAllButton label={t("boxes.history")} activeFilter={filter !== null} onPress={() => setFilter(null)} />
                 <View className="flex-row items-center gap-2"><TouchableOpacity accessibilityRole="button" accessibilityLabel="Filtrar ingresos de caja" accessibilityState={{ selected: filter === "ingreso" }} onPress={() => setFilter("ingreso")} className={`h-10 w-10 items-center justify-center rounded-xl ${filter === "ingreso" ? "bg-emerald-200" : "bg-emerald-50"}`}><Text className="text-[22px] font-extrabold text-emerald-700">+</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" accessibilityLabel="Filtrar gastos de caja" accessibilityState={{ selected: filter === "gasto" }} onPress={() => setFilter("gasto")} className={`h-10 w-10 items-center justify-center rounded-xl ${filter === "gasto" ? "bg-rose-200" : "bg-rose-50"}`}><Text className="text-[22px] font-extrabold text-rose-700">−</Text></TouchableOpacity></View>
                 <TouchableOpacity accessibilityLabel="Invitar a esta caja" disabled={compartiendo} onPress={() => void compartirCaja()} className="h-10 w-10 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><UserPlus size={19} color="#0d9488" /></TouchableOpacity>
                 <TouchableOpacity accessibilityLabel="Seleccionar movimientos de caja" onPress={() => { setSeleccionando(true); setSeleccionados([]); }} className="min-h-10 flex-row items-center gap-1"><ListChecks size={18} color="#059669" /><Text className="text-[15px] font-bold text-emerald-600">Seleccionar</Text></TouchableOpacity>

@@ -5,7 +5,7 @@ const home = fs.readFileSync("screens/Home.tsx", "utf8");
 
 assert.match(
   home,
-  /\{fmt\(budget\)\}/,
+  /hideBalance \? "••••" : fmt\(budget\)/,
   "el presupuesto debe enseñar el monto exacto escrito por el usuario",
 );
 assert.doesNotMatch(

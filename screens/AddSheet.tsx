@@ -54,6 +54,7 @@ export default function AddSheet({
   const [category, setCategory] = useState(
     transaction?.category || (type === "expense" ? "comida" : "salario")
   );
+  const [categoryTouched, setCategoryTouched] = useState(Boolean(transaction));
   const [icono, setIcono] = useState<string | undefined>(transaction?.icono);
   const [iconColor, setIconColor] = useState(
     transaction?.iconColor ?? catInfo(transaction?.category ?? (initialType === "income" ? "salario" : "comida")).color
@@ -111,6 +112,7 @@ export default function AddSheet({
   }
 
   function reemplazarCategoria(indice: number, nuevaId: string) {
+    setCategoryTouched(true);
     setIdsRapidos((anteriores) => {
       const siguientes = [...anteriores[type]];
       const otroLugar = siguientes.indexOf(nuevaId);
@@ -150,6 +152,7 @@ export default function AddSheet({
   function aplicarFoto(categoryId: string, asset: ImagePicker.ImagePickerAsset) {
     if (!asset.base64) return;
     setCategory(categoryId);
+    setCategoryTouched(true);
     setIcono(`data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`);
   }
 
@@ -194,6 +197,7 @@ export default function AddSheet({
   useEffect(() => {
     if (!categoriaRecienCreada) return;
     setCategory(categoriaRecienCreada);
+    setCategoryTouched(true);
     // Al volver de "Ver todas", adopta también el dibujo de esa categoría.
     // El movimiento conserva así exactamente lo que la persona acaba de elegir.
     setIcono(catInfo(categoriaRecienCreada).iconoNombre);
@@ -202,6 +206,7 @@ export default function AddSheet({
 
   useEffect(() => {
     if (!transaction) setCategory(type === "expense" ? "comida" : "salario");
+    if (!transaction) setCategoryTouched(false);
     if (!transaction) setIcono(undefined);
     setCategoriaConIconos(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -480,7 +485,7 @@ export default function AddSheet({
                 {t("addSheet.quickCategories")}
               </Text>
               {categoriasRapidas.map((cat, indice) => {
-                const activa = cat.id === category;
+                const activa = categoryTouched && cat.id === category;
                 const IconoElegido = activa && icono && !esFoto(icono) ? iconoDe(icono) : null;
                 return (
                   <View key={cat.id} className="gap-1.5">
@@ -488,6 +493,7 @@ export default function AddSheet({
                     <TouchableOpacity
                       onPress={() => {
                         setCategory(cat.id);
+                        setCategoryTouched(true);
                         setIcono(cat.iconoNombre);
                         setCategoriaConIconos((actual) => actual === cat.id ? null : cat.id);
                       }}
@@ -581,6 +587,7 @@ export default function AddSheet({
                           <TouchableOpacity
                             onPress={() => {
                               setCategory(cat.id);
+                              setCategoryTouched(true);
                               if (activa && icono === id) {
                                 setIcono(undefined);
                                 setIconoConColores(null);

@@ -424,6 +424,10 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
   devolución. Los filtros +/− separan ingresos y gastos; tocar el título
   restaura todos los movimientos. Familia y Caja sitúan sus totales bajo el saldo
   y dejan el botón + como acción inferior principal.
+- Inicio integra el presupuesto mensual dentro de la tarjeta de saldo y deja
+  Saldo anterior a todo el ancho. La campana abre un panel con pagos del
+  calendario, importaciones pendientes y la próxima exportación programada.
+  Los botones de movimientos se distinguen de +/− y pulsan al haber un filtro.
 
 ### Funciones e integraciones todavía incompletas
 
