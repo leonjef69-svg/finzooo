@@ -21,6 +21,7 @@ import { firebaseErrorMessage } from "@/utils/firebaseErrors";
 import { GoogleSignInCancelled, signInWithGoogle } from "@/utils/googleAuth";
 import { googleSignInErrorMessage } from "@/utils/googleSignInError";
 import { useAppData } from "@/contexts/AppDataContext";
+import { irUnaVez } from "@/utils/nav";
 
 type Errors = { name?: string; email?: string; pass?: string; general?: string };
 
@@ -158,6 +159,12 @@ export default function Register({
         </View>
 
         <View className="px-6 mt-5">
+          <View className="mb-3 flex-row flex-wrap justify-center">
+            <Text className="text-xs text-slate-500">{t("register.legalPrefix")} </Text>
+            <TouchableOpacity onPress={() => irUnaVez("/legal")} accessibilityRole="link">
+              <Text className="text-xs font-bold text-amber-700 underline">{t("register.legalLink")}</Text>
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={submit}

@@ -9,7 +9,7 @@ import SpaceMovementFields, { validSpaceDate } from "@/components/SpaceMovementF
 import { useAppData } from "@/contexts/AppDataContext";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { horaDe } from "@/utils/format";
-import { allocatePersonalReturn, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, isTrustedLegacyFamilyContribution, linkedTransferLedger, minimumContributionAmount, orphanedPersonalTransferIds, returnableToPersonal } from "@/utils/linkedTransfers";
+import { allocatePersonalReturn, balanceOfSpace, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, isTrustedLegacyFamilyContribution, linkedTransferLedger, minimumContributionAmount, orphanedPersonalTransferIds, returnableToPersonal } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
 import { auth } from "@/utils/firebase";
 import { irUnaVez, safeBack } from "@/utils/nav";
@@ -324,10 +324,19 @@ export default function Family() {
   const seleccionar = (id: string) => setSeleccionados(prev => prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]);
   const borrarSeleccionados = (ids = seleccionados) => ejecutar(async () => {
     if (!familia || !ids.length) return;
-    const items = movimientos.filter(item => ids.includes(item.id));
+    const currentUid = auth.currentUser?.uid;
+    const solicitados = movimientos.filter(item => ids.includes(item.id));
+    const items = solicitados.filter(item => owner || item.creadoPor === currentUid);
+    if (items.length !== solicitados.length) {
+      showToast(t("family.onlyOwnDelete"));
+      return;
+    }
     if (items.some(item => item.tipo === "ingreso" && item.personalTransactionId != null && !canUndoContribution(movimientos, item, item.personalOwnerUid))) {
       showToast(t("family.contributionUsed")); return;
     }
+    const saldoDespues = balanceOfSpace(movimientos)
+      - items.reduce((total, item) => total + (item.tipo === "ingreso" ? item.monto : -item.monto), 0);
+    if (saldoDespues < -0.005) { showToast(t("family.notEnoughSpace")); return; }
     for (const item of items) {
       if (item.personalTransactionId != null) await borrarAportePersonal("family", familia.id, item.id);
       else await borrarMovimientoFamilia(familia.id, item.id);
@@ -336,10 +345,12 @@ export default function Family() {
     setSeleccionados([]); setSeleccionando(false); await recargar();
   });
   const confirmarBorrarTodo = () => {
-    if (!visibles.length) return;
-    Alert.alert("Borrar todos los movimientos", `Se eliminarán los ${visibles.length} movimientos que se muestran. Esta acción no se puede deshacer.`, [
+    const currentUid = auth.currentUser?.uid;
+    const borrables = owner ? visibles : visibles.filter(item => item.creadoPor === currentUid);
+    if (!borrables.length) { showToast(t("family.onlyOwnDelete")); return; }
+    Alert.alert("Borrar todos los movimientos", `Se eliminarán los ${borrables.length} movimientos que puedes borrar. Esta acción no se puede deshacer.`, [
       { text: t("common.cancel"), style: "cancel" },
-      { text: "Borrar todo", style: "destructive", onPress: () => void borrarSeleccionados(visibles.map(item => item.id)) },
+      { text: "Borrar todo", style: "destructive", onPress: () => void borrarSeleccionados(borrables.map(item => item.id)) },
     ]);
   };
 

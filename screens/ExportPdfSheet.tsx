@@ -7,7 +7,7 @@ import {
   subirADropbox,
   DropboxSinConectar,
 } from "@/utils/dropbox";
-import { archivoCsv, archivoExcel, filasDelReporte } from "@/utils/reporteArchivo";
+import { archivoCsv, archivoExcel, filasDelReporte, movimientosParaReporte } from "@/utils/reporteArchivo";
 import { htmlDelReporte } from "@/utils/reportePdfDatos";
 import {
   ActivityIndicator,
@@ -428,10 +428,10 @@ export default function ExportPdfSheet({
     { id: "csv", label: "CSV", Icon: Sheet },
   ];
 
-  const monthTx = movimientosDelEspacio
-    .filter((tx) => tx.date.startsWith(selectedMk))
-    .filter((tx) => exportType === "all" || tx.type === exportType)
-    .sort((a, b) => (a.date < b.date ? -1 : 1));
+  const monthTx = movimientosParaReporte(
+    movimientosDelEspacio.filter((tx) => tx.date.startsWith(selectedMk)),
+    exportType,
+  ).sort((a, b) => (a.date < b.date ? -1 : 1));
   const total = monthTx.reduce(
     (sum, tx) => sum + (tx.type === "expense" ? -tx.amount : tx.amount),
     0

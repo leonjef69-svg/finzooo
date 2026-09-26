@@ -10,6 +10,8 @@ import { useColorScheme } from "nativewind";
 import { setPendingImport } from "@/utils/pendingImport";
 import { useAppData } from "@/contexts/AppDataContext";
 import { nextId } from "@/utils/id";
+
+const MAX_IMPORT_BYTES = 15 * 1024 * 1024;
 import { accountLabelFor, guessAccount } from "@/constants/accounts";
 import { catInfo } from "@/constants/categories";
 import { fmtDate } from "@/utils/format";
@@ -328,6 +330,10 @@ export default function ImportSheet({
     let readAsPdf = false;
     try {
       file = new File(asset.uri);
+      if ((file.size ?? 0) > MAX_IMPORT_BYTES) {
+        showToastAndClose(t("importSheet.tooLarge"));
+        return;
+      }
       readAsPdf = isPdf;
 
       let text: string;

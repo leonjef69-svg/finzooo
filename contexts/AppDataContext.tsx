@@ -1399,16 +1399,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
 
     async function collect() {
-      // Antes que nada, recoger lo que se haya escrito por fuera.
-      const cajaDelDisco = await recogerDelDisco();
-
       if (captureBusy.current) return;
       // El permiso de Android se puede quitar desde los ajustes del sistema
-      // en cualquier momento, así que se comprueba en cada recogida.
+      // en cualquier momento. Se comprueba ANTES de descifrar listas grandes:
+      // con la captura apagada, el temporizador no debe tocar el disco.
       if (!notificationReader.isEnabled() || !notificationReader.isPermissionGranted()) return;
 
       captureBusy.current = true;
       try {
+        // Recoge lo que haya escrito el trabajo de fondo únicamente cuando la
+        // función está activa y realmente puede haber novedades.
+        const cajaDelDisco = await recogerDelDisco();
         // Lo que un trabajo de fondo saco del buzon y no llego a registrar.
         //
         // Va PRIMERO y junto con lo del buzon: si Android corto el proceso a
@@ -1992,11 +1993,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       antes.map((p) => {
         if (p.id !== id) return p;
         const marked = marcarPagado(p, mes, pagado);
-        if (!pagado) {
-          const movimientos = { ...(p.movimientos ?? {}) };
-          delete movimientos[mes];
-          return { ...marked, movimientos };
-        }
+        // Al desmarcar se conserva el enlace y el gasto. Si vuelve a marcarlo,
+        // se reutiliza el mismo movimiento con sus notas y categoría.
+        if (!pagado) return marked;
         if (nextMovementId == null) return marked;
         return {
           ...marked,
@@ -2005,7 +2004,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       })
     );
     if (!pagado) {
-      if (movementStillExists && movementId != null) deleteTransaction(movementId);
       return;
     }
     if (movementStillExists || nextMovementId == null) return;

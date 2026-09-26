@@ -77,18 +77,15 @@ console.log("\n--- Y NO SE APAGA NADA DE LO QUE YA ESTABA ---");
   ok(!/storage|save|delete/i.test(util), "y la comprobacion no toca nada guardado");
 }
 
-console.log("\n--- Y NO SE PROMETE DONDE NO EXISTE (13/08/2026) ---");
+console.log("\n--- LA VENTA SOLO PROMETE FUNCIONES PREMIUM REALES ---");
 {
-  // La pantalla del precio se lo ofrecia a TODO EL MUNDO, aunque Ajustes lo escondiera fuera de
-  // Peru y Bolivia. Alguien en Mexico habria pagado por una funcion que despues ni le aparece.
-  // Prometer de mas justo donde se cobra es lo peor que se puede hacer, y es de lo que Google
-  // mira antes de aprobar una app.
+  // El registro automático depende del país y no es el motivo para cobrar Premium. La lista
+  // comercial debe nombrar los espacios colaborativos que sí están protegidos por el plan.
   const premium = leerSinComentarios("screens/Premium.tsx");
-  ok(
-    /hayRegistroAutomatico\(userCurrency\)/.test(premium),
-    "la lista de Premium solo lo nombra donde funciona"
-  );
-  ok(/perkYape/.test(premium), "y el texto sigue estando, no se borro");
+  ok(!/perkYape|hayRegistroAutomatico/.test(premium), "no vende la captura Yape como Premium");
+  for (const clave of ["perkFamily", "perkSharedBoxes", "perkTelegram"]) {
+    ok(premium.includes(`premium.${clave}`), `sí anuncia ${clave}`);
+  }
 }
 
 console.log(fallos === 0 ? "\nTodo bien: la funcion solo se ve donde tiene sentido" : `\n${fallos} fallas`);

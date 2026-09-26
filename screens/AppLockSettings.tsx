@@ -24,7 +24,7 @@ type Step =
   | "confirm" // repitiéndolo
   | "verify"; // comprobando el actual para poder apagarlo
 
-export default function AppLockSettings({ onBack }: { onBack: () => void }) {
+export default function AppLockSettings({ onBack, allowEnable = true }: { onBack: () => void; allowEnable?: boolean }) {
   const { t, isCloudSynced } = useAppData();
   const insets = useSafeAreaInsets();
 
@@ -145,6 +145,7 @@ export default function AppLockSettings({ onBack }: { onBack: () => void }) {
 
   function toggle(next: boolean) {
     setMessage("");
+    if (next && !allowEnable) return;
     // Para apagarlo hay que saber el PIN. Si no, cualquiera que agarre el
     // teléfono desbloqueado podría quitar el candado desde aquí, y el
     // candado no habría servido de nada.

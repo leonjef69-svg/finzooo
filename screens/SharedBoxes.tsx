@@ -13,7 +13,7 @@ import { auth } from "@/utils/firebase";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { nextId } from "@/utils/id";
-import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
+import { allocatePersonalReturn, balanceOfSpace, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
 import { actualizarAportePersonal, borrarAportePersonal } from "@/utils/personalContribution";
 import { ArrowDown, ArrowRightLeft, ArrowUp, LogOut, Pencil, Trash2, UserMinus, UserPlus, UsersRound, X } from "lucide-react-native";
 import { borrarMovimientoCajaCompartida, cerrarCajaCompartida, crearInvitacionCaja, escucharMovimientosCaja, guardarMovimientoCajaCompartida, listarCajasCompartidas, listarMiembrosCaja, observarCierreCaja, quitarMiembroCaja, salirDeCaja, unirseACaja, type CajaCompartida, type MiembroCajaCompartida, type MovimientoCajaCompartida } from "@/utils/cloudCajasCompartidas";
@@ -126,7 +126,10 @@ export default function SharedBoxes() {
   });
   const borrar = (item: MovimientoCajaCompartida) => ejecutar(async () => {
     if (!caja) return;
+    if (!owner && item.creadoPor !== uid) { showToast(t("boxes.onlyOwnDelete")); return; }
     if (item.tipo === "ingreso" && item.personalTransactionId != null && !canUndoContribution(movimientos, item, item.personalOwnerUid)) { showToast(t("boxes.contributionUsed")); return; }
+    const saldoDespues = balanceOfSpace(movimientos) - (item.tipo === "ingreso" ? item.monto : -item.monto);
+    if (saldoDespues < -0.005) { showToast(t("boxes.notEnoughSpace")); return; }
     if (item.personalTransactionId != null) await borrarAportePersonal("box", caja.id, item.id);
     else await borrarMovimientoCajaCompartida(caja.id, item.id);
     if (item.personalOwnerUid === uid && item.personalTransactionId != null) deleteLinkedTransferTransaction(item.personalTransactionId);

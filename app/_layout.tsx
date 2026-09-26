@@ -58,9 +58,8 @@ function GlobalOverlays() {
 
 // Dos cosas que dependen de entrar/salir de la app:
 //
-//  1. Al VOLVER: regresa siempre a Inicio (el saldo disponible) — nunca
-//     deja a la persona a medio camino en "Agregar movimiento" u otra
-//     pantalla.
+//  1. Al VOLVER tras 30 minutos: regresa a Inicio. Una salida breve a Yape,
+//     WhatsApp, cámara o archivos conserva la pantalla y lo que se escribió.
 //  2. Al SALIR: escribe de inmediato lo que estuviera esperando su turno
 //     de guardarse. Los guardados se agrupan con un retardo corto para no
 //     cifrar todo el conjunto de datos en cada toque (ver utils/storage),
@@ -68,8 +67,8 @@ function GlobalOverlays() {
 //     alcance a perderlo.
 // Pantallas que NO deben cerrarse cuando la app vuelve al frente.
 //
-// La regla general (volver a Inicio al regresar) existe para no dejar a
-// nadie a medio camino en una pantalla de hace horas. Pero estas dos hacen
+// La regla general (volver a Inicio después de media hora) existe para no dejar
+// a nadie a medio camino en una pantalla antigua. Estas rutas además hacen
 // que Android tome el control un instante como parte de su propio
 // funcionamiento, y la app lo confunde con "se fue y volvió":
 //
@@ -449,6 +448,7 @@ function CreditNotificationEffect() {
 function AppLifecycleEffects() {
   const { hasOnboarded } = useAppData();
   const prevState = useRef(AppState.currentState);
+  const backgroundedAt = useRef<number | null>(null);
   const navigationRef = useNavigationContainerRef();
   // En qué pantalla está la persona ahora mismo. Se guarda en una "caja"
   // para poder leerlo desde el escuchador de abajo sin tener que volver a
@@ -469,11 +469,15 @@ function AppLifecycleEffects() {
         // que en este instante sigue siendo Inicio porque la de importar
         // todavía no ha llegado—. Ver la explicación en la bandera.
         const editandoMovimiento = /^\/transaction\/[^/]+\/edit$/.test(pathnameRef.current);
-        if (!abriendoArchivoEntrante() && !KEEP_ON_RETURN.includes(pathnameRef.current) && !editandoMovimiento) {
+        const fueraPorMuchoTiempo = backgroundedAt.current != null
+          && Date.now() - backgroundedAt.current >= 30 * 60 * 1000;
+        if (fueraPorMuchoTiempo && !abriendoArchivoEntrante() && !KEEP_ON_RETURN.includes(pathnameRef.current) && !editandoMovimiento) {
           router.dismissTo("/(tabs)");
         }
+        backgroundedAt.current = null;
       }
       if (nextState === "background" || nextState === "inactive") {
+        if (backgroundedAt.current == null) backgroundedAt.current = Date.now();
         flushPendingSaves();
       }
       prevState.current = nextState;

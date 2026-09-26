@@ -82,9 +82,17 @@ export async function compartirCajaExistente(
       transaction.set(doc(db, "boxUsers", uid, "spaces", ref.id), { boxId: ref.id, unidoEn: serverTimestamp() });
     }
   });
+  // Si la conexión cayó a mitad de una migración anterior, esos documentos
+  // ya existen y las reglas solo permiten crearlos una vez. Se conservan y se
+  // copian únicamente los que faltan, haciendo seguro el reintento.
+  const yaCopiados = new Set(
+    (await getDocs(collection(db, "boxSpaces", ref.id, "movements"))).docs.map(item => item.id),
+  );
   for (let inicio = 0; inicio < movimientos.length; inicio += 400) {
+    const pendientes = movimientos.slice(inicio, inicio + 400).filter(item => !yaCopiados.has(item.id));
+    if (pendientes.length === 0) continue;
     const lote = writeBatch(db);
-    for (const item of movimientos.slice(inicio, inicio + 400)) {
+    for (const item of pendientes) {
       lote.set(doc(db, "boxSpaces", ref.id, "movements", item.id), {
         tipo: item.tipo, monto: item.monto, descripcion: item.descripcion, fecha: item.fecha,
         ...(item.category ? { category: item.category } : {}), ...(item.notes ? { notes: item.notes } : {}),

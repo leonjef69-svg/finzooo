@@ -9,7 +9,7 @@
 // convierte un gasto en ingreso, un monto como texto deja el Excel sin poder
 // sumar, y una coma sin escapar parte una fila en dos y enseña movimientos que
 // no existen.
-import { aplicarEstilosExcel, csvDeFilas, csvEscape, filasDelReporte } from "@/utils/reporteArchivo";
+import { aplicarEstilosExcel, csvDeFilas, csvEscape, filasDelReporte, movimientosParaReporte } from "@/utils/reporteArchivo";
 import { htmlDelReporte } from "@/utils/reportePdfDatos";
 import { setPropias } from "@/utils/categoriasPropias";
 import type { Transaction } from "@/types";
@@ -49,6 +49,18 @@ const ingreso: Transaction = {
   notes: "",
 };
 
+console.log("\n--- LAS TRANSFERENCIAS NO SE HACEN PASAR POR GASTOS ---");
+{
+  const transferencia: Transaction = {
+    ...gasto,
+    id: 3,
+    amount: 500,
+    internalTransfer: "family",
+  };
+  ok(movimientosParaReporte([gasto, transferencia], "expense").length === 1, "Gastos excluye transferencias internas");
+  ok(movimientosParaReporte([gasto, transferencia], "all").length === 2, "Todos conserva la transferencia identificada");
+}
+
 console.log("\n--- LAS FILAS DEL REPORTE ---");
 {
   setPropias([]);
@@ -84,13 +96,7 @@ console.log("\n--- LOS MONTOS: SIGNO Y TIPO ---");
 
 console.log("\n--- EL EXCEL FINAL CONSERVA LOS COLORES ---");
 {
-  const filas = [
-    ["Fecha", "Categoría", "Descripción", "Método", "Monto"],
-    ["1 ago.", "Comida", "Almuerzo", "Efectivo", -12.5],
-    ["2 ago.", "Sueldo", "Pago", "Transferencia", 100],
-    [],
-    ["Total", "", "", "", 87.5],
-  ];
+  const filas = filasDelReporte({ movimientos: [gasto, ingreso], total: 87.5, nombresDeMes: MESES, t });
   const libro = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(libro, XLSX.utils.aoa_to_sheet(filas), "Movimientos");
   const base = new Uint8Array(
@@ -103,10 +109,10 @@ console.log("\n--- EL EXCEL FINAL CONSERVA LOS COLORES ---");
 
   ok(estilos.includes('fgColor rgb="FF0F766E"'), "la cabecera lleva fondo verde en el archivo final");
   ok(estilos.includes('color rgb="FFFFFFFF"'), "y texto blanco");
-  ok(/<c r="A1" s="1"/.test(hoja) && /<c r="E1" s="1"/.test(hoja), "las cinco cabeceras usan ese estilo");
-  ok(/<c r="E2" s="2"/.test(hoja), "los gastos usan el color de gasto");
-  ok(/<c r="E3" s="3"/.test(hoja), "los ingresos usan el color de ingreso");
-  ok(/<c r="A5" s="4"/.test(hoja) && /<c r="E5" s="4"/.test(hoja), "la fila total queda resaltada");
+  ok(/<c r="A1" s="1"/.test(hoja) && /<c r="G1" s="1"/.test(hoja), "las siete cabeceras usan ese estilo");
+  ok(/<c r="G2" s="2"/.test(hoja), "los gastos usan el color de gasto");
+  ok(/<c r="G3" s="3"/.test(hoja), "los ingresos usan el color de ingreso");
+  ok(/<c r="A5" s="4"/.test(hoja) && /<c r="G5" s="4"/.test(hoja), "la fila total queda resaltada");
 }
 
 console.log("\n--- UNA DESCRIPCIÓN VACÍA NO ROMPE LA FILA ---");

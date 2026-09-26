@@ -492,6 +492,33 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 - Validación superada: TypeScript, ESLint, 111 pruebas, 7 auditores y 29 pruebas
   de las funciones del servidor. No se publicó ni desplegó ningún servicio.
 
+### Auditoría externa — prioridad media, primera tanda corregida (26/09/2026)
+
+- Desmarcar un pago del calendario conserva el movimiento enlazado y una nueva
+  confirmación reutiliza su edición, en vez de borrar información financiera.
+- Las exportaciones de gastos e ingresos excluyen transferencias internas y el
+  Excel aplica filtro, anchos, estilos y formato monetario a sus siete columnas.
+- La exportación automática se apaga al terminar Premium o la prueba; el lector
+  automático deja de descifrar movimientos cada ocho segundos cuando está
+  desactivado o sin permiso.
+- Salir unos instantes a Yape, WhatsApp, cámara o archivos ya no cierra el
+  formulario actual; el regreso a Inicio ocurre tras treinta minutos fuera.
+- El bloqueo ya activado puede deshabilitarse aunque Premium haya vencido, sin
+  permitir que se vuelva a activar gratis, y el texto del PIN no promete una
+  recuperación que la nube quizá no tenga.
+- Familia y Cajas impiden borrados ajenos y operaciones que dejarían saldo
+  negativo desde la app; compartir una caja puede reintentarse sin duplicar los
+  movimientos ya copiados.
+- Se añadió límite de 15 MB antes de procesar una importación y un enlace a la
+  política de privacidad al crear la cuenta.
+- La pantalla Premium ahora anuncia Familia, Cajas compartidas y Telegram, y no
+  presenta el registro automático de Yape como una función Premium.
+- Pendiente de una tanda posterior: moneda propia en Familia, refuerzo atómico
+  del saldo compartido en servidor, limpieza completa de Telegram al borrar la
+  cuenta, App Check, privacidad nativa del lector, prueba Premium gestionada por
+  servidor y migración del documento único a datos paginados.
+- No se desplegaron reglas, funciones ni una versión de la aplicación.
+
 ## Reglas para continuar
 
 1. Leer `AGENTS.md`, este archivo y `ENTREGAS.md`.

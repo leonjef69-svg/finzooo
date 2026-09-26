@@ -38,6 +38,14 @@ type DatosDelReporte = {
   t: (clave: string, valores?: Record<string, string | number>) => string;
 };
 
+export function movimientosParaReporte(
+  movimientos: Transaction[],
+  tipo: "all" | "expense" | "income",
+): Transaction[] {
+  if (tipo === "all") return movimientos;
+  return movimientos.filter((tx) => !tx.internalTransfer && tx.type === tipo);
+}
+
 /**
  * Las filas del reporte: cabecera, movimientos, una vacía y el total.
  *
@@ -108,10 +116,13 @@ export function archivoExcel(
 ): ArchivoGenerado {
   const wb = XLSX.utils.book_new();
   const hoja = XLSX.utils.aoa_to_sheet(filas);
-  hoja["!autofilter"] = { ref: `A1:E${Math.max(1, filas.length - 2)}` };
+  hoja["!autofilter"] = { ref: `A1:G${Math.max(1, filas.length - 2)}` };
   // Anchos de columna, o la descripción sale cortada y hay que arrastrar cada
   // borde a mano al abrirlo.
-  hoja["!cols"] = [{ wch: 16 }, { wch: 16 }, { wch: 34 }, { wch: 14 }, { wch: 12 }];
+  hoja["!cols"] = [
+    { wch: 16 }, { wch: 10 }, { wch: 15 }, { wch: 20 },
+    { wch: 34 }, { wch: 18 }, { wch: 14 },
+  ];
   // Excel no acepta nombres de hoja de más de 31 caracteres: con uno más largo
   // el archivo no abre, y el error no dice por qué.
   XLSX.utils.book_append_sheet(wb, hoja, nombreDeLaHoja.slice(0, 31));
@@ -149,17 +160,17 @@ export function aplicarEstilosExcel(
     hoja = hoja.replace(patron, `<c r="${ref}" s="${estilo}"`);
   };
 
-  for (const col of ["A", "B", "C", "D", "E"]) poner(`${col}1`, 1);
+  for (const col of ["A", "B", "C", "D", "E", "F", "G"]) poner(`${col}1`, 1);
   const filaTotal = filas.length;
   for (let i = 1; i < filas.length - 2; i++) {
     const filaExcel = i + 1;
     if (i % 2 === 0) {
-      for (const col of ["A", "B", "C", "D"]) poner(`${col}${filaExcel}`, 5);
+      for (const col of ["A", "B", "C", "D", "E", "F"]) poner(`${col}${filaExcel}`, 5);
     }
-    const monto = filas[i]?.[4];
-    if (typeof monto === "number") poner(`E${filaExcel}`, monto < 0 ? 2 : 3);
+    const monto = filas[i]?.[6];
+    if (typeof monto === "number") poner(`G${filaExcel}`, monto < 0 ? 2 : 3);
   }
-  for (const col of ["A", "B", "C", "D", "E"]) poner(`${col}${filaTotal}`, 4);
+  for (const col of ["A", "B", "C", "D", "E", "F", "G"]) poner(`${col}${filaTotal}`, 4);
 
   // Índices: 0 normal, 1 cabecera, 2 gasto, 3 ingreso, 4 total, 5 fila alterna.
   const estilos = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>

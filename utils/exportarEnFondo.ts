@@ -17,7 +17,7 @@ import { loadJSON, saveJSON, flushPendingSaves, STORAGE_KEYS } from "@/utils/sto
 import { monthNamesFor, translations } from "@/constants/i18n";
 import { htmlDelReporte } from "@/utils/reportePdfDatos";
 import { File, Paths } from "expo-file-system";
-import { archivoCsv, archivoExcel, filasDelReporte } from "@/utils/reporteArchivo";
+import { archivoCsv, archivoExcel, filasDelReporte, movimientosParaReporte } from "@/utils/reporteArchivo";
 import { guardarEnCarpeta } from "@/utils/carpetaTelefono";
 import { subirADropbox } from "@/utils/dropbox";
 import { subirAOneDrive } from "@/utils/onedrive";
@@ -26,6 +26,7 @@ import {
   htmlAPdfEnFondo,
   PdfEnFondoNoDisponible,
   PdfEnFondoSinRespuesta,
+  cancelarExportacion,
   programarExportacion,
 } from "@/modules/export-scheduler";
 import {
@@ -42,6 +43,7 @@ import {
   type ScheduledExport,
 } from "@/utils/scheduledExport";
 import type { Profile, Transaction } from "@/types";
+import { loadPrueba, pruebaVigente } from "@/utils/pruebaPremium";
 import {
   cargarEspaciosExportables,
   formateadorDelEspacio,
@@ -58,6 +60,7 @@ import {
 type ResultadoDeFondo =
   | "hecho"
   | "apagado"
+  | "premium-requerido"
   | "no-toca-hoy"
   | "ya-se-hizo-hoy"
   | "pdf-no-se-puede"
@@ -147,6 +150,18 @@ export async function exportarEnFondo(
 
   if (!schedule.enabled) return await apuntar("apagado");
 
+  if (!forzar) {
+    const [premiumComprado, inicioPrueba] = await Promise.all([
+      loadJSON<boolean>(STORAGE_KEYS.isPremium, false),
+      loadPrueba(),
+    ]);
+    if (!premiumComprado && !pruebaVigente(inicioPrueba, Date.now())) {
+      saveSchedule({ ...schedule, enabled: false });
+      cancelarExportacion();
+      return await apuntar("premium-requerido");
+    }
+  }
+
   const ahora = new Date();
   // El despertador puede desviarse unos minutos (ver el módulo nativo), así que
   // se comprueba el día aquí. Sin esto, un despertador que se retrasa hasta
@@ -193,8 +208,7 @@ export async function exportarEnFondo(
       ? mesForzado!
       : monthForSchedule(schedule, ahora);
     const delMes = movimientos.filter((tx) => tx.date.slice(0, 7) === mes);
-    const delTipo =
-      schedule.type === "all" ? delMes : delMes.filter((tx) => tx.type === schedule.type);
+    const delTipo = movimientosParaReporte(delMes, schedule.type);
 
     // Un reporte de cero movimientos es una hoja con solo la cabecera. No se
     // sube: llenaría la nube de archivos vacíos y taparía los que sí valen.
