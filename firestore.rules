@@ -174,7 +174,7 @@ service cloud.firestore {
                               'userLanguage', 'budgets', 'categoryBudgets', 'transactions', 'deletedTransactionIds',
                               'goals', 'deletedGoalIds', 'pagosProgramados', 'isPremium', 'premiumTrialStartedAt', 'merchantLearned',
                               'categoryOverrides', 'categoriasPropias', 'carryoverCleared',
-                              'iconosFavoritos'
+                              'iconosFavoritos', 'syncUpdatedAt'
                             ])
                          // Los que van siempre.
                          && request.resource.data.hasOnboarded is bool
@@ -219,7 +219,8 @@ service cloud.firestore {
                          && (!('categoryOverrides' in request.resource.data) || request.resource.data.categoryOverrides is map)
                          && (!('categoriasPropias' in request.resource.data) || request.resource.data.categoriasPropias is list)
                          && (!('carryoverCleared' in request.resource.data) || request.resource.data.carryoverCleared is list)
-                         && (!('iconosFavoritos' in request.resource.data) || request.resource.data.iconosFavoritos is list);
+                         && (!('iconosFavoritos' in request.resource.data) || request.resource.data.iconosFavoritos is list)
+                         && (!('syncUpdatedAt' in request.resource.data) || request.resource.data.syncUpdatedAt is map);
     }
 
     // EL MODO NEGOCIO, QUE VIVE EN SU PROPIO DOCUMENTO. **Faltaba (21/08/2026).**

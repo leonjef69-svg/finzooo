@@ -14,6 +14,7 @@ import {
   pruneDeletedGoalIds,
   pruneDeletedTransactionIds,
 } from "@/utils/mergeTransactions";
+import { mergeCloudFields } from "@/utils/cloudFieldMerge";
 
 export type CloudData = {
   hasOnboarded: boolean;
@@ -69,6 +70,8 @@ export type CloudData = {
    * paraLaNube() en utils/iconosFavoritos.
    */
   iconosFavoritos?: string[];
+  /** Marca cuándo cambió cada bloque que no tiene identificadores propios. */
+  syncUpdatedAt?: Record<string, number>;
 };
 
 // Trae los datos guardados en la nube para esta cuenta (o "null" si esta
@@ -114,6 +117,7 @@ export async function loadCloudData(uid: string): Promise<CloudData | null> {
       categoryOverrides: data.categoryOverrides || {},
       categoriasPropias: data.categoriasPropias || [],
       iconosFavoritos: data.iconosFavoritos || [],
+      syncUpdatedAt: data.syncUpdatedAt || {},
     };
   } catch (error) {
     // "La cuenta no tiene copia" y "no pudimos consultar la copia" son dos
@@ -167,6 +171,7 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
 
   try {
     const ref = doc(db, "users", uid);
+    let saved = clean;
     // Lectura y escritura deben ser una sola operación. Con getDoc + setDoc,
     // dos teléfonos podían leer la misma copia, añadir cosas diferentes y el
     // último en guardar borraba silenciosamente lo que acababa de subir el otro.
@@ -176,6 +181,7 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
       const actual = snap.exists() ? snap.data() : null;
       let siguiente = conservarPremiumManual(actual, clean);
       if (actual) {
+        siguiente = mergeCloudFields(siguiente, actual as CloudData);
         const borrados = pruneDeletedTransactionIds([
           ...(actual.deletedTransactionIds || []),
           ...(siguiente.deletedTransactionIds || []),
@@ -201,9 +207,10 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
       // Se vuelve a medir aquí porque el tamaño anterior a la fusión ya no basta.
       if (pesa(siguiente) > TOPE_SEGURO) siguiente = sinFotos(siguiente);
       if (pesa(siguiente) > LIMITE_FIRESTORE) throw new Error("demasiado-grande");
+      saved = siguiente;
       transaction.set(ref, siguiente);
     });
-    return { ok: true };
+    return { ok: true, data: saved };
   } catch (e) {
     return { ok: false, motivo: motivoLegible(e) };
   }
@@ -230,7 +237,7 @@ function motivoLegible(e: unknown): string {
 }
 
 /** Cómo fue el último intento de subir. Ver el cartel de "respaldados" en Ajustes. */
-export type ResultadoNube = { ok: true } | { ok: false; motivo: string };
+export type ResultadoNube = { ok: true; data: CloudData } | { ok: false; motivo: string };
 
 /** El tope de Firestore es 1 MB por documento. */
 const LIMITE_FIRESTORE = 1_000_000;

@@ -100,6 +100,7 @@ import {
   saveCloudData,
   type CloudData,
 } from "@/utils/cloudSync";
+import { CLOUD_SYNC_GROUPS, type CloudSyncGroup } from "@/utils/cloudFieldMerge";
 import { subscribeTesterPremium } from "@/utils/testerPremium";
 import { TESTER_PREMIUM_INACTIVE, type TesterPremiumState } from "@/utils/testerPremiumState";
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
@@ -498,6 +499,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Meses cuyo "Saldo anterior" se muestra en cero ("AAAA-MM"), cada uno
   // independiente del resto. Lo maneja el botón de Inicio.
   const [carryoverCleared, setCarryoverCleared] = useState<string[]>([]);
+  const [cloudSyncMeta, setCloudSyncMeta] = useState<Record<string, number>>({});
+  const cloudSyncMetaRef = useRef<Record<string, number>>({});
+  useEffect(() => {
+    cloudSyncMetaRef.current = cloudSyncMeta;
+  }, [cloudSyncMeta]);
   const [deletedTransactionIds, setDeletedTransactionIds] = useState<number[]>([]);
   const [deletedGoalIds, setDeletedGoalIds] = useState<number[]>([]);
   const deletedTransactionIdsRef = useRef<number[]>([]);
@@ -576,6 +582,62 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (ids.length > 0) reserveIdsAbove(Math.max(...ids));
   }
 
+  function markCloudGroup(group: CloudSyncGroup) {
+    const changedAt = Date.now();
+    cloudSyncMetaRef.current = { ...cloudSyncMetaRef.current, [group]: changedAt };
+    setCloudSyncMeta(cloudSyncMetaRef.current);
+  }
+
+  /** Aplica solo los bloques que otro dispositivo cambió después. */
+  function applyNewerCloudFields(cloud: CloudData) {
+    const localTimes = cloudSyncMetaRef.current;
+    const remoteTimes = cloud.syncUpdatedAt ?? {};
+    const take = (group: CloudSyncGroup, apply: () => void) => {
+      if (group in localTimes && (remoteTimes[group] ?? 0) <= (localTimes[group] ?? 0)) return;
+      apply();
+    };
+    take(CLOUD_SYNC_GROUPS.profile, () => {
+      const country = countryFor(cloud.userLanguage, cloud.userCurrency)?.id ?? "PE";
+      setUserName(cloud.userName);
+      setUserPhoto(cloud.userPhoto);
+      setUserCurrency(cloud.userCurrency);
+      setUserLanguage(cloud.userLanguage);
+      setUserCountry(country);
+      saveJSON(STORAGE_KEYS.profile, {
+        userName: cloud.userName,
+        userEmail,
+        userPhoto: cloud.userPhoto,
+        userCurrency: cloud.userCurrency,
+        userLanguage: cloud.userLanguage,
+        userCountry: country,
+        hasOnboarded: true,
+      });
+    });
+    take(CLOUD_SYNC_GROUPS.budgets, () => setBudgets(cloud.budgets));
+    take(CLOUD_SYNC_GROUPS.categoryBudgets, () => setCategoryBudgets(cloud.categoryBudgets));
+    take(CLOUD_SYNC_GROUPS.payments, () => setPagosProgramados(cloud.pagosProgramados ?? []));
+    take(CLOUD_SYNC_GROUPS.merchants, () => setMerchantLearned(cloud.merchantLearned ?? {}));
+    take(CLOUD_SYNC_GROUPS.categoryOverrides, () => {
+      saveOverrides(cloud.categoryOverrides ?? {});
+      setCategoryOverridesState(cloud.categoryOverrides ?? {});
+    });
+    take(CLOUD_SYNC_GROUPS.customCategories, () => {
+      savePropias(cloud.categoriasPropias ?? []);
+      setCategoriasPropiasState(cloud.categoriasPropias ?? []);
+    });
+    take(CLOUD_SYNC_GROUPS.carryover, () => setCarryoverCleared(cloud.carryoverCleared ?? []));
+    take(CLOUD_SYNC_GROUPS.favoriteIcons, () => {
+      saveFavoritos(cloud.iconosFavoritos ?? []);
+      setIconosFavoritosState(cloud.iconosFavoritos ?? []);
+    });
+    const mergedTimes = { ...localTimes };
+    for (const [group, changedAt] of Object.entries(remoteTimes)) {
+      mergedTimes[group] = Math.max(mergedTimes[group] ?? 0, changedAt);
+    }
+    cloudSyncMetaRef.current = mergedTimes;
+    setCloudSyncMeta(cloudSyncMetaRef.current);
+  }
+
   /**
    * TODO lo que va a la copia de la cuenta, en UN SOLO SITIO.
    *
@@ -623,6 +685,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // 1 MB compartido con los movimientos, y pasarse no lo deja a medias: lo
       // deja sin guardar. Ver la nota en utils/iconosFavoritos.
       iconosFavoritos: paraLaNube(iconosFavoritos),
+      syncUpdatedAt: cloudSyncMeta,
     };
   }
 
@@ -675,6 +738,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     saveFavoritos(cloud.iconosFavoritos ?? []);
     setIconosFavoritosState(cloud.iconosFavoritos ?? []);
     setCarryoverCleared(cloud.carryoverCleared ?? []);
+    cloudSyncMetaRef.current = cloud.syncUpdatedAt ?? {};
+    setCloudSyncMeta(cloudSyncMetaRef.current);
     setHasOnboarded(true);
     saveJSON(STORAGE_KEYS.profile, {
       userName: cloud.userName,
@@ -695,6 +760,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     saveJSON(STORAGE_KEYS.isPremium, cloud.isPremium);
     saveJSON(STORAGE_KEYS.merchantLearned, cloud.merchantLearned ?? {});
     saveJSON(STORAGE_KEYS.carryoverCleared, cloud.carryoverCleared ?? []);
+    saveJSON(STORAGE_KEYS.cloudSyncMeta, cloud.syncUpdatedAt ?? {});
 
     /**
      * Y EL NEGOCIO, QUE VIVE EN OTRO DOCUMENTO.
@@ -742,6 +808,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       savedPrueba,
       savedNegocio,
       savedPagos,
+      savedCloudSyncMeta,
     ] = await Promise.all([
       loadJSON<Record<string, number>>(STORAGE_KEYS.budgets, {}),
       loadJSON<Record<string, number>>(STORAGE_KEYS.categoryBudgets, {}),
@@ -769,6 +836,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       cargarNegocio(),
       // El calendario de pagos. Ver utils/calendarioPagos.
       loadJSON<PagoProgramado[]>(STORAGE_KEYS.pagosProgramados, []),
+      loadJSON<Record<string, number>>(STORAGE_KEYS.cloudSyncMeta, {}),
     ]);
     setBudgets(savedBudgets);
     setCategoryBudgets(savedCategoryBudgets);
@@ -786,6 +854,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setMerchantLearned(savedLearned);
     setCarryoverCleared(savedCarryoverCleared);
     setDatosNegocio(savedNegocio);
+    cloudSyncMetaRef.current = savedCloudSyncMeta;
+    setCloudSyncMeta(savedCloudSyncMeta);
   }
 
   // Cierra la sesión de verdad (Firebase) y limpia los datos de este
@@ -863,6 +933,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setPruebaInicio(null);
     setMerchantLearned({});
     setCarryoverCleared([]);
+    cloudSyncMetaRef.current = {};
+    setCloudSyncMeta({});
     setRespaldoFallo(null);
     setCelebrateGoal(null);
     setVerComoGratis(false);
@@ -921,6 +993,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setPruebaInicio(null);
     setMerchantLearned({});
     setCarryoverCleared([]);
+    cloudSyncMetaRef.current = {};
+    setCloudSyncMeta({});
   }
 
   useEffect(() => {
@@ -1061,6 +1135,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (ready) saveJSON(STORAGE_KEYS.carryoverCleared, carryoverCleared);
   }, [carryoverCleared, ready]);
   useEffect(() => {
+    if (ready) saveJSON(STORAGE_KEYS.cloudSyncMeta, cloudSyncMeta);
+  }, [cloudSyncMeta, ready]);
+  useEffect(() => {
     if (ready) saveJSON(STORAGE_KEYS.deletedTransactionIds, deletedTransactionIds);
   }, [deletedTransactionIds, ready]);
   // EL NEGOCIO, en sus cuatro claves. Se guardan las cuatro juntas porque cambian juntas:
@@ -1111,9 +1188,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       /* SE MIRA COMO FUE. Antes se lanzaba y se olvidaba, y el cartel de Ajustes decia
          "Tus datos estan respaldados" solo por haber iniciado sesion — aunque la subida
          llevara semanas fallando. Ver utils/cloudSync. */
-      void saveCloudData(uid, datosParaLaNube()).then((r) =>
-        setRespaldoFallo(r.ok ? null : r.motivo)
-      );
+      void saveCloudData(uid, datosParaLaNube()).then((r) => {
+        setRespaldoFallo(r.ok ? null : r.motivo);
+        if (r.ok) applyNewerCloudFields(r.data);
+      });
     }, 1500);
     return () => clearTimeout(timer);
     // datosParaLaNube se queda FUERA de esta lista a propósito. Es una función que
@@ -1150,6 +1228,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // modulo — ver iconosFavoritos arriba.
     iconosFavoritos,
     carryoverCleared,
+    cloudSyncMeta,
     deletedTransactionIds,
     deletedGoalIds,
   ]);
@@ -1163,6 +1242,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const sincronizarMovimientos = async () => {
       const cloud = await loadCloudData(uid).catch(() => null);
       if (!alive || !cloud) return;
+      applyNewerCloudFields(cloud);
       const borrados = pruneDeletedTransactionIds([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])]);
       const metasBorradas = pruneDeletedGoalIds([...deletedGoalIds, ...(cloud.deletedGoalIds ?? [])]);
       setDeletedTransactionIds((actuales) =>
@@ -1497,6 +1577,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       if (uid) {
         void loadCloudData(uid).then((cloud) => {
           if (!cloud) return;
+          applyNewerCloudFields(cloud);
           const borrados = pruneDeletedTransactionIds([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])]);
           const metasBorradas = pruneDeletedGoalIds([...deletedGoalIds, ...(cloud.deletedGoalIds ?? [])]);
           setDeletedTransactionIds((actuales) =>
@@ -1626,6 +1707,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const key = monthKey(initialMonth.y, initialMonth.m);
     setMonth(initialMonth);
     setBudgets((b) => ({ ...b, [key]: budgetAmount }));
+    markCloudGroup(CLOUD_SYNC_GROUPS.budgets);
+    markCloudGroup(CLOUD_SYNC_GROUPS.profile);
     setHasOnboarded(true);
     saveJSON(STORAGE_KEYS.profile, {
       userName,
@@ -1639,6 +1722,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function updateProfileInfo(name: string, photo: string | null) {
+    markCloudGroup(CLOUD_SYNC_GROUPS.profile);
     setUserName(name);
     setUserPhoto(photo);
     saveJSON(STORAGE_KEYS.profile, {
@@ -1654,6 +1738,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function updateCurrency(id: string) {
+    markCloudGroup(CLOUD_SYNC_GROUPS.profile);
     setUserCurrency(id);
     // Cambiar cómo se muestran los montos no cambia el país real del usuario.
     // El país también controla métodos locales (Yape/Plin) y Telegram.
@@ -1670,6 +1755,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function updateLanguage(id: string) {
+    markCloudGroup(CLOUD_SYNC_GROUPS.profile);
     setUserLanguage(id);
     saveJSON(STORAGE_KEYS.profile, {
       userName,
@@ -1696,6 +1782,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * decisión sobran.
    */
   function updateCountry(country: string, language: string, currency: string) {
+    markCloudGroup(CLOUD_SYNC_GROUPS.profile);
     setUserLanguage(language);
     setUserCurrency(currency);
     setUserCountry(country);
@@ -1716,6 +1803,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   /** Guarda la elección previa al registro sin dar por terminado el setup. */
   function setInitialCountry(country: string, language: string, currency: string) {
+    markCloudGroup(CLOUD_SYNC_GROUPS.profile);
     setUserLanguage(language);
     setUserCurrency(currency);
     setUserCountry(country);
@@ -1748,6 +1836,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // anteriores siguen intactos y se pueden seguir consultando en el
   // Historial.
   function resetCarryover() {
+    markCloudGroup(CLOUD_SYNC_GROUPS.carryover);
     setCarryoverCleared((prev) => (prev.includes(mk) ? prev : [...prev, mk]));
     showToast(t("toast.carryoverReset"));
   }
@@ -1762,6 +1851,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // desde la app. Como no se borró ningún dato, restaurar es solo dejar de
   // ocultarlo — el saldo vuelve exactamente al valor que tenía.
   function restoreCarryover() {
+    markCloudGroup(CLOUD_SYNC_GROUPS.carryover);
     setCarryoverCleared((prev) => prev.filter((m) => m !== mk));
     showToast(t("toast.carryoverRestored"));
   }
@@ -1777,6 +1867,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }));
       return;
     }
+    markCloudGroup(CLOUD_SYNC_GROUPS.budgets);
     setBudgets((b) => ({ ...b, [mk]: amount }));
     showToast(t("toast.budgetUpdated"));
   }
@@ -1792,6 +1883,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * para provocar ese redibujado — el dato de verdad vive en categoryCustom.
    */
   function updateCategoryOverrides(next: CategoryOverrides) {
+    markCloudGroup(CLOUD_SYNC_GROUPS.categoryOverrides);
     saveOverrides(next);
     setCategoryOverridesState(next);
   }
@@ -1811,6 +1903,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     icono: string;
     image?: string;
   }): string {
+    markCloudGroup(CLOUD_SYNC_GROUPS.customCategories);
     const { lista, creada } = crearPropia(categoriasPropias, datos);
     savePropias(lista);
     setCategoriasPropiasState(lista);
@@ -1825,6 +1918,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * nube se dispare. Ver iconosFavoritos.
    */
   function guardarFavoritos(lista: string[]) {
+    markCloudGroup(CLOUD_SYNC_GROUPS.favoriteIcons);
     saveFavoritos(lista);
     // Se relee del sitio donde quedaron, no se guarda lo que llego: saveFavoritos
     // limpia repetidos y aplica el tope, y el estado tiene que ser lo mismo que
@@ -1851,6 +1945,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function guardarPagoProgramado(pago: PagoProgramado) {
+    markCloudGroup(CLOUD_SYNC_GROUPS.payments);
     setPagosProgramados((antes) =>
       antes.some((p) => p.id === pago.id)
         ? antes.map((p) => (p.id === pago.id ? pago : p))
@@ -1859,6 +1954,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function quitarPagoProgramado(id: string) {
+    markCloudGroup(CLOUD_SYNC_GROUPS.payments);
     setPagosProgramados((antes) => antes.filter((p) => p.id !== id));
   }
 
@@ -1880,6 +1976,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   function marcarPagoDelMes(id: string, mes: string, pagado: boolean) {
     const pago = pagosProgramados.find((p) => p.id === id);
     if (!pago) return;
+    markCloudGroup(CLOUD_SYNC_GROUPS.payments);
     const operationKey = `${id}:${mes}`;
     if (pagosEnCurso.current.has(operationKey)) return;
     pagosEnCurso.current.add(operationKey);
@@ -2082,6 +2179,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     id: string,
     cambios: { nombre?: string; color?: string; icono?: string; image?: string | null }
   ) {
+    markCloudGroup(CLOUD_SYNC_GROUPS.customCategories);
     const lista = editarPropia(categoriasPropias, id, cambios);
     savePropias(lista);
     setCategoriasPropiasState(lista);
@@ -2098,6 +2196,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * sería grave — y nadie que quita una categoría está pidiendo eso.
    */
   function borrarCategoria(id: string) {
+    markCloudGroup(CLOUD_SYNC_GROUPS.customCategories);
     const lista = borrarPropia(categoriasPropias, id);
     savePropias(lista);
     setCategoriasPropiasState(lista);
@@ -2113,6 +2212,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       showToast("Uno de los montos supera el máximo permitido");
       return;
     }
+    markCloudGroup(CLOUD_SYNC_GROUPS.categoryBudgets);
     setCategoryBudgets(newBudgets);
     showToast(t("toast.budgetUpdated"));
   }
@@ -2171,6 +2271,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   // Guarda que un comercio va en una categoría, para futuras importaciones.
   function learnMerchantCategory(merchantText: string, category: string) {
+    markCloudGroup(CLOUD_SYNC_GROUPS.merchants);
     setMerchantLearned((prev) => learnCategory(merchantText, category, prev));
   }
 

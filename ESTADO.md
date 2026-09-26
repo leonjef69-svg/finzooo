@@ -477,6 +477,10 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
   realmente nuevos se incorporarán.
 - Las familias toleran enlaces antiguos dañados y, al borrarse, eliminan también
   los enlaces de todos sus integrantes.
+- Presupuestos, calendario, categorías, personalización, perfil y preferencias
+  llevan una fecha por bloque. Al sincronizar dos teléfonos gana únicamente el
+  bloque más nuevo; registrar un gasto ya no pisa cambios ajenos. Las cuentas
+  antiguas migran dando prioridad inicial a la copia compartida de la nube.
 - Negocio fusiona registros por identificador dentro de una transacción, muestra
   el fallo de respaldo y avisa antes de acercarse al límite de Firestore.
 - Los movimientos llevan fecha de actualización; una edición más nueva gana al
@@ -485,7 +489,7 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 - Las credenciales de firma se retiraron del archivo local de Android y ahora se
   exigen mediante variables de entorno. La rotación de la clave en Google Play
   continúa siendo una operación manual pendiente y no se generó ningún AAB.
-- Validación superada: TypeScript, ESLint, 110 pruebas, 7 auditores y 29 pruebas
+- Validación superada: TypeScript, ESLint, 111 pruebas, 7 auditores y 29 pruebas
   de las funciones del servidor. No se publicó ni desplegó ningún servicio.
 
 ## Reglas para continuar

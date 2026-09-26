@@ -37,6 +37,9 @@ export const STORAGE_KEYS = {
   categoriasPropias: "finzo:categoriasPropias",
   categoryCustom: "finzo:categoryCustom",
   iconosFavoritos: "finzo:iconosFavoritos",
+  // Fechas de los bloques sincronizados; evita que un teléfono con una copia
+  // antigua pise presupuesto, calendario o categorías al subir otro cambio.
+  cloudSyncMeta: "finzo:cloudSyncMeta",
   /**
    * A QUIÉN LE MANDAS LOS REPORTES. **Y ESTA ES LA CUARTA QUE FALTABA** (18/08/2026).
    *
@@ -136,6 +139,7 @@ export async function clearAccountData(): Promise<void> {
         STORAGE_KEYS.categoriasPropias,
         STORAGE_KEYS.categoryCustom,
         STORAGE_KEYS.iconosFavoritos,
+        STORAGE_KEYS.cloudSyncMeta,
         // Y la cuarta, encontrada el 18/08/2026: son correos y teléfonos de OTRAS
         // personas. Ver la nota en STORAGE_KEYS.
         STORAGE_KEYS.sendContacts,
