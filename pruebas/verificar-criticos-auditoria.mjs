@@ -12,6 +12,9 @@ const ajustesCaja = leer("app/box-settings.tsx");
 const contexto = leer("contexts/AppDataContext.tsx");
 const inicio = leer("app/index.tsx");
 const almacenamiento = leer("utils/storage.ts");
+const home = leer("screens/Home.tsx");
+const importar = leer("screens/ImportSheet.tsx");
+const nube = leer("utils/cloudSync.ts");
 
 const unionFamilia = familia.slice(familia.indexOf("export async function unirseAFamilia"), familia.indexOf("export async function listarMiembrosFamilia"));
 const unionCaja = cajasCompartidas.slice(cajasCompartidas.indexOf("export async function unirseACaja"), cajasCompartidas.indexOf("export async function listarMovimientosCajaCompartida"));
@@ -44,5 +47,8 @@ for (const clave of [
 ]) exigir(almacenamiento.includes(`\"${clave}\"`), `Cerrar sesión no borra ${clave}`);
 
 exigir(inicio.includes("needsEmailVerification") && inicio.includes("/verify-email"), "Una cuenta sin verificar todavía puede reabrir Inicio");
+exigir(!home.includes('t.method !== "credit"'), "Inicio todavía oculta gastos pagados con tarjeta de crédito");
+exigir(importar.includes('cand.match ? "skip" : "new"'), "Importar todavía duplica por defecto movimientos existentes");
+exigir(nube.includes('throw new Error("cloud-read-failed"'), "Un fallo al leer la nube todavía se presenta como cuenta sin copia");
 
-console.log("Bloqueantes de unión, cambio de cuenta, Cajas y correo sin verificar protegidos.");
+console.log("Bloqueantes y descuadres prioritarios de la auditoría protegidos.");

@@ -233,11 +233,13 @@ console.log("\n--- EL NEGOCIO ESTA ENGANCHADO POR LOS CUATRO LADOS ---");
   // aqui no se leian, asi que entrar desde otro celular las hacia desaparecer con la copia
   // correcta a salvo en la nube. Y no dio ningun error.
   const ctx = fs.readFileSync(path.join(RAIZ, "contexts/AppDataContext.tsx"), "utf8");
+  const nubeNegocio = fs.readFileSync(path.join(RAIZ, "utils/cloudNegocio.ts"), "utf8");
 
   ok(/cargarNegocio\(\)/.test(ctx), "1. al arrancar se lee del celular");
   ok(/guardarVentas\(datosNegocio\.ventas\)/.test(ctx), "2. al cambiar se guarda en el celular");
   ok(/subirNegocio\(uid, datosNegocio\)/.test(ctx), "3. y se sube a la nube");
   ok(/const negocioDeLaNube = await bajarNegocio\(userUid\)/.test(ctx), "4. Y SE BAJA al entrar desde otro celular");
+  ok(!/export async function bajarNegocio[\s\S]*?catch[\s\S]*?return null/.test(nubeNegocio), "un fallo de red no se confunde con negocio vacío");
   // Bajar y no escribirlo en el celular seria peor que no bajarlo: la pantalla lo mostraria y
   // al reiniciar la app volveria a estar vacio.
   ok(/guardarVentas\(negocioDeLaNube\.ventas\)/.test(ctx), "y lo bajado se escribe en el celular");
@@ -252,7 +254,7 @@ console.log("\n--- EL NEGOCIO ESTA ENGANCHADO POR LOS CUATRO LADOS ---");
   // documento de Firestore, no un campo de ese. Y sus dependencias tienen que incluir los
   // datos del negocio, o crear uno no dispararia ninguna subida y se quedaria solo en el
   // celular — el mismo fallo que tuvieron los favoritos.
-  const desdeLaSubida = ctx.slice(ctx.lastIndexOf("subirNegocio(uid, datosNegocio);"));
+  const desdeLaSubida = ctx.slice(ctx.lastIndexOf("void subirNegocio(uid, datosNegocio)"));
   const deps = /\}, \[[\s\S]*?\]\);/.exec(desdeLaSubida)?.[0] ?? "";
   ok(deps.includes("datosNegocio"), "y crear o cambiar algo del negocio dispara la subida");
 }

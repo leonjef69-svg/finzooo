@@ -115,22 +115,26 @@ export async function loadCloudData(uid: string): Promise<CloudData | null> {
       categoriasPropias: data.categoriasPropias || [],
       iconosFavoritos: data.iconosFavoritos || [],
     };
-  } catch {
-    return null;
+  } catch (error) {
+    // "La cuenta no tiene copia" y "no pudimos consultar la copia" son dos
+    // estados opuestos. El segundo se propaga para que la pantalla permita
+    // reintentar y nunca configure/suba una cuenta vacía sobre datos existentes.
+    throw new Error("cloud-read-failed", { cause: error });
   }
 }
 
 // Durante la prueba cerrada damos Premium manual en Firebase.
 // Si el celular todavía tiene una copia vieja con isPremium:false, no debe pisar ese true.
 export function conservarPremiumManual(
-  actualEnLaNube: { isPremium?: unknown } | null,
+  actualEnLaNube: { isPremium?: unknown; premiumTrialStartedAt?: unknown } | null,
   siguiente: CloudData
 ): CloudData {
-  if (siguiente.isPremium) return siguiente;
-  if (actualEnLaNube?.isPremium === true) {
-    return { ...siguiente, isPremium: true };
+  if (!actualEnLaNube) return siguiente;
+  const conservado = { ...siguiente, isPremium: actualEnLaNube.isPremium === true };
+  if (typeof actualEnLaNube.premiumTrialStartedAt === "number") {
+    conservado.premiumTrialStartedAt = actualEnLaNube.premiumTrialStartedAt;
   }
-  return siguiente;
+  return conservado;
 }
 
 // Sube los datos actuales a la nube. Si no hay internet, falla en

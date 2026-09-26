@@ -88,7 +88,10 @@ export async function listarFamilias(uid: string): Promise<EspacioFamilia[]> {
   const ids = new Set(espacios.docs.map(item => item.id));
   const legacyId = indice.exists() ? String(indice.data().activeFamilyId || "") : "";
   if (legacyId) ids.add(legacyId);
-  const familias = (await Promise.all([...ids].map(leerFamilia))).filter((item): item is EspacioFamilia => item !== null);
+  // Un índice heredado puede apuntar a una familia que el dueño ya purgó. Un
+  // vínculo roto no debe impedir abrir todas las demás familias válidas.
+  const familias = (await Promise.all([...ids].map(id => leerFamilia(id).catch(() => null))))
+    .filter((item): item is EspacioFamilia => item !== null);
   return familias.sort((a, b) => b.creadoEn - a.creadoEn);
 }
 
@@ -278,6 +281,7 @@ export async function borrarVinculoFamiliaDeCuenta(uid: string): Promise<void> {
       const indices = await Promise.all(grupo.map(member => getDoc(doc(db, "familyUsers", member.id))));
       const lote = writeBatch(db);
       grupo.forEach((member, index) => {
+        lote.delete(doc(db, "familyUsers", member.id, "spaces", familyId));
         if (member.id === uid) lote.delete(doc(db, "familyUsers", member.id));
         else if (indices[index].exists() && String(indices[index].data().activeFamilyId || "") === familyId) {
           lote.set(doc(db, "familyUsers", member.id), { activeFamilyId: "" }, { merge: true });

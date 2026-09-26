@@ -464,6 +464,30 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 - Los avisos transitivos no críticos de `npm audit` dependen de Expo SDK 54.
   Revisarlos al migrar de SDK, sin forzar una actualización mayor antes del AAB.
 
+### Auditoría externa — prioridad alta, primer bloque corregido (26/09/2026)
+
+- Los gastos pagados con tarjeta de crédito vuelven a aparecer y sumar en Inicio.
+- La entrada de montos entiende separadores de miles y decimales de Perú y otros
+  países (`1,500`, `1.500,25` y `1,500.25`) sin convertirlos en valores erróneos.
+- Un fallo de red al leer la nube ya no se confunde con una cuenta vacía ni puede
+  provocar que el inicio suba datos vacíos sobre una copia existente.
+- El estado Premium y el inicio de la prueba se conservan desde la nube, incluida
+  una revocación, para evitar respaldos bloqueados por datos viejos del teléfono.
+- Importar omite duplicados de forma predeterminada y muestra cuántos registros
+  realmente nuevos se incorporarán.
+- Las familias toleran enlaces antiguos dañados y, al borrarse, eliminan también
+  los enlaces de todos sus integrantes.
+- Negocio fusiona registros por identificador dentro de una transacción, muestra
+  el fallo de respaldo y avisa antes de acercarse al límite de Firestore.
+- Los movimientos llevan fecha de actualización; una edición más nueva gana al
+  fusionar teléfono, nube y Telegram. Deshacer desde Telegram registra además la
+  eliminación para impedir que el movimiento reaparezca.
+- Las credenciales de firma se retiraron del archivo local de Android y ahora se
+  exigen mediante variables de entorno. La rotación de la clave en Google Play
+  continúa siendo una operación manual pendiente y no se generó ningún AAB.
+- Validación superada: TypeScript, ESLint, 110 pruebas, 7 auditores y 29 pruebas
+  de las funciones del servidor. No se publicó ni desplegó ningún servicio.
+
 ## Reglas para continuar
 
 1. Leer `AGENTS.md`, este archivo y `ENTREGAS.md`.

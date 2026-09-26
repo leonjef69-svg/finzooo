@@ -8,12 +8,12 @@ if (!archivo.includes("export function conservarPremiumManual")) {
   fallos.push("Falta la función que protege el Premium manual.");
 }
 
-if (!archivo.includes("actualEnLaNube?.isPremium === true")) {
-  fallos.push("No se comprueba si Firebase ya tenía Premium verdadero.");
+if (!archivo.includes("isPremium: actualEnLaNube.isPremium === true")) {
+  fallos.push("No se conserva exactamente el Premium que controla Firebase.");
 }
 
-if (!archivo.includes("return { ...siguiente, isPremium: true };")) {
-  fallos.push("No se conserva isPremium:true cuando ya estaba en la nube.");
+if (!archivo.includes('typeof actualEnLaNube.premiumTrialStartedAt === "number"')) {
+  fallos.push("No se conserva el inicio de prueba que ya existe en Firebase.");
 }
 
 if (!archivo.includes("const snap = await transaction.get(ref);")) {

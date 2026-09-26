@@ -1086,7 +1086,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!(ready && hasOnboarded && uid)) return;
     const timer = setTimeout(() => {
-      subirNegocio(uid, datosNegocio);
+      void subirNegocio(uid, datosNegocio).catch((error) => {
+        const mensaje = String((error as Error)?.message ?? error);
+        setRespaldoFallo(mensaje.includes("demasiado-grande") ? "demasiado-grande" : "negocio");
+      });
     }, 1500);
     return () => clearTimeout(timer);
   }, [datosNegocio, ready, hasOnboarded, uid]);
@@ -1158,7 +1161,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (!(ready && hasOnboarded && uid)) return;
     let alive = true;
     const sincronizarMovimientos = async () => {
-      const cloud = await loadCloudData(uid);
+      const cloud = await loadCloudData(uid).catch(() => null);
       if (!alive || !cloud) return;
       const borrados = pruneDeletedTransactionIds([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])]);
       const metasBorradas = pruneDeletedGoalIds([...deletedGoalIds, ...(cloud.deletedGoalIds ?? [])]);
@@ -1508,7 +1511,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           setGoals((locales) =>
             mergeGoals(locales, cloud.goals).filter((goal) => !metasBorradas.includes(goal.id))
           );
-        });
+        }).catch(() => undefined);
       }
     });
     return () => {
@@ -2124,7 +2127,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // Un movimiento creado por un pago de tarjeta tiene su monto y fecha
     // enlazados al registro de la tarjeta. Editarlos solo desde Inicio dejaría
     // dos verdades distintas; esos campos se corrigen desde Tarjeta de crédito.
-    const safeTransaction =
+    const safeTransaction: Transaction = {
+      ...(
       existing?.method === "credit-card-payment"
         ? {
             ...t2,
@@ -2134,7 +2138,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             time: existing.time,
             method: existing.method,
           }
-        : t2;
+        : t2
+      ),
+      updatedAt: Date.now(),
+    };
     setTransactions((prev) =>
       isEdit
         ? prev.map((p) => (p.id === safeTransaction.id ? safeTransaction : p))

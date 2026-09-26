@@ -235,7 +235,9 @@ export default function Home({
   const monthTx = useMemo(
     () =>
       transactions
-        .filter((t) => t.date.startsWith(mk) && t.method !== "credit")
+        // Un método de pago describe cómo se pagó; no puede hacer desaparecer
+        // el gasto ni cambiar el saldo solo en Inicio.
+        .filter((t) => t.date.startsWith(mk))
         .sort(compararMovimientos),
     [transactions, mk]
   );

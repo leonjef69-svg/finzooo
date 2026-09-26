@@ -18,9 +18,10 @@
 // que nadie lo viera. Al ser un documento suelto, se borra con una línea — y esa línea está
 // en deleteCloudAccount, junto a la otra.
 
-import { deleteDoc, doc, getDoc, setDoc } from "firebase/firestore";
+import { deleteDoc, doc, getDoc, runTransaction } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import type { DatosDelNegocio } from "@/utils/negocio";
+import { utf8ByteLength } from "@/utils/utf8";
 
 /** Dónde vive el negocio de esta cuenta. */
 function documento(uid: string) {
@@ -28,23 +29,17 @@ function documento(uid: string) {
 }
 
 export async function bajarNegocio(uid: string): Promise<DatosDelNegocio | null> {
-  try {
-    const snap = await getDoc(documento(uid));
-    if (!snap.exists()) return null;
-    const data = snap.data() as Partial<DatosDelNegocio>;
-    // Cada lista con su valor de respaldo: un documento guardado por una versión anterior
-    // puede no traerlas todas, y leer una lista que no está reventaría la pantalla.
-    return {
-      negocios: Array.isArray(data.negocios) ? data.negocios : [],
-      productos: Array.isArray(data.productos) ? data.productos : [],
-      ventas: Array.isArray(data.ventas) ? data.ventas : [],
-      movimientos: Array.isArray(data.movimientos) ? data.movimientos : [],
-    };
-  } catch {
-    // Sin internet se sigue con lo que hay en el celular. Nunca se borra nada por no haber
-    // podido leer.
-    return null;
-  }
+  const snap = await getDoc(documento(uid));
+  if (!snap.exists()) return null;
+  const data = snap.data() as Partial<DatosDelNegocio>;
+  // Cada lista con su valor de respaldo: un documento guardado por una versión anterior
+  // puede no traerlas todas, y leer una lista que no está reventaría la pantalla.
+  return {
+    negocios: Array.isArray(data.negocios) ? data.negocios : [],
+    productos: Array.isArray(data.productos) ? data.productos : [],
+    ventas: Array.isArray(data.ventas) ? data.ventas : [],
+    movimientos: Array.isArray(data.movimientos) ? data.movimientos : [],
+  };
 }
 
 export function subirNegocio(uid: string, datos: DatosDelNegocio): Promise<void> {
@@ -53,7 +48,31 @@ export function subirNegocio(uid: string, datos: DatosDelNegocio): Promise<void>
   // respaldo del negocio fallaría en silencio desde el primer día. Es el mismo paso que hace
   // saveCloudData, y por el mismo motivo.
   const limpio = JSON.parse(JSON.stringify(datos)) as DatosDelNegocio;
-  return setDoc(documento(uid), limpio).catch(() => {});
+  return runTransaction(db, async transaction => {
+    const ref = documento(uid);
+    const snap = await transaction.get(ref);
+    const remoto = snap.exists() ? snap.data() as Partial<DatosDelNegocio> : {};
+    const fusionar = <T extends { id: string }>(local: T[], nube: unknown): T[] => {
+      const resultado = [...local];
+      const ids = new Set(local.map(item => item.id));
+      for (const item of Array.isArray(nube) ? nube as T[] : []) {
+        if (!item || typeof item.id !== "string" || ids.has(item.id)) continue;
+        ids.add(item.id);
+        resultado.push(item);
+      }
+      return resultado;
+    };
+    const siguiente: DatosDelNegocio = {
+      negocios: fusionar(limpio.negocios, remoto.negocios),
+      productos: fusionar(limpio.productos, remoto.productos),
+      ventas: fusionar(limpio.ventas, remoto.ventas),
+      movimientos: fusionar(limpio.movimientos, remoto.movimientos),
+    };
+    if (utf8ByteLength(JSON.stringify(siguiente)) > 800_000) {
+      throw new Error("negocio-demasiado-grande");
+    }
+    transaction.set(ref, siguiente);
+  });
 }
 
 /**

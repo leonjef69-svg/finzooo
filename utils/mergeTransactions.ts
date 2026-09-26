@@ -37,10 +37,14 @@ export function mergeTransactions(
   if (enMemoria.length === 0) return guardadas;
 
   const porId = new Map<number, Transaction>();
-  // Primero las guardadas, y encima las de memoria: así, con el mismo
-  // identificador, gana la de memoria.
+  // Primero las guardadas. La copia local gana si ambas son antiguas; cuando
+  // existe updatedAt gana realmente la edición más reciente (por ejemplo una
+  // corrección hecha desde Telegram mientras el teléfono estaba abierto).
   for (const tx of guardadas) porId.set(tx.id, tx);
-  for (const tx of enMemoria) porId.set(tx.id, tx);
+  for (const tx of enMemoria) {
+    const remota = porId.get(tx.id);
+    if (!remota || (tx.updatedAt ?? 0) >= (remota.updatedAt ?? 0)) porId.set(tx.id, tx);
+  }
 
   // Las más nuevas primero, que es como las espera toda la app. Con la misma
   // fecha se ordena por identificador para que el orden no baile entre dos

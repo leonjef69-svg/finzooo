@@ -23,6 +23,8 @@ export type Transaction = {
   /** Color propio del dibujo de este movimiento. */
   iconColor?: string;
   id: number;
+  /** Última modificación; permite que una edición de otro dispositivo gane a una copia vieja. */
+  updatedAt?: number;
   type: "expense" | "income";
   amount: number;
   category: string;

@@ -16,6 +16,11 @@ assert.equal(
   "el campo debe detenerse en trece cifras enteras",
 );
 assert.equal(parseAmountInput(String(MAX_MONEY_AMOUNT)), MAX_MONEY_AMOUNT);
+assert.equal(parseAmountInput("1,500"), 1500, "una coma de miles no puede guardar 1.5");
+assert.equal(parseAmountInput("1,500.25"), 1500.25, "acepta miles y decimales al estilo de Perú");
+assert.equal(parseAmountInput("1.500,25"), 1500.25, "acepta miles y decimales con coma decimal");
+assert.equal(parseAmountInput("0,5"), 0.5, "una coma decimal corta conserva los centavos");
+assert.equal(parseAmountInput("12,345,678"), 12345678, "acepta varios grupos de miles");
 assert.equal(parseAmountInput("9000000000001"), 0);
 assert.equal(parseCreditMoneyInput("9000000000001", "PEN"), null);
 assert.equal(

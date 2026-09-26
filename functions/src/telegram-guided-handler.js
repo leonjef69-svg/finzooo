@@ -238,7 +238,7 @@ async function saveSimpleMovement(db, chatId, connection, space, movement, opera
       if (!user.exists || !(await premiumForUser(db, connection.uid, user.data(), tx))) throw new Error("NOT_PREMIUM");
       const data = user.data(), transactions = Array.isArray(data.transactions) ? data.transactions : [];
       const id = personalIdForOperation(key);
-      saved = { id, type: movement.type, amount: movement.amount, category: movement.category, date: localDate(connection.user), time: time(connection.user), method: movement.method, description: movement.description, notes: "", origin: "manual" };
+      saved = { id, updatedAt: Date.now(), type: movement.type, amount: movement.amount, category: movement.category, date: localDate(connection.user), time: time(connection.user), method: movement.method, description: movement.description, notes: "", origin: "manual" };
       action = { uid: connection.uid, kind: "movement", space: safeSpace(space), personalTransactionId: id, movement: saved };
       if (!claimOperation(tx, chatConnectionRef, connectionSnap.data() || {}, key)) return;
       if (transactions.some(item => item.id === id)) throw new Error("DUPLICATE_ID");
@@ -346,7 +346,8 @@ async function undoLast(db, token, chatId, connection) {
       const transactions = Array.isArray(user.data()?.transactions) ? user.data().transactions : [];
       const current = transactions.find(item => item.id === action.personalTransactionId);
       if (!current || current.type !== action.movement.type || Number(current.amount) !== Number(action.movement.amount)) throw new Error("NOTHING_TO_UNDO");
-      tx.update(ref, { transactions: transactions.filter(item => item.id !== action.personalTransactionId) });
+      const deletedTransactionIds = [...new Set([...(Array.isArray(user.data()?.deletedTransactionIds) ? user.data().deletedTransactionIds : []), action.personalTransactionId])].slice(-5000);
+      tx.update(ref, { transactions: transactions.filter(item => item.id !== action.personalTransactionId), deletedTransactionIds });
     });
   } else {
     const root = action.space.kind === "family" ? "familySpaces" : "boxSpaces", spaceRef = db.collection(root).doc(action.space.id), movementRef = spaceRef.collection("movements").doc(action.sharedMovementId);
@@ -363,7 +364,8 @@ async function undoLast(db, token, chatId, connection) {
         const transactions = Array.isArray(user.data()?.transactions) ? user.data().transactions : [];
         const linked = transactions.find(item => item.id === action.personalTransactionId && item.internalTransfer === action.space.kind && [action.space.id, action.sharedMovementId].includes(item.internalTransferLink));
         if (!linked) throw new Error("NOTHING_TO_UNDO");
-        tx.update(userRef, { transactions: transactions.filter(item => item.id !== action.personalTransactionId) });
+        const deletedTransactionIds = [...new Set([...(Array.isArray(user.data()?.deletedTransactionIds) ? user.data().deletedTransactionIds : []), action.personalTransactionId])].slice(-5000);
+        tx.update(userRef, { transactions: transactions.filter(item => item.id !== action.personalTransactionId), deletedTransactionIds });
       } else if (movement.data().tipo !== action.movement.tipo || Number(movement.data().monto) !== Number(action.movement.monto)) throw new Error("NOTHING_TO_UNDO");
       tx.delete(movementRef);
     });
@@ -384,7 +386,7 @@ async function editLast(db, token, chatId, connection, flow, method) {
       assertLiveConnection(connectionSnap, statusSnap, connection.uid, chatId);
       const transactions = Array.isArray(user.data()?.transactions) ? user.data().transactions : [], index = transactions.findIndex(item => item.id === action.personalTransactionId);
       if (index < 0) throw new Error("NOTHING_TO_EDIT");
-      const next = [...transactions]; next[index] = { ...next[index], category, method };
+      const next = [...transactions]; next[index] = { ...next[index], category, method, updatedAt: Date.now() };
       if (Buffer.byteLength(JSON.stringify({ ...user.data(), transactions: next }), "utf8") > MAX_USER_BYTES) throw new Error("TOO_LARGE");
       tx.update(ref, { transactions: next });
     });

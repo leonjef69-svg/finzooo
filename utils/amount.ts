@@ -21,14 +21,31 @@ export const MAX_MONEY_AMOUNT = 9_000_000_000_000;
 export const MAX_MONEY_INTEGER_DIGITS = 13;
 
 export function sanitizeAmountInput(raw: string): string {
-  // La coma se trata como separador decimal, no se descarta.
-  let s = raw.replace(/,/g, ".").replace(/[^0-9.]/g, "");
+  const limpio = raw.replace(/[^0-9.,]/g, "");
+  const separadores = [...limpio].flatMap((char, index) => char === "." || char === "," ? [index] : []);
+  let s: string;
 
-  // Solo se admite un punto decimal: manda el primero y los siguientes se
-  // ignoran, así "1.2.3" queda en "1.23" en vez de recortarse a "1.2".
-  const firstDot = s.indexOf(".");
-  if (firstDot !== -1) {
-    s = s.slice(0, firstDot + 1) + s.slice(firstDot + 1).replace(/\./g, "");
+  if (separadores.length === 0) {
+    s = limpio;
+  } else {
+    const ultimo = separadores.at(-1)!;
+    const fraccion = limpio.slice(ultimo + 1).replace(/[^0-9]/g, "");
+    const entero = limpio.slice(0, ultimo).replace(/[^0-9]/g, "");
+    const tieneAmbos = limpio.includes(".") && limpio.includes(",");
+    const gruposDeMiles = separadores.length > 1
+      && limpio.split(/[.,]/).slice(1).every((grupo) => grupo.length === 3);
+    const unicoPareceMiles = separadores.length === 1
+      && fraccion.length === 3
+      && entero.length > 0
+      && entero !== "0";
+
+    if (gruposDeMiles || (!tieneAmbos && unicoPareceMiles)) {
+      s = limpio.replace(/[.,]/g, "");
+    } else {
+      // Si aparecen punto y coma, el último es el decimal y los anteriores son
+      // miles: 1,500.25 y 1.500,25 producen el mismo valor.
+      s = `${entero}${limpio.endsWith(".") || limpio.endsWith(",") ? "." : fraccion ? `.${fraccion}` : ""}`;
+    }
   }
 
   const [integer = "", fraction] = s.split(".");

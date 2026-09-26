@@ -436,7 +436,7 @@ export default function ImportSheet({
     const toReplace: Transaction[] = [];
 
     for (const cand of candidates) {
-      const decision = resolutions.get(cand.tx.id) ?? (cand.match ? "keepBoth" : "new");
+      const decision = resolutions.get(cand.tx.id) ?? (cand.match ? "skip" : "new");
       if (decision === "skip") continue;
       if (decision === "merge" && cand.match) {
         toReplace.push(mergeTransaction(cand.match.existing, cand.raw));
@@ -453,9 +453,8 @@ export default function ImportSheet({
     setDone(true);
   }
 
-  // "Importar todo": los nuevos entran, y los posibles duplicados se
-  // mantienen ambos (la decisión más segura: nunca borra nada). Si quiere
-  // fusionar, para eso está el botón "Revisar".
+  // El botón principal importa únicamente lo nuevo. Un posible duplicado no
+  // entra salvo que la persona lo revise y elija expresamente conservar ambos.
   function importAll() {
     if (candidates.length === 0) return;
     applyResolutions(new Map());
@@ -688,7 +687,7 @@ export default function ImportSheet({
                 </TouchableOpacity>
               )}
               <TouchableOpacity onPress={importAll} className="flex-1 py-3.5 rounded-2xl bg-emerald-600 items-center">
-                <Text className="font-bold text-white">{t("importSheet.importAll")}</Text>
+                <Text className="font-bold text-white">{dupes.length > 0 ? t("importSheet.importNew", { count: candidates.length - dupes.length }) : t("importSheet.importAll")}</Text>
               </TouchableOpacity>
             </View>
           </ScrollView>
