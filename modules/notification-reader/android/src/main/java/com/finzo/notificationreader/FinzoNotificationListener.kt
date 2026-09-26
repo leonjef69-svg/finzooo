@@ -174,13 +174,17 @@ class FinzoNotificationListener : NotificationListenerService() {
       val pkg = sbn.packageName?.lowercase() ?: return
       val esAppDeDinero = isMoneyApp(pkg)
 
-      // Se anota ANTES de cualquier filtro: solo el nombre del paquete y la
+      // Con el interruptor apagado no se guarda ni siquiera el nombre de la
+      // aplicación que notificó. El permiso de Android puede seguir concedido,
+      // pero el consentimiento dentro de Fino manda.
+      if (!NotificationStore.isEnabled(applicationContext)) return
+
+      // Se anota antes del filtro de apps financieras: solo el nombre del paquete y la
       // hora, nunca el contenido. Es lo que permite distinguir "el servicio
       // no arrancó" de "arrancó pero no reconoce la app del banco" — dos
       // problemas que desde la pantalla se ven exactamente igual.
       NotificationStore.noteSeen(applicationContext, pkg, esAppDeDinero)
 
-      if (!NotificationStore.isEnabled(applicationContext)) return
       if (!esAppDeDinero) return
 
       val extras = sbn.notification?.extras ?: return

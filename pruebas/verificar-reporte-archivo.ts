@@ -136,6 +136,9 @@ console.log("\n--- EL CSV: DECIMALES Y ESCAPADO ---");
   ok(csvEscape("Pan, leche") === '"Pan, leche"', "una coma se protege con comillas");
   ok(csvEscape('Dijo "hola"') === '"Dijo ""hola"""', "y las comillas se doblan");
   ok(csvEscape("linea1\nlinea2") === '"linea1\nlinea2"', "un salto de línea también");
+  ok(csvEscape("uno;dos") === '"uno;dos"', "un punto y coma no desordena Excel regional");
+  ok(csvEscape("=HYPERLINK(\"https://example.test\")") === '"\'=HYPERLINK(""https://example.test"")"', "una fórmula importada queda como texto");
+  ok(csvEscape("@SUM(A1:A2)") === "'@SUM(A1:A2)", "también neutraliza fórmulas con arroba");
   ok(csvEscape("Almuerzo") === "Almuerzo", "y lo normal se deja tal cual, sin comillas de adorno");
 
   const texto = csvDeFilas([["Pan, leche", 5]]);

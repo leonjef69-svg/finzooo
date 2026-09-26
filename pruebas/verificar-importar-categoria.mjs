@@ -76,7 +76,8 @@ console.log("\n--- Y BORRAR TODO EL MES PIDE CONFIRMACION (12/08/2026) ---");
 
   // SOLO EL MES QUE SE ESTA VIENDO. Borrar meses que no se ven seria otra cosa y mucho mas
   // grave: nadie puede confirmar lo que no tiene delante.
-  ok(/onBulkDelete\(monthTx\.filter\([^\n]+internalTransfer[^\n]+\.map/.test(home), "solo borra los movimientos normales del mes que se esta viendo");
+  ok(/movimientosBorrablesDelMes = useMemo\(\(\) => monthTx\.filter\([^\n]+internalTransfer/.test(home)
+    && /onBulkDelete\(movimientosBorrablesDelMes\.map/.test(home), "solo borra los movimientos normales del mes que se esta viendo");
 }
 console.log(fallos === 0 ? "\nTodo bien: lo tuyo no se tira, y borrar todo avisa" : `\n${fallos} fallas`);
 process.exit(fallos ? 1 : 0);

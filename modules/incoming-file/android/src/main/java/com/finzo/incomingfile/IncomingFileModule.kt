@@ -31,6 +31,7 @@ import java.io.File
  * que si lo hubiera elegido a mano, incluido el borrado tras leerlo.
  */
 class IncomingFileModule : Module() {
+  private val MAX_IMPORT_BYTES = 15L * 1024L * 1024L
   /** Numero cualquiera; solo sirve para reconocer NUESTRA respuesta entre las de Android. */
   private val CODIGO_ELEGIR = 7311
 
@@ -194,9 +195,24 @@ class IncomingFileModule : Module() {
   private fun copyToCache(uri: Uri, name: String): File? {
     val context = appContext.reactContext ?: return null
     val target = File(context.cacheDir, "entrante-${System.currentTimeMillis()}-${safe(name)}")
-    context.contentResolver.openInputStream(uri)?.use { input ->
-      target.outputStream().use { output -> input.copyTo(output) }
-    } ?: return null
+    var total = 0L
+    try {
+      context.contentResolver.openInputStream(uri)?.use { input ->
+        target.outputStream().use { output ->
+          val buffer = ByteArray(DEFAULT_BUFFER_SIZE)
+          while (true) {
+            val read = input.read(buffer)
+            if (read < 0) break
+            total += read
+            if (total > MAX_IMPORT_BYTES) throw IllegalArgumentException("archivo-demasiado-grande")
+            output.write(buffer, 0, read)
+          }
+        }
+      } ?: return null
+    } catch (error: Throwable) {
+      target.delete()
+      return null
+    }
     return target
   }
 

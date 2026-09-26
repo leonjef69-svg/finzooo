@@ -303,7 +303,12 @@ export default function Home({
 
   const [selectMode, setSelectMode] = useState(false);
   const [confirmandoBorrarTodo, setConfirmandoBorrarTodo] = useState(false);
+  const [confirmandoSeleccionados, setConfirmandoSeleccionados] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
+  const movimientosBorrablesDelMes = useMemo(() => monthTx.filter((m) => !m.internalTransfer), [monthTx]);
+  const seleccionadosBorrables = useMemo(() => selected.filter((id) =>
+    movimientosBorrablesDelMes.some((tx) => tx.id === id)
+  ), [selected, movimientosBorrablesDelMes]);
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
 
@@ -361,9 +366,10 @@ export default function Home({
     [marcadas, selectMode, colorScheme, fmt, t, monthNames, alTocarFila]
   );
   function confirmBulkDelete() {
-    onBulkDelete(selected);
+    onBulkDelete(seleccionadosBorrables);
     setSelected([]);
     setSelectMode(false);
+    setConfirmandoSeleccionados(false);
   }
 
   /**
@@ -380,7 +386,7 @@ export default function Home({
    * meses que no se ven sería otra cosa y mucho más grave.
    */
   function borrarTodoElMes() {
-    onBulkDelete(monthTx.filter((m) => !m.internalTransfer).map((m) => m.id));
+    onBulkDelete(movimientosBorrablesDelMes.map((m) => m.id));
     setSelected([]);
     setSelectMode(false);
     setConfirmandoBorrarTodo(false);
@@ -711,16 +717,16 @@ export default function Home({
               </Text>
               <View className="flex-row items-center gap-3">
                 <TouchableOpacity
-                  onPress={confirmBulkDelete}
-                  disabled={selected.length === 0}
+                  onPress={() => setConfirmandoSeleccionados(true)}
+                  disabled={seleccionadosBorrables.length === 0}
                   className={`w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-950 items-center justify-center ${
-                    selected.length === 0 ? "opacity-40" : ""
+                    seleccionadosBorrables.length === 0 ? "opacity-40" : ""
                   }`}
                 >
                   <Trash2 size={21} color="#f43f5e" />
                 </TouchableOpacity>
                 {/* BORRAR TODO. Se enseña solo si hay algo que borrar. */}
-                {monthTx.length > 0 && (
+                {movimientosBorrablesDelMes.length > 0 && (
                   <TouchableOpacity onPress={() => setConfirmandoBorrarTodo(true)} hitSlop={6}>
                     <Text className="text-base font-bold text-rose-500">{t("home.deleteAll")}</Text>
                   </TouchableOpacity>
@@ -805,13 +811,23 @@ export default function Home({
           esto no se puede deshacer y "¿borrar todo?" a secas no da para decidir nada. */}
       <ConfirmDialog
         visible={confirmandoBorrarTodo}
-        title={t("home.deleteAllTitle", { count: monthTx.length, month: monthLabel })}
+        title={t("home.deleteAllTitle", { count: movimientosBorrablesDelMes.length, month: monthLabel })}
         message={t("home.deleteAllMessage")}
         confirmLabel={t("home.deleteAllConfirm")}
         cancelLabel={t("common.cancel")}
         danger
         onCancel={() => setConfirmandoBorrarTodo(false)}
         onConfirm={borrarTodoElMes}
+      />
+      <ConfirmDialog
+        visible={confirmandoSeleccionados}
+        title={t("home.deleteSelectedTitle", { count: seleccionadosBorrables.length })}
+        message={t("home.deleteSelectedMessage")}
+        confirmLabel={t("common.delete")}
+        cancelLabel={t("common.cancel")}
+        danger
+        onCancel={() => setConfirmandoSeleccionados(false)}
+        onConfirm={confirmBulkDelete}
       />
     </View>
   );

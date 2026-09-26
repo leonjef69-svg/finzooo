@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { crearCodigoFamilia } from "../utils/familia.ts";
+import { crearCodigoFamilia } from "../utils/familia";
 
 const rules = fs.readFileSync("firestore.rules", "utf8");
 const cloud = fs.readFileSync("utils/cloudFamilia.ts", "utf8");

@@ -45,6 +45,7 @@ const BASE = {
   "@/modules/export-scheduler": stub("programador.ts"),
   // Reanimated arranca su parte nativa al cargarse y tumba el proceso. Ver el sustituto.
   "react-native-reanimated": stub("reanimated.ts"),
+  "expo-crypto": stub("crypto.ts"),
 };
 
 // Y los de las pruebas que cargan modulos de Expo.
@@ -118,6 +119,7 @@ const SUITES = [
   { archivo: "verificar-favoritos.ts", alias: EXPO },
   { archivo: "verificar-elegir-categoria.ts", alias: EXPO },
   { archivo: "verificar-prueba-premium.ts", alias: EXPO },
+  { archivo: "verificar-familia.ts", alias: EXPO },
 ];
 
 /**

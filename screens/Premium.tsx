@@ -21,6 +21,7 @@ import {
   type PlanDeCompra,
 } from "@/utils/compras";
 import { DURACION_PRUEBA_HORAS, diaDeLaFecha, pruebaTerminaEn } from "@/utils/pruebaPremium";
+import { TELEGRAM_ENABLED } from "@/constants/features";
 
 /**
  * FINZO PREMIUM: las dos columnas, el precio y la prueba gratuita.
@@ -156,7 +157,7 @@ export default function Premium({
     { texto: t("premium.perkBusiness") },
     { texto: t("premium.perkFamily") },
     { texto: t("premium.perkSharedBoxes") },
-    { texto: t("premium.perkTelegram") },
+    ...(TELEGRAM_ENABLED ? [{ texto: t("premium.perkTelegram") }] : []),
     { texto: t("premium.perkVoice") },
     { texto: t("premium.perkLock") },
     { texto: t("premium.perkSavingsGoals") },

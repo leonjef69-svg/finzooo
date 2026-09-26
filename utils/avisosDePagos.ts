@@ -97,10 +97,11 @@ export type ResultadoDeProgramar = { puestos: number; fallo?: string };
 export function reprogramarAvisosDePagos(
   lista: PagoProgramado[],
   t: (clave: string, valores?: Record<string, string | number>) => string,
-  ahora: Date = new Date()
+  ahora: Date = new Date(),
+  formatAmount: (monto: number) => string = (monto) => monto.toFixed(2),
 ): Promise<ResultadoDeProgramar> {
   enFila = enFila
-    .then(() => hacerlo(lista, t, ahora))
+    .then(() => hacerlo(lista, t, ahora, formatAmount))
     .catch((e) => ({ puestos: 0, fallo: String(e?.message ?? e) }));
   return enFila;
 }
@@ -108,7 +109,8 @@ export function reprogramarAvisosDePagos(
 async function hacerlo(
   lista: PagoProgramado[],
   t: (clave: string, valores?: Record<string, string | number>) => string,
-  ahora: Date
+  ahora: Date,
+  formatAmount: (monto: number) => string,
 ): Promise<ResultadoDeProgramar> {
   // Cada paso dice dónde está, para que si algo revienta el mensaje diga EN CUÁL. Sin esto,
   // "cannot read property of undefined" no distingue el permiso del canal ni del programado.
@@ -162,7 +164,7 @@ async function hacerlo(
         await Notifications.scheduleNotificationAsync({
           content: {
             title: t("calendario.avisoTitulo", { nombre: pago.nombre }),
-            body: textoDelAviso(pago, t),
+            body: textoDelAviso(pago, t, formatAmount),
             sound: "default",
             data: { [MARCA]: true, pagoId: pago.id, mes },
           },
@@ -194,13 +196,14 @@ async function hacerlo(
  */
 function textoDelAviso(
   pago: PagoProgramado,
-  t: (clave: string, valores?: Record<string, string | number>) => string
+  t: (clave: string, valores?: Record<string, string | number>) => string,
+  formatAmount: (monto: number) => string,
 ): string {
   if (pago.tipo === "recordatorio" || pago.monto == null) {
     return t("calendario.avisoRecordatorio");
   }
   const clave = pago.tipo === "ingreso" ? "calendario.avisoIngreso" : "calendario.avisoPago";
-  return t(clave, { monto: pago.monto.toFixed(2) });
+  return t(clave, { monto: formatAmount(pago.monto) });
 }
 
 /**

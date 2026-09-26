@@ -236,7 +236,7 @@ type AppDataContextValue = {
   movimientosDeCategoria: (id: string) => number;
 
   transactions: Transaction[];
-  addOrUpdateTransaction: (t: Transaction) => void;
+  addOrUpdateTransaction: (t: Transaction, allowLinkedTransferUpdate?: boolean) => void;
   deleteTransaction: (id: number) => void;
   /** Solo para Familia/Cajas al borrar el movimiento enlazado en su origen. */
   deleteLinkedTransferTransaction: (id: number) => void;
@@ -884,7 +884,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // PIN y buzón nativo. Se intenta limpiar todo aunque una integración falle.
     notificationReader.setEnabled(false);
     await Promise.allSettled([
-      reprogramarAvisosDePagos([], tRef.current),
+      reprogramarAvisosDePagos([], tRef.current, new Date(), fmt),
       cancelarProgramacionAlCerrarSesion(),
       desconectarDropbox(),
       desconectarOneDrive(),
@@ -1117,7 +1117,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
      * estaba ahí. Guardando lo que devuelve el propio reprogramado, el número no puede
      * adelantarse a los hechos.
      */
-    reprogramarAvisosDePagos(pagosProgramados, (clave, valores) => tRef.current(clave, valores))
+    reprogramarAvisosDePagos(pagosProgramados, (clave, valores) => tRef.current(clave, valores), new Date(), fmt)
       .then((r) => {
         setAvisosProgramados(r.puestos);
         setAvisosFallo(r.fallo ?? null);
@@ -1858,8 +1858,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function setBudgetForCurrentMonth(amount: number) {
-    if (!isSafeMoneyAmount(amount) || amount < 0) {
-      showToast("El monto supera el máximo permitido");
+    if (!Number.isFinite(amount) || amount < 0) {
+      showToast(t("toast.amountNonNegative"));
+      return;
+    }
+    if (!isSafeMoneyAmount(amount)) {
+      showToast(t("toast.amountTooLarge"));
       return;
     }
     if (!presupuestoCubreTransferencias(amount, transactions, mk)) {
@@ -1938,7 +1942,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * EL CALENDARIO DE PAGOS. Guardar crea o reemplaza, con el mismo criterio que un negocio.
    */
   function reprogramarAvisos() {
-    reprogramarAvisosDePagos(pagosProgramados, (clave, valores) => tRef.current(clave, valores))
+    reprogramarAvisosDePagos(pagosProgramados, (clave, valores) => tRef.current(clave, valores), new Date(), fmt)
       .then((r) => {
         setAvisosProgramados(r.puestos);
         setAvisosFallo(r.fallo ?? null);
@@ -2206,8 +2210,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function updateCategoryBudgets(newBudgets: Record<string, number>) {
-    if (Object.values(newBudgets).some((amount) => !isSafeMoneyAmount(amount) || amount < 0)) {
-      showToast("Uno de los montos supera el máximo permitido");
+    const values = Object.values(newBudgets);
+    if (values.some((amount) => !Number.isFinite(amount) || amount < 0)) {
+      showToast(t("toast.amountNonNegative"));
+      return;
+    }
+    if (values.some((amount) => !isSafeMoneyAmount(amount))) {
+      showToast(t("toast.amountTooLarge"));
       return;
     }
     markCloudGroup(CLOUD_SYNC_GROUPS.categoryBudgets);
@@ -2215,12 +2224,20 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     showToast(t("toast.budgetUpdated"));
   }
 
-  function addOrUpdateTransaction(t2: Transaction) {
-    if (!isSafeMoneyAmount(t2.amount) || t2.amount <= 0) {
-      showToast("El monto supera el máximo permitido");
+  function addOrUpdateTransaction(t2: Transaction, allowLinkedTransferUpdate = false) {
+    if (!Number.isFinite(t2.amount) || t2.amount <= 0) {
+      showToast(t("toast.amountPositive"));
+      return;
+    }
+    if (!isSafeMoneyAmount(t2.amount)) {
+      showToast(t("toast.amountTooLarge"));
       return;
     }
     const existing = transactions.find((p) => p.id === t2.id);
+    if (existing?.internalTransfer && !allowLinkedTransferUpdate) {
+      showToast(t("toast.transferEditBlocked"));
+      return;
+    }
     const isEdit = Boolean(existing);
     // Un movimiento creado por un pago de tarjeta tiene su monto y fecha
     // enlazados al registro de la tarjeta. Editarlos solo desde Inicio dejaría

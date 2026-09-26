@@ -347,10 +347,10 @@ export function movimientoDelPago(
  */
 const DIBUJO_POR_PALABRA: [string, string][] = [
   // Marcas primero: son las más concretas y las que más ilusión hacen.
-  ["netflix", "marca:youtube"],
+  ["netflix", "Film"],
   ["spotify", "marca:spotify"],
   ["youtube", "marca:youtube"],
-  ["disney", "marca:youtube"],
+  ["disney", "Film"],
   ["amazon", "marca:amazon"],
   ["prime", "marca:amazon"],
   ["steam", "marca:steam"],

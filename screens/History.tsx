@@ -169,14 +169,17 @@ export default function History({
 
   const renglones = useMemo<Renglon[]>(() => {
     const query = search.trim().toLowerCase();
-    const monthTx = allMonthTx
+    // Al buscar se recorre todo el historial. Sin búsqueda, el selector de mes
+    // conserva su comportamiento normal y los totales siguen siendo mensuales.
+    const searchScope = query ? transactions : allMonthTx;
+    const monthTx = searchScope
       .filter((t) => filter === "all" || (filter === "transfer" ? Boolean(t.internalTransfer) : !t.internalTransfer && t.type === filter))
       .filter((tx) => !categoryFilter || tx.category === categoryFilter)
       .filter((tx) => (!minAmount || tx.amount >= parsedMinAmount) && (!maxAmount || tx.amount <= parsedMaxAmount))
       .filter((tx) => {
         if (!query) return true;
         const c = catInfo(tx.category);
-        const haystack = `${tx.description} ${t(c.label)} ${methodLabel(tx.method, t)}`.toLowerCase();
+        const haystack = `${tx.description} ${tx.notes || ""} ${tx.amount} ${fmt(tx.amount)} ${t(c.label)} ${methodLabel(tx.method, t)}`.toLowerCase();
         return haystack.includes(query);
       })
       .sort(compararMovimientos);
@@ -193,7 +196,7 @@ export default function History({
       salida.push({ clave: key, tipo: "fila", tx, transferGroup });
     });
     return salida;
-  }, [allMonthTx, filter, search, categoryFilter, minAmount, maxAmount, parsedMinAmount, parsedMaxAmount, t]);
+  }, [allMonthTx, transactions, filter, search, categoryFilter, minAmount, maxAmount, parsedMinAmount, parsedMaxAmount, fmt, t]);
 
   const dibujar = useCallback(
     ({ item }: { item: Renglon }) =>

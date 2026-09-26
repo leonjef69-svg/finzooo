@@ -83,9 +83,10 @@ console.log("\n--- LA VENTA SOLO PROMETE FUNCIONES PREMIUM REALES ---");
   // comercial debe nombrar los espacios colaborativos que sí están protegidos por el plan.
   const premium = leerSinComentarios("screens/Premium.tsx");
   ok(!/perkYape|hayRegistroAutomatico/.test(premium), "no vende la captura Yape como Premium");
-  for (const clave of ["perkFamily", "perkSharedBoxes", "perkTelegram"]) {
+  for (const clave of ["perkFamily", "perkSharedBoxes"]) {
     ok(premium.includes(`premium.${clave}`), `sí anuncia ${clave}`);
   }
+  ok(/TELEGRAM_ENABLED \? \[\{ texto: t\("premium\.perkTelegram"\)/.test(premium), "Telegram solo se anuncia con servidor habilitado");
 }
 
 console.log(fallos === 0 ? "\nTodo bien: la funcion solo se ve donde tiene sentido" : `\n${fallos} fallas`);

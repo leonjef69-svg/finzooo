@@ -63,7 +63,12 @@ ok(
 // falta, Google Play Services responde G10 aunque el botón y Firebase estén
 // bien escritos.
 const PLAY_SIGNING_SHA1 = "251613db754cae260052f7e00b8f8192fe02355a";
-for (const archivo of ["google-services.json", "android/app/google-services.json"]) {
+// La copia dentro de android/ se genera localmente y está ignorada por Git;
+// una CI limpia no debe fallar por no tener ese archivo privado de compilación.
+const configuraciones = ["google-services.json", "android/app/google-services.json"]
+  .filter((archivo) => fs.existsSync(path.join(process.cwd(), archivo)));
+ok(configuraciones.includes("google-services.json"), "existe la configuración pública de referencia");
+for (const archivo of configuraciones) {
   const config = JSON.parse(fs.readFileSync(path.join(process.cwd(), archivo), "utf8"));
   const app = config.client.find(
     (client: { client_info?: { android_client_info?: { package_name?: string } } }) =>

@@ -27,6 +27,7 @@ export type EspacioFamilia = {
   nombre: string;
   ownerUid: string;
   creadoEn: number;
+  currency: string;
 };
 
 export type MiembroFamilia = {
@@ -68,14 +69,14 @@ export async function cargarFamiliaActiva(uid: string): Promise<EspacioFamilia |
   if (!espacio.exists()) return null;
   const data = espacio.data();
   if (data.closed === true) return null;
-  return { id: espacio.id, nombre: String(data.nombre || "Familia"), ownerUid: String(data.ownerUid), creadoEn: alNumero(data.creadoEn) };
+  return { id: espacio.id, nombre: String(data.nombre || "Familia"), ownerUid: String(data.ownerUid), creadoEn: alNumero(data.creadoEn), currency: String(data.currency || "PEN") };
 }
 
 async function leerFamilia(familyId: string): Promise<EspacioFamilia | null> {
   const espacio = await getDoc(doc(db, "familySpaces", familyId));
   if (!espacio.exists() || espacio.data().closed === true) return null;
   const data = espacio.data();
-  return { id: espacio.id, nombre: String(data.nombre || "Familia"), ownerUid: String(data.ownerUid), creadoEn: alNumero(data.creadoEn) };
+  return { id: espacio.id, nombre: String(data.nombre || "Familia"), ownerUid: String(data.ownerUid), creadoEn: alNumero(data.creadoEn), currency: String(data.currency || "PEN") };
 }
 
 /** Todas las familias del usuario. El índice antiguo se conserva como respaldo
@@ -95,17 +96,17 @@ export async function listarFamilias(uid: string): Promise<EspacioFamilia[]> {
   return familias.sort((a, b) => b.creadoEn - a.creadoEn);
 }
 
-export async function crearFamilia(uid: string, nombrePersona: string, nombreFamilia: string): Promise<EspacioFamilia> {
+export async function crearFamilia(uid: string, nombrePersona: string, nombreFamilia: string, currency = "PEN"): Promise<EspacioFamilia> {
   const ref = doc(collection(db, "familySpaces"));
   const nombre = nombreFamilia.trim().slice(0, 35);
   if (!nombre) throw new Error("invalid-input");
   await runTransaction(db, async transaction => {
-    transaction.set(ref, { nombre, ownerUid: uid, creadoEn: serverTimestamp() });
+    transaction.set(ref, { nombre, ownerUid: uid, currency, creadoEn: serverTimestamp() });
     transaction.set(doc(db, "familySpaces", ref.id, "members", uid), { uid, nombre: nombrePersona.trim().slice(0, 60), rol: "owner", unidoEn: serverTimestamp() });
     transaction.set(doc(db, "familyUsers", uid, "spaces", ref.id), { familyId: ref.id, unidoEn: serverTimestamp() });
     transaction.set(doc(db, "familyUsers", uid), { activeFamilyId: ref.id }, { merge: true });
   });
-  return { id: ref.id, nombre, ownerUid: uid, creadoEn: Date.now() };
+  return { id: ref.id, nombre, ownerUid: uid, creadoEn: Date.now(), currency };
 }
 
 export async function crearInvitacionFamilia(uid: string, familiaId: string): Promise<string> {
@@ -172,11 +173,12 @@ export async function unirseAFamilia(uid: string, nombre: string, codigoCrudo: s
     });
     transaction.set(indexRef, { activeFamilyId: familyId }, { merge: true });
     transaction.set(doc(db, "familyUsers", uid, "spaces", familyId), { familyId, unidoEn: serverTimestamp() });
+    transaction.delete(inviteRef);
   });
   const family = await getDoc(familyRef);
   if (!family.exists()) throw new Error("invalid-code");
   const familyData = family.data();
-  return { id: family.id, nombre: String(familyData.nombre || "Familia"), ownerUid: String(familyData.ownerUid), creadoEn: alNumero(familyData.creadoEn) };
+  return { id: family.id, nombre: String(familyData.nombre || "Familia"), ownerUid: String(familyData.ownerUid), creadoEn: alNumero(familyData.creadoEn), currency: String(familyData.currency || "PEN") };
 }
 
 export async function listarMiembrosFamilia(familyId: string): Promise<MiembroFamilia[]> {

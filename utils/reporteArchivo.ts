@@ -87,8 +87,11 @@ export function filasDelReporte(datos: DatosDelReporte): (string | number)[][] {
  * dos al abrir el archivo, y entonces el reporte enseña movimientos que no
  * existen. Las comillas se doblan porque es así como se escapan en un CSV.
  */
-export function csvEscape(value: string): string {
-  return /[",\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value;
+export function csvEscape(value: string, protectFormula = true): string {
+  // Excel interpreta estas iniciales como fórmulas incluso dentro de un CSV.
+  // El apóstrofo las fuerza a texto y evita ejecutar contenido importado.
+  const seguro = protectFormula && /^[=+\-@]/.test(value) ? `'${value}` : value;
+  return /[",;\r\n]/.test(seguro) ? `"${seguro.replace(/"/g, '""')}"` : seguro;
 }
 
 /** Escribe un archivo en la carpeta temporal y devuelve dónde quedó. */
@@ -219,7 +222,7 @@ export function csvDeFilas(filas: (string | number)[][]): string {
       fila
         // Los números con dos decimales: en un CSV se espera "12.50", no "12.5".
         // El Excel los lleva como número de verdad, que es otra cosa.
-        .map((v) => csvEscape(typeof v === "number" ? v.toFixed(2) : String(v)))
+        .map((v) => typeof v === "number" ? csvEscape(v.toFixed(2), false) : csvEscape(String(v)))
         .join(",")
     )
     .join("\n");

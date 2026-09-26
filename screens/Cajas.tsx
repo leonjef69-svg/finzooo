@@ -231,7 +231,7 @@ export default function Cajas() {
       if (!tomarAccionLocal()) return;
       const personal = transactions.find(tx => tx.id === aporteEditado.personalTransactionId);
       setDatos(antes => ({ ...antes, movimientos: antes.movimientos.map(item => item.id === aporteEditado.id ? { ...item, monto: valor, descripcion: descripcion.trim().slice(0, 60) || item.descripcion } : item) }));
-      if (personal) addOrUpdateTransaction({ ...personal, amount: valor });
+      if (personal) addOrUpdateTransaction({ ...personal, amount: valor }, true);
       setMonto(""); setDescripcion(""); setEditandoAporteId(null); setAnotando(null);
       showToast(t("boxes.movementSaved"));
       return;

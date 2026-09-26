@@ -276,6 +276,10 @@ export async function deleteCloudAccount(uid: string): Promise<void> {
     validarBorradoCajasCompartidasDeCuenta(uid),
     validarBorradoFamiliasDeCuenta(uid),
   ]);
+  // La app sí puede borrar su estado público de Telegram. Si las funciones
+  // están desplegadas, este borrado dispara además la limpieza atómica de la
+  // conexión, borradores y deshacer, que están cerrados al cliente.
+  await deleteDoc(doc(db, "telegramUsers", uid));
   // Primero se limpia lo compartido. Si el usuario era dueño se elimina el
   // espacio completo; si solo era miembro, se retira su acceso sin afectar
   // el historial que pertenece al resto del grupo.

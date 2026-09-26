@@ -29,6 +29,8 @@ import {
   Zap,
   Mic,
   MessageSquare,
+  Moon,
+  Sun,
   X,
 } from "lucide-react-native";
 import * as voiceWidget from "@/modules/voice-widget";
@@ -38,6 +40,7 @@ import { currencyLabelFor } from "@/constants/currencies";
 import { countryFor, countryLabelFor } from "@/constants/countries";
 import { hayRegistroAutomatico } from "@/utils/dondeHayYape";
 import { useAppData } from "@/contexts/AppDataContext";
+import { TELEGRAM_ENABLED } from "@/constants/features";
 import { auth } from "@/utils/firebase";
 
 // Achica y comprime la foto antes de guardarla, para que no pese mucho
@@ -106,7 +109,7 @@ export default function Settings({
   onVoiceHelp: () => void;
   onTelegram: () => void;
 }) {
-  const { t, userCountry, isCloudSynced, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios } =
+  const { t, userCountry, themeMode, updateThemeMode, isCloudSynced, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios } =
     useAppData();
   /** El negocio que se está quedando con los yapeos, si hay alguno. Ver la fila de abajo. */
   const negocioQueRecibe = negocios.find((n) => n.activo && n.destinoYapes === "negocio");
@@ -514,7 +517,7 @@ export default function Settings({
             </View>
           }
         />
-        <Row
+        {TELEGRAM_ENABLED ? <Row
           Icon={MessageSquare}
           label={t("telegram.rowLabel")}
           onPress={() => (isPremium ? onTelegram() : onPremium())}
@@ -523,7 +526,7 @@ export default function Settings({
               <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
             </View>
           }
-        />
+        /> : null}
         <Row
           Icon={Lock}
           label={t("lock.rowLabel")}
@@ -565,8 +568,15 @@ export default function Settings({
           onPress={onCurrency}
           right={<ChevronRight size={16} color="#cbd5e1" />}
         />
-        {/* La apariencia se decide una sola vez durante la configuración inicial.
-            No se repite un icono de sol/luna dentro de la navegación diaria. */}
+        <Row
+          Icon={themeMode === "dark" ? Moon : Sun}
+          label={t("setup.appearance")}
+          onPress={() => updateThemeMode(themeMode === "dark" ? "light" : "dark")}
+          right={<View className="flex-row rounded-xl bg-slate-100 p-1 dark:bg-noche-2">
+            <TouchableOpacity accessibilityLabel={t("setup.lightAppearance")} accessibilityState={{ selected: themeMode === "light" }} onPress={() => updateThemeMode("light")} className={`h-8 w-9 items-center justify-center rounded-lg ${themeMode === "light" ? "bg-amber-400" : ""}`}><Sun size={16} color={themeMode === "light" ? "#fff" : "#64748b"} /></TouchableOpacity>
+            <TouchableOpacity accessibilityLabel={t("setup.darkAppearance")} accessibilityState={{ selected: themeMode === "dark" }} onPress={() => updateThemeMode("dark")} className={`h-8 w-9 items-center justify-center rounded-lg ${themeMode === "dark" ? "bg-slate-800" : ""}`}><Moon size={16} color={themeMode === "dark" ? "#fff" : "#64748b"} /></TouchableOpacity>
+          </View>}
+        />
         {/* LA FILA DE "NOTIFICACIONES" SE FUE AL CALENDARIO (21/08/2026).
             Mandaba SOLO sobre los avisos del calendario, pero desde aqui parecia mandar sobre
             todo: la app tiene cuatro cosas que avisan —el calendario, la voz de los yapes, la

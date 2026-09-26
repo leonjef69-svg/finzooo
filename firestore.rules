@@ -255,8 +255,10 @@ service cloud.firestore {
                     && request.resource.data.nombre is string
                     && request.resource.data.nombre.size() > 0
                     && request.resource.data.nombre.size() <= 35
+                    && request.resource.data.currency is string
+                    && request.resource.data.currency.size() == 3
                     && request.resource.data.creadoEn is timestamp
-                    && request.resource.data.keys().hasOnly(['nombre', 'ownerUid', 'creadoEn'])
+                    && request.resource.data.keys().hasOnly(['nombre', 'ownerUid', 'currency', 'creadoEn'])
                     && premiumUser(request.auth.uid);
       allow read: if familyMember(familyId);
       allow update: if familyMember(familyId)
@@ -352,7 +354,13 @@ service cloud.firestore {
                     && request.resource.data.expiresAt > request.time.toMillis();
       // El destino y el vencimiento de una invitación no pueden alterarse.
       allow update: if false;
-      allow delete: if verified() && resource.data.createdBy == request.auth.uid;
+      allow delete: if verified() && (
+        resource.data.createdBy == request.auth.uid
+        || (
+          resource.data.familyId is string
+          && existsAfter(/databases/$(database)/documents/familySpaces/$(resource.data.familyId)/members/$(request.auth.uid))
+        )
+      );
     }
 
     // Índice privado que permite recuperar el espacio familiar al cambiar de celular.
@@ -484,7 +492,13 @@ service cloud.firestore {
         && premiumUser(request.auth.uid)
         && request.resource.data.expiresAt > request.time.toMillis();
       allow update: if false;
-      allow delete: if verified() && resource.data.createdBy == request.auth.uid;
+      allow delete: if verified() && (
+        resource.data.createdBy == request.auth.uid
+        || (
+          resource.data.boxId is string
+          && existsAfter(/databases/$(database)/documents/boxSpaces/$(resource.data.boxId)/members/$(request.auth.uid))
+        )
+      );
     }
 
     match /boxUsers/{userId}/spaces/{boxId} {

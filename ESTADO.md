@@ -519,6 +519,37 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
   servidor y migración del documento único a datos paginados.
 - No se desplegaron reglas, funciones ni una versión de la aplicación.
 
+### Auditoría externa — moneda, seguridad y mejoras de uso (26/09/2026)
+
+- Cada Familia nueva conserva su propia moneda y todos sus integrantes ven el
+  mismo formato. Las transferencias o devoluciones entre monedas distintas se
+  bloquean para no copiar cifras sin conversión; Cajas compartidas aplica la
+  misma protección.
+- Telegram queda oculto por defecto hasta compilar con el servicio habilitado.
+  El borrado de cuenta retira su estado visible y deja preparado el disparador
+  de limpieza del servidor. Esta función no se desplegó.
+- Los códigos de Familia y Caja usan aleatoriedad criptográfica y se consumen
+  al entrar, en lugar de poder reutilizarse durante siete días.
+- Los CSV neutralizan fórmulas y protegen separadores regionales; el borrado
+  múltiple exige confirmación y no cuenta transferencias que debe conservar.
+- Las transferencias enlazadas no se pueden editar mediante una ruta directa;
+  sus cambios autorizados siguen haciéndose desde Familia o Caja.
+- Los identificadores nuevos abandonan el cálculo que habría superado el
+  entero seguro en 2039. El formato nuevo mantiene orden y separación entre
+  dispositivos sin tocar identificadores antiguos.
+- Ajustes permite cambiar entre tema claro y oscuro. Historial busca en todos
+  los meses e incluye notas y montos cuando se escribe una búsqueda.
+- Los avisos del calendario usan la moneda configurada y Netflix/Disney dejan
+  de mostrarse con el logotipo incorrecto de YouTube.
+- El lector nativo no registra nombres de aplicaciones cuando está apagado y
+  limpia su buzón y diagnóstico al desactivarse. La importación nativa corta la
+  copia al superar 15 MB. Ambos cambios requieren un futuro instalable para
+  comprobarse en Android; no se generó ninguno.
+- Tarjetas de crédito permanece pendiente por decisión del propietario y no se
+  incluyó en esta tanda.
+- Validación superada: TypeScript, ESLint, 111 pruebas de la app, 7 auditores y
+  30 pruebas del servidor. No se publicó, compiló ni desplegó nada.
+
 ## Reglas para continuar
 
 1. Leer `AGENTS.md`, este archivo y `ENTREGAS.md`.

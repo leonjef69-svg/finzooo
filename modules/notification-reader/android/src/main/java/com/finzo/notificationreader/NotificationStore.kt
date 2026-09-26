@@ -81,7 +81,21 @@ object NotificationStore {
     prefs(context).getBoolean(KEY_ENABLED, false)
 
   fun setEnabled(context: Context, value: Boolean) {
-    prefs(context).edit().putBoolean(KEY_ENABLED, value).apply()
+    val edit = prefs(context).edit().putBoolean(KEY_ENABLED, value)
+    if (!value) {
+      edit
+        .putString(KEY_QUEUE, "[]")
+        .putString(KEY_IN_FLIGHT, "[]")
+        .putString(KEY_SEEN, "[]")
+        .remove(KEY_LAST_PKG)
+        .remove(KEY_LAST_MONEY_PKG)
+        .remove(KEY_ULTIMAS)
+        .remove(KEY_LAST_AT)
+        .remove(KEY_LAST_MONEY_AT)
+        .remove(KEY_TOTAL_SEEN)
+        .remove(KEY_MONEY_SEEN)
+    }
+    edit.apply()
   }
 
   /**

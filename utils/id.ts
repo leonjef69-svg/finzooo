@@ -5,15 +5,22 @@
 // existía y TERMINABA REEMPLAZANDO un movimiento viejo en vez de agregarse
 // (addOrUpdateTransaction entiende "mismo número" como "esto es una edición").
 //
-// La hora sola puede coincidir en dos celulares. Por eso reservamos 12 bits
-// aleatorios (4096 posibilidades) dentro de cada milisegundo. El resultado
-// sigue siendo un número seguro de JavaScript y conserva el orden temporal,
-// pero dos dispositivos ya no generan automáticamente el mismo identificador.
+// La hora sola puede coincidir en dos celulares. Reservamos 12 bits aleatorios
+// (4096 posibilidades) dentro de cada segundo. Una base de migración mantiene
+// los IDs nuevos por encima del formato antiguo sin multiplicar para siempre
+// Date.now(): aquel formato habría superado el entero seguro en 2039.
 let lastId = 0;
+const ID_EPOCH_MS = Date.UTC(2026, 0, 1);
+const ID_BASE = 7_500_000_000_000_000;
+
+export function idCandidate(now: number, randomBucket: number): number {
+  const seconds = Math.max(0, Math.floor((now - ID_EPOCH_MS) / 1000));
+  const bucket = Math.max(0, Math.min(4095, Math.floor(randomBucket)));
+  return ID_BASE + seconds * 4096 + bucket;
+}
 
 export function nextId(): number {
-  const now = Date.now();
-  const candidato = now * 4096 + Math.floor(Math.random() * 4096);
+  const candidato = idCandidate(Date.now(), Math.random() * 4096);
   lastId = candidato > lastId ? candidato : lastId + 1;
   return lastId;
 }

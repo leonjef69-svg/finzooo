@@ -125,6 +125,7 @@ export async function unirseACaja(uid: string, nombre: string, codigoCrudo: stri
     // vencimiento, el estado del espacio y el Premium del dueño.
     transaction.set(memberRef, { uid, nombre: nombre.trim().slice(0, 60), rol: "member", inviteCode: codigo, unidoEn: serverTimestamp() });
     transaction.set(doc(db, "boxUsers", uid, "spaces", boxId), { boxId, unidoEn: serverTimestamp() });
+    transaction.delete(invitacion.ref);
   });
   const caja = await getDoc(doc(db, "boxSpaces", boxId));
   if (!caja.exists()) throw new Error("invalid-code");

@@ -9,6 +9,7 @@ import BackButton from "@/components/BackButton";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth, db } from "@/utils/firebase";
 import { volverUnaVez } from "@/utils/nav";
+import { TELEGRAM_ENABLED } from "@/constants/features";
 
 const ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 const TELEGRAM_BOT_USERNAME = "dotero2bot";
@@ -25,12 +26,22 @@ export default function TelegramScreen() {
   const [code, setCode] = useState("");
 
   useEffect(() => {
+    if (!TELEGRAM_ENABLED) { setLoading(false); return; }
     if (!uid) { setLoading(false); return; }
     return onSnapshot(doc(db, "telegramUsers", uid), (snapshot) => {
       setConnected(snapshot.exists() && snapshot.data().active === true);
       setLoading(false);
     }, () => setLoading(false));
   }, [uid]);
+
+  if (!TELEGRAM_ENABLED) {
+    return (
+      <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top }}>
+        <View className="flex-row items-center px-4 py-2"><BackButton onPress={volverUnaVez} /><Text className="ml-3 text-xl font-black text-slate-900 dark:text-white">{t("telegram.title")}</Text></View>
+        <View className="flex-1 items-center justify-center px-8"><MessageSquare size={34} color="#64748b" /><Text className="mt-4 text-center text-base font-bold text-slate-900 dark:text-white">{t("telegram.unavailable")}</Text></View>
+      </View>
+    );
+  }
 
   async function generate() {
     if (!uid || !isPremium) return router.replace("/premium");

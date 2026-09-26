@@ -9,6 +9,7 @@ const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { handleTelegramUpdate } = require("./src/telegram-guided-handler");
 const { CENT, contributionLimits, canCloseLinkedSpace, hasUnreturnedPersonalContribution } = require("./src/personal-contribution");
+const { premiumForUser } = require("./src/premium-entitlement");
 
 initializeApp();
 
@@ -17,15 +18,9 @@ function validDocumentId(value) {
 }
 
 async function hasPremium(db, uid) {
-  const [user, tester] = await Promise.all([
-    db.doc(`users/${uid}`).get(),
-    db.doc(`testerPremium/${uid}`).get(),
-  ]);
+  const user = await db.doc(`users/${uid}`).get();
   const data = user.exists ? user.data() : {};
-  const trial = typeof data.premiumTrialStartedAt === "number" ? data.premiumTrialStartedAt : 0;
-  return data.isPremium === true
-    || (tester.exists && tester.data().active === true && tester.data().grantedAt)
-    || (trial > 0 && trial + 24 * 60 * 60 * 1000 > Date.now());
+  return premiumForUser(db, uid, data);
 }
 
 /**

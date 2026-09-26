@@ -116,7 +116,7 @@ export default function SharedBoxes() {
         if (valor - aporteEditado.monto > disponible) { showToast(t("boxes.notEnoughPersonal")); return; }
         await actualizarAportePersonal("box", caja.id, aporteEditado.id, valor, nombre || aporteEditado.descripcion);
         const personal = transactions.find(tx => tx.id === aporteEditado.personalTransactionId);
-        if (personal) addOrUpdateTransaction({ ...personal, amount: valor });
+        if (personal) addOrUpdateTransaction({ ...personal, amount: valor }, true);
         setEditandoAporteId(null); limpiar(); return;
       }
       if (modo === "gasto" && !canSpendFromSpace(movimientos, valor)) { showToast(t("boxes.notEnoughSpace")); return; }
@@ -136,6 +136,7 @@ export default function SharedBoxes() {
   });
   const devolverAPersonal = () => ejecutar(async () => {
     if (!uid || !caja || devolvibleAPersonal <= 0) return;
+    if (caja.currency !== userCurrency) { showToast(t("spaces.currencyMismatch")); return; }
     const personalId = nextId();
     const allocations = allocatePersonalReturn(movimientos, devolvibleAPersonal, uid);
     const movementId = await guardarMovimientoCajaCompartida(caja.id, uid, {

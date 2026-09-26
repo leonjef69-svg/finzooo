@@ -9,8 +9,11 @@ if (/lastId\s*=\s*now\s*>\s*lastId\s*\?\s*now/.test(codigo)) {
 if (!codigo.includes("Math.random() * 4096")) {
   fallos.push("Falta separar los identificadores creados por dispositivos distintos.");
 }
-if (!codigo.includes("now * 4096")) {
-  fallos.push("El identificador dejó de conservar el orden temporal.");
+if (!codigo.includes("seconds * 4096")) {
+  fallos.push("El identificador dejó de conservar el orden temporal por segundos.");
+}
+if (/Date\.now\(\)\s*\*\s*4096/.test(codigo)) {
+  fallos.push("El identificador vuelve a desbordar el entero seguro en 2039.");
 }
 
 if (fallos.length) {
