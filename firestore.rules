@@ -118,7 +118,7 @@ service cloud.firestore {
     function validSharedMovement(data) {
       return data.keys().hasOnly([
           'tipo', 'monto', 'descripcion', 'method', 'fecha', 'creadoPor',
-          'creadoEn', 'personalTransactionId', 'personalOwnerUid',
+          'creadoEn', 'category', 'notes', 'personalTransactionId', 'personalOwnerUid',
           'personalReturnAmount'
         ])
         && data.tipo in ['ingreso', 'gasto']
@@ -127,6 +127,8 @@ service cloud.firestore {
         && data.monto <= 9000000000000
         && data.descripcion is string
         && data.descripcion.size() <= 120
+        && (!('category' in data) || (data.category is string && data.category.size() <= 50))
+        && (!('notes' in data) || (data.notes is string && data.notes.size() <= 300))
         && data.fecha is string
         && data.fecha.size() <= 10
         && data.creadoPor == request.auth.uid

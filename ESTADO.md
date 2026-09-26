@@ -1,5 +1,11 @@
 # Estado actual de Fino
 
+## Rediseño de movimientos Familia/Caja (25/09/2026)
+
+- Preparados los movimientos con barra inferior, formulario aparte, filtros y categorías.
+- **Pendiente antes de usar el formulario de Familia:** publicar la versión actual de `firestore.rules` en `dotero-2d430`. Las reglas anteriores rechazan los nuevos campos `category` y `notes`.
+- No se generó APK ni AAB para esta entrega.
+
 Actualizado: **22 de septiembre de 2026**.
 
 ## Auditoría integral y protección de espacios (22/09/2026)

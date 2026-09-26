@@ -40,6 +40,8 @@ export type MovimientoFamilia = {
   tipo: "ingreso" | "gasto";
   monto: number;
   descripcion: string;
+  category?: string;
+  notes?: string;
   method?: string;
   fecha: string;
   creadoEn: number;
@@ -180,7 +182,7 @@ export async function listarMovimientosFamilia(familyId: string): Promise<Movimi
   const snap = await getDocs(query(collection(db, "familySpaces", familyId, "movements"), orderBy("creadoEn", "desc")));
   return snap.docs.map((item) => {
     const data = item.data();
-    return { id: item.id, tipo: data.tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(data.monto || 0), descripcion: String(data.descripcion || ""), method: typeof data.method === "string" ? data.method : undefined, fecha: String(data.fecha || ""), creadoEn: alNumero(data.creadoEn), creadoPor: String(data.creadoPor || ""), personalTransactionId: typeof data.personalTransactionId === "number" ? data.personalTransactionId : undefined, personalOwnerUid: typeof data.personalOwnerUid === "string" ? data.personalOwnerUid : undefined, personalReturnAmount: typeof data.personalReturnAmount === "number" ? data.personalReturnAmount : undefined };
+    return { id: item.id, tipo: data.tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(data.monto || 0), descripcion: String(data.descripcion || ""), category: typeof data.category === "string" ? data.category : undefined, notes: typeof data.notes === "string" ? data.notes : undefined, method: typeof data.method === "string" ? data.method : undefined, fecha: String(data.fecha || ""), creadoEn: alNumero(data.creadoEn), creadoPor: String(data.creadoPor || ""), personalTransactionId: typeof data.personalTransactionId === "number" ? data.personalTransactionId : undefined, personalOwnerUid: typeof data.personalOwnerUid === "string" ? data.personalOwnerUid : undefined, personalReturnAmount: typeof data.personalReturnAmount === "number" ? data.personalReturnAmount : undefined };
   });
 }
 

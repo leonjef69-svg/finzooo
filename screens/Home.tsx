@@ -13,14 +13,13 @@ import { estadoEn, fechaEnElMes, mesDe } from "@/utils/calendarioPagos";
 import { availablePersonalBalance, budgetUsed } from "@/utils/finances";
 import { fmtDate, monthKey } from "@/utils/format";
 import { esFoto } from "@/utils/iconosFavoritos";
-import { compactPersonalTransferRows, netTransferredFromPersonal, personalTransferStatuses, type TransferGroupSummary, type TransferStatus } from "@/utils/linkedTransfers";
+import { compactPersonalTransferRows, personalTransferStatuses, type TransferGroupSummary, type TransferStatus } from "@/utils/linkedTransfers";
 import { irUnaVez } from "@/utils/nav";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { usePendingImport } from "@/utils/pendingImport";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Bell,
-  Boxes,
   CreditCard,
   Check,
   CheckCircle2,
@@ -36,7 +35,6 @@ import {
   RotateCcw,
   Target,
   Trash2,
-  UsersRound,
   X,
 } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
@@ -85,10 +83,8 @@ const FilaMovimiento = memo(function FilaMovimiento({
   const c = catInfo(tx.category);
   const isTransfer = Boolean(tx.internalTransfer);
   const spaceName = tx.internalTransferSpaceName || t(tx.internalTransfer === "family" ? "spaces.family" : "spaces.boxes");
-  const title = transferGroup
-    ? t("transfer.groupTitle", { name: spaceName })
-    : isTransfer
-    ? t(tx.type === "expense" ? "transfer.personalToSpace" : "transfer.spaceToPersonal", { name: spaceName })
+  const title = isTransfer
+    ? `Personal (${spaceName})`
     : tx.description || t(c.label);
   // Si la persona dejó como descripción el mismo nombre de la categoría,
   // mostrar ambos renglones es una repetición, no información adicional.
@@ -143,7 +139,9 @@ const FilaMovimiento = memo(function FilaMovimiento({
             </Text>
             {isTransfer ? (
               <Text className="mt-0.5 text-[11px] font-semibold text-blue-600 dark:text-blue-300" numberOfLines={1}>
-                {t("transfer.internal")} · {t(`transfer.${transferGroup?.status || transferStatus || (tx.type === "income" ? "returned" : "pending")}`)}
+                {transferGroup
+                  ? `Enviado ${fmt(transferGroup.sent)} · Devuelto ${fmt(transferGroup.returned)}`
+                  : `Transferencia de ${tx.type === "expense" ? "Personal" : spaceName} a ${tx.type === "expense" ? spaceName : "Personal"} · ${tx.type === "expense" ? "Enviado" : "Devuelto"}`}
               </Text>
             ) : !repeatsCategory ? (
               <Text className="mt-0.5 text-[11px] font-semibold" style={{ color: oscuro ? "#cbd5e1" : "#475569" }} numberOfLines={1}>
@@ -151,9 +149,7 @@ const FilaMovimiento = memo(function FilaMovimiento({
               </Text>
             ) : null}
             <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#94a3b8" : "#64748b" }} numberOfLines={1}>
-              {transferGroup
-                ? t("transfer.summaryLine", { sent: fmt(transferGroup.sent), returned: fmt(transferGroup.returned) })
-                : `${fmtDate(tx.date, monthNames)}${tx.time ? ` · ${tx.time}` : ""}`}
+              {`${fmtDate(tx.date, monthNames)}${tx.time ? ` · ${tx.time}` : ""}`}
             </Text>
           </View>
           <View className="items-end self-stretch justify-start">
@@ -163,7 +159,7 @@ const FilaMovimiento = memo(function FilaMovimiento({
               adjustsFontSizeToFit
               minimumFontScale={0.72}
             >
-              {transferGroup ? "↔ " : isTransfer ? (tx.type === "expense" ? "→ " : "↩ ") : tx.type === "expense" ? "-" : "+"}
+              {isTransfer ? (tx.type === "expense" ? "→ " : "↩ ") : tx.type === "expense" ? "-" : "+"}
               {fmt(transferGroup?.pending ?? tx.amount)}
             </Text>
             {!isTransfer ? <View className="mt-1"><EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} /></View> : null}
@@ -243,16 +239,6 @@ export default function Home({
   // transferido a cada tipo de espacio. Toda salida enlazada nació al elegir
   // "Desde Personal" y toda entrada enlazada es una devolución; el dinero
   // externo no crea una mitad en Personal y por eso no entra en la cuenta.
-  const netInBoxes = useMemo(() => netTransferredFromPersonal(transactions, "box"), [transactions]);
-  const netInFamily = useMemo(() => netTransferredFromPersonal(transactions, "family"), [transactions]);
-  const heldInSpaces = useMemo(() => [
-    ...(netInBoxes > 0 ? [{ key: "box", label: t("home.boxNet"), amount: netInBoxes, Icon: Boxes, tone: { background: "bg-teal-50 dark:bg-noche-2", border: "border-teal-200 dark:border-teal-800", icon: "#0d9488", text: "text-teal-700 dark:text-teal-300" } }] : []),
-    ...(netInFamily > 0 ? [{ key: "family", label: t("home.familyNet"), amount: netInFamily, Icon: UsersRound, tone: { background: "bg-violet-50 dark:bg-noche-2", border: "border-violet-200 dark:border-violet-800", icon: "#7c3aed", text: "text-violet-700 dark:text-violet-300" } }] : []),
-  ], [netInBoxes, netInFamily, t]);
-  const heldSpacesVertical = useMemo(
-    () => heldInSpaces.length === 2 && heldInSpaces.some(item => Math.trunc(Math.abs(item.amount)).toString().length >= 8),
-    [heldInSpaces],
-  );
   const available = availablePersonalBalance({ budget, prevBalance, income: mainIncome, spent: mainSpent, transfersOut, transfersIn });
   const pct = budgetUsed({ budget, prevBalance, income: mainIncome, spent: mainSpent }) * 100;
   const visiblePct = Math.max(0, Math.min(100, pct));
@@ -522,37 +508,6 @@ export default function Home({
             </>
           )}
         </LinearGradient>
-
-        {!editingBudget && heldInSpaces.length > 0 && (
-          <View className={`mx-5 mt-3 gap-2.5 ${heldSpacesVertical ? "" : "flex-row"}`}>
-            {heldInSpaces.map(({ key, label, amount, Icon, tone }) => (
-              <View
-                key={key}
-                className={`${tone.background} ${tone.border} ${heldSpacesVertical ? "w-full" : "flex-1"} justify-center rounded-2xl border-[1.5px] px-3 py-2`}
-                style={[softShadow, { minHeight: 70 }]}
-              >
-                <View className="mb-1 flex-row items-center gap-2">
-                  <Icon size={17} color={tone.icon} />
-                  <Text className={`text-xs font-semibold ${tone.text}`} numberOfLines={1}>
-                    {label}
-                  </Text>
-                  <Text className="flex-1 text-xs font-medium text-slate-500 dark:text-slate-300" numberOfLines={1}>
-                    · {t("home.transferredFromPersonal")}
-                  </Text>
-                </View>
-                <Text
-                  className="text-lg font-extrabold"
-                  style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-                  numberOfLines={1}
-                  adjustsFontSizeToFit
-                  minimumFontScale={0.52}
-                >
-                  {fmt(amount)}
-                </Text>
-              </View>
-            ))}
-          </View>
-        )}
 
         {!editingBudget && (
           <TouchableOpacity

@@ -1,8 +1,18 @@
-import { ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
+import { Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
+import { useState } from "react";
 import { useAppData } from "@/contexts/AppDataContext";
 import { PAYMENT_METHODS } from "@/constants/i18n";
 
 export type MovementFilter = "ingreso" | "gasto" | "transferencia" | null;
+
+export function SpaceFilteredTotal({ filter, amount, format }: {
+  filter: "ingreso" | "gasto";
+  amount: number;
+  format: (value: number) => string;
+}) {
+  const { t } = useAppData();
+  return <View className={`mb-2 w-full rounded-xl px-3 py-2 ${filter === "ingreso" ? "bg-emerald-50 dark:bg-emerald-950/40" : "bg-rose-50 dark:bg-rose-950/35"}`}><Text className={`text-xs font-bold ${filter === "ingreso" ? "text-emerald-700 dark:text-emerald-300" : "text-rose-700 dark:text-rose-300"}`}>{t(filter === "ingreso" ? "history.totalIncome" : "spaces.totalExpense")}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6} className={`text-lg font-extrabold ${filter === "ingreso" ? "text-emerald-800 dark:text-emerald-200" : "text-rose-800 dark:text-rose-200"}`}>{format(amount)}</Text></View>;
+}
 
 export function SpaceTotals({ income, expense, filter, onFilter, format }: {
   income: number; expense: number; filter: MovementFilter;
@@ -51,7 +61,7 @@ export function SpaceTransferFilter({ count, filter, onFilter }: {
     accessibilityRole="button"
     accessibilityState={{ selected }}
     onPress={() => onFilter(selected ? null : "transferencia")}
-    className={`mt-2 min-h-10 flex-row items-center justify-center rounded-xl border px-3 ${selected ? "border-blue-500 bg-blue-100 dark:bg-blue-950" : "border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/40"}`}
+    className={`mt-2 min-h-9 self-start flex-row items-center justify-center rounded-full px-3 ${selected ? "bg-blue-100 dark:bg-blue-950" : "bg-blue-50 dark:bg-blue-950/40"}`}
   >
     <Text className="text-xs font-extrabold text-blue-700 dark:text-blue-300">{t("transfer.filter")} · {count}</Text>
   </TouchableOpacity>;
@@ -61,12 +71,11 @@ export function SpacePaymentMethod({ value, onChange, disabled = false }: {
   value: string; onChange: (method: string) => void; disabled?: boolean;
 }) {
   const { t, userCountry } = useAppData();
+  const [open, setOpen] = useState(false);
   const methods = PAYMENT_METHODS.filter(m => (m.id !== "plin" || userCountry === "PE") && (m.id !== "yape" || userCountry === "PE" || userCountry === "BO"));
   return <View className="mt-2">
-    <Text className="mb-1 text-sm font-semibold text-slate-700 dark:text-slate-200">{t("detail.method")}</Text>
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 4 }}>
-      {methods.map(method => <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: value === method.id }} key={method.id} disabled={disabled} onPress={() => onChange(method.id)} className={`min-h-11 justify-center rounded-xl px-3 ${value === method.id ? "bg-emerald-100 dark:bg-emerald-950" : "bg-slate-100 dark:bg-noche-2"}`}><Text className={value === method.id ? "text-sm font-bold text-emerald-800 dark:text-emerald-200" : "text-sm text-slate-700 dark:text-slate-200"}>{t(method.labelKey)}</Text></TouchableOpacity>)}
-    </ScrollView>
+    <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: open }} disabled={disabled} onPress={() => setOpen(!open)} className="min-h-11 flex-row items-center justify-between rounded-xl border border-slate-200 px-3 dark:border-noche-borde"><Text className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t("detail.method")}</Text><Text className="text-sm font-bold text-emerald-700 dark:text-emerald-300">{t(methods.find(m => m.id === value)?.labelKey || methods[0].labelKey)} ▾</Text></TouchableOpacity>
+    {open ? <View className="mt-1 gap-1 rounded-xl border border-slate-200 p-1 dark:border-noche-borde">{methods.map(method => <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: value === method.id }} key={method.id} disabled={disabled} onPress={() => { onChange(method.id); setOpen(false); }} className={`min-h-11 justify-center rounded-lg px-3 ${value === method.id ? "bg-emerald-100 dark:bg-emerald-950" : "bg-slate-50 dark:bg-noche-2"}`}><Text className={value === method.id ? "text-sm font-bold text-emerald-800 dark:text-emerald-200" : "text-sm text-slate-700 dark:text-slate-200"}>{t(method.labelKey)}</Text></TouchableOpacity>)}</View> : null}
   </View>;
 }
 

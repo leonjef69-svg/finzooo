@@ -23,6 +23,8 @@ export type MovimientoCajaCompartida = {
   tipo: "ingreso" | "gasto";
   monto: number;
   descripcion: string;
+  category?: string;
+  notes?: string;
   method?: string;
   fecha: string;
   creadoPor: string;
@@ -85,6 +87,7 @@ export async function compartirCajaExistente(
     for (const item of movimientos.slice(inicio, inicio + 400)) {
       lote.set(doc(db, "boxSpaces", ref.id, "movements", item.id), {
         tipo: item.tipo, monto: item.monto, descripcion: item.descripcion, fecha: item.fecha,
+        ...(item.category ? { category: item.category } : {}), ...(item.notes ? { notes: item.notes } : {}),
         ...(item.method ? { method: item.method } : {}), creadoPor: uid, creadoEn: item.creadoEn,
         ...(item.personalTransactionId != null ? { personalTransactionId: item.personalTransactionId, personalOwnerUid: uid } : {}),
         ...(item.personalReturnAmount != null ? { personalReturnAmount: item.personalReturnAmount } : {}),
@@ -122,7 +125,7 @@ export async function unirseACaja(uid: string, nombre: string, codigoCrudo: stri
 
 export async function listarMovimientosCajaCompartida(boxId: string): Promise<MovimientoCajaCompartida[]> {
   const snap = await getDocs(query(collection(db, "boxSpaces", boxId, "movements"), orderBy("creadoEn", "desc")));
-  return snap.docs.map(item => ({ id: item.id, tipo: item.data().tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(item.data().monto || 0), descripcion: String(item.data().descripcion || ""), method: typeof item.data().method === "string" ? item.data().method : undefined, fecha: String(item.data().fecha || ""), creadoPor: String(item.data().creadoPor || ""), creadoEn: alNumero(item.data().creadoEn), personalTransactionId: typeof item.data().personalTransactionId === "number" ? item.data().personalTransactionId : undefined, personalOwnerUid: typeof item.data().personalOwnerUid === "string" ? item.data().personalOwnerUid : undefined, personalReturnAmount: typeof item.data().personalReturnAmount === "number" ? item.data().personalReturnAmount : undefined }));
+  return snap.docs.map(item => ({ id: item.id, tipo: item.data().tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(item.data().monto || 0), descripcion: String(item.data().descripcion || ""), category: typeof item.data().category === "string" ? item.data().category : undefined, notes: typeof item.data().notes === "string" ? item.data().notes : undefined, method: typeof item.data().method === "string" ? item.data().method : undefined, fecha: String(item.data().fecha || ""), creadoPor: String(item.data().creadoPor || ""), creadoEn: alNumero(item.data().creadoEn), personalTransactionId: typeof item.data().personalTransactionId === "number" ? item.data().personalTransactionId : undefined, personalOwnerUid: typeof item.data().personalOwnerUid === "string" ? item.data().personalOwnerUid : undefined, personalReturnAmount: typeof item.data().personalReturnAmount === "number" ? item.data().personalReturnAmount : undefined }));
 }
 
 export async function guardarMovimientoCajaCompartida(boxId: string, uid: string, movimiento: Omit<MovimientoCajaCompartida, "id" | "creadoPor" | "creadoEn">): Promise<string> {
@@ -227,6 +230,6 @@ export function observarCierreCaja(boxId: string, cerrado: () => void, error: ()
 
 export function escucharMovimientosCaja(boxId: string, recibir: (items: MovimientoCajaCompartida[]) => void, error: () => void) {
   return onSnapshot(query(collection(db, "boxSpaces", boxId, "movements"), orderBy("creadoEn", "desc")), snap => {
-    recibir(snap.docs.map(item => ({ id: item.id, tipo: item.data().tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(item.data().monto || 0), descripcion: String(item.data().descripcion || ""), method: typeof item.data().method === "string" ? item.data().method : undefined, fecha: String(item.data().fecha || ""), creadoPor: String(item.data().creadoPor || ""), creadoEn: alNumero(item.data().creadoEn), personalTransactionId: typeof item.data().personalTransactionId === "number" ? item.data().personalTransactionId : undefined, personalOwnerUid: typeof item.data().personalOwnerUid === "string" ? item.data().personalOwnerUid : undefined, personalReturnAmount: typeof item.data().personalReturnAmount === "number" ? item.data().personalReturnAmount : undefined })));
+    recibir(snap.docs.map(item => ({ id: item.id, tipo: item.data().tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(item.data().monto || 0), descripcion: String(item.data().descripcion || ""), category: typeof item.data().category === "string" ? item.data().category : undefined, notes: typeof item.data().notes === "string" ? item.data().notes : undefined, method: typeof item.data().method === "string" ? item.data().method : undefined, fecha: String(item.data().fecha || ""), creadoPor: String(item.data().creadoPor || ""), creadoEn: alNumero(item.data().creadoEn), personalTransactionId: typeof item.data().personalTransactionId === "number" ? item.data().personalTransactionId : undefined, personalOwnerUid: typeof item.data().personalOwnerUid === "string" ? item.data().personalOwnerUid : undefined, personalReturnAmount: typeof item.data().personalReturnAmount === "number" ? item.data().personalReturnAmount : undefined })));
   }, error);
 }

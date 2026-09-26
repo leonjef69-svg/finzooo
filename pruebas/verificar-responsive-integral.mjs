@@ -48,9 +48,9 @@ console.log("\n--- TECLADO, MODALES Y CONTENIDO LARGO ---");
 
   for (const [ruta, patron, nombre] of [
     ["screens/SavingsList.tsx", /goals\.slice\(0, goalLimit\)/, "metas"],
-    ["screens/Family.tsx", /visibles\.slice\(0, movementLimit\)/, "movimientos familiares"],
-    ["screens/Cajas.tsx", /visibles\.slice\(0, movementLimit\)/, "movimientos de cajas"],
-    ["screens/SharedBoxes.tsx", /visibles\.slice\(0, movementLimit\)/, "movimientos compartidos"],
+    ["screens/Family.tsx", /filasVisibles\.slice\(0, movementLimit\)/, "movimientos familiares"],
+    ["screens/Cajas.tsx", /filasVisibles\.slice\(0, movementLimit\)/, "movimientos de cajas"],
+    ["screens/SharedBoxes.tsx", /filasVisibles\.slice\(0, movementLimit\)/, "movimientos compartidos"],
   ]) {
     ok(patron.test(leer(ruta)), `${nombre} se cargan por grupos y no todos de golpe`);
   }
