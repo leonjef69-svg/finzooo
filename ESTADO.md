@@ -609,6 +609,19 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 - Validación: TypeScript, 112 pruebas y 7 auditores aprobados; ESLint sin
   errores (11 avisos previos). Sin APK ni despliegue.
 
+### Auditoría externa — base del historial separado (27/09/2026)
+
+- Preparados el modelo de documentos, la fusión de ediciones/borrados, lotes
+  acotados por tamaño, una copia sombra reanudable y una comprobación previa
+  al corte del formato antiguo. Se prueban un corte de red y una edición de
+  otro teléfono durante la copia: ninguno permite borrar el origen.
+- La prueba nueva simula 10.000 movimientos y falló antes de añadir el módulo.
+  No hay escrituras nuevas en Firebase ni cambio del respaldo activo.
+- La secuencia de activación y los casos que faltan están en
+  `docs/MIGRACION_RESPALDO_PERSONAL.md`.
+- Validación: TypeScript, 113 pruebas y 7 auditores aprobados; ESLint sin
+  errores (11 avisos anteriores). No se publicó ni activó el nuevo formato.
+
 ## Reglas para continuar
 
 1. Leer `AGENTS.md`, este archivo y `ENTREGAS.md`.

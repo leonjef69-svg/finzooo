@@ -77,6 +77,7 @@ const SUITES = [
   { archivo: "verificar-negocio.ts", alias: BASE },
   { archivo: "verificar-montos-seguros.ts", alias: BASE },
   { archivo: "verificar-tamano-utf8.ts", alias: BASE },
+  { archivo: "verificar-historial-separado.ts", alias: BASE },
   { archivo: "verificar-lista-yapes.ts", alias: BASE },
   { archivo: "verificar-copia-vacia.ts", alias: BASE },
   { archivo: "verificar-calendario-pagos.ts", alias: BASE },
