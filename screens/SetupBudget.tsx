@@ -4,11 +4,11 @@ import { AppState, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, S
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as Notifications from "expo-notifications";
 import { Bell, ChevronRight, Globe2, Moon, Sun, WalletCards } from "lucide-react-native";
-import { currencyDecimals, currencySymbolFor } from "@/constants/currencies";
+import { currencySymbolFor } from "@/constants/currencies";
 import { countryById, countryLabelFor } from "@/constants/countries";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
-import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
+import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { irUnaVez } from "@/utils/nav";
 
 const notificationKey = () => `@fino/setup-notifications-enabled:${auth.currentUser?.uid ?? "local"}`;
@@ -20,7 +20,8 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
   const insets = useSafeAreaInsets();
   const now = new Date();
   const monthLabel = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
-  const parsed = parseAmountInput(amount);
+  const parsed = parseAmountInput(amount, userCurrency);
+  const amountError = amountInputError(amount, userCurrency);
   const disabled = !amount || parsed <= 0;
 
   useEffect(() => {
@@ -127,10 +128,8 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
             keyboardType="decimal-pad"
             value={amount}
             onChangeText={(v) => {
-              const safe = sanitizeSafeAmountInput(v);
-              const [whole = "", rawDecimals] = safe.split(".");
-              const allowedDecimals = currencyDecimals(userCurrency);
-              const decimals = allowedDecimals > 0 ? rawDecimals?.slice(0, allowedDecimals) : undefined;
+              const safe = sanitizeSafeAmountInput(v, userCurrency);
+              const [whole = "", decimals] = safe.split(".");
               const normalized = whole.replace(/^0+(?=\d)/, "");
               setAmount(decimals === undefined ? normalized : `${normalized || "0"}.${decimals}`);
             }}
@@ -142,6 +141,8 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
           />
           </View>
         </View>
+
+      {amountError ? <Text className="mt-2 text-xs font-semibold text-red-200">{t(amountError === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")}</Text> : null}
 
       <TouchableOpacity
         activeOpacity={0.85}

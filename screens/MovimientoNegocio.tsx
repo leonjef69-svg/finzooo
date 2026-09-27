@@ -30,7 +30,7 @@ export default function MovimientoNegocio({
   negocioId: string;
   onBack: () => void;
 }) {
-  const { t, negocios, guardarMovimientoNegocio, showToast } = useAppData();
+  const { t, userCurrency, negocios, guardarMovimientoNegocio, showToast } = useAppData();
   const insets = useSafeAreaInsets();
 
   const negocio = negocios.find((n) => n.id === negocioId);
@@ -51,7 +51,7 @@ export default function MovimientoNegocio({
     if (guardando.current) return;
     // La coma vale como el punto: en Perú se escribe "12,50" tanto como "12.50", y rechazarlo
     // sería rechazar la forma en que la mitad de la gente escribe una cantidad.
-    const monto = parseAmountInput(montoTexto);
+    const monto = parseAmountInput(montoTexto, userCurrency);
     if (monto <= 0) {
       showToast(t("caja.faltaMonto"));
       return;
@@ -143,7 +143,7 @@ export default function MovimientoNegocio({
           </Text>
           <TextInput
             disableFullscreenUI            value={montoTexto}
-            onChangeText={(value) => setMontoTexto(sanitizeAmountInput(value))}
+            onChangeText={(value) => setMontoTexto(sanitizeAmountInput(value, userCurrency))}
             placeholder="0.00"
             placeholderTextColor="#94a3b8"
             keyboardType="decimal-pad"

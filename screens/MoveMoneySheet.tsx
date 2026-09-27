@@ -26,7 +26,7 @@ export default function MoveMoneySheet({
   const [amount, setAmount] = useState("");
   const [confirming, setConfirming] = useState(false);
   const isAdd = mode === "add";
-  const amt = parseAmountInput(amount);
+  const amt = parseAmountInput(amount, userCurrency);
   // EL TOPE QUE FALTABA.
   //
   // Apartar solo subia un numero dentro de la meta, sin mirar nada: con
@@ -90,7 +90,7 @@ export default function MoveMoneySheet({
             disableFullscreenUI            autoFocus
             keyboardType="decimal-pad"
             value={amount}
-            onChangeText={(v) => setAmount(sanitizeAmountInput(v))}
+            onChangeText={(v) => setAmount(sanitizeAmountInput(v, userCurrency))}
             onFocus={() => onFieldFocus("amount")}
             onBlur={() => onFieldBlur("amount")}
             placeholder="0.00"

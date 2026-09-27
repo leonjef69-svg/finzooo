@@ -18,7 +18,7 @@ import { COLOR_HEX_600 } from "@/constants/colors";
 import { methodLabel, PAYMENT_METHODS } from "@/constants/i18n";
 import { useAppData } from "@/contexts/AppDataContext";
 import { defaultDateForMonth, isValidISODate, normalizeDateInput } from "@/utils/date";
-import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
+import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { nextId } from "@/utils/id";
 import { horaDe } from "@/utils/format";
 import { iconoDe, iconosParaCategoria } from "@/constants/iconos";
@@ -216,7 +216,8 @@ export default function AddSheet({
   // monto, así que una fecha escrita a mano de cualquier forma se guardaba
   // igual y rompía la app al mostrarla.
   const dateOk = isValidISODate(date);
-  const valid = parseAmountInput(amount) > 0 && dateOk;
+  const valid = parseAmountInput(amount, userCurrency) > 0 && dateOk;
+  const amountError = amountInputError(amount, userCurrency);
 
   // ÚNICO mecanismo responsable de reaccionar al teclado en esta pantalla:
   // `useAnimatedKeyboard` (Reanimated). Se engancha directo al valor que el
@@ -471,13 +472,14 @@ export default function AddSheet({
                   disableFullscreenUI
                   keyboardType="decimal-pad"
                   value={amount}
-                  onChangeText={(v) => setAmount(sanitizeSafeAmountInput(v))}
+                  onChangeText={(v) => setAmount(sanitizeSafeAmountInput(v, userCurrency))}
                   placeholder="0.00"
                   placeholderTextColor="#94a3b8"
                   className="flex-1 text-base font-extrabold"
                   style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
                 />
               </View>
+              {amountError ? <Text className="mt-1 text-xs text-red-600 dark:text-red-400">{t(amountError === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")}</Text> : null}
             </View>
 
             <View className="gap-2">
@@ -815,7 +817,7 @@ export default function AddSheet({
                   ...transaction,
                   id: transaction?.id || nextId(),
                   type,
-                  amount: parseAmountInput(amount),
+                  amount: parseAmountInput(amount, userCurrency),
                   category,
                   icono,
                   iconColor,

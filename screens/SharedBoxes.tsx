@@ -11,7 +11,7 @@ import { fmt as formatAmount, horaDe } from "@/utils/format";
 import { currencySymbolFor } from "@/constants/currencies";
 import { auth } from "@/utils/firebase";
 import { irUnaVez, safeBack } from "@/utils/nav";
-import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
+import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { nextId } from "@/utils/id";
 import { allocatePersonalReturn, balanceOfSpace, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
 import { actualizarAportePersonal, borrarAportePersonal } from "@/utils/personalContribution";
@@ -108,7 +108,9 @@ export default function SharedBoxes() {
       const nueva = await unirseACaja(uid, userName, codigo);
       setCajas(items => [nueva, ...items.filter(item => item.id !== nueva.id)]); setCaja(nueva);
     } else if (caja && (modo === "ingreso" || modo === "gasto")) {
-      const valor = parseAmountInput(monto); if (valor <= 0) return;
+      const issue = amountInputError(monto, moneda);
+      if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
+      const valor = parseAmountInput(monto, moneda); if (valor <= 0) return;
       const aporteEditado = editandoAporteId ? movimientos.find(item => item.id === editandoAporteId) : undefined;
       if (aporteEditado?.personalTransactionId != null) {
         const minimo = minimumContributionAmount(movimientos, aporteEditado, uid);
@@ -185,7 +187,7 @@ export default function SharedBoxes() {
         </>}
         {modo ? <View className="my-3 gap-2 rounded-2xl border border-slate-200 p-3 dark:border-noche-borde">
           <TextInput disableFullscreenUI editable={!busy} value={modo === "unir" ? codigo : nombre} onChangeText={value => modo === "unir" ? setCodigo(value.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 8)) : setNombre(value)} maxLength={modo === "unir" ? 8 : 60} placeholder={t(modo === "unir" ? "family.codePlaceholder" : "boxes.description")} placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-3 text-base text-slate-900 dark:text-white" />
-          {modo !== "unir" ? <TextInput disableFullscreenUI editable={!busy} value={monto} onChangeText={value => setMonto(sanitizeSafeAmountInput(value))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-3 text-lg text-slate-900 dark:text-white" /> : null}
+          {modo !== "unir" ? <TextInput disableFullscreenUI editable={!busy} value={monto} onChangeText={value => setMonto(sanitizeSafeAmountInput(value, moneda))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-3 text-lg text-slate-900 dark:text-white" /> : null}
           {modo === "ingreso" || modo === "gasto" ? <SpacePaymentMethod value={method} onChange={setMethod} disabled={busy} /> : null}
           <View className="flex-row gap-2">{boton(t("common.cancel"), limpiar)}{boton(busy ? t("common.loading") : t("common.save"), guardar)}</View>
         </View> : null}

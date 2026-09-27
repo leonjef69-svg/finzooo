@@ -118,7 +118,7 @@ export default function History({
   setMonth: (month: Month) => void;
   onOpenDetail: (id: number) => void;
 }) {
-  const { fmt, t, monthNames } = useAppData();
+  const { fmt, t, monthNames, userCurrency } = useAppData();
   const { transfer } = useLocalSearchParams<{ transfer?: string }>();
   const { colorScheme } = useColorScheme();
   const oscuro = colorScheme === "dark";
@@ -148,8 +148,8 @@ export default function History({
     () => Array.from(new Set(allMonthTx.map((transaction) => transaction.category))).sort((a, b) => t(catInfo(a).label).localeCompare(t(catInfo(b).label))),
     [allMonthTx, t],
   );
-  const parsedMinAmount = parseAmountInput(minAmount);
-  const parsedMaxAmount = parseAmountInput(maxAmount);
+  const parsedMinAmount = parseAmountInput(minAmount, userCurrency);
+  const parsedMaxAmount = parseAmountInput(maxAmount, userCurrency);
   const hasAdvancedFilters = Boolean(categoryFilter || minAmount || maxAmount);
   const transferStatuses = useMemo(() => personalTransferStatuses(transactions), [transactions]);
   useEffect(() => {
@@ -289,7 +289,7 @@ export default function History({
                 <TextInput
                   disableFullscreenUI
                   value={minAmount}
-                  onChangeText={(value) => setMinAmount(sanitizeAmountInput(value))}
+                  onChangeText={(value) => setMinAmount(sanitizeAmountInput(value, userCurrency))}
                   keyboardType="decimal-pad"
                   placeholder={t("history.minAmount")}
                   placeholderTextColor="#94a3b8"
@@ -299,7 +299,7 @@ export default function History({
                 <TextInput
                   disableFullscreenUI
                   value={maxAmount}
-                  onChangeText={(value) => setMaxAmount(sanitizeAmountInput(value))}
+                  onChangeText={(value) => setMaxAmount(sanitizeAmountInput(value, userCurrency))}
                   keyboardType="decimal-pad"
                   placeholder={t("history.maxAmount")}
                   placeholderTextColor="#94a3b8"

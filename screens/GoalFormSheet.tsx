@@ -26,7 +26,7 @@ export default function GoalFormSheet({
   const [target, setTarget] = useState(goal ? String(goal.target) : "");
   const saveLock = useRef(false);
   const [guardando, setGuardando] = useState(false);
-  const valid = name.trim().length > 0 && parseAmountInput(target) > 0;
+  const valid = name.trim().length > 0 && parseAmountInput(target, userCurrency) > 0;
   const createdDate = goal?.createdDate || new Date().toISOString().slice(0, 10);
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -95,7 +95,7 @@ export default function GoalFormSheet({
               <TextInput
                 disableFullscreenUI                keyboardType="decimal-pad"
                 value={target}
-                onChangeText={(v) => setTarget(sanitizeAmountInput(v))}
+                onChangeText={(v) => setTarget(sanitizeAmountInput(v, userCurrency))}
                 onFocus={() => onFieldFocus("target")}
                 onBlur={() => onFieldBlur("target")}
                 placeholder="0.00"
@@ -121,7 +121,7 @@ export default function GoalFormSheet({
               onSave({
                 id: goal?.id || nextId(),
                 name: name.trim(),
-                target: parseAmountInput(target),
+                target: parseAmountInput(target, userCurrency),
                 saved: goal?.saved || 0,
                 createdDate,
                 completed: goal ? goal.completed : false,

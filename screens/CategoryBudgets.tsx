@@ -10,7 +10,7 @@ import { gastosDisponibles } from "@/constants/categories";
 import { CARD_SHADOW } from "@/constants/style";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
-import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
+import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { useKeyboardAnimatedPadding } from "@/utils/keyboard";
 import AvisoSoloLectura from "@/components/AvisoSoloLectura";
 import BackButton from "@/components/BackButton";
@@ -23,7 +23,7 @@ export default function CategoryBudgets({
   /** Se acabó la prueba y ya había límites puestos: se ven, pero no se cambian. */
   soloLectura?: boolean;
 }) {
-  const { t, fmt, userCurrency, categoryBudgets, categorySpent, updateCategoryBudgets, categoriasPropias } =
+  const { t, fmt, userCurrency, showToast, categoryBudgets, categorySpent, updateCategoryBudgets, categoriasPropias } =
     useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -84,9 +84,11 @@ export default function CategoryBudgets({
     // EL PORTERO, POR SI ALGÚN DÍA QUEDA UN BOTÓN SUELTO. Esconder el botón de guardar basta
     // hoy, pero esconder no es impedir: esta línea es la que de verdad protege el dato.
     if (soloLectura) return;
+    const issue = Object.values(amounts).map((value) => amountInputError(value, userCurrency)).find(Boolean);
+    if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
     const newBudgets: Record<string, number> = {};
     Object.entries(amounts).forEach(([id, v]) => {
-      const n = parseAmountInput(v);
+      const n = parseAmountInput(v, userCurrency);
       if (n > 0) newBudgets[id] = n;
     });
     updateCategoryBudgets(newBudgets);
@@ -157,7 +159,7 @@ export default function CategoryBudgets({
                       disableFullscreenUI                      value={amounts[c.id] ?? ""}
                       editable={!soloLectura}
                       onChangeText={(v) =>
-                        setAmounts((prev) => ({ ...prev, [c.id]: sanitizeSafeAmountInput(v) }))
+                        setAmounts((prev) => ({ ...prev, [c.id]: sanitizeSafeAmountInput(v, userCurrency) }))
                       }
                       keyboardType="decimal-pad"
                       placeholder={t("categoryBudgets.noLimit")}

@@ -550,6 +550,20 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 - Validación superada: TypeScript, ESLint, 111 pruebas de la app, 7 auditores y
   30 pruebas del servidor. No se publicó, compiló ni desplegó nada.
 
+### Auditoría externa — entrada de montos (26/09/2026)
+
+- Los campos de dinero ya no recortan cifras que superan el límite: conservan
+  visible lo escrito y rechazan el guardado con una explicación. Antes un monto
+  grande podía convertirse silenciosamente en otro diez veces menor.
+- La cantidad de decimales se valida según la moneda seleccionada. Los montos
+  fraccionarios muy grandes se rechazan para evitar pérdida de precisión.
+- Presupuestos y montos iniciales de Familia o Caja no se convierten en cero si
+  se escribe un valor inválido.
+- Validación superada: TypeScript, 111 pruebas y 7 auditores. ESLint terminó
+  sin errores, con avisos preexistentes en Contexto e Importación.
+- Sigue pendiente migrar el respaldo personal a varios documentos, junto con
+  la compatibilidad de Telegram y la publicación coordinada de reglas.
+
 ## Reglas para continuar
 
 1. Leer `AGENTS.md`, este archivo y `ENTREGAS.md`.

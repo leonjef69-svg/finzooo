@@ -17,7 +17,7 @@ import {
   saldoCaja,
   type DatosCajas,
 } from "@/utils/cajas";
-import { parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
+import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { horaDe } from "@/utils/format";
 import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
@@ -189,8 +189,10 @@ export default function Cajas() {
   function crearCaja() {
     const nombre = nuevoNombre.trim().slice(0, 30);
     if (!nombre) return;
+    const issue = amountInputError(montoInicial, userCurrency);
+    if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
     const nueva = { id: nuevoIdCaja("caja"), nombre, creadaEn: Date.now() };
-    const inicial = parseAmountInput(montoInicial);
+    const inicial = parseAmountInput(montoInicial, userCurrency);
     if (origenDinero === "personal" && inicial > disponible) {
       showToast(t("boxes.notEnoughPersonal"));
       return;
@@ -220,7 +222,9 @@ export default function Cajas() {
 
   function guardarMovimiento() {
     if (!caja || !anotando) return;
-    const valor = parseAmountInput(monto);
+    const issue = amountInputError(monto, userCurrency);
+    if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
+    const valor = parseAmountInput(monto, userCurrency);
     if (!(valor > 0)) return;
     if (!validSpaceDate(movementDate)) { showToast("Escribe una fecha válida: AAAA-MM-DD"); return; }
     const aporteEditado = editandoAporteId ? movimientos.find(item => item.id === editandoAporteId) : undefined;
@@ -439,7 +443,7 @@ export default function Cajas() {
                 <TouchableOpacity onPress={() => setCreando(false)} className="h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><X size={20} color="#64748b" /></TouchableOpacity>
                 </View>
                 <Text className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.initialAmount")}</Text>
-                <TextInput disableFullscreenUI value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
+                <TextInput disableFullscreenUI value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
                 <Text className="text-xs font-semibold text-slate-600 dark:text-slate-300">{t("boxes.moneyOrigin")}</Text>
                 <View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} onPress={() => setOrigenDinero(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenDinero === origin ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text></TouchableOpacity>)}</View>
                 {origenDinero === "personal" ? <Text className="text-[11px] text-slate-500">{t("boxes.personalAvailable", { amount: fmt(disponible) })}</Text> : null}
@@ -459,7 +463,7 @@ export default function Cajas() {
               <ScrollView className="flex-1 bg-white px-5 dark:bg-noche" contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 30 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
               <View className="rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde">
                 <View className="mb-3 flex-row gap-2"><TouchableOpacity accessibilityLabel="Ingreso" onPress={() => { setAnotando("ingreso"); setCategory("salario"); }} className={`h-11 flex-1 items-center justify-center rounded-xl ${anotando === "ingreso" ? "bg-emerald-600" : "bg-emerald-50"}`}><ArrowUp size={21} color={anotando === "ingreso" ? "#fff" : "#047857"} /></TouchableOpacity><TouchableOpacity accessibilityLabel="Gasto" onPress={() => { setAnotando("gasto"); setCategory("otros"); }} className={`h-11 flex-1 items-center justify-center rounded-xl ${anotando === "gasto" ? "bg-rose-600" : "bg-rose-50"}`}><ArrowDown size={21} color={anotando === "gasto" ? "#fff" : "#be123c"} /></TouchableOpacity></View>
-                <TextInput disableFullscreenUI value={monto} onChangeText={(value) => setMonto(sanitizeSafeAmountInput(value))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border-[1.5px] border-slate-200 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
+                <TextInput disableFullscreenUI value={monto} onChangeText={(value) => setMonto(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border-[1.5px] border-slate-200 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
                 <TextInput disableFullscreenUI value={descripcion} onChangeText={setDescripcion} maxLength={60} placeholder={t("boxes.description")} placeholderTextColor="#94a3b8" className="mt-2 h-12 rounded-xl border-[1.5px] border-slate-200 px-4 text-slate-900 dark:text-slate-100" />
                 <SpaceMovementFields type={anotando} category={category} onCategory={setCategory} date={movementDate} onDate={setMovementDate} notes={notes} onNotes={setNotes} />
                 {anotando === "ingreso" ? <><Text className="mb-1 mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">{t("boxes.moneyOrigin")}</Text><View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} onPress={() => setOrigenDinero(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenDinero === origin ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text></TouchableOpacity>)}</View>{origenDinero === "personal" ? <Text className="mt-1 text-[11px] text-slate-500">{t("boxes.personalAvailable", { amount: fmt(disponible) })}</Text> : null}</> : null}

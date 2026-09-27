@@ -140,7 +140,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
   }
 
   function save() {
-    const amount = parseAmountInput(amountText);
+    const amount = parseAmountInput(amountText, userCurrency);
     if (amount <= 0) return;
     const iso = normalizeDateInput(date);
     // El campo de fecha es texto libre. Ya hubo un fallo por esto: guardar
@@ -167,7 +167,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
 
   const cats = kind === "expense" ? EXPENSE_CATS : INCOME_CATS;
   const amountValid = (() => {
-    return parseAmountInput(amountText) > 0;
+    return parseAmountInput(amountText, userCurrency) > 0;
   })();
   const dateValid = isValidISODate(normalizeDateInput(date));
   const canSave = amountValid && dateValid;
@@ -332,7 +332,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
               <Field label={t("scan.fieldAmount")}>
                 <TextInput
                   disableFullscreenUI                  value={amountText}
-                  onChangeText={(value) => setAmountText(sanitizeAmountInput(value))}
+                  onChangeText={(value) => setAmountText(sanitizeAmountInput(value, userCurrency))}
                   keyboardType="decimal-pad"
                   placeholder="0.00"
                   placeholderTextColor="#94a3b8"
@@ -413,7 +413,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
               <Check size={18} color={canSave ? "#ffffff" : "#94a3b8"} />
               <Text className={`font-bold ${canSave ? "text-white" : "text-slate-400"}`}>
                 {canSave
-                  ? t("scan.save", { amount: fmt(parseAmountInput(amountText)) })
+                  ? t("scan.save", { amount: fmt(parseAmountInput(amountText, userCurrency)) })
                   : t("scan.saveDisabled")}
               </Text>
             </TouchableOpacity>

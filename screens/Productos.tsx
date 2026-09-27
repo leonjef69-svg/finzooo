@@ -33,7 +33,7 @@ export default function Productos({
   negocioId: string;
   onBack: () => void;
 }) {
-  const { t, fmt, negocios, productos, guardarProducto, quitarProducto, showToast } = useAppData();
+  const { t, fmt, userCurrency, negocios, productos, guardarProducto, quitarProducto, showToast } = useAppData();
   const insets = useSafeAreaInsets();
 
   const negocio = negocios.find((n) => n.id === negocioId);
@@ -80,7 +80,7 @@ export default function Productos({
     }
     // La coma también vale: en Perú se escribe "12,50" tanto como "12.50", y rechazarlo sería
     // rechazar la forma en que la mitad de la gente escribe un precio.
-    const precio = parseAmountInput(precioTexto);
+    const precio = parseAmountInput(precioTexto, userCurrency);
     if (precio <= 0) {
       showToast(t("productos.faltaPrecio"));
       return;
@@ -136,7 +136,7 @@ export default function Productos({
             </Text>
             <TextInput
               disableFullscreenUI              value={precioTexto}
-              onChangeText={(value) => setPrecioTexto(sanitizeAmountInput(value))}
+              onChangeText={(value) => setPrecioTexto(sanitizeAmountInput(value, userCurrency))}
               placeholder="0.00"
               placeholderTextColor="#94a3b8"
               keyboardType="decimal-pad"

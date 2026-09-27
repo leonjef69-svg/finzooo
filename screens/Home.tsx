@@ -10,7 +10,7 @@ import { iconoDe } from "@/constants/iconos";
 import { CARD_SHADOW, SALDO_TARJETA, SALDO_VERDE } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
-import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
+import { amountInputError, parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { cuandoTexto, estadoEn, fechaEnElMes, mesDe, pagosDelMes } from "@/utils/calendarioPagos";
 import { availablePersonalBalance, budgetUsed } from "@/utils/finances";
 import { fmtDate, monthKey } from "@/utils/format";
@@ -197,6 +197,8 @@ export default function Home({
   const {
     fmt,
     t,
+    userCurrency,
+    showToast,
     monthNames,
     monthLabel,
     setBudgetForCurrentMonth,
@@ -229,7 +231,9 @@ export default function Home({
     setEditingBudget(true);
   }
   function saveBudgetInline() {
-    setBudgetForCurrentMonth(parseAmountInput(budgetInput));
+    const issue = amountInputError(budgetInput, userCurrency);
+    if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
+    setBudgetForCurrentMonth(parseAmountInput(budgetInput, userCurrency));
     setEditingBudget(false);
   }
   const monthTx = useMemo(
@@ -490,7 +494,7 @@ export default function Home({
               <TextInput
                 disableFullscreenUI
                 value={budgetInput}
-                onChangeText={(v) => setBudgetInput(sanitizeAmountInput(v))}
+                onChangeText={(v) => setBudgetInput(sanitizeAmountInput(v, userCurrency))}
                 keyboardType="decimal-pad"
                 autoFocus
                 className="flex-1 border-b border-white/40 py-0.5 text-2xl font-extrabold text-white"
