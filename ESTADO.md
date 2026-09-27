@@ -586,6 +586,15 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 - Validación: TypeScript, 111 pruebas y 7 auditores aprobados; ESLint sin
   errores (12 avisos preexistentes en Contexto e Importación). Sin despliegue.
 
+### Auditoría externa — avisos de calendario y moneda (27/09/2026)
+
+- Cambiar la moneda vuelve a programar los avisos del calendario para que el
+  importe no conserve el símbolo anterior. El formato se calcula con la moneda
+  actual sin ejecutar la programación en cada redibujado.
+- La prueba nueva falló contra el código anterior y pasó con el cambio.
+- Validación: TypeScript, 112 pruebas y 7 auditores aprobados; ESLint sin
+  errores (11 avisos previos en sincronización e importación). Sin despliegue.
+
 ## Reglas para continuar
 
 1. Leer `AGENTS.md`, este archivo y `ENTREGAS.md`.

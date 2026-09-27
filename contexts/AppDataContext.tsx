@@ -1117,12 +1117,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
      * estaba ahí. Guardando lo que devuelve el propio reprogramado, el número no puede
      * adelantarse a los hechos.
      */
-    reprogramarAvisosDePagos(pagosProgramados, (clave, valores) => tRef.current(clave, valores), new Date(), fmt)
+    const formatForNotification = (amount: number) => formatAmount(amount, currencySymbolFor(userCurrency), userCurrency);
+    reprogramarAvisosDePagos(pagosProgramados, (clave, valores) => tRef.current(clave, valores), new Date(), formatForNotification)
       .then((r) => {
         setAvisosProgramados(r.puestos);
         setAvisosFallo(r.fallo ?? null);
       });
-  }, [pagosProgramados, ready]);
+  }, [pagosProgramados, ready, userCurrency]);
   useEffect(() => {
     // El de la cuenta. Guardando el que ven las pantallas, activar la prueba
     // dejaria Premium marcado para siempre en este celular.
