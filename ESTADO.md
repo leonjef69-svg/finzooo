@@ -595,6 +595,20 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 - Validación: TypeScript, 112 pruebas y 7 auditores aprobados; ESLint sin
   errores (11 avisos previos en sincronización e importación). Sin despliegue.
 
+### Auditoría externa — cierre de sesión sin copia (27/09/2026)
+
+- Si falla el respaldo, cerrar sesión conserva la cuenta y los datos locales
+  por defecto. El usuario puede optar por salir sin copia mediante dos
+  confirmaciones que explican la pérdida irreversible de cambios no guardados.
+- El flujo normal sigue exigiendo un respaldo correcto antes de limpiar el
+  teléfono; la excepción solo se usa cuando la persona la elige expresamente.
+- Las advertencias están traducidas al español, inglés y portugués. La prueba
+  de seguridad falla con el código anterior y comprueba ambos caminos.
+- No se migró todavía el documento principal a una subcolección: activar un
+  formato parcial rompería la convivencia con versiones antiguas y Telegram.
+- Validación: TypeScript, 112 pruebas y 7 auditores aprobados; ESLint sin
+  errores (11 avisos previos). Sin APK ni despliegue.
+
 ## Reglas para continuar
 
 1. Leer `AGENTS.md`, este archivo y `ENTREGAS.md`.

@@ -18,7 +18,35 @@ export default function SettingsTab() {
     isTesterPremium,
     logout,
     showToast,
+    t,
   } = useAppData();
+
+  async function cerrarSesion(skipBackup = false) {
+    if (cerrandoSesion.current) return;
+    cerrandoSesion.current = true;
+    try {
+      await logout(skipBackup ? { skipBackup: true } : undefined);
+      router.replace("/login");
+    } catch (error) {
+      cerrandoSesion.current = false;
+      if (!skipBackup && error instanceof Error && error.name === "BackupBeforeLogoutError") {
+        Alert.alert(t("settings.logoutBackupFailedTitle"), t("settings.logoutBackupFailedBody"), [
+          { text: t("settings.logoutKeepData"), style: "cancel" },
+          { text: t("settings.logoutWithoutBackup"), style: "destructive", onPress: confirmacionFinal },
+        ]);
+        return;
+      }
+      showToast(error instanceof Error ? error.message : t("settings.logoutError"));
+    }
+  }
+
+  function confirmacionFinal() {
+    Alert.alert(t("settings.logoutFinalTitle"), t("settings.logoutFinalBody"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("settings.logoutWithoutBackup"), style: "destructive", onPress: () => void cerrarSesion(true) },
+    ]);
+  }
+
   return (
     <Settings
       userName={userName}
@@ -41,23 +69,14 @@ export default function SettingsTab() {
       onLogout={() => {
         if (cerrandoSesion.current) return;
         Alert.alert(
-          "Cerrar sesión",
-          "Se quitarán de este teléfono tus datos, avisos, PIN y conexiones de exportación. Antes, Fino intentará guardar la copia en tu cuenta.",
+          t("settings.logout"),
+          t("settings.logoutConfirmBody"),
           [
-            { text: "Cancelar", style: "cancel" },
+            { text: t("common.cancel"), style: "cancel" },
             {
-              text: "Cerrar sesión",
+              text: t("settings.logout"),
               style: "destructive",
-              onPress: () => void (async () => {
-                cerrandoSesion.current = true;
-                try {
-                  await logout();
-                  router.replace("/login");
-                } catch (error) {
-                  showToast(error instanceof Error ? error.message : "No se pudo cerrar sesión. Vuelve a intentarlo.");
-                  cerrandoSesion.current = false;
-                }
-              })(),
+              onPress: () => void cerrarSesion(),
             },
           ],
         );

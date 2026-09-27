@@ -138,7 +138,7 @@ type AppDataContextValue = {
   completeOnboarding: (budgetAmount: number) => void;
   reloadPersistedData: () => Promise<void>;
   hydrateFromCloud: (uid: string) => Promise<boolean>;
-  logout: () => Promise<void>;
+  logout: (options?: { skipBackup?: boolean }) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   deleteAccount: (currentPassword: string) => Promise<void>;
 
@@ -861,16 +861,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Cierra la sesión de verdad (Firebase) y limpia los datos de este
   // celular, para que la siguiente cuenta que inicie sesión aquí no vea
   // los movimientos/metas de la cuenta anterior.
-  async function logout() {
+  async function logout(options?: { skipBackup?: boolean }) {
     // Antes de salir, espera a que el último cambio (por ejemplo, la
     // moneda que acabas de elegir) termine de subirse a la nube. Si no
     // se espera esto, cerrar sesión muy rápido después de un cambio
     // podía "perderlo": ya no quedaba ni en el celular (se borra abajo)
     // ni en la nube (no le había dado tiempo de subir).
-    if (uid) {
+    if (uid && !options?.skipBackup) {
       const respaldo = await saveCloudData(uid, datosParaLaNube());
       if (!respaldo.ok) {
-        throw new Error("No se pudo respaldar tu información. Tu sesión y tus datos se conservaron. Revisa tu conexión y vuelve a intentarlo.");
+        const error = new Error("No se pudo respaldar tu información. Tu sesión y tus datos se conservaron. Revisa tu conexión y vuelve a intentarlo.");
+        error.name = "BackupBeforeLogoutError";
+        throw error;
       }
     }
     // También hay que salir del lado de Google. Si no, la próxima vez que

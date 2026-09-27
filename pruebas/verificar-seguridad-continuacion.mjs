@@ -26,9 +26,28 @@ for (const failure of [{ ok: false, motivo: "sin-red" }, { ok: false, motivo: "d
     auth: {}, clearAccountData: async () => calls.push("clear") };
   vm.createContext(scope);
   vm.runInContext(code("logout"), scope);
-  await assert.rejects(scope.logout());
+  await assert.rejects(scope.logout(), error => error.name === "BackupBeforeLogoutError");
   assert.deepEqual(calls, [], "un respaldo fallido no permite cerrar ni borrar");
 }
+{
+  const calls = [];
+  const scope = {
+    uid: "test",
+    datosParaLaNube: () => ({}),
+    saveCloudData: async () => { calls.push("backup"); return { ok: false, motivo: "sin-internet" }; },
+    signOutFromGoogle: async () => calls.push("google"),
+    signOut: async () => { calls.push("auth"); throw new Error("STOP"); },
+    auth: {},
+  };
+  vm.createContext(scope);
+  vm.runInContext(code("logout"), scope);
+  await assert.rejects(scope.logout({ skipBackup: true }), /STOP/);
+  assert.deepEqual(calls, ["google", "auth"], "solo la salida expresamente autorizada omite el respaldo");
+}
+const settings = read("app/(tabs)/settings.tsx");
+assert.match(settings, /BackupBeforeLogoutError/);
+assert.match(settings, /skipBackup:\s*true/);
+assert.match(settings, /secondConfirmation|confirmacionFinal/);
 for (const [name, args] of [["addOrUpdateGoal", [{}]], ["deleteGoal", [1]], ["addMoneyToGoal", [20, 1]], ["withdrawMoneyFromGoal", [1, 20]]]) {
   const scope = { isPremium: false };
   vm.createContext(scope);
