@@ -10,10 +10,18 @@ export type HistoryEntry =
   | { id: number; deleted: true; transaction?: never }
   | { id: number; deleted: false; transaction: Transaction };
 
+export class UnsupportedHistoryFormatError extends Error {
+  readonly code = "cloud/history-format-unsupported";
+  constructor() {
+    super("historial-formato-no-compatible");
+    this.name = "UnsupportedHistoryFormatError";
+  }
+}
+
 /** Una app que solo entiende la lista antigua jamás debe sobrescribir otro formato. */
 export function assertLegacyHistoryFormat(data: { historyFormat?: unknown } | null): void {
   if (data?.historyFormat !== undefined && data.historyFormat !== 1) {
-    throw new Error("historial-formato-no-compatible");
+    throw new UnsupportedHistoryFormatError();
   }
 }
 

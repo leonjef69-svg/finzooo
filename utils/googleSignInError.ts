@@ -17,6 +17,10 @@ export function googleSignInErrorMessage(error: unknown): string {
   const code = errorCode(error);
   const upper = code.toUpperCase();
 
+  if (code === "cloud/history-format-unsupported") {
+    return "Tus datos usan una versión más reciente. Actualiza Fino para abrir esta cuenta sin perder movimientos.";
+  }
+
   if (code === "10" || upper.includes("DEVELOPER_ERROR")) {
     return "Google no pudo validar esta instalación de Fino. Código G10.";
   }

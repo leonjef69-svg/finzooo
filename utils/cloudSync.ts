@@ -15,7 +15,7 @@ import {
   pruneDeletedTransactionIds,
 } from "@/utils/mergeTransactions";
 import { mergeCloudFields } from "@/utils/cloudFieldMerge";
-import { assertLegacyHistoryFormat } from "@/utils/cloudHistoryMigration";
+import { assertLegacyHistoryFormat, UnsupportedHistoryFormatError } from "@/utils/cloudHistoryMigration";
 
 export type CloudData = {
   hasOnboarded: boolean;
@@ -122,6 +122,7 @@ export async function loadCloudData(uid: string): Promise<CloudData | null> {
       syncUpdatedAt: data.syncUpdatedAt || {},
     };
   } catch (error) {
+    if (error instanceof UnsupportedHistoryFormatError) throw error;
     // "La cuenta no tiene copia" y "no pudimos consultar la copia" son dos
     // estados opuestos. El segundo se propaga para que la pantalla permita
     // reintentar y nunca configure/suba una cuenta vacía sobre datos existentes.

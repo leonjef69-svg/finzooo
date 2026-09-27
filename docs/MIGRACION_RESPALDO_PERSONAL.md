@@ -65,6 +65,9 @@ No debe conectarse al respaldo real hasta completar los pasos anteriores.
 La app actual rechaza leer o guardar un documento `users/{uid}` que indique
 `historyFormat` distinto de 1. Las reglas locales también rechazan que una
 versión antigua escriba sobre una cuenta ya marcada con el formato nuevo.
+Si se encuentra ese marcador al iniciar sesión, se indica que hay que
+actualizar Fino; no se presenta como contraseña incorrecta ni como problema
+de Google. La verificación de correo muestra el mismo motivo.
 Esto **no activa** el formato nuevo: faltan el lector/escritor, Telegram y el
 borrado completo de la subcolección. El cambio de reglas tampoco está
 publicado. Al activar v2, la regla de escritura tendrá que permitir el nuevo

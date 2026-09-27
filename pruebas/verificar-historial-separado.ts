@@ -10,15 +10,27 @@ import {
   stageHistoryShadow,
   stageLegacyHistory,
 } from "@/utils/cloudHistoryMigration";
+import { firebaseErrorMessage } from "@/utils/firebaseErrors";
+import { googleSignInErrorMessage } from "@/utils/googleSignInError";
 
 assert.doesNotThrow(() => assertLegacyHistoryFormat(null));
 assert.doesNotThrow(() => assertLegacyHistoryFormat({}));
 assert.doesNotThrow(() => assertLegacyHistoryFormat({ historyFormat: 1 }));
 assert.throws(() => assertLegacyHistoryFormat({ historyFormat: 2 }), /historial-formato-no-compatible/);
 assert.throws(() => assertLegacyHistoryFormat({ historyFormat: "desconocido" }), /historial-formato-no-compatible/);
+let incompatible: unknown;
+try { assertLegacyHistoryFormat({ historyFormat: 2 }); } catch (error) { incompatible = error; }
+assert.equal((incompatible as { code?: string })?.code, "cloud/history-format-unsupported");
+assert.match(firebaseErrorMessage("cloud/history-format-unsupported"), /actualiz/i);
+assert.match(googleSignInErrorMessage(incompatible), /actualiz/i);
 const cloudSync = fs.readFileSync("utils/cloudSync.ts", "utf8");
 assert.ok((cloudSync.match(/assertLegacyHistoryFormat\(/g) ?? []).length >= 2,
   "la lectura y la escritura deben rechazar un formato futuro");
+assert.match(cloudSync, /error instanceof UnsupportedHistoryFormatError\) throw error/,
+  "el lector debe conservar el motivo específico hasta la pantalla de acceso");
+assert.match(fs.readFileSync("screens/VerifyEmail.tsx", "utf8"),
+  /firebaseErrorMessage\(code\)/,
+  "la verificación de correo debe explicar cuándo hace falta actualizar");
 const rules = fs.readFileSync("firestore.rules", "utf8");
 assert.match(rules, /resource\.data\.get\('historyFormat', 1\) == 1/,
   "las reglas deben bloquear a una app vieja tras el corte");

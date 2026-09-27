@@ -627,6 +627,8 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 - La app ahora rechaza cargar y sobrescribir una cuenta marcada con un formato
   de historial que no entiende. Las reglas locales bloquearán a clientes viejos
   cuando una cuenta migre, una vez publicadas junto con la solución completa.
+- Los accesos por correo y Google y la verificación de correo muestran un aviso
+  de actualización cuando detectan ese formato, en vez de un error genérico.
 - El límite de 1 MB sigue sin resolverse para la app instalada. Todavía faltan
   lector/escritor, Telegram, borrado de cuenta, pruebas en emulador y despliegue
   coordinado. No se ha activado ni publicado la migración.

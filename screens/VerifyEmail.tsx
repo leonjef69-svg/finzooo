@@ -3,6 +3,7 @@ import { ActivityIndicator, Image, ScrollView, StatusBar, Text, TouchableOpacity
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { useAppData } from "@/contexts/AppDataContext";
+import { firebaseErrorMessage } from "@/utils/firebaseErrors";
 
 export default function VerifyEmail({
   email,
@@ -30,10 +31,13 @@ export default function VerifyEmail({
       if (!verified) {
         setMessage(t("verifyEmail.notDetected"));
       }
-    } catch {
+    } catch (error) {
       // Un fallo de red o de Firebase no puede dejar a la persona mirando
       // un círculo para siempre. El botón vuelve a estar disponible abajo.
-      setMessage(t("verifyEmail.notDetected"));
+      const code = (error as { code?: string })?.code;
+      setMessage(code === "cloud/history-format-unsupported"
+        ? firebaseErrorMessage(code)
+        : t("verifyEmail.notDetected"));
     } finally {
       setChecking(false);
     }

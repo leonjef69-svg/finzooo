@@ -16,6 +16,8 @@ export function firebaseErrorMessage(code: string): string {
       return "Demasiados intentos. Espera un momento e inténtalo de nuevo.";
     case "auth/network-request-failed":
       return "No hay conexión a internet.";
+    case "cloud/history-format-unsupported":
+      return "Tus datos usan una versión más reciente. Actualiza Fino para abrir esta cuenta sin perder movimientos.";
     default:
       return "Ocurrió un error. Inténtalo de nuevo.";
   }
