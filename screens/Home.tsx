@@ -20,6 +20,7 @@ import { irUnaVez } from "@/utils/nav";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { usePendingImport } from "@/utils/pendingImport";
 import { loadSchedule, proximaProgramada } from "@/utils/scheduledExport";
+import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Bell,
@@ -42,7 +43,7 @@ import {
   X,
 } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import { FlatList, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated, { FadeInDown } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -220,11 +221,13 @@ export default function Home({
   const [avisosAbiertos, setAvisosAbiertos] = useState(false);
   const [proximaExportacion, setProximaExportacion] = useState(0);
 
-  useEffect(() => {
+  useFocusEffect(useCallback(() => {
+    let active = true;
     Promise.all([loadSchedule(), proximaProgramada()]).then(([schedule, next]) => {
-      setProximaExportacion(schedule.enabled ? next : 0);
-    }).catch(() => setProximaExportacion(0));
-  }, []);
+      if (active) setProximaExportacion(schedule.enabled ? next : 0);
+    }).catch(() => { if (active) setProximaExportacion(0); });
+    return () => { active = false; };
+  }, []));
 
   function startEditBudget() {
     setBudgetInput(String(budget));
@@ -303,7 +306,8 @@ export default function Home({
       .slice(0, 3)
       .map((p) => ({ pago: p, cuando: cuandoTexto(p, mesAhora, hoy) }));
   }, [pagosProgramados]);
-  const hayNotificaciones = hayPagosUrgentes || Boolean(archivoPendiente) || proximaExportacion > Date.now();
+  // Una exportación futura es información útil en el panel, no una alerta pendiente.
+  const hayNotificaciones = hayPagosUrgentes || Boolean(archivoPendiente);
 
   const [selectMode, setSelectMode] = useState(false);
   const [confirmandoBorrarTodo, setConfirmandoBorrarTodo] = useState(false);

@@ -576,6 +576,16 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
   con versiones anteriores. No se ha activado ningún formato nuevo.
 - Validación: TypeScript, 111 pruebas y 7 auditores aprobados. Sin despliegue.
 
+### Auditoría externa — campana de Inicio (26/09/2026)
+
+- El punto rojo solo señala un pago urgente o una importación pendiente; una
+  exportación futura permanece visible en el panel sin parecer una urgencia.
+- La próxima exportación se vuelve a leer al regresar a Inicio, para reflejar
+  cambios hechos en su pantalla de ajustes sin reiniciar la aplicación.
+- La prueba nueva falló primero contra el comportamiento anterior y luego pasó.
+- Validación: TypeScript, 111 pruebas y 7 auditores aprobados; ESLint sin
+  errores (12 avisos preexistentes en Contexto e Importación). Sin despliegue.
+
 ## Reglas para continuar
 
 1. Leer `AGENTS.md`, este archivo y `ENTREGAS.md`.

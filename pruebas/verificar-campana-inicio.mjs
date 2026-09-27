@@ -15,6 +15,12 @@ if (!/Importación pendiente[\s\S]*Próxima exportación/.test(home)) {
 if (!/\{hayNotificaciones \? \([\s\S]*bg-rose-500[\s\S]*\) : null\}/.test(home)) {
   fallos.push("el punto rojo no representa todos los avisos reales");
 }
+if (!/const hayNotificaciones = hayPagosUrgentes \|\| Boolean\(archivoPendiente\);/.test(home)) {
+  fallos.push("una exportación futura no debe mantener encendido el punto rojo");
+}
+if (!/useFocusEffect\(useCallback\(\(\) => \{[\s\S]*loadSchedule\(\)[\s\S]*proximaProgramada\(\)/.test(home)) {
+  fallos.push("la próxima exportación debe actualizarse al regresar a Inicio");
+}
 
 if (fallos.length) {
   console.error(fallos.map((f) => `FALLA: ${f}`).join("\n"));
