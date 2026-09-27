@@ -364,6 +364,8 @@ export default function Settings({
                       ? "settings.backupNoPermission"
                       : respaldoFallo === "sin-internet"
                         ? "settings.backupNoInternet"
+                        : respaldoFallo === "demasiado-grande"
+                          ? "settings.backupTooLarge"
                         : "settings.backupFailedHint"
                   )}
             </Text>

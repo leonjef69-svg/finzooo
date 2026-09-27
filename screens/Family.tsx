@@ -114,7 +114,8 @@ export default function Family() {
       const activa = lista.find(item => item.id === (preferida || familiaEnMemoria.get(uid)?.familia?.id || activaLegacy?.id)) || lista[0] || null;
       setFamilia(activa);
       if (activa) {
-        const [people, movements] = await Promise.all([listarMiembrosFamilia(activa.id), listarMovimientosFamilia(activa.id)]);
+        const movements = saldos.find(([id]) => id === activa.id)?.[1] ?? [];
+        const people = await listarMiembrosFamilia(activa.id);
         if (pedido !== reloadId.current) return;
         setMiembros(people); setMovimientos(movements);
         familiaEnMemoria.set(uid, { familia: activa, miembros: people, movimientos: movements });

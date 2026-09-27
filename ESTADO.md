@@ -564,6 +564,18 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 - Sigue pendiente migrar el respaldo personal a varios documentos, junto con
   la compatibilidad de Telegram y la publicación coordinada de reglas.
 
+### Auditoría externa — rendimiento y aviso de respaldo (26/09/2026)
+
+- Familia reutiliza los movimientos de la familia activa que ya había leído
+  para calcular saldos, evitando descargarlos una segunda vez al abrirla.
+- Si el respaldo alcanza el límite del documento, Ajustes muestra el motivo
+  real y advierte que no se debe desinstalar la app antes de exportar los datos
+  o resolver el respaldo. Antes prometía un reintento que no podía funcionar.
+- La migración del historial a varios documentos sigue pendiente: debe incluir
+  restauración, uso en dos teléfonos, Telegram, reglas de acceso y convivencia
+  con versiones anteriores. No se ha activado ningún formato nuevo.
+- Validación: TypeScript, 111 pruebas y 7 auditores aprobados. Sin despliegue.
+
 ## Reglas para continuar
 
 1. Leer `AGENTS.md`, este archivo y `ENTREGAS.md`.
