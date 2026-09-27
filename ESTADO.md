@@ -622,6 +622,15 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 - Validación: TypeScript, 113 pruebas y 7 auditores aprobados; ESLint sin
   errores (11 avisos anteriores). No se publicó ni activó el nuevo formato.
 
+### Auditoría externa — protección del futuro cambio de historial (27/09/2026)
+
+- La app ahora rechaza cargar y sobrescribir una cuenta marcada con un formato
+  de historial que no entiende. Las reglas locales bloquearán a clientes viejos
+  cuando una cuenta migre, una vez publicadas junto con la solución completa.
+- El límite de 1 MB sigue sin resolverse para la app instalada. Todavía faltan
+  lector/escritor, Telegram, borrado de cuenta, pruebas en emulador y despliegue
+  coordinado. No se ha activado ni publicado la migración.
+
 ## Reglas para continuar
 
 1. Leer `AGENTS.md`, este archivo y `ENTREGAS.md`.

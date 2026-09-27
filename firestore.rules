@@ -169,6 +169,11 @@ service cloud.firestore {
       allow create, update: if request.auth != null
                          && request.auth.uid == userId
                          && request.auth.token.email_verified == true
+                         // Si el servidor migra esta cuenta, una app antigua no puede
+                         // reemplazar el documento y borrar el marcador del formato nuevo.
+                         // Las escrituras v2 necesitan reglas nuevas al activarse.
+                         && (!exists(/databases/$(database)/documents/users/$(userId))
+                             || resource.data.get('historyFormat', 1) == 1)
                          && request.resource.data.keys().hasOnly([
                               'hasOnboarded', 'userName', 'userPhoto', 'userCurrency',
                               'userLanguage', 'budgets', 'categoryBudgets', 'transactions', 'deletedTransactionIds',

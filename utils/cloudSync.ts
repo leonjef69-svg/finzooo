@@ -15,6 +15,7 @@ import {
   pruneDeletedTransactionIds,
 } from "@/utils/mergeTransactions";
 import { mergeCloudFields } from "@/utils/cloudFieldMerge";
+import { assertLegacyHistoryFormat } from "@/utils/cloudHistoryMigration";
 
 export type CloudData = {
   hasOnboarded: boolean;
@@ -81,6 +82,7 @@ export async function loadCloudData(uid: string): Promise<CloudData | null> {
     const snap = await getDoc(doc(db, "users", uid));
     if (!snap.exists()) return null;
     const data = snap.data();
+    assertLegacyHistoryFormat(data);
     if (!data?.hasOnboarded) return null;
     return {
       hasOnboarded: true,
@@ -179,6 +181,7 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
     await runTransaction(db, async (transaction) => {
       const snap = await transaction.get(ref);
       const actual = snap.exists() ? snap.data() : null;
+      assertLegacyHistoryFormat(actual);
       let siguiente = conservarPremiumManual(actual, clean);
       if (actual) {
         siguiente = mergeCloudFields(siguiente, actual as CloudData);

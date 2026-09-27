@@ -10,6 +10,13 @@ export type HistoryEntry =
   | { id: number; deleted: true; transaction?: never }
   | { id: number; deleted: false; transaction: Transaction };
 
+/** Una app que solo entiende la lista antigua jamás debe sobrescribir otro formato. */
+export function assertLegacyHistoryFormat(data: { historyFormat?: unknown } | null): void {
+  if (data?.historyFormat !== undefined && data.historyFormat !== 1) {
+    throw new Error("historial-formato-no-compatible");
+  }
+}
+
 const MAX_BATCH_DOCUMENTS = 200;
 const MAX_BATCH_BYTES = 4_000_000;
 const MAX_DOCUMENT_BYTES = 800_000;

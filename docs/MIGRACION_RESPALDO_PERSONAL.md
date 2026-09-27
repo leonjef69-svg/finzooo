@@ -59,3 +59,13 @@ La verificación entrega la revisión del documento original; el corte final
 deberá comprobar esa misma revisión dentro de una transacción. Sin esa última
 comparación, otro teléfono podría escribir entre la verificación y el corte.
 No debe conectarse al respaldo real hasta completar los pasos anteriores.
+
+## Protección previa añadida
+
+La app actual rechaza leer o guardar un documento `users/{uid}` que indique
+`historyFormat` distinto de 1. Las reglas locales también rechazan que una
+versión antigua escriba sobre una cuenta ya marcada con el formato nuevo.
+Esto **no activa** el formato nuevo: faltan el lector/escritor, Telegram y el
+borrado completo de la subcolección. El cambio de reglas tampoco está
+publicado. Al activar v2, la regla de escritura tendrá que permitir el nuevo
+protocolo sin abrir de nuevo la posibilidad de sobrescribirlo con v1.

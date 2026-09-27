@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import type { Transaction } from "@/types";
 import {
+  assertLegacyHistoryFormat,
   historyBatches,
   historyDocumentId,
   mergeHistoryEntries,
@@ -8,6 +10,18 @@ import {
   stageHistoryShadow,
   stageLegacyHistory,
 } from "@/utils/cloudHistoryMigration";
+
+assert.doesNotThrow(() => assertLegacyHistoryFormat(null));
+assert.doesNotThrow(() => assertLegacyHistoryFormat({}));
+assert.doesNotThrow(() => assertLegacyHistoryFormat({ historyFormat: 1 }));
+assert.throws(() => assertLegacyHistoryFormat({ historyFormat: 2 }), /historial-formato-no-compatible/);
+assert.throws(() => assertLegacyHistoryFormat({ historyFormat: "desconocido" }), /historial-formato-no-compatible/);
+const cloudSync = fs.readFileSync("utils/cloudSync.ts", "utf8");
+assert.ok((cloudSync.match(/assertLegacyHistoryFormat\(/g) ?? []).length >= 2,
+  "la lectura y la escritura deben rechazar un formato futuro");
+const rules = fs.readFileSync("firestore.rules", "utf8");
+assert.match(rules, /resource\.data\.get\('historyFormat', 1\) == 1/,
+  "las reglas deben bloquear a una app vieja tras el corte");
 
 const movement = (id: number, updatedAt = id): Transaction => ({
   id,
