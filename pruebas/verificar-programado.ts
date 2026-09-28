@@ -1091,5 +1091,47 @@ console.log("\n--- LOS GRÁFICOS DEL PDF AUTOMÁTICO SE PUEDEN PEDIR ---");
   }
 }
 
+console.log("\n--- LA RECUPERACIÓN AL ABRIR CONFIRMA SOLO DESPUÉS DEL ÉXITO ---");
+{
+  // Cuando Android no despierta el trabajo, Inicio recupera la ejecución al
+  // abrir la app. Antes la marcaba como hecha ANTES de subir: un corte de red
+  // dejaba ese día perdido y Dropbox/carpeta ni siquiera llegaban al destino
+  // elegido porque la ruta los convertía silenciosamente en "Compartir".
+  const RAIZ = process.cwd();
+  const layout = fs.readFileSync(path.join(RAIZ, "app/_layout.tsx"), "utf8");
+  const ruta = fs.readFileSync(path.join(RAIZ, "app/export-pdf.tsx"), "utf8");
+  const hoja = fs.readFileSync(path.join(RAIZ, "screens/ExportPdfSheet.tsx"), "utf8");
+
+  const recuperacion = layout.slice(layout.indexOf("// La copia que se guarda sola"));
+  ok(
+    !/saveSchedule\(\{ \.\.\.s, lastAutoRun:/.test(recuperacion.slice(0, 2600)),
+    "abrir la app no marca la ejecución antes de subir"
+  );
+  ok(/run: runKey/.test(recuperacion), "la clave viaja hasta quien realiza la exportación");
+  ok(/charts: s\.charts \? "1" : "0"/.test(recuperacion), "también conserva la opción de gráficos");
+  ok(/space: s\.spaceId \|\| "personal"/.test(recuperacion), "y el espacio Familia/Caja elegido");
+
+  for (const destino of ["drive", "dropbox", "onedrive", "folder"] as const) {
+    ok(
+      ruta.includes(`dest === "${destino}"`),
+      `la ruta automática conserva el destino ${destino}`
+    );
+  }
+  ok(/scheduledRunKey=\{run\}/.test(ruta), "la pantalla recibe la ejecución que debe confirmar");
+  ok(
+    /saveSchedule\(\{ \.\.\.actual, lastAutoRun: scheduledRunKey \}\)/.test(hoja),
+    "el éxito confirma la ejecución sin pisar ajustes recientes"
+  );
+  ok(/await flushPendingSaves\(\)/.test(hoja), "la confirmación queda en disco antes de cerrar");
+  ok(
+    /if \(availableMonths\.length === 0\)[\s\S]{0,350}confirmarEjecucionProgramada\(\)/.test(hoja),
+    "un mes vacío termina la ejecución sin dejar una pantalla invisible"
+  );
+  ok(
+    /destination === "onedrive"[\s\S]{0,180}subirAOneDrive/.test(hoja),
+    "la recuperación de OneDrive también sube al destino correcto"
+  );
+}
+
 console.log(fallos === 0 ? "\nTodo bien\n" : `\n${fallos} fallos\n`);
 process.exit(fallos ? 1 : 0);

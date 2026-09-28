@@ -7,6 +7,7 @@ import {
   subirADropbox,
   DropboxSinConectar,
 } from "@/utils/dropbox";
+import { subirAOneDrive, OneDriveSinConectar } from "@/utils/onedrive";
 import { archivoCsv, archivoExcel, filasDelReporte, movimientosParaReporte } from "@/utils/reporteArchivo";
 import { htmlDelReporte } from "@/utils/reportePdfDatos";
 import {
@@ -43,7 +44,14 @@ import { useColorScheme } from "nativewind";
 import { catInfo } from "@/constants/categories";
 import PdfPreview from "@/components/PdfPreview";
 import { monthKey, fmtDate } from "@/utils/format";
-import { buildFileName, markExported, type ExportDestination, type FileNameMode } from "@/utils/scheduledExport";
+import {
+  buildFileName,
+  loadSchedule,
+  markExported,
+  saveSchedule,
+  type ExportDestination,
+  type FileNameMode,
+} from "@/utils/scheduledExport";
 import {
   isGmailInstalled,
   isWhatsAppInstalled,
@@ -69,7 +77,7 @@ import {
   resumenFinanciero,
   type ExportSpace,
 } from "@/utils/exportSpaces";
-import { loadJSON, STORAGE_KEYS } from "@/utils/storage";
+import { flushPendingSaves, loadJSON, STORAGE_KEYS } from "@/utils/storage";
 
 // Cuántos movimientos se dibujan en la vista previa. El PDF los lleva todos;
 // esto es solo lo que se ve antes de decidir. Con cincuenta ya se comprueba
@@ -91,6 +99,7 @@ export default function ExportPdfSheet({
   fileName: forcedName,
   recipientName,
   initialSpaceId,
+  scheduledRunKey,
 }: {
   onClose: () => void;
   // Mes "AAAA-MM" con el que abrir ya elegido. Lo usa la orden por voz
@@ -119,6 +128,8 @@ export default function ExportPdfSheet({
   recipientName?: string;
   /** Espacio guardado por la exportación automática. */
   initialSpaceId?: string;
+  /** Clave de la ejecución programada que solo se confirma tras guardar bien. */
+  scheduledRunKey?: string;
   // Dónde va el archivo: "share" abre el menú de compartir de Android,
   // "mail" abre la aplicación de correo con el archivo ya adjunto, y
   // "drive", "dropbox" y "folder" lo guardan sin ninguna ventana de por medio.
@@ -568,8 +579,22 @@ export default function ExportPdfSheet({
    * llegar. Un recordatorio que insiste después de hecha la tarea se
    * silencia en dos días, y con él se pierde el que sí servía.
    */
-  function exportacionHecha() {
+  async function confirmarEjecucionProgramada() {
+    if (scheduledRunKey) {
+      // Se vuelve a leer para no pisar cambios hechos mientras se armaba o
+      // subía el archivo (hora, destino, formato, etc.). La clave antigua no
+      // bloquea una programación nueva porque incluye su hora.
+      const actual = await loadSchedule();
+      saveSchedule({ ...actual, lastAutoRun: scheduledRunKey });
+    }
+    // Si Android cierra la pantalla justo después de subir, la confirmación
+    // tiene que estar ya en disco; de lo contrario se duplicaría al abrir.
+    await flushPendingSaves();
+  }
+
+  async function exportacionHecha() {
     markExported(new Date());
+    await confirmarEjecucionProgramada();
   }
 
   async function handleExport() {
@@ -626,7 +651,7 @@ export default function ExportPdfSheet({
       if (destination === "drive") {
         const uploaded = await uploadToDrive(file.uri, file.fileName, file.mimeType);
         showToast(t("exportPdf.savedToDrive", { name: uploaded.name || file.fileName }));
-        exportacionHecha();
+        await exportacionHecha();
         return;
       }
 
@@ -634,7 +659,7 @@ export default function ExportPdfSheet({
         try {
           const puesto = await subirADropbox(file.uri, file.fileName);
           showToast(t("exportPdf.savedToDropbox", { name: puesto }));
-          exportacionHecha();
+          await exportacionHecha();
         } catch (e) {
           // "Sin conectar" tiene salida (ir a autorizar) y el resto no, así que
           // se dicen distinto. Un "no se pudo" genérico no lleva a ningún sitio.
@@ -655,13 +680,30 @@ export default function ExportPdfSheet({
         return;
       }
 
+      if (destination === "onedrive") {
+        try {
+          await subirAOneDrive(file.uri, file.fileName);
+          showToast(t("exportPdf.savedToOneDrive", { name: file.fileName }));
+          await exportacionHecha();
+        } catch (e) {
+          showToast(
+            t(
+              e instanceof OneDriveSinConectar
+                ? "exportPdf.onedriveMissing"
+                : "exportPdf.onedriveError"
+            )
+          );
+        }
+        return;
+      }
+
       // La carpeta del teléfono. Es un destino de la exportación automática, y
       // llega aquí porque la copia automática pasa por esta misma pantalla.
       if (destination === "folder") {
         try {
           await guardarEnCarpeta(file.uri, file.fileName, file.mimeType);
           showToast(t("exportPdf.savedToFolder", { name: file.fileName }));
-          exportacionHecha();
+          await exportacionHecha();
         } catch (e) {
           // Los dos motivos se dicen distinto porque la salida es distinta: sin
           // carpeta hay que ir a elegirla; con la carpeta perdida hay que volver
@@ -692,7 +734,7 @@ export default function ExportPdfSheet({
             await Sharing.shareAsync(file.uri, { mimeType: file.mimeType });
           }
         }
-        exportacionHecha();
+        await exportacionHecha();
         return;
       }
 
@@ -716,7 +758,7 @@ export default function ExportPdfSheet({
             await Sharing.shareAsync(file.uri, { mimeType: file.mimeType });
           }
         }
-        exportacionHecha();
+        await exportacionHecha();
         return;
       }
 
@@ -739,7 +781,7 @@ export default function ExportPdfSheet({
           destinatario?.value ?? ""
         );
         if (directo) {
-          exportacionHecha();
+          await exportacionHecha();
           return;
         }
 
@@ -756,7 +798,7 @@ export default function ExportPdfSheet({
           body: t("exportPdf.mailBody", { month: selectedMonthLabel }),
           attachments: [file.uri],
         });
-        exportacionHecha();
+        await exportacionHecha();
         return;
       }
 
@@ -765,7 +807,7 @@ export default function ExportPdfSheet({
           mimeType: file.mimeType,
           UTI: file.mimeType === "application/pdf" ? "com.adobe.pdf" : "public.data",
         });
-        exportacionHecha();
+        await exportacionHecha();
       }
     } catch (e) {
       if (e instanceof DriveNotSignedIn) showToast(t("exportPdf.driveNoAccount"));
@@ -785,7 +827,19 @@ export default function ExportPdfSheet({
   const autoFired = useRef(false);
   useEffect(() => {
     if (!autoExport || autoFired.current || !initialMonth) return;
-    if (espaciosCargando || availableMonths.length === 0) return;
+    if (espaciosCargando) return;
+
+    // Una programación sin movimientos no puede quedarse como una ruta
+    // invisible abierta para siempre. Es un resultado terminal para esta
+    // ejecución: se confirma sin fingir que se exportó un archivo.
+    if (availableMonths.length === 0) {
+      autoFired.current = true;
+      showToast(t("exportPdf.noData"));
+      confirmarEjecucionProgramada().finally(() => {
+        if (silent) onClose();
+      });
+      return;
+    }
 
     // Si la voz dijo A QUIÉN, hay que esperar a que los contactos terminen
     // de cargarse.
@@ -805,7 +859,9 @@ export default function ExportPdfSheet({
       // Sin pantalla no hay nada que mirar ni forma de salir: si no se cierra
       // aquí, la copia automática de un mes vacío dejaría a la persona con
       // una pantalla en blanco encima de Inicio.
-      if (silent) onClose();
+      confirmarEjecucionProgramada().finally(() => {
+        if (silent) onClose();
+      });
       return;
     }
     handleExport().finally(() => {

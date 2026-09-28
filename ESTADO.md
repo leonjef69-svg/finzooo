@@ -13,6 +13,9 @@
   y se añadieron etiquetas a controles de icono principales.
 - Todo está preparado localmente. No se publicaron Functions, reglas, AAB ni se
   activó App Check; tarjetas de crédito siguen fuera del trabajo activo.
+- Las exportaciones recuperadas al abrir Fino ya no se marcan como exitosas
+  antes de subir: conservan destino, espacio y gráficos, y reintentan tras un
+  fallo sin repetir dentro de la misma sesión.
 
 ## Historial Personal separado — preparado localmente (27/09/2026)
 

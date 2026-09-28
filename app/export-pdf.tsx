@@ -9,7 +9,7 @@ export default function ExportPdfRoute() {
   const blocked = useRedirectIfOrphaned();
   // Lo que puede venir de la orden por voz o de una exportación programada:
   // "/export-pdf?month=2026-01&format=pdf&type=all&dest=drive&auto=1&silent=1"
-  const { month, format, type, auto, dest, silent, name, to, charts, space } = useLocalSearchParams<{
+  const { month, format, type, auto, dest, silent, name, to, charts, space, run } = useLocalSearchParams<{
     month?: string;
     format?: string;
     type?: string;
@@ -20,6 +20,7 @@ export default function ExportPdfRoute() {
     to?: string;
     charts?: string;
     space?: string;
+    run?: string;
   }>();
   if (blocked) return null;
 
@@ -43,7 +44,13 @@ export default function ExportPdfRoute() {
       autoExport={auto === "1"}
       initialCharts={charts === "1"}
       destination={
-        dest === "drive" || dest === "mail" || dest === "gmail" || dest === "whatsapp"
+        dest === "drive" ||
+        dest === "dropbox" ||
+        dest === "onedrive" ||
+        dest === "folder" ||
+        dest === "mail" ||
+        dest === "gmail" ||
+        dest === "whatsapp"
           ? dest
           : "share"
       }
@@ -51,6 +58,7 @@ export default function ExportPdfRoute() {
       fileName={name}
       recipientName={to}
       initialSpaceId={space}
+      scheduledRunKey={run}
     />
   );
 }

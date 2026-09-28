@@ -98,5 +98,11 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 - El botón de prueba del calendario también se ejecuta: programa un aviso a
   tres segundos con título, texto, sonido y marca correctos; distingue permiso
   denegado de un error del servicio.
-- TypeScript y ESLint están aprobados para esta tanda. No se modificaron
-  tarjetas de crédito ni se publicó ningún cambio.
+- La recuperación de exportaciones al abrir la app ya conserva el destino real
+  (Drive, Dropbox, OneDrive o carpeta), el espacio Personal/Familia/Caja y la
+  opción de gráficos. Solo confirma la ejecución después de guardar bien; si
+  falla la red, permite reintentar en el próximo arranque sin entrar en bucle
+  durante la misma sesión. Un mes sin movimientos termina limpiamente y no
+  deja una pantalla invisible abierta.
+- TypeScript, ESLint, 117 pruebas y 8 auditores están aprobados para esta
+  tanda. No se modificaron tarjetas de crédito ni se publicó ningún cambio.

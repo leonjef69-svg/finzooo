@@ -28,7 +28,6 @@ import {
   loadSchedule,
   markTapHandled,
   monthForSchedule,
-  saveSchedule,
   toDateKey,
 } from "@/utils/scheduledExport";
 
@@ -381,11 +380,16 @@ function ScheduledExportEffect() {
         const now = new Date();
         if (!isAutoRunDue(s, now)) return;
         if (!isNavigationMounted(navigationRef)) return;
-        // Se apunta ANTES de exportar, no después. Si se apuntara después y
-        // la subida fallara a medias, al reabrir la app volvería a intentarlo
-        // en bucle. Perder una copia es molesto; repetirla sin parar hasta
-        // que alguien lo note, peor.
-        saveSchedule({ ...s, lastAutoRun: claveDeEjecucion(s, now) });
+        // NO se apunta como hecha todavía. La pantalla que realiza la subida
+        // confirma esta ejecución únicamente después de que el destino haya
+        // respondido bien. Antes se marcaba aquí, y un corte de Internet hacía
+        // que Drive/Dropbox fallaran pero el día quedara registrado como
+        // terminado: no había otro intento hasta la siguiente programación.
+        //
+        // Sigue habiendo un solo intento por arranque (`checked`): así un fallo
+        // no abre pantallas en bucle dentro de la misma sesión. Al abrir Fino
+        // otra vez se reintenta, y al primer éxito queda confirmada la clave.
+        const runKey = claveDeEjecucion(s, now);
         irUnaVez({
           pathname: "/export-pdf",
           params: {
@@ -397,6 +401,9 @@ function ScheduledExportEffect() {
             dest: s.destination,
             auto: "1",
             silent: "1",
+            run: runKey,
+            charts: s.charts ? "1" : "0",
+            space: s.spaceId || "personal",
             name: buildFileName({
               mode: s.fileNameMode,
               custom: s.fileName,
