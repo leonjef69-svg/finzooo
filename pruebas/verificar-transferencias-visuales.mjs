@@ -24,7 +24,7 @@ assert.match(history, /filter === "all"[\s\S]*compactPersonalTransferRows/, "His
 for (const [nombre, codigo] of [["Familia", family], ["Caja", boxes], ["Caja compartida", sharedBoxes]]) {
   assert.match(codigo, /!isLinkedSpaceTransfer\(item\) && item\.tipo === "ingreso"/, `${nombre} excluye transferencias del total de ingresos`);
   assert.match(codigo, /!isLinkedSpaceTransfer\(item\) && item\.tipo === "gasto"/, `${nombre} excluye devoluciones del total de gastos`);
-  assert.match(codigo, /SpaceTransferAmounts[\s\S]*Recibido de Personal[\s\S]*Devuelto a Personal/, `${nombre} muestra lo recibido y devuelto a Personal`);
+  assert.match(codigo, /SpaceTransferAmounts[\s\S]*boxes\.receivedFromPersonal[\s\S]*boxes\.returnedToPersonal/, `${nombre} muestra lo recibido y devuelto a Personal con textos traducibles`);
   assert.match(codigo, /compactLinkedTransferRows/, `${nombre} resume los pares de transferencia en una sola tarjeta`);
 }
 assert.match(transferAmounts, /returned > 0 &&/, "la devolución no aparece hasta que exista un monto devuelto");

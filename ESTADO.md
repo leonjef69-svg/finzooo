@@ -680,6 +680,21 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 
 ## Próximo paso exacto
 
-Después de publicar y probar las reglas y funciones auditadas, definir la
-siguiente versión, generar su AAB con `generar-aab.bat`, subirlo a prueba
-cerrada y probar una instalación nueva.
+Continuar la revisión local de traducciones y accesibilidad en pantallas
+secundarias y reemplazar las pruebas antiguas basadas solo en texto. Después,
+con autorización previa, publicar y probar reglas y funciones, definir la
+siguiente versión, generar su AAB, subirlo a prueba cerrada y probar una
+instalación nueva.
+
+### Auditoría externa — traducciones, accesibilidad y prueba de campana (28/09/2026)
+
+- La bienvenida, Caja compartida y las etiquetas accesibles principales de
+  Inicio, Familia, Cajas y navegación usan ahora los tres idiomas configurados.
+- Las transferencias de Familia y Caja muestran «recibido» y «devuelto» con
+  textos traducibles, sin alterar montos, vínculos ni tarjetas de crédito.
+- La prueba de la campana dejó de buscar fragmentos exactos del componente y
+  ahora ejecuta la decisión real: pagos urgentes e importaciones encienden el
+  punto; una exportación futura se muestra sin marcarse como urgencia.
+- Las pruebas estáticas afectadas se ajustaron para exigir las claves traducidas
+  en los tres idiomas, sin retirar sus verificaciones de seguridad y flujo.
+- No se publicó, compiló ni desplegó nada. Tarjetas de crédito sigue excluido.

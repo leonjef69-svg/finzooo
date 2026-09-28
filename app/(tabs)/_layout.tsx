@@ -93,6 +93,7 @@ function FinoTabBar({
   bottomInset: number;
   onAdd: () => void;
 }) {
+  const { t } = useAppData();
   const routes = state.routes;
   const { width, fontScale } = useWindowDimensions();
   const barHeight = fontScale > 1.3 ? 78 : 68;
@@ -178,7 +179,7 @@ function FinoTabBar({
         {routes.slice(0, 2).map((route, index) => renderTab(route, index))}
         <TouchableOpacity
           accessibilityRole="button"
-          accessibilityLabel="Registrar movimiento"
+          accessibilityLabel={t("common.addMovement")}
           activeOpacity={0.86}
           onPress={onAdd}
           style={{

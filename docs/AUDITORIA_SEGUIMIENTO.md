@@ -15,8 +15,8 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 - MED-01 a MED-17 y MED-21/MED-22: correcciones preparadas en código. La prueba
   Premium ahora se concede una sola vez desde una función del servidor.
 - BAJ-02 a BAJ-11 y BAJ-13: corregidos en código. BAJ-01 (traducciones y
-  accesibilidad) continúa por tandas; ya se limpiaron Inicio, Familia, Cajas y
-  selectores comunes principales.
+  accesibilidad) continúa por tandas; ya se limpiaron Inicio, bienvenida,
+  Familia, Cajas, Caja compartida, navegación y selectores comunes principales.
 
 ## Pendiente por decisión o trabajo externo
 
@@ -34,8 +34,9 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
   que el procesamiento de PDF no bloquee la interfaz.
 - MED-20: la limpieza y menor captura del lector nativo están en código, pero
   requieren un AAB y prueba física para considerarlas terminadas.
-- MED-23: ya existen pruebas reales del emulador de reglas y dos clientes, pero
-  todavía quedan pruebas antiguas que solo inspeccionan texto por reemplazar.
+- MED-23: ya existen pruebas reales del emulador de reglas y dos clientes. La
+  prueba de la campana ya valida comportamiento en vez de inspeccionar texto;
+  todavía quedan otras pruebas antiguas por reemplazar gradualmente.
 - VER-01 y VER-04 a VER-06: verificar consola/producción, correo fuera de la
   app, avisos tras reiniciar y requisitos fiscales de Google Play.
 - Pruebas físicas: dos teléfonos/dos cuentas, red intermitente, Drive/Dropbox,
@@ -44,7 +45,8 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
 ## Siguiente orden
 
-1. Terminar BAJ-01 y ampliar las pruebas de accesibilidad/traducciones.
+1. Terminar BAJ-01 en pantallas secundarias y comprobar el recorrido con lector
+   de pantalla en un dispositivo real.
 2. Revisar los pendientes de rendimiento y pruebas reales que aún puedan
    simularse localmente, sin tocar tarjetas de crédito.
 3. Preparar una sola versión de prueba con los cambios nativos acumulados.

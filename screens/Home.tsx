@@ -19,6 +19,7 @@ import { compactPersonalTransferRows, type TransferGroupSummary } from "@/utils/
 import { irUnaVez } from "@/utils/nav";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { usePendingImport } from "@/utils/pendingImport";
+import { summarizeHomeNotifications } from "@/utils/homeNotifications";
 import { loadSchedule, proximaProgramada } from "@/utils/scheduledExport";
 import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -307,7 +308,13 @@ export default function Home({
       .map((p) => ({ pago: p, cuando: cuandoTexto(p, mesAhora, hoy) }));
   }, [pagosProgramados]);
   // Una exportación futura es información útil en el panel, no una alerta pendiente.
-  const hayNotificaciones = hayPagosUrgentes || Boolean(archivoPendiente);
+  const estadoNotificaciones = summarizeHomeNotifications({
+    hasUrgentPayments: hayPagosUrgentes,
+    hasPendingImport: Boolean(archivoPendiente),
+    nextScheduledExportAt: proximaExportacion,
+    now: Date.now(),
+  });
+  const hayNotificaciones = estadoNotificaciones.hasUrgentNotification;
 
   const [selectMode, setSelectMode] = useState(false);
   const [confirmandoBorrarTodo, setConfirmandoBorrarTodo] = useState(false);
@@ -442,7 +449,7 @@ export default function Home({
 
           <TouchableOpacity
             accessibilityRole="button"
-            accessibilityLabel="Abrir notificaciones"
+            accessibilityLabel={t("home.openNotifications")}
             onPress={() => setAvisosAbiertos((value) => !value)}
             className="w-10 h-10 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
@@ -460,7 +467,7 @@ export default function Home({
           {avisosCalendario.map(({ pago, cuando }) => <TouchableOpacity key={pago.id} onPress={() => irUnaVez(`/calendario/nuevo?id=${pago.id}`)} className="mb-2 flex-row items-center gap-3 rounded-xl bg-amber-50 p-3 dark:bg-amber-950/30"><CalendarDays size={19} color="#d97706" /><View className="min-w-0 flex-1"><Text numberOfLines={1} className="text-sm font-bold text-slate-900 dark:text-white">{pago.nombre}</Text><Text className="text-xs text-amber-700 dark:text-amber-300">{t(cuando.clave, cuando)}</Text></View><ChevronRight size={17} color="#d97706" /></TouchableOpacity>)}
           {archivoPendiente ? <TouchableOpacity onPress={() => irUnaVez({ pathname: "/import", params: { uri: archivoPendiente.uri, name: archivoPendiente.name } })} className="mb-2 flex-row items-center gap-3 rounded-xl bg-blue-50 p-3 dark:bg-blue-950/30"><FileUp size={19} color="#2563eb" /><View className="min-w-0 flex-1"><Text className="text-sm font-bold text-slate-900 dark:text-white">{t("home.pendingImport")}</Text><Text numberOfLines={1} className="text-xs text-blue-700 dark:text-blue-300">{archivoPendiente.name}</Text></View><ChevronRight size={17} color="#2563eb" /></TouchableOpacity> : null}
           {proximaExportacion > Date.now() ? <TouchableOpacity onPress={() => irUnaVez("/scheduled-export")} className="mb-2 flex-row items-center gap-3 rounded-xl bg-emerald-50 p-3 dark:bg-emerald-950/30"><FileUp size={19} color="#059669" /><View className="min-w-0 flex-1"><Text className="text-sm font-bold text-slate-900 dark:text-white">{t("home.nextExport")}</Text><Text className="text-xs text-emerald-700 dark:text-emerald-300">{new Date(proximaExportacion).toLocaleString()}</Text></View><ChevronRight size={17} color="#059669" /></TouchableOpacity> : null}
-          {avisosCalendario.length === 0 && !archivoPendiente && !(proximaExportacion > Date.now()) ? <Text className="py-3 text-center text-sm text-slate-500">{t("home.noPendingNotifications")}</Text> : null}
+          {!estadoNotificaciones.hasAnythingToShow && avisosCalendario.length === 0 ? <Text className="py-3 text-center text-sm text-slate-500">{t("home.noPendingNotifications")}</Text> : null}
         </View> : null}
 
         <LinearGradient
@@ -747,7 +754,7 @@ export default function Home({
           ) : (
             <>
               <MovementAllButton label={t("home.recentTransactions")} activeFilter={recentFilter !== null} onPress={() => setRecentFilter(null)} />
-              <View className="flex-row items-center gap-2"><TouchableOpacity accessibilityRole="button" accessibilityLabel="Filtrar ingresos personales" accessibilityState={{ selected: recentFilter === "income" }} onPress={() => setRecentFilter("income")} className={`h-10 w-10 items-center justify-center rounded-xl ${recentFilter === "income" ? "bg-emerald-200" : "bg-emerald-50"}`}><Text className="text-[22px] font-extrabold text-emerald-700">+</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" accessibilityLabel="Filtrar gastos personales" accessibilityState={{ selected: recentFilter === "expense" }} onPress={() => setRecentFilter("expense")} className={`h-10 w-10 items-center justify-center rounded-xl ${recentFilter === "expense" ? "bg-rose-200" : "bg-rose-50"}`}><Text className="text-[22px] font-extrabold text-rose-700">−</Text></TouchableOpacity></View>
+              <View className="flex-row items-center gap-2"><TouchableOpacity accessibilityRole="button" accessibilityLabel={t("home.filterIncome")} accessibilityState={{ selected: recentFilter === "income" }} onPress={() => setRecentFilter("income")} className={`h-10 w-10 items-center justify-center rounded-xl ${recentFilter === "income" ? "bg-emerald-200" : "bg-emerald-50"}`}><Text className="text-[22px] font-extrabold text-emerald-700">+</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" accessibilityLabel={t("home.filterExpense")} accessibilityState={{ selected: recentFilter === "expense" }} onPress={() => setRecentFilter("expense")} className={`h-10 w-10 items-center justify-center rounded-xl ${recentFilter === "expense" ? "bg-rose-200" : "bg-rose-50"}`}><Text className="text-[22px] font-extrabold text-rose-700">−</Text></TouchableOpacity></View>
               {monthTx.length > 0 && (
                 <TouchableOpacity onPress={toggleSelectMode} className="min-h-10 flex-row items-center gap-1.5">
                   <ListChecks size={18} color="#059669" />
