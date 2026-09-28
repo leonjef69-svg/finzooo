@@ -722,3 +722,12 @@ instalación nueva.
   del propietario y permite solo marcas, formatos de archivo y separadores.
 - BAJ-01 queda corregido en código. Sigue pendiente comprobar el recorrido real
   con TalkBack, letra al 200 %, modo horizontal y un dispositivo físico.
+
+### Auditoría externa — pruebas reales de importación y presupuesto (28/09/2026)
+
+- La importación rápida ahora se comprueba ejecutando su ventana real: admite
+  hasta 14 días, descarta desde 15 y no enlaza dos filas con el mismo movimiento.
+- El presupuesto exacto se comprueba mediante la misma función de Inicio: no
+  redondea el monto y evita formatearlo cuando el saldo está oculto.
+- Se mantienen 113 pruebas totales porque estas dos reemplazan pruebas estáticas
+  anteriores; no se tocaron tarjetas de crédito ni se publicó nada.

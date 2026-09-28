@@ -37,8 +37,9 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
   requieren un AAB y prueba física para considerarlas terminadas.
 - MED-23: ya existen pruebas reales del emulador de reglas y dos clientes. La
   prueba de la campana ya valida comportamiento y la del flujo inicial ejecuta
-  las traducciones reales; todavía quedan otras pruebas antiguas por reemplazar
-  gradualmente.
+  las traducciones reales. Las pruebas de importación rápida y presupuesto
+  exacto también ejecutan ya la lógica real; todavía quedan otras pruebas
+  antiguas por reemplazar gradualmente.
 - VER-01 y VER-04 a VER-06: verificar consola/producción, correo fuera de la
   app, avisos tras reiniciar y requisitos fiscales de Google Play.
 - Pruebas físicas: dos teléfonos/dos cuentas, red intermitente, Drive/Dropbox,
@@ -54,3 +55,14 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 4. Con autorización previa: publicar servidor/reglas, instalar la versión en
    prueba cerrada y ejecutar la lista manual en dispositivos.
 5. Migrar primero una cuenta de prueba y después decidir el despliegue general.
+
+### Auditoría externa — pruebas reales de importación y presupuesto (28/09/2026)
+
+- La prueba de importación dejó de buscar una frase en el archivo fuente: ahora
+  ejecuta el detector y comprueba el límite de 14 días, la exclusión desde el
+  día 15 y que una coincidencia no pueda reutilizarse.
+- La prueba del presupuesto también ejecuta la función usada por Inicio:
+  confirma que 1.359 llega completo al formateador y que un monto oculto no se
+  procesa ni se muestra.
+- TypeScript y ESLint están aprobados para esta tanda. No se modificaron
+  tarjetas de crédito ni se publicó ningún cambio.

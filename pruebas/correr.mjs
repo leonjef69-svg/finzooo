@@ -67,6 +67,8 @@ const EXPO = {
 const SUITES = [
   { archivo: "verificar-premium-tester.ts", alias: BASE },
   { archivo: "verificar-campana-inicio.ts", alias: BASE },
+  { archivo: "verificar-importacion-rapida.ts", alias: BASE },
+  { archivo: "verificar-presupuesto-exacto.ts", alias: BASE },
   { archivo: "verificar-flujo-inicial-real.ts", alias: BASE },
   { archivo: "verificar-acceso-google.ts", alias: BASE },
   // La caja de React se cambia por una de mentira: ver stubs/react.ts.

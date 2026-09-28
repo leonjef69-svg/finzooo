@@ -11,6 +11,7 @@ import { CARD_SHADOW, SALDO_TARJETA, SALDO_VERDE } from "@/constants/style";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
 import { amountInputError, parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
+import { formatBudgetDisplay } from "@/utils/budgetDisplay";
 import { cuandoTexto, estadoEn, fechaEnElMes, mesDe, pagosDelMes } from "@/utils/calendarioPagos";
 import { availablePersonalBalance, budgetUsed } from "@/utils/finances";
 import { fmtDate, monthKey } from "@/utils/format";
@@ -558,7 +559,7 @@ export default function Home({
                     <Text numberOfLines={1} className="text-xs font-bold text-emerald-100">{t("home.monthlyBudget")}</Text>
                   </View>
                   <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} className="max-w-[48%] text-sm font-extrabold text-white">
-                    {hideBalance ? "••••" : fmt(budget)}
+                    {formatBudgetDisplay(hideBalance, budget, fmt)}
                   </Text>
                 </View>
                 <View className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/25">
