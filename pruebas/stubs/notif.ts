@@ -6,11 +6,32 @@ export const AndroidImportance = { DEFAULT: 3, HIGH: 4 };
 export const scheduledNotifications: any[] = [];
 export const cancelledNotificationIds: string[] = [];
 let nextIdentifier = 1;
+let permissionGranted = true;
+let requestedPermissionGranted = true;
+let scheduleFailure: string | null = null;
+let scheduleDelayMs = 0;
 
 export function resetNotificationStub() {
   scheduledNotifications.splice(0);
   cancelledNotificationIds.splice(0);
   nextIdentifier = 1;
+  permissionGranted = true;
+  requestedPermissionGranted = true;
+  scheduleFailure = null;
+  scheduleDelayMs = 0;
+}
+
+export function setNotificationPermissions(current: boolean, requested = current) {
+  permissionGranted = current;
+  requestedPermissionGranted = requested;
+}
+
+export function setScheduleFailure(message: string | null) {
+  scheduleFailure = message;
+}
+
+export function setScheduleDelay(milliseconds: number) {
+  scheduleDelayMs = Math.max(0, milliseconds);
 }
 
 export function seedScheduledNotification(notification: any) {
@@ -23,10 +44,17 @@ export async function cancelScheduledNotificationAsync(identifier: string) {
   const index = scheduledNotifications.findIndex((notification) => notification.identifier === identifier);
   if (index >= 0) scheduledNotifications.splice(index, 1);
 }
-export async function requestPermissionsAsync() { return { status: "granted" }; }
-export async function getPermissionsAsync() { return { status: "granted", granted: true }; }
+export async function requestPermissionsAsync() {
+  permissionGranted = requestedPermissionGranted;
+  return { status: permissionGranted ? "granted" : "denied", granted: permissionGranted };
+}
+export async function getPermissionsAsync() {
+  return { status: permissionGranted ? "granted" : "denied", granted: permissionGranted };
+}
 export async function setNotificationChannelAsync() {}
 export async function scheduleNotificationAsync(notification: any) {
+  if (scheduleDelayMs > 0) await new Promise((resolve) => setTimeout(resolve, scheduleDelayMs));
+  if (scheduleFailure) throw new Error(scheduleFailure);
   const identifier = `notification-${nextIdentifier++}`;
   scheduledNotifications.push({ identifier, ...notification });
   return identifier;

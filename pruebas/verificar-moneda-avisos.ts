@@ -8,6 +8,9 @@ import {
   resetNotificationStub,
   scheduledNotifications,
   seedScheduledNotification,
+  setNotificationPermissions,
+  setScheduleDelay,
+  setScheduleFailure,
 } from "./stubs/notif";
 
 const payment: PagoProgramado = {
@@ -81,4 +84,51 @@ assert.deepEqual(
   "quitar los pagos debe retirar solo sus avisos",
 );
 
-console.log("Avisos: moneda, pagados, duplicados y cancelación selectiva correctos.");
+resetNotificationStub();
+setNotificationPermissions(false, false);
+const denied = await reprogramarAvisosDePagos(
+  [payment],
+  translate,
+  now,
+  paymentNotificationFormatter("PEN"),
+);
+assert.equal(denied.puestos, 0);
+assert.equal(denied.fallo, "sin-permiso");
+assert.equal(scheduledNotifications.length, 0, "sin permiso no debe fingirse ningún aviso");
+
+resetNotificationStub();
+setScheduleFailure("agenda no disponible");
+const failed = await reprogramarAvisosDePagos(
+  [payment],
+  translate,
+  now,
+  paymentNotificationFormatter("PEN"),
+);
+assert.equal(failed.puestos, 0);
+assert.match(failed.fallo ?? "", /programando Luz/);
+assert.match(failed.fallo ?? "", /agenda no disponible/);
+
+resetNotificationStub();
+setScheduleDelay(2);
+const firstRun = reprogramarAvisosDePagos(
+  [payment],
+  translate,
+  now,
+  paymentNotificationFormatter("PEN"),
+);
+const secondRun = reprogramarAvisosDePagos(
+  [payment],
+  translate,
+  now,
+  paymentNotificationFormatter("USD"),
+);
+const [firstResult, secondResult] = await Promise.all([firstRun, secondRun]);
+assert.equal(firstResult.puestos, 3);
+assert.equal(secondResult.puestos, 3);
+assert.equal(scheduledNotifications.length, 3, "dos reprogramaciones juntas no deben duplicar avisos");
+assert.ok(
+  scheduledNotifications.every((notification) => notification.content.body.includes("US$")),
+  "la última reprogramación debe quedar activa completa",
+);
+
+console.log("Avisos: moneda, permisos, fallos y reprogramaciones simultáneas correctos.");

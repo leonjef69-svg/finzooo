@@ -746,6 +746,8 @@ instalación nueva.
 - Los avisos del calendario se prueban ahora mediante programación real
   simulada: cambio de moneda, tres meses, meses pagados, ausencia de duplicados
   y cancelación selectiva sin borrar avisos de exportación.
+- También se verifican permiso denegado, fallo del sistema y dos cambios
+  simultáneos; la cola conserva únicamente la configuración más reciente.
 - Se mantienen 113 pruebas totales porque tres pruebas de comportamiento
   reemplazan tres pruebas estáticas anteriores; no se tocaron tarjetas de
   crédito ni se publicó nada.

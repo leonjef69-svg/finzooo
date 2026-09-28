@@ -92,5 +92,8 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
   texto. La prueba programa tres meses reales, cambia de PEN a USD, confirma
   que no se dupliquen, omite el mes pagado y cancela únicamente avisos del
   calendario sin retirar el aviso independiente de exportación.
+- La misma prueba cubre permiso denegado, error nativo al programar y dos
+  reprogramaciones simultáneas. Los fallos conservan su etapa y motivo, y la
+  última moneda queda activa con tres avisos, no seis.
 - TypeScript y ESLint están aprobados para esta tanda. No se modificaron
   tarjetas de crédito ni se publicó ningún cambio.
