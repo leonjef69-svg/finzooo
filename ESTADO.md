@@ -1,5 +1,19 @@
 # Estado actual de Fino
 
+## Regla de seguimiento y seguridad Premium (28/09/2026)
+
+- Cada avance debe terminar indicando qué sigue y qué falta. El detalle vivo de
+  la auditoría está en `docs/AUDITORIA_SEGUIMIENTO.md`.
+- La prueba gratuita Premium ya no se concede desde el teléfono: una Cloud
+  Function decide la hora y una transacción permite usarla una sola vez. Las
+  reglas impiden que el cliente cree o reinicie esa fecha.
+- Si el permiso Premium de tester solo está en caché, no concede funciones sin
+  verificar, pero Ajustes explica que hace falta conectarse para comprobarlo.
+- Se tradujo una primera tanda visible de Inicio, Familia, Cajas y selectores,
+  y se añadieron etiquetas a controles de icono principales.
+- Todo está preparado localmente. No se publicaron Functions, reglas, AAB ni se
+  activó App Check; tarjetas de crédito siguen fuera del trabajo activo.
+
 ## Historial Personal separado — preparado localmente (27/09/2026)
 
 - El código nuevo guarda cada movimiento Personal en su propio documento. La
@@ -660,6 +674,9 @@ rescatar Excel/Premium: eso ya quedó consolidado en `C:\finzo` y subido a
 5. Ejecutar TypeScript, ESLint, pruebas y auditores antes de publicar.
 6. Crear commit y push al terminar.
 7. Entregar un solo instalable a la vez.
+8. En cada avance indicar qué sigue y qué falta; no declarar terminada toda la
+   auditoría mientras queden tareas locales, pruebas físicas o acciones externas.
+9. Tarjetas de crédito siguen pendientes y no se modifican sin autorización.
 
 ## Próximo paso exacto
 

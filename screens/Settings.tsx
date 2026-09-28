@@ -109,7 +109,7 @@ export default function Settings({
   onVoiceHelp: () => void;
   onTelegram: () => void;
 }) {
-  const { t, userCountry, themeMode, updateThemeMode, isCloudSynced, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios } =
+  const { t, userCountry, themeMode, updateThemeMode, isCloudSynced, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios, testerPremiumPendingVerification } =
     useAppData();
   /** El negocio que se está quedando con los yapeos, si hay alguno. Ver la fila de abajo. */
   const negocioQueRecibe = negocios.find((n) => n.activo && n.destinoYapes === "negocio");
@@ -320,6 +320,11 @@ export default function Settings({
           <ChevronRight size={16} color="#ffffff" />
         </LinearGradient>
       </TouchableOpacity>
+      {testerPremiumPendingVerification ? (
+        <Text className="mx-6 mt-1 text-xs text-amber-700 dark:text-amber-300">
+          {t("settings.testerPremiumNeedsConnection")}
+        </Text>
+      ) : null}
 
       {/* EL CARTEL DICE LO QUE DE VERDAD PASO CON LA ULTIMA SUBIDA.
           Hasta el 20/08/2026 solo miraba `isCloudSynced`, que es "hay sesion iniciada" — asi

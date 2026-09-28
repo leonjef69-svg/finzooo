@@ -1,11 +1,13 @@
 export type TesterPremiumState = {
   active: boolean;
+  pendingVerification: boolean;
   grantedAt: number | null;
   grantedBy: string | null;
 };
 
 export const TESTER_PREMIUM_INACTIVE: TesterPremiumState = {
   active: false,
+  pendingVerification: false,
   grantedAt: null,
   grantedBy: null,
 };
@@ -32,6 +34,7 @@ export function testerPremiumFromData(data: unknown, fromCache = false): TesterP
     : null;
   return {
     active: !fromCache && record.active === true && grantedAt !== null,
+    pendingVerification: fromCache && record.active === true && grantedAt !== null,
     grantedAt,
     grantedBy,
   };

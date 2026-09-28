@@ -1,5 +1,6 @@
 import {
   createContext,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -114,6 +115,7 @@ import {
   pruneDeletedGoalIds,
   pruneDeletedTransactionIds,
 } from "@/utils/mergeTransactions";
+import { activatePremiumTrialCloud } from "@/utils/premiumTrialCloud";
 import { presupuestoCubreTransferencias, presupuestoDelMes, transferidoPendienteDelMes } from "@/utils/presupuestoMensual";
 import { hayDescuadre, maximoAApartar, saldoLibre, totalApartado } from "@/utils/ahorro";
 import { availablePersonalBalance } from "@/utils/finances";
@@ -300,13 +302,14 @@ type AppDataContextValue = {
    */
   isPremium: boolean;
   isTesterPremium: boolean;
+  testerPremiumPendingVerification: boolean;
   testerPremiumGrantedAt: number | null;
   /** Cuando empezo la prueba gratuita, o null si no se ha usado. */
   pruebaInicio: number | null;
   /** Cuantas horas le quedan a la prueba. Cero si no hay ninguna corriendo. */
   pruebaHoras: number;
-  /** Enciende la prueba gratuita. Devuelve false si ya se habia usado. */
-  activarPruebaPremium: () => boolean;
+  /** Pide al servidor una prueba gratuita. Devuelve false si ya se había usado. */
+  activarPruebaPremium: () => Promise<boolean>;
   /**
    * MODO NEGOCIO (V1). Los negocios de esta cuenta, y cómo cambiarlos.
    *
@@ -590,7 +593,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   /** Aplica solo los bloques que otro dispositivo cambió después. */
-  function applyNewerCloudFields(cloud: CloudData) {
+  const applyNewerCloudFields = useCallback((cloud: CloudData) => {
     const localTimes = cloudSyncMetaRef.current;
     const remoteTimes = cloud.syncUpdatedAt ?? {};
     const take = (group: CloudSyncGroup, apply: () => void) => {
@@ -637,7 +640,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
     cloudSyncMetaRef.current = mergedTimes;
     setCloudSyncMeta(cloudSyncMetaRef.current);
-  }
+  }, [userEmail]);
 
   /**
    * TODO lo que va a la copia de la cuenta, en UN SOLO SITIO.
@@ -949,13 +952,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // haga estos cambios si te dejaste la sesión abierta en otro celular.
   async function reauthenticate(currentPassword: string) {
     const user = auth.currentUser;
-    if (!user) throw new Error("No hay una sesión activa.");
+    if (!user) throw new Error(tRef.current("settings.noActiveSession"));
     const usaContrasena = user.providerData.some(provider => provider.providerId === "password");
     if (!usaContrasena) {
       await reauthenticateWithGoogle();
       return user;
     }
-    if (!user.email) throw new Error("La cuenta no tiene un correo válido.");
+    if (!user.email) throw new Error(tRef.current("settings.invalidAccountEmail"));
     const credential = EmailAuthProvider.credential(user.email, currentPassword);
     await reauthenticateWithCredential(user, credential);
     return user;
@@ -1267,7 +1270,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
     };
-  }, [ready, hasOnboarded, uid, deletedTransactionIds, deletedGoalIds]);
+  }, [ready, hasOnboarded, uid, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -1608,7 +1611,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     };
     // Solo depende de si la app ya está lista: los datos que necesita los
     // lee de captureInputs en el momento de recoger.
-  }, [ready, hasOnboarded, uid, deletedTransactionIds, deletedGoalIds]);
+  }, [ready, hasOnboarded, uid, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields]);
 
   function setAutoCaptureOn(value: boolean) {
     notificationReader.setEnabled(value);
@@ -2170,15 +2173,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setDatosNegocio((antes) => ({ ...antes, movimientos: antes.movimientos.filter((m) => m.id !== id) }));
   }
 
-  function activarPruebaPremium(): boolean {
+  async function activarPruebaPremium(): Promise<boolean> {
     if (pruebaYaUsada(pruebaInicio)) return false;
-    const inicio = Date.now();
+    const { activated, startedAt: inicio } = await activatePremiumTrialCloud();
     setPruebaInicio(inicio);
     savePrueba(inicio);
     // El reloj de dentro se pone al dia para que la prueba cuente desde ya y no
     // desde el ultimo minuto redondo.
     setAhora(inicio);
-    return true;
+    return activated;
   }
 
   /** Cambia una propia. Lo que no se pase se deja como estaba. */
@@ -2498,6 +2501,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     withdrawMoneyFromGoal,
     isPremium,
     isTesterPremium: testerPremium.active,
+    testerPremiumPendingVerification: testerPremium.pendingVerification,
     testerPremiumGrantedAt: testerPremium.grantedAt,
     pruebaInicio,
     pruebaHoras: pruebaHorasRestantes(pruebaInicio, ahora),

@@ -61,7 +61,7 @@ export default function BoxSettings() {
     <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 36 }} keyboardShouldPersistTaps="handled">
       {!datos ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : !caja ? <Text className="py-8 text-center text-slate-500">{t("boxes.notFound")}</Text> : <>
         <Text className="mb-2 text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.editName")}</Text>
-        <View className="flex-row rounded-2xl border-[1.5px] border-slate-200 p-2 dark:border-noche-borde"><TextInput disableFullscreenUI value={nombre} onChangeText={setNombre} maxLength={30} className="h-11 flex-1 px-3 text-base font-bold text-slate-900 dark:text-slate-100" /><TouchableOpacity onPress={() => void guardar()} className="h-11 w-11 items-center justify-center rounded-xl bg-teal-600"><Check size={20} color="#fff" /></TouchableOpacity></View>
+        <View className="flex-row rounded-2xl border-[1.5px] border-slate-200 p-2 dark:border-noche-borde"><TextInput disableFullscreenUI value={nombre} onChangeText={setNombre} maxLength={30} className="h-11 flex-1 px-3 text-base font-bold text-slate-900 dark:text-slate-100" /><TouchableOpacity accessibilityLabel={t("common.save")} onPress={() => void guardar()} className="h-11 w-11 items-center justify-center rounded-xl bg-teal-600"><Check size={20} color="#fff" /></TouchableOpacity></View>
         <TouchableOpacity onPress={eliminar} className="mt-6 min-h-12 items-center justify-center rounded-2xl border-[1.5px] border-rose-200 bg-rose-50"><Text className="font-bold text-rose-600">{t("boxes.delete")}</Text></TouchableOpacity>
       </>}
     </ScrollView>

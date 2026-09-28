@@ -7,10 +7,14 @@ assert.equal(activo.active, true);
 assert.equal(activo.grantedAt, ahora);
 assert.equal(activo.grantedBy, "Firebase");
 
-assert.equal(testerPremiumFromData({ active: true, grantedAt: ahora }, true).active, false,
+const cache = testerPremiumFromData({ active: true, grantedAt: ahora }, true);
+assert.equal(cache.active, false,
   "La caché local no puede conservar una concesión retirada");
+assert.equal(cache.pendingVerification, true,
+  "Sin conexión debe explicar que el permiso está pendiente de comprobarse");
 assert.equal(testerPremiumFromData({ active: true }).active, false,
   "Una concesión activa debe registrar cuándo se otorgó");
 assert.equal(testerPremiumFromData({ active: false, grantedAt: ahora }).active, false);
+assert.equal(testerPremiumFromData({ active: false, grantedAt: ahora }).pendingVerification, false);
 
 console.log("Premium de tester: concesión, revocación y caché seguras OK");

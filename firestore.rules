@@ -221,13 +221,19 @@ service cloud.firestore {
                               || (exists(/databases/$(database)/documents/users/$(userId))
                                 && request.resource.data.isPremium == resource.data.isPremium)
                             )
-                         && (!('premiumTrialStartedAt' in request.resource.data)
-                              || request.resource.data.premiumTrialStartedAt is number)
-                         && (!exists(/databases/$(database)/documents/users/$(userId))
-                              || !('premiumTrialStartedAt' in resource.data)
-                              || (('premiumTrialStartedAt' in request.resource.data)
-                                && request.resource.data.premiumTrialStartedAt
-                                  == resource.data.premiumTrialStartedAt))
+                         // Solo la función del servidor puede iniciar la prueba.
+                         && (
+                           (!exists(/databases/$(database)/documents/users/$(userId))
+                             && !('premiumTrialStartedAt' in request.resource.data))
+                           || (exists(/databases/$(database)/documents/users/$(userId))
+                             && (
+                               (!('premiumTrialStartedAt' in resource.data)
+                                 && !('premiumTrialStartedAt' in request.resource.data))
+                               || (('premiumTrialStartedAt' in resource.data)
+                                 && request.resource.data.premiumTrialStartedAt
+                                   == resource.data.premiumTrialStartedAt)
+                             ))
+                         )
                          // Y LOS OPCIONALES, COMPROBADOS SOLO SI VIENEN.
                          //
                          // Son opcionales de verdad: una cuenta creada antes de esa función no

@@ -3,6 +3,7 @@ import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { CalendarDays, Check, ChevronDown, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import type { Month } from "@/types";
+import { useAppData } from "@/contexts/AppDataContext";
 
 type Props = {
   month: Month;
@@ -28,6 +29,7 @@ function labelFor(key: string, monthNames: string[]) {
 export default function MonthSelector({ month, months, monthNames, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const { colorScheme } = useColorScheme();
+  const { t } = useAppData();
   const currentKey = `${month.y}-${String(month.m + 1).padStart(2, "0")}`;
   const label = `${monthNames[month.m]} ${month.y}`;
   const dark = colorScheme === "dark";
@@ -52,8 +54,8 @@ export default function MonthSelector({ month, months, monthNames, onChange }: P
           <View className="max-h-[72%] rounded-t-3xl bg-white px-5 pb-8 pt-4 dark:bg-noche-2">
             <View className="mb-4 flex-row items-center justify-between">
               <View>
-                <Text className="text-lg font-extrabold text-slate-900 dark:text-slate-100">Mes con movimientos</Text>
-                <Text className="mt-0.5 text-xs text-slate-500 dark:text-slate-300">Elige un mes para ver sus datos.</Text>
+                <Text className="text-lg font-extrabold text-slate-900 dark:text-slate-100">{t("monthPicker.title")}</Text>
+                <Text className="mt-0.5 text-xs text-slate-500 dark:text-slate-300">{t("monthPicker.help")}</Text>
               </View>
               <TouchableOpacity onPress={() => setOpen(false)} className="h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-noche">
                 <X size={18} color={dark ? "#cbd5e1" : "#475569"} />
@@ -61,7 +63,7 @@ export default function MonthSelector({ month, months, monthNames, onChange }: P
             </View>
 
             {months.length === 0 ? (
-              <Text className="py-8 text-center text-sm text-slate-500 dark:text-slate-300">Aún no hay meses con movimientos.</Text>
+              <Text className="py-8 text-center text-sm text-slate-500 dark:text-slate-300">{t("monthPicker.empty")}</Text>
             ) : (
               <ScrollView showsVerticalScrollIndicator={false}>
                 <View className="gap-2 pb-2">

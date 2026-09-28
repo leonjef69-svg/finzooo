@@ -9,7 +9,7 @@ if (!/accessibilityLabel="Abrir notificaciones"/.test(home)) {
 if (!/onPress=\{\(\) => setAvisosAbiertos\(\(value\) => !value\)\}/.test(home)) {
   fallos.push("la campana no abre y cierra su panel");
 }
-if (!/Importación pendiente[\s\S]*Próxima exportación/.test(home)) {
+if (!/home\.pendingImport[\s\S]*home\.nextExport/.test(home)) {
   fallos.push("el panel no reúne importaciones y exportaciones comprobables");
 }
 if (!/\{hayNotificaciones \? \([\s\S]*bg-rose-500[\s\S]*\) : null\}/.test(home)) {

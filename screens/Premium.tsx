@@ -65,6 +65,7 @@ export default function Premium({
 
   /** Si se está preguntando por la prueba gratuita, en la propia pantalla. */
   const [preguntandoPrueba, setPreguntandoPrueba] = useState(false);
+  const [activandoPrueba, setActivandoPrueba] = useState(false);
   /**
    * Qué plan se está comprando ahora mismo, o null.
    *
@@ -163,12 +164,21 @@ export default function Premium({
     { texto: t("premium.perkSavingsGoals") },
   ];
 
-  function confirmarPrueba() {
-    setPreguntandoPrueba(false);
+  async function confirmarPrueba() {
+    if (activandoPrueba) return;
+    setActivandoPrueba(true);
     // La regla de "una sola vez" la hace cumplir el contexto, no este botón: un
     // botón escondido es una decisión de pantalla y esto es de la cuenta.
-    if (activarPruebaPremium()) showToast(t("premium.pruebaActiva", { horas: DURACION_PRUEBA_HORAS }));
-    else showToast(t("premium.pruebaUsada"));
+    try {
+      const activada = await activarPruebaPremium();
+      setPreguntandoPrueba(false);
+      if (activada) showToast(t("premium.pruebaActiva", { horas: DURACION_PRUEBA_HORAS }));
+      else showToast(t("premium.pruebaUsada"));
+    } catch {
+      showToast(t("premium.pruebaError"));
+    } finally {
+      setActivandoPrueba(false);
+    }
   }
 
   return (
@@ -413,6 +423,7 @@ export default function Premium({
                 </TouchableOpacity>
                 <TouchableOpacity
                   onPress={confirmarPrueba}
+                  disabled={activandoPrueba}
                   className="flex-1 py-3 rounded-xl items-center flex-row justify-center gap-1.5 bg-emerald-600"
                 >
                   <CheckCircle2 size={14} color="#ffffff" />

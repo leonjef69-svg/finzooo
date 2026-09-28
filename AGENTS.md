@@ -50,6 +50,12 @@ sesión, su computadora o una confirmación personal. En ese caso se juntan los
 pasos imprescindibles y se elige el camino más corto; no se convierte una tarea
 automática en una cadena de instrucciones manuales.
 
+En cada cierre o actualización de una auditoría hay que decir explícitamente
+**qué sigue y qué falta**, aunque una parte ya esté terminada. No responder solo
+«terminado» si aún quedan correcciones, pruebas físicas, publicación, migración
+o acciones manuales externas. Tarjetas de crédito permanecen fuera de la
+auditoría activa hasta que el usuario autorice retomarlas.
+
 ## Expo HAS CHANGED
 
 Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/

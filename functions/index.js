@@ -10,6 +10,7 @@ const { getFirestore } = require("firebase-admin/firestore");
 const { handleTelegramUpdate } = require("./src/telegram-guided-handler");
 const { CENT, contributionLimits, canCloseLinkedSpace, hasUnreturnedPersonalContribution } = require("./src/personal-contribution");
 const { premiumForUser } = require("./src/premium-entitlement");
+const { activatePremiumTrial } = require("./src/premium-trial");
 
 initializeApp();
 
@@ -22,6 +23,25 @@ async function hasPremium(db, uid) {
   const data = user.exists ? user.data() : {};
   return premiumForUser(db, uid, data);
 }
+
+/** La prueba gratuita se concede una sola vez y con hora del servidor. */
+exports.activatePremiumTrial = onCall(
+  { region: "southamerica-east1" },
+  async request => {
+    const uid = request.auth?.uid;
+    if (!uid || request.auth.token?.email_verified !== true) {
+      throw new HttpsError("unauthenticated", "Debes iniciar sesión y verificar tu correo.");
+    }
+    try {
+      return await activatePremiumTrial(getFirestore(), uid);
+    } catch (error) {
+      if (error?.message === "ACCOUNT_NOT_READY") {
+        throw new HttpsError("failed-precondition", "Termina de configurar tu cuenta.");
+      }
+      throw error;
+    }
+  },
+);
 
 /**
  * Único camino para reducir o borrar un aporte que salió de Personal.

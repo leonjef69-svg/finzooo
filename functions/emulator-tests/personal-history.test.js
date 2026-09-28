@@ -53,6 +53,9 @@ test("historial v2: acceso propio, bloqueo ajeno y cliente antiguo", async t => 
         { ...oldShape, transactions: [] }));
       assert.equal((await getDoc(doc(legacyOwner, "users", "alice-legacy"))).data().historyFormat, undefined);
     });
+    await t.test("el teléfono no puede concederse una prueba Premium", async () => {
+      await assertFails(updateDoc(doc(owner, "users", "alice"), { premiumTrialStartedAt: Date.now() }));
+    });
     await t.test("una lápida no revive y el documento debe tener forma válida", async () => {
       await assertSucceeds(setDoc(row, { id: 123, deleted: true, syncAt: serverTimestamp() }));
       await assertFails(setDoc(row, content));

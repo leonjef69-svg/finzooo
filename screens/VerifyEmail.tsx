@@ -83,7 +83,7 @@ export default function VerifyEmail({
         <Text className="text-3xl font-extrabold text-white mb-1 text-center">
           {t("verifyEmail.title")}
         </Text>
-        <Text className="text-base font-semibold text-white/90 mb-7">Te enviamos un enlace</Text>
+        <Text className="text-base font-semibold text-white/90 mb-7">{t("verifyEmail.linkSent")}</Text>
         <Text className="mb-7 text-[92px] leading-[106px]">✉️</Text>
         <View className="w-full rounded-2xl bg-white/95 px-6 py-5">
           <Text className="text-base text-center text-slate-600">{t("verifyEmail.sentTo")}</Text>
