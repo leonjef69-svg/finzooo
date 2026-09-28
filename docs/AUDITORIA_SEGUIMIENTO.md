@@ -67,5 +67,9 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 - Los métodos de pago ahora se filtran mediante una función probada: Yape solo
   aparece en Perú/Bolivia, Plin solo en Perú, los métodos universales siguen en
   todos los países y una edición conserva métodos antiguos.
+- La importación ya no recorre todo el historial por cada fila. Construye una
+  sola vez un índice por fecha y consulta únicamente la ventana de 14 días; una
+  prueba local indexa y busca entre 10.001 movimientos, incluido un cambio de
+  mes.
 - TypeScript y ESLint están aprobados para esta tanda. No se modificaron
   tarjetas de crédito ni se publicó ningún cambio.

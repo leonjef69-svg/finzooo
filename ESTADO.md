@@ -727,6 +727,8 @@ instalación nueva.
 
 - La importación rápida ahora se comprueba ejecutando su ventana real: admite
   hasta 14 días, descarta desde 15 y no enlaza dos filas con el mismo movimiento.
+- Esa ventana usa ahora un índice por fecha: importar varias filas dejó de
+  recorrer los 10.000 movimientos completos una vez por cada fila.
 - El presupuesto exacto se comprueba mediante la misma función de Inicio: no
   redondea el monto y evita formatearlo cuando el saldo está oculto.
 - Los métodos de pago ya se prueban ejecutando su filtro real por país y la

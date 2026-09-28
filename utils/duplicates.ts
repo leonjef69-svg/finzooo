@@ -27,6 +27,8 @@ export type DuplicateMatch = {
   reasons: string[];
 };
 
+export type DuplicateDateIndex = Map<string, Transaction[]>;
+
 // --- Monto ---
 // Se compara con una tolerancia de un centavo, porque los redondeos
 // (0.1 + 0.2 no da exactamente 0.3 en una computadora) pueden hacer que
@@ -182,6 +184,46 @@ export function findBestMatch(
     if (!best || match.score > best.score) best = match;
   }
   return best;
+}
+
+/**
+ * Índice reutilizable para importaciones grandes.
+ *
+ * La ventana de 14 días dentro de findBestMatch evita puntuar movimientos
+ * lejanos, pero por sí sola todavía recorría todo el historial por cada fila
+ * del archivo. Este índice hace que cada fila visite únicamente 29 fechas.
+ */
+export function buildDuplicateDateIndex(
+  existingList: Transaction[],
+): DuplicateDateIndex {
+  const index: DuplicateDateIndex = new Map();
+  for (const transaction of existingList) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(transaction.date)) continue;
+    const bucket = index.get(transaction.date);
+    if (bucket) bucket.push(transaction);
+    else index.set(transaction.date, [transaction]);
+  }
+  return index;
+}
+
+function isoDateAtOffset(isoDate: string, days: number): string | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(isoDate)) return null;
+  const timestamp = Date.parse(`${isoDate}T00:00:00Z`);
+  if (!Number.isFinite(timestamp)) return null;
+  return new Date(timestamp + days * 86400000).toISOString().slice(0, 10);
+}
+
+export function findBestMatchInIndex(
+  index: DuplicateDateIndex,
+  incoming: RawRow,
+  alreadyMatchedIds: Set<number>,
+): DuplicateMatch | null {
+  const nearby: Transaction[] = [];
+  for (let offset = -14; offset <= 14; offset++) {
+    const date = isoDateAtOffset(incoming.date, offset);
+    if (date) nearby.push(...(index.get(date) ?? []));
+  }
+  return findBestMatch(nearby, incoming, alreadyMatchedIds);
 }
 
 // ---------------------------------------------------------------------

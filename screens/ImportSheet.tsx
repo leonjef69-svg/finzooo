@@ -15,7 +15,7 @@ import { catInfo } from "@/constants/categories";
 import { fmtDate } from "@/utils/format";
 import { matchCategory, matchMethod, parseStatement, type RawRow } from "@/utils/importEngine";
 import { suggestCategory } from "@/utils/classifier";
-import { findBestMatch, mergeTransaction, type DuplicateMatch } from "@/utils/duplicates";
+import { buildDuplicateDateIndex, findBestMatchInIndex, mergeTransaction, type DuplicateMatch } from "@/utils/duplicates";
 import DuplicateReview from "@/screens/DuplicateReview";
 import { elegirArchivo, puedeElegirArchivo } from "@/modules/incoming-file";
 import type { Transaction } from "@/types";
@@ -164,6 +164,10 @@ export default function ImportSheet({
 
   const newOnes = useMemo(() => candidates.filter((c) => !c.match), [candidates]);
   const dupes = useMemo(() => candidates.filter((c) => c.match), [candidates]);
+  const duplicateDateIndex = useMemo(
+    () => buildDuplicateDateIndex(transactions),
+    [transactions],
+  );
 
   // Archivo llegado desde fuera: se carga una sola vez, al abrir. La marca
   // evita que un redibujado lo vuelva a leer — el archivo se borra tras
@@ -289,7 +293,7 @@ export default function ImportSheet({
         account: raw.account,
         origin: "imported",
       };
-      const match = findBestMatch(transactions, raw, yaEmparejados.current);
+      const match = findBestMatchInIndex(duplicateDateIndex, raw, yaEmparejados.current);
       if (match) yaEmparejados.current.add(match.existing.id);
       return { tx, raw, match };
     });

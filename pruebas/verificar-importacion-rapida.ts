@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
+import { performance } from "node:perf_hooks";
 
 import type { Transaction } from "@/types";
-import { findBestMatch } from "@/utils/duplicates";
+import {
+  buildDuplicateDateIndex,
+  findBestMatch,
+  findBestMatchInIndex,
+} from "@/utils/duplicates";
 import type { RawRow } from "@/utils/importEngine";
 
 function movimiento(id: number, date: string): Transaction {
@@ -51,4 +56,24 @@ assert.equal(findBestMatch([movimiento(4, "2026-09-05")], entrante, new Set()), 
 // Una fila del historial solo puede enlazarse con una fila importada.
 assert.equal(findBestMatch([cercano], entrante, new Set([cercano.id])), null);
 
-console.log("La importación limita comparaciones a 14 días y no reutiliza coincidencias.");
+// Una importación grande no debe volver a recorrer 10.000 movimientos por
+// cada fila: construye el índice una vez y busca solo en las fechas cercanas.
+const historialGrande = Array.from({ length: 10_000 }, (_, index) =>
+  movimiento(10_000 + index, "2025-01-01")
+);
+historialGrande.push(cercano);
+const inicio = performance.now();
+const indice = buildDuplicateDateIndex(historialGrande);
+assert.equal(findBestMatchInIndex(indice, entrante, new Set())?.existing.id, cercano.id);
+const duracion = performance.now() - inicio;
+assert.ok(duracion < 2_000, `indexar y buscar 10.001 movimientos tardó ${duracion.toFixed(0)} ms`);
+
+const cambioDeMes = { ...entrante, date: "2026-09-02" };
+const agosto = movimiento(30_001, "2026-08-20");
+assert.equal(
+  findBestMatchInIndex(buildDuplicateDateIndex([agosto]), cambioDeMes, new Set())?.existing.id,
+  agosto.id,
+  "la ventana de 14 días debe funcionar al cruzar de mes",
+);
+
+console.log(`La importación indexa 10.001 movimientos y busca por fecha en ${duracion.toFixed(0)} ms.`);
