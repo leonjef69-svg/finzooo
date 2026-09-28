@@ -75,5 +75,13 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
   prueba carga los 250 países y 155 monedas reales, valida símbolos, decimales,
   asignaciones, orden y búsquedas por nombre, código, moneda y símbolo. Cambiar
   moneda conserva el país local y el país continúa fuera del respaldo en nube.
+- La categoría de cada fila importada se decide ahora en una función probada:
+  lo escrito en el archivo tiene prioridad, los sinónimos reales se reconocen,
+  lo aprendido por la persona se conserva y una categoría de ingreso no puede
+  entrar en un gasto. La confirmación de borrado mensual permanece vigilada en
+  una prueba independiente.
+- Una prueba sintética procesa 10.000 filas CSV, comprueba que ninguna se pierda
+  ni cambie de tipo y limita el tiempo local a 3 segundos; en esta revisión
+  terminó en menos de 100 ms. Esto no reemplaza la medición física de PDF.
 - TypeScript y ESLint están aprobados para esta tanda. No se modificaron
   tarjetas de crédito ni se publicó ningún cambio.

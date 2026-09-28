@@ -66,8 +66,10 @@ const EXPO = {
  */
 const SUITES = [
   { archivo: "verificar-premium-tester.ts", alias: BASE },
+  { archivo: "verificar-archivo-grande.ts", alias: BASE },
   { archivo: "verificar-campana-inicio.ts", alias: BASE },
   { archivo: "verificar-importacion-rapida.ts", alias: BASE },
+  { archivo: "verificar-importar-categoria.ts", alias: BASE },
   { archivo: "verificar-metodos-por-pais.ts", alias: BASE },
   { archivo: "verificar-paises-monedas.ts", alias: BASE },
   { archivo: "verificar-presupuesto-exacto.ts", alias: BASE },

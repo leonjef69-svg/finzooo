@@ -736,6 +736,10 @@ instalación nueva.
 - Países y monedas se prueban ahora usando el catálogo real: 250 países, 155
   monedas, búsquedas, orden, símbolos, decimales y separación entre perfil
   local y respaldo en nube.
+- La categoría escrita en un archivo importado tiene una prueba directa y
+  separada de la protección para borrar un mes completo.
+- Un CSV sintético de 10.000 movimientos se procesa completo en menos de 100 ms
+  en el entorno local; la medición física de PDF sigue pendiente.
 - Se mantienen 113 pruebas totales porque tres pruebas de comportamiento
   reemplazan tres pruebas estáticas anteriores; no se tocaron tarjetas de
   crédito ni se publicó nada.

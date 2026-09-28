@@ -13,8 +13,8 @@ import { nextId } from "@/utils/id";
 import { accountLabelFor, guessAccount } from "@/constants/accounts";
 import { catInfo } from "@/constants/categories";
 import { fmtDate } from "@/utils/format";
-import { matchCategory, matchMethod, parseStatement, type RawRow } from "@/utils/importEngine";
-import { suggestCategory } from "@/utils/classifier";
+import { matchMethod, parseStatement, type RawRow } from "@/utils/importEngine";
+import { categoryForImportedRow } from "@/utils/importCategory";
 import { buildDuplicateDateIndex, findBestMatchInIndex, mergeTransaction, type DuplicateMatch } from "@/utils/duplicates";
 import DuplicateReview from "@/screens/DuplicateReview";
 import { elegirArchivo, puedeElegirArchivo } from "@/modules/incoming-file";
@@ -274,11 +274,7 @@ export default function ImportSheet({
       // El orden es: lo que ESCRIBIÓ una persona primero, lo que adivina la app después. Si la
       // categoría del archivo no se reconoce —"Alimentación" no es ninguna de las de Fino— se
       // cae a la adivinanza de siempre, que para "SUPERMERCADO PLAZA" acierta igual.
-      const delArchivo = matchCategory(raw.categoryRaw, raw.type, t);
-      const generica = delArchivo === (raw.type === "expense" ? "otros" : "otro_ingreso");
-      const category = generica
-        ? suggestCategory(raw.merchant || raw.description, raw.type, merchantLearned)
-        : delArchivo;
+      const category = categoryForImportedRow(raw, t, merchantLearned);
       const tx: Transaction = {
         id: nextId(),
         type: raw.type,
