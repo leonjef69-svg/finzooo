@@ -88,5 +88,9 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
   el HTML de un PDF con 10.000 movimientos conserva la primera y última fila,
   escapa el texto y queda bajo el límite temporal local. La impresión nativa
   del PDF todavía necesita medirse en un teléfono de gama baja.
+- Los avisos del calendario dejaron de comprobarse leyendo el efecto como
+  texto. La prueba programa tres meses reales, cambia de PEN a USD, confirma
+  que no se dupliquen, omite el mes pagado y cancela únicamente avisos del
+  calendario sin retirar el aviso independiente de exportación.
 - TypeScript y ESLint están aprobados para esta tanda. No se modificaron
   tarjetas de crédito ni se publicó ningún cambio.

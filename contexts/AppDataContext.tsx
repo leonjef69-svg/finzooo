@@ -129,6 +129,7 @@ import { desconectarOneDrive } from "@/utils/onedrive";
 import { disableLock } from "@/utils/appLock";
 import { setPendingImport } from "@/utils/pendingImport";
 import { profileWithCurrency } from "@/utils/profile";
+import { paymentNotificationFormatter } from "@/utils/notificationCurrency";
 import { limpiarCajasEnMemoria } from "@/utils/cajasMemoria";
 import type { Goal, Month, Profile, Transaction } from "@/types";
 
@@ -1125,7 +1126,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
      * estaba ahí. Guardando lo que devuelve el propio reprogramado, el número no puede
      * adelantarse a los hechos.
      */
-    const formatForNotification = (amount: number) => formatAmount(amount, currencySymbolFor(userCurrency), userCurrency);
+    const formatForNotification = paymentNotificationFormatter(userCurrency);
     reprogramarAvisosDePagos(pagosProgramados, (clave, valores) => tRef.current(clave, valores), new Date(), formatForNotification)
       .then((r) => {
         setAvisosProgramados(r.puestos);

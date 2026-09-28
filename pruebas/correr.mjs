@@ -72,6 +72,14 @@ const SUITES = [
   { archivo: "verificar-importacion-rapida.ts", alias: BASE },
   { archivo: "verificar-importar-categoria.ts", alias: BASE },
   { archivo: "verificar-metodos-por-pais.ts", alias: BASE },
+  {
+    archivo: "verificar-moneda-avisos.ts",
+    alias: {
+      ...EXPO,
+      "@react-native-async-storage/async-storage": stub("async-storage.ts"),
+      "expo-secure-store": stub("secure-store.ts"),
+    },
+  },
   { archivo: "verificar-paises-monedas.ts", alias: BASE },
   { archivo: "verificar-presupuesto-exacto.ts", alias: BASE },
   { archivo: "verificar-flujo-inicial-real.ts", alias: BASE },

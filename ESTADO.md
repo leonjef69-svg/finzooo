@@ -743,6 +743,9 @@ instalación nueva.
 - Un Excel real de 10.000 filas y la preparación de un PDF con 10.000
   movimientos también pasan pruebas locales de carga. El límite de 15 MB se
   comprueba en su byte exacto; aún falta medir la impresión nativa en teléfono.
+- Los avisos del calendario se prueban ahora mediante programación real
+  simulada: cambio de moneda, tres meses, meses pagados, ausencia de duplicados
+  y cancelación selectiva sin borrar avisos de exportación.
 - Se mantienen 113 pruebas totales porque tres pruebas de comportamiento
   reemplazan tres pruebas estáticas anteriores; no se tocaron tarjetas de
   crédito ni se publicó nada.
