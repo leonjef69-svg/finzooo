@@ -64,5 +64,8 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 - La prueba del presupuesto también ejecuta la función usada por Inicio:
   confirma que 1.359 llega completo al formateador y que un monto oculto no se
   procesa ni se muestra.
+- Los métodos de pago ahora se filtran mediante una función probada: Yape solo
+  aparece en Perú/Bolivia, Plin solo en Perú, los métodos universales siguen en
+  todos los países y una edición conserva métodos antiguos.
 - TypeScript y ESLint están aprobados para esta tanda. No se modificaron
   tarjetas de crédito ni se publicó ningún cambio.

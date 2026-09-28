@@ -15,12 +15,13 @@ import CategoryAvatar from "@/components/CategoryAvatar";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
 import { currencySymbolFor } from "@/constants/currencies";
 import { COLOR_HEX_600 } from "@/constants/colors";
-import { methodLabel, PAYMENT_METHODS } from "@/constants/i18n";
+import { methodLabel } from "@/constants/i18n";
 import { useAppData } from "@/contexts/AppDataContext";
 import { defaultDateForMonth, isValidISODate, normalizeDateInput } from "@/utils/date";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { nextId } from "@/utils/id";
 import { horaDe } from "@/utils/format";
+import { availablePaymentMethods, initialPaymentMethod } from "@/utils/paymentMethods";
 import { iconoDe, iconosParaCategoria } from "@/constants/iconos";
 import { alternar, esFoto, getFavoritos } from "@/utils/iconosFavoritos";
 import { esPropia } from "@/utils/categoriasPropias";
@@ -70,7 +71,7 @@ export default function AddSheet({
   const [categoriaConIconos, setCategoriaConIconos] = useState<string | null>(null);
   const [nombreTemporal, setNombreTemporal] = useState("");
   const [date, setDate] = useState(transaction?.date || defaultDateForMonth(currentMonth));
-  const [method, setMethod] = useState(transaction?.method || "debit");
+  const [method, setMethod] = useState(initialPaymentMethod(transaction));
   const [description, setDescription] = useState(transaction?.description || "");
   const [notes, setNotes] = useState(transaction?.notes || "");
   const [showMethod, setShowMethod] = useState(false);
@@ -179,10 +180,7 @@ export default function AddSheet({
   const coloresRapidos = ["rose", "orange", "amber", "green", "emerald", "teal", "blue", "violet", "pink", "slate"];
 
   const metodosDisponibles = useMemo(
-    () => PAYMENT_METHODS.filter((m) =>
-      (m.id !== "plin" || userCountry === "PE")
-      && (m.id !== "yape" || userCountry === "PE" || userCountry === "BO")
-    ),
+    () => availablePaymentMethods(userCountry),
     [userCountry]
   );
 

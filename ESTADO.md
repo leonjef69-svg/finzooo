@@ -729,5 +729,8 @@ instalación nueva.
   hasta 14 días, descarta desde 15 y no enlaza dos filas con el mismo movimiento.
 - El presupuesto exacto se comprueba mediante la misma función de Inicio: no
   redondea el monto y evita formatearlo cuando el saldo está oculto.
-- Se mantienen 113 pruebas totales porque estas dos reemplazan pruebas estáticas
-  anteriores; no se tocaron tarjetas de crédito ni se publicó nada.
+- Los métodos de pago ya se prueban ejecutando su filtro real por país y la
+  compatibilidad al editar movimientos antiguos.
+- Se mantienen 113 pruebas totales porque tres pruebas de comportamiento
+  reemplazan tres pruebas estáticas anteriores; no se tocaron tarjetas de
+  crédito ni se publicó nada.
