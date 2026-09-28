@@ -748,6 +748,8 @@ instalación nueva.
   y cancelación selectiva sin borrar avisos de exportación.
 - También se verifican permiso denegado, fallo del sistema y dos cambios
   simultáneos; la cola conserva únicamente la configuración más reciente.
+- La acción «Probar aviso» tiene casos ejecutables de éxito a tres segundos,
+  permiso denegado y error nativo.
 - Se mantienen 113 pruebas totales porque tres pruebas de comportamiento
   reemplazan tres pruebas estáticas anteriores; no se tocaron tarjetas de
   crédito ni se publicó nada.

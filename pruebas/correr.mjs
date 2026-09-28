@@ -82,6 +82,14 @@ const SUITES = [
   },
   { archivo: "verificar-paises-monedas.ts", alias: BASE },
   { archivo: "verificar-presupuesto-exacto.ts", alias: BASE },
+  {
+    archivo: "verificar-prueba-aviso.ts",
+    alias: {
+      ...EXPO,
+      "@react-native-async-storage/async-storage": stub("async-storage.ts"),
+      "expo-secure-store": stub("secure-store.ts"),
+    },
+  },
   { archivo: "verificar-flujo-inicial-real.ts", alias: BASE },
   { archivo: "verificar-acceso-google.ts", alias: BASE },
   // La caja de React se cambia por una de mentira: ver stubs/react.ts.

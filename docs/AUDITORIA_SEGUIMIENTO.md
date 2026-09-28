@@ -95,5 +95,8 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 - La misma prueba cubre permiso denegado, error nativo al programar y dos
   reprogramaciones simultáneas. Los fallos conservan su etapa y motivo, y la
   última moneda queda activa con tres avisos, no seis.
+- El botón de prueba del calendario también se ejecuta: programa un aviso a
+  tres segundos con título, texto, sonido y marca correctos; distingue permiso
+  denegado de un error del servicio.
 - TypeScript y ESLint están aprobados para esta tanda. No se modificaron
   tarjetas de crédito ni se publicó ningún cambio.
