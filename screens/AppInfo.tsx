@@ -152,25 +152,25 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
               no hay forma de saber si un arreglo nativo está o no, y se
               acaba arreglando dos veces algo que ya estaba bien. */}
           <Text className="text-[10px] text-slate-400 mt-1" selectable>
-            {t("appInfo.nativeParts")}: {incomingFile.isSupported ? "✓" : "✗"} compartir ·{" "}
+            {t("appInfo.nativeParts")}: {incomingFile.isSupported ? "✓" : "✗"} {t("appInfo.nativeShare")} ·{" "}
             {/* Ponía "gmail", y es el mismo módulo que abre el chat de
                 WhatsApp con el número puesto. Viéndolo así parecía que lo de
                 WhatsApp no venía en el APK. */}
-            {shareToApp.isSupported ? "✓" : "✗"} enviar directo ·{" "}
+            {shareToApp.isSupported ? "✓" : "✗"} {t("appInfo.nativeDirectSend")} ·{" "}
             {/* Esta distingue el APK del 1 de agosto de los anteriores. Los
                 de antes también traen "enviar directo", así que esa línea
                 sola no dice cuál está instalado, y quien no recuerde si
                 llegó a instalarlo se queda sin saberlo. */}
-            {shareToApp.hasDirectMail ? "✓" : "✗"} correo directo ·{" "}
-            {textRecognizer.isSupported ? "✓" : "✗"} escáner ·{" "}
+            {shareToApp.hasDirectMail ? "✓" : "✗"} {t("appInfo.nativeDirectMail")} ·{" "}
+            {textRecognizer.isSupported ? "✓" : "✗"} {t("appInfo.nativeScanner")} ·{" "}
             {/* El APK del 2 de agosto por la mañana ya traía la voz, pero se
                 quedaba muda con un yapeo de verdad. Esta línea distingue uno
                 del otro: sin ella, el arreglo ya instalado parece no estar. */}
-            {notificationReader.hasSpeakReason ? "✓" : "✗"} voz afinada ·{" "}
+            {notificationReader.hasSpeakReason ? "✓" : "✗"} {t("appInfo.nativeTunedVoice")} ·{" "}
             {/* Y esta distingue el APK que habla SIN ESPERA de los anteriores,
                 que ya traían la voz pero tardaban unos segundos. Sin ella,
                 "sigue tardando" no dice si el arreglo llegó a instalarse. */}
-            {notificationReader.hasVozSinEspera ? "✓" : "✗"} voz al instante ·{" "}
+            {notificationReader.hasVozSinEspera ? "✓" : "✗"} {t("appInfo.nativeInstantVoice")} ·{" "}
             {/* LAS DOS DE LA EXPORTACIÓN AUTOMÁTICA, y hacían falta.
                 El 06/08/2026 el usuario reportó que el PDF no salía solo. El
                 motivo era que su APK trae el despertador pero NO el conversor de
@@ -181,14 +181,14 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
                 Son dos y no una a propósito: el despertador llegó antes que el
                 conversor, así que hay APK con el primero y sin el segundo. Es
                 justo el caso que costó este ida y vuelta. */}
-            {puedeExportarEnFondo() ? "✓" : "✗"} reporte solo ·{" "}
-            {puedePdfEnFondo() ? "✓" : "✗"} PDF solo ·{" "}
+            {puedeExportarEnFondo() ? "✓" : "✗"} {t("appInfo.nativeAutoReport")} ·{" "}
+            {puedePdfEnFondo() ? "✓" : "✗"} {t("appInfo.nativeAutoPdf")} ·{" "}
             {/* La del 12/08/2026, y hizo falta el mismo día. Se entregó un APK
                 que traía esta parte, la app siguió mostrando la pantalla vieja
                 por otro motivo, y no había forma de saber si el problema era
                 que el APK no se había instalado o que el arreglo no servía. Se
                 perdieron dos vueltas en eso. */}
-            {incomingFile.puedeElegirArchivo ? "✓" : "✗"} hojas de Google
+            {incomingFile.puedeElegirArchivo ? "✓" : "✗"} {t("appInfo.nativeGoogleSheets")}
           </Text>
 
           <TouchableOpacity

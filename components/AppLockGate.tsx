@@ -239,7 +239,7 @@ export default function AppLockGate() {
 
       {retrySeconds > 0 && (
         <Text className="mt-4 text-center text-xs font-bold text-rose-500">
-          Demasiados intentos. Intenta de nuevo en {retrySeconds} s.
+          {t("lock.retryIn", { seconds: retrySeconds })}
         </Text>
       )}
 

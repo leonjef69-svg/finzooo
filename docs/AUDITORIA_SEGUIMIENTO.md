@@ -14,10 +14,10 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
   del emulador.
 - MED-01 a MED-17 y MED-21/MED-22: correcciones preparadas en código. La prueba
   Premium ahora se concede una sola vez desde una función del servidor.
-- BAJ-02 a BAJ-11 y BAJ-13: corregidos en código. BAJ-01 (traducciones y
-  accesibilidad) continúa por tandas; ya se limpiaron Inicio, bienvenida,
-  Familia, Cajas, Caja compartida, calendario, Telegram, navegación y selectores
-  comunes principales.
+- BAJ-01 a BAJ-11 y BAJ-13: corregidos en código. Un auditor automático revisa
+  texto JSX, placeholders, etiquetas accesibles, alertas y mensajes breves en
+  Inicio, bienvenida, Familia, Cajas, Caja compartida, calendario, Telegram,
+  navegación y pantallas secundarias. Falta la comprobación física con TalkBack.
 
 ## Pendiente por decisión o trabajo externo
 
@@ -47,8 +47,7 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
 ## Siguiente orden
 
-1. Terminar BAJ-01 en pantallas secundarias y comprobar el recorrido con lector
-   de pantalla en un dispositivo real.
+1. Sustituir más pruebas antiguas de texto por pruebas de comportamiento.
 2. Revisar los pendientes de rendimiento y pruebas reales que aún puedan
    simularse localmente, sin tocar tarjetas de crédito.
 3. Preparar una sola versión de prueba con los cambios nativos acumulados.

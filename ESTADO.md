@@ -710,3 +710,15 @@ instalación nueva.
 - Los auditores confirman 1.527 claves por idioma, sin claves repetidas,
   faltantes, variables desiguales ni problemas de redacción.
 - No se modificaron tarjetas de crédito ni se publicó ningún cambio.
+
+### Auditoría externa — cierre local de traducciones visibles (28/09/2026)
+
+- Se tradujeron el bloqueo por intentos y el diagnóstico de partes nativas de
+  Información, que todavía mezclaban español al elegir inglés o portugués.
+- Se añadió un auditor de interfaz que analiza las pantallas con el compilador
+  de TypeScript y falla si encuentra texto JSX, placeholder, etiqueta accesible,
+  alerta o mensaje breve sin pasar por traducciones.
+- El auditor excluye expresamente el módulo de tarjetas de crédito por decisión
+  del propietario y permite solo marcas, formatos de archivo y separadores.
+- BAJ-01 queda corregido en código. Sigue pendiente comprobar el recorrido real
+  con TalkBack, letra al 200 %, modo horizontal y un dispositivo físico.

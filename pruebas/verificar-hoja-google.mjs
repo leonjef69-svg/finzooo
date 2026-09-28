@@ -170,7 +170,7 @@ console.log("\n--- EN APPS VIEJAS NO SE OFRECE LO QUE NO SE PUEDE ABRIR ---");
 
   // Y SE VE EN INFORMACION. Sin esto no hay forma de saber si un APK trae esta parte, y se
   // acaba buscando el fallo donde no esta — pasó el 12/08/2026, dos veces.
-  ok(/puedeElegirArchivo \? "✓" : "✗"\} hojas de Google/.test(leer("screens/AppInfo.tsx")),
+  ok(/puedeElegirArchivo \? "✓" : "✗"\} \{t\("appInfo\.nativeGoogleSheets"\)\}/.test(leer("screens/AppInfo.tsx")),
     "y se ve en la pantalla de Informacion");
 }
 
