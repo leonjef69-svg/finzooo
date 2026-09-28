@@ -83,5 +83,10 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 - Una prueba sintética procesa 10.000 filas CSV, comprueba que ninguna se pierda
   ni cambie de tipo y limita el tiempo local a 3 segundos; en esta revisión
   terminó en menos de 100 ms. Esto no reemplaza la medición física de PDF.
+- La carga de archivos usa ahora un límite de 15 MB con fronteras probadas. Un
+  XLSX real de 10.000 filas se abre, convierte y analiza sin pérdidas; preparar
+  el HTML de un PDF con 10.000 movimientos conserva la primera y última fila,
+  escapa el texto y queda bajo el límite temporal local. La impresión nativa
+  del PDF todavía necesita medirse en un teléfono de gama baja.
 - TypeScript y ESLint están aprobados para esta tanda. No se modificaron
   tarjetas de crédito ni se publicó ningún cambio.

@@ -19,8 +19,7 @@ import { buildDuplicateDateIndex, findBestMatchInIndex, mergeTransaction, type D
 import DuplicateReview from "@/screens/DuplicateReview";
 import { elegirArchivo, puedeElegirArchivo } from "@/modules/incoming-file";
 import type { Transaction } from "@/types";
-
-const MAX_IMPORT_BYTES = 15 * 1024 * 1024;
+import { isImportTooLarge } from "@/utils/importLimits";
 
 /**
  * La extensión que le toca a un documento de Google ya convertido.
@@ -330,7 +329,7 @@ export default function ImportSheet({
     let readAsPdf = false;
     try {
       file = new File(asset.uri);
-      if ((file.size ?? 0) > MAX_IMPORT_BYTES) {
+      if (isImportTooLarge(file.size)) {
         showToastAndClose(t("importSheet.tooLarge"));
         return;
       }

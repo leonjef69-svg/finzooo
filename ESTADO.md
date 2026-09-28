@@ -740,6 +740,9 @@ instalación nueva.
   separada de la protección para borrar un mes completo.
 - Un CSV sintético de 10.000 movimientos se procesa completo en menos de 100 ms
   en el entorno local; la medición física de PDF sigue pendiente.
+- Un Excel real de 10.000 filas y la preparación de un PDF con 10.000
+  movimientos también pasan pruebas locales de carga. El límite de 15 MB se
+  comprueba en su byte exacto; aún falta medir la impresión nativa en teléfono.
 - Se mantienen 113 pruebas totales porque tres pruebas de comportamiento
   reemplazan tres pruebas estáticas anteriores; no se tocaron tarjetas de
   crédito ni se publicó nada.
