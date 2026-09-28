@@ -118,7 +118,7 @@ import {
 import { activatePremiumTrialCloud } from "@/utils/premiumTrialCloud";
 import { presupuestoCubreTransferencias, presupuestoDelMes, transferidoPendienteDelMes } from "@/utils/presupuestoMensual";
 import { hayDescuadre, maximoAApartar, saldoLibre, totalApartado } from "@/utils/ahorro";
-import { availablePersonalBalance } from "@/utils/finances";
+import { availablePersonalBalance, totalsForMonth } from "@/utils/finances";
 import { saldoAnteriorDe } from "@/utils/saldoAnterior";
 import { isSafeMoneyAmount } from "@/utils/amount";
 import { unlinkCreditPaymentsForHomeTransactions } from "@/utils/creditStore";
@@ -1653,12 +1653,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // se vuelven a hacer cuando los movimientos, los presupuestos o el mes
   // elegido cambian de verdad — no en cada pequeño cambio de pantalla.
   const { spent, income, transfersOut, transfersIn } = useMemo(() => {
-    const mTx = transactions.filter((t) => t.date.startsWith(mk));
-    const s = mTx.filter((t) => t.type === "expense" && !t.internalTransfer).reduce((sum, t) => sum + t.amount, 0);
-    const transfersOut = mTx.filter((t) => t.type === "expense" && t.internalTransfer).reduce((sum, t) => sum + t.amount, 0);
-    const transfersIn = mTx.filter((t) => t.type === "income" && t.internalTransfer).reduce((sum, t) => sum + t.amount, 0);
-    const i = mTx.filter((t) => t.type === "income" && !t.internalTransfer).reduce((sum, t) => sum + t.amount, 0);
-    return { spent: s, income: i, transfersOut, transfersIn };
+    return totalsForMonth(transactions, mk);
   }, [transactions, mk]);
 
   // Cuánto se ha gastado este mes en cada categoría (solo gastos), para

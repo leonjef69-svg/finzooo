@@ -16,13 +16,8 @@ import {
   availablePersonalBalance,
   budgetLeft,
   budgetUsed,
-  changeVsPrevious,
-  dailyTotals,
-  daysInMonthOf,
   health,
-  previousMonthKey,
   totalsForMonth,
-  visibleRange,
 } from "@/utils/finances";
 
 let fallos = 0;
@@ -38,7 +33,12 @@ console.log("\n--- TRANSFERIR CAMBIA PERSONAL, NO EL CONSUMO ---");
   ok(availablePersonalBalance({ budget: 500, prevBalance: 0, income: 0, spent: 0, transfersOut: 300, transfersIn: 100 }) === 300, "una devolución vuelve a sumar solo en Personal");
 }
 
-type Tx = { date: string; type: "expense" | "income"; amount: number };
+type Tx = {
+  date: string;
+  type: "expense" | "income";
+  amount: number;
+  internalTransfer?: boolean;
+};
 
 console.log("\n--- EL DISPONIBLE ES EL MISMO QUE EN INICIO ---");
 {
@@ -101,43 +101,24 @@ console.log("\n--- LA SALUD NO SE OPINA SIN DATOS ---");
     "justo en el 100% todavia no es 'te pasaste'");
 }
 
-console.log("\n--- EL PORCENTAJE CONTRA EL MES PASADO ---");
-{
-  ok(changeVsPrevious(300, 200) === 0.5, "de 200 a 300 es +50%");
-  ok(changeVsPrevious(150, 300) === -0.5, "de 300 a 150 es -50%");
-  ok(changeVsPrevious(200, 200) === 0, "igual que el mes pasado es 0%");
-  // Lo importante: NO inventar una comparacion que no existe.
-  ok(changeVsPrevious(300, 0) === null, "de 0 a 300 no es '+100%': no hay comparacion posible");
-  ok(changeVsPrevious(0, 0) === null, "de 0 a 0 tampoco");
-}
-
 console.log("\n--- LOS TOTALES SALEN DE LOS MOVIMIENTOS ---");
 {
   const txs: Tx[] = [
     { date: "2026-07-03", type: "expense", amount: 100 },
     { date: "2026-07-15", type: "expense", amount: 50 },
     { date: "2026-07-20", type: "income", amount: 800 },
+    { date: "2026-07-21", type: "expense", amount: 300, internalTransfer: true },
+    { date: "2026-07-22", type: "income", amount: 75, internalTransfer: true },
     { date: "2026-06-30", type: "expense", amount: 999 }, // otro mes
     { date: "2026-08-01", type: "income", amount: 999 },  // otro mes
   ];
   const julio = totalsForMonth(txs, "2026-07");
   ok(julio.spent === 150, "julio gasta 150, sin colarse junio ni agosto");
   ok(julio.income === 800, "julio ingresa 800");
+  ok(julio.transfersOut === 300, "el envío interno se separa del gasto");
+  ok(julio.transfersIn === 75, "y la devolución se separa del ingreso");
   const junio = totalsForMonth(txs, "2026-06");
   ok(junio.spent === 999 && junio.income === 0, "junio se lee aparte y correctamente");
-}
-
-console.log("\n--- EL MES ANTERIOR ---");
-{
-  ok(previousMonthKey("2026-07") === "2026-06", "julio -> junio");
-  ok(previousMonthKey("2026-01") === "2025-12", "enero -> diciembre del ano anterior");
-  ok(previousMonthKey("2026-03") === "2026-02", "marzo -> febrero");
-}
-{
-  ok(daysInMonthOf("2026-02") === 28, "febrero de 2026 tiene 28 dias");
-  ok(daysInMonthOf("2024-02") === 29, "febrero de 2024 (bisiesto) tiene 29");
-  ok(daysInMonthOf("2026-07") === 31, "julio tiene 31");
-  ok(daysInMonthOf("2026-04") === 30, "abril tiene 30");
 }
 
 console.log("\n--- LA CUENTA QUE SE ENSENA TIENE QUE CERRAR ---");

@@ -104,5 +104,9 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
   falla la red, permite reintentar en el próximo arranque sin entrar en bucle
   durante la misma sesión. Un mes sin movimientos termina limpiamente y no
   deja una pantalla invisible abierta.
+- Se retiraron cálculos de gráficos y comparaciones mensuales que ya no usaba
+  ninguna pantalla. El total mensual que antes estaba huérfano ahora alimenta
+  realmente a Inicio y separa gastos, ingresos, envíos y devoluciones; así una
+  transferencia interna no puede volver a entrar en los totales normales.
 - TypeScript, ESLint, 117 pruebas y 8 auditores están aprobados para esta
   tanda. No se modificaron tarjetas de crédito ni se publicó ningún cambio.

@@ -16,6 +16,9 @@
 - Las exportaciones recuperadas al abrir Fino ya no se marcan como exitosas
   antes de subir: conservan destino, espacio y gráficos, y reintentan tras un
   fallo sin repetir dentro de la misma sesión.
+- Los totales mensuales de Inicio usan una sola función probada y mantienen
+  transferencias internas separadas de gastos e ingresos. Se retiró código de
+  gráficas antiguas que ya no tenía consumidores reales.
 
 ## Historial Personal separado — preparado localmente (27/09/2026)
 
