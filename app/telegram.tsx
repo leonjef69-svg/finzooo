@@ -53,7 +53,7 @@ export default function TelegramScreen() {
       setCode(next);
       await Linking.openURL(`https://t.me/${TELEGRAM_BOT_USERNAME}?start=link_${next}`);
     } catch {
-      showToast("No se pudo generar el código. Revisa tu conexión.");
+      showToast(t("telegram.generateError"));
     }
   }
 

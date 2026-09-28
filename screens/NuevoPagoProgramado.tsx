@@ -31,6 +31,7 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { TODOS_LOS_GRUPOS, iconoDe } from "@/constants/iconos";
 import { esFoto } from "@/utils/iconosFavoritos";
 import { COLOR_HEX_600 } from "@/constants/colors";
+import { currencySymbolFor } from "@/constants/currencies";
 import {
   iconoSugerido,
   mesDe,
@@ -91,7 +92,7 @@ export default function NuevoPagoProgramado({
   fecha?: string;
   onBack: () => void;
 }) {
-  const { t, monthNames, pagosProgramados, guardarPagoProgramado, quitarPagoProgramado } =
+  const { t, monthNames, pagosProgramados, guardarPagoProgramado, quitarPagoProgramado, userCurrency } =
     useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -444,7 +445,7 @@ export default function NuevoPagoProgramado({
         <View className="flex-row gap-2.5 mb-3">
           {!esRecordatorio && (
             <View className={`flex-1 h-[50px] rounded-2xl px-4 flex-row items-center ${campo}`}>
-              <Text className="text-[13px] text-slate-400 mr-1.5">S/</Text>
+              <Text className="text-[13px] text-slate-400 mr-1.5">{currencySymbolFor(userCurrency)}</Text>
               <TextInput
                 disableFullscreenUI                value={monto}
                 onChangeText={(v) => setMonto(soloMonto(v))}

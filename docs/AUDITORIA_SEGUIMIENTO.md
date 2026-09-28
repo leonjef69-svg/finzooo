@@ -16,7 +16,8 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
   Premium ahora se concede una sola vez desde una función del servidor.
 - BAJ-02 a BAJ-11 y BAJ-13: corregidos en código. BAJ-01 (traducciones y
   accesibilidad) continúa por tandas; ya se limpiaron Inicio, bienvenida,
-  Familia, Cajas, Caja compartida, navegación y selectores comunes principales.
+  Familia, Cajas, Caja compartida, calendario, Telegram, navegación y selectores
+  comunes principales.
 
 ## Pendiente por decisión o trabajo externo
 
@@ -35,8 +36,9 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 - MED-20: la limpieza y menor captura del lector nativo están en código, pero
   requieren un AAB y prueba física para considerarlas terminadas.
 - MED-23: ya existen pruebas reales del emulador de reglas y dos clientes. La
-  prueba de la campana ya valida comportamiento en vez de inspeccionar texto;
-  todavía quedan otras pruebas antiguas por reemplazar gradualmente.
+  prueba de la campana ya valida comportamiento y la del flujo inicial ejecuta
+  las traducciones reales; todavía quedan otras pruebas antiguas por reemplazar
+  gradualmente.
 - VER-01 y VER-04 a VER-06: verificar consola/producción, correo fuera de la
   app, avisos tras reiniciar y requisitos fiscales de Google Play.
 - Pruebas físicas: dos teléfonos/dos cuentas, red intermitente, Drive/Dropbox,

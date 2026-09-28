@@ -226,7 +226,7 @@ export default function Cajas() {
     if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
     const valor = parseAmountInput(monto, userCurrency);
     if (!(valor > 0)) return;
-    if (!validSpaceDate(movementDate)) { showToast("Escribe una fecha válida: AAAA-MM-DD"); return; }
+    if (!validSpaceDate(movementDate)) { showToast(t("common.validDateYmd")); return; }
     const aporteEditado = editandoAporteId ? movimientos.find(item => item.id === editandoAporteId) : undefined;
     if (aporteEditado?.personalTransactionId != null) {
       const minimo = minimumContributionAmount(movimientos, aporteEditado);
@@ -298,9 +298,9 @@ export default function Cajas() {
   }
   function confirmarBorrarTodo() {
     if (!visibles.length) return;
-    Alert.alert("Borrar todos los movimientos", `Se eliminarán los ${visibles.length} movimientos que se muestran. Esta acción no se puede deshacer.`, [
+    Alert.alert(t("spaces.deleteMovementsTitle"), t("spaces.deleteMovementsMessage", { count: visibles.length }), [
       { text: t("common.cancel"), style: "cancel" },
-      { text: "Borrar todo", style: "destructive", onPress: () => borrarSeleccionados(visibles.map(item => item.id)) },
+      { text: t("common.deleteAll"), style: "destructive", onPress: () => borrarSeleccionados(visibles.map(item => item.id)) },
     ]);
   }
   function borrarCajas(ids = cajasSeleccionadas) {
@@ -322,9 +322,9 @@ export default function Cajas() {
   }
   function confirmarBorrarTodasLasCajas() {
     if (!datos.cajas.length) return;
-    Alert.alert("Borrar todas las cajas", `Se eliminarán las ${datos.cajas.length} cajas. Solo se pueden borrar cajas con saldo S/ 0.00.`, [
+    Alert.alert(t("boxes.deleteAllTitle"), t("boxes.deleteAllMessage", { count: datos.cajas.length, amount: fmt(0) }), [
       { text: t("common.cancel"), style: "cancel" },
-      { text: "Borrar todo", style: "destructive", onPress: () => borrarCajas(datos.cajas.map(item => item.id)) },
+      { text: t("common.deleteAll"), style: "destructive", onPress: () => borrarCajas(datos.cajas.map(item => item.id)) },
     ]);
   }
 

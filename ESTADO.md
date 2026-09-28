@@ -698,3 +698,15 @@ instalación nueva.
 - Las pruebas estáticas afectadas se ajustaron para exigir las claves traducidas
   en los tres idiomas, sin retirar sus verificaciones de seguridad y flujo.
 - No se publicó, compiló ni desplegó nada. Tarjetas de crédito sigue excluido.
+
+### Auditoría externa — segunda tanda de textos y moneda (28/09/2026)
+
+- Los avisos de fecha inválida y borrado de Familia/Cajas, incluido el saldo
+  cero exigido, ya respetan español, inglés, portugués y la moneda configurada.
+- Telegram traduce el error al generar el código. El calendario dejó de mostrar
+  `S/` fijo y usa el símbolo real de la cuenta.
+- La prueba del flujo inicial ahora carga las traducciones ejecutables de los
+  tres idiomas; ya no se limita a contar frases dentro del archivo fuente.
+- Los auditores confirman 1.527 claves por idioma, sin claves repetidas,
+  faltantes, variables desiguales ni problemas de redacción.
+- No se modificaron tarjetas de crédito ni se publicó ningún cambio.
