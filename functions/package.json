@@ -2,9 +2,12 @@
   "name": "fino-telegram-functions",
   "private": true,
   "main": "index.js",
-  "engines": { "node": "20" },
+  "engines": {
+    "node": "20"
+  },
   "scripts": {
     "test": "node --test test/*.test.js",
+    "test:emulator": "node --test emulator-tests/*.test.js",
     "serve:telegram": "node local.js"
   },
   "dependencies": {
@@ -14,5 +17,8 @@
   "overrides": {
     "qs": "^6.15.4",
     "uuid": "^11.1.1"
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2"
   }
 }

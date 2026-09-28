@@ -1,74 +1,50 @@
-# Migración segura del respaldo Personal
+# Migración del historial Personal
 
-Estado: preparación local. **Nada de este formato está activado en Firebase ni en la app.**
+Estado: código y pruebas locales preparados; producción sin cambios.
 
-## Por qué no basta con mover la lista
+Cada movimiento de una cuenta migrada vive en `users/{uid}/history/{id}`.
+`users/{uid}` conserva los demás datos y `historyFormat: 2`, sin los arreglos
+`transactions` ni `deletedTransactionIds`. Los borrados se guardan como
+documentos con `deleted: true`, para que otro teléfono no los restaure.
 
-Hoy `users/{uid}` guarda todos los movimientos. La app, Telegram y los teléfonos
-antiguos leen y escriben esa misma lista. Quitarla antes de actualizar los tres
-haría que una versión anterior mostrara un historial incompleto o sobrescribiera
-el nuevo. Las subcolecciones tampoco se eliminan al borrar su documento padre.
+## Garantías y límites
 
-## Invariantes antes de activar
+- La lista antigua no se retira hasta comprobar cada movimiento y cada borrado.
+  Se conserva el identificador; un borrado prevalece sobre una copia vieja.
+- Entre ediciones gana la más reciente. Si dos contenidos distintos tienen la
+  misma fecha de edición, se detiene la fusión para revisar el conflicto.
+- El teléfono antiguo no puede sobrescribir una cuenta migrada. La app muestra
+  un aviso de actualización; es mejor detener una escritura que perder datos.
+- Una falla de lectura de Firestore no se trata como historial vacío.
+- El tamaño máximo por movimiento individual sigue limitado por Firestore.
 
-1. El documento antiguo conserva todo el historial hasta comprobar que la copia
-   nueva contiene cada movimiento y cada borrado. Un fallo a mitad de camino se
-   reintenta; nunca se interpreta como una cuenta vacía.
-2. Los identificadores permanecen iguales. El borrado gana frente a una copia
-   vieja del movimiento; entre dos ediciones gana la más reciente y un empate
-   con distinto contenido exige revisión, no un corte silencioso.
-3. Los teléfonos con versión antigua no pueden sobrescribir el formato nuevo.
-   Antes del corte habrá que exigirles actualizar, con un aviso comprensible;
-   dejarlos escribir un respaldo parcial sería peor que mostrar un error.
-4. La app y Telegram deben leer/escribir el mismo formato desde el momento del
-   corte, incluidos transferencias, correcciones, deshacer y resúmenes.
-5. Borrar la cuenta también borra todos los documentos del historial nuevo.
+## Orden seguro para una entrega futura
 
-## Orden de entrega
+1. Verificar una copia exportada y preparar una compilación de la app nueva.
+2. Publicar reglas y Functions compatibles con ambos formatos.
+3. Distribuir la app nueva y confirmar que los dispositivos antiguos dejaron
+   de escribir en las cuentas que se van a migrar.
+4. Migrar cada cuenta con `functions/scripts/migrate-personal-history.js`.
+   El script exige confirmar exactamente el UID para producción. Nunca se
+   ejecuta automáticamente. Si se corta, conserva la lista original y se
+   puede repetir; solo retira la lista cuando verifica todas las filas y la
+   revisión del documento principal sigue siendo la misma.
+5. Comprobar en una cuenta de prueba restauración, edición, borrado, Telegram
+   y eliminación de cuenta antes de ampliar la migración.
 
-1. Completar el lector y escritor del historial separado, reglas de acceso,
-   funciones de Telegram y borrado de cuenta. Probarlos en un emulador de
-   Firebase con dos cuentas y dos teléfonos simulados.
-2. Publicar primero el servidor compatible con ambos formatos, pero sin iniciar
-   migraciones. Esto requiere aviso y aprobación del propietario.
-3. Entregar la app nueva y comprobar respaldo/restauración sin cambiar todavía
-   el formato de las cuentas existentes.
-4. Migrar una cuenta de prueba: copiar en lotes, verificar el contenido, bloquear
-   escrituras antiguas y solo entonces cambiar el marcador de formato y retirar
-   la lista del documento principal. Si el proceso se interrumpe, reanudar desde
-   los documentos ya copiados; no borrar el origen prematuramente.
-5. Repetir con volúmenes de 10.000 o más movimientos y observar lecturas, tiempo
-   de apertura y costos antes de habilitarlo a todos.
+La app vieja queda bloqueada para escribir después de la migración. Eso evita
+pérdida de datos, pero requiere que la persona actualice la app antes de seguir
+registrando movimientos. Una eliminación de cuenta v2 marca primero el
+documento principal como pendiente, bloquea nuevas escrituras y borra la
+subcolección en lotes; un corte permite reintentar el borrado.
 
-## Pruebas obligatorias para darlo por terminado
+Validación local: `npx tsc --noEmit`, `npx eslint app screens components utils
+constants contexts modules`, `node pruebas/correr.mjs`, `npm test --prefix
+functions` y pruebas con el emulador de Firestore. Se probaron 10.000 filas,
+dos clientes, copia mayor a 800 KB, migración interrumpida y reglas de acceso.
 
-- Alta, edición y borrado simultáneos en dos teléfonos; una eliminación no revive.
-- Migración interrumpida después de cualquier lote y reinicio sin pérdida.
-- Teléfono antiguo intentando escribir tras el corte: rechazo claro, no borrado.
-- Telegram: alta, corrección, transferencia, deshacer y resúmenes tras el corte.
-- Inicio de sesión en teléfono nuevo, exportación, cierre de sesión y borrado de
-  cuenta con 10.000 movimientos.
-- Error de reglas, falta de red y documento individual demasiado grande.
-
-`utils/cloudHistoryMigration.ts` prepara y verifica lotes sin tocar Firebase.
-También prueba una copia sombra reanudable: si falla un lote, el documento viejo
-queda intacto; si otro teléfono lo cambia durante la copia, no se permite el
-corte y se repite con la versión nueva. El futuro adaptador de Firestore deberá
-fusionar cada lote de manera atómica, no sobrescribirlo a ciegas.
-La verificación entrega la revisión del documento original; el corte final
-deberá comprobar esa misma revisión dentro de una transacción. Sin esa última
-comparación, otro teléfono podría escribir entre la verificación y el corte.
-No debe conectarse al respaldo real hasta completar los pasos anteriores.
-
-## Protección previa añadida
-
-La app actual rechaza leer o guardar un documento `users/{uid}` que indique
-`historyFormat` distinto de 1. Las reglas locales también rechazan que una
-versión antigua escriba sobre una cuenta ya marcada con el formato nuevo.
-Si se encuentra ese marcador al iniciar sesión, se indica que hay que
-actualizar Fino; no se presenta como contraseña incorrecta ni como problema
-de Google. La verificación de correo muestra el mismo motivo.
-Esto **no activa** el formato nuevo: faltan el lector/escritor, Telegram y el
-borrado completo de la subcolección. El cambio de reglas tampoco está
-publicado. Al activar v2, la regla de escritura tendrá que permitir el nuevo
-protocolo sin abrir de nuevo la posibilidad de sobrescribirlo con v1.
+Antes de publicar faltan pruebas con dispositivos reales (restauración desde
+otro móvil, exportación, cierre de sesión y red intermitente), medir tiempos y
+costos con historiales grandes y comprobar una eliminación de cuenta completa
+con 10.000 movimientos. El emulador prueba la lógica, pero no sustituye esas
+pruebas. Tampoco hay migraciones ni publicaciones realizadas.

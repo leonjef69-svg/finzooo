@@ -1,5 +1,23 @@
 # Estado actual de Fino
 
+## Historial Personal separado — preparado localmente (27/09/2026)
+
+- El código nuevo guarda cada movimiento Personal en su propio documento. La
+  copia principal conserva perfil, presupuestos y metas, pero ya no la lista
+  completa de movimientos en las cuentas migradas.
+- Hay lector para cuentas antiguas, migración reanudable y comprobada antes de
+  retirar la lista vieja, adaptación de Telegram y borrado de cuenta protegido
+  contra interrupciones. Las reglas impiden que una versión vieja sobrescriba
+  el formato nuevo.
+- Se probaron dos teléfonos simulados, 10.000 movimientos, un respaldo que
+  supera 800 KB, ediciones, borrados, acceso ajeno y recuperación tras corte.
+- **No se migró ninguna cuenta real ni se publicaron reglas, Functions o app.**
+  Para usarlo en producción se requiere una entrega coordinada: reglas y
+  Functions, app actualizada y migración de cuentas después de verificar la
+  actualización. No ejecutar la migración administrativa en una cuenta real
+  mientras existan clientes antiguos escribiendo.
+- Las tarjetas de crédito siguen pendientes por indicación del usuario.
+
 ## Auditoría externa — bloqueantes corregidos en código (26/09/2026)
 
 - Unirse a una Familia o Caja compartida ya crea primero la membresía validada

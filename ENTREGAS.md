@@ -10,6 +10,11 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+La separación del historial Personal está preparada y probada localmente,
+pero todavía **no está disponible en Google Play**. No se ha publicado ni
+migrado ninguna cuenta real. Requiere una entrega coordinada de reglas,
+Functions, app y migración; no se debe activar solo una de esas partes.
+
 | Fecha preparada | Versión | Marca visible | Estado |
 |---|---|---|---|
 | 23/08/2026 | 1.0.5 | `23ago-09` | Inicio exacto de tres pantallas aprobado |

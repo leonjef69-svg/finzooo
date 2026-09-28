@@ -101,6 +101,7 @@ import {
   type CloudData,
 } from "@/utils/cloudSync";
 import { CLOUD_SYNC_GROUPS, type CloudSyncGroup } from "@/utils/cloudFieldMerge";
+import { clearHistoryV2Cache } from "@/utils/cloudHistoryV2";
 import { subscribeTesterPremium } from "@/utils/testerPremium";
 import { TESTER_PREMIUM_INACTIVE, type TesterPremiumState } from "@/utils/testerPremiumState";
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
@@ -881,6 +882,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // compartido, y confuso al probar con varias cuentas.
     await signOutFromGoogle();
     await signOut(auth);
+    if (uid) clearHistoryV2Cache(uid);
     // Todo lo que puede seguir actuando fuera del estado de React también
     // pertenece a la cuenta que sale: avisos, alarmas, permisos de destinos,
     // PIN y buzón nativo. Se intenta limpiar todo aunque una integración falle.

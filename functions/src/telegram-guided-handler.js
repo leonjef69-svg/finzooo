@@ -1,10 +1,10 @@
 "use strict";
 
 const crypto = require("node:crypto");
-const { Buffer } = require("node:buffer");
 const { FieldValue } = require("firebase-admin/firestore");
 const { cleanAmount, parseLinkCode, parseNaturalMovement, parseQuickEntry } = require("./telegram-parser");
 const { premium, premiumForUser } = require("./premium-entitlement");
+const { isV2, allPersonalTransactions, personalRecord, addPersonal, editPersonal, deletePersonal } = require("./telegram-personal-history");
 
 const FLOW_MS = 10 * 60_000;
 const MAX_USER_BYTES = 850_000;
@@ -163,7 +163,13 @@ function spaceKeyboard(space, personalCurrency) {
 
 async function showSpace(db, token, chatId, connection, space, heading = "") {
   let figures;
-  if (space.kind === "personal") figures = personalFigures(connection.user);
+  if (space.kind === "personal") {
+    const user = connection.user;
+    const transactions = isV2(user)
+      ? await allPersonalTransactions(db.collection("users").doc(connection.uid), user)
+      : user.transactions;
+    figures = personalFigures({ ...user, transactions });
+  }
   else {
     const root = space.kind === "family" ? "familySpaces" : "boxSpaces";
     const snap = await db.collection(root).doc(space.id).collection("movements").get();
@@ -236,15 +242,13 @@ async function saveSimpleMovement(db, chatId, connection, space, movement, opera
       const [user, connectionSnap, statusSnap] = await Promise.all([tx.get(ref), tx.get(chatConnectionRef), tx.get(statusRef)]);
       assertLiveConnection(connectionSnap, statusSnap, connection.uid, chatId);
       if (!user.exists || !(await premiumForUser(db, connection.uid, user.data(), tx))) throw new Error("NOT_PREMIUM");
-      const data = user.data(), transactions = Array.isArray(data.transactions) ? data.transactions : [];
+      const data = user.data();
       const id = personalIdForOperation(key);
       saved = { id, updatedAt: Date.now(), type: movement.type, amount: movement.amount, category: movement.category, date: localDate(connection.user), time: time(connection.user), method: movement.method, description: movement.description, notes: "", origin: "manual" };
       action = { uid: connection.uid, kind: "movement", space: safeSpace(space), personalTransactionId: id, movement: saved };
+      const record = await personalRecord(tx, ref, data, id);
       if (!claimOperation(tx, chatConnectionRef, connectionSnap.data() || {}, key)) return;
-      if (transactions.some(item => item.id === id)) throw new Error("DUPLICATE_ID");
-      const next = [...transactions, saved];
-      if (Buffer.byteLength(JSON.stringify({ ...data, transactions: next }), "utf8") > MAX_USER_BYTES) throw new Error("TOO_LARGE");
-      tx.update(ref, { transactions: next });
+      addPersonal(tx, ref, data, record, saved, MAX_USER_BYTES);
     });
     return action;
   }
@@ -297,7 +301,11 @@ async function registerQuick(db, token, chatId, connection, space, movement, ope
 
 async function showTransferConfirmation(db, token, chatId, connection, flow, value) {
   if (flow.space.currency !== String(connection.user.userCurrency || "PEN")) throw new Error("CURRENCY_MISMATCH");
-  const available = personalFigures(connection.user).balance;
+  const user = connection.user;
+  const transactions = isV2(user)
+    ? await allPersonalTransactions(db.collection("users").doc(connection.uid), user)
+    : user.transactions;
+  const available = personalFigures({ ...user, transactions }).balance;
   if (value.amount > available) throw new Error("INSUFFICIENT");
   const nonce = crypto.randomBytes(5).toString("hex"), next = { ...flow, step: "transfer_confirm", amount: value.amount, description: value.description, nonce };
   await saveFlow(db, chatId, next);
@@ -320,14 +328,12 @@ async function confirmTransfer(db, token, chatId, connection, nonce, operationId
     if (!user.exists || !(await premiumForUser(db, connection.uid, user.data(), tx))) throw new Error("NOT_PREMIUM");
     if (!space.exists || !member.exists || space.data().ownerUid !== connection.uid || [space.data().closed, space.data().closing, space.data().deleting].includes(true) || space.data().migrationComplete === false) throw new Error("SPACE_UNAVAILABLE");
     if (flow.space.currency !== String(user.data().userCurrency || "PEN")) throw new Error("CURRENCY_MISMATCH");
-    if (personalFigures({ ...user.data(), timeZone: connection.user.timeZone }).balance < flow.amount) throw new Error("INSUFFICIENT");
-    const transactions = Array.isArray(user.data().transactions) ? user.data().transactions : [];
+    const transactions = await allPersonalTransactions(userRef, user.data(), tx);
+    if (personalFigures({ ...user.data(), transactions, timeZone: connection.user.timeZone }).balance < flow.amount) throw new Error("INSUFFICIENT");
+    const record = await personalRecord(tx, userRef, user.data(), personalTransactionId);
     if (!claimOperation(tx, connectionRef, connectionSnap.data() || {}, key)) return;
-    if (transactions.some(item => item.id === personalTransactionId)) throw new Error("DUPLICATE_ID");
     const personalMovement = { id: personalTransactionId, type: "expense", amount: flow.amount, category: "otros", date: localDate(connection.user), time: time(connection.user), method: "transfer", description: `Transferencia a ${flow.space.name}`, notes: "", origin: "manual", internalTransfer: flow.space.kind, internalTransferLink: movementRef.id, internalTransferSpaceId: flow.space.id, internalTransferSpaceName: flow.space.name };
-    const next = [...transactions, personalMovement];
-    if (Buffer.byteLength(JSON.stringify({ ...user.data(), transactions: next }), "utf8") > MAX_USER_BYTES) throw new Error("TOO_LARGE");
-    tx.update(userRef, { transactions: next });
+    addPersonal(tx, userRef, user.data(), record, personalMovement, MAX_USER_BYTES);
     tx.set(movementRef, { tipo: "ingreso", monto: flow.amount, descripcion: flow.description === "Ingreso desde Telegram" ? "Transferencia desde Personal" : flow.description, method: "transfer", fecha: localDate(connection.user), creadoPor: connection.uid, creadoEn: FieldValue.serverTimestamp(), personalTransactionId, personalOwnerUid: connection.uid });
   });
   const movement = { type: "income", amount: flow.amount, description: flow.description === "Ingreso desde Telegram" ? "Transferencia desde Personal" : flow.description, method: "transfer" };
@@ -343,11 +349,10 @@ async function undoLast(db, token, chatId, connection) {
       const ref = db.collection("users").doc(connection.uid), connectionRef = db.collection("telegramConnections").doc(String(chatId)), statusRef = db.collection("telegramUsers").doc(connection.uid);
       const [user, connectionSnap, statusSnap] = await Promise.all([tx.get(ref), tx.get(connectionRef), tx.get(statusRef)]);
       assertLiveConnection(connectionSnap, statusSnap, connection.uid, chatId);
-      const transactions = Array.isArray(user.data()?.transactions) ? user.data().transactions : [];
-      const current = transactions.find(item => item.id === action.personalTransactionId);
+      const record = await personalRecord(tx, ref, user.data(), action.personalTransactionId);
+      const current = record.transaction;
       if (!current || current.type !== action.movement.type || Number(current.amount) !== Number(action.movement.amount)) throw new Error("NOTHING_TO_UNDO");
-      const deletedTransactionIds = [...new Set([...(Array.isArray(user.data()?.deletedTransactionIds) ? user.data().deletedTransactionIds : []), action.personalTransactionId])].slice(-5000);
-      tx.update(ref, { transactions: transactions.filter(item => item.id !== action.personalTransactionId), deletedTransactionIds });
+      deletePersonal(tx, ref, user.data(), record, action.personalTransactionId);
     });
   } else {
     const root = action.space.kind === "family" ? "familySpaces" : "boxSpaces", spaceRef = db.collection(root).doc(action.space.id), movementRef = spaceRef.collection("movements").doc(action.sharedMovementId);
@@ -361,11 +366,10 @@ async function undoLast(db, token, chatId, connection) {
       if (!space.exists || !member.exists || !movement.exists || [space.data().closed, space.data().closing, space.data().deleting].includes(true) || space.data().migrationComplete === false || movement.data().creadoPor !== connection.uid) throw new Error("NOTHING_TO_UNDO");
       if (action.kind === "transfer") {
         if (movement.data().personalOwnerUid !== connection.uid || movement.data().personalTransactionId !== action.personalTransactionId) throw new Error("NOTHING_TO_UNDO");
-        const transactions = Array.isArray(user.data()?.transactions) ? user.data().transactions : [];
-        const linked = transactions.find(item => item.id === action.personalTransactionId && item.internalTransfer === action.space.kind && [action.space.id, action.sharedMovementId].includes(item.internalTransferLink));
+        const record = await personalRecord(tx, userRef, user.data(), action.personalTransactionId);
+        const linked = record.transaction && record.transaction.internalTransfer === action.space.kind && [action.space.id, action.sharedMovementId].includes(record.transaction.internalTransferLink) ? record.transaction : null;
         if (!linked) throw new Error("NOTHING_TO_UNDO");
-        const deletedTransactionIds = [...new Set([...(Array.isArray(user.data()?.deletedTransactionIds) ? user.data().deletedTransactionIds : []), action.personalTransactionId])].slice(-5000);
-        tx.update(userRef, { transactions: transactions.filter(item => item.id !== action.personalTransactionId), deletedTransactionIds });
+        deletePersonal(tx, userRef, user.data(), record, action.personalTransactionId);
       } else if (movement.data().tipo !== action.movement.tipo || Number(movement.data().monto) !== Number(action.movement.monto)) throw new Error("NOTHING_TO_UNDO");
       tx.delete(movementRef);
     });
@@ -384,11 +388,10 @@ async function editLast(db, token, chatId, connection, flow, method) {
       const ref = db.collection("users").doc(connection.uid), connectionRef = db.collection("telegramConnections").doc(String(chatId)), statusRef = db.collection("telegramUsers").doc(connection.uid);
       const [user, connectionSnap, statusSnap] = await Promise.all([tx.get(ref), tx.get(connectionRef), tx.get(statusRef)]);
       assertLiveConnection(connectionSnap, statusSnap, connection.uid, chatId);
-      const transactions = Array.isArray(user.data()?.transactions) ? user.data().transactions : [], index = transactions.findIndex(item => item.id === action.personalTransactionId);
-      if (index < 0) throw new Error("NOTHING_TO_EDIT");
-      const next = [...transactions]; next[index] = { ...next[index], category, method, updatedAt: Date.now() };
-      if (Buffer.byteLength(JSON.stringify({ ...user.data(), transactions: next }), "utf8") > MAX_USER_BYTES) throw new Error("TOO_LARGE");
-      tx.update(ref, { transactions: next });
+      const record = await personalRecord(tx, ref, user.data(), action.personalTransactionId);
+      if (!record.transaction) throw new Error("NOTHING_TO_EDIT");
+      editPersonal(tx, ref, user.data(), record,
+        { ...record.transaction, category, method, updatedAt: Date.now() }, MAX_USER_BYTES);
     });
     action.movement = { ...action.movement, category, method };
   } else {

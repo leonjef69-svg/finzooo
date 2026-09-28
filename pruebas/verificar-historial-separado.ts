@@ -7,6 +7,7 @@ import {
   historyDocumentId,
   mergeHistoryEntries,
   missingFromShadow,
+  planLocalHistoryChanges,
   stageHistoryShadow,
   stageLegacyHistory,
 } from "@/utils/cloudHistoryMigration";
@@ -79,6 +80,18 @@ assert.deepEqual(
   "una edición distinta con la misma hora tampoco confirma la migración",
 );
 assert.deepEqual(missingFromShadow(edited, [{ id: 1, deleted: true }]), [], "una eliminación nueva no resucita");
+assert.deepEqual(planLocalHistoryChanges([movement(1, 10)], [], original), [],
+  "guardar de nuevo no debe escribir un movimiento sin cambios");
+assert.deepEqual(planLocalHistoryChanges([movement(1, 10), movement(2, 11)], [], original),
+  [{ id: 2, deleted: false, transaction: movement(2, 11) }]);
+assert.deepEqual(planLocalHistoryChanges([movement(1, 10)], [1], original),
+  [{ id: 1, deleted: true }], "un borrado solo escribe su lápida");
+assert.deepEqual(planLocalHistoryChanges([movement(1, 10)], [], [{ id: 1, deleted: true }]), [],
+  "un teléfono atrasado no resucita un borrado");
+assert.deepEqual(planLocalHistoryChanges([{ ...movement(1, 20), amount: 50 }], [], original), edited,
+  "una edición nueva sí debe guardarse");
+assert.throws(() => planLocalHistoryChanges([{ ...movement(1, 10), amount: 50 }], [], original),
+  /historial-edicion-en-conflicto/);
 assert.throws(() => historyBatches(stageLegacyHistory([{ ...movement(2), notes: "x".repeat(900_000) }], [])));
 
 const root = { revision: "1", transactions: legacy.slice(0, 425), deletedIds: [5] };

@@ -169,17 +169,24 @@ service cloud.firestore {
       allow create, update: if request.auth != null
                          && request.auth.uid == userId
                          && request.auth.token.email_verified == true
-                         // Si el servidor migra esta cuenta, una app antigua no puede
-                         // reemplazar el documento y borrar el marcador del formato nuevo.
-                         // Las escrituras v2 necesitan reglas nuevas al activarse.
                          && (!exists(/databases/$(database)/documents/users/$(userId))
-                             || resource.data.get('historyFormat', 1) == 1)
+                           || resource.data.get('accountDeletionPending', false) != true)
+                         // Solo el servidor cambia el formato. Un cliente antiguo
+                         // no puede quitar el marcador v2 al guardar su lista vieja.
+                         && request.resource.data.get('historyFormat', 1) in [1, 2]
+                         && (
+                           (!exists(/databases/$(database)/documents/users/$(userId))
+                             && request.resource.data.get('historyFormat', 1) == 1)
+                           || (exists(/databases/$(database)/documents/users/$(userId))
+                             && request.resource.data.get('historyFormat', 1)
+                               == resource.data.get('historyFormat', 1))
+                         )
                          && request.resource.data.keys().hasOnly([
                               'hasOnboarded', 'userName', 'userPhoto', 'userCurrency',
-                              'userLanguage', 'budgets', 'categoryBudgets', 'transactions', 'deletedTransactionIds',
+                              'userLanguage', 'budgets', 'categoryBudgets', 'transactions', 'deletedTransactionIds', 'historyFormat',
                               'goals', 'deletedGoalIds', 'pagosProgramados', 'isPremium', 'premiumTrialStartedAt', 'merchantLearned',
                               'categoryOverrides', 'categoriasPropias', 'carryoverCleared',
-                              'iconosFavoritos', 'syncUpdatedAt'
+                              'iconosFavoritos', 'syncUpdatedAt', 'accountDeletionPending'
                             ])
                          // Los que van siempre.
                          && request.resource.data.hasOnboarded is bool
@@ -189,13 +196,21 @@ service cloud.firestore {
                          && request.resource.data.userLanguage is string
                          && request.resource.data.budgets is map
                          && request.resource.data.categoryBudgets is map
-                         && request.resource.data.transactions is list
-                         && (!('deletedTransactionIds' in request.resource.data)
-                              || request.resource.data.deletedTransactionIds is list)
+                         && (
+                           (request.resource.data.get('historyFormat', 1) == 1
+                             && request.resource.data.transactions is list
+                             && (!('deletedTransactionIds' in request.resource.data)
+                               || request.resource.data.deletedTransactionIds is list))
+                           || (request.resource.data.get('historyFormat', 1) == 2
+                             && !('transactions' in request.resource.data)
+                             && !('deletedTransactionIds' in request.resource.data))
+                         )
                          && request.resource.data.goals is list
                          && (!('deletedGoalIds' in request.resource.data)
                               || request.resource.data.deletedGoalIds is list)
                          && request.resource.data.isPremium is bool
+                         && (!('accountDeletionPending' in request.resource.data)
+                           || request.resource.data.accountDeletionPending == true)
                          // Premium nunca lo concede el celular. Una cuenta nueva empieza
                          // sin Premium y, después, el cliente solo puede conservar el valor
                          // que ya exista. La consola/servidor administrativo sigue pudiendo
@@ -226,6 +241,31 @@ service cloud.firestore {
                          && (!('carryoverCleared' in request.resource.data) || request.resource.data.carryoverCleared is list)
                          && (!('iconosFavoritos' in request.resource.data) || request.resource.data.iconosFavoritos is list)
                          && (!('syncUpdatedAt' in request.resource.data) || request.resource.data.syncUpdatedAt is map);
+
+      // Cada movimiento vive en su propio documento al migrar. Los clientes
+      // solo pueden leer/escribir el historial de su propia cuenta verificada.
+      match /history/{historyId} {
+        allow read: if verified() && request.auth.uid == userId
+          && get(/databases/$(database)/documents/users/$(userId)).data.get('historyFormat', 1) == 2;
+        allow create, update: if verified() && request.auth.uid == userId
+          && get(/databases/$(database)/documents/users/$(userId)).data.get('historyFormat', 1) == 2
+          && get(/databases/$(database)/documents/users/$(userId)).data.get('accountDeletionPending', false) != true
+          && request.resource.data.keys().hasOnly(['id', 'deleted', 'transaction', 'syncAt'])
+          && request.resource.data.id is number
+          && historyId == string(request.resource.data.id)
+          && request.resource.data.deleted is bool
+          && request.resource.data.syncAt == request.time
+          && (
+            (request.resource.data.deleted == true && !('transaction' in request.resource.data))
+            || (request.resource.data.deleted == false
+              && request.resource.data.transaction is map
+              && request.resource.data.transaction.id == request.resource.data.id)
+          )
+          && (!exists(/databases/$(database)/documents/users/$(userId)/history/$(historyId))
+            || resource.data.deleted != true || request.resource.data.deleted == true);
+        allow delete: if verified() && request.auth.uid == userId
+          && get(/databases/$(database)/documents/users/$(userId)).data.get('accountDeletionPending', false) == true;
+      }
     }
 
     // EL MODO NEGOCIO, QUE VIVE EN SU PROPIO DOCUMENTO. **Faltaba (21/08/2026).**

@@ -2,9 +2,8 @@ import type { Transaction } from "@/types";
 import { utf8ByteLength } from "@/utils/utf8";
 
 /**
- * Preparación del futuro historial por documentos. No activa la migración:
- * todavía faltan el lector/escritor de Firestore, las reglas y Telegram.
- * Mantener esta parte pura permite probar la conservación antes de tocar datos reales.
+ * Operaciones puras del historial por documentos. La migración de una cuenta
+ * real es administrativa y manual; importar este módulo nunca la ejecuta.
  */
 export type HistoryEntry =
   | { id: number; deleted: true; transaction?: never }
@@ -43,6 +42,37 @@ export function stageLegacyHistory(transactions: Transaction[], deletedIds: numb
   }));
   rows.push(...deletedIds.map((id) => ({ id, deleted: true as const })));
   return mergeHistoryEntries([], rows);
+}
+
+/** Calcula solo los cambios locales frente a la última copia confirmada.
+ * Ausencia en la lista local no significa borrado: puede ser un teléfono sin restaurar.
+ */
+export function planLocalHistoryChanges(
+  transactions: Transaction[],
+  deletedIds: number[],
+  baseline: HistoryEntry[],
+): HistoryEntry[] {
+  const previous = new Map(baseline.map((entry) => [entry.id, entry]));
+  const changes: HistoryEntry[] = [];
+  for (const entry of stageLegacyHistory(transactions, deletedIds)) {
+    const old = previous.get(entry.id);
+    if (old?.deleted) continue;
+    if (entry.deleted) {
+      changes.push(entry);
+      continue;
+    }
+    if (!old) {
+      changes.push(entry);
+      continue;
+    }
+    const before = old.transaction.updatedAt ?? 0;
+    const after = entry.transaction.updatedAt ?? 0;
+    if (after > before) changes.push(entry);
+    else if (after === before && canonical(entry.transaction) !== canonical(old.transaction)) {
+      throw new Error("historial-edicion-en-conflicto");
+    }
+  }
+  return changes;
 }
 
 /** Dos teléfonos pueden aportar cambios distintos; un borrado nunca resucita. */

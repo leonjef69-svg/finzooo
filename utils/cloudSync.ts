@@ -1,4 +1,4 @@
-import { deleteDoc, doc, getDoc, runTransaction } from "firebase/firestore";
+import { deleteDoc, doc, getDoc, runTransaction, updateDoc } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import { borrarNegocioDeLaNube } from "@/utils/cloudNegocio";
 import { borrarCajasDeLaNube } from "@/utils/cloudCajas";
@@ -16,8 +16,12 @@ import {
 } from "@/utils/mergeTransactions";
 import { mergeCloudFields } from "@/utils/cloudFieldMerge";
 import { assertLegacyHistoryFormat, UnsupportedHistoryFormatError } from "@/utils/cloudHistoryMigration";
+import { clearHistoryV2Cache, deleteHistoryV2, loadHistoryV2, saveHistoryV2 } from "@/utils/cloudHistoryV2";
 
 export type CloudData = {
+  historyFormat?: 1 | 2;
+  /** Se activa al borrar la cuenta; bloquea nuevas escrituras hasta terminar. */
+  accountDeletionPending?: boolean;
   hasOnboarded: boolean;
   userName: string;
   userPhoto: string | null;
@@ -82,7 +86,9 @@ export async function loadCloudData(uid: string): Promise<CloudData | null> {
     const snap = await getDoc(doc(db, "users", uid));
     if (!snap.exists()) return null;
     const data = snap.data();
-    assertLegacyHistoryFormat(data);
+    if (data.accountDeletionPending === true) throw new Error("account-deletion-pending");
+    const history = data.historyFormat === 2 ? await loadHistoryV2(uid) : null;
+    if (!history) assertLegacyHistoryFormat(data);
     if (!data?.hasOnboarded) return null;
     return {
       hasOnboarded: true,
@@ -92,8 +98,8 @@ export async function loadCloudData(uid: string): Promise<CloudData | null> {
       userLanguage: data.userLanguage || "es",
       budgets: data.budgets || {},
       categoryBudgets: data.categoryBudgets || {},
-      transactions: data.transactions || [],
-      deletedTransactionIds: data.deletedTransactionIds || [],
+      transactions: history?.transactions ?? data.transactions ?? [],
+      deletedTransactionIds: history?.deletedIds ?? data.deletedTransactionIds ?? [],
       goals: data.goals || [],
       deletedGoalIds: data.deletedGoalIds || [],
       // SE LEE, y no solo se escribe. Ya pasó el 07/08 con las categorías propias: estaban
@@ -156,6 +162,22 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
   // en la nube fallara en silencio y la persona nunca se enterara.
   // Este paso los quita: JSON.stringify descarta las claves con undefined.
   let clean = JSON.parse(JSON.stringify(data)) as CloudData;
+  // Solo el servidor puede cambiar la versión; el cliente conserva la que
+  // realmente haya en Firebase, nunca la que venga de memoria local.
+  delete clean.historyFormat;
+
+  try {
+    const existing = await getDoc(doc(db, "users", uid));
+    if (existing.exists() && existing.data().accountDeletionPending === true) {
+      return { ok: false, motivo: "eliminacion-pendiente" };
+    }
+    if (existing.exists() && existing.data().historyFormat === 2) {
+      return await saveCloudDataV2(uid, clean);
+    }
+    if (existing.exists()) assertLegacyHistoryFormat(existing.data());
+  } catch (error) {
+    return { ok: false, motivo: motivoLegible(error) };
+  }
 
   /* SI NO CABE, SE SUBE SIN FOTOS ANTES QUE NO SUBIR NADA (20/08/2026).
      El documento tiene un tope duro de 1 MB y pasarse no lo guarda a medias: **no guarda
@@ -220,6 +242,44 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
   }
 }
 
+async function saveCloudDataV2(uid: string, clean: CloudData): Promise<ResultadoNube> {
+  try {
+    const history = await saveHistoryV2(uid, clean.transactions, clean.deletedTransactionIds ?? []);
+    const ref = doc(db, "users", uid);
+    let saved: CloudData = { ...clean, transactions: history.transactions, deletedTransactionIds: history.deletedIds };
+    await runTransaction(db, async (transaction) => {
+      const snap = await transaction.get(ref);
+      if (!snap.exists() || snap.data().historyFormat !== 2) throw new UnsupportedHistoryFormatError();
+      const actual = snap.data() as CloudData;
+      let next = mergeCloudFields(conservarPremiumManual(actual, saved), actual);
+      const metasBorradas = pruneDeletedGoalIds([
+        ...(actual.deletedGoalIds ?? []), ...(next.deletedGoalIds ?? []),
+      ]);
+      const idsMetasBorradas = new Set(metasBorradas);
+      next = {
+        ...next,
+        deletedGoalIds: metasBorradas,
+        goals: mergeGoals(next.goals, actual.goals ?? []).filter((goal) => !idsMetasBorradas.has(goal.id)),
+      };
+      const { transactions: _transactions, deletedTransactionIds: _deleted, ...metadata } = next;
+      void _transactions; void _deleted;
+      let root = { ...metadata, historyFormat: 2 as const };
+      if (pesa(root) > TOPE_SEGURO) {
+        const compact = sinFotos(next);
+        const { transactions: _tx, deletedTransactionIds: _ids, ...withoutHistory } = compact;
+        void _tx; void _ids;
+        root = { ...withoutHistory, historyFormat: 2 as const };
+      }
+      if (pesa(root) > LIMITE_FIRESTORE) throw new Error("demasiado-grande");
+      transaction.set(ref, root);
+      saved = { ...next, ...root, transactions: history.transactions, deletedTransactionIds: history.deletedIds };
+    });
+    return { ok: true, data: saved };
+  } catch (error) {
+    return { ok: false, motivo: motivoLegible(error) };
+  }
+}
+
 /**
  * TRADUCE EL ERROR DE FIRESTORE A ALGO QUE SE PUEDA HACER.
  *
@@ -248,7 +308,7 @@ const LIMITE_FIRESTORE = 1_000_000;
 /** Con margen: los nombres de los campos y el formato de Firestore también ocupan. */
 const TOPE_SEGURO = 800_000;
 
-function pesa(data: CloudData): number {
+function pesa(data: unknown): number {
   return utf8ByteLength(JSON.stringify(data));
 }
 
@@ -304,7 +364,17 @@ export async function deleteCloudAccount(uid: string): Promise<void> {
   // Las tarjetas usan un documento separado para no acercar el respaldo
   // principal al límite de Firestore. Eliminar la cuenta debe borrar ambos.
   await deleteCreditCloudAccount(uid);
+  const account = await getDoc(doc(db, "users", uid));
+  if (account.exists() && account.data().historyFormat === 2) {
+    // A partir de aquí ninguna otra sesión puede registrar movimientos ni
+    // presentar un historial incompleto como si fuera una copia válida.
+    if (account.data().accountDeletionPending !== true) {
+      await updateDoc(account.ref, { accountDeletionPending: true });
+    }
+    await deleteHistoryV2(uid);
+  }
   // El documento principal va al final: si falla el borrado de uno auxiliar,
   // la cuenta sigue completa para que la persona pueda volver a intentarlo.
   await deleteDoc(doc(db, "users", uid));
+  clearHistoryV2Cache(uid);
 }
