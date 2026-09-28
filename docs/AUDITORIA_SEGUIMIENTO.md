@@ -71,5 +71,9 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
   sola vez un índice por fecha y consulta únicamente la ventana de 14 días; una
   prueba local indexa y busca entre 10.001 movimientos, incluido un cambio de
   mes.
+- El catálogo mundial dejó de comprobarse leyendo su código como texto. La
+  prueba carga los 250 países y 155 monedas reales, valida símbolos, decimales,
+  asignaciones, orden y búsquedas por nombre, código, moneda y símbolo. Cambiar
+  moneda conserva el país local y el país continúa fuera del respaldo en nube.
 - TypeScript y ESLint están aprobados para esta tanda. No se modificaron
   tarjetas de crédito ni se publicó ningún cambio.

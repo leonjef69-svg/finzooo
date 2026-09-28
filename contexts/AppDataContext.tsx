@@ -128,6 +128,7 @@ import { desconectarDropbox } from "@/utils/dropbox";
 import { desconectarOneDrive } from "@/utils/onedrive";
 import { disableLock } from "@/utils/appLock";
 import { setPendingImport } from "@/utils/pendingImport";
+import { profileWithCurrency } from "@/utils/profile";
 import { limpiarCajasEnMemoria } from "@/utils/cajasMemoria";
 import type { Goal, Month, Profile, Transaction } from "@/types";
 
@@ -1751,15 +1752,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setUserCurrency(id);
     // Cambiar cómo se muestran los montos no cambia el país real del usuario.
     // El país también controla métodos locales (Yape/Plin) y Telegram.
-    saveJSON(STORAGE_KEYS.profile, {
+    saveJSON(STORAGE_KEYS.profile, profileWithCurrency({
       userName,
       userEmail,
       userPhoto,
-      userCurrency: id,
+      userCurrency,
       userLanguage,
       userCountry,
       hasOnboarded: true,
-    });
+    }, id));
     showToast(t("toast.currencyUpdated"));
   }
 

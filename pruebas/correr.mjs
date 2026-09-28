@@ -69,6 +69,7 @@ const SUITES = [
   { archivo: "verificar-campana-inicio.ts", alias: BASE },
   { archivo: "verificar-importacion-rapida.ts", alias: BASE },
   { archivo: "verificar-metodos-por-pais.ts", alias: BASE },
+  { archivo: "verificar-paises-monedas.ts", alias: BASE },
   { archivo: "verificar-presupuesto-exacto.ts", alias: BASE },
   { archivo: "verificar-flujo-inicial-real.ts", alias: BASE },
   { archivo: "verificar-acceso-google.ts", alias: BASE },

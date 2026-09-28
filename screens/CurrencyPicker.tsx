@@ -2,9 +2,9 @@ import { useMemo, useState } from "react";
 import { FlatList, Image, StatusBar, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check, Search } from "lucide-react-native";
-import { CURRENCIES, currencyLabelFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import BackButton from "@/components/BackButton";
+import { filterCurrencies } from "@/utils/catalogSearch";
 
 export default function CurrencyPicker({ current, onBack, onSelect }: {
   current: string;
@@ -14,15 +14,10 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
   const { t, userLanguage } = useAppData();
   const [query, setQuery] = useState("");
   const insets = useSafeAreaInsets();
-  const currencies = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase(userLanguage);
-    return CURRENCIES
-      .map((currency) => ({ ...currency, name: currencyLabelFor(currency.id, t, userLanguage) }))
-      .filter((currency) => !normalized
-        || currency.name.toLocaleLowerCase(userLanguage).includes(normalized)
-        || currency.id.toLowerCase().includes(normalized)
-        || currency.symbol.toLocaleLowerCase(userLanguage).includes(normalized));
-  }, [query, t, userLanguage]);
+  const currencies = useMemo(
+    () => filterCurrencies(query, userLanguage, t),
+    [query, t, userLanguage],
+  );
 
   return (
     <View className="flex-1 bg-[#17100c]" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>

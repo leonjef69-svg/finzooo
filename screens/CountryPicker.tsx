@@ -2,11 +2,12 @@ import { useMemo, useState } from "react";
 import { FlatList, Image, StatusBar, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check, Search } from "lucide-react-native";
-import { countriesFor, countryFor, countryLabelFor } from "@/constants/countries";
+import { countryFor, countryLabelFor } from "@/constants/countries";
 import { currencySymbolFor } from "@/constants/currencies";
 import { languageLabelFor } from "@/constants/i18n";
 import { useAppData } from "@/contexts/AppDataContext";
 import BackButton from "@/components/BackButton";
+import { filterCountries } from "@/utils/catalogSearch";
 
 export default function CountryPicker({ onBack, onSelect }: {
   onBack: () => void;
@@ -16,16 +17,10 @@ export default function CountryPicker({ onBack, onSelect }: {
   const [query, setQuery] = useState("");
   const insets = useSafeAreaInsets();
   const actual = countryFor(userLanguage, userCurrency, userCountry);
-  const countries = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase(userLanguage);
-    return countriesFor(userLanguage).filter((country) => {
-      if (!normalized) return true;
-      const name = countryLabelFor(country, userLanguage).toLocaleLowerCase(userLanguage);
-      return name.includes(normalized)
-        || country.id.toLowerCase().includes(normalized)
-        || country.currency.toLowerCase().includes(normalized);
-    });
-  }, [query, userLanguage]);
+  const countries = useMemo(
+    () => filterCountries(query, userLanguage),
+    [query, userLanguage],
+  );
 
   return (
     <View className="flex-1 bg-[#17100c]" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>

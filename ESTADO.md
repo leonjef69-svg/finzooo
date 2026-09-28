@@ -733,6 +733,9 @@ instalación nueva.
   redondea el monto y evita formatearlo cuando el saldo está oculto.
 - Los métodos de pago ya se prueban ejecutando su filtro real por país y la
   compatibilidad al editar movimientos antiguos.
+- Países y monedas se prueban ahora usando el catálogo real: 250 países, 155
+  monedas, búsquedas, orden, símbolos, decimales y separación entre perfil
+  local y respaldo en nube.
 - Se mantienen 113 pruebas totales porque tres pruebas de comportamiento
   reemplazan tres pruebas estáticas anteriores; no se tocaron tarjetas de
   crédito ni se publicó nada.
