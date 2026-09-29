@@ -110,3 +110,29 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
   transferencia interna no puede volver a entrar en los totales normales.
 - TypeScript, ESLint, 117 pruebas y 8 auditores están aprobados para esta
   tanda. No se modificaron tarjetas de crédito ni se publicó ningún cambio.
+
+### Cierre de validación local Android (28/09/2026)
+
+- Se comprobó que el proyecto usa `package-lock.json`; las dependencias se
+  reinstalaron con `npm ci` para respetar exactamente las versiones aprobadas y
+  evitar las rutas profundas que producía una instalación local con pnpm.
+- Gradle completó `:app:assembleDebug`: 755 tareas y `BUILD SUCCESSFUL`. El APK
+  de comprobación quedó en `android/app/build/outputs/apk/debug/app-debug.apk`
+  con SHA-256
+  `18C5B16E7A7EB7046DCEB06BCF94A63E09912390F05A9EBC29A42CA8BC90058E`.
+- Con esa instalación exacta volvieron a pasar TypeScript, ESLint, las 117
+  pruebas, los 8 auditores y las 38 pruebas de Cloud Functions.
+- Se retiraron las cachés y copias temporales creadas durante la compilación.
+  `output/` se preservó sin cambios. No se modificaron tarjetas de crédito y no
+  se publicó, instaló ni desplegó nada.
+- No quedan hallazgos locales de código de la auditoría original fuera del
+  módulo de tarjetas de crédito excluido por decisión del usuario. `npm audit`
+  pasó de 90 avisos a 22 (20 moderados y 2 altos) al actualizar sin rupturas
+  `fast-uri`, `undici` y React Navigation. Los restantes son transitivos de
+  Expo Router, Metro, PostCSS y `xcode`; corregirlos automáticamente exige
+  bajar Expo Router o saltar de Expo 54 a 57, por lo que se documentan para una
+  migración controlada y no se aplicó `--force`.
+- Siguen pendientes las comprobaciones físicas y acciones externas enumeradas:
+  reglas/Functions, AAB de prueba, dos dispositivos y dos cuentas, red
+  intermitente, Drive/Dropbox, TalkBack, reinicio, iPhone, App Check, rotación
+  de firma, requisitos de Play y la migración posterior del historial.
