@@ -145,16 +145,33 @@ export default function History({
     [transactions],
   );
   const categoriesForMonth = useMemo(
-    () => Array.from(new Set(allMonthTx.map((transaction) => transaction.category))).sort((a, b) => t(catInfo(a).label).localeCompare(t(catInfo(b).label))),
-    [allMonthTx, t],
+    () => Array.from(new Set(allMonthTx
+      .filter((transaction) => filter === "all"
+        || (filter === "transfer"
+          ? Boolean(transaction.internalTransfer)
+          : !transaction.internalTransfer && transaction.type === filter))
+      .map((transaction) => transaction.category)))
+      .sort((a, b) => t(catInfo(a).label).localeCompare(t(catInfo(b).label))),
+    [allMonthTx, filter, t],
   );
   const parsedMinAmount = parseAmountInput(minAmount, userCurrency);
   const parsedMaxAmount = parseAmountInput(maxAmount, userCurrency);
   const hasAdvancedFilters = Boolean(categoryFilter || minAmount || maxAmount);
   const transferStatuses = useMemo(() => personalTransferStatuses(transactions), [transactions]);
   useEffect(() => {
-    if (transfer === "1") setFilter("transfer");
+    if (transfer === "1") {
+      setFilter("transfer");
+      setCategoryFilter("");
+    }
   }, [transfer]);
+  useEffect(() => {
+    if (categoryFilter && !categoriesForMonth.includes(categoryFilter)) setCategoryFilter("");
+  }, [categoryFilter, categoriesForMonth]);
+
+  function selectTypeFilter(nextFilter: typeof filter) {
+    setFilter(nextFilter);
+    setCategoryFilter("");
+  }
 
   const { totalExpense, totalIncome } = useMemo(() => {
     return {
@@ -313,7 +330,7 @@ export default function History({
             {FILTERS.map(({ id, label }) => (
               <TouchableOpacity
                 key={id}
-                onPress={() => setFilter(id)}
+                onPress={() => selectTypeFilter(id)}
                 className={`px-4 py-2 rounded-full ${filter === id ? "bg-emerald-600" : "bg-slate-100 dark:bg-noche-2"}`}
               >
                 <Text className={`text-xs font-bold ${filter === id ? "text-white" : "text-slate-600 dark:text-slate-200"}`}>
