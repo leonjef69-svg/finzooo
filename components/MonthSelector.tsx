@@ -1,9 +1,12 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { CalendarDays, Check, ChevronDown, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import type { Month } from "@/types";
 import { useAppData } from "@/contexts/AppDataContext";
+import { availablePersonalBalance, totalsForMonth } from "@/utils/finances";
+import { presupuestoDelMes } from "@/utils/presupuestoMensual";
+import { saldoAnteriorDe } from "@/utils/saldoAnterior";
 
 type Props = {
   month: Month;
@@ -24,15 +27,24 @@ function labelFor(key: string, monthNames: string[]) {
 
 /**
  * Selector compartido por Inicio, Historial y Reportes. La lista se recibe ya
- * filtrada; solo ofrece meses con movimientos y no cambia cifras financieras.
+ * filtrada; muestra el saldo personal que corresponde a cada mes y permite cambiarlo.
  */
 export default function MonthSelector({ month, months, monthNames, onChange }: Props) {
   const [open, setOpen] = useState(false);
   const { colorScheme } = useColorScheme();
-  const { t } = useAppData();
+  const { t, fmtCompact, transactions, budgets, carryoverCleared } = useAppData();
   const currentKey = `${month.y}-${String(month.m + 1).padStart(2, "0")}`;
   const label = `${monthNames[month.m]} ${month.y}`;
   const dark = colorScheme === "dark";
+  const monthBalances = useMemo(() => Object.fromEntries(months.map((key) => {
+    const totals = totalsForMonth(transactions, key);
+    const total = availablePersonalBalance({
+      budget: presupuestoDelMes(budgets, key),
+      prevBalance: saldoAnteriorDe(key, budgets, transactions, carryoverCleared),
+      ...totals,
+    });
+    return [key, total];
+  })), [months, transactions, budgets, carryoverCleared]);
 
   return (
     <>
@@ -76,15 +88,28 @@ export default function MonthSelector({ month, months, monthNames, onChange }: P
                           onChange(monthFromKey(key));
                           setOpen(false);
                         }}
-                        className={`flex-row items-center justify-between rounded-2xl border-[1.5px] px-4 py-3 ${
+                        className={`flex-row items-center gap-3 rounded-2xl border-[1.5px] px-4 py-2.5 ${
                           selected
                             ? "border-emerald-600 bg-emerald-600"
                             : "border-slate-200 bg-slate-50 dark:border-noche-borde dark:bg-noche"
                         }`}
                       >
-                        <Text className={`text-sm font-bold ${selected ? "text-white" : "text-slate-800 dark:text-slate-100"}`}>
+                        <Text className={`min-w-0 flex-1 text-sm font-bold ${selected ? "text-white" : "text-slate-800 dark:text-slate-100"}`} numberOfLines={1}>
                           {labelFor(key, monthNames)}
                         </Text>
+                        <View className="items-end">
+                          <Text className={`text-[9px] font-semibold ${selected ? "text-emerald-100" : "text-slate-500 dark:text-slate-400"}`}>
+                            {t("monthPicker.balance")}
+                          </Text>
+                          <Text
+                            className={`text-xs font-extrabold ${selected ? "text-white" : monthBalances[key] < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-700 dark:text-emerald-300"}`}
+                            numberOfLines={1}
+                            adjustsFontSizeToFit
+                            minimumFontScale={0.75}
+                          >
+                            {fmtCompact(monthBalances[key] ?? 0)}
+                          </Text>
+                        </View>
                         {selected ? <Check size={17} color="#ffffff" strokeWidth={3} /> : null}
                       </TouchableOpacity>
                     );

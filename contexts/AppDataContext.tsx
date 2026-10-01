@@ -174,6 +174,8 @@ type AppDataContextValue = {
   spent: number;
   income: number;
   prevBalance: number;
+  /** Meses donde se decidió no arrastrar el saldo del mes previo. */
+  carryoverCleared: string[];
   // ¿El mes que se está viendo tiene su Saldo anterior puesto en cero? La
   // pantalla lo usa para decidir si ofrecer "poner en cero" o "restaurar".
   // Cada mes es independiente: esto es cierto o falso mes por mes.
@@ -2442,6 +2444,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     spent,
     income,
     prevBalance,
+    carryoverCleared,
     carryoverActive,
     resetCarryover,
     restoreCarryover,
