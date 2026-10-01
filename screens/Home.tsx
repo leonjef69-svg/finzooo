@@ -1,6 +1,7 @@
 import ConfirmDialog from "@/components/ConfirmDialog";
 import EtiquetaMetodo from "@/components/EtiquetaMetodo";
 import IconBadge from "@/components/IconBadge";
+import MonthSelector from "@/components/MonthSelector";
 import MovementAllButton from "@/components/MovementAllButton";
 import PressableScale from "@/components/PressableScale";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
@@ -250,6 +251,14 @@ export default function Home({
         .sort(compararMovimientos),
     [transactions, mk]
   );
+  const availableMonths = useMemo(
+    () => Array.from(new Set(
+      transactions
+        .map((transaction) => transaction.date.slice(0, 7))
+        .filter((key) => /^\d{4}-\d{2}$/.test(key)),
+    )).sort().reverse(),
+    [transactions],
+  );
   const mainSpent = useMemo(() => monthTx.filter((t) => t.type === "expense" && !t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
   const mainIncome = useMemo(() => monthTx.filter((t) => t.type === "income" && !t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
   const transfersOut = useMemo(() => monthTx.filter((t) => t.type === "expense" && t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
@@ -428,17 +437,7 @@ export default function Home({
             >
               <ChevronLeft size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
             </TouchableOpacity>
-            <View className="w-[140px] py-1.5 rounded-full bg-slate-50 dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde">
-              <Text
-                className="font-bold text-sm text-center px-1"
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.82}
-                style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-              >
-                {monthNames[month.m]} {month.y}
-              </Text>
-            </View>
+            <MonthSelector month={month} months={availableMonths} monthNames={monthNames} onChange={setMonth} />
             <TouchableOpacity
               accessibilityRole="button"
               onPress={() => shiftMonth(1)}

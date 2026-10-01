@@ -38,6 +38,10 @@ export default function DonutChart({ data }: { data: Slice[] }) {
   // lista extensa se compacta sin que se superpongan sus rótulos.
   const bubble = count <= 7 ? 62 : Math.max(44, Math.min(70, Math.round(74 - count * 2.2)));
   const radius = Math.max(54, Math.min(70, Math.round(80 - count * 1.6)));
+  // Con una sola categoría, la etiqueta queda debajo de la rosquilla. Se sube
+  // el conjunto y se acorta el gráfico para reducir el espacio vacío superior.
+  const centerY = count === 1 ? 126 : CENTER_Y;
+  const height = count === 1 ? 280 : HEIGHT;
   const orbitX = WIDTH / 2 - bubble / 2 - 5;
   // En vez de dibujar un círculo vertical enorme, se abre la composición hacia
   // los lados. Conserva la separación de los rótulos y reduce 60 px de alto.
@@ -64,18 +68,18 @@ export default function DonutChart({ data }: { data: Slice[] }) {
   if (total <= 0) return null;
 
   return (
-    <View style={{ width: WIDTH, height: HEIGHT, maxWidth: "100%" }}>
-      <Svg width={WIDTH} height={HEIGHT} viewBox={`0 0 ${WIDTH} ${HEIGHT}`}>
+    <View style={{ width: WIDTH, height, maxWidth: "100%" }}>
+      <Svg width={WIDTH} height={height} viewBox={`0 0 ${WIDTH} ${height}`}>
         {data.map((item, index) => {
           const sector = sectors[index];
           const bubbleAngle = bubbleAngles[index];
           const bubbleX = CENTER_X + Math.cos(bubbleAngle) * orbitX;
-          const bubbleY = CENTER_Y + Math.sin(bubbleAngle) * orbitY;
+          const bubbleY = centerY + Math.sin(bubbleAngle) * orbitY;
           // La línea empieza exactamente en el centro del segmento del mismo
           // color. Antes salía de una posición fija, por eso parecía pertenecer
           // a otra categoría cuando los montos tenían tamaños distintos.
           const ringX = CENTER_X + Math.cos(sector.middle) * (radius + 11);
-          const ringY = CENTER_Y + Math.sin(sector.middle) * (radius + 11);
+          const ringY = centerY + Math.sin(sector.middle) * (radius + 11);
           // El enlace termina en el borde del círculo (nunca lo atraviesa) y
           // se curva apenas cuando dos categorías son vecinas. Esta geometría
           // evita los rizos que antes aparecían con varias categorías azules.
@@ -113,7 +117,7 @@ export default function DonutChart({ data }: { data: Slice[] }) {
             <Circle
               key={item.id}
               cx={CENTER_X}
-              cy={CENTER_Y}
+              cy={centerY}
               r={radius}
               fill="none"
               stroke={item.color}
@@ -121,7 +125,7 @@ export default function DonutChart({ data }: { data: Slice[] }) {
               strokeOpacity={selected == null || active ? 1 : 0.34}
               strokeDasharray={`${dash} ${gap}`}
               rotation={rotation}
-              origin={`${CENTER_X}, ${CENTER_Y}`}
+              origin={`${CENTER_X}, ${centerY}`}
               onPress={() => setSelected((current) => (current === item.id ? null : item.id))}
             />
           );
@@ -131,7 +135,7 @@ export default function DonutChart({ data }: { data: Slice[] }) {
       {data.map((item, index) => {
         const bubbleAngle = bubbleAngles[index];
         const left = CENTER_X + Math.cos(bubbleAngle) * orbitX - bubble / 2;
-        const top = CENTER_Y + Math.sin(bubbleAngle) * orbitY - bubble / 2;
+        const top = centerY + Math.sin(bubbleAngle) * orbitY - bubble / 2;
         const Icon = item.Icon;
         const percentage = (item.value / total) * 100;
         const iconSize = bubble >= 62 ? 22 : bubble >= 50 ? 19 : bubble >= 44 ? 16 : 14;
