@@ -634,12 +634,12 @@ export default function Home({
         <View className="flex-row flex-wrap gap-2.5 px-5 mt-3">
           <Animated.View entering={FadeInDown.delay(0 * 70).duration(300)} style={{ flexBasis: "100%", flexGrow: 1 }}>
             <PressableScale
-              className="bg-teal-50 dark:bg-teal-950/30 rounded-2xl px-3 py-2 border-[1.5px] border-teal-300 dark:border-teal-800 justify-center"
-              style={[softShadow, { minHeight: 64 }]}
+              className="bg-teal-50 dark:bg-teal-950/30 rounded-2xl px-3 py-1.5 border-[1.5px] border-teal-300 dark:border-teal-800 justify-center"
+              style={[softShadow, { minHeight: 58 }]}
             >
-              <View className="flex-row items-center gap-2 mb-1">
+              <View className="flex-row items-center gap-2 mb-0">
                 <Text className="text-base">🕒</Text>
-                <Text className="flex-1 text-xs text-teal-800 dark:text-teal-200 font-bold" numberOfLines={2}>
+                <Text className="flex-1 text-sm text-teal-800 dark:text-teal-200 font-bold" numberOfLines={2}>
                   {t("home.previousBalance")}
                 </Text>
                 {carryoverActive ? (
@@ -648,9 +648,9 @@ export default function Home({
                     accessibilityRole="button"
                     accessibilityLabel={t("home.restoreCarryoverConfirm")}
                     hitSlop={6}
-                    className="w-10 h-10 rounded-xl bg-emerald-100 dark:bg-emerald-900 items-center justify-center border-[1.5px] border-emerald-400 dark:border-emerald-600"
+                    className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-900 items-center justify-center border-[1.5px] border-emerald-400 dark:border-emerald-600"
                   >
-                    <RotateCcw size={20} strokeWidth={2.5} color="#047857" />
+                    <RotateCcw size={18} strokeWidth={2.5} color="#047857" />
                   </TouchableOpacity>
                 ) : prevBalance !== 0 ? (
                   <TouchableOpacity
@@ -658,9 +658,9 @@ export default function Home({
                     accessibilityRole="button"
                     accessibilityLabel={t("home.resetCarryoverConfirm")}
                     hitSlop={6}
-                    className="w-10 h-10 rounded-xl bg-rose-100 dark:bg-rose-950 items-center justify-center border-[1.5px] border-rose-400 dark:border-rose-700"
+                    className="w-9 h-9 rounded-xl bg-rose-100 dark:bg-rose-950 items-center justify-center border-[1.5px] border-rose-400 dark:border-rose-700"
                   >
-                    <Eraser size={20} strokeWidth={2.5} color="#be123c" />
+                    <Eraser size={18} strokeWidth={2.5} color="#be123c" />
                   </TouchableOpacity>
                 ) : null}
               </View>
