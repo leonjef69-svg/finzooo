@@ -23,8 +23,8 @@ function labelFor(key: string, monthNames: string[]) {
 }
 
 /**
- * Selector único para Historial y Reportes. La lista se recibe ya filtrada:
- * por eso nunca ofrece un mes vacío ni cambia información financiera.
+ * Selector compartido por Inicio, Historial y Reportes. La lista se recibe ya
+ * filtrada; solo ofrece meses con movimientos y no cambia cifras financieras.
  */
 export default function MonthSelector({ month, months, monthNames, onChange }: Props) {
   const [open, setOpen] = useState(false);
