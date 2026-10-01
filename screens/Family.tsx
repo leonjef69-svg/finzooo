@@ -48,7 +48,10 @@ export default function Family() {
   const [familia, setFamilia] = useState<EspacioFamilia | null>(copiaInicial?.familia ?? null);
   const [familias, setFamilias] = useState<EspacioFamilia[]>(copiaInicial?.familia ? [copiaInicial.familia] : []);
   const [saldosFamilias, setSaldosFamilias] = useState<Record<string, number>>({});
-  const [verTodas, setVerTodas] = useState(false);
+  // Entrar desde Personal debe llevar al selector de familias, no abrir
+  // automáticamente la última familia activa. La persona elige el espacio
+  // que quiere consultar en cada entrada.
+  const [verTodas, setVerTodas] = useState(true);
   const [miembros, setMiembros] = useState<MiembroFamilia[]>(copiaInicial?.miembros ?? []);
   const [movimientos, setMovimientos] = useState<MovimientoFamilia[]>(copiaInicial?.movimientos ?? []);
   // La reconciliación de Personal debe conocer los movimientos de TODAS las
@@ -56,7 +59,7 @@ export default function Family() {
   // familia se interpretara como huérfana y se borrara de Personal.
   const [movimientosFamilias, setMovimientosFamilias] = useState<Record<string, MovimientoFamilia[]>>({});
   const [familiasSincronizadas, setFamiliasSincronizadas] = useState(false);
-  const [cargando, setCargando] = useState(!copiaInicial);
+  const [cargando, setCargando] = useState(true);
   const [ocupado, setOcupado] = useState(false);
   const [modo, setModo] = useState<"crear" | "unir" | null>(null);
   const [nombre, setNombre] = useState("");
