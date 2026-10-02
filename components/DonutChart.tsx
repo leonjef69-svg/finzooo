@@ -36,16 +36,16 @@ export default function DonutChart({ data }: { data: Slice[] }) {
   // No hay posiciones ni tamaños fijos por categoría. Al añadir o quitar una,
   // todo se reequilibra gradualmente: pocas categorías ganan presencia y una
   // lista extensa se compacta sin que se superpongan sus rótulos.
-  const bubble = count <= 7 ? 62 : Math.max(44, Math.min(70, Math.round(74 - count * 2.2)));
-  const radius = Math.max(54, Math.min(70, Math.round(80 - count * 1.6)));
+  const bubble = Math.max(44, Math.min(56, Math.round(66 - count * 1.5)));
+  const radius = Math.max(52, Math.min(66, Math.round(74 - count * 1.7)));
   // Con una sola categoría, la etiqueta queda debajo de la rosquilla. Se sube
   // el conjunto y se acorta el gráfico para reducir el espacio vacío superior.
-  const centerY = count === 1 ? 126 : CENTER_Y;
-  const height = count === 1 ? 280 : HEIGHT;
+  const centerY = count === 1 ? 118 : count <= 4 ? 146 : CENTER_Y;
+  const height = count === 1 ? 260 : count <= 4 ? 300 : HEIGHT;
   const orbitX = WIDTH / 2 - bubble / 2 - 5;
   // En vez de dibujar un círculo vertical enorme, se abre la composición hacia
   // los lados. Conserva la separación de los rótulos y reduce 60 px de alto.
-  const orbitY = 112 + (70 - bubble) * 0.4;
+  const orbitY = count <= 4 ? 102 + (56 - bubble) * 0.3 : 112 + (70 - bubble) * 0.4;
   const visualValues = data.map((item) => Math.max(item.value, total * MIN_VISIBLE_FRACTION));
   const visualTotal = visualValues.reduce((sum, value) => sum + value, 0);
   const circumference = 2 * Math.PI * radius;
@@ -59,7 +59,7 @@ export default function DonutChart({ data }: { data: Slice[] }) {
   // Cada círculo mira primero al centro de SU segmento, no a una posición
   // arbitraria. Cuando dos categorías pequeñas están juntas, se separan solo
   // lo necesario para que no se toquen; así las líneas son cortas y legibles.
-  const minimumLabelGap = bubble >= 62 ? 0.52 : bubble >= 50 ? 0.42 : 0.36;
+  const minimumLabelGap = bubble >= 54 ? 0.44 : bubble >= 48 ? 0.4 : 0.36;
   const bubbleAngles = sectors.reduce<number[]>((angles, sector, index) => {
     if (index === 0) return [sector.middle];
     return [...angles, Math.max(sector.middle, angles[index - 1] + minimumLabelGap)];
@@ -121,7 +121,7 @@ export default function DonutChart({ data }: { data: Slice[] }) {
               r={radius}
               fill="none"
               stroke={item.color}
-              strokeWidth={active ? 25 : 21}
+              strokeWidth={active ? 22 : 18}
               strokeOpacity={selected == null || active ? 1 : 0.34}
               strokeDasharray={`${dash} ${gap}`}
               rotation={rotation}
@@ -138,8 +138,8 @@ export default function DonutChart({ data }: { data: Slice[] }) {
         const top = centerY + Math.sin(bubbleAngle) * orbitY - bubble / 2;
         const Icon = item.Icon;
         const percentage = (item.value / total) * 100;
-        const iconSize = bubble >= 62 ? 22 : bubble >= 50 ? 19 : bubble >= 44 ? 16 : 14;
-        const textSize = bubble >= 62 ? 14 : bubble >= 50 ? 12 : bubble >= 44 ? 10 : 9;
+        const iconSize = bubble >= 56 ? 19 : bubble >= 48 ? 16 : 14;
+        const textSize = bubble >= 56 ? 12 : bubble >= 48 ? 11 : 9;
         return (
           <TouchableOpacity
             key={`bubble-${item.id}`}
