@@ -3,6 +3,7 @@ export type LinkedSpaceMovement = {
   tipo: "ingreso" | "gasto";
   monto: number;
   creadoEn?: number;
+  creadoPor?: string;
   personalTransactionId?: number;
   personalOwnerUid?: string;
   personalReturnAmount?: number;
@@ -211,7 +212,8 @@ export function balanceOfSpace(items: LinkedSpaceMovement[]): number {
 
 export function netFromPersonal(items: LinkedSpaceMovement[], ownerUid?: string): number {
   return Math.max(0, items.reduce((sum, item) => {
-    if (ownerUid && item.personalOwnerUid !== ownerUid) return sum;
+    const responsable = item.personalOwnerUid || item.creadoPor;
+    if (ownerUid && responsable !== ownerUid) return sum;
     if (item.tipo === "ingreso" && item.personalTransactionId != null) return sum + item.monto;
     return sum - (item.personalReturnAmount || 0);
   }, 0));
@@ -228,16 +230,15 @@ export function returnableToPersonal(items: LinkedSpaceMovement[], ownerUid?: st
  * a la cuenta que lo puso.
  */
 export function hasUnreturnedPersonalContributions(items: LinkedSpaceMovement[]): boolean {
-  // Los vínculos antiguos no tenían `personalOwnerUid`. Siguen siendo dinero
-  // salido de Personal y no se puede permitir que el cierre los haga
-  // desaparecer solo porque les falte ese dato nuevo.
-  if (items.some(item => item.personalTransactionId != null && !item.personalOwnerUid)) {
+  // Los registros antiguos ya guardaban quién creó el movimiento. Se usa ese
+  // dato como responsable cuando falta `personalOwnerUid`, incluida la
+  // devolución, para no mostrarla como hecha y a la vez bloquear el cierre.
+  const contribuciones = items.filter(item => item.tipo === "ingreso" && item.personalTransactionId != null);
+  if (contribuciones.some(item => !(item.personalOwnerUid || item.creadoPor))) {
     return netFromPersonal(items) > CENT;
   }
   const contributors = new Set(
-    items
-      .filter(item => item.personalTransactionId != null && item.personalOwnerUid)
-      .map(item => item.personalOwnerUid!),
+    contribuciones.map(item => item.personalOwnerUid || item.creadoPor!),
   );
   return [...contributors].some(uid => netFromPersonal(items, uid) > CENT);
 }

@@ -12,7 +12,11 @@ function balance(movements) {
 
 function personalNet(movements, uid) {
   return Math.max(0, movements.reduce((sum, movement) => {
-    if (movement.personalOwnerUid !== uid) return sum;
+    // Los movimientos familiares antiguos guardaban el UID del creador aunque
+    // todavía no tuvieran `personalOwnerUid`. Para una devolución eso permite
+    // atribuir el reembolso a la misma persona sin tratarlo como dinero ajeno.
+    const responsibleUid = movement.personalOwnerUid || movement.creadoPor;
+    if (responsibleUid !== uid) return sum;
     if (movement.tipo === "ingreso" && typeof movement.personalTransactionId === "number") return sum + numberOrZero(movement.monto);
     return sum - numberOrZero(movement.personalReturnAmount);
   }, 0));
@@ -31,10 +35,14 @@ function contributionLimits(movements, uid, original) {
 /** Un espacio solo se puede cerrar o purgar cuando no queda saldo ni aportes pendientes. */
 function canCloseLinkedSpace(movements) {
   if (Math.abs(balance(movements)) > CENT) return false;
+  const contributions = movements.filter(movement =>
+    movement.tipo === "ingreso" && typeof movement.personalTransactionId === "number",
+  );
+  // Si un aporte antiguo no conserva ni propietario ni creador, no es seguro
+  // cerrar: no se puede confirmar a qué cuenta de Personal debe devolverse.
+  if (contributions.some(movement => !(movement.personalOwnerUid || movement.creadoPor))) return false;
   const contributors = new Set(
-    movements
-      .filter(movement => typeof movement.personalTransactionId === "number" && typeof movement.personalOwnerUid === "string")
-      .map(movement => movement.personalOwnerUid),
+    contributions.map(movement => movement.personalOwnerUid || movement.creadoPor),
   );
   return [...contributors].every(uid => personalNet(movements, uid) <= CENT);
 }
