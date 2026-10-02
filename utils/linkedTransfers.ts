@@ -231,10 +231,15 @@ export function returnableToPersonal(items: LinkedSpaceMovement[], ownerUid?: st
  */
 export function hasUnreturnedPersonalContributions(items: LinkedSpaceMovement[]): boolean {
   // Los registros antiguos ya guardaban quién creó el movimiento. Se usa ese
-  // dato como responsable cuando falta `personalOwnerUid`, incluida la
-  // devolución, para no mostrarla como hecha y a la vez bloquear el cierre.
+  // dato como responsable cuando falta `personalOwnerUid`. Si una devolución
+  // antigua tampoco conserva creador, solo queda el neto agregado como señal
+  // fiable: no se puede asignar con seguridad a una persona concreta.
   const contribuciones = items.filter(item => item.tipo === "ingreso" && item.personalTransactionId != null);
-  if (contribuciones.some(item => !(item.personalOwnerUid || item.creadoPor))) {
+  const devoluciones = items.filter(item => (item.personalReturnAmount || 0) > CENT);
+  if (
+    contribuciones.some(item => !(item.personalOwnerUid || item.creadoPor)) ||
+    devoluciones.some(item => !(item.personalOwnerUid || item.creadoPor))
+  ) {
     return netFromPersonal(items) > CENT;
   }
   const contributors = new Set(

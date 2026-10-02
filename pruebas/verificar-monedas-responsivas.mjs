@@ -6,6 +6,7 @@ const reports = fs.readFileSync("screens/Reports.tsx", "utf8");
 const daily = fs.readFileSync("components/DailyBarsChart.tsx", "utf8");
 const donut = fs.readFileSync("components/DonutChart.tsx", "utf8");
 const home = fs.readFileSync("screens/Home.tsx", "utf8");
+const monthSelector = fs.readFileSync("components/MonthSelector.tsx", "utf8");
 const friendlyName = fs.readFileSync("utils/friendlyName.ts", "utf8");
 
 assert.match(formato, /currencyDecimals/);
@@ -30,7 +31,8 @@ assert.ok(
 assert.match(daily, /fmtAxis/);
 assert.match(donut, /MIN_VISIBLE_FRACTION/, "la dona conserva visibles los segmentos menores al 1%");
 assert.doesNotMatch(home, /home\.greeting|friendlyName\(userName\)/, "Inicio no desperdicia alto con un saludo");
-assert.match(home, /w-\[140px\]/, "el mes tiene un ancho compacto y estable en la cabecera");
+assert.match(home, /<MonthSelector\b/, "Inicio usa el selector de meses reutilizable");
+assert.match(monthSelector, /max-w-\[132px\]/, "el mes tiene un ancho compacto y estable en la cabecera");
 assert.doesNotMatch(home, /ThemeToggleButton/, "Inicio no repite un icono para cambiar la apariencia");
 assert.match(home, /adjustsFontSizeToFit/);
 assert.match(friendlyName, /includes\("@"\)/);

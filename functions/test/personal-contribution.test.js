@@ -37,3 +37,18 @@ test("un espacio no se cierra hasta devolver todos los aportes Personal", () => 
   assert.equal(hasUnreturnedPersonalContribution(used, "ana"), true);
   assert.equal(hasUnreturnedPersonalContribution(returned, "ana"), false);
 });
+
+test("una devolución antigua sin propietario no bloquea el cierre si el neto quedó en cero", () => {
+  const legacyReturned = [
+    { tipo: "ingreso", monto: 500, personalTransactionId: 10, personalOwnerUid: "ana" },
+    { tipo: "gasto", monto: 500, personalReturnAmount: 500 },
+  ];
+  assert.equal(canCloseLinkedSpace(legacyReturned), true);
+
+  const legacyPartial = [
+    { tipo: "ingreso", monto: 500, personalTransactionId: 10, personalOwnerUid: "ana" },
+    { tipo: "gasto", monto: 300, personalReturnAmount: 300 },
+    { tipo: "gasto", monto: 200 },
+  ];
+  assert.equal(canCloseLinkedSpace(legacyPartial), false);
+});

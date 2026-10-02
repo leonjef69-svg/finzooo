@@ -16,7 +16,7 @@ function personalNet(movements, uid) {
     // todavía no tuvieran `personalOwnerUid`. Para una devolución eso permite
     // atribuir el reembolso a la misma persona sin tratarlo como dinero ajeno.
     const responsibleUid = movement.personalOwnerUid || movement.creadoPor;
-    if (responsibleUid !== uid) return sum;
+    if (uid && responsibleUid !== uid) return sum;
     if (movement.tipo === "ingreso" && typeof movement.personalTransactionId === "number") return sum + numberOrZero(movement.monto);
     return sum - numberOrZero(movement.personalReturnAmount);
   }, 0));
@@ -41,6 +41,12 @@ function canCloseLinkedSpace(movements) {
   // Si un aporte antiguo no conserva ni propietario ni creador, no es seguro
   // cerrar: no se puede confirmar a qué cuenta de Personal debe devolverse.
   if (contributions.some(movement => !(movement.personalOwnerUid || movement.creadoPor))) return false;
+  const returns = movements.filter(movement => numberOrZero(movement.personalReturnAmount) > CENT);
+  // Las devoluciones antiguas sin responsable no pueden atribuirse a un UID.
+  // En ese caso usamos el neto agregado; si sigue pendiente, no cerramos.
+  if (returns.some(movement => !(movement.personalOwnerUid || movement.creadoPor))) {
+    return personalNet(movements) <= CENT;
+  }
   const contributors = new Set(
     contributions.map(movement => movement.personalOwnerUid || movement.creadoPor),
   );
