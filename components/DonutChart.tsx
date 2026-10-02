@@ -2,6 +2,7 @@ import { useState, type ComponentType } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useColorScheme } from "nativewind";
+import { ajustarValoresRosquilla, distribuirAngulosEtiquetas } from "@/utils/donutGeometry";
 
 type Slice = {
   id: string;
@@ -11,7 +12,6 @@ type Slice = {
   Icon?: ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
 };
 
-const MIN_VISIBLE_FRACTION = 0.012;
 // El gráfico usa casi todo el ancho de la tarjeta. Así las llamadas laterales
 // tienen aire y no se necesita una tarjeta innecesariamente alta.
 const WIDTH = 340;
@@ -38,15 +38,15 @@ export default function DonutChart({ data }: { data: Slice[] }) {
   // lista extensa se compacta sin que se superpongan sus rótulos.
   const bubble = Math.max(44, Math.min(56, Math.round(66 - count * 1.5)));
   const radius = Math.max(52, Math.min(66, Math.round(74 - count * 1.7)));
-  // Con una sola categoría, la etiqueta queda debajo de la rosquilla. Se sube
-  // el conjunto y se acorta el gráfico para reducir el espacio vacío superior.
+  // Con una sola categoría, la etiqueta queda debajo de la rosquilla. Se deja
+  // suficiente separación para que la línea que la une con su segmento se vea.
   const centerY = count === 1 ? 118 : count <= 4 ? 146 : CENTER_Y;
-  const height = count === 1 ? 260 : count <= 4 ? 300 : HEIGHT;
+  const height = count === 1 ? 280 : count <= 4 ? 300 : HEIGHT;
   const orbitX = WIDTH / 2 - bubble / 2 - 5;
   // En vez de dibujar un círculo vertical enorme, se abre la composición hacia
   // los lados. Conserva la separación de los rótulos y reduce 60 px de alto.
-  const orbitY = count <= 4 ? 102 + (56 - bubble) * 0.3 : 112 + (70 - bubble) * 0.4;
-  const visualValues = data.map((item) => Math.max(item.value, total * MIN_VISIBLE_FRACTION));
+  const orbitY = count === 1 ? 126 : count <= 4 ? 102 + (56 - bubble) * 0.3 : 112 + (70 - bubble) * 0.4;
+  const visualValues = ajustarValoresRosquilla(data.map((item) => item.value), total);
   const visualTotal = visualValues.reduce((sum, value) => sum + value, 0);
   const circumference = 2 * Math.PI * radius;
   let accumulated = 0;
@@ -56,14 +56,15 @@ export default function DonutChart({ data }: { data: Slice[] }) {
     accumulated += value;
     return { start, middle, value };
   });
-  // Cada círculo mira primero al centro de SU segmento, no a una posición
-  // arbitraria. Cuando dos categorías pequeñas están juntas, se separan solo
-  // lo necesario para que no se toquen; así las líneas son cortas y legibles.
-  const minimumLabelGap = bubble >= 54 ? 0.44 : bubble >= 48 ? 0.4 : 0.36;
-  const bubbleAngles = sectors.reduce<number[]>((angles, sector, index) => {
-    if (index === 0) return [sector.middle];
-    return [...angles, Math.max(sector.middle, angles[index - 1] + minimumLabelGap)];
-  }, []);
+  // La separación se calcula por el tamaño real de las etiquetas y se
+  // distribuye alrededor del círculo, incluso al cruzar el punto de inicio.
+  const smallestOrbit = Math.max(1, Math.min(orbitX, orbitY));
+  const labelDistance = bubble + 8;
+  const minimumLabelGap = 2 * Math.asin(Math.min(1, labelDistance / (2 * smallestOrbit)));
+  const bubbleAngles = distribuirAngulosEtiquetas(
+    sectors.map((sector) => sector.middle),
+    minimumLabelGap,
+  );
 
   if (total <= 0) return null;
 
@@ -80,9 +81,8 @@ export default function DonutChart({ data }: { data: Slice[] }) {
           // a otra categoría cuando los montos tenían tamaños distintos.
           const ringX = CENTER_X + Math.cos(sector.middle) * (radius + 11);
           const ringY = centerY + Math.sin(sector.middle) * (radius + 11);
-          // El enlace termina en el borde del círculo (nunca lo atraviesa) y
-          // se curva apenas cuando dos categorías son vecinas. Esta geometría
-          // evita los rizos que antes aparecían con varias categorías azules.
+          // El enlace termina en el borde del círculo y usa una curva que abre
+          // las categorías cercanas sin perder el color del segmento origen.
           const lineX = bubbleX - ringX;
           const lineY = bubbleY - ringY;
           const lineLength = Math.max(1, Math.hypot(lineX, lineY));
@@ -90,19 +90,23 @@ export default function DonutChart({ data }: { data: Slice[] }) {
           const directionY = lineY / lineLength;
           const bubbleEdgeX = bubbleX - directionX * (bubble / 2 + 1);
           const bubbleEdgeY = bubbleY - directionY * (bubble / 2 + 1);
-          const bend = Math.max(-10, Math.min(10, diferenciaAngular(sector.middle, bubbleAngle) * 5));
-          const middleX = (ringX + bubbleEdgeX) / 2;
-          const middleY = (ringY + bubbleEdgeY) / 2;
-          const controlX = middleX - directionY * bend;
-          const controlY = middleY + directionX * bend;
+          const sectorCos = Math.cos(sector.middle);
+          const sectorSin = Math.sin(sector.middle);
+          const labelCos = Math.cos(bubbleAngle);
+          const labelSin = Math.sin(bubbleAngle);
+          const separation = Math.max(-24, Math.min(24, diferenciaAngular(sector.middle, bubbleAngle) * 34));
+          const control1X = ringX + sectorCos * 24 - sectorSin * separation * 0.35;
+          const control1Y = ringY + sectorSin * 24 + sectorCos * separation * 0.35;
+          const control2X = bubbleEdgeX - directionX * 22 - labelSin * separation * 0.35;
+          const control2Y = bubbleEdgeY - directionY * 22 + labelCos * separation * 0.35;
           return (
             <Path
               key={`line-${item.id}`}
-              d={`M ${ringX} ${ringY} Q ${controlX} ${controlY}, ${bubbleEdgeX} ${bubbleEdgeY}`}
+              d={`M ${ringX} ${ringY} C ${control1X} ${control1Y}, ${control2X} ${control2Y}, ${bubbleEdgeX} ${bubbleEdgeY}`}
               fill="none"
               stroke={item.color}
-              strokeWidth={1.15}
-              strokeOpacity={0.82}
+              strokeWidth={count === 1 ? 1.8 : 1.5}
+              strokeOpacity={count === 1 ? 1 : 0.95}
             />
           );
         })}

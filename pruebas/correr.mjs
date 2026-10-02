@@ -65,6 +65,7 @@ const EXPO = {
  * otras que no hacen nada, para poder comprobar las CUENTAS con Node.
  */
 const SUITES = [
+  { archivo: "verificar-geometria-rosquilla.ts", alias: BASE },
   { archivo: "verificar-premium-tester.ts", alias: BASE },
   { archivo: "verificar-archivo-grande.ts", alias: BASE },
   { archivo: "verificar-archivos-grandes.ts", alias: BASE, formato: "cjs" },

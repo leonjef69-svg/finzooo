@@ -23,13 +23,18 @@ assert.match(reports, /shownBarData/);
 assert.match(reports, /shownDaily/);
 assert.doesNotMatch(reports, /setTransactions\([^)]*preview/i);
 assert.match(donut, /percentage < 1 \? "<1%"/, "los gastos pequeños no se muestran falsamente como 0%");
+assert.match(donut, /const orbitY = count === 1 \? 126 :/, "con una sola categoría se separa la etiqueta para que la línea del gráfico sea visible");
+assert.match(donut, /const height = count === 1 \? 280 :/, "la separación de la etiqueta única no recorta el gráfico");
+assert.match(donut, /strokeWidth=\{count === 1 \? 1\.8 : 1\.5\}/, "los conectores del gráfico tienen grosor suficiente");
 assert.ok(!reports.includes("Fino IA"), "Reportes ya no muestra Fino IA");
 assert.ok(
   reports.lastIndexOf('t("reports.byDayTitle")') < reports.lastIndexOf('t("reports.byMonth")'),
   "el gasto diario aparece antes del gasto mensual",
 );
 assert.match(daily, /fmtAxis/);
-assert.match(donut, /MIN_VISIBLE_FRACTION/, "la dona conserva visibles los segmentos menores al 1%");
+assert.match(donut, /ajustarValoresRosquilla/, "los segmentos pequeños se realzan sin perder el peso de la categoría dominante");
+const donutGeometry = fs.readFileSync("utils/donutGeometry.ts", "utf8");
+assert.match(donutGeometry, /MAX_VISUAL_UPLIFT = 0\.16/, "la mejora visual de segmentos pequeños tiene un límite");
 assert.doesNotMatch(home, /home\.greeting|friendlyName\(userName\)/, "Inicio no desperdicia alto con un saludo");
 assert.match(home, /<MonthSelector\b/, "Inicio usa el selector de meses reutilizable");
 assert.match(monthSelector, /max-w-\[132px\]/, "el mes tiene un ancho compacto y estable en la cabecera");
