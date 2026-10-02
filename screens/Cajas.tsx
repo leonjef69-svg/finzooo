@@ -137,6 +137,68 @@ export default function Cajas() {
     // que la nube termine de responder, una contraparte ausente no es huérfana.
     if (!ready || !cloudReady) return;
     const movimientosPorId = new Map(datos.movimientos.map(item => [item.id, item]));
+    const transferenciasPersonales = transactions.filter(tx => tx.internalTransfer === "box");
+    const transferenciasPorMovimiento = new Map<string, typeof transferenciasPersonales>();
+    for (const personal of transferenciasPersonales) {
+      if (!personal.internalTransferLink) continue;
+      transferenciasPorMovimiento.set(personal.internalTransferLink, [
+        ...(transferenciasPorMovimiento.get(personal.internalTransferLink) || []), personal,
+      ]);
+    }
+    const movimientoPersonalRecuperado = new Map<string, number>();
+    const personalUsado = new Set<number>();
+    for (const item of datos.movimientos) {
+      if (item.personalTransactionId != null) {
+        personalUsado.add(item.personalTransactionId);
+        continue;
+      }
+      const candidatasEnlazadas = transferenciasPorMovimiento.get(item.id) || [];
+      const personal = candidatasEnlazadas.length === 1 ? candidatasEnlazadas[0] : undefined;
+      const esRetorno = item.tipo === "gasto" && (item.personalReturnAmount || 0) > 0;
+      const tipoPersonal = esRetorno ? "income" : item.tipo === "ingreso" ? "expense" : null;
+      if (!personal || !tipoPersonal || personal.type !== tipoPersonal
+        || (personal.internalTransferSpaceId && personal.internalTransferSpaceId !== item.cajaId)) continue;
+      movimientoPersonalRecuperado.set(item.id, personal.id);
+      personalUsado.add(personal.id);
+    }
+    // Algunas versiones guardaban ambas mitades, pero sin el ID cruzado. Si
+    // queda una única pareja posible por caja, tipo, monto y fecha, se repara;
+    // si hay ambigüedad se conserva intacta para no enlazar dinero equivocado.
+    const pendientesDeEnlace = datos.movimientos.filter(item => item.personalTransactionId == null && !movimientoPersonalRecuperado.has(item.id));
+    const candidatosPorMovimiento = new Map<string, typeof transferenciasPersonales>();
+    const movimientosPorPersonal = new Map<number, string[]>();
+    for (const item of pendientesDeEnlace) {
+      const esRetorno = item.tipo === "gasto" && (item.personalReturnAmount || 0) > 0;
+      const tipoPersonal = esRetorno ? "income" : item.tipo === "ingreso" ? "expense" : null;
+      const montoEsperado = esRetorno ? item.personalReturnAmount : item.monto;
+      if (!tipoPersonal || montoEsperado == null) continue;
+      const candidatos = transferenciasPersonales.filter(tx => {
+        return !personalUsado.has(tx.id) && !tx.internalTransferLink && tx.type === tipoPersonal
+          && Math.abs((tx.amount || 0) - montoEsperado) < 0.005
+          && tx.date === item.fecha
+          && (!tx.internalTransferSpaceId || tx.internalTransferSpaceId === item.cajaId);
+      });
+      candidatosPorMovimiento.set(item.id, candidatos);
+      for (const candidato of candidatos) {
+        movimientosPorPersonal.set(candidato.id, [...(movimientosPorPersonal.get(candidato.id) || []), item.id]);
+      }
+    }
+    for (const [movementId, candidatos] of candidatosPorMovimiento) {
+      const candidato = candidatos[0];
+      if (candidatos.length !== 1 || !candidato || movimientosPorPersonal.get(candidato.id)?.length !== 1) continue;
+      movimientoPersonalRecuperado.set(movementId, candidato.id);
+      personalUsado.add(candidato.id);
+    }
+    const movimientosConVinculoRecuperado = [...movimientoPersonalRecuperado].map(([id, personalTransactionId]) => ({ id, personalTransactionId }));
+    if (movimientosConVinculoRecuperado.length) {
+      const idsRecuperados = new Map(movimientosConVinculoRecuperado.map(item => [item.id, item.personalTransactionId]));
+      setDatos(actual => ({
+        ...actual,
+        movimientos: actual.movimientos.map(item => item.personalTransactionId != null || !idsRecuperados.has(item.id)
+          ? item
+          : { ...item, personalTransactionId: idsRecuperados.get(item.id) }),
+      }));
+    }
     const upserts = datos.movimientos.flatMap(item => {
       if (item.personalTransactionId == null) return [];
       const cajaDelMovimiento = datos.cajas.find(c => c.id === item.cajaId);
@@ -494,7 +556,7 @@ export default function Cajas() {
               const transferencia = isLinkedSpaceTransfer(item);
               const retorno = isLinkedSpaceReturn(item);
               return (
-              <TouchableOpacity key={key} disabled={transferGroup ? seleccionando : !seleccionando} onPress={() => transferGroup ? setFilter("transferencia") : setSeleccionados(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id])} className={`mb-2 flex-row items-center rounded-2xl border-[1.5px] p-3 dark:border-noche-borde ${seleccionados.includes(item.id) ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200"}`}>
+              <TouchableOpacity key={key} disabled={Boolean(transferGroup) || !seleccionando} onPress={() => setSeleccionados(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id])} className={`mb-2 flex-row items-center rounded-2xl border-[1.5px] p-3 dark:border-noche-borde ${seleccionados.includes(item.id) ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200"}`}>
                 <View className={`h-9 w-9 items-center justify-center rounded-xl ${transferencia ? "bg-blue-100 dark:bg-blue-950" : item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{transferencia ? <ArrowRightLeft size={17} color="#2563eb" /> : item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
                 {transferencia ? <View className="ml-3 flex-1"><SpaceTransferAmounts title={caja.nombre} sentLabel={t("boxes.receivedFromPersonal")} returnedLabel={t("boxes.returnedToPersonal")} sent={transferGroup?.sent ?? (retorno ? 0 : item.monto)} returned={transferGroup?.returned ?? (retorno ? item.monto : 0)} format={fmt} /></View> : <><View className="ml-3 flex-1"><Text className="text-[15px] font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-2 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></>}
                 {seleccionando && !transferGroup ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${seleccionados.includes(item.id) ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : null}
