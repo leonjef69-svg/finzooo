@@ -2,7 +2,13 @@ import { useState, type ComponentType } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import Svg, { Circle, Path } from "react-native-svg";
 import { useColorScheme } from "nativewind";
-import { ajustarValoresRosquilla, distribuirAngulosEtiquetas } from "@/utils/donutGeometry";
+import {
+  ajustarValoresRosquilla,
+  calcularTamanoBurbujaRosquilla,
+  crearCurvaConectorRosquilla,
+  distribuirAngulosEtiquetas,
+  textoPorcentajeRosquilla,
+} from "@/utils/donutGeometry";
 
 type Slice = {
   id: string;
@@ -19,10 +25,6 @@ const HEIGHT = 320;
 const CENTER_X = WIDTH / 2;
 const CENTER_Y = 156;
 
-function diferenciaAngular(desde: number, hasta: number) {
-  return Math.atan2(Math.sin(hasta - desde), Math.cos(hasta - desde));
-}
-
 /**
  * Todas las categorías quedan visibles alrededor de la rosquilla. Cuando hay
  * más categorías, tanto los círculos como la rosquilla se compactan un poco;
@@ -36,7 +38,8 @@ export default function DonutChart({ data }: { data: Slice[] }) {
   // No hay posiciones ni tamaños fijos por categoría. Al añadir o quitar una,
   // todo se reequilibra gradualmente: pocas categorías ganan presencia y una
   // lista extensa se compacta sin que se superpongan sus rótulos.
-  const bubble = Math.max(44, Math.min(56, Math.round(66 - count * 1.5)));
+  const preferredBubble = Math.max(18, Math.min(56, Math.round(66 - count * 1.5)));
+  const bubble = calcularTamanoBurbujaRosquilla(count, preferredBubble, WIDTH);
   const radius = Math.max(52, Math.min(66, Math.round(74 - count * 1.7)));
   // Con una sola categoría, la etiqueta queda debajo de la rosquilla. Se deja
   // suficiente separación para que la línea que la une con su segmento se vea.
@@ -76,37 +79,26 @@ export default function DonutChart({ data }: { data: Slice[] }) {
           const bubbleAngle = bubbleAngles[index];
           const bubbleX = CENTER_X + Math.cos(bubbleAngle) * orbitX;
           const bubbleY = centerY + Math.sin(bubbleAngle) * orbitY;
-          // La línea empieza exactamente en el centro del segmento del mismo
-          // color. Antes salía de una posición fija, por eso parecía pertenecer
-          // a otra categoría cuando los montos tenían tamaños distintos.
-          const ringX = CENTER_X + Math.cos(sector.middle) * (radius + 11);
-          const ringY = centerY + Math.sin(sector.middle) * (radius + 11);
-          // El enlace termina en el borde del círculo y usa una curva que abre
-          // las categorías cercanas sin perder el color del segmento origen.
-          const lineX = bubbleX - ringX;
-          const lineY = bubbleY - ringY;
-          const lineLength = Math.max(1, Math.hypot(lineX, lineY));
-          const directionX = lineX / lineLength;
-          const directionY = lineY / lineLength;
-          const bubbleEdgeX = bubbleX - directionX * (bubble / 2 + 1);
-          const bubbleEdgeY = bubbleY - directionY * (bubble / 2 + 1);
-          const sectorCos = Math.cos(sector.middle);
-          const sectorSin = Math.sin(sector.middle);
-          const labelCos = Math.cos(bubbleAngle);
-          const labelSin = Math.sin(bubbleAngle);
-          const separation = Math.max(-24, Math.min(24, diferenciaAngular(sector.middle, bubbleAngle) * 34));
-          const control1X = ringX + sectorCos * 24 - sectorSin * separation * 0.35;
-          const control1Y = ringY + sectorSin * 24 + sectorCos * separation * 0.35;
-          const control2X = bubbleEdgeX - directionX * 22 - labelSin * separation * 0.35;
-          const control2Y = bubbleEdgeY - directionY * 22 + labelCos * separation * 0.35;
+          // El conector comienza en el segmento de su color y se abre en
+          // abanico de inmediato, incluso cuando varios montos son diminutos.
+          const route = crearCurvaConectorRosquilla({
+            centerX: CENTER_X,
+            centerY,
+            sourceAngle: sector.middle,
+            labelAngle: bubbleAngle,
+            bubbleX,
+            bubbleY,
+            bubbleSize: bubble,
+            sourceRadius: radius + 11,
+          });
           return (
             <Path
               key={`line-${item.id}`}
-              d={`M ${ringX} ${ringY} C ${control1X} ${control1Y}, ${control2X} ${control2Y}, ${bubbleEdgeX} ${bubbleEdgeY}`}
+              d={`M ${route.inicio.x} ${route.inicio.y} C ${route.control1.x} ${route.control1.y}, ${route.control2.x} ${route.control2.y}, ${route.fin.x} ${route.fin.y}`}
               fill="none"
               stroke={item.color}
-              strokeWidth={count === 1 ? 1.8 : 1.5}
-              strokeOpacity={count === 1 ? 1 : 0.95}
+              strokeWidth={count === 1 ? 1.8 : 1.1}
+              strokeOpacity={count === 1 ? 1 : 0.9}
             />
           );
         })}
@@ -141,16 +133,19 @@ export default function DonutChart({ data }: { data: Slice[] }) {
         const left = CENTER_X + Math.cos(bubbleAngle) * orbitX - bubble / 2;
         const top = centerY + Math.sin(bubbleAngle) * orbitY - bubble / 2;
         const Icon = item.Icon;
-        const percentage = (item.value / total) * 100;
-        const iconSize = bubble >= 56 ? 19 : bubble >= 48 ? 16 : 14;
-        const textSize = bubble >= 56 ? 12 : bubble >= 48 ? 11 : 9;
+        const percentageText = textoPorcentajeRosquilla(item.value, total);
+        const percentageAccessible = percentageText === "<1%"
+          ? "menos de 1 por ciento"
+          : percentageText === ">99%" ? "más de 99 por ciento" : percentageText;
+        const iconSize = bubble >= 56 ? 19 : bubble >= 48 ? 16 : bubble >= 36 ? 12 : bubble >= 26 ? 10 : 8;
+        const textSize = bubble >= 56 ? 12 : bubble >= 48 ? 11 : bubble >= 36 ? 9 : bubble >= 26 ? 8 : 7;
         return (
           <TouchableOpacity
             key={`bubble-${item.id}`}
             className="bg-white dark:bg-noche-2"
             onPress={() => setSelected((current) => (current === item.id ? null : item.id))}
             accessibilityRole="button"
-            accessibilityLabel={`${item.name}: ${percentage < 1 ? "menos de 1" : Math.round(percentage)} por ciento`}
+            accessibilityLabel={`${item.name}: ${percentageAccessible}`}
             style={{
               position: "absolute",
               left,
@@ -166,7 +161,7 @@ export default function DonutChart({ data }: { data: Slice[] }) {
           >
             {Icon ? <Icon size={iconSize} color={item.color} strokeWidth={2.35} /> : null}
             <Text numberOfLines={1} style={{ marginTop: 2, color: colorScheme === "dark" ? "#ffffff" : "#0f172a", fontSize: textSize, fontWeight: "800" }}>
-              {percentage < 1 ? "<1%" : `${Math.round(percentage)}%`}
+              {percentageText}
             </Text>
           </TouchableOpacity>
         );

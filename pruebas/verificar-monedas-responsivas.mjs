@@ -22,10 +22,10 @@ assert.match(reports, /Array\.from\(\{ length: 31 \}/);
 assert.match(reports, /shownBarData/);
 assert.match(reports, /shownDaily/);
 assert.doesNotMatch(reports, /setTransactions\([^)]*preview/i);
-assert.match(donut, /percentage < 1 \? "<1%"/, "los gastos pequeños no se muestran falsamente como 0%");
+assert.match(donut, /textoPorcentajeRosquilla/, "la gráfica muestra el porcentaje real y conserva las categorías menores a 1%");
 assert.match(donut, /const orbitY = count === 1 \? 126 :/, "con una sola categoría se separa la etiqueta para que la línea del gráfico sea visible");
 assert.match(donut, /const height = count === 1 \? 280 :/, "la separación de la etiqueta única no recorta el gráfico");
-assert.match(donut, /strokeWidth=\{count === 1 \? 1\.8 : 1\.5\}/, "los conectores del gráfico tienen grosor suficiente");
+assert.match(donut, /strokeWidth=\{count === 1 \? 1\.8 : 1\.1\}/, "los conectores curvos se separan sin amontonarse");
 assert.ok(!reports.includes("Fino IA"), "Reportes ya no muestra Fino IA");
 assert.ok(
   reports.lastIndexOf('t("reports.byDayTitle")') < reports.lastIndexOf('t("reports.byMonth")'),
