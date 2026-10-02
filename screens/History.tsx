@@ -175,10 +175,10 @@ export default function History({
 
   const { totalExpense, totalIncome } = useMemo(() => {
     return {
-      totalExpense: allMonthTx.filter((t) => t.type === "expense" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0),
-      totalIncome: allMonthTx.filter((t) => t.type === "income" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0),
+      totalExpense: allMonthTx.filter((t) => t.type === "expense" && !t.internalTransfer && (!categoryFilter || t.category === categoryFilter)).reduce((s, t) => s + t.amount, 0),
+      totalIncome: allMonthTx.filter((t) => t.type === "income" && !t.internalTransfer && (!categoryFilter || t.category === categoryFilter)).reduce((s, t) => s + t.amount, 0),
     };
-  }, [allMonthTx]);
+  }, [allMonthTx, categoryFilter]);
   const showIncomeTotal = totalIncome > 0 && (filter === "all" || filter === "income");
   const showExpenseTotal = totalExpense > 0 && (filter === "all" || filter === "expense");
   const totalHasMoreThanEightFigures = (amount: number) => Math.trunc(Math.abs(amount)).toString().length >= 8;
@@ -351,7 +351,7 @@ export default function History({
                 </View>
                 <View className="flex-1 min-w-0">
                   <Text className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold" numberOfLines={1}>
-                    {t("history.totalIncome")}
+                    {categoryFilter ? `${t("history.totalIncome")} · ${t(catInfo(categoryFilter).label)}` : t("history.totalIncome")}
                   </Text>
                   <Text className="text-base font-extrabold text-emerald-600" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
                     {fmt(totalIncome)}
@@ -369,7 +369,7 @@ export default function History({
                 </View>
                 <View className="flex-1 min-w-0">
                   <Text className="text-[11px] text-slate-500 dark:text-slate-300 font-semibold" numberOfLines={1}>
-                    {t("history.totalExpense")}
+                    {categoryFilter ? `${t("history.totalExpense")} · ${t(catInfo(categoryFilter).label)}` : t("history.totalExpense")}
                   </Text>
                   <Text className="text-base font-extrabold text-rose-500" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
                     {fmt(totalExpense)}
