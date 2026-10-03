@@ -653,7 +653,11 @@ function RootLayout() {
                 panel de "Agregar gasto/ingreso" desde Inicio. */}
             <Stack.Screen
               name="transaction/choose"
-              options={{ presentation: "transparentModal", contentStyle: { backgroundColor: "transparent" } }}
+              options={{
+                presentation: "transparentModal",
+                animation: "slide_from_bottom",
+                contentStyle: { backgroundColor: "transparent" },
+              }}
             />
             <Stack.Screen
               name="savings/form"

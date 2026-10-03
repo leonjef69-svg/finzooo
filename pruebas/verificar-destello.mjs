@@ -119,7 +119,12 @@ console.log("\n--- Y QUE EL CAMBIO A INICIO NO SE SIENTA COMO UN CORTE (10/08/20
   // una hoja que cerrar y la baja el sistema con su animacion.
   const elegir = sinComentarios(fs.readFileSync(path.join(RAIZ, "app/transaction/choose.tsx"), "utf8"));
   const nuevo = sinComentarios(fs.readFileSync(path.join(RAIZ, "app/transaction/new.tsx"), "utf8"));
+  const inicioElegir = raiz.indexOf('name="transaction/choose"');
+  const finElegir = raiz.indexOf("/>", inicioElegir);
+  const opcionesElegir = raiz.slice(inicioElegir, finElegir);
 
+  ok(/presentation:\s*"transparentModal"/.test(opcionesElegir), "el selector conserva Inicio visible detrás del panel");
+  ok(/animation:\s*"slide_from_bottom"/.test(opcionesElegir), "el selector del botón + entra desde abajo como una hoja");
   ok(/router\.replace\(`\/transaction\/new/.test(elegir), "el panel se cambia por la hoja, no se apila debajo");
   ok(!/router\.push\(/.test(elegir), "y no queda ningun push en el panel");
   ok(!/dismissTo/.test(nuevo), "guardar cierra UNA pantalla, sin deshacer dos de golpe");
