@@ -571,28 +571,18 @@ function RootLayout() {
             <Stack.Screen name="setup" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
             <Stack.Screen name="country" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
             <Stack.Screen name="currency" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
-            {/* transaction/new y transaction/[id]/edit muestran AddSheet, una
-                pantalla LLENA y opaca. Van con "modal" normal —no
-                "transparentModal"— porque transparentModal en Android está
-                pensado para paneles que ocupan SOLO PARTE de la pantalla
-                (como AddChooser, más abajo): le da al contenido una ventana
-                nativa que en la práctica resultó ser más chica que la
-                pantalla completa. Nada que hiciéramos en React —ni
-                "position: absolute, inset 0"— podía arreglarlo, porque el
-                límite que se veía (Inicio asomando con su lista y su botón
-                "+") estaba FUERA de esa ventana, a nivel del sistema
-                operativo, no dentro de nuestra propia jerarquía de vistas.
-                Volvimos a "modal", que sí reserva una ventana del tamaño
-                real del dispositivo.
-                Para el destello blanco (que fue la razón original del
-                cambio a transparentModal): en vez de quitar el fondo nativo
-                por completo, se le da el color correcto del tema con
-                "contentStyle" — así el instante antes de que React pinte su
-                contenido, el fondo nativo YA es del color correcto, en vez
-                de blanco por defecto. */}
+            <Stack.Screen name="family" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: screenBg } }} />
+            <Stack.Screen name="boxes" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: screenBg } }} />
+            {/* El alta de un movimiento es un panel superpuesto como el selector
+                del botón +. Su contenido es parcial, así que transparentModal
+                deja Inicio visible detrás sin darle a AddSheet una ventana de
+                pantalla completa. */}
             <Stack.Screen
               name="transaction/new"
-              options={{ presentation: "modal", contentStyle: { backgroundColor: screenBg } }}
+              options={{
+                presentation: "transparentModal",
+                contentStyle: { backgroundColor: "transparent" },
+              }}
             />
             <Stack.Screen
               name="transaction/[id]/edit"

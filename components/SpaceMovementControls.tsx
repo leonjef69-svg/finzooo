@@ -1,4 +1,4 @@
-import { Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
+import { Modal, Pressable, ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { useState } from "react";
 import { useAppData } from "@/contexts/AppDataContext";
 import { PAYMENT_METHODS } from "@/constants/i18n";
@@ -101,15 +101,28 @@ export function SpaceTransferFilter({ count, filter, onFilter }: {
   </TouchableOpacity>;
 }
 
-export function SpacePaymentMethod({ value, onChange, disabled = false }: {
-  value: string; onChange: (method: string) => void; disabled?: boolean;
+export function SpacePaymentMethod({ value, onChange, disabled = false, compact = false }: {
+  value: string; onChange: (method: string) => void; disabled?: boolean; compact?: boolean;
 }) {
   const { t, userCountry } = useAppData();
   const [open, setOpen] = useState(false);
   const methods = PAYMENT_METHODS.filter(m => (m.id !== "plin" || userCountry === "PE") && (m.id !== "yape" || userCountry === "PE" || userCountry === "BO"));
-  return <View className="mt-2">
-    <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: open }} disabled={disabled} onPress={() => setOpen(!open)} className="min-h-11 flex-row items-center justify-between rounded-xl border border-slate-200 px-3 dark:border-noche-borde"><Text className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t("detail.method")}</Text><Text className="text-sm font-bold text-emerald-700 dark:text-emerald-300">{t(methods.find(m => m.id === value)?.labelKey || methods[0].labelKey)} ▾</Text></TouchableOpacity>
-    {open ? <View className="mt-1 gap-1 rounded-xl border border-slate-200 p-1 dark:border-noche-borde">{methods.map(method => <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: value === method.id }} key={method.id} disabled={disabled} onPress={() => { onChange(method.id); setOpen(false); }} className={`min-h-11 justify-center rounded-lg px-3 ${value === method.id ? "bg-emerald-100 dark:bg-emerald-950" : "bg-slate-50 dark:bg-noche-2"}`}><Text className={value === method.id ? "text-sm font-bold text-emerald-800 dark:text-emerald-200" : "text-sm text-slate-700 dark:text-slate-200"}>{t(method.labelKey)}</Text></TouchableOpacity>)}</View> : null}
+  return <View className={compact ? "w-[132px]" : "mt-2"}>
+    <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: open }} disabled={disabled} onPress={() => setOpen(true)} className={compact ? "h-12 flex-row items-center justify-center rounded-xl border border-slate-200 px-2 dark:border-noche-borde" : "min-h-11 flex-row items-center justify-between rounded-xl border border-slate-200 px-3 dark:border-noche-borde"}>
+      {!compact ? <Text className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t("detail.method")}</Text> : null}
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{compact ? `${t("detail.method")} · ` : ""}{t(methods.find(m => m.id === value)?.labelKey || methods[0].labelKey)} ▾</Text>
+    </TouchableOpacity>
+    <Modal transparent visible={open} animationType="fade" statusBarTranslucent onRequestClose={() => setOpen(false)}>
+      <View className="flex-1 items-center justify-center bg-black/45 px-8">
+        <Pressable accessibilityRole="button" accessibilityLabel={t("common.cancel")} onPress={() => setOpen(false)} className="absolute inset-0" />
+        <View className="max-h-[78%] w-full rounded-2xl bg-white p-4 dark:bg-noche">
+          <Text className="mb-3 text-base font-extrabold text-slate-900 dark:text-slate-100">{t("detail.method")}</Text>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ gap: 6 }}>
+            {methods.map(method => <TouchableOpacity accessibilityRole="button" accessibilityState={{ selected: value === method.id }} key={method.id} disabled={disabled} onPress={() => { onChange(method.id); setOpen(false); }} className={`min-h-11 justify-center rounded-xl px-3 ${value === method.id ? "bg-emerald-100 dark:bg-emerald-950" : "bg-slate-50 dark:bg-noche-2"}`}><Text className={value === method.id ? "text-sm font-bold text-emerald-800 dark:text-emerald-200" : "text-sm text-slate-700 dark:text-slate-200"}>{t(method.labelKey)}</Text></TouchableOpacity>)}
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
   </View>;
 }
 

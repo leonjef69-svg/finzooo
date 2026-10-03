@@ -1,5 +1,38 @@
 # Estado actual de Fino
 
+## Ajustes de Familia/Caja, saldo y navegación (02/10/2026)
+
+- Las tarjetas del selector de Familia y Caja quedaron más compactas y parejas.
+  Se retiró la etiqueta “En control” de la tarjeta de Inicio; siguen visibles el
+  saldo, el presupuesto y su barra de avance.
+- La barra inferior ahora anima cada toque y hace más visible el botón +. Una
+  indicación breve enseña a usarlo la primera vez y se oculta al tocarlo.
+- La invitación de Familia/Caja se muestra en una hoja inferior con código
+  copiable; el portapapeles se carga solo al pedir copiar, así no puede tumbar
+  la pantalla Familia si el APK antiguo no trae ese módulo nativo.
+- “Unirme” en Cajas ya permite escribir el código en la misma pantalla como en
+  Familia. Los errores distinguen permisos de conexión/código inválido.
+- Simulación comprobada: de S/ 500, enviar S/ 120 a Familia, S/ 80 a Caja y
+  devolver S/ 50 deja S/ 350 en Personal. Elegir “Desde Personal” no cambia el
+  saldo; solo lo cambia un movimiento guardado, y la devolución lo restaura.
+- Familia ahora guarda su creación y el aporte inicial desde Personal en una
+  sola transacción: si Firebase rechaza el aporte, no queda una familia vacía
+  ni se descuenta el saldo Personal. Las reglas permiten esta operación solo
+  al propietario y validan el espacio con `getAfter`, igual que Caja.
+- El aporte y la devolución de Personal siguen siendo dos registros enlazados,
+  aunque la pantalla los agrupe en una tarjeta. La simulación con el monto de
+  la captura confirma que, con devolución completa y saldo cero, se puede
+  cerrar; el saldo/presupuesto Personal actual no participa de ese cálculo.
+- Los errores de una función Firebase ausente ya no se muestran como “código
+  vencido”. Caja privada guarda localmente; Caja compartida y Familia usan las
+  mismas Functions para borrar aportes y cerrar, por eso la Caja privada no
+  confirma que el servicio compartido esté actualizado.
+- TypeScript, ESLint, 119 pruebas y 8 auditores aprobados; además, 39 pruebas
+  de Functions. El bundle de Metro incluye los cambios. No se han publicado
+  reglas, Functions ni app, y no se pudo comprobar una escritura real contra
+  Firebase. Hace falta actualizar reglas y Functions en `dotero-2d430` para
+  habilitar las operaciones compartidas en producción.
+
 ## Regla de seguimiento y seguridad Premium (28/09/2026)
 
 - Cada avance debe terminar indicando qué sigue y qué falta. El detalle vivo de

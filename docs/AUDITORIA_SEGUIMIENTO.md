@@ -1,6 +1,6 @@
 # Seguimiento de la auditoría de Claude
 
-Última revisión: 28/09/2026. Este archivo separa tres cosas distintas: código
+Última revisión: 02/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
 ## Corregido y probado localmente
@@ -55,6 +55,25 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 4. Con autorización previa: publicar servidor/reglas, instalar la versión en
    prueba cerrada y ejecutar la lista manual en dispositivos.
 5. Migrar primero una cuenta de prueba y después decidir el despliegue general.
+
+### Familia/Caja: invitaciones, disponibilidad y presentación (02/10/2026)
+
+- El selector muestra tarjetas de Familia y Caja más compactas, con altura y
+  espaciado consistentes; Inicio ya no muestra el estado “En control”.
+- La barra inferior anima cada toque, resalta el botón + y muestra una sola vez
+  la indicación para registrar el primer movimiento.
+- El código de invitación se presenta en una hoja inferior compartida. La
+  lectura nativa del portapapeles se retrasa hasta tocar “Copiar”, para que una
+  versión instalada sin `ExpoClipboard` no falle al abrir Familia.
+- “Unirme” en Cajas ahora introduce el código en la misma pantalla y abre la
+  caja después de aceptar la invitación. Los errores de permisos ya no se
+  confunden con una desconexión.
+- Simulación de saldo ejecutada: S/ 500 − S/ 120 (Familia) − S/ 80 (Caja) +
+  S/ 50 (devolución) = S/ 350. Seleccionar el origen no modifica el saldo.
+- TypeScript, ESLint, 118 pruebas y 8 auditores aprobados. El emulador y las
+  escrituras de Firebase aún deben verificarse; no se han publicado reglas,
+  Functions ni app. Las reglas desplegadas podrían rechazar los campos nuevos
+  `category` y `notes` hasta publicar `firestore.rules` con autorización.
 
 ### Auditoría externa — pruebas reales de importación y presupuesto (28/09/2026)
 

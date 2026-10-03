@@ -1,15 +1,15 @@
-import { SpaceOverviewTotals, SpacePaymentMethod, type MovementFilter } from "@/components/SpaceMovementControls";
+import { SpaceOverviewTotals, type MovementFilter } from "@/components/SpaceMovementControls";
 import { methodLabel } from "@/constants/i18n";
 import BackButton from "@/components/BackButton";
 import MovementAllButton from "@/components/MovementAllButton";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
-import SpaceActionBar from "@/components/SpaceActionBar";
 import SpaceTransferAmounts from "@/components/SpaceTransferAmounts";
-import SpaceMovementFields, { validSpaceDate } from "@/components/SpaceMovementFields";
+import SpaceMovementSheet from "@/components/SpaceMovementSheet";
+import { validSpaceDate } from "@/components/SpaceMovementFields";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
 import { bajarCajas, subirCajas } from "@/utils/cloudCajas";
-import { compartirCajaExistente, crearInvitacionCaja } from "@/utils/cloudCajasCompartidas";
+import { compartirCajaExistente, crearInvitacionCaja, unirseACaja } from "@/utils/cloudCajasCompartidas";
 import {
   CAJAS_VACIAS,
   fusionarCajas,
@@ -19,14 +19,16 @@ import {
 } from "@/utils/cajas";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { horaDe } from "@/utils/format";
-import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
+import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, compactLinkedTransferRows, countSelectedCompactRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, movementIdsForCompactRow, planSpaceMovementDeletion, returnableToPersonal } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
 import { irUnaVez, safeBack } from "@/utils/nav";
+import { borrarAportePersonal } from "@/utils/personalContribution";
 import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 import { guardarCajasEnMemoria, leerCajasEnMemoria } from "@/utils/cajasMemoria";
-import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Boxes, Check, ListChecks, MoreVertical, Plus, Trash2, UserPlus, X } from "lucide-react-native";
+import { spaceErrorKey } from "@/utils/spaceErrors";
+import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Boxes, Check, ListChecks, Pencil, Plus, Trash2, UserPlus, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, Modal, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 
@@ -46,10 +48,15 @@ export default function Cajas() {
   const [datos, setDatos] = useState<DatosCajas>(() => leerCajasEnMemoria() ?? CAJAS_VACIAS);
   const [lista, setLista] = useState(true);
   const [cajaId, setCajaId] = useState<string | null>(null);
+  const [editandoNombreCaja, setEditandoNombreCaja] = useState(false);
+  const [nombreCajaEditado, setNombreCajaEditado] = useState("");
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [montoInicial, setMontoInicial] = useState("");
   const [origenDinero, setOrigenDinero] = useState<"externo" | "personal">("externo");
   const [creando, setCreando] = useState(false);
+  const [uniendoCaja, setUniendoCaja] = useState(false);
+  const [codigoCaja, setCodigoCaja] = useState("");
+  const [cargandoUnion, setCargandoUnion] = useState(false);
   const [anotando, setAnotando] = useState<"ingreso" | "gasto" | null>(null);
   const [monto, setMonto] = useState("");
   const [method, setMethod] = useState("cash");
@@ -115,6 +122,10 @@ export default function Cajas() {
   }, [datos, ready, cloudReady]);
 
   const caja = datos.cajas.find((item) => item.id === cajaId);
+  useEffect(() => {
+    setEditandoNombreCaja(false);
+    setNombreCajaEditado(caja?.nombre ?? "");
+  }, [cajaId, caja?.nombre]);
   useEffect(() => setMovementLimit(60), [cajaId, filter]);
   const movimientos = useMemo(
     () => datos.movimientos.filter((item) => item.cajaId === cajaId).sort((a, b) => b.creadoEn - a.creadoEn),
@@ -237,6 +248,7 @@ export default function Cajas() {
   const filasVisibles = filter
     ? visibles.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }))
     : compactLinkedTransferRows(visibles);
+  const filasSeleccionadas = countSelectedCompactRows(filasVisibles, visibles, seleccionados);
   function sacarDePersonal(valor: number, destino: string, spaceId: string, link: string, date = fechaLocal()): number {
     const id = nextId();
     addOrUpdateTransaction({
@@ -280,6 +292,38 @@ export default function Cajas() {
     setCajaId(nueva.id);
     setLista(false);
     showToast(t("boxes.saved"));
+  }
+
+  function guardarNombreCaja() {
+    if (!caja || editandoAporteId != null) return;
+    const nombreNuevo = nombreCajaEditado.trim().slice(0, 30);
+    if (!nombreNuevo) { showToast(t("boxes.nameRequired")); return; }
+    if (nombreNuevo === caja.nombre) { setEditandoNombreCaja(false); return; }
+    if (!tomarAccionLocal()) return;
+    setDatos(antes => ({
+      ...antes,
+      cajas: antes.cajas.map(item => item.id === caja.id ? { ...item, nombre: nombreNuevo } : item),
+    }));
+    setEditandoNombreCaja(false);
+    showToast(t("boxes.renamed"));
+  }
+
+  async function unirseACajaCompartida() {
+    const uid = auth.currentUser?.uid;
+    const codigo = codigoCaja.trim().toUpperCase();
+    if (!uid) { showToast(t("boxes.loginRequired")); return; }
+    if (codigo.length !== 8 || cargandoUnion) return;
+    setCargandoUnion(true);
+    try {
+      const unida = await unirseACaja(uid, userName || t("family.member"), codigo);
+      setUniendoCaja(false);
+      setCodigoCaja("");
+      irUnaVez({ pathname: "/shared-boxes", params: { boxId: unida.id } });
+    } catch (error) {
+      showToast(t(spaceErrorKey(error, true)));
+    } finally {
+      setCargandoUnion(false);
+    }
   }
 
   function guardarMovimiento() {
@@ -339,30 +383,34 @@ export default function Cajas() {
     showToast(t("boxes.movementSaved"));
   }
 
-  function borrarMovimiento(id: string) {
-    const movimiento = datos.movimientos.find((item) => item.id === id);
-    if (movimiento?.tipo === "ingreso" && movimiento.personalTransactionId != null && !canUndoContribution(movimientos, movimiento)) {
-      showToast(t("boxes.contributionUsed"));
+  async function borrarSeleccionados(ids = seleccionados) {
+    const plan = planSpaceMovementDeletion(movimientos, ids);
+    if (!plan.ok) {
+      if (plan.reason === "empty") return;
+      showToast(t(plan.reason === "contribution-used" ? "boxes.contributionUsed" : "boxes.notEnoughSpace"));
       return;
     }
-    if (movimiento?.personalTransactionId != null) deleteLinkedTransferTransaction(movimiento.personalTransactionId);
-    setDatos((antes) => ({
-      ...antes,
-      movimientos: antes.movimientos.filter((item) => item.id !== id),
-      movimientosBorrados: [...new Set([...antes.movimientosBorrados, id])],
-    }));
-  }
-  function borrarSeleccionados(ids = seleccionados) {
-    const items = movimientos.filter(item => ids.includes(item.id));
-    if (items.some(item => item.tipo === "ingreso" && item.personalTransactionId != null && !canUndoContribution(movimientos, item))) { showToast(t("boxes.contributionUsed")); return; }
-    for (const item of items) borrarMovimiento(item.id);
+    try {
+      for (const item of plan.items) {
+        if (item.personalTransactionId != null) {
+          await borrarAportePersonal("box", item.cajaId, item.id);
+          deleteLinkedTransferTransaction(item.personalTransactionId);
+        }
+      }
+      const idsBorrados = new Set(plan.items.map(item => item.id));
+      setDatos(antes => ({ ...antes, movimientos: antes.movimientos.filter(item => !idsBorrados.has(item.id)), movimientosBorrados: [...new Set([...antes.movimientosBorrados, ...idsBorrados])] }));
+    } catch {
+      showToast(t("family.connectionError"));
+      return;
+    }
     setSeleccionados([]); setSeleccionando(false);
   }
   function confirmarBorrarTodo() {
     if (!visibles.length) return;
-    Alert.alert(t("spaces.deleteMovementsTitle"), t("spaces.deleteMovementsMessage", { count: visibles.length }), [
+    const messageKey = visibles.some(isLinkedSpaceTransfer) ? "spaces.deleteLinkedMovementsMessage" : "spaces.deleteMovementsMessage";
+    Alert.alert(t("spaces.deleteMovementsTitle"), t(messageKey, { count: visibles.length }), [
       { text: t("common.cancel"), style: "cancel" },
-      { text: t("common.deleteAll"), style: "destructive", onPress: () => borrarSeleccionados(visibles.map(item => item.id)) },
+      { text: t("common.deleteAll"), style: "destructive", onPress: () => void borrarSeleccionados(visibles.map(item => item.id)) },
     ]);
   }
   function borrarCajas(ids = cajasSeleccionadas) {
@@ -381,6 +429,19 @@ export default function Cajas() {
       movimientosBorrados: [...new Set([...antes.movimientosBorrados, ...idsMovimientos])],
     }));
     setCajasSeleccionadas([]); setSeleccionandoCajas(false);
+  }
+  function cerrarCajaActual() {
+    if (!caja || !ready) return;
+    if (!canCloseLinkedSpace(movimientos)) { showToast(t("boxes.closeBalance")); return; }
+    const cajaIdActual = caja.id;
+    Alert.alert(t("boxes.close"), t("boxes.deleteWarning"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("boxes.close"), style: "destructive", onPress: () => {
+        borrarCajas([cajaIdActual]);
+        setCajaId(null);
+        setLista(true);
+      } },
+    ]);
   }
   function confirmarBorrarTodasLasCajas() {
     if (!datos.cajas.length) return;
@@ -432,7 +493,7 @@ export default function Cajas() {
       // La caja se vuelve compartida antes de crear el código. Se abre con el
       // código ya visible, en vez de lanzar el cuadro antiguo de "Compartir".
       irUnaVez({ pathname: "/shared-boxes", params: { boxId: compartida.id, invitation: codigo } });
-    } catch { showToast(t("family.connectionError")); }
+    } catch (error) { showToast(t(spaceErrorKey(error))); }
     finally { setCompartiendo(false); }
   }
 
@@ -461,8 +522,28 @@ export default function Cajas() {
             <Text className="mb-3 mt-2 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("boxes.subtitle")}</Text>
             <View className="mb-3 flex-row gap-3">
               <TouchableOpacity onPress={() => setCreando(true)} className="min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-600"><Plus size={18} color="#fff" /><Text className="font-bold text-white">{t("family.create")}</Text></TouchableOpacity>
-              <TouchableOpacity onPress={() => irUnaVez("/shared-boxes?join=1")} className="min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950"><UserPlus size={18} color="#0d9488" /><Text className="font-bold text-teal-700 dark:text-teal-300">{t("family.join")}</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => { setUniendoCaja(value => !value); setCodigoCaja(""); }} className="min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950"><UserPlus size={18} color="#0d9488" /><Text className="font-bold text-teal-700 dark:text-teal-300">{t("family.join")}</Text></TouchableOpacity>
             </View>
+            {uniendoCaja ? <View className="mb-3 rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde">
+              <TextInput
+                disableFullscreenUI
+                autoFocus
+                editable={!cargandoUnion}
+                value={codigoCaja}
+                onChangeText={value => setCodigoCaja(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8))}
+                onSubmitEditing={() => void unirseACajaCompartida()}
+                returnKeyType="done"
+                maxLength={8}
+                autoCapitalize="characters"
+                placeholder={t("family.codePlaceholder")}
+                placeholderTextColor="#94a3b8"
+                className="h-11 rounded-xl border-[1.5px] border-emerald-400 px-4 text-slate-900 dark:text-slate-100"
+              />
+              <View className="mt-2 flex-row gap-2">
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.cancel")} disabled={cargandoUnion} onPress={() => { setUniendoCaja(false); setCodigoCaja(""); }} className="min-h-10 flex-1 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><X size={19} color="#64748b" /></TouchableOpacity>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.save")} disabled={cargandoUnion || codigoCaja.length !== 8} onPress={() => void unirseACajaCompartida()} className={`min-h-10 flex-1 items-center justify-center rounded-xl ${cargandoUnion || codigoCaja.length !== 8 ? "bg-emerald-300" : "bg-emerald-600"}`}><Check size={19} color="#fff" /></TouchableOpacity>
+              </View>
+            </View> : null}
             {datos.cajas.length > 0 ? <View className="mb-2 flex-row items-center justify-between">
               {seleccionandoCajas ? <>
                 <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{cajasSeleccionadas.length} {cajasSeleccionadas.length === 1 ? "seleccionada" : "seleccionadas"}</Text>
@@ -481,12 +562,12 @@ export default function Cajas() {
                 key={item.id}
                 disabled={!seleccionandoCajas && creando}
                 onPress={() => seleccionandoCajas ? setCajasSeleccionadas(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id]) : (setCajaId(item.id), setLista(false))}
-                className={`mb-3 min-h-[86px] flex-row items-center rounded-2xl border-[1.5px] bg-white p-4 dark:bg-noche-2 ${cajasSeleccionadas.includes(item.id) ? "border-teal-500 bg-teal-50 dark:border-teal-500 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}
+                className={`mb-2 min-h-[76px] flex-row items-center rounded-2xl border-[1.5px] bg-white px-3 py-2 dark:bg-noche-2 ${cajasSeleccionadas.includes(item.id) ? "border-teal-500 bg-teal-50 dark:border-teal-500 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}
               >
-                <View className="h-11 w-11 items-center justify-center rounded-2xl bg-teal-50 dark:bg-teal-950"><Boxes size={20} color="#0d9488" /></View>
-                <View className="ml-3 flex-1">
-                  <Text className="font-extrabold text-slate-900 dark:text-slate-100">{item.nombre}</Text>
-                  <Text className="mt-0.5 text-xs font-bold text-teal-700 dark:text-teal-300">{fmt(saldoCaja(item.id, datos.movimientos))}</Text>
+                <View className="h-9 w-9 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Boxes size={19} color="#0d9488" /></View>
+                <View className="ml-2.5 flex-1">
+                  <Text numberOfLines={1} className="text-[15px] font-extrabold text-slate-900 dark:text-slate-100">{item.nombre}</Text>
+                  <Text className="mt-0.5 text-[13px] font-bold text-teal-700 dark:text-teal-300">{fmt(saldoCaja(item.id, datos.movimientos))}</Text>
                 </View>
                 {seleccionandoCajas ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${cajasSeleccionadas.includes(item.id) ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : <ArrowLeftRight size={17} color="#64748b" />}
               </TouchableOpacity>
@@ -514,32 +595,41 @@ export default function Cajas() {
           </>
         ) : (
           <>
-            <TouchableOpacity onPress={() => setLista(true)} className="mb-2 mt-1 flex-row items-center gap-2 py-2"><ArrowLeftRight size={16} color="#0d9488" /><Text className="text-xs font-bold text-teal-700 dark:text-teal-300">{t("boxes.all")}</Text></TouchableOpacity>
+            <View className="mb-2 mt-1 flex-row items-center justify-between">
+              <TouchableOpacity onPress={() => setLista(true)} className="flex-row items-center gap-2 py-2"><ArrowLeftRight size={16} color="#0d9488" /><Text className="text-xs font-bold text-teal-700 dark:text-teal-300">{t("boxes.all")}</Text></TouchableOpacity>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.inviteAccessibility")} disabled={compartiendo} onPress={() => void compartirCaja()} className="h-10 w-10 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950">
+                <UserPlus size={19} color="#0d9488" />
+              </TouchableOpacity>
+            </View>
             <View className="rounded-3xl bg-teal-600 px-4 py-3">
-              <View className="flex-row items-center"><Text className="flex-1 text-base font-bold text-teal-100">{caja.nombre}</Text><TouchableOpacity accessibilityLabel={t("boxes.options")} onPress={() => irUnaVez({ pathname: "/box-settings", params: { boxId: caja.id } })} className="h-10 w-10 items-center justify-center rounded-xl bg-teal-700"><MoreVertical size={20} color="#fff" /></TouchableOpacity></View>
+              <View className="flex-row items-center gap-2">
+                {editandoNombreCaja ? <>
+                  <TextInput disableFullscreenUI autoFocus value={nombreCajaEditado} onChangeText={setNombreCajaEditado} onSubmitEditing={guardarNombreCaja} returnKeyType="done" maxLength={30} selectTextOnFocus placeholder={t("boxes.namePlaceholder")} placeholderTextColor="#99f6e4" className="h-9 min-w-0 flex-1 rounded-xl bg-teal-700/70 px-3 text-base font-bold text-white" />
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.save")} onPress={guardarNombreCaja} className="h-9 w-9 items-center justify-center rounded-xl bg-white/20"><Check size={18} color="#fff" /></TouchableOpacity>
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.cancel")} onPress={() => { setEditandoNombreCaja(false); setNombreCajaEditado(caja.nombre); }} className="h-9 w-9 items-center justify-center rounded-xl bg-white/20"><X size={17} color="#fff" /></TouchableOpacity>
+                </> : <>
+                  <Text numberOfLines={1} className="flex-1 text-base font-bold text-teal-100">{caja.nombre}</Text>
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.editName")} onPress={() => { setNombreCajaEditado(caja.nombre); setEditandoNombreCaja(true); }} className="h-9 w-9 items-center justify-center rounded-xl bg-teal-700">
+                    <Pencil size={16} color="#fff" />
+                  </TouchableOpacity>
+                </>}
+              </View>
               <Text className="text-[26px] font-extrabold leading-8 text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58}>{fmt(saldoActual)}</Text>
             </View>
-            <SpaceOverviewTotals income={resumen.ingresos} expense={resumen.gastos} filter={filter} onFilter={setFilter} format={fmt} />
             {devolvibleAPersonal > 0 ? <TouchableOpacity onPress={devolverAPersonal} className="mt-2 min-h-11 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("boxes.returnAmount", { amount: fmt(devolvibleAPersonal) })}</Text></TouchableOpacity> : null}
-            <Modal visible={Boolean(anotando)} animationType="slide" onRequestClose={() => setAnotando(null)}>
-              <ScrollView className="flex-1 bg-white px-5 dark:bg-noche" contentContainerStyle={{ paddingTop: insets.top + 20, paddingBottom: insets.bottom + 30 }} keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
-              <View className="rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde">
-                <View className="mb-3 flex-row gap-2"><TouchableOpacity accessibilityLabel={t("boxes.income")} onPress={() => { setAnotando("ingreso"); setCategory("salario"); }} className={`h-11 flex-1 items-center justify-center rounded-xl ${anotando === "ingreso" ? "bg-emerald-600" : "bg-emerald-50"}`}><ArrowUp size={21} color={anotando === "ingreso" ? "#fff" : "#047857"} /></TouchableOpacity><TouchableOpacity accessibilityLabel={t("boxes.expense")} onPress={() => { setAnotando("gasto"); setCategory("otros"); }} className={`h-11 flex-1 items-center justify-center rounded-xl ${anotando === "gasto" ? "bg-rose-600" : "bg-rose-50"}`}><ArrowDown size={21} color={anotando === "gasto" ? "#fff" : "#be123c"} /></TouchableOpacity></View>
-                <TextInput disableFullscreenUI value={monto} onChangeText={(value) => setMonto(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border-[1.5px] border-slate-200 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
-                <TextInput disableFullscreenUI value={descripcion} onChangeText={setDescripcion} maxLength={60} placeholder={t("boxes.description")} placeholderTextColor="#94a3b8" className="mt-2 h-12 rounded-xl border-[1.5px] border-slate-200 px-4 text-slate-900 dark:text-slate-100" />
-                <SpaceMovementFields type={anotando} category={category} onCategory={setCategory} date={movementDate} onDate={setMovementDate} notes={notes} onNotes={setNotes} />
-                {anotando === "ingreso" ? <><Text className="mb-1 mt-2 text-xs font-semibold text-slate-600 dark:text-slate-300">{t("boxes.moneyOrigin")}</Text><View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} onPress={() => setOrigenDinero(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenDinero === origin ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text></TouchableOpacity>)}</View>{origenDinero === "personal" ? <Text className="mt-1 text-[11px] text-slate-500">{t("boxes.personalAvailable", { amount: fmt(disponible) })}</Text> : null}</> : null}
-                {anotando !== "ingreso" || origenDinero === "externo" ? <SpacePaymentMethod value={method} onChange={setMethod} /> : null}
-                <View className="mt-3 flex-row gap-2">
-                  <TouchableOpacity onPress={() => { setAnotando(null); setEditandoAporteId(null); }} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text></TouchableOpacity>
-                  <TouchableOpacity onPress={guardarMovimiento} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-emerald-600"><Text className="font-bold text-white">{t("common.save")}</Text></TouchableOpacity>
-                </View>
-              </View>
-              </ScrollView>
-            </Modal>
-            <View className="mb-2 mt-5 flex-row items-center justify-between gap-2">
+            <View className="mt-2 flex-row justify-between">
+              <TouchableOpacity style={{ width: "48%", height: 40 }} accessibilityRole="button" disabled={!ready} onPress={() => { setMonto(""); setDescripcion(""); setNotes(""); setOrigenDinero("externo"); setCategory("salario"); setMovementDate(fechaLocal()); setMethod("cash"); setAnotando("ingreso"); }} className="flex-row items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-2">
+                <Plus size={16} color="#fff" /><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} className="text-[13px] font-extrabold text-white">{t("boxes.addMoney")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={{ width: "48%", height: 40 }} accessibilityRole="button" accessibilityLabel={t("boxes.close")} disabled={!ready} onPress={cerrarCajaActual} className="flex-row items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-2 dark:border-rose-900 dark:bg-rose-950">
+                <X size={15} color="#e11d48" /><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} className="text-[13px] font-extrabold text-rose-700 dark:text-rose-300">{t("boxes.close")}</Text>
+              </TouchableOpacity>
+            </View>
+            <SpaceOverviewTotals income={resumen.ingresos} expense={resumen.gastos} filter={filter} onFilter={setFilter} format={fmt} />
+            <SpaceMovementSheet visible={Boolean(anotando)} type={anotando} onType={next => { setAnotando(next); setCategory(next === "ingreso" ? "salario" : "otros"); }} onClose={() => { setAnotando(null); setEditandoAporteId(null); }} onSave={guardarMovimiento} amount={monto} onAmount={value => setMonto(sanitizeSafeAmountInput(value, userCurrency))} description={descripcion} onDescription={setDescripcion} method={method} onMethod={setMethod} currency={userCurrency} category={category} onCategory={setCategory} date={movementDate} onDate={setMovementDate} notes={notes} onNotes={setNotes} origin={origenDinero} onOrigin={setOrigenDinero} availableText={t("boxes.personalAvailable", { amount: fmt(disponible) })} disabled={!ready} />
+            <View className={`mb-2 mt-5 ${seleccionando ? "flex-row items-center justify-between" : "flex-row items-center gap-1"}`}>
               {seleccionando ? <>
-                <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{seleccionados.length} {seleccionados.length === 1 ? "seleccionado" : "seleccionados"}</Text>
+                <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{filasSeleccionadas} {filasSeleccionadas === 1 ? "seleccionado" : "seleccionados"}</Text>
                 <View className="flex-row items-center gap-3">
                   <TouchableOpacity accessibilityLabel={t("common.deleteSelected")} disabled={!seleccionados.length} onPress={() => borrarSeleccionados()} className={`h-9 w-9 items-center justify-center rounded-full bg-rose-50 dark:bg-rose-950 ${!seleccionados.length ? "opacity-40" : ""}`}><Trash2 size={19} color="#f43f5e" /></TouchableOpacity>
                   <TouchableOpacity onPress={confirmarBorrarTodo} hitSlop={6}><Text className="text-sm font-bold text-rose-500">{t("home.deleteAll")}</Text></TouchableOpacity>
@@ -547,26 +637,27 @@ export default function Cajas() {
                 </View>
               </> : <>
                 <MovementAllButton label={t("boxes.history")} activeFilter={filter !== null} onPress={() => setFilter(null)} />
-                <View className="flex-row items-center gap-2"><TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.filterIncome")} accessibilityState={{ selected: filter === "ingreso" }} onPress={() => setFilter("ingreso")} className={`h-10 w-10 items-center justify-center rounded-xl ${filter === "ingreso" ? "bg-emerald-200" : "bg-emerald-50"}`}><Text className="text-[22px] font-extrabold text-emerald-700">+</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.filterExpense")} accessibilityState={{ selected: filter === "gasto" }} onPress={() => setFilter("gasto")} className={`h-10 w-10 items-center justify-center rounded-xl ${filter === "gasto" ? "bg-rose-200" : "bg-rose-50"}`}><Text className="text-[22px] font-extrabold text-rose-700">−</Text></TouchableOpacity></View>
-                <TouchableOpacity accessibilityLabel={t("boxes.inviteAccessibility")} disabled={compartiendo} onPress={() => void compartirCaja()} className="h-10 w-10 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><UserPlus size={19} color="#0d9488" /></TouchableOpacity>
-                <TouchableOpacity accessibilityLabel={t("boxes.selectMovements")} onPress={() => { setSeleccionando(true); setSeleccionados([]); }} className="min-h-10 flex-row items-center gap-1"><ListChecks size={18} color="#059669" /><Text className="text-[15px] font-bold text-emerald-600">{t("common.select")}</Text></TouchableOpacity>
+                <View className="flex-row items-center gap-1">
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.filterIncome")} accessibilityState={{ selected: filter === "ingreso" }} onPress={() => setFilter("ingreso")} className={`h-10 w-10 items-center justify-center rounded-xl ${filter === "ingreso" ? "bg-emerald-200" : "bg-emerald-50"}`}><ArrowUp size={19} color="#047857" strokeWidth={2.6} /></TouchableOpacity>
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.filterExpense")} accessibilityState={{ selected: filter === "gasto" }} onPress={() => setFilter("gasto")} className={`h-10 w-10 items-center justify-center rounded-xl ${filter === "gasto" ? "bg-rose-200" : "bg-rose-50"}`}><ArrowDown size={19} color="#be123c" strokeWidth={2.6} /></TouchableOpacity>
+                </View>
+                <TouchableOpacity accessibilityLabel={t("boxes.selectMovements")} onPress={() => { setSeleccionando(true); setSeleccionados([]); }} className="min-h-10 flex-row items-center gap-1 px-1"><ListChecks size={18} color="#059669" /><Text className="text-[15px] font-bold text-emerald-600">{t("common.select")}</Text></TouchableOpacity>
               </>}
             </View>
             {filasVisibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "boxes.noMovements")}</Text> : filasVisibles.slice(0, movementLimit).map(({ key, item, transferGroup }) => {
               const transferencia = isLinkedSpaceTransfer(item);
               const retorno = isLinkedSpaceReturn(item);
-              return (
-              <TouchableOpacity key={key} disabled={Boolean(transferGroup) || !seleccionando} onPress={() => setSeleccionados(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id])} className={`mb-2 flex-row items-center rounded-2xl border-[1.5px] p-3 dark:border-noche-borde ${seleccionados.includes(item.id) ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200"}`}>
+              const idsDeFila = movementIdsForCompactRow({ key, item, transferGroup }, visibles);
+              const filaSeleccionada = idsDeFila.length > 0 && idsDeFila.every(id => seleccionados.includes(id));
+              return <TouchableOpacity key={key} disabled={!seleccionando} onPress={() => setSeleccionados(prev => filaSeleccionada ? prev.filter(id => !idsDeFila.includes(id)) : [...new Set([...prev, ...idsDeFila])])} className={`mb-2 flex-row items-center rounded-2xl border-[1.5px] p-3 dark:border-noche-borde ${filaSeleccionada ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200"}`}>
                 <View className={`h-9 w-9 items-center justify-center rounded-xl ${transferencia ? "bg-blue-100 dark:bg-blue-950" : item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{transferencia ? <ArrowRightLeft size={17} color="#2563eb" /> : item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
                 {transferencia ? <View className="ml-3 flex-1"><SpaceTransferAmounts title={caja.nombre} sentLabel={t("boxes.receivedFromPersonal")} returnedLabel={t("boxes.returnedToPersonal")} sent={transferGroup?.sent ?? (retorno ? 0 : item.monto)} returned={transferGroup?.returned ?? (retorno ? item.monto : 0)} format={fmt} /></View> : <><View className="ml-3 flex-1"><Text className="text-[15px] font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-2 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></>}
-                {seleccionando && !transferGroup ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${seleccionados.includes(item.id) ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : null}
-              </TouchableOpacity>
-              );
+                {seleccionando ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${filaSeleccionada ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : null}
+              </TouchableOpacity>;
             })}
           </>
         )}
       </ScrollView>
-      {!lista && caja ? <SpaceActionBar onAdd={() => { setOrigenDinero("externo"); setCategory("otros"); setMovementDate(fechaLocal()); setAnotando("gasto"); }} /> : null}
     </View>
   );
 }

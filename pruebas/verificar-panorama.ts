@@ -31,6 +31,14 @@ console.log("\n--- TRANSFERIR CAMBIA PERSONAL, NO EL CONSUMO ---");
   const saldo = availablePersonalBalance({ budget: 500, prevBalance: 0, income: 0, spent: 0, transfersOut: 300, transfersIn: 0 });
   ok(saldo === 200, "enviar 300 desde Personal reduce su saldo de 500 a 200");
   ok(availablePersonalBalance({ budget: 500, prevBalance: 0, income: 0, spent: 0, transfersOut: 300, transfersIn: 100 }) === 300, "una devolución vuelve a sumar solo en Personal");
+  const movimientos = [
+    { date: "2026-10-02", type: "expense" as const, amount: 120, internalTransfer: "family" },
+    { date: "2026-10-02", type: "expense" as const, amount: 80, internalTransfer: "box" },
+    { date: "2026-10-02", type: "income" as const, amount: 50, internalTransfer: "family" },
+  ];
+  const delMes = totalsForMonth(movimientos, "2026-10");
+  const despuesDeFamiliaYCaja = availablePersonalBalance({ budget: 500, prevBalance: 0, income: delMes.income, spent: delMes.spent, transfersOut: delMes.transfersOut, transfersIn: delMes.transfersIn });
+  ok(despuesDeFamiliaYCaja === 350, "simulación: 500 − 120 a Familia − 80 a Caja + 50 devueltos = 350, sin saltos ni doble descuento");
 }
 
 type Tx = {

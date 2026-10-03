@@ -1187,9 +1187,9 @@ console.log("\n--- AL CERRAR SESION NO SE QUEDA NADA DE LA CUENTA ANTERIOR ---")
     ? almacen.slice(inicioBorrado, finBorrado)
     : "";
   ok(borrado.length > 0, "se encontro el borrado de fin de sesion");
-  // themeMode se queda a proposito: es preferencia del aparato, no de la cuenta.
+  // themeMode y visualStyle se quedan a proposito: son preferencias del aparato, no de la cuenta.
   const fuera = declaradas.filter(
-    (k) => k !== "themeMode" && !borrado.includes(`STORAGE_KEYS.${k}`)
+    (k) => !["themeMode", "visualStyle"].includes(k) && !borrado.includes(`STORAGE_KEYS.${k}`)
   );
   ok(fuera.length === 0, `todas se borran al cerrar sesion${fuera.length ? ": falta " + fuera.join(", ") : ""}`);
 

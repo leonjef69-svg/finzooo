@@ -22,7 +22,4 @@ config.resolver.resolveRequest = (context, moduleName, platform) => {
 
 module.exports = withNativeWind(config, {
   input: "./global.css",
-  // En Windows y con pnpm, el módulo virtual puede quedar vacío después de
-  // limpiar la caché. Escribir el resultado evita que la app arranque sin estilos.
-  forceWriteFileSystem: true,
 });

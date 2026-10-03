@@ -9,6 +9,7 @@ import SpaceTransferAmounts from "@/components/SpaceTransferAmounts";
 import { catInfo } from "@/constants/categories";
 import { iconoDe } from "@/constants/iconos";
 import { CARD_SHADOW, SALDO_TARJETA, SALDO_VERDE } from "@/constants/style";
+import { balanceGradientForVisualStyle } from "@/constants/visualTheme";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
 import { amountInputError, parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
@@ -27,6 +28,8 @@ import { useFocusEffect } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import {
   Bell,
+  ArrowDown,
+  ArrowUp,
   CalendarDays,
   CreditCard,
   Check,
@@ -210,7 +213,9 @@ export default function Home({
     resetCarryover,
     restoreCarryover,
     pagosProgramados,
+    visualStyle,
   } = useAppData();
+  const peachOlive = visualStyle === "peachOlive";
   const [confirmResetCarryover, setConfirmResetCarryover] = useState(false);
   const [confirmRestoreCarryover, setConfirmRestoreCarryover] = useState(false);
   // El cálculo vive en utils/finances.ts y no aquí. Reportes enseña el mismo
@@ -281,15 +286,7 @@ export default function Home({
   const available = availablePersonalBalance({ budget, prevBalance, income: mainIncome, spent: mainSpent, transfersOut, transfersIn });
   const pct = budgetUsed({ budget, prevBalance, income: mainIncome, spent: mainSpent }) * 100;
   const visiblePct = Math.max(0, Math.min(100, pct));
-  const progressColor = pct >= 100 ? "#fb7185" : pct >= 80 ? "#fbbf24" : "#6ee7b7";
-  const budgetStatus =
-    pct >= 100
-      ? { label: "Excedido", color: "#fff1f2", background: "#e11d48" }
-      : pct >= 90
-        ? { label: "Casi al límite", color: "#7c2d12", background: "#fbbf24" }
-        : pct >= 70
-          ? { label: "Atención", color: "#78350f", background: "#fde68a" }
-          : { label: "En control", color: "#065f46", background: "#a7f3d0" };
+  const progressColor = pct >= 100 ? "#fb7185" : pct >= 80 ? "#fbbf24" : peachOlive ? "#65764a" : "#6ee7b7";
 
   /**
    * ¿HAY ALGO QUE PAGAR YA? Es lo que enciende el punto rojo de la campana.
@@ -336,6 +333,7 @@ export default function Home({
   ), [selected, movimientosBorrablesDelMes]);
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
+  const balanceColors = peachOlive ? balanceGradientForVisualStyle(visualStyle) : SALDO_VERDE;
 
   function shiftMonth(d: number) {
     let m = month.m + d;
@@ -471,7 +469,7 @@ export default function Home({
         </View> : null}
 
         <LinearGradient
-          colors={[...SALDO_VERDE]}
+          colors={[...balanceColors]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           // La esquina, el recorte y el contorno salen de SALDO_TARJETA, compartido
@@ -484,7 +482,7 @@ export default function Home({
           style={SALDO_TARJETA}
         >
           <View className="flex-row items-center justify-between">
-            <Text className="text-sm font-bold text-emerald-100">
+            <Text className={`text-sm font-bold ${peachOlive ? "text-emerald-800" : "text-emerald-100"}`}>
               {editingBudget ? t("home.monthlyBudget") : t("home.availableBalance")}
             </Text>
             {!editingBudget && (
@@ -493,9 +491,9 @@ export default function Home({
                 className="h-7 w-7 items-center justify-center"
               >
                 {hideBalance ? (
-                  <EyeOff size={16} color="#d1fae5" />
+                  <EyeOff size={16} color={peachOlive ? "#526b43" : "#d1fae5"} />
                 ) : (
-                  <Eye size={16} color="#d1fae5" />
+                  <Eye size={16} color={peachOlive ? "#526b43" : "#d1fae5"} />
                 )}
               </TouchableOpacity>
             )}
@@ -508,43 +506,32 @@ export default function Home({
                 onChangeText={(v) => setBudgetInput(sanitizeAmountInput(v, userCurrency))}
                 keyboardType="decimal-pad"
                 autoFocus
-                className="flex-1 border-b border-white/40 py-0.5 text-2xl font-extrabold text-white"
+                className={`flex-1 border-b border-white/40 py-0.5 text-2xl font-extrabold ${peachOlive ? "text-slate-900" : "text-white"}`}
               />
               <TouchableOpacity
                 onPress={saveBudgetInline}
                 className="h-[40px] w-[40px] items-center justify-center rounded-full bg-white/25"
               >
-                <Check size={20} color="#ffffff" />
+                <Check size={20} color={peachOlive ? "#526b43" : "#ffffff"} />
               </TouchableOpacity>
               <TouchableOpacity
                 onPress={() => setEditingBudget(false)}
                 className="h-[40px] w-[40px] items-center justify-center rounded-full bg-white/15"
               >
-                <X size={20} color="#ffffff" />
+                <X size={20} color={peachOlive ? "#526b43" : "#ffffff"} />
               </TouchableOpacity>
             </View>
           ) : (
             <>
-              <View className="mt-0.5 flex-row items-center justify-between gap-3">
+              <View className="mt-0.5 flex-row items-center">
                 <Text
-                  className="min-w-0 flex-1 text-3xl font-extrabold tracking-tight text-white"
+                  className={`min-w-0 flex-1 text-3xl font-extrabold tracking-tight ${peachOlive ? "text-slate-900" : "text-white"}`}
                   numberOfLines={1}
                   adjustsFontSizeToFit
                   minimumFontScale={0.62}
                 >
                   {hideBalance ? "• • • • • •" : fmt(available)}
                 </Text>
-                <View
-                  style={{ backgroundColor: budgetStatus.background }}
-                  className="rounded-full px-3 py-1.5"
-                >
-                  <Text
-                    style={{ color: budgetStatus.color }}
-                    className="text-xs font-extrabold"
-                  >
-                    {budgetStatus.label} · {Math.round(visiblePct)}%
-                  </Text>
-                </View>
               </View>
               <TouchableOpacity
                 onPress={startEditBudget}
@@ -555,9 +542,9 @@ export default function Home({
                 <View className="flex-row items-center justify-between gap-3">
                   <View className="min-w-0 flex-1 flex-row items-center gap-2">
                     <Text className="text-base">💰</Text>
-                    <Text numberOfLines={1} className="text-xs font-bold text-emerald-100">{t("home.monthlyBudget")}</Text>
+                    <Text numberOfLines={1} className={`text-xs font-bold ${peachOlive ? "text-emerald-800" : "text-emerald-100"}`}>{t("home.monthlyBudget")}</Text>
                   </View>
-                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} className="max-w-[48%] text-sm font-extrabold text-white">
+                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} className={`max-w-[48%] text-sm font-extrabold ${peachOlive ? "text-slate-900" : "text-white"}`}>
                     {formatBudgetDisplay(hideBalance, budget, fmt)}
                   </Text>
                 </View>
@@ -631,8 +618,8 @@ export default function Home({
           </TouchableOpacity>
         )}
 
-        <View className="flex-row flex-wrap gap-2.5 px-5 mt-3">
-          <Animated.View entering={FadeInDown.delay(0 * 70).duration(300)} style={{ flexBasis: "100%", flexGrow: 1 }}>
+        <View className="px-5 mt-3 gap-2.5">
+          <Animated.View entering={FadeInDown.delay(0 * 70).duration(300)} style={{ width: "100%" }}>
             <PressableScale
               className="bg-teal-50 dark:bg-teal-950/30 rounded-2xl px-3 py-1.5 border-[1.5px] border-teal-300 dark:border-teal-800 justify-center"
               style={[softShadow, { minHeight: 58 }]}
@@ -675,48 +662,52 @@ export default function Home({
               </Text>
             </PressableScale>
           </Animated.View>
-          <Animated.View entering={FadeInDown.delay(1 * 70).duration(300)} style={{ flexBasis: "48%", flexGrow: 1 }}>
-            <PressableScale
-              className="bg-rose-50 dark:bg-noche-2 rounded-2xl px-3 py-2.5 border-[1.5px] border-rose-100 dark:border-noche-borde justify-center"
-              style={[softShadow, { minHeight: 78 }]}
-            >
-              <View className="flex-row items-center gap-2 mb-1">
-                <Text className="text-base">📉</Text>
-                <Text className="flex-1 text-xs text-slate-600 dark:text-slate-200 font-semibold" numberOfLines={2}>
-                  {t("home.spent")}
-                </Text>
-              </View>
-              <Text
-                className="text-lg font-extrabold text-rose-500"
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.72}
-              >
-                  {fmt(mainSpent)}
-              </Text>
-            </PressableScale>
-          </Animated.View>
-          <Animated.View entering={FadeInDown.delay(2 * 70).duration(300)} style={{ flexBasis: "48%", flexGrow: 1 }}>
-            <PressableScale
-              className="bg-emerald-50 dark:bg-noche-2 rounded-2xl px-3 py-2.5 border-[1.5px] border-emerald-100 dark:border-noche-borde justify-center"
-              style={[softShadow, { minHeight: 78 }]}
-            >
-              <View className="flex-row items-center gap-2 mb-1">
-                <Text className="text-base">📈</Text>
-                <Text className="flex-1 text-xs text-slate-600 dark:text-slate-200 font-semibold" numberOfLines={2}>
-                  {t("home.income")}
-                </Text>
-              </View>
-              <Text
-                className="text-lg font-extrabold text-emerald-600"
-                numberOfLines={1}
-                adjustsFontSizeToFit
-                minimumFontScale={0.72}
-              >
-                  {fmt(mainIncome)}
-              </Text>
-            </PressableScale>
-          </Animated.View>
+          {(mainSpent > 0 || mainIncome > 0) && (
+            <View className="flex-row gap-2.5">
+              {mainSpent > 0 ? <Animated.View entering={FadeInDown.delay(1 * 70).duration(300)} style={{ flex: 1, minWidth: 0 }}>
+                <PressableScale
+                  className="bg-rose-50 dark:bg-noche-2 rounded-2xl px-3 py-2.5 border-[1.5px] border-rose-100 dark:border-noche-borde justify-center"
+                  style={[softShadow, { minHeight: 78 }]}
+                >
+                  <View className="flex-row items-center gap-2 mb-1">
+                    <Text className="text-base">📉</Text>
+                    <Text className="flex-1 text-xs text-slate-600 dark:text-slate-200 font-semibold" numberOfLines={2}>
+                      {t("home.spent")}
+                    </Text>
+                  </View>
+                  <Text
+                    className="text-lg font-extrabold text-rose-500"
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.72}
+                  >
+                    {fmt(mainSpent)}
+                  </Text>
+                </PressableScale>
+              </Animated.View> : null}
+              {mainIncome > 0 ? <Animated.View entering={FadeInDown.delay(mainSpent > 0 ? 2 * 70 : 1 * 70).duration(300)} style={{ flex: 1, minWidth: 0 }}>
+                <PressableScale
+                  className="bg-emerald-50 dark:bg-noche-2 rounded-2xl px-3 py-2.5 border-[1.5px] border-emerald-100 dark:border-noche-borde justify-center"
+                  style={[softShadow, { minHeight: 78 }]}
+                >
+                  <View className="flex-row items-center gap-2 mb-1">
+                    <Text className="text-base">📈</Text>
+                    <Text className="flex-1 text-xs text-slate-600 dark:text-slate-200 font-semibold" numberOfLines={2}>
+                      {t("home.income")}
+                    </Text>
+                  </View>
+                  <Text
+                    className="text-lg font-extrabold text-emerald-600"
+                    numberOfLines={1}
+                    adjustsFontSizeToFit
+                    minimumFontScale={0.72}
+                  >
+                    {fmt(mainIncome)}
+                  </Text>
+                </PressableScale>
+              </Animated.View> : null}
+            </View>
+          )}
         </View>
 
         <View className="px-4 mt-3 mb-2 flex-row items-center justify-between gap-3">
@@ -754,7 +745,7 @@ export default function Home({
           ) : (
             <>
               <MovementAllButton label={t("home.recentTransactions")} activeFilter={recentFilter !== null} onPress={() => setRecentFilter(null)} />
-              <View className="flex-row items-center gap-2"><TouchableOpacity accessibilityRole="button" accessibilityLabel={t("home.filterIncome")} accessibilityState={{ selected: recentFilter === "income" }} onPress={() => setRecentFilter("income")} className={`h-10 w-10 items-center justify-center rounded-xl ${recentFilter === "income" ? "bg-emerald-200" : "bg-emerald-50"}`}><Text className="text-[22px] font-extrabold text-emerald-700">+</Text></TouchableOpacity><TouchableOpacity accessibilityRole="button" accessibilityLabel={t("home.filterExpense")} accessibilityState={{ selected: recentFilter === "expense" }} onPress={() => setRecentFilter("expense")} className={`h-10 w-10 items-center justify-center rounded-xl ${recentFilter === "expense" ? "bg-rose-200" : "bg-rose-50"}`}><Text className="text-[22px] font-extrabold text-rose-700">−</Text></TouchableOpacity></View>
+              <View className="flex-row items-center gap-2"><TouchableOpacity accessibilityRole="button" accessibilityLabel={t("home.filterIncome")} accessibilityState={{ selected: recentFilter === "income" }} onPress={() => setRecentFilter("income")} className={`h-10 w-10 items-center justify-center rounded-xl ${recentFilter === "income" ? "bg-emerald-200" : "bg-emerald-50"}`}><ArrowUp size={19} color="#047857" strokeWidth={2.6} /></TouchableOpacity><TouchableOpacity accessibilityRole="button" accessibilityLabel={t("home.filterExpense")} accessibilityState={{ selected: recentFilter === "expense" }} onPress={() => setRecentFilter("expense")} className={`h-10 w-10 items-center justify-center rounded-xl ${recentFilter === "expense" ? "bg-rose-200" : "bg-rose-50"}`}><ArrowDown size={19} color="#be123c" strokeWidth={2.6} /></TouchableOpacity></View>
               {monthTx.length > 0 && (
                 <TouchableOpacity onPress={toggleSelectMode} className="min-h-10 flex-row items-center gap-1.5">
                   <ListChecks size={18} color="#059669" />

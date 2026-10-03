@@ -113,6 +113,12 @@ export async function crearInvitacionCaja(uid: string, boxId: string): Promise<s
   return codigo;
 }
 
+export async function renombrarCajaCompartida(boxId: string, nombre: string): Promise<void> {
+  const limpio = nombre.trim().slice(0, 30);
+  if (!limpio) throw new Error("invalid-name");
+  await updateDoc(doc(db, "boxSpaces", boxId), { nombre: limpio });
+}
+
 export async function unirseACaja(uid: string, nombre: string, codigoCrudo: string): Promise<CajaCompartida> {
   const codigo = codigoCrudo.trim().toUpperCase();
   const invitacion = await getDoc(doc(db, "boxInvites", codigo));
@@ -231,13 +237,13 @@ export async function borrarCajasCompartidasDeCuenta(uid: string): Promise<void>
   }
 }
 
-export function observarCierreCaja(boxId: string, cerrado: () => void, error: () => void) {
+export function observarCierreCaja(boxId: string, cerrado: () => void, error: (error: Error) => void) {
   return onSnapshot(doc(db, "boxSpaces", boxId), snap => {
     if (!snap.exists() || snap.data().closed === true) cerrado();
   }, error);
 }
 
-export function escucharMovimientosCaja(boxId: string, recibir: (items: MovimientoCajaCompartida[]) => void, error: () => void) {
+export function escucharMovimientosCaja(boxId: string, recibir: (items: MovimientoCajaCompartida[]) => void, error: (error: Error) => void) {
   return onSnapshot(query(collection(db, "boxSpaces", boxId, "movements"), orderBy("creadoEn", "desc")), snap => {
     recibir(snap.docs.map(item => ({ id: item.id, tipo: item.data().tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(item.data().monto || 0), descripcion: String(item.data().descripcion || ""), category: typeof item.data().category === "string" ? item.data().category : undefined, notes: typeof item.data().notes === "string" ? item.data().notes : undefined, method: typeof item.data().method === "string" ? item.data().method : undefined, fecha: String(item.data().fecha || ""), creadoPor: String(item.data().creadoPor || ""), creadoEn: alNumero(item.data().creadoEn), personalTransactionId: typeof item.data().personalTransactionId === "number" ? item.data().personalTransactionId : undefined, personalOwnerUid: typeof item.data().personalOwnerUid === "string" ? item.data().personalOwnerUid : undefined, personalReturnAmount: typeof item.data().personalReturnAmount === "number" ? item.data().personalReturnAmount : undefined })));
   }, error);

@@ -3,6 +3,7 @@ import {
   allocatePersonalReturn,
   canSpendFromSpace,
   canCloseLinkedSpace,
+  countSelectedCompactRows,
   compactLinkedTransferRows,
   compactPersonalTransferRows,
   hasUnreturnedPersonalContribution,
@@ -15,6 +16,8 @@ import {
   netTransferredFromPersonal,
   hasUnreturnedPersonalContributions,
   orphanedPersonalTransferIds,
+  movementIdsForCompactRow,
+  planSpaceMovementDeletion,
   personalTransferStatuses,
   returnableToPersonal,
   totalAcrossPersonalAndSpace,
@@ -48,6 +51,24 @@ igual(totalAcrossPersonalAndSpace(400, devuelto), 450, "devolver conserva el tot
 const liquidado = [...intacto, { id: "retorno-final", tipo: "gasto" as const, monto: 200, personalTransactionId: 12, personalReturnAmount: 200 }];
 igual(hasUnreturnedPersonalContributions(liquidado), false, "la devolución completa liquida el aporte de Personal");
 igual(canCloseLinkedSpace(liquidado), true, "solo un espacio sin saldo ni aporte pendiente se puede cerrar");
+
+const montoDelCasoReportado = 1_123_123_124_124;
+const parReportado = [
+  { id: "aporte-reportado", tipo: "ingreso" as const, monto: montoDelCasoReportado, personalTransactionId: 101, personalOwnerUid: "admin" },
+  { id: "devolucion-reportada", tipo: "gasto" as const, monto: montoDelCasoReportado, personalTransactionId: 102, personalOwnerUid: "admin", personalReturnAmount: montoDelCasoReportado },
+];
+igual(canCloseLinkedSpace(parReportado), true, "el par exacto de la captura pasa el preflight local de Familia/Caja");
+const filasReportadas = compactLinkedTransferRows(parReportado);
+igual(filasReportadas.length, 1, "el aporte y su devolución aparecen en una tarjeta compacta");
+const idsReportados = movementIdsForCompactRow(filasReportadas[0], parReportado);
+igual(idsReportados.length, 2, "la tarjeta agrupada conserva los dos registros necesarios para borrar ambas mitades");
+igual(countSelectedCompactRows(filasReportadas, parReportado, idsReportados), 1, "seleccionar la tarjeta agrupada cuenta como un movimiento visible");
+const planReportado = planSpaceMovementDeletion(parReportado, idsReportados);
+igual(planReportado.ok, true, "el lote completo de aporte y devolución se puede borrar cuando queda saldo cero");
+igual(planReportado.ok ? planReportado.items.map(item => item.id).join(",") : "", "devolucion-reportada,aporte-reportado", "la devolución se procesa antes que el aporte enlazado");
+const planIncompleto = planSpaceMovementDeletion(parReportado, ["aporte-reportado"]);
+igual(planIncompleto.ok, false, "no se borra el aporte solo si su devolución sigue enlazada");
+igual(planIncompleto.ok ? "" : planIncompleto.reason, "contribution-used", "el bloqueo parcial explica el aporte que aún no se ha deshecho");
 
 const personales = [
   { id: 21, internalTransfer: "family" as const, internalTransferLink: "familia-vigente" },

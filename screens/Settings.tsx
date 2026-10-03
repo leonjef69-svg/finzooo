@@ -30,6 +30,7 @@ import {
   Mic,
   MessageSquare,
   Moon,
+  Palette,
   Sun,
   X,
 } from "lucide-react-native";
@@ -109,7 +110,7 @@ export default function Settings({
   onVoiceHelp: () => void;
   onTelegram: () => void;
 }) {
-  const { t, userCountry, themeMode, updateThemeMode, isCloudSynced, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios, testerPremiumPendingVerification } =
+  const { t, userCountry, themeMode, updateThemeMode, visualStyle, updateVisualStyle, isCloudSynced, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios, testerPremiumPendingVerification } =
     useAppData();
   /** El negocio que se está quedando con los yapeos, si hay alguno. Ver la fila de abajo. */
   const negocioQueRecibe = negocios.find((n) => n.activo && n.destinoYapes === "negocio");
@@ -584,6 +585,38 @@ export default function Settings({
             <TouchableOpacity accessibilityLabel={t("setup.darkAppearance")} accessibilityState={{ selected: themeMode === "dark" }} onPress={() => updateThemeMode("dark")} className={`h-8 w-9 items-center justify-center rounded-lg ${themeMode === "dark" ? "bg-slate-800" : ""}`}><Moon size={16} color={themeMode === "dark" ? "#fff" : "#64748b"} /></TouchableOpacity>
           </View>}
         />
+        <View className="w-full rounded-2xl border-[1.5px] border-slate-200 bg-white p-4 dark:border-noche-borde dark:bg-noche-2">
+          <View className="flex-row items-center gap-3">
+            <View className="h-9 w-9 items-center justify-center rounded-xl bg-slate-50 dark:bg-noche-3">
+              <Palette size={17} color={visualStyle === "peachOlive" ? "#65764a" : "#059669"} />
+            </View>
+            <Text className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-100">
+              {t("settings.visualStyle")}
+            </Text>
+          </View>
+          <View className="mt-3 flex-row rounded-xl bg-slate-100 p-1 dark:bg-noche-3">
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={t("settings.visualClassic")}
+              accessibilityState={{ selected: visualStyle === "classic" }}
+              onPress={() => updateVisualStyle("classic")}
+              className={`h-9 flex-1 flex-row items-center justify-center gap-1.5 rounded-lg px-2 ${visualStyle === "classic" ? "bg-white dark:bg-noche-2" : ""}`}
+            >
+              <View className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
+              <Text numberOfLines={1} className="text-[11px] font-bold text-slate-700 dark:text-slate-200">{t("settings.visualClassic")}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={t("settings.visualPeachOlive")}
+              accessibilityState={{ selected: visualStyle === "peachOlive" }}
+              onPress={() => updateVisualStyle("peachOlive")}
+              className={`h-9 flex-1 flex-row items-center justify-center gap-1.5 rounded-lg px-2 ${visualStyle === "peachOlive" ? "bg-white dark:bg-noche-2" : ""}`}
+            >
+              <View className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#65764a" }} />
+              <Text numberOfLines={1} className="text-[11px] font-bold text-slate-700 dark:text-slate-200">{t("settings.visualPeachOlive")}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
         {/* LA FILA DE "NOTIFICACIONES" SE FUE AL CALENDARIO (21/08/2026).
             Mandaba SOLO sobre los avisos del calendario, pero desde aqui parecia mandar sobre
             todo: la app tiene cuatro cosas que avisan —el calendario, la voz de los yapes, la

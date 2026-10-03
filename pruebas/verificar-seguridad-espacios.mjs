@@ -19,6 +19,9 @@ assert.match(pantallaFamilia, /tipo === "ingreso" && owner && origenDinero === "
 assert.match(rules, /&& boxOpen\(boxId\)/, "una invitación no abre una caja cerrada");
 assert.match(rules, /resource\.data\.get\('deleting', false\) == true/, "solo un borrado de cuenta autorizado puede purgar un espacio");
 assert.match(familia, /await runTransaction\(db, async transaction => \{[\s\S]*transaction\.set\(ref,[\s\S]*familyUsers/, "crear una familia es una operación indivisible");
+assert.match(familia, /transaction\.set\(movimientoRef, \{ \.\.\.movimientoInicial, creadoPor: uid, creadoEn: serverTimestamp\(\) \}\)/, "el aporte inicial se guarda junto con la Familia");
+assert.match(rules, /function familyOpenAfter\(familyId\)/, "las reglas admiten revisar la Familia nueva en la misma transacción");
+assert.match(rules, /\(getAfter\([\s\S]*familySpaces\/\$\(familyId\)\)\.data\.ownerUid == request\.auth\.uid[\s\S]*familyOpenAfter\(familyId\)\)/, "solo el propietario puede añadir un aporte al crear la Familia");
 assert.match(rules, /allow create:[\s\S]*&& boxOpen\(boxId\)/, "las reglas rechazan una caja cerrada aunque conserve el código");
 const unionCaja = cajas.slice(cajas.indexOf("export async function unirseACaja"), cajas.indexOf("export async function listarMovimientosCajaCompartida"));
 assert.doesNotMatch(unionCaja, /transaction\.get\(boxRef\)/, "un invitado no intenta leer la caja antes de ser miembro");

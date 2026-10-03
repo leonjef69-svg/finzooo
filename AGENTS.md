@@ -88,7 +88,7 @@ Y las pruebas, que ahora corren con un solo comando:
 node pruebas/correr.mjs
 ```
 
-Son **78 pruebas y 7 auditores** (23/08/2026). Ver [pruebas/LEEME.md](pruebas/LEEME.md).
+Son **118 pruebas y 8 auditores** (02/10/2026). Ver [pruebas/LEEME.md](pruebas/LEEME.md).
 El número sube: lo que no puede bajar es que estén todas en verde.
 
 Cada prueba nueva tiene que **fallar contra la versión anterior**: una que

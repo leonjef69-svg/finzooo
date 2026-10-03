@@ -8,7 +8,6 @@ const exigir = (condicion, mensaje) => {
 const familia = leer("utils/cloudFamilia.ts");
 const cajasCompartidas = leer("utils/cloudCajasCompartidas.ts");
 const cajas = leer("screens/Cajas.tsx");
-const ajustesCaja = leer("app/box-settings.tsx");
 const contexto = leer("contexts/AppDataContext.tsx");
 const inicio = leer("app/index.tsx");
 const almacenamiento = leer("utils/storage.ts");
@@ -25,7 +24,7 @@ exigir(unionFamilia.indexOf("transaction.set(doc(db, \"familySpaces\"") < unionF
 exigir(unionCaja.indexOf("transaction.set(memberRef") < unionCaja.lastIndexOf("getDoc(doc(db, \"boxSpaces\""), "Caja debe leer el espacio solo después de crear la membresía");
 
 exigir(cajas.includes("!canCloseLinkedSpace(datos.movimientos.filter"), "La lista de Cajas no protege aportes consumidos al borrar");
-exigir(ajustesCaja.includes("!canCloseLinkedSpace(movimientosCaja)"), "Ajustes de Caja no protege aportes consumidos al borrar");
+exigir(!fs.existsSync(new URL("../app/box-settings.tsx", import.meta.url)), "La pantalla vieja de opciones de Caja reapareció sin acceso desde la interfaz");
 exigir(cajas.includes("if (!ready || !cloudReady) return;"), "Cajas repara transferencias antes de terminar la carga de la nube");
 
 for (const marca of [

@@ -193,15 +193,17 @@ console.log("\n--- LOS LIMITES SE PUEDEN PONER A LAS CATEGORIAS PROPIAS (12/08/2
   // React se queja y el campo deja de responder.
   ok(/amounts\[c\.id\] \?\? ""/.test(limites), "una categoria nueva no deja la casilla rota");
 
-  // Y SE PUEDE CREAR UNA DESDE AQUI (12/08/2026). Pedido suyo: "esos iconos que tengo en elegir
-  // categoria, quiero que esten en presupuesto por categoria". Traer el catalogo entero —236
-  // casillas— dentro de esta pantalla habria sido copiar una pantalla dentro de otra: se lleva
-  // a la que ya sabe hacerlo, y al volver la categoria nueva ya esta aqui con su casilla.
-  ok(/irUnaVez\("\/nueva-categoria"\)/.test(limites), "se puede crear una categoria sin salir de los limites");
+  // La creación de presupuesto usa el mismo selector inferior que los movimientos: no abre
+  // la pantalla completa antigua; su modo directo evita pasar primero por la lista.
+  ok(/TransactionCategorySheet/.test(limites), "presupuesto reutiliza la hoja nueva de categorías");
+  ok(/initialCreate/.test(limites), "presupuesto abre directamente el formulario breve de categoría");
+  ok(!/irUnaVez\("\/nueva-categoria"\)/.test(limites), "presupuesto ya no abre la pantalla antigua");
   ok(/\[categoriasPropias\]/.test(limites), "y al volver aparece sola, sin cerrar la pantalla");
   // En solo lectura no sale: crear es de las cosas que Premium si cierra.
-  const trozoNueva = limites.slice(Math.max(0, limites.indexOf("/nueva-categoria") - 300), limites.indexOf("/nueva-categoria"));
+  const indiceNueva = limites.indexOf('t("categoryBudgets.nueva")');
+  const trozoNueva = limites.slice(Math.max(0, indiceNueva - 700), indiceNueva);
   ok(/\{!soloLectura && \(/.test(trozoNueva), "pero no en solo lectura");
+  ok(/setShowCategories\(true\)/.test(trozoNueva), "el botón de presupuesto abre la nueva hoja");
 }
 
 console.log(fallos === 0 ? "\nTodo bien: nadie se queda fuera de lo suyo\n" : `\n${fallos} fallos\n`);

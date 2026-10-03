@@ -44,6 +44,12 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('deleting', false) == false;
     }
 
+    function familyOpenAfter(familyId) {
+      return getAfter(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('closed', false) == false
+        && getAfter(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('closing', false) == false
+        && getAfter(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('deleting', false) == false;
+    }
+
     function testerPremiumUser(userId) {
       return exists(/databases/$(database)/documents/testerPremium/$(userId))
         && get(/databases/$(database)/documents/testerPremium/$(userId)).data.active == true
@@ -353,7 +359,11 @@ service cloud.firestore {
 
       match /movements/{movementId} {
         allow read: if familyMember(familyId);
-        allow create: if familyMember(familyId) && familyOpen(familyId)
+        allow create: if verified() && (
+                        (familyMember(familyId) && familyOpen(familyId))
+                        || (getAfter(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid
+                          && familyOpenAfter(familyId))
+                      )
                       && familyOwnerPremiumAfter(familyId)
                       && validSharedMovement(request.resource.data)
                       && (!('personalTransactionId' in request.resource.data)

@@ -22,6 +22,10 @@ export type TransferGroupSummary = {
 };
 export type CompactTransferRow<T> = { key: string; item: T; transferGroup?: TransferGroupSummary };
 
+export type SpaceMovementDeletionPlan<T> =
+  | { ok: true; items: T[] }
+  | { ok: false; reason: "empty" | "contribution-used" | "negative-balance" };
+
 export type PersonalLinkedTransfer = {
   id: number;
   type?: "expense" | "income";
@@ -264,6 +268,57 @@ export function canSpendFromSpace(items: LinkedSpaceMovement[], amount: number):
 export function canUndoContribution(items: LinkedSpaceMovement[], contribution: LinkedSpaceMovement, ownerUid?: string): boolean {
   if (contribution.tipo !== "ingreso" || contribution.personalTransactionId == null) return true;
   return contribution.monto <= returnableToPersonal(items, ownerUid) + CENT;
+}
+
+/**
+ * Build one safe deletion plan for both Familia and Caja. When the selected
+ * rows contain a complete aporte/devolución pair, remove the selected returns
+ * from the preflight balance first, then delete returns before contributions.
+ */
+export function planSpaceMovementDeletion<T extends LinkedSpaceMovement>(
+  movements: readonly T[],
+  selectedIds: readonly string[],
+): SpaceMovementDeletionPlan<T> {
+  const ids = new Set(selectedIds);
+  const selected = movements.filter(item => ids.has(item.id));
+  if (!selected.length) return { ok: false, reason: "empty" };
+
+  const selectedReturnIds = new Set(selected.filter(isLinkedSpaceReturn).map(item => item.id));
+  const afterSelectedReturns = movements.filter(item => !selectedReturnIds.has(item.id));
+  const contributionUsed = selected.some(item =>
+    item.tipo === "ingreso"
+      && item.personalTransactionId != null
+      && !canUndoContribution(afterSelectedReturns, item, item.personalOwnerUid),
+  );
+  if (contributionUsed) return { ok: false, reason: "contribution-used" };
+
+  const remainingBalance = balanceOfSpace([...movements])
+    - selected.reduce((sum, item) => sum + (item.tipo === "ingreso" ? item.monto : -item.monto), 0);
+  if (remainingBalance < -CENT) return { ok: false, reason: "negative-balance" };
+
+  const items = [...selected].sort((a, b) => Number(isLinkedSpaceReturn(b)) - Number(isLinkedSpaceReturn(a)));
+  return { ok: true, items };
+}
+
+export function movementIdsForCompactRow<T extends LinkedSpaceMovement>(
+  row: CompactTransferRow<T>,
+  visibleItems: readonly T[],
+): string[] {
+  return row.transferGroup
+    ? visibleItems.filter(isLinkedSpaceTransfer).map(item => item.id)
+    : [row.item.id];
+}
+
+export function countSelectedCompactRows<T extends LinkedSpaceMovement>(
+  rows: readonly CompactTransferRow<T>[],
+  visibleItems: readonly T[],
+  selectedIds: readonly string[],
+): number {
+  const selected = new Set(selectedIds);
+  return rows.filter(row => {
+    const ids = movementIdsForCompactRow(row, visibleItems);
+    return ids.length > 0 && ids.every(id => selected.has(id));
+  }).length;
 }
 
 /** Monto mínimo al editar: nunca invade la parte ya utilizada. */

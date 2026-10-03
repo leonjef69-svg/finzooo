@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import * as ImagePicker from "expo-image-picker";
 import { irUnaVez } from "@/utils/nav";
-import { Image, Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated, {
   KeyboardState,
   useAnimatedKeyboard,
@@ -10,11 +9,12 @@ import Animated, {
   useSharedValue,
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { X, Check, ChevronDown, ChevronRight, Calendar, Star, Camera, ImageIcon, Repeat2, Pencil } from "lucide-react-native";
+import { Check, ChevronDown, Calendar, Clock } from "lucide-react-native";
 import CategoryAvatar from "@/components/CategoryAvatar";
+import TransactionCategorySheet from "@/components/TransactionCategorySheet";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
+import { COUNTRIES } from "@/constants/countries";
 import { currencySymbolFor } from "@/constants/currencies";
-import { COLOR_HEX_600 } from "@/constants/colors";
 import { methodLabel } from "@/constants/i18n";
 import { useAppData } from "@/contexts/AppDataContext";
 import { defaultDateForMonth, isValidISODate, normalizeDateInput } from "@/utils/date";
@@ -22,16 +22,8 @@ import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/u
 import { nextId } from "@/utils/id";
 import { horaDe } from "@/utils/format";
 import { availablePaymentMethods, initialPaymentMethod } from "@/utils/paymentMethods";
-import { iconoDe, iconosParaCategoria } from "@/constants/iconos";
-import { alternar, esFoto, getFavoritos } from "@/utils/iconosFavoritos";
-import { esPropia } from "@/utils/categoriasPropias";
-import { sanitizeName } from "@/utils/categoryCustom";
 import type { Month, Transaction } from "@/types";
 import { useColorScheme } from "nativewind";
-
-// Alto compartido por las cajas de Fecha y Método de pago, para que se vean
-// exactamente iguales en cualquier celular.
-const FIELD_HEIGHT = 48;
 
 export default function AddSheet({
   initialType,
@@ -46,7 +38,7 @@ export default function AddSheet({
   onClose: () => void;
   onSave: (t: Transaction) => void;
 }) {
-  const { userCurrency, userCountry, t, categoriasPropias, categoriaRecienCreada, olvidarCategoriaRecienCreada, guardarFavoritos, showToast, categoryOverrides, updateCategoryOverrides, editarCategoria } =
+  const { userCurrency, userCountry, t, categoriasPropias, categoriaRecienCreada, olvidarCategoriaRecienCreada } =
     useAppData();
   const [type, setType] = useState<"expense" | "income">(
     initialType || transaction?.type || "expense"
@@ -55,26 +47,17 @@ export default function AddSheet({
   const [category, setCategory] = useState(
     transaction?.category || (type === "expense" ? "comida" : "salario")
   );
-  const [categoryTouched, setCategoryTouched] = useState(Boolean(transaction));
   const [icono, setIcono] = useState<string | undefined>(transaction?.icono);
   const [iconColor, setIconColor] = useState(
     transaction?.iconColor ?? catInfo(transaction?.category ?? (initialType === "income" ? "salario" : "comida")).color
   );
-  const [iconoConColores, setIconoConColores] = useState<string | null>(null);
-  const [favoritos, setFavoritosLocales] = useState(() => getFavoritos());
-  const [idsRapidos, setIdsRapidos] = useState<Record<"expense" | "income", string[]>>({
-    expense: ["comida", "transporte", "compras"],
-    income: ["salario", "freelance", "regalo"],
-  });
-  const [cambiandoLugar, setCambiandoLugar] = useState<number | null>(null);
-  const [renombrando, setRenombrando] = useState<string | null>(null);
-  const [categoriaConIconos, setCategoriaConIconos] = useState<string | null>(null);
-  const [nombreTemporal, setNombreTemporal] = useState("");
   const [date, setDate] = useState(transaction?.date || defaultDateForMonth(currentMonth));
+  const [time] = useState(transaction?.time || horaDe(Date.now()));
   const [method, setMethod] = useState(initialPaymentMethod(transaction));
   const [description, setDescription] = useState(transaction?.description || "");
   const [notes, setNotes] = useState(transaction?.notes || "");
   const [showMethod, setShowMethod] = useState(false);
+  const [showCategories, setShowCategories] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const submittingRef = useRef(false);
   const insets = useSafeAreaInsets();
@@ -90,94 +73,30 @@ export default function AddSheet({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [type, categoriasPropias]
   );
+  const selectedCategory = catInfo(category);
+  const countryFlag = COUNTRIES.find((country) => country.id === userCountry)?.flag ?? "🌐";
 
-  // Las tres posiciones son estables: elegir un dibujo no debe hacer saltar
-  // Comida al lugar de Transporte. Solo cambian cuando la persona usa ⇄ o
-  // mantiene presionada expresamente una categoría.
-  const categoriasRapidas = useMemo(() => {
-    const elegidas = idsRapidos[type]
-      .map((id) => cats.find((c) => c.id === id))
-      .filter((c): c is NonNullable<typeof c> => Boolean(c));
-    return [...elegidas, ...cats.filter((c) => !elegidas.some((e) => e.id === c.id))].slice(0, 3);
-  }, [cats, idsRapidos, type]);
-
-  function abrirCambioDeCategoria(indice: number) {
-    setRenombrando(null);
-    setCambiandoLugar((actual) => actual === indice ? null : indice);
+  function seleccionarCategoria(id: string) {
+    const info = catInfo(id);
+    setCategory(id);
+    setIcono(info.iconoNombre);
+    setIconColor(info.color);
+    setShowCategories(false);
   }
 
-  function abrirCambioDeNombre(categoryId: string) {
-    setCambiandoLugar(null);
-    setRenombrando(categoryId);
-    setNombreTemporal(t(catInfo(categoryId).label));
-  }
+  function cambiarTipo(nextType: "expense" | "income") {
+    setType(nextType);
+    const categories = nextType === "expense" ? gastosDisponibles() : ingresosDisponibles();
+    if (categories.some((item) => item.id === category)) return;
 
-  function reemplazarCategoria(indice: number, nuevaId: string) {
-    setCategoryTouched(true);
-    setIdsRapidos((anteriores) => {
-      const siguientes = [...anteriores[type]];
-      const otroLugar = siguientes.indexOf(nuevaId);
-      if (otroLugar >= 0) [siguientes[indice], siguientes[otroLugar]] = [siguientes[otroLugar], siguientes[indice]];
-      else siguientes[indice] = nuevaId;
-      return { ...anteriores, [type]: siguientes };
-    });
-    setCategory(nuevaId);
-    setIcono(catInfo(nuevaId).iconoNombre);
-    setIconColor(catInfo(nuevaId).color);
-    setCambiandoLugar(null);
+    // No conservar una categoría de gasto en un ingreso (ni al revés).
+    // Si la actual no pertenece al tipo nuevo, partir de su categoría habitual.
+    const fallback = nextType === "expense" ? "comida" : "salario";
+    const info = catInfo(fallback);
+    setCategory(fallback);
+    setIcono(info.iconoNombre);
+    setIconColor(info.color);
   }
-
-  function guardarNombre(categoryId: string) {
-    const limpio = sanitizeName(nombreTemporal);
-    if (!limpio) return;
-    if (esPropia(categoryId)) editarCategoria(categoryId, { nombre: limpio });
-    else updateCategoryOverrides({
-      ...categoryOverrides,
-      [categoryId]: { ...categoryOverrides[categoryId], name: limpio },
-    });
-    setRenombrando(null);
-    showToast(t("nuevaCat.guardada"));
-  }
-
-  function iconosRelacionados(categoryId: string): string[] {
-    const info = catInfo(categoryId);
-    return iconosParaCategoria(categoryId, info.iconoNombre);
-  }
-
-  function cambiarFavorito(id: string) {
-    const siguientes = alternar(favoritos, id);
-    setFavoritosLocales(siguientes);
-    guardarFavoritos(siguientes);
-  }
-
-  function aplicarFoto(categoryId: string, asset: ImagePicker.ImagePickerAsset) {
-    if (!asset.base64) return;
-    setCategory(categoryId);
-    setCategoryTouched(true);
-    setIcono(`data:${asset.mimeType ?? "image/jpeg"};base64,${asset.base64}`);
-  }
-
-  async function tomarFoto(categoryId: string) {
-    const permiso = await ImagePicker.requestCameraPermissionsAsync();
-    if (!permiso.granted) {
-      showToast(t("catCustom.cameraPermission"));
-      return;
-    }
-    const resultado = await ImagePicker.launchCameraAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.7, base64: true });
-    if (!resultado.canceled && resultado.assets[0]) aplicarFoto(categoryId, resultado.assets[0]);
-  }
-
-  async function elegirDeGaleria(categoryId: string) {
-    const permiso = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permiso.granted) {
-      showToast(t("settings.photoPermission"));
-      return;
-    }
-    const resultado = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ["images"], allowsEditing: true, aspect: [1, 1], quality: 0.7, base64: true });
-    if (!resultado.canceled && resultado.assets[0]) aplicarFoto(categoryId, resultado.assets[0]);
-  }
-
-  const coloresRapidos = ["rose", "orange", "amber", "green", "emerald", "teal", "blue", "violet", "pink", "slate"];
 
   const metodosDisponibles = useMemo(
     () => availablePaymentMethods(userCountry),
@@ -195,18 +114,14 @@ export default function AddSheet({
   useEffect(() => {
     if (!categoriaRecienCreada) return;
     setCategory(categoriaRecienCreada);
-    setCategoryTouched(true);
-    // Al volver de "Ver todas", adopta también el dibujo de esa categoría.
-    // El movimiento conserva así exactamente lo que la persona acaba de elegir.
+    // Una categoría creada desde el selector queda elegida de inmediato.
     setIcono(catInfo(categoriaRecienCreada).iconoNombre);
     olvidarCategoriaRecienCreada();
   }, [categoriaRecienCreada, olvidarCategoriaRecienCreada]);
 
   useEffect(() => {
     if (!transaction) setCategory(type === "expense" ? "comida" : "salario");
-    if (!transaction) setCategoryTouched(false);
     if (!transaction) setIcono(undefined);
-    setCategoriaConIconos(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [type]);
 
@@ -400,13 +315,48 @@ export default function AddSheet({
     exitAfterKeyboardHidden(() => onSave(t));
   }
 
+  function createMovement(): Transaction {
+    return {
+      // Mantiene los campos que este formulario no modifica, como el origen,
+      // la cuenta y los datos usados para detectar movimientos duplicados.
+      ...transaction,
+      id: transaction?.id || nextId(),
+      type,
+      amount: parseAmountInput(amount, userCurrency),
+      category,
+      icono,
+      iconColor,
+      date,
+      method,
+      description,
+      notes,
+      // Al editar se conserva la hora original; solo se genera al crear.
+      time,
+    };
+  }
+
   return (
-    // Pantalla COMPLETA, no un panel flotante — cubre el dispositivo entero
-    // sin importar el tipo de presentación con la que Expo Router la abra
-    // (ver app/_layout.tsx). Esta View NUNCA cambia de tamaño ni de
-    // posición por el teclado: es fija de principio a fin.
-    <View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }}>
-      <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top }}>
+    // El alta nueva es un panel inferior superpuesto a Inicio. La edición de
+    // un movimiento conserva su pantalla completa de siempre.
+    <View className={transaction ? "flex-1" : "absolute inset-0 justify-end"}>
+      {!transaction ? (
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={t("common.cancel")}
+          activeOpacity={1}
+          onPress={handleClose}
+          className="absolute inset-0 bg-slate-900/45"
+        />
+      ) : null}
+      <View
+        className={transaction
+          ? "flex-1 bg-white dark:bg-noche"
+          : "w-full overflow-hidden rounded-t-[28px] border-t border-slate-200 bg-white dark:border-noche-borde dark:bg-noche"}
+        style={transaction
+          ? { paddingTop: insets.top }
+          : { maxHeight: keyboardVisible ? "90%" : "64%", paddingTop: 4 }}
+      >
+        {!transaction ? <View className="mb-1 mt-2 h-1 w-10 self-center rounded-full bg-slate-300 dark:bg-noche-3" /> : null}
         {/* Cabecera: fuera del contenedor animado a propósito, nunca se
             mueve cuando aparece el teclado. */}
         <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
@@ -417,10 +367,15 @@ export default function AddSheet({
             {transaction ? t("addSheet.editTitle") : t("addSheet.newTitle")}
           </Text>
           <TouchableOpacity
-            onPress={handleClose}
-            className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
+            accessibilityRole="button"
+            accessibilityLabel={t("common.save")}
+            disabled={!valid || submitting}
+            onPress={() => handleSave(createMovement())}
+            className={`w-10 h-10 rounded-full items-center justify-center ${
+              type === "expense" ? "bg-rose-500" : "bg-emerald-600"
+            } ${!valid || submitting ? "opacity-40" : ""}`}
           >
-            <X size={16} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
+            <Check size={19} color="#ffffff" />
           </TouchableOpacity>
         </View>
 
@@ -430,7 +385,7 @@ export default function AddSheet({
               {(["expense", "income"] as const).map((opt) => (
                 <TouchableOpacity
                   key={opt}
-                  onPress={() => setType(opt)}
+                  onPress={() => cambiarTipo(opt)}
                   className={`flex-1 py-2.5 rounded-xl items-center ${
                     type === opt ? (opt === "expense" ? "bg-rose-500" : "bg-emerald-600") : ""
                   }`}
@@ -444,320 +399,55 @@ export default function AddSheet({
           </View>
         )}
 
-        {/* Único bloque que reacciona al teclado: campos con scroll +
-            botones fijos abajo, dentro de un mismo contenedor animado cuyo
+        {/* Único bloque que reacciona al teclado: campos con scroll dentro
+            de un contenedor animado cuyo
             "paddingBottom" sigue la altura real del teclado (ver
             animatedPaddingStyle arriba). Cuando el teclado aparece, este
             bloque (no la pantalla completa) se achica desde abajo — el
-            ScrollView dentro se ajusta solo por ser flex:1, y los botones
-            quedan pegados al borde inferior de este bloque, justo encima
-            del teclado. */}
-        <Animated.View style={[{ flex: 1 }, animatedPaddingStyle]}>
+            ScrollView dentro se ajusta solo por ser flex:1. Guardar queda en
+            la cabecera fija, siempre visible aunque aparezca el teclado. */}
+        <Animated.View
+          style={[
+            transaction ? { flex: 1, minHeight: 0 } : { flexShrink: 1, minHeight: 0 },
+            animatedPaddingStyle,
+          ]}
+        >
           <ScrollView
             ref={scrollRef}
-            className="flex-1 px-5"
-            contentContainerClassName="gap-3 pb-5"
+            className={transaction ? "flex-1 px-5" : "px-5"}
+            style={transaction ? { minHeight: 0 } : { flexGrow: 0, flexShrink: 1 }}
+            contentContainerClassName="gap-3"
+            contentContainerStyle={{ paddingBottom: keyboardVisible ? 16 : 16 + insets.bottom }}
             keyboardShouldPersistTaps="handled"
           >
             <View>
               <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("addSheet.amount")}</Text>
               <View
-                className="flex-row items-center bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4"
-                style={{ height: 48 }}
+                className="bg-slate-50 dark:bg-noche-2 rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde px-4 py-2"
+                style={{ minHeight: 76 }}
               >
-                <Text className="text-slate-500 dark:text-slate-300 font-bold mr-1">{currencySymbolFor(userCurrency)}</Text>
+                <View className="flex-row items-center gap-1.5">
+                  <Text className="text-sm">{countryFlag}</Text>
+                  <Text className="text-[10px] font-extrabold text-slate-500 dark:text-slate-300">
+                    {currencySymbolFor(userCurrency)} · {userCurrency}
+                  </Text>
+                </View>
                 <TextInput
                   disableFullscreenUI
                   keyboardType="decimal-pad"
                   value={amount}
                   onChangeText={(v) => setAmount(sanitizeSafeAmountInput(v, userCurrency))}
-                  placeholder="0.00"
+                  placeholder="0"
                   placeholderTextColor="#94a3b8"
-                  className="flex-1 text-base font-extrabold"
-                  style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                  className="h-9 py-0 text-2xl font-extrabold"
+                  style={{ padding: 0, color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
                 />
               </View>
               {amountError ? <Text className="mt-1 text-xs text-red-600 dark:text-red-400">{t(amountError === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")}</Text> : null}
             </View>
 
-            <View className="gap-2">
-              <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200">
-                {t("addSheet.quickCategories")}
-              </Text>
-              {categoriasRapidas.map((cat, indice) => {
-                const activa = categoryTouched && cat.id === category;
-                const IconoElegido = activa && icono && !esFoto(icono) ? iconoDe(icono) : null;
-                return (
-                  <View key={cat.id} className="gap-1.5">
-                    <View className="flex-row items-center justify-between gap-2">
-                    <TouchableOpacity
-                      onPress={() => {
-                        setCategory(cat.id);
-                        setCategoryTouched(true);
-                        setIcono(cat.iconoNombre);
-                        setCategoriaConIconos((actual) => actual === cat.id ? null : cat.id);
-                      }}
-                      onLongPress={() => abrirCambioDeCategoria(indice)}
-                      delayLongPress={450}
-                      className={`flex-row items-center gap-1 rounded-full border px-2.5 py-1.5 shrink ${
-                        activa
-                          ? "bg-emerald-50 border-emerald-500 dark:bg-emerald-950"
-                          : "bg-slate-50 border-slate-200 dark:bg-noche-2 dark:border-noche-borde"
-                      }`}
-                    >
-                        {activa && esFoto(icono ?? "") ? (
-                          <Image source={{ uri: icono }} className="w-5 h-5 rounded-full" />
-                        ) : IconoElegido ? (
-                          <IconoElegido size={15} color={COLOR_HEX_600[iconColor] ?? "#059669"} />
-                        ) : (
-                          <CategoryAvatar id={cat.id} size={15} />
-                        )}
-                      <Text
-                        className={`text-xs font-bold ${activa ? "text-emerald-700 dark:text-emerald-300" : "text-slate-700 dark:text-slate-200"}`}
-                      >
-                        {t(cat.label)}
-                      </Text>
-                    </TouchableOpacity>
-                    <View className="flex-row gap-1">
-                      <TouchableOpacity accessibilityLabel={t("addSheet.changeQuickCategory")} onPress={() => abrirCambioDeCategoria(indice)} className="w-7 h-7 rounded-full items-center justify-center border border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde">
-                        <Repeat2 size={13} color="#64748b" />
-                      </TouchableOpacity>
-                      <TouchableOpacity accessibilityLabel={t("addSheet.renameCategory")} onPress={() => abrirCambioDeNombre(cat.id)} className="w-7 h-7 rounded-full items-center justify-center border border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde">
-                        <Pencil size={13} color="#64748b" />
-                      </TouchableOpacity>
-                      <TouchableOpacity accessibilityLabel={t("catCustom.takePhoto")} onPress={() => void tomarFoto(cat.id)} className="w-7 h-7 rounded-full items-center justify-center border border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde">
-                        <Camera size={15} color={colorScheme === "dark" ? "#cbd5e1" : "#475569"} />
-                      </TouchableOpacity>
-                      <TouchableOpacity accessibilityLabel={t("catCustom.pickImage")} onPress={() => void elegirDeGaleria(cat.id)} className="w-7 h-7 rounded-full items-center justify-center border border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde">
-                        <ImageIcon size={15} color={colorScheme === "dark" ? "#cbd5e1" : "#475569"} />
-                      </TouchableOpacity>
-                    </View>
-                    </View>
-                    {renombrando === cat.id ? (
-                      <View className="flex-row items-center gap-2">
-                        <TextInput
-                          disableFullscreenUI
-                          autoFocus
-                          value={nombreTemporal}
-                          onChangeText={setNombreTemporal}
-                          maxLength={24}
-                          className="flex-1 rounded-xl border border-emerald-400 bg-white dark:bg-noche-2 px-3 text-sm text-slate-900 dark:text-slate-100"
-                          style={{ height: 42, paddingVertical: 0, textAlignVertical: "center" }}
-                        />
-                        <TouchableOpacity
-                          accessibilityLabel={t("nuevaCat.guardar")}
-                          onPress={() => guardarNombre(cat.id)}
-                          className="w-[42px] h-[42px] rounded-full bg-emerald-600 items-center justify-center"
-                        >
-                          <Check size={18} color="#ffffff" />
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          accessibilityLabel={t("nuevaCat.cancelar")}
-                          onPress={() => setRenombrando(null)}
-                          className="w-[42px] h-[42px] rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
-                        >
-                          <X size={18} color="#64748b" />
-                        </TouchableOpacity>
-                      </View>
-                    ) : null}
-                    {cambiandoLugar === indice ? (
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 7, paddingRight: 16 }}>
-                        {cats.map((opcion) => (
-                          <TouchableOpacity
-                            key={opcion.id}
-                            onPress={() => reemplazarCategoria(indice, opcion.id)}
-                            className={`flex-row items-center gap-1 rounded-full border px-2.5 py-1.5 ${opcion.id === cat.id ? "border-emerald-500 bg-emerald-50" : "border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde"}`}
-                          >
-                            <CategoryAvatar id={opcion.id} size={14} />
-                            <Text className="text-[11px] font-semibold text-slate-700 dark:text-slate-200">{t(opcion.label)}</Text>
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    ) : null}
-                    {categoriaConIconos === cat.id ? <ScrollView
-                      horizontal
-                      showsHorizontalScrollIndicator={false}
-                      contentContainerStyle={{ gap: 8, paddingRight: 16 }}
-                    >
-                      {iconosRelacionados(cat.id).map((id) => {
-                        const Icono = iconoDe(id);
-                        const marcado = activa && icono === id;
-                        return (
-                          <View key={id} className="w-11 h-11">
-                          <TouchableOpacity
-                            onPress={() => {
-                              setCategory(cat.id);
-                              setCategoryTouched(true);
-                              if (activa && icono === id) {
-                                setIcono(undefined);
-                                setIconoConColores(null);
-                              } else {
-                                setIcono(id);
-                                setIconColor(cat.color);
-                                setIconoConColores(id);
-                              }
-                            }}
-                            className={`w-10 h-10 mt-1 rounded-xl items-center justify-center border ${
-                              marcado
-                                ? "bg-emerald-50 border-emerald-500 dark:bg-emerald-950"
-                                : "bg-slate-50 border-slate-200 dark:bg-noche-2 dark:border-noche-borde"
-                            }`}
-                          >
-                            <Icono size={20} color={marcado ? "#059669" : colorScheme === "dark" ? "#cbd5e1" : "#475569"} />
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            accessibilityLabel={favoritos.includes(id) ? t("nuevaCat.favQuitado") : t("nuevaCat.favGuardado")}
-                            onPress={() => cambiarFavorito(id)}
-                            className="absolute right-0 top-0 w-5 h-5 rounded-full items-center justify-center bg-white dark:bg-noche-1 border border-amber-300"
-                          >
-                            <Star size={11} color="#f59e0b" fill={favoritos.includes(id) ? "#f59e0b" : "transparent"} />
-                          </TouchableOpacity>
-                          </View>
-                        );
-                      })}
-                    </ScrollView> : null}
-                    {activa && iconoConColores === icono && !esFoto(icono ?? "") ? (
-                      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 9, paddingRight: 16 }}>
-                        {coloresRapidos.map((color) => (
-                          <TouchableOpacity
-                            key={color}
-                            accessibilityLabel={color}
-                            onPress={() => setIconColor(color)}
-                            className={`w-7 h-7 rounded-full items-center justify-center border-2 ${iconColor === color ? "border-slate-900 dark:border-white" : "border-transparent"}`}
-                          >
-                            <View className="w-5 h-5 rounded-full" style={{ backgroundColor: COLOR_HEX_600[color] }} />
-                          </TouchableOpacity>
-                        ))}
-                      </ScrollView>
-                    ) : null}
-                  </View>
-                );
-              })}
-
-              <View className="flex-row items-center gap-2 pt-0.5">
-                <View className="flex-1 min-w-0">
-                  <View className="flex-row items-center gap-1 mb-1">
-                    <Star size={14} color="#f59e0b" />
-                    <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                      {t("nuevaCat.tabFavoritos")}
-                    </Text>
-                  </View>
-                  {favoritos.length > 0 ? (
-                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-                      {favoritos.map((id) => {
-                        const marcado = icono === id;
-                        const Icono = esFoto(id) ? null : iconoDe(id);
-                        return (
-                          <View key={id} className="w-11 h-11">
-                            <TouchableOpacity
-                              onPress={() => setIcono(id)}
-                              className={`w-9 h-9 mt-1 rounded-xl items-center justify-center overflow-hidden border ${
-                                marcado ? "border-amber-500 bg-amber-50" : "border-slate-200 bg-slate-50 dark:bg-noche-2 dark:border-noche-borde"
-                              }`}
-                            >
-                              {esFoto(id) ? (
-                                <Image source={{ uri: id }} className="w-full h-full" />
-                              ) : Icono ? (
-                                <Icono size={18} color={marcado ? "#d97706" : colorScheme === "dark" ? "#cbd5e1" : "#475569"} />
-                              ) : null}
-                            </TouchableOpacity>
-                            <TouchableOpacity
-                              accessibilityLabel={t("nuevaCat.favQuitado")}
-                              onPress={() => cambiarFavorito(id)}
-                              className="absolute right-0 top-0 w-5 h-5 rounded-full items-center justify-center bg-white dark:bg-noche-1 border border-amber-300"
-                            >
-                              <Star size={11} color="#f59e0b" fill="#f59e0b" />
-                            </TouchableOpacity>
-                          </View>
-                        );
-                      })}
-                    </ScrollView>
-                  ) : (
-                    <Text className="text-[11px] text-slate-400">—</Text>
-                  )}
-                </View>
-                <TouchableOpacity
-                  onPress={() => {
-                    setCambiandoLugar(null);
-                    setRenombrando(null);
-                    irUnaVez({
-                      pathname: "/nueva-categoria",
-                      params: { tipo: type, actual: category },
-                    })
-                  }}
-                  className="flex-row items-center gap-1 rounded-full border border-slate-300 dark:border-noche-borde px-3 py-2"
-                >
-                  <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                    {t("addSheet.viewAllCategories")}
-                  </Text>
-                  <ChevronRight size={14} color="#94a3b8" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Fecha y Método comparten FIELD_HEIGHT. Sin esa altura fija se
-                veían de distinto tamaño: en Android un campo de escritura trae
-                relleno propio invisible que un texto normal no tiene, así que
-                el mismo py- daba dos alturas distintas. */}
-            <View className="flex-row gap-3">
-              <View className="flex-1">
-                <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("detail.date")}</Text>
-                <View
-                  className={`flex-row items-center gap-2 bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] px-3 ${
-                    dateOk ? "border-slate-200 dark:border-noche-borde" : "border-rose-400"
-                  }`}
-                  style={{ height: FIELD_HEIGHT }}
-                >
-                  <Calendar size={16} color={dateOk ? "#94a3b8" : "#fb7185"} />
-                  <TextInput
-                    disableFullscreenUI
-                    value={date}
-                    onChangeText={setDate}
-                    // Al salir del campo se acomoda sola: si escribiste
-                    // "24/07/2026" queda como la app la guarda internamente,
-                    // en vez de rechazarte algo que estaba bien escrito.
-                    onBlur={() => setDate((d) => normalizeDateInput(d))}
-                    placeholder="AAAA-MM-DD"
-                    placeholderTextColor="#94a3b8"
-                    className="text-sm font-semibold flex-1"
-                    // padding 0 quita el relleno propio de Android; sin esto la
-                    // caja crece por dentro y no coincide con la de al lado.
-                    style={{ padding: 0, color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-                  />
-                </View>
-                {!dateOk && (
-                  <Text className="text-[11px] font-semibold text-rose-500 mt-1">{t("addSheet.dateError")}</Text>
-                )}
-              </View>
-              <View className="flex-1">
-                <Text className="text-xs font-semibold text-slate-600 dark:text-slate-200 mb-1.5">{t("detail.method")}</Text>
-                {/* SE CIERRA EL TECLADO ANTES DE ABRIR LA LISTA (10/08/2026).
-                    Con el teclado arriba —y suele estarlo, porque el monto se escribe justo
-                    antes— la lista de métodos quedaba partida por la mitad: los últimos, Yape y
-                    Plin, caían detrás de las teclas y no había forma de llegar a ellos.
-                    Elegir el método no necesita teclado, así que se quita. */}
-                <TouchableOpacity
-                  onPress={() => {
-                    Keyboard.dismiss();
-                    setShowMethod(true);
-                  }}
-                  className="flex-row items-center justify-between gap-2 bg-slate-50 dark:bg-noche-2 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde px-3"
-                  style={{ height: FIELD_HEIGHT }}
-                >
-                  <Text
-                    className="text-sm font-semibold flex-1"
-                    style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-                    numberOfLines={1}
-                  >
-                    {methodLabel(method, t)}
-                  </Text>
-                  <ChevronDown size={15} color="#94a3b8" />
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            <View className="flex-row gap-3">
-              <View className="min-w-0 flex-1" onLayout={(e) => setDescriptionY(e.nativeEvent.layout.y)}>
+            <View className="flex-row items-start gap-2.5">
+              <View onLayout={(e) => setDescriptionY(e.nativeEvent.layout.y)} className="min-w-0 flex-1">
                 <Text className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-200">{t("addSheet.description")}</Text>
                 <TextInput
                   disableFullscreenUI
@@ -766,78 +456,103 @@ export default function AddSheet({
                   onFocus={focusDescription}
                   placeholder={t("addSheet.descriptionPlaceholder")}
                   placeholderTextColor="#94a3b8"
-                  className="w-full rounded-xl border-[1.5px] border-slate-200 bg-slate-50 px-3 py-3.5 text-sm dark:border-noche-borde dark:bg-noche-2"
+                  className="h-12 w-full rounded-xl border-[1.5px] border-slate-200 bg-slate-50 px-3 text-sm dark:border-noche-borde dark:bg-noche-2"
                   style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
                 />
               </View>
+
               <View className="min-w-0 flex-1">
-                <Text className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-200">{t("addSheet.notesOptional")}</Text>
-                <TextInput
-                  disableFullscreenUI
-                  value={notes}
-                  onChangeText={setNotes}
-                  onFocus={focusNotes}
-                  placeholder={t("addSheet.notesPlaceholder")}
-                  placeholderTextColor="#94a3b8"
-                  className="w-full rounded-xl border-[1.5px] border-slate-200 bg-slate-50 px-3 py-3.5 text-sm dark:border-noche-borde dark:bg-noche-2"
-                  style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
-                />
+                <Text className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-200">{t("detail.method")}</Text>
+                <TouchableOpacity
+                  onPress={() => { Keyboard.dismiss(); setShowMethod(true); }}
+                  accessibilityRole="button"
+                  className="h-12 flex-row items-center justify-between rounded-xl border-[1.5px] border-slate-200 bg-slate-50 px-2.5 dark:border-noche-borde dark:bg-noche-2"
+                >
+                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.78} className="min-w-0 flex-1 text-xs font-semibold text-slate-800 dark:text-slate-100">
+                    {methodLabel(method, t)}
+                  </Text>
+                  <ChevronDown size={15} color="#64748b" />
+                </TouchableOpacity>
               </View>
+            </View>
+
+            <View className="flex-row items-start gap-2.5">
+              <View className="min-w-0 flex-1">
+                <Text className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-200">{t("detail.category")}</Text>
+                <TouchableOpacity
+                  onPress={() => { Keyboard.dismiss(); setShowCategories(true); }}
+                  accessibilityRole="button"
+                  accessibilityLabel={`${t("detail.category")}: ${t(selectedCategory.label)}`}
+                  className="h-12 flex-row items-center justify-between rounded-xl border-[1.5px] border-slate-200 bg-slate-50 px-3 dark:border-noche-borde dark:bg-noche-2"
+                >
+                  <View className="min-w-0 flex-1 flex-row items-center gap-2">
+                    <CategoryAvatar id={category} size={20} />
+                    <Text numberOfLines={1} className="min-w-0 flex-1 text-xs font-semibold text-slate-800 dark:text-slate-100">
+                      {t(selectedCategory.label)}
+                    </Text>
+                  </View>
+                  <ChevronDown size={15} color="#64748b" />
+                </TouchableOpacity>
+              </View>
+
+              <View className="min-w-0 flex-1">
+                <Text className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-200">{t("detail.date")}</Text>
+                <View
+                  className={`h-12 flex-row items-center gap-2 rounded-xl border-[1.5px] bg-slate-50 px-3 dark:bg-noche-2 ${
+                    dateOk ? "border-slate-200 dark:border-noche-borde" : "border-rose-400"
+                  }`}
+                >
+                  <Calendar size={15} color={dateOk ? "#94a3b8" : "#fb7185"} />
+                  <TextInput
+                    disableFullscreenUI
+                    value={date}
+                    onChangeText={setDate}
+                    onBlur={() => setDate((d) => normalizeDateInput(d))}
+                    placeholder="AAAA-MM-DD"
+                    placeholderTextColor="#94a3b8"
+                    className="min-w-0 flex-1 text-xs font-semibold"
+                    style={{ padding: 0, color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+                  />
+                </View>
+                {!dateOk ? <Text className="mt-1 text-[11px] font-semibold text-rose-500">{t("addSheet.dateError")}</Text> : null}
+                <View className="mt-1.5 flex-row items-center gap-1.5 pl-1">
+                  <Clock size={13} color="#94a3b8" />
+                  <Text className="text-xs font-medium text-slate-500 dark:text-slate-300">{time}</Text>
+                </View>
+              </View>
+            </View>
+
+            <View>
+              <Text className="mb-1.5 text-xs font-semibold text-slate-600 dark:text-slate-200">{t("addSheet.notesOptional")}</Text>
+              <TextInput
+                disableFullscreenUI
+                value={notes}
+                onChangeText={setNotes}
+                onFocus={focusNotes}
+                placeholder={t("addSheet.notesPlaceholder")}
+                placeholderTextColor="#94a3b8"
+                className="h-12 w-full rounded-xl border-[1.5px] border-slate-200 bg-slate-50 px-3 text-sm dark:border-noche-borde dark:bg-noche-2"
+                style={{ color: colorScheme === "dark" ? "#f1f5f9" : "#0f172a" }}
+              />
             </View>
           </ScrollView>
 
-          {/* Botones: pegados al borde inferior de este contenedor animado.
-              Cuando el teclado está abierto, insets.bottom (la barra de
-              gestos del sistema) ya no hace falta —el teclado ocupa ese
-              espacio— así que se omite para no dejar un hueco vacío de más. */}
-          <View
-            className="px-5 py-4 flex-row gap-3 border-t border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2"
-            style={{ paddingBottom: keyboardVisible ? 16 : 16 + insets.bottom }}
-          >
-            <TouchableOpacity
-              onPress={handleClose}
-              className="flex-1 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 border-[1.5px] border-slate-300 dark:border-slate-500 items-center"
-            >
-              <Text className="font-bold text-slate-600 dark:text-slate-200">{t("common.cancel")}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              disabled={!valid || submitting}
-              onPress={() =>
-                handleSave({
-                  // Conserva los campos que esta pantalla no edita: de dónde
-                  // vino el movimiento, el comercio, la cuenta, el código de
-                  // operación y las etiquetas.
-                  //
-                  // Sin esto, editar un movimiento traído del banco lo dejaba
-                  // como si lo hubieras escrito a mano: perdía su insignia de
-                  // "Importado" y los datos con los que el detector de
-                  // duplicados evita registrar dos veces el mismo gasto.
-                  ...transaction,
-                  id: transaction?.id || nextId(),
-                  type,
-                  amount: parseAmountInput(amount, userCurrency),
-                  category,
-                  icono,
-                  iconColor,
-                  date,
-                  method,
-                  description,
-                  notes,
-                  // La hora se conserva al EDITAR y se pone al crear: si al
-                  // corregir un monto se cambiara, un movimiento de la manana
-                  // pasaria a ser de la noche solo por haberlo tocado.
-                  time: transaction?.time ?? horaDe(Date.now()),
-                })
-              }
-              className={`flex-1 py-3.5 rounded-2xl items-center ${
-                type === "expense" ? "bg-rose-500" : "bg-emerald-600"
-              } ${!valid || submitting ? "opacity-40" : ""}`}
-            >
-              <Text className="font-bold text-white">{t("common.save")}</Text>
-            </TouchableOpacity>
-          </View>
         </Animated.View>
       </View>
+
+      {showCategories ? (
+        <TransactionCategorySheet
+          type={type}
+          categories={cats}
+          selectedId={category}
+          onClose={() => setShowCategories(false)}
+          onSelect={seleccionarCategoria}
+          onManage={() => {
+            setShowCategories(false);
+            irUnaVez({ pathname: "/nueva-categoria", params: { tipo: type, actual: category } });
+          }}
+        />
+      ) : null}
 
       {/* Selector de método de pago.
           Va aquí fuera, encima de todo, y NO dentro de la lista con scroll.

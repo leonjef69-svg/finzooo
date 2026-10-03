@@ -1,32 +1,13 @@
-// CATEGORIAS RAPIDAS EN EL MOVIMIENTO, Y UNA SOLA PANTALLA COMPLETA DETRAS
+// SELECTOR DE CATEGORIAS DEL MOVIMIENTO
 //
-// Pedido el 06/08/2026, con la pantalla en la mano: "quiero que solo quede un
-// boton que diga Elegir categoria y todo lo que esta en azul desaparezca, que
-// siga funcionando normal como esta hasta ahora". Lo azul era la cuadricula de
-// doce casillas mas "Nueva", "Ver mas" y "Editar X".
+// El formulario tiene una sola fila compacta para elegir categoría. Desde ahí
+// se abre esta hoja inferior, que muestra las categorías disponibles del tipo
+// actual, permite crear una categoría con foto opcional y conserva el acceso a
+// la pantalla para personalizar las categorías existentes.
 //
-// La primera version puso la cuadricula en una pantalla propia y el catalogo de
-// dibujos en otra. El usuario lo señalo con las tres capturas: "al darle click a
-// elegir categoria deberia mandarme a la 3 imagen no a la 2" — queria el
-// catalogo, y la lista de por medio era un paso que no habia pedido.
-//
-// Borrar la lista NO era una opcion: es lo que se usa en cada gasto, y sin ella
-// habria que crear una categoria nueva cada vez. Se le explico y eligio
-// juntarlas. Asi que ahora hay UNA pantalla que se recorre de arriba abajo:
-// las categorias que ya existen, la vista previa con el nombre, y el catalogo.
-//
-// LO QUE ESTA PRUEBA PROTEGE
-//
-// Tres cosas, y ninguna se ve leyendo el codigo de un archivo solo:
-//
-//  1. Que la pantalla de en medio NO vuelva. Es el fallo que el usuario
-//     reporto, y volveria sin que nadie se diera cuenta si alguien decide
-//     "separar responsabilidades".
-//  2. Que las tres puertas que se mudaron —elegir, crear, editar— sigan
-//     existiendo en su nuevo sitio.
-//  3. Que la vista previa siga viendose MIENTRAS se elige dibujo y color. Esa
-//     era una decision tomada y documentada, y al meter la lista encima se
-//     habria perdido en silencio si no fuera por el bloque pegajoso.
+// Las comprobaciones de abajo protegen que ingreso y gasto no se mezclen, que
+// la categoría elegida se guarde con su icono y que crear/administrar siga
+// conectado al mismo movimiento.
 import fs from "fs";
 import path from "path";
 
@@ -56,46 +37,41 @@ const pantLimpia = sinComentarios(pant);
 const ruta = fs.readFileSync(path.join(RAIZ, "app/nueva-categoria.tsx"), "utf8");
 const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
 
-console.log("\n--- EN NUEVO MOVIMIENTO HAY ATAJOS SIN PERDER EL CATALOGO ---");
+console.log("\n--- EL SELECTOR DE CATEGORIAS DEL MOVIMIENTO ---");
 {
-  ok(addLimpio.includes("addSheet.quickCategories"), "hay categorias rapidas en el movimiento");
+  const selector = fs.readFileSync(path.join(RAIZ, "components/TransactionCategorySheet.tsx"), "utf8");
+  const selectorLimpio = sinComentarios(selector);
+  ok(addLimpio.includes("TransactionCategorySheet"), "el movimiento abre su hoja de categorias");
+  ok(addLimpio.includes("setShowCategories(true)"), "tocar categoria abre el selector");
+  ok(addLimpio.includes("categories={cats}"), "el selector recibe solo categorias del tipo elegido");
+  ok(
+    /function cambiarTipo\(nextType: "expense" \| "income"\)[\s\S]{0,700}categories\.some\(\(item\) => item\.id === category\)[\s\S]{0,450}const fallback = nextType === "expense" \? "comida" : "salario"/.test(addLimpio),
+    "cambiar gasto/ingreso evita conservar una categoria del tipo contrario"
+  );
+  ok(addLimpio.includes("onPress={() => cambiarTipo(opt)}"), "el selector de tipo usa el cambio de categoria seguro");
+  ok(addLimpio.includes("userCurrency"), "el monto conserva la moneda configurada en Fino");
+  ok(
+    /COUNTRIES\.find\(\(country\) => country\.id === userCountry\)/.test(addLimpio)
+      && /currencySymbolFor\(userCurrency\)/.test(addLimpio)
+      && addLimpio.includes("{countryFlag}"),
+    "el campo muestra la bandera y moneda configuradas solo como referencia visual"
+  );
+  ok(
+    !/onPress=[^\n]*(?:setUserCurrency|setCurrency|showCurrency)/.test(addLimpio),
+    "la referencia del monto no permite cambiar moneda ni afecta el registro"
+  );
+  ok(selectorLimpio.includes("categories.map((item)"), "se muestran las categorias disponibles");
+  ok(selectorLimpio.includes("crearCategoria({"), "se pueden crear categorias desde la hoja");
+  ok(selectorLimpio.includes("nombreRepetido("), "no deja guardar nombres duplicados");
+  ok(selectorLimpio.includes('chooseImage("camera")'), "la nueva categoria puede usar la camara");
+  ok(selectorLimpio.includes('chooseImage("library")'), "la nueva categoria puede usar una foto de galeria");
+  ok(selectorLimpio.includes("<ImageCropper"), "la foto se recorta antes de guardarla");
   ok(
     /pathname: "\/nueva-categoria",\s*\r?\n?\s*params: \{ tipo: type, actual: category \}/.test(addLimpio),
-    "Ver todas abre el catalogo pasandole la categoria actual"
+    "se conserva el acceso a administrar categorias"
   );
-  ok(
-    /\.slice\(0, 3\)/.test(addLimpio),
-    "solo aparecen tres categorias rapidas para conservar espacio"
-  );
-  ok(addLimpio.includes("horizontal"), "los iconos se deslizan horizontalmente");
-  ok(addLimpio.includes("iconosRelacionados(cat.id)"), "cada categoria enseña sus propios iconos");
-  ok(addLimpio.includes("getFavoritos()"), "los favoritos tambien estan a mano");
-  ok(addLimpio.includes("alternar(favoritos, id)"), "cada icono se puede marcar o quitar de favoritos");
-  ok(addLimpio.includes("guardarFavoritos(siguientes)"), "la estrella guarda el cambio de favoritos");
-  ok(/nuevaCat\.favQuitado[\s\S]{0,160}cambiarFavorito\(id\)/.test(addLimpio), "la fila Favoritos permite quitar cada icono directamente");
-  ok(addLimpio.includes("tomarFoto(cat.id)"), "cada categoria ofrece camara a su costado");
-  ok(addLimpio.includes("elegirDeGaleria(cat.id)"), "cada categoria ofrece galeria a su costado");
-  ok(addLimpio.includes("onLongPress={() => abrirCambioDeCategoria(indice)}"), "mantener pulsada permite reemplazar la categoria");
-  ok(addLimpio.includes("<Repeat2"), "el icono de cambio hace visible esa funcion");
-  ok(addLimpio.includes("<Pencil"), "cada categoria tiene acceso para cambiar su nombre");
-  ok(addLimpio.includes("cambiandoLugar === indice"), "las opciones se abren dentro del movimiento");
-  ok(addLimpio.includes("reemplazarCategoria(indice, opcion.id)"), "la elegida reemplaza solo la posicion indicada");
-  ok(addLimpio.includes("renombrando === cat.id"), "el nombre se edita en la misma fila");
-  ok(addLimpio.includes("guardarNombre(cat.id)"), "el nombre se guarda sin abrir otra pantalla");
-  ok(
-    /height: 42, paddingVertical: 0, textAlignVertical: "center"/.test(addLimpio),
-    "el campo para renombrar no corta ni desalinea el texto en Android"
-  );
-  ok(
-    /w-\[42px\] h-\[42px\][\s\S]{0,180}<Check/.test(addLimpio),
-    "guardar nombre tiene la misma altura que el campo"
-  );
-  ok(!addLimpio.includes("const elegida = cats.find((c) => c.id === category)"), "elegir iconos no reordena las categorias");
-  ok(addLimpio.includes("setIconoConColores(id)"), "tocar un icono abre su fila de colores");
-  ok(addLimpio.includes("setIconoConColores(null)"), "volver a tocarlo cierra los colores");
-  ok(addLimpio.includes("iconColor,"), "el movimiento conserva el color elegido");
+  ok(/setCategory\(id\);[\s\S]{0,100}setIcono\(info\.iconoNombre\)/.test(addLimpio), "al elegir, conserva la categoria y su icono");
   ok(/category,\s*icono,/.test(addLimpio), "el movimiento guarda la categoria y el icono elegidos");
-  ok(/style=\{\{ height: 48 \}\}/.test(addLimpio), "el campo de monto queda realmente compacto");
 }
 
 console.log("\n--- CADA CATEGORIA TIENE UNA FILA PROPIA DE ICONOS ---");

@@ -11,6 +11,8 @@ export const STORAGE_KEYS = {
   deletedGoalIds: "finzo:deletedGoalIds",
   isPremium: "finzo:isPremium",
   themeMode: "finzo:themeMode",
+  // Preferencia visual del dispositivo, independiente de la cuenta y del modo claro/oscuro.
+  visualStyle: "finzo:visualStyle",
   merchantLearned: "finzo:merchantLearned",
   // Meses en los que el "Saldo anterior" se muestra en cero, cada uno por
   // separado (lista de claves "AAAA-MM"). Poner uno en cero no afecta a
@@ -103,6 +105,9 @@ export const STORAGE_KEYS = {
   // Cajas de dinero independientes. No reutilizan Modo Negocio: una caja puede
   // ser Casa, Viaje o Ana y solo contiene entradas y salidas propias.
   cajasDinero: "finzo:cajasDinero",
+  // La indicación inicial del botón + pertenece a la cuenta y se oculta tras
+  // el primer uso. Se borra al cerrar sesión para no heredarla entre cuentas.
+  plusHint: "finzo:plusHint",
 } as const;
 
 /** Retira automáticamente los datos falsos que dejaron versiones antiguas. */
@@ -114,7 +119,7 @@ export async function clearRetiredAlternateData(): Promise<void> {
 }
 
 // Borra todos los datos de la cuenta de golpe (operación atómica y
-// esperada). themeMode se conserva porque es preferencia del dispositivo,
+// esperada). themeMode y visualStyle se conservan porque son preferencias del dispositivo,
 // no de la cuenta.
 export async function clearAccountData(): Promise<void> {
   // Primero se descartan los guardados en cola: son de la sesión que se
@@ -157,6 +162,7 @@ export async function clearAccountData(): Promise<void> {
         STORAGE_KEYS.ventas,
         STORAGE_KEYS.movimientosNegocio,
         STORAGE_KEYS.cajasDinero,
+        STORAGE_KEYS.plusHint,
         // Integraciones y tareas que pertenecen a la cuenta, aunque sus claves
         // vivan fuera del almacén principal.
         "finzo:scheduledExport",

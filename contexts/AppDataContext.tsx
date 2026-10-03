@@ -16,8 +16,9 @@ import {
   signOut,
   updatePassword,
 } from "firebase/auth";
-import { AppState } from "react-native";
-import { colorScheme } from "nativewind";
+import { AppState, View } from "react-native";
+import { colorScheme, useColorScheme, vars } from "nativewind";
+import { nativewindThemeVariables, type VisualStyle } from "@/constants/visualTheme";
 import { seedTransactions, seedGoals } from "@/constants/seed";
 import { currencySymbolFor } from "@/constants/currencies";
 import { countryById, countryFor } from "@/constants/countries";
@@ -166,6 +167,8 @@ type AppDataContextValue = {
   monthNames: string[];
   themeMode: ThemeMode;
   updateThemeMode: (mode: ThemeMode) => void;
+  visualStyle: VisualStyle;
+  updateVisualStyle: (style: VisualStyle) => void;
 
   month: Month;
   setMonth: (m: Month) => void;
@@ -401,6 +404,7 @@ function currentRealMonth(): Month {
 }
 
 export function AppDataProvider({ children }: { children: ReactNode }) {
+  const { colorScheme: activeColorScheme } = useColorScheme();
   const [ready, setReady] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
@@ -412,6 +416,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [userLanguage, setUserLanguage] = useState("es");
   const [userCountry, setUserCountry] = useState("PE");
   const [themeMode, setThemeMode] = useState<ThemeMode>("system");
+  const [visualStyle, setVisualStyle] = useState<VisualStyle>("peachOlive");
+  const visualStyleVariables = useMemo(
+    () => vars(nativewindThemeVariables(visualStyle, activeColorScheme === "dark")),
+    [visualStyle, activeColorScheme],
+  );
   const [month, setMonth] = useState<Month>(currentRealMonth);
   const [budgets, setBudgets] = useState<Record<string, number>>({});
   const [categoryBudgets, setCategoryBudgets] = useState<Record<string, number>>({});
@@ -1014,12 +1023,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // alargaba cada arranque con la suma de tres esperas del almacenamiento.
       // Los movimientos siguen cargándose antes de `ready`: no se sacrifica
       // seguridad de datos por mostrar Inicio antes de tiempo.
-      const [, savedTheme, profile] = await Promise.all([
+      const [, savedTheme, savedVisualStyle, profile] = await Promise.all([
         clearRetiredAlternateData(),
         loadJSON<ThemeMode>(STORAGE_KEYS.themeMode, "system"),
+        loadJSON<VisualStyle>(STORAGE_KEYS.visualStyle, "peachOlive"),
         loadJSON<Profile | null>(STORAGE_KEYS.profile, null),
       ]);
       setThemeMode(savedTheme);
+      setVisualStyle(savedVisualStyle === "classic" ? "classic" : "peachOlive");
       colorScheme.set(savedTheme);
       // País y moneda se eligen ANTES de crear la cuenta. Android puede
       // cerrar Fino mientras la persona abre el correo de verificación; al
@@ -1833,6 +1844,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     showToast(t("toast.themeUpdated"));
   }
 
+  function updateVisualStyle(style: VisualStyle) {
+    setVisualStyle(style);
+    saveJSON(STORAGE_KEYS.visualStyle, style);
+    showToast(t("toast.themeUpdated"));
+  }
+
   // "No pasar el saldo" al mes que se está viendo: ese mes arranca en 0.
   //
   // SOLO CIERRA LA PUERTA DE ENTRADA A ESTE MES. El resultado real de este
@@ -2437,6 +2454,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     monthNames,
     themeMode,
     updateThemeMode,
+    visualStyle,
+    updateVisualStyle,
     month,
     setMonth,
     budgets,
@@ -2534,7 +2553,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     showToast,
   });
 
-  return <AppDataContext.Provider value={valor}>{children}</AppDataContext.Provider>;
+  return (
+    <AppDataContext.Provider value={valor}>
+      <View style={[{ flex: 1 }, visualStyleVariables]}>{children}</View>
+    </AppDataContext.Provider>
+  );
 }
 
 export function useAppData() {

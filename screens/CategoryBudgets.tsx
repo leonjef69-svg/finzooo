@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import { irUnaVez } from "@/utils/nav";
 import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,6 +13,7 @@ import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/u
 import { useKeyboardAnimatedPadding } from "@/utils/keyboard";
 import AvisoSoloLectura from "@/components/AvisoSoloLectura";
 import BackButton from "@/components/BackButton";
+import TransactionCategorySheet from "@/components/TransactionCategorySheet";
 
 export default function CategoryBudgets({
   onBack,
@@ -79,6 +79,7 @@ export default function CategoryBudgets({
     });
     return initial;
   });
+  const [showCategories, setShowCategories] = useState(false);
 
   function save() {
     // EL PORTERO, POR SI ALGÚN DÍA QUEDA UN BOTÓN SUELTO. Esconder el botón de guardar basta
@@ -205,7 +206,7 @@ export default function CategoryBudgets({
               En solo lectura no sale: crear es de las cosas que Premium sí cierra. */}
           {!soloLectura && (
             <TouchableOpacity
-              onPress={() => irUnaVez("/nueva-categoria")}
+              onPress={() => setShowCategories(true)}
               className="flex-row items-center justify-center gap-2 rounded-2xl border-[1.5px] border-dashed border-slate-300 dark:border-noche-borde py-4"
             >
               <Plus size={17} color="#059669" />
@@ -216,6 +217,18 @@ export default function CategoryBudgets({
           )}
         </View>
       </ScrollView>
+
+      {showCategories ? <TransactionCategorySheet
+        type="expense"
+        categories={categorias}
+        selectedId={categorias[0]?.id ?? "otros"}
+        initialCreate
+        onClose={() => setShowCategories(false)}
+        onSelect={(id) => {
+          setAmounts((prev) => ({ ...prev, [id]: prev[id] ?? "" }));
+          setShowCategories(false);
+        }}
+      /> : null}
 
       {!soloLectura && (
         <View

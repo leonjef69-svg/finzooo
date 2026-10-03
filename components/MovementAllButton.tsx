@@ -34,7 +34,7 @@ export default function MovementAllButton({ label, activeFilter, onPress }: {
         : "border-slate-200 bg-slate-50 dark:border-noche-borde dark:bg-noche-2"}`}
     >
       <ListFilter size={17} color={activeFilter ? "#2563eb" : "#475569"} />
-      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} className={`text-[14px] font-extrabold ${activeFilter
+      <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.82} className={`text-[14px] font-extrabold ${activeFilter
         ? "text-blue-700 dark:text-blue-300"
         : "text-slate-800 dark:text-slate-100"}`}>{label}</Text>
     </TouchableOpacity>

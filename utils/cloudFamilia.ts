@@ -53,6 +53,8 @@ export type MovimientoFamilia = {
   personalReturnAmount?: number;
 };
 
+type MovimientoInicialFamilia = Omit<MovimientoFamilia, "id" | "creadoEn" | "creadoPor">;
+
 const alNumero = (value: unknown): number => {
   if (typeof value === "number") return value;
   if (value && typeof value === "object" && "toMillis" in value) {
@@ -96,17 +98,36 @@ export async function listarFamilias(uid: string): Promise<EspacioFamilia[]> {
   return familias.sort((a, b) => b.creadoEn - a.creadoEn);
 }
 
-export async function crearFamilia(uid: string, nombrePersona: string, nombreFamilia: string, currency = "PEN"): Promise<EspacioFamilia> {
+export async function crearFamilia(
+  uid: string,
+  nombrePersona: string,
+  nombreFamilia: string,
+  currency = "PEN",
+  movimientoInicial?: MovimientoInicialFamilia,
+): Promise<EspacioFamilia & { movimientoInicialId?: string }> {
   const ref = doc(collection(db, "familySpaces"));
   const nombre = nombreFamilia.trim().slice(0, 35);
   if (!nombre) throw new Error("invalid-input");
+  if (movimientoInicial && (!isSafeMoneyAmount(movimientoInicial.monto) || movimientoInicial.monto <= 0)) {
+    throw new Error("invalid-amount");
+  }
+  const movimientoRef = movimientoInicial
+    ? doc(collection(db, "familySpaces", ref.id, "movements"))
+    : undefined;
   await runTransaction(db, async transaction => {
     transaction.set(ref, { nombre, ownerUid: uid, currency, creadoEn: serverTimestamp() });
     transaction.set(doc(db, "familySpaces", ref.id, "members", uid), { uid, nombre: nombrePersona.trim().slice(0, 60), rol: "owner", unidoEn: serverTimestamp() });
     transaction.set(doc(db, "familyUsers", uid, "spaces", ref.id), { familyId: ref.id, unidoEn: serverTimestamp() });
     transaction.set(doc(db, "familyUsers", uid), { activeFamilyId: ref.id }, { merge: true });
+    // The space and its first contribution commit together or neither does.
+    if (movimientoInicial && movimientoRef) {
+      transaction.set(movimientoRef, { ...movimientoInicial, creadoPor: uid, creadoEn: serverTimestamp() });
+    }
   });
-  return { id: ref.id, nombre, ownerUid: uid, creadoEn: Date.now(), currency };
+  return {
+    id: ref.id, nombre, ownerUid: uid, creadoEn: Date.now(), currency,
+    ...(movimientoRef ? { movimientoInicialId: movimientoRef.id } : {}),
+  };
 }
 
 export async function crearInvitacionFamilia(uid: string, familiaId: string): Promise<string> {

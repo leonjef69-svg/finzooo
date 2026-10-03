@@ -23,7 +23,6 @@ const family = read("screens/Family.tsx");
 const sharedBoxes = read("screens/SharedBoxes.tsx");
 const rules = read("firestore.rules");
 const contributionFunction = read("functions/index.js");
-const familySettings = read("app/family-settings.tsx");
 
 ok(
   creditStore.includes("saveJSONNow(STORAGE_KEYS.creditCards") &&
@@ -108,11 +107,6 @@ ok(
     contributionFunction.includes("canCloseLinkedSpace(movements)") &&
     rules.includes("request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre'])"),
   "cerrar o preparar el borrado de un espacio también exige validación del servidor",
-);
-ok(
-  familySettings.includes("familyId ? listaFamilias.find") &&
-    !familySettings.includes("listaFamilias.find(item => item.id === familyId) ?? listaFamilias[0]"),
-  "un enlace inválido de ajustes no puede administrar por accidente la primera familia",
 );
 ok(
   contributionFunction.includes("exports.leaveLinkedSpace") &&

@@ -147,6 +147,7 @@ const SUITES = [
   { archivo: "verificar-elegir-categoria.ts", alias: EXPO },
   { archivo: "verificar-prueba-premium.ts", alias: EXPO },
   { archivo: "verificar-familia.ts", alias: EXPO },
+  { archivo: "verificar-error-espacios.ts", alias: BASE },
 ];
 
 /**

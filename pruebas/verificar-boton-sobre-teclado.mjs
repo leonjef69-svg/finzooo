@@ -80,15 +80,18 @@ console.log("\n--- EL CONTENEDOR TIENE QUE SER ANIMADO ---");
   }
 }
 
-console.log("\n--- CANCELAR SE RECONOCE COMO BOTON EN MODO OSCURO (23/08/2026) ---");
+console.log("\n--- GUARDAR QUEDA VISIBLE EN LA CABECERA, TAMBIÉN CON TECLADO (03/10/2026) ---");
 {
-  // Reportado con una captura real: el fondo de «Cancelar» se mezclaba con la barra inferior
-  // y el texto parecia estar suelto. Un botón secundario no necesita ser verde, pero sí debe
-  // conservar un contorno visible junto al botón principal.
+  // El formulario ya no tiene una barra inferior con Guardar/Cancelar. El
+  // botón de guardar está en la cabecera fija, fuera del área que sube al abrir
+  // el teclado.
   const nuevoMovimiento = leerSinComentarios("screens/AddSheet.tsx");
   ok(
-    /onPress=\{handleClose\}[\s\S]{0,220}border-\[1\.5px\][\s\S]{0,120}dark:border-slate-500/.test(nuevoMovimiento),
-    "Cancelar conserva un contorno visible también de noche"
+    nuevoMovimiento.indexOf('accessibilityLabel={t("common.save")}') >= 0
+      && nuevoMovimiento.indexOf('accessibilityLabel={t("common.save")}') < nuevoMovimiento.indexOf("<Animated.View")
+      && /onPress=\{\(\) => handleSave\(createMovement\(\)\)\}/.test(nuevoMovimiento)
+      && /<Check size=\{19\} color="#ffffff"/.test(nuevoMovimiento),
+    "el icono de guardar está fijo en la cabecera y permanece alcanzable con teclado"
   );
 }
 

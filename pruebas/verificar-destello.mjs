@@ -53,14 +53,58 @@ ok(/sceneStyle:\s*\{\s*backgroundColor:/.test(pestanas), "4. las pestañas tiene
 
 console.log("\n--- Y LO QUE YA ESTABA, QUE NO SE PUEDE PERDER ---");
 {
-  // ESTO YA PASABA ANTES. Se deja escrito porque el arreglo de hoy toca el mismo bloque de
-  // opciones, y borrar el contentStyle de las modales de un manotazo devolveria el destello
-  // por el otro lado: el de la hoja ABRIENDOSE, que costo lo suyo en su dia.
-  const modales = raiz.match(/presentation:\s*"modal"[^}]*\}/g) ?? [];
-  ok(modales.length >= 2, `las dos pantallas modales siguen declaradas (${modales.length})`);
+  // Nuevo movimiento usa una ruta transparente, y el propio AddSheet dibuja el panel y el
+  // fondo oscuro. Mantener ambas mitades evita la pantalla vacía entre navegación y dibujo.
+  const inicioAlta = raiz.indexOf('name="transaction/new"');
+  const finAlta = raiz.indexOf('name="transaction/[id]/edit"', inicioAlta);
+  const alta = raiz.slice(inicioAlta, finAlta);
+  ok(/presentation:\s*"transparentModal"/.test(alta), "nuevo movimiento conserva Inicio detrás del panel");
   ok(
-    modales.every((m) => /backgroundColor:\s*screenBg/.test(m)),
-    "y las dos siguen con el fondo del tema"
+    /contentStyle:\s*\{\s*backgroundColor:\s*"transparent"\s*\}/.test(alta),
+    "la ruta no tapa el panel con un fondo opaco"
+  );
+  const add = sinComentarios(fs.readFileSync(path.join(RAIZ, "screens/AddSheet.tsx"), "utf8"));
+  ok(
+    /absolute inset-0 justify-end/.test(add) && /bg-slate-900\/45/.test(add),
+    "el formulario dibuja su panel inferior y oscurece Inicio"
+  );
+  ok(
+    /maxHeight:\s*keyboardVisible\s*\?\s*"90%"\s*:\s*"64%"/.test(add)
+      && /rounded-t-\[28px\]/.test(add)
+      && /h-1 w-10 self-center/.test(add)
+      && /: "w-full overflow-hidden rounded-t-\[28px\]/.test(add)
+      && /transaction \? \{ flex: 1, minHeight: 0 \} : \{ flexShrink: 1, minHeight: 0 \}/.test(add)
+      && /transaction \? \{ minHeight: 0 \} : \{ flexGrow: 0, flexShrink: 1 \}/.test(add),
+    "el panel inferior se ajusta a sus campos, elimina el hueco bajo Notas y crece si hace falta con el teclado"
+  );
+  ok(
+    /onLayout=\{\(e\) => setDescriptionY\(e\.nativeEvent\.layout\.y\)\} className="min-w-0 flex-1"[\s\S]*?t\("addSheet\.description"\)[\s\S]*?className="min-w-0 flex-1"[\s\S]*?t\("detail\.method"\)/.test(add)
+      && /t\("detail\.category"\)[\s\S]*?className="min-w-0 flex-1"[\s\S]*?t\("detail\.date"\)/.test(add),
+    "Descripción/Método y Categoría/Fecha comparten filas con campos de igual ancho"
+  );
+  ok(
+    !/showNotes|setShowNotes/.test(add)
+      && /t\("addSheet\.notesOptional"\)[\s\S]*?value=\{notes\}[\s\S]*?placeholder=\{t\("addSheet\.notesPlaceholder"\)\}/.test(add),
+    "Notas permanece visible, sin control para desplegarla"
+  );
+  ok(
+    /COUNTRIES\.find\(\(country\) => country\.id === userCountry\)/.test(add)
+      && /currencySymbolFor\(userCurrency\)\s*\}\s*·\s*\{userCurrency\}/.test(add)
+      && !/accessibilityRole="button"[^>]*>\s*\{countryFlag\}/.test(add),
+    "la bandera y moneda decorativas reflejan la configuración y no abren otra acción"
+  );
+  ok(
+    add.indexOf('accessibilityLabel={t("common.save")}') >= 0
+      && add.indexOf('accessibilityLabel={t("common.save")}') < add.indexOf("<Animated.View")
+      && /onPress=\{\(\) => handleSave\(createMovement\(\)\)\}/.test(add)
+      && /<Check size=\{19\} color="#ffffff"/.test(add)
+      && !/<Text[^>]*>\{t\("common\.save"\)\}<\/Text>/.test(add)
+      && !/<Text[^>]*>\{t\("common\.cancel"\)\}<\/Text>/.test(add),
+    "Guardar es un botón de icono fijo en la cabecera, sin botones de texto abajo"
+  );
+  ok(
+    /name="transaction\/\[id\]\/edit"\s+options=\{\{\s*presentation:\s*"modal",\s*contentStyle:\s*\{\s*backgroundColor:\s*screenBg\s*\}\s*\}\}/.test(raiz),
+    "editar un movimiento conserva su pantalla completa"
   );
 }
 

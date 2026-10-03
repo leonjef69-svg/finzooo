@@ -1,4 +1,8 @@
 /** @type {import('tailwindcss').Config} */
+const shades = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
+const dynamicColor = (name) => `rgb(var(--fino-${name}) / <alpha-value>)`;
+const dynamicScale = (name) => Object.fromEntries(shades.map((shade) => [shade, dynamicColor(`${name}-${shade}`)]));
+
 module.exports = {
   darkMode: "class",
   content: ["./app/**/*.{js,jsx,ts,tsx}", "./screens/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
@@ -30,6 +34,12 @@ module.exports = {
        * colgando del mismo numero es como se rompe uno arreglando el otro.
        */
       colors: {
+        // Paleta base intercambiable desde Ajustes. Las categorías propias usan sus
+        // colores guardados y no dependen de estos tonos semánticos.
+        white: dynamicColor("white"),
+        slate: dynamicScale("slate"),
+        emerald: dynamicScale("emerald"),
+        rose: dynamicScale("rose"),
         /*
          * EL MODO OSCURO, EN CARBON. Antes era negro puro (#000000) y el problema no era el
          * color: era que LA TARJETA Y EL FONDO ERAN LO MISMO. Lo unico que las separaba era un
