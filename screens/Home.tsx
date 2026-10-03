@@ -435,7 +435,7 @@ export default function Home({
             >
               <ChevronLeft size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
             </TouchableOpacity>
-            <MonthSelector month={month} months={availableMonths} monthNames={monthNames} onChange={setMonth} />
+            <MonthSelector month={month} months={availableMonths} monthNames={monthNames} onChange={setMonth} showMovementCount />
             <TouchableOpacity
               accessibilityRole="button"
               onPress={() => shiftMonth(1)}

@@ -2,9 +2,10 @@ import { useMemo, useState } from "react";
 import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { CalendarDays, Check, ChevronDown, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
-import type { Month } from "@/types";
+import type { Month, Transaction } from "@/types";
 import { useAppData } from "@/contexts/AppDataContext";
 import { availablePersonalBalance, totalsForMonth } from "@/utils/finances";
+import { compactPersonalTransferRows } from "@/utils/linkedTransfers";
 import { presupuestoDelMes } from "@/utils/presupuestoMensual";
 import { saldoAnteriorDe } from "@/utils/saldoAnterior";
 
@@ -13,7 +14,7 @@ type Props = {
   months: string[];
   monthNames: string[];
   onChange: (month: Month) => void;
-  subtitle?: string;
+  showMovementCount?: boolean;
 };
 
 function monthFromKey(key: string): Month {
@@ -30,7 +31,7 @@ function labelFor(key: string, monthNames: string[]) {
  * Selector compartido por Inicio, Historial y Reportes. La lista se recibe ya
  * filtrada; muestra el saldo personal que corresponde a cada mes y permite cambiarlo.
  */
-export default function MonthSelector({ month, months, monthNames, onChange, subtitle }: Props) {
+export default function MonthSelector({ month, months, monthNames, onChange, showMovementCount = false }: Props) {
   const [open, setOpen] = useState(false);
   const { colorScheme } = useColorScheme();
   const { t, fmtCompact, transactions, budgets, carryoverCleared } = useAppData();
@@ -46,22 +47,28 @@ export default function MonthSelector({ month, months, monthNames, onChange, sub
     });
     return [key, total];
   })), [months, transactions, budgets, carryoverCleared]);
+  const monthMovementCounts = useMemo(() => {
+    if (!showMovementCount) return {};
+    const grouped: Record<string, Transaction[]> = Object.fromEntries(months.map((key) => [key, []]));
+    for (const transaction of transactions) {
+      const key = transaction.date.slice(0, 7);
+      if (grouped[key]) grouped[key].push(transaction);
+    }
+    return Object.fromEntries(months.map((key) => [key, compactPersonalTransferRows(grouped[key]).length]));
+  }, [months, showMovementCount, transactions]);
 
   return (
     <>
       <TouchableOpacity
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={`Elegir mes, ${label}${subtitle ? `, ${subtitle}` : ""}`}
+        accessibilityLabel={`Elegir mes, ${label}`}
         className="flex-row items-center gap-1.5 rounded-full border-[1.5px] border-slate-200 bg-slate-50 px-3 py-2 dark:border-noche-borde dark:bg-noche-2"
       >
         <CalendarDays size={14} color={dark ? "#cbd5e1" : "#475569"} />
-        <View className="min-w-0">
-          <Text className="max-w-[132px] text-xs font-bold text-slate-700 dark:text-slate-100" numberOfLines={1}>
-            {label}
-          </Text>
-          {subtitle ? <Text className="max-w-[132px] text-[10px] font-medium text-slate-500 dark:text-slate-300" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{subtitle}</Text> : null}
-        </View>
+        <Text className="max-w-[132px] text-xs font-bold text-slate-700 dark:text-slate-100" numberOfLines={1}>
+          {label}
+        </Text>
         <ChevronDown size={14} color={dark ? "#cbd5e1" : "#475569"} />
       </TouchableOpacity>
 
@@ -98,9 +105,16 @@ export default function MonthSelector({ month, months, monthNames, onChange, sub
                             : "border-slate-200 bg-slate-50 dark:border-noche-borde dark:bg-noche"
                         }`}
                       >
-                        <Text className={`min-w-0 flex-1 text-sm font-bold ${selected ? "text-white" : "text-slate-800 dark:text-slate-100"}`} numberOfLines={1}>
-                          {labelFor(key, monthNames)}
-                        </Text>
+                        <View className="min-w-0 flex-1">
+                          <Text className={`text-sm font-bold ${selected ? "text-white" : "text-slate-800 dark:text-slate-100"}`} numberOfLines={1}>
+                            {labelFor(key, monthNames)}
+                          </Text>
+                          {showMovementCount ? <Text className={`mt-0.5 text-[10px] font-medium ${selected ? "text-emerald-100" : "text-slate-500 dark:text-slate-400"}`} numberOfLines={1}>
+                            {monthMovementCounts[key] === 1
+                              ? t("monthPicker.oneMovement")
+                              : t("monthPicker.manyMovements", { count: monthMovementCounts[key] ?? 0 })}
+                          </Text> : null}
+                        </View>
                         <View className="items-end">
                           <Text className={`text-[9px] font-semibold ${selected ? "text-emerald-100" : "text-slate-500 dark:text-slate-400"}`}>
                             {t("monthPicker.balance")}

@@ -27,8 +27,9 @@
   ocupan ahora el mismo ancho; el método dejó de tener un ancho fijo estrecho.
 - En Historial, los filtros de Todos/Gastos/Ingresos/Transferencias aparecen
   por encima del panel de filtros avanzados al abrirlo.
-- El selector del mes en Historial muestra debajo cuántos movimientos visibles
-  hay en ese mes; las transferencias agrupadas cuentan como una sola tarjeta.
+- Al abrir el selector del mes en Inicio o Historial, debajo de cada mes aparece
+  cuántos movimientos visibles hay; las transferencias agrupadas cuentan como
+  una sola tarjeta.
 - Los errores de una función Firebase ausente ya no se muestran como “código
   vencido”. Caja privada guarda localmente; Caja compartida y Familia usan las
   mismas Functions para borrar aportes y cerrar, por eso la Caja privada no
