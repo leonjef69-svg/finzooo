@@ -13,6 +13,7 @@ type Props = {
   months: string[];
   monthNames: string[];
   onChange: (month: Month) => void;
+  subtitle?: string;
 };
 
 function monthFromKey(key: string): Month {
@@ -29,7 +30,7 @@ function labelFor(key: string, monthNames: string[]) {
  * Selector compartido por Inicio, Historial y Reportes. La lista se recibe ya
  * filtrada; muestra el saldo personal que corresponde a cada mes y permite cambiarlo.
  */
-export default function MonthSelector({ month, months, monthNames, onChange }: Props) {
+export default function MonthSelector({ month, months, monthNames, onChange, subtitle }: Props) {
   const [open, setOpen] = useState(false);
   const { colorScheme } = useColorScheme();
   const { t, fmtCompact, transactions, budgets, carryoverCleared } = useAppData();
@@ -51,13 +52,16 @@ export default function MonthSelector({ month, months, monthNames, onChange }: P
       <TouchableOpacity
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={`Elegir mes, ${label}`}
+        accessibilityLabel={`Elegir mes, ${label}${subtitle ? `, ${subtitle}` : ""}`}
         className="flex-row items-center gap-1.5 rounded-full border-[1.5px] border-slate-200 bg-slate-50 px-3 py-2 dark:border-noche-borde dark:bg-noche-2"
       >
         <CalendarDays size={14} color={dark ? "#cbd5e1" : "#475569"} />
-        <Text className="max-w-[132px] text-xs font-bold text-slate-700 dark:text-slate-100" numberOfLines={1}>
-          {label}
-        </Text>
+        <View className="min-w-0">
+          <Text className="max-w-[132px] text-xs font-bold text-slate-700 dark:text-slate-100" numberOfLines={1}>
+            {label}
+          </Text>
+          {subtitle ? <Text className="max-w-[132px] text-[10px] font-medium text-slate-500 dark:text-slate-300" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>{subtitle}</Text> : null}
+        </View>
         <ChevronDown size={14} color={dark ? "#cbd5e1" : "#475569"} />
       </TouchableOpacity>
 

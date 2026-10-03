@@ -140,6 +140,13 @@ export default function History({
     () => transactions.filter((t) => t.date.startsWith(mk)),
     [transactions, mk]
   );
+  const monthMovementCount = useMemo(
+    () => compactPersonalTransferRows(allMonthTx).length,
+    [allMonthTx],
+  );
+  const monthMovementLabel = monthMovementCount === 1
+    ? t("history.monthMovementOne")
+    : t("history.monthMovementMany", { count: monthMovementCount });
   const availableMonths = useMemo(
     () => Array.from(new Set(transactions.filter((transaction) => /^\d{4}-\d{2}-\d{2}$/.test(transaction.date)).map((transaction) => transaction.date.slice(0, 7)))).sort().reverse(),
     [transactions],
@@ -248,7 +255,7 @@ export default function History({
             <View>
               <Text className="text-xl font-extrabold text-slate-900 dark:text-slate-100">{t("history.title")}</Text>
             </View>
-            <MonthSelector month={month} months={availableMonths} monthNames={monthNames} onChange={setMonth} />
+            <MonthSelector month={month} months={availableMonths} monthNames={monthNames} onChange={setMonth} subtitle={monthMovementLabel} />
           </View>
 
           <View className="px-5 mt-3">

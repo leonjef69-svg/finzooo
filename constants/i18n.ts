@@ -293,6 +293,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "home.selectedCountPlural": "{count} seleccionados",
 
     "history.title": "Historial",
+    "history.monthMovementOne": "1 movimiento",
+    "history.monthMovementMany": "{count} movimientos",
     "history.filterAll": "Todos",
     "history.filterExpense": "Gastos",
     "history.filterIncome": "Ingresos",
@@ -1932,6 +1934,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "home.selectedCountPlural": "{count} selected",
 
     "history.title": "History",
+    "history.monthMovementOne": "1 transaction",
+    "history.monthMovementMany": "{count} transactions",
     "history.filterAll": "All",
     "history.filterExpense": "Expenses",
     "history.filterIncome": "Income",
@@ -3561,6 +3565,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "home.selectedCountPlural": "{count} selecionados",
 
     "history.title": "Histórico",
+    "history.monthMovementOne": "1 movimentação",
+    "history.monthMovementMany": "{count} movimentações",
     "history.filterAll": "Todos",
     "history.filterExpense": "Gastos",
     "history.filterIncome": "Receitas",
