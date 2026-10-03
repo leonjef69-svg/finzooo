@@ -25,11 +25,13 @@
   cerrar; el saldo/presupuesto Personal actual no participa de ese cálculo.
 - En el formulario compartido de Familia y Caja, Descripción y Método de pago
   ocupan ahora el mismo ancho; el método dejó de tener un ancho fijo estrecho.
+- En Historial, los filtros de Todos/Gastos/Ingresos/Transferencias aparecen
+  por encima del panel de filtros avanzados al abrirlo.
 - Los errores de una función Firebase ausente ya no se muestran como “código
   vencido”. Caja privada guarda localmente; Caja compartida y Familia usan las
   mismas Functions para borrar aportes y cerrar, por eso la Caja privada no
   confirma que el servicio compartido esté actualizado.
-- TypeScript, ESLint, 120 pruebas y 8 auditores aprobados; además, 39 pruebas
+- TypeScript, ESLint, 121 pruebas y 8 auditores aprobados; además, 39 pruebas
   de Functions. El bundle de Metro incluye los cambios. No se han publicado
   reglas, Functions ni app, y no se pudo comprobar una escritura real contra
   Firebase. Hace falta actualizar reglas y Functions en `dotero-2d430` para

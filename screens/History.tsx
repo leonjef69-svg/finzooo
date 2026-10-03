@@ -277,6 +277,20 @@ export default function History({
             </View>
           </View>
 
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 20, marginTop: 12 }}>
+            {FILTERS.map(({ id, label }) => (
+              <TouchableOpacity
+                key={id}
+                onPress={() => selectTypeFilter(id)}
+                className={`px-4 py-2 rounded-full ${filter === id ? "bg-emerald-600" : "bg-slate-100 dark:bg-noche-2"}`}
+              >
+                <Text className={`text-xs font-bold ${filter === id ? "text-white" : "text-slate-600 dark:text-slate-200"}`}>
+                  {label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+
           {showFilters ? (
             <View className="mx-5 mt-2 rounded-2xl border-[1.5px] border-slate-200 bg-slate-50 p-3 dark:border-noche-borde dark:bg-noche-2">
               <View className="mb-2 flex-row items-center justify-between">
@@ -325,20 +339,6 @@ export default function History({
               </View>
             </View>
           ) : null}
-
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingHorizontal: 20, marginTop: 12 }}>
-            {FILTERS.map(({ id, label }) => (
-              <TouchableOpacity
-                key={id}
-                onPress={() => selectTypeFilter(id)}
-                className={`px-4 py-2 rounded-full ${filter === id ? "bg-emerald-600" : "bg-slate-100 dark:bg-noche-2"}`}
-              >
-                <Text className={`text-xs font-bold ${filter === id ? "text-white" : "text-slate-600 dark:text-slate-200"}`}>
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
 
           {(showIncomeTotal || showExpenseTotal) ? <View className={`px-5 mt-3 mb-3 ${totalsVertical ? "gap-3" : "flex-row gap-3"}`}>
             {showIncomeTotal && (
