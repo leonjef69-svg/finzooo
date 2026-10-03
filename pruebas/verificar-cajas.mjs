@@ -35,6 +35,7 @@ const rules = fs.readFileSync("firestore.rules", "utf8");
 const deletion = fs.readFileSync("utils/cloudSync.ts", "utf8");
 const screen = fs.readFileSync("screens/Cajas.tsx", "utf8");
 const movementSheet = fs.readFileSync("components/SpaceMovementSheet.tsx", "utf8");
+const movementControls = fs.readFileSync("components/SpaceMovementControls.tsx", "utf8");
 const movementFields = fs.readFileSync("components/SpaceMovementFields.tsx", "utf8");
 const categorySheet = fs.readFileSync("components/TransactionCategorySheet.tsx", "utf8");
 const sharedScreen = fs.readFileSync("screens/SharedBoxes.tsx", "utf8");
@@ -48,6 +49,9 @@ assert.match(rules, /match \/cajas\/\{userId\}/, "la nube protege las cajas por 
 assert.match(deletion, /borrarCajasDeLaNube/, "al eliminar la cuenta también se eliminan sus cajas");
 assert.match(screen, /internalTransferLink: link/, "el débito de Personal queda enlazado con el ingreso de la caja");
 assert.match(movementSheet, /TransactionCategorySheet/, "Caja usa el selector actual de categorías");
+assert.match(movementSheet, /<SpacePaymentMethod value=\{method\} onChange=\{onMethod\} disabled=\{disabled\} compact \/>/, "Caja usa el método de pago compacto en el formulario compartido");
+assert.match(movementControls, /compact \? "min-w-0 flex-1" : "mt-2"/, "el campo de pago ocupa la mitad disponible junto a descripción en Familia y Caja");
+assert.match(movementControls, /compact \? "h-12 w-full flex-row items-center justify-center/, "el control de pago llena su columna y queda alineado con descripción");
 assert.match(movementFields, /onOpenCategory/, "el campo de caja abre el selector reutilizable");
 assert.doesNotMatch(movementFields, /<Modal|EXPENSE_CATS|INCOME_CATS/, "Caja ya no conserva el selector antiguo de categorías");
 assert.match(categorySheet, /chooseImage\("camera"\)/, "la categoría de caja acepta foto de cámara");

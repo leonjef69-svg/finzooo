@@ -6,6 +6,7 @@ const rules = fs.readFileSync("firestore.rules", "utf8");
 const cloud = fs.readFileSync("utils/cloudFamilia.ts", "utf8");
 const screen = fs.readFileSync("screens/Family.tsx", "utf8");
 const movementSheet = fs.readFileSync("components/SpaceMovementSheet.tsx", "utf8");
+const movementControls = fs.readFileSync("components/SpaceMovementControls.tsx", "utf8");
 const movementFields = fs.readFileSync("components/SpaceMovementFields.tsx", "utf8");
 const categorySheet = fs.readFileSync("components/TransactionCategorySheet.tsx", "utf8");
 const invitationSheet = fs.readFileSync("components/SpaceInvitationSheet.tsx", "utf8");
@@ -37,6 +38,9 @@ assert.match(movementFilter, /text-\[14px\] font-extrabold/, "el filtro de movim
 assert.match(movementSheet, /\[\"externo\", \"personal\"\] as const/, "el formulario permite distinguir dinero externo de Personal");
 assert.match(movementSheet, /onOrigin\(value\)/, "el formulario aplica el origen seleccionado");
 assert.match(movementSheet, /TransactionCategorySheet/, "Familia usa el selector actual de categorías");
+assert.match(movementSheet, /<SpacePaymentMethod value=\{method\} onChange=\{onMethod\} disabled=\{disabled\} compact \/>/, "Familia usa el método de pago compacto en el formulario compartido");
+assert.match(movementControls, /compact \? "min-w-0 flex-1" : "mt-2"/, "el campo de pago ocupa la mitad disponible junto a descripción en Familia y Caja");
+assert.match(movementControls, /compact \? "h-12 w-full flex-row items-center justify-center/, "el control de pago llena su columna y queda alineado con descripción");
 assert.match(movementSheet, /gastosDisponibles, ingresosDisponibles/, "Familia ofrece categorías filtradas por ingreso o gasto");
 assert.match(movementFields, /onOpenCategory/, "el campo familiar abre el selector reutilizable");
 assert.doesNotMatch(movementFields, /<Modal|EXPENSE_CATS|INCOME_CATS/, "Familia ya no conserva el selector antiguo de categorías");

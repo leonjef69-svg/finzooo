@@ -107,8 +107,8 @@ export function SpacePaymentMethod({ value, onChange, disabled = false, compact 
   const { t, userCountry } = useAppData();
   const [open, setOpen] = useState(false);
   const methods = PAYMENT_METHODS.filter(m => (m.id !== "plin" || userCountry === "PE") && (m.id !== "yape" || userCountry === "PE" || userCountry === "BO"));
-  return <View className={compact ? "w-[132px]" : "mt-2"}>
-    <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: open }} disabled={disabled} onPress={() => setOpen(true)} className={compact ? "h-12 flex-row items-center justify-center rounded-xl border border-slate-200 px-2 dark:border-noche-borde" : "min-h-11 flex-row items-center justify-between rounded-xl border border-slate-200 px-3 dark:border-noche-borde"}>
+  return <View className={compact ? "min-w-0 flex-1" : "mt-2"}>
+    <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: open }} disabled={disabled} onPress={() => setOpen(true)} className={compact ? "h-12 w-full flex-row items-center justify-center rounded-xl border border-slate-200 px-2 dark:border-noche-borde" : "min-h-11 flex-row items-center justify-between rounded-xl border border-slate-200 px-3 dark:border-noche-borde"}>
       {!compact ? <Text className="text-sm font-semibold text-slate-700 dark:text-slate-200">{t("detail.method")}</Text> : null}
       <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{compact ? `${t("detail.method")} · ` : ""}{t(methods.find(m => m.id === value)?.labelKey || methods[0].labelKey)} ▾</Text>
     </TouchableOpacity>
