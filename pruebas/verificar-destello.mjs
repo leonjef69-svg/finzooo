@@ -59,6 +59,7 @@ console.log("\n--- Y LO QUE YA ESTABA, QUE NO SE PUEDE PERDER ---");
   const finAlta = raiz.indexOf('name="transaction/[id]/edit"', inicioAlta);
   const alta = raiz.slice(inicioAlta, finAlta);
   ok(/presentation:\s*"transparentModal"/.test(alta), "nuevo movimiento conserva Inicio detrás del panel");
+  ok(/animation:\s*"slide_from_bottom"/.test(alta), "nuevo movimiento también sube desde abajo al abrirse");
   ok(
     /contentStyle:\s*\{\s*backgroundColor:\s*"transparent"\s*\}/.test(alta),
     "la ruta no tapa el panel con un fondo opaco"

@@ -581,6 +581,7 @@ function RootLayout() {
               name="transaction/new"
               options={{
                 presentation: "transparentModal",
+                animation: "slide_from_bottom",
                 contentStyle: { backgroundColor: "transparent" },
               }}
             />
