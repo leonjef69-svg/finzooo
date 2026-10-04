@@ -1,28 +1,27 @@
+import { useRef } from "react";
 import { useLocalSearchParams } from "expo-router";
 import ExportPdfSheet from "@/screens/ExportPdfSheet";
 import PremiumLocked from "@/components/PremiumLocked";
 import { useAppData } from "@/contexts/AppDataContext";
 import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
+import { takeQueuedExport, type PendingExport } from "@/utils/pendingExport";
+import { useAppLocked } from "@/utils/lockState";
 
 export default function ExportPdfRoute() {
   const { t, isPremium } = useAppData();
   const blocked = useRedirectIfOrphaned();
-  // Lo que puede venir de la orden por voz o de una exportación programada:
-  // "/export-pdf?month=2026-01&format=pdf&type=all&dest=drive&auto=1&silent=1"
-  const { month, format, type, auto, dest, silent, name, to, charts, space, run } = useLocalSearchParams<{
-    month?: string;
-    format?: string;
-    type?: string;
-    auto?: string;
-    dest?: string;
-    silent?: string;
-    name?: string;
-    to?: string;
-    charts?: string;
-    space?: string;
-    run?: string;
-  }>();
-  if (blocked) return null;
+  const locked = useAppLocked();
+  // Una URL puede traer cualquier parámetro. Solo un token impredecible que
+  // Fino acaba de crear permite ejecutar una orden automática. Lo demás se
+  // ignora: un enlace externo abre como mucho el formulario manual.
+  const { intent } = useLocalSearchParams<{ intent?: string }>();
+  const queuedRef = useRef<{ token: string | undefined; value: PendingExport | null } | null>(null);
+  const token = typeof intent === "string" ? intent : undefined;
+  if (queuedRef.current?.token !== token || queuedRef.current === null) {
+    queuedRef.current = { token, value: takeQueuedExport(token) };
+  }
+  const queued = queuedRef.current.value;
+  if (blocked || locked) return null;
 
   if (!isPremium) {
     return (
@@ -38,27 +37,17 @@ export default function ExportPdfRoute() {
   return (
     <ExportPdfSheet
       onClose={safeBack}
-      initialMonth={month}
-      initialFormat={format === "csv" ? "csv" : format === "xlsx" ? "xlsx" : "pdf"}
-      initialType={type === "expense" || type === "income" ? type : "all"}
-      autoExport={auto === "1"}
-      initialCharts={charts === "1"}
-      destination={
-        dest === "drive" ||
-        dest === "dropbox" ||
-        dest === "onedrive" ||
-        dest === "folder" ||
-        dest === "mail" ||
-        dest === "gmail" ||
-        dest === "whatsapp"
-          ? dest
-          : "share"
-      }
-      silent={silent === "1"}
-      fileName={name}
-      recipientName={to}
-      initialSpaceId={space}
-      scheduledRunKey={run}
+      initialMonth={queued?.month}
+      initialFormat={queued?.format ?? "pdf"}
+      initialType={queued?.type ?? "all"}
+      autoExport={queued?.auto === true}
+      initialCharts={queued?.charts === true}
+      destination={queued?.destination ?? "share"}
+      silent={queued?.silent === true}
+      fileName={queued?.fileName}
+      recipientName={queued?.recipientName}
+      initialSpaceId={queued?.spaceId}
+      scheduledRunKey={queued?.runKey}
     />
   );
 }

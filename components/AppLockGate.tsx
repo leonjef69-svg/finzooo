@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { AppState, Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Lock } from "lucide-react-native";
 import PinPad from "@/components/PinPad";
@@ -10,7 +10,8 @@ import {
   PIN_LENGTH,
   biometricKind,
   usaHuella,
-  isLockEnabled,
+  lockEnabledState,
+  subscribeLockConfiguration,
   olvidarSalida,
   pinRetryAfterMs,
   promptBiometrics,
@@ -26,15 +27,17 @@ import {
 /**
  * Tapa la app entera cuando está bloqueada.
  *
- * Va DENTRO de la vista raíz y encima de todo (incluidos los paneles
- * modales), no como una pantalla más de navegación. Si fuera una pantalla,
- * bastaría con el botón de "atrás" de Android para saltársela.
+ * Usa un modal nativo sobre la navegación y sus paneles. Si fuera una
+ * pantalla, bastaría con el botón de "atrás" de Android para saltársela.
  */
 export default function AppLockGate() {
   const { t, ready } = useAppData();
   const insets = useSafeAreaInsets();
 
   const [enabled, setEnabled] = useState(false);
+  const [checked, setChecked] = useState(false);
+  const [lockError, setLockError] = useState(false);
+  const [checkVersion, setCheckVersion] = useState(0);
   const [locked, setLocked] = useState(false);
   const [kind, setKind] = useState<BiometricKind>("none");
   const [pin, setPin] = useState("");
@@ -59,6 +62,7 @@ export default function AppLockGate() {
   // sale.
   const prompting = useRef(false);
   const leftAt = useRef<number | null>(null);
+  const lockErrorRef = useRef(false);
 
   // ¿Está el candado puesto AHORA MISMO? En una "caja" porque lo mira el
   // escuchador de abajo, que se registra una sola vez y si no vería siempre
@@ -84,12 +88,27 @@ export default function AppLockGate() {
   // depender de si Android tuvo a bien no matarla.
   useEffect(() => {
     let alive = true;
+    setChecked(false);
     (async () => {
-      const on = await isLockEnabled();
+      const status = await lockEnabledState();
       if (!alive) return;
+      if (status === "unavailable") {
+        lockErrorRef.current = true;
+        setLockError(true);
+        setEnabled(true);
+        setLocked(true);
+        setKind("none");
+        setPin("");
+        setChecked(true);
+        return;
+      }
+      const hadReadError = lockErrorRef.current;
+      lockErrorRef.current = false;
+      setLockError(false);
+      const on = status === "enabled";
       setEnabled(on);
       if (on) {
-        const reciente = await salioHaceNada();
+        const reciente = !hadReadError && await salioHaceNada();
         if (!alive) return;
         setLocked(!reciente);
         // Si ya no vale, se borra: una marca vieja no tiene por qué quedarse
@@ -100,20 +119,47 @@ export default function AppLockGate() {
       } else {
         setLocked(false);
       }
+      if (alive) setChecked(true);
     })();
     return () => {
       alive = false;
     };
-  }, []);
+  }, [checkVersion]);
 
-  const offerBiometrics = kind !== "none";
+  // Encender o apagar el candado en Ajustes debe surtir efecto en esta misma
+  // sesión. Antes se leía una sola vez al montar la app.
+  useEffect(() => subscribeLockConfiguration(() => {
+    void lockEnabledState().then(async (status) => {
+      if (status === "unavailable") {
+        lockErrorRef.current = true;
+        setLockError(true);
+        setEnabled(true);
+        setLocked(true);
+        setKind("none");
+        setPin("");
+        return;
+      }
+      lockErrorRef.current = false;
+      setLockError(false);
+      const on = status === "enabled";
+      setEnabled(on);
+      if (!on) {
+        setLocked(false);
+        setKind("none");
+      } else {
+        setKind((await usaHuella()) ? await biometricKind() : "none");
+      }
+    });
+  }), []);
+
+  const offerBiometrics = !lockError && kind !== "none";
 
   const askBiometrics = useCallback(async () => {
-    if (!offerBiometrics || prompting.current) return;
+    if (!offerBiometrics || prompting.current || lockErrorRef.current) return;
     prompting.current = true;
     const ok = await promptBiometrics(t("lock.prompt"), t("lock.usePin"));
     prompting.current = false;
-    if (ok) {
+    if (ok && !lockErrorRef.current) {
       setLocked(false);
       setPin("");
       setFailures(0);
@@ -156,7 +202,7 @@ export default function AppLockGate() {
 
   // Comprobar el PIN en cuanto se completa: no hace falta botón de aceptar.
   useEffect(() => {
-    if (pin.length !== PIN_LENGTH || retrySeconds > 0) return;
+    if (lockError || pin.length !== PIN_LENGTH || retrySeconds > 0) return;
     let alive = true;
     (async () => {
       const match = await verifyPin(pin);
@@ -190,25 +236,43 @@ export default function AppLockGate() {
     return () => {
       alive = false;
     };
-  }, [pin, retrySeconds]);
+  }, [pin, retrySeconds, lockError]);
 
   // Se avisa al resto de la app de si el candado está puesto. Lo usa la
   // apertura de un estado de cuenta compartido: mientras esto sea cierto no
   // se navega a ningún sitio, porque abrir Importar por debajo del candado
   // solo consigue que la app se lo lleve por delante al desbloquear. Ver
   // utils/lockState.ts.
-  setAppLocked(ready && locked);
+  useLayoutEffect(() => {
+    setAppLocked(!ready || !checked || locked);
+  }, [ready, checked, locked]);
 
   // Mientras se cargan los datos guardados no se dibuja nada: si se pintara
   // la app antes de saber si hay bloqueo, se vería el saldo un instante
   // ANTES de pedir la huella, que es justo lo que hay que evitar.
-  if (!ready || !locked) return null;
+  if (ready && checked && !locked) return null;
 
   return (
-    <View
-      className="absolute inset-0 z-50 bg-white dark:bg-noche"
-      style={{ paddingTop: insets.top, paddingBottom: insets.bottom + 20 }}
-    >
+    <Modal visible animationType="fade" onRequestClose={() => undefined} statusBarTranslucent>
+    <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top, paddingBottom: insets.bottom + 20 }}>
+      {(!ready || !checked) ? (
+        <View className="flex-1 items-center justify-center px-6">
+          <Lock size={28} color="#059669" />
+          <Text className="mt-4 text-center text-base font-bold text-slate-900 dark:text-slate-100">
+            {t("lock.checking")}
+          </Text>
+        </View>
+      ) : lockError ? (
+        <View className="flex-1 items-center justify-center px-6">
+          <Lock size={28} color="#059669" />
+          <Text className="mt-4 text-center text-base font-bold text-slate-900 dark:text-slate-100">
+            {t("lock.readError")}
+          </Text>
+          <TouchableOpacity onPress={() => setCheckVersion((value) => value + 1)} className="mt-5 px-5 py-3 rounded-2xl bg-emerald-600">
+            <Text className="text-sm font-bold text-white">{t("lock.retryCheck")}</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
@@ -260,6 +324,8 @@ export default function AppLockGate() {
         </TouchableOpacity>
       )}
       </ScrollView>
+      )}
     </View>
+    </Modal>
   );
 }

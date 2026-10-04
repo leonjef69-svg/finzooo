@@ -24,12 +24,27 @@
  * ningún sitio; el archivo queda guardado y Importar se abre justo después
  * de desbloquear, que es cuando la persona puede verlo.
  */
-let bloqueada = false;
+import { useSyncExternalStore } from "react";
+
+// Al arrancar todavía no se leyó SecureStore. La duda se trata como bloqueo.
+let bloqueada = true;
+const listeners = new Set<() => void>();
 
 export function setAppLocked(value: boolean): void {
+  if (bloqueada === value) return;
   bloqueada = value;
+  listeners.forEach((listener) => listener());
 }
 
 export function isAppLocked(): boolean {
   return bloqueada;
+}
+
+function subscribeAppLock(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
+
+export function useAppLocked(): boolean {
+  return useSyncExternalStore(subscribeAppLock, isAppLocked, isAppLocked);
 }

@@ -13,7 +13,8 @@ import "../global.css";
 import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
 import { flushPendingSaves } from "@/utils/storage";
 import { getPendingImport, setPendingImport } from "@/utils/pendingImport";
-import { isAppLocked } from "@/utils/lockState";
+import { isAppLocked, useAppLocked } from "@/utils/lockState";
+import { queueExport } from "@/utils/pendingExport";
 import AppLockGate from "@/components/AppLockGate";
 import CelebrationOverlay from "@/components/CelebrationOverlay";
 import Toast from "@/components/Toast";
@@ -324,6 +325,7 @@ function typeLabelFor(type: "all" | "expense" | "income", t: (k: string) => stri
  */
 function ScheduledExportEffect() {
   const { ready, hasOnboarded, isPremium, t } = useAppData();
+  const locked = useAppLocked();
   const navigationRef = useNavigationContainerRef();
 
   // Una sola comprobación por arranque. Sin esto, cada vuelta al frente
@@ -341,7 +343,7 @@ function ScheduledExportEffect() {
   }, [ready, hasOnboarded]);
 
   useEffect(() => {
-    if (!ready || !hasOnboarded || !isPremium) return;
+    if (!ready || !hasOnboarded || !isPremium || locked) return;
 
     function abrirExportar(response: Notifications.NotificationResponse) {
       const screen = response.notification.request.content.data?.screen;
@@ -353,22 +355,20 @@ function ScheduledExportEffect() {
       if (screen !== "export") return;
       loadSchedule().then(async (s) => {
         if (!isNavigationMounted(navigationRef)) return;
-        irUnaVez({
-          pathname: "/export-pdf",
-          params: {
-            month: monthForSchedule(s, new Date()),
-            format: s.format,
-            type: s.type,
-            dest: s.destination,
-            name: buildFileName({
+        const intent = queueExport({
+          month: monthForSchedule(s, new Date()),
+          format: s.format,
+          type: s.type,
+          destination: s.destination,
+          fileName: buildFileName({
               mode: s.fileNameMode,
               custom: s.fileName,
               typeLabel: typeLabelFor(s.type, t),
               dateKey: toDateKey(new Date()),
               extension: s.format,
-            }),
-          },
+          }),
         });
+        irUnaVez({ pathname: "/export-pdf", params: { intent } });
       });
     }
 
@@ -411,34 +411,31 @@ function ScheduledExportEffect() {
         // no abre pantallas en bucle dentro de la misma sesión. Al abrir Fino
         // otra vez se reintenta, y al primer éxito queda confirmada la clave.
         const runKey = claveDeEjecucion(s, now);
-        irUnaVez({
-          pathname: "/export-pdf",
-          params: {
-            month: monthForSchedule(s, now),
-            format: s.format,
-            type: s.type,
-            // El destino que la persona eligió, no "drive" fijo. Con el fijo,
-            // quien eligiera la carpeta del teléfono recibía su copia en Drive.
-            dest: s.destination,
-            auto: "1",
-            silent: "1",
-            run: runKey,
-            charts: s.charts ? "1" : "0",
-            space: s.spaceId || "personal",
-            name: buildFileName({
+        const intent = queueExport({
+          month: monthForSchedule(s, now),
+          format: s.format,
+          type: s.type,
+          // El destino elegido, no un destino fijo.
+          destination: s.destination,
+          auto: true,
+          silent: true,
+          runKey,
+          charts: s.charts,
+          spaceId: s.spaceId || "personal",
+          fileName: buildFileName({
               mode: s.fileNameMode,
               custom: s.fileName,
               typeLabel: typeLabelFor(s.type, t),
               dateKey: toDateKey(now),
               extension: s.format,
-            }),
-          },
+          }),
         });
+        irUnaVez({ pathname: "/export-pdf", params: { intent } });
       });
     }
 
     return () => sub.remove();
-  }, [ready, hasOnboarded, isPremium, navigationRef, t]);
+  }, [ready, hasOnboarded, isPremium, locked, navigationRef, t]);
 
   return null;
 }

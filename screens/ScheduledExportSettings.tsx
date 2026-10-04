@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { irUnaVez } from "@/utils/nav";
+import { queueExport } from "@/utils/pendingExport";
 import { ScrollView, Text, TextInput, TouchableOpacity, useWindowDimensions, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check, ChevronLeft, Cloud, FolderOpen, Info, Package, Play } from "lucide-react-native";
@@ -326,18 +327,16 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
   async function probarAhora() {
     const mesDePrueba = schedule.frequency === "monthly" ? testMonth : undefined;
     if (!saleSolo) {
-      irUnaVez({
-        pathname: "/export-pdf",
-        params: {
-          month: mesDePrueba || monthForSchedule(schedule, new Date()),
-          format: schedule.format,
-          type: schedule.type,
-          dest: schedule.destination,
-          name: nombreArchivo,
-          space: schedule.spaceId || "personal",
-          auto: "1",
-        },
+      const intent = queueExport({
+        month: mesDePrueba || monthForSchedule(schedule, new Date()),
+        format: schedule.format,
+        type: schedule.type,
+        destination: schedule.destination,
+        fileName: nombreArchivo,
+        spaceId: schedule.spaceId || "personal",
+        auto: true,
       });
+      irUnaVez({ pathname: "/export-pdf", params: { intent } });
       return;
     }
 

@@ -48,8 +48,9 @@ console.log("\n--- SOBREVIVE A QUE ANDROID MATE LA APP ---");
 
   // Sin esto, arrancar en frio bloquea siempre y el margen no sirve de nada
   // en los celulares que matan la app.
-  const arranque = gate.slice(gate.indexOf("const on = await isLockEnabled()"));
-  ok(arranque.slice(0, 600).includes("salioHaceNada"), "el arranque en frio mira si se acaba de salir");
+  const arranque = gate.slice(gate.indexOf("const status = await lockEnabledState()"));
+  ok(/const reciente = !hadReadError && await salioHaceNada\(\)/.test(arranque),
+    "el arranque en frio mira si se acaba de salir, excepto tras un fallo de lectura");
 }
 
 console.log("\n--- ESTANDO BLOQUEADO NO SE APUNTA NADA ---");

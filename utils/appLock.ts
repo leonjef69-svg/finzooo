@@ -26,6 +26,16 @@ const KEY_SALT = "finzo.lock.salt";
 const KEY_LEGACY_ALTERNATE_PIN = "finzo.lock.alt";
 const KEY_FAILED_ATTEMPTS = "finzo.lock.failedAttempts";
 const KEY_LOCK_UNTIL = "finzo.lock.lockUntil";
+const configurationListeners = new Set<() => void>();
+
+export function subscribeLockConfiguration(listener: () => void): () => void {
+  configurationListeners.add(listener);
+  return () => { configurationListeners.delete(listener); };
+}
+
+function notifyLockConfiguration(): void {
+  configurationListeners.forEach((listener) => listener());
+}
 
 export const PIN_LENGTH = 4;
 
@@ -167,9 +177,20 @@ export async function promptBiometrics(reason: string, cancelLabel: string): Pro
   }
 }
 
-export async function isLockEnabled(): Promise<boolean> {
+export type LockEnabledState = "enabled" | "disabled" | "unavailable";
+
+export async function lockEnabledState(): Promise<LockEnabledState> {
   void remove(KEY_LEGACY_ALTERNATE_PIN);
-  return (await read(KEY_ENABLED)) === "1";
+  try {
+    return (await SecureStore.getItemAsync(KEY_ENABLED)) === "1" ? "enabled" : "disabled";
+  } catch {
+    // La interfaz distingue este fallo para no aplicar el margen de regreso.
+    return "unavailable";
+  }
+}
+
+export async function isLockEnabled(): Promise<boolean> {
+  return (await lockEnabledState()) !== "disabled";
 }
 
 export async function hasPin(): Promise<boolean> {
@@ -197,21 +218,38 @@ export async function enableLock(pin: string): Promise<boolean> {
 
   await write(KEY_SALT, salt);
   await write(KEY_HASH, hash);
+  try {
+    const [storedSalt, storedHash] = await Promise.all([
+      SecureStore.getItemAsync(KEY_SALT),
+      SecureStore.getItemAsync(KEY_HASH),
+    ]);
+    if (storedSalt !== salt || storedHash !== hash) return false;
+  } catch {
+    return false;
+  }
   await write(KEY_ENABLED, "1");
 
   // Se comprueba leyendo de vuelta: si algo del cajón cifrado falló, esto
   // devuelve false y la pantalla no dice que quedó activado.
-  return (await isLockEnabled()) && (await hasPin());
+  const enabled = (await lockEnabledState()) === "enabled" && (await hasPin());
+  if (enabled) notifyLockConfiguration();
+  return enabled;
 }
 
 /** Apaga el bloqueo y borra el PIN. */
-export async function disableLock(): Promise<void> {
+export async function disableLock(): Promise<boolean> {
   await remove(KEY_ENABLED);
+  // No borrar el PIN si el interruptor sigue encendido: de lo contrario un
+  // fallo parcial dejaría el teléfono bloqueado sin forma de abrirlo.
+  const disabled = (await lockEnabledState()) === "disabled";
+  if (!disabled) return false;
   await remove(KEY_HASH);
   await remove(KEY_SALT);
   await remove(KEY_LEGACY_ALTERNATE_PIN);
   await remove(KEY_FAILED_ATTEMPTS);
   await remove(KEY_LOCK_UNTIL);
+  notifyLockConfiguration();
+  return true;
 }
 
 export type PinMatch = "real" | "locked" | null;
@@ -280,4 +318,5 @@ export async function usaHuella(): Promise<boolean> {
 
 export async function guardarUsaHuella(valor: boolean): Promise<void> {
   await write(KEY_HUELLA, valor ? "1" : "0");
+  notifyLockConfiguration();
 }

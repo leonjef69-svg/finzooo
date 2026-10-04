@@ -22,18 +22,31 @@
 - Importar archivos compartidos ya no recibe una ruta desde la dirección de la
   pantalla. El archivo llega por el canal interno de Android y un enlace externo
   no puede pedirle a Fino que lea o borre una ruta local arbitraria.
+- Exportar tampoco acepta instrucciones automáticas desde la dirección de la
+  pantalla. Solo una orden interna, con identificador temporal y opciones
+  guardadas en memoria, puede abrir una exportación directa. Órdenes diferentes
+  ya no comparten identificador aunque ocurran casi al mismo tiempo. La tarea
+  programada espera a que el candado esté abierto.
+- El candado cubre también los paneles nativos. Si falla la lectura del estado
+  seguro, permanece cerrado y permite reintentar; no aplica el margen de
+  regreso ni anuncia activación sin confirmación. Al apagarlo, conserva el PIN
+  si no pudo verificar que el interruptor se apagó. El cambio de huella/PIN se
+  refleja durante la misma sesión.
 - Cerrar sesión y borrar la cuenta ahora usan la misma limpieza local: retiran
   avisos de pagos, exportación y tarjetas; desconectan Dropbox/OneDrive; apagan
   el PIN y el lector de notificaciones; borran los datos locales y vacían los
   datos de la cuenta que quedan en memoria.
-- Verificado: TypeScript, ESLint, 123 pruebas y 8 auditores aprobados. No se
-  compiló una APK, no se probó en un teléfono y no se publicaron cambios en
-  Firebase o Play Console.
+- Verificado: TypeScript, ESLint, 124 pruebas locales y 8 auditores aprobados,
+  incluidos casos de enlace externo, órdenes simultáneas y errores del cajón
+  seguro. Una prueba local adicional ajena a este cambio sigue sin registrar
+  en Git. No se compiló una APK, no se probó el nuevo flujo en un teléfono y
+  no se publicaron cambios en Firebase o Play Console.
 - **Pendiente:** evitar la pérdida de datos Gratis al cerrar sesión sin dejar
-  que otra cuenta vea los datos locales; terminar la fusión segura de nube y
+  que otra cuenta vea los datos locales (copias cifradas separadas por cuenta y
+  barrera antes de cargar cualquier dato); terminar la fusión segura de nube y
   teléfono; aplicar la protección Pro en Firebase; decidir el tratamiento de
-  aportes pendientes de Familia/Caja; y corregir enlaces de exportación y el
-  candado. La protección local anterior no recupera una llave de cifrado
+  aportes pendientes de Familia/Caja; y probar el nuevo candado y los enlaces
+  en un dispositivo. La protección local anterior no recupera una llave de cifrado
   perdida: evita destruir lo que aún quede. El runtime Node 22 también debe
   prepararse antes del 30/10/2026. Ver FINO-01 a FINO-05 y FINO-13, 24, 41,
   42 y 58 del informe. Antes del 30/10 hay que comprobar y publicar las

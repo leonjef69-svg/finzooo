@@ -7,6 +7,7 @@ import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "expo-spe
 import { useAppData } from "@/contexts/AppDataContext";
 import { applyVoiceCorrection, type VoiceFailure } from "@/utils/voiceParser";
 import { parseVoiceCommand } from "@/utils/voiceCommand";
+import { queueExport } from "@/utils/pendingExport";
 import { suggestCategory } from "@/utils/classifier";
 import CategoryAvatar from "@/components/CategoryAvatar";
 import { catInfo } from "@/constants/categories";
@@ -444,25 +445,18 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     // seguridad quedó del otro lado: si el mes que se entendió no tiene
     // movimientos, no se exporta nada y se avisa cuál era.
     if (command.kind === "export") {
+      const intent = queueExport({
+        month: command.monthKey,
+        format: command.format,
+        destination: command.destination,
+        type: command.type,
+        charts: command.charts,
+        recipientName: command.recipient,
+        auto: true,
+      });
       router.replace({
         pathname: "/export-pdf",
-        params: {
-          month: command.monthKey,
-          format: command.format,
-          dest: command.destination,
-          // Todo, solo gastos o solo ingresos. Sin esto, decir "ingresos"
-          // salía entendido en todo menos en lo único que hacía distinto al
-          // documento: llegaba el mes entero.
-          type: command.type,
-          // Los graficos solo si se pidieron: "exportar julio pdf con
-          // graficos". Sin decirlo llega la lista sola, que es lo normal.
-          charts: command.charts ? "1" : "0",
-          // A quien, tal como se dijo. La pantalla de exportar lo busca entre
-          // los contactos guardados; si no lo encuentra, abre la app y se
-          // elige alli, que es lo que pasaba antes de esto.
-          to: command.recipient,
-          auto: "1",
-        },
+        params: { intent },
       });
       return;
     }
@@ -1105,12 +1099,13 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
             </View>
 
             <TouchableOpacity
-              onPress={() =>
+              onPress={() => {
+                const intent = queueExport({ month: summaryMk, format: "pdf", auto: true });
                 router.replace({
                   pathname: "/export-pdf",
-                  params: { month: summaryMk, format: "pdf", auto: "1" },
-                })
-              }
+                  params: { intent },
+                });
+              }}
               className="w-full flex-row items-center justify-center gap-2 py-4 rounded-2xl bg-violet-500 mt-4"
             >
               <Check size={18} color="#ffffff" />

@@ -841,7 +841,9 @@ console.log("\n--- 'PROBAR AHORA' PRUEBA EL CAMINO QUE VA A CORRER ---");
   );
   // Y solo cuando de verdad va a salir solo. Si no puede, lo que va a pasar a la
   // hora ES abrir la pantalla, así que probar eso es lo correcto.
-  ok(/if \(!saleSolo\) \{[\s\S]{0,200}?pathname: "\/export-pdf"/.test(pant), "y si no sale solo, prueba lo que sí pasará");
+  const pruebaConPantalla = pant.slice(pant.indexOf("if (!saleSolo) {"), pant.indexOf("if (probando)", pant.indexOf("if (!saleSolo) {")));
+  ok(pruebaConPantalla.includes("queueExport({") && pruebaConPantalla.includes('pathname: "/export-pdf"'),
+    "y si no sale solo, prueba lo que sí pasará");
   // Los ajustes se guardan agrupados con un retardo y el trabajo los lee DEL
   // DISCO: sin volcarlos, probar tras cambiar la hora probaría la hora anterior.
   ok(
@@ -1110,23 +1112,26 @@ console.log("\n--- LA RECUPERACIÓN AL ABRIR CONFIRMA SOLO DESPUÉS DEL ÉXITO -
   const layout = fs.readFileSync(path.join(RAIZ, "app/_layout.tsx"), "utf8");
   const ruta = fs.readFileSync(path.join(RAIZ, "app/export-pdf.tsx"), "utf8");
   const hoja = fs.readFileSync(path.join(RAIZ, "screens/ExportPdfSheet.tsx"), "utf8");
+  const config = fs.readFileSync(path.join(RAIZ, "utils/scheduledExport.ts"), "utf8");
 
   const recuperacion = layout.slice(layout.indexOf("// La copia que se guarda sola"));
   ok(
     !/saveSchedule\(\{ \.\.\.s, lastAutoRun:/.test(recuperacion.slice(0, 2600)),
     "abrir la app no marca la ejecución antes de subir"
   );
-  ok(/run: runKey/.test(recuperacion), "la clave viaja hasta quien realiza la exportación");
-  ok(/charts: s\.charts \? "1" : "0"/.test(recuperacion), "también conserva la opción de gráficos");
-  ok(/space: s\.spaceId \|\| "personal"/.test(recuperacion), "y el espacio Familia/Caja elegido");
+  ok(/runKey,/.test(recuperacion), "la clave viaja en la orden interna hasta quien realiza la exportación");
+  ok(/charts: s\.charts/.test(recuperacion), "también conserva la opción de gráficos");
+  ok(/spaceId: s\.spaceId \|\| "personal"/.test(recuperacion), "y el espacio Familia/Caja elegido");
 
   for (const destino of ["drive", "dropbox", "onedrive", "folder"] as const) {
     ok(
-      ruta.includes(`dest === "${destino}"`),
+      /destination: s\.destination/.test(recuperacion) &&
+        /destination=\{queued\?\.destination \?\? "share"\}/.test(ruta) &&
+        config.includes(`| "${destino}"`),
       `la ruta automática conserva el destino ${destino}`
     );
   }
-  ok(/scheduledRunKey=\{run\}/.test(ruta), "la pantalla recibe la ejecución que debe confirmar");
+  ok(/scheduledRunKey=\{queued\?\.runKey\}/.test(ruta), "la pantalla recibe la ejecución que debe confirmar");
   ok(
     /saveSchedule\(\{ \.\.\.actual, lastAutoRun: scheduledRunKey \}\)/.test(hoja),
     "el éxito confirma la ejecución sin pisar ajustes recientes"

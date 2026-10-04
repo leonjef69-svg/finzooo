@@ -122,10 +122,17 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
         const ok = await verifyPin(pin);
         if (!alive) return;
         if (ok === "real") {
-          await disableLock();
-          setEnabled(false);
-          setMessage("");
-          reset();
+          const disabled = await disableLock();
+          if (!alive) return;
+          if (disabled) {
+            setEnabled(false);
+            setMessage("");
+            reset();
+          } else {
+            setError(true);
+            setMessage(t("lock.saveFailed"));
+            setPin("");
+          }
         } else {
           setError(true);
           setTimeout(() => {
