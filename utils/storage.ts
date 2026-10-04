@@ -193,12 +193,44 @@ export async function clearAccountData(): Promise<void> {
   } catch {
     // Algunos fabricantes fallan al borrar muchas claves juntas. Se vuelve
     // a intentar una por una para no dejar datos de la cuenta anterior.
-    await Promise.allSettled(
+    const results = await Promise.allSettled(
       [...allKeys, "@fino/credit-v1"].map((key) =>
         AsyncStorage.removeItem(key),
       ),
     );
+    if (results.some((result) => result.status === "rejected")) {
+      reportStorageWriteError();
+      throw new Error("account-local-data-clear-failed");
+    }
   }
+  unreadableLocalData = false;
+}
+
+// Un fallo de lectura no es una lista vacía. Conservamos el texto cifrado
+// original e impedimos cualquier guardado local o respaldo de datos parciales
+// hasta que se pueda abrir de nuevo. El bloqueo vive en memoria: al reiniciar,
+// Android vuelve a intentar leer la llave y los datos originales.
+let unreadableLocalData = false;
+type StorageReadErrorListener = () => void;
+let storageReadErrorListener: StorageReadErrorListener | null = null;
+
+export function hasUnreadableLocalData(): boolean {
+  return unreadableLocalData;
+}
+
+export function subscribeStorageReadErrors(listener: StorageReadErrorListener): () => void {
+  storageReadErrorListener = listener;
+  if (unreadableLocalData) listener();
+  return () => {
+    if (storageReadErrorListener === listener) storageReadErrorListener = null;
+  };
+}
+
+function markUnreadableLocalData(): void {
+  if (unreadableLocalData) return;
+  unreadableLocalData = true;
+  discardPendingSaves();
+  storageReadErrorListener?.();
 }
 
 export async function loadJSON<T>(key: string, fallback: T): Promise<T> {
@@ -219,6 +251,7 @@ export async function loadJSON<T>(key: string, fallback: T): Promise<T> {
     saveJSON(key, parsed);
     return parsed;
   } catch {
+    markUnreadableLocalData();
     return fallback;
   }
 }
@@ -263,8 +296,15 @@ function reportStorageWriteError(): void {
 }
 
 function writeNow(key: string, value: unknown): Promise<void> {
+  if (unreadableLocalData) {
+    reportStorageWriteError();
+    return Promise.resolve();
+  }
   return encryptText(JSON.stringify(value))
-    .then((encrypted) => AsyncStorage.setItem(key, encrypted))
+    .then((encrypted) => {
+      if (unreadableLocalData) return;
+      return AsyncStorage.setItem(key, encrypted);
+    })
     .catch(() => {
       reportStorageWriteError();
     });
@@ -281,8 +321,13 @@ export async function saveJSONNow(key: string, value: unknown): Promise<boolean>
   if (timer) clearTimeout(timer);
   pendingTimers.delete(target);
   pendingValues.delete(target);
+  if (unreadableLocalData) {
+    reportStorageWriteError();
+    return false;
+  }
   try {
     const encrypted = await encryptText(JSON.stringify(value));
+    if (unreadableLocalData) return false;
     await AsyncStorage.setItem(target, encrypted);
     return true;
   } catch {
@@ -292,6 +337,10 @@ export async function saveJSONNow(key: string, value: unknown): Promise<boolean>
 }
 
 export function saveJSON(key: string, value: unknown): void {
+  if (unreadableLocalData) {
+    reportStorageWriteError();
+    return;
+  }
   const target = key;
   pendingValues.set(target, value);
 

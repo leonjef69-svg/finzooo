@@ -1,5 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import CryptoJS from "crypto-js";
 
 // La "llave maestra" que cifra todo se guarda en el cajón cifrado del
@@ -28,9 +29,25 @@ function bytesToHex(bytes: Uint8Array): string {
 // en disco sigue estando únicamente en el cajón cifrado del sistema.
 let cachedKeyPromise: Promise<string> | null = null;
 
+async function hasEncryptedDataOnDevice(): Promise<boolean> {
+  // SecureStore puede devolver null si Android pierde/invalida su llave. En
+  // ese caso crear otra llave destruiria la posibilidad de recuperar los
+  // datos ya cifrados. Solo es seguro crearla en una instalacion sin datos.
+  const keys = await AsyncStorage.getAllKeys();
+  for (const [, raw] of await AsyncStorage.multiGet(keys)) {
+    if (raw && (raw.startsWith("v2:") || /^[0-9a-f]{32}:/i.test(raw))) {
+      return true;
+    }
+  }
+  return false;
+}
+
 async function readOrCreateKey(): Promise<string> {
   const existing = await SecureStore.getItemAsync(KEY_STORAGE_NAME);
   if (existing) return existing;
+  if (await hasEncryptedDataOnDevice()) {
+    throw new Error("encryption-key-missing-with-existing-data");
+  }
   const randomBytes = await Crypto.getRandomBytesAsync(32);
   const key = bytesToHex(randomBytes);
   await SecureStore.setItemAsync(KEY_STORAGE_NAME, key);

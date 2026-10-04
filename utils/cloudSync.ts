@@ -17,6 +17,7 @@ import {
 import { mergeCloudFields } from "@/utils/cloudFieldMerge";
 import { assertLegacyHistoryFormat, UnsupportedHistoryFormatError } from "@/utils/cloudHistoryMigration";
 import { clearHistoryV2Cache, deleteHistoryV2, loadHistoryV2, saveHistoryV2 } from "@/utils/cloudHistoryV2";
+import { hasUnreadableLocalData } from "@/utils/storage";
 
 export type CloudData = {
   historyFormat?: 1 | 2;
@@ -175,6 +176,11 @@ export function conservarPremiumManual(
 // promesa por si quien la llama necesita esperar a que termine (por
 // ejemplo, antes de cerrar sesión) en vez de solo "lanzarla y olvidarla".
 export async function saveCloudData(uid: string, data: CloudData): Promise<ResultadoNube> {
+  // Si una lectura local falló, el contexto puede tener valores de respaldo
+  // vacíos. Nunca se suben sobre la copia válida de otro teléfono.
+  if (hasUnreadableLocalData()) {
+    return { ok: false, motivo: "datos-locales-ilegibles" };
+  }
   // Firestore RECHAZA cualquier campo cuyo valor sea "undefined" y tira el
   // guardado entero. Como los movimientos ahora tienen campos opcionales
   // (comercio, cuenta, referencia...), uno vacío podría hacer que la copia
@@ -221,6 +227,7 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
     // último en guardar borraba silenciosamente lo que acababa de subir el otro.
     // Firestore repite esta función si el documento cambia mientras se prepara.
     await runTransaction(db, async (transaction) => {
+      if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
       const snap = await transaction.get(ref);
       const actual = snap.exists() ? snap.data() : null;
       assertLegacyHistoryFormat(actual);
@@ -252,6 +259,7 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
       // Se vuelve a medir aquí porque el tamaño anterior a la fusión ya no basta.
       if (pesa(siguiente) > TOPE_SEGURO) siguiente = sinFotos(siguiente);
       if (pesa(siguiente) > LIMITE_FIRESTORE) throw new Error("demasiado-grande");
+      if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
       saved = siguiente;
       transaction.set(ref, siguiente);
     });
@@ -263,10 +271,12 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
 
 async function saveCloudDataV2(uid: string, clean: CloudData): Promise<ResultadoNube> {
   try {
+    if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
     const history = await saveHistoryV2(uid, clean.transactions, clean.deletedTransactionIds ?? []);
     const ref = doc(db, "users", uid);
     let saved: CloudData = { ...clean, transactions: history.transactions, deletedTransactionIds: history.deletedIds };
     await runTransaction(db, async (transaction) => {
+      if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
       const snap = await transaction.get(ref);
       if (!snap.exists() || snap.data().historyFormat !== 2) throw new UnsupportedHistoryFormatError();
       const actual = snap.data() as CloudData;
@@ -290,6 +300,7 @@ async function saveCloudDataV2(uid: string, clean: CloudData): Promise<Resultado
         root = { ...withoutHistory, historyFormat: 2 as const };
       }
       if (pesa(root) > LIMITE_FIRESTORE) throw new Error("demasiado-grande");
+      if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
       transaction.set(ref, root);
       saved = { ...next, ...root, transactions: history.transactions, deletedTransactionIds: history.deletedIds };
     });

@@ -16,7 +16,7 @@ import {
   signOut,
   updatePassword,
 } from "firebase/auth";
-import { AppState, View } from "react-native";
+import { AppState, Modal, Text, View } from "react-native";
 import { colorScheme, useColorScheme, vars } from "nativewind";
 import { nativewindThemeVariables, type VisualStyle } from "@/constants/visualTheme";
 import { seedTransactions, seedGoals } from "@/constants/seed";
@@ -26,11 +26,13 @@ import { monthNamesFor, translations } from "@/constants/i18n";
 import {
   clearAccountData,
   clearRetiredAlternateData,
+  hasUnreadableLocalData,
   loadJSON,
   saveJSON,
   saveJSONNow,
   STORAGE_KEYS,
   subscribeStorageWriteErrors,
+  subscribeStorageReadErrors,
 } from "@/utils/storage";
 import {
   borrarNegocio as borrarNegocioYLoSuyo,
@@ -103,7 +105,7 @@ import {
   saveCloudData,
   type CloudData,
 } from "@/utils/cloudSync";
-import { CLOUD_SYNC_GROUPS, type CloudSyncGroup } from "@/utils/cloudFieldMerge";
+import { CLOUD_SYNC_GROUPS, mergeBudgetMonths, type CloudSyncGroup } from "@/utils/cloudFieldMerge";
 import { clearHistoryV2Cache } from "@/utils/cloudHistoryV2";
 import { subscribeTesterPremium } from "@/utils/testerPremium";
 import { TESTER_PREMIUM_INACTIVE, type TesterPremiumState } from "@/utils/testerPremiumState";
@@ -537,6 +539,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [autoCaptureLog, setAutoCaptureLog] = useState<CaptureLogEntry[]>([]);
   const [celebrateGoal, setCelebrateGoal] = useState<string | null>(null);
   const [toast, setToast] = useState("");
+  const [storageReadBlocked, setStorageReadBlocked] = useState(hasUnreadableLocalData);
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   // El "uid" de la cuenta que inició sesión de verdad (y ya verificó su
   // correo). Mientras esto no tenga un valor, no subimos nada a la nube.
@@ -632,7 +635,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         hasOnboarded: true,
       });
     });
-    take(CLOUD_SYNC_GROUPS.budgets, () => setBudgets(cloud.budgets));
+    // Aun con la misma marca de tiempo, el servidor puede haber unido un mes
+    // que este teléfono no tenía. No se sustituye el mapa entero.
+    setBudgets((current) => {
+      const merged = mergeBudgetMonths(
+        current,
+        cloud.budgets,
+        localTimes[CLOUD_SYNC_GROUPS.budgets] ?? 0,
+        remoteTimes[CLOUD_SYNC_GROUPS.budgets] ?? 0,
+      );
+      return JSON.stringify(current) === JSON.stringify(merged) ? current : merged;
+    });
     take(CLOUD_SYNC_GROUPS.categoryBudgets, () => setCategoryBudgets(cloud.categoryBudgets));
     take(CLOUD_SYNC_GROUPS.payments, () => setPagosProgramados(cloud.pagosProgramados ?? []));
     take(CLOUD_SYNC_GROUPS.merchants, () => setMerchantLearned(cloud.merchantLearned ?? {}));
@@ -653,8 +666,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     for (const [group, changedAt] of Object.entries(remoteTimes)) {
       mergedTimes[group] = Math.max(mergedTimes[group] ?? 0, changedAt);
     }
-    cloudSyncMetaRef.current = mergedTimes;
-    setCloudSyncMeta(cloudSyncMetaRef.current);
+    if (Object.keys(mergedTimes).some((group) => mergedTimes[group] !== localTimes[group])) {
+      cloudSyncMetaRef.current = mergedTimes;
+      setCloudSyncMeta(mergedTimes);
+    }
   }, [userEmail]);
 
   /**
@@ -951,6 +966,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // celular, para que la siguiente cuenta que inicie sesión aquí no vea
   // los movimientos/metas de la cuenta anterior.
   async function logout(options?: { skipBackup?: boolean }) {
+    if (hasUnreadableLocalData()) throw new Error(tRef.current("storage.readBlockedBody"));
     // Antes de salir, espera a que el último cambio (por ejemplo, la
     // moneda que acabas de elegir) termine de subirse a la nube. Si no
     // se espera esto, cerrar sesión muy rápido después de un cambio
@@ -1000,6 +1016,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // cuenta de inicio de sesión, y por último todo lo guardado en este
   // celular. Es un cambio que no se puede deshacer.
   async function deleteAccount(currentPassword: string) {
+    if (hasUnreadableLocalData()) throw new Error(tRef.current("storage.readBlockedBody"));
     const user = await reauthenticate(currentPassword);
     await deleteCloudAccount(user.uid);
     await deleteUser(user);
@@ -1291,6 +1308,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       toastTimer.current = setTimeout(() => setToast(""), 4_500);
     });
   }, []);
+
+  useEffect(() => subscribeStorageReadErrors(() => {
+    setStorageReadBlocked(true);
+  }), []);
 
   // ---------------------------------------------------------------------
   // CAPTURA AUTOMÁTICA DESDE NOTIFICACIONES
@@ -2548,6 +2569,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   return (
     <AppDataContext.Provider value={valor}>
       <View style={[{ flex: 1 }, visualStyleVariables]}>{children}</View>
+      <Modal visible={storageReadBlocked} transparent animationType="fade" onRequestClose={() => undefined}>
+        <View style={{ flex: 1, justifyContent: "center", padding: 24, backgroundColor: "rgba(0,0,0,0.72)" }}>
+          <View style={{ borderRadius: 20, padding: 24, backgroundColor: "#FFFFFF" }}>
+            <Text style={{ color: "#1B1B1B", fontSize: 20, fontWeight: "700", marginBottom: 12 }}>
+              {t("storage.readBlockedTitle")}
+            </Text>
+            <Text style={{ color: "#3D3D3D", fontSize: 16, lineHeight: 24 }}>
+              {t("storage.readBlockedBody")}
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </AppDataContext.Provider>
   );
 }

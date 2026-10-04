@@ -21,7 +21,7 @@ function code(name) {
 }
 for (const failure of [{ ok: false, motivo: "sin-red" }, { ok: false, motivo: "demasiado-grande" }]) {
   const calls = [];
-  const scope = { uid: "test", isPremium: true, datosParaLaNube: () => ({}), saveCloudData: async () => failure,
+  const scope = { uid: "test", isPremium: true, hasUnreadableLocalData: () => false, datosParaLaNube: () => ({}), saveCloudData: async () => failure,
     signOutFromGoogle: async () => calls.push("google"), signOut: async () => calls.push("auth"),
     auth: {}, clearAccountData: async () => calls.push("clear") };
   vm.createContext(scope);
@@ -34,6 +34,7 @@ for (const failure of [{ ok: false, motivo: "sin-red" }, { ok: false, motivo: "d
   const scope = {
     uid: "test",
     isPremium: true,
+    hasUnreadableLocalData: () => false,
     datosParaLaNube: () => ({}),
     saveCloudData: async () => { calls.push("backup"); return { ok: false, motivo: "sin-internet" }; },
     signOutFromGoogle: async () => calls.push("google"),
@@ -50,6 +51,7 @@ for (const failure of [{ ok: false, motivo: "sin-red" }, { ok: false, motivo: "d
   const scope = {
     uid: "test",
     isPremium: false,
+    hasUnreadableLocalData: () => false,
     datosParaLaNube: () => ({}),
     saveCloudData: async () => { calls.push("backup"); return { ok: true }; },
     signOutFromGoogle: async () => calls.push("google"),
@@ -60,6 +62,20 @@ for (const failure of [{ ok: false, motivo: "sin-red" }, { ok: false, motivo: "d
   vm.runInContext(code("logout"), scope);
   await assert.rejects(scope.logout(), /STOP/);
   assert.deepEqual(calls, ["google", "auth"], "Gratis cierra sesión sin escribir una copia nueva en la nube");
+}
+{
+  const calls = [];
+  const scope = {
+    hasUnreadableLocalData: () => true,
+    tRef: { current: () => "datos-ilegibles" },
+    signOutFromGoogle: async () => calls.push("google"),
+    signOut: async () => calls.push("auth"),
+    auth: {},
+  };
+  vm.createContext(scope);
+  vm.runInContext(code("logout"), scope);
+  await assert.rejects(scope.logout(), /datos-ilegibles/);
+  assert.deepEqual(calls, [], "una lectura dañada nunca desencadena cierre ni borrado local");
 }
 const settings = read("app/(tabs)/settings.tsx");
 assert.match(settings, /BackupBeforeLogoutError/);

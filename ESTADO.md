@@ -2,6 +2,23 @@
 
 ## Riesgos de seguridad y datos (04/10/2026)
 
+- Si Android no puede leer o descifrar una clave local, Fino ya no interpreta
+  esos datos como vacíos para después guardarlos encima. Conserva el texto
+  original, detiene guardados y respaldos incompletos, y muestra un aviso que
+  bloquea el uso hasta reabrir la app o revisar la recuperación. Cuando falta
+  la llave de SecureStore pero aún hay datos cifrados, no crea una nueva.
+  Pruebas automáticas cubren llave ausente, firma dañada y guardado rechazado.
+- La copia de presupuestos en Firebase ya une meses distintos al guardar y al
+  aplicar una respuesta del servidor. Aún falta una fusión por elemento con
+  registro de borrados para límites, categorías y pagos; unirlos simplemente
+  haría reaparecer elementos eliminados. También falta proteger la restauración
+  inicial al pasar de Gratis a Pro, después de separar los datos locales por
+  cuenta.
+- Firebase Functions quedó configurado localmente para Node 22 tanto en
+  `functions/package.json` como en `firebase.json` (este último tiene
+  prioridad al desplegar). Sus 39 pruebas pasan con el Node instalado en el
+  equipo; **no** se ha probado todavía en un entorno Node 22 ni se ha
+  desplegado. Google fija el retiro de Node 20 para el 30/10/2026.
 - Importar archivos compartidos ya no recibe una ruta desde la dirección de la
   pantalla. El archivo llega por el canal interno de Android y un enlace externo
   no puede pedirle a Fino que lea o borre una ruta local arbitraria.
@@ -12,13 +29,15 @@
 - Verificado: TypeScript, ESLint, 123 pruebas y 8 auditores aprobados. No se
   compiló una APK, no se probó en un teléfono y no se publicaron cambios en
   Firebase o Play Console.
-- **Pendiente:** decidir cómo evitar la pérdida de datos Gratis al cerrar
-  sesión sin dejar que otra cuenta vea los datos locales; resolver la fusión
-  segura de nube y teléfono; aplicar la protección Pro en Firebase; decidir el
-  tratamiento de aportes pendientes de Familia/Caja; y revisar datos locales
-  dañados, enlaces de exportación y el candado. El runtime Node 22 también debe
-  prepararse antes del 30/10/2026. Ver los hallazgos FINO-01 a FINO-05 y
-  FINO-13, 24, 41, 42 y 58 del informe.
+- **Pendiente:** evitar la pérdida de datos Gratis al cerrar sesión sin dejar
+  que otra cuenta vea los datos locales; terminar la fusión segura de nube y
+  teléfono; aplicar la protección Pro en Firebase; decidir el tratamiento de
+  aportes pendientes de Familia/Caja; y corregir enlaces de exportación y el
+  candado. La protección local anterior no recupera una llave de cifrado
+  perdida: evita destruir lo que aún quede. El runtime Node 22 también debe
+  prepararse antes del 30/10/2026. Ver FINO-01 a FINO-05 y FINO-13, 24, 41,
+  42 y 58 del informe. Antes del 30/10 hay que comprobar y publicar las
+  Functions con Node 22 en una entrega coordinada.
 
 ## Pagos del calendario y sincronización Pro (03/10/2026)
 

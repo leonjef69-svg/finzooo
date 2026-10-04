@@ -22,6 +22,7 @@ import { deleteDoc, doc, getDoc, runTransaction } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import type { DatosDelNegocio } from "@/utils/negocio";
 import { utf8ByteLength } from "@/utils/utf8";
+import { hasUnreadableLocalData } from "@/utils/storage";
 
 /** Dónde vive el negocio de esta cuenta. */
 function documento(uid: string) {
@@ -43,12 +44,14 @@ export async function bajarNegocio(uid: string): Promise<DatosDelNegocio | null>
 }
 
 export function subirNegocio(uid: string, datos: DatosDelNegocio): Promise<void> {
+  if (hasUnreadableLocalData()) return Promise.reject(new Error("datos-locales-ilegibles"));
   // Firestore RECHAZA cualquier campo con valor "undefined" y tira el guardado entero. La
   // venta tiene "movimientoId" opcional —vacío en toda la V1—, así que sin esta limpieza el
   // respaldo del negocio fallaría en silencio desde el primer día. Es el mismo paso que hace
   // saveCloudData, y por el mismo motivo.
   const limpio = JSON.parse(JSON.stringify(datos)) as DatosDelNegocio;
   return runTransaction(db, async transaction => {
+    if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
     const ref = documento(uid);
     const snap = await transaction.get(ref);
     const remoto = snap.exists() ? snap.data() as Partial<DatosDelNegocio> : {};
@@ -71,6 +74,7 @@ export function subirNegocio(uid: string, datos: DatosDelNegocio): Promise<void>
     if (utf8ByteLength(JSON.stringify(siguiente)) > 800_000) {
       throw new Error("negocio-demasiado-grande");
     }
+    if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
     transaction.set(ref, siguiente);
   });
 }

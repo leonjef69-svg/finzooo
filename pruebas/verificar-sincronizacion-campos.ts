@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { mergeCloudFields } from "@/utils/cloudFieldMerge";
+import { readFileSync } from "node:fs";
+import { mergeBudgetMonths, mergeCloudFields } from "@/utils/cloudFieldMerge";
 import type { CloudData } from "@/utils/cloudSync";
 
 function data(overrides: Partial<CloudData> = {}): CloudData {
@@ -60,5 +61,20 @@ const migrated = mergeCloudFields(
 );
 assert.equal(migrated.budgets["2026-09"], 900, "al migrar una cuenta antigua gana la copia compartida de la nube");
 assert.ok((migrated.syncUpdatedAt?.budgets ?? 0) > 0, "la migración deja una fecha para futuros conflictos");
+
+const distinctMonths = mergeCloudFields(
+  data({ budgets: { "2026-10": 1000 }, syncUpdatedAt: { budgets: 40 } }),
+  data({ budgets: { "2026-09": 900 }, syncUpdatedAt: { budgets: 30 } }),
+);
+assert.deepEqual(distinctMonths.budgets, { "2026-09": 900, "2026-10": 1000 },
+  "editar octubre no borra septiembre guardado en otro teléfono");
+assert.deepEqual(
+  mergeBudgetMonths({ "2026-10": 1000 }, { "2026-10": 1500, "2026-09": 900 }, 10, 20),
+  { "2026-10": 1500, "2026-09": 900 },
+  "si ambos editan el mismo mes gana el cambio posterior, sin perder otro mes",
+);
+const context = readFileSync("contexts/AppDataContext.tsx", "utf8");
+assert.match(context, /setBudgets\(\(current\) => \{\s*const merged = mergeBudgetMonths\(/,
+  "la app aplica también los meses fusionados que devuelve la nube");
 
 console.log("Sincronización por bloques entre dos teléfonos correcta.");
