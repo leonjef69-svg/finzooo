@@ -97,8 +97,8 @@ export default function DonutChart({ data }: { data: Slice[] }) {
               d={`M ${route.inicio.x} ${route.inicio.y} C ${route.control1.x} ${route.control1.y}, ${route.control2.x} ${route.control2.y}, ${route.fin.x} ${route.fin.y}`}
               fill="none"
               stroke={item.color}
-              strokeWidth={count === 1 ? 1.8 : 1.1}
-              strokeOpacity={count === 1 ? 1 : 0.9}
+              strokeWidth={1.8}
+              strokeOpacity={1}
             />
           );
         })}

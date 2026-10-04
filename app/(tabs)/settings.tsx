@@ -70,7 +70,7 @@ export default function SettingsTab() {
         if (cerrandoSesion.current) return;
         Alert.alert(
           t("settings.logout"),
-          t("settings.logoutConfirmBody"),
+          t(isPremium ? "settings.logoutConfirmBody" : "settings.logoutConfirmBodyFree"),
           [
             { text: t("common.cancel"), style: "cancel" },
             {

@@ -110,7 +110,7 @@ export default function Settings({
   onVoiceHelp: () => void;
   onTelegram: () => void;
 }) {
-  const { t, userCountry, themeMode, updateThemeMode, visualStyle, updateVisualStyle, isCloudSynced, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios, testerPremiumPendingVerification } =
+  const { t, userCountry, themeMode, updateThemeMode, visualStyle, updateVisualStyle, hasCloudAccount, isPremium: premiumCloud, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios, testerPremiumPendingVerification } =
     useAppData();
   /** El negocio que se está quedando con los yapeos, si hay alguno. Ver la fila de abajo. */
   const negocioQueRecibe = negocios.find((n) => n.activo && n.destinoYapes === "negocio");
@@ -332,7 +332,22 @@ export default function Settings({
           que decia "Tus datos estan respaldados" aunque la subida llevara semanas fallando.
           Un respaldo que miente es peor que no tener respaldo: con el segundo, uno guarda una
           copia por su cuenta. */}
-      {isCloudSynced && (
+      {hasCloudAccount && !premiumCloud ? (
+        <TouchableOpacity
+          onPress={onPremium}
+          accessibilityRole="button"
+          className="mx-5 mt-2.5 flex-row items-center gap-2.5 rounded-2xl px-3 py-2.5 border-[1.5px] bg-indigo-50 dark:bg-noche-2 border-indigo-100 dark:border-noche-borde"
+        >
+          <View className="w-8 h-8 rounded-xl items-center justify-center bg-indigo-100 dark:bg-noche-3">
+            <Cloud size={16} color="#4f46e5" />
+          </View>
+          <View className="flex-1">
+            <Text className="text-sm font-bold text-indigo-700 dark:text-slate-100">{t("settings.backupProTitle")}</Text>
+            <Text className="text-xs leading-4 text-indigo-600 dark:text-slate-300">{t("settings.backupProHint")}</Text>
+          </View>
+          <ChevronRight size={16} color="#4f46e5" />
+        </TouchableOpacity>
+      ) : hasCloudAccount && premiumCloud ? (
         <View
           className={`mx-5 mt-2.5 flex-row items-center gap-2.5 rounded-2xl px-3 py-2.5 border-[1.5px] ${
             respaldoAlDia
@@ -377,7 +392,7 @@ export default function Settings({
             </Text>
           </View>
         </View>
-      )}
+      ) : null}
 
       <View className="px-5 mt-3.5 gap-2.5">
         <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 px-1">{t("settings.sectionSettings")}</Text>

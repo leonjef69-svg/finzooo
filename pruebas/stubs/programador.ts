@@ -13,6 +13,10 @@ export function puedeExportarEnFondo(): boolean {
   return false;
 }
 
+export function puedePdfEnFondo(): boolean {
+  return false;
+}
+
 export function programarExportacion(_cuando: Date): void {}
 
 export function cancelarExportacion(): void {}

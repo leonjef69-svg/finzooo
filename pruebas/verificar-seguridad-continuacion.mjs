@@ -21,7 +21,7 @@ function code(name) {
 }
 for (const failure of [{ ok: false, motivo: "sin-red" }, { ok: false, motivo: "demasiado-grande" }]) {
   const calls = [];
-  const scope = { uid: "test", datosParaLaNube: () => ({}), saveCloudData: async () => failure,
+  const scope = { uid: "test", isPremium: true, datosParaLaNube: () => ({}), saveCloudData: async () => failure,
     signOutFromGoogle: async () => calls.push("google"), signOut: async () => calls.push("auth"),
     auth: {}, clearAccountData: async () => calls.push("clear") };
   vm.createContext(scope);
@@ -33,6 +33,7 @@ for (const failure of [{ ok: false, motivo: "sin-red" }, { ok: false, motivo: "d
   const calls = [];
   const scope = {
     uid: "test",
+    isPremium: true,
     datosParaLaNube: () => ({}),
     saveCloudData: async () => { calls.push("backup"); return { ok: false, motivo: "sin-internet" }; },
     signOutFromGoogle: async () => calls.push("google"),
@@ -43,6 +44,22 @@ for (const failure of [{ ok: false, motivo: "sin-red" }, { ok: false, motivo: "d
   vm.runInContext(code("logout"), scope);
   await assert.rejects(scope.logout({ skipBackup: true }), /STOP/);
   assert.deepEqual(calls, ["google", "auth"], "solo la salida expresamente autorizada omite el respaldo");
+}
+{
+  const calls = [];
+  const scope = {
+    uid: "test",
+    isPremium: false,
+    datosParaLaNube: () => ({}),
+    saveCloudData: async () => { calls.push("backup"); return { ok: true }; },
+    signOutFromGoogle: async () => calls.push("google"),
+    signOut: async () => { calls.push("auth"); throw new Error("STOP"); },
+    auth: {},
+  };
+  vm.createContext(scope);
+  vm.runInContext(code("logout"), scope);
+  await assert.rejects(scope.logout(), /STOP/);
+  assert.deepEqual(calls, ["google", "auth"], "Gratis cierra sesión sin escribir una copia nueva en la nube");
 }
 const settings = read("app/(tabs)/settings.tsx");
 assert.match(settings, /BackupBeforeLogoutError/);
@@ -79,5 +96,27 @@ const privacy = read("docs/privacidad.html");
 assert.match(privacy, /Telegram/);
 assert.match(privacy, /Sentry/);
 assert.match(privacy, /Familia y Cajas/);
+
+const importRoute = read("app/import.tsx");
+const layout = read("app/_layout.tsx");
+assert.match(importRoute, /usePendingImport\(\)/);
+assert.doesNotMatch(importRoute, /useLocalSearchParams/);
+assert.match(layout, /irUnaVez\("\/import"\)/);
+assert.doesNotMatch(layout, /pathname:\s*"\/import"\s*,\s*params:\s*\{\s*uri:\s*file\.uri/);
+
+const localCleanup = code("limpiarCuentaEnEsteDispositivo");
+for (const cleanup of [
+  "cancelarProgramacionAlCerrarSesion()",
+  "desconectarDropbox()",
+  "desconectarOneDrive()",
+  "disableLock()",
+  "notificationReader.clear()",
+  "clearCreditNotifications",
+  "clearAccountData()",
+]) assert.ok(localCleanup.includes(cleanup), `la limpieza común incluye ${cleanup}`);
+const logout = code("logout");
+const deleteAccount = code("deleteAccount");
+assert.match(logout, /limpiarCuentaEnEsteDispositivo\(uid\)/);
+assert.match(deleteAccount, /deleteUser\(user\)[\s\S]*?limpiarCuentaEnEsteDispositivo\(user\.uid\)/);
 
 console.log("Respaldo fallido conserva datos; metas e invitaciones protegidas; espacios Premium, configuración y privacidad verificados.");

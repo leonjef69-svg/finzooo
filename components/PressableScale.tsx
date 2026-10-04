@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Pressable, type GestureResponderEvent, type StyleProp, type ViewStyle } from "react-native";
+import { Pressable, type AccessibilityRole, type GestureResponderEvent, type StyleProp, type ViewStyle } from "react-native";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 
 // Un envoltorio reutilizable que le da a cualquier tarjeta o botón el
@@ -10,13 +10,19 @@ export default function PressableScale({
   disabled,
   children,
   style,
+  containerStyle,
   className,
+  accessibilityRole,
+  accessibilityLabel,
 }: {
   onPress?: (e: GestureResponderEvent) => void;
   disabled?: boolean;
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
+  containerStyle?: StyleProp<ViewStyle>;
   className?: string;
+  accessibilityRole?: AccessibilityRole;
+  accessibilityLabel?: string;
 }) {
   const scale = useSharedValue(1);
   const animatedStyle = useAnimatedStyle(() => ({
@@ -24,10 +30,12 @@ export default function PressableScale({
   }));
 
   return (
-    <Animated.View style={animatedStyle}>
+    <Animated.View style={[containerStyle, animatedStyle]}>
       <Pressable
         onPress={onPress}
         disabled={disabled}
+        accessibilityRole={accessibilityRole}
+        accessibilityLabel={accessibilityLabel}
         onPressIn={() => {
           scale.value = withSpring(0.96, { damping: 15, stiffness: 300 });
         }}

@@ -30,7 +30,12 @@
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
 import { loadJSON, saveJSON } from "@/utils/storage";
-import { cancelarExportacion, programarExportacion } from "@/modules/export-scheduler";
+import {
+  cancelarExportacion,
+  programarExportacion,
+  puedeExportarEnFondo,
+  puedePdfEnFondo,
+} from "@/modules/export-scheduler";
 
 export type ExportFrequency = "daily" | "weekly" | "monthly" | "custom";
 export type ExportDestination =
@@ -274,6 +279,17 @@ async function cancelByTag(tag: string): Promise<void> {
   );
 }
 
+/** Retira el recordatorio previo en equipos que ahora pueden entregar el resultado real. */
+export async function retirarRecordatorioDeExportacionAnterior(): Promise<void> {
+  const schedule = await loadSchedule();
+  const puedeCompletarEnFondo =
+    schedule.enabled &&
+    esDestinoAutomatico(schedule.destination) &&
+    puedeExportarEnFondo() &&
+    (schedule.format !== "pdf" || puedePdfEnFondo());
+  if (puedeCompletarEnFondo) await cancelByTag(TAG);
+}
+
 /** Qué días de la semana dispara la programación. Vacío si no es semanal. */
 export function activeWeekdays(schedule: ScheduledExport): number[] {
   if (schedule.frequency === "weekly") return [schedule.weekday];
@@ -291,7 +307,8 @@ export function activeWeekdays(schedule: ScheduledExport): number[] {
  */
 export async function applySchedule(
   schedule: ScheduledExport,
-  texts: { title: string; body: string }
+  texts: { title: string; body: string },
+  options: { notifyAtScheduledTime?: boolean } = {},
 ): Promise<boolean> {
   await cancelByTag(TAG);
   // Y se retiran los segundos avisos de "todavía no exportaste" que pudiera
@@ -299,6 +316,26 @@ export async function applySchedule(
   // 05/08/2026; sin esta línea, a quien lo tuviera puesto le seguiría sonando
   // una vez y no habría forma de callarlo desde la app.
   await cancelByTag(TAG_VIEJO_REPESCA);
+
+  if (!schedule.enabled) {
+    cancelarExportacion();
+    saveJSON(KEY_PROXIMA, 0);
+    return true;
+  }
+
+  const { status } = await Notifications.requestPermissionsAsync();
+  if (status !== "granted") {
+    cancelarExportacion();
+    saveJSON(KEY_PROXIMA, 0);
+    return false;
+  }
+
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("finzo-export", {
+      name: texts.title,
+      importance: Notifications.AndroidImportance.DEFAULT,
+    });
+  }
 
   // EL DESPERTADOR DE ANDROID, el que hace el reporte con la app cerrada.
   //
@@ -309,32 +346,15 @@ export async function applySchedule(
   //
   // Si el APK no trae el módulo nativo, estas dos funciones no hacen nada y
   // queda el comportamiento de siempre. Ver modules/export-scheduler.
-  if (schedule.enabled) {
-    const cuando = proximaEjecucion(schedule, new Date());
-    programarExportacion(cuando);
-    // Se apunta PARA CUÁNDO quedó puesto, y la pantalla lo enseña.
-    //
-    // Sin este dato no había forma de saber por qué no llegó un reporte: si el
-    // despertador no había sonado o si había sonado y el trabajo falló. Se veía
-    // igual. El usuario puso la hora un minuto adelante, no llegó nada, y para
-    // averiguar el motivo hubo que leer código — cuando la respuesta ("quedó
-    // puesto para mañana") cabía en una línea de la pantalla.
-    saveJSON(KEY_PROXIMA, cuando.getTime());
-  } else {
-    cancelarExportacion();
-    saveJSON(KEY_PROXIMA, 0);
-  }
-  if (!schedule.enabled) return true;
+  const cuando = proximaEjecucion(schedule, new Date());
+  programarExportacion(cuando);
+  // Se apunta PARA CUÁNDO quedó puesto, y la pantalla lo enseña.
+  saveJSON(KEY_PROXIMA, cuando.getTime());
 
-  const { status } = await Notifications.requestPermissionsAsync();
-  if (status !== "granted") return false;
-
-  if (Platform.OS === "android") {
-    await Notifications.setNotificationChannelAsync("finzo-export", {
-      name: texts.title,
-      importance: Notifications.AndroidImportance.DEFAULT,
-    });
-  }
+  // Si el archivo se genera solo, no adelantamos un aviso que pueda parecer
+  // confirmación. El trabajo de fondo avisará cuando tenga el resultado real.
+  // Solo los equipos que necesitan una acción a esa hora reciben el recordatorio.
+  if (options.notifyAtScheduledTime === false) return true;
 
   const content = {
     title: texts.title,

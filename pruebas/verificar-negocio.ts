@@ -244,11 +244,19 @@ console.log("\n--- EL NEGOCIO ESTA ENGANCHADO POR LOS CUATRO LADOS ---");
   // al reiniciar la app volveria a estar vacio.
   ok(/guardarVentas\(negocioDeLaNube\.ventas\)/.test(ctx), "y lo bajado se escribe en el celular");
 
-  // Al cerrar sesion y al borrar la cuenta se suelta DEL ESTADO. El disco ya lo borra
-  // clearAccountData, pero el estado en memoria sobrevive: sin esto, la cuenta siguiente veria
-  // el negocio de la anterior hasta reiniciar la app.
-  const veces = (ctx.match(/setDatosNegocio\(NEGOCIO_VACIO\)/g) ?? []).length;
-  ok(veces >= 2, `se suelta al cerrar sesion y al borrar la cuenta (${veces})`);
+  // Cerrar sesión y borrar la cuenta pasan por la misma limpieza local. Así no se
+  // mantienen dos listas distintas de datos que olvidar vaciar.
+  const limpieza = /async function limpiarCuentaEnEsteDispositivo\([\s\S]*?\n  \}/.exec(ctx)?.[0] ?? "";
+  const inicioLogout = ctx.indexOf("async function logout(");
+  const inicioReauth = ctx.indexOf("async function reauthenticate(", inicioLogout);
+  const logout = ctx.slice(inicioLogout, inicioReauth);
+  const inicioDelete = ctx.indexOf("async function deleteAccount(");
+  const inicioInit = ctx.indexOf("useEffect(() => {\n    async function init()", inicioDelete);
+  const borrarCuenta = ctx.slice(inicioDelete, inicioInit);
+  ok(/setDatosNegocio\(NEGOCIO_VACIO\)/.test(limpieza), "la limpieza común vacía el negocio en memoria");
+  ok(/await limpiarCuentaEnEsteDispositivo\(uid\)/.test(logout), "cerrar sesión usa la limpieza común");
+  ok(/await deleteUser\(user\);[\s\S]*?limpiarCuentaEnEsteDispositivo\(user\.uid\)/.test(borrarCuenta),
+    "borrar la cuenta limpia el negocio local después de borrarla en la nube");
 
   // LA SUBIDA DEL NEGOCIO VA EN SU PROPIO EFECTO, no dentro del de la cuenta: es otro
   // documento de Firestore, no un campo de ese. Y sus dependencias tienen que incluir los

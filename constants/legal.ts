@@ -3,7 +3,7 @@
 // un abogado si más adelante la app crece o cambia su forma de ganar dinero.
 import { anunciosActivos } from "@/constants/anuncios";
 export const LEGAL_CONTACT_EMAIL = "dinero123xc@gmail.com";
-export const LEGAL_LAST_UPDATED = "11 de septiembre de 2026";
+export const LEGAL_LAST_UPDATED = "3 de octubre de 2026";
 
 /**
  * LO QUE SE DICE DE LOS ANUNCIOS, Y SOLO CUANDO LOS HAY.
@@ -50,6 +50,7 @@ Esta es la parte más delicada y por eso va aparte.
 
 3. Cómo se guarda tu información
 - En tu celular, la información principal de tu cuenta se guarda cifrada. La cola temporal del registro automático se mantiene dentro del almacenamiento privado de Fino protegido por Android y no se incluye en copias de seguridad del sistema.
+- Fino guarda cifrado en el celular cuáles avisos ya revisaste, solo para controlar el indicador de la campana. Ese estado no se envía a la nube y se borra al cerrar sesión.
 - Si inicias sesión, también se guarda una copia en la nube usando Firebase (un servicio de Google), para que puedas recuperar tu información si cambias de celular. Tus datos personales solo son visibles para tu cuenta; lo que anotes en Familia o una Caja compartida también es visible para sus miembros.
 
 4. Con quién compartimos tu información

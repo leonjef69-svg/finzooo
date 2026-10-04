@@ -1,5 +1,70 @@
 # Estado actual de Fino
 
+## Riesgos de seguridad y datos (04/10/2026)
+
+- Importar archivos compartidos ya no recibe una ruta desde la dirección de la
+  pantalla. El archivo llega por el canal interno de Android y un enlace externo
+  no puede pedirle a Fino que lea o borre una ruta local arbitraria.
+- Cerrar sesión y borrar la cuenta ahora usan la misma limpieza local: retiran
+  avisos de pagos, exportación y tarjetas; desconectan Dropbox/OneDrive; apagan
+  el PIN y el lector de notificaciones; borran los datos locales y vacían los
+  datos de la cuenta que quedan en memoria.
+- Verificado: TypeScript, ESLint, 123 pruebas y 8 auditores aprobados. No se
+  compiló una APK, no se probó en un teléfono y no se publicaron cambios en
+  Firebase o Play Console.
+- **Pendiente:** decidir cómo evitar la pérdida de datos Gratis al cerrar
+  sesión sin dejar que otra cuenta vea los datos locales; resolver la fusión
+  segura de nube y teléfono; aplicar la protección Pro en Firebase; decidir el
+  tratamiento de aportes pendientes de Familia/Caja; y revisar datos locales
+  dañados, enlaces de exportación y el candado. El runtime Node 22 también debe
+  prepararse antes del 30/10/2026. Ver los hallazgos FINO-01 a FINO-05 y
+  FINO-13, 24, 41, 42 y 58 del informe.
+
+## Pagos del calendario y sincronización Pro (03/10/2026)
+
+- En Inicio e Historial, cada movimiento muestra fecha y hora bajo el nombre, y
+  la categoría bajo el monto. Al confirmar un pago del calendario se registra
+  también la hora de confirmación.
+- El plan Gratis conserva sus datos en el teléfono y ya no sube ni restaura la
+  copia personal, el Modo Negocio ni el historial en segundo plano. Las copias
+  antiguas de Firebase no se borran; la app no descarga el historial antes de
+  comprobar el acceso Pro. En Ajustes, la nube se presenta como función Pro.
+- La regla está implementada en la app nueva, no publicada como regla de
+  Firestore. Las versiones antiguas aún podrían sincronizar; la protección
+  definitiva del servidor y el cobro de Play deben coordinarse antes de lanzar
+  los planes.
+- TypeScript, ESLint, 123 pruebas y 8 auditores aprobados. La compilación del
+  emulador no terminó: Windows bloqueó la ejecución de `clang` del Android SDK.
+  No se instaló una APK nueva ni se borraron datos del emulador.
+
+## Acciones de presupuesto y saldo anterior en Inicio (03/10/2026)
+
+- En la tarjeta de saldo, “Presupuesto del mes” ahora tiene letra un punto mayor.
+  La barra de avance engrosó apenas y su riel usa un fondo tenue adaptado al
+  tema, para que el indicador se vea definido sin competir con el saldo.
+- El presupuesto se muestra como texto y monto, sin parecer un campo editable;
+  “Definir presupuesto mensual” es la acción que abre su editor. El rótulo se
+  distribuye en dos líneas para conservar el aire del botón.
+- En el primer mes, cuando no hay saldo anterior, esa acción se muestra sola,
+  a todo el ancho y con menor altura; desde el segundo mes comparte la fila con
+  Mostrar/Ocultar saldo del mes anterior.
+- Las tarjetas pequeñas de Gastado e Ingresos usan flechas hacia abajo/arriba
+  junto a sus rótulos, con el texto algo mayor y altura reducida sin recortar
+  los montos.
+- “Definir presupuesto” y “Mostrar/Ocultar saldo del mes anterior” aparecen en
+  dos botones del mismo ancho. El texto largo se envuelve completo, con altura
+  suficiente; el ojo distingue mostrar de ocultar y el índigo evita confundirlo
+  con ingreso (verde) o gasto (rojo).
+- Ambos controles dan una respuesta breve al toque (encogimiento suave y vuelta
+  con resorte), sin animación permanente. La tarjeta del mes anterior aparece
+  solo si existe historial y se oculta/muestra con una transición suave; ocultar
+  no cambia el saldo ni los movimientos.
+- Revisado en el emulador con el servidor de desarrollo: ambos rótulos se leen
+  completos, la tarjeta no recorta los botones y el control de ojo oculta y
+  restaura la tarjeta sin tocar los montos. No se creó un AAB ni se modificaron
+  movimientos o datos financieros.
+- TypeScript, ESLint, 123 pruebas y 8 auditores aprobados.
+
 ## Ajustes de Familia/Caja, saldo y navegación (02/10/2026)
 
 - Las tarjetas del selector de Familia y Caja quedaron más compactas y parejas.
@@ -799,3 +864,62 @@ instalación nueva.
 - Se mantienen 113 pruebas totales porque tres pruebas de comportamiento
   reemplazan tres pruebas estáticas anteriores; no se tocaron tarjetas de
   crédito ni se publicó nada.
+
+### Avisos del calendario y resultado de exportación en Inicio (03/10/2026)
+
+- La campana deja de anunciar una exportación futura como si ya se hubiera
+  recibido. Muestra únicamente el resultado del último intento automático,
+  con fecha/hora y estado; «Probar ahora» no se presenta como envío programado.
+- Los avisos de calendario muestran el monto, la fecha completa y su estado.
+  Al tocarlos, abren una ficha inferior con acciones para editar o marcar el
+  pago/ingreso/recordatorio como realizado.
+- La configuración de exportación automática conserva una sola explicación
+  breve y el interruptor de «Incluir gráficos» queda como rótulo e interruptor.
+  El selector manual Todos/Gastos/Ingresos permanece sin cambios.
+- Verificado: TypeScript, ESLint, `node pruebas/correr.mjs` (123 pruebas y 8
+  auditores), y revisión visual de Inicio y el flujo del aviso en el emulador.
+  La exportación automática estaba desactivada, por lo que no se activó para
+  inspeccionar opciones ocultas; esa parte se validó con pruebas y código.
+- No se cambiaron movimientos ni saldos y no se generó APK/AAB. Pendiente:
+  probar la configuración de exportación con la función activada por el usuario
+  y validar en el emulador la campana cuando exista un resultado automático.
+
+### Campana con contador y hoja inferior (03/10/2026)
+
+- La campana cuenta los avisos nuevos y se sacude brevemente al llegar avisos.
+  Al abrirla, sube una hoja inferior con fondo atenuado; abrirla marca los avisos
+  como vistos, pero no marca pagos como hechos. Los pagos siguen visibles hasta
+  usar su acción correspondiente.
+- La ficha del calendario ahora ocupa la misma hoja, con regreso a la lista; el
+  cuadro de importación conserva su acción para abrir el archivo.
+- En los dispositivos que exportan con la app cerrada ya no se muestra un aviso
+  adelantado a la hora programada: se envía al teléfono el resultado real (éxito,
+  falta de movimientos o error). Los dispositivos que necesitan que la persona
+  toque el aviso a esa hora conservan ese recordatorio de acción. Al iniciar la
+  app se retira el recordatorio antiguo de los dispositivos que ya pueden
+  exportar en segundo plano; no se cancela la alarma nativa de ejecución.
+- El resultado del teléfono abre el estado de exportación. Los avisos leídos se
+  guardan cifrados solo en el dispositivo y se eliminan al cerrar sesión; se
+  documentó en la política local y en PLAYSTORE.md.
+- Verificado: 123 pruebas, 8 auditores, TypeScript y ESLint. En el emulador se
+  comprobó visualmente la hoja inferior y su estado vacío. No había un aviso de
+  calendario ni un resultado automático real para probar la ficha completa o
+  la notificación de exportación sin crear datos/pruebas artificiales.
+- No se cambiaron movimientos, se dejó la exportación automática como estaba y
+  no se generó APK/AAB. Sigue pendiente probar el aviso real cuando ocurra una
+  exportación programada con permiso de notificaciones activo.
+
+### Equilibrio de porciones y líneas en la rosquilla (03/10/2026)
+
+- Las categorías muy pequeñas reciben un tamaño visual mínimo, pero el ajuste
+  comparte un presupuesto global: no amplía la cola pequeña por encima del 18%
+  de la dona final. Si los montos reales ya ocupan más espacio, no se reducen.
+- Los porcentajes y montos mostrados siguen calculándose con los datos reales.
+- Las líneas curvas ahora usan 1.8 dp, opacidad completa y exactamente el color
+  de su segmento. Las etiquetas se conservan distribuidas alrededor de la dona.
+- Pruebas nuevas cubren la geometría real con seis y nueve categorías pequeñas,
+  el máximo común, la separación de sus orígenes y el color/grosor de líneas.
+- Verificado: TypeScript, ESLint, 123 pruebas y 8 auditores. El emulador estaba
+  abierto pero sin servidor de desarrollo activo; falta revisar el dibujo
+  actualizado en pantalla. No se tocaron movimientos ni saldos y no se generó
+  APK/AAB.

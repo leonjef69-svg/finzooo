@@ -22,9 +22,19 @@ export default function LoginRoute() {
         // Primero intenta traer los datos de esta cuenta desde la nube
         // (por si inició sesión antes en otro celular).
         if (user) {
-          const gotCloudData = await hydrateFromCloud(user.uid);
-          if (gotCloudData) {
+          const cloudResult = await hydrateFromCloud(user.uid);
+          if (cloudResult === "restored") {
             router.replace("/(tabs)");
+            return;
+          }
+          if (cloudResult === "premium-required") {
+            Alert.alert(t("login.cloudRequiresPremiumTitle"), t("login.cloudRequiresPremiumText"));
+            if (hasOnboarded) {
+              await reloadPersistedData();
+              router.replace("/(tabs)");
+            } else {
+              router.replace("/setup");
+            }
             return;
           }
           /**

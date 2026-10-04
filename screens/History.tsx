@@ -42,6 +42,7 @@ const Fila = memo(function Fila({
   transferStatus,
   transferGroup,
   onOpenTransferGroup,
+  monthNames,
 }: {
   tx: Transaction;
   fmt: (n: number) => string;
@@ -51,6 +52,7 @@ const Fila = memo(function Fila({
   transferStatus?: TransferStatus;
   transferGroup?: TransferGroupSummary;
   onOpenTransferGroup: () => void;
+  monthNames: string[];
 }) {
   const c = catInfo(tx.category);
   const isTransfer = Boolean(tx.internalTransfer);
@@ -84,10 +86,9 @@ const Fila = memo(function Fila({
         >
           {title}
         </Text>
-        {/* El método pertenece visualmente al monto: ambos describen el pago.
-            Aquí queda la hora, en el espacio que antes ocupaba el método. */}
+        {/* Fecha y hora debajo del nombre; la categoría acompaña visualmente al monto. */}
         <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#f1f5f9" : "#64748b" }} numberOfLines={1}>
-          {isTransfer ? `${t("transfer.internal")} · ${t(`transfer.${transferGroup?.status || transferStatus || (tx.type === "income" ? "returned" : "pending")}`)}` : tx.time || t(c.label)}
+          {isTransfer ? `${t("transfer.internal")} · ${t(`transfer.${transferGroup?.status || transferStatus || (tx.type === "income" ? "returned" : "pending")}`)}` : `${fmtDate(tx.date, monthNames)}${tx.time ? ` · ${tx.time}` : ""}`}
         </Text>
       </View>
       <View className="items-end self-stretch justify-start">
@@ -100,6 +101,11 @@ const Fila = memo(function Fila({
           {transferGroup ? "↔ " : isTransfer ? (tx.type === "expense" ? "→ " : "↩ ") : tx.type === "expense" ? "-" : "+"}
           {fmt(transferGroup?.pending ?? tx.amount)}
         </Text>
+        {!isTransfer && tx.description !== t(c.label) ? (
+          <Text className="mt-0.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300" numberOfLines={1}>
+            {t(c.label)}
+          </Text>
+        ) : null}
         {transferGroup ? <Text className="mt-1 max-w-[150px] text-right text-[10px] text-slate-500 dark:text-slate-300" numberOfLines={2}>{t("transfer.summaryLine", { sent: fmt(transferGroup.sent), returned: fmt(transferGroup.returned) })}</Text> : null}
         {!isTransfer ? <View className="mt-1"><EtiquetaMetodo metodo={tx.method} t={t} oscuro={oscuro} /></View> : null}
       </View>
@@ -223,7 +229,7 @@ export default function History({
         </Text>
       ) : (
         <View className="px-5">
-          <Fila tx={item.tx} fmt={fmt} t={t} oscuro={oscuro} onOpenDetail={onOpenDetail} onOpenTransferGroup={() => setFilter("transfer")} transferStatus={item.tx.type === "income" && item.tx.internalTransfer ? "returned" : transferStatuses.get(item.tx.id)} transferGroup={item.transferGroup} />
+          <Fila tx={item.tx} fmt={fmt} t={t} oscuro={oscuro} monthNames={monthNames} onOpenDetail={onOpenDetail} onOpenTransferGroup={() => setFilter("transfer")} transferStatus={item.tx.type === "income" && item.tx.internalTransfer ? "returned" : transferStatuses.get(item.tx.id)} transferGroup={item.transferGroup} />
         </View>
       ),
     [fmt, t, oscuro, onOpenDetail, monthNames, transferStatuses]

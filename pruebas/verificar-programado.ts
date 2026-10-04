@@ -379,7 +379,14 @@ console.log("\n--- LA PANTALLA DICE Y OFRECE LO QUE DEBE ---");
   // QUÉ PASA A ESA HORA, dicho en la pantalla. El usuario lo preguntó con todo
   // ya configurado —"¿debería exportar automáticamente a la hora que le puse?"—
   // y tenía razón: no se decía en ningún sitio.
-  ok(codigo.includes("schedExport.timeWhatHappens"), "la pantalla explica qué pasa a la hora fijada");
+  ok(
+    codigo.includes("schedExport.compactFondo") && codigo.includes("schedExport.compactAlAbrir"),
+    "queda una sola explicación breve y ajustada al funcionamiento de esta instalación"
+  );
+  ok(
+    !codigo.includes("schedExport.explain") && !codigo.includes("schedExport.whyNotFull"),
+    "la tarjeta explicativa duplicada ya no aparece en la configuración"
+  );
 
   // Y ninguna nota puede volver a prometer "automático del todo". Lo decían las
   // tres, en la MISMA frase en que admitían que hay que abrir la app. Prometer
@@ -789,7 +796,7 @@ console.log("\n--- Y NINGÚN TEXTO SE QUEDA CONTANDO UN LÍMITE QUE YA NO EXISTE
   // tienen que nombrar la instalación.
   const RAIZ = process.cwd();
   const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
-  for (const clave of ["schedExport.fondoNoPdf", "schedExport.whyNotFull", "schedExport.res.pdf-no-se-puede"]) {
+  for (const clave of ["schedExport.fondoNoPdf", "schedExport.res.pdf-no-se-puede"]) {
     const valores = [
       ...i18n.matchAll(new RegExp(`"${clave.replace(/\./g, "\\.")}":\\s*\\n?\\s*"((?:[^"\\\\]|\\\\.)*)"`, "g")),
     ].map((m) => m[1]);
@@ -887,7 +894,8 @@ console.log("\n--- 'PROBAR AHORA' PRUEBA EL CAMINO QUE VA A CORRER ---");
   // Drive quedaría un archivo que no abre y el reporte diría "listo" — peor que
   // no tener ninguno, porque así nadie lo revisa.
   ok(/\(hecho\.size \?\? 0\) === 0/.test(fondo), "un PDF de cero bytes no se sube");
-  ok(/apuntar\("pdf-vacio"/.test(fondo), "y se dice con su propio motivo, no como 'falló'");
+  ok(/registrarResultado\("pdf-vacio"/.test(fondo), "y se dice con su propio motivo, no como 'falló'");
+  ok(/apuntar\(resultado, archivo, detalle, !forzar\)/.test(fondo), "Probar ahora conserva su resultado en Ajustes, pero no se marca como exportación programada");
 
   // La ruta se arma con la MISMA pieza que el Excel. Pegando textos salía una
   // barra doble —Paths.cache ya acaba en barra— y una ruta con "//" en medio es
@@ -1085,10 +1093,11 @@ console.log("\n--- LOS GRÁFICOS DEL PDF AUTOMÁTICO SE PUEDEN PEDIR ---");
   // Y sus dos textos en los tres idiomas. Uno que falte no da error: sale el nombre de la
   // clave en pantalla.
   const i18n = fs.readFileSync(path.join(RAIZ, "constants/i18n.ts"), "utf8");
-  for (const clave of ["graficos", "graficosHint"]) {
+  for (const clave of ["graficos"]) {
     const veces = (i18n.match(new RegExp(`"schedExport\\.${clave}":`, "g")) ?? []).length;
     ok(veces === 3, `"${clave}" esta en los tres idiomas (${veces})`);
   }
+  ok(!pantalla.includes("schedExport.graficosHint"), "Incluir gráficos conserva solo el rótulo y el interruptor");
 }
 
 console.log("\n--- LA RECUPERACIÓN AL ABRIR CONFIRMA SOLO DESPUÉS DEL ÉXITO ---");

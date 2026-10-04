@@ -72,8 +72,15 @@ if (faltantes === 0) console.log("  ninguna");
 // --- 3. Claves usadas en el código que no existen ---
 console.log("\n== Claves usadas pero inexistentes ==");
 function walk(dir, out = []) {
+  const excluded = new Set([
+    "node_modules", ".git", ".expo", "android", "ios", "dist",
+    // Entornos de auditoría, cachés y entregables no son parte del código
+    // activo. Recorrer worktrees viejos daba falsos errores de traducciones.
+    ".claude", ".pnpm-store", ".android-user", ".gradle-cache", ".tmp",
+    "output", "outputs",
+  ]);
   for (const name of fs.readdirSync(dir)) {
-    if (["node_modules", ".git", ".expo", "android", "ios", "dist"].includes(name)) continue;
+    if (excluded.has(name)) continue;
     const full = path.join(dir, name);
     const st = fs.statSync(full);
     if (st.isDirectory()) walk(full, out);

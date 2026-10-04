@@ -1,15 +1,15 @@
-import { useLocalSearchParams } from "expo-router";
 import ImportSheet from "@/screens/ImportSheet";
 import PremiumLocked from "@/components/PremiumLocked";
 import { useAppData } from "@/contexts/AppDataContext";
 import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
+import { usePendingImport } from "@/utils/pendingImport";
 
 export default function ImportRoute() {
   const { t, isPremium } = useAppData();
-  // Cuando se llega desde "Compartir → Fino", el archivo viene en la
-  // dirección de la pantalla y se carga solo.
-  const { uri, name } = useLocalSearchParams<{ uri?: string; name?: string }>();
-  const incoming = uri && name ? { uri, name } : null;
+  // El archivo compartido se recibe por el módulo nativo y queda en memoria.
+  // Nunca se acepta una ruta de archivo desde la dirección: un enlace externo
+  // no debe poder hacer que Fino lea ni borre archivos del teléfono.
+  const incoming = usePendingImport();
 
   // Al llegar desde otra app, Fino arranca DIRECTO aquí y no hay ninguna
   // pantalla detrás. El guardián de pantallas huérfanas lo leería como un

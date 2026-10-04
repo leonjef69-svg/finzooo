@@ -98,6 +98,7 @@ import { auth } from "@/utils/firebase";
 import { reauthenticateWithGoogle, signOutFromGoogle } from "@/utils/googleAuth";
 import {
   deleteCloudAccount,
+  CloudPremiumRequiredError,
   loadCloudData,
   saveCloudData,
   type CloudData,
@@ -143,7 +144,7 @@ type AppDataContextValue = {
   hasOnboarded: boolean;
   completeOnboarding: (budgetAmount: number) => void;
   reloadPersistedData: () => Promise<void>;
-  hydrateFromCloud: (uid: string) => Promise<boolean>;
+  hydrateFromCloud: (uid: string) => Promise<"restored" | "none" | "premium-required">;
   logout: (options?: { skipBackup?: boolean }) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   deleteAccount: (currentPassword: string) => Promise<void>;
@@ -385,6 +386,7 @@ type AppDataContextValue = {
   setVerComoGratis: (v: boolean) => void;
   tienePremiumDeVerdad: boolean;
   isCloudSynced: boolean;
+  hasCloudAccount: boolean;
   /** La ultima subida a la nube termino bien. NO es lo mismo que tener sesion iniciada. */
   respaldoAlDia: boolean;
   /** Por que fallo la ultima subida, para poder decirlo en vez de callarlo. */
@@ -709,9 +711,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Trae lo que haya guardado en la nube para esta cuenta (por ejemplo,
   // al iniciar sesión desde un celular nuevo). Si no hay nada guardado
   // todavía, no hace nada y devuelve "false".
-  async function hydrateFromCloud(userUid: string): Promise<boolean> {
-    const cloud = await loadCloudData(userUid);
-    if (!cloud) return false;
+  async function hydrateFromCloud(userUid: string): Promise<"restored" | "none" | "premium-required"> {
+    let cloud: CloudData | null;
+    try {
+      cloud = await loadCloudData(userUid, {
+        allowCloudCopy: (entitlement) =>
+          isPremiumDeLaCuenta || testerPremium.active || entitlement.isPremium ||
+          pruebaVigente(entitlement.premiumTrialStartedAt ?? pruebaInicio, Date.now()),
+      });
+    } catch (error) {
+      if (error instanceof CloudPremiumRequiredError) return "premium-required";
+      throw error;
+    }
+    if (!cloud) return "none";
     setUserName(cloud.userName);
     setUserPhoto(cloud.userPhoto);
     setUserCurrency(cloud.userCurrency);
@@ -805,7 +817,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // una lista más abajo.
       guardarMovimientosNegocio(negocioDeLaNube.movimientos);
     }
-    return true;
+    return "restored";
   }
 
   async function reloadPersistedData() {
@@ -875,33 +887,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setCloudSyncMeta(savedCloudSyncMeta);
   }
 
-  // Cierra la sesión de verdad (Firebase) y limpia los datos de este
-  // celular, para que la siguiente cuenta que inicie sesión aquí no vea
-  // los movimientos/metas de la cuenta anterior.
-  async function logout(options?: { skipBackup?: boolean }) {
-    // Antes de salir, espera a que el último cambio (por ejemplo, la
-    // moneda que acabas de elegir) termine de subirse a la nube. Si no
-    // se espera esto, cerrar sesión muy rápido después de un cambio
-    // podía "perderlo": ya no quedaba ni en el celular (se borra abajo)
-    // ni en la nube (no le había dado tiempo de subir).
-    if (uid && !options?.skipBackup) {
-      const respaldo = await saveCloudData(uid, datosParaLaNube());
-      if (!respaldo.ok) {
-        const error = new Error("No se pudo respaldar tu información. Tu sesión y tus datos se conservaron. Revisa tu conexión y vuelve a intentarlo.");
-        error.name = "BackupBeforeLogoutError";
-        throw error;
-      }
-    }
-    // También hay que salir del lado de Google. Si no, la próxima vez que
-    // alguien pulse "Continuar con Google" entraría directo con la última
-    // cuenta usada, sin poder elegir otra — un problema real en un celular
-    // compartido, y confuso al probar con varias cuentas.
-    await signOutFromGoogle();
-    await signOut(auth);
-    if (uid) clearHistoryV2Cache(uid);
-    // Todo lo que puede seguir actuando fuera del estado de React también
-    // pertenece a la cuenta que sale: avisos, alarmas, permisos de destinos,
-    // PIN y buzón nativo. Se intenta limpiar todo aunque una integración falle.
+  /** Limpia datos, avisos e integraciones locales que pertenecían a la cuenta. */
+  async function limpiarCuentaEnEsteDispositivo(userUid: string | null) {
+    if (userUid) clearHistoryV2Cache(userUid);
     notificationReader.setEnabled(false);
     await Promise.allSettled([
       reprogramarAvisosDePagos([], tRef.current, new Date(), fmt),
@@ -910,14 +898,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       desconectarOneDrive(),
       disableLock(),
       notificationReader.clear(),
+      import("@/utils/creditNotifications").then(({ clearCreditNotifications }) =>
+        clearCreditNotifications(),
+      ),
     ]);
     limpiarPendientes();
     setPendingImport(null);
     limpiarCajasEnMemoria();
-    // Borra todos los datos de la cuenta de forma atómica y esperada
-    // ANTES de actualizar el estado. Si la app se cierra en este momento,
-    // AsyncStorage ya está limpio y no hay riesgo de que al reabrir la
-    // app se encuentre con datos de la sesión anterior.
+    // Al salir de la cuenta se limpian sus datos locales antes de vaciar React.
+    // Si Android cerrase Fino durante esta operación, la siguiente apertura no
+    // cargaría movimientos de la cuenta anterior.
     await clearAccountData();
     setHasOnboarded(false);
     setUserName("");
@@ -947,9 +937,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setDatosNegocio(NEGOCIO_VACIO);
     setAutoCaptureOnState(false);
     setAutoCaptureLog([]);
-    // La prueba gratuita tambien se suelta: el disco ya se limpio, pero lo que
-    // esta en memoria sobrevive y la cuenta siguiente entraria con la prueba de la
-    // anterior a medio correr.
     setPruebaInicio(null);
     setMerchantLearned({});
     setCarryoverCleared([]);
@@ -958,6 +945,32 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setRespaldoFallo(null);
     setCelebrateGoal(null);
     setVerComoGratis(false);
+  }
+
+  // Cierra la sesión de verdad (Firebase) y limpia los datos de este
+  // celular, para que la siguiente cuenta que inicie sesión aquí no vea
+  // los movimientos/metas de la cuenta anterior.
+  async function logout(options?: { skipBackup?: boolean }) {
+    // Antes de salir, espera a que el último cambio (por ejemplo, la
+    // moneda que acabas de elegir) termine de subirse a la nube. Si no
+    // se espera esto, cerrar sesión muy rápido después de un cambio
+    // podía "perderlo": ya no quedaba ni en el celular (se borra abajo)
+    // ni en la nube (no le había dado tiempo de subir).
+    if (uid && isPremium && !options?.skipBackup) {
+      const respaldo = await saveCloudData(uid, datosParaLaNube());
+      if (!respaldo.ok) {
+        const error = new Error("No se pudo respaldar tu información. Tu sesión y tus datos se conservaron. Revisa tu conexión y vuelve a intentarlo.");
+        error.name = "BackupBeforeLogoutError";
+        throw error;
+      }
+    }
+    // También hay que salir del lado de Google. Si no, la próxima vez que
+    // alguien pulse "Continuar con Google" entraría directo con la última
+    // cuenta usada, sin poder elegir otra — un problema real en un celular
+    // compartido, y confuso al probar con varias cuentas.
+    await Promise.allSettled([signOutFromGoogle()]);
+    await signOut(auth);
+    await limpiarCuentaEnEsteDispositivo(uid);
   }
 
   // Antes de cambiar la contraseña o borrar la cuenta, Firebase exige
@@ -990,31 +1003,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const user = await reauthenticate(currentPassword);
     await deleteCloudAccount(user.uid);
     await deleteUser(user);
-    await clearAccountData();
-    setHasOnboarded(false);
-    setUserName("");
-    setUserEmail("");
-    setUserPhoto(null);
-    setUserCurrency("PEN");
-    setUserLanguage("es");
-    setUserCountry("PE");
-    setBudgets({});
-    setCategoryBudgets({});
-    setTransactions([]);
-    setDeletedTransactionIds([]);
-    setDeletedGoalIds([]);
-    setGoals([]);
-    setIsPremium(false);
-    setTesterPremium(TESTER_PREMIUM_INACTIVE);
-    setDatosNegocio(NEGOCIO_VACIO);
-    // La prueba gratuita tambien se suelta: el disco ya se limpio, pero lo que
-    // esta en memoria sobrevive y la cuenta siguiente entraria con la prueba de la
-    // anterior a medio correr.
-    setPruebaInicio(null);
-    setMerchantLearned({});
-    setCarryoverCleared([]);
-    cloudSyncMetaRef.current = {};
-    setCloudSyncMeta({});
+    await Promise.allSettled([signOutFromGoogle()]);
+    await limpiarCuentaEnEsteDispositivo(user.uid);
   }
 
   useEffect(() => {
@@ -1184,7 +1174,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * una subida por letra.
    */
   useEffect(() => {
-    if (!(ready && hasOnboarded && uid)) return;
+    if (!(ready && hasOnboarded && uid && isPremium)) return;
     const timer = setTimeout(() => {
       void subirNegocio(uid, datosNegocio).catch((error) => {
         const mensaje = String((error as Error)?.message ?? error);
@@ -1192,7 +1182,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       });
     }, 1500);
     return () => clearTimeout(timer);
-  }, [datosNegocio, ready, hasOnboarded, uid]);
+  }, [datosNegocio, ready, hasOnboarded, uid, isPremium]);
 
   // Además de guardar en este celular, si hay una cuenta con sesión
   // iniciada y correo verificado, también sube los datos a la nube.
@@ -1206,7 +1196,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Perder la última subida no pierde datos: el celular ya los tiene
   // guardados, y logout() sube todo explícitamente antes de cerrar sesión.
   useEffect(() => {
-    if (!(ready && hasOnboarded && uid)) return;
+    if (!(ready && hasOnboarded && uid && isPremium)) return;
     const timer = setTimeout(() => {
       /* SE MIRA COMO FUE. Antes se lanzaba y se olvidaba, y el cartel de Ajustes decia
          "Tus datos estan respaldados" solo por haber iniciado sesion — aunque la subida
@@ -1227,6 +1217,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     ready,
     hasOnboarded,
     uid,
+    isPremium,
     userName,
     userPhoto,
     userCurrency,
@@ -1260,7 +1251,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // movimientos que otro dispositivo haya subido. Se fusionan por id: nunca
   // se sustituye la lista local completa por una copia posiblemente antigua.
   useEffect(() => {
-    if (!(ready && hasOnboarded && uid)) return;
+    if (!(ready && hasOnboarded && uid && isPremium)) return;
     let alive = true;
     const sincronizarMovimientos = async () => {
       const cloud = await loadCloudData(uid).catch(() => null);
@@ -1285,7 +1276,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
     };
-  }, [ready, hasOnboarded, uid, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields]);
+  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -1598,7 +1589,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // plano — los Honor y Huawei aprietan el ahorro de batería. Ver reengancharLector.
       reengancharLector();
       collect();
-      if (uid) {
+      if (uid && isPremium) {
         void loadCloudData(uid).then((cloud) => {
           if (!cloud) return;
           applyNewerCloudFields(cloud);
@@ -1626,7 +1617,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     };
     // Solo depende de si la app ya está lista: los datos que necesita los
     // lee de captureInputs en el momento de recoger.
-  }, [ready, hasOnboarded, uid, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields]);
+  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields]);
 
   function setAutoCaptureOn(value: boolean) {
     notificationReader.setEnabled(value);
@@ -2542,7 +2533,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     verComoGratis,
     setVerComoGratis,
     tienePremiumDeVerdad: isPremiumDeLaCuenta || pruebaCorriendo || testerPremium.active,
-    isCloudSynced: uid !== null,
+    isCloudSynced: uid !== null && isPremium,
+    hasCloudAccount: uid !== null,
     /* "Respaldados" quiere decir que la ULTIMA subida termino bien, no que haya sesion
        iniciada. Ver el cartel de Ajustes y utils/cloudSync. */
     respaldoAlDia: uid !== null && respaldoFallo === null,

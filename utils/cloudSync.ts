@@ -81,12 +81,30 @@ export type CloudData = {
 
 // Trae los datos guardados en la nube para esta cuenta (o "null" si esta
 // cuenta nunca terminó de configurarse, o si no hay internet ahora mismo).
-export async function loadCloudData(uid: string): Promise<CloudData | null> {
+export class CloudPremiumRequiredError extends Error {
+  constructor() {
+    super("cloud-copy-requires-premium");
+    this.name = "CloudPremiumRequiredError";
+  }
+}
+
+export async function loadCloudData(
+  uid: string,
+  options?: { allowCloudCopy?: (entitlement: { isPremium: boolean; premiumTrialStartedAt?: number }) => boolean },
+): Promise<CloudData | null> {
   try {
     const snap = await getDoc(doc(db, "users", uid));
     if (!snap.exists()) return null;
     const data = snap.data();
     if (data.accountDeletionPending === true) throw new Error("account-deletion-pending");
+    // El modo Gratis no descarga historiales separados ni restaura la copia antigua.
+    // La copia queda intacta en Firestore; Pro permite volver a cargarla.
+    if (data?.hasOnboarded && options?.allowCloudCopy && !options.allowCloudCopy({
+      isPremium: data.isPremium === true,
+      premiumTrialStartedAt: typeof data.premiumTrialStartedAt === "number" ? data.premiumTrialStartedAt : undefined,
+    })) {
+      throw new CloudPremiumRequiredError();
+    }
     const history = data.historyFormat === 2 ? await loadHistoryV2(uid) : null;
     if (!history) assertLegacyHistoryFormat(data);
     if (!data?.hasOnboarded) return null;
@@ -128,6 +146,7 @@ export async function loadCloudData(uid: string): Promise<CloudData | null> {
       syncUpdatedAt: data.syncUpdatedAt || {},
     };
   } catch (error) {
+    if (error instanceof CloudPremiumRequiredError) throw error;
     if (error instanceof UnsupportedHistoryFormatError) throw error;
     // "La cuenta no tiene copia" y "no pudimos consultar la copia" son dos
     // estados opuestos. El segundo se propaga para que la pantalla permita

@@ -72,6 +72,20 @@ export function syncCreditNotifications(state: CreditState) {
   return queue;
 }
 
+/** Cancela solo los avisos de tarjetas, sin tocar calendario ni exportaciones. */
+export function clearCreditNotifications() {
+  queue = queue
+    .then(async () => {
+      const scheduled = await Notifications.getAllScheduledNotificationsAsync();
+      for (const notification of scheduled) {
+        if (notification.content.data?.[MARK])
+          await Notifications.cancelScheduledNotificationAsync(notification.identifier);
+      }
+    })
+    .catch(() => undefined);
+  return queue;
+}
+
 async function sync(state: CreditState) {
   const scheduled = await Notifications.getAllScheduledNotificationsAsync();
   for (const notification of scheduled) {

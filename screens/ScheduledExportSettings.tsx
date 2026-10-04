@@ -233,7 +233,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
     const ok = await applySchedule(next, {
       title: t("schedExport.notifTitle"),
       body: t(saldraSolo ? "schedExport.notifBodyFondo" : "schedExport.notifBody"),
-    });
+    }, { notifyAtScheduledTime: !saldraSolo });
     setNotifOk(ok);
 
     if (!ok) {
@@ -430,25 +430,6 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
             </Text>
           </View>
           <Toggle on={schedule.enabled} onChange={(v: boolean) => update({ enabled: v })} />
-        </View>
-
-        {/* QUÉ HACE Y QUÉ NO.
-            Alguien que activa esto espera que le llegue el archivo solo. Si eso
-            no va a pasar, tiene que saberlo ANTES de confiar en ello y no un mes
-            después. Y si SÍ va a pasar, decir lo contrario es igual de malo:
-            este cuadro decía que no se podía cuando ya se podía. */}
-        <View className="rounded-2xl border-[1.5px] border-slate-200 dark:border-noche-borde bg-slate-50 dark:bg-noche-2 p-4 mb-5">
-          <View className="flex-row gap-2.5">
-            <Info size={16} color="#64748b" />
-            <Text className="flex-1 text-xs text-slate-600 dark:text-slate-300 leading-5">
-              {t(saleSolo ? "schedExport.explainFondo" : "schedExport.explain")}
-            </Text>
-          </View>
-          {!saleSolo && (
-            <Text className="text-[11px] text-slate-500 dark:text-slate-400 leading-4 mt-2.5 pl-[26px]">
-              {t("schedExport.whyNotFull")}
-            </Text>
-          )}
         </View>
 
         {schedule.enabled && (
@@ -743,17 +724,8 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
               <Info size={15} color="#64748b" />
               <View className="flex-1">
                 <Text className="text-[11px] leading-5 text-slate-600 dark:text-slate-300">
-                  {/* Con el despertador de Android sale solo; sin él, al abrir la
-                      app. Son dos promesas distintas y hay que decir la que
-                      corresponde a ESTE celular: quien tenga un APK anterior
-                      recibe el texto nuevo y no la función. */}
-                  {/* SE PREGUNTA `saleSolo`, LA MISMA CONDICIÓN QUE LA CAJA DE ARRIBA.
-                      Aquí decía `enFondo && format !== "pdf"`, que es casi lo mismo pero no
-                      lo mismo: con el APK que SÍ sabe armar el PDF sin pantalla, arriba salía
-                      *"lo guarda sola, con la app cerrada"* y aquí abajo *"se crea en cuanto
-                      abras Fino"*. Las dos frases a la vez, en la misma pantalla, sobre lo
-                      mismo. Con una sola condición no pueden discrepar. */}
-                  {t(saleSolo ? "schedExport.fondoSi" : "schedExport.timeWhatHappens")}
+                  {/* Una sola frase breve explica el comportamiento de esta instalación. */}
+                  {t(saleSolo ? "schedExport.compactFondo" : "schedExport.compactAlAbrir")}
                 </Text>
                 {/* Y el PDF no se puede armar con la app cerrada, así que quien
                     tenga el despertador y elija PDF tiene que saberlo aquí, al
@@ -849,14 +821,9 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                 Viene apagado: ocupan media hoja y empujan la lista a la siguiente. */}
             {schedule.format === "pdf" && (
               <View className="flex-row items-center justify-between mb-5 rounded-xl border-[1.5px] border-slate-200 dark:border-noche-borde p-3.5">
-                <View className="flex-1 pr-3">
-                  <Text className="text-xs font-bold text-slate-700 dark:text-slate-200">
-                    {t("schedExport.graficos")}
-                  </Text>
-                  <Text className="text-[11px] text-slate-500 dark:text-slate-400 leading-relaxed mt-1">
-                    {t("schedExport.graficosHint")}
-                  </Text>
-                </View>
+                <Text className="flex-1 pr-3 text-sm font-bold text-slate-700 dark:text-slate-200">
+                  {t("schedExport.graficos")}
+                </Text>
                 {/* El Toggle de la app y no el del sistema: es el que usa el interruptor
                     principal de esta misma pantalla, y dos interruptores distintos en la
                     misma pantalla se ven como un descuido. */}

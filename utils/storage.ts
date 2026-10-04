@@ -108,6 +108,9 @@ export const STORAGE_KEYS = {
   // La indicación inicial del botón + pertenece a la cuenta y se oculta tras
   // el primer uso. Se borra al cerrar sesión para no heredarla entre cuentas.
   plusHint: "finzo:plusHint",
+  // Avisos que ya se revisaron en Inicio. Es solo estado local para el punto
+  // rojo de la campana; no se comparte ni se sincroniza con la nube.
+  homeNotificationSeen: "finzo:homeNotificationSeen",
 } as const;
 
 /** Retira automáticamente los datos falsos que dejaron versiones antiguas. */
@@ -163,6 +166,7 @@ export async function clearAccountData(): Promise<void> {
         STORAGE_KEYS.movimientosNegocio,
         STORAGE_KEYS.cajasDinero,
         STORAGE_KEYS.plusHint,
+        STORAGE_KEYS.homeNotificationSeen,
         // Integraciones y tareas que pertenecen a la cuenta, aunque sus claves
         // vivan fuera del almacén principal.
         "finzo:scheduledExport",

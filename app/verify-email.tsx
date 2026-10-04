@@ -17,8 +17,8 @@ export default function VerifyEmailRoute() {
         await withTimeout(reload(user));
         if (!user.emailVerified) return false;
 
-        const gotCloudData = await withTimeout(hydrateFromCloud(user.uid));
-        if (gotCloudData) {
+        const cloudResult = await withTimeout(hydrateFromCloud(user.uid));
+        if (cloudResult === "restored") {
           router.replace("/(tabs)");
           return true;
         }

@@ -1,10 +1,11 @@
+import { Alert } from "react-native";
 import { router } from "expo-router";
 import Register from "@/screens/Register";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
 
 export default function RegisterRoute() {
-  const { hasOnboarded, hydrateFromCloud, setUserName, setUserEmail } = useAppData();
+  const { t, hasOnboarded, hydrateFromCloud, setUserName, setUserEmail } = useAppData();
   return (
     <Register
       onRegistered={(name, email) => {
@@ -23,9 +24,14 @@ export default function RegisterRoute() {
         if (user) {
           setUserName(user.displayName || "");
           setUserEmail(user.email || "");
-          const gotCloudData = await hydrateFromCloud(user.uid);
-          if (gotCloudData) {
+          const cloudResult = await hydrateFromCloud(user.uid);
+          if (cloudResult === "restored") {
             router.replace("/(tabs)");
+            return;
+          }
+          if (cloudResult === "premium-required") {
+            Alert.alert(t("login.cloudRequiresPremiumTitle"), t("login.cloudRequiresPremiumText"));
+            router.replace(hasOnboarded ? "/(tabs)" : "/setup");
             return;
           }
         }

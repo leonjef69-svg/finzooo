@@ -15,6 +15,9 @@
 
 import { loadJSON, saveJSON, flushPendingSaves, STORAGE_KEYS } from "@/utils/storage";
 import { monthNamesFor, translations } from "@/constants/i18n";
+import { shouldNotifyAutomaticExportResult } from "@/utils/homeNotifications";
+import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
 import { htmlDelReporte } from "@/utils/reportePdfDatos";
 import { File, Paths } from "expo-file-system";
 import { archivoCsv, archivoExcel, filasDelReporte, movimientosParaReporte } from "@/utils/reporteArchivo";
@@ -82,11 +85,55 @@ const CLAVE_ULTIMO = "finzo:exportacionEnFondo.ultimo";
  */
 const LARGO_DETALLE = 200;
 
+async function notificarResultadoEnElTelefono(
+  resultado: ResultadoDeFondo,
+  archivo: string,
+): Promise<void> {
+  try {
+    const permiso = await Notifications.getPermissionsAsync();
+    if (!permiso.granted) return;
+
+    const perfil = await loadJSON<Partial<Profile>>(STORAGE_KEYS.profile, {});
+    const idioma = perfil.userLanguage ?? "es";
+    const textos = (translations as Record<string, Record<string, string>>)[idioma] ?? translations.es;
+    const claveCuerpo = resultado === "hecho"
+      ? "schedExport.resultNotificationSuccess"
+      : resultado === "sin-movimientos"
+        ? "schedExport.resultNotificationNoData"
+        : "schedExport.resultNotificationFailure";
+    const cuerpo = textos[claveCuerpo] ?? translations.es[claveCuerpo];
+    const body = cuerpo.replace("{archivo}", archivo || "Fino");
+
+    await Notifications.scheduleNotificationAsync({
+      content: {
+        title: textos["schedExport.resultNotificationTitle"] ?? translations.es["schedExport.resultNotificationTitle"],
+        body,
+        sound: "default",
+        data: {
+          tag: "finzo-export-result",
+          screen: "export-result",
+          result: resultado,
+          resultAt: Date.now(),
+        },
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.TIME_INTERVAL,
+        seconds: 1,
+        channelId: Platform.OS === "android" ? "finzo-export" : undefined,
+      },
+    });
+  } catch {
+    // Un fallo al avisar no puede deshacer ni cambiar el resultado del archivo.
+  }
+}
+
 /** Lo último que hizo el trabajo de fondo, para la pantalla de ajustes. */
 export type UltimoIntento = {
   cuando: number;
   resultado: ResultadoDeFondo;
   archivo: string;
+  /** Solo los intentos programados se anuncian en la campana de Inicio. */
+  automatico?: boolean;
   /**
    * EL TEXTO DEL ERROR, cuando hubo uno.
    *
@@ -105,15 +152,20 @@ export async function ultimoIntentoEnFondo(): Promise<UltimoIntento | null> {
 async function apuntar(
   resultado: ResultadoDeFondo,
   archivo = "",
-  detalle = ""
+  detalle = "",
+  automatico = true,
 ): Promise<ResultadoDeFondo> {
   saveJSON(CLAVE_ULTIMO, {
     cuando: Date.now(),
     resultado,
     archivo,
+    automatico,
     detalle: detalle.slice(0, LARGO_DETALLE),
   });
   await flushPendingSaves();
+  if (automatico && shouldNotifyAutomaticExportResult(resultado, automatico)) {
+    await notificarResultadoEnElTelefono(resultado, archivo);
+  }
   return resultado;
 }
 
@@ -146,9 +198,11 @@ export async function exportarEnFondo(
   mesForzado?: string
 ): Promise<ResultadoDeFondo> {
   const schedule = await loadSchedule();
+  const registrarResultado = (resultado: ResultadoDeFondo, archivo = "", detalle = "") =>
+    apuntar(resultado, archivo, detalle, !forzar);
   reprogramar(schedule);
 
-  if (!schedule.enabled) return await apuntar("apagado");
+  if (!schedule.enabled) return await registrarResultado("apagado");
 
   if (!forzar) {
     const [premiumComprado, inicioPrueba] = await Promise.all([
@@ -158,7 +212,7 @@ export async function exportarEnFondo(
     if (!premiumComprado && !pruebaVigente(inicioPrueba, Date.now())) {
       saveSchedule({ ...schedule, enabled: false });
       cancelarExportacion();
-      return await apuntar("premium-requerido");
+      return await registrarResultado("premium-requerido");
     }
   }
 
@@ -166,15 +220,15 @@ export async function exportarEnFondo(
   // El despertador puede desviarse unos minutos (ver el módulo nativo), así que
   // se comprueba el día aquí. Sin esto, un despertador que se retrasa hasta
   // pasada la medianoche haría el reporte de un día que no tocaba.
-  if (!forzar && !isScheduledDay(schedule, ahora)) return await apuntar("no-toca-hoy");
+  if (!forzar && !isScheduledDay(schedule, ahora)) return await registrarResultado("no-toca-hoy");
   if (!forzar && schedule.lastAutoRun === claveDeEjecucion(schedule, ahora)) {
-    return await apuntar("ya-se-hizo-hoy");
+    return await registrarResultado("ya-se-hizo-hoy");
   }
 
   // El PDF ya NO se salta: desde el 06/08/2026 se convierte con código de
   // Android que no necesita la app en pantalla. Ver modules/export-scheduler.
   // Si el APK es anterior, htmlAPdfEnFondo lanza y se apunta el motivo.
-  if (!esDestinoAutomatico(schedule.destination)) return await apuntar("destino-no-automatico");
+  if (!esDestinoAutomatico(schedule.destination)) return await registrarResultado("destino-no-automatico");
 
   try {
     const [movimientosPersonales, perfil, budgets, carryoverCleared] = await Promise.all([
@@ -195,7 +249,7 @@ export async function exportarEnFondo(
       t("spaces.boxes"),
     );
     const espacio = espacios.find((item) => item.id === (schedule.spaceId || "personal"));
-    if (!espacio) return await apuntar("espacio-no-disponible");
+    if (!espacio) return await registrarResultado("espacio-no-disponible");
     const movimientos = espacio.transactions;
     const fmtEspacio = formateadorDelEspacio(espacio);
 
@@ -212,7 +266,7 @@ export async function exportarEnFondo(
 
     // Un reporte de cero movimientos es una hoja con solo la cabecera. No se
     // sube: llenaría la nube de archivos vacíos y taparía los que sí valen.
-    if (delTipo.length === 0) return await apuntar("sin-movimientos");
+    if (delTipo.length === 0) return await registrarResultado("sin-movimientos");
 
     const total = delTipo.reduce(
       (suma, tx) => suma + (tx.type === "expense" ? -tx.amount : tx.amount),
@@ -290,7 +344,7 @@ export async function exportarEnFondo(
       // no abre — que es peor que no tener ninguno, porque nadie lo revisa.
       const hecho = new File(uri);
       if (!hecho.exists || (hecho.size ?? 0) === 0) {
-        return await apuntar("pdf-vacio", fileName, `${uri} · ${hecho.size ?? "sin tamaño"}`);
+        return await registrarResultado("pdf-vacio", fileName, `${uri} · ${hecho.size ?? "sin tamaño"}`);
       }
       archivo = { uri, fileName, mimeType: "application/pdf" };
     } else {
@@ -328,17 +382,17 @@ export async function exportarEnFondo(
       markExported(ahora);
     }
     await flushPendingSaves();
-    return await apuntar("hecho", archivo.fileName);
+    return await registrarResultado("hecho", archivo.fileName);
   } catch (e) {
     // El APK viejo se dice aparte: "falló" mandaría a buscar un problema de
     // internet cuando lo que falta es instalar el APK nuevo. Los 6ago-01 y
     // 6ago-02 traen el despertador pero no el conversor de PDF.
-    if (e instanceof PdfEnFondoNoDisponible) return await apuntar("pdf-no-se-puede");
+    if (e instanceof PdfEnFondoNoDisponible) return await registrarResultado("pdf-no-se-puede");
     // La conversión colgada se dice aparte, porque lo que hay que hacer es
     // distinto: no es un fallo del reporte ni de internet, es que el conversor
     // del APK instalado se queda esperando. Hace falta el APK nuevo.
     if (e instanceof PdfEnFondoSinRespuesta) {
-      return await apuntar("pdf-sin-respuesta", "", e.message);
+      return await registrarResultado("pdf-sin-respuesta", "", e.message);
     }
     // Y nunca dejar que esto reviente: un trabajo de fondo que lanza una
     // excepción deja a Android con un candado de energía abierto y el proceso
@@ -348,6 +402,6 @@ export async function exportarEnFondo(
     // qué había fallado: en la pantalla ponía "falló" y a partir de ahí solo
     // quedaba adivinar. Ver UltimoIntento.detalle.
     const detalle = e instanceof Error ? `${e.name}: ${e.message}` : String(e);
-    return await apuntar("error", "", detalle);
+    return await registrarResultado("error", "", detalle);
   }
 }

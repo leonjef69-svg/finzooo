@@ -28,6 +28,7 @@ import {
   loadSchedule,
   markTapHandled,
   monthForSchedule,
+  retirarRecordatorioDeExportacionAnterior,
   toDateKey,
 } from "@/utils/scheduledExport";
 
@@ -248,7 +249,10 @@ function IncomingFileEffect() {
       // Se suelta ANTES de navegar: si el push fallara, insistir en bucle
       // sería peor que perder la importación.
       pending.current = null;
-      irUnaVez({ pathname: "/import", params: { uri: file.uri, name: file.name } });
+      // La ruta del archivo no se pone en la URL. Importar la recoge del estado
+      // temporal que acabamos de guardar arriba; así un enlace externo no puede
+      // inyectar una ruta local y hacer que la app la lea o la borre.
+      irUnaVez("/import");
       return true;
     }
 
@@ -325,12 +329,28 @@ function ScheduledExportEffect() {
   // Una sola comprobación por arranque. Sin esto, cada vuelta al frente
   // dispararía otra subida mientras la anterior sigue en marcha.
   const checked = useRef(false);
+  const migrationChecked = useRef(false);
+
+  // Las versiones previas dejaban un recordatorio a la hora programada,
+  // incluso en equipos que ya completan la exportación en segundo plano.
+  // Límpialo una vez al arrancar; el aviso del resultado real lo reemplaza.
+  useEffect(() => {
+    if (!ready || !hasOnboarded || migrationChecked.current) return;
+    migrationChecked.current = true;
+    void retirarRecordatorioDeExportacionAnterior().catch(() => undefined);
+  }, [ready, hasOnboarded]);
 
   useEffect(() => {
     if (!ready || !hasOnboarded || !isPremium) return;
 
     function abrirExportar(response: Notifications.NotificationResponse) {
-      if (response.notification.request.content.data?.screen !== "export") return;
+      const screen = response.notification.request.content.data?.screen;
+      if (screen === "export-result") {
+        if (!isNavigationMounted(navigationRef)) return;
+        irUnaVez("/scheduled-export");
+        return;
+      }
+      if (screen !== "export") return;
       loadSchedule().then(async (s) => {
         if (!isNavigationMounted(navigationRef)) return;
         irUnaVez({
@@ -362,7 +382,8 @@ function ScheduledExportEffect() {
     // lo que la función entera existe para evitar.
     Notifications.getLastNotificationResponseAsync().then(async (last) => {
       if (!last) return;
-      if (last.notification.request.content.data?.screen !== "export") return;
+      const screen = last.notification.request.content.data?.screen;
+      if (screen !== "export" && screen !== "export-result") return;
       // Ese método no olvida nunca: devuelve el último aviso tocado aunque
       // hayan pasado días y aunque ahora se esté abriendo la app desde el
       // icono. Se comprueba que no se haya atendido ya, o la pantalla de

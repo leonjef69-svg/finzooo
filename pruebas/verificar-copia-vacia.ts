@@ -42,7 +42,7 @@ ok(
 // del camino que devuelve datos, avisaría a quien sí los recuperó.
 const iAviso = login.indexOf("login.sinCopiaTitulo");
 const iNube = login.indexOf("hydrateFromCloud(user.uid)");
-const iDisco = login.indexOf("reloadPersistedData()");
+const iDisco = login.indexOf("await reloadPersistedData();", iAviso);
 ok(iNube !== -1 && iNube < iAviso, "el aviso llega después de haber intentado la nube");
 ok(iDisco !== -1 && iAviso < iDisco, "y antes de leer lo del celular, que se sigue leyendo igual");
 

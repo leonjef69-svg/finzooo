@@ -1,3 +1,4 @@
+import { Alert } from "react-native";
 import { router } from "expo-router";
 import Onboarding from "@/screens/Onboarding";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -7,7 +8,7 @@ import { googleSignInErrorMessage } from "@/utils/googleSignInError";
 import { irUnaVez } from "@/utils/nav";
 
 export default function OnboardingRoute() {
-  const { hasOnboarded, hydrateFromCloud, setUserName, setUserEmail } = useAppData();
+  const { t, hasOnboarded, hydrateFromCloud, setUserName, setUserEmail } = useAppData();
 
   async function continueWithGoogle() {
     try {
@@ -17,8 +18,11 @@ export default function OnboardingRoute() {
 
       setUserName(user.displayName || "");
       setUserEmail(user.email || "");
-      const gotCloudData = await hydrateFromCloud(user.uid);
-      router.replace((gotCloudData || hasOnboarded) ? "/(tabs)" : "/setup");
+      const cloudResult = await hydrateFromCloud(user.uid);
+      if (cloudResult === "premium-required") {
+        Alert.alert(t("login.cloudRequiresPremiumTitle"), t("login.cloudRequiresPremiumText"));
+      }
+      router.replace((cloudResult === "restored" || hasOnboarded) ? "/(tabs)" : "/setup");
     } catch (error) {
       if (error instanceof GoogleSignInCancelled) return;
       throw new Error(googleSignInErrorMessage(error));

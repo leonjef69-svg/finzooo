@@ -1,27 +1,40 @@
 const FULL_TURN = Math.PI * 2;
-const MINIMUM_VISUAL_FRACTION = 0.02;
-const MAX_VISUAL_UPLIFT = 0.16;
+const MINIMUM_VISUAL_FRACTION = 0.03;
+const MAX_SMALL_VISUAL_SHARE = 0.18;
 
 /**
- * Da un mínimo visible a los segmentos pequeños sin permitir que el ajuste
- * añada más del 16% del total original a la rosquilla.
+ * Da un mínimo visual a las categorías diminutas, con un límite común para
+ * que el ajuste no las amplíe más del 18% de la dona final. Si por sus montos
+ * reales ya superan ese espacio, conserva su proporción sin reducirlas. Los
+ * porcentajes siempre salen de los datos reales.
  */
 export function ajustarValoresRosquilla(values: number[], total: number) {
   if (total <= 0 || values.length === 0) return values;
 
-  // Un segmento de 1.2% apenas ocupa unos píxeles y su línea parece salir
-  // junto a las demás. Con 2% conserva una porción visible; en el caso de
-  // una categoría dominante y cuatro pequeñas, la dominante aún ocupa más
-  // del 92% de la dona.
-  const minimumValue = total * MINIMUM_VISUAL_FRACTION;
-  const requiredUplift = values.reduce(
+  const threshold = total * MINIMUM_VISUAL_FRACTION;
+  const smallValues = values.filter((value) => value > 0 && value < threshold);
+  if (smallValues.length === 0) return values;
+
+  const smallTotal = smallValues.reduce((sum, value) => sum + value, 0);
+  const mainTotal = Math.max(0, total - smallTotal);
+  if (mainTotal <= 0) return values;
+
+  // El presupuesto se define como parte de la dona final, no como aumento
+  // independiente por categoría. El 18% equivale a un máximo de 0.18/0.82
+  // del peso de las categorías que ya son visibles.
+  const smallBudget = mainTotal * (MAX_SMALL_VISUAL_SHARE / (1 - MAX_SMALL_VISUAL_SHARE));
+  const minimumValue = Math.min(threshold, smallBudget / smallValues.length);
+  const requiredUplift = smallValues.reduce(
     (sum, value) => sum + Math.max(0, minimumValue - value),
     0,
   );
-  const allowedUplift = total * MAX_VISUAL_UPLIFT;
+  const allowedUplift = Math.max(0, smallBudget - smallTotal);
   const upliftScale = requiredUplift > 0 ? Math.min(1, allowedUplift / requiredUplift) : 0;
 
-  return values.map((value) => value + Math.max(0, minimumValue - value) * upliftScale);
+  return values.map((value) => {
+    if (value <= 0 || value >= threshold) return value;
+    return value + Math.max(0, minimumValue - value) * upliftScale;
+  });
 }
 
 /** El texto describe el porcentaje real, nunca el tamaño visual del segmento. */
