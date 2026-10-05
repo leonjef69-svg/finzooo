@@ -19,6 +19,8 @@ import { irUnaVez, safeBack } from "@/utils/nav";
 import { actualizarAportePersonal, borrarAportePersonal } from "@/utils/personalContribution";
 import { devolverAportePersonal } from "@/utils/personalReturn";
 import { spaceErrorKey } from "@/utils/spaceErrors";
+import { captureAccountTask, type AccountTaskWait } from "@/utils/accountTask";
+import { getAccountStorageSession } from "@/utils/storage";
 import {
   borrarMovimientoFamilia, cargarFamiliaActiva, cerrarFamilia, crearFamilia, crearInvitacionFamilia, listarFamilias,
   guardarMovimientoFamilia, listarMiembrosFamilia, listarMovimientosFamilia, quitarMiembroFamilia, renombrarFamilia, vincularMovimientoPersonalFamilia,
@@ -39,12 +41,21 @@ type FamiliaEnMemoria = {
   movimientos: MovimientoFamilia[];
 };
 
+type FamilyActionWait = AccountTaskWait & { reload: (preferred?: string) => Promise<void> };
+
 // Familia vive en Firebase, pero no debe volver a aparecer vacía cada vez que
 // se cambia de espacio. Esta copia dura únicamente mientras Fino está abierto;
 // al entrar se enseña al instante y después se valida silenciosamente en nube.
 const familiaEnMemoria = new Map<string, FamiliaEnMemoria>();
 
 export default function Family() {
+  // La pantalla no conserva listas/formularios de la cuenta que acaba de salir.
+  useAppData();
+  const uid = auth.currentUser?.uid ?? "";
+  return <FamilyForAccount key={`${uid}:${getAccountStorageSession()}`} accountUid={uid} />;
+}
+
+function FamilyForAccount({ accountUid }: { accountUid: string }) {
   const { t, fmt, userCurrency, userName, showToast, isPremium, disponible, transactions, addOrUpdateTransaction, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
   const insets = useSafeAreaInsets();
   const uidAlAbrir = auth.currentUser?.uid ?? "";
@@ -99,6 +110,13 @@ export default function Family() {
   // Evita dos reparaciones mientras Firestore confirma el nuevo vínculo.
   const legacyRepairIds = useRef(new Set<string>());
   const reloadId = useRef(0);
+  const accountSession = useRef(getAccountStorageSession()).current;
+  const confirmedReload = useRef(0);
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; reloadId.current += 1; };
+  }, []);
   const tRef = useRef(t);
   const toastRef = useRef(showToast);
   tRef.current = t;
@@ -106,45 +124,40 @@ export default function Family() {
 
   const recargar = useCallback(async (preferida?: string) => {
     const pedido = ++reloadId.current;
-    const uid = auth.currentUser?.uid;
-    if (!uid) { setCargando(false); return; }
+    const uid = accountUid;
+    const task = captureAccountTask(uid, () => mounted.current && pedido === reloadId.current && getAccountStorageSession() === accountSession);
+    if (!task.current()) { if (!uid && mounted.current) setCargando(false); return; }
     setFamiliasSincronizadas(false);
     try {
-      const [lista, activaLegacy] = await Promise.all([listarFamilias(uid), cargarFamiliaActiva(uid)]);
-      if (pedido !== reloadId.current) return;
-      setFamilias(lista);
-      const saldos = await Promise.all(lista.map(async item => {
-        const movimientosDeFamilia = await listarMovimientosFamilia(item.id);
+      const [lista, activaLegacy] = await task.wait(() => Promise.all([listarFamilias(uid), cargarFamiliaActiva(uid)]));
+      const saldos = await task.wait(() => Promise.all(lista.map(async item => {
+        const movimientosDeFamilia = await task.wait(() => listarMovimientosFamilia(item.id, true));
         return [item.id, movimientosDeFamilia, {
           saldo: movimientosDeFamilia.reduce((total, movimiento) => total + (movimiento.tipo === "ingreso" ? movimiento.monto : -movimiento.monto), 0),
         }] as const;
-      }));
-      if (pedido !== reloadId.current) return;
+      })));
+      const activa = lista.find(item => item.id === (preferida || familiaEnMemoria.get(uid)?.familia?.id || activaLegacy?.id)) || lista[0] || null;
+      const movements = activa ? saldos.find(([id]) => id === activa.id)?.[1] ?? [] : [];
+      const people = activa ? await task.wait(() => listarMiembrosFamilia(activa.id)) : [];
+      if (!task.current()) return;
+      confirmedReload.current = pedido;
+      // Publicar juntos los datos completos: nunca reconciliar una mitad nueva
+      // de la lista con movimientos/miembros de la consulta anterior.
+      setFamilias(lista);
       setSaldosFamilias(Object.fromEntries(saldos.map(([id, , info]) => [id, info.saldo])));
       setMovimientosFamilias(Object.fromEntries(saldos.map(([id, items]) => [id, items])));
-      setFamiliasSincronizadas(true);
-      const activa = lista.find(item => item.id === (preferida || familiaEnMemoria.get(uid)?.familia?.id || activaLegacy?.id)) || lista[0] || null;
       setFamilia(activa);
-      if (activa) {
-        const movements = saldos.find(([id]) => id === activa.id)?.[1] ?? [];
-        const people = await listarMiembrosFamilia(activa.id);
-        if (pedido !== reloadId.current) return;
-        setMiembros(people); setMovimientos(movements);
-        familiaEnMemoria.set(uid, { familia: activa, miembros: people, movimientos: movements });
-      } else {
-        setMiembros([]); setMovimientos([]);
-        familiaEnMemoria.set(uid, { familia: null, miembros: [], movimientos: [] });
-      }
-    } catch { toastRef.current(tRef.current("family.connectionError")); }
-    finally { setCargando(false); }
-  }, []);
+      setMiembros(people); setMovimientos(movements);
+      setFamiliasSincronizadas(true);
+      familiaEnMemoria.set(uid, { familia: activa, miembros: people, movimientos: movements });
+    } catch { if (task.current()) toastRef.current(tRef.current("family.connectionError")); }
+    finally { if (task.current()) setCargando(false); }
+  }, [accountSession, accountUid]);
 
-  useFocusEffect(useCallback(() => { void recargar(); }, [recargar]));
-  useEffect(() => {
-    const uid = auth.currentUser?.uid;
-    if (!uid || cargando) return;
-    familiaEnMemoria.set(uid, { familia, miembros, movimientos });
-  }, [cargando, familia, miembros, movimientos]);
+  useFocusEffect(useCallback(() => {
+    void recargar();
+    return () => { reloadId.current += 1; setFamiliasSincronizadas(false); };
+  }, [recargar]));
   const familiaId = familia?.id;
   useEffect(() => {
     setVerMiembros(false);
@@ -154,12 +167,16 @@ export default function Family() {
   useEffect(() => setMovementLimit(60), [familiaId, filter]);
   useEffect(() => {
     if (!familiaId) return;
-    return observarCierreFamilia(familiaId, () => {
+    let active = true;
+    const task = captureAccountTask(accountUid, () => mounted.current && active && getAccountStorageSession() === accountSession);
+    const stop = observarCierreFamilia(familiaId, () => {
+      if (!task.current()) return;
       setFamilia(null); setMovimientos([]); setMiembros([]); setTipo(null);
       setInvitacion(""); setFilter(null);
       setVerTodas(true); void recargar();
-    }, () => toastRef.current(tRef.current("family.connectionError")));
-  }, [familiaId, recargar]);
+    }, () => { if (task.current()) toastRef.current(tRef.current("family.connectionError")); });
+    return () => { active = false; stop(); };
+  }, [accountSession, accountUid, familiaId, recargar]);
   const saldo = useMemo(() => movimientos.reduce((sum, item) => sum + (item.tipo === "ingreso" ? item.monto : -item.monto), 0), [movimientos]);
   const resumen = useMemo(() => movimientos.reduce(
     (total, item) => ({
@@ -178,8 +195,10 @@ export default function Family() {
   const devolvibleAPersonal = returnableToPersonal(movimientos, auth.currentUser?.uid);
 
   useEffect(() => {
-    const uid = auth.currentUser?.uid;
-    if (!uid || cargando || !familiasSincronizadas) return;
+    const uid = accountUid;
+    const revision = reloadId.current;
+    const task = captureAccountTask(uid, () => mounted.current && revision === reloadId.current && !actionLock.current && getAccountStorageSession() === accountSession);
+    if (!task.current() || cargando || !familiasSincronizadas || confirmedReload.current !== revision) return;
     const todosLosMovimientos = Object.values(movimientosFamilias).flat();
     const validMovementIds = todosLosMovimientos
       .filter(item => item.personalOwnerUid === uid && item.personalTransactionId != null)
@@ -236,8 +255,9 @@ export default function Family() {
     for (const item of legacy) {
       legacyRepairIds.current.add(item.id);
       const personalId = nextId();
-      void vincularMovimientoPersonalFamilia(familia.id, item.id, personalId, uid)
+      void task.wait(() => vincularMovimientoPersonalFamilia(familia.id, item.id, personalId, uid))
         .then(() => {
+          if (!task.current()) return;
           repairLinkedTransferTransactions([{
             id: personalId, type: "expense", amount: item.monto, category: "otros", date: item.fecha,
             time: horaDe(item.creadoEn), method: "transfer", description: t("family.transferTo", { name: familia.nombre }),
@@ -248,24 +268,50 @@ export default function Family() {
         })
         .catch(() => {
           legacyRepairIds.current.delete(item.id);
-          toastRef.current(tRef.current("family.connectionError"));
+          if (task.current()) toastRef.current(tRef.current("family.connectionError"));
         });
     }
-  }, [cargando, familia, familias, familiasSincronizadas, movimientos, movimientosFamilias, owner, recargar, repairLinkedTransferTransactions, t, transactions]);
+  }, [accountSession, accountUid, cargando, familia, familias, familiasSincronizadas, movimientos, movimientosFamilias, ocupado, owner, recargar, repairLinkedTransferTransactions, t, transactions]);
 
-  async function ejecutar(action: () => Promise<void>, onError?: (error: unknown) => void) {
+  async function ejecutar(action: (wait: FamilyActionWait) => Promise<void>, onError?: (error: unknown) => void) {
     if (actionLock.current) return;
+    const task = captureAccountTask(accountUid, () => mounted.current && getAccountStorageSession() === accountSession);
+    if (!task.current()) return;
     actionLock.current = true;
     setOcupado(true);
-    try { await action(); }
+    let mutationRevision: number | undefined;
+    async function guarded<T>(work: () => Promise<T>): Promise<T> {
+      // Invalidar antes de enviar, no después de recibir: una lectura iniciada
+      // antes del borrado no puede restaurarlo durante la espera del servidor.
+      mutationRevision = ++reloadId.current;
+      setFamiliasSincronizadas(false);
+      try { return await task.wait(work); }
+      finally {
+        // También descartar una actualización manual/foco recibida mientras
+        // el servidor aún estaba procesando la modificación.
+        if (task.current()) {
+          mutationRevision = ++reloadId.current;
+          setFamiliasSincronizadas(false);
+        }
+      }
+    }
+    const wait = Object.assign(guarded, { reload: (preferred?: string) => task.wait(() => recargar(preferred)) });
+    try { await action(wait); }
     catch (error) {
+      if (!task.current()) return;
       if (onError) onError(error);
       else showToast(t(spaceErrorKey(error)));
     }
-    finally { actionLock.current = false; setOcupado(false); }
+    finally {
+      actionLock.current = false;
+      if (task.current()) {
+        setOcupado(false);
+        if (mutationRevision !== undefined && mutationRevision === reloadId.current) void recargar();
+      }
+    }
   }
 
-  const crear = () => ejecutar(async () => {
+  const crear = () => ejecutar(async wait => {
     if (!isPremium) { irUnaVez("/premium"); return; }
     const issue = amountInputError(montoInicial, userCurrency);
     if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
@@ -284,7 +330,7 @@ export default function Family() {
       method: origenInicial === "personal" ? "transfer" : "cash",
       ...(personalTransactionId != null ? { personalTransactionId, personalOwnerUid: uid } : {}),
     } : undefined;
-    const nueva = await crearFamilia(uid, userName || t("family.member"), value, userCurrency, movimientoInicial);
+    const nueva = await wait(() => crearFamilia(uid, userName || t("family.member"), value, userCurrency, movimientoInicial));
     if (personalTransactionId != null && nueva.movimientoInicialId) {
       addOrUpdateTransaction({
         id: personalTransactionId, type: "expense", amount: initial, category: "otros", date: fechaHoy(),
@@ -293,28 +339,28 @@ export default function Family() {
         internalTransferSpaceId: nueva.id, internalTransferSpaceName: value,
       });
     }
-    setModo(null); setNombre(""); setMontoInicial(""); setOrigenInicial("externo"); setVerTodas(false); await recargar(nueva.id); showToast(t("family.created"));
+    setModo(null); setNombre(""); setMontoInicial(""); setOrigenInicial("externo"); setVerTodas(false); await wait.reload(nueva.id); showToast(t("family.created"));
   });
 
-  const unir = () => ejecutar(async () => {
+  const unir = () => ejecutar(async wait => {
     const uid = auth.currentUser?.uid;
     if (!uid || codigo.length !== 8) return;
-    const nueva = await unirseAFamilia(uid, userName || t("family.member"), codigo);
-    setModo(null); setCodigo(""); setVerTodas(false); await recargar(nueva.id); showToast(t("family.joined"));
+    const nueva = await wait(() => unirseAFamilia(uid, userName || t("family.member"), codigo));
+    setModo(null); setCodigo(""); setVerTodas(false); await wait.reload(nueva.id); showToast(t("family.joined"));
   });
 
-  const invitar = () => ejecutar(async () => {
+  const invitar = () => ejecutar(async wait => {
     const uid = auth.currentUser?.uid; if (!uid || !familia || !owner) return;
     if (!isPremium) { irUnaVez("/premium"); return; }
-    setInvitacion(await crearInvitacionFamilia(uid, familia.id));
+    setInvitacion(await wait(() => crearInvitacionFamilia(uid, familia.id)));
   });
   const guardarNombreFamilia = () => {
     if (!familia || !owner || ocupado) return;
     const nombreNuevo = nombreFamiliaEditado.trim().slice(0, 35);
     if (!nombreNuevo) { showToast(t("family.nameRequired")); return; }
     if (nombreNuevo === familia.nombre) { setEditandoNombreFamilia(false); return; }
-    void ejecutar(async () => {
-      await renombrarFamilia(familia.id, nombreNuevo);
+    void ejecutar(async wait => {
+      await wait(() => renombrarFamilia(familia.id, nombreNuevo));
       const familiaActualizada = { ...familia, nombre: nombreNuevo };
       setFamilia(familiaActualizada);
       setFamilias(actuales => actuales.map(item => item.id === familia.id ? familiaActualizada : item));
@@ -332,13 +378,13 @@ export default function Family() {
     if (!familia || !owner || miembro.rol === "owner") return;
     Alert.alert(t("family.removeMember"), miembro.nombre, [
       { text: t("common.cancel"), style: "cancel" },
-      { text: t("common.delete"), style: "destructive", onPress: () => void ejecutar(async () => {
-        await quitarMiembroFamilia(familia.id, miembro.uid);
+      { text: t("common.delete"), style: "destructive", onPress: () => void ejecutar(async wait => {
+        await wait(() => quitarMiembroFamilia(familia.id, miembro.uid));
         setMiembros(actuales => actuales.filter(item => item.uid !== miembro.uid));
       }) },
     ]);
   };
-  const guardar = () => ejecutar(async () => {
+  const guardar = () => ejecutar(async wait => {
     const issue = amountInputError(monto, familia?.currency || userCurrency);
     if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
     const uid = auth.currentUser?.uid; const value = parseAmountInput(monto, familia?.currency || userCurrency);
@@ -349,10 +395,10 @@ export default function Family() {
       const minimo = minimumContributionAmount(movimientos, aporteEditado, uid);
       if (value < minimo - 0.005) { showToast(t("family.contributionUsed")); return; }
       if (value - aporteEditado.monto > disponible) { showToast(t("family.notEnoughPersonal")); return; }
-      await actualizarAportePersonal("family", familia.id, aporteEditado.id, value, descripcion || aporteEditado.descripcion);
+      await wait(() => actualizarAportePersonal("family", familia.id, aporteEditado.id, value, descripcion || aporteEditado.descripcion));
       const personal = transactions.find(tx => tx.id === aporteEditado.personalTransactionId);
       if (personal) addOrUpdateTransaction({ ...personal, amount: value }, true);
-      setMonto(""); setDescripcion(""); setEditandoAporteId(null); setTipo(null); await recargar();
+      setMonto(""); setDescripcion(""); setEditandoAporteId(null); setTipo(null); await wait.reload();
       return;
     }
     const desdePersonal = tipo === "ingreso" && owner && origenDinero === "personal";
@@ -360,19 +406,19 @@ export default function Family() {
     if (desdePersonal && value > disponible) { showToast(t("family.notEnoughPersonal")); return; }
     if (tipo === "gasto" && !canSpendFromSpace(movimientos, value)) { showToast(t("family.notEnoughSpace")); return; }
     const personalTransactionId = desdePersonal ? nextId() : undefined;
-    const movementId = await guardarMovimientoFamilia(familia.id, uid, { tipo, monto: value, descripcion: descripcion.trim().slice(0, 60) || (tipo === "ingreso" ? t(desdePersonal ? "family.initialFromPersonal" : "family.externalMoney") : ""), ...(desdePersonal ? {} : { category }), notes: notes.trim(), fecha: movementDate, method: personalTransactionId != null ? "transfer" : method, ...(personalTransactionId != null ? { personalTransactionId, personalOwnerUid: uid } : {}) });
+    const movementId = await wait(() => guardarMovimientoFamilia(familia.id, uid, { tipo, monto: value, descripcion: descripcion.trim().slice(0, 60) || (tipo === "ingreso" ? t(desdePersonal ? "family.initialFromPersonal" : "family.externalMoney") : ""), ...(desdePersonal ? {} : { category }), notes: notes.trim(), fecha: movementDate, method: personalTransactionId != null ? "transfer" : method, ...(personalTransactionId != null ? { personalTransactionId, personalOwnerUid: uid } : {}) }));
     if (personalTransactionId != null) addOrUpdateTransaction({ id: personalTransactionId, type: "expense", amount: value, category: "otros", date: movementDate, time: horaDe(Date.now()), method: "transfer", description: t("family.transferTo", { name: familia.nombre }), notes: notes.trim(), origin: "manual", internalTransfer: "family", internalTransferLink: movementId, internalTransferSpaceId: familia.id, internalTransferSpaceName: familia.nombre });
-    setMonto(""); setDescripcion(""); setNotes(""); setMovementDate(fechaHoy()); setOrigenDinero("externo"); setTipo(null); await recargar(); showToast(t("family.movementSaved"));
+    setMonto(""); setDescripcion(""); setNotes(""); setMovementDate(fechaHoy()); setOrigenDinero("externo"); setTipo(null); await wait.reload(); showToast(t("family.movementSaved"));
   });
 
-  const devolverAPersonal = () => ejecutar(async () => {
+  const devolverAPersonal = () => ejecutar(async wait => {
     const uid = auth.currentUser?.uid;
     if (!uid || !familia || devolvibleAPersonal <= 0) return;
     if (familia.currency !== userCurrency) { showToast(t("spaces.currencyMismatch")); return; }
-    const receipt = await devolverAportePersonal({ kind: "family", spaceId: familia.id, amount: devolvibleAPersonal,
-      currency: userCurrency, fecha: fechaHoy(), description: t("family.returnToPersonal") });
+    const receipt = await wait(() => devolverAportePersonal({ kind: "family", spaceId: familia.id, amount: devolvibleAPersonal,
+      currency: userCurrency, fecha: fechaHoy(), description: t("family.returnToPersonal") }));
     if (!recordPersonalReturn(receipt)) return;
-    await recargar();
+    await wait.reload();
   });
   const salir = () => {
     const uid = auth.currentUser?.uid;
@@ -380,10 +426,10 @@ export default function Family() {
     const familyId = familia.id;
     Alert.alert(t("family.leave"), t("family.leaveWarning"), [
       { text: t("common.cancel"), style: "cancel" },
-      { text: t("family.leave"), style: "destructive", onPress: () => void ejecutar(async () => {
-        await salirDeFamilia(uid, familyId);
+      { text: t("family.leave"), style: "destructive", onPress: () => void ejecutar(async wait => {
+        await wait(() => salirDeFamilia(uid, familyId));
         setFamilia(null); setMiembros([]); setMovimientos([]); setTipo(null); setInvitacion("");
-        setVerTodas(true); await recargar(); showToast(t("family.left"));
+        setVerTodas(true); await wait.reload(); showToast(t("family.left"));
       }) },
     ]);
   };
@@ -408,15 +454,15 @@ export default function Family() {
     }
     Alert.alert(t("family.deleteSelectedTitle"), t("family.deleteSelectedMessage"), [
       { text: t("common.cancel"), style: "cancel" },
-      { text: t("common.delete"), style: "destructive", onPress: () => void ejecutar(async () => {
+      { text: t("common.delete"), style: "destructive", onPress: () => void ejecutar(async wait => {
         for (const item of actuales) {
-          await cerrarFamilia(uid, item.id);
+          await wait(() => cerrarFamilia(uid, item.id));
           if (auth.currentUser?.uid !== uid) return;
           repairLinkedTransferTransactions(settlePersonalTransfers(transactions, "family", item.id));
         }
         setFamiliasSeleccionadas([]);
         setSeleccionandoFamilias(false);
-        await recargar();
+        await wait.reload();
       }, error => {
         const code = (error as { code?: string })?.code;
         showToast(t(code === "functions/failed-precondition" ? "family.closeBalance" : spaceErrorKey(error)));
@@ -430,19 +476,19 @@ export default function Family() {
     const familyId = familia.id;
     Alert.alert(t("family.close"), t("family.closeWarning"), [
       { text: t("common.cancel"), style: "cancel" },
-      { text: t("family.close"), style: "destructive", onPress: () => void ejecutar(async () => {
-        await cerrarFamilia(uid, familyId);
+      { text: t("family.close"), style: "destructive", onPress: () => void ejecutar(async wait => {
+        await wait(() => cerrarFamilia(uid, familyId));
         if (auth.currentUser?.uid !== uid) return;
         repairLinkedTransferTransactions(settlePersonalTransfers(transactions, "family", familyId));
         setFamilia(null); setMiembros([]); setMovimientos([]); setTipo(null); setInvitacion("");
-        setVerTodas(true); await recargar(); showToast(t("family.closed"));
+        setVerTodas(true); await wait.reload(); showToast(t("family.closed"));
       }, error => {
         const code = (error as { code?: string })?.code;
         showToast(t(code === "functions/failed-precondition" ? "family.closeBalance" : spaceErrorKey(error)));
       }) },
     ]);
   };
-  const borrarSeleccionados = (ids = seleccionados) => ejecutar(async () => {
+  const borrarSeleccionados = (ids = seleccionados) => ejecutar(async wait => {
     if (!familia || !ids.length) return;
     const currentUid = auth.currentUser?.uid;
     const solicitados = movimientos.filter(item => ids.includes(item.id));
@@ -458,11 +504,11 @@ export default function Family() {
       return;
     }
     for (const item of plan.items) {
-      if (item.personalTransactionId != null) await borrarAportePersonal("family", familia.id, item.id);
-      else await borrarMovimientoFamilia(familia.id, item.id);
+      if (item.personalTransactionId != null) await wait(() => borrarAportePersonal("family", familia.id, item.id));
+      else await wait(() => borrarMovimientoFamilia(familia.id, item.id));
       if (item.personalOwnerUid === auth.currentUser?.uid && item.personalTransactionId != null) deleteLinkedTransferTransaction(item.personalTransactionId);
     }
-    setSeleccionados([]); setSeleccionando(false); await recargar();
+    setSeleccionados([]); setSeleccionando(false); await wait.reload();
   });
   const confirmarBorrarTodo = () => {
     const currentUid = auth.currentUser?.uid;

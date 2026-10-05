@@ -24,6 +24,12 @@ Requisitos, regresión y límites: `docs/PRUEBAS_NODE22_BORRADO_CUENTA.md`.
 
 ## Qué comprueba cada cosa
 
+`verificar-consultas-espacios.mjs` ejecuta manejadores originales de Familia y
+Cajas con respuestas diferidas: cuenta/sesión, consulta superada, borrado,
+caché, miembros y cierres. La prueba de fuentes reales está en
+`functions/integration-tests/shared-sources.test.js` (SDK/Auth/Firestore local).
+Regresión, comandos y límites: `docs/PRUEBAS_CONSULTAS_ESPACIOS.md`.
+
 ### Pruebas (`verificar-*`)
 
 | | |

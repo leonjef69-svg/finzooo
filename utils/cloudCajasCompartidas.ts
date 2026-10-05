@@ -1,5 +1,5 @@
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, getDocs, orderBy, query,
+  addDoc, collection, deleteDoc, doc, getDoc, getDocFromServer, getDocs, orderBy, query,
   runTransaction, serverTimestamp, setDoc, onSnapshot, updateDoc, writeBatch,
   where,
 } from "firebase/firestore";
@@ -238,13 +238,18 @@ export async function borrarCajasCompartidasDeCuenta(uid: string): Promise<void>
 }
 
 export function observarCierreCaja(boxId: string, cerrado: () => void, error: (error: Error) => void) {
-  return onSnapshot(doc(db, "boxSpaces", boxId), snap => {
-    if (!snap.exists() || snap.data().closed === true) cerrado();
+  return onSnapshot(doc(db, "boxSpaces", boxId), { includeMetadataChanges: true }, snap => {
+    if (!snap.metadata.fromCache && !snap.metadata.hasPendingWrites && (!snap.exists() || snap.data().closed === true)) cerrado();
   }, error);
 }
 
-export function escucharMovimientosCaja(boxId: string, recibir: (items: MovimientoCajaCompartida[]) => void, error: (error: Error) => void) {
-  return onSnapshot(query(collection(db, "boxSpaces", boxId, "movements"), orderBy("creadoEn", "desc")), snap => {
-    recibir(snap.docs.map(item => ({ id: item.id, tipo: item.data().tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(item.data().monto || 0), descripcion: String(item.data().descripcion || ""), category: typeof item.data().category === "string" ? item.data().category : undefined, notes: typeof item.data().notes === "string" ? item.data().notes : undefined, method: typeof item.data().method === "string" ? item.data().method : undefined, fecha: String(item.data().fecha || ""), creadoPor: String(item.data().creadoPor || ""), creadoEn: alNumero(item.data().creadoEn), personalTransactionId: typeof item.data().personalTransactionId === "number" ? item.data().personalTransactionId : undefined, personalOwnerUid: typeof item.data().personalOwnerUid === "string" ? item.data().personalOwnerUid : undefined, personalReturnAmount: typeof item.data().personalReturnAmount === "number" ? item.data().personalReturnAmount : undefined })));
+export async function confirmarCajaAbierta(boxId: string): Promise<boolean> {
+  const snap = await getDocFromServer(doc(db, "boxSpaces", boxId));
+  return snap.exists() && snap.data().closed !== true && !snap.metadata.hasPendingWrites;
+}
+
+export function escucharMovimientosCaja(boxId: string, recibir: (items: MovimientoCajaCompartida[], confirmado: boolean) => void, error: (error: Error) => void) {
+  return onSnapshot(query(collection(db, "boxSpaces", boxId, "movements"), orderBy("creadoEn", "desc")), { includeMetadataChanges: true }, snap => {
+    recibir(snap.docs.map(item => ({ id: item.id, tipo: item.data().tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(item.data().monto || 0), descripcion: String(item.data().descripcion || ""), category: typeof item.data().category === "string" ? item.data().category : undefined, notes: typeof item.data().notes === "string" ? item.data().notes : undefined, method: typeof item.data().method === "string" ? item.data().method : undefined, fecha: String(item.data().fecha || ""), creadoPor: String(item.data().creadoPor || ""), creadoEn: alNumero(item.data().creadoEn), personalTransactionId: typeof item.data().personalTransactionId === "number" ? item.data().personalTransactionId : undefined, personalOwnerUid: typeof item.data().personalOwnerUid === "string" ? item.data().personalOwnerUid : undefined, personalReturnAmount: typeof item.data().personalReturnAmount === "number" ? item.data().personalReturnAmount : undefined })), !snap.metadata.fromCache && !snap.metadata.hasPendingWrites);
   }, error);
 }

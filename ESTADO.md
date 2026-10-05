@@ -1,5 +1,28 @@
 # Estado actual de Fino
 
+## Consultas antiguas de espacios — protección local (05/10/2026)
+
+- Familia publica una consulta completa, ligada a cuenta/generación/revisión;
+  invalida lecturas antes y después de modificar y descarta errores/finalización
+  antiguos. Cajas descarta miembros/listas de otra selección y reinicia su
+  escucha después de modificar. Las operaciones no aplican resultados ni
+  envían el siguiente paso tras cambiar de sesión, incluso A → B → A.
+- Solo fuentes del servidor sin escrituras pendientes pueden conciliar
+  Personal. Se comprueba que el espacio sigue abierto para no borrar aportes
+  consumidos durante la purga. Cajas retira contrapartes borradas remotamente
+  únicamente del espacio activo confirmado, sin tocar otros ni ya liquidados.
+  La caché continúa siendo información de pantalla, no prueba financiera.
+- Guía y límites: `docs/PRUEBAS_CONSULTAS_ESPACIOS.md`. La regresión local falla
+  contra `ffca3eb`. Sin nuevas claves/datos locales, formatos, permisos o cambios
+  de privacidad; no se modifica PLAYSTORE.md porque no se recopila algo nuevo.
+- TypeScript/ESLint aprobados, 131 pruebas locales y 8 auditores (una prueba
+  preexistente ajena sigue sin registrar en Git), 54 unitarias de Functions y
+  54 de reglas/SDK/HTTP/eventos aprobadas con Node 22 real. La prueba de Telegram
+  ahora espera toda la limpieza, sin retirar ninguna comprobación.
+- **Qué sigue:** Cajas privadas y conflictos financieros simultáneos.
+  **Qué falta:** Android/dos teléfonos y
+  publicación coordinada de lo preparado. No se publicó nada; tarjetas fuera.
+
 ## Devoluciones deshechas: confirmación invalidada (05/10/2026)
 
 - Continuación de FINO-02: una devolución anulada conservaba una confirmación

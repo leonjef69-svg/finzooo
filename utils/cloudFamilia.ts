@@ -5,7 +5,9 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocFromServer,
   getDocs,
+  getDocsFromServer,
   orderBy,
   query,
   runTransaction,
@@ -164,8 +166,8 @@ export async function cerrarFamilia(uid: string, familiaId: string): Promise<voi
 }
 
 export function observarCierreFamilia(familiaId: string, cerrado: () => void, error: () => void) {
-  return onSnapshot(doc(db, "familySpaces", familiaId), snap => {
-    if (!snap.exists() || snap.data().closed === true) cerrado();
+  return onSnapshot(doc(db, "familySpaces", familiaId), { includeMetadataChanges: true }, snap => {
+    if (!snap.metadata.fromCache && !snap.metadata.hasPendingWrites && (!snap.exists() || snap.data().closed === true)) cerrado();
   }, error);
 }
 
@@ -208,8 +210,18 @@ export async function listarMiembrosFamilia(familyId: string): Promise<MiembroFa
   return snap.docs.map((item) => ({ uid: item.id, nombre: String(item.data().nombre || "Miembro"), rol: item.data().rol === "owner" ? "owner" : "member" }));
 }
 
-export async function listarMovimientosFamilia(familyId: string): Promise<MovimientoFamilia[]> {
-  const snap = await getDocs(query(collection(db, "familySpaces", familyId, "movements"), orderBy("creadoEn", "desc")));
+export async function listarMovimientosFamilia(familyId: string, confirmarServidor = false): Promise<MovimientoFamilia[]> {
+  const consulta = query(collection(db, "familySpaces", familyId, "movements"), orderBy("creadoEn", "desc"));
+  const snap = await (confirmarServidor ? getDocsFromServer(consulta) : getDocs(consulta));
+  // Una copia sin conexión o con escrituras pendientes se puede mostrar, pero
+  // no constituye prueba de que un vínculo de Personal exista o haya desaparecido.
+  if (confirmarServidor && (snap.metadata.fromCache || snap.metadata.hasPendingWrites)) throw new Error("family-unconfirmed");
+  if (confirmarServidor) {
+    // Al cerrar un espacio se purga su historial. No confundir esa lista vacía
+    // con un aporte borrado: el dinero ya consumido debe permanecer en Personal.
+    const espacio = await getDocFromServer(doc(db, "familySpaces", familyId));
+    if (!espacio.exists() || espacio.data().closed === true || espacio.metadata.hasPendingWrites) throw new Error("family-unconfirmed");
+  }
   return snap.docs.map((item) => {
     const data = item.data();
     return { id: item.id, tipo: data.tipo === "ingreso" ? "ingreso" : "gasto", monto: Number(data.monto || 0), descripcion: String(data.descripcion || ""), category: typeof data.category === "string" ? data.category : undefined, notes: typeof data.notes === "string" ? data.notes : undefined, method: typeof data.method === "string" ? data.method : undefined, fecha: String(data.fecha || ""), creadoEn: alNumero(data.creadoEn), creadoPor: String(data.creadoPor || ""), personalTransactionId: typeof data.personalTransactionId === "number" ? data.personalTransactionId : undefined, personalOwnerUid: typeof data.personalOwnerUid === "string" ? data.personalOwnerUid : undefined, personalReturnAmount: typeof data.personalReturnAmount === "number" ? data.personalReturnAmount : undefined };

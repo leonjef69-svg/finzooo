@@ -10,6 +10,12 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Familia y Cajas compartidas descartan consultas/operaciones de una sesión
+anterior y fuentes sin confirmar antes de corregir Personal. Cajas concilia
+contrapartes borradas remotamente solo del espacio activo abierto, conservando
+aportes consumidos y otros espacios. Guía: `docs/PRUEBAS_CONSULTAS_ESPACIOS.md`.
+Preparado localmente; no hay APK/OTA/deploy ni cambios nativos en esta tanda.
+
 La devolución deshecha ahora invalida su confirmación privada y una respuesta
 atrasada no reinserta el ingreso borrado. Requiere actualizar juntas
 `changePersonalContribution`, `returnPersonalContribution` y la app; no cambian

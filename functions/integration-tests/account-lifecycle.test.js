@@ -154,9 +154,12 @@ test("Node 22, llamadas HTTP y eliminación real en Auth/Firestore emulados", { 
         "el evento de Auth debe terminar la limpieza");
       assert.equal((await admin.collection("personalReturnReceipts/owner/operations").get()).empty, true);
       assert.equal((await admin.doc("testerPremium/owner").get()).exists, false);
-      await eventually(async () => !(await admin.doc("telegramConnections/chat-owner").get()).exists,
+      const telegramRemoved = ["telegramConnections/chat-owner", "telegramDrafts/chat-owner", "telegramUndo/chat-owner", "telegramLinkRequests/owner-code"];
+      // El evento borra por colecciones/lotes; la conexión desaparece antes de
+      // limpiar los códigos. Esperar TODO, sin quitar ninguna comprobación.
+      await eventually(async () => (await Promise.all(telegramRemoved.map(name => admin.doc(name).get()))).every(snap => !snap.exists),
         "el evento Firestore debe limpiar Telegram");
-      for (const name of ["telegramDrafts/chat-owner", "telegramUndo/chat-owner", "telegramLinkRequests/owner-code"]) {
+      for (const name of telegramRemoved) {
         assert.equal((await admin.doc(name).get()).exists, false, name);
       }
       assert.equal((await admin.doc("telegramDrafts/other-kept").get()).exists, true);
