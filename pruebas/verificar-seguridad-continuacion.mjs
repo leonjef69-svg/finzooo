@@ -100,6 +100,7 @@ const settings = read("app/(tabs)/settings.tsx");
   const disabled = [];
   const scope = {
     auth: { currentUser: { uid: "A" } }, localSessionVersion: { current: 0 }, localOpenRequest: { current: 0 },
+    cloudFieldsRef: { current: null },
     tRef: { current: (key) => key }, setReady() {}, setHasOnboarded() {},
     prepareLocalAccount: async (uid) => uid === "A" ? accountA : true,
     loadJSON: async () => ({ userName: "B" }), STORAGE_KEYS: { profile: "profile" },

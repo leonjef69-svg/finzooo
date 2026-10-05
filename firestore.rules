@@ -177,6 +177,12 @@ service cloud.firestore {
                          && request.auth.token.email_verified == true
                          && (!exists(/databases/$(database)/documents/users/$(userId))
                            || resource.data.get('accountDeletionPending', false) != true)
+                         // Tras migrar, una app antigua no puede quitar las
+                         // marcas por elemento ni volver a sustituir listas enteras.
+                         && request.resource.data.get('syncFormat', 1) in [1, 2]
+                         && (!exists(/databases/$(database)/documents/users/$(userId))
+                           || resource.data.get('syncFormat', 1) != 2
+                           || request.resource.data.get('syncFormat', 1) == 2)
                          // Solo el servidor cambia el formato. Un cliente antiguo
                          // no puede quitar el marcador v2 al guardar su lista vieja.
                          && request.resource.data.get('historyFormat', 1) in [1, 2]
@@ -192,7 +198,7 @@ service cloud.firestore {
                               'userLanguage', 'budgets', 'categoryBudgets', 'transactions', 'deletedTransactionIds', 'historyFormat',
                               'goals', 'deletedGoalIds', 'pagosProgramados', 'isPremium', 'premiumTrialStartedAt', 'merchantLearned',
                               'categoryOverrides', 'categoriasPropias', 'carryoverCleared',
-                              'iconosFavoritos', 'syncUpdatedAt', 'accountDeletionPending'
+                              'iconosFavoritos', 'syncUpdatedAt', 'syncFormat', 'accountDeletionPending'
                             ])
                          // Los que van siempre.
                          && request.resource.data.hasOnboarded is bool

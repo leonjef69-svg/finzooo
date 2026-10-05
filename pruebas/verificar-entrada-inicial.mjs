@@ -17,7 +17,8 @@ for (const screen of [onboarding, countryPicker, currencyPicker]) {
   assert.doesNotMatch(screen, /blurRadius=/, "el fondo no se amplía ni se desenfoca artificialmente");
 }
 assert.match(context, /setInitialCountry/);
-assert.match(context, /hasOnboarded:\s*false/);
+assert.match(context, /persistCloudProfile\(markCloudProfile\([\s\S]*?country, false\)/,
+  "elegir país antes del registro no da por terminado el setup");
 assert.match(context, /if \(profile\) \{/);
 assert.match(context, /setUserCurrency\(profile\.userCurrency/);
 

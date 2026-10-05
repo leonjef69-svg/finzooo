@@ -1,5 +1,50 @@
 # Estado actual de Fino
 
+## Unión segura de teléfono y nube al entrar a Pro (05/10/2026)
+
+- FINO-03 corregido para la copia Personal: presupuestos por mes, límites,
+  categorías propias y personalizadas, calendario, clasificación aprendida,
+  saldo anterior, favoritos y perfil se unen por elemento/campo. Una lista
+  incompleta no reemplaza los elementos que solo existían en la otra copia.
+- Cada edición y borrado conserva su marca dentro de `syncUpdatedAt`. Borrar
+  una categoría, un límite o un pago no hace que vuelva al recibir una copia
+  antigua; desmarcar un mes conserva el gasto y su enlace. Editar otro campo
+  no rejuvenece campos viejos. Los empates nuevos se resuelven igual en ambos
+  sentidos y el reloj avanza desde la última marca observada.
+- Las mutaciones actualizan una referencia inmediata y encolan datos/marcas
+  sin esperar al siguiente dibujado. Subir usa esa referencia para no enviar
+  un valor viejo con la fecha de una edición nueva. La recepción utiliza la
+  misma unión que la transacción de subida. Restaurar con datos locales
+  existentes también une movimientos/metas y sus borrados, sin reemplazarlos.
+- Las fotos locales omitidas por tamaño o por la política de pagos/favoritos
+  no se borran del teléfono por recibir la copia de Firebase. Una eliminación
+  expresa de foto sí se respeta. La reducción de fotos retira `undefined`
+  antes de escribir, para que Firestore no rechace el documento completo.
+- Google desde Bienvenida también abre primero la copia por UID. La recepción
+  de listas inválidas o IDs duplicados aborta sin modificar los campos locales;
+  Ajustes explica que la copia no pudo unirse. No es un validador completo de
+  todos los campos del documento: ampliar esa validación sigue siendo posible.
+- Nuevo `syncFormat: 2`, independiente de `historyFormat`: las reglas admiten
+  la migración y, una vez marcada una cuenta, rechazan la sustitución completa
+  desde una app antigua que quite ese marcador. **Las reglas deben publicarse
+  antes de entregar esta app.** Las reglas antiguas no admiten el campo nuevo;
+  entregar solo la app impediría sus respaldos. No se publicó ninguna parte.
+- Verificado: TypeScript y ESLint; 126 pruebas locales y 8 auditores; 39
+  pruebas de Functions; y 15 comprobaciones reales en el emulador de Firestore,
+  incluidos dos clientes, 10.000 movimientos, migración y rechazo a apps
+  antiguas. El conteo local incluye una prueba preexistente ajena que permanece
+  sin registrar en Git. La prueba nueva falla contra el código anterior por
+  perder una categoría; la de reglas también falla contra las reglas anteriores.
+- **Qué sigue:** aplicar el requisito Pro en el servidor (FINO-04), no solo
+  en la app, y resolver la decisión sobre aportes de Familia/Caja (FINO-02).
+  **Qué falta:** Android con dos cuentas/dispositivos, entrega coordinada,
+  revisión de reglas realmente publicadas y Node 22. Negocio/Cajas tienen
+  documentos y lógica aparte; este cambio no declara corregida su fusión ni
+  los pagos del mismo mes confirmados simultáneamente en dos teléfonos.
+- Guía y límites: `docs/PRUEBAS_FUSION_PRO.md`. Las marcas de borrado no se
+  purgan sin confirmación de dispositivos; también cuentan en el límite de
+  1 MB. El exceso se rechaza conservando el último respaldo, no truncando datos.
+
 ## Cierre de sesión conserva la copia local por cuenta (05/10/2026)
 
 - FINO-01 corregido en código: cerrar sesión confirma una copia local cifrada
@@ -45,12 +90,10 @@
   bloquea el uso hasta reabrir la app o revisar la recuperación. Cuando falta
   la llave de SecureStore pero aún hay datos cifrados, no crea una nueva.
   Pruebas automáticas cubren llave ausente, firma dañada y guardado rechazado.
-- La copia de presupuestos en Firebase ya une meses distintos al guardar y al
-  aplicar una respuesta del servidor. Aún falta una fusión por elemento con
-  registro de borrados para límites, categorías y pagos; unirlos simplemente
-  haría reaparecer elementos eliminados. También falta proteger la restauración
-  inicial al pasar de Gratis a Pro, después de separar los datos locales por
-  cuenta.
+- La copia de presupuestos ya unía meses distintos. El 05/10 se completó la
+  fusión Personal por elemento con marcas de borrado para límites, categorías
+  y pagos, incluida la recepción/restauración. Su despliegue coordinado y
+  comprobación física siguen pendientes; véase la sección superior.
 - Firebase Functions quedó configurado localmente para Node 22 tanto en
   `functions/package.json` como en `firebase.json` (este último tiene
   prioridad al desplegar). Sus 39 pruebas pasan con el Node instalado en el
@@ -79,9 +122,9 @@
   seguro. Una prueba local adicional ajena a este cambio sigue sin registrar
   en Git. No se compiló una APK, no se probó el nuevo flujo en un teléfono y
   no se publicaron cambios en Firebase o Play Console.
-- **Pendiente:** probar en Android la conservación local al cerrar sesión;
-  terminar la fusión segura de nube y
-  teléfono; aplicar la protección Pro en Firebase; decidir el tratamiento de
+- **Pendiente:** probar en Android la conservación local y la fusión Personal;
+  revisar las fusiones de Negocio/Cajas; aplicar la protección Pro en Firebase;
+  decidir el tratamiento de
   aportes pendientes de Familia/Caja; y probar el nuevo candado y los enlaces
   en un dispositivo. La protección local anterior no recupera una llave de cifrado
   perdida: evita destruir lo que aún quede. El runtime Node 22 también debe

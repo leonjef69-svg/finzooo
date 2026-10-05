@@ -20,6 +20,12 @@ async function clientModule(firestore, entry = "utils/cloudHistoryV2.ts") {
     plugins: [{ name: "test-firebase", setup(build) {
       build.onResolve({ filter: /^@\/utils\/firebase$/ }, () => ({ path: "firebase", namespace: "test" }));
       build.onLoad({ filter: /.*/, namespace: "test" }, () => ({ contents: "export const db = globalThis.__finoHistoryTestDb;", loader: "js" }));
+      // El respaldo real comprueba la lectura del teléfono. Esta prueba
+      // usa datos válidos y aísla esa pieza nativa, no la lógica de nube.
+      build.onResolve({ filter: /^@\/utils\/storage$/ }, () => ({ path: "storage", namespace: "test-storage" }));
+      build.onLoad({ filter: /.*/, namespace: "test-storage" }, () => ({
+        contents: "export const hasUnreadableLocalData = () => false;", loader: "js",
+      }));
       build.onResolve({ filter: /^@\/utils\/(cloudNegocio|cloudCajas|cloudFamilia|cloudCajasCompartidas|creditCloud)$/ },
         () => ({ path: "unused", namespace: "stub" }));
       build.onLoad({ filter: /.*/, namespace: "stub" }, () => ({

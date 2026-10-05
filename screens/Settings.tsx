@@ -387,6 +387,8 @@ export default function Settings({
                         ? "settings.backupNoInternet"
                         : respaldoFallo === "demasiado-grande"
                           ? "settings.backupTooLarge"
+                        : respaldoFallo === "datos-nube-invalidos"
+                          ? "settings.backupInvalid"
                         : "settings.backupFailedHint"
                   )}
             </Text>

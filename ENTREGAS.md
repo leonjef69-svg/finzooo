@@ -10,6 +10,14 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+El 05/10/2026 quedó preparada y comprobada la conservación local al cerrar
+sesión y la unión Personal por elemento al volver a Pro (`syncFormat: 2`).
+No se generó ni publicó un APK/AAB u OTA. Las reglas deben admitir el marcador
+antes de distribuir esta app; después de su primera escritura, una versión
+antigua no podrá reemplazar la copia de esa cuenta. La nube Pro del servidor,
+las pruebas físicas y la publicación coordinada siguen pendientes.
+Ver `docs/PRUEBAS_FUSION_PRO.md` antes de entregar o revertir versiones.
+
 La separación del historial Personal está preparada y probada localmente,
 pero todavía **no está disponible en Google Play**. No se ha publicado ni
 migrado ninguna cuenta real. Requiere una entrega coordinada de reglas,

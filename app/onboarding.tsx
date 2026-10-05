@@ -8,7 +8,7 @@ import { googleSignInErrorMessage } from "@/utils/googleSignInError";
 import { irUnaVez } from "@/utils/nav";
 
 export default function OnboardingRoute() {
-  const { t, hasOnboarded, hydrateFromCloud, setUserName, setUserEmail } = useAppData();
+  const { t, openLocalAccount, hydrateFromCloud, setUserName, setUserEmail } = useAppData();
 
   async function continueWithGoogle() {
     try {
@@ -16,13 +16,15 @@ export default function OnboardingRoute() {
       const user = auth.currentUser;
       if (!user) throw new Error("Google no devolvió una cuenta.");
 
+      const restoredLocal = await openLocalAccount(user.uid, user.email);
+      if (restoredLocal) { router.replace("/(tabs)"); return; }
       setUserName(user.displayName || "");
       setUserEmail(user.email || "");
       const cloudResult = await hydrateFromCloud(user.uid);
       if (cloudResult === "premium-required") {
         Alert.alert(t("login.cloudRequiresPremiumTitle"), t("login.cloudRequiresPremiumText"));
       }
-      router.replace((cloudResult === "restored" || hasOnboarded) ? "/(tabs)" : "/setup");
+      router.replace(cloudResult === "restored" ? "/(tabs)" : "/setup");
     } catch (error) {
       if (error instanceof GoogleSignInCancelled) return;
       throw new Error(googleSignInErrorMessage(error));

@@ -20,6 +20,8 @@ import { clearHistoryV2Cache, deleteHistoryV2, loadHistoryV2, saveHistoryV2 } fr
 import { hasUnreadableLocalData } from "@/utils/storage";
 
 export type CloudData = {
+  /** Formato que fusiona campos y conserva marcas de borrado por elemento. */
+  syncFormat?: 1 | 2;
   historyFormat?: 1 | 2;
   /** Se activa al borrar la cuenta; bloquea nuevas escrituras hasta terminar. */
   accountDeletionPending?: boolean;
@@ -76,7 +78,7 @@ export type CloudData = {
    * paraLaNube() en utils/iconosFavoritos.
    */
   iconosFavoritos?: string[];
-  /** Marca cuándo cambió cada bloque que no tiene identificadores propios. */
+  /** Fechas de bloques antiguos y de cambios/borrados por elemento. */
   syncUpdatedAt?: Record<string, number>;
 };
 
@@ -110,6 +112,7 @@ export async function loadCloudData(
     if (!history) assertLegacyHistoryFormat(data);
     if (!data?.hasOnboarded) return null;
     return {
+      syncFormat: data.syncFormat === 2 ? 2 : 1,
       hasOnboarded: true,
       userName: data.userName || "",
       userPhoto: data.userPhoto || null,
@@ -187,6 +190,7 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
   // en la nube fallara en silencio y la persona nunca se enterara.
   // Este paso los quita: JSON.stringify descarta las claves con undefined.
   let clean = JSON.parse(JSON.stringify(data)) as CloudData;
+  clean.syncFormat = 2;
   // Solo el servidor puede cambiar la versión; el cliente conserva la que
   // realmente haya en Firebase, nunca la que venga de memoria local.
   delete clean.historyFormat;
@@ -325,6 +329,7 @@ async function saveCloudDataV2(uid: string, clean: CloudData): Promise<Resultado
 function motivoLegible(e: unknown): string {
   const crudo = String((e as { code?: string })?.code ?? (e as Error)?.message ?? e);
   if (/demasiado-grande/i.test(crudo)) return "demasiado-grande";
+  if (/cloud-field-invalid|cloud-field-duplicate-id|sync-clock-overflow/i.test(crudo)) return "datos-nube-invalidos";
   if (/permission-denied|insufficient permissions/i.test(crudo)) return "permisos";
   if (/unavailable|network|offline/i.test(crudo)) return "sin-internet";
   return crudo;
@@ -349,14 +354,14 @@ function sinFotos(data: CloudData): CloudData {
   for (const [k, v] of Object.entries(data.categoryOverrides ?? {})) {
     overrides[k] = esFoto(v.image) ? { ...v, image: undefined } : v;
   }
-  return {
+  return JSON.parse(JSON.stringify({
     ...data,
     userPhoto: esFoto(data.userPhoto) ? null : data.userPhoto,
     categoryOverrides: overrides,
     categoriasPropias: (data.categoriasPropias ?? []).map((c) =>
       esFoto(c.image) ? { ...c, image: undefined } : c
     ),
-  };
+  })) as CloudData;
 }
 
 // Borra por completo el documento de esta cuenta en la nube (se usa al

@@ -60,7 +60,8 @@ const migrated = mergeCloudFields(
   data({ budgets: { "2026-09": 900 } }),
 );
 assert.equal(migrated.budgets["2026-09"], 900, "al migrar una cuenta antigua gana la copia compartida de la nube");
-assert.ok((migrated.syncUpdatedAt?.budgets ?? 0) > 0, "la migración deja una fecha para futuros conflictos");
+assert.equal(migrated.syncUpdatedAt?.budgets, 0, "la migración no inventa una edición reciente para datos antiguos");
+assert.equal(migrated.syncFormat, 2, "la migración distingue la unión por elemento de la sustitución antigua");
 
 const distinctMonths = mergeCloudFields(
   data({ budgets: { "2026-10": 1000 }, syncUpdatedAt: { budgets: 40 } }),
@@ -74,7 +75,8 @@ assert.deepEqual(
   "si ambos editan el mismo mes gana el cambio posterior, sin perder otro mes",
 );
 const context = readFileSync("contexts/AppDataContext.tsx", "utf8");
-assert.match(context, /setBudgets\(\(current\) => \{\s*const merged = mergeBudgetMonths\(/,
-  "la app aplica también los meses fusionados que devuelve la nube");
+assert.match(context, /merged = mergeCloudFields\(\{ \.\.\.local, syncUpdatedAt: cloudSyncMetaRef\.current \}, cloud\)/,
+  "la recepción utiliza la misma unión por elemento que la subida");
+assert.match(context, /setBudgets\(merged\.budgets\)/, "los meses fusionados llegan a la pantalla");
 
-console.log("Sincronización por bloques entre dos teléfonos correcta.");
+console.log("Sincronización por elementos entre dos teléfonos correcta.");

@@ -1120,7 +1120,7 @@ console.log("\n--- VIAJAN A LA COPIA DE LA NUBE ---");
   // y con las propias.
   //
   // Con un solo armador, un campo nuevo entra en las dos subidas a la vez.
-  ok(/function datosParaLaNube\(\): CloudData/.test(ctx), "hay un solo armador del paquete");
+  ok([...ctx.matchAll(/function datosParaLaNube\([^)]*\): CloudData/g)].length === 1, "hay un solo armador del paquete");
   ok(/categoriasPropias,/.test(ctx), "y lleva las categorias propias");
   const subidas = [...ctx.matchAll(/saveCloudData\(/g)].map((m) => m.index ?? 0);
   const conArmador = subidas.filter((i) => ctx.slice(i, i + 60).includes("datosParaLaNube()"));

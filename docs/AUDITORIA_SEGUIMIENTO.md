@@ -1,7 +1,26 @@
 # Seguimiento de la auditoría de Claude
 
-Última revisión: 02/10/2026. Este archivo separa tres cosas distintas: código
+Última revisión: 05/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
+
+## Auditoría FINO — avance de pérdida de datos (05/10/2026)
+
+- FINO-01: cierre de sesión con copia local cifrada por UID, ya preparado y
+  probado localmente; pendiente el recorrido Android con dos cuentas.
+- FINO-03: unión por elemento/campo de la copia Personal, también al recibir
+  y restaurar. Presupuestos, límites, categorías y calendario se conservan;
+  borrados explícitos no reaparecen. Ver `docs/PRUEBAS_FUSION_PRO.md`.
+- Validación actual: TypeScript, ESLint, 126 pruebas locales, 8 auditores,
+  39 pruebas de Functions y 15 comprobaciones en el emulador Firestore.
+  Las nuevas pruebas de fusión y reglas fallan contra la versión anterior.
+  Una de las 126 pruebas es preexistente, ajena y no registrada en Git.
+- No se publicó la app, las reglas ni Functions; no se usaron cuentas reales.
+  Las reglas nuevas deben admitir `syncFormat: 2` antes de distribuir la app.
+  El requisito Pro aún no está aplicado a todas las rutas del servidor.
+- **Qué sigue:** FINO-04 (Pro en servidor), FINO-02 (decisión sobre aportes),
+  comprobar Functions en Node 22 y preparar una entrega coordinada.
+  **Qué falta:** dispositivo, consolas/producción y revisión independiente de
+  Negocio/Cajas y del pago simultáneo del mismo mes desde dos teléfonos.
 
 ## Corregido y probado localmente
 

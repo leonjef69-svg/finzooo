@@ -107,7 +107,7 @@ import {
   saveCloudData,
   type CloudData,
 } from "@/utils/cloudSync";
-import { CLOUD_SYNC_GROUPS, mergeBudgetMonths, type CloudSyncGroup } from "@/utils/cloudFieldMerge";
+import { CLOUD_SYNC_GROUPS, cloudGroupValue, mergeCloudFields, recordCloudGroupChange, replaceCloudGroup, type CloudSyncGroup } from "@/utils/cloudFieldMerge";
 import { clearHistoryV2Cache } from "@/utils/cloudHistoryV2";
 import { subscribeTesterPremium } from "@/utils/testerPremium";
 import { TESTER_PREMIUM_INACTIVE, type TesterPremiumState } from "@/utils/testerPremiumState";
@@ -134,7 +134,6 @@ import { desconectarDropbox } from "@/utils/dropbox";
 import { desconectarOneDrive } from "@/utils/onedrive";
 import { disableLock } from "@/utils/appLock";
 import { setPendingImport } from "@/utils/pendingImport";
-import { profileWithCurrency } from "@/utils/profile";
 import { paymentNotificationFormatter } from "@/utils/notificationCurrency";
 import { limpiarCajasEnMemoria } from "@/utils/cajasMemoria";
 import type { Goal, Month, Profile, Transaction } from "@/types";
@@ -525,9 +524,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [carryoverCleared, setCarryoverCleared] = useState<string[]>([]);
   const [cloudSyncMeta, setCloudSyncMeta] = useState<Record<string, number>>({});
   const cloudSyncMetaRef = useRef<Record<string, number>>({});
-  useEffect(() => {
-    cloudSyncMetaRef.current = cloudSyncMeta;
-  }, [cloudSyncMeta]);
+  const cloudFieldsRef = useRef<CloudData | null>(null);
   const [deletedTransactionIds, setDeletedTransactionIds] = useState<number[]>([]);
   const [deletedGoalIds, setDeletedGoalIds] = useState<number[]>([]);
   const deletedTransactionIdsRef = useRef<number[]>([]);
@@ -590,6 +587,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user || (previousUser !== null && previousUser !== user.uid)) {
         localSessionVersion.current += 1;
+        cloudFieldsRef.current = null;
         setAccountStorageAvailable(false);
         setHasOnboarded(false);
       }
@@ -618,73 +616,103 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (ids.length > 0) reserveIdsAbove(Math.max(...ids));
   }
 
-  function markCloudGroup(group: CloudSyncGroup) {
-    const changedAt = Date.now();
-    cloudSyncMetaRef.current = { ...cloudSyncMetaRef.current, [group]: changedAt };
+  function markCloudGroup<T>(group: CloudSyncGroup, fallback: T, update: (current: T) => T): T {
+    const local = cloudFieldsRef.current ?? { ...datosParaLaNube(), pagosProgramados, iconosFavoritos };
+    const before = (cloudFieldsRef.current ? cloudGroupValue(local, group) : fallback) as T;
+    const after = update(before);
+    cloudSyncMetaRef.current = recordCloudGroupChange(cloudSyncMetaRef.current, group, before, after);
+    // Disponible inmediatamente: una respuesta de red o un segundo toque
+    // no pueden adelantarse al siguiente dibujado y pisar esta edición.
+    cloudFieldsRef.current = { ...replaceCloudGroup(local, group, after), syncUpdatedAt: cloudSyncMetaRef.current, syncFormat: 2 };
     setCloudSyncMeta(cloudSyncMetaRef.current);
+    // Se encolan en el mismo gesto, sin esperar a un efecto de React que
+    // podría quedar suspendido al cerrar sesión inmediatamente después.
+    if (ready && hasOnboarded) {
+      const keys: Partial<Record<CloudSyncGroup, string>> = {
+        budgets: STORAGE_KEYS.budgets, categoryBudgets: STORAGE_KEYS.categoryBudgets,
+        payments: STORAGE_KEYS.pagosProgramados, merchants: STORAGE_KEYS.merchantLearned,
+        categoryOverrides: STORAGE_KEYS.categoryCustom, customCategories: STORAGE_KEYS.categoriasPropias,
+        carryover: STORAGE_KEYS.carryoverCleared, favoriteIcons: STORAGE_KEYS.iconosFavoritos,
+      };
+      const key = keys[group];
+      if (key) saveJSON(key, after);
+      saveJSON(STORAGE_KEYS.cloudSyncMeta, cloudSyncMetaRef.current);
+    }
+    return after;
   }
 
-  /** Aplica solo los bloques que otro dispositivo cambió después. */
+  function markCloudProfile(changes: Partial<Pick<CloudData, "userName" | "userPhoto" | "userCurrency" | "userLanguage">>) {
+    return markCloudGroup(CLOUD_SYNC_GROUPS.profile,
+      { userName, userPhoto, userCurrency, userLanguage }, (current) => ({ ...current, ...changes }));
+  }
+
+  function persistCloudProfile(profile: Pick<CloudData, "userName" | "userPhoto" | "userCurrency" | "userLanguage">,
+    country = userCountry, onboarded = true) {
+    setUserName(profile.userName);
+    setUserPhoto(profile.userPhoto);
+    setUserCurrency(profile.userCurrency);
+    setUserLanguage(profile.userLanguage);
+    setUserCountry(country);
+    saveJSON(STORAGE_KEYS.profile, { ...profile, userEmail, userCountry: country, hasOnboarded: onboarded });
+  }
+
+  /** La misma unión se usa al subir y al recibir, nunca una lista entera. */
   const applyNewerCloudFields = useCallback((cloud: CloudData) => {
-    const localTimes = cloudSyncMetaRef.current;
-    const remoteTimes = cloud.syncUpdatedAt ?? {};
-    const take = (group: CloudSyncGroup, apply: () => void) => {
-      if (group in localTimes && (remoteTimes[group] ?? 0) <= (localTimes[group] ?? 0)) return;
-      apply();
-    };
-    take(CLOUD_SYNC_GROUPS.profile, () => {
-      const country = countryFor(cloud.userLanguage, cloud.userCurrency)?.id ?? "PE";
-      setUserName(cloud.userName);
-      setUserPhoto(cloud.userPhoto);
-      setUserCurrency(cloud.userCurrency);
-      setUserLanguage(cloud.userLanguage);
-      setUserCountry(country);
+    const local = cloudFieldsRef.current;
+    if (!local) return false;
+    let merged: CloudData;
+    try {
+      merged = mergeCloudFields({ ...local, syncUpdatedAt: cloudSyncMetaRef.current }, cloud);
+    } catch {
+      // Una copia mal formada no modifica la memoria ni la copia local.
+      setRespaldoFallo("datos-nube-invalidos");
+      return false;
+    }
+    // Los atajos a fotos nunca viajan a Firebase, pero tampoco se quitan
+    // del teléfono por haber recibido una copia que no puede contenerlos.
+    const photos = (local.iconosFavoritos ?? []).filter((icon) => icon.startsWith("data:"));
+    merged.iconosFavoritos = [...photos, ...(merged.iconosFavoritos ?? [])];
+    cloudFieldsRef.current = merged;
+    const changed = (a: unknown, b: unknown) => JSON.stringify(a) !== JSON.stringify(b);
+    if (changed(cloudGroupValue(local, "profile"), cloudGroupValue(merged, "profile"))) {
+      setUserName(merged.userName);
+      setUserPhoto(merged.userPhoto);
+      setUserCurrency(merged.userCurrency);
+      setUserLanguage(merged.userLanguage);
       saveJSON(STORAGE_KEYS.profile, {
-        userName: cloud.userName,
+        userName: merged.userName,
         userEmail,
-        userPhoto: cloud.userPhoto,
-        userCurrency: cloud.userCurrency,
-        userLanguage: cloud.userLanguage,
-        userCountry: country,
+        userPhoto: merged.userPhoto,
+        userCurrency: merged.userCurrency,
+        userLanguage: merged.userLanguage,
+        userCountry,
         hasOnboarded: true,
       });
-    });
-    // Aun con la misma marca de tiempo, el servidor puede haber unido un mes
-    // que este teléfono no tenía. No se sustituye el mapa entero.
-    setBudgets((current) => {
-      const merged = mergeBudgetMonths(
-        current,
-        cloud.budgets,
-        localTimes[CLOUD_SYNC_GROUPS.budgets] ?? 0,
-        remoteTimes[CLOUD_SYNC_GROUPS.budgets] ?? 0,
-      );
-      return JSON.stringify(current) === JSON.stringify(merged) ? current : merged;
-    });
-    take(CLOUD_SYNC_GROUPS.categoryBudgets, () => setCategoryBudgets(cloud.categoryBudgets));
-    take(CLOUD_SYNC_GROUPS.payments, () => setPagosProgramados(cloud.pagosProgramados ?? []));
-    take(CLOUD_SYNC_GROUPS.merchants, () => setMerchantLearned(cloud.merchantLearned ?? {}));
-    take(CLOUD_SYNC_GROUPS.categoryOverrides, () => {
-      saveOverrides(cloud.categoryOverrides ?? {});
-      setCategoryOverridesState(cloud.categoryOverrides ?? {});
-    });
-    take(CLOUD_SYNC_GROUPS.customCategories, () => {
-      savePropias(cloud.categoriasPropias ?? []);
-      setCategoriasPropiasState(cloud.categoriasPropias ?? []);
-    });
-    take(CLOUD_SYNC_GROUPS.carryover, () => setCarryoverCleared(cloud.carryoverCleared ?? []));
-    take(CLOUD_SYNC_GROUPS.favoriteIcons, () => {
-      saveFavoritos(cloud.iconosFavoritos ?? []);
-      setIconosFavoritosState(cloud.iconosFavoritos ?? []);
-    });
-    const mergedTimes = { ...localTimes };
-    for (const [group, changedAt] of Object.entries(remoteTimes)) {
-      mergedTimes[group] = Math.max(mergedTimes[group] ?? 0, changedAt);
     }
-    if (Object.keys(mergedTimes).some((group) => mergedTimes[group] !== localTimes[group])) {
-      cloudSyncMetaRef.current = mergedTimes;
-      setCloudSyncMeta(mergedTimes);
+    if (changed(local.budgets, merged.budgets)) setBudgets(merged.budgets);
+    if (changed(local.categoryBudgets, merged.categoryBudgets)) setCategoryBudgets(merged.categoryBudgets);
+    if (changed(local.pagosProgramados ?? [], merged.pagosProgramados)) setPagosProgramados(merged.pagosProgramados ?? []);
+    if (changed(local.merchantLearned ?? {}, merged.merchantLearned)) setMerchantLearned(merged.merchantLearned ?? {});
+    if (changed(local.categoryOverrides ?? {}, merged.categoryOverrides)) {
+      saveOverrides(merged.categoryOverrides ?? {});
+      setCategoryOverridesState(merged.categoryOverrides ?? {});
     }
-  }, [userEmail]);
+    if (changed(local.categoriasPropias ?? [], merged.categoriasPropias)) {
+      savePropias(merged.categoriasPropias ?? []);
+      setCategoriasPropiasState(merged.categoriasPropias ?? []);
+    }
+    if (changed(local.carryoverCleared ?? [], merged.carryoverCleared)) setCarryoverCleared(merged.carryoverCleared ?? []);
+    if (changed(local.iconosFavoritos ?? [], merged.iconosFavoritos)) {
+      saveFavoritos(merged.iconosFavoritos);
+      setIconosFavoritosState(getFavoritos());
+      cloudFieldsRef.current = { ...merged, iconosFavoritos: getFavoritos() };
+    }
+    if (changed(cloudSyncMetaRef.current, merged.syncUpdatedAt)) {
+      cloudSyncMetaRef.current = merged.syncUpdatedAt ?? {};
+      setCloudSyncMeta(cloudSyncMetaRef.current);
+    }
+    return true;
+  }, [userEmail, userCountry]);
 
   /**
    * TODO lo que va a la copia de la cuenta, en UN SOLO SITIO.
@@ -700,8 +728,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * con las categorías propias. Con un solo armador, un campo nuevo entra en las
    * dos subidas a la vez y no hay una segunda lista que acordarse de tocar.
    */
-  function datosParaLaNube(): CloudData {
-    return {
+  function datosParaLaNube(fromState = false): CloudData {
+    let data: CloudData = {
+      syncFormat: 2,
       hasOnboarded,
       userName,
       userPhoto,
@@ -733,9 +762,29 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // 1 MB compartido con los movimientos, y pasarse no lo deja a medias: lo
       // deja sin guardar. Ver la nota en utils/iconosFavoritos.
       iconosFavoritos: paraLaNube(iconosFavoritos),
-      syncUpdatedAt: cloudSyncMeta,
+      syncUpdatedAt: cloudSyncMetaRef.current,
     };
+    if (!fromState && cloudFieldsRef.current) {
+      for (const group of Object.values(CLOUD_SYNC_GROUPS)) {
+        data = replaceCloudGroup(data, group, cloudGroupValue(cloudFieldsRef.current, group));
+      }
+      data.pagosProgramados = pagosParaLaNube(data.pagosProgramados ?? []);
+      data.iconosFavoritos = paraLaNube(data.iconosFavoritos ?? []);
+    }
+    return data;
   }
+
+  // Se actualiza antes de los efectos de red y solo cuando este dibujado
+  // ya incluye la última edición síncrona. No sobrescribe una edición posterior.
+  useEffect(() => {
+    if (!ready || cloudSyncMeta !== cloudSyncMetaRef.current) return;
+    cloudFieldsRef.current = { ...datosParaLaNube(true), pagosProgramados, iconosFavoritos };
+    // El armador se recrea por dibujado; importan sus datos, no su identidad.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready, hasOnboarded, userName, userPhoto, userCurrency, userLanguage, budgets, categoryBudgets,
+    transactions, deletedTransactionIds, goals, deletedGoalIds, pagosProgramados,
+    isPremiumDeLaCuenta, pruebaInicio, merchantLearned, categoryOverrides,
+    categoriasPropias, carryoverCleared, iconosFavoritos, cloudSyncMeta]);
 
   // Trae lo que haya guardado en la nube para esta cuenta (por ejemplo,
   // al iniciar sesión desde un celular nuevo). Si no hay nada guardado
@@ -760,6 +809,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     }
     checkSession();
     if (!cloud) return "none";
+    // Entrar a Pro o restaurar manualmente no autoriza reemplazar lo que
+    // ya existe en este teléfono. Se conservan los dos historiales y los
+    // borrados, con la misma unión que utiliza la subida atómica.
+    const local = cloudFieldsRef.current;
+    if (local?.hasOnboarded) {
+      const merged = mergeCloudFields({ ...local, syncUpdatedAt: cloudSyncMetaRef.current }, cloud);
+      const deleted = pruneDeletedTransactionIds([...(local.deletedTransactionIds ?? []), ...(cloud.deletedTransactionIds ?? [])]);
+      const deletedGoals = pruneDeletedGoalIds([...(local.deletedGoalIds ?? []), ...(cloud.deletedGoalIds ?? [])]);
+      cloud = {
+        ...merged,
+        isPremium: cloud.isPremium,
+        premiumTrialStartedAt: cloud.premiumTrialStartedAt,
+        deletedTransactionIds: deleted,
+        transactions: mergeTransactions(local.transactions, cloud.transactions).filter((tx) => !deleted.includes(tx.id)),
+        deletedGoalIds: deletedGoals,
+        goals: mergeGoals(local.goals, cloud.goals).filter((goal) => !deletedGoals.includes(goal.id)),
+        iconosFavoritos: [...(local.iconosFavoritos ?? []).filter((icon) => icon.startsWith("data:")), ...(merged.iconosFavoritos ?? [])],
+      };
+    }
     setUserName(cloud.userName);
     setUserPhoto(cloud.userPhoto);
     setUserCurrency(cloud.userCurrency);
@@ -804,6 +872,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setIconosFavoritosState(cloud.iconosFavoritos ?? []);
     setCarryoverCleared(cloud.carryoverCleared ?? []);
     cloudSyncMetaRef.current = cloud.syncUpdatedAt ?? {};
+    cloudFieldsRef.current = cloud;
     setCloudSyncMeta(cloudSyncMetaRef.current);
     setHasOnboarded(true);
     saveJSON(STORAGE_KEYS.profile, {
@@ -817,7 +886,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     });
     saveJSON(STORAGE_KEYS.budgets, cloud.budgets);
     saveJSON(STORAGE_KEYS.categoryBudgets, cloud.categoryBudgets);
-    saveJSON(STORAGE_KEYS.transactions, cloud.transactions);
+    saveJSON(STORAGE_KEYS.transactions, cloud.transactions.filter((tx) => !borrados.includes(tx.id)));
     saveJSON(STORAGE_KEYS.deletedTransactionIds, borrados);
     saveJSON(STORAGE_KEYS.goals, cloud.goals.filter((goal) => !metasBorradas.includes(goal.id)));
     saveJSON(STORAGE_KEYS.deletedGoalIds, metasBorradas);
@@ -857,7 +926,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return "restored";
   }
 
-  async function reloadPersistedData() {
+  async function reloadPersistedData(profile?: Profile | null) {
     const loadingUid = auth.currentUser?.uid;
     const version = localSessionVersion.current;
     const [
@@ -930,6 +999,23 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setDatosNegocio(savedNegocio);
     cloudSyncMetaRef.current = savedCloudSyncMeta;
     setCloudSyncMeta(savedCloudSyncMeta);
+    // La copia para respuestas de red queda lista antes de resolver la
+    // apertura, incluso si React todavía no dibujó estos datos cargados.
+    cloudFieldsRef.current = {
+      ...datosParaLaNube(true),
+      ...(profile ? { userName: profile.userName || "", userPhoto: profile.userPhoto ?? null,
+        userCurrency: profile.userCurrency || "PEN", userLanguage: profile.userLanguage || "es",
+        hasOnboarded: profile.hasOnboarded } : {}),
+      budgets: savedBudgets, categoryBudgets: savedCategoryBudgets,
+      transactions: savedTransactions.filter((tx) => !savedDeletedTransactionIds.includes(tx.id)),
+      deletedTransactionIds: savedDeletedTransactionIds,
+      goals: savedGoals.filter((goal) => !savedDeletedGoalIds.includes(goal.id)),
+      deletedGoalIds: savedDeletedGoalIds, pagosProgramados: savedPagos,
+      isPremium: savedIsPremium, merchantLearned: savedLearned,
+      categoryOverrides: savedOverrides, categoriasPropias: savedPropias,
+      carryoverCleared: savedCarryoverCleared, iconosFavoritos: savedFavoritos,
+      syncUpdatedAt: savedCloudSyncMeta,
+    };
     setAutoCaptureLog(savedCaptureLog);
   }
 
@@ -947,12 +1033,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setReady(false);
     const request = ++localOpenRequest.current;
     localSessionVersion.current += 1;
+    cloudFieldsRef.current = null;
     try {
       const onboarded = await prepareLocalAccount(userUid, email);
       const profile = await loadJSON<Profile | null>(STORAGE_KEYS.profile, null);
       if (auth.currentUser?.uid !== userUid || request !== localOpenRequest.current) throw new Error(tRef.current("settings.noActiveSession"));
       if (profile) applyLocalProfile(profile);
-      await reloadPersistedData();
+      await reloadPersistedData(profile);
       if (auth.currentUser?.uid !== userUid || request !== localOpenRequest.current) throw new Error(tRef.current("settings.noActiveSession"));
       setHasOnboarded(onboarded);
       return onboarded;
@@ -1028,6 +1115,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setMerchantLearned({});
     setCarryoverCleared([]);
     cloudSyncMetaRef.current = {};
+    cloudFieldsRef.current = null;
     setCloudSyncMeta({});
     setRespaldoFallo(null);
     setCelebrateGoal(null);
@@ -1401,7 +1489,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const sincronizarMovimientos = async () => {
       const cloud = await loadCloudData(uid).catch(() => null);
       if (!alive || !cloud || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
-      applyNewerCloudFields(cloud);
+      if (!applyNewerCloudFields(cloud)) return;
       const borrados = pruneDeletedTransactionIds([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])]);
       const metasBorradas = pruneDeletedGoalIds([...deletedGoalIds, ...(cloud.deletedGoalIds ?? [])]);
       setDeletedTransactionIds((actuales) =>
@@ -1736,7 +1824,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       if (uid && isPremium) {
         void loadCloudData(uid).then((cloud) => {
           if (!cloud || !alive || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
-          applyNewerCloudFields(cloud);
+          if (!applyNewerCloudFields(cloud)) return;
           const borrados = pruneDeletedTransactionIds([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])]);
           const metasBorradas = pruneDeletedGoalIds([...deletedGoalIds, ...(cloud.deletedGoalIds ?? [])]);
           setDeletedTransactionIds((actuales) =>
@@ -1861,9 +1949,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const initialMonth = currentRealMonth();
     const key = monthKey(initialMonth.y, initialMonth.m);
     setMonth(initialMonth);
-    setBudgets((b) => ({ ...b, [key]: budgetAmount }));
-    markCloudGroup(CLOUD_SYNC_GROUPS.budgets);
-    markCloudGroup(CLOUD_SYNC_GROUPS.profile);
+    setBudgets(markCloudGroup(CLOUD_SYNC_GROUPS.budgets, budgets, (b) => ({ ...b, [key]: budgetAmount })));
+    markCloudProfile({ userName, userPhoto, userCurrency, userLanguage });
     setHasOnboarded(true);
     saveJSON(STORAGE_KEYS.profile, {
       userName,
@@ -1877,50 +1964,20 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function updateProfileInfo(name: string, photo: string | null) {
-    markCloudGroup(CLOUD_SYNC_GROUPS.profile);
-    setUserName(name);
-    setUserPhoto(photo);
-    saveJSON(STORAGE_KEYS.profile, {
-      userName: name,
-      userEmail,
-      userPhoto: photo,
-      userCurrency,
-      userLanguage,
-      userCountry,
-      hasOnboarded: true,
-    });
+    persistCloudProfile(markCloudProfile({ userName: name, userPhoto: photo }));
     showToast(t("toast.profileUpdated"));
   }
 
   function updateCurrency(id: string) {
-    markCloudGroup(CLOUD_SYNC_GROUPS.profile);
-    setUserCurrency(id);
+    const next = markCloudProfile({ userCurrency: id });
     // Cambiar cómo se muestran los montos no cambia el país real del usuario.
     // El país también controla métodos locales (Yape/Plin) y Telegram.
-    saveJSON(STORAGE_KEYS.profile, profileWithCurrency({
-      userName,
-      userEmail,
-      userPhoto,
-      userCurrency,
-      userLanguage,
-      userCountry,
-      hasOnboarded: true,
-    }, id));
+    persistCloudProfile(next);
     showToast(t("toast.currencyUpdated"));
   }
 
   function updateLanguage(id: string) {
-    markCloudGroup(CLOUD_SYNC_GROUPS.profile);
-    setUserLanguage(id);
-    saveJSON(STORAGE_KEYS.profile, {
-      userName,
-      userEmail,
-      userPhoto,
-      userCurrency,
-      userLanguage: id,
-      userCountry,
-      hasOnboarded: true,
-    });
+    persistCloudProfile(markCloudProfile({ userLanguage: id }));
     showToast(translations[id as keyof typeof translations]?.["toast.languageUpdated"] || "Idioma actualizado");
   }
 
@@ -1937,19 +1994,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * decisión sobran.
    */
   function updateCountry(country: string, language: string, currency: string) {
-    markCloudGroup(CLOUD_SYNC_GROUPS.profile);
-    setUserLanguage(language);
-    setUserCurrency(currency);
-    setUserCountry(country);
-    saveJSON(STORAGE_KEYS.profile, {
-      userName,
-      userEmail,
-      userPhoto,
-      userCurrency: currency,
-      userLanguage: language,
-      userCountry: country,
-      hasOnboarded: true,
-    });
+    persistCloudProfile(markCloudProfile({ userLanguage: language, userCurrency: currency }), country);
     showToast(
       translations[language as keyof typeof translations]?.["toast.countryUpdated"] ||
         "Listo"
@@ -1958,19 +2003,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   /** Guarda la elección previa al registro sin dar por terminado el setup. */
   function setInitialCountry(country: string, language: string, currency: string) {
-    markCloudGroup(CLOUD_SYNC_GROUPS.profile);
-    setUserLanguage(language);
-    setUserCurrency(currency);
-    setUserCountry(country);
-    saveJSON(STORAGE_KEYS.profile, {
-      userName,
-      userEmail,
-      userPhoto,
-      userCurrency: currency,
-      userLanguage: language,
-      userCountry: country,
-      hasOnboarded: false,
-    });
+    persistCloudProfile(markCloudProfile({ userLanguage: language, userCurrency: currency }), country, false);
   }
 
   function updateThemeMode(mode: ThemeMode) {
@@ -1997,8 +2030,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // anteriores siguen intactos y se pueden seguir consultando en el
   // Historial.
   function resetCarryover() {
-    markCloudGroup(CLOUD_SYNC_GROUPS.carryover);
-    setCarryoverCleared((prev) => (prev.includes(mk) ? prev : [...prev, mk]));
+    setCarryoverCleared(markCloudGroup(CLOUD_SYNC_GROUPS.carryover, carryoverCleared,
+      (prev) => (prev.includes(mk) ? prev : [...prev, mk])));
     showToast(t("toast.carryoverReset"));
   }
 
@@ -2012,8 +2045,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // desde la app. Como no se borró ningún dato, restaurar es solo dejar de
   // ocultarlo — el saldo vuelve exactamente al valor que tenía.
   function restoreCarryover() {
-    markCloudGroup(CLOUD_SYNC_GROUPS.carryover);
-    setCarryoverCleared((prev) => prev.filter((m) => m !== mk));
+    setCarryoverCleared(markCloudGroup(CLOUD_SYNC_GROUPS.carryover, carryoverCleared,
+      (prev) => prev.filter((m) => m !== mk)));
     showToast(t("toast.carryoverRestored"));
   }
 
@@ -2032,8 +2065,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }));
       return;
     }
-    markCloudGroup(CLOUD_SYNC_GROUPS.budgets);
-    setBudgets((b) => ({ ...b, [mk]: amount }));
+    setBudgets(markCloudGroup(CLOUD_SYNC_GROUPS.budgets, budgets, (b) => ({ ...b, [mk]: amount })));
     showToast(t("toast.budgetUpdated"));
   }
 
@@ -2048,7 +2080,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * para provocar ese redibujado — el dato de verdad vive en categoryCustom.
    */
   function updateCategoryOverrides(next: CategoryOverrides) {
-    markCloudGroup(CLOUD_SYNC_GROUPS.categoryOverrides);
+    markCloudGroup(CLOUD_SYNC_GROUPS.categoryOverrides, categoryOverrides, () => next);
     saveOverrides(next);
     setCategoryOverridesState(next);
   }
@@ -2068,8 +2100,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     icono: string;
     image?: string;
   }): string {
-    markCloudGroup(CLOUD_SYNC_GROUPS.customCategories);
-    const { lista, creada } = crearPropia(categoriasPropias, datos);
+    let creada: CategoriaPropia | undefined;
+    const lista = markCloudGroup(CLOUD_SYNC_GROUPS.customCategories, categoriasPropias, (current) => {
+      const result = crearPropia(current, datos);
+      creada = result.creada;
+      return result.lista;
+    });
+    if (!creada) throw new Error("category-create-failed");
     savePropias(lista);
     setCategoriasPropiasState(lista);
     setCategoriaRecienCreada(creada.id);
@@ -2083,12 +2120,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * nube se dispare. Ver iconosFavoritos.
    */
   function guardarFavoritos(lista: string[]) {
-    markCloudGroup(CLOUD_SYNC_GROUPS.favoriteIcons);
-    saveFavoritos(lista);
+    const next = markCloudGroup(CLOUD_SYNC_GROUPS.favoriteIcons, iconosFavoritos, () => {
+      saveFavoritos(lista);
+      return getFavoritos();
+    });
     // Se relee del sitio donde quedaron, no se guarda lo que llego: saveFavoritos
     // limpia repetidos y aplica el tope, y el estado tiene que ser lo mismo que
     // hay en el disco o la nube recibiria una lista distinta de la que se ve.
-    setIconosFavoritosState(getFavoritos());
+    setIconosFavoritosState(next);
   }
 
   /**
@@ -2110,17 +2149,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function guardarPagoProgramado(pago: PagoProgramado) {
-    markCloudGroup(CLOUD_SYNC_GROUPS.payments);
-    setPagosProgramados((antes) =>
+    setPagosProgramados(markCloudGroup(CLOUD_SYNC_GROUPS.payments, pagosProgramados, (antes) =>
       antes.some((p) => p.id === pago.id)
         ? antes.map((p) => (p.id === pago.id ? pago : p))
         : [...antes, pago]
-    );
+    ));
   }
 
   function quitarPagoProgramado(id: string) {
-    markCloudGroup(CLOUD_SYNC_GROUPS.payments);
-    setPagosProgramados((antes) => antes.filter((p) => p.id !== id));
+    setPagosProgramados(markCloudGroup(CLOUD_SYNC_GROUPS.payments, pagosProgramados,
+      (antes) => antes.filter((p) => p.id !== id)));
   }
 
   /**
@@ -2139,9 +2177,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * Un recordatorio no crea nada: `movimientoDelPago` devuelve null y aquí no se fuerza.
    */
   function marcarPagoDelMes(id: string, mes: string, pagado: boolean) {
-    const pago = pagosProgramados.find((p) => p.id === id);
+    const currentPayments = cloudFieldsRef.current?.pagosProgramados ?? pagosProgramados;
+    const pago = currentPayments.find((p) => p.id === id);
     if (!pago) return;
-    markCloudGroup(CLOUD_SYNC_GROUPS.payments);
     const operationKey = `${id}:${mes}`;
     if (pagosEnCurso.current.has(operationKey)) return;
     pagosEnCurso.current.add(operationKey);
@@ -2153,7 +2191,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const mov = pagado ? movimientoDelPago(pago, mes) : null;
     const nextMovementId =
       pagado && mov && !movementStillExists ? nextId() : movementId;
-    setPagosProgramados((antes) =>
+    setPagosProgramados(markCloudGroup(CLOUD_SYNC_GROUPS.payments, currentPayments, (antes) =>
       antes.map((p) => {
         if (p.id !== id) return p;
         const marked = marcarPagado(p, mes, pagado);
@@ -2166,7 +2204,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           movimientos: { ...(p.movimientos ?? {}), [mes]: nextMovementId },
         };
       })
-    );
+    ));
     if (!pagado) {
       return;
     }
@@ -2341,8 +2379,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     id: string,
     cambios: { nombre?: string; color?: string; icono?: string; image?: string | null }
   ) {
-    markCloudGroup(CLOUD_SYNC_GROUPS.customCategories);
-    const lista = editarPropia(categoriasPropias, id, cambios);
+    const lista = markCloudGroup(CLOUD_SYNC_GROUPS.customCategories, categoriasPropias,
+      (current) => editarPropia(current, id, cambios));
     savePropias(lista);
     setCategoriasPropiasState(lista);
   }
@@ -2358,8 +2396,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * sería grave — y nadie que quita una categoría está pidiendo eso.
    */
   function borrarCategoria(id: string) {
-    markCloudGroup(CLOUD_SYNC_GROUPS.customCategories);
-    const lista = borrarPropia(categoriasPropias, id);
+    const lista = markCloudGroup(CLOUD_SYNC_GROUPS.customCategories, categoriasPropias,
+      (current) => borrarPropia(current, id));
     savePropias(lista);
     setCategoriasPropiasState(lista);
   }
@@ -2379,7 +2417,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       showToast(t("toast.amountTooLarge"));
       return;
     }
-    markCloudGroup(CLOUD_SYNC_GROUPS.categoryBudgets);
+    markCloudGroup(CLOUD_SYNC_GROUPS.categoryBudgets, categoryBudgets, () => newBudgets);
     setCategoryBudgets(newBudgets);
     showToast(t("toast.budgetUpdated"));
   }
@@ -2446,8 +2484,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   // Guarda que un comercio va en una categoría, para futuras importaciones.
   function learnMerchantCategory(merchantText: string, category: string) {
-    markCloudGroup(CLOUD_SYNC_GROUPS.merchants);
-    setMerchantLearned((prev) => learnCategory(merchantText, category, prev));
+    setMerchantLearned(markCloudGroup(CLOUD_SYNC_GROUPS.merchants, merchantLearned,
+      (prev) => learnCategory(merchantText, category, prev)));
   }
 
   function removeTransactions(ids: number[]) {
