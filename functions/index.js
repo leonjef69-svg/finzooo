@@ -135,11 +135,18 @@ exports.changePersonalContribution = onCall(
     const spaceRef = db.doc(`${collectionName}/${spaceId}`);
     const movementRef = spaceRef.collection("movements").doc(movementId);
     const memberRef = spaceRef.collection("members").doc(uid);
+    const receiptRef = db.doc(`personalReturnReceipts/${uid}/operations/${movementId}`);
 
     await db.runTransaction(async transaction => {
-      const [space, member, current, movementSnapshot] = await Promise.all([
+      const [space, member, current, movementSnapshot, confirmed] = await Promise.all([
         transaction.get(spaceRef), transaction.get(memberRef), transaction.get(movementRef), transaction.get(spaceRef.collection("movements")),
+        action === "delete" ? transaction.get(receiptRef) : Promise.resolve(null),
       ]);
+      const previous = confirmed?.exists ? confirmed.data() : null;
+      // Recupera una anulación ya confirmada sin otra escritura, incluso si
+      // después venció Pro o el espacio se cerró. Solo confirma la operación propia.
+      if (action === "delete" && !current.exists && previous?.cancelled === true
+        && previous.uid === uid && previous.kind === kind && previous.spaceId === spaceId && previous.movementId === movementId) return;
       if (!space.exists || !member.exists || space.data().closed === true || space.data().closing === true || space.data().deleting === true) {
         throw new HttpsError("failed-precondition", "El espacio no está disponible.");
       }
@@ -159,7 +166,16 @@ exports.changePersonalContribution = onCall(
         throw new HttpsError("failed-precondition", "Una devolución solo puede deshacerse completa.");
       }
       if (action === "delete" && linkedReturn) {
+        const receipt = previous || currentData.personalReturnReceipt;
+        if (receipt) {
+          if (receipt.uid !== uid || receipt.kind !== kind || receipt.spaceId !== spaceId || receipt.movementId !== movementId
+            || receipt.personalTransactionId !== currentData.personalTransactionId || receipt.amount !== currentData.personalReturnAmount) {
+            throw new HttpsError("failed-precondition", "La confirmación de la devolución no coincide.");
+          }
+          transaction.set(receiptRef, { ...receipt, cancelled: true, cancelledAt: receipt.cancelledAt ?? Date.now() });
+        }
         transaction.delete(movementRef);
+        transaction.update(spaceRef, { personalReturnVersion: (Number(space.data().personalReturnVersion) || 0) + 1 });
         return;
       }
       const movements = movementSnapshot.docs.map(item => item.data());

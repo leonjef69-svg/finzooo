@@ -10,6 +10,13 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+La devolución deshecha ahora invalida su confirmación privada y una respuesta
+atrasada no reinserta el ingreso borrado. Requiere actualizar juntas
+`changePersonalContribution`, `returnPersonalContribution` y la app; no cambian
+las reglas ni el formato del archivo local. La anulación inicial conserva sus
+permisos Pro; recuperar el resultado ya confirmado no crea una operación nueva.
+Ver `docs/PRUEBAS_DEVOLUCION_ANULADA.md`. No se publicó ninguna entrega.
+
 Node 22 quedó probado localmente con las funciones cargadas en su emulador,
 llamadas HTTP y eventos reales de Auth/Firestore emulados. El borrado de Familia
 fallaba al intentar leer índices privados ajenos; se corrigió mediante

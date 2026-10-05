@@ -8,6 +8,7 @@ export function spaceErrorKey(error: unknown, invalidCode = false): string {
   if (reason === "return-changed") return "spaces.returnChanged";
   if (reason === "return-currency-mismatch") return "spaces.currencyMismatch";
   if (reason === "return-space-closed") return "spaces.returnClosed";
+  if (reason === "return-cancelled") return "spaces.returnCancelled";
   if (detail.includes("return-account-changed")) return "family.loginRequired";
   if (detail.includes("return-busy")) return "spaces.returnBusy";
   if (detail.includes("return-local-save-failed")) return "toast.localSaveFailed";

@@ -66,6 +66,7 @@ async function returnPersonalContribution(db, uid, input, now = Date.now()) {
       if (receipt.uid !== uid || receipt.kind !== kind || receipt.spaceId !== spaceId || receipt.personalTransactionId !== personalTransactionId
         || receipt.currency !== currency || units(receipt.amount, currency) !== expected || receipt.fecha !== fecha
         || receipt.description !== description.trim()) fail("return-conflict");
+      if (receipt.cancelled === true) fail("return-cancelled");
       return receipt;
     }
     const [space, member, existing] = await Promise.all([tx.get(spaceRef), tx.get(spaceRef.collection("members").doc(uid)), tx.get(movementRef)]);
@@ -75,6 +76,7 @@ async function returnPersonalContribution(db, uid, input, now = Date.now()) {
       if (!receipt || receipt.uid !== uid || receipt.kind !== kind || receipt.spaceId !== spaceId
         || receipt.personalTransactionId !== personalTransactionId || receipt.currency !== currency
         || units(receipt.amount, currency) !== expected || receipt.fecha !== fecha || receipt.description !== description.trim()) fail("return-conflict");
+      if (receipt.cancelled === true) fail("return-cancelled");
       return receipt; // También recupera un resultado ya confirmado tras cerrar.
     }
     const data = space.data();

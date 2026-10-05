@@ -207,6 +207,12 @@ Personal de otro. No acredita borrado físico en Android ni reglas/configuració
 publicadas. La nueva función debe desplegarse antes de distribuir la app;
 el formulario y las políticas de producción continúan por verificar.
 
+La confirmación financiera conserva también la marca y fecha de anulación
+cuando el usuario deshace una devolución; así no se recupera como vigente al
+reintentar. Es la misma finalidad de consistencia y prevención de duplicados,
+con la misma retención hasta borrar Auth, sin nueva categoría de datos ni
+permiso Android. Política interna/web preparadas; publicación por comprobar.
+
 > **LOS CONTACTOS DE ENVÍO NO SE DECLARAN, Y AQUÍ DECÍA LO CONTRARIO (corregido el
 > 18/08/2026).** Este archivo afirmaba que "se guardan y se suben a su copia en la nube" y
 > mandaba declararlos bajo "Correo electrónico" y "Números de teléfono". **Es falso:**

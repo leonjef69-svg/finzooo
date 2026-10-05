@@ -163,6 +163,30 @@ test("Node 22, llamadas HTTP y eliminación real en Auth/Firestore emulados", { 
       assert.equal((await admin.doc("testerPremium/other").get()).exists, true);
       assert.equal((await admin.doc("users/other").get()).exists, true);
     });
+    await t.test("deshacer por HTTP invalida reintentos y permite una devolución nueva", async () => {
+      const undo = await account("undo-owner");
+      await admin.doc("users/undo-owner").set({ isPremium: true });
+      const invoke = (name, data) => httpsCallable(undo.functions, name, { timeout: 90_000 })(data);
+      for (const kind of ["family", "box"]) {
+        const id = `undo-${kind}`, rootName = kind === "family" ? "familySpaces" : "boxSpaces";
+        await admin.doc(`${rootName}/${id}`).set({ ownerUid: "undo-owner", nombre: "Demo", currency: "PEN" });
+        await admin.doc(`${rootName}/${id}/members/undo-owner`).set({ uid: "undo-owner", rol: "owner" });
+        await admin.doc(`${rootName}/${id}/movements/contribution`).set({ tipo: "ingreso", monto: 100,
+          personalTransactionId: 10, personalOwnerUid: "undo-owner", creadoPor: "undo-owner", creadoEn: 1 });
+        await admin.doc(`${rootName}/${id}/movements/spent`).set({ tipo: "gasto", monto: 60, creadoPor: "undo-owner", creadoEn: 2 });
+        await admin.doc("users/undo-owner").update({ isPremium: true });
+        const request = { ...payload, kind, spaceId: id, personalTransactionId: kind === "family" ? 700 : 800 };
+        const returned = (await invoke("returnPersonalContribution", request)).data;
+        const deletion = { kind, spaceId: id, movementId: returned.movementId, action: "delete" };
+        await invoke("changePersonalContribution", deletion);
+        await assert.rejects(invoke("returnPersonalContribution", request), error => error.details?.reason === "return-cancelled");
+        await admin.doc("users/undo-owner").update({ isPremium: false });
+        await invoke("changePersonalContribution", deletion); // Solo confirma la anulación previa, no cambia dinero.
+        const fresh = (await invoke("returnPersonalContribution", { ...request, personalTransactionId: request.personalTransactionId + 1 })).data;
+        assert.equal(fresh.amount, 40); assert.notEqual(fresh.movementId, returned.movementId);
+        assert.equal((await admin.collection(`${rootName}/${id}/movements`).get()).size, 3);
+      }
+    });
     await t.test("correo sin confirmar no puede usar la devolución por HTTP", async () => {
       const unverified = await account("unverified", false);
       await assert.rejects(httpsCallable(unverified.functions, "returnPersonalContribution")(payload), error => error.code === "functions/unauthenticated");

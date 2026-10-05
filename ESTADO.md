@@ -1,5 +1,32 @@
 # Estado actual de Fino
 
+## Devoluciones deshechas: confirmación invalidada (05/10/2026)
+
+- Continuación de FINO-02: una devolución anulada conservaba una confirmación
+  privada vigente. El servidor la devolvía al reintentar y podía recrear su
+  ingreso en Personal. La prueba nueva falló antes del arreglo, tanto en el
+  registro real del contexto como en Firestore emulado.
+- `changePersonalContribution` marca `cancelled`/`cancelledAt` en la misma
+  transacción que borra el retorno y actualiza la versión del espacio.
+  La misma anulación puede confirmarse otra vez sin escribir ni exigir renovar
+  Pro; deshacer por primera vez mantiene sus permisos Pro actuales.
+- `returnPersonalContribution` rechaza esa confirmación con `return-cancelled`.
+  La app retira su orden pendiente solo después de confirmar el guardado; un
+  fallo de red o una respuesta de otra sesión conserva la orden. Muestra un
+  aviso traducido, sin registrar ingreso. Una devolución nueva usa otro ID.
+- El borrado actualiza su referencia inmediatamente. La recepción comprueba
+  la marca antes de encolar y también al aplicar; una respuesta atrasada no
+  restaura un ID ya borrado. Retira la confirmación local pendiente de ese ID.
+- Sin nuevas claves locales ni cambio de formato de archivos por cuenta.
+  La política describe la marca/fecha de anulación; la retención hasta borrar
+  Auth no cambia. Guía: `docs/PRUEBAS_DEVOLUCION_ANULADA.md`.
+  TypeScript/ESLint aprobados, 130 pruebas locales y 8 auditores, 54 de Functions
+  y 50 de reglas/SDK/HTTP/eventos bajo Node 22. Una prueba local sigue siendo
+  preexistente ajena sin registrar en Git. Regresiones fallan contra el código anterior.
+- **Qué sigue:** revisar consultas atrasadas y conciliación entre dispositivos.
+  **Qué falta:** Android, escenarios entre dos teléfonos, producción y entrega
+  coordinada. No se publicó nada ni se repararon registros reales; tarjetas fuera.
+
 ## Node 22 y borrado de cuenta con grupos — validación local (05/10/2026)
 
 - FINO-05: configuración ya preparada para Node 22; ahora se ejecutaron las

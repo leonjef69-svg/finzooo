@@ -2490,6 +2490,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   function recordPersonalReturn(receipt: PersonalReturnReceipt): boolean {
     if (!personalReturnIsCurrent(receipt)) return false;
+    if (deletedTransactionIdsRef.current.includes(receipt.personalTransactionId)) return false;
     if (currencyForReturn.current !== receipt.currency) {
       showToast(tRef.current("spaces.currencyMismatch"));
       return false;
@@ -2501,7 +2502,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       internalTransferSpaceId: receipt.spaceId, internalTransferSpaceName: receipt.spaceName,
       internalTransferAllocations: receipt.allocations, updatedAt: Date.now() };
     returnReceipt.current = receipt;
-    setTransactions(previous => mergePersonalReturn(previous, tx));
+    setTransactions(previous => deletedTransactionIdsRef.current.includes(receipt.personalTransactionId)
+      ? previous : mergePersonalReturn(previous, tx));
     return true;
   }
 
@@ -2574,6 +2576,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   function removeTransactions(ids: number[]) {
     if (!ids.length) return;
     void unlinkCreditPaymentsForHomeTransactions(ids);
+    // Bloquea respuestas atrasadas desde este instante, no recién al dibujar.
+    deletedTransactionIdsRef.current = pruneDeletedTransactionIds([...deletedTransactionIdsRef.current, ...ids]);
+    if (returnReceipt.current && ids.includes(returnReceipt.current.personalTransactionId)) returnReceipt.current = null;
     setDeletedTransactionIds((prev) => {
       const next = pruneDeletedTransactionIds([...prev, ...ids]);
       deletedTransactionIdsRef.current = next;

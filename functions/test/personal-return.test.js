@@ -92,3 +92,10 @@ test("el comprobante propio sigue disponible tras eliminar el grupo", async () =
   assert.equal(db.writes.length, 3);
   await assert.rejects(returnPersonalContribution(db, "owner", { ...input, spaceId: "another" }), error => error.reason === "return-conflict");
 });
+test("un comprobante anulado no confirma otro ingreso aunque siga existiendo", async () => {
+  const db = database();
+  const receipt = await returnPersonalContribution(db, "owner", input);
+  db.entries.set(`personalReturnReceipts/owner/operations/${receipt.movementId}`, { ...receipt, cancelled: true, cancelledAt: 2000 });
+  await assert.rejects(returnPersonalContribution(db, "owner", input), error => error.reason === "return-cancelled");
+  assert.equal(db.writes.length, 3, "un reintento anulado no modifica dinero ni comprobantes");
+});

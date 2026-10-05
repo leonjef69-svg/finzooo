@@ -116,12 +116,13 @@ function request(uid: string, input?: PersonalReturnRequest): Promise<PersonalRe
       return { ...value, localSession: session! };
     } catch (error) {
       const reason = (error as { details?: { reason?: string } })?.details?.reason;
-      // Estos rechazos prueban que la operación no se confirmó. Un error de
-      // red no lo prueba: conserva la misma orden para recuperar el resultado.
-      if (["return-changed", "return-currency-mismatch", "return-invalid-request", "return-space-closed"].includes(reason || "")) {
+      // Estos rechazos confirman que no queda una devolución vigente para
+      // esta orden. Un error de red no lo confirma: conserva la misma orden.
+      if (["return-changed", "return-currency-mismatch", "return-invalid-request", "return-space-closed", "return-cancelled"].includes(reason || "")) {
         await journal(async () => {
           const saved = await loadPending(uid, session);
-          if (saved?.payload.personalTransactionId === pending.payload.personalTransactionId) await saveJSONNow(STORAGE_KEYS.personalReturnPending, null);
+          if (saved?.payload.personalTransactionId === pending.payload.personalTransactionId
+            && !await saveJSONNow(STORAGE_KEYS.personalReturnPending, null)) throw new Error("return-local-save-failed");
         });
       }
       throw error;

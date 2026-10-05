@@ -100,6 +100,7 @@ let source;
 function find(node) { if (ts.isFunctionDeclaration(node) && node.name?.text === "recordPersonalReturn") source = node.getText(contextAst); ts.forEachChild(node, find); }
 find(contextAst); assert.ok(source, "existe el registro único y comprobado de la devolución");
 const scope = { personalReturnIsCurrent: value => value.localSession === session && value.uid === uid,
+  deletedTransactionIdsRef: { current: [] },
   currencyForReturn: { current: "PEN" }, tRef: { current: key => key }, returnReceipt: { current: null },
   horaDe: () => "12:00", mergePersonalReturn: rebooted.mergePersonalReturn,
   setTransactions: update => { rows = update(rows); }, showToast() {}, Date };

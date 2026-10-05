@@ -3,6 +3,23 @@
 Última revisión: 05/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## Continuación FINO-02 — no revivir una devolución anulada (05/10/2026)
+
+- Falla confirmada: borrar el retorno no invalidaba su confirmación privada.
+  Un reintento la recuperaba como vigente. Además, la recepción en el contexto
+  no comprobaba si su ID ya se había borrado.
+- Anulación y comprobante se actualizan conjuntamente; repetir la anulación
+  no escribe ni exige Pro otra vez. El replay del retorno anulado se rechaza.
+- Orden pendiente: retiro verificado, sin convertir errores de red en anulación.
+  Borrado inmediato en referencia y guardia también al procesar la recepción.
+- Pruebas y alcance: `docs/PRUEBAS_DEVOLUCION_ANULADA.md`. No abre Gratis para
+  nuevas ediciones/borrados Pro ni declara corregidas todas las consultas de UI.
+  TypeScript/ESLint, 130 pruebas locales y 8 auditores, 54 unitarias de Functions
+  y 50 de SDK/reglas/HTTP/eventos aprobados; una prueba local es ajena no registrada.
+- **Qué sigue:** conciliación/consultas atrasadas entre dispositivos.
+  **Qué falta:** Android/dos teléfonos, producción y entrega coordinada.
+  No se publicaron cambios ni se tocaron tarjetas.
+
 ## FINO-05 y continuación FINO-02 — Node 22 y borrado probado (05/10/2026)
 
 - Node 22.23.3 real, portátil y SHA-256 oficial verificado. Se cargaron las

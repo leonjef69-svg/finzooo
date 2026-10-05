@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+const { execFileSync } = require("node:child_process");
 const { createRequire } = require("node:module");
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require("@firebase/rules-unit-testing");
 const { initializeApp, deleteApp } = require("firebase-admin/app");
@@ -33,7 +34,10 @@ test("devolución sin Pro: límites reales, reintentos, concurrencia y migració
     return requireProject(name);
   } };
   scope.exports = scope.module.exports;
-  vm.runInNewContext(fs.readFileSync(indexPath, "utf8"), scope);
+  const baseline = process.env.FINO_TEST_RETURN_BASELINE;
+  if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw new Error("La regresión requiere un hash de Git.");
+  vm.runInNewContext(baseline ? execFileSync("git", ["show", `${baseline}:functions/index.js`], { cwd: path.resolve(__dirname, "../.."), encoding: "utf8" })
+    : fs.readFileSync(indexPath, "utf8"), scope);
   const api = scope.module.exports, auth = { uid: "owner", token: { email_verified: true } };
   const contribution = { tipo: "ingreso", monto: 100, personalTransactionId: 10, personalOwnerUid: "owner", creadoPor: "owner", creadoEn: 1 };
   const payload = { kind: "family", spaceId: "f", amount: 40, personalTransactionId: 100,
@@ -111,6 +115,22 @@ test("devolución sin Pro: límites reales, reintentos, concurrencia y migració
       assert.equal(saved.personalOwnerUid, "deleted"); assert.equal(saved.personalReturnReceipt.uid, "deleted");
       assert.deepEqual(await api.returnPersonalContribution({ auth, data: { ...payload, spaceId: "anonymize", personalTransactionId: 500 } }), row,
         "recupera solo su comprobante privado, sin devolverle acceso al grupo");
+    });
+    await t.test("deshacer una devolución invalida su confirmación y no resucita por reintento", async () => {
+      await seed("familySpaces", "cancel");
+      const input = { ...payload, spaceId: "cancel", personalTransactionId: 600 };
+      const returned = await api.returnPersonalContribution({ auth, data: input });
+      await api.changePersonalContribution({ auth, data: { kind: "family", spaceId: "cancel", movementId: returned.movementId, action: "delete" } });
+      await assert.rejects(api.returnPersonalContribution({ auth, data: input }), error => error.details?.reason === "return-cancelled",
+        "el reintento no devuelve una confirmación de dinero que se deshizo");
+      const saved = (await db.doc(`personalReturnReceipts/owner/operations/${returned.movementId}`).get()).data();
+      assert.equal(saved.cancelled, true); assert.ok(Number.isFinite(saved.cancelledAt));
+      assert.equal((await db.doc(`familySpaces/cancel/movements/${returned.movementId}`).get()).exists, false);
+      await db.doc("users/owner").update({ isPremium: false });
+      await api.changePersonalContribution({ auth, data: { kind: "family", spaceId: "cancel", movementId: returned.movementId, action: "delete" } });
+      const newReturn = await api.returnPersonalContribution({ auth, data: { ...input, personalTransactionId: 601 } });
+      assert.equal(newReturn.amount, 40); assert.notEqual(newReturn.movementId, returned.movementId);
+      assert.equal((await db.collection("familySpaces/cancel/movements").get()).size, 3);
     });
     await t.test("el comprobante es privado y su eliminación no toca otra cuenta", async () => {
       const client = env.authenticatedContext("owner", { email_verified: true }).firestore();
