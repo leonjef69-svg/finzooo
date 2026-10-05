@@ -15,7 +15,7 @@ import { irUnaVez, safeBack } from "@/utils/nav";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { spaceErrorKey } from "@/utils/spaceErrors";
 import { nextId } from "@/utils/id";
-import { allocatePersonalReturn, balanceOfSpace, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, returnableToPersonal } from "@/utils/linkedTransfers";
+import { allocatePersonalReturn, balanceOfSpace, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
 import { actualizarAportePersonal, borrarAportePersonal } from "@/utils/personalContribution";
 import { ArrowDown, ArrowRightLeft, ArrowUp, Check, LogOut, Pencil, Trash2, UserMinus, UserPlus, UsersRound, X } from "lucide-react-native";
 import { borrarMovimientoCajaCompartida, cerrarCajaCompartida, crearInvitacionCaja, escucharMovimientosCaja, guardarMovimientoCajaCompartida, listarCajasCompartidas, listarMiembrosCaja, observarCierreCaja, quitarMiembroCaja, renombrarCajaCompartida, salirDeCaja, unirseACaja, type CajaCompartida, type MiembroCajaCompartida, type MovimientoCajaCompartida } from "@/utils/cloudCajasCompartidas";
@@ -176,7 +176,12 @@ export default function SharedBoxes() {
   const cerrar = () => {
     if (!uid || !caja || !owner) return;
     if (!canCloseLinkedSpace(movimientos)) { showToast(t("boxes.closeBalance")); return; }
-    Alert.alert(t("boxes.close"), t("boxes.closeWarning"), [{ text: t("common.cancel"), style: "cancel" }, { text: t("boxes.close"), style: "destructive", onPress: () => void ejecutar(async () => { await cerrarCajaCompartida(uid, caja.id); setCajas(items => items.filter(item => item.id !== caja.id)); setCaja(null); }) }]);
+    Alert.alert(t("boxes.close"), t("boxes.closeWarning"), [{ text: t("common.cancel"), style: "cancel" }, { text: t("boxes.close"), style: "destructive", onPress: () => void ejecutar(async () => {
+      await cerrarCajaCompartida(uid, caja.id);
+      if (auth.currentUser?.uid !== uid) return;
+      repairLinkedTransferTransactions(settlePersonalTransfers(transactions, "box", caja.id));
+      setCajas(items => items.filter(item => item.id !== caja.id)); setCaja(null);
+    }) }]);
   };
   function boton(label: string, action: () => void) {
     return <TouchableOpacity disabled={busy} onPress={action} className="min-h-12 flex-1 items-center justify-center rounded-xl bg-emerald-600 px-3"><Text className="text-sm font-bold text-white">{label}</Text></TouchableOpacity>;

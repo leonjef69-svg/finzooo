@@ -188,7 +188,7 @@ assert.match(cajas, /!cloudReady \|\| !uid \|\| !isPremium/);
 const cajasAst = ts.createSourceFile("Cajas.tsx", cajas, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const declarations = new Map();
 function collectCaja(node) {
-  if (ts.isVariableDeclaration(node) && ["ausenciaConfirmada", "borradosExplicitos", "orphanIds"].includes(node.name.getText(cajasAst))) {
+  if (ts.isVariableDeclaration(node) && ["ausenciaConfirmada", "borradosExplicitos", "cajasActivas", "orphanIds"].includes(node.name.getText(cajasAst))) {
     declarations.set(node.name.getText(cajasAst), `const ${node.getText(cajasAst)};`);
   }
   ts.forEachChild(node, collectCaja);
@@ -196,7 +196,7 @@ function collectCaja(node) {
 collectCaja(cajasAst);
 function deletedCounterparts(pro, confirmed, deletedIds) {
   const scope = { isPremium: pro, nubeConfirmadaPara: { current: confirmed ? "alice" : null },
-    auth: { currentUser: { uid: "alice" } }, datos: { movimientosBorrados: deletedIds }, movimientosPorId: new Map(),
+    auth: { currentUser: { uid: "alice" } }, datos: { cajas: [{ id: "caja-local" }], movimientosBorrados: deletedIds }, movimientosPorId: new Map(),
     transactions: [{ id: 10, internalTransfer: "box", internalTransferLink: "mov-local", internalTransferSpaceId: "caja-local" },
       { id: 20, internalTransfer: "box", internalTransferLink: "shared-movement", internalTransferSpaceId: "shared-box" }] };
   vm.runInNewContext(ts.transpile([...declarations.values()].join("\n") + "\nresult = orphanIds;", { target: ts.ScriptTarget.ES2022 }), scope);

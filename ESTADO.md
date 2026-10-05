@@ -1,5 +1,38 @@
 # Estado actual de Fino
 
+## Aportes consumidos y borrado local de Cajas (05/10/2026)
+
+- Decisión explícita del propietario: un aporte ya gastado se considera
+  consumido, no deuda que obligue a devolverlo. Esta decisión sustituye la
+  obligación histórica de devolver todos los aportes incluso con saldo cero.
+- FINO-02, avance parcial: teléfono y Functions permiten cerrar/preparar borrado
+  con saldo cero y movimientos válidos aunque parte del aporte se gastase.
+  Un miembro puede salir si ya no tiene saldo recuperable. Saldo disponible,
+  devolución atribuida a otra persona y datos inválidos siguen protegidos.
+  No se permite borrar/reducir por debajo de lo gastado un aporte individual.
+- Cerrar no elimina la salida ni devoluciones de Personal: marca sus registros
+  como liquidados y guarda el importe consumido. Conserva montos/saldo y separa
+  "Consumido" de "Devuelta", incluso al filtrar un mes distinto al del retorno.
+  La conciliación automática solo elimina ausencias de espacios que siguen
+  activos y fueron leídos; un espacio cerrado/ausente no devuelve dinero ficticio.
+- Cajas privadas ya no llaman al servidor compartido al borrar aportes locales.
+  El plan local impide borrar lo gastado y retira ambas mitades de un aporte
+  intacto o de un par completamente devuelto. Familia conserva sus vínculos
+  ocultos al cerrar para permitir su limpieza posterior al borrar una cuenta.
+- Las pruebas nuevas ejecutan las funciones y filtros reales, comparan teléfono
+  y servidor, comprueban 20.000 registros y fallan contra la versión anterior.
+  Verificado: TypeScript, ESLint, 128 pruebas locales y 8 auditores; 42 de
+  Functions y 31 en el emulador Firestore. Una prueba local es preexistente,
+  ajena y sigue sin registrar en Git. Node 22 aún no se comprobó.
+  La validación completa y sus límites figuran en `docs/PRUEBAS_APORTES_CONSUMIDOS.md`.
+- **Qué sigue:** devolver el saldo que aún queda en Familia/Caja sin exigir
+  renovar Pro; comprobar Node 22 y el recorrido real de eliminación.
+  **Qué falta:** ese desbloqueo, Android/dos dispositivos, llamadas reales de
+  Functions, compatibilidad con apps antiguas y publicación coordinada.
+  Los marcadores de cierres hechos desde otro dispositivo dependen de recibir
+  su copia Personal; no se migraron cierres históricos ni cuentas reales.
+  No se publicó Firebase/app; tarjetas de crédito permanecen excluidas.
+
 ## Nube Pro protegida en servidor — preparación local (05/10/2026)
 
 - FINO-04: reglas preparadas para exigir Pro real (pago, prueba vigente o

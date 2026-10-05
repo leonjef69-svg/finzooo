@@ -32,29 +32,33 @@ function contributionLimits(movements, uid, original) {
   };
 }
 
-/** Un espacio solo se puede cerrar o purgar cuando no queda saldo ni aportes pendientes. */
-function canCloseLinkedSpace(movements) {
-  if (Math.abs(balance(movements)) > CENT) return false;
-  const contributions = movements.filter(movement =>
-    movement.tipo === "ingreso" && typeof movement.personalTransactionId === "number",
-  );
-  // Si un aporte antiguo no conserva ni propietario ni creador, no es seguro
-  // cerrar: no se puede confirmar a qué cuenta de Personal debe devolverse.
-  if (contributions.some(movement => !(movement.personalOwnerUid || movement.creadoPor))) return false;
-  const returns = movements.filter(movement => numberOrZero(movement.personalReturnAmount) > CENT);
-  // Las devoluciones antiguas sin responsable no pueden atribuirse a un UID.
-  // En ese caso usamos el neto agregado; si sigue pendiente, no cerramos.
-  if (returns.some(movement => !(movement.personalOwnerUid || movement.creadoPor))) {
-    return personalNet(movements) <= CENT;
+function invalidPersonalReturns(movements) {
+  if (movements.some(item => !Number.isFinite(item.monto) || item.monto <= 0)) return true;
+  const contributions = movements.filter(item => item.tipo === "ingreso" && typeof item.personalTransactionId === "number");
+  const returns = movements.filter(item => item.personalReturnAmount != null);
+  if (returns.some(item => item.tipo !== "gasto" || !Number.isFinite(item.personalReturnAmount)
+    || item.personalReturnAmount <= 0 || Math.abs(item.personalReturnAmount - item.monto) > CENT)) return true;
+  const unknownOwner = [...contributions, ...returns].some(item => !(item.personalOwnerUid || item.creadoPor));
+  const totals = new Map();
+  for (const item of contributions) {
+    const owner = unknownOwner ? "legacy" : item.personalOwnerUid || item.creadoPor;
+    totals.set(owner, (totals.get(owner) || 0) + item.monto);
   }
-  const contributors = new Set(
-    contributions.map(movement => movement.personalOwnerUid || movement.creadoPor),
-  );
-  return [...contributors].every(uid => personalNet(movements, uid) <= CENT);
+  for (const item of returns) {
+    const owner = unknownOwner ? "legacy" : item.personalOwnerUid || item.creadoPor;
+    totals.set(owner, (totals.get(owner) || 0) - item.personalReturnAmount);
+  }
+  return [...totals.values()].some(total => total < -CENT);
+}
+
+/** Saldo cero: lo gastado se considera consumido, no una deuda de devolución. */
+function canCloseLinkedSpace(movements) {
+  return Math.abs(balance(movements)) <= CENT && !invalidPersonalReturns(movements);
 }
 
 function hasUnreturnedPersonalContribution(movements, uid) {
-  return personalNet(movements, uid) > CENT;
+  return invalidPersonalReturns(movements) || balance(movements) < -CENT
+    || Math.min(Math.max(0, balance(movements)), personalNet(movements, uid)) > CENT;
 }
 
 module.exports = { CENT, contributionLimits, canCloseLinkedSpace, hasUnreturnedPersonalContribution };

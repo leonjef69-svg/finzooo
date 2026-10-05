@@ -48,10 +48,11 @@ UID administrativo. Su plataforma es primera generación, con reintento y límit
 de 540 segundos; el SDK instalado admite esa declaración, pero falta probar su
 ejecución real en Node 22 y un entorno autorizado.
 
-**FINO-02 sigue pendiente:** los aportes gastados todavía pueden impedir cerrar
-el espacio/eliminar la cuenta; la devolución tras vencer Pro requiere trabajo
-adicional. La función nueva no elude esos pasos del flujo compartido ni decide
-si un aporte gastado se considera consumido o deuda. Tampoco sustituye la limpieza
+**FINO-02 tiene un avance posterior:** el propietario decidió que un aporte
+gastado es consumido. El cierre con saldo cero y la conservación de Personal
+se prepararon en `PRUEBAS_APORTES_CONSUMIDOS.md`. La devolución del saldo aún
+disponible tras vencer Pro sigue pendiente; no se declara completado ese flujo.
+La función Personal no elude los pasos del flujo compartido. Tampoco sustituye la limpieza
 existente de Telegram/tarjetas ni declara cubiertas colecciones desconocidas.
 
 ## Qué se comprobó y qué no
@@ -78,8 +79,8 @@ existente de Telegram/tarjetas ni declara cubiertas colecciones desconocidas.
   a intentar al abrir la pantalla. Un borrado local explícito sí retira su
   contraparte Personal, también en Gratis; una simple ausencia sin consulta
   confirmada no. Los filtros reales están probados. Falta comprobar avisos,
-  reconexión y el recorrido completo en Android. Revisar además el borrado de
-  aportes de Caja privada: aún usa una llamada pensada para espacios compartidos.
+  reconexión y el recorrido completo en Android. El borrado de aportes de Caja
+  privada se corrigió posteriormente: ya no llama al servidor compartido.
 - La revocación real, los errores de red, cambios de cuenta, eliminación y prueba
   en Android, reglas publicadas y política web continúan pendientes.
 

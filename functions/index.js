@@ -182,7 +182,7 @@ exports.manageLinkedSpace = onCall(
       }
       const movements = movementSnapshot.docs.map(item => item.data());
       if (!canCloseLinkedSpace(movements)) {
-        throw new HttpsError("failed-precondition", "Primero devuelve los aportes Personal y deja el saldo en cero.");
+        throw new HttpsError("failed-precondition", "Primero devuelve el dinero disponible y deja el saldo en cero. Lo ya gastado es consumido.");
       }
       if (action === "prepare-delete") {
         transaction.update(spaceRef, { deleting: true });

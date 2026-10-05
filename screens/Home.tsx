@@ -177,6 +177,8 @@ const FilaMovimiento = memo(function FilaMovimiento({
             returnedLabel="Devuelto"
             sent={transferGroup?.sent ?? (tx.type === "expense" ? tx.amount : 0)}
             returned={transferGroup?.returned ?? (tx.type === "income" ? tx.amount : 0)}
+            consumed={transferGroup?.consumed}
+            consumedLabel={t("transfer.consumed")}
             format={fmt}
           /> : <><View className="flex-1 min-w-0">
             <Text

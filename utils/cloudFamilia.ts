@@ -154,7 +154,8 @@ export async function cerrarFamilia(uid: string, familiaId: string): Promise<voi
     const indices = await Promise.all(grupo.map(member => getDoc(doc(db, "familyUsers", member.id))));
     const lote = writeBatch(db);
     grupo.forEach((member, index) => {
-      lote.delete(doc(db, "familyUsers", member.id, "spaces", familiaId));
+      // Conservar el vínculo oculto permite borrar/anónimizar esta Familia
+      // al eliminar después la cuenta, aunque no fuese la Familia activa.
       if (!indices[index]?.exists() || String(indices[index].data().activeFamilyId || "") !== familiaId) return;
       lote.set(doc(db, "familyUsers", member.id), { activeFamilyId: "", closedFamilyIds: arrayUnion(familiaId) }, { merge: true });
     });

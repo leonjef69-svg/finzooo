@@ -366,8 +366,8 @@ function sinFotos(data: CloudData): CloudData {
 // falta saber si funcionó, porque no queremos borrar la cuenta de
 // inicio de sesión si sus datos no se pudieron borrar primero.
 export async function deleteCloudAccount(uid: string): Promise<void> {
-  // Primero se valida TODO lo compartido. Si hay aportes personales sin
-  // devolver, se aborta antes de borrar cualquier documento de la cuenta.
+  // Primero se valida TODO lo compartido. Si aún hay saldo recuperable,
+  // se aborta antes de borrar. Lo ya gastado no se exige como deuda.
   await Promise.all([
     validarBorradoCajasCompartidasDeCuenta(uid),
     validarBorradoFamiliasDeCuenta(uid),

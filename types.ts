@@ -39,6 +39,9 @@ export type Transaction = {
   /** Espacio al que salió o desde el que volvió el dinero. */
   internalTransferSpaceId?: string;
   internalTransferSpaceName?: string;
+  /** Espacio cerrado: la parte que no volvió se consumió, no quedó como deuda. */
+  internalTransferSettled?: boolean;
+  internalTransferConsumedAmount?: number;
   /**
    * Reparte una devolución entre los aportes originales que está cerrando.
    * Es opcional para que las transferencias anteriores sigan abriendo; al

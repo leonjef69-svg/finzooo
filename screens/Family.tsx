@@ -12,7 +12,7 @@ import { validSpaceDate } from "@/components/SpaceMovementFields";
 import { useAppData } from "@/contexts/AppDataContext";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { fmt as formatAmount, horaDe } from "@/utils/format";
-import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, countSelectedCompactRows, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, isTrustedLegacyFamilyContribution, linkedTransferLedger, minimumContributionAmount, movementIdsForCompactRow, orphanedPersonalTransferIds, planSpaceMovementDeletion, returnableToPersonal } from "@/utils/linkedTransfers";
+import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, countSelectedCompactRows, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, isTrustedLegacyFamilyContribution, linkedTransferLedger, minimumContributionAmount, movementIdsForCompactRow, orphanedPersonalTransferIds, planSpaceMovementDeletion, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
 import { auth } from "@/utils/firebase";
 import { irUnaVez, safeBack } from "@/utils/nav";
@@ -183,7 +183,12 @@ export default function Family() {
     const validMovementIds = todosLosMovimientos
       .filter(item => item.personalOwnerUid === uid && item.personalTransactionId != null)
       .map(item => item.id);
-    const orphanIds = orphanedPersonalTransferIds(transactions, "family", validMovementIds, true);
+    // Una Familia cerrada ya no aparece en la lista activa. Su aporte gastado
+    // no se borra de Personal: hacerlo devolvería dinero que ya no existe.
+    const familiasActivas = new Set(familias.map(item => item.id));
+    const conciliables = transactions.filter(tx => !tx.internalTransferSettled
+      && !!tx.internalTransferSpaceId && familiasActivas.has(tx.internalTransferSpaceId));
+    const orphanIds = orphanedPersonalTransferIds(conciliables, "family", validMovementIds, true);
     const nombresPorFamilia = new Map(familias.map(item => [item.id, item.nombre]));
     const upserts = todosLosMovimientos.flatMap(item => {
       if (item.personalOwnerUid !== uid || item.personalTransactionId == null) return [];
@@ -404,7 +409,11 @@ export default function Family() {
     Alert.alert(t("family.deleteSelectedTitle"), t("family.deleteSelectedMessage"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("common.delete"), style: "destructive", onPress: () => void ejecutar(async () => {
-        for (const item of actuales) await cerrarFamilia(uid, item.id);
+        for (const item of actuales) {
+          await cerrarFamilia(uid, item.id);
+          if (auth.currentUser?.uid !== uid) return;
+          repairLinkedTransferTransactions(settlePersonalTransfers(transactions, "family", item.id));
+        }
         setFamiliasSeleccionadas([]);
         setSeleccionandoFamilias(false);
         await recargar();
@@ -423,6 +432,8 @@ export default function Family() {
       { text: t("common.cancel"), style: "cancel" },
       { text: t("family.close"), style: "destructive", onPress: () => void ejecutar(async () => {
         await cerrarFamilia(uid, familyId);
+        if (auth.currentUser?.uid !== uid) return;
+        repairLinkedTransferTransactions(settlePersonalTransfers(transactions, "family", familyId));
         setFamilia(null); setMiembros([]); setMovimientos([]); setTipo(null); setInvitacion("");
         setVerTodas(true); await recargar(); showToast(t("family.closed"));
       }, error => {

@@ -178,6 +178,13 @@ de eliminación de Firebase Auth retira ese registro y las copias cubiertas.
 No añade una categoría de datos distinta a los IDs y gestión de cuenta ya
 declarados. La política debe describirlo al publicar; no se publicó aún.
 
+El cierre de Familia/Cajas conserva en el historial Personal un marcador de
+cierre y el importe del aporte consumido. No es un cobro ni una transferencia
+bancaria nueva: registra el destino de dinero ya anotado. Forma parte de la
+información financiera ya declarada y de su copia Pro; no añade permisos ni
+una nueva categoría. El saldo disponible sigue protegido; las devoluciones
+tras vencer Pro continúan pendientes antes de declarar completo ese recorrido.
+
 > **LOS CONTACTOS DE ENVÍO NO SE DECLARAN, Y AQUÍ DECÍA LO CONTRARIO (corregido el
 > 18/08/2026).** Este archivo afirmaba que "se guardan y se suben a su copia en la nube" y
 > mandaba declararlos bajo "Correo electrónico" y "Números de teléfono". **Es falso:**

@@ -19,10 +19,9 @@ import {
 } from "@/utils/cajas";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { horaDe } from "@/utils/format";
-import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, compactLinkedTransferRows, countSelectedCompactRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, movementIdsForCompactRow, planSpaceMovementDeletion, returnableToPersonal } from "@/utils/linkedTransfers";
+import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, compactLinkedTransferRows, countSelectedCompactRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, movementIdsForCompactRow, planSpaceMovementDeletion, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
 import { irUnaVez, safeBack } from "@/utils/nav";
-import { borrarAportePersonal } from "@/utils/personalContribution";
 import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 import { guardarCajasEnMemoria, leerCajasEnMemoria } from "@/utils/cajasMemoria";
 import { spaceErrorKey } from "@/utils/spaceErrors";
@@ -248,8 +247,11 @@ export default function Cajas() {
     });
     const ausenciaConfirmada = isPremium && nubeConfirmadaPara.current === auth.currentUser?.uid;
     const borradosExplicitos = new Set(datos.movimientosBorrados || []);
+    const cajasActivas = new Set(datos.cajas.map(item => item.id));
     const orphanIds = transactions
       .filter(tx => tx.internalTransfer === "box"
+        && !tx.internalTransferSettled
+        && !!tx.internalTransferSpaceId && cajasActivas.has(tx.internalTransferSpaceId)
         && tx.internalTransferLink?.startsWith("mov-")
         && (!tx.internalTransferSpaceId || tx.internalTransferSpaceId.startsWith("caja-"))
         && !movimientosPorId.has(tx.internalTransferLink)
@@ -398,7 +400,7 @@ export default function Cajas() {
     showToast(t("boxes.movementSaved"));
   }
 
-  async function borrarSeleccionados(ids = seleccionados) {
+  function borrarSeleccionados(ids = seleccionados) {
     const plan = planSpaceMovementDeletion(movimientos, ids);
     if (!plan.ok) {
       if (plan.reason === "empty") return;
@@ -408,7 +410,8 @@ export default function Cajas() {
     try {
       for (const item of plan.items) {
         if (item.personalTransactionId != null) {
-          await borrarAportePersonal("box", item.cajaId, item.id);
+          // Esta Caja vive en el teléfono. El plan local ya comprobó que el
+          // aporte no se gastó; no pertenece al servidor de Cajas compartidas.
           deleteLinkedTransferTransaction(item.personalTransactionId);
         }
       }
@@ -436,6 +439,7 @@ export default function Cajas() {
       return;
     }
     const idsMovimientos = datos.movimientos.filter(item => ids.includes(item.cajaId)).map(item => item.id);
+    repairLinkedTransferTransactions(candidatas.flatMap(item => settlePersonalTransfers(transactions, "box", item.id)));
     setDatos(antes => ({
       ...antes,
       cajas: antes.cajas.filter(item => !ids.includes(item.id)),

@@ -10,12 +10,13 @@ export type LinkedSpaceMovement = {
 };
 
 export type TransferAllocation = { transactionId: number; amount: number };
-export type TransferStatus = "pending" | "partial" | "returned";
+export type TransferStatus = "pending" | "partial" | "returned" | "consumed";
 export type TransferGroupSummary = {
   key: string;
   sent: number;
   returned: number;
   pending: number;
+  consumed?: number;
   count: number;
   status: TransferStatus;
   spaceName?: string;
@@ -35,6 +36,8 @@ export type PersonalLinkedTransfer = {
   internalTransferSpaceId?: string;
   internalTransferSpaceName?: string;
   internalTransferAllocations?: TransferAllocation[];
+  internalTransferSettled?: boolean;
+  internalTransferConsumedAmount?: number;
 };
 
 /** La mitad que vive en Personal de una transferencia a un espacio. */
@@ -149,7 +152,9 @@ export function personalTransferStatuses(items: PersonalLinkedTransfer[]): Map<n
   for (const item of items) {
     if (item.type !== "expense" || !item.internalTransfer || !Number.isFinite(item.amount) || (item.amount || 0) <= 0) continue;
     const returned = returnedById.get(item.id) || 0;
-    result.set(item.id, returned >= (item.amount || 0) - CENT ? "returned" : returned > CENT ? "partial" : "pending");
+    result.set(item.id, item.internalTransferSettled
+      ? (item.internalTransferConsumedAmount ?? Math.max(0, (item.amount || 0) - returned)) > CENT ? "consumed" : "returned"
+      : returned >= (item.amount || 0) - CENT ? "returned" : returned > CENT ? "partial" : "pending");
   }
   return result;
 }
@@ -160,6 +165,8 @@ export function personalTransferStatuses(items: PersonalLinkedTransfer[]): Map<n
  */
 export function compactPersonalTransferRows<T extends PersonalTransferMovement>(items: T[]): CompactTransferRow<T>[] {
   const summaries = new Map<string, TransferGroupSummary>();
+  const settledByKey = new Map<string, number>();
+  const consumedByKey = new Map<string, number>();
   for (const item of items) {
     if (!item.internalTransfer || !Number.isFinite(item.amount) || item.amount <= 0) continue;
     const identity = item.internalTransferSpaceId || item.internalTransferSpaceName || "legacy";
@@ -167,13 +174,22 @@ export function compactPersonalTransferRows<T extends PersonalTransferMovement>(
     const current = summaries.get(key) || { key, sent: 0, returned: 0, pending: 0, count: 0, status: "pending" as const, spaceName: item.internalTransferSpaceName };
     if (item.type === "expense") current.sent = money(current.sent + item.amount);
     else current.returned = money(current.returned + item.amount);
+    if (item.type === "expense" && item.internalTransferSettled) {
+      settledByKey.set(key, money((settledByKey.get(key) || 0) + item.amount));
+      const consumed = item.internalTransferConsumedAmount ?? item.amount;
+      consumedByKey.set(key, money((consumedByKey.get(key) || 0) + Math.min(item.amount, Math.max(0, consumed))));
+    }
     current.count += 1;
     current.spaceName ||= item.internalTransferSpaceName;
     summaries.set(key, current);
   }
   for (const summary of summaries.values()) {
-    summary.pending = money(Math.max(0, summary.sent - summary.returned));
-    summary.status = summary.pending <= CENT ? "returned" : summary.returned > CENT ? "partial" : "pending";
+    const settledSent = settledByKey.get(summary.key) || 0;
+    // En un destino cerrado, lo que no volvió fue consumido. Nunca se suma
+    // ese importe a Personal ni se presenta como devolución.
+    summary.consumed = consumedByKey.get(summary.key) || 0;
+    summary.pending = money(Math.max(0, summary.sent - summary.returned - settledSent));
+    summary.status = summary.pending <= CENT ? summary.consumed > CENT ? "consumed" : "returned" : summary.returned > CENT ? "partial" : "pending";
   }
   const emitted = new Set<string>();
   return items.flatMap(item => {
@@ -227,13 +243,31 @@ export function returnableToPersonal(items: LinkedSpaceMovement[], ownerUid?: st
   return Math.max(0, Math.min(balanceOfSpace(items), netFromPersonal(items, ownerUid)));
 }
 
-/**
- * Un espacio no se puede cerrar solo porque su saldo global sea cero. Si un
- * aporte de Personal se gastó, cerrar el espacio borraría su contraparte y
- * haría que reaparezca en Personal. Cada aporte enlazado debe volver primero
- * a la cuenta que lo puso.
- */
+/** Una devolución inválida no puede convertir dinero ajeno en aporte liquidado. */
+function invalidPersonalReturns(items: LinkedSpaceMovement[]): boolean {
+  if (items.some(item => !Number.isFinite(item.monto) || item.monto <= 0)) return true;
+  const contributions = items.filter(item => item.tipo === "ingreso" && item.personalTransactionId != null);
+  const returns = items.filter(item => item.personalReturnAmount != null);
+  if (returns.some(item => item.tipo !== "gasto" || !Number.isFinite(item.personalReturnAmount)
+    || item.personalReturnAmount! <= 0 || Math.abs(item.personalReturnAmount! - item.monto) > CENT)) return true;
+  const unknownOwner = [...contributions, ...returns].some(item => !(item.personalOwnerUid || item.creadoPor));
+  const totals = new Map<string, number>();
+  for (const item of contributions) {
+    const owner = unknownOwner ? "legacy" : item.personalOwnerUid || item.creadoPor!;
+    totals.set(owner, (totals.get(owner) || 0) + item.monto);
+  }
+  for (const item of returns) {
+    const owner = unknownOwner ? "legacy" : item.personalOwnerUid || item.creadoPor!;
+    totals.set(owner, (totals.get(owner) || 0) - item.personalReturnAmount!);
+  }
+  return [...totals.values()].some(total => total < -CENT);
+}
+
+/** Lo gastado es consumido; solo el saldo recuperable sigue pendiente. */
 export function hasUnreturnedPersonalContributions(items: LinkedSpaceMovement[]): boolean {
+  const available = balanceOfSpace(items);
+  if (invalidPersonalReturns(items) || available < -CENT) return true;
+  if (available <= CENT) return false;
   // Los registros antiguos ya guardaban quién creó el movimiento. Se usa ese
   // dato como responsable cuando falta `personalOwnerUid`. Si una devolución
   // antigua tampoco conserva creador, solo queda el neto agregado como señal
@@ -244,20 +278,49 @@ export function hasUnreturnedPersonalContributions(items: LinkedSpaceMovement[])
     contribuciones.some(item => !(item.personalOwnerUid || item.creadoPor)) ||
     devoluciones.some(item => !(item.personalOwnerUid || item.creadoPor))
   ) {
-    return netFromPersonal(items) > CENT;
+    return returnableToPersonal(items) > CENT;
   }
   const contributors = new Set(
     contribuciones.map(item => item.personalOwnerUid || item.creadoPor!),
   );
-  return [...contributors].some(uid => netFromPersonal(items, uid) > CENT);
+  return [...contributors].some(uid => returnableToPersonal(items, uid) > CENT);
 }
 
 export function hasUnreturnedPersonalContribution(items: LinkedSpaceMovement[], ownerUid: string): boolean {
-  return netFromPersonal(items, ownerUid) > CENT;
+  return invalidPersonalReturns(items) || balanceOfSpace(items) < -CENT || returnableToPersonal(items, ownerUid) > CENT;
 }
 
 export function canCloseLinkedSpace(items: LinkedSpaceMovement[]): boolean {
   return Math.abs(balanceOfSpace(items)) <= CENT && !hasUnreturnedPersonalContributions(items);
+}
+
+/** Conserva ambas mitades históricas al cerrar; no genera ningún ingreso. */
+export function settlePersonalTransfers<T extends PersonalLinkedTransfer>(items: T[], kind: "family" | "box", spaceId: string): T[] {
+  const linked = items.filter(item => item.internalTransfer === kind && item.internalTransferSpaceId === spaceId);
+  const contributions = linked.filter(item => item.type === "expense");
+  const amounts = new Map(contributions.map(item => [item.id, item.amount || 0]));
+  const credited = new Map<number, number>();
+  let unallocated = 0;
+  for (const item of linked.filter(item => item.type === "income")) {
+    let remaining = Math.max(0, item.amount || 0);
+    for (const allocation of item.internalTransferAllocations || []) {
+      if (!Number.isFinite(allocation.amount) || allocation.amount <= 0 || !amounts.has(allocation.transactionId)) continue;
+      const available = Math.max(0, amounts.get(allocation.transactionId)! - (credited.get(allocation.transactionId) || 0));
+      const applied = Math.min(remaining, allocation.amount, available);
+      credited.set(allocation.transactionId, money((credited.get(allocation.transactionId) || 0) + applied));
+      remaining = money(remaining - applied);
+    }
+    unallocated = money(unallocated + remaining);
+  }
+  // Compatibilidad con devoluciones antiguas que aún no guardaron distribución.
+  for (const item of [...contributions].sort((a, b) => a.id - b.id)) {
+    const applied = Math.min(unallocated, Math.max(0, (item.amount || 0) - (credited.get(item.id) || 0)));
+    credited.set(item.id, money((credited.get(item.id) || 0) + applied));
+    unallocated = money(unallocated - applied);
+  }
+  return linked.filter(item => !item.internalTransferSettled).map(item => ({ ...item, internalTransferSettled: true,
+    ...(item.type === "expense" ? { internalTransferConsumedAmount: money(Math.max(0, (item.amount || 0) - (credited.get(item.id) || 0))) } : {}),
+  }));
 }
 
 export function canSpendFromSpace(items: LinkedSpaceMovement[], amount: number): boolean {

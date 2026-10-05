@@ -99,7 +99,7 @@ const Fila = memo(function Fila({
           minimumFontScale={0.72}
         >
           {transferGroup ? "↔ " : isTransfer ? (tx.type === "expense" ? "→ " : "↩ ") : tx.type === "expense" ? "-" : "+"}
-          {fmt(transferGroup?.pending ?? tx.amount)}
+          {fmt(transferGroup?.status === "consumed" ? transferGroup.consumed || 0 : transferGroup?.pending ?? tx.amount)}
         </Text>
         {!isTransfer && tx.description !== t(c.label) ? (
           <Text className="mt-0.5 text-[11px] font-semibold text-slate-600 dark:text-slate-300" numberOfLines={1}>

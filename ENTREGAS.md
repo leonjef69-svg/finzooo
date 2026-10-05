@@ -10,6 +10,14 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+La tanda de aportes del 05/10/2026 permite cerrar un espacio sin saldo con
+aportaciones consumidas, conserva las salidas de Personal y corrige el borrado
+local de Cajas. La decisión del propietario quedó registrada en ESTADO.md.
+Requiere publicar las Functions actualizadas junto con la app; versiones
+antiguas mantienen su comprobación anterior. Las devoluciones de saldo tras
+vencer Pro y las pruebas físicas todavía están pendientes. Ver
+`docs/PRUEBAS_APORTES_CONSUMIDOS.md`. No se generó ni publicó una entrega.
+
 El 05/10/2026 quedó preparada y comprobada la conservación local al cerrar
 sesión y la unión Personal por elemento al volver a Pro (`syncFormat: 2`).
 No se generó ni publicó un APK/AAB u OTA. Las reglas deben admitir el marcador

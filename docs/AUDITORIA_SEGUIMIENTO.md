@@ -3,6 +3,26 @@
 Última revisión: 05/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-02 — consumido sin deuda ficticia, avance parcial (05/10/2026)
+
+- El propietario autorizó considerar consumido el aporte gastado. Saldo cero
+  permite cerrar/preparar borrado sin exigir devolución de dinero inexistente.
+  El miembro con dinero ya consumido también puede salir. Devoluciones inválidas,
+  saldos disponibles y borrado de aportes gastados siguen bloqueados.
+- Se conserva Personal al cerrar: marcador e importe consumido, sin alterar
+  saldo ni generar ingresos. Las ausencias de espacios cerrados no se purgan
+  como huérfanos, también si la copia de destino llega antes que la Personal.
+- Borrado de Caja privada corregido: no llama a Functions compartidas; prueba
+  real del método, aporte intacto/gastado y par devuelto. Familia conserva los
+  vínculos de cierre para limpieza posterior. Guía de pruebas y límites:
+  `docs/PRUEBAS_APORTES_CONSUMIDOS.md`.
+- Verificado: TypeScript, ESLint, 128 pruebas locales y 8 auditores; 42 de
+  Functions y 31 del emulador. Una prueba local es preexistente ajena no registrada.
+- **Qué sigue:** devolución del saldo aún disponible tras vencer Pro y Node 22.
+  **Qué falta:** completar esa excepción segura, teléfono/dos dispositivos,
+  Functions reales/consolas y publicación coordinada. No se considera FINO-02
+  completamente resuelto ni se migraron cuentas; tarjetas siguen excluidas.
+
 ## FINO-04 — protección Pro preparada, no publicada (05/10/2026)
 
 - Personal/historial, Negocio y Cajas privadas requieren Pro también en reglas.

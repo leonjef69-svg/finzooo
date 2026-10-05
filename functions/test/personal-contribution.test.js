@@ -23,18 +23,18 @@ test("un aporte intacto puede borrarse y una devolución reduce solo su parte", 
   });
 });
 
-test("un espacio no se cierra hasta devolver todos los aportes Personal", () => {
+test("lo gastado es consumido y no bloquea cerrar un espacio sin saldo", () => {
   const used = [
     { tipo: "ingreso", monto: 100, personalTransactionId: 10, personalOwnerUid: "ana" },
     { tipo: "gasto", monto: 100 },
   ];
-  assert.equal(canCloseLinkedSpace(used), false);
+  assert.equal(canCloseLinkedSpace(used), true);
   const returned = [
     { tipo: "ingreso", monto: 100, personalTransactionId: 10, personalOwnerUid: "ana" },
     { tipo: "gasto", monto: 100, personalTransactionId: 11, personalOwnerUid: "ana", personalReturnAmount: 100 },
   ];
   assert.equal(canCloseLinkedSpace(returned), true);
-  assert.equal(hasUnreturnedPersonalContribution(used, "ana"), true);
+  assert.equal(hasUnreturnedPersonalContribution(used, "ana"), false);
   assert.equal(hasUnreturnedPersonalContribution(returned, "ana"), false);
 });
 
@@ -50,5 +50,13 @@ test("una devolución antigua sin propietario no bloquea el cierre si el neto qu
     { tipo: "gasto", monto: 300, personalReturnAmount: 300 },
     { tipo: "gasto", monto: 200 },
   ];
-  assert.equal(canCloseLinkedSpace(legacyPartial), false);
+  assert.equal(canCloseLinkedSpace(legacyPartial), true);
+});
+
+test("consumido no permite saldos pendientes, devoluciones ajenas o datos inválidos", () => {
+  const contribution = { tipo: "ingreso", monto: 100, personalTransactionId: 10, personalOwnerUid: "ana" };
+  assert.equal(canCloseLinkedSpace([contribution, { tipo: "gasto", monto: 60 }]), false);
+  assert.equal(hasUnreturnedPersonalContribution([contribution, { tipo: "gasto", monto: 60 }], "ana"), true);
+  assert.equal(canCloseLinkedSpace([contribution, { tipo: "gasto", monto: 100, personalOwnerUid: "bob", personalReturnAmount: 100 }]), false);
+  assert.equal(canCloseLinkedSpace([{ tipo: "ingreso", monto: NaN }]), false);
 });

@@ -41,9 +41,9 @@ igual(canSpendFromSpace(usado, 150), true, "permite gastar exactamente el saldo"
 igual(returnableToPersonal(usado), 150, "solo se devuelve lo que sigue disponible");
 igual(canUndoContribution(usado, aporte), false, "no se borra un aporte parcialmente usado");
 igual(minimumContributionAmount(usado, aporte), 50, "no se reduce por debajo del dinero utilizado");
-igual(hasUnreturnedPersonalContributions(usado), true, "un aporte Personal gastado sigue pendiente de devolución");
+igual(hasUnreturnedPersonalContributions(usado), true, "la parte del aporte que sigue disponible debe devolverse");
 igual(hasUnreturnedPersonalContribution(usado, "yo"), true, "el preflight detecta el aporte pendiente del miembro que quiere salir");
-igual(canCloseLinkedSpace(usado), false, "un espacio no se cierra aunque luego se lleve el saldo a cero sin devolver a Personal");
+igual(canCloseLinkedSpace(usado), false, "un espacio con saldo disponible no se puede cerrar");
 
 const devuelto = [...usado, { id: "retorno", tipo: "gasto" as const, monto: 100, personalTransactionId: 11, personalReturnAmount: 100 }];
 igual(returnableToPersonal(devuelto), 50, "una devolución no puede repetirse");
