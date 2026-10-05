@@ -319,7 +319,13 @@ service cloud.firestore {
     match /cajas/{userId} {
       allow read: if verified() && request.auth.uid == userId && premiumUser(userId);
       allow create, update: if verified() && request.auth.uid == userId
-        && premiumUser(userId) && cloudCopyOpen(userId);
+        && premiumUser(userId) && cloudCopyOpen(userId)
+        && request.resource.data.get('syncFormat', 1) in [1, 2]
+        // Una copia antigua no puede quitar el formato que conserva versiones
+        // por Caja/movimiento y volver a imponer siempre su lista local.
+        && (!exists(/databases/$(database)/documents/cajas/$(userId))
+          || resource.data.get('syncFormat', 1) != 2
+          || request.resource.data.get('syncFormat', 1) == 2);
       allow delete: if verified() && request.auth.uid == userId;
     }
 

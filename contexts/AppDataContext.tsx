@@ -2610,15 +2610,24 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // nuevo durante la siguiente sincronización. Solo se retiran los IDs que
     // acabamos de reconstruir desde una fuente enlazada y verificada.
     const restoredIds = new Set(upserts.map(item => item.id));
+    deletedTransactionIdsRef.current = deletedTransactionIdsRef.current.filter(id => !restoredIds.has(id));
     setDeletedTransactionIds(prev => {
       const next = prev.filter(id => !restoredIds.has(id));
+      deletedTransactionIdsRef.current = next;
       return next.length === prev.length ? prev : next;
     });
     setTransactions(prev => {
       const replacements = new Map(upserts.map(item => [item.id, item]));
-      const repaired = prev.map(item => replacements.get(item.id) ?? item);
+      const repaired = prev.map(item => {
+        const replacement = replacements.get(item.id);
+        if (!replacement) return item;
+        // Un espacio cerrado no se reabre por una copia activa anterior.
+        if (item.internalTransferSettled && !replacement.internalTransferSettled) return item;
+        return { ...item, ...replacement,
+          updatedAt: Math.max(Date.now(), (item.updatedAt ?? 0) + 1, replacement.updatedAt ?? 0) };
+      });
       const known = new Set(prev.map(item => item.id));
-      return [...upserts.filter(item => !known.has(item.id)), ...repaired];
+      return [...upserts.filter(item => !known.has(item.id)).map(item => ({ ...item, updatedAt: Math.max(Date.now(), item.updatedAt ?? 0) })), ...repaired];
     });
   }
 

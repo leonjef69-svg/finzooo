@@ -56,6 +56,7 @@ Esta es la parte más delicada y por eso va aparte.
 - El servidor conserva el identificador de tu cuenta y la fecha de uso de la prueba para gestionar Pro y evitar reiniciarla al borrar una copia. Ese registro no contiene movimientos ni fotos y se elimina al completar el borrado de tu cuenta.
 - Cuando devuelves un aporte de Familia o Caja a Personal, el servidor conserva una confirmación con tu identificador, el espacio, el importe, la fecha, la descripción y los aportes relacionados. Sirve para evitar duplicados y recuperar una devolución interrumpida, también sin Pro o después de salir del espacio. No es un respaldo completo de Personal. La confirmación privada se elimina al completar el borrado de tu cuenta; el movimiento compartido sigue el tratamiento del espacio. La orden pendiente se guarda cifrada en tu teléfono, separada por cuenta.
 - Si deshaces esa devolución, la confirmación conserva una marca y la fecha de anulación para no registrarla otra vez como vigente. Esta información también se elimina al completar el borrado de tu cuenta.
+- Las copias de tus Cajas privadas incluyen la fecha de última edición y un marcador técnico de formato para evitar reemplazar cambios recientes por copias antiguas. La copia en la nube sigue requiriendo Pro y solo es visible para tu cuenta.
 
 4. Con quién compartimos tu información
 ${PARRAFO_ANUNCIOS}

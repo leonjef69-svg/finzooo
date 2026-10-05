@@ -24,6 +24,12 @@ Requisitos, regresión y límites: `docs/PRUEBAS_NODE22_BORRADO_CUENTA.md`.
 
 ## Qué comprueba cada cosa
 
+`verificar-cajas-sincronizacion.mjs` cubre versiones, conflictos, datos inválidos,
+cache/sesión, respuesta encolada, conversión con vista vieja y marcas de consumo
+con los auxiliares/manejadores propios reales. La prueba SDK está en
+`functions/integration-tests/private-boxes.test.js`. Guía y límites:
+`docs/PRUEBAS_CAJAS_PRIVADAS.md`.
+
 `verificar-consultas-espacios.mjs` ejecuta manejadores originales de Familia y
 Cajas con respuestas diferidas: cuenta/sesión, consulta superada, borrado,
 caché, miembros y cierres. La prueba de fuentes reales está en

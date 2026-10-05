@@ -94,6 +94,7 @@ async function deleteLocal(movements, selected) {
   const removedPersonal = [], messages = [];
   let rpcCount = 0;
   const scope = { movimientos: movements, seleccionados: selected, planSpaceMovementDeletion: local.planSpaceMovementDeletion,
+    cuentaActual: () => true, ready: true, compartiendo: false,
     borrarAportePersonal: async () => { rpcCount++; throw new Error("NO_SERVER_FOR_LOCAL_BOX"); },
     deleteLinkedTransferTransaction: id => removedPersonal.push(id), setDatos: update => { data = update(data); },
     showToast: message => messages.push(message), t: key => key, setSeleccionados() {}, setSeleccionando() {} };
@@ -115,8 +116,11 @@ assert.deepEqual(fullPair.removedPersonal, [11, 10]);
 const cajaScope = { isPremium: true, nubeConfirmadaPara: { current: "ana" }, auth: { currentUser: { uid: "ana" } },
   datos: { cajas: [{ id: "caja-otra" }], movimientosBorrados: [contribution.id, returned.id] },
   transactions: personal, movimientosPorId: new Map() };
-const deleted = execute(declarations("screens/Cajas.tsx", ["ausenciaConfirmada", "borradosExplicitos", "cajasActivas", "orphanIds"]), cajaScope, "orphanIds");
-assert.deepEqual(Array.from(deleted), [12], "la Caja cerrada no restaura dinero aunque su copia llegue antes del marcador Personal");
+const deleted = execute(declarations("screens/Cajas.tsx", ["borradosExplicitos", "cajasActivas", "orphanIds"]), cajaScope, "orphanIds");
+assert.deepEqual(Array.from(deleted), [], "ni Caja cerrada ni ausencia sin marca devuelven dinero ficticio");
+cajaScope.datos.movimientosBorrados.push("mov-otra");
+const explicitDeleted = execute(declarations("screens/Cajas.tsx", ["borradosExplicitos", "cajasActivas", "orphanIds"]), { ...cajaScope }, "orphanIds");
+assert.deepEqual(Array.from(explicitDeleted), [12], "una marca explícita sí permite conciliar el borrado de la Caja activa, sin tocar la cerrada");
 const familyScope = { familias: [{ id: "familia-activa" }], transactions: [
   { id: 1, internalTransfer: "family", internalTransferSpaceId: "familia-cerrada", internalTransferLink: "cerrado" },
   { id: 2, internalTransfer: "family", internalTransferSpaceId: "familia-activa", internalTransferLink: "eliminado" },
@@ -125,6 +129,7 @@ const familyDeleted = execute(declarations("screens/Family.tsx", ["familiasActiv
 assert.deepEqual(Array.from(familyDeleted), [2], "Familia cerrada no convierte su ausencia en devolución ficticia");
 
 const closeScope = { datos: { cajas: [{ id: "caja-local" }], movimientos: [contribution, { ...spent, monto: 60 }, returned], cajasBorradas: [], movimientosBorrados: [] },
+  cuentaActual: () => true, ready: true, compartiendo: false,
   cajasSeleccionadas: ["caja-local"], canCloseLinkedSpace: local.canCloseLinkedSpace, settlePersonalTransfers: local.settlePersonalTransfers,
   transactions: personal, repairLinkedTransferTransactions: updates => { closeScope.personalUpdates = updates; },
   setDatos: update => { closeScope.datos = update(closeScope.datos); }, setCajasSeleccionadas() {}, setSeleccionandoCajas() {},

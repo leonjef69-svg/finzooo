@@ -7,6 +7,8 @@ import { db } from "@/utils/firebase";
 import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
 import { subirCajas } from "@/utils/cloudCajas";
+import { copiaPrivadaCoincide, validarCajas } from "@/utils/cajas";
+import { captureAccountTask } from "@/utils/accountTask";
 import { canCloseLinkedSpace, hasUnreturnedPersonalContribution } from "@/utils/linkedTransfers";
 import { cerrarEspacioCompartido, finalizarBorradoEspacioCompartido, prepararBorradoEspacioCompartido, salirEspacioCompartido } from "@/utils/personalContribution";
 import type { Caja, MovimientoCaja } from "@/utils/cajas";
@@ -73,29 +75,31 @@ export async function compartirCajaExistente(
   movimientos: MovimientoCaja[],
   currency = "PEN",
 ): Promise<CajaCompartida> {
+  const task = captureAccountTask(uid);
   // Confirma el origen privado antes de copiar devoluciones históricas.
-  const sourceSaved = await subirCajas(uid, { cajas: [caja], movimientos, cajasBorradas: [], movimientosBorrados: [] });
+  const sourceSaved = await task.wait(() => subirCajas(uid, { cajas: [caja], movimientos, cajasBorradas: [], movimientosBorrados: [] }));
   if (!sourceSaved) throw new Error("permission-denied");
-  const privateCopy = await getDoc(doc(db, "cajas", uid));
+  const privateCopy = await task.wait(() => getDocFromServer(doc(db, "cajas", uid)));
+  if (!privateCopy.exists() || !copiaPrivadaCoincide(caja, movimientos, validarCajas(privateCopy.data()))) throw new Error("cajas-sync-conflict");
   const sourceIndices = new Map<string, number>((privateCopy.data()?.movimientos || []).map((item: MovimientoCaja, index: number) => [item.id, index]));
   if (movimientos.some(item => item.personalReturnAmount != null && !sourceIndices.has(item.id))) {
     throw new Error("return-invalid-data");
   }
   const ref = doc(db, "boxSpaces", `${uid}_${caja.id}`);
-  await runTransaction(db, async transaction => {
-    const actual = await transaction.get(ref);
+  await task.wait(() => runTransaction(db, async transaction => {
+    const actual = await task.wait(() => transaction.get(ref));
     if (actual.exists() && actual.data().ownerUid !== uid) throw new Error("not-owner");
     if (!actual.exists()) {
       transaction.set(ref, { nombre: caja.nombre, ownerUid: uid, currency, creadaEn: serverTimestamp(), migrationComplete: false });
       transaction.set(doc(db, "boxSpaces", ref.id, "members", uid), { uid, nombre: nombrePersona, rol: "owner", unidoEn: serverTimestamp() });
       transaction.set(doc(db, "boxUsers", uid, "spaces", ref.id), { boxId: ref.id, unidoEn: serverTimestamp() });
     }
-  });
+  }));
   // Si la conexión cayó a mitad de una migración anterior, esos documentos
   // ya existen y las reglas solo permiten crearlos una vez. Se conservan y se
   // copian únicamente los que faltan, haciendo seguro el reintento.
   const yaCopiados = new Set(
-    (await getDocs(collection(db, "boxSpaces", ref.id, "movements"))).docs.map(item => item.id),
+    (await task.wait(() => getDocs(collection(db, "boxSpaces", ref.id, "movements")))).docs.map(item => item.id),
   );
   for (let inicio = 0; inicio < movimientos.length; inicio += 400) {
     const pendientes = movimientos.slice(inicio, inicio + 400).filter(item => !yaCopiados.has(item.id));
@@ -110,9 +114,9 @@ export async function compartirCajaExistente(
         ...(item.personalReturnAmount != null ? { personalReturnAmount: item.personalReturnAmount, migrationSourceIndex: sourceIndices.get(item.id) } : {}),
       });
     }
-    await lote.commit();
+    await task.wait(() => lote.commit());
   }
-  await updateDoc(ref, { migrationComplete: true });
+  await task.wait(() => updateDoc(ref, { migrationComplete: true }));
   return { id: ref.id, nombre: caja.nombre, ownerUid: uid, creadaEn: caja.creadaEn, currency };
 }
 

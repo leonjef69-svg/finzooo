@@ -191,7 +191,7 @@ assert.match(cajas, /!cloudReady \|\| !uid \|\| !isPremium/);
 const cajasAst = ts.createSourceFile("Cajas.tsx", cajas, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 const declarations = new Map();
 function collectCaja(node) {
-  if (ts.isVariableDeclaration(node) && ["ausenciaConfirmada", "borradosExplicitos", "cajasActivas", "orphanIds"].includes(node.name.getText(cajasAst))) {
+  if (ts.isVariableDeclaration(node) && ["borradosExplicitos", "cajasActivas", "orphanIds"].includes(node.name.getText(cajasAst))) {
     declarations.set(node.name.getText(cajasAst), `const ${node.getText(cajasAst)};`);
   }
   ts.forEachChild(node, collectCaja);
@@ -208,7 +208,8 @@ function deletedCounterparts(pro, confirmed, deletedIds) {
 assert.deepEqual(deletedCounterparts(false, false, []), [], "Gratis no borra por una ausencia sin confirmar");
 assert.deepEqual(deletedCounterparts(false, false, ["mov-local"]), [10], "un borrado local explícito sí retira su contraparte");
 assert.deepEqual(deletedCounterparts(true, false, []), [], "un error Pro conserva el movimiento Personal");
-assert.deepEqual(deletedCounterparts(true, true, []), [10], "una consulta confirmada no toca movimientos compartidos");
+assert.deepEqual(deletedCounterparts(true, true, []), [], "confirmar una copia antigua no demuestra que se borró dinero");
+assert.deepEqual(deletedCounterparts(true, true, ["mov-local"]), [10], "la marca explícita concilia el borrado privado, sin tocar movimientos compartidos");
 
 // Una consulta de permisos lenta no puede desactivar la prueba recién
 // concedida; una activación de la cuenta anterior tampoco cambia la actual.

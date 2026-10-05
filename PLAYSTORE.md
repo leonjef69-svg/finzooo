@@ -207,6 +207,12 @@ Personal de otro. No acredita borrado físico en Android ni reglas/configuració
 publicadas. La nueva función debe desplegarse antes de distribuir la app;
 el formulario y las políticas de producción continúan por verificar.
 
+Las copias de Cajas privadas conservan
+la fecha de última edición de cada Caja/movimiento y un marcador técnico de
+formato, para no reemplazar una edición reciente con una copia antigua. Siguen
+siendo los datos financieros de la propia cuenta, sin nuevas categorías de
+datos, servicios o destinatarios; la nube de Cajas sigue limitada a Pro.
+
 La confirmación financiera conserva también la marca y fecha de anulación
 cuando el usuario deshace una devolución; así no se recupera como vigente al
 reintentar. Es la misma finalidad de consistencia y prevención de duplicados,

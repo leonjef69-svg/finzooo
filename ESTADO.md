@@ -1,5 +1,30 @@
 # Estado actual de Fino
 
+## Cajas privadas — versiones y copias comprobadas (05/10/2026)
+
+- Unión por fecha de edición; empates distintos/sobregiro abortan sin elegir
+  una copia a ciegas. Conserva borrados y marca `syncFormat: 2`; las reglas
+  bloquean quitar ese formato una vez usado. Primera actualización compatible.
+- Lectura del servidor y datos comprobados; no toma caché, documento incompleto
+  ni ausencia sin marca como un borrado. Subida transaccional limpia `undefined`,
+  comprueba cuenta/generación y archivo local legible, y devuelve el resultado
+  confirmado a pantalla sin otra consulta ni bucle de envíos.
+- Cache/pantalla por cuenta y sesión, cambios pendientes protegidos, avisos
+  traducidos y actualización manual. Gratis no consulta la nube. Reconstruir
+  Personal conserva campos y no reabre dinero consumido. Al compartir se
+  comprueba el origen antes de crear el espacio y se guardan las esperas por sesión.
+- Política interna/web y PLAYSTORE.md reflejan fecha de edición/formato de
+  Cajas, sin nuevas categorías de datos ni servicios. Guía, regresiones y
+  limitaciones: `docs/PRUEBAS_CAJAS_PRIVADAS.md`.
+- TypeScript/ESLint aprobados; 132 pruebas locales y 8 auditores (una prueba
+  preexistente ajena sin registrar en Git), 54 unitarias de Functions y 61 de
+  reglas/SDK/HTTP/eventos con Node 22 real. Regresiones local y SDK fallan
+  contra `bcc34d3` por sobrescribir la edición 120 con 100.
+- **Qué sigue:** conversión privada/compartida entre dispositivos e interrupciones,
+  y transferencia indivisible entre Personal/Cajas. **Qué falta:** Android,
+  conflictos heredados, tamaño/costos y publicación coordinada.
+  No se publicó ni reparó producción; tarjetas siguen excluidas.
+
 ## Consultas antiguas de espacios — protección local (05/10/2026)
 
 - Familia publica una consulta completa, ligada a cuenta/generación/revisión;

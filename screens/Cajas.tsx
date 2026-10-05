@@ -15,6 +15,8 @@ import {
   fusionarCajas,
   nuevoIdCaja,
   saldoCaja,
+  siguienteVersionCaja,
+  validarCajas,
   type DatosCajas,
 } from "@/utils/cajas";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
@@ -22,11 +24,12 @@ import { horaDe } from "@/utils/format";
 import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, compactLinkedTransferRows, countSelectedCompactRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, movementIdsForCompactRow, planSpaceMovementDeletion, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
 import { irUnaVez, safeBack } from "@/utils/nav";
-import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
+import { getAccountStorageSession, hasUnreadableLocalData, loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
+import { captureAccountTask } from "@/utils/accountTask";
 import { guardarCajasEnMemoria, leerCajasEnMemoria } from "@/utils/cajasMemoria";
 import { spaceErrorKey } from "@/utils/spaceErrors";
-import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Boxes, Check, ListChecks, Pencil, Plus, Trash2, UserPlus, X } from "lucide-react-native";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Boxes, Check, ListChecks, Pencil, Plus, RefreshCw, Trash2, UserPlus, X } from "lucide-react-native";
+import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
 import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
@@ -42,9 +45,16 @@ function fechaLocal(): string {
 }
 
 export default function Cajas() {
+  useAppData();
+  const uid = auth.currentUser?.uid ?? "";
+  return <CajasForAccount key={`${uid}:${getAccountStorageSession()}`} accountUid={uid} />;
+}
+
+function CajasForAccount({ accountUid }: { accountUid: string }) {
   const { t, fmt, showToast, disponible, transactions, addOrUpdateTransaction, deleteLinkedTransferTransaction, repairLinkedTransferTransactions, isPremium, userName, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
-  const [datos, setDatos] = useState<DatosCajas>(() => leerCajasEnMemoria() ?? CAJAS_VACIAS);
+  const [datos, setRenderedDatos] = useState<DatosCajas>(() => leerCajasEnMemoria() ?? CAJAS_VACIAS);
+  const datosActuales = useRef(datos);
   const [lista, setLista] = useState(true);
   const [cajaId, setCajaId] = useState<string | null>(null);
   const [editandoNombreCaja, setEditandoNombreCaja] = useState(false);
@@ -75,9 +85,36 @@ export default function Cajas() {
   const [cajasSeleccionadas, setCajasSeleccionadas] = useState<string[]>([]);
   const accionLocalEnCurso = useRef(false);
   const nubeConfirmadaPara = useRef<string | null>(null);
+  const [syncIssue, setSyncIssue] = useState<"boxes.syncFailed" | "boxes.syncConflict" | null>(null);
+  const [refreshVersion, setRefreshVersion] = useState(0);
+  const requestedRefresh = useRef(refreshVersion);
+  requestedRefresh.current = refreshVersion;
+  const accountSession = useRef(getAccountStorageSession()).current;
+  const mounted = useRef(true);
+  const premiumForSync = useRef(isPremium);
+  premiumForSync.current = isPremium;
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+  const cuentaActual = useCallback(() => mounted.current && accountSession !== null
+    && accountSession === getAccountStorageSession() && (auth.currentUser?.uid ?? "") === accountUid,
+  [accountSession, accountUid]);
+  const reportSyncError = useCallback((error: unknown) => {
+    if (!cuentaActual()) return;
+    setSyncIssue(error instanceof Error && error.message === "cajas-sync-conflict" ? "boxes.syncConflict" : "boxes.syncFailed");
+  }, [cuentaActual]);
+  const setDatos = useCallback((update: SetStateAction<DatosCajas>) => {
+    if (!cuentaActual()) return;
+    const next = typeof update === "function" ? update(datosActuales.current) : update;
+    // Una confirmación idéntica no programa otra subida de la misma lista.
+    if (next === datosActuales.current || JSON.stringify(next) === JSON.stringify(datosActuales.current)) return;
+    datosActuales.current = next;
+    setRenderedDatos(next);
+  }, [cuentaActual]);
 
   function tomarAccionLocal(): boolean {
-    if (accionLocalEnCurso.current) return false;
+    if (!cuentaActual() || !ready || compartiendo || cargandoUnion || accionLocalEnCurso.current) return false;
     accionLocalEnCurso.current = true;
     setTimeout(() => { accionLocalEnCurso.current = false; }, 700);
     return true;
@@ -85,52 +122,73 @@ export default function Cajas() {
 
   useFocusEffect(useCallback(() => {
     let alive = true;
+    const requested = refreshVersion;
+    const current = () => alive && cuentaActual() && requestedRefresh.current === requested;
     setCloudReady(false);
+    setReady(false);
     nubeConfirmadaPara.current = null;
     void (async () => {
-      const uid = auth.currentUser?.uid;
+      const uid = accountUid;
+      try {
       const local = await loadJSON<DatosCajas>(STORAGE_KEYS.cajasDinero, CAJAS_VACIAS);
-      if (!alive || auth.currentUser?.uid !== uid) return;
+      if (!current()) return;
+      if (hasUnreadableLocalData()) throw new Error("cajas-local-unreadable");
       const memoria = leerCajasEnMemoria();
-      const visible = memoria ? fusionarCajas(local, memoria) : local;
+      const checked = validarCajas(local);
+      const visible = memoria ? fusionarCajas(checked, validarCajas(memoria)) : checked;
       guardarCajasEnMemoria(visible);
       setDatos(visible);
       setReady(true);
 
       let remoto: DatosCajas | null = null;
       if (uid && isPremium) {
+        const task = captureAccountTask(uid, () => current() && premiumForSync.current);
         try {
-          remoto = await bajarCajas(uid);
-          if (alive && auth.currentUser?.uid === uid) nubeConfirmadaPara.current = uid;
-        } catch {
+          remoto = await task.wait(() => bajarCajas(uid));
+          if (task.current()) nubeConfirmadaPara.current = uid;
+        } catch (error) {
           // Se puede seguir trabajando localmente, pero no reparar ausencias
           // ni subir encima de una copia que no se pudo consultar.
+          if (task.current()) reportSyncError(error);
           return;
         }
       }
-      if (!alive || auth.currentUser?.uid !== uid) return;
-      setDatos(actual => {
-        // Si la persona anotó algo mientras llegaba la nube, se fusiona con
-        // el estado ACTUAL. Usar `visible` aquí podría borrar ese toque rápido.
-        const unidos = remoto ? fusionarCajas(actual, remoto) : actual;
-        guardarCajasEnMemoria(unidos);
-        void saveJSON(STORAGE_KEYS.cajasDinero, unidos);
-        return unidos;
-      });
+      if (!current()) return;
+      // La referencia incorpora inmediatamente cada cambio local, incluso si
+      // React todavía no lo pintó. La nube no sustituye una edición encolada.
+      const unidos = remoto ? fusionarCajas(datosActuales.current, remoto) : datosActuales.current;
+      setDatos(unidos);
+      guardarCajasEnMemoria(unidos);
+      void saveJSON(STORAGE_KEYS.cajasDinero, unidos);
       setCloudReady(true);
+      setSyncIssue(null);
+      } catch (error) {
+        if (current()) {
+          nubeConfirmadaPara.current = null;
+          setCloudReady(false); reportSyncError(error);
+        }
+      }
     })();
     return () => { alive = false; };
-  }, [isPremium]));
+  }, [accountUid, cuentaActual, isPremium, refreshVersion, reportSyncError, setDatos]));
 
   useEffect(() => {
+    if (!cuentaActual() || !ready || hasUnreadableLocalData()) return;
     guardarCajasEnMemoria(datos);
-    if (!ready) return;
     void saveJSON(STORAGE_KEYS.cajasDinero, datos);
-    const uid = auth.currentUser?.uid;
+    const uid = accountUid;
     if (!cloudReady || !uid || !isPremium || nubeConfirmadaPara.current !== uid) return;
-    const timer = setTimeout(() => { if (auth.currentUser?.uid === uid) void subirCajas(uid, datos); }, 700);
-    return () => clearTimeout(timer);
-  }, [datos, ready, cloudReady, isPremium]);
+    let active = true;
+    const task = captureAccountTask(uid, () => active && cuentaActual() && premiumForSync.current);
+    const timer = setTimeout(() => {
+      if (!task.current()) return;
+      void subirCajas(uid, datos, error => { if (task.current()) reportSyncError(error); }, saved => {
+        if (task.current() && !hasUnreadableLocalData()) setDatos(current => fusionarCajas(current, saved));
+      })
+        .then(ok => { if (ok && task.current()) setSyncIssue(null); });
+    }, 700);
+    return () => { active = false; clearTimeout(timer); };
+  }, [accountUid, cuentaActual, datos, ready, cloudReady, isPremium, reportSyncError, setDatos]);
 
   const caja = datos.cajas.find((item) => item.id === cajaId);
   useEffect(() => {
@@ -157,7 +215,7 @@ export default function Cajas() {
   useEffect(() => {
     // En un teléfono nuevo Personal puede llegar antes que las Cajas. Hasta
     // que la nube termine de responder, una contraparte ausente no es huérfana.
-    if (!ready || !cloudReady) return;
+    if (!cuentaActual() || !ready || !cloudReady || (isPremium && nubeConfirmadaPara.current !== accountUid)) return;
     const movimientosPorId = new Map(datos.movimientos.map(item => [item.id, item]));
     const transferenciasPersonales = transactions.filter(tx => tx.internalTransfer === "box");
     const transferenciasPorMovimiento = new Map<string, typeof transferenciasPersonales>();
@@ -218,7 +276,7 @@ export default function Cajas() {
         ...actual,
         movimientos: actual.movimientos.map(item => item.personalTransactionId != null || !idsRecuperados.has(item.id)
           ? item
-          : { ...item, personalTransactionId: idsRecuperados.get(item.id) }),
+          : { ...item, personalTransactionId: idsRecuperados.get(item.id), updatedAt: siguienteVersionCaja(item) }),
       }));
     }
     const upserts = datos.movimientos.flatMap(item => {
@@ -235,6 +293,7 @@ export default function Cajas() {
         description: esRetorno ? t("boxes.returnFrom", { name: cajaDelMovimiento?.nombre || "" }) : t("boxes.transferTo", { name: cajaDelMovimiento?.nombre || "" }),
         notes: "", origin: "manual" as const, internalTransfer: "box" as const, internalTransferLink: item.id,
         internalTransferSpaceId: item.cajaId, internalTransferSpaceName: cajaDelMovimiento?.nombre || "Caja",
+        updatedAt: item.updatedAt ?? item.creadoEn,
         ...(allocations ? { internalTransferAllocations: allocations } : {}),
       };
       const current = transactions.find(tx => tx.id === item.personalTransactionId);
@@ -245,7 +304,6 @@ export default function Cajas() {
         && JSON.stringify(current.internalTransferAllocations || []) === JSON.stringify(allocations || [])) return [];
       return [canonical];
     });
-    const ausenciaConfirmada = isPremium && nubeConfirmadaPara.current === auth.currentUser?.uid;
     const borradosExplicitos = new Set(datos.movimientosBorrados || []);
     const cajasActivas = new Set(datos.cajas.map(item => item.id));
     const orphanIds = transactions
@@ -255,10 +313,12 @@ export default function Cajas() {
         && tx.internalTransferLink?.startsWith("mov-")
         && (!tx.internalTransferSpaceId || tx.internalTransferSpaceId.startsWith("caja-"))
         && !movimientosPorId.has(tx.internalTransferLink)
-        && (ausenciaConfirmada || borradosExplicitos.has(tx.internalTransferLink)))
+        // La ausencia, incluso en una copia antigua del servidor, no prueba
+        // un borrado. Exigir la marca guardada al eliminar ese movimiento.
+        && borradosExplicitos.has(tx.internalTransferLink))
       .map(tx => tx.id);
     if (upserts.length || orphanIds.length) repairLinkedTransferTransactions(upserts, orphanIds);
-  }, [datos.cajas, datos.movimientos, datos.movimientosBorrados, ready, cloudReady, isPremium, repairLinkedTransferTransactions, t, transactions]);
+  }, [accountUid, cuentaActual, datos.cajas, datos.movimientos, datos.movimientosBorrados, ready, cloudReady, isPremium, repairLinkedTransferTransactions, setDatos, t, transactions]);
 
   const visibles = movimientos.filter(item => !filter
     || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter));
@@ -319,7 +379,7 @@ export default function Cajas() {
     if (!tomarAccionLocal()) return;
     setDatos(antes => ({
       ...antes,
-      cajas: antes.cajas.map(item => item.id === caja.id ? { ...item, nombre: nombreNuevo } : item),
+      cajas: antes.cajas.map(item => item.id === caja.id ? { ...item, nombre: nombreNuevo, updatedAt: siguienteVersionCaja(item) } : item),
     }));
     setEditandoNombreCaja(false);
     showToast(t("boxes.renamed"));
@@ -330,16 +390,18 @@ export default function Cajas() {
     const codigo = codigoCaja.trim().toUpperCase();
     if (!uid) { showToast(t("boxes.loginRequired")); return; }
     if (codigo.length !== 8 || cargandoUnion) return;
+    const task = captureAccountTask(accountUid, cuentaActual);
+    if (!task.current()) return;
     setCargandoUnion(true);
     try {
-      const unida = await unirseACaja(uid, userName || t("family.member"), codigo);
+      const unida = await task.wait(() => unirseACaja(uid, userName || t("family.member"), codigo));
       setUniendoCaja(false);
       setCodigoCaja("");
       irUnaVez({ pathname: "/shared-boxes", params: { boxId: unida.id } });
     } catch (error) {
-      showToast(t(spaceErrorKey(error, true)));
+      if (task.current()) showToast(t(spaceErrorKey(error, true)));
     } finally {
-      setCargandoUnion(false);
+      if (task.current()) setCargandoUnion(false);
     }
   }
 
@@ -357,7 +419,7 @@ export default function Cajas() {
       if (valor - aporteEditado.monto > disponible) { showToast(t("boxes.notEnoughPersonal")); return; }
       if (!tomarAccionLocal()) return;
       const personal = transactions.find(tx => tx.id === aporteEditado.personalTransactionId);
-      setDatos(antes => ({ ...antes, movimientos: antes.movimientos.map(item => item.id === aporteEditado.id ? { ...item, monto: valor, descripcion: descripcion.trim().slice(0, 60) || item.descripcion } : item) }));
+      setDatos(antes => ({ ...antes, movimientos: antes.movimientos.map(item => item.id === aporteEditado.id ? { ...item, monto: valor, descripcion: descripcion.trim().slice(0, 60) || item.descripcion, updatedAt: siguienteVersionCaja(item) } : item) }));
       if (personal) addOrUpdateTransaction({ ...personal, amount: valor }, true);
       setMonto(""); setDescripcion(""); setEditandoAporteId(null); setAnotando(null);
       showToast(t("boxes.movementSaved"));
@@ -401,6 +463,7 @@ export default function Cajas() {
   }
 
   function borrarSeleccionados(ids = seleccionados) {
+    if (!cuentaActual() || !ready || compartiendo) return;
     const plan = planSpaceMovementDeletion(movimientos, ids);
     if (!plan.ok) {
       if (plan.reason === "empty") return;
@@ -432,6 +495,7 @@ export default function Cajas() {
     ]);
   }
   function borrarCajas(ids = cajasSeleccionadas) {
+    if (!cuentaActual() || !ready || compartiendo) return;
     const candidatas = datos.cajas.filter(item => ids.includes(item.id));
     if (!candidatas.length) return;
     if (candidatas.some(item => !canCloseLinkedSpace(datos.movimientos.filter(movement => movement.cajaId === item.id)))) {
@@ -484,10 +548,12 @@ export default function Cajas() {
     const uid = auth.currentUser?.uid;
     if (!uid || !caja || compartiendo) return;
     if (!isPremium) { irUnaVez("/premium"); return; }
+    const task = captureAccountTask(accountUid, cuentaActual);
+    if (!task.current() || !ready) return;
     setCompartiendo(true);
     try {
-      const compartida = await compartirCajaExistente(uid, userName || t("family.member"), caja, movimientos, userCurrency);
-      const codigo = await crearInvitacionCaja(uid, compartida.id);
+      const compartida = await task.wait(() => compartirCajaExistente(uid, userName || t("family.member"), caja, movimientos, userCurrency));
+      const codigo = await task.wait(() => crearInvitacionCaja(uid, compartida.id));
       const idsPersonales = new Set(movimientos.flatMap(item => item.personalTransactionId == null ? [] : [item.personalTransactionId]));
       const enlacesMigrados = transactions
         .filter(item => idsPersonales.has(item.id) && item.internalTransfer === "box")
@@ -512,8 +578,13 @@ export default function Cajas() {
       // La caja se vuelve compartida antes de crear el código. Se abre con el
       // código ya visible, en vez de lanzar el cuadro antiguo de "Compartir".
       irUnaVez({ pathname: "/shared-boxes", params: { boxId: compartida.id, invitation: codigo } });
-    } catch (error) { showToast(t(spaceErrorKey(error))); }
-    finally { setCompartiendo(false); }
+    } catch (error) {
+      if (task.current()) {
+        if (error instanceof Error && error.message === "cajas-sync-conflict") reportSyncError(error);
+        else showToast(t(spaceErrorKey(error)));
+      }
+    }
+    finally { if (task.current()) setCompartiendo(false); }
   }
 
   return (
@@ -521,9 +592,10 @@ export default function Cajas() {
       <View className="flex-row items-center justify-between px-5 pb-3">
         <BackButton onPress={safeBack} />
         <Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("boxes.title")}</Text>
-        <View className="w-10" />
+        <TouchableOpacity accessibilityLabel={t("common.refresh")} disabled={compartiendo || cargandoUnion} onPress={() => setRefreshVersion(value => value + 1)} className="h-10 w-10 items-center justify-center"><RefreshCw size={18} color="#64748b" /></TouchableOpacity>
       </View>
       <SpaceSwitcher active="boxes" />
+      {syncIssue ? <Text accessibilityLiveRegion="polite" className="px-5 pb-2 text-xs leading-5 text-amber-700 dark:text-amber-300">{t(syncIssue)}</Text> : null}
 
       <ScrollView
         className="flex-1 px-5"

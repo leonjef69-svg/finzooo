@@ -10,6 +10,14 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Cajas privadas prepara `syncFormat: 2`/fecha de edición: no impone una copia vieja
+sobre una edición nueva, conserva eliminaciones y rechaza conflictos ambiguos.
+La carga confirma servidor/cuenta y la pantalla recibe el resultado del guardado.
+Exige entrega coordinada de reglas y app; tras escribir formato 2 no revertir a
+un cliente que lo quite. La conversión entre dispositivos todavía requiere
+otra revisión antes de entregar. Ver `docs/PRUEBAS_CAJAS_PRIVADAS.md`.
+Sin APK/OTA/despliegue ni cambios nativos; no cambió CODE_MARKER.
+
 Familia y Cajas compartidas descartan consultas/operaciones de una sesión
 anterior y fuentes sin confirmar antes de corregir Personal. Cajas concilia
 contrapartes borradas remotamente solo del espacio activo abierto, conservando

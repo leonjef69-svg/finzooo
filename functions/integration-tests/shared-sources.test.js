@@ -25,6 +25,10 @@ async function sources(client) {
     plugins: [{ name: "only-demo-config", setup(build) {
       build.onLoad({ filter: /[\\/]utils[\\/]firebase\.ts$/ }, () => ({ loader: "ts",
         contents: "export const { auth, db, functions } = globalThis.__FINO_DEMO_CLIENT__;" }));
+      // No hay almacenamiento Android en Node; las fuentes compartidas no
+      // ejercitan este módulo. La generación se controla en la prueba local.
+      build.onLoad({ filter: /[\\/]utils[\\/]storage\.ts$/ }, () => ({ loader: "ts",
+        contents: "export const getAccountStorageSession = () => 1; export const hasUnreadableLocalData = () => false;" }));
     } }],
   });
   const module = { exports: {} };
