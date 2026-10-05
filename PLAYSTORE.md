@@ -164,8 +164,11 @@ se procesan para registrar movimientos. Las políticas pública e interna ya lo 
 
 El estado de avisos ya revisados (`finzo:homeNotificationSeen`) se guarda cifrado
 solo en el teléfono, para controlar el contador de la campana. No se sube a Firebase,
-por lo que no añade una categoría de datos recogidos en Play Console; se borra al
-cerrar sesión. La política dentro de la app lo describe desde el 03/10/2026.
+por lo que no añade una categoría de datos recogidos en Play Console. Desde el
+05/10/2026, cerrar sesión conserva una copia local cifrada y separada por cuenta,
+incluidos los avisos leídos; solo se recupera con esa misma cuenta en el teléfono.
+Eliminar la cuenta retira también sus copias locales. La política publicada debe
+actualizarse con `docs/privacidad.html` en la próxima entrega.
 
 > **LOS CONTACTOS DE ENVÍO NO SE DECLARAN, Y AQUÍ DECÍA LO CONTRARIO (corregido el
 > 18/08/2026).** Este archivo afirmaba que "se guardan y se suben a su copia en la nube" y

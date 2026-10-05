@@ -16,7 +16,7 @@ import {
   signOut,
   updatePassword,
 } from "firebase/auth";
-import { AppState, Modal, Text, View } from "react-native";
+import { Alert, AppState, Modal, Text, View } from "react-native";
 import { colorScheme, useColorScheme, vars } from "nativewind";
 import { nativewindThemeVariables, type VisualStyle } from "@/constants/visualTheme";
 import { seedTransactions, seedGoals } from "@/constants/seed";
@@ -30,10 +30,12 @@ import {
   loadJSON,
   saveJSON,
   saveJSONNow,
+  setAccountStorageAvailable,
   STORAGE_KEYS,
   subscribeStorageWriteErrors,
   subscribeStorageReadErrors,
 } from "@/utils/storage";
+import { allowPreAccountPreferences, archiveLocalAccount, deleteLocalAccountVault, LocalAccountVaultError, prepareLocalAccount, resumeLocalAccount } from "@/utils/localAccountVault";
 import {
   borrarNegocio as borrarNegocioYLoSuyo,
   borrarProducto as quitarProductoDeLaLista,
@@ -146,6 +148,7 @@ type AppDataContextValue = {
   hasOnboarded: boolean;
   completeOnboarding: (budgetAmount: number) => void;
   reloadPersistedData: () => Promise<void>;
+  openLocalAccount: (uid: string, email?: string | null) => Promise<boolean>;
   hydrateFromCloud: (uid: string) => Promise<"restored" | "none" | "premium-required">;
   logout: (options?: { skipBackup?: boolean }) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
@@ -544,6 +547,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // El "uid" de la cuenta que inició sesión de verdad (y ya verificó su
   // correo). Mientras esto no tenga un valor, no subimos nada a la nube.
   const [uid, setUid] = useState<string | null>(null);
+  const localSessionVersion = useRef(0);
+  const localOpenRequest = useRef(0);
 
   // Una versión de fmt() ya conectada a la moneda elegida — toda la app
   // la usa a través del contexto, así que se actualiza en el mismo
@@ -581,7 +586,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const monthNames = monthNamesFor(userLanguage);
 
   useEffect(() => {
+    let previousUser: string | null = null;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user || (previousUser !== null && previousUser !== user.uid)) {
+        localSessionVersion.current += 1;
+        setAccountStorageAvailable(false);
+        setHasOnboarded(false);
+      }
+      previousUser = user?.uid ?? null;
       setUid(user && user.emailVerified ? user.uid : null);
       setNeedsEmailVerification(!!user && !user.emailVerified);
       setAuthReady(true);
@@ -592,7 +604,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setTesterPremium(TESTER_PREMIUM_INACTIVE);
     if (!uid) return;
-    return subscribeTesterPremium(uid, setTesterPremium);
+    return subscribeTesterPremium(uid, (value) => {
+      if (auth.currentUser?.uid === uid) setTesterPremium(value);
+    });
   }, [uid]);
 
   // Cada vez que cargamos datos ya guardados, avisamos al generador de
@@ -727,6 +741,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // al iniciar sesión desde un celular nuevo). Si no hay nada guardado
   // todavía, no hace nada y devuelve "false".
   async function hydrateFromCloud(userUid: string): Promise<"restored" | "none" | "premium-required"> {
+    const version = localSessionVersion.current;
+    const checkSession = () => {
+      if (auth.currentUser?.uid !== userUid || localSessionVersion.current !== version) throw new Error(tRef.current("settings.noActiveSession"));
+    };
+    checkSession();
     let cloud: CloudData | null;
     try {
       cloud = await loadCloudData(userUid, {
@@ -735,9 +754,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           pruebaVigente(entitlement.premiumTrialStartedAt ?? pruebaInicio, Date.now()),
       });
     } catch (error) {
+      checkSession();
       if (error instanceof CloudPremiumRequiredError) return "premium-required";
       throw error;
     }
+    checkSession();
     if (!cloud) return "none";
     setUserName(cloud.userName);
     setUserPhoto(cloud.userPhoto);
@@ -821,6 +842,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
      * creado sin sesión, y borrarlo por venir vacío de la nube sería perderlo.
      */
     const negocioDeLaNube = await bajarNegocio(userUid);
+    checkSession();
     if (negocioDeLaNube) {
       setDatosNegocio(negocioDeLaNube);
       guardarNegocios(negocioDeLaNube.negocios);
@@ -836,6 +858,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   async function reloadPersistedData() {
+    const loadingUid = auth.currentUser?.uid;
+    const version = localSessionVersion.current;
     const [
       savedBudgets,
       savedCategoryBudgets,
@@ -853,6 +877,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       savedNegocio,
       savedPagos,
       savedCloudSyncMeta,
+      savedCaptureLog,
     ] = await Promise.all([
       loadJSON<Record<string, number>>(STORAGE_KEYS.budgets, {}),
       loadJSON<Record<string, number>>(STORAGE_KEYS.categoryBudgets, {}),
@@ -866,14 +891,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // La personalizacion de categorias se carga en la variable de modulo
       // que consulta catInfo, y ademas al estado para que las pantallas se
       // dibujen con ella desde el primer momento.
-      loadOverrides(),
+      loadOverrides(false),
       // Y las categorias propias, por el mismo motivo: catInfo las consulta
       // desde una variable de modulo, no desde el contexto.
-      loadPropias(),
+      loadPropias(false),
       // Los iconos favoritos, tambien en variable de modulo: la pantalla de
       // crear categoria los necesita al dibujarse, y leer el disco en cada
       // letra que se escribe seria leer el disco decenas de veces.
-      loadFavoritos(),
+      loadFavoritos(false),
       // Cuando se activo la prueba gratuita, si se activo. Ver utils/pruebaPremium.
       loadPrueba(),
       // El negocio: sus negocios, productos y ventas. Ver utils/negocio.
@@ -881,7 +906,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // El calendario de pagos. Ver utils/calendarioPagos.
       loadJSON<PagoProgramado[]>(STORAGE_KEYS.pagosProgramados, []),
       loadJSON<Record<string, number>>(STORAGE_KEYS.cloudSyncMeta, {}),
+      loadJSON<CaptureLogEntry[]>(STORAGE_KEYS.autoCaptureLog, []),
     ]);
+    if (auth.currentUser?.uid !== loadingUid || version !== localSessionVersion.current) return;
+    setOverrides(savedOverrides);
+    setPropias(savedPropias);
+    setFavoritos(savedFavoritos);
     setBudgets(savedBudgets);
     setCategoryBudgets(savedCategoryBudgets);
     setCategoryOverridesState(savedOverrides);
@@ -900,6 +930,46 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setDatosNegocio(savedNegocio);
     cloudSyncMetaRef.current = savedCloudSyncMeta;
     setCloudSyncMeta(savedCloudSyncMeta);
+    setAutoCaptureLog(savedCaptureLog);
+  }
+
+  function applyLocalProfile(profile: Profile) {
+    setUserName(profile.userName || "");
+    setUserEmail(profile.userEmail || "");
+    setUserPhoto(profile.userPhoto ?? null);
+    setUserCurrency(profile.userCurrency || "PEN");
+    setUserLanguage(profile.userLanguage || "es");
+    setUserCountry(profile.userCountry || countryFor(profile.userLanguage || "es", profile.userCurrency || "PEN")?.id || "PE");
+  }
+
+  async function openLocalAccount(userUid: string, email?: string | null): Promise<boolean> {
+    if (auth.currentUser?.uid !== userUid) throw new Error(tRef.current("settings.noActiveSession"));
+    setReady(false);
+    const request = ++localOpenRequest.current;
+    localSessionVersion.current += 1;
+    try {
+      const onboarded = await prepareLocalAccount(userUid, email);
+      const profile = await loadJSON<Profile | null>(STORAGE_KEYS.profile, null);
+      if (auth.currentUser?.uid !== userUid || request !== localOpenRequest.current) throw new Error(tRef.current("settings.noActiveSession"));
+      if (profile) applyLocalProfile(profile);
+      await reloadPersistedData();
+      if (auth.currentUser?.uid !== userUid || request !== localOpenRequest.current) throw new Error(tRef.current("settings.noActiveSession"));
+      setHasOnboarded(onboarded);
+      return onboarded;
+    } catch (error) {
+      if (request === localOpenRequest.current) {
+        setAccountStorageAvailable(false);
+        setHasOnboarded(false);
+      }
+      if (error instanceof LocalAccountVaultError) {
+        const accessError = new Error(tRef.current(error.reason === "owner" ? "localAccount.ownerMismatch" : "localAccount.restoreFailed"));
+        accessError.name = "LocalAccountAccessError";
+        throw accessError;
+      }
+      throw error;
+    } finally {
+      if (request === localOpenRequest.current) setReady(true);
+    }
   }
 
   /** Limpia datos, avisos e integraciones locales que pertenecían a la cuenta. */
@@ -923,7 +993,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // Al salir de la cuenta se limpian sus datos locales antes de vaciar React.
     // Si Android cerrase Fino durante esta operación, la siguiente apertura no
     // cargaría movimientos de la cuenta anterior.
+    try {
     await clearAccountData();
+    } finally {
     setHasOnboarded(false);
     setUserName("");
     setUserEmail("");
@@ -960,6 +1032,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setRespaldoFallo(null);
     setCelebrateGoal(null);
     setVerComoGratis(false);
+    }
   }
 
   // Cierra la sesión de verdad (Firebase) y limpia los datos de este
@@ -967,6 +1040,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // los movimientos/metas de la cuenta anterior.
   async function logout(options?: { skipBackup?: boolean }) {
     if (hasUnreadableLocalData()) throw new Error(tRef.current("storage.readBlockedBody"));
+    const localUser = auth.currentUser;
+    if (!localUser) throw new Error(tRef.current("settings.noActiveSession"));
+    const captureWasEnabled = notificationReader.isEnabled();
+    const onboardedBeforeLogout = hasOnboarded;
+    localSessionVersion.current += 1;
+    let archiving = false;
+    setReady(false);
+    notificationReader.setEnabled(false);
+    try {
     // Antes de salir, espera a que el último cambio (por ejemplo, la
     // moneda que acabas de elegir) termine de subirse a la nube. Si no
     // se espera esto, cerrar sesión muy rápido después de un cambio
@@ -984,9 +1066,34 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // alguien pulse "Continuar con Google" entraría directo con la última
     // cuenta usada, sin poder elegir otra — un problema real en un celular
     // compartido, y confuso al probar con varias cuentas.
+    // La copia local se confirma antes de cerrar Firebase o retirar datos.
+    // Incluye también Gratis y a quien decide salir sin respaldo en la nube.
+    const captureDeadline = Date.now() + 10_000;
+    while (captureBusy.current) {
+      if (Date.now() > captureDeadline) throw new Error(tRef.current("localAccount.saveFailed"));
+      await new Promise((resolve) => setTimeout(resolve, 25));
+    }
+    archiving = true;
+    await archiveLocalAccount(localUser.uid, localUser.email);
+    archiving = false;
+    setHasOnboarded(false);
     await Promise.allSettled([signOutFromGoogle()]);
     await signOut(auth);
-    await limpiarCuentaEnEsteDispositivo(uid);
+    await limpiarCuentaEnEsteDispositivo(localUser.uid);
+    } catch (error) {
+      if (auth.currentUser?.uid === localUser.uid) {
+        await resumeLocalAccount(localUser.uid).catch(() => {
+          setAccountStorageAvailable(false);
+          setStorageReadBlocked(true);
+        });
+        setHasOnboarded(onboardedBeforeLogout);
+        notificationReader.setEnabled(captureWasEnabled);
+      }
+      if (archiving || error instanceof LocalAccountVaultError) throw new Error(tRef.current("localAccount.saveFailed"));
+      throw error;
+    } finally {
+      setReady(true);
+    }
   }
 
   // Antes de cambiar la contraseña o borrar la cuenta, Firebase exige
@@ -1021,7 +1128,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await deleteCloudAccount(user.uid);
     await deleteUser(user);
     await Promise.allSettled([signOutFromGoogle()]);
-    await limpiarCuentaEnEsteDispositivo(user.uid);
+    const cleanup = await Promise.allSettled([
+      limpiarCuentaEnEsteDispositivo(user.uid),
+      deleteLocalAccountVault(user.uid),
+    ]);
+    if (cleanup.some((result) => result.status === "rejected")) throw new Error(tRef.current("localAccount.deleteCleanupFailed"));
   }
 
   useEffect(() => {
@@ -1030,15 +1141,22 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // alargaba cada arranque con la suma de tres esperas del almacenamiento.
       // Los movimientos siguen cargándose antes de `ready`: no se sacrifica
       // seguridad de datos por mostrar Inicio antes de tiempo.
-      const [, savedTheme, savedVisualStyle, profile] = await Promise.all([
+      const [, savedTheme, savedVisualStyle] = await Promise.all([
         clearRetiredAlternateData(),
         loadJSON<ThemeMode>(STORAGE_KEYS.themeMode, "system"),
         loadJSON<VisualStyle>(STORAGE_KEYS.visualStyle, "peachOlive"),
-        loadJSON<Profile | null>(STORAGE_KEYS.profile, null),
       ]);
       setThemeMode(savedTheme);
       setVisualStyle(savedVisualStyle === "classic" ? "classic" : "peachOlive");
       colorScheme.set(savedTheme);
+      await auth.authStateReady();
+      const user = auth.currentUser;
+      if (user) {
+        await openLocalAccount(user.uid, user.email);
+        return;
+      }
+      const preAccount = await allowPreAccountPreferences();
+      const profile = preAccount ? await loadJSON<Profile | null>(STORAGE_KEYS.profile, null) : null;
       // País y moneda se eligen ANTES de crear la cuenta. Android puede
       // cerrar Fino mientras la persona abre el correo de verificación; al
       // volver hay que restaurar esa elección aunque el setup aún no haya
@@ -1056,16 +1174,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             "PE"
         );
       }
-      if (profile?.hasOnboarded) {
-        setHasOnboarded(true);
-        await reloadPersistedData();
-      }
       setReady(true);
     }
-    init().catch(() => {
+    init().catch(async (error) => {
       // Una lectura local inesperadamente dañada no debe dejar la primera
       // apertura en una pantalla vacía para siempre. Las lecturas normales
       // ya tienen sus propios valores seguros; esto cubre el último recurso.
+      setAccountStorageAvailable(false);
+      setHasOnboarded(false);
+      await signOut(auth).catch(() => undefined);
+      const message = error instanceof LocalAccountVaultError
+        ? tRef.current(error.reason === "owner" ? "localAccount.ownerMismatch" : "localAccount.restoreFailed")
+        : error instanceof Error && error.name === "LocalAccountAccessError" ? error.message : tRef.current("localAccount.restoreFailed");
+      Alert.alert(tRef.current("localAccount.title"), message);
       setReady(true);
     });
     // Esto debe ejecutarse UNA sola vez, al abrir la app. Si añadiéramos
@@ -1100,22 +1221,22 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   // Guardado automático: cada vez que algo cambia, se guarda solo.
   useEffect(() => {
-    if (ready) saveJSON(STORAGE_KEYS.budgets, budgets);
-  }, [budgets, ready]);
+    if (ready && hasOnboarded) saveJSON(STORAGE_KEYS.budgets, budgets);
+  }, [budgets, ready, hasOnboarded]);
   useEffect(() => {
-    if (ready) saveJSON(STORAGE_KEYS.categoryBudgets, categoryBudgets);
-  }, [categoryBudgets, ready]);
+    if (ready && hasOnboarded) saveJSON(STORAGE_KEYS.categoryBudgets, categoryBudgets);
+  }, [categoryBudgets, ready, hasOnboarded]);
   useEffect(() => {
-    if (ready) saveJSON(STORAGE_KEYS.transactions, transactions);
-  }, [transactions, ready]);
+    if (ready && hasOnboarded) saveJSON(STORAGE_KEYS.transactions, transactions);
+  }, [transactions, ready, hasOnboarded]);
   useEffect(() => {
-    if (ready) saveJSON(STORAGE_KEYS.goals, goals);
-  }, [goals, ready]);
+    if (ready && hasOnboarded) saveJSON(STORAGE_KEYS.goals, goals);
+  }, [goals, ready, hasOnboarded]);
   useEffect(() => {
-    if (ready) saveJSON(STORAGE_KEYS.deletedGoalIds, deletedGoalIds);
-  }, [deletedGoalIds, ready]);
+    if (ready && hasOnboarded) saveJSON(STORAGE_KEYS.deletedGoalIds, deletedGoalIds);
+  }, [deletedGoalIds, ready, hasOnboarded]);
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !hasOnboarded) return;
     saveJSON(STORAGE_KEYS.pagosProgramados, pagosProgramados);
     /**
      * LOS AVISOS SE REPROGRAMAN ENTEROS EN CADA CAMBIO, y a propósito.
@@ -1152,33 +1273,33 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         setAvisosProgramados(r.puestos);
         setAvisosFallo(r.fallo ?? null);
       });
-  }, [pagosProgramados, ready, userCurrency]);
+  }, [pagosProgramados, ready, hasOnboarded, userCurrency]);
   useEffect(() => {
     // El de la cuenta. Guardando el que ven las pantallas, activar la prueba
     // dejaria Premium marcado para siempre en este celular.
-    if (ready) saveJSON(STORAGE_KEYS.isPremium, isPremiumDeLaCuenta);
-  }, [isPremiumDeLaCuenta, ready]);
+    if (ready && hasOnboarded) saveJSON(STORAGE_KEYS.isPremium, isPremiumDeLaCuenta);
+  }, [isPremiumDeLaCuenta, ready, hasOnboarded]);
   useEffect(() => {
-    if (ready) saveJSON(STORAGE_KEYS.merchantLearned, merchantLearned);
-  }, [merchantLearned, ready]);
+    if (ready && hasOnboarded) saveJSON(STORAGE_KEYS.merchantLearned, merchantLearned);
+  }, [merchantLearned, ready, hasOnboarded]);
   useEffect(() => {
-    if (ready) saveJSON(STORAGE_KEYS.carryoverCleared, carryoverCleared);
-  }, [carryoverCleared, ready]);
+    if (ready && hasOnboarded) saveJSON(STORAGE_KEYS.carryoverCleared, carryoverCleared);
+  }, [carryoverCleared, ready, hasOnboarded]);
   useEffect(() => {
-    if (ready) saveJSON(STORAGE_KEYS.cloudSyncMeta, cloudSyncMeta);
-  }, [cloudSyncMeta, ready]);
+    if (ready && hasOnboarded) saveJSON(STORAGE_KEYS.cloudSyncMeta, cloudSyncMeta);
+  }, [cloudSyncMeta, ready, hasOnboarded]);
   useEffect(() => {
-    if (ready) saveJSON(STORAGE_KEYS.deletedTransactionIds, deletedTransactionIds);
-  }, [deletedTransactionIds, ready]);
+    if (ready && hasOnboarded) saveJSON(STORAGE_KEYS.deletedTransactionIds, deletedTransactionIds);
+  }, [deletedTransactionIds, ready, hasOnboarded]);
   // EL NEGOCIO, en sus cuatro claves. Se guardan las cuatro juntas porque cambian juntas:
   // una venta toca las ventas, pero borrar un negocio toca las cuatro a la vez.
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !hasOnboarded) return;
     guardarNegocios(datosNegocio.negocios);
     guardarProductos(datosNegocio.productos);
     guardarVentas(datosNegocio.ventas);
     guardarMovimientosNegocio(datosNegocio.movimientos);
-  }, [datosNegocio, ready]);
+  }, [datosNegocio, ready, hasOnboarded]);
 
   /**
    * Y A LA NUBE, EN SU PROPIO DOCUMENTO.
@@ -1192,13 +1313,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    */
   useEffect(() => {
     if (!(ready && hasOnboarded && uid && isPremium)) return;
+    let alive = true;
+    const version = localSessionVersion.current;
     const timer = setTimeout(() => {
       void subirNegocio(uid, datosNegocio).catch((error) => {
+        if (!alive || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
         const mensaje = String((error as Error)?.message ?? error);
         setRespaldoFallo(mensaje.includes("demasiado-grande") ? "demasiado-grande" : "negocio");
       });
     }, 1500);
-    return () => clearTimeout(timer);
+    return () => { alive = false; clearTimeout(timer); };
   }, [datosNegocio, ready, hasOnboarded, uid, isPremium]);
 
   // Además de guardar en este celular, si hay una cuenta con sesión
@@ -1214,16 +1338,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // guardados, y logout() sube todo explícitamente antes de cerrar sesión.
   useEffect(() => {
     if (!(ready && hasOnboarded && uid && isPremium)) return;
+    let alive = true;
+    const version = localSessionVersion.current;
     const timer = setTimeout(() => {
       /* SE MIRA COMO FUE. Antes se lanzaba y se olvidaba, y el cartel de Ajustes decia
          "Tus datos estan respaldados" solo por haber iniciado sesion — aunque la subida
          llevara semanas fallando. Ver utils/cloudSync. */
       void saveCloudData(uid, datosParaLaNube()).then((r) => {
+        if (!alive || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
         setRespaldoFallo(r.ok ? null : r.motivo);
         if (r.ok) applyNewerCloudFields(r.data);
       });
     }, 1500);
-    return () => clearTimeout(timer);
+    return () => { alive = false; clearTimeout(timer); };
     // datosParaLaNube se queda FUERA de esta lista a propósito. Es una función que
     // se crea de nuevo en cada dibujado, así que incluirla dispararía una subida
     // por dibujado — internet gastado en mandar lo mismo. La lista de abajo son
@@ -1270,9 +1397,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!(ready && hasOnboarded && uid && isPremium)) return;
     let alive = true;
+    const version = localSessionVersion.current;
     const sincronizarMovimientos = async () => {
       const cloud = await loadCloudData(uid).catch(() => null);
-      if (!alive || !cloud) return;
+      if (!alive || !cloud || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
       applyNewerCloudFields(cloud);
       const borrados = pruneDeletedTransactionIds([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])]);
       const metasBorradas = pruneDeletedGoalIds([...deletedGoalIds, ...(cloud.deletedGoalIds ?? [])]);
@@ -1348,25 +1476,20 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const captureBusy = useRef(false);
 
   useEffect(() => {
-    let alive = true;
-    loadJSON<CaptureLogEntry[]>(STORAGE_KEYS.autoCaptureLog, []).then((saved) => {
-      if (alive && Array.isArray(saved)) setAutoCaptureLog(saved);
-    });
     if (notificationReader.isSupported) {
       setAutoCaptureOnState(notificationReader.isEnabled());
       setAutoCapturePermission(notificationReader.isPermissionGranted());
     }
-    return () => {
-      alive = false;
-    };
   }, []);
 
   useEffect(() => {
-    if (ready) saveJSON(STORAGE_KEYS.autoCaptureLog, autoCaptureLog);
-  }, [autoCaptureLog, ready]);
+    if (ready && hasOnboarded) saveJSON(STORAGE_KEYS.autoCaptureLog, autoCaptureLog);
+  }, [autoCaptureLog, ready, hasOnboarded]);
 
   useEffect(() => {
     if (!(ready && hasOnboarded && notificationReader.isSupported)) return;
+    let alive = true;
+    const version = localSessionVersion.current;
 
     /**
      * Vuelve a leer del disco y se queda con TODO lo que haya.
@@ -1612,7 +1735,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       collect();
       if (uid && isPremium) {
         void loadCloudData(uid).then((cloud) => {
-          if (!cloud) return;
+          if (!cloud || !alive || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
           applyNewerCloudFields(cloud);
           const borrados = pruneDeletedTransactionIds([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])]);
           const metasBorradas = pruneDeletedGoalIds([...deletedGoalIds, ...(cloud.deletedGoalIds ?? [])]);
@@ -1632,6 +1755,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }
     });
     return () => {
+      alive = false;
       clearInterval(cada);
       alLlegar.remove();
       sub.remove();
@@ -2443,6 +2567,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     hasOnboarded,
     completeOnboarding,
     reloadPersistedData,
+    openLocalAccount,
     hydrateFromCloud,
     logout,
     changePassword,

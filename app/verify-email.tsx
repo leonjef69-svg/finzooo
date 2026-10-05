@@ -6,7 +6,7 @@ import { auth } from "@/utils/firebase";
 import { withTimeout } from "@/utils/withTimeout";
 
 export default function VerifyEmailRoute() {
-  const { hasOnboarded, reloadPersistedData, hydrateFromCloud, logout } = useAppData();
+  const { openLocalAccount, hydrateFromCloud, logout } = useAppData();
 
   return (
     <VerifyEmail
@@ -16,18 +16,18 @@ export default function VerifyEmailRoute() {
         if (!user) return false;
         await withTimeout(reload(user));
         if (!user.emailVerified) return false;
+        const localRestored = await withTimeout(openLocalAccount(user.uid, user.email));
+        if (localRestored) {
+          router.replace("/(tabs)");
+          return true;
+        }
 
         const cloudResult = await withTimeout(hydrateFromCloud(user.uid));
         if (cloudResult === "restored") {
           router.replace("/(tabs)");
           return true;
         }
-        if (hasOnboarded) {
-          await withTimeout(reloadPersistedData());
-          router.replace("/(tabs)");
-        } else {
-          router.replace("/setup");
-        }
+        router.replace("/setup");
         return true;
       }}
       onResend={async () => {

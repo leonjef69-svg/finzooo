@@ -19,11 +19,26 @@ function code(name) {
   assert.ok(found, name);
   return ts.transpile(found.getText(source), { target: ts.ScriptTarget.ES2022 });
 }
+function logoutScope() {
+  return {
+    auth: { currentUser: { uid: "test", email: "test@example.com" } },
+    setReady() {}, setHasOnboarded() {},
+    captureBusy: { current: false },
+    notificationReader: { isEnabled: () => false, setEnabled() {} },
+    openLocalAccount: async () => true,
+    resumeLocalAccount: async () => undefined,
+    hasOnboarded: true,
+    localSessionVersion: { current: 0 },
+    archiveLocalAccount: async () => undefined,
+    LocalAccountVaultError: class extends Error {},
+    tRef: { current: (key) => key },
+  };
+}
 for (const failure of [{ ok: false, motivo: "sin-red" }, { ok: false, motivo: "demasiado-grande" }]) {
   const calls = [];
-  const scope = { uid: "test", isPremium: true, hasUnreadableLocalData: () => false, datosParaLaNube: () => ({}), saveCloudData: async () => failure,
+  const scope = { ...logoutScope(), uid: "test", isPremium: true, hasUnreadableLocalData: () => false, datosParaLaNube: () => ({}), saveCloudData: async () => failure,
     signOutFromGoogle: async () => calls.push("google"), signOut: async () => calls.push("auth"),
-    auth: {}, clearAccountData: async () => calls.push("clear") };
+    clearAccountData: async () => calls.push("clear") };
   vm.createContext(scope);
   vm.runInContext(code("logout"), scope);
   await assert.rejects(scope.logout(), error => error.name === "BackupBeforeLogoutError");
@@ -32,6 +47,7 @@ for (const failure of [{ ok: false, motivo: "sin-red" }, { ok: false, motivo: "d
 {
   const calls = [];
   const scope = {
+    ...logoutScope(),
     uid: "test",
     isPremium: true,
     hasUnreadableLocalData: () => false,
@@ -39,7 +55,6 @@ for (const failure of [{ ok: false, motivo: "sin-red" }, { ok: false, motivo: "d
     saveCloudData: async () => { calls.push("backup"); return { ok: false, motivo: "sin-internet" }; },
     signOutFromGoogle: async () => calls.push("google"),
     signOut: async () => { calls.push("auth"); throw new Error("STOP"); },
-    auth: {},
   };
   vm.createContext(scope);
   vm.runInContext(code("logout"), scope);
@@ -49,6 +64,7 @@ for (const failure of [{ ok: false, motivo: "sin-red" }, { ok: false, motivo: "d
 {
   const calls = [];
   const scope = {
+    ...logoutScope(),
     uid: "test",
     isPremium: false,
     hasUnreadableLocalData: () => false,
@@ -56,7 +72,6 @@ for (const failure of [{ ok: false, motivo: "sin-red" }, { ok: false, motivo: "d
     saveCloudData: async () => { calls.push("backup"); return { ok: true }; },
     signOutFromGoogle: async () => calls.push("google"),
     signOut: async () => { calls.push("auth"); throw new Error("STOP"); },
-    auth: {},
   };
   vm.createContext(scope);
   vm.runInContext(code("logout"), scope);
@@ -78,6 +93,77 @@ for (const failure of [{ ok: false, motivo: "sin-red" }, { ok: false, motivo: "d
   assert.deepEqual(calls, [], "una lectura dañada nunca desencadena cierre ni borrado local");
 }
 const settings = read("app/(tabs)/settings.tsx");
+{
+  let finishA;
+  const accountA = new Promise((resolve) => { finishA = resolve; });
+  const applied = [];
+  const disabled = [];
+  const scope = {
+    auth: { currentUser: { uid: "A" } }, localSessionVersion: { current: 0 }, localOpenRequest: { current: 0 },
+    tRef: { current: (key) => key }, setReady() {}, setHasOnboarded() {},
+    prepareLocalAccount: async (uid) => uid === "A" ? accountA : true,
+    loadJSON: async () => ({ userName: "B" }), STORAGE_KEYS: { profile: "profile" },
+    applyLocalProfile: (profile) => applied.push(profile.userName), reloadPersistedData: async () => undefined,
+    setAccountStorageAvailable: (value) => disabled.push(value), LocalAccountVaultError: class extends Error {},
+  };
+  vm.createContext(scope);
+  vm.runInContext(code("openLocalAccount"), scope);
+  const older = assert.rejects(scope.openLocalAccount("A"), /settings.noActiveSession/);
+  scope.auth.currentUser = { uid: "B" };
+  assert.equal(await scope.openLocalAccount("B"), true);
+  finishA(true);
+  await older;
+  assert.deepEqual(applied, ["B"], "una apertura antigua no aplica el perfil de otra cuenta");
+  assert.deepEqual(disabled, [], "el error de A no deshabilita la cuenta B que ya abrió");
+}
+{
+  const calls = [];
+  const scope = {
+    auth: { currentUser: { uid: "test" } },
+    localSessionVersion: { current: 0 },
+    tRef: { current: (key) => key },
+    CloudPremiumRequiredError: class extends Error {},
+    setUserName: (value) => calls.push(value),
+  };
+  scope.loadCloudData = async () => {
+    scope.localSessionVersion.current += 1;
+    return { userName: "Respuesta antigua" };
+  };
+  vm.createContext(scope);
+  vm.runInContext(code("hydrateFromCloud"), scope);
+  await assert.rejects(scope.hydrateFromCloud("test"), /settings.noActiveSession/);
+  assert.deepEqual(calls, [], "una respuesta vieja de nube no modifica una nueva sesión");
+}
+{
+  const calls = [];
+  const scope = {
+    ...logoutScope(), uid: "test", isPremium: false, hasUnreadableLocalData: () => false,
+    archiveLocalAccount: async () => calls.push("local-copy"),
+    signOutFromGoogle: async () => calls.push("google"),
+    signOut: async (auth) => { calls.push("auth"); auth.currentUser = null; },
+    limpiarCuentaEnEsteDispositivo: async () => calls.push("clear-active"),
+  };
+  vm.createContext(scope);
+  vm.runInContext(code("logout"), scope);
+  await scope.logout();
+  assert.deepEqual(calls, ["local-copy", "google", "auth", "clear-active"], "Gratis confirma copia local antes de cerrar o limpiar");
+}
+{
+  const calls = [];
+  const scope = {
+    ...logoutScope(), uid: "test", isPremium: false, hasUnreadableLocalData: () => false,
+    signOut: async () => calls.push("auth"),
+    signOutFromGoogle: async () => calls.push("google"),
+    limpiarCuentaEnEsteDispositivo: async () => calls.push("clear-active"),
+    openLocalAccount: async () => { throw new Error("No recargar una copia vieja sobre cambios pendientes"); },
+  };
+  scope.archiveLocalAccount = async () => { throw new scope.LocalAccountVaultError(); };
+  vm.createContext(scope);
+  vm.runInContext(code("logout"), scope);
+  await assert.rejects(scope.logout(), /localAccount.saveFailed/);
+  assert.deepEqual(calls, [], "fallo local conserva la sesión sin borrar ni recargar cambios antiguos");
+  assert.equal(scope.auth.currentUser.uid, "test");
+}
 assert.match(settings, /BackupBeforeLogoutError/);
 assert.match(settings, /skipBackup:\s*true/);
 assert.match(settings, /secondConfirmation|confirmacionFinal/);
@@ -132,7 +218,7 @@ for (const cleanup of [
 ]) assert.ok(localCleanup.includes(cleanup), `la limpieza común incluye ${cleanup}`);
 const logout = code("logout");
 const deleteAccount = code("deleteAccount");
-assert.match(logout, /limpiarCuentaEnEsteDispositivo\(uid\)/);
+assert.match(logout, /limpiarCuentaEnEsteDispositivo\(localUser\.uid\)/);
 assert.match(deleteAccount, /deleteUser\(user\)[\s\S]*?limpiarCuentaEnEsteDispositivo\(user\.uid\)/);
 
 console.log("Respaldo fallido conserva datos; metas e invitaciones protegidas; espacios Premium, configuración y privacidad verificados.");

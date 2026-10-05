@@ -15,13 +15,24 @@ import "expo-router/entry";
 
 import { capturarEnFondo } from "./utils/capturaEnFondo";
 import { exportarEnFondo } from "./utils/exportarEnFondo";
+import { allowBackgroundAccount, withLocalAccountOperation } from "./utils/localAccountVault";
+import { auth } from "./utils/firebase";
+
+async function runForActiveAccount(task) {
+  return withLocalAccountOperation(async () => {
+    await auth.authStateReady();
+    const user = auth.currentUser;
+    if (!user || !await allowBackgroundAccount(user.uid, user.email)) return;
+    await task();
+  });
+}
 
 // El nombre tiene que ser EL MISMO que usa FinzoCaptureService en Android.
 // Si no coinciden, Android despierta el trabajo, no encuentra nada con ese
 // nombre y se cierra sin decir nada: no falla, simplemente no pasa.
 AppRegistry.registerHeadlessTask("FinzoCapture", () => async () => {
   try {
-    await capturarEnFondo();
+    await runForActiveAccount(capturarEnFondo);
   } catch (error) {
     Sentry.captureException(error);
     // Nunca dejar que esto reviente. Si algo sale mal, lo capturado sigue en
@@ -36,7 +47,7 @@ AppRegistry.registerHeadlessTask("FinzoCapture", () => async () => {
 // ese nombre y se cierra sin decir nada.
 AppRegistry.registerHeadlessTask("FinzoExport", () => async () => {
   try {
-    await exportarEnFondo();
+    await runForActiveAccount(exportarEnFondo);
   } catch (error) {
     Sentry.captureException(error);
     // Igual que el de arriba: si algo sale mal queda el aviso a la hora y el

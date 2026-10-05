@@ -56,7 +56,7 @@ export default function Login({
       await onLoggedIn();
     } catch (err) {
       const code = (err as { code?: string })?.code || "";
-      setError(firebaseErrorMessage(code));
+      setError(err instanceof Error && err.name === "LocalAccountAccessError" ? err.message : firebaseErrorMessage(code));
     } finally {
       authBusy.current = false;
       setLoading(false);
@@ -76,7 +76,8 @@ export default function Login({
       // Cancelar no es un fallo: si la persona cerró la ventana de Google
       // a propósito, mostrarle un error rojo sería confuso.
       if (err instanceof GoogleSignInCancelled) return;
-      setGoogleError(googleSignInErrorMessage(err));
+      if (err instanceof Error && err.name === "LocalAccountAccessError") setGoogleError(err.message);
+      else setGoogleError(googleSignInErrorMessage(err));
     } finally {
       authBusy.current = false;
       setGoogleLoading(false);

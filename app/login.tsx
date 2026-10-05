@@ -5,22 +5,29 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
 
 export default function LoginRoute() {
-  const { t, hasOnboarded, reloadPersistedData, hydrateFromCloud, setUserName, setUserEmail } =
+  const { t, openLocalAccount, hydrateFromCloud, setUserName, setUserEmail } =
     useAppData();
   return (
     <Login
       onLoggedIn={async () => {
         const user = auth.currentUser;
+        if (!user) return;
+        const localRestored = await openLocalAccount(user.uid, user.email);
         if (user) {
-          setUserName(user.displayName || "");
+          if (!localRestored) setUserName(user.displayName || "");
           setUserEmail(user.email || "");
         }
         if (user && !user.emailVerified) {
           router.replace("/verify-email");
           return;
         }
-        // Primero intenta traer los datos de esta cuenta desde la nube
-        // (por si inició sesión antes en otro celular).
+        // La copia del teléfono es de esta cuenta y se conserva incluso Gratis.
+        // No reemplazarla por una copia antigua de la nube al volver a entrar.
+        if (localRestored) {
+          router.replace("/(tabs)");
+          return;
+        }
+        // Sin copia local, intenta recuperar la de esta cuenta desde la nube.
         if (user) {
           const cloudResult = await hydrateFromCloud(user.uid);
           if (cloudResult === "restored") {
@@ -29,45 +36,12 @@ export default function LoginRoute() {
           }
           if (cloudResult === "premium-required") {
             Alert.alert(t("login.cloudRequiresPremiumTitle"), t("login.cloudRequiresPremiumText"));
-            if (hasOnboarded) {
-              await reloadPersistedData();
-              router.replace("/(tabs)");
-            } else {
-              router.replace("/setup");
-            }
+            router.replace("/setup");
             return;
           }
-          /**
-           * ESTA CUENTA NO TIENE NINGUNA COPIA, Y HAY QUE DECIRLO (18/08/2026)
-           *
-           * Hasta hoy esto se pasaba en silencio: se entraba, la pantalla salía vacía, y
-           * desde fuera eso se ve **exactamente igual** que "la app perdió mis datos".
-           *
-           * Le pasó a él con tres cuentas suyas —dos de Google y una de Hotmail—: sus
-           * movimientos estaban a salvo en la nube de una, entró con otra, y dio por hecho
-           * que se habían borrado. Media tarde en descubrir que la app no tenía nada roto.
-           *
-           * **No se borra nada ni se toca la nube**: si el celular ya traía datos, siguen
-           * ahí abajo (`reloadPersistedData`). Lo único que se añade es decir lo que pasó y
-           * cuál es la salida, que es el patrón de toda esta app —un fallo que no avisa
-           * cuesta días—.
-           *
-           * Solo se avisa a quien YA usaba la app (`hasOnboarded`). A quien acaba de
-           * instalarla, "no hay copia" es lo normal y el aviso solo asustaría.
-           */
-          if (hasOnboarded) {
-            Alert.alert(t("login.sinCopiaTitulo"), t("login.sinCopiaTexto"));
-          }
+          Alert.alert(t("login.sinCopiaTitulo"), t("login.sinCopiaTexto"));
         }
-        if (hasOnboarded) {
-          // Vuelve a leer lo guardado en este celular, por si algo cambió
-          // desde el último "Cerrar sesión" dentro de esta misma vez que
-          // la app estuvo abierta.
-          await reloadPersistedData();
-          router.replace("/(tabs)");
-        } else {
-          router.replace("/setup");
-        }
+        router.replace("/setup");
       }}
       onGoRegister={() => router.replace("/register")}
     />

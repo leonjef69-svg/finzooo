@@ -77,10 +77,11 @@ export function setPropias(next: CategoriaPropia[]): void {
   propias = Array.isArray(next) ? next.filter(esValida) : [];
 }
 
-export async function loadPropias(): Promise<CategoriaPropia[]> {
+export async function loadPropias(apply = true): Promise<CategoriaPropia[]> {
   const guardado = await loadJSON<CategoriaPropia[]>(STORAGE_KEY, []);
-  setPropias(guardado);
-  return propias;
+  const loaded = Array.isArray(guardado) ? guardado.filter(esValida) : [];
+  if (apply) setPropias(loaded);
+  return loaded;
 }
 
 export function savePropias(next: CategoriaPropia[]): void {

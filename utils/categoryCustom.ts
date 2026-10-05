@@ -61,10 +61,11 @@ export function setOverrides(next: CategoryOverrides): void {
   overrides = next ?? {};
 }
 
-export async function loadOverrides(): Promise<CategoryOverrides> {
+export async function loadOverrides(apply = true): Promise<CategoryOverrides> {
   const guardado = await loadJSON<CategoryOverrides>(STORAGE_KEY, {});
-  overrides = guardado && typeof guardado === "object" ? guardado : {};
-  return overrides;
+  const loaded = guardado && typeof guardado === "object" ? guardado : {};
+  if (apply) overrides = loaded;
+  return loaded;
 }
 
 export function saveOverrides(next: CategoryOverrides): void {

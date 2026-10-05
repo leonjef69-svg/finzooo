@@ -149,7 +149,7 @@ console.log("\n--- LA PRUEBA NO SE MEZCLA CON EL PREMIUM DE LA CUENTA ---");
   const inicioDelete = ctx.indexOf("async function deleteAccount(");
   const inicioInit = ctx.indexOf("useEffect(() => {\n    async function init()", inicioDelete);
   const borrarCuenta = ctx.slice(inicioDelete, inicioInit);
-  ok(/setPruebaInicio\(null\)/.test(limpieza) && /limpiarCuentaEnEsteDispositivo\(uid\)/.test(logout) &&
+  ok(/setPruebaInicio\(null\)/.test(limpieza) && /limpiarCuentaEnEsteDispositivo\(localUser\.uid\)/.test(logout) &&
     /limpiarCuentaEnEsteDispositivo\(user\.uid\)/.test(borrarCuenta),
   "al cerrar sesión y borrar la cuenta, se suelta la prueba local");
   const almacen = fs.readFileSync(path.join(RAIZ, "utils/storage.ts"), "utf8");

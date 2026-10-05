@@ -140,9 +140,10 @@ export function paraLaNube(lista: string[]): string[] {
   return limpiar(lista).filter((x) => !esFoto(x));
 }
 
-export async function loadFavoritos(): Promise<string[]> {
-  favoritos = limpiar(await loadJSON<unknown>(STORAGE_KEY, []));
-  return favoritos;
+export async function loadFavoritos(apply = true): Promise<string[]> {
+  const loaded = limpiar(await loadJSON<unknown>(STORAGE_KEY, []));
+  if (apply) favoritos = loaded;
+  return loaded;
 }
 
 export function saveFavoritos(lista: string[]): void {

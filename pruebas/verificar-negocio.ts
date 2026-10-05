@@ -85,7 +85,7 @@ console.log("\n--- AL CERRAR SESION NO QUEDA NADA DEL NEGOCIO ---");
   // nombres, los colores Y LAS FOTOS de la persona anterior. Aqui serian sus ventas y sus
   // precios.
   const almacen = fs.readFileSync(path.join(RAIZ, "utils/storage.ts"), "utf8");
-  const borrado = almacen.slice(almacen.indexOf("clearAccountData"));
+  const borrado = almacen.slice(almacen.indexOf("export const ACCOUNT_STORAGE_KEYS"));
   for (const clave of ["negocios", "productos", "ventas"]) {
     ok(borrado.includes(`STORAGE_KEYS.${clave},`), `se borra ${clave} al cerrar sesion`);
   }
@@ -254,7 +254,7 @@ console.log("\n--- EL NEGOCIO ESTA ENGANCHADO POR LOS CUATRO LADOS ---");
   const inicioInit = ctx.indexOf("useEffect(() => {\n    async function init()", inicioDelete);
   const borrarCuenta = ctx.slice(inicioDelete, inicioInit);
   ok(/setDatosNegocio\(NEGOCIO_VACIO\)/.test(limpieza), "la limpieza común vacía el negocio en memoria");
-  ok(/await limpiarCuentaEnEsteDispositivo\(uid\)/.test(logout), "cerrar sesión usa la limpieza común");
+  ok(/await limpiarCuentaEnEsteDispositivo\(localUser\.uid\)/.test(logout), "cerrar sesión usa la limpieza común");
   ok(/await deleteUser\(user\);[\s\S]*?limpiarCuentaEnEsteDispositivo\(user\.uid\)/.test(borrarCuenta),
     "borrar la cuenta limpia el negocio local después de borrarla en la nube");
 
@@ -515,7 +515,7 @@ console.log("\n--- EL PANEL: ENGANCHE, PANTALLA Y RUTA (paso 4) ---");
   // primer commit del Modo Negocio —PASA CONTRA LA VERSION ANTERIOR, y se deja escrita
   // porque ahora si hay datos que borrar ahi.
   const almacen = fs.readFileSync(path.join(RAIZ, "utils/storage.ts"), "utf8");
-  const borrado = almacen.slice(almacen.indexOf("clearAccountData"));
+  const borrado = almacen.slice(almacen.indexOf("export const ACCOUNT_STORAGE_KEYS"));
   ok(borrado.includes("STORAGE_KEYS.movimientosNegocio,"), "y se borran al cerrar sesion (ya estaba)");
 
   const pant = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");

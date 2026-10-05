@@ -5,10 +5,13 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
 
 export default function RegisterRoute() {
-  const { t, hasOnboarded, hydrateFromCloud, setUserName, setUserEmail } = useAppData();
+  const { t, openLocalAccount, hydrateFromCloud, setUserName, setUserEmail } = useAppData();
   return (
     <Register
-      onRegistered={(name, email) => {
+      onRegistered={async (name, email) => {
+        const user = auth.currentUser;
+        if (!user) return;
+        await openLocalAccount(user.uid, user.email);
         setUserName(name);
         setUserEmail(email);
         // Orden temporal para revisar todas las pantallas del flujo inicial:
@@ -22,6 +25,11 @@ export default function RegisterRoute() {
       onGoogleSignedIn={async () => {
         const user = auth.currentUser;
         if (user) {
+          const localRestored = await openLocalAccount(user.uid, user.email);
+          if (localRestored) {
+            router.replace("/(tabs)");
+            return;
+          }
           setUserName(user.displayName || "");
           setUserEmail(user.email || "");
           const cloudResult = await hydrateFromCloud(user.uid);
@@ -31,11 +39,11 @@ export default function RegisterRoute() {
           }
           if (cloudResult === "premium-required") {
             Alert.alert(t("login.cloudRequiresPremiumTitle"), t("login.cloudRequiresPremiumText"));
-            router.replace(hasOnboarded ? "/(tabs)" : "/setup");
+            router.replace("/setup");
             return;
           }
         }
-        router.replace(hasOnboarded ? "/(tabs)" : "/setup");
+        router.replace("/setup");
       }}
       onGoLogin={() => router.replace("/login")}
     />

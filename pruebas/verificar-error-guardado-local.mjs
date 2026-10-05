@@ -14,7 +14,7 @@ const fallos = [];
 if (!storage.includes("export function subscribeStorageWriteErrors")) {
   fallos.push("El guardado local no permite informar sus fallos.");
 }
-if (!storage.includes(".catch(() => {\n      reportStorageWriteError();")) {
+if (!/\.catch\(\(\) => \{\s*failedWriteKeys\.add\(key\);\s*reportStorageWriteError\(\);/.test(storage)) {
   fallos.push("El guardado agrupado todavía oculta sus errores.");
 }
 if (!contexto.includes("subscribeStorageWriteErrors(() =>")) {
@@ -41,7 +41,7 @@ const root = process.cwd();
 const stub = (name) => path.join(root, "pruebas", "stubs", name);
 async function runStorageScenario(source) {
   const result = esbuild.buildSync({
-    stdin: { contents: source, resolveDir: root, sourcefile: "storage-safety-scenario.ts", loader: "ts" },
+    stdin: { contents: 'import { setAccountStorageAvailable } from "@/utils/storage"; setAccountStorageAvailable(true);\n' + source, resolveDir: root, sourcefile: "storage-safety-scenario.ts", loader: "ts" },
     bundle: true,
     platform: "node",
     format: "cjs",

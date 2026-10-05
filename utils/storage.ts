@@ -121,15 +121,9 @@ export async function clearRetiredAlternateData(): Promise<void> {
   await AsyncStorage.multiRemove(obsoleteKeys).catch(() => undefined);
 }
 
-// Borra todos los datos de la cuenta de golpe (operación atómica y
-// esperada). themeMode y visualStyle se conservan porque son preferencias del dispositivo,
-// no de la cuenta.
-export async function clearAccountData(): Promise<void> {
-  // Primero se descartan los guardados en cola: son de la sesión que se
-  // está cerrando y, si llegaran después del borrado, volverían a escribir
-  // en el celular los datos que acabamos de eliminar.
-  discardPendingSaves();
-  const accountKeys = [
+// Inventario común al borrado activo y al archivo cifrado por cuenta.
+// themeMode y visualStyle pertenecen al dispositivo y quedan fuera.
+export const ACCOUNT_STORAGE_KEYS = [
         STORAGE_KEYS.profile,
         STORAGE_KEYS.budgets,
         STORAGE_KEYS.categoryBudgets,
@@ -177,10 +171,31 @@ export async function clearAccountData(): Promise<void> {
         "finzo:carpetaExportacion",
         "finzo:capturaPendiente",
         "finzo:avisosEncendidos",
+        "@fino/credit-v1",
       ];
+
+const accountKeySet = new Set(ACCOUNT_STORAGE_KEYS);
+let accountStorageAvailable = false;
+let accountAccessVersion = 0;
+
+/** Ningún dato de cuenta se carga hasta comprobar quién inició sesión. */
+export function setAccountStorageAvailable(available: boolean): void {
+  if (accountStorageAvailable === available) return;
+  accountAccessVersion += 1;
+  accountStorageAvailable = available;
+  if (!available) discardPendingSaves();
+}
+
+function canAccessKey(key: string): boolean {
+  return !accountKeySet.has(key) || accountStorageAvailable;
+}
+
+export async function clearAccountData(): Promise<void> {
+  discardPendingSaves();
+  await waitForInFlightWrites();
   // Las claves con el prefijo antiguo se incluyen para limpiar también
   // cualquier dato falso que haya quedado de versiones anteriores.
-  const allKeys = Array.from(new Set(accountKeys.flatMap((key) => [
+  const allKeys = Array.from(new Set(ACCOUNT_STORAGE_KEYS.flatMap((key) => [
     key,
     key.replace(/^finzo:/, "finzo:decoy:"),
   ])));
@@ -204,6 +219,7 @@ export async function clearAccountData(): Promise<void> {
     }
   }
   unreadableLocalData = false;
+  failedWriteKeys.clear();
 }
 
 // Un fallo de lectura no es una lista vacía. Conservamos el texto cifrado
@@ -234,10 +250,13 @@ function markUnreadableLocalData(): void {
 }
 
 export async function loadJSON<T>(key: string, fallback: T): Promise<T> {
+  if (!canAccessKey(key)) return fallback;
+  const version = accountAccessVersion;
   try {
     const raw = await AsyncStorage.getItem(key);
     if (raw == null) return fallback;
     const decrypted = await decryptText(raw);
+    if (accountKeySet.has(key) && (version !== accountAccessVersion || !canAccessKey(key))) return fallback;
     if (decrypted != null) {
       const parsed = JSON.parse(decrypted) as T;
       // Los datos AES-CBC antiguos siguen siendo legibles, pero se actualizan
@@ -274,6 +293,8 @@ const DEBOUNCE_MS = 400;
 
 const pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const pendingValues = new Map<string, unknown>();
+const inFlightWrites = new Set<Promise<unknown>>();
+const failedWriteKeys = new Set<string>();
 type StorageWriteErrorListener = () => void;
 let storageWriteErrorListener: StorageWriteErrorListener | null = null;
 let lastStorageWriteErrorAt = 0;
@@ -295,19 +316,37 @@ function reportStorageWriteError(): void {
   storageWriteErrorListener?.();
 }
 
+function trackWrite<T>(promise: Promise<T>): Promise<T> {
+  inFlightWrites.add(promise);
+  void promise.then(() => inFlightWrites.delete(promise), () => inFlightWrites.delete(promise));
+  return promise;
+}
+
+async function waitForInFlightWrites(): Promise<void> {
+  while (inFlightWrites.size) await Promise.allSettled([...inFlightWrites]);
+}
+
 function writeNow(key: string, value: unknown): Promise<void> {
+  if (!canAccessKey(key)) return Promise.resolve();
+  const version = accountAccessVersion;
   if (unreadableLocalData) {
+    failedWriteKeys.add(key);
     reportStorageWriteError();
     return Promise.resolve();
   }
-  return encryptText(JSON.stringify(value))
-    .then((encrypted) => {
-      if (unreadableLocalData) return;
-      return AsyncStorage.setItem(key, encrypted);
+  return trackWrite(encryptText(JSON.stringify(value))
+    .then(async (encrypted) => {
+      if (!canAccessKey(key) || (accountKeySet.has(key) && version !== accountAccessVersion)) return false;
+      if (unreadableLocalData) throw new Error("local-data-unreadable");
+      await AsyncStorage.setItem(key, encrypted);
+      return true;
     })
+    .then((written) => { if (written) failedWriteKeys.delete(key); })
+    .then(() => undefined)
     .catch(() => {
+      failedWriteKeys.add(key);
       reportStorageWriteError();
-    });
+    }));
 }
 
 /**
@@ -315,28 +354,39 @@ function writeNow(key: string, value: unknown): Promise<void> {
  * guardado antes de volver atrás. También cancela una escritura anterior en
  * cola para impedir que llegue después y pise el valor nuevo.
  */
-export async function saveJSONNow(key: string, value: unknown): Promise<boolean> {
+export function saveJSONNow(key: string, value: unknown): Promise<boolean> {
+  return trackWrite(saveJSONNowUntracked(key, value));
+}
+
+async function saveJSONNowUntracked(key: string, value: unknown): Promise<boolean> {
+  if (!canAccessKey(key)) return false;
+  const version = accountAccessVersion;
   const target = key;
   const timer = pendingTimers.get(target);
   if (timer) clearTimeout(timer);
   pendingTimers.delete(target);
   pendingValues.delete(target);
   if (unreadableLocalData) {
+    failedWriteKeys.add(target);
     reportStorageWriteError();
     return false;
   }
   try {
     const encrypted = await encryptText(JSON.stringify(value));
-    if (unreadableLocalData) return false;
+    if (!canAccessKey(key) || (accountKeySet.has(key) && version !== accountAccessVersion)) return false;
+    if (unreadableLocalData) throw new Error("local-data-unreadable");
     await AsyncStorage.setItem(target, encrypted);
+    failedWriteKeys.delete(target);
     return true;
   } catch {
+    failedWriteKeys.add(target);
     reportStorageWriteError();
     return false;
   }
 }
 
 export function saveJSON(key: string, value: unknown): void {
+  if (!canAccessKey(key)) return;
   if (unreadableLocalData) {
     reportStorageWriteError();
     return;
@@ -364,15 +414,25 @@ export function saveJSON(key: string, value: unknown): void {
 // justo después, así que un guardado pendiente llegaría tarde y
 // reescribiría datos de la sesión anterior).
 export async function flushPendingSaves(): Promise<void> {
-  const writes: Promise<void>[] = [];
+  const queued: [string, unknown][] = [];
   for (const [key, timer] of pendingTimers) {
     clearTimeout(timer);
     const value = pendingValues.get(key);
     pendingValues.delete(key);
-    writes.push(writeNow(key, value));
+    queued.push([key, value]);
   }
   pendingTimers.clear();
+  // El valor más reciente en cola se escribe después de un guardado anterior
+  // que ya empezó, aunque cifrar ese anterior haya tardado más.
+  await waitForInFlightWrites();
+  const writes = queued.map(([key, value]) => writeNow(key, value));
   await Promise.all(writes);
+  await waitForInFlightWrites();
+}
+
+export async function flushPendingSavesChecked(): Promise<boolean> {
+  await flushPendingSaves();
+  return !unreadableLocalData && failedWriteKeys.size === 0;
 }
 
 // Cancela los guardados pendientes SIN escribirlos. Se usa al borrar los

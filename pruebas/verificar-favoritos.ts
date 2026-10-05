@@ -158,7 +158,7 @@ console.log("\n--- LA PANTALLA: LA PESTAÑA VA EN EL MEDIO ---");
   ok(/guardarFavoritos\(siguiente\)/.test(pant), "marcar guarda por el contexto");
   ok(!/saveFavoritos\(/.test(pant), "y no salta al disco por su cuenta");
   const ctx = fs.readFileSync(path.join(process.cwd(), "contexts/AppDataContext.tsx"), "utf8");
-  ok(/loadFavoritos\(\)/.test(ctx), "y se leen al arrancar la app");
+  ok(/loadFavoritos\(false\)/.test(ctx), "y se leen sin aplicar datos globales antes de comprobar la cuenta");
 }
 
 console.log("\n--- Y VIAJAN A LA COPIA DE LA CUENTA ---");

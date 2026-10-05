@@ -1181,7 +1181,7 @@ console.log("\n--- AL CERRAR SESION NO SE QUEDA NADA DE LA CUENTA ANTERIOR ---")
   const declaradas = [...almacen.matchAll(/^ {2}([a-zA-Z]+): "finzo:/gm)].map((m) => m[1]);
   ok(declaradas.length >= 8, `se leyeron las claves guardadas (${declaradas.length})`);
 
-  const inicioBorrado = almacen.indexOf("export async function clearAccountData");
+  const inicioBorrado = almacen.indexOf("export const ACCOUNT_STORAGE_KEYS");
   const finBorrado = almacen.indexOf("export async function loadJSON", inicioBorrado);
   const borrado = inicioBorrado >= 0 && finBorrado > inicioBorrado
     ? almacen.slice(inicioBorrado, finBorrado)

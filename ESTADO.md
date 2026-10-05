@@ -1,5 +1,42 @@
 # Estado actual de Fino
 
+## Cierre de sesión conserva la copia local por cuenta (05/10/2026)
+
+- FINO-01 corregido en código: cerrar sesión confirma una copia local cifrada
+  antes de cerrar Firebase y limpiar los datos activos. Funciona también para
+  Gratis y para Pro cuando el usuario elige salir sin actualizar la nube. Si
+  falla el guardado, la sesión y los cambios en memoria se conservan.
+- El arranque espera a que Firebase confirme la identidad antes de leer datos
+  de cuenta. Cada copia se vincula al UID y se recupera solo para esa cuenta.
+  Login, Google, registro y verificación restauran primero la copia local;
+  no la reemplazan automáticamente por una copia antigua de Firebase.
+- El inventario de claves es común al borrado activo y al archivo local.
+  Las generaciones se guardan por bloques, se verifican y se confirman al final;
+  una restauración parcial mantiene bloqueado el acceso y admite reintento.
+  Dueño, punteros y contenido están cifrados y autenticados. Se conserva una
+  generación anterior y se retiran fragmentos no confirmados cuando es posible.
+- Las tareas de fondo comprueban que la cuenta siga activa y se coordinan con
+  el archivo local. Al salir se desactivan avisos, PIN, captura e integraciones.
+  Eliminar la cuenta intenta retirar también todas sus generaciones locales,
+  sin retirar las copias de otras cuentas del teléfono.
+- Migración: si una instalación antigua no tiene dueño identificado, solo se
+  vincula al correo que figura en su perfil. Los datos sin dueño o con un correo
+  distinto se conservan bloqueados; su recuperación exige resolver la identidad,
+  no asignarlos a otra cuenta ni comenzar a guardar encima.
+- Pruebas ejecutan el almacenamiento y el archivo reales con sustitutos de
+  Android: A → salir → B → salir → A, fotos/categorías, guardados pendientes y
+  en vuelo, fallo de confirmación, copia dañada, restauración interrumpida y
+  eliminación por UID. La prueba del cierre real falla contra HEAD anterior
+  porque ese código cerraba Firebase sin confirmar ninguna copia local.
+- Verificación final: TypeScript, ESLint, 125 pruebas locales y 8 auditores en
+  verde. El conteo local incluye una prueba preexistente que continúa sin
+  registrar en Git; no se incorporó al cambio. También se comprobaron aperturas
+  simultáneas y respuestas antiguas de Firebase tras cambiar de sesión.
+- No hay teléfono ni emulador conectado en esta sesión. Falta comprobar el
+  recorrido con dos cuentas de prueba en Android y entregar/publicar la app.
+  La política local y PLAYSTORE.md ya describen la conservación; la web de
+  privacidad debe publicarse junto con la entrega. No se desplegó Firebase.
+
 ## Riesgos de seguridad y datos (04/10/2026)
 
 - Si Android no puede leer o descifrar una clave local, Fino ya no interpreta
@@ -32,18 +69,18 @@
   regreso ni anuncia activación sin confirmación. Al apagarlo, conserva el PIN
   si no pudo verificar que el interruptor se apagó. El cambio de huella/PIN se
   refleja durante la misma sesión.
-- Cerrar sesión y borrar la cuenta ahora usan la misma limpieza local: retiran
+- Cerrar sesión y borrar la cuenta usan la misma limpieza de datos activos: retiran
   avisos de pagos, exportación y tarjetas; desconectan Dropbox/OneDrive; apagan
   el PIN y el lector de notificaciones; borran los datos locales y vacían los
-  datos de la cuenta que quedan en memoria.
+  datos de la cuenta que quedan en memoria. Desde el 05/10, cerrar sesión conserva
+  primero una copia cifrada por cuenta; eliminar la cuenta retira esa copia.
 - Verificado: TypeScript, ESLint, 124 pruebas locales y 8 auditores aprobados,
   incluidos casos de enlace externo, órdenes simultáneas y errores del cajón
   seguro. Una prueba local adicional ajena a este cambio sigue sin registrar
   en Git. No se compiló una APK, no se probó el nuevo flujo en un teléfono y
   no se publicaron cambios en Firebase o Play Console.
-- **Pendiente:** evitar la pérdida de datos Gratis al cerrar sesión sin dejar
-  que otra cuenta vea los datos locales (copias cifradas separadas por cuenta y
-  barrera antes de cargar cualquier dato); terminar la fusión segura de nube y
+- **Pendiente:** probar en Android la conservación local al cerrar sesión;
+  terminar la fusión segura de nube y
   teléfono; aplicar la protección Pro en Firebase; decidir el tratamiento de
   aportes pendientes de Familia/Caja; y probar el nuevo candado y los enlaces
   en un dispositivo. La protección local anterior no recupera una llave de cifrado

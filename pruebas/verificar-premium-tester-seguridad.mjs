@@ -9,7 +9,7 @@ assert.match(rules, /match \/testerPremium\/\{userId\}/);
 assert.match(rules, /allow create, update, delete: if false;/);
 assert.match(rules, /request\.auth\.uid == userId/);
 assert.match(rules, /\|\| testerPremiumUser\(userId\)/);
-assert.match(context, /subscribeTesterPremium\(uid, setTesterPremium\)/);
+assert.match(context, /subscribeTesterPremium\(uid, \(value\) => \{\s*if \(auth\.currentUser\?\.uid === uid\) setTesterPremium\(value\);/);
 assert.match(context, /isPremiumDeLaCuenta \|\| pruebaCorriendo \|\| testerPremium\.active/);
 assert.doesNotMatch(cloud, /testerPremium|isTesterPremium/,
   "La concesión administrativa no debe viajar en el respaldo editable del usuario");

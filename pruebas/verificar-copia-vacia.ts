@@ -34,22 +34,22 @@ ok(
   "al entrar sin copia en la nube, la app lo dice en vez de callarse"
 );
 ok(
-  /if \(hasOnboarded\) \{\s*\n?\s*Alert\.alert\(t\("login\.sinCopiaTitulo"\)/.test(login),
-  "y solo a quien ya usaba la app: al recién llegado, no tener copia es lo normal"
+  /if \(localRestored\) \{[\s\S]*?return;/.test(login),
+  "una cuenta con copia local entra sin recibir un aviso falso de pérdida"
 );
 
 // El aviso va DESPUÉS del intento de nube y ANTES de leer el celular: si se colara en medio
 // del camino que devuelve datos, avisaría a quien sí los recuperó.
 const iAviso = login.indexOf("login.sinCopiaTitulo");
 const iNube = login.indexOf("hydrateFromCloud(user.uid)");
-const iDisco = login.indexOf("await reloadPersistedData();", iAviso);
+const iDisco = login.indexOf("await openLocalAccount(user.uid, user.email)");
 ok(iNube !== -1 && iNube < iAviso, "el aviso llega después de haber intentado la nube");
-ok(iDisco !== -1 && iAviso < iDisco, "y antes de leer lo del celular, que se sigue leyendo igual");
+ok(iDisco !== -1 && iDisco < iNube, "la copia local de la cuenta se comprueba antes de intentar la nube");
 
 // Lo que de verdad no puede pasar: que el arreglo se lleve por delante la lectura del disco.
 ok(
-  /await reloadPersistedData\(\);/.test(login),
-  "lo guardado en el celular se sigue cargando: el aviso NO reemplaza a nada"
+  /await openLocalAccount\(user.uid, user.email\)/.test(login),
+  "lo guardado en el celular se recupera separado por cuenta"
 );
 
 console.log("\nQué dice el aviso");

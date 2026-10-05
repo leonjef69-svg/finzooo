@@ -30,7 +30,7 @@ export default function Register({
   onGoogleSignedIn,
   onGoLogin,
 }: {
-  onRegistered: (name: string, email: string) => void;
+  onRegistered: (name: string, email: string) => void | Promise<void>;
   // Con Google no hay diferencia entre "crear cuenta" y "entrar": Google
   // crea la cuenta si no existía. Por eso este camino termina igual que el
   // de la pantalla de Login, sin pasar por verificar el correo (las
@@ -68,7 +68,8 @@ export default function Register({
       await onGoogleSignedIn();
     } catch (err) {
       if (err instanceof GoogleSignInCancelled) return;
-      setGoogleError(googleSignInErrorMessage(err));
+      if (err instanceof Error && err.name === "LocalAccountAccessError") setGoogleError(err.message);
+      else setGoogleError(googleSignInErrorMessage(err));
     } finally {
       authBusy.current = false;
       setGoogleLoading(false);
@@ -91,10 +92,10 @@ export default function Register({
       const credential = await createUserWithEmailAndPassword(auth, email.trim(), pass);
       await updateProfile(credential.user, { displayName: name.trim() });
       await sendEmailVerification(credential.user);
-      onRegistered(name.trim(), email.trim());
+      await onRegistered(name.trim(), email.trim());
     } catch (err) {
       const code = (err as { code?: string })?.code || "";
-      setErrors({ general: firebaseErrorMessage(code) });
+      setErrors({ general: err instanceof Error && err.name === "LocalAccountAccessError" ? err.message : firebaseErrorMessage(code) });
     } finally {
       authBusy.current = false;
       setLoading(false);
