@@ -1,5 +1,42 @@
 # Estado actual de Fino
 
+## Nube Pro protegida en servidor — preparación local (05/10/2026)
+
+- FINO-04: reglas preparadas para exigir Pro real (pago, prueba vigente o
+  tester autorizado) al leer/escribir Personal, su historial, Negocio y Cajas
+  privadas. Gratis conserva las Cajas privadas y Personal en el teléfono;
+  bajar de plan no elimina ninguna copia antigua de Firebase. Tarjetas de
+  crédito permanecen fuera de esta corrección y de su cobertura Pro.
+- `getCloudAccess` consulta solo campos de permiso mediante una máscara;
+  devuelve permisos y existencia, nunca movimientos, fotos ni perfil. La app
+  consulta esos permisos antes de descargar la copia y al volver a primer plano.
+  Respuestas de una cuenta anterior se rechazan al cambiar de sesión. Una consulta
+  lenta no puede retirar una prueba que acaba de concederse.
+- El borrado Personal pasa por `deletePersonalCloudCopy`, con correo verificado
+  e identidad confirmada recientemente, sin exigir Pro. Bloquea nuevas escrituras
+  antes de borrar el historial por lotes y retira el documento principal al final.
+  Una interrupción permite reintentar sin tocar otra cuenta. Un registro privado
+  mantiene el bloqueo hasta terminar de eliminar la identidad de Firebase Auth.
+- La prueba puede activarse desde una cuenta configurada solo en el teléfono.
+  `premiumTrialClaims/{uid}` conserva su primera fecha; borrar solo la copia
+  financiera no reinicia las 24 horas. Los clientes no pueden leer/editar ese
+  registro. La limpieza reintentable de Auth (evento de primera generación)
+  retira Personal/historial, Negocio, Cajas privadas, permiso de tester y registro
+  de prueba. No sustituye las validaciones de Familia/Cajas compartidas.
+- Cajas no sube ni baja automáticamente para Gratis. Un error al consultar
+  una copia Pro no se interpreta como vacío ni borra su contraparte Personal;
+  permite seguir guardando localmente y volver a intentar al abrir la pantalla.
+- Validación: TypeScript, ESLint, 127 pruebas locales y 8 auditores; 41 pruebas
+  de Functions y 26 comprobaciones reales en el emulador Firestore.
+  El conteo local incluye una prueba preexistente ajena no registrada
+  en Git. Las pruebas nuevas fallan contra el código/reglas anteriores.
+- **Qué sigue:** resolver FINO-02 (aportes gastados y borrado de cuenta),
+  comprobar Node 22 y preparar publicación coordinada. **Qué falta:** pruebas
+  físicas, llamadas reales de Functions/evento Auth y reglas de producción.
+  No se desplegó Firebase, no se compiló ni publicó app ni política web.
+  FINO-04 no se declara resuelto en producción ni para las tarjetas excluidas.
+  Guía, orden de entrega y límites: `docs/PRUEBAS_NUBE_PRO.md`.
+
 ## Unión segura de teléfono y nube al entrar a Pro (05/10/2026)
 
 - FINO-03 corregido para la copia Personal: presupuestos por mes, límites,

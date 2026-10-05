@@ -33,6 +33,7 @@ test("historial v2: acceso propio, bloqueo ajeno y cliente antiguo", async t => 
     const unverified = env.authenticatedContext("alice", { email_verified: false }).firestore();
     await env.withSecurityRulesDisabled(async context => {
       await setDoc(doc(context.firestore(), "users", "alice"), rootData());
+      await setDoc(doc(context.firestore(), "testerPremium", "alice"), { active: true, grantedAt: serverTimestamp() });
     });
     const row = doc(owner, "users", "alice", "history", "123");
     const content = { id: 123, deleted: false, transaction: { id: 123, amount: 20 }, syncAt: serverTimestamp() };
@@ -49,6 +50,8 @@ test("historial v2: acceso propio, bloqueo ajeno y cliente antiguo", async t => 
       await assertSucceeds(setDoc(doc(owner, "users", "alice"), rootData()));
       // Otra cuenta solo puede crear la suya: se usa otro contexto verificado.
       const legacyOwner = env.authenticatedContext("alice-legacy", { email_verified: true }).firestore();
+      await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), "testerPremium", "alice-legacy"),
+        { active: true, grantedAt: serverTimestamp() }));
       await assertSucceeds(setDoc(doc(legacyOwner, "users", "alice-legacy"),
         { ...oldShape, transactions: [] }));
       assert.equal((await getDoc(doc(legacyOwner, "users", "alice-legacy"))).data().historyFormat, undefined);
@@ -71,7 +74,7 @@ test("historial v2: acceso propio, bloqueo ajeno y cliente antiguo", async t => 
         { id: 126, deleted: false, transaction: { id: 126 }, syncAt: serverTimestamp() }));
       await assertFails(updateDoc(doc(owner, "users", "alice"), { userName: "No debe cambiar" }));
       await assertSucceeds(deleteDoc(row));
-      await assertSucceeds(deleteDoc(doc(owner, "users", "alice")));
+      await assertFails(deleteDoc(doc(owner, "users", "alice")), "el servidor termina la limpieza, no un borrado directo del cliente");
     });
   } finally {
     await env.cleanup();

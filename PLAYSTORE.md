@@ -170,6 +170,14 @@ incluidos los avisos leídos; solo se recupera con esa misma cuenta en el teléf
 Eliminar la cuenta retira también sus copias locales. La política publicada debe
 actualizarse con `docs/privacidad.html` en la próxima entrega.
 
+La próxima versión aplica Pro también en el servidor para Personal, historial,
+Negocio y Cajas privadas. Gratis consulta únicamente permisos, no sus movimientos
+ni fotos. Se guarda además un registro privado por UID de la fecha de prueba,
+sin información financiera, hasta completar el borrado de la cuenta. El evento
+de eliminación de Firebase Auth retira ese registro y las copias cubiertas.
+No añade una categoría de datos distinta a los IDs y gestión de cuenta ya
+declarados. La política debe describirlo al publicar; no se publicó aún.
+
 > **LOS CONTACTOS DE ENVÍO NO SE DECLARAN, Y AQUÍ DECÍA LO CONTRARIO (corregido el
 > 18/08/2026).** Este archivo afirmaba que "se guardan y se suben a su copia en la nube" y
 > mandaba declararlos bajo "Correo electrónico" y "Números de teléfono". **Es falso:**

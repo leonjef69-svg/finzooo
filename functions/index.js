@@ -6,13 +6,48 @@ const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { cleanupTelegram, cleanupExpiredTelegram } = require("./src/telegram-cleanup");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
+const { getAuth } = require("firebase-admin/auth");
+const legacyFunctions = require("firebase-functions/v1");
 const { getFirestore } = require("firebase-admin/firestore");
 const { handleTelegramUpdate } = require("./src/telegram-guided-handler");
 const { CENT, contributionLimits, canCloseLinkedSpace, hasUnreturnedPersonalContribution } = require("./src/personal-contribution");
 const { premiumForUser } = require("./src/premium-entitlement");
 const { activatePremiumTrial } = require("./src/premium-trial");
+const { getCloudAccess, deletePersonalCloudCopy, cleanupDeletedCloudAccount } = require("./src/cloud-access");
 
 initializeApp();
+
+function verifiedAccount(request, recent = false) {
+  const uid = request.auth?.uid;
+  if (typeof uid !== "string" || !uid || uid.length > 128 || uid.includes("/")
+    || request.auth.token?.email_verified !== true) {
+    throw new HttpsError("unauthenticated", "Debes iniciar sesión y verificar tu correo.");
+  }
+  if (recent) {
+    const age = Date.now() / 1000 - request.auth.token.auth_time;
+    if (!Number.isFinite(age) || age < -30 || age > 300) {
+      throw new HttpsError("failed-precondition", "Confirma tu identidad antes de eliminar los datos.");
+    }
+  }
+  return uid;
+}
+
+exports.getCloudAccess = onCall({ region: "southamerica-east1", maxInstances: 10 }, request =>
+  getCloudAccess(getFirestore(), verifiedAccount(request)));
+
+exports.deletePersonalCloudCopy = onCall({ region: "southamerica-east1", maxInstances: 5, timeoutSeconds: 540 }, request =>
+  deletePersonalCloudCopy(getFirestore(), verifiedAccount(request, true)));
+
+exports.cleanupDeletedCloudAccount = legacyFunctions.region("southamerica-east1")
+  .runWith({ failurePolicy: true, maxInstances: 5, timeoutSeconds: 540 }).auth.user().onDelete(async user => {
+    try {
+      await getAuth().getUser(user.uid);
+      return; // No eliminar una cuenta nueva que reutilice el UID administrativo.
+    } catch (error) {
+      if (error?.code !== "auth/user-not-found") throw error;
+    }
+    await cleanupDeletedCloudAccount(getFirestore(), user.uid);
+  });
 
 function validDocumentId(value) {
   return typeof value === "string" && /^[A-Za-z0-9_-]{1,160}$/.test(value);
@@ -33,7 +68,11 @@ exports.activatePremiumTrial = onCall(
       throw new HttpsError("unauthenticated", "Debes iniciar sesión y verificar tu correo.");
     }
     try {
-      return await activatePremiumTrial(getFirestore(), uid);
+      // Un ID token anterior puede seguir vigente tras borrar Auth. No puede
+      // usarse para recrear el permiso de prueba del UID ya eliminado.
+      const account = await getAuth().getUser(uid);
+      if (account.disabled || account.emailVerified !== true) throw new HttpsError("unauthenticated", "Verifica tu cuenta.");
+      return await activatePremiumTrial(getFirestore(), uid, Date.now(), { hasLocalSetup: request.data?.hasLocalSetup === true });
     } catch (error) {
       if (error?.message === "ACCOUNT_NOT_READY") {
         throw new HttpsError("failed-precondition", "Termina de configurar tu cuenta.");

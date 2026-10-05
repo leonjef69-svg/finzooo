@@ -10,6 +10,7 @@ const { initializeTestEnvironment } = require("@firebase/rules-unit-testing");
 const { doc, getDoc, setDoc, updateDoc } = require("firebase/firestore");
 const { initializeApp, deleteApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
+const { deletePersonalCloudCopy } = require("../src/cloud-access");
 
 async function clientModule(firestore, entry = "utils/cloudHistoryV2.ts") {
   const root = path.resolve(__dirname, "../..");
@@ -20,6 +21,21 @@ async function clientModule(firestore, entry = "utils/cloudHistoryV2.ts") {
     plugins: [{ name: "test-firebase", setup(build) {
       build.onResolve({ filter: /^@\/utils\/firebase$/ }, () => ({ path: "firebase", namespace: "test" }));
       build.onLoad({ filter: /.*/, namespace: "test" }, () => ({ contents: "export const db = globalThis.__finoHistoryTestDb;", loader: "js" }));
+      // Este grupo comprueba la copia real de un cliente Pro en Firestore.
+      // La API de permisos tiene sus propias pruebas y aquí se aísla el RPC.
+      build.onResolve({ filter: /^@\/utils\/cloudAccountAccess$/ }, () => ({ path: "access", namespace: "test-access" }));
+      build.onLoad({ filter: /.*/, namespace: "test-access" }, () => ({
+        contents: `const db = globalThis.__finoHistoryTestDb;
+        export async function getCloudAccountAccess(uid) {
+          const { getDoc, doc } = require("firebase/firestore");
+          const snapshot = await getDoc(doc(db, "users", uid));
+          const data = snapshot.data() || {};
+          return { uid, canSync: true, isPremium: data.isPremium === true, isTester: false,
+            deletionPending: data.accountDeletionPending === true, hasCloudCopy: data.hasOnboarded === true,
+            serverNow: Date.now() };
+        }
+        export async function deletePersonalCloudCopy() { throw new Error("UNUSED"); }`, loader: "js",
+      }));
       // El respaldo real comprueba la lectura del teléfono. Esta prueba
       // usa datos válidos y aísla esa pieza nativa, no la lógica de nube.
       build.onResolve({ filter: /^@\/utils\/storage$/ }, () => ({ path: "storage", namespace: "test-storage" }));
@@ -67,7 +83,7 @@ test("el respaldo v2 acepta más de 800 KB y restaura sin lista raíz", async ()
     await env.clearFirestore();
     await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), "users", "large"), {
       historyFormat: 2, hasOnboarded: true, userName: "Large", userPhoto: null,
-      userCurrency: "PEN", userLanguage: "es", budgets: {}, categoryBudgets: {}, goals: [], isPremium: false,
+      userCurrency: "PEN", userLanguage: "es", budgets: {}, categoryBudgets: {}, goals: [], isPremium: true,
     }));
     const db = env.authenticatedContext("large", { email_verified: true }).firestore();
     const cloud = await clientModule(db, "utils/cloudSync.ts");
@@ -102,7 +118,7 @@ test("10.000 movimientos se restauran y una edición escribe solo su documento",
     await env.clearFirestore();
     const root = admin.collection("users").doc("volume");
     await root.set({ historyFormat: 2, hasOnboarded: true, userName: "Volumen", userPhoto: null,
-      userCurrency: "PEN", userLanguage: "es", budgets: {}, categoryBudgets: {}, goals: [], isPremium: false });
+      userCurrency: "PEN", userLanguage: "es", budgets: {}, categoryBudgets: {}, goals: [], isPremium: true });
     for (let start = 1; start <= 10_000; start += 200) {
       const batch = admin.batch();
       for (let id = start; id < Math.min(start + 200, 10_001); id++) {
@@ -138,7 +154,7 @@ test("dos teléfonos guardan, editan, borran y restauran historial v2", async ()
     await env.clearFirestore();
     await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), "users", "alice"), {
       historyFormat: 2, hasOnboarded: true, userName: "Alice", userPhoto: null,
-      userCurrency: "PEN", userLanguage: "es", budgets: {}, categoryBudgets: {}, goals: [], isPremium: false,
+      userCurrency: "PEN", userLanguage: "es", budgets: {}, categoryBudgets: {}, goals: [], isPremium: true,
     }));
     const dbA = env.authenticatedContext("alice", { email_verified: true }).firestore();
     const dbB = env.authenticatedContext("alice", { email_verified: true }).firestore();
@@ -158,11 +174,14 @@ test("dos teléfonos guardan, editan, borran y restauran historial v2", async ()
     assert.equal((await getDoc(doc(dbB, "users", "alice"))).data().transactions, undefined,
       "la lista vieja no vuelve al documento principal");
     await updateDoc(doc(dbA, "users", "alice"), { accountDeletionPending: true });
-    await phoneA.deleteHistoryV2("alice");
-    assert.deepEqual(await phoneB.loadHistoryV2("alice"), { transactions: [movement(2)], deletedIds: [1] },
-      "la otra sesión conserva su caché hasta cerrar cuenta");
+    await assert.rejects(phoneA.deleteHistoryV2("alice"), error => error.code === "permission-denied",
+      "el cliente no obtiene lectura gratis al marcar borrado");
+    const cleanupApp = initializeApp({ projectId: "demo-fino-client" }, "history-cleanup-test");
+    try { await deletePersonalCloudCopy(getFirestore(cleanupApp), "alice"); }
+    finally { await deleteApp(cleanupApp); }
     phoneB.clearHistoryV2Cache("alice");
-    assert.deepEqual(await phoneB.loadHistoryV2("alice"), { transactions: [], deletedIds: [] });
+    await assert.rejects(phoneB.loadHistoryV2("alice"), error => error.code === "permission-denied",
+      "una cuenta borrada ya no puede leer ni reconstruir el respaldo");
   } finally {
     await env.cleanup();
   }

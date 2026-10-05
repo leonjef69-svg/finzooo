@@ -7,12 +7,9 @@ function documento(uid: string) {
 }
 
 export async function bajarCajas(uid: string): Promise<DatosCajas | null> {
-  try {
-    const snap = await getDoc(documento(uid));
-    return snap.exists() ? normalizarCajas(snap.data() as Partial<DatosCajas>) : null;
-  } catch {
-    return null;
-  }
+  // Un fallo de permisos/red no demuestra que las Cajas estén vacías.
+  const snap = await getDoc(documento(uid));
+  return snap.exists() ? normalizarCajas(snap.data() as Partial<DatosCajas>) : null;
 }
 
 export async function subirCajas(uid: string, datos: DatosCajas): Promise<boolean> {

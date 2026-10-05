@@ -117,7 +117,7 @@ console.log("\n--- LA NUBE DEL NEGOCIO ES OTRO DOCUMENTO ---");
   // salio bien.
   const cuenta = fs.readFileSync(path.join(RAIZ, "utils/cloudSync.ts"), "utf8");
   const borrarCuenta = cuenta.slice(cuenta.indexOf("export async function deleteCloudAccount"));
-  ok(/deleteDoc\(doc\(db, "users", uid\)\)/.test(borrarCuenta), "borra el documento de la cuenta");
+  ok(/await deletePersonalCloudCopy\(uid\)/.test(borrarCuenta), "pide al servidor borrar el documento y su historial sin exigir Pro");
   ok(/borrarNegocioDeLaNube\(uid\)/.test(borrarCuenta), "Y TAMBIEN el del negocio");
   ok(/deleteCreditCloudAccount\(uid\)/.test(borrarCuenta), "Y el respaldo separado de las tarjetas");
 }

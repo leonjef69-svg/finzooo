@@ -75,6 +75,7 @@ export default function Cajas() {
   const [seleccionandoCajas, setSeleccionandoCajas] = useState(false);
   const [cajasSeleccionadas, setCajasSeleccionadas] = useState<string[]>([]);
   const accionLocalEnCurso = useRef(false);
+  const nubeConfirmadaPara = useRef<string | null>(null);
 
   function tomarAccionLocal(): boolean {
     if (accionLocalEnCurso.current) return false;
@@ -86,18 +87,29 @@ export default function Cajas() {
   useFocusEffect(useCallback(() => {
     let alive = true;
     setCloudReady(false);
+    nubeConfirmadaPara.current = null;
     void (async () => {
+      const uid = auth.currentUser?.uid;
       const local = await loadJSON<DatosCajas>(STORAGE_KEYS.cajasDinero, CAJAS_VACIAS);
-      if (!alive) return;
+      if (!alive || auth.currentUser?.uid !== uid) return;
       const memoria = leerCajasEnMemoria();
       const visible = memoria ? fusionarCajas(local, memoria) : local;
       guardarCajasEnMemoria(visible);
       setDatos(visible);
       setReady(true);
 
-      const uid = auth.currentUser?.uid;
-      const remoto = uid ? await bajarCajas(uid).catch(() => null) : null;
-      if (!alive) return;
+      let remoto: DatosCajas | null = null;
+      if (uid && isPremium) {
+        try {
+          remoto = await bajarCajas(uid);
+          if (alive && auth.currentUser?.uid === uid) nubeConfirmadaPara.current = uid;
+        } catch {
+          // Se puede seguir trabajando localmente, pero no reparar ausencias
+          // ni subir encima de una copia que no se pudo consultar.
+          return;
+        }
+      }
+      if (!alive || auth.currentUser?.uid !== uid) return;
       setDatos(actual => {
         // Si la persona anotó algo mientras llegaba la nube, se fusiona con
         // el estado ACTUAL. Usar `visible` aquí podría borrar ese toque rápido.
@@ -109,17 +121,17 @@ export default function Cajas() {
       setCloudReady(true);
     })();
     return () => { alive = false; };
-  }, []));
+  }, [isPremium]));
 
   useEffect(() => {
     guardarCajasEnMemoria(datos);
-    if (!ready || !cloudReady) return;
+    if (!ready) return;
     void saveJSON(STORAGE_KEYS.cajasDinero, datos);
     const uid = auth.currentUser?.uid;
-    if (!uid) return;
-    const timer = setTimeout(() => { void subirCajas(uid, datos); }, 700);
+    if (!cloudReady || !uid || !isPremium || nubeConfirmadaPara.current !== uid) return;
+    const timer = setTimeout(() => { if (auth.currentUser?.uid === uid) void subirCajas(uid, datos); }, 700);
     return () => clearTimeout(timer);
-  }, [datos, ready, cloudReady]);
+  }, [datos, ready, cloudReady, isPremium]);
 
   const caja = datos.cajas.find((item) => item.id === cajaId);
   useEffect(() => {
@@ -234,14 +246,17 @@ export default function Cajas() {
         && JSON.stringify(current.internalTransferAllocations || []) === JSON.stringify(allocations || [])) return [];
       return [canonical];
     });
+    const ausenciaConfirmada = isPremium && nubeConfirmadaPara.current === auth.currentUser?.uid;
+    const borradosExplicitos = new Set(datos.movimientosBorrados || []);
     const orphanIds = transactions
       .filter(tx => tx.internalTransfer === "box"
         && tx.internalTransferLink?.startsWith("mov-")
         && (!tx.internalTransferSpaceId || tx.internalTransferSpaceId.startsWith("caja-"))
-        && !movimientosPorId.has(tx.internalTransferLink))
+        && !movimientosPorId.has(tx.internalTransferLink)
+        && (ausenciaConfirmada || borradosExplicitos.has(tx.internalTransferLink)))
       .map(tx => tx.id);
     if (upserts.length || orphanIds.length) repairLinkedTransferTransactions(upserts, orphanIds);
-  }, [datos.cajas, datos.movimientos, ready, cloudReady, repairLinkedTransferTransactions, t, transactions]);
+  }, [datos.cajas, datos.movimientos, datos.movimientosBorrados, ready, cloudReady, isPremium, repairLinkedTransferTransactions, t, transactions]);
 
   const visibles = movimientos.filter(item => !filter
     || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter));

@@ -134,7 +134,7 @@ console.log("\n--- Y LA APP PIDE SOLA QUE VUELVAN A ENGANCHAR EL LECTOR ---");
   // actualizacion de la app, y la segunda que Android tire el lector mientras la app esta
   // en segundo plano —los Honor y Huawei aprietan el ahorro de bateria—.
   const alArrancar = ctx.indexOf("reengancharLector();");
-  const elDeVolver = ctx.indexOf('AppState.addEventListener("change"');
+  const elDeVolver = ctx.indexOf('const sub = AppState.addEventListener("change"');
   ok(alArrancar > 0 && alArrancar < elDeVolver, "se pide al arrancar la app");
   ok(
     ctx.slice(elDeVolver).includes("reengancharLector();"),

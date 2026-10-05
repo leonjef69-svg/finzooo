@@ -3,6 +3,28 @@
 Última revisión: 05/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-04 — protección Pro preparada, no publicada (05/10/2026)
+
+- Personal/historial, Negocio y Cajas privadas requieren Pro también en reglas.
+  Gratis mantiene su uso local; se conservan copias antiguas al bajar de plan.
+  Consulta de permisos separada y limitada a metadatos, sin descargar fotos,
+  movimientos ni perfil de la persona Gratis.
+- Borrado Personal administrativo sin Pro, con identidad reciente, bloqueo y
+  limpieza por lotes. Registro privado de prueba por UID y limpieza de Auth
+  reintentable. La prueba no se reinicia borrando solo la copia financiera.
+- Cajas distingue copia vacía de consulta fallida y no repara eliminando datos
+  por un fallo de permisos/red. No se revisó toda su fusión en esta tanda.
+- TypeScript, ESLint, 127 pruebas locales, 8 auditores, 41 de Functions y 26
+  comprobaciones reales del emulador Firestore en verde.
+  Una prueba local es preexistente ajena y continúa sin registrar en Git.
+  Regresión contra reglas anteriores confirma acceso Gratis no autorizado.
+- **Qué sigue:** decisión sobre aportes gastados (FINO-02), Node 22 y entrega
+  coordinada de Functions/reglas/app/política. **Qué falta:** teléfono, llamadas
+  reales de Functions/evento Auth y consolas. No se desplegó ni publicó nada;
+  el cobro real no existe y tarjetas de crédito siguen excluidas. Este cambio
+  no soluciona el bloqueo de devolución/cierre por aportes al vencer Pro.
+  Detalle y límites: `docs/PRUEBAS_NUBE_PRO.md`.
+
 ## Auditoría FINO — avance de pérdida de datos (05/10/2026)
 
 - FINO-01: cierre de sesión con copia local cifrada por UID, ya preparado y

@@ -1,4 +1,4 @@
-import { deleteDoc, doc, getDoc, runTransaction, updateDoc } from "firebase/firestore";
+import { deleteDoc, doc, getDoc, runTransaction } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import { borrarNegocioDeLaNube } from "@/utils/cloudNegocio";
 import { borrarCajasDeLaNube } from "@/utils/cloudCajas";
@@ -16,8 +16,9 @@ import {
 } from "@/utils/mergeTransactions";
 import { mergeCloudFields } from "@/utils/cloudFieldMerge";
 import { assertLegacyHistoryFormat, UnsupportedHistoryFormatError } from "@/utils/cloudHistoryMigration";
-import { clearHistoryV2Cache, deleteHistoryV2, loadHistoryV2, saveHistoryV2 } from "@/utils/cloudHistoryV2";
+import { clearHistoryV2Cache, loadHistoryV2, saveHistoryV2 } from "@/utils/cloudHistoryV2";
 import { hasUnreadableLocalData } from "@/utils/storage";
+import { deletePersonalCloudCopy, getCloudAccountAccess } from "@/utils/cloudAccountAccess";
 
 export type CloudData = {
   /** Formato que fusiona campos y conserva marcas de borrado por elemento. */
@@ -93,21 +94,17 @@ export class CloudPremiumRequiredError extends Error {
 
 export async function loadCloudData(
   uid: string,
-  options?: { allowCloudCopy?: (entitlement: { isPremium: boolean; premiumTrialStartedAt?: number }) => boolean },
+  options?: { allowCloudCopy?: (entitlement: { isPremium: boolean; isTester?: boolean; premiumTrialStartedAt?: number }) => boolean },
 ): Promise<CloudData | null> {
   try {
+    const access = await getCloudAccountAccess(uid);
+    if (access.deletionPending) throw new Error("account-deletion-pending");
+    if (!access.hasCloudCopy) return null;
+    if (!access.canSync || (options?.allowCloudCopy && !options.allowCloudCopy(access))) throw new CloudPremiumRequiredError();
     const snap = await getDoc(doc(db, "users", uid));
     if (!snap.exists()) return null;
     const data = snap.data();
     if (data.accountDeletionPending === true) throw new Error("account-deletion-pending");
-    // El modo Gratis no descarga historiales separados ni restaura la copia antigua.
-    // La copia queda intacta en Firestore; Pro permite volver a cargarla.
-    if (data?.hasOnboarded && options?.allowCloudCopy && !options.allowCloudCopy({
-      isPremium: data.isPremium === true,
-      premiumTrialStartedAt: typeof data.premiumTrialStartedAt === "number" ? data.premiumTrialStartedAt : undefined,
-    })) {
-      throw new CloudPremiumRequiredError();
-    }
     const history = data.historyFormat === 2 ? await loadHistoryV2(uid) : null;
     if (!history) assertLegacyHistoryFormat(data);
     if (!data?.hasOnboarded) return null;
@@ -399,17 +396,9 @@ export async function deleteCloudAccount(uid: string): Promise<void> {
   // Las tarjetas usan un documento separado para no acercar el respaldo
   // principal al límite de Firestore. Eliminar la cuenta debe borrar ambos.
   await deleteCreditCloudAccount(uid);
-  const account = await getDoc(doc(db, "users", uid));
-  if (account.exists() && account.data().historyFormat === 2) {
-    // A partir de aquí ninguna otra sesión puede registrar movimientos ni
-    // presentar un historial incompleto como si fuera una copia válida.
-    if (account.data().accountDeletionPending !== true) {
-      await updateDoc(account.ref, { accountDeletionPending: true });
-    }
-    await deleteHistoryV2(uid);
-  }
   // El documento principal va al final: si falla el borrado de uno auxiliar,
   // la cuenta sigue completa para que la persona pueda volver a intentarlo.
-  await deleteDoc(doc(db, "users", uid));
+  // Admin borra el historial sin exigir leerlo ni tener Pro en el teléfono.
+  await deletePersonalCloudCopy(uid);
   clearHistoryV2Cache(uid);
 }

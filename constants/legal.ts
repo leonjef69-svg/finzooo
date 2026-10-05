@@ -53,6 +53,7 @@ Esta es la parte más delicada y por eso va aparte.
 - Fino guarda cifrado en el celular cuáles avisos ya revisaste, solo para controlar el indicador de la campana. Ese estado no se envía a la nube.
 - Al cerrar sesión, se conserva una copia cifrada en ese teléfono, separada por cuenta. Solo se recupera al entrar con la misma cuenta en ese teléfono; otras cuentas no la ven. Los avisos, el PIN y las conexiones de exportación se desactivan. Si pierdes el teléfono o desinstalas Fino, la información que no tenga respaldo en la nube podría perderse.
 - El respaldo personal en la nube usando Firebase (un servicio de Google) requiere Pro, incluida una prueba o acceso autorizado. Las copias antiguas se conservan al pasar a Gratis. Tus datos personales solo son visibles para tu cuenta; lo que anotes en Familia o una Caja compartida también es visible para sus miembros.
+- El servidor conserva el identificador de tu cuenta y la fecha de uso de la prueba para gestionar Pro y evitar reiniciarla al borrar una copia. Ese registro no contiene movimientos ni fotos y se elimina al completar el borrado de tu cuenta.
 
 4. Con quién compartimos tu información
 ${PARRAFO_ANUNCIOS}

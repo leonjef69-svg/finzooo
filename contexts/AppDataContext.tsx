@@ -122,6 +122,7 @@ import {
   pruneDeletedTransactionIds,
 } from "@/utils/mergeTransactions";
 import { activatePremiumTrialCloud } from "@/utils/premiumTrialCloud";
+import { getCloudAccountAccess } from "@/utils/cloudAccountAccess";
 import { presupuestoCubreTransferencias, presupuestoDelMes, transferidoPendienteDelMes } from "@/utils/presupuestoMensual";
 import { hayDescuadre, maximoAApartar, saldoLibre, totalApartado } from "@/utils/ahorro";
 import { availablePersonalBalance, totalsForMonth } from "@/utils/finances";
@@ -545,6 +546,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // correo). Mientras esto no tenga un valor, no subimos nada a la nube.
   const [uid, setUid] = useState<string | null>(null);
   const localSessionVersion = useRef(0);
+  const cloudAccessRevision = useRef(0);
   const localOpenRequest = useRef(0);
 
   // Una versión de fmt() ya conectada a la moneda elegida — toda la app
@@ -606,6 +608,30 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       if (auth.currentUser?.uid === uid) setTesterPremium(value);
     });
   }, [uid]);
+
+  // Solo permisos, nunca movimientos: Gratis también puede comprobar una
+  // compra/prueba del servidor sin leer la copia financiera completa.
+  useEffect(() => {
+    if (!uid || !ready) return;
+    let alive = true;
+    const version = localSessionVersion.current;
+    const refresh = async () => {
+      const revision = cloudAccessRevision.current;
+      try {
+        const access = await getCloudAccountAccess(uid);
+        if (!alive || version !== localSessionVersion.current || revision !== cloudAccessRevision.current || auth.currentUser?.uid !== uid) return;
+        setIsPremium(access.isPremium);
+        setPruebaInicio(access.premiumTrialStartedAt ?? null);
+        savePrueba(access.premiumTrialStartedAt ?? null);
+      } catch {
+        // Sin respuesta válida no se concede nube; lo local no se borra.
+        if (alive && version === localSessionVersion.current && revision === cloudAccessRevision.current && auth.currentUser?.uid === uid) setRespaldoFallo("permisos");
+      }
+    };
+    void refresh();
+    const listener = AppState.addEventListener("change", (state) => { if (state === "active") void refresh(); });
+    return () => { alive = false; listener.remove(); };
+  }, [uid, ready]);
 
   // Cada vez que cargamos datos ya guardados, avisamos al generador de
   // números cuál es el más alto que ya existe. Así un movimiento nuevo
@@ -799,7 +825,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     try {
       cloud = await loadCloudData(userUid, {
         allowCloudCopy: (entitlement) =>
-          isPremiumDeLaCuenta || testerPremium.active || entitlement.isPremium ||
+          isPremiumDeLaCuenta || testerPremium.active || entitlement.isPremium || entitlement.isTester ||
           pruebaVigente(entitlement.premiumTrialStartedAt ?? pruebaInicio, Date.now()),
       });
     } catch (error) {
@@ -2364,8 +2390,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   async function activarPruebaPremium(): Promise<boolean> {
+    if (!hasOnboarded) return false;
     if (pruebaYaUsada(pruebaInicio)) return false;
+    const userUid = auth.currentUser?.uid;
+    const version = localSessionVersion.current;
     const { activated, startedAt: inicio } = await activatePremiumTrialCloud();
+    if (!userUid || auth.currentUser?.uid !== userUid || version !== localSessionVersion.current) return false;
+    // Una consulta iniciada antes de activar no puede retirar la prueba nueva.
+    cloudAccessRevision.current += 1;
     setPruebaInicio(inicio);
     savePrueba(inicio);
     // El reloj de dentro se pone al dia para que la prueba cuente desde ya y no

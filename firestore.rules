@@ -53,21 +53,29 @@ service cloud.firestore {
     function testerPremiumUser(userId) {
       return exists(/databases/$(database)/documents/testerPremium/$(userId))
         && get(/databases/$(database)/documents/testerPremium/$(userId)).data.active == true
-        && get(/databases/$(database)/documents/testerPremium/$(userId)).data.grantedAt is timestamp;
+        && get(/databases/$(database)/documents/testerPremium/$(userId)).data.grantedAt is timestamp
+        && get(/databases/$(database)/documents/testerPremium/$(userId)).data.grantedAt.toMillis() > 0;
     }
 
     function premiumUser(userId) {
-      return exists(/databases/$(database)/documents/users/$(userId))
+      return cloudCopyOpen(userId) && ((exists(/databases/$(database)/documents/users/$(userId))
         && (
-          get(/databases/$(database)/documents/users/$(userId)).data.isPremium == true
-          || testerPremiumUser(userId)
+          get(/databases/$(database)/documents/users/$(userId)).data.get('isPremium', false) == true
           || (
-            get(/databases/$(database)/documents/users/$(userId)).data.premiumTrialStartedAt is number
-            && get(/databases/$(database)/documents/users/$(userId)).data.premiumTrialStartedAt <= request.time.toMillis()
-            && get(/databases/$(database)/documents/users/$(userId)).data.premiumTrialStartedAt
+            get(/databases/$(database)/documents/users/$(userId)).data.get('premiumTrialStartedAt', -1) is number
+            && get(/databases/$(database)/documents/users/$(userId)).data.get('premiumTrialStartedAt', -1) >= 0
+            && get(/databases/$(database)/documents/users/$(userId)).data.get('premiumTrialStartedAt', -1) <= request.time.toMillis()
+            && get(/databases/$(database)/documents/users/$(userId)).data.get('premiumTrialStartedAt', -1)
               + 24 * 60 * 60 * 1000 > request.time.toMillis()
           )
-        );
+        )) || testerPremiumUser(userId));
+    }
+
+    function cloudCopyOpen(userId) {
+      return (!exists(/databases/$(database)/documents/users/$(userId))
+        || get(/databases/$(database)/documents/users/$(userId)).data.get('accountDeletionPending', false) != true)
+        && (!exists(/databases/$(database)/documents/premiumTrialClaims/$(userId))
+          || get(/databases/$(database)/documents/premiumTrialClaims/$(userId)).data.get('deletionPending', false) != true);
     }
 
     // Concesión administrativa por UID. El usuario solo puede leer la suya;
@@ -166,15 +174,16 @@ service cloud.firestore {
     // Cada persona guarda todo en un solo documento: users/{su-id}
     match /users/{userId} {
 
-      // Solo puedes leer/borrar TU propio documento, y solo si iniciaste
-      // sesión Y confirmaste tu correo.
-      allow read, delete: if request.auth != null
-                       && request.auth.uid == userId
-                       && request.auth.token.email_verified == true;
+      // Solo puedes leer TU copia financiera con Pro, sesión y correo verificado.
+      allow read: if verified() && request.auth.uid == userId && premiumUser(userId);
+      // La función administrativa borra sin exigir Pro. Un delete directo
+      // dejaría historiales huérfanos y podría retirar la prueba antigua.
+      allow delete: if false;
 
       allow create, update: if request.auth != null
                          && request.auth.uid == userId
                          && request.auth.token.email_verified == true
+                         && premiumUser(userId)
                          && (!exists(/databases/$(database)/documents/users/$(userId))
                            || resource.data.get('accountDeletionPending', false) != true)
                          // Tras migrar, una app antigua no puede quitar las
@@ -264,8 +273,10 @@ service cloud.firestore {
       // solo pueden leer/escribir el historial de su propia cuenta verificada.
       match /history/{historyId} {
         allow read: if verified() && request.auth.uid == userId
+          && premiumUser(userId)
           && get(/databases/$(database)/documents/users/$(userId)).data.get('historyFormat', 1) == 2;
         allow create, update: if verified() && request.auth.uid == userId
+          && premiumUser(userId)
           && get(/databases/$(database)/documents/users/$(userId)).data.get('historyFormat', 1) == 2
           && get(/databases/$(database)/documents/users/$(userId)).data.get('accountDeletionPending', false) != true
           && request.resource.data.keys().hasOnly(['id', 'deleted', 'transaction', 'syncAt'])
@@ -297,17 +308,19 @@ service cloud.firestore {
     // condiciones que de verdad protegen —es tuyo, hay sesión y el correo está confirmado— se
     // quedan igual que arriba.
     match /negocios/{userId} {
-      allow read, write: if request.auth != null
-                      && request.auth.uid == userId
-                      && request.auth.token.email_verified == true;
+      allow read: if verified() && request.auth.uid == userId && premiumUser(userId);
+      allow create, update: if verified() && request.auth.uid == userId
+        && premiumUser(userId) && cloudCopyOpen(userId);
+      allow delete: if verified() && request.auth.uid == userId;
     }
 
     // Cajas personales independientes. No son negocios y viven en su propio
     // documento para que sus movimientos no se mezclen con ninguno de los dos.
     match /cajas/{userId} {
-      allow read, write: if request.auth != null
-                      && request.auth.uid == userId
-                      && request.auth.token.email_verified == true;
+      allow read: if verified() && request.auth.uid == userId && premiumUser(userId);
+      allow create, update: if verified() && request.auth.uid == userId
+        && premiumUser(userId) && cloudCopyOpen(userId);
+      allow delete: if verified() && request.auth.uid == userId;
     }
 
     // Espacios familiares: los datos solo son visibles para miembros. Para

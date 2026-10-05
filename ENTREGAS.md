@@ -14,9 +14,14 @@ El 05/10/2026 quedó preparada y comprobada la conservación local al cerrar
 sesión y la unión Personal por elemento al volver a Pro (`syncFormat: 2`).
 No se generó ni publicó un APK/AAB u OTA. Las reglas deben admitir el marcador
 antes de distribuir esta app; después de su primera escritura, una versión
-antigua no podrá reemplazar la copia de esa cuenta. La nube Pro del servidor,
-las pruebas físicas y la publicación coordinada siguen pendientes.
-Ver `docs/PRUEBAS_FUSION_PRO.md` antes de entregar o revertir versiones.
+antigua no podrá reemplazar la copia de esa cuenta. También quedó preparado el
+bloqueo Pro en servidor para Personal/historial, Negocio y Cajas privadas, con
+consulta de permisos separada y borrado administrativo sin exigir Pro.
+Las funciones nuevas deben estar disponibles antes de distribuir la app;
+las reglas no se publican de forma aislada. Las pruebas físicas, Node 22 y
+la publicación coordinada siguen pendientes; tarjetas de crédito siguen fuera.
+Ver `docs/PRUEBAS_FUSION_PRO.md` y `docs/PRUEBAS_NUBE_PRO.md` antes de entregar
+o revertir versiones. No se publicó ningún cambio de esta tanda.
 
 La separación del historial Personal está preparada y probada localmente,
 pero todavía **no está disponible en Google Play**. No se ha publicado ni

@@ -5,7 +5,8 @@ const assert = require("node:assert/strict");
 const { premium } = require("../src/premium-entitlement");
 
 test("tester Premium es independiente del Premium comprado", () => {
-  assert.equal(premium({ isPremium: false }, Date.now(), { active: true }), true);
+  assert.equal(premium({ isPremium: false }, Date.now(), { active: true, grantedAt: { toMillis: () => 1 } }), true);
+  assert.equal(premium({ isPremium: false }, Date.now(), { active: true }), false, "no concede un tester sin fecha válida");
   assert.equal(premium({ isPremium: false }, Date.now(), { active: false }), false);
   assert.equal(premium({ isPremium: true }, Date.now(), { active: false }), true);
 });

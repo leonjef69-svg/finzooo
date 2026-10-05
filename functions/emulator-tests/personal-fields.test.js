@@ -6,7 +6,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require("@firebase/rules-unit-testing");
-const { doc, setDoc, getDoc, updateDoc } = require("firebase/firestore");
+const { doc, setDoc, getDoc, updateDoc, serverTimestamp } = require("firebase/firestore");
 
 // Solo se ejecuta contra el emulador de demo-fino, nunca contra producción.
 test("unión por campos: permite migrar y bloquea el reemplazo de una app antigua", async t => {
@@ -21,6 +21,8 @@ test("unión por campos: permite migrar y bloquea el reemplazo de una app antigu
     const other = env.authenticatedContext("fields-other", { email_verified: true }).firestore();
     const unverified = env.authenticatedContext("fields-owner", { email_verified: false }).firestore();
     const ref = doc(owner, "users", "fields-owner");
+    await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), "testerPremium", "fields-owner"),
+      { active: true, grantedAt: serverTimestamp() }));
     const legacy = { hasOnboarded: true, userName: "Prueba", userPhoto: null,
       userCurrency: "PEN", userLanguage: "es", budgets: { "2026-10": 1000 },
       categoryBudgets: {}, transactions: [], goals: [], isPremium: false, syncUpdatedAt: { budgets: 1 } };
