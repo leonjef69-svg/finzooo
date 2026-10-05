@@ -15,7 +15,7 @@ const OWNER_KEY = "finzo:localAccountOwner:v1";
 const PREFIX = "finzo:localAccountVault:v1:";
 type Owner = { uid: string; mode: "active" | "archived" };
 type Snapshot = { version: 1; uid: string; entries: [string, string | null][] };
-type StoredSnapshot = { version: 1; uid: string; entries: [string, string | null][] };
+type StoredSnapshot = { version: 1 | 2; uid: string; entries: [string, string | null][] };
 type Manifest = { version: 1; current: string; previous?: string };
 const keys = [...new Set(ACCOUNT_STORAGE_KEYS)];
 const emailKey = (email: string | null | undefined) => (email ?? "").trim().toLowerCase();
@@ -100,11 +100,12 @@ async function readSnapshot(uid: string): Promise<Snapshot | null> {
   if (!text) throw new LocalAccountVaultError("read");
   try {
     const snapshot = JSON.parse(text) as StoredSnapshot;
-    if (snapshot.version !== 1 || snapshot.uid !== uid || !Array.isArray(snapshot.entries) || snapshot.entries.length !== keys.length) throw new Error();
+    const expectedKeys = snapshot.version === 1 ? keys.filter(key => key !== STORAGE_KEYS.personalReturnPending) : keys;
+    if (![1, 2].includes(snapshot.version) || snapshot.uid !== uid || !Array.isArray(snapshot.entries) || snapshot.entries.length !== expectedKeys.length) throw new Error();
     const seen = new Set<string>();
     const entries: Snapshot["entries"] = [];
     for (const entry of snapshot.entries) {
-      if (!Array.isArray(entry) || entry.length !== 2 || !keys.includes(entry[0]) || seen.has(entry[0]) || (entry[1] !== null && typeof entry[1] !== "string")) throw new Error();
+      if (!Array.isArray(entry) || entry.length !== 2 || !expectedKeys.includes(entry[0]) || seen.has(entry[0]) || (entry[1] !== null && typeof entry[1] !== "string")) throw new Error();
       seen.add(entry[0]);
       if (entry[1] === null) entries.push([entry[0], null]);
       else {
@@ -119,6 +120,7 @@ async function readSnapshot(uid: string): Promise<Snapshot | null> {
         entries.push([entry[0], entry[0] === "@fino/credit-v1" ? decoded : value]);
       }
     }
+    if (snapshot.version === 1) entries.push([STORAGE_KEYS.personalReturnPending, null]);
     return { version: 1, uid, entries };
   } catch { throw new LocalAccountVaultError("read"); }
 }
@@ -149,7 +151,7 @@ async function saveSnapshot(uid: string): Promise<void> {
     if (await AsyncStorage.getItem(ref) !== value) throw new LocalAccountVaultError("write");
     refs.push([key, ref]);
   }
-  const text = JSON.stringify({ version: 1, uid, entries: refs } satisfies StoredSnapshot);
+  const text = JSON.stringify({ version: 2, uid, entries: refs } satisfies StoredSnapshot);
   const raw = await encryptText(text);
   await AsyncStorage.setItem(generation, raw);
   if (await decryptText(await AsyncStorage.getItem(generation) ?? "") !== text) throw new LocalAccountVaultError("write");

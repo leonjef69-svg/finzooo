@@ -42,17 +42,21 @@ await scenario(`
   assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [], "arranque no expone datos antes de identificar cuenta");
   assert.equal(await prepareLocalAccount("A", "a@example.com"), true);
   await AsyncStorage.setItem("@fino/credit-v1", JSON.stringify({ cards: [{ id: "legacy-A" }] }));
+  const pendingReturn = { uid: "A", payload: { kind: "family", spaceId: "f", amount: 40, personalTransactionId: 100 } };
+  await saveJSONNow(STORAGE_KEYS.personalReturnPending, pendingReturn);
   saveJSON(STORAGE_KEYS.transactions, [{ id: 60, amount: 60 }]);
   await archiveLocalAccount("A", "a@example.com");
   assert.equal(await allowBackgroundAccount("A", "a@example.com"), false, "sin sesión no se ejecuta el registro de fondo");
   await clearAccountData();
   assert.equal(await prepareLocalAccount("B", "b@example.com"), false);
   assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [], "B nunca recibe gastos de A");
+  assert.equal(await loadJSON(STORAGE_KEYS.personalReturnPending, null), null, "B nunca recibe la orden de devolución de A");
   await seed("B", "b@example.com", 90);
   await archiveLocalAccount("B", "b@example.com");
   await clearAccountData();
   assert.equal(await prepareLocalAccount("A", "a@example.com"), true);
   assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [{ id: 60, amount: 60 }], "A recupera también el último guardado pendiente");
+  assert.deepEqual(await loadJSON(STORAGE_KEYS.personalReturnPending, null), pendingReturn, "A recupera su devolución interrumpida al volver a entrar");
   assert.deepEqual(await loadJSON(STORAGE_KEYS.categoryCustom, {}), { photo: "foto-privada-A" });
   assert.deepEqual(JSON.parse(await AsyncStorage.getItem("@fino/credit-v1")), { cards: [{ id: "legacy-A" }] }, "el formato de migración antiguo también se conserva");
   const vaultKeys = (await AsyncStorage.getAllKeys()).filter(k => k.includes("localAccountVault"));
@@ -61,7 +65,7 @@ await scenario(`
     assert.ok(raw.startsWith("v2:"));
     assert.ok(!raw.includes("foto-privada"));
     const copy = JSON.parse(await decryptText(raw));
-    if (copy.version === 1 && copy.entries) assert.equal(copy.entries.length, new Set(ACCOUNT_STORAGE_KEYS).size, "inventario completo");
+    if (copy.version === 2 && copy.entries) assert.equal(copy.entries.length, new Set(ACCOUNT_STORAGE_KEYS).size, "inventario completo");
   }
   await deleteLocalAccountVault("B");
   assert.ok(!(await AsyncStorage.getAllKeys()).some(k => k.includes("localAccountVault:v1:B:")));
@@ -122,6 +126,21 @@ await scenario(`
 `);
 
 const context = fs.readFileSync("contexts/AppDataContext.tsx", "utf8");
+await scenario(`
+  await seed("legacy", "legacy@example.com", 123);
+  await prepareLocalAccount("legacy", "legacy@example.com");
+  await archiveLocalAccount("legacy", "legacy@example.com");
+  const manifestKey = "finzo:localAccountVault:v1:legacy:manifest";
+  const manifest = JSON.parse(await decryptText(await AsyncStorage.getItem(manifestKey)));
+  const snapshot = JSON.parse(await decryptText(await AsyncStorage.getItem(manifest.current)));
+  snapshot.version = 1;
+  snapshot.entries = snapshot.entries.filter(([key]) => key !== STORAGE_KEYS.personalReturnPending);
+  await AsyncStorage.setItem(manifest.current, await encryptText(JSON.stringify(snapshot)));
+  await clearAccountData();
+  await prepareLocalAccount("legacy", "legacy@example.com");
+  assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [{ id: 123, amount: 123 }], "la copia antigua sigue abriendo al añadir la orden de devolución");
+  assert.equal(await loadJSON(STORAGE_KEYS.personalReturnPending, null), null);
+`);
 await scenario(`
   setAccountStorageAvailable(true);
   await saveJSONNow(STORAGE_KEYS.transactions, [{ id: 50, amount: 50 }]);

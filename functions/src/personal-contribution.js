@@ -61,4 +61,4 @@ function hasUnreturnedPersonalContribution(movements, uid) {
     || Math.min(Math.max(0, balance(movements)), personalNet(movements, uid)) > CENT;
 }
 
-module.exports = { CENT, contributionLimits, canCloseLinkedSpace, hasUnreturnedPersonalContribution };
+module.exports = { CENT, contributionLimits, canCloseLinkedSpace, hasUnreturnedPersonalContribution, invalidPersonalReturns };

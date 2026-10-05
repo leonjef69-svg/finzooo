@@ -3,6 +3,27 @@
 Última revisión: 05/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-02 — recuperación del saldo sin renovar Pro (05/10/2026)
+
+- Nuevo servicio estrecho: S/100 aportados, S/60 gastados y S/40 recuperables
+  permiten devolver S/40 a Personal sin Pro y cerrar el espacio sin deuda ficticia.
+  No permite otras operaciones Pro ni tocar el aporte de otra cuenta.
+- Transacción financiera con identificador persistente, orden local cifrada y
+  confirmación privada. Reintentos no generan otro ingreso; se recupera aun
+  después de borrar el grupo o salir de él, sin conceder acceso al grupo.
+- Nuevas devoluciones SDK bloqueadas, también Pro. La copia histórica de una
+  Caja privada solo admite su origen exacto y una fase de migración irreversible.
+  El evento Auth limpia confirmaciones por UID; bloqueo de cuenta en eliminación.
+- Pruebas y límites: `docs/PRUEBAS_DEVOLUCION_SIN_PRO.md`. La decisión de lo
+  consumido y conservación del historial continúan vigentes.
+  TypeScript/ESLint aprobados; 129 pruebas locales y 8 auditores, 49 de Functions
+  y 40 del emulador Firestore. Una prueba local preexistente ajena sigue sin
+  registrar en Git. La regresión nueva falla contra el manejador anterior.
+- **Qué sigue:** FINO-05 (Node 22) y comprobar eliminación de cuenta de punta
+  a punta. **Qué falta:** Android/dos cuentas/dispositivos, Functions/Auth reales,
+  consolas, transición de versiones y publicación autorizada. FINO-02 preparado
+  en estas rutas, no declarado resuelto en producción. Tarjetas excluidas.
+
 ## FINO-02 — consumido sin deuda ficticia, avance parcial (05/10/2026)
 
 - El propietario autorizó considerar consumido el aporte gastado. Saldo cero
@@ -19,6 +40,7 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 - Verificado: TypeScript, ESLint, 128 pruebas locales y 8 auditores; 42 de
   Functions y 31 del emulador. Una prueba local es preexistente ajena no registrada.
 - **Qué sigue:** devolución del saldo aún disponible tras vencer Pro y Node 22.
+  La excepción de devolución está preparada en la sección superior.
   **Qué falta:** completar esa excepción segura, teléfono/dos dispositivos,
   Functions reales/consolas y publicación coordinada. No se considera FINO-02
   completamente resuelto ni se migraron cuentas; tarjetas siguen excluidas.

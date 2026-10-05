@@ -6,6 +6,7 @@ import {
 import { db } from "@/utils/firebase";
 import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
+import { subirCajas } from "@/utils/cloudCajas";
 import { canCloseLinkedSpace, hasUnreturnedPersonalContribution } from "@/utils/linkedTransfers";
 import { cerrarEspacioCompartido, prepararBorradoEspacioCompartido, salirEspacioCompartido } from "@/utils/personalContribution";
 import type { Caja, MovimientoCaja } from "@/utils/cajas";
@@ -72,6 +73,14 @@ export async function compartirCajaExistente(
   movimientos: MovimientoCaja[],
   currency = "PEN",
 ): Promise<CajaCompartida> {
+  // Confirma el origen privado antes de copiar devoluciones históricas.
+  const sourceSaved = await subirCajas(uid, { cajas: [caja], movimientos, cajasBorradas: [], movimientosBorrados: [] });
+  if (!sourceSaved) throw new Error("permission-denied");
+  const privateCopy = await getDoc(doc(db, "cajas", uid));
+  const sourceIndices = new Map<string, number>((privateCopy.data()?.movimientos || []).map((item: MovimientoCaja, index: number) => [item.id, index]));
+  if (movimientos.some(item => item.personalReturnAmount != null && !sourceIndices.has(item.id))) {
+    throw new Error("return-invalid-data");
+  }
   const ref = doc(db, "boxSpaces", `${uid}_${caja.id}`);
   await runTransaction(db, async transaction => {
     const actual = await transaction.get(ref);
@@ -98,7 +107,7 @@ export async function compartirCajaExistente(
         ...(item.category ? { category: item.category } : {}), ...(item.notes ? { notes: item.notes } : {}),
         ...(item.method ? { method: item.method } : {}), creadoPor: uid, creadoEn: item.creadoEn,
         ...(item.personalTransactionId != null ? { personalTransactionId: item.personalTransactionId, personalOwnerUid: uid } : {}),
-        ...(item.personalReturnAmount != null ? { personalReturnAmount: item.personalReturnAmount } : {}),
+        ...(item.personalReturnAmount != null ? { personalReturnAmount: item.personalReturnAmount, migrationSourceIndex: sourceIndices.get(item.id) } : {}),
       });
     }
     await lote.commit();

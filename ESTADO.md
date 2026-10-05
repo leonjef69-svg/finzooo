@@ -1,5 +1,38 @@
 # Estado actual de Fino
 
+## Devolución a Personal después de vencer Pro (05/10/2026)
+
+- FINO-02, avance posterior: `returnPersonalContribution` permite devolver
+  únicamente el saldo recuperable de la cuenta autenticada, sin exigir Pro.
+  Aporte S/100 y gasto S/60: devuelve S/40, permite cerrar con S/0 y conserva
+  S/60 como consumidos. No concede operaciones normales ni respaldo Gratis.
+- El servidor valida membresía, moneda, aportes, devoluciones y saldo dentro
+  de una transacción. Dos devoluciones simultáneas no duplican el saldo. El
+  mismo identificador recupera la confirmación sin otra escritura de dinero.
+- Antes de enviar, el teléfono guarda una orden cifrada por cuenta; conserva
+  esa orden si pierde la respuesta y la recupera al reiniciar/volver a entrar.
+  Solo la retira después de comprobar el ingreso guardado en disco. Una
+  respuesta de la sesión anterior no se aplica aunque vuelva a la misma cuenta.
+- Confirmación privada en `personalReturnReceipts/{uid}/operations/*`: permite
+  recuperar una operación ya confirmada aun si el espacio se borró o retiró
+  al miembro. No devuelve acceso al grupo ni copia Personal. El SDK no puede
+  leerla; el servidor entrega solo la operación propia cuyo ID ya conoce el
+  teléfono. Se limpia por lotes al completar el borrado de Firebase Auth.
+- Las devoluciones nuevas pasan por Functions, tanto Gratis como Pro. La
+  conversión de una Caja privada admite únicamente copiar devoluciones
+  históricas exactas desde la copia Pro, antes de cerrar su migración; no se
+  puede reabrir esa fase. Los archivos locales antiguos se leen sin perder
+  datos; los nuevos incluyen la orden pendiente en su formato de archivo 2.
+- Verificación y límites: `docs/PRUEBAS_DEVOLUCION_SIN_PRO.md`. No se tocó
+  código nativo, cobros ni tarjetas. No se publicó app, reglas o Functions.
+  TypeScript y ESLint aprobados; 129 pruebas locales y 8 auditores, 49 pruebas
+  de Functions y 40 del emulador Firestore. El conteo local incluye una prueba
+  preexistente ajena no registrada en Git; Node 22 aún no se comprobó.
+- **Qué sigue:** comprobar Node 22 y el recorrido completo de eliminación.
+  **Qué falta:** Android/dos dispositivos, tokens y Functions reales, revisión
+  de consolas, transición de apps antiguas y publicación coordinada. Historias
+  corruptas se rechazan, no se repararon cuentas reales ni cierres históricos.
+
 ## Aportes consumidos y borrado local de Cajas (05/10/2026)
 
 - Decisión explícita del propietario: un aporte ya gastado se considera
@@ -27,6 +60,7 @@
   La validación completa y sus límites figuran en `docs/PRUEBAS_APORTES_CONSUMIDOS.md`.
 - **Qué sigue:** devolver el saldo que aún queda en Familia/Caja sin exigir
   renovar Pro; comprobar Node 22 y el recorrido real de eliminación.
+  La devolución fue preparada posteriormente en la sección superior.
   **Qué falta:** ese desbloqueo, Android/dos dispositivos, llamadas reales de
   Functions, compatibilidad con apps antiguas y publicación coordinada.
   Los marcadores de cierres hechos desde otro dispositivo dependen de recibir

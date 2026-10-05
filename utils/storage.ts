@@ -111,6 +111,7 @@ export const STORAGE_KEYS = {
   // Avisos que ya se revisaron en Inicio. Es solo estado local para el punto
   // rojo de la campana; no se comparte ni se sincroniza con la nube.
   homeNotificationSeen: "finzo:homeNotificationSeen",
+  personalReturnPending: "finzo:personalReturnPending",
 } as const;
 
 /** Retira automáticamente los datos falsos que dejaron versiones antiguas. */
@@ -161,6 +162,7 @@ export const ACCOUNT_STORAGE_KEYS = [
         STORAGE_KEYS.cajasDinero,
         STORAGE_KEYS.plusHint,
         STORAGE_KEYS.homeNotificationSeen,
+        STORAGE_KEYS.personalReturnPending,
         // Integraciones y tareas que pertenecen a la cuenta, aunque sus claves
         // vivan fuera del almacén principal.
         "finzo:scheduledExport",
@@ -184,6 +186,11 @@ export function setAccountStorageAvailable(available: boolean): void {
   accountAccessVersion += 1;
   accountStorageAvailable = available;
   if (!available) discardPendingSaves();
+}
+
+/** Permite rechazar respuestas antiguas, incluso A → B → A. Solo lectura. */
+export function getAccountStorageSession(): number | null {
+  return accountStorageAvailable ? accountAccessVersion : null;
 }
 
 function canAccessKey(key: string): boolean {

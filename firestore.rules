@@ -133,7 +133,7 @@ service cloud.firestore {
       return data.keys().hasOnly([
           'tipo', 'monto', 'descripcion', 'method', 'fecha', 'creadoPor',
           'creadoEn', 'category', 'notes', 'personalTransactionId', 'personalOwnerUid',
-          'personalReturnAmount'
+          'personalReturnAmount', 'migrationSourceIndex'
         ])
         && data.tipo in ['ingreso', 'gasto']
         && data.monto is number
@@ -385,6 +385,7 @@ service cloud.firestore {
                       )
                       && familyOwnerPremiumAfter(familyId)
                       && validSharedMovement(request.resource.data)
+                      && !('personalReturnAmount' in request.resource.data)
                       && (!('personalTransactionId' in request.resource.data)
                         || getAfter(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid);
         allow update: if familyMember(familyId)
@@ -476,6 +477,24 @@ service cloud.firestore {
       }
     }
 
+    // Una devolución histórica migrada no es un nuevo reembolso. Solo copia
+    // exactamente un registro de la Caja privada del mismo propietario Pro.
+    function validMigratedBoxReturn(boxId, movementId, data) {
+      let rows = get(/databases/$(database)/documents/cajas/$(request.auth.uid)).data.movimientos;
+      return get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid
+        && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('migrationComplete', true) == false
+        && data.migrationSourceIndex is int && data.migrationSourceIndex >= 0 && data.migrationSourceIndex < rows.size()
+        && rows[data.migrationSourceIndex].id == movementId
+        && boxId == request.auth.uid + '_' + rows[data.migrationSourceIndex].cajaId
+        && rows[data.migrationSourceIndex].tipo == data.tipo
+        && rows[data.migrationSourceIndex].monto == data.monto
+        && rows[data.migrationSourceIndex].personalTransactionId == data.personalTransactionId
+        && rows[data.migrationSourceIndex].personalReturnAmount == data.personalReturnAmount
+        && rows[data.migrationSourceIndex].fecha == data.fecha
+        && rows[data.migrationSourceIndex].creadoEn == data.creadoEn
+        && rows[data.migrationSourceIndex].descripcion == data.descripcion;
+    }
+
     // Una caja compartida es independiente de Personal, Familia y Negocio.
     // Cada miembro puede ver y anotar movimientos; solo el dueño Premium invita.
     match /boxSpaces/{boxId} {
@@ -496,10 +515,16 @@ service cloud.firestore {
                     && resource.data.ownerUid == request.auth.uid
                     && resource.data.get('closed', false) == false
                     && resource.data.get('deleting', false) == false
-                    && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre', 'migrationComplete'])
-                    && request.resource.data.nombre is string
-                    && request.resource.data.nombre.size() > 0
-                    && request.resource.data.nombre.size() <= 30;
+                    && (
+                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre'])
+                        && request.resource.data.nombre is string
+                        && request.resource.data.nombre.size() > 0
+                        && request.resource.data.nombre.size() <= 30)
+                      || (resource.data.get('migrationComplete', true) == false
+                        && request.resource.data.migrationComplete == true
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['migrationComplete'])
+                        && premiumUser(request.auth.uid))
+                    );
       allow delete: if verified()
                     && resource.data.ownerUid == request.auth.uid
                     && resource.data.get('deleting', false) == true;
@@ -536,6 +561,8 @@ service cloud.firestore {
         )
           && boxOwnerPremiumAfter(boxId)
           && validSharedMovement(request.resource.data)
+          && (!('personalReturnAmount' in request.resource.data)
+            || validMigratedBoxReturn(boxId, movementId, request.resource.data))
           && (!('personalTransactionId' in request.resource.data)
             || getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid);
         allow update: if boxMember(boxId)

@@ -183,7 +183,21 @@ cierre y el importe del aporte consumido. No es un cobro ni una transferencia
 bancaria nueva: registra el destino de dinero ya anotado. Forma parte de la
 información financiera ya declarada y de su copia Pro; no añade permisos ni
 una nueva categoría. El saldo disponible sigue protegido; las devoluciones
-tras vencer Pro continúan pendientes antes de declarar completo ese recorrido.
+tras vencer Pro se prepararon posteriormente en `docs/PRUEBAS_DEVOLUCION_SIN_PRO.md`;
+el recorrido físico completo aún está pendiente.
+
+La devolución a Personal guarda en servidor una confirmación financiera privada
+por operación: UID, espacio, importe, moneda, fecha, descripción e IDs de aportes.
+Se usa para deduplicación y recuperación incluso sin Pro, sin descargar ni
+respaldar todo Personal. Solo Functions puede entregarla al dueño autenticado
+que conoce el ID; se conserva hasta completar el borrado de Auth y se limpia por
+lotes. El movimiento del espacio sigue siendo visible para sus miembros. La
+orden pendiente local se cifra, se separa por cuenta y se conserva al cerrar
+sesión; se retira tras confirmar el ingreso en disco o un rechazo definitivo.
+Esto pertenece a información financiera y gestión de cuenta ya declaradas;
+revisar retención/finalidad en el formulario antes de publicar. No añade permiso
+Android ni SDK de anuncios. Política interna/web actualizadas solo en archivos;
+el texto publicado y las declaraciones reales de Play siguen sin comprobarse.
 
 > **LOS CONTACTOS DE ENVÍO NO SE DECLARAN, Y AQUÍ DECÍA LO CONTRARIO (corregido el
 > 18/08/2026).** Este archivo afirmaba que "se guardan y se suben a su copia en la nube" y

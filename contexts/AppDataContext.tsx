@@ -97,7 +97,7 @@ import {
   pruebaYaUsada,
   savePrueba,
 } from "@/utils/pruebaPremium";
-import { fmt as formatAmount, fmtCompact as formatCompactAmount, monthKey } from "@/utils/format";
+import { fmt as formatAmount, fmtCompact as formatCompactAmount, monthKey, horaDe } from "@/utils/format";
 import { auth } from "@/utils/firebase";
 import { reauthenticateWithGoogle, signOutFromGoogle } from "@/utils/googleAuth";
 import {
@@ -123,6 +123,8 @@ import {
 } from "@/utils/mergeTransactions";
 import { activatePremiumTrialCloud } from "@/utils/premiumTrialCloud";
 import { getCloudAccountAccess } from "@/utils/cloudAccountAccess";
+import { finishPersonalReturn, mergePersonalReturn, personalReturnIsCurrent, recoverPersonalReturn, type PersonalReturnReceipt } from "@/utils/personalReturn";
+import { spaceErrorKey } from "@/utils/spaceErrors";
 import { presupuestoCubreTransferencias, presupuestoDelMes, transferidoPendienteDelMes } from "@/utils/presupuestoMensual";
 import { hayDescuadre, maximoAApartar, saldoLibre, totalApartado } from "@/utils/ahorro";
 import { availablePersonalBalance, totalsForMonth } from "@/utils/finances";
@@ -253,6 +255,7 @@ type AppDataContextValue = {
 
   transactions: Transaction[];
   addOrUpdateTransaction: (t: Transaction, allowLinkedTransferUpdate?: boolean) => void;
+  recordPersonalReturn: (receipt: PersonalReturnReceipt) => boolean;
   deleteTransaction: (id: number) => void;
   /** Solo para Familia/Cajas al borrar el movimiento enlazado en su origen. */
   deleteLinkedTransferTransaction: (id: number) => void;
@@ -547,6 +550,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [uid, setUid] = useState<string | null>(null);
   const localSessionVersion = useRef(0);
   const cloudAccessRevision = useRef(0);
+  const returnReceipt = useRef<PersonalReturnReceipt | null>(null);
+  const currencyForReturn = useRef(userCurrency);
+  currencyForReturn.current = userCurrency;
   const localOpenRequest = useRef(0);
 
   // Una versión de fmt() ya conectada a la moneda elegida — toda la app
@@ -1342,6 +1348,34 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, [categoryBudgets, ready, hasOnboarded]);
   useEffect(() => {
     if (ready && hasOnboarded) saveJSON(STORAGE_KEYS.transactions, transactions);
+  }, [transactions, ready, hasOnboarded]);
+  // Recupera una orden autorizada antes de cerrar la app, sin exigir Pro.
+  useEffect(() => {
+    if (!uid || !ready || !hasOnboarded) return;
+    let alive = true;
+    const version = localSessionVersion.current;
+    const recover = async () => {
+      try {
+        const receipt = await recoverPersonalReturn(uid);
+        if (!alive || version !== localSessionVersion.current || auth.currentUser?.uid !== uid || !receipt) return;
+        recordPersonalReturn(receipt);
+      } catch (error) {
+        if (alive && version === localSessionVersion.current && auth.currentUser?.uid === uid) showToast(tRef.current(spaceErrorKey(error)));
+      }
+    };
+    void recover();
+    const listener = AppState.addEventListener("change", state => { if (state === "active") void recover(); });
+    return () => { alive = false; listener.remove(); returnReceipt.current = null; };
+    // La identidad determina esta escucha; los valores actuales se leen por referencia.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uid, ready, hasOnboarded]);
+  useEffect(() => {
+    const receipt = returnReceipt.current;
+    if (!receipt || !ready || !hasOnboarded) return;
+    const timer = setTimeout(() => {
+      void finishPersonalReturn(receipt).then(done => { if (done && returnReceipt.current === receipt) returnReceipt.current = null; }).catch(() => undefined);
+    }, 1000);
+    return () => clearTimeout(timer);
   }, [transactions, ready, hasOnboarded]);
   useEffect(() => {
     if (ready && hasOnboarded) saveJSON(STORAGE_KEYS.goals, goals);
@@ -2454,6 +2488,23 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     showToast(t("toast.budgetUpdated"));
   }
 
+  function recordPersonalReturn(receipt: PersonalReturnReceipt): boolean {
+    if (!personalReturnIsCurrent(receipt)) return false;
+    if (currencyForReturn.current !== receipt.currency) {
+      showToast(tRef.current("spaces.currencyMismatch"));
+      return false;
+    }
+    const tx: Transaction = { id: receipt.personalTransactionId, type: "income", amount: receipt.amount,
+      category: "otros", date: receipt.fecha, time: horaDe(receipt.createdAt), method: "transfer",
+      description: tRef.current(receipt.kind === "family" ? "family.returnFrom" : "boxes.returnFrom", { name: receipt.spaceName }),
+      notes: "", origin: "manual", internalTransfer: receipt.kind, internalTransferLink: receipt.movementId,
+      internalTransferSpaceId: receipt.spaceId, internalTransferSpaceName: receipt.spaceName,
+      internalTransferAllocations: receipt.allocations, updatedAt: Date.now() };
+    returnReceipt.current = receipt;
+    setTransactions(previous => mergePersonalReturn(previous, tx));
+    return true;
+  }
+
   function addOrUpdateTransaction(t2: Transaction, allowLinkedTransferUpdate = false) {
     if (!Number.isFinite(t2.amount) || t2.amount <= 0) {
       showToast(t("toast.amountPositive"));
@@ -2698,6 +2749,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     movimientosDeCategoria,
     transactions,
     addOrUpdateTransaction,
+    recordPersonalReturn,
     pagosProgramados,
     guardarPagoProgramado,
     quitarPagoProgramado,

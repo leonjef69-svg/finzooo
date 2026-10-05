@@ -64,10 +64,11 @@ en Git. Node instalado: 24.18; la comprobación específica con Node 22 sigue pe
 
 ## Lo que sigue y falta
 
-FINO-02 permanece parcial: el saldo que todavía existe sigue sin poder devolverse
-con la ruta actual si el dueño perdió Pro. Hay que preparar una excepción limitada
-y validada en servidor; no abrir los movimientos comunes a Gratis ni permitir
-devoluciones repetidas. Las cuentas con saldo disponible siguen protegidas.
+La excepción de devolución tras vencer Pro quedó preparada posteriormente en
+`PRUEBAS_DEVOLUCION_SIN_PRO.md`, con validación administrativa e identificador
+persistente. No abre movimientos comunes a Gratis. FINO-02 sigue sin declararse
+resuelto en producción; las cuentas con saldo disponible no pueden cerrarse
+hasta devolverlo y el recorrido físico completo sigue pendiente.
 
 En el teléfono que cierra se guarda el marcador inmediatamente. En otro dispositivo
 su presentación depende de recibir esa copia Personal; las protecciones de ausencia

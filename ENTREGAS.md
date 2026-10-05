@@ -10,12 +10,22 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+La devolución a Personal sin Pro también quedó preparada el 05/10/2026.
+Requiere `returnPersonalContribution` y la limpieza Auth actualizada antes de
+activar las reglas/app que la utilizan. Las reglas nuevas rechazan devoluciones
+SDK directas de las versiones antiguas, incluso Pro; no publicarlas aisladas.
+La conversión de Cajas privadas también requiere el nuevo cliente para copiar
+sus retornos históricos. Los archivos cifrados nuevos usan formato 2; la app
+nueva lee formato 1, pero no se debe revertir a una app antigua sin comprobar
+su compatibilidad. Guía y pruebas: `docs/PRUEBAS_DEVOLUCION_SIN_PRO.md`.
+No se generó entrega, no se cambió CODE_MARKER ni se desplegó Firebase.
+
 La tanda de aportes del 05/10/2026 permite cerrar un espacio sin saldo con
 aportaciones consumidas, conserva las salidas de Personal y corrige el borrado
 local de Cajas. La decisión del propietario quedó registrada en ESTADO.md.
 Requiere publicar las Functions actualizadas junto con la app; versiones
-antiguas mantienen su comprobación anterior. Las devoluciones de saldo tras
-vencer Pro y las pruebas físicas todavía están pendientes. Ver
+antiguas mantienen su comprobación anterior. Las devoluciones tras vencer Pro
+se prepararon posteriormente; las pruebas físicas siguen pendientes. Ver
 `docs/PRUEBAS_APORTES_CONSUMIDOS.md`. No se generó ni publicó una entrega.
 
 El 05/10/2026 quedó preparada y comprobada la conservación local al cerrar

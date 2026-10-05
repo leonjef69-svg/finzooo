@@ -51,7 +51,10 @@ ejecución real en Node 22 y un entorno autorizado.
 **FINO-02 tiene un avance posterior:** el propietario decidió que un aporte
 gastado es consumido. El cierre con saldo cero y la conservación de Personal
 se prepararon en `PRUEBAS_APORTES_CONSUMIDOS.md`. La devolución del saldo aún
-disponible tras vencer Pro sigue pendiente; no se declara completado ese flujo.
+disponible tras vencer Pro se preparó después en `PRUEBAS_DEVOLUCION_SIN_PRO.md`.
+Se conserva solo una confirmación de esa operación, no se abre la copia Personal
+a Gratis. El evento Auth limpia también esas confirmaciones privadas por lotes.
+No se declara completado el recorrido físico ni publicado ese flujo.
 La función Personal no elude los pasos del flujo compartido. Tampoco sustituye la limpieza
 existente de Telegram/tarjetas ni declara cubiertas colecciones desconocidas.
 
@@ -93,7 +96,8 @@ existente de Telegram/tarjetas ni declara cubiertas colecciones desconocidas.
    Asegurar un camino de actualización/borrado de cuenta; no asumir que una
    actualización por internet llega a todos los teléfonos.
 3. Publicar primero las Functions nuevas/compatibles (`getCloudAccess`,
-   `deletePersonalCloudCopy`, `activatePremiumTrial` y `cleanupDeletedCloudAccount`)
+   `deletePersonalCloudCopy`, `activatePremiumTrial`, `returnPersonalContribution`
+   y `cleanupDeletedCloudAccount`)
    y verificar que respondan. Preparar las reglas compatibles con `syncFormat: 2`
    y una versión de app que use esas funciones. Coordinar la activación: entregar
    solo la app con reglas viejas impediría sus respaldos; publicar solo reglas
@@ -103,7 +107,7 @@ existente de Telegram/tarjetas ni declara cubiertas colecciones desconocidas.
 5. Solo después decidir el despliegue general y la migración de historial. No
    se ha activado `historyFormat: 2` en ninguna cuenta real desde esta tanda.
 
-**Qué sigue:** FINO-02, Node 22 y transición coordinada.
-**Qué falta:** decisión sobre aportes, pruebas físicas/Functions reales,
+**Qué sigue:** Node 22, recorrido completo de FINO-02 y transición coordinada.
+**Qué falta:** pruebas físicas/Functions reales,
 consolas y publicación autorizada. FINO-04 queda preparado en las rutas indicadas,
 no declarado resuelto en producción ni para tarjetas de crédito.

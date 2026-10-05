@@ -12,11 +12,12 @@ import { validSpaceDate } from "@/components/SpaceMovementFields";
 import { useAppData } from "@/contexts/AppDataContext";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { fmt as formatAmount, horaDe } from "@/utils/format";
-import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, countSelectedCompactRows, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, isTrustedLegacyFamilyContribution, linkedTransferLedger, minimumContributionAmount, movementIdsForCompactRow, orphanedPersonalTransferIds, planSpaceMovementDeletion, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
+import { canCloseLinkedSpace, canSpendFromSpace, countSelectedCompactRows, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, isTrustedLegacyFamilyContribution, linkedTransferLedger, minimumContributionAmount, movementIdsForCompactRow, orphanedPersonalTransferIds, planSpaceMovementDeletion, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
 import { auth } from "@/utils/firebase";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { actualizarAportePersonal, borrarAportePersonal } from "@/utils/personalContribution";
+import { devolverAportePersonal } from "@/utils/personalReturn";
 import { spaceErrorKey } from "@/utils/spaceErrors";
 import {
   borrarMovimientoFamilia, cargarFamiliaActiva, cerrarFamilia, crearFamilia, crearInvitacionFamilia, listarFamilias,
@@ -44,7 +45,7 @@ type FamiliaEnMemoria = {
 const familiaEnMemoria = new Map<string, FamiliaEnMemoria>();
 
 export default function Family() {
-  const { t, fmt, userCurrency, userName, showToast, isPremium, disponible, transactions, addOrUpdateTransaction, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
+  const { t, fmt, userCurrency, userName, showToast, isPremium, disponible, transactions, addOrUpdateTransaction, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
   const insets = useSafeAreaInsets();
   const uidAlAbrir = auth.currentUser?.uid ?? "";
   const copiaInicial = uidAlAbrir ? familiaEnMemoria.get(uidAlAbrir) : undefined;
@@ -368,10 +369,9 @@ export default function Family() {
     const uid = auth.currentUser?.uid;
     if (!uid || !familia || devolvibleAPersonal <= 0) return;
     if (familia.currency !== userCurrency) { showToast(t("spaces.currencyMismatch")); return; }
-    const personalId = nextId();
-    const allocations = allocatePersonalReturn(movimientos, devolvibleAPersonal, uid);
-    const movementId = await guardarMovimientoFamilia(familia.id, uid, { tipo: "gasto", monto: devolvibleAPersonal, descripcion: t("family.returnToPersonal"), fecha: fechaHoy(), method: "transfer", personalTransactionId: personalId, personalOwnerUid: uid, personalReturnAmount: devolvibleAPersonal });
-    addOrUpdateTransaction({ id: personalId, type: "income", amount: devolvibleAPersonal, category: "otros", date: fechaHoy(), time: horaDe(Date.now()), method: "transfer", description: t("family.returnFrom", { name: familia.nombre }), notes: "", origin: "manual", internalTransfer: "family", internalTransferLink: movementId, internalTransferSpaceId: familia.id, internalTransferSpaceName: familia.nombre, internalTransferAllocations: allocations });
+    const receipt = await devolverAportePersonal({ kind: "family", spaceId: familia.id, amount: devolvibleAPersonal,
+      currency: userCurrency, fecha: fechaHoy(), description: t("family.returnToPersonal") });
+    if (!recordPersonalReturn(receipt)) return;
     await recargar();
   });
   const salir = () => {

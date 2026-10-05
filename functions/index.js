@@ -14,6 +14,7 @@ const { CENT, contributionLimits, canCloseLinkedSpace, hasUnreturnedPersonalCont
 const { premiumForUser } = require("./src/premium-entitlement");
 const { activatePremiumTrial } = require("./src/premium-trial");
 const { getCloudAccess, deletePersonalCloudCopy, cleanupDeletedCloudAccount } = require("./src/cloud-access");
+const { returnPersonalContribution } = require("./src/personal-return");
 
 initializeApp();
 
@@ -37,6 +38,19 @@ exports.getCloudAccess = onCall({ region: "southamerica-east1", maxInstances: 10
 
 exports.deletePersonalCloudCopy = onCall({ region: "southamerica-east1", maxInstances: 5, timeoutSeconds: 540 }, request =>
   deletePersonalCloudCopy(getFirestore(), verifiedAccount(request, true)));
+
+exports.returnPersonalContribution = onCall({ region: "southamerica-east1", maxInstances: 5, timeoutSeconds: 120 }, async request => {
+  const uid = verifiedAccount(request);
+  const account = await getAuth().getUser(uid);
+  if (account.disabled || !account.emailVerified) throw new HttpsError("unauthenticated", "Verifica tu cuenta.");
+  try { return await returnPersonalContribution(getFirestore(), uid, request.data); }
+  catch (error) {
+    if (!error?.reason) throw error;
+    const code = error.reason === "return-permission-denied" ? "permission-denied"
+      : error.reason === "return-invalid-request" ? "invalid-argument" : "failed-precondition";
+    throw new HttpsError(code, "No se confirmó la devolución. Actualiza el espacio y revisa el saldo.", { reason: error.reason });
+  }
+});
 
 exports.cleanupDeletedCloudAccount = legacyFunctions.region("southamerica-east1")
   .runWith({ failurePolicy: true, maxInstances: 5, timeoutSeconds: 540 }).auth.user().onDelete(async user => {
@@ -235,7 +249,7 @@ exports.leaveLinkedSpace = onCall(
         throw new HttpsError("failed-precondition", "Primero devuelve el aporte Personal de este miembro.");
       }
       movementsToAnonymize = movementSnapshot.docs.filter(item =>
-        item.data().creadoPor === memberUid || item.data().personalOwnerUid === memberUid,
+        item.data().creadoPor === memberUid || item.data().personalOwnerUid === memberUid || item.data().personalReturnReceipt?.uid === memberUid,
       );
       if (member.exists) transaction.delete(memberRef);
       transaction.delete(linkRef);
@@ -251,6 +265,7 @@ exports.leaveLinkedSpace = onCall(
         batch.update(item.ref, {
           ...(data.creadoPor === memberUid ? { creadoPor: "deleted" } : {}),
           ...(data.personalOwnerUid === memberUid ? { personalOwnerUid: "deleted" } : {}),
+          ...(data.personalReturnReceipt?.uid === memberUid ? { "personalReturnReceipt.uid": "deleted" } : {}),
         });
       }
       await batch.commit();

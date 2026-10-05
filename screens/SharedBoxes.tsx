@@ -14,14 +14,14 @@ import { auth } from "@/utils/firebase";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { spaceErrorKey } from "@/utils/spaceErrors";
-import { nextId } from "@/utils/id";
-import { allocatePersonalReturn, balanceOfSpace, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
+import { balanceOfSpace, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
 import { actualizarAportePersonal, borrarAportePersonal } from "@/utils/personalContribution";
+import { devolverAportePersonal } from "@/utils/personalReturn";
 import { ArrowDown, ArrowRightLeft, ArrowUp, Check, LogOut, Pencil, Trash2, UserMinus, UserPlus, UsersRound, X } from "lucide-react-native";
 import { borrarMovimientoCajaCompartida, cerrarCajaCompartida, crearInvitacionCaja, escucharMovimientosCaja, guardarMovimientoCajaCompartida, listarCajasCompartidas, listarMiembrosCaja, observarCierreCaja, quitarMiembroCaja, renombrarCajaCompartida, salirDeCaja, unirseACaja, type CajaCompartida, type MiembroCajaCompartida, type MovimientoCajaCompartida } from "@/utils/cloudCajasCompartidas";
 
 export default function SharedBoxes() {
-  const { t, userCurrency, isPremium, userName, showToast, disponible, transactions, addOrUpdateTransaction, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
+  const { t, userCurrency, isPremium, userName, showToast, disponible, transactions, addOrUpdateTransaction, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
   const insets = useSafeAreaInsets();
   const { join, boxId, invitation: invitationInicial } = useLocalSearchParams<{ join?: string; boxId?: string; invitation?: string }>();
   const [cajas, setCajas] = useState<CajaCompartida[]>([]);
@@ -147,14 +147,9 @@ export default function SharedBoxes() {
   const devolverAPersonal = () => ejecutar(async () => {
     if (!uid || !caja || devolvibleAPersonal <= 0) return;
     if (caja.currency !== userCurrency) { showToast(t("spaces.currencyMismatch")); return; }
-    const personalId = nextId();
-    const allocations = allocatePersonalReturn(movimientos, devolvibleAPersonal, uid);
-    const movementId = await guardarMovimientoCajaCompartida(caja.id, uid, {
-      tipo: "gasto", monto: devolvibleAPersonal, descripcion: t("boxes.returnToPersonal"),
-      fecha: new Date().toLocaleDateString("sv-SE"), method: "transfer",
-      personalTransactionId: personalId, personalOwnerUid: uid, personalReturnAmount: devolvibleAPersonal,
-    });
-    addOrUpdateTransaction({ id: personalId, type: "income", amount: devolvibleAPersonal, category: "otros", date: new Date().toLocaleDateString("sv-SE"), time: horaDe(Date.now()), method: "transfer", description: t("boxes.returnFrom", { name: caja.nombre }), notes: "", origin: "manual", internalTransfer: "box", internalTransferLink: movementId, internalTransferSpaceId: caja.id, internalTransferSpaceName: caja.nombre, internalTransferAllocations: allocations });
+    const receipt = await devolverAportePersonal({ kind: "box", spaceId: caja.id, amount: devolvibleAPersonal,
+      currency: userCurrency, fecha: new Date().toLocaleDateString("sv-SE"), description: t("boxes.returnToPersonal") });
+    recordPersonalReturn(receipt);
   });
   const salir = () => { if (!uid || !caja || owner) return; Alert.alert(t("boxes.leave"), t("boxes.leaveWarning"), [{ text: t("common.cancel"), style: "cancel" }, { text: t("boxes.leave"), style: "destructive", onPress: () => void ejecutar(async () => { await salirDeCaja(uid, caja.id); setCajas(items => items.filter(item => item.id !== caja.id)); setCaja(null); }) }]); };
   const quitar = (member: MiembroCajaCompartida) => { if (!caja || !owner || member.rol === "owner") return; Alert.alert(t("boxes.removeMember"), member.nombre, [{ text: t("common.cancel"), style: "cancel" }, { text: t("common.delete"), style: "destructive", onPress: () => void ejecutar(async () => { await quitarMiembroCaja(caja.id, member.uid); setMiembros(items => items.filter(item => item.uid !== member.uid)); }) }]); };
