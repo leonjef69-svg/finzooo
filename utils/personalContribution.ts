@@ -20,6 +20,11 @@ export async function prepararBorradoEspacioCompartido(kind: SpaceKind, spaceId:
   await httpsCallable(functions, "manageLinkedSpace")({ kind, spaceId, action: "prepare-delete" });
 }
 
+/** Servidor retira índices privados y confirma el borrado del espacio preparado. */
+export async function finalizarBorradoEspacioCompartido(kind: SpaceKind, spaceId: string): Promise<void> {
+  await httpsCallable(functions, "finalizeLinkedSpaceDeletion", { timeout: 550_000 })({ kind, spaceId });
+}
+
 export async function salirEspacioCompartido(kind: SpaceKind, spaceId: string, targetUid?: string): Promise<void> {
   await httpsCallable(functions, "leaveLinkedSpace")({ kind, spaceId, ...(targetUid ? { targetUid } : {}) });
 }

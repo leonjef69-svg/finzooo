@@ -15,6 +15,7 @@ const { premiumForUser } = require("./src/premium-entitlement");
 const { activatePremiumTrial } = require("./src/premium-trial");
 const { getCloudAccess, deletePersonalCloudCopy, cleanupDeletedCloudAccount } = require("./src/cloud-access");
 const { returnPersonalContribution } = require("./src/personal-return");
+const { finalizeLinkedSpaceDeletion } = require("./src/linked-space-cleanup");
 
 initializeApp();
 
@@ -62,6 +63,19 @@ exports.cleanupDeletedCloudAccount = legacyFunctions.region("southamerica-east1"
     }
     await cleanupDeletedCloudAccount(getFirestore(), user.uid);
   });
+
+exports.finalizeLinkedSpaceDeletion = onCall({ region: "southamerica-east1", maxInstances: 5, timeoutSeconds: 540 }, async request => {
+  const uid = verifiedAccount(request, true);
+  const account = await getAuth().getUser(uid);
+  if (account.disabled || !account.emailVerified) throw new HttpsError("unauthenticated", "Verifica tu cuenta.");
+  try { return await finalizeLinkedSpaceDeletion(getFirestore(), uid, request.data); }
+  catch (error) {
+    if (!error?.reason) throw error;
+    const code = error.reason === "cleanup-not-owner" ? "permission-denied"
+      : error.reason === "cleanup-invalid-request" ? "invalid-argument" : "failed-precondition";
+    throw new HttpsError(code, "No se pudo completar la limpieza del espacio.", { reason: error.reason });
+  }
+});
 
 function validDocumentId(value) {
   return typeof value === "string" && /^[A-Za-z0-9_-]{1,160}$/.test(value);

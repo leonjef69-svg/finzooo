@@ -95,7 +95,8 @@ completa aprobaron. No se modificó ni relajó ese auditor para obtener el verde
   ni gasto ilimitado. App Check/rate limiting/costos de abuso siguen pendientes.
 - Se serializan devoluciones entre sí. No se declara corregida aquí toda la
   concurrencia de gastos ordinarios SDK, aportes, borrados y monedas del espacio.
-- Node instalado 24.18; falta validar específicamente Node 22 antes de entregar.
+- Node 22 se comprobó posteriormente con SDK/HTTP y eventos Auth/Firestore
+  emulados; ver `PRUEBAS_NODE22_BORRADO_CUENTA.md`. Falta el servicio de producción.
   Tarjetas y cobros permanecen excluidos; no se creó plan de S/3 ni Play Billing.
 
 ## Entrega futura — requiere autorización
@@ -110,5 +111,5 @@ completa aprobaron. No se modificó ni relajó ese auditor para obtener el verde
    en Familia/Caja con Pro vencido, reconexión y cuenta eliminada. Conservar
    historial Personal y no emitir una devolución ficticia de S/60 consumidos.
 
-**Qué sigue:** Node 22 y recorrido completo de eliminación.
+**Qué sigue:** recorrido Android de eliminación y transición coordinada.
 **Qué falta:** pruebas físicas/Functions reales, consolas, transición y publicación.

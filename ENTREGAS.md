@@ -10,6 +10,14 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Node 22 quedó probado localmente con las funciones cargadas en su emulador,
+llamadas HTTP y eventos reales de Auth/Firestore emulados. El borrado de Familia
+fallaba al intentar leer índices privados ajenos; se corrigió mediante
+`finalizeLinkedSpaceDeletion`, sin ampliar reglas ni exigir Pro. Esta función
+tiene que estar desplegada antes de entregar el nuevo cliente de borrado.
+Ver `docs/PRUEBAS_NODE22_BORRADO_CUENTA.md`. No se compiló/publicó app ni servidor.
+La versión realmente desplegada en Firebase todavía no se comprobó.
+
 La devolución a Personal sin Pro también quedó preparada el 05/10/2026.
 Requiere `returnPersonalContribution` y la limpieza Auth actualizada antes de
 activar las reglas/app que la utilizan. Las reglas nuevas rechazan devoluciones

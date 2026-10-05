@@ -3,6 +3,29 @@
 Última revisión: 05/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-05 y continuación FINO-02 — Node 22 y borrado probado (05/10/2026)
+
+- Node 22.23.3 real, portátil y SHA-256 oficial verificado. Se cargaron las
+  Functions originales, con llamadas HTTP de SDK y eventos Auth/Firestore
+  auténticos de sus emuladores, no envolturas de Auth sustituidas.
+- Hallazgo adicional confirmado: el borrado de Familia intentaba consultar
+  índices privados de otro miembro y fallaba por las reglas correctas de
+  privacidad. La regresión reproduce el rechazo usando el cliente anterior.
+- `finalizeLinkedSpaceDeletion`: identidad reciente, dueño, borrado preparado,
+  movimientos ya retirados y ninguna exigencia Pro. Limpia solo índices del
+  espacio; conserva los del propietario para reintentar y retira raíz/índice/
+  membresía propios conjuntamente al final. Sin ampliar reglas privadas.
+- Devolución con prueba vencida, historial de 405 documentos, espacios propios,
+  limpieza Auth de permisos/comprobantes y limpieza de Telegram comprobados;
+  otra cuenta se conserva. Pruebas y límites en
+  `docs/PRUEBAS_NODE22_BORRADO_CUENTA.md`.
+  TypeScript/ESLint, 129 pruebas locales y 8 auditores, 53 de Functions y 48
+  de reglas/SDK/HTTP/eventos aprobados. Una prueba local es ajena no registrada.
+- **Qué sigue:** recorrido Android y demás riesgos de datos. **Qué falta:**
+  teléfono/dos dispositivos, Google real, configuración de producción y
+  publicación coordinada. No se declara auditoría completa ni FINO-05 resuelto
+  en producción; tarjetas siguen excluidas.
+
 ## FINO-02 — recuperación del saldo sin renovar Pro (05/10/2026)
 
 - Nuevo servicio estrecho: S/100 aportados, S/60 gastados y S/40 recuperables

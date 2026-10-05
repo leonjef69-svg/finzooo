@@ -199,6 +199,14 @@ revisar retención/finalidad en el formulario antes de publicar. No añade permi
 Android ni SDK de anuncios. Política interna/web actualizadas solo en archivos;
 el texto publicado y las declaraciones reales de Play siguen sin comprobarse.
 
+El 05/10/2026 se comprobó el borrado de la nube con SDK/HTTP y eventos reales de
+Auth/Firestore emulados bajo Node 22. Se corrigió la limpieza de índices privados
+de miembros desde una función administrativa limitada al espacio en borrado.
+No añade datos recogidos, permisos Android ni acceso de un miembro al historial
+Personal de otro. No acredita borrado físico en Android ni reglas/configuración
+publicadas. La nueva función debe desplegarse antes de distribuir la app;
+el formulario y las políticas de producción continúan por verificar.
+
 > **LOS CONTACTOS DE ENVÍO NO SE DECLARAN, Y AQUÍ DECÍA LO CONTRARIO (corregido el
 > 18/08/2026).** Este archivo afirmaba que "se guardan y se suben a su copia en la nube" y
 > mandaba declararlos bajo "Correo electrónico" y "Números de teléfono". **Es falso:**

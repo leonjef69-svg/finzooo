@@ -20,7 +20,7 @@ import { db } from "@/utils/firebase";
 import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
 import { canCloseLinkedSpace, hasUnreturnedPersonalContribution } from "@/utils/linkedTransfers";
-import { cerrarEspacioCompartido, prepararBorradoEspacioCompartido, salirEspacioCompartido } from "@/utils/personalContribution";
+import { cerrarEspacioCompartido, finalizarBorradoEspacioCompartido, prepararBorradoEspacioCompartido, salirEspacioCompartido } from "@/utils/personalContribution";
 
 export type EspacioFamilia = {
   id: string;
@@ -290,9 +290,8 @@ export async function borrarVinculoFamiliaDeCuenta(uid: string): Promise<void> {
     const movimientosParaValidar = await listarMovimientosFamilia(familyId);
     if (!canCloseLinkedSpace(movimientosParaValidar)) throw new Error("unsettled-personal-contributions");
     await prepararBorradoEspacioCompartido("family", familyId);
-    const [movimientos, miembros, invitaciones] = await Promise.all([
+    const [movimientos, invitaciones] = await Promise.all([
       getDocs(collection(db, "familySpaces", familyId, "movements")),
-      getDocs(collection(db, "familySpaces", familyId, "members")),
       getDocs(query(collection(db, "familyInvites"), where("createdBy", "==", uid), where("familyId", "==", familyId))),
     ]);
     for (let inicio = 0; inicio < movimientos.docs.length; inicio += 400) {
@@ -300,26 +299,12 @@ export async function borrarVinculoFamiliaDeCuenta(uid: string): Promise<void> {
       for (const item of movimientos.docs.slice(inicio, inicio + 400)) lote.delete(item.ref);
       await lote.commit();
     }
-    for (let inicio = 0; inicio < miembros.docs.length; inicio += 200) {
-      const grupo = miembros.docs.slice(inicio, inicio + 200);
-      const indices = await Promise.all(grupo.map(member => getDoc(doc(db, "familyUsers", member.id))));
-      const lote = writeBatch(db);
-      grupo.forEach((member, index) => {
-        lote.delete(doc(db, "familyUsers", member.id, "spaces", familyId));
-        if (member.id === uid) lote.delete(doc(db, "familyUsers", member.id));
-        else if (indices[index].exists() && String(indices[index].data().activeFamilyId || "") === familyId) {
-          lote.set(doc(db, "familyUsers", member.id), { activeFamilyId: "" }, { merge: true });
-        }
-        lote.delete(member.ref);
-      });
-      await lote.commit();
-    }
     for (let inicio = 0; inicio < invitaciones.docs.length; inicio += 400) {
       const lote = writeBatch(db);
       for (const invite of invitaciones.docs.slice(inicio, inicio + 400)) lote.delete(invite.ref);
       await lote.commit();
     }
-    await deleteDoc(familyRef);
+    await finalizarBorradoEspacioCompartido("family", familyId);
   }
   await deleteDoc(indexRef);
 }

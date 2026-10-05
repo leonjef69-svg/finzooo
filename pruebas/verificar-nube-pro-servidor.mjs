@@ -112,6 +112,9 @@ indexScope.exports = indexScope.module.exports;
 vm.runInNewContext(read("functions/index.js"), indexScope);
 const api = indexScope.module.exports;
 assert.equal(api.deletePersonalCloudCopy.options.timeoutSeconds, 540, "un historial grande no usa el límite corto por defecto");
+assert.equal(api.finalizeLinkedSpaceDeletion.options.timeoutSeconds, 540, "la limpieza de grupos conserva tiempo para varias páginas");
+await assert.rejects(api.finalizeLinkedSpaceDeletion({ auth: { uid: "alice", token: { email_verified: true, auth_time: 1 } },
+  data: { kind: "family", spaceId: "f" } }), error => error.code === "failed-precondition", "finalizar el borrado exige identidad reciente");
 await api.cleanupDeletedCloudAccount({ uid: "bob" });
 assert.equal(db.documents.has("users/bob"), true, "un evento viejo no elimina un UID que ahora pertenece a una cuenta activa");
 for (const auth of [undefined, { uid: "alice", token: { email_verified: false } }]) {

@@ -8,7 +8,7 @@ import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
 import { subirCajas } from "@/utils/cloudCajas";
 import { canCloseLinkedSpace, hasUnreturnedPersonalContribution } from "@/utils/linkedTransfers";
-import { cerrarEspacioCompartido, prepararBorradoEspacioCompartido, salirEspacioCompartido } from "@/utils/personalContribution";
+import { cerrarEspacioCompartido, finalizarBorradoEspacioCompartido, prepararBorradoEspacioCompartido, salirEspacioCompartido } from "@/utils/personalContribution";
 import type { Caja, MovimientoCaja } from "@/utils/cajas";
 
 export type CajaCompartida = {
@@ -219,9 +219,8 @@ export async function borrarCajasCompartidasDeCuenta(uid: string): Promise<void>
     const movimientosParaValidar = await listarMovimientosCajaCompartida(boxId);
     if (!canCloseLinkedSpace(movimientosParaValidar)) throw new Error("unsettled-personal-contributions");
     await prepararBorradoEspacioCompartido("box", boxId);
-    const [movimientos, miembros, invitaciones] = await Promise.all([
+    const [movimientos, invitaciones] = await Promise.all([
       getDocs(collection(db, "boxSpaces", boxId, "movements")),
-      getDocs(collection(db, "boxSpaces", boxId, "members")),
       getDocs(query(collection(db, "boxInvites"), where("createdBy", "==", uid), where("boxId", "==", boxId))),
     ]);
     for (let inicio = 0; inicio < movimientos.docs.length; inicio += 400) {
@@ -229,20 +228,12 @@ export async function borrarCajasCompartidasDeCuenta(uid: string): Promise<void>
       for (const item of movimientos.docs.slice(inicio, inicio + 400)) lote.delete(item.ref);
       await lote.commit();
     }
-    for (let inicio = 0; inicio < miembros.docs.length; inicio += 200) {
-      const lote = writeBatch(db);
-      for (const member of miembros.docs.slice(inicio, inicio + 200)) {
-        lote.delete(doc(db, "boxUsers", member.id, "spaces", boxId));
-        lote.delete(member.ref);
-      }
-      await lote.commit();
-    }
     for (let inicio = 0; inicio < invitaciones.docs.length; inicio += 400) {
       const lote = writeBatch(db);
       for (const invite of invitaciones.docs.slice(inicio, inicio + 400)) lote.delete(invite.ref);
       await lote.commit();
     }
-    await deleteDoc(boxRef);
+    await finalizarBorradoEspacioCompartido("box", boxId);
   }
 }
 

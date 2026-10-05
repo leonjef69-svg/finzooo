@@ -4,8 +4,8 @@
 node pruebas/correr.mjs
 ```
 
-Desde la raíz del proyecto. Tarda unos segundos y sale **77 pruebas y 7
-auditores**. Si algo falla, dice cuál y en qué.
+Desde la raíz del proyecto. Descubre las pruebas nuevas y muestra el número
+actual de pruebas y auditores. Si algo falla, dice cuál y en qué.
 
 Antes de publicar cualquier cosa, además:
 
@@ -13,6 +13,12 @@ Antes de publicar cualquier cosa, además:
 npx tsc --noEmit
 npx eslint app screens components utils constants contexts modules
 ```
+
+Las funciones del servidor tienen pruebas separadas. Desde `functions`,
+`npm test` ejecuta sus pruebas unitarias. `npm run test:server` exige Node 22
+real y ejecuta reglas, SDK, HTTP y eventos de Auth/Firestore en emuladores
+locales con cuentas ficticias. No despliega ni necesita datos de producción.
+Requisitos, regresión y límites: `docs/PRUEBAS_NODE22_BORRADO_CUENTA.md`.
 
 ---
 

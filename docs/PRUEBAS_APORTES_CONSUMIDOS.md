@@ -2,6 +2,8 @@
 
 05/10/2026. Preparación local, no publicada. El propietario respondió:
 "Considerarlos consumidos, sin exigir devolución".
+Comprobación posterior de Node 22 y borrado real con SDK/HTTP/emuladores en
+`PRUEBAS_NODE22_BORRADO_CUENTA.md`; la comprobación Android sigue pendiente.
 
 ## Regla aplicada
 

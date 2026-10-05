@@ -1,5 +1,37 @@
 # Estado actual de Fino
 
+## Node 22 y borrado de cuenta con grupos — validación local (05/10/2026)
+
+- FINO-05: configuración ya preparada para Node 22; ahora se ejecutaron las
+  pruebas con Node 22.23.3 real, descargado del sitio oficial y comprobado por
+  SHA-256. Es portátil en `.tmp`, no reemplazó Node 24 del equipo.
+- Nueva prueba conecta los SDK reales a Auth, Functions y Firestore locales,
+  usa cuentas ficticias y llamadas HTTP autenticadas. Se comprobó devolución
+  S/40 con prueba vencida, borrado Personal/historial de 405 documentos y
+  grupos propios, y el evento real del emulador Auth que limpia permisos y
+  comprobantes. También se disparó la limpieza Firestore de Telegram; otra
+  cuenta y sus datos permanecen intactos. No son servicios de producción.
+- La prueba descubrió y confirmó una falla adicional de FINO-02: el cliente
+  intentaba leer `familyUsers` de otro miembro para limpiar sus índices,
+  pero esas lecturas privadas están correctamente prohibidas por las reglas.
+  No se abrieron esos permisos: `finalizeLinkedSpaceDeletion` hace la limpieza
+  limitada desde el servidor, solo dueño verificado y autenticado recientemente,
+  con borrado preparado y sin movimientos restantes. No exige Pro.
+- El propietario conserva membresía/índice hasta terminar. Índices de miembros
+  se limpian por espacio sin borrar otros vínculos; la confirmación final une
+  raíz, membresía e índice propios en una transacción. Interrupción y reintento
+  comprobados; las versiones anteriores quedan reproducibles mediante regresión.
+- Guía reproducible, alcance y cifras: `docs/PRUEBAS_NODE22_BORRADO_CUENTA.md`.
+  Nuevo `firebase.pruebas.json` separado de producción y lanzador que exige
+  Node 22, localhost/proyecto demo y rechaza configuraciones/secretos locales.
+  TypeScript/ESLint aprobados, 129 pruebas locales y 8 auditores, 53 de Functions
+  y 48 de SDK/reglas/HTTP/eventos bajo Node 22. Una prueba local es preexistente
+  ajena no registrada en Git. La regresión falla con el cliente anterior.
+- **Qué sigue:** comprobar el recorrido Android y continuar los riesgos de
+  datos restantes. **Qué falta:** teléfono/dos dispositivos, cuentas Google
+  reales, consolas y publicación coordinada. Hay que desplegar también la nueva
+  función antes de distribuir la app. Tarjetas excluidas; no se publicó nada.
+
 ## Devolución a Personal después de vencer Pro (05/10/2026)
 
 - FINO-02, avance posterior: `returnPersonalContribution` permite devolver

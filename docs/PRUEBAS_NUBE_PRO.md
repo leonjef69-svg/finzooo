@@ -2,6 +2,9 @@
 
 Preparado el 05/10/2026. Todo lo descrito como corregido corresponde al código
 local; no se desplegó Firebase, no se usaron cuentas reales y no se publicó app.
+Actualización posterior: Node 22, llamadas HTTP y eventos Auth/Firestore se
+comprobaron localmente en `PRUEBAS_NODE22_BORRADO_CUENTA.md`; también se corrigió
+la limpieza de índices privados durante el borrado de Familia/Caja.
 
 ## Qué se protege
 
@@ -96,8 +99,8 @@ existente de Telegram/tarjetas ni declara cubiertas colecciones desconocidas.
    Asegurar un camino de actualización/borrado de cuenta; no asumir que una
    actualización por internet llega a todos los teléfonos.
 3. Publicar primero las Functions nuevas/compatibles (`getCloudAccess`,
-   `deletePersonalCloudCopy`, `activatePremiumTrial`, `returnPersonalContribution`
-   y `cleanupDeletedCloudAccount`)
+   `deletePersonalCloudCopy`, `activatePremiumTrial`, `returnPersonalContribution`,
+   `finalizeLinkedSpaceDeletion` y `cleanupDeletedCloudAccount`)
    y verificar que respondan. Preparar las reglas compatibles con `syncFormat: 2`
    y una versión de app que use esas funciones. Coordinar la activación: entregar
    solo la app con reglas viejas impediría sus respaldos; publicar solo reglas
