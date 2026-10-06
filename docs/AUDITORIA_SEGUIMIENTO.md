@@ -3,6 +3,34 @@
 Última revisión: 06/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## Continuación punto 1 — lote monetario local preparado (06/10/2026)
+
+- Contexto exige comprobante HTTP genuino/cuenta/generación/cola y relee
+  originales cifrados dentro de la cola de escritura. Personal/borrados/Caja
+  juntos, versión exacta de servidor, originales conservados y otras filas.
+- Reserva corta durante SQLite/lectura, mutaciones rechazadas antes de memoria,
+  captura en cola espera; durante cifrado se reprepara con los datos nuevos.
+  Fallo mantiene originales; lectura incierta congela escrituras sin borrar.
+  Pantalla cerrada tras iniciar lote no recibe éxito, pero cuenta vigente sí
+  refleja lo verificado. Reserva liberada incluso ante error.
+- Guía: `docs/PRUEBAS_LOTE_IMPORTE_CAJA.md`. Código original y SQLite real con
+  sustitutos de React/nativos; no Android. Regresión ddde38d por API nueva
+  ausente, no fallo de usuarios publicados. Datos/claves/retención sin cambios.
+- 120 pruebas SDK/reglas/HTTP/eventos bajo Node 22 real aprobadas, sin fallos,
+  omisiones ni cancelaciones; 73 unitarias del servidor aprobadas. ADB vacío.
+- Auditor que expiró recorría artefactos/cachés. Excluidos esos directorios,
+  recorrido original probado (regresión ddde38d), sin omitir código propio ni
+  ampliar el timeout. No se cuenta la pasada interrumpida como aprobada.
+- TypeScript/ESLint y repetición final: 143 locales/8 auditores aprobados; una
+  prueba ajena sin registrar conservada pero no incluida en commit. Tarjetas:
+  dos suites específicas excluidas, no consideradas verificadas.
+- **Qué sigue:** selección/petición/lote/recuperación visible, controles y
+  lecturas visuales concurrentes, decisiones obsoletas/Pro vencido. **Qué falta:**
+  Android/espacio/tamaño/dos dispositivos/otros conflictos y 61 hallazgos,
+  consolas/políticas publicadas/publicación autorizada. Sin tarjeta/nativos/
+  marca/instalable/OTA/despliegue. No botón ni petición monetarios en pantalla;
+  contexto preparado no equivale a punto 1 ni auditoría terminados.
+
 ## Continuación punto 1 — cliente monetario preparado (06/10/2026)
 
 - Fuentes frescas en cola auténtica, consulta exacta/limitada de historial v2;

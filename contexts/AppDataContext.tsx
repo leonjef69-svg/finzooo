@@ -144,9 +144,13 @@ import { guardarCajasEnMemoria, limpiarCajasEnMemoria } from "@/utils/cajasMemor
 import { patchPrivateBoxPersonal, validatePrivateBoxPatch } from "@/utils/privateBoxPersonal";
 import { validatePrivateBoxRepair, type PrivateBoxRepairChoice } from "@/utils/privateBoxRepair";
 import { assertPrivateBoxRepairCloud, loadPrivateBoxRepairCloud } from "@/utils/privateBoxRepairCloud";
-import { PrivateBoxSyncError, privateBoxCloudResponseCurrent } from "@/utils/privateBoxSync";
+import { PrivateBoxSyncError, privateBoxCloudResponseCurrent, type PrivateBoxCloudLease } from "@/utils/privateBoxSync";
+import { assertPrivateBoxMoneyReceipt } from "@/utils/cloudPrivateBoxMoney";
+import { confirmarRevisionImporteLocal } from "@/utils/privateBoxMoneyReview";
+import { assertPrivateBoxMoneyLocalIdle, assertPrivateBoxMoneyLocalMutation, reservePrivateBoxMoneyLocalWrite, type PrivateBoxMoneyLocalWrite } from "@/utils/privateBoxMoneyLocalWrite";
+import { canonical, type MoneyAck } from "../functions/src/private-box-money-shared.js";
 import { captureAccountTask } from "@/utils/accountTask";
-import { CAJAS_VACIAS, fusionarCajas, validarCajas, type DatosCajas } from "@/utils/cajas";
+import { CAJAS_VACIAS, fusionarCajas, validarCajas, type DatosCajas, type RevisionImporteCaja } from "@/utils/cajas";
 import type { Goal, Month, Profile, Transaction } from "@/types";
 
 export type ThemeMode = "light" | "dark" | "system";
@@ -271,6 +275,7 @@ type AppDataContextValue = {
   /** Repara pares enlazados sin mostrar una cadena de avisos. */
   repairLinkedTransferTransactions: (upserts: Transaction[], deleteIds?: number[]) => void;
   commitPrivateBoxData: (before: DatosCajas, data: DatosCajas, upserts: Transaction[], deleteIds: number[], current: () => boolean, apply: (data: DatosCajas) => void, repair?: true | PrivateBoxRepairChoice) => Promise<boolean>;
+  commitPrivateBoxMoney: (before: DatosCajas, entry: RevisionImporteCaja, ack: MoneyAck, lease: PrivateBoxCloudLease, current: () => boolean, apply: (data: DatosCajas) => void) => Promise<boolean>;
   deleteTransactions: (ids: number[]) => void;
   commitImport: (toAdd: Transaction[], toReplace: Transaction[]) => void;
 
@@ -432,7 +437,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
-  const [userCurrency, setUserCurrency] = useState("PEN");
+  const [userCurrency, setRenderedUserCurrency] = useState("PEN");
+  const currencyForReturn = useRef(userCurrency);
+  const setUserCurrency = useCallback((next: string) => {
+    assertPrivateBoxMoneyLocalMutation("currency", next);
+    currencyForReturn.current = next;
+    setRenderedUserCurrency(next);
+  }, []);
   const [userLanguage, setUserLanguage] = useState("es");
   const [userCountry, setUserCountry] = useState("PE");
   const [themeMode, setThemeMode] = useState<ThemeMode>("system");
@@ -466,7 +477,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [transactions, setRenderedTransactions] = useState<Transaction[]>(seedTransactions);
   const transactionsLive = useRef(transactions);
   const setTransactions = useCallback((update: SetStateAction<Transaction[]>) => {
+    if (typeof update === "function") assertPrivateBoxMoneyLocalIdle();
     const next = typeof update === "function" ? update(transactionsLive.current) : update;
+    assertPrivateBoxMoneyLocalMutation("transactions", next);
     transactionsLive.current = next;
     setRenderedTransactions(next);
   }, []);
@@ -545,12 +558,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [cloudSyncMeta, setCloudSyncMeta] = useState<Record<string, number>>({});
   const cloudSyncMetaRef = useRef<Record<string, number>>({});
   const cloudFieldsRef = useRef<CloudData | null>(null);
-  const [deletedTransactionIds, setDeletedTransactionIds] = useState<number[]>([]);
+  const [deletedTransactionIds, setRenderedDeletedTransactionIds] = useState<number[]>([]);
   const [deletedGoalIds, setDeletedGoalIds] = useState<number[]>([]);
   const deletedTransactionIdsRef = useRef<number[]>([]);
-  useEffect(() => {
-    deletedTransactionIdsRef.current = deletedTransactionIds;
-  }, [deletedTransactionIds]);
+  const setDeletedTransactionIds = useCallback((update: SetStateAction<number[]>) => {
+    if (typeof update === "function") assertPrivateBoxMoneyLocalIdle();
+    const next = typeof update === "function" ? update(deletedTransactionIdsRef.current) : update;
+    assertPrivateBoxMoneyLocalMutation("deletedIds", next);
+    deletedTransactionIdsRef.current = next;
+    setRenderedDeletedTransactionIds(next);
+  }, []);
   // Captura automática desde notificaciones. El estado real vive en el
   // módulo nativo (sobrevive a que la app se cierre); aquí solo tenemos un
   // reflejo para pintar la pantalla de ajustes.
@@ -567,8 +584,6 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const localSessionVersion = useRef(0);
   const cloudAccessRevision = useRef(0);
   const returnReceipt = useRef<PersonalReturnReceipt | null>(null);
-  const currencyForReturn = useRef(userCurrency);
-  currencyForReturn.current = userCurrency;
   const localOpenRequest = useRef(0);
 
   // Una versión de fmt() ya conectada a la moneda elegida — toda la app
@@ -761,7 +776,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setCloudSyncMeta(cloudSyncMetaRef.current);
     }
     return true;
-  }, [userEmail, userCountry]);
+  }, [userEmail, userCountry, setUserCurrency]);
 
   /**
    * TODO lo que va a la copia de la cuenta, en UN SOLO SITIO.
@@ -1597,7 +1612,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
     };
-  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions]);
+  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -1938,7 +1953,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     };
     // Solo depende de si la app ya está lista: los datos que necesita los
     // lee de captureInputs en el momento de recoger.
-  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions]);
+  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds]);
 
   function setAutoCaptureOn(value: boolean) {
     notificationReader.setEnabled(value);
@@ -2517,6 +2532,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function recordPersonalReturn(receipt: PersonalReturnReceipt): boolean {
+    assertPrivateBoxMoneyLocalIdle();
     if (!personalReturnIsCurrent(receipt)) return false;
     if (deletedTransactionIdsRef.current.includes(receipt.personalTransactionId)) return false;
     if (currencyForReturn.current !== receipt.currency) {
@@ -2582,6 +2598,62 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           },
         };
       });
+    });
+  }
+
+  /** No reutiliza el parche ordinario: no renueva fechas/versiones del servidor.
+   * La pantalla todavía no lo invoca. Mantener la cola de revisión abierta.
+   */
+  async function commitPrivateBoxMoney(before: DatosCajas, entry: RevisionImporteCaja, ack: MoneyAck,
+    lease: PrivateBoxCloudLease, current: () => boolean, apply: (data: DatosCajas) => void): Promise<boolean> {
+    const owner = auth.currentUser?.uid ?? "", version = localSessionVersion.current;
+    const task = captureAccountTask(owner, () => version === localSessionVersion.current);
+    if (!ready || !hasOnboarded || !task.current() || !current() || hasUnreadableLocalData()) return false;
+    if (Platform.OS !== "android") throw new Error("private-box-android-only");
+    assertPrivateBoxMoneyReceipt(owner, entry, ack, lease);
+    const original = canonical(before), selected = canonical(entry);
+    return withLocalAccountOperation(async () => {
+      if (!task.current() || !current()) return false;
+      let presented = false;
+      const ok = await saveJSONBatchNow([STORAGE_KEYS.transactions, STORAGE_KEYS.deletedTransactionIds, STORAGE_KEYS.cajasDinero], async () => {
+        assertPrivateBoxMoneyReceipt(owner, entry, ack, lease);
+        // Dentro de la cola de escritura: no usa una lectura anterior a otras
+        // escrituras ni una copia visual como prueba de originales en disco.
+        const saved = validarCajas(await task.wait(() => loadJSON<DatosCajas | null>(STORAGE_KEYS.cajasDinero, null)));
+        if (!current() || canonical(before) !== original || canonical(saved) !== original || canonical(entry) !== selected) throw new Error("private-box-source-changed");
+        const base = transactionsLive.current, deleted = deletedTransactionIdsRef.current, currency = currencyForReturn.current;
+        const rows = canonical(base), marks = canonical(deleted);
+        const plan = confirmarRevisionImporteLocal(saved, base, deleted, entry, ack, owner, currency);
+        let reservation: PrivateBoxMoneyLocalWrite | undefined;
+        const sourcesCurrent = () => task.current() && canonical(before) === original && canonical(entry) === selected
+          && canonical(transactionsLive.current) === rows && canonical(deletedTransactionIdsRef.current) === marks && currencyForReturn.current === currency;
+        return {
+          entries: [[STORAGE_KEYS.transactions, plan.transactions], [STORAGE_KEYS.deletedTransactionIds, deleted], [STORAGE_KEYS.cajasDinero, plan.data]],
+          stillValid: () => {
+            if (!current() || !sourcesCurrent()) return false;
+            assertPrivateBoxMoneyReceipt(owner, entry, ack, lease); return true;
+          },
+          reserve: () => {
+            reservation = reservePrivateBoxMoneyLocalWrite(task.current, { transactions: base, deletedIds: deleted, currency, boxes: before });
+            return reservation.release;
+          },
+          committed: () => {
+            // Si se cierra SOLO la pantalla tras comenzar SQLite, el resultado
+            // comprobado sigue perteneciendo a esta cuenta. No queda memoria
+            // vieja ni se anuncia éxito en una pantalla que ya no está.
+            if (!sourcesCurrent() || !reservation) throw new Error("private-box-source-changed");
+            reservation.publish(() => {
+              setTransactions(plan.transactions);
+              setDeletedTransactionIds(deleted);
+              guardarCajasEnMemoria(plan.data);
+              if (current()) { presented = true; apply(plan.data); }
+            });
+          },
+        };
+      });
+      // apply cambia la referencia de la pantalla: no confundir ese cambio
+      // propio con una elección obsoleta después de haber guardado con éxito.
+      return ok && task.current() && presented;
     });
   }
 
@@ -2653,6 +2725,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   function removeTransactions(ids: number[]) {
     if (!ids.length) return;
+    assertPrivateBoxMoneyLocalIdle();
     void unlinkCreditPaymentsForHomeTransactions(ids);
     // Bloquea respuestas atrasadas desde este instante, no recién al dibujar.
     deletedTransactionIdsRef.current = pruneDeletedTransactionIds([...deletedTransactionIdsRef.current, ...ids]);
@@ -2681,6 +2754,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function repairLinkedTransferTransactions(upserts: Transaction[], deleteIds: number[] = []) {
+    assertPrivateBoxMoneyLocalIdle();
     if (deleteIds.length) removeTransactions(deleteIds);
     if (!upserts.length) return;
     // Si Familia/Caja conserva el vínculo válido, su contraparte de Personal
@@ -2854,6 +2928,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     deleteLinkedTransferTransaction,
     repairLinkedTransferTransactions,
     commitPrivateBoxData,
+    commitPrivateBoxMoney,
     deleteTransactions,
     commitImport,
     merchantLearned,

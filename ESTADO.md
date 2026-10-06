@@ -1,5 +1,34 @@
 # Estado actual de Fino
 
+## Lote monetario local — contexto preparado, UI pendiente (06/10/2026)
+
+- Confirma Personal/borrados/Caja juntos con respuesta HTTP genuina, misma
+  cuenta/generación/cola y originales releídos en la cola de escritura. Misma
+  versión del servidor; no inventa otra ni reemplaza otros movimientos.
+- Reserva corta durante SQLite/lectura impide mutaciones antes de alterar
+  memoria; captura en cola espera. Cifrado permite repreparar con otra edición.
+  Escritura fallida mantiene originales/pendiente; verificación fallida congela
+  escrituras sin borrar. Reserva siempre liberada. Pantalla cerrada tras iniciar
+  SQLite no recibe éxito; cuenta vigente refleja lo realmente comprobado.
+- Guía: `docs/PRUEBAS_LOTE_IMPORTE_CAJA.md`. Contexto/setters/cliente/colas/
+  almacén originales con SQLite real, no Android físico. 10.001 movimientos/
+  1.001 Cajas conservados. Regresión ddde38d falla por API nueva ausente.
+- SDK/reglas/HTTP/eventos: 120 aprobadas bajo Node 22 real, ninguna omitida,
+  cancelada ni fallida; incluye lote original y expiración después de HTTP.
+  73 unitarias del servidor aprobadas. ADB no encontró dispositivos.
+- Auditor de código excluye cachés/artefactos que agotaban su tiempo; recorrido
+  original probado con regresión ddde38d, sin retirar fuentes propias ni ampliar
+  timeout. Tres lectores previos adaptados a las guardias reales, no vacías.
+- TypeScript/ESLint y repetición final: 143 locales/8 auditores aprobados (una
+  prueba ajena sin registrar, no incluida en commit). Dos suites de tarjetas
+  excluidas, no contadas como aprobadas. La pasada que expiró no se cuenta.
+- **No habilitado:** contexto importa verificador, pero pantalla no invoca lote
+  ni nueva petición. **Qué sigue:** elección, petición/lote en misma cola,
+  recuperación visible, decisión obsoleta/Pro vencido y controles concurrentes.
+  **Qué falta:** Android/otros conflictos/hallazgos/consolas/publicación conjunta
+  autorizada. No nuevas claves/datos/retención, nativos/tarjetas/marca/entrega.
+  Punto 1/auditoría abiertos; no atomicidad servidor/teléfono.
+
 ## Cliente monetario — confirmación del servidor preparada (06/10/2026)
 
 - Fuentes frescas dentro de cola de revisión auténtica; historial v2 limitado

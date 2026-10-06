@@ -1,6 +1,7 @@
 "use strict";
 const test = require("node:test"), assert = require("node:assert/strict"), path = require("node:path");
 const { createRequire } = require("node:module"), { execFileSync } = require("node:child_process");
+const { pathToFileURL } = require("node:url");
 const { initializeApp: initializeAdmin, deleteApp: deleteAdmin } = require("firebase-admin/app");
 const { getAuth: getAdminAuth } = require("firebase-admin/auth");
 const { getFirestore: getAdminFirestore } = require("firebase-admin/firestore");
@@ -227,6 +228,48 @@ test("Corrección de dinero: SDK/HTTP y transacciones reales sin medias transfer
       await assert.rejects(api.withPrivateBoxMoneyReview(uid, client.request), error => error.details?.reason === "money-source-changed");
       assert.equal((await rootRef.get()).data().transactions[0].amount, 70); assert.equal((await boxesRef.get()).data().movimientos[0].monto, 80);
       assert.deepEqual(native.boxes.revisionesImporte[0].remote.personal, entry.remote.personal);
+    });
+    const { createMoneyBatchHarness } = await import(pathToFileURL(path.join(root, "pruebas/verificar-lote-importe-caja.mjs")).href);
+    const selected = { ...copy(entry), estado: "pendiente" };
+    const localBoxes = { cajas: [copy(box)], movimientos: [copy(m)], cajasBorradas: [], movimientosBorrados: [], revisionesImporte: [selected] };
+    await t.test("HTTP auténtico llega al contexto y SQLite originales, Personal/Caja y marca juntos en ambos formatos", async () => {
+      for (const format of [1, 2]) {
+        await seed(format);
+        const h = createMoneyBatchHarness(a, selected, localBoxes, [copy(p)]);
+        try {
+          assert.equal(await h.run(), true);
+          const localPersonal = h.disk(h.api.STORAGE_KEYS.transactions)[0], localBox = h.disk(h.api.STORAGE_KEYS.cajasDinero);
+          const remotePersonal = format === 2 ? (await rootRef.collection("history").doc("10").get()).data().transaction : (await rootRef.get()).data().transactions[0];
+          assert.deepEqual(localPersonal, remotePersonal); assert.deepEqual(localBox.movimientos[0], (await boxesRef.get()).data().movimientos[0]);
+          assert.equal(localPersonal.updatedAt, selected.version); assert.equal(localBox.revisionesImporte[0].estado, "confirmado");
+          assert.deepEqual(localBox.revisionesImporte[0].local, selected.local); assert.equal(h.e.applied.length, 1);
+        } finally { h.e.db.close(); }
+      }
+    });
+    await t.test("fallo SQLite después de HTTP conserva originales; reintentar confirma local sin otra escritura remota", async () => {
+      await seed(); const h = createMoneyBatchHarness(a, selected, localBoxes, [copy(p)]); h.e.failure = "rollback";
+      try {
+        assert.equal(await h.run(), false); assert.equal(h.e.applied.length, 0);
+        assert.equal(h.disk(h.api.STORAGE_KEYS.cajasDinero).revisionesImporte[0].estado, "pendiente");
+        assert.equal(h.e.rows.current[0].updatedAt, p.updatedAt);
+        const before = [await rootRef.get(), await boxesRef.get()];
+        h.e.failure = null; assert.equal(await h.run(), true);
+        const after = [await rootRef.get(), await boxesRef.get()];
+        assert.deepEqual(after.map(row => row.updateTime.toMillis()), before.map(row => row.updateTime.toMillis()));
+        assert.equal(h.disk(h.api.STORAGE_KEYS.transactions)[0].updatedAt, selected.version);
+        assert.equal(h.disk(h.api.STORAGE_KEYS.cajasDinero).revisionesImporte[0].estado, "confirmado");
+      } finally { h.e.db.close(); }
+    });
+    await t.test("Pro vence después de HTTP confirmado: el contexto completa ese lote local sin otro permiso remoto", async () => {
+      await seed(); const h = createMoneyBatchHarness(a, selected, localBoxes, [copy(p)]);
+      try {
+        await h.api.withPrivateBoxMoneyReview(uid, async lease => {
+          const ack = await h.request(lease); await rootRef.update({ isPremium: false });
+          assert.equal(await h.commit(ack, lease), true);
+          assert.equal(h.disk(h.api.STORAGE_KEYS.cajasDinero).revisionesImporte[0].estado, "confirmado");
+          assert.equal(h.e.calls, 1, "no intenta una segunda operación remota al completar la primera");
+        });
+      } finally { h.e.db.close(); }
     });
   } finally {
     for (const client of clients) { await terminate(client.db); await deleteApp(client.app); }

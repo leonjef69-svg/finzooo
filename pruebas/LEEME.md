@@ -1,5 +1,18 @@
 # Pruebas y auditores
 
+`verificar-lote-importe-caja.mjs` ejecuta contexto/setters/cliente/colas/almacén
+originales y SQLite real: comprobante genuino, tres claves, reserva corta,
+repreparación, fallos, versiones, otros movimientos y 10.001 filas/1.001 Cajas.
+También proporciona el mismo arnés a pruebas SDK/HTTP locales. Guía:
+`docs/PRUEBAS_LOTE_IMPORTE_CAJA.md`. Regresión
+`FINO_TEST_MONEY_BATCH_BASELINE=ddde38d` falla por API nueva ausente; no afirma
+un bug publicado. Pantalla/petición/Android siguen pendientes.
+
+`verificar-auditoria-sin-artefactos.mjs` comprueba el recorrido original del
+auditor de código: conserva las carpetas de fuentes y excluye cachés/resultados
+que podían agotar el tiempo o aparentar usos. Regresión:
+`FINO_TEST_AUDIT_WALK_BASELINE=ddde38d`.
+
 ```bash
 node pruebas/correr.mjs
 ```
@@ -33,8 +46,8 @@ conservación y guardado local. Alcance, comandos y regresión:
 originales: fuentes frescas dentro de revisión, originales pendientes en disco,
 confirmación genuina ligada a cuenta/sesión/cola, respuesta perdida/copiada,
 fallos y cambios sin confirmar dinero local. La suite SDK/HTTP del cliente está
-en `functions/integration-tests/private-box-money.test.js`. No hay integración
-en pantalla/contexto ni lote final monetario; guía, regresión y límites:
+en `functions/integration-tests/private-box-money.test.js`. El contexto dispone
+del lote comprobable, pero pantalla/petición siguen sin activar; guía y límites:
 `docs/PRUEBAS_CLIENTE_IMPORTE_CAJA.md`.
 
 `verificar-recuperacion-incompleta-cajas.mjs` ejecuta el plan, aviso, manejador

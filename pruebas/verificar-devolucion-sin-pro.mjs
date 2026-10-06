@@ -3,6 +3,11 @@ import fs from "node:fs";
 import vm from "node:vm";
 import { execFileSync } from "node:child_process";
 import ts from "typescript";
+import { createRequire } from "node:module";
+const requireCore = createRequire(new URL("../utils/privateBoxMoneyLocalWrite.ts", import.meta.url));
+const moneyGuard = { exports: {} };
+vm.runInNewContext(ts.transpile(fs.readFileSync("utils/privateBoxMoneyLocalWrite.ts", "utf8"), { module: ts.ModuleKind.CommonJS }), { exports: moneyGuard.exports, require: requireCore });
+const { assertPrivateBoxMoneyLocalIdle } = moneyGuard.exports;
 
 const read = file => process.env.FINO_TEST_BASELINE ? execFileSync("git", ["show", `HEAD:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");
 if (process.env.FINO_TEST_BASELINE) {
@@ -99,7 +104,7 @@ const contextAst = ts.createSourceFile("context.tsx", read("contexts/AppDataCont
 let source;
 function find(node) { if (ts.isFunctionDeclaration(node) && node.name?.text === "recordPersonalReturn") source = node.getText(contextAst); ts.forEachChild(node, find); }
 find(contextAst); assert.ok(source, "existe el registro único y comprobado de la devolución");
-const scope = { personalReturnIsCurrent: value => value.localSession === session && value.uid === uid,
+const scope = { assertPrivateBoxMoneyLocalIdle, personalReturnIsCurrent: value => value.localSession === session && value.uid === uid,
   deletedTransactionIdsRef: { current: [] },
   currencyForReturn: { current: "PEN" }, tRef: { current: key => key }, returnReceipt: { current: null },
   horaDe: () => "12:00", mergePersonalReturn: rebooted.mergePersonalReturn,

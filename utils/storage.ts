@@ -409,6 +409,8 @@ export type PreparedLocalBatch = {
   entries: [string, unknown][];
   stillValid: () => boolean;
   committed: () => void;
+  /** Reserva opcional corta. Siempre se libera, incluso ante fallo nativo. */
+  reserve?: () => () => void;
 };
 
 /** Android: el módulo instalado escribe el lote en una transacción SQLite.
@@ -416,14 +418,14 @@ export type PreparedLocalBatch = {
  * El llamador no habilita operaciones de varias claves en plataformas sin esa
  * garantía. Una sola clave conserva el comportamiento previo de AsyncStorage.
  */
-export function saveJSONBatchNow(keys: string[], prepare: () => PreparedLocalBatch): Promise<boolean> {
+export function saveJSONBatchNow(keys: string[], prepare: () => PreparedLocalBatch | Promise<PreparedLocalBatch>): Promise<boolean> {
   const version = accountAccessVersion;
   if (!keys.length || new Set(keys).size !== keys.length || keys.some(key => !canAccessKey(key)) || unreadableLocalData) return Promise.resolve(false);
   return enqueueWrite(async () => {
     try {
       for (let attempt = 0; attempt < 4; attempt++) {
         if (version !== accountAccessVersion || unreadableLocalData || keys.some(key => !canAccessKey(key))) return false;
-        const batch = prepare();
+        const batch = await prepare();
         if (batch.entries.length !== keys.length || batch.entries.some(([key]) => !keys.includes(key)) || new Set(batch.entries.map(([key]) => key)).size !== keys.length) throw new Error("local-batch-invalid");
         const encrypted: [string, string][] = [];
         for (const [key, value] of batch.entries) encrypted.push([key, await encryptText(JSON.stringify(value))]);
@@ -433,24 +435,28 @@ export function saveJSONBatchNow(keys: string[], prepare: () => PreparedLocalBat
         catch { markUnreadableLocalData(); throw new Error("local-batch-source-unreadable"); }
         if (version !== accountAccessVersion || unreadableLocalData || keys.some(key => !canAccessKey(key))) return false;
         if (!batch.stillValid()) continue;
-        let writeError: unknown;
-        try { await AsyncStorage.multiSet(encrypted); } catch (error) { writeError = error; }
-        // El resultado perdido después del commit también se confirma leyendo
-        // exactamente el texto cifrado enviado; nunca se repite dinero a ciegas.
-        let saved: Map<string, string | null>;
-        try { saved = new Map(await AsyncStorage.multiGet(keys)); }
-        catch { markUnreadableLocalData(); throw new Error("local-batch-unconfirmed"); }
-        if (encrypted.some(([key, value]) => saved.get(key) !== value)) {
-          if (encrypted.some(([key, value]) => before.get(key) !== value && saved.get(key) === value)) markUnreadableLocalData();
-          throw writeError ?? new Error("local-batch-not-saved");
-        }
-        for (const key of keys) {
-          writeEpochs.set(key, (writeEpochs.get(key) ?? 0) + 1);
-          cancelPendingKey(key); failedWriteKeys.delete(key);
-        }
-        if (version !== accountAccessVersion || keys.some(key => !canAccessKey(key))) return false;
-        batch.committed();
-        return true;
+        const release = batch.reserve?.();
+        try {
+          if (!batch.stillValid()) continue;
+          let writeError: unknown;
+          try { await AsyncStorage.multiSet(encrypted); } catch (error) { writeError = error; }
+          // El resultado perdido después del commit también se confirma leyendo
+          // exactamente el texto cifrado enviado; nunca se repite dinero a ciegas.
+          let saved: Map<string, string | null>;
+          try { saved = new Map(await AsyncStorage.multiGet(keys)); }
+          catch { markUnreadableLocalData(); throw new Error("local-batch-unconfirmed"); }
+          if (encrypted.some(([key, value]) => saved.get(key) !== value)) {
+            if (encrypted.some(([key, value]) => before.get(key) !== value && saved.get(key) === value)) markUnreadableLocalData();
+            throw writeError ?? new Error("local-batch-not-saved");
+          }
+          for (const key of keys) {
+            writeEpochs.set(key, (writeEpochs.get(key) ?? 0) + 1);
+            cancelPendingKey(key); failedWriteKeys.delete(key);
+          }
+          if (version !== accountAccessVersion || keys.some(key => !canAccessKey(key))) return false;
+          batch.committed();
+          return true;
+        } finally { release?.(); }
       }
       return false;
     } catch (error) {

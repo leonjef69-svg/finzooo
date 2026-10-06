@@ -3,6 +3,11 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
+const requireCore = createRequire(new URL("../utils/privateBoxMoneyLocalWrite.ts", import.meta.url));
+const moneyGuard = { exports: {} };
+vm.runInNewContext(ts.transpile(fs.readFileSync("utils/privateBoxMoneyLocalWrite.ts", "utf8"), { module: ts.ModuleKind.CommonJS }), { exports: moneyGuard.exports, require: requireCore });
+const { assertPrivateBoxMoneyLocalIdle } = moneyGuard.exports;
 
 const baseline = process.env.FINO_TEST_BASELINE;
 if (baseline && baseline !== "1" && !/^[a-f0-9]{7,40}$/.test(baseline)) throw new Error("La regresión requiere 1 o un hash de Git.");
@@ -40,7 +45,7 @@ function client() {
   return module.exports;
 }
 const api = client(), txQueue = [], deletionQueue = [];
-const context = { deletedTransactionIdsRef: { current: [] }, returnReceipt: { current: null }, currencyForReturn: { current: "PEN" },
+const context = { assertPrivateBoxMoneyLocalIdle, deletedTransactionIdsRef: { current: [] }, returnReceipt: { current: null }, currencyForReturn: { current: "PEN" },
   personalReturnIsCurrent: value => value.uid === uid && value.localSession === session, mergePersonalReturn: api.mergePersonalReturn,
   tRef: { current: key => key }, horaDe: () => "12:00", showToast() {},
   pruneDeletedTransactionIds: values => [...new Set(values)], unlinkCreditPaymentsForHomeTransactions() {},

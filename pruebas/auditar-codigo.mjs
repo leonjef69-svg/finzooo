@@ -53,7 +53,10 @@ check("dias de la semana", dias.length === 0, dias.join(", ") || "14 revisadas")
 console.log("\n== Exportado pero sin usar ==");
 function walk(dir, out = []) {
   for (const name of fs.readdirSync(dir)) {
-    if (["node_modules", ".git", ".expo", "android", "ios", "dist"].includes(name)) continue;
+    // Cachés/herramientas/resultados no son código de Fino. Recorrerlos hacía
+    // expirar el auditor y sus textos podían ocultar un export realmente muerto.
+    if (["node_modules", ".git", ".expo", "android", "ios", "dist", ".tmp", ".gradle-cache", ".pnpm-store", ".android-user", "output"].includes(name)
+      || /^\.tmp-\d+$/.test(name)) continue;
     const full = path.join(dir, name);
     if (fs.statSync(full).isDirectory()) walk(full, out);
     else if (/\.[cm]?[jt]sx?$/.test(name)) out.push(full);

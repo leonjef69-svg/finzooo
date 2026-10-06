@@ -32,6 +32,7 @@ import { irUnaVez, safeBack } from "@/utils/nav";
 import { getAccountStorageSession, hasUnreadableLocalData, loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 import { captureAccountTask } from "@/utils/accountTask";
 import { guardarCajasEnMemoria, leerCajasEnMemoria } from "@/utils/cajasMemoria";
+import { assertPrivateBoxMoneyLocalIdle, assertPrivateBoxMoneyLocalMutation } from "@/utils/privateBoxMoneyLocalWrite";
 import { cancelarConversionCaja, enlacesCajaConvertida, huellaCaja, nuevoIntentoCaja, retirarCajaConvertida } from "@/utils/boxMigration";
 import { spaceErrorKey } from "@/utils/spaceErrors";
 import type { Transaction } from "@/types";
@@ -133,9 +134,11 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }, [cuentaActual]);
   const setDatos = useCallback((update: SetStateAction<DatosCajas>) => {
     if (!cuentaActual()) return;
+    if (typeof update === "function") assertPrivateBoxMoneyLocalIdle();
     const next = typeof update === "function" ? update(datosActuales.current) : update;
     // Una confirmación idéntica no programa otra subida de la misma lista.
     if (next === datosActuales.current || JSON.stringify(next) === JSON.stringify(datosActuales.current)) return;
+    assertPrivateBoxMoneyLocalMutation("boxes", next);
     datosActuales.current = next;
     setRenderedDatos(next);
   }, [cuentaActual]);

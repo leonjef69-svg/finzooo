@@ -10,6 +10,18 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Lote monetario local preparado en el contexto: respuesta genuina, originales
+releídos, tres claves juntas y versión exacta del servidor. Reserva corta evita
+mutaciones durante SQLite; no publica éxito antes de verificar el archivo ni
+deja memoria vieja si se cierra solo la pantalla. Guía:
+`docs/PRUEBAS_LOTE_IMPORTE_CAJA.md`. **Pantalla/petición aún sin habilitar**.
+Siguen selección/recuperación/decisión obsoleta/Pro vencido y controles
+concurrentes; después Android/consolas/otros hallazgos/publicación coordinada
+autorizada. Sin nueva retención/claves/nativos/tarjetas/marca/entrega.
+
+Las secciones siguientes registran el avance histórico de cada tanda; sus
+pendientes anteriores no sustituyen los de esta última continuación.
+
 Cliente monetario preparado para fuentes de servidor y solicitud con originales
 pendientes confirmados en disco. Respuesta genuina ligada a cuenta/sesión/cola,
 sin aceptar un comprobante calculado/copiado ni anunciar guardado local por HTTP.

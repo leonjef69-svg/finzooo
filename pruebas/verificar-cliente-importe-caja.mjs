@@ -169,6 +169,8 @@ for (const change of ["uid", "session", "currency", "personal", "disk", "entry",
   await tick(); assert.equal(e.reads.length, 0); finish.resolve(); assert.match((await oldResult).message, /review-changed/); await operation;
   assert.equal(e.calls.length, 0); assert.equal(typeof request, "function");
 }
-// Este paso no se ha habilitado inadvertidamente en las pantallas/contexto.
-for (const file of ["screens/Cajas.tsx", "contexts/AppDataContext.tsx"]) assert.doesNotMatch(fs.readFileSync(file, "utf8"), /requestPrivateBoxMoneyReview|cloudPrivateBoxMoney/);
-console.log("Cliente monetario original: fuentes de servidor, originales en disco, respuesta genuina, cola, identidad/reintento y fallos sin confirmar dinero local comprobados. UI/lote final pendientes.");
+// El contexto puede comprobar una respuesta; no envía peticiones ni habilita UI.
+assert.doesNotMatch(fs.readFileSync("screens/Cajas.tsx", "utf8"), /requestPrivateBoxMoneyReview|cloudPrivateBoxMoney|commitPrivateBoxMoney/);
+assert.doesNotMatch(fs.readFileSync("contexts/AppDataContext.tsx", "utf8"), /requestPrivateBoxMoneyReview/);
+assert.match(fs.readFileSync("contexts/AppDataContext.tsx", "utf8"), /assertPrivateBoxMoneyReceipt/);
+console.log("Cliente monetario original: fuentes, respuesta genuina, cola, identidad/reintento y fallos comprobados. Petición/UI sin habilitar.");

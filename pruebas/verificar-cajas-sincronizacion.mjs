@@ -28,6 +28,7 @@ const deferred = () => {
 };
 const flush = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
 const api = load("utils/cajas.ts");
+const moneyLocalWrite = load("utils/privateBoxMoneyLocalWrite.ts");
 const box = { id: "caja-a", nombre: "A", creadaEn: 1 };
 const row = { id: "mov-a", cajaId: box.id, tipo: "ingreso", monto: 100, descripcion: "Aporte", fecha: "2026-10-05", creadoEn: 1 };
 const data = (rows = [row], boxes = [box]) => ({ cajas: boxes, movimientos: rows, cajasBorradas: [], movimientosBorrados: [] });
@@ -96,7 +97,7 @@ readGate = deferred(); const becameUnreadable = cloud.subirCajas(uid, old); awai
 unreadable = true; readGate.resolve(); assert.equal(await becameUnreadable, false);
 assert.equal(writes.length, 0, "un fallo local aparecido durante la transacción también impide subir");
 unreadable = false; readGate = null;
-const memory = load("utils/cajasMemoria.ts", name => name.endsWith("firebase") ? { auth } : storage);
+const memory = load("utils/cajasMemoria.ts", name => name.endsWith("privateBoxMoneyLocalWrite") ? moneyLocalWrite : name.endsWith("firebase") ? { auth } : storage);
 memory.guardarCajasEnMemoria(old); assert.ok(memory.leerCajasEnMemoria());
 uid = "B"; assert.equal(memory.leerCajasEnMemoria(), null); uid = "A"; session++;
 assert.equal(memory.leerCajasEnMemoria(), null, "la caché no sobrevive a una sesión distinta");
@@ -146,7 +147,7 @@ function screenHarness(premium = true) {
     guardandoRef: { current: false },
     refreshVersion: 0, requestedRefresh: { current: 0 },
     premiumForSync: { current: premium }, nubeConfirmadaPara: { current: null }, datosActuales: { current: data() },
-    captureAccountTask: capture, hasUnreadableLocalData: () => false, STORAGE_KEYS: { cajasDinero: "cajas" }, CAJAS_VACIAS: data([]),
+    ...moneyLocalWrite, captureAccountTask: capture, hasUnreadableLocalData: () => false, STORAGE_KEYS: { cajasDinero: "cajas" }, CAJAS_VACIAS: data([]),
     validarCajas: api.validarCajas, fusionarCajas: api.fusionarCajas,
     privateBoxCloudResponseCurrent: () => true,
     loadJSON: () => localRead.promise, bajarCajas: () => { count++; return cloudRead.promise; },
@@ -193,7 +194,7 @@ function screenHarness(premium = true) {
 
 // Reparación original: no pierde información ni reabre dinero consumido.
 const contextNode = select("contexts/AppDataContext.tsx", n => ts.isFunctionDeclaration(n) && n.name?.text === "repairLinkedTransferTransactions");
-const queued = [], marks = [], ctx = { deletedTransactionIdsRef: { current: [10] }, removeTransactions() {},
+const queued = [], marks = [], ctx = { ...moneyLocalWrite, deletedTransactionIdsRef: { current: [10] }, removeTransactions() {},
   setDeletedTransactionIds: callback => marks.push(callback), setTransactions: callback => queued.push(callback), Date };
 vm.runInNewContext(js(contextNode.node.getText(contextNode.tree)), ctx);
 ctx.repairLinkedTransferTransactions([{ id: 10, internalTransfer: "box", amount: 120, updatedAt: 1 }]);
