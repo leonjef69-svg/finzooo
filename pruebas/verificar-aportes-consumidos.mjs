@@ -120,7 +120,8 @@ const cajaScope = { isPremium: true, nubeConfirmadaPara: { current: "ana" }, aut
 function loadRepairModule(file) {
   const module = { exports: {} };
   vm.runInNewContext(ts.transpile(read(file), { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }), {
-    module, exports: module.exports, require: name => name.endsWith("linkedTransfers") ? local : loadRepairModule(name.replace("@/", "") + ".ts") });
+    module, exports: module.exports, require: name => name.startsWith(".") ? createRequire(new URL("../utils/cajas.ts", import.meta.url))(name === "./utf8" ? "./utf8.ts" : name)
+      : name.endsWith("linkedTransfers") ? local : loadRepairModule(name.replace("@/", "") + ".ts") });
   return module.exports;
 }
 const repairPrivate = loadRepairModule("utils/privateBoxRepair.ts");

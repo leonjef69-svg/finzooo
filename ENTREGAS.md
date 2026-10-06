@@ -10,6 +10,15 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Preparación local monetaria conserva los cuatro originales y elección en Cajas
+cifrado/bóveda por cuenta, sin nueva clave ni respaldo remoto de esas copias.
+Hasta 50 revisiones/400.000 bytes; mantiene anteriores al llegar al límite.
+Guía: `docs/PRUEBAS_ORIGINALES_IMPORTE_CAJA.md`. **No hay botón ni envío/guardado
+monetario conectados.** Antes de habilitarlo faltan protección del respaldo
+Personal/subidas en vuelo, selección, lote conjunto y recuperación. Políticas
+preparadas en archivos; no publicadas. Después siguen Android/tamaño/consolas y
+publicación coordinada autorizada. No nativos/marca/APK/OTA/despliegue.
+
 Corrección financiera prepara **solo el servidor**: elección de monto/fecha
 de un aporte con enlaces exactos y actualización conjunta de Personal/Caja
 remotos. Pro/cuenta/fuentes/moneda/saldo, reintentos y concurrencia protegidos.

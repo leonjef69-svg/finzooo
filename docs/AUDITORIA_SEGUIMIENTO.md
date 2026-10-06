@@ -3,6 +3,26 @@
 Última revisión: 06/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## Continuación punto 1 — originales de importe locales (06/10/2026)
+
+- Cuatro fuentes/elección/versiones conservadas en Cajas cifrado y archivo por
+  cuenta. Normalizar no descarta, confirmada no vuelve a pendiente ni cambia
+  originales. Hasta 50 revisiones/400.000 bytes totales, sin borrar anteriores.
+- Validación común del servidor, propuesta local de dos mitades, respuesta exacta,
+  fuentes/moneda/borrados/saldo y metadata conservados. Fusión/recuperación/subida
+  Caja ordinarias no resuelven una pendiente; copias no viajan como respaldo.
+- Regresión sintética contra b48e703 pierde las revisiones al normalizar. Archivo
+  y cifrado originales comprobados con sustitutos Android, no teléfono real.
+  Guía: `docs/PRUEBAS_ORIGINALES_IMPORTE_CAJA.md`. TypeScript/ESLint,
+  141 locales/8 auditores (una prueba ajena sin registrar), 73 unitarias
+  Functions y 110 SDK/reglas/HTTP/eventos Node 22 reales aprobados. Sin pruebas
+  omitidas/canceladas; lectores adaptados a módulos originales sin quitar aserciones.
+- **Qué sigue:** botón/fuentes frescas, barrera Personal/subidas en vuelo,
+  petición, lote financiero confirmado y recuperación. **Qué falta:** otras
+  discrepancias, Android/tamaño/consolas/políticas publicadas y entrega autorizada.
+  No conectado a pantalla, no publicado, no atomicidad servidor/celular ni auditoría
+  cerrada. Tarjetas/nativos/marca sin cambios. Políticas local/web/Play preparadas.
+
 ## Continuación punto 1 — base de corrección monetaria en servidor (06/10/2026)
 
 - Servicio limitado a aporte propio exacto Personal/Caja privada; cuatro

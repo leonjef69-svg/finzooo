@@ -14,7 +14,7 @@ export class CloudCajasConflictError extends Error {
 }
 function servidor(value: unknown): DatosCajas {
   const data = validarCajas(value);
-  if (data.revisionesNombre) throw new Error("cajas-invalid-data");
+  if (data.revisionesNombre || data.revisionesImporte) throw new Error("cajas-invalid-data");
   return data;
 }
 
@@ -31,7 +31,9 @@ export async function subirCajas(uid: string, datos: DatosCajas, onError?: (erro
   try {
     if (hasUnreadableLocalData()) throw new Error("cajas-local-unreadable");
     const clean = validarCajas(JSON.parse(JSON.stringify(datos)));
+    if (clean.revisionesImporte?.some(entry => entry.estado === "pendiente")) throw new Error("cajas-sync-conflict");
     delete clean.revisionesNombre;
+    delete clean.revisionesImporte;
     // La señal de una conversión incierta protege ESTE celular; no es una
     // edición monetaria ni un campo de la copia en Firebase.
     for (const box of clean.cajas) { delete box.sharingPending; delete box.sharingAttempt; }

@@ -206,7 +206,8 @@ assert.match(cajas, /!cloudReady \|\| repairBlocked \|\| !uid \|\| !isPremium/);
 function loadBoxRepair(file) {
   const module = { exports: {} };
   vm.runInNewContext(ts.transpile(read(file), { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }), {
-    module, exports: module.exports, require: name => loadBoxRepair(name.replace("@/", "") + ".ts") });
+    module, exports: module.exports, require: name => name.startsWith(".") ? createRequire(new URL("../utils/cajas.ts", import.meta.url))(name === "./utf8" ? "./utf8.ts" : name)
+      : loadBoxRepair(name.replace("@/", "") + ".ts") });
   return module.exports;
 }
 const repairApi = loadBoxRepair("utils/privateBoxRepair.ts");

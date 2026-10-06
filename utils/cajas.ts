@@ -1,3 +1,6 @@
+import { canonical, validateMoneyReview, type MoneyReview } from "../functions/src/private-box-money-shared.js";
+import { utf8ByteLength } from "./utf8";
+
 export type Caja = {
   id: string;
   nombre: string;
@@ -39,6 +42,9 @@ export type RevisionNombreCaja = {
   creadoEn: number; estado: "pendiente" | "confirmado";
 };
 
+/** Cuatro originales y elección solo locales; no se suben como respaldo. */
+export type RevisionImporteCaja = MoneyReview & { estado: "pendiente" | "confirmado" };
+
 export type DatosCajas = {
   cajas: Caja[];
   movimientos: MovimientoCaja[];
@@ -48,6 +54,7 @@ export type DatosCajas = {
   /** Confirmaciones escritas solo por el servidor, no una segunda copia del dinero. */
   conversiones?: Record<string, ConversionCaja>;
   revisionesNombre?: RevisionNombreCaja[];
+  revisionesImporte?: RevisionImporteCaja[];
 };
 
 export const CAJAS_VACIAS: DatosCajas = {
@@ -70,6 +77,7 @@ export function normalizarCajas(value: Partial<DatosCajas> | null | undefined): 
     ...(value?.syncFormat === 2 || value?.syncFormat === 3 ? { syncFormat: value.syncFormat } : {}),
     ...(value?.conversiones ? { conversiones: value.conversiones } : {}),
     ...(value?.revisionesNombre ? { revisionesNombre: value.revisionesNombre } : {}),
+    ...(value?.revisionesImporte ? { revisionesImporte: value.revisionesImporte } : {}),
   };
 }
 
@@ -123,7 +131,51 @@ export function validarCajas(value: unknown): DatosCajas {
       revisions.add(entry.id);
     }
   }
+  if (data.revisionesImporte !== undefined) {
+    if (!Array.isArray(data.revisionesImporte) || data.revisionesImporte.length > 50) return invalid();
+    const revisions = new Set<string>(), pending = new Set<number>();
+    let owner: string | undefined;
+    for (const entry of data.revisionesImporte) {
+      try { validarRevisionImporte(entry); } catch { return invalid(); }
+      if (revisions.has(entry.id) || (owner !== undefined && owner !== entry.uid)
+        || (entry.estado === "pendiente" && pending.has(entry.local.personal.id))) return invalid();
+      revisions.add(entry.id);
+      owner = entry.uid;
+      if (entry.estado === "pendiente") pending.add(entry.local.personal.id);
+    }
+    if (bytesRevisionesImporte(data.revisionesImporte) > 400_000) return invalid();
+  }
   return normalizarCajas(data);
+}
+
+export function validarRevisionImporte(entry: RevisionImporteCaja): void {
+  if (!entry || !["pendiente", "confirmado"].includes(entry.estado)) throw new Error("cajas-invalid-data");
+  validateMoneyReview(entry);
+  canonical(entry);
+  // Reserva también el byte adicional de "confirmado": un archivo al límite
+  // debe poder confirmar sin borrar otra revisión para hacer espacio.
+  if (utf8ByteLength(JSON.stringify({ ...entry, estado: "confirmado" })) > 150_000) throw new Error("cajas-money-history-full");
+}
+
+function bytesRevisionesImporte(entries: RevisionImporteCaja[]): number {
+  return utf8ByteLength(JSON.stringify(entries.map(entry => ({ ...entry, estado: "confirmado" }))));
+}
+
+/** No elimina una versión anterior ni reemplaza otra elección con el mismo ID. */
+export function conservarRevisionImporte(data: DatosCajas, entry: RevisionImporteCaja): DatosCajas {
+  validarRevisionImporte(entry);
+  const old = data.revisionesImporte?.find(value => value.id === entry.id);
+  if (old && canonical({ ...old, estado: entry.estado }) !== canonical(entry)) throw new Error("cajas-money-changed");
+  if (old?.estado === "confirmado" && entry.estado === "pendiente") return data;
+  if (old && old.estado === entry.estado) return data;
+  if (!old && entry.estado === "pendiente" && data.revisionesImporte?.some(value => value.estado === "pendiente"
+    && value.local.personal.id === entry.local.personal.id)) throw new Error("cajas-money-pending");
+  if (!old && (data.revisionesImporte?.length ?? 0) >= 50) throw new Error("cajas-money-history-full");
+  // Clona después de validar: NaN/Infinity no se convierten en null y las
+  // referencias del formulario no pueden modificar los originales retenidos.
+  const retained = [...(data.revisionesImporte || []).filter(value => value.id !== entry.id), JSON.parse(JSON.stringify(entry))];
+  if (bytesRevisionesImporte(retained) > 400_000) throw new Error("cajas-money-history-full");
+  return { ...data, revisionesImporte: retained };
 }
 
 const nombreBase = (box: Caja) => JSON.stringify(Object.fromEntries(Object.entries(box)
@@ -219,6 +271,22 @@ function unirPorId<T extends VersionedItem>(a: T[], b: T[]): T[] {
 }
 
 export function fusionarCajas(local: DatosCajas, remoto: DatosCajas): DatosCajas {
+  let money = { ...CAJAS_VACIAS };
+  for (const entry of [...(remoto.revisionesImporte || []), ...(local.revisionesImporte || [])]) {
+    const prior = money.revisionesImporte?.find(value => value.id === entry.id);
+    money = conservarRevisionImporte(money, prior?.estado === "confirmado" ? { ...entry, estado: "confirmado" } : entry);
+  }
+  // La fusión ordinaria no decide el importe de una revisión pendiente.
+  // La integración deberá confirmar las dos mitades mediante su guardado propio.
+  for (const entry of money.revisionesImporte || []) {
+    if (entry.estado !== "pendiente") continue;
+    if (local.cajasBorradas.includes(entry.box.id) || remoto.cajasBorradas.includes(entry.box.id)
+      || local.movimientosBorrados.includes(entry.local.movement.id) || remoto.movimientosBorrados.includes(entry.local.movement.id)
+      || local.conversiones?.[entry.box.id] || remoto.conversiones?.[entry.box.id]) throw new Error("cajas-sync-conflict");
+    const a = local.movimientos.find(row => row.id === entry.local.movement.id);
+    const b = remoto.movimientos.find(row => row.id === entry.local.movement.id);
+    if (a && b && canonical(a) !== canonical(b)) throw new Error("cajas-sync-conflict");
+  }
   const signature = (value: ConversionCaja) => JSON.stringify([value.uid, value.sourceId, value.targetId, value.name,
     value.currency, value.createdAt, value.digest, value.completedAt,
     [...value.links].sort((a, b) => a.personalId - b.personalId).map(link => [link.personalId, link.movementId])]);
@@ -263,6 +331,7 @@ export function fusionarCajas(local: DatosCajas, remoto: DatosCajas): DatosCajas
     retained = conservarRevisionNombre(retained, prior?.estado === "confirmado" ? { ...entry, estado: "confirmado" } : entry);
   }
   return { cajas, movimientos, cajasBorradas, movimientosBorrados,
+    ...(money.revisionesImporte ? { revisionesImporte: money.revisionesImporte } : {}),
     ...(retained.revisionesNombre ? { revisionesNombre: retained.revisionesNombre } : {}),
     ...(local.syncFormat === 3 || remoto.syncFormat === 3 || Object.keys(conversiones).length
       ? { syncFormat: 3 as const, conversiones } : { syncFormat: 2 as const }) };

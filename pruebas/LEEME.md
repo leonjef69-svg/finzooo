@@ -127,3 +127,11 @@ Había dos sustitutos de react-native, cada uno con piezas distintas, y cada
 prueba usaba el suyo. Así es como dos pruebas se quedaron paradas meses sin
 que nadie se enterara. Ahora es **uno solo**: si a alguna le falta algo, se
 añade ahí y lo tienen todas.
+
+## Preparación del archivo de originales monetarios
+
+`verificar-originales-importe-caja.mjs` ejecuta Cajas y plan monetario puros,
+cuatro fuentes, validación/metadata/versiones, límites y cifrado/bóveda reales
+con sustitutos de Android. La regresión b48e703 pierde el campo al normalizar.
+No es pantalla/envío/guardado monetario conectados ni Android físico. Ver
+`docs/PRUEBAS_ORIGINALES_IMPORTE_CAJA.md` para alcance y siguientes pasos.

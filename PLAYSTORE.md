@@ -233,6 +233,21 @@ Antes de habilitarlo faltan conservación cifrada local, decisión/guardado
 recuperables y actualización de políticas si esa integración guarda copias
 nuevas. Guía: `docs/PRUEBAS_DIFERENCIAS_DINERO_SERVIDOR.md`.
 
+El archivo local para esa integración queda preparado en `revisionesImporte`
+dentro de `cajasDinero`: cuatro registros originales completos (Personal/Caja,
+celular/nube), elección, UID/IDs, moneda, fechas y estado pendiente/confirmado.
+Se cifra con el mismo almacén, se conserva en la copia local por cuenta al salir
+y sigue su eliminación local. Hasta 50 revisiones/400.000 bytes UTF-8 entre
+todas, sin retirar una anterior al alcanzar el límite; cada una hasta 150.000
+bytes. La subida ordinaria excluye esas copias y se detiene si están pendientes.
+La validación local de la respuesta es todavía un plan puro, no un guardado
+financiero ni envío conectado a pantalla. Falta proteger el respaldo Personal
+y comprobar juntos petición/guardado/recuperación antes de habilitarlo.
+Políticas interna/web preparadas en archivos, no publicadas. La petición futura
+transmitirá originales financieros ya contemplados para consistencia, pero se
+deben revisar finalidad, retención y metadatos/imágenes reales con la declaración
+de Play antes de distribuir, no asumir aprobación ni completar la consola ahora.
+
 Al convertir una Caja privada a compartida, `privateBoxMigrations` y la copia
 privada conservan una confirmación del servidor: UID, IDs de origen/destino,
 nombre/moneda, fechas, SHA-256 de la copia e IDs de enlaces a Personal, sin

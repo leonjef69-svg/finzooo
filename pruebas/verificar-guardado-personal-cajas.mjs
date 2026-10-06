@@ -6,6 +6,9 @@ import ts from "typescript";
 import { DatabaseSync } from "node:sqlite";
 import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { createRequire } from "node:module";
+const requireCore = createRequire(new URL("../utils/cajas.ts", import.meta.url));
+const requirePure = name => requireCore(name === "./utf8" ? "./utf8.ts" : name);
 
 const worker = process.argv[2] === "--crash-worker";
 if (worker) {
@@ -52,7 +55,7 @@ function harness() {
   return h;
 }
 function loadPure(file) {
-  const module = { exports: {} }; vm.runInNewContext(js(read(file)), { module, exports: module.exports, Error }); return module.exports;
+  const module = { exports: {} }; vm.runInNewContext(js(read(file)), { module, exports: module.exports, Error, require: requirePure }); return module.exports;
 }
 function declaration(file, name) {
   const tree = ts.createSourceFile(file, read(file), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX); let result;

@@ -4,6 +4,9 @@ import vm from "node:vm";
 import ts from "typescript";
 import { execFileSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
+import { createRequire } from "node:module";
+const requireCore = createRequire(new URL("../utils/cajas.ts", import.meta.url));
+const requirePure = name => requireCore(name === "./utf8" ? "./utf8.ts" : name);
 
 const baseline = process.env.FINO_TEST_PAIR_BASELINE;
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw new Error("Se requiere hash Git.");
@@ -20,7 +23,7 @@ function load(file) {
   if (cache[file]) return cache[file];
   const module = { exports: {} };
   vm.runInNewContext(js(fs.readFileSync(file, "utf8")), { module, exports: module.exports,
-    require: name => load(name.replace("@/", "") + ".ts"), Error, Date });
+    require: name => name.startsWith(".") ? requirePure(name) : load(name.replace("@/", "") + ".ts"), Error, Date });
   return cache[file] = module.exports;
 }
 const cajas = load("utils/cajas.ts"), linked = load("utils/linkedTransfers.ts"), repairs = load("utils/privateBoxRepair.ts"), patch = load("utils/privateBoxPersonal.ts");

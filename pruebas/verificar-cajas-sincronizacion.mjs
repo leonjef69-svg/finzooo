@@ -3,13 +3,16 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
+const requireCore = createRequire(new URL("../utils/cajas.ts", import.meta.url));
+const requirePure = name => requireCore(name === "./utf8" ? "./utf8.ts" : name);
 
 const baseline = process.env.FINO_TEST_BASELINE;
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw new Error("Se requiere un hash de Git.");
 const read = file => baseline ? execFileSync("git", ["show", `${baseline}:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");
 const js = code => ts.transpile(code, { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS });
 const plain = value => JSON.parse(JSON.stringify(value));
-function load(file, require) {
+function load(file, require = requirePure) {
   const module = { exports: {} };
   vm.runInNewContext(js(read(file)), { module, exports: module.exports, require }); return module.exports;
 }

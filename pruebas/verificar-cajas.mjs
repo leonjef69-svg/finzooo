@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { fusionarCajas, saldoCaja } from "../utils/cajas.ts";
+import * as esbuild from "esbuild";
+import { createRequire } from "node:module";
+const bundle = esbuild.buildSync({ entryPoints: ["utils/cajas.ts"], bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent" });
+const loaded = { exports: {} };
+new Function("module", "exports", "require", bundle.outputFiles[0].text)(loaded, loaded.exports, createRequire(import.meta.url));
+const { fusionarCajas, saldoCaja } = loaded.exports;
 import { canUndoContribution } from "../utils/linkedTransfers.ts";
 
 const local = {

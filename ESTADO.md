@@ -1,5 +1,30 @@
 # Estado actual de Fino
 
+## Originales monetarios — archivo local preparado, pantalla pendiente (06/10/2026)
+
+- `revisionesImporte` conserva cuatro originales, elección, UID/IDs/moneda,
+  fechas y confirmación en Cajas cifrado y bóveda por cuenta existentes.
+  Normalizar/fusionar no lo descarta; no depende de referencias del formulario.
+- Valida con el módulo puro real del servidor; rechaza NaN/fechas/metadata
+  incompatibles, duplicados y respuesta/cuenta/moneda distintas. Hasta 50
+  revisiones/400.000 bytes totales, cada una 150.000 bytes, sin borrar anteriores.
+- Fusión/recuperación/subida ordinaria de Cajas no corrigen una decisión pendiente.
+  Confirmadas no vuelven a pendientes; originales excluidos del respaldo Caja.
+  Plan local solo propone ambas mitades con igual versión, sin tocar otros registros.
+- **No conectado:** no hay botón, petición ni guardado financiero nuevo en pantalla.
+  Sigue integrar selección, barrera de Personal/subidas en vuelo y lote conjunto,
+  con recuperación/revisión obsoleta. La barrera Caja sola no permite habilitarlo.
+- Guía: `docs/PRUEBAS_ORIGINALES_IMPORTE_CAJA.md`; regresión sintética b48e703
+  pierde la revisión al normalizar. Cifrado/bóveda reales con sustitutos de Android,
+  no prueba física. Políticas interna/web/PLAYSTORE preparadas, no publicadas.
+- TypeScript/ESLint, 141 locales/8 auditores (una prueba ajena sin registrar:
+  140 en copia limpia), 73 unitarias Functions y 110 SDK/reglas/HTTP/eventos
+  Node 22 reales aprobados. Regresión b48e703 falla como se esperaba. Los
+  lectores de pruebas se adaptaron a módulos originales, sin quitar aserciones.
+  ADB sin dispositivos. **Qué falta:** otras discrepancias, Android/
+  espacio/tamaño/dos dispositivos, consolas y publicación coordinada autorizada.
+  Sin tarjetas/nativos/marca/instalable/OTA/despliegue. Punto 1/auditoría abiertos.
+
 ## Diferencias de dinero — base del servidor, sin activar en app (06/10/2026)
 
 - `resolvePrivateBoxMoney` prepara monto/fecha elegidos entre cuatro originales

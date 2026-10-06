@@ -80,6 +80,11 @@ export function planPrivateBoxRepair(data: DatosCajas, rows: Transaction[], dele
   if (!Array.isArray(rows)) {
     return { data, upserts: [], conflicts: [{ reason: "invalid" }] };
   }
+  const moneyPending = (data.revisionesImporte || []).filter(entry => entry.estado === "pendiente");
+  if (moneyPending.length) return { data, upserts: [], conflicts: moneyPending.map(entry => ({
+    reason: entry.uid === uid ? "values" : "invalid", movementId: entry.local.movement.id,
+    personalId: entry.local.personal.id, boxId: entry.box.id,
+  })) };
   const refersToPrivate = privateReferences(data);
   const invalidRows: PrivateBoxConflict[] = rows.flatMap(row => !readableIdentity(row) || (refersToPrivate(row) && !validPersonal(row))
     ? [{ reason: "invalid" as const, ...(readableIdentity(row) ? { personalId: row.id,
