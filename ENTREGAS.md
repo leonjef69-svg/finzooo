@@ -10,6 +10,12 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Enlace heredado prepara identificación y confirmación explícitas de una pareja
+existente; solo une IDs con guardado conjunto, sin cambiar montos ni duplicar
+movimientos. Pro conserva su comprobación remota y Gratis trabaja localmente.
+Guía: `docs/PRUEBAS_ENLACE_HEREDADO.md`. Sin claves/nativos/marca ni entrega.
+Punto 1 sigue abierto para diferencias más complejas; faltan Android y publicación.
+
 Recuperación Personal/Caja prepara un guardado conjunto con IDs comprobados,
 sin sobrescribir un monto distinto ni devolver dinero por una marca heredada.
 Una pareja inequívoca permite elegir monto/fecha; otras discrepancias se

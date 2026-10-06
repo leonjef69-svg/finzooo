@@ -148,7 +148,7 @@ try {
       t: key => key, showToast: key => events.push(key), amountInputError: () => null, parseAmountInput: Number, validSpaceDate: () => true,
       fechaLocal: () => "2026-10-05", horaDe: () => "12:00", nextId: () => ++id, nuevoIdCaja: prefix => `${prefix}-${++id}`,
       tomarAccionLocal: () => !s.guardandoRef.current, siguienteVersionCaja: boxes.siguienteVersionCaja,
-      commitPrivateBoxData: ctx.commit, setGuardando: value => { s.guardando = value; },
+      commitPrivateBoxData: ctx.commit, setGuardando: value => { s.guardando = value; }, setRepairCloudChanged() {},
       setDatos: value => { s.datosActuales.current = value; s.datos = value; },
       setNuevoNombre() {}, setMontoInicial() {}, setOrigenDinero() {}, setCreando() {}, setCajaId() {}, setLista() {}, setMonto() {}, setDescripcion() {},
       setEditandoAporteId() {}, setAnotando() {}, setNotes() {}, setMovementDate() {}, setSeleccionados() {}, setSeleccionando() {}, setCajasSeleccionadas() {}, setSeleccionandoCajas() {},

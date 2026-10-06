@@ -1,5 +1,29 @@
 # Estado actual de Fino
 
+## Enlace heredado elegido — avance del punto 1 (06/10/2026)
+
+- Revisión muestra Caja y alternativas de Personal. El usuario identifica y
+  confirma la pareja; no se decide automáticamente por monto/fecha.
+- Igual importe/fecha, dirección y IDs únicos; bloquea marcadores de borrado,
+  otro espacio/enlace, cierre, conversión pendiente y devoluciones posteriores.
+  Guarda IDs de ambas mitades juntos, conservando dinero y campos originales.
+- Selección/confirmación obsoleta, fuente distinta o fallo no cierran la revisión.
+  Gratis corrige localmente; Pro mantiene la comprobación de IDs del servidor
+  y nunca fuerza una edición/borrado remoto no recibido. Lista de 20 en 20.
+- Guía: `docs/PRUEBAS_ENLACE_HEREDADO.md`. Regresión contra 410bbb3 reproduce
+  el rechazo anterior de la elección. Sin claves/servicios/retención nuevos,
+  cambios nativos, tarjetas, entrega o despliegue.
+- La diferencia remota tiene aviso visible específico y conserva la revisión;
+  no se presenta como fallo genérico de disco ni se fuerza la unión.
+- TypeScript/ESLint aprobados; 138 locales/8 auditores (una prueba ajena sin
+  registrar: 137 en copia limpia), 63 unitarias y 92 SDK/reglas/HTTP/eventos con
+  Node 22 real, sin fallos/omisiones. SQLite/confirmación originales comprobados;
+  no equivalen a Android físico. La regresión anterior falla como se espera.
+- **Qué sigue:** punto 1 aún abierto para diferencias local/nube concurrentes,
+  mitad ausente y reparto no demostrable. **Qué falta:** puntos 2 y 3, Android/
+  cierres/espacio/tamaño/dos dispositivos, consolas y publicación autorizada.
+  ADB no encontró dispositivos conectados; no se declaró prueba física hecha.
+
 ## Pares Personal/Caja heredados — recuperación protegida (06/10/2026)
 
 - Regresión comprobada contra 0f0588f: Caja S/100 imponía ese monto sobre

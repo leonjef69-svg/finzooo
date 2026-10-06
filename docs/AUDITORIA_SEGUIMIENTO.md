@@ -3,6 +3,21 @@
 Última revisión: 06/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## Continuación punto 1 — selección de enlace heredado (06/10/2026)
+
+- Elección y confirmación unen una pareja existente con igual importe/fecha,
+  sin cambiar dinero o campos. No se decide por coincidencia ni se fuerza una
+  edición/borrado remoto no recibido; aviso específico conserva la revisión.
+- Elegibilidad se vuelve a comprobar dentro del guardado conjunto original:
+  IDs únicos, no borrados/cierre/otro enlace/espacio/devoluciones posteriores.
+- TypeScript/ESLint, 138 locales/8 auditores (una prueba ajena sin registrar),
+  63 unitarias y 92 SDK/reglas/HTTP/eventos aprobados. Regresión contra 410bbb3
+  falla como se espera. Guía: `docs/PRUEBAS_ENLACE_HEREDADO.md`.
+- **Punto 1 no cerrado:** siguen diferencias concurrentes, mitad ausente y
+  reparto antiguo no demostrable. **Qué falta:** puntos 2/3, Android visual/
+  cierre/espacio/tamaño/dos dispositivos y publicación autorizada. ADB sin
+  dispositivo conectado; no se publicó nada ni se tocaron tarjetas.
+
 ## Continuación FINO-02 — copias incompletas al borrar cuenta (05/10/2026)
 
 - S/100 copiados podían bloquear como deuda ficticia el borrado de cuenta.

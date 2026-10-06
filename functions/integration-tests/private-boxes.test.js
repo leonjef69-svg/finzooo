@@ -15,7 +15,7 @@ const { getFirestore, connectFirestoreEmulator, disableNetwork, enableNetwork, g
 const esbuild = requireRoot("esbuild");
 
 async function code(client) {
-  const built = await esbuild.build({ stdin: { contents: 'export { bajarCajas, subirCajas } from "@/utils/cloudCajas"; export { loadPrivateBoxRepairCloud, assertPrivateBoxRepairCloud } from "@/utils/privateBoxRepairCloud";',
+  const built = await esbuild.build({ stdin: { contents: 'export { bajarCajas, subirCajas } from "@/utils/cloudCajas"; export { loadPrivateBoxRepairCloud, assertPrivateBoxRepairCloud } from "@/utils/privateBoxRepairCloud"; export { resolvePrivateBoxConflict, privateBoxLinkCandidates } from "@/utils/privateBoxRepair";',
     resolveDir: root, loader: "ts" }, bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent",
     external: ["firebase/*"], alias: { "@": root },
     plugins: [{ name: "demo-config-and-native-session", setup(build) {
@@ -121,6 +121,20 @@ test("Cajas privadas con SDK/Firestore reales: versiones, transacción, borrados
       await disableNetwork(a.db);
       await assert.rejects(a.api.loadPrivateBoxRepairCloud(uid, [10]), error => error.code === "unavailable");
       await enableNetwork(a.db);
+    });
+    await t.test("un enlace antiguo elegido conserva su dinero y la copia SDK acepta el ID comprobado", async () => {
+      const personal = { id: 10, type: "expense", amount: 100, date: row.fecha, internalTransfer: "box", notes: "Conservar" };
+      await admin.doc(`users/${uid}`).set({ isPremium: true, transactions: [personal], deletedTransactionIds: [] });
+      await ref.set(initial);
+      const proof = await a.api.loadPrivateBoxRepairCloud(uid, [10]);
+      assert.doesNotThrow(() => a.api.assertPrivateBoxRepairCloud([personal], proof));
+      assert.equal(a.api.privateBoxLinkCandidates(initial, [personal], [], row.id).length, 1);
+      const selected = a.api.resolvePrivateBoxConflict(initial, [personal], [], uid, { movementId: row.id, personalId: personal.id, from: "link" });
+      assert.equal(selected.upserts[0].amount, 100); assert.equal(selected.upserts[0].notes, "Conservar");
+      assert.equal(await a.api.subirCajas(uid, selected.data), true);
+      const saved = (await ref.get()).data();
+      assert.equal(saved.movimientos.length, 1); assert.equal(saved.movimientos[0].personalTransactionId, 10); assert.equal(saved.movimientos[0].monto, 100);
+      await assert.rejects(a.api.loadPrivateBoxRepairCloud("otra-cuenta", [10]), /account-task-obsolete/);
     });
     await t.test("historial separado consulta solo los IDs pedidos y una marca remota no se resucita", async () => {
       const personal = { id: 10, type: "expense", amount: 100, date: "2026-10-06", internalTransfer: "box" };

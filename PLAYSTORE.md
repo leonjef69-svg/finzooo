@@ -240,6 +240,11 @@ ni una categoría de datos distinta. Pro verifica únicamente los IDs afectados
 en el servidor antes de recuperar; Gratis no consulta nube. Los casos sin
 prueba se conservan para revisión, no se borran ni se reembolsan por inferencia.
 Guía y limitaciones: `docs/PRUEBAS_REPARACION_PARES_CAJAS.md`; no publicado.
+La identificación manual de una pareja heredada modifica los IDs de enlace
+ya previstos en esos mismos registros financieros. Exige elección y confirmación,
+sin nuevos datos recogidos, claves, servicios, destinatarios o retención. No
+recupera por aproximación una copia remota diferente ni una mitad desaparecida.
+Ver `docs/PRUEBAS_ENLACE_HEREDADO.md`; preparación, no publicación.
 La Caja conserva además una señal local cifrada de conversión pendiente para
 no usar su copia privada mientras el resultado remoto es incierto. No se sube
 a Firebase, no añade una clave ni categoría de datos y sigue el mismo archivo

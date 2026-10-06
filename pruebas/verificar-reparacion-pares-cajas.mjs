@@ -138,7 +138,10 @@ await assert.rejects(obsoleteProof, /account-task-obsolete/); gate = null; sessi
 
 // Contexto y almacén reales sobre SQLite; solo Auth, cifrado y React se sustituyen.
 const commit = pick("contexts/AppDataContext.tsx", node => ts.isFunctionDeclaration(node) && node.name?.text === "commitPrivateBoxData");
-for (const [source, sourceRows, expected, mode] of [[data, [], missing, true], [half, [tx], recovered, true], [data, [conflicting], useBox, { movementId: move.id, from: "box" }]]) {
+const weakLink = { ...tx, internalTransferLink: undefined, internalTransferSpaceId: undefined };
+const linkChoice = { movementId: move.id, personalId: tx.id, from: "link" };
+const linkPlan = repairs.resolvePrivateBoxConflict(half, [weakLink], [], "a", linkChoice);
+for (const [source, sourceRows, expected, mode] of [[data, [], missing, true], [half, [tx], recovered, true], [data, [conflicting], useBox, { movementId: move.id, from: "box" }], [half, [weakLink], linkPlan, linkChoice]]) {
   for (const failure of [null, "rollback", "lost-ack", "obsolete", "remote-edit", "remote-deleted", "remote-restore", "remote-unavailable"]) {
     const db = new DatabaseSync(":memory:"); db.exec("CREATE TABLE store (key TEXT PRIMARY KEY, value TEXT)");
     const get = key => db.prepare("SELECT value FROM store WHERE key=?").get(key)?.value ?? null;
@@ -162,7 +165,7 @@ for (const [source, sourceRows, expected, mode] of [[data, [], missing, true], [
       assertPrivateBoxRepairCloud: proofApi.assertPrivateBoxRepairCloud,
       loadPrivateBoxRepairCloud: async () => {
         if (failure === "remote-unavailable") throw Error("unavailable");
-        return { transactions: failure === "remote-deleted" ? [] : [{ ...tx, amount: failure === "remote-edit" ? 140 : 100 }], deletedIds: failure === "remote-deleted" ? [10] : [] };
+        return { transactions: failure === "remote-deleted" ? [] : [{ ...(mode.from === "link" ? weakLink : tx), amount: failure === "remote-edit" ? 140 : 100 }], deletedIds: failure === "remote-deleted" ? [10] : [] };
       },
       saveJSONBatchNow: storage.saveJSONBatchNow, STORAGE_KEYS: storage.STORAGE_KEYS, ...cajas, ...patch, ...repairs,
       guardarCajasEnMemoria: () => events.push("box-cache"), setTransactions: rows => { ctx.transactionsLive.current = rows; events.push("personal"); },

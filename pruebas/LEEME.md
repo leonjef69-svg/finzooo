@@ -24,6 +24,12 @@ Requisitos, regresión y límites: `docs/PRUEBAS_NODE22_BORRADO_CUENTA.md`.
 
 ## Qué comprueba cada cosa
 
+`verificar-enlace-heredado-explicito.mjs` ejecuta la elección/confirmación
+originales y sus condiciones: iguales importes/fechas, IDs únicos, no borrados,
+cancelación, cambios de fuente/cuenta/plan. La matriz SQLite original también
+comprueba el guardado de ese enlace. Guía, regresión y límites:
+`docs/PRUEBAS_ENLACE_HEREDADO.md`.
+
 `verificar-reparacion-pares-cajas.mjs` comprueba recuperaciones con IDs,
 conservación ante diferencias/borrados/consumo, elección explícita y el guardado
 original sobre SQLite real (no Android físico). Incluye pantalla/contexto

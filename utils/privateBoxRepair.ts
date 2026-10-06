@@ -2,7 +2,7 @@ import type { Transaction } from "@/types";
 import { CAJAS_VACIAS, fusionarCajas, siguienteVersionCaja, type DatosCajas, type MovimientoCaja } from "@/utils/cajas";
 import { linkedTransferLedger } from "@/utils/linkedTransfers";
 
-export type PrivateBoxRepairChoice = { movementId: string; from: "personal" | "box" };
+export type PrivateBoxRepairChoice = { movementId: string; from: "personal" | "box" } | { movementId: string; personalId: number; from: "link" };
 export type PrivateBoxConflict = {
   movementId?: string; personalId?: number; boxId?: string;
   reason: "identity" | "deleted" | "settled" | "values" | "missing";
@@ -18,6 +18,24 @@ const allocationsEqual = (a: Transaction["internalTransferAllocations"], b: Tran
 };
 const direction = (row: MovimientoCaja) => row.personalReturnAmount != null ? "income" as const : row.tipo === "ingreso" ? "expense" as const : null;
 const amount = (row: MovimientoCaja) => row.personalReturnAmount ?? row.monto;
+
+/** Alternativas para que la persona identifique un enlace; nunca las aplica por coincidencia. */
+export function privateBoxLinkCandidates(data: DatosCajas, rows: Transaction[], deleted: number[], movementId: string): Transaction[] {
+  const move = data.movimientos.find(row => row.id === movementId), box = move && data.cajas.find(box => box.id === move.cajaId);
+  if (!move || !box || box.sharingPending || move.personalTransactionId != null || move.tipo !== "ingreso"
+    || data.cajasBorradas.includes(box.id) || data.conversiones?.[box.id]
+    || data.movimientosBorrados.includes(move.id) || data.movimientos.some(row => row.cajaId === move.cajaId && row.personalReturnAmount != null)
+    || rows.some(row => row.internalTransferLink === move.id)) return [];
+  const day = new Date(`${move.fecha}T00:00:00Z`);
+  if (!Number.isFinite(move.monto) || move.monto <= 0 || !Number.isSafeInteger(Math.round(move.monto * 1000))
+    || !/^\d{4}-\d{2}-\d{2}$/.test(move.fecha) || Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== move.fecha) return [];
+  const counts = new Map<number, number>(), used = new Set(data.movimientos.map(row => row.personalTransactionId));
+  for (const row of rows) counts.set(row.id, (counts.get(row.id) || 0) + 1);
+  const removed = new Set(deleted);
+  return rows.filter(row => row.internalTransfer === "box" && row.type === "expense" && !row.internalTransferSettled && !row.internalTransferLink
+    && (!row.internalTransferSpaceId || row.internalTransferSpaceId === move.cajaId) && row.amount === move.monto && row.date === move.fecha
+    && Number.isSafeInteger(row.id) && row.id > 0 && counts.get(row.id) === 1 && !used.has(row.id) && !removed.has(row.id));
+}
 
 /** Lee ambas mitades. Ni la ausencia ni una coincidencia de monto/fecha prueban un borrado o un vínculo. */
 export function planPrivateBoxRepair(data: DatosCajas, rows: Transaction[], deleted: number[], uid: string): PrivateBoxRepairPlan {
@@ -128,6 +146,17 @@ export function planPrivateBoxRepair(data: DatosCajas, rows: Transaction[], dele
 
 /** Elección explícita, limitada a monto/fecha de una pareja con IDs exactos. */
 export function resolvePrivateBoxConflict(data: DatosCajas, rows: Transaction[], deleted: number[], uid: string, choice: PrivateBoxRepairChoice): PrivateBoxRepairPlan {
+  if (choice.from === "link") {
+    const tx = privateBoxLinkCandidates(data, rows, deleted, choice.movementId).find(row => row.id === choice.personalId);
+    if (!tx) throw new Error("private-box-repair-conflict");
+    const move = data.movimientos.find(row => row.id === choice.movementId)!, box = data.cajas.find(box => box.id === move.cajaId)!;
+    const nextData = { ...data, movimientos: data.movimientos.map(row => row.id === move.id ? { ...row, personalTransactionId: tx.id, updatedAt: siguienteVersionCaja(row) } : row) };
+    const nextTx = { ...tx, internalTransferLink: move.id, internalTransferSpaceId: move.cajaId, internalTransferSpaceName: box.nombre };
+    fusionarCajas(nextData, CAJAS_VACIAS);
+    const repaired = planPrivateBoxRepair(nextData, rows.map(row => row.id === tx.id ? nextTx : row), deleted, uid);
+    return repaired.conflicts.length ? { data: nextData, upserts: [nextTx], conflicts: repaired.conflicts }
+      : { ...repaired, upserts: [nextTx, ...repaired.upserts.filter(row => row.id !== tx.id)] };
+  }
   const issue = planPrivateBoxRepair(data, rows, deleted, uid).conflicts.find(item => item.movementId === choice.movementId && item.reason === "values" && item.selectable);
   if (!issue || !["personal", "box"].includes(choice.from)) throw new Error("private-box-repair-conflict");
   const move = data.movimientos.find(item => item.id === choice.movementId)!, tx = rows.find(item => item.id === issue.personalId)!;

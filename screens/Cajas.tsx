@@ -31,7 +31,7 @@ import { cancelarConversionCaja, enlacesCajaConvertida, huellaCaja, nuevoIntento
 import { spaceErrorKey } from "@/utils/spaceErrors";
 import type { Transaction } from "@/types";
 import { privateBoxLinksMatch } from "@/utils/privateBoxPersonal";
-import { planPrivateBoxRepair, resolvePrivateBoxConflict, type PrivateBoxRepairChoice } from "@/utils/privateBoxRepair";
+import { planPrivateBoxRepair, privateBoxLinkCandidates, resolvePrivateBoxConflict, type PrivateBoxRepairChoice } from "@/utils/privateBoxRepair";
 import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Boxes, Check, ListChecks, Pencil, Plus, RefreshCw, Trash2, UserPlus, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
 import { Alert, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -92,8 +92,11 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const accionLocalEnCurso = useRef(false);
   const nubeConfirmadaPara = useRef<string | null>(null);
   const [syncIssue, setSyncIssue] = useState<"boxes.syncFailed" | "boxes.syncConflict" | null>(null);
+  const [repairCloudChanged, setRepairCloudChanged] = useState(false);
   const conversionEnCurso = useRef(false);
   const reparacionIntentada = useRef<{ data: DatosCajas; rows: Transaction[]; refresh: number } | null>(null);
+  const [linkReview, setLinkReview] = useState<string | null>(null);
+  const [linkLimit, setLinkLimit] = useState(20);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const requestedRefresh = useRef(refreshVersion);
   requestedRefresh.current = refreshVersion;
@@ -125,6 +128,8 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
 
   const repairPlan = useMemo(() => planPrivateBoxRepair(datos, transactions, deletedTransactionIds, accountUid), [datos, transactions, deletedTransactionIds, accountUid]);
   const repairBlocked = !personalReady || !hasOnboarded || !cloudReady || repairPlan.conflicts.length > 0 || repairPlan.upserts.length > 0 || repairPlan.data !== datos;
+  const linkCandidates = useMemo(() => linkReview ? privateBoxLinkCandidates(datos, transactions, deletedTransactionIds, linkReview) : [], [datos, transactions, deletedTransactionIds, linkReview]);
+  const linkMovement = datos.movimientos.find(row => row.id === linkReview);
 
   function tomarAccionLocal(): boolean {
     if (repairBlocked) { showToast(t("boxes.repairReview")); return false; }
@@ -142,10 +147,15 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     guardandoRef.current = true; setGuardando(true);
     try {
       const ok = await commitPrivateBoxData(before, next, upserts, deleteIds, () => cuentaActual() && datosActuales.current === before, setDatos, repair);
+      if (ok && repair && cuentaActual()) setRepairCloudChanged(false);
       if (!ok && cuentaActual()) showToast(t("toast.localSaveFailed"));
       return ok && cuentaActual();
     } catch (error) {
-      if (cuentaActual()) showToast(t(error instanceof Error && error.message === "private-box-android-only" ? "boxes.atomicAndroidOnly" : "toast.localSaveFailed"));
+      if (cuentaActual()) {
+        if (repair && error instanceof Error && error.message === "private-box-source-changed") {
+          setRepairCloudChanged(true); showToast(t("boxes.repairCloudChanged"));
+        } else showToast(t(error instanceof Error && error.message === "private-box-android-only" ? "boxes.atomicAndroidOnly" : "toast.localSaveFailed"));
+      }
       return false;
     } finally {
       guardandoRef.current = false;
@@ -265,6 +275,8 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     const move = datos.movimientos.find(item => item.id === issue.movementId);
     const personal = transactions.find(item => item.id === issue.personalId);
     if (!issue.selectable || !move || !personal) {
+      const linkable = repairPlan.conflicts.find(item => item.movementId && privateBoxLinkCandidates(datos, transactions, deletedTransactionIds, item.movementId).length > 0);
+      if (linkable?.movementId) { setLinkLimit(20); setLinkReview(linkable.movementId); return; }
       Alert.alert(t("boxes.repairReview"), t("boxes.repairUncertain"), [{ text: t("common.close") }]);
       return;
     }
@@ -285,6 +297,27 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       { text: t("common.cancel"), style: "cancel" },
       { text: t("boxes.repairUsePersonal"), onPress: () => void apply("personal") },
       { text: t("boxes.repairUseBox"), onPress: () => void apply("box") },
+    ]);
+  }
+
+  function confirmarEnlaceHeredado(personalId: number) {
+    const before = datosActuales.current, beforeRows = personalActuales.current;
+    const movementId = linkReview;
+    if (!movementId || !cuentaActual() || guardandoRef.current || !personalReady || !cloudReady) return;
+    const candidate = privateBoxLinkCandidates(before, beforeRows, deletedTransactionIds, movementId).find(row => row.id === personalId);
+    if (!candidate) { showToast(t("boxes.repairUnsafe")); return; }
+    const premiumBefore = premiumForSync.current;
+    Alert.alert(t("boxes.repairLinkTitle"), t("boxes.repairLinkConfirm", { description: candidate.description, amount: fmt(candidate.amount), date: candidate.date }), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("boxes.repairLinkAction"), onPress: async () => {
+        if (!cuentaActual() || before !== datosActuales.current || beforeRows !== personalActuales.current || premiumBefore !== premiumForSync.current
+          || guardandoRef.current || compartiendo || (isPremium && nubeConfirmadaPara.current !== accountUid) || syncIssue === "boxes.syncConflict") return;
+        try {
+          const choice = { movementId, personalId, from: "link" as const };
+          const plan = resolvePrivateBoxConflict(before, beforeRows, deletedTransactionIds, accountUid, choice);
+          if (await guardarCambioCaja(plan.data, plan.upserts, [], choice)) { setLinkReview(null); showToast(t("boxes.repairSaved")); }
+        } catch { if (cuentaActual()) showToast(t("boxes.repairUnsafe")); }
+      } },
     ]);
   }
 
@@ -613,6 +646,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       </View>
       <SpaceSwitcher active="boxes" />
       {syncIssue ? <Text accessibilityLiveRegion="polite" className="px-5 pb-2 text-xs leading-5 text-amber-700 dark:text-amber-300">{t(syncIssue)}</Text> : null}
+      {repairCloudChanged ? <Text accessibilityLiveRegion="polite" className="px-5 pb-2 text-xs leading-5 text-amber-700 dark:text-amber-300">{t("boxes.repairCloudChanged")}</Text> : null}
       {ready && cloudReady && repairPlan.conflicts.length > 0 ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.repairReview")} disabled={guardando || compartiendo || syncIssue === "boxes.syncConflict"} onPress={revisarTransferencias} className="mx-5 mb-3 rounded-xl bg-amber-50 p-3 dark:bg-amber-950">
         <Text accessibilityLiveRegion="polite" className="text-xs leading-5 text-amber-800 dark:text-amber-200">{t("boxes.repairNotice", { count: repairPlan.conflicts.length })}</Text>
         <Text className="mt-1 text-sm font-bold text-amber-800 dark:text-amber-200">{t("boxes.repairReview")}</Text>
@@ -629,6 +663,18 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
           if (cercaDelFinal && movementLimit < filasVisibles.length) setMovementLimit(limit => Math.min(limit + 60, filasVisibles.length));
         }}
       >
+        {linkReview && ready && personalReady && cloudReady ? <View className="mb-4 rounded-xl border border-amber-200 p-3 dark:border-amber-800">
+          <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">{t("boxes.repairLinkTitle")}</Text>
+          {linkMovement ? <Text className="mt-2 text-xs leading-5 text-slate-900 dark:text-slate-100">{t("boxes.repairLinkFor", { name: datos.cajas.find(box => box.id === linkMovement.cajaId)?.nombre || "", description: linkMovement.descripcion, amount: fmt(linkMovement.monto), date: linkMovement.fecha })}</Text> : null}
+          <Text className="my-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.repairLinkHelp")}</Text>
+          {linkCandidates.slice(0, linkLimit).map(row => <TouchableOpacity key={row.id} accessibilityRole="button" disabled={guardando || compartiendo || syncIssue === "boxes.syncConflict"} onPress={() => confirmarEnlaceHeredado(row.id)} className="mb-2 min-h-12 rounded-xl bg-amber-50 p-3 dark:bg-amber-950">
+            <Text className="text-sm font-semibold text-slate-900 dark:text-slate-100">{row.description}</Text>
+            <Text className="mt-1 text-xs text-slate-600 dark:text-slate-300">{fmt(row.amount)} · {row.date}{row.time ? ` · ${row.time}` : ""}</Text>
+          </TouchableOpacity>)}
+          {linkCandidates.length === 0 ? <Text className="mb-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.repairUncertain")}</Text> : null}
+          {linkCandidates.length > linkLimit ? <TouchableOpacity accessibilityRole="button" onPress={() => setLinkLimit(value => value + 20)} className="min-h-11 justify-center"><Text className="font-bold text-amber-800 dark:text-amber-200">{t("common.show")}</Text></TouchableOpacity> : null}
+          <TouchableOpacity accessibilityRole="button" disabled={guardando} onPress={() => setLinkReview(null)} className="min-h-11 justify-center"><Text className="font-bold text-slate-600 dark:text-slate-300">{t("common.cancel")}</Text></TouchableOpacity>
+        </View> : null}
         {!ready ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : lista || !caja ? (
           <>
             <Text className="mb-3 mt-2 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("boxes.subtitle")}</Text>
