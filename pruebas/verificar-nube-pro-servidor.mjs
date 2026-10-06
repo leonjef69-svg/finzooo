@@ -16,22 +16,23 @@ function ownModule(file, require = requireProject) {
 const entitlement = ownModule("functions/src/premium-entitlement.js");
 assert.equal(entitlement.premium({ isPremium: false }, Date.now(), { active: true }), false,
   "el servidor no concede tester si falta la fecha, igual que las reglas");
-const backend = ownModule("functions/src/cloud-access.js", name => name === "./premium-entitlement" ? entitlement : requireProject(name));
+const backend = ownModule("functions/src/cloud-access.js", name => name === "./premium-entitlement" ? entitlement
+  : name === "./incomplete-box-cleanup" ? requireProject("./src/incomplete-box-cleanup") : requireProject(name));
 function fakeFirestore(initial) {
   const documents = new Map(Object.entries(initial));
   const writes = [];
   let failBatch = false;
-  function query(path, filters = [], count = Infinity) {
-    return { where: (key, op, value) => { assert.equal(op, "=="); return query(path, [...filters, [key, value]], count); },
-      limit: value => query(path, filters, value), get: async () => {
+  function query(path, filters = [], count = Infinity, after = "") {
+    return { where: (key, op, value) => { assert.equal(op, "=="); return query(path, [...filters, [key, value]], count, after); },
+      limit: value => query(path, filters, value, after), startAfter: snap => query(path, filters, count, snap.id), get: async () => {
         const keys = [...documents.keys()].filter(key => key.startsWith(`${path}/`) && key.split("/").length === path.split("/").length + 1
-          && filters.every(([field, value]) => documents.get(key)[field] === value));
+          && key.split("/").at(-1) > after && filters.every(([field, value]) => documents.get(key)[field] === value)).sort();
         const docs = keys.slice(0, count).map(key => ({ id: key.split("/").at(-1), ref: doc(key), data: () => documents.get(key) }));
         return { docs, empty: docs.length === 0 };
       } };
   }
   function doc(path) {
-    return { path, get: async () => ({ exists: documents.has(path), data: () => documents.get(path) }),
+    return { path, id: path.split("/").at(-1), get: async () => ({ exists: documents.has(path), data: () => documents.get(path) }),
       delete: async () => { writes.push(["delete", path]); documents.delete(path); },
       collection: name => query(`${path}/${name}`) };
   }
@@ -48,6 +49,7 @@ function fakeFirestore(initial) {
     runTransaction: async run => run({ get: ref => ref.get(),
       set: (ref, value, options) => documents.set(ref.path, { ...(options?.merge ? documents.get(ref.path) : {}), ...value }),
       update: (ref, value) => documents.set(ref.path, { ...documents.get(ref.path), ...value }),
+      delete: ref => { writes.push(["delete", ref.path]); documents.delete(ref.path); },
     }), batch: () => {
       const pending = [];
       return { delete: ref => pending.push(ref), commit: async () => {

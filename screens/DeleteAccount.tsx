@@ -32,6 +32,10 @@ export default function DeleteAccount({
     try {
       await onConfirm(password);
     } catch (err) {
+      if ((err as { details?: { reason?: string } })?.details?.reason?.startsWith("incomplete-box-")
+        || (err as Error)?.message === "incomplete-box-invalid-response") {
+        setError(t("deleteAccount.incompleteBoxConflict")); setLoading(false); return;
+      }
       if ((err as Error)?.message === "unsettled-personal-contributions") {
         setError(t("deleteAccount.unsettledContributions"));
         setLoading(false);

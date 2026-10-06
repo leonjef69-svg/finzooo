@@ -528,6 +528,8 @@ service cloud.firestore {
                       || request.resource.data.migrationComplete is bool)
                     && (!('migrationProtocol' in request.resource.data)
                       || (request.resource.data.migrationProtocol == 2 && request.resource.data.migrationComplete == false))
+                    && (request.resource.data.get('migrationComplete', true) != false
+                      || request.resource.data.get('migrationProtocol', 0) == 2)
                     && request.resource.data.keys().hasOnly(['nombre', 'ownerUid', 'currency', 'creadaEn', 'migrationComplete', 'migrationProtocol'])
                     && premiumUser(request.auth.uid) && cloudCopyOpen(request.auth.uid);
       allow read: if boxMember(boxId);
@@ -549,6 +551,7 @@ service cloud.firestore {
                         && request.resource.data.nombre.size() <= 30);
       allow delete: if verified()
                     && resource.data.ownerUid == request.auth.uid
+                    && resource.data.get('migrationDeletionPending', false) != true
                     && resource.data.get('deleting', false) == true;
 
       match /members/{userId} {
@@ -571,6 +574,7 @@ service cloud.firestore {
                 && get(/databases/$(database)/documents/boxInvites/$(request.resource.data.inviteCode)).data.expiresAt > request.time.toMillis()));
         allow delete: if verified()
           && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid
+          && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('migrationDeletionPending', false) != true
           && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == true;
       }
 
@@ -634,7 +638,17 @@ service cloud.firestore {
     }
 
     match /boxUsers/{userId}/spaces/{boxId} {
-      allow read, create, update: if verified() && request.auth.uid == userId;
+      allow read: if verified() && request.auth.uid == userId;
+      // No recrear índices huérfanos/cancelados con una escritura atrasada.
+      // getAfter admite la creación/unión atómica de raíz + membresía + índice.
+      allow create, update: if verified() && request.auth.uid == userId
+        && cloudCopyOpen(userId)
+        && existsAfter(/databases/$(database)/documents/boxSpaces/$(boxId)/members/$(userId))
+        && getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('closed', false) == false
+        && getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == false
+        && getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('migrationCancelled', false) == false
+        && request.resource.data.keys().hasOnly(['boxId', 'unidoEn'])
+        && request.resource.data.boxId == boxId && request.resource.data.unidoEn is timestamp;
       allow delete: if verified()
         && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid
         && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == true;

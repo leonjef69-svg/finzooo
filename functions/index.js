@@ -17,6 +17,7 @@ const { getCloudAccess, deletePersonalCloudCopy, cleanupDeletedCloudAccount } = 
 const { returnPersonalContribution } = require("./src/personal-return");
 const { finalizeLinkedSpaceDeletion } = require("./src/linked-space-cleanup");
 const { privateBoxMigration } = require("./src/private-box-migration");
+const { prepareIncompleteBoxDeletion } = require("./src/incomplete-box-cleanup");
 
 initializeApp();
 
@@ -37,6 +38,18 @@ function verifiedAccount(request, recent = false) {
 
 exports.getCloudAccess = onCall({ region: "southamerica-east1", maxInstances: 10 }, request =>
   getCloudAccess(getFirestore(), verifiedAccount(request)));
+
+exports.prepareIncompleteBoxDeletion = onCall({ region: "southamerica-east1", maxInstances: 5, timeoutSeconds: 540 }, async request => {
+  const uid = verifiedAccount(request, true);
+  if (!["inspect", "discard"].includes(request.data?.action)) throw new HttpsError("invalid-argument", "Solicitud de borrado inválida.");
+  const user = await getAuth().getUser(uid);
+  if (user.disabled || !user.emailVerified) throw new HttpsError("unauthenticated", "Confirma tu cuenta.");
+  try { return await prepareIncompleteBoxDeletion(getFirestore(), uid, request.data.action); }
+  catch (error) {
+    if (!error?.reason) throw error;
+    throw new HttpsError("failed-precondition", "No se pudo comprobar una copia incompleta. No se elimina como si fuera dinero compartido.", { reason: error.reason });
+  }
+});
 
 exports.privateBoxMigration = onCall({ region: "southamerica-east1", maxInstances: 5, timeoutSeconds: 120 }, async request => {
   const uid = verifiedAccount(request);

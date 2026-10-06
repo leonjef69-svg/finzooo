@@ -3,6 +3,26 @@
 Última revisión: 05/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## Continuación FINO-02 — copias incompletas al borrar cuenta (05/10/2026)
+
+- S/100 copiados podían bloquear como deuda ficticia el borrado de cuenta.
+  El índice sin destino también fallaba por las reglas SDK. Regresión cliente
+  anterior reproduce el bloqueo; el servidor verifica primero sin escribir.
+- Nueva limpieza limitada sin Pro, identidad reciente y UID autenticado:
+  congela/limpia clones demostrados, conserva origen durante esa fase y barrera
+  hasta Auth. Publicación real, invitados, diferencias o legado no demostrable
+  no se descartan a ciegas. Recibos se comprueban antes de retirarlos.
+- Reglas protegen la barrera e impiden índices arbitrarios/atrasados o nuevas
+  copias legacy sin protocolo. Se mantienen creación/unión atómicas normales.
+- Guía/evidencia: `docs/PRUEBAS_BORRADO_CAJAS_INCOMPLETAS.md`. Preparado en código,
+  no publicado ni probado físicamente; no declara FINO-02 totalmente resuelto.
+- TypeScript/ESLint, 136 locales/8 auditores (una prueba ajena sin registrar),
+  63 unitarias y 89 SDK/reglas/HTTP/eventos aprobados con Node 22 real. Regresiones
+  local/SDK contra 51a57d0 detectan la deuda ficticia; JWT atrasado no recrea índice.
+- **Qué sigue:** pares heredados y conflictos. **Qué falta:** legado no
+  demostrable, Android/cierres/dos dispositivos, tamaño/espacio lleno, consolas/
+  índices y publicación coordinada. No se tocaron tarjetas ni código nativo.
+
 ## Continuación FINO-02 — no revivir una devolución anulada (05/10/2026)
 
 - Falla confirmada: borrar el retorno no invalidaba su confirmación privada.

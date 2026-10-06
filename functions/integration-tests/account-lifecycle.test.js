@@ -17,7 +17,7 @@ const esbuild = requireRoot("esbuild");
 const projectId = "demo-fino-node22";
 
 async function clientDeletion(client) {
-  const built = await esbuild.build({ stdin: { contents: 'export { deleteCloudAccount } from "@/utils/cloudSync";',
+  const built = await esbuild.build({ stdin: { contents: 'import {setAccountStorageAvailable} from "@/utils/storage"; setAccountStorageAvailable(true); export { deleteCloudAccount } from "@/utils/cloudSync";',
     resolveDir: root, sourcefile: "account-cloud-deletion.ts", loader: "ts" },
     bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent",
     external: ["firebase/*"], alias: { "@": root,

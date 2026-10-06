@@ -1,5 +1,35 @@
 # Estado actual de Fino
 
+## Borrado de cuenta con conversiones incompletas — preparado (05/10/2026)
+
+- Una copia pendiente de S/100 se trataba como dinero compartido y bloqueaba
+  borrar cuenta. Índices sin destino también fallaban por permisos SDK.
+- `prepareIncompleteBoxDeletion`: comprobar no escribe; descartar se llama
+  después de validar lo compartido, verifica de nuevo y cierra/limpia únicamente
+  clones propios. Sin Pro, correo verificado e identidad reciente; UID sale de
+  Auth. No devuelve dinero ficticio ni altera Personal/origen durante esa fase.
+- Cubre protocolos 2/3, raíz sin índice, índices sin destino y legado con copia
+  exacta/subconjunto comprobado contra el origen privado. Legado sin origen,
+  copia diferente, miembros invitados o recibo de publicación se conservan con
+  explicación. Una publicación que gana a la limpieza queda fuera del descarte.
+- Raíz/membresía se conservan cerradas hasta borrar Auth; SDK no las elimina ni
+  recrea su índice. El evento purga esas barreras antes de retirar recibos y
+  elimina también pendientes creados durante el recorrido. Una app vieja no
+  inicia otro legado sin protocolo después de publicar las reglas nuevas.
+- Cursores de 100 raíces, lotes de 200 hijos, tareas ligadas a cuenta/generación
+  y respuesta mínima propia. Privacidad interna/web y PLAYSTORE preparados;
+  no se publicó nada ni cambió código nativo, tarjetas o CODE_MARKER.
+- Guía: `docs/PRUEBAS_BORRADO_CAJAS_INCOMPLETAS.md`.
+- TypeScript/ESLint aprobados; 136 pruebas locales/8 auditores (una prueba ajena
+  sin registrar: 135 en copia limpia), 63 unitarias Functions y 89 SDK/reglas/
+  HTTP/eventos con Node 22. Regresiones local y SDK fallan contra 51a57d0 por
+  deuda ficticia del clon. Comprobadas 106 raíces/405 clones y JWT anterior a Auth.
+- **Qué sigue:** reparación de pares Personal/Caja heredados y resolución
+  explícita de conflictos. **Qué falta:** Android/cierres forzados, dos cuentas/
+  teléfonos, disco lleno/tamaño, legado no comprobable, pruebas de índices y
+  publicación coordinada de funciones + reglas + app. No es atomicidad global
+  de todo el borrado de cuenta ni una auditoría terminada.
+
 ## Cancelación segura de compartir Caja — preparada (05/10/2026)
 
 - Una Caja pendiente muestra Reintentar / Cancelar compartir. Cancelar propia

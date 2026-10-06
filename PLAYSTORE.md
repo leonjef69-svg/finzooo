@@ -252,6 +252,17 @@ diario requiere actualizar Interacciones con la app en Seguridad de los datos;
 no dar por suficiente la declaración anterior. Política interna/web preparadas;
 formulario y publicación de producción pendientes. No declarar el flujo como entregado.
 
+El borrado prepara `prepareIncompleteBoxDeletion`, sin Pro pero con correo
+verificado e identidad reciente. Verifica primero sin escribir y limpia solo
+clones propios demostrados; el origen privado se conserva hasta el paso normal
+de borrar Cajas de la cuenta. `migrationDeletionPending` en el destino cerrado
+mantiene la barrera hasta terminar Auth; entonces desaparecen raíz, miembros,
+clones/índices y las confirmaciones. Se revisan estas últimas antes de retirarlas
+para no confundir una publicación real con una copia incompleta. Sin permisos,
+servicios o categorías financieras nuevos; misma finalidad/retención del borrado.
+La descripción publicada y Seguridad de los datos siguen por contrastar con
+la próxima versión; esta preparación no modifica las consolas ni la web publicada.
+
 > **LOS CONTACTOS DE ENVÍO NO SE DECLARAN, Y AQUÍ DECÍA LO CONTRARIO (corregido el
 > 18/08/2026).** Este archivo afirmaba que "se guardan y se suben a su copia en la nube" y
 > mandaba declararlos bajo "Correo electrónico" y "Números de teléfono". **Es falso:**

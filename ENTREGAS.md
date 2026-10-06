@@ -10,12 +10,23 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Borrado de cuenta prepara `prepareIncompleteBoxDeletion`: comprobación previa
+sin escribir, limpieza de clones propios sin devolución ficticia y retirada de
+índices huérfanos. Legado solo si coincide con su origen; dinero publicado sigue
+su validación normal. Barrera/membresía hasta Auth y purga antes de quitar recibos.
+Reglas impiden borrar/recrear esa barrera desde SDK y nuevo legado sin protocolo.
+Guía: `docs/PRUEBAS_BORRADO_CAJAS_INCOMPLETAS.md`. Desplegar función + evento Auth
+y reglas antes de la app; no publicarlas de forma aislada ni volver a cliente
+que pueda crear copias sin protocolo. Sin APK/OTA/despliegue, marca sin cambios.
+Faltan pares/conflictos heredados, Android, rendimiento/tamaño y casos no demostrables.
+
 Caja pendiente prepara Reintentar / Cancelar compartir. Cancelación propia sin
 Pro: barrera remota persistente, intentos UUID y guardado local confirmado antes
 de desbloquear; una conversión terminada recupera su recibo y no devuelve dinero.
 Limpia clones cancelados/índice y borra metadata/barreras al eliminar Auth.
 Guía: `docs/PRUEBAS_CANCELACION_CAJA.md`. Requiere funciones + reglas + app juntas.
-**No publicar todavía:** quedan conversiones activas/incompletas al borrar cuenta,
+**No publicar todavía:** la limpieza de conversiones activas/incompletas se prepara
+en la sección anterior; siguen pendientes
 conflictos/pares heredados, pruebas físicas y revisión de tamaño/rendimiento.
 No se compiló APK ni publicó OTA/Firebase; CODE_MARKER no cambia.
 

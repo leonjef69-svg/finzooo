@@ -11,6 +11,7 @@ import { copiaPrivadaCoincide, validarCajas } from "@/utils/cajas";
 import { confirmarConversionCaja, huellaCaja } from "@/utils/boxMigration";
 import { copiedBoxMovementMatches, sharedBoxMovement } from "@/functions/src/private-box-source";
 import { captureAccountTask } from "@/utils/accountTask";
+import { prepararBorradoConversionesCaja } from "@/utils/incompleteBoxDeletion";
 import { canCloseLinkedSpace, hasUnreturnedPersonalContribution } from "@/utils/linkedTransfers";
 import { cerrarEspacioCompartido, finalizarBorradoEspacioCompartido, prepararBorradoEspacioCompartido, salirEspacioCompartido } from "@/utils/personalContribution";
 import type { Caja, MovimientoCaja, ConversionCaja } from "@/utils/cajas";
@@ -213,10 +214,12 @@ export async function cerrarCajaCompartida(uid: string, boxId: string): Promise<
 /** Preflight del borrado de cuenta: no permite borrar una caja del dueño si
  * aún contiene aportes personales sin devolución. */
 export async function validarBorradoCajasCompartidasDeCuenta(uid: string): Promise<void> {
+  await prepararBorradoConversionesCaja(uid, "inspect");
   const enlaces = await getDocs(collection(db, "boxUsers", uid, "spaces"));
   for (const enlace of enlaces.docs) {
     const caja = await getDoc(doc(db, "boxSpaces", enlace.id));
     if (!caja.exists()) continue;
+    if (caja.data().ownerUid === uid && caja.data().migrationComplete === false) continue;
     const movimientos = await listarMovimientosCajaCompartida(enlace.id);
     const invalido = caja.data().ownerUid === uid
       ? !canCloseLinkedSpace(movimientos)
@@ -229,15 +232,18 @@ export async function validarBorradoCajasCompartidasDeCuenta(uid: string): Promi
 
 /** Retira al usuario de cajas ajenas y elimina por completo las que creó. */
 export async function borrarCajasCompartidasDeCuenta(uid: string): Promise<void> {
+  await prepararBorradoConversionesCaja(uid, "discard");
   const enlaces = await getDocs(collection(db, "boxUsers", uid, "spaces"));
   for (const enlace of enlaces.docs) {
     const boxId = enlace.id;
     const boxRef = doc(db, "boxSpaces", boxId);
     const box = await getDoc(boxRef);
     if (!box.exists()) {
-      await deleteDoc(enlace.ref);
+      // La regla SDK no permite borrar un índice cuyo destino ya no existe.
+      await prepararBorradoConversionesCaja(uid, "discard");
       continue;
     }
+    if (box.data().ownerUid === uid && box.data().migrationComplete === false && box.data().migrationDeletionPending === true) continue;
     if (box.data().ownerUid !== uid) {
       await salirEspacioCompartido("box", boxId);
       continue;
