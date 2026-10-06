@@ -19,6 +19,7 @@ import { assertLegacyHistoryFormat, UnsupportedHistoryFormatError } from "@/util
 import { clearHistoryV2Cache, loadHistoryV2, saveHistoryV2 } from "@/utils/cloudHistoryV2";
 import { hasUnreadableLocalData } from "@/utils/storage";
 import { deletePersonalCloudCopy, getCloudAccountAccess } from "@/utils/cloudAccountAccess";
+import { PrivateBoxSyncError, withPrivateBoxCloudOperation, type PrivateBoxCloudLease } from "@/utils/privateBoxSync";
 
 export type CloudData = {
   /** Formato que fusiona campos y conserva marcas de borrado por elemento. */
@@ -101,14 +102,15 @@ export async function loadCloudData(
     if (access.deletionPending) throw new Error("account-deletion-pending");
     if (!access.hasCloudCopy) return null;
     if (!access.canSync || (options?.allowCloudCopy && !options.allowCloudCopy(access))) throw new CloudPremiumRequiredError();
-    const snap = await getDoc(doc(db, "users", uid));
+    return await withPrivateBoxCloudOperation<CloudData | null>(uid, async lease => {
+    const snap = await lease.wait(() => getDoc(doc(db, "users", uid)));
     if (!snap.exists()) return null;
     const data = snap.data();
     if (data.accountDeletionPending === true) throw new Error("account-deletion-pending");
-    const history = data.historyFormat === 2 ? await loadHistoryV2(uid) : null;
+    const history = data.historyFormat === 2 ? await loadHistoryV2(uid, lease) : null;
     if (!history) assertLegacyHistoryFormat(data);
     if (!data?.hasOnboarded) return null;
-    return {
+    return lease.remember<CloudData>({
       syncFormat: data.syncFormat === 2 ? 2 : 1,
       hasOnboarded: true,
       userName: data.userName || "",
@@ -145,8 +147,10 @@ export async function loadCloudData(
       categoriasPropias: data.categoriasPropias || [],
       iconosFavoritos: data.iconosFavoritos || [],
       syncUpdatedAt: data.syncUpdatedAt || {},
-    };
+    });
+    });
   } catch (error) {
+    if (error instanceof PrivateBoxSyncError) throw error;
     if (error instanceof CloudPremiumRequiredError) throw error;
     if (error instanceof UnsupportedHistoryFormatError) throw error;
     // "La cuenta no tiene copia" y "no pudimos consultar la copia" son dos
@@ -176,6 +180,7 @@ export function conservarPremiumManual(
 // promesa por si quien la llama necesita esperar a que termine (por
 // ejemplo, antes de cerrar sesión) en vez de solo "lanzarla y olvidarla".
 export async function saveCloudData(uid: string, data: CloudData): Promise<ResultadoNube> {
+  try { return await withPrivateBoxCloudOperation<ResultadoNube>(uid, async lease => {
   // Si una lectura local falló, el contexto puede tener valores de respaldo
   // vacíos. Nunca se suben sobre la copia válida de otro teléfono.
   if (hasUnreadableLocalData()) {
@@ -193,12 +198,12 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
   delete clean.historyFormat;
 
   try {
-    const existing = await getDoc(doc(db, "users", uid));
+    const existing = await lease.wait(() => getDoc(doc(db, "users", uid)));
     if (existing.exists() && existing.data().accountDeletionPending === true) {
       return { ok: false, motivo: "eliminacion-pendiente" };
     }
     if (existing.exists() && existing.data().historyFormat === 2) {
-      return await saveCloudDataV2(uid, clean);
+      return await saveCloudDataV2(uid, clean, lease);
     }
     if (existing.exists()) assertLegacyHistoryFormat(existing.data());
   } catch (error) {
@@ -227,9 +232,9 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
     // dos teléfonos podían leer la misma copia, añadir cosas diferentes y el
     // último en guardar borraba silenciosamente lo que acababa de subir el otro.
     // Firestore repite esta función si el documento cambia mientras se prepara.
-    await runTransaction(db, async (transaction) => {
+    await lease.wait(() => runTransaction(db, async (transaction) => {
       if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
-      const snap = await transaction.get(ref);
+      const snap = await lease.wait(() => transaction.get(ref));
       const actual = snap.exists() ? snap.data() : null;
       assertLegacyHistoryFormat(actual);
       let siguiente = conservarPremiumManual(actual, clean);
@@ -262,23 +267,25 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
       if (pesa(siguiente) > LIMITE_FIRESTORE) throw new Error("demasiado-grande");
       if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
       saved = siguiente;
+      lease.assertCurrent();
       transaction.set(ref, siguiente);
-    });
-    return { ok: true, data: saved };
+    }));
+    return { ok: true, data: lease.remember(saved) };
   } catch (e) {
     return { ok: false, motivo: motivoLegible(e) };
   }
+  }); } catch (error) { return { ok: false, motivo: motivoLegible(error) }; }
 }
 
-async function saveCloudDataV2(uid: string, clean: CloudData): Promise<ResultadoNube> {
+async function saveCloudDataV2(uid: string, clean: CloudData, lease: PrivateBoxCloudLease): Promise<ResultadoNube> {
   try {
     if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
-    const history = await saveHistoryV2(uid, clean.transactions, clean.deletedTransactionIds ?? []);
+    const history = await saveHistoryV2(uid, clean.transactions, clean.deletedTransactionIds ?? [], lease);
     const ref = doc(db, "users", uid);
     let saved: CloudData = { ...clean, transactions: history.transactions, deletedTransactionIds: history.deletedIds };
-    await runTransaction(db, async (transaction) => {
+    await lease.wait(() => runTransaction(db, async (transaction) => {
       if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
-      const snap = await transaction.get(ref);
+      const snap = await lease.wait(() => transaction.get(ref));
       if (!snap.exists() || snap.data().historyFormat !== 2) throw new UnsupportedHistoryFormatError();
       const actual = snap.data() as CloudData;
       let next = mergeCloudFields(conservarPremiumManual(actual, saved), actual);
@@ -302,10 +309,11 @@ async function saveCloudDataV2(uid: string, clean: CloudData): Promise<Resultado
       }
       if (pesa(root) > LIMITE_FIRESTORE) throw new Error("demasiado-grande");
       if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
+      lease.assertCurrent();
       transaction.set(ref, root);
       saved = { ...next, ...root, transactions: history.transactions, deletedTransactionIds: history.deletedIds };
-    });
-    return { ok: true, data: saved };
+    }));
+    return { ok: true, data: lease.remember(saved) };
   } catch (error) {
     return { ok: false, motivo: motivoLegible(error) };
   }
@@ -325,6 +333,7 @@ async function saveCloudDataV2(uid: string, clean: CloudData): Promise<Resultado
  */
 function motivoLegible(e: unknown): string {
   const crudo = String((e as { code?: string })?.code ?? (e as Error)?.message ?? e);
+  if (/private-box-review-(pending|changed)/.test(crudo)) return "revision-caja-pendiente";
   if (/demasiado-grande/i.test(crudo)) return "demasiado-grande";
   if (/cloud-field-invalid|cloud-field-duplicate-id|sync-clock-overflow/i.test(crudo)) return "datos-nube-invalidos";
   if (/permission-denied|insufficient permissions/i.test(crudo)) return "permisos";

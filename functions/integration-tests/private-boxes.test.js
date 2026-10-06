@@ -15,16 +15,21 @@ const { getFirestore, connectFirestoreEmulator, disableNetwork, enableNetwork, g
 const esbuild = requireRoot("esbuild");
 
 async function code(client) {
-  const names = process.env.FINO_TEST_CAJAS_BASELINE ? "" : 'export { resolverNombreCaja } from "@/utils/cloudCajas"; export { prepararRevisionNombre } from "@/utils/cajas"; export { planPrivateBoxRepair } from "@/utils/privateBoxRepair";';
+  const names = process.env.FINO_TEST_CAJAS_BASELINE ? "" : 'export { resolverNombreCaja } from "@/utils/cloudCajas"; export { prepararRevisionNombre } from "@/utils/cajas"; export { planPrivateBoxRepair } from "@/utils/privateBoxRepair"; export {saveCloudData} from "@/utils/cloudSync"; export {saveHistoryV2,loadHistoryV2} from "@/utils/cloudHistoryV2"; export {withPrivateBoxMoneyReview,privateBoxCloudResponseCurrent} from "@/utils/privateBoxSync";';
   const built = await esbuild.build({ stdin: { contents: 'export { bajarCajas, subirCajas } from "@/utils/cloudCajas"; export { loadPrivateBoxRepairCloud, assertPrivateBoxRepairCloud } from "@/utils/privateBoxRepairCloud"; export { resolvePrivateBoxConflict, privateBoxLinkCandidates } from "@/utils/privateBoxRepair";' + names,
     resolveDir: root, loader: "ts" }, bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent",
-    external: ["firebase/*"], alias: { "@": root },
+    external: ["firebase/*"], alias: { "@": root, "expo-crypto": path.join(root, "pruebas/stubs/crypto.ts") },
     plugins: [{ name: "demo-config-and-native-session", setup(build) {
       build.onLoad({ filter: /[\\/]utils[\\/]firebase\.ts$/ }, () => ({ loader: "ts",
-        contents: "export const { auth, db } = globalThis.__FINO_DEMO__;" }));
+        contents: "export const { auth, db, functions } = globalThis.__FINO_DEMO__;" }));
       build.onLoad({ filter: /[\\/]utils[\\/]storage\.ts$/ }, () => ({ loader: "ts", contents: `
         export const getAccountStorageSession = () => globalThis.__FINO_DEMO__.native.session;
+        export const STORAGE_KEYS = {cajasDinero:'cajas'};
+        export const loadJSON = async (_key, fallback) => globalThis.__FINO_DEMO__.native.localCajas ?? fallback;
         export const hasUnreadableLocalData = () => globalThis.__FINO_DEMO__.native.unreadable;` }));
+      // El módulo excluido no se carga ni prueba; el borrado no forma parte de esta suite.
+      build.onResolve({ filter: /^@\/utils\/creditCloud$/ }, () => ({ path: "excluded-credit", namespace: "excluded" }));
+      build.onLoad({ filter: /.*/, namespace: "excluded" }, () => ({ loader: "ts", contents: "export const deleteCreditCloudAccount=async()=>{};" }));
       const baseline = process.env.FINO_TEST_CAJAS_BASELINE;
       if (baseline) {
         if (!/^[a-f0-9]{7,40}$/.test(baseline)) throw new Error("Se requiere un hash de Git.");
@@ -227,6 +232,34 @@ test("Cajas privadas con SDK/Firestore reales: versiones, transacción, borrados
       await admin.doc(`users/${uid}`).update({ isPremium: false });
       await assert.rejects(getDocFromServer(doc(a.db, "cajas", uid)), error => error.code === "permission-denied");
       await deleteDoc(doc(a.db, "cajas", uid)); assert.equal((await ref.get()).exists, false);
+    });
+    await t.test("una revisión local pendiente bloquea respaldo Personal antiguo/v2 y Caja capturada antes, sin escrituras reales", async () => {
+      const move = { ...row, personalTransactionId: 10 }, p = { id: 10, type: "expense", amount: 80, category: "otros", date: move.fecha, description: "Aporte", method: "transfer", notes: "", internalTransfer: "box", internalTransferLink: move.id, internalTransferSpaceId: box.id, updatedAt: 110 };
+      const profile = { hasOnboarded: true, userName: "Prueba", userPhoto: null, userCurrency: "PEN", userLanguage: "es", budgets: {}, categoryBudgets: {}, transactions: [{ ...p, amount: 100, updatedAt: 100 }], goals: [], isPremium: true, syncFormat: 2 };
+      const source = { ...initial, movimientos: [move] };
+      const entry = { id: "money-sdk-barrier-0001", uid, currency: "PEN", box, local: { personal: p, movement: move }, remote: { personal: profile.transactions[0], movement: move }, chosen: "local-personal", createdAt: 200, version: 200, estado: "pendiente" };
+      await admin.doc(`users/${uid}`).set(profile); await ref.set(source);
+      a.native.localCajas = { ...source, revisionesImporte: [entry] };
+      const beforePersonal = await admin.doc(`users/${uid}`).get(), beforeBox = await ref.get();
+      const result = await a.api.saveCloudData(uid, { ...profile, transactions: [p] });
+      assert.equal(result.ok, false); assert.equal(result.motivo, "revision-caja-pendiente");
+      assert.equal(await a.api.subirCajas(uid, source), false);
+      await assert.rejects(a.api.saveHistoryV2(uid, [p], []), /review-pending/);
+      await assert.rejects(a.api.loadHistoryV2(uid), /review-pending/);
+      assert.equal((await admin.doc(`users/${uid}`).get()).updateTime.isEqual(beforePersonal.updateTime), true);
+      assert.equal((await ref.get()).updateTime.isEqual(beforeBox.updateTime), true);
+      assert.equal(a.native.localCajas.revisionesImporte[0].local.personal.amount, 80);
+      a.native.localCajas = undefined;
+    });
+    await t.test("una confirmación SDK antigua no se aplica después de empezar a revisar; no bloquea otro dispositivo", async () => {
+      const profile = { hasOnboarded: true, userName: "Prueba", userPhoto: null, userCurrency: "PEN", userLanguage: "es", budgets: {}, categoryBudgets: {}, transactions: [], goals: [], isPremium: true, syncFormat: 2 };
+      await admin.doc(`users/${uid}`).set(profile); await ref.set(initial);
+      const saved = await a.api.saveCloudData(uid, profile); assert.equal(saved.ok, true);
+      assert.equal(a.api.privateBoxCloudResponseCurrent(uid, saved.data), true);
+      await a.api.withPrivateBoxMoneyReview(uid, async lease => { lease.assertCurrent(); });
+      assert.equal(a.api.privateBoxCloudResponseCurrent(uid, saved.data), false);
+      assert.equal((await b.api.saveCloudData(uid, profile)).ok, true, "la coordinación no concede un bloqueo remoto a otra cuenta/dispositivo");
+      assert.equal((await a.api.saveCloudData(uid, profile)).ok, true);
     });
   } finally {
     for (const c of clients) { await terminate(c.db); await deleteApp(c.app); }

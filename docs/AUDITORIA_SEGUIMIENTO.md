@@ -3,6 +3,27 @@
 Última revisión: 06/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## Continuación punto 1 — barrera del respaldo Personal/Caja (06/10/2026)
+
+- Pendencia local pausa ambos respaldos/lecturas ordinarios, incluso tras reinicio;
+  misma cola por UID y autorización anidada genuina para historial v2. Identidad,
+  generación, archivo legible y verificación antes de escribir/tras esperas.
+- Recepción/hidratación/contexto descartan sellos viejos. No rejuvenece otra
+  respuesta/autorización. Espera el desenlace de escrituras en vuelo, no las deshace.
+  Ajustes explica la pausa sin anunciar una confirmación vieja como respaldo actual.
+- Regresión c24eff0 reproduce Personal S/80 contra Caja S/100 pese a pendencia.
+  Pruebas nuevas aíslan red/almacén, ejecutan módulos/contexto originales; SDK
+  real añade casos sin escrituras y respuesta vieja/otro dispositivo. Guía:
+  `docs/PRUEBAS_BARRERA_PERSONAL_CAJA.md`. TypeScript/ESLint, 140 pruebas del
+  ámbito/8 auditores (una ajena sin registrar), 73 unitarias y 112 SDK/reglas/
+  HTTP/eventos bajo Node 22 real aprobados. Regresión anterior falla; adaptadores
+  y contrato de sesión corregidos sin quitar aserciones, suite completa repetida.
+- **Qué sigue:** pantalla, fuentes frescas dentro de cola, originales, mutaciones
+  protegidas, petición, lote financiero y recuperación. **Qué falta:** resto de
+  conflictos/hallazgos, Android/tamaño/consolas/publicación autorizada. Sin cierre
+  de punto 1/auditoría ni atomicidad global. No nativos/tarjetas/marca/entrega.
+  Dos suites específicas de tarjetas excluidas expresamente por el propietario.
+
 ## Continuación punto 1 — originales de importe locales (06/10/2026)
 
 - Cuatro fuentes/elección/versiones conservadas en Cajas cifrado y archivo por

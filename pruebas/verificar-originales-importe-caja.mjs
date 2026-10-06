@@ -131,6 +131,7 @@ assert.equal(plan.data, journal); assert.equal(plan.upserts.length, 0); assert.e
 let cloud = plain(data), calls = 0, writes = 0;
 const task = { captureAccountTask: () => ({ current: () => true, wait: work => work() }) };
 const uploader = load("utils/cloudCajas.ts", name => {
+  if (name === "@/utils/privateBoxSync") return { withPrivateBoxCloudOperation: async (_uid, work) => work({ assertCurrent() {}, wait: work => work(), remember: data => data }) };
   if (name === "@/utils/cajas") return core;
   if (name === "@/utils/firebase") return { db: {} };
   if (name === "@/utils/accountTask") return task;

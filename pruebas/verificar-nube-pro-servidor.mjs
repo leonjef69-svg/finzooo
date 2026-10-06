@@ -157,7 +157,7 @@ function find(node) {
 find(clientAst);
 let reads = 0;
 const clientScope = { getCloudAccountAccess: async () => access, getDoc: async () => { reads++; throw new Error("NO_READ"); },
-  UnsupportedHistoryFormatError: class extends Error {} };
+  UnsupportedHistoryFormatError: class extends Error {}, PrivateBoxSyncError: class extends Error {} };
 vm.createContext(clientScope);
 vm.runInContext(ts.transpile(`${errorSource.replace(/^export\s+/, "")}\n${loadSource.replace(/^export\s+/, "")}`, { target: ts.ScriptTarget.ES2022 }), clientScope);
 await assert.rejects(clientScope.loadCloudData("alice"), error => error.name === "CloudPremiumRequiredError");

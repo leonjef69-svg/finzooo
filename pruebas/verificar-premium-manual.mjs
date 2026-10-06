@@ -1,32 +1,19 @@
-import fs from "fs";
-
-const archivo = fs.readFileSync("utils/cloudSync.ts", "utf8");
-
-const fallos = [];
-
-if (!archivo.includes("export function conservarPremiumManual")) {
-  fallos.push("Falta la función que protege el Premium manual.");
-}
-
-if (!archivo.includes("isPremium: actualEnLaNube.isPremium === true")) {
-  fallos.push("No se conserva exactamente el Premium que controla Firebase.");
-}
-
-if (!archivo.includes('typeof actualEnLaNube.premiumTrialStartedAt === "number"')) {
-  fallos.push("No se conserva el inicio de prueba que ya existe en Firebase.");
-}
-
-if (!archivo.includes("const snap = await transaction.get(ref);")) {
-  fallos.push("saveCloudData no lee el documento actual dentro de la operación atómica.");
-}
-
-if (!archivo.includes("let siguiente = conservarPremiumManual(actual, clean);")) {
-  fallos.push("saveCloudData no protege Premium antes de escribir.");
-}
-
-if (fallos.length) {
-  for (const fallo of fallos) console.error("FALLA:", fallo);
-  process.exit(1);
-}
-
-console.log("OK premium manual protegido");
+import fs from "node:fs";
+import assert from "node:assert/strict";
+import vm from "node:vm";
+import ts from "typescript";
+const source = ts.createSourceFile("cloud.ts", fs.readFileSync("utils/cloudSync.ts", "utf8"), ts.ScriptTarget.Latest, true);
+const declaration = source.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "conservarPremiumManual");
+assert.ok(declaration, "debe existir el auxiliar original, no una copia en la prueba");
+const scope = { exports: {} };
+vm.runInNewContext(ts.transpile(declaration.getText(source), { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }), scope);
+const protect = scope.exports.conservarPremiumManual;
+const local = { isPremium: false, premiumTrialStartedAt: 999, transactions: [{ id: 1, amount: 80 }], budgets: { mes: 100 } };
+const result = protect({ isPremium: true, premiumTrialStartedAt: 10 }, local);
+assert.equal(result.isPremium, true, "el teléfono no revoca una concesión del servidor");
+assert.equal(result.premiumTrialStartedAt, 10, "no reinicia la prueba con la fecha local");
+assert.equal(result.transactions, local.transactions); assert.equal(result.budgets, local.budgets);
+assert.equal(protect({ isPremium: false }, { ...local, isPremium: true }).isPremium, false, "el teléfono no puede concederse Pro sobre una revocación");
+assert.equal(protect({ isPremium: "true" }, local).isPremium, false, "solo acepta un booleano real");
+assert.equal(protect(null, local), local); assert.equal(local.isPremium, false);
+console.log("Premium manual: auxiliar original ejecutado; conserva permiso/prueba del servidor sin cambiar movimientos. Su conexión de escritura se comprueba en las pruebas de respaldo.");

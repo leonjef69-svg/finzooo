@@ -16,6 +16,12 @@ vm.runInNewContext(ts.transpile(read("utils/cloudFieldMerge.ts"), {
 }), { exports });
 const { mergeCloudFields, recordCloudGroupChange, cloudGroupValue, replaceCloudGroup, CLOUD_SYNC_GROUPS } = exports;
 const plain = (value) => JSON.parse(JSON.stringify(value));
+// Dependencia de coordinación sustituida solo para probar la fusión original;
+// su cola/sesión/archivo se ejecutan en verificar-barrera-personal-caja.mjs.
+const coordinator = {
+  PrivateBoxSyncError: class extends Error {}, privateBoxCloudResponseCurrent: () => true,
+  withPrivateBoxCloudOperation: async (_uid, work) => work({ assertCurrent() {}, wait: work => work(), remember: data => data }),
+};
 const data = (extra = {}) => ({ hasOnboarded: true, userName: "Ana", userPhoto: null,
   userCurrency: "PEN", userLanguage: "es", budgets: {}, categoryBudgets: {},
   transactions: [], goals: [], isPremium: false, ...extra });
@@ -142,7 +148,7 @@ function code(name, ast = source) {
   assert.ok(found, name);
   return ts.transpile(found.replace(/^export\s+/, ""), { target: ts.ScriptTarget.ES2022 });
 }
-const scope = { ...exports, cloudFieldsRef: { current: a }, cloudSyncMetaRef: { current: a.syncUpdatedAt },
+const scope = { ...exports, ...coordinator, auth: { currentUser: { uid: "test" } }, cloudFieldsRef: { current: a }, cloudSyncMetaRef: { current: a.syncUpdatedAt },
   setCloudSyncMeta() {}, setRespaldoFallo() {}, userEmail: "test@example.com", userCountry: "PE",
   saveJSON() {}, STORAGE_KEYS: {}, getFavoritos: () => [], ready: true, hasOnboarded: true,
 };
@@ -208,7 +214,7 @@ for (const historyFormat of [1, 2]) {
   if (historyFormat === 2) { stored.historyFormat = 2; delete stored.transactions; }
   const snap = () => ({ exists: () => true, data: () => structuredClone(stored) });
   const cloudScope = {
-    ...exports, ...helpers, db: {}, doc: () => "isolated-user", getDoc: async () => snap(),
+    ...exports, ...helpers, ...coordinator, db: {}, doc: () => "isolated-user", getDoc: async () => snap(),
     hasUnreadableLocalData: () => false, utf8ByteLength: (text) => Buffer.byteLength(text, "utf8"),
     assertLegacyHistoryFormat: (raw) => { if (raw?.historyFormat === 2) throw new Error("not-legacy"); },
     UnsupportedHistoryFormatError: class extends Error {},
@@ -240,7 +246,7 @@ for (const historyFormat of [1, 2]) {
 const localHydrate = { ...a, transactions: [transaction(1), transaction(3)], deletedTransactionIds: [3],
   iconosFavoritos: [localPhoto, "Home"] };
 const remoteHydrate = { ...b, isPremium: true, transactions: [transaction(2), transaction(3)] };
-const hydrateScope = { ...exports, ...helpers, auth: { currentUser: { uid: "test" } }, localSessionVersion: { current: 1 },
+const hydrateScope = { ...exports, ...helpers, ...coordinator, setRespaldoFallo() {}, auth: { currentUser: { uid: "test" } }, localSessionVersion: { current: 1 },
   cloudFieldsRef: { current: localHydrate }, cloudSyncMetaRef: { current: a.syncUpdatedAt },
   tRef: { current: (key) => key }, loadCloudData: async () => remoteHydrate,
   CloudPremiumRequiredError: class extends Error {}, userCountry: "PE", userEmail: "test@example.com", pruebaInicio: null,

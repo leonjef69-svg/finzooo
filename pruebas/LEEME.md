@@ -135,3 +135,16 @@ cuatro fuentes, validación/metadata/versiones, límites y cifrado/bóveda reale
 con sustitutos de Android. La regresión b48e703 pierde el campo al normalizar.
 No es pantalla/envío/guardado monetario conectados ni Android físico. Ver
 `docs/PRUEBAS_ORIGINALES_IMPORTE_CAJA.md` para alcance y siguientes pasos.
+
+## Coordinación de respaldo y alcance sin tarjetas
+
+`verificar-barrera-personal-caja.mjs` ejecuta la cola/nube/historial/contexto
+originales con red y almacenamiento aislados. La regresión c24eff0 reproduce
+un respaldo de Personal pese a la revisión Caja pendiente. No es Android ni
+la corrección monetaria de pantalla, que todavía falta conectar. Guía:
+`docs/PRUEBAS_BARRERA_PERSONAL_CAJA.md`.
+
+Por la exclusión del propietario, ejecutar `node pruebas/correr.mjs --sin-tarjetas`
+omite sus dos suites específicas y no las cuenta como aprobadas. Sin esa opción
+se conserva la ejecución completa; con un filtro el total muestra solo lo que
+se ejecutó. La compilación/lint generales no equivalen a auditar ese módulo.

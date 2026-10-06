@@ -36,6 +36,7 @@ import { cancelarConversionCaja, enlacesCajaConvertida, huellaCaja, nuevoIntento
 import { spaceErrorKey } from "@/utils/spaceErrors";
 import type { Transaction } from "@/types";
 import { privateBoxLinksMatch } from "@/utils/privateBoxPersonal";
+import { PrivateBoxSyncError, privateBoxCloudResponseCurrent } from "@/utils/privateBoxSync";
 import { planPrivateBoxRepair, privateBoxLinkCandidates, resolvePrivateBoxConflict, type PrivateBoxRepairChoice } from "@/utils/privateBoxRepair";
 import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Boxes, Check, ListChecks, Pencil, Plus, RefreshCw, Trash2, UserPlus, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
@@ -124,7 +125,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   [accountSession, accountUid]);
   const reportSyncError = useCallback((error: unknown) => {
     if (!cuentaActual()) return;
-    setSyncIssue(error instanceof Error && error.message === "cajas-sync-conflict" ? "boxes.syncConflict" : "boxes.syncFailed");
+    setSyncIssue(error instanceof PrivateBoxSyncError || (error instanceof Error && error.message === "cajas-sync-conflict") ? "boxes.syncConflict" : "boxes.syncFailed");
     if (error instanceof CloudCajasConflictError) {
       setNameCopies({ local: datosActuales.current, remoto: error.cajaRemota });
       setCloudReady(false); nubeConfirmadaPara.current = null;
@@ -218,6 +219,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
         }
       }
       if (!current()) return;
+      if (remoto && !privateBoxCloudResponseCurrent(uid, remoto)) return;
       // La referencia incorpora inmediatamente cada cambio local, incluso si
       // React todavía no lo pintó. La nube no sustituye una edición encolada.
       let unidos: DatosCajas;

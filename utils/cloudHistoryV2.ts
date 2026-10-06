@@ -8,6 +8,7 @@ import {
   type HistoryEntry, historyDocumentId, mergeHistoryEntries,
   planLocalHistoryChanges, UnsupportedHistoryFormatError,
 } from "@/utils/cloudHistoryMigration";
+import { withPrivateBoxCloudLease, type PrivateBoxCloudLease } from "@/utils/privateBoxSync";
 
 type Cache = { entries: HistoryEntry[]; checkpoint: Timestamp | null };
 const caches = new Map<string, Cache>();
@@ -75,35 +76,39 @@ function asLists(entries: HistoryEntry[]): { transactions: Transaction[]; delete
 }
 
 /** Historial completo para restauración o actualización; nunca interpreta fallo como vacío. */
-export function loadHistoryV2(uid: string): Promise<{ transactions: Transaction[]; deletedIds: number[] }> {
-  return exclusive(uid, async () => asLists((await refresh(uid)).entries));
+export function loadHistoryV2(uid: string, lease?: PrivateBoxCloudLease): Promise<{ transactions: Transaction[]; deletedIds: number[] }> {
+  return withPrivateBoxCloudLease(uid, lease, approved => exclusive(uid, async () => {
+    const response = asLists((await approved.wait(() => refresh(uid))).entries);
+    return approved.remember(response);
+  }));
 }
 
 /** Guarda solo cambios locales. Cada fila verifica de nuevo su versión dentro de una transacción. */
 export function saveHistoryV2(
-  uid: string, transactions: Transaction[], deletedIds: number[],
+  uid: string, transactions: Transaction[], deletedIds: number[], lease?: PrivateBoxCloudLease,
 ): Promise<{ transactions: Transaction[]; deletedIds: number[] }> {
-  return exclusive(uid, async () => {
-    let cache = await refresh(uid);
+  return withPrivateBoxCloudLease(uid, lease, approved => exclusive(uid, async () => {
+    let cache = await approved.wait(() => refresh(uid));
     const changes = planLocalHistoryChanges(transactions, deletedIds, cache.entries);
     for (const change of changes) {
       const rootRef = doc(db, "users", uid);
       const rowRef = doc(db, "users", uid, "history", historyDocumentId(change.id));
-      const saved = await runTransaction(db, async (tx) => {
-        const [root, row] = await Promise.all([tx.get(rootRef), tx.get(rowRef)]);
+      const saved = await approved.wait(() => runTransaction(db, async (tx) => {
+        const [root, row] = await approved.wait(() => Promise.all([tx.get(rootRef), tx.get(rowRef)]));
         if (!root.exists() || root.data().historyFormat !== 2) throw new UnsupportedHistoryFormatError();
         const old = row.exists() ? parseEntry(row.data()) : null;
         const merged = mergeHistoryEntries(old ? [old] : [], [change])[0];
         if (!old || JSON.stringify(old) !== JSON.stringify(merged)) {
+          approved.assertCurrent();
           tx.set(rowRef, { ...merged, syncAt: serverTimestamp() });
         }
         return merged;
-      });
+      }));
       cache = { ...cache, entries: mergeHistoryEntries(cache.entries, [saved]) };
       caches.set(uid, cache);
     }
-    return asLists((await refresh(uid)).entries);
-  });
+    return approved.remember(asLists((await approved.wait(() => refresh(uid))).entries));
+  }));
 }
 
 export function clearHistoryV2Cache(uid: string): void {

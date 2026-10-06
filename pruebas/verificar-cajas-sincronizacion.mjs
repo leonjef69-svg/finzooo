@@ -64,6 +64,7 @@ let remote = recent, cache = false, pending = false, exists = true, readGate = n
 const writes = [];
 const snapshot = () => ({ exists: () => exists, data: () => remote, metadata: { fromCache: cache, hasPendingWrites: pending } });
 const cloud = load("utils/cloudCajas.ts", name => {
+  if (name === "@/utils/privateBoxSync") return { withPrivateBoxCloudOperation: async (_uid, work) => work({ assertCurrent() {}, wait: work => work(), remember: data => data }) };
   if (name === "@/utils/firebase") return { db: {}, auth };
   if (name === "@/utils/cajas") return api;
   if (name === "@/utils/accountTask") return { captureAccountTask: capture };
@@ -147,6 +148,7 @@ function screenHarness(premium = true) {
     premiumForSync: { current: premium }, nubeConfirmadaPara: { current: null }, datosActuales: { current: data() },
     captureAccountTask: capture, hasUnreadableLocalData: () => false, STORAGE_KEYS: { cajasDinero: "cajas" }, CAJAS_VACIAS: data([]),
     validarCajas: api.validarCajas, fusionarCajas: api.fusionarCajas,
+    privateBoxCloudResponseCurrent: () => true,
     loadJSON: () => localRead.promise, bajarCajas: () => { count++; return cloudRead.promise; },
     leerCajasEnMemoria: () => null, guardarCajasEnMemoria: value => { state.memory = value; }, saveJSON: async (_key, value) => { state.saved = value; },
     setRenderedDatos: value => { state.rendered = value; }, setReady: value => { state.ready = value; },

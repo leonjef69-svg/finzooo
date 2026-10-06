@@ -1,5 +1,31 @@
 # Estado actual de Fino
 
+## Respaldo Personal/Caja — coordinación preparada (06/10/2026)
+
+- Revisión monetaria pendiente pausa ambas copias ordinarias, también tras
+  reinicio. Cola por UID, identidad/generación, lectura Cajas legible y guardia
+  antes de escribir/tras esperar. Historial v2 anidado sin candado circular.
+- Sello solo en memoria: contexto, hidratación y descarga Caja rechazan respuestas
+  anteriores a una revisión o cuenta. No rejuvenece objetos/autorizaciones viejos.
+  Ajustes explica la pausa; no muestra respaldo actualizado con confirmación vieja.
+- Espera una subida ya enviada, no promete cancelarla/deshacerla. La futura
+  elección exige fuentes frescas dentro de esa cola, originales antes de red y
+  guardado conjunto confirmado. **No hay botón/petición monetaria conectados aún.**
+- Guía: `docs/PRUEBAS_BARRERA_PERSONAL_CAJA.md`. Regresión c24eff0 reproduce
+  respaldo Personal S/80 mientras Caja sigue S/100 con revisión pendiente.
+- TypeScript/ESLint, 140 pruebas del ámbito/8 auditores (una prueba ajena sin
+  registrar: 139 en copia limpia), 73 unitarias y 112 SDK/reglas/HTTP/eventos
+  bajo Node 22 real aprobados. Regresión c24eff0 falla como se esperaba. ADB
+  sin dispositivos; la primera suite SDK detectó adaptadores/error de sesión,
+  se corrigieron sin quitar aserciones y la repetición completa aprobó.
+  Tarjetas fuera: dos suites específicas
+  excluidas y no contadas como aprobadas; compilación/lint generales no auditan
+  ese módulo. Sin nuevos datos/claves/retención: políticas/Play no se modifican.
+- **Qué sigue:** pantalla/selección, mutaciones locales protegidas, petición,
+  lote financiero y recuperación. **Qué falta:** otras discrepancias/hallazgos,
+  Android/tamaño/dos dispositivos/consolas/publicación coordinada autorizada.
+  Punto 1/auditoría abiertos; sin nativos/tarjetas/marca/instalable/OTA/despliegue.
+
 ## Originales monetarios — archivo local preparado, pantalla pendiente (06/10/2026)
 
 - `revisionesImporte` conserva cuatro originales, elección, UID/IDs/moneda,

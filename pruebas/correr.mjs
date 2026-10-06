@@ -165,7 +165,13 @@ const AUDITORES = fs
   .filter((f) => /^auditar-.*\.mjs$/.test(f))
   .sort();
 
-const FILTRO = process.argv[2] || process.env.FINO_TEST || "";
+const SIN_TARJETAS = process.argv.includes("--sin-tarjetas");
+const FILTRO = process.argv.slice(2).find(value => value !== "--sin-tarjetas") || process.env.FINO_TEST || "";
+const seleccionada = archivo => (!FILTRO || archivo.includes(FILTRO))
+  && (!SIN_TARJETAS || !/^verificar-tarjeta-credito(?:-ux)?\.ts$/.test(archivo));
+const suitesSeleccionadas = SUITES.filter(s => seleccionada(s.archivo));
+const sueltasSeleccionadas = SUELTAS.filter(seleccionada);
+const auditoresSeleccionados = AUDITORES.filter(seleccionada);
 
 /** Corre un .mjs suelto y cuenta si paso. */
 function correrSuelto(archivo) {
@@ -186,7 +192,8 @@ let fallos = 0;
 const rotas = [];
 
 console.log("\n=== PRUEBAS ===\n");
-for (const s of SUITES.filter(s => !FILTRO || s.archivo.includes(FILTRO))) {
+if (SIN_TARJETAS) console.log("Tarjetas de crédito: dos suites excluidas por decisión del propietario. No se cuentan como aprobadas.\n");
+for (const s of suitesSeleccionadas) {
   const nombre = s.archivo.replace(/\.ts$/, "");
   const salida = path.join(TMP, nombre + (s.formato === "cjs" ? ".cjs" : ".mjs"));
   try {
@@ -223,15 +230,15 @@ for (const s of SUITES.filter(s => !FILTRO || s.archivo.includes(FILTRO))) {
   }
 }
 
-for (const f of SUELTAS.filter(f => !FILTRO || f.includes(FILTRO))) correrSuelto(f);
+for (const f of sueltasSeleccionadas) correrSuelto(f);
 
 console.log("\n=== AUDITORES ===\n");
-for (const a of AUDITORES.filter(a => !FILTRO || a.includes(FILTRO))) correrSuelto(a);
+for (const a of auditoresSeleccionados) correrSuelto(a);
 
 console.log("");
 if (fallos === 0) {
   console.log(
-    `Todo bien: ${SUITES.length + SUELTAS.length} pruebas y ${AUDITORES.length} auditores\n`
+    `Todo bien: ${suitesSeleccionadas.length + sueltasSeleccionadas.length} pruebas y ${auditoresSeleccionados.length} auditores${SIN_TARJETAS ? " (tarjetas excluidas)" : ""}\n`
   );
 } else {
   console.log(`${fallos} con problemas: ${rotas.join(", ")}\n`);

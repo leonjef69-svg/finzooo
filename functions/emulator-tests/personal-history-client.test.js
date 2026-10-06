@@ -12,7 +12,7 @@ const { initializeApp, deleteApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { deletePersonalCloudCopy } = require("../src/cloud-access");
 
-async function clientModule(firestore, entry = "utils/cloudHistoryV2.ts") {
+async function clientModule(firestore, entry = "utils/cloudHistoryV2.ts", uid = "alice") {
   const root = path.resolve(__dirname, "../..");
   const result = await esbuild.build({
     entryPoints: [path.join(root, entry)],
@@ -20,7 +20,7 @@ async function clientModule(firestore, entry = "utils/cloudHistoryV2.ts") {
     external: ["firebase/firestore"],
     plugins: [{ name: "test-firebase", setup(build) {
       build.onResolve({ filter: /^@\/utils\/firebase$/ }, () => ({ path: "firebase", namespace: "test" }));
-      build.onLoad({ filter: /.*/, namespace: "test" }, () => ({ contents: "export const db = globalThis.__finoHistoryTestDb;", loader: "js" }));
+      build.onLoad({ filter: /.*/, namespace: "test" }, () => ({ contents: "export const db = globalThis.__finoHistoryTestDb; export const auth = globalThis.__finoHistoryTestAuth;", loader: "js" }));
       // Este grupo comprueba la copia real de un cliente Pro en Firestore.
       // La API de permisos tiene sus propias pruebas y aquí se aísla el RPC.
       build.onResolve({ filter: /^@\/utils\/cloudAccountAccess$/ }, () => ({ path: "access", namespace: "test-access" }));
@@ -40,7 +40,7 @@ async function clientModule(firestore, entry = "utils/cloudHistoryV2.ts") {
       // usa datos válidos y aísla esa pieza nativa, no la lógica de nube.
       build.onResolve({ filter: /^@\/utils\/storage$/ }, () => ({ path: "storage", namespace: "test-storage" }));
       build.onLoad({ filter: /.*/, namespace: "test-storage" }, () => ({
-        contents: "export const hasUnreadableLocalData = () => false;", loader: "js",
+        contents: "export const hasUnreadableLocalData = () => false; export const getAccountStorageSession=()=>1; export const STORAGE_KEYS={cajasDinero:'cajas'}; export const loadJSON=async(_key,fallback)=>fallback;", loader: "js",
       }));
       build.onResolve({ filter: /^@\/utils\/(cloudNegocio|cloudCajas|cloudFamilia|cloudCajasCompartidas|creditCloud)$/ },
         () => ({ path: "unused", namespace: "stub" }));
@@ -60,10 +60,12 @@ async function clientModule(firestore, entry = "utils/cloudHistoryV2.ts") {
     } }],
   });
   globalThis.__finoHistoryTestDb = firestore;
+  globalThis.__finoHistoryTestAuth = { currentUser: { uid } };
   const module = { exports: {} };
   const localRequire = createRequire(__filename);
   new Function("require", "module", "exports", result.outputFiles[0].text)(localRequire, module, module.exports);
   delete globalThis.__finoHistoryTestDb;
+  delete globalThis.__finoHistoryTestAuth;
   return module.exports;
 }
 
@@ -86,7 +88,7 @@ test("el respaldo v2 acepta más de 800 KB y restaura sin lista raíz", async ()
       userCurrency: "PEN", userLanguage: "es", budgets: {}, categoryBudgets: {}, goals: [], isPremium: true,
     }));
     const db = env.authenticatedContext("large", { email_verified: true }).firestore();
-    const cloud = await clientModule(db, "utils/cloudSync.ts");
+    const cloud = await clientModule(db, "utils/cloudSync.ts", "large");
     const transactions = Array.from({ length: 105 }, (_, index) => ({
       ...movement(index + 1), notes: "x".repeat(8_000),
     }));
@@ -129,7 +131,7 @@ test("10.000 movimientos se restauran y una edición escribe solo su documento",
       await batch.commit();
     }
     const db = env.authenticatedContext("volume", { email_verified: true }).firestore();
-    const phone = await clientModule(db);
+    const phone = await clientModule(db, "utils/cloudHistoryV2.ts", "volume");
     const restored = await phone.loadHistoryV2("volume");
     assert.equal(restored.transactions.length, 10_000);
     const edited = restored.transactions.map(item => item.id === 5_000 ? movement(5_000, 20_000, 99) : item);

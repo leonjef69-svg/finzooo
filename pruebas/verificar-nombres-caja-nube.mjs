@@ -29,6 +29,7 @@ const local = { cajas: [a, other], movimientos: [row], cajasBorradas: [], movimi
 const remote = { ...plain(local), cajas: [b, other] };
 let document = { ...plain(remote), future: { preserve: true } };
 const api = load("utils/cloudCajas.ts", name => {
+  if (name === "@/utils/privateBoxSync") return { withPrivateBoxCloudOperation: async (_uid, work) => work({ assertCurrent() {}, wait: work => work(), remember: data => data }) };
   if (name.endsWith("firebase")) return { db: {}, auth };
   if (name.endsWith("cajas")) return core;
   if (name.endsWith("accountTask")) return task;

@@ -28,7 +28,7 @@ async function sources(client) {
       // No hay almacenamiento Android en Node; las fuentes compartidas no
       // ejercitan este módulo. La generación se controla en la prueba local.
       build.onLoad({ filter: /[\\/]utils[\\/]storage\.ts$/ }, () => ({ loader: "ts",
-        contents: "export const getAccountStorageSession = () => 1; export const hasUnreadableLocalData = () => false;" }));
+        contents: "export const getAccountStorageSession = () => 1; export const hasUnreadableLocalData = () => false; export const STORAGE_KEYS={cajasDinero:'cajas'}; export const loadJSON=async(_key,fallback)=>fallback;" }));
     } }],
   });
   const module = { exports: {} };

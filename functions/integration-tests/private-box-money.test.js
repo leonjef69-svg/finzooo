@@ -47,7 +47,7 @@ test("Corrección de dinero: SDK/HTTP y transacciones reales sin medias transfer
       bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent", external: ["firebase/*"], alias: { "@": root },
       plugins: [{ name: "previous-real-client", setup(build) {
         build.onLoad({ filter: /[\\/]utils[\\/]firebase\.ts$/ }, () => ({ loader: "ts", contents: "export const {auth,db}=globalThis.client;" }));
-        build.onLoad({ filter: /[\\/]utils[\\/]storage\.ts$/ }, () => ({ loader: "ts", contents: "export const getAccountStorageSession=()=>1; export const hasUnreadableLocalData=()=>false;" }));
+        build.onLoad({ filter: /[\\/]utils[\\/]storage\.ts$/ }, () => ({ loader: "ts", contents: "export const getAccountStorageSession=()=>1; export const hasUnreadableLocalData=()=>false; export const STORAGE_KEYS={cajasDinero:'cajas'}; export const loadJSON=async(_key,fallback)=>fallback;" }));
         build.onLoad({ filter: /[\\/]utils[\\/](?:cloudCajas|cajas)\.ts$/ }, ({ path: file }) => ({ loader: "ts", contents: execFileSync("git", ["show", `${baseline}:utils/${path.basename(file)}`], { cwd: root, encoding: "utf8" }) }));
       } }] });
     const module = { exports: {} };

@@ -144,6 +144,7 @@ import { guardarCajasEnMemoria, limpiarCajasEnMemoria } from "@/utils/cajasMemor
 import { patchPrivateBoxPersonal, validatePrivateBoxPatch } from "@/utils/privateBoxPersonal";
 import { validatePrivateBoxRepair, type PrivateBoxRepairChoice } from "@/utils/privateBoxRepair";
 import { assertPrivateBoxRepairCloud, loadPrivateBoxRepairCloud } from "@/utils/privateBoxRepairCloud";
+import { PrivateBoxSyncError, privateBoxCloudResponseCurrent } from "@/utils/privateBoxSync";
 import { captureAccountTask } from "@/utils/accountTask";
 import { CAJAS_VACIAS, fusionarCajas, validarCajas, type DatosCajas } from "@/utils/cajas";
 import type { Goal, Month, Profile, Transaction } from "@/types";
@@ -158,7 +159,7 @@ type AppDataContextValue = {
   completeOnboarding: (budgetAmount: number) => void;
   reloadPersistedData: () => Promise<void>;
   openLocalAccount: (uid: string, email?: string | null) => Promise<boolean>;
-  hydrateFromCloud: (uid: string) => Promise<"restored" | "none" | "premium-required">;
+  hydrateFromCloud: (uid: string) => Promise<"restored" | "none" | "premium-required" | "review-pending">;
   logout: (options?: { skipBackup?: boolean }) => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
   deleteAccount: (currentPassword: string) => Promise<void>;
@@ -705,6 +706,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   /** La misma unión se usa al subir y al recibir, nunca una lista entera. */
   const applyNewerCloudFields = useCallback((cloud: CloudData) => {
+    if (!privateBoxCloudResponseCurrent(auth.currentUser?.uid ?? "", cloud)) return false;
     const local = cloudFieldsRef.current;
     if (!local) return false;
     let merged: CloudData;
@@ -836,7 +838,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Trae lo que haya guardado en la nube para esta cuenta (por ejemplo,
   // al iniciar sesión desde un celular nuevo). Si no hay nada guardado
   // todavía, no hace nada y devuelve "false".
-  async function hydrateFromCloud(userUid: string): Promise<"restored" | "none" | "premium-required"> {
+  async function hydrateFromCloud(userUid: string): Promise<"restored" | "none" | "premium-required" | "review-pending"> {
     const version = localSessionVersion.current;
     const checkSession = () => {
       if (auth.currentUser?.uid !== userUid || localSessionVersion.current !== version) throw new Error(tRef.current("settings.noActiveSession"));
@@ -852,10 +854,20 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       checkSession();
       if (error instanceof CloudPremiumRequiredError) return "premium-required";
+      if (error instanceof PrivateBoxSyncError) {
+        setRespaldoFallo("revision-caja-pendiente");
+        if (!cloudFieldsRef.current?.hasOnboarded) throw new Error(tRef.current("settings.backupBoxReview"));
+        return "review-pending";
+      }
       throw error;
     }
     checkSession();
     if (!cloud) return "none";
+    if (!privateBoxCloudResponseCurrent(userUid, cloud)) {
+      setRespaldoFallo("revision-caja-pendiente");
+      if (!cloudFieldsRef.current?.hasOnboarded) throw new Error(tRef.current("settings.backupBoxReview"));
+      return "review-pending";
+    }
     // Entrar a Pro o restaurar manualmente no autoriza reemplazar lo que
     // ya existe en este teléfono. Se conservan los dos historiales y los
     // borrados, con la misma unión que utiliza la subida atómica.
@@ -1509,6 +1521,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
          llevara semanas fallando. Ver utils/cloudSync. */
       void saveCloudData(uid, datosParaLaNube()).then((r) => {
         if (!alive || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
+        if (r.ok && !privateBoxCloudResponseCurrent(uid, r.data)) { setRespaldoFallo("revision-caja-pendiente"); return; }
         setRespaldoFallo(r.ok ? null : r.motivo);
         if (r.ok) applyNewerCloudFields(r.data);
       });

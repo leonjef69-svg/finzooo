@@ -6,7 +6,7 @@ const fallos = [];
 if (!nube.includes("runTransaction")) {
   fallos.push("La copia en la nube todavía no usa una operación atómica.");
 }
-if (!nube.includes("await transaction.get(ref)")) {
+if (!/await (?:lease\.wait\(\(\) => )?transaction\.get\(ref\)/.test(nube)) {
   fallos.push("La lectura de la copia ocurre fuera de la operación atómica.");
 }
 if (!nube.includes("transaction.set(ref, siguiente)")) {

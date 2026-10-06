@@ -389,6 +389,8 @@ export default function Settings({
                           ? "settings.backupTooLarge"
                         : respaldoFallo === "datos-nube-invalidos"
                           ? "settings.backupInvalid"
+                        : respaldoFallo === "revision-caja-pendiente"
+                          ? "settings.backupBoxReview"
                         : "settings.backupFailedHint"
                   )}
             </Text>

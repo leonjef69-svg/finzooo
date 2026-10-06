@@ -10,6 +10,15 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Coordinación Personal/Caja preparada: una revisión monetaria pendiente pausa
+ambos respaldos ordinarios; cola por cuenta y sello en memoria impiden aplicar
+respuestas viejas. Historial v2 anidado, identidad, archivo dañado y guardia antes
+de escribir comprobables. Guía: `docs/PRUEBAS_BARRERA_PERSONAL_CAJA.md`.
+**No botón monetario ni petición conectados.** Faltan elección/fuentes frescas
+dentro de la cola, guardado conjunto y recuperación; después Android/consolas y
+entrega coordinada autorizada. No nueva retención/servicio, nativos, tarjeta,
+CODE_MARKER, APK/OTA o despliegue. No garantiza atomicidad servidor/teléfono.
+
 Preparación local monetaria conserva los cuatro originales y elección en Cajas
 cifrado/bóveda por cuenta, sin nueva clave ni respaldo remoto de esas copias.
 Hasta 50 revisiones/400.000 bytes; mantiene anteriores al llegar al límite.
