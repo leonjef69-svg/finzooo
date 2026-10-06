@@ -21,15 +21,21 @@ function fakeFirestore(initial) {
   const documents = new Map(Object.entries(initial));
   const writes = [];
   let failBatch = false;
+  function query(path, filters = [], count = Infinity) {
+    return { where: (key, op, value) => { assert.equal(op, "=="); return query(path, [...filters, [key, value]], count); },
+      limit: value => query(path, filters, value), get: async () => {
+        const keys = [...documents.keys()].filter(key => key.startsWith(`${path}/`) && key.split("/").length === path.split("/").length + 1
+          && filters.every(([field, value]) => documents.get(key)[field] === value));
+        const docs = keys.slice(0, count).map(key => ({ id: key.split("/").at(-1), ref: doc(key), data: () => documents.get(key) }));
+        return { docs, empty: docs.length === 0 };
+      } };
+  }
   function doc(path) {
     return { path, get: async () => ({ exists: documents.has(path), data: () => documents.get(path) }),
       delete: async () => { writes.push(["delete", path]); documents.delete(path); },
-      collection: name => ({ limit: count => ({ get: async () => {
-        const docs = [...documents.keys()].filter(key => key.startsWith(`${path}/${name}/`)).slice(0, count).map(key => ({ ref: doc(key) }));
-        return { docs, empty: docs.length === 0 };
-      } }) }) };
+      collection: name => query(`${path}/${name}`) };
   }
-  return { documents, writes, doc, collection: name => ({ doc: uid => doc(`${name}/${uid}`) }),
+  return { documents, writes, doc, collection: name => ({ ...query(name), doc: uid => doc(`${name}/${uid}`) }),
     getAll: async (...args) => {
       const { fieldMask } = args.pop();
       assert.ok(!fieldMask.some(field => ["transactions", "budgets", "userPhoto"].includes(field)), "la consulta de permisos ni siquiera descarga fotos/historial al servidor");
@@ -84,8 +90,16 @@ assert.ok(db.documents.has("users/bob/history/1"), "la limpieza nunca toca otra 
 assert.equal(db.documents.get("premiumTrialClaims/alice").deletionPending, true, "no reabre la prueba antes de borrar Auth");
 db.documents.set("cajas/alice", {});
 db.documents.set("negocios/alice", {});
+db.documents.set("privateBoxMigrations/alice/attempts/attempt-0001", { cancelled: true });
+db.documents.set("boxSpaces/alice_cancelled", { ownerUid: "alice", migrationCancelled: true, migrationProtocol: 3, migrationComplete: false });
+db.documents.set("boxSpaces/alice_cancelled/members/alice", { rol: "owner" });
+db.documents.set("boxSpaces/alice_cancelled/movements/clon", { monto: 100 });
+db.documents.set("boxSpaces/bob_cancelled", { ownerUid: "bob", migrationCancelled: true, migrationProtocol: 3, migrationComplete: false });
+db.documents.set("boxSpaces/alice_active", { ownerUid: "alice", migrationComplete: true });
 await backend.cleanupDeletedCloudAccount(db, "alice");
-for (const path of ["cajas/alice", "negocios/alice", "premiumTrialClaims/alice"]) assert.equal(db.documents.has(path), false);
+for (const path of ["cajas/alice", "negocios/alice", "premiumTrialClaims/alice", "privateBoxMigrations/alice/attempts/attempt-0001",
+  "boxSpaces/alice_cancelled", "boxSpaces/alice_cancelled/members/alice", "boxSpaces/alice_cancelled/movements/clon"]) assert.equal(db.documents.has(path), false, path);
+assert.equal(db.documents.has("boxSpaces/bob_cancelled"), true); assert.equal(db.documents.has("boxSpaces/alice_active"), true);
 
 // Ejecuta las envolturas onCall reales aislando exclusivamente los SDK.
 class HttpsError extends Error { constructor(code, message) { super(message); this.code = code; } }

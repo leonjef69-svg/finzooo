@@ -5,6 +5,8 @@ export type Caja = {
   updatedAt?: number;
   /** Solo local: impide usar la copia privada mientras compartir es incierto. */
   sharingPending?: boolean;
+  /** Solo local: distingue un reintento de una conversión nueva. */
+  sharingAttempt?: string;
 };
 
 export type MovimientoCaja = {
@@ -79,7 +81,8 @@ export function validarCajas(value: unknown): DatosCajas {
   for (const box of data.cajas) {
     if (!box || !id(box.id) || ids.has(box.id) || typeof box.nombre !== "string"
       || !time(box.creadaEn) || (box.updatedAt !== undefined && !time(box.updatedAt))
-      || (box.sharingPending !== undefined && typeof box.sharingPending !== "boolean")) return invalid();
+      || (box.sharingPending !== undefined && typeof box.sharingPending !== "boolean")
+      || (box.sharingAttempt !== undefined && (typeof box.sharingAttempt !== "string" || !/^[A-Za-z0-9_-]{16,80}$/.test(box.sharingAttempt)))) return invalid();
     ids.add(box.id);
   }
   for (const row of data.movimientos) {
@@ -114,7 +117,7 @@ export function siguienteVersionCaja(item: VersionedItem, now = Date.now()): num
 
 function firma(item: VersionedItem): string {
   // Los registros son planos. El orden de propiedades/undefined no es edición.
-  return JSON.stringify(Object.fromEntries(Object.entries(item).filter(([key, value]) => key !== "updatedAt" && key !== "sharingPending" && value !== undefined).sort(([a], [b]) => a.localeCompare(b))));
+  return JSON.stringify(Object.fromEntries(Object.entries(item).filter(([key, value]) => key !== "updatedAt" && key !== "sharingPending" && key !== "sharingAttempt" && value !== undefined).sort(([a], [b]) => a.localeCompare(b))));
 }
 
 /** No convertir una vista vieja dejando atrás movimientos/ediciones en nube. */
@@ -159,8 +162,13 @@ export function fusionarCajas(local: DatosCajas, remoto: DatosCajas): DatosCajas
   const cajasFuera = new Set(cajasBorradas);
   const movimientosFuera = new Set(movimientosBorrados);
   const pending = new Set([...local.cajas, ...remoto.cajas].filter(box => box.sharingPending).map(box => box.id));
+  const attempts = new Map<string, string>();
+  for (const box of [...local.cajas, ...remoto.cajas].filter(box => box.sharingPending && box.sharingAttempt)) {
+    if (attempts.has(box.id) && attempts.get(box.id) !== box.sharingAttempt) throw new Error("cajas-sync-conflict");
+    attempts.set(box.id, box.sharingAttempt!);
+  }
   const cajas = unirPorId(local.cajas.filter(item => !cajasFuera.has(item.id)), remoto.cajas.filter(item => !cajasFuera.has(item.id)))
-    .map(box => pending.has(box.id) ? { ...box, sharingPending: true } : box);
+    .map(box => pending.has(box.id) ? { ...box, sharingPending: true, ...(attempts.has(box.id) ? { sharingAttempt: attempts.get(box.id)! } : {}) } : box);
   const idsCajas = new Set(cajas.map((item) => item.id));
   const presentes = (item: MovimientoCaja) => !movimientosFuera.has(item.id) && idsCajas.has(item.cajaId);
   const movimientos = unirPorId(local.movimientos.filter(presentes), remoto.movimientos.filter(presentes));

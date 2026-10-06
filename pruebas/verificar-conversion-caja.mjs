@@ -51,6 +51,7 @@ function harness() {
   const scope = { Error, auth: { currentUser: { uid: "a" } }, caja: box, movimientos: [row], compartiendo: false,
     Platform: { OS: "android" }, privateBoxLinksMatch: linksModule.exports.privateBoxLinksMatch,
     guardandoRef: { current: false },
+    conversionEnCurso: { current: false },
     isPremium: true, accountUid: "a", ready: true, userName: "A", userCurrency: "PEN", active: true,
     cuentaActual: () => scope.active, hasUnreadableLocalData: () => false, datosActuales: dataRef,
     transactions: transactions.map(row => ({ ...row, internalTransferSettled: false })), enlacesCajaConvertida: module.exports.enlacesCajaConvertida, retirarCajaConvertida: module.exports.retirarCajaConvertida,
@@ -61,6 +62,7 @@ function harness() {
     repairLinkedTransferTransactions: rows => events.push(["repair", rows]), setCompartiendo: value => events.push(["busy", value]),
     setDatos: work => { dataRef.current = work(dataRef.current); events.push("retired"); }, setCajaId: () => {}, setLista: () => {},
     guardarCambioCaja: async (next, upserts = []) => { if (upserts.length) scope.repairLinkedTransferTransactions(upserts); dataRef.current = next; events.push(next.cajas.some(row => row.id === box.id) ? "pending" : "retired"); return true; },
+    nuevoIntentoCaja: () => "prueba-intento-0001",
     crearInvitacionCaja: async () => { events.push("invite"); throw new Error("network"); },
     irUnaVez: params => events.push(["open", params]), spaceErrorKey: () => "network" };
   vm.runInNewContext(ts.transpile(`${action}\nglobalThis.run = compartirCaja;`, { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }), scope);

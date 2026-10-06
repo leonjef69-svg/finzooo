@@ -23,7 +23,7 @@ export async function subirCajas(uid: string, datos: DatosCajas, onError?: (erro
     const clean = validarCajas(JSON.parse(JSON.stringify(datos)));
     // La señal de una conversión incierta protege ESTE celular; no es una
     // edición monetaria ni un campo de la copia en Firebase.
-    for (const box of clean.cajas) delete box.sharingPending;
+    for (const box of clean.cajas) { delete box.sharingPending; delete box.sharingAttempt; }
     const ref = documento(uid);
     const saved = await task.wait(() => runTransaction(db, async (transaction) => {
       const snap = await task.wait(() => transaction.get(ref));
@@ -32,7 +32,7 @@ export async function subirCajas(uid: string, datos: DatosCajas, onError?: (erro
         : normalizarCajas(null);
       if (hasUnreadableLocalData()) throw new Error("cajas-local-unreadable");
       const merged = fusionarCajas(clean, remoto);
-      for (const box of merged.cajas) delete box.sharingPending;
+      for (const box of merged.cajas) { delete box.sharingPending; delete box.sharingAttempt; }
       transaction.set(ref, merged);
       return merged;
     }));

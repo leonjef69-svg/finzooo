@@ -237,7 +237,20 @@ no se presenta esa parte como comprobada ni entregada.
 La Caja conserva además una señal local cifrada de conversión pendiente para
 no usar su copia privada mientras el resultado remoto es incierto. No se sube
 a Firebase, no añade una clave ni categoría de datos y sigue el mismo archivo
-por cuenta. Falta cancelación segura antes de entregar el flujo completo.
+por cuenta. Su ID de intento UUID también se guarda ahí cifrado y solo se
+transmite como metadata de la operación, separado de la copia financiera.
+La cancelación prepara `privateBoxMigrations/{uid}/attempts`: ID, huella,
+origen/moneda, fechas y cancelación; el documento padre conserva un contador
+diario antiabuso. `boxSpaces` mantiene la barrera de cancelación que impide
+una publicación atrasada; sus clones incompletos/índice visible se limpian.
+Intentos y barreras se conservan hasta terminar el borrado Auth, incluida su
+limpieza de miembros/clones residuales. No exige Pro para cancelar/recuperar,
+ni permite descargar el historial privado Gratis. Misma finalidad de
+consistencia/protección financiera, sin servicios o permisos Android nuevos.
+Antes de publicar, contrastar identificadores, datos financieros y si el contador
+diario requiere actualizar Interacciones con la app en Seguridad de los datos;
+no dar por suficiente la declaración anterior. Política interna/web preparadas;
+formulario y publicación de producción pendientes. No declarar el flujo como entregado.
 
 > **LOS CONTACTOS DE ENVÍO NO SE DECLARAN, Y AQUÍ DECÍA LO CONTRARIO (corregido el
 > 18/08/2026).** Este archivo afirmaba que "se guardan y se suben a su copia en la nube" y

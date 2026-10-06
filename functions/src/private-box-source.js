@@ -26,7 +26,7 @@ function sharedBoxMovement(row, uid) {
 function copiedBoxMovementMatches(actual, row, uid) {
   const expected = sharedBoxMovement(row, uid);
   // El índice de copia es transitorio; los valores monetarios/IDs no lo son.
-  const allowed = new Set([...Object.keys(expected), "migrationSourceIndex"]);
+  const allowed = new Set([...Object.keys(expected), "migrationSourceIndex", "migrationAttemptId"]);
   return Object.keys(actual).every(key => allowed.has(key))
     && Object.entries(expected).every(([key, value]) => actual[key] === value);
 }

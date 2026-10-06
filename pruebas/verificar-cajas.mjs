@@ -60,7 +60,7 @@ assert.match(categorySheet, /onPress=\{saveCategory\}/, "la categoría de caja s
 assert.match(screen, /guardarCambioCaja\([\s\S]*?plan\.items\.flatMap\(item => item\.personalTransactionId/, "borrar un aporte enlazado guarda ambas mitades y sus marcas juntas");
 assert.match(sharedCloud, /export async function compartirCajaExistente/, "una caja existente se comparte sin crear otra desde cero");
 assert.match(sharedCloud, /migrationComplete: false/, "una copia incompleta nunca reemplaza la caja privada");
-assert.match(sharedCloud, /await task.wait\(\(\) => confirmarConversionCaja\(uid, caja.id, digest, currency, "finish"\)\)/, "solo el servidor confirma la copia completa dentro de la sesión vigente");
+assert.match(sharedCloud, /await task.wait\(\(\) => confirmarConversionCaja\(uid, caja.id, digest, currency, "finish", caja.sharingAttempt\)\)/, "solo el servidor confirma la copia completa y el intento dentro de la sesión vigente");
 assert.doesNotMatch(sharedCloud, /updateDoc\(ref, \{ migrationComplete: true/, "el celular no declara terminada una copia sin comprobación del servidor");
 assert.match(sharedCloud, /inicio \+= 400/, "una caja grande se copia en lotes admitidos por Firebase");
 assert.match(screen, /Solo después de terminar toda la copia se retira la versión privada/, "la pantalla no borra la caja si falla la migración");
@@ -71,7 +71,7 @@ assert.match(screen, /params: \{ boxId: compartida\.id, \.\.\.\(codigo \? \{ inv
 assert.match(sharedScreen, /SpaceInvitationSheet code=\{invitacion\}/, "la invitación de una caja compartida usa la misma hoja");
 assert.match(invitationSheet, /import\("expo-clipboard"\)[\s\S]*?setStringAsync\(code\)/, "la hoja compartida solo carga el portapapeles al pedir copiar");
 assert.match(screen, /boxes\.inviteAccessibility/, "el propietario conserva un acceso accesible para invitar a una caja");
-assert.match(screen, /<View className="mb-2 mt-1 flex-row items-center justify-between">[\s\S]*?t\("boxes\.all"\)[\s\S]*?boxes\.inviteAccessibility[\s\S]*?<\/View>\s*<View className="rounded-3xl bg-teal-600/, "la invitación de Caja comparte la fila de Ver todas y queda fuera de la tarjeta de saldo");
+assert.match(screen, /<View className="mb-2 mt-1 flex-row items-center justify-between">[\s\S]*?t\("boxes\.all"\)[\s\S]*?boxes\.inviteAccessibility[\s\S]*?<\/View>[\s\S]*?<View className="rounded-3xl bg-teal-600/, "la invitación de Caja comparte la fila de Ver todas y queda fuera de la tarjeta de saldo, con aviso de conversión pendiente entre ambas");
 assert.match(screen, /MovementAllButton label=\{t\("boxes\.history"\)\}[\s\S]*?filterIncome[\s\S]*?filterExpense[\s\S]*?boxes\.selectMovements[\s\S]*?<\/\>}/, "el filtro de caja usa una sola fila, igual que Personal");
 assert.match(sharedCloud, /export async function listarMiembrosCaja/, "la caja compartida puede mostrar sus miembros");
 assert.match(sharedCloud, /export async function quitarMiembroCaja/, "el propietario puede retirar el acceso de un miembro");

@@ -83,7 +83,7 @@ export async function compartirCajaExistente(
   const completed = await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "status"));
   if (completed) return { id: completed.targetId, nombre: completed.name, ownerUid: uid, creadaEn: completed.createdAt, currency, conversion: completed };
   const finish = async () => {
-    try { return await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "finish")); }
+    try { return await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "finish", caja.sharingAttempt)); }
     catch (cause) { throw new Error("cajas-sharing-unconfirmed", { cause }); }
   };
   if (!allowNew) {
@@ -101,7 +101,9 @@ export async function compartirCajaExistente(
     throw new Error("return-invalid-data");
   }
   const ref = doc(db, "boxSpaces", `${uid}_${caja.id}`);
-  const migrationState = await task.wait(() => runTransaction(db, async transaction => {
+  const alreadyFinished = caja.sharingAttempt ? await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "begin", caja.sharingAttempt, nombrePersona)) : null;
+  if (alreadyFinished) return { id: alreadyFinished.targetId, nombre: alreadyFinished.name, ownerUid: uid, creadaEn: alreadyFinished.createdAt, currency, conversion: alreadyFinished };
+  const migrationState = caja.sharingAttempt ? (await task.wait(() => getDocFromServer(ref))).data()! : await task.wait(() => runTransaction(db, async transaction => {
     const actual = await task.wait(() => transaction.get(ref));
     if (actual.exists() && actual.data().ownerUid !== uid) throw new Error("not-owner");
     if (!actual.exists()) {
@@ -111,12 +113,15 @@ export async function compartirCajaExistente(
     }
     return actual.exists() ? actual.data() : { migrationResetting: false };
   }));
+  if (caja.sharingAttempt && (!migrationState || migrationState.migrationProtocol !== 3
+    || migrationState.migrationAttemptId !== caja.sharingAttempt || migrationState.migrationCancelled !== false)) throw new Error("cajas-sync-conflict");
   let copied = (await task.wait(() => getDocs(collection(db, "boxSpaces", ref.id, "movements")))).docs;
   const byId = new Map(movimientos.map(row => [row.id, row]));
-  if (migrationState.migrationResetting === true || copied.some(row => !byId.has(row.id) || !copiedBoxMovementMatches(row.data(), byId.get(row.id)!, uid))) {
+  if (migrationState.migrationResetting === true || copied.some(row => !byId.has(row.id) || !copiedBoxMovementMatches(row.data(), byId.get(row.id)!, uid)
+    || (caja.sharingAttempt && row.data().migrationAttemptId !== caja.sharingAttempt))) {
     // Solo el servidor puede vaciar clones del protocolo nuevo y sin miembros
     // invitados. Una Caja heredada con datos distintos se conserva intacta.
-    await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "reset"));
+    await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "reset", caja.sharingAttempt));
     copied = [];
   }
   const yaCopiados = new Set(copied.map(row => row.id));
@@ -127,6 +132,7 @@ export async function compartirCajaExistente(
     for (const item of pendientes) {
       lote.set(doc(db, "boxSpaces", ref.id, "movements", item.id), {
         ...sharedBoxMovement(item, uid), migrationSourceIndex: sourceIndices.get(item.id),
+        ...(caja.sharingAttempt ? { migrationAttemptId: caja.sharingAttempt } : {}),
       });
     }
     await task.wait(() => lote.commit());

@@ -56,13 +56,33 @@ async function deletePersonalCloudCopy(db, uid) {
 async function cleanupDeletedCloudAccount(db, uid) {
   await deletePersonalCloudCopy(db, uid);
   for (const collection of ["personalReturnReceipts", "privateBoxMigrations"]) {
-    const receipts = db.doc(`${collection}/${uid}`).collection("operations");
-    while (true) {
-      const rows = await receipts.limit(200).get();
-      if (rows.empty) break;
-      const batch = db.batch();
-      for (const row of rows.docs) batch.delete(row.ref);
-      await batch.commit();
+    for (const subcollection of collection === "privateBoxMigrations" ? ["operations", "attempts"] : ["operations"]) {
+      const receipts = db.doc(`${collection}/${uid}`).collection(subcollection);
+      while (true) {
+        const rows = await receipts.limit(200).get();
+        if (rows.empty) break;
+        const batch = db.batch();
+        for (const row of rows.docs) batch.delete(row.ref);
+        await batch.commit();
+      }
+    }
+  }
+  // Las barreras canceladas no tienen índice visible. Solo después de borrar
+  // Auth pueden desaparecer: ningún token de esa cuenta podrá reactivarlas.
+  while (true) {
+    const cancelled = await db.collection("boxSpaces").where("ownerUid", "==", uid)
+      .where("migrationCancelled", "==", true).limit(100).get();
+    if (cancelled.empty) break;
+    for (const root of cancelled.docs) {
+      if (root.data().migrationProtocol !== 3 || root.data().migrationComplete !== false) throw new Error("cancelled-box-conflict");
+      for (const child of ["movements", "members"]) {
+        while (true) {
+          const rows = await root.ref.collection(child).limit(200).get();
+          if (rows.empty) break;
+          const batch = db.batch(); for (const row of rows.docs) batch.delete(row.ref); await batch.commit();
+        }
+      }
+      const batch = db.batch(); batch.delete(db.doc(`boxUsers/${uid}/spaces/${root.id}`)); batch.delete(root.ref); await batch.commit();
     }
   }
   const batch = db.batch();

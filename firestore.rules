@@ -135,7 +135,7 @@ service cloud.firestore {
       return data.keys().hasOnly([
           'tipo', 'monto', 'descripcion', 'method', 'fecha', 'creadoPor',
           'creadoEn', 'category', 'notes', 'personalTransactionId', 'personalOwnerUid',
-          'personalReturnAmount', 'migrationSourceIndex'
+          'personalReturnAmount', 'migrationSourceIndex', 'migrationAttemptId'
         ])
         && data.tipo in ['ingreso', 'gasto']
         && data.monto is number
@@ -494,6 +494,10 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid
         && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('migrationComplete', true) == false
         && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('migrationResetting', false) == false
+        && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('migrationCancelled', false) == false
+        && ((get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('migrationProtocol', 0) != 3
+              && !('migrationAttemptId' in data))
+          || data.get('migrationAttemptId', '') == get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('migrationAttemptId', null))
         && data.migrationSourceIndex is int && data.migrationSourceIndex >= 0 && data.migrationSourceIndex < rows.size()
         && rows[data.migrationSourceIndex].id == movementId
         && boxId == request.auth.uid + '_' + rows[data.migrationSourceIndex].cajaId
@@ -579,6 +583,7 @@ service cloud.firestore {
           && (
             (boxOpenAfter(boxId) && !('personalReturnAmount' in request.resource.data)
               && !('migrationSourceIndex' in request.resource.data)
+              && !('migrationAttemptId' in request.resource.data)
               && (boxMember(boxId) || getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid))
             || (boxMember(boxId) && validMigratedBoxReturn(boxId, movementId, request.resource.data))
           )

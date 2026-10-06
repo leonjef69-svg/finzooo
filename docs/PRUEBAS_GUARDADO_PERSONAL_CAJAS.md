@@ -91,11 +91,10 @@ Regresión: `FINO_TEST_BASELINE=4a97b15` solo para la prueba nueva. Falla por
 
 ## Qué sigue y qué falta
 
-- **Antes de entregar:** falta cancelación comprobada de una conversión pendiente
-  que todavía no publicó su destino (p. ej. Pro vence antes de copiar o falta
-  conexión). No quitar la señal sin confirmar/invalidar cualquier terminación
-  remota en curso. Hoy conserva la copia y permite reintentar, pero no es un
-  flujo terminado ni se debe publicar así como completo.
+- La cancelación comprobada que faltaba se prepara ahora en
+  `PRUEBAS_CANCELACION_CAJA.md`: invalida el intento remoto antes de quitar
+  la señal local y recupera un resultado ya publicado sin reabrirlo privado.
+  No equivale a una entrega ni resuelve las otras limitaciones de esta guía.
 - Sigue la limpieza de copias compartidas incompletas/índices al borrar cuenta.
 - La reparación automática de pares **heredados** conserva su recorrido anterior;
   faltan su revisión indivisible y una resolución explícita de conflictos.

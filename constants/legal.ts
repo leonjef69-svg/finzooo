@@ -58,6 +58,7 @@ Esta es la parte más delicada y por eso va aparte.
 - Si deshaces esa devolución, la confirmación conserva una marca y la fecha de anulación para no registrarla otra vez como vigente. Esta información también se elimina al completar el borrado de tu cuenta.
 - Las copias de tus Cajas privadas incluyen la fecha de última edición y un marcador técnico de formato para evitar reemplazar cambios recientes por copias antiguas. La copia en la nube sigue requiriendo Pro y solo es visible para tu cuenta.
 - Al convertir una Caja privada en compartida, conservamos una confirmación privada con los identificadores de origen/destino, nombre, moneda, fecha y huella técnica de la copia y los enlaces a Personal. Evita repetir la conversión si se pierde la respuesta. No guarda otra copia de los montos y se elimina al completar el borrado de tu cuenta. Recuperar esa confirmación propia no exige renovar Pro ni da acceso al historial privado en la nube.
+- Para cancelar una conversión pendiente conservamos el identificador del intento, su huella, moneda y fechas, una señal que impide reactivarlo y un contador diario contra intentos excesivos. La barrera y los intentos se conservan hasta completar el borrado de la cuenta; los clones incompletos se limpian sin borrar el origen privado. Cancelar o recuperar un resultado propio no exige renovar Pro.
 
 4. Con quién compartimos tu información
 ${PARRAFO_ANUNCIOS}

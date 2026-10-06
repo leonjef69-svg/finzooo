@@ -1,5 +1,37 @@
 # Estado actual de Fino
 
+## Cancelación segura de compartir Caja — preparada (05/10/2026)
+
+- Una Caja pendiente muestra Reintentar / Cancelar compartir. Cancelar propia
+  no exige Pro. Solo se desbloquea después de una barrera confirmada del
+  servidor y del guardado local; no cambia montos ni devuelve dinero a Personal.
+- Si ya terminó, recupera el recibo y retira/remapea localmente la copia con el
+  guardado conjunto, en vez de reabrirla como privada. Red/disco/respuesta dudosa,
+  cambio de cuenta/fuente o enlace inválido conservan el bloqueo y originales.
+- Intento UUID cifrado antes de enviar, ignorado en huella/edición financiera
+  y excluido de Cajas en Firebase. Protocolo 3/registro privado de intentos:
+  iniciar/copiar/finalizar un intento cancelado no puede reactivarlo. Otro
+  intento válido usa UUID nuevo; no se limpia una copia heredada o con miembros.
+- Cancelar congela primero el destino incluso si aún no existe; después limpia
+  sus clones en lotes de 200 y retira su índice. La barrera se conserva hasta
+  borrar Auth. El evento elimina intentos/barreras/clones propios, no ajenos.
+- Máximo 30 intentos nuevos por cuenta/día UTC; recuperar/repetir un resultado
+  propio no consume otro cupo. No es un límite global de facturación ni sustituye
+  las medidas generales antiabuso. Sin registros vigentes de cuenta/prueba/tester
+  no recrea datos por peticiones atrasadas; un tester sin copia Personal sí puede
+  cancelar incluso después de vencer su acceso.
+- Guía: `docs/PRUEBAS_CANCELACION_CAJA.md`. Políticas interna/web y PLAYSTORE
+  reflejan metadata técnica/retención. No hay claves locales nuevas ni cambios
+  nativos, tarjetas, APK/OTA o despliegue Firebase.
+- TypeScript/ESLint aprobados, 135 pruebas locales/8 auditores (una prueba ajena
+  preexistente sin registrar: 134 en copia limpia), 57 unitarias Functions y 80
+  SDK/reglas/HTTP/eventos bajo Node 22. La ejecución local inicial de Firebase
+  falló por arranque; la repetición completa aprobó sin omitir comprobaciones.
+- **Qué sigue:** limpieza de conversiones activas/incompletas al eliminar cuenta
+  (esta tanda cubre canceladas). **Qué falta:** pares heredados, conflictos entre
+  dispositivos, Android físico/cierres forzados, rendimiento/espacio lleno,
+  equivalente iOS/web y publicación coordinada de funciones + reglas + app.
+
 ## Personal/Cajas privadas — guardado conjunto preparado (05/10/2026)
 
 - Crear/aportar, editar, devolver, borrar, cerrar y remapear al compartir
@@ -20,9 +52,8 @@
   reiniciar no permite usar a la vez copia privada y compartida. No viaja a
   Firebase ni cambia la huella financiera. Compartir nueva Caja fallaba por no
   poder leer la inexistencia de su destino; permiso limitado y SDK nuevo comprobados.
-- **Antes de entregar:** falta cancelar de forma comprobada una conversión que
-  todavía no publicó destino, incluso si venció Pro; no quitar el bloqueo a
-  ciegas. La copia se conserva/reintenta, pero este flujo no está terminado.
+- La cancelación que faltaba se prepara en la sección anterior y su guía.
+  Sigue pendiente entregar y probar físicamente el conjunto; Git no actualiza la app.
 - TypeScript/ESLint aprobados; 134 pruebas locales y 8 auditores (una prueba
   preexistente ajena no registrada en Git), 57 unitarias de Functions y 73
   SDK/reglas/HTTP/eventos con Node 22. SQLite real y acciones originales comprobadas;

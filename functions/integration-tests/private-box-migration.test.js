@@ -9,13 +9,21 @@ const { initializeApp, deleteApp } = requireRoot("firebase/app");
 const { getAuth, connectAuthEmulator, signInWithEmailAndPassword } = requireRoot("firebase/auth");
 const { getFirestore, connectFirestoreEmulator, doc, setDoc, updateDoc, getDocFromServer, deleteDoc, terminate } = requireRoot("firebase/firestore");
 const { getFunctions, connectFunctionsEmulator } = requireRoot("firebase/functions");
-const { privateBoxMigration, digestSource } = require("../src/private-box-migration");
+let migration = require("../src/private-box-migration");
+if (process.env.FINO_TEST_CANCEL_BASELINE) {
+  assert.match(process.env.FINO_TEST_CANCEL_BASELINE, /^[a-f0-9]{7,40}$/);
+  const Module = require("node:module"), filename = path.join(__dirname, "../src/private-box-migration.js");
+  const old = new Module(filename, module); old.filename = filename; old.paths = module.paths;
+  old._compile(require("node:child_process").execFileSync("git", ["show", `${process.env.FINO_TEST_CANCEL_BASELINE}:functions/src/private-box-migration.js`], { cwd: root, encoding: "utf8" }), filename);
+  migration = old.exports;
+}
+const { privateBoxMigration, digestSource } = migration;
 const { sharedBoxMovement } = require("../src/private-box-source");
 const { execFileSync } = require("node:child_process");
 
 async function appCode(client) {
   const esbuild = requireRoot("esbuild");
-  const built = await esbuild.build({ stdin: { contents: 'export { compartirCajaExistente } from "@/utils/cloudCajasCompartidas"; export { subirCajas } from "@/utils/cloudCajas";', resolveDir: root, loader: "ts" },
+  const built = await esbuild.build({ stdin: { contents: 'export { compartirCajaExistente } from "@/utils/cloudCajasCompartidas"; export { cancelarConversionCaja } from "@/utils/boxMigration"; export { subirCajas } from "@/utils/cloudCajas";', resolveDir: root, loader: "ts" },
     bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent", external: ["firebase/*", "node:crypto"], alias: { "@": root },
     plugins: [{ name: "native-config-only", setup(build) {
       build.onLoad({ filter: /[\\/]utils[\\/]firebase\.ts$/ }, () => ({ loader: "ts", contents: "export const {auth,db,functions} = globalThis.__FINO_DEMO__;" }));
@@ -30,7 +38,7 @@ async function appCode(client) {
   return module.exports;
 }
 
-test("Conversión real: servidor, SDK, respuesta perdida, permisos y copia incorrecta", { timeout: 180_000 }, async t => {
+test("Conversión real: servidor, SDK, respuesta perdida, permisos y copia incorrecta", { timeout: 360_000 }, async t => {
   assert.equal(process.env.FIRESTORE_EMULATOR_HOST, "127.0.0.1:8080"); assert.equal(process.env.FIREBASE_AUTH_EMULATOR_HOST, "127.0.0.1:9099");
   const projectId = "demo-fino-node22", uid = "migration-owner";
   const adminApp = initializeAdmin({ projectId }, "migration-admin"), admin = getAdminFirestore(adminApp), adminAuth = getAdminAuth(adminApp);
@@ -53,6 +61,13 @@ test("Conversión real: servidor, SDK, respuesta perdida, permisos y copia incor
     await adminAuth.createUser({ uid, email: `${uid}@example.test`, password: "SoloPruebaLocal123!", emailVerified: true });
     await admin.doc(`users/${uid}`).set({ isPremium: true }); await signInWithEmailAndPassword(auth, `${uid}@example.test`, "SoloPruebaLocal123!");
     const client = { auth, db, functions, session: 1 }, api = await appCode(client);
+    if (process.env.FINO_TEST_CANCEL_BASELINE) {
+      // El helper anterior debe confirmar la misma operación que el actual
+      // ya comprobó con Firestore real; falla por no admitir cancelar.
+      await seed(); await target.delete(); await admin.doc(`users/${uid}`).update({ isPremium: false });
+      const result = await privateBoxMigration(admin, uid, { ...payload, action: "cancel" });
+      assert.equal(result.cancelled, true); return;
+    }
     await t.test("una copia incompleta o con el mismo ID y monto distinto no retira el origen", async () => {
       await seed(); await target.collection("movements").doc(row.id).set({ ...sharedBoxMovement(row, uid), monto: 90 });
       await assert.rejects(privateBoxMigration(admin, uid, payload), /migration-copy-incomplete/);
@@ -149,6 +164,92 @@ test("Conversión real: servidor, SDK, respuesta perdida, permisos y copia incor
       const unrelated = admin.doc("boxSpaces/other_private-box"); await unrelated.set({ ownerUid: "other", nombre: "Privada" });
       await assert.rejects(getDocFromServer(doc(db, "boxSpaces", unrelated.id)), error => error.code === "permission-denied");
       await assert.rejects(getDocFromServer(doc(db, "boxSpaces", "other_missing-box")), error => error.code === "permission-denied");
+    });
+    await t.test("cancelar sin destino ni Pro crea barrera, no cambia el origen y bloquea el SDK atrasado", async () => {
+      await seed(); await target.delete(); await admin.doc(`users/${uid}`).update({ isPremium: false });
+      const before = (await origin.get()).data();
+      const result = await privateBoxMigration(admin, uid, { ...payload, action: "cancel" });
+      assert.equal(result.cancelled, true); assert.deepEqual((await origin.get()).data(), before);
+      assert.equal(await api.cancelarConversionCaja(uid, { ...box, sharingPending: true }, [row], "PEN"), null, "HTTP real y reintento sin Pro");
+      await admin.doc(`users/${uid}`).update({ isPremium: true });
+      await assert.rejects(setDoc(doc(db, "boxSpaces", targetId), { nombre: box.nombre, ownerUid: uid, currency: "PEN", creadaEn: new Date(), migrationComplete: false, migrationProtocol: 2 }), e => e.code === "permission-denied");
+      await assert.rejects(privateBoxMigration(admin, uid, payload), /migration-cancelled/);
+      await assert.rejects(privateBoxMigration(admin, uid, { ...payload, action: "reset" }), /migration-cancelled/);
+      await assert.rejects(setDoc(doc(db, "boxSpaces", targetId, "movements", row.id), { ...sharedBoxMovement(row, uid), migrationSourceIndex: 0 }), e => e.code === "permission-denied");
+    });
+    await t.test("cancelar limpia más de 400 clones, retira el índice y preserva todo el dinero privado", async () => {
+      await seed(); await admin.doc(`users/${uid}`).update({ isPremium: false });
+      await admin.doc(`boxUsers/${uid}/spaces/${targetId}`).set({ boxId: targetId });
+      for (let start = 0; start < 405; start += 200) {
+        const batch = admin.batch(); for (let i = start; i < Math.min(start + 200, 405); i++) batch.set(target.collection("movements").doc(`clon-${i}`), sharedBoxMovement(row, uid)); await batch.commit();
+      }
+      const before = (await origin.get()).data(); await privateBoxMigration(admin, uid, { ...payload, action: "cancel" });
+      assert.equal((await target.collection("movements").get()).size, 0); assert.equal((await admin.doc(`boxUsers/${uid}/spaces/${targetId}`).get()).exists, false);
+      assert.deepEqual((await origin.get()).data(), before); assert.equal((await target.get()).data().migrationCancelled, true);
+    });
+    await t.test("un intento nuevo funciona; inicio, copia y confirmación del cancelado nunca lo reactivan", async () => {
+      await seed(); await admin.doc(`users/${uid}`).update({ isPremium: true });
+      const oldId = "intento-cancelado-001", nextId = "intento-nuevo-000001";
+      await privateBoxMigration(admin, uid, { ...payload, action: "begin", attemptId: oldId });
+      await target.collection("movements").doc(row.id).set({ ...sharedBoxMovement(row, uid), migrationAttemptId: oldId });
+      await privateBoxMigration(admin, uid, { ...payload, action: "cancel", attemptId: oldId });
+      await privateBoxMigration(admin, uid, { ...payload, action: "begin", attemptId: nextId });
+      await assert.rejects(privateBoxMigration(admin, uid, { ...payload, action: "begin", attemptId: oldId }), /migration-cancelled/);
+      await assert.rejects(privateBoxMigration(admin, uid, { ...payload, attemptId: oldId }), /migration-attempt-conflict/);
+      await assert.rejects(privateBoxMigration(admin, uid, { ...payload, action: "cancel", attemptId: oldId }), /migration-attempt-conflict/);
+      await assert.rejects(setDoc(doc(db, "boxSpaces", targetId, "movements", row.id), { ...sharedBoxMovement(row, uid), migrationSourceIndex: 0, migrationAttemptId: oldId }), e => e.code === "permission-denied");
+      await assert.rejects(setDoc(doc(db, "boxSpaces", targetId, "movements", row.id), { ...sharedBoxMovement(row, uid), migrationSourceIndex: 0 }), e => e.code === "permission-denied");
+      const pending = { ...box, sharingPending: true, sharingAttempt: nextId };
+      const result = await api.compartirCajaExistente(uid, "A", pending, [row]);
+      assert.equal(result.conversion.targetId, targetId); assert.equal((await target.get()).data().migrationProtocol, 3);
+      assert.equal((await origin.get()).data().cajas.length, 0);
+    });
+    await t.test("cancelar una copia terminada devuelve su recibo sin volver a hacerla privada", async () => {
+      await admin.doc(`users/${uid}`).update({ isPremium: false });
+      const saved = (await admin.doc(`privateBoxMigrations/${uid}/operations/${box.id}`).get()).data();
+      const result = await api.cancelarConversionCaja(uid, { ...box, sharingPending: true, sharingAttempt: "intento-nuevo-000001" }, [row], "PEN");
+      assert.deepEqual(result, saved); assert.equal((await origin.get()).data().cajas.length, 0); assert.equal((await target.get()).data().migrationComplete, true);
+    });
+    await t.test("cancelación y finalización concurrentes dejan exactamente una copia utilizable", async () => {
+      for (let i = 0; i < 3; i++) {
+        await seed(); await target.collection("movements").doc(row.id).set(sharedBoxMovement(row, uid));
+        const results = await Promise.allSettled([privateBoxMigration(admin, uid, { ...payload, action: "cancel" }), privateBoxMigration(admin, uid, payload)]);
+        const remote = (await target.get()).data(), source = (await origin.get()).data();
+        assert.equal(remote.migrationComplete === true, source.cajas.length === 0);
+        assert.ok(results.some(result => result.status === "fulfilled"));
+        if (remote.migrationComplete) assert.equal((await admin.doc(`privateBoxMigrations/${uid}/operations/${box.id}`).get()).exists, true);
+        else { assert.equal(remote.migrationCancelled, true); assert.equal(source.movimientos[0].monto, 100); }
+      }
+    });
+    await t.test("no cancela un espacio heredado, ajeno, con miembros o una cuenta en borrado", async () => {
+      await seed(0); await assert.rejects(privateBoxMigration(admin, uid, { ...payload, action: "cancel" }), /migration-cancel-forbidden/);
+      await seed(); await target.update({ ownerUid: "other" }); await assert.rejects(privateBoxMigration(admin, uid, { ...payload, action: "cancel" }), /migration-cancel-forbidden/);
+      await seed(); await target.collection("members").doc("other").set({ rol: "member" });
+      await assert.rejects(privateBoxMigration(admin, uid, { ...payload, action: "cancel" }), /migration-members-conflict/);
+      await target.collection("members").doc("other").delete(); await admin.doc(`users/${uid}`).update({ accountDeletionPending: true });
+      await assert.rejects(privateBoxMigration(admin, uid, { ...payload, action: "cancel" }), /migration-account-closing/);
+      assert.equal((await origin.get()).data().movimientos[0].monto, 100); await admin.doc(`users/${uid}`).update({ accountDeletionPending: false });
+      const user = (await admin.doc(`users/${uid}`).get()).data(); await admin.doc(`users/${uid}`).delete();
+      await assert.rejects(privateBoxMigration(admin, uid, { ...payload, action: "cancel" }), /migration-account-missing/);
+      await admin.doc(`testerPremium/${uid}`).set({ active: true, grantedAt: new Date() });
+      const testerAttempt = "intento-tester-00001";
+      await privateBoxMigration(admin, uid, { ...payload, action: "begin", attemptId: testerAttempt });
+      await admin.doc(`testerPremium/${uid}`).update({ active: false });
+      assert.equal((await privateBoxMigration(admin, uid, { ...payload, action: "cancel", attemptId: testerAttempt })).cancelled, true,
+        "un tester sin copia Personal cancela aunque venza su acceso");
+      await admin.doc(`testerPremium/${uid}`).delete();
+      await assert.rejects(privateBoxMigration(admin, uid, { ...payload, action: "cancel", attemptId: testerAttempt }), /migration-account-missing/);
+      assert.equal((await target.get()).data().migrationComplete, false); await admin.doc(`users/${uid}`).set(user);
+    });
+    await t.test("el límite frena nuevos intentos abusivos pero permite recuperar cancelaciones confirmadas", async () => {
+      await seed(); await target.delete();
+      const proof = await privateBoxMigration(admin, uid, { ...payload, action: "cancel" }); assert.equal(proof.cancelled, true);
+      await admin.doc(`privateBoxMigrations/${uid}`).set({ quotaDay: Math.floor(Date.now() / 86400000), quotaCount: 30 });
+      assert.equal((await privateBoxMigration(admin, uid, { ...payload, action: "cancel" })).cancelled, true);
+      const id = "caja-fuera-cuota";
+      await assert.rejects(privateBoxMigration(admin, uid, { ...payload, sourceId: id, action: "cancel" }), /migration-too-many-attempts/);
+      assert.equal((await admin.doc(`boxSpaces/${uid}_${id}`).get()).exists, false);
+      await admin.doc(`privateBoxMigrations/${uid}`).delete();
     });
   } finally { await terminate(db); await deleteApp(app); await admin.terminate(); await deleteAdmin(adminApp); }
 });

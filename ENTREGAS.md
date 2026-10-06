@@ -10,6 +10,15 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Caja pendiente prepara Reintentar / Cancelar compartir. Cancelación propia sin
+Pro: barrera remota persistente, intentos UUID y guardado local confirmado antes
+de desbloquear; una conversión terminada recupera su recibo y no devuelve dinero.
+Limpia clones cancelados/índice y borra metadata/barreras al eliminar Auth.
+Guía: `docs/PRUEBAS_CANCELACION_CAJA.md`. Requiere funciones + reglas + app juntas.
+**No publicar todavía:** quedan conversiones activas/incompletas al borrar cuenta,
+conflictos/pares heredados, pruebas físicas y revisión de tamaño/rendimiento.
+No se compiló APK ni publicó OTA/Firebase; CODE_MARKER no cambia.
+
 Personal/Cajas privadas prepara guardado conjunto en el SQLite Android existente:
 no muestra éxito hasta confirmar ambas mitades y sus marcas; escrituras antiguas
 no deshacen un lote nuevo. Incluye aportes, edición, devolución, borrado, cierre
@@ -21,9 +30,8 @@ limpieza de copias incompletas; no es atomicidad conjunta con Firebase.
 Sin APK/OTA/despliegue ni cambios nativos; CODE_MARKER permanece igual.
 
 El bloqueo local de conversión pendiente sobrevive reinicios y no viaja a
-Firebase. **No entregar todavía:** falta cancelar con comprobación del servidor
-los intentos que no publicaron destino, sin exigir renovar Pro ni desbloquear
-una copia que podría acabar compartida. También falta la limpieza de huérfanos.
+Firebase. La cancelación comprobada se prepara en la sección anterior, sin renovar
+Pro ni desbloquear a ciegas. Quedan pruebas físicas y limpieza de huérfanos activos.
 
 Conversión privada/compartida prepara `privateBoxMigration` y formato privado 3:
 comprobación y retirada indivisibles en Firebase, confirmación recuperable,
