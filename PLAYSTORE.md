@@ -213,6 +213,15 @@ formato, para no reemplazar una edición reciente con una copia antigua. Siguen
 siendo los datos financieros de la propia cuenta, sin nuevas categorías de
 datos, servicios o destinatarios; la nube de Cajas sigue limitada a Pro.
 
+Al convertir una Caja privada a compartida, `privateBoxMigrations` y la copia
+privada conservan una confirmación del servidor: UID, IDs de origen/destino,
+nombre/moneda, fechas, SHA-256 de la copia e IDs de enlaces a Personal, sin
+una segunda copia de los montos. Evita repetir la operación; solo recupera
+la confirmación propia mediante función autenticada, incluso sin Pro, sin
+abrir el historial privado a Gratis. Se elimina al terminar el evento de
+borrado Auth. Misma finalidad de consistencia de datos financieros, sin nuevos
+servicios ni permisos Android; política interna/web preparadas para ese flujo.
+
 La confirmación financiera conserva también la marca y fecha de anulación
 cuando el usuario deshace una devolución; así no se recupera como vigente al
 reintentar. Es la misma finalidad de consistencia y prevención de duplicados,

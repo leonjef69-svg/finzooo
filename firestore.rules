@@ -93,13 +93,15 @@ service cloud.firestore {
     function boxOpen(boxId) {
       return get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('closed', false) == false
         && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('closing', false) == false
-        && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == false;
+        && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == false
+        && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('migrationComplete', true) == true;
     }
 
     function boxOpenAfter(boxId) {
       return getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('closed', false) == false
         && getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('closing', false) == false
-        && getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == false;
+        && getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == false
+        && getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('migrationComplete', true) == true;
     }
 
     function familyOwnerPremium(familyId) {
@@ -320,12 +322,14 @@ service cloud.firestore {
       allow read: if verified() && request.auth.uid == userId && premiumUser(userId);
       allow create, update: if verified() && request.auth.uid == userId
         && premiumUser(userId) && cloudCopyOpen(userId)
-        && request.resource.data.get('syncFormat', 1) in [1, 2]
+        && request.resource.data.get('syncFormat', 1) in [1, 2, 3]
         // Una copia antigua no puede quitar el formato que conserva versiones
         // por Caja/movimiento y volver a imponer siempre su lista local.
         && (!exists(/databases/$(database)/documents/cajas/$(userId))
-          || resource.data.get('syncFormat', 1) != 2
-          || request.resource.data.get('syncFormat', 1) == 2);
+          || (request.resource.data.get('syncFormat', 1) >= resource.data.get('syncFormat', 1)))
+        && request.resource.data.get('conversiones', {}) == (exists(/databases/$(database)/documents/cajas/$(userId)) ? resource.data.get('conversiones', {}) : {})
+        && (request.resource.data.get('syncFormat', 1) != 3
+          || (exists(/databases/$(database)/documents/cajas/$(userId)) && resource.data.get('syncFormat', 1) == 3));
       allow delete: if verified() && request.auth.uid == userId;
     }
 
@@ -489,13 +493,17 @@ service cloud.firestore {
       let rows = get(/databases/$(database)/documents/cajas/$(request.auth.uid)).data.movimientos;
       return get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid
         && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('migrationComplete', true) == false
+        && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('migrationResetting', false) == false
         && data.migrationSourceIndex is int && data.migrationSourceIndex >= 0 && data.migrationSourceIndex < rows.size()
         && rows[data.migrationSourceIndex].id == movementId
         && boxId == request.auth.uid + '_' + rows[data.migrationSourceIndex].cajaId
         && rows[data.migrationSourceIndex].tipo == data.tipo
         && rows[data.migrationSourceIndex].monto == data.monto
-        && rows[data.migrationSourceIndex].personalTransactionId == data.personalTransactionId
-        && rows[data.migrationSourceIndex].personalReturnAmount == data.personalReturnAmount
+        && rows[data.migrationSourceIndex].get('personalTransactionId', null) == data.get('personalTransactionId', null)
+        && rows[data.migrationSourceIndex].get('personalReturnAmount', null) == data.get('personalReturnAmount', null)
+        && rows[data.migrationSourceIndex].get('category', '') == data.get('category', '')
+        && rows[data.migrationSourceIndex].get('notes', '') == data.get('notes', '')
+        && rows[data.migrationSourceIndex].get('method', '') == data.get('method', '')
         && rows[data.migrationSourceIndex].fecha == data.fecha
         && rows[data.migrationSourceIndex].creadoEn == data.creadoEn
         && rows[data.migrationSourceIndex].descripcion == data.descripcion;
@@ -514,23 +522,20 @@ service cloud.firestore {
                     && request.resource.data.creadaEn is timestamp
                     && (!('migrationComplete' in request.resource.data)
                       || request.resource.data.migrationComplete is bool)
-                    && request.resource.data.keys().hasOnly(['nombre', 'ownerUid', 'currency', 'creadaEn', 'migrationComplete'])
-                    && premiumUser(request.auth.uid);
+                    && (!('migrationProtocol' in request.resource.data)
+                      || (request.resource.data.migrationProtocol == 2 && request.resource.data.migrationComplete == false))
+                    && request.resource.data.keys().hasOnly(['nombre', 'ownerUid', 'currency', 'creadaEn', 'migrationComplete', 'migrationProtocol'])
+                    && premiumUser(request.auth.uid) && cloudCopyOpen(request.auth.uid);
       allow read: if boxMember(boxId);
       allow update: if boxMember(boxId)
                     && resource.data.ownerUid == request.auth.uid
                     && resource.data.get('closed', false) == false
                     && resource.data.get('deleting', false) == false
-                    && (
-                      (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre'])
+                    && boxOpen(boxId)
+                    && (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['nombre'])
                         && request.resource.data.nombre is string
                         && request.resource.data.nombre.size() > 0
-                        && request.resource.data.nombre.size() <= 30)
-                      || (resource.data.get('migrationComplete', true) == false
-                        && request.resource.data.migrationComplete == true
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['migrationComplete'])
-                        && premiumUser(request.auth.uid))
-                    );
+                        && request.resource.data.nombre.size() <= 30);
       allow delete: if verified()
                     && resource.data.ownerUid == request.auth.uid
                     && resource.data.get('deleting', false) == true;
@@ -560,19 +565,21 @@ service cloud.firestore {
 
       match /movements/{movementId} {
         allow read: if boxMember(boxId);
-        allow create: if verified() && (
-          (boxMember(boxId) && boxOpen(boxId))
-          || (getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid
-            && boxOpenAfter(boxId))
-        )
+        allow create: if verified()
           && boxOwnerPremiumAfter(boxId)
           && validSharedMovement(request.resource.data)
-          && (!('personalReturnAmount' in request.resource.data)
-            || validMigratedBoxReturn(boxId, movementId, request.resource.data))
+          && cloudCopyOpen(request.auth.uid)
+          && (
+            (boxOpenAfter(boxId) && !('personalReturnAmount' in request.resource.data)
+              && !('migrationSourceIndex' in request.resource.data)
+              && (boxMember(boxId) || getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid))
+            || (boxMember(boxId) && validMigratedBoxReturn(boxId, movementId, request.resource.data))
+          )
           && (!('personalTransactionId' in request.resource.data)
             || getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid);
         allow update: if boxMember(boxId)
                       && boxOwnerPremium(boxId)
+                      && boxOpen(boxId)
                       && (
                         (resource.data.creadoPor == request.auth.uid
                           && request.resource.data.creadoPor == 'deleted'

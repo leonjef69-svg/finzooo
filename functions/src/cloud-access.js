@@ -55,16 +55,18 @@ async function deletePersonalCloudCopy(db, uid) {
 /** El evento de Auth retira también permisos que un token antiguo conserve. */
 async function cleanupDeletedCloudAccount(db, uid) {
   await deletePersonalCloudCopy(db, uid);
-  const receipts = db.doc(`personalReturnReceipts/${uid}`).collection("operations");
-  while (true) {
-    const rows = await receipts.limit(200).get();
-    if (rows.empty) break;
-    const batch = db.batch();
-    for (const row of rows.docs) batch.delete(row.ref);
-    await batch.commit();
+  for (const collection of ["personalReturnReceipts", "privateBoxMigrations"]) {
+    const receipts = db.doc(`${collection}/${uid}`).collection("operations");
+    while (true) {
+      const rows = await receipts.limit(200).get();
+      if (rows.empty) break;
+      const batch = db.batch();
+      for (const row of rows.docs) batch.delete(row.ref);
+      await batch.commit();
+    }
   }
   const batch = db.batch();
-  for (const collection of ["negocios", "cajas", "testerPremium", "premiumTrialClaims", "personalReturnReceipts"]) {
+  for (const collection of ["negocios", "cajas", "testerPremium", "premiumTrialClaims", "personalReturnReceipts", "privateBoxMigrations"]) {
     batch.delete(db.doc(`${collection}/${uid}`));
   }
   await batch.commit();

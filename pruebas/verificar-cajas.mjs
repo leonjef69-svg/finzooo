@@ -60,13 +60,14 @@ assert.match(categorySheet, /onPress=\{saveCategory\}/, "la categoría de caja s
 assert.match(screen, /deleteLinkedTransferTransaction\(item\.personalTransactionId\)/, "borrar un aporte enlazado también restaura Personal desde su caja");
 assert.match(sharedCloud, /export async function compartirCajaExistente/, "una caja existente se comparte sin crear otra desde cero");
 assert.match(sharedCloud, /migrationComplete: false/, "una copia incompleta nunca reemplaza la caja privada");
-assert.match(sharedCloud, /await task.wait\(\(\) => updateDoc\(ref, \{ migrationComplete: true \}\)\)/, "la caja solo queda compartida después de copiar todos sus movimientos y comprobar la sesión");
+assert.match(sharedCloud, /await task.wait\(\(\) => confirmarConversionCaja\(uid, caja.id, digest, currency, "finish"\)\)/, "solo el servidor confirma la copia completa dentro de la sesión vigente");
+assert.doesNotMatch(sharedCloud, /updateDoc\(ref, \{ migrationComplete: true/, "el celular no declara terminada una copia sin comprobación del servidor");
 assert.match(sharedCloud, /inicio \+= 400/, "una caja grande se copia en lotes admitidos por Firebase");
 assert.match(screen, /Solo después de terminar toda la copia se retira la versión privada/, "la pantalla no borra la caja si falla la migración");
 assert.match(screen, /crearInvitacionCaja\(uid, compartida\.id\)/, "compartir genera el código para la persona invitada");
 assert.match(screen, /unirseACaja\(uid, userName \|\| t\("family\.member"\), codigo\)/, "Caja valida el código desde su propia pantalla antes de abrir el espacio compartido");
 assert.doesNotMatch(screen, /shared-boxes\?join=1/, "Unirme ya no manda a un formulario diferente en otra pantalla");
-assert.match(screen, /params: \{ boxId: compartida\.id, invitation: codigo \}/, "al compartir Caja se abre su espacio con el código recién generado");
+assert.match(screen, /params: \{ boxId: compartida\.id, \.\.\.\(codigo \? \{ invitation: codigo \}/, "se abre la Caja con código si se pudo crear, sin deshacer la conversión si falla Invitar");
 assert.match(sharedScreen, /SpaceInvitationSheet code=\{invitacion\}/, "la invitación de una caja compartida usa la misma hoja");
 assert.match(invitationSheet, /import\("expo-clipboard"\)[\s\S]*?setStringAsync\(code\)/, "la hoja compartida solo carga el portapapeles al pedir copiar");
 assert.match(screen, /boxes\.inviteAccessibility/, "el propietario conserva un acceso accesible para invitar a una caja");

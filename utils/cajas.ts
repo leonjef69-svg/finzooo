@@ -23,12 +23,20 @@ export type MovimientoCaja = {
   personalReturnAmount?: number;
 };
 
+export type ConversionCaja = {
+  uid: string; sourceId: string; targetId: string; name: string; currency: string;
+  createdAt: number; digest: string; completedAt: number;
+  links: { personalId: number; movementId: string }[];
+};
+
 export type DatosCajas = {
   cajas: Caja[];
   movimientos: MovimientoCaja[];
   cajasBorradas: string[];
   movimientosBorrados: string[];
-  syncFormat?: 1 | 2;
+  syncFormat?: 1 | 2 | 3;
+  /** Confirmaciones escritas solo por el servidor, no una segunda copia del dinero. */
+  conversiones?: Record<string, ConversionCaja>;
 };
 
 export const CAJAS_VACIAS: DatosCajas = {
@@ -48,7 +56,8 @@ export function normalizarCajas(value: Partial<DatosCajas> | null | undefined): 
     movimientos: Array.isArray(value?.movimientos) ? value.movimientos : [],
     cajasBorradas: Array.isArray(value?.cajasBorradas) ? value.cajasBorradas : [],
     movimientosBorrados: Array.isArray(value?.movimientosBorrados) ? value.movimientosBorrados : [],
-    ...(value?.syncFormat === 2 ? { syncFormat: 2 as const } : {}),
+    ...(value?.syncFormat === 2 || value?.syncFormat === 3 ? { syncFormat: value.syncFormat } : {}),
+    ...(value?.conversiones ? { conversiones: value.conversiones } : {}),
   };
 }
 
@@ -58,7 +67,8 @@ export function validarCajas(value: unknown): DatosCajas {
   if (!value || typeof value !== "object") return invalid();
   const data = value as Partial<DatosCajas>;
   if (!Array.isArray(data.cajas) || !Array.isArray(data.movimientos)
-    || (data.syncFormat !== undefined && data.syncFormat !== 1 && data.syncFormat !== 2)
+    || (data.syncFormat === 3 && data.conversiones === undefined)
+    || (data.syncFormat !== undefined && ![1, 2, 3].includes(data.syncFormat))
     || (data.cajasBorradas !== undefined && !Array.isArray(data.cajasBorradas))
     || (data.movimientosBorrados !== undefined && !Array.isArray(data.movimientosBorrados))) return invalid();
   const time = (n: unknown) => typeof n === "number" && Number.isSafeInteger(n) && n >= 0;
@@ -82,6 +92,15 @@ export function validarCajas(value: unknown): DatosCajas {
     movementIds.add(row.id);
   }
   if ([...(data.cajasBorradas || []), ...(data.movimientosBorrados || [])].some(value => !id(value))) return invalid();
+  if (data.conversiones !== undefined) {
+    if (!data.conversiones || typeof data.conversiones !== "object" || Array.isArray(data.conversiones) || data.syncFormat !== 3) return invalid();
+    for (const [key, value] of Object.entries(data.conversiones)) {
+      if (!value || key !== value.sourceId || !id(value.uid) || value.targetId !== `${value.uid}_${key}`
+        || typeof value.name !== "string" || !/^[A-Z]{3}$/.test(value.currency)
+        || !/^[a-f0-9]{64}$/.test(value.digest) || !time(value.createdAt) || !time(value.completedAt)
+        || !Array.isArray(value.links) || value.links.some(link => !link || !Number.isSafeInteger(link.personalId) || link.personalId <= 0 || !id(link.movementId))) return invalid();
+    }
+  }
   return normalizarCajas(data);
 }
 
@@ -119,6 +138,19 @@ function unirPorId<T extends VersionedItem>(a: T[], b: T[]): T[] {
 }
 
 export function fusionarCajas(local: DatosCajas, remoto: DatosCajas): DatosCajas {
+  const signature = (value: ConversionCaja) => JSON.stringify([value.uid, value.sourceId, value.targetId, value.name,
+    value.currency, value.createdAt, value.digest, value.completedAt,
+    [...value.links].sort((a, b) => a.personalId - b.personalId).map(link => [link.personalId, link.movementId])]);
+  const conversiones = { ...remoto.conversiones, ...local.conversiones };
+  for (const [id, conversion] of Object.entries(conversiones)) {
+    // Una copia atrasada puede contener ediciones sin subir. No borrarlas por
+    // inferencia: solo el reintento con la huella exacta puede retirarlas.
+    if (local.cajas.some(box => box.id === id) || remoto.cajas.some(box => box.id === id)
+      || local.movimientos.some(row => row.cajaId === id) || remoto.movimientos.some(row => row.cajaId === id)
+      || (local.conversiones?.[id] && remoto.conversiones?.[id]
+        && signature(local.conversiones[id]) !== signature(remoto.conversiones[id]))) throw new Error("cajas-sync-conflict");
+    if (conversion.sourceId !== id) throw new Error("cajas-invalid-data");
+  }
   const cajasBorradas = [...new Set([...local.cajasBorradas, ...remoto.cajasBorradas])];
   const movimientosBorrados = [...new Set([...local.movimientosBorrados, ...remoto.movimientosBorrados])];
   const cajasFuera = new Set(cajasBorradas);
@@ -137,7 +169,9 @@ export function fusionarCajas(local: DatosCajas, remoto: DatosCajas): DatosCajas
     saldos.set(item.cajaId, (saldos.get(item.cajaId) ?? 0n) + BigInt(units) * (item.tipo === "ingreso" ? 1n : -1n));
   }
   if ([...saldos.values()].some(saldo => saldo < 0n)) throw new Error("cajas-sync-conflict");
-  return { cajas, movimientos, cajasBorradas, movimientosBorrados, syncFormat: 2 };
+  return { cajas, movimientos, cajasBorradas, movimientosBorrados,
+    ...(local.syncFormat === 3 || remoto.syncFormat === 3 || Object.keys(conversiones).length
+      ? { syncFormat: 3 as const, conversiones } : { syncFormat: 2 as const }) };
 }
 
 export function saldoCaja(cajaId: string, movimientos: MovimientoCaja[]): number {

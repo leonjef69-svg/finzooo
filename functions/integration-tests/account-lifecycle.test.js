@@ -149,10 +149,12 @@ test("Node 22, llamadas HTTP y eliminación real en Auth/Firestore emulados", { 
     await t.test("eliminar Auth dispara la limpieza auténtica de permisos y comprobantes", async () => {
       assert.equal((await admin.doc("premiumTrialClaims/owner").get()).data().deletionPending, true);
       assert.equal((await admin.collection("personalReturnReceipts/owner/operations").get()).size, 1);
+      await admin.doc("privateBoxMigrations/owner/operations/local-box").set({ uid: "owner", targetId: "owner_local-box" });
       await deleteUser(owner.auth.currentUser);
       await eventually(async () => !(await admin.doc("premiumTrialClaims/owner").get()).exists,
         "el evento de Auth debe terminar la limpieza");
       assert.equal((await admin.collection("personalReturnReceipts/owner/operations").get()).empty, true);
+      assert.equal((await admin.collection("privateBoxMigrations/owner/operations").get()).empty, true);
       assert.equal((await admin.doc("testerPremium/owner").get()).exists, false);
       const telegramRemoved = ["telegramConnections/chat-owner", "telegramDrafts/chat-owner", "telegramUndo/chat-owner", "telegramLinkRequests/owner-code"];
       // El evento borra por colecciones/lotes; la conexión desaparece antes de

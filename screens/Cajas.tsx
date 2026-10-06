@@ -27,6 +27,7 @@ import { irUnaVez, safeBack } from "@/utils/nav";
 import { getAccountStorageSession, hasUnreadableLocalData, loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 import { captureAccountTask } from "@/utils/accountTask";
 import { guardarCajasEnMemoria, leerCajasEnMemoria } from "@/utils/cajasMemoria";
+import { enlacesCajaConvertida, huellaCaja, retirarCajaConvertida } from "@/utils/boxMigration";
 import { spaceErrorKey } from "@/utils/spaceErrors";
 import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Boxes, Check, ListChecks, Pencil, Plus, RefreshCw, Trash2, UserPlus, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
@@ -177,7 +178,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     guardarCajasEnMemoria(datos);
     void saveJSON(STORAGE_KEYS.cajasDinero, datos);
     const uid = accountUid;
-    if (!cloudReady || !uid || !isPremium || nubeConfirmadaPara.current !== uid) return;
+    if (!cloudReady || !uid || !isPremium || compartiendo || nubeConfirmadaPara.current !== uid) return;
     let active = true;
     const task = captureAccountTask(uid, () => active && cuentaActual() && premiumForSync.current);
     const timer = setTimeout(() => {
@@ -188,9 +189,15 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
         .then(ok => { if (ok && task.current()) setSyncIssue(null); });
     }, 700);
     return () => { active = false; clearTimeout(timer); };
-  }, [accountUid, cuentaActual, datos, ready, cloudReady, isPremium, reportSyncError, setDatos]);
+  }, [accountUid, cuentaActual, datos, ready, cloudReady, compartiendo, isPremium, reportSyncError, setDatos]);
 
   const caja = datos.cajas.find((item) => item.id === cajaId);
+  useEffect(() => {
+    if (!ready || !cuentaActual()) return;
+    const repairs = Object.values(datos.conversiones || {}).filter(value => value.uid === accountUid)
+      .flatMap(value => enlacesCajaConvertida(transactions, value));
+    if (repairs.length) repairLinkedTransferTransactions(repairs);
+  }, [accountUid, cuentaActual, datos.conversiones, ready, repairLinkedTransferTransactions, transactions]);
   useEffect(() => {
     setEditandoNombreCaja(false);
     setNombreCajaEditado(caja?.nombre ?? "");
@@ -547,39 +554,31 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   async function compartirCaja() {
     const uid = auth.currentUser?.uid;
     if (!uid || !caja || compartiendo) return;
-    if (!isPremium) { irUnaVez("/premium"); return; }
     const task = captureAccountTask(accountUid, cuentaActual);
-    if (!task.current() || !ready) return;
+    if (!task.current() || !ready || hasUnreadableLocalData()) return;
     setCompartiendo(true);
     try {
-      const compartida = await task.wait(() => compartirCajaExistente(uid, userName || t("family.member"), caja, movimientos, userCurrency));
-      const codigo = await task.wait(() => crearInvitacionCaja(uid, compartida.id));
-      const idsPersonales = new Set(movimientos.flatMap(item => item.personalTransactionId == null ? [] : [item.personalTransactionId]));
-      const enlacesMigrados = transactions
-        .filter(item => idsPersonales.has(item.id) && item.internalTransfer === "box")
-        .map(item => ({
-          ...item,
-          internalTransferSpaceId: compartida.id,
-          internalTransferSpaceName: compartida.nombre,
-        }));
+      const compartida = await task.wait(() => compartirCajaExistente(uid, userName || t("family.member"), caja, movimientos, userCurrency, isPremium));
+      const currentData = datosActuales.current;
+      const currentBox = currentData.cajas.find(box => box.id === caja.id);
+      if (!currentBox) throw new Error("cajas-sync-conflict");
+      const currentDigest = await task.wait(() => huellaCaja(currentBox, currentData.movimientos.filter(row => row.cajaId === caja.id), userCurrency));
+      if (currentDigest !== compartida.conversion.digest || currentData !== datosActuales.current || hasUnreadableLocalData()) throw new Error("cajas-sync-conflict");
+      const enlacesMigrados = enlacesCajaConvertida(transactions, compartida.conversion);
       if (enlacesMigrados.length) repairLinkedTransferTransactions(enlacesMigrados);
       // Solo después de terminar toda la copia se retira la versión privada.
       // Los débitos enlazados de Personal se conservan porque ahora apuntan a
       // los mismos movimientos dentro de la caja compartida.
-      const ids = movimientos.map(item => item.id);
-      setDatos(antes => ({
-        ...antes,
-        cajas: antes.cajas.filter(item => item.id !== caja.id),
-        movimientos: antes.movimientos.filter(item => item.cajaId !== caja.id),
-        cajasBorradas: [...new Set([...antes.cajasBorradas, caja.id])],
-        movimientosBorrados: [...new Set([...antes.movimientosBorrados, ...ids])],
-      }));
+      setDatos(antes => retirarCajaConvertida(antes, compartida.conversion));
       setCajaId(null); setLista(true);
-      // La caja se vuelve compartida antes de crear el código. Se abre con el
-      // código ya visible, en vez de lanzar el cuadro antiguo de "Compartir".
-      irUnaVez({ pathname: "/shared-boxes", params: { boxId: compartida.id, invitation: codigo } });
+      let codigo: string | undefined;
+      try { codigo = await task.wait(() => crearInvitacionCaja(uid, compartida.id)); }
+      catch { if (task.current()) showToast(t("boxes.invitationRetry")); }
+      if (task.current()) irUnaVez({ pathname: "/shared-boxes", params: { boxId: compartida.id, ...(codigo ? { invitation: codigo } : {}) } });
     } catch (error) {
       if (task.current()) {
+        const reason = (error as { details?: { reason?: string } })?.details?.reason;
+        if (!isPremium && (reason === "migration-not-owner" || reason === "migration-premium-required")) { irUnaVez("/premium"); return; }
         if (error instanceof Error && error.message === "cajas-sync-conflict") reportSyncError(error);
         else showToast(t(spaceErrorKey(error)));
       }

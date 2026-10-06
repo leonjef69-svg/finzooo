@@ -5,6 +5,7 @@ export function spaceErrorKey(error: unknown, invalidCode = false): string {
   const message = typeof value?.message === "string" ? value.message.toLowerCase() : "";
   const detail = `${code} ${message}`;
   const reason = value?.details?.reason;
+  if (typeof reason === "string" && reason.startsWith("migration-")) return "boxes.syncConflict";
   if (reason === "return-changed") return "spaces.returnChanged";
   if (reason === "return-currency-mismatch") return "spaces.currencyMismatch";
   if (reason === "return-space-closed") return "spaces.returnClosed";

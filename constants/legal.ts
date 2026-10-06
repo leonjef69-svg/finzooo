@@ -57,6 +57,7 @@ Esta es la parte más delicada y por eso va aparte.
 - Cuando devuelves un aporte de Familia o Caja a Personal, el servidor conserva una confirmación con tu identificador, el espacio, el importe, la fecha, la descripción y los aportes relacionados. Sirve para evitar duplicados y recuperar una devolución interrumpida, también sin Pro o después de salir del espacio. No es un respaldo completo de Personal. La confirmación privada se elimina al completar el borrado de tu cuenta; el movimiento compartido sigue el tratamiento del espacio. La orden pendiente se guarda cifrada en tu teléfono, separada por cuenta.
 - Si deshaces esa devolución, la confirmación conserva una marca y la fecha de anulación para no registrarla otra vez como vigente. Esta información también se elimina al completar el borrado de tu cuenta.
 - Las copias de tus Cajas privadas incluyen la fecha de última edición y un marcador técnico de formato para evitar reemplazar cambios recientes por copias antiguas. La copia en la nube sigue requiriendo Pro y solo es visible para tu cuenta.
+- Al convertir una Caja privada en compartida, conservamos una confirmación privada con los identificadores de origen/destino, nombre, moneda, fecha y huella técnica de la copia y los enlaces a Personal. Evita repetir la conversión si se pierde la respuesta. No guarda otra copia de los montos y se elimina al completar el borrado de tu cuenta. Recuperar esa confirmación propia no exige renovar Pro ni da acceso al historial privado en la nube.
 
 4. Con quién compartimos tu información
 ${PARRAFO_ANUNCIOS}

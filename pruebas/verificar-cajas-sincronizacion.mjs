@@ -104,6 +104,8 @@ const sharing = load("utils/cloudCajasCompartidas.ts", name => {
   if (name === "@/utils/cajas") return api;
   if (name === "@/utils/accountTask") return { captureAccountTask: capture };
   if (name === "@/utils/cloudCajas") return { subirCajas: async () => true };
+  if (name === "@/utils/boxMigration") return { huellaCaja: async () => "a".repeat(64), confirmarConversionCaja: async () => null };
+  if (name === "@/functions/src/private-box-source") return {};
   if (name === "@/utils/familia" || name === "@/utils/amount" || name === "@/utils/linkedTransfers" || name === "@/utils/personalContribution") return {};
   if (name === "firebase/firestore") return { doc: (...parts) => ({ parts }), collection: (...parts) => ({ parts }), serverTimestamp: () => 1,
     getDocFromServer: async () => { if (sourceGate) await sourceGate.promise; return { exists: () => true, data: () => recent }; },

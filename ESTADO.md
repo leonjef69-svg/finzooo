@@ -1,5 +1,31 @@
 # Estado actual de Fino
 
+## Conversión de Caja privada a compartida — preparada (05/10/2026)
+
+- `privateBoxMigration` compara origen/huella y toda la copia en transacción:
+  solo al coincidir publica destino, retira origen y guarda confirmación propia.
+  Respuesta perdida y confirmaciones concurrentes no crean otro movimiento.
+- Reintento compara contenido, no solo ID; limpia únicamente clones nuevos
+  incompletos sin miembros invitados. Copias heredadas distintas se conservan.
+  Las reglas bloquean la finalización SDK y el uso de copias incompletas.
+- Formato privado 3 conserva confirmaciones del servidor y bloquea su borrado,
+  falsificación y retroceso. Una copia local atrasada no se descarta por
+  inferencia. La pantalla comprueba su copia actual, remapea enlaces exactos
+  sin sumar dinero y termina el cambio antes de intentar crear la invitación.
+- Recuperación/finalización propia sin Pro no abre el historial ni inicia
+  una Caja nueva. Limpieza de confirmaciones en borrado Auth y privacidad
+  interna/web/PLAYSTORE actualizadas. Guía: `docs/PRUEBAS_CONVERSION_CAJA.md`.
+- TypeScript/ESLint aprobados; 133 pruebas locales y 8 auditores (una prueba
+  preexistente ajena sin registrar en Git), 57 unitarias de Functions y 72
+  reglas/SDK/HTTP/eventos con Node 22. Regresiones local/SDK contra `b502b9a`
+  fallan como corresponde; acción real de pantalla y dos lotes de 405 registros
+  comprobados. Git no sustituye la publicación coordinada.
+- **Qué sigue:** transferencia indivisible Personal/Cajas y limpieza de copias
+  incompletas/índices al borrar cuenta. **Qué falta:** Android/cierres forzados,
+  dos dispositivos, resolución explícita de conflictos heredados, límites de
+  tamaño/costos y publicación coordinada de funciones, reglas y app.
+  No se desplegó Firebase ni se entregó APK/OTA; tarjetas excluidas.
+
 ## Cajas privadas — versiones y copias comprobadas (05/10/2026)
 
 - Unión por fecha de edición; empates distintos/sobregiro abortan sin elegir

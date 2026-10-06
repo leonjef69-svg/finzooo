@@ -16,6 +16,7 @@ const { activatePremiumTrial } = require("./src/premium-trial");
 const { getCloudAccess, deletePersonalCloudCopy, cleanupDeletedCloudAccount } = require("./src/cloud-access");
 const { returnPersonalContribution } = require("./src/personal-return");
 const { finalizeLinkedSpaceDeletion } = require("./src/linked-space-cleanup");
+const { privateBoxMigration } = require("./src/private-box-migration");
 
 initializeApp();
 
@@ -36,6 +37,18 @@ function verifiedAccount(request, recent = false) {
 
 exports.getCloudAccess = onCall({ region: "southamerica-east1", maxInstances: 10 }, request =>
   getCloudAccess(getFirestore(), verifiedAccount(request)));
+
+exports.privateBoxMigration = onCall({ region: "southamerica-east1", maxInstances: 5, timeoutSeconds: 120 }, async request => {
+  const uid = verifiedAccount(request);
+  const account = await getAuth().getUser(uid);
+  if (account.disabled || !account.emailVerified) throw new HttpsError("unauthenticated", "Verifica tu cuenta.");
+  try { return await privateBoxMigration(getFirestore(), uid, request.data); }
+  catch (error) {
+    if (!error?.reason) throw error;
+    throw new HttpsError(error.reason === "migration-invalid-request" ? "invalid-argument" : "failed-precondition",
+      "No se confirmó la copia de la Caja. El origen no se retira hasta comprobarla.", { reason: error.reason });
+  }
+});
 
 exports.deletePersonalCloudCopy = onCall({ region: "southamerica-east1", maxInstances: 5, timeoutSeconds: 540 }, request =>
   deletePersonalCloudCopy(getFirestore(), verifiedAccount(request, true)));
@@ -147,7 +160,7 @@ exports.changePersonalContribution = onCall(
       // después venció Pro o el espacio se cerró. Solo confirma la operación propia.
       if (action === "delete" && !current.exists && previous?.cancelled === true
         && previous.uid === uid && previous.kind === kind && previous.spaceId === spaceId && previous.movementId === movementId) return;
-      if (!space.exists || !member.exists || space.data().closed === true || space.data().closing === true || space.data().deleting === true) {
+      if (!space.exists || !member.exists || space.data().closed === true || space.data().closing === true || space.data().deleting === true || space.data().migrationComplete === false) {
         throw new HttpsError("failed-precondition", "El espacio no está disponible.");
       }
       if (!(await hasPremium(db, space.data().ownerUid))) {
@@ -220,6 +233,7 @@ exports.manageLinkedSpace = onCall(
       if (!space.exists || space.data().ownerUid !== uid) {
         throw new HttpsError("permission-denied", "Solo el propietario puede realizar esta acción.");
       }
+      if (space.data().migrationComplete === false) throw new HttpsError("failed-precondition", "La copia de la Caja aún no está confirmada.");
       if (space.data().deleting === true) {
         if (action === "prepare-delete") return;
         throw new HttpsError("failed-precondition", "El espacio se está eliminando.");
@@ -269,6 +283,7 @@ exports.leaveLinkedSpace = onCall(
       if (familyUserRef) reads.push(transaction.get(familyUserRef));
       const [space, member, movementSnapshot, familyUser] = await Promise.all(reads);
       if (!space.exists) return;
+      if (space.data().migrationComplete === false) throw new HttpsError("failed-precondition", "La copia de la Caja aún no está confirmada.");
       const ownerUid = space.data().ownerUid;
       if (memberUid === ownerUid) throw new HttpsError("failed-precondition", "El propietario debe cerrar el espacio.");
       if (memberUid !== uid && ownerUid !== uid) {

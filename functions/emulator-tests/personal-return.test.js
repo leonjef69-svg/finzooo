@@ -102,7 +102,10 @@ test("devolución sin Pro: límites reales, reintentos, concurrencia y migració
       const row = { ...fields, creadoPor: "owner", personalOwnerUid: "owner", migrationSourceIndex: 0 };
       await assertFails(setDoc(doc(client, "boxSpaces", id, "movements", "forged"), row));
       await assertSucceeds(setDoc(doc(client, "boxSpaces", id, "movements", original.id), row));
-      await assertSucceeds(updateDoc(doc(client, "boxSpaces", id), { migrationComplete: true }));
+      await assertFails(updateDoc(doc(client, "boxSpaces", id), { migrationComplete: true }));
+      // Esta prueba aísla permisos. La confirmación administrativa completa se
+      // ejecuta y valida por HTTP en private-box-migration.test.js.
+      await root.update({ migrationComplete: true });
       await assertFails(updateDoc(doc(client, "boxSpaces", id), { migrationComplete: false }));
       await assertFails(setDoc(doc(client, "boxSpaces", id, "movements", "later"), row));
     });

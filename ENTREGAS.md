@@ -10,6 +10,15 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Conversión privada/compartida prepara `privateBoxMigration` y formato privado 3:
+comprobación y retirada indivisibles en Firebase, confirmación recuperable,
+clones nuevos incompletos aislados y ediciones atrasadas conservadas. Invitación
+fallida no deshace el cambio. Guía/límites: `docs/PRUEBAS_CONVERSION_CAJA.md`.
+Requiere funciones + reglas + app coordinadas; no entregar la app antes del
+servidor ni volver a un cliente que quite formato 3. Quedan transferencias
+entre archivos, conflictos heredados y limpieza de copias incompletas por revisar.
+Sin APK/OTA/despliegue ni cambios nativos; CODE_MARKER permanece igual.
+
 Cajas privadas prepara `syncFormat: 2`/fecha de edición: no impone una copia vieja
 sobre una edición nueva, conserva eliminaciones y rechaza conflictos ambiguos.
 La carga confirma servidor/cuenta y la pantalla recibe el resultado del guardado.
