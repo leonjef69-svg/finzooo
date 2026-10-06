@@ -1,5 +1,33 @@
 # Estado actual de Fino
 
+## Diferencias de dinero — base del servidor, sin activar en app (06/10/2026)
+
+- `resolvePrivateBoxMoney` prepara monto/fecha elegidos entre cuatro originales
+  de un aporte Personal/Caja privada con ID exacto. UID de Auth, cuenta real
+  verificada, Pro transaccional, moneda/saldo y fuentes comprobadas de nuevo.
+- Personal y Caja remotos se actualizan juntos; historial antiguo o separado,
+  duplicados, borrados/cierre/conversión/devolución y edición posterior protegidos.
+  Repetir resultado vigente no escribe. Preserva otros registros/metadata; datos
+  no finitos no se confunden con null. Petición limitada a 150.000 bytes.
+- Escala monetaria compartida sin SDK/Node; extracción de cálculo de devolución
+  sin cambio de reglas. El test sigue el módulo real y conserva la comparación
+  del catálogo. No hay nueva colección/recibo ni retención distinta en servidor.
+- Guía: `docs/PRUEBAS_DIFERENCIAS_DINERO_SERVIDOR.md`. Regresión SDK contra
+  e10b2b6 reproduce Caja S/100 con Personal S/80 al interrumpir el recorrido
+  anterior después de subir Caja. No equivale a afirmar afectación de usuarios.
+- **No habilitado ni publicado:** falta integrar la pantalla, guardar originales/
+  elección cifrados antes de pedir la corrección, guardar ambas mitades localmente,
+  bloquear subidas incompatibles y recuperar tras fallos/reinicio/cambio de cuenta.
+- **Qué sigue:** esa integración y sus pruebas. **Qué falta:** restantes conflictos,
+  Android, índices/consolas, políticas según nuevos datos locales y publicación
+  coordinada autorizada. Punto 1/auditoría abiertos; no atomicidad servidor/celular.
+- TypeScript/ESLint, 140 pruebas locales/8 auditores (una prueba ajena sin
+  registrar: 139 en copia limpia), 73 unitarias de Functions y 110 pruebas
+  SDK/reglas/HTTP/eventos aprobadas bajo Node 22 real, sin omisiones ni
+  cancelaciones. Regresión e10b2b6 falla como se esperaba (Personal 80 != 100).
+  ADB sin dispositivos: Android sigue pendiente. Sin tarjetas, código nativo,
+  CODE_MARKER, APK/OTA, despliegue o datos reales consultados/modificados.
+
 ## Recuperación incompleta — guardias financieras del punto 1 (06/10/2026)
 
 - Regresiones contra 37ff973 reproducen reconstrucción de Caja cerrada,

@@ -223,6 +223,16 @@ Las políticas interna/web están preparadas con fecha 06/10; no publicadas.
 Revisar consistencia de la declaración real de Play antes de entregar.
 Guía y límites: `docs/PRUEBAS_NOMBRES_CAJA_NUBE.md`.
 
+Se prepara además `resolvePrivateBoxMoney`, limitado a la cuenta verificada
+con Pro, para corregir monto/fecha de un aporte Personal/Caja privada en una
+sola transacción remota. Comprueba fuentes, enlaces, moneda y saldo; no añade
+colección/recibo ni retención distinta: modifica registros financieros existentes.
+La petición incluye originales y elección financiera, dentro de la finalidad
+de consistencia del respaldo ya declarado. No está conectado a la app ni publicado.
+Antes de habilitarlo faltan conservación cifrada local, decisión/guardado
+recuperables y actualización de políticas si esa integración guarda copias
+nuevas. Guía: `docs/PRUEBAS_DIFERENCIAS_DINERO_SERVIDOR.md`.
+
 Al convertir una Caja privada a compartida, `privateBoxMigrations` y la copia
 privada conservan una confirmación del servidor: UID, IDs de origen/destino,
 nombre/moneda, fechas, SHA-256 de la copia e IDs de enlaces a Personal, sin

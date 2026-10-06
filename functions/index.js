@@ -18,6 +18,7 @@ const { returnPersonalContribution } = require("./src/personal-return");
 const { finalizeLinkedSpaceDeletion } = require("./src/linked-space-cleanup");
 const { privateBoxMigration } = require("./src/private-box-migration");
 const { prepareIncompleteBoxDeletion } = require("./src/incomplete-box-cleanup");
+const { resolvePrivateBoxMoney } = require("./src/private-box-money");
 
 initializeApp();
 
@@ -38,6 +39,19 @@ function verifiedAccount(request, recent = false) {
 
 exports.getCloudAccess = onCall({ region: "southamerica-east1", maxInstances: 10 }, request =>
   getCloudAccess(getFirestore(), verifiedAccount(request)));
+
+exports.resolvePrivateBoxMoney = onCall({ region: "southamerica-east1", maxInstances: 5, timeoutSeconds: 120 }, async request => {
+  const uid = verifiedAccount(request);
+  const account = await getAuth().getUser(uid);
+  if (account.disabled || !account.emailVerified) throw new HttpsError("unauthenticated", "Verifica tu cuenta.");
+  try { return await resolvePrivateBoxMoney(getFirestore(), uid, request.data); }
+  catch (error) {
+    if (!error?.reason) throw error;
+    throw new HttpsError(error.reason === "money-premium-required" ? "permission-denied"
+      : /invalid-review|review-too-large/.test(error.reason) ? "invalid-argument" : "failed-precondition",
+    "No se corrigió la transferencia. Conserva los originales y revisa de nuevo los importes.", { reason: error.reason });
+  }
+});
 
 exports.prepareIncompleteBoxDeletion = onCall({ region: "southamerica-east1", maxInstances: 5, timeoutSeconds: 540 }, async request => {
   const uid = verifiedAccount(request, true);

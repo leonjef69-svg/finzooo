@@ -115,7 +115,10 @@ assert.equal(rows.length, 1);
 
 const serverCurrency = fs.readFileSync("functions/src/personal-return.js", "utf8");
 assert.ok(serverCurrency.includes("returnPersonalContribution"));
-const backendScope = { module: { exports: {} }, require: name => name === "node:crypto" ? {} : { invalidPersonalReturns() {} } };
+const sharedMoney = { module: { exports: {} } };
+vm.runInNewContext(fs.readFileSync("functions/src/money-units.js", "utf8"), sharedMoney);
+const backendScope = { module: { exports: {} }, require: name => name === "node:crypto" ? {}
+  : name === "./money-units" ? sharedMoney.module.exports : { invalidPersonalReturns() {} } };
 vm.runInNewContext(serverCurrency, backendScope);
 for (const currency of currencyScope.exports.CURRENCIES) assert.equal(backendScope.module.exports.currencyDecimals(currency.id), currencyScope.exports.currencyDecimals(currency.id), currency.id);
 for (const file of ["screens/Family.tsx", "screens/SharedBoxes.tsx"]) {

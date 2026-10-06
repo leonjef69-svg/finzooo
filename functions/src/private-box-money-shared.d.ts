@@ -1,0 +1,15 @@
+import type { Caja, MovimientoCaja } from "../../utils/cajas";
+import type { Transaction } from "../../types";
+export type MoneySource = "local-personal" | "local-box" | "remote-personal" | "remote-box";
+export type MoneyReview = { id: string; uid: string; currency: string; box: Caja;
+  local: { personal: Transaction; movement: MovimientoCaja };
+  remote: { personal: Transaction; movement: MovimientoCaja };
+  chosen: MoneySource; createdAt: number; version: number };
+export type MoneyAck = { confirmed: true; uid: string; id: string; boxId: string; movementId: string;
+  personalId: number; amount: number; date: string; version: number };
+export function canonical(value: unknown): string;
+export function validateMoneyReview(entry: MoneyReview, uid?: string): MoneyReview;
+export function moneyChoices(entry: MoneyReview): { source: MoneySource; amount: number; date: string }[];
+export function moneyResult(entry: MoneyReview): MoneyReview["local"];
+export function moneyAcknowledgement(entry: MoneyReview): MoneyAck;
+export function fail(reason: string): never;

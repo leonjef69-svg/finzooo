@@ -10,6 +10,15 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Corrección financiera prepara **solo el servidor**: elección de monto/fecha
+de un aporte con enlaces exactos y actualización conjunta de Personal/Caja
+remotos. Pro/cuenta/fuentes/moneda/saldo, reintentos y concurrencia protegidos.
+Guía: `docs/PRUEBAS_DIFERENCIAS_DINERO_SERVIDOR.md`. No hay nueva colección ni
+recibo. **No habilitar ni desplegar todavía:** faltan pantalla, originales/
+decisión cifrados, guardado conjunto local, recuperación y bloqueo de subidas
+incompatibles. Sin código nativo/marca/APK/OTA/despliegue. Después faltan Android,
+índices/consolas y publicación coordinada autorizada; punto 1 sigue abierto.
+
 Recuperación incompleta prepara guardias que impiden reconstruir una Caja
 cerrada/convertida o propagar montos/fechas/repartos inválidos a Personal.
 Conserva los datos sin devolver dinero ficticio ni modificar compartidas

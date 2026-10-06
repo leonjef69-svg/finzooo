@@ -22,12 +22,18 @@ const require = createRequire(import.meta.url);
 const cli = process.env.FINO_FIREBASE_CLI || require.resolve("firebase-tools/lib/bin/firebase.js");
 if (!fs.existsSync(cli)) throw new Error("No se encontró Firebase CLI para las pruebas locales.");
 const env = { ...process.env, FIREBASE_CLI_DISABLE_USAGE: "1", FUNCTIONS_DISCOVERY_TIMEOUT: "60", CI: "true" };
+const moneyBaseline = process.env.FINO_TEST_MONEY_BASELINE;
+if (moneyBaseline && !/^[a-f0-9]{7,40}$/.test(moneyBaseline)) throw new Error("La regresión requiere un hash Git.");
+// La regresión financiera reproduce solo la escritura antigua del par;
+// sin esa variable siempre se ejecutan todas las suites, sin omisiones.
+const suites = moneyBaseline ? "functions/integration-tests/private-box-money.test.js"
+  : "functions/emulator-tests/*.test.js functions/integration-tests/*.test.js";
 const hostPath = process.env.PATH || process.env.Path || "";
 for (const key of Object.keys(env)) if (key.toUpperCase() === "PATH") delete env[key];
 env.PATH = `${path.dirname(process.execPath)}${path.delimiter}${hostPath}`;
 delete env.GOOGLE_APPLICATION_CREDENTIALS;
 const result = spawnSync(process.execPath, [cli, "emulators:exec", "--only", "auth,functions,firestore",
   "--project", "demo-fino-node22", "--config", configPath,
-  "node --test --test-concurrency=1 functions/emulator-tests/*.test.js functions/integration-tests/*.test.js"], { cwd: root, env, stdio: "inherit" });
+  `node --test --test-concurrency=1 ${suites}`], { cwd: root, env, stdio: "inherit" });
 if (result.error) throw result.error;
 process.exitCode = result.status ?? 1;

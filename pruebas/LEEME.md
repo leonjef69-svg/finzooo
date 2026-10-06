@@ -20,6 +20,11 @@ real y ejecuta reglas, SDK, HTTP y eventos de Auth/Firestore en emuladores
 locales con cuentas ficticias. No despliega ni necesita datos de producción.
 Requisitos, regresión y límites: `docs/PRUEBAS_NODE22_BORRADO_CUENTA.md`.
 
+La base de corrección remota Personal/Caja tiene diez pruebas unitarias y una
+suite SDK/HTTP separada. No está habilitada en la app; falta integrar selección,
+conservación y guardado local. Alcance, comandos y regresión:
+`docs/PRUEBAS_DIFERENCIAS_DINERO_SERVIDOR.md`.
+
 ---
 
 ## Qué comprueba cada cosa

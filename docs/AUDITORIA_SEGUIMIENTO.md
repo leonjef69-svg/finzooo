@@ -3,6 +3,26 @@
 Última revisión: 06/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## Continuación punto 1 — base de corrección monetaria en servidor (06/10/2026)
+
+- Servicio limitado a aporte propio exacto Personal/Caja privada; cuatro
+  originales/elección de monto-fecha, Pro/cuenta/moneda/fuentes y saldo comprobados.
+  Una transacción remota guarda ambos registros, no otros; replay vigente no escribe.
+- Historial antiguo/separado, duplicados, borrados, cierre, conversión, devolución,
+  edición concurrente y datos no finitos protegidos. Sin colección/recibo nuevo ni
+  nueva retención de servidor. Una decisión obsoleta no fuerza datos actuales.
+- Regresión contra e10b2b6 usa SDK original: interrupción tras subir Caja deja
+  S/100 en Caja y S/80 en Personal. Guía y límites:
+  `docs/PRUEBAS_DIFERENCIAS_DINERO_SERVIDOR.md`. Regresión falla como se esperaba;
+  TypeScript/ESLint, 140 locales/8 auditores (una prueba ajena sin registrar),
+  73 unitarias de Functions y 110 SDK/reglas/HTTP/eventos aprobados bajo Node 22
+  real, sin pruebas omitidas ni canceladas. ADB sin dispositivos; no prueba Android.
+- **Qué sigue:** integrar pantalla/confirmación, originales y decisión cifrados,
+  guardado conjunto local, bloqueos y recuperación. **Qué falta:** otras discrepancias,
+  Android, índices/consolas, políticas de la integración y publicación autorizada.
+  No conectado a la app, no publicado ni desplegado, tarjetas/nativos sin cambios.
+  No declara punto 1, auditoría o atomicidad servidor/celular resueltos.
+
 ## Continuación punto 1 — reconstrucción incompleta protegida (06/10/2026)
 
 - Tres regresiones contra 37ff973 comprueban Caja cerrada reconstruida como

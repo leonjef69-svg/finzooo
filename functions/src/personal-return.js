@@ -2,18 +2,8 @@
 
 const crypto = require("node:crypto");
 const { invalidPersonalReturns } = require("./personal-contribution");
-const ZERO = new Set(["BIF", "CLP", "DJF", "GNF", "ISK", "JPY", "KMF", "KRW", "PYG", "RWF", "UGX", "VND", "VUV", "XAF", "XOF", "XPF"]);
-const THREE = new Set(["BHD", "IQD", "JOD", "KWD", "LYD", "OMR", "TND"]);
-function currencyDecimals(currency) { return ZERO.has(currency) ? 0 : THREE.has(currency) ? 3 : 2; }
+const { currencyDecimals, units } = require("./money-units");
 function fail(reason) { const error = new Error(reason); error.reason = reason; throw error; }
-function units(value, currency) {
-  const decimals = currencyDecimals(currency), scale = 10 ** decimals;
-  if (!Number.isFinite(value) || value < 0 || value > 9_000_000_000_000) fail("return-invalid-data");
-  const rounded = Math.round(value * scale) / scale;
-  if (Math.abs(value - rounded) > Math.max(1e-9, Number.EPSILON * Math.abs(value) * 2)) fail("return-invalid-data");
-  if (!Number.isInteger(rounded) && rounded > (decimals === 3 ? 10_000_000_000 : 100_000_000_000)) fail("return-invalid-data");
-  return BigInt(rounded.toFixed(decimals).replace(".", ""));
-}
 function amount(value, currency) {
   const result = Number(value) / 10 ** currencyDecimals(currency);
   if (units(result, currency) !== value) fail("return-invalid-data");
