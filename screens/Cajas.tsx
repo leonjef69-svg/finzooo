@@ -5,6 +5,7 @@ import MovementAllButton from "@/components/MovementAllButton";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
 import SpaceTransferAmounts from "@/components/SpaceTransferAmounts";
 import SpaceMovementSheet from "@/components/SpaceMovementSheet";
+import PrivateBoxMoneyReview from "@/components/PrivateBoxMoneyReview";
 import { validSpaceDate } from "@/components/SpaceMovementFields";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
@@ -23,6 +24,7 @@ import {
   confirmarRevisionNombreLocal,
   type DatosCajas,
   type RevisionNombreCaja,
+  type RevisionImporteCaja,
 } from "@/utils/cajas";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { horaDe } from "@/utils/format";
@@ -31,7 +33,7 @@ import { nextId } from "@/utils/id";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { getAccountStorageSession, hasUnreadableLocalData, loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 import { captureAccountTask } from "@/utils/accountTask";
-import { guardarCajasEnMemoria, leerCajasEnMemoria } from "@/utils/cajasMemoria";
+import { guardarCajasEnMemoria, leerCajasEnMemoria, observarCajasEnMemoria, revisionCajasEnMemoria } from "@/utils/cajasMemoria";
 import { assertPrivateBoxMoneyLocalIdle, assertPrivateBoxMoneyLocalMutation } from "@/utils/privateBoxMoneyLocalWrite";
 import { cancelarConversionCaja, enlacesCajaConvertida, huellaCaja, nuevoIntentoCaja, retirarCajaConvertida } from "@/utils/boxMigration";
 import { spaceErrorKey } from "@/utils/spaceErrors";
@@ -39,9 +41,11 @@ import type { Transaction } from "@/types";
 import { privateBoxLinksMatch } from "@/utils/privateBoxPersonal";
 import { PrivateBoxSyncError, privateBoxCloudResponseCurrent } from "@/utils/privateBoxSync";
 import { planPrivateBoxRepair, privateBoxLinkCandidates, resolvePrivateBoxConflict, type PrivateBoxRepairChoice } from "@/utils/privateBoxRepair";
+import { compararImporteCaja, confirmarImporteCaja, reintentarImporteCaja, type PrivateBoxMoneyComparison, type PrivateBoxMoneyPort } from "@/utils/privateBoxMoneyFlow";
+import type { MoneySource } from "../functions/src/private-box-money-shared.js";
 import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Boxes, Check, ListChecks, Pencil, Plus, RefreshCw, Trash2, UserPlus, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
-import { Alert, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 
@@ -62,7 +66,7 @@ export default function Cajas() {
 }
 
 function CajasForAccount({ accountUid }: { accountUid: string }) {
-  const { ready: personalReady, hasOnboarded, t, fmt, showToast, disponible, transactions, deletedTransactionIds, commitPrivateBoxData, isPremium, userName, userCurrency } = useAppData();
+  const { ready: personalReady, hasOnboarded, t, fmt, showToast, disponible, transactions, deletedTransactionIds, commitPrivateBoxData, commitPrivateBoxMoney, stagePrivateBoxMoney, readPrivateBoxMoneyLocal, isPremium, userName, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
   const [datos, setRenderedDatos] = useState<DatosCajas>(() => leerCajasEnMemoria() ?? CAJAS_VACIAS);
   const datosActuales = useRef(datos);
@@ -104,6 +108,14 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const nameCopiesActual = useRef(nameCopies);
   nameCopiesActual.current = nameCopies;
   const [nameHistory, setNameHistory] = useState(false);
+  const [moneyComparison, setRenderedMoneyComparison] = useState<PrivateBoxMoneyComparison | null>(null);
+  const moneyComparisonActual = useRef(moneyComparison);
+  const setMoneyComparison = useCallback((next: PrivateBoxMoneyComparison | null) => {
+    moneyComparisonActual.current = next;
+    setRenderedMoneyComparison(next);
+  }, []);
+  const [moneyBusy, setMoneyBusy] = useState(false);
+  const [moneyMessage, setMoneyMessage] = useState<string | null>(null);
   const conversionEnCurso = useRef(false);
   const reparacionIntentada = useRef<{ data: DatosCajas; rows: Transaction[]; refresh: number } | null>(null);
   const [linkReview, setLinkReview] = useState<string | null>(null);
@@ -143,12 +155,29 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     setRenderedDatos(next);
   }, [cuentaActual]);
 
+  // Un lote que termina tras cerrar y reabrir Cajas avisa a la pantalla nueva.
+  // La pantalla que lo inició aplica su propio resultado después del disco.
+  useEffect(() => observarCajasEnMemoria(() => {
+    if (!cuentaActual() || guardandoRef.current) return;
+    const value = leerCajasEnMemoria();
+    if (value) { setDatos(value); setReady(true); }
+  }), [cuentaActual, setDatos]);
+
   const repairPlan = useMemo(() => planPrivateBoxRepair(datos, transactions, deletedTransactionIds, accountUid), [datos, transactions, deletedTransactionIds, accountUid]);
   const repairBlocked = !personalReady || !hasOnboarded || !cloudReady || repairPlan.conflicts.length > 0 || repairPlan.upserts.length > 0 || repairPlan.data !== datos;
   const linkCandidates = useMemo(() => linkReview ? privateBoxLinkCandidates(datos, transactions, deletedTransactionIds, linkReview) : [], [datos, transactions, deletedTransactionIds, linkReview]);
   const linkMovement = datos.movimientos.find(row => row.id === linkReview);
   const nameOptions = useMemo(() => nameCopies ? diferenciasNombreCajas(nameCopies.local, nameCopies.remoto) : [], [nameCopies]);
   const pendingNames = (datos.revisionesNombre || []).filter(entry => entry.uid === accountUid && entry.estado === "pendiente");
+  const moneyCandidates = useMemo(() => {
+    const ids = new Set(repairPlan.conflicts.filter(item => item.selectable).map(item => item.movementId));
+    for (const move of nameCopies?.local.movimientos || []) {
+      const other = nameCopies?.remoto.movimientos.find(row => row.id === move.id);
+      if (other && move.personalTransactionId === other.personalTransactionId && (move.monto !== other.monto || move.fecha !== other.fecha)) ids.add(move.id);
+    }
+    return datos.movimientos.filter(row => ids.has(row.id) && row.personalTransactionId != null
+      && !datos.revisionesImporte?.some(entry => entry.estado === "pendiente" && entry.local.movement.id === row.id));
+  }, [datos, repairPlan, nameCopies]);
 
   function tomarAccionLocal(): boolean {
     if (repairBlocked) { showToast(t("boxes.repairReview")); return false; }
@@ -198,12 +227,14 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     void (async () => {
       const uid = accountUid;
       try {
+      const memoryRevision = revisionCajasEnMemoria();
       const local = await loadJSON<DatosCajas>(STORAGE_KEYS.cajasDinero, CAJAS_VACIAS);
       if (!current()) return;
       if (hasUnreadableLocalData()) throw new Error("cajas-local-unreadable");
       const memoria = leerCajasEnMemoria();
       const checked = validarCajas(local);
-      const visible = memoria ? fusionarCajas(checked, validarCajas(memoria)) : checked;
+      const visible = memoryRevision !== revisionCajasEnMemoria() && memoria ? validarCajas(memoria)
+        : memoria ? fusionarCajas(checked, validarCajas(memoria)) : checked;
       guardarCajasEnMemoria(visible);
       setDatos(visible);
       setReady(true);
@@ -247,7 +278,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }, [accountUid, cuentaActual, isPremium, refreshVersion, reportSyncError, setDatos]));
 
   useEffect(() => {
-    if (!cuentaActual() || !ready || hasUnreadableLocalData()) return;
+    if (!cuentaActual() || !ready || datos !== datosActuales.current || guardandoRef.current || hasUnreadableLocalData()) return;
     guardarCajasEnMemoria(datos);
     void saveJSON(STORAGE_KEYS.cajasDinero, datos);
     const uid = accountUid;
@@ -309,6 +340,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       Alert.alert(t("boxes.repairReview"), t(issue.reason === "settled" ? "boxes.repairClosedDetails" : "boxes.repairUncertain"), [{ text: t("common.close") }]);
       return;
     }
+    if (premiumForSync.current) { void consultarImporteCaja(move.id); return; }
     const before = datosActuales.current, beforeRows = transactions;
     const apply = async (from: "personal" | "box") => {
       if (!cuentaActual() || before !== datosActuales.current || beforeRows !== personalActuales.current || guardandoRef.current || premiumForSync.current !== isPremium
@@ -327,6 +359,60 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       { text: t("boxes.repairUsePersonal"), onPress: () => void apply("personal") },
       { text: t("boxes.repairUseBox"), onPress: () => void apply("box") },
     ]);
+  }
+
+  function moneyPort(): PrivateBoxMoneyPort {
+    return { current: () => cuentaActual() && personalReady && hasOnboarded && !hasUnreadableLocalData(),
+      premium: () => premiumForSync.current, boxes: () => datosActuales.current, local: readPrivateBoxMoneyLocal,
+      stage: (before, entry, lease, current) => stagePrivateBoxMoney(before, entry, lease, current, setDatos),
+      commit: (before, entry, ack, lease, current) => commitPrivateBoxMoney(before, entry, ack, lease, current, setDatos) };
+  }
+
+  async function trabajarImporteCaja(work: () => Promise<boolean | PrivateBoxMoneyComparison>): Promise<void> {
+    if (!cuentaActual() || !ready || !personalReady || !hasOnboarded || guardandoRef.current || compartiendo || cargandoUnion) return;
+    if (!premiumForSync.current) { setMoneyMessage(t("boxes.moneyNeedsPro")); return; }
+    if (Platform.OS !== "android") { setMoneyMessage(t("boxes.atomicAndroidOnly")); return; }
+    guardandoRef.current = true; setGuardando(true); setMoneyBusy(true); setMoneyMessage(null);
+    try {
+      const result = await work();
+      if (!cuentaActual()) return;
+      if (typeof result === "object") setMoneyComparison(result);
+      else if (result) { setMoneyComparison(null); setMoneyMessage(t("boxes.moneySaved")); showToast(t("boxes.moneySaved")); }
+      else setMoneyMessage(t("boxes.moneyPending"));
+    } catch (error) {
+      if (!cuentaActual()) return;
+      const value = error as { message?: string; code?: string; details?: { reason?: string } };
+      const reason = value.details?.reason || value.message || "";
+      const pro = reason === "cajas-money-needs-pro" || reason === "money-premium-required";
+      const changed = /changed|invalid|negative-balance|return-conflict|obsolete/.test(reason);
+      if (changed) setMoneyComparison(null);
+      setMoneyMessage(t(pro ? "boxes.moneyNeedsPro" : reason === "cajas-money-history-full" ? "boxes.moneyHistoryFull"
+        : changed ? "boxes.moneyChanged" : "boxes.moneyPending"));
+    } finally {
+      guardandoRef.current = false;
+      if (cuentaActual()) { setGuardando(false); setMoneyBusy(false); setRefreshVersion(value => value + 1); }
+    }
+  }
+
+  async function consultarImporteCaja(movementId: string): Promise<void> {
+    await trabajarImporteCaja(() => compararImporteCaja(accountUid, movementId, moneyPort()));
+  }
+
+  function elegirImporteCaja(chosen: MoneySource) {
+    const comparison = moneyComparisonActual.current;
+    const choice = comparison?.choices.find(value => value.source === chosen && value.usable);
+    if (!comparison || !choice || guardandoRef.current || !cuentaActual()) return;
+    Alert.alert(t("boxes.moneyReview"), t("boxes.moneyConfirm", { amount: fmt(choice.amount), date: choice.date }), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("common.save"), onPress: () => {
+        if (comparison !== moneyComparisonActual.current) return;
+        void trabajarImporteCaja(() => confirmarImporteCaja(comparison, chosen, moneyPort()));
+      } },
+    ]);
+  }
+
+  async function recuperarImporteCaja(entry: RevisionImporteCaja): Promise<void> {
+    await trabajarImporteCaja(() => reintentarImporteCaja(accountUid, entry, moneyPort()));
   }
 
   function confirmarEnlaceHeredado(personalId: number) {
@@ -720,9 +806,17 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
         <TouchableOpacity accessibilityLabel={t("common.refresh")} disabled={compartiendo || cargandoUnion || guardando} onPress={() => setRefreshVersion(value => value + 1)} className="h-10 w-10 items-center justify-center"><RefreshCw size={18} color="#64748b" /></TouchableOpacity>
       </View>
       <SpaceSwitcher active="boxes" />
+      <Modal transparent visible={moneyBusy} animationType="fade" onRequestClose={() => undefined}>
+        <View className="flex-1 items-center justify-center bg-black/40 px-6">
+          <View accessibilityViewIsModal className="w-full rounded-2xl bg-white p-6 dark:bg-noche">
+            <ActivityIndicator size="large" color="#059669" />
+            <Text accessibilityLiveRegion="polite" className="mt-4 text-center text-sm text-slate-900 dark:text-slate-100">{t("boxes.moneyWorking")}</Text>
+          </View>
+        </View>
+      </Modal>
       {syncIssue ? <Text accessibilityLiveRegion="polite" className="px-5 pb-2 text-xs leading-5 text-amber-700 dark:text-amber-300">{t(syncIssue)}</Text> : null}
       {repairCloudChanged ? <Text accessibilityLiveRegion="polite" className="px-5 pb-2 text-xs leading-5 text-amber-700 dark:text-amber-300">{t("boxes.repairCloudChanged")}</Text> : null}
-      {ready && cloudReady && repairPlan.conflicts.length > 0 ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.repairReview")} disabled={guardando || compartiendo || syncIssue === "boxes.syncConflict"} onPress={revisarTransferencias} className="mx-5 mb-3 rounded-xl bg-amber-50 p-3 dark:bg-amber-950">
+      {ready && cloudReady && repairPlan.conflicts.length > 0 ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.repairReview")} disabled={guardando || compartiendo || (syncIssue === "boxes.syncConflict" && !isPremium)} onPress={revisarTransferencias} className="mx-5 mb-3 rounded-xl bg-amber-50 p-3 dark:bg-amber-950">
         <Text accessibilityLiveRegion="polite" className="text-xs leading-5 text-amber-800 dark:text-amber-200">{t("boxes.repairNotice", { count: repairPlan.conflicts.length })}</Text>
         <Text className="mt-1 text-sm font-bold text-amber-800 dark:text-amber-200">{t("boxes.repairReview")}</Text>
       </TouchableOpacity> : null}
@@ -738,6 +832,10 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
           if (cercaDelFinal && movementLimit < filasVisibles.length) setMovementLimit(limit => Math.min(limit + 60, filasVisibles.length));
         }}
       >
+        {ready ? <PrivateBoxMoneyReview comparison={moneyComparison} reviews={(datos.revisionesImporte || []).filter(entry => entry.uid === accountUid)}
+          candidates={moneyCandidates} message={moneyMessage} busy={guardando || compartiendo || cargandoUnion} premium={isPremium} t={t}
+          compare={id => void consultarImporteCaja(id)} choose={elegirImporteCaja} retry={entry => void recuperarImporteCaja(entry)}
+          cancel={() => { if (guardandoRef.current) return; setMoneyComparison(null); setMoneyMessage(null); }} /> : null}
         {ready && nameOptions.length > 0 ? <View className="mb-3 rounded-xl border border-amber-200 p-3 dark:border-amber-800">
           <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">{t("boxes.nameReview")}</Text>
           <Text className="my-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.nameHelp")}</Text>

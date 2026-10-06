@@ -1,5 +1,31 @@
 # Estado actual de Fino
 
+## Comparación de importes — flujo conectado, sin publicar (06/10/2026)
+
+- Pantalla Cajas: cuatro fuentes con monto/moneda/fecha, confirmación humana,
+  reconsulta después del Sí y opciones inseguras desactivadas. Ver el formulario
+  no guarda ni decide dinero. Conflicto de nube no oculta el acceso a revisión.
+- Originales/elección y fuentes vivas Personal/borrados/Caja se conservan juntos
+  antes de HTTP; después, recibo genuino y lote verificado con versión exacta.
+  Fallos dejan pendiente visible; reintentar/reiniciar no inventa otro ID ni
+  duplica dinero. Pro vencido o elección obsoleta no borran los originales.
+- Dos toques bloqueados; modal durante operación. Caché avisa a nueva pantalla;
+  lectura/render atrasados no restauran otra copia. Guía vigente:
+  `docs/PRUEBAS_FLUJO_IMPORTE_CAJA.md`. Es código preparado, no versión entregada.
+- TypeScript/ESLint completos aprobados; 144 locales/8 auditores, 73 unitarias
+  servidor y 121 SDK/reglas/HTTP/eventos bajo Node 22 real, sin fallos/omisiones/
+  cancelaciones. Total local incluye una prueba ajena sin registrar, no incluida
+  en commit; dos suites específicas de tarjetas excluidas. Regresión cbe2b08
+  falla por contrato nuevo ausente, no por bug de entrega publicada.
+- **Qué sigue:** protocolo para desbloquear una elección obsoleta/Pro vencido
+  antes de recuperar respuesta, sin descartar originales; pruebas Android.
+  **Qué falta:** dispositivos (ADB vacío), demás conflictos/hallazgos y entrega
+  conjunta autorizada de servidor/reglas/app, consolas/políticas publicadas.
+  No cambios nativos/tarjetas, marca, APK/AAB/OTA ni despliegue. Punto 1 abierto.
+
+Las secciones siguientes registran fases anteriores, no el estado de la UI
+tras esta integración.
+
 ## Lote monetario local — contexto preparado, UI pendiente (06/10/2026)
 
 - Confirma Personal/borrados/Caja juntos con respuesta HTTP genuina, misma

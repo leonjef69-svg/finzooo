@@ -30,9 +30,10 @@ const source = `
   import { auth } from '@/utils/firebase';
   import { captureAccountTask } from '@/utils/accountTask';
   import { withLocalAccountOperation } from '@/utils/localAccountVault';
-  import { hasUnreadableLocalData, loadJSON, saveJSONBatchNow, STORAGE_KEYS } from '@/utils/storage';
+  import { hasUnreadableLocalData, loadJSON, saveJSONBatchNow, flushPendingSaves, STORAGE_KEYS } from '@/utils/storage';
   import { validarCajas } from '@/utils/cajas';
-  import { confirmarRevisionImporteLocal } from '@/utils/privateBoxMoneyReview';
+  import { confirmarRevisionImporteLocal, conservarOriginalesImporte } from '@/utils/privateBoxMoneyReview';
+  import { assertPrivateBoxMoneyReviewLease } from '@/utils/privateBoxSync';
   import { assertPrivateBoxMoneyReceipt } from '@/utils/cloudPrivateBoxMoney';
   import { assertPrivateBoxMoneyLocalIdle, assertPrivateBoxMoneyLocalMutation, reservePrivateBoxMoneyLocalWrite } from '@/utils/privateBoxMoneyLocalWrite';
   import { guardarCajasEnMemoria } from '@/utils/cajasMemoria';
@@ -40,6 +41,7 @@ const source = `
   export * from '@/utils/storage'; export * from '@/utils/cloudPrivateBoxMoney';
   export * from '@/utils/privateBoxSync'; export * from '@/utils/privateBoxMoneyLocalWrite';
   export * from '@/utils/cajasMemoria'; export * from '@/utils/localAccountVault';
+  export * from '@/utils/privateBoxMoneyFlow';
   export function createContext() {
     const e = globalThis.env, ready=true, hasOnboarded=true, Platform={get OS(){return e.platform}};
     const useCallback=callback=>callback;
@@ -48,8 +50,10 @@ const source = `
     const setRenderedDeletedTransactionIds=ids=>{e.renderedDeleted=ids;};
     const setRenderedUserCurrency=currency=>{e.renderedCurrency=currency;};
     ${callbacks}
+    ${declaration(context, "readPrivateBoxMoneyLocal")}
+    ${declaration(context, "stagePrivateBoxMoney")}
     ${commit}
-    return { commitPrivateBoxMoney, setTransactions, setDeletedTransactionIds, setUserCurrency };
+    return { commitPrivateBoxMoney, stagePrivateBoxMoney, readPrivateBoxMoneyLocal, setTransactions, setDeletedTransactionIds, setUserCurrency };
   }
   export function createScreen() {
     const e=globalThis.env, useCallback=callback=>callback, cuentaActual=()=>e.active, datosActuales=e.screen;
@@ -60,8 +64,15 @@ const source = `
 `;
 const mocks = {
   "@/utils/firebase": `const e=globalThis.env; export const db=e.realClient?.db??{}, functions=e.realClient?.functions??{}; export const auth={get currentUser(){return e.realClient?.auth.currentUser??(e.uid?{uid:e.uid,emailVerified:true}:null)}};`,
-  "firebase/firestore": `export const collection=()=>{}, doc=()=>{}, getDocFromServer=()=>{}, getDocsFromServer=()=>{}, limit=()=>{}, query=()=>{}, where=()=>{};`,
-  "firebase/functions": `export const httpsCallable=(...args)=>async payload=>{globalThis.env.calls++;if(globalThis.env.realClient)return globalThis.sdkFunctions.httpsCallable(...args)(payload);return {data:globalThis.ack(payload)}};`,
+  "firebase/firestore": `
+    export const doc=(db,...parts)=>globalThis.env.realClient?globalThis.sdkFirestore.doc(db,...parts):parts.join('/');
+    export const collection=(...args)=>globalThis.env.realClient?globalThis.sdkFirestore.collection(...args):doc(...args);
+    export const limit=n=>globalThis.env.realClient?globalThis.sdkFirestore.limit(n):({limit:n});
+    export const where=(...args)=>globalThis.env.realClient?globalThis.sdkFirestore.where(...args):({where:args});
+    export const query=(ref,...clauses)=>globalThis.env.realClient?globalThis.sdkFirestore.query(ref,...clauses):({ref,clauses});
+    export const getDocFromServer=async ref=>{const e=globalThis.env;e.sourceReads=(e.sourceReads??0)+1;await e.sourceGate?.();return e.realClient?globalThis.sdkFirestore.getDocFromServer(ref):e.snapshot(e.sources.get(ref));};
+    export const getDocsFromServer=async ref=>{const e=globalThis.env;return e.realClient?globalThis.sdkFirestore.getDocsFromServer(ref):{metadata:{fromCache:false,hasPendingWrites:false},docs:e.links??[]};};`,
+  "firebase/functions": `export const httpsCallable=(...args)=>async payload=>{const e=globalThis.env;e.calls++;if(e.realClient)return globalThis.sdkFunctions.httpsCallable(...args)(payload);if(e.send)return e.send(payload);return {data:globalThis.ack(payload)}};`,
   "@react-native-async-storage/async-storage": `export default globalThis.env.adapter;`,
   "@/utils/encryption": `export const encryptText=async text=>{const e=globalThis.env; if(e.encryptGate){e.encryptStarted.resolve();await e.encryptGate.promise;}if(e.encryptFailure)throw Error('encrypt-failed');return 'v2:'+text;}; export const decryptText=async text=>text.slice(3);`,
   "expo-crypto": `export const randomUUID=()=> 'test-uuid';`,
@@ -96,7 +107,7 @@ export function createMoneyBatchHarness(realClient=null,review=entry,initial=ori
     }, multiRemove:async keys=>{for(const key of keys)db.prepare("DELETE FROM store WHERE key=?").run(key);},
     getAllKeys:async()=>db.prepare("SELECT key FROM store").all().map(row=>row.key) };
   const module={exports:{}};
-  new Function("module","exports","require","globalThis",built.outputFiles[0].text)(module,module.exports,require,{env:e,ack:moneyAcknowledgement,sdkFunctions:realClient?require("firebase/functions"):null});
+  new Function("module","exports","require","globalThis",built.outputFiles[0].text)(module,module.exports,require,{env:e,ack:moneyAcknowledgement,sdkFunctions:realClient?require("firebase/functions"):null,sdkFirestore:realClient?require("firebase/firestore"):null});
   const api=module.exports;api.setAccountStorageAvailable(true);
   for(const [key,value]of [[api.STORAGE_KEYS.transactions,e.rows.current],[api.STORAGE_KEYS.deletedTransactionIds,e.deleted.current],[api.STORAGE_KEYS.cajasDinero,e.screen.current]])put(key,`v2:${JSON.stringify(value)}`);
   const ctx=api.createContext(),setBoxes=api.createScreen();api.guardarCajasEnMemoria(e.screen.current);
@@ -201,7 +212,9 @@ if(process.argv[1]&&path.resolve(process.argv[1])===fileURLToPath(import.meta.ur
     assert.deepEqual(h.e.rows.current[10000],rows[10000]);assert.equal(h.disk(h.api.STORAGE_KEYS.cajasDinero).cajas.length,1001);
     assert.equal(h.e.rows.current[0].amount,100);assert.equal(h.e.rows.current[0].updatedAt,200);
   }
-  // Ningún botón/petición se habilita como parte de este componente.
-  assert.doesNotMatch(read("screens/Cajas.tsx"),/commitPrivateBoxMoney|requestPrivateBoxMoneyReview/);
-  console.log("Lote monetario: contexto/setters/cliente/colas/almacén originales, SQLite real, confirmación genuina, reserva corta, versiones, otros movimientos y fallos comprobados. Android/UI pendientes.");
+  // La pantalla pasa el recibo genuino por el flujo original, nunca un ack calculado.
+  assert.match(read("screens/Cajas.tsx"),/confirmarImporteCaja\(comparison, chosen, moneyPort\(\)\)/);
+  assert.match(read("screens/Cajas.tsx"),/commitPrivateBoxMoney\(before, entry, ack, lease, current, setDatos\)/);
+  assert.doesNotMatch(read("screens/Cajas.tsx"),/moneyAcknowledgement|requestPrivateBoxMoneyReview/);
+  console.log("Lote monetario: contexto/setters/cliente/colas/almacén originales, SQLite real, confirmación genuina, reserva corta, versiones, otros movimientos y fallos comprobados. Android físico pendiente.");
 } finally {for(const db of instances)db.close();}

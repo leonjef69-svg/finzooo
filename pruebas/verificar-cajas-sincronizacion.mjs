@@ -142,6 +142,7 @@ for (const [ready, cloudReady, premium, confirmed, sameAccount] of [[false, true
 }
 function screenHarness(premium = true) {
   uid = "A"; session = 1;
+  memory.limpiarCajasEnMemoria();
   const state = {}, localRead = deferred(), cloudRead = deferred(); let count = 0;
   const scope = { auth, accountUid: "A", cuentaActual: () => uid === "A" && session === 1, isPremium: premium,
     guardandoRef: { current: false },
@@ -151,7 +152,8 @@ function screenHarness(premium = true) {
     validarCajas: api.validarCajas, fusionarCajas: api.fusionarCajas,
     privateBoxCloudResponseCurrent: () => true,
     loadJSON: () => localRead.promise, bajarCajas: () => { count++; return cloudRead.promise; },
-    leerCajasEnMemoria: () => null, guardarCajasEnMemoria: value => { state.memory = value; }, saveJSON: async (_key, value) => { state.saved = value; },
+    leerCajasEnMemoria: memory.leerCajasEnMemoria, revisionCajasEnMemoria: memory.revisionCajasEnMemoria,
+    guardarCajasEnMemoria: value => { memory.guardarCajasEnMemoria(value); state.memory = value; }, saveJSON: async (_key, value) => { state.saved = value; },
     setRenderedDatos: value => { state.rendered = value; }, setReady: value => { state.ready = value; },
     setCloudReady: value => { state.cloudReady = value; }, setSyncIssue: value => { state.issue = value; },
     setNameCopies: value => { state.nameCopies = value; },
@@ -180,6 +182,13 @@ function screenHarness(premium = true) {
 {
   const h = screenHarness(false); h.localRead.resolve(data()); await flush();
   assert.equal(h.count(), 0, "Gratis conserva solo la copia del celular"); assert.equal(h.state.cloudReady, true);
+}
+{
+  const h = screenHarness(false);
+  h.scope.guardarCajasEnMemoria(recent);
+  h.localRead.resolve(old); await flush();
+  assert.equal(h.state.rendered.movimientos[0].monto,120,"una lectura anterior al lote no restaura la copia vieja al abrir Cajas");
+  assert.equal(h.state.saved.movimientos[0].monto,120);
 }
 {
   const h = screenHarness(); h.localRead.resolve(old); await flush();

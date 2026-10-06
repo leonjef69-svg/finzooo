@@ -3,6 +3,29 @@
 Última revisión: 06/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## Continuación punto 1 — comparación/elección/reintento conectados (06/10/2026)
+
+- Cajas muestra cuatro fuentes (monto/moneda/fecha), exige confirmación humana
+  y reconsulta antes de conservar elección/originales y fuentes locales juntas.
+  Respuesta genuina y lote financiero en la misma cola. Pendientes visibles
+  aun con descarga pausada; historial de originales confirmados disponible.
+- Fallos/red/respuesta perdida/reinicio conservan elección; no se fabrica otra
+  versión ni se duplica. Pro antes de HTTP/copia obsoleta detienen la corrección
+  preservando originales; Pro después de respuesta genuina no impide lote local.
+- Modal/dos toques, aviso de caché a pantalla nueva y lectura/render antiguos
+  protegidos. Guía: `docs/PRUEBAS_FLUJO_IMPORTE_CAJA.md`. Pruebas de código original
+  y SQLite/demo Firebase no equivalen a Android visual ni consola de producción.
+- Verificación: TypeScript/ESLint completos, 144 locales/8 auditores, 73
+  unitarias y 121 SDK/reglas/HTTP/eventos bajo Node 22 real aprobados. Ningún
+  fallo/omisión/cancelación de servidor. La prueba local ajena sin registrar se
+  conserva fuera del commit; tarjetas: dos suites específicas excluidas, no
+  verificadas. Regresión cbe2b08 falla por nuevo contrato ausente.
+- **Qué sigue:** recuperación/desbloqueo de elección obsoleta o Pro vencido antes
+  de respuesta, sin borrar originales. **Qué falta:** Android/cierres/espacio/
+  tamaño/dos dispositivos, restantes hallazgos, consolas/políticas reales y
+  publicación coordinada autorizada. Tarjetas intactas; sin nativos/marca/
+  APK/AAB/OTA/despliegue. Punto 1 y auditoría permanecen abiertos.
+
 ## Continuación punto 1 — lote monetario local preparado (06/10/2026)
 
 - Contexto exige comprobante HTTP genuino/cuenta/generación/cola y relee

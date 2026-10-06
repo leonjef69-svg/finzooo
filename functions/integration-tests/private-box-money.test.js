@@ -232,6 +232,29 @@ test("Corrección de dinero: SDK/HTTP y transacciones reales sin medias transfer
     const { createMoneyBatchHarness } = await import(pathToFileURL(path.join(root, "pruebas/verificar-lote-importe-caja.mjs")).href);
     const selected = { ...copy(entry), estado: "pendiente" };
     const localBoxes = { cajas: [copy(box)], movimientos: [copy(m)], cajasBorradas: [], movimientosBorrados: [], revisionesImporte: [selected] };
+    await t.test("flujo original completo: consulta SDK, cuatro fuentes, reconsulta, originales SQLite y corrección HTTP en ambos formatos", async () => {
+      for (const format of [1, 2]) {
+        await seed(format);
+        const initial = { cajas: [copy(box)], movimientos: [copy(m)], cajasBorradas: [], movimientosBorrados: [] };
+        const h = createMoneyBatchHarness(a, selected, initial, [copy(p)]);
+        const port = { current: () => h.e.active, premium: () => true, boxes: () => h.e.screen.current, local: h.ctx.readPrivateBoxMoneyLocal,
+          stage: (before, entry, lease, current) => h.ctx.stagePrivateBoxMoney(before, entry, lease, current, h.setBoxes),
+          commit: (before, entry, ack, lease, current) => h.ctx.commitPrivateBoxMoney(before, entry, ack, lease, current, h.setBoxes) };
+        try {
+          const comparison = await h.api.compararImporteCaja(uid, m.id, port);
+          assert.equal(comparison.choices.length, 4); assert.equal(h.e.calls, 0); assert.equal(h.e.writes, 0);
+          assert.equal(await h.api.confirmarImporteCaja(comparison, "remote-box", port), true);
+          assert.equal(h.e.writes, 2); assert.equal(h.e.calls, 1);
+          const saved = h.disk(h.api.STORAGE_KEYS.cajasDinero), entry = saved.revisionesImporte[0];
+          const remote = format === 2 ? (await rootRef.collection("history").doc("10").get()).data().transaction : (await rootRef.get()).data().transactions[0];
+          assert.equal(entry.estado, "confirmado"); assert.deepEqual(entry.local, { personal: p, movement: m });
+          assert.deepEqual(entry.remote, selected.remote); assert.deepEqual(remote, h.disk(h.api.STORAGE_KEYS.transactions)[0]);
+          assert.deepEqual(saved.movimientos, (await boxesRef.get()).data().movimientos);
+          assert.equal(remote.amount, 80); assert.equal(remote.updatedAt, entry.version);
+          assert.equal((await rootRef.get()).data().future, "Conservar");
+        } finally { h.e.db.close(); }
+      }
+    });
     await t.test("HTTP auténtico llega al contexto y SQLite originales, Personal/Caja y marca juntos en ambos formatos", async () => {
       for (const format of [1, 2]) {
         await seed(format);

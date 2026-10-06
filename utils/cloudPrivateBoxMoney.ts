@@ -68,7 +68,7 @@ export async function loadPrivateBoxMoneySources(uid: string, movementId: string
 
 /** Envía SOLO una elección ya guardada con sus originales. No guarda dinero
  * localmente ni cambia su marca. Debe mantenerse esta misma revisión/cola
- * abierta hasta terminar el futuro lote financiero del contexto.
+ * abierta hasta terminar el lote financiero del contexto.
  */
 export async function requestPrivateBoxMoneyReview(uid: string, entry: RevisionImporteCaja, lease: PrivateBoxCloudLease,
   local: () => PrivateBoxMoneyLocal, current: () => boolean): Promise<MoneyAck> {
@@ -101,7 +101,7 @@ export async function requestPrivateBoxMoneyReview(uid: string, entry: RevisionI
   return ack;
 }
 
-/** El futuro guardado financiero exige la respuesta genuina en la misma cola. */
+/** El guardado financiero exige la respuesta genuina en la misma cola. */
 export function assertPrivateBoxMoneyReceipt(uid: string, entry: RevisionImporteCaja, ack: MoneyAck, lease: PrivateBoxCloudLease): void {
   check(uid, lease);
   const proof = receipts.get(ack);

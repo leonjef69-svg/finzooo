@@ -53,6 +53,15 @@ function assertSources(data: DatosCajas, rows: Transaction[], deleted: number[],
   if (balance < 0n) throw new Error("cajas-money-negative-balance");
 }
 
+/** Conserva una elección sin corregir dinero. Exige todavía los originales locales. */
+export function conservarOriginalesImporte(data: DatosCajas, rows: Transaction[], deleted: number[],
+  entry: RevisionImporteCaja, uid: string, currency: string): DatosCajas {
+  validarCajas(data); validarRevisionImporte(entry);
+  if (entry.uid !== uid || entry.currency !== currency || entry.estado !== "pendiente") throw new Error("cajas-money-changed");
+  assertSources(data, rows, deleted, entry, "original");
+  return conservarRevisionImporte(data, entry);
+}
+
 /** SOLO un plan puro. El contexto aún debe guardar sus claves juntas en Android. */
 export function confirmarRevisionImporteLocal(data: DatosCajas, rows: Transaction[], deleted: number[],
   entry: RevisionImporteCaja, ack: MoneyAck, uid: string, currency: string): { data: DatosCajas; transactions: Transaction[] } {

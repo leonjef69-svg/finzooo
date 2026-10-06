@@ -2,9 +2,14 @@
 
 ## Alcance
 
-Continúa el punto 1 abierto de la auditoría. `commitPrivateBoxMoney` está
-disponible en el contexto, pero **ninguna pantalla lo invoca ni envía la nueva
-petición**. No se habilita una corrección parcialmente integrada. Tarjetas
+**Actualización posterior:** la selección/petición y conservación previa ya
+están conectadas en el código de pantalla. Ver
+`docs/PRUEBAS_FLUJO_IMPORTE_CAJA.md` para el alcance vigente y los pendientes.
+Este documento registra la preparación anterior del lote, no una entrega.
+
+En la fase anterior continuaba el punto 1 abierto. `commitPrivateBoxMoney` estaba
+disponible en el contexto, pero **ninguna pantalla lo invocaba ni enviaba la nueva
+petición**. Tarjetas
 excluidas. Sin código nativo, APK/AAB/OTA, marca ni despliegue.
 
 No se cambia el esquema, las claves ni la conservación ya documentada en
@@ -43,10 +48,11 @@ cuenta existentes. Ninguna nueva colección o recibo permanente remoto.
    validación rechazada. El lote invalida escrituras atrasadas de sus claves.
 
 La reserva lanza `private-box-source-changed`, no confirma silenciosamente una
-acción rechazada. **Antes de activar UI**, controles/acciones concurrentes deben
+acción rechazada. **Requisito de la integración UI:** controles/acciones concurrentes deben
 deshabilitarse o tratar ese rechazo con mensaje/reintento; revisar también una
 pantalla nueva abierta durante el lote y su lectura local atrasada. Esta tanda
-no declara resuelto ese recorrido visual.
+no declaraba resuelto ese recorrido visual. La actualización posterior añade
+modal, avisos de caché y lecturas/efectos atrasados protegidos; Android sigue pendiente.
 
 ## Verificación
 

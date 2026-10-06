@@ -8,6 +8,14 @@ import { assertPrivateBoxMoneyLocalMutation } from "@/utils/privateBoxMoneyLocal
 let valor: DatosCajas | null = null;
 let session: number | null = null;
 let uid = "";
+let revision = 0;
+const listeners = new Set<() => void>();
+
+export function revisionCajasEnMemoria(): number { return revision; }
+export function observarCajasEnMemoria(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
 
 export function leerCajasEnMemoria(): DatosCajas | null {
   const current = getAccountStorageSession();
@@ -18,11 +26,16 @@ export function guardarCajasEnMemoria(siguiente: DatosCajas): void {
   const current = getAccountStorageSession();
   if (current === null) return;
   assertPrivateBoxMoneyLocalMutation("boxes", siguiente);
+  if (current === session && uid === (auth.currentUser?.uid ?? "") && valor === siguiente) return;
   session = current; uid = auth.currentUser?.uid ?? ""; valor = siguiente;
+  revision++;
+  for (const listener of listeners) listener();
 }
 
 export function limpiarCajasEnMemoria(): void {
   valor = null;
   session = null;
   uid = "";
+  revision++;
+  for (const listener of listeners) listener();
 }

@@ -10,6 +10,22 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Flujo de comparación de importes conectado en Cajas, aún **sin publicar**:
+cuatro fuentes con monto/moneda/fecha y confirmación, reconsulta, conservación
+previa de originales con Personal/borrados/Caja juntos, HTTP genuino y lote
+financiero con versión exacta. Pendientes/reintento/reinicio e historial
+visibles; modal/dos toques/caché y lecturas atrasadas protegidos. Guía vigente:
+`docs/PRUEBAS_FLUJO_IMPORTE_CAJA.md`. No desplegar esta pantalla sin preparar
+conjuntamente servidor/reglas. Siguen recuperación de decisión obsoleta o Pro
+vencido antes de recuperar respuesta, Android y autorización de publicación.
+Tarjetas fuera; ningún APK/AAB/OTA, marca ni cambio nativo en esta tanda.
+TypeScript/ESLint completos, 144 locales/8 auditores, 73 unitarias servidor y
+121 SDK/reglas/HTTP/eventos Node 22 real aprobados. Sin omisiones/cancelaciones/
+fallos de servidor. Una prueba local ajena sin registrar queda fuera del commit;
+dos suites específicas de tarjetas excluidas, no verificadas.
+
+Antecedentes de la preparación del lote (ahora conectado):
+
 Lote monetario local preparado en el contexto: respuesta genuina, originales
 releídos, tres claves juntas y versión exacta del servidor. Reserva corta evita
 mutaciones durante SQLite; no publica éxito antes de verificar el archivo ni
