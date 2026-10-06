@@ -5,7 +5,7 @@ import { linkedTransferLedger } from "@/utils/linkedTransfers";
 export type PrivateBoxRepairChoice = { movementId: string; from: "personal" | "box" } | { movementId: string; personalId: number; from: "link" };
 export type PrivateBoxConflict = {
   movementId?: string; personalId?: number; boxId?: string;
-  reason: "identity" | "deleted" | "settled" | "values" | "missing";
+  reason: "identity" | "deleted" | "settled" | "values" | "missing" | "invalid";
   /** Solo una pareja inequívoca puede ofrecer elegir monto/fecha. */
   selectable?: boolean;
 };
@@ -19,28 +19,75 @@ const allocationsEqual = (a: Transaction["internalTransferAllocations"], b: Tran
 const direction = (row: MovimientoCaja) => row.personalReturnAmount != null ? "income" as const : row.tipo === "ingreso" ? "expense" as const : null;
 const amount = (row: MovimientoCaja) => row.personalReturnAmount ?? row.monto;
 
+// El legado también pasa por aquí: una fecha inexistente o una fracción
+// menor que la unidad soportada no autoriza reconstruir dinero en Personal.
+const validMoney = (value: number): boolean => {
+  const units = Math.round(value * 1000);
+  return Number.isFinite(value) && value > 0 && units > 0 && Number.isSafeInteger(units)
+    && Math.abs(value - units / 1000) <= Number.EPSILON * Math.max(1, Math.abs(value)) * 4;
+};
+const validDate = (value: string): boolean => {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const day = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(day.getTime()) && day.toISOString().slice(0, 10) === value;
+};
+function validPersonal(tx: Transaction): boolean {
+  if (!Number.isSafeInteger(tx.id) || tx.id <= 0 || !["expense", "income"].includes(tx.type) || !validMoney(tx.amount) || !validDate(tx.date)
+    || (tx.internalTransferLink !== undefined && typeof tx.internalTransferLink !== "string")
+    || (tx.internalTransferSpaceId !== undefined && typeof tx.internalTransferSpaceId !== "string")
+    || (tx.internalTransferSettled !== undefined && typeof tx.internalTransferSettled !== "boolean")
+    || (tx.internalTransferConsumedAmount !== undefined && (tx.internalTransferConsumedAmount < 0 || tx.internalTransferConsumedAmount > tx.amount
+      || (tx.internalTransferConsumedAmount !== 0 && !validMoney(tx.internalTransferConsumedAmount))))) return false;
+  const allocations = tx.internalTransferAllocations;
+  if (allocations === undefined) return true;
+  if (!Array.isArray(allocations)) return false;
+  const seen = new Set<number>();
+  return allocations.every(item => {
+    if (!item || !Number.isSafeInteger(item.transactionId) || item.transactionId <= 0 || !validMoney(item.amount) || seen.has(item.transactionId)) return false;
+    seen.add(item.transactionId); return true;
+  });
+}
+const readableIdentity = (row: Transaction): boolean => !!row && typeof row === "object" && Number.isSafeInteger(row.id) && row.id > 0;
+function privateReferences(data: DatosCajas): (row: Transaction) => boolean {
+  const ids = new Set([...data.cajas.map(box => box.id), ...data.cajasBorradas, ...Object.keys(data.conversiones || {})]);
+  return row => row.internalTransfer === "box" && (typeof row.internalTransferSpaceId !== "string" || !row.internalTransferSpaceId
+    || row.internalTransferSpaceId.startsWith("caja-") || ids.has(row.internalTransferSpaceId));
+}
+
 /** Alternativas para que la persona identifique un enlace; nunca las aplica por coincidencia. */
 export function privateBoxLinkCandidates(data: DatosCajas, rows: Transaction[], deleted: number[], movementId: string): Transaction[] {
+  const refersToPrivate = privateReferences(data);
+  if (!Array.isArray(rows) || rows.some(row => !readableIdentity(row) || (refersToPrivate(row) && !validPersonal(row)))) return [];
   const move = data.movimientos.find(row => row.id === movementId), box = move && data.cajas.find(box => box.id === move.cajaId);
   if (!move || !box || box.sharingPending || move.personalTransactionId != null || move.tipo !== "ingreso"
     || data.cajasBorradas.includes(box.id) || data.conversiones?.[box.id]
     || data.movimientosBorrados.includes(move.id) || data.movimientos.some(row => row.cajaId === move.cajaId && row.personalReturnAmount != null)
     || rows.some(row => row.internalTransferLink === move.id)) return [];
-  const day = new Date(`${move.fecha}T00:00:00Z`);
-  if (!Number.isFinite(move.monto) || move.monto <= 0 || !Number.isSafeInteger(Math.round(move.monto * 1000))
-    || !/^\d{4}-\d{2}-\d{2}$/.test(move.fecha) || Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== move.fecha) return [];
+  if (!validMoney(move.monto) || !validDate(move.fecha)) return [];
   const counts = new Map<number, number>(), used = new Set(data.movimientos.map(row => row.personalTransactionId));
   for (const row of rows) counts.set(row.id, (counts.get(row.id) || 0) + 1);
   const removed = new Set(deleted);
   return rows.filter(row => row.internalTransfer === "box" && row.type === "expense" && !row.internalTransferSettled && !row.internalTransferLink
     && (!row.internalTransferSpaceId || row.internalTransferSpaceId === move.cajaId) && row.amount === move.monto && row.date === move.fecha
-    && Number.isSafeInteger(row.id) && row.id > 0 && counts.get(row.id) === 1 && !used.has(row.id) && !removed.has(row.id));
+    && validPersonal(row) && counts.get(row.id) === 1 && !used.has(row.id) && !removed.has(row.id));
 }
 
 /** Lee ambas mitades. Ni la ausencia ni una coincidencia de monto/fecha prueban un borrado o un vínculo. */
 export function planPrivateBoxRepair(data: DatosCajas, rows: Transaction[], deleted: number[], uid: string): PrivateBoxRepairPlan {
+  // Datos restaurados antiguos no tienen garantía de TypeScript. No dejar
+  // que una fila/reparto ilegible rompa la pantalla ni reconstruir los demás
+  // sobre una fuente que todavía necesita revisión.
+  if (!Array.isArray(rows)) {
+    return { data, upserts: [], conflicts: [{ reason: "invalid" }] };
+  }
+  const refersToPrivate = privateReferences(data);
+  const invalidRows: PrivateBoxConflict[] = rows.flatMap(row => !readableIdentity(row) || (refersToPrivate(row) && !validPersonal(row))
+    ? [{ reason: "invalid" as const, ...(readableIdentity(row) ? { personalId: row.id,
+      ...(typeof row.internalTransferSpaceId === "string" ? { boxId: row.internalTransferSpaceId } : {}),
+      ...(typeof row.internalTransferLink === "string" ? { movementId: row.internalTransferLink } : {}) } : {}) }] : []);
+  if (invalidRows.length) return { data, upserts: [], conflicts: invalidRows };
   const conflicts: PrivateBoxConflict[] = [], upserts = new Map<number, Transaction>();
-  const deletedPersonal = new Set(deleted), deletedMovements = new Set(data.movimientosBorrados);
+  const deletedPersonal = new Set(deleted), deletedMovements = new Set(data.movimientosBorrados), closedBoxes = new Set(data.cajasBorradas);
   const seen = new Set<number>(), reused = new Set<number>();
   for (const row of rows) { if (seen.has(row.id)) reused.add(row.id); seen.add(row.id); }
   for (const move of data.movimientos) {
@@ -75,7 +122,14 @@ export function planPrivateBoxRepair(data: DatosCajas, rows: Transaction[], dele
     if (!boxes.has(move.cajaId) || pending.has(move.cajaId)) continue;
     const byLink = byMovement.get(move.id) || [];
     const tx = move.personalTransactionId == null ? byLink[0] : rowsById.get(move.personalTransactionId);
+    // Restos de una Caja cerrada/convertida no demuestran una mitad pendiente.
+    if (closedBoxes.has(move.cajaId) || data.conversiones?.[move.cajaId]) { conflict(move, "settled", tx); continue; }
+    if (!validMoney(move.monto) || !validDate(move.fecha) || (tx && !validPersonal(tx))
+      || (move.personalReturnAmount != null && (move.tipo !== "gasto" || !validMoney(move.personalReturnAmount) || move.personalReturnAmount !== move.monto))) {
+      conflict(move, "invalid", tx); continue;
+    }
     if (move.personalTransactionId == null && byLink.length === 0) {
+      if (move.personalReturnAmount != null) { conflict(move, "identity"); continue; }
       // No enlazar un ingreso externo por coincidir con una transferencia del mismo día.
       const spaces = weak.get(weakKey(direction(move), amount(move), move.fecha));
       if (spaces?.has(undefined) || spaces?.has(move.cajaId)) conflict(move, "identity");
@@ -165,9 +219,7 @@ export function resolvePrivateBoxConflict(data: DatosCajas, rows: Transaction[],
   if (move.personalReturnAmount != null || data.movimientos.some(item => item.cajaId === move.cajaId && item.personalReturnAmount != null)) throw new Error("private-box-repair-conflict");
   const nextMove = choice.from === "personal" ? { ...move, monto: tx.amount, fecha: tx.date, updatedAt: siguienteVersionCaja(move) } : move;
   const nextTx = choice.from === "box" ? { ...tx, amount: move.monto, date: move.fecha } : tx;
-  const day = new Date(`${nextTx.date}T00:00:00Z`);
-  if (!Number.isFinite(nextTx.amount) || nextTx.amount <= 0 || !Number.isSafeInteger(Math.round(nextTx.amount * 1000))
-    || !/^\d{4}-\d{2}-\d{2}$/.test(nextTx.date) || Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== nextTx.date) throw new Error("private-box-repair-conflict");
+  if (!validMoney(nextTx.amount) || !validDate(nextTx.date)) throw new Error("private-box-repair-conflict");
   const nextData = nextMove === move ? data : { ...data, movimientos: data.movimientos.map(item => item.id === move.id ? nextMove : item) };
   // Un registro elegido no puede hacer negativo el saldo de Caja.
   fusionarCajas(nextData, CAJAS_VACIAS);

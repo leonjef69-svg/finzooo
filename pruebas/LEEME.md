@@ -24,6 +24,14 @@ Requisitos, regresión y límites: `docs/PRUEBAS_NODE22_BORRADO_CUENTA.md`.
 
 ## Qué comprueba cada cosa
 
+`verificar-recuperacion-incompleta-cajas.mjs` ejecuta el plan, aviso, manejador
+de entrada y guardado originales con SQLite real: Caja cerrada/convertida,
+fechas/montos/repartos dañados, filas ilegibles, identidad disponible y no
+mezclar datos compartidos. No reconstruye ni escribe un plan antiguo inseguro;
+las recuperaciones positivas se mantienen. SDK emulado lee también fuentes
+dañadas/cerradas sin modificarlas. Regresión y límites:
+`docs/PRUEBAS_RECUPERACION_INCOMPLETA_CAJAS.md`.
+
 `verificar-nombres-caja-nube.mjs` ejecuta auxiliares, transacción, elección,
 reintento y guardados originales; confirma ambos nombres antes de la red,
 rechaza fuentes/sesiones/planes obsoletos y no toca dinero. Incluye rollback

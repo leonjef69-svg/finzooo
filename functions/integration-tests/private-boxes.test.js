@@ -15,7 +15,7 @@ const { getFirestore, connectFirestoreEmulator, disableNetwork, enableNetwork, g
 const esbuild = requireRoot("esbuild");
 
 async function code(client) {
-  const names = process.env.FINO_TEST_CAJAS_BASELINE ? "" : 'export { resolverNombreCaja } from "@/utils/cloudCajas"; export { prepararRevisionNombre } from "@/utils/cajas";';
+  const names = process.env.FINO_TEST_CAJAS_BASELINE ? "" : 'export { resolverNombreCaja } from "@/utils/cloudCajas"; export { prepararRevisionNombre } from "@/utils/cajas"; export { planPrivateBoxRepair } from "@/utils/privateBoxRepair";';
   const built = await esbuild.build({ stdin: { contents: 'export { bajarCajas, subirCajas } from "@/utils/cloudCajas"; export { loadPrivateBoxRepairCloud, assertPrivateBoxRepairCloud } from "@/utils/privateBoxRepairCloud"; export { resolvePrivateBoxConflict, privateBoxLinkCandidates } from "@/utils/privateBoxRepair";' + names,
     resolveDir: root, loader: "ts" }, bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent",
     external: ["firebase/*"], alias: { "@": root },
@@ -146,6 +146,28 @@ test("Cajas privadas con SDK/Firestore reales: versiones, transacción, borrados
       const proof = await a.api.loadPrivateBoxRepairCloud(uid, [10, 11, 999]);
       assert.deepEqual(proof.transactions, [personal]); assert.deepEqual(proof.deletedIds, [11]);
       assert.throws(() => a.api.assertPrivateBoxRepairCloud([personal], proof), /source-changed/);
+    });
+    await t.test("una copia cerrada confirmada no reconstruye Personal ni reabre un aporte", async () => {
+      const closed = { ...initial, movimientos: [{ ...row, personalTransactionId: 10 }], cajasBorradas: [box.id], syncFormat: 2 };
+      await ref.set(closed);
+      const checked = await a.api.bajarCajas(uid), plan = a.api.planPrivateBoxRepair(checked, [], [], uid);
+      assert.equal(plan.upserts.length, 0); assert.ok(plan.conflicts.some(item => item.reason === "settled"));
+      assert.deepEqual(plan.data, checked); assert.deepEqual((await ref.get()).data(), closed);
+    });
+    await t.test("devolución y fecha dañadas leídas por SDK se conservan sin aceptar una reparación financiera", async () => {
+      const contribution = { ...row, personalTransactionId: 10 };
+      const returned = { ...row, id: "broken-return", tipo: "gasto", monto: 40, personalReturnAmount: 40, personalTransactionId: 11, creadoEn: 2 };
+      const personal = { id: 10, type: "expense", amount: 100, date: row.fecha, internalTransfer: "box", internalTransferLink: row.id, internalTransferSpaceId: box.id, internalTransferSpaceName: box.nombre };
+      await ref.set({ ...initial, movimientos: [contribution, returned] });
+      const checked = await a.api.bajarCajas(uid);
+      const damaged = { ...personal, id: 11, type: "income", amount: 40, internalTransferLink: returned.id, internalTransferAllocations: {} };
+      const plan = a.api.planPrivateBoxRepair(checked, [personal, damaged], [], uid);
+      assert.equal(plan.upserts.length, 0); assert.ok(plan.conflicts.some(item => item.reason === "invalid"));
+      assert.deepEqual(plan.data, checked);
+      await ref.set({ ...initial, movimientos: [{ ...contribution, fecha: "2026-02-30" }] });
+      const badDate = await a.api.bajarCajas(uid), invalid = a.api.planPrivateBoxRepair(badDate, [], [], uid);
+      assert.equal(invalid.upserts.length, 0); assert.ok(invalid.conflicts.some(item => item.reason === "invalid"));
+      assert.equal((await ref.get()).data().movimientos[0].fecha, "2026-02-30");
     });
     const remoteName = { ...box, nombre: "Vacaciones" }, otherBox = { ...box, id: "caja-b", nombre: "Casa" };
     const nameLocal = { ...initial, syncFormat: 2, cajas: [box, otherBox], movimientosBorrados: ["mov-old"] };

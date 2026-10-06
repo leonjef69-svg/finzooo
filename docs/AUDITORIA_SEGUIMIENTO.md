@@ -3,6 +3,26 @@
 Última revisión: 06/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## Continuación punto 1 — reconstrucción incompleta protegida (06/10/2026)
+
+- Tres regresiones contra 37ff973 comprueban Caja cerrada reconstruida como
+  abierta, fecha imposible propagada y reparto no iterable que rompía Cajas.
+  Se conserva y señala, sin escribir dinero ni confirmar un plan viejo inseguro.
+- Devolución sin ID/mitad requiere revisión. Recuperaciones positivas siguen;
+  conserva identidad privada y no valida/repara movimientos compartidos ajenos.
+  Explicaciones específicas, sin prometer dos copias cuando falta una mitad.
+- Contexto/almacén originales con SQLite y SDK/Auth/Firestore locales reales;
+  10.001 filas/1.001 Cajas sin ajuste. No Android físico ni medición de su rapidez.
+- TypeScript/ESLint, 140 locales/8 auditores (una prueba ajena sin registrar),
+  63 unitarias y 99 SDK/reglas/HTTP/eventos bajo Node 22 aprobados. La primera
+  pasada detectó ámbito/identidad: se corrigió código, sin quitar aserciones.
+  Guía: `docs/PRUEBAS_RECUPERACION_INCOMPLETA_CAJAS.md`.
+- **Qué sigue:** resolver desacuerdos monetarios locales/remotos, mitad/reparto
+  sin prueba y elecciones obsoletas. **Qué falta:** Android, consolas, publicación
+  coordinada/autorizada y comprobación posterior. ADB sin dispositivos; sin
+  datos/retención/claves/reglas/servicios nuevos, nativos, tarjetas o publicación.
+  Punto 1 y auditoría no cerrados; no es atomicidad global servidor/celular.
+
 ## Continuación punto 1 — nombres distintos de Caja (06/10/2026)
 
 - Elección explícita solo ante empate de versión/nombre, no decide dinero.

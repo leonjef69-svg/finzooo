@@ -10,6 +10,15 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Recuperación incompleta prepara guardias que impiden reconstruir una Caja
+cerrada/convertida o propagar montos/fechas/repartos inválidos a Personal.
+Conserva los datos sin devolver dinero ficticio ni modificar compartidas
+ajenas; el guardado real rechaza un plan antiguo inseguro. Explica por qué.
+Guía: `docs/PRUEBAS_RECUPERACION_INCOMPLETA_CAJAS.md`. Sin claves/datos nuevos,
+reglas/Functions de producción, nativos, marca ni entrega. No publica ni repara
+datos reales. Punto 1 abierto para discrepancias financieras más complejas;
+faltan Android y publicación autorizada coordinada de todo el conjunto.
+
 Nombres de Caja prepara elección explícita entre celular/nube ante igual
 versión; guarda ambos originales cifrados antes de enviar y comprueba otra vez
 la Caja en servidor sin tocar dinero, movimientos ni otra Caja. Reintento

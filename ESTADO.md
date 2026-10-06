@@ -1,5 +1,31 @@
 # Estado actual de Fino
 
+## Recuperación incompleta — guardias financieras del punto 1 (06/10/2026)
+
+- Regresiones contra 37ff973 reproducen reconstrucción de Caja cerrada,
+  propagación de fecha imposible y excepción al leer reparto no iterable.
+  Cierre/conversión residual, monto/fecha inválidos o reparto incompleto no
+  reconstruyen dinero. Se conserva el archivo, sin devolución/borrado ficticio.
+- Explicación distingue datos inválidos y Caja cerrada/convertida/liquidada;
+  no ofrece elegir dinero en esos casos. Devolución sin ID/mitad enlazada pide
+  revisión; ID exacto válido mantiene su recuperación. No altera datos de Cajas
+  compartidas ajenas al archivo ni pierde la identidad privada disponible.
+- Dentro del guardado conjunto original, un plan antiguo inseguro no escribe
+  ninguna clave ni publica éxito. Destinos indexados una vez, 10.001 filas/
+  1.001 Cajas comprobadas sin ajuste; no equivale a velocidad o prueba Android.
+- Guía: `docs/PRUEBAS_RECUPERACION_INCOMPLETA_CAJAS.md`. TypeScript/ESLint,
+  140 locales/8 auditores (una prueba ajena sin registrar: 139 en copia limpia),
+  63 unitarias y 99 SDK/reglas/HTTP/eventos aprobados bajo Node 22 real. Primera
+  pasada detectó validación fuera de ámbito/identidad perdida; código ajustado,
+  sin quitar aserciones. Tres regresiones fallan antes y pasan ahora.
+- Sin nuevas claves/datos recogidos/retención, reglas/Functions de producción,
+  código nativo, tarjetas, marca, APK/OTA o despliegue. Privacidad/Play no cambian
+  en esta tanda porque no se guarda ni transmite información nueva.
+- **Qué sigue:** desacuerdos financieros entre celular/nube, mitad/reparto sin
+  prueba y elecciones obsoletas; conservar no significa resolverlos. **Qué falta:**
+  Android/visual/cierres/espacio/tamaño/dos dispositivos y publicación coordinada
+  autorizada. ADB sin dispositivos. Punto 1 y auditoría todavía abiertos.
+
 ## Nombres distintos de Caja — avance limitado del punto 1 (06/10/2026)
 
 - Igual versión y otros campos iguales permiten elegir celular/nube tras

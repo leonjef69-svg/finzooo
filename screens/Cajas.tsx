@@ -293,12 +293,15 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   function revisarTransferencias() {
     const issue = repairPlan.conflicts.find(item => item.selectable) || repairPlan.conflicts[0];
     if (!issue || !cuentaActual() || guardandoRef.current) return;
+    if (issue.reason === "invalid") {
+      Alert.alert(t("boxes.repairReview"), t("boxes.repairInvalidDetails"), [{ text: t("common.close") }]); return;
+    }
     const move = datos.movimientos.find(item => item.id === issue.movementId);
     const personal = transactions.find(item => item.id === issue.personalId);
     if (!issue.selectable || !move || !personal) {
       const linkable = repairPlan.conflicts.find(item => item.movementId && privateBoxLinkCandidates(datos, transactions, deletedTransactionIds, item.movementId).length > 0);
       if (linkable?.movementId) { setLinkLimit(20); setLinkReview(linkable.movementId); return; }
-      Alert.alert(t("boxes.repairReview"), t("boxes.repairUncertain"), [{ text: t("common.close") }]);
+      Alert.alert(t("boxes.repairReview"), t(issue.reason === "settled" ? "boxes.repairClosedDetails" : "boxes.repairUncertain"), [{ text: t("common.close") }]);
       return;
     }
     const before = datosActuales.current, beforeRows = transactions;
