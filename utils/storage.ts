@@ -300,6 +300,9 @@ const DEBOUNCE_MS = 400;
 
 const pendingTimers = new Map<string, ReturnType<typeof setTimeout>>();
 const pendingValues = new Map<string, unknown>();
+const pendingEpochs = new Map<string, number>();
+const writeEpochs = new Map<string, number>();
+let writeQueue: Promise<unknown> = Promise.resolve();
 const inFlightWrites = new Set<Promise<unknown>>();
 const failedWriteKeys = new Set<string>();
 type StorageWriteErrorListener = () => void;
@@ -333,7 +336,19 @@ async function waitForInFlightWrites(): Promise<void> {
   while (inFlightWrites.size) await Promise.allSettled([...inFlightWrites]);
 }
 
-function writeNow(key: string, value: unknown): Promise<void> {
+function enqueueWrite<T>(work: () => Promise<T>): Promise<T> {
+  const result = writeQueue.then(work, work);
+  writeQueue = result.then(() => undefined, () => undefined);
+  return trackWrite(result);
+}
+
+function cancelPendingKey(key: string): void {
+  const timer = pendingTimers.get(key);
+  if (timer) clearTimeout(timer);
+  pendingTimers.delete(key); pendingValues.delete(key); pendingEpochs.delete(key);
+}
+
+function writeNow(key: string, value: unknown, epoch = writeEpochs.get(key) ?? 0): Promise<void> {
   if (!canAccessKey(key)) return Promise.resolve();
   const version = accountAccessVersion;
   if (unreadableLocalData) {
@@ -341,9 +356,9 @@ function writeNow(key: string, value: unknown): Promise<void> {
     reportStorageWriteError();
     return Promise.resolve();
   }
-  return trackWrite(encryptText(JSON.stringify(value))
+  return enqueueWrite(() => encryptText(JSON.stringify(value))
     .then(async (encrypted) => {
-      if (!canAccessKey(key) || (accountKeySet.has(key) && version !== accountAccessVersion)) return false;
+      if (!canAccessKey(key) || (accountKeySet.has(key) && version !== accountAccessVersion) || epoch !== (writeEpochs.get(key) ?? 0)) return false;
       if (unreadableLocalData) throw new Error("local-data-unreadable");
       await AsyncStorage.setItem(key, encrypted);
       return true;
@@ -368,19 +383,17 @@ export function saveJSONNow(key: string, value: unknown): Promise<boolean> {
 async function saveJSONNowUntracked(key: string, value: unknown): Promise<boolean> {
   if (!canAccessKey(key)) return false;
   const version = accountAccessVersion;
+  const epoch = writeEpochs.get(key) ?? 0;
   const target = key;
-  const timer = pendingTimers.get(target);
-  if (timer) clearTimeout(timer);
-  pendingTimers.delete(target);
-  pendingValues.delete(target);
+  cancelPendingKey(target);
   if (unreadableLocalData) {
     failedWriteKeys.add(target);
     reportStorageWriteError();
     return false;
   }
-  try {
+  return enqueueWrite(async () => { try {
     const encrypted = await encryptText(JSON.stringify(value));
-    if (!canAccessKey(key) || (accountKeySet.has(key) && version !== accountAccessVersion)) return false;
+    if (!canAccessKey(key) || (accountKeySet.has(key) && version !== accountAccessVersion) || epoch !== (writeEpochs.get(key) ?? 0)) return false;
     if (unreadableLocalData) throw new Error("local-data-unreadable");
     await AsyncStorage.setItem(target, encrypted);
     failedWriteKeys.delete(target);
@@ -389,7 +402,63 @@ async function saveJSONNowUntracked(key: string, value: unknown): Promise<boolea
     failedWriteKeys.add(target);
     reportStorageWriteError();
     return false;
-  }
+  } });
+}
+
+export type PreparedLocalBatch = {
+  entries: [string, unknown][];
+  stillValid: () => boolean;
+  committed: () => void;
+};
+
+/** Android: el módulo instalado escribe el lote en una transacción SQLite.
+ * Preparar/cifrar todo antes; ninguna escritura vieja pasa por encima del lote.
+ * El llamador no habilita operaciones de varias claves en plataformas sin esa
+ * garantía. Una sola clave conserva el comportamiento previo de AsyncStorage.
+ */
+export function saveJSONBatchNow(keys: string[], prepare: () => PreparedLocalBatch): Promise<boolean> {
+  const version = accountAccessVersion;
+  if (!keys.length || new Set(keys).size !== keys.length || keys.some(key => !canAccessKey(key)) || unreadableLocalData) return Promise.resolve(false);
+  return enqueueWrite(async () => {
+    try {
+      for (let attempt = 0; attempt < 4; attempt++) {
+        if (version !== accountAccessVersion || unreadableLocalData || keys.some(key => !canAccessKey(key))) return false;
+        const batch = prepare();
+        if (batch.entries.length !== keys.length || batch.entries.some(([key]) => !keys.includes(key)) || new Set(batch.entries.map(([key]) => key)).size !== keys.length) throw new Error("local-batch-invalid");
+        const encrypted: [string, string][] = [];
+        for (const [key, value] of batch.entries) encrypted.push([key, await encryptText(JSON.stringify(value))]);
+        if (version !== accountAccessVersion || unreadableLocalData || keys.some(key => !canAccessKey(key))) return false;
+        let before: Map<string, string | null>;
+        try { before = new Map(await AsyncStorage.multiGet(keys)); }
+        catch { markUnreadableLocalData(); throw new Error("local-batch-source-unreadable"); }
+        if (version !== accountAccessVersion || unreadableLocalData || keys.some(key => !canAccessKey(key))) return false;
+        if (!batch.stillValid()) continue;
+        let writeError: unknown;
+        try { await AsyncStorage.multiSet(encrypted); } catch (error) { writeError = error; }
+        // El resultado perdido después del commit también se confirma leyendo
+        // exactamente el texto cifrado enviado; nunca se repite dinero a ciegas.
+        let saved: Map<string, string | null>;
+        try { saved = new Map(await AsyncStorage.multiGet(keys)); }
+        catch { markUnreadableLocalData(); throw new Error("local-batch-unconfirmed"); }
+        if (encrypted.some(([key, value]) => saved.get(key) !== value)) {
+          if (encrypted.some(([key, value]) => before.get(key) !== value && saved.get(key) === value)) markUnreadableLocalData();
+          throw writeError ?? new Error("local-batch-not-saved");
+        }
+        for (const key of keys) {
+          writeEpochs.set(key, (writeEpochs.get(key) ?? 0) + 1);
+          cancelPendingKey(key); failedWriteKeys.delete(key);
+        }
+        if (version !== accountAccessVersion || keys.some(key => !canAccessKey(key))) return false;
+        batch.committed();
+        return true;
+      }
+      return false;
+    } catch (error) {
+      if (error instanceof Error && ["private-box-source-changed", "private-box-invalid-patch", "private-box-id-conflict"].includes(error.message)) return false;
+      for (const key of keys) failedWriteKeys.add(key);
+      reportStorageWriteError(); return false;
+    }
+  });
 }
 
 export function saveJSON(key: string, value: unknown): void {
@@ -400,6 +469,7 @@ export function saveJSON(key: string, value: unknown): void {
   }
   const target = key;
   pendingValues.set(target, value);
+  pendingEpochs.set(target, writeEpochs.get(target) ?? 0);
 
   const existing = pendingTimers.get(target);
   if (existing) clearTimeout(existing);
@@ -409,8 +479,10 @@ export function saveJSON(key: string, value: unknown): void {
     setTimeout(() => {
       pendingTimers.delete(target);
       const pending = pendingValues.get(target);
+      const epoch = pendingEpochs.get(target);
       pendingValues.delete(target);
-      writeNow(target, pending);
+      pendingEpochs.delete(target);
+      writeNow(target, pending, epoch);
     }, DEBOUNCE_MS)
   );
 }
@@ -421,18 +493,19 @@ export function saveJSON(key: string, value: unknown): void {
 // justo después, así que un guardado pendiente llegaría tarde y
 // reescribiría datos de la sesión anterior).
 export async function flushPendingSaves(): Promise<void> {
-  const queued: [string, unknown][] = [];
+  const queued: [string, unknown, number][] = [];
   for (const [key, timer] of pendingTimers) {
     clearTimeout(timer);
     const value = pendingValues.get(key);
     pendingValues.delete(key);
-    queued.push([key, value]);
+    queued.push([key, value, pendingEpochs.get(key) ?? 0]);
+    pendingEpochs.delete(key);
   }
   pendingTimers.clear();
   // El valor más reciente en cola se escribe después de un guardado anterior
   // que ya empezó, aunque cifrar ese anterior haya tardado más.
   await waitForInFlightWrites();
-  const writes = queued.map(([key, value]) => writeNow(key, value));
+  const writes = queued.map(([key, value, epoch]) => writeNow(key, value, epoch));
   await Promise.all(writes);
   await waitForInFlightWrites();
 }
@@ -449,4 +522,5 @@ export function discardPendingSaves(): void {
   for (const timer of pendingTimers.values()) clearTimeout(timer);
   pendingTimers.clear();
   pendingValues.clear();
+  pendingEpochs.clear();
 }

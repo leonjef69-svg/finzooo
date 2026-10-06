@@ -82,8 +82,12 @@ export async function compartirCajaExistente(
   const digest = await task.wait(() => huellaCaja(caja, movimientos, currency));
   const completed = await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "status"));
   if (completed) return { id: completed.targetId, nombre: completed.name, ownerUid: uid, creadaEn: completed.createdAt, currency, conversion: completed };
+  const finish = async () => {
+    try { return await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "finish")); }
+    catch (cause) { throw new Error("cajas-sharing-unconfirmed", { cause }); }
+  };
   if (!allowNew) {
-    const conversion = await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "finish"));
+    const conversion = await finish();
     if (!conversion) throw new Error("cajas-sync-conflict");
     return { id: conversion.targetId, nombre: conversion.name, ownerUid: uid, creadaEn: conversion.createdAt, currency, conversion };
   }
@@ -127,7 +131,7 @@ export async function compartirCajaExistente(
     }
     await task.wait(() => lote.commit());
   }
-  const conversion = await task.wait(() => confirmarConversionCaja(uid, caja.id, digest, currency, "finish"));
+  const conversion = await finish();
   if (!conversion) throw new Error("cajas-sync-conflict");
   return { id: ref.id, nombre: caja.nombre, ownerUid: uid, creadaEn: caja.creadaEn, currency, conversion };
 }

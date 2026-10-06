@@ -1,5 +1,37 @@
 # Estado actual de Fino
 
+## Personal/Cajas privadas — guardado conjunto preparado (05/10/2026)
+
+- Crear/aportar, editar, devolver, borrar, cerrar y remapear al compartir
+  guardan Personal, marcas y Caja juntos en el SQLite Android ya instalado.
+  Cifrado y lectura de comprobación antes de actualizar memoria/mostrar éxito.
+  Rollback no cierra el formulario; respuesta perdida no repite el aporte.
+- Las escrituras se ordenan y una antigua no pisa el lote confirmado. Rechazar
+  una fuente cambiada conserva los guardados ordinarios pendientes. Se protege
+  cuenta/generación, ID/enlace/monto y consumidos, sin nuevas claves locales.
+- Solo las operaciones enlazadas se limitan a Android hasta implementar y
+  comprobar un contrato equivalente iOS/web; las de una sola clave continúan.
+  Fuente actual en memoria y bloqueo durante guardado; consulta Pro descartada
+  se vuelve a pedir. Guía: `docs/PRUEBAS_GUARDADO_PERSONAL_CAJAS.md`.
+- Regresión falla contra `4a97b15` por escritura antigua sobre la nueva. Se
+  ejecutan acciones/contexto/almacén originales y SQLite real, con un proceso
+  que termina entre INSERT o tras COMMIT. No es todavía una prueba física Android.
+- Conversión incierta: señal local cifrada `sharingPending` antes de enviar;
+  reiniciar no permite usar a la vez copia privada y compartida. No viaja a
+  Firebase ni cambia la huella financiera. Compartir nueva Caja fallaba por no
+  poder leer la inexistencia de su destino; permiso limitado y SDK nuevo comprobados.
+- **Antes de entregar:** falta cancelar de forma comprobada una conversión que
+  todavía no publicó destino, incluso si venció Pro; no quitar el bloqueo a
+  ciegas. La copia se conserva/reintenta, pero este flujo no está terminado.
+- TypeScript/ESLint aprobados; 134 pruebas locales y 8 auditores (una prueba
+  preexistente ajena no registrada en Git), 57 unitarias de Functions y 73
+  SDK/reglas/HTTP/eventos con Node 22. SQLite real y acciones originales comprobadas;
+  no equivale a Android físico. No publicar antes de resolver lo pendiente.
+- **Qué sigue:** limpiar copias compartidas incompletas e índices al borrar
+  cuenta. **Qué falta:** pares heredados, conflictos entre dispositivos,
+  Android/cierres forzados, tamaño/rendimiento, equivalente iOS/web y publicación
+  coordinada. Sin APK/OTA/despliegue; tarjetas y código nativo sin cambios.
+
 ## Conversión de Caja privada a compartida — preparada (05/10/2026)
 
 - `privateBoxMigration` compara origen/huella y toda la copia en transacción:

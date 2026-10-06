@@ -29,9 +29,11 @@ import { captureAccountTask } from "@/utils/accountTask";
 import { guardarCajasEnMemoria, leerCajasEnMemoria } from "@/utils/cajasMemoria";
 import { enlacesCajaConvertida, huellaCaja, retirarCajaConvertida } from "@/utils/boxMigration";
 import { spaceErrorKey } from "@/utils/spaceErrors";
+import type { Transaction } from "@/types";
+import { privateBoxLinksMatch } from "@/utils/privateBoxPersonal";
 import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Boxes, Check, ListChecks, Pencil, Plus, RefreshCw, Trash2, UserPlus, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
-import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 
@@ -52,7 +54,7 @@ export default function Cajas() {
 }
 
 function CajasForAccount({ accountUid }: { accountUid: string }) {
-  const { t, fmt, showToast, disponible, transactions, addOrUpdateTransaction, deleteLinkedTransferTransaction, repairLinkedTransferTransactions, isPremium, userName, userCurrency } = useAppData();
+  const { t, fmt, showToast, disponible, transactions, commitPrivateBoxData, repairLinkedTransferTransactions, isPremium, userName, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
   const [datos, setRenderedDatos] = useState<DatosCajas>(() => leerCajasEnMemoria() ?? CAJAS_VACIAS);
   const datosActuales = useRef(datos);
@@ -80,6 +82,8 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const [ready, setReady] = useState(leerCajasEnMemoria() !== null);
   const [cloudReady, setCloudReady] = useState(false);
   const [compartiendo, setCompartiendo] = useState(false);
+  const [guardando, setGuardando] = useState(false);
+  const guardandoRef = useRef(false);
   const [seleccionando, setSeleccionando] = useState(false);
   const [seleccionados, setSeleccionados] = useState<string[]>([]);
   const [seleccionandoCajas, setSeleccionandoCajas] = useState(false);
@@ -115,16 +119,40 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }, [cuentaActual]);
 
   function tomarAccionLocal(): boolean {
-    if (!cuentaActual() || !ready || compartiendo || cargandoUnion || accionLocalEnCurso.current) return false;
+    if (syncIssue === "boxes.syncConflict") { showToast(t("boxes.syncConflict")); return false; }
+    if (caja?.sharingPending) { showToast(t("boxes.sharingPending")); return false; }
+    if (!cuentaActual() || !ready || compartiendo || cargandoUnion || guardandoRef.current || accionLocalEnCurso.current) return false;
     accionLocalEnCurso.current = true;
     setTimeout(() => { accionLocalEnCurso.current = false; }, 700);
     return true;
   }
 
+  async function guardarCambioCaja(next: DatosCajas, upserts: Transaction[] = [], deleteIds: number[] = []): Promise<boolean> {
+    if (!cuentaActual() || guardandoRef.current || hasUnreadableLocalData()) return false;
+    const before = datosActuales.current;
+    guardandoRef.current = true; setGuardando(true);
+    try {
+      const ok = await commitPrivateBoxData(before, next, upserts, deleteIds, () => cuentaActual() && datosActuales.current === before, setDatos);
+      if (!ok && cuentaActual()) showToast(t("toast.localSaveFailed"));
+      return ok && cuentaActual();
+    } catch (error) {
+      if (cuentaActual()) showToast(t(error instanceof Error && error.message === "private-box-android-only" ? "boxes.atomicAndroidOnly" : "toast.localSaveFailed"));
+      return false;
+    } finally {
+      guardandoRef.current = false;
+      if (cuentaActual()) {
+        setGuardando(false);
+        // Una consulta que terminó mientras se guardaba fue descartada. No
+        // dejar por eso la sincronización Pro detenida hasta cambiar de pantalla.
+        if (!cloudReady) setRefreshVersion(value => value + 1);
+      }
+    }
+  }
+
   useFocusEffect(useCallback(() => {
     let alive = true;
     const requested = refreshVersion;
-    const current = () => alive && cuentaActual() && requestedRefresh.current === requested;
+    const current = () => alive && cuentaActual() && !guardandoRef.current && requestedRefresh.current === requested;
     setCloudReady(false);
     setReady(false);
     nubeConfirmadaPara.current = null;
@@ -178,9 +206,9 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     guardarCajasEnMemoria(datos);
     void saveJSON(STORAGE_KEYS.cajasDinero, datos);
     const uid = accountUid;
-    if (!cloudReady || !uid || !isPremium || compartiendo || nubeConfirmadaPara.current !== uid) return;
+    if (!cloudReady || !uid || !isPremium || compartiendo || guardando || nubeConfirmadaPara.current !== uid) return;
     let active = true;
-    const task = captureAccountTask(uid, () => active && cuentaActual() && premiumForSync.current);
+    const task = captureAccountTask(uid, () => active && cuentaActual() && !guardandoRef.current && premiumForSync.current);
     const timer = setTimeout(() => {
       if (!task.current()) return;
       void subirCajas(uid, datos, error => { if (task.current()) reportSyncError(error); }, saved => {
@@ -189,11 +217,11 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
         .then(ok => { if (ok && task.current()) setSyncIssue(null); });
     }, 700);
     return () => { active = false; clearTimeout(timer); };
-  }, [accountUid, cuentaActual, datos, ready, cloudReady, compartiendo, isPremium, reportSyncError, setDatos]);
+  }, [accountUid, cuentaActual, datos, ready, cloudReady, compartiendo, guardando, isPremium, reportSyncError, setDatos]);
 
   const caja = datos.cajas.find((item) => item.id === cajaId);
   useEffect(() => {
-    if (!ready || !cuentaActual()) return;
+    if (!ready || !cuentaActual() || guardandoRef.current) return;
     const repairs = Object.values(datos.conversiones || {}).filter(value => value.uid === accountUid)
       .flatMap(value => enlacesCajaConvertida(transactions, value));
     if (repairs.length) repairLinkedTransferTransactions(repairs);
@@ -222,7 +250,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   useEffect(() => {
     // En un teléfono nuevo Personal puede llegar antes que las Cajas. Hasta
     // que la nube termine de responder, una contraparte ausente no es huérfana.
-    if (!cuentaActual() || !ready || !cloudReady || (isPremium && nubeConfirmadaPara.current !== accountUid)) return;
+    if (!cuentaActual() || !ready || !cloudReady || guardando || (isPremium && nubeConfirmadaPara.current !== accountUid) || guardandoRef.current) return;
     const movimientosPorId = new Map(datos.movimientos.map(item => [item.id, item]));
     const transferenciasPersonales = transactions.filter(tx => tx.internalTransfer === "box");
     const transferenciasPorMovimiento = new Map<string, typeof transferenciasPersonales>();
@@ -325,7 +353,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
         && borradosExplicitos.has(tx.internalTransferLink))
       .map(tx => tx.id);
     if (upserts.length || orphanIds.length) repairLinkedTransferTransactions(upserts, orphanIds);
-  }, [accountUid, cuentaActual, datos.cajas, datos.movimientos, datos.movimientosBorrados, ready, cloudReady, isPremium, repairLinkedTransferTransactions, setDatos, t, transactions]);
+  }, [accountUid, cuentaActual, datos.cajas, datos.movimientos, datos.movimientosBorrados, ready, cloudReady, guardando, isPremium, repairLinkedTransferTransactions, setDatos, t, transactions]);
 
   const visibles = movimientos.filter(item => !filter
     || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter));
@@ -333,18 +361,17 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     ? visibles.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }))
     : compactLinkedTransferRows(visibles);
   const filasSeleccionadas = countSelectedCompactRows(filasVisibles, visibles, seleccionados);
-  function sacarDePersonal(valor: number, destino: string, spaceId: string, link: string, date = fechaLocal()): number {
+  function sacarDePersonal(valor: number, destino: string, spaceId: string, link: string, date = fechaLocal()): Transaction {
     const id = nextId();
-    addOrUpdateTransaction({
+    return {
       id, type: "expense", amount: valor, category: "otros", date,
       time: horaDe(Date.now()), method: "transfer", description: t("boxes.transferTo", { name: destino }),
       notes: "", origin: "manual", internalTransfer: "box", internalTransferLink: link,
       internalTransferSpaceId: spaceId, internalTransferSpaceName: destino,
-    });
-    return id;
+    };
   }
 
-  function crearCaja() {
+  async function crearCaja() {
     const nombre = nuevoNombre.trim().slice(0, 30);
     if (!nombre) return;
     const issue = amountInputError(montoInicial, userCurrency);
@@ -357,18 +384,20 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     }
     if (!tomarAccionLocal()) return;
     const movimientoId = nuevoIdCaja("mov");
-    const personalTransactionId = inicial > 0 && origenDinero === "personal"
+    const personal = inicial > 0 && origenDinero === "personal"
       ? sacarDePersonal(inicial, nombre, nueva.id, movimientoId)
       : undefined;
-    setDatos((antes) => ({
+    const antes = datosActuales.current;
+    const next = {
       ...antes,
       cajas: [...antes.cajas, nueva],
       movimientos: inicial > 0 ? [...antes.movimientos, {
         id: movimientoId, cajaId: nueva.id, tipo: "ingreso", monto: inicial,
         descripcion: t(origenDinero === "personal" ? "boxes.initialFromPersonal" : "boxes.initialExternal"),
-        method: origenDinero === "personal" ? "transfer" : "cash", fecha: fechaLocal(), creadoEn: Date.now(), personalTransactionId,
+        method: origenDinero === "personal" ? "transfer" : "cash", fecha: fechaLocal(), creadoEn: Date.now(), personalTransactionId: personal?.id,
       }] : antes.movimientos,
-    }));
+    } satisfies DatosCajas;
+    if (!await guardarCambioCaja(next, personal ? [personal] : [])) return;
     setNuevoNombre("");
     setMontoInicial("");
     setOrigenDinero("externo");
@@ -412,7 +441,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     }
   }
 
-  function guardarMovimiento() {
+  async function guardarMovimiento() {
     if (!caja || !anotando) return;
     const issue = amountInputError(monto, userCurrency);
     if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
@@ -426,8 +455,10 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       if (valor - aporteEditado.monto > disponible) { showToast(t("boxes.notEnoughPersonal")); return; }
       if (!tomarAccionLocal()) return;
       const personal = transactions.find(tx => tx.id === aporteEditado.personalTransactionId);
-      setDatos(antes => ({ ...antes, movimientos: antes.movimientos.map(item => item.id === aporteEditado.id ? { ...item, monto: valor, descripcion: descripcion.trim().slice(0, 60) || item.descripcion, updatedAt: siguienteVersionCaja(item) } : item) }));
-      if (personal) addOrUpdateTransaction({ ...personal, amount: valor }, true);
+      if (!personal) { showToast(t("boxes.syncConflict")); return; }
+      const antes = datosActuales.current;
+      const next = { ...antes, movimientos: antes.movimientos.map(item => item.id === aporteEditado.id ? { ...item, monto: valor, descripcion: descripcion.trim().slice(0, 60) || item.descripcion, updatedAt: siguienteVersionCaja(item) } : item) };
+      if (!await guardarCambioCaja(next, [{ ...personal, amount: valor }])) return;
       setMonto(""); setDescripcion(""); setEditandoAporteId(null); setAnotando(null);
       showToast(t("boxes.movementSaved"));
       return;
@@ -442,7 +473,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     }
     if (!tomarAccionLocal()) return;
     const movimientoId = nuevoIdCaja("mov");
-    const personalTransactionId = anotando === "ingreso" && origenDinero === "personal"
+    const personal = anotando === "ingreso" && origenDinero === "personal"
       ? sacarDePersonal(valor, caja.nombre, caja.id, movimientoId, movementDate)
       : undefined;
     const movimiento = {
@@ -452,13 +483,14 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       method: anotando === "ingreso" && origenDinero === "personal" ? "transfer" : method,
       monto: valor,
       descripcion: descripcion.trim().slice(0, 60) || (anotando === "ingreso" ? t(origenDinero === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney") : ""),
-      ...(personalTransactionId == null ? { category } : {}),
+      ...(personal == null ? { category } : {}),
       notes: notes.trim(),
       fecha: movementDate,
       creadoEn: Date.now(),
-      personalTransactionId,
+      personalTransactionId: personal?.id,
     };
-    setDatos((antes) => ({ ...antes, movimientos: [...antes.movimientos, movimiento] }));
+    const antes = datosActuales.current;
+    if (!await guardarCambioCaja({ ...antes, movimientos: [...antes.movimientos, movimiento] }, personal ? [personal] : [])) return;
     setMonto("");
     setDescripcion("");
     setNotes("");
@@ -469,27 +501,22 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     showToast(t("boxes.movementSaved"));
   }
 
-  function borrarSeleccionados(ids = seleccionados) {
-    if (!cuentaActual() || !ready || compartiendo) return;
+  async function borrarSeleccionados(ids = seleccionados) {
+    if (syncIssue === "boxes.syncConflict") { showToast(t("boxes.syncConflict")); return; }
+    if (caja?.sharingPending) { showToast(t("boxes.sharingPending")); return; }
+    if (!cuentaActual() || !ready || compartiendo || guardandoRef.current) return;
     const plan = planSpaceMovementDeletion(movimientos, ids);
     if (!plan.ok) {
       if (plan.reason === "empty") return;
       showToast(t(plan.reason === "contribution-used" ? "boxes.contributionUsed" : "boxes.notEnoughSpace"));
       return;
     }
-    try {
-      for (const item of plan.items) {
-        if (item.personalTransactionId != null) {
-          // Esta Caja vive en el teléfono. El plan local ya comprobó que el
-          // aporte no se gastó; no pertenece al servidor de Cajas compartidas.
-          deleteLinkedTransferTransaction(item.personalTransactionId);
-        }
-      }
+    {
+      // El plan protege lo consumido; el guardado retira ambas mitades y
+      // sus marcas de borrado juntas, sin llamar al servidor compartido.
       const idsBorrados = new Set(plan.items.map(item => item.id));
-      setDatos(antes => ({ ...antes, movimientos: antes.movimientos.filter(item => !idsBorrados.has(item.id)), movimientosBorrados: [...new Set([...antes.movimientosBorrados, ...idsBorrados])] }));
-    } catch {
-      showToast(t("family.connectionError"));
-      return;
+      const antes = datosActuales.current;
+      if (!await guardarCambioCaja({ ...antes, movimientos: antes.movimientos.filter(item => !idsBorrados.has(item.id)), movimientosBorrados: [...new Set([...antes.movimientosBorrados, ...idsBorrados])] }, [], plan.items.flatMap(item => item.personalTransactionId == null ? [] : [item.personalTransactionId]))) return;
     }
     setSeleccionados([]); setSeleccionando(false);
   }
@@ -501,24 +528,28 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       { text: t("common.deleteAll"), style: "destructive", onPress: () => void borrarSeleccionados(visibles.map(item => item.id)) },
     ]);
   }
-  function borrarCajas(ids = cajasSeleccionadas) {
-    if (!cuentaActual() || !ready || compartiendo) return;
+  async function borrarCajas(ids = cajasSeleccionadas) {
+    if (syncIssue === "boxes.syncConflict") { showToast(t("boxes.syncConflict")); return false; }
+    if (!cuentaActual() || !ready || compartiendo || guardandoRef.current) return false;
     const candidatas = datos.cajas.filter(item => ids.includes(item.id));
-    if (!candidatas.length) return;
+    if (!candidatas.length) return false;
+    if (candidatas.some(item => item.sharingPending)) { showToast(t("boxes.sharingPending")); return false; }
     if (candidatas.some(item => !canCloseLinkedSpace(datos.movimientos.filter(movement => movement.cajaId === item.id)))) {
       showToast(t("boxes.closeBalance"));
-      return;
+      return false;
     }
     const idsMovimientos = datos.movimientos.filter(item => ids.includes(item.cajaId)).map(item => item.id);
-    repairLinkedTransferTransactions(candidatas.flatMap(item => settlePersonalTransfers(transactions, "box", item.id)));
-    setDatos(antes => ({
+    const settled = candidatas.flatMap(item => settlePersonalTransfers(transactions, "box", item.id));
+    const antes = datosActuales.current;
+    if (!await guardarCambioCaja({
       ...antes,
       cajas: antes.cajas.filter(item => !ids.includes(item.id)),
       movimientos: antes.movimientos.filter(item => !ids.includes(item.cajaId)),
       cajasBorradas: [...new Set([...antes.cajasBorradas, ...ids])],
       movimientosBorrados: [...new Set([...antes.movimientosBorrados, ...idsMovimientos])],
-    }));
+    }, settled)) return false;
     setCajasSeleccionadas([]); setSeleccionandoCajas(false);
+    return true;
   }
   function cerrarCajaActual() {
     if (!caja || !ready) return;
@@ -526,8 +557,8 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     const cajaIdActual = caja.id;
     Alert.alert(t("boxes.close"), t("boxes.deleteWarning"), [
       { text: t("common.cancel"), style: "cancel" },
-      { text: t("boxes.close"), style: "destructive", onPress: () => {
-        borrarCajas([cajaIdActual]);
+      { text: t("boxes.close"), style: "destructive", onPress: async () => {
+        if (!await borrarCajas([cajaIdActual])) return;
         setCajaId(null);
         setLista(true);
       } },
@@ -541,23 +572,35 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     ]);
   }
 
-  function devolverAPersonal() {
+  async function devolverAPersonal() {
     if (!caja || devolvibleAPersonal <= 0) return;
     if (!tomarAccionLocal()) return;
     const movimientoId = nuevoIdCaja("mov");
     const personalId = nextId();
     const allocations = allocatePersonalReturn(movimientos, devolvibleAPersonal);
-    setDatos(antes => ({ ...antes, movimientos: [...antes.movimientos, { id: movimientoId, cajaId: caja.id, tipo: "gasto", monto: devolvibleAPersonal, descripcion: t("boxes.returnToPersonal"), method: "transfer", fecha: fechaLocal(), creadoEn: Date.now(), personalTransactionId: personalId, personalReturnAmount: devolvibleAPersonal }] }));
-    addOrUpdateTransaction({ id: personalId, type: "income", amount: devolvibleAPersonal, category: "otros", date: fechaLocal(), time: horaDe(Date.now()), method: "transfer", description: t("boxes.returnFrom", { name: caja.nombre }), notes: "", origin: "manual", internalTransfer: "box", internalTransferLink: movimientoId, internalTransferSpaceId: caja.id, internalTransferSpaceName: caja.nombre, internalTransferAllocations: allocations });
+    const antes = datosActuales.current;
+    await guardarCambioCaja({ ...antes, movimientos: [...antes.movimientos, { id: movimientoId, cajaId: caja.id, tipo: "gasto", monto: devolvibleAPersonal, descripcion: t("boxes.returnToPersonal"), method: "transfer", fecha: fechaLocal(), creadoEn: Date.now(), personalTransactionId: personalId, personalReturnAmount: devolvibleAPersonal }] }, [{ id: personalId, type: "income", amount: devolvibleAPersonal, category: "otros", date: fechaLocal(), time: horaDe(Date.now()), method: "transfer", description: t("boxes.returnFrom", { name: caja.nombre }), notes: "", origin: "manual", internalTransfer: "box", internalTransferLink: movimientoId, internalTransferSpaceId: caja.id, internalTransferSpaceName: caja.nombre, internalTransferAllocations: allocations }]);
   }
 
   async function compartirCaja() {
     const uid = auth.currentUser?.uid;
-    if (!uid || !caja || compartiendo) return;
+    if (!uid || !caja || compartiendo || guardandoRef.current) return;
+    if (!isPremium && !caja.sharingPending) { irUnaVez("/premium"); return; }
+    const hasLinkedMoney = movimientos.some(row => row.personalTransactionId != null)
+      || transactions.some(row => row.internalTransfer === "box" && row.internalTransferSpaceId === caja.id);
+    // Bloquear ANTES de copiar en Firebase, no después de publicar el destino.
+    if (hasLinkedMoney && Platform.OS !== "android") { showToast(t("boxes.atomicAndroidOnly")); return; }
+    if (!privateBoxLinksMatch(datosActuales.current, transactions, caja.id)) {
+      reportSyncError(new Error("cajas-sync-conflict")); return;
+    }
     const task = captureAccountTask(accountUid, cuentaActual);
     if (!task.current() || !ready || hasUnreadableLocalData()) return;
     setCompartiendo(true);
     try {
+      if (!caja.sharingPending) {
+        const before = datosActuales.current;
+        if (!await guardarCambioCaja({ ...before, cajas: before.cajas.map(box => box.id === caja.id ? { ...box, sharingPending: true } : box) })) return;
+      }
       const compartida = await task.wait(() => compartirCajaExistente(uid, userName || t("family.member"), caja, movimientos, userCurrency, isPremium));
       const currentData = datosActuales.current;
       const currentBox = currentData.cajas.find(box => box.id === caja.id);
@@ -565,11 +608,12 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       const currentDigest = await task.wait(() => huellaCaja(currentBox, currentData.movimientos.filter(row => row.cajaId === caja.id), userCurrency));
       if (currentDigest !== compartida.conversion.digest || currentData !== datosActuales.current || hasUnreadableLocalData()) throw new Error("cajas-sync-conflict");
       const enlacesMigrados = enlacesCajaConvertida(transactions, compartida.conversion);
-      if (enlacesMigrados.length) repairLinkedTransferTransactions(enlacesMigrados);
       // Solo después de terminar toda la copia se retira la versión privada.
       // Los débitos enlazados de Personal se conservan porque ahora apuntan a
       // los mismos movimientos dentro de la caja compartida.
-      setDatos(antes => retirarCajaConvertida(antes, compartida.conversion));
+      if (!await guardarCambioCaja(retirarCajaConvertida(currentData, compartida.conversion), enlacesMigrados)) {
+        reportSyncError(new Error("cajas-sync-conflict")); return;
+      }
       setCajaId(null); setLista(true);
       let codigo: string | undefined;
       try { codigo = await task.wait(() => crearInvitacionCaja(uid, compartida.id)); }
@@ -577,9 +621,10 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       if (task.current()) irUnaVez({ pathname: "/shared-boxes", params: { boxId: compartida.id, ...(codigo ? { invitation: codigo } : {}) } });
     } catch (error) {
       if (task.current()) {
-        const reason = (error as { details?: { reason?: string } })?.details?.reason;
+        const original = error instanceof Error && error.message === "cajas-sharing-unconfirmed" ? error.cause : error;
+        const reason = (original as { details?: { reason?: string } })?.details?.reason;
         if (!isPremium && (reason === "migration-not-owner" || reason === "migration-premium-required")) { irUnaVez("/premium"); return; }
-        if (error instanceof Error && error.message === "cajas-sync-conflict") reportSyncError(error);
+        if ((error instanceof Error && ["cajas-sync-conflict", "cajas-sharing-unconfirmed"].includes(error.message)) || (typeof reason === "string" && reason.startsWith("migration-"))) reportSyncError(new Error("cajas-sync-conflict"));
         else showToast(t(spaceErrorKey(error)));
       }
     }
@@ -591,7 +636,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       <View className="flex-row items-center justify-between px-5 pb-3">
         <BackButton onPress={safeBack} />
         <Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("boxes.title")}</Text>
-        <TouchableOpacity accessibilityLabel={t("common.refresh")} disabled={compartiendo || cargandoUnion} onPress={() => setRefreshVersion(value => value + 1)} className="h-10 w-10 items-center justify-center"><RefreshCw size={18} color="#64748b" /></TouchableOpacity>
+        <TouchableOpacity accessibilityLabel={t("common.refresh")} disabled={compartiendo || cargandoUnion || guardando} onPress={() => setRefreshVersion(value => value + 1)} className="h-10 w-10 items-center justify-center"><RefreshCw size={18} color="#64748b" /></TouchableOpacity>
       </View>
       <SpaceSwitcher active="boxes" />
       {syncIssue ? <Text accessibilityLiveRegion="polite" className="px-5 pb-2 text-xs leading-5 text-amber-700 dark:text-amber-300">{t(syncIssue)}</Text> : null}
@@ -650,7 +695,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
             {datos.cajas.map((item) => (
               <TouchableOpacity
                 key={item.id}
-                disabled={!seleccionandoCajas && creando}
+                disabled={guardando || (!seleccionandoCajas && creando)}
                 onPress={() => seleccionandoCajas ? setCajasSeleccionadas(prev => prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id]) : (setCajaId(item.id), setLista(false))}
                 className={`mb-2 min-h-[76px] flex-row items-center rounded-2xl border-[1.5px] bg-white px-3 py-2 dark:bg-noche-2 ${cajasSeleccionadas.includes(item.id) ? "border-teal-500 bg-teal-50 dark:border-teal-500 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}
               >
@@ -671,14 +716,14 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
             {creando ? (
               <View className="mt-2 gap-2">
                 <View className="flex-row items-center gap-2">
-                <TextInput disableFullscreenUI value={nuevoNombre} onChangeText={setNuevoNombre} maxLength={30} autoFocus placeholder={t("boxes.namePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 flex-1 rounded-xl border-[1.5px] border-teal-400 px-4 text-slate-900 dark:text-slate-100" />
-                <TouchableOpacity accessibilityLabel={t("common.save")} onPress={crearCaja} className="h-12 w-12 items-center justify-center rounded-xl bg-emerald-600"><Check size={20} color="#fff" /></TouchableOpacity>
-                <TouchableOpacity accessibilityLabel={t("common.cancel")} onPress={() => setCreando(false)} className="h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><X size={20} color="#64748b" /></TouchableOpacity>
+                <TextInput disableFullscreenUI editable={!guardando} value={nuevoNombre} onChangeText={setNuevoNombre} maxLength={30} autoFocus placeholder={t("boxes.namePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 flex-1 rounded-xl border-[1.5px] border-teal-400 px-4 text-slate-900 dark:text-slate-100" />
+                <TouchableOpacity accessibilityLabel={t("common.save")} accessibilityState={{ busy: guardando }} disabled={guardando} onPress={crearCaja} className="h-12 w-12 items-center justify-center rounded-xl bg-emerald-600"><Check size={20} color="#fff" /></TouchableOpacity>
+                <TouchableOpacity accessibilityLabel={t("common.cancel")} disabled={guardando} onPress={() => setCreando(false)} className="h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><X size={20} color="#64748b" /></TouchableOpacity>
                 </View>
                 <Text className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.initialAmount")}</Text>
-                <TextInput disableFullscreenUI value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
+                <TextInput disableFullscreenUI editable={!guardando} value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
                 <Text className="text-xs font-semibold text-slate-600 dark:text-slate-300">{t("boxes.moneyOrigin")}</Text>
-                <View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} onPress={() => setOrigenDinero(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenDinero === origin ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text></TouchableOpacity>)}</View>
+                <View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} disabled={guardando} onPress={() => setOrigenDinero(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenDinero === origin ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text></TouchableOpacity>)}</View>
                 {origenDinero === "personal" ? <Text className="text-[11px] text-slate-500">{t("boxes.personalAvailable", { amount: fmt(disponible) })}</Text> : null}
               </View>
             ) : null}
@@ -687,7 +732,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
           <>
             <View className="mb-2 mt-1 flex-row items-center justify-between">
               <TouchableOpacity onPress={() => setLista(true)} className="flex-row items-center gap-2 py-2"><ArrowLeftRight size={16} color="#0d9488" /><Text className="text-xs font-bold text-teal-700 dark:text-teal-300">{t("boxes.all")}</Text></TouchableOpacity>
-              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.inviteAccessibility")} disabled={compartiendo} onPress={() => void compartirCaja()} className="h-10 w-10 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950">
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.inviteAccessibility")} disabled={compartiendo || guardando} onPress={() => void compartirCaja()} className="h-10 w-10 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950">
                 <UserPlus size={19} color="#0d9488" />
               </TouchableOpacity>
             </View>
@@ -706,17 +751,17 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
               </View>
               <Text className="text-[26px] font-extrabold leading-8 text-white" numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.58}>{fmt(saldoActual)}</Text>
             </View>
-            {devolvibleAPersonal > 0 ? <TouchableOpacity onPress={devolverAPersonal} className="mt-2 min-h-11 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("boxes.returnAmount", { amount: fmt(devolvibleAPersonal) })}</Text></TouchableOpacity> : null}
+            {devolvibleAPersonal > 0 ? <TouchableOpacity disabled={guardando} onPress={devolverAPersonal} className="mt-2 min-h-11 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("boxes.returnAmount", { amount: fmt(devolvibleAPersonal) })}</Text></TouchableOpacity> : null}
             <View className="mt-2 flex-row justify-between">
-              <TouchableOpacity style={{ width: "48%", height: 40 }} accessibilityRole="button" disabled={!ready} onPress={() => { setMonto(""); setDescripcion(""); setNotes(""); setOrigenDinero("externo"); setCategory("salario"); setMovementDate(fechaLocal()); setMethod("cash"); setAnotando("ingreso"); }} className="flex-row items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-2">
+              <TouchableOpacity style={{ width: "48%", height: 40 }} accessibilityRole="button" disabled={!ready || guardando} onPress={() => { setMonto(""); setDescripcion(""); setNotes(""); setOrigenDinero("externo"); setCategory("salario"); setMovementDate(fechaLocal()); setMethod("cash"); setAnotando("ingreso"); }} className="flex-row items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-2">
                 <Plus size={16} color="#fff" /><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} className="text-[13px] font-extrabold text-white">{t("boxes.addMoney")}</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={{ width: "48%", height: 40 }} accessibilityRole="button" accessibilityLabel={t("boxes.close")} disabled={!ready} onPress={cerrarCajaActual} className="flex-row items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-2 dark:border-rose-900 dark:bg-rose-950">
+              <TouchableOpacity style={{ width: "48%", height: 40 }} accessibilityRole="button" accessibilityLabel={t("boxes.close")} disabled={!ready || guardando} onPress={cerrarCajaActual} className="flex-row items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-2 dark:border-rose-900 dark:bg-rose-950">
                 <X size={15} color="#e11d48" /><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} className="text-[13px] font-extrabold text-rose-700 dark:text-rose-300">{t("boxes.close")}</Text>
               </TouchableOpacity>
             </View>
             <SpaceOverviewTotals income={resumen.ingresos} expense={resumen.gastos} filter={filter} onFilter={setFilter} format={fmt} />
-            <SpaceMovementSheet visible={Boolean(anotando)} type={anotando} onType={next => { setAnotando(next); setCategory(next === "ingreso" ? "salario" : "otros"); }} onClose={() => { setAnotando(null); setEditandoAporteId(null); }} onSave={guardarMovimiento} amount={monto} onAmount={value => setMonto(sanitizeSafeAmountInput(value, userCurrency))} description={descripcion} onDescription={setDescripcion} method={method} onMethod={setMethod} currency={userCurrency} category={category} onCategory={setCategory} date={movementDate} onDate={setMovementDate} notes={notes} onNotes={setNotes} origin={origenDinero} onOrigin={setOrigenDinero} availableText={t("boxes.personalAvailable", { amount: fmt(disponible) })} disabled={!ready} />
+            <SpaceMovementSheet visible={Boolean(anotando)} type={anotando} onType={next => { setAnotando(next); setCategory(next === "ingreso" ? "salario" : "otros"); }} onClose={() => { if (!guardandoRef.current) { setAnotando(null); setEditandoAporteId(null); } }} onSave={guardarMovimiento} amount={monto} onAmount={value => setMonto(sanitizeSafeAmountInput(value, userCurrency))} description={descripcion} onDescription={setDescripcion} method={method} onMethod={setMethod} currency={userCurrency} category={category} onCategory={setCategory} date={movementDate} onDate={setMovementDate} notes={notes} onNotes={setNotes} origin={origenDinero} onOrigin={setOrigenDinero} availableText={t("boxes.personalAvailable", { amount: fmt(disponible) })} disabled={!ready || guardando} />
             <View className={`mb-2 mt-5 ${seleccionando ? "flex-row items-center justify-between" : "flex-row items-center gap-1"}`}>
               {seleccionando ? <>
                 <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{filasSeleccionadas} {filasSeleccionadas === 1 ? "seleccionado" : "seleccionados"}</Text>

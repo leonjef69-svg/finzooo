@@ -10,6 +10,21 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Personal/Cajas privadas prepara guardado conjunto en el SQLite Android existente:
+no muestra éxito hasta confirmar ambas mitades y sus marcas; escrituras antiguas
+no deshacen un lote nuevo. Incluye aportes, edición, devolución, borrado, cierre
+y remapeo al compartir. Las operaciones enlazadas iOS/web quedan bloqueadas con
+aviso hasta tener un equivalente comprobado; sus operaciones de una clave siguen.
+Guía: `docs/PRUEBAS_GUARDADO_PERSONAL_CAJAS.md`. Sin claves nuevas ni cambio de
+archivo por cuenta. Falta Android físico, pares heredados, rendimiento/tamaño y
+limpieza de copias incompletas; no es atomicidad conjunta con Firebase.
+Sin APK/OTA/despliegue ni cambios nativos; CODE_MARKER permanece igual.
+
+El bloqueo local de conversión pendiente sobrevive reinicios y no viaja a
+Firebase. **No entregar todavía:** falta cancelar con comprobación del servidor
+los intentos que no publicaron destino, sin exigir renovar Pro ni desbloquear
+una copia que podría acabar compartida. También falta la limpieza de huérfanos.
+
 Conversión privada/compartida prepara `privateBoxMigration` y formato privado 3:
 comprobación y retirada indivisibles en Firebase, confirmación recuperable,
 clones nuevos incompletos aislados y ediciones atrasadas conservadas. Invitación

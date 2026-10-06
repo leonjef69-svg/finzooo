@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
   type ReactNode,
+  type SetStateAction,
 } from "react";
 import {
   deleteUser,
@@ -16,7 +17,7 @@ import {
   signOut,
   updatePassword,
 } from "firebase/auth";
-import { Alert, AppState, Modal, Text, View } from "react-native";
+import { Alert, AppState, Modal, Platform, Text, View } from "react-native";
 import { colorScheme, useColorScheme, vars } from "nativewind";
 import { nativewindThemeVariables, type VisualStyle } from "@/constants/visualTheme";
 import { seedTransactions, seedGoals } from "@/constants/seed";
@@ -30,12 +31,13 @@ import {
   loadJSON,
   saveJSON,
   saveJSONNow,
+  saveJSONBatchNow,
   setAccountStorageAvailable,
   STORAGE_KEYS,
   subscribeStorageWriteErrors,
   subscribeStorageReadErrors,
 } from "@/utils/storage";
-import { allowPreAccountPreferences, archiveLocalAccount, deleteLocalAccountVault, LocalAccountVaultError, prepareLocalAccount, resumeLocalAccount } from "@/utils/localAccountVault";
+import { allowPreAccountPreferences, archiveLocalAccount, deleteLocalAccountVault, LocalAccountVaultError, prepareLocalAccount, resumeLocalAccount, withLocalAccountOperation } from "@/utils/localAccountVault";
 import {
   borrarNegocio as borrarNegocioYLoSuyo,
   borrarProducto as quitarProductoDeLaLista,
@@ -138,7 +140,10 @@ import { desconectarOneDrive } from "@/utils/onedrive";
 import { disableLock } from "@/utils/appLock";
 import { setPendingImport } from "@/utils/pendingImport";
 import { paymentNotificationFormatter } from "@/utils/notificationCurrency";
-import { limpiarCajasEnMemoria } from "@/utils/cajasMemoria";
+import { guardarCajasEnMemoria, limpiarCajasEnMemoria } from "@/utils/cajasMemoria";
+import { patchPrivateBoxPersonal, validatePrivateBoxPatch } from "@/utils/privateBoxPersonal";
+import { captureAccountTask } from "@/utils/accountTask";
+import { CAJAS_VACIAS, fusionarCajas, validarCajas, type DatosCajas } from "@/utils/cajas";
 import type { Goal, Month, Profile, Transaction } from "@/types";
 
 export type ThemeMode = "light" | "dark" | "system";
@@ -261,6 +266,7 @@ type AppDataContextValue = {
   deleteLinkedTransferTransaction: (id: number) => void;
   /** Repara pares enlazados sin mostrar una cadena de avisos. */
   repairLinkedTransferTransactions: (upserts: Transaction[], deleteIds?: number[]) => void;
+  commitPrivateBoxData: (before: DatosCajas, data: DatosCajas, upserts: Transaction[], deleteIds: number[], current: () => boolean, apply: (data: DatosCajas) => void) => Promise<boolean>;
   deleteTransactions: (ids: number[]) => void;
   commitImport: (toAdd: Transaction[], toReplace: Transaction[]) => void;
 
@@ -453,7 +459,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Se crea desde otra pantalla, encima de la de agregar. Al volver hay que
   // dejarla elegida: nadie crea una categoria para despues buscarla.
   const [categoriaRecienCreada, setCategoriaRecienCreada] = useState<string | null>(null);
-  const [transactions, setTransactions] = useState<Transaction[]>(seedTransactions);
+  const [transactions, setRenderedTransactions] = useState<Transaction[]>(seedTransactions);
+  const transactionsLive = useRef(transactions);
+  const setTransactions = useCallback((update: SetStateAction<Transaction[]>) => {
+    const next = typeof update === "function" ? update(transactionsLive.current) : update;
+    transactionsLive.current = next;
+    setRenderedTransactions(next);
+  }, []);
   const [goals, setGoals] = useState<Goal[]>(seedGoals);
   const [pagosProgramados, setPagosProgramados] = useState<PagoProgramado[]>([]);
   const pagosEnCurso = useRef(new Set<string>());
@@ -1569,7 +1581,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
     };
-  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields]);
+  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -1910,7 +1922,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     };
     // Solo depende de si la app ya está lista: los datos que necesita los
     // lee de captureInputs en el momento de recoger.
-  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields]);
+  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions]);
 
   function setAutoCaptureOn(value: boolean) {
     notificationReader.setEnabled(value);
@@ -2507,6 +2519,48 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return true;
   }
 
+  async function commitPrivateBoxData(before: DatosCajas, data: DatosCajas, upserts: Transaction[], deleteIds: number[], current: () => boolean, apply: (data: DatosCajas) => void): Promise<boolean> {
+    const owner = auth.currentUser?.uid ?? "", version = localSessionVersion.current;
+    const task = captureAccountTask(owner, () => version === localSessionVersion.current);
+    if (!ready || !hasOnboarded || !task.current() || !current() || hasUnreadableLocalData()) return false;
+    const paired = upserts.length > 0 || deleteIds.length > 0;
+    // El contrato de varias claves está comprobado en el SQLite de Android,
+    // no se supone equivalente en iOS/web. Operaciones de una Caja sin enlace
+    // Personal continúan funcionando allí con una sola clave.
+    if (paired && Platform.OS !== "android") throw new Error("private-box-android-only");
+    const keys = paired ? [STORAGE_KEYS.transactions, STORAGE_KEYS.deletedTransactionIds, STORAGE_KEYS.cajasDinero] : [STORAGE_KEYS.cajasDinero];
+    const checked = validarCajas(JSON.parse(JSON.stringify(data)));
+    fusionarCajas(checked, CAJAS_VACIAS);
+    const source = validarCajas(JSON.parse(JSON.stringify(before)));
+    const initialPersonal = transactionsLive.current;
+    return withLocalAccountOperation(async () => {
+      if (!task.current() || !current()) return false;
+      return saveJSONBatchNow(keys, () => {
+        if (!task.current() || !current() || (paired && transactionsLive.current !== initialPersonal)) throw new Error("private-box-source-changed");
+        const base = transactionsLive.current, deleted = deletedTransactionIdsRef.current;
+        validatePrivateBoxPatch(source, checked, base, upserts, deleteIds, owner);
+        const patch = patchPrivateBoxPersonal(base, deleted, upserts, deleteIds);
+        return {
+          entries: paired ? [[STORAGE_KEYS.transactions, patch.transactions], [STORAGE_KEYS.deletedTransactionIds, patch.deletedIds], [STORAGE_KEYS.cajasDinero, checked]] : [[STORAGE_KEYS.cajasDinero, checked]],
+          stillValid: () => task.current() && current() && (!paired || (transactionsLive.current === base && deletedTransactionIdsRef.current === deleted)),
+          committed: () => {
+            if (!task.current()) return;
+            if (paired) {
+              const latest = transactionsLive.current === base && deletedTransactionIdsRef.current === deleted
+                ? patch : patchPrivateBoxPersonal(transactionsLive.current, deletedTransactionIdsRef.current, upserts, deleteIds);
+              deletedTransactionIdsRef.current = latest.deletedIds;
+              if (returnReceipt.current && deleteIds.includes(returnReceipt.current.personalTransactionId)) returnReceipt.current = null;
+              setDeletedTransactionIds(latest.deletedIds);
+              setTransactions(latest.transactions);
+            }
+            guardarCajasEnMemoria(checked);
+            apply(checked);
+          },
+        };
+      });
+    });
+  }
+
   function addOrUpdateTransaction(t2: Transaction, allowLinkedTransferUpdate = false) {
     if (!Number.isFinite(t2.amount) || t2.amount <= 0) {
       showToast(t("toast.amountPositive"));
@@ -2774,6 +2828,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     deleteTransaction,
     deleteLinkedTransferTransaction,
     repairLinkedTransferTransactions,
+    commitPrivateBoxData,
     deleteTransactions,
     commitImport,
     merchantLearned,

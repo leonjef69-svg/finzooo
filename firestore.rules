@@ -527,6 +527,13 @@ service cloud.firestore {
                     && request.resource.data.keys().hasOnly(['nombre', 'ownerUid', 'currency', 'creadaEn', 'migrationComplete', 'migrationProtocol'])
                     && premiumUser(request.auth.uid) && cloudCopyOpen(request.auth.uid);
       allow read: if boxMember(boxId);
+      // La transacción de creación debe comprobar que su destino NO existe.
+      // Solo devuelve inexistencia; nunca datos de un espacio ya creado ni
+      // permiso de listado. La copia privada propia ya se confirmó antes.
+      allow get: if verified() && premiumUser(request.auth.uid) && cloudCopyOpen(request.auth.uid)
+        && exists(/databases/$(database)/documents/cajas/$(request.auth.uid))
+        && boxId.matches('^' + request.auth.uid + '_[A-Za-z0-9_-]+$')
+        && !exists(/databases/$(database)/documents/boxSpaces/$(boxId));
       allow update: if boxMember(boxId)
                     && resource.data.ownerUid == request.auth.uid
                     && resource.data.get('closed', false) == false

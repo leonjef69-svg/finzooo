@@ -129,7 +129,7 @@ const repairNode = select("screens/Cajas.tsx", (node, tree) => ts.isCallExpressi
   && node.arguments[0]?.getText(tree).includes("const movimientosPorId ="));
 const repairEffect = repairNode.node.arguments[0].getText(repairNode.tree);
 for (const [ready, cloudReady, premium, confirmed, sameAccount] of [[false, true, false, null, true], [true, false, true, "A", true], [true, true, true, null, true], [true, true, false, null, false]]) {
-  const scope = { ready, cloudReady, isPremium: premium, accountUid: "A", nubeConfirmadaPara: { current: confirmed }, cuentaActual: () => sameAccount };
+  const scope = { ready, cloudReady, guardando: false, isPremium: premium, accountUid: "A", nubeConfirmadaPara: { current: confirmed }, cuentaActual: () => sameAccount };
   Object.defineProperty(scope, "datos", { get() { throw new Error("PASSED_GUARD"); } });
   vm.runInNewContext(js(`globalThis.repair = (${repairEffect});`), scope);
   assert.doesNotThrow(() => scope.repair(), "no concilia antes de cargar ni con cuenta/copia sin confirmar");
@@ -138,6 +138,7 @@ function screenHarness(premium = true) {
   uid = "A"; session = 1;
   const state = {}, localRead = deferred(), cloudRead = deferred(); let count = 0;
   const scope = { auth, accountUid: "A", cuentaActual: () => uid === "A" && session === 1, isPremium: premium,
+    guardandoRef: { current: false },
     refreshVersion: 0, requestedRefresh: { current: 0 },
     premiumForSync: { current: premium }, nubeConfirmadaPara: { current: null }, datosActuales: { current: data() },
     captureAccountTask: capture, hasUnreadableLocalData: () => false, STORAGE_KEYS: { cajasDinero: "cajas" }, CAJAS_VACIAS: data([]),

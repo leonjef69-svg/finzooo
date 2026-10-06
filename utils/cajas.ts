@@ -3,6 +3,8 @@ export type Caja = {
   nombre: string;
   creadaEn: number;
   updatedAt?: number;
+  /** Solo local: impide usar la copia privada mientras compartir es incierto. */
+  sharingPending?: boolean;
 };
 
 export type MovimientoCaja = {
@@ -76,7 +78,8 @@ export function validarCajas(value: unknown): DatosCajas {
   const ids = new Set<string>(), movementIds = new Set<string>();
   for (const box of data.cajas) {
     if (!box || !id(box.id) || ids.has(box.id) || typeof box.nombre !== "string"
-      || !time(box.creadaEn) || (box.updatedAt !== undefined && !time(box.updatedAt))) return invalid();
+      || !time(box.creadaEn) || (box.updatedAt !== undefined && !time(box.updatedAt))
+      || (box.sharingPending !== undefined && typeof box.sharingPending !== "boolean")) return invalid();
     ids.add(box.id);
   }
   for (const row of data.movimientos) {
@@ -111,7 +114,7 @@ export function siguienteVersionCaja(item: VersionedItem, now = Date.now()): num
 
 function firma(item: VersionedItem): string {
   // Los registros son planos. El orden de propiedades/undefined no es edición.
-  return JSON.stringify(Object.fromEntries(Object.entries(item).filter(([key, value]) => key !== "updatedAt" && value !== undefined).sort(([a], [b]) => a.localeCompare(b))));
+  return JSON.stringify(Object.fromEntries(Object.entries(item).filter(([key, value]) => key !== "updatedAt" && key !== "sharingPending" && value !== undefined).sort(([a], [b]) => a.localeCompare(b))));
 }
 
 /** No convertir una vista vieja dejando atrás movimientos/ediciones en nube. */
@@ -155,7 +158,9 @@ export function fusionarCajas(local: DatosCajas, remoto: DatosCajas): DatosCajas
   const movimientosBorrados = [...new Set([...local.movimientosBorrados, ...remoto.movimientosBorrados])];
   const cajasFuera = new Set(cajasBorradas);
   const movimientosFuera = new Set(movimientosBorrados);
-  const cajas = unirPorId(local.cajas.filter(item => !cajasFuera.has(item.id)), remoto.cajas.filter(item => !cajasFuera.has(item.id)));
+  const pending = new Set([...local.cajas, ...remoto.cajas].filter(box => box.sharingPending).map(box => box.id));
+  const cajas = unirPorId(local.cajas.filter(item => !cajasFuera.has(item.id)), remoto.cajas.filter(item => !cajasFuera.has(item.id)))
+    .map(box => pending.has(box.id) ? { ...box, sharingPending: true } : box);
   const idsCajas = new Set(cajas.map((item) => item.id));
   const presentes = (item: MovimientoCaja) => !movimientosFuera.has(item.id) && idsCajas.has(item.cajaId);
   const movimientos = unirPorId(local.movimientos.filter(presentes), remoto.movimientos.filter(presentes));

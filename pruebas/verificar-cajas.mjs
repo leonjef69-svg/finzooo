@@ -57,7 +57,7 @@ assert.doesNotMatch(movementFields, /<Modal|EXPENSE_CATS|INCOME_CATS/, "Caja ya 
 assert.match(categorySheet, /chooseImage\("camera"\)/, "la categoría de caja acepta foto de cámara");
 assert.match(categorySheet, /chooseImage\("library"\)/, "la categoría de caja acepta foto de galería");
 assert.match(categorySheet, /onPress=\{saveCategory\}/, "la categoría de caja se guarda desde la misma hoja");
-assert.match(screen, /deleteLinkedTransferTransaction\(item\.personalTransactionId\)/, "borrar un aporte enlazado también restaura Personal desde su caja");
+assert.match(screen, /guardarCambioCaja\([\s\S]*?plan\.items\.flatMap\(item => item\.personalTransactionId/, "borrar un aporte enlazado guarda ambas mitades y sus marcas juntas");
 assert.match(sharedCloud, /export async function compartirCajaExistente/, "una caja existente se comparte sin crear otra desde cero");
 assert.match(sharedCloud, /migrationComplete: false/, "una copia incompleta nunca reemplaza la caja privada");
 assert.match(sharedCloud, /await task.wait\(\(\) => confirmarConversionCaja\(uid, caja.id, digest, currency, "finish"\)\)/, "solo el servidor confirma la copia completa dentro de la sesión vigente");

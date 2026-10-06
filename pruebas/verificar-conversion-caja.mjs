@@ -12,8 +12,10 @@ const load = file => {
   return module.exports;
 };
 const api = load("utils/cajas.ts");
+const linksModule = { exports: {} };
+vm.runInNewContext(ts.transpile(fs.readFileSync("utils/privateBoxPersonal.ts", "utf8"), { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }), { module: linksModule, exports: linksModule.exports });
 const box = { id: "caja-a", nombre: "A", creadaEn: 1 };
-const row = { id: "mov-a", cajaId: box.id, tipo: "ingreso", monto: 100, descripcion: "Aporte", fecha: "2026-10-05", creadoEn: 2 };
+const row = { id: "mov-a", cajaId: box.id, tipo: "ingreso", monto: 100, descripcion: "Aporte", fecha: "2026-10-05", creadoEn: 2, personalTransactionId: 10 };
 const local = { cajas: [box], movimientos: [row], cajasBorradas: [], movimientosBorrados: [] };
 const receipt = { uid: "a", sourceId: box.id, targetId: "a_caja-a", name: "A", currency: "PEN", createdAt: 1,
   digest: "a".repeat(64), completedAt: 3, links: [{ personalId: 10, movementId: row.id }] };
@@ -31,7 +33,7 @@ const functions = tree.statements.filter(node => ts.isFunctionDeclaration(node) 
 const module = { exports: {} }; vm.runInNewContext(ts.transpile(functions, { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }), { module, exports: module.exports });
 const done = module.exports.retirarCajaConvertida(local, receipt);
 assert.equal(done.cajas.length, 0); assert.equal(done.movimientos.length, 0); assert.equal(done.conversiones[box.id].digest, receipt.digest);
-const transactions = [{ id: 10, amount: 100, internalTransfer: "box", internalTransferSpaceId: box.id, internalTransferLink: row.id, internalTransferSettled: true },
+const transactions = [{ id: 10, type: "expense", amount: 100, internalTransfer: "box", internalTransferSpaceId: box.id, internalTransferLink: row.id, internalTransferSettled: true },
   { id: 11, amount: 5, internalTransfer: "box", internalTransferSpaceId: "otra", internalTransferLink: "otro" }];
 const repaired = module.exports.enlacesCajaConvertida(transactions, receipt);
 assert.equal(repaired.length, 1); assert.equal(repaired[0].amount, 100); assert.equal(repaired[0].internalTransferSettled, true);
@@ -46,16 +48,19 @@ function find(node) { if (ts.isFunctionDeclaration(node) && node.name?.text === 
 find(screenTree); assert.ok(action);
 function harness() {
   const events = [], dataRef = { current: local };
-  const scope = { auth: { currentUser: { uid: "a" } }, caja: box, movimientos: [row], compartiendo: false,
+  const scope = { Error, auth: { currentUser: { uid: "a" } }, caja: box, movimientos: [row], compartiendo: false,
+    Platform: { OS: "android" }, privateBoxLinksMatch: linksModule.exports.privateBoxLinksMatch,
+    guardandoRef: { current: false },
     isPremium: true, accountUid: "a", ready: true, userName: "A", userCurrency: "PEN", active: true,
     cuentaActual: () => scope.active, hasUnreadableLocalData: () => false, datosActuales: dataRef,
-    transactions, enlacesCajaConvertida: module.exports.enlacesCajaConvertida, retirarCajaConvertida: module.exports.retirarCajaConvertida,
+    transactions: transactions.map(row => ({ ...row, internalTransferSettled: false })), enlacesCajaConvertida: module.exports.enlacesCajaConvertida, retirarCajaConvertida: module.exports.retirarCajaConvertida,
     t: key => key, reportSyncError: () => events.push("conflict"), showToast: key => events.push(key),
     captureAccountTask: () => ({ current: () => scope.active, wait: async work => { assert.ok(scope.active); const value = await work(); assert.ok(scope.active); return value; } }),
     compartirCajaExistente: async () => ({ id: receipt.targetId, nombre: receipt.name, conversion: receipt }),
     huellaCaja: async (_box, rows) => rows[0].monto === 100 ? receipt.digest : "b".repeat(64),
     repairLinkedTransferTransactions: rows => events.push(["repair", rows]), setCompartiendo: value => events.push(["busy", value]),
     setDatos: work => { dataRef.current = work(dataRef.current); events.push("retired"); }, setCajaId: () => {}, setLista: () => {},
+    guardarCambioCaja: async (next, upserts = []) => { if (upserts.length) scope.repairLinkedTransferTransactions(upserts); dataRef.current = next; events.push(next.cajas.some(row => row.id === box.id) ? "pending" : "retired"); return true; },
     crearInvitacionCaja: async () => { events.push("invite"); throw new Error("network"); },
     irUnaVez: params => events.push(["open", params]), spaceErrorKey: () => "network" };
   vm.runInNewContext(ts.transpile(`${action}\nglobalThis.run = compartirCaja;`, { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }), scope);
@@ -74,5 +79,15 @@ function harness() {
   };
   await h.scope.run(); assert.ok(h.events.includes("conflict")); assert.equal(h.dataRef.current.movimientos[0].monto, 120);
   assert.equal(h.events.includes("retired"), false, "una edición local durante la espera no se retira por una confirmación anterior");
+}
+{
+  const h = harness(); h.scope.compartirCajaExistente = async () => { throw new Error("cajas-sharing-unconfirmed"); };
+  await h.scope.run(); assert.ok(h.events.includes("conflict")); assert.equal(h.dataRef.current.cajas.length, 1);
+  assert.equal(h.dataRef.current.cajas[0].sharingPending, true, "la señal se conserva para el próximo arranque");
+}
+{
+  const h = harness(); h.scope.Platform.OS = "ios";
+  h.scope.compartirCajaExistente = async () => { throw new Error("NO_SERVER_WRITE_ALLOWED"); };
+  await h.scope.run(); assert.ok(h.events.includes("boxes.atomicAndroidOnly")); assert.equal(h.dataRef.current.cajas.length, 1);
 }
 console.log("Conversión de Caja: copia atrasada preservada, confirmación y enlaces sin duplicación comprobados.");

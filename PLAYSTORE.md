@@ -228,6 +228,17 @@ reintentar. Es la misma finalidad de consistencia y prevención de duplicados,
 con la misma retención hasta borrar Auth, sin nueva categoría de datos ni
 permiso Android. Política interna/web preparadas; publicación por comprobar.
 
+El guardado conjunto Personal/Cajas privadas en Android no añade datos, claves
+locales, retención, servicios ni permisos: usa el mismo cifrado y los mismos
+movimientos/marcas en una transacción local comprobada. No genera un envío
+adicional a Firebase ni cambia la copia por cuenta. Las operaciones enlazadas
+en iOS/web se bloquean con aviso hasta implementar su garantía equivalente;
+no se presenta esa parte como comprobada ni entregada.
+La Caja conserva además una señal local cifrada de conversión pendiente para
+no usar su copia privada mientras el resultado remoto es incierto. No se sube
+a Firebase, no añade una clave ni categoría de datos y sigue el mismo archivo
+por cuenta. Falta cancelación segura antes de entregar el flujo completo.
+
 > **LOS CONTACTOS DE ENVÍO NO SE DECLARAN, Y AQUÍ DECÍA LO CONTRARIO (corregido el
 > 18/08/2026).** Este archivo afirmaba que "se guardan y se suben a su copia en la nube" y
 > mandaba declararlos bajo "Correo electrónico" y "Números de teléfono". **Es falso:**

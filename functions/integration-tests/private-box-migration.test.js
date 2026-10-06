@@ -135,5 +135,20 @@ test("Conversión real: servidor, SDK, respuesta perdida, permisos y copia incor
       assert.deepEqual((await origin.get()).data().cajas.map(box => box.id), [other.id]);
       assert.equal((await origin.get()).data().movimientos.length, 0);
     });
+    await t.test("crea y convierte una Caja compartida completamente nueva con SDK real", async () => {
+      const fresh = { ...box, id: "caja-nueva" }, freshRow = { ...row, id: "mov-nuevo", cajaId: fresh.id, personalTransactionId: 1010 };
+      const ref = admin.doc(`boxSpaces/${uid}_${fresh.id}`);
+      assert.equal((await ref.get()).exists, false);
+      await origin.set({ ...initial, cajas: [fresh], movimientos: [freshRow] });
+      const localPending = { ...fresh, sharingPending: true };
+      assert.equal(await api.subirCajas(uid, { ...initial, cajas: [localPending], movimientos: [freshRow] }), true);
+      assert.equal((await origin.get()).data().cajas[0].sharingPending, undefined, "el marcador local no viaja a Firebase");
+      const result = await api.compartirCajaExistente(uid, "A", localPending, [freshRow]);
+      assert.equal(result.id, ref.id); assert.equal((await ref.get()).data().migrationComplete, true);
+      assert.equal((await origin.get()).data().cajas.length, 0);
+      const unrelated = admin.doc("boxSpaces/other_private-box"); await unrelated.set({ ownerUid: "other", nombre: "Privada" });
+      await assert.rejects(getDocFromServer(doc(db, "boxSpaces", unrelated.id)), error => error.code === "permission-denied");
+      await assert.rejects(getDocFromServer(doc(db, "boxSpaces", "other_missing-box")), error => error.code === "permission-denied");
+    });
   } finally { await terminate(db); await deleteApp(app); await admin.terminate(); await deleteAdmin(adminApp); }
 });
