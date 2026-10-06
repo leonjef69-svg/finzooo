@@ -42,6 +42,27 @@ test("Corrección de dinero: SDK/HTTP y transacciones reales sin medias transfer
     const result = { app, db, auth, functions, call: httpsCallable(functions, "resolvePrivateBoxMoney", { timeout: 120_000 }) }; clients.push(result);
     await signInWithEmailAndPassword(auth, `${owner}@example.test`, "SoloPruebaLocal123!"); return result;
   }
+  async function reviewClient(client) {
+    const native = { session: 1, unreadable: false, current: true, rows: [copy(entry.local.personal)], currency: "PEN",
+      boxes: { cajas: [box], movimientos: [entry.local.movement], cajasBorradas: [], movimientosBorrados: [], revisionesImporte: [{ ...copy(entry), estado: "pendiente" }] } };
+    const env = { ...client, native };
+    const built = await esbuild.build({ stdin: { contents: 'export * from "@/utils/cloudPrivateBoxMoney"; export * from "@/utils/privateBoxSync";', resolveDir: root, loader: "ts" },
+      bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent", external: ["firebase/*"], alias: { "@": root },
+      plugins: [{ name: "real-money-client-native-session", setup(build) {
+        build.onLoad({ filter: /[\\/]utils[\\/]firebase\.ts$/ }, () => ({ loader: "ts", contents: "export const {auth,db,functions}=globalThis.client;" }));
+        build.onLoad({ filter: /[\\/]utils[\\/]storage\.ts$/ }, () => ({ loader: "ts", contents: `
+          const native=globalThis.client.native;
+          export const getAccountStorageSession=()=>native.session;
+          export const hasUnreadableLocalData=()=>native.unreadable;
+          export const STORAGE_KEYS={cajasDinero:'cajas'};
+          export const loadJSON=async(_key,fallback)=>native.boxes == null ? fallback : structuredClone(native.boxes);` }));
+      } }] });
+    const module = { exports: {} };
+    new Function("module", "exports", "require", "globalThis", built.outputFiles[0].text)(module, module.exports, requireRoot, { client: env });
+    const api = module.exports, selected = { ...copy(entry), estado: "pendiente" };
+    const local = () => ({ transactions: native.rows, deletedIds: [], currency: native.currency });
+    return { api, native, selected, local, request: lease => api.requestPrivateBoxMoneyReview(uid, selected, lease, local, () => native.current) };
+  }
   async function oldUpload(client) {
     const built = await esbuild.build({ stdin: { contents: 'export { subirCajas } from "@/utils/cloudCajas";', resolveDir: root, loader: "ts" },
       bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent", external: ["firebase/*"], alias: { "@": root },
@@ -142,6 +163,70 @@ test("Corrección de dinero: SDK/HTTP y transacciones reales sin medias transfer
         const value = copy(entry); change(value); await assert.rejects(a.call(value), error => error.code === "functions/invalid-argument");
       }
       assert.equal((await rootRef.get()).data().transactions[0].amount, 80); assert.equal((await boxesRef.get()).data().movimientos[0].monto, 80);
+    });
+    await t.test("cliente original exige originales en disco antes de llamar al servidor", async () => {
+      await seed(); const client = await reviewClient(a), { api, native } = client;
+      delete native.boxes.revisionesImporte;
+      const before = [await rootRef.get(), await boxesRef.get()];
+      await assert.rejects(api.withPrivateBoxMoneyReview(uid, client.request), /cajas-money-changed/);
+      const after = [await rootRef.get(), await boxesRef.get()];
+      assert.deepEqual(after.map(row => row.updateTime.toMillis()), before.map(row => row.updateTime.toMillis()));
+      assert.equal(after[0].data().transactions[0].amount, 80);
+    });
+    await t.test("cliente original consulta fuentes exactas en ambos formatos sin descargar todo el historial", async () => {
+      for (const format of [1, 2]) {
+        await seed(format); const client = await reviewClient(a), { api, selected, native } = client;
+        await api.withPrivateBoxMoneyReview(uid, async lease => {
+          const sources = await api.loadPrivateBoxMoneySources(uid, m.id, p.id, "PEN", lease);
+          assert.deepEqual(sources.transactions, [entry.remote.personal]); assert.equal(sources.data.movimientos[0].monto, 80);
+          const ack = await client.request(lease);
+          api.assertPrivateBoxMoneyReceipt(uid, selected, ack, lease);
+          assert.throws(() => api.assertPrivateBoxMoneyReceipt(uid, selected, copy(ack), lease), /unconfirmed/);
+          assert.equal(native.boxes.revisionesImporte[0].estado, "pendiente", "HTTP no se presenta como guardado local final");
+          const remotePersonal = format === 2 ? (await rootRef.collection("history").doc("10").get()).data().transaction : (await rootRef.get()).data().transactions[0];
+          assert.equal(remotePersonal.amount, 100); assert.equal((await boxesRef.get()).data().movimientos[0].monto, 100);
+        });
+      }
+    });
+    await t.test("cliente original recupera confirmación perdida sin volver a escribir ni duplicar", async () => {
+      await seed(); const client = await reviewClient(a), { api, native, selected } = client;
+      let oldAck, oldLease;
+      await api.withPrivateBoxMoneyReview(uid, async lease => { oldLease = lease; oldAck = await client.request(lease); });
+      // Simula que no se llegó al lote local. Los cuatro originales siguen intactos.
+      assert.equal(native.boxes.revisionesImporte[0].estado, "pendiente");
+      const before = [await rootRef.get(), await boxesRef.get()];
+      await api.withPrivateBoxMoneyReview(uid, async lease => {
+        assert.throws(() => api.assertPrivateBoxMoneyReceipt(uid, selected, oldAck, oldLease), /review-changed/);
+        const ack = await client.request(lease); api.assertPrivateBoxMoneyReceipt(uid, selected, ack, lease);
+      });
+      const after = [await rootRef.get(), await boxesRef.get()];
+      assert.deepEqual(after.map(row => row.updateTime.toMillis()), before.map(row => row.updateTime.toMillis()));
+      assert.equal(after[0].data().transactions.length, 1); assert.equal(after[1].data().movimientos.length, 1);
+    });
+    await t.test("cliente original no confirma localmente una respuesta si la pantalla se cerró durante HTTP", async () => {
+      await seed(); const client = await reviewClient(a), { api, native, selected } = client;
+      let reads = 0;
+      await assert.rejects(api.withPrivateBoxMoneyReview(uid, lease => api.requestPrivateBoxMoneyReview(uid, selected, lease, () => {
+        if (++reads === 2) native.current = false;
+        return client.local();
+      }, () => native.current)), /obsolete/);
+      assert.equal(native.boxes.revisionesImporte[0].estado, "pendiente");
+      assert.equal((await rootRef.get()).data().transactions[0].amount, 100, "una petición ya enviada puede haberse confirmado en servidor");
+      const before = [await rootRef.get(), await boxesRef.get()]; native.current = true;
+      await api.withPrivateBoxMoneyReview(uid, client.request);
+      const after = [await rootRef.get(), await boxesRef.get()];
+      assert.deepEqual(after.map(row => row.updateTime.toMillis()), before.map(row => row.updateTime.toMillis()));
+    });
+    await t.test("cliente original respeta Pro revocado y ediciones posteriores sin perder originales", async () => {
+      await seed(); const client = await reviewClient(a), { api, native } = client;
+      await rootRef.update({ isPremium: false });
+      await assert.rejects(api.withPrivateBoxMoneyReview(uid, lease => api.loadPrivateBoxMoneySources(uid, m.id, p.id, "PEN", lease)), error => error.code === "permission-denied");
+      await assert.rejects(api.withPrivateBoxMoneyReview(uid, client.request), error => error.code === "functions/permission-denied");
+      assert.equal(native.boxes.revisionesImporte[0].estado, "pendiente");
+      await rootRef.update({ isPremium: true, transactions: [{ ...entry.remote.personal, amount: 70 }] });
+      await assert.rejects(api.withPrivateBoxMoneyReview(uid, client.request), error => error.details?.reason === "money-source-changed");
+      assert.equal((await rootRef.get()).data().transactions[0].amount, 70); assert.equal((await boxesRef.get()).data().movimientos[0].monto, 80);
+      assert.deepEqual(native.boxes.revisionesImporte[0].remote.personal, entry.remote.personal);
     });
   } finally {
     for (const client of clients) { await terminate(client.db); await deleteApp(client.app); }

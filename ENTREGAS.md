@@ -10,6 +10,15 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Cliente monetario preparado para fuentes de servidor y solicitud con originales
+pendientes confirmados en disco. Respuesta genuina ligada a cuenta/sesión/cola,
+sin aceptar un comprobante calculado/copiado ni anunciar guardado local por HTTP.
+Reintento vigente sin nueva escritura; Pro real aplicado por reglas/servicio.
+Guía: `docs/PRUEBAS_CLIENTE_IMPORTE_CAJA.md`. **No se importa desde pantalla o
+contexto ni se habilita:** sigue lote conjunto, selección y recuperación
+explícita; después Android/consolas/publicación coordinada autorizada. Mismo
+esquema ya documentado, sin nueva retención/claves/nativos/tarjetas/marca/entrega.
+
 Coordinación Personal/Caja preparada: una revisión monetaria pendiente pausa
 ambos respaldos ordinarios; cola por cuenta y sello en memoria impiden aplicar
 respuestas viejas. Historial v2 anidado, identidad, archivo dañado y guardia antes

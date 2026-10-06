@@ -29,6 +29,14 @@ conservación y guardado local. Alcance, comandos y regresión:
 
 ## Qué comprueba cada cosa
 
+`verificar-cliente-importe-caja.mjs` ejecuta cliente/coordinador/validadores
+originales: fuentes frescas dentro de revisión, originales pendientes en disco,
+confirmación genuina ligada a cuenta/sesión/cola, respuesta perdida/copiada,
+fallos y cambios sin confirmar dinero local. La suite SDK/HTTP del cliente está
+en `functions/integration-tests/private-box-money.test.js`. No hay integración
+en pantalla/contexto ni lote final monetario; guía, regresión y límites:
+`docs/PRUEBAS_CLIENTE_IMPORTE_CAJA.md`.
+
 `verificar-recuperacion-incompleta-cajas.mjs` ejecuta el plan, aviso, manejador
 de entrada y guardado originales con SQLite real: Caja cerrada/convertida,
 fechas/montos/repartos dañados, filas ilegibles, identidad disponible y no

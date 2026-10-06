@@ -1,5 +1,29 @@
 # Estado actual de Fino
 
+## Cliente monetario — confirmación del servidor preparada (06/10/2026)
+
+- Fuentes frescas dentro de cola de revisión auténtica; historial v2 limitado
+  al ID/enlace afectado, sin descargar toda la colección. Cache/error/ausencia,
+  moneda/formato/borrados/duplicados no se convierten en una copia vacía.
+- Petición exige originales/elección idénticos en disco y pareja actual válida,
+  antes y después de HTTP. Confirmación genuina ligada al objeto, cuenta,
+  generación y cola; copiar/calcular un ack no basta. Reglas/servicio aplican Pro.
+- No marca el resultado como guardado local; respuesta perdida/pantalla cerrada
+  conserva pendientes. Reintento vigente recupera confirmación sin otra escritura.
+  Guía: `docs/PRUEBAS_CLIENTE_IMPORTE_CAJA.md`. No fuentes globalmente atómicas
+  en el formulario: servidor las relee en su transacción final.
+- TypeScript/ESLint, 141 locales/8 auditores (una prueba ajena sin registrar: 140 en
+  copia limpia), 73 unitarias y 117 SDK/reglas/HTTP/eventos Node 22 reales
+  aprobados. Prueba directa repetida tras guardias finales; regresión aee6653
+  falla por contrato nuevo ausente, no por fallo de la app publicada. ADB vacío.
+- **Sin activar:** ningún botón/import del contexto/petición desde pantalla,
+  lote monetario final, nativos/tarjetas/marca/instalable/OTA/despliegue. Mismo
+  esquema de datos ya documentado, sin nueva clave/colección/retención.
+- **Qué sigue:** lote financiero con respuesta genuina, mutaciones protegidas,
+  selección y recuperación explícita (incluye decisión obsoleta y Pro vencido).
+  **Qué falta:** otros hallazgos/conflictos, Android/tamaño/dos dispositivos,
+  consolas y publicación coordinada autorizada. Punto 1/auditoría abiertos.
+
 ## Respaldo Personal/Caja — coordinación preparada (06/10/2026)
 
 - Revisión monetaria pendiente pausa ambas copias ordinarias, también tras

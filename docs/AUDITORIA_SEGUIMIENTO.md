@@ -3,6 +3,28 @@
 Última revisión: 06/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## Continuación punto 1 — cliente monetario preparado (06/10/2026)
+
+- Fuentes frescas en cola auténtica, consulta exacta/limitada de historial v2;
+  archivo pendiente con originales comprobados antes/después de HTTP, pareja
+  actual válida, cuenta/generación/moneda. Respuesta genuina ligada a la misma
+  cola; calcular/copiar campos de un ack no equivale a recibirlo.
+- Cliente original y SDK/HTTP demo comprueban recuperación vigente sin otra
+  escritura, Pro revocado, pantalla cerrada y cambios posteriores. No modifica
+  dinero local ni confirma su guardado por recibir HTTP. Guía:
+  `docs/PRUEBAS_CLIENTE_IMPORTE_CAJA.md`. Regresión aee6653 del contrato nuevo
+  falla por cliente/verificador ausente, no por bug de la app publicada.
+- TypeScript/ESLint, 141 locales/8 auditores (una prueba ajena sin registrar), 73
+  unitarias y 117 SDK/reglas/HTTP/eventos Node 22 reales aprobados; prueba
+  directa final del cliente repetida. Sin omisiones/cancelaciones en servidor;
+  tarjetas específicas excluidas del ámbito. ADB no encontró dispositivos.
+- **Qué sigue:** lote financiero/mutaciones protegidas, selección humana y
+  caminos para decisión obsoleta/Pro vencido. **Qué falta:** Android/tamaño/
+  dos dispositivos/consolas/otros hallazgos/publicación coordinada autorizada.
+  Ningún import del contexto/pantalla ni nuevo botón o envío habilitados.
+  Mismo esquema documentado; no claves/retención/nativos/tarjetas/marca/entrega.
+  No cerrar punto 1/auditoría ni prometer atomicidad servidor/teléfono.
+
 ## Continuación punto 1 — barrera del respaldo Personal/Caja (06/10/2026)
 
 - Pendencia local pausa ambos respaldos/lecturas ordinarios, incluso tras reinicio;

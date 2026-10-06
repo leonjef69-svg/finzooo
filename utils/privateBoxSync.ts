@@ -73,7 +73,14 @@ export function withPrivateBoxCloudLease<T>(uid: string, lease: PrivateBoxCloudL
   lease.assertCurrent(); return work(lease);
 }
 
-/** Preparación futura: invalida respuestas, espera subidas en vuelo y no fuerza datos. */
+/** Solo la revisión en curso puede consultar/enviar su corrección especial. */
+export function assertPrivateBoxMoneyReviewLease(uid: string, lease: PrivateBoxCloudLease): void {
+  const proof = leases.get(lease);
+  if (proof?.uid !== uid || proof.mode !== "review") throw new PrivateBoxSyncError("changed");
+  lease.assertCurrent();
+}
+
+/** Invalida respuestas, espera subidas en vuelo y no fuerza datos. */
 export async function withPrivateBoxMoneyReview<T>(uid: string, work: (lease: PrivateBoxCloudLease) => Promise<T>): Promise<T> {
   const session = getAccountStorageSession(), task = captureAccountTask(uid);
   if (session === null || !task.current() || hasUnreadableLocalData()) throw new PrivateBoxSyncError("changed");
