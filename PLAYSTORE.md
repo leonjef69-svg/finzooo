@@ -213,6 +213,16 @@ formato, para no reemplazar una edición reciente con una copia antigua. Siguen
 siendo los datos financieros de la propia cuenta, sin nuevas categorías de
 datos, servicios o destinatarios; la nube de Cajas sigue limitada a Pro.
 
+La revisión explícita de dos nombres distintos de Caja conserva ambas versiones,
+elección, UID/IDs, fecha y confirmación pendiente en `revisionesNombre`, solo
+en el contenedor local cifrado `cajasDinero`, incluido en la copia por cuenta.
+No se sube ese registro a Firebase; solo se cambia el nombre elegido con Pro.
+Hasta 50 revisiones, sin borrar anteriores al alcanzar el límite; misma limpieza
+de la cuenta local. No añade clave/permiso/servicio/destinatario externo.
+Las políticas interna/web están preparadas con fecha 06/10; no publicadas.
+Revisar consistencia de la declaración real de Play antes de entregar.
+Guía y límites: `docs/PRUEBAS_NOMBRES_CAJA_NUBE.md`.
+
 Al convertir una Caja privada a compartida, `privateBoxMigrations` y la copia
 privada conservan una confirmación del servidor: UID, IDs de origen/destino,
 nombre/moneda, fechas, SHA-256 de la copia e IDs de enlaces a Personal, sin

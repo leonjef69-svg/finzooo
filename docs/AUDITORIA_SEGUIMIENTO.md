@@ -3,6 +3,24 @@
 Última revisión: 06/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## Continuación punto 1 — nombres distintos de Caja (06/10/2026)
+
+- Elección explícita solo ante empate de versión/nombre, no decide dinero.
+  Guarda ambas versiones locales cifradas antes de red; transacción exige
+  la fuente remota exacta y cambia solo nombre/versión, preservando demás datos.
+- Reintento vigente idempotente; fallos/cambios de cuenta/fuente/Pro/respuesta
+  no confirman éxito. Hasta 50 revisiones locales conservadas por cuenta,
+  no subidas a Firebase. Políticas y compatibilidad preparadas, no publicadas.
+- TypeScript/ESLint, 139 locales/8 auditores (una prueba ajena sin registrar),
+  63 unitarias y 97 SDK/reglas/HTTP/eventos aprobados con Node 22 real.
+  Regresión contra 482f2fd falla como se espera. Guía:
+  `docs/PRUEBAS_NOMBRES_CAJA_NUBE.md`.
+- **Qué sigue:** punto 1 no cerrado: diferencias de dinero/mitad ausente/
+  reparto no demostrable y elecciones obsoletas conservadas para revisar.
+  **Qué falta:** puntos 2/3, Android visual/cierre/espacio/tamaño/dos dispositivos,
+  consolas y publicación autorizada. ADB sin dispositivos; no se publicó nada,
+  no se tocaron tarjetas ni código nativo. No es atomicidad global con Firebase.
+
 ## Continuación punto 1 — selección de enlace heredado (06/10/2026)
 
 - Elección y confirmación unen una pareja existente con igual importe/fecha,

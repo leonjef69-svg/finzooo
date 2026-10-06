@@ -44,6 +44,9 @@ await scenario(`
   await AsyncStorage.setItem("@fino/credit-v1", JSON.stringify({ cards: [{ id: "legacy-A" }] }));
   const pendingReturn = { uid: "A", payload: { kind: "family", spaceId: "f", amount: 40, personalTransactionId: 100 } };
   await saveJSONNow(STORAGE_KEYS.personalReturnPending, pendingReturn);
+  const name = { id: "name-A", uid: "A", boxId: "box-A", local: { id: "box-A", nombre: "Viaje", creadaEn: 1, updatedAt: 10 }, remoto: { id: "box-A", nombre: "Vacaciones", creadaEn: 1, updatedAt: 10 }, elegido: { id: "box-A", nombre: "Viaje", creadaEn: 1, updatedAt: 20 }, creadoEn: 20, estado: "pendiente" };
+  const privateBoxes = { cajas: [name.local], movimientos: [], cajasBorradas: [], movimientosBorrados: [], revisionesNombre: [name] };
+  await saveJSONNow(STORAGE_KEYS.cajasDinero, privateBoxes);
   saveJSON(STORAGE_KEYS.transactions, [{ id: 60, amount: 60 }]);
   await archiveLocalAccount("A", "a@example.com");
   assert.equal(await allowBackgroundAccount("A", "a@example.com"), false, "sin sesión no se ejecuta el registro de fondo");
@@ -51,12 +54,14 @@ await scenario(`
   assert.equal(await prepareLocalAccount("B", "b@example.com"), false);
   assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [], "B nunca recibe gastos de A");
   assert.equal(await loadJSON(STORAGE_KEYS.personalReturnPending, null), null, "B nunca recibe la orden de devolución de A");
+  assert.equal(await loadJSON(STORAGE_KEYS.cajasDinero, null), null, "B nunca recibe los nombres de Cajas conservados de A");
   await seed("B", "b@example.com", 90);
   await archiveLocalAccount("B", "b@example.com");
   await clearAccountData();
   assert.equal(await prepareLocalAccount("A", "a@example.com"), true);
   assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [{ id: 60, amount: 60 }], "A recupera también el último guardado pendiente");
   assert.deepEqual(await loadJSON(STORAGE_KEYS.personalReturnPending, null), pendingReturn, "A recupera su devolución interrumpida al volver a entrar");
+  assert.deepEqual(await loadJSON(STORAGE_KEYS.cajasDinero, null), privateBoxes, "A recupera los dos nombres y la elección pendiente al iniciar sesión de nuevo");
   assert.deepEqual(await loadJSON(STORAGE_KEYS.categoryCustom, {}), { photo: "foto-privada-A" });
   assert.deepEqual(JSON.parse(await AsyncStorage.getItem("@fino/credit-v1")), { cards: [{ id: "legacy-A" }] }, "el formato de migración antiguo también se conserva");
   const vaultKeys = (await AsyncStorage.getAllKeys()).filter(k => k.includes("localAccountVault"));

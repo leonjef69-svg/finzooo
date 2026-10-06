@@ -3,7 +3,7 @@
 // un abogado si más adelante la app crece o cambia su forma de ganar dinero.
 import { anunciosActivos } from "@/constants/anuncios";
 export const LEGAL_CONTACT_EMAIL = "dinero123xc@gmail.com";
-export const LEGAL_LAST_UPDATED = "5 de octubre de 2026";
+export const LEGAL_LAST_UPDATED = "6 de octubre de 2026";
 
 /**
  * LO QUE SE DICE DE LOS ANUNCIOS, Y SOLO CUANDO LOS HAY.
@@ -57,6 +57,7 @@ Esta es la parte más delicada y por eso va aparte.
 - Cuando devuelves un aporte de Familia o Caja a Personal, el servidor conserva una confirmación con tu identificador, el espacio, el importe, la fecha, la descripción y los aportes relacionados. Sirve para evitar duplicados y recuperar una devolución interrumpida, también sin Pro o después de salir del espacio. No es un respaldo completo de Personal. La confirmación privada se elimina al completar el borrado de tu cuenta; el movimiento compartido sigue el tratamiento del espacio. La orden pendiente se guarda cifrada en tu teléfono, separada por cuenta.
 - Si deshaces esa devolución, la confirmación conserva una marca y la fecha de anulación para no registrarla otra vez como vigente. Esta información también se elimina al completar el borrado de tu cuenta.
 - Las copias de tus Cajas privadas incluyen la fecha de última edición y un marcador técnico de formato para evitar reemplazar cambios recientes por copias antiguas. La copia en la nube sigue requiriendo Pro y solo es visible para tu cuenta.
+- Si eliges entre dos nombres distintos de una Caja, guardamos ambos nombres, tu elección, los identificadores, la fecha y si falta confirmarla. Esta copia queda cifrada solo en ese teléfono y separada por cuenta; no se envía a Firebase. Se conserva al cerrar sesión y se retira al eliminar los datos locales de tu cuenta. Se guardan hasta 50 revisiones; al llegar al límite no se borra una anterior para guardar otra.
 - Al convertir una Caja privada en compartida, conservamos una confirmación privada con los identificadores de origen/destino, nombre, moneda, fecha y huella técnica de la copia y los enlaces a Personal. Evita repetir la conversión si se pierde la respuesta. No guarda otra copia de los montos y se elimina al completar el borrado de tu cuenta. Recuperar esa confirmación propia no exige renovar Pro ni da acceso al historial privado en la nube.
 - Para cancelar una conversión pendiente conservamos el identificador del intento, su huella, moneda y fechas, una señal que impide reactivarlo y un contador diario contra intentos excesivos. La barrera y los intentos se conservan hasta completar el borrado de la cuenta; los clones incompletos se limpian sin borrar el origen privado. Cancelar o recuperar un resultado propio no exige renovar Pro.
 - Al eliminar la cuenta se comprueban también las conversiones incompletas. La comprobación previa no borra datos; las copias verificadas se cierran y se limpian sus clones e índices durante el borrado. Se mantiene una señal técnica hasta eliminar la identidad de Firebase para impedir reactivaciones atrasadas. Una copia inconsistente o ya publicada no se elimina como si fuera un clon. Este proceso no genera una devolución de dinero ni exige Pro.

@@ -148,6 +148,7 @@ function screenHarness(premium = true) {
     leerCajasEnMemoria: () => null, guardarCajasEnMemoria: value => { state.memory = value; }, saveJSON: async (_key, value) => { state.saved = value; },
     setRenderedDatos: value => { state.rendered = value; }, setReady: value => { state.ready = value; },
     setCloudReady: value => { state.cloudReady = value; }, setSyncIssue: value => { state.issue = value; },
+    setNameCopies: value => { state.nameCopies = value; },
     reportSyncError: error => { state.error = error.message; } };
   state.rendered = scope.datosActuales.current;
   vm.runInNewContext(js(`globalThis.setDatos = (${setter}); globalThis.focus = (${focus});`), scope);
@@ -173,6 +174,16 @@ function screenHarness(premium = true) {
 {
   const h = screenHarness(false); h.localRead.resolve(data()); await flush();
   assert.equal(h.count(), 0, "Gratis conserva solo la copia del celular"); assert.equal(h.state.cloudReady, true);
+}
+{
+  const h = screenHarness(); h.localRead.resolve(old); await flush();
+  const different = { ...old, cajas: [{ ...old.cajas[0], nombre: "Otra elección" }] };
+  h.cloudRead.resolve(different); await flush();
+  assert.equal(h.state.rendered.cajas[0].nombre, "A", "el empate de nombre conserva el celular original");
+  assert.equal(h.state.cloudReady, false); assert.equal(h.scope.nubeConfirmadaPara.current, null);
+  assert.equal(h.state.nameCopies.local.cajas[0].nombre, "A");
+  assert.equal(h.state.nameCopies.remoto.cajas[0].nombre, "Otra elección");
+  assert.equal(h.state.error, "cajas-sync-conflict");
 }
 
 // Reparación original: no pierde información ni reabre dinero consumido.

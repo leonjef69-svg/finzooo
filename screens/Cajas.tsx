@@ -8,7 +8,7 @@ import SpaceMovementSheet from "@/components/SpaceMovementSheet";
 import { validSpaceDate } from "@/components/SpaceMovementFields";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
-import { bajarCajas, subirCajas } from "@/utils/cloudCajas";
+import { bajarCajas, CloudCajasConflictError, resolverNombreCaja, subirCajas } from "@/utils/cloudCajas";
 import { compartirCajaExistente, crearInvitacionCaja, unirseACaja } from "@/utils/cloudCajasCompartidas";
 import {
   CAJAS_VACIAS,
@@ -17,7 +17,12 @@ import {
   saldoCaja,
   siguienteVersionCaja,
   validarCajas,
+  diferenciasNombreCajas,
+  prepararRevisionNombre,
+  conservarRevisionNombre,
+  confirmarRevisionNombreLocal,
   type DatosCajas,
+  type RevisionNombreCaja,
 } from "@/utils/cajas";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { horaDe } from "@/utils/format";
@@ -93,6 +98,10 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const nubeConfirmadaPara = useRef<string | null>(null);
   const [syncIssue, setSyncIssue] = useState<"boxes.syncFailed" | "boxes.syncConflict" | null>(null);
   const [repairCloudChanged, setRepairCloudChanged] = useState(false);
+  const [nameCopies, setNameCopies] = useState<{ local: DatosCajas; remoto: DatosCajas } | null>(null);
+  const nameCopiesActual = useRef(nameCopies);
+  nameCopiesActual.current = nameCopies;
+  const [nameHistory, setNameHistory] = useState(false);
   const conversionEnCurso = useRef(false);
   const reparacionIntentada = useRef<{ data: DatosCajas; rows: Transaction[]; refresh: number } | null>(null);
   const [linkReview, setLinkReview] = useState<string | null>(null);
@@ -116,6 +125,10 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const reportSyncError = useCallback((error: unknown) => {
     if (!cuentaActual()) return;
     setSyncIssue(error instanceof Error && error.message === "cajas-sync-conflict" ? "boxes.syncConflict" : "boxes.syncFailed");
+    if (error instanceof CloudCajasConflictError) {
+      setNameCopies({ local: datosActuales.current, remoto: error.cajaRemota });
+      setCloudReady(false); nubeConfirmadaPara.current = null;
+    }
   }, [cuentaActual]);
   const setDatos = useCallback((update: SetStateAction<DatosCajas>) => {
     if (!cuentaActual()) return;
@@ -130,6 +143,8 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const repairBlocked = !personalReady || !hasOnboarded || !cloudReady || repairPlan.conflicts.length > 0 || repairPlan.upserts.length > 0 || repairPlan.data !== datos;
   const linkCandidates = useMemo(() => linkReview ? privateBoxLinkCandidates(datos, transactions, deletedTransactionIds, linkReview) : [], [datos, transactions, deletedTransactionIds, linkReview]);
   const linkMovement = datos.movimientos.find(row => row.id === linkReview);
+  const nameOptions = useMemo(() => nameCopies ? diferenciasNombreCajas(nameCopies.local, nameCopies.remoto) : [], [nameCopies]);
+  const pendingNames = (datos.revisionesNombre || []).filter(entry => entry.uid === accountUid && entry.estado === "pendiente");
 
   function tomarAccionLocal(): boolean {
     if (repairBlocked) { showToast(t("boxes.repairReview")); return false; }
@@ -174,6 +189,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     const current = () => alive && cuentaActual() && !guardandoRef.current && requestedRefresh.current === requested;
     setCloudReady(false);
     setReady(false);
+    setNameCopies(null);
     nubeConfirmadaPara.current = null;
     void (async () => {
       const uid = accountUid;
@@ -204,7 +220,12 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       if (!current()) return;
       // La referencia incorpora inmediatamente cada cambio local, incluso si
       // React todavía no lo pintó. La nube no sustituye una edición encolada.
-      const unidos = remoto ? fusionarCajas(datosActuales.current, remoto) : datosActuales.current;
+      let unidos: DatosCajas;
+      try { unidos = remoto ? fusionarCajas(datosActuales.current, remoto) : datosActuales.current; }
+      catch (error) {
+        if (remoto && (error as { message?: string })?.message === "cajas-sync-conflict" && current()) setNameCopies({ local: datosActuales.current, remoto });
+        throw error;
+      }
       setDatos(unidos);
       guardarCajasEnMemoria(unidos);
       void saveJSON(STORAGE_KEYS.cajasDinero, unidos);
@@ -317,6 +338,52 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
           const plan = resolvePrivateBoxConflict(before, beforeRows, deletedTransactionIds, accountUid, choice);
           if (await guardarCambioCaja(plan.data, plan.upserts, [], choice)) { setLinkReview(null); showToast(t("boxes.repairSaved")); }
         } catch { if (cuentaActual()) showToast(t("boxes.repairUnsafe")); }
+      } },
+    ]);
+  }
+
+  async function reintentarNombreCaja(entry: RevisionNombreCaja) {
+    if (!cuentaActual() || !ready || compartiendo || guardandoRef.current || entry.uid !== accountUid) return;
+    if (!isPremium) { showToast(t("boxes.nameNeedsPro")); return; }
+    const task = captureAccountTask(accountUid, cuentaActual);
+    if (!task.current() || hasUnreadableLocalData()) return;
+    const before = datosActuales.current;
+    const retained = before.revisionesNombre?.find(value => value.id === entry.id);
+    if (!retained || JSON.stringify(retained) !== JSON.stringify(entry)) return;
+    guardandoRef.current = true; setGuardando(true);
+    try {
+      const result = await task.wait(() => resolverNombreCaja(accountUid, entry));
+      if (before !== datosActuales.current || !premiumForSync.current || hasUnreadableLocalData()
+        || result.uid !== accountUid || result.id !== entry.id || result.boxId !== entry.boxId || result.nombre !== entry.elegido.nombre || result.version !== entry.elegido.updatedAt) throw new Error("cajas-name-changed");
+      const next = confirmarRevisionNombreLocal(before, entry, accountUid);
+      if (!await commitPrivateBoxData(before, next, [], [], () => task.current() && datosActuales.current === before, setDatos)) {
+        if (task.current()) showToast(t("toast.localSaveFailed")); return;
+      }
+      if (task.current()) { setNameCopies(null); showToast(t("boxes.nameResolved")); setRefreshVersion(value => value + 1); }
+    } catch (error) {
+      if (task.current()) showToast(t(error instanceof Error && error.message === "cajas-name-changed" ? "boxes.nameChanged" : "boxes.namePending"));
+    } finally { guardandoRef.current = false; if (task.current()) setGuardando(false); }
+  }
+
+  function elegirNombreCaja(boxId: string, usar: "local" | "nube") {
+    const copies = nameCopies, before = datosActuales.current;
+    if (!copies || !cuentaActual() || !ready || guardandoRef.current || compartiendo || copies.local !== before) return;
+    const pair = nameOptions.find(item => item.local.id === boxId);
+    if (!pair) return;
+    Alert.alert(t("boxes.nameReview"), t("boxes.nameConfirm", { local: pair.local.nombre, cloud: pair.remoto.nombre,
+      chosen: usar === "local" ? pair.local.nombre : pair.remoto.nombre }), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("common.save"), onPress: async () => {
+        if (!cuentaActual() || before !== datosActuales.current || copies !== nameCopiesActual.current || !premiumForSync.current || guardandoRef.current || compartiendo) return;
+        if (before.revisionesNombre?.some(entry => entry.boxId === boxId && entry.estado === "pendiente")) { showToast(t("boxes.namePending")); return; }
+        try {
+          const entry = prepararRevisionNombre(before, copies.remoto, accountUid, nuevoIdCaja("nombre"), boxId, usar);
+          // Primero confirma las dos copias en disco. Si falla, no envía nada.
+          if (!await guardarCambioCaja(conservarRevisionNombre(before, entry))) return;
+          await reintentarNombreCaja(entry);
+        } catch (error) {
+          if (cuentaActual()) showToast(t(error instanceof Error && error.message === "cajas-name-history-full" ? "boxes.nameHistoryFull" : "boxes.nameChanged"));
+        }
       } },
     ]);
   }
@@ -663,6 +730,25 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
           if (cercaDelFinal && movementLimit < filasVisibles.length) setMovementLimit(limit => Math.min(limit + 60, filasVisibles.length));
         }}
       >
+        {ready && nameOptions.length > 0 ? <View className="mb-3 rounded-xl border border-amber-200 p-3 dark:border-amber-800">
+          <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">{t("boxes.nameReview")}</Text>
+          <Text className="my-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.nameHelp")}</Text>
+          {nameOptions.slice(0, 20).map(pair => <View key={pair.local.id} className="mb-3">
+            <Text className="text-xs leading-5 text-slate-900 dark:text-slate-100">{t("boxes.nameVersions", { local: pair.local.nombre, cloud: pair.remoto.nombre })}</Text>
+            <View className="mt-2 gap-2">
+              <TouchableOpacity accessibilityRole="button" disabled={guardando || !isPremium} onPress={() => elegirNombreCaja(pair.local.id, "local")} className="min-h-11 justify-center rounded-lg bg-amber-50 px-3 dark:bg-amber-950"><Text className="font-bold text-amber-800 dark:text-amber-200">{t("boxes.nameUseLocal")}</Text></TouchableOpacity>
+              <TouchableOpacity accessibilityRole="button" disabled={guardando || !isPremium} onPress={() => elegirNombreCaja(pair.local.id, "nube")} className="min-h-11 justify-center rounded-lg bg-amber-50 px-3 dark:bg-amber-950"><Text className="font-bold text-amber-800 dark:text-amber-200">{t("boxes.nameUseCloud")}</Text></TouchableOpacity>
+            </View>
+          </View>)}
+        </View> : null}
+        {ready && pendingNames.length > 0 ? <View className="mb-3 rounded-xl bg-amber-50 p-3 dark:bg-amber-950">
+          <Text className="text-xs leading-5 text-amber-800 dark:text-amber-200">{t("boxes.namePending")}</Text>
+          {pendingNames.map(entry => <TouchableOpacity key={entry.id} accessibilityRole="button" disabled={guardando} onPress={() => void reintentarNombreCaja(entry)} className="min-h-11 justify-center"><Text className="font-bold text-amber-800 dark:text-amber-200">{t("boxes.nameRetry", { name: entry.elegido.nombre })}</Text></TouchableOpacity>)}
+        </View> : null}
+        {ready && (datos.revisionesNombre?.length ?? 0) > 0 ? <View className="mb-3">
+          <TouchableOpacity accessibilityRole="button" onPress={() => setNameHistory(value => !value)} className="min-h-11 justify-center"><Text className="font-bold text-slate-600 dark:text-slate-300">{t("boxes.nameHistory")}</Text></TouchableOpacity>
+          {nameHistory ? datos.revisionesNombre?.filter(entry => entry.uid === accountUid).map(entry => <Text key={entry.id} className="mb-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.nameVersions", { local: entry.local.nombre, cloud: entry.remoto.nombre })}</Text>) : null}
+        </View> : null}
         {linkReview && ready && personalReady && cloudReady ? <View className="mb-4 rounded-xl border border-amber-200 p-3 dark:border-amber-800">
           <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">{t("boxes.repairLinkTitle")}</Text>
           {linkMovement ? <Text className="mt-2 text-xs leading-5 text-slate-900 dark:text-slate-100">{t("boxes.repairLinkFor", { name: datos.cajas.find(box => box.id === linkMovement.cajaId)?.nombre || "", description: linkMovement.descripcion, amount: fmt(linkMovement.monto), date: linkMovement.fecha })}</Text> : null}

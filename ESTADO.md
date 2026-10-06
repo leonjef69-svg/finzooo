@@ -1,5 +1,28 @@
 # Estado actual de Fino
 
+## Nombres distintos de Caja — avance limitado del punto 1 (06/10/2026)
+
+- Igual versión y otros campos iguales permiten elegir celular/nube tras
+  confirmación. Conserva primero ambos nombres y elección cifrados localmente;
+  no envía nada si ese guardado falla. No cambia dinero ni movimientos.
+- Transacción lee otra vez ESA Caja y modifica solo nombre/versión. Rechaza
+  una edición/borrado/conversión posterior; conserva otras Cajas, movimientos,
+  marcas, recibos y campos raíz desconocidos. Repetir un resultado vigente
+  confirma sin otra escritura; disco/red/sesión/plan/ack inválido no dan éxito.
+- Revisión local en contenedor/copia por cuenta existentes; no viaja a Firebase.
+  Hasta 50 revisiones, sin borrar una antigua al llegar al límite; todas propias
+  visibles. Acceso nube sigue Pro. Políticas interna/web/PLAYSTORE preparados.
+- Guía: `docs/PRUEBAS_NOMBRES_CAJA_NUBE.md`. No volver a app antigua que elimina
+  esa metadata al normalizar sin verificar conservación/compatibilidad.
+- TypeScript/ESLint, 139 locales/8 auditores (una prueba ajena sin registrar:
+  138 en copia limpia), 63 unitarias y 97 SDK/reglas/HTTP/eventos aprobados
+  con Node 22 real. Regresión contra 482f2fd falla como se espera.
+- **Qué sigue:** punto 1 abierto para dinero distinto, mitad ausente/reparto
+  no demostrable y elecciones pendientes obsoletas. **Qué falta:** Android/
+  cierres/espacio/tamaño/dos dispositivos, consolas y publicación autorizada.
+  ADB sin dispositivos; no se modificó código nativo, tarjetas o CODE_MARKER,
+  no se instaló/publicó nada. No es atomicidad global servidor/celular.
+
 ## Enlace heredado elegido — avance del punto 1 (06/10/2026)
 
 - Revisión muestra Caja y alternativas de Personal. El usuario identifica y

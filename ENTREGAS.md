@@ -10,6 +10,16 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Nombres de Caja prepara elección explícita entre celular/nube ante igual
+versión; guarda ambos originales cifrados antes de enviar y comprueba otra vez
+la Caja en servidor sin tocar dinero, movimientos ni otra Caja. Reintento
+vigente sin nueva escritura. Revisiones solo locales, hasta 50 conservadas,
+incluidas en copia por cuenta; políticas interna/web/PLAYSTORE preparadas.
+Guía: `docs/PRUEBAS_NOMBRES_CAJA_NUBE.md`. Sin claves/nativos/marca ni entrega.
+No volver a una app que normaliza eliminando revisiones sin comprobar
+compatibilidad. Punto 1 sigue abierto para dinero/legado/elecciones obsoletas;
+faltan Android y publicación coordinada/autorizada de todo lo preparado.
+
 Enlace heredado prepara identificación y confirmación explícitas de una pareja
 existente; solo une IDs con guardado conjunto, sin cambiar montos ni duplicar
 movimientos. Pro conserva su comprobación remota y Gratis trabaja localmente.

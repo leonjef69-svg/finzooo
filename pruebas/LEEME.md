@@ -24,6 +24,15 @@ Requisitos, regresión y límites: `docs/PRUEBAS_NODE22_BORRADO_CUENTA.md`.
 
 ## Qué comprueba cada cosa
 
+`verificar-nombres-caja-nube.mjs` ejecuta auxiliares, transacción, elección,
+reintento y guardados originales; confirma ambos nombres antes de la red,
+rechaza fuentes/sesiones/planes obsoletos y no toca dinero. Incluye rollback
+y respuesta perdida con el contexto/almacén originales sobre SQLite real,
+no Android. La prueba de copia por cuenta cubre conservar revisiones A→B→A.
+`private-boxes.test.js` prueba también dos SDK concurrentes y reglas reales
+emuladas. Regresión contra 482f2fd y límites:
+`docs/PRUEBAS_NOMBRES_CAJA_NUBE.md`.
+
 `verificar-enlace-heredado-explicito.mjs` ejecuta la elección/confirmación
 originales y sus condiciones: iguales importes/fechas, IDs únicos, no borrados,
 cancelación, cambios de fuente/cuenta/plan. La matriz SQLite original también

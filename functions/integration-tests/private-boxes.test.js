@@ -15,7 +15,8 @@ const { getFirestore, connectFirestoreEmulator, disableNetwork, enableNetwork, g
 const esbuild = requireRoot("esbuild");
 
 async function code(client) {
-  const built = await esbuild.build({ stdin: { contents: 'export { bajarCajas, subirCajas } from "@/utils/cloudCajas"; export { loadPrivateBoxRepairCloud, assertPrivateBoxRepairCloud } from "@/utils/privateBoxRepairCloud"; export { resolvePrivateBoxConflict, privateBoxLinkCandidates } from "@/utils/privateBoxRepair";',
+  const names = process.env.FINO_TEST_CAJAS_BASELINE ? "" : 'export { resolverNombreCaja } from "@/utils/cloudCajas"; export { prepararRevisionNombre } from "@/utils/cajas";';
+  const built = await esbuild.build({ stdin: { contents: 'export { bajarCajas, subirCajas } from "@/utils/cloudCajas"; export { loadPrivateBoxRepairCloud, assertPrivateBoxRepairCloud } from "@/utils/privateBoxRepairCloud"; export { resolvePrivateBoxConflict, privateBoxLinkCandidates } from "@/utils/privateBoxRepair";' + names,
     resolveDir: root, loader: "ts" }, bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent",
     external: ["firebase/*"], alias: { "@": root },
     plugins: [{ name: "demo-config-and-native-session", setup(build) {
@@ -145,6 +146,59 @@ test("Cajas privadas con SDK/Firestore reales: versiones, transacción, borrados
       const proof = await a.api.loadPrivateBoxRepairCloud(uid, [10, 11, 999]);
       assert.deepEqual(proof.transactions, [personal]); assert.deepEqual(proof.deletedIds, [11]);
       assert.throws(() => a.api.assertPrivateBoxRepairCloud([personal], proof), /source-changed/);
+    });
+    const remoteName = { ...box, nombre: "Vacaciones" }, otherBox = { ...box, id: "caja-b", nombre: "Casa" };
+    const nameLocal = { ...initial, syncFormat: 2, cajas: [box, otherBox], movimientosBorrados: ["mov-old"] };
+    const nameRemote = { ...nameLocal, cajas: [remoteName, otherBox], future: { preserved: true } };
+    await t.test("elección explícita de nombre conserva dinero, marcas y campos remotos; repetir no escribe otra vez", async () => {
+      await ref.set(nameRemote);
+      const entry = a.api.prepararRevisionNombre(nameLocal, nameRemote, uid, "name-sdk-a", box.id, "local", 100);
+      let conflict;
+      assert.equal(await a.api.subirCajas(uid, nameLocal, error => { conflict = error; }), false);
+      assert.equal(conflict.cajaRemota.cajas[0].nombre, remoteName.nombre);
+      const ack = await a.api.resolverNombreCaja(uid, entry);
+      assert.deepEqual(ack, { uid, id: entry.id, boxId: box.id, nombre: box.nombre, version: 100 });
+      const saved = await ref.get(); assert.deepEqual(saved.data().movimientos, initial.movimientos);
+      assert.deepEqual(saved.data().movimientosBorrados, ["mov-old"]); assert.deepEqual(saved.data().future, { preserved: true });
+      assert.equal(saved.data().revisionesNombre, undefined);
+      assert.deepEqual(await b.api.resolverNombreCaja(uid, entry), ack);
+      assert.equal((await ref.get()).updateTime.toMillis(), saved.updateTime.toMillis(), "el reintento es una confirmación sin escritura");
+    });
+    await t.test("dos elecciones de nombres simultáneas no se pisan; una queda para revisar", async () => {
+      await ref.set(nameRemote);
+      const localChoice = a.api.prepararRevisionNombre(nameLocal, nameRemote, uid, "name-sdk-b", box.id, "local", 101);
+      const cloudChoice = b.api.prepararRevisionNombre(nameLocal, nameRemote, uid, "name-sdk-c", box.id, "nube", 102);
+      const result = await Promise.allSettled([a.api.resolverNombreCaja(uid, localChoice), b.api.resolverNombreCaja(uid, cloudChoice)]);
+      assert.equal(result.filter(item => item.status === "fulfilled").length, 1);
+      assert.match(result.find(item => item.status === "rejected").reason.message, /cajas-name-changed/);
+      const successful = result.find(item => item.status === "fulfilled").value;
+      assert.equal((await ref.get()).data().cajas[0].nombre, successful.nombre);
+      assert.deepEqual((await ref.get()).data().movimientos, initial.movimientos);
+    });
+    await t.test("una Caja cambiada o borrada después de mostrar el nombre impide la elección anterior", async () => {
+      const entry = a.api.prepararRevisionNombre(nameLocal, nameRemote, uid, "name-sdk-d", box.id, "local", 103);
+      await ref.set({ ...nameRemote, cajas: [{ ...remoteName, nombre: "Cambió", updatedAt: 200 }, otherBox] });
+      await assert.rejects(a.api.resolverNombreCaja(uid, entry), /cajas-name-changed/);
+      assert.equal((await ref.get()).data().cajas[0].nombre, "Cambió");
+      await ref.set({ ...nameRemote, cajas: [otherBox], movimientos: [], cajasBorradas: [box.id] });
+      await assert.rejects(a.api.resolverNombreCaja(uid, entry), /cajas-name-changed/);
+      assert.deepEqual((await ref.get()).data().cajasBorradas, [box.id]);
+    });
+    await t.test("elegir nube conserva la edición simultánea de otra Caja y no rebaja el formato 3", async () => {
+      await ref.set({ ...nameRemote, syncFormat: 3, conversiones: {}, cajas: [remoteName, { ...otherBox, nombre: "Casa nueva", updatedAt: 300 }] });
+      const entry = a.api.prepararRevisionNombre(nameLocal, nameRemote, uid, "name-sdk-e", box.id, "nube", 104);
+      await a.api.resolverNombreCaja(uid, entry);
+      const saved = (await ref.get()).data(); assert.equal(saved.syncFormat, 3); assert.deepEqual(saved.conversiones, {});
+      assert.equal(saved.cajas[0].nombre, remoteName.nombre); assert.equal(saved.cajas[1].nombre, "Casa nueva");
+      assert.deepEqual(saved.future, { preserved: true }); assert.deepEqual(saved.movimientos, initial.movimientos);
+      await assert.rejects(a.api.resolverNombreCaja("otra-cuenta", { ...entry, uid: "otra-cuenta" }), /account-task-obsolete/);
+    });
+    await t.test("las reglas niegan resolver nombres sin Pro, sin cambiar la copia remota", async () => {
+      await ref.set(nameRemote); await admin.doc(`users/${uid}`).update({ isPremium: false });
+      const entry = a.api.prepararRevisionNombre(nameLocal, nameRemote, uid, "name-sdk-f", box.id, "local", 105);
+      await assert.rejects(a.api.resolverNombreCaja(uid, entry), error => error.code === "permission-denied");
+      assert.equal((await ref.get()).data().cajas[0].nombre, remoteName.nombre);
+      await admin.doc(`users/${uid}`).update({ isPremium: true });
     });
     await t.test("archivo local ilegible no se sube; Gratis no lee la nube, pero puede borrar su copia", async () => {
       a.native.unreadable = true; assert.equal(await a.api.subirCajas(uid, combined), false); a.native.unreadable = false;
