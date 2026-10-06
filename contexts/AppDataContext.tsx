@@ -142,6 +142,8 @@ import { setPendingImport } from "@/utils/pendingImport";
 import { paymentNotificationFormatter } from "@/utils/notificationCurrency";
 import { guardarCajasEnMemoria, limpiarCajasEnMemoria } from "@/utils/cajasMemoria";
 import { patchPrivateBoxPersonal, validatePrivateBoxPatch } from "@/utils/privateBoxPersonal";
+import { validatePrivateBoxRepair, type PrivateBoxRepairChoice } from "@/utils/privateBoxRepair";
+import { assertPrivateBoxRepairCloud, loadPrivateBoxRepairCloud } from "@/utils/privateBoxRepairCloud";
 import { captureAccountTask } from "@/utils/accountTask";
 import { CAJAS_VACIAS, fusionarCajas, validarCajas, type DatosCajas } from "@/utils/cajas";
 import type { Goal, Month, Profile, Transaction } from "@/types";
@@ -259,6 +261,7 @@ type AppDataContextValue = {
   movimientosDeCategoria: (id: string) => number;
 
   transactions: Transaction[];
+  deletedTransactionIds: number[];
   addOrUpdateTransaction: (t: Transaction, allowLinkedTransferUpdate?: boolean) => void;
   recordPersonalReturn: (receipt: PersonalReturnReceipt) => boolean;
   deleteTransaction: (id: number) => void;
@@ -266,7 +269,7 @@ type AppDataContextValue = {
   deleteLinkedTransferTransaction: (id: number) => void;
   /** Repara pares enlazados sin mostrar una cadena de avisos. */
   repairLinkedTransferTransactions: (upserts: Transaction[], deleteIds?: number[]) => void;
-  commitPrivateBoxData: (before: DatosCajas, data: DatosCajas, upserts: Transaction[], deleteIds: number[], current: () => boolean, apply: (data: DatosCajas) => void) => Promise<boolean>;
+  commitPrivateBoxData: (before: DatosCajas, data: DatosCajas, upserts: Transaction[], deleteIds: number[], current: () => boolean, apply: (data: DatosCajas) => void, repair?: true | PrivateBoxRepairChoice) => Promise<boolean>;
   deleteTransactions: (ids: number[]) => void;
   commitImport: (toAdd: Transaction[], toReplace: Transaction[]) => void;
 
@@ -2519,11 +2522,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return true;
   }
 
-  async function commitPrivateBoxData(before: DatosCajas, data: DatosCajas, upserts: Transaction[], deleteIds: number[], current: () => boolean, apply: (data: DatosCajas) => void): Promise<boolean> {
+  async function commitPrivateBoxData(before: DatosCajas, data: DatosCajas, upserts: Transaction[], deleteIds: number[], current: () => boolean, apply: (data: DatosCajas) => void, repair?: true | PrivateBoxRepairChoice): Promise<boolean> {
     const owner = auth.currentUser?.uid ?? "", version = localSessionVersion.current;
     const task = captureAccountTask(owner, () => version === localSessionVersion.current);
     if (!ready || !hasOnboarded || !task.current() || !current() || hasUnreadableLocalData()) return false;
-    const paired = upserts.length > 0 || deleteIds.length > 0;
+    const paired = !!repair || upserts.length > 0 || deleteIds.length > 0;
     // El contrato de varias claves está comprobado en el SQLite de Android,
     // no se supone equivalente en iOS/web. Operaciones de una Caja sin enlace
     // Personal continúan funcionando allí con una sola clave.
@@ -2533,12 +2536,20 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     fusionarCajas(checked, CAJAS_VACIAS);
     const source = validarCajas(JSON.parse(JSON.stringify(before)));
     const initialPersonal = transactionsLive.current;
+    if (repair && isPremium) {
+      const oldLinks = new Map(source.movimientos.map(row => [row.id, row.personalTransactionId]));
+      const ids = [...new Set([...checked.movimientos.flatMap(row => row.personalTransactionId != null && oldLinks.get(row.id) !== row.personalTransactionId ? [row.personalTransactionId] : []),
+        ...upserts.flatMap(row => [row.id, ...(row.internalTransferAllocations || []).map(link => link.transactionId)])])];
+      const remote = await task.wait(() => loadPrivateBoxRepairCloud(owner, ids));
+      assertPrivateBoxRepairCloud(initialPersonal, remote);
+    }
     return withLocalAccountOperation(async () => {
       if (!task.current() || !current()) return false;
       return saveJSONBatchNow(keys, () => {
         if (!task.current() || !current() || (paired && transactionsLive.current !== initialPersonal)) throw new Error("private-box-source-changed");
         const base = transactionsLive.current, deleted = deletedTransactionIdsRef.current;
-        validatePrivateBoxPatch(source, checked, base, upserts, deleteIds, owner);
+        if (repair) validatePrivateBoxRepair(source, checked, base, deleted, upserts, deleteIds, owner, repair);
+        else validatePrivateBoxPatch(source, checked, base, upserts, deleteIds, owner);
         const patch = patchPrivateBoxPersonal(base, deleted, upserts, deleteIds);
         return {
           entries: paired ? [[STORAGE_KEYS.transactions, patch.transactions], [STORAGE_KEYS.deletedTransactionIds, patch.deletedIds], [STORAGE_KEYS.cajasDinero, checked]] : [[STORAGE_KEYS.cajasDinero, checked]],
@@ -2817,6 +2828,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     movimientosDeCategoria,
     transactions,
     addOrUpdateTransaction,
+    deletedTransactionIds,
     recordPersonalReturn,
     pagosProgramados,
     guardarPagoProgramado,

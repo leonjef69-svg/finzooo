@@ -87,7 +87,7 @@ assert.match(screen, /spaces\.deleteLinkedMovementsMessage/, "la confirmación e
 assert.match(screen, /Movimientos de caja|boxes\.history/, "el control usa la etiqueta breve de movimientos de caja");
 assert.doesNotMatch(screen, /SpaceActionBar|MoreVertical|boxes\.options/, "Caja no muestra el + flotante ni el menú que ya fueron retirados");
 assert.match(screen, /minimumContributionAmount/, "editar un aporte respeta la parte ya utilizada");
-assert.match(screen, /repairLinkedTransferTransactions/, "las cajas reparan transferencias huérfanas");
+assert.match(screen, /guardarCambioCaja\(repairPlan\.data, repairPlan\.upserts, \[\], true\)/, "las cajas reparan ambas mitades con guardado conjunto comprobado");
 assert.match(sharedScreen, /canCloseLinkedSpace\(movimientos\)/, "una caja no se cierra si deja saldo o aportes de Personal pendientes");
 assert.match(finances, /availableBalance\(f\) - f\.transfersOut \+ f\.transfersIn/, "devolver dinero aumenta Personal sin contarlo como un ingreso nuevo");
 assert.match(home, /availablePersonalBalance/, "Inicio descuenta lo enviado a Familia y Cajas");

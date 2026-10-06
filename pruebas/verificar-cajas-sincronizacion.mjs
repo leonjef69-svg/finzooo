@@ -127,10 +127,10 @@ const focus = focusNode.node.arguments[0].arguments[0].getText(focusNode.tree);
 const setterNode = select("screens/Cajas.tsx", (n, tree) => ts.isVariableDeclaration(n) && n.name.getText(tree) === "setDatos");
 const setter = setterNode.node.initializer.arguments[0].getText(setterNode.tree);
 const repairNode = select("screens/Cajas.tsx", (node, tree) => ts.isCallExpression(node) && node.expression.getText(tree) === "useEffect"
-  && node.arguments[0]?.getText(tree).includes("const movimientosPorId ="));
+  && node.arguments[0]?.getText(tree).includes("const prior = reparacionIntentada"));
 const repairEffect = repairNode.node.arguments[0].getText(repairNode.tree);
 for (const [ready, cloudReady, premium, confirmed, sameAccount] of [[false, true, false, null, true], [true, false, true, "A", true], [true, true, true, null, true], [true, true, false, null, false]]) {
-  const scope = { ready, cloudReady, guardando: false, isPremium: premium, accountUid: "A", nubeConfirmadaPara: { current: confirmed }, cuentaActual: () => sameAccount };
+  const scope = { personalReady: true, hasOnboarded: true, ready, cloudReady, guardando: false, isPremium: premium, accountUid: "A", nubeConfirmadaPara: { current: confirmed }, cuentaActual: () => sameAccount };
   Object.defineProperty(scope, "datos", { get() { throw new Error("PASSED_GUARD"); } });
   vm.runInNewContext(js(`globalThis.repair = (${repairEffect});`), scope);
   assert.doesNotThrow(() => scope.repair(), "no concilia antes de cargar ni con cuenta/copia sin confirmar");

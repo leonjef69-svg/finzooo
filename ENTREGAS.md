@@ -10,6 +10,15 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Recuperación Personal/Caja prepara un guardado conjunto con IDs comprobados,
+sin sobrescribir un monto distinto ni devolver dinero por una marca heredada.
+Una pareja inequívoca permite elegir monto/fecha; otras discrepancias se
+conservan bloqueadas para revisar. Pro verifica IDs afectados en servidor antes
+de recuperar; Gratis no consulta nube. Guía:
+`docs/PRUEBAS_REPARACION_PARES_CAJAS.md`. Sin nuevos datos/retención/claves,
+APK/OTA/despliegue o marca. Faltan legado no demostrable, diferencias entre
+dispositivos, Android y entrega coordinada de todo el conjunto preparado.
+
 Borrado de cuenta prepara `prepareIncompleteBoxDeletion`: comprobación previa
 sin escribir, limpieza de clones propios sin devolución ficticia y retirada de
 índices huérfanos. Legado solo si coincide con su origen; dinero publicado sigue

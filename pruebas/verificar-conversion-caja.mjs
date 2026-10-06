@@ -50,7 +50,7 @@ function harness() {
   const events = [], dataRef = { current: local };
   const scope = { Error, auth: { currentUser: { uid: "a" } }, caja: box, movimientos: [row], compartiendo: false,
     Platform: { OS: "android" }, privateBoxLinksMatch: linksModule.exports.privateBoxLinksMatch,
-    guardandoRef: { current: false },
+    guardandoRef: { current: false }, repairBlocked: false,
     conversionEnCurso: { current: false },
     isPremium: true, accountUid: "a", ready: true, userName: "A", userCurrency: "PEN", active: true,
     cuentaActual: () => scope.active, hasUnreadableLocalData: () => false, datosActuales: dataRef,

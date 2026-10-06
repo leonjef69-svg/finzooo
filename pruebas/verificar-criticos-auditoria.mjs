@@ -25,7 +25,7 @@ exigir(unionCaja.indexOf("transaction.set(memberRef") < unionCaja.lastIndexOf("g
 
 exigir(cajas.includes("!canCloseLinkedSpace(datos.movimientos.filter"), "La lista de Cajas no protege aportes consumidos al borrar");
 exigir(!fs.existsSync(new URL("../app/box-settings.tsx", import.meta.url)), "La pantalla vieja de opciones de Caja reapareció sin acceso desde la interfaz");
-exigir(cajas.includes("if (!cuentaActual() || !ready || !cloudReady"), "Cajas repara transferencias antes de terminar la carga o desde otra cuenta");
+exigir(cajas.includes("if (!cuentaActual() || !personalReady || !hasOnboarded || !ready || !cloudReady"), "Cajas repara transferencias antes de terminar la carga de ambas mitades o desde otra cuenta");
 
 for (const marca of [
   "setCategoryOverridesState({})",

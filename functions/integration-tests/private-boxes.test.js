@@ -15,7 +15,7 @@ const { getFirestore, connectFirestoreEmulator, disableNetwork, enableNetwork, g
 const esbuild = requireRoot("esbuild");
 
 async function code(client) {
-  const built = await esbuild.build({ stdin: { contents: 'export { bajarCajas, subirCajas } from "@/utils/cloudCajas";',
+  const built = await esbuild.build({ stdin: { contents: 'export { bajarCajas, subirCajas } from "@/utils/cloudCajas"; export { loadPrivateBoxRepairCloud, assertPrivateBoxRepairCloud } from "@/utils/privateBoxRepairCloud";',
     resolveDir: root, loader: "ts" }, bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent",
     external: ["firebase/*"], alias: { "@": root },
     plugins: [{ name: "demo-config-and-native-session", setup(build) {
@@ -109,6 +109,28 @@ test("Cajas privadas con SDK/Firestore reales: versiones, transacción, borrados
       await assert.rejects(a.api.bajarCajas(uid), /cajas-invalid-data/);
       assert.equal(await a.api.subirCajas(uid, saved), false); assert.equal((await ref.get()).data().cajas, "corrupta");
       await ref.set(saved);
+    });
+    await t.test("reparación lee Personal confirmado y no impone una mitad local sobre una edición remota", async () => {
+      const personal = { id: 10, type: "expense", amount: 100, date: "2026-10-06", internalTransfer: "box", internalTransferLink: "mov-a", internalTransferSpaceId: "caja-a" };
+      await admin.doc(`users/${uid}`).update({ transactions: [personal], deletedTransactionIds: [] });
+      const proof = await a.api.loadPrivateBoxRepairCloud(uid, [10]);
+      assert.deepEqual(proof.transactions, [personal]);
+      assert.throws(() => a.api.assertPrivateBoxRepairCloud([{ ...personal, amount: 80 }], proof), /source-changed/);
+      assert.throws(() => a.api.assertPrivateBoxRepairCloud([], proof), /source-changed/);
+      assert.doesNotThrow(() => a.api.assertPrivateBoxRepairCloud([personal], proof));
+      await disableNetwork(a.db);
+      await assert.rejects(a.api.loadPrivateBoxRepairCloud(uid, [10]), error => error.code === "unavailable");
+      await enableNetwork(a.db);
+    });
+    await t.test("historial separado consulta solo los IDs pedidos y una marca remota no se resucita", async () => {
+      const personal = { id: 10, type: "expense", amount: 100, date: "2026-10-06", internalTransfer: "box" };
+      await admin.doc(`users/${uid}`).set({ isPremium: true, historyFormat: 2 });
+      await admin.doc(`users/${uid}/history/10`).set({ id: 10, deleted: false, transaction: personal });
+      await admin.doc(`users/${uid}/history/11`).set({ id: 11, deleted: true });
+      await admin.doc(`users/${uid}/history/12`).set({ id: 12, deleted: false, transaction: { ...personal, id: 12 } });
+      const proof = await a.api.loadPrivateBoxRepairCloud(uid, [10, 11, 999]);
+      assert.deepEqual(proof.transactions, [personal]); assert.deepEqual(proof.deletedIds, [11]);
+      assert.throws(() => a.api.assertPrivateBoxRepairCloud([personal], proof), /source-changed/);
     });
     await t.test("archivo local ilegible no se sube; Gratis no lee la nube, pero puede borrar su copia", async () => {
       a.native.unreadable = true; assert.equal(await a.api.subirCajas(uid, combined), false); a.native.unreadable = false;

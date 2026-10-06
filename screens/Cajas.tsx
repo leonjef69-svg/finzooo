@@ -21,7 +21,7 @@ import {
 } from "@/utils/cajas";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { horaDe } from "@/utils/format";
-import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, compactLinkedTransferRows, countSelectedCompactRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, movementIdsForCompactRow, planSpaceMovementDeletion, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
+import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, compactLinkedTransferRows, countSelectedCompactRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, minimumContributionAmount, movementIdsForCompactRow, planSpaceMovementDeletion, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { getAccountStorageSession, hasUnreadableLocalData, loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
@@ -31,6 +31,7 @@ import { cancelarConversionCaja, enlacesCajaConvertida, huellaCaja, nuevoIntento
 import { spaceErrorKey } from "@/utils/spaceErrors";
 import type { Transaction } from "@/types";
 import { privateBoxLinksMatch } from "@/utils/privateBoxPersonal";
+import { planPrivateBoxRepair, resolvePrivateBoxConflict, type PrivateBoxRepairChoice } from "@/utils/privateBoxRepair";
 import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Boxes, Check, ListChecks, Pencil, Plus, RefreshCw, Trash2, UserPlus, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
 import { Alert, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
@@ -54,7 +55,7 @@ export default function Cajas() {
 }
 
 function CajasForAccount({ accountUid }: { accountUid: string }) {
-  const { t, fmt, showToast, disponible, transactions, commitPrivateBoxData, repairLinkedTransferTransactions, isPremium, userName, userCurrency } = useAppData();
+  const { ready: personalReady, hasOnboarded, t, fmt, showToast, disponible, transactions, deletedTransactionIds, commitPrivateBoxData, isPremium, userName, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
   const [datos, setRenderedDatos] = useState<DatosCajas>(() => leerCajasEnMemoria() ?? CAJAS_VACIAS);
   const datosActuales = useRef(datos);
@@ -92,6 +93,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const nubeConfirmadaPara = useRef<string | null>(null);
   const [syncIssue, setSyncIssue] = useState<"boxes.syncFailed" | "boxes.syncConflict" | null>(null);
   const conversionEnCurso = useRef(false);
+  const reparacionIntentada = useRef<{ data: DatosCajas; rows: Transaction[]; refresh: number } | null>(null);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const requestedRefresh = useRef(refreshVersion);
   requestedRefresh.current = refreshVersion;
@@ -99,6 +101,8 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const mounted = useRef(true);
   const premiumForSync = useRef(isPremium);
   premiumForSync.current = isPremium;
+  const personalActuales = useRef(transactions);
+  personalActuales.current = transactions;
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; };
@@ -119,7 +123,11 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     setRenderedDatos(next);
   }, [cuentaActual]);
 
+  const repairPlan = useMemo(() => planPrivateBoxRepair(datos, transactions, deletedTransactionIds, accountUid), [datos, transactions, deletedTransactionIds, accountUid]);
+  const repairBlocked = !personalReady || !hasOnboarded || !cloudReady || repairPlan.conflicts.length > 0 || repairPlan.upserts.length > 0 || repairPlan.data !== datos;
+
   function tomarAccionLocal(): boolean {
+    if (repairBlocked) { showToast(t("boxes.repairReview")); return false; }
     if (syncIssue === "boxes.syncConflict") { showToast(t("boxes.syncConflict")); return false; }
     if (caja?.sharingPending) { showToast(t("boxes.sharingPending")); return false; }
     if (!cuentaActual() || !ready || compartiendo || cargandoUnion || guardandoRef.current || accionLocalEnCurso.current) return false;
@@ -128,12 +136,12 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     return true;
   }
 
-  async function guardarCambioCaja(next: DatosCajas, upserts: Transaction[] = [], deleteIds: number[] = []): Promise<boolean> {
+  async function guardarCambioCaja(next: DatosCajas, upserts: Transaction[] = [], deleteIds: number[] = [], repair?: true | PrivateBoxRepairChoice): Promise<boolean> {
     if (!cuentaActual() || guardandoRef.current || hasUnreadableLocalData()) return false;
     const before = datosActuales.current;
     guardandoRef.current = true; setGuardando(true);
     try {
-      const ok = await commitPrivateBoxData(before, next, upserts, deleteIds, () => cuentaActual() && datosActuales.current === before, setDatos);
+      const ok = await commitPrivateBoxData(before, next, upserts, deleteIds, () => cuentaActual() && datosActuales.current === before, setDatos, repair);
       if (!ok && cuentaActual()) showToast(t("toast.localSaveFailed"));
       return ok && cuentaActual();
     } catch (error) {
@@ -207,7 +215,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     guardarCajasEnMemoria(datos);
     void saveJSON(STORAGE_KEYS.cajasDinero, datos);
     const uid = accountUid;
-    if (!cloudReady || !uid || !isPremium || compartiendo || guardando || nubeConfirmadaPara.current !== uid) return;
+    if (!cloudReady || repairBlocked || !uid || !isPremium || compartiendo || guardando || nubeConfirmadaPara.current !== uid) return;
     let active = true;
     const task = captureAccountTask(uid, () => active && cuentaActual() && !guardandoRef.current && premiumForSync.current);
     const timer = setTimeout(() => {
@@ -218,15 +226,9 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
         .then(ok => { if (ok && task.current()) setSyncIssue(null); });
     }, 700);
     return () => { active = false; clearTimeout(timer); };
-  }, [accountUid, cuentaActual, datos, ready, cloudReady, compartiendo, guardando, isPremium, reportSyncError, setDatos]);
+  }, [accountUid, cuentaActual, datos, ready, cloudReady, repairBlocked, compartiendo, guardando, isPremium, reportSyncError, setDatos]);
 
   const caja = datos.cajas.find((item) => item.id === cajaId);
-  useEffect(() => {
-    if (!ready || !cuentaActual() || guardandoRef.current) return;
-    const repairs = Object.values(datos.conversiones || {}).filter(value => value.uid === accountUid)
-      .flatMap(value => enlacesCajaConvertida(transactions, value));
-    if (repairs.length) repairLinkedTransferTransactions(repairs);
-  }, [accountUid, cuentaActual, datos.conversiones, ready, repairLinkedTransferTransactions, transactions]);
   useEffect(() => {
     setEditandoNombreCaja(false);
     setNombreCajaEditado(caja?.nombre ?? "");
@@ -246,115 +248,45 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const saldoActual = caja ? saldoCaja(caja.id, datos.movimientos) : 0;
   const devolvibleAPersonal = returnableToPersonal(movimientos);
 
-  // Repara automáticamente cualquiera de las dos mitades que haya quedado
-  // huérfana por un cierre entre ambos guardados.
+  // Recuperación comprobada: Personal, Caja y marcas se guardan juntos.
   useEffect(() => {
-    // En un teléfono nuevo Personal puede llegar antes que las Cajas. Hasta
-    // que la nube termine de responder, una contraparte ausente no es huérfana.
-    if (!cuentaActual() || !ready || !cloudReady || guardando || (isPremium && nubeConfirmadaPara.current !== accountUid) || guardandoRef.current) return;
-    const movimientosPorId = new Map(datos.movimientos.map(item => [item.id, item]));
-    const transferenciasPersonales = transactions.filter(tx => tx.internalTransfer === "box");
-    const transferenciasPorMovimiento = new Map<string, typeof transferenciasPersonales>();
-    for (const personal of transferenciasPersonales) {
-      if (!personal.internalTransferLink) continue;
-      transferenciasPorMovimiento.set(personal.internalTransferLink, [
-        ...(transferenciasPorMovimiento.get(personal.internalTransferLink) || []), personal,
-      ]);
+    if (!cuentaActual() || !personalReady || !hasOnboarded || !ready || !cloudReady || guardando || (isPremium && nubeConfirmadaPara.current !== accountUid)
+      || guardandoRef.current || compartiendo || repairPlan.conflicts.length || hasUnreadableLocalData()
+      || (repairPlan.upserts.length === 0 && repairPlan.data === datos)) return;
+    const prior = reparacionIntentada.current;
+    if (prior?.data === datos && prior.rows === transactions && prior.refresh === refreshVersion) return;
+    reparacionIntentada.current = { data: datos, rows: transactions, refresh: refreshVersion };
+    void guardarCambioCaja(repairPlan.data, repairPlan.upserts, [], true);
+  }, [accountUid, cuentaActual, datos, transactions, repairPlan, refreshVersion, personalReady, hasOnboarded, ready, cloudReady, guardando, compartiendo, isPremium]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function revisarTransferencias() {
+    const issue = repairPlan.conflicts.find(item => item.selectable) || repairPlan.conflicts[0];
+    if (!issue || !cuentaActual() || guardandoRef.current) return;
+    const move = datos.movimientos.find(item => item.id === issue.movementId);
+    const personal = transactions.find(item => item.id === issue.personalId);
+    if (!issue.selectable || !move || !personal) {
+      Alert.alert(t("boxes.repairReview"), t("boxes.repairUncertain"), [{ text: t("common.close") }]);
+      return;
     }
-    const movimientoPersonalRecuperado = new Map<string, number>();
-    const personalUsado = new Set<number>();
-    for (const item of datos.movimientos) {
-      if (item.personalTransactionId != null) {
-        personalUsado.add(item.personalTransactionId);
-        continue;
+    const before = datosActuales.current, beforeRows = transactions;
+    const apply = async (from: "personal" | "box") => {
+      if (!cuentaActual() || before !== datosActuales.current || beforeRows !== personalActuales.current || guardandoRef.current || premiumForSync.current !== isPremium
+        || !cloudReady || (isPremium && nubeConfirmadaPara.current !== accountUid) || syncIssue === "boxes.syncConflict") return;
+      try {
+        const choice = { movementId: move.id, from };
+        const plan = resolvePrivateBoxConflict(before, beforeRows, deletedTransactionIds, accountUid, choice);
+        if (await guardarCambioCaja(plan.data, plan.upserts, [], choice)) showToast(t("boxes.repairSaved"));
+      } catch {
+        if (cuentaActual()) showToast(t("boxes.repairUnsafe"));
       }
-      const candidatasEnlazadas = transferenciasPorMovimiento.get(item.id) || [];
-      const personal = candidatasEnlazadas.length === 1 ? candidatasEnlazadas[0] : undefined;
-      const esRetorno = item.tipo === "gasto" && (item.personalReturnAmount || 0) > 0;
-      const tipoPersonal = esRetorno ? "income" : item.tipo === "ingreso" ? "expense" : null;
-      if (!personal || !tipoPersonal || personal.type !== tipoPersonal
-        || (personal.internalTransferSpaceId && personal.internalTransferSpaceId !== item.cajaId)) continue;
-      movimientoPersonalRecuperado.set(item.id, personal.id);
-      personalUsado.add(personal.id);
-    }
-    // Algunas versiones guardaban ambas mitades, pero sin el ID cruzado. Si
-    // queda una única pareja posible por caja, tipo, monto y fecha, se repara;
-    // si hay ambigüedad se conserva intacta para no enlazar dinero equivocado.
-    const pendientesDeEnlace = datos.movimientos.filter(item => item.personalTransactionId == null && !movimientoPersonalRecuperado.has(item.id));
-    const candidatosPorMovimiento = new Map<string, typeof transferenciasPersonales>();
-    const movimientosPorPersonal = new Map<number, string[]>();
-    for (const item of pendientesDeEnlace) {
-      const esRetorno = item.tipo === "gasto" && (item.personalReturnAmount || 0) > 0;
-      const tipoPersonal = esRetorno ? "income" : item.tipo === "ingreso" ? "expense" : null;
-      const montoEsperado = esRetorno ? item.personalReturnAmount : item.monto;
-      if (!tipoPersonal || montoEsperado == null) continue;
-      const candidatos = transferenciasPersonales.filter(tx => {
-        return !personalUsado.has(tx.id) && !tx.internalTransferLink && tx.type === tipoPersonal
-          && Math.abs((tx.amount || 0) - montoEsperado) < 0.005
-          && tx.date === item.fecha
-          && (!tx.internalTransferSpaceId || tx.internalTransferSpaceId === item.cajaId);
-      });
-      candidatosPorMovimiento.set(item.id, candidatos);
-      for (const candidato of candidatos) {
-        movimientosPorPersonal.set(candidato.id, [...(movimientosPorPersonal.get(candidato.id) || []), item.id]);
-      }
-    }
-    for (const [movementId, candidatos] of candidatosPorMovimiento) {
-      const candidato = candidatos[0];
-      if (candidatos.length !== 1 || !candidato || movimientosPorPersonal.get(candidato.id)?.length !== 1) continue;
-      movimientoPersonalRecuperado.set(movementId, candidato.id);
-      personalUsado.add(candidato.id);
-    }
-    const movimientosConVinculoRecuperado = [...movimientoPersonalRecuperado].map(([id, personalTransactionId]) => ({ id, personalTransactionId }));
-    if (movimientosConVinculoRecuperado.length) {
-      const idsRecuperados = new Map(movimientosConVinculoRecuperado.map(item => [item.id, item.personalTransactionId]));
-      setDatos(actual => ({
-        ...actual,
-        movimientos: actual.movimientos.map(item => item.personalTransactionId != null || !idsRecuperados.has(item.id)
-          ? item
-          : { ...item, personalTransactionId: idsRecuperados.get(item.id), updatedAt: siguienteVersionCaja(item) }),
-      }));
-    }
-    const upserts = datos.movimientos.flatMap(item => {
-      if (item.personalTransactionId == null) return [];
-      const cajaDelMovimiento = datos.cajas.find(c => c.id === item.cajaId);
-      const esRetorno = item.tipo === "gasto" && (item.personalReturnAmount || 0) > 0;
-      const itemsCaja = datos.movimientos.filter(movement => movement.cajaId === item.cajaId);
-      const allocations = esRetorno ? linkedTransferLedger(itemsCaja).allocationsByReturnId.get(item.id) || [] : undefined;
-      const canonical = {
-        id: item.personalTransactionId,
-        type: esRetorno ? "income" as const : "expense" as const,
-        amount: esRetorno ? item.personalReturnAmount! : item.monto,
-        category: "otros", date: item.fecha, time: horaDe(item.creadoEn), method: "transfer",
-        description: esRetorno ? t("boxes.returnFrom", { name: cajaDelMovimiento?.nombre || "" }) : t("boxes.transferTo", { name: cajaDelMovimiento?.nombre || "" }),
-        notes: "", origin: "manual" as const, internalTransfer: "box" as const, internalTransferLink: item.id,
-        internalTransferSpaceId: item.cajaId, internalTransferSpaceName: cajaDelMovimiento?.nombre || "Caja",
-        updatedAt: item.updatedAt ?? item.creadoEn,
-        ...(allocations ? { internalTransferAllocations: allocations } : {}),
-      };
-      const current = transactions.find(tx => tx.id === item.personalTransactionId);
-      if (current?.internalTransfer === "box" && current.internalTransferLink === item.id
-        && current.type === canonical.type && current.amount === canonical.amount
-        && current.internalTransferSpaceId === item.cajaId
-        && current.internalTransferSpaceName === canonical.internalTransferSpaceName
-        && JSON.stringify(current.internalTransferAllocations || []) === JSON.stringify(allocations || [])) return [];
-      return [canonical];
-    });
-    const borradosExplicitos = new Set(datos.movimientosBorrados || []);
-    const cajasActivas = new Set(datos.cajas.map(item => item.id));
-    const orphanIds = transactions
-      .filter(tx => tx.internalTransfer === "box"
-        && !tx.internalTransferSettled
-        && !!tx.internalTransferSpaceId && cajasActivas.has(tx.internalTransferSpaceId)
-        && tx.internalTransferLink?.startsWith("mov-")
-        && (!tx.internalTransferSpaceId || tx.internalTransferSpaceId.startsWith("caja-"))
-        && !movimientosPorId.has(tx.internalTransferLink)
-        // La ausencia, incluso en una copia antigua del servidor, no prueba
-        // un borrado. Exigir la marca guardada al eliminar ese movimiento.
-        && borradosExplicitos.has(tx.internalTransferLink))
-      .map(tx => tx.id);
-    if (upserts.length || orphanIds.length) repairLinkedTransferTransactions(upserts, orphanIds);
-  }, [accountUid, cuentaActual, datos.cajas, datos.movimientos, datos.movimientosBorrados, ready, cloudReady, guardando, isPremium, repairLinkedTransferTransactions, setDatos, t, transactions]);
+    };
+    Alert.alert(t("boxes.repairReview"), t("boxes.repairChoose", { name: datos.cajas.find(item => item.id === move.cajaId)?.nombre || "",
+      personal: fmt(personal.amount), personalDate: personal.date, box: fmt(move.monto), boxDate: move.fecha }), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("boxes.repairUsePersonal"), onPress: () => void apply("personal") },
+      { text: t("boxes.repairUseBox"), onPress: () => void apply("box") },
+    ]);
+  }
 
   const visibles = movimientos.filter(item => !filter
     || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter));
@@ -503,6 +435,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }
 
   async function borrarSeleccionados(ids = seleccionados) {
+    if (repairBlocked) { showToast(t("boxes.repairReview")); return; }
     if (syncIssue === "boxes.syncConflict") { showToast(t("boxes.syncConflict")); return; }
     if (caja?.sharingPending) { showToast(t("boxes.sharingPending")); return; }
     if (!cuentaActual() || !ready || compartiendo || guardandoRef.current) return;
@@ -530,6 +463,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     ]);
   }
   async function borrarCajas(ids = cajasSeleccionadas) {
+    if (repairBlocked) { showToast(t("boxes.repairReview")); return false; }
     if (syncIssue === "boxes.syncConflict") { showToast(t("boxes.syncConflict")); return false; }
     if (!cuentaActual() || !ready || compartiendo || guardandoRef.current) return false;
     const candidatas = datos.cajas.filter(item => ids.includes(item.id));
@@ -584,6 +518,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }
 
   async function compartirCaja() {
+    if (repairBlocked && !caja?.sharingPending) { showToast(t("boxes.repairReview")); return; }
     const uid = auth.currentUser?.uid;
     if (!uid || !caja || compartiendo || conversionEnCurso.current || guardandoRef.current) return;
     if (!isPremium && !caja.sharingPending) { irUnaVez("/premium"); return; }
@@ -678,6 +613,10 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       </View>
       <SpaceSwitcher active="boxes" />
       {syncIssue ? <Text accessibilityLiveRegion="polite" className="px-5 pb-2 text-xs leading-5 text-amber-700 dark:text-amber-300">{t(syncIssue)}</Text> : null}
+      {ready && cloudReady && repairPlan.conflicts.length > 0 ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.repairReview")} disabled={guardando || compartiendo || syncIssue === "boxes.syncConflict"} onPress={revisarTransferencias} className="mx-5 mb-3 rounded-xl bg-amber-50 p-3 dark:bg-amber-950">
+        <Text accessibilityLiveRegion="polite" className="text-xs leading-5 text-amber-800 dark:text-amber-200">{t("boxes.repairNotice", { count: repairPlan.conflicts.length })}</Text>
+        <Text className="mt-1 text-sm font-bold text-amber-800 dark:text-amber-200">{t("boxes.repairReview")}</Text>
+      </TouchableOpacity> : null}
 
       <ScrollView
         className="flex-1 px-5"

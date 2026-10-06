@@ -24,6 +24,12 @@ Requisitos, regresión y límites: `docs/PRUEBAS_NODE22_BORRADO_CUENTA.md`.
 
 ## Qué comprueba cada cosa
 
+`verificar-reparacion-pares-cajas.mjs` comprueba recuperaciones con IDs,
+conservación ante diferencias/borrados/consumo, elección explícita y el guardado
+original sobre SQLite real (no Android físico). Incluye pantalla/contexto
+originales, rollback, respuesta perdida y fuente/sesión remota. Regresión contra
+0f0588f y límites: `docs/PRUEBAS_REPARACION_PARES_CAJAS.md`.
+
 `verificar-cajas-sincronizacion.mjs` cubre versiones, conflictos, datos inválidos,
 cache/sesión, respuesta encolada, conversión con vista vieja y marcas de consumo
 con los auxiliares/manejadores propios reales. La prueba SDK está en

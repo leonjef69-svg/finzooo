@@ -140,7 +140,7 @@ try {
     vm.runInNewContext(js(declaration("contexts/AppDataContext.tsx", "commitPrivateBoxData") + "\nglobalThis.commit=commitPrivateBoxData;"), ctx);
     let id = 1000;
     const s = { ...linked, ctx, h, events, accountUid: "a", auth: ctx.auth, userCurrency: "PEN", userName: "A", isPremium: true,
-      guardandoRef: { current: false }, guardando: false, syncIssue: null, ready: true, cloudReady: true, compartiendo: false, cargandoUnion: false,
+      guardandoRef: { current: false }, guardando: false, syncIssue: null, repairBlocked: false, ready: true, cloudReady: true, compartiendo: false, cargandoUnion: false,
       cuentaActual: () => true, hasUnreadableLocalData: h.api.hasUnreadableLocalData, datosActuales: { current: before }, datos: before,
       movimientos: before.movimientos, transactions: rows, caja: before.cajas[0], disponible: 500,
       nuevoNombre: "Viaje", montoInicial: "100", origenDinero: "personal", monto: "20", anotando: "ingreso", descripcion: "Aporte",

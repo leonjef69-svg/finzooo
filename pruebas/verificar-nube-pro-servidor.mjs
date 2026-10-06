@@ -201,31 +201,23 @@ finishAccess({ data: { ok: true } });
 await deletion;
 const cajas = read("screens/Cajas.tsx");
 assert.match(cajas, /uid && isPremium/);
-assert.match(cajas, /!cloudReady \|\| !uid \|\| !isPremium/);
-// Ejecuta los filtros reales de Cajas: un borrado explícito funciona también
-// en Gratis, pero una ausencia por no poder consultar nube nunca borra dinero.
-const cajasAst = ts.createSourceFile("Cajas.tsx", cajas, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-const declarations = new Map();
-function collectCaja(node) {
-  if (ts.isVariableDeclaration(node) && ["borradosExplicitos", "cajasActivas", "orphanIds"].includes(node.name.getText(cajasAst))) {
-    declarations.set(node.name.getText(cajasAst), `const ${node.getText(cajasAst)};`);
-  }
-  ts.forEachChild(node, collectCaja);
+assert.match(cajas, /!cloudReady \|\| repairBlocked \|\| !uid \|\| !isPremium/);
+// La reparación real no interpreta una ausencia ni una marca heredada como devolución.
+function loadBoxRepair(file) {
+  const module = { exports: {} };
+  vm.runInNewContext(ts.transpile(read(file), { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }), {
+    module, exports: module.exports, require: name => loadBoxRepair(name.replace("@/", "") + ".ts") });
+  return module.exports;
 }
-collectCaja(cajasAst);
-function deletedCounterparts(pro, confirmed, deletedIds) {
-  const scope = { isPremium: pro, nubeConfirmadaPara: { current: confirmed ? "alice" : null },
-    auth: { currentUser: { uid: "alice" } }, datos: { cajas: [{ id: "caja-local" }], movimientosBorrados: deletedIds }, movimientosPorId: new Map(),
-    transactions: [{ id: 10, internalTransfer: "box", internalTransferLink: "mov-local", internalTransferSpaceId: "caja-local" },
-      { id: 20, internalTransfer: "box", internalTransferLink: "shared-movement", internalTransferSpaceId: "shared-box" }] };
-  vm.runInNewContext(ts.transpile([...declarations.values()].join("\n") + "\nresult = orphanIds;", { target: ts.ScriptTarget.ES2022 }), scope);
-  return Array.from(scope.result);
+const repairApi = loadBoxRepair("utils/privateBoxRepair.ts");
+for (const deletedIds of [[], ["mov-local"]]) {
+  const source = { cajas: [{ id: "caja-local" }], movimientos: [], cajasBorradas: [], movimientosBorrados: deletedIds };
+  const rows = [{ id: 10, internalTransfer: "box", internalTransferLink: "mov-local", internalTransferSpaceId: "caja-local" },
+    { id: 20, internalTransfer: "box", internalTransferLink: "shared-movement", internalTransferSpaceId: "shared-box" }];
+  const plan = repairApi.planPrivateBoxRepair(source, rows, [], "alice");
+  assert.equal(plan.data, source); assert.equal(plan.upserts.length, 0, "Gratis y Pro conservan dinero con una contraparte ausente");
+  assert.deepEqual(Array.from(plan.conflicts, item => item.personalId), [10], "marca antigua pide revisión privada, sin tocar movimientos compartidos");
 }
-assert.deepEqual(deletedCounterparts(false, false, []), [], "Gratis no borra por una ausencia sin confirmar");
-assert.deepEqual(deletedCounterparts(false, false, ["mov-local"]), [10], "un borrado local explícito sí retira su contraparte");
-assert.deepEqual(deletedCounterparts(true, false, []), [], "un error Pro conserva el movimiento Personal");
-assert.deepEqual(deletedCounterparts(true, true, []), [], "confirmar una copia antigua no demuestra que se borró dinero");
-assert.deepEqual(deletedCounterparts(true, true, ["mov-local"]), [10], "la marca explícita concilia el borrado privado, sin tocar movimientos compartidos");
 
 // Una consulta de permisos lenta no puede desactivar la prueba recién
 // concedida; una activación de la cuenta anterior tampoco cambia la actual.

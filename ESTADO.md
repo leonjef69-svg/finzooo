@@ -1,5 +1,32 @@
 # Estado actual de Fino
 
+## Pares Personal/Caja heredados — recuperación protegida (06/10/2026)
+
+- Regresión comprobada contra 0f0588f: Caja S/100 imponía ese monto sobre
+  Personal S/80. También recuperaba enlaces por monto/fecha y guardados separados.
+- Recupera únicamente vínculos comprobados y guarda ambas mitades/marcas
+  juntas; no pisa otro movimiento ni borra por ausencia/marca heredada.
+  Conserva notas, imágenes, etiquetas y campos existentes. Consumo/borrados/
+  duplicados/repartos dudosos se conservan para revisar, sin devolver dinero.
+- Diferencia inequívoca de monto/fecha permite elegir Personal o Caja con
+  aviso explícito. No permite saldo negativo ni un ajuste parcial cuando hay
+  devoluciones posteriores. Espera Personal y Caja; bloquea operaciones/subida
+  privada mientras hay revisión y no reintenta en bucle un guardado fallido.
+- Pro consulta servidor solo para IDs afectados (y aportes del reparto),
+  tanto documento antiguo como historial separado. No usa caché ni toma una
+  edición/borrado remoto no recibido como autorización para reconstruir.
+  Gratis no consulta nube. Recalcula la propuesta dentro del guardado vivo.
+- Guía: `docs/PRUEBAS_REPARACION_PARES_CAJAS.md`. Sin claves/retención/servicios
+  nuevos, cambios nativos, tarjetas, APK/OTA, CODE_MARKER o despliegue Firebase.
+- TypeScript/ESLint aprobados; 137 pruebas locales/8 auditores (una prueba ajena
+  sin registrar: 136 en copia limpia), 63 unitarias Functions y 91 SDK/reglas/
+  HTTP/eventos con Node 22 real, sin fallos ni pruebas omitidas. Regresión
+  contra 0f0588f falla por la sobrescritura S/80 → S/100; código nuevo aprobado.
+- **Qué sigue:** legado no demostrable y diferencias local/nube explícitas.
+  **Qué falta:** Android/cierres/espacio lleno/datos grandes/dos dispositivos,
+  revisión visual, consolas y publicación coordinada. No es atomicidad global
+  servidor/celular ni cierre de toda la auditoría.
+
 ## Borrado de cuenta con conversiones incompletas — preparado (05/10/2026)
 
 - Una copia pendiente de S/100 se trataba como dinero compartido y bloqueaba

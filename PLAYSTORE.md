@@ -234,6 +234,12 @@ movimientos/marcas en una transacción local comprobada. No genera un envío
 adicional a Firebase ni cambia la copia por cuenta. Las operaciones enlazadas
 en iOS/web se bloquean con aviso hasta implementar su garantía equivalente;
 no se presenta esa parte como comprobada ni entregada.
+La recuperación heredada también usa ese guardado conjunto. Una elección
+explícita de monto/fecha modifica los mismos registros; no crea nuevas claves
+ni una categoría de datos distinta. Pro verifica únicamente los IDs afectados
+en el servidor antes de recuperar; Gratis no consulta nube. Los casos sin
+prueba se conservan para revisión, no se borran ni se reembolsan por inferencia.
+Guía y limitaciones: `docs/PRUEBAS_REPARACION_PARES_CAJAS.md`; no publicado.
 La Caja conserva además una señal local cifrada de conversión pendiente para
 no usar su copia privada mientras el resultado remoto es incierto. No se sube
 a Firebase, no añade una clave ni categoría de datos y sigue el mismo archivo

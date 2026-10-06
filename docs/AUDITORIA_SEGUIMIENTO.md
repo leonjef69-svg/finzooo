@@ -1,6 +1,6 @@
 # Seguimiento de la auditoría de Claude
 
-Última revisión: 05/10/2026. Este archivo separa tres cosas distintas: código
+Última revisión: 06/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
 ## Continuación FINO-02 — copias incompletas al borrar cuenta (05/10/2026)
@@ -298,3 +298,21 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
   reglas/Functions, AAB de prueba, dos dispositivos y dos cuentas, red
   intermitente, Drive/Dropbox, TalkBack, reinicio, iPhone, App Check, rotación
   de firma, requisitos de Play y la migración posterior del historial.
+
+## Continuación FINO-02 — pares heredados protegidos (06/10/2026)
+
+- Falla comprobada en el efecto anterior: monto de Caja imponía otra cifra
+  sobre Personal. Recuperación por IDs y guardado conjunto sustituyen la
+  coincidencia débil y las escrituras separadas, conservando campos y borrados.
+- Elección de monto/fecha únicamente con pareja inequívoca; sin saldo negativo
+  ni ajustes parciales de devoluciones. Ausencia/consumo/duplicados/marca antigua
+  conservan registros y piden revisión; no fabrican devolución.
+- Pro comprueba en servidor los IDs afectados; copia remota no recibida bloquea
+  la reconstrucción. No se otorga nube a Gratis ni se cambia el contrato nativo.
+- Guía: `docs/PRUEBAS_REPARACION_PARES_CAJAS.md`. No afirma FINO-02 corregido
+  globalmente ni en producción. **Qué sigue:** legado/diferencias local-nube.
+  **Qué falta:** Android/cierres/espacio/tamaño/dos dispositivos, revisión del
+  aviso, consolas y publicación coordinada. Tarjetas excluidas.
+- TypeScript/ESLint, 137 locales/8 auditores (una prueba ajena sin registrar),
+  63 unitarias Functions y 91 SDK/reglas/HTTP/eventos aprobados. Regresión
+  contra 0f0588f confirma la sobrescritura antigua; ninguna cuenta real tocada.

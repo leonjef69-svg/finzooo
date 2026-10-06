@@ -94,7 +94,7 @@ async function deleteLocal(movements, selected) {
   const removedPersonal = [], messages = [];
   let rpcCount = 0;
   const scope = { movimientos: movements, seleccionados: selected, planSpaceMovementDeletion: local.planSpaceMovementDeletion,
-    caja: data.cajas[0], cuentaActual: () => true, ready: true, compartiendo: false, syncIssue: null, guardandoRef: { current: false }, datosActuales: { get current() { return data; } },
+    caja: data.cajas[0], cuentaActual: () => true, ready: true, compartiendo: false, syncIssue: null, repairBlocked: false, guardandoRef: { current: false }, datosActuales: { get current() { return data; } },
     guardarCambioCaja: async (next, _upserts, deleteIds = []) => { data = next; removedPersonal.push(...deleteIds); return true; },
     borrarAportePersonal: async () => { rpcCount++; throw new Error("NO_SERVER_FOR_LOCAL_BOX"); },
     deleteLinkedTransferTransaction: id => removedPersonal.push(id), setDatos: update => { data = update(data); },
@@ -115,13 +115,23 @@ assert.equal(fullPair.data.movimientos.length, 0);
 assert.deepEqual(fullPair.removedPersonal, [11, 10]);
 
 const cajaScope = { isPremium: true, nubeConfirmadaPara: { current: "ana" }, auth: { currentUser: { uid: "ana" } },
-  datos: { cajas: [{ id: "caja-otra" }], movimientosBorrados: [contribution.id, returned.id] },
+  datos: { cajas: [{ id: "caja-otra" }], movimientos: [], cajasBorradas: [], movimientosBorrados: [contribution.id, returned.id] },
   transactions: personal, movimientosPorId: new Map() };
-const deleted = execute(declarations("screens/Cajas.tsx", ["borradosExplicitos", "cajasActivas", "orphanIds"]), cajaScope, "orphanIds");
-assert.deepEqual(Array.from(deleted), [], "ni Caja cerrada ni ausencia sin marca devuelven dinero ficticio");
+function loadRepairModule(file) {
+  const module = { exports: {} };
+  vm.runInNewContext(ts.transpile(read(file), { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }), {
+    module, exports: module.exports, require: name => name.endsWith("linkedTransfers") ? local : loadRepairModule(name.replace("@/", "") + ".ts") });
+  return module.exports;
+}
+const repairPrivate = loadRepairModule("utils/privateBoxRepair.ts");
+const preserved = repairPrivate.planPrivateBoxRepair(cajaScope.datos, personal, [], "ana");
+assert.equal(preserved.upserts.length, 0, "ni Caja cerrada ni ausencia sin marca devuelven dinero ficticio");
+assert.equal(preserved.data, cajaScope.datos);
 cajaScope.datos.movimientosBorrados.push("mov-otra");
-const explicitDeleted = execute(declarations("screens/Cajas.tsx", ["borradosExplicitos", "cajasActivas", "orphanIds"]), { ...cajaScope }, "orphanIds");
-assert.deepEqual(Array.from(explicitDeleted), [12], "una marca explícita sí permite conciliar el borrado de la Caja activa, sin tocar la cerrada");
+const explicitDeleted = repairPrivate.planPrivateBoxRepair(cajaScope.datos, personal, [], "ana");
+assert.equal(explicitDeleted.upserts.length, 0, "marca antigua sin la pareja no borra ni devuelve dinero automáticamente");
+assert.equal(explicitDeleted.data, cajaScope.datos);
+assert.ok(explicitDeleted.conflicts.some(issue => issue.personalId === 12), "pide revisión de la contraparte ausente");
 const familyScope = { familias: [{ id: "familia-activa" }], transactions: [
   { id: 1, internalTransfer: "family", internalTransferSpaceId: "familia-cerrada", internalTransferLink: "cerrado" },
   { id: 2, internalTransfer: "family", internalTransferSpaceId: "familia-activa", internalTransferLink: "eliminado" },
@@ -130,7 +140,7 @@ const familyDeleted = execute(declarations("screens/Family.tsx", ["familiasActiv
 assert.deepEqual(Array.from(familyDeleted), [2], "Familia cerrada no convierte su ausencia en devolución ficticia");
 
 const closeScope = { datos: { cajas: [{ id: "caja-local" }], movimientos: [contribution, { ...spent, monto: 60 }, returned], cajasBorradas: [], movimientosBorrados: [] },
-  cuentaActual: () => true, ready: true, compartiendo: false, syncIssue: null, guardandoRef: { current: false },
+  cuentaActual: () => true, ready: true, compartiendo: false, syncIssue: null, repairBlocked: false, guardandoRef: { current: false },
   datosActuales: { get current() { return closeScope.datos; } },
   guardarCambioCaja: async (next, upserts = []) => { closeScope.datos = next; closeScope.personalUpdates = upserts; return true; },
   cajasSeleccionadas: ["caja-local"], canCloseLinkedSpace: local.canCloseLinkedSpace, settlePersonalTransfers: local.settlePersonalTransfers,
