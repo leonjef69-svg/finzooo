@@ -10,6 +10,18 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-59 (mapas de Sentry) parcial, no publicado: conservar la subida durante
+Android ahora requiere activación expresa y credenciales privadas. Sin activar,
+la compilación mantiene su comportamiento anterior. Se integraron el plugin
+oficial y Metro conservando NativeWind. Falta verificar una
+compilación autorizada y una traza legible en Sentry; las actualizaciones OTA
+requieren su propia subida de mapas. Ver `docs/SENTRY_MAPAS.md`.
+Sin APK/AAB/OTA nuevo. Tarjetas de crédito excluidas.
+TypeScript, ESLint, 139 pruebas locales y 8 auditores aprobados; 138 pruebas
+en Git limpio, por el archivo local no versionado señalado abajo.
+Exportación local Android con mapas aprobada; el identificador coincide entre
+mapa y paquete Hermes. No sustituye la compilación nativa ni la prueba en Sentry.
+
 FINO-61 atendido en el conteo: se retiraron diez pruebas que no comprobaban
 el código actual (gráficas inexistentes y copias de algoritmos). El gráfico
 diario vigente ahora comparte la misma cuenta entre Reportes y una prueba

@@ -1,5 +1,24 @@
 # Estado actual de Fino
 
+## FINO-59 — protección para activar mapas de Sentry (07/10/2026)
+
+- La compilación normal conserva la protección que evita fallar por falta de
+  credenciales de Sentry. Si se activa expresamente la subida de mapas, ahora
+  conserva `sentry.gradle` y exige token, organización y proyecto en el entorno
+  de compilación; no se guardan secretos en Git.
+- La prueba nueva falló antes del cambio y pasa después. La guía está en
+  `docs/SENTRY_MAPAS.md`.
+- El plugin oficial y Metro quedan integrados, conservando NativeWind.
+- TypeScript, ESLint, 139 pruebas locales y 8 auditores aprobaron; en una
+  copia limpia de Git son 138 pruebas por el archivo local no versionado ya
+  indicado abajo. La prueba de Sentry ejecuta la cadena real de mods de Expo.
+- Exportación local Android con mapas aprobada: paquete Hermes y mapa
+  comparten identificador; 4.172 fuentes. No es una compilación APK/AAB.
+- **Qué sigue:** configurar las variables privadas en EAS y comprobar una
+  compilación autorizada con un fallo de prueba en Android. **Qué falta:**
+  confirmar en Sentry la traza legible y preparar la subida separada para
+  actualizaciones OTA; tarjetas excluidas.
+
 ## FINO-61 — pruebas que no comprobaban la app (07/10/2026)
 
 - Se retiraron del corredor cinco pruebas de gráficas de líneas/acumulados que

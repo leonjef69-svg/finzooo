@@ -3,6 +3,25 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-59 — mapas de Sentry (07/10/2026)
+
+- El script Gradle de Sentry ya no se retira cuando se solicita expresamente
+  subir mapas y existen `SENTRY_AUTH_TOKEN`, `SENTRY_ORG` y `SENTRY_PROJECT`.
+  Sin esa activación, el AAB mantiene la compilación anterior. La activación
+  incompleta falla con un mensaje claro, sin imprimir credenciales.
+- Prueba nueva roja antes y verde después. No se generó AAB ni se tocó Sentry.
+  La guía operativa está en `docs/SENTRY_MAPAS.md`.
+- Se integraron el plugin oficial y Metro conservando NativeWind.
+- TypeScript, ESLint, 139 pruebas locales y 8 auditores aprobaron (138 pruebas
+  en Git limpio). La cadena real de mods de Expo se probó con subida activada
+  y desactivada, sin red ni credenciales reales.
+- `expo export --platform android --source-maps` terminó correctamente;
+  paquete Hermes y mapa comparten identificador y el mapa contiene 4.172
+  fuentes. No se subieron archivos ni se compiló un APK/AAB.
+- **Qué sigue:** configurar credenciales en EAS y verificar una compilación
+  autorizada. **Qué falta:** comprobar la traza real y cubrir por separado los
+  mapas de actualizaciones OTA; tarjetas excluidas.
+
 ## FINO-61 — cobertura engañosa en pruebas (07/10/2026)
 
 - Se confirmó que cinco pruebas ejecutaban gráficas retiradas y otra ejecutaba

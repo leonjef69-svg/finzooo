@@ -1,4 +1,5 @@
 const { withAndroidStyles, withAppBuildGradle } = require("@expo/config-plugins");
+const { configureSentryGradle } = require("./sentry-gradle-policy");
 
 /**
  * Android 15 controla las barras del sistema cuando la app usa edge-to-edge.
@@ -21,13 +22,9 @@ module.exports = function withModernAndroidBars(config) {
     return result;
   });
   return withAppBuildGradle(config, (result) => {
-    // Sentry sigue registrando fallos desde JavaScript, pero su subida de
-    // mapas durante Gradle requiere credenciales privadas que todavía no se
-    // han configurado. Una integración residual aquí hacía fallar el AAB.
-    result.modResults.contents = result.modResults.contents
-      .split("\n")
-      .filter((line) => !line.includes("@sentry/react-native") || !line.includes("sentry.gradle"))
-      .join("\n");
+    // La subida de mapas solo se activa con una decisión explícita y con las
+    // credenciales privadas en el entorno de compilación, nunca en Git.
+    result.modResults.contents = configureSentryGradle(result.modResults.contents);
     return result;
   });
 };

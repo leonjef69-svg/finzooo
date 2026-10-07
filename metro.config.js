@@ -1,9 +1,9 @@
-const { getDefaultConfig } = require("expo/metro-config");
+const { getSentryExpoConfig } = require("@sentry/react-native/metro");
 const { withNativeWind } = require("nativewind/metro");
 const { createRequire } = require("module");
 const path = require("path");
 
-const config = getDefaultConfig(__dirname);
+const config = getSentryExpoConfig(__dirname);
 const requireFromNativeWind = createRequire(require.resolve("nativewind/package.json"));
 const cssInteropRoot = path.dirname(requireFromNativeWind.resolve("react-native-css-interop/package.json"));
 const defaultResolveRequest = config.resolver.resolveRequest;

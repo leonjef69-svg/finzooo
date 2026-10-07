@@ -107,7 +107,8 @@
           "color": "#059669"
         }
       ],
-      "./plugins/with-modern-android-bars"
+      "./plugins/with-modern-android-bars",
+      "@sentry/react-native/expo"
     ],
     "experiments": {
       "typedRoutes": true,
