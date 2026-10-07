@@ -115,6 +115,7 @@ import { clearHistoryV2Cache } from "@/utils/cloudHistoryV2";
 import { subscribeTesterPremium } from "@/utils/testerPremium";
 import { TESTER_PREMIUM_INACTIVE, type TesterPremiumState } from "@/utils/testerPremiumState";
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
+import { debeConciliarCaptura, huellaRegistroCaptura } from "@/utils/captureReconcile";
 import { guardarPendientes, limpiarPendientes, pendientesDeCaptura } from "@/utils/capturaEnFondo";
 import {
   mergeGoals,
@@ -1685,6 +1686,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (!(ready && hasOnboarded && notificationReader.isSupported)) return;
     let alive = true;
     const version = localSessionVersion.current;
+    let ultimaConciliacion = 0;
+    let solicitudesConciliacion = 0;
+    let ultimaSolicitudAtendida = -1;
+    let ultimaHuellaRegistro: string | null = null;
 
     /**
      * Vuelve a leer del disco y se queda con TODO lo que haya.
@@ -1698,12 +1703,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
      * Con dinero eso no es un despiste. Es un movimiento que existió y ya no
      * está, y nadie se entera hasta que las cuentas no cuadran.
      */
-    async function recogerDelDisco() {
+    async function recogerDelDisco(): Promise<{ caja: MovimientoNegocio[]; ok: boolean }> {
       try {
-        const [guardadas, registro] = await Promise.all([
+        const [guardadas, registro, caja] = await Promise.all([
           loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []),
           loadJSON<CaptureLogEntry[]>(STORAGE_KEYS.autoCaptureLog, []),
+          loadJSON<MovimientoNegocio[]>(STORAGE_KEYS.movimientosNegocio, []),
         ]);
+        if (!Array.isArray(guardadas) || !Array.isArray(registro) || !Array.isArray(caja)) {
+          return { caja: [], ok: false };
+        }
         // El disco puede conservar durante unos milisegundos la lista anterior
         // porque el guardado está agrupado. Nunca reincorporamos identificadores
         // que la persona ya borró, aunque todavía aparezcan en esa copia vieja.
@@ -1722,19 +1731,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         // segundo plano quedaba en los movimientos pero NO en esta lista
         // hasta cerrar la app del todo. Justo la pantalla a la que se recurre
         // para comprobar si un yapeo llegó.
-        if (Array.isArray(registro)) {
-          setAutoCaptureLog((memoria) => mergeCaptureLog(memoria, registro));
-        }
+        setAutoCaptureLog((memoria) => mergeCaptureLog(memoria, registro));
         // Y LA CAJA DEL NEGOCIO, POR LO MISMO. Desde el paso 5, el trabajo de fondo también
         // escribe ahí: un yapeo que entra al negocio con la app cerrada quedaría en el disco,
         // y el siguiente guardado de la app —que tiene su lista de memoria vieja— lo pisaría.
-        const caja = await loadJSON<MovimientoNegocio[]>(STORAGE_KEYS.movimientosNegocio, []);
-        const cajaDelDisco = Array.isArray(caja) ? caja : [];
+        const cajaDelDisco = caja;
         if (cajaDelDisco.length > 0) {
           setDatosNegocio((antes) => {
             const juntos = fusionarMovimientosNegocio(antes.movimientos, cajaDelDisco);
-            // La misma referencia si no hay nada nuevo: esto corre cada ocho segundos, y un
-            // objeto nuevo cada vez volvería a guardar y a subir el negocio entero sin motivo.
+            // La misma referencia si no hay nada nuevo: un objeto nuevo cada vez
+            // volvería a guardar y a subir el negocio entero sin motivo.
             return juntos === antes.movimientos ? antes : { ...antes, movimientos: juntos };
           });
         }
@@ -1743,15 +1749,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         // misma pasada y necesita saber qué hay YA en la caja para no registrarlo dos veces.
         // Con la lista del estado, un yapeo que el trabajo de fondo acabara de anotar podría
         // volver a entrar. Un ingreso duplicado en una caja no se ve: solo infla el saldo.
-        return cajaDelDisco;
+        return { caja: cajaDelDisco, ok: true };
       } catch {
-        // Si no se puede leer, se sigue con lo que hay en memoria. Nunca se
-        // borra nada por no haber podido leer.
+        // Si no se puede leer, no se borra nada. Con un aviso pendiente se
+        // espera otro intento para no registrar dinero sobre una copia incierta.
       }
-      return [] as MovimientoNegocio[];
+      return { caja: [], ok: false };
     }
 
-    async function collect() {
+    async function collect(forzarConciliacion = false) {
+      // Un regreso al frente no se pierde si otra recogida está en curso.
+      if (forzarConciliacion) solicitudesConciliacion++;
       if (captureBusy.current) return;
       // El permiso de Android se puede quitar desde los ajustes del sistema
       // en cualquier momento. Se comprueba ANTES de descifrar listas grandes:
@@ -1760,9 +1768,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
       captureBusy.current = true;
       try {
-        // Recoge lo que haya escrito el trabajo de fondo únicamente cuando la
-        // función está activa y realmente puede haber novedades.
-        const cajaDelDisco = await recogerDelDisco();
+        // Primero se consulta el buzón ligero. Antes se descifraban tres listas
+        // completas cada ocho segundos incluso si no había ningún aviso nuevo.
         // Lo que un trabajo de fondo saco del buzon y no llego a registrar.
         //
         // Va PRIMERO y junto con lo del buzon: si Android corto el proceso a
@@ -1771,7 +1778,33 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         const delBuzon = await notificationReader.drain();
         const aMedias = (await pendientesDeCaptura()) as typeof delBuzon;
         const captured = [...new Map([...aMedias, ...delBuzon].map(item => [item.captureId || `${item.package}|${item.postedAt}|${item.title}|${item.text}`, item])).values()];
+        // El trabajo de fondo deja constancia aquí incluso si ya vació el
+        // buzón. Así detectamos su escritura en el próximo pulso sin leer
+        // todas las transacciones y la caja del negocio ocho veces por minuto.
+        const registroBreve = await loadJSON<CaptureLogEntry[]>(STORAGE_KEYS.autoCaptureLog, []);
+        const huellaRegistro = huellaRegistroCaptura(Array.isArray(registroBreve) ? registroBreve : []);
+        const solicitudActual = solicitudesConciliacion;
+        const conciliar = debeConciliarCaptura(
+          solicitudActual !== ultimaSolicitudAtendida,
+          captured.length,
+          huellaRegistro !== ultimaHuellaRegistro,
+          ultimaConciliacion,
+          Date.now(),
+        );
+        const lectura = conciliar ? await recogerDelDisco() : { caja: [] as MovimientoNegocio[], ok: true };
+        if (conciliar && lectura.ok) {
+          ultimaConciliacion = Date.now();
+          ultimaSolicitudAtendida = solicitudActual;
+          ultimaHuellaRegistro = huellaRegistro;
+        }
         if (captured.length === 0) return;
+        if (!lectura.ok) {
+          // El lote sigue en el buzón nativo hasta ackDrain. También se deja
+          // apuntado para reinicio: registrar dinero sin poder leer el disco
+          // podría duplicar una captura del trabajo de fondo.
+          await guardarPendientes(captured);
+          return;
+        }
         await guardarPendientes(captured);
 
         const {
@@ -1805,12 +1838,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           // LA CAJA DE MEMORIA **Y** LA DEL DISCO. Un yapeo que el trabajo de fondo acabara de
           // anotar está en el disco y todavía no en el estado, y sin juntarlas volvería a
           // entrar. Ver recogerDelDisco.
-          fusionarMovimientosNegocio(datosDelNegocio.movimientos, cajaDelDisco)
+          fusionarMovimientosNegocio(datosDelNegocio.movimientos, lectura.caja)
         );
 
         const siguienteLog = [...baseLog, ...log].slice(-40);
         const siguientesPersonales = mergeTransactions(personales, basePersonal);
-        const siguientesNegocio = [...fusionarMovimientosNegocio(datosDelNegocio.movimientos, cajaDelDisco), ...delNegocio];
+        const siguientesNegocio = [...fusionarMovimientosNegocio(datosDelNegocio.movimientos, lectura.caja), ...delNegocio];
         // Persistencia comprobable antes de confirmar el lote nativo. Así no
         // existe una ventana donde el buzón ya se borró y el movimiento vive
         // únicamente en memoria de React.
@@ -1852,7 +1885,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    collect();
+    collect(true);
 
     // Y CADA POCO, MIENTRAS LA APP ESTE EN PANTALLA.
     //
@@ -1862,7 +1895,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // dos veces— pero la app solo recogia al VOLVER al frente. Estando ya
     // delante no volvia nunca, asi que el yapeo se quedaba esperando.
     //
-    // Ocho segundos: si el buzon esta vacio, recoger no cuesta nada.
+    // Ocho segundos para el buzón y su pequeño registro; las listas completas
+    // se descifran si cambia ese registro, llega un aviso, vuelve al frente
+    // o se cumple el minuto de repaso de seguridad.
     const cada = setInterval(collect, 8000);
 
     // EN EL MOMENTO EN QUE LLEGA EL YAPEO.
@@ -1927,7 +1962,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // Y puede que Android haya tirado el lector mientras la app estaba en segundo
       // plano — los Honor y Huawei aprietan el ahorro de batería. Ver reengancharLector.
       reengancharLector();
-      collect();
+      collect(true);
       if (uid && isPremium) {
         void loadCloudData(uid).then((cloud) => {
           if (!cloud || !alive || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;

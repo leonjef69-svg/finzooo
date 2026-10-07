@@ -3,6 +3,27 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-14 — lector de avisos sin descifrar historiales en cada pulso (07/10/2026)
+
+- Confirmado: con captura activada, la app volvía a leer y descifrar la lista
+  completa de movimientos, el registro de avisos y la caja del negocio cada
+  ocho segundos aunque no hubiera novedades. Ahora consulta el buzón y el
+  registro breve; las listas completas se reconcilian al llegar un aviso,
+  cambiar el registro que escribe Android en segundo plano, volver al frente
+  o cumplir un minuto de repaso. Un cambio de fondo se detecta en el siguiente
+  pulso, sin esperar al minuto.
+- Las tres lecturas de la conciliación se completan antes de modificar los
+  datos visibles. Si alguna falla, un aviso pendiente no se confirma ni se
+  registra sobre una copia incompleta. La prueba de regresión falló antes del
+  cambio; se conservó la protección del negocio contra duplicados.
+- TypeScript, ESLint, 148 pruebas sin tarjetas y 8 auditores aprobados. La
+  prueba del registro falló antes del cambio; la del negocio se actualizó
+  para comprobar el nombre nuevo sin quitar su protección. No se tocó el
+  código nativo ni se publicó.
+- **Qué sigue:** revisar el siguiente hallazgo de riesgo. **Qué falta:** medir
+  en un Android con historial grande, probar
+  avisos con la app abierta/cerrada, consolas y entrega; tarjetas excluidas.
+
 ## FINO-39/56 — fecha y finalización de metas (07/10/2026)
 
 - Confirmado: `toISOString()` ponía la fecha UTC y `GoalFormSheet` conservaba

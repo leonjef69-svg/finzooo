@@ -10,6 +10,13 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-14 preparado, no publicado: la captura deja de descifrar el historial
+entero cada ocho segundos sin avisos; detecta cambios del trabajo de fondo
+mediante el registro breve y conserva el repaso de seguridad. Una lectura
+incompleta no confirma movimientos. TypeScript, ESLint, 148 pruebas y 8
+auditores sin tarjetas aprobados; falta medirlo en Android y verificar avisos
+con la app abierta/cerrada. Sin APK/AAB/OTA ni entrega a usuarios.
+
 FINO-39/56 corregidos en código, no publicados: metas nuevas guardan la fecha
 local y una edición del objetivo recalcula si la meta está cumplida. No se
 reescriben fechas antiguas sin confirmación. Regresión previa, TypeScript,

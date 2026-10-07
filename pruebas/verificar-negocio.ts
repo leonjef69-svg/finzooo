@@ -881,7 +881,8 @@ console.log("\n--- EL YAPEO QUE ENTRA AL NEGOCIO (paso 5) ---");
   // estado no esta listo hasta el siguiente dibujo, asi que un yapeo que el trabajo de fondo
   // acabara de anotar volveria a entrar si solo se mirara el estado.
   ok(
-    /fusionarMovimientosNegocio\(datosDelNegocio\.movimientos, cajaDelDisco\)/.test(ctxFusion),
+    /const lectura = conciliar \? await recogerDelDisco\(\)/.test(ctxFusion)
+      && /fusionarMovimientosNegocio\(datosDelNegocio\.movimientos, lectura\.caja\)/.test(ctxFusion),
     "y no se registra dos veces uno que el trabajo de fondo acabe de anotar"
   );
 

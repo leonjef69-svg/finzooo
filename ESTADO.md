@@ -1,5 +1,20 @@
 # Estado actual de Fino
 
+## FINO-14 — captura sin lecturas completas cada ocho segundos (07/10/2026)
+
+- El lector sigue revisando avisos cada ocho segundos, pero solo descifra el
+  registro breve mientras no haya cambios. Relee movimientos y caja al llegar
+  un aviso, detectar una escritura del trabajo de fondo, volver al frente o
+  al cumplir un minuto de repaso. No espera un minuto para mostrar un yapeo
+  que Android ya guardó.
+- Si una de las listas no se puede leer, no registra ni confirma un aviso
+  sobre datos incompletos. TypeScript, ESLint, 148 pruebas y 8 auditores sin
+  tarjetas aprobados; falta comprobarlo en Android con muchos movimientos.
+  Código no publicado; tarjetas excluidas.
+- **Qué sigue:** cerrar verificación y continuar la auditoría. **Qué falta:**
+  prueba física de rendimiento y segundo plano, consolas, entrega coordinada
+  y demás riesgos no resueltos.
+
 ## FINO-39/56 — fecha y estado de metas (07/10/2026)
 
 - Una meta nueva toma el día local del celular, no el día UTC que en Lima

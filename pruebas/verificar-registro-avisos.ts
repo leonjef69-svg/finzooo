@@ -23,6 +23,7 @@
 import fs from "fs";
 import path from "path";
 import { mergeCaptureLog } from "@/utils/mergeTransactions";
+import { debeConciliarCaptura, huellaRegistroCaptura } from "@/utils/captureReconcile";
 import type { CaptureLogEntry } from "@/utils/autoCapture";
 
 const RAIZ = process.cwd();
@@ -39,6 +40,26 @@ const aviso = (at: number, texto: string): CaptureLogEntry => ({
   result: "added",
   amount: 1,
 });
+
+console.log("\n--- NO DESCIFRAR TODO CADA OCHO SEGUNDOS ---");
+ok(!debeConciliarCaptura(false, 0, false, 100_000, 108_000),
+  "sin avisos nuevos, un pulso a los ocho segundos no lee el historial");
+ok(debeConciliarCaptura(false, 1, false, 100_000, 108_000),
+  "un aviso nuevo sí reconcilia antes de anotar dinero");
+ok(debeConciliarCaptura(true, 0, false, 100_000, 108_000),
+  "volver al frente reconcilia lo que guardó el trabajo de fondo");
+ok(debeConciliarCaptura(false, 0, true, 100_000, 108_000),
+  "si cambia el pequeño registro de fondo, se reconcilia sin esperar al minuto");
+ok(huellaRegistroCaptura([aviso(1, "a")]) !== huellaRegistroCaptura([aviso(2, "b")]),
+  "dos registros con igual tamaño pero distinto aviso no parecen idénticos");
+ok(debeConciliarCaptura(false, 0, false, 100_000, 160_000),
+  "un repaso de seguridad sigue ocurriendo al minuto sin avisos");
+ok(debeConciliarCaptura(false, 0, false, 100_000, 99_000),
+  "un reloj que retrocede no pospone el repaso indefinidamente");
+const codigoCaptura = fs.readFileSync(path.join(RAIZ, "contexts", "AppDataContext.tsx"), "utf8");
+ok(/debeConciliarCaptura\(/.test(codigoCaptura)
+  && /const delBuzon = await notificationReader\.drain\(\);[\s\S]{0,800}debeConciliarCaptura\(/.test(codigoCaptura),
+  "el contexto revisa primero el buzón antes de decidir si lee el historial");
 
 console.log("\n--- EL FALLO REPORTADO ---");
 {
@@ -66,7 +87,7 @@ console.log("\n--- NO SE PIERDE LO QUE SOLO ESTA EN MEMORIA ---");
 
 console.log("\n--- SIN NOVEDADES, LA MISMA LISTA (NO SOLO IGUAL) ---");
 {
-  // Esto se llama cada ocho segundos. Si devolviera una lista nueva cada vez,
+  // Esto se llama en cada conciliación. Si devolviera una lista nueva cada vez,
   // la pantalla se repintaria y el registro entero se volveria a cifrar y
   // guardar sin que nada hubiera cambiado.
   const enMemoria = [aviso(1000, "uno"), aviso(2000, "dos")];
