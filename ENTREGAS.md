@@ -10,10 +10,18 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-11 corregido en código, no publicado: al tocar «Ya lo pagué», el
+movimiento usa la fecha y hora reales del toque, incluso si el vencimiento
+fue en otro mes. El calendario conserva el vencimiento y los movimientos
+anteriores no se reescriben. La regresión falló antes y pasa ahora; faltan
+prueba visual en Android y entrega. TypeScript, ESLint, 148 pruebas locales y
+8 auditores sin tarjetas aprobaron. Sin APK/AAB/OTA.
+
 FINO-08 mitigado en código, no publicado: si el trabajo de exportación no
 puede verificar Pro con la app cerrada, deja intacta la programación y omite
-ese archivo. La prueba específica pasa; esto todavía no garantiza que un
-tester reciba el archivo sin abrir la app. Faltan verificación de permiso en
+ese archivo. TypeScript, ESLint, 148 pruebas locales y 8 auditores sin
+tarjetas aprobaron; esto todavía no garantiza que un tester reciba el
+archivo sin abrir la app. Faltan verificación de permiso en
 segundo plano y prueba Android. Sin APK/AAB/OTA.
 
 FINO-17 preparado, no publicado: al vencer Pro, los Yapes nuevos vuelven a

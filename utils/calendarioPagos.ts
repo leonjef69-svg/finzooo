@@ -1,6 +1,8 @@
 import { isSafeMoneyAmount, parseAmountInput } from "@/utils/amount";
 import { currencyDecimals } from "@/constants/currencies";
 import { esFoto } from "@/utils/iconosFavoritos";
+import { fechaLocalISO } from "@/utils/date";
+import { horaDe } from "@/utils/format";
 /**
  * EL CALENDARIO DE PAGOS — las cuentas, sin React ni Android (18/08/2026)
  *
@@ -312,21 +314,22 @@ export function validarPago(
  *
  * Devuelve `null` para un recordatorio: no tiene monto y no puede tocar las cuentas.
  *
- * **La fecha es la del pago, no la de hoy.** Quien marca el 20 el recibo que vencía el 5
- * está anotando un gasto del 5: con la fecha de hoy, el mes que lo pagó y el mes al que
- * pertenece dejarían de coincidir y los reportes de los dos meses saldrían mal.
+ * El calendario conserva por separado la fecha de vencimiento. El movimiento
+ * registra cuándo la persona confirmó el pago, incluso si fue antes o después:
+ * las cuentas de Inicio e Historial pertenecen al día en que se pagó de verdad.
  */
 export function movimientoDelPago(
   p: PagoProgramado,
-  mes: string
-): { type: "income" | "expense"; amount: number; date: string; description: string } | null {
+  mes: string,
+  confirmadoEn: Date
+): { type: "income" | "expense"; amount: number; date: string; time: string; description: string } | null {
   if (p.tipo === "recordatorio" || p.monto == null) return null;
-  const fecha = fechaEnElMes(p, mes);
-  if (fecha === "") return null;
+  if (fechaEnElMes(p, mes) === "") return null;
   return {
     type: p.tipo === "ingreso" ? "income" : "expense",
     amount: p.monto,
-    date: fecha,
+    date: fechaLocalISO(confirmadoEn),
+    time: horaDe(confirmadoEn.getTime()),
     description: p.nombre,
   };
 }

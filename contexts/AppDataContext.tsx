@@ -2354,7 +2354,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const movementId = pago.movimientos?.[mes];
     const movementStillExists =
       movementId != null && transactions.some((tx) => tx.id === movementId);
-    const mov = pagado ? movimientoDelPago(pago, mes) : null;
+    const mov = pagado ? movimientoDelPago(pago, mes, new Date()) : null;
     const nextMovementId =
       pagado && mov && !movementStillExists ? nextId() : movementId;
     setPagosProgramados(markCloudGroup(CLOUD_SYNC_GROUPS.payments, currentPayments, (antes) =>
@@ -2398,6 +2398,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       category:
         pago.categoria || suggestCategory(pago.nombre, mov.type, merchantLearned),
       date: mov.date,
+      time: mov.time,
       method: "",
       description: mov.description,
       notes: "",

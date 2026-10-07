@@ -1,5 +1,15 @@
 # Estado actual de Fino
 
+## FINO-11 — «Ya lo pagué» usa la fecha real (07/10/2026)
+
+- Al marcarlo, el gasto o ingreso lleva la fecha y hora locales de ese toque.
+  El vencimiento sigue en el calendario; pagar antes o después no altera esa
+  fecha. Los movimientos ya existentes se conservan sin reescribir.
+- La prueba falló con el comportamiento anterior y pasa ahora. TypeScript,
+  ESLint, 148 pruebas locales y 8 auditores sin tarjetas aprobaron.
+  **Qué sigue:** recorrido visual en Android. **Qué falta:** entrega;
+  tarjetas excluidas.
+
 ## FINO-08 — la exportación de tester conserva su programación (07/10/2026)
 
 - Si el trabajo con la app cerrada no puede verificar Pro, no hace el archivo
@@ -7,8 +17,9 @@
   que se apagó; la prueba específica falló antes y ahora pasa.
 - Esto evita perder la configuración, pero aún no garantiza el archivo para
   testers con la app cerrada: falta verificar su derecho vigente sin dejar un
-  permiso duradero que sobreviva a una revocación. **Qué sigue:** probar el
-  conjunto y diseñar esa comprobación. **Qué falta:** Android, red/permiso de
+  permiso duradero que sobreviva a una revocación. TypeScript, ESLint, 148
+  pruebas locales y 8 auditores sin tarjetas aprobaron. **Qué sigue:** diseñar
+  esa comprobación. **Qué falta:** Android, red/permiso de
   tester, control de avisos repetidos y publicación; tarjetas excluidas.
 
 ## FINO-17 — Yapes y negocios cuando vence Pro (07/10/2026)

@@ -3,6 +3,20 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-11 — fecha real al marcar un pago (07/10/2026)
+
+- Decisión del propietario: «Ya lo pagué» registra en Inicio e Historial la
+  fecha y hora locales del toque, aunque el recibo venciera otro día o mes.
+  El calendario conserva su fecha de vencimiento sin cambiarla.
+- La prueba del pago anticipado y la del pago tardío fallaron con el código
+  anterior y pasan con el nuevo. Un movimiento ya enlazado no se vuelve a
+  crear ni se refecha al desmarcar y marcar otra vez; los antiguos no se
+  reescriben automáticamente. TypeScript, ESLint, 148 pruebas locales y 8
+  auditores sin tarjetas aprobaron.
+- **Qué sigue:** tocar el flujo en Android.
+  **Qué falta:** confirmar visualmente Inicio, Historial y calendario en el
+  teléfono/emulador, y publicar la versión. Tarjetas excluidas.
+
 ## FINO-08 — exportación de tester no se apaga sola (07/10/2026)
 
 - Confirmado: si el trabajo sin pantalla no encontraba Premium comprado ni

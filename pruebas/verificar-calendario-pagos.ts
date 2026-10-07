@@ -217,19 +217,31 @@ ok(validarPago("Luz", "pago", 90, 31).ok === true, "el 31 sí, y ya se recorta s
 // ---------------------------------------------------------------------------
 console.log("\nEl movimiento que se crea al marcarlo pagado");
 
-const movLuz = movimientoDelPago(pago({ dia: 18, monto: 90 }), "2026-08");
+const movLuz = movimientoDelPago(pago({ dia: 18, monto: 90 }), "2026-08", new Date(2026, 8, 2, 14, 5));
 ok(movLuz?.type === "expense" && movLuz.amount === 90, "un pago crea un gasto por su monto");
 ok(
-  movLuz?.date === "2026-08-18",
-  "con la fecha DEL PAGO y no la de hoy: marcarlo tarde no lo muda de mes"
+  movLuz?.date === "2026-09-02" && movLuz.time === "2:05 p.m.",
+  "si se paga después del vencimiento, el movimiento lleva la fecha y hora reales"
 );
 ok(
-  movimientoDelPago(pago({ tipo: "ingreso", monto: 1200, dia: 30 }), "2026-08")?.type === "income",
+  movimientoDelPago(pago({ dia: 18, monto: 90 }), "2026-08", new Date(2026, 7, 10, 9, 3))?.date === "2026-08-10",
+  "si se paga antes del vencimiento, tampoco se atribuye al día programado"
+);
+ok(
+  movimientoDelPago(pago({ tipo: "ingreso", monto: 1200, dia: 30 }), "2026-08", new Date(2026, 7, 29))?.type === "income",
   "un ingreso crea un ingreso"
 );
 ok(
-  movimientoDelPago(pago({ tipo: "recordatorio", monto: undefined }), "2026-08") === null,
+  movimientoDelPago(pago({ tipo: "recordatorio", monto: undefined }), "2026-08", new Date(2026, 7, 18)) === null,
   "y un recordatorio NO crea nada: no tiene monto y no puede tocar las cuentas"
+);
+const contextoPago = fs.readFileSync(path.join(process.cwd(), "contexts/AppDataContext.tsx"), "utf8");
+const alMarcarPago = contextoPago.slice(contextoPago.indexOf("function marcarPagoDelMes("), contextoPago.indexOf("function marcarPagoDelMes(") + 4300);
+ok(
+  alMarcarPago.includes("movimientoDelPago(pago, mes, new Date())")
+  && alMarcarPago.includes("date: mov.date")
+  && alMarcarPago.includes("time: mov.time"),
+  "el gesto real guarda la fecha y hora de confirmación en el movimiento"
 );
 
 // ---------------------------------------------------------------------------
@@ -372,7 +384,7 @@ ok(/montoNumero\s*=\s*esRecordatorio\s*\?\s*undefined\s*:\s*montoDelCalendario\(
 // es lo que se usa -el mismo clasificador que los yapes-.
 console.log("\nEl movimiento que se crea al pagar");
 
-const movNetflix = movimientoDelPago(pago({ nombre: "Netflix", monto: 44, dia: 15 }), "2026-08");
+const movNetflix = movimientoDelPago(pago({ nombre: "Netflix", monto: 44, dia: 15 }), "2026-08", new Date(2026, 7, 15));
 ok(movNetflix?.description === "Netflix", "el movimiento se llama como el pago");
 ok(
   movNetflix?.description !== "" && movNetflix?.description != null,
