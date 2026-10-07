@@ -10,6 +10,7 @@
 // y para entonces ya se le prometió a alguien que le íbamos a avisar de su recibo.
 import fs from "fs";
 import path from "path";
+import { calendarNotificationTarget, paymentForCalendarNotification } from "@/utils/calendarNotificationTap";
 import {
   cuandoAvisar,
   cuentaPorEstado,
@@ -243,6 +244,36 @@ ok(
   && alMarcarPago.includes("time: mov.time"),
   "el gesto real guarda la fecha y hora de confirmación en el movimiento"
 );
+
+console.log("\nTocar un aviso del celular abre el pago correcto");
+const target = calendarNotificationTarget({ calendarioPagos: true, pagoId: "luz", mes: "2026-08" });
+ok(target?.pagoId === "luz" && target.mes === "2026-08", "se identifica el pago y el mes del aviso propio");
+ok(calendarNotificationTarget({ calendarioPagos: false, pagoId: "luz", mes: "2026-08" }) === null,
+  "un aviso ajeno no puede abrir un pago");
+ok(calendarNotificationTarget({ calendarioPagos: true, pagoId: "luz", mes: "2026-13" }) === null,
+  "un mes inválido no llega al calendario");
+ok(paymentForCalendarNotification([pago({ id: "luz" })], "luz", "2026-08")?.id === "luz",
+  "la ficha se obtiene de los pagos de la cuenta abierta");
+ok(paymentForCalendarNotification([pago({ id: "luz" })], "borrado", "2026-08") === null,
+  "si el pago se borró, no se abre otra ficha por error");
+ok(paymentForCalendarNotification([pago({ id: "unico", repite: "unica", mesUnico: "2026-08" })], "unico", "2026-09") === null,
+  "un aviso antiguo no abre un pago único en otro mes");
+const layoutAviso = fs.readFileSync(path.join(process.cwd(), "app/_layout.tsx"), "utf8");
+const homeAviso = fs.readFileSync(path.join(process.cwd(), "screens/Home.tsx"), "utf8");
+ok(layoutAviso.includes("<CalendarNotificationEffect />")
+  && layoutAviso.includes("Notifications.addNotificationResponseReceivedListener(open)")
+  && layoutAviso.includes("Notifications.getLastNotificationResponseAsync()")
+  && layoutAviso.includes('pathname: "/(tabs)"')
+  && layoutAviso.includes("avisoPagoId: target.pagoId, avisoMes: target.mes")
+  && layoutAviso.includes("Notifications.clearLastNotificationResponseAsync()")
+  && layoutAviso.includes("markCalendarNotificationOpening()")
+  && layoutAviso.includes("!isCalendarNotificationOpening()")
+  && layoutAviso.includes("if (!ready || !hasOnboarded || locked) return;"),
+  "el toque se recibe con la app abierta o cerrada, espera al candado y evita perder la ficha al volver");
+ok(homeAviso.includes("paymentForCalendarNotification(pagosProgramados, avisoPagoId, avisoMes)")
+  && homeAviso.includes("setAvisoCalendarioSeleccionado({ pago, mes: avisoMes")
+  && homeAviso.includes("router.setParams({ avisoPagoId: undefined"),
+  "Inicio abre la ficha inferior una sola vez y limpia los parámetros del aviso");
 
 // ---------------------------------------------------------------------------
 // EL PRIMER AVISO QUE VA A SONAR DE VERDAD

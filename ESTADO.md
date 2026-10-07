@@ -1,13 +1,23 @@
 # Estado actual de Fino
 
+## FINO-10 — abrir pago desde el aviso del celular (07/10/2026)
+
+- Tocar el aviso abre Inicio con la ficha inferior del pago y mes indicados,
+  aun tras un arranque en frío; espera a que el candado se quite. Un aviso
+  antiguo explica que el pago ya no está; uno ya marcado no ofrece duplicarlo.
+- Prueba local específica, TypeScript, ESLint, 148 pruebas y 8 auditores sin
+  tarjetas aprobados. **Qué sigue:** toque real con app abierta/cerrada y
+  candado en Android. **Qué falta:**
+  publicación; tarjetas excluidas.
+
 ## FINO-53 — fecha en el aviso del teléfono (07/10/2026)
 
 - Los avisos del calendario muestran día, mes y año del vencimiento junto al
   monto, también en recordatorios e ingresos. En febrero se muestra la fecha
   realmente programada. La prueba falló antes del arreglo y pasa ahora;
   TypeScript, ESLint, 148 pruebas locales y 8 auditores sin tarjetas aprobaron.
-- **Qué sigue:** FINO-10 (abrir la ficha al tocar el
-  aviso). **Qué falta:** prueba Android y entrega; tarjetas excluidas.
+- **Qué sigue:** comprobar FINO-10 en Android (abrir la ficha al tocar el
+  aviso). **Qué falta:** entrega; tarjetas excluidas.
 
 ## FINO-38 — saldo correcto al aportar a Familia/Caja (07/10/2026)
 

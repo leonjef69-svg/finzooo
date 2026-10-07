@@ -24,6 +24,7 @@ import {
   type PagoProgramado,
 } from "@/utils/calendarioPagos";
 import { availablePersonalBalance, budgetUsed } from "@/utils/finances";
+import { paymentForCalendarNotification } from "@/utils/calendarNotificationTap";
 import { fmtDate, monthKey } from "@/utils/format";
 import { esFoto } from "@/utils/iconosFavoritos";
 import { compactPersonalTransferRows, type TransferGroupSummary } from "@/utils/linkedTransfers";
@@ -38,7 +39,7 @@ import {
 } from "@/utils/homeNotifications";
 import { ultimoIntentoEnFondo, type UltimoIntento } from "@/utils/exportarEnFondo";
 import { loadJSON, saveJSONNow, STORAGE_KEYS } from "@/utils/storage";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { LinearGradient } from "expo-linear-gradient";
 import {
@@ -237,6 +238,7 @@ export default function Home({
   onBulkDelete: (ids: number[]) => void;
 }) {
   const {
+    ready,
     fmt,
     t,
     userCurrency,
@@ -252,6 +254,9 @@ export default function Home({
     marcarPagoDelMes,
     visualStyle,
   } = useAppData();
+  const { avisoPagoId, avisoMes, avisoTap } = useLocalSearchParams<{
+    avisoPagoId?: string; avisoMes?: string; avisoTap?: string;
+  }>();
   const peachOlive = visualStyle === "peachOlive";
   const { height: viewportHeight } = useWindowDimensions();
   const [confirmResetCarryover, setConfirmResetCarryover] = useState(false);
@@ -280,6 +285,24 @@ export default function Home({
     transform: [{ rotate: `${rotacionCampana.value}deg` }],
   }));
   const avisosNuevosAnteriores = useRef(0);
+  const ultimoAvisoTelefono = useRef<string | null>(null);
+  const showToastAvisoRef = useRef(showToast);
+  showToastAvisoRef.current = showToast;
+
+  useEffect(() => {
+    if (!ready || typeof avisoPagoId !== "string" || typeof avisoMes !== "string"
+      || typeof avisoTap !== "string" || ultimoAvisoTelefono.current === avisoTap) return;
+    ultimoAvisoTelefono.current = avisoTap;
+    const pago = /^\d{4}-(0[1-9]|1[0-2])$/.test(avisoMes)
+      ? paymentForCalendarNotification(pagosProgramados, avisoPagoId, avisoMes) : null;
+    if (pago) {
+      setAvisosAbiertos(true);
+      setAvisoCalendarioSeleccionado({ pago, mes: avisoMes, estado: estadoEn(pago, avisoMes, new Date()) });
+    } else {
+      showToastAvisoRef.current(t("home.notificationUnavailable"));
+    }
+    router.setParams({ avisoPagoId: undefined, avisoMes: undefined, avisoTap: undefined });
+  }, [ready, avisoPagoId, avisoMes, avisoTap, pagosProgramados, t]);
 
   useEffect(() => {
     let active = true;
@@ -1099,14 +1122,14 @@ export default function Home({
                 <Text className="mt-2 text-sm text-slate-600 dark:text-slate-300">
                   {t(fechaKey, { fecha: fechaVisible })}
                 </Text>
-                <Text className={`mt-1 text-sm font-semibold ${estado === "vencido" ? "text-rose-600 dark:text-rose-300" : "text-amber-700 dark:text-amber-300"}`}>
-                  {t(estado === "vencido" ? "home.notificationOverdue" : "home.notificationPending")}
+                <Text className={`mt-1 text-sm font-semibold ${estado === "pagado" ? "text-emerald-700 dark:text-emerald-300" : estado === "vencido" ? "text-rose-600 dark:text-rose-300" : "text-amber-700 dark:text-amber-300"}`}>
+                  {t(estado === "pagado" ? "home.notificationAlreadyDone" : estado === "vencido" ? "home.notificationOverdue" : "home.notificationPending")}
                 </Text>
                 <View className="mt-5 flex-row gap-3">
                   <TouchableOpacity accessibilityRole="button" onPress={editarAvisoCalendario} className="h-12 flex-1 items-center justify-center rounded-xl border border-slate-200 bg-white dark:border-noche-borde dark:bg-noche-3">
                     <Text className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("common.edit")}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity accessibilityRole="button" onPress={confirmarAvisoCalendario} className="h-12 flex-1 items-center justify-center rounded-xl bg-emerald-600">
+                  {estado !== "pagado" ? <TouchableOpacity accessibilityRole="button" onPress={confirmarAvisoCalendario} className="h-12 flex-1 items-center justify-center rounded-xl bg-emerald-600">
                     <Text className="text-sm font-bold text-white">
                       {pago.tipo === "pago"
                         ? t("calendario.yaPague")
@@ -1114,7 +1137,7 @@ export default function Home({
                           ? t("home.notificationMarkReceived")
                           : t("home.notificationMarkReminderDone")}
                     </Text>
-                  </TouchableOpacity>
+                  </TouchableOpacity> : null}
                 </View>
               </ScrollView>
             );

@@ -3,6 +3,21 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-10 — tocar aviso del celular abre la ficha (07/10/2026)
+
+- El toque de un aviso propio del calendario ahora lleva a Inicio y abre la
+  ficha inferior del pago y mes correctos. Se atiende tanto con la app abierta
+  como al arrancarla desde el aviso, y espera a que se quite el candado.
+- Si el pago fue borrado o el mes ya no aplica, se explica que el aviso quedó
+  antiguo sin abrir otra ficha. Si ya se marcó, se muestra como registrado y
+  no se ofrece registrarlo de nuevo. Se limpia la respuesta atendida para no
+  reabrirla en siguientes arranques.
+- La prueba específica cubre la selección, datos ajenos/incorrectos y la
+  conexión de ambas rutas de llegada; no sustituye un toque real en Android.
+  TypeScript, ESLint, 148 pruebas locales y 8 auditores sin tarjetas aprobaron.
+- **Qué sigue:** prueba en Android con
+  app abierta, cerrada, candado y pago borrado; publicación. Tarjetas excluidas.
+
 ## FINO-53 — fecha visible en el aviso del celular (07/10/2026)
 
 - El aviso del teléfono mostraba monto, pero no día ni mes del vencimiento.
@@ -13,7 +28,7 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
   las comprobaciones de traducción en español, inglés y portugués.
   TypeScript, ESLint, 148 pruebas locales y 8 auditores sin tarjetas aprobaron.
 - **Qué sigue:** verlo en Android. **Qué falta:**
-  arreglar por separado la apertura de la ficha al tocarlo (FINO-10) y
+  comprobar también allí la apertura de la ficha al tocarlo (FINO-10) y
   publicar; tarjetas excluidas.
 
 ## FINO-38 — aportes según el saldo del mes de su fecha (07/10/2026)

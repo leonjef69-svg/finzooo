@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { NOCHE } from "@/constants/style";
-import { irUnaVez, isNavigationMounted } from "@/utils/nav";
+import { irUnaVez, isNavigationMounted, reemplazarUnaVez } from "@/utils/nav";
 import { AppState, View } from "react-native";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
 import { Stack, router, useNavigationContainerRef, usePathname } from "expo-router";
@@ -14,6 +14,7 @@ import { AppDataProvider, useAppData } from "@/contexts/AppDataContext";
 import { flushPendingSaves } from "@/utils/storage";
 import { getPendingImport, setPendingImport } from "@/utils/pendingImport";
 import { isAppLocked, useAppLocked } from "@/utils/lockState";
+import { calendarNotificationTarget, isCalendarNotificationOpening, markCalendarNotificationOpening } from "@/utils/calendarNotificationTap";
 import { queueExport } from "@/utils/pendingExport";
 import AppLockGate from "@/components/AppLockGate";
 import CelebrationOverlay from "@/components/CelebrationOverlay";
@@ -440,6 +441,47 @@ function ScheduledExportEffect() {
   return null;
 }
 
+/** Abre la ficha del recibo en Inicio al tocar su aviso del teléfono. */
+function CalendarNotificationEffect() {
+  const { ready, hasOnboarded } = useAppData();
+  const locked = useAppLocked();
+  const navigationRef = useNavigationContainerRef();
+  const handled = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!ready || !hasOnboarded || locked) return;
+    let active = true;
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    function open(response: Notifications.NotificationResponse) {
+      const target = calendarNotificationTarget(response.notification.request.content.data);
+      if (!target || !active) return;
+      const key = `${response.notification.request.identifier}:${response.notification.date}`;
+      if (handled.current === key) return;
+      if (!isNavigationMounted(navigationRef)) {
+        retry = setTimeout(() => open(response), 75);
+        return;
+      }
+      handled.current = key;
+      markCalendarNotificationOpening();
+      reemplazarUnaVez({
+        pathname: "/(tabs)",
+        params: { avisoPagoId: target.pagoId, avisoMes: target.mes, avisoTap: key },
+      });
+      void Notifications.clearLastNotificationResponseAsync().catch(() => undefined);
+    }
+    const subscription = Notifications.addNotificationResponseReceivedListener(open);
+    void Notifications.getLastNotificationResponseAsync()
+      .then(last => { if (last) open(last); })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+      if (retry) clearTimeout(retry);
+      subscription.remove();
+    };
+  }, [ready, hasOnboarded, locked, navigationRef]);
+  return null;
+}
+
 /** Abre directamente el calendario de la tarjeta al tocar uno de sus avisos. */
 function CreditNotificationEffect() {
   const { ready, hasOnboarded } = useAppData();
@@ -496,7 +538,7 @@ function AppLifecycleEffects() {
         const editandoMovimiento = /^\/transaction\/[^/]+\/edit$/.test(pathnameRef.current);
         const fueraPorMuchoTiempo = backgroundedAt.current != null
           && Date.now() - backgroundedAt.current >= 30 * 60 * 1000;
-        if (fueraPorMuchoTiempo && !abriendoArchivoEntrante() && !KEEP_ON_RETURN.includes(pathnameRef.current) && !editandoMovimiento) {
+        if (fueraPorMuchoTiempo && !abriendoArchivoEntrante() && !isCalendarNotificationOpening() && !KEEP_ON_RETURN.includes(pathnameRef.current) && !editandoMovimiento) {
           router.dismissTo("/(tabs)");
         }
         backgroundedAt.current = null;
@@ -710,6 +752,7 @@ function RootLayout() {
           <IncomingFileEffect />
           <AppLifecycleEffects />
           <ScheduledExportEffect />
+          <CalendarNotificationEffect />
           <CreditNotificationEffect />
           {/* Va aquí, el último de todos, para quedar POR ENCIMA de todo lo
               demás — incluidos los paneles modales. Si fuera una pantalla de

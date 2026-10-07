@@ -10,12 +10,19 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-10 preparado, no publicado: tocar un aviso de pago del teléfono abre
+Inicio con su ficha inferior, incluso tras arranque en frío y después del
+candado. Un pago borrado muestra un aviso; uno ya registrado no se duplica.
+La prueba específica pasa; falta el toque real en Android con la app
+abierta/cerrada antes de entregar. TypeScript, ESLint, 148 pruebas y 8
+auditores sin tarjetas aprobaron. Sin APK/AAB/OTA.
+
 FINO-53 preparado, no publicado: el aviso del calendario en el teléfono
 muestra el monto y la fecha completa del vencimiento (día/mes/año). Incluye
 ingresos, recordatorios y ajuste al último día de febrero. La regresión falló
 antes y pasa ahora; TypeScript, ESLint, 148 pruebas locales y 8 auditores sin
-tarjetas aprobaron. Falta prueba Android y FINO-10 para que tocar
-el aviso abra la ficha correcta. Sin APK/AAB/OTA.
+tarjetas aprobaron. Falta comprobar en Android que tocar el aviso abra la
+ficha correcta (FINO-10). Sin APK/AAB/OTA.
 
 FINO-38 preparado, no publicado: Familia y Caja validan aportes contra el
 saldo del mes de la fecha del aporte, no el mes abierto en Inicio. Incluye
