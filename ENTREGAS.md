@@ -10,6 +10,11 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-19 preparado: generar AAB usa el archivo Firebase explícito de `app.json`,
+validado contra proyecto, remitente y paquete. La comprobación local real y
+las pruebas de rechazo/copia y acceso Google aprobaron. Falta compilar y
+comprobar la firma en entorno limpio; no se generó ni publicó AAB.
+
 FINO-60 preparado: librería de cifrado sustituida conservando formato, llave y
 datos antiguos. Comparación independiente con 10.000 movimientos, TypeScript,
 ESLint, 140 pruebas locales y 8 auditores aprobados (139 pruebas en Git limpio).

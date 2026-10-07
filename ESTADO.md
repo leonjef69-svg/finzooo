@@ -1,5 +1,21 @@
 # Estado actual de Fino
 
+## FINO-19 — configuración Firebase explícita al generar AAB (07/10/2026)
+
+- `generar-aab.bat` ya no elige automáticamente el JSON más reciente de
+  Descargas. Lee `android.googleServicesFile` de `app.json` y comprueba proyecto,
+  remitente y paquete contra la configuración de Fino antes del prebuild.
+- El auxiliar vuelve a validar antes de copiar y copia el contenido validado.
+  La prueba con archivos ficticios rechaza proyecto/remitente/paquete incorrecto,
+  duplicados y conserva el destino previo cuando falla. La configuración real
+  pasó la comprobación de solo lectura; no se generó AAB.
+- La nueva regresión y la prueba de acceso Google aprobaron. La batería completa
+  de 140 pruebas y 8 auditores había aprobado en este mismo turno antes de este
+  cambio; el nuevo caso eleva el inventario a 141 locales (140 en Git limpio).
+- **Qué sigue:** conciliar el resto de IDs con sus pruebas y pendientes.
+  **Qué falta:** compilación firmada en entorno limpio y prueba física;
+  FINO-29 (firma) es un pendiente separado. Tarjetas excluidas.
+
 ## FINO-60 — cifrado mantenido con formato compatible (07/10/2026)
 
 - Se sustituyeron `crypto-js` y sus tipos por `@noble/ciphers`, `@noble/hashes`

@@ -50,12 +50,12 @@ for (const archivo of ["Register.tsx", "Login.tsx"]) {
   );
 }
 
-console.log("\n--- EL AAB USA LA CONFIGURACIÓN RECIÉN DESCARGADA ---");
+console.log("\n--- EL AAB USA LA CONFIGURACIÓN ELEGIDA Y VALIDADA ---");
 const generador = fs.readFileSync(path.join(process.cwd(), "generar-aab.bat"), "utf8");
 ok(
-  /Downloads\\google-services\*\.json/i.test(generador) &&
-    /copy \/Y "%FIREBASE_CONFIG%" "android\\app\\google-services\.json"/i.test(generador),
-  "el generador toma de Descargas la configuración privada más reciente"
+  !/Downloads\\google-services\*\.json/i.test(generador) &&
+    generador.includes("node scripts\\verificar-firebase-android.cjs --copy"),
+  "el generador valida el archivo elegido sin depender de Descargas"
 );
 
 // La firma de la aplicación que entrega Google Play debe existir tanto en la

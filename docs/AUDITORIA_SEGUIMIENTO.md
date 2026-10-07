@@ -3,6 +3,23 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-19 — Firebase explícito al preparar Android (07/10/2026)
+
+- Retirada la selección del JSON más reciente de Descargas. El generador usa
+  `android.googleServicesFile` y valida proyecto/remitente contra
+  `utils/firebase.ts` y paquete contra `app.json`, antes de prebuild y de copiar.
+- Prueba nueva roja antes y verde después: configuraciones de otro proyecto,
+  remitente y paquete, duplicados, lectura sin cambios y rechazo sin sobrescribir
+  destino. La prueba Google anterior exigía elegir Descargas; se actualizó ese
+  requisito conservando las comprobaciones de firma de Google Play.
+- La configuración real pasó la lectura local. No se ejecutó prebuild/AAB.
+  Prueba específica y acceso Google aprobados; batería anterior del mismo turno
+  140 pruebas/8 auditores. Inventario actual: 141 locales, 140 en Git limpio.
+- **Qué sigue:** revisión cruzada del resto de hallazgos. **Qué falta:**
+  compilación y firma en entorno limpio (FINO-29 separado), Android y entrega.
+  Si se descarga otro JSON, debe actualizarse deliberadamente la ruta de
+  `app.json` o su archivo; no se tomará de Descargas por fecha. Tarjetas excluidas.
+
 ## FINO-60 — sustitución compatible de crypto-js (07/10/2026)
 
 - Se retiró crypto-js de dependencias y del cifrado real. Noble Ciphers/Hashes

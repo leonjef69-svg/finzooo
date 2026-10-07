@@ -18,6 +18,13 @@ if not exist "%ANDROID_HOME%" (
   exit /b 1
 )
 
+rem Validar el archivo elegido en app.json antes de modificar Android.
+node scripts\verificar-firebase-android.cjs
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
+
 rem Regenera la configuración nativa desde app.json. Sin este paso, la carpeta
 rem Android podía conservar permisos o plugins de una versión anterior aunque
 rem el proyecto ya estuviera corregido.
@@ -28,17 +35,7 @@ if errorlevel 1 (
   exit /b 1
 )
 
-set "FIREBASE_CONFIG="
-for /f "delims=" %%F in ('dir /b /a-d /o-d "%USERPROFILE%\Downloads\google-services*.json" 2^>nul') do if not defined FIREBASE_CONFIG set "FIREBASE_CONFIG=%USERPROFILE%\Downloads\%%F"
-if not defined FIREBASE_CONFIG set "FIREBASE_CONFIG=google-services.json"
-
-if not exist "%FIREBASE_CONFIG%" (
-  echo ERROR: Falta la configuracion descargada de Firebase.
-  pause
-  exit /b 1
-)
-
-copy /Y "%FIREBASE_CONFIG%" "android\app\google-services.json" >nul
+node scripts\verificar-firebase-android.cjs --copy
 if errorlevel 1 exit /b 1
 
 node -e "const fs=require('fs'),a=require('./app.json').expo,p='android/app/build.gradle';let s=fs.readFileSync(p,'utf8');s=s.replace(/versionCode\s+\d+/, 'versionCode '+a.android.versionCode).replace(/versionName\s+\x22[^\x22]+\x22/, 'versionName \x22'+a.version+'\x22');fs.writeFileSync(p,s)"
