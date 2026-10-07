@@ -21,6 +21,7 @@ import { File, Paths } from "expo-file-system";
 import * as XLSX from "xlsx";
 import { strFromU8, strToU8, unzipSync, zipSync } from "fflate";
 import { catInfo } from "@/constants/categories";
+import { currencyDecimals } from "@/constants/currencies";
 import { methodLabel } from "@/constants/i18n";
 import { fmtDate } from "@/utils/format";
 import type { Transaction } from "@/types";
@@ -51,7 +52,7 @@ export function movimientosParaReporte(
  *
  * Los montos van como NÚMERO y no como texto, y los gastos en negativo. Así el
  * Excel los puede sumar y ordenar sin que nadie toque nada. El CSV los convierte
- * a texto con dos decimales al escribirlos, que es lo que se espera de un CSV.
+ * a texto con los decimales de la moneda del espacio exportado.
  */
 export function filasDelReporte(datos: DatosDelReporte): (string | number)[][] {
   const { movimientos, total, nombresDeMes, t } = datos;
@@ -90,8 +91,9 @@ export function filasDelReporte(datos: DatosDelReporte): (string | number)[][] {
 export function csvEscape(value: string, protectFormula = true): string {
   // Excel interpreta estas iniciales como fórmulas incluso dentro de un CSV.
   // El apóstrofo las fuerza a texto y evita ejecutar contenido importado.
-  const seguro = protectFormula && /^[=+\-@]/.test(value) ? `'${value}` : value;
-  return /[",;\r\n]/.test(seguro) ? `"${seguro.replace(/"/g, '""')}"` : seguro;
+  const inicioPeligroso = /^[\t\r\n]|^[\s]*[=+\-@＝＋－＠]/u.test(value);
+  const seguro = protectFormula && inicioPeligroso ? `'${value}` : value;
+  return /[",;\t\r\n]/.test(seguro) ? `"${seguro.replace(/"/g, '""')}"` : seguro;
 }
 
 /** Escribe un archivo en la carpeta temporal y devuelve dónde quedó. */
@@ -216,19 +218,20 @@ export function aplicarEstilosExcel(
  * Va aparte de escribir el archivo para poder comprobarlo: los decimales y el
  * escapado son justo donde un CSV se rompe, y no se ven mirando el código.
  */
-export function csvDeFilas(filas: (string | number)[][]): string {
+export function csvDeFilas(filas: (string | number)[][], moneda = "PEN"): string {
+  const decimales = currencyDecimals(moneda);
   return filas
     .map((fila) =>
       fila
-        // Los números con dos decimales: en un CSV se espera "12.50", no "12.5".
+        // El CSV conserva la precisión de la moneda del espacio.
         // El Excel los lleva como número de verdad, que es otra cosa.
-        .map((v) => typeof v === "number" ? csvEscape(v.toFixed(2), false) : csvEscape(String(v)))
+        .map((v) => typeof v === "number" ? csvEscape(v.toFixed(decimales), false) : csvEscape(String(v)))
         .join(",")
     )
     .join("\n");
 }
 
 /** El mismo reporte en CSV, de las mismas filas. */
-export function archivoCsv(filas: (string | number)[][], fileName: string): ArchivoGenerado {
-  return { uri: escribir(fileName, csvDeFilas(filas)), mimeType: "text/csv", fileName };
+export function archivoCsv(filas: (string | number)[][], fileName: string, moneda = "PEN"): ArchivoGenerado {
+  return { uri: escribir(fileName, csvDeFilas(filas, moneda)), mimeType: "text/csv", fileName };
 }

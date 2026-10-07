@@ -10,6 +10,13 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-57 preparado, no publicado: CSV manual y automático respetan los decimales
+de la moneda del espacio; el texto de descripciones con controles iniciales o
+signos que podrían leerse como fórmula se protege. Regresión roja antes y verde
+después, TypeScript, ESLint, 148 pruebas y 8 auditores sin tarjetas aprobaron.
+Falta abrir archivos reales en Excel/LibreOffice y probar en Android. Sin
+APK/AAB/OTA.
+
 FINO-10 preparado, no publicado: tocar un aviso de pago del teléfono abre
 Inicio con su ficha inferior, incluso tras arranque en frío y después del
 candado. Un pago borrado muestra un aviso; uno ya registrado no se duplica.

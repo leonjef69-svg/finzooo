@@ -1,5 +1,18 @@
 # Estado actual de Fino
 
+## FINO-57 — CSV según moneda y texto protegido (07/10/2026)
+
+- El CSV manual y automático usan los decimales del espacio: por ejemplo,
+  CLP sin decimales y BHD con tres. PEN conserva dos. Excel (.xlsx) no cambia.
+- Las descripciones que empiezan con tabulador, retorno, salto de línea,
+  espacios antes de una fórmula o signos de ancho completo reciben la misma
+  protección de texto que las fórmulas ya cubiertas. La prueba específica
+  falló antes del arreglo y pasa ahora. TypeScript, ESLint, 148 pruebas y 8
+  auditores sin tarjetas aprobaron.
+- **Qué sigue:** abrir un CSV real en Excel/LibreOffice y comprobar sus celdas;
+  la interpretación puede variar entre programas. **Qué falta:** Android y
+  publicación; tarjetas excluidas.
+
 ## FINO-10 — abrir pago desde el aviso del celular (07/10/2026)
 
 - Tocar el aviso abre Inicio con la ficha inferior del pago y mes indicados,

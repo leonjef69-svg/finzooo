@@ -130,6 +130,8 @@ console.log("\n--- EL CSV: DECIMALES Y ESCAPADO ---");
   ok(texto.includes("a,12.50"), `12.5 se escribe 12.50 (${texto.split("\n")[0]})`);
   ok(texto.includes("b,100.00"), "y 100 se escribe 100.00");
   ok(texto.includes("c,-3.00"), "y el negativo mantiene el signo");
+  ok(csvDeFilas([["peso chileno", 1234]], "CLP") === "peso chileno,1234", "CLP no añade centavos inexistentes");
+  ok(csvDeFilas([["dinar", 12.345]], "BHD") === "dinar,12.345", "BHD conserva sus tres decimales");
 }
 {
   // Aquí está el fallo que parte un reporte: una coma dentro de la descripción.
@@ -139,6 +141,11 @@ console.log("\n--- EL CSV: DECIMALES Y ESCAPADO ---");
   ok(csvEscape("uno;dos") === '"uno;dos"', "un punto y coma no desordena Excel regional");
   ok(csvEscape("=HYPERLINK(\"https://example.test\")") === '"\'=HYPERLINK(""https://example.test"")"', "una fórmula importada queda como texto");
   ok(csvEscape("@SUM(A1:A2)") === "'@SUM(A1:A2)", "también neutraliza fórmulas con arroba");
+  ok(csvEscape("\t=1+1") === '"\'\t=1+1"', "una tabulación inicial no deja una fórmula activa");
+  ok(csvEscape("\r=1+1") === '"\'\r=1+1"', "un retorno inicial tampoco deja una fórmula activa");
+  ok(csvEscape("\n=1+1") === '"\'\n=1+1"', "un salto inicial tampoco deja una fórmula activa");
+  ok(csvEscape(" =1+1") === "' =1+1", "los espacios delante de una fórmula no la ocultan");
+  ok(csvEscape("＝1+1") === "'＝1+1", "el signo igual de ancho completo también se protege");
   ok(csvEscape("Almuerzo") === "Almuerzo", "y lo normal se deja tal cual, sin comillas de adorno");
 
   const texto = csvDeFilas([["Pan, leche", 5]]);

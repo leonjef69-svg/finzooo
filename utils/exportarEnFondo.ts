@@ -358,7 +358,7 @@ export async function exportarEnFondo(
       archivo =
         schedule.format === "xlsx"
           ? archivoExcel(filas, t("exportPdf.movements"), fileName)
-          : archivoCsv(filas, fileName);
+          : archivoCsv(filas, fileName, espacio.currency);
     }
 
     if (schedule.destination === "folder") {

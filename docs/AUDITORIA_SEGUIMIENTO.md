@@ -3,6 +3,21 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-57 — precisión de moneda y fórmulas en CSV (07/10/2026)
+
+- Confirmado: la salida CSV fijaba dos decimales para todas las monedas y no
+  protegía tabulador/retorno inicial. Ahora recibe la moneda del espacio tanto
+  en exportación manual como automática y usa sus decimales reales.
+- El escapado protege también controles iniciales, espacios previos a signos
+  de fórmula y variantes de ancho completo. Conserva comillas y separadores
+  correctos. La prueba añadió CLP/BHD y entradas problemáticas; falló antes
+  del arreglo y pasa ahora. TypeScript, ESLint, 148 pruebas y 8 auditores sin
+  tarjetas aprobaron.
+- **Qué sigue:** abrir el CSV generado en Excel/LibreOffice y revisar que el
+  texto peligroso permanezca inerte, también tras guardar y reabrir. El
+  apóstrofo no es una garantía universal entre hojas de cálculo.
+  **Qué falta:** prueba Android y publicación; tarjetas excluidas.
+
 ## FINO-10 — tocar aviso del celular abre la ficha (07/10/2026)
 
 - El toque de un aviso propio del calendario ahora lleva a Inicio y abre la

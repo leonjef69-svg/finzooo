@@ -568,7 +568,7 @@ export default function ExportPdfSheet({
   }
 
   async function exportAsCsv() {
-    return archivoCsv(filas(), nombreDeArchivo("csv"));
+    return archivoCsv(filas(), nombreDeArchivo("csv"), espacio?.currency ?? userCurrency);
   }
 
   /**
