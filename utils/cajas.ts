@@ -43,7 +43,12 @@ export type RevisionNombreCaja = {
 };
 
 /** Cuatro originales y elección solo locales; no se suben como respaldo. */
-export type RevisionImporteCaja = MoneyReview & { estado: "pendiente" | "confirmado" };
+export type RevisionImporteCaja = MoneyReview & {
+  estado: "pendiente" | "confirmado" | "sustituido";
+  /** Enlaces solo locales: conserva la elección anterior y su sucesora. */
+  reemplaza?: string;
+  reemplazadaPor?: string;
+};
 
 export type DatosCajas = {
   cajas: Caja[];
@@ -143,13 +148,28 @@ export function validarCajas(value: unknown): DatosCajas {
       owner = entry.uid;
       if (entry.estado === "pendiente") pending.add(entry.local.personal.id);
     }
+    const byId = new Map(data.revisionesImporte.map(entry => [entry.id, entry]));
+    for (const entry of data.revisionesImporte) {
+      if (entry.reemplaza) {
+        const prior = byId.get(entry.reemplaza);
+        if (!prior || prior.estado !== "sustituido" || prior.reemplazadaPor !== entry.id
+          || !mismaParejaImporte(prior, entry) || prior.version >= entry.version) return invalid();
+      }
+      if (entry.reemplazadaPor) {
+        const next = byId.get(entry.reemplazadaPor);
+        if (!next || next.reemplaza !== entry.id || !mismaParejaImporte(entry, next) || next.version <= entry.version) return invalid();
+      }
+    }
     if (bytesRevisionesImporte(data.revisionesImporte) > 400_000) return invalid();
   }
   return normalizarCajas(data);
 }
 
 export function validarRevisionImporte(entry: RevisionImporteCaja): void {
-  if (!entry || !["pendiente", "confirmado"].includes(entry.estado)) throw new Error("cajas-invalid-data");
+  if (!entry || !["pendiente", "confirmado", "sustituido"].includes(entry.estado)) throw new Error("cajas-invalid-data");
+  const reference = (id: unknown) => typeof id === "string" && /^[A-Za-z0-9_-]{16,160}$/.test(id) && id !== entry.id;
+  if ((entry.reemplaza !== undefined && !reference(entry.reemplaza))
+    || (entry.estado === "sustituido" ? !reference(entry.reemplazadaPor) : entry.reemplazadaPor !== undefined)) throw new Error("cajas-invalid-data");
   validateMoneyReview(entry);
   canonical(entry);
   // Reserva también el byte adicional de "confirmado": un archivo al límite
@@ -165,6 +185,9 @@ function bytesRevisionesImporte(entries: RevisionImporteCaja[]): number {
 export function conservarRevisionImporte(data: DatosCajas, entry: RevisionImporteCaja): DatosCajas {
   validarRevisionImporte(entry);
   const old = data.revisionesImporte?.find(value => value.id === entry.id);
+  // Retirar una elección exige guardar su sucesora en el mismo lote, nunca
+  // esta función de una sola revisión ni una confirmación de la elección vieja.
+  if (entry.estado === "sustituido" || old?.estado === "sustituido" || (!old && entry.reemplaza)) throw new Error("cajas-money-changed");
   if (old && canonical({ ...old, estado: entry.estado }) !== canonical(entry)) throw new Error("cajas-money-changed");
   if (old?.estado === "confirmado" && entry.estado === "pendiente") return data;
   if (old && old.estado === entry.estado) return data;
@@ -176,6 +199,42 @@ export function conservarRevisionImporte(data: DatosCajas, entry: RevisionImport
   const retained = [...(data.revisionesImporte || []).filter(value => value.id !== entry.id), JSON.parse(JSON.stringify(entry))];
   if (bytesRevisionesImporte(retained) > 400_000) throw new Error("cajas-money-history-full");
   return { ...data, revisionesImporte: retained };
+}
+
+function mismaParejaImporte(a: RevisionImporteCaja, b: RevisionImporteCaja): boolean {
+  return a.uid === b.uid && a.currency === b.currency && a.box.id === b.box.id
+    && a.local.personal.id === b.local.personal.id && a.local.movement.id === b.local.movement.id;
+}
+
+/** Retira únicamente el intento anterior, sin borrar sus cuatro originales. */
+export function sustituirRevisionImporte(data: DatosCajas, entry: RevisionImporteCaja): DatosCajas {
+  validarCajas(data); validarRevisionImporte(entry);
+  const old = data.revisionesImporte?.find(value => value.id === entry.reemplaza);
+  if (!old || old.estado !== "pendiente" || entry.estado !== "pendiente" || !mismaParejaImporte(old, entry)
+    || old.version >= entry.version || data.revisionesImporte?.some(value => value.id === entry.id)) throw new Error("cajas-money-changed");
+  if ((data.revisionesImporte?.length ?? 0) >= 50) throw new Error("cajas-money-history-full");
+  const previous: RevisionImporteCaja = { ...old, estado: "sustituido", reemplazadaPor: entry.id };
+  validarRevisionImporte(previous);
+  const retained = [...data.revisionesImporte!.map(value => value.id === old.id ? previous : value), entry];
+  if (bytesRevisionesImporte(retained) > 400_000) throw new Error("cajas-money-history-full");
+  return validarCajas({ ...data, revisionesImporte: JSON.parse(JSON.stringify(retained)) });
+}
+
+/** La copia atrasada no reactiva un intento; dos sucesoras diferentes no se eligen a ciegas. */
+function unirRevisionesImporte(a: RevisionImporteCaja[], b: RevisionImporteCaja[]): RevisionImporteCaja[] {
+  const result = new Map<string, RevisionImporteCaja>();
+  for (const entry of [...a, ...b]) {
+    validarRevisionImporte(entry);
+    const old = result.get(entry.id);
+    if (old) {
+      const original = (value: RevisionImporteCaja) => canonical({ ...value, estado: undefined, reemplazadaPor: undefined });
+      if (original(old) !== original(entry)) throw new Error("cajas-money-changed");
+      if (old.estado !== "pendiente" && entry.estado !== "pendiente" && canonical(old) !== canonical(entry)) throw new Error("cajas-money-changed");
+      if (old.estado !== "pendiente") continue;
+    }
+    result.set(entry.id, entry);
+  }
+  return [...result.values()];
 }
 
 const nombreBase = (box: Caja) => JSON.stringify(Object.fromEntries(Object.entries(box)
@@ -271,11 +330,8 @@ function unirPorId<T extends VersionedItem>(a: T[], b: T[]): T[] {
 }
 
 export function fusionarCajas(local: DatosCajas, remoto: DatosCajas): DatosCajas {
-  let money = { ...CAJAS_VACIAS };
-  for (const entry of [...(remoto.revisionesImporte || []), ...(local.revisionesImporte || [])]) {
-    const prior = money.revisionesImporte?.find(value => value.id === entry.id);
-    money = conservarRevisionImporte(money, prior?.estado === "confirmado" ? { ...entry, estado: "confirmado" } : entry);
-  }
+  const entries = unirRevisionesImporte(remoto.revisionesImporte || [], local.revisionesImporte || []);
+  const money = entries.length ? validarCajas({ ...CAJAS_VACIAS, revisionesImporte: entries }) : CAJAS_VACIAS;
   // La fusión ordinaria no decide el importe de una revisión pendiente.
   // La integración deberá confirmar las dos mitades mediante su guardado propio.
   for (const entry of money.revisionesImporte || []) {

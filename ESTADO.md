@@ -1,5 +1,30 @@
 # Estado actual de Fino
 
+## Nueva revisión de elección monetaria pendiente — preparada (06/10/2026)
+
+- Pro puede revisar fuentes actuales y confirmar otra elección de monto/fecha
+  para una pareja exacta. Reconsulta después del Sí; mirar no guarda. Anterior
+  queda `sustituido` con originales/elección intactos, nueva `pendiente`, en
+  mismo lote Personal/borrados/Caja. No se retira una sin conservar la otra.
+- Cadena local mutua por IDs, cuenta/moneda y versión creciente; copia atrasada
+  no revive elección, ramas incompatibles se rechazan. Reserva/cuenta/acuse
+  genuino siguen protegiendo lote. Límite de espacio no borra originales.
+- Respuesta vieja invalidada por nueva cola; servidor mantiene CAS exacto.
+  Si una petición anterior ya enviada termina remotamente, no se fuerza la
+  decisión nueva: queda pendiente y revisable. Guía vigente:
+  `docs/PRUEBAS_SUSTITUCION_IMPORTE_CAJA.md`. Políticas preparadas, no publicadas.
+- TypeScript/ESLint completos aprobados; 146 pruebas locales y 8 auditores,
+  77 unitarias de servidor y 126 SDK/reglas/HTTP/eventos bajo Node 22 real
+  aprobados, sin fallos, omisiones ni cancelaciones en servidor. Regresión
+  1084e38 falla antes y pasa ahora. Una prueba local ajena sin registrar cuenta
+  en el total, pero no se incorpora al commit; no se probó un checkout limpio.
+  Dos suites específicas de tarjetas excluidas, no verificadas.
+- **Qué sigue:** retiro sin sucesora/Pro, fuentes totalmente coincidentes y
+  demás casos sin prueba. **Qué falta:** Android (ADB vacío)/otros hallazgos,
+  consolas y publicación coordinada autorizada. No rollback a cliente que
+  desconozca cadena sin migración. Sin tarjetas/nativos/marca/APK/AAB/OTA/
+  despliegue. Punto 1/auditoría siguen abiertos.
+
 ## Recuperación monetaria ya completada sin Pro — preparada (06/10/2026)
 
 - Respuesta perdida/fallo local y Pro vencido ya no impiden recuperar una

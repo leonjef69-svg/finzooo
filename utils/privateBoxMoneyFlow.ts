@@ -1,6 +1,6 @@
 import { nuevoIdCaja, type DatosCajas, type RevisionImporteCaja } from "@/utils/cajas";
 import { loadPrivateBoxMoneySources, requestPrivateBoxMoneyReview, recoverPrivateBoxMoneyReview, type PrivateBoxMoneyLocal, type PrivateBoxMoneySources } from "@/utils/cloudPrivateBoxMoney";
-import { prepararRevisionImporte } from "@/utils/privateBoxMoneyReview";
+import { prepararRevisionImporte, conservarOriginalesImporte } from "@/utils/privateBoxMoneyReview";
 import { withPrivateBoxMoneyReview, type PrivateBoxCloudLease } from "@/utils/privateBoxSync";
 import { canonical, type MoneyAck, type MoneySource } from "../functions/src/private-box-money-shared.js";
 
@@ -16,6 +16,7 @@ export type PrivateBoxMoneyComparison = {
   uid: string; movementId: string; before: DatosCajas; local: PrivateBoxMoneyLocal; remote: PrivateBoxMoneySources;
   fingerprint: string;
   choices: { source: MoneySource; amount: number; date: string; usable: boolean }[];
+  replaces?: string;
 };
 
 function allowed(port: PrivateBoxMoneyPort): void {
@@ -23,12 +24,12 @@ function allowed(port: PrivateBoxMoneyPort): void {
   if (!port.premium()) throw new Error("cajas-money-needs-pro");
 }
 function fingerprint(before: DatosCajas, local: PrivateBoxMoneyLocal, remote: PrivateBoxMoneySources,
-  choices: PrivateBoxMoneyComparison["choices"]): string {
-  return canonical({ before, local, remote, choices });
+  choices: PrivateBoxMoneyComparison["choices"], replaces?: string): string {
+  return canonical({ before, local, remote, choices, replaces });
 }
 
 /** Consulta sin corregir, sin guardar diarios y sin mantener un candado abierto en el formulario. */
-export async function compararImporteCaja(uid: string, movementId: string, port: PrivateBoxMoneyPort): Promise<PrivateBoxMoneyComparison> {
+export async function compararImporteCaja(uid: string, movementId: string, port: PrivateBoxMoneyPort, replaces?: string): Promise<PrivateBoxMoneyComparison> {
   allowed(port);
   const before = port.boxes(), local = port.local(), source = canonical({ before, local });
   const movement = before.movimientos.find(row => row.id === movementId);
@@ -50,13 +51,14 @@ export async function compararImporteCaja(uid: string, movementId: string, port:
     let lastError: unknown;
     const choices = values.map(value => {
       try {
-        prepararRevisionImporte(before, local.transactions, local.deletedIds, remote.data, remote.transactions, remote.deletedIds,
-          uid, local.currency, nuevoIdCaja("importe"), movementId, value.source);
+        const entry = prepararRevisionImporte(before, local.transactions, local.deletedIds, remote.data, remote.transactions, remote.deletedIds,
+          uid, local.currency, nuevoIdCaja("importe"), movementId, value.source, Date.now(), replaces);
+        conservarOriginalesImporte(before, local.transactions, local.deletedIds, entry, uid, local.currency);
         return { ...value, usable: true };
       } catch (error) { lastError = error; return { ...value, usable: false }; }
     });
     if (!choices.some(value => value.usable)) throw lastError;
-    return { uid, movementId, before, local, remote, choices, fingerprint: fingerprint(before, local, remote, choices) };
+    return { uid, movementId, before, local, remote, choices, ...(replaces ? { replaces } : {}), fingerprint: fingerprint(before, local, remote, choices, replaces) };
   });
 }
 
@@ -74,8 +76,8 @@ async function enviarConservada(uid: string, entry: RevisionImporteCaja, port: P
 export async function confirmarImporteCaja(comparison: PrivateBoxMoneyComparison, chosen: MoneySource, port: PrivateBoxMoneyPort): Promise<boolean> {
   allowed(port);
   const original = comparison.fingerprint;
-  const current = () => port.current() && fingerprint(comparison.before, comparison.local, comparison.remote, comparison.choices) === original
-    && fingerprint(port.boxes(), port.local(), comparison.remote, comparison.choices) === original;
+  const current = () => port.current() && fingerprint(comparison.before, comparison.local, comparison.remote, comparison.choices, comparison.replaces) === original
+    && fingerprint(port.boxes(), port.local(), comparison.remote, comparison.choices, comparison.replaces) === original;
   if (!current() || !comparison.choices.some(value => value.source === chosen && value.usable)) throw new Error("cajas-money-changed");
   return withPrivateBoxMoneyReview(comparison.uid, async lease => {
     allowed(port);
@@ -86,7 +88,10 @@ export async function confirmarImporteCaja(comparison: PrivateBoxMoneyComparison
     if (!current() || canonical(fresh) !== canonical(comparison.remote)) throw new Error("cajas-money-changed");
     const entry = prepararRevisionImporte(comparison.before, comparison.local.transactions, comparison.local.deletedIds,
       fresh.data, fresh.transactions, fresh.deletedIds, comparison.uid, comparison.local.currency,
-      nuevoIdCaja("importe"), comparison.movementId, chosen);
+      nuevoIdCaja("importe"), comparison.movementId, chosen, Date.now(), comparison.replaces);
+    // También comprueba capacidad/cadena antes de entrar al almacén, para
+    // explicar el límite sin presentarlo como un fallo genérico del disco.
+    conservarOriginalesImporte(comparison.before, comparison.local.transactions, comparison.local.deletedIds, entry, comparison.uid, comparison.local.currency);
     if (!await port.stage(comparison.before, entry, lease, current)) return false;
     return enviarConservada(comparison.uid, entry, port, lease);
   });

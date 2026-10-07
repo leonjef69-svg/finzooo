@@ -3,6 +3,28 @@
 Última revisión: 06/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## Continuación punto 1 — nueva elección conserva la revisión anterior (06/10/2026)
+
+- Regresión 1084e38 reproduce `money-pending` al comparar una revisión antigua.
+  Pro ahora revisa fuentes actuales y confirma explícitamente otra elección.
+- Anterior sustituida/nueva pendiente y Personal/borrados/Caja guardados juntos;
+  anteriores originales/elección conservados. Nueva versión supera la anterior;
+  ambas subidas permanecen pausadas hasta confirmar. No copia ningún enlace
+  local al servidor ni vuelve a enviar desde UI el intento sustituido.
+- Cadena mutua/identidad/moneda/versiones, límites, fusión atrasada, fallos por
+  fase/reinicio, respuesta vieja y componente original comprobables. Guía:
+  `docs/PRUEBAS_SUSTITUCION_IMPORTE_CAJA.md`. Políticas solo en archivos.
+- Verificación: TypeScript/ESLint completos; 146 pruebas locales/8 auditores,
+  77 unitarias de servidor y 126 SDK/reglas/HTTP/eventos Node 22 real aprobados.
+  Ningún fallo/omisión/cancelación en servidor. Una prueba local ajena sin
+  registrar se cuenta pero no se incorpora al commit; checkout limpio no
+  probado. Dos suites específicas de tarjetas excluidas, no verificadas.
+- **Qué sigue:** retirar sin sucesora/Pro o revisar fuentes iguales/incompletas/
+  incompatibles, sin adivinar. **Qué falta:** Android/disco/tamaño/dos dispositivos
+  (ADB vacío), demás hallazgos, consolas y entrega conjunta autorizada. Revisar
+  compatibilidad antes de rollback. Tarjetas intactas; sin nativos/marca/
+  APK/AAB/OTA/despliegue. Punto 1 y auditoría abiertos.
+
 ## Continuación punto 1 — recuperar resultado vigente sin Pro (06/10/2026)
 
 - Regresión 48e9f95: flujo real rechazaba recuperar por Pro antes de consultar

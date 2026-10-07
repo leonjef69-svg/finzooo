@@ -232,6 +232,62 @@ test("Corrección de dinero: SDK/HTTP y transacciones reales sin medias transfer
     const { createMoneyBatchHarness } = await import(pathToFileURL(path.join(root, "pruebas/verificar-lote-importe-caja.mjs")).href);
     const selected = { ...copy(entry), estado: "pendiente" };
     const localBoxes = { cajas: [copy(box)], movimientos: [copy(m)], cajasBorradas: [], movimientosBorrados: [], revisionesImporte: [selected] };
+    await t.test("elección obsoleta: nueva revisión conserva ambas y no acepta una petición vieja después, en ambos formatos", async () => {
+      for (const format of [1, 2]) {
+        await seed(format);
+        const changedPersonal = { ...copy(entry.remote.personal), amount: 70, updatedAt: 30 };
+        const changedMovement = { ...copy(entry.remote.movement), monto: 70, updatedAt: 30 };
+        if (format === 2) await rootRef.collection("history").doc("10").update({ transaction: changedPersonal });
+        else await rootRef.update({ transactions: [changedPersonal] });
+        await boxesRef.update({ movimientos: [changedMovement] });
+        const h = createMoneyBatchHarness(a, selected, localBoxes, [copy(p)]);
+        const port = { current: () => h.e.active, premium: () => true, boxes: () => h.e.screen.current, local: h.ctx.readPrivateBoxMoneyLocal,
+          stage: (before, next, lease, current) => h.ctx.stagePrivateBoxMoney(before, next, lease, current, h.setBoxes),
+          commit: (before, next, ack, lease, current) => h.ctx.commitPrivateBoxMoney(before, next, ack, lease, current, h.setBoxes) };
+        try {
+          const comparison = await h.api.compararImporteCaja(uid, m.id, port, selected.id);
+          assert.equal(comparison.replaces, selected.id); assert.equal(h.e.writes, 0); assert.equal(h.e.calls, 0);
+          assert.equal(await h.api.confirmarImporteCaja(comparison, "remote-personal", port), true);
+          const data = h.disk(h.api.STORAGE_KEYS.cajasDinero), old = data.revisionesImporte.find(row => row.id === selected.id), next = data.revisionesImporte.find(row => row.id !== selected.id);
+          assert.equal(old.estado, "sustituido"); assert.equal(old.reemplazadaPor, next.id); assert.equal(next.reemplaza, old.id);
+          assert.deepEqual(old.local, selected.local); assert.deepEqual(old.remote, selected.remote); assert.equal(old.chosen, selected.chosen);
+          assert.equal(next.estado, "confirmado"); assert.ok(next.version > old.version);
+          assert.deepEqual(next.remote, { personal: changedPersonal, movement: changedMovement });
+          const remote = format === 2 ? (await rootRef.collection("history").doc("10").get()).data().transaction : (await rootRef.get()).data().transactions[0];
+          assert.deepEqual(remote, h.disk(h.api.STORAGE_KEYS.transactions)[0]); assert.equal(remote.amount, 70); assert.equal(remote.updatedAt, next.version);
+          const before = [await rootRef.get(), await boxesRef.get()];
+          await assert.rejects(a.call(entry), error => error.details?.reason === "money-source-changed");
+          await assert.rejects(httpsCallable(a.functions, "recoverPrivateBoxMoney")(entry), error => error.details?.reason === "money-source-changed");
+          await assert.rejects(h.api.reintentarImporteCaja(uid, selected, port), /cajas-money-changed/);
+          const after = [await rootRef.get(), await boxesRef.get()];
+          assert.deepEqual(after.map(row => row.data()), before.map(row => row.data()));
+          assert.deepEqual(after.map(row => row.updateTime.toMillis()), before.map(row => row.updateTime.toMillis()));
+          assert.equal(after[1].data().revisionesImporte, undefined, "la cadena/originales conservados no se suben al respaldo");
+        } finally { h.e.db.close(); }
+      }
+    });
+    await t.test("fallo después de sustituir: nuevo pendiente recupera HTTP real sin perder la revisión anterior", async () => {
+      await seed(); await rootRef.update({ transactions: [{ ...entry.remote.personal, amount: 70, updatedAt: 30 }] });
+      await boxesRef.update({ movimientos: [{ ...entry.remote.movement, monto: 70, updatedAt: 30 }] });
+      const h = createMoneyBatchHarness(a, selected, localBoxes, [copy(p)]);
+      const port = { current: () => h.e.active, premium: () => true, boxes: () => h.e.screen.current, local: h.ctx.readPrivateBoxMoneyLocal,
+        stage: async (before, next, lease, current) => { const ok = await h.ctx.stagePrivateBoxMoney(before, next, lease, current, h.setBoxes); h.e.failure = "rollback"; return ok; },
+        commit: (before, next, ack, lease, current) => h.ctx.commitPrivateBoxMoney(before, next, ack, lease, current, h.setBoxes) };
+      try {
+        const comparison = await h.api.compararImporteCaja(uid, m.id, port, selected.id);
+        assert.equal(await h.api.confirmarImporteCaja(comparison, "local-personal", port), false);
+        const data = h.disk(h.api.STORAGE_KEYS.cajasDinero), next = data.revisionesImporte.find(row => row.estado === "pendiente");
+        assert.equal(data.revisionesImporte.find(row => row.id === selected.id).estado, "sustituido");
+        assert.equal(h.e.rows.current[0].updatedAt, p.updatedAt); assert.ok(next.version > selected.version);
+        const before = [await rootRef.get(), await boxesRef.get()]; h.e.failure = null;
+        assert.equal(await h.api.reintentarImporteCaja(uid, next, port), true);
+        const after = [await rootRef.get(), await boxesRef.get()];
+        assert.deepEqual(after.map(row => row.updateTime.toMillis()), before.map(row => row.updateTime.toMillis()));
+        const journal = h.disk(h.api.STORAGE_KEYS.cajasDinero).revisionesImporte;
+        assert.equal(journal.find(row => row.id === next.id).estado, "confirmado");
+        assert.deepEqual(journal.find(row => row.id === selected.id).remote, selected.remote);
+      } finally { h.e.db.close(); }
+    });
     await t.test("flujo original completo: consulta SDK, cuatro fuentes, reconsulta, originales SQLite y corrección HTTP en ambos formatos", async () => {
       for (const format of [1, 2]) {
         await seed(format);

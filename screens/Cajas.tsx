@@ -402,7 +402,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     const comparison = moneyComparisonActual.current;
     const choice = comparison?.choices.find(value => value.source === chosen && value.usable);
     if (!comparison || !choice || guardandoRef.current || !cuentaActual()) return;
-    Alert.alert(t("boxes.moneyReview"), t("boxes.moneyConfirm", { amount: fmt(choice.amount), date: choice.date }), [
+    Alert.alert(t("boxes.moneyReview"), t(comparison.replaces ? "boxes.moneyReviewAgainConfirm" : "boxes.moneyConfirm", { amount: fmt(choice.amount), date: choice.date }), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("common.save"), onPress: () => {
         if (comparison !== moneyComparisonActual.current) return;
@@ -413,6 +413,10 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
 
   async function recuperarImporteCaja(entry: RevisionImporteCaja): Promise<void> {
     await trabajarImporteCaja(() => reintentarImporteCaja(accountUid, entry, moneyPort()), true);
+  }
+
+  async function revisarImporteCajaDeNuevo(entry: RevisionImporteCaja): Promise<void> {
+    await trabajarImporteCaja(() => compararImporteCaja(accountUid, entry.local.movement.id, moneyPort(), entry.id));
   }
 
   function confirmarEnlaceHeredado(personalId: number) {
@@ -835,6 +839,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
         {ready ? <PrivateBoxMoneyReview comparison={moneyComparison} reviews={(datos.revisionesImporte || []).filter(entry => entry.uid === accountUid)}
           candidates={moneyCandidates} message={moneyMessage} busy={guardando || compartiendo || cargandoUnion} premium={isPremium} t={t}
           compare={id => void consultarImporteCaja(id)} choose={elegirImporteCaja} retry={entry => void recuperarImporteCaja(entry)}
+          reviewAgain={entry => void revisarImporteCajaDeNuevo(entry)}
           cancel={() => { if (guardandoRef.current) return; setMoneyComparison(null); setMoneyMessage(null); }} /> : null}
         {ready && nameOptions.length > 0 ? <View className="mb-3 rounded-xl border border-amber-200 p-3 dark:border-amber-800">
           <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">{t("boxes.nameReview")}</Text>

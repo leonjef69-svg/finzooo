@@ -10,6 +10,25 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Nueva revisión Pro de elección monetaria pendiente: fuentes actuales,
+confirmación/reconsulta, anteriores originales/elección conservados con estado
+local `sustituido` y enlaces mutuos; nueva pendiente en el mismo lote local.
+Límite no borra historial; versiones/cola/acuse genuino y fallos protegidos.
+Guía vigente: `docs/PRUEBAS_SUSTITUCION_IMPORTE_CAJA.md`. No entregar cliente que
+descarte/desconozca esa cadena ni retroceder sin revisar migración. Políticas
+preparadas en archivos, no publicadas; sin tarjetas/nativos/marca/APK/AAB/OTA/
+despliegue. Siguen retiro sin sucesora/Pro, otros casos incompatibles, Android,
+consolas y publicación conjunta autorizada.
+
+Verificación de esta tanda: TypeScript/ESLint completos, 146 pruebas locales/
+8 auditores, 77 unitarias de servidor y 126 SDK/reglas/HTTP/eventos Node 22
+real aprobados. Servidor sin fallos/omisiones/cancelaciones. Regresión 1084e38
+falla antes y pasa ahora. El total local incluye una prueba ajena sin registrar
+que queda fuera del commit; no se probó un checkout limpio. Dos suites
+específicas de tarjetas excluidas, no verificadas.
+
+Antecedente de recuperación sin Pro:
+
 Recuperación sin Pro de corrección monetaria **ya completada y vigente**:
 `recoverPrivateBoxMoney`, solo lectura; respuesta mínima propia, no historial
 ni corrección nueva. Botón Gratis comprueba resultado pendiente; SDK/contexto

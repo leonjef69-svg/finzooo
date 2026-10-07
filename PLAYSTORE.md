@@ -259,6 +259,18 @@ Nueva corrección y descarga del respaldo siguen exigiendo Pro. Guía:
 servidor/reglas/app preparados antes de distribuir; políticas y consola reales
 siguen pendientes. Esto no autoriza ni realiza publicación.
 
+La sustitución de una elección pendiente conserva la elección anterior con
+estado `sustituido` y los enlaces técnicos locales `reemplaza`/`reemplazadaPor`
+entre ambas revisiones. Mantiene cuatro originales por revisión, los mismos
+límites/cifrado/archivo por UID y eliminación local, sin borrar anteriores para
+hacer espacio. Los enlaces no viajan en la petición financiera ni en el respaldo,
+no añaden clave/colección/destinatario externo. Elegir otra vez requiere Pro y
+confirmación explícita de las fuentes frescas; solo se retira el intento antiguo
+en el mismo lote que conserva el nuevo pendiente. Políticas interna/web preparadas
+en archivos, no publicadas. Guía: `docs/PRUEBAS_SUSTITUCION_IMPORTE_CAJA.md`.
+No volver a un cliente que descarte o desconozca esta cadena sin revisar antes
+compatibilidad/migración. Consolas y publicación autorizada siguen pendientes.
+
 Al convertir una Caja privada a compartida, `privateBoxMigrations` y la copia
 privada conservan una confirmación del servidor: UID, IDs de origen/destino,
 nombre/moneda, fechas, SHA-256 de la copia e IDs de enlaces a Personal, sin

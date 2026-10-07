@@ -182,4 +182,4 @@ const scenario = esbuild.buildSync({ stdin: { contents: `
 } });
 const loaded = { exports: {} }; new Function("module", "exports", "require", scenario.outputFiles[0].text)(loaded, loaded.exports, require);
 await loaded.exports.run(plain(journal));
-console.log("Originales de importe: retención cifrada por cuenta, elección exacta, plan conjunto validado y copia ordinaria bloqueada; pantalla/envío aún sin conectar.");
+console.log("Originales de importe: retención cifrada por cuenta, elección exacta, plan conjunto validado y copia ordinaria bloqueada; la integración de pantalla se prueba por separado.");

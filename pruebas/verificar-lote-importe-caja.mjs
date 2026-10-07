@@ -11,6 +11,8 @@ import * as esbuild from "esbuild";
 const root = process.cwd(), require = createRequire(import.meta.url), clone = value => structuredClone(value);
 const baseline = process.env.FINO_TEST_MONEY_BATCH_BASELINE;
 const recoveryBaseline = process.env.FINO_TEST_MONEY_RECOVERY_BASELINE;
+const supersessionBaseline = process.env.FINO_TEST_MONEY_SUPERSESSION_BASELINE;
+if (supersessionBaseline && !/^[a-f0-9]{7,40}$/.test(supersessionBaseline)) throw Error("Se requiere hash Git.");
 if (recoveryBaseline && !/^[a-f0-9]{7,40}$/.test(recoveryBaseline)) throw Error("Se requiere hash Git.");
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw Error("Se requiere hash Git.");
 const read = file => baseline ? execFileSync("git", ["show", `${baseline}:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");
@@ -44,6 +46,7 @@ const source = `
   export * from '@/utils/privateBoxSync'; export * from '@/utils/privateBoxMoneyLocalWrite';
   export * from '@/utils/cajasMemoria'; export * from '@/utils/localAccountVault';
   export * from '@/utils/privateBoxMoneyFlow';
+  export * from '@/utils/privateBoxMoneyReview'; export * from '@/utils/cajas';
   export function createContext() {
     const e = globalThis.env, ready=true, hasOnboarded=true, Platform={get OS(){return e.platform}};
     const useCallback=callback=>callback;
@@ -85,6 +88,7 @@ const built = await esbuild.build({ stdin: { contents: source, loader: "ts", res
     build.onResolve({ filter: /.*/ }, args => args.path in mocks ? { path: args.path, namespace: "batch-mocks" } : undefined);
     build.onLoad({ filter: /.*/, namespace: "batch-mocks" }, args => ({ contents: mocks[args.path], loader: "ts" }));
     if(recoveryBaseline)build.onLoad({filter:/[\\/]utils[\\/]privateBoxMoneyFlow\.ts$/},()=>({contents:execFileSync("git",["show",`${recoveryBaseline}:utils/privateBoxMoneyFlow.ts`],{encoding:"utf8"}),loader:"ts"}));
+    if(supersessionBaseline)build.onLoad({filter:/[\\/]utils[\\/](?:cajas|privateBoxMoneyReview|privateBoxMoneyFlow)\.ts$/},({path:file})=>({contents:execFileSync("git",["show",`${supersessionBaseline}:utils/${path.basename(file)}`],{encoding:"utf8"}),loader:"ts"}));
   } }] });
 const gate = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
 const { moneyAcknowledgement } = require("../functions/src/private-box-money-shared.js");

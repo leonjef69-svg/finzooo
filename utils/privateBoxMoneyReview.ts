@@ -1,12 +1,12 @@
 import type { Transaction } from "@/types";
-import { conservarRevisionImporte, validarCajas, validarRevisionImporte, type DatosCajas, type RevisionImporteCaja } from "@/utils/cajas";
+import { conservarRevisionImporte, sustituirRevisionImporte, validarCajas, validarRevisionImporte, type DatosCajas, type RevisionImporteCaja } from "@/utils/cajas";
 import { canonical, moneyAcknowledgement, moneyResult, type MoneyAck, type MoneyReview, type MoneySource } from "../functions/src/private-box-money-shared.js";
 import { units } from "../functions/src/money-units.js";
 
 /** Construye solo una pareja enlazada por IDs; no busca similitud de dinero. */
 export function prepararRevisionImporte(local: DatosCajas, rows: Transaction[], deleted: number[],
   remote: DatosCajas, remoteRows: Transaction[], remoteDeleted: number[], uid: string, currency: string,
-  id: string, movementId: string, chosen: MoneySource, now = Date.now()): RevisionImporteCaja {
+  id: string, movementId: string, chosen: MoneySource, now = Date.now(), reemplaza?: string): RevisionImporteCaja {
   validarCajas(local); validarCajas(remote);
   const one = <T,>(items: T[], match: (item: T) => boolean): T => {
     const selected = items.filter(match);
@@ -20,14 +20,17 @@ export function prepararRevisionImporte(local: DatosCajas, rows: Transaction[], 
   if (canonical(box) !== canonical(cloudBox)) throw new Error("cajas-money-changed");
   const personal = one(rows, row => row.id === movement.personalTransactionId);
   const cloudPersonal = one(remoteRows, row => row.id === personal.id);
+  const prior = reemplaza ? local.revisionesImporte?.find(value => value.id === reemplaza) : undefined;
+  if (reemplaza && (!prior || prior.estado !== "pendiente" || prior.uid !== uid || prior.currency !== currency
+    || prior.box.id !== box.id || prior.local.personal.id !== personal.id || prior.local.movement.id !== movementId)) throw new Error("cajas-money-changed");
   const version = Math.max(now, (personal.updatedAt ?? 0) + 1, (cloudPersonal.updatedAt ?? 0) + 1,
-    (movement.updatedAt ?? movement.creadoEn) + 1, (other.updatedAt ?? other.creadoEn) + 1);
+    (movement.updatedAt ?? movement.creadoEn) + 1, (other.updatedAt ?? other.creadoEn) + 1, (prior?.version ?? 0) + 1);
   const entry: RevisionImporteCaja = { id, uid, currency, box, local: { personal, movement },
-    remote: { personal: cloudPersonal, movement: other }, chosen, createdAt: now, version, estado: "pendiente" };
+    remote: { personal: cloudPersonal, movement: other }, chosen, createdAt: now, version, estado: "pendiente", ...(reemplaza ? { reemplaza } : {}) };
   validarRevisionImporte(entry);
   assertSources(local, rows, deleted, entry, "original");
   assertSources(remote, remoteRows, remoteDeleted, { ...entry, local: entry.remote }, "original");
-  if (local.revisionesImporte?.some(value => value.estado === "pendiente" && value.local.personal.id === personal.id)) throw new Error("cajas-money-pending");
+  if (local.revisionesImporte?.some(value => value.estado === "pendiente" && value.local.personal.id === personal.id && value.id !== reemplaza)) throw new Error("cajas-money-pending");
   // Valida primero; no transforma valores no finitos ni comparte referencias.
   return JSON.parse(JSON.stringify(entry));
 }
@@ -59,7 +62,7 @@ export function conservarOriginalesImporte(data: DatosCajas, rows: Transaction[]
   validarCajas(data); validarRevisionImporte(entry);
   if (entry.uid !== uid || entry.currency !== currency || entry.estado !== "pendiente") throw new Error("cajas-money-changed");
   assertSources(data, rows, deleted, entry, "original");
-  return conservarRevisionImporte(data, entry);
+  return entry.reemplaza ? sustituirRevisionImporte(data, entry) : conservarRevisionImporte(data, entry);
 }
 
 /** SOLO un plan puro. El contexto aún debe guardar sus claves juntas en Android. */
