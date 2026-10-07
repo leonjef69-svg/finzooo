@@ -8,6 +8,7 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { applyVoiceCorrection, type VoiceFailure } from "@/utils/voiceParser";
 import { parseVoiceCommand } from "@/utils/voiceCommand";
 import { voiceCompareMonths, voiceMonthlyTotals, voiceTopMonth } from "@/utils/voiceMonth";
+import { voiceSummary } from "@/utils/voiceSummary";
 import { queueExport } from "@/utils/pendingExport";
 import { suggestCategory } from "@/utils/classifier";
 import CategoryAvatar from "@/components/CategoryAvatar";
@@ -667,67 +668,10 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     onClose();
   }
 
-  // Cuentas del mes pedido: cuánto salió, cuánto entró y en qué se fue más.
-  // Se calcula aquí y no en un archivo aparte porque son cuatro líneas y
-  // solo las usa esta pantalla.
-  const summary = (() => {
-    if (!summaryMk) return null;
-    // Si se preguntó por un día, el filtro es la fecha completa. Funciona
-    // igual porque una fecha guardada es "2026-07-28": el mes es su
-    // principio y el día es la fecha entera.
-    const prefix = summaryDay > 0 ? `${summaryMk}-${String(summaryDay).padStart(2, "0")}` : summaryMk;
-    const monthTx = transactions.filter((tx) => tx.date.startsWith(prefix));
-
-    // El "protagonista" es lo que se pidió; el otro lado va como línea
-    // pequeña debajo. Antes el protagonista era SIEMPRE el gasto, así que
-    // pedir un resumen de ingresos mostraba gastos.
-    const wantsIncome = summaryFocus === "income";
-    const all = monthTx.filter((tx) => !tx.internalTransfer && (wantsIncome ? tx.type === "income" : tx.type === "expense"));
-    const other = monthTx.filter((tx) => !tx.internalTransfer && (wantsIncome ? tx.type === "expense" : tx.type === "income"));
-
-    // Si se pidió una categoría, el resumen es SOLO de esa.
-    const main = summaryCategory ? all.filter((tx) => tx.category === summaryCategory) : all;
-
-    const byCategory = new Map<string, number>();
-    for (const tx of main) byCategory.set(tx.category, (byCategory.get(tx.category) ?? 0) + tx.amount);
-    const [y, m] = summaryMk.split("-").map(Number);
-
-    return {
-      label: summaryDay > 0
-        ? t("voice.summaryDayLabel", { day: summaryDay, month: monthNames[m - 1], year: y })
-        : `${monthNames[m - 1]} ${y}`,
-      isIncome: wantsIncome,
-      isDay: summaryDay > 0,
-      category: summaryCategory,
-      // Qué decir cuando no hay nada. Con un día pedido, "en ese mes" sería
-      // mentira: se buscó en un solo día. Se elige aquí y no en el dibujo
-      // porque son seis casos y en medio del JSX no se leían.
-      emptyKey: summaryCategory
-        ? summaryDay > 0
-          ? "voice.summaryEmptyCategoryDay"
-          : "voice.summaryEmptyCategory"
-        : summaryDay > 0
-          ? wantsIncome
-            ? "voice.summaryEmptyIncomeDay"
-            : "voice.summaryEmptyDay"
-          : wantsIncome
-            ? "voice.summaryEmptyIncome"
-            : "voice.summaryEmpty",
-      total: main.reduce((s, tx) => s + tx.amount, 0),
-      otherTotal: other.reduce((s, tx) => s + tx.amount, 0),
-      count: main.length,
-      // Sin categoría pedida se enseña en qué se fue más (las categorías);
-      // con una categoría, esa lista sería una sola fila repitiendo el
-      // total, así que se enseñan los movimientos concretos, que es lo que
-      // de verdad se quiere ver.
-      top: Array.from(byCategory.entries())
-        .sort((a, b) => b[1] - a[1])
-        .slice(0, 4),
-      // De un día se enseñan más: son pocos y caben. De un mes entero, seis
-      // ya llenan la pantalla y el resto se resume en "y N más".
-      items: [...main].sort((a, b) => b.amount - a.amount).slice(0, summaryDay > 0 ? 10 : 6),
-    };
-  })();
+  // La pantalla y su prueba comparten exactamente la misma cuenta.
+  const summary = summaryMk
+    ? voiceSummary(transactions, summaryMk, summaryDay, summaryFocus, summaryCategory, monthNames, t)
+    : null;
 
   /** Nombre legible de un mes guardado como "2026-05". */
   function monthLabel(key: string): string {

@@ -169,3 +169,11 @@ Por la exclusión del propietario, ejecutar `node pruebas/correr.mjs --sin-tarje
 omite sus dos suites específicas y no las cuenta como aprobadas. Sin esa opción
 se conserva la ejecución completa; con un filtro el total muestra solo lo que
 se ejecutó. La compilación/lint generales no equivalen a auditar ese módulo.
+
+Cuatro archivos históricos (`verificar-archivo-entrante.mjs`,
+`verificar-bloqueo-importar.mjs`, `verificar-carrera-inicio.mjs` y
+`verificar-bloqueo.mjs`) simulan pasos de navegación/candado, pero no ejecutan
+el componente ni Android. El corredor los conserva para consulta y permite
+ejecutarlos con un filtro explícito, pero no los cuenta en la batería normal.
+Sus casos deben comprobarse en un teléfono según
+[`docs/PRUEBAS_NAVEGACION_CANDADO.md`](../docs/PRUEBAS_NAVEGACION_CANDADO.md).

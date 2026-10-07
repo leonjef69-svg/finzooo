@@ -131,6 +131,7 @@ const SUITES = [
   { archivo: "verificar-panorama.ts", alias: BASE },
   { archivo: "verificar-gasto-diario-real.ts", alias: BASE },
   { archivo: "verificar-comparar-meses-real.ts", alias: BASE },
+  { archivo: "verificar-resumen-dia-real.ts", alias: BASE },
   { archivo: "verificar-fusion.ts", alias: BASE },
   { archivo: "verificar-sincronizacion-campos.ts", alias: BASE },
   { archivo: "verificar-frecuencias-responsivas.ts", alias: BASE },
@@ -170,10 +171,20 @@ const AUDITORES = fs
 
 const SIN_TARJETAS = process.argv.includes("--sin-tarjetas");
 const FILTRO = process.argv.slice(2).find(value => value !== "--sin-tarjetas") || process.env.FINO_TEST || "";
+// Estos cuatro archivos reproducen de memoria la navegación y el candado,
+// pero no ejecutan AppLockGate ni el recorrido real de Android. Se conservan
+// como escenarios históricos; no cuentan como pruebas de la app hasta tener
+// una comprobación real. Un filtro explícito permite correrlos por separado.
+const SIMULACIONES_NAVEGACION = new Set([
+  "verificar-archivo-entrante.mjs",
+  "verificar-bloqueo-importar.mjs",
+  "verificar-carrera-inicio.mjs",
+  "verificar-bloqueo.mjs",
+]);
 const seleccionada = archivo => (!FILTRO || archivo.includes(FILTRO))
   && (!SIN_TARJETAS || !/^verificar-tarjeta-credito(?:-ux)?\.ts$/.test(archivo));
 const suitesSeleccionadas = SUITES.filter(s => seleccionada(s.archivo));
-const sueltasSeleccionadas = SUELTAS.filter(seleccionada);
+const sueltasSeleccionadas = SUELTAS.filter(f => seleccionada(f) && (FILTRO || !SIMULACIONES_NAVEGACION.has(f)));
 const auditoresSeleccionados = AUDITORES.filter(seleccionada);
 
 /** Corre un .mjs suelto y cuenta si paso. */
@@ -196,6 +207,7 @@ const rotas = [];
 
 console.log("\n=== PRUEBAS ===\n");
 if (SIN_TARJETAS) console.log("Tarjetas de crédito: dos suites excluidas por decisión del propietario. No se cuentan como aprobadas.\n");
+if (!FILTRO) console.log("Navegación/candado: cuatro simulaciones históricas fuera del conteo hasta comprobar el flujo real en Android.\n");
 for (const s of suitesSeleccionadas) {
   const nombre = s.archivo.replace(/\.ts$/, "");
   const salida = path.join(TMP, nombre + (s.formato === "cjs" ? ".cjs" : ".mjs"));

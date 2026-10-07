@@ -10,14 +10,17 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
-FINO-61 parcialmente atendido: se retiraron nueve pruebas que no comprobaban
+FINO-61 atendido en el conteo: se retiraron diez pruebas que no comprobaban
 el código actual (gráficas inexistentes y copias de algoritmos). El gráfico
 diario vigente ahora comparte la misma cuenta entre Reportes y una prueba
 real, que falló antes de la extracción. Voz también comparte las cuentas de
-comparación mensual con una prueba real. Pasaron 142 pruebas locales y 8
+comparación mensual y resumen por día con pruebas reales. Cuatro simulaciones
+de navegación/candado se guardan, pero no cuentan hasta probar Android.
+Pasaron 138 pruebas locales y 8
 auditores sin tarjetas; una prueba local no está versionada, por lo que Git
-limpio tiene 141. Faltan cinco simulaciones por sustituir. No constituye
-una entrega instalada. Sin APK/AAB/OTA.
+limpio tiene 137. Falta el recorrido físico de
+`docs/PRUEBAS_NAVEGACION_CANDADO.md`. No constituye una entrega instalada.
+Sin APK/AAB/OTA.
 
 FINO-58 revalidado: el candado falla cerrado si SecureStore no responde.
 FINO-59 parcialmente mitigado: el bot local exige autorizaciones explícitas,

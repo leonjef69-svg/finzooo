@@ -12,14 +12,18 @@
   gráfico viejo de 31 barras. El ranking y la comparación de meses de Voz
   también usan ahora `utils/voiceMonth.ts`; su prueba real falló antes de
   extraerlos y cubre transferencias, meses vacíos y diferencias pequeñas.
-  Se retiró otra copia del algoritmo. Pasan 142 pruebas locales y 8 auditores sin
+  El resumen por día/mes de Voz usa también una función común con prueba real;
+  se retiró otra copia que ignoraba transferencias.
+- Cuatro simulaciones históricas de navegación/candado se conservan pero ya no
+  cuentan como pruebas automáticas de la app. Pasan 138 pruebas locales y 8
+  auditores sin
   tarjetas; una de esas pruebas (`verificar-resumen-gasto-ingreso-ui.mjs`) no
-  está versionada, así que una copia limpia tiene 141. Los recuentos locales
+  está versionada, así que una copia limpia tiene 137. Los recuentos locales
   anteriores también la incluían. La reducción es deliberada: no se presenta
   cobertura falsa.
-- **Qué sigue:** reemplazar cinco simulaciones restantes por pruebas que
-  ejecuten la lógica real de voz y navegación. **Qué falta:** esa
-  parte de FINO-61, pruebas físicas y publicación; tarjetas excluidas.
+- **Qué sigue:** ejecutar `docs/PRUEBAS_NAVEGACION_CANDADO.md` en Android.
+  **Qué falta:** ese recorrido físico, publicación y otros pendientes de la
+  auditoría; tarjetas excluidas.
 
 ## FINO-58/59 — candado revalidado y herramientas locales protegidas (07/10/2026)
 

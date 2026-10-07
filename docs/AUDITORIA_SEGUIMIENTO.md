@@ -21,11 +21,16 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 - La comparación mensual y ranking de Voz también comparten función con su
   prueba real. La prueba nueva falló antes de la extracción y comprueba que
   una transferencia no se sume como gasto; la antigua copia sí la sumaba.
-  Se retiró esa copia. Siguen aprobando 142 pruebas locales y 8 auditores.
-- **Qué sigue:** sustituir las otras cinco pruebas que copian algoritmos de
-  voz y navegación por comprobaciones de código real, y demostrar
-  que fallan si ese código se altera. **Qué falta:** completar FINO-61,
-  pruebas Android y publicación; tarjetas excluidas.
+  El resumen por día/mes de Voz ahora comparte también función con su prueba
+  real y la copia antigua se retiró.
+- Las cuatro simulaciones históricas de navegación/candado no ejecutan la app:
+  se conservan como escenarios, pero el corredor no las incluye en el conteo
+  normal. Pasan 138 pruebas locales y 8 auditores sin tarjetas; en Git limpio
+  son 137 porque una prueba local preexistente no está versionada.
+- **Qué sigue:** realizar el recorrido de
+  `docs/PRUEBAS_NAVEGACION_CANDADO.md` en Android y convertirlo en pruebas
+  automatizadas donde sea viable. **Qué falta:** comprobación física y
+  publicación; tarjetas excluidas.
 
 ## FINO-58/59 — candado y herramientas de desarrollo (07/10/2026)
 
