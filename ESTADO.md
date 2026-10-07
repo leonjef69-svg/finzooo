@@ -1,5 +1,17 @@
 # Estado actual de Fino
 
+## FINO-61 — pruebas que no comprobaban la app (07/10/2026)
+
+- Se retiraron del corredor cinco pruebas de gráficas de líneas/acumulados que
+  ya no existen y una copia congelada del exportador. No eran comprobaciones
+  de la app actual; `verificar-exportar.ts` sí ejecuta el exportador real.
+  Los seis archivos borrados se pueden recuperar desde Git.
+- Después de retirarlos pasan 143 pruebas y 8 auditores, sin tarjetas. La
+  reducción del número es deliberada: no se presenta cobertura falsa.
+- **Qué sigue:** reemplazar ocho simulaciones restantes por pruebas que
+  ejecuten la lógica real de pantallas, voz y navegación. **Qué falta:** esa
+  parte de FINO-61, pruebas físicas y publicación; tarjetas excluidas.
+
 ## FINO-58/59 — candado revalidado y herramientas locales protegidas (07/10/2026)
 
 - FINO-58 ya estaba corregido: un error al leer SecureStore mantiene el

@@ -3,6 +3,19 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-61 — cobertura engañosa en pruebas (07/10/2026)
+
+- Se confirmó que cinco pruebas ejecutaban gráficas retiradas y otra ejecutaba
+  JavaScript compilado y congelado de un exportador viejo. Se retiraron esos
+  seis archivos; Git conserva su historial. El exportador actual sigue
+  cubierto por `verificar-exportar.ts`, que lo importa y ejecuta.
+- La batería restante pasó: 143 pruebas y 8 auditores sin tarjetas. El número
+  baja porque estas seis nunca podían detectar un fallo nuevo de la app.
+- **Qué sigue:** sustituir las otras ocho pruebas que copian algoritmos de
+  informes, voz y navegación por comprobaciones de código real, y demostrar
+  que fallan si ese código se altera. **Qué falta:** completar FINO-61,
+  pruebas Android y publicación; tarjetas excluidas.
+
 ## FINO-58/59 — candado y herramientas de desarrollo (07/10/2026)
 
 - FINO-58 ya se había corregido en `276cf53`. La prueba ejecuta la lectura
