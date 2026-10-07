@@ -1,5 +1,21 @@
 # Estado actual de Fino
 
+## FINO-46 — signos de una columna Monto al importar (07/10/2026)
+
+- Si un archivo sin columna Tipo/Cargo/Abono usa cargos negativos, sus
+  montos positivos se leen como ingresos. Si todos son positivos, siguen
+  siendo gastos: no se inventan ingresos en extractos de otro formato.
+  La regla excluye totales con fecha inválida y se aplica también a filas
+  que esperan que la persona elija fecha. La columna Tipo explícita manda.
+- La regresión falló antes del cambio y pasó después. TypeScript/ESLint,
+  148 pruebas sin tarjetas y 8 auditores aprobados. Es código preparado, no
+  publicado; la vista previa aún no permite cambiar manualmente el tipo de
+  cada fila y falta comprobar extractos reales y Android antes de dar el
+  hallazgo por cerrado para todos los formatos.
+- **Qué sigue:** seguir con pérdida/corrupción de datos y añadir revisión
+  manual de tipo en la importación si se confirma necesaria. **Qué falta:**
+  pruebas físicas, consolas y publicación; tarjetas fuera.
+
 ## FINO-12 — monto del calendario corregido en código (07/10/2026)
 
 - El formulario ya no convierte `1,500` en S/ 1,50: conserva lo escrito y al

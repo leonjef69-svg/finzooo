@@ -3,6 +3,22 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-46 — abono positivo en columna Monto única (07/10/2026)
+
+- Confirmado: con `Monto=-80` y `Monto=+1500`, el lector original devolvía
+  dos gastos. Ahora decide la convención por el archivo: con un cargo negativo
+  real, el positivo es ingreso; sin negativos, no cambia compras positivas.
+  No infiere desde una fila TOTAL inválida, respeta Tipo escrito y conserva
+  el tipo en filas que esperan fecha.
+- Prueba del lector real roja antes del cambio, verde después; TypeScript,
+  ESLint, 148 pruebas sin tarjetas y 8 auditores aprobados. No se modificaron
+  datos existentes ni se publicó el código. La vista previa muestra el signo,
+  pero no permite corregir el tipo fila por fila: esa mejora y los extractos
+  reales/Android siguen pendientes antes de cerrar el hallazgo completo.
+- **Qué sigue:** continuar riesgos de pérdida/corrupción e importación.
+  **Qué falta:** revisión manual de tipo, pruebas Android/consolas/entrega;
+  tarjetas fuera del ámbito.
+
 ## FINO-12 — monto de pagos del calendario (07/10/2026)
 
 - Confirmado en `NuevoPagoProgramado`: `Number(monto.replace(",", "."))`

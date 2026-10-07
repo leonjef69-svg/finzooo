@@ -10,6 +10,14 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-46 corregido en el lector de archivos, no publicado: en una columna
+única Monto, si hay cargos negativos reales, los positivos se presentan como
+ingresos; con solo positivos se conserva la lectura anterior como gastos.
+La columna Tipo explícita prevalece y un pie TOTAL no cambia la convención.
+Regresión roja antes del arreglo; TypeScript/ESLint y 148 pruebas/8 auditores
+sin tarjetas aprobados. Faltan revisión manual de tipos y pruebas con archivos
+reales/Android; sin APK/AAB/OTA ni entrega a usuarios.
+
 FINO-12 corregido en el código, no publicado: el monto de un pago/ingreso del
 calendario conserva la coma o el punto escrito y distingue `1,500` (mil
 quinientos en PEN) de `1,50` (uno con cincuenta). Un formato ambiguo o cifra

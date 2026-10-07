@@ -501,6 +501,14 @@ export function parseStatement(text: string, account?: string): ParseResult {
   let errorCount = 0;
   let sinFecha = 0;
   const rowsSinFecha: RawRow[] = [];
+  // En algunos extractos hay una sola columna Monto: cargos negativos y
+  // abonos positivos. No se puede inferir el signo de un solo renglón: otros
+  // bancos ponen TODOS los cargos en positivo. La decisión se toma al final
+  // del archivo y solo para filas reales sin columna de tipo ni cargo/abono.
+  const columnaUnicaSinTipo = map.amount !== -1 && map.charge === -1
+    && map.credit === -1 && map.type === -1;
+  const positivosSinTipo: RawRow[] = [];
+  let hayCargoNegativo = false;
 
   // Lo que el archivo dice de sí mismo antes de empezar la tabla. Ver mesDeclaradoEn.
   const mesDelArchivo = mesDeclaradoEn(lines.slice(0, headerIndex));
@@ -538,6 +546,7 @@ export function parseStatement(text: string, account?: string): ParseResult {
     // columnas separadas de cargo (sale dinero) y abono (entra dinero).
     let value: number | null = null;
     let typeFromColumns: "expense" | "income" | null = null;
+    let montoUnico: number | null = null;
 
     if (map.charge !== -1 || map.credit !== -1) {
       const charge = parseAmount(cellAt(map.charge));
@@ -553,11 +562,18 @@ export function parseStatement(text: string, account?: string): ParseResult {
     if (value === null && map.amount !== -1) {
       const single = parseAmount(cellAt(map.amount));
       if (single !== null && single !== 0) {
+        montoUnico = single;
         value = Math.abs(single);
         // Sin columna de tipo, el signo manda: negativo = salió dinero.
         typeFromColumns = single < 0 ? "expense" : null;
       }
     }
+
+    // Una fila TOTAL con fecha inválida no decide la convención de todo el
+    // archivo. Sí cuentan las filas sin fecha que se conservan para revisión.
+    const signoDeFilaReal = columnaUnicaSinTipo && montoUnico !== null
+      && (date !== null || !fechaCruda.trim());
+    if (signoDeFilaReal && montoUnico !== null && montoUnico < 0) hayCargoNegativo = true;
 
     if (!date || value === null || value === 0) {
       errorCount++;
@@ -570,7 +586,7 @@ export function parseStatement(text: string, account?: string): ParseResult {
         sinFecha++;
         // Se guarda entera menos la fecha. Ver rowsSinFecha.
         const sinDia = cellAt(map.description);
-        rowsSinFecha.push({
+        const filaSinFecha: RawRow = {
           date: "",
           amount: value,
           type: (map.type !== -1 ? matchType(cellAt(map.type)) : null) ?? typeFromColumns ?? "expense",
@@ -580,7 +596,9 @@ export function parseStatement(text: string, account?: string): ParseResult {
           categoryRaw: cellAt(map.category),
           methodRaw: cellAt(map.method),
           account,
-        });
+        };
+        rowsSinFecha.push(filaSinFecha);
+        if (signoDeFilaReal && montoUnico !== null && montoUnico > 0) positivosSinTipo.push(filaSinFecha);
       }
       continue;
     }
@@ -592,7 +610,7 @@ export function parseStatement(text: string, account?: string): ParseResult {
     const type = explicitType ?? typeFromColumns ?? "expense";
 
     const description = cellAt(map.description);
-    rows.push({
+    const fila: RawRow = {
       date,
       amount: value,
       type,
@@ -602,7 +620,16 @@ export function parseStatement(text: string, account?: string): ParseResult {
       categoryRaw: cellAt(map.category),
       methodRaw: cellAt(map.method),
       account,
-    });
+    };
+    rows.push(fila);
+    if (signoDeFilaReal && montoUnico !== null && montoUnico > 0) positivosSinTipo.push(fila);
+  }
+
+  // Aplicar una sola convención a todo el archivo. Sin cargos negativos se
+  // conserva el comportamiento anterior, para no convertir compras positivas
+  // de otro banco en ingresos inventados.
+  if (hayCargoNegativo) {
+    for (const fila of positivosSinTipo) fila.type = "income";
   }
 
   return { ok: true, rows, errorCount, sinFecha, rowsSinFecha, headerIndex };
