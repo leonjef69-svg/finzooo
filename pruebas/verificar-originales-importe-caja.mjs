@@ -59,6 +59,24 @@ for (const source of ["local-personal", "local-box", "remote-personal", "remote-
   }
 }
 const journal = core.conservarRevisionImporte(data, selected), ack = moneyAcknowledgement(selected);
+// Retiro sin mover dinero: una elección anterior no vuelve a activarse y
+// ninguna copia original se pierde, incluso al mezclar un guardado atrasado.
+const equalPersonal = { ...personal, amount: movement.monto };
+const equalEntry = { ...entry, id: "money-retirement-0001", local: { personal: equalPersonal, movement }, remote: { ...entry.remote, personal } };
+const equalBoxes = core.conservarRevisionImporte(data, equalEntry);
+const retired = review.retirarRevisionImporteLocal(equalBoxes, [equalPersonal, unrelated], [], equalEntry, "A", "PEN");
+assert.equal(retired.revisionesImporte[0].estado, "retirado");
+assert.deepEqual(plain(retired.movimientos), plain(equalBoxes.movimientos), "retirar no cambia la Caja");
+assert.deepEqual(plain(retired.revisionesImporte[0].local), plain(equalEntry.local), "retirar conserva los originales");
+assert.deepEqual(plain(core.fusionarCajas(retired, equalBoxes).revisionesImporte), plain(retired.revisionesImporte), "un guardado viejo no reactiva la elección");
+assert.equal(core.conservarRevisionImporte(retired, equalEntry), retired);
+assert.throws(() => review.retirarRevisionImporteLocal(equalBoxes, [personal, unrelated], [], equalEntry, "A", "PEN"), /money-changed/);
+assert.throws(() => review.retirarRevisionImporteLocal(equalBoxes, [equalPersonal, unrelated], [equalPersonal.id], equalEntry, "A", "PEN"), /money-changed/);
+assert.throws(() => review.retirarRevisionImporteLocal(journal, previousRows, [], selected, "A", "PEN"), /money-changed/);
+const spentNinety = { ...movement, id: "spent-retirement", tipo: "gasto", monto: 90, personalTransactionId: undefined };
+const oldChoice = { ...equalEntry, chosen: "remote-personal" };
+const withSpend = core.conservarRevisionImporte({ ...data, movimientos: [movement, spentNinety] }, oldChoice);
+assert.equal(review.retirarRevisionImporteLocal(withSpend, [equalPersonal], [], oldChoice, "A", "PEN").revisionesImporte[0].estado, "retirado");
 for (const [source, rows, deleted, response, owner, currency] of [
   [{ ...journal, cajasBorradas: [box.id] }, previousRows, [], ack, "A", "PEN"],
   [{ ...journal, movimientosBorrados: [movement.id] }, previousRows, [], ack, "A", "PEN"],

@@ -1,5 +1,5 @@
 import { nuevoIdCaja, type DatosCajas, type RevisionImporteCaja } from "@/utils/cajas";
-import { loadPrivateBoxMoneySources, requestPrivateBoxMoneyReview, recoverPrivateBoxMoneyReview, type PrivateBoxMoneyLocal, type PrivateBoxMoneySources } from "@/utils/cloudPrivateBoxMoney";
+import { loadPrivateBoxMoneySources, requestPrivateBoxMoneyReview, recoverPrivateBoxMoneyReview, requestPrivateBoxMoneyRetirement, type MoneyRetireAck, type PrivateBoxMoneyLocal, type PrivateBoxMoneySources } from "@/utils/cloudPrivateBoxMoney";
 import { prepararRevisionImporte, conservarOriginalesImporte } from "@/utils/privateBoxMoneyReview";
 import { withPrivateBoxMoneyReview, type PrivateBoxCloudLease } from "@/utils/privateBoxSync";
 import { canonical, type MoneyAck, type MoneySource } from "../functions/src/private-box-money-shared.js";
@@ -11,6 +11,7 @@ export type PrivateBoxMoneyPort = {
   local: () => PrivateBoxMoneyLocal;
   stage: (before: DatosCajas, entry: RevisionImporteCaja, lease: PrivateBoxCloudLease, current: () => boolean) => Promise<boolean>;
   commit: (before: DatosCajas, entry: RevisionImporteCaja, ack: MoneyAck, lease: PrivateBoxCloudLease, current: () => boolean) => Promise<boolean>;
+  retire: (before: DatosCajas, entry: RevisionImporteCaja, ack: MoneyRetireAck, lease: PrivateBoxCloudLease, current: () => boolean) => Promise<boolean>;
 };
 export type PrivateBoxMoneyComparison = {
   uid: string; movementId: string; before: DatosCajas; local: PrivateBoxMoneyLocal; remote: PrivateBoxMoneySources;
@@ -116,5 +117,24 @@ export async function reintentarImporteCaja(uid: string, entry: RevisionImporteC
       ack = await requestPrivateBoxMoneyReview(uid, entry, lease, port.local, current);
     }
     return port.commit(before, entry, ack, lease, current);
+  });
+}
+
+/** Retira la elección vieja sin modificar cifras solo si ambas copias del servidor
+ * y ambas locales coinciden. Si la elección se aplicó primero, recupera y confirma.
+ */
+export async function retirarImporteCaja(uid: string, entry: RevisionImporteCaja, port: PrivateBoxMoneyPort): Promise<boolean> {
+  if (!port.current()) throw new Error("account-task-obsolete");
+  const retained = port.boxes().revisionesImporte?.find(value => value.id === entry.id);
+  if (entry.uid !== uid || entry.estado !== "pendiente" || !retained || canonical(retained) !== canonical(entry)) throw new Error("cajas-money-changed");
+  return withPrivateBoxMoneyReview(uid, async lease => {
+    const before = port.boxes(), source = canonical(before);
+    const current = () => port.current() && canonical(port.boxes()) === source;
+    const answer = await requestPrivateBoxMoneyRetirement(uid, entry, lease, port.local, current);
+    if (answer.status === "applied") {
+      const ack = await recoverPrivateBoxMoneyReview(uid, entry, lease, port.local, current);
+      return port.commit(before, entry, ack, lease, current);
+    }
+    return port.retire(before, entry, answer, lease, current);
   });
 }

@@ -146,8 +146,8 @@ import { patchPrivateBoxPersonal, validatePrivateBoxPatch } from "@/utils/privat
 import { validatePrivateBoxRepair, type PrivateBoxRepairChoice } from "@/utils/privateBoxRepair";
 import { assertPrivateBoxRepairCloud, loadPrivateBoxRepairCloud } from "@/utils/privateBoxRepairCloud";
 import { PrivateBoxSyncError, privateBoxCloudResponseCurrent, assertPrivateBoxMoneyReviewLease, type PrivateBoxCloudLease } from "@/utils/privateBoxSync";
-import { assertPrivateBoxMoneyReceipt } from "@/utils/cloudPrivateBoxMoney";
-import { confirmarRevisionImporteLocal, conservarOriginalesImporte } from "@/utils/privateBoxMoneyReview";
+import { assertPrivateBoxMoneyReceipt, assertPrivateBoxMoneyRetirement, type MoneyRetireAck } from "@/utils/cloudPrivateBoxMoney";
+import { confirmarRevisionImporteLocal, conservarOriginalesImporte, retirarRevisionImporteLocal } from "@/utils/privateBoxMoneyReview";
 import { assertPrivateBoxMoneyLocalIdle, assertPrivateBoxMoneyLocalMutation, reservePrivateBoxMoneyLocalWrite, type PrivateBoxMoneyLocalWrite } from "@/utils/privateBoxMoneyLocalWrite";
 import { canonical, type MoneyAck } from "../functions/src/private-box-money-shared.js";
 import { captureAccountTask } from "@/utils/accountTask";
@@ -277,6 +277,7 @@ type AppDataContextValue = {
   repairLinkedTransferTransactions: (upserts: Transaction[], deleteIds?: number[]) => void;
   commitPrivateBoxData: (before: DatosCajas, data: DatosCajas, upserts: Transaction[], deleteIds: number[], current: () => boolean, apply: (data: DatosCajas) => void, repair?: true | PrivateBoxRepairChoice) => Promise<boolean>;
   commitPrivateBoxMoney: (before: DatosCajas, entry: RevisionImporteCaja, ack: MoneyAck, lease: PrivateBoxCloudLease, current: () => boolean, apply: (data: DatosCajas) => void) => Promise<boolean>;
+  retirePrivateBoxMoney: (before: DatosCajas, entry: RevisionImporteCaja, ack: MoneyRetireAck, lease: PrivateBoxCloudLease, current: () => boolean, apply: (data: DatosCajas) => void) => Promise<boolean>;
   stagePrivateBoxMoney: (before: DatosCajas, entry: RevisionImporteCaja, lease: PrivateBoxCloudLease, current: () => boolean, apply: (data: DatosCajas) => void) => Promise<boolean>;
   readPrivateBoxMoneyLocal: () => { transactions: Transaction[]; deletedIds: number[]; currency: string };
   deleteTransactions: (ids: number[]) => void;
@@ -2713,6 +2714,49 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  /** Solo tras el comprobante del servidor: conserva cifras y originales en un lote local indivisible. */
+  async function retirePrivateBoxMoney(before: DatosCajas, entry: RevisionImporteCaja, ack: MoneyRetireAck,
+    lease: PrivateBoxCloudLease, current: () => boolean, apply: (data: DatosCajas) => void): Promise<boolean> {
+    const owner = auth.currentUser?.uid ?? "", version = localSessionVersion.current;
+    const task = captureAccountTask(owner, () => version === localSessionVersion.current);
+    if (!ready || !hasOnboarded || !task.current() || !current() || hasUnreadableLocalData()) return false;
+    if (Platform.OS !== "android") throw new Error("private-box-android-only");
+    assertPrivateBoxMoneyRetirement(owner, entry, ack, lease);
+    const original = canonical(before), selected = canonical(entry);
+    return withLocalAccountOperation(async () => {
+      if (!task.current() || !current()) return false;
+      await task.wait(() => flushPendingSaves());
+      let presented = false;
+      const ok = await saveJSONBatchNow([STORAGE_KEYS.transactions, STORAGE_KEYS.deletedTransactionIds, STORAGE_KEYS.cajasDinero], async () => {
+        assertPrivateBoxMoneyRetirement(owner, entry, ack, lease);
+        const saved = validarCajas(await task.wait(() => loadJSON<DatosCajas | null>(STORAGE_KEYS.cajasDinero, null)));
+        if (!current() || canonical(before) !== original || canonical(saved) !== original || canonical(entry) !== selected) throw new Error("private-box-source-changed");
+        const base = transactionsLive.current, deleted = deletedTransactionIdsRef.current, currency = currencyForReturn.current;
+        const rows = canonical(base), marks = canonical(deleted);
+        const next = retirarRevisionImporteLocal(saved, base, deleted, entry, owner, currency);
+        let reservation: PrivateBoxMoneyLocalWrite | undefined;
+        const sourcesCurrent = () => task.current() && canonical(before) === original && canonical(entry) === selected
+          && canonical(transactionsLive.current) === rows && canonical(deletedTransactionIdsRef.current) === marks && currencyForReturn.current === currency;
+        return {
+          entries: [[STORAGE_KEYS.transactions, base], [STORAGE_KEYS.deletedTransactionIds, deleted], [STORAGE_KEYS.cajasDinero, next]],
+          stillValid: () => { assertPrivateBoxMoneyRetirement(owner, entry, ack, lease); return current() && sourcesCurrent(); },
+          reserve: () => {
+            reservation = reservePrivateBoxMoneyLocalWrite(task.current, { transactions: base, deletedIds: deleted, currency, boxes: before });
+            return reservation.release;
+          },
+          committed: () => {
+            if (!sourcesCurrent() || !reservation) throw new Error("private-box-source-changed");
+            reservation.publish(() => {
+              guardarCajasEnMemoria(next);
+              if (current()) { presented = true; apply(next); }
+            });
+          },
+        };
+      });
+      return ok && task.current() && presented;
+    });
+  }
+
   function addOrUpdateTransaction(t2: Transaction, allowLinkedTransferUpdate = false) {
     if (!Number.isFinite(t2.amount) || t2.amount <= 0) {
       showToast(t("toast.amountPositive"));
@@ -2985,6 +3029,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     repairLinkedTransferTransactions,
     commitPrivateBoxData,
     commitPrivateBoxMoney,
+    retirePrivateBoxMoney,
     stagePrivateBoxMoney,
     readPrivateBoxMoneyLocal,
     deleteTransactions,

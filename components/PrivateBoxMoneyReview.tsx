@@ -23,12 +23,12 @@ type Props = {
   message: string | null; busy: boolean; premium: boolean;
   t: (key: string, values?: Record<string, string | number>) => string;
   compare: (id: string) => void; choose: (source: MoneySource) => void; retry: (entry: RevisionImporteCaja) => void;
-  reviewAgain: (entry: RevisionImporteCaja) => void; cancel: () => void;
+  reviewAgain: (entry: RevisionImporteCaja) => void; retire: (entry: RevisionImporteCaja) => void; cancel: () => void;
 };
 const nombre = (data: DatosCajas, id: string) => data.cajas.find(row => row.id === id)?.nombre || "";
 
 /** Mantiene visibles las cuatro fuentes, incluso cuando tienen cifras iguales. */
-export default function PrivateBoxMoneyReview({ comparison, reviews, candidates, message, busy, premium, t, compare, choose, retry, reviewAgain, cancel }: Props) {
+export default function PrivateBoxMoneyReview({ comparison, reviews, candidates, message, busy, premium, t, compare, choose, retry, reviewAgain, retire, cancel }: Props) {
   const [history, setHistory] = useState(false);
   const pending = reviews.filter(entry => entry.estado === "pendiente");
   const amount = (value: number, currency: string) => fmt(value, currencySymbolFor(currency), currency);
@@ -55,11 +55,12 @@ export default function PrivateBoxMoneyReview({ comparison, reviews, candidates,
       {originalesImporte(entry).map(copy => <Text key={copy.source} className="mb-1 text-xs leading-5 text-slate-900 dark:text-slate-100">{t(MONEY_SOURCE_LABELS[copy.source])}: {amount(copy.amount, entry.currency)} · {copy.date}{copy.source === entry.chosen ? ` · ${t("boxes.moneyChosen")}` : ""}</Text>)}
       <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={() => retry(entry)} className="min-h-11 justify-center"><Text className="font-bold text-amber-800 dark:text-amber-200">{t(premium ? "boxes.moneyRetry" : "boxes.moneyRecover")}</Text></TouchableOpacity>
       <TouchableOpacity accessibilityRole="button" disabled={busy || !premium} onPress={() => reviewAgain(entry)} className={`min-h-11 justify-center ${!premium ? "opacity-50" : ""}`}><Text className="font-bold text-amber-800 dark:text-amber-200">{t("boxes.moneyReviewAgain")}</Text></TouchableOpacity>
+      <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={() => retire(entry)} className="min-h-11 justify-center"><Text className="font-bold text-amber-800 dark:text-amber-200">{t("boxes.moneyRetireAction")}</Text></TouchableOpacity>
     </View>)}
     {reviews.length > 0 ? <View className="mb-3">
       <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: history }} onPress={() => setHistory(value => !value)} className="min-h-11 justify-center"><Text className="font-bold text-slate-600 dark:text-slate-300">{t("boxes.moneyHistory")}</Text></TouchableOpacity>
       {history ? reviews.filter(entry => entry.estado !== "pendiente").map(entry => <View key={entry.id} className="mb-2">
-        <Text className="text-xs font-bold text-slate-900 dark:text-slate-100">{entry.box.nombre} · {t(entry.estado === "sustituido" ? "boxes.moneySuperseded" : "boxes.moneyConfirmed")}</Text>
+        <Text className="text-xs font-bold text-slate-900 dark:text-slate-100">{entry.box.nombre} · {t(entry.estado === "sustituido" ? "boxes.moneySuperseded" : entry.estado === "retirado" ? "boxes.moneyRetiredHistory" : "boxes.moneyConfirmed")}</Text>
         {originalesImporte(entry).map(copy => <Text key={copy.source} className="text-xs leading-5 text-slate-600 dark:text-slate-300">{t(MONEY_SOURCE_LABELS[copy.source])}: {amount(copy.amount, entry.currency)} · {copy.date}{copy.source === entry.chosen ? ` · ${t("boxes.moneyChosen")}` : ""}</Text>)}
       </View>) : null}
     </View> : null}

@@ -10,6 +10,23 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Cierre de elección monetaria pendiente **preparado, no publicado**: Gratis
+puede cerrarla solo si las dos copias de Personal/Caja ya coinciden aquí y en
+Firebase. El servidor guarda una huella técnica que invalida una petición
+antigua; la app conserva originales y montos, con guardado local indivisible.
+Si la corrección se aplicó primero, recupera su confirmación; si hay diferencias
+o fallos, mantiene el pendiente. `docs/PRUEBAS_RETIRO_IMPORTE_CAJA.md` reúne
+pruebas y pasos restantes. Servidor actualizado debe desplegarse antes que el
+cliente, en entrega coordinada autorizada. La política se modificó solo en
+archivos. Esta tanda no entrega APK/AAB/OTA ni toca tarjetas de crédito.
+TypeScript/ESLint, 147 pruebas locales y 8 auditores sin tarjetas, 82
+unitarias del servidor y 128 SDK/HTTP/reglas en Firebase local/Node 22
+aprobados. Un APK de desarrollo se abrió solo en emulador hasta bienvenida;
+no se probó el recorrido financiero en Android con cuenta. La prueba local
+ajena sin registrar se mantuvo fuera del commit.
+
+Antecedente de sustitución Pro:
+
 Nueva revisión Pro de elección monetaria pendiente: fuentes actuales,
 confirmación/reconsulta, anteriores originales/elección conservados con estado
 local `sustituido` y enlaces mutuos; nueva pendiente en el mismo lote local.

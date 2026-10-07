@@ -59,7 +59,7 @@ async function cleanupDeletedCloudAccount(db, uid) {
   // Comprobar ANTES de retirar recibos: un destino inconsistente pero ya
   // publicado no puede pasar como clon por haber borrado primero su prueba.
   await prepareIncompleteBoxDeletion(db, uid, "deleted");
-  for (const collection of ["personalReturnReceipts", "privateBoxMigrations"]) {
+  for (const collection of ["personalReturnReceipts", "privateBoxMigrations", "moneyReviewRetirements"]) {
     for (const subcollection of collection === "privateBoxMigrations" ? ["operations", "attempts"] : ["operations"]) {
       const receipts = db.doc(`${collection}/${uid}`).collection(subcollection);
       while (true) {
@@ -72,7 +72,7 @@ async function cleanupDeletedCloudAccount(db, uid) {
     }
   }
   const batch = db.batch();
-  for (const collection of ["negocios", "cajas", "testerPremium", "premiumTrialClaims", "personalReturnReceipts", "privateBoxMigrations"]) {
+  for (const collection of ["negocios", "cajas", "testerPremium", "premiumTrialClaims", "personalReturnReceipts", "privateBoxMigrations", "moneyReviewRetirements"]) {
     batch.delete(db.doc(`${collection}/${uid}`));
   }
   await batch.commit();

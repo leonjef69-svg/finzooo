@@ -18,7 +18,7 @@ const { returnPersonalContribution } = require("./src/personal-return");
 const { finalizeLinkedSpaceDeletion } = require("./src/linked-space-cleanup");
 const { privateBoxMigration } = require("./src/private-box-migration");
 const { prepareIncompleteBoxDeletion } = require("./src/incomplete-box-cleanup");
-const { resolvePrivateBoxMoney, recoverPrivateBoxMoney } = require("./src/private-box-money");
+const { resolvePrivateBoxMoney, recoverPrivateBoxMoney, retirePrivateBoxMoney } = require("./src/private-box-money");
 
 initializeApp();
 
@@ -64,6 +64,21 @@ exports.recoverPrivateBoxMoney = onCall({ region: "southamerica-east1", maxInsta
     if (!error?.reason) throw error;
     throw new HttpsError(/invalid-review|review-too-large/.test(error.reason) ? "invalid-argument" : "failed-precondition",
       "No se pudo confirmar esa corrección. Conserva los originales; no se ha cambiado dinero.", { reason: error.reason });
+  }
+});
+
+// Sin Pro: registra el retiro únicamente cuando ambas copias remotas ya
+// coinciden con las locales. Si la corrección vieja se aplicó, devuelve solo
+// su estado para que la app recupere el recibo por el camino de solo lectura.
+exports.retirePrivateBoxMoney = onCall({ region: "southamerica-east1", maxInstances: 5, timeoutSeconds: 120 }, async request => {
+  const uid = verifiedAccount(request);
+  const account = await getAuth().getUser(uid);
+  if (account.disabled || !account.emailVerified) throw new HttpsError("unauthenticated", "Verifica tu cuenta.");
+  try { return await retirePrivateBoxMoney(getFirestore(), uid, request.data); }
+  catch (error) {
+    if (!error?.reason) throw error;
+    throw new HttpsError(/invalid-review|review-too-large/.test(error.reason) ? "invalid-argument" : "failed-precondition",
+      "No se retiró la elección. Conserva los originales y comprueba las copias.", { reason: error.reason });
   }
 });
 

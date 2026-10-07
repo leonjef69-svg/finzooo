@@ -1,6 +1,6 @@
 "use strict";
 const test = require("node:test"), assert = require("node:assert/strict");
-const { resolvePrivateBoxMoney, recoverPrivateBoxMoney } = require("../src/private-box-money");
+const { resolvePrivateBoxMoney, recoverPrivateBoxMoney, retirePrivateBoxMoney } = require("../src/private-box-money");
 const { validateMoneyReview, moneyChoices, moneyResult } = require("../src/private-box-money-shared");
 const copy = value => structuredClone(value);
 const box = { id: "caja-a", nombre: "Viaje", creadaEn: 1, updatedAt: 10 };
@@ -24,7 +24,8 @@ function database(entry = revision, format = 1) {
       const pending = [];
       const result = await work({ get: async ref => ref.query ? { docs: [...entries].filter(([path, value]) => path.startsWith(ref.path + "/") && path.split("/").length === ref.path.split("/").length + 1
         && ref.filters.every(([key, expected]) => key.split(".").reduce((item, part) => item?.[part], value) === expected)).slice(0, ref.count).map(([path, value]) => snap(path, value)) } : snap(ref.path, entries.get(ref.path)),
-        update: (ref, value) => pending.push([ref.path, { ...entries.get(ref.path), ...copy(value) }]) });
+        update: (ref, value) => pending.push([ref.path, { ...entries.get(ref.path), ...copy(value) }]),
+        set: (ref, value) => pending.push([ref.path, copy(value)]) });
       if (rejectCommit) throw Error("commit-interrupted");
       for (const [path, value] of pending) { entries.set(path, value); writes.push(path); } return result;
     }); queue = result.catch(() => {}); return result;
@@ -161,4 +162,66 @@ test("recuperación mantiene límites y rechaza diario local en servidor sin cre
   db.entries.get("cajas/owner").revisionesImporte = [];
   await assert.rejects(recoverPrivateBoxMoney(db, "owner", revision), /invalid-source/);
   assert.equal(db.writes.length, 0); assert.equal(db.entries.size, 2);
+});
+
+test("retiro sin Pro solo cuando Personal y Caja remotos coinciden con los locales; bloquea escrituras tardías", async () => {
+  for (const format of [1, 2]) {
+    const db = database(revision, format);
+    const user = db.entries.get("users/owner"), boxes = db.entries.get("cajas/owner");
+    if (format === 2) db.entries.get("users/owner/history/10").transaction = copy(p);
+    else user.transactions[0] = copy(p);
+    boxes.movimientos[0] = copy(m);
+    user.isPremium = false;
+    const beforeUser = copy(user), beforeBoxes = copy(boxes);
+    const receipt = await retirePrivateBoxMoney(db, "owner", revision);
+    assert.equal(receipt.status, "retired");
+    assert.equal(receipt.id, revision.id);
+    assert.match(receipt.digest, /^[a-f0-9]{64}$/);
+    assert.deepEqual(user, beforeUser); assert.deepEqual(boxes, beforeBoxes);
+    assert.deepEqual(db.writes, [`moneyReviewRetirements/owner/operations/${revision.id}`]);
+    assert.deepEqual(await retirePrivateBoxMoney(db, "owner", revision), receipt);
+    await assert.rejects(recoverPrivateBoxMoney(db, "owner", revision), /money-review-retired/);
+    user.isPremium = true;
+    await assert.rejects(resolvePrivateBoxMoney(db, "owner", revision), /money-review-retired/);
+    assert.deepEqual(db.writes, [`moneyReviewRetirements/owner/operations/${revision.id}`]);
+  }
+});
+test("retiro conserva el pendiente si las copias no coinciden o una fuente cambia", async () => {
+  for (const change of [() => {}, db => { db.entries.get("users/owner").transactions[0] = copy(p); },
+    db => { db.entries.get("cajas/owner").movimientos[0] = copy(m); },
+    db => { db.entries.get("users/owner").transactions[0] = { ...p, notes: "modificado" }; db.entries.get("cajas/owner").movimientos[0] = copy(m); },
+    db => { db.entries.get("users/owner").accountDeletionPending = true; },
+    db => { db.entries.get("cajas/owner").movimientos.push({ ...m, id: "devolucion", tipo: "gasto", monto: 1, personalReturnAmount: 1 }); }]) {
+    const db = database(); change(db);
+    const before = copy([...db.entries]);
+    await assert.rejects(retirePrivateBoxMoney(db, "owner", revision), /money-/);
+    assert.deepEqual([...db.entries], before); assert.equal(db.writes.length, 0);
+  }
+});
+test("retiro idempotente rechaza reutilizar el mismo ID con otra elección", async () => {
+  const db = database();
+  db.entries.get("users/owner").transactions[0] = copy(p);
+  db.entries.get("cajas/owner").movimientos[0] = copy(m);
+  await retirePrivateBoxMoney(db, "owner", revision);
+  await assert.rejects(retirePrivateBoxMoney(db, "owner", { ...revision, chosen: "remote-personal" }), /money-review-retired/);
+  assert.equal(db.writes.length, 1);
+});
+test("retiro mira el saldo actual, no el saldo hipotético de la elección vieja", async () => {
+  const oldChoice = { ...revision, chosen: "remote-personal" }, db = database(oldChoice);
+  db.entries.get("users/owner").transactions[0] = copy(p);
+  db.entries.get("cajas/owner").movimientos = [copy(m), { ...m, id: "spent", tipo: "gasto", monto: 90, personalTransactionId: undefined }];
+  assert.equal((await retirePrivateBoxMoney(db, "owner", oldChoice)).status, "retired");
+  const invalid = database(oldChoice);
+  invalid.entries.get("users/owner").transactions[0] = copy(p);
+  invalid.entries.get("cajas/owner").movimientos = [copy(m), { ...m, id: "spent", tipo: "gasto", monto: 110, personalTransactionId: undefined }];
+  await assert.rejects(retirePrivateBoxMoney(invalid, "owner", oldChoice), /money-invalid-source/);
+});
+test("si la elección ya se aplicó, retirar no falsea un recibo ni cambia el dinero", async () => {
+  const db = database();
+  await resolvePrivateBoxMoney(db, "owner", revision);
+  db.entries.get("users/owner").isPremium = false;
+  const before = copy([...db.entries]), count = db.writes.length;
+  assert.deepEqual(await retirePrivateBoxMoney(db, "owner", revision), { status: "applied", uid: "owner", id: revision.id });
+  assert.deepEqual([...db.entries], before); assert.equal(db.writes.length, count);
+  assert.equal((await recoverPrivateBoxMoney(db, "owner", revision)).amount, 100);
 });

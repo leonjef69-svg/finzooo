@@ -28,6 +28,7 @@ function declaration(file, name) {
 const context = "contexts/AppDataContext.tsx";
 // Falla en ddde38d por API nueva ausente, sin afirmar un bug de usuarios.
 const commit = declaration(context, "commitPrivateBoxMoney");
+const retire = declaration(context, "retirePrivateBoxMoney");
 if (baseline) throw Error("La revisión anterior debía fallar por guardado monetario ausente.");
 const callbacks = ["setTransactions", "setDeletedTransactionIds", "setUserCurrency"].map(name => declaration(context, name)).join("\n");
 const source = `
@@ -36,9 +37,9 @@ const source = `
   import { withLocalAccountOperation } from '@/utils/localAccountVault';
   import { hasUnreadableLocalData, loadJSON, saveJSONBatchNow, flushPendingSaves, STORAGE_KEYS } from '@/utils/storage';
   import { validarCajas } from '@/utils/cajas';
-  import { confirmarRevisionImporteLocal, conservarOriginalesImporte } from '@/utils/privateBoxMoneyReview';
+  import { confirmarRevisionImporteLocal, conservarOriginalesImporte, retirarRevisionImporteLocal } from '@/utils/privateBoxMoneyReview';
   import { assertPrivateBoxMoneyReviewLease } from '@/utils/privateBoxSync';
-  import { assertPrivateBoxMoneyReceipt } from '@/utils/cloudPrivateBoxMoney';
+  import { assertPrivateBoxMoneyReceipt, assertPrivateBoxMoneyRetirement } from '@/utils/cloudPrivateBoxMoney';
   import { assertPrivateBoxMoneyLocalIdle, assertPrivateBoxMoneyLocalMutation, reservePrivateBoxMoneyLocalWrite } from '@/utils/privateBoxMoneyLocalWrite';
   import { guardarCajasEnMemoria } from '@/utils/cajasMemoria';
   import { canonical } from '../functions/src/private-box-money-shared.js';
@@ -58,7 +59,8 @@ const source = `
     ${declaration(context, "readPrivateBoxMoneyLocal")}
     ${declaration(context, "stagePrivateBoxMoney")}
     ${commit}
-    return { commitPrivateBoxMoney, stagePrivateBoxMoney, readPrivateBoxMoneyLocal, setTransactions, setDeletedTransactionIds, setUserCurrency };
+    ${retire}
+    return { commitPrivateBoxMoney, retirePrivateBoxMoney, stagePrivateBoxMoney, readPrivateBoxMoneyLocal, setTransactions, setDeletedTransactionIds, setUserCurrency };
   }
   export function createScreen() {
     const e=globalThis.env, useCallback=callback=>callback, cuentaActual=()=>e.active, datosActuales=e.screen;
@@ -98,6 +100,7 @@ const personal = { id: 10, type: "expense", amount: 80, category: "otros", date:
 const other = { id: 11, type: "income", amount: 500, category: "otros", date: "2026-10-05", updatedAt: 4 };
 const entry = { id: "money-operation-0001", uid: "A", currency: "PEN", box, local: { personal, movement }, remote: { personal: { ...personal, amount: 100 }, movement }, chosen: "remote-box", createdAt: 200, version: 200, estado: "pendiente" };
 const original = { cajas: [box, { id: "caja-b", nombre: "Otra", creadaEn: 1 }], movimientos: [movement], cajasBorradas: [], movimientosBorrados: [], syncFormat: 2, revisionesImporte: [entry] };
+export { box, movement, personal, other, entry, original };
 const instances=[];
 export function createMoneyBatchHarness(realClient=null,review=entry,initial=original,personalRows=[personal,other]) {
   const db=new DatabaseSync(":memory:"); instances.push(db); db.exec("CREATE TABLE store (key TEXT PRIMARY KEY,value TEXT)");

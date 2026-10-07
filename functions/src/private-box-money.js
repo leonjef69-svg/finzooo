@@ -1,4 +1,5 @@
 "use strict";
+const { createHash } = require("node:crypto");
 const { FieldValue } = require("firebase-admin/firestore");
 const { premiumForUser } = require("./premium-entitlement");
 const { sourceFrom } = require("./private-box-migration");
@@ -7,24 +8,40 @@ const { canonical, validateMoneyReview, moneyResult, moneyAcknowledgement, fail 
 function sameSource(actual, expected) {
   try { return canonical(actual) === canonical(expected); } catch { fail("money-invalid-source"); }
 }
+function sameWithoutVersion(actual, expected) {
+  if (!actual || !expected || typeof actual !== "object" || typeof expected !== "object") fail("money-invalid-source");
+  const { updatedAt: ignoredActual, ...current } = actual;
+  const { updatedAt: ignoredExpected, ...original } = expected;
+  return sameSource(current, original);
+}
+function retirementDigest(entry) { return createHash("sha256").update(canonical(entry)).digest("hex"); }
+function retirementResult(entry, digest) {
+  return { status: "retired", uid: entry.uid, id: entry.id, boxId: entry.box.id,
+    movementId: entry.remote.movement.id, personalId: entry.remote.personal.id, digest };
+}
 
-/** Pareja exacta, fuentes comprobadas y saldo válido; cero nuevos recibos/colecciones. */
-async function privateBoxMoney(db, uid, entry, readOnly) {
+/** Pareja exacta y fuentes comprobadas; el retiro conserva un bloqueo permanente por ID. */
+async function privateBoxMoney(db, uid, entry, mode) {
   let bytes;
   try { bytes = Buffer.byteLength(JSON.stringify(entry), "utf8"); } catch { fail("money-invalid-review"); }
   if (bytes > 150_000) fail("money-review-too-large");
   validateMoneyReview(entry, uid);
   const rootRef = db.doc(`users/${uid}`), boxesRef = db.doc(`cajas/${uid}`);
+  const retirementRef = db.doc(`moneyReviewRetirements/${uid}/operations/${entry.id}`);
   return db.runTransaction(async tx => {
-    const [root, boxes] = await Promise.all([tx.get(rootRef), tx.get(boxesRef)]);
+    const [root, boxes, retirement] = await Promise.all([tx.get(rootRef), tx.get(boxesRef), tx.get(retirementRef)]);
     const user = root.exists ? root.data() : null;
     if (!user || user.hasOnboarded !== true || user.accountDeletionPending === true) fail("money-account-unavailable");
     // Recuperar solo comprueba el resultado exacto ya presente; nunca corrige
     // ni entrega el historial. Una corrección nueva sigue exigiendo Pro.
-    if (readOnly) {
+    if (mode !== "resolve") {
       const claim = await tx.get(db.doc(`premiumTrialClaims/${uid}`));
       if (claim.exists && claim.data().deletionPending === true) fail("money-account-unavailable");
     } else if (!(await premiumForUser(db, uid, user, tx))) fail("money-premium-required");
+    if (retirement.exists) {
+      if (mode !== "retire" || retirement.data().digest !== retirementDigest(entry)) fail("money-review-retired");
+      return retirementResult(entry, retirement.data().digest);
+    }
     if (user.userCurrency !== entry.currency) fail("money-currency-changed");
     if (!boxes.exists) fail("money-source-changed");
     const data = boxes.data();
@@ -63,8 +80,20 @@ async function privateBoxMoney(db, uid, entry, readOnly) {
     }
     const result = moneyResult(entry), ack = moneyAcknowledgement(entry);
     const replay = sameSource(personal, result.personal) && sameSource(movement, result.movement);
+    if (mode === "retire" && replay) return { status: "applied", uid, id: entry.id };
+    if (mode === "retire") {
+      // Solo se suelta el bloqueo cuando ambas mitades remotas y locales ya
+      // coinciden. El marcador y el escritor viejo leen el mismo documento:
+      // Firestore reintenta la transacción perdedora, incluso si HTTP llegó tarde.
+      if (entry.local.personal.amount !== entry.local.movement.monto || entry.local.personal.date !== entry.local.movement.fecha
+        || !sameWithoutVersion(personal, entry.local.personal) || !sameWithoutVersion(movement, entry.local.movement)) fail("money-source-changed");
+      try { sourceFrom(data, boxId); } catch { fail("money-invalid-source"); }
+      const digest = retirementDigest(entry);
+      tx.set(retirementRef, { digest, retiredAt: FieldValue.serverTimestamp() });
+      return retirementResult(entry, digest);
+    }
     if (!replay && (!sameSource(personal, entry.remote.personal) || !sameSource(movement, entry.remote.movement))) fail("money-source-changed");
-    if (readOnly && !replay) fail("money-not-confirmed");
+    if (mode === "recover" && !replay) fail("money-not-confirmed");
     let balance = 0n;
     const ids = new Set();
     for (const row of rows) {
@@ -84,6 +113,7 @@ async function privateBoxMoney(db, uid, entry, readOnly) {
     return ack;
   });
 }
-function resolvePrivateBoxMoney(db, uid, entry) { return privateBoxMoney(db, uid, entry, false); }
-function recoverPrivateBoxMoney(db, uid, entry) { return privateBoxMoney(db, uid, entry, true); }
-module.exports = { resolvePrivateBoxMoney, recoverPrivateBoxMoney };
+function resolvePrivateBoxMoney(db, uid, entry) { return privateBoxMoney(db, uid, entry, "resolve"); }
+function recoverPrivateBoxMoney(db, uid, entry) { return privateBoxMoney(db, uid, entry, "recover"); }
+function retirePrivateBoxMoney(db, uid, entry) { return privateBoxMoney(db, uid, entry, "retire"); }
+module.exports = { resolvePrivateBoxMoney, recoverPrivateBoxMoney, retirePrivateBoxMoney };

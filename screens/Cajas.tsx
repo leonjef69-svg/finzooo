@@ -41,7 +41,7 @@ import type { Transaction } from "@/types";
 import { privateBoxLinksMatch } from "@/utils/privateBoxPersonal";
 import { PrivateBoxSyncError, privateBoxCloudResponseCurrent } from "@/utils/privateBoxSync";
 import { planPrivateBoxRepair, privateBoxLinkCandidates, resolvePrivateBoxConflict, type PrivateBoxRepairChoice } from "@/utils/privateBoxRepair";
-import { compararImporteCaja, confirmarImporteCaja, reintentarImporteCaja, type PrivateBoxMoneyComparison, type PrivateBoxMoneyPort } from "@/utils/privateBoxMoneyFlow";
+import { compararImporteCaja, confirmarImporteCaja, reintentarImporteCaja, retirarImporteCaja, type PrivateBoxMoneyComparison, type PrivateBoxMoneyPort } from "@/utils/privateBoxMoneyFlow";
 import type { MoneySource } from "../functions/src/private-box-money-shared.js";
 import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Boxes, Check, ListChecks, Pencil, Plus, RefreshCw, Trash2, UserPlus, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
@@ -66,7 +66,7 @@ export default function Cajas() {
 }
 
 function CajasForAccount({ accountUid }: { accountUid: string }) {
-  const { ready: personalReady, hasOnboarded, t, fmt, showToast, disponible, transactions, deletedTransactionIds, commitPrivateBoxData, commitPrivateBoxMoney, stagePrivateBoxMoney, readPrivateBoxMoneyLocal, isPremium, userName, userCurrency } = useAppData();
+  const { ready: personalReady, hasOnboarded, t, fmt, showToast, disponible, transactions, deletedTransactionIds, commitPrivateBoxData, commitPrivateBoxMoney, retirePrivateBoxMoney, stagePrivateBoxMoney, readPrivateBoxMoneyLocal, isPremium, userName, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
   const [datos, setRenderedDatos] = useState<DatosCajas>(() => leerCajasEnMemoria() ?? CAJAS_VACIAS);
   const datosActuales = useRef(datos);
@@ -365,10 +365,11 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     return { current: () => cuentaActual() && personalReady && hasOnboarded && !hasUnreadableLocalData(),
       premium: () => premiumForSync.current, boxes: () => datosActuales.current, local: readPrivateBoxMoneyLocal,
       stage: (before, entry, lease, current) => stagePrivateBoxMoney(before, entry, lease, current, setDatos),
-      commit: (before, entry, ack, lease, current) => commitPrivateBoxMoney(before, entry, ack, lease, current, setDatos) };
+      commit: (before, entry, ack, lease, current) => commitPrivateBoxMoney(before, entry, ack, lease, current, setDatos),
+      retire: (before, entry, ack, lease, current) => retirePrivateBoxMoney(before, entry, ack, lease, current, setDatos) };
   }
 
-  async function trabajarImporteCaja(work: () => Promise<boolean | PrivateBoxMoneyComparison>, recovery = false): Promise<void> {
+  async function trabajarImporteCaja(work: () => Promise<boolean | PrivateBoxMoneyComparison>, recovery = false, retiring = false): Promise<void> {
     if (!cuentaActual() || !ready || !personalReady || !hasOnboarded || guardandoRef.current || compartiendo || cargandoUnion) return;
     if (!premiumForSync.current && !recovery) { setMoneyMessage(t("boxes.moneyNeedsPro")); return; }
     if (Platform.OS !== "android") { setMoneyMessage(t("boxes.atomicAndroidOnly")); return; }
@@ -377,7 +378,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       const result = await work();
       if (!cuentaActual()) return;
       if (typeof result === "object") setMoneyComparison(result);
-      else if (result) { setMoneyComparison(null); setMoneyMessage(t("boxes.moneySaved")); showToast(t("boxes.moneySaved")); }
+      else if (result) { setMoneyComparison(null); setMoneyMessage(t(retiring ? "boxes.moneyRetired" : "boxes.moneySaved")); showToast(t(retiring ? "boxes.moneyRetired" : "boxes.moneySaved")); }
       else setMoneyMessage(t("boxes.moneyPending"));
     } catch (error) {
       if (!cuentaActual()) return;
@@ -386,7 +387,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       const pro = reason === "cajas-money-needs-pro" || reason === "money-premium-required";
       const changed = /changed|invalid|negative-balance|return-conflict|obsolete/.test(reason);
       if (changed) setMoneyComparison(null);
-      setMoneyMessage(t(pro ? "boxes.moneyNeedsPro" : reason === "cajas-money-history-full" ? "boxes.moneyHistoryFull"
+      setMoneyMessage(t(reason === "money-review-retired" ? "boxes.moneyRetireReady" : retiring && changed ? "boxes.moneyRetireBlocked" : pro ? "boxes.moneyNeedsPro" : reason === "cajas-money-history-full" ? "boxes.moneyHistoryFull"
         : changed ? "boxes.moneyChanged" : "boxes.moneyPending"));
     } finally {
       guardandoRef.current = false;
@@ -413,6 +414,14 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
 
   async function recuperarImporteCaja(entry: RevisionImporteCaja): Promise<void> {
     await trabajarImporteCaja(() => reintentarImporteCaja(accountUid, entry, moneyPort()), true);
+  }
+
+  function pedirRetirarImporteCaja(entry: RevisionImporteCaja): void {
+    if (guardandoRef.current || !cuentaActual()) return;
+    Alert.alert(t("boxes.moneyRetireAction"), t("boxes.moneyRetireConfirm"), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("boxes.moneyRetireAction"), onPress: () => void trabajarImporteCaja(() => retirarImporteCaja(accountUid, entry, moneyPort()), true, true) },
+    ]);
   }
 
   async function revisarImporteCajaDeNuevo(entry: RevisionImporteCaja): Promise<void> {
@@ -839,6 +848,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
         {ready ? <PrivateBoxMoneyReview comparison={moneyComparison} reviews={(datos.revisionesImporte || []).filter(entry => entry.uid === accountUid)}
           candidates={moneyCandidates} message={moneyMessage} busy={guardando || compartiendo || cargandoUnion} premium={isPremium} t={t}
           compare={id => void consultarImporteCaja(id)} choose={elegirImporteCaja} retry={entry => void recuperarImporteCaja(entry)}
+          retire={pedirRetirarImporteCaja}
           reviewAgain={entry => void revisarImporteCajaDeNuevo(entry)}
           cancel={() => { if (guardandoRef.current) return; setMoneyComparison(null); setMoneyMessage(null); }} /> : null}
         {ready && nameOptions.length > 0 ? <View className="mb-3 rounded-xl border border-amber-200 p-3 dark:border-amber-800">

@@ -28,7 +28,9 @@ test("Corrección de dinero: SDK/HTTP y transacciones reales sin medias transfer
   const entry = { id: "money-operation-first", uid, currency: "PEN", box, local: { personal: p, movement: m },
     remote: { personal: { ...p, amount: 80 }, movement: { ...m, monto: 80 } }, chosen: "local-personal", createdAt: 100, version: 100 };
   const rootRef = admin.doc(`users/${uid}`), boxesRef = admin.doc(`cajas/${uid}`);
+  const retirementRef = admin.doc(`moneyReviewRetirements/${uid}/operations/${entry.id}`);
   async function seed(format = 1, currency = "PEN") {
+    await retirementRef.delete();
     await rootRef.set({ hasOnboarded: true, isPremium: true, userCurrency: currency, future: "Conservar",
       ...(format === 2 ? { historyFormat: 2 } : { transactions: [entry.remote.personal], deletedTransactionIds: [99] }) });
     await boxesRef.set({ cajas: [box], movimientos: [entry.remote.movement], cajasBorradas: [], movimientosBorrados: ["mov-old"], future: { preserved: true } });
@@ -405,6 +407,43 @@ test("Corrección de dinero: SDK/HTTP y transacciones reales sin medias transfer
       await adminAuth.updateUser(uid, { disabled: false, emailVerified: false });
       await assert.rejects(recover(entry), error => error.code === "functions/unauthenticated");
       await adminAuth.updateUser(uid, { emailVerified: true });
+    });
+    await t.test("retiro real sin Pro registra un bloqueo duradero sin cambiar importes ni originales", async () => {
+      const retire = httpsCallable(a.functions, "retirePrivateBoxMoney");
+      for (const format of [1, 2]) {
+        await seed(format); await rootRef.update({ isPremium: false });
+        if (format === 2) await rootRef.collection("history").doc("10").update({ transaction: p });
+        else await rootRef.update({ transactions: [p] });
+        await boxesRef.update({ movimientos: [m] });
+        const before = [await rootRef.get(), await boxesRef.get()];
+        const result = (await retire(entry)).data;
+        assert.equal(result.status, "retired"); assert.equal(result.id, entry.id);
+        assert.match(result.digest, /^[a-f0-9]{64}$/);
+        assert.equal((await retirementRef.get()).data().digest, result.digest);
+        await assert.rejects(getDocFromServer(doc(a.db, "moneyReviewRetirements", uid, "operations", entry.id)),
+          error => error.code === "permission-denied", "el celular no lee la huella privada");
+        const after = [await rootRef.get(), await boxesRef.get()];
+        assert.deepEqual(after.map(row => row.data()), before.map(row => row.data()));
+        assert.deepEqual((await retire(entry)).data, result, "respuesta perdida no crea otro bloqueo");
+        await rootRef.update({ isPremium: true, ...(format === 1 ? { transactions: [entry.remote.personal] } : {}) });
+        if (format === 2) await rootRef.collection("history").doc("10").update({ transaction: entry.remote.personal });
+        await boxesRef.update({ movimientos: [entry.remote.movement] });
+        await assert.rejects(a.call(entry), error => error.details?.reason === "money-review-retired");
+        await assert.rejects(retire({ ...entry, chosen: "remote-personal" }), error => error.details?.reason === "money-review-retired");
+        assert.equal((await rootRef.get()).data().transactions?.[0].amount ?? 80, 80);
+        assert.equal((await boxesRef.get()).data().movimientos[0].monto, 80);
+      }
+    });
+    await t.test("retiro no libera un desacuerdo ni confirma falsamente una elección aplicada", async () => {
+      const retire = httpsCallable(a.functions, "retirePrivateBoxMoney");
+      await seed(); await rootRef.update({ isPremium: false });
+      await assert.rejects(retire(entry), error => error.details?.reason === "money-source-changed");
+      assert.equal((await retirementRef.get()).exists, false);
+      await rootRef.update({ isPremium: true }); await a.call(entry); await rootRef.update({ isPremium: false });
+      const before = [await rootRef.get(), await boxesRef.get()];
+      assert.deepEqual((await retire(entry)).data, { status: "applied", uid, id: entry.id });
+      assert.equal((await retirementRef.get()).exists, false);
+      assert.deepEqual([await rootRef.get(), await boxesRef.get()].map(row => row.updateTime.toMillis()), before.map(row => row.updateTime.toMillis()));
     });
   } finally {
     for (const client of clients) { await terminate(client.db); await deleteApp(client.app); }

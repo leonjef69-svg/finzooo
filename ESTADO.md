@@ -1,5 +1,30 @@
 # Estado actual de Fino
 
+## Cierre seguro de elección monetaria convergente — preparado (07/10/2026)
+
+- Una elección pendiente se puede cerrar sin Pro solo si Personal y Caja ya
+  coinciden tanto en el teléfono como en el servidor. El servidor guarda una
+  huella técnica por UID/operación para impedir que una petición antigua vuelva
+  a imponer el monto. Si la corrección ganó antes, la app recupera su resultado
+  auténtico en lugar de afirmar que se retiró. No se borran los cuatro
+  originales, no se mueve dinero y un desacuerdo conserva el pendiente.
+- Marca local `retirado` en lote indivisible de Personal/borrados/Cajas, con
+  acuse genuino y cola de sincronización. La huella remota se elimina al borrar
+  la cuenta. Guía: `docs/PRUEBAS_RETIRO_IMPORTE_CAJA.md`. Política interna/web y
+  borrador de Play actualizados solo en archivos.
+- TypeScript/ESLint, 147 pruebas locales y 8 auditores sin tarjetas,
+  82 unitarias de servidor y 128 pruebas SDK/HTTP/reglas con Firebase local y
+  Node 22 aprobados. La prueba local ajena sin registrar se conservó fuera del
+  commit. Entrega en Android con cuenta, consolas y políticas publicadas se
+  deben comprobar antes de lanzar. En este turno un APK de
+  desarrollo sí se instaló **solo en emulador** y abrió la bienvenida; no se
+  probó el flujo de dinero con una cuenta real. Tarjetas intactas, sin APK/AAB/
+  OTA ni despliegue a usuarios.
+- **Qué sigue:** validar el retiro en Android con cuenta de prueba y dos
+  dispositivos. **Qué falta:** publicación
+  coordinada autorizada de servidor/app, revisión de consolas/Play y los demás
+  hallazgos de auditoría. No volver a una función anterior que ignore la huella.
+
 ## Nueva revisión de elección monetaria pendiente — preparada (06/10/2026)
 
 - Pro puede revisar fuentes actuales y confirmar otra elección de monto/fecha

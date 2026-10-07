@@ -271,6 +271,19 @@ en archivos, no publicadas. Guía: `docs/PRUEBAS_SUSTITUCION_IMPORTE_CAJA.md`.
 No volver a un cliente que descarte o desconozca esta cadena sin revisar antes
 compatibilidad/migración. Consolas y publicación autorizada siguen pendientes.
 
+El cierre sin Pro de una elección monetaria pendiente solo se ofrece cuando
+Personal y Caja locales y remotos ya coinciden. Mantiene los cuatro originales
+en el diario local cifrado, con estado `retirado`, sin alterar los importes.
+`moneyReviewRetirements/{uid}/operations/{id}` guarda únicamente UID/ID en la
+ruta, huella SHA-256 de la solicitud y fecha de cierre; bloquea una petición
+vieja posterior y se limpia al completar el borrado de la cuenta. No guarda
+otra copia del movimiento. Las reglas de cliente no conceden acceso a esa
+colección; el servidor la administra. Si la corrección se aplicó primero, la
+app recupera su resultado en vez de fingir un retiro. Política interna/web
+actualizada solo en archivos, no publicada; verificar Play Console y desplegar
+servidor antes de distribuir la app. Guía:
+`docs/PRUEBAS_RETIRO_IMPORTE_CAJA.md`.
+
 Al convertir una Caja privada a compartida, `privateBoxMigrations` y la copia
 privada conservan una confirmación del servidor: UID, IDs de origen/destino,
 nombre/moneda, fechas, SHA-256 de la copia e IDs de enlaces a Personal, sin

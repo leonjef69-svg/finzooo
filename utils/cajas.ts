@@ -44,7 +44,7 @@ export type RevisionNombreCaja = {
 
 /** Cuatro originales y elección solo locales; no se suben como respaldo. */
 export type RevisionImporteCaja = MoneyReview & {
-  estado: "pendiente" | "confirmado" | "sustituido";
+  estado: "pendiente" | "confirmado" | "sustituido" | "retirado";
   /** Enlaces solo locales: conserva la elección anterior y su sucesora. */
   reemplaza?: string;
   reemplazadaPor?: string;
@@ -166,7 +166,7 @@ export function validarCajas(value: unknown): DatosCajas {
 }
 
 export function validarRevisionImporte(entry: RevisionImporteCaja): void {
-  if (!entry || !["pendiente", "confirmado", "sustituido"].includes(entry.estado)) throw new Error("cajas-invalid-data");
+  if (!entry || !["pendiente", "confirmado", "sustituido", "retirado"].includes(entry.estado)) throw new Error("cajas-invalid-data");
   const reference = (id: unknown) => typeof id === "string" && /^[A-Za-z0-9_-]{16,160}$/.test(id) && id !== entry.id;
   if ((entry.reemplaza !== undefined && !reference(entry.reemplaza))
     || (entry.estado === "sustituido" ? !reference(entry.reemplazadaPor) : entry.reemplazadaPor !== undefined)) throw new Error("cajas-invalid-data");
@@ -189,7 +189,8 @@ export function conservarRevisionImporte(data: DatosCajas, entry: RevisionImport
   // esta función de una sola revisión ni una confirmación de la elección vieja.
   if (entry.estado === "sustituido" || old?.estado === "sustituido" || (!old && entry.reemplaza)) throw new Error("cajas-money-changed");
   if (old && canonical({ ...old, estado: entry.estado }) !== canonical(entry)) throw new Error("cajas-money-changed");
-  if (old?.estado === "confirmado" && entry.estado === "pendiente") return data;
+  if (old && ["confirmado", "retirado"].includes(old.estado) && entry.estado === "pendiente") return data;
+  if (old && ["confirmado", "retirado"].includes(old.estado) && entry.estado !== old.estado) throw new Error("cajas-money-changed");
   if (old && old.estado === entry.estado) return data;
   if (!old && entry.estado === "pendiente" && data.revisionesImporte?.some(value => value.estado === "pendiente"
     && value.local.personal.id === entry.local.personal.id)) throw new Error("cajas-money-pending");

@@ -153,6 +153,7 @@ test("Node 22, llamadas HTTP y eliminación real en Auth/Firestore emulados", { 
       assert.equal((await admin.collection("personalReturnReceipts/owner/operations").get()).size, 1);
       await admin.doc("privateBoxMigrations/owner/operations/local-box").set({ uid: "owner", targetId: "owner_local-box" });
       await admin.doc("privateBoxMigrations/owner/attempts/cancelled-attempt").set({ uid: "owner", cancelled: true });
+      await admin.doc("moneyReviewRetirements/owner/operations/old-choice").set({ digest: "a".repeat(64) });
       await admin.doc("boxSpaces/owner_cancelled").set({ ownerUid: "owner", migrationCancelled: true, migrationProtocol: 3, migrationComplete: false });
       await admin.doc("boxSpaces/owner_cancelled/members/owner").set({ uid: "owner", rol: "owner" });
       await admin.doc("boxSpaces/owner_cancelled/movements/clon").set({ monto: 100 });
@@ -163,6 +164,7 @@ test("Node 22, llamadas HTTP y eliminación real en Auth/Firestore emulados", { 
       assert.equal((await admin.collection("personalReturnReceipts/owner/operations").get()).empty, true);
       assert.equal((await admin.collection("privateBoxMigrations/owner/operations").get()).empty, true);
       assert.equal((await admin.collection("privateBoxMigrations/owner/attempts").get()).empty, true);
+      assert.equal((await admin.collection("moneyReviewRetirements/owner/operations").get()).empty, true);
       assert.equal((await admin.doc("boxSpaces/owner_cancelled").get()).exists, false);
       assert.equal((await admin.collection("boxSpaces/owner_cancelled/members").get()).empty, true);
       assert.equal((await admin.collection("boxSpaces/owner_cancelled/movements").get()).empty, true);

@@ -4,7 +4,7 @@ import { auth, db, functions } from "@/utils/firebase";
 import { captureAccountTask } from "@/utils/accountTask";
 import { validarCajas, validarRevisionImporte, type DatosCajas, type RevisionImporteCaja } from "@/utils/cajas";
 import { historyDocumentId } from "@/utils/cloudHistoryMigration";
-import { confirmarRevisionImporteLocal } from "@/utils/privateBoxMoneyReview";
+import { confirmarRevisionImporteLocal, retirarRevisionImporteLocal } from "@/utils/privateBoxMoneyReview";
 import { assertPrivateBoxMoneyReviewLease, type PrivateBoxCloudLease } from "@/utils/privateBoxSync";
 import { hasUnreadableLocalData, loadJSON, STORAGE_KEYS } from "@/utils/storage";
 import { canonical, moneyAcknowledgement, type MoneyAck, type MoneyReview } from "../functions/src/private-box-money-shared.js";
@@ -13,6 +13,9 @@ import type { Transaction } from "@/types";
 export type PrivateBoxMoneySources = { data: DatosCajas; transactions: Transaction[]; deletedIds: number[] };
 export type PrivateBoxMoneyLocal = { transactions: Transaction[]; deletedIds: number[]; currency: string };
 const receipts = new WeakMap<MoneyAck, { uid: string; entry: string; lease: PrivateBoxCloudLease; current: () => boolean }>();
+export type MoneyRetireAck = { status: "retired"; uid: string; id: string; boxId: string; movementId: string; personalId: number; digest: string };
+type MoneyRetireReply = MoneyRetireAck | { status: "applied"; uid: string; id: string };
+const retirements = new WeakMap<MoneyRetireAck, { uid: string; entry: string; lease: PrivateBoxCloudLease; current: () => boolean }>();
 
 function check(uid: string, lease: PrivateBoxCloudLease): void {
   assertPrivateBoxMoneyReviewLease(uid, lease);
@@ -118,4 +121,45 @@ export function assertPrivateBoxMoneyReceipt(uid: string, entry: RevisionImporte
   const proof = receipts.get(ack);
   if (!proof || proof.uid !== uid || proof.lease !== lease || !proof.current() || proof.entry !== canonical(entry)
     || canonical(ack) !== canonical(moneyAcknowledgement(entry))) throw new Error("cajas-money-unconfirmed");
+}
+
+/** El retiro jamás elige un monto. Si el servidor ya aplicó la elección,
+ * devuelve «applied» y el flujo debe recuperar su recibo verdadero.
+ */
+export async function requestPrivateBoxMoneyRetirement(uid: string, entry: RevisionImporteCaja, lease: PrivateBoxCloudLease,
+  local: () => PrivateBoxMoneyLocal, current: () => boolean): Promise<MoneyRetireReply> {
+  check(uid, lease); validarRevisionImporte(entry);
+  const original = canonical(entry), selected: RevisionImporteCaja = JSON.parse(JSON.stringify(entry));
+  const task = captureAccountTask(uid, current);
+  const assertLocal = async () => {
+    check(uid, lease);
+    if (selected.uid !== uid || selected.estado !== "pendiente" || original !== canonical(entry)) throw new Error("cajas-money-changed");
+    const data = validarCajas(await task.wait(() => lease.wait(() => loadJSON<DatosCajas | null>(STORAGE_KEYS.cajasDinero, null))));
+    const actual = local();
+    retirarRevisionImporteLocal(data, actual.transactions, actual.deletedIds, selected, uid, actual.currency);
+    if (!task.current()) throw new Error("account-task-obsolete");
+  };
+  await assertLocal();
+  const payload: MoneyReview = { id: selected.id, uid: selected.uid, currency: selected.currency, box: selected.box,
+    local: selected.local, remote: selected.remote, chosen: selected.chosen, createdAt: selected.createdAt, version: selected.version };
+  const call = httpsCallable<MoneyReview, MoneyRetireReply>(functions, "retirePrivateBoxMoney", { timeout: 120_000 });
+  const result = await task.wait(() => lease.wait(() => call(payload)));
+  const ack = result.data;
+  if (!ack || ack.uid !== uid || ack.id !== selected.id || !["retired", "applied"].includes(ack.status)) throw new Error("cajas-money-unconfirmed");
+  if (ack.status === "retired" && (ack.boxId !== selected.box.id || ack.movementId !== selected.remote.movement.id
+    || ack.personalId !== selected.remote.personal.id || !/^[a-f0-9]{64}$/.test(ack.digest))) throw new Error("cajas-money-unconfirmed");
+  await assertLocal();
+  if (ack.status === "applied") return ack;
+  const proof = Object.freeze({ ...ack });
+  retirements.set(proof, { uid, entry: original, lease, current: task.current });
+  return proof;
+}
+
+export function assertPrivateBoxMoneyRetirement(uid: string, entry: RevisionImporteCaja, ack: MoneyRetireAck, lease: PrivateBoxCloudLease): void {
+  check(uid, lease);
+  const proof = retirements.get(ack);
+  if (!proof || proof.uid !== uid || proof.lease !== lease || !proof.current() || proof.entry !== canonical(entry)
+    || ack.status !== "retired" || ack.uid !== uid || ack.id !== entry.id || ack.boxId !== entry.box.id
+    || ack.movementId !== entry.remote.movement.id || ack.personalId !== entry.remote.personal.id
+    || !/^[a-f0-9]{64}$/.test(ack.digest)) throw new Error("cajas-money-unconfirmed");
 }

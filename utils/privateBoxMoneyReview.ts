@@ -35,7 +35,7 @@ export function prepararRevisionImporte(local: DatosCajas, rows: Transaction[], 
   return JSON.parse(JSON.stringify(entry));
 }
 
-function assertSources(data: DatosCajas, rows: Transaction[], deleted: number[], entry: MoneyReview, mode: "original" | "confirmed"): void {
+function assertSources(data: DatosCajas, rows: Transaction[], deleted: number[], entry: MoneyReview, mode: "original" | "confirmed" | "retire"): void {
   const result = moneyResult(entry), movementId = entry.local.movement.id, personalId = entry.local.personal.id;
   const box = data.cajas.filter(box => box.id === entry.box.id);
   const moves = data.movimientos.filter(row => row.id === movementId);
@@ -45,12 +45,12 @@ function assertSources(data: DatosCajas, rows: Transaction[], deleted: number[],
     || data.conversiones?.[entry.box.id] || data.movimientos.filter(row => row.personalTransactionId === personalId).length !== 1
     || rows.filter(row => row.internalTransferLink === movementId).length !== 1
     || data.movimientos.some(row => row.cajaId === entry.box.id && (row.personalReturnAmount !== undefined || data.movimientosBorrados.includes(row.id)))) throw new Error("cajas-money-changed");
-  const allowed = mode === "original" ? [entry.local] : [entry.local, entry.remote, result];
+  const allowed = mode === "original" || mode === "retire" ? [entry.local] : [entry.local, entry.remote, result];
   if (!allowed.some(pair => canonical(pair.personal) === canonical(personal[0]))
     || !allowed.some(pair => canonical(pair.movement) === canonical(moves[0]))) throw new Error("cajas-money-changed");
   let balance = 0n;
   for (const row of data.movimientos.filter(row => row.cajaId === entry.box.id)) {
-    const amount = units(row.id === movementId ? result.movement.monto : row.monto, entry.currency, "cajas-money-changed");
+    const amount = units(row.id === movementId && mode !== "retire" ? result.movement.monto : row.monto, entry.currency, "cajas-money-changed");
     balance += amount * (row.tipo === "ingreso" ? 1n : -1n);
   }
   if (balance < 0n) throw new Error("cajas-money-negative-balance");
@@ -78,4 +78,17 @@ export function confirmarRevisionImporteLocal(data: DatosCajas, rows: Transactio
     movimientos: data.movimientos.map(row => row.id === result.movement.id ? result.movement : row),
   }, { ...entry, estado: "confirmado" });
   return { data: next, transactions: rows.map(row => row.id === result.personal.id ? result.personal : row) };
+}
+
+/** No altera el dinero; solo cierra el pendiente si los originales locales ya coinciden. */
+export function retirarRevisionImporteLocal(data: DatosCajas, rows: Transaction[], deleted: number[],
+  entry: RevisionImporteCaja, uid: string, currency: string): DatosCajas {
+  validarCajas(data); validarRevisionImporte(entry);
+  const retained = data.revisionesImporte?.find(value => value.id === entry.id);
+  if (entry.uid !== uid || entry.currency !== currency || entry.estado !== "pendiente"
+    || !retained || canonical(retained) !== canonical(entry)
+    || entry.local.personal.amount !== entry.local.movement.monto
+    || entry.local.personal.date !== entry.local.movement.fecha) throw new Error("cajas-money-changed");
+  assertSources(data, rows, deleted, entry, "retire");
+  return conservarRevisionImporte(data, { ...entry, estado: "retirado" });
 }
