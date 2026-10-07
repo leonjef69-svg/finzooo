@@ -761,6 +761,18 @@ console.log("\n--- ONEDRIVE: LAS CUATRO TRAMPAS DE MICROSOFT ---");
   }
 }
 
+console.log("\n--- SIN PERMISO COMPROBABLE NO SE BORRA LA PROGRAMACIÓN ---");
+{
+  const fondo = fs.readFileSync(path.join(process.cwd(), "utils/exportarEnFondo.ts"), "utf8");
+  const inicioControlPremium = fondo.indexOf("if (!forzar) {", fondo.indexOf("export async function exportarEnFondo"));
+  const finControlPremium = fondo.indexOf("const ahora = new Date();", inicioControlPremium);
+  const controlPremium = fondo.slice(inicioControlPremium, finControlPremium);
+  ok(controlPremium.includes('registrarResultado("premium-requerido")')
+    && !controlPremium.includes("enabled: false")
+    && !controlPremium.includes("cancelarExportacion()"),
+    "sin poder verificar Pro, el reporte se omite pero la programación no se apaga sola");
+}
+
 console.log("\n--- CADA MOTIVO DE 'NO SE HIZO' TIENE SU TEXTO ---");
 {
   // El trabajo de fondo devuelve un MOTIVO y la pantalla lo enseña. Si a un

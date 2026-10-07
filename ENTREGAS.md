@@ -10,6 +10,12 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-08 mitigado en código, no publicado: si el trabajo de exportación no
+puede verificar Pro con la app cerrada, deja intacta la programación y omite
+ese archivo. La prueba específica pasa; esto todavía no garantiza que un
+tester reciba el archivo sin abrir la app. Faltan verificación de permiso en
+segundo plano y prueba Android. Sin APK/AAB/OTA.
+
 FINO-17 preparado, no publicado: al vencer Pro, los Yapes nuevos vuelven a
 Personal, sin mover lo ya anotado en Negocio ni duplicar avisos antiguos.
 Los negocios existentes se consultan sin Pro; se puede apagar, pero no

@@ -1,5 +1,16 @@
 # Estado actual de Fino
 
+## FINO-08 — la exportación de tester conserva su programación (07/10/2026)
+
+- Si el trabajo con la app cerrada no puede verificar Pro, no hace el archivo
+  pero tampoco apaga ni cancela la programación. Registra el motivo sin decir
+  que se apagó; la prueba específica falló antes y ahora pasa.
+- Esto evita perder la configuración, pero aún no garantiza el archivo para
+  testers con la app cerrada: falta verificar su derecho vigente sin dejar un
+  permiso duradero que sobreviva a una revocación. **Qué sigue:** probar el
+  conjunto y diseñar esa comprobación. **Qué falta:** Android, red/permiso de
+  tester, control de avisos repetidos y publicación; tarjetas excluidas.
+
 ## FINO-17 — Yapes y negocios cuando vence Pro (07/10/2026)
 
 - Sin Pro, los Yapes nuevos quedan en Personal aunque hubiera un negocio

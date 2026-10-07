@@ -29,7 +29,6 @@ import {
   htmlAPdfEnFondo,
   PdfEnFondoNoDisponible,
   PdfEnFondoSinRespuesta,
-  cancelarExportacion,
   programarExportacion,
 } from "@/modules/export-scheduler";
 import {
@@ -210,8 +209,10 @@ export async function exportarEnFondo(
       loadPrueba(),
     ]);
     if (!premiumComprado && !pruebaVigente(inicioPrueba, Date.now())) {
-      saveSchedule({ ...schedule, enabled: false });
-      cancelarExportacion();
+      // El trabajo sin pantalla no conoce un permiso de tester recién
+      // validado por el servidor. No crea el archivo sin comprobar Pro, pero
+      // tampoco destruye una programación elegida por la persona: al volver
+      // a abrir Fino se podrá reintentar con el permiso actualizado.
       return await registrarResultado("premium-requerido");
     }
   }

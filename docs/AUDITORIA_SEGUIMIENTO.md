@@ -3,6 +3,27 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-08 — exportación de tester no se apaga sola (07/10/2026)
+
+- Confirmado: si el trabajo sin pantalla no encontraba Premium comprado ni
+  una prueba de 24 horas vigente, apagaba la programación y cancelaba la
+  alarma. El permiso de tester solo estaba en la sesión abierta, por lo que
+  una persona tester podía perder su programación definitivamente.
+- Ahora, si no puede comprobar Pro, omite ese archivo, registra el motivo y
+  conserva la programación/alarma para la siguiente oportunidad. El texto
+  mostrado ya no afirma falsamente que se apagó. Regresión roja antes del
+  cambio y prueba programada específica aprobada.
+- **No equivale a exportación de tester garantizada con la app cerrada:** el
+  trabajo aún no verifica su permiso vigente en el servidor. Evité guardar
+  un permiso indefinido o ejecutar el reporte sin comprobarlo. Un intento
+  posterior podría volver a omitirse; esto exige un diseño de verificación
+  breve y revocable y una prueba real en Android.
+- Verificación local completa: TypeScript y ESLint sin errores; 148 pruebas
+  locales y 8 auditores aprobados, sin ejecutar las suites de tarjetas.
+- **Qué sigue:** diseñar esa verificación. **Qué
+  falta:** ejecución real de tester con app cerrada, fallo de red, reapertura,
+  control de avisos repetidos y entrega; tarjetas excluidas.
+
 ## FINO-17 — destino de Yapes al vencer Pro (07/10/2026)
 
 - Confirmado: el destino Negocio seguía activo tras vencer Pro. La captura con
