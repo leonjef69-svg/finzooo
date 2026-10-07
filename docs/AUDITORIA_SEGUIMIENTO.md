@@ -3,6 +3,19 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-39/56 — fecha y finalización de metas (07/10/2026)
+
+- Confirmado: `toISOString()` ponía la fecha UTC y `GoalFormSheet` conservaba
+  `completed` al editar el objetivo. Ahora fecha local y estado derivado de
+  `saved >= target`, tanto al entregar el formulario como al guardar en el
+  contexto. Prueba con 23:30 en Lima demuestra el salto UTC; subir/bajar el
+  objetivo comprueba ambos sentidos.
+- Regresión roja antes del cambio; TypeScript/ESLint y 148 pruebas sin tarjetas/
+  8 auditores aprobados. No se cambian fechas de metas antiguas sin saber qué
+  día quiso la persona; código no publicado ni probado tocando Android.
+- **Qué sigue:** FINO-14 y demás riesgos de datos/rendimiento.
+  **Qué falta:** prueba física, consolas y entrega autorizada; tarjetas fuera.
+
 ## FINO-46 — abono positivo en columna Monto única (07/10/2026)
 
 - Confirmado: con `Monto=-80` y `Monto=+1500`, el lector original devolvía

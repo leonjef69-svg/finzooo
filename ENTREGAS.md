@@ -10,6 +10,12 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-39/56 corregidos en código, no publicados: metas nuevas guardan la fecha
+local y una edición del objetivo recalcula si la meta está cumplida. No se
+reescriben fechas antiguas sin confirmación. Regresión previa, TypeScript,
+ESLint y 148 pruebas/8 auditores sin tarjetas aprobados; falta tocar el flujo
+en Android. Sin APK/AAB/OTA ni entrega a usuarios.
+
 FINO-46 corregido en el lector de archivos, no publicado: en una columna
 única Monto, si hay cargos negativos reales, los positivos se presentan como
 ingresos; con solo positivos se conserva la lectura anterior como gastos.

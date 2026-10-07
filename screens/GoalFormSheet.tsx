@@ -7,6 +7,8 @@ import { nextId } from "@/utils/id";
 import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { useKeyboardAnimatedPadding } from "@/utils/keyboard";
 import { fmtDate } from "@/utils/format";
+import { fechaLocalISO } from "@/utils/date";
+import { metaConEstadoActual } from "@/utils/ahorro";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Goal } from "@/types";
@@ -27,7 +29,7 @@ export default function GoalFormSheet({
   const saveLock = useRef(false);
   const [guardando, setGuardando] = useState(false);
   const valid = name.trim().length > 0 && parseAmountInput(target, userCurrency) > 0;
-  const createdDate = goal?.createdDate || new Date().toISOString().slice(0, 10);
+  const createdDate = goal?.createdDate || fechaLocalISO();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
 
@@ -118,14 +120,14 @@ export default function GoalFormSheet({
               if (saveLock.current) return;
               saveLock.current = true;
               setGuardando(true);
-              onSave({
+              onSave(metaConEstadoActual({
                 id: goal?.id || nextId(),
                 name: name.trim(),
                 target: parseAmountInput(target, userCurrency),
                 saved: goal?.saved || 0,
                 createdDate,
                 completed: goal ? goal.completed : false,
-              });
+              }));
             }}
             className={`flex-1 py-3.5 rounded-2xl bg-emerald-600 items-center ${!valid || guardando ? "opacity-40" : ""}`}
           >

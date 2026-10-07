@@ -9,7 +9,9 @@ import {
   maximoAApartar,
   hayDescuadre,
   faltaParaRespaldar,
+  metaConEstadoActual,
 } from "@/utils/ahorro";
+import { fechaLocalISO } from "@/utils/date";
 import type { Goal } from "@/types";
 import fs from "fs";
 import path from "path";
@@ -20,6 +22,28 @@ function ok(c: boolean, m: string) { console.log(`  ${c ? "OK   " : "FALLA"} ${m
 function meta(id: number, saved: number, target = 1000, completed = false): Goal {
   return { id, name: `meta ${id}`, target, saved, createdDate: "2026-08-01", completed };
 }
+
+console.log("\n--- FECHA Y ESTADO AL EDITAR UNA META ---");
+const zonaAnterior = process.env.TZ;
+process.env.TZ = "America/Lima";
+const tardeEnLima = new Date("2026-10-08T04:30:00Z");
+ok(fechaLocalISO(tardeEnLima) === "2026-10-07"
+  && tardeEnLima.toISOString().slice(0, 10) === "2026-10-08",
+  "a las 23:30 en Lima se guarda el 7, no el 8 de UTC");
+if (zonaAnterior === undefined) delete process.env.TZ;
+else process.env.TZ = zonaAnterior;
+ok(metaConEstadoActual(meta(1, 100, 80, false)).completed,
+  "bajar el objetivo a menos de lo ahorrado marca la meta cumplida");
+ok(!metaConEstadoActual(meta(1, 100, 150, true)).completed,
+  "subir el objetivo vuelve a abrir una meta que aún no alcanzó el nuevo monto");
+const codigoFormularioMeta = fs.readFileSync(path.join(process.cwd(), "screens", "GoalFormSheet.tsx"), "utf8");
+const codigoContextoMetas = fs.readFileSync(path.join(process.cwd(), "contexts", "AppDataContext.tsx"), "utf8");
+ok(/fechaLocalISO\(\)/.test(codigoFormularioMeta) && !/new Date\(\)\.toISOString\(\)\.slice\(0, 10\)/.test(codigoFormularioMeta),
+  "el formulario usa la fecha local al crear");
+ok(/onSave\(metaConEstadoActual\(\{/.test(codigoFormularioMeta),
+  "el formulario entrega a Guardar la meta con su estado recalculado");
+ok(/metaConEstadoActual\(g\)/.test(codigoContextoMetas),
+  "el guardado recalcula el estado aunque llegue una meta de otra pantalla");
 
 console.log("\n--- CUANTO HAY APARTADO ---");
 ok(totalApartado([]) === 0, "sin metas, nada apartado");

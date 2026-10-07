@@ -1,5 +1,10 @@
 import type { Goal } from "@/types";
 
+/** El objetivo editado decide si una meta está cumplida; no el estado viejo. */
+export function metaConEstadoActual(goal: Goal): Goal {
+  return { ...goal, completed: goal.saved >= goal.target };
+}
+
 /**
  * EL AHORRO COMO SOBRES, NO COMO ALCANCÍA.
  *

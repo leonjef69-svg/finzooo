@@ -1,5 +1,10 @@
 import type { Month } from "@/types";
 
+/** Fecha del calendario del teléfono; toISOString() usa UTC y puede dar mañana. */
+export function fechaLocalISO(date: Date = new Date()): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 export function daysInMonth(y: number, m: number) {
   return new Date(y, m + 1, 0).getDate();
 }

@@ -1,5 +1,20 @@
 # Estado actual de Fino
 
+## FINO-39/56 — fecha y estado de metas (07/10/2026)
+
+- Una meta nueva toma el día local del celular, no el día UTC que en Lima
+  puede ser mañana cerca de medianoche. Al editar el objetivo, «cumplida»
+  se recalcula con el monto realmente ahorrado: bajar el objetivo puede
+  cumplirla y subirlo puede dejarla pendiente. El guardado vuelve a comprobar
+  ese estado aunque la meta llegue desde otra pantalla.
+- Regresión roja antes del cambio; TypeScript/ESLint, 148 pruebas sin tarjetas
+  y 8 auditores aprobados. No hay migración automática de fechas antiguas:
+  cambiarlas sin evidencia podría inventar el día equivocado. Código aún no
+  publicado; falta la prueba visual en Android.
+- **Qué sigue:** reducir lecturas periódicas innecesarias y continuar el
+  resto de hallazgos. **Qué falta:** Android, consolas, publicación coordinada
+  y auditoría restante; tarjetas fuera.
+
 ## FINO-46 — signos de una columna Monto al importar (07/10/2026)
 
 - Si un archivo sin columna Tipo/Cargo/Abono usa cargos negativos, sus

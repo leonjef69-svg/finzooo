@@ -129,7 +129,7 @@ import { getCloudAccountAccess } from "@/utils/cloudAccountAccess";
 import { finishPersonalReturn, mergePersonalReturn, personalReturnIsCurrent, recoverPersonalReturn, type PersonalReturnReceipt } from "@/utils/personalReturn";
 import { spaceErrorKey } from "@/utils/spaceErrors";
 import { presupuestoCubreTransferencias, presupuestoDelMes, transferidoPendienteDelMes } from "@/utils/presupuestoMensual";
-import { hayDescuadre, maximoAApartar, saldoLibre, totalApartado } from "@/utils/ahorro";
+import { hayDescuadre, maximoAApartar, metaConEstadoActual, saldoLibre, totalApartado } from "@/utils/ahorro";
 import { availablePersonalBalance, totalsForMonth } from "@/utils/finances";
 import { saldoAnteriorDe } from "@/utils/saldoAnterior";
 import { isSafeMoneyAmount } from "@/utils/amount";
@@ -2900,9 +2900,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   function addOrUpdateGoal(g: Goal) {
     if (!isPremium) return;
+    const actualizada = metaConEstadoActual(g);
     setGoals((prev) => {
       const exists = prev.some((p) => p.id === g.id);
-      return exists ? prev.map((p) => (p.id === g.id ? g : p)) : [g, ...prev];
+      return exists ? prev.map((p) => (p.id === g.id ? actualizada : p)) : [actualizada, ...prev];
     });
     showToast(t("toast.goalSaved"));
   }
