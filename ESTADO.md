@@ -1,5 +1,18 @@
 # Estado actual de Fino
 
+## FINO-12 — monto del calendario corregido en código (07/10/2026)
+
+- El formulario ya no convierte `1,500` en S/ 1,50: conserva lo escrito y al
+  guardar interpreta miles/centavos según la moneda. `1,500.25` y `1.500,25`
+  dan S/ 1.500,25; los separadores ambiguos y los montos fuera del límite se
+  rechazan sin recortar el número. La prueba nueva falló con el código anterior.
+- TypeScript, ESLint, 147 pruebas sin tarjetas y 8 auditores aprobados. Sin
+  nuevos datos, permisos ni cambios nativos. Código preparado, no entregado a
+  teléfonos; la verificación visual de pegar/escribir en Android sigue pendiente.
+- **Qué sigue:** continuar los hallazgos financieros y probar este campo en
+  Android. **Qué falta:** pruebas físicas de las correcciones monetarias,
+  revisión de consolas/políticas y publicación coordinada; tarjetas fuera.
+
 ## Cierre seguro de elección monetaria convergente — preparado (07/10/2026)
 
 - Una elección pendiente se puede cerrar sin Pro solo si Personal y Caja ya

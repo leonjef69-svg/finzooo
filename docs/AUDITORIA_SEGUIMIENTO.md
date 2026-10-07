@@ -1,7 +1,21 @@
 # Seguimiento de la auditoría de Claude
 
-Última revisión: 06/10/2026. Este archivo separa tres cosas distintas: código
+Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
+
+## FINO-12 — monto de pagos del calendario (07/10/2026)
+
+- Confirmado en `NuevoPagoProgramado`: `Number(monto.replace(",", "."))`
+  convertía `1,500` en 1,5. El formulario ahora usa la conversión compartida
+  con validación de grupos, moneda y límite; mantiene el texto original hasta
+  guardar. No altera montos de pagos ya guardados: esos requieren revisión
+  humana, no una corrección automática que podría inventar otro valor.
+- La prueba nueva falló con el código previo; tras el arreglo pasaron
+  TypeScript/ESLint, 147 pruebas sin tarjetas y 8 auditores. No se ejecutó el
+  toque del campo en Android ni se entregó una nueva versión.
+- **Qué sigue:** revisar los demás errores de importes y datos. **Qué falta:**
+  prueba Android y consola/entrega del conjunto; FINO-12 no está cerrado en
+  usuarios publicados. Tarjetas de crédito excluidas.
 
 ## Continuación punto 1 — nueva elección conserva la revisión anterior (06/10/2026)
 

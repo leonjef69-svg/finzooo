@@ -1,4 +1,5 @@
-import { isSafeMoneyAmount } from "@/utils/amount";
+import { isSafeMoneyAmount, parseAmountInput } from "@/utils/amount";
+import { currencyDecimals } from "@/constants/currencies";
 import { esFoto } from "@/utils/iconosFavoritos";
 /**
  * EL CALENDARIO DE PAGOS — las cuentas, sin React ni Android (18/08/2026)
@@ -486,18 +487,37 @@ export function textoDeRepeticion(
  * impide** escribir otra cosa: hay teclados que traen simbolos, esta el pegar, y esta el
  * dictado por voz. Fiarse del tipo de teclado es fiarse de algo que no controlamos.
  *
- * Se admite **una sola** coma o punto, porque en Peru se escribe "12,50" tanto como "12.50",
- * y como mucho dos decimales: los centimos no llegan a tres cifras y dejarlo abierto solo
- * sirve para que un dedo torpe guarde 12.5555.
- *
- * Se deja como TEXTO y no se convierte a numero aqui: convertir en cada tecla haria que
- * escribir "12." saltara bajo el dedo. La conversion es una sola, al guardar.
+ * Se conserva el separador escrito: cambiar "1,500" a "1.500" en cada tecla
+ * hacía imposible distinguir miles de decimales al guardar. Tampoco se recorta
+ * un número grande hasta convertirlo silenciosamente en otro monto válido.
+ * La conversión y validación se hacen una sola vez al guardar.
  */
 export function soloMonto(texto: string): string {
-  const limpio = texto.replace(/[^0-9.,]/g, "").replace(/,/g, ".");
-  const trozos = limpio.split(".");
-  if (trozos.length === 1) return trozos[0].slice(0, 13);
-  return trozos[0].slice(0, 13) + "." + trozos.slice(1).join("").slice(0, 3);
+  return texto.replace(/[^0-9.,]/g, "");
+}
+
+/** Convierte el texto del calendario sin adivinar ante grupos mal formados. */
+export function montoDelCalendario(texto: string, moneda: string): number {
+  const limpio = texto.trim();
+  if (!/^\d[\d.,]*$/.test(limpio)) return 0;
+
+  const grupos = limpio.split(/[.,]/);
+  if (grupos.some((grupo) => grupo.length === 0)) return 0;
+  const decimales = currencyDecimals(moneda);
+
+  if (grupos.length === 2) {
+    const [entero, final] = grupos;
+    const esDecimal = final.length <= decimales;
+    const esMiles = decimales !== 3 && entero.length <= 3 && final.length === 3;
+    if (!esDecimal && !esMiles) return 0;
+  } else if (grupos.length > 2) {
+    if (grupos[0].length > 3 || grupos.slice(1, -1).some((grupo) => grupo.length !== 3)) return 0;
+    const final = grupos.at(-1)!;
+    const todosMiles = grupos.slice(1).every((grupo) => grupo.length === 3);
+    if (!todosMiles && final.length > decimales) return 0;
+  }
+
+  return parseAmountInput(limpio, moneda);
 }
 
 

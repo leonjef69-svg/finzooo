@@ -25,6 +25,7 @@ import {
   cuandoTexto,
   iconoSugerido,
   soloMonto,
+  montoDelCalendario,
   primerAviso,
   textoDeRepeticion,
   validarPago,
@@ -347,12 +348,20 @@ ok(validarPago("Luz", "pago", 90, 5).ok === true, "y un numero de verdad si");
 
 ok(soloMonto("12#") === "12", "el # se cae al escribir");
 ok(soloMonto("abc") === "", "y las letras tambien");
-ok(soloMonto("12,50") === "12.50", "la coma vale como el punto: en Peru se escribe de las dos formas");
-ok(soloMonto("12.5.7") === "12.57", "dos puntos no hacen dos decimales: solo hay una parte decimal");
-ok(soloMonto("12.5555") === "12.555", "admite tres decimales para las monedas que los utilizan");
-ok(soloMonto("12345678901234") === "1234567890123", "detiene el monto en trece cifras enteras");
+ok(soloMonto("12,50") === "12,50", "conserva la coma escrita hasta interpretar el monto al guardar");
+ok(soloMonto("1,500.25") === "1,500.25", "no mezcla separadores de miles y centimos al pegar");
+ok(soloMonto("12.5.7") === "12.5.7", "un formato ambiguo permanece visible para poder rechazarlo");
+ok(soloMonto("12345678901234") === "12345678901234", "un monto enorme no se recorta silenciosamente");
 ok(soloMonto("12.") === "12.", "se puede quedar a medias mientras se escribe, sin saltar bajo el dedo");
-ok(Number.isFinite(Number(soloMonto("12,50"))), "lo que sale de aqui siempre se puede convertir a numero");
+ok(montoDelCalendario(soloMonto("1,500"), "PEN") === 1500, "1,500 se guarda como mil quinientos, no como 1,50");
+ok(montoDelCalendario(soloMonto("1,500.25"), "PEN") === 1500.25, "miles y centimos conservan el valor al pegar");
+ok(montoDelCalendario(soloMonto("12,50"), "PEN") === 12.5, "la coma decimal corta sigue funcionando");
+ok(montoDelCalendario(soloMonto("1.500,25"), "PEN") === 1500.25, "tambien admite el otro orden de separadores");
+ok(montoDelCalendario(soloMonto("12.5.7"), "PEN") === 0, "se rechazan separadores ambiguos");
+ok(montoDelCalendario(soloMonto("12345678901234"), "PEN") === 0, "se rechazan cifras fuera del limite sin guardar otra menor");
+ok(montoDelCalendario(soloMonto("1,500"), "BHD") === 1.5, "una moneda de tres decimales interpreta tres cifras como fraccion");
+const formularioCalendario = fs.readFileSync(path.join(process.cwd(), "screens/NuevoPagoProgramado.tsx"), "utf8");
+ok(/montoNumero\s*=\s*esRecordatorio\s*\?\s*undefined\s*:\s*montoDelCalendario\(monto,\s*userCurrency\)/.test(formularioCalendario), "el formulario usa la conversion comprobada al guardar");
 
 // ---------------------------------------------------------------------------
 // EL MOVIMIENTO QUE SE CREA LLEVA CATEGORIA DE VERDAD

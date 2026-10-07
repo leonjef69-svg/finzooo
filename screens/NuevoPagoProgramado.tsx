@@ -35,6 +35,7 @@ import { currencySymbolFor } from "@/constants/currencies";
 import {
   iconoSugerido,
   mesDe,
+  montoDelCalendario,
   soloMonto,
   textoDeRepeticion,
   validarPago,
@@ -216,7 +217,7 @@ export default function NuevoPagoProgramado({
   }
 
   function guardar() {
-    const montoNumero = esRecordatorio ? undefined : Number(monto.replace(",", "."));
+    const montoNumero = esRecordatorio ? undefined : montoDelCalendario(monto, userCurrency);
     const check = validarPago(nombre, tipo, montoNumero, dia);
     if (!check.ok) {
       Alert.alert(t("calendario.nuevo.faltaTitulo"), t(`calendario.nuevo.falta.${check.motivo}`));

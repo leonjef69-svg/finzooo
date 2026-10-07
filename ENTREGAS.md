@@ -10,6 +10,13 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-12 corregido en el código, no publicado: el monto de un pago/ingreso del
+calendario conserva la coma o el punto escrito y distingue `1,500` (mil
+quinientos en PEN) de `1,50` (uno con cincuenta). Un formato ambiguo o cifra
+excesiva no se guarda como otro valor. TypeScript/ESLint y 147 pruebas/8
+auditores sin tarjetas aprobados; falta probarlo tocando el campo en Android.
+Sin APK/AAB/OTA ni entrega a usuarios en esta tanda.
+
 Cierre de elección monetaria pendiente **preparado, no publicado**: Gratis
 puede cerrarla solo si las dos copias de Personal/Caja ya coinciden aquí y en
 Firebase. El servidor guarda una huella técnica que invalida una petición
