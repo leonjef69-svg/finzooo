@@ -3,6 +3,19 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-53 — fecha visible en el aviso del celular (07/10/2026)
+
+- El aviso del teléfono mostraba monto, pero no día ni mes del vencimiento.
+  Ahora añade la fecha completa en formato día/mes/año, también para ingresos
+  y recordatorios. En un día 31 que cae en febrero muestra el último día real
+  de febrero, igual que el calendario.
+- La prueba del aviso sin fecha falló antes del cambio; ahora pasa, junto con
+  las comprobaciones de traducción en español, inglés y portugués.
+  TypeScript, ESLint, 148 pruebas locales y 8 auditores sin tarjetas aprobaron.
+- **Qué sigue:** verlo en Android. **Qué falta:**
+  arreglar por separado la apertura de la ficha al tocarlo (FINO-10) y
+  publicar; tarjetas excluidas.
+
 ## FINO-38 — aportes según el saldo del mes de su fecha (07/10/2026)
 
 - Confirmado: Familia y Caja comparaban los aportes con el disponible del mes

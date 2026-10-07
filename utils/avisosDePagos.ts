@@ -16,6 +16,7 @@ import { loadJSON, saveJSON } from "@/utils/storage";
 import {
   cuandoAvisar,
   estadoEn,
+  fechaEnElMes,
   mesDe,
   mesSiguiente,
   type PagoProgramado,
@@ -164,7 +165,7 @@ async function hacerlo(
         await Notifications.scheduleNotificationAsync({
           content: {
             title: t("calendario.avisoTitulo", { nombre: pago.nombre }),
-            body: textoDelAviso(pago, t, formatAmount),
+            body: textoDelAviso(pago, mes, t, formatAmount),
             sound: "default",
             data: { [MARCA]: true, pagoId: pago.id, mes },
           },
@@ -196,14 +197,17 @@ async function hacerlo(
  */
 function textoDelAviso(
   pago: PagoProgramado,
+  mes: string,
   t: (clave: string, valores?: Record<string, string | number>) => string,
   formatAmount: (monto: number) => string,
 ): string {
+  const fechaISO = fechaEnElMes(pago, mes);
+  const fecha = `${fechaISO.slice(8, 10)}/${fechaISO.slice(5, 7)}/${fechaISO.slice(0, 4)}`;
   if (pago.tipo === "recordatorio" || pago.monto == null) {
-    return t("calendario.avisoRecordatorio");
+    return t("calendario.avisoRecordatorio", { fecha });
   }
   const clave = pago.tipo === "ingreso" ? "calendario.avisoIngreso" : "calendario.avisoPago";
-  return t(clave, { monto: formatAmount(pago.monto) });
+  return t(clave, { monto: formatAmount(pago.monto), fecha });
 }
 
 /**

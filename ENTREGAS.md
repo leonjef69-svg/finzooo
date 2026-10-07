@@ -10,6 +10,13 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-53 preparado, no publicado: el aviso del calendario en el teléfono
+muestra el monto y la fecha completa del vencimiento (día/mes/año). Incluye
+ingresos, recordatorios y ajuste al último día de febrero. La regresión falló
+antes y pasa ahora; TypeScript, ESLint, 148 pruebas locales y 8 auditores sin
+tarjetas aprobaron. Falta prueba Android y FINO-10 para que tocar
+el aviso abra la ficha correcta. Sin APK/AAB/OTA.
+
 FINO-38 preparado, no publicado: Familia y Caja validan aportes contra el
 saldo del mes de la fecha del aporte, no el mes abierto en Inicio. Incluye
 creación y ampliación en Familia y Cajas, incluso aportes antiguos de Cajas

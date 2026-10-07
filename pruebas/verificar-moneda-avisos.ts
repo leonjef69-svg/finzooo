@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 
 import type { PagoProgramado } from "@/utils/calendarioPagos";
+import { translations } from "@/constants/i18n";
 import { reprogramarAvisosDePagos } from "@/utils/avisosDePagos";
 import { paymentNotificationFormatter } from "@/utils/notificationCurrency";
 import {
@@ -28,7 +29,7 @@ const payment: PagoProgramado = {
 const translate = (key: string, values?: Record<string, string | number>) =>
   key === "calendario.avisoTitulo"
     ? `Aviso: ${values?.nombre}`
-    : `Monto: ${values?.monto ?? ""}`;
+    : `Monto: ${values?.monto ?? ""} · vence ${values?.fecha ?? ""}`;
 const now = new Date(2026, 8, 1, 8, 0, 0);
 
 resetNotificationStub();
@@ -50,6 +51,9 @@ const bodiesInSoles = scheduledNotifications
   .filter((notification) => notification.content.data.calendarioPagos)
   .map((notification) => notification.content.body);
 assert.ok(bodiesInSoles.every((body) => body.includes("S/ 1,250.50")));
+assert.ok(scheduledNotifications.some((notification) => notification.content.data?.mes === "2026-09"
+  && notification.content.body?.includes("20/09/2026")),
+"el aviso del celular incluye día, mes y año del vencimiento");
 
 const dollars = await reprogramarAvisosDePagos(
   [payment],
@@ -130,5 +134,21 @@ assert.ok(
   scheduledNotifications.every((notification) => notification.content.body.includes("US$")),
   "la última reprogramación debe quedar activa completa",
 );
+
+for (const language of ["es", "en", "pt"] as const) {
+  for (const key of ["calendario.avisoPago", "calendario.avisoIngreso", "calendario.avisoRecordatorio"]) {
+    assert.ok(translations[language][key].includes("{fecha}"), `${language}: ${key} debe mostrar la fecha`);
+  }
+}
+resetNotificationStub();
+await reprogramarAvisosDePagos(
+  [{ ...payment, tipo: "recordatorio", monto: undefined, dia: 31 }],
+  translate,
+  new Date(2026, 0, 1, 8),
+  paymentNotificationFormatter("PEN"),
+);
+assert.ok(scheduledNotifications.some((notification) => notification.content.data?.mes === "2026-02"
+  && notification.content.body?.includes("28/02/2026")),
+"el aviso de un recordatorio del día 31 muestra la fecha real de febrero");
 
 console.log("Avisos: moneda, permisos, fallos y reprogramaciones simultáneas correctos.");

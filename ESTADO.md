@@ -1,5 +1,14 @@
 # Estado actual de Fino
 
+## FINO-53 — fecha en el aviso del teléfono (07/10/2026)
+
+- Los avisos del calendario muestran día, mes y año del vencimiento junto al
+  monto, también en recordatorios e ingresos. En febrero se muestra la fecha
+  realmente programada. La prueba falló antes del arreglo y pasa ahora;
+  TypeScript, ESLint, 148 pruebas locales y 8 auditores sin tarjetas aprobaron.
+- **Qué sigue:** FINO-10 (abrir la ficha al tocar el
+  aviso). **Qué falta:** prueba Android y entrega; tarjetas excluidas.
+
 ## FINO-38 — saldo correcto al aportar a Familia/Caja (07/10/2026)
 
 - Crear o ampliar un aporte desde Personal se valida con el saldo del mes al
