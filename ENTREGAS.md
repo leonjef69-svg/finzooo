@@ -10,6 +10,12 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-60 preparado: librería de cifrado sustituida conservando formato, llave y
+datos antiguos. Comparación independiente con 10.000 movimientos, TypeScript,
+ESLint, 140 pruebas locales y 8 auditores aprobados (139 pruebas en Git limpio).
+Empaquetado Android/Hermes aprobado; falta actualización real sobre datos
+antiguos en Android. Sin APK/AAB/OTA ni cambios de datos reales.
+
 FINO-59 (mapas de Sentry) parcial, no publicado: conservar la subida durante
 Android ahora requiere activación expresa y credenciales privadas. Sin activar,
 la compilación mantiene su comportamiento anterior. Se integraron el plugin

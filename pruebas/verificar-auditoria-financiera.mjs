@@ -41,7 +41,7 @@ ok(
   "el modo señuelo fue retirado de la app",
 );
 ok(
-  encryption.includes("CryptoJS.HmacSHA256") &&
+  encryption.includes("hmac(sha256, key,") &&
     encryption.includes("constantTimeEqual") &&
     encryption.includes("return `v2:"),
   "el cifrado detecta alteraciones con HMAC",

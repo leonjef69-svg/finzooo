@@ -1,5 +1,22 @@
 # Estado actual de Fino
 
+## FINO-60 — cifrado mantenido con formato compatible (07/10/2026)
+
+- Se sustituyeron `crypto-js` y sus tipos por `@noble/ciphers`, `@noble/hashes`
+  y `@scure/base`, fijados a 2.4.0. Se conserva AES-256-CBC/PKCS7 + HMAC-SHA256,
+  la llave de SecureStore, el prefijo v2 y la lectura del formato antiguo.
+  No hay conversión masiva de datos ni cambio de llave.
+- Se rechazan llaves malformadas sin reemplazarlas y campos sobrantes en el
+  texto cifrado. La prueba nueva falló contra el código anterior; compara
+  lectura/escritura de 10.000 movimientos con el cifrado independiente de
+  Node y comprueba Unicode también con el TextDecoder real de Expo.
+- TypeScript, ESLint, 140 pruebas locales y 8 auditores aprobaron (139 pruebas
+  en Git limpio). Exportación Android/Hermes con mapas aprobada.
+- **Qué sigue:** FINO-19, selección de configuración Firebase al generar AAB.
+  **Qué falta:** actualizar sobre una instalación Android de prueba con datos
+  antiguos, comprobar cierre/reinicio/sesión y publicar. Sin dispositivo ni
+  AVD disponible en esta sesión. Tarjetas excluidas.
+
 ## FINO-59 — protección para activar mapas de Sentry (07/10/2026)
 
 - La compilación normal conserva la protección que evita fallar por falta de

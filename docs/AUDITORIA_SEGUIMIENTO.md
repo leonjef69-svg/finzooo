@@ -3,6 +3,27 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-60 — sustitución compatible de crypto-js (07/10/2026)
+
+- Se retiró crypto-js de dependencias y del cifrado real. Noble Ciphers/Hashes
+  y Scure Base 2.4.0 mantienen el formato v2, AES-CBC/PKCS7, HMAC y la llave
+  existente. Expo Crypto 15 aporta el azar; SDK 54 no ofrece AES nativo como
+  sustitución directa. No se cambió el formato ni se migraron datos reales.
+- Prueba nueva falló antes por aceptar campos sobrantes. Ahora comprueba
+  claves dañadas/ausentes sin reemplazo, alteración de IV/cifrado/HMAC, lectura
+  v1/v2, tamaños de bloque, Unicode/BOM y 10.000 movimientos. El resultado se
+  contrasta con AES/HMAC de Node, y con el decodificador de Expo, sin copiar
+  el algoritmo de la app.
+- TypeScript, ESLint, 140 pruebas locales y 8 auditores aprobaron (139 en Git
+  limpio); exportación Android/Hermes aprobada. No se compiló APK ni se publicó.
+- **Qué sigue:** selección de Firebase del generador (FINO-19).
+  **Qué falta:** prueba Android al actualizar una instalación con datos v1/v2,
+  cierre/reinicio y publicación. Tarjetas fuera del alcance.
+- Referencias: [CryptoJS](https://github.com/brix/crypto-js),
+  [Expo Crypto SDK 54](https://docs.expo.dev/versions/v54.0.0/sdk/crypto/),
+  [Noble Ciphers](https://github.com/paulmillr/noble-ciphers),
+  [Noble Hashes](https://github.com/paulmillr/noble-hashes).
+
 ## FINO-59 — mapas de Sentry (07/10/2026)
 
 - El script Gradle de Sentry ya no se retira cuando se solicita expresamente

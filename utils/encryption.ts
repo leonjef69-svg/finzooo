@@ -1,7 +1,11 @@
 import * as SecureStore from "expo-secure-store";
 import * as Crypto from "expo-crypto";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import CryptoJS from "crypto-js";
+import { cbc } from "@noble/ciphers/aes.js";
+import { hmac } from "@noble/hashes/hmac.js";
+import { sha256 } from "@noble/hashes/sha2.js";
+import { hexToBytes } from "@noble/hashes/utils.js";
+import { base64 } from "@scure/base";
 
 // La "llave maestra" que cifra todo se guarda en el cajón cifrado del
 // propio sistema operativo (respaldado por el hardware del celular),
@@ -44,7 +48,10 @@ async function hasEncryptedDataOnDevice(): Promise<boolean> {
 
 async function readOrCreateKey(): Promise<string> {
   const existing = await SecureStore.getItemAsync(KEY_STORAGE_NAME);
-  if (existing) return existing;
+  if (existing !== null) {
+    if (!/^[0-9a-f]{64}$/i.test(existing)) throw new Error("encryption-key-invalid");
+    return existing;
+  }
   if (await hasEncryptedDataOnDevice()) {
     throw new Error("encryption-key-missing-with-existing-data");
   }
@@ -66,26 +73,21 @@ function getOrCreateKey(): Promise<string> {
   return cachedKeyPromise;
 }
 
-async function secureRandomWordArray(byteCount: number) {
-  const randomBytes = await Crypto.getRandomBytesAsync(byteCount);
-  return CryptoJS.enc.Hex.parse(bytesToHex(randomBytes));
-}
-
 // Cifra un texto. El resultado incluye un "IV" (un valor aleatorio único
 // por cada guardado, necesario para descifrar) pegado adelante — el IV
 // no es secreto, solo debe ser distinto cada vez.
 export async function encryptText(plaintext: string): Promise<string> {
   const keyHex = await getOrCreateKey();
-  const key = CryptoJS.enc.Hex.parse(keyHex);
-  const iv = await secureRandomWordArray(16);
-  const encrypted = CryptoJS.AES.encrypt(plaintext, key, { iv });
-  const ivHex = iv.toString(CryptoJS.enc.Hex);
-  const cipherPart = encrypted.toString();
+  const key = hexToBytes(keyHex);
+  const iv = await Crypto.getRandomBytesAsync(16);
+  // Mismo AES-256-CBC/PKCS7 y formato v2: cambia la implementación, no los
+  // datos guardados. No hace falta reescribir historiales al actualizar.
+  const encrypted = cbc(key, iv).encrypt(new TextEncoder().encode(plaintext));
+  const ivHex = bytesToHex(iv);
+  const cipherPart = base64.encode(encrypted);
   // AES-CBC oculta el contenido, pero por sí solo no detecta alteraciones.
   // El HMAC impide aceptar como válido un dato manipulado o dañado.
-  const mac = CryptoJS.HmacSHA256(`${ivHex}:${cipherPart}`, key).toString(
-    CryptoJS.enc.Hex,
-  );
+  const mac = bytesToHex(hmac(sha256, key, new TextEncoder().encode(`${ivHex}:${cipherPart}`)));
   return `v2:${ivHex}:${cipherPart}:${mac}`;
 }
 
@@ -104,23 +106,25 @@ export async function decryptText(ciphertext: string): Promise<string | null> {
   try {
     const parts = ciphertext.split(":");
     const authenticated = parts[0] === "v2";
+    if (parts.length !== (authenticated ? 4 : 2)) return null;
     const ivHex = authenticated ? parts[1] : parts[0];
     const cipherPart = authenticated ? parts[2] : parts[1];
     const storedMac = authenticated ? parts[3] : undefined;
-    if (!ivHex || !cipherPart) return null;
+    if (!ivHex || !/^[0-9a-f]{32}$/i.test(ivHex) || !cipherPart) return null;
+    if (authenticated && (!storedMac || !/^[0-9a-f]{64}$/.test(storedMac))) return null;
+    const cipherBytes = base64.decode(cipherPart);
+    if (!cipherBytes.length || cipherBytes.length % 16 !== 0) return null;
     const keyHex = await getOrCreateKey();
-    const key = CryptoJS.enc.Hex.parse(keyHex);
+    const key = hexToBytes(keyHex);
     if (authenticated) {
       if (!storedMac) return null;
-      const expectedMac = CryptoJS.HmacSHA256(
-        `${ivHex}:${cipherPart}`,
-        key,
-      ).toString(CryptoJS.enc.Hex);
+      const expectedMac = bytesToHex(hmac(sha256, key, new TextEncoder().encode(`${ivHex}:${cipherPart}`)));
       if (!constantTimeEqual(storedMac, expectedMac)) return null;
     }
-    const iv = CryptoJS.enc.Hex.parse(ivHex);
-    const decrypted = CryptoJS.AES.decrypt(cipherPart, key, { iv });
-    const text = decrypted.toString(CryptoJS.enc.Utf8);
+    const iv = hexToBytes(ivHex);
+    const decrypted = cbc(key, iv).decrypt(cipherBytes);
+    // La lectura estricta conserva BOM y rechaza UTF-8 dañado, como antes.
+    const text = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(decrypted);
     return text.length > 0 ? text : null;
   } catch {
     return null;
