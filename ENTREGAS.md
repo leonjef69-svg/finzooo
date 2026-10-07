@@ -10,12 +10,13 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
-FINO-61 parcialmente atendido: se retiraron ocho pruebas que no comprobaban
+FINO-61 parcialmente atendido: se retiraron nueve pruebas que no comprobaban
 el código actual (gráficas inexistentes y copias de algoritmos). El gráfico
 diario vigente ahora comparte la misma cuenta entre Reportes y una prueba
-real, que falló antes de la extracción. Pasaron 142 pruebas locales y 8
+real, que falló antes de la extracción. Voz también comparte las cuentas de
+comparación mensual con una prueba real. Pasaron 142 pruebas locales y 8
 auditores sin tarjetas; una prueba local no está versionada, por lo que Git
-limpio tiene 141. Faltan seis simulaciones por sustituir. No constituye
+limpio tiene 141. Faltan cinco simulaciones por sustituir. No constituye
 una entrega instalada. Sin APK/AAB/OTA.
 
 FINO-58 revalidado: el candado falla cerrado si SecureStore no responde.

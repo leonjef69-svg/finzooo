@@ -7,6 +7,7 @@ import { ExpoSpeechRecognitionModule, useSpeechRecognitionEvent } from "expo-spe
 import { useAppData } from "@/contexts/AppDataContext";
 import { applyVoiceCorrection, type VoiceFailure } from "@/utils/voiceParser";
 import { parseVoiceCommand } from "@/utils/voiceCommand";
+import { voiceCompareMonths, voiceMonthlyTotals, voiceTopMonth } from "@/utils/voiceMonth";
 import { queueExport } from "@/utils/pendingExport";
 import { suggestCategory } from "@/utils/classifier";
 import CategoryAvatar from "@/components/CategoryAvatar";
@@ -734,75 +735,16 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     return `${monthNames[m - 1]} ${y}`;
   }
 
-  /** Lo que salió y lo que entró en cada mes que tenga algo. */
-  function totalsByMonth(): Map<string, { expense: number; income: number }> {
-    const map = new Map<string, { expense: number; income: number }>();
-    for (const tx of transactions) {
-      if (tx.internalTransfer) continue;
-      const key = tx.date.slice(0, 7);
-      const acc = map.get(key) ?? { expense: 0, income: 0 };
-      if (tx.type === "income") acc.income += tx.amount;
-      else acc.expense += tx.amount;
-      map.set(key, acc);
-    }
-    return map;
-  }
-
   // "¿En qué mes gasté más?" — el ranking de todos los meses guardados.
   const topMonth = (() => {
     if (stage !== "topMonth") return null;
-    const totals = totalsByMonth();
-
-    // Un mes sin nada de lo que se pregunta no entra en la carrera: si se
-    // pregunta por ingresos, un mes solo con gastos no es "el que menos
-    // ingresos tuvo", es un mes que no cuenta.
-    const lista = [...totals.entries()]
-      .map(([key, t]) => ({ key, value: topFocus === "income" ? t.income : t.expense }))
-      .filter((m) => m.value > 0)
-      .sort((a, b) => (topDirection === "least" ? a.value - b.value : b.value - a.value));
-
-    if (lista.length === 0) return { empty: true, winner: null, others: [], max: 0 };
-    return {
-      empty: false,
-      winner: lista[0],
-      others: lista.slice(1, 6),
-      // Para las barritas: se miden todas contra la más grande de la lista,
-      // no contra la ganadora, que al pedir "el que menos" es la más chica.
-      max: Math.max(...lista.map((m) => m.value)),
-    };
+    return voiceTopMonth(voiceMonthlyTotals(transactions), topFocus, topDirection);
   })();
 
   // "Compara junio con mayo" — los dos meses, uno al lado del otro.
   const compare = (() => {
     if (stage !== "compare" || !compareMonths[0]) return null;
-    const totals = totalsByMonth();
-    const vacio = { expense: 0, income: 0 };
-    const a = { key: compareMonths[0], ...(totals.get(compareMonths[0]) ?? vacio) };
-    const b = { key: compareMonths[1], ...(totals.get(compareMonths[1]) ?? vacio) };
-
-    // La frase de abajo habla de lo que se preguntó. Sin decir nada, de los
-    // gastos: es de lo que uno quiere enterarse al comparar dos meses.
-    const porIngresos = compareFocus === "income";
-    const va = porIngresos ? a.income : a.expense;
-    const vb = porIngresos ? b.income : b.expense;
-    const diff = va - vb;
-
-    // "Casi lo mismo" cuando la diferencia no llega al 5% del mayor: decir
-    // "gastaste S/ 2 más" en dos meses de mil soles no informa de nada.
-    const mayor = Math.max(va, vb);
-    const casiIgual = mayor === 0 || Math.abs(diff) / mayor < 0.05;
-
-    return {
-      a,
-      b,
-      empty: a.expense + a.income + b.expense + b.income === 0,
-      casiIgual,
-      diff: Math.abs(diff),
-      // De qué mes se habla en la frase: del que tenga más.
-      mesConMas: diff >= 0 ? a.key : b.key,
-      subeLaFrase: diff >= 0,
-      porIngresos,
-    };
+    return voiceCompareMonths(voiceMonthlyTotals(transactions), compareMonths, compareFocus);
   })();
 
   // Latido de fondo: existe siempre, para que se vea que está esperando.

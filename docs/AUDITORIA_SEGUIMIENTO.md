@@ -18,7 +18,11 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
   locales y 8 auditores sin tarjetas. Una prueba preexistente no está
   versionada (`verificar-resumen-gasto-ingreso-ui.mjs`), por lo que en un
   checkout limpio son 141. Los archivos retirados siguen recuperables en Git.
-- **Qué sigue:** sustituir las otras seis pruebas que copian algoritmos de
+- La comparación mensual y ranking de Voz también comparten función con su
+  prueba real. La prueba nueva falló antes de la extracción y comprueba que
+  una transferencia no se sume como gasto; la antigua copia sí la sumaba.
+  Se retiró esa copia. Siguen aprobando 142 pruebas locales y 8 auditores.
+- **Qué sigue:** sustituir las otras cinco pruebas que copian algoritmos de
   voz y navegación por comprobaciones de código real, y demostrar
   que fallan si ese código se altera. **Qué falta:** completar FINO-61,
   pruebas Android y publicación; tarjetas excluidas.

@@ -9,12 +9,15 @@
 - El gráfico diario actual usa una cuenta extraída sin cambiarla a
   `utils/reportDaily.ts`, ahora ejecutada por una prueba nueva que falló antes
   de la extracción. Se retiraron dos simulaciones más, una de ellas del
-  gráfico viejo de 31 barras. Pasan 142 pruebas locales y 8 auditores sin
+  gráfico viejo de 31 barras. El ranking y la comparación de meses de Voz
+  también usan ahora `utils/voiceMonth.ts`; su prueba real falló antes de
+  extraerlos y cubre transferencias, meses vacíos y diferencias pequeñas.
+  Se retiró otra copia del algoritmo. Pasan 142 pruebas locales y 8 auditores sin
   tarjetas; una de esas pruebas (`verificar-resumen-gasto-ingreso-ui.mjs`) no
   está versionada, así que una copia limpia tiene 141. Los recuentos locales
   anteriores también la incluían. La reducción es deliberada: no se presenta
   cobertura falsa.
-- **Qué sigue:** reemplazar seis simulaciones restantes por pruebas que
+- **Qué sigue:** reemplazar cinco simulaciones restantes por pruebas que
   ejecuten la lógica real de voz y navegación. **Qué falta:** esa
   parte de FINO-61, pruebas físicas y publicación; tarjetas excluidas.
 
