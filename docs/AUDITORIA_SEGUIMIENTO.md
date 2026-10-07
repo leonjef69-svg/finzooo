@@ -3,6 +3,24 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-58/59 — candado y herramientas de desarrollo (07/10/2026)
+
+- FINO-58 ya se había corregido en `276cf53`. La prueba ejecuta la lectura
+  real del estado con SecureStore simulado fallando: responde `unavailable`,
+  `isLockEnabled()` sigue bloqueando y la puerta muestra un modal desde el
+  arranque. Revalidado localmente; falta Android real.
+- FINO-59: el bot local ahora exige `FINO_LOCAL_FIREBASE_PROJECT_ID`,
+  `FINO_LOCAL_ALLOW_WEBHOOK_DELETE=YES` y, si se eligió producción,
+  `FINO_LOCAL_ALLOW_PRODUCTION=YES`. Se comprueba que sin esas autorizaciones
+  termina antes de cargar Firebase o llamar a Telegram. No se ejecutó contra
+  servicios reales. Se retiró el script de plantilla que movía/borraba el
+  proyecto, se corrigió README y se fijó `sharp-cli`.
+- La prueba de herramientas falló contra la versión anterior y pasó ahora;
+  TypeScript, ESLint, 149 pruebas y 8 auditores sin tarjetas aprobaron.
+  **Qué sigue:** resolver el tratamiento de mapas de código de Sentry sin
+  introducir credenciales en el repositorio. **Qué falta:** esa parte,
+  prueba física del candado y publicación; tarjetas excluidas.
+
 ## FINO-57 — precisión de moneda y fórmulas en CSV (07/10/2026)
 
 - Confirmado: la salida CSV fijaba dos decimales para todas las monedas y no

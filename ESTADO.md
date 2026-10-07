@@ -1,5 +1,21 @@
 # Estado actual de Fino
 
+## FINO-58/59 — candado revalidado y herramientas locales protegidas (07/10/2026)
+
+- FINO-58 ya estaba corregido: un error al leer SecureStore mantiene el
+  candado cerrado y no enseña la app mientras se comprueba. La prueba que
+  simula ese fallo volvió a pasar. Falta verlo en un Android real.
+- FINO-59: `functions/local.js` ya no usa el proyecto de producción por
+  defecto ni cambia el webhook sin autorización explícita; para producción
+  exige una segunda autorización. No se ejecutó el bot ni se tocó producción.
+  Se retiraron el comando y script `reset-project` de la plantilla, y su
+  invitación en README. `sharp-cli` quedó fijado a una versión concreta.
+  La prueba nueva falló antes del arreglo y pasó después; 149 pruebas y 8
+  auditores sin tarjetas aprobaron.
+- **Qué sigue:** revisar la generación/subida de símbolos de Sentry sin romper
+  el AAB. **Qué falta:** esa parte de FINO-59, comprobación física del candado
+  y entrega; tarjetas excluidas.
+
 ## FINO-57 — CSV según moneda y texto protegido (07/10/2026)
 
 - El CSV manual y automático usan los decimales del espacio: por ejemplo,

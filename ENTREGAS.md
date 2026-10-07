@@ -10,6 +10,14 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-58 revalidado: el candado falla cerrado si SecureStore no responde.
+FINO-59 parcialmente mitigado: el bot local exige autorizaciones explícitas,
+la plantilla ya no ofrece `reset-project` y la herramienta gráfica tiene
+versión fija. No se ejecutó ningún bot ni se cambió producción. La prueba
+nueva falló antes y pasa ahora; 149 pruebas y 8 auditores sin tarjetas
+aprobaron. Falta revisar los símbolos de Sentry y probar el candado en
+Android. Sin APK/AAB/OTA.
+
 FINO-57 preparado, no publicado: CSV manual y automático respetan los decimales
 de la moneda del espacio; el texto de descripciones con controles iniciales o
 signos que podrían leerse como fórmula se protege. Regresión roja antes y verde

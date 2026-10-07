@@ -1,5 +1,19 @@
 "use strict";
 
+// Esta herramienta borra el webhook del bot para poder leer mensajes por
+// polling. No debe hacerlo por accidente ni apuntar a Firebase de producción
+// solo porque alguien ejecutó `node local.js`.
+const projectId = process.env.FINO_LOCAL_FIREBASE_PROJECT_ID?.trim();
+if (process.env.FINO_LOCAL_ALLOW_WEBHOOK_DELETE !== "YES") {
+  throw new Error("El bot local cambiaría el webhook. Exige FINO_LOCAL_ALLOW_WEBHOOK_DELETE=YES explícito.");
+}
+if (!projectId) {
+  throw new Error("Indica FINO_LOCAL_FIREBASE_PROJECT_ID para el proyecto de pruebas.");
+}
+if (projectId === "dotero-2d430" && process.env.FINO_LOCAL_ALLOW_PRODUCTION !== "YES") {
+  throw new Error("Producción bloqueada: FINO_LOCAL_ALLOW_PRODUCTION=YES es obligatorio para usarla aquí.");
+}
+
 const { applicationDefault, initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { handleTelegramUpdate } = require("./src/telegram-guided-handler");
@@ -7,7 +21,7 @@ const { handleTelegramUpdate } = require("./src/telegram-guided-handler");
 const token = process.env.TELEGRAM_BOT_TOKEN;
 if (!token) throw new Error("Falta TELEGRAM_BOT_TOKEN en el entorno. No lo escribas dentro del código.");
 
-initializeApp({ credential: applicationDefault(), projectId: "dotero-2d430" });
+initializeApp({ credential: applicationDefault(), projectId });
 const db = getFirestore();
 let offset = 0;
 

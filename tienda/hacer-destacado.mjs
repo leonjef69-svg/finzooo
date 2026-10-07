@@ -8,7 +8,7 @@
 //
 //   node tienda/hacer-destacado.mjs
 //
-// Hace falta sharp, que no es dependencia del proyecto: se baja al vuelo con npx.
+// Hace falta sharp-cli; se fija la versión para no ejecutar una nueva al azar.
 //
 // LO QUE PIDE GOOGLE, Y QUE HAY QUE RESPETAR SI SE TOCA:
 //   · 1024 × 500 exactos.
@@ -48,7 +48,7 @@ const temporal = path.join(AQUI, ".destacado.svg");
 const destino = path.join(AQUI, "destacado-1024x500.png");
 fs.writeFileSync(temporal, svg);
 try {
-  execFileSync("npx", ["-y", "sharp-cli", "-i", temporal, "-o", destino, "-f", "png", "flatten", VERDE], {
+  execFileSync("npx", ["-y", "sharp-cli@6.1.0", "-i", temporal, "-o", destino, "-f", "png", "flatten", VERDE], {
     stdio: "inherit",
     shell: true,
   });
