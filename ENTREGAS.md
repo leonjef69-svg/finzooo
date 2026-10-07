@@ -10,6 +10,13 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-38 preparado, no publicado: Familia y Caja validan aportes contra el
+saldo del mes de la fecha del aporte, no el mes abierto en Inicio. Incluye
+creación y ampliación en Familia y Cajas, incluso aportes antiguos de Cajas
+compartidas, y el texto del saldo en el formulario. Regresión roja
+antes del cambio y verde ahora; TypeScript, ESLint, 148 pruebas locales y 8
+auditores sin tarjetas aprobaron. Faltan Android y entrega. Sin APK/AAB/OTA.
+
 FINO-11 corregido en código, no publicado: al tocar «Ya lo pagué», el
 movimiento usa la fecha y hora reales del toque, incluso si el vencimiento
 fue en otro mes. El calendario conserva el vencimiento y los movimientos

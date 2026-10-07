@@ -16,6 +16,9 @@
 // presupuestos que ya están guardados. Las funciones de este archivo no
 // tienen acceso a nada más.
 
+import { presupuestoDelMes } from "@/utils/presupuestoMensual";
+import { saldoAnteriorDe, type MovimientoDelSaldo } from "@/utils/saldoAnterior";
+
 export type MonthFigures = {
   /** Presupuesto puesto para ese mes. 0 si no se puso ninguno. */
   budget: number;
@@ -127,4 +130,20 @@ export function totalsForMonth(
     }
   }
   return { spent, income, transfersOut, transfersIn };
+}
+
+/** Saldo de Personal en el mes de una operación, no en el mes abierto en Inicio. */
+export function disponiblePersonalEnFecha(
+  fecha: string,
+  budgets: Record<string, number>,
+  transactions: (MovimientoDelSaldo & { internalTransfer?: unknown })[],
+  carryoverCleared: string[]
+): number {
+  const mes = fecha.slice(0, 7);
+  const { spent, income, transfersOut, transfersIn } = totalsForMonth(transactions, mes);
+  return availablePersonalBalance({
+    budget: presupuestoDelMes(budgets, mes),
+    prevBalance: saldoAnteriorDe(mes, budgets, transactions, carryoverCleared),
+    spent, income, transfersOut, transfersIn,
+  });
 }

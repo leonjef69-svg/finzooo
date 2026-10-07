@@ -27,6 +27,7 @@ import {
   type RevisionImporteCaja,
 } from "@/utils/cajas";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
+import { disponiblePersonalEnFecha } from "@/utils/finances";
 import { horaDe } from "@/utils/format";
 import { allocatePersonalReturn, canCloseLinkedSpace, canSpendFromSpace, compactLinkedTransferRows, countSelectedCompactRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, minimumContributionAmount, movementIdsForCompactRow, planSpaceMovementDeletion, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
@@ -66,7 +67,7 @@ export default function Cajas() {
 }
 
 function CajasForAccount({ accountUid }: { accountUid: string }) {
-  const { ready: personalReady, hasOnboarded, t, fmt, showToast, disponible, transactions, deletedTransactionIds, commitPrivateBoxData, commitPrivateBoxMoney, retirePrivateBoxMoney, stagePrivateBoxMoney, readPrivateBoxMoneyLocal, isPremium, userName, userCurrency } = useAppData();
+  const { ready: personalReady, hasOnboarded, t, fmt, showToast, budgets, carryoverCleared, transactions, deletedTransactionIds, commitPrivateBoxData, commitPrivateBoxMoney, retirePrivateBoxMoney, stagePrivateBoxMoney, readPrivateBoxMoneyLocal, isPremium, userName, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
   const [datos, setRenderedDatos] = useState<DatosCajas>(() => leerCajasEnMemoria() ?? CAJAS_VACIAS);
   const datosActuales = useRef(datos);
@@ -90,6 +91,13 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const [category, setCategory] = useState("otros");
   const [movementDate, setMovementDate] = useState(fechaLocal());
   const [notes, setNotes] = useState("");
+  const saldoPersonalEn = useCallback((fecha: string) =>
+    disponiblePersonalEnFecha(fecha, budgets, transactions, carryoverCleared),
+  [budgets, transactions, carryoverCleared]);
+  const hoyEnPantalla = fechaLocal();
+  const disponibleHoy = useMemo(() => saldoPersonalEn(hoyEnPantalla), [saldoPersonalEn, hoyEnPantalla]);
+  const disponibleMovimiento = useMemo(() => saldoPersonalEn(movementDate), [saldoPersonalEn, movementDate]);
+  const disponible = creando ? disponibleHoy : disponibleMovimiento;
   const [editandoAporteId, setEditandoAporteId] = useState<string | null>(null);
   const [ready, setReady] = useState(leerCajasEnMemoria() !== null);
   const [cloudReady, setCloudReady] = useState(false);
@@ -518,7 +526,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
     const nueva = { id: nuevoIdCaja("caja"), nombre, creadaEn: Date.now() };
     const inicial = parseAmountInput(montoInicial, userCurrency);
-    if (origenDinero === "personal" && inicial > disponible) {
+    if (origenDinero === "personal" && inicial > saldoPersonalEn(fechaLocal())) {
       showToast(t("boxes.notEnoughPersonal"));
       return;
     }
@@ -592,7 +600,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     if (aporteEditado?.personalTransactionId != null) {
       const minimo = minimumContributionAmount(movimientos, aporteEditado);
       if (valor < minimo - 0.005) { showToast(t("boxes.contributionUsed")); return; }
-      if (valor - aporteEditado.monto > disponible) { showToast(t("boxes.notEnoughPersonal")); return; }
+      if (valor - aporteEditado.monto > saldoPersonalEn(aporteEditado.fecha)) { showToast(t("boxes.notEnoughPersonal")); return; }
       if (!tomarAccionLocal()) return;
       const personal = transactions.find(tx => tx.id === aporteEditado.personalTransactionId);
       if (!personal) { showToast(t("boxes.syncConflict")); return; }
@@ -603,7 +611,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       showToast(t("boxes.movementSaved"));
       return;
     }
-    if (anotando === "ingreso" && origenDinero === "personal" && valor > disponible) {
+    if (anotando === "ingreso" && origenDinero === "personal" && valor > saldoPersonalEn(movementDate)) {
       showToast(t("boxes.notEnoughPersonal"));
       return;
     }

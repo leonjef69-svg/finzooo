@@ -16,6 +16,9 @@
 // TODA ESTA PRUEBA FALLA CONTRA LA VERSION ANTERIOR salvo donde se diga lo contrario: el
 // codigo viejo devolvia 0 en cuanto habia una marca en ese mes o en cualquiera anterior.
 import { saldoAnteriorDe, tieneCorte } from "@/utils/saldoAnterior";
+import { disponiblePersonalEnFecha } from "@/utils/finances";
+import fs from "fs";
+import path from "path";
 
 let fallos = 0;
 function ok(c: boolean, m: string) {
@@ -152,6 +155,30 @@ console.log("\n--- LOS PRESUPUESTOS ENTRAN EN CRUDO, SIN HEREDAR ---");
   ok(saldoAnteriorDe("2026-07", presupuestos, [], []) === 500, `solo cuenta el presupuesto que se puso de verdad (${saldoAnteriorDe("2026-07", presupuestos, [], [])})`);
   // Y una clave que no sea un mes no rompe la cuenta ni suma nada.
   ok(saldoAnteriorDe("2026-07", { ...presupuestos, basura: 999 } as Record<string, number>, [], []) === 500, "una clave rara no suma");
+}
+
+console.log("\n--- APORTAR A FAMILIA O CAJA USA EL MES DEL APORTE ---");
+{
+  const presupuestos = { "2026-09": 1000, "2026-10": 100 };
+  const movs = [gasto("2026-10-02", 50)];
+  const cortes = ["2026-10"];
+  ok(disponiblePersonalEnFecha("2026-09-20", presupuestos, movs, cortes) === 1000,
+    "el saldo de septiembre se conserva aunque hoy sea octubre");
+  ok(disponiblePersonalEnFecha("2026-10-07", presupuestos, movs, cortes) === 50,
+    "un aporte fechado en octubre solo puede usar sus S/50 disponibles");
+  ok(disponiblePersonalEnFecha("2026-10-07", presupuestos,
+    [...movs, { date: "2026-10-03", type: "expense", amount: 20, internalTransfer: "family" }], cortes) === 30,
+    "un aporte anterior a Familia también reduce lo que puede aportarse hoy");
+  const family = fs.readFileSync(path.join(process.cwd(), "screens/Family.tsx"), "utf8");
+  const boxes = fs.readFileSync(path.join(process.cwd(), "screens/Cajas.tsx"), "utf8");
+  const sharedBoxes = fs.readFileSync(path.join(process.cwd(), "screens/SharedBoxes.tsx"), "utf8");
+  ok(!/initial > disponible\b|value > disponible\b|value - aporteEditado\.monto > disponible\b/.test(family),
+    "Familia no valida aportes con el mes que quedó seleccionado en Inicio");
+  ok(!/inicial > disponible\b|valor > disponible\b|valor - aporteEditado\.monto > disponible\b/.test(boxes),
+    "Caja tampoco valida aportes con el mes abierto en Inicio");
+  ok(sharedBoxes.includes("saldoPersonalEn(aporteEditado.fecha)")
+    && !/valor - aporteEditado\.monto > disponible\b/.test(sharedBoxes),
+    "ampliar un aporte antiguo en Caja compartida usa el mes original");
 }
 
 console.log(fallos === 0 ? "\nTodo bien: cada mes decide solo" : `\n${fallos} fallas`);

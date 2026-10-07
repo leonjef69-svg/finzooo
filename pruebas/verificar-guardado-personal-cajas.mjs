@@ -145,7 +145,8 @@ try {
     const s = { ...linked, ctx, h, events, accountUid: "a", auth: ctx.auth, userCurrency: "PEN", userName: "A", isPremium: true,
       guardandoRef: { current: false }, guardando: false, syncIssue: null, repairBlocked: false, ready: true, cloudReady: true, compartiendo: false, cargandoUnion: false,
       cuentaActual: () => true, hasUnreadableLocalData: h.api.hasUnreadableLocalData, datosActuales: { current: before }, datos: before,
-      movimientos: before.movimientos, transactions: rows, caja: before.cajas[0], disponible: 500,
+      movimientos: before.movimientos, transactions: rows, caja: before.cajas[0],
+      saldoPersonalEn: fecha => { events.push(`saldo:${fecha}`); return 500; },
       nuevoNombre: "Viaje", montoInicial: "100", origenDinero: "personal", monto: "20", anotando: "ingreso", descripcion: "Aporte",
       category: "otros", method: "transfer", notes: "", movementDate: "2026-10-05", editandoAporteId: null, seleccionados: [], cajasSeleccionadas: [],
       t: key => key, showToast: key => events.push(key), amountInputError: () => null, parseAmountInput: Number, validSpaceDate: () => true,
@@ -163,15 +164,18 @@ try {
   {
     const s = screenHarness(boxes.CAJAS_VACIAS); await s.actions.crearCaja();
     assert.equal(s.ctx.transactionsLive.current[0].amount, 100); assert.equal(s.datosActuales.current.movimientos[0].monto, 100);
+    assert.ok(s.events.includes("saldo:2026-10-05"), "la Caja valida el saldo de la fecha del aporte inicial");
     assert.equal(s.events.includes("boxes.saved"), true);
   }
   {
     const s = screenHarness({ ...data, movimientos: [] }); await s.actions.guardarMovimiento();
     assert.equal(s.ctx.transactionsLive.current[0].amount, 20); assert.equal(s.datosActuales.current.movimientos[0].monto, 20);
+    assert.ok(s.events.includes("saldo:2026-10-05"), "la Caja valida el saldo de la fecha elegida");
   }
   {
     const s = screenHarness(data, [transfer]); s.editandoAporteId = move.id; s.monto = "80"; await s.actions.guardarMovimiento();
     assert.equal(s.ctx.transactionsLive.current[0].amount, 80); assert.equal(s.datosActuales.current.movimientos[0].monto, 80);
+    assert.ok(s.events.includes(`saldo:${move.fecha}`), "ampliar un aporte usa el saldo de su mes original");
   }
   {
     const s = screenHarness(data, [transfer]); s.seleccionados = [move.id]; await s.actions.borrarSeleccionados();

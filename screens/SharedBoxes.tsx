@@ -13,6 +13,7 @@ import { currencySymbolFor } from "@/constants/currencies";
 import { auth } from "@/utils/firebase";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
+import { disponiblePersonalEnFecha } from "@/utils/finances";
 import { spaceErrorKey } from "@/utils/spaceErrors";
 import { balanceOfSpace, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, orphanedPersonalTransferIds, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
 import { captureAccountTask, type AccountTaskWait } from "@/utils/accountTask";
@@ -29,7 +30,8 @@ export default function SharedBoxes() {
 }
 
 function SharedBoxesForAccount({ uid }: { uid: string }) {
-  const { t, userCurrency, isPremium, userName, showToast, disponible, transactions, addOrUpdateTransaction, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
+  const { t, userCurrency, isPremium, userName, showToast, budgets, carryoverCleared, transactions, addOrUpdateTransaction, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
+  const saldoPersonalEn = (fecha: string) => disponiblePersonalEnFecha(fecha, budgets, transactions, carryoverCleared);
   const insets = useSafeAreaInsets();
   const { join, boxId, invitation: invitationInicial } = useLocalSearchParams<{ join?: string; boxId?: string; invitation?: string }>();
   const [cajas, setCajas] = useState<CajaCompartida[]>([]);
@@ -198,7 +200,7 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
       if (aporteEditado?.personalTransactionId != null) {
         const minimo = minimumContributionAmount(movimientos, aporteEditado, uid);
         if (valor < minimo - 0.005) { showToast(t("boxes.contributionUsed")); return; }
-        if (valor - aporteEditado.monto > disponible) { showToast(t("boxes.notEnoughPersonal")); return; }
+        if (valor - aporteEditado.monto > saldoPersonalEn(aporteEditado.fecha)) { showToast(t("boxes.notEnoughPersonal")); return; }
         await wait(() => actualizarAportePersonal("box", caja.id, aporteEditado.id, valor, nombre || aporteEditado.descripcion));
         const personal = transactions.find(tx => tx.id === aporteEditado.personalTransactionId);
         if (personal) addOrUpdateTransaction({ ...personal, amount: valor }, true);

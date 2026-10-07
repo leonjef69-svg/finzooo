@@ -3,6 +3,22 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-38 — aportes según el saldo del mes de su fecha (07/10/2026)
+
+- Confirmado: Familia y Caja comparaban los aportes con el disponible del mes
+  que la persona dejó abierto en Inicio, no con el mes del movimiento.
+- Ahora las dos usan la misma cuenta financiera de Inicio aplicada al mes de
+  la fecha del aporte. Crear usa el día actual; aportar otro día usa la fecha
+  elegida; ampliar un aporte usa el mes original, también en Caja compartida. La cifra
+  explicativa del formulario sigue la misma fecha.
+- La prueba falló en ambas pantallas antes del cambio y pasa ahora. También
+  comprueba cortes de saldo y transferencias previas. La prueba de guardado
+  real de Caja también comprueba qué fecha se usa. TypeScript, ESLint,
+  148 pruebas locales y 8 auditores sin tarjetas aprobaron.
+- **Qué sigue:** probarlo en Android.
+  **Qué falta:** prueba visual con Inicio en otro mes y entrega; tarjetas
+  excluidas.
+
 ## FINO-11 — fecha real al marcar un pago (07/10/2026)
 
 - Decisión del propietario: «Ya lo pagué» registra en Inicio e Historial la

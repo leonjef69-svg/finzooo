@@ -1,5 +1,16 @@
 # Estado actual de Fino
 
+## FINO-38 — saldo correcto al aportar a Familia/Caja (07/10/2026)
+
+- Crear o ampliar un aporte desde Personal se valida con el saldo del mes al
+  que pertenece ese aporte, no con el mes que se quedó abierto en Inicio.
+  Aplica a Familia, Cajas privadas y a la ampliación de aportes en Cajas
+  compartidas; el formulario muestra la misma cifra.
+- La regresión de ambos espacios falló antes y pasa ahora; TypeScript,
+  ESLint, 148 pruebas locales y 8 auditores sin tarjetas aprobaron.
+  **Qué sigue:** prueba visual en Android. **Qué falta:**
+  entrega; tarjetas excluidas.
+
 ## FINO-11 — «Ya lo pagué» usa la fecha real (07/10/2026)
 
 - Al marcarlo, el gasto o ingreso lleva la fecha y hora locales de ese toque.

@@ -11,6 +11,7 @@ import SpaceMembersSheet from "@/components/SpaceMembersSheet";
 import { validSpaceDate } from "@/components/SpaceMovementFields";
 import { useAppData } from "@/contexts/AppDataContext";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
+import { disponiblePersonalEnFecha } from "@/utils/finances";
 import { fmt as formatAmount, horaDe } from "@/utils/format";
 import { canCloseLinkedSpace, canSpendFromSpace, countSelectedCompactRows, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, isTrustedLegacyFamilyContribution, linkedTransferLedger, minimumContributionAmount, movementIdsForCompactRow, orphanedPersonalTransferIds, planSpaceMovementDeletion, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
 import { nextId } from "@/utils/id";
@@ -56,7 +57,7 @@ export default function Family() {
 }
 
 function FamilyForAccount({ accountUid }: { accountUid: string }) {
-  const { t, fmt, userCurrency, userName, showToast, isPremium, disponible, transactions, addOrUpdateTransaction, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
+  const { t, fmt, userCurrency, userName, showToast, isPremium, budgets, carryoverCleared, transactions, addOrUpdateTransaction, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
   const insets = useSafeAreaInsets();
   const uidAlAbrir = auth.currentUser?.uid ?? "";
   const copiaInicial = uidAlAbrir ? familiaEnMemoria.get(uidAlAbrir) : undefined;
@@ -97,6 +98,13 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   const [category, setCategory] = useState("otros");
   const [movementDate, setMovementDate] = useState(fechaHoy());
   const [notes, setNotes] = useState("");
+  const saldoPersonalEn = useCallback((fecha: string) =>
+    disponiblePersonalEnFecha(fecha, budgets, transactions, carryoverCleared),
+  [budgets, transactions, carryoverCleared]);
+  const hoyEnPantalla = fechaHoy();
+  const disponibleHoy = useMemo(() => saldoPersonalEn(hoyEnPantalla), [saldoPersonalEn, hoyEnPantalla]);
+  const disponibleMovimiento = useMemo(() => saldoPersonalEn(movementDate), [saldoPersonalEn, movementDate]);
+  const disponible = modo === "crear" ? disponibleHoy : disponibleMovimiento;
   const fmtFamilia = useCallback((amount: number) => {
     const currency = familia?.currency || userCurrency;
     return formatAmount(amount, currencySymbolFor(currency), currency);
@@ -317,8 +325,9 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
     const uid = auth.currentUser?.uid; const value = nombre.trim().slice(0, 35);
     const initial = parseAmountInput(montoInicial, userCurrency);
-    if (!uid || !value || (origenInicial === "personal" && initial > disponible)) {
-      if (origenInicial === "personal" && initial > disponible) showToast(t("family.notEnoughPersonal"));
+    const disponibleAlCrear = saldoPersonalEn(fechaHoy());
+    if (!uid || !value || (origenInicial === "personal" && initial > disponibleAlCrear)) {
+      if (origenInicial === "personal" && initial > disponibleAlCrear) showToast(t("family.notEnoughPersonal"));
       return;
     }
     const personalTransactionId = initial > 0 && origenInicial === "personal" ? nextId() : undefined;
@@ -394,7 +403,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     if (aporteEditado?.personalTransactionId != null) {
       const minimo = minimumContributionAmount(movimientos, aporteEditado, uid);
       if (value < minimo - 0.005) { showToast(t("family.contributionUsed")); return; }
-      if (value - aporteEditado.monto > disponible) { showToast(t("family.notEnoughPersonal")); return; }
+      if (value - aporteEditado.monto > saldoPersonalEn(aporteEditado.fecha)) { showToast(t("family.notEnoughPersonal")); return; }
       await wait(() => actualizarAportePersonal("family", familia.id, aporteEditado.id, value, descripcion || aporteEditado.descripcion));
       const personal = transactions.find(tx => tx.id === aporteEditado.personalTransactionId);
       if (personal) addOrUpdateTransaction({ ...personal, amount: value }, true);
@@ -403,7 +412,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     }
     const desdePersonal = tipo === "ingreso" && owner && origenDinero === "personal";
     if (desdePersonal && familia.currency !== userCurrency) { showToast(t("spaces.currencyMismatch")); return; }
-    if (desdePersonal && value > disponible) { showToast(t("family.notEnoughPersonal")); return; }
+    if (desdePersonal && value > saldoPersonalEn(movementDate)) { showToast(t("family.notEnoughPersonal")); return; }
     if (tipo === "gasto" && !canSpendFromSpace(movimientos, value)) { showToast(t("family.notEnoughSpace")); return; }
     const personalTransactionId = desdePersonal ? nextId() : undefined;
     const movementId = await wait(() => guardarMovimientoFamilia(familia.id, uid, { tipo, monto: value, descripcion: descripcion.trim().slice(0, 60) || (tipo === "ingreso" ? t(desdePersonal ? "family.initialFromPersonal" : "family.externalMoney") : ""), ...(desdePersonal ? {} : { category }), notes: notes.trim(), fecha: movementDate, method: personalTransactionId != null ? "transfer" : method, ...(personalTransactionId != null ? { personalTransactionId, personalOwnerUid: uid } : {}) }));
