@@ -10,6 +10,8 @@ import * as esbuild from "esbuild";
 
 const root = process.cwd(), require = createRequire(import.meta.url), clone = value => structuredClone(value);
 const baseline = process.env.FINO_TEST_MONEY_BATCH_BASELINE;
+const recoveryBaseline = process.env.FINO_TEST_MONEY_RECOVERY_BASELINE;
+if (recoveryBaseline && !/^[a-f0-9]{7,40}$/.test(recoveryBaseline)) throw Error("Se requiere hash Git.");
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw Error("Se requiere hash Git.");
 const read = file => baseline ? execFileSync("git", ["show", `${baseline}:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");
 function declaration(file, name) {
@@ -72,7 +74,7 @@ const mocks = {
     export const query=(ref,...clauses)=>globalThis.env.realClient?globalThis.sdkFirestore.query(ref,...clauses):({ref,clauses});
     export const getDocFromServer=async ref=>{const e=globalThis.env;e.sourceReads=(e.sourceReads??0)+1;await e.sourceGate?.();return e.realClient?globalThis.sdkFirestore.getDocFromServer(ref):e.snapshot(e.sources.get(ref));};
     export const getDocsFromServer=async ref=>{const e=globalThis.env;return e.realClient?globalThis.sdkFirestore.getDocsFromServer(ref):{metadata:{fromCache:false,hasPendingWrites:false},docs:e.links??[]};};`,
-  "firebase/functions": `export const httpsCallable=(...args)=>async payload=>{const e=globalThis.env;e.calls++;if(e.realClient)return globalThis.sdkFunctions.httpsCallable(...args)(payload);if(e.send)return e.send(payload);return {data:globalThis.ack(payload)}};`,
+  "firebase/functions": `export const httpsCallable=(...args)=>async payload=>{const e=globalThis.env;e.calls++;(e.endpoints??=[]).push(args[1]);if(e.realClient)return globalThis.sdkFunctions.httpsCallable(...args)(payload);if(e.send)return e.send(payload,args[1]);return {data:globalThis.ack(payload)}};`,
   "@react-native-async-storage/async-storage": `export default globalThis.env.adapter;`,
   "@/utils/encryption": `export const encryptText=async text=>{const e=globalThis.env; if(e.encryptGate){e.encryptStarted.resolve();await e.encryptGate.promise;}if(e.encryptFailure)throw Error('encrypt-failed');return 'v2:'+text;}; export const decryptText=async text=>text.slice(3);`,
   "expo-crypto": `export const randomUUID=()=> 'test-uuid';`,
@@ -82,6 +84,7 @@ const built = await esbuild.build({ stdin: { contents: source, loader: "ts", res
   plugins: [{ name: "native-and-sdk-only", setup(build) {
     build.onResolve({ filter: /.*/ }, args => args.path in mocks ? { path: args.path, namespace: "batch-mocks" } : undefined);
     build.onLoad({ filter: /.*/, namespace: "batch-mocks" }, args => ({ contents: mocks[args.path], loader: "ts" }));
+    if(recoveryBaseline)build.onLoad({filter:/[\\/]utils[\\/]privateBoxMoneyFlow\.ts$/},()=>({contents:execFileSync("git",["show",`${recoveryBaseline}:utils/privateBoxMoneyFlow.ts`],{encoding:"utf8"}),loader:"ts"}));
   } }] });
 const gate = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
 const { moneyAcknowledgement } = require("../functions/src/private-box-money-shared.js");

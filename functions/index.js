@@ -18,7 +18,7 @@ const { returnPersonalContribution } = require("./src/personal-return");
 const { finalizeLinkedSpaceDeletion } = require("./src/linked-space-cleanup");
 const { privateBoxMigration } = require("./src/private-box-migration");
 const { prepareIncompleteBoxDeletion } = require("./src/incomplete-box-cleanup");
-const { resolvePrivateBoxMoney } = require("./src/private-box-money");
+const { resolvePrivateBoxMoney, recoverPrivateBoxMoney } = require("./src/private-box-money");
 
 initializeApp();
 
@@ -50,6 +50,20 @@ exports.resolvePrivateBoxMoney = onCall({ region: "southamerica-east1", maxInsta
     throw new HttpsError(error.reason === "money-premium-required" ? "permission-denied"
       : /invalid-review|review-too-large/.test(error.reason) ? "invalid-argument" : "failed-precondition",
     "No se corrigió la transferencia. Conserva los originales y revisa de nuevo los importes.", { reason: error.reason });
+  }
+});
+
+// Sin Pro: únicamente confirma un resultado exacto vigente. La petición no
+// puede seleccionar el modo de escritura ni esta función iniciar un arreglo.
+exports.recoverPrivateBoxMoney = onCall({ region: "southamerica-east1", maxInstances: 5, timeoutSeconds: 120 }, async request => {
+  const uid = verifiedAccount(request);
+  const account = await getAuth().getUser(uid);
+  if (account.disabled || !account.emailVerified) throw new HttpsError("unauthenticated", "Verifica tu cuenta.");
+  try { return await recoverPrivateBoxMoney(getFirestore(), uid, request.data); }
+  catch (error) {
+    if (!error?.reason) throw error;
+    throw new HttpsError(/invalid-review|review-too-large/.test(error.reason) ? "invalid-argument" : "failed-precondition",
+      "No se pudo confirmar esa corrección. Conserva los originales; no se ha cambiado dinero.", { reason: error.reason });
   }
 });
 

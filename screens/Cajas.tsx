@@ -368,9 +368,9 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       commit: (before, entry, ack, lease, current) => commitPrivateBoxMoney(before, entry, ack, lease, current, setDatos) };
   }
 
-  async function trabajarImporteCaja(work: () => Promise<boolean | PrivateBoxMoneyComparison>): Promise<void> {
+  async function trabajarImporteCaja(work: () => Promise<boolean | PrivateBoxMoneyComparison>, recovery = false): Promise<void> {
     if (!cuentaActual() || !ready || !personalReady || !hasOnboarded || guardandoRef.current || compartiendo || cargandoUnion) return;
-    if (!premiumForSync.current) { setMoneyMessage(t("boxes.moneyNeedsPro")); return; }
+    if (!premiumForSync.current && !recovery) { setMoneyMessage(t("boxes.moneyNeedsPro")); return; }
     if (Platform.OS !== "android") { setMoneyMessage(t("boxes.atomicAndroidOnly")); return; }
     guardandoRef.current = true; setGuardando(true); setMoneyBusy(true); setMoneyMessage(null);
     try {
@@ -412,7 +412,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }
 
   async function recuperarImporteCaja(entry: RevisionImporteCaja): Promise<void> {
-    await trabajarImporteCaja(() => reintentarImporteCaja(accountUid, entry, moneyPort()));
+    await trabajarImporteCaja(() => reintentarImporteCaja(accountUid, entry, moneyPort()), true);
   }
 
   function confirmarEnlaceHeredado(personalId: number) {

@@ -1,6 +1,6 @@
 "use strict";
 const test = require("node:test"), assert = require("node:assert/strict");
-const { resolvePrivateBoxMoney } = require("../src/private-box-money");
+const { resolvePrivateBoxMoney, recoverPrivateBoxMoney } = require("../src/private-box-money");
 const { validateMoneyReview, moneyChoices, moneyResult } = require("../src/private-box-money-shared");
 const copy = value => structuredClone(value);
 const box = { id: "caja-a", nombre: "Viaje", creadaEn: 1, updatedAt: 10 };
@@ -111,4 +111,54 @@ test("petición grande y versión de historial desconocida no escriben ni sustit
   await assert.rejects(resolvePrivateBoxMoney(database(), "owner", entry), /review-too-large/);
   const db = database(); db.entries.get("users/owner").historyFormat = 99;
   await assert.rejects(resolvePrivateBoxMoney(db, "owner", revision), /invalid-source/); assert.equal(db.writes.length, 0);
+});
+
+test("respuesta perdida se recupera sin Pro solo con resultado exacto vigente, sin escrituras", async () => {
+  for (const format of [1, 2]) {
+    const db = database(revision, format);
+    const ack = await resolvePrivateBoxMoney(db, "owner", revision);
+    db.entries.get("users/owner").isPremium = false;
+    const before = copy([...db.entries]), writes = db.writes.length;
+    assert.deepEqual(await recoverPrivateBoxMoney(db, "owner", revision), ack);
+    assert.deepEqual([...db.entries], before); assert.equal(db.writes.length, writes);
+    await assert.rejects(resolvePrivateBoxMoney(db, "owner", { ...revision, readOnly: true, action: "recover" }), /premium-required/);
+    assert.deepEqual([...db.entries], before);
+  }
+});
+test("recuperar nunca inicia una corrección pendiente aunque la cuenta tenga Pro", async () => {
+  for (const premium of [true, false]) {
+    const db = database(); db.entries.get("users/owner").isPremium = premium;
+    const before = copy([...db.entries]);
+    await assert.rejects(recoverPrivateBoxMoney(db, "owner", { ...revision, action: "resolve", readOnly: false }), /money-not-confirmed/);
+    assert.equal(db.writes.length, 0); assert.deepEqual([...db.entries], before);
+  }
+});
+test("recuperación rechaza copia posterior, pareja parcial, borrado, cuenta y moneda distintas", async () => {
+  for (const format of [1, 2]) for (const change of ["version", "notes", "partial", "duplicate", "deleted", "box", "return", "account", "claim-deleting", "currency", "history"]) {
+    const db = database(revision, format); await resolvePrivateBoxMoney(db, "owner", revision);
+    const user = db.entries.get("users/owner"), boxes = db.entries.get("cajas/owner"); user.isPremium = false;
+    const row = format === 2 ? db.entries.get("users/owner/history/10").transaction : user.transactions[0];
+    if (change === "version") row.updatedAt++;
+    if (change === "notes") row.notes = "Cambio posterior";
+    if (change === "partial") boxes.movimientos[0] = copy(revision.remote.movement);
+    if (change === "duplicate") boxes.movimientos.push({ ...copy(boxes.movimientos[0]), id: "duplicate" });
+    if (change === "deleted") { if (format === 2) db.entries.get("users/owner/history/10").deleted = true; else user.deletedTransactionIds.push(10); }
+    if (change === "box") boxes.cajasBorradas.push(box.id);
+    if (change === "return") boxes.movimientos.push({ ...copy(m), id: "returned", tipo: "gasto", monto: 20, personalTransactionId: 11, personalReturnAmount: 20 });
+    if (change === "account") user.accountDeletionPending = true;
+    if (change === "claim-deleting") db.entries.set("premiumTrialClaims/owner", { deletionPending: true });
+    if (change === "currency") user.userCurrency = "USD";
+    if (change === "history") user.historyFormat = 99;
+    const before = copy([...db.entries]), writes = db.writes.length;
+    await assert.rejects(recoverPrivateBoxMoney(db, "owner", revision), /money-/);
+    assert.equal(db.writes.length, writes); assert.deepEqual([...db.entries], before);
+  }
+  await assert.rejects(recoverPrivateBoxMoney(database(), "guest", revision), /invalid-review/);
+});
+test("recuperación mantiene límites y rechaza diario local en servidor sin crear colecciones", async () => {
+  const db = database(); const large = { ...revision, extra: "x".repeat(150000) };
+  await assert.rejects(recoverPrivateBoxMoney(db, "owner", large), /review-too-large/);
+  db.entries.get("cajas/owner").revisionesImporte = [];
+  await assert.rejects(recoverPrivateBoxMoney(db, "owner", revision), /invalid-source/);
+  assert.equal(db.writes.length, 0); assert.equal(db.entries.size, 2);
 });

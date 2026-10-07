@@ -1,5 +1,30 @@
 # Estado actual de Fino
 
+## Recuperación monetaria ya completada sin Pro — preparada (06/10/2026)
+
+- Respuesta perdida/fallo local y Pro vencido ya no impiden recuperar una
+  corrección que siga aplicada exactamente en el servidor. Nuevo endpoint de
+  solo lectura comprueba identidad/cuenta/fuentes/versión/saldo y devuelve
+  confirmación mínima; no corrige ni descarga historial ni crea recibos.
+- Reintento empieza por recuperación. Solo «todavía no aplicada» permite
+  solicitar escritura con Pro vigente. Red/edición posterior/acuse falso no
+  fuerzan otro arreglo. Diario cifrado y comprobante genuino antes del lote
+  local, misma versión y otros registros/originales conservados.
+- Botón Gratis «Comprobar resultado pendiente», no respaldo Gratis. Políticas
+  internas/web/PLAYSTORE actualizadas solo en archivos. Guía vigente:
+  `docs/PRUEBAS_RECUPERACION_IMPORTE_SIN_PRO.md`. Regresión 48e9f95 reproduce el
+  bloqueo previo; se refiere al código preparado, no a daño publicado.
+- TypeScript/ESLint completos y 145 locales/8 auditores aprobados; una prueba
+  ajena sin registrar se conserva fuera del commit. Tarjetas: dos suites
+  específicas excluidas. 77 unitarias y 124 SDK/reglas/HTTP/eventos Node 22
+  real aprobados, cero fallos/omisiones/cancelaciones. Regresión falla antes
+  y pasa ahora; lotes/recuperación/textos legales repetidos con guardias finales.
+- **Qué sigue:** revisión obsoleta/resultado nunca aplicado cuando Pro venció:
+  retiro o sustitución explícitos sin borrar originales. **Qué falta:** Android
+  (ADB vacío)/otros conflictos/hallazgos, consolas/políticas publicadas y entrega
+  conjunta autorizada de servidor/reglas/app. Tarjetas intactas; sin nativos,
+  marca, APK/AAB/OTA ni despliegue. Punto 1 y auditoría permanecen abiertos.
+
 ## Comparación de importes — flujo conectado, sin publicar (06/10/2026)
 
 - Pantalla Cajas: cuatro fuentes con monto/moneda/fecha, confirmación humana,

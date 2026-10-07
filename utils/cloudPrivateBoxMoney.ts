@@ -70,8 +70,8 @@ export async function loadPrivateBoxMoneySources(uid: string, movementId: string
  * localmente ni cambia su marca. Debe mantenerse esta misma revisión/cola
  * abierta hasta terminar el lote financiero del contexto.
  */
-export async function requestPrivateBoxMoneyReview(uid: string, entry: RevisionImporteCaja, lease: PrivateBoxCloudLease,
-  local: () => PrivateBoxMoneyLocal, current: () => boolean): Promise<MoneyAck> {
+async function callPrivateBoxMoney(name: "resolvePrivateBoxMoney" | "recoverPrivateBoxMoney", uid: string,
+  entry: RevisionImporteCaja, lease: PrivateBoxCloudLease, local: () => PrivateBoxMoneyLocal, current: () => boolean): Promise<MoneyAck> {
   check(uid, lease); validarRevisionImporte(entry);
   const original = canonical(entry);
   const selected: RevisionImporteCaja = JSON.parse(JSON.stringify(entry));
@@ -90,7 +90,7 @@ export async function requestPrivateBoxMoneyReview(uid: string, entry: RevisionI
   await assertLocal();
   const payload: MoneyReview = { id: selected.id, uid: selected.uid, currency: selected.currency, box: selected.box,
     local: selected.local, remote: selected.remote, chosen: selected.chosen, createdAt: selected.createdAt, version: selected.version };
-  const call = httpsCallable<MoneyReview, MoneyAck>(functions, "resolvePrivateBoxMoney", { timeout: 120_000 });
+  const call = httpsCallable<MoneyReview, MoneyAck>(functions, name, { timeout: 120_000 });
   const result = await task.wait(() => lease.wait(() => call(payload)));
   if (canonical(result.data) !== canonical(moneyAcknowledgement(selected))) throw new Error("cajas-money-unconfirmed");
   await assertLocal();
@@ -99,6 +99,17 @@ export async function requestPrivateBoxMoneyReview(uid: string, entry: RevisionI
   const ack = Object.freeze({ ...result.data });
   receipts.set(ack, { uid, entry: original, lease, current: task.current });
   return ack;
+}
+
+export function requestPrivateBoxMoneyReview(uid: string, entry: RevisionImporteCaja, lease: PrivateBoxCloudLease,
+  local: () => PrivateBoxMoneyLocal, current: () => boolean): Promise<MoneyAck> {
+  return callPrivateBoxMoney("resolvePrivateBoxMoney", uid, entry, lease, local, current);
+}
+
+/** Recupera respuesta perdida sin Pro. El endpoint no tiene vía de escritura. */
+export function recoverPrivateBoxMoneyReview(uid: string, entry: RevisionImporteCaja, lease: PrivateBoxCloudLease,
+  local: () => PrivateBoxMoneyLocal, current: () => boolean): Promise<MoneyAck> {
+  return callPrivateBoxMoney("recoverPrivateBoxMoney", uid, entry, lease, local, current);
 }
 
 /** El guardado financiero exige la respuesta genuina en la misma cola. */

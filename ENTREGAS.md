@@ -10,6 +10,22 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+Recuperación sin Pro de corrección monetaria **ya completada y vigente**:
+`recoverPrivateBoxMoney`, solo lectura; respuesta mínima propia, no historial
+ni corrección nueva. Botón Gratis comprueba resultado pendiente; SDK/contexto
+exigen originales cifrados, recibo genuino y guardado local verificado con
+misma versión. Escritura nueva y descargar respaldo siguen requiriendo Pro.
+Guía vigente: `docs/PRUEBAS_RECUPERACION_IMPORTE_SIN_PRO.md`. Función nueva y
+políticas están preparadas, no desplegadas/publicadas. Publicarlas conjuntamente
+con servidor/reglas/app antes de entregar, solo con autorización. Siguen revisión
+obsoleta/no aplicada con Pro vencido, Android y restantes hallazgos. Tarjetas
+fuera; ningún cambio nativo/marca/APK/AAB/OTA ni entrega en esta tanda.
+TypeScript/ESLint, 145 locales/8 auditores, 77 unitarias servidor y 124 SDK/
+reglas/HTTP/eventos Node 22 real aprobados. Una prueba local ajena no registrada
+no se incorpora al commit; dos suites específicas de tarjetas excluidas.
+
+Antecedente del flujo conectado:
+
 Flujo de comparación de importes conectado en Cajas, aún **sin publicar**:
 cuatro fuentes con monto/moneda/fecha y confirmación, reconsulta, conservación
 previa de originales con Personal/borrados/Caja juntos, HTTP genuino y lote

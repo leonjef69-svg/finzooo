@@ -9,7 +9,7 @@ function sameSource(actual, expected) {
 }
 
 /** Pareja exacta, fuentes comprobadas y saldo válido; cero nuevos recibos/colecciones. */
-async function resolvePrivateBoxMoney(db, uid, entry) {
+async function privateBoxMoney(db, uid, entry, readOnly) {
   let bytes;
   try { bytes = Buffer.byteLength(JSON.stringify(entry), "utf8"); } catch { fail("money-invalid-review"); }
   if (bytes > 150_000) fail("money-review-too-large");
@@ -19,7 +19,12 @@ async function resolvePrivateBoxMoney(db, uid, entry) {
     const [root, boxes] = await Promise.all([tx.get(rootRef), tx.get(boxesRef)]);
     const user = root.exists ? root.data() : null;
     if (!user || user.hasOnboarded !== true || user.accountDeletionPending === true) fail("money-account-unavailable");
-    if (!(await premiumForUser(db, uid, user, tx))) fail("money-premium-required");
+    // Recuperar solo comprueba el resultado exacto ya presente; nunca corrige
+    // ni entrega el historial. Una corrección nueva sigue exigiendo Pro.
+    if (readOnly) {
+      const claim = await tx.get(db.doc(`premiumTrialClaims/${uid}`));
+      if (claim.exists && claim.data().deletionPending === true) fail("money-account-unavailable");
+    } else if (!(await premiumForUser(db, uid, user, tx))) fail("money-premium-required");
     if (user.userCurrency !== entry.currency) fail("money-currency-changed");
     if (!boxes.exists) fail("money-source-changed");
     const data = boxes.data();
@@ -29,7 +34,7 @@ async function resolvePrivateBoxMoney(db, uid, entry) {
       || (data.syncFormat !== undefined && ![1, 2, 3].includes(data.syncFormat))
       || (data.syncFormat === 3 && data.conversiones === undefined)
       || (data.conversiones !== undefined && (!data.conversiones || typeof data.conversiones !== "object" || Array.isArray(data.conversiones) || data.syncFormat !== 3))
-      || data.revisionesNombre !== undefined) fail("money-invalid-source");
+      || data.revisionesNombre !== undefined || data.revisionesImporte !== undefined) fail("money-invalid-source");
     const boxId = entry.box.id, movementId = entry.remote.movement.id, personalId = entry.remote.personal.id;
     if (data.cajas.filter(item => item?.id === boxId).length !== 1 || (data.cajasBorradas || []).includes(boxId)
       || (data.movimientosBorrados || []).includes(movementId) || data.conversiones?.[boxId]
@@ -59,6 +64,7 @@ async function resolvePrivateBoxMoney(db, uid, entry) {
     const result = moneyResult(entry), ack = moneyAcknowledgement(entry);
     const replay = sameSource(personal, result.personal) && sameSource(movement, result.movement);
     if (!replay && (!sameSource(personal, entry.remote.personal) || !sameSource(movement, entry.remote.movement))) fail("money-source-changed");
+    if (readOnly && !replay) fail("money-not-confirmed");
     let balance = 0n;
     const ids = new Set();
     for (const row of rows) {
@@ -78,4 +84,6 @@ async function resolvePrivateBoxMoney(db, uid, entry) {
     return ack;
   });
 }
-module.exports = { resolvePrivateBoxMoney };
+function resolvePrivateBoxMoney(db, uid, entry) { return privateBoxMoney(db, uid, entry, false); }
+function recoverPrivateBoxMoney(db, uid, entry) { return privateBoxMoney(db, uid, entry, true); }
+module.exports = { resolvePrivateBoxMoney, recoverPrivateBoxMoney };

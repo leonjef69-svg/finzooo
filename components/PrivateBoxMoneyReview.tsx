@@ -49,9 +49,9 @@ export default function PrivateBoxMoneyReview({ comparison, reviews, candidates,
     </View> : null}
     {pending.map(entry => <View key={entry.id} className="mb-3 rounded-xl bg-amber-50 p-3 dark:bg-amber-950">
       <Text className="text-sm font-bold text-amber-800 dark:text-amber-200">{entry.box.nombre}</Text>
-      <Text className="my-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{t(premium ? "boxes.moneyPending" : "boxes.moneyNeedsPro")}</Text>
+      <Text className="my-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{t(premium ? "boxes.moneyPending" : "boxes.moneyRecoveryHelp")}</Text>
       {originalesImporte(entry).map(copy => <Text key={copy.source} className="mb-1 text-xs leading-5 text-slate-900 dark:text-slate-100">{t(MONEY_SOURCE_LABELS[copy.source])}: {amount(copy.amount, entry.currency)} · {copy.date}{copy.source === entry.chosen ? ` · ${t("boxes.moneyChosen")}` : ""}</Text>)}
-      <TouchableOpacity accessibilityRole="button" disabled={busy || !premium} onPress={() => retry(entry)} className="min-h-11 justify-center"><Text className={`font-bold text-amber-800 dark:text-amber-200 ${!premium ? "opacity-50" : ""}`}>{t("boxes.moneyRetry")}</Text></TouchableOpacity>
+      <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={() => retry(entry)} className="min-h-11 justify-center"><Text className="font-bold text-amber-800 dark:text-amber-200">{t(premium ? "boxes.moneyRetry" : "boxes.moneyRecover")}</Text></TouchableOpacity>
     </View>)}
     {reviews.length > 0 ? <View className="mb-3">
       <TouchableOpacity accessibilityRole="button" accessibilityState={{ expanded: history }} onPress={() => setHistory(value => !value)} className="min-h-11 justify-center"><Text className="font-bold text-slate-600 dark:text-slate-300">{t("boxes.moneyHistory")}</Text></TouchableOpacity>

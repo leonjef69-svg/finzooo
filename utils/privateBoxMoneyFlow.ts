@@ -1,5 +1,5 @@
 import { nuevoIdCaja, type DatosCajas, type RevisionImporteCaja } from "@/utils/cajas";
-import { loadPrivateBoxMoneySources, requestPrivateBoxMoneyReview, type PrivateBoxMoneyLocal, type PrivateBoxMoneySources } from "@/utils/cloudPrivateBoxMoney";
+import { loadPrivateBoxMoneySources, requestPrivateBoxMoneyReview, recoverPrivateBoxMoneyReview, type PrivateBoxMoneyLocal, type PrivateBoxMoneySources } from "@/utils/cloudPrivateBoxMoney";
 import { prepararRevisionImporte } from "@/utils/privateBoxMoneyReview";
 import { withPrivateBoxMoneyReview, type PrivateBoxCloudLease } from "@/utils/privateBoxSync";
 import { canonical, type MoneyAck, type MoneySource } from "../functions/src/private-box-money-shared.js";
@@ -94,8 +94,22 @@ export async function confirmarImporteCaja(comparison: PrivateBoxMoneyComparison
 
 /** Tras reiniciar se usa el mismo ID, elección y versión; el servidor comprueba/repite sin duplicar. */
 export async function reintentarImporteCaja(uid: string, entry: RevisionImporteCaja, port: PrivateBoxMoneyPort): Promise<boolean> {
-  allowed(port);
+  if (!port.current()) throw new Error("account-task-obsolete");
   const retained = port.boxes().revisionesImporte?.find(value => value.id === entry.id);
   if (entry.uid !== uid || entry.estado !== "pendiente" || !retained || canonical(retained) !== canonical(entry)) throw new Error("cajas-money-changed");
-  return withPrivateBoxMoneyReview(uid, lease => enviarConservada(uid, entry, port, lease));
+  return withPrivateBoxMoneyReview(uid, async lease => {
+    const before = port.boxes(), source = canonical(before);
+    const current = () => port.current() && canonical(port.boxes()) === source;
+    let ack: MoneyAck;
+    try { ack = await recoverPrivateBoxMoneyReview(uid, entry, lease, port.local, current); }
+    catch (error) {
+      // Solo un rechazo definitivo de «todavía no confirmado» permite el
+      // camino de escritura. Red, fuente distinta o respuesta dudosa no.
+      const reason = (error as { details?: { reason?: string } })?.details?.reason;
+      if (reason !== "money-not-confirmed") throw error;
+      allowed(port);
+      ack = await requestPrivateBoxMoneyReview(uid, entry, lease, port.local, current);
+    }
+    return port.commit(before, entry, ack, lease, current);
+  });
 }

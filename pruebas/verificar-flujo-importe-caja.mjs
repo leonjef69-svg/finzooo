@@ -32,11 +32,13 @@ function setup(initial=data,rows=[p,other]){
   h.e.sources=new Map([["users/A",{hasOnboarded:true,userCurrency:"PEN",transactions:[clone(remoteP)],deletedTransactionIds:[]}],
     ["cajas/A",{...clone(data),movimientos:[clone(remoteM)]}]]);
   h.e.snapshot=value=>({metadata,exists:()=>value!==undefined,data:()=>clone(value)});
-  h.e.send=async entry=>{
+  h.e.send=async (entry,endpoint)=>{
     const saved=h.disk(h.api.STORAGE_KEYS.cajasDinero).revisionesImporte.find(row=>row.id===entry.id);
     assert.deepEqual(saved,{...entry,estado:"pendiente"},"Nunca envía antes de confirmar los cuatro originales cifrados en disco");
     const result=moneyResult(entry),user=h.e.sources.get("users/A"),boxes=h.e.sources.get("cajas/A");
-    if(canonical(user.transactions[0])!==canonical(result.personal)||canonical(boxes.movimientos[0])!==canonical(result.movement)){
+    const replay=canonical(user.transactions[0])===canonical(result.personal)&&canonical(boxes.movimientos[0])===canonical(result.movement);
+    if(endpoint==="recoverPrivateBoxMoney"&&!replay)throw {details:{reason:"money-not-confirmed"}};
+    if(!replay){
       assert.deepEqual(user.transactions[0],entry.remote.personal);assert.deepEqual(boxes.movimientos[0],entry.remote.movement);
       user.transactions[0]=clone(result.personal);boxes.movimientos[0]=clone(result.movement);h.e.remoteWrites++;
     }
@@ -96,7 +98,8 @@ try{
     if(issue.startsWith("stage-")){assert.equal(h.e.calls,0);assert.deepEqual(h.disk(h.api.STORAGE_KEYS.cajasDinero),data);continue;}
     const before=clone(h.pending());assert.equal(before.estado,"pendiente");assert.deepEqual(before.local,review.local);assert.deepEqual(before.remote,review.remote);
     if(issue==="pro-after-stage"){
-      await assert.rejects(h.retry(),/needs-pro/);assert.deepEqual(h.pending(),before);assert.equal(h.e.calls,0);
+      await assert.rejects(h.retry(),/needs-pro/);assert.deepEqual(h.pending(),before);assert.equal(h.e.calls,1);
+      assert.deepEqual(h.e.endpoints,["recoverPrivateBoxMoney"],"sin Pro solo consulta resultado, no inicia una corrección");
     }
     h.e.failure=null;h.e.premium=true;h.e.send=send;
     assert.equal(await h.retry(),true);assert.equal(h.e.remoteWrites,1);assert.equal(h.pending().estado,"confirmado");
@@ -177,8 +180,8 @@ const nodes=[];function walk(node){if(Array.isArray(node)){node.forEach(walk);re
 const texts=nodes.flatMap(node=>node.type==="Text"?[JSON.stringify(node.props.children)]:[]).join("\n");
 for(const label of Object.values(MONEY_SOURCE_LABELS))assert.match(texts,new RegExp(label));
 for(const date of [p.date,remoteP.date,remoteM.fecha])assert.ok(texts.includes(date));
-assert.ok(texts.includes("boxes.moneyNeedsPro"));assert.ok(texts.includes("boxes.moneyChosen"));
-assert.ok(nodes.some(node=>node.type==="Button"&&node.props.disabled===true),"reintento gratuito desactivado, no borra originales");
+assert.ok(texts.includes("boxes.moneyRecoveryHelp"));assert.ok(texts.includes("boxes.moneyChosen"));
+assert.ok(nodes.some(node=>node.type==="Button"&&node.props.disabled===false&&JSON.stringify(node.props.children).includes("boxes.moneyRecover")),"Gratis puede comprobar el resultado pendiente, sin habilitar una corrección nueva");
 
 // La pantalla conserva la confirmación explícita; no acepta botones de avisos antiguos.
 const screen=fs.readFileSync("screens/Cajas.tsx","utf8"),ast=ts.createSourceFile("Cajas.tsx",screen,ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX);

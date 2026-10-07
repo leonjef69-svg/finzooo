@@ -228,10 +228,10 @@ con Pro, para corregir monto/fecha de un aporte Personal/Caja privada en una
 sola transacción remota. Comprueba fuentes, enlaces, moneda y saldo; no añade
 colección/recibo ni retención distinta: modifica registros financieros existentes.
 La petición incluye originales y elección financiera, dentro de la finalidad
-de consistencia del respaldo ya declarado. No está conectado a la app ni publicado.
-Antes de habilitarlo faltan conservación cifrada local, decisión/guardado
-recuperables y actualización de políticas si esa integración guarda copias
-nuevas. Guía: `docs/PRUEBAS_DIFERENCIAS_DINERO_SERVIDOR.md`.
+de consistencia del respaldo ya declarado. Ya conectado en el código de la
+próxima versión, no publicado. Guía inicial:
+`docs/PRUEBAS_DIFERENCIAS_DINERO_SERVIDOR.md`; integración vigente:
+`docs/PRUEBAS_FLUJO_IMPORTE_CAJA.md`.
 
 El archivo local para esa integración queda preparado en `revisionesImporte`
 dentro de `cajasDinero`: cuatro registros originales completos (Personal/Caja,
@@ -240,13 +240,24 @@ Se cifra con el mismo almacén, se conserva en la copia local por cuenta al sali
 y sigue su eliminación local. Hasta 50 revisiones/400.000 bytes UTF-8 entre
 todas, sin retirar una anterior al alcanzar el límite; cada una hasta 150.000
 bytes. La subida ordinaria excluye esas copias y se detiene si están pendientes.
-La validación local de la respuesta es todavía un plan puro, no un guardado
-financiero ni envío conectado a pantalla. Falta proteger el respaldo Personal
-y comprobar juntos petición/guardado/recuperación antes de habilitarlo.
-Políticas interna/web preparadas en archivos, no publicadas. La petición futura
-transmitirá originales financieros ya contemplados para consistencia, pero se
+La pantalla conserva esos originales antes de enviar y confirma Personal/Caja
+juntos tras respuesta genuina; una revisión pendiente pausa ambos respaldos.
+Políticas interna/web preparadas en archivos, no publicadas. La petición
+transmite originales financieros ya contemplados para consistencia, pero se
 deben revisar finalidad, retención y metadatos/imágenes reales con la declaración
 de Play antes de distribuir, no asumir aprobación ni completar la consola ahora.
+
+La recuperación prepara `recoverPrivateBoxMoney`: una cuenta real verificada
+puede comprobar, incluso sin Pro, si su elección pendiente ya está aplicada
+exactamente en Personal/Caja. El servicio solo devuelve la confirmación del
+resultado que el usuario suministró; no devuelve el historial ni otros datos,
+no escribe, no inicia una corrección y no crea colección/recibo/retención nuevos.
+La petición vuelve a enviar los mismos originales/elección para comprobar la
+consistencia financiera; se guardan con el mismo cifrado/archivo por cuenta.
+Nueva corrección y descarga del respaldo siguen exigiendo Pro. Guía:
+`docs/PRUEBAS_RECUPERACION_IMPORTE_SIN_PRO.md`. Desplegar función junto con el
+servidor/reglas/app preparados antes de distribuir; políticas y consola reales
+siguen pendientes. Esto no autoriza ni realiza publicación.
 
 Al convertir una Caja privada a compartida, `privateBoxMigrations` y la copia
 privada conservan una confirmación del servidor: UID, IDs de origen/destino,

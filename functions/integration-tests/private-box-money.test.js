@@ -9,7 +9,7 @@ const root = path.resolve(__dirname, "../.."), requireRoot = createRequire(path.
 const { initializeApp, deleteApp } = requireRoot("firebase/app");
 const { getAuth, connectAuthEmulator, signInWithEmailAndPassword } = requireRoot("firebase/auth");
 const { getFunctions, connectFunctionsEmulator, httpsCallable } = requireRoot("firebase/functions");
-const { getFirestore, connectFirestoreEmulator, terminate } = requireRoot("firebase/firestore");
+const { getFirestore, connectFirestoreEmulator, terminate, getDocFromServer, doc } = requireRoot("firebase/firestore");
 const { resolvePrivateBoxMoney } = require("../src/private-box-money");
 const { moneyResult } = require("../src/private-box-money-shared");
 const esbuild = requireRoot("esbuild");
@@ -293,6 +293,62 @@ test("Corrección de dinero: SDK/HTTP y transacciones reales sin medias transfer
           assert.equal(h.e.calls, 1, "no intenta una segunda operación remota al completar la primera");
         });
       } finally { h.e.db.close(); }
+    });
+    await t.test("respuesta HTTP perdida y Pro vencido: recupera par vigente sin escrituras remotas ni lectura SDK Gratis", async () => {
+      for (const format of [1, 2]) {
+        await seed(format); const h = createMoneyBatchHarness(a, selected, localBoxes, [copy(p)]); h.e.failure = "rollback";
+        try {
+          assert.equal(await h.run(), false); await rootRef.update({ isPremium: false });
+          const before = [await rootRef.get(), await boxesRef.get()];
+          const historyBefore = format === 2 ? await rootRef.collection("history").doc("10").get() : null;
+          await assert.rejects(getDocFromServer(doc(a.db, "users", uid)), error => error.code === "permission-denied");
+          await assert.rejects(getDocFromServer(doc(a.db, "cajas", uid)), error => error.code === "permission-denied");
+          if (format === 2) await assert.rejects(getDocFromServer(doc(a.db, "users", uid, "history", "10")), error => error.code === "permission-denied");
+          h.e.failure = null;
+          const port = { current: () => h.e.active, premium: () => false, boxes: () => h.e.screen.current, local: h.ctx.readPrivateBoxMoneyLocal,
+            stage() { throw Error("No volver a iniciar originales"); },
+            commit: (before, entry, ack, lease, current) => h.ctx.commitPrivateBoxMoney(before, entry, ack, lease, current, h.setBoxes) };
+          assert.equal(await h.api.reintentarImporteCaja(uid, selected, port), true);
+          const after = [await rootRef.get(), await boxesRef.get()];
+          assert.deepEqual(after.map(row => row.data()), before.map(row => row.data()));
+          assert.deepEqual(after.map(row => row.updateTime.toMillis()), before.map(row => row.updateTime.toMillis()));
+          if (format === 2) assert.equal((await rootRef.collection("history").doc("10").get()).updateTime.toMillis(), historyBefore.updateTime.toMillis());
+          assert.equal(h.e.endpoints.at(-1), "recoverPrivateBoxMoney"); assert.equal(h.e.sourceReads ?? 0, 0);
+          assert.equal(h.disk(h.api.STORAGE_KEYS.cajasDinero).revisionesImporte[0].estado, "confirmado");
+          assert.equal(h.disk(h.api.STORAGE_KEYS.transactions)[0].updatedAt, selected.version);
+        } finally { h.e.db.close(); }
+      }
+    });
+    await t.test("endpoint recuperación no escribe una corrección no terminada, ni siquiera con Pro", async () => {
+      const recover = httpsCallable(a.functions, "recoverPrivateBoxMoney");
+      for (const premium of [true, false]) {
+        await seed(); await rootRef.update({ isPremium: premium });
+        const before = [await rootRef.get(), await boxesRef.get()];
+        await assert.rejects(recover({ ...entry, action: "resolve", readOnly: false }), error => error.details?.reason === "money-not-confirmed");
+        const after = [await rootRef.get(), await boxesRef.get()];
+        assert.deepEqual(after.map(row => row.data()), before.map(row => row.data()));
+        assert.deepEqual(after.map(row => row.updateTime.toMillis()), before.map(row => row.updateTime.toMillis()));
+        if (!premium) await assert.rejects(a.call({ ...entry, readOnly: true, action: "recover" }), error => error.details?.reason === "money-premium-required");
+      }
+    });
+    await t.test("recuperación exige resultado vigente, dueño real/verificado y cuenta no borrada", async () => {
+      const recover = httpsCallable(a.functions, "recoverPrivateBoxMoney");
+      await seed(); await a.call(entry); await rootRef.update({ isPremium: false, transactions: [{ ...moneyResult(entry).personal, updatedAt: 101 }] });
+      const before = [await rootRef.get(), await boxesRef.get()];
+      await assert.rejects(recover(entry), error => error.details?.reason === "money-source-changed");
+      assert.deepEqual([await rootRef.get(), await boxesRef.get()].map(row => row.updateTime.toMillis()), before.map(row => row.updateTime.toMillis()));
+      await seed(); await a.call(entry); await rootRef.update({ isPremium: false, accountDeletionPending: true });
+      await assert.rejects(recover(entry), error => error.details?.reason === "money-account-unavailable");
+      await rootRef.update({ accountDeletionPending: false });
+      await admin.doc(`premiumTrialClaims/${uid}`).set({ deletionPending: true });
+      await assert.rejects(recover(entry), error => error.details?.reason === "money-account-unavailable");
+      await assert.rejects(recover({ ...entry, uid: "other-user" }), error => error.code === "functions/invalid-argument");
+      await seed(); await a.call(entry); await rootRef.update({ isPremium: false });
+      await adminAuth.updateUser(uid, { disabled: true });
+      await assert.rejects(recover(entry), error => error.code === "functions/unauthenticated");
+      await adminAuth.updateUser(uid, { disabled: false, emailVerified: false });
+      await assert.rejects(recover(entry), error => error.code === "functions/unauthenticated");
+      await adminAuth.updateUser(uid, { emailVerified: true });
     });
   } finally {
     for (const client of clients) { await terminate(client.db); await deleteApp(client.app); }

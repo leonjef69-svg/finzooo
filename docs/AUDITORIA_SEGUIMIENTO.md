@@ -3,6 +3,28 @@
 Última revisión: 06/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## Continuación punto 1 — recuperar resultado vigente sin Pro (06/10/2026)
+
+- Regresión 48e9f95: flujo real rechazaba recuperar por Pro antes de consultar
+  una corrección ya terminada. No se afirma afectación de entrega publicada.
+- Función solo lectura con Auth/cuenta real y transacción exige resultado
+  exacto vigente. Respuesta mínima propia, sin historial ni nueva colección/
+  recibo. Endpoint de escritura y descarga Firestore mantienen Pro.
+- Cliente/flujo/botón originales permiten recuperación Gratis; solo rechazo
+  definitivo «no aplicada» permite escritura con Pro. No vía alternativa tras
+  red/cambio/acuse falso. Comprobante genuino y lote local, originales/versiones
+  conservados. Políticas preparadas en archivos, no publicadas. Guía:
+  `docs/PRUEBAS_RECUPERACION_IMPORTE_SIN_PRO.md`.
+- TypeScript/ESLint y 145 locales/8 auditores aprobados (prueba local ajena no
+  registrada conservada fuera del commit; tarjetas específicas excluidas).
+  77 unitarias y 124 SDK/reglas/HTTP/eventos Node 22 real aprobados, sin fallos,
+  omisiones ni cancelaciones. Incluye resultados/permisos/barreras de borrado.
+- **Qué sigue:** sustituir o retirar revisión obsoleta/no aplicada con elección
+  explícita y sin perder originales. **Qué falta:** Android/espacio/tamaño/dos
+  dispositivos (ADB vacío), demás hallazgos, consolas/políticas reales y entrega
+  coordinada autorizada de funciones/reglas/app. Sin tarjetas/nativos/marca/
+  APK/AAB/OTA/despliegue. Punto 1 y auditoría siguen abiertos.
+
 ## Continuación punto 1 — comparación/elección/reintento conectados (06/10/2026)
 
 - Cajas muestra cuatro fuentes (monto/moneda/fecha), exige confirmación humana

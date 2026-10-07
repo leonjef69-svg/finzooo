@@ -32,8 +32,11 @@ entrega coordinada antes de publicar esta pantalla.
    el mismo ID/versión/elección; el servidor acepta repetición vigente sin
    duplicar otra escritura. Un cambio posterior detiene el proceso.
 7. Originales confirmados se consultan en «Ver versiones conservadas».
-   Una cuenta sin Pro conserva y puede ver originales; no envía la corrección
+   Una cuenta sin Pro conserva y puede ver originales; no inicia la corrección
    de nube. Si Pro vence después de HTTP confirmado, termina ese lote local.
+   La actualización siguiente prepara recuperar un resultado exacto ya aplicado
+   incluso si se perdió HTTP antes de vencer Pro; ver
+   `docs/PRUEBAS_RECUPERACION_IMPORTE_SIN_PRO.md`.
 
 No se cambia el esquema, claves, conservación ni colección remota. Se usa el
 diario ya documentado en privacidad/Play: cifrado y archivo por UID, máximo
@@ -91,8 +94,9 @@ de la pasada ni una omisión. ADB volvió a devolver una lista vacía.
 
 ## Qué sigue y qué falta
 
-- Una elección pendiente obsoleta o Pro vencido **antes** de recuperar una
-  respuesta sigue conservada y bloqueada. No hay aún un mecanismo para
+- Una elección pendiente obsoleta o nunca aplicada cuando Pro venció sigue
+  conservada y bloqueada. Un resultado exacto ya aplicado puede recuperarse
+  sin Pro con la actualización siguiente. No hay aún un mecanismo para
   reemplazar/retirar esa elección y desbloquear copias sin perder originales.
   La protección está probada; ese protocolo de recuperación queda pendiente.
 - Pruebas Android: disposición/lectura de los cuatro valores, lector de
