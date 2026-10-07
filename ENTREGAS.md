@@ -10,11 +10,12 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
-FINO-61 parcialmente atendido: se retiraron seis pruebas que no comprobaban
-el código actual (cinco gráficas inexistentes y una copia congelada del
-exportador). Quedan 143 pruebas y 8 auditores sin tarjetas aprobados; faltan
-ocho simulaciones por sustituir. Esta limpieza no cambia la app instalada ni
-constituye una entrega. Sin APK/AAB/OTA.
+FINO-61 parcialmente atendido: se retiraron ocho pruebas que no comprobaban
+el código actual (gráficas inexistentes y copias de algoritmos). El gráfico
+diario vigente ahora comparte la misma cuenta entre Reportes y una prueba
+real, que falló antes de la extracción. Quedan 142 pruebas y 8 auditores sin
+tarjetas aprobados; faltan seis simulaciones por sustituir. No constituye
+una entrega instalada. Sin APK/AAB/OTA.
 
 FINO-58 revalidado: el candado falla cerrado si SecureStore no responde.
 FINO-59 parcialmente mitigado: el bot local exige autorizaciones explícitas,

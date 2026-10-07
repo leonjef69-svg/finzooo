@@ -11,8 +11,13 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
   cubierto por `verificar-exportar.ts`, que lo importa y ejecuta.
 - La batería restante pasó: 143 pruebas y 8 auditores sin tarjetas. El número
   baja porque estas seis nunca podían detectar un fallo nuevo de la app.
-- **Qué sigue:** sustituir las otras ocho pruebas que copian algoritmos de
-  informes, voz y navegación por comprobaciones de código real, y demostrar
+- Después, la cuenta de gasto diario salió de Reportes a una función pura
+  que Reportes usa de verdad. La nueva prueba la ejecuta junto a las medidas
+  reales del gráfico; falló antes de la extracción. Se retiraron dos copias
+  más, incluida la que aún esperaba 31 barras. Ahora pasan 142 pruebas y
+  8 auditores sin tarjetas. Los archivos retirados siguen recuperables en Git.
+- **Qué sigue:** sustituir las otras seis pruebas que copian algoritmos de
+  voz y navegación por comprobaciones de código real, y demostrar
   que fallan si ese código se altera. **Qué falta:** completar FINO-61,
   pruebas Android y publicación; tarjetas excluidas.
 

@@ -12,6 +12,7 @@ import { catInfo } from "@/constants/categories";
 import { COLOR_HEX_600 } from "@/constants/colors";
 import { CARD_SHADOW } from "@/constants/style";
 import { monthKey } from "@/utils/format";
+import { dailySpendBars } from "@/utils/reportDaily";
 import { budgetLeft, budgetUsed, health } from "@/utils/finances";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
@@ -146,24 +147,7 @@ export default function Reports({
   // dejaba cada columna en 9px, y ahí no cabe ni el número del día ni el
   // monto: los números acababan debajo de la barra equivocada y los montos
   // se pisaban o no se escribían.
-  const daily = useMemo(() => {
-    const porDia = new Map<number, number>();
-    for (const tx of transactions) {
-      if (tx.type !== "expense" || tx.internalTransfer || !tx.date.startsWith(mk)) continue;
-      const d = Number(tx.date.slice(8, 10));
-      porDia.set(d, (porDia.get(d) ?? 0) + tx.amount);
-    }
-    const bars = [...porDia.entries()]
-      .map(([day, amount]) => ({ day, amount }))
-      .sort((a, b) => a.day - b.day);
-
-    // Solo se resalta "hoy" si se está mirando el mes actual. En un mes
-    // pasado, resaltar el día 29 no querría decir nada.
-    const now = new Date();
-    const isCurrentMonth = month.y === now.getFullYear() && month.m === now.getMonth();
-
-    return { bars, today: isCurrentMonth ? now.getDate() : 0 };
-  }, [transactions, mk, month.y, month.m]);
+  const daily = useMemo(() => dailySpendBars(transactions, month), [transactions, month]);
 
   const previewBarData = useMemo(
     () =>

@@ -6,10 +6,13 @@
   ya no existen y una copia congelada del exportador. No eran comprobaciones
   de la app actual; `verificar-exportar.ts` sí ejecuta el exportador real.
   Los seis archivos borrados se pueden recuperar desde Git.
-- Después de retirarlos pasan 143 pruebas y 8 auditores, sin tarjetas. La
-  reducción del número es deliberada: no se presenta cobertura falsa.
-- **Qué sigue:** reemplazar ocho simulaciones restantes por pruebas que
-  ejecuten la lógica real de pantallas, voz y navegación. **Qué falta:** esa
+- El gráfico diario actual usa una cuenta extraída sin cambiarla a
+  `utils/reportDaily.ts`, ahora ejecutada por una prueba nueva que falló antes
+  de la extracción. Se retiraron dos simulaciones más, una de ellas del
+  gráfico viejo de 31 barras. Pasan 142 pruebas y 8 auditores sin tarjetas.
+  La reducción del número es deliberada: no se presenta cobertura falsa.
+- **Qué sigue:** reemplazar seis simulaciones restantes por pruebas que
+  ejecuten la lógica real de voz y navegación. **Qué falta:** esa
   parte de FINO-61, pruebas físicas y publicación; tarjetas excluidas.
 
 ## FINO-58/59 — candado revalidado y herramientas locales protegidas (07/10/2026)

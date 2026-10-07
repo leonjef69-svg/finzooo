@@ -129,6 +129,7 @@ const SUITES = [
   { archivo: "verificar-signo-importacion.ts", alias: BASE },
   { archivo: "verificar-exportar.ts", alias: EXPO },
   { archivo: "verificar-panorama.ts", alias: BASE },
+  { archivo: "verificar-gasto-diario-real.ts", alias: BASE },
   { archivo: "verificar-fusion.ts", alias: BASE },
   { archivo: "verificar-sincronizacion-campos.ts", alias: BASE },
   { archivo: "verificar-frecuencias-responsivas.ts", alias: BASE },
