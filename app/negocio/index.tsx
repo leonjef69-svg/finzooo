@@ -1,10 +1,11 @@
 import PremiumLocked from "@/components/PremiumLocked";
 import Negocios from "@/screens/Negocios";
 import { useAppData } from "@/contexts/AppDataContext";
+import { candadoPremium } from "@/utils/candado";
 import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
 
 export default function NegocioRoute() {
-  const { t, isPremium } = useAppData();
+  const { t, isPremium, negocios } = useAppData();
   const blocked = useRedirectIfOrphaned();
   if (blocked) return null;
 
@@ -13,7 +14,8 @@ export default function NegocioRoute() {
   // El candado va aquí, en la puerta de la pantalla, igual que en importar, exportar, metas y
   // los límites por categoría. Ese es el patrón de la app y no hay motivo para inventar otro:
   // una comprobación dentro de la pantalla dejaría el negocio a medio dibujar.
-  if (!isPremium) {
+  const estado = candadoPremium(isPremium, negocios.length > 0);
+  if (estado === "cerrado") {
     return (
       <PremiumLocked
         title={t("negocios.title")}
@@ -24,5 +26,5 @@ export default function NegocioRoute() {
     );
   }
 
-  return <Negocios onBack={safeBack} />;
+  return <Negocios onBack={safeBack} soloLectura={estado === "soloLectura"} />;
 }

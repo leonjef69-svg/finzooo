@@ -469,7 +469,11 @@ export default function Settings({
           // QUÉ ESTÁ PASANDO, SIN TENER QUE ENTRAR. Si un negocio se está quedando con los
           // yapeos, eso cambia dónde cae la plata todos los días: no puede estar solo a tres
           // pantallas de distancia. Y si se apagara sin querer, aquí se nota.
-          hint={negocioQueRecibe ? t("negocios.rowYapes", { nombre: negocioQueRecibe.nombre }) : undefined}
+          hint={negocioQueRecibe
+            ? isPremium
+              ? t("negocios.rowYapes", { nombre: negocioQueRecibe.nombre })
+              : t("negocios.rowYapesPausados")
+            : undefined}
           // CON UN SOLO NEGOCIO SE ENTRA DIRECTO A SU PANEL. La lista de negocios con un solo
           // negocio es una pantalla que solo sirve para tocar la única fila que tiene. Con dos
           // o más sí hace falta elegir.

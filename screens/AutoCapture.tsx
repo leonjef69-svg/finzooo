@@ -85,6 +85,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
     autoCaptureLog,
     clearAutoCaptureLog,
     negocios,
+    isPremium,
   } = useAppData();
   /**
    * ¿HAY UN NEGOCIO QUEDÁNDOSE CON LOS YAPEOS QUE ENTRAN?
@@ -288,11 +289,13 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                 <View className="flex-row items-center gap-2 mb-2">
                   <Store size={15} color="#059669" />
                   <Text className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                    {t("autoCapture.vanAlNegocio", { nombre: negocioQueRecibe.nombre })}
+                    {isPremium
+                      ? t("autoCapture.vanAlNegocio", { nombre: negocioQueRecibe.nombre })
+                      : t("autoCapture.negocioPausado")}
                   </Text>
                 </View>
                 <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-400">
-                  {t("autoCapture.vanAlNegocioTexto")}
+                  {t(isPremium ? "autoCapture.vanAlNegocioTexto" : "autoCapture.negocioPausadoTexto")}
                 </Text>
                 <TouchableOpacity
                   onPress={() => irUnaVez(`/negocio/${negocioQueRecibe.id}`)}

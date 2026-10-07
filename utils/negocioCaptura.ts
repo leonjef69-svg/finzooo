@@ -48,6 +48,11 @@ export function negocioQueRecibeYapes(negocios: Negocio[]): Negocio | undefined 
   return negocios.find((n) => n.activo && n.destinoYapes === "negocio");
 }
 
+/** Al vencer Pro se pausa el destino, sin mover ingresos ya contabilizados. */
+export function negocioQueRecibeYapesSegunPlan(negocios: Negocio[], premiumActivo: boolean): Negocio | undefined {
+  return premiumActivo ? negocioQueRecibeYapes(negocios) : undefined;
+}
+
 /**
  * Enciende o apaga el envío de yapeos a un negocio, APAGÁNDOLO EN LOS DEMÁS.
  *
@@ -119,13 +124,19 @@ export function separarLoDelNegocio(
   negocio: Negocio | undefined,
   yaEnLaCaja: MovimientoNegocio[]
 ): { personales: Transaction[]; delNegocio: MovimientoNegocio[] } {
+  const yaVistos = new Set(yaEnLaCaja.map((m) => m.avisoId).filter(Boolean));
   // SIN NEGOCIO QUE RECIBA, TODO SIGUE COMO SIEMPRE. Es la línea que hace que encender el
   // Modo Negocio no cambie nada mientras no se diga lo contrario.
   if (!negocio || !negocio.activo || negocio.destinoYapes !== "negocio") {
-    return { personales: aRegistrar, delNegocio: [] };
+    // Si Pro caducó entre el trabajo de fondo y esta recogida, ese aviso
+    // podría estar YA en la caja. No se añade por segunda vez a Personal.
+    const personales = yaVistos.size === 0 ? aRegistrar : aRegistrar.filter((mov) => {
+      const cuando = avisoDe[mov.id];
+      return mov.type !== "income" || cuando === undefined || !yaVistos.has(idDeAviso(cuando));
+    });
+    return { personales, delNegocio: [] };
   }
 
-  const yaVistos = new Set(yaEnLaCaja.map((m) => m.avisoId).filter(Boolean));
   const personales: Transaction[] = [];
   const delNegocio: MovimientoNegocio[] = [];
 

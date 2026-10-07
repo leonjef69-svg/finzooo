@@ -524,24 +524,26 @@ export default function PanelNegocio({
                   {t("panel.yapesTitulo")}
                 </Text>
                 <Text className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  {recibeYapes ? t("panel.yapesAqui") : t("panel.yapesPersonal")}
+                  {recibeYapes && soloLectura
+                    ? t("panel.yapesPausados")
+                    : recibeYapes ? t("panel.yapesAqui") : t("panel.yapesPersonal")}
                 </Text>
               </View>
-              {/* EL INTERRUPTOR SE VE PERO NO SE TOCA en solo lectura, y verlo es lo importante:
-                  dice a dónde está cayendo la plata AHORA MISMO, que es justo lo que hay que
-                  poder comprobar aunque no se pueda cambiar. Esconderlo dejaría a alguien sin
-                  saber por qué sus yapeos no aparecen en Inicio. */}
+              {/* Sin Pro se puede apagar la elección antigua, nunca encenderla.
+                  Los avisos nuevos van a Personal; los ingresos previos no se mueven. */}
               <Toggle
                 on={recibeYapes}
                 onChange={(v: boolean) => {
-                  if (soloLectura) return;
+                  if (soloLectura && v) return;
                   mandarYapesAlNegocio(negocioId, v);
                   showToast(v ? t("panel.yapesActivado") : t("panel.yapesDesactivado"));
                 }}
               />
             </View>
             <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-400 mt-3">
-              {t("panel.yapesExplicacion")}
+              {soloLectura
+                ? t(recibeYapes ? "panel.yapesPausadosExplicacion" : "panel.yapesRequierePro")
+                : t("panel.yapesExplicacion")}
             </Text>
             {/* SI OTRO NEGOCIO LOS ESTABA RECIBIENDO, HAY QUE DECIRLO ANTES de que se los quite
                 sin avisar. Solo uno puede recibir: con dos, el mismo yapeo tendría dos destinos

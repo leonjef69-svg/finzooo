@@ -117,6 +117,10 @@ console.log("\n--- LA PRUEBA NO SE MEZCLA CON EL PREMIUM DE LA CUENTA ---");
     /const isPremium = \(isPremiumDeLaCuenta \|\| pruebaCorriendo \|\| testerPremium\.active\) && !verComoGratis/.test(ctx),
     "las pantallas ven compra, prueba o Premium de tester"
   );
+  ok(/const caducidad = setTimeout\(/.test(ctx)
+    && /pruebaInicio! \+ DURACION_PRUEBA_MS - Date\.now\(\)/.test(ctx)
+    && /AppState\.addEventListener\("change"/.test(ctx),
+    "la prueba caduca al instante real y se revisa al volver a la app");
 
   // Y lo que SE GUARDA es solo el de la cuenta. Guardando la suma, activar la prueba
   // dejaria Premium marcado para siempre en este celular.

@@ -1,5 +1,22 @@
 # Estado actual de Fino
 
+## FINO-17 — Yapes y negocios cuando vence Pro (07/10/2026)
+
+- Sin Pro, los Yapes nuevos quedan en Personal aunque hubiera un negocio
+  elegido como destino. Los anteriores no cambian de lugar y un aviso ya
+  registrado en Negocio no se duplica en Personal. Esto funciona también en
+  el trabajo de fondo; si allí no se puede verificar un permiso de tester,
+  se elige Personal para no encerrar ingresos.
+- La lista y los paneles de negocios existentes se pueden consultar sin Pro.
+  Crear/cambiar/borrar sigue reservado; apagar el destino antiguo está
+  permitido, encenderlo no. Ajustes y diagnóstico muestran el destino real.
+  La prueba de 24 horas caduca a la hora exacta y se revisa al regresar.
+- TypeScript, ESLint, 148 pruebas locales y 8 auditores sin tarjetas aprobados
+  (una prueba ajena sin registrar no entra en este cambio). La
+  prueba en Android y la entrega siguen pendientes. **Qué sigue:** continuar
+  la auditoría. **Qué falta:** app abierta/cerrada,
+  compras/permiso de tester y demás hallazgos; tarjetas excluidas.
+
 ## FINO-14 — captura sin lecturas completas cada ocho segundos (07/10/2026)
 
 - El lector sigue revisando avisos cada ocho segundos, pero solo descifra el
@@ -8,8 +25,9 @@
   al cumplir un minuto de repaso. No espera un minuto para mostrar un yapeo
   que Android ya guardó.
 - Si una de las listas no se puede leer, no registra ni confirma un aviso
-  sobre datos incompletos. TypeScript, ESLint, 148 pruebas y 8 auditores sin
-  tarjetas aprobados; falta comprobarlo en Android con muchos movimientos.
+  sobre datos incompletos. TypeScript, ESLint, 148 pruebas locales y 8 auditores
+  sin tarjetas aprobados; una prueba ajena sin registrar no entra en este
+  cambio. Falta comprobarlo en Android con muchos movimientos.
   Código no publicado; tarjetas excluidas.
 - **Qué sigue:** cerrar verificación y continuar la auditoría. **Qué falta:**
   prueba física de rendimiento y segundo plano, consolas, entrega coordinada

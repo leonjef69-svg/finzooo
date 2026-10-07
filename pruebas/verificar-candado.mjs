@@ -71,7 +71,11 @@ console.log("\n--- Y NO SE PUEDE CREAR NI CAMBIAR NADA ---");
   ok(/soloLectura \? null : usaVentas \?/.test(panel), "sin Premium no sale el boton grande de registrar");
   ok(/usaVentas && !soloLectura/.test(panel), "ni los de gasto y productos");
   ok(/!usaVentas && !soloLectura/.test(panel), "ni el enlace gris de registrar una venta");
-  ok(/if \(soloLectura\) return;/.test(panel), "y el interruptor de los yapeos no cambia nada");
+  const ctx = leer("contexts/AppDataContext.tsx");
+  ok(/if \(soloLectura && v\) return;/.test(panel)
+    && /if \(activar && !premiumAhora\) return;/.test(ctx)
+    && /pruebaVigente\(pruebaInicio, Date\.now\(\)\)/.test(ctx),
+    "sin Pro solo se puede apagar un destino antiguo de yapeos, nunca encenderlo");
   ok(/\) : soloLectura \? null : \(/.test(panel), "y no se puede borrar del historial");
 
   const metas = leer("screens/SavingsList.tsx");

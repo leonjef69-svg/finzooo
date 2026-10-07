@@ -3,6 +3,32 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-17 — destino de Yapes al vencer Pro (07/10/2026)
+
+- Confirmado: el destino Negocio seguía activo tras vencer Pro. La captura con
+  la app abierta y el trabajo de fondo ahora consultan si sigue vigente antes
+  de enviar ingresos nuevos al negocio; sin Pro van a Personal. No se mueve
+  ni reinterpreta ningún ingreso ya anotado en la caja. Si un aviso antiguo
+  llega de nuevo tras vencer, su marca impide duplicarlo en Personal.
+- Quien tenga negocios previos puede abrir la lista y sus paneles en consulta
+  aunque Pro haya vencido; crear, editar y borrar siguen restringidos. Puede
+  apagar la preferencia antigua de recibir Yapes, pero no encenderla sin Pro.
+  Ajustes, diagnóstico y panel explican que la preferencia queda pausada y
+  que se reanudaría al recuperar Pro si no se apaga.
+- La prueba de 24 horas ahora actualiza el candado en su instante exacto y al
+  volver del segundo plano; antes podía tardar hasta un minuto. Sin sesión
+  visible, un permiso de tester no se presume vigente: ante esa incertidumbre,
+  el ingreso va a Personal y no se pierde. Prueba del caso nuevo roja antes
+  del arreglo; TypeScript, ESLint, 148 pruebas locales sin tarjetas y 8
+  auditores aprobados. Una de las 148 es un archivo ajeno sin registrar que
+  no se incluye en este cambio.
+- **Qué sigue:** revisar otros hallazgos.
+  **Qué falta:** simular expiración y Yapes con la app abierta/cerrada en
+  Android (ADB no mostró dispositivos ni AVD disponibles en esta sesión),
+  verificar compras/permiso de tester y publicación. Los productos
+  previos aún tienen una ruta Pro separada que conviene revisar como parte
+  del acceso a datos propios. Tarjetas de crédito fuera del ámbito.
+
 ## FINO-14 — lector de avisos sin descifrar historiales en cada pulso (07/10/2026)
 
 - Confirmado: con captura activada, la app volvía a leer y descifrar la lista
@@ -16,7 +42,8 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
   datos visibles. Si alguna falla, un aviso pendiente no se confirma ni se
   registra sobre una copia incompleta. La prueba de regresión falló antes del
   cambio; se conservó la protección del negocio contra duplicados.
-- TypeScript, ESLint, 148 pruebas sin tarjetas y 8 auditores aprobados. La
+- TypeScript, ESLint, 148 pruebas locales sin tarjetas y 8 auditores aprobados
+  (una prueba ajena sin registrar no se incluye en el cambio). La
   prueba del registro falló antes del cambio; la del negocio se actualizó
   para comprobar el nombre nuevo sin quitar su protección. No se tocó el
   código nativo ni se publicó.

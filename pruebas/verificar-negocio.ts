@@ -43,6 +43,7 @@ import {
   fusionarMovimientosNegocio,
   mandarYapesA,
   negocioQueRecibeYapes,
+  negocioQueRecibeYapesSegunPlan,
   separarLoDelNegocio,
 } from "@/utils/negocioCaptura";
 import { STORAGE_KEYS } from "@/utils/storage";
@@ -269,13 +270,20 @@ console.log("\n--- EL NEGOCIO ESTA ENGANCHADO POR LOS CUATRO LADOS ---");
 
 console.log("\n--- LA PANTALLA, Y QUE EL MODO NEGOCIO ES PREMIUM ---");
 {
-  // Decision suya del 07/08/2026: es Premium. El candado va en la puerta de la pantalla, igual
-  // que en importar, exportar, metas y los limites por categoria — el patron de la app.
+  // Crear y cambiar negocios es Pro; al vencer, la lista de negocios propios
+  // sigue visible en solo lectura y el candado cubre la lista vacía.
   const ruta = fs.readFileSync(path.join(RAIZ, "app/negocio/index.tsx"), "utf8");
-  ok(/if \(!isPremium\)/.test(ruta), "sin Premium no se entra");
+  ok(/candadoPremium\(isPremium, negocios\.length > 0\)/.test(ruta)
+    && /soloLectura=\{estado === "soloLectura"\}/.test(ruta),
+    "sin Pro se pueden consultar negocios propios, pero no editarlos");
+  ok(/if \(estado === "cerrado"\)/.test(ruta), "sin negocio propio la lista sí queda cerrada");
   ok(/PremiumLocked/.test(ruta), "y se explica con la pantalla de siempre, no con una nueva");
 
   const pant = fs.readFileSync(path.join(RAIZ, "screens/Negocios.tsx"), "utf8");
+  ok(/soloLectura && <AvisoSoloLectura/.test(pant)
+    && /soloLectura \? null : borrando === n\.id/.test(pant)
+    && /!soloLectura && !enEdicion/.test(pant),
+    "con Pro vencido la lista muestra datos existentes y oculta borrar, editar y crear");
   // Borrar un negocio se lleva sus ventas: eso hay que DECIRLO antes, no descubrirlo despues.
   ok(/negocios\.borrarAviso/.test(pant), "al borrar se avisa de que se van sus ventas");
   // Y la confirmacion va en la propia fila, no en una ventana del sistema: la ventana tapa la
@@ -756,6 +764,13 @@ console.log("\n--- EL YAPEO QUE ENTRA AL NEGOCIO (paso 5) ---");
   // La hora del aviso en milisegundos, que es de donde salen la fecha y la hora del negocio.
   const avisos = { 1: new Date(2026, 7, 8, 19, 30).getTime(), 2: new Date(2026, 7, 8, 20, 0).getTime() };
 
+  // Al vencer Pro, los avisos NUEVOS vuelven a Personal; no se mueve lo ya
+  // guardado en la caja. Al recuperarlo, se respeta la elección anterior.
+  ok(negocioQueRecibeYapesSegunPlan([receptor], true)?.id === receptor.id,
+    "con Pro el negocio elegido recibe los ingresos nuevos");
+  ok(negocioQueRecibeYapesSegunPlan([receptor], false) === undefined,
+    "sin Pro los nuevos ingresos vuelven a Personal");
+
   // 1. SIN NEGOCIO QUE RECIBA, NO CAMBIA NADA. Es la linea que protege todo lo demas: con el
   //    interruptor apagado —que es como esta por defecto— la app se comporta igual que antes
   //    de que este archivo existiera.
@@ -794,6 +809,9 @@ console.log("\n--- EL YAPEO QUE ENTRA AL NEGOCIO (paso 5) ---");
   ok(otraVez.delNegocio.length === 0, "el mismo yapeo no entra dos veces");
   // Y TAMPOCO CAE EN LO PERSONAL al descartarlo: ya esta registrado, en la caja.
   ok(otraVez.personales.length === 0, "y al descartarlo no se cuela en lo personal");
+  const despuesDeCaducar = separarLoDelNegocio([entra(1, 15)], avisos, undefined, repartido.delNegocio);
+  ok(despuesDeCaducar.personales.length === 0 && despuesDeCaducar.delNegocio.length === 0,
+    "al caducar Pro, un aviso ya registrado en Negocio no se duplica en Personal");
 
   // 5. SIN LA MARCA DEL AVISO SE QUEDA EN PERSONAL, que es donde estaria hoy. Meterlo en la
   //    caja sin poder marcarlo lo dejaria expuesto a entrar otra vez manana.
@@ -834,12 +852,18 @@ console.log("\n--- EL YAPEO QUE ENTRA AL NEGOCIO (paso 5) ---");
   // EL NEGOCIO TIENE QUE IR EN captureInputs. La recogida corre desde un escuchador montado
   // una vez: leyendo el estado ahi dentro, un yapeo acabaria en el bolsillo que estaba elegido
   // al abrir la app y no en el de ahora.
-  ok(/captureInputs\.current = \{ transactions, merchantLearned, t, negocio: datosNegocio(?:, [^}]+)? \}/.test(ctx), "y se usa el negocio de AHORA, no el de al abrir la app");
+  ok(/captureInputs\.current = \{[\s\S]*?negocio: datosNegocio,[\s\S]*?premiumCuenta: isPremiumDeLaCuenta/.test(ctx),
+    "y se usa el negocio y el plan de AHORA, no los de al abrir la app");
+  ok(/negocioQueRecibeYapesSegunPlan\(datosDelNegocio\.negocios, premiumNegocio\)/.test(ctx),
+    "con la app abierta no llegan ingresos nuevos al negocio sin Pro");
 
   // 10. EL INTERRUPTOR, EN EL PANEL Y NO ESCONDIDO. Es lo que decide donde cae tu plata todos
   //     los dias: en "editar el negocio" no lo encontraria nadie.
   const panel = fs.readFileSync(path.join(RAIZ, "screens/PanelNegocio.tsx"), "utf8");
   ok(/mandarYapesAlNegocio\(negocioId, v\)/.test(panel), "el interruptor esta en el panel");
+  ok(/if \(soloLectura && v\) return/.test(panel)
+    && /if \(activar && !premiumAhora\) return/.test(ctx),
+    "sin Pro se puede apagar el destino viejo, pero no encenderlo");
   ok(/panel\.yapesExplicacion/.test(panel), "y se explica que hace");
   // Si otro negocio los estaba recibiendo, se dice ANTES de quitarselos.
   ok(/panel\.yapesOtroNegocio/.test(panel), "y se avisa si se los quitas a otro negocio");
@@ -854,7 +878,9 @@ console.log("\n--- EL YAPEO QUE ENTRA AL NEGOCIO (paso 5) ---");
   // error: solo cuentas que no cuadran.
   const fondo = fs.readFileSync(path.join(RAIZ, "utils/capturaEnFondo.ts"), "utf8");
   ok(/separarLoDelNegocio\(/.test(fondo), "con la app CERRADA tambien se reparte");
-  ok(/negocioQueRecibeYapes\(/.test(fondo), "y se lee que negocio recibe");
+  ok(/negocioQueRecibeYapesSegunPlan\(/.test(fondo)
+    && /pruebaVigente\(inicioPrueba, Date\.now\(\)\)/.test(fondo),
+    "la app cerrada comprueba el plan y la hora real antes de elegir destino");
   ok(/loadJSON<MovimientoNegocio\[\]>\(STORAGE_KEYS\.movimientosNegocio/.test(fondo), "leyendo la caja del disco, que es lo unico que hay con la app cerrada");
   ok(/saveJSON\(STORAGE_KEYS\.movimientosNegocio, \[\.\.\.caja, \.\.\.delNegocio\]\)/.test(fondo), "y lo del negocio se escribe en su caja");
   ok(/mergeTransactions\(personales, guardadas\)/.test(fondo), "y en los movimientos personales solo va lo personal");

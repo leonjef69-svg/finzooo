@@ -68,7 +68,7 @@ import { bajarNegocio, subirNegocio } from "@/utils/cloudNegocio";
 import {
   fusionarMovimientosNegocio,
   mandarYapesA,
-  negocioQueRecibeYapes,
+  negocioQueRecibeYapesSegunPlan,
   separarLoDelNegocio,
 } from "@/utils/negocioCaptura";
 // setOverrides y setPropias ya no se usan aqui: al traer los datos de la nube se
@@ -94,6 +94,7 @@ import {
   setFavoritos,
 } from "@/utils/iconosFavoritos";
 import {
+  DURACION_PRUEBA_MS,
   loadPrueba,
   pruebaHorasRestantes,
   pruebaVigente,
@@ -533,8 +534,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!pruebaCorriendo) return;
     const reloj = setInterval(() => setAhora(Date.now()), 60_000);
-    return () => clearInterval(reloj);
-  }, [pruebaCorriendo]);
+    // Un intervalo de un minuto dejaba un hueco en el que la prueba ya había
+    // vencido pero las pantallas aún permitían acciones Pro.
+    const caducidad = setTimeout(
+      () => setAhora(Date.now()),
+      Math.max(0, pruebaInicio! + DURACION_PRUEBA_MS - Date.now()) + 1,
+    );
+    const alVolver = AppState.addEventListener("change", (state) => {
+      if (state === "active") setAhora(Date.now());
+    });
+    return () => { clearInterval(reloj); clearTimeout(caducidad); alVolver.remove(); };
+  }, [pruebaCorriendo, pruebaInicio]);
   /**
    * VER LA APP COMO ALGUIEN SIN PREMIUM, a propósito y desde Acerca de.
    *
@@ -1663,9 +1673,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // corre desde un escuchador y desde un temporizador que se montan una vez, así que ahí
   // dentro el estado sería el de cuando se montaron. Un yapeo habría acabado en el bolsillo
   // que estaba elegido al abrir la app, no en el de ahora.
-  const captureInputs = useRef({ transactions, merchantLearned, t, negocio: datosNegocio, autoCaptureLog });
+  const captureInputs = useRef({
+    transactions, merchantLearned, t, negocio: datosNegocio, autoCaptureLog,
+    premiumCuenta: isPremiumDeLaCuenta, testerActivo: testerPremium.active,
+    inicioPrueba: pruebaInicio, vistaGratis: verComoGratis,
+  });
   useEffect(() => {
-    captureInputs.current = { transactions, merchantLearned, t, negocio: datosNegocio, autoCaptureLog };
+    captureInputs.current = {
+      transactions, merchantLearned, t, negocio: datosNegocio, autoCaptureLog,
+      premiumCuenta: isPremiumDeLaCuenta, testerActivo: testerPremium.active,
+      inicioPrueba: pruebaInicio, vistaGratis: verComoGratis,
+    };
   });
   // Evita que dos recogidas se pisen (abrir la app y volver al frente casi
   // a la vez): sin esto, las dos vaciarían el buzón y se duplicaría todo.
@@ -1813,6 +1831,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           t: translate,
           negocio: datosDelNegocio,
           autoCaptureLog: logEnMemoria,
+          premiumCuenta,
+          testerActivo,
+          inicioPrueba,
+          vistaGratis,
         } = captureInputs.current;
         const [transactionsDelDisco, logDelDisco] = await Promise.all([
           loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []),
@@ -1830,7 +1852,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
          * Y si no hay ningún negocio recibiendo yapeos, que es como está por defecto,
          * separarLoDelNegocio devuelve la lista tal cual entró.
          */
-        const receptor = negocioQueRecibeYapes(datosDelNegocio.negocios);
+        const premiumNegocio = !vistaGratis &&
+          (premiumCuenta || testerActivo || pruebaVigente(inicioPrueba, Date.now()));
+        const receptor = negocioQueRecibeYapesSegunPlan(datosDelNegocio.negocios, premiumNegocio);
         const { personales, delNegocio } = separarLoDelNegocio(
           toAdd,
           avisoDe,
@@ -2427,6 +2451,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * se puede comprobar con una lista de negocios en las pruebas, sin dibujar nada.
    */
   function mandarYapesAlNegocio(id: string, activar: boolean) {
+    // Gratis sí puede detener un destino antiguo; no puede volver a activarlo.
+    const premiumAhora = !verComoGratis &&
+      (isPremiumDeLaCuenta || testerPremium.active || pruebaVigente(pruebaInicio, Date.now()));
+    if (activar && !premiumAhora) return;
     setDatosNegocio((antes) => ({ ...antes, negocios: mandarYapesA(antes.negocios, id, activar) }));
   }
 

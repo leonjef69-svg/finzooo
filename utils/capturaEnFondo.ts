@@ -1,8 +1,9 @@
 import { flushPendingSaves, loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
 import { mergeTransactions } from "@/utils/mergeTransactions";
-import { negocioQueRecibeYapes, separarLoDelNegocio } from "@/utils/negocioCaptura";
+import { negocioQueRecibeYapesSegunPlan, separarLoDelNegocio } from "@/utils/negocioCaptura";
 import type { MovimientoNegocio, Negocio } from "@/utils/negocio";
+import { loadPrueba, pruebaVigente } from "@/utils/pruebaPremium";
 import { reserveIdsAbove } from "@/utils/id";
 import * as notificationReader from "@/modules/notification-reader";
 import { translations } from "@/constants/i18n";
@@ -83,7 +84,7 @@ export async function capturarEnFondo(): Promise<number> {
   // ahi la proxima vez que se abre.
   await guardarPendientes(captured);
 
-  const [guardadas, learned, logPrevio, perfil, negocios, cajaGuardada] = await Promise.all([
+  const [guardadas, learned, logPrevio, perfil, negocios, cajaGuardada, premiumCuenta, inicioPrueba] = await Promise.all([
     loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []),
     loadJSON<Record<string, string>>(STORAGE_KEYS.merchantLearned, {}),
     loadJSON<CaptureLogEntry[]>(STORAGE_KEYS.autoCaptureLog, []),
@@ -98,6 +99,8 @@ export async function capturarEnFondo(): Promise<number> {
     // No habría dado ningún error. Habría dado cuentas que no cuadran.
     loadJSON<Negocio[]>(STORAGE_KEYS.negocios, []),
     loadJSON<MovimientoNegocio[]>(STORAGE_KEYS.movimientosNegocio, []),
+    loadJSON<boolean>(STORAGE_KEYS.isPremium, false),
+    loadPrueba(),
   ]);
 
   // Los identificadores nuevos tienen que ir por encima de los que ya
@@ -118,10 +121,14 @@ export async function capturarEnFondo(): Promise<number> {
   // repartos escritos aparte acabarían decidiendo distinto, y entonces dónde cae tu plata
   // dependería de si tenías Fino abierta o no.
   const caja = Array.isArray(cajaGuardada) ? cajaGuardada : [];
+  // En el trabajo sin pantalla no se confía en un permiso de tester guardado:
+  // puede haber sido revocado. Sin una prueba vigente o Premium de la cuenta,
+  // el destino seguro de un ingreso nuevo es Personal.
+  const premiumNegocio = premiumCuenta === true || pruebaVigente(inicioPrueba, Date.now());
   const { personales, delNegocio } = separarLoDelNegocio(
     toAdd,
     avisoDe,
-    negocioQueRecibeYapes(Array.isArray(negocios) ? negocios : []),
+    negocioQueRecibeYapesSegunPlan(Array.isArray(negocios) ? negocios : [], premiumNegocio),
     caja
   );
 

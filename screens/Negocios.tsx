@@ -4,6 +4,7 @@ import { ScrollView, Text, TextInput, TouchableOpacity, View } from "react-nativ
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Store, Plus, Trash2, Check, X, Package, ChevronRight } from "lucide-react-native";
 import BackButton from "@/components/BackButton";
+import AvisoSoloLectura from "@/components/AvisoSoloLectura";
 import { CARD_SHADOW } from "@/constants/style";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -28,7 +29,7 @@ import { crearNegocio, type Negocio } from "@/utils/negocio";
  *  "Restaurante" harían imposible agrupar nada en V2. */
 const CATEGORIAS = ["restaurante", "bodega", "belleza", "servicios", "ropa", "otro"] as const;
 
-export default function Negocios({ onBack }: { onBack: () => void }) {
+export default function Negocios({ onBack, soloLectura = false }: { onBack: () => void; soloLectura?: boolean }) {
   const { t, negocios, guardarNegocio, quitarNegocio, showToast, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
 
@@ -44,11 +45,13 @@ export default function Negocios({ onBack }: { onBack: () => void }) {
   const [borrando, setBorrando] = useState<string | null>(null);
 
   function abrirNuevo() {
+    if (soloLectura) return;
     setBorrando(null);
     setEnEdicion(crearNegocio({ nombre: "", categoria: "restaurante", moneda: userCurrency }));
   }
 
   function guardar() {
+    if (soloLectura) return;
     if (!enEdicion) return;
     const nombre = enEdicion.nombre.trim();
     // Sin nombre no se guarda: una lista con un negocio en blanco no se puede ni tocar para
@@ -85,11 +88,12 @@ export default function Negocios({ onBack }: { onBack: () => void }) {
             {t("negocios.subtitle")}
           </Text>
         </View>
+        {soloLectura && <AvisoSoloLectura />}
 
         {/* LA FORMA DE CREAR O EDITAR, EN LA MISMA PANTALLA.
             No en otra: crear un negocio son tres datos, y mandar a otra pantalla para tres
             datos hace perder de vista la lista que se está construyendo. */}
-        {enEdicion && (
+        {enEdicion && !soloLectura && (
           <View
             className="rounded-2xl p-4 mb-5 bg-white dark:bg-noche-2 border-[1.5px] border-emerald-300 dark:border-emerald-700"
             style={CARD_SHADOW}
@@ -198,7 +202,7 @@ export default function Negocios({ onBack }: { onBack: () => void }) {
                   <ChevronRight size={16} color="#94a3b8" />
                 </TouchableOpacity>
 
-                {borrando === n.id ? (
+                {soloLectura ? null : borrando === n.id ? (
                   /* LA CONFIRMACIÓN, CON LO QUE SE PIERDE DICHO. "Se va a borrar" no informa
                      igual que "se van sus productos y sus ventas", y es justo el dato que
                      hace dudar. */
@@ -267,7 +271,7 @@ export default function Negocios({ onBack }: { onBack: () => void }) {
           </View>
         )}
 
-        {!enEdicion && (
+        {!soloLectura && !enEdicion && (
           <TouchableOpacity
             onPress={abrirNuevo}
             className="flex-row items-center justify-center gap-2 py-3.5 rounded-2xl bg-emerald-600 mt-5"

@@ -10,11 +10,20 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-17 preparado, no publicado: al vencer Pro, los Yapes nuevos vuelven a
+Personal, sin mover lo ya anotado en Negocio ni duplicar avisos antiguos.
+Los negocios existentes se consultan sin Pro; se puede apagar, pero no
+encender, el destino de nuevos Yapes. La prueba Pro caduca en el instante
+exacto. TypeScript, ESLint, 148 pruebas locales y 8 auditores sin tarjetas
+aprobados (una prueba ajena sin registrar no se incluye);
+falta comprobarlo en Android abierta/cerrada y publicarlo. Sin APK/AAB/OTA.
+
 FINO-14 preparado, no publicado: la captura deja de descifrar el historial
 entero cada ocho segundos sin avisos; detecta cambios del trabajo de fondo
 mediante el registro breve y conserva el repaso de seguridad. Una lectura
-incompleta no confirma movimientos. TypeScript, ESLint, 148 pruebas y 8
-auditores sin tarjetas aprobados; falta medirlo en Android y verificar avisos
+incompleta no confirma movimientos. TypeScript, ESLint, 148 pruebas locales y
+8 auditores sin tarjetas aprobados (una prueba ajena sin registrar no se
+incluye); falta medirlo en Android y verificar avisos
 con la app abierta/cerrada. Sin APK/AAB/OTA ni entrega a usuarios.
 
 FINO-39/56 corregidos en código, no publicados: metas nuevas guardan la fecha
