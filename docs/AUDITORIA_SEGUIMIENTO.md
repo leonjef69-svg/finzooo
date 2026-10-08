@@ -3,6 +3,23 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-24 — pendiente cifrado y mínimo (07/10/2026)
+
+- Revalidado: 300 eran marcas nativas con posible texto, no el log JS (40,
+  ya cifrado). Buzón/lote 200 cifrados AES-GCM/clave Android Keystore, nombres
+  ajenos retirados también en instalaciones anteriores; contadores conservados.
+- Lectura falla cerrada, migración sin cambiar montos, no crear llave al leer ni
+  al añadir si hay otro lote cifrado. Commit falso no confirma ni deja una
+  caché distinta: restaura campos afectados para un reintento real.
+- Regresiones estática/política y Kotlin original rojas contra `257813c` y
+  verdes actuales. JSON/JCE reales, Context/Preferences/proveedor adaptados.
+  Guía `PRUEBAS_BUZON_YAPE_CIFRADO.md`. No se ejecutó Keystore/servicio físico.
+- TypeScript/ESLint sin avisos, 155 pruebas/8 auditores (154 en Git limpio)
+  aprobados; Gradle debug inicial aprobó módulo/app/manifiesto.
+- **Qué sigue:** FINO-30 y restantes IDs. **Qué falta:** recorrido Android,
+  release/firma, nueva instalación, política/Play y servidor publicados,
+  consolas y trámites. Sin APK/AAB/EAS/OTA/despliegue. Tarjetas/Sentry fuera.
+
 ## FINO-25/26 — declaraciones y movimiento (07/10/2026)
 
 - FINO-25 confirmado en PLAYSTORE: afirmación de procesamiento local sin exigir

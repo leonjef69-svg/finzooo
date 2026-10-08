@@ -117,7 +117,7 @@ class NotificationReaderModule : Module() {
       NotificationStore.setEnabled(context, value)
     }
 
-    // Devuelve todo lo capturado desde la última vez y vacía el buzón.
+    // Reclama un lote cifrado sin retirarlo hasta confirmar su guardado.
     // El resultado es texto JSON; quien llama lo convierte a objetos.
     AsyncFunction("drain") { NotificationStore.drain(context) }
 
@@ -127,8 +127,8 @@ class NotificationReaderModule : Module() {
     AsyncFunction("clear") { NotificationStore.clear(context) }
 
     // Diagnóstico, como texto JSON: si el servicio está conectado, cuántas
-    // notificaciones ha visto en total (de cualquier app), cuál fue la
-    // última y cuántas quedan por recoger. Es lo que permite saber POR QUÉ
+    // notificaciones ha visto en total, cuántas eran de Yape y cuántas
+    // quedan por recoger. No conserva nombres de otras apps. Permite saber POR QUÉ
     // no se captura nada, en vez de mirar una pantalla vacía.
     Function("stats") { NotificationStore.stats(context, FinzoNotificationListener.estaVivo()) }
 

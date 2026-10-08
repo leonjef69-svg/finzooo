@@ -567,12 +567,6 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                       </Text>
                     </View>
 
-                    {stats.lastPackage ? (
-                      <Text className="text-[10px] text-slate-400 mt-2" numberOfLines={1}>
-                        {t("autoCapture.statusLast", { app: stats.lastPackage })}
-                      </Text>
-                    ) : null}
-
                     {/* ¿HA AVISADO YAPE ALGUNA VEZ? LA PREGUNTA QUE FALTABA (21/08/2026).
                         Su pantalla decia "888 avisos vistos, ultimo com.whatsapp" y con eso no
                         se puede saber si Yape aviso y quedo tapado por el WhatsApp siguiente, o
@@ -591,14 +585,6 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                         {stats.moneySeen > 0 ? stats.moneySeen : t("autoCapture.statusMoneyNone")}
                       </Text>
                     </View>
-
-                    {/* Y las ultimas apps que avisaron: asi, tras yapearse, se ve al momento si
-                        Yape aparecio en la lista o no. Solo el nombre, nunca el texto. */}
-                    {stats.ultimasApps !== "" && (
-                      <Text selectable className="text-[10px] leading-4 text-slate-400 mt-2">
-                        {t("autoCapture.statusUltimas")}: {stats.ultimasApps.split(",").join(" · ")}
-                      </Text>
-                    )}
 
                     {/* POR QUÉ HABLÓ O SE CALLÓ. */}
                     {motivoVoz !== "" && (

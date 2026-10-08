@@ -1,5 +1,12 @@
 # Pruebas y auditores
 
+FINO-24: `verificar-privacidad-buzon-yape.mjs` comprueba contratos estáticos y
+ejecuta política original. `node scripts/probar-receptores-kotlin.mjs --notification-privacy`
+compila/ejecuta Kotlin ORIGINAL con JSON/JCE reales y adaptadores Android/Keystore,
+sin descargar dependencias ni declarar prueba física. Regresiones contra
+`FINO_TEST_NOTIFICATION_PRIVACY_BASELINE=257813c` rojas. Guía:
+`docs/PRUEBAS_BUZON_YAPE_CIFRADO.md`. Nuevo APK acumulado/Android pendientes.
+
 Privacidad del candado/Inicio: `verificar-privacidad-candado.mjs` ejecuta puente,
 efectos y PrivateModal originales con adaptadores; `verificar-privacidad-inicio.mjs`
 extrae formato/fila reales y ejecuta el componente de aportes original. Kotlin:

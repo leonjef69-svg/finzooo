@@ -1,5 +1,23 @@
 # Estado actual de Fino
 
+## FINO-24 — buzón de Yape cifrado (07/10/2026)
+
+- Hasta 200 pendientes/lote 200 y 300 marcas contra duplicados cifrados con
+  Android Keystore/AES-GCM. Diagnóstico JS ya cifrado hasta 40; no eran 300
+  entradas de esa pantalla. Se retiran nombres de otras apps, no sus contadores.
+- Migración al recoger/consultar valida todas las listas antiguas y conserva
+  datos; error no equivale a vacío. Confirmaciones comprueban disco y restauran
+  memoria ante fallo; no generar otra clave si queda un lote cifrado.
+- Pruebas Kotlin/JSON/JCE originales con adaptadores aprobadas; regresiones
+  contra `257813c` rojas. Guía `docs/PRUEBAS_BUZON_YAPE_CIFRADO.md`. TypeScript,
+  ESLint y 155 pruebas/8 auditores aprobados (154 en Git limpio). Compilación
+  Android debug inicial aprobó módulo/app; no es un servicio/Keystore físico.
+- Sin nuevos permisos, nube o planes; políticas/Play preparados, no publicados.
+  Requiere nueva instalación Android acumulada; OTA/APK anterior no lo contiene.
+- **Qué sigue:** FINO-30/restantes IDs. **Qué falta:** Android/migración física,
+  verificación release/firma, consolas/trámites y entrega autorizada.
+  Tarjetas/Sentry siguen fuera; no se declara terminada toda la auditoría.
+
 ## FINO-25/26 — voz honesta y campana por llegada (07/10/2026)
 
 - Política interna/HTML preparado/ayuda de tres idiomas explican que Android

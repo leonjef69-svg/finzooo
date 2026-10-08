@@ -1,0 +1,43 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import { execFileSync } from "node:child_process";
+import { buildSync } from "esbuild";
+import { createRequire } from "node:module";
+
+const baseline = process.env.FINO_TEST_NOTIFICATION_PRIVACY_BASELINE;
+if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw Error("Se requiere hash Git.");
+const read = file => baseline ? execFileSync("git", ["show", `${baseline}:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");
+const base = "modules/notification-reader/android/src/main/java/com/finzo/notificationreader/";
+const store = read(base + "NotificationStore.kt");
+assert.ok(store.includes("return NotificationPreferences(raw, setOf(KEY_QUEUE, KEY_IN_FLIGHT, KEY_SEEN))"), "Proteger todas las listas persistidas, no solo el diagnostico JS");
+assert.doesNotMatch(store, /putString\(KEY_LAST_PKG|putString\(KEY_ULTIMAS/);
+assert.match(store, /if \(!p.getBoolean\(KEY_ENABLED, false\)\) return false/);
+assert.match(store, /notification-drain-unconfirmed/);
+assert.match(store, /notification-ack-unconfirmed/);
+assert.doesNotMatch(store.slice(store.indexOf("private fun readArray")), /catch|isNullOrBlank/);
+assert.match(store, /MAX_QUEUE = 200/);
+assert.match(store, /MAX_SEEN = 300/);
+const prefs = read(base + "NotificationPreferences.kt");
+assert.ok(prefs.includes("JSONArray(plain)") && prefs.includes("notification-migration-unconfirmed"));
+assert.match(prefs, /createKey = protectedFields\.none/);
+const cipher = read(base + "NotificationCipher.kt");
+assert.match(cipher, /AES\/GCM\/NoPadding/);
+assert.match(cipher, /AndroidKeyStore/);
+assert.match(cipher, /setRandomizedEncryptionRequired\(true\)/);
+assert.match(cipher, /if \(!create\) throw/);
+assert.equal((cipher.match(/cipher\.updateAAD/g) ?? []).length, 2);
+const ui = read("screens/AutoCapture.tsx");
+assert.doesNotMatch(ui, /stats\.lastPackage|stats\.ultimasApps/);
+const context = read("contexts/AppDataContext.tsx");
+assert.match(context, /saveJSONNow\(STORAGE_KEYS\.autoCaptureLog/);
+assert.match(read("utils/storage.ts"), /const encrypted = await encryptText\(JSON.stringify\(value\)\)/);
+assert.match(read("utils/autoCapture.ts"), /const MAX_LOG = 40/);
+assert.doesNotMatch(read("utils/cloudSync.ts"), /autoCaptureLog/);
+assert.equal(JSON.parse(read("app.json")).expo.android.allowBackup, false);
+const compiled = buildSync({ stdin: { contents: read("constants/legal.ts"), sourcefile: "legal.ts", loader: "ts", resolveDir: process.cwd() }, bundle: true, platform: "node", format: "cjs", alias: { "@": process.cwd() }, write: false, logLevel: "silent" });
+const module = { exports: {} };
+new Function("module", "exports", "require", compiled.outputFiles[0].text)(module, module.exports, createRequire(import.meta.url));
+for (const text of [module.exports.PRIVACY_POLICY, read("docs/privacidad.html")]) {
+  assert.ok(text.includes("40 avisos") && text.includes("300 marcas") && text.includes("Android Keystore"));
+}
+console.log("Yape: contrato estatico de cifrado/minimizacion y politica original ejecutada. Kotlin/JCE se ejecutan aparte con --notification-privacy; esto NO prueba Android.");

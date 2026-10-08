@@ -28,13 +28,14 @@ ok(
 );
 ok(
   listener.indexOf("NotificationStore.noteSeen(") < listener.indexOf("if (!esAppDeDinero) return"),
-  "se anota el paquete antes de descartarlo"
+  "se cuenta el aviso antes de descartarlo, sin guardar nombres de otras apps"
 );
 ok(
   /fun noteSeen\(context: Context, pkg: String, esAppDeDinero: Boolean\)/.test(store),
   "el buzón recibe la marca de app de dinero"
 );
-ok(store.includes("putString(KEY_ULTIMAS, ultimas)"), "guarda las últimas apps observadas");
+ok(!/putString\(KEY_ULTIMAS|putString\(KEY_LAST_PKG/.test(store), "no guarda nombres de otras apps");
+ok(store.includes("remove(KEY_ULTIMAS)") && store.includes("remove(KEY_LAST_PKG)"), "retira nombres antiguos sin retirar contadores");
 ok(store.includes("if (esAppDeDinero)"), "solo una app aceptada aumenta el contador especial");
 ok(store.includes("putInt(KEY_MONEY_SEEN"), "aumenta el contador de Yape");
 ok(store.includes("putString(KEY_LAST_MONEY_PKG"), "guarda el paquete de Yape");

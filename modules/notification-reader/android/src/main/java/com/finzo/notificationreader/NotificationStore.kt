@@ -53,9 +53,8 @@ object NotificationStore {
   private const val KEY_LAST_MONEY_AT = "lastMoneyAt"
   private const val KEY_MONEY_SEEN = "moneySeen"
 
-  /** Las ultimas apps que avisaron, separadas por coma. Solo el nombre, nunca el texto. */
+  /** Clave antigua: se retira sin conservar los nombres de otras aplicaciones. */
   private const val KEY_ULTIMAS = "ultimasApps"
-  private const val CUANTAS_ULTIMAS = 8
 
   // Por qué la voz hablo o se callo la ultima vez. Sin esto, "no dijo nada"
   // se ve exactamente igual con la voz apagada, con un monto que no se
@@ -69,8 +68,17 @@ object NotificationStore {
   private const val MAX_QUEUE = 200
   private const val MAX_SEEN = 300
 
-  private fun prefs(context: Context) =
-    context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+  private fun prefs(context: Context): android.content.SharedPreferences {
+    val raw = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
+    // No leer el buzón para consultar un interruptor. Quitar nombres antiguos
+    // sin borrar datos financieros durante la migración.
+    if (raw.contains(KEY_LAST_PKG) || raw.contains(KEY_ULTIMAS)) {
+      check(raw.edit().remove(KEY_LAST_PKG).remove(KEY_ULTIMAS).commit()) {
+        "notification-diagnostics-cleanup-unconfirmed"
+      }
+    }
+    return NotificationPreferences(raw, setOf(KEY_QUEUE, KEY_IN_FLIGHT, KEY_SEEN))
+  }
 
   /**
    * Interruptor que controla Fino desde sus ajustes. Va aparte del permiso
@@ -80,6 +88,7 @@ object NotificationStore {
   fun isEnabled(context: Context): Boolean =
     prefs(context).getBoolean(KEY_ENABLED, false)
 
+  @Synchronized
   fun setEnabled(context: Context, value: Boolean) {
     val edit = prefs(context).edit().putBoolean(KEY_ENABLED, value)
     if (!value) {
@@ -95,7 +104,7 @@ object NotificationStore {
         .remove(KEY_TOTAL_SEEN)
         .remove(KEY_MONEY_SEEN)
     }
-    edit.apply()
+    check(edit.commit()) { "notification-setting-unconfirmed" }
   }
 
   /**
@@ -158,22 +167,16 @@ object NotificationStore {
    * Se llama antes de filtrar por app a propósito: si este contador sube
    * pero no se captura nada, el servicio funciona y el problema es la lista
    * de apps de dinero. Si no sube, es que Android nunca lo conectó. Solo se
-   * guarda el nombre del paquete y la hora — nunca el contenido.
+   * guarda el contador y la hora — nunca el nombre de otras apps ni el contenido.
    */
   @Synchronized
   fun noteSeen(context: Context, pkg: String, esAppDeDinero: Boolean) {
     val p = prefs(context)
-    val anteriores = (p.getString(KEY_ULTIMAS, "") ?: "")
-      .split(",")
-      .map { it.trim() }
-      .filter { it.isNotBlank() && it != pkg }
-    val ultimas = (anteriores + pkg).takeLast(CUANTAS_ULTIMAS).joinToString(",")
+    if (!p.getBoolean(KEY_ENABLED, false)) return
 
     val cambio = p.edit()
       .putInt(KEY_TOTAL_SEEN, p.getInt(KEY_TOTAL_SEEN, 0) + 1)
-      .putString(KEY_LAST_PKG, pkg)
       .putLong(KEY_LAST_AT, System.currentTimeMillis())
-      .putString(KEY_ULTIMAS, ultimas)
 
     // Esta marca usa EXACTAMENTE el mismo resultado que el filtro del servicio.
     // Antes la pantalla mostraba siempre "ninguno": las claves existían, pero nadie
@@ -204,17 +207,19 @@ object NotificationStore {
   }
 
   /** Todo el diagnóstico junto, como texto JSON. */
+  @Synchronized
   fun stats(context: Context, connectedNow: Boolean? = null): String {
     val p = prefs(context)
+    prepareFinancialLists(p)
     return JSONObject().apply {
       put("connected", connectedNow ?: p.getBoolean(KEY_CONNECTED, false))
       put("connectedAt", p.getLong(KEY_CONNECTED_AT, 0L))
       put("totalSeen", p.getInt(KEY_TOTAL_SEEN, 0))
-      put("lastPackage", p.getString(KEY_LAST_PKG, "") ?: "")
+      put("lastPackage", "") // Puente anterior compatible, sin nombres.
       put("moneySeen", p.getInt(KEY_MONEY_SEEN, 0))
       put("lastMoneyPackage", p.getString(KEY_LAST_MONEY_PKG, "") ?: "")
       put("lastMoneyAt", p.getLong(KEY_LAST_MONEY_AT, 0L))
-      put("ultimasApps", p.getString(KEY_ULTIMAS, "") ?: "")
+      put("ultimasApps", "")
       put("lastAt", p.getLong(KEY_LAST_AT, 0L))
       put("enabled", p.getBoolean(KEY_ENABLED, false))
       put("queued", readArray(p.getString(KEY_QUEUE, null)).length() + readArray(p.getString(KEY_IN_FLIGHT, null)).length())
@@ -234,6 +239,8 @@ object NotificationStore {
   @Synchronized
   fun add(context: Context, item: JSONObject, dedupeKey: String): Boolean {
     val p = prefs(context)
+    if (!p.getBoolean(KEY_ENABLED, false)) return false
+    prepareFinancialLists(p)
 
     val seen = readArray(p.getString(KEY_SEEN, null))
     for (i in 0 until seen.length()) {
@@ -249,7 +256,7 @@ object NotificationStore {
     p.edit()
       .putString(KEY_SEEN, seen.toString())
       .putString(KEY_QUEUE, queue.toString())
-      .apply()
+      .commit().also { check(it) { "notification-capture-unconfirmed" } }
     return true
   }
 
@@ -261,20 +268,25 @@ object NotificationStore {
   @Synchronized
   fun drain(context: Context): String {
     val p = prefs(context)
+    prepareFinancialLists(p)
     val pendiente = p.getString(KEY_IN_FLIGHT, null)
     if (!pendiente.isNullOrBlank() && readArray(pendiente).length() > 0) return pendiente
     val queue = p.getString(KEY_QUEUE, null) ?: "[]"
+    readArray(queue)
     p.edit()
       .putString(KEY_QUEUE, "[]")
       .putString(KEY_IN_FLIGHT, queue)
-      .commit()
+      .commit().also { check(it) { "notification-drain-unconfirmed" } }
     return queue
   }
 
   /** Confirma que el último lote reclamado ya quedó guardado. */
   @Synchronized
   fun ackDrain(context: Context) {
-    prefs(context).edit().putString(KEY_IN_FLIGHT, "[]").commit()
+    val p = prefs(context)
+    // No borrar un lote que no se puede abrir por inferencia.
+    readArray(p.getString(KEY_IN_FLIGHT, null))
+    check(p.edit().putString(KEY_IN_FLIGHT, "[]").commit()) { "notification-ack-unconfirmed" }
   }
 
   /** Borra todo: buzón y memoria de lo ya visto. */
@@ -284,13 +296,15 @@ object NotificationStore {
       .putString(KEY_QUEUE, "[]")
       .putString(KEY_IN_FLIGHT, "[]")
       .putString(KEY_SEEN, "[]")
-      .apply()
+      .commit().also { check(it) { "notification-clear-unconfirmed" } }
+  }
+
+  private fun prepareFinancialLists(p: android.content.SharedPreferences) {
+    // Abrir también las marcas de duplicados, aunque no llegue otro Yape:
+    // la primera recogida/diagnóstico migra todas las listas antiguas.
+    listOf(KEY_QUEUE, KEY_IN_FLIGHT, KEY_SEEN).forEach { readArray(p.getString(it, null)) }
   }
 
   private fun readArray(raw: String?): JSONArray =
-    try {
-      if (raw.isNullOrBlank()) JSONArray() else JSONArray(raw)
-    } catch (e: Throwable) {
-      JSONArray()
-    }
+    if (raw == null) JSONArray() else JSONArray(raw)
 }

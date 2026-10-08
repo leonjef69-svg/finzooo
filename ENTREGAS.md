@@ -1,5 +1,15 @@
 # Entregas de Fino
 
+## Preparado, no entregado — FINO-24 (07/10/2026)
+
+Buzón Yape/duplicados cifrados con Keystore; conserva y convierte avisos antiguos,
+comprueba guardados y deja de conservar nombres de otras apps. Kotlin/JCE local
+aprobado con adaptadores y regresiones rojas-verdes; módulo/app debug compilados.
+Guía `docs/PRUEBAS_BUZON_YAPE_CIFRADO.md`. No hay APK/AAB/OTA ni despliegue nuevo.
+Necesita nueva instalación Android, acumulada con otros cambios nativos.
+**Qué sigue:** exportación manual/restantes IDs. **Qué falta:** pruebas Android,
+release/firma, consolas/trámites y entrega autorizada. Tarjetas/Sentry fuera.
+
 Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Versión disponible en Google Play

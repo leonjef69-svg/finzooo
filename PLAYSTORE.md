@@ -388,6 +388,17 @@ la próxima versión; esta preparación no modifica las consolas ni la web publi
 
 ## Permiso delicado: lector de notificaciones
 
+FINO-24 preparado (07/10/2026): buzón temporal y marcas de duplicados cifrados
+con clave local de Android Keystore. Hasta 200 pendientes, un lote reclamado
+hasta 200 y 300 marcas; diagnóstico JS ya cifrado hasta 40 avisos. Buzón/log no
+se envían a Firebase; los movimientos resultantes siguen el respaldo Pro ya
+declarado. Se retiran nombres de otras apps, se conservan contadores/horas.
+Sin permisos, destinatarios, categorías de datos ni retención remota nuevos.
+Requiere instalar nueva versión Android; comprobar migración/Keystore físico y
+manifiesto final antes de publicar una afirmación de cifrado para esa versión.
+Política interna/HTML son borradores, no web publicada. Guía:
+`docs/PRUEBAS_BUZON_YAPE_CIFRADO.md`. Seguridad de los datos real aún por contrastar.
+
 Es la declaración más importante del formulario y **la que puede tumbar la publicación**.
 Google exige justificar `BIND_NOTIFICATION_LISTENER_SERVICE` con la función principal de la app.
 
