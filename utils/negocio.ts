@@ -25,13 +25,15 @@
 // llega en V3 con la voz. Tampoco hay inventario ni stock.
 
 import { sanitizeName } from "@/utils/categoryCustom";
-import { loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
+import { loadJSON, saveJSON, saveJSONBatchNow, STORAGE_KEYS } from "@/utils/storage";
+import { mergeBusinessData, type BusinessDeleted } from "@/utils/businessSync";
 
 /** A dónde van los Yapes que entren mientras el negocio está activo. */
 export type DestinoDeLosYapes = "personal" | "negocio";
 
 export type Negocio = {
   id: string;
+  updatedAt?: number;
   nombre: string;
   /** Restaurante, bodega, peluquería… Texto libre elegido de una lista. */
   categoria: string;
@@ -63,6 +65,7 @@ export type Negocio = {
 
 export type Producto = {
   id: string;
+  updatedAt?: number;
   negocioId: string;
   nombre: string;
   precio: number;
@@ -90,6 +93,7 @@ export type MetodoDeVenta = "yape" | "plin" | "efectivo" | "transferencia" | "ta
 
 export type Venta = {
   id: string;
+  updatedAt?: number;
   negocioId: string;
   /** "AAAA-MM-DD" */
   fecha: string;
@@ -143,6 +147,7 @@ export type Venta = {
  */
 export type MovimientoNegocio = {
   id: string;
+  updatedAt?: number;
   negocioId: string;
   tipo: "ingreso" | "gasto";
   monto: number;
@@ -173,6 +178,8 @@ export type MovimientoNegocio = {
 
 /** Todo lo del negocio junto. Es lo que se guarda y lo que viaja a la nube. */
 export type DatosDelNegocio = {
+  syncFormat?: number;
+  deleted?: BusinessDeleted;
   negocios: Negocio[];
   productos: Producto[];
   ventas: Venta[];
@@ -195,18 +202,34 @@ export function nuevoId(prefijo: string): string {
 // ── Guardado en el celular ───────────────────────────────────────────
 
 export async function cargarNegocio(): Promise<DatosDelNegocio> {
-  const [negocios, productos, ventas, movimientos] = await Promise.all([
+  const [negocios, productos, ventas, movimientos, deleted] = await Promise.all([
     loadJSON<Negocio[]>(STORAGE_KEYS.negocios, []),
     loadJSON<Producto[]>(STORAGE_KEYS.productos, []),
     loadJSON<Venta[]>(STORAGE_KEYS.ventas, []),
     loadJSON<MovimientoNegocio[]>(STORAGE_KEYS.movimientosNegocio, []),
+    loadJSON<BusinessDeleted | undefined>(STORAGE_KEYS.businessDeleted, undefined),
   ]);
-  return {
-    negocios: Array.isArray(negocios) ? negocios : [],
-    productos: Array.isArray(productos) ? productos : [],
-    ventas: Array.isArray(ventas) ? ventas : [],
-    movimientos: Array.isArray(movimientos) ? movimientos : [],
-  };
+  return mergeBusinessData({ negocios, productos, ventas, movimientos, deleted }, {});
+}
+
+/** Las cuatro listas y sus borrados viajan juntos por el almacén real.
+ * Incorporar primero lo capturado en segundo plano, sin recuperar borrados. */
+export function guardarDatosNegocio(datos: DatosDelNegocio, stillValid: () => boolean = () => true): Promise<boolean> {
+  const keys = [STORAGE_KEYS.negocios, STORAGE_KEYS.productos, STORAGE_KEYS.ventas,
+    STORAGE_KEYS.movimientosNegocio, STORAGE_KEYS.businessDeleted];
+  return saveJSONBatchNow(keys, async () => {
+    const [movimientos, deleted] = await Promise.all([
+      loadJSON<MovimientoNegocio[]>(STORAGE_KEYS.movimientosNegocio, []),
+      loadJSON<BusinessDeleted | undefined>(STORAGE_KEYS.businessDeleted, undefined),
+    ]);
+    const next = mergeBusinessData(datos, { movimientos, deleted });
+    return {
+      entries: [[STORAGE_KEYS.negocios, next.negocios], [STORAGE_KEYS.productos, next.productos],
+        [STORAGE_KEYS.ventas, next.ventas], [STORAGE_KEYS.movimientosNegocio, next.movimientos],
+        [STORAGE_KEYS.businessDeleted, next.deleted]],
+      stillValid, committed() {},
+    };
+  });
 }
 
 export function guardarNegocios(negocios: Negocio[]): void {

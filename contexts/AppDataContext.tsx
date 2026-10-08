@@ -43,10 +43,7 @@ import {
   borrarNegocio as borrarNegocioYLoSuyo,
   borrarProducto as quitarProductoDeLaLista,
   cargarNegocio,
-  guardarMovimientosNegocio,
-  guardarNegocios,
-  guardarProductos,
-  guardarVentas,
+  guardarDatosNegocio,
   NEGOCIO_VACIO,
   type DatosDelNegocio,
   type MovimientoNegocio,
@@ -66,6 +63,7 @@ import { nextId, reserveIdsAbove } from "@/utils/id";
 import { applyImportedTransactions } from "@/utils/importCommit";
 import { learnCategory, suggestCategory } from "@/utils/classifier";
 import { bajarNegocio, subirNegocio } from "@/utils/cloudNegocio";
+import { markBusinessChanges, mergeBusinessData } from "@/utils/businessSync";
 import {
   fusionarMovimientosNegocio,
   mandarYapesA,
@@ -531,7 +529,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * totales, y guardándola aparte eso no depende de acordarse de filtrar en los 16 sitios
    * que leen movimientos. Ver utils/negocio.
    */
-  const [datosNegocio, setDatosNegocio] = useState<DatosDelNegocio>(NEGOCIO_VACIO);
+  const [datosNegocio, setRenderedDatosNegocio] = useState<DatosDelNegocio>(NEGOCIO_VACIO);
+  const datosNegocioLive = useRef(datosNegocio);
+  const setDatosNegocio = useCallback(function updateBusinessData(update: SetStateAction<DatosDelNegocio>, fromSync = false) {
+    const before = datosNegocioLive.current;
+    const next = typeof update === "function" ? update(before) : update;
+    if (next === before) return;
+    const prepared = fromSync ? next : markBusinessChanges(before, next);
+    datosNegocioLive.current = prepared;
+    setRenderedDatosNegocio(prepared);
+  }, []);
 
   /** El motivo del ultimo fallo al subir, o null si la ultima subida salio bien. */
   const [respaldoFallo, setRespaldoFallo] = useState<string | null>(null);
@@ -1006,18 +1013,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
      * Si no hay nada en la nube se deja lo que haya en el celular: puede ser un negocio
      * creado sin sesión, y borrarlo por venir vacío de la nube sería perderlo.
      */
+    const negocioSession = localSessionVersion.current;
     const negocioDeLaNube = await bajarNegocio(userUid);
     checkSession();
     if (negocioDeLaNube) {
-      setDatosNegocio(negocioDeLaNube);
-      guardarNegocios(negocioDeLaNube.negocios);
-      guardarProductos(negocioDeLaNube.productos);
-      guardarVentas(negocioDeLaNube.ventas);
-      // Y LA CAJA. Faltaba esta línea: los gastos y los ingresos del negocio bajaban de la
-      // nube, se veían en la pantalla, y al reiniciar la app volvían a estar vacíos porque
-      // nunca se habían escrito en el celular. Es el mismo fallo de las categorías propias,
-      // una lista más abajo.
-      guardarMovimientosNegocio(negocioDeLaNube.movimientos);
+      const combined = mergeBusinessData(datosNegocioLive.current, negocioDeLaNube);
+      setDatosNegocio(combined, true);
+      await guardarDatosNegocio(combined, () => auth.currentUser?.uid === userUid &&
+        negocioSession === localSessionVersion.current && datosNegocioLive.current === combined);
+      checkSession();
     }
     return "restored";
   }
@@ -1092,7 +1096,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setIsPremium(savedIsPremium);
     setMerchantLearned(savedLearned);
     setCarryoverCleared(savedCarryoverCleared);
-    setDatosNegocio(savedNegocio);
+    setDatosNegocio(savedNegocio, true);
     cloudSyncMetaRef.current = savedCloudSyncMeta;
     setCloudSyncMeta(savedCloudSyncMeta);
     // La copia para respuestas de red queda lista antes de resolver la
@@ -1204,7 +1208,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setAvisosFallo(null);
     setIsPremium(false);
     setTesterPremium(TESTER_PREMIUM_INACTIVE);
-    setDatosNegocio(NEGOCIO_VACIO);
+    setDatosNegocio(NEGOCIO_VACIO, true);
     setAutoCaptureOnState(false);
     setAutoCaptureLog([]);
     setPruebaInicio(null);
@@ -1507,10 +1511,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // una venta toca las ventas, pero borrar un negocio toca las cuatro a la vez.
   useEffect(() => {
     if (!ready || !hasOnboarded) return;
-    guardarNegocios(datosNegocio.negocios);
-    guardarProductos(datosNegocio.productos);
-    guardarVentas(datosNegocio.ventas);
-    guardarMovimientosNegocio(datosNegocio.movimientos);
+    const version = localSessionVersion.current;
+    void guardarDatosNegocio(datosNegocio, () => version === localSessionVersion.current && datosNegocioLive.current === datosNegocio);
   }, [datosNegocio, ready, hasOnboarded]);
 
   /**
@@ -1528,14 +1530,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     let alive = true;
     const version = localSessionVersion.current;
     const timer = setTimeout(() => {
-      void subirNegocio(uid, datosNegocio).catch((error) => {
+      void subirNegocio(uid, datosNegocio, () => alive && version === localSessionVersion.current &&
+        auth.currentUser?.uid === uid && datosNegocioLive.current === datosNegocio).then((confirmed) => {
+        if (!alive || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
+        const combined = mergeBusinessData(datosNegocioLive.current, confirmed);
+        if (JSON.stringify(combined) !== JSON.stringify(datosNegocioLive.current)) setDatosNegocio(combined, true);
+      }).catch((error) => {
         if (!alive || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
         const mensaje = String((error as Error)?.message ?? error);
         setRespaldoFallo(mensaje.includes("demasiado-grande") ? "demasiado-grande" : "negocio");
       });
     }, 1500);
     return () => { alive = false; clearTimeout(timer); };
-  }, [datosNegocio, ready, hasOnboarded, uid, isPremium]);
+  }, [datosNegocio, ready, hasOnboarded, uid, isPremium, setDatosNegocio]);
 
   // Además de guardar en este celular, si hay una cuenta con sesión
   // iniciada y correo verificado, también sube los datos a la nube.
@@ -1634,7 +1641,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
     };
-  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds, setGoals]);
+  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds, setGoals, setDatosNegocio]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -1763,7 +1770,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         const cajaDelDisco = caja;
         if (cajaDelDisco.length > 0) {
           setDatosNegocio((antes) => {
-            const juntos = fusionarMovimientosNegocio(antes.movimientos, cajaDelDisco);
+            const juntos = fusionarMovimientosNegocio(antes.movimientos, cajaDelDisco, antes.deleted?.movimientos, antes.deleted?.negocios);
             // La misma referencia si no hay nada nuevo: un objeto nuevo cada vez
             // volvería a guardar y a subir el negocio entero sin motivo.
             return juntos === antes.movimientos ? antes : { ...antes, movimientos: juntos };
@@ -2023,7 +2030,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     };
     // Solo depende de si la app ya está lista: los datos que necesita los
     // lee de captureInputs en el momento de recoger.
-  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds, setGoals]);
+  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds, setGoals, setDatosNegocio]);
 
   function setAutoCaptureOn(value: boolean) {
     notificationReader.setEnabled(value);

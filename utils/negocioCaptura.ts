@@ -89,13 +89,23 @@ export function mandarYapesA(negocios: Negocio[], id: string, activar: boolean):
  */
 export function fusionarMovimientosNegocio(
   enMemoria: MovimientoNegocio[],
-  guardados: MovimientoNegocio[]
+  guardados: MovimientoNegocio[],
+  deletedIds: string[] = [],
+  deletedBusinessIds: string[] = [],
 ): MovimientoNegocio[] {
-  if (guardados.length === 0) return enMemoria;
-  const conocidos = new Set(enMemoria.map((m) => m.id));
-  const nuevos = guardados.filter((m) => !conocidos.has(m.id));
-  if (nuevos.length === 0) return enMemoria;
-  return [...enMemoria, ...nuevos];
+  const removed = new Set(deletedIds), businesses = new Set(deletedBusinessIds);
+  const active = enMemoria.filter(m => !removed.has(m.id) && !businesses.has(m.negocioId));
+  let changed = active.length !== enMemoria.length;
+  const byId = new Map(active.map(m => [m.id, m]));
+  for (const item of guardados) {
+    if (removed.has(item.id) || businesses.has(item.negocioId)) continue;
+    const current = byId.get(item.id);
+    if (!current || (item.updatedAt ?? 0) > (current.updatedAt ?? 0)) {
+      byId.set(item.id, item);
+      changed = true;
+    }
+  }
+  return changed ? [...byId.values()] : enMemoria;
 }
 
 /** La marca del aviso de Android, para no registrar dos veces el mismo yapeo. */

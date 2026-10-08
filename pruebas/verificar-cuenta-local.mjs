@@ -44,6 +44,8 @@ await scenario(`
   await AsyncStorage.setItem("@fino/credit-v1", JSON.stringify({ cards: [{ id: "legacy-A" }] }));
   const pendingReturn = { uid: "A", payload: { kind: "family", spaceId: "f", amount: 40, personalTransactionId: 100 } };
   await saveJSONNow(STORAGE_KEYS.personalReturnPending, pendingReturn);
+  const businessDeleted = { negocios: ["n-A"], productos: [], ventas: ["v-A"], movimientos: [] };
+  await saveJSONNow(STORAGE_KEYS.businessDeleted, businessDeleted);
   const name = { id: "name-A", uid: "A", boxId: "box-A", local: { id: "box-A", nombre: "Viaje", creadaEn: 1, updatedAt: 10 }, remoto: { id: "box-A", nombre: "Vacaciones", creadaEn: 1, updatedAt: 10 }, elegido: { id: "box-A", nombre: "Viaje", creadaEn: 1, updatedAt: 20 }, creadoEn: 20, estado: "pendiente" };
   const privateBoxes = { cajas: [name.local], movimientos: [], cajasBorradas: [], movimientosBorrados: [], revisionesNombre: [name] };
   await saveJSONNow(STORAGE_KEYS.cajasDinero, privateBoxes);
@@ -54,6 +56,7 @@ await scenario(`
   assert.equal(await prepareLocalAccount("B", "b@example.com"), false);
   assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [], "B nunca recibe gastos de A");
   assert.equal(await loadJSON(STORAGE_KEYS.personalReturnPending, null), null, "B nunca recibe la orden de devolución de A");
+  assert.equal(await loadJSON(STORAGE_KEYS.businessDeleted, null), null, "B no recibe marcas de Negocio de A");
   assert.equal(await loadJSON(STORAGE_KEYS.cajasDinero, null), null, "B nunca recibe los nombres de Cajas conservados de A");
   await seed("B", "b@example.com", 90);
   await archiveLocalAccount("B", "b@example.com");
@@ -61,6 +64,7 @@ await scenario(`
   assert.equal(await prepareLocalAccount("A", "a@example.com"), true);
   assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [{ id: 60, amount: 60 }], "A recupera también el último guardado pendiente");
   assert.deepEqual(await loadJSON(STORAGE_KEYS.personalReturnPending, null), pendingReturn, "A recupera su devolución interrumpida al volver a entrar");
+  assert.deepEqual(await loadJSON(STORAGE_KEYS.businessDeleted, null), businessDeleted, "A recupera sus marcas de Negocio sin reabrir borrados");
   assert.deepEqual(await loadJSON(STORAGE_KEYS.cajasDinero, null), privateBoxes, "A recupera los dos nombres y la elección pendiente al iniciar sesión de nuevo");
   assert.deepEqual(await loadJSON(STORAGE_KEYS.categoryCustom, {}), { photo: "foto-privada-A" });
   assert.deepEqual(JSON.parse(await AsyncStorage.getItem("@fino/credit-v1")), { cards: [{ id: "legacy-A" }] }, "el formato de migración antiguo también se conserva");
@@ -70,7 +74,7 @@ await scenario(`
     assert.ok(raw.startsWith("v2:"));
     assert.ok(!raw.includes("foto-privada"));
     const copy = JSON.parse(await decryptText(raw));
-    if (copy.version === 2 && copy.entries) assert.equal(copy.entries.length, new Set(ACCOUNT_STORAGE_KEYS).size, "inventario completo");
+    if (copy.version === 3 && copy.entries) assert.equal(copy.entries.length, new Set(ACCOUNT_STORAGE_KEYS).size, "inventario completo");
   }
   await deleteLocalAccountVault("B");
   assert.ok(!(await AsyncStorage.getAllKeys()).some(k => k.includes("localAccountVault:v1:B:")));
@@ -139,12 +143,26 @@ await scenario(`
   const manifest = JSON.parse(await decryptText(await AsyncStorage.getItem(manifestKey)));
   const snapshot = JSON.parse(await decryptText(await AsyncStorage.getItem(manifest.current)));
   snapshot.version = 1;
-  snapshot.entries = snapshot.entries.filter(([key]) => key !== STORAGE_KEYS.personalReturnPending);
+  snapshot.entries = snapshot.entries.filter(([key]) => key !== STORAGE_KEYS.personalReturnPending && key !== STORAGE_KEYS.businessDeleted);
   await AsyncStorage.setItem(manifest.current, await encryptText(JSON.stringify(snapshot)));
   await clearAccountData();
   await prepareLocalAccount("legacy", "legacy@example.com");
   assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [{ id: 123, amount: 123 }], "la copia antigua sigue abriendo al añadir la orden de devolución");
   assert.equal(await loadJSON(STORAGE_KEYS.personalReturnPending, null), null);
+`);
+await scenario(`
+  await seed("v2", "v2@example.com", 456);
+  await prepareLocalAccount("v2", "v2@example.com");
+  await archiveLocalAccount("v2", "v2@example.com");
+  const manifest = JSON.parse(await decryptText(await AsyncStorage.getItem("finzo:localAccountVault:v1:v2:manifest")));
+  const snapshot = JSON.parse(await decryptText(await AsyncStorage.getItem(manifest.current)));
+  snapshot.version = 2;
+  snapshot.entries = snapshot.entries.filter(([key]) => key !== STORAGE_KEYS.businessDeleted);
+  await AsyncStorage.setItem(manifest.current, await encryptText(JSON.stringify(snapshot)));
+  await clearAccountData();
+  await prepareLocalAccount("v2", "v2@example.com");
+  assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [{ id: 456, amount: 456 }], "copia v2 abre al añadir marcas de Negocio");
+  assert.equal(await loadJSON(STORAGE_KEYS.businessDeleted, null), null);
 `);
 await scenario(`
   setAccountStorageAvailable(true);

@@ -8,7 +8,7 @@ export function handlerOriginal(file, name, dependencies, sourceText = fs.readFi
   const source = ts.createSourceFile(file, sourceText, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
   let found;
   function visit(node) {
-    if (ts.isFunctionDeclaration(node) && node.name?.text === name) found ??= node;
+    if ((ts.isFunctionDeclaration(node) || ts.isFunctionExpression(node)) && node.name?.text === name) found ??= node;
     ts.forEachChild(node, visit);
   }
   visit(source);

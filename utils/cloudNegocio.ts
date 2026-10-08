@@ -23,6 +23,7 @@ import { db } from "@/utils/firebase";
 import type { DatosDelNegocio } from "@/utils/negocio";
 import { utf8ByteLength } from "@/utils/utf8";
 import { hasUnreadableLocalData } from "@/utils/storage";
+import { mergeBusinessData } from "@/utils/businessSync";
 
 /** Dónde vive el negocio de esta cuenta. */
 function documento(uid: string) {
@@ -35,15 +36,10 @@ export async function bajarNegocio(uid: string): Promise<DatosDelNegocio | null>
   const data = snap.data() as Partial<DatosDelNegocio>;
   // Cada lista con su valor de respaldo: un documento guardado por una versión anterior
   // puede no traerlas todas, y leer una lista que no está reventaría la pantalla.
-  return {
-    negocios: Array.isArray(data.negocios) ? data.negocios : [],
-    productos: Array.isArray(data.productos) ? data.productos : [],
-    ventas: Array.isArray(data.ventas) ? data.ventas : [],
-    movimientos: Array.isArray(data.movimientos) ? data.movimientos : [],
-  };
+  return mergeBusinessData(data, {});
 }
 
-export function subirNegocio(uid: string, datos: DatosDelNegocio): Promise<void> {
+export function subirNegocio(uid: string, datos: DatosDelNegocio, stillCurrent: () => boolean = () => true): Promise<DatosDelNegocio> {
   if (hasUnreadableLocalData()) return Promise.reject(new Error("datos-locales-ilegibles"));
   // Firestore RECHAZA cualquier campo con valor "undefined" y tira el guardado entero. La
   // venta tiene "movimientoId" opcional —vacío en toda la V1—, así que sin esta limpieza el
@@ -51,31 +47,20 @@ export function subirNegocio(uid: string, datos: DatosDelNegocio): Promise<void>
   // saveCloudData, y por el mismo motivo.
   const limpio = JSON.parse(JSON.stringify(datos)) as DatosDelNegocio;
   return runTransaction(db, async transaction => {
+    if (!stillCurrent()) throw new Error("negocio-session-changed");
     if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
     const ref = documento(uid);
     const snap = await transaction.get(ref);
+    if (!stillCurrent()) throw new Error("negocio-session-changed");
     const remoto = snap.exists() ? snap.data() as Partial<DatosDelNegocio> : {};
-    const fusionar = <T extends { id: string }>(local: T[], nube: unknown): T[] => {
-      const resultado = [...local];
-      const ids = new Set(local.map(item => item.id));
-      for (const item of Array.isArray(nube) ? nube as T[] : []) {
-        if (!item || typeof item.id !== "string" || ids.has(item.id)) continue;
-        ids.add(item.id);
-        resultado.push(item);
-      }
-      return resultado;
-    };
-    const siguiente: DatosDelNegocio = {
-      negocios: fusionar(limpio.negocios, remoto.negocios),
-      productos: fusionar(limpio.productos, remoto.productos),
-      ventas: fusionar(limpio.ventas, remoto.ventas),
-      movimientos: fusionar(limpio.movimientos, remoto.movimientos),
-    };
+    const siguiente = mergeBusinessData(limpio, remoto);
     if (utf8ByteLength(JSON.stringify(siguiente)) > 800_000) {
       throw new Error("negocio-demasiado-grande");
     }
     if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
+    if (!stillCurrent()) throw new Error("negocio-session-changed");
     transaction.set(ref, siguiente);
+    return siguiente;
   });
 }
 

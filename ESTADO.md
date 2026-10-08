@@ -1,5 +1,19 @@
 # Estado actual de Fino
 
+## FINO-43 — Negocio no revive borrados (07/10/2026)
+
+- Borrados/ediciones de las cuatro listas se conservan al fusionar nube,
+  guardado conjunto cifrado y copia local por cuenta. Archivos antiguos v1/v2
+  siguen legibles; nuevos archivos por cuenta v3. Reglas impiden retirar marcas
+  o bajar formato. No se añaden escuchas permanentes de Firebase.
+- La regresión de venta resucitada falló antes y pasa después. 148 pruebas
+  locales/8 auditores (147 en Git limpio) y 129 pruebas del servidor local Node 22
+  aprobadas. Guía y límites: `docs/PRUEBAS_NEGOCIO_BORRADOS.md`.
+- **Qué sigue:** revalidar los restantes IDs del índice de 61 hallazgos.
+  **Qué falta:** Android/dos dispositivos, reglas publicadas, políticas externas
+  y entrega coordinada. No hubo APK/AAB/OTA ni despliegue. Sentry apagado en
+  código preparado y apartado; tarjetas excluidas por decisión del propietario.
+
 ## FINO-55 — elemento eliminado con salida visible (07/10/2026)
 
 - Detalle, edición de movimiento, meta/aporte/edición, revisión de duplicados
@@ -11,9 +25,8 @@
 - Prueba roja antes/verde después ejecutando componentes/manejadores originales
   con dependencias sustituidas. TypeScript, ESLint sin avisos y batería de
   cierre de 146 pruebas locales/8 auditores aprobados (145 en Git limpio).
-- **Qué sigue:** FINO-43, Negocio en nube: una nueva prueba reproduce que una
-  venta borrada reaparece; está en preparación y aún no pasa ni se entrega.
-  **Qué falta:** corregir ese punto, restantes IDs, Android y publicación.
+- **Actualización:** FINO-43 corregido en la sección superior, no publicado.
+  **Qué sigue y falta:** restantes IDs, Android y publicación.
   Tarjetas y comprobación de Sentry excluidas según decisión del propietario.
 
 ## FINO-44/54 — importación editada y guardados únicos (07/10/2026)

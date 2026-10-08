@@ -213,6 +213,14 @@ formato, para no reemplazar una edición reciente con una copia antigua. Siguen
 siendo los datos financieros de la propia cuenta, sin nuevas categorías de
 datos, servicios o destinatarios; la nube de Cajas sigue limitada a Pro.
 
+Negocio añade versiones de edición y marcas técnicas de borrado para las cuatro
+listas. La nueva clave `finzo:businessDeleted` contiene únicamente IDs, cifrados
+en el teléfono y separados por cuenta; esos mismos IDs se incluyen en la copia
+Pro de `negocios/{uid}`. No añade servicios, destinatarios ni permisos Android.
+Se conservan hasta eliminar los datos de la cuenta para impedir que un cliente
+antiguo recupere filas borradas. Política interna/web preparadas, no publicadas.
+Coordinar reglas y actualización; guía: `docs/PRUEBAS_NEGOCIO_BORRADOS.md`.
+
 La revisión explícita de dos nombres distintos de Caja conserva ambas versiones,
 elección, UID/IDs, fecha y confirmación pendiente en `revisionesNombre`, solo
 en el contenedor local cifrado `cajasDinero`, incluido en la copia por cuenta.

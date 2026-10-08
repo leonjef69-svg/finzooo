@@ -310,9 +310,23 @@ service cloud.firestore {
     // condiciones que de verdad protegen —es tuyo, hay sesión y el correo está confirmado— se
     // quedan igual que arriba.
     match /negocios/{userId} {
+      function keepsBusinessDeletes() {
+        let old = resource.data.get('deleted', {});
+        let next = request.resource.data.get('deleted', {});
+        return next.get('negocios', []).hasAll(old.get('negocios', []))
+          && next.get('productos', []).hasAll(old.get('productos', []))
+          && next.get('ventas', []).hasAll(old.get('ventas', []))
+          && next.get('movimientos', []).hasAll(old.get('movimientos', []));
+      }
       allow read: if verified() && request.auth.uid == userId && premiumUser(userId);
-      allow create, update: if verified() && request.auth.uid == userId
-        && premiumUser(userId) && cloudCopyOpen(userId);
+      allow create: if verified() && request.auth.uid == userId
+        && premiumUser(userId) && cloudCopyOpen(userId)
+        && request.resource.data.get('syncFormat', 1) in [1, 2];
+      allow update: if verified() && request.auth.uid == userId
+        && premiumUser(userId) && cloudCopyOpen(userId)
+        && request.resource.data.get('syncFormat', 1) in [1, 2]
+        && request.resource.data.get('syncFormat', 1) >= resource.data.get('syncFormat', 1)
+        && keepsBusinessDeletes();
       allow delete: if verified() && request.auth.uid == userId;
     }
 

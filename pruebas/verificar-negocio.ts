@@ -237,13 +237,13 @@ console.log("\n--- EL NEGOCIO ESTA ENGANCHADO POR LOS CUATRO LADOS ---");
   const nubeNegocio = fs.readFileSync(path.join(RAIZ, "utils/cloudNegocio.ts"), "utf8");
 
   ok(/cargarNegocio\(\)/.test(ctx), "1. al arrancar se lee del celular");
-  ok(/guardarVentas\(datosNegocio\.ventas\)/.test(ctx), "2. al cambiar se guarda en el celular");
-  ok(/subirNegocio\(uid, datosNegocio\)/.test(ctx), "3. y se sube a la nube");
+  ok(/guardarDatosNegocio\(datosNegocio,/.test(ctx), "2. al cambiar se guardan listas y borrados juntos");
+  ok(/subirNegocio\(uid, datosNegocio,/.test(ctx), "3. y se sube con control de sesión");
   ok(/const negocioDeLaNube = await bajarNegocio\(userUid\)/.test(ctx), "4. Y SE BAJA al entrar desde otro celular");
   ok(!/export async function bajarNegocio[\s\S]*?catch[\s\S]*?return null/.test(nubeNegocio), "un fallo de red no se confunde con negocio vacío");
   // Bajar y no escribirlo en el celular seria peor que no bajarlo: la pantalla lo mostraria y
   // al reiniciar la app volveria a estar vacio.
-  ok(/guardarVentas\(negocioDeLaNube\.ventas\)/.test(ctx), "y lo bajado se escribe en el celular");
+  ok(/guardarDatosNegocio\(combined,/.test(ctx), "y lo bajado se une y escribe con sus borrados");
 
   // Cerrar sesión y borrar la cuenta pasan por la misma limpieza local. Así no se
   // mantienen dos listas distintas de datos que olvidar vaciar.
@@ -254,7 +254,7 @@ console.log("\n--- EL NEGOCIO ESTA ENGANCHADO POR LOS CUATRO LADOS ---");
   const inicioDelete = ctx.indexOf("async function deleteAccount(");
   const inicioInit = ctx.indexOf("useEffect(() => {\n    async function init()", inicioDelete);
   const borrarCuenta = ctx.slice(inicioDelete, inicioInit);
-  ok(/setDatosNegocio\(NEGOCIO_VACIO\)/.test(limpieza), "la limpieza común vacía el negocio en memoria");
+  ok(/setDatosNegocio\(NEGOCIO_VACIO, true\)/.test(limpieza), "la limpieza común vacía el negocio sin crear borrados de otra cuenta");
   ok(/await limpiarCuentaEnEsteDispositivo\(localUser\.uid\)/.test(logout), "cerrar sesión usa la limpieza común");
   ok(/await deleteUser\(user\);[\s\S]*?limpiarCuentaEnEsteDispositivo\(user\.uid\)/.test(borrarCuenta),
     "borrar la cuenta limpia el negocio local después de borrarla en la nube");
@@ -263,7 +263,7 @@ console.log("\n--- EL NEGOCIO ESTA ENGANCHADO POR LOS CUATRO LADOS ---");
   // documento de Firestore, no un campo de ese. Y sus dependencias tienen que incluir los
   // datos del negocio, o crear uno no dispararia ninguna subida y se quedaria solo en el
   // celular — el mismo fallo que tuvieron los favoritos.
-  const desdeLaSubida = ctx.slice(ctx.lastIndexOf("void subirNegocio(uid, datosNegocio)"));
+  const desdeLaSubida = ctx.slice(ctx.lastIndexOf("void subirNegocio(uid, datosNegocio,"));
   const deps = /\}, \[[\s\S]*?\]\);/.exec(desdeLaSubida)?.[0] ?? "";
   ok(deps.includes("datosNegocio"), "y crear o cambiar algo del negocio dispara la subida");
 }
@@ -511,11 +511,11 @@ console.log("\n--- EL PANEL: ENGANCHE, PANTALLA Y RUTA (paso 4) ---");
   // estado y NO en el celular. Al reiniciar la app, los gastos anotados desaparecian sin dar
   // ningun error. Es el mismo agujero que tuvieron las categorias propias.
   ok(
-    /guardarMovimientosNegocio\(datosNegocio\.movimientos\)/.test(ctx),
+    /guardarDatosNegocio\(datosNegocio,/.test(ctx),
     "los movimientos del negocio se guardan en el celular"
   );
   ok(
-    /guardarMovimientosNegocio\(negocioDeLaNube\.movimientos\)/.test(ctx),
+    /guardarDatosNegocio\(combined,/.test(ctx),
     "y lo que baja de la nube tambien se escribe"
   );
 
@@ -902,7 +902,7 @@ console.log("\n--- EL YAPEO QUE ENTRA AL NEGOCIO (paso 5) ---");
   ok(fusionarMovimientosNegocio(enMemoria, enMemoria) === enMemoria, "y si no hay nada nuevo devuelve la misma lista, sin repintar ni subir nada");
 
   const ctxFusion = fs.readFileSync(path.join(RAIZ, "contexts/AppDataContext.tsx"), "utf8");
-  ok(/fusionarMovimientosNegocio\(antes\.movimientos, cajaDelDisco\)/.test(ctxFusion), "y la app junta la caja del disco al recoger");
+  ok(/fusionarMovimientosNegocio\(antes\.movimientos, cajaDelDisco, antes\.deleted\?\.movimientos, antes\.deleted\?\.negocios\)/.test(ctxFusion), "la app junta la caja del disco sin recuperar borrados");
   // Y AL REPARTIR SE MIRAN LAS DOS: la de memoria y la que se acaba de leer del disco. El
   // estado no esta listo hasta el siguiente dibujo, asi que un yapeo que el trabajo de fondo
   // acabara de anotar volveria a entrar si solo se mirara el estado.

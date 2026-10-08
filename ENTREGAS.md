@@ -10,11 +10,19 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-43 preparado: borrados y ediciones de Negocio no retroceden por copias
+antiguas; lote local cifrado y archivo por cuenta v3 (v1/v2 siguen legibles).
+Reglas de formato/marcas probadas en Firestore local. 148 pruebas locales/8
+auditores (147 en Git limpio) y 129 pruebas de servidor local Node 22 aprobadas.
+Falta Android, dos dispositivos y coordinar app/reglas antes de distribuir.
+Política y ficha ajustadas a las marcas técnicas. Sin APK/AAB/OTA ni despliegue.
+Guía: `docs/PRUEBAS_NEGOCIO_BORRADOS.md`. Restantes IDs aún pendientes.
+
 FINO-55 preparado: elementos ausentes tienen mensaje/Volver; editar un movimiento
 o meta ausente no crea uno nuevo. Prueba con componentes originales aprobada,
 TypeScript/ESLint y 146 pruebas locales/8 auditores aprobados al cierre de este
-punto (145 en Git limpio). Falta Android físico. FINO-43 sigue en preparación;
-no está corregido. Sin APK/AAB/OTA.
+punto (145 en Git limpio). Falta Android físico. FINO-43 se preparó después,
+como indica el apartado superior. Sin APK/AAB/OTA.
 
 FINO-44/54 preparados: importación conserva ediciones al sincronizar, bloquea
 conflictos, IDs repetidos y fusiones con aportes enlazados; cuatro manejadores

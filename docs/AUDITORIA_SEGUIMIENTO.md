@@ -3,6 +3,22 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-43 — versiones y borrados del Negocio (07/10/2026)
+
+- Las cuatro listas incluyen versiones y borrados; guardado conjunto cifrado
+  incorpora captura de fondo sin resucitar filas. Copia por cuenta v3, lectura
+  compatible v1/v2. Nube transaccional retorna la copia conciliada y reglas
+  impiden que un cliente atrasado quite marcas o baje formato.
+- La regresión de nube original falló antes y pasa después. Acciones originales,
+  almacenamiento sobre SQLite, cambio de cuenta y reglas de Firestore local
+  comprobados. 148 pruebas locales/8 auditores (147 en Git limpio), 129 pruebas
+  del servidor local con Node 22 aprobadas. No se tocó producción.
+- Privacidad/ficha actualizadas por IDs y fechas técnicos; no nuevos servicios
+  ni permisos. Límites/migración/pruebas físicas en `PRUEBAS_NEGOCIO_BORRADOS.md`.
+- **Qué sigue:** contrastar restantes IDs del índice. **Qué falta:** Android,
+  dos dispositivos, consolas/políticas, coordinación de reglas/versión y entrega.
+  Sentry y tarjetas excluidos. No se declara terminada toda la auditoría.
+
 ## FINO-55 — rutas y ediciones con origen ausente (07/10/2026)
 
 - Se reemplazaron las pantallas vacías y la navegación durante el dibujo por
@@ -14,9 +30,8 @@ corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 - Prueba del código original roja antes/verde después. TypeScript, ESLint sin
   avisos y batería de 146 pruebas locales/8 auditores aprobados en el cierre
   del punto (145 en Git limpio). No se monta Android en esa prueba.
-- **Qué sigue:** FINO-43. Se añadió una comprobación en preparación que falla
-  porque `subirNegocio` revive ventas borradas; aún no forma parte de una
-  corrección entregada. **Qué falta:** ese arreglo, Android y resto de IDs.
+- **Actualización:** FINO-43 preparado en el apartado superior, no publicado.
+  **Qué sigue y falta:** Android y resto de IDs, consolas y entrega.
   Sentry y tarjetas excluidos según decisión del propietario.
 
 ## FINO-44/54 y decisión sobre Sentry (07/10/2026)

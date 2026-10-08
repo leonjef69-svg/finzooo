@@ -54,7 +54,7 @@ Las tarjetas de crédito permanecen excluidas por decisión del propietario.
 | FINO-40 | Eliminar la cuenta no hace la limpieza del teléfono que sí hace cerrar sesión | Limpieza y cierre preparados según seguimiento. Falta eliminación real con cuenta de prueba; tarjetas excluidas. |
 | FINO-41 | Los paneles nativos (campana, selector de mes, confirmaciones, hojas de espacios) quedan por encima del candado | Candado sobre paneles preparado; 276cf53. Falta guía Android. |
 | FINO-42 | Un enlace finzo://export-pdf puede generar y enviar a otra app o a la nube el reporte, sin pasar por el candado | Enlace de exportación restringido; 276cf53. Falta guía Android. |
-| FINO-43 | La copia en la nube del Modo Negocio no recuerda lo borrado: ventas, productos y negocios borrados reaparecen | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
+| FINO-43 | La copia en la nube del Modo Negocio no recuerda lo borrado: ventas, productos y negocios borrados reaparecen | Preparado: versiones/marcas, lote cifrado, copia por cuenta v3 compatible v1/v2 y reglas verificadas en Firestore local; regresión roja/verde. Guía PRUEBAS_NEGOCIO_BORRADOS.md. Falta Android/dos dispositivos y entrega coordinada con reglas. |
 | FINO-44 | Al importar fusionando con un movimiento existente no se marca la edición, y otro teléfono puede revertirla | Corregido con prueba del manejador original y fusión entre clientes: edición fechada, conflictos rechazados y lote sin duplicados. Falta recorrido Android/dos teléfonos. |
 | FINO-45 | Al exportar la Familia se usa la moneda del usuario y todos sus movimientos salen como 'Otros' | Corregido y probado con carga real de espacios: moneda Familia, categoría y notas conservadas. Falta abrir PDF/Excel/CSV reales en Android. |
 | FINO-46 | Al importar un archivo con una sola columna de monto, los abonos positivos se guardan como gastos | Signos al importar corregidos; bf321b4. Falta importación visual. |
@@ -81,6 +81,6 @@ por decisión explícita. Los trámites/cuentas externas deben acreditarse y las
 pruebas Android ejecutarse. La publicación es un paso separado que requiere
 coordinación/autorización; un commit en GitHub no actualiza la app instalada.
 
-**Qué sigue:** FINO-43/55 y los IDs marcados para revalidación. **Qué falta:** ese
+**Qué sigue:** los IDs marcados para revalidación. **Qué falta:** ese
 contraste completo, Android, consolas, trámites y entrega. Este archivo debe
 actualizarse al cerrar cada punto; no omitir los pendientes por ser de gravedad baja.

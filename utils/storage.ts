@@ -102,6 +102,7 @@ export const STORAGE_KEYS = {
   productos: "finzo:productos",
   ventas: "finzo:ventas",
   movimientosNegocio: "finzo:movimientosNegocio",
+  businessDeleted: "finzo:businessDeleted",
   // Cajas de dinero independientes. No reutilizan Modo Negocio: una caja puede
   // ser Casa, Viaje o Ana y solo contiene entradas y salidas propias.
   cajasDinero: "finzo:cajasDinero",
@@ -159,6 +160,7 @@ export const ACCOUNT_STORAGE_KEYS = [
         STORAGE_KEYS.productos,
         STORAGE_KEYS.ventas,
         STORAGE_KEYS.movimientosNegocio,
+        STORAGE_KEYS.businessDeleted,
         STORAGE_KEYS.cajasDinero,
         STORAGE_KEYS.plusHint,
         STORAGE_KEYS.homeNotificationSeen,
