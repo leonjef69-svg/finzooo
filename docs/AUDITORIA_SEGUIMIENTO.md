@@ -3,6 +3,25 @@
 Última revisión: 08/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-49 — denuncias parciales preparadas (08/10/2026)
+
+Responsable confirmó recepción/revisión. UI y servidor comprueban contenido,
+autor, pertenencia y cuenta; Gratis también denuncia. Reintento/doble toque,
+cupos concurrentes, privacidad y limpieza con barrera al eliminar comprobados.
+11 casos SDK/Admin/reglas locales Node 22 verdes; captura anterior a barrera
+roja, no un commit/APK anterior. Extractor TS corregido y regresión `d965d47`
+roja/verde. Guía `PRUEBAS_DENUNCIAS_CONTENIDO.md` separa evidencia de límites.
+No guarda con configuración ausente ni confirma correo recibido; SMTP/extensión
+no instalados, envío no habilitado, políticas/Play preparados no publicados.
+TypeScript/ESLint sin avisos; 165 pruebas/8 auditores y 83 unitarias del servidor
+aprobados; 80 comprobaciones SDK/reglas Firestore local aprobadas (incluyen las
+11 de denuncias). Una prueba local ajena no versionada se mantiene fuera del
+commit: 164 previstas en Git limpio, sin ejecutar otro checkout.
+**Qué sigue:** FINO-47 y resto de IDs. **Qué falta:** términos/bloqueo/moderación
+efectiva, proveedor/configuración/retención y prueba correo, Android/consolas/
+trámites/cobros y entrega autorizada. Tarjetas/Sentry externo excluidos.
+
+
 ## FINO-52 — generador y creación de manuales/metas (08/10/2026)
 
 - Salto nativo de 24 bits aun sobre máximo restaurado; entero seguro antes

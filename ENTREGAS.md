@@ -1,5 +1,18 @@
 # Entregas de Fino
 
+## Preparado, no entregado — FINO-49 parcial (08/10/2026)
+
+Denuncias de contenido en Familia/Cajas: cuenta/miembro/texto/autor verificados,
+sin cambiar saldos. Cola privada, cupo/reintento y limpieza con barrera al borrar
+cuenta. Sin proveedor SMTP/configuración no se guardan ni anuncian envíos.
+11 comprobaciones SDK/reglas locales aprobadas; guía
+`docs/PRUEBAS_DENUNCIAS_CONTENIDO.md`. Políticas/Play son borradores actualizados.
+No se instaló proveedor/extensión ni envió correo. **Qué sigue:** aceptación
+de términos/bloqueo y resto de auditoría. **Qué falta:** configurar/probar correo,
+Android, consolas/trámites/cobros y publicación coordinada autorizada.
+No APK/AAB/OTA/EAS/despliegue; Git no actualiza la app. Tarjetas/Sentry fuera.
+
+
 ## Preparado, no entregado — identidades de altas nuevas (08/10/2026)
 
 Generador con entropía aun sobre máximo común; UUID por alta nueva Personal/

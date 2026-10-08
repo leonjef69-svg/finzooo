@@ -19,6 +19,7 @@ const { finalizeLinkedSpaceDeletion } = require("./src/linked-space-cleanup");
 const { privateBoxMigration } = require("./src/private-box-migration");
 const { prepareIncompleteBoxDeletion } = require("./src/incomplete-box-cleanup");
 const { resolvePrivateBoxMoney, recoverPrivateBoxMoney, retirePrivateBoxMoney } = require("./src/private-box-money");
+const { submitContentReport, cleanupExpiredReports } = require("./src/content-reports");
 
 initializeApp();
 
@@ -39,6 +40,22 @@ function verifiedAccount(request, recent = false) {
 
 exports.getCloudAccess = onCall({ region: "southamerica-east1", maxInstances: 10 }, request =>
   getCloudAccess(getFirestore(), verifiedAccount(request)));
+
+exports.submitContentReport = onCall({ region: "southamerica-east1", maxInstances: 2 }, async request => {
+  const uid = verifiedAccount(request), account = await getAuth().getUser(uid);
+  if (account.disabled || !account.emailVerified) throw new HttpsError("unauthenticated", "Verifica tu cuenta.");
+  try { return await submitContentReport(getFirestore(), uid, request.data); }
+  catch (error) {
+    if (!error?.reason) throw error;
+    throw new HttpsError(error.reason === "report-limit" ? "resource-exhausted"
+      : error.reason === "report-permission" ? "permission-denied"
+        : error.reason === "report-invalid" ? "invalid-argument" : "failed-precondition",
+    "No se guardó la denuncia. No se cambió ningún movimiento ni saldo.", { reason: error.reason });
+  }
+});
+
+exports.cleanupExpiredContentReports = onSchedule({ schedule: "every 60 minutes", region: "southamerica-east1", maxInstances: 1 }, () =>
+  cleanupExpiredReports(getFirestore()));
 
 exports.resolvePrivateBoxMoney = onCall({ region: "southamerica-east1", maxInstances: 5, timeoutSeconds: 120 }, async request => {
   const uid = verifiedAccount(request);

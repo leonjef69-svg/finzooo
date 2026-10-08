@@ -28,6 +28,12 @@ rules_version = '2';
 // publicar este archivo otra vez en la consola.
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Avisos de moderación y cola SMTP: solo servidor/operador administrativo.
+    // Un celular no puede leer denuncias ni generar correos por SDK directo.
+    match /contentReports/{reportId} { allow read, write: if false; }
+    match /moderationMail/{mailId} { allow read, write: if false; }
+    match /reportRateLimits/{userId} { allow read, write: if false; }
+    match /privateSettings/{settingId} { allow read, write: if false; }
 
     function verified() {
       return request.auth != null && request.auth.token.email_verified == true;

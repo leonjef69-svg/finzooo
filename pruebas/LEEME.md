@@ -1,5 +1,15 @@
 # Pruebas y auditores
 
+FINO-49: `verificar-denuncia-contenido-real.mjs` ejecuta cliente/tarea por sesión
+y manejador originales con IO adaptado; ACK, doble toque, reintento y desmontaje.
+UI estática, no SMTP ni Android. `functions/emulator-tests/content-reports.test.js`
+se ejecuta aparte con SDK/Admin/reglas locales, Node 22; 11 comprobaciones.
+Captura local anterior a barrera de cuenta roja/actual verde, no APK histórico;
+guía `docs/PRUEBAS_DENUNCIAS_CONTENIDO.md`. Términos/bloqueo/envío real pendientes.
+Extractor `.ts` corregido: `verificar-extractor-ts-original.mjs`, regresión
+`FINO_TEST_HANDLER_PARSER_BASELINE=d965d47` roja; compila genéricos TS reales.
+
+
 FINO-52 altas nuevas: `verificar-identidad-creacion-real.mjs` ejecuta generador,
 fusión y manejadores originales con IO adaptado: máximo común, 100.000 altas,
 colisión numérica forzada con UUID distinto, edición, entropía/espacio agotado.

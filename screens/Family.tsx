@@ -8,6 +8,7 @@ import SpaceTransferAmounts from "@/components/SpaceTransferAmounts";
 import SpaceMovementSheet from "@/components/SpaceMovementSheet";
 import SpaceInvitationSheet from "@/components/SpaceInvitationSheet";
 import SpaceMembersSheet from "@/components/SpaceMembersSheet";
+import ContentReportButton from "@/components/ContentReportButton";
 import { validSpaceDate } from "@/components/SpaceMovementFields";
 import { useAppData } from "@/contexts/AppDataContext";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
@@ -636,9 +637,12 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
           const retorno = isLinkedSpaceReturn(item);
           const idsDeFila = movementIdsForCompactRow({ key, item, transferGroup }, visibles);
           const filaSeleccionada = idsDeFila.length > 0 && idsDeFila.every(id => seleccionados.includes(id));
-          return <TouchableOpacity key={key} disabled={!seleccionando} onPress={() => setSeleccionados(prev => filaSeleccionada ? prev.filter(id => !idsDeFila.includes(id)) : [...new Set([...prev, ...idsDeFila])])} className={`mb-2 flex-row items-center rounded-2xl border-[1.5px] p-3 dark:border-noche-borde ${filaSeleccionada ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200"}`}>
+          return <TouchableOpacity key={key} disabled={!seleccionando} accessible={seleccionando} accessibilityRole={seleccionando ? "checkbox" : undefined} accessibilityState={{ checked: filaSeleccionada, disabled: !seleccionando }} onPress={() => setSeleccionados(prev => filaSeleccionada ? prev.filter(id => !idsDeFila.includes(id)) : [...new Set([...prev, ...idsDeFila])])} className={`mb-2 flex-row items-center rounded-2xl border-[1.5px] p-3 dark:border-noche-borde ${filaSeleccionada ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200"}`}>
             <View className={`h-9 w-9 items-center justify-center rounded-xl ${transferencia ? "bg-blue-100 dark:bg-blue-950" : item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{transferencia ? <ArrowRightLeft size={17} color="#2563eb" /> : item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
             {transferencia ? <View className="ml-3 flex-1"><SpaceTransferAmounts title={familia.nombre} sentLabel={t("boxes.receivedFromPersonal")} returnedLabel={t("boxes.returnedToPersonal")} sent={transferGroup?.sent ?? (retorno ? 0 : item.monto)} returned={transferGroup?.returned ?? (retorno ? item.monto : 0)} format={fmtFamilia} /></View> : <><View className="ml-3 flex-1"><Text numberOfLines={1} className="text-[15px] font-bold text-slate-800 dark:text-slate-100">{item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-1 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmtFamilia(item.monto)}</Text></>}
+            {!seleccionando ? <ContentReportButton key={`${familia.id}:${item.id}`} target={transferencia
+              ? { kind: "family", spaceId: familia.id, targetType: "space", targetId: familia.id, expectedText: familia.nombre.slice(0, 120), expectedUid: familia.ownerUid }
+              : { kind: "family", spaceId: familia.id, targetType: "movement", targetId: item.id, expectedText: item.descripcion.slice(0, 120), expectedUid: item.creadoPor }} /> : null}
             {seleccionando ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${filaSeleccionada ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : null}
           </TouchableOpacity>;
         })}
@@ -646,6 +650,6 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       </>}
     </ScrollView>
     <SpaceInvitationSheet code={invitacion} visible={Boolean(invitacion)} onClose={() => setInvitacion("")} />
-    {familia ? <SpaceMembersSheet familyName={familia.nombre} members={miembros} visible={verMiembros} canManage={owner} onRemove={quitarMiembro} onClose={() => setVerMiembros(false)} /> : null}
+    {familia ? <SpaceMembersSheet familyName={familia.nombre} members={miembros} visible={verMiembros} canManage={owner} onRemove={quitarMiembro} onClose={() => setVerMiembros(false)} reportSpace={{ kind: "family", spaceId: familia.id, ownerUid: familia.ownerUid }} /> : null}
   </View>;
 }

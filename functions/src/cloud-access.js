@@ -56,6 +56,8 @@ async function deletePersonalCloudCopy(db, uid) {
 /** El evento de Auth retira también permisos que un token antiguo conserve. */
 async function cleanupDeletedCloudAccount(db, uid) {
   await deletePersonalCloudCopy(db, uid);
+  // Retirar también avisos/cola de correo de este usuario o sobre él.
+  await require("./content-reports").cleanupReportsForAccount(db, uid);
   // Comprobar ANTES de retirar recibos: un destino inconsistente pero ya
   // publicado no puede pasar como clon por haber borrado primero su prueba.
   await prepareIncompleteBoxDeletion(db, uid, "deleted");

@@ -132,6 +132,33 @@ pero es diseño y se puede dejar para después: primero publicar.
 
 ## Formulario de seguridad de los datos
 
+### FINO-49 — denuncias preparadas, aún no activadas (08/10/2026)
+
+Responsable y destinatario confirmados por el propietario: dinero123xc@gmail.com.
+La función prepara en Firebase `contentReports`, `moderationMail` y un contador
+privado `reportRateLimits`; solo el servidor puede acceder. Incluye UID del
+denunciante/autor, IDs del espacio/elemento, texto señalado (120 caracteres),
+motivo, aclaración voluntaria (500), fecha, huella/ID de reintento y autorización
+de procesamiento/versionado de política. No adjunta automáticamente montos,
+notas, fotos ni todo el historial, aunque el texto voluntario podría contener
+datos personales o financieros: no afirmar que la denuncia nunca los contiene.
+Revisar «Otro contenido generado por usuarios», IDs, finalidad de seguridad/
+prevención de abuso y las categorías realmente transmitidas antes de activar.
+
+Limpieza programada desde 30 días, acotada y reintentable (no garantía de fecha
+exacta); borrado Auth limpia avisos enviados por/sobre esa cuenta. Queda una
+barrera de UID/fecha hasta 30 días contra solicitudes atrasadas; el contador
+normal conserva solo día/cupo vigente hasta el borrado de cuenta. El borrado
+de Firestore no retira correos ya recibidos ni copias del proveedor.
+
+Sin configuración privada comprobada, la función rechaza la denuncia y explica
+que soporte aún no está disponible. No se instaló extensión ni proveedor SMTP,
+no se enviaron correos y no se conectó una cuenta real. Antes de activarla,
+definir proveedor, conservación, accesos y procedimiento manual de atención;
+actualizar políticas publicadas y consola. Un acuse de guardado NO confirma
+correo entregado ni denuncia resuelta. Guía: `docs/PRUEBAS_DENUNCIAS_CONTENIDO.md`.
+La aceptación de Términos/bloqueo y moderación efectiva siguen pendientes.
+
 En los espacios compartidos de Familia y Cajas, el nombre de miembro y los
 movimientos ingresados en ese espacio se muestran a los participantes autorizados.
 Los datos personales fuera del espacio no se muestran a los invitados. La política
@@ -469,13 +496,17 @@ promesa de guardado al minuto. Guía: `docs/PRUEBAS_HORARIO_EXPORTACION.md`.
 
 ## Clasificación de contenido
 
-Es un cuestionario. Con una app de finanzas sin contenido sensible, todo va en **No**:
-violencia, sexo, drogas, lenguaje, apuestas, contenido de usuarios, compartir ubicación.
+No marcar todo «No» automáticamente: Familia/Cajas permiten nombres y textos
+compartidos entre miembros, que son contenido generado por usuarios aunque
+solo se vean por invitación. Responder según las preguntas reales y las
+funciones de la versión a publicar; no inferir una clasificación «apto para
+todos» desde el código. Las compras tampoco existen aún en la versión preparada.
+Antes de declarar que hay compras, verificar integración y producto reales.
 
-**La única que sí:** *"¿La app permite comprar bienes o servicios digitales?"* → **Sí**
-(la suscripción Premium).
-
-Resultado esperado: **apto para todos**.
+La política requiere términos previos, reglas de contenido y moderación efectiva;
+tener un botón de denuncia por sí solo no acredita cumplimiento. Revisar bloqueo
+según interacción/visibilidad y respetar registros y saldos financieros.
+[Política oficial de contenido generado por usuarios](https://support.google.com/googleplay/android-developer/answer/9876937?hl=es-419).
 
 ---
 

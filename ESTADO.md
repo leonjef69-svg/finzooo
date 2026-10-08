@@ -1,5 +1,31 @@
 # Estado actual de Fino
 
+## FINO-49 — denuncias preparadas, envío aún pendiente (08/10/2026)
+
+- Propietario confirmó que recibirá/revisará avisos de contenido inapropiado.
+  Bandera/ficha en Familia y Cajas compartidas, con texto/motivo/aclaración;
+  permiso Gratis, cuenta verificada y pertenencia comprobados en servidor.
+- Texto/autor obsoleto rechazados; reintento del mismo ID no repite correo/cupo.
+  Colecciones privadas sin permisos SDK; máscaras evitan leer dinero/historial.
+  Denunciar no modifica movimientos ni saldos. Acuse NO confirma recepción.
+- Configuración ausente falla sin guardar: proveedor SMTP/extensión todavía no
+  instalados. No se enviaron correos ni se habilitó soporte en producción.
+  Limpieza programada desde 30 días; borrado de cuenta cierra primero el cupo
+  para bloquear solicitudes atrasadas. Correos ya recibidos requieren otra gestión.
+- 11 comprobaciones SDK/Admin/reglas Firestore locales Node 22 aprobadas;
+  captura previa a barrera roja, actual verde. Manejadores/tarea de sesión
+  originales con IO adaptado y extractor TS con regresión Git roja/verde.
+  Guía `docs/PRUEBAS_DENUNCIAS_CONTENIDO.md` detalla límites, no Android/SMTP.
+- Políticas internas/HTML/Play preparadas, no publicadas; CGU no equivale a
+  declarar todo No. FINO-49 parcial: faltan términos/bloqueo/atención efectiva.
+- TypeScript/ESLint sin avisos; 165 pruebas/8 auditores, 83 unitarias de servidor
+  y 80 comprobaciones SDK/reglas locales aprobados. Incluye una prueba local
+  ajena no versionada: 164 previstas en Git limpio, no otro checkout ejecutado.
+- **Qué sigue:** aceptación FINO-47 y restantes 15/16/34/37/49/50/52.
+  **Qué falta:** configuración privada de correo, Android/dos cuentas,
+  consolas/trámites/cobros y publicación autorizada. Tarjetas/Sentry fuera.
+
+
 ## FINO-52 — generador y origen de altas nuevas (08/10/2026)
 
 - Máximo restaurado común ya no fuerza `máximo + 1`: salto nativo de 24 bits

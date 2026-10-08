@@ -4,6 +4,8 @@ import { UserMinus, UsersRound, X } from "lucide-react-native";
 import { Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import Modal from "@/components/PrivateModal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import ContentReportButton from "@/components/ContentReportButton";
+import type { ReportTarget } from "@/utils/contentReports";
 
 export default function SpaceMembersSheet({
   familyName,
@@ -12,6 +14,7 @@ export default function SpaceMembersSheet({
   canManage = false,
   onRemove,
   onClose,
+  reportSpace,
 }: {
   familyName: string;
   members: MiembroFamilia[];
@@ -19,6 +22,7 @@ export default function SpaceMembersSheet({
   canManage?: boolean;
   onRemove?: (member: MiembroFamilia) => void;
   onClose: () => void;
+  reportSpace?: Pick<ReportTarget, "kind" | "spaceId"> & { ownerUid: string };
 }) {
   const { t } = useAppData();
   const insets = useSafeAreaInsets();
@@ -56,6 +60,7 @@ export default function SpaceMembersSheet({
                 {familyName}
               </Text>
             </View>
+            {reportSpace ? <ContentReportButton key={reportSpace.spaceId} target={{ kind: reportSpace.kind, spaceId: reportSpace.spaceId, targetType: "space", targetId: reportSpace.spaceId, expectedText: familyName.slice(0, 120), expectedUid: reportSpace.ownerUid }} /> : null}
             <View className="mr-2 flex-row items-center gap-1 rounded-full bg-emerald-50 px-3 py-1.5 dark:bg-emerald-950">
               <UsersRound size={15} color="#059669" />
               <Text className="text-sm font-extrabold text-emerald-700 dark:text-emerald-300">
@@ -88,6 +93,7 @@ export default function SpaceMembersSheet({
                     {member.rol === "owner" ? t("common.administrator") : t("family.member")}
                   </Text>
                 </View>
+                {reportSpace ? <ContentReportButton key={`${reportSpace.spaceId}:${member.uid}`} target={{ kind: reportSpace.kind, spaceId: reportSpace.spaceId, targetType: "member", targetId: member.uid, expectedText: member.nombre.slice(0, 120), expectedUid: member.uid }} /> : null}
                 {canManage && member.rol !== "owner" && onRemove ? (
                   <TouchableOpacity
                     accessibilityRole="button"

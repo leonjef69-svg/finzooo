@@ -15,7 +15,8 @@ const entitlement = ownModule("functions/src/premium-entitlement.js");
 assert.equal(entitlement.premium({ isPremium: false }, Date.now(), { active: true }), false,
   "el servidor no concede tester si falta la fecha, igual que las reglas");
 const backend = ownModule("functions/src/cloud-access.js", name => name === "./premium-entitlement" ? entitlement
-  : name === "./incomplete-box-cleanup" ? requireProject("./src/incomplete-box-cleanup") : requireProject(name));
+  : name === "./incomplete-box-cleanup" ? requireProject("./src/incomplete-box-cleanup")
+    : name === "./content-reports" ? ownModule("functions/src/content-reports.js") : requireProject(name));
 function fakeFirestore(initial) {
   const documents = new Map(Object.entries(initial));
   const writes = [];
@@ -31,6 +32,7 @@ function fakeFirestore(initial) {
   }
   function doc(path) {
     return { path, id: path.split("/").at(-1), get: async () => ({ exists: documents.has(path), data: () => documents.get(path) }),
+      set: async (value, options) => { writes.push(["set", path]); documents.set(path, { ...(options?.merge ? documents.get(path) : {}), ...value }); },
       delete: async () => { writes.push(["delete", path]); documents.delete(path); },
       collection: name => query(`${path}/${name}`) };
   }
@@ -100,6 +102,8 @@ await backend.cleanupDeletedCloudAccount(db, "alice");
 for (const path of ["cajas/alice", "negocios/alice", "premiumTrialClaims/alice", "privateBoxMigrations/alice/attempts/attempt-0001",
   "boxSpaces/alice_cancelled", "boxSpaces/alice_cancelled/members/alice", "boxSpaces/alice_cancelled/movements/clon"]) assert.equal(db.documents.has(path), false, path);
 assert.equal(db.documents.has("boxSpaces/bob_cancelled"), true); assert.equal(db.documents.has("boxSpaces/alice_active"), true);
+if (apiExistsInSource("submitContentReport")) assert.equal(db.documents.get("reportRateLimits/alice").closed, true, "la limpieza mantiene una barrera temporal contra denuncias atrasadas");
+function apiExistsInSource(name) { return read("functions/index.js").includes(`exports.${name} =`); }
 
 // Ejecuta las envolturas onCall reales aislando exclusivamente los SDK.
 class HttpsError extends Error { constructor(code, message) { super(message); this.code = code; } }
@@ -141,6 +145,11 @@ assert.throws(() => api.deletePersonalCloudCopy({ auth: { ...verified, token: { 
 authExists = false;
 await assert.rejects(api.activatePremiumTrial({ auth: verified, data: { hasLocalSetup: true } }), error => error.code === "auth/user-not-found",
   "un token anterior no recrea una cuenta ya borrada de Auth");
+if (api.submitContentReport) {
+  assert.equal(api.submitContentReport.options.maxInstances, 2);
+  await assert.rejects(api.submitContentReport({ auth: undefined, data: {} }), error => error.code === "unauthenticated");
+  await assert.rejects(api.submitContentReport({ auth: verified, data: {} }), error => error.code === "auth/user-not-found", "no denunciar con token de una cuenta eliminada");
+}
 await api.cleanupDeletedCloudAccount({ uid: "bob" });
 assert.equal(db.documents.has("users/bob"), false, "el evento de Auth completa la limpieza por UID");
 

@@ -32,6 +32,7 @@ Esta Política de Privacidad explica qué información recoge Fino, para qué la
 - Datos de tu cuenta: tu nombre y tu correo electrónico, cuando te registras. Si eliges una foto de perfil, esa foto.
 - Lo que tú anotas: tus movimientos (ingresos y gastos), presupuestos, metas de ahorro y, si usas el Modo Negocio, tus negocios, productos, ventas y movimientos del negocio. Fino no se conecta a ningún banco ni tarjeta.
 - Si usas Familia o Cajas compartidas: el nombre con el que participas, los movimientos del espacio y su método de pago. Solo sus miembros autorizados pueden verlos.
+- Si decides denunciar contenido compartido y el servicio está habilitado, enviamos a soporte el texto señalado (hasta 120 caracteres), el motivo, tu explicación voluntaria (hasta 500), identificadores de tu cuenta, del autor, del espacio y del elemento, fecha y tu autorización para tramitarla. No adjuntamos automáticamente montos, fotos, notas, presupuestos ni el historial; no escribas contraseñas ni datos innecesarios. Esta función está preparada; su envío al correo aún no está configurado.
 - Contactos de envío que tú guardas: los nombres, correos y números de teléfono a los que decidas mandar tus reportes. Los escribes tú; Fino no lee la agenda de tu celular.
 - Fotos que tú eliges: las imágenes que pongas a tus categorías propias, y las fotos de boletas si usas el escáner.
 - Lo que dices al micrófono mientras usas el dictado, hasta que la escucha se detiene o sales de la pantalla, para entender la orden.
@@ -49,6 +50,7 @@ Esta es la parte más delicada y por eso va aparte.
 - Puedes apagarlo cuando quieras desde Ajustes, y borrar ese registro con un botón.
 
 3. Cómo se guarda tu información
+- Las denuncias habilitadas se guardan de forma privada en Firebase y se preparan para revisión por el responsable de Fino en ${LEGAL_CONTACT_EMAIL}. Guardar una denuncia no confirma que el correo haya llegado ni que esté resuelta; no borra movimientos ni cambia saldos. Se programa la limpieza de la denuncia y de su copia técnica de correo desde los 30 días; puede retrasarse por errores o acumulación. Al eliminar la cuenta se retiran esas copias técnicas enviadas por ella o sobre ella. Un contador privado limita denuncias aceptadas a tres por día UTC; tras borrar la cuenta queda una barrera técnica hasta 30 días para impedir solicitudes atrasadas. La limpieza de Firebase no retira correos ya recibidos: para su eliminación contacta a soporte. La configuración del proveedor y su conservación deben verificarse antes de activar el servicio.
 - Los movimientos personales y metas nuevos conservan un identificador técnico de creación para no confundir dos registros con el mismo número. No identifica tu teléfono ni registra otra persona. Se guarda con el movimiento o meta, cifrado en el celular y, con Pro, en su copia; sigue la conservación y eliminación de esos registros. El respaldo añade una marca de compatibilidad para impedir que una versión antigua retire esas identidades. Esta protección está preparada, no publicada.
 - En tu celular, la información principal de tu cuenta se guarda cifrada. La versión preparada cifra también el buzón temporal de Yape y sus marcas para evitar duplicados con una clave local de Android Keystore. Conserva hasta 200 avisos pendientes y hasta 200 en un lote reclamado, que se retira después de confirmar el guardado; conserva hasta 300 marcas contra duplicados. El buzón no se envía a Firebase ni se incluye en copias de seguridad del sistema. Al actualizar se cifran los lotes antiguos sin cambiar sus montos; si no pueden leerse, no se reemplazan por vacíos. Requiere instalar la nueva versión Android; una actualización por internet no añade este cifrado a un APK antiguo.
 - Fino guarda cifrado en el celular cuáles avisos ya revisaste, solo para controlar el indicador de la campana. Ese estado no se envía a la nube.
@@ -70,6 +72,7 @@ Esta es la parte más delicada y por eso va aparte.
 4. Con quién compartimos tu información
 ${PARRAFO_ANUNCIOS}
 - Usamos Firebase (Google) para la cuenta y la copia segura. El envío de diagnósticos a Sentry está desactivado en esta versión preparada.
+- Si eliges denunciar y el servicio está habilitado, el responsable de Fino recibe los datos de esa denuncia para revisarla. El envío automático necesita un proveedor de correo, todavía no configurado: antes de activarlo se informará el proveedor y su tratamiento de datos. No se envía tu historial completo a soporte.
 - Si TÚ conectas Google Drive, Dropbox o eliges una carpeta de tu celular, se suben ahí los archivos de reporte que tú pidas, y nada más. Fino solo puede entrar a su propia carpeta.
 - Si TÚ eliges enviar un reporte por correo o WhatsApp, ese archivo va a quien tú indiques, a través de la aplicación que elijas.
 - Si TÚ conectas Telegram, Telegram recibe los mensajes que escribes y las confirmaciones que Fino te responde. La conexión es opcional y puedes desconectarla desde Ajustes.
@@ -96,6 +99,7 @@ Fino es una herramienta personal para organizar tus ingresos, gastos, presupuest
 
 2. Tu responsabilidad
 Tú eres responsable de la exactitud de la información que ingresas. Fino únicamente organiza y calcula en base a lo que tú escribes.
+En Familia y Cajas compartidas no se permiten insultos, acoso, amenazas, contenido sexual inapropiado, discriminación ni difusión de información personal de otra persona sin permiso. Usa solo información necesaria para organizar el espacio. Puedes señalar contenido a soporte en ${LEGAL_CONTACT_EMAIL}; la denuncia dentro de la app está preparada, pendiente de habilitación y comprobación del correo. Denunciar no borra registros financieros ni cambia el saldo. Estas reglas no sustituyen una aceptación explícita, un sistema de bloqueo ni la revisión efectiva por soporte, todavía pendientes de completar.
 
 3. Cuentas
 Debes dar información verdadera al crear tu cuenta (nombre y correo real) para poder verificarla y para que puedas recuperar tus datos si cambias de celular.
