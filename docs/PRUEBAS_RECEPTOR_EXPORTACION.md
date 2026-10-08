@@ -71,10 +71,10 @@ código anterior; no modifica el código actual ni la configuración instalada.
   cambios de plan y sin red; la alarma debe reponerse sin generar un archivo
   por reiniciar, y la cancelada no reactivarse. Probar también actualización
   sobre una instalación anterior con una alarma pendiente.
-- FINO-09 sigue pendiente: exactitud prometida sin acceso de alarmas exactas.
-  El catch de `setAlarmClock` cae a una alarma inexacta; no garantiza hora ni
-  éxito del servicio en todos los fabricantes. Revisar mensajes/comportamiento
-  con Android 12+ y restricciones de batería antes de entregar.
+- FINO-09 preparado posteriormente: ficha advierte retrasos, consulta acceso
+  exacto y conserva fallback aproximado; ver `PRUEBAS_HORARIO_EXPORTACION.md`.
+  No garantiza hora ni éxito del servicio en todos los fabricantes. Sigue
+  por probar Android 12+ y restricciones de batería antes de entregar.
 - Restantes IDs, consola/políticas, firma release y publicación siguen pendientes.
   No se declara terminada la auditoría ni corregida la app ya instalada.
 

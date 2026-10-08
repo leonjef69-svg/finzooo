@@ -10,6 +10,15 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-09 preparado: horario previsto, textos compactos de retrasos y consulta
+de acceso exacto antes de programar en Android 12+. Política Kotlin JVM y
+Gradle debug/SDK real aprobados. No agrega permiso/retención ni cambia planes.
+Kotlin requiere nueva instalación acumulada, no solo OTA. Falta servicio/alarmas
+físicos, firma release y publicación; sin APK/AAB/EAS. Guía:
+`docs/PRUEBAS_HORARIO_EXPORTACION.md`. Sigue FINO-22.
+TypeScript/ESLint sin avisos y 150 pruebas locales/8 auditores aprobados
+(149 en Git limpio). No se revisó una configuración publicada ni se entregó app.
+
 FINO-21 preparado, requiere nueva instalación: exportación privada y receptor
 aparte para arranque protegido. Kotlin JVM original y Gradle debug/SDK real
 aprobados; manifiesto recién generado verificado. Release pendiente por firma;

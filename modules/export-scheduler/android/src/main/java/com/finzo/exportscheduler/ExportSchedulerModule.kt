@@ -5,6 +5,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.SharedPreferences
+import android.os.Build
 import expo.modules.kotlin.Promise
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
@@ -14,30 +15,13 @@ import expo.modules.kotlin.modules.ModuleDefinition
  *
  * POR QUE UN DESPERTADOR Y NO UN TRABAJO PERIODICO
  *
- * Los trabajos periodicos de Android (WorkManager) no permiten una hora
- * concreta: garantizan "una vez cada 24 horas", que puede caer a cualquier
- * hora. Para "todos los dias a las 19:26" hace falta un despertador.
+ * La app calcula el proximo dia/hora y aqui programa una alarma individual.
+ * Un trabajo periodico tampoco garantiza la hora exacta ni un intervalo puntual.
  *
- * POR QUE setAlarmClock Y NO LOS OTROS DOS
- *
- * Es el unico que da hora exacta SIN pedir permisos, y ademas Android lo
- * respeta con el telefono dormido. Los otros dos que parecian obvios fallaron:
- *
- *   setAndAllowWhileIdle — se uso primero y fue un error. Es INEXACTO: Android
- *     agrupa esos avisos y puede retrasarlos diez minutos o mas. El usuario
- *     probo poniendo la hora un minuto adelante y no sono; con este despertador
- *     era casi imposible que sonara puntual. Para un reporte diario el desvio
- *     no importaria, pero para PROBARLO importa muchisimo, y una funcion que no
- *     se puede probar no se puede creer.
- *
- *   setExactAndAllowWhileIdle — clava el minuto, pero desde Android 12 exige el
- *     permiso SCHEDULE_EXACT_ALARM, que Google solo aprueba para alarmas y
- *     calendarios. Pedirlo para una app de gastos es de las cosas por las que
- *     rechazan una app en la tienda.
- *
- * LO QUE SE PAGA: Android trata esto como una alarma de reloj, asi que puede
- * ensenar el iconito de alarma en la barra de arriba con la proxima hora. Es
- * visible y hay que avisarlo; a cambio, el reporte llega cuando dice que llega.
+ * PUNTUALIDAD: setAlarmClock tambien exige acceso a alarmas exactas desde
+ * Android 12. No se pide un permiso nuevo: se consulta el acceso existente y,
+ * sin el, se usa setAndAllowWhileIdle. Android puede retrasar esa alarma.
+ * Probar el guardado inmediato no acredita la puntualidad del horario.
  */
 class ExportSchedulerModule : Module() {
 
@@ -124,13 +108,11 @@ class ExportSchedulerModule : Module() {
 
     private fun poner(context: Context, cuando: Long) {
       val gestor = alarmas(context)
-      try {
-        gestor.setAlarmClock(AlarmManager.AlarmClockInfo(cuando, aviso(context)), aviso(context))
-      } catch (e: SecurityException) {
-        // Algun fabricante podria negarlo. Antes que quedarse sin nada, se cae
-        // al inexacto: llega tarde, pero llega.
-        gestor.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cuando, aviso(context))
-      }
+      val exactaPermitida = Build.VERSION.SDK_INT < Build.VERSION_CODES.S || gestor.canScheduleExactAlarms()
+      ExportAlarmPolicy.programar(exactaPermitida,
+        exacta = { gestor.setAlarmClock(AlarmManager.AlarmClockInfo(cuando, aviso(context)), aviso(context)) },
+        aproximada = { gestor.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, cuando, aviso(context)) }
+      )
     }
 
     /**

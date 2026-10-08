@@ -3,6 +3,22 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-09 — puntualidad y acceso exacto (07/10/2026)
+
+- Confirmada promesa falsa en ficha/notas y comentario/test de setAlarmClock.
+  Catálogo real de tres idiomas ahora advierte retrasos y distingue intento
+  previsto de archivo completado. No se agrega otra tarjeta ni un permiso.
+- Guard de SDK/acceso conectado a `ExportAlarmPolicy`; callback exacto/fallback
+  y revocación ejecutados con Kotlin original en JVM. No es AlarmManager real.
+  Regresión del catálogo contra `24f5757` roja y actual verde.
+- Gradle debug/SDK real aprobó Kotlin/manifiesto; sin APK/AAB/EAS ni despliegue.
+- TypeScript/ESLint sin avisos y 150 pruebas locales/8 auditores aprobados
+  (149 en Git limpio). La JVM/Kotlin y Gradle no acreditan el recorrido físico.
+- **Qué sigue:** FINO-22. **Qué falta:** restantes IDs, recorrido físico de
+  alarmas/servicio/red, nueva instalación nativa acumulada, firma release y
+  publicación autorizada. Sentry/tarjetas excluidos. Guía:
+  `PRUEBAS_HORARIO_EXPORTACION.md`.
+
 ## FINO-21 — barrera Android y dos entradas separadas (07/10/2026)
 
 - Se conserva la identidad del PendingIntent, pero su receptor ahora es privado.

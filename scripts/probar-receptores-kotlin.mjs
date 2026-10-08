@@ -29,7 +29,7 @@ const baseline = process.env.FINO_TEST_RECEIVER_KOTLIN_BASELINE;
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw new Error("La regresion exige un hash Git.");
 const source = name => {
   const file = `${base}/${name}.kt`;
-  if (!baseline || name === "FinzoBootReceiver") return path.join(root, file);
+  if (!baseline || name !== "FinzoExportReceiver") return path.join(root, file);
   // Fuente anterior como artefacto de regresion, no edicion del proyecto.
   const target = path.join(temp, `${name}.kt`);
   fs.writeFileSync(target, execFileSync("git", ["show", `${baseline}:${file}`], { cwd: root }));
@@ -41,6 +41,7 @@ const run = args => {
   if (result.status !== 0) throw new Error(`Comprobacion Kotlin fallo (${result.status}). Artefactos en ${temp}`);
 };
 run(["-cp", compiler.join(path.delimiter), "org.jetbrains.kotlin.cli.jvm.K2JVMCompiler", "-no-stdlib", "-no-reflect",
-  "-classpath", stdlib, "-d", path.join(temp, "classes"), source("FinzoExportReceiver"), source("FinzoBootReceiver"),
+  "-classpath", stdlib, "-d", path.join(temp, "classes"), source("FinzoExportReceiver"), source("FinzoBootReceiver"), source("ExportAlarmPolicy"),
   ...fs.readdirSync(fixture).filter(file => file.endsWith(".kt")).map(file => path.join(fixture, file))]);
 run(["-cp", [path.join(temp, "classes"), stdlib].join(path.delimiter), "com.finzo.exportscheduler.ReceiverTestKt"]);
+run(["-cp", [path.join(temp, "classes"), stdlib].join(path.delimiter), "com.finzo.exportscheduler.AlarmPolicyTestKt"]);

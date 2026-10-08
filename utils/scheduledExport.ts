@@ -2,28 +2,15 @@
 //
 // QUÉ ES AUTOMÁTICO DE VERDAD, Y QUÉ NO
 //
-// A la hora fijada, la copia se genera y se guarda SOLA, sin que nadie toque
-// nada. Los tres destinos que ofrece cumplen eso: la carpeta del teléfono,
-// Google Drive y Dropbox (ver DESTINOS_AUTOMATICOS).
+// Con el módulo Android disponible, el trabajo puede crear y guardar la copia
+// sin abrir una pantalla. El PDF requiere también el conversor nativo instalado.
+// La fecha programada es prevista, no garantiza puntualidad: Android puede
+// retrasar la alarma, y red/batería/plan/destino pueden impedir completar el archivo.
+// Sin ese soporte, el archivo se crea al abrir Fino después de la hora prevista;
+// también el aviso puede retrasarse. El soporte nativo requiere una instalación,
+// no llega por OTA. La pantalla distingue las capacidades de cada instalación.
 //
-// Lo único que no es automático es EL MOMENTO EXACTO. La copia se hace la
-// primera vez que se abre la app pasada la hora, no a la hora en punto con el
-// celular guardado en el bolsillo. Y eso no es dejadez:
-//
-//   1. El PDF se arma en un WebView (expo-print). Un WebView necesita que la
-//      app esté abierta; con la app cerrada no hay dónde dibujar y no sale
-//      ningún archivo.
-//   2. Android mata los procesos en segundo plano cuando quiere, y los Honor y
-//      Xiaomi son de los más agresivos. Una tarea programada a las 3 de la
-//      mañana no se ejecutaría de forma fiable.
-//
-// Para que ocurra a la hora en punto con la app cerrada hace falta armar el
-// archivo en código nativo (sin WebView) y meterlo en un WorkManager. Es un
-// cambio de APK, no de actualización, y está anotado como pendiente en
-// ESTADO.md.
-//
-// Mientras tanto llega un AVISO a la hora fijada, así que la app se abre y la
-// copia sale enseguida. Los destinos que necesitan que una persona elija a
+// Los destinos que necesitan que una persona elija a
 // quién mandar el archivo —correo, WhatsApp, compartir— no se ofrecen aquí, por
 // la sencilla razón de que no se pueden hacer solos.
 

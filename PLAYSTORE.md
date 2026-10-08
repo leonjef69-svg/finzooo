@@ -424,6 +424,13 @@ servicios o destinatarios. Mantiene RECEIVE_BOOT_COMPLETED y servicio privado.
 Kotlin/manifest debug comprobados, no una versión instalada; verificar manifiesto
 release/firma y recorrido físico al entregar. Guía: `docs/PRUEBAS_RECEPTOR_EXPORTACION.md`.
 
+FINO-09 preparado (07/10/2026): exportación automática usa hora prevista, no
+garantiza entrega puntual. Android 12+ consulta acceso exacto existente y, sin
+él, usa alarma aproximada. No se agregan SCHEDULE_EXACT_ALARM/USE_EXACT_ALARM ni
+datos/permisos/destinatarios. Textos compactos/ficha interna ajustados; comprobar
+servicio/alarmas físicos y versión final antes de entregar. No publicar una
+promesa de guardado al minuto. Guía: `docs/PRUEBAS_HORARIO_EXPORTACION.md`.
+
 ---
 
 ## Clasificación de contenido

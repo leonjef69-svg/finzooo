@@ -459,13 +459,13 @@ console.log("\n--- EL DESPERTADOR DE ANDROID: LAS COSTURAS ---");
   ok(/ACCION_EXPORTAR/.test(modulo), "hay una acción propia para el despertador");
   ok(/intent\?\.action != ExportSchedulerModule\.ACCION_EXPORTAR\) return/.test(receptor), "y el receptor ignora cualquier otra accion");
 
-  // EL TIPO DE DESPERTADOR. Se usó el inexacto y fue un error: Android agrupa
-  // esos avisos y puede retrasarlos diez minutos, así que la función no se podía
-  // ni probar. setAlarmClock es el único exacto que no pide permisos.
-  ok(/setAlarmClock/.test(modulo), "el despertador es exacto (setAlarmClock)");
+  // Android 12+ tambien exige acceso para setAlarmClock. Sin permiso se usa
+  // la alarma aproximada y no se promete puntualidad en la ficha.
+  ok(/canScheduleExactAlarms/.test(modulo) && /setAlarmClock/.test(modulo), "se consulta el permiso antes de intentar exacta");
+  ok(/ExportAlarmPolicy.programar/.test(modulo) && /setAndAllowWhileIdle/.test(modulo), "sin acceso sigue el recorrido aproximado");
   ok(
     !/SCHEDULE_EXACT_ALARM/.test(manifiesto),
-    "y no se pide SCHEDULE_EXACT_ALARM, que Google solo aprueba para alarmas"
+    "no se agrega un permiso de alarma exacta en esta correccion"
   );
 
   // El tope de tiempo del servicio: aquí se sube un archivo por internet, y los

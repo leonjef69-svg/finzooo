@@ -1,5 +1,12 @@
 # Pruebas y auditores
 
+`verificar-horario-exportacion.mjs` ejecuta el catálogo real de tres idiomas:
+aviso de retrasos, intento previsto y prueba no promete puntualidad; comprueba
+también la conexión nativa. `scripts/probar-receptores-kotlin.mjs` ejecuta la
+política Kotlin original con callbacks, no AlarmManager/Android físico. Regresión
+del catálogo: `FINO_TEST_EXPORT_TIME_BASELINE=24f5757`. Guía y límites:
+`docs/PRUEBAS_HORARIO_EXPORTACION.md`.
+
 `verificar-receptor-exportacion.mjs` comprueba estáticamente el contrato de
 receptores: trabajo privado y arranque separado. `node scripts/probar-receptores-kotlin.mjs`
 compila/ejecuta Kotlin original en JVM con adaptadores de Android; exige JAR

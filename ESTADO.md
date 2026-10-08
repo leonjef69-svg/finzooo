@@ -1,5 +1,20 @@
 # Estado actual de Fino
 
+## FINO-09 — hora prevista y permiso comprobado (07/10/2026)
+
+- Ficha compacta y destinos en tres idiomas advierten retrasos; próximo intento
+  previsto y prueba inmediata no prometen entrega puntual.
+- Android 12+ consulta acceso existente antes de exacta; sin él usa aproximada.
+  Política Kotlin original probada en JVM: revocación cae a fallback, otros
+  errores no se ocultan. Sin nuevos permisos ni cambios de fechas/datos/planes.
+- Regresión del catálogo roja contra `24f5757`, actual verde. Gradle/SDK real
+  debug aprobado. Guía: `docs/PRUEBAS_HORARIO_EXPORTACION.md`.
+- TypeScript/ESLint sin avisos y 150 pruebas locales/8 auditores aprobados
+  (149 en Git limpio). JVM/Gradle son adicionales y no prueban puntualidad física.
+- **Qué sigue:** FINO-22, privacidad de capturas/miniatura con candado.
+  **Qué falta:** restantes IDs, servicio/alarmas físicos, nueva instalación
+  nativa acumulada, firma release y publicación autorizada. Sentry/tarjetas fuera.
+
 ## FINO-21 — exportación privada y arranque separado (07/10/2026)
 
 - Receptor de exportación privado, con el mismo componente/acción de alarma;
