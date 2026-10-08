@@ -401,7 +401,7 @@ export async function applySchedule(
 
 const KEY_LAST_EXPORT = "finzo:scheduledExport.lastExport";
 
-/** Se apunta al terminar CUALQUIER exportación, programada o a mano. */
+/** Se apunta tras confirmar guardado en carpeta/nube, no al abrir otra app. */
 export function markExported(now: Date): void {
   saveJSON(KEY_LAST_EXPORT, toDateKey(now));
 }

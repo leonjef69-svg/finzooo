@@ -158,6 +158,7 @@ export default function ExportPdfSheet({
   // automática pasa por aquí con el destino que la persona programó.
   const [destination, setDestination] = useState<ExportDestination>(initialDestination);
   const [exporting, setExporting] = useState(false);
+  const exportLock = useRef(false);
   // Los graficos vienen APAGADOS: se encienden si se quieren.
   //
   // Ocupan media hoja y empujan la lista de movimientos a la siguiente. El
@@ -572,7 +573,7 @@ export default function ExportPdfSheet({
   }
 
   /**
-   * Se llama al terminar una exportación de verdad, venga de donde venga.
+   * Se llama tras guardar en carpeta/nube; abrir otra app no confirma envío.
    *
    * Apunta el día y retira el aviso de repesca. Lo segundo importa: si se
    * exportó a las 9:05, el "todavía no exportaste" de las 9:30 tiene que no
@@ -598,6 +599,7 @@ export default function ExportPdfSheet({
   }
 
   async function handleExport() {
+    if (exportLock.current) return;
     if (monthTx.length === 0) {
       showToast(t("exportPdf.noData"));
       return;
@@ -636,6 +638,7 @@ export default function ExportPdfSheet({
       showToast(t("exportPdf.noContactPicked"));
     }
 
+    exportLock.current = true;
     setExporting(true);
     try {
       // Primero se arma el archivo, y después se decide qué hacer con él.
@@ -732,9 +735,13 @@ export default function ExportPdfSheet({
           showToast(t("exportPdf.whatsappMissing"));
           if (await Sharing.isAvailableAsync()) {
             await Sharing.shareAsync(file.uri, { mimeType: file.mimeType });
+          } else {
+            showToast(t("exportPdf.shareUnavailable"));
+            return;
           }
         }
-        await exportacionHecha();
+        // Abrir WhatsApp/selector no demuestra envío ni recepción.
+        showToast(t("exportPdf.readyToSend"));
         return;
       }
 
@@ -756,9 +763,12 @@ export default function ExportPdfSheet({
           showToast(t("schedExport.gmailMissing"));
           if (await Sharing.isAvailableAsync()) {
             await Sharing.shareAsync(file.uri, { mimeType: file.mimeType });
+          } else {
+            showToast(t("exportPdf.shareUnavailable"));
+            return;
           }
         }
-        await exportacionHecha();
+        showToast(t("exportPdf.readyToSend"));
         return;
       }
 
@@ -781,7 +791,7 @@ export default function ExportPdfSheet({
           destinatario?.value ?? ""
         );
         if (directo) {
-          await exportacionHecha();
+          showToast(t("exportPdf.readyToSend"));
           return;
         }
 
@@ -798,7 +808,8 @@ export default function ExportPdfSheet({
           body: t("exportPdf.mailBody", { month: selectedMonthLabel }),
           attachments: [file.uri],
         });
-        await exportacionHecha();
+        // Android devuelve SENT incluso al cancelar; no es confirmación.
+        showToast(t("exportPdf.readyToSend"));
         return;
       }
 
@@ -807,13 +818,16 @@ export default function ExportPdfSheet({
           mimeType: file.mimeType,
           UTI: file.mimeType === "application/pdf" ? "com.adobe.pdf" : "public.data",
         });
-        await exportacionHecha();
+        showToast(t("exportPdf.readyToSend"));
+      } else {
+        showToast(t("exportPdf.shareUnavailable"));
       }
     } catch (e) {
       if (e instanceof DriveNotSignedIn) showToast(t("exportPdf.driveNoAccount"));
       else if (e instanceof DriveDenied) showToast(t("exportPdf.driveDenied"));
       else showToast(t(destination === "drive" ? "exportPdf.driveError" : "exportPdf.error"));
     } finally {
+      exportLock.current = false;
       setExporting(false);
     }
   }

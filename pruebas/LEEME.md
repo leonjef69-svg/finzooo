@@ -1,5 +1,11 @@
 # Pruebas y auditores
 
+FINO-30: `verificar-entrega-exportacion-real.mjs` ejecuta manejadores originales
+y catálogo con IO sustituido: preparar no confirma envío; subir/guardar espera
+respuesta, fallos/doble toque/reintento. Regresión contra
+`FINO_TEST_EXPORT_DELIVERY_BASELINE=ac8ebd7` roja. Guía:
+`docs/PRUEBAS_ENTREGA_EXPORTACION.md`. No es Android ni recibo de terceros.
+
 FINO-24: `verificar-privacidad-buzon-yape.mjs` comprueba contratos estáticos y
 ejecuta política original. `node scripts/probar-receptores-kotlin.mjs --notification-privacy`
 compila/ejecuta Kotlin ORIGINAL con JSON/JCE reales y adaptadores Android/Keystore,

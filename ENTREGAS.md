@@ -1,5 +1,14 @@
 # Entregas de Fino
 
+## Preparado, no entregado — FINO-30 (07/10/2026)
+
+Exportación manual distingue archivo preparado de guardado comprobado. Abrir
+WhatsApp/Gmail/correo/selector no confirma envío ni recepción. Regresión roja
+contra `ac8ebd7`, manejadores originales/IO adaptado verdes; guía
+`docs/PRUEBAS_ENTREGA_EXPORTACION.md`. No añade cambio nativo ni datos/servicios.
+**Qué sigue:** restantes IDs. **Qué falta:** Android y entrega coordinada con
+lo nativo acumulado, consolas/trámites; tarjetas/Sentry fuera. No publicado.
+
 ## Preparado, no entregado — FINO-24 (07/10/2026)
 
 Buzón Yape/duplicados cifrados con Keystore; conserva y convierte avisos antiguos,

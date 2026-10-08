@@ -1,5 +1,20 @@
 # Estado actual de Fino
 
+## FINO-30 — exportar no confirma recepción (07/10/2026)
+
+- WhatsApp/Gmail/correo/selector solo muestran archivo preparado, sin marcar
+  envío/ejecución programada como terminada; ausencia de apps se explica.
+  Carpeta/nubes conservan confirmación tras guardado correcto, no ante error.
+- Bloqueo inmediato contra doble toque y reintento liberado. No cambian archivo,
+  formatos, destinatario, nube/permisos/planes ni se inventan recibos de terceros.
+- Manejadores/catálogo originales con IO adaptado aprobados, regresión roja
+  contra `ac8ebd7`. Guía `docs/PRUEBAS_ENTREGA_EXPORTACION.md`. Android pendiente.
+- TypeScript/ESLint sin avisos y 156 pruebas/8 auditores aprobados (155 en Git
+  limpio; una prueba propia local se mantiene fuera del versionado).
+- **Qué sigue:** restantes IDs, incluidos IDs de movimientos, firma/manifiesto,
+  costos, políticas y accesibilidad. **Qué falta:** pruebas físicas, consolas,
+  trámites y entrega autorizada. No APK/AAB/OTA/despliegue; tarjetas/Sentry fuera.
+
 ## FINO-24 — buzón de Yape cifrado (07/10/2026)
 
 - Hasta 200 pendientes/lote 200 y 300 marcas contra duplicados cifrados con

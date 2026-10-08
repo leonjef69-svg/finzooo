@@ -3,6 +3,25 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-30 — no confirmar un envío desconocido (07/10/2026)
+
+- Confirmado que incluso fallback sin app marcaba exportación. Es una fecha
+  interna, no un historial visible de recepciones. Se precisa el alcance.
+- Externos no llaman exportacionHecha; mensaje de archivo preparado traducido
+  y falta de aplicación explícita. Guardados de carpeta/nubes esperan respuesta;
+  bloquea doble toque y libera reintento. Automatico sigue sin destinos externos.
+- handleExport/exportacionHecha y catálogo ORIGINALES con IO adaptado verdes;
+  regresión roja contra `ac8ebd7`. Contrato de MailComposer instalado contrastado:
+  Android no sabe si envió/canceló, SENT no se usa como prueba. Tres formatos,
+  cuatro externos/directos/fallback y cuatro guardados/error/pendiente probados.
+- Guía `PRUEBAS_ENTREGA_EXPORTACION.md`. No se probó envío, servicio remoto,
+  visibilidad del aviso tras volver, permisos de adjunto ni interfaz Android.
+- TypeScript/ESLint sin avisos y 156 pruebas/8 auditores aprobados (155 en Git
+  limpio, una prueba local del propietario no versionada).
+- **Qué sigue:** restantes IDs. **Qué falta:** Android, firma/manifiesto,
+  consolas/políticas/trámites y entrega autorizada. Tarjetas/Sentry fuera;
+  sin APK/AAB/OTA/despliegue, no se declara terminada toda la auditoría.
+
 ## FINO-24 — pendiente cifrado y mínimo (07/10/2026)
 
 - Revalidado: 300 eran marcas nativas con posible texto, no el log JS (40,
