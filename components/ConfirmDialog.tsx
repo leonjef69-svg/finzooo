@@ -1,4 +1,5 @@
-import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import Modal from "@/components/PrivateModal";
 
 export default function ConfirmDialog({
   visible,

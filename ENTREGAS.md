@@ -10,6 +10,13 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-22/23 y refuerzo FINO-41 preparados: ventana protegida con candado,
+paneles suspendidos hasta desbloqueo y ojo que oculta todos los importes de
+Inicio. Kotlin JVM y Gradle debug/SDK real aprobados; no son pruebas físicas.
+Módulo ScreenPrivacy necesita nueva instalación nativa acumulada, no OTA.
+Faltan Android/TalkBack/OEM, firma/release y entrega autorizada. No se generó
+APK/AAB ni se usó EAS; no es una versión ya disponible.
+
 FINO-09 preparado: horario previsto, textos compactos de retrasos y consulta
 de acceso exacto antes de programar en Android 12+. Política Kotlin JVM y
 Gradle debug/SDK real aprobados. No agrega permiso/retención ni cambia planes.

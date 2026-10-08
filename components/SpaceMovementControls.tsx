@@ -1,4 +1,5 @@
-import { Modal, Pressable, ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
+import { Pressable, ScrollView, Text, TouchableOpacity, useWindowDimensions, View } from "react-native";
+import Modal from "@/components/PrivateModal";
 import { useState } from "react";
 import { useAppData } from "@/contexts/AppDataContext";
 import { PAYMENT_METHODS } from "@/constants/i18n";

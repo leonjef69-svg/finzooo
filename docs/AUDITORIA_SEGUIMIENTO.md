@@ -3,6 +3,27 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-22/23 y refuerzo FINO-41 (07/10/2026)
+
+- Protege ventana nativa desde onCreate, confirma FLAG_SECURE antes de quitar
+  cubierta y solo permite capturas tras confirmar candado apagado. Ausencia del
+  módulo en APK anterior se identifica como sin soporte, no protección cumplida.
+- Gate unifica comprobaciones cancelables, falla cerrado ante error y recrea
+  su diálogo tras confirmación. PrivateModal suspende paneles hasta desbloqueo.
+  Tarjetas propias excluidas, sin modificar sus dos ventanas.
+- Inicio comparte formato oculto con todos sus importes/filas/avisos/aportes,
+  oculta progreso y anuncia acción/estado del ojo en tres idiomas. Datos intactos.
+- Pruebas de puente/efectos/formato/fila/componentes ORIGINALES con adaptadores
+  y regresiones rojas/verdes; Kotlin original JVM pasa. Gradle debug/SDK real
+  compiló módulo y app, fusionó manifiesto y registró Package/Module. Receptores
+  y alarmas JVM anteriores también se reejecutaron, sin romperse.
+- Sin APK/AAB/OTA/EAS/despliegue. Release/firma no se comprobaron en este punto.
+  Guía: `PRUEBAS_PRIVACIDAD_CANDADO_INICIO.md`.
+- TypeScript/ESLint sin avisos; 152 pruebas/8 auditores (151 en Git limpio)
+  aprobados. ADB sin dispositivos; los artefactos ajenos se conservan sin subir.
+- **Qué sigue:** FINO-24/restantes IDs. **Qué falta:** Android real, TalkBack/OEM,
+  release, instalación acumulada, consolas/trámites/publicación. Sentry fuera.
+
 ## FINO-09 — puntualidad y acceso exacto (07/10/2026)
 
 - Confirmada promesa falsa en ficha/notas y comentario/test de setAlarmClock.

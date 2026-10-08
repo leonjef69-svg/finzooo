@@ -5,6 +5,7 @@ import { Lock } from "lucide-react-native";
 import PinPad from "@/components/PinPad";
 import { useAppData } from "@/contexts/AppDataContext";
 import { setAppLocked } from "@/utils/lockState";
+import { applyLockScreenPrivacy } from "@/utils/screenPrivacy";
 import {
   GRACE_MS,
   PIN_LENGTH,
@@ -73,9 +74,6 @@ export default function AppLockGate() {
   // volver a abrirla dentro del margen la dejaría entrar sin PIN — justo al
   // revés de para lo que sirve.
   const lockedRef = useRef(false);
-  useEffect(() => {
-    lockedRef.current = locked;
-  }, [locked]);
 
   // Al arrancar: si el bloqueo está puesto, se bloquea antes de enseñar nada.
   //
@@ -91,6 +89,8 @@ export default function AppLockGate() {
     setChecked(false);
     (async () => {
       const status = await lockEnabledState();
+      if (!alive) return;
+      await applyLockScreenPrivacy(status);
       if (!alive) return;
       if (status === "unavailable") {
         lockErrorRef.current = true;
@@ -115,12 +115,23 @@ export default function AppLockGate() {
         // ahí esperando.
         if (!reciente) void olvidarSalida();
         // Ver usaHuella: quien la apagó en Ajustes entra siempre con el PIN.
-        setKind((await usaHuella()) ? await biometricKind() : "none");
+        const nextKind = (await usaHuella()) ? await biometricKind() : "none";
+        if (!alive) return;
+        setKind(nextKind);
       } else {
         setLocked(false);
       }
       if (alive) setChecked(true);
-    })();
+    })().catch(() => {
+      if (!alive) return;
+      lockErrorRef.current = true;
+      setLockError(true);
+      setEnabled(true);
+      setLocked(true);
+      setKind("none");
+      setPin("");
+      setChecked(true);
+    });
     return () => {
       alive = false;
     };
@@ -129,27 +140,12 @@ export default function AppLockGate() {
   // Encender o apagar el candado en Ajustes debe surtir efecto en esta misma
   // sesión. Antes se leía una sola vez al montar la app.
   useEffect(() => subscribeLockConfiguration(() => {
-    void lockEnabledState().then(async (status) => {
-      if (status === "unavailable") {
-        lockErrorRef.current = true;
-        setLockError(true);
-        setEnabled(true);
-        setLocked(true);
-        setKind("none");
-        setPin("");
-        return;
-      }
-      lockErrorRef.current = false;
-      setLockError(false);
-      const on = status === "enabled";
-      setEnabled(on);
-      if (!on) {
-        setLocked(false);
-        setKind("none");
-      } else {
-        setKind((await usaHuella()) ? await biometricKind() : "none");
-      }
-    });
+    // Se cierran también los paneles nativos; al volver a crearlos React
+    // Native copia FLAG_SECURE de la ventana principal. Una comprobación
+    // anterior se cancela en la limpieza del efecto, no pisa la nueva.
+    setAppLocked(true);
+    setChecked(false);
+    setCheckVersion((value) => value + 1);
   }), []);
 
   const offerBiometrics = !lockError && kind !== "none";
@@ -244,6 +240,7 @@ export default function AppLockGate() {
   // solo consigue que la app se lo lleve por delante al desbloquear. Ver
   // utils/lockState.ts.
   useLayoutEffect(() => {
+    lockedRef.current = !ready || !checked || locked;
     setAppLocked(!ready || !checked || locked);
   }, [ready, checked, locked]);
 
@@ -253,7 +250,7 @@ export default function AppLockGate() {
   if (ready && checked && !locked) return null;
 
   return (
-    <Modal visible animationType="fade" onRequestClose={() => undefined} statusBarTranslucent>
+    <Modal visible key={`${checkVersion}-${checked ? "checked" : "checking"}`} animationType="fade" onRequestClose={() => undefined} statusBarTranslucent>
     <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top, paddingBottom: insets.bottom + 20 }}>
       {(!ready || !checked) ? (
         <View className="flex-1 items-center justify-center px-6">

@@ -21,15 +21,17 @@ const compiler = [jar("org.jetbrains.kotlin", "kotlin-compiler-embeddable", "2.1
 const annotationVersions = fs.readdirSync(path.join(cache, "org.jetbrains", "annotations")).sort().reverse();
 compiler.push(jar("org.jetbrains", "annotations", annotationVersions[0]));
 const java = process.env.JAVA_HOME ? path.join(process.env.JAVA_HOME, "bin", process.platform === "win32" ? "java.exe" : "java") : "java";
-const base = "modules/export-scheduler/android/src/main/java/com/finzo/exportscheduler";
-const fixture = path.join(root, "pruebas/native/export-receivers");
+const privacy = process.argv.includes("--screen-privacy");
+const base = privacy ? "modules/screen-privacy/android/src/main/java/com/finzo/screenprivacy"
+  : "modules/export-scheduler/android/src/main/java/com/finzo/exportscheduler";
+const fixture = path.join(root, privacy ? "pruebas/native/screen-privacy" : "pruebas/native/export-receivers");
 fs.mkdirSync(path.join(root, ".tmp"), { recursive: true });
 const temp = fs.mkdtempSync(path.join(root, ".tmp/receiver-kotlin-"));
-const baseline = process.env.FINO_TEST_RECEIVER_KOTLIN_BASELINE;
+const baseline = privacy ? process.env.FINO_TEST_SCREEN_PRIVACY_BASELINE : process.env.FINO_TEST_RECEIVER_KOTLIN_BASELINE;
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw new Error("La regresion exige un hash Git.");
 const source = name => {
   const file = `${base}/${name}.kt`;
-  if (!baseline || name !== "FinzoExportReceiver") return path.join(root, file);
+  if (!baseline || (!privacy && name !== "FinzoExportReceiver")) return path.join(root, file);
   // Fuente anterior como artefacto de regresion, no edicion del proyecto.
   const target = path.join(temp, `${name}.kt`);
   fs.writeFileSync(target, execFileSync("git", ["show", `${baseline}:${file}`], { cwd: root }));
@@ -40,8 +42,10 @@ const run = args => {
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`Comprobacion Kotlin fallo (${result.status}). Artefactos en ${temp}`);
 };
+const sources = privacy ? ["ScreenPrivacy", "ScreenPrivacyPackage"] : ["FinzoExportReceiver", "FinzoBootReceiver", "ExportAlarmPolicy"];
 run(["-cp", compiler.join(path.delimiter), "org.jetbrains.kotlin.cli.jvm.K2JVMCompiler", "-no-stdlib", "-no-reflect",
-  "-classpath", stdlib, "-d", path.join(temp, "classes"), source("FinzoExportReceiver"), source("FinzoBootReceiver"), source("ExportAlarmPolicy"),
+  "-classpath", stdlib, "-d", path.join(temp, "classes"), ...sources.map(source),
   ...fs.readdirSync(fixture).filter(file => file.endsWith(".kt")).map(file => path.join(fixture, file))]);
-run(["-cp", [path.join(temp, "classes"), stdlib].join(path.delimiter), "com.finzo.exportscheduler.ReceiverTestKt"]);
-run(["-cp", [path.join(temp, "classes"), stdlib].join(path.delimiter), "com.finzo.exportscheduler.AlarmPolicyTestKt"]);
+const mainClasses = privacy ? ["com.finzo.screenprivacy.ScreenPrivacyTestKt"]
+  : ["com.finzo.exportscheduler.ReceiverTestKt", "com.finzo.exportscheduler.AlarmPolicyTestKt"];
+for (const mainClass of mainClasses) run(["-cp", [path.join(temp, "classes"), stdlib].join(path.delimiter), mainClass]);

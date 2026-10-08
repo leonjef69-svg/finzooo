@@ -1,7 +1,8 @@
 import { useAppData } from "@/contexts/AppDataContext";
 import type { MiembroFamilia } from "@/utils/cloudFamilia";
 import { UserMinus, UsersRound, X } from "lucide-react-native";
-import { Modal, Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { Pressable, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import Modal from "@/components/PrivateModal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function SpaceMembersSheet({

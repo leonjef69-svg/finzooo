@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { Modal, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { ScrollView, Text, TouchableOpacity, View } from "react-native";
+import Modal from "@/components/PrivateModal";
 import { CalendarDays, Check, ChevronDown, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import type { Month, Transaction } from "@/types";

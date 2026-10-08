@@ -65,7 +65,8 @@ import {
 } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { FlatList, Modal, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import { FlatList, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import Modal from "@/components/PrivateModal";
 import Animated, {
   FadeInDown,
   FadeOutUp,
@@ -239,7 +240,7 @@ export default function Home({
 }) {
   const {
     ready,
-    fmt,
+    fmt: formatAmount,
     t,
     userCurrency,
     userLanguage,
@@ -268,6 +269,8 @@ export default function Home({
   const [editingBudget, setEditingBudget] = useState(false);
   const [budgetInput, setBudgetInput] = useState("");
   const [hideBalance, setHideBalance] = useState(false);
+  // El ojo oculta todos los importes de Inicio sin cambiar los datos.
+  const fmt = useCallback((amount: number) => hideBalance ? "• • • • • •" : formatAmount(amount), [hideBalance, formatAmount]);
   const [collapsedPreviousBalanceMonths, setCollapsedPreviousBalanceMonths] = useState<string[]>([]);
   const archivoPendiente = usePendingImport();
   const [avisosAbiertos, setAvisosAbiertos] = useState(false);
@@ -699,6 +702,10 @@ export default function Home({
             {!editingBudget && (
               <TouchableOpacity
                 onPress={() => setHideBalance((v) => !v)}
+                accessibilityRole="switch"
+                accessibilityLabel={t(hideBalance ? "home.showAmounts" : "home.hideAmounts")}
+                accessibilityState={{ checked: hideBalance }}
+                hitSlop={8}
                 className="h-7 w-7 items-center justify-center"
               >
                 {hideBalance ? (
@@ -757,7 +764,7 @@ export default function Home({
                   className="mt-2 h-2 overflow-hidden rounded-full"
                   style={{ backgroundColor: peachOlive ? "rgba(101, 118, 74, 0.16)" : "rgba(255, 255, 255, 0.27)" }}
                 >
-                  <View style={{ width: `${visiblePct}%`, height: "100%", borderRadius: 999, backgroundColor: progressColor }} />
+                  {!hideBalance && <View style={{ width: `${visiblePct}%`, height: "100%", borderRadius: 999, backgroundColor: progressColor }} />}
                 </View>
                 <View className="mt-2 flex-row items-stretch gap-2">
                   <PressableScale

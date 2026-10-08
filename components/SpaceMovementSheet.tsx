@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowDown, ArrowUp, Check, X } from "lucide-react-native";
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import Modal from "@/components/PrivateModal";
 import { useAppData } from "@/contexts/AppDataContext";
 import { COUNTRIES } from "@/constants/countries";
 import { currencySymbolFor } from "@/constants/currencies";

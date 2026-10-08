@@ -46,7 +46,8 @@ import { compararImporteCaja, confirmarImporteCaja, reintentarImporteCaja, retir
 import type { MoneySource } from "../functions/src/private-box-money-shared.js";
 import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Boxes, Check, ListChecks, Pencil, Plus, RefreshCw, Trash2, UserPlus, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState, type SetStateAction } from "react";
-import { ActivityIndicator, Alert, Modal, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import Modal from "@/components/PrivateModal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 

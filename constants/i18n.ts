@@ -108,6 +108,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "home.greeting": "Hola,",
     "home.availableBalance": "Saldo disponible",
+    "home.hideAmounts": "Ocultar importes de Inicio",
+    "home.showAmounts": "Mostrar importes de Inicio",
     "home.budgetedOf": "de {amount} presupuestado",
     "home.monthlyBudget": "Presupuesto del mes",
     "home.setMonthlyBudget": "Definir presupuesto mensual",
@@ -1873,6 +1875,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "home.greeting": "Hi,",
     "home.availableBalance": "Available balance",
+    "home.hideAmounts": "Hide amounts on Home",
+    "home.showAmounts": "Show amounts on Home",
     "home.budgetedOf": "of {amount} budgeted",
     "home.monthlyBudget": "Monthly budget",
     "home.setMonthlyBudget": "Set monthly budget",
@@ -3628,6 +3632,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
 
     "home.greeting": "Olá,",
     "home.availableBalance": "Saldo disponível",
+    "home.hideAmounts": "Ocultar valores da tela inicial",
+    "home.showAmounts": "Mostrar valores da tela inicial",
     "home.budgetedOf": "de {amount} orçado",
     "home.monthlyBudget": "Orçamento do mês",
     "home.setMonthlyBudget": "Definir orçamento mensal",

@@ -1,5 +1,24 @@
 # Estado actual de Fino
 
+## FINO-22/23 y refuerzo FINO-41 — privacidad (07/10/2026)
+
+- Candado protege ventana Android desde arranque; conserva protección al
+  desbloquear y durante el margen. Confirmación nativa/errores/cancelación
+  comprobados; paneles financieros no quedan por encima y se recrean con el PIN.
+- Ojo de Inicio oculta todos sus importes y barra, con acción/estado accesibles
+  en tres idiomas. No cambia datos ni oculta textos/otras pantallas.
+- Regresiones rojas contra `6672b08`, verdes actuales. Kotlin original con
+  adaptadores JVM aprobado; Gradle debug/SDK real aprobó módulo/app/manifiesto
+  y registro automático del Package. No se declara prueba física ni release.
+- Guía: `docs/PRUEBAS_PRIVACIDAD_CANDADO_INICIO.md`. Necesita instalación nativa
+  nueva acumulada; APK anterior/OTA no contiene el nuevo módulo. Sin nuevos datos,
+  permisos, nube o cambios de planes. No se generó APK/AAB ni se gastó EAS.
+- TypeScript/ESLint sin avisos, 152 pruebas locales/8 auditores aprobados
+  (151 en Git limpio; hay una prueba adicional del propietario sin seguimiento).
+  ADB sin dispositivos; no se declara recorrido físico.
+- **Qué sigue:** FINO-24 y restantes IDs. **Qué falta:** Android/TalkBack/OEM,
+  release/firma, consolas, trámites y entrega autorizada. Sentry/tarjetas fuera.
+
 ## FINO-09 — hora prevista y permiso comprobado (07/10/2026)
 
 - Ficha compacta y destinos en tres idiomas advierten retrasos; próximo intento

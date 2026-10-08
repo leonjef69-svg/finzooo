@@ -1,5 +1,6 @@
 import { Copy, X } from "lucide-react-native";
-import { Modal, Pressable, Text, TouchableOpacity, View } from "react-native";
+import { Pressable, Text, TouchableOpacity, View } from "react-native";
+import Modal from "@/components/PrivateModal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppData } from "@/contexts/AppDataContext";
 
