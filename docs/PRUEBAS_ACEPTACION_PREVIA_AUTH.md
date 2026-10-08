@@ -2,6 +2,10 @@
 
 08/10/2026. Preparado en código; no publicado ni probado en Android.
 
+Ampliación posterior del mismo día: PRUEBAS_ACEPTACION_POR_CUENTA.md detalla
+el recibo/versionado local y su comprobación original. Este apartado conserva
+el alcance histórico del primer paso; no describe todo el código actual.
+
 ## Cambio y alcance
 
 Registro por correo y los dos botones de Google ahora muestran una casilla

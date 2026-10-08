@@ -1,10 +1,12 @@
 import { httpsCallable } from "firebase/functions";
 import { functions } from "@/utils/firebase";
+import { assertSharedContentAccepted } from "@/utils/legalAcceptance";
 
 type SpaceKind = "family" | "box";
 
 /** Las reducciones y borrados de aportes enlazados se validan en servidor. */
 export async function actualizarAportePersonal(kind: SpaceKind, spaceId: string, movementId: string, amount: number, description: string): Promise<void> {
+  await assertSharedContentAccepted();
   await httpsCallable(functions, "changePersonalContribution")({ kind, spaceId, movementId, action: "update", amount, description });
 }
 

@@ -50,6 +50,7 @@ Esta es la parte más delicada y por eso va aparte.
 - Puedes apagarlo cuando quieras desde Ajustes, y borrar ese registro con un botón.
 
 3. Cómo se guarda tu información
+Si marcas la casilla de aceptación, la versión preparada guarda cifrados solo en ese teléfono tu identificador de cuenta, la huella técnica de los textos de Términos y Privacidad, tu elección y la fecha del reloj del celular. No se envía a Firebase ni se incluye en el respaldo financiero; se conserva al cerrar sesión y se retira al eliminar los datos locales de esa cuenta. Si falta o cambian los documentos, se pide una elección nueva antes de crear o compartir contenido. Este registro local no acredita por sí solo consentimiento jurídico para datos sensibles ni una fecha certificada por servidor. Esta protección está preparada, todavía no publicada.
 - Las denuncias habilitadas se guardan de forma privada en Firebase y se preparan para revisión por el responsable de Fino en ${LEGAL_CONTACT_EMAIL}. Guardar una denuncia no confirma que el correo haya llegado ni que esté resuelta; no borra movimientos ni cambia saldos. Se programa la limpieza de la denuncia y de su copia técnica de correo desde los 30 días; puede retrasarse por errores o acumulación. Al eliminar la cuenta se retiran esas copias técnicas enviadas por ella o sobre ella. Un contador privado limita denuncias aceptadas a tres por día UTC; tras borrar la cuenta queda una barrera técnica hasta 30 días para impedir solicitudes atrasadas. La limpieza de Firebase no retira correos ya recibidos: para su eliminación contacta a soporte. La configuración del proveedor y su conservación deben verificarse antes de activar el servicio.
 - Los movimientos personales y metas nuevos conservan un identificador técnico de creación para no confundir dos registros con el mismo número. No identifica tu teléfono ni registra otra persona. Se guarda con el movimiento o meta, cifrado en el celular y, con Pro, en su copia; sigue la conservación y eliminación de esos registros. El respaldo añade una marca de compatibilidad para impedir que una versión antigua retire esas identidades. Esta protección está preparada, no publicada.
 - En tu celular, la información principal de tu cuenta se guarda cifrada. La versión preparada cifra también el buzón temporal de Yape y sus marcas para evitar duplicados con una clave local de Android Keystore. Conserva hasta 200 avisos pendientes y hasta 200 en un lote reclamado, que se retira después de confirmar el guardado; conserva hasta 300 marcas contra duplicados. El buzón no se envía a Firebase ni se incluye en copias de seguridad del sistema. Al actualizar se cifran los lotes antiguos sin cambiar sus montos; si no pueden leerse, no se reemplazan por vacíos. Requiere instalar la nueva versión Android; una actualización por internet no añade este cifrado a un APK antiguo.
@@ -92,14 +93,14 @@ Si esta política cambia, actualizaremos la fecha al inicio de este documento.`;
 
 export const TERMS_AND_CONDITIONS = `Última actualización: ${LEGAL_LAST_UPDATED}
 
-Al usar Fino, aceptas estos términos.
+La aceptación de estos términos se solicita mediante una casilla explícita antes de crear la cuenta por correo o acceder con Google. En la versión preparada se pide también antes de crear o compartir contenido cuando no existe una aceptación vigente para la cuenta en ese teléfono. Leer registros, recuperar dinero, salir de espacios y eliminar la cuenta no exige marcar esa casilla.
 
 1. Qué es Fino
 Fino es una herramienta personal para organizar tus ingresos, gastos, presupuestos y metas de ahorro. Es un cuaderno digital: no es un banco, no mueve dinero real, no está conectada a cuentas bancarias ni ofrece asesoría financiera o de inversión.
 
 2. Tu responsabilidad
 Tú eres responsable de la exactitud de la información que ingresas. Fino únicamente organiza y calcula en base a lo que tú escribes.
-En Familia y Cajas compartidas no se permiten insultos, acoso, amenazas, contenido sexual inapropiado, discriminación ni difusión de información personal de otra persona sin permiso. Usa solo información necesaria para organizar el espacio. Puedes señalar contenido a soporte en ${LEGAL_CONTACT_EMAIL}; la denuncia dentro de la app está preparada, pendiente de habilitación y comprobación del correo. Denunciar no borra registros financieros ni cambia el saldo. Estas reglas no sustituyen una aceptación explícita, un sistema de bloqueo ni la revisión efectiva por soporte, todavía pendientes de completar.
+En Familia y Cajas compartidas no se permiten insultos, acoso, amenazas, contenido sexual inapropiado, discriminación ni difusión de información personal de otra persona sin permiso. Usa solo información necesaria para organizar el espacio. Puedes señalar contenido a soporte en ${LEGAL_CONTACT_EMAIL}; la denuncia dentro de la app está preparada, pendiente de habilitación y comprobación del correo. Denunciar no borra registros financieros ni cambia el saldo. La aceptación explícita local está preparada; faltan su protección en el servidor, un sistema de bloqueo y la revisión efectiva por soporte. Estas reglas por sí solas no sustituyen esas medidas.
 
 3. Cuentas
 Debes dar información verdadera al crear tu cuenta (nombre y correo real) para poder verificarla y para que puedas recuperar tus datos si cambias de celular.
@@ -111,7 +112,7 @@ Fino ofrece funciones gratuitas y puede ofrecer funciones adicionales de pago (P
 Fino se ofrece "tal cual". Hacemos lo posible para que funcione correctamente y tus datos estén seguros, pero no podemos garantizar que la app esté libre de errores en todo momento.
 
 6. Cambios
-Podemos actualizar estos términos con el tiempo. Si sigues usando la app después de un cambio, se entiende que lo aceptas.
+Podemos actualizar estos términos con el tiempo. Si cambia el texto de estos documentos, la versión preparada volverá a pedir una elección explícita antes de crear o compartir contenido; seguir usando la app no equivale a marcar la casilla. La aplicación de esta protección en el servidor y su revisión jurídica siguen pendientes.
 
 7. Contacto
 Si tienes preguntas sobre estos términos, escríbenos a ${LEGAL_CONTACT_EMAIL}.`;

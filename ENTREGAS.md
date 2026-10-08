@@ -1,5 +1,16 @@
 # Entregas de Fino
 
+## Preparado, no entregado — aceptación por cuenta parcial (08/10/2026)
+
+Recibo cifrado/versionado local tras elección explícita, conservación logout y
+borrado por cuenta; aceptación existente sin Pro. Diez acciones compartidas y
+conversión nueva protegidas en cliente, recuperación/salidas conservadas.
+Originales/IO adaptado y regresiones `1292a78` comprobados; guía
+PRUEBAS_ACEPTACION_POR_CUENTA.md. **Qué sigue:** servidor/bloqueo/restantes IDs.
+**Qué falta:** Android, SMTP, consolas/revisión jurídica/trámites/cobros y
+publicación autorizada. No acredita consentimiento sensible. Políticas solo en
+archivos; sin APK/AAB/OTA/EAS/despliegue. Tarjetas/Sentry fuera; auditoría abierta.
+
 ## Preparado, no entregado — FINO-50 parcial (08/10/2026)
 
 Interruptores, PIN/biometría, mes/categoría y barras con nombres/roles/estado;

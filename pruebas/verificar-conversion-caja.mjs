@@ -56,6 +56,9 @@ function harness() {
     guardandoRef: { current: false }, repairBlocked: false,
     conversionEnCurso: { current: false },
     isPremium: true, accountUid: "a", ready: true, userName: "A", userCurrency: "PEN", active: true,
+    // Escenarios financieros con elección válida. La barrera real sin elección
+    // se ejecuta en verificar-aceptacion-cuenta-real, antes de guardar pendiente.
+    assertSharedContentAccepted: async () => events.push("accepted"),
     cuentaActual: () => scope.active, hasUnreadableLocalData: () => false, datosActuales: dataRef,
     transactions: transactions.map(row => ({ ...row, internalTransferSettled: false })), enlacesCajaConvertida: module.exports.enlacesCajaConvertida, retirarCajaConvertida: module.exports.retirarCajaConvertida,
     t: key => key, reportSyncError: () => events.push("conflict"), showToast: key => events.push(key),
@@ -73,6 +76,7 @@ function harness() {
 }
 {
   const h = harness(); await h.scope.run();
+  assert.ok(h.events.indexOf("accepted") < h.events.indexOf("pending"), "aceptar antes de inmovilizar la Caja");
   assert.ok(h.events.indexOf("retired") < h.events.indexOf("invite"), "la invitación no decide si se retira una copia ya confirmada");
   assert.equal(h.dataRef.current.cajas.length, 0); assert.ok(h.events.includes("boxes.invitationRetry"));
   assert.equal(h.events.find(item => Array.isArray(item) && item[0] === "open")[1].params.boxId, receipt.targetId);

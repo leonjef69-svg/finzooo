@@ -105,6 +105,9 @@ assert.equal(memory.leerCajasEnMemoria(), null, "la caché no sobrevive a una se
 // Conversión real: una vista vieja/otra sesión no alcanza a crear el grupo.
 session = 1; let groupWrites = 0, sourceGate = null;
 const sharing = load("utils/cloudCajasCompartidas.ts", name => {
+  // Estos escenarios financieros presuponen documentos aceptados. La barrera
+  // sin aceptación se ejecuta aparte con el módulo original de recibos.
+  if (name === "@/utils/legalAcceptance") return { assertSharedContentAccepted: async () => {} };
   if (name === "@/utils/firebase") return { db: {}, auth };
   if (name === "@/utils/cajas") return api;
   if (name === "@/utils/accountTask") return { captureAccountTask: capture };

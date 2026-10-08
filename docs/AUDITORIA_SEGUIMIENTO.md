@@ -3,6 +3,21 @@
 Última revisión: 08/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-47/49 — recibo por cuenta, parcial (08/10/2026)
+
+Recibo cifrado local por UID/textos completos, conservado logout y eliminado
+por cuenta; elección existente sin Pro. Diez acciones compartidas y conversión
+nueva comprobadas, sin Caja pendiente por pedir documentos; salida/recuperación
+financiera conservadas. Originales/IO adaptado y regresiones `1292a78` rojas/verde.
+Guía PRUEBAS_ACEPTACION_POR_CUENTA.md. Se amplía el paso histórico siguiente,
+TypeScript/ESLint sin avisos y 168 pruebas/8 auditores verdes sin tarjetas;
+una prueba ajena no versionada (167 previstas en Git limpio, no otro checkout).
+Refuerzo final del formato v2/HMAC aprobado en la suite original del recibo.
+no se declara fin de FINO-47/48/49 ni evidencia jurídica sensible.
+**Qué sigue:** servidor/compatibilidad, bloqueo y restantes IDs.
+**Qué falta:** Android/TalkBack, SMTP, consolas/políticas/revisión jurídica/
+trámites/cobros y publicación coordinada autorizada. Tarjetas/Sentry excluidos.
+
 ## FINO-50 — controles comunes, parcial (08/10/2026)
 
 Diez Toggle exigen rótulo; rol/estado/área de toque, PIN/biometría, mes/

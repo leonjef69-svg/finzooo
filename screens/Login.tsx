@@ -19,6 +19,8 @@ import AuthField from "@/components/AuthField";
 import AuthLegalAcceptance from "@/components/AuthLegalAcceptance";
 import GoogleButton, { OrDivider } from "@/components/GoogleButton";
 import { auth } from "@/utils/firebase";
+import { recordLegalAcceptanceForCurrentAccount } from "@/utils/legalAcceptance";
+import { withTimeout } from "@/utils/withTimeout";
 import { firebaseErrorMessage } from "@/utils/firebaseErrors";
 import { GoogleSignInCancelled, signInWithGoogle } from "@/utils/googleAuth";
 import { googleSignInErrorMessage } from "@/utils/googleSignInError";
@@ -31,7 +33,7 @@ export default function Login({
   onLoggedIn: () => void | Promise<void>;
   onGoRegister: () => void;
 }) {
-  const { t } = useAppData();
+  const { t, showToast } = useAppData();
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [loading, setLoading] = useState(false);
@@ -79,6 +81,7 @@ export default function Login({
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
+      await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => showToast(t("legal.saveFailed")));
       await onLoggedIn();
     } catch (err) {
       // Cancelar no es un fallo: si la persona cerró la ventana de Google

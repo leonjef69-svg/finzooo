@@ -16,6 +16,7 @@ for (const [file, name] of paths) {
   const calls = [], errors = [], authBusy = { current: false };
   let pendingResolve;
   const dependencies = {
+    withTimeout: promise => promise, recordLegalAcceptanceForCurrentAccount: async () => { calls.push("receipt"); }, showToast: value => errors.push(value),
     authBusy, legalAccepted: false, t: key => key,
     name: "Ana Torres", email: "ana@example.test", pass: "pass-test-only", auth: {},
     setGoogleError: value => errors.push(value), setErrors: value => errors.push(value), setError: value => errors.push(value),
@@ -35,12 +36,12 @@ for (const [file, name] of paths) {
   dependencies.legalAccepted = true;
   await handlerOriginal(file, name, dependencies, source(file))();
   if (name === "submit") {
-    assert.deepEqual(calls.filter(value => typeof value === "string"), ["create", "profile", "verify", "registered"]);
+    assert.deepEqual(calls.filter(value => typeof value === "string"), ["create", "receipt", "profile", "verify", "registered"]);
     calls.length = 0; dependencies.email = "invalid";
     await handlerOriginal(file, name, dependencies, source(file))();
     assert.deepEqual(calls, [], "aceptar no salta la validación del correo");
   } else {
-    assert.deepEqual(calls.filter(value => typeof value === "string"), ["google", file.includes("Register") ? "signed" : "logged"]);
+    assert.deepEqual(calls.filter(value => typeof value === "string"), ["google", "receipt", file.includes("Register") ? "signed" : "logged"]);
     calls.length = 0; pendingResolve = null;
     const handler = handlerOriginal(file, name, dependencies, source(file));
     const pending = handler(); await handler();
@@ -51,6 +52,13 @@ for (const [file, name] of paths) {
     assert.equal(authBusy.current, false, "cancelar Google libera el bloqueo sin navegar");
     assert.equal(calls.filter(value => typeof value === "string").length, 0);
   }
+  calls.length = 0; errors.length = 0; dependencies.email = "ana@example.test";
+  dependencies.signInWithGoogle = async () => { calls.push("google"); };
+  dependencies.recordLegalAcceptanceForCurrentAccount = async () => { calls.push("receipt-failed"); throw new Error("disk-error"); };
+  await handlerOriginal(file, name, dependencies, source(file))();
+  assert.equal(calls.filter(value => value === "create" || value === "google").length, 1, "fallo local no repite Auth exitoso");
+  assert.ok(errors.includes("legal.saveFailed"), "no anuncia aceptación guardada ante fallo");
+  assert.ok(calls.includes(name === "submit" ? "registered" : file.includes("Register") ? "signed" : "logged"), "acceso válido no queda atrapado por un recibo fallido");
 }
 
 // Componente JSX original con árbol/adaptadores, no dispositivo ni TalkBack.
@@ -76,4 +84,4 @@ for (const file of ["screens/Register.tsx", "screens/Login.tsx"]) {
   assert.ok(text.includes("[legalAccepted, setLegalAccepted] = useState(false)"), "casilla nunca premarcada; contrato estático");
   assert.ok(text.includes("<AuthLegalAcceptance"), "conexión de la pantalla; contrato estático");
 }
-console.log("Originales con IO/JSX adaptado: tres altas bloqueadas sin aceptación, autorización explícita, validación, doble toque/cancelación y casilla/enlace. No recibo por cuenta, restauración de sesión, consentimiento legal ni Android.");
+console.log("Originales con IO/JSX adaptado: tres altas bloqueadas sin aceptación, recibo tras Auth sin repetir altas ante fallo, validación, doble toque/cancelación y casilla/enlace. Persistencia real probada aparte; no consentimiento jurídico ni Android.");

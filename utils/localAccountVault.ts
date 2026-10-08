@@ -1,6 +1,7 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Crypto from "expo-crypto";
 import { decryptText, encryptText } from "@/utils/encryption";
+import { deleteLegalAcceptance } from "@/utils/legalAcceptance";
 import {
   ACCOUNT_STORAGE_KEYS,
   clearAccountData,
@@ -267,6 +268,7 @@ export async function allowBackgroundAccount(uid: string, email?: string | null)
 }
 
 export async function deleteLocalAccountVault(uid: string): Promise<void> {
+  await deleteLegalAcceptance(uid);
   const storedKeys = await AsyncStorage.getAllKeys();
   await AsyncStorage.multiRemove(storedKeys.filter((key) => key.startsWith(accountPrefix(uid))));
   if ((await readOwner())?.uid === uid) await AsyncStorage.removeItem(OWNER_KEY);

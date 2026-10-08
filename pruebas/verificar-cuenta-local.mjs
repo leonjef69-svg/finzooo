@@ -25,6 +25,7 @@ async function scenario(body) {
     stdin: { contents: source, resolveDir: root, sourcefile: "account-scenario.ts", loader: "ts" },
     bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent",
     alias: {
+      "@/utils/firebase": path.join(root, "pruebas/stubs/firebase-local.ts"),
       "@": root,
       "@react-native-async-storage/async-storage": path.join(root, "pruebas/stubs/async-storage.ts"),
       "expo-secure-store": path.join(root, "pruebas/stubs/secure-store.ts"),

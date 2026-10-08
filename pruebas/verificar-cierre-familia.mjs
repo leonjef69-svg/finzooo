@@ -79,9 +79,10 @@ const contributionApi = {
   prepararBorradoEspacioCompartido: async () => {},
   salirEspacioCompartido: async () => {},
 };
-const compiled = buildSync({ entryPoints: ["utils/cloudFamilia.ts"], bundle: true, write: false, platform: "node", format: "cjs", external: ["firebase/firestore", "@/utils/firebase", "@/utils/familia", "@/utils/personalContribution"] });
+const compiled = buildSync({ entryPoints: ["utils/cloudFamilia.ts"], bundle: true, write: false, platform: "node", format: "cjs", external: ["firebase/firestore", "@/utils/firebase", "@/utils/familia", "@/utils/personalContribution", "@/utils/legalAcceptance"] });
 const module = { exports: {} };
-vm.runInNewContext(compiled.outputFiles[0].text, { module, exports: module.exports, require: id => id === "firebase/firestore" ? api : id === "@/utils/firebase" ? { db: {} } : id === "@/utils/personalContribution" ? contributionApi : { crearCodigoFamilia: () => "TESTCODE" } });
+// Solo el cierre financiero; aceptación se comprueba en su suite original aparte.
+vm.runInNewContext(compiled.outputFiles[0].text, { module, exports: module.exports, require: id => id === "firebase/firestore" ? api : id === "@/utils/firebase" ? { db: {} } : id === "@/utils/personalContribution" ? contributionApi : id === "@/utils/legalAcceptance" ? { assertSharedContentAccepted: async () => {} } : { crearCodigoFamilia: () => "TESTCODE" } });
 const cloud = module.exports;
 const initialMovement = {
   tipo: "ingreso", monto: 10, descripcion: "Monto inicial desde Personal", fecha: "2026-10-02",

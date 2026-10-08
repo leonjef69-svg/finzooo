@@ -1,5 +1,16 @@
 # Lo que hay que rellenar en Play Console
 
+FINO-47/49 preparado (08/10/2026): al marcar la casilla se guarda cifrado solo
+en el teléfono un recibo por UID, SHA-256 de los documentos, elección y fecha
+del reloj local. No viaja a Firebase ni al respaldo financiero; permanece al
+salir y se retira con los datos locales de la cuenta. Actualizar documentos
+invalida la aceptación anterior para nuevas acciones compartidas; leer/salir/
+recuperar dinero/borrar cuenta no exige aceptar. Sin permisos o servicios
+nuevos. Política interna/HTML preparadas, no publicadas. No declarar esto como
+consentimiento jurídico sensible ni protección remota: servidor/apps antiguas,
+resto de caminos, bloqueo, SMTP y revisión de consola siguen pendientes.
+Guía: docs/PRUEBAS_ACEPTACION_POR_CUENTA.md. FINO-47/48/49 no cerrados.
+
 Preparado el **08/08/2026**, antes de que exista la cuenta, para que el día que se abra sea
 copiar y pegar en vez de redactar bajo presión.
 

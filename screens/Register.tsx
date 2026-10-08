@@ -18,6 +18,8 @@ import AuthField from "@/components/AuthField";
 import AuthLegalAcceptance from "@/components/AuthLegalAcceptance";
 import GoogleButton, { OrDivider } from "@/components/GoogleButton";
 import { auth } from "@/utils/firebase";
+import { recordLegalAcceptanceForCurrentAccount } from "@/utils/legalAcceptance";
+import { withTimeout } from "@/utils/withTimeout";
 import { firebaseErrorMessage } from "@/utils/firebaseErrors";
 import { GoogleSignInCancelled, signInWithGoogle } from "@/utils/googleAuth";
 import { googleSignInErrorMessage } from "@/utils/googleSignInError";
@@ -38,7 +40,7 @@ export default function Register({
   onGoogleSignedIn: () => void | Promise<void>;
   onGoLogin: () => void;
 }) {
-  const { t } = useAppData();
+  const { t, showToast } = useAppData();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
@@ -70,6 +72,7 @@ export default function Register({
     setGoogleLoading(true);
     try {
       await signInWithGoogle();
+      await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => showToast(t("legal.saveFailed")));
       await onGoogleSignedIn();
     } catch (err) {
       if (err instanceof GoogleSignInCancelled) return;
@@ -99,6 +102,7 @@ export default function Register({
     setLoading(true);
     try {
       const credential = await createUserWithEmailAndPassword(auth, email.trim(), pass);
+      await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => showToast(t("legal.saveFailed")));
       await updateProfile(credential.user, { displayName: name.trim() });
       await sendEmailVerification(credential.user);
       await onRegistered(name.trim(), email.trim());

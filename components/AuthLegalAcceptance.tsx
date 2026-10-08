@@ -3,11 +3,13 @@ import { LEGAL_LAST_UPDATED } from "@/constants/legal";
 import { irUnaVez } from "@/utils/nav";
 
 /** Elección explícita antes de un acceso que pueda crear una cuenta, no un recibo legal. */
-export default function AuthLegalAcceptance({ accepted, onChange, disabled, t }: {
+export default function AuthLegalAcceptance({ accepted, onChange, disabled, t, showLink = true, light = true }: {
   accepted: boolean;
   onChange: (accepted: boolean) => void;
   disabled: boolean;
   t: (key: string) => string;
+  showLink?: boolean;
+  light?: boolean;
 }) {
   return (
     <View className="mb-3">
@@ -24,9 +26,9 @@ export default function AuthLegalAcceptance({ accepted, onChange, disabled, t }:
         <View className={`w-6 h-6 rounded-md border-2 items-center justify-center ${accepted ? "bg-amber-700 border-amber-700" : "bg-white border-slate-500"}`}>
           {accepted ? <Text accessible={false} className="text-white font-bold">✓</Text> : null}
         </View>
-        <Text className="flex-1 text-xs text-slate-700">{t("auth.legalAccept")}</Text>
+        <Text className={`flex-1 text-xs text-slate-700 ${light ? "" : "dark:text-slate-200"}`}>{t("auth.legalAccept")}</Text>
       </TouchableOpacity>
-      <TouchableOpacity
+      {showLink ? <TouchableOpacity
         accessibilityRole="link"
         accessibilityLabel={t("register.legalLink")}
         accessibilityState={{ disabled }}
@@ -37,7 +39,7 @@ export default function AuthLegalAcceptance({ accepted, onChange, disabled, t }:
       >
         <Text className="text-xs font-bold text-amber-800 underline">{t("register.legalLink")}</Text>
         <Text className="text-xs text-slate-600">{LEGAL_LAST_UPDATED}</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> : null}
     </View>
   );
 }

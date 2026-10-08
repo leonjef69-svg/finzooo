@@ -3,6 +3,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PRIVACY_POLICY, TERMS_AND_CONDITIONS } from "@/constants/legal";
 import { useAppData } from "@/contexts/AppDataContext";
 import BackButton from "@/components/BackButton";
+import LegalAcceptancePanel from "@/components/LegalAcceptancePanel";
 
 export default function Legal({ onBack }: { onBack: () => void }) {
   const { t } = useAppData();
@@ -23,6 +24,7 @@ export default function Legal({ onBack }: { onBack: () => void }) {
 
         <Text className="text-base font-extrabold text-slate-900 dark:text-slate-100 mb-3">{t("legal.termsHeader")}</Text>
         <Text className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{TERMS_AND_CONDITIONS}</Text>
+        <View className="mt-6"><LegalAcceptancePanel allowAccept /></View>
       </ScrollView>
     </View>
   );

@@ -196,6 +196,7 @@ const scenario = esbuild.buildSync({ stdin: { contents: `
   }
 `, resolveDir: root, sourcefile: "money-journal-scenario.ts", loader: "ts" }, bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent", alias: {
   "@": root, "@react-native-async-storage/async-storage": path.join(root, "pruebas/stubs/async-storage.ts"),
+  "@/utils/firebase": path.join(root, "pruebas/stubs/firebase-local.ts"),
   "expo-secure-store": path.join(root, "pruebas/stubs/secure-store.ts"), "expo-crypto": path.join(root, "pruebas/stubs/crypto.ts"),
 } });
 const loaded = { exports: {} }; new Function("module", "exports", "require", scenario.outputFiles[0].text)(loaded, loaded.exports, require);

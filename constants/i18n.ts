@@ -1757,6 +1757,12 @@ export const translations: Record<LanguageId, Record<string, string>> = {
       "Reportes con gráficos: toca cada categoría, barra o punto para ver el monto exacto.",
 
     "legal.privacyHeader": "Política de privacidad",
+    "legal.sharedRequired": "Antes de crear o compartir contenido, lee y acepta los documentos.",
+    "legal.acceptanceSaved": "Aceptación guardada para esta cuenta en este celular.",
+    "legal.checking": "Comprobando la aceptación…",
+    "legal.saveFailed": "No se pudo comprobar o guardar la aceptación. Tus movimientos siguen intactos. Puedes volver a leer y aceptar.",
+    "legal.acceptSave": "Aceptar y guardar",
+    "legal.readAccept": "Leer y aceptar",
     "legal.termsHeader": "Términos y condiciones",
 
     "splash.tagline": "Tu presupuesto, bajo control",
@@ -3545,6 +3551,12 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "appInfo.whatsNewItem3": "Charts in Reports: tap any category, bar, or point to see the exact amount.",
 
     "legal.privacyHeader": "Privacy Policy",
+    "legal.sharedRequired": "Before creating or sharing content, read and accept the documents.",
+    "legal.acceptanceSaved": "Acceptance saved for this account on this phone.",
+    "legal.checking": "Checking acceptance…",
+    "legal.saveFailed": "Acceptance could not be checked or saved. Your entries remain intact. You can read and accept again.",
+    "legal.acceptSave": "Accept and save",
+    "legal.readAccept": "Read and accept",
     "legal.termsHeader": "Terms and Conditions",
 
     "splash.tagline": "Your budget, under control",
@@ -5333,6 +5345,12 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "appInfo.whatsNewItem3": "Gráficos em Relatórios: toque em cada categoria, barra ou ponto para ver o valor exato.",
 
     "legal.privacyHeader": "Política de privacidade",
+    "legal.sharedRequired": "Antes de criar ou compartilhar conteúdo, leia e aceite os documentos.",
+    "legal.acceptanceSaved": "Aceitação salva para esta conta neste celular.",
+    "legal.checking": "Verificando a aceitação…",
+    "legal.saveFailed": "Não foi possível verificar ou salvar a aceitação. Seus registros continuam intactos. Você pode ler e aceitar novamente.",
+    "legal.acceptSave": "Aceitar e salvar",
+    "legal.readAccept": "Ler e aceitar",
     "legal.termsHeader": "Termos e condições",
 
     "splash.tagline": "Seu orçamento, sob controle",

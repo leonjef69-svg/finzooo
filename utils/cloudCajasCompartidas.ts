@@ -4,6 +4,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/utils/firebase";
+import { assertSharedContentAccepted } from "@/utils/legalAcceptance";
 import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
 import { subirCajas } from "@/utils/cloudCajas";
@@ -93,6 +94,7 @@ export async function compartirCajaExistente(
     return { id: conversion.targetId, nombre: conversion.name, ownerUid: uid, creadaEn: conversion.createdAt, currency, conversion };
   }
   // Confirma el origen privado antes de copiar devoluciones históricas.
+  await task.wait(() => assertSharedContentAccepted(uid));
   const sourceSaved = await task.wait(() => subirCajas(uid, { cajas: [caja], movimientos, cajasBorradas: [], movimientosBorrados: [] }));
   if (!sourceSaved) throw new Error("permission-denied");
   const privateCopy = await task.wait(() => getDocFromServer(doc(db, "cajas", uid)));
@@ -144,18 +146,21 @@ export async function compartirCajaExistente(
 }
 
 export async function crearInvitacionCaja(uid: string, boxId: string): Promise<string> {
+  await assertSharedContentAccepted(uid);
   const codigo = crearCodigoFamilia();
   await setDoc(doc(db, "boxInvites", codigo), { boxId, createdBy: uid, expiresAt: Date.now() + 7 * 86400000, creadoEn: serverTimestamp() });
   return codigo;
 }
 
 export async function renombrarCajaCompartida(boxId: string, nombre: string): Promise<void> {
+  await assertSharedContentAccepted();
   const limpio = nombre.trim().slice(0, 30);
   if (!limpio) throw new Error("invalid-name");
   await updateDoc(doc(db, "boxSpaces", boxId), { nombre: limpio });
 }
 
 export async function unirseACaja(uid: string, nombre: string, codigoCrudo: string): Promise<CajaCompartida> {
+  await assertSharedContentAccepted(uid);
   const codigo = codigoCrudo.trim().toUpperCase();
   const invitacion = await getDoc(doc(db, "boxInvites", codigo));
   if (!invitacion.exists() || Number(invitacion.data().expiresAt || 0) < Date.now()) throw new Error("invalid-code");
@@ -180,6 +185,7 @@ export async function listarMovimientosCajaCompartida(boxId: string): Promise<Mo
 }
 
 export async function guardarMovimientoCajaCompartida(boxId: string, uid: string, movimiento: Omit<MovimientoCajaCompartida, "id" | "creadoPor" | "creadoEn">): Promise<string> {
+  await assertSharedContentAccepted(uid);
   if (!isSafeMoneyAmount(movimiento.monto) || movimiento.monto <= 0) throw new Error("invalid-amount");
   const ref = await addDoc(collection(db, "boxSpaces", boxId, "movements"), { ...movimiento, creadoPor: uid, creadoEn: serverTimestamp() });
   return ref.id;

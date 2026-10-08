@@ -19,6 +19,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/utils/firebase";
+import { assertSharedContentAccepted } from "@/utils/legalAcceptance";
 import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
 import { canCloseLinkedSpace, hasUnreturnedPersonalContribution } from "@/utils/linkedTransfers";
@@ -107,6 +108,7 @@ export async function crearFamilia(
   currency = "PEN",
   movimientoInicial?: MovimientoInicialFamilia,
 ): Promise<EspacioFamilia & { movimientoInicialId?: string }> {
+  await assertSharedContentAccepted(uid);
   const ref = doc(collection(db, "familySpaces"));
   const nombre = nombreFamilia.trim().slice(0, 35);
   if (!nombre) throw new Error("invalid-input");
@@ -133,6 +135,7 @@ export async function crearFamilia(
 }
 
 export async function crearInvitacionFamilia(uid: string, familiaId: string): Promise<string> {
+  await assertSharedContentAccepted(uid);
   const codigo = crearCodigoFamilia();
   await setDoc(doc(db, "familyInvites", codigo), {
     familyId: familiaId,
@@ -144,6 +147,7 @@ export async function crearInvitacionFamilia(uid: string, familiaId: string): Pr
 }
 
 export async function renombrarFamilia(familiaId: string, nombre: string): Promise<void> {
+  await assertSharedContentAccepted();
   await updateDoc(doc(db, "familySpaces", familiaId), { nombre: nombre.trim().slice(0, 35) });
 }
 
@@ -172,6 +176,7 @@ export function observarCierreFamilia(familiaId: string, cerrado: () => void, er
 }
 
 export async function unirseAFamilia(uid: string, nombre: string, codigoCrudo: string): Promise<EspacioFamilia> {
+  await assertSharedContentAccepted(uid);
   const codigo = codigoCrudo.trim().toUpperCase();
   const inviteRef = doc(db, "familyInvites", codigo);
   const invite = await getDoc(inviteRef);
@@ -229,6 +234,7 @@ export async function listarMovimientosFamilia(familyId: string, confirmarServid
 }
 
 export async function guardarMovimientoFamilia(familyId: string, uid: string, movimiento: Omit<MovimientoFamilia, "id" | "creadoEn" | "creadoPor">): Promise<string> {
+  await assertSharedContentAccepted(uid);
   if (!isSafeMoneyAmount(movimiento.monto) || movimiento.monto <= 0) throw new Error("invalid-amount");
   const ref = await addDoc(collection(db, "familySpaces", familyId, "movements"), { ...movimiento, creadoPor: uid, creadoEn: serverTimestamp() });
   return ref.id;

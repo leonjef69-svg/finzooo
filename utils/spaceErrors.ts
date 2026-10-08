@@ -4,6 +4,9 @@ export function spaceErrorKey(error: unknown, invalidCode = false): string {
   const code = typeof value?.code === "string" ? value.code.toLowerCase() : "";
   const message = typeof value?.message === "string" ? value.message.toLowerCase() : "";
   const detail = `${code} ${message}`;
+  if (detail.includes("legal-acceptance-required")) return "legal.sharedRequired";
+  if (detail.includes("legal-account-")) return "family.loginRequired";
+  if (detail.includes("legal-")) return "legal.saveFailed";
   const reason = value?.details?.reason;
   if (typeof reason === "string" && reason.startsWith("migration-")) return "boxes.syncConflict";
   if (reason === "return-changed") return "spaces.returnChanged";

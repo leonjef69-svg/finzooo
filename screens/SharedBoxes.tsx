@@ -9,6 +9,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import { useAppData } from "@/contexts/AppDataContext";
 import BackButton from "@/components/BackButton";
+import LegalAcceptancePanel from "@/components/LegalAcceptancePanel";
 import { fmt as formatAmount, horaDe } from "@/utils/format";
 import { currencySymbolFor } from "@/constants/currencies";
 import { auth } from "@/utils/firebase";
@@ -272,6 +273,7 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
         if (cercaDelFinal && movementLimit < filasVisibles.length) setMovementLimit(limit => Math.min(limit + 60, filasVisibles.length));
       }}
     >
+      <LegalAcceptancePanel />
       {!uid ? <Text className="text-slate-600 dark:text-slate-200">{t("boxes.loginRequired")}</Text> : <>
         {!caja ? <>
           <View className="mb-3 flex-row gap-2">{boton(t("boxes.join"), () => { limpiar(); setModo("unir"); })}</View>

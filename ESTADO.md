@@ -1,5 +1,23 @@
 # Estado actual de Fino
 
+## FINO-47/49 — aceptación local por cuenta, parcial (08/10/2026)
+
+- Recibo local cifrado por UID y SHA-256 de ambos documentos tras elección
+  explícita; se conserva al salir, se retira al borrar la cuenta. No Firebase
+  nuevo ni respaldo financiero. Cuenta existente puede aceptar en Legal sin Pro.
+- Diez altas/ediciones compartidas y conversión nueva requieren recibo vigente;
+  pedirlo no deja Caja pendiente. Leer/devolver/salir/cerrar/borrar siguen posibles.
+- Originales de recibo/cifrado/bóveda y manejadores con IO adaptado aprobados;
+  TypeScript/ESLint sin avisos; 168 pruebas/8 auditores aprobados sin tarjetas.
+  Una prueba local ajena no versionada: 167 previstas en Git limpio, no otro
+  checkout ejecutado. Último refuerzo v2/HMAC comprobado en su suite original.
+  dos regresiones `1292a78` rojas/actual verde. Guía
+  `docs/PRUEBAS_ACEPTACION_POR_CUENTA.md` enumera límites. Políticas preparadas.
+- **Qué sigue:** servidor/compatibilidad y bloqueo/restantes IDs.
+  **Qué falta:** Android/TalkBack, SMTP, consolas/revisión jurídica/trámites,
+  cobros y entrega autorizada. No cumplimiento jurídico acreditado ni cierre
+  FINO-47/48/49. Sin APK/AAB/OTA/despliegue; tarjetas/Sentry fuera.
+
 ## FINO-50 — controles comunes accesibles, parcial (08/10/2026)
 
 - Diez interruptores con nombre obligatorio, rol/estado y área de toque;

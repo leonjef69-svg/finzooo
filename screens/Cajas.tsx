@@ -38,6 +38,7 @@ import { guardarCajasEnMemoria, leerCajasEnMemoria, observarCajasEnMemoria, revi
 import { assertPrivateBoxMoneyLocalIdle, assertPrivateBoxMoneyLocalMutation } from "@/utils/privateBoxMoneyLocalWrite";
 import { cancelarConversionCaja, enlacesCajaConvertida, huellaCaja, nuevoIntentoCaja, retirarCajaConvertida } from "@/utils/boxMigration";
 import { spaceErrorKey } from "@/utils/spaceErrors";
+import { assertSharedContentAccepted } from "@/utils/legalAcceptance";
 import type { Transaction } from "@/types";
 import { privateBoxLinksMatch } from "@/utils/privateBoxPersonal";
 import { PrivateBoxSyncError, privateBoxCloudResponseCurrent } from "@/utils/privateBoxSync";
@@ -751,6 +752,8 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     try {
       let pendingBox = caja;
       if (!caja.sharingPending) {
+        // Pedir la elección antes de inmovilizar la copia privada como pendiente.
+        await task.wait(() => assertSharedContentAccepted(uid));
         const before = datosActuales.current;
         pendingBox = { ...caja, sharingPending: true, sharingAttempt: nuevoIntentoCaja() };
         if (!await guardarCambioCaja({ ...before, cajas: before.cajas.map(box => box.id === caja.id ? pendingBox : box) })) return;
