@@ -1,5 +1,25 @@
 # Estado actual de Fino
 
+## FINO-20 y revalidación FINO-06/31 (07/10/2026)
+
+- Invitación Familia/Caja se consume con la membresía en el mismo guardado;
+  un miembro no revoca otros códigos. Una cuenta en eliminación no vuelve a
+  entrar por petición atrasada. No cambian saldos, membresías existentes o planes.
+- Métodos originales/SDK y reglas Firestore local comprobados, con regresión
+  roja antes del arreglo. FINO-06/31 ya corregidos revalidados: prueba por cuenta
+  no reiniciable borrando respaldo y Gratis sin descarga de fotos/movimientos.
+  Guía y límites: `docs/PRUEBAS_INVITACIONES_UNICAS.md`.
+- TypeScript/ESLint sin avisos, 148 pruebas locales/8 auditores (147 en Git
+  limpio), 82 unitarias del servidor y 142 pruebas Firebase local/Node 22
+  aprobadas. Regresión `d9c3d01` roja y versión actual verde. ADB sin dispositivos.
+- Por comprobar: un token aún vigente después de terminar el borrado Auth;
+  las reglas no verifican directamente existencia en Auth. No se afirma que
+  esta protección durante el borrado cubra ese caso posterior.
+- **Qué sigue:** FINO-21, receptor Android público de exportación; sigue abierto,
+  el filtro de acción no protege de otra app. **Qué falta:** esa corrección,
+  restantes IDs, Android, consolas y entrega autorizada. No desplegado/publicado.
+  Sentry y tarjetas excluidos. No se declara terminada toda la auditoría.
+
 ## FINO-43 — Negocio no revive borrados (07/10/2026)
 
 - Borrados/ediciones de las cuatro listas se conservan al fusionar nube,

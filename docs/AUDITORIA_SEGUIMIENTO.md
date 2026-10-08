@@ -3,6 +3,30 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-20 — entrada y consumo inseparables; FINO-06/31 revalidados (07/10/2026)
+
+- Regresión real de Firestore falló contra las reglas anteriores por aceptar
+  una membresía sin consumir su código. Ahora se exige el consumo en el mismo
+  guardado y se limita al código de esa membresía nueva, o revocación del creador.
+  Marcadores de eliminación bloquean nuevas membresías por peticiones atrasadas.
+- Clientes originales Familia/Caja ejecutados con SDK real: índices/membresía/
+  consumo juntos, concurrencia, rechazo completo y permisos. No cambia dinero
+  ni añade metadata/retención/permisos/servicios. La suite de reglas usa tokens
+  simulados, no es prueba del login ni de Android.
+- FINO-06/31: ya corregidos, métodos originales y pruebas existentes reejecutados;
+  se documenta la diferencia entre pruebas con adaptador y emulador real.
+- TypeScript/ESLint sin avisos, 148 pruebas locales/8 auditores (147 en Git
+  limpio), 82 unitarias y 142 reglas/SDK/HTTP/eventos Firebase local bajo Node 22
+  aprobadas. Regresión `d9c3d01` falló por consumo omitido, revocación ajena y
+  cuenta en eliminación; suite actual verde. ADB sin dispositivos conectados.
+- Queda contrastar Auth/SDK después de terminar el borrado: las marcas nuevas
+  protegen mientras están presentes, no invalidan por sí mismas un token viejo
+  una vez retiradas. Se anotó sin inferir retención ni darlo por corregido.
+- **Qué sigue:** FINO-21 confirmado abierto (receptor público acepta exportar
+  con acción conocida). **Qué falta:** corrección nativa, Android, consolas,
+  restantes IDs y despliegue/entrega autorizados. Sentry y tarjetas excluidos.
+  Evidencia y pasos: `PRUEBAS_INVITACIONES_UNICAS.md`.
+
 ## FINO-43 — versiones y borrados del Negocio (07/10/2026)
 
 - Las cuatro listas incluyen versiones y borrados; guardado conjunto cifrado

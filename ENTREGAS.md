@@ -10,6 +10,17 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-20 preparado: consumir invitación al entrar es obligatorio también en
+reglas; los invitados no revocan otros códigos y una cuenta en eliminación
+no entra por petición atrasada. Regresión Firestore local y clientes originales
+comprobados; FINO-06/31 revalidados. Sin despliegue/APK/AAB/OTA. Falta Android,
+dos cuentas y entrega coordinada. Guía: `docs/PRUEBAS_INVITACIONES_UNICAS.md`.
+FINO-21 sigue confirmado pendiente: receptor Android público de exportación.
+TypeScript/ESLint, 148 pruebas locales/8 auditores (147 en Git limpio), 82
+unitarias de servidor y 142 pruebas Firebase local/Node 22 aprobadas. ADB sin
+dispositivos. Falta comprobar también petición de una sesión antigua después
+de terminar el borrado Auth; no se presenta ese caso como resuelto.
+
 FINO-43 preparado: borrados y ediciones de Negocio no retroceden por copias
 antiguas; lote local cifrado y archivo por cuenta v3 (v1/v2 siguen legibles).
 Reglas de formato/marcas probadas en Firestore local. 148 pruebas locales/8
