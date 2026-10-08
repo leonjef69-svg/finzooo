@@ -9,6 +9,7 @@ import {
   planLocalHistoryChanges, UnsupportedHistoryFormatError,
 } from "@/utils/cloudHistoryMigration";
 import { withPrivateBoxCloudLease, type PrivateBoxCloudLease } from "@/utils/privateBoxSync";
+import { assertMatchingAccountCurrencies } from "@/utils/cloudFieldMerge";
 
 type Cache = { entries: HistoryEntry[]; checkpoint: Timestamp | null };
 const caches = new Map<string, Cache>();
@@ -86,6 +87,7 @@ export function loadHistoryV2(uid: string, lease?: PrivateBoxCloudLease): Promis
 /** Guarda solo cambios locales. Cada fila verifica de nuevo su versión dentro de una transacción. */
 export function saveHistoryV2(
   uid: string, transactions: Transaction[], deletedIds: number[], lease?: PrivateBoxCloudLease,
+  currency?: string,
 ): Promise<{ transactions: Transaction[]; deletedIds: number[] }> {
   return withPrivateBoxCloudLease(uid, lease, approved => exclusive(uid, async () => {
     let cache = await approved.wait(() => refresh(uid));
@@ -96,6 +98,10 @@ export function saveHistoryV2(
       const saved = await approved.wait(() => runTransaction(db, async (tx) => {
         const [root, row] = await approved.wait(() => Promise.all([tx.get(rootRef), tx.get(rowRef)]));
         if (!root.exists() || root.data().historyFormat !== 2) throw new UnsupportedHistoryFormatError();
+        if (currency !== undefined) assertMatchingAccountCurrencies(
+          { hasOnboarded: true, userCurrency: currency },
+          { hasOnboarded: root.data().hasOnboarded === true, userCurrency: root.data().userCurrency || "PEN" },
+        );
         const old = row.exists() ? parseEntry(row.data()) : null;
         const merged = mergeHistoryEntries(old ? [old] : [], [change])[0];
         if (!old || JSON.stringify(old) !== JSON.stringify(merged)) {

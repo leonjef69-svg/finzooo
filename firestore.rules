@@ -216,6 +216,12 @@ service cloud.firestore {
                          && request.resource.data.userName is string
                          && (request.resource.data.userPhoto is string || request.resource.data.userPhoto == null)
                          && request.resource.data.userCurrency is string
+                         // Moneda fija al configurar la cuenta, incluso si
+                         // se borran todos los movimientos. Bloquea apps viejas.
+                         && (!exists(/databases/$(database)/documents/users/$(userId))
+                           || resource.data.get('hasOnboarded', false) != true
+                           || (request.resource.data.hasOnboarded == true
+                             && request.resource.data.userCurrency == resource.data.get('userCurrency', 'PEN')))
                          && request.resource.data.userLanguage is string
                          && request.resource.data.budgets is map
                          && request.resource.data.categoryBudgets is map

@@ -1,5 +1,14 @@
 # Pruebas y auditores
 
+FINO-51: `verificar-moneda-cuenta-real.mjs` ejecuta manejadores, setter,
+unión/recepción/restauración y guardados originales con IO adaptado: cuenta
+nueva, moneda fija, país independiente y conflicto sin escrituras v1/v2/por
+fila. Regresión `FINO_TEST_CURRENCY_BASELINE=5cd7e09` roja. Contratos de UI
+estáticos, no pruebas visuales. Seis comprobaciones aparte con SDK/reglas
+Firestore local en `functions/emulator-tests/account-currency.test.js`,
+regresión `FINO_TEST_CURRENCY_RULES_BASELINE=5cd7e09` roja. Guía
+`docs/PRUEBAS_MONEDA_FIJA.md`; Android/dos dispositivos/publicación pendientes.
+
 FINO-28/29: `verificar-configuracion-release.mjs` ejecuta plugin/mods Expo
 originales sobre plantilla SDK real y manifiesto adaptado. Contratos de firma,
 idempotencia/preservación/error cerrado; regresión

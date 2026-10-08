@@ -11,12 +11,13 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
   onBack: () => void;
   onSelect: (id: string) => void;
 }) {
-  const { t, userLanguage } = useAppData();
+  const { t, userLanguage, hasOnboarded } = useAppData();
   const [query, setQuery] = useState("");
   const insets = useSafeAreaInsets();
   const currencies = useMemo(
-    () => filterCurrencies(query, userLanguage, t),
-    [query, t, userLanguage],
+    () => filterCurrencies(hasOnboarded ? "" : query, userLanguage, t)
+      .filter(currency => !hasOnboarded || currency.id === current),
+    [query, t, userLanguage, hasOnboarded, current],
   );
 
   return (
@@ -30,14 +31,14 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
         <View className="w-10" />
       </View>
       <View className="px-5 pb-3">
-        <Text className="text-xs text-white/80 mb-3">{t("currency.subtitle")}</Text>
-        <View className="flex-row items-center rounded-2xl border-[1.5px] border-white/50 bg-white/95 px-4">
+        <Text className="text-xs text-white/80 mb-3">{t(hasOnboarded ? "currency.locked" : "currency.subtitle")}</Text>
+        {!hasOnboarded && <View className="flex-row items-center rounded-2xl border-[1.5px] border-white/50 bg-white/95 px-4">
           <Search size={18} color="#94a3b8" />
           <TextInput value={query} onChangeText={setQuery} placeholder={t("currency.search")}
             placeholderTextColor="#94a3b8" autoCorrect={false}
             disableFullscreenUI
             className="flex-1 py-3 px-3 text-sm text-slate-900" />
-        </View>
+        </View>}
       </View>
       <FlatList
         data={currencies}
@@ -53,7 +54,9 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
             const selected = currency.id === current;
             return (
               <TouchableOpacity key={currency.id} onPress={() => { onSelect(currency.id); onBack(); }}
+                disabled={hasOnboarded}
                 accessibilityRole="button"
+                accessibilityState={{ selected, disabled: hasOnboarded }}
                 accessibilityLabel={currency.name === currency.id ? currency.id : `${currency.name}. ${currency.symbol}. ${currency.id}`}
                 className={`flex-row items-center justify-between rounded-2xl p-4 border-[1.5px] ${selected
                   ? "border-amber-500 bg-amber-50"

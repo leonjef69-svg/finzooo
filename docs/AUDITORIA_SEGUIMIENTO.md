@@ -1,7 +1,26 @@
 # Seguimiento de la auditoría de Claude
 
-Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
+Última revisión: 08/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
+
+## FINO-51 — moneda de cuenta, no etiqueta editable (08/10/2026)
+
+- Revalidado: moneda/país podían reetiquetar importes sin convertir. Propietario
+  eligió otra moneda únicamente en una cuenta nueva. Queda fija al configurar,
+  sin depender de cantidad de movimientos, con guardia inmediata y explicación.
+- País/idioma siguen editables; moneda local preservada también al recuperar.
+  Copias de monedas distintas no se unen/suben/restauran sobre datos locales.
+  Historial separado se controla antes y por fila; reglas preparadas bloquean
+  cambio y reapertura del registro en documentos ya configurados.
+- Prueba de manejadores/fusión/recepción/restauración/guardado originales con
+  IO adaptado aprobada; SDK/reglas reales locales: seis comprobaciones verdes.
+  Regresiones contra `5cd7e09` rojas, sin relajar reglas. Guía
+  `PRUEBAS_MONEDA_FIJA.md` distingue contratos de UI de ejecución/Android.
+- Repetición de cuatro suites SDK/Firestore: 25 comprobaciones verdes en Node
+  22; TypeScript/ESLint y 160 pruebas/8 auditores (159 en Git limpio).
+- **Qué sigue:** restantes IDs. **Qué falta:** Android/dos dispositivos,
+  copias ya discrepantes revisadas explícitamente, reglas publicadas/consolas,
+  trámites y entrega. No se modificó producción ni tarjetas; auditoría abierta.
 
 ## FINO-28/29 — manifiesto y firma regenerados (08/10/2026)
 

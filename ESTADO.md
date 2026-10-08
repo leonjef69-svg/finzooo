@@ -1,5 +1,23 @@
 # Estado actual de Fino
 
+## FINO-51 — moneda fija por cuenta (08/10/2026)
+
+- Decisión del propietario aplicada: elegir moneda en una cuenta nueva, fija
+  al terminar su configuración aunque no tenga movimientos. Cambiar de país
+  conserva moneda; perfil por cuenta conserva el bloqueo al volver a entrar.
+- Unión/restauración/subida rechazan monedas discrepantes sin cambiar datos.
+  Historial separado comprueba antes de subir y por fila; reglas preparadas
+  impiden reetiquetar desde apps antiguas y reabrir configuración.
+- Manejadores/fusión/guardado originales con IO adaptado y seis comprobaciones
+  SDK/reglas Firestore locales aprobadas; ambas regresiones rojas contra
+  `5cd7e09`. Guía `docs/PRUEBAS_MONEDA_FIJA.md`. No hay conversión automática.
+- Repetición SDK junto a Pro/campos/historial: 25 comprobaciones verdes con
+  Node 22. TypeScript/ESLint; 160 pruebas/8 auditores (159 en Git limpio).
+- **Qué sigue:** restantes IDs. **Qué falta:** recorrido Android/dos teléfonos,
+  revisión explícita de copias ya discrepantes, publicación coordinada de
+  reglas/app y comprobación en consola. No se entregó ni desplegó. Tarjetas
+  y Sentry externo fuera; auditoría no terminada.
+
 ## FINO-28/29 — configuración Android reproducible (08/10/2026)
 
 - Plugin en app.json retira PreviewActivity y mantiene recortador privado,

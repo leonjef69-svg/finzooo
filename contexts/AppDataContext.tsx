@@ -438,7 +438,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [authReady, setAuthReady] = useState(false);
   const [needsEmailVerification, setNeedsEmailVerification] = useState(false);
-  const [hasOnboarded, setHasOnboarded] = useState(false);
+  const [hasOnboarded, setRenderedHasOnboarded] = useState(false);
+  // Inmediato: dos toques no pueden cambiar la moneda entre terminar el
+  // registro y el siguiente dibujado. Se restaura y limpia con cada cuenta.
+  const accountConfigured = useRef(false);
+  const setHasOnboarded = useCallback((configured: boolean) => {
+    accountConfigured.current = configured;
+    setRenderedHasOnboarded(configured);
+  }, []);
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userPhoto, setUserPhoto] = useState<string | null>(null);
@@ -667,7 +674,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setAuthReady(true);
     });
     return unsubscribe;
-  }, []);
+  }, [setHasOnboarded]);
 
   useEffect(() => {
     setTesterPremium(TESTER_PREMIUM_INACTIVE);
@@ -758,9 +765,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     let merged: CloudData;
     try {
       merged = mergeCloudFields({ ...local, syncUpdatedAt: cloudSyncMetaRef.current }, cloud);
-    } catch {
+    } catch (error) {
       // Una copia mal formada no modifica la memoria ni la copia local.
-      setRespaldoFallo("datos-nube-invalidos");
+      setRespaldoFallo(error instanceof Error && error.message === "account-currency-conflict"
+        ? "monedas-distintas" : "datos-nube-invalidos");
       return false;
     }
     // Los atajos a fotos nunca viajan a Firebase, pero tampoco se quitan
@@ -919,7 +927,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // borrados, con la misma unión que utiliza la subida atómica.
     const local = cloudFieldsRef.current;
     if (local?.hasOnboarded) {
-      const merged = mergeCloudFields({ ...local, syncUpdatedAt: cloudSyncMetaRef.current }, cloud);
+      let merged: CloudData;
+      try {
+        merged = mergeCloudFields({ ...local, syncUpdatedAt: cloudSyncMetaRef.current }, cloud);
+      } catch (error) {
+        if (error instanceof Error && error.message === "account-currency-conflict") {
+          setRespaldoFallo("monedas-distintas");
+          throw new Error(tRef.current("settings.backupCurrencyConflict"));
+        }
+        throw error;
+      }
       const deleted = pruneDeletedTransactionIds([...(local.deletedTransactionIds ?? []), ...(cloud.deletedTransactionIds ?? [])]);
       const deletedGoals = pruneDeletedGoalIds([...(local.deletedGoalIds ?? []), ...(cloud.deletedGoalIds ?? [])]);
       cloud = {
@@ -938,9 +955,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setUserCurrency(cloud.userCurrency);
     setUserLanguage(cloud.userLanguage);
     const localCountry = countryById(userCountry);
-    const restoredCountry = localCountry?.currency === cloud.userCurrency
-      ? localCountry.id
-      : countryFor(cloud.userLanguage, cloud.userCurrency)?.id ?? "PE";
+    // Conserva el país real de una cuenta local configurada aunque su moneda
+    // sea distinta; en una instalación nueva mantiene la inferencia anterior.
+    const restoredCountry = localCountry && (local?.hasOnboarded || localCountry.currency === cloud.userCurrency)
+      ? localCountry.id : countryFor(cloud.userLanguage, cloud.userCurrency)?.id ?? "PE";
     setUserCountry(restoredCountry);
     setBudgets(cloud.budgets);
     setCategoryBudgets(cloud.categoryBudgets);
@@ -2154,10 +2172,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function updateCurrency(id: string) {
+    if (accountConfigured.current) {
+      if (id !== currencyForReturn.current) showToast(t("currency.locked"));
+      return;
+    }
     const next = markCloudProfile({ userCurrency: id });
-    // Cambiar cómo se muestran los montos no cambia el país real del usuario.
-    // El país también controla métodos locales (Yape/Plin) y Telegram.
-    persistCloudProfile(next);
+    persistCloudProfile(next, userCountry, false);
     showToast(t("toast.currencyUpdated"));
   }
 
@@ -2179,15 +2199,21 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * decisión sobran.
    */
   function updateCountry(country: string, language: string, currency: string) {
-    persistCloudProfile(markCloudProfile({ userLanguage: language, userCurrency: currency }), country);
+    const keepCurrency = accountConfigured.current;
+    persistCloudProfile(markCloudProfile({ userLanguage: language,
+      userCurrency: keepCurrency ? currencyForReturn.current : currency }), country, keepCurrency);
     showToast(
-      translations[language as keyof typeof translations]?.["toast.countryUpdated"] ||
+      translations[language as keyof typeof translations]?.[keepCurrency ? "country.updatedLocked" : "toast.countryUpdated"] ||
         "Listo"
     );
   }
 
   /** Guarda la elección previa al registro sin dar por terminado el setup. */
   function setInitialCountry(country: string, language: string, currency: string) {
+    if (accountConfigured.current) {
+      updateCountry(country, language, currency);
+      return;
+    }
     persistCloudProfile(markCloudProfile({ userLanguage: language, userCurrency: currency }), country, false);
   }
 

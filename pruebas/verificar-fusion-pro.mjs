@@ -178,6 +178,7 @@ assert.ok(scope.cloudFieldsRef.current.iconosFavoritos.includes(localPhoto), "re
 assert.equal(scope.cloudFieldsRef.current.pagosProgramados.length, 2);
 
 const profileScope = { ...exports, userName: "Ana", userPhoto: null, userCurrency: "PEN", userLanguage: "es",
+  accountConfigured: { current: false },
   userCountry: "PE", userEmail: "test@example.com", STORAGE_KEYS: { profile: "profile" },
   markCloudGroup: (_group, before, update) => update(before),
   saveJSON: (_key, saved) => { profileScope.saved = saved; },
@@ -272,6 +273,13 @@ assert.equal(hydrateScope.pagosProgramados.length, 2);
 assert.deepEqual(plain(hydrateScope.transactions).map((tx) => tx.id), [2, 1], "une movimientos y no resucita los borrados");
 assert.equal(hydrateScope.isPremium, true);
 assert.ok(hydrateScope.iconosFavoritos.includes(localPhoto));
+hydrateScope.countryById = () => ({ id: "US", currency: "USD" });
+hydrateScope.userCountry = "US";
+await hydrateScope.hydrateFromCloud("test");
+assert.equal(hydrateScope.userCountry, "US", "una cuenta configurada conserva su país aunque anote en PEN");
+hydrateScope.cloudFieldsRef.current = null;
+await hydrateScope.hydrateFromCloud("test");
+assert.equal(hydrateScope.userCountry, "PE", "sin cuenta local conserva la inferencia anterior desde la copia");
 const beforeInvalid = plain(scope.cloudFieldsRef.current);
 scope.incoming = data({ categoriasPropias: [category("c"), category("c")] });
 assert.equal(vm.runInContext("applyNewerCloudFields(incoming);", scope), false,

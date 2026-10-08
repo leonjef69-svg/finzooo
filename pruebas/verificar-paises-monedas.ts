@@ -72,10 +72,9 @@ const profile: Profile = {
   userCountry: "PE",
   hasOnboarded: true,
 };
-assert.deepEqual(profileWithCurrency(profile, "USD"), {
-  ...profile,
-  userCurrency: "USD",
-  userCountry: "PE",
-});
+assert.equal(profileWithCurrency(profile, "USD"), profile, "la cuenta configurada no cambia de moneda");
+assert.deepEqual(profileWithCurrency({ ...profile, hasOnboarded: false }, "USD"), {
+  ...profile, hasOnboarded: false, userCurrency: "USD", userCountry: "PE",
+}, "la cuenta nueva sí permite elegirla sin cambiar de país");
 
 console.log(`Catálogo real correcto: ${COUNTRIES.length} países y ${CURRENCIES.length} monedas.`);

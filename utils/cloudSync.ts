@@ -14,7 +14,7 @@ import {
   pruneDeletedGoalIds,
   pruneDeletedTransactionIds,
 } from "@/utils/mergeTransactions";
-import { mergeCloudFields } from "@/utils/cloudFieldMerge";
+import { assertMatchingAccountCurrencies, mergeCloudFields } from "@/utils/cloudFieldMerge";
 import { assertLegacyHistoryFormat, UnsupportedHistoryFormatError } from "@/utils/cloudHistoryMigration";
 import { clearHistoryV2Cache, loadHistoryV2, saveHistoryV2 } from "@/utils/cloudHistoryV2";
 import { hasUnreadableLocalData } from "@/utils/storage";
@@ -202,6 +202,7 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
     if (existing.exists() && existing.data().accountDeletionPending === true) {
       return { ok: false, motivo: "eliminacion-pendiente" };
     }
+    if (existing.exists()) assertMatchingAccountCurrencies(clean, existing.data() as CloudData);
     if (existing.exists() && existing.data().historyFormat === 2) {
       return await saveCloudDataV2(uid, clean, lease);
     }
@@ -280,7 +281,7 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
 async function saveCloudDataV2(uid: string, clean: CloudData, lease: PrivateBoxCloudLease): Promise<ResultadoNube> {
   try {
     if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
-    const history = await saveHistoryV2(uid, clean.transactions, clean.deletedTransactionIds ?? [], lease);
+    const history = await saveHistoryV2(uid, clean.transactions, clean.deletedTransactionIds ?? [], lease, clean.userCurrency);
     const ref = doc(db, "users", uid);
     let saved: CloudData = { ...clean, transactions: history.transactions, deletedTransactionIds: history.deletedIds };
     await lease.wait(() => runTransaction(db, async (transaction) => {
@@ -334,6 +335,7 @@ async function saveCloudDataV2(uid: string, clean: CloudData, lease: PrivateBoxC
 function motivoLegible(e: unknown): string {
   const crudo = String((e as { code?: string })?.code ?? (e as Error)?.message ?? e);
   if (/private-box-review-(pending|changed)/.test(crudo)) return "revision-caja-pendiente";
+  if (/account-currency-conflict/.test(crudo)) return "monedas-distintas";
   if (/demasiado-grande/i.test(crudo)) return "demasiado-grande";
   if (/cloud-field-invalid|cloud-field-duplicate-id|sync-clock-overflow/i.test(crudo)) return "datos-nube-invalidos";
   if (/permission-denied|insufficient permissions/i.test(crudo)) return "permisos";

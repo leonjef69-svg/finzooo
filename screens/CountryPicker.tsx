@@ -13,7 +13,7 @@ export default function CountryPicker({ onBack, onSelect }: {
   onBack: () => void;
   onSelect: (country: string, language: string, currency: string) => void;
 }) {
-  const { t, userLanguage, userCurrency, userCountry } = useAppData();
+  const { t, userLanguage, userCurrency, userCountry, hasOnboarded } = useAppData();
   const [query, setQuery] = useState("");
   const insets = useSafeAreaInsets();
   const actual = countryFor(userLanguage, userCurrency, userCountry);
@@ -33,7 +33,7 @@ export default function CountryPicker({ onBack, onSelect }: {
         <View className="w-10" />
       </View>
       <View className="px-5 pb-3">
-        <Text className="text-xs text-white/80 mb-3">{t("country.subtitle")}</Text>
+        <Text className="text-xs text-white/80 mb-3">{t(hasOnboarded ? "country.lockedCurrency" : "country.subtitle")}</Text>
         <View className="flex-row items-center rounded-2xl border-[1.5px] border-white/50 bg-white/95 px-4">
           <Search size={18} color="#94a3b8" />
           <TextInput value={query} onChangeText={setQuery} placeholder={t("country.search")}
@@ -65,7 +65,7 @@ export default function CountryPicker({ onBack, onSelect }: {
               <TouchableOpacity key={country.id}
                 onPress={() => { onSelect(country.id, country.language, country.currency); onBack(); }}
                 accessibilityRole="button"
-                accessibilityLabel={`${countryLabelFor(country, userLanguage)}. ${country.currency}. ${selected ? t("common.selected") : ""}`}
+                accessibilityLabel={`${countryLabelFor(country, userLanguage)}. ${hasOnboarded ? userCurrency : country.currency}. ${selected ? t("common.selected") : ""}`}
                 className={`flex-row items-center gap-3 rounded-2xl p-4 border-[1.5px] ${selected
                   ? "border-amber-500 bg-amber-50"
                   : "border-white/50 bg-white/95"}`}>
@@ -73,9 +73,9 @@ export default function CountryPicker({ onBack, onSelect }: {
                 <View className="flex-1 min-w-0">
                   <Text numberOfLines={2} className="text-sm font-bold text-slate-900">{countryLabelFor(country, userLanguage)}</Text>
                 </View>
-                <Text className="text-xs font-bold text-slate-500">
+                {!hasOnboarded && <Text className="text-xs font-bold text-slate-500">
                   {currencySymbolFor(country.currency) === country.currency ? country.currency : `${country.currency} (${currencySymbolFor(country.currency)})`}
-                </Text>
+                </Text>}
                 {selected && <Check size={18} color="#d97706" />}
               </TouchableOpacity>
             );

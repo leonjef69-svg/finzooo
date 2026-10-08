@@ -1,5 +1,15 @@
 # Entregas de Fino
 
+## Preparado, no entregado — FINO-51 (08/10/2026)
+
+Moneda fija al terminar configuración inicial por decisión del propietario.
+País/idioma pueden cambiar sin convertir ni reetiquetar importes. Copias
+discrepantes conservadas sin unión/subida; protección de reglas preparada.
+Regresiones roja/verde de manejadores y reglas reales locales, guía
+`docs/PRUEBAS_MONEDA_FIJA.md`. Sin APK/AAB/OTA ni Firebase real. **Qué sigue:**
+restantes IDs. **Qué falta:** Android/dos dispositivos y publicación coordinada,
+consolas/trámites y entrega acumulada. Tarjetas/Sentry externo fuera.
+
 ## Preparado, no entregado — FINO-28/29 (08/10/2026)
 
 Plugin nativo reconstruye firma release sin secretos y limita componentes

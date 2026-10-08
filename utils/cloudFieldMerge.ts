@@ -179,8 +179,20 @@ function pathsFromMetadata(metadata: Record<string, number>, group: CloudSyncGro
   });
 }
 
+/** Dos cuentas configuradas no pueden reinterpretar sus importes al unirse. */
+export function assertMatchingAccountCurrencies(
+  local: Pick<CloudData, "hasOnboarded" | "userCurrency">,
+  remote: Pick<CloudData, "hasOnboarded" | "userCurrency">,
+): void {
+  if (local.hasOnboarded && remote.hasOnboarded &&
+    (local.userCurrency || "PEN") !== (remote.userCurrency || "PEN")) {
+    throw new Error("account-currency-conflict");
+  }
+}
+
 /** Unir por campo conserva registros independientes y respeta borrados explícitos. */
 export function mergeCloudFields(local: CloudData, remote: CloudData): CloudData {
+  assertMatchingAccountCurrencies(local, remote);
   const localTimes = local.syncUpdatedAt ?? {};
   const remoteTimes = remote.syncUpdatedAt ?? {};
   const times: Record<string, number> = {};
@@ -218,5 +230,9 @@ export function mergeCloudFields(local: CloudData, remote: CloudData): CloudData
     times[group] = Math.max(clock(localTimes[group]), clock(remoteTimes[group]));
     merged = replaceCloudGroup(merged, group, valueFromEntries(group, result, times));
   }
-  return { ...merged, syncUpdatedAt: Object.fromEntries(Object.entries(times).sort(([a], [b]) => compare(a, b))) };
+  // Una selección previa al registro no gana a la moneda de una copia ya
+  // configurada, aunque haya sido elegida más recientemente en este teléfono.
+  const configured = local.hasOnboarded ? local : remote.hasOnboarded ? remote : null;
+  return { ...merged, ...(configured ? { userCurrency: configured.userCurrency || "PEN", hasOnboarded: true } : {}),
+    syncUpdatedAt: Object.fromEntries(Object.entries(times).sort(([a], [b]) => compare(a, b))) };
 }
