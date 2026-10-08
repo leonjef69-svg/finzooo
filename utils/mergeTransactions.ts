@@ -2,6 +2,23 @@ import type { Goal, Transaction } from "@/types";
 import type { CaptureLogEntry } from "@/utils/autoCapture";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 
+/** Un número coincidente no convierte dos avisos/aportes distintos en una
+ * edición. No inventa identidades para registros antiguos o manuales, ni
+ * renumera referencias de dinero. Ante prueba inequívoca conserva las copias
+ * interrumpiendo la unión antes de escribir. */
+export function assertSameTransactionOrigin(a: Transaction, b: Transaction): void {
+  if (a.id !== b.id) return;
+  if (a.captureId && b.captureId && a.captureId !== b.captureId) {
+    throw new Error("record-origin-conflict");
+  }
+  if (a.internalTransferLink && b.internalTransferLink &&
+    (a.internalTransferLink !== b.internalTransferLink ||
+      a.internalTransfer !== b.internalTransfer ||
+      a.internalTransferSpaceId !== b.internalTransferSpaceId)) {
+    throw new Error("record-origin-conflict");
+  }
+}
+
 /**
  * Junta los movimientos que tiene la app en memoria con los que hay
  * guardados en el disco.
@@ -33,18 +50,24 @@ export function mergeTransactions(
   enMemoria: Transaction[],
   guardadas: Transaction[]
 ): Transaction[] {
-  if (guardadas.length === 0) return enMemoria;
-  if (enMemoria.length === 0) return guardadas;
-
   const porId = new Map<number, Transaction>();
   // Primero las guardadas. La copia local gana si ambas son antiguas; cuando
   // existe updatedAt gana realmente la edición más reciente (por ejemplo una
   // corrección hecha desde Telegram mientras el teléfono estaba abierto).
-  for (const tx of guardadas) porId.set(tx.id, tx);
+  for (const tx of guardadas) {
+    const previa = porId.get(tx.id);
+    if (previa) assertSameTransactionOrigin(previa, tx);
+    porId.set(tx.id, tx);
+  }
   for (const tx of enMemoria) {
     const remota = porId.get(tx.id);
+    if (remota) assertSameTransactionOrigin(remota, tx);
     if (!remota || (tx.updatedAt ?? 0) >= (remota.updatedAt ?? 0)) porId.set(tx.id, tx);
   }
+  // Conservar referencias y formato históricos, pero solo DESPUÉS de
+  // comprobar que tampoco una lista aislada contiene orígenes contradictorios.
+  if (guardadas.length === 0) return enMemoria;
+  if (enMemoria.length === 0) return guardadas;
 
   // Las más nuevas primero, que es como las espera toda la app. Con la misma
   // fecha se ordena por identificador para que el orden no baile entre dos
@@ -58,8 +81,24 @@ export function mergeTransactions(
 /** ¿Hay algo en el disco que la app todavía no tiene? */
 export function hayNovedades(enMemoria: Transaction[], guardadas: Transaction[]): boolean {
   if (guardadas.length === 0) return false;
-  const conocidas = new Set<number>(enMemoria.map((t) => t.id));
-  return guardadas.some((t) => !conocidas.has(t.id));
+  const conocidas = new Map<number, Transaction>();
+  for (const tx of enMemoria) {
+    const previa = conocidas.get(tx.id);
+    if (previa) assertSameTransactionOrigin(previa, tx);
+    conocidas.set(tx.id, tx);
+  }
+  let nuevas = false;
+  // No terminar al encontrar la primera novedad: más adelante puede estar
+  // el aviso que coincide en número, pero no en origen. Tampoco devolver
+  // false por IDs iguales antes de comprobarlos: el siguiente guardado
+  // sobrescribiría la copia del disco sin pasar por mergeTransactions.
+  for (const tx of guardadas) {
+    const previa = conocidas.get(tx.id);
+    if (previa) assertSameTransactionOrigin(previa, tx);
+    else nuevas = true;
+    conocidas.set(tx.id, tx);
+  }
+  return nuevas;
 }
 
 /**

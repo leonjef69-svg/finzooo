@@ -764,11 +764,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (!local) return false;
     let merged: CloudData;
     try {
+      // Verificar movimientos antes de cambiar perfil, presupuestos o marcas.
+      // Las referencias vivas incluyen cambios posteriores al último dibujado.
+      mergeTransactions(transactionsLive.current, cloud.transactions);
       merged = mergeCloudFields({ ...local, syncUpdatedAt: cloudSyncMetaRef.current }, cloud);
     } catch (error) {
       // Una copia mal formada no modifica la memoria ni la copia local.
-      setRespaldoFallo(error instanceof Error && error.message === "account-currency-conflict"
-        ? "monedas-distintas" : "datos-nube-invalidos");
+      setRespaldoFallo(error instanceof Error && error.message === "record-origin-conflict"
+        ? "movimientos-en-conflicto"
+        : error instanceof Error && error.message === "account-currency-conflict"
+          ? "monedas-distintas" : "datos-nube-invalidos");
       return false;
     }
     // Los atajos a fotos nunca viajan a Firebase, pero tampoco se quitan
@@ -939,12 +944,22 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }
       const deleted = pruneDeletedTransactionIds([...(local.deletedTransactionIds ?? []), ...(cloud.deletedTransactionIds ?? [])]);
       const deletedGoals = pruneDeletedGoalIds([...(local.deletedGoalIds ?? []), ...(cloud.deletedGoalIds ?? [])]);
+      let restoredTransactions: Transaction[];
+      try {
+        restoredTransactions = mergeTransactions(local.transactions, cloud.transactions);
+      } catch (error) {
+        if (error instanceof Error && error.message === "record-origin-conflict") {
+          setRespaldoFallo("movimientos-en-conflicto");
+          throw new Error(tRef.current("settings.backupMovementConflict"));
+        }
+        throw error;
+      }
       cloud = {
         ...merged,
         isPremium: cloud.isPremium,
         premiumTrialStartedAt: cloud.premiumTrialStartedAt,
         deletedTransactionIds: deleted,
-        transactions: mergeTransactions(local.transactions, cloud.transactions).filter((tx) => !deleted.includes(tx.id)),
+        transactions: restoredTransactions.filter((tx) => !deleted.includes(tx.id)),
         deletedGoalIds: deletedGoals,
         goals: mergeGoals(local.goals, cloud.goals).filter((goal) => !deletedGoals.includes(goal.id)),
         iconosFavoritos: [...(local.iconosFavoritos ?? []).filter((icon) => icon.startsWith("data:")), ...(merged.iconosFavoritos ?? [])],

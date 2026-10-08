@@ -1,5 +1,17 @@
 # Pruebas y auditores
 
+FINO-52 parcial: `verificar-origen-movimientos-conflicto.mjs` ejecuta módulos,
+recepción/restauración/setter/recogida del disco originales con IO adaptado:
+orígenes distintos de avisos/aportes detienen la unión antes de reemplazar
+datos, ediciones/reintentos del mismo origen siguen válidos. Regresión
+`FINO_TEST_MOVEMENT_ORIGIN_BASELINE=0a6b9a9` roja. SDK/reglas reales locales en
+`functions/emulator-tests/personal-history-client.test.js`, caso «orígenes
+distintos»; reglas históricas con
+`FINO_TEST_MOVEMENT_ORIGIN_RULES_BASELINE=0a6b9a9` rojas. Guía
+`docs/PRUEBAS_ORIGEN_MOVIMIENTOS.md`. Manuales/metas/generador/lápidas,
+referencias ausentes, clientes v1 antiguos, migrador Admin y Android pendientes;
+diagnóstico global de IDs sigue rojo. No se cuenta FINO-52 como corregido.
+
 FINO-33: lectores de seguridad-continuacion/fusion-pro/nube-pro-servidor
 respetan el hash concreto de `FINO_TEST_BASELINE` y distinguen contratos
 estáticos de ejecución con IO adaptado. `1` es HEAD, no una versión anterior

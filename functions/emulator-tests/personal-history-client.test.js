@@ -6,11 +6,14 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { createRequire } = require("node:module");
 const esbuild = require("../../node_modules/esbuild");
-const { initializeTestEnvironment } = require("@firebase/rules-unit-testing");
-const { doc, getDoc, setDoc, updateDoc } = require("firebase/firestore");
+const { initializeTestEnvironment, assertFails, assertSucceeds } = require("@firebase/rules-unit-testing");
+const { doc, getDoc, setDoc, updateDoc, serverTimestamp } = require("firebase/firestore");
 const { initializeApp, deleteApp } = require("firebase-admin/app");
 const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { deletePersonalCloudCopy } = require("../src/cloud-access");
+
+const originRulesBaseline = process.env.FINO_TEST_MOVEMENT_ORIGIN_RULES_BASELINE;
+if (originRulesBaseline && !/^[0-9a-f]{7,40}$/i.test(originRulesBaseline)) throw new Error("Hash Git no válido para reglas.");
 
 async function clientModule(firestore, entry = "utils/cloudHistoryV2.ts", uid = "alice") {
   const root = path.resolve(__dirname, "../..");
@@ -72,6 +75,83 @@ async function clientModule(firestore, entry = "utils/cloudHistoryV2.ts", uid = 
 const movement = (id, updatedAt = id, amount = 10) => ({
   id, updatedAt, amount, type: "expense", category: "otros", date: "2026-09-27",
   method: "cash", description: `Movimiento ${id}`, notes: "",
+});
+
+test("orígenes distintos no reemplazan un movimiento al sincronizar ni por escritura directa", async t => {
+  const env = await initializeTestEnvironment({ projectId: "demo-fino-origin-client", firestore: {
+    host: "127.0.0.1", port: 8080,
+    rules: originRulesBaseline
+      ? require("node:child_process").execFileSync("git", ["show", `${originRulesBaseline}:firestore.rules`], { encoding: "utf8" })
+      : fs.readFileSync(path.resolve(__dirname, "../../firestore.rules"), "utf8"),
+  } });
+  try {
+    await env.clearFirestore();
+    await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), "users", "alice"), {
+      historyFormat: 2, hasOnboarded: true, userName: "Alice", userPhoto: null,
+      userCurrency: "PEN", userLanguage: "es", budgets: {}, categoryBudgets: {}, goals: [], isPremium: true,
+    }));
+    const dbA = env.authenticatedContext("alice", { email_verified: true }).firestore();
+    const dbB = env.authenticatedContext("alice", { email_verified: true }).firestore();
+    const phoneA = await clientModule(dbA), phoneB = await clientModule(dbB);
+    const original = { ...movement(100, 10), captureId: "aviso-A" };
+    const other = { ...movement(100, 20, 20), captureId: "aviso-B" };
+    const linked = { ...movement(101, 10), internalTransfer: "box", internalTransferLink: "aporte-A", internalTransferSpaceId: "caja-A" };
+    const originalOther = JSON.stringify(other);
+    await phoneA.saveHistoryV2("alice", [original, linked], []);
+    await t.test("cliente v2 real conserva el original y devuelve conflicto", async () => {
+      await assert.rejects(phoneB.saveHistoryV2("alice", [other], []), /record-origin-conflict/);
+      assert.equal(JSON.stringify(other), originalOther, "el movimiento local B permanece intacto");
+      assert.deepEqual((await getDoc(doc(dbB, "users", "alice", "history", "100"))).data().transaction, original);
+    });
+    await t.test("respaldo v1 real no escribe lista ni metadatos cuando hay conflicto", async () => {
+      const owner = "v1-owner";
+      const root = { hasOnboarded: true, userName: "Original", userPhoto: null,
+        userCurrency: "PEN", userLanguage: "es", budgets: { "2026-10": 100 }, categoryBudgets: {},
+        transactions: [original], goals: [], isPremium: true };
+      await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), "users", owner), root));
+      const db = env.authenticatedContext(owner, { email_verified: true }).firestore();
+      const phone = await clientModule(db, "utils/cloudSync.ts", owner);
+      const local = { ...root, userName: "NO APLICAR", transactions: [other], budgets: { "2026-10": 200 } };
+      const originalLocal = JSON.stringify(local);
+      assert.deepEqual(await phone.saveCloudData(owner, local), { ok: false, motivo: "movimientos-en-conflicto" });
+      assert.equal(JSON.stringify(local), originalLocal);
+      assert.deepEqual((await getDoc(doc(db, "users", owner))).data(), root);
+    });
+    await t.test("reglas impiden cambiar o quitar la referencia de Yape", async () => {
+      const row = doc(dbB, "users", "alice", "history", "100");
+      await assertFails(setDoc(row, { id: 100, deleted: false, transaction: other, syncAt: serverTimestamp() }));
+      const { captureId: _omitted, ...withoutOrigin } = other;
+      void _omitted;
+      await assertFails(setDoc(row, { id: 100, deleted: false, transaction: withoutOrigin, syncAt: serverTimestamp() }));
+      assert.equal((await getDoc(row)).data().transaction.captureId, "aviso-A");
+    });
+    await t.test("reglas conservan las tres referencias del aporte", async () => {
+      const row = doc(dbB, "users", "alice", "history", "101");
+      for (const change of [
+        { internalTransferLink: "aporte-B" }, { internalTransferSpaceId: "caja-B" }, { internalTransfer: "family" },
+      ]) await assertFails(setDoc(row, { id: 101, deleted: false, transaction: { ...linked, ...change }, syncAt: serverTimestamp() }));
+      const { internalTransferLink: _omitted, ...withoutLink } = linked;
+      void _omitted;
+      await assertFails(setDoc(row, { id: 101, deleted: false, transaction: withoutLink, syncAt: serverTimestamp() }));
+      assert.deepEqual((await getDoc(row)).data().transaction, linked);
+    });
+    await t.test("mismo original puede editarse y borrarse; registros antiguos siguen legibles", async () => {
+      await phoneB.saveHistoryV2("alice", [{ ...original, updatedAt: 30, amount: 15 }], []);
+      assert.equal((await getDoc(doc(dbB, "users", "alice", "history", "100"))).data().transaction.amount, 15);
+      await assertSucceeds(setDoc(doc(dbB, "users", "alice", "history", "102"), {
+        id: 102, deleted: false, transaction: movement(102), syncAt: serverTimestamp(),
+      }));
+      const legacy = doc(dbB, "users", "alice", "history", "103");
+      await assertSucceeds(setDoc(legacy, {
+        id: 103, deleted: false, transaction: { ...movement(103), captureId: null, internalTransferLink: null }, syncAt: serverTimestamp(),
+      }));
+      await assertSucceeds(setDoc(legacy, {
+        id: 103, deleted: false, transaction: movement(103, 200, 15), syncAt: serverTimestamp(),
+      }));
+      await phoneA.saveHistoryV2("alice", [], [100]);
+      assert.equal((await getDoc(doc(dbB, "users", "alice", "history", "100"))).data().deleted, true);
+    });
+  } finally { await env.cleanup(); }
 });
 
 test("el respaldo v2 acepta más de 800 KB y restaura sin lista raíz", async () => {

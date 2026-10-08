@@ -144,7 +144,19 @@ function code(name, ast = source) {
   assert.ok(found, name);
   return ts.transpile(found.replace(/^export\s+/, ""), { target: ts.ScriptTarget.ES2022 });
 }
-const scope = { ...exports, ...coordinator, auth: { currentUser: { uid: "test" } }, cloudFieldsRef: { current: a }, cloudSyncMetaRef: { current: a.syncUpdatedAt },
+// Auxiliares originales de la misma revisión, también para preflight de recepción.
+const orderExports = {};
+vm.runInNewContext(ts.transpile(read("utils/ordenarMovimientos.ts"), {
+  target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
+}), { exports: orderExports });
+const helpers = {};
+vm.runInNewContext(ts.transpile(read("utils/mergeTransactions.ts"), {
+  target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
+}), { exports: helpers, require: name => {
+  assert.equal(name, "@/utils/ordenarMovimientos");
+  return orderExports;
+} });
+const scope = { ...exports, ...helpers, ...coordinator, transactionsLive: { current: a.transactions }, auth: { currentUser: { uid: "test" } }, cloudFieldsRef: { current: a }, cloudSyncMetaRef: { current: a.syncUpdatedAt },
   setCloudSyncMeta() {}, setRespaldoFallo() {}, userEmail: "test@example.com", userCountry: "PE",
   saveJSON() {}, STORAGE_KEYS: {}, getFavoritos: () => [], ready: true, hasOnboarded: true,
 };
@@ -192,19 +204,6 @@ assert.equal(profileScope.saved.userCountry, "CL");
 
 // Las dos rutas de escritura reales (lista antigua e historial v2) y la
 // restauración se ejecutan con una red aislada en memoria.
-// Ambos auxiliares proceden de la misma revisión, no del disco actual cuando
-// se está probando una anterior. Solo tipos se eliminan al transpilar.
-const orderExports = {};
-vm.runInNewContext(ts.transpile(read("utils/ordenarMovimientos.ts"), {
-  target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
-}), { exports: orderExports });
-const helpers = {};
-vm.runInNewContext(ts.transpile(read("utils/mergeTransactions.ts"), {
-  target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
-}), { exports: helpers, require: name => {
-  assert.equal(name, "@/utils/ordenarMovimientos");
-  return orderExports;
-} });
 const cloudAst = ts.createSourceFile("cloud.ts", read("utils/cloudSync.ts"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 const cloudCode = ["conservarPremiumManual", "pesa", "sinFotos", "motivoLegible", "saveCloudData", "saveCloudDataV2"]
   .map((name) => code(name, cloudAst)).join("\n");

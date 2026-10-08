@@ -1,5 +1,27 @@
 # Estado actual de Fino
 
+## FINO-52 — refuerzo parcial de avisos/aportes (08/10/2026)
+
+- Orígenes conocidos diferentes bajo el mismo número detienen la unión:
+  disco/memoria, importación, respaldo v1/v2 y recepción/restauración antes
+  de cambiar perfil/presupuestos. Mensaje explica conservar ambas copias.
+- Reglas preparadas del historial por documentos impiden cambiar/quitar
+  referencias de Yape/aportes; edición del mismo origen y borrado admitidos.
+- Código original/IO adaptado y SDK/reglas locales aprobados; regresiones
+  contra `0a6b9a9` rojas. 38 comprobaciones Firestore actuales, incluidos
+  10.000 movimientos, Pro, moneda e historial. Guía
+  `docs/PRUEBAS_ORIGEN_MOVIMIENTOS.md` detalla qué NO queda protegido.
+- TypeScript/ESLint sin avisos; 162 pruebas y 8 auditores aprobados sin
+  tarjetas. Incluyen una prueba local ajena no versionada (161 previstas en
+  Git limpio; no se ejecutó otro checkout). Diagnóstico FINO-52 rojo separado.
+- FINO-52 sigue ABIERTO: generador/manuales/metas, referencias ausentes,
+  lápidas por número, clientes v1 antiguos, Admin/migrador JS y todos los
+  caminos de captura/creación necesitan trabajo. No se renumeraron datos.
+- **Qué sigue:** identidad compatible de creación y restantes
+  15/16/34/37/47/49/50. **Qué falta:** Android/dos teléfonos,
+  consolas/trámites/cobros y entrega acumulada autorizada. Sin publicación;
+  tarjetas/Sentry externo fuera. Auditoría no terminada.
+
 ## FINO-33 comprobaciones fiables / FINO-52 confirmado (08/10/2026)
 
 - Tres lectores de regresión respetan el hash indicado, no HEAD; auxiliares

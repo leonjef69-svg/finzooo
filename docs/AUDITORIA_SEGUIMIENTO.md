@@ -3,6 +3,28 @@
 Última revisión: 08/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-52 — protección parcial, no cierre (08/10/2026)
+
+- Número coincidente con referencias inequívocamente distintas de aviso/aporte
+  rechaza unión, importación y planificación de historial; no renumera datos.
+  Recepción/restauración comprueban antes de cambiar perfil/presupuestos y
+  Settings explica conservar copias. Atajo del disco también comprueba origen.
+- Reglas v2 preparadas impiden cambiar/quitar referencias; misma edición,
+  borrado y datos antiguos sin referencia/nulos siguen admitidos.
+- Código original/IO adaptado y SDK/reglas reales locales aprobados;
+  regresiones contra `0a6b9a9` rojas. 38 comprobaciones locales (26 + 12)
+  incluyen 10.000 movimientos, dos clientes, Pro, moneda e historial.
+  Guía `PRUEBAS_ORIGEN_MOVIMIENTOS.md` documenta cobertura y límites.
+- TypeScript/ESLint y 162 pruebas/8 auditores aprobados, sin tarjetas; una
+  prueba local ajena no versionada fuera del commit (161 previstas en Git
+  limpio, no comprobado en otro checkout). Diagnóstico de FINO-52 rojo aparte.
+- FINO-52 sigue abierto: generador/manuales/metas, referencias ausentes,
+  lápidas por número, v1 directo/antiguo, Admin/migrador JS y restantes caminos
+  de captura/creación NO quedan certificados. Diagnóstico original sigue rojo.
+- **Qué sigue:** identidad estable compatible y revalidar 15/16/34/37/47/49/50.
+  **Qué falta:** Android/dos teléfonos, consolas/trámites/cobros y entrega
+  autorizada. Sin publicación; tarjetas/Sentry externo fuera. Auditoría abierta.
+
 ## FINO-33 pruebas / FINO-52 confirmado (08/10/2026)
 
 - Tres lectores ignoraban el hash y leían HEAD; ahora fijan y muestran el

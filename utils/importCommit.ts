@@ -1,4 +1,5 @@
 import type { Transaction } from "@/types";
+import { assertSameTransactionOrigin } from "@/utils/mergeTransactions";
 
 /** Preparar el lote completo antes de cambiar la lista: un conflicto no
  * guarda solo algunos movimientos ni vuelve a crear un movimiento borrado. */
@@ -14,6 +15,7 @@ export function applyImportedTransactions(
   const replacements = new Map<number, Transaction>();
   for (const replacement of toReplace) {
     const existing = known.get(replacement.id);
+    if (existing) assertSameTransactionOrigin(existing, replacement);
     if (!existing || deleted.has(replacement.id) || existing.internalTransfer ||
       (existing.updatedAt ?? 0) > (replacement.updatedAt ?? 0)) {
       throw new Error("import-source-changed");
@@ -25,6 +27,8 @@ export function applyImportedTransactions(
   }
   const added: Transaction[] = [];
   for (const tx of toAdd) {
+    const existing = known.get(tx.id);
+    if (existing) assertSameTransactionOrigin(existing, tx);
     if (known.has(tx.id) || deleted.has(tx.id)) continue;
     known.set(tx.id, tx);
     added.push({ ...tx, updatedAt: Math.max(now, tx.updatedAt ?? 0) });

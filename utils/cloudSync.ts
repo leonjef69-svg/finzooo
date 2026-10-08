@@ -336,6 +336,7 @@ function motivoLegible(e: unknown): string {
   const crudo = String((e as { code?: string })?.code ?? (e as Error)?.message ?? e);
   if (/private-box-review-(pending|changed)/.test(crudo)) return "revision-caja-pendiente";
   if (/account-currency-conflict/.test(crudo)) return "monedas-distintas";
+    if (/record-origin-conflict/.test(crudo)) return "movimientos-en-conflicto";
   if (/demasiado-grande/i.test(crudo)) return "demasiado-grande";
   if (/cloud-field-invalid|cloud-field-duplicate-id|sync-clock-overflow/i.test(crudo)) return "datos-nube-invalidos";
   if (/permission-denied|insufficient permissions/i.test(crudo)) return "permisos";

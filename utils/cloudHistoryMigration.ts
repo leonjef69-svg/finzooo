@@ -1,5 +1,6 @@
 import type { Transaction } from "@/types";
 import { utf8ByteLength } from "@/utils/utf8";
+import { assertSameTransactionOrigin } from "@/utils/mergeTransactions";
 
 /**
  * Operaciones puras del historial por documentos. La migración de una cuenta
@@ -65,6 +66,7 @@ export function planLocalHistoryChanges(
       changes.push(entry);
       continue;
     }
+    assertSameTransactionOrigin(old.transaction, entry.transaction);
     const before = old.transaction.updatedAt ?? 0;
     const after = entry.transaction.updatedAt ?? 0;
     if (after > before) changes.push(entry);
@@ -81,6 +83,9 @@ export function mergeHistoryEntries(existing: HistoryEntry[], incoming: HistoryE
   for (const entry of [...existing, ...incoming]) {
     historyDocumentId(entry.id);
     const previous = byId.get(entry.id);
+    if (previous && !previous.deleted && !entry.deleted) {
+      assertSameTransactionOrigin(previous.transaction, entry.transaction);
+    }
     if (previous && !previous.deleted && !entry.deleted &&
       (entry.transaction.updatedAt ?? 0) === (previous.transaction.updatedAt ?? 0) &&
       canonical(entry.transaction) !== canonical(previous.transaction)) {
@@ -138,6 +143,7 @@ export function missingFromShadow(source: HistoryEntry[], shadow: HistoryEntry[]
       continue;
     }
     if (entry.deleted || stored.deleted) continue;
+    assertSameTransactionOrigin(entry.transaction, stored.transaction);
     const oldVersion = entry.transaction.updatedAt ?? 0;
     const savedVersion = stored.transaction.updatedAt ?? 0;
     if (savedVersion < oldVersion ||

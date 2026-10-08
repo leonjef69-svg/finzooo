@@ -1,5 +1,18 @@
 # Entregas de Fino
 
+## Preparado, no entregado — FINO-52 parcial (08/10/2026)
+
+Se detienen uniones de avisos/aportes con orígenes conocidos distintos y mismo
+número, antes de reemplazar movimientos/metadatos; reglas v2 preparadas.
+Pruebas originales y SDK/reglas locales actuales, regresiones rojas contra
+`0a6b9a9`; guía `docs/PRUEBAS_ORIGEN_MOVIMIENTOS.md`. FINO-52 NO cerrado:
+generador/manuales/metas, lápidas, referencias ausentes, cliente v1 antiguo
+y migrador administrativo pendientes. No se renumeraron datos ni tocaron
+tarjetas. **Qué sigue:** protección completa compatible y restantes IDs.
+**Qué falta:** Android/dos teléfonos, consolas/trámites/cobros y entrega
+autorizada. No APK/AAB/OTA/EAS/despliegue; Git no actualiza los teléfonos.
+Sentry externo fuera.
+
 ## Comprobado, no entregado — FINO-33 / FINO-52 abierto (08/10/2026)
 
 Correcciones de las pruebas, no una nueva versión de la app: lectores de

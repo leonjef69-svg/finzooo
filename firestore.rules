@@ -280,6 +280,17 @@ service cloud.firestore {
       // Cada movimiento vive en su propio documento al migrar. Los clientes
       // solo pueden leer/escribir el historial de su propia cuenta verificada.
       match /history/{historyId} {
+        // Un cliente antiguo/directo no puede quitar o cambiar un origen ya
+        // guardado para sustituir otro aviso/aporte bajo el mismo número.
+        // No acredita unicidad para movimientos antiguos sin esas referencias.
+        function keepsKnownOrigin(before, after) {
+          return (before.get('captureId', '') in ['', null]
+              || after.get('captureId', '') == before.captureId)
+            && (before.get('internalTransferLink', '') in ['', null]
+              || (after.get('internalTransferLink', '') == before.internalTransferLink
+                && after.get('internalTransfer', '') == before.get('internalTransfer', '')
+                && after.get('internalTransferSpaceId', '') == before.get('internalTransferSpaceId', '')));
+        }
         allow read: if verified() && request.auth.uid == userId
           && premiumUser(userId)
           && get(/databases/$(database)/documents/users/$(userId)).data.get('historyFormat', 1) == 2;
@@ -298,6 +309,10 @@ service cloud.firestore {
               && request.resource.data.transaction is map
               && request.resource.data.transaction.id == request.resource.data.id)
           )
+          && (!exists(/databases/$(database)/documents/users/$(userId)/history/$(historyId))
+            || request.resource.data.deleted == true
+            || resource.data.deleted == true
+            || keepsKnownOrigin(resource.data.transaction, request.resource.data.transaction))
           && (!exists(/databases/$(database)/documents/users/$(userId)/history/$(historyId))
             || resource.data.deleted != true || request.resource.data.deleted == true);
         allow delete: if verified() && request.auth.uid == userId

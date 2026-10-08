@@ -108,6 +108,10 @@ findReceive(tree); assert.ok(receive);
 const failure = [];
 const receiveDeps = { auth: { currentUser: { uid: "a" } }, privateBoxCloudResponseCurrent: () => true,
   cloudFieldsRef: { current: a }, cloudSyncMetaRef: { current: a.syncUpdatedAt }, mergeCloudFields: api.mergeCloudFields,
+  transactionsLive: { current: a.transactions },
+  // Esta suite aísla moneda/perfil: las listas son vacías. La fusión de
+  // movimientos se ejecuta originalmente en sus suites, no se acredita aquí.
+  mergeTransactions: (left, right) => { assert.deepEqual(left, []); assert.deepEqual(right, []); return []; },
   setRespaldoFallo: reason => failure.push(reason) };
 const apply = new Function(...Object.keys(receiveDeps), ts.transpileModule(`return ${receive.getText(tree)};`, {
   compilerOptions: { target: ts.ScriptTarget.ES2022 },
