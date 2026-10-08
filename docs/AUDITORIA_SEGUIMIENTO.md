@@ -3,6 +3,22 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-28/29 — manifiesto y firma regenerados (08/10/2026)
+
+- Confirmados en fuentes/configuración: PreviewActivity/recortador públicos;
+  firma solo en Android ignorado. Nuevo plugin conserva launcher/recorte y
+  evita perder firma release al reconstruir desde plantilla SDK. No crea
+  credenciales ni publica; ClipboardFileProvider exige público y está limitado.
+- Regresión roja contra `3f41a81`, plugin/mods reales en plantilla SDK y
+  manifiesto adaptado verdes; Groovy original con DSL/grafo adaptados verde.
+  Prebuild sin --clean real y :app:processDebugMainManifest SDK real aprobado;
+  singular nuevo sin PreviewActivity, recorte privado y receptores conservados.
+- TypeScript/ESLint, 159 pruebas/8 auditores verdes (158 en Git limpio).
+  Guía `PRUEBAS_ANDROID_CONFIGURACION.md` distingue cada nivel de evidencia.
+- **Qué sigue:** restantes IDs. **Qué falta:** APK nuevo acumulado, recorrido
+  Android, manifiesto/firma release y huella contra Play/clave custodiada,
+  consolas/trámites. Tarjetas/Sentry excluidos. Auditoría no terminada.
+
 ## FINO-32 — permisos de calendario (08/10/2026)
 
 - Confirmado: la carga automática con lista no vacía pedía permiso. Ahora

@@ -1,5 +1,23 @@
 # Estado actual de Fino
 
+## FINO-28/29 — configuración Android reproducible (08/10/2026)
+
+- Plugin en app.json retira PreviewActivity y mantiene recortador privado,
+  sin romper arranque/enlaces/receptores. ClipboardFileProvider permanece
+  público: su implementación exige eso; restringido a cache/.clipboard/.
+- Firma release por variables privadas regenerada también desde plantilla
+  SDK limpia, idempotente y sin valores en Git; no queda debug como firma
+  final. Faltan claves/huella real; no se crearon/sustituyeron credenciales.
+- Plugin/mods originales en plantilla SDK real y Groovy original con DSL/
+  grafo adaptados aprobados. Prebuild local sin --clean y merger Android debug
+  real aprobado; configuración de comandos de package.json preservada.
+  Guía `docs/PRUEBAS_ANDROID_CONFIGURACION.md`. Release firmado pendiente.
+- TypeScript/ESLint y 159 pruebas/8 auditores verdes (158 en Git limpio).
+- **Qué sigue:** restantes IDs. **Qué falta:** Android visual, manifiesto y
+  firma release/Play/consentimientos/trámites y entrega acumulada. Nativo
+  requiere APK nuevo posterior; ninguno generado/publicado ahora. Tarjetas
+  y Sentry externo fuera; auditoría no terminada.
+
 ## FINO-32 — permisos de avisos contextuales (08/10/2026)
 
 - Reprogramar al iniciar/recuperar/cambiar moneda no pide permiso. Guardar un

@@ -1,5 +1,15 @@
 # Entregas de Fino
 
+## Preparado, no entregado — FINO-28/29 (08/10/2026)
+
+Plugin nativo reconstruye firma release sin secretos y limita componentes
+expuestos sin quitar recorte/arranque. Plantilla SDK/mods y Groovy originales
+comprobados, prebuild local sin --clean y merger debug real aprobados;
+guía `docs/PRUEBAS_ANDROID_CONFIGURACION.md`. Requiere APK nuevo acumulado,
+no genera otro APK/AAB ni OTA/EAS/despliegue en este paso. **Qué sigue:**
+restantes IDs. **Qué falta:** Android/fotos/enlaces/avisos, release final,
+credenciales/huella/consolas/trámites y entrega. Tarjetas/Sentry externo fuera.
+
 ## Preparado, no entregado — FINO-32 (08/10/2026)
 
 Permiso del calendario solo tras acción explícita, no al recuperar pagos.

@@ -1,5 +1,14 @@
 # Pruebas y auditores
 
+FINO-28/29: `verificar-configuracion-release.mjs` ejecuta plugin/mods Expo
+originales sobre plantilla SDK real y manifiesto adaptado. Contratos de firma,
+idempotencia/preservación/error cerrado; regresión
+`FINO_TEST_RELEASE_POLICY_BASELINE=3f41a81` roja. JVM aparte:
+`node scripts/probar-politica-firma.mjs` ejecuta Groovy original con DSL/grafo
+adaptados y valores ficticios; no firma. Guía
+`docs/PRUEBAS_ANDROID_CONFIGURACION.md` incluye merger debug real y pendientes
+release/Android/clave. No requiere carpeta Android generada para la prueba Node.
+
 FINO-32: `verificar-permiso-calendario-real.mjs` ejecuta programador, contexto,
 efecto e interruptor originales con IO sustituido: carga sin petición, intención
 explícita consumida una vez, concesión/negación/canal, retiro propio, guardado

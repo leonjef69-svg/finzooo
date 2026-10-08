@@ -108,6 +108,7 @@
         }
       ],
       "./plugins/with-modern-android-bars",
+      "./plugins/with-android-release-guard",
       "@sentry/react-native/expo"
     ],
     "experiments": {
