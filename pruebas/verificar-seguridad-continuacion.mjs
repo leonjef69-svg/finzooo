@@ -1,13 +1,10 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
 import vm from "node:vm";
-import { execFileSync } from "node:child_process";
 import ts from "typescript";
+import { createSourceReader } from "./helpers/source-reader.mjs";
 
 // Ejecuta las funciones reales aislando solo almacenamiento/autenticación.
-const read = p => process.env.FINO_TEST_BASELINE
-  ? execFileSync("git", ["show", `HEAD:${p}`], { encoding: "utf8" })
-  : fs.readFileSync(p, "utf8");
+const read = createSourceReader();
 const source = ts.createSourceFile("context.tsx", read("contexts/AppDataContext.tsx"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 function code(name) {
   let found;
@@ -220,4 +217,4 @@ const deleteAccount = code("deleteAccount");
 assert.match(logout, /limpiarCuentaEnEsteDispositivo\(localUser\.uid\)/);
 assert.match(deleteAccount, /deleteUser\(user\)[\s\S]*?limpiarCuentaEnEsteDispositivo\(user\.uid\)/);
 
-console.log("Respaldo fallido conserva datos; metas e invitaciones protegidas; espacios Premium, configuración y privacidad verificados.");
+console.log("Manejadores originales/IO adaptado: cierre y permisos locales; contratos estáticos: reglas, limpieza, enlaces y textos. Android/Firebase publicado no comprobados.");

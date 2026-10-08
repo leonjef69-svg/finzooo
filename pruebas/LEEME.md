@@ -1,5 +1,21 @@
 # Pruebas y auditores
 
+FINO-33: lectores de seguridad-continuacion/fusion-pro/nube-pro-servidor
+respetan el hash concreto de `FINO_TEST_BASELINE` y distinguen contratos
+estáticos de ejecución con IO adaptado. `1` es HEAD, no una versión anterior
+permanente. `verificar-fuentes-regresion.mjs` ejecuta los tres lectores
+originales; roja con `FINO_TEST_SOURCE_READER_BASELINE=d7cdbe8`, actual verde.
+`verificar-cierre-sesion-conserva-real.mjs` conecta logout + bóveda/cifrado/
+almacén originales con IO adaptado, verifica Gratis A→B→A, último cambio,
+Pro y fallos. Solo logout histórico con `FINO_TEST_LOGOUT_FLOW_BASELINE=276cf53`
+es rojo; no es un APK histórico. Guía `docs/PRUEBAS_CALIDAD_REGRESIONES.md`.
+
+FINO-52 NO corregido: se retira la falsa comprobación de cadenas del conteo.
+`node pruebas/diagnosticos/reproducir-colision-identificadores.mjs` ejecuta
+generador y fusión originales en dos instancias; devuelve error por perder
+uno de dos movimientos y una de dos metas. El corredor avisa del pendiente,
+no lo cuenta como aprobado. Faltan protección/migración y dos dispositivos.
+
 FINO-51: `verificar-moneda-cuenta-real.mjs` ejecuta manejadores, setter,
 unión/recepción/restauración y guardados originales con IO adaptado: cuenta
 nueva, moneda fija, país independiente y conflicto sin escrituras v1/v2/por

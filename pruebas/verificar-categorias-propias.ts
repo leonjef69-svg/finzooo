@@ -1162,7 +1162,7 @@ console.log("\n--- VIAJAN A LA COPIA DE LA NUBE ---");
   ok(/categoryOverrides: data\.categoryOverrides \|\| \{\}/.test(nube), "y la personalizacion tambien");
 }
 
-console.log("\n--- AL CERRAR SESION NO SE QUEDA NADA DE LA CUENTA ANTERIOR ---");
+console.log("\n--- CONTRATO ESTATICO: CLAVES PRIVADAS AISLADAS DE LA CUENTA SIGUIENTE ---");
 {
   // FALLO DE PRIVACIDAD, encontrado el 07/08/2026 mientras se añadian los
   // favoritos a la nube.
@@ -1176,7 +1176,9 @@ console.log("\n--- AL CERRAR SESION NO SE QUEDA NADA DE LA CUENTA ANTERIOR ---")
   // nombres y colores, Y SUS FOTOS. Datos de una cuenta a la vista de otra.
   //
   // Asi que no se comprueban esas tres, se comprueban TODAS: cualquier clave que se
-  // añada y no entre en el borrado hace fallar esto.
+  // añada y no entre en el aislamiento hace fallar esto. Esto NO demuestra
+  // conservación: la copia cifrada por cuenta se prueba ejecutando logout y
+  // la bóveda originales en verificar-cierre-sesion-conserva-real.mjs.
   const almacen = fs.readFileSync(path.join(RAIZ, "utils/storage.ts"), "utf8");
   const declaradas = [...almacen.matchAll(/^ {2}([a-zA-Z]+): "finzo:/gm)].map((m) => m[1]);
   ok(declaradas.length >= 8, `se leyeron las claves guardadas (${declaradas.length})`);
@@ -1186,12 +1188,12 @@ console.log("\n--- AL CERRAR SESION NO SE QUEDA NADA DE LA CUENTA ANTERIOR ---")
   const borrado = inicioBorrado >= 0 && finBorrado > inicioBorrado
     ? almacen.slice(inicioBorrado, finBorrado)
     : "";
-  ok(borrado.length > 0, "se encontro el borrado de fin de sesion");
+  ok(borrado.length > 0, "se encontró la lista de claves privadas de la sesión activa");
   // themeMode y visualStyle se quedan a proposito: son preferencias del aparato, no de la cuenta.
   const fuera = declaradas.filter(
     (k) => !["themeMode", "visualStyle"].includes(k) && !borrado.includes(`STORAGE_KEYS.${k}`)
   );
-  ok(fuera.length === 0, `todas se borran al cerrar sesion${fuera.length ? ": falta " + fuera.join(", ") : ""}`);
+  ok(fuera.length === 0, `todas se aíslan de otras cuentas, sin borrar la copia por cuenta${fuera.length ? ": falta " + fuera.join(", ") : ""}`);
 
   // Y las tres claves viven en la lista comun, no cada una en su archivo: es lo que
   // hace que la prueba de arriba pueda verlas.

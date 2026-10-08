@@ -1,15 +1,11 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
 import vm from "node:vm";
-import { execFileSync } from "node:child_process";
 import ts from "typescript";
-import { buildSync } from "esbuild";
+import { createSourceReader } from "./helpers/source-reader.mjs";
 
 // Corre las funciones propias, no una copia de su lógica. Android y la
 // conexión de red se sustituyen; no se usa Firebase ni una cuenta real.
-const read = (file) => process.env.FINO_TEST_BASELINE
-  ? execFileSync("git", ["show", `HEAD:${file}`], { encoding: "utf8" })
-  : fs.readFileSync(file, "utf8");
+const read = createSourceReader();
 const exports = {};
 vm.runInNewContext(ts.transpile(read("utils/cloudFieldMerge.ts"), {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
@@ -196,11 +192,19 @@ assert.equal(profileScope.saved.userCountry, "CL");
 
 // Las dos rutas de escritura reales (lista antigua e historial v2) y la
 // restauración se ejecutan con una red aislada en memoria.
-// esbuild asigna module.exports al empaquetar estos auxiliares reales.
-const txScope = { module: { exports: {} } };
-vm.runInNewContext(buildSync({ entryPoints: ["utils/mergeTransactions.ts"], bundle: true,
-  platform: "node", format: "cjs", write: false, alias: { "@": process.cwd() } }).outputFiles[0].text, txScope);
-const helpers = txScope.module.exports;
+// Ambos auxiliares proceden de la misma revisión, no del disco actual cuando
+// se está probando una anterior. Solo tipos se eliminan al transpilar.
+const orderExports = {};
+vm.runInNewContext(ts.transpile(read("utils/ordenarMovimientos.ts"), {
+  target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
+}), { exports: orderExports });
+const helpers = {};
+vm.runInNewContext(ts.transpile(read("utils/mergeTransactions.ts"), {
+  target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
+}), { exports: helpers, require: name => {
+  assert.equal(name, "@/utils/ordenarMovimientos");
+  return orderExports;
+} });
 const cloudAst = ts.createSourceFile("cloud.ts", read("utils/cloudSync.ts"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 const cloudCode = ["conservarPremiumManual", "pesa", "sinFotos", "motivoLegible", "saveCloudData", "saveCloudDataV2"]
   .map((name) => code(name, cloudAst)).join("\n");
@@ -311,4 +315,4 @@ assert.equal(builderScope.datosParaLaNube(true).budgets["2026-10"], 1000, "la ca
 const onboarding = read("app/onboarding.tsx");
 assert.match(onboarding, /await openLocalAccount\(user.uid, user.email\)/, "Google desde bienvenida abre la copia de su propia cuenta antes de Firebase");
 assert.match(onboarding, /if \(restoredLocal\)/, "una copia local recuperada no se reemplaza por una nube antigua");
-console.log("Gratis → Pro: unión real por elemento, borrados, fotos, meses, ediciones y respuestas pendientes comprobados.");
+console.log("Gratis → Pro: fusión/manejadores originales con IO adaptado; contratos estáticos de entrada. No comprueba Android ni Firebase publicado.");

@@ -208,6 +208,7 @@ const rotas = [];
 console.log("\n=== PRUEBAS ===\n");
 if (SIN_TARJETAS) console.log("Tarjetas de crédito: dos suites excluidas por decisión del propietario. No se cuentan como aprobadas.\n");
 if (!FILTRO) console.log("Navegación/candado: cuatro simulaciones históricas fuera del conteo hasta comprobar el flujo real en Android.\n");
+if (!FILTRO) console.log("FINO-52 sigue abierto: diagnosticos/reproducir-colision-identificadores.mjs reproduce pérdida de movimientos/metas; NO cuenta como prueba aprobada.\n");
 for (const s of suitesSeleccionadas) {
   const nombre = s.archivo.replace(/\.ts$/, "");
   const salida = path.join(TMP, nombre + (s.formato === "cjs" ? ".cjs" : ".mjs"));

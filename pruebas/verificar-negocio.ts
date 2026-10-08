@@ -9,7 +9,7 @@
 //   1. Que el negocio viva APARTE de los movimientos. Si mañana alguien le mete el negocio
 //      dentro, la plata del negocio empieza a sumarse en los totales personales y no se nota
 //      hasta que las cuentas no cuadran.
-//   2. Que borre sus datos al cerrar sesión. Ya pasó el 07/08/2026 con las categorías propias:
+//   2. Que aisle los datos de la sesión activa después de conservar su copia por cuenta. Ya pasó el 07/08/2026 con las categorías propias:
 //      la cuenta siguiente heredó las de la anterior, con sus fotos.
 //   3. Que la nube del negocio sea OTRO documento y que borrar la cuenta borre los dos.
 //   4. Que los totales de una venta salgan de sus líneas y que el precio quede copiado.
@@ -79,7 +79,7 @@ console.log("\n--- EL NEGOCIO VIVE APARTE DE LOS MOVIMIENTOS ---");
   ok(!/negocio/i.test(finanzas), "y los totales personales no saben que existe el negocio");
 }
 
-console.log("\n--- AL CERRAR SESION NO QUEDA NADA DEL NEGOCIO ---");
+console.log("\n--- CONTRATO ESTATICO: NEGOCIO AISLADO DE LA CUENTA SIGUIENTE ---");
 {
   // Ya paso con las categorias propias: sus claves vivian solo en su archivo, se quedaron
   // fuera del borrado, y la cuenta siguiente en ese celular heredo las categorias, los
@@ -88,7 +88,7 @@ console.log("\n--- AL CERRAR SESION NO QUEDA NADA DEL NEGOCIO ---");
   const almacen = fs.readFileSync(path.join(RAIZ, "utils/storage.ts"), "utf8");
   const borrado = almacen.slice(almacen.indexOf("export const ACCOUNT_STORAGE_KEYS"));
   for (const clave of ["negocios", "productos", "ventas"]) {
-    ok(borrado.includes(`STORAGE_KEYS.${clave},`), `se borra ${clave} al cerrar sesion`);
+    ok(borrado.includes(`STORAGE_KEYS.${clave},`), `${clave} pertenece a las claves privadas de la cuenta, no del aparato`);
   }
 }
 

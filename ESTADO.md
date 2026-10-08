@@ -1,5 +1,25 @@
 # Estado actual de Fino
 
+## FINO-33 comprobaciones fiables / FINO-52 confirmado (08/10/2026)
+
+- Tres lectores de regresión respetan el hash indicado, no HEAD; auxiliares
+  de fusión de la misma revisión. Prueba de lectores roja contra `d7cdbe8`,
+  actual verde; salidas separan IO adaptado de contratos estáticos/Android.
+- Logout original conectado a bóveda/cifrado/almacén originales conserva
+  Gratis A→B→A y último cambio, Pro y errores. Regresión del logout anterior
+  `276cf53` roja por no confirmar copia. Limpieza de servicios/Auth adaptadas.
+- Prueba falsa de IDs retirada: diagnóstico original confirma mismo ID con
+  azar distinto/máximo común y pierde uno de dos movimientos/metas. FINO-52
+  sigue ABIERTO, no arreglado; no se cambió el generador ni datos/tarjetas.
+  Guía `docs/PRUEBAS_CALIDAD_REGRESIONES.md` documenta evidencia y límites.
+- TypeScript/ESLint y 161 pruebas/8 auditores aprobados sin tarjetas. El total
+  incluye una prueba local preexistente no versionada (160 previstas en una
+  copia limpia; no se ejecutó otro checkout). Diagnóstico FINO-52 rojo separado.
+- **Qué sigue:** protección compatible de IDs; revalidar 15/16/34/37/47/49/50.
+  **Qué falta:** Android/dos celulares, consolas/políticas/trámites, cobros y
+  entrega acumulada autorizada. No APK/AAB/OTA/despliegue; Sentry externo y
+  tarjetas siguen fuera. Auditoría no terminada.
+
 ## FINO-51 — moneda fija por cuenta (08/10/2026)
 
 - Decisión del propietario aplicada: elegir moneda en una cuenta nueva, fija

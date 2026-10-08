@@ -3,6 +3,30 @@
 Última revisión: 08/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-33 pruebas / FINO-52 confirmado (08/10/2026)
+
+- Tres lectores ignoraban el hash y leían HEAD; ahora fijan y muestran el
+  commit correcto. Auxiliares de fusión también se leen de esa revisión.
+  Regresión de lectores contra `d7cdbe8` roja en los tres, actual verde.
+- Logout + bóveda/almacén/cifrado originales conectados con IO adaptado:
+  Gratis A→B→A, cambio pendiente, Pro/sin respaldo expreso y fallos de disco/
+  Auth/nube conservan datos. Logout de `276cf53` rojo por falta de manifiesto,
+  no por método ausente. No se probó un APK histórico ni limpieza de servicios.
+- Contratos de claves/estructuras siguen siendo estáticos; etiquetas precisas
+  evitan confundir aislamiento activo con borrado definitivo de cuenta.
+- FINO-52 confirmado por ejecución: azar distinto + mismo máximo cargado
+  generan igual ID, fusión pierde uno de dos movimientos y una de dos metas.
+  Falsa prueba de cadenas retirada; diagnóstico rojo fuera de aprobadas y
+  pendiente visible en el corredor. No se instaló un prototipo inseguro.
+- TypeScript/ESLint sin avisos; 161 pruebas/8 auditores verdes sin tarjetas.
+  Una prueba local ajena no versionada se conserva fuera del commit; 160
+  previstas en Git limpio, sin ejecutar un segundo checkout. FINO-52 rojo
+  separado NO se incluye entre aprobadas.
+- Guía `PRUEBAS_CALIDAD_REGRESIONES.md`. **Qué sigue:** corregir FINO-52 sin
+  renumerar historiales/aportes a ciegas; revalidar 15/16/34/37/47/49/50.
+  **Qué falta:** Android/dos dispositivos, consolas/trámites, cobros y entrega
+  autorizada. Tarjetas/Sentry externo fuera, sin publicación; auditoría abierta.
+
 ## FINO-51 — moneda de cuenta, no etiqueta editable (08/10/2026)
 
 - Revalidado: moneda/país podían reetiquetar importes sin convertir. Propietario

@@ -1,5 +1,16 @@
 # Entregas de Fino
 
+## Comprobado, no entregado — FINO-33 / FINO-52 abierto (08/10/2026)
+
+Correcciones de las pruebas, no una nueva versión de la app: lectores de
+regresión respetan hash, cierre Gratis/Pro conectado a copia/cifrado reales
+con IO adaptado y regresiones rojas/verdes. Guía
+`docs/PRUEBAS_CALIDAD_REGRESIONES.md`. Diagnóstico de IDs pierde movimientos/
+metas y sale con error: FINO-52 sigue abierto. No cambió el generador ni se
+tocaron tarjetas. **Qué sigue:** corregir IDs y restantes 15/16/34/37/47/49/50.
+**Qué falta:** Android, consolas/trámites, cobros y entrega autorizada. Sin
+APK/AAB/OTA/despliegue; Git no actualiza los teléfonos, Sentry externo fuera.
+
 ## Preparado, no entregado — FINO-51 (08/10/2026)
 
 Moneda fija al terminar configuración inicial por decisión del propietario.

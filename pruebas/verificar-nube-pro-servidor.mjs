@@ -1,13 +1,11 @@
 import assert from "node:assert/strict";
-import fs from "node:fs";
 import vm from "node:vm";
 import { createRequire } from "node:module";
-import { execFileSync } from "node:child_process";
 import ts from "typescript";
+import { createSourceReader } from "./helpers/source-reader.mjs";
 
 const requireProject = createRequire(new URL("../functions/index.js", import.meta.url));
-const read = file => process.env.FINO_TEST_BASELINE
-  ? execFileSync("git", ["show", `HEAD:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");
+const read = createSourceReader();
 function ownModule(file, require = requireProject) {
   const scope = { module: { exports: {} }, require, Date, console };
   vm.runInNewContext(read(file), scope);
@@ -254,4 +252,4 @@ providerScope.auth.currentUser = { uid: "bob" };
 finishTrial({ activated: true, startedAt: 100_001 });
 assert.equal(await oldAccountTrial, false);
 assert.equal(permissionWrites.length, 3, "una activación anterior no toca la cuenta nueva");
-console.log("Nube Pro: permiso separado, Gratis sin descarga, borrado sin Pro, identidad y prueba única comprobados.");
+console.log("Nube Pro: cliente/servidor originales con Auth/red/Firestore adaptados y contratos estáticos de Cajas. No acredita reglas publicadas ni Android.");
