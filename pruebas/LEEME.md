@@ -1,5 +1,12 @@
 # Pruebas y auditores
 
+FINO-47 parcial: `verificar-aceptacion-antes-auth.mjs` ejecuta los tres
+manejadores de alta y JSX original con IO/árbol adaptados. Sin aceptación no
+inicia Auth; doble toque/cancelación y validación conservados. Regresión
+`FINO_LEGAL_AUTH_BASELINE=a80a09b` roja/actual verde. Guía
+`docs/PRUEBAS_ACEPTACION_PREVIA_AUTH.md`: no recibo por cuenta, sesiones
+existentes, servidor, validez jurídica ni Android. No declarar cierre total.
+
 FINO-49: `verificar-denuncia-contenido-real.mjs` ejecuta cliente/tarea por sesión
 y manejador originales con IO adaptado; ACK, doble toque, reintento y desmontaje.
 UI estática, no SMTP ni Android. `functions/emulator-tests/content-reports.test.js`

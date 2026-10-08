@@ -15,13 +15,13 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { createUserWithEmailAndPassword, sendEmailVerification, updateProfile } from "firebase/auth";
 import AuthField from "@/components/AuthField";
+import AuthLegalAcceptance from "@/components/AuthLegalAcceptance";
 import GoogleButton, { OrDivider } from "@/components/GoogleButton";
 import { auth } from "@/utils/firebase";
 import { firebaseErrorMessage } from "@/utils/firebaseErrors";
 import { GoogleSignInCancelled, signInWithGoogle } from "@/utils/googleAuth";
 import { googleSignInErrorMessage } from "@/utils/googleSignInError";
 import { useAppData } from "@/contexts/AppDataContext";
-import { irUnaVez } from "@/utils/nav";
 
 type Errors = { name?: string; email?: string; pass?: string; general?: string };
 
@@ -46,6 +46,7 @@ export default function Register({
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState("");
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const authBusy = useRef(false);
   const insets = useSafeAreaInsets();
@@ -59,6 +60,10 @@ export default function Register({
 
   async function registerWithGoogle() {
     if (authBusy.current) return;
+    if (!legalAccepted) {
+      setGoogleError(t("auth.legalRequired"));
+      return;
+    }
     authBusy.current = true;
     setErrors({});
     setGoogleError("");
@@ -78,6 +83,10 @@ export default function Register({
 
   async function submit() {
     if (authBusy.current) return;
+    if (!legalAccepted) {
+      setErrors({ general: t("auth.legalRequired") });
+      return;
+    }
     setGoogleError("");
     const e: Errors = {};
     if (name.trim().length < 2) e.name = t("register.nameError");
@@ -160,16 +169,11 @@ export default function Register({
         </View>
 
         <View className="px-6 mt-5">
-          <View className="mb-3 flex-row flex-wrap justify-center">
-            <Text className="text-xs text-slate-500">{t("register.legalPrefix")} </Text>
-            <TouchableOpacity onPress={() => irUnaVez("/legal")} accessibilityRole="link">
-              <Text className="text-xs font-bold text-amber-700 underline">{t("register.legalLink")}</Text>
-            </TouchableOpacity>
-          </View>
+          <AuthLegalAcceptance accepted={legalAccepted} onChange={setLegalAccepted} disabled={loading || googleLoading} t={t} />
           <TouchableOpacity
             activeOpacity={0.85}
             onPress={submit}
-            disabled={loading}
+            disabled={loading || googleLoading || !legalAccepted}
             className={`w-full bg-amber-500 py-4 rounded-2xl items-center justify-center ${
               loading ? "opacity-70" : ""
             }`}
@@ -187,7 +191,7 @@ export default function Register({
               label={t("login.withGoogle")}
               onPress={registerWithGoogle}
               loading={googleLoading}
-              disabled={loading}
+              disabled={loading || !legalAccepted}
               light
             />
             {googleError ? (

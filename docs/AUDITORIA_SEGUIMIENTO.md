@@ -3,6 +3,22 @@
 Última revisión: 08/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-47 — aceptación previa de altas, parcial (08/10/2026)
+
+Correo de registro y ambos botones Google bloqueados sin casilla explícita
+sin marcar; enlace/fecha y roles/estado accesibles. Se retira frase automática.
+Manejadores/JSX originales con IO/árbol adaptados y regresión `a80a09b`
+roja/actual verde; guía PRUEBAS_ACEPTACION_PREVIA_AUTH.md. No recibo por
+UID/versionado ni cobertura de sesiones existentes/correo ni de servidor.
+No consentimiento sensible acreditado: FINO-47/48/49 siguen pendientes.
+TypeScript/ESLint sin avisos y 166 pruebas/8 auditores aprobados con tarjetas
+excluidas. Incluye una prueba ajena no versionada: 165 previstas en Git limpio,
+no otro checkout ejecutado. La pasada inicial incluyó por error dos pruebas
+de tarjetas, solo con adaptadores; se repitió el cierre excluyéndolas. No se
+modificó ese módulo ni datos reales. No nuevos datos/permisos/Firebase/nativos.
+**Qué sigue:** aceptación existente/bloqueo y resto de IDs. **Qué falta:**
+Android, SMTP, consolas/trámites/cobros y publicación autorizada. Sentry fuera.
+
 ## FINO-49 — denuncias parciales preparadas (08/10/2026)
 
 Responsable confirmó recepción/revisión. UI y servidor comprueban contenido,

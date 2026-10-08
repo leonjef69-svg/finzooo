@@ -1,5 +1,20 @@
 # Estado actual de Fino
 
+## FINO-47 — elección previa a las altas, parcial (08/10/2026)
+
+- Registro correo y ambos accesos Google requieren casilla explícita, sin
+  marcar por defecto, antes de Auth. Documentos/fecha accesibles; elección
+  bloqueada durante el acceso. Se retira la frase de aceptación automática.
+- Manejadores/JSX originales con IO adaptado aprobados, regresión `a80a09b`
+  roja/actual verde. Guía `docs/PRUEBAS_ACEPTACION_PREVIA_AUTH.md`.
+- TypeScript/ESLint y 166 pruebas/8 auditores aprobados sin tarjetas; una
+  prueba ajena no versionada (165 previstas en Git limpio, no otro checkout).
+- NO acredita consentimiento sensible ni recibo por cuenta/versionado; sesiones
+  existentes/correo y acceso previo a compartir aún pendientes. FINO-47/48/49
+  no cerrados. No cambios financieros, Firebase/nativos ni publicación.
+- **Qué sigue:** aceptación existente y bloqueo/restantes IDs. **Qué falta:**
+  Android, SMTP, consolas/trámites/cobros y entrega autorizada. Tarjetas/Sentry fuera.
+
 ## FINO-49 — denuncias preparadas, envío aún pendiente (08/10/2026)
 
 - Propietario confirmó que recibirá/revisará avisos de contenido inapropiado.

@@ -132,6 +132,16 @@ pero es diseño y se puede dejar para después: primero publicar.
 
 ## Formulario de seguridad de los datos
 
+### FINO-47 — aceptación previa de altas preparada (08/10/2026)
+
+Registro por correo y ambos botones Google muestran una elección explícita
+sin marcar y los documentos internos/fecha antes de enviar credenciales. No
+añade nuevos campos transmitidos ni un recibo de consentimiento: falta
+evidencia por cuenta/versionado, sesiones existentes, servidor y revisión
+jurídica de datos sensibles. No declarar cumplimiento completo ni términos
+aceptados por todos los miembros existentes. Android/publicación pendientes;
+guía `docs/PRUEBAS_ACEPTACION_PREVIA_AUTH.md`.
+
 ### FINO-49 — denuncias preparadas, aún no activadas (08/10/2026)
 
 Responsable y destinatario confirmados por el propietario: dinero123xc@gmail.com.

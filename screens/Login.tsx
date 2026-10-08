@@ -16,6 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Wallet } from "lucide-react-native";
 import { sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import AuthField from "@/components/AuthField";
+import AuthLegalAcceptance from "@/components/AuthLegalAcceptance";
 import GoogleButton, { OrDivider } from "@/components/GoogleButton";
 import { auth } from "@/utils/firebase";
 import { firebaseErrorMessage } from "@/utils/firebaseErrors";
@@ -37,6 +38,7 @@ export default function Login({
   const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState("");
   const [googleError, setGoogleError] = useState("");
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const authBusy = useRef(false);
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
@@ -65,6 +67,12 @@ export default function Login({
 
   async function loginWithGoogle() {
     if (authBusy.current) return;
+    // Google también crea una cuenta cuando aún no existe. Mostrar la
+    // elección ANTES de enviar credenciales, no después de crearla.
+    if (!legalAccepted) {
+      setGoogleError(t("auth.legalRequired"));
+      return;
+    }
     authBusy.current = true;
     setError("");
     setGoogleError("");
@@ -158,7 +166,7 @@ export default function Login({
         <TouchableOpacity
           activeOpacity={0.85}
           onPress={submit}
-          disabled={loading}
+          disabled={loading || googleLoading}
           className={`w-full mt-7 bg-amber-500 py-4 rounded-2xl items-center justify-center ${
             loading ? "opacity-70" : ""
           }`}
@@ -172,11 +180,13 @@ export default function Login({
 
         {Platform.OS === "android" ? <>
           <OrDivider label={t("login.or")} />
+          <Text className="text-xs text-slate-600 mb-1">{t("auth.googleCreatesAccount")}</Text>
+          <AuthLegalAcceptance accepted={legalAccepted} onChange={setLegalAccepted} disabled={loading || googleLoading} t={t} />
           <GoogleButton
             label={t("login.withGoogle")}
             onPress={loginWithGoogle}
             loading={googleLoading}
-            disabled={loading}
+            disabled={loading || !legalAccepted}
             light
           />
           {googleError ? (

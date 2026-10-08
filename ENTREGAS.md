@@ -1,5 +1,15 @@
 # Entregas de Fino
 
+## Preparado, no entregado — FINO-47 parcial (08/10/2026)
+
+Casilla explícita/enlace/fecha antes del registro por correo y ambos botones
+Google, sin premarcar ni aceptación automática. Manejadores/JSX originales
+con IO adaptado y regresión roja/verde; guía PRUEBAS_ACEPTACION_PREVIA_AUTH.md.
+No prueba jurídica ni recibo por cuenta; sesiones existentes y CGU pendientes.
+**Qué sigue:** completar aceptación/bloqueo/restantes IDs. **Qué falta:**
+Android, SMTP, consolas/trámites/cobros y publicación autorizada. Sin APK/AAB/
+OTA/EAS/despliegue. Tarjetas/Sentry fuera; auditoría no terminada.
+
 ## Preparado, no entregado — FINO-49 parcial (08/10/2026)
 
 Denuncias de contenido en Familia/Cajas: cuenta/miembro/texto/autor verificados,
