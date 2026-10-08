@@ -87,10 +87,9 @@ repetir/reiniciar, red cortada, vencimiento y dueño sin Pro. Publicar las regla
 solo dentro de la entrega coordinada autorizada. Las reglas en GitHub no protegen
 el proyecto hasta desplegarlas; no se hizo despliegue en esta tanda.
 
-FINO-21 sigue pendiente: el receptor Android de exportación combina arranque y
-acción privada en un componente público. El filtro por nombre de acción no
-autentica al remitente. Revisar/separar esas entradas y comprobar Android antes
-de entregar. FINO-09 (puntualidad), restantes IDs, políticas/consolas y publicación
+FINO-21 se preparó después: entradas de arranque/exportación separadas, con
+trabajo privado; ver `PRUEBAS_RECEPTOR_EXPORTACION.md`. Sigue pendiente comprobar
+Android/release y entregar la nueva instalación. FINO-09 (puntualidad), restantes IDs, políticas/consolas y publicación
 siguen pendientes. Sentry y tarjetas permanecen excluidos.
 
 Referencia técnica: [operaciones atómicas y reglas de Firebase](https://firebase.google.com/docs/firestore/manage-data/transactions#data_validation_for_atomic_operations).

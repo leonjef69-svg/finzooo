@@ -1,5 +1,12 @@
 # Pruebas y auditores
 
+`verificar-receptor-exportacion.mjs` comprueba estáticamente el contrato de
+receptores: trabajo privado y arranque separado. `node scripts/probar-receptores-kotlin.mjs`
+compila/ejecuta Kotlin original en JVM con adaptadores de Android; exige JAR
+locales/Java y no se cuenta como prueba física ni se omite silenciosamente.
+Gradle debug comprueba por separado SDK/manifiesto; guía y regresiones:
+`docs/PRUEBAS_RECEPTOR_EXPORTACION.md`.
+
 `verificar-lote-importe-caja.mjs` ejecuta contexto/setters/cliente/colas/almacén
 originales y SQLite real: comprobante genuino, tres claves, reserva corta,
 repreparación, fallos, versiones, otros movimientos y 10.001 filas/1.001 Cajas.

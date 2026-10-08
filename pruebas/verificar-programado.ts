@@ -449,18 +449,15 @@ console.log("\n--- EL DESPERTADOR DE ANDROID: LAS COSTURAS ---");
     ok(modulo.includes(`Function("${f}")`), `Kotlin declara ${f}`);
   }
 
-  // EL RECEPTOR TIENE QUE ESTAR ABIERTO, y estuvo cerrado: el mensaje de
-  // "teléfono encendido" lo manda el sistema, que es OTRA app, así que con
-  // exported="false" no llegaba nunca. Reiniciar el celular dejaba la función
-  // muerta en silencio.
-  const bloqueReceptor = /<receiver[\s\S]*?<\/receiver>/.exec(manifiesto)?.[0] ?? "";
-  ok(/android:exported="true"/.test(bloqueReceptor), "el receptor está abierto, o el arranque no llega");
-  ok(/BOOT_COMPLETED/.test(bloqueReceptor), "y escucha el arranque del teléfono");
-  // Y el agujero que eso abre se cierra exigiendo una acción propia: sin esto,
-  // otra app podría disparar una exportación mandando un mensaje vacío.
+  // Separar el arranque protegido de Android y el trabajo privado. Una accion
+  // conocida no protege un receptor publico de mensajes de otra app.
+  const receptores = [...manifiesto.replace(/<!--[\s\S]*?-->/g, "").matchAll(/<receiver\b[^>]*?(?:\/>|>[\s\S]*?<\/receiver>)/g)].map(m => m[0]);
+  const privado = receptores.find(r => r.includes('android:name="com.finzo.exportscheduler.FinzoExportReceiver"')) ?? "";
+  const arranque = receptores.find(r => r.includes('android:name="com.finzo.exportscheduler.FinzoBootReceiver"')) ?? "";
+  ok(/android:exported="false"/.test(privado), "el receptor de exportacion es privado");
+  ok(/android:exported="true"/.test(arranque) && /BOOT_COMPLETED/.test(arranque), "el arranque del sistema tiene su propio receptor");
   ok(/ACCION_EXPORTAR/.test(modulo), "hay una acción propia para el despertador");
-  ok(/ACCION_EXPORTAR ->/.test(receptor), "y el receptor solo exporta con esa acción");
-  ok(/else -> Unit/.test(receptor), "cualquier otro mensaje se ignora");
+  ok(/intent\?\.action != ExportSchedulerModule\.ACCION_EXPORTAR\) return/.test(receptor), "y el receptor ignora cualquier otra accion");
 
   // EL TIPO DE DESPERTADOR. Se usó el inexacto y fue un error: Android agrupa
   // esos avisos y puede retrasarlos diez minutos, así que la función no se podía

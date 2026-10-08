@@ -418,6 +418,12 @@ Ajustes → Registro automático → encender el interruptor → conceder el per
 bloqueados expresamente. Los reportes usan el selector moderno de Android y el
 acceso rápido de voz es un widget; ninguno necesita esos permisos amplios.
 
+FINO-21 preparado (07/10/2026): el receptor de trabajo de exportación será privado
+y el de arranque del sistema estará separado. No añade permisos ni datos recogidos,
+servicios o destinatarios. Mantiene RECEIVE_BOOT_COMPLETED y servicio privado.
+Kotlin/manifest debug comprobados, no una versión instalada; verificar manifiesto
+release/firma y recorrido físico al entregar. Guía: `docs/PRUEBAS_RECEPTOR_EXPORTACION.md`.
+
 ---
 
 ## Clasificación de contenido

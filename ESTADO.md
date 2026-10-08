@@ -1,5 +1,19 @@
 # Estado actual de Fino
 
+## FINO-21 — exportación privada y arranque separado (07/10/2026)
+
+- Receptor de exportación privado, con el mismo componente/acción de alarma;
+  receptor aparte de arranque protegido solo repone. Servicio permanece privado.
+- Regresiones estática y ejecución Kotlin JVM rojas contra `de49c06`, verdes
+  actuales. Gradle/SDK real aprobó Kotlin debug y el manifiesto recién fusionado.
+  Release se detuvo por falta de variables de firma; no se modificó el candado.
+  No se generó APK/AAB ni se gastó EAS. Guía: `docs/PRUEBAS_RECEPTOR_EXPORTACION.md`.
+- TypeScript/ESLint sin avisos, 149 pruebas locales/8 auditores (148 en Git limpio)
+  aprobadas. JVM usa adaptadores de Android, no acredita permisos físicos.
+- **Qué sigue:** FINO-09, promesa de hora exacta de exportación. **Qué falta:**
+  ese punto/restantes IDs, pruebas Android (ADB vacío), manifiesto release/firma,
+  entrega nativa acumulada y publicación autorizada. Tarjetas/Sentry excluidos.
+
 ## FINO-20 y revalidación FINO-06/31 (07/10/2026)
 
 - Invitación Familia/Caja se consume con la membresía en el mismo guardado;

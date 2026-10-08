@@ -10,12 +10,20 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-21 preparado, requiere nueva instalación: exportación privada y receptor
+aparte para arranque protegido. Kotlin JVM original y Gradle debug/SDK real
+aprobados; manifiesto recién generado verificado. Release pendiente por firma;
+no se debilitó la protección ni se generó APK/AAB. TypeScript/ESLint, 149 pruebas
+locales/8 auditores aprobados (148 en Git limpio). ADB vacío. Juntar cambios
+nativos antes de una sola entrega; no publicar por OTA como si protegiera al
+APK anterior. Guía: `docs/PRUEBAS_RECEPTOR_EXPORTACION.md`. Sigue FINO-09.
+
 FINO-20 preparado: consumir invitación al entrar es obligatorio también en
 reglas; los invitados no revocan otros códigos y una cuenta en eliminación
 no entra por petición atrasada. Regresión Firestore local y clientes originales
 comprobados; FINO-06/31 revalidados. Sin despliegue/APK/AAB/OTA. Falta Android,
 dos cuentas y entrega coordinada. Guía: `docs/PRUEBAS_INVITACIONES_UNICAS.md`.
-FINO-21 sigue confirmado pendiente: receptor Android público de exportación.
+Actualización: FINO-21 preparado en la sección superior, todavía no instalado.
 TypeScript/ESLint, 148 pruebas locales/8 auditores (147 en Git limpio), 82
 unitarias de servidor y 142 pruebas Firebase local/Node 22 aprobadas. ADB sin
 dispositivos. Falta comprobar también petición de una sesión antigua después

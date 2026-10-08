@@ -3,6 +3,23 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-21 — barrera Android y dos entradas separadas (07/10/2026)
+
+- Se conserva la identidad del PendingIntent, pero su receptor ahora es privado.
+  Un nuevo receptor solo repone al arranque protegido. El servicio sigue privado;
+  no se agregan permisos, datos, destinos ni cambios financieros.
+- Prueba estática roja/verde y receptores originales compilados/ejecutados en
+  JVM con adaptadores de Android. La JVM también falla contra `de49c06` por
+  el receptor anterior atendiendo arranque; no se confunde con permisos físicos.
+- Gradle debug/SDK real aprobó compilación Kotlin y fusión de manifiesto. Se
+  leyó el resultado singular `merged_manifest`, no el plural antiguo. Release
+  rechazó la comprobación por variables de firma ausentes; protección intacta.
+- TypeScript/ESLint, 149 pruebas locales/8 auditores (148 en Git limpio) aprobados.
+  Sin APK/AAB/OTA/despliegue ni compilación EAS. ADB vacío, falta prueba física.
+- **Qué sigue:** FINO-09 (hora exacta prometida/fallback inexacto). **Qué falta:**
+  restantes IDs, Android, firma/manifiesto release y entrega nativa acumulada.
+  Guía: `PRUEBAS_RECEPTOR_EXPORTACION.md`. Sentry/tarjetas excluidos.
+
 ## FINO-20 — entrada y consumo inseparables; FINO-06/31 revalidados (07/10/2026)
 
 - Regresión real de Firestore falló contra las reglas anteriores por aceptar

@@ -109,10 +109,8 @@ class ExportSchedulerModule : Module() {
       context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
     private fun aviso(context: Context): PendingIntent {
-      // Con accion propia, y no un mensaje vacio: el receptor tiene que estar
-      // abierto para que el sistema pueda avisar del arranque, y lo unico que
-      // impide que otra app dispare una exportacion es que el receptor exija
-      // esta accion. Ver FinzoExportReceiver.
+      // Componente/accion explicitos e inmutables: solo el receptor privado.
+      // El arranque del sistema lo atiende FinzoBootReceiver por separado.
       val intent = Intent(context, FinzoExportReceiver::class.java).setAction(ACCION_EXPORTAR)
       return PendingIntent.getBroadcast(
         context,
