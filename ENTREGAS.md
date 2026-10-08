@@ -1,5 +1,18 @@
 # Entregas de Fino
 
+## Preparado, no entregado — identidades de altas nuevas (08/10/2026)
+
+Generador con entropía aun sobre máximo común; UUID por alta nueva Personal/
+Yape/meta, fusión rechaza otra identidad. No se renumeran antiguos/enlaces.
+Reglas admiten/conservan `recordIdentityFormat: 1` y UUID v2; publicar reglas
+compatibles antes de distribuir la app. Avisar que versiones antiguas que
+retiren el marcador no podrán guardar esa copia. Migrador Admin reforzado.
+Guía `docs/PRUEBAS_IDENTIDAD_CREACION.md`, regresiones rojas/verdes.
+**Qué sigue:** antiguos/lápidas/otras entradas y restantes IDs de auditoría.
+**Qué falta:** Android/dos teléfonos, migración real revisada, consolas/cobros/
+trámites y publicación autorizada. Sin APK/AAB/OTA/EAS/despliegue. FINO-52
+y auditoría abiertos; tarjetas y Sentry externo fuera.
+
 ## Preparado, no entregado — FINO-52 parcial (08/10/2026)
 
 Se detienen uniones de avisos/aportes con orígenes conocidos distintos y mismo

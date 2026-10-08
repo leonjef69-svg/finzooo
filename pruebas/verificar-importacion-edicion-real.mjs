@@ -21,6 +21,9 @@ let applyImportedTransactions;
 try { ({ applyImportedTransactions } = load("utils/importCommit.ts")); } catch { /* Antes del arreglo no existe; probar también el manejador antiguo. */ }
 const commit = handlerOriginal("contexts/AppDataContext.tsx", "commitImport", {
   applyImportedTransactions, transactionsLive, deletedTransactionIdsRef: deletion,
+  // Este caso usa IDs heredados construidos antes del alta; el generador
+  // y sus identidades reales se comprueban en verificar-identidad-creacion-real.
+  issuedCreationId: () => undefined,
   assertPrivateBoxMoneyLocalIdle() {},
   setTransactions(update) { transactionsLive.current = typeof update === "function" ? update(transactionsLive.current) : update; },
   showToast() {}, t: key => key,

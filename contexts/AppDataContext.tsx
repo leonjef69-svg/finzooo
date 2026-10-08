@@ -59,7 +59,7 @@ import {
 } from "@/utils/calendarioPagos";
 import { reprogramarAvisosDePagos } from "@/utils/avisosDePagos";
 import { useValorEstable } from "@/utils/valorEstable";
-import { nextId, reserveIdsAbove } from "@/utils/id";
+import { nextId, reserveIdsAbove, issuedCreationId } from "@/utils/id";
 import { applyImportedTransactions } from "@/utils/importCommit";
 import { learnCategory, suggestCategory } from "@/utils/classifier";
 import { bajarNegocio, subirNegocio } from "@/utils/cloudNegocio";
@@ -118,6 +118,8 @@ import { processCaptured, type CaptureLogEntry } from "@/utils/autoCapture";
 import { debeConciliarCaptura, huellaRegistroCaptura } from "@/utils/captureReconcile";
 import { guardarPendientes, limpiarPendientes, pendientesDeCaptura } from "@/utils/capturaEnFondo";
 import {
+  assertSameCreation,
+  assertSameTransactionOrigin,
   mergeGoals,
   mergeTransactions,
   hayNovedades,
@@ -767,6 +769,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // Verificar movimientos antes de cambiar perfil, presupuestos o marcas.
       // Las referencias vivas incluyen cambios posteriores al último dibujado.
       mergeTransactions(transactionsLive.current, cloud.transactions);
+      mergeGoals(goalsLive.current, cloud.goals);
       merged = mergeCloudFields({ ...local, syncUpdatedAt: cloudSyncMetaRef.current }, cloud);
     } catch (error) {
       // Una copia mal formada no modifica la memoria ni la copia local.
@@ -2896,6 +2899,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       showToast(t("common.missingTitle"));
       return false;
     }
+    // Los aportes/devoluciones ya tienen identidad remota propia. No añadir
+    // un UUID solo a la mitad local de una pareja guardada por el servidor.
+    // El módulo de tarjetas permanece fuera de esta modificación.
+    const creationId = t2.creationId ?? (t2.internalTransfer || t2.method === "credit-card-payment"
+      ? undefined : issuedCreationId(t2.id)) ?? existing?.creationId;
+    t2 = { ...t2, ...(creationId ? { creationId } : {}) };
+    if (existing) {
+      try {
+        assertSameCreation(existing, t2);
+        if (!allowLinkedTransferUpdate) assertSameTransactionOrigin(existing, t2);
+      }
+      catch { showToast(t("settings.backupMovementConflict")); return false; }
+    }
     if (existing?.internalTransfer && !allowLinkedTransferUpdate) {
       showToast(t("toast.transferEditBlocked"));
       return false;
@@ -2936,7 +2952,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   function commitImport(toAdd: Transaction[], toReplace: Transaction[]) {
     if (toAdd.length === 0 && toReplace.length === 0) return 0;
     assertPrivateBoxMoneyLocalIdle();
-    const result = applyImportedTransactions(transactionsLive.current, toAdd, toReplace, deletedTransactionIdsRef.current);
+    const newRows = toAdd.map(row => {
+      const creationId = row.creationId ?? issuedCreationId(row.id);
+      return creationId ? { ...row, creationId } : row;
+    });
+    const result = applyImportedTransactions(transactionsLive.current, newRows, toReplace, deletedTransactionIdsRef.current);
     if (result.count === 0) return 0;
     setTransactions(result.transactions);
     showToast(
@@ -3033,6 +3053,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if ((requireExisting && !goalsLive.current.some(goal => goal.id === g.id)) || deletedGoalIds.includes(g.id)) {
       showToast(t("common.missingTitle"));
       return false;
+    }
+    const existing = goalsLive.current.find(goal => goal.id === g.id);
+    const creationId = g.creationId ?? issuedCreationId(g.id) ?? existing?.creationId;
+    g = { ...g, ...(creationId ? { creationId } : {}) };
+    if (existing) {
+      try { assertSameCreation(existing, g); }
+      catch { showToast(t("settings.backupMovementConflict")); return false; }
     }
     const actualizada = metaConEstadoActual(g);
     setGoals((prev) => {

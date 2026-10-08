@@ -8,6 +8,7 @@ import { compararMovimientos } from "@/utils/ordenarMovimientos";
  * interrumpiendo la unión antes de escribir. */
 export function assertSameTransactionOrigin(a: Transaction, b: Transaction): void {
   if (a.id !== b.id) return;
+  assertSameCreation(a, b);
   if (a.captureId && b.captureId && a.captureId !== b.captureId) {
     throw new Error("record-origin-conflict");
   }
@@ -15,6 +16,13 @@ export function assertSameTransactionOrigin(a: Transaction, b: Transaction): voi
     (a.internalTransferLink !== b.internalTransferLink ||
       a.internalTransfer !== b.internalTransfer ||
       a.internalTransferSpaceId !== b.internalTransferSpaceId)) {
+    throw new Error("record-origin-conflict");
+  }
+}
+
+/** Un cliente que quite la identidad tampoco puede reemplazar su original. */
+export function assertSameCreation(a: { id: number; creationId?: string }, b: { id: number; creationId?: string }): void {
+  if (a.id === b.id && (a.creationId || b.creationId) && a.creationId !== b.creationId) {
     throw new Error("record-origin-conflict");
   }
 }
@@ -115,8 +123,11 @@ export function pruneDeletedTransactionIds(ids: number[], limit = 5000) {
 
 export function mergeGoals(locales: Goal[], remotas: Goal[]): Goal[] {
   const porId = new Map<number, Goal>();
-  for (const goal of remotas) porId.set(goal.id, goal);
-  for (const goal of locales) porId.set(goal.id, goal);
+  for (const goal of [...remotas, ...locales]) {
+    const previous = porId.get(goal.id);
+    if (previous) assertSameCreation(previous, goal);
+    porId.set(goal.id, goal);
+  }
   return [...porId.values()].sort((a, b) => b.id - a.id);
 }
 

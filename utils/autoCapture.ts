@@ -17,7 +17,7 @@ import {
   type ParseFailure,
 } from "@/utils/notificationParser";
 import { suggestCategory } from "@/utils/classifier";
-import { nextId } from "@/utils/id";
+import { nextId, issuedCreationId } from "@/utils/id";
 import { horaDe } from "@/utils/format";
 import type { CapturedNotification } from "@/modules/notification-reader";
 import type { Transaction } from "@/types";
@@ -172,6 +172,7 @@ export function processCaptured(
     avisoDe[id] = n.postedAt;
     toAdd.push({
       id,
+      creationId: issuedCreationId(id),
       type: raw.type,
       amount: raw.amount,
       category: suggestCategory(raw.merchant || raw.description, raw.type, merchantLearned),

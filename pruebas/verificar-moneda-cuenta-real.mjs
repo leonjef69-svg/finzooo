@@ -109,6 +109,8 @@ const failure = [];
 const receiveDeps = { auth: { currentUser: { uid: "a" } }, privateBoxCloudResponseCurrent: () => true,
   cloudFieldsRef: { current: a }, cloudSyncMetaRef: { current: a.syncUpdatedAt }, mergeCloudFields: api.mergeCloudFields,
   transactionsLive: { current: a.transactions },
+  goalsLive: { current: a.goals },
+  mergeGoals: (left, right) => { assert.deepEqual(left, []); assert.deepEqual(right, []); return []; },
   // Esta suite aísla moneda/perfil: las listas son vacías. La fusión de
   // movimientos se ejecuta originalmente en sus suites, no se acredita aquí.
   mergeTransactions: (left, right) => { assert.deepEqual(left, []); assert.deepEqual(right, []); return []; },

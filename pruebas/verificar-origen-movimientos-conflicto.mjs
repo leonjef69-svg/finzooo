@@ -86,6 +86,7 @@ const writes = [], notices = [];
 const deps = { ...api, auth: { currentUser: { uid: "A" } },
   privateBoxCloudResponseCurrent: () => true, cloudFieldsRef: { current: local },
   transactionsLive: { current: [first] }, cloudSyncMetaRef: { current: {} },
+  goalsLive: { current: [] },
   localSessionVersion: { current: 0 }, tRef: { current: key => key },
   loadCloudData: async () => incoming, CloudPremiumRequiredError: class extends Error {},
   setRespaldoFallo: reason => notices.push(reason),

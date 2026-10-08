@@ -1,5 +1,15 @@
 # Pruebas y auditores
 
+FINO-52 altas nuevas: `verificar-identidad-creacion-real.mjs` ejecuta generador,
+fusión y manejadores originales con IO adaptado: máximo común, 100.000 altas,
+colisión numérica forzada con UUID distinto, edición, entropía/espacio agotado.
+Regresión `FINO_TEST_CREATION_ID_BASELINE=72e816b` roja. Diagnóstico histórico
+del máximo común ahora verde, no acreditación total. Migrador Admin con
+regresión `FINO_TEST_HISTORY_ADMIN_ORIGIN_BASELINE=72e816b` roja. SDK/reglas
+locales prueban manuales/metas/marcador raíz. Guía
+`docs/PRUEBAS_IDENTIDAD_CREACION.md`: antiguos, lápidas, otros escritores/
+entradas, migración real y Android siguen pendientes. No declarar cierre.
+
 FINO-52 parcial: `verificar-origen-movimientos-conflicto.mjs` ejecuta módulos,
 recepción/restauración/setter/recogida del disco originales con IO adaptado:
 orígenes distintos de avisos/aportes detienen la unión antes de reemplazar

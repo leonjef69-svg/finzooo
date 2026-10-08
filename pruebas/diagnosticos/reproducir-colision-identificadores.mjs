@@ -1,10 +1,13 @@
 import assert from "node:assert/strict";
 import vm from "node:vm";
 import ts from "typescript";
+import { randomUUID } from "node:crypto";
 import { createSourceReader } from "../helpers/source-reader.mjs";
 
-// Reproducción de FINO-52, NO prueba aprobada. Su salida es no-cero mientras
-// dos movimientos independientes se pierdan. Nunca opera sobre datos reales.
+// Reproducción histórica de FINO-52, NO acreditación completa del hallazgo.
+// Ahora comprueba el caso del máximo común con bytes nativos adaptados;
+// verificar-identidad-creacion-real también fuerza una coincidencia numérica.
+// Nunca opera sobre datos reales.
 const read = createSourceReader();
 function load(file, dependencies = {}) {
   const exports = {};
@@ -18,7 +21,10 @@ class Clock extends Date { static now() { return now; } }
 function phone(random) {
   const math = Object.create(Math);
   math.random = () => random;
-  return load("utils/id.ts", { Date: Clock, Math: math });
+  return load("utils/id.ts", { Date: Clock, Math: math, require: name => {
+    assert.equal(name, "expo-crypto");
+    return { randomUUID, getRandomValues: array => { array.fill(Math.floor(random * 255)); return array; } };
+  } });
 }
 const a = phone(0.01), b = phone(0.99);
 // El máximo cargado es mayor que ambas propuestas del reloj: puede venir de

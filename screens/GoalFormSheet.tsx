@@ -121,6 +121,7 @@ export default function GoalFormSheet({
               saveLock.current = true;
               setGuardando(true);
               onSave(metaConEstadoActual({
+                ...goal,
                 id: goal?.id || nextId(),
                 name: name.trim(),
                 target: parseAmountInput(target, userCurrency),

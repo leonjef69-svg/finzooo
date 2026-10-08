@@ -209,7 +209,7 @@ service cloud.firestore {
                               'userLanguage', 'budgets', 'categoryBudgets', 'transactions', 'deletedTransactionIds', 'historyFormat',
                               'goals', 'deletedGoalIds', 'pagosProgramados', 'isPremium', 'premiumTrialStartedAt', 'merchantLearned',
                               'categoryOverrides', 'categoriasPropias', 'carryoverCleared',
-                              'iconosFavoritos', 'syncUpdatedAt', 'syncFormat', 'accountDeletionPending'
+                              'iconosFavoritos', 'syncUpdatedAt', 'syncFormat', 'accountDeletionPending', 'recordIdentityFormat'
                             ])
                          // Los que van siempre.
                          && request.resource.data.hasOnboarded is bool
@@ -235,6 +235,9 @@ service cloud.firestore {
                              && !('deletedTransactionIds' in request.resource.data))
                          )
                          && request.resource.data.goals is list
+                         && (!('recordIdentityFormat' in request.resource.data) || request.resource.data.recordIdentityFormat == 1)
+                         && (!exists(/databases/$(database)/documents/users/$(userId)) || resource.data.get('recordIdentityFormat', 0) != 1
+                           || request.resource.data.get('recordIdentityFormat', 0) == 1)
                          && (!('deletedGoalIds' in request.resource.data)
                               || request.resource.data.deletedGoalIds is list)
                          && request.resource.data.isPremium is bool
@@ -284,7 +287,9 @@ service cloud.firestore {
         // guardado para sustituir otro aviso/aporte bajo el mismo número.
         // No acredita unicidad para movimientos antiguos sin esas referencias.
         function keepsKnownOrigin(before, after) {
-          return (before.get('captureId', '') in ['', null]
+          return (before.get('creationId', '') in ['', null]
+              || after.get('creationId', '') == before.creationId)
+            && (before.get('captureId', '') in ['', null]
               || after.get('captureId', '') == before.captureId)
             && (before.get('internalTransferLink', '') in ['', null]
               || (after.get('internalTransferLink', '') == before.internalTransferLink

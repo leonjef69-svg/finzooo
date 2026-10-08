@@ -3,7 +3,7 @@
 // un abogado si más adelante la app crece o cambia su forma de ganar dinero.
 import { anunciosActivos } from "@/constants/anuncios";
 export const LEGAL_CONTACT_EMAIL = "dinero123xc@gmail.com";
-export const LEGAL_LAST_UPDATED = "7 de octubre de 2026";
+export const LEGAL_LAST_UPDATED = "8 de octubre de 2026";
 
 /**
  * LO QUE SE DICE DE LOS ANUNCIOS, Y SOLO CUANDO LOS HAY.
@@ -49,6 +49,7 @@ Esta es la parte más delicada y por eso va aparte.
 - Puedes apagarlo cuando quieras desde Ajustes, y borrar ese registro con un botón.
 
 3. Cómo se guarda tu información
+- Los movimientos personales y metas nuevos conservan un identificador técnico de creación para no confundir dos registros con el mismo número. No identifica tu teléfono ni registra otra persona. Se guarda con el movimiento o meta, cifrado en el celular y, con Pro, en su copia; sigue la conservación y eliminación de esos registros. El respaldo añade una marca de compatibilidad para impedir que una versión antigua retire esas identidades. Esta protección está preparada, no publicada.
 - En tu celular, la información principal de tu cuenta se guarda cifrada. La versión preparada cifra también el buzón temporal de Yape y sus marcas para evitar duplicados con una clave local de Android Keystore. Conserva hasta 200 avisos pendientes y hasta 200 en un lote reclamado, que se retira después de confirmar el guardado; conserva hasta 300 marcas contra duplicados. El buzón no se envía a Firebase ni se incluye en copias de seguridad del sistema. Al actualizar se cifran los lotes antiguos sin cambiar sus montos; si no pueden leerse, no se reemplazan por vacíos. Requiere instalar la nueva versión Android; una actualización por internet no añade este cifrado a un APK antiguo.
 - Fino guarda cifrado en el celular cuáles avisos ya revisaste, solo para controlar el indicador de la campana. Ese estado no se envía a la nube.
 - Al cerrar sesión, se conserva una copia cifrada en ese teléfono, separada por cuenta. Solo se recupera al entrar con la misma cuenta en ese teléfono; otras cuentas no la ven. Los avisos, el PIN y las conexiones de exportación se desactivan. Si pierdes el teléfono o desinstalas Fino, la información que no tenga respaldo en la nube podría perderse.

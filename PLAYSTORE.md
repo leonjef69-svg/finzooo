@@ -388,6 +388,15 @@ la próxima versión; esta preparación no modifica las consolas ni la web publi
 
 ## Permiso delicado: lector de notificaciones
 
+FINO-52 preparado (08/10/2026): movimientos personales/metas nuevos conservan
+un UUID de creación, además del número, y el respaldo un marcador técnico de
+compatibilidad. No identifica otro teléfono/persona ni añade un servicio o
+permiso: viaja en los mismos datos financieros locales y copia Pro. Se conserva
+con esos registros, siguiendo su borrado/archivo por cuenta. No se etiqueta
+automáticamente historial antiguo. Revisar identificadores y finalidad en la
+declaración real de Play al entregar, sin afirmar aprobación ni publicar ahora.
+Guía `docs/PRUEBAS_IDENTIDAD_CREACION.md`; tarjetas/Sentry externo fuera.
+
 FINO-24 preparado (07/10/2026): buzón temporal y marcas de duplicados cifrados
 con clave local de Android Keystore. Hasta 200 pendientes, un lote reclamado
 hasta 200 y 300 marcas; diagnóstico JS ya cifrado hasta 40 avisos. Buzón/log no

@@ -135,6 +135,31 @@ test("orígenes distintos no reemplazan un movimiento al sincronizar ni por escr
       await assertFails(setDoc(row, { id: 101, deleted: false, transaction: withoutLink, syncAt: serverTimestamp() }));
       assert.deepEqual((await getDoc(row)).data().transaction, linked);
     });
+    await t.test("manuales con identidad nueva rechazan colisión y quitar la identidad", async () => {
+      const manual = { ...movement(104), creationId: "manual-A" };
+      await phoneA.saveHistoryV2("alice", [manual], []);
+      const row = doc(dbB, "users", "alice", "history", "104");
+      await assert.rejects(phoneB.saveHistoryV2("alice", [{ ...manual, creationId: "manual-B", updatedAt: 300 }], []), /record-origin-conflict/);
+      for (const transaction of [{ ...manual, creationId: "manual-B" }, movement(104)]) {
+        await assertFails(setDoc(row, { id: 104, deleted: false, transaction, syncAt: serverTimestamp() }));
+      }
+      await phoneB.saveHistoryV2("alice", [{ ...manual, amount: 15, updatedAt: 300 }], []);
+      assert.equal((await getDoc(row)).data().transaction.amount, 15);
+    });
+    await t.test("respaldo v1 conserva metas nuevas y exige formato de identidad a apps antiguas", async () => {
+      const owner = "goal-owner", goal = { id: 200, creationId: "meta-A", name: "Meta", target: 100, saved: 0, createdDate: "2026-10-08", completed: false };
+      const root = { hasOnboarded: true, userName: "Original", userPhoto: null, userCurrency: "PEN", userLanguage: "es",
+        budgets: {}, categoryBudgets: {}, transactions: [], goals: [goal], isPremium: true, recordIdentityFormat: 1 };
+      await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), "users", owner), root));
+      const db = env.authenticatedContext(owner, { email_verified: true }).firestore();
+      const phone = await clientModule(db, "utils/cloudSync.ts", owner);
+      assert.deepEqual(await phone.saveCloudData(owner, { ...root, goals: [{ ...goal, creationId: "meta-B" }] }), { ok: false, motivo: "movimientos-en-conflicto" });
+      assert.deepEqual((await getDoc(doc(db, "users", owner))).data(), root);
+      const { recordIdentityFormat: _omitted, ...oldClient } = root; void _omitted;
+      await assertFails(setDoc(doc(db, "users", owner), { ...oldClient, goals: [{ ...goal, creationId: undefined }].map(({ creationId: _id, ...rest }) => { void _id; return rest; }) }));
+      assert.equal((await phone.saveCloudData(owner, { ...root, goals: [{ ...goal, name: "Editada" }] })).ok, true);
+      assert.equal((await getDoc(doc(db, "users", owner))).data().goals[0].creationId, "meta-A");
+    });
     await t.test("mismo original puede editarse y borrarse; registros antiguos siguen legibles", async () => {
       await phoneB.saveHistoryV2("alice", [{ ...original, updatedAt: 30, amount: 15 }], []);
       assert.equal((await getDoc(doc(dbB, "users", "alice", "history", "100"))).data().transaction.amount, 15);

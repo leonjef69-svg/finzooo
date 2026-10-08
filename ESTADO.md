@@ -1,5 +1,29 @@
 # Estado actual de Fino
 
+## FINO-52 — generador y origen de altas nuevas (08/10/2026)
+
+- Máximo restaurado común ya no fuerza `máximo + 1`: salto nativo de 24 bits
+  y control de entero seguro. UUID independiente distingue manuales/metas
+  nuevos aun con colisión numérica forzada. No renumera ni etiqueta antiguos.
+- Creación/edición/importación conservan origen; Yape lo guarda y recepción
+  comprueba metas antes de aplicar metadatos. Parejas remotas siguen con sus
+  referencias existentes; no se agrega identidad solo a la mitad local.
+- Reglas preparadas conservan UUID v2 y marcador raíz `recordIdentityFormat`
+  frente a apps antiguas que lo retiren. Migrador Admin comprueba orígenes.
+- Regresiones contra `72e816b` rojas y actuales verdes; 100.000 altas,
+  colisión forzada, edición y agotamiento. 83 pruebas del servidor Node 22 y
+  40 comprobaciones SDK/reglas Firestore local aprobadas. Guía
+  `docs/PRUEBAS_IDENTIDAD_CREACION.md` enumera cobertura y límites.
+- TypeScript/ESLint sin avisos y 163 pruebas/8 auditores aprobados, sin tarjetas.
+  Una prueba local ajena no versionada fuera del commit (162 previstas en Git
+  limpio; no se ejecutó otro checkout). Política interna/web preparadas, no publicadas.
+- FINO-52 aún abierto para antiguos ambiguos, lápidas por número, escrituras
+  directas v1/otras entradas, migración y Android. Diagnóstico del máximo
+  común ahora verde; NO usarlo como cierre del hallazgo completo.
+- **Qué sigue:** compatibilidad restante y 15/16/34/37/47/49/50.
+  **Qué falta:** Android/dos teléfonos, consolas/trámites/cobros y entrega
+  autorizada. Sin publicación; tarjetas/Sentry externo fuera.
+
 ## FINO-52 — refuerzo parcial de avisos/aportes (08/10/2026)
 
 - Orígenes conocidos diferentes bajo el mismo número detienen la unión:

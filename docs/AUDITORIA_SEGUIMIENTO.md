@@ -3,6 +3,28 @@
 Última revisión: 08/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-52 — generador y creación de manuales/metas (08/10/2026)
+
+- Salto nativo de 24 bits aun sobre máximo restaurado; entero seguro antes
+  de emitir ID y UUID independiente para nuevas altas. Coincidencia forzada
+  no sustituye manuales/metas. Edición/importación/Yape conservan identidad.
+- Reglas v2 conservan UUID; marcador raíz bloquea apps antiguas que lo quiten.
+  Migrador JS Admin también rechaza orígenes distintos en elección/cobertura.
+  No renumera antiguos/enlaces ni asigna UUID a una mitad remota de aporte.
+- Regresiones contra `72e816b` rojas, actuales verdes: originales/IO adaptado,
+  100.000 altas, colisión forzada, agotamiento; 83 pruebas de servidor Node 22
+  y 40 comprobaciones SDK/reglas reales locales aprobadas. Guía
+  `PRUEBAS_IDENTIDAD_CREACION.md` separa las pruebas de sus límites.
+- TypeScript/ESLint sin avisos y 163 pruebas/8 auditores aprobados sin tarjetas;
+  una prueba local ajena no versionada fuera del commit (162 previstas en
+  Git limpio, no comprobado en otro checkout). Políticas actualizadas en archivos.
+- FINO-52 aún abierto: antiguos ambiguos, lápidas numéricas, otros escritores/
+  entradas, migración y recorrido Android. Diagnóstico del máximo común ya
+  verde; NO representa cierre ni pruebas físicas. No publicación.
+- **Qué sigue:** esos límites y revalidar 15/16/34/37/47/49/50.
+  **Qué falta:** Android/dos teléfonos, consolas/trámites/cobros y entrega
+  autorizada. Tarjetas/Sentry externo fuera; auditoría abierta.
+
 ## FINO-52 — protección parcial, no cierre (08/10/2026)
 
 - Número coincidente con referencias inequívocamente distintas de aviso/aporte

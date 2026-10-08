@@ -6,6 +6,12 @@ export async function getRandomBytesAsync(length: number): Promise<Uint8Array> {
   return getRandomBytes(length);
 }
 
+/** Adaptador de IO para pruebas Node; no acredita entropía nativa Android. */
+export function getRandomValues<T extends Uint8Array>(array: T): T {
+  array.set(getRandomBytes(array.length));
+  return array;
+}
+
 let nextId = 0;
 export function randomUUID(): string {
   nextId += 1;

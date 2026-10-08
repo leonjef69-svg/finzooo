@@ -156,7 +156,7 @@ vm.runInNewContext(ts.transpile(read("utils/mergeTransactions.ts"), {
   assert.equal(name, "@/utils/ordenarMovimientos");
   return orderExports;
 } });
-const scope = { ...exports, ...helpers, ...coordinator, transactionsLive: { current: a.transactions }, auth: { currentUser: { uid: "test" } }, cloudFieldsRef: { current: a }, cloudSyncMetaRef: { current: a.syncUpdatedAt },
+const scope = { ...exports, ...helpers, ...coordinator, transactionsLive: { current: a.transactions }, goalsLive: { current: a.goals }, auth: { currentUser: { uid: "test" } }, cloudFieldsRef: { current: a }, cloudSyncMetaRef: { current: a.syncUpdatedAt },
   setCloudSyncMeta() {}, setRespaldoFallo() {}, userEmail: "test@example.com", userCountry: "PE",
   saveJSON() {}, STORAGE_KEYS: {}, getFavoritos: () => [], ready: true, hasOnboarded: true,
 };

@@ -23,6 +23,8 @@ export type Transaction = {
   /** Color propio del dibujo de este movimiento. */
   iconColor?: string;
   id: number;
+  /** Identidad de creación, independiente del número. Ausente en datos antiguos. */
+  creationId?: string;
   /** Última modificación; permite que una edición de otro dispositivo gane a una copia vieja. */
   updatedAt?: number;
   type: "expense" | "income";
@@ -97,6 +99,8 @@ export type Profile = {
 
 export type Goal = {
   id: number;
+  /** Se conserva al editar; no se inventa para metas antiguas. */
+  creationId?: string;
   name: string;
   target: number;
   saved: number;

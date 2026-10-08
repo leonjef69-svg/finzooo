@@ -22,6 +22,8 @@ import { deletePersonalCloudCopy, getCloudAccountAccess } from "@/utils/cloudAcc
 import { PrivateBoxSyncError, withPrivateBoxCloudOperation, type PrivateBoxCloudLease } from "@/utils/privateBoxSync";
 
 export type CloudData = {
+  /** Impide que una app anterior retire identidades nuevas al volver a subir. */
+  recordIdentityFormat?: 1;
   /** Formato que fusiona campos y conserva marcas de borrado por elemento. */
   syncFormat?: 1 | 2;
   historyFormat?: 1 | 2;
@@ -147,6 +149,7 @@ export async function loadCloudData(
       categoriasPropias: data.categoriasPropias || [],
       iconosFavoritos: data.iconosFavoritos || [],
       syncUpdatedAt: data.syncUpdatedAt || {},
+      recordIdentityFormat: data.recordIdentityFormat === 1 ? 1 : undefined,
     });
     });
   } catch (error) {
@@ -193,6 +196,7 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
   // Este paso los quita: JSON.stringify descarta las claves con undefined.
   let clean = JSON.parse(JSON.stringify(data)) as CloudData;
   clean.syncFormat = 2;
+  clean.recordIdentityFormat = 1;
   // Solo el servidor puede cambiar la versión; el cliente conserva la que
   // realmente haya en Firebase, nunca la que venga de memoria local.
   delete clean.historyFormat;

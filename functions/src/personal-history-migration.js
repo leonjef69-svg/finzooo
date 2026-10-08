@@ -36,6 +36,7 @@ function chooseEntry(old, incoming) {
   if (!old) return incoming;
   if (old.deleted) return old;
   if (incoming.deleted) return incoming;
+  assertSameOrigin(old.transaction, incoming.transaction);
   const a = old.transaction.updatedAt ?? 0;
   const b = incoming.transaction.updatedAt ?? 0;
   if (a === b && canonical(old.transaction) !== canonical(incoming.transaction)) {
@@ -48,9 +49,20 @@ function covers(stored, source) {
   if (!stored) return false;
   if (stored.deleted) return true;
   if (source.deleted) return false;
+  assertSameOrigin(stored.transaction, source.transaction);
   const oldTime = source.transaction.updatedAt ?? 0;
   const newTime = stored.transaction.updatedAt ?? 0;
   return newTime > oldTime || (newTime === oldTime && canonical(stored.transaction) === canonical(source.transaction));
+}
+
+function assertSameOrigin(a, b) {
+  if ((a.creationId || b.creationId) && a.creationId !== b.creationId
+    || a.captureId && b.captureId && a.captureId !== b.captureId
+    || a.internalTransferLink && b.internalTransferLink &&
+      (a.internalTransferLink !== b.internalTransferLink || a.internalTransfer !== b.internalTransfer
+        || a.internalTransferSpaceId !== b.internalTransferSpaceId)) {
+    throw new Error("HISTORY_ORIGIN_CONFLICT");
+  }
 }
 
 function sameRevision(a, b) {
