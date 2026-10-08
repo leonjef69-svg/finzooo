@@ -3,6 +3,23 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-35 — lectura PDF acotada (07/10/2026)
+
+- Hallazgo confirmado con archivo sintético: descompresión completa sin tope.
+  Streaming por partes limita salida antes de concatenar; acumula incluso
+  streams sin texto/fallidos y limita cantidad/fragmentos/cabeceras pendientes.
+- No retorna texto parcial al superar límite; mensaje traducido/liberación;
+  no cambia interpretación financiera ni convierte límites en stream dañado.
+  Tokenizador avanza ante delimitadores y no repite búsquedas sin cierre.
+- Extractor/fflate original real, compresión Node independiente y observador
+  de clase real; manejador original con IO sustituido. Roja contra `595cf99`,
+  verde actual. Normal 10.000 filas aprobado. Guía `PRUEBAS_LIMITES_PDF.md`.
+- TypeScript/ESLint sin avisos; 157 pruebas/8 auditores aprobados (156 en Git
+  limpio). Node no mide RAM/Hermes físico. ADB sin dispositivos.
+- **Qué sigue:** permisos de avisos y restantes IDs. **Qué falta:** Android,
+  límites sobre PDFs habituales grandes, consolas/firma/trámites y entrega.
+  Tarjetas/Sentry fuera, sin APK/AAB/OTA/despliegue. Auditoría no terminada.
+
 ## FINO-30 — no confirmar un envío desconocido (07/10/2026)
 
 - Confirmado que incluso fallback sin app marcaba exportación. Es una fecha

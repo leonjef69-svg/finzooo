@@ -1,5 +1,21 @@
 # Estado actual de Fino
 
+## FINO-35 — lectura PDF con límites (07/10/2026)
+
+- Entrada 15 MiB también dentro del lector; descomprime por partes antes de
+  concatenar: 8 MiB/stream, 32 MiB acumulados, 4096 streams, 100.000 fragmentos
+  y 128 KiB sin salida. Errores de límite no se ocultan ni importan páginas parciales.
+- Mensaje traducido de menos páginas/CSV/Excel; carga liberada. Se evita bucle
+  del tokenizador y búsqueda repetida sin cierre; se mantienen signos/columnas.
+- Extractor/fflate reales y manejador con IO adaptado verdes; bomba 9 MiB,
+  formatos, límites y 10.000 filas; regresión roja contra `595cf99`. Guía
+  `docs/PRUEBAS_LIMITES_PDF.md`. No se asegura límite exacto de RAM Android.
+- TypeScript/ESLint sin avisos y batería 157 pruebas/8 auditores aprobada
+  (156 en Git limpio). No hay dispositivo en ADB, no se probó interfaz física.
+- **Qué sigue:** permisos de avisos/restantes IDs. **Qué falta:** Android,
+  firma/manifiesto, consolas/políticas/trámites y entrega autorizada.
+  Sin APK/AAB/OTA/despliegue; tarjetas/Sentry fuera; auditoría no terminada.
+
 ## FINO-30 — exportar no confirma recepción (07/10/2026)
 
 - WhatsApp/Gmail/correo/selector solo muestran archivo preparado, sin marcar

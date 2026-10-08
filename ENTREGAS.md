@@ -1,5 +1,14 @@
 # Entregas de Fino
 
+## Preparado, no entregado — FINO-35 (07/10/2026)
+
+Lector PDF limita descompresión y no importa datos parciales al superar tope.
+Extractor/fflate reales, manejador adaptado y regresión roja-verde aprobados;
+guía `docs/PRUEBAS_LIMITES_PDF.md`. No añade datos/servicios/permisos ni cambio
+nativo. **Qué sigue:** permisos/restantes IDs. **Qué falta:** Android/memoria,
+firma/consignaciones externas y entrega acumulada. Tarjetas/Sentry fuera.
+Sin APK/AAB/OTA/EAS/despliegue, no se modifica la versión instalada.
+
 ## Preparado, no entregado — FINO-30 (07/10/2026)
 
 Exportación manual distingue archivo preparado de guardado comprobado. Abrir

@@ -46,7 +46,7 @@ Las tarjetas de crédito permanecen excluidas por decisión del propietario.
 | FINO-32 | El permiso de notificaciones se pide al arrancar, fuera de contexto, si hay pagos en el calendario | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
 | FINO-33 | Las pruebas automáticas validan mucho texto del código y una de ellas consolida la pérdida de datos al cerrar sesión | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
 | FINO-34 | Documentos del proyecto y de la ficha contradicen el código | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
-| FINO-35 | La lectura de PDF descomprime sin límite | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
+| FINO-35 | La lectura de PDF descomprime sin límite | Preparado: streaming acotado antes de concatenar, límite por stream/acumulado/entrada/cantidad/fragmentos/cabecera, mensaje sin importación parcial. Extractor/fflate reales con compresión independiente, manejador adaptado, regresión roja-verde y 10.000 filas. Guía PRUEBAS_LIMITES_PDF.md. Falta RAM/Hermes Android y PDFs habituales grandes; no se garantiza cero cierres ni se declara lector PDF completo. |
 | FINO-36 | Módulo de tarjetas de crédito oculto pero accesible por enlace/aviso y sincronizado sin plan | Excluido: tarjetas de crédito. No modificar ni dar por corregido. |
 | FINO-37 | Código aparentemente sin uso | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
 | FINO-38 | Crear una Familia con aporte valida contra el disponible del mes que se esté mirando, no del mes actual | Saldo del mes correspondiente; 6d4a211. Falta recorrido Android. |

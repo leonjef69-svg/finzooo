@@ -3,14 +3,54 @@
 // Descomprime streams FlateDecode con fflate y rastrea la posición
 // de cada fragmento de texto para reconstruir la tabla por filas.
 
-import { decompressSync } from 'fflate';
+import { Decompress } from 'fflate';
+import { MAX_IMPORT_BYTES } from './importLimits';
+
+export const PDF_MAX_STREAM_BYTES = 8 * 1024 * 1024;
+export const PDF_MAX_DECODED_BYTES = 32 * 1024 * 1024;
+export const PDF_MAX_STREAMS = 4096;
+export const PDF_MAX_TEXT_PIECES = 100_000;
+const COMPRESSED_CHUNK_BYTES = 256;
+const MAX_PENDING_COMPRESSED_BYTES = 128 * 1024;
+
+export class PdfResourceLimitError extends Error {
+  constructor() { super('pdf-resource-limit'); this.name = 'PdfResourceLimitError'; }
+}
+
+// No descomprimir todo antes de comprobar el límite. Cada push es pequeño;
+// no permite que una sola llamada materialice cientos de MB antes del callback.
+function decompressBounded(raw: Uint8Array, charge: (bytes: number) => void): Uint8Array {
+  const chunks: Uint8Array[] = [];
+  let size = 0, pending = 0;
+  const decoder = new Decompress(chunk => {
+    size += chunk.byteLength;
+    charge(chunk.byteLength);
+    if (size > PDF_MAX_STREAM_BYTES) throw new PdfResourceLimitError();
+    if (chunk.byteLength > 0) pending = 0;
+    chunks.push(chunk);
+  });
+  for (let offset = 0; offset < raw.length; offset += COMPRESSED_CHUNK_BYTES) {
+    const end = Math.min(raw.length, offset + COMPRESSED_CHUNK_BYTES);
+    pending += end - offset;
+    // Cabeceras incompletas no pueden acumularse/copiase sin límite mientras
+    // el descompresor espera; deja margen para bloques sin compresión de 64 KiB.
+    if (pending > MAX_PENDING_COMPRESSED_BYTES) throw new PdfResourceLimitError();
+    decoder.push(raw.subarray(offset, end), end === raw.length);
+  }
+  const decoded = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) { decoded.set(chunk, offset); offset += chunk.length; }
+  return decoded;
+}
 
 // ── Helpers de bytes ─────────────────────────────────────────────────
 
 function u8str(bytes: Uint8Array): string {
-  let s = '';
-  for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
-  return s;
+  const parts: string[] = [];
+  for (let i = 0; i < bytes.length; i += 4096) {
+    parts.push(String.fromCharCode(...bytes.subarray(i, i + 4096)));
+  }
+  return parts.join('');
 }
 
 function u8search(data: Uint8Array, needle: string, from = 0): number {
@@ -167,7 +207,7 @@ function* tokenize(src: string): Generator<PdfToken> {
         const isNum = /^-?(?:\d+\.?\d*|\.\d+)$/.test(tok);
         yield { type: isNum ? 'num' : 'op', val: tok };
       }
-      i = j;
+      i = j > i ? j : i + 1; // Un delimitador desconocido no puede atascar el lector.
     }
   }
 }
@@ -180,7 +220,7 @@ interface TextPiece {
   text: string;
 }
 
-function extractPieces(content: string): TextPiece[] {
+function extractPieces(content: string, limit = PDF_MAX_TEXT_PIECES): TextPiece[] {
   const pieces: TextPiece[] = [];
 
   let inText = false;
@@ -244,7 +284,10 @@ function extractPieces(content: string): TextPiece[] {
         if (inText && lastStr) {
           if (op === "'") { tlm_y -= leading; cx = tlm_x; cy = tlm_y; }
           const text = decPdfStr(lastStr).trim();
-          if (text) pieces.push({ x: cx, y: cy, text });
+          if (text) {
+            if (pieces.length >= limit) throw new PdfResourceLimitError();
+            pieces.push({ x: cx, y: cy, text });
+          }
         }
         break;
 
@@ -257,7 +300,10 @@ function extractPieces(content: string): TextPiece[] {
               if (t.type === 'str') text += decPdfStr(t.val);
             }
             const trimmed = text.trim();
-            if (trimmed) pieces.push({ x: cx, y: cy, text: trimmed });
+            if (trimmed) {
+              if (pieces.length >= limit) throw new PdfResourceLimitError();
+              pieces.push({ x: cx, y: cy, text: trimmed });
+            }
           }
         }
         break;
@@ -373,8 +419,14 @@ function piecesToText(pieces: TextPiece[]): string {
 // ── Función principal ────────────────────────────────────────────────
 
 export async function extractPdfText(data: Uint8Array): Promise<string> {
+  if (data.byteLength > MAX_IMPORT_BYTES) throw new PdfResourceLimitError();
   let pos = 0;
   const allPieces: TextPiece[] = [];
+  let streams = 0, decodedBytes = 0;
+  const charge = (bytes: number) => {
+    decodedBytes += bytes;
+    if (decodedBytes > PDF_MAX_DECODED_BYTES) throw new PdfResourceLimitError();
+  };
 
   while (pos < data.length) {
     const si = u8search(data, 'stream', pos);
@@ -391,25 +443,31 @@ export async function extractPdfText(data: Uint8Array): Promise<string> {
     const isFlate = /\/FlateDecode\b|\/Fl\b/.test(dictText);
 
     const ei = u8search(data, 'endstream', ci);
-    if (ei < 0) { pos = si + 1; continue; }
+    // Sin ningún cierre posterior tampoco puede existir otro stream completo.
+    // Repetir la búsqueda desde cada marcador produciría trabajo cuadrático.
+    if (ei < 0) break;
 
     const rawStream = data.slice(ci, ei);
     pos = ei + 9;
+    if (++streams > PDF_MAX_STREAMS) throw new PdfResourceLimitError();
 
     let content: string;
     if (isFlate) {
       try {
-        content = u8str(decompressSync(rawStream));
-      } catch {
+        content = u8str(decompressBounded(rawStream, charge));
+      } catch (error) {
+        if (error instanceof PdfResourceLimitError) throw error;
         continue; // stream corrupto o no es zlib, saltamos
       }
     } else {
+      charge(rawStream.byteLength);
+      if (rawStream.byteLength > PDF_MAX_STREAM_BYTES) throw new PdfResourceLimitError();
       content = u8str(rawStream);
     }
 
     if (!content.includes('BT')) continue;
 
-    allPieces.push(...extractPieces(content));
+    for (const piece of extractPieces(content, PDF_MAX_TEXT_PIECES - allPieces.length)) allPieces.push(piece);
   }
 
   return piecesToText(allPieces);

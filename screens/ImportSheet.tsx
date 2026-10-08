@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import * as DocumentPicker from "expo-document-picker";
 import { File } from "expo-file-system";
 import { FileUp, CheckCircle2, AlertTriangle, Copy, X, Landmark } from "lucide-react-native";
-import { diagnosePdf, extractPdfText, seEntiende } from "@/utils/pdfExtract";
+import { diagnosePdf, extractPdfText, seEntiende, PdfResourceLimitError } from "@/utils/pdfExtract";
 import { extractExcelText, looksLikeExcel } from "@/utils/excelExtract";
 import { useColorScheme } from "nativewind";
 import { setPendingImport } from "@/utils/pendingImport";
@@ -415,8 +415,8 @@ export default function ImportSheet({
       setErrorCount(parsed.errorCount);
       setSinFecha(parsed.sinFecha);
       setRowsSinFecha(parsed.rowsSinFecha);
-    } catch {
-      showToastAndClose(readAsPdf ? t("importSheet.pdfError") : isExcel ? t("importSheet.excelError") : t("importSheet.readError"));
+    } catch (error) {
+      showToastAndClose(error instanceof PdfResourceLimitError ? t("importSheet.pdfTooComplex") : readAsPdf ? t("importSheet.pdfError") : isExcel ? t("importSheet.excelError") : t("importSheet.readError"));
     } finally {
       // Seguridad/privacidad: el archivo del banco se borra del celular
       // apenas terminamos de leerlo. No lo guardamos más de lo necesario.

@@ -1,5 +1,11 @@
 # Pruebas y auditores
 
+FINO-35: `verificar-pdf-limites-real.mjs` ejecuta extractor/fflate reales con
+compresión Node independiente y observador de clase real; pantalla con IO
+adaptado. Bomba sintética, límites/acumulado, sin parcial, formatos y 10.000
+filas. Regresión `FINO_TEST_PDF_LIMITS_BASELINE=595cf99` roja. Guía:
+`docs/PRUEBAS_LIMITES_PDF.md`. No mide memoria/UI/Hermes Android.
+
 FINO-30: `verificar-entrega-exportacion-real.mjs` ejecuta manejadores originales
 y catálogo con IO sustituido: preparar no confirma envío; subir/guardar espera
 respuesta, fallos/doble toque/reintento. Regresión contra
