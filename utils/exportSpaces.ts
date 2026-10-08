@@ -55,12 +55,12 @@ function movimientoCompartido(
     id: numeroEstable(`${prefijo}:${item.id}`),
     type: item.tipo === "ingreso" ? "income" : "expense",
     amount: item.monto,
-    category: "otros",
+    category: item.category || "otros",
     date: item.fecha,
     time: Number.isFinite(item.creadoEn) ? horaDe(item.creadoEn) : undefined,
     method: item.method || "",
     description: item.descripcion,
-    notes: "",
+    notes: item.notes || "",
     origin: "manual",
     ...(transferencia ? { internalTransfer: kind, internalTransferLink: item.id } : {}),
   };
@@ -72,12 +72,12 @@ function movimientoCajaPrivada(item: MovimientoCaja): Transaction {
     id: numeroEstable(`box:${item.id}`),
     type: item.tipo === "ingreso" ? "income" : "expense",
     amount: item.monto,
-    category: "otros",
+    category: item.category || "otros",
     date: item.fecha,
     time: Number.isFinite(item.creadoEn) ? horaDe(item.creadoEn) : undefined,
     method: item.method || "",
     description: item.descripcion,
-    notes: "",
+    notes: item.notes || "",
     origin: "manual",
     ...(transferencia ? { internalTransfer: "box", internalTransferLink: item.id } : {}),
   };
@@ -130,7 +130,7 @@ export async function cargarEspaciosExportables(
         id: `family:${familia.id}`,
         kind: "family",
         name: familia.nombre || familyLabel,
-        currency: userCurrency,
+        currency: familia.currency,
         transactions: movimientos.map((item) => movimientoCompartido("family", item, "family")),
       });
     }

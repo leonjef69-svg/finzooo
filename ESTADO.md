@@ -1,5 +1,20 @@
 # Estado actual de Fino
 
+## FINO-45 — reportes conservan moneda, categorías y notas (07/10/2026)
+
+- Familia exporta con su propia moneda. Familia, Caja privada y Caja compartida
+  conservan la categoría y notas guardadas; movimientos antiguos sin ellas
+  mantienen «Otros» y notas vacías. No cambia el monto ni el filtro de transferencias.
+- La prueba ejecuta `cargarEspaciosExportables` con los servicios sustituidos;
+  falló antes del cambio. TypeScript, ESLint, 142 pruebas locales y 8 auditores
+  aprobaron (141 pruebas en Git limpio).
+- Se creó `docs/AUDITORIA_CIERRE_61.md` con todos los IDs originales y sus
+  condiciones de cierre, incluidos los que aún deben revalidarse.
+- **Qué sigue:** importación editada/repetida (FINO-44/54).
+  **Qué falta:** abrir archivos reales de cada formato en Android y los restantes
+  puntos del índice. Sentry: sin token/organización/proyecto configurados en
+  esta sesión; comprobación de cuenta pendiente. Tarjetas excluidas.
+
 ## FINO-19 — configuración Firebase explícita al generar AAB (07/10/2026)
 
 - `generar-aab.bat` ya no elige automáticamente el JSON más reciente de

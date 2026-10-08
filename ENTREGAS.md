@@ -10,6 +10,11 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-45 preparado: moneda propia de Familia y categorías/notas reales de Familia
+y Cajas en los reportes. Prueba del cargador real, TypeScript, ESLint, 142 pruebas
+locales y 8 auditores aprobados (141 en Git limpio). Falta abrir PDF/Excel/CSV
+en Android. Sin APK/AAB/OTA nuevo.
+
 FINO-19 preparado: generar AAB usa el archivo Firebase explícito de `app.json`,
 validado contra proyecto, remitente y paquete. La comprobación local real y
 las pruebas de rechazo/copia y acceso Google aprobaron. Falta compilar y

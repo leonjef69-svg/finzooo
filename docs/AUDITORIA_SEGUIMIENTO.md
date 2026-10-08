@@ -3,6 +3,21 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-45 — exportación por espacio (07/10/2026)
+
+- Confirmado en la revisión cruzada: Familia usaba la moneda personal y todos
+  los espacios descartaban categorías/notas. Se corrigió el cargador real sin
+  alterar montos ni transferencias.
+- La regresión roja antes/verde después cubre Familia USD frente a Personal PEN,
+  Caja compartida EUR, Caja privada, datos antiguos y fallo remoto sin sustituir
+  Familia por otro espacio. TypeScript, ESLint, 142 pruebas locales y 8 auditores
+  aprobaron (141 pruebas en Git limpio).
+- **Qué sigue:** FINO-44/54. **Qué falta:** archivos reales en Android y resto
+  del índice `AUDITORIA_CIERRE_61.md`. Se comprobó solo presencia de variables
+  Sentry: no hay token, organización ni proyecto configurados; no se consultó
+  su API ni se conoce el motivo de pérdida de acceso del propietario.
+  Tarjetas excluidas.
+
 ## FINO-19 — Firebase explícito al preparar Android (07/10/2026)
 
 - Retirada la selección del JSON más reciente de Descargas. El generador usa
