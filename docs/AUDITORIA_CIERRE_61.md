@@ -55,7 +55,7 @@ Las tarjetas de crédito permanecen excluidas por decisión del propietario.
 | FINO-41 | Los paneles nativos (campana, selector de mes, confirmaciones, hojas de espacios) quedan por encima del candado | Candado sobre paneles preparado; 276cf53. Falta guía Android. |
 | FINO-42 | Un enlace finzo://export-pdf puede generar y enviar a otra app o a la nube el reporte, sin pasar por el candado | Enlace de exportación restringido; 276cf53. Falta guía Android. |
 | FINO-43 | La copia en la nube del Modo Negocio no recuerda lo borrado: ventas, productos y negocios borrados reaparecen | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
-| FINO-44 | Al importar fusionando con un movimiento existente no se marca la edición, y otro teléfono puede revertirla | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
+| FINO-44 | Al importar fusionando con un movimiento existente no se marca la edición, y otro teléfono puede revertirla | Corregido con prueba del manejador original y fusión entre clientes: edición fechada, conflictos rechazados y lote sin duplicados. Falta recorrido Android/dos teléfonos. |
 | FINO-45 | Al exportar la Familia se usa la moneda del usuario y todos sus movimientos salen como 'Otros' | Corregido y probado con carga real de espacios: moneda Familia, categoría y notas conservadas. Falta abrir PDF/Excel/CSV reales en Android. |
 | FINO-46 | Al importar un archivo con una sola columna de monto, los abonos positivos se guardan como gastos | Signos al importar corregidos; bf321b4. Falta importación visual. |
 | FINO-47 | Entrar con Google crea la cuenta sin mostrar ni aceptar Términos y Privacidad; con correo la aceptación es implícita | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
@@ -65,12 +65,12 @@ Las tarjetas de crédito permanecen excluidas por decisión del propietario.
 | FINO-51 | Cambiar la moneda o el país reetiqueta todo el historial sin convertir ni pedir confirmación, y cambia qué funciones aparecen | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
 | FINO-52 | Dos teléfonos de la misma cuenta pueden generar el mismo id de movimiento y uno se pierde al fusionar | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
 | FINO-53 | El aviso del calendario no dice cuándo vence el pago | Fecha completa en aviso; ecc9aa9. Falta aviso real. |
-| FINO-54 | Importar, revisar duplicados, escanear boleta y aportar a una meta no impiden el doble toque | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
+| FINO-54 | Importar, revisar duplicados, escanear boleta y aportar a una meta no impiden el doble toque | Manejadores de las cuatro pantallas protegidos y ejecutados en prueba, incluido reintento ante errores. Falta doble toque físico en Android. |
 | FINO-55 | Si el elemento ya no existe, varias pantallas quedan en blanco o actúan mientras se dibujan | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
 | FINO-56 | Editar la meta de ahorro no recalcula si está cumplida | Recalcular meta al editar; 634ec94. Falta recorrido Android. |
 | FINO-57 | El CSV usa siempre 2 decimales y no neutraliza tabulador ni retorno al inicio de una celda | CSV moneda/texto corregido; 180d73a. Falta Excel/LibreOffice y Android. |
 | FINO-58 | El candado falla abierto si no se puede leer SecureStore y hay una ventana inicial sin candado | Candado falla cerrado; 276cf53. Falta SecureStore/Android. |
-| FINO-59 | Herramientas locales con efectos sobre producción o sobre el propio código | Herramientas y mapas preparados; 49f8d2c / 73efeb2. Falta credenciales y comprobar mapas en Sentry. |
+| FINO-59 | Herramientas locales con efectos sobre producción o sobre el propio código | Herramientas protegidas; 49f8d2c. Sentry apartado por decisión del propietario: envío apagado en la versión preparada. Reactivación/verificación externa excluidas hasta nueva autorización. |
 | FINO-60 | El cifrado local depende de crypto-js, librería que su autor declara sin mantenimiento | Cifrado sustituido compatible; 9067a37. Falta actualizar instalación Android con datos antiguos. |
 | FINO-61 | 14 pruebas no ejecutan el código de la app: 5 prueban gráficos que ya no existen y 9 usan una copia de la lógica | Pruebas falsas retiradas/reemplazadas; ec0923e. Cuatro recorridos de navegación aún pendientes. |
 
@@ -81,6 +81,6 @@ por decisión explícita. Los trámites/cuentas externas deben acreditarse y las
 pruebas Android ejecutarse. La publicación es un paso separado que requiere
 coordinación/autorización; un commit en GitHub no actualiza la app instalada.
 
-**Qué sigue:** FINO-44/54 y los IDs marcados para revalidación. **Qué falta:** ese
+**Qué sigue:** FINO-43/55 y los IDs marcados para revalidación. **Qué falta:** ese
 contraste completo, Android, consolas, trámites y entrega. Este archivo debe
 actualizarse al cerrar cada punto; no omitir los pendientes por ser de gravedad baja.

@@ -63,6 +63,7 @@ import {
 import { reprogramarAvisosDePagos } from "@/utils/avisosDePagos";
 import { useValorEstable } from "@/utils/valorEstable";
 import { nextId, reserveIdsAbove } from "@/utils/id";
+import { applyImportedTransactions } from "@/utils/importCommit";
 import { learnCategory, suggestCategory } from "@/utils/classifier";
 import { bajarNegocio, subirNegocio } from "@/utils/cloudNegocio";
 import {
@@ -283,7 +284,7 @@ type AppDataContextValue = {
   stagePrivateBoxMoney: (before: DatosCajas, entry: RevisionImporteCaja, lease: PrivateBoxCloudLease, current: () => boolean, apply: (data: DatosCajas) => void) => Promise<boolean>;
   readPrivateBoxMoneyLocal: () => { transactions: Transaction[]; deletedIds: number[]; currency: string };
   deleteTransactions: (ids: number[]) => void;
-  commitImport: (toAdd: Transaction[], toReplace: Transaction[]) => void;
+  commitImport: (toAdd: Transaction[], toReplace: Transaction[]) => number;
 
   merchantLearned: Record<string, string>;
   learnMerchantCategory: (merchantText: string, category: string) => void;
@@ -2868,17 +2869,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   //   toAdd    → movimientos nuevos (ya con su id puesto)
   //   toReplace→ movimientos fusionados (mismo id que uno existente)
   function commitImport(toAdd: Transaction[], toReplace: Transaction[]) {
-    if (toAdd.length === 0 && toReplace.length === 0) return;
-    const replaceMap = new Map(toReplace.map((t2) => [t2.id, t2]));
-    setTransactions((prev) => {
-      const updated = prev.map((p) => replaceMap.get(p.id) ?? p);
-      return [...toAdd, ...updated];
-    });
+    if (toAdd.length === 0 && toReplace.length === 0) return 0;
+    assertPrivateBoxMoneyLocalIdle();
+    const result = applyImportedTransactions(transactionsLive.current, toAdd, toReplace, deletedTransactionIdsRef.current);
+    if (result.count === 0) return 0;
+    setTransactions(result.transactions);
     showToast(
-      t(toAdd.length + toReplace.length > 1 ? "importSheet.doneToastPlural" : "importSheet.doneToast", {
-        count: toAdd.length + toReplace.length,
+      t(result.count > 1 ? "importSheet.doneToastPlural" : "importSheet.doneToast", {
+        count: result.count,
       })
     );
+    return result.count;
   }
 
   // Guarda que un comercio va en una categoría, para futuras importaciones.

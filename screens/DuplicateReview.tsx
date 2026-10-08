@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Copy, GitMerge, Layers, ArrowRight, ChevronLeft } from "lucide-react-native";
@@ -42,22 +42,28 @@ export default function DuplicateReview({
 
   const [index, setIndex] = useState(0);
   const [resolutions] = useState<Map<number, Resolution>>(new Map());
+  const decidedIds = useRef(new Set<number>());
 
   const current = dupes[index];
   const isLast = index >= dupes.length - 1;
 
   function decide(decision: Resolution) {
-    resolutions.set(current.tx.id, decision);
-    // Si fusiona o mantiene, aprovechamos para "enseñarle" al clasificador
-    // que ese comercio va en la categoría que la persona ya tenía elegida
-    // (solo si fusiona: ahí confirma que es el mismo gasto).
-    if (decision === "merge" && current.match) {
-      onLearn(current.raw.merchant || current.raw.description, current.match.existing.category);
-    }
-    if (isLast) {
-      onFinish(resolutions);
-    } else {
-      setIndex((i) => i + 1);
+    if (!current || decidedIds.current.has(current.tx.id)) return;
+    decidedIds.current.add(current.tx.id);
+    try {
+      resolutions.set(current.tx.id, decision);
+      // Solo fusionar confirma que el comercio corresponde al gasto existente.
+      if (decision === "merge" && current.match) {
+        onLearn(current.raw.merchant || current.raw.description, current.match.existing.category);
+      }
+      if (isLast) {
+        onFinish(resolutions);
+      } else {
+        setIndex((i) => i + 1);
+      }
+    } catch (error) {
+      decidedIds.current.delete(current.tx.id);
+      throw error;
     }
   }
 

@@ -3,6 +3,28 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-44/54 y decisión sobre Sentry (07/10/2026)
+
+- Importación: `commitImport` ejecuta el preparador real sobre los movimientos
+  actuales, conserva la barrera monetaria, marca edición, deduplica IDs y
+  rechaza todo el lote si una fusión perdió su origen o cambió de versión.
+  `scoreMatch` no trata aportes enlazados como gastos duplicados.
+- Cuatro pantallas bloquean guardados repetidos inmediatamente y permiten
+  reintento tras error. Se ejecutan sus manejadores originales extraídos con
+  TypeScript, sin copiar su lógica. No se monta React ni se prueba Android;
+  ese límite queda explícito. Pruebas rojas contra la versión anterior.
+- Sentry: el propietario eligió dejarlo fuera. El auxiliar compatible ya no
+  carga/inicia el SDK ni envía errores; la raíz se conserva y las tareas de
+  fondo no dependen de ese servicio. Prueba con observador de SDK roja antes y
+  verde después. Privacidad/PLAYSTORE actualizados para la versión preparada;
+  la web y las apps instaladas necesitan entrega coordinada.
+- TypeScript, ESLint, 145 pruebas locales y 8 auditores aprobaron (144 en Git
+  limpio). Empaquetado Android/Hermes con mapas aprobado; el SDK de diagnósticos
+  ya no forma parte de los imports de la app. No es un APK/AAB instalado.
+  **Qué sigue:** FINO-43/55 y revalidación de los IDs restantes.
+  **Qué falta:** Android, dos clientes reales, consolas/entrega; Sentry y tarjetas
+  excluidos por decisión del propietario.
+
 ## FINO-45 — exportación por espacio (07/10/2026)
 
 - Confirmado en la revisión cruzada: Familia usaba la moneda personal y todos

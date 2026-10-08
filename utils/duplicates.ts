@@ -105,7 +105,7 @@ export function scoreMatch(existing: Transaction, incoming: RawRow): DuplicateMa
   const reasons: string[] = [];
 
   // El tipo debe coincidir: un ingreso nunca es duplicado de un gasto.
-  if (existing.type !== incoming.type) {
+  if (existing.type !== incoming.type || existing.internalTransfer) {
     return { existing, score: 0, level: "new", reasons: [] };
   }
 

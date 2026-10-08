@@ -1,5 +1,11 @@
 # Mapas de código de Sentry (Android)
 
+**07/10/2026: fuera de uso por decisión del propietario.** La versión preparada
+no inicializa el SDK ni envía diagnósticos. Las instrucciones siguientes quedan
+como referencia para una futura reactivación expresamente solicitada; no deben
+configurarse credenciales ni activarse subidas mientras Sentry siga apartado.
+Esto no cambia las versiones instaladas hasta entregar la actualización.
+
 La app puede enviar fallos a Sentry, pero sin el mapa del JavaScript los
 mensajes son difíciles de leer. El proyecto mantiene la compilación habitual
 sin subida de mapas porque antes fallaba cuando faltaban credenciales.

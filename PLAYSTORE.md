@@ -158,7 +158,7 @@ se procesan para registrar movimientos. Las políticas pública e interna ya lo 
 | **Mensajes en la app** *(otros: contenido de notificaciones)* | Sí | No | Funciones de la app |
 | **IDs de usuario** *(identificador de chat de Telegram, si se conecta)* | Sí | No | Funciones de la app · Gestión de la cuenta |
 | **Grabaciones de voz** | **No se recoge** | — | Se procesa en el celular y no se guarda |
-| **Diagnóstico de fallos y rendimiento** | Sí | No | Analítica y funcionamiento de la app (Sentry) |
+| **Diagnóstico de fallos y rendimiento** | No en la versión preparada | — | Sentry desactivado por decisión del propietario; comprobar y actualizar la declaración al publicar |
 
 **Para las cinco que sí:** marcar **cifrado en tránsito** y **se puede solicitar el borrado**.
 

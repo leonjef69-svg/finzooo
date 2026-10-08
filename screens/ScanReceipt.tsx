@@ -42,7 +42,7 @@ type Stage =
 type Kind = "expense" | "income";
 
 export default function ScanReceipt({ onClose }: { onClose: () => void }) {
-  const { t, fmt, merchantLearned, addOrUpdateTransaction, userCurrency } = useAppData();
+  const { t, fmt, merchantLearned, addOrUpdateTransaction, userCurrency, showToast } = useAppData();
   const insets = useSafeAreaInsets();
 
   const [stage, setStage] = useState<Stage>("intro");
@@ -56,6 +56,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
   const [date, setDate] = useState("");
   const [kind, setKind] = useState<Kind>("expense");
   const [category, setCategory] = useState("otros");
+  const saveLock = useRef(false);
   /** La foto tomada y todavía sin recortar. Mientras exista, se enseña el recortador. */
   const [porRecortar, setPorRecortar] = useState<{ uri: string; ancho: number; alto: number } | null>(null);
 
@@ -140,6 +141,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
   }
 
   function save() {
+    if (saveLock.current) return;
     const amount = parseAmountInput(amountText, userCurrency);
     if (amount <= 0) return;
     const iso = normalizeDateInput(date);
@@ -148,21 +150,26 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
     // (ver el comentario de isValidISODate). Aquí no se guarda nada que no
     // pase esa comprobación.
     if (!isValidISODate(iso)) return;
-
-    const transaction: Transaction = {
-      id: nextId(),
-      type: kind,
-      amount,
-      category,
-      date: iso,
-      method: "cash",
-      description: merchant || t(catInfo(category).label),
-      notes: read?.docNumber ? t("scan.noteDoc", { doc: read.docNumber }) : "",
-      merchant: merchant || undefined,
-      origin: "manual",
-    };
-    addOrUpdateTransaction(transaction);
-    onClose();
+    saveLock.current = true;
+    try {
+      const transaction: Transaction = {
+        id: nextId(),
+        type: kind,
+        amount,
+        category,
+        date: iso,
+        method: "cash",
+        description: merchant || t(catInfo(category).label),
+        notes: read?.docNumber ? t("scan.noteDoc", { doc: read.docNumber }) : "",
+        merchant: merchant || undefined,
+        origin: "manual",
+      };
+      addOrUpdateTransaction(transaction);
+      onClose();
+    } catch {
+      saveLock.current = false;
+      showToast(t("toast.localSaveFailed"));
+    }
   }
 
   const cats = kind === "expense" ? EXPENSE_CATS : INCOME_CATS;

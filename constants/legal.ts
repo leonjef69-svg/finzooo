@@ -36,7 +36,7 @@ Esta Política de Privacidad explica qué información recoge Fino, para qué la
 - Fotos que tú eliges: las imágenes que pongas a tus categorías propias, y las fotos de boletas si usas el escáner.
 - Lo que dices al micrófono, solo mientras lo tienes apretado, para entender la orden.
 - Si conectas Telegram, el texto que envías al bot, tu identificador de chat y el movimiento que confirmas.
-- Información técnica de errores y rendimiento (como versión de la app, modelo del dispositivo y lugar del fallo) mediante Sentry. Fino configura estos reportes sin tu identidad, solicitudes de red ni datos adicionales de la aplicación.
+- El envío de diagnósticos a Sentry está desactivado en esta versión preparada. No enviamos errores ni datos de rendimiento a ese servicio.
 - No recogemos tu ubicación ni leemos la agenda de contactos de tu celular.
 
 2. La lectura de notificaciones (registro automático)
@@ -67,7 +67,7 @@ Esta es la parte más delicada y por eso va aparte.
 
 4. Con quién compartimos tu información
 ${PARRAFO_ANUNCIOS}
-- Usamos Firebase (Google) para la cuenta y la copia segura, y Sentry para recibir diagnósticos técnicos de fallos.
+- Usamos Firebase (Google) para la cuenta y la copia segura. El envío de diagnósticos a Sentry está desactivado en esta versión preparada.
 - Si TÚ conectas Google Drive, Dropbox o eliges una carpeta de tu celular, se suben ahí los archivos de reporte que tú pidas, y nada más. Fino solo puede entrar a su propia carpeta.
 - Si TÚ eliges enviar un reporte por correo o WhatsApp, ese archivo va a quien tú indiques, a través de la aplicación que elijas.
 - Si TÚ conectas Telegram, Telegram recibe los mensajes que escribes y las confirmaciones que Fino te responde. La conexión es opcional y puedes desconectarla desde Ajustes.

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -22,9 +22,10 @@ export default function MoveMoneySheet({
   onClose: () => void;
   onConfirm: (amount: number) => void;
 }) {
-  const { userCurrency, fmt, t, maximoAApartar: tope } = useAppData();
+  const { userCurrency, fmt, t, maximoAApartar: tope, showToast } = useAppData();
   const [amount, setAmount] = useState("");
   const [confirming, setConfirming] = useState(false);
+  const confirmLock = useRef(false);
   const isAdd = mode === "add";
   const amt = parseAmountInput(amount, userCurrency);
   // EL TOPE QUE FALTABA.
@@ -53,6 +54,18 @@ export default function MoveMoneySheet({
       Keyboard.dismiss();
     };
   }, []);
+
+  function confirmMove() {
+    if (!valid || confirmLock.current) return;
+    confirmLock.current = true;
+    try {
+      onConfirm(amt);
+      setConfirming(false);
+    } catch {
+      confirmLock.current = false;
+      showToast(t("toast.localSaveFailed"));
+    }
+  }
 
   return (
     <Animated.View
@@ -118,7 +131,7 @@ export default function MoveMoneySheet({
         )}
         <TouchableOpacity
           disabled={!valid}
-          onPress={() => (isAdd ? onConfirm(amt) : setConfirming(true))}
+          onPress={() => (isAdd ? confirmMove() : setConfirming(true))}
           className={`w-full mt-4 py-4 rounded-2xl items-center ${
             isAdd ? "bg-emerald-600" : "bg-rose-500"
           } ${!valid ? "opacity-40" : ""}`}
@@ -135,7 +148,7 @@ export default function MoveMoneySheet({
         confirmLabel={t("moveMoney.withdraw")}
         cancelLabel={t("common.cancel")}
         onCancel={() => setConfirming(false)}
-        onConfirm={() => onConfirm(amt)}
+        onConfirm={confirmMove}
       />
     </Animated.View>
   );

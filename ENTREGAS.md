@@ -10,6 +10,15 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-44/54 preparados: importación conserva ediciones al sincronizar, bloquea
+conflictos, IDs repetidos y fusiones con aportes enlazados; cuatro manejadores
+de guardado protegidos contra doble toque y comprobados con código original.
+Sentry queda apagado por decisión del propietario, con privacidad y declaración
+preparadas para esta versión. TypeScript, ESLint, 145 pruebas locales y 8
+auditores aprobados (144 en Git limpio). Falta Android físico y entrega.
+Empaquetado local Android/Hermes aprobado con Sentry apagado.
+No se ha enviado este cambio a las versiones instaladas.
+
 FINO-45 preparado: moneda propia de Familia y categorías/notas reales de Familia
 y Cajas en los reportes. Prueba del cargador real, TypeScript, ESLint, 142 pruebas
 locales y 8 auditores aprobados (141 en Git limpio). Falta abrir PDF/Excel/CSV

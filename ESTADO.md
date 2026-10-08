@@ -1,5 +1,33 @@
 # Estado actual de Fino
 
+## FINO-44/54 — importación editada y guardados únicos (07/10/2026)
+
+- La importación marca la fecha real de edición, evita IDs repetidos y no
+  vuelve a crear movimientos borrados. Si un movimiento a fusionar cambió
+  mientras se revisaba, rechaza el lote completo y pide cargarlo otra vez.
+  Los aportes enlazados a espacios no se ofrecen como duplicados de gastos.
+- Importar, revisar duplicados, guardar boleta y apartar/retirar una meta
+  tienen bloqueos inmediatos contra toques repetidos. Ante error se liberan
+  para reintentar. Las pruebas ejecutan los manejadores originales con
+  dependencias sustituidas; ambas fallaron contra el código anterior.
+- TypeScript, ESLint, 145 pruebas locales y 8 auditores aprobaron (144 pruebas
+  en Git limpio). Empaquetado Android/Hermes aprobado con Sentry apagado.
+  **Qué sigue:** FINO-43/55. **Qué falta:** doble toque físico,
+  importación y sincronización en dos teléfonos; entrega. Tarjetas excluidas.
+
+## Sentry apartado por decisión del propietario (07/10/2026)
+
+- El propietario no tiene acceso y prefiere dejarlo fuera. `utils/sentry.ts`
+  conserva llamadas compatibles para la raíz y tareas de fondo, sin cargar
+  ni iniciar el SDK ni enviar diagnósticos. No se consultó ninguna cuenta.
+- La prueba de no inicialización/envío falló antes y pasa ahora. Privacidad
+  y PLAYSTORE describen la versión preparada; las instaladas no cambian
+  hasta entregar una actualización. La integración de mapas anterior queda
+  solo como referencia para una reactivación solicitada expresamente.
+- **Qué sigue:** auditoría restante. **Qué falta:** entregar este cambio y
+  ajustar la declaración de Play para esa versión. La comprobación externa
+  de Sentry queda excluida hasta nueva decisión; tarjetas también excluidas.
+
 ## FINO-45 — reportes conservan moneda, categorías y notas (07/10/2026)
 
 - Familia exporta con su propia moneda. Familia, Caja privada y Caja compartida

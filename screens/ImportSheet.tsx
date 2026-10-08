@@ -157,6 +157,7 @@ export default function ImportSheet({
   const [reviewing, setReviewing] = useState(false);
   const [done, setDone] = useState(false);
   const [importedTotal, setImportedTotal] = useState(0);
+  const importLock = useRef(false);
 
   const iconMuted = colorScheme === "dark" ? "#94a3b8" : "#475569";
   const primaryText = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
@@ -437,25 +438,33 @@ export default function ImportSheet({
 
   // Aplica un conjunto de decisiones y guarda todo de una vez.
   function applyResolutions(resolutions: Map<number, Resolution>) {
-    const toAdd: Transaction[] = [];
-    const toReplace: Transaction[] = [];
+    if (importLock.current) return;
+    importLock.current = true;
+    try {
+      const toAdd: Transaction[] = [];
+      const toReplace: Transaction[] = [];
 
-    for (const cand of candidates) {
-      const decision = resolutions.get(cand.tx.id) ?? (cand.match ? "skip" : "new");
-      if (decision === "skip") continue;
-      if (decision === "merge" && cand.match) {
-        toReplace.push(mergeTransaction(cand.match.existing, cand.raw));
-      } else {
-        // "new" o "keepBoth": entra tal cual. Si el usuario ya lo tenía
-        // manual y elige mantener ambos, este queda marcado "importado".
-        toAdd.push(cand.tx);
+      for (const cand of candidates) {
+        const decision = resolutions.get(cand.tx.id) ?? (cand.match ? "skip" : "new");
+        if (decision === "skip") continue;
+        if (decision === "merge" && cand.match) {
+          toReplace.push(mergeTransaction(cand.match.existing, cand.raw));
+        } else {
+          // "new" o "keepBoth": entra tal cual. Si el usuario ya lo tenía
+          // manual y elige mantener ambos, este queda marcado "importado".
+          toAdd.push(cand.tx);
+        }
       }
-    }
 
-    commitImport(toAdd, toReplace);
-    setImportedTotal(toAdd.length + toReplace.length);
-    setReviewing(false);
-    setDone(true);
+      const total = commitImport(toAdd, toReplace);
+      setImportedTotal(total);
+      setReviewing(false);
+      setDone(true);
+    } catch {
+      importLock.current = false;
+      setReviewing(false);
+      showToast(t("importSheet.applyFailed"));
+    }
   }
 
   // El botón principal importa únicamente lo nuevo. Un posible duplicado no
@@ -466,6 +475,7 @@ export default function ImportSheet({
   }
 
   function reset() {
+    importLock.current = false;
     setFileName(null);
     setCandidates([]);
     setErrorCount(0);

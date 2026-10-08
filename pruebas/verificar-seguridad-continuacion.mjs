@@ -191,9 +191,7 @@ assert.equal(appConfig.expo.updates.requestHeaders["expo-channel-name"], "produc
 assert.match(appConfig.expo.ios.infoPlist.NSMicrophoneUsageDescription, /dictas un movimiento/i);
 
 const sentry = read("utils/sentry.ts");
-assert.match(sentry, /sendDefaultPii:\s*false/);
-assert.match(sentry, /delete event\.user/);
-assert.match(sentry, /delete event\.request/);
+assert.doesNotMatch(sentry, /@sentry\/react-native|Sentry\.init\(/);
 
 const privacy = read("docs/privacidad.html");
 assert.match(privacy, /Telegram/);
