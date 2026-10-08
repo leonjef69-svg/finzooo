@@ -7,6 +7,7 @@ import { fmtDate } from "@/utils/format";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Goal } from "@/types";
 import BackButton from "@/components/BackButton";
+import MissingItem from "@/components/MissingItem";
 import { useColorScheme } from "nativewind";
 
 export default function SavingsDetail({
@@ -28,7 +29,7 @@ export default function SavingsDetail({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
-  if (!goal) return null;
+  if (!goal) return <MissingItem onBack={onBack} />;
   const pct = goal.target > 0 ? Math.min(100, (goal.saved / goal.target) * 100) : 0;
   const remaining = Math.max(0, goal.target - goal.saved);
 

@@ -1,5 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import PremiumLocked from "@/components/PremiumLocked";
+import MissingItem from "@/components/MissingItem";
 import NuevaVenta from "@/screens/NuevaVenta";
 import { useAppData } from "@/contexts/AppDataContext";
 import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
@@ -27,8 +28,7 @@ export default function NuevaVentaRoute() {
   // sin forma de verla ni de borrarla.
   const negocio = id ? negocios.find((n) => n.id === id) : undefined;
   if (!negocio) {
-    safeBack();
-    return null;
+    return <MissingItem onBack={safeBack} />;
   }
 
   return <NuevaVenta negocioId={negocio.id} onBack={safeBack} />;

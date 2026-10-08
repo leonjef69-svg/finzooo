@@ -1,5 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import PremiumLocked from "@/components/PremiumLocked";
+import MissingItem from "@/components/MissingItem";
 import PanelNegocio from "@/screens/PanelNegocio";
 import { useAppData } from "@/contexts/AppDataContext";
 import { candadoPremium, puedeTocar } from "@/utils/candado";
@@ -37,8 +38,7 @@ export default function PanelNegocioRoute() {
   // abierta. Es lo mismo que hace la pantalla de productos, y por lo mismo.
   const negocio = id ? negocios.find((n) => n.id === id) : undefined;
   if (!negocio) {
-    safeBack();
-    return null;
+    return <MissingItem onBack={safeBack} />;
   }
 
   return <PanelNegocio negocioId={negocio.id} onBack={safeBack} soloLectura={!puedeTocar(estado)} />;

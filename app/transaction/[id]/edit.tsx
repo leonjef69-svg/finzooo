@@ -1,5 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import AddSheet from "@/screens/AddSheet";
+import MissingItem from "@/components/MissingItem";
 import { useAppData } from "@/contexts/AppDataContext";
 import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
 
@@ -9,6 +10,7 @@ export default function EditTransactionRoute() {
   const transaction = transactions.find((t) => String(t.id) === id);
   const blocked = useRedirectIfOrphaned();
   if (blocked) return null;
+  if (!transaction) return <MissingItem onBack={safeBack} />;
 
   return (
     <AddSheet
@@ -16,8 +18,7 @@ export default function EditTransactionRoute() {
       currentMonth={month}
       onClose={safeBack}
       onSave={(t) => {
-        addOrUpdateTransaction(t);
-        router.dismissTo("/(tabs)");
+        if (addOrUpdateTransaction(t, false, true)) router.dismissTo("/(tabs)");
       }}
     />
   );

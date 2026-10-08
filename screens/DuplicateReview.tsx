@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Copy, GitMerge, Layers, ArrowRight, ChevronLeft } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import { useAppData } from "@/contexts/AppDataContext";
+import MissingItem from "@/components/MissingItem";
 import { fmtDate } from "@/utils/format";
 import { catInfo } from "@/constants/categories";
 import type { DuplicateMatch } from "@/utils/duplicates";
@@ -67,7 +68,8 @@ export default function DuplicateReview({
     }
   }
 
-  const existing = current.match!.existing;
+  if (!current?.match) return <MissingItem onBack={onCancel} />;
+  const existing = current.match.existing;
   const raw = current.raw;
   const score = current.match!.score;
   const level = current.match!.level;

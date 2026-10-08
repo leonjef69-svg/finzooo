@@ -3,6 +3,22 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-55 — rutas y ediciones con origen ausente (07/10/2026)
+
+- Se reemplazaron las pantallas vacías y la navegación durante el dibujo por
+  `MissingItem`. Se incluyeron las rutas equivalentes de productos/venta/gasto
+  de Negocio y edición de metas, además de las del informe.
+- El guardado de una edición exige un origen vigente; no basta haberlo visto
+  al abrir el formulario. Movimiento y meta rechazados no se presentan como
+  éxito. Las protecciones existentes de movimientos enlazados se conservan.
+- Prueba del código original roja antes/verde después. TypeScript, ESLint sin
+  avisos y batería de 146 pruebas locales/8 auditores aprobados en el cierre
+  del punto (145 en Git limpio). No se monta Android en esa prueba.
+- **Qué sigue:** FINO-43. Se añadió una comprobación en preparación que falla
+  porque `subirNegocio` revive ventas borradas; aún no forma parte de una
+  corrección entregada. **Qué falta:** ese arreglo, Android y resto de IDs.
+  Sentry y tarjetas excluidos según decisión del propietario.
+
 ## FINO-44/54 y decisión sobre Sentry (07/10/2026)
 
 - Importación: `commitImport` ejecuta el preparador real sobre los movimientos

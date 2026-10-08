@@ -1,5 +1,21 @@
 # Estado actual de Fino
 
+## FINO-55 — elemento eliminado con salida visible (07/10/2026)
+
+- Detalle, edición de movimiento, meta/aporte/edición, revisión de duplicados
+  y cuatro rutas de Negocio muestran un mensaje y «Volver» cuando falta el
+  elemento, sin navegar mientras se dibujan ni abrir una creación por accidente.
+- Las ediciones de movimiento y meta comprueban también el origen al guardar;
+  una respuesta/toque atrasado no vuelve a crear el elemento. Las metas y
+  movimientos usan su lista actual en memoria para esa comprobación.
+- Prueba roja antes/verde después ejecutando componentes/manejadores originales
+  con dependencias sustituidas. TypeScript, ESLint sin avisos y batería de
+  cierre de 146 pruebas locales/8 auditores aprobados (145 en Git limpio).
+- **Qué sigue:** FINO-43, Negocio en nube: una nueva prueba reproduce que una
+  venta borrada reaparece; está en preparación y aún no pasa ni se entrega.
+  **Qué falta:** corregir ese punto, restantes IDs, Android y publicación.
+  Tarjetas y comprobación de Sentry excluidas según decisión del propietario.
+
 ## FINO-44/54 — importación editada y guardados únicos (07/10/2026)
 
 - La importación marca la fecha real de edición, evita IDs repetidos y no

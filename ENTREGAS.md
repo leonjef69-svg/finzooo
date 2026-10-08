@@ -10,6 +10,12 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-55 preparado: elementos ausentes tienen mensaje/Volver; editar un movimiento
+o meta ausente no crea uno nuevo. Prueba con componentes originales aprobada,
+TypeScript/ESLint y 146 pruebas locales/8 auditores aprobados al cierre de este
+punto (145 en Git limpio). Falta Android físico. FINO-43 sigue en preparación;
+no está corregido. Sin APK/AAB/OTA.
+
 FINO-44/54 preparados: importación conserva ediciones al sincronizar, bloquea
 conflictos, IDs repetidos y fusiones con aportes enlazados; cuatro manejadores
 de guardado protegidos contra doble toque y comprobados con código original.

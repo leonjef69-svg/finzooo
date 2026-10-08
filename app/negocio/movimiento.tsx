@@ -1,5 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import PremiumLocked from "@/components/PremiumLocked";
+import MissingItem from "@/components/MissingItem";
 import MovimientoNegocio from "@/screens/MovimientoNegocio";
 import { useAppData } from "@/contexts/AppDataContext";
 import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
@@ -26,8 +27,7 @@ export default function MovimientoNegocioRoute() {
   // ningun saldo y no habria forma de verlo ni de borrarlo.
   const negocio = id ? negocios.find((n) => n.id === id) : undefined;
   if (!negocio) {
-    safeBack();
-    return null;
+    return <MissingItem onBack={safeBack} />;
   }
 
   return <MovimientoNegocio negocioId={negocio.id} onBack={safeBack} />;

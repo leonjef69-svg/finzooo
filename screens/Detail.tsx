@@ -12,6 +12,7 @@ import { fmtDate } from "@/utils/format";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Transaction } from "@/types";
 import BackButton from "@/components/BackButton";
+import MissingItem from "@/components/MissingItem";
 import { personalTransferStatuses } from "@/utils/linkedTransfers";
 
 export default function Detail({
@@ -30,7 +31,7 @@ export default function Detail({
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
-  if (!transaction) return null;
+  if (!transaction) return <MissingItem onBack={onBack} />;
   const c = catInfo(transaction.category);
   const linkedCreditPayment = transaction.method === "credit-card-payment";
   const managedTransfer = Boolean(transaction.internalTransfer);

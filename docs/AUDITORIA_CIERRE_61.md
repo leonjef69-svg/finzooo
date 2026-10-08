@@ -66,7 +66,7 @@ Las tarjetas de crédito permanecen excluidas por decisión del propietario.
 | FINO-52 | Dos teléfonos de la misma cuenta pueden generar el mismo id de movimiento y uno se pierde al fusionar | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
 | FINO-53 | El aviso del calendario no dice cuándo vence el pago | Fecha completa en aviso; ecc9aa9. Falta aviso real. |
 | FINO-54 | Importar, revisar duplicados, escanear boleta y aportar a una meta no impiden el doble toque | Manejadores de las cuatro pantallas protegidos y ejecutados en prueba, incluido reintento ante errores. Falta doble toque físico en Android. |
-| FINO-55 | Si el elemento ya no existe, varias pantallas quedan en blanco o actúan mientras se dibujan | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
+| FINO-55 | Si el elemento ya no existe, varias pantallas quedan en blanco o actúan mientras se dibujan | Corregido y probado con componentes/manejadores originales: mensaje/Volver y edición con origen vigente; falta recorrido visual Android. |
 | FINO-56 | Editar la meta de ahorro no recalcula si está cumplida | Recalcular meta al editar; 634ec94. Falta recorrido Android. |
 | FINO-57 | El CSV usa siempre 2 decimales y no neutraliza tabulador ni retorno al inicio de una celda | CSV moneda/texto corregido; 180d73a. Falta Excel/LibreOffice y Android. |
 | FINO-58 | El candado falla abierto si no se puede leer SecureStore y hay una ventana inicial sin candado | Candado falla cerrado; 276cf53. Falta SecureStore/Android. |

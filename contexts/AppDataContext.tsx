@@ -271,7 +271,7 @@ type AppDataContextValue = {
 
   transactions: Transaction[];
   deletedTransactionIds: number[];
-  addOrUpdateTransaction: (t: Transaction, allowLinkedTransferUpdate?: boolean) => void;
+  addOrUpdateTransaction: (t: Transaction, allowLinkedTransferUpdate?: boolean, requireExisting?: boolean) => boolean;
   recordPersonalReturn: (receipt: PersonalReturnReceipt) => boolean;
   deleteTransaction: (id: number) => void;
   /** Solo para Familia/Cajas al borrar el movimiento enlazado en su origen. */
@@ -326,7 +326,7 @@ type AppDataContextValue = {
    * tiene que callar los avisos EN EL ACTO, no la próxima vez que se toque un pago.
    */
   reprogramarAvisos: () => void;
-  addOrUpdateGoal: (g: Goal) => void;
+  addOrUpdateGoal: (g: Goal, requireExisting?: boolean) => boolean;
   deleteGoal: (id: number) => void;
   addMoneyToGoal: (amount: number, goalId: number) => void;
   withdrawMoneyFromGoal: (goalId: number, amount: number) => void;
@@ -490,7 +490,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     transactionsLive.current = next;
     setRenderedTransactions(next);
   }, []);
-  const [goals, setGoals] = useState<Goal[]>(seedGoals);
+  const [goals, setRenderedGoals] = useState<Goal[]>(seedGoals);
+  const goalsLive = useRef(goals);
+  const setGoals = useCallback((update: SetStateAction<Goal[]>) => {
+    const next = typeof update === "function" ? update(goalsLive.current) : update;
+    goalsLive.current = next;
+    setRenderedGoals(next);
+  }, []);
   const [pagosProgramados, setPagosProgramados] = useState<PagoProgramado[]>([]);
   const pagosEnCurso = useRef(new Set<string>());
   const [avisosProgramados, setAvisosProgramados] = useState<number | null>(null);
@@ -1628,7 +1634,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
     };
-  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds]);
+  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds, setGoals]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -2017,7 +2023,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     };
     // Solo depende de si la app ya está lista: los datos que necesita los
     // lee de captureInputs en el momento de recoger.
-  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds]);
+  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds, setGoals]);
 
   function setAutoCaptureOn(value: boolean) {
     notificationReader.setEnabled(value);
@@ -2822,19 +2828,23 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     });
   }
 
-  function addOrUpdateTransaction(t2: Transaction, allowLinkedTransferUpdate = false) {
+  function addOrUpdateTransaction(t2: Transaction, allowLinkedTransferUpdate = false, requireExisting = false) {
     if (!Number.isFinite(t2.amount) || t2.amount <= 0) {
       showToast(t("toast.amountPositive"));
-      return;
+      return false;
     }
     if (!isSafeMoneyAmount(t2.amount)) {
       showToast(t("toast.amountTooLarge"));
-      return;
+      return false;
     }
-    const existing = transactions.find((p) => p.id === t2.id);
+    const existing = transactionsLive.current.find((p) => p.id === t2.id);
+    if ((requireExisting && !existing) || deletedTransactionIdsRef.current.includes(t2.id)) {
+      showToast(t("common.missingTitle"));
+      return false;
+    }
     if (existing?.internalTransfer && !allowLinkedTransferUpdate) {
       showToast(t("toast.transferEditBlocked"));
-      return;
+      return false;
     }
     const isEdit = Boolean(existing);
     // Un movimiento creado por un pago de tarjeta tiene su monto y fecha
@@ -2853,7 +2863,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           }
         : t2
       ),
-      updatedAt: Date.now(),
+      updatedAt: Math.max(Date.now(), (existing?.updatedAt ?? 0) + 1),
     };
     setTransactions((prev) =>
       isEdit
@@ -2861,6 +2871,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         : [safeTransaction, ...prev],
     );
     showToast(isEdit ? t("toast.transactionUpdated") : t("toast.transactionSaved"));
+    return true;
   }
 
   // Agrega varios movimientos de golpe (importación de estados de cuenta)
@@ -2963,14 +2974,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     );
   }
 
-  function addOrUpdateGoal(g: Goal) {
-    if (!isPremium) return;
+  function addOrUpdateGoal(g: Goal, requireExisting = false) {
+    if (!isPremium) return false;
+    if ((requireExisting && !goalsLive.current.some(goal => goal.id === g.id)) || deletedGoalIds.includes(g.id)) {
+      showToast(t("common.missingTitle"));
+      return false;
+    }
     const actualizada = metaConEstadoActual(g);
     setGoals((prev) => {
       const exists = prev.some((p) => p.id === g.id);
       return exists ? prev.map((p) => (p.id === g.id ? actualizada : p)) : [actualizada, ...prev];
     });
     showToast(t("toast.goalSaved"));
+    return true;
   }
 
   function deleteGoal(id: number) {

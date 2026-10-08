@@ -13,8 +13,8 @@ export function handlerOriginal(file, name, dependencies, sourceText = fs.readFi
   }
   visit(source);
   if (!found) throw new Error(`No existe ${name} en ${file}`);
-  const code = ts.transpileModule(found.getText(source), {
-    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None },
+  const code = ts.transpileModule(found.getText(source).replace(/^export\s+(?:default\s+)?/, ""), {
+    compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None, jsx: ts.JsxEmit.React },
   }).outputText;
   return new Function(...Object.keys(dependencies), `${code}\nreturn ${name};`)(...Object.values(dependencies));
 }

@@ -1,5 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import PremiumLocked from "@/components/PremiumLocked";
+import MissingItem from "@/components/MissingItem";
 import MoveMoneySheet from "@/screens/MoveMoneySheet";
 import { useAppData } from "@/contexts/AppDataContext";
 import { irUnaVez, safeBack, useRedirectIfOrphaned } from "@/utils/nav";
@@ -11,7 +12,8 @@ export default function SavingsMoveRoute() {
   const moveMode = mode === "withdraw" ? "withdraw" : "add";
   const blocked = useRedirectIfOrphaned();
 
-  if (blocked || !goal) return null;
+  if (blocked) return null;
+  if (!goal) return <MissingItem onBack={safeBack} />;
   if (!isPremium) return <PremiumLocked title={t("savingsList.title")} description={t("savingsLocked.description")} onBack={safeBack} onSeePremium={() => irUnaVez("/premium")} />;
 
   return (

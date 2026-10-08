@@ -1,5 +1,6 @@
 import { useLocalSearchParams } from "expo-router";
 import PremiumLocked from "@/components/PremiumLocked";
+import MissingItem from "@/components/MissingItem";
 import Productos from "@/screens/Productos";
 import { useAppData } from "@/contexts/AppDataContext";
 import { safeBack, useRedirectIfOrphaned, irUnaVez } from "@/utils/nav";
@@ -29,8 +30,7 @@ export default function ProductosRoute() {
   // productos de un negocio que ya no existe, y guardar ahí crearía productos huérfanos.
   const negocio = id ? negocios.find((n) => n.id === id) : undefined;
   if (!negocio) {
-    safeBack();
-    return null;
+    return <MissingItem onBack={safeBack} />;
   }
 
   return <Productos negocioId={negocio.id} onBack={safeBack} />;
