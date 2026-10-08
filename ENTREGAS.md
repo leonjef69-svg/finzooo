@@ -10,6 +10,11 @@ Resumen público. No guarda enlaces privados, credenciales ni datos de firma.
 
 ## Próxima versión
 
+FINO-25/26 preparados: explicación honesta de reconocimiento de voz y campana
+solo por llegadas nuevas, con reducir movimiento y etiquetas traducidas.
+Política/ayuda/HTML/Play son borradores coherentes con el código; no se publicaron.
+Faltan Android/TalkBack, proveedor real de voz y declaración final de Play.
+
 FINO-22/23 y refuerzo FINO-41 preparados: ventana protegida con candado,
 paneles suspendidos hasta desbloqueo y ojo que oculta todos los importes de
 Inicio. Kotlin JVM y Gradle debug/SDK real aprobados; no son pruebas físicas.

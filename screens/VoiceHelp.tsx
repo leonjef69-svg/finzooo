@@ -91,6 +91,9 @@ export default function VoiceHelp({ onBack }: { onBack: () => void }) {
         <Text className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-5">
           {t("voiceHelp.intro")}
         </Text>
+        <Text className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-5">
+          {t("voiceHelp.privacy")}
+        </Text>
 
         {GRUPOS.map((grupo) => (
           <View key={grupo.titulo} className="mb-6">

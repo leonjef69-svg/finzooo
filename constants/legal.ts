@@ -34,7 +34,7 @@ Esta Política de Privacidad explica qué información recoge Fino, para qué la
 - Si usas Familia o Cajas compartidas: el nombre con el que participas, los movimientos del espacio y su método de pago. Solo sus miembros autorizados pueden verlos.
 - Contactos de envío que tú guardas: los nombres, correos y números de teléfono a los que decidas mandar tus reportes. Los escribes tú; Fino no lee la agenda de tu celular.
 - Fotos que tú eliges: las imágenes que pongas a tus categorías propias, y las fotos de boletas si usas el escáner.
-- Lo que dices al micrófono, solo mientras lo tienes apretado, para entender la orden.
+- Lo que dices al micrófono mientras usas el dictado, hasta que la escucha se detiene o sales de la pantalla, para entender la orden.
 - Si conectas Telegram, el texto que envías al bot, tu identificador de chat y el movimiento que confirmas.
 - El envío de diagnósticos a Sentry está desactivado en esta versión preparada. No enviamos errores ni datos de rendimiento a ese servicio.
 - No recogemos tu ubicación ni leemos la agenda de contactos de tu celular.
@@ -72,7 +72,7 @@ ${PARRAFO_ANUNCIOS}
 - Si TÚ conectas Google Drive, Dropbox o eliges una carpeta de tu celular, se suben ahí los archivos de reporte que tú pidas, y nada más. Fino solo puede entrar a su propia carpeta.
 - Si TÚ eliges enviar un reporte por correo o WhatsApp, ese archivo va a quien tú indiques, a través de la aplicación que elijas.
 - Si TÚ conectas Telegram, Telegram recibe los mensajes que escribes y las confirmaciones que Fino te responde. La conexión es opcional y puedes desconectarla desde Ajustes.
-- El micrófono usa el servicio de reconocimiento de voz de tu propio celular, que en Android es de Google.
+- El micrófono usa el servicio de reconocimiento configurado en Android (por ejemplo, Google). Ese proveedor puede usar internet y puede enviar el audio a sus servidores para convertirlo en texto; no garantizamos que se procese solo dentro del teléfono. Fino no guarda archivos de grabación ni los sube a Firebase. El tratamiento y la conservación del audio por el proveedor dependen de su servicio y su política. Puedes usar la app sin dictado y apagarlo saliendo de la pantalla.
 
 5. Tus derechos
 - Puedes revisar y corregir tus datos en cualquier momento dentro de la app.

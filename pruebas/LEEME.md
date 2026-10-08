@@ -1,5 +1,18 @@
 # Pruebas y auditores
 
+Privacidad del candado/Inicio: `verificar-privacidad-candado.mjs` ejecuta puente,
+efectos y PrivateModal originales con adaptadores; `verificar-privacidad-inicio.mjs`
+extrae formato/fila reales y ejecuta el componente de aportes original. Kotlin:
+`node scripts/probar-receptores-kotlin.mjs --screen-privacy`. Guía y limitaciones:
+`docs/PRUEBAS_PRIVACIDAD_CANDADO_INICIO.md`. Regresiones `6672b08` rojas.
+
+Voz y campana: `verificar-voz-privacidad.mjs` ejecuta la política exportada y
+contrasta textos/configuración, NO audio/tráfico. `verificar-campana-movimiento-real.mjs`
+extrae efecto/ref originales y ejecuta el hook y catálogo con IO adaptado,
+NO una animación renderizada. Regresiones con `FINO_TEST_VOICE_PRIVACY_BASELINE`
+y `FINO_TEST_BELL_MOTION_BASELINE` contra `cb7f1e2`. Guía:
+`docs/PRUEBAS_VOZ_CAMPANA.md`. Android/TalkBack/proveedor siguen pendientes.
+
 `verificar-horario-exportacion.mjs` ejecuta el catálogo real de tres idiomas:
 aviso de retrasos, intento previsto y prueba no promete puntualidad; comprueba
 también la conexión nativa. `scripts/probar-receptores-kotlin.mjs` ejecuta la

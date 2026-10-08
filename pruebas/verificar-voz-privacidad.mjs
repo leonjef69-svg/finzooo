@@ -1,0 +1,31 @@
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { buildSync } from "esbuild";
+import { createRequire } from "node:module";
+import { execFileSync } from "node:child_process";
+const baseline = process.env.FINO_TEST_VOICE_PRIVACY_BASELINE;
+if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw Error("Se requiere hash Git.");
+const read = file => baseline ? execFileSync("git", ["show", `${baseline}:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");
+const compiled = buildSync({ stdin: { contents: read("constants/legal.ts"), sourcefile: "legal.ts", loader: "ts", resolveDir: process.cwd() },
+  bundle: true, platform: "node", format: "cjs", alias: { "@": process.cwd() }, write: false, logLevel: "silent" });
+const module = { exports: {} };
+new Function("module", "exports", "require", compiled.outputFiles[0].text)(module, module.exports, createRequire(import.meta.url));
+const policy = module.exports.PRIVACY_POLICY;
+const microphone = policy.split("\n").find(line => line.startsWith("- El micrófono"));
+assert.ok(microphone?.includes("internet") && microphone.includes("proveedor"), "La politica no debe prometer reconocimiento siempre local ni siempre Google");
+assert.ok(!policy.includes("solo mientras lo tienes apretado"), "La escucha arranca al abrir y termina con Listo/silencio/salida, no exige mantener pulsado");
+const html = read("docs/privacidad.html");
+assert.ok(html.includes("puede enviar el audio a sus servidores"));
+assert.ok(!html.includes("solo mientras lo tienes apretado"));
+const play = read("PLAYSTORE.md");
+const voiceRow = play.split("\n").find(line => line.includes("**Grabaciones de voz**"));
+assert.ok(voiceRow.split("|")[2].includes("Por verificar"), "No declarar ausencia de recogida sin verificar el servicio de la APK final");
+const catalog = read("constants/i18n.ts");
+assert.equal((catalog.match(/"voiceHelp\.privacy":/g) ?? []).length, 3);
+assert.ok(read("screens/VoiceHelp.tsx").includes('t("voiceHelp.privacy")'));
+// Contraste con la dependencia instalada, no se sustituye por una suposición.
+const service = fs.readFileSync(path.join("node_modules/expo-speech-recognition/android/src/main/java/expo/modules/speechrecognition/ExpoSpeechService.kt"), "utf8");
+assert.ok(service.includes("createSpeechRecognizer") && service.includes("createOnDeviceSpeechRecognizer"));
+assert.ok(!read("screens/VoiceEntry.tsx").includes("requiresOnDeviceRecognition: true"), "Si se exige offline en el futuro, revisar esta politica y compatibilidad");
+console.log("Voz: politica exportada, web, ayuda traducida y borrador Play ya no garantizan procesamiento local. Audio/proveedor/APK y consola reales pendientes.");

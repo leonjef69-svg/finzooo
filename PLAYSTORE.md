@@ -157,10 +157,24 @@ se procesan para registrar movimientos. Las políticas pública e interna ya lo 
 | **Información financiera del usuario** *(otra)* | Sí | No | Funciones de la app |
 | **Mensajes en la app** *(otros: contenido de notificaciones)* | Sí | No | Funciones de la app |
 | **IDs de usuario** *(identificador de chat de Telegram, si se conecta)* | Sí | No | Funciones de la app · Gestión de la cuenta |
-| **Grabaciones de voz** | **No se recoge** | — | Se procesa en el celular y no se guarda |
+| **Grabaciones de voz** | **Por verificar en la APK final** | Opcional | Android puede enviar audio al servicio de reconocimiento; Fino no guarda grabaciones. No marcar «No se recoge» basándose solo en que no se guarda en Firebase. |
 | **Diagnóstico de fallos y rendimiento** | No en la versión preparada | — | Sentry desactivado por decisión del propietario; comprobar y actualizar la declaración al publicar |
 
 **Para las cinco que sí:** marcar **cifrado en tránsito** y **se puede solicitar el borrado**.
+
+**FINO-25 — dictado:** el código no exige reconocimiento exclusivamente local.
+La dependencia instalada elige el servicio normal de Android si no se exige
+`requiresOnDeviceRecognition`. La política/ayuda preparadas ahora avisan que el
+proveedor puede usar internet y procesar audio fuera del teléfono. No se cambia
+el motor ni se bloquean teléfonos sin modelos offline. Antes de publicar hay que
+comprobar proveedor, transferencia, retención y declaraciones de recogida/
+compartición/cifrado para la APK final. No afirmar procesamiento temporal sin
+evidencia de retención del proveedor. La transcripción confirmada como movimiento
+sigue el tratamiento de la información financiera, no es una grabación de audio.
+Fuentes oficiales revisadas el 07/10/2026:
+[Android SpeechRecognizer](https://developer.android.com/reference/android/speech/SpeechRecognizer)
+y [definiciones de Seguridad de los datos](https://support.google.com/googleplay/android-developer/answer/10787469?hl=es).
+Esto es un borrador: no confirma que la consola ni la web pública estén actualizadas.
 
 El estado de avisos ya revisados (`finzo:homeNotificationSeen`) se guarda cifrado
 solo en el teléfono, para controlar el contador de la campana. No se sube a Firebase,

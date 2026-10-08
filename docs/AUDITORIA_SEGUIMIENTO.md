@@ -3,6 +3,26 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-25/26 — declaraciones y movimiento (07/10/2026)
+
+- FINO-25 confirmado en PLAYSTORE: afirmación de procesamiento local sin exigir
+  motor offline. Se corrige política/HTML/ayuda y declaración borrador de audio,
+  sin asegurar proveedor/retención/cifrado de terceros ni cambiar el motor.
+  La escucha no exige mantener pulsado; también se corrige esa explicación.
+- FINO-26: avisos históricos/contador insuficiente confirmados por ejecución del
+  efecto anterior; nueva referencia por IDs, espera de hidratación, preferencia
+  dinámica/cancelación y traducciones preparadas. Reanimated instalado sí usa
+  sistema por defecto: se documenta ese límite del hallazgo original.
+- Pruebas originales de efecto/hook/catálogo/política ejecutadas con adaptadores,
+  rojas contra `cb7f1e2` y verdes actuales. Guía `PRUEBAS_VOZ_CAMPANA.md`.
+  No son pruebas de tráfico/proveedor, interfaz Android ni cumplimiento legal.
+- TypeScript/ESLint sin avisos; 154 pruebas/8 auditores (153 en Git limpio)
+  aprobados. Una prueba histórica exigía literal español: se actualizó su
+  conexión traducible conservando las comprobaciones, y volvió a aprobar.
+- **Qué sigue:** FINO-24 y restantes IDs. **Qué falta:** Android, voz/retención
+  real, consolas/declaraciones/trámites, política pública y entrega autorizada.
+  FINO-50 no se declara cerrado; tarjetas/Sentry siguen fuera.
+
 ## FINO-22/23 y refuerzo FINO-41 (07/10/2026)
 
 - Protege ventana nativa desde onCreate, confirma FLAG_SECURE antes de quitar

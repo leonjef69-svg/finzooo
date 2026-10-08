@@ -67,10 +67,13 @@ import { useColorScheme } from "nativewind";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FlatList, Pressable, ScrollView, Text, TextInput, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import Modal from "@/components/PrivateModal";
+import { useReduceMotion } from "@/utils/useReduceMotion";
 import Animated, {
+  cancelAnimation,
   FadeInDown,
   FadeOutUp,
   LinearTransition,
+  ReduceMotion,
   useAnimatedStyle,
   useSharedValue,
   withSequence,
@@ -175,8 +178,8 @@ const FilaMovimiento = memo(function FilaMovimiento({
           />
           {isTransfer ? <SpaceTransferAmounts
             title={title}
-            sentLabel={`Enviado a ${tx.internalTransfer === "family" ? "Familia" : "Caja"}`}
-            returnedLabel="Devuelto"
+            sentLabel={t(tx.internalTransfer === "family" ? "transfer.sentToFamily" : "transfer.sentToBox")}
+            returnedLabel={t("transfer.returned")}
             sent={transferGroup?.sent ?? (tx.type === "expense" ? tx.amount : 0)}
             returned={transferGroup?.returned ?? (tx.type === "income" ? tx.amount : 0)}
             consumed={transferGroup?.consumed}
@@ -277,6 +280,7 @@ export default function Home({
   const [ahoraAvisos, setAhoraAvisos] = useState(() => Date.now());
   const [avisosVistos, setAvisosVistos] = useState<string[]>([]);
   const [estadoAvisosCargado, setEstadoAvisosCargado] = useState(false);
+  const [estadoExportacionInicialCargado, setEstadoExportacionInicialCargado] = useState(false);
   const [ultimoIntentoExportacion, setUltimoIntentoExportacion] = useState<UltimoIntento | null>(null);
   const [avisoCalendarioSeleccionado, setAvisoCalendarioSeleccionado] = useState<{
     pago: PagoProgramado;
@@ -287,7 +291,8 @@ export default function Home({
   const rotacionCampanaEstilo = useAnimatedStyle(() => ({
     transform: [{ rotate: `${rotacionCampana.value}deg` }],
   }));
-  const avisosNuevosAnteriores = useRef(0);
+  const avisosNuevosAnteriores = useRef<Set<string> | null>(null);
+  const reducirMovimiento = useReduceMotion();
   const ultimoAvisoTelefono = useRef<string | null>(null);
   const showToastAvisoRef = useRef(showToast);
   showToastAvisoRef.current = showToast;
@@ -337,7 +342,8 @@ export default function Home({
     setAhoraAvisos(Date.now());
     ultimoIntentoEnFondo()
       .then((attempt) => { if (active) setUltimoIntentoExportacion(attempt); })
-      .catch(() => { if (active) setUltimoIntentoExportacion(null); });
+      .catch(() => { if (active) setUltimoIntentoExportacion(null); })
+      .finally(() => { if (active) setEstadoExportacionInicialCargado(true); });
     return () => { active = false; };
   }, []));
 
@@ -512,22 +518,30 @@ export default function Home({
   const hayNotificaciones = numeroNoLeidos > 0;
 
   useEffect(() => {
+    if (!ready || !estadoAvisosCargado || !estadoExportacionInicialCargado) return;
     const anteriores = avisosNuevosAnteriores.current;
-    avisosNuevosAnteriores.current = numeroNoLeidos;
-    const nuevos = numeroNoLeidos - anteriores;
+    avisosNuevosAnteriores.current = new Set(idsNoLeidos);
+    if (reducirMovimiento) {
+      cancelAnimation(rotacionCampana);
+      rotacionCampana.value = 0;
+      return;
+    }
+    // La primera lectura contiene avisos anteriores, no llegadas nuevas.
+    if (!anteriores) return;
+    const nuevos = idsNoLeidos.filter(id => !anteriores.has(id)).length;
     if (nuevos <= 0) return;
     const secuencia = [];
     for (let i = 0; i < Math.min(nuevos, 5); i++) {
       secuencia.push(
-        withTiming(-15, { duration: 45 }),
-        withTiming(15, { duration: 65 }),
-        withTiming(-11, { duration: 45 }),
-        withTiming(11, { duration: 55 }),
-        withTiming(0, { duration: 55 }),
+        withTiming(-15, { duration: 45, reduceMotion: ReduceMotion.System }),
+        withTiming(15, { duration: 65, reduceMotion: ReduceMotion.System }),
+        withTiming(-11, { duration: 45, reduceMotion: ReduceMotion.System }),
+        withTiming(11, { duration: 55, reduceMotion: ReduceMotion.System }),
+        withTiming(0, { duration: 55, reduceMotion: ReduceMotion.System }),
       );
     }
     rotacionCampana.value = withSequence(...secuencia);
-  }, [numeroNoLeidos, rotacionCampana]);
+  }, [ready, estadoAvisosCargado, estadoExportacionInicialCargado, idsNoLeidos, reducirMovimiento, rotacionCampana]);
 
   useEffect(() => {
     if (!avisosAbiertos || !estadoAvisosCargado || idsNoLeidos.length === 0) return;

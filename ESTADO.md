@@ -1,5 +1,23 @@
 # Estado actual de Fino
 
+## FINO-25/26 — voz honesta y campana por llegada (07/10/2026)
+
+- Política interna/HTML preparado/ayuda de tres idiomas explican que Android
+  puede usar internet/proveedor para dictado. No se promete audio local por no
+  guardarlo en Firebase; Play deja su declaración por verificar. No se cambia
+  motor, compatibilidad, escucha ni datos y no se inventa consentimiento.
+- Campana espera lectura inicial, no sacude por avisos históricos y compara
+  IDs nuevos incluso con contador igual; cancelación con reducir movimiento en
+  vivo, límite de ráfaga y etiquetas de transferencias traducidas. Reanimated
+  ya respeta sistema por defecto, no se presenta su ausencia explícita como bug.
+- Regresiones contra `cb7f1e2` rojas y actuales verdes: política exportada y
+  efecto/hook originales con adaptadores. Guía `docs/PRUEBAS_VOZ_CAMPANA.md`.
+- TypeScript/ESLint sin avisos y 154 pruebas/8 auditores (153 en Git limpio)
+  aprobados; ADB sigue sin dispositivos. No se ejecutó voz ni animación Android.
+- **Qué sigue:** FINO-24/restantes IDs. **Qué falta:** Android/TalkBack/proveedor
+  real de voz, retención/tráfico, Play/política publicados, consolas/trámites,
+  instalación nativa acumulada, firma y entrega autorizada. Tarjetas/Sentry fuera.
+
 ## FINO-22/23 y refuerzo FINO-41 — privacidad (07/10/2026)
 
 - Candado protege ventana Android desde arranque; conserva protección al
