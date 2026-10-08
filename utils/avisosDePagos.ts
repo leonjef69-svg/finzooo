@@ -12,7 +12,7 @@
 import { Linking, Platform } from "react-native";
 import Constants from "expo-constants";
 import * as Notifications from "expo-notifications";
-import { loadJSON, saveJSON } from "@/utils/storage";
+import { loadJSON, saveJSONNow } from "@/utils/storage";
 import {
   cuandoAvisar,
   estadoEn,
@@ -100,9 +100,10 @@ export function reprogramarAvisosDePagos(
   t: (clave: string, valores?: Record<string, string | number>) => string,
   ahora: Date = new Date(),
   formatAmount: (monto: number) => string = (monto) => monto.toFixed(2),
+  opciones: { solicitarPermiso?: boolean } = {},
 ): Promise<ResultadoDeProgramar> {
   enFila = enFila
-    .then(() => hacerlo(lista, t, ahora, formatAmount))
+    .then(() => hacerlo(lista, t, ahora, formatAmount, opciones.solicitarPermiso === true))
     .catch((e) => ({ puestos: 0, fallo: String(e?.message ?? e) }));
   return enFila;
 }
@@ -112,24 +113,28 @@ async function hacerlo(
   t: (clave: string, valores?: Record<string, string | number>) => string,
   ahora: Date,
   formatAmount: (monto: number) => string,
+  solicitarPermiso: boolean,
 ): Promise<ResultadoDeProgramar> {
   // Cada paso dice dónde está, para que si algo revienta el mensaje diga EN CUÁL. Sin esto,
   // "cannot read property of undefined" no distingue el permiso del canal ni del programado.
   let paso = "empezando";
   try {
-    // EL PERMISO, Y ESTO FALTABA (18/08/2026).
-    //
-    // Desde Android 13 los avisos se piden a mano, y aquí no se pedían: se programaban
-    // perfectamente y no aparecía ninguno. El único sitio que lo pedía era la exportación
-    // automática, así que el calendario solo funcionaba si la persona había configurado
-    // ANTES otra cosa que no tiene nada que ver.
-    //
-    // Se pide al programar y no al abrir la pantalla: la ventana de Android sale cuando ya
-    // se entiende para qué sirve —acabas de guardar un recibo— y no nada más entrar.
+    // Apagar o quitar pagos siempre limpia solo sus avisos, sin abrir permisos.
+    paso = "retirando";
+    await retirarLosNuestros();
+    if (!(await avisosEncendidos()) || lista.length === 0) return { puestos: 0 };
+
+    // Rehidratar la cuenta, cambiar moneda o volver a la app NO autoriza un diálogo.
+    // Solo guardar un pago o activar sus avisos transmite la intención explícita.
     if (lista.length > 0) {
       paso = "permiso";
       const permiso = await Notifications.getPermissionsAsync();
       if (!permiso.granted) {
+        if (!solicitarPermiso || permiso.canAskAgain === false) return { puestos: 0, fallo: "sin-permiso" };
+        // Android 13 necesita el canal antes de mostrar la petición de permiso.
+        paso = "canal";
+        await prepararCanal();
+        paso = "permiso";
         const pedido = await Notifications.requestPermissionsAsync();
         if (!pedido.granted) return { puestos: 0, fallo: "sin-permiso" };
       }
@@ -138,14 +143,6 @@ async function hacerlo(
       paso = "canal";
       await prepararCanal();
     }
-
-    paso = "retirando";
-    await retirarLosNuestros();
-
-    // APAGADOS DESDE AJUSTES: se retiran los que hubiera y no se pone ninguno. Se comprueba
-    // DESPUES de retirar, no antes, para que apagar el interruptor limpie de verdad lo que ya
-    // estaba programado en vez de dejarlo sonando.
-    if (!(await avisosEncendidos())) return { puestos: 0 };
 
     let puestos = 0;
     let mes = mesDe(ahora);
@@ -265,6 +262,8 @@ export async function probarAviso(
   try {
     const permiso = await Notifications.getPermissionsAsync();
     if (!permiso.granted) {
+      if (permiso.canAskAgain === false) return "sin-permiso";
+      await prepararCanal();
       const pedido = await Notifications.requestPermissionsAsync();
       if (!pedido.granted) return "sin-permiso";
     }
@@ -374,6 +373,7 @@ export async function avisosEncendidos(): Promise<boolean> {
   return loadJSON<boolean>(CLAVE_AVISOS, true);
 }
 
-export function guardarAvisosEncendidos(valor: boolean): void {
-  saveJSON(CLAVE_AVISOS, valor);
+export function guardarAvisosEncendidos(valor: boolean): Promise<boolean> {
+  // El reprogramado siguiente debe leer el nuevo valor, no el anterior en disco.
+  return saveJSONNow(CLAVE_AVISOS, valor);
 }

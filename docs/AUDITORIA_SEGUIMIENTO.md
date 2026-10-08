@@ -3,6 +3,21 @@
 Última revisión: 07/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-32 — permisos de calendario (08/10/2026)
+
+- Confirmado: la carga automática con lista no vacía pedía permiso. Ahora
+  solo Guardar/activar/Probar registra intención; la carga/moneda no pide.
+  Negación no borra pago; canal previo al diálogo, canAskAgain respetado.
+- Apagar/quitar limpia calendario sin pedir ni retirar exportación. Interruptor
+  espera guardado inmediato para no reprogramar con valor antiguo; doble toque,
+  fallos de escritura y reintento protegidos. Intención reiniciada al limpiar.
+- Programador/contexto/efecto/interruptor originales con IO adaptado; roja
+  contra `450f29d`, actual verde; guía `PRUEBAS_PERMISOS_CALENDARIO.md`.
+- TypeScript/ESLint sin avisos; 158 pruebas/8 auditores verdes (157 en Git
+  limpio, la otra es una prueba local preexistente del usuario).
+- **Qué sigue:** restantes IDs. **Qué falta:** prueba Android/permiso/sonido,
+  firma/consolas/trámites y entrega. Tarjetas/Sentry excluidos. No publicado.
+
 ## FINO-35 — lectura PDF acotada (07/10/2026)
 
 - Hallazgo confirmado con archivo sintético: descompresión completa sin tope.

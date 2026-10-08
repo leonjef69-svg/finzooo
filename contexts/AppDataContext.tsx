@@ -497,6 +497,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, []);
   const [pagosProgramados, setPagosProgramados] = useState<PagoProgramado[]>([]);
   const pagosEnCurso = useRef(new Set<string>());
+  // Intención de un toque en Guardar, no de recuperar pagos al iniciar/sincronizar.
+  const solicitarPermisoDePagos = useRef(false);
   const [avisosProgramados, setAvisosProgramados] = useState<number | null>(null);
   const [avisosFallo, setAvisosFallo] = useState<string | null>(null);
   // Ver el efecto que reprograma los avisos: la caja con el traductor de ahora mismo.
@@ -1204,6 +1206,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setDeletedGoalIds([]);
     setGoals([]);
     setPagosProgramados([]);
+    solicitarPermisoDePagos.current = false;
     setAvisosProgramados(0);
     setAvisosFallo(null);
     setIsPremium(false);
@@ -1484,7 +1487,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
      * adelantarse a los hechos.
      */
     const formatForNotification = paymentNotificationFormatter(userCurrency);
-    reprogramarAvisosDePagos(pagosProgramados, (clave, valores) => tRef.current(clave, valores), new Date(), formatForNotification)
+    const solicitarPermiso = solicitarPermisoDePagos.current;
+    solicitarPermisoDePagos.current = false;
+    reprogramarAvisosDePagos(pagosProgramados, (clave, valores) => tRef.current(clave, valores), new Date(), formatForNotification, { solicitarPermiso })
       .then((r) => {
         setAvisosProgramados(r.puestos);
         setAvisosFallo(r.fallo ?? null);
@@ -2321,7 +2326,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * EL CALENDARIO DE PAGOS. Guardar crea o reemplaza, con el mismo criterio que un negocio.
    */
   function reprogramarAvisos() {
-    reprogramarAvisosDePagos(pagosProgramados, (clave, valores) => tRef.current(clave, valores), new Date(), fmt)
+    reprogramarAvisosDePagos(pagosProgramados, (clave, valores) => tRef.current(clave, valores), new Date(), fmt, { solicitarPermiso: true })
       .then((r) => {
         setAvisosProgramados(r.puestos);
         setAvisosFallo(r.fallo ?? null);
@@ -2329,6 +2334,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function guardarPagoProgramado(pago: PagoProgramado) {
+    solicitarPermisoDePagos.current = true;
     setPagosProgramados(markCloudGroup(CLOUD_SYNC_GROUPS.payments, pagosProgramados, (antes) =>
       antes.some((p) => p.id === pago.id)
         ? antes.map((p) => (p.id === pago.id ? pago : p))

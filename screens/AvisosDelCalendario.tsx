@@ -9,7 +9,7 @@
  * se ven iguales: cuántos avisos hay puestos de verdad, el botón para probarlo en diez
  * segundos, el sonido, y el motivo exacto si algo falló al programarlos.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Bell, ChevronRight, Volume2 } from "lucide-react-native";
@@ -25,7 +25,7 @@ import {
 } from "@/utils/avisosDePagos";
 
 export default function AvisosDelCalendario({ onBack }: { onBack: () => void }) {
-  const { t, avisosProgramados, avisosFallo, reprogramarAvisos } = useAppData();
+  const { t, showToast, avisosProgramados, avisosFallo, reprogramarAvisos } = useAppData();
   const [encendidos, setEncendidos] = useState(true);
   useEffect(() => {
     avisosEncendidos().then(setEncendidos);
@@ -34,6 +34,24 @@ export default function AvisosDelCalendario({ onBack }: { onBack: () => void }) 
   const [probando, setProbando] = useState(false);
   const [resultado, setResultado] = useState<ResultadoDeLaPrueba | null>(null);
   const [noSeAbrio, setNoSeAbrio] = useState(false);
+  const cambiandoAvisos = useRef(false);
+
+  async function cambiarAvisos(valor: boolean) {
+    if (cambiandoAvisos.current) return;
+    cambiandoAvisos.current = true;
+    try {
+      if (!(await guardarAvisosEncendidos(valor))) {
+        showToast(t("toast.localSaveFailed"));
+        return;
+      }
+      setEncendidos(valor);
+      reprogramarAvisos();
+    } catch {
+      showToast(t("toast.localSaveFailed"));
+    } finally {
+      cambiandoAvisos.current = false;
+    }
+  }
 
   return (
     <View
@@ -71,13 +89,7 @@ export default function AvisosDelCalendario({ onBack }: { onBack: () => void }) 
           </View>
           <Toggle
             on={encendidos}
-            onChange={(v) => {
-              setEncendidos(v);
-              guardarAvisosEncendidos(v);
-              // Se reprograma en el acto: apagar tiene que callar los avisos AHORA, no la
-              // proxima vez que se toque un pago.
-              reprogramarAvisos();
-            }}
+            onChange={cambiarAvisos}
           />
         </View>
 

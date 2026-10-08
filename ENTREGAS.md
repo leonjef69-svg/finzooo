@@ -1,12 +1,21 @@
 # Entregas de Fino
 
+## Preparado, no entregado — FINO-32 (08/10/2026)
+
+Permiso del calendario solo tras acción explícita, no al recuperar pagos.
+Canal antes del diálogo Android 13; interruptor espera escritura y conserva
+avisos ajenos. Pruebas originales con IO adaptado, regresión contra `450f29d`;
+guía `docs/PRUEBAS_PERMISOS_CALENDARIO.md`. Sin cambio nativo/permisos nuevos,
+APK/AAB/OTA/despliegue. **Qué sigue:** restantes IDs. **Qué falta:** Android,
+firma/consolas/trámites y entrega acumulada. Tarjetas/Sentry fuera.
+
 ## Preparado, no entregado — FINO-35 (07/10/2026)
 
 Lector PDF limita descompresión y no importa datos parciales al superar tope.
 Extractor/fflate reales, manejador adaptado y regresión roja-verde aprobados;
 guía `docs/PRUEBAS_LIMITES_PDF.md`. No añade datos/servicios/permisos ni cambio
 nativo. **Qué sigue:** permisos/restantes IDs. **Qué falta:** Android/memoria,
-firma/consignaciones externas y entrega acumulada. Tarjetas/Sentry fuera.
+firma/consolas/trámites externos y entrega acumulada. Tarjetas/Sentry fuera.
 Sin APK/AAB/OTA/EAS/despliegue, no se modifica la versión instalada.
 
 ## Preparado, no entregado — FINO-30 (07/10/2026)

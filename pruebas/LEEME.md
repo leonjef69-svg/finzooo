@@ -1,5 +1,12 @@
 # Pruebas y auditores
 
+FINO-32: `verificar-permiso-calendario-real.mjs` ejecuta programador, contexto,
+efecto e interruptor originales con IO sustituido: carga sin petición, intención
+explícita consumida una vez, concesión/negación/canal, retiro propio, guardado
+confirmado/doble toque/fallo. Regresión
+`FINO_TEST_PAYMENT_PERMISSION_BASELINE=450f29d` roja. Guía:
+`docs/PRUEBAS_PERMISOS_CALENDARIO.md`. No monta React ni prueba Android.
+
 FINO-35: `verificar-pdf-limites-real.mjs` ejecuta extractor/fflate reales con
 compresión Node independiente y observador de clase real; pantalla con IO
 adaptado. Bomba sintética, límites/acumulado, sin parcial, formatos y 10.000

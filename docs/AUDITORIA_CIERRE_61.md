@@ -1,6 +1,6 @@
 # Control de cierre de los 61 hallazgos
 
-Revisión: 07/10/2026. Este índice conserva todos los IDs del informe de Claude.
+Revisión: 08/10/2026. Este índice conserva todos los IDs del informe de Claude.
 No es un porcentaje de correcciones ni declara la auditoría terminada.
 Las notas de código preparado remiten al seguimiento y a Git; no equivalen a
 pruebas físicas ni a publicación. «Revalidar» significa que falta contrastar
@@ -43,7 +43,7 @@ Las tarjetas de crédito permanecen excluidas por decisión del propietario.
 | FINO-29 | La configuración de firma release vive solo en la carpeta android/ generada e ignorada por Git | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
 | FINO-30 | La exportación manual por WhatsApp/correo/compartir se marca como hecha al abrir la otra app | Preparado: externos solo archivo preparado, nunca confirma envío/ejecución al abrir/cancelar; ausencia explicada. Carpeta/nube esperan guardado real y error no confirma. Manejadores/catálogo originales con IO adaptado; regresión roja/verde, doble toque/reintento. Guía PRUEBAS_ENTREGA_EXPORTACION.md. Marca anterior no era historial visible de recepción. Falta Android/adjunto/servicios reales y entrega. |
 | FINO-31 | Para decidir 'solo Pro', la app descarga primero el documento completo (con el historial v1) | Revalidado: permiso por llamada/máscara de campos; loadCloudData Gratis no lee el documento financiero. Prueba del método original nube-pro-servidor y reglas cloud-pro; guía PRUEBAS_INVITACIONES_UNICAS.md. Falta verificar versión desplegada y Android. |
-| FINO-32 | El permiso de notificaciones se pide al arrancar, fuera de contexto, si hay pagos en el calendario | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
+| FINO-32 | El permiso de notificaciones se pide al arrancar, fuera de contexto, si hay pagos en el calendario | Preparado: programado automático no pide; intención de Guardar consumida una vez, activar/Probar explícitos, canal antes del diálogo y canAskAgain respetado. Apagar retira solo calendario; interruptor espera escritura confirmada y no finge éxito/doble toque. Programador/efecto/contexto/manejador originales con IO adaptado y regresión roja-verde. Guía PRUEBAS_PERMISOS_CALENDARIO.md. Falta Android/canales/sonido/cuentas y entrega; no es confirmación física. |
 | FINO-33 | Las pruebas automáticas validan mucho texto del código y una de ellas consolida la pérdida de datos al cerrar sesión | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
 | FINO-34 | Documentos del proyecto y de la ficha contradicen el código | Revalidar código actual, corrección si procede y prueba vinculada antes de cerrar. |
 | FINO-35 | La lectura de PDF descomprime sin límite | Preparado: streaming acotado antes de concatenar, límite por stream/acumulado/entrada/cantidad/fragmentos/cabecera, mensaje sin importación parcial. Extractor/fflate reales con compresión independiente, manejador adaptado, regresión roja-verde y 10.000 filas. Guía PRUEBAS_LIMITES_PDF.md. Falta RAM/Hermes Android y PDFs habituales grandes; no se garantiza cero cierres ni se declara lector PDF completo. |

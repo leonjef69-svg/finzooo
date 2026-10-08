@@ -1,5 +1,22 @@
 # Estado actual de Fino
 
+## FINO-32 — permisos de avisos contextuales (08/10/2026)
+
+- Reprogramar al iniciar/recuperar/cambiar moneda no pide permiso. Guardar un
+  pago consume intención una vez; activar o Probar sí son acciones explícitas.
+  Negarlo conserva el pago, no se insiste en canAskAgain=false; canal antes
+  del diálogo Android 13. Apagar limpia solo calendario, conserva exportación.
+- Interruptor espera escritura confirmada y bloquea doble toque; fallo no
+  cambia su posición ni programa sobre un valor anterior, muestra error.
+- Programador, efecto/manejadores originales ejecutados con IO adaptado;
+  roja contra `450f29d`, actual verde. Guía
+  `docs/PRUEBAS_PERMISOS_CALENDARIO.md`. No prueba Android/sonido real.
+- TypeScript/ESLint sin avisos; 158 pruebas/8 auditores aprobados (157 en
+  Git limpio, más una prueba local preexistente del usuario).
+- **Qué sigue:** restantes IDs de la matriz. **Qué falta:** Android, firma,
+  consolas/políticas/trámites y entrega autorizada. Sin cambio nativo ni
+  APK/AAB/OTA/despliegue. Tarjetas/Sentry fuera; auditoría no terminada.
+
 ## FINO-35 — lectura PDF con límites (07/10/2026)
 
 - Entrada 15 MiB también dentro del lector; descomprime por partes antes de
