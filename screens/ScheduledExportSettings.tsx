@@ -428,7 +428,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
               {schedule.enabled ? t("schedExport.on") : t("schedExport.off")}
             </Text>
           </View>
-          <Toggle on={schedule.enabled} onChange={(v: boolean) => update({ enabled: v })} />
+          <Toggle label={t("schedExport.title")} on={schedule.enabled} onChange={(v: boolean) => update({ enabled: v })} />
         </View>
 
         {schedule.enabled && (
@@ -827,6 +827,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
                     principal de esta misma pantalla, y dos interruptores distintos en la
                     misma pantalla se ven como un descuido. */}
                 <Toggle
+                  label={t("schedExport.graficos")}
                   on={schedule.charts ?? false}
                   onChange={(v: boolean) => update({ charts: v })}
                 />

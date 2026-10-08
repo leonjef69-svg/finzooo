@@ -22,6 +22,8 @@ export default function PinPad({
   error,
   biometric,
   onBiometric,
+  deleteLabel,
+  biometricLabel,
 }: {
   value: string;
   onChange: (next: string) => void;
@@ -30,6 +32,8 @@ export default function PinPad({
   /** Si hay huella disponible, se ofrece como tecla extra abajo a la izquierda. */
   biometric?: BiometricKind;
   onBiometric?: () => void;
+  deleteLabel: string;
+  biometricLabel: string;
 }) {
   const { width: screenWidth } = useWindowDimensions();
   // Se mide la pantalla y se reparte a mano: el ancho del teclado, y el de
@@ -116,7 +120,7 @@ export default function PinPad({
         ].map((row) => (
           <View key={row[0]} className="flex-row mb-3" style={{ gap: GAP }}>
             {row.map((digit) => (
-              <Key key={digit} width={keyWidth} onPress={() => press(digit)}>
+              <Key key={digit} label={digit} width={keyWidth} onPress={() => press(digit)}>
                 <Text className="text-2xl font-semibold text-slate-900 dark:text-slate-100">{digit}</Text>
               </Key>
             ))}
@@ -125,7 +129,7 @@ export default function PinPad({
 
         <View className="flex-row" style={{ gap: GAP }}>
           {showBiometric ? (
-            <Key onPress={onBiometric} plain width={keyWidth}>
+            <Key label={biometricLabel} role="button" onPress={onBiometric} plain width={keyWidth}>
               {biometric === "face" ? (
                 <ScanFace size={26} color="#059669" />
               ) : (
@@ -137,11 +141,11 @@ export default function PinPad({
             <View style={{ width: keyWidth, height: 64 }} />
           )}
 
-          <Key onPress={() => press("0")} width={keyWidth}>
+          <Key label="0" onPress={() => press("0")} width={keyWidth}>
             <Text className="text-2xl font-semibold text-slate-900 dark:text-slate-100">0</Text>
           </Key>
 
-          <Key onPress={backspace} plain width={keyWidth}>
+          <Key label={deleteLabel} onPress={backspace} plain width={keyWidth}>
             <Delete size={24} color="#94a3b8" />
           </Key>
         </View>
@@ -155,15 +159,21 @@ function Key({
   children,
   plain,
   width,
+  label,
+  role = "keyboardkey",
 }: {
   onPress: () => void;
   children: React.ReactNode;
   plain?: boolean;
   /** Ancho ya calculado. Obligatorio: sin él la tecla se queda en cero. */
   width: number;
+  label: string;
+  role?: "keyboardkey" | "button";
 }) {
   return (
     <TouchableOpacity
+      accessibilityRole={role}
+      accessibilityLabel={label}
       onPress={onPress}
       activeOpacity={0.6}
       // El ancho llega como número, no como flex-1. Con flex-1 dentro de un

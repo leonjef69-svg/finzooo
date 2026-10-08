@@ -480,7 +480,7 @@ export default function NuevoPagoProgramado({
               mes: monthNames[Number(mesVisible.split("-")[1]) - 1],
             })}
           </Text>
-          <Toggle on={repite} onChange={setRepite} />
+          <Toggle label={t(repeticion.clave, { dia: repeticion.dia ?? dia, mes: monthNames[Number(mesVisible.split("-")[1]) - 1] })} on={repite} onChange={setRepite} />
         </View>
 
         {/* EL AVISO, EN SU PROPIO RENGLON Y CON LOS DOS CAMPOS ANCHOS.

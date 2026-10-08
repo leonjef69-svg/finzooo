@@ -88,6 +88,7 @@ export default function AvisosDelCalendario({ onBack }: { onBack: () => void }) 
             </Text>
           </View>
           <Toggle
+            label={t("calendario.avisos.interruptor")}
             on={encendidos}
             onChange={cambiarAvisos}
           />

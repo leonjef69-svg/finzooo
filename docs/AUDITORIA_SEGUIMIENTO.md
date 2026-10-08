@@ -3,6 +3,19 @@
 Última revisión: 08/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-50 — controles comunes, parcial (08/10/2026)
+
+Diez Toggle exigen rótulo; rol/estado/área de toque, PIN/biometría, mes/
+categoría y barras identificados sin cambiar dinero. JSX/acciones originales
+con IO/árbol adaptados, cuatro regresiones `53fbf38` rojas y actual verde;
+mes/categoría son contratos estáticos. Guía PRUEBAS_ACCESIBILIDAD_CONTROLES.md.
+TypeScript/ESLint y 167 pruebas/8 auditores aprobados sin tarjetas; una prueba
+ajena no versionada (166 previstas en Git limpio, no otro checkout). No datos/
+permisos/Firebase/nativos nuevos ni publicación. FINO-50 sigue parcial.
+**Qué sigue:** otros controles/pantallas, aceptación/bloqueo y resto de IDs.
+**Qué falta:** foco/contraste/tamaño/TalkBack/Android, SMTP, consolas/trámites/
+cobros y entrega autorizada. Tarjetas/Sentry excluidos.
+
 ## FINO-47 — aceptación previa de altas, parcial (08/10/2026)
 
 Correo de registro y ambos botones Google bloqueados sin casilla explícita

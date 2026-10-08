@@ -532,6 +532,7 @@ export default function PanelNegocio({
               {/* Sin Pro se puede apagar la elección antigua, nunca encenderla.
                   Los avisos nuevos van a Personal; los ingresos previos no se mueven. */}
               <Toggle
+                label={t("panel.yapesTitulo")}
                 on={recibeYapes}
                 onChange={(v: boolean) => {
                   if (soloLectura && v) return;

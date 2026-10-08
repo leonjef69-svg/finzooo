@@ -1,5 +1,20 @@
 # Estado actual de Fino
 
+## FINO-50 — controles comunes accesibles, parcial (08/10/2026)
+
+- Diez interruptores con nombre obligatorio, rol/estado y área de toque;
+  PIN/biometría, mes/categoría y barras identificados, sin alterar dinero.
+- JSX/acciones originales con adaptadores aprobados; cuatro regresiones
+  rojas contra `53fbf38`. Mes/categoría son contratos estáticos, no Android.
+  Guía `docs/PRUEBAS_ACCESIBILIDAD_CONTROLES.md`. No datos/permisos nuevos.
+- TypeScript/ESLint sin avisos y 167 pruebas/8 auditores aprobados sin
+  tarjetas. Una prueba ajena no versionada: 166 previstas en Git limpio,
+  no otro checkout ejecutado. Corrección de rótulo inglés/portugués: PIN no
+  requiere huella, por eso el interruptor no promete solo huella.
+- **Qué sigue:** resto de controles/IDs, aceptación/bloqueo. **Qué falta:**
+  TalkBack/Android, SMTP, consolas/trámites/cobros y entrega autorizada.
+  Tarjetas/Sentry fuera; FINO-50 y auditoría no terminados.
+
 ## FINO-47 — elección previa a las altas, parcial (08/10/2026)
 
 - Registro correo y ambos accesos Google requieren casilla explícita, sin

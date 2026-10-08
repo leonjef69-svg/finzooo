@@ -291,6 +291,8 @@ export default function AppLockGate() {
       </Text>
 
       <PinPad
+        deleteLabel={t("lock.eraseDigit")}
+        biometricLabel={t(kind === "face" ? "lock.retryFace" : "lock.retryFingerprint")}
         value={pin}
         onChange={(value) => retrySeconds === 0 && setPin(value)}
         error={error}

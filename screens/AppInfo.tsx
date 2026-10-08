@@ -141,7 +141,7 @@ export default function AppInfo({ onBack }: { onBack: () => void }) {
                     {t("appInfo.verComoGratisTexto")}
                   </Text>
                 </View>
-                <Toggle on={verComoGratis} onChange={setVerComoGratis} />
+                <Toggle label={t("appInfo.verComoGratis")} on={verComoGratis} onChange={setVerComoGratis} />
               </View>
             </View>
           )}

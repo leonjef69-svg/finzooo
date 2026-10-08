@@ -63,7 +63,8 @@ export default function MonthSelector({ month, months, monthNames, onChange, sho
       <TouchableOpacity
         onPress={() => setOpen(true)}
         accessibilityRole="button"
-        accessibilityLabel={`Elegir mes, ${label}`}
+        accessibilityLabel={t("monthPicker.choose", { month: label })}
+        accessibilityState={{ expanded: open }}
         className="flex-row items-center gap-1.5 rounded-full border-[1.5px] border-slate-200 bg-slate-50 px-3 py-2 dark:border-noche-borde dark:bg-noche-2"
       >
         <CalendarDays size={14} color={dark ? "#cbd5e1" : "#475569"} />
@@ -81,7 +82,7 @@ export default function MonthSelector({ month, months, monthNames, onChange, sho
                 <Text className="text-lg font-extrabold text-slate-900 dark:text-slate-100">{t("monthPicker.title")}</Text>
                 <Text className="mt-0.5 text-xs text-slate-500 dark:text-slate-300">{t("monthPicker.help")}</Text>
               </View>
-              <TouchableOpacity onPress={() => setOpen(false)} className="h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-noche">
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} hitSlop={4} onPress={() => setOpen(false)} className="h-10 w-10 items-center justify-center rounded-full bg-slate-100 dark:bg-noche">
                 <X size={18} color={dark ? "#cbd5e1" : "#475569"} />
               </TouchableOpacity>
             </View>
@@ -96,6 +97,8 @@ export default function MonthSelector({ month, months, monthNames, onChange, sho
                     return (
                       <TouchableOpacity
                         key={key}
+                        accessibilityRole="button"
+                        accessibilityState={{ selected }}
                         onPress={() => {
                           onChange(monthFromKey(key));
                           setOpen(false);

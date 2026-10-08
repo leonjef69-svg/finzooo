@@ -214,6 +214,7 @@ export default function Productos({
                   {/* Activar y desactivar SIN abrir nada: es lo que se hace a diario cuando se
                       acaba un producto, y meterlo dentro de "editar" lo esconde. */}
                   <Toggle
+                    label={t("productos.activeSwitch", { name: p.nombre })}
                     on={p.activo}
                     onChange={(v: boolean) => guardarProducto({ ...p, activo: v })}
                   />

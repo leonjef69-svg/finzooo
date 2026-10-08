@@ -118,7 +118,7 @@ export default function TransactionCategorySheet({ type, categories, selectedId,
         </View>
         <View className="flex-row items-center justify-between px-5 pb-3 pt-1">
           {creating ? (
-            <TouchableOpacity onPress={() => { Keyboard.dismiss(); setCreating(false); }} className="h-9 w-9 items-center justify-center rounded-full bg-slate-100 dark:bg-noche-3">
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.back")} hitSlop={6} onPress={() => { Keyboard.dismiss(); setCreating(false); }} className="h-9 w-9 items-center justify-center rounded-full bg-slate-100 dark:bg-noche-3">
               <X size={17} color="#64748b" />
             </TouchableOpacity>
           ) : (
@@ -129,7 +129,7 @@ export default function TransactionCategorySheet({ type, categories, selectedId,
           <Text className="text-base font-extrabold text-slate-900 dark:text-slate-100">
             {creating ? t("nuevaCat.title") : t("elegirCat.title")}
           </Text>
-          <TouchableOpacity onPress={close} className="h-9 w-9 items-center justify-center rounded-full bg-slate-100 dark:bg-noche-3">
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} hitSlop={6} onPress={close} className="h-9 w-9 items-center justify-center rounded-full bg-slate-100 dark:bg-noche-3">
             <X size={17} color="#64748b" />
           </TouchableOpacity>
         </View>

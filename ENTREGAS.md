@@ -1,5 +1,14 @@
 # Entregas de Fino
 
+## Preparado, no entregado — FINO-50 parcial (08/10/2026)
+
+Interruptores, PIN/biometría, mes/categoría y barras con nombres/roles/estado;
+sin cambio de dinero/permisos/Firebase. JSX original con adaptadores/regresiones
+rojas/verde; guía PRUEBAS_ACCESIBILIDAD_CONTROLES.md. No prueba TalkBack ni
+accesibilidad total. **Qué sigue:** controles restantes/aceptación/bloqueo.
+**Qué falta:** Android, SMTP, consolas/trámites/cobros y publicación autorizada.
+Sin APK/AAB/OTA/EAS/despliegue; tarjetas/Sentry fuera; auditoría no terminada.
+
 ## Preparado, no entregado — FINO-47 parcial (08/10/2026)
 
 Casilla explícita/enlace/fecha antes del registro por correo y ambos botones

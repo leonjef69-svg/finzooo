@@ -191,7 +191,7 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
             <Text className="text-xs text-slate-500 dark:text-slate-300 mb-10">
               {t("lock.stepHint", { count: PIN_LENGTH })}
             </Text>
-            <PinPad value={pin} onChange={setPin} error={error} />
+            <PinPad value={pin} onChange={setPin} error={error} deleteLabel={t("lock.eraseDigit")} biometricLabel={t(kind === "face" ? "lock.retryFace" : "lock.retryFingerprint")} />
             {message !== "" && (
               <Text className="text-xs text-rose-500 mt-6 text-center">{message}</Text>
             )}
@@ -214,7 +214,7 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
                     {enabled ? t("lock.stateOn") : t("lock.stateOff")}
                   </Text>
                 </View>
-                <Toggle on={enabled} onChange={toggle} />
+                <Toggle label={t("lock.rowLabel")} on={enabled} onChange={toggle} />
               </View>
 
               {/* LA HUELLA, COMO UNA ELECCIÓN Y NO COMO UN HECHO.
@@ -238,6 +238,7 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
                     </Text>
                   </View>
                   <Toggle
+                    label={t(kind === "face" ? "lock.usarCara" : "lock.usarHuella")}
                     on={conHuella}
                     onChange={(v) => {
                       setConHuella(v);

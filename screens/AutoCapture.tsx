@@ -319,7 +319,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
                 <Text className="text-[13px] font-bold text-slate-900 dark:text-slate-100 flex-1 pr-3">
                   {t("autoCapture.toggleTitle")}
                 </Text>
-                {autoCapturePermission && <Toggle on={autoCaptureOn} onChange={setAutoCaptureOn} />}
+                {autoCapturePermission && <Toggle label={t("autoCapture.toggleTitle")} on={autoCaptureOn} onChange={setAutoCaptureOn} />}
               </View>
 
               {/* La voz solo si el APK la trae: es código nativo y no llega por

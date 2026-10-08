@@ -145,6 +145,7 @@ export default function DailyBarsChart({
           mismo lugar. */}
       <View className="flex-row items-center justify-between mb-1.5 gap-2">
         <Text
+          accessibilityLiveRegion="polite"
           numberOfLines={1}
           className={`flex-1 text-[11px] ${
             activo
@@ -155,6 +156,9 @@ export default function DailyBarsChart({
           {activo ? formatSelected(activo.day, activo.amount) : hint}
         </Text>
         <TouchableOpacity
+          accessibilityRole="togglebutton"
+          accessibilityLabel={showAmounts ? hideAmountsLabel : showAmountsLabel}
+          accessibilityState={{ checked: showAmounts }}
           onPress={() => setShowAmounts((v) => !v)}
           className="px-3 py-1.5 rounded-full bg-slate-100 dark:bg-noche-2"
         >
@@ -299,6 +303,9 @@ export default function DailyBarsChart({
           {data.map((d, i) => (
             <TouchableOpacity
               key={d.day}
+              accessibilityRole="button"
+              accessibilityLabel={formatSelected(d.day, d.amount)}
+              accessibilityState={{ selected: selected === i }}
               activeOpacity={0.6}
               style={{ flex: 1, height: "100%" }}
               onPress={() => setSelected((prev) => (prev === i ? null : i))}

@@ -1,5 +1,12 @@
 # Pruebas y auditores
 
+FINO-50 parcial: `verificar-accesibilidad-controles-real.mjs` ejecuta JSX/
+acciones originales de Toggle, PIN y barras con adaptadores; mes/categorías
+son contratos estáticos. Regresiones `FINO_ACCESSIBILITY_BASELINE=53fbf38`
+rojas por caso (FINO_ACCESSIBILITY_CASE); actual verde. Guía
+`docs/PRUEBAS_ACCESIBILIDAD_CONTROLES.md` separa esto de TalkBack y del
+resto de pantallas. No declarar accesibilidad completa.
+
 FINO-47 parcial: `verificar-aceptacion-antes-auth.mjs` ejecuta los tres
 manejadores de alta y JSX original con IO/árbol adaptados. Sin aceptación no
 inicia Auth; doble toque/cancelación y validación conservados. Regresión
