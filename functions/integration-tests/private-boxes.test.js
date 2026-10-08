@@ -18,7 +18,9 @@ async function code(client) {
   const names = process.env.FINO_TEST_CAJAS_BASELINE ? "" : 'export { resolverNombreCaja } from "@/utils/cloudCajas"; export { prepararRevisionNombre } from "@/utils/cajas"; export { planPrivateBoxRepair } from "@/utils/privateBoxRepair"; export {saveCloudData} from "@/utils/cloudSync"; export {saveHistoryV2,loadHistoryV2} from "@/utils/cloudHistoryV2"; export {withPrivateBoxMoneyReview,privateBoxCloudResponseCurrent} from "@/utils/privateBoxSync";';
   const built = await esbuild.build({ stdin: { contents: 'export { bajarCajas, subirCajas } from "@/utils/cloudCajas"; export { loadPrivateBoxRepairCloud, assertPrivateBoxRepairCloud } from "@/utils/privateBoxRepairCloud"; export { resolvePrivateBoxConflict, privateBoxLinkCandidates } from "@/utils/privateBoxRepair";' + names,
     resolveDir: root, loader: "ts" }, bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent",
-    external: ["firebase/*"], alias: { "@": root, "expo-crypto": path.join(root, "pruebas/stubs/crypto.ts") },
+    external: ["firebase/*"], alias: { "@": root, "expo-crypto": path.join(root, "pruebas/stubs/crypto.ts"),
+      "@react-native-async-storage/async-storage": path.join(root, "pruebas/stubs/async-storage.ts"),
+      "expo-secure-store": path.join(root, "pruebas/stubs/secure-store.ts") },
     plugins: [{ name: "demo-config-and-native-session", setup(build) {
       build.onLoad({ filter: /[\\/]utils[\\/]firebase\.ts$/ }, () => ({ loader: "ts",
         contents: "export const { auth, db, functions } = globalThis.__FINO_DEMO__;" }));

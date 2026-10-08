@@ -20,16 +20,19 @@ if (process.env.FINO_TEST_CANCEL_BASELINE) {
 const { privateBoxMigration, digestSource } = migration;
 const { sharedBoxMovement } = require("../src/private-box-source");
 const { execFileSync } = require("node:child_process");
+const { DOCUMENTS, acceptLegalDocuments } = require("../src/legal-acceptance");
 
 async function appCode(client) {
   const esbuild = requireRoot("esbuild");
-  const built = await esbuild.build({ stdin: { contents: 'export { compartirCajaExistente } from "@/utils/cloudCajasCompartidas"; export { cancelarConversionCaja } from "@/utils/boxMigration"; export { subirCajas } from "@/utils/cloudCajas";', resolveDir: root, loader: "ts" },
-    bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent", external: ["firebase/*", "node:crypto"], alias: { "@": root },
+  const built = await esbuild.build({ stdin: { contents: 'export { compartirCajaExistente } from "@/utils/cloudCajasCompartidas"; export { cancelarConversionCaja } from "@/utils/boxMigration"; export { subirCajas } from "@/utils/cloudCajas"; export { recordLegalAcceptanceForCurrentAccount } from "@/utils/legalAcceptance";', resolveDir: root, loader: "ts" },
+    bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent", external: ["firebase/*", "node:crypto"], alias: { "@": root,
+      "@react-native-async-storage/async-storage": path.join(root, "pruebas/stubs/async-storage.ts"),
+      "expo-secure-store": path.join(root, "pruebas/stubs/secure-store.ts") },
     plugins: [{ name: "native-config-only", setup(build) {
       build.onLoad({ filter: /[\\/]utils[\\/]firebase\.ts$/ }, () => ({ loader: "ts", contents: "export const {auth,db,functions} = globalThis.__FINO_DEMO__;" }));
       build.onLoad({ filter: /[\\/]utils[\\/]storage\.ts$/ }, () => ({ loader: "ts", contents: "export const getAccountStorageSession = () => globalThis.__FINO_DEMO__.session; export const hasUnreadableLocalData = () => false; export const STORAGE_KEYS={cajasDinero:'cajas'}; export const loadJSON=async(_key,fallback)=>fallback;" }));
       build.onResolve({ filter: /^expo-crypto$/ }, () => ({ path: "crypto-native", namespace: "test-native" }));
-      build.onLoad({ filter: /.*/, namespace: "test-native" }, () => ({ loader: "js", contents: 'export const CryptoDigestAlgorithm = { SHA256: "sha256" }; export const digestStringAsync = async (algorithm,text) => require("node:crypto").createHash(algorithm).update(text,"utf8").digest("hex"); export const getRandomBytes = n => require("node:crypto").randomBytes(n); export const randomUUID = () => require("node:crypto").randomUUID();' }));
+      build.onLoad({ filter: /.*/, namespace: "test-native" }, () => ({ loader: "js", contents: 'export const CryptoDigestAlgorithm = { SHA256: "sha256" }; export const digestStringAsync = async (algorithm,text) => require("node:crypto").createHash(algorithm).update(text,"utf8").digest("hex"); export const getRandomBytes = n => require("node:crypto").randomBytes(n); export const getRandomBytesAsync = async n => require("node:crypto").randomBytes(n); export const randomUUID = () => require("node:crypto").randomUUID();' }));
       if (process.env.FINO_TEST_MIGRATION_BASELINE) build.onLoad({ filter: /[\\/]utils[\\/]cloudCajasCompartidas\.ts$/ }, () => ({ loader: "ts", contents: execFileSync("git", ["show", `${process.env.FINO_TEST_MIGRATION_BASELINE}:utils/cloudCajasCompartidas.ts`], { cwd: root, encoding: "utf8" }) }));
     } }],
   });
@@ -61,6 +64,10 @@ test("Conversión real: servidor, SDK, respuesta perdida, permisos y copia incor
     await adminAuth.createUser({ uid, email: `${uid}@example.test`, password: "SoloPruebaLocal123!", emailVerified: true });
     await admin.doc(`users/${uid}`).set({ isPremium: true }); await signInWithEmailAndPassword(auth, `${uid}@example.test`, "SoloPruebaLocal123!");
     const client = { auth, db, functions, session: 1 }, api = await appCode(client);
+    // Elección local original y confirmación administrativa de esta cuenta
+    // de prueba para los casos SDK directos. La app confirma por HTTP al actuar.
+    await api.recordLegalAcceptanceForCurrentAccount();
+    await acceptLegalDocuments(admin, uid, { termsHash: DOCUMENTS.termsHash, privacyHash: DOCUMENTS.privacyHash, termsAccepted: true, privacyRead: true });
     if (process.env.FINO_TEST_CANCEL_BASELINE) {
       // El helper anterior debe confirmar la misma operación que el actual
       // ya comprobó con Firestore real; falla por no admitir cancelar.

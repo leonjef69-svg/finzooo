@@ -25,6 +25,9 @@ async function clientDeletion(client) {
       "expo-secure-store": path.join(root, "pruebas/stubs/secure-store.ts"),
       "expo-crypto": path.join(root, "pruebas/stubs/crypto.ts") },
     plugins: [{ name: "only-demo-firebase", setup(build) {
+      // Tarjetas fuera del alcance: no cargar ni consultar ese módulo.
+      build.onResolve({ filter: /^@\/utils\/creditCloud$/ }, () => ({ path: "excluded-credit", namespace: "excluded" }));
+      build.onLoad({ filter: /.*/, namespace: "excluded" }, () => ({ loader: "ts", contents: "export const deleteCreditCloudAccount=async()=>{};" }));
       build.onLoad({ filter: /[\\/]utils[\\/]firebase\.ts$/ }, () => ({ loader: "ts",
         contents: "export const { auth, db, functions } = globalThis.__FINO_DEMO_CLIENT__;" }));
       if (process.env.FINO_TEST_BASELINE) {

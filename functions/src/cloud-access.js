@@ -74,7 +74,7 @@ async function cleanupDeletedCloudAccount(db, uid) {
     }
   }
   const batch = db.batch();
-  for (const collection of ["negocios", "cajas", "testerPremium", "premiumTrialClaims", "personalReturnReceipts", "privateBoxMigrations", "moneyReviewRetirements"]) {
+  for (const collection of ["negocios", "cajas", "testerPremium", "premiumTrialClaims", "personalReturnReceipts", "privateBoxMigrations", "moneyReviewRetirements", "legalAcceptances"]) {
     batch.delete(db.doc(`${collection}/${uid}`));
   }
   await batch.commit();

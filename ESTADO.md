@@ -1,5 +1,22 @@
 # Estado actual de Fino
 
+## FINO-47/49 — aceptación en servidor preparada (08/10/2026)
+
+- Callable verificado y recibo privado por UID/versionado; reglas preparadas
+  exigen aceptación en altas/nombres compartidos. Edición de aportes e inicio
+  de conversión protegidos en transacción; salidas/recuperación preservadas.
+- Confirmación cliente tras elección local, exacta/por sesión, agrupada y
+  limitada a cinco minutos; sin copiar historial ni conceder Pro. Evento Auth
+  retira recibo; barrera existente impide recreación atrasada. Políticas en archivos.
+- Guía `docs/PRUEBAS_ACEPTACION_SERVIDOR.md`: evidencia y límites, no jurídica.
+  Batería integral: 184 SDK/HTTP locales y 86 unitarias Node 22, sin omisiones;
+  app 169 pruebas/8 auditores sin tarjetas (168 previstas Git limpio, una ajena
+  no versionada). Huella final de Privacidad/servidor/reglas igual; no publicación.
+- **Qué sigue:** bloqueo/moderación/restantes IDs. **Qué falta:** Android,
+  SMTP, revisión jurídica/trámites/consolas/cobros, compatibilidad/huellas y
+  entrega coordinada autorizada. Nada desplegado; no distribuir app/reglas
+  por separado. FINO-47/49 parciales; tarjetas/Sentry externo fuera.
+
 ## FINO-47/49 — aceptación local por cuenta, parcial (08/10/2026)
 
 - Recibo local cifrado por UID y SHA-256 de ambos documentos tras elección

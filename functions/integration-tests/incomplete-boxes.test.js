@@ -12,6 +12,7 @@ const { getFunctions, connectFunctionsEmulator, httpsCallable } = requireRoot("f
 const { prepareIncompleteBoxDeletion } = require("../src/incomplete-box-cleanup");
 const { privateBoxMigration, digestSource } = require("../src/private-box-migration");
 const { sharedBoxMovement } = require("../src/private-box-source");
+const { DOCUMENTS, acceptLegalDocuments } = require("../src/legal-acceptance");
 
 async function appCode(client) {
   const esbuild = requireRoot("esbuild");
@@ -20,6 +21,9 @@ async function appCode(client) {
       "@react-native-async-storage/async-storage": path.join(root, "pruebas/stubs/async-storage.ts"),
       "expo-secure-store": path.join(root, "pruebas/stubs/secure-store.ts"), "expo-crypto": path.join(root, "pruebas/stubs/crypto.ts") },
     plugins: [{ name: "only-native-config", setup(build) {
+      // Tarjetas excluidas por decisión del propietario, también en limpieza.
+      build.onResolve({ filter: /^@\/utils\/creditCloud$/ }, () => ({ path: "excluded-credit", namespace: "excluded" }));
+      build.onLoad({ filter: /.*/, namespace: "excluded" }, () => ({ loader: "ts", contents: "export const deleteCreditCloudAccount=async()=>{};" }));
       build.onLoad({ filter: /[\\/]utils[\\/]firebase\.ts$/ }, () => ({ loader: "ts", contents: "export const {auth,db,functions} = globalThis.__FINO_DEMO__;" }));
       if (process.env.FINO_TEST_INCOMPLETE_BASELINE) {
         assert.match(process.env.FINO_TEST_INCOMPLETE_BASELINE, /^[a-f0-9]{7,40}$/);
@@ -82,6 +86,9 @@ test("Copias incompletas: SDK/HTTP, borrado de cuenta, legado, carreras e índic
       assert.equal((await dbAdmin.doc("boxInvites/another-kept").get()).exists, true); assert.equal((await dbAdmin.doc("boxInvites/incomplete-copy").get()).exists, false);
     });
     await t.test("reglas no dejan borrar la barrera, membresía o recrear índices tardíos", async () => {
+      // Aislar la barrera financiera: con elección vigente debe seguir fallando
+      // por el destino cerrado, no por la nueva comprobación de documentos.
+      await acceptLegalDocuments(dbAdmin, uid, { termsHash: DOCUMENTS.termsHash, privacyHash: DOCUMENTS.privacyHash, termsAccepted: true, privacyRead: true });
       await assert.rejects(deleteDoc(doc(db, "boxSpaces", targetId)), error => error.code === "permission-denied");
       await assert.rejects(deleteDoc(doc(db, "boxSpaces", targetId, "members", uid)), error => error.code === "permission-denied");
       await assert.rejects(setDoc(doc(db, "boxUsers", uid, "spaces", targetId), { boxId: targetId, unidoEn: serverTimestamp() }), error => error.code === "permission-denied");

@@ -4,6 +4,10 @@ export function spaceErrorKey(error: unknown, invalidCode = false): string {
   const code = typeof value?.code === "string" ? value.code.toLowerCase() : "";
   const message = typeof value?.message === "string" ? value.message.toLowerCase() : "";
   const detail = `${code} ${message}`;
+  const legalReason = value?.details?.reason;
+  if (legalReason === "legal-version-changed") return "legal.versionChanged";
+  if (legalReason === "legal-acceptance-required") return "legal.sharedRequired";
+  if (typeof legalReason === "string" && legalReason.startsWith("legal-")) return "legal.saveFailed";
   if (detail.includes("legal-acceptance-required")) return "legal.sharedRequired";
   if (detail.includes("legal-account-")) return "family.loginRequired";
   if (detail.includes("legal-")) return "legal.saveFailed";

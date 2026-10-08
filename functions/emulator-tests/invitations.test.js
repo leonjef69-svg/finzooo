@@ -7,6 +7,7 @@ const { execFileSync } = require("node:child_process");
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require("@firebase/rules-unit-testing");
 const { doc, getDoc, setDoc, deleteDoc, writeBatch, runTransaction, serverTimestamp } = require("firebase/firestore");
 const root = path.resolve(__dirname, "../..");
+const { DOCUMENTS } = require("../src/legal-acceptance");
 
 test("Invitaciones Familia/Caja: una entrada consume su código en el mismo guardado", async t => {
   const { handlerOriginal } = await import("../../pruebas/helpers/handler-original.mjs");
@@ -23,6 +24,11 @@ test("Invitaciones Familia/Caja: una entrada consume su código en el mismo guar
     await env.withSecurityRulesDisabled(async context => {
       const db = context.firestore();
       await setDoc(doc(db, "users", "owner"), { isPremium: true });
+      // Estos escenarios prueban invitaciones con elección vigente; la ausencia
+      // y el callable real se prueban en las suites legal-acceptance aparte.
+      for (const uid of ["owner", ...["family", "box"].flatMap(kind => ["single", "ok", "reuse", "bad", "race-a", "race-b", "deleting", "closed"].map(suffix => `${kind}-${suffix}`))]) {
+        await setDoc(doc(db, "legalAcceptances", uid), { format: 1, uid, ...DOCUMENTS, termsAccepted: true, privacyRead: true, acceptedAt: Date.now() - 1000 });
+      }
       for (const name of ["familySpaces", "boxSpaces"]) {
         await setDoc(doc(db, name, "home"), { ownerUid: "owner", nombre: "Demo", currency: "PEN", creadoEn: serverTimestamp(), creadaEn: serverTimestamp() });
         await setDoc(doc(db, name, "home", "members", "owner"), { uid: "owner", rol: "owner" });
@@ -46,7 +52,7 @@ test("Invitaciones Familia/Caja: una entrada consume su código en el mismo guar
       }
       function originalJoin(db) {
         const alNumero = () => 123; // Solo formato de la fecha mostrada; no decide permisos ni escribe.
-        const deps = { db, doc, getDoc, runTransaction, serverTimestamp, alNumero };
+        const deps = { db, doc, getDoc, runTransaction, serverTimestamp, alNumero, assertSharedContentAccepted: async () => {} };
         if (kind === "box") deps.desdeDocumento = handlerOriginal(source, "desdeDocumento", { alNumero });
         return handlerOriginal(source, kind === "family" ? "unirseAFamilia" : "unirseACaja", deps);
       }

@@ -1,5 +1,20 @@
 # Lo que hay que rellenar en Play Console
 
+Ampliación preparada FINO-47/49 (08/10/2026): al actuar sobre contenido compartido
+se confirma en `legalAcceptances/{uid}` un recibo privado con UID, versión/
+SHA-256 de documentos, elección y fecha del servidor. Solo versión vigente,
+sin perfil/fotos/dinero; se retira al completar Auth. Barreras existentes hasta
+30 días (limpieza programada desde esa fecha, puede retrasarse) impiden
+recreación tardía. El recibo local permanece separado y cifrado.
+No añade permisos ni proveedor distinto de Firebase, ni nuevo acceso a soporte.
+Lecturas/llamada/escritura inicial sí consumen cuota; no prometer costo cero.
+Antes de distribuir, contrastar Identificadores e Interacciones con la app,
+finalidad y conservación en el formulario real, sin asumir aprobado. Política
+interna/HTML solo preparadas; guía PRUEBAS_ACEPTACION_SERVIDOR.md. No acredita
+consentimiento sensible ni reemplaza bloqueo/moderación/revisión jurídica.
+Servidor/reglas/huellas/documentos/app deben activarse coordinadamente, con
+autorización; nada desplegado ahora. El paso local histórico siguiente se amplía.
+
 FINO-47/49 preparado (08/10/2026): al marcar la casilla se guarda cifrado solo
 en el teléfono un recibo por UID, SHA-256 de los documentos, elección y fecha
 del reloj local. No viaja a Firebase ni al respaldo financiero; permanece al

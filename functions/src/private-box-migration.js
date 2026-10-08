@@ -3,6 +3,7 @@ const { createHash } = require("node:crypto");
 const { premiumForUser } = require("./premium-entitlement");
 const { privateBoxSourceString, copiedBoxMovementMatches } = require("./private-box-source");
 const { invalidPersonalReturns } = require("./personal-contribution");
+const { assertLegalAcceptance } = require("./legal-acceptance");
 
 const fail = reason => { const error = new Error(reason); error.reason = reason; throw error; };
 function requestValid(data) {
@@ -165,6 +166,7 @@ async function begin(db, uid, data, target, origin, receiptRef) {
       tx.get(quotaRef),
     ]);
     if (receipt.exists) return sameReceipt(receipt.data(), uid, data);
+    await assertLegalAcceptance(tx, db, uid);
     if (attempt.exists && (attempt.data().cancelled === true || attempt.data().sourceId !== data.sourceId
       || attempt.data().digest !== data.digest || attempt.data().currency !== data.currency)) fail("migration-cancelled");
     if (!(await premiumForUser(db, uid, user.data() || {}, tx))) fail("migration-premium-required");

@@ -1,5 +1,9 @@
 # FINO-47/49: aceptación por cuenta, parcial (08/10/2026)
 
+Ampliación posterior: PRUEBAS_ACEPTACION_SERVIDOR.md describe el recibo remoto
+y las reglas preparados. Este documento conserva el alcance histórico local;
+la afirmación de «sin documentos Firebase nuevos» no describe la ampliación.
+
 ## Preparado, no publicado
 
 - Registro por correo y ambos botones Google conservan la casilla explícita

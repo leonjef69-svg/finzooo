@@ -3,6 +3,20 @@
 Última revisión: 08/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
+## FINO-47/49 — barrera de servidor preparada (08/10/2026)
+
+Callable verificado sin Pro, recibo privado versionado y reglas preparadas;
+edición de aporte/inicio de conversión en transacción, salidas financieras
+sin nueva aceptación. Cliente confirma tras elección local, por cuenta/sesión/
+documentos y cinco minutos; Auth borra recibo, barrera existente impide recrearlo.
+184 casos SDK/HTTP locales y 86 unitarias Node 22 aprobados; app 169 pruebas/
+8 auditores sin tarjetas. Una prueba ajena no versionada: 168 previstas en Git
+limpio, no otro checkout. Contrato de huellas aprobado tras aclarar retención.
+Guía PRUEBAS_ACEPTACION_SERVIDOR.md. **Qué sigue:** bloqueo/moderación y restantes
+IDs. **Qué falta:** Android, SMTP, consolas/políticas/revisión jurídica/trámites/
+cobros, compatibilidad/migración y publicación coordinada autorizada. No entrega;
+no cumplimiento jurídico acreditado, FINO-47/49 parciales, tarjetas/Sentry fuera.
+
 ## FINO-47/49 — recibo por cuenta, parcial (08/10/2026)
 
 Recibo cifrado local por UID/textos completos, conservado logout y eliminado

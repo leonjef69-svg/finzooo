@@ -4,6 +4,7 @@ import { PRIVACY_POLICY, TERMS_AND_CONDITIONS } from "@/constants/legal";
 import { decryptText, encryptText } from "@/utils/encryption";
 import { auth } from "@/utils/firebase";
 import { getAccountStorageSession } from "@/utils/storage";
+import { confirmLegalAcceptance, forgetLegalAcceptanceConfirmation } from "@/utils/legalAcceptanceRemote";
 
 const PREFIX = "finzo:legalAcceptance:v1:";
 type Receipt = { format: 1; uid: string; termsHash: string; privacyHash: string;
@@ -84,18 +85,23 @@ export async function recordLegalAcceptanceForCurrentAccount(): Promise<void> {
     const encrypted = await encryptText(JSON.stringify(receipt)); check();
     await AsyncStorage.setItem(key, encrypted); check();
     if (await AsyncStorage.getItem(key) !== encrypted) throw new Error("legal-save-failed");
-    check(); notify(uid);
+    check(); forgetLegalAcceptanceConfirmation(uid); notify(uid);
   });
 }
 
 /** No cierra/borra datos ni exige Pro; únicamente protege altas de contenido. */
 export async function assertSharedContentAccepted(uid = auth.currentUser?.uid ?? ""): Promise<void> {
+  const check = accountCheck(uid);
   if (!await hasAcceptedLegalDocuments(uid)) throw new Error("legal-acceptance-required");
+  check();
+  const documents = await hashes(); check();
+  await confirmLegalAcceptance(uid, documents); check();
 }
 
 export async function deleteLegalAcceptance(uid: string): Promise<void> {
   const key = receiptKey(uid);
   closing.add(uid); // Impide que una elección atrasada vuelva a crear el recibo.
+  forgetLegalAcceptanceConfirmation(uid);
   return enqueue(uid, async () => {
     await AsyncStorage.removeItem(key);
     if (await AsyncStorage.getItem(key) !== null) throw new Error("legal-delete-failed");

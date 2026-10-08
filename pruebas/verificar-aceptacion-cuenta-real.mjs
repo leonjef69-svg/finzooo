@@ -21,6 +21,7 @@ function environment() {
   `, resolveDir: root, sourcefile: "legal-real-dependencies.ts", loader: "ts" },
     bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent",
     alias: { "@": root, "@/utils/firebase": path.join(root, "pruebas/stubs/firebase-local.ts"),
+      "firebase/functions": path.join(root, "pruebas/stubs/legal-functions.ts"),
       "@react-native-async-storage/async-storage": path.join(root, "pruebas/stubs/async-storage.ts"),
       "expo-secure-store": path.join(root, "pruebas/stubs/secure-store.ts"),
       "expo-crypto": path.join(root, "pruebas/stubs/crypto-sha256.ts") } });

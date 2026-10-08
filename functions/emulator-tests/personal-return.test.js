@@ -10,6 +10,7 @@ const { initializeTestEnvironment, assertFails, assertSucceeds } = require("@fir
 const { initializeApp, deleteApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { doc, setDoc, updateDoc, serverTimestamp } = require("firebase/firestore");
+const { DOCUMENTS, acceptLegalDocuments } = require("../src/legal-acceptance");
 
 test("devolución sin Pro: límites reales, reintentos, concurrencia y migración histórica", async t => {
   const env = await initializeTestEnvironment({ projectId: "demo-fino-return", firestore: { host: "127.0.0.1", port: 8080,
@@ -82,6 +83,9 @@ test("devolución sin Pro: límites reales, reintentos, concurrencia y migració
       assert.equal((await db.collection("familySpaces/foreign/movements").get()).size, 2);
     });
     await t.test("ni Pro puede saltarse el servicio mediante una devolución SDK directa", async () => {
+      // La primera devolución Gratis anterior carecía de aceptación. Estos
+      // casos SDK aíslan reglas financieras con documentos ya aceptados.
+      await acceptLegalDocuments(db, "owner", { termsHash: DOCUMENTS.termsHash, privacyHash: DOCUMENTS.privacyHash, termsAccepted: true, privacyRead: true });
       await db.doc("users/owner").update({ isPremium: true });
       const client = env.authenticatedContext("owner", { email_verified: true }).firestore();
       const row = { tipo: "gasto", monto: 40, descripcion: "Devolver", method: "transfer", fecha: "2026-10-05", creadoPor: "owner", creadoEn: serverTimestamp(),

@@ -1,5 +1,16 @@
 # Entregas de Fino
 
+## Preparado, no entregado — aceptación servidor parcial (08/10/2026)
+
+Callable/recibo privado versionado y reglas, cliente con elección local y
+confirmación propia acotada; dinero/salidas no dependen de nueva aceptación.
+Borrado Auth limpia el recibo y la barrera existente rechaza solicitudes tardías.
+Guía PRUEBAS_ACEPTACION_SERVIDOR.md. Requiere activación autorizada y coordinada
+de servidor/reglas/huellas/documentos/app; ninguna parte se publicó ahora.
+**Qué sigue:** bloqueo/restantes IDs. **Qué falta:** Android, SMTP/atención,
+consolas/políticas/revisión jurídica/trámites/cobros y entrega. Sin APK/AAB/OTA;
+tarjetas/Sentry excluidos, FINO-47/49 y auditoría todavía no cerrados.
+
 ## Preparado, no entregado — aceptación por cuenta parcial (08/10/2026)
 
 Recibo cifrado/versionado local tras elección explícita, conservación logout y

@@ -22,6 +22,7 @@ const { resolvePrivateBoxMoney, recoverPrivateBoxMoney, retirePrivateBoxMoney } 
 const { submitContentReport, cleanupExpiredReports } = require("./src/content-reports");
 
 initializeApp();
+const { acceptLegalDocuments, assertLegalAcceptance } = require("./src/legal-acceptance");
 
 function verifiedAccount(request, recent = false) {
   const uid = request.auth?.uid;
@@ -40,6 +41,23 @@ function verifiedAccount(request, recent = false) {
 
 exports.getCloudAccess = onCall({ region: "southamerica-east1", maxInstances: 10 }, request =>
   getCloudAccess(getFirestore(), verifiedAccount(request)));
+
+exports.acceptLegalDocuments = onCall({ region: "southamerica-east1", maxInstances: 2, timeoutSeconds: 60 }, async request => {
+  const uid = verifiedAccount(request);
+  let account;
+  try { account = await getAuth().getUser(uid); }
+  catch (error) {
+    if (error?.code === "auth/user-not-found") throw new HttpsError("unauthenticated", "La cuenta ya no está disponible.");
+    throw error;
+  }
+  if (account.disabled || !account.emailVerified) throw new HttpsError("unauthenticated", "Verifica tu cuenta.");
+  try { return await acceptLegalDocuments(getFirestore(), uid, request.data); }
+  catch (error) {
+    if (!error?.reason) throw error;
+    throw new HttpsError(error.reason === "legal-invalid-request" ? "invalid-argument" : "failed-precondition",
+      "No se confirmó la aceptación. No se cambió ningún movimiento ni saldo.", { reason: error.reason });
+  }
+});
 
 exports.submitContentReport = onCall({ region: "southamerica-east1", maxInstances: 2 }, async request => {
   const uid = verifiedAccount(request), account = await getAuth().getUser(uid);
@@ -224,6 +242,13 @@ exports.changePersonalContribution = onCall(
     const receiptRef = db.doc(`personalReturnReceipts/${uid}/operations/${movementId}`);
 
     await db.runTransaction(async transaction => {
+      if (action === "update") {
+        try { await assertLegalAcceptance(transaction, db, uid); }
+        catch (error) {
+          if (!error?.reason) throw error;
+          throw new HttpsError("failed-precondition", "Lee y acepta los documentos antes de compartir contenido.", { reason: error.reason });
+        }
+      }
       const [space, member, current, movementSnapshot, confirmed] = await Promise.all([
         transaction.get(spaceRef), transaction.get(memberRef), transaction.get(movementRef), transaction.get(spaceRef.collection("movements")),
         action === "delete" ? transaction.get(receiptRef) : Promise.resolve(null),

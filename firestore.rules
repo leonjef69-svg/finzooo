@@ -34,12 +34,15 @@ service cloud.firestore {
     match /moderationMail/{mailId} { allow read, write: if false; }
     match /reportRateLimits/{userId} { allow read, write: if false; }
     match /privateSettings/{settingId} { allow read, write: if false; }
+    // Solo el callable verificado puede confirmar una elección vigente.
+    match /legalAcceptances/{userId} { allow read, write: if false; }
 
     function verified() {
       return request.auth != null && request.auth.token.email_verified == true;
     }
 
     function familyMember(familyId) {
+      // Lectura/salidas financieras NO dependen de aceptar documentos.
       return verified()
         && exists(/databases/$(database)/documents/familySpaces/$(familyId)/members/$(request.auth.uid));
     }
@@ -82,6 +85,18 @@ service cloud.firestore {
         || get(/databases/$(database)/documents/users/$(userId)).data.get('accountDeletionPending', false) != true)
         && (!exists(/databases/$(database)/documents/premiumTrialClaims/$(userId))
           || get(/databases/$(database)/documents/premiumTrialClaims/$(userId)).data.get('deletionPending', false) != true);
+    }
+
+    function sharedContentAccepted() {
+      let receipt = get(/databases/$(database)/documents/legalAcceptances/$(request.auth.uid)).data;
+      return verified() && cloudCopyOpen(request.auth.uid)
+        && receipt.format == 1 && receipt.uid == request.auth.uid
+        && receipt.version == '2026-10-08-ugc1'
+        && receipt.termsHash == '3dab9c8bcd507b36f28f293c57dc23010e76b5f408de3700d2e53c44c97f968f'
+        && receipt.privacyHash == '812f7f971bd3391f3302dc45f9b312743561280a23119b2c1b643fa0242927d5'
+        && receipt.termsAccepted == true && receipt.privacyRead == true
+        && receipt.acceptedAt is int && receipt.acceptedAt > 0
+        && receipt.acceptedAt <= request.time.toMillis();
     }
 
     // Concesión administrativa por UID. El usuario solo puede leer la suya;
@@ -382,7 +397,7 @@ service cloud.firestore {
     // Espacios familiares: los datos solo son visibles para miembros. Para
     // entrar hace falta un código aleatorio vigente; conocer un familyId no basta.
     match /familySpaces/{familyId} {
-      allow create: if verified()
+      allow create: if verified() && sharedContentAccepted()
                     && request.resource.data.ownerUid == request.auth.uid
                     && request.resource.data.nombre is string
                     && request.resource.data.nombre.size() > 0
@@ -393,7 +408,7 @@ service cloud.firestore {
                     && request.resource.data.keys().hasOnly(['nombre', 'ownerUid', 'currency', 'creadoEn'])
                     && premiumUser(request.auth.uid);
       allow read: if familyMember(familyId);
-      allow update: if familyMember(familyId)
+      allow update: if familyMember(familyId) && sharedContentAccepted()
                     && resource.data.ownerUid == request.auth.uid
                     && resource.data.get('closed', false) == false
                     && resource.data.get('deleting', false) == false
@@ -407,7 +422,7 @@ service cloud.firestore {
 
       match /members/{userId} {
         allow read: if familyMember(familyId);
-        allow create: if verified()
+        allow create: if verified() && sharedContentAccepted()
                       && userId == request.auth.uid
                       && cloudCopyOpen(userId)
                       && request.resource.data.uid == request.auth.uid
@@ -437,7 +452,7 @@ service cloud.firestore {
 
       match /movements/{movementId} {
         allow read: if familyMember(familyId);
-        allow create: if verified() && (
+        allow create: if verified() && sharedContentAccepted() && (
                         (familyMember(familyId) && familyOpen(familyId))
                         || (getAfter(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid
                           && familyOpenAfter(familyId))
@@ -484,7 +499,7 @@ service cloud.firestore {
     match /familyInvites/{code} {
       allow get: if verified();
       allow list: if verified() && resource.data.createdBy == request.auth.uid;
-      allow create: if verified()
+      allow create: if verified() && sharedContentAccepted()
                     && request.resource.data.createdBy == request.auth.uid
                     && request.resource.data.familyId is string
                     && familyMember(request.resource.data.familyId)
@@ -568,7 +583,7 @@ service cloud.firestore {
     // Una caja compartida es independiente de Personal, Familia y Negocio.
     // Cada miembro puede ver y anotar movimientos; solo el dueño Premium invita.
     match /boxSpaces/{boxId} {
-      allow create: if verified()
+      allow create: if verified() && sharedContentAccepted()
                     && request.resource.data.ownerUid == request.auth.uid
                     && request.resource.data.nombre is string
                     && request.resource.data.nombre.size() > 0
@@ -592,7 +607,7 @@ service cloud.firestore {
         && exists(/databases/$(database)/documents/cajas/$(request.auth.uid))
         && boxId.matches('^' + request.auth.uid + '_[A-Za-z0-9_-]+$')
         && !exists(/databases/$(database)/documents/boxSpaces/$(boxId));
-      allow update: if boxMember(boxId)
+      allow update: if boxMember(boxId) && sharedContentAccepted()
                     && resource.data.ownerUid == request.auth.uid
                     && resource.data.get('closed', false) == false
                     && resource.data.get('deleting', false) == false
@@ -609,7 +624,7 @@ service cloud.firestore {
       match /members/{userId} {
         allow read: if boxMember(boxId);
         allow get: if verified() && userId == request.auth.uid;
-        allow create: if verified() && userId == request.auth.uid
+        allow create: if verified() && sharedContentAccepted() && userId == request.auth.uid
           && cloudCopyOpen(userId)
           && request.resource.data.uid == request.auth.uid
           && request.resource.data.nombre is string
@@ -634,7 +649,7 @@ service cloud.firestore {
 
       match /movements/{movementId} {
         allow read: if boxMember(boxId);
-        allow create: if verified()
+        allow create: if verified() && sharedContentAccepted()
           && boxOwnerPremiumAfter(boxId)
           && validSharedMovement(request.resource.data)
           && cloudCopyOpen(request.auth.uid)
@@ -673,7 +688,7 @@ service cloud.firestore {
     match /boxInvites/{code} {
       allow get: if verified();
       allow list: if verified() && resource.data.createdBy == request.auth.uid;
-      allow create: if verified()
+      allow create: if verified() && sharedContentAccepted()
         && request.resource.data.createdBy == request.auth.uid
         && request.resource.data.boxId is string
         && boxMember(request.resource.data.boxId)
