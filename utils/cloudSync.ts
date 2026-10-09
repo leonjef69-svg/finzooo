@@ -15,7 +15,7 @@ import {
   pruneDeletedTransactionIds,
 } from "@/utils/mergeTransactions";
 import { assertMatchingAccountCurrencies, mergeCloudFields } from "@/utils/cloudFieldMerge";
-import { assertLegacyHistoryFormat, UnsupportedHistoryFormatError } from "@/utils/cloudHistoryMigration";
+import { assertKnownRecordIdentityFormat, assertLegacyHistoryFormat, InvalidRecordIdentityFormatError, UnsupportedHistoryFormatError } from "@/utils/cloudHistoryMigration";
 import { clearHistoryV2Cache, loadHistoryV2, saveHistoryV2 } from "@/utils/cloudHistoryV2";
 import { hasUnreadableLocalData } from "@/utils/storage";
 import { deletePersonalCloudCopy, getCloudAccountAccess } from "@/utils/cloudAccountAccess";
@@ -109,6 +109,7 @@ export async function loadCloudData(
     if (!snap.exists()) return null;
     const data = snap.data();
     if (data.accountDeletionPending === true) throw new Error("account-deletion-pending");
+    assertKnownRecordIdentityFormat(data);
     const history = data.historyFormat === 2 ? await loadHistoryV2(uid, lease) : null;
     if (!history) assertLegacyHistoryFormat(data);
     if (!data?.hasOnboarded) return null;
@@ -156,6 +157,7 @@ export async function loadCloudData(
     if (error instanceof PrivateBoxSyncError) throw error;
     if (error instanceof CloudPremiumRequiredError) throw error;
     if (error instanceof UnsupportedHistoryFormatError) throw error;
+    if (error instanceof InvalidRecordIdentityFormatError) throw error;
     // "La cuenta no tiene copia" y "no pudimos consultar la copia" son dos
     // estados opuestos. El segundo se propaga para que la pantalla permita
     // reintentar y nunca configure/suba una cuenta vacía sobre datos existentes.
@@ -189,6 +191,9 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
   if (hasUnreadableLocalData()) {
     return { ok: false, motivo: "datos-locales-ilegibles" };
   }
+  // Validar antes de limpiar campos: no rebajar silenciosamente un formato
+  // que venga de otra versión de la app o de una copia importada.
+  assertKnownRecordIdentityFormat(data);
   // Firestore RECHAZA cualquier campo cuyo valor sea "undefined" y tira el
   // guardado entero. Como los movimientos ahora tienen campos opcionales
   // (comercio, cuenta, referencia...), uno vacío podría hacer que la copia
@@ -206,6 +211,7 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
     if (existing.exists() && existing.data().accountDeletionPending === true) {
       return { ok: false, motivo: "eliminacion-pendiente" };
     }
+    if (existing.exists()) assertKnownRecordIdentityFormat(existing.data());
     if (existing.exists()) assertMatchingAccountCurrencies(clean, existing.data() as CloudData);
     if (existing.exists() && existing.data().historyFormat === 2) {
       return await saveCloudDataV2(uid, clean, lease);
@@ -241,6 +247,7 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
       if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
       const snap = await lease.wait(() => transaction.get(ref));
       const actual = snap.exists() ? snap.data() : null;
+      assertKnownRecordIdentityFormat(actual);
       assertLegacyHistoryFormat(actual);
       let siguiente = conservarPremiumManual(actual, clean);
       if (actual) {
@@ -292,6 +299,7 @@ async function saveCloudDataV2(uid: string, clean: CloudData, lease: PrivateBoxC
       if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
       const snap = await lease.wait(() => transaction.get(ref));
       if (!snap.exists() || snap.data().historyFormat !== 2) throw new UnsupportedHistoryFormatError();
+      assertKnownRecordIdentityFormat(snap.data());
       const actual = snap.data() as CloudData;
       let next = mergeCloudFields(conservarPremiumManual(actual, saved), actual);
       const metasBorradas = pruneDeletedGoalIds([
@@ -338,6 +346,8 @@ async function saveCloudDataV2(uid: string, clean: CloudData, lease: PrivateBoxC
  */
 function motivoLegible(e: unknown): string {
   const crudo = String((e as { code?: string })?.code ?? (e as Error)?.message ?? e);
+  if (/cloud\/history-format-unsupported|historial-formato-no-compatible/.test(crudo)) return "actualizacion-necesaria";
+  if (/cloud\/record-identity-invalid/.test(crudo)) return "datos-nube-invalidos";
   if (/private-box-review-(pending|changed)/.test(crudo)) return "revision-caja-pendiente";
   if (/account-currency-conflict/.test(crudo)) return "monedas-distintas";
     if (/record-origin-conflict/.test(crudo)) return "movimientos-en-conflicto";

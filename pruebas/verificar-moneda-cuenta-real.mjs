@@ -14,6 +14,14 @@ const api = {};
 vm.runInNewContext(ts.transpileModule(read("utils/cloudFieldMerge.ts"), {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
 }).outputText, { exports: api, Error });
+const historyFormats = {};
+vm.runInNewContext(ts.transpileModule(read("utils/cloudHistoryMigration.ts"), {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+}).outputText, { exports: historyFormats, Error, require: name => {
+  if (name === "@/utils/mergeTransactions") return {};
+  if (name === "@/utils/utf8") return { utf8ByteLength: text => Buffer.byteLength(text) };
+  throw new Error(`Dependencia inesperada: ${name}`);
+} });
 const writes = [], notices = [], changes = [];
 const deps = { accountConfigured: { current: true }, currencyForReturn: { current: "PEN" },
   userCurrency: "PEN", userCountry: "PE", userName: "Ana", userPhoto: null,
@@ -149,7 +157,7 @@ assert.equal(readable(Error("account-currency-conflict")), "monedas-distintas");
 for (const historyFormat of [1, 2]) {
   let saved = { ...b, historyFormat };
   const operations = [], snap = () => ({ exists: () => true, data: () => saved });
-  const cloudDeps = { ...api, db: {}, doc: () => "user", getDoc: async () => snap(),
+  const cloudDeps = { ...api, ...historyFormats, db: {}, doc: () => "user", getDoc: async () => snap(),
     hasUnreadableLocalData: () => false, utf8ByteLength: text => Buffer.byteLength(text),
     withPrivateBoxCloudOperation: async (_uid, work) => work({ wait: work => work(), remember: value => value, assertCurrent() {} }),
     assertLegacyHistoryFormat() {}, LIMITE_FIRESTORE: 1_000_000, TOPE_SEGURO: 800_000,
@@ -174,7 +182,7 @@ for (const historyFormat of [1, 2]) {
 
 // Reconsulta por fila: si cambia la raíz tras el primer control, no escribe
 // esa fila de importes. El SDK de red se adapta; no se copia el guardado.
-const historyWrites = [], historyDeps = { ...api, db: {},
+const historyWrites = [], historyDeps = { ...api, ...historyFormats, db: {},
   withPrivateBoxCloudLease: async (_uid, _lease, work) => work({ wait: work => work(), remember: value => value, assertCurrent() {} }),
   exclusive: (_uid, work) => work(), refresh: async () => ({ entries: [], checkpoint: null }),
   planLocalHistoryChanges: () => [{ id: 1, deleted: false, transaction: { id: 1, amount: 100 } }],

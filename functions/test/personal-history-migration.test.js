@@ -2,10 +2,10 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { legacyEntries, chooseEntry, covers } = require("../src/personal-history-migration");
+const { legacyEntries, chooseEntry, covers, migratePersonalHistory } = require("../src/personal-history-migration");
 const vm = require("node:vm"), { execFileSync } = require("node:child_process");
 const originBaseline = process.env.FINO_TEST_HISTORY_ADMIN_ORIGIN_BASELINE;
-let original = { legacyEntries, chooseEntry, covers };
+let original = { legacyEntries, chooseEntry, covers, migratePersonalHistory };
 if (originBaseline) {
   assert.match(originBaseline, /^[a-f0-9]{7,40}$/i);
   const module = { exports: {} };
@@ -51,4 +51,41 @@ test("Admin también rechaza dos orígenes distintos antes de retirar la lista r
   const before = row({ creationId: "creacion-A" }), after = row({ creationId: "creacion-A", amount: 20, updatedAt: 200 });
   assert.equal(original.chooseEntry(before, after), after);
   assert.equal(original.covers(after, before), true);
+});
+
+test("Admin no acredita una marca sin origen como copia de un alta identificada", () => {
+  for (const proof of [{ creationId: "A" }, { captureId: "captura-A" }, { internalTransferLink: "aporte-A" }]) {
+    const live = { id: 1, deleted: false, transaction: { id: 1, amount: 10, ...proof } };
+    const erased = { id: 1, deleted: true };
+    const before = JSON.stringify([live, erased]);
+    for (const [a, b] of [[live, erased], [erased, live]]) {
+      assert.throws(() => original.chooseEntry(a, b), /HISTORY_ORIGIN_CONFLICT/);
+      assert.throws(() => original.covers(a, b), /HISTORY_ORIGIN_CONFLICT/);
+    }
+    assert.throws(() => original.legacyEntries({ transactions: [live.transaction], deletedTransactionIds: [1] }), /HISTORY_ORIGIN_CONFLICT/);
+    assert.equal(JSON.stringify([live, erased]), before);
+  }
+  const live = { id: 1, deleted: false, transaction: { id: 1, amount: 10, creationId: "A" } };
+  assert.equal(original.chooseEntry(null, live), live, "un alta sin contradicción sigue copiable");
+  assert.equal(original.covers(live, live), true);
+});
+
+test("Admin no interpreta ni rebaja una revisión de identidad desconocida", () => {
+  for (const recordIdentityFormat of [2, "1", null, false, 0]) {
+    const data = { recordIdentityFormat, transactions: [{ id: 1, amount: 10 }], deletedTransactionIds: [] };
+    const before = JSON.stringify(data);
+    assert.throws(() => original.legacyEntries(data), /HISTORY_FORMAT_UNSUPPORTED/);
+    assert.equal(JSON.stringify(data), before);
+  }
+  assert.equal(original.legacyEntries({ recordIdentityFormat: 1, transactions: [{ id: 1 }] }).length, 1);
+});
+
+test("migración no anuncia 'ya migrada' para una revisión que no entiende", async () => {
+  let data = { hasOnboarded: true, historyFormat: 2, recordIdentityFormat: 2 };
+  const root = { collection: () => ({}), get: async () => ({ exists: true, data: () => data }) };
+  const db = { collection: () => ({ doc: () => root }), batch: () => assert.fail("no empezar escrituras") };
+  await assert.rejects(original.migratePersonalHistory(db, "fixture"), /HISTORY_FORMAT_UNSUPPORTED/);
+  assert.equal(data.recordIdentityFormat, 2);
+  data = { ...data, recordIdentityFormat: 1 };
+  assert.equal((await original.migratePersonalHistory(db, "fixture")).alreadyMigrated, true);
 });

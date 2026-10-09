@@ -6,6 +6,18 @@ datos. Las tarjetas de crédito permanecen excluidas.
 
 ## Qué se comprobó realmente
 
+Actualización posterior del 09/10: PRUEBAS_FORMATO_COPIA documenta cuatro
+casos ahora bloqueados conservando fuentes (stageLegacyHistory, importación,
+Admin elegir/cobertura). El diagnóstico conserva sus SIETE casos y sigue
+ROJO por TRES: mergeHistoryEntries, planLocalHistoryChanges y manual antiguo
+sin origen. Las notas de siete fallos que siguen son evidencia de la pasada
+anterior, no el resultado actual. No equivale a completar el protocolo.
+
+El propietario ya aceptó exigir actualización para sincronizar. Se prepara
+el contrato; no se ha activado una política mínima global ni una migración.
+La protección de formatos desconocidos tiene guía propia y seis casos SDK
+locales rojos/verde, no verifica versiones de todos los APK instalados.
+
 `node pruebas/diagnosticos/reproducir-borrados-identidad.mjs` terminó ROJO
 con siete casos. Está deliberadamente fuera del corredor de pruebas aprobadas:
 no se borró ni se ocultó para mostrar una batería verde. Solo usa registros
@@ -74,7 +86,7 @@ eso necesita el contrato de origen/versiones siguiente y activación compatible.
 6. Autorizar y coordinar después el cambio de formatos/reglas/servidor/app.
    Revisar copias reales exige acceso expreso a esas cuentas, no está autorizado.
 
-**Qué sigue:** el protocolo compatible y la prueba de esos casos hasta que
+**Qué sigue:** el protocolo compatible y la prueba de los tres casos aún rojos hasta que
 dejen de perder o descartar copias. **Qué falta:** revisión humana de antiguos
 ambiguos, recorridos Android/dos teléfonos y entrega coordinada autorizada.
 No renumerar, migrar ni «resolver» el conflicto eligiendo una copia a ciegas.

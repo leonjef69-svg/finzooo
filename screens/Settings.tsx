@@ -391,6 +391,8 @@ export default function Settings({
                           ? "settings.backupCurrencyConflict"
                         : respaldoFallo === "movimientos-en-conflicto"
                           ? "settings.backupMovementConflict"
+                        : respaldoFallo === "actualizacion-necesaria"
+                          ? "settings.backupUpdateRequired"
                         : respaldoFallo === "revision-caja-pendiente"
                           ? "settings.backupBoxReview"
                         : "settings.backupFailedHint"

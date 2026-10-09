@@ -13,6 +13,8 @@ const { getFirestore, FieldValue } = require("firebase-admin/firestore");
 const { deletePersonalCloudCopy } = require("../src/cloud-access");
 
 const originRulesBaseline = process.env.FINO_TEST_MOVEMENT_ORIGIN_RULES_BASELINE;
+const formatBaseline = process.env.FINO_TEST_FORMAT_BARRIER_BASELINE;
+if (formatBaseline && !/^[a-f0-9]{7,40}$/i.test(formatBaseline)) throw new Error("Hash Git no válido para formato.");
 if (originRulesBaseline && !/^[0-9a-f]{7,40}$/i.test(originRulesBaseline)) throw new Error("Hash Git no válido para reglas.");
 
 async function clientModule(firestore, entry = "utils/cloudHistoryV2.ts", uid = "alice") {
@@ -22,6 +24,12 @@ async function clientModule(firestore, entry = "utils/cloudHistoryV2.ts", uid = 
     bundle: true, write: false, platform: "node", format: "cjs",
     external: ["firebase/firestore"],
     plugins: [{ name: "test-firebase", setup(build) {
+      build.onLoad({ filter: /\.(ts|tsx)$/, namespace: "file" }, args => {
+        if (!formatBaseline) return;
+        const source = path.relative(root, args.path).split(path.sep).join("/");
+        if (!["utils/cloudSync.ts", "utils/cloudHistoryV2.ts", "utils/cloudHistoryMigration.ts", "utils/mergeTransactions.ts", "utils/importCommit.ts"].includes(source)) return;
+        return { contents: require("node:child_process").execFileSync("git", ["show", `${formatBaseline}:${source}`], { encoding: "utf8" }), loader: source.endsWith(".tsx") ? "tsx" : "ts" };
+      });
       build.onResolve({ filter: /^@\/utils\/firebase$/ }, () => ({ path: "firebase", namespace: "test" }));
       build.onLoad({ filter: /.*/, namespace: "test" }, () => ({ contents: "export const db = globalThis.__finoHistoryTestDb; export const auth = globalThis.__finoHistoryTestAuth;", loader: "js" }));
       // Este grupo comprueba la copia real de un cliente Pro en Firestore.
@@ -292,4 +300,42 @@ test("dos teléfonos guardan, editan, borran y restauran historial v2", async ()
   } finally {
     await env.cleanup();
   }
+});
+
+test("formato desconocido: el cliente original no lo lee como copia normal ni lo rebaja", async t => {
+  const env = await initializeTestEnvironment({ projectId: "demo-fino-format-client", firestore: {
+    host: "127.0.0.1", port: 8080, rules: fs.readFileSync(path.resolve(__dirname, "../../firestore.rules"), "utf8"),
+  } });
+  try {
+    await env.clearFirestore();
+    for (const historyFormat of [1, 2]) {
+      const uid = `format-${historyFormat}`;
+      const root = { hasOnboarded: true, userName: "NO CAMBIAR", userPhoto: null, userCurrency: "PEN", userLanguage: "es",
+        budgets: { "2026-10": 100 }, categoryBudgets: {}, transactions: [movement(1)], goals: [], isPremium: true,
+        historyFormat, recordIdentityFormat: 2 };
+      if (historyFormat === 2) delete root.transactions;
+      await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), "users", uid), root));
+      const db = env.authenticatedContext(uid, { email_verified: true }).firestore();
+      const phone = await clientModule(db, "utils/cloudSync.ts", uid);
+      await t.test(`v${historyFormat}: rechaza lectura sin ofrecer vacío`, async () => {
+        await assert.rejects(phone.loadCloudData(uid), error => error.code === "cloud/history-format-unsupported");
+        assert.deepEqual((await getDoc(doc(db, "users", uid))).data(), root);
+      });
+      await t.test(`v${historyFormat}: guardar no pierde el marcador ni cambia presupuesto`, async () => {
+        const input = { ...root, recordIdentityFormat: 1, userName: "NO APLICAR", transactions: [movement(2)], budgets: { "2026-10": 999 } };
+        const before = JSON.stringify(input);
+        const result = await phone.saveCloudData(uid, input);
+        assert.equal(result.ok, false);
+        assert.equal(result.motivo, "actualizacion-necesaria");
+        assert.deepEqual((await getDoc(doc(db, "users", uid))).data(), root);
+        assert.equal(JSON.stringify(input), before);
+      });
+      if (historyFormat === 2) await t.test("v2: guardado por fila vuelve a comprobar el formato de raíz", async () => {
+        const history = await clientModule(db, "utils/cloudHistoryV2.ts", uid);
+        await assert.rejects(history.saveHistoryV2(uid, [movement(2)], []), error => error.code === "cloud/history-format-unsupported");
+        assert.equal((await getDoc(doc(db, "users", uid, "history", "2"))).exists(), false);
+        assert.deepEqual((await getDoc(doc(db, "users", uid))).data(), root);
+      });
+    }
+  } finally { await env.cleanup(); }
 });

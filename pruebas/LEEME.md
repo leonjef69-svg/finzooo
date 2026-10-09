@@ -1,5 +1,18 @@
 # Pruebas y auditores
 
+Ampliación posterior 09/10: 188 pruebas/8 auditores sin tarjetas, 92 unitarias
+Node 22 y 208 SDK/reglas/HTTP locales aprobadas; seis casos SDK de formato
+recomprobados al final. TypeScript/ESLint aprobados. Una prueba ajena no
+versionada está en 188: 187 previstas Git limpio, no otro checkout ejecutado.
+verificar-formatos-copia-real y consultas-estables ejecutan los originales
+con IO adaptado; SDK de formatos usa Firestore real local. Regresión 07dfaf0:
+rechazos/avisos ausentes y escrituras indebidas, no API faltante. Admin/Telegram
+también tienen regresiones rojas/verde. Guía PRUEBAS_FORMATO_COPIA.
+El diagnóstico conserva siete casos: cuatro ya se bloquean preservando fuentes,
+TRES siguen rojos. No cerrar FINO-52 ni toda la auditoría por estas cifras.
+El propietario aceptó exigir actualización; mínimo global/contrato/activación
+siguen pendientes. Las notas de siete fallos/cifras siguientes son históricas.
+
 Cierre de esta tanda, 09/10: 187 pruebas y 8 auditores aprobados con
 --sin-tarjetas (una prueba local ajena no versionada, 186 previstas Git limpio;
 no se ejecutó otro checkout). 88 unitarias Node 22 y 202 SDK/reglas/HTTP locales

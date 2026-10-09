@@ -5,7 +5,7 @@ import {
 import type { Transaction } from "@/types";
 import { db } from "@/utils/firebase";
 import {
-  type HistoryEntry, historyDocumentId, mergeHistoryEntries,
+  type HistoryEntry, assertKnownRecordIdentityFormat, historyDocumentId, mergeHistoryEntries,
   planLocalHistoryChanges, UnsupportedHistoryFormatError,
 } from "@/utils/cloudHistoryMigration";
 import { withPrivateBoxCloudLease, type PrivateBoxCloudLease } from "@/utils/privateBoxSync";
@@ -98,6 +98,7 @@ export function saveHistoryV2(
       const saved = await approved.wait(() => runTransaction(db, async (tx) => {
         const [root, row] = await approved.wait(() => Promise.all([tx.get(rootRef), tx.get(rowRef)]));
         if (!root.exists() || root.data().historyFormat !== 2) throw new UnsupportedHistoryFormatError();
+        assertKnownRecordIdentityFormat(root.data());
         if (currency !== undefined) assertMatchingAccountCurrencies(
           { hasOnboarded: true, userCurrency: currency },
           { hasOnboarded: root.data().hasOnboarded === true, userCurrency: root.data().userCurrency || "PEN" },

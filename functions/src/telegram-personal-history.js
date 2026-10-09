@@ -5,6 +5,7 @@ const { FieldValue } = require("firebase-admin/firestore");
 function isV2(userData) { return userData?.historyFormat === 2; }
 function assertActive(userData) {
   if (userData?.accountDeletionPending === true) throw new Error("ACCOUNT_DELETION_PENDING");
+  if (userData?.recordIdentityFormat !== undefined && userData.recordIdentityFormat !== 1) throw new Error("HISTORY_FORMAT_UNSUPPORTED");
 }
 function rowRef(userRef, id) {
   if (!Number.isSafeInteger(id)) throw new Error("INVALID_ID");

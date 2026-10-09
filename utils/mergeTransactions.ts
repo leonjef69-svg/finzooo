@@ -27,6 +27,17 @@ export function assertSameCreation(a: { id: number; creationId?: string }, b: { 
   }
 }
 
+/** Una marca que solo guarda un número no demuestra qué origen borraba.
+ * Una lista viva identificada y esa misma marca juntas son contradictorias:
+ * detener el lote conserva las fuentes, en vez de descartar el alta a ciegas.
+ * No inventa identidad para un registro antiguo ni restaura por su cuenta. */
+export function assertNoIdentifiedDeletionOverlap(transactions: Transaction[], deletedIds: number[]): void {
+  const deleted = new Set(deletedIds);
+  if (transactions.some(tx => deleted.has(tx.id) && (tx.creationId || tx.captureId || tx.internalTransferLink))) {
+    throw new Error("record-origin-conflict");
+  }
+}
+
 /**
  * Junta los movimientos que tiene la app en memoria con los que hay
  * guardados en el disco.

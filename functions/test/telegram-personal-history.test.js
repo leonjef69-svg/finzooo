@@ -111,3 +111,19 @@ test("Telegram conserva también el primer borrado después de superar 5000 marc
   assert.equal(JSON.stringify(data), before);
   assert.ok(Buffer.byteLength(JSON.stringify(saved)) < Buffer.byteLength(before), "este borrado no agranda la copia previa");
 });
+
+test("Telegram conserva la copia de una revisión desconocida sin leer historial ni guardar", async () => {
+  const original = historyOriginal();
+  for (const historyFormat of [1, 2]) for (const recordIdentityFormat of [2, "1", null, false, 0]) {
+    const { root, tx, writes } = fakeRoot();
+    const data = { historyFormat, recordIdentityFormat, transactions: [{ id: 1, amount: 10 }], deletedTransactionIds: [] };
+    const before = JSON.stringify(data);
+    await assert.rejects(original.allPersonalTransactions(root, data, tx), /HISTORY_FORMAT_UNSUPPORTED/);
+    await assert.rejects(original.personalRecord(tx, root, data, 1), /HISTORY_FORMAT_UNSUPPORTED/);
+    assert.throws(() => original.addPersonal(tx, root, data, {}, { id: 2 }, 850_000), /HISTORY_FORMAT_UNSUPPORTED/);
+    assert.throws(() => original.editPersonal(tx, root, data, { transaction: data.transactions[0] }, { id: 1, amount: 20 }, 850_000), /HISTORY_FORMAT_UNSUPPORTED/);
+    assert.throws(() => original.deletePersonal(tx, root, data, { transaction: data.transactions[0] }, 1), /HISTORY_FORMAT_UNSUPPORTED/);
+    assert.deepEqual(writes, []);
+    assert.equal(JSON.stringify(data), before);
+  }
+});

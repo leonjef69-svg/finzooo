@@ -207,6 +207,14 @@ assert.equal(profileScope.saved.userCountry, "CL");
 const cloudAst = ts.createSourceFile("cloud.ts", read("utils/cloudSync.ts"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 const cloudCode = ["conservarPremiumManual", "pesa", "sinFotos", "motivoLegible", "saveCloudData", "saveCloudDataV2"]
   .map((name) => code(name, cloudAst)).join("\n");
+const historyFormats = {};
+vm.runInNewContext(ts.transpile(read("utils/cloudHistoryMigration.ts"), {
+  target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
+}), { exports: historyFormats, require: name => {
+  if (name === "@/utils/mergeTransactions") return helpers;
+  if (name === "@/utils/utf8") return { utf8ByteLength: text => Buffer.byteLength(text) };
+  throw new Error(`Dependencia inesperada: ${name}`);
+} });
 const transaction = (id) => ({ id, updatedAt: id, type: "expense", amount: 50,
   category: "servicios", date: "2026-10-05", method: "cash", description: "Pago", notes: "" });
 function noUndefined(value) {
@@ -218,7 +226,7 @@ for (const historyFormat of [1, 2]) {
   if (historyFormat === 2) { stored.historyFormat = 2; delete stored.transactions; }
   const snap = () => ({ exists: () => true, data: () => structuredClone(stored) });
   const cloudScope = {
-    ...exports, ...helpers, ...coordinator, db: {}, doc: () => "isolated-user", getDoc: async () => snap(),
+    ...exports, ...helpers, ...coordinator, ...historyFormats, db: {}, doc: () => "isolated-user", getDoc: async () => snap(),
     hasUnreadableLocalData: () => false, utf8ByteLength: (text) => Buffer.byteLength(text, "utf8"),
     assertLegacyHistoryFormat: (raw) => { if (raw?.historyFormat === 2) throw new Error("not-legacy"); },
     UnsupportedHistoryFormatError: class extends Error {},

@@ -1,5 +1,18 @@
 # Entregas de Fino
 
+## 09/10/2026 — formatos/borrados dudosos, NO entregado a teléfonos
+
+Propietario aceptó exigir actualización antes de sincronizar con un contrato
+nuevo; datos locales conservados. Se preparan controles de formato futuro/
+inválido en nube/transacciones/recepción, Telegram y migrador Admin; importación/
+staging/Admin detienen contradicciones identificadas sin retirar fuentes.
+PRUEBAS_FORMATO_COPIA conserva evidencias y límites. No hay mínimo global
+activado, cambio de formato, migración real ni APK/AAB/OTA/despliegue.
+FINO-52 sigue abierto: cuatro casos protegidos, tres diagnósticos rojos.
+**Qué sigue/falta:** contrato común, revisión humana de antiguos ambiguos,
+Android/dos dispositivos, trámites/consolas/SMTP/cobros y entrega coordinada.
+Tarjetas/Sentry externo excluidos. Un push no actualiza la app instalada.
+
 ## Preparado, no entregado — consultas/borrados/controles/ficha — 09/10/2026
 
 Bucle de recepción eliminado, consultas rechazadas antes del libro y permiso

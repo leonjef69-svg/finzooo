@@ -1689,7 +1689,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     let alive = true;
     const version = localSessionVersion.current;
     const sincronizarMovimientos = async () => {
-      const cloud = await loadCloudData(uid).catch(() => null);
+      const cloud = await loadCloudData(uid).catch((error) => {
+        if (alive && version === localSessionVersion.current && auth.currentUser?.uid === uid) {
+          const code = (error as { code?: string } | null)?.code;
+          if (code === "cloud/history-format-unsupported") setRespaldoFallo("actualizacion-necesaria");
+          if (code === "cloud/record-identity-invalid") setRespaldoFallo("datos-nube-invalidos");
+        }
+        return null;
+      });
       if (!alive || !cloud || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
       if (!applyNewerCloudFields(cloud)) return;
       const borrados = pruneDeletedTransactionIds([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])]);
@@ -2108,7 +2115,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
             const siguientes = mergeGoals(locales, cloud.goals).filter((goal) => !idsMetasBorradas.has(goal.id));
             return JSON.stringify(locales) === JSON.stringify(siguientes) ? locales : siguientes;
           });
-        }).catch(() => undefined);
+        }).catch((error) => {
+          if (alive && version === localSessionVersion.current && auth.currentUser?.uid === uid) {
+            const code = (error as { code?: string } | null)?.code;
+            if (code === "cloud/history-format-unsupported") setRespaldoFallo("actualizacion-necesaria");
+            if (code === "cloud/record-identity-invalid") setRespaldoFallo("datos-nube-invalidos");
+          }
+        });
       }
     });
     return () => {

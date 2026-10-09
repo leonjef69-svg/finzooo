@@ -1,5 +1,26 @@
 # Estado actual de Fino
 
+## Formatos y fuentes ambiguas — 09/10/2026, preparado
+
+- Propietario aceptó exigir actualización para sincronizar, conservando datos
+  locales. No autorizó despliegue/migraciones ni acceso a historiales reales.
+- Nube valida revisión antes de reconstruir/limpiar y dentro de transacciones;
+  formato futuro pide actualizar, datos inválidos piden revisar. Avisos al abrir/
+  regresar respetan la sesión; importación/TS/Admin no descartan un alta
+  identificada por una marca numérica dudosa. Telegram rechaza revisión desconocida.
+- Guía PRUEBAS_FORMATO_COPIA: 188 pruebas/8 auditores sin tarjetas (una ajena
+  no versionada), 92 unitarias Node 22 y 208 SDK/reglas/HTTP locales aprobadas.
+  Seis casos SDK de formato recomprobados contra el código final; TypeScript/
+  ESLint aprobados. Regresiones 07dfaf0 rojas por el fallo, no ausencia de API.
+- El diagnóstico conserva siete casos: cuatro ahora se bloquean preservando
+  fuentes, TRES siguen rojos. No es que toda la auditoría tenga solo tres pendientes.
+  La migración ambigua se detiene; no renumerar/quitar identidades para eludirla.
+- **Qué sigue:** contrato de origen/versiones/restauración y mínimo de escritores.
+  **Qué falta:** tres casos, antiguos ambiguos, Android/dos equipos, SMTP/moderación,
+  consolas/políticas/trámites/cobros y activación coordinada autorizada.
+  Aún no hay mínimo global publicado ni cierre FINO-52; no cambió formato activo.
+  Sin APK/AAB/OTA/despliegue; tarjetas/Sentry externo fuera, diseño diferido.
+
 ## Consultas, borrados, accesibilidad y ficha — 09/10/2026, preparado
 
 - Se eliminó el bucle de descargas repetidas. Servidor comprueba permisos antes

@@ -27,9 +27,19 @@ archivos sin consumidores retirados; ficha local de Play rectificada.
 Guías PRUEBAS_CONSULTAS_ESTABLES, PRUEBAS_COMPATIBILIDAD_PENDIENTE,
 PRUEBAS_ACCESIBILIDAD_PANTALLAS, PRUEBAS_CODIGO_RETIRADO y
 REVISION_PRIVACIDAD_FICHA conservan evidencias/regresiones y pendientes.
-FINO-52 mantiene siete casos ROJOS fuera del conteo: no queda cerrado por ello.
+En esa pasada FINO-52 tenía siete casos ROJOS fuera del conteo. La ampliación
+siguiente conserva los siete: cuatro se detienen con fuentes intactas y TRES
+siguen rojos. No queda cerrado por la batería aprobada.
 La web pública sí respondió con textos antiguos contradictorios; no se editó
 HTML ni se publicó app/servidor/reglas. Git no acredita esas activaciones.
+
+Ampliación posterior: PRUEBAS_FORMATO_COPIA documenta rechazo de revisiones
+desconocidas sin rebajarlas, mensajes distintos para revisión futura/dato inválido
+y barreras de importación/TS/Admin. 188 pruebas/8 auditores sin tarjetas, 92
+unitarias y 208 SDK/reglas/HTTP locales aprobadas; seis casos SDK de formato
+recomprobados al final. El propietario aceptó actualizar antes de sincronizar,
+no desplegar ni migrar datos reales. El mínimo global todavía necesita contrato
+e implementación/activación compatible; los bloqueos no certifican versiones APK.
 
 | Hallazgo | Tema original | Situación y condición de cierre |
 |---|---|---|
@@ -84,7 +94,7 @@ HTML ni se publicó app/servidor/reglas. Git no acredita esas activaciones.
 | FINO-49 | Familia y Cajas compartidas tienen contenido entre usuarios sin términos aceptados, ni denuncia ni bloqueo | PARCIAL: denuncias/responsable preparados y aceptación propia vigente en cliente/servidor/reglas. SDK/Admin/HTTP/Auth locales comprobados; guías PRUEBAS_DENUNCIAS_CONTENIDO.md y PRUEBAS_ACEPTACION_SERVIDOR.md. Configuración ausente rechaza sin anunciar recepción. Faltan SMTP/configuración/retención, bloqueo/moderación efectiva, Android/políticas/consolas/despliegue coordinado. No cumplimiento completo ni correo real. |
 | FINO-50 | Interruptores y botones de solo icono sin rol, estado ni etiqueta para lectores de pantalla | PARCIAL: controles comunes y resto de iconos pulsables/catálogo etiquetados en tres idiomas; funciones/acciones/JSX originales, inventario AST y regresiones comprobados. Guías PRUEBAS_ACCESIBILIDAD_CONTROLES y PRUEBAS_ACCESIBILIDAD_PANTALLAS. Catálogo conserva memorización y no anuncia URI/foto. Faltan foco/agrupación/contraste/tamaño/gestos, Android/TalkBack y entrega; no accesibilidad completa. |
 | FINO-51 | Cambiar la moneda o el país reetiqueta todo el historial sin convertir ni pedir confirmación, y cambia qué funciones aparecen | Preparado según decisión: moneda fija al configurar cuenta; país/idioma independientes; copias discrepantes no se unen ni suben. Manejadores/guardados originales con IO adaptado y SDK/reglas locales roja-verde. Guía PRUEBAS_MONEDA_FIJA.md. Falta Android, dos dispositivos y reglas/app publicadas; no conversión automática ni cambios en tarjetas. |
-| FINO-52 | Dos teléfonos de la misma cuenta pueden generar el mismo id de movimiento y uno se pierde al fusionar | ABIERTO: altas nuevas reforzadas previamente. Reproducción nueva confirma SIETE CASOS ROJOS de lápidas numéricas/antiguos ambiguos, fuera del conteo aprobado. Telegram v1 no reutiliza ID eliminado y marcas no se truncan por cantidad en cliente/metas/Telegram; regresiones comprobadas, no recuperación de marcas ya perdidas. Guías PRUEBAS_IDENTIDAD_CREACION y PRUEBAS_COMPATIBILIDAD_PENDIENTE. Falta contrato de origen/versiones/restauración, compatibilidad mínima, revisión humana de antiguos, migración/Android y activación autorizada; no renumerar ni migrar a ciegas. |
+| FINO-52 | Dos teléfonos de la misma cuenta pueden generar el mismo id de movimiento y uno se pierde al fusionar | ABIERTO: siete diagnósticos conservados, cuatro ahora bloqueados con fuentes intactas y TRES aún rojos (unión/plan frente a lápida numérica y manual antiguo sin origen). Importación/TS/Admin paran contradicciones identificadas; revisiones desconocidas no se rebajan en nube/Telegram/Admin. Altas reforzadas y marcas sin truncar previas siguen preparadas. Guías PRUEBAS_IDENTIDAD_CREACION, PRUEBAS_COMPATIBILIDAD_PENDIENTE y PRUEBAS_FORMATO_COPIA. Propietario aceptó actualización para sincronizar, pero mínimo global/protocolo de origen/versiones/restauración, antiguos ambiguos, migración/Android y activación siguen pendientes. No recuperar marcas perdidas, renumerar ni migrar a ciegas. |
 | FINO-53 | El aviso del calendario no dice cuándo vence el pago | Fecha completa en aviso; ecc9aa9. Falta aviso real. |
 | FINO-54 | Importar, revisar duplicados, escanear boleta y aportar a una meta no impiden el doble toque | Manejadores de las cuatro pantallas protegidos y ejecutados en prueba, incluido reintento ante errores. Falta doble toque físico en Android. |
 | FINO-55 | Si el elemento ya no existe, varias pantallas quedan en blanco o actúan mientras se dibujan | Corregido y probado con componentes/manejadores originales: mensaje/Volver y edición con origen vigente; falta recorrido visual Android. |
@@ -103,6 +113,7 @@ pruebas Android ejecutarse. La publicación es un paso separado que requiere
 coordinación/autorización; un commit en GitHub no actualiza la app instalada.
 
 **Qué sigue:** FINO-52 y contrato compatible, costos/App Check y moderación,
-publicación legal coordinada y pruebas físicas. **Qué falta:** decisiones de
-compatibilidad/activación, Android, consolas, trámites/cobros/SMTP y entrega. Este archivo debe
+publicación legal coordinada y pruebas físicas. **Qué falta:** implementar la
+compatibilidad mínima ya aceptada y autorizar activación, Android, consolas,
+trámites/cobros/SMTP y entrega. Este archivo debe
 actualizarse al cerrar cada punto; no omitir los pendientes por ser de gravedad baja.

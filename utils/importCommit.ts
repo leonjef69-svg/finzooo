@@ -1,5 +1,5 @@
 import type { Transaction } from "@/types";
-import { assertSameTransactionOrigin } from "@/utils/mergeTransactions";
+import { assertNoIdentifiedDeletionOverlap, assertSameTransactionOrigin } from "@/utils/mergeTransactions";
 
 /** Preparar el lote completo antes de cambiar la lista: un conflicto no
  * guarda solo algunos movimientos ni vuelve a crear un movimiento borrado. */
@@ -10,6 +10,7 @@ export function applyImportedTransactions(
   deletedIds: number[],
   now = Date.now(),
 ): { transactions: Transaction[]; count: number } {
+  assertNoIdentifiedDeletionOverlap([...toAdd, ...toReplace], deletedIds);
   const deleted = new Set(deletedIds);
   const known = new Map(current.map(tx => [tx.id, tx]));
   const replacements = new Map<number, Transaction>();

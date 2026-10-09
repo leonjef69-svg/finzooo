@@ -1,6 +1,6 @@
 import type { Transaction } from "@/types";
 import { utf8ByteLength } from "@/utils/utf8";
-import { assertSameTransactionOrigin } from "@/utils/mergeTransactions";
+import { assertNoIdentifiedDeletionOverlap, assertSameTransactionOrigin } from "@/utils/mergeTransactions";
 
 /**
  * Operaciones puras del historial por documentos. La migración de una cuenta
@@ -16,6 +16,24 @@ export class UnsupportedHistoryFormatError extends Error {
     super("historial-formato-no-compatible");
     this.name = "UnsupportedHistoryFormatError";
   }
+}
+
+export class InvalidRecordIdentityFormatError extends Error {
+  readonly code = "cloud/record-identity-invalid";
+  constructor() {
+    super("cloud-field-invalid");
+    this.name = "InvalidRecordIdentityFormatError";
+  }
+}
+
+/** No quitar un marcador desconocido al reconstruir una copia antigua.
+ * Ausencia es el formato histórico; solo se interpreta la revisión conocida.
+ * La activación de una revisión nueva requiere app/reglas/servidor juntos. */
+export function assertKnownRecordIdentityFormat(data: { recordIdentityFormat?: unknown } | null): void {
+  const format = data?.recordIdentityFormat;
+  if (format === undefined || format === 1) return;
+  if (typeof format !== "number" || !Number.isSafeInteger(format) || format < 1) throw new InvalidRecordIdentityFormatError();
+  throw new UnsupportedHistoryFormatError();
 }
 
 /** Una app que solo entiende la lista antigua jamás debe sobrescribir otro formato. */
@@ -36,6 +54,7 @@ export function historyDocumentId(id: number): string {
 
 /** Los borrados conocidos prevalecen sobre copias antiguas del movimiento. */
 export function stageLegacyHistory(transactions: Transaction[], deletedIds: number[]): HistoryEntry[] {
+  assertNoIdentifiedDeletionOverlap(transactions, deletedIds);
   const rows: HistoryEntry[] = transactions.map((transaction) => ({
     id: transaction.id,
     deleted: false,

@@ -42,7 +42,7 @@ const emptyCloud = { transactions: [], goals: [], deletedTransactionIds: [], del
 function fixture(initial = {}, { paused = false, accepted = true } = {}) {
   const state = { transactions: initial.transactions ?? [], goals: initial.goals ?? [],
     deletedTransactionIds: initial.deletedTransactionIds ?? [], deletedGoalIds: initial.deletedGoalIds ?? [] };
-  const initialRefs = { ...state };
+  const initialRefs = { ...state }, errors = [];
   const jobs = []; let requests = 0, renders = 0, changes = 0, cleanup, dependencies, dirty = false;
   let response = { ...emptyCloud, ...initial };
   const scope = { ...merge, ready: true, hasOnboarded: true, uid: "A", isPremium: true,
@@ -50,7 +50,7 @@ function fixture(initial = {}, { paused = false, accepted = true } = {}) {
     transactionsLive: { current: state.transactions }, goalsLive: { current: state.goals },
     deletedTransactionIdsRef: { current: state.deletedTransactionIds }, useCallback: fn => fn,
     assertPrivateBoxMoneyLocalIdle() {}, assertPrivateBoxMoneyLocalMutation() {},
-    applyNewerCloudFields: () => accepted, setDatosNegocio() {},
+    applyNewerCloudFields: () => accepted, setDatosNegocio() {}, setRespaldoFallo: value => errors.push(value),
     setAutoCapturePermission() {}, notificationReader: { isPermissionGranted: () => false },
     reengancharLector() {}, collect() {},
     loadCloudData: async () => {
@@ -86,7 +86,7 @@ function fixture(initial = {}, { paused = false, accepted = true } = {}) {
       if (dirty) render();
     }
   }
-  return { scope, state, initialRefs, jobs, render, settle,
+  return { scope, state, initialRefs, jobs, errors, render, settle,
     response: value => { response = { ...emptyCloud, ...value }; },
     dispatch, counts: () => ({ requests, renders, changes }), stop: () => cleanup?.() };
 }
@@ -176,4 +176,29 @@ for (const input of [{ isPremium: false }, { ready: false }, { hasOnboarded: fal
   const f = fixture(); Object.assign(f.scope, input); f.render(); await f.settle();
   assert.equal(f.counts().requests, 0, "no consulta cuando el efecto no tiene permiso/contexto preparado"); f.stop();
 }
-console.log("Consultas estables: efectos/setters/fusiones originales con hooks, Auth/red adaptados; regresión del bucle, novedades/borrados/sesión/resume. No mide facturación ni prueba Android/SDK real.");
+for (const [code, reason] of [["cloud/history-format-unsupported", "actualizacion-necesaria"], ["cloud/record-identity-invalid", "datos-nube-invalidos"]]) {
+  const f = fixture({ transactions: [record(1)], goals: [goal(2)] });
+  const failure = Object.assign(new Error("formato desconocido"), { code });
+  f.scope.loadCloudData = async () => { throw failure; };
+  f.render(); await f.settle();
+  assert.deepEqual(f.errors, [reason], "abrir no oculta ni confunde formato nuevo/datos inválidos");
+  f.errors.length = 0;
+  f.scope.resume("active"); await f.settle();
+  assert.deepEqual(f.errors, [reason], "volver tampoco anuncia un reintento suficiente");
+  for (const key of Object.keys(f.state)) assert.equal(f.state[key], f.initialRefs[key], "sin formato conocido no se modifica una lista");
+  f.stop();
+}
+for (const invalidation of ["uid", "version", "unmount"]) {
+  const f = fixture({ transactions: [record(1)] });
+  let rejectRead;
+  f.scope.loadCloudData = () => new Promise((_resolve, reject) => { rejectRead = reject; });
+  f.render();
+  if (invalidation === "uid") f.scope.auth.currentUser = { uid: "B" };
+  if (invalidation === "version") f.scope.localSessionVersion.current++;
+  if (invalidation === "unmount") f.stop();
+  rejectRead(Object.assign(new Error("formato desconocido"), { code: "cloud/history-format-unsupported" }));
+  await f.settle();
+  assert.deepEqual(f.errors, [], "un fallo atrasado no pone un aviso en otra sesión/pantalla");
+  assert.equal(f.state.transactions, f.initialRefs.transactions); f.stop();
+}
+console.log("Consultas estables: efectos/setters/fusiones originales con hooks, Auth/red adaptados; bucle, novedades/borrados/sesión/resume y avisos de formato, sin aceptar fallos atrasados. No mide facturación ni prueba Android/SDK real.");
