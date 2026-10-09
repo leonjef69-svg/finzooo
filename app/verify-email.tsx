@@ -6,7 +6,7 @@ import { auth } from "@/utils/firebase";
 import { withTimeout } from "@/utils/withTimeout";
 
 export default function VerifyEmailRoute() {
-  const { openLocalAccount, hydrateFromCloud, logout } = useAppData();
+  const { t, openLocalAccount, hydrateFromCloud, logout } = useAppData();
 
   return (
     <VerifyEmail
@@ -15,6 +15,11 @@ export default function VerifyEmailRoute() {
         const user = auth.currentUser;
         if (!user) return false;
         await withTimeout(reload(user));
+        if (auth.currentUser !== user) {
+          const failure = new Error(t("settings.noActiveSession"));
+          failure.name = "LocalAccountAccessError";
+          throw failure;
+        }
         if (!user.emailVerified) return false;
         const localRestored = await withTimeout(openLocalAccount(user.uid, user.email));
         if (localRestored) {
@@ -31,9 +36,10 @@ export default function VerifyEmailRoute() {
         return true;
       }}
       onResend={async () => {
-        if (auth.currentUser) {
-          await withTimeout(sendEmailVerification(auth.currentUser));
-        }
+        const user = auth.currentUser;
+        if (!user) throw new Error(t("settings.noActiveSession"));
+        await withTimeout(sendEmailVerification(user));
+        if (auth.currentUser !== user) throw new Error(t("settings.noActiveSession"));
       }}
       onLogout={async () => {
         await logout();

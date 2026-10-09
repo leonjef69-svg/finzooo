@@ -1,5 +1,19 @@
 # Entregas de Fino
 
+## Preparado, no entregado — acceso inicial funcional (08/10/2026)
+
+Registro parcial, Google de Bienvenida, carga de cuenta distinguida del
+acceso, verificación/reset y teclado/fondo; rediseño retirado y diferido por
+el propietario. Guía PRUEBAS_ACCESO_INICIAL_VIDEO.md conserva evidencia del
+video, pruebas/regresiones y límite de la primera integral SDK/HTTP. Integral
+final 189/189 aprobada; repetición aislada 14/14, sin relajar la aserción que
+falló primero. Acceso usa el SDK de la app y sus manejadores originales.
+Firma instalada sí registrada según consulta Firebase solo lectura; no se
+modificó nube/configuración. **Qué sigue:** recorrido inicial y continuidad entre cuentas.
+**Qué falta:** cuenta/Google/correo reales en Android, resto de auditoría,
+consolas/trámites/migración/cobros y entrega autorizada. No APK/AAB/OTA/EAS
+ni despliegue; Git no actualiza una instalación de producción. Tarjetas/Sentry fuera.
+
 ## Preparado, no entregado — aceptación servidor parcial (08/10/2026)
 
 Callable/recibo privado versionado y reglas, cliente con elección local y

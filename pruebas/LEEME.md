@@ -1,5 +1,13 @@
 # Pruebas y auditores
 
+Acceso inicial: `verificar-bienvenida-acceso-real.mjs`,
+`verificar-registro-reintento-real.mjs` y
+`verificar-acceso-inicial-operativo.mjs` ejecutan originales con IO/JSX
+adaptado. Regresiones `a1000a5` rojas/actual verde; guía
+PRUEBAS_ACCESO_INICIAL_VIDEO.md. Auth SDK real local se comprueba aparte en
+`functions/integration-tests/initial-auth.test.js`: no Google nativo,
+Microsoft OAuth, envío real de correo ni prueba de todas las pantallas.
+
 FINO-50 parcial: `verificar-accesibilidad-controles-real.mjs` ejecuta JSX/
 acciones originales de Toggle, PIN y barras con adaptadores; mes/categorías
 son contratos estáticos. Regresiones `FINO_ACCESSIBILITY_BASELINE=53fbf38`

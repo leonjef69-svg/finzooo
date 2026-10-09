@@ -6,13 +6,18 @@ import { auth } from "@/utils/firebase";
 import { GoogleSignInCancelled, signInWithGoogle } from "@/utils/googleAuth";
 import { googleSignInErrorMessage } from "@/utils/googleSignInError";
 import { irUnaVez } from "@/utils/nav";
+import { recordLegalAcceptanceForCurrentAccount } from "@/utils/legalAcceptance";
+import { withTimeout } from "@/utils/withTimeout";
 
 export default function OnboardingRoute() {
-  const { t, openLocalAccount, hydrateFromCloud, setUserName, setUserEmail } = useAppData();
+  const { t, showToast, openLocalAccount, hydrateFromCloud, setUserName, setUserEmail } = useAppData();
 
   async function continueWithGoogle() {
+    let authenticated = false;
     try {
       await signInWithGoogle();
+      authenticated = true;
+      await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => showToast(t("legal.saveFailed")));
       const user = auth.currentUser;
       if (!user) throw new Error("Google no devolvió una cuenta.");
 
@@ -27,6 +32,8 @@ export default function OnboardingRoute() {
       router.replace(cloudResult === "restored" ? "/(tabs)" : "/setup");
     } catch (error) {
       if (error instanceof GoogleSignInCancelled) return;
+      if (error instanceof Error && error.name === "LocalAccountAccessError") throw error;
+      if (authenticated && (error as { code?: string })?.code !== "cloud/history-format-unsupported") throw new Error(t("login.accountOpenFailed"));
       throw new Error(googleSignInErrorMessage(error));
     }
   }

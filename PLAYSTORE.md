@@ -1,5 +1,13 @@
 # Lo que hay que rellenar en Play Console
 
+Acceso inicial preparado (08/10/2026): correcciones de registro/reintento,
+verificación y Google; no añaden proveedores, datos ni permisos. Hotmail/
+Outlook significan correo y contraseña, no OAuth Microsoft. Casilla previa
+también en Bienvenida. Diseño diferido; ninguna compra/anuncio configurados
+por este bloque. Firma real consultada solo lectura, sin cambiar Firebase.
+Pruebas locales no acreditan correo entregado ni acceso Android/Play; guía
+PRUEBAS_ACCESO_INICIAL_VIDEO.md. Revisión de consola/publicación siguen pendientes.
+
 Ampliación preparada FINO-47/49 (08/10/2026): al actuar sobre contenido compartido
 se confirma en `legalAcceptances/{uid}` un recibo privado con UID, versión/
 SHA-256 de documentos, elección y fecha del servidor. Solo versión vigente,

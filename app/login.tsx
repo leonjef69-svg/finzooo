@@ -3,6 +3,7 @@ import { router } from "expo-router";
 import Login from "@/screens/Login";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
+import { switchEntryRoute } from "@/utils/entryNavigation";
 
 export default function LoginRoute() {
   const { t, openLocalAccount, hydrateFromCloud, setUserName, setUserEmail } =
@@ -43,7 +44,7 @@ export default function LoginRoute() {
         }
         router.replace("/setup");
       }}
-      onGoRegister={() => router.replace("/register")}
+      onGoRegister={() => switchEntryRoute("/register")}
     />
   );
 }

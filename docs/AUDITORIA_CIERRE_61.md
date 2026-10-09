@@ -7,7 +7,12 @@ pruebas físicas ni a publicación. «Revalidar» significa que falta contrastar
 el hallazgo con el código actual y dejar una prueba vinculada; no presupone que
 siga fallando ni que ya esté corregido.
 
-No hay teléfono conectado ni AVD disponible en la comprobación de esta sesión.
+En la comprobación inicial no había teléfono ni AVD disponible. En la pasada
+del video/acceso del 08/10 sí estuvo conectado el emulador `emulator-5554`;
+la inspección fue parcial y no completa los recorridos Android de esta tabla.
+Guía `PRUEBAS_ACCESO_INICIAL_VIDEO.md`: 1.870 fotogramas, acceso simulado
+con SDK de la app, 189/189 comprobaciones SDK/HTTP locales aprobadas y
+correcciones de registro/verificación. Google/correos reales siguen pendientes.
 Las tarjetas de crédito permanecen excluidas por decisión del propietario.
 
 | Hallazgo | Tema original | Situación y condición de cierre |

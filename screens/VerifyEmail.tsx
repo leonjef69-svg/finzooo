@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ActivityIndicator, Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -20,10 +20,12 @@ export default function VerifyEmail({
   const [checking, setChecking] = useState(false);
   const [resending, setResending] = useState(false);
   const [message, setMessage] = useState("");
+  const verificationBusy = useRef(false);
   const insets = useSafeAreaInsets();
 
   async function handleCheck() {
-    if (checking || resending) return;
+    if (verificationBusy.current || checking || resending) return;
+    verificationBusy.current = true;
     setChecking(true);
     setMessage("");
     try {
@@ -35,26 +37,39 @@ export default function VerifyEmail({
       // Un fallo de red o de Firebase no puede dejar a la persona mirando
       // un círculo para siempre. El botón vuelve a estar disponible abajo.
       const code = (error as { code?: string })?.code;
-      setMessage(code === "cloud/history-format-unsupported"
+      setMessage(error instanceof Error && error.name === "LocalAccountAccessError" ? error.message : code === "cloud/history-format-unsupported"
         ? firebaseErrorMessage(code)
-        : t("verifyEmail.notDetected"));
+        : t("verifyEmail.checkFailed"));
     } finally {
+      verificationBusy.current = false;
       setChecking(false);
     }
   }
 
   async function handleResend() {
-    if (checking || resending) return;
+    if (verificationBusy.current || checking || resending) return;
+    verificationBusy.current = true;
     setResending(true);
     setMessage("");
     try {
       await onResend();
       setMessage(t("verifyEmail.resent"));
     } catch {
-      setMessage(t("verifyEmail.notDetected"));
+      setMessage(t("verifyEmail.resendFailed"));
     } finally {
+      verificationBusy.current = false;
       setResending(false);
     }
+  }
+
+  async function handleLogout() {
+    if (verificationBusy.current) return;
+    verificationBusy.current = true;
+    setChecking(true);
+    setMessage("");
+    try { await onLogout(); }
+    catch { setMessage(t("verifyEmail.logoutFailed")); }
+    finally { verificationBusy.current = false; setChecking(false); }
   }
 
   return (
@@ -120,7 +135,7 @@ export default function VerifyEmail({
         </Text>
       </TouchableOpacity>
 
-      <TouchableOpacity activeOpacity={0.7} onPress={onLogout} className="mt-4 items-center py-2">
+      <TouchableOpacity activeOpacity={0.7} disabled={checking || resending} onPress={handleLogout} className="mt-4 items-center py-2">
         <Text className="text-sm font-semibold text-white">{t("verifyEmail.useOtherAccount")}</Text>
       </TouchableOpacity>
       </View>

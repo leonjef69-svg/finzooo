@@ -1,8 +1,10 @@
-import { useState, type ReactNode } from "react";
+import { useCallback, useRef, useState, type ReactNode } from "react";
+import { useFocusEffect } from "expo-router";
 import { ActivityIndicator, ImageBackground, Platform, ScrollView, StatusBar, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BellRing, ChartNoAxesCombined, ReceiptText, ShieldCheck } from "lucide-react-native";
 import { useAppData } from "@/contexts/AppDataContext";
+import AuthLegalAcceptance from "@/components/AuthLegalAcceptance";
 
 type Props = { onGoogle: () => Promise<void>; onCreateAccount: () => void; onLogin: () => void };
 
@@ -11,13 +13,31 @@ export default function Onboarding({ onGoogle, onCreateAccount, onLogin }: Props
   const insets = useSafeAreaInsets();
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState("");
+  const [legalAccepted, setLegalAccepted] = useState(false);
+  const [navigating, setNavigating] = useState(false);
+  const authBusy = useRef(false);
+  const navigationBusy = useRef(false);
+  useFocusEffect(useCallback(() => {
+    navigationBusy.current = false;
+    setNavigating(false);
+  }, []));
+
+  function navigate(action: () => void) {
+    if (authBusy.current || navigationBusy.current) return;
+    navigationBusy.current = true;
+    setNavigating(true);
+    action();
+  }
 
   async function continueWithGoogle() {
+    if (authBusy.current || navigationBusy.current) return;
+    if (!legalAccepted) { setGoogleError(t("auth.legalRequired")); return; }
+    authBusy.current = true;
     setGoogleError("");
     setGoogleLoading(true);
     try { await onGoogle(); }
     catch (error) { setGoogleError(error instanceof Error ? error.message : t("login.googleError")); }
-    finally { setGoogleLoading(false); }
+    finally { authBusy.current = false; setGoogleLoading(false); }
   }
 
   return (
@@ -51,11 +71,12 @@ export default function Onboarding({ onGoogle, onCreateAccount, onLogin }: Props
           <Feature icon={<ShieldCheck size={20} color="#15803d" />} tint="bg-emerald-50" title={t("onboarding.savings")} subtitle={fmt(120)} />
         </View>
         <View>
-          {Platform.OS === "android" ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("onboarding.continueGoogle")} disabled={googleLoading} onPress={continueWithGoogle} className="h-14 rounded-2xl bg-white flex-row items-center justify-center">
+          {Platform.OS === "android" ? <View className="rounded-2xl bg-white px-3"><AuthLegalAcceptance accepted={legalAccepted} onChange={setLegalAccepted} disabled={googleLoading || navigating} t={t} /></View> : null}
+          {Platform.OS === "android" ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("onboarding.continueGoogle")} accessibilityState={{ disabled: googleLoading || navigating || !legalAccepted, busy: googleLoading }} disabled={googleLoading || navigating || !legalAccepted} onPress={continueWithGoogle} className="h-14 rounded-2xl bg-white flex-row items-center justify-center">
             {googleLoading ? <ActivityIndicator color="#0f766e" /> : <><Text className="mr-3 text-2xl font-extrabold text-[#4285F4]">G</Text><Text className="text-base font-extrabold text-slate-900">{t("onboarding.continueGoogle")}</Text></>}
           </TouchableOpacity> : null}
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("onboarding.createAccount")} onPress={onCreateAccount} className={`${Platform.OS === "android" ? "mt-3" : ""} h-14 rounded-2xl bg-amber-500 items-center justify-center`}><Text className="text-base font-extrabold text-white">{t("onboarding.createAccount")}</Text></TouchableOpacity>
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("onboarding.haveAccount")} onPress={onLogin} className="h-12 items-center justify-center"><Text className="text-sm font-bold text-white underline">{t("onboarding.haveAccount")}</Text></TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("onboarding.createAccount")} disabled={googleLoading || navigating} onPress={() => navigate(onCreateAccount)} className={`${Platform.OS === "android" ? "mt-3" : ""} h-14 rounded-2xl bg-amber-500 items-center justify-center`}><Text className="text-base font-extrabold text-white">{t("onboarding.createAccount")}</Text></TouchableOpacity>
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("onboarding.haveAccount")} disabled={googleLoading || navigating} onPress={() => navigate(onLogin)} className="h-12 items-center justify-center"><Text className="text-sm font-bold text-white underline">{t("onboarding.haveAccount")}</Text></TouchableOpacity>
           {googleError ? <Text className="mt-2 text-center text-xs font-bold text-red-200">{googleError}</Text> : null}
         </View>
       </ScrollView>

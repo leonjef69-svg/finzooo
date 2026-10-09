@@ -18,10 +18,10 @@ for (const [file, name] of paths) {
   const dependencies = {
     withTimeout: promise => promise, recordLegalAcceptanceForCurrentAccount: async () => { calls.push("receipt"); }, showToast: value => errors.push(value),
     authBusy, legalAccepted: false, t: key => key,
-    name: "Ana Torres", email: "ana@example.test", pass: "pass-test-only", auth: {},
+    name: "Ana Torres", email: "ana@example.test", pass: "pass-test-only", auth: { currentUser: null }, createdUser: { current: null }, verificationSent: { current: false },
     setGoogleError: value => errors.push(value), setErrors: value => errors.push(value), setError: value => errors.push(value),
     setLoading: value => calls.push(["loading", value]), setGoogleLoading: value => calls.push(["googleLoading", value]),
-    createUserWithEmailAndPassword: async () => { calls.push("create"); return { user: {} }; },
+    createUserWithEmailAndPassword: async () => { calls.push("create"); const user = { uid: "uid-test" }; dependencies.auth.currentUser = user; return { user }; },
     updateProfile: async () => calls.push("profile"), sendEmailVerification: async () => calls.push("verify"),
     signInWithGoogle: async () => { calls.push("google"); if (pendingResolve === null) await new Promise(resolve => { pendingResolve = resolve; }); },
     onRegistered: async () => calls.push("registered"), onGoogleSignedIn: async () => calls.push("signed"),
@@ -53,6 +53,7 @@ for (const [file, name] of paths) {
     assert.equal(calls.filter(value => typeof value === "string").length, 0);
   }
   calls.length = 0; errors.length = 0; dependencies.email = "ana@example.test";
+  dependencies.createdUser.current = null; dependencies.verificationSent.current = false;
   dependencies.signInWithGoogle = async () => { calls.push("google"); };
   dependencies.recordLegalAcceptanceForCurrentAccount = async () => { calls.push("receipt-failed"); throw new Error("disk-error"); };
   await handlerOriginal(file, name, dependencies, source(file))();

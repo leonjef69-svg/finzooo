@@ -1,8 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Image,
-  Keyboard,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -49,16 +48,12 @@ export default function Register({
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState("");
   const [legalAccepted, setLegalAccepted] = useState(false);
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
   const authBusy = useRef(false);
+  const createdUser = useRef<typeof auth.currentUser>(null);
+  const verificationSent = useRef(false);
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
 
-  useEffect(() => {
-    const show = Keyboard.addListener("keyboardDidShow", () => setKeyboardVisible(true));
-    const hide = Keyboard.addListener("keyboardDidHide", () => setKeyboardVisible(false));
-    return () => { show.remove(); hide.remove(); };
-  }, []);
 
   async function registerWithGoogle() {
     if (authBusy.current) return;
@@ -70,13 +65,16 @@ export default function Register({
     setErrors({});
     setGoogleError("");
     setGoogleLoading(true);
+    let authenticated = false;
     try {
       await signInWithGoogle();
+      authenticated = true;
       await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => showToast(t("legal.saveFailed")));
       await onGoogleSignedIn();
     } catch (err) {
       if (err instanceof GoogleSignInCancelled) return;
       if (err instanceof Error && err.name === "LocalAccountAccessError") setGoogleError(err.message);
+      else if (authenticated && (err as { code?: string })?.code !== "cloud/history-format-unsupported") setGoogleError(t("login.accountOpenFailed"));
       else setGoogleError(googleSignInErrorMessage(err));
     } finally {
       authBusy.current = false;
@@ -93,7 +91,8 @@ export default function Register({
     setGoogleError("");
     const e: Errors = {};
     if (name.trim().length < 2) e.name = t("register.nameError");
-    if (!/^\S+@\S+\.\S+$/.test(email)) e.email = t("register.emailError");
+    const normalizedEmail = email.trim();
+    if (!/^\S+@\S+\.\S+$/.test(normalizedEmail)) e.email = t("register.emailError");
     if (pass.length < 8) e.pass = t("register.passwordError");
     setErrors(e);
     if (Object.keys(e).length) return;
@@ -101,14 +100,36 @@ export default function Register({
     authBusy.current = true;
     setLoading(true);
     try {
-      const credential = await createUserWithEmailAndPassword(auth, email.trim(), pass);
+      // Firebase puede haber creado la cuenta antes de que falle perfil,
+      // correo o apertura local. Reintentar termina esa cuenta, no crea otra.
+      if (!createdUser.current) {
+        createdUser.current = (await createUserWithEmailAndPassword(auth, normalizedEmail, pass)).user;
+        verificationSent.current = false;
+      }
+      const user = createdUser.current;
+      function requireSameAccount() {
+        if (auth.currentUser !== user) {
+          const failure = new Error(t("settings.noActiveSession"));
+          failure.name = "LocalAccountAccessError";
+          throw failure;
+        }
+      }
+      requireSameAccount();
       await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => showToast(t("legal.saveFailed")));
-      await updateProfile(credential.user, { displayName: name.trim() });
-      await sendEmailVerification(credential.user);
-      await onRegistered(name.trim(), email.trim());
+      requireSameAccount();
+      await withTimeout(updateProfile(user, { displayName: name.trim() }));
+      requireSameAccount();
+      if (!verificationSent.current) {
+        try {
+          await withTimeout(sendEmailVerification(user));
+          verificationSent.current = true;
+        } catch { showToast(t("register.verificationRetry")); }
+      }
+      requireSameAccount();
+      await onRegistered(name.trim(), normalizedEmail);
     } catch (err) {
       const code = (err as { code?: string })?.code || "";
-      setErrors({ general: err instanceof Error && err.name === "LocalAccountAccessError" ? err.message : firebaseErrorMessage(code) });
+      setErrors({ general: err instanceof Error && err.name === "LocalAccountAccessError" ? err.message : createdUser.current ? t("register.accountCreatedRetry") : firebaseErrorMessage(code) });
     } finally {
       authBusy.current = false;
       setLoading(false);
@@ -125,16 +146,15 @@ export default function Register({
         source={require("../assets/images/onboarding/fino-sunset-background.png")}
         resizeMode="cover"
         className="absolute inset-0 h-full w-full"
-        style={{ transform: [{ scale: 1.08 }, { translateY: -120 }] }}
+        style={{ transform: [{ scale: 1.08 }] }}
       />
       <View className="absolute inset-0 bg-black/40" />
       <ScrollView
-        contentContainerStyle={{ paddingTop: insets.top + 215, paddingBottom: insets.bottom }}
+        contentContainerStyle={{ flexGrow: 1, paddingTop: insets.top + 215, paddingBottom: 0 }}
         keyboardShouldPersistTaps="handled"
-        scrollEnabled={height < 700 || keyboardVisible}
         bounces={false}
       >
-        <View className="rounded-t-[30px] bg-white/95 pb-4" style={{ minHeight: Math.max(600, height - insets.top - 215) }}>
+        <View className="rounded-t-[30px] bg-white/95 pb-4" style={{ minHeight: Math.max(0, height - insets.top - 215), paddingBottom: insets.bottom + 16 }}>
         <View className="px-6 pt-7 pb-3">
           <Text className="text-2xl font-extrabold text-slate-900">{t("register.title")}</Text>
           <Text className="text-sm text-slate-500 mt-1">{t("register.subtitle")}</Text>
@@ -147,6 +167,7 @@ export default function Register({
             onChange={setName}
             placeholder={t("register.namePlaceholder")}
             error={errors.name}
+            editable={!loading && !googleLoading}
             light
           />
           <AuthField
@@ -156,6 +177,7 @@ export default function Register({
             placeholder={t("auth.emailPlaceholder")}
             error={errors.email}
             keyboardType="email-address"
+            editable={!loading && !googleLoading && !createdUser.current}
             light
           />
           <AuthField
@@ -165,6 +187,7 @@ export default function Register({
             onChange={setPass}
             placeholder="••••••••"
             error={errors.pass}
+            editable={!loading && !googleLoading && !createdUser.current}
             light
           />
           {errors.general ? (
@@ -185,7 +208,7 @@ export default function Register({
             {loading ? (
               <ActivityIndicator color="#ffffff" />
             ) : (
-              <Text className="text-white font-bold">{t("register.submit")}</Text>
+              <Text className="text-white font-bold">{t(createdUser.current ? "register.finishAccount" : "register.submit")}</Text>
             )}
           </TouchableOpacity>
 
@@ -208,7 +231,7 @@ export default function Register({
           {/* gap-1: ver la nota del mismo bloque en Login.tsx. */}
           <View className="flex-row justify-center gap-1 mt-4">
             <Text className="text-sm text-slate-500">{t("register.haveAccount")}</Text>
-            <TouchableOpacity onPress={onGoLogin}>
+            <TouchableOpacity disabled={loading || googleLoading} onPress={() => { if (!authBusy.current) onGoLogin(); }}>
               <Text className="text-sm text-amber-600 font-bold">{t("register.login")}</Text>
             </TouchableOpacity>
           </View>

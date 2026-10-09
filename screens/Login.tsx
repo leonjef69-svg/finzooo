@@ -55,12 +55,14 @@ export default function Login({
     setError("");
     authBusy.current = true;
     setLoading(true);
+    let authenticated = false;
     try {
       await signInWithEmailAndPassword(auth, email.trim(), pass);
+      authenticated = true;
       await onLoggedIn();
     } catch (err) {
       const code = (err as { code?: string })?.code || "";
-      setError(err instanceof Error && err.name === "LocalAccountAccessError" ? err.message : firebaseErrorMessage(code));
+      setError(err instanceof Error && err.name === "LocalAccountAccessError" ? err.message : authenticated && code !== "cloud/history-format-unsupported" ? t("login.accountOpenFailed") : firebaseErrorMessage(code));
     } finally {
       authBusy.current = false;
       setLoading(false);
@@ -79,8 +81,10 @@ export default function Login({
     setError("");
     setGoogleError("");
     setGoogleLoading(true);
+    let authenticated = false;
     try {
       await signInWithGoogle();
+      authenticated = true;
       await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => showToast(t("legal.saveFailed")));
       await onLoggedIn();
     } catch (err) {
@@ -88,6 +92,7 @@ export default function Login({
       // a propósito, mostrarle un error rojo sería confuso.
       if (err instanceof GoogleSignInCancelled) return;
       if (err instanceof Error && err.name === "LocalAccountAccessError") setGoogleError(err.message);
+      else if (authenticated && (err as { code?: string })?.code !== "cloud/history-format-unsupported") setGoogleError(t("login.accountOpenFailed"));
       else setGoogleError(googleSignInErrorMessage(err));
     } finally {
       authBusy.current = false;
@@ -96,12 +101,14 @@ export default function Login({
   }
 
   async function forgotPassword() {
-    if (!/^\S+@\S+\.\S+$/.test(email)) {
+    if (authBusy.current) return;
+    if (!/^\S+@\S+\.\S+$/.test(email.trim())) {
       Alert.alert(t("login.writeEmailFirstTitle"), t("login.writeEmailFirstMessage"));
       return;
     }
+    authBusy.current = true;
     try {
-      await sendPasswordResetEmail(auth, email.trim());
+      await withTimeout(sendPasswordResetEmail(auth, email.trim()));
       Alert.alert(
         t("login.resetEmailSentTitle"),
         t("login.resetEmailSentMessage", { email: email.trim() })
@@ -109,6 +116,8 @@ export default function Login({
     } catch (err) {
       const code = (err as { code?: string })?.code || "";
       Alert.alert(t("login.resetEmailFailedTitle"), firebaseErrorMessage(code));
+    } finally {
+      authBusy.current = false;
     }
   }
 
@@ -122,7 +131,7 @@ export default function Login({
         source={require("../assets/images/onboarding/fino-sunset-background.png")}
         resizeMode="cover"
         className="absolute inset-0 h-full w-full"
-        style={{ transform: [{ scale: 1.08 }, { translateY: -120 }] }}
+        style={{ transform: [{ scale: 1.08 }] }}
       />
       <View className="absolute inset-0 bg-black/45" />
       <ScrollView
@@ -130,11 +139,11 @@ export default function Login({
           flexGrow: 1,
           paddingHorizontal: 0,
           paddingTop: insets.top + 245,
-          paddingBottom: insets.bottom + 24,
+          paddingBottom: 0,
         }}
         keyboardShouldPersistTaps="handled"
       >
-        <View className="rounded-t-[30px] bg-white/95 px-6 pt-8 pb-7" style={{ minHeight: Math.max(610, height - insets.top - 245) }}>
+        <View className="rounded-t-[30px] bg-white/95 px-6 pt-8 pb-7" style={{ minHeight: Math.max(0, height - insets.top - 245), paddingBottom: insets.bottom + 24 }}>
           <View className="w-12 h-12 rounded-2xl bg-amber-500 items-center justify-center mb-5">
             <Wallet size={22} color="#ffffff" />
           </View>
@@ -148,6 +157,7 @@ export default function Login({
             onChange={setEmail}
             placeholder={t("auth.emailPlaceholder")}
             keyboardType="email-address"
+            editable={!loading && !googleLoading}
             light
           />
           <AuthField
@@ -156,10 +166,11 @@ export default function Login({
             value={pass}
             onChange={setPass}
             placeholder="••••••••"
+            editable={!loading && !googleLoading}
             light
           />
           {error ? <Text className="text-rose-500 text-xs font-medium -mt-2">{error}</Text> : null}
-          <TouchableOpacity onPress={forgotPassword}>
+          <TouchableOpacity disabled={loading || googleLoading} onPress={forgotPassword}>
             <Text className="text-right text-xs font-semibold text-amber-600">
               {t("login.forgotPassword")}
             </Text>
@@ -204,7 +215,7 @@ export default function Login({
             no se ve y cualquiera lo borraría sin saber que hacía falta. */}
         <View className="flex-row justify-center gap-1 mt-6 pb-6">
           <Text className="text-sm text-slate-500">{t("login.noAccount")}</Text>
-          <TouchableOpacity onPress={onGoRegister}>
+          <TouchableOpacity disabled={loading || googleLoading} onPress={() => { if (!authBusy.current) onGoRegister(); }}>
             <Text className="text-sm text-amber-600 font-bold">{t("login.register")}</Text>
           </TouchableOpacity>
           </View>

@@ -1,5 +1,27 @@
 # Estado actual de Fino
 
+## Prioridad: acceso inicial estable, no rediseño (08/10/2026)
+
+- Video decodificado completo: 1.870 fotogramas, 1.706 imágenes distintas
+  revisadas; duplicados exactos conservan tiempos. Guía
+  `docs/PRUEBAS_ACCESO_INICIAL_VIDEO.md` separa observación, causa y límites.
+- Tercer Google protegido; error de datos no se disfraza de fallo Google.
+  Registro parcial continúa sin recrear cuenta; verificación/reset únicos,
+  mensajes precisos y desplazamiento/fondo funcional corregidos. UI nueva
+  retirada por decisión del propietario; diseño queda para después.
+- Firma Debug instalada comprobada en Firebase real SOLO LECTURA: sí está
+  registrada; JSON local no reflejaba todas. Ninguna configuración cambiada.
+- TypeScript/ESLint y 172 pruebas/8 auditores aprobados sin tarjetas, una
+  prueba ajena no versionada (171 previstas Git limpio; no otro checkout).
+  Integral final SDK/HTTP: 189/189 aprobados, sin omitir casos. Primera pasada
+  falló por espera 25 s/evento ~26 s; aislada 14/14 y repetición integral
+  aprobadas sin alterar esa aserción ni ampliar la espera. Acceso nuevo usa
+  Firebase 12.16 de la app y manejadores originales contra Auth local.
+- **Qué sigue:** recorrido de acceso/configuración y continuidad entre cuentas.
+  **Qué falta:** cuentas/Google/correo Android real, resto de IDs, SMTP,
+  consolas/trámites/cobros/migración y entrega autorizada. Nada desplegado;
+  tarjetas/Sentry externo fuera. Auditoría no terminada.
+
 ## FINO-47/49 — aceptación en servidor preparada (08/10/2026)
 
 - Callable verificado y recibo privado por UID/versionado; reglas preparadas

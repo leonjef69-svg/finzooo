@@ -4,6 +4,16 @@
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
 
 ## FINO-47/49 — barrera de servidor preparada (08/10/2026)
+Ampliación de acceso: `PRUEBAS_ACCESO_INICIAL_VIDEO.md` registra tercer Google,
+reintentos de registro, verificación y cobertura del video. UI/rediseño diferidos
+por el propietario. Firma Android Firebase real consultada solo lectura, sí
+registrada. App 172/8 aprobadas; integral final SDK/HTTP 189/189 y repetición
+aislada 14/14 aprobadas, conservando aserción/espera de limpieza Auth que falló
+primero. Acceso ejecuta manejadores originales y SDK Firebase 12.16 de la app.
+**Qué sigue:** acceso/configuración y continuidad entre cuentas.
+**Qué falta:** Google/correo Android reales, resto de IDs y
+acciones externas/entrega; no cerrar FINO-47/49 ni auditoría.
+
 
 Callable verificado sin Pro, recibo privado versionado y reglas preparadas;
 edición de aporte/inicio de conversión en transacción, salidas financieras

@@ -11,6 +11,7 @@ type Props = {
   error?: string;
   keyboardType?: "default" | "email-address";
   light?: boolean;
+  editable?: boolean;
 };
 
 export default function AuthField({
@@ -22,6 +23,7 @@ export default function AuthField({
   error,
   keyboardType = "default",
   light = false,
+  editable = true,
 }: Props) {
   const [show, setShow] = useState(false);
   const isPassword = type === "password";
@@ -35,7 +37,11 @@ export default function AuthField({
         }`}
       >
         <TextInput
-          disableFullscreenUI          value={value}
+          disableFullscreenUI
+          value={value}
+          editable={editable}
+          accessibilityLabel={label}
+          autoCorrect={false}
           onChangeText={onChange}
           placeholder={placeholder}
           placeholderTextColor="#94a3b8"
@@ -46,6 +52,7 @@ export default function AuthField({
         />
         {isPassword && (
           <TouchableOpacity
+            disabled={!editable}
             onPress={() => setShow(!show)}
             accessibilityRole="button"
             accessibilityLabel={show ? "Ocultar contraseña" : "Mostrar contraseña"}
