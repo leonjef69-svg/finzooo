@@ -905,7 +905,7 @@ export default function ExportPdfSheet({
     <Animated.View
       style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "flex-end", zIndex: 40 }, animatedPaddingStyle]}
     >
-      <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       {/* La hoja no puede pasar del 88% de la pantalla. Con la vista previa
           dentro, en un celular corto el botón de exportar se salía por abajo
           y no había forma de alcanzarlo: se veían las opciones pero no se
@@ -922,7 +922,7 @@ export default function ExportPdfSheet({
           <Text className="font-extrabold text-slate-900 dark:text-slate-100 text-base">
             {t("exportPdf.exportDataTitle")}
           </Text>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} hitSlop={6}
             onPress={onClose}
             className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
@@ -1176,7 +1176,7 @@ export default function ExportPdfSheet({
                       : "bg-white dark:bg-noche-2 border-slate-200 dark:border-noche-borde"
                   }`}
                 >
-                  <TouchableOpacity
+                  <TouchableOpacity accessibilityRole="togglebutton" accessibilityLabel={c.name} accessibilityState={{ checked: contactoId === c.id }}
                     onPress={() => setContactoId(contactoId === c.id ? null : c.id)}
                     onLongPress={() => borrarContacto(c.id)}
                     className="pl-3.5 pr-2 py-2.5"
@@ -1194,7 +1194,7 @@ export default function ExportPdfSheet({
                       visible, así que se descubre tarde. Sin esto, la única
                       forma de corregirlo era borrarlo y escribirlo entero
                       otra vez. */}
-                  <TouchableOpacity
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("accessibility.editContact", { name: c.name })}
                     onPress={() => editarContacto(c)}
                     hitSlop={{ top: 10, bottom: 10, left: 4, right: 4 }}
                     className="px-1 py-2.5"
@@ -1206,7 +1206,7 @@ export default function ExportPdfSheet({
                       nadie: un contacto escrito mal se quedaba ahí para
                       siempre. Mantener pulsado sigue funcionando para quien
                       ya lo sabía. */}
-                  <TouchableOpacity
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("accessibility.deleteContact", { name: c.name })}
                     onPress={() => borrarContacto(c.id)}
                     hitSlop={{ top: 10, bottom: 10, left: 4, right: 10 }}
                     className="pr-3 pl-0.5 py-2.5"

@@ -48,7 +48,7 @@ export default function SavingsList({
         <BackButton onPress={onBack} />
         <Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("savingsList.title")}</Text>
         {tab === "metas" && !soloLectura ? (
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("accessibility.addGoal")} hitSlop={6}
             onPress={onAdd}
             className="w-10 h-10 rounded-full bg-emerald-600 items-center justify-center"
           >

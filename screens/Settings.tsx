@@ -239,14 +239,14 @@ export default function Settings({
                   className="flex-1 text-lg font-bold border-b border-emerald-400 py-1"
                   style={{ color: primaryTextColor }}
                 />
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.save")}
                   onPress={saveName}
                   hitSlop={6}
                   className="w-9 h-9 rounded-full bg-emerald-600 items-center justify-center"
                 >
                   <Check size={17} color="#ffffff" />
                 </TouchableOpacity>
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.cancel")}
                   onPress={() => setEditingName(false)}
                   hitSlop={6}
                   className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
@@ -281,7 +281,7 @@ export default function Settings({
           {/* EL LÁPIZ, EN EL BORDE. Fuera de la fila del nombre para que el centrado sea real.
               Al editar desaparece: sus botones —aceptar y cancelar— ya están dentro. */}
           {!editingName && (
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.edit")}
               onPress={startEditName}
               hitSlop={10}
               className="w-8 h-8 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"

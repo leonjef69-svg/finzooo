@@ -146,7 +146,7 @@ export default function RecortarBoleta({
   return (
     <View className="flex-1 bg-black">
       <View className="flex-row items-center justify-between px-5 pt-14 pb-3">
-        <TouchableOpacity onPress={onCancelar} className="w-10 h-10 items-center justify-center">
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} hitSlop={6} onPress={onCancelar} className="w-10 h-10 items-center justify-center">
           <X size={22} color="#ffffff" />
         </TouchableOpacity>
         <Text className="text-sm font-bold text-white">{t("recorte.titulo")}</Text>

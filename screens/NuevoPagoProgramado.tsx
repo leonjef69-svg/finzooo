@@ -31,6 +31,7 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { TODOS_LOS_GRUPOS, iconoDe } from "@/constants/iconos";
 import { esFoto } from "@/utils/iconosFavoritos";
 import { COLOR_HEX_600 } from "@/constants/colors";
+import { iconLabelFor } from "@/utils/iconAccessibility";
 import { currencySymbolFor } from "@/constants/currencies";
 import {
   iconoSugerido,
@@ -93,7 +94,7 @@ export default function NuevoPagoProgramado({
   fecha?: string;
   onBack: () => void;
 }) {
-  const { t, monthNames, pagosProgramados, guardarPagoProgramado, quitarPagoProgramado, userCurrency } =
+  const { t, monthNames, pagosProgramados, guardarPagoProgramado, quitarPagoProgramado, userCurrency, userLanguage } =
     useAppData();
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -306,7 +307,7 @@ export default function NuevoPagoProgramado({
             el icono ya se pueda editar"*. Se hicieron las dos cosas — el sitio que se toca es
             el cuadro entero, que es de 56, y el lápiz creció a 15. */}
         <View className="flex-row items-center gap-3 mb-3">
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("calendario.nuevo.elegirDibujo")} accessibilityState={{ expanded: eligiendoIcono }} hitSlop={6}
             onPress={() => setEligiendoIcono(true)}
             className="w-[56px] h-[56px] rounded-2xl items-center justify-center overflow-hidden"
             style={{ backgroundColor: tinta + (oscuro ? "33" : "22") }}
@@ -339,7 +340,7 @@ export default function NuevoPagoProgramado({
             <View className="flex-row items-center justify-between mb-2.5">
               <View className="flex-row flex-1">
                 {(["dibujo", "foto", "color"] as const).map((x) => (
-                  <TouchableOpacity
+                  <TouchableOpacity accessibilityRole="tab" accessibilityLabel={t(`calendario.nuevo.pestana.${x}`)} accessibilityState={{ selected: pestana === x }}
                     key={x}
                     onPress={() => setPestana(x)}
                     className="px-3 py-1.5 mr-1 rounded-lg"
@@ -385,6 +386,7 @@ export default function NuevoPagoProgramado({
                             <Casilla
                               key={x}
                               id={x}
+                              label={iconLabelFor(x, userLanguage)}
                               puesto={x === icono}
                               tinta={tinta}
                               onPress={elegirDibujo}
@@ -425,7 +427,7 @@ export default function NuevoPagoProgramado({
             {pestana === "color" && (
               <View className="flex-row flex-wrap gap-2.5 py-1">
                 {Object.keys(COLOR_HEX_600).map((k) => (
-                  <TouchableOpacity
+                  <TouchableOpacity accessibilityRole="radio" accessibilityLabel={t("accessibility.colorOption", { color: t(`accessibility.color.${k}`) })} accessibilityState={{ checked: color === k }} hitSlop={6}
                     key={k}
                     onPress={() => setColor(k)}
                     style={{
@@ -580,18 +582,20 @@ function BotonFoto({ texto, onPress }: { texto: string; onPress: () => void }) {
  */
 const Casilla = memo(function Casilla({
   id,
+  label,
   puesto,
   tinta,
   onPress,
 }: {
   id: string;
+  label: string;
   puesto: boolean;
   tinta: string;
   onPress: (id: string) => void;
 }) {
   const D = iconoDe(id);
   return (
-    <TouchableOpacity
+    <TouchableOpacity accessibilityRole="radio" accessibilityLabel={label} accessibilityState={{ checked: puesto }}
       onPress={() => onPress(id)}
       style={{ width: "20%", aspectRatio: 1 }}
       className="items-center justify-center p-1"

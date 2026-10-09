@@ -358,7 +358,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
             filtros, que es donde se elige QUÉ se está mirando y por tanto qué se va a
             borrar: *"tiene que estar debajo de los botones de por pagar, pagados,
             recuerdos"*. */}
-        <TouchableOpacity onPress={() => irUnaVez("/calendario/avisos")} className="w-10 items-end p-1">
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("calendario.avisos.titulo")} hitSlop={6} onPress={() => irUnaVez("/calendario/avisos")} className="w-10 items-end p-1">
           <Settings size={19} color="#94a3b8" />
         </TouchableOpacity>
       </View>
@@ -413,13 +413,13 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
         )}
 
         <View className="flex-row items-center justify-between mb-3">
-          <TouchableOpacity onPress={() => { setMes(mesAnterior(mes)); setDiaAbierto(null); }} className="p-1.5">
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("accessibility.previousMonth")} hitSlop={6} onPress={() => { setMes(mesAnterior(mes)); setDiaAbierto(null); }} className="p-1.5">
             <ChevronLeft size={19} color="#94a3b8" />
           </TouchableOpacity>
           <Text className="text-[15px] font-bold text-slate-900 dark:text-slate-100">
             {monthNames[numeroMes - 1]} {anio}
           </Text>
-          <TouchableOpacity onPress={() => { setMes(mesSiguiente(mes)); setDiaAbierto(null); }} className="p-1.5">
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("accessibility.nextMonth")} hitSlop={6} onPress={() => { setMes(mesSiguiente(mes)); setDiaAbierto(null); }} className="p-1.5">
             <ChevronRight size={19} color="#94a3b8" />
           </TouchableOpacity>
         </View>
@@ -640,7 +640,7 @@ export default function CalendarioPagos({ onBack }: { onBack: () => void }) {
                   })}
                 </Text>
                 <View className="flex-row items-center gap-3">
-                  <TouchableOpacity
+                  <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.deleteSelected")} accessibilityState={{ disabled: seleccionados.length === 0 }} hitSlop={6}
                     onPress={() => setConfirmandoBorrar(true)}
                     disabled={seleccionados.length === 0}
                     className={`w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-950 items-center justify-center ${

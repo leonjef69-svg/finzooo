@@ -238,7 +238,7 @@ export default function Negocios({ onBack, soloLectura = false }: { onBack: () =
                     {/* PRODUCTOS PRIMERO, y en verde: es lo que se hace a diario con un
                         negocio. Editar el nombre se hace una vez. Con los dos del mismo color
                         se leerían como igual de importantes. */}
-                    <TouchableOpacity
+                    <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("negocios.productos")}
                       onPress={() => irUnaVez({ pathname: "/negocio/productos", params: { id: n.id } })}
                       className="flex-1 py-2.5 rounded-xl items-center bg-emerald-600 flex-row justify-center gap-1.5"
                     >
@@ -258,7 +258,7 @@ export default function Negocios({ onBack, soloLectura = false }: { onBack: () =
                         {t("negocios.editar")}
                       </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
+                    <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.delete")} hitSlop={6}
                       onPress={() => setBorrando(n.id)}
                       className="w-11 py-2.5 rounded-xl items-center justify-center bg-rose-50 dark:bg-rose-900/20"
                     >

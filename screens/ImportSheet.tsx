@@ -72,7 +72,7 @@ function ElegirMes({
   });
   return (
     <View className="absolute inset-0 items-center justify-center px-8 z-50">
-      <TouchableOpacity className="absolute inset-0 bg-slate-900/50" activeOpacity={1} onPress={onCancel} />
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} className="absolute inset-0 bg-slate-900/50" activeOpacity={1} onPress={onCancel} />
       <View className="bg-white dark:bg-noche-2 rounded-3xl p-6 w-full max-h-[70%]">
         <Text className="font-extrabold text-slate-900 dark:text-slate-100 text-base mb-1.5">
           {t("importSheet.pickMonthTitle", { count: cuantos })}
@@ -500,7 +500,7 @@ export default function ImportSheet({
 
   return (
     <View className="absolute inset-0 z-40 justify-end">
-      <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
         className="bg-white dark:bg-noche-2 rounded-t-3xl px-5 pt-3"
         style={{ paddingBottom: 32 + insets.bottom, maxHeight: "88%" }}
@@ -512,7 +512,7 @@ export default function ImportSheet({
           <Text className="font-extrabold text-base" style={{ color: primaryText }}>
             {t("importSheet.title")}
           </Text>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} hitSlop={6}
             onPress={onClose}
             className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
@@ -687,7 +687,7 @@ export default function ImportSheet({
             </View>
 
             <View className="flex-row gap-3">
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.cancel")} hitSlop={6}
                 onPress={reset}
                 className="w-12 py-3.5 rounded-2xl bg-slate-100 dark:bg-noche-2 items-center justify-center"
               >

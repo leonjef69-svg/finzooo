@@ -110,15 +110,15 @@ export function hayNovedades(enMemoria: Transaction[], guardadas: Transaction[])
 }
 
 /**
- * Los borrados evitan que otro teléfono resucite movimientos antiguos, pero
- * no deben crecer para siempre. Los identificadores salen del tiempo, así que
- * conservar los 5.000 más recientes cubre años de uso sin inflar la copia.
+ * Una marca no caduca por su posición: un dispositivo puede conservar un
+ * movimiento antiguo indefinidamente. Recortar la lista lo resucitaba.
+ * Una compactación futura necesita confirmación de todos los escritores,
+ * no un límite arbitrario. Si la copia no cabe, debe fallar sin perder marcas.
  */
-export function pruneDeletedTransactionIds(ids: number[], limit = 5000) {
+export function pruneDeletedTransactionIds(ids: number[]) {
   return [...new Set(ids)]
     .filter(Number.isFinite)
-    .sort((a, b) => b - a)
-    .slice(0, limit);
+    .sort((a, b) => b - a);
 }
 
 export function mergeGoals(locales: Goal[], remotas: Goal[]): Goal[] {
@@ -131,11 +131,10 @@ export function mergeGoals(locales: Goal[], remotas: Goal[]): Goal[] {
   return [...porId.values()].sort((a, b) => b.id - a.id);
 }
 
-export function pruneDeletedGoalIds(ids: number[], limit = 1000) {
+export function pruneDeletedGoalIds(ids: number[]) {
   return [...new Set(ids)]
     .filter(Number.isFinite)
-    .sort((a, b) => b - a)
-    .slice(0, limit);
+    .sort((a, b) => b - a);
 }
 
 // Cuántos avisos se recuerdan. El mismo tope que usa processCaptured: si

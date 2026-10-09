@@ -83,7 +83,7 @@ export default function DuplicateReview({
       style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}
     >
       <View className="flex-row items-center justify-between px-5 pt-2 pb-3">
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.cancel")} hitSlop={6}
           onPress={onCancel}
           className="w-10 h-10 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
         >

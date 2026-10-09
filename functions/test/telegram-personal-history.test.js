@@ -2,6 +2,9 @@
 
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const vm = require("node:vm");
+const fs = require("node:fs");
+const { execFileSync } = require("node:child_process");
 const {
   allPersonalTransactions, personalRecord, addPersonal, editPersonal, deletePersonal,
 } = require("../src/telegram-personal-history");
@@ -64,4 +67,47 @@ test("Telegram no modifica una cuenta cuyo borrado está pendiente", async () =>
   await assert.rejects(personalRecord(tx, root, data, 1), /ACCOUNT_DELETION_PENDING/);
   assert.throws(() => addPersonal(tx, root, data, {}, { id: 1 }, 850_000), /ACCOUNT_DELETION_PENDING/);
   assert.deepEqual(writes, []);
+});
+
+function historyOriginal() {
+  if (process.env.FINO_TELEGRAM_HISTORY_BASELINE && !/^[a-f0-9]{7,40}$/i.test(process.env.FINO_TELEGRAM_HISTORY_BASELINE)) throw new Error("Hash no válido");
+  const source = process.env.FINO_TELEGRAM_HISTORY_BASELINE
+    ? execFileSync("git", ["show", process.env.FINO_TELEGRAM_HISTORY_BASELINE + ":functions/src/telegram-personal-history.js"], { encoding: "utf8" })
+    : fs.readFileSync(require.resolve("../src/telegram-personal-history"), "utf8");
+  const module = { exports: {} };
+  vm.runInNewContext(source, { module, require: name => {
+    assert.equal(name, "firebase-admin/firestore");
+    return { FieldValue: { serverTimestamp: () => "SERVER_TIMESTAMP" } };
+  }, Buffer });
+  return module.exports;
+}
+
+test("Telegram antiguo rechaza un ID reservado por borrado sin anunciar un alta que desaparece", async () => {
+  const original = historyOriginal();
+  const { root, tx, writes } = fakeRoot();
+  const data = { transactions: [{ id: 1, amount: 10 }], deletedTransactionIds: [7] };
+  const before = JSON.stringify(data);
+  const record = await original.personalRecord(tx, root, data, 7);
+  assert.throws(() => original.addPersonal(tx, root, data, record, { id: 7, amount: 20 }, 850_000), /DUPLICATE_ID/);
+  assert.equal(JSON.stringify(data), before);
+  assert.deepEqual(writes, []);
+  original.addPersonal(tx, root, data, {}, { id: 8, amount: 20 }, 850_000);
+  assert.equal(writes.length, 1);
+  assert.equal(writes[0].data.transactions[1].id, 8);
+});
+
+test("Telegram conserva también el primer borrado después de superar 5000 marcas", async () => {
+  const original = historyOriginal(), { root, tx, writes } = fakeRoot();
+  const movement = { id: 6001, amount: 20, description: "Fixture" };
+  const data = { transactions: [movement], deletedTransactionIds: Array.from({ length: 5000 }, (_, index) => index + 1) };
+  const before = JSON.stringify(data);
+  const record = await original.personalRecord(tx, root, data, movement.id);
+  original.deletePersonal(tx, root, data, record, movement.id);
+  const saved = writes[0].data;
+  assert.equal(saved.deletedTransactionIds.length, 5001);
+  assert.ok(saved.deletedTransactionIds.includes(1), "no olvidar la primera marca ni resucitar un registro de otro teléfono");
+  assert.ok(saved.deletedTransactionIds.includes(movement.id));
+  assert.equal(saved.transactions.length, 0);
+  assert.equal(JSON.stringify(data), before);
+  assert.ok(Buffer.byteLength(JSON.stringify(saved)) < Buffer.byteLength(before), "este borrado no agranda la copia previa");
 });

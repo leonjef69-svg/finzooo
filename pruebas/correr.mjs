@@ -170,6 +170,7 @@ const AUDITORES = fs
   .sort();
 
 const SIN_TARJETAS = process.argv.includes("--sin-tarjetas");
+const entornoPruebas = { ...process.env, FINO_EXCLUDE_CREDIT: SIN_TARJETAS ? "1" : "0" };
 const FILTRO = process.argv.slice(2).find(value => value !== "--sin-tarjetas") || process.env.FINO_TEST || "";
 // Estos cuatro archivos reproducen de memoria la navegación y el candado,
 // pero no ejecutan AppLockGate ni el recorrido real de Android. Se conservan
@@ -191,7 +192,7 @@ const auditoresSeleccionados = AUDITORES.filter(seleccionada);
 function correrSuelto(archivo) {
   const nombre = archivo.replace(/\.mjs$/, "");
   try {
-    const r = execFileSync("node", [path.join(DIR, archivo)], { stdio: "pipe" }).toString();
+    const r = execFileSync("node", [path.join(DIR, archivo)], { stdio: "pipe", env: entornoPruebas }).toString();
     const linea = r.trim().split("\n").pop();
     console.log(`  OK          ${nombre.padEnd(30)} ${linea}`);
   } catch (e) {
@@ -234,7 +235,7 @@ for (const s of suitesSeleccionadas) {
     continue;
   }
   try {
-    const r = execFileSync("node", [salida], { stdio: "pipe" }).toString();
+    const r = execFileSync("node", [salida], { stdio: "pipe", env: entornoPruebas }).toString();
     const linea = r.trim().split("\n").pop();
     console.log(`  OK          ${nombre.padEnd(26)} ${linea}`);
   } catch (e) {

@@ -28,6 +28,7 @@ import * as ImagePicker from "expo-image-picker";
 import { Camera, Check, ChevronLeft, ImageIcon, Star, Trash2, X } from "lucide-react-native";
 import CategoryAvatar from "@/components/CategoryAvatar";
 import ImageCropper from "@/components/ImageCropper";
+import { iconLabelFor } from "@/utils/iconAccessibility";
 import { catInfo, gastosDisponibles, ingresosDisponibles } from "@/constants/categories";
 import {
   ALTO_TITULO,
@@ -310,12 +311,14 @@ function aspectoDeCasilla(color: string, lado: number, oscuro: boolean): Aspecto
  */
 const Dibujito = memo(function Dibujito({
   id,
+  label,
   normal,
   lado,
   onElegir,
   onCancelar,
 }: {
   id: string;
+  label: string;
   /**
    * SOLO EL ASPECTO GRIS, el que NO depende del color.
    *
@@ -404,7 +407,7 @@ const Dibujito = memo(function Dibujito({
     //
     // Hay una prueba que vigila justamente eso: que la medida llegue en un objeto y no en
     // una función. Qué componente se use da igual.
-    <Pressable
+    <Pressable accessibilityRole="radio" accessibilityLabel={label} accessibilityState={{ checked: !!marcada }}
       onPressIn={() => {
         // La marca se mueve YA, y se mueve DE VERDAD: la anterior se apaga en el mismo
         // instante. Ver la nota de marcaActual.
@@ -481,12 +484,14 @@ const Dibujito = memo(function Dibujito({
  */
 const Fila = memo(function Fila({
   iconos,
+  labelFor,
   normal,
   lado,
   onElegir,
   onCancelar,
 }: {
   iconos: (string | null)[];
+  labelFor: (id: string) => string;
   /** Solo el aspecto gris. El del color ya no viaja por aqui. Ver Dibujito. */
   normal: ViewStyle;
   lado: number;
@@ -503,6 +508,7 @@ const Fila = memo(function Fila({
           <Dibujito
             key={id}
             id={id}
+            label={labelFor(id)}
             normal={normal}
             lado={lado}
             onElegir={onElegir}
@@ -636,15 +642,17 @@ const TituloDeGrupo = memo(function TituloDeGrupo({ texto }: { texto: string }) 
 /** Un color de la paleta. Memorizada por lo mismo que CasillaCategoria. */
 const CasillaColor = memo(function CasillaColor({
   color,
+  label,
   puesto,
   onElegir,
 }: {
   color: string;
+  label: string;
   puesto: boolean;
   onElegir: (color: string) => void;
 }) {
   return (
-    <TouchableOpacity
+    <TouchableOpacity accessibilityRole="radio" accessibilityLabel={label} accessibilityState={{ checked: puesto }}
       onPress={() => onElegir(color)}
       className={`w-12 h-12 rounded-full items-center justify-center ${
         puesto ? "border-[3px] border-slate-900 dark:border-white" : ""
@@ -727,6 +735,7 @@ export default function NuevaCategoria({
 }) {
   const {
     t,
+    userLanguage,
     categoriasPropias,
     categoryOverrides,
     updateCategoryOverrides,
@@ -737,6 +746,9 @@ export default function NuevaCategoria({
     movimientosDeCategoria,
     showToast,
   } = useAppData();
+  // La función cambia únicamente al cambiar idioma, no al escribir o elegir
+  // color. Las casillas memorizadas no se suscriben al contexto completo.
+  const labelForIcon = useCallback((id: string) => iconLabelFor(id, userLanguage), [userLanguage]);
   const insets = useSafeAreaInsets();
   /**
    * LOS BOTONES DE ABAJO, ENCIMA DEL TECLADO (12/08/2026).
@@ -1335,7 +1347,7 @@ export default function NuevaCategoria({
       style={[{ paddingTop: insets.top }, animatedPaddingStyle]}
     >
       <View className="px-5 pt-3 pb-2 flex-row items-center gap-2">
-        <TouchableOpacity onPress={onBack} className="w-9 h-9 items-center justify-center -ml-2">
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.back")} hitSlop={6} onPress={onBack} className="w-9 h-9 items-center justify-center -ml-2">
           <ChevronLeft size={24} color="#94a3b8" />
         </TouchableOpacity>
         <Text className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
@@ -1368,7 +1380,7 @@ export default function NuevaCategoria({
                 cámara, encuadre y zoom, y volver a hacerlo para la siguiente
                 categoría es justo lo que un favorito evita. El argumento miraba
                 de dónde sale el dibujo en vez de cuánto cuesta conseguirlo. */}
-            <TouchableOpacity
+            <TouchableOpacity accessibilityRole="togglebutton" accessibilityLabel={t(esFav ? "accessibility.removeFavorite" : "accessibility.addFavorite")} accessibilityState={{ checked: esFav }} hitSlop={6}
               onPress={alternarFavorito}
               className={`w-10 h-10 rounded-full items-center justify-center border-[1.5px] ${
                 esFav ? "bg-amber-100 border-amber-400" : "border-slate-300 dark:border-noche-borde"
@@ -1613,7 +1625,7 @@ export default function NuevaCategoria({
             <View className="px-5" style={{ paddingTop: 12 }}>
               <View className="flex-row flex-wrap gap-3">
                 {COLORES.map((c) => (
-                  <CasillaColor key={c} color={c} puesto={color === c} onElegir={setColor} />
+                  <CasillaColor key={c} color={c} label={t("accessibility.colorOption", { color: t(`accessibility.color.${c}`) })} puesto={color === c} onElegir={setColor} />
                 ))}
               </View>
             </View>
@@ -1645,6 +1657,7 @@ export default function NuevaCategoria({
                   <Fila
                     key={f}
                     iconos={fila}
+                    labelFor={labelForIcon}
                     normal={aspectoGris}
                     lado={lado}
                     onElegir={elegirFavorito}
@@ -1736,6 +1749,7 @@ export default function NuevaCategoria({
                       {trozo.titulo !== null && <TituloDeGrupo texto={titulos[trozo.titulo]} />}
                       <Fila
                         iconos={trozo.fila}
+                        labelFor={labelForIcon}
                         normal={aspectoGris}
                         lado={lado}
                         onElegir={setIcono}
@@ -1750,6 +1764,7 @@ export default function NuevaCategoria({
                         <Fila
                           key={indice}
                           iconos={fila}
+                          labelFor={labelForIcon}
                           normal={aspectoGris}
                           lado={lado}
                           onElegir={setIcono}
@@ -1835,6 +1850,8 @@ export default function NuevaCategoria({
             cancel: t("common.cancel"),
             save: t("common.save"),
             error: t("catCustom.cropError"),
+            zoomOut: t("accessibility.zoomOut"),
+            zoomIn: t("accessibility.zoomIn"),
           }}
         />
       )}

@@ -717,7 +717,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
     // la misma app, el mismo código, pero se percibe como algo que se abre
     // un momento y se va. Tocar fuera lo cierra.
     <View className="absolute inset-0 z-50 items-center justify-center px-5">
-      <TouchableOpacity
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")}
         className="absolute inset-0 bg-black/70"
         activeOpacity={1}
         onPress={onClose}
@@ -743,7 +743,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
         ]}
       >
         <View className="flex-row justify-end">
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} hitSlop={6}
             onPress={onClose}
             className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >
@@ -854,7 +854,7 @@ export default function VoiceEntry({ onClose }: { onClose: () => void }) {
                             {fmt(row.amount)}
                           </Text>
                         </TouchableOpacity>
-                        <TouchableOpacity
+                        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.delete")} hitSlop={6}
                           onPress={() => removeRow(i)}
                           className="w-7 h-7 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
                         >

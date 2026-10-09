@@ -656,7 +656,7 @@ export default function Home({
           <View className="h-10 w-10" />
 
           <View className="flex-row items-center gap-1">
-            <TouchableOpacity
+            <TouchableOpacity accessibilityLabel={t("accessibility.previousMonth")} hitSlop={6}
               accessibilityRole="button"
               onPress={() => shiftMonth(-1)}
               className="w-7 h-9 items-center justify-center"
@@ -664,7 +664,7 @@ export default function Home({
               <ChevronLeft size={18} color={colorScheme === "dark" ? "#94a3b8" : "#475569"} />
             </TouchableOpacity>
             <MonthSelector month={month} months={availableMonths} monthNames={monthNames} onChange={setMonth} showMovementCount />
-            <TouchableOpacity
+            <TouchableOpacity accessibilityLabel={t("accessibility.nextMonth")} hitSlop={6}
               accessibilityRole="button"
               onPress={() => shiftMonth(1)}
               className="w-7 h-9 items-center justify-center"
@@ -740,13 +740,13 @@ export default function Home({
                 autoFocus
                 className={`flex-1 border-b border-white/40 py-0.5 text-2xl font-extrabold ${peachOlive ? "text-slate-900" : "text-white"}`}
               />
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.save")} hitSlop={6}
                 onPress={saveBudgetInline}
                 className="h-[40px] w-[40px] items-center justify-center rounded-full bg-white/25"
               >
                 <Check size={20} color={peachOlive ? "#526b43" : "#ffffff"} />
               </TouchableOpacity>
-              <TouchableOpacity
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.cancel")} hitSlop={6}
                 onPress={() => setEditingBudget(false)}
                 className="h-[40px] w-[40px] items-center justify-center rounded-full bg-white/15"
               >
@@ -970,7 +970,7 @@ export default function Home({
                 })}
               </Text>
               <View className="flex-row items-center gap-3">
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.deleteSelected")} accessibilityState={{ disabled: seleccionadosBorrables.length === 0 }} hitSlop={6}
                   onPress={() => setConfirmandoSeleccionados(true)}
                   disabled={seleccionadosBorrables.length === 0}
                   className={`w-9 h-9 rounded-full bg-rose-50 dark:bg-rose-950 items-center justify-center ${

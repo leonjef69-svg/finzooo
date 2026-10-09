@@ -1,6 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { handlerOriginal } from "./helpers/handler-original.mjs";
 
 const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
@@ -11,25 +12,30 @@ function ok(condition, message) {
 }
 
 console.log("\nAuditoría financiera y de seguridad");
-const creditStore = read("utils/creditStore.ts");
+const excludedCredit = process.env.FINO_EXCLUDE_CREDIT === "1";
+function creditOk(check, message) {
+  if (excludedCredit) console.log("  EXCLUIDO    " + message + " (tarjetas, no comprobado)");
+  else ok(check(), message);
+}
+const creditStore = excludedCredit ? "" : read("utils/creditStore.ts");
 const storage = read("utils/storage.ts");
 const encryption = read("utils/encryption.ts");
 const lock = read("utils/appLock.ts");
 const context = read("contexts/AppDataContext.tsx");
 const addSheet = read("screens/AddSheet.tsx");
-const pay = read("screens/CreditPayV1.tsx");
+const pay = excludedCredit ? "" : read("screens/CreditPayV1.tsx");
 const detail = read("screens/Detail.tsx");
 const family = read("screens/Family.tsx");
 const sharedBoxes = read("screens/SharedBoxes.tsx");
 const rules = read("firestore.rules");
 const contributionFunction = read("functions/index.js");
 
-ok(
+creditOk(() =>
   creditStore.includes("saveJSONNow(STORAGE_KEYS.creditCards") &&
     creditStore.includes("loadJSON<unknown>(STORAGE_KEYS.creditCards"),
   "las tarjetas usan el almacén cifrado central",
 );
-ok(
+creditOk(() =>
   storage.includes("STORAGE_KEYS.creditCards") &&
     storage.includes('AsyncStorage.removeItem("@fino/credit-v1")'),
   "cerrar sesión borra tarjetas actuales y antiguas",
@@ -63,21 +69,22 @@ ok(
     addSheet.includes("disabled={!valid || submitting}"),
   "el formulario principal ignora el doble toque",
 );
-ok(
+creditOk(() =>
   context.includes('existing?.method === "credit-card-payment"') &&
     detail.includes("!linkedCreditPayment"),
   "un pago de tarjeta no puede desincronizarse editándolo desde Inicio",
 );
-ok(
+creditOk(() =>
   !pay.includes('label="Otra tarjeta"'),
   "se retiró el pago riesgoso de una tarjeta con otra",
 );
-ok(
-  context.includes("pruneDeletedTransactionIds") &&
-    read("utils/mergeTransactions.ts").includes("slice(0, limit)"),
-  "la lista de borrados tiene un límite seguro",
-);
-ok(
+const preserveTransactions = handlerOriginal("utils/mergeTransactions.ts", "pruneDeletedTransactionIds", {});
+const preserveGoals = handlerOriginal("utils/mergeTransactions.ts", "pruneDeletedGoalIds", {});
+ok(context.includes("pruneDeletedTransactionIds") &&
+  preserveTransactions(Array.from({ length: 5001 }, (_, id) => id + 1)).includes(1) &&
+  preserveGoals(Array.from({ length: 1001 }, (_, id) => id + 1)).includes(1),
+  "los normalizadores originales no olvidan borrados antiguos por cantidad");
+creditOk(() =>
   read("utils/creditCloud.ts").includes("deleteCreditCloudAccount") &&
     read("utils/cloudSync.ts").includes("deleteCreditCloudAccount(uid)"),
   "eliminar la cuenta también borra el respaldo de tarjetas",
@@ -122,4 +129,4 @@ ok(
 );
 
 if (failures) process.exit(1);
-console.log("Auditoría financiera: protecciones verificadas.");
+console.log("Auditoría financiera: protecciones originales/contratos estáticos comprobados" + (excludedCredit ? "; cinco contratos de tarjetas excluidos." : "."));

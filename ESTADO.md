@@ -1,5 +1,35 @@
 # Estado actual de Fino
 
+## Consultas, borrados, accesibilidad y ficha — 09/10/2026, preparado
+
+- Se eliminó el bucle de descargas repetidas. Servidor comprueba permisos antes
+  del libro completo; salidas repetidas se acotan y Pro se lee dentro de la
+  transacción con máscara, sin historial/fotos/perfil del dueño.
+- No se olvidan borrados por superar 5000 movimientos o 1000 metas, incluido
+  Telegram; filtros de apertura/recepción por Set. Telegram no reutiliza un
+  ID borrado. No se cambian montos, IDs ni formatos; no reconstruye datos perdidos.
+- Rótulos/roles/selección del resto de iconos y catálogo en tres idiomas,
+  manteniendo memorización/estilos y sin anunciar URI/base64 de fotos.
+- Seis archivos sin consumidores retirados, recuperables desde Git. Ficha
+  local de Play diferencia Gratis/Pro/dictado y no promete cobros/anuncios.
+  La web pública sí respondió con Términos/borrado contradictorios; no se
+  editaron HTML ni textos/huellas aceptados por app/servidor.
+- TypeScript/ESLint aprobados; 187 pruebas/8 auditores sin tarjetas (una ajena
+  no versionada: 186 previstas en Git limpio, no otro checkout). 88 unitarias
+  Node 22 y 202 SDK/reglas/HTTP locales aprobadas, sin omisiones. Cinco
+  contratos mixtos de tarjetas también excluidos, no cuentan como aprobados.
+- FINO-52 conserva siete casos ROJOS fuera del corredor, explícitos en
+  PRUEBAS_COMPATIBILIDAD_PENDIENTE: marcas sin origen y antiguos ambiguos.
+  No equivale a cerrar pérdida de datos ni autoriza una migración real.
+- CLI solo lectura: success/0 funciones en dotero-2d430, no runtime publicado
+  observable; no se leyeron historiales ni cambiaron configuraciones.
+- **Qué sigue:** contrato compatible de borrados/identidades y política mínima
+  de actualización para que escritores antiguos no retiren protecciones.
+  **Qué falta:** esa decisión, Android/Google/correo reales, App Check/métricas,
+  SMTP/bloqueo/moderación, consolas/trámites/Billing, web y entrega coordinadas.
+  Sin APK/AAB/OTA/despliegue. Tarjetas/Sentry externo fuera; diseño diferido.
+  Seguimiento completo: docs/AUDITORIA_CIERRE_61.md; auditoría no terminada.
+
 ## Configuración segura e Idioma separado — 09/10/2026, preparado
 
 - Decisión nueva: País pasa a Idioma en configuración/Ajustes; tres idiomas,

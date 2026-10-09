@@ -38,7 +38,7 @@ export default function SavingsDetail({
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
         <BackButton onPress={onBack} />
         <Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("savingsDetail.title")}</Text>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.edit")} hitSlop={6}
           onPress={onEdit}
           className="w-10 h-10 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
         >

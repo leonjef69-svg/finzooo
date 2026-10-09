@@ -252,7 +252,7 @@ export default function Productos({
                   </View>
                 ) : (
                   <View className="flex-row gap-2 mt-3">
-                    <TouchableOpacity
+                    <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.edit")}
                       onPress={() => abrirEdicion(p)}
                       className="flex-1 py-2.5 rounded-xl items-center bg-slate-100 dark:bg-noche-2"
                     >
@@ -260,7 +260,7 @@ export default function Productos({
                         {t("negocios.editar")}
                       </Text>
                     </TouchableOpacity>
-                    <TouchableOpacity
+                    <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.delete")} hitSlop={6}
                       onPress={() => setBorrando(p.id)}
                       className="w-11 py-2.5 rounded-xl items-center justify-center bg-rose-50 dark:bg-rose-900/20"
                     >

@@ -1,5 +1,22 @@
 # Entregas de Fino
 
+## Preparado, no entregado — consultas/borrados/controles/ficha — 09/10/2026
+
+Bucle de recepción eliminado, consultas rechazadas antes del libro y permiso
+Pro transaccional acotado; marcas completas sin recortes 5000/1000, Telegram
+sin reutilizar ID eliminado. Rótulos/roles del catálogo y controles sin rediseño;
+seis huérfanos recuperables retirados. Ficha local corregida; HTML intactos.
+187 pruebas/8 auditores sin tarjetas, 88 unitarias Node 22 y 202 SDK/reglas/HTTP
+locales aprobadas. Una prueba ajena no versionada, 186 previstas en Git limpio
+(sin otro checkout). Cinco contratos mixtos de tarjetas también excluidos.
+Siete diagnósticos de FINO-52 siguen ROJOS y no se ocultan en esos números.
+**Qué sigue:** compatibilidad mínima y contrato de identidades/borrados.
+**Qué falta:** esa decisión, pruebas Android/cuentas reales, App Check/SMTP/
+moderación, consolas/trámites/Billing y activación/entrega autorizadas.
+No APK/AAB/OTA/EAS ni Firebase/Play. La web ya servía contenidos anteriores,
+contradictorios; no se editaron HTML. Git no actualiza la app instalada.
+Tarjetas/Sentry fuera; no distribuir como auditoría totalmente terminada.
+
 ## Preparado, no entregado — configuración/Idioma — 09/10/2026
 
 Idioma sustituye País sin cambiar moneda; banderas únicamente decorativas.

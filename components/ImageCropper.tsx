@@ -163,7 +163,7 @@ export default function ImageCropper({
   uri: string;
   onCancel: () => void;
   onDone: (r: CropResult) => void;
-  labels: { title: string; hint: string; cancel: string; save: string; error: string };
+  labels: { title: string; hint: string; cancel: string; save: string; error: string; zoomOut: string; zoomIn: string };
 }) {
   const { width: screenWidth, height: screenHeight } = useWindowDimensions();
   // En vertical conserva el marco aprobado de 240. En una pantalla baja u
@@ -412,7 +412,7 @@ export default function ImageCropper({
       {/* El zoom de a pasos. Está además de la pinza, no en su lugar: la pinza
           es lo natural, pero con una sola mano ocupada no se puede hacer. */}
       <View className="flex-row items-center gap-4 mt-6">
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={labels.zoomOut} accessibilityState={{ disabled: zoom <= ZOOM_MIN }} hitSlop={6}
           onPress={() => cambiarZoom(-PASO_ZOOM)}
           disabled={zoom <= ZOOM_MIN}
           className={`w-11 h-11 rounded-full items-center justify-center border-[1.5px] border-slate-600 ${
@@ -424,7 +424,7 @@ export default function ImageCropper({
         <Text className="text-white text-sm font-bold w-14 text-center">
           {zoom.toFixed(1)}x
         </Text>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={labels.zoomIn} accessibilityState={{ disabled: zoom >= ZOOM_MAX }} hitSlop={6}
           onPress={() => cambiarZoom(PASO_ZOOM)}
           disabled={zoom >= ZOOM_MAX}
           className={`w-11 h-11 rounded-full items-center justify-center border-[1.5px] border-slate-600 ${

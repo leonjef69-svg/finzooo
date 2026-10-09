@@ -1,5 +1,33 @@
 # Pruebas y auditores
 
+Cierre de esta tanda, 09/10: 187 pruebas y 8 auditores aprobados con
+--sin-tarjetas (una prueba local ajena no versionada, 186 previstas Git limpio;
+no se ejecutó otro checkout). 88 unitarias Node 22 y 202 SDK/reglas/HTTP locales
+aprobadas sin omisiones. Son comprobaciones de código/SDK/adaptadores, no
+pruebas de todo Android ni cierre de FINO-52 o de la auditoría.
+
+Refuerzo 09/10: consultas estables y autorizadas, inventario/acciones accesibles,
+catálogo y ficha, y resolver/imports de huérfanos. Nuevas suites de originales:
+verificar-consultas-estables-real, verificar-consultas-autorizadas-real,
+verificar-accesibilidad-pantallas-real, verificar-codigo-huerfano-real y
+verificar-ficha-planes-real. Regresiones b6cccc0 rojas/actual verdes; guías
+PRUEBAS_CONSULTAS_ESTABLES, PRUEBAS_ACCESIBILIDAD_PANTALLAS,
+PRUEBAS_CODIGO_RETIRADO y REVISION_PRIVACIDAD_FICHA.
+Servidor Node 22: query-authorization comprueba 13 casos con Firestore real
+local; telegram-personal-history rechaza un ID reservado en v1. No producción.
+FINO-52: diagnosticos/reproducir-borrados-identidad.mjs tiene SIETE CASOS ROJOS
+confirmados y permanece fuera del conteo aprobado, no eliminado ni convertido
+en éxito. Guía PRUEBAS_COMPATIBILIDAD_PENDIENTE. No cerrar toda la auditoría
+por la batería verde. Usar --sin-tarjetas por decisión del propietario.
+
+Ampliación: verificar-conservacion-borrados-real ejecuta normalizadores con
+5001/1001/100000 marcas; Telegram conserva la primera tras 5000 borrados.
+verificar-exclusion-tarjetas-real ejecuta el auditor mixto impidiendo leer
+las fuentes excluidas y comprueba cinco contratos no ejecutados; el corredor
+propaga la decisión, sin cambiar módulos de tarjetas. Ambos baseline b6cccc0
+rojos por defecto anterior, no ausencia de un API. El contrato viejo que
+llamaba «seguro» al recorte se sustituyó por normalizadores originales.
+
 Configuración/Idioma (09/10): ocho suites nuevas de originales y adaptadores,
 enumeradas en docs/PRUEBAS_CONFIGURACION_INICIAL.md. Legacy, rutas, guardado,
 avisos, selección, banderas, idioma independiente y aliases; regresiones

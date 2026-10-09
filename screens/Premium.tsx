@@ -191,7 +191,7 @@ export default function Premium({
     >
       <StatusBar style="light" />
       <View className="flex-row items-center px-5 pt-2 pb-1">
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.back")} hitSlop={6}
           onPress={onBack}
           className="w-10 h-10 rounded-full bg-white/10 items-center justify-center"
         >

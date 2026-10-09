@@ -561,7 +561,7 @@ export default function AddSheet({
           Yape y Plin por mucho que se arrastrara. */}
       {showMethod && (
         <View className="absolute inset-0 z-50 items-center justify-center px-8">
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")}
             className="absolute inset-0 bg-slate-900/60"
             activeOpacity={1}
             onPress={() => setShowMethod(false)}

@@ -398,7 +398,7 @@ export default function ScheduledExportSettings({ onBack }: { onBack: () => void
   return (
     <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top }}>
       <View className="px-5 pt-3 pb-2 flex-row items-center gap-2">
-        <TouchableOpacity onPress={onBack} className="w-9 h-9 items-center justify-center -ml-2">
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.back")} hitSlop={6} onPress={onBack} className="w-9 h-9 items-center justify-center -ml-2">
           <ChevronLeft size={24} color="#94a3b8" />
         </TouchableOpacity>
         <Text className="text-xl font-extrabold text-slate-900 dark:text-slate-100">

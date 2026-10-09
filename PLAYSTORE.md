@@ -1,5 +1,13 @@
 # Lo que hay que rellenar en Play Console
 
+Revalidación FINO-16/34 (09/10/2026): ficha siguiente corregida para el código
+preparado, NO copiada a Play Console ni garantía de la APK instalada. La web
+pública sí respondió y contiene cambios anteriores: no afirmar ya «nada
+publicado» para HTML. Términos y borrado mantienen contradicciones verificadas,
+detalladas en docs/REVISION_PRIVACIDAD_FICHA.md. No se editaron los HTML:
+podrían publicarse por GitHub Pages al hacer push; requieren autorización.
+No se cambió el texto/hash aceptado por la app ni las reglas/servidor legales.
+
 Configuración/Idioma preparada (09/10/2026): idioma y moneda independientes,
 banderas solo representativas; no seleccionan ubicación ni añaden recogida de
 datos. País histórico no se borra ni se deduce de las banderas. Guardado local
@@ -74,59 +82,52 @@ y Google lo revisa de verdad.
 ## Descripción corta (máx. 80 caracteres)
 
 ```
-Controla tus gastos y los de tu negocio, en soles. Yape se registra solo.
+Organiza gastos, ingresos y presupuesto. Registro opcional de Yape.
 ```
 
-**73 caracteres** de los 80 que deja Google. Contado, no estimado — pasarse hace que el
+**67 caracteres** de los 80 que deja Google. Contado, no estimado — pasarse hace que el
 formulario lo rechace al pegarlo, y ahí se recorta a las prisas.
 
-La descripción completa son **1.585** de los 4.000 permitidos.
+La descripción completa tiene **1962** caracteres de los 4.000 permitidos,
+incluidos saltos LF (verificar el contador de Play al pegar).
 
 **En qué países funciona el registro automático, dicho en la propia descripción**
 (añadido el 11/08/2026, a petición suya). Sin esa línea, alguien de México lee "cuando
 te yapeen se anota solo", instala, y esa función no le aparece — porque ahí no hay Yape.
 Eso no es una decepción cualquiera: es una estrella y un comentario diciendo que la
-función principal no existe, y con razón, porque el texto se lo prometió. La app misma ya
-la esconde fuera de Perú y Bolivia (ver utils/dondeHayYape); esto es la otra mitad, la de
-no prometerla antes de instalar.
+función principal no existe, y con razón, porque el texto se lo prometió.
+La condición actual consulta la moneda de la cuenta, PEN/BOB
+(ver app/auto-capture.tsx y utils/dondeHayYape); no geolocaliza ni deduce país de
+idioma/banderas. El borrador no promete acceso a Yape por seleccionar español.
 
 ---
 
 ## Descripción completa
 
 ```
-Fino es una app de presupuesto pensada para Perú: lleva tus gastos de casa y los de tu negocio por separado, en soles.
+Fino te ayuda a organizar ingresos, gastos y presupuesto sin conectarse a tus cuentas bancarias ni mover dinero real.
 
-LO QUE HACE SOLO
-Enciende el registro automático y cuando te yapeen, el movimiento se anota sin que toques nada. Funciona incluso con la app cerrada.
+USO PERSONAL GRATIS
+• Anota movimientos y ordénalos por categoría.
+• Consulta el presupuesto del mes y los gráficos de tus ingresos y gastos.
+• Organiza pagos y recordatorios en el calendario.
+• Tus registros financieros se guardan cifrados en el celular.
 
-Esta parte necesita Yape, así que está disponible en Perú y Bolivia. En los demás países Fino funciona igual de bien: anotas tus movimientos en dos toques, los dictas o los importas del estado de cuenta de tu banco.
+FUNCIONES PRO
+La copia y sincronización personal en la nube, importar estados de cuenta, exportar PDF, Excel y CSV, exportación automática, metas de ahorro, límites por categoría, activar PIN o biometría y Modo Negocio requieren Pro. Familia y Cajas compartidas dependen de Pro de su propietario. Al vencer Pro, las funciones de recuperación, salida y eliminación de cuenta no deben quedar bloqueadas.
 
-TU DINERO ORDENADO
-• Ingresos y gastos con categorías
-• Presupuesto del mes y por categoría
-• Metas de ahorro
-• Reportes en PDF, Excel y CSV
-• Copia de seguridad en la nube
+Esta versión ofrece una prueba de 24 horas. Las compras todavía no están habilitadas; no ofrecemos aún un plan de pago sin anuncios. No se muestran anuncios en esta versión.
 
-MODO NEGOCIO
-Si tienes un negocio, su plata va aparte de la de tu casa. Nunca se mezclan, ni en los totales.
-• Los yapeos que recibes entran directo a la caja del negocio
-• Anota tus gastos: insumos, gas, alquiler
-• Mira cuánto hiciste hoy, este mes o desde el primer día
-• Compara un mes con el anterior
-• Registra ventas por producto, si quieres llevar esa cuenta
+REGISTRO OPCIONAL DE YAPE
+Con una cuenta configurada en soles o bolivianos, puedes activar el lector de avisos de Yape con tu permiso. Esta función requiere Yape, disponible en Perú y Bolivia. Su funcionamiento en segundo plano depende de los permisos y restricciones de Android.
 
-HABLA EN VEZ DE ESCRIBIR
-Anota un gasto, pregunta cuánto llevas o pide un reporte, dictando.
+DICTADO Y REPORTES
+Puedes dictar movimientos con Pro. El servicio de reconocimiento del celular puede necesitar internet. Los reportes y sus destinos externos requieren Pro y los permisos o conexiones correspondientes. Las tareas automáticas pueden retrasarse; abrir correo o WhatsApp no confirma que el archivo se haya enviado o recibido.
 
-TUS REPORTES DONDE QUIERAS
-Guárdalos en tu celular, en Google Drive o en Dropbox. También puedes programarlos para que salgan solos cada día, semana o mes.
+TUS DATOS Y TU CUENTA
+Gratis conserva los registros en ese celular; cerrar sesión no equivale a borrarlos. Pro permite también una copia en la nube. Puedes solicitar eliminar tu cuenta desde Ajustes o por el contacto de nuestra página de borrado. Los archivos que tú hayas exportado a otras cuentas deben borrarse allí.
 
-TUS DATOS SON TUYOS
-Se guardan cifrados en tu celular. No vendemos tu información. Puedes borrar tu cuenta entera cuando quieras, desde la app o desde nuestra web.
-
-Fino no es un banco, no mueve dinero y no se conecta a tus cuentas bancarias. Es tu cuaderno de gastos, pero que hace las cuentas por ti.
+Fino no es un banco ni ofrece asesoría financiera o de inversión.
 ```
 
 ---
@@ -221,25 +222,28 @@ versión, aunque todavía no se ha desplegado su servidor. Antes de subir ese AA
 que actualizar el formulario: el texto enviado al bot y el identificador del chat
 se procesan para registrar movimientos. Las políticas pública e interna ya lo explican.
 
-> **Lo que decide la mayoría de respuestas:** los datos **se recogen** (viajan a Firebase si la
-> persona inicia sesión) y **no se comparten** con terceros. Todo va **cifrado en tránsito** y
-> **se puede pedir el borrado**. Nada de esto es opcional en el formulario y equivocarse aquí
-> es lo que más rechazos causa.
+> **Borrador, no respuestas aprobadas:** iniciar sesión transmite identidad a Firebase
+> Auth; no implica respaldar finanzas de Gratis. Pro, espacios compartidos y conexiones
+> opcionales tienen recorridos distintos. No marcar «No comparte» ni cifrado de todos
+> los proveedores sin comprobar la APK final, el dictado y las excepciones de la política
+> de Play. Borrado y conservación deben describir procesos reales, no prometer inmediatez.
 
-### ¿Recoge o comparte datos? → **Sí, recoge. No comparte.**
+### ¿Recoge o comparte datos? → **Sí recoge identidad; verificar categorías y compartición**
 
 | Categoría | ¿Se recoge? | ¿Obligatorio? | Para qué |
 |---|---|---|---|
 | **Nombre** | Sí | No (solo con cuenta) | Funciones de la app |
 | **Correo electrónico** | Sí | No | Funciones de la app · Gestión de la cuenta |
-| **Fotos** | Sí | No | Funciones de la app (foto de perfil, dibujos de categorías, boletas) |
+| **Fotos** | Sí, en funciones que las transmiten | No | Perfil/categorías respaldados con Pro; el escaneo de boletas actual es local y no sube su foto a Firebase por sí solo |
 | **Información financiera del usuario** *(otra)* | Sí | No | Funciones de la app |
-| **Mensajes en la app** *(otros: contenido de notificaciones)* | Sí | No | Funciones de la app |
-| **IDs de usuario** *(identificador de chat de Telegram, si se conecta)* | Sí | No | Funciones de la app · Gestión de la cuenta |
+| **Mensajes en la app** | Verificar por recorrido | No | Telegram/contenido compartido/denuncias opcionales; buzón y diagnóstico Yape brutos permanecen locales. El movimiento confirmado puede formar parte de una copia Pro |
+| **IDs de usuario** *(UID de Firebase; chat si Telegram se conecta)* | Sí | No | Gestión de la cuenta, permisos/recibos y funciones opcionales; no limitado a Telegram |
 | **Grabaciones de voz** | **Por verificar en la APK final** | Opcional | Android puede enviar audio al servicio de reconocimiento; Fino no guarda grabaciones. No marcar «No se recoge» basándose solo en que no se guarda en Firebase. |
 | **Diagnóstico de fallos y rendimiento** | No en la versión preparada | — | Sentry desactivado por decisión del propietario; comprobar y actualizar la declaración al publicar |
 
-**Para las cinco que sí:** marcar **cifrado en tránsito** y **se puede solicitar el borrado**.
+**Para cada categoría realmente recogida:** comprobar finalidad, obligatoriedad,
+recogida/compartición, cifrado en tránsito y borrado con la versión publicada;
+no copiar una respuesta global del borrador sin contrastarla.
 
 **FINO-25 — dictado:** el código no exige reconocimiento exclusivamente local.
 La dependencia instalada elige el servicio normal de Android si no se exige
@@ -545,6 +549,20 @@ servicio/alarmas físicos y versión final antes de entregar. No publicar una
 promesa de guardado al minuto. Guía: `docs/PRUEBAS_HORARIO_EXPORTACION.md`.
 
 ---
+
+## Declaración de funciones financieras — pendiente de consola
+
+Google exige completar este formulario también para apps en pruebas y para
+las que declaren no ofrecer funciones financieras. La categoría «Finanzas»
+no sustituye el formulario. No seleccionar «Mi app no ofrece ninguna función
+financiera» automáticamente: Fino registra gastos, ingresos y presupuestos.
+Revisar todas las opciones reales, incluida «Otro», y explicar el alcance
+de la versión a publicar. Registrar gastos no equivale a prestar, transferir
+dinero bancario ni asesorar sobre inversiones; no marcar servicios que no existen.
+La clasificación definitiva requiere consola/revisión de Google, no una
+certificación desde el código. El módulo de tarjetas está excluido por decisión
+del propietario y no se declara verificado para esta selección.
+[Guía oficial del formulario](https://support.google.com/googleplay/android-developer/answer/13849271?hl=es-419).
 
 ## Clasificación de contenido
 

@@ -948,6 +948,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }
       const deleted = pruneDeletedTransactionIds([...(local.deletedTransactionIds ?? []), ...(cloud.deletedTransactionIds ?? [])]);
       const deletedGoals = pruneDeletedGoalIds([...(local.deletedGoalIds ?? []), ...(cloud.deletedGoalIds ?? [])]);
+      const deletedSet = new Set(deleted);
+      const deletedGoalsSet = new Set(deletedGoals);
       let restoredTransactions: Transaction[];
       try {
         restoredTransactions = mergeTransactions(local.transactions, cloud.transactions);
@@ -963,9 +965,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         isPremium: cloud.isPremium,
         premiumTrialStartedAt: cloud.premiumTrialStartedAt,
         deletedTransactionIds: deleted,
-        transactions: restoredTransactions.filter((tx) => !deleted.includes(tx.id)),
+        transactions: restoredTransactions.filter((tx) => !deletedSet.has(tx.id)),
         deletedGoalIds: deletedGoals,
-        goals: mergeGoals(local.goals, cloud.goals).filter((goal) => !deletedGoals.includes(goal.id)),
+        goals: mergeGoals(local.goals, cloud.goals).filter((goal) => !deletedGoalsSet.has(goal.id)),
         iconosFavoritos: [...(local.iconosFavoritos ?? []).filter((icon) => icon.startsWith("data:")), ...(merged.iconosFavoritos ?? [])],
       };
     }
@@ -983,10 +985,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setCategoryBudgets(cloud.categoryBudgets);
     const borrados = pruneDeletedTransactionIds(cloud.deletedTransactionIds ?? []);
     const metasBorradas = pruneDeletedGoalIds(cloud.deletedGoalIds ?? []);
+    const idsBorrados = new Set(borrados);
+    const idsMetasBorradas = new Set(metasBorradas);
     setDeletedTransactionIds(borrados);
-    setTransactions(cloud.transactions.filter((tx) => !borrados.includes(tx.id)));
+    setTransactions(cloud.transactions.filter((tx) => !idsBorrados.has(tx.id)));
     setDeletedGoalIds(metasBorradas);
-    setGoals(cloud.goals.filter((goal) => !metasBorradas.includes(goal.id)));
+    setGoals(cloud.goals.filter((goal) => !idsMetasBorradas.has(goal.id)));
     setPagosProgramados(cloud.pagosProgramados ?? []);
     protectExistingIds(cloud.transactions, cloud.goals);
     setIsPremium(cloud.isPremium);
@@ -1028,9 +1032,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     });
     saveJSON(STORAGE_KEYS.budgets, cloud.budgets);
     saveJSON(STORAGE_KEYS.categoryBudgets, cloud.categoryBudgets);
-    saveJSON(STORAGE_KEYS.transactions, cloud.transactions.filter((tx) => !borrados.includes(tx.id)));
+    saveJSON(STORAGE_KEYS.transactions, cloud.transactions.filter((tx) => !idsBorrados.has(tx.id)));
     saveJSON(STORAGE_KEYS.deletedTransactionIds, borrados);
-    saveJSON(STORAGE_KEYS.goals, cloud.goals.filter((goal) => !metasBorradas.includes(goal.id)));
+    saveJSON(STORAGE_KEYS.goals, cloud.goals.filter((goal) => !idsMetasBorradas.has(goal.id)));
     saveJSON(STORAGE_KEYS.deletedGoalIds, metasBorradas);
     saveJSON(STORAGE_KEYS.pagosProgramados, cloud.pagosProgramados ?? []);
     saveJSON(STORAGE_KEYS.isPremium, cloud.isPremium);
@@ -1117,6 +1121,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       loadJSON<CaptureLogEntry[]>(STORAGE_KEYS.autoCaptureLog, []),
     ]);
     if (auth.currentUser?.uid !== loadingUid || version !== localSessionVersion.current) return;
+    const savedDeletedSet = new Set(savedDeletedTransactionIds);
+    const savedDeletedGoalsSet = new Set(savedDeletedGoalIds);
     setOverrides(savedOverrides);
     setPropias(savedPropias);
     setFavoritos(savedFavoritos);
@@ -1127,9 +1133,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setIconosFavoritosState(savedFavoritos);
     setPruebaInicio(savedPrueba);
     setDeletedTransactionIds(savedDeletedTransactionIds);
-    setTransactions(savedTransactions.filter((tx) => !savedDeletedTransactionIds.includes(tx.id)));
+    setTransactions(savedTransactions.filter((tx) => !savedDeletedSet.has(tx.id)));
     setDeletedGoalIds(savedDeletedGoalIds);
-    setGoals(savedGoals.filter((goal) => !savedDeletedGoalIds.includes(goal.id)));
+    setGoals(savedGoals.filter((goal) => !savedDeletedGoalsSet.has(goal.id)));
     setPagosProgramados(savedPagos);
     protectExistingIds(savedTransactions, savedGoals);
     setIsPremium(savedIsPremium);
@@ -1146,9 +1152,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         userCurrency: profile.userCurrency || "PEN", userLanguage: profile.userLanguage || "es",
         hasOnboarded: profile.hasOnboarded } : {}),
       budgets: savedBudgets, categoryBudgets: savedCategoryBudgets,
-      transactions: savedTransactions.filter((tx) => !savedDeletedTransactionIds.includes(tx.id)),
+      transactions: savedTransactions.filter((tx) => !savedDeletedSet.has(tx.id)),
       deletedTransactionIds: savedDeletedTransactionIds,
-      goals: savedGoals.filter((goal) => !savedDeletedGoalIds.includes(goal.id)),
+      goals: savedGoals.filter((goal) => !savedDeletedGoalsSet.has(goal.id)),
       deletedGoalIds: savedDeletedGoalIds, pagosProgramados: savedPagos,
       isPremium: savedIsPremium, merchantLearned: savedLearned,
       categoryOverrides: savedOverrides, categoriasPropias: savedPropias,
@@ -1688,18 +1694,29 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       if (!applyNewerCloudFields(cloud)) return;
       const borrados = pruneDeletedTransactionIds([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])]);
       const metasBorradas = pruneDeletedGoalIds([...deletedGoalIds, ...(cloud.deletedGoalIds ?? [])]);
+      const idsBorrados = new Set(borrados);
+      const idsMetasBorradas = new Set(metasBorradas);
       setDeletedTransactionIds((actuales) =>
-        actuales.length === borrados.length && actuales.every((id) => borrados.includes(id))
+        actuales.length === borrados.length && actuales.every((id) => idsBorrados.has(id))
           ? actuales
           : borrados
       );
-      setTransactions((locales) =>
-        mergeTransactions(locales, cloud.transactions).filter((tx) => !borrados.includes(tx.id))
+      // Una copia igual no es un cambio. En especial, crear otro [] de metas
+      // borradas cambiaba la dependencia de este efecto y volvía a descargar
+      // sin parar; las listas nuevas también disparaban otra subida/cifrado.
+      setTransactions((locales) => {
+        const siguientes = mergeTransactions(locales, cloud.transactions).filter((tx) => !idsBorrados.has(tx.id));
+        return JSON.stringify(locales) === JSON.stringify(siguientes) ? locales : siguientes;
+      });
+      setDeletedGoalIds((actuales) =>
+        actuales.length === metasBorradas.length && actuales.every((id) => idsMetasBorradas.has(id))
+          ? actuales
+          : metasBorradas
       );
-      setDeletedGoalIds(metasBorradas);
-      setGoals((locales) =>
-        mergeGoals(locales, cloud.goals).filter((goal) => !metasBorradas.includes(goal.id))
-      );
+      setGoals((locales) => {
+        const siguientes = mergeGoals(locales, cloud.goals).filter((goal) => !idsMetasBorradas.has(goal.id));
+        return JSON.stringify(locales) === JSON.stringify(siguientes) ? locales : siguientes;
+      });
     };
     void sincronizarMovimientos();
     return () => {
@@ -2071,18 +2088,26 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           if (!applyNewerCloudFields(cloud)) return;
           const borrados = pruneDeletedTransactionIds([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])]);
           const metasBorradas = pruneDeletedGoalIds([...deletedGoalIds, ...(cloud.deletedGoalIds ?? [])]);
+          const idsBorrados = new Set(borrados);
+          const idsMetasBorradas = new Set(metasBorradas);
           setDeletedTransactionIds((actuales) =>
-            actuales.length === borrados.length && actuales.every((id) => borrados.includes(id))
+            actuales.length === borrados.length && actuales.every((id) => idsBorrados.has(id))
               ? actuales
               : borrados
           );
-          setTransactions((locales) =>
-            mergeTransactions(locales, cloud.transactions).filter((tx) => !borrados.includes(tx.id))
+          setTransactions((locales) => {
+            const siguientes = mergeTransactions(locales, cloud.transactions).filter((tx) => !idsBorrados.has(tx.id));
+            return JSON.stringify(locales) === JSON.stringify(siguientes) ? locales : siguientes;
+          });
+          setDeletedGoalIds((actuales) =>
+            actuales.length === metasBorradas.length && actuales.every((id) => idsMetasBorradas.has(id))
+              ? actuales
+              : metasBorradas
           );
-          setDeletedGoalIds(metasBorradas);
-          setGoals((locales) =>
-            mergeGoals(locales, cloud.goals).filter((goal) => !metasBorradas.includes(goal.id))
-          );
+          setGoals((locales) => {
+            const siguientes = mergeGoals(locales, cloud.goals).filter((goal) => !idsMetasBorradas.has(goal.id));
+            return JSON.stringify(locales) === JSON.stringify(siguientes) ? locales : siguientes;
+          });
         }).catch(() => undefined);
       }
     });

@@ -185,10 +185,12 @@ function validDocumentId(value) {
   return typeof value === "string" && /^[A-Za-z0-9_-]{1,160}$/.test(value);
 }
 
-async function hasPremium(db, uid) {
-  const user = await db.doc(`users/${uid}`).get();
+async function hasPremium(db, uid, transaction) {
+  const [user] = await transaction.getAll(db.doc(`users/${uid}`), {
+    fieldMask: ["isPremium", "premiumTrialStartedAt", "accountDeletionPending"],
+  });
   const data = user.exists ? user.data() : {};
-  return premiumForUser(db, uid, data);
+  return premiumForUser(db, uid, data, transaction);
 }
 
 /** La prueba gratuita se concede una sola vez y con hora del servidor. */
@@ -249,8 +251,8 @@ exports.changePersonalContribution = onCall(
           throw new HttpsError("failed-precondition", "Lee y acepta los documentos antes de compartir contenido.", { reason: error.reason });
         }
       }
-      const [space, member, current, movementSnapshot, confirmed] = await Promise.all([
-        transaction.get(spaceRef), transaction.get(memberRef), transaction.get(movementRef), transaction.get(spaceRef.collection("movements")),
+      const [space, member, current, confirmed] = await Promise.all([
+        transaction.get(spaceRef), transaction.get(memberRef), transaction.get(movementRef),
         action === "delete" ? transaction.get(receiptRef) : Promise.resolve(null),
       ]);
       const previous = confirmed?.exists ? confirmed.data() : null;
@@ -260,9 +262,6 @@ exports.changePersonalContribution = onCall(
         && previous.uid === uid && previous.kind === kind && previous.spaceId === spaceId && previous.movementId === movementId) return;
       if (!space.exists || !member.exists || space.data().closed === true || space.data().closing === true || space.data().deleting === true || space.data().migrationComplete === false) {
         throw new HttpsError("failed-precondition", "El espacio no está disponible.");
-      }
-      if (!(await hasPremium(db, space.data().ownerUid))) {
-        throw new HttpsError("failed-precondition", "El espacio está en solo lectura porque venció Premium.");
       }
       const currentData = current.exists ? current.data() : {};
       const linkedContribution = currentData.tipo === "ingreso" && typeof currentData.personalTransactionId === "number";
@@ -275,6 +274,11 @@ exports.changePersonalContribution = onCall(
       }
       if (action === "update" && !linkedContribution) {
         throw new HttpsError("failed-precondition", "Una devolución solo puede deshacerse completa.");
+      }
+      // El permiso también se lee dentro de la transacción, sin descargar
+      // movimientos, fotos o perfil del propietario para comprobar Pro.
+      if (!(await hasPremium(db, space.data().ownerUid, transaction))) {
+        throw new HttpsError("failed-precondition", "El espacio está en solo lectura porque venció Premium.");
       }
       if (action === "delete" && linkedReturn) {
         const receipt = previous || currentData.personalReturnReceipt;
@@ -289,6 +293,7 @@ exports.changePersonalContribution = onCall(
         transaction.update(spaceRef, { personalReturnVersion: (Number(space.data().personalReturnVersion) || 0) + 1 });
         return;
       }
+      const movementSnapshot = await transaction.get(spaceRef.collection("movements"));
       const movements = movementSnapshot.docs.map(item => item.data());
       const original = Number.isFinite(currentData.monto) ? currentData.monto : 0;
       const limits = contributionLimits(movements, uid, original);
@@ -324,10 +329,7 @@ exports.manageLinkedSpace = onCall(
     const collectionName = kind === "family" ? "familySpaces" : "boxSpaces";
     const spaceRef = db.doc(`${collectionName}/${spaceId}`);
     await db.runTransaction(async transaction => {
-      const [space, movementSnapshot] = await Promise.all([
-        transaction.get(spaceRef),
-        transaction.get(spaceRef.collection("movements")),
-      ]);
+      const space = await transaction.get(spaceRef);
       if (!space.exists || space.data().ownerUid !== uid) {
         throw new HttpsError("permission-denied", "Solo el propietario puede realizar esta acción.");
       }
@@ -336,6 +338,7 @@ exports.manageLinkedSpace = onCall(
         if (action === "prepare-delete") return;
         throw new HttpsError("failed-precondition", "El espacio se está eliminando.");
       }
+      const movementSnapshot = await transaction.get(spaceRef.collection("movements"));
       const movements = movementSnapshot.docs.map(item => item.data());
       if (!canCloseLinkedSpace(movements)) {
         throw new HttpsError("failed-precondition", "Primero devuelve el dinero disponible y deja el saldo en cero. Lo ya gastado es consumido.");
@@ -376,10 +379,9 @@ exports.leaveLinkedSpace = onCall(
       const reads = [
         transaction.get(spaceRef),
         transaction.get(memberRef),
-        transaction.get(spaceRef.collection("movements")),
       ];
       if (familyUserRef) reads.push(transaction.get(familyUserRef));
-      const [space, member, movementSnapshot, familyUser] = await Promise.all(reads);
+      const [space, member, familyUser] = await Promise.all(reads);
       if (!space.exists) return;
       if (space.data().migrationComplete === false) throw new HttpsError("failed-precondition", "La copia de la Caja aún no está confirmada.");
       const ownerUid = space.data().ownerUid;
@@ -387,6 +389,17 @@ exports.leaveLinkedSpace = onCall(
       if (memberUid !== uid && ownerUid !== uid) {
         throw new HttpsError("permission-denied", "No puedes retirar a este miembro.");
       }
+      if (!member.exists && ownerUid !== uid) {
+        // Una salida confirmada puede necesitar reintentar la anonimización.
+        // No rechazarla por faltar ya la membresía, pero tampoco descargar
+        // un libro ajeno solo porque un desconocido conoce su ID.
+        const book = spaceRef.collection("movements");
+        const owned = await Promise.all(["creadoPor", "personalOwnerUid", "personalReturnReceipt.uid"].map(field =>
+          transaction.get(book.where(field, "==", uid).limit(1)),
+        ));
+        if (owned.every(result => result.empty)) return;
+      }
+      const movementSnapshot = await transaction.get(spaceRef.collection("movements"));
       const movements = movementSnapshot.docs.map(item => item.data());
       if (hasUnreturnedPersonalContribution(movements, memberUid)) {
         throw new HttpsError("failed-precondition", "Primero devuelve el aporte Personal de este miembro.");

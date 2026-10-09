@@ -71,7 +71,7 @@ export default function MoveMoneySheet({
     <Animated.View
       style={[{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "flex-end" }, animatedPaddingStyle]}
     >
-      <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
         className="bg-white dark:bg-noche-2 rounded-t-3xl px-5 pt-3"
         style={{
@@ -87,7 +87,7 @@ export default function MoveMoneySheet({
           <Text className="font-extrabold text-slate-900 dark:text-slate-100 text-base">
             {isAdd ? t("moveMoney.addTitle") : t("moveMoney.withdrawTitle")}
           </Text>
-          <TouchableOpacity
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} hitSlop={6}
             onPress={onClose}
             className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
           >

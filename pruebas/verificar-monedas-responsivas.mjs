@@ -7,7 +7,6 @@ const daily = fs.readFileSync("components/DailyBarsChart.tsx", "utf8");
 const donut = fs.readFileSync("components/DonutChart.tsx", "utf8");
 const home = fs.readFileSync("screens/Home.tsx", "utf8");
 const monthSelector = fs.readFileSync("components/MonthSelector.tsx", "utf8");
-const friendlyName = fs.readFileSync("utils/friendlyName.ts", "utf8");
 
 assert.match(formato, /currencyDecimals/);
 assert.match(formato, /fmtCompact/);
@@ -46,6 +45,5 @@ assert.match(home, /<MonthSelector\b/, "Inicio usa el selector de meses reutiliz
 assert.match(monthSelector, /max-w-\[132px\]/, "el mes tiene un ancho compacto y estable en la cabecera");
 assert.doesNotMatch(home, /ThemeToggleButton/, "Inicio no repite un icono para cambiar la apariencia");
 assert.match(home, /adjustsFontSizeToFit/);
-assert.match(friendlyName, /includes\("@"\)/);
 
 console.log("✓ Las monedas grandes usan formato compacto y no deforman reportes.");

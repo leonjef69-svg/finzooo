@@ -98,7 +98,7 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
   return (
     <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top }}>
       <View className="px-5 pt-3 pb-2 flex-row items-center gap-2">
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.back")} hitSlop={6}
           onPress={abierta ? () => setAbierta(null) : onBack}
           className="w-9 h-9 items-center justify-center -ml-2"
         >
@@ -213,7 +213,7 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
             </Text>
             <View className="flex-row flex-wrap gap-2 mb-3">
               {COLORES.map((nombreColor) => (
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="radio" accessibilityLabel={t("accessibility.colorOption", { color: t(`accessibility.color.${nombreColor}`) })} accessibilityState={{ checked: cat?.color === nombreColor }}
                   key={nombreColor}
                   onPress={() => cambiar(abierta, { color: nombreColor })}
                   className={`w-9 h-9 rounded-full items-center justify-center ${
@@ -231,7 +231,7 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
             </Text>
             <View className="flex-row flex-wrap gap-2 mb-5">
               {COLORES_LIBRES.map((hex) => (
-                <TouchableOpacity
+                <TouchableOpacity accessibilityRole="radio" accessibilityLabel={t("accessibility.colorOption", { color: hex })} accessibilityState={{ checked: cat?.color === hex }}
                   key={hex}
                   onPress={() => cambiar(abierta, { color: hex })}
                   className={`w-9 h-9 rounded-full items-center justify-center ${
@@ -277,6 +277,8 @@ export default function CategoryCustomize({ onBack }: { onBack: () => void }) {
             cancel: t("common.cancel"),
             save: t("common.save"),
             error: t("catCustom.cropError"),
+            zoomOut: t("accessibility.zoomOut"),
+            zoomIn: t("accessibility.zoomIn"),
           }}
         />
       )}

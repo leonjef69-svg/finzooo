@@ -36,6 +36,11 @@ function addPersonal(tx, userRef, userData, record, movement, maxBytes) {
     tx.set(record.ref, { id: movement.id, deleted: false, transaction: movement, syncAt: FieldValue.serverTimestamp() });
     return;
   }
+  // Un ID eliminado sigue reservado: agregarlo de nuevo anunciaría éxito,
+  // pero la sincronización lo quitaría por su marca de borrado antigua.
+  if (Array.isArray(userData.deletedTransactionIds) && userData.deletedTransactionIds.includes(movement.id)) {
+    throw new Error("DUPLICATE_ID");
+  }
   const next = [...(Array.isArray(userData.transactions) ? userData.transactions : []), movement];
   if (Buffer.byteLength(JSON.stringify({ ...userData, transactions: next }), "utf8") > maxBytes) throw new Error("TOO_LARGE");
   tx.update(userRef, { transactions: next });
@@ -62,7 +67,7 @@ function deletePersonal(tx, userRef, userData, record, id) {
   }
   const deletedTransactionIds = [...new Set([
     ...(Array.isArray(userData.deletedTransactionIds) ? userData.deletedTransactionIds : []), id,
-  ])].slice(-5000);
+  ])];
   tx.update(userRef, {
     transactions: userData.transactions.filter(item => item.id !== id), deletedTransactionIds,
   });

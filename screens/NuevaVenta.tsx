@@ -178,7 +178,7 @@ export default function NuevaVenta({
                       {/* El "−" solo aparece cuando hay algo que quitar: un botón que no puede
                           hacer nada se toca igual y parece roto. */}
                       {cuantos > 0 && (
-                        <TouchableOpacity
+                        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("accessibility.decreaseProduct", { name: p.nombre })} hitSlop={6}
                           onPress={() => sumar(p.id, -1)}
                           className="w-9 h-9 rounded-xl items-center justify-center bg-slate-100 dark:bg-noche-2"
                         >
@@ -192,7 +192,7 @@ export default function NuevaVenta({
                       >
                         {cuantos}
                       </Text>
-                      <TouchableOpacity
+                      <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("accessibility.increaseProduct", { name: p.nombre })} hitSlop={6}
                         onPress={() => sumar(p.id, 1)}
                         className="w-9 h-9 rounded-xl items-center justify-center bg-emerald-600"
                       >

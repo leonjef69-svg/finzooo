@@ -268,7 +268,7 @@ export default function History({
                 className="flex-1 text-sm text-slate-900 dark:text-slate-100"
               />
               {search.length > 0 && (
-                <TouchableOpacity onPress={() => setSearch("")}>
+                <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("accessibility.clearSearch")} hitSlop={6} onPress={() => setSearch("")}>
                   <X size={16} color="#94a3b8" />
                 </TouchableOpacity>
               )}

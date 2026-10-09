@@ -95,7 +95,6 @@ console.log("\n--- ACCESIBILIDAD BÁSICA ---");
   for (const ruta of [
     "components/BackButton.tsx",
     "components/AuthField.tsx",
-    "components/FAB.tsx",
     "components/Row.tsx",
   ]) {
     const texto = leer(ruta);

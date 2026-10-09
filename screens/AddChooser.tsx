@@ -21,7 +21,7 @@ export default function AddChooser({
   const { colorScheme } = useColorScheme();
   return (
     <View className="absolute inset-0 z-40 justify-end">
-      <TouchableOpacity className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
+      <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} className="absolute inset-0 bg-slate-900/40" activeOpacity={1} onPress={onClose} />
       <View
         className="bg-white dark:bg-noche-2 rounded-t-3xl px-5 pt-3"
         style={{ maxHeight: "100%", paddingBottom: 16 + insets.bottom }}

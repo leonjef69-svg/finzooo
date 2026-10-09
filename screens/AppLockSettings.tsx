@@ -173,7 +173,7 @@ export default function AppLockSettings({ onBack, allowEnable = true }: { onBack
   return (
     <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top }}>
       <View className="px-5 pt-3 pb-2 flex-row items-center gap-2">
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t(step === "idle" ? "common.back" : "common.cancel")} hitSlop={6}
           onPress={step === "idle" ? onBack : reset}
           className="w-9 h-9 items-center justify-center -ml-2"
         >

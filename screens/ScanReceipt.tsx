@@ -202,7 +202,7 @@ export default function ScanReceipt({ onClose }: { onClose: () => void }) {
         <Text className="text-xl font-extrabold text-slate-900 dark:text-slate-100">
           {t("scan.title")}
         </Text>
-        <TouchableOpacity onPress={onClose} className="w-9 h-9 items-center justify-center">
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} hitSlop={6} onPress={onClose} className="w-9 h-9 items-center justify-center">
           <X size={22} color="#94a3b8" />
         </TouchableOpacity>
       </View>

@@ -1,3 +1,4 @@
+import { useAppData } from "@/contexts/AppDataContext";
 import { useState } from "react";
 import { ActivityIndicator, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -32,6 +33,7 @@ export default function PdfPreview({
   title: string;
   onClose: () => void;
 }) {
+  const { t } = useAppData();
   const insets = useSafeAreaInsets();
   const [cargando, setCargando] = useState(true);
   // Atras cierra la vista previa y deja debajo la pantalla de exportar, en vez
@@ -49,7 +51,7 @@ export default function PdfPreview({
             {title}
           </Text>
         </View>
-        <TouchableOpacity
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} hitSlop={6}
           onPress={onClose}
           className="w-9 h-9 rounded-full bg-white dark:bg-noche-2 items-center justify-center"
         >

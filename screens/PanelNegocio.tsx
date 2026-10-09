@@ -654,7 +654,7 @@ export default function PanelNegocio({
                     /* BORRAR TAMBIÉN ES CAMBIAR, así que en solo lectura no está. Y aquí importa
                        más que en los otros botones: lo que se borra es dinero registrado. */
                     <View className="flex-row justify-end mt-2">
-                      <TouchableOpacity
+                      <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.delete")} hitSlop={6}
                         onPress={() => setBorrando(f.id)}
                         className="w-11 py-2 rounded-xl items-center justify-center bg-rose-50 dark:bg-rose-900/20"
                       >

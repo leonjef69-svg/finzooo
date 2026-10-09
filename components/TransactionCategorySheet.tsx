@@ -248,6 +248,8 @@ export default function TransactionCategorySheet({ type, categories, selectedId,
               cancel: t("common.cancel"),
               save: t("common.save"),
               error: t("catCustom.cropError"),
+              zoomOut: t("accessibility.zoomOut"),
+              zoomIn: t("accessibility.zoomIn"),
             }}
           />
         </View>
