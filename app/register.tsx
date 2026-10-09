@@ -12,7 +12,14 @@ export default function RegisterRoute() {
       onRegistered={async (name, email) => {
         const user = auth.currentUser;
         if (!user) return;
-        await openLocalAccount(user.uid, user.email);
+        try { await openLocalAccount(user.uid, user.email); }
+        catch (error) {
+          if (error instanceof Error && error.name === "LocalAccountVerificationRequired") {
+            router.replace("/verify-email");
+            return;
+          }
+          throw error;
+        }
         setUserName(name);
         setUserEmail(email);
         // Orden temporal para revisar todas las pantallas del flujo inicial:

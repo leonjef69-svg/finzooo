@@ -1,18 +1,29 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useFocusEffect } from "expo-router";
 import { FlatList, Image, StatusBar, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Check, Search } from "lucide-react-native";
 import { useAppData } from "@/contexts/AppDataContext";
 import BackButton from "@/components/BackButton";
 import { filterCurrencies } from "@/utils/catalogSearch";
+import { currencyFlagFor } from "@/utils/decorativeFlags";
 
 export default function CurrencyPicker({ current, onBack, onSelect }: {
   current: string;
   onBack: () => void;
-  onSelect: (id: string) => void;
+  onSelect: (id: string) => void | Promise<void>;
 }) {
-  const { t, userLanguage, hasOnboarded } = useAppData();
+  const { t, showToast, userLanguage, hasOnboarded } = useAppData();
   const [query, setQuery] = useState("");
+  const navigationBusy = useRef(false);
+  const focusVersion = useRef(0);
+  const currencyLocked = useRef(hasOnboarded);
+  currencyLocked.current = hasOnboarded;
+  useFocusEffect(useCallback(() => {
+    ++focusVersion.current;
+    navigationBusy.current = false;
+    return () => { ++focusVersion.current; navigationBusy.current = true; };
+  }, []));
   const insets = useSafeAreaInsets();
   const currencies = useMemo(
     () => filterCurrencies(hasOnboarded ? "" : query, userLanguage, t)
@@ -20,13 +31,36 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
     [query, t, userLanguage, hasOnboarded, current],
   );
 
+  function volver() {
+    if (navigationBusy.current) return;
+    navigationBusy.current = true;
+    try { onBack(); } catch {
+      navigationBusy.current = false;
+      showToast(t("setup.selectionFailed"));
+    }
+  }
+  async function seleccionar(id: string) {
+    if (hasOnboarded || currencyLocked.current || navigationBusy.current) return;
+    navigationBusy.current = true;
+    const version = focusVersion.current;
+    try {
+      await onSelect(id);
+      if (version !== focusVersion.current) return;
+      onBack();
+    } catch {
+      if (version !== focusVersion.current) return;
+      navigationBusy.current = false;
+      showToast(t("setup.selectionFailed"));
+    }
+  }
+
   return (
     <View className="flex-1 bg-[#17100c]" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
       <Image source={require("../assets/images/onboarding/fino-settings-background.png")} resizeMode="cover" className="absolute inset-0 h-full w-full" />
       <View className="absolute inset-0 bg-black/45" />
       <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
-        <BackButton onPress={onBack} onDark />
+        <BackButton onPress={volver} onDark />
         <Text className="text-base font-bold text-white">{t("settings.currency")}</Text>
         <View className="w-10" />
       </View>
@@ -53,7 +87,7 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
         renderItem={({ item: currency }) => {
             const selected = currency.id === current;
             return (
-              <TouchableOpacity key={currency.id} onPress={() => { onSelect(currency.id); onBack(); }}
+              <TouchableOpacity key={currency.id} onPress={() => seleccionar(currency.id)}
                 disabled={hasOnboarded}
                 accessibilityRole="button"
                 accessibilityState={{ selected, disabled: hasOnboarded }}
@@ -62,6 +96,10 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
                   ? "border-amber-500 bg-amber-50"
                   : "border-white/50 bg-white/95"}`}>
                 <View className="flex-row items-center gap-3 flex-1 min-w-0">
+                  <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+                    <Text testID="flag-decoration" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+                      className="text-xl">{currencyFlagFor(currency.id)}</Text>
+                  </View>
                   <Text className="flex-1 text-sm font-bold leading-5 text-slate-900" numberOfLines={2}>
                     {currency.name === currency.id ? currency.id : `${currency.name}${currency.symbol === currency.id ? "" : ` (${currency.symbol})`}`}
                   </Text>

@@ -18,6 +18,7 @@ function code(name) {
 }
 function logoutScope() {
   return {
+    getAccountStorageSession: () => 1,
     auth: { currentUser: { uid: "test", email: "test@example.com" } },
     setReady() {}, setHasOnboarded() {},
     captureBusy: { current: false },
@@ -79,6 +80,7 @@ for (const failure of [{ ok: false, motivo: "sin-red" }, { ok: false, motivo: "d
   const calls = [];
   const scope = {
     hasUnreadableLocalData: () => true,
+    getAccountStorageSession: () => 1,
     tRef: { current: () => "datos-ilegibles" },
     signOutFromGoogle: async () => calls.push("google"),
     signOut: async () => calls.push("auth"),

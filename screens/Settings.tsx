@@ -18,7 +18,7 @@ import {
   PiggyBank,
   PieChart,
   Coins,
-  MapPin,
+  Globe2,
   KeyRound,
   Pencil,
   UserX,
@@ -38,7 +38,8 @@ import * as voiceWidget from "@/modules/voice-widget";
 import { useColorScheme } from "nativewind";
 import Row from "@/components/Row";
 import { currencyLabelFor } from "@/constants/currencies";
-import { countryFor, countryLabelFor } from "@/constants/countries";
+import { languageLabelFor } from "@/constants/i18n";
+import { currencyFlagFor, languageFlagFor } from "@/utils/decorativeFlags";
 import { hayRegistroAutomatico } from "@/utils/dondeHayYape";
 import { useAppData } from "@/contexts/AppDataContext";
 import { TELEGRAM_ENABLED } from "@/constants/features";
@@ -62,7 +63,6 @@ export default function Settings({
   onCurrency,
   userLanguage,
   onLanguage,
-  onCountry,
   isPremium,
   isTesterPremium,
   onCategoryBudgets,
@@ -90,7 +90,6 @@ export default function Settings({
   onCurrency: () => void;
   userLanguage: string;
   onLanguage: () => void;
-  onCountry: () => void;
   isPremium: boolean;
   isTesterPremium: boolean;
   onCategoryBudgets: () => void;
@@ -110,7 +109,7 @@ export default function Settings({
   onVoiceHelp: () => void;
   onTelegram: () => void;
 }) {
-  const { t, userCountry, themeMode, updateThemeMode, visualStyle, updateVisualStyle, hasCloudAccount, isPremium: premiumCloud, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios, testerPremiumPendingVerification } =
+  const { t, themeMode, updateThemeMode, visualStyle, updateVisualStyle, hasCloudAccount, isPremium: premiumCloud, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios, testerPremiumPendingVerification } =
     useAppData();
   /** El negocio que se está quedando con los yapeos, si hay alguno. Ver la fila de abajo. */
   const negocioQueRecibe = negocios.find((n) => n.activo && n.destinoYapes === "negocio");
@@ -128,7 +127,6 @@ export default function Settings({
   // Qué país corresponde al idioma y la moneda puestos. Puede no haber
   // ninguno si alguien los ajustó por separado a una combinación que no es
   // de ningún país; ahí la fila sale sin nombre en vez de mentir.
-  const paisActual = countryFor(userLanguage, userCurrency, userCountry);
   const insets = useSafeAreaInsets();
   const usaContrasena = auth.currentUser?.providerData.some(provider => provider.providerId === "password") ?? true;
 
@@ -582,26 +580,18 @@ export default function Settings({
             </View>
           }
         />
-        {/* EL PAÍS MANDA. Pone el idioma y la moneda de una vez.
-            La fila de Idioma se quitó el 03/08/2026 a petición del usuario:
-            eligiendo Perú la app tiene que quedar en español y punto, sin un
-            segundo ajuste que pueda contradecirlo.
-
-            Lo que se pierde es el caso raro —vivir en Perú y querer la app en
-            inglés— y se acepta a cambio de que no pueda quedar una mezcla que
-            nadie eligió a propósito. La pantalla de idioma sigue existiendo
-            en /language por si algún día se repone. */}
+        {/* Idioma y moneda independientes; las banderas son solo adornos. */}
         <Row
-          Icon={MapPin}
-          label={`${t("settings.country")}${paisActual ? ` · ${countryLabelFor(paisActual, userLanguage)}` : ""}`}
-          onPress={onCountry}
-          right={<ChevronRight size={16} color="#cbd5e1" />}
+          Icon={Globe2}
+          label={`${t("settings.language")} · ${languageLabelFor(userLanguage)}`}
+          onPress={onLanguage}
+          right={<View className="flex-row items-center gap-2"><Text accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" className="text-xl">{languageFlagFor(userLanguage)}</Text><ChevronRight size={16} color="#cbd5e1" /></View>}
         />
         <Row
           Icon={Coins}
           label={`${t("settings.currency")} · ${currencyLabelFor(userCurrency, t, userLanguage)}`}
           onPress={onCurrency}
-          right={<ChevronRight size={16} color="#cbd5e1" />}
+          right={<View className="flex-row items-center gap-2"><Text accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" className="text-xl">{currencyFlagFor(userCurrency)}</Text><ChevronRight size={16} color="#cbd5e1" /></View>}
         />
         <Row
           Icon={themeMode === "dark" ? Moon : Sun}

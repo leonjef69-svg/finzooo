@@ -168,10 +168,12 @@ cloud = plain(journal); await assert.rejects(uploader.bajarCajas("A"), /invalid-
 const scenario = esbuild.buildSync({ stdin: { contents: `
   import assert from "node:assert/strict";
   import AsyncStorage, { failNextStorageOperation } from "@react-native-async-storage/async-storage";
+  import { auth } from "@/utils/firebase";
   import { loadJSON, saveJSONNow, setAccountStorageAvailable, clearAccountData, STORAGE_KEYS } from "@/utils/storage";
   import { archiveLocalAccount, prepareLocalAccount, deleteLocalAccountVault } from "@/utils/localAccountVault";
   import { validarCajas } from "@/utils/cajas";
   export async function run(journal) {
+    auth.currentUser = { uid: "A", email: "a@example.com", emailVerified: true };
     setAccountStorageAvailable(true);
     await saveJSONNow(STORAGE_KEYS.profile, { hasOnboarded: true, userEmail: "a@example.com" });
     await prepareLocalAccount("A", "a@example.com");

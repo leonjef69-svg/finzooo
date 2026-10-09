@@ -2,6 +2,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Crypto from "expo-crypto";
 import { decryptText, encryptText } from "@/utils/encryption";
 import { deleteLegalAcceptance } from "@/utils/legalAcceptance";
+import { auth } from "@/utils/firebase";
 import {
   ACCOUNT_STORAGE_KEYS,
   clearAccountData,
@@ -24,7 +25,7 @@ const accountPrefix = (uid: string) => `${PREFIX}${encodeURIComponent(uid)}:`;
 const manifestKey = (uid: string) => `${accountPrefix(uid)}manifest`;
 
 export class LocalAccountVaultError extends Error {
-  constructor(public readonly reason: "owner" | "read" | "write") {
+  constructor(public readonly reason: "owner" | "verification" | "read" | "write") {
     super(`local-account-${reason}`);
     this.name = "LocalAccountVaultError";
   }
@@ -51,10 +52,30 @@ async function readOwner(): Promise<Owner | null> {
   } catch { throw new LocalAccountVaultError("read"); }
 }
 
-async function writeOwner(owner: Owner): Promise<void> {
+async function removeUnconfirmedOwner(raw: string): Promise<void> {
+  setAccountStorageAvailable(false);
+  try {
+    if (await AsyncStorage.getItem(OWNER_KEY) === raw) await AsyncStorage.removeItem(OWNER_KEY);
+  } catch { throw new LocalAccountVaultError("write"); }
+}
+
+async function writeOwner(owner: Owner, assertCurrentSession?: () => void): Promise<string> {
   const raw = await encryptText(JSON.stringify(owner));
-  await AsyncStorage.setItem(OWNER_KEY, raw);
-  if (await AsyncStorage.getItem(OWNER_KEY) !== raw) throw new LocalAccountVaultError("write");
+  assertCurrentSession?.();
+  try {
+    await AsyncStorage.setItem(OWNER_KEY, raw);
+    assertCurrentSession?.();
+    if (await AsyncStorage.getItem(OWNER_KEY) !== raw) throw new LocalAccountVaultError("write");
+    assertCurrentSession?.();
+  } catch (error) {
+    if (assertCurrentSession) {
+      // Esta cola impide otra adjudicación mientras se retira únicamente el
+      // dueño recién escrito. Los datos originales nunca se borran aquí.
+      await removeUnconfirmedOwner(raw);
+    }
+    throw error;
+  }
+  return raw;
 }
 
 async function readProfile(): Promise<{ hasOnboarded?: boolean; userEmail?: string } | null> {
@@ -197,18 +218,45 @@ async function restore(uid: string, snapshot: Snapshot | null): Promise<void> {
 }
 
 async function prepare(uid: string, email?: string | null): Promise<boolean> {
+  const openingUser = auth.currentUser;
   const owner = await readOwner();
   const profile = await readProfile();
   if (!owner) {
     // Migración de la instalación anterior: los datos se vinculan solo al
-    // correo guardado, nunca a la primera cuenta distinta que entre.
-    if (profile?.hasOnboarded && (!emailKey(email) || emailKey(profile.userEmail) !== emailKey(email))) throw new LocalAccountVaultError("owner");
-    if (!profile?.hasOnboarded && await hasUnownedAccountData()) throw new LocalAccountVaultError("owner");
-    const saved = await readSnapshot(uid);
-    if (saved) await restore(uid, saved);
-    else {
-      await writeOwner({ uid, mode: "active" });
-      setAccountStorageAvailable(true);
+    // correo confirmado de la sesión real, no al correo escrito en registro.
+    if (profile?.hasOnboarded) {
+      setAccountStorageAvailable(false);
+      if (!emailKey(email) || emailKey(profile.userEmail) !== emailKey(email)) throw new LocalAccountVaultError("owner");
+      const assertLegacySession = () => {
+        if (!openingUser || auth.currentUser !== openingUser || openingUser.uid !== uid ||
+          !emailKey(openingUser.email) || emailKey(openingUser.email) !== emailKey(profile.userEmail)) {
+          throw new LocalAccountVaultError("owner");
+        }
+        if (!openingUser.emailVerified) throw new LocalAccountVaultError("verification");
+      };
+      assertLegacySession();
+      // Un perfil activo anterior no se reemplaza por una copia archivada.
+      // La adjudicación espera al cifrado y vuelve a comprobar la sesión.
+      const claimedOwner = await writeOwner({ uid, mode: "active" }, assertLegacySession);
+      try {
+        assertLegacySession();
+        setAccountStorageAvailable(true);
+        return profile.hasOnboarded === true;
+      } catch (error) {
+        await removeUnconfirmedOwner(claimedOwner);
+        throw error;
+      }
+    } else {
+      if (await hasUnownedAccountData()) {
+        setAccountStorageAvailable(false);
+        throw new LocalAccountVaultError("owner");
+      }
+      const saved = await readSnapshot(uid);
+      if (saved) await restore(uid, saved);
+      else {
+        await writeOwner({ uid, mode: "active" });
+        setAccountStorageAvailable(true);
+      }
     }
   } else if (owner.uid === uid && owner.mode === "active" && profile) {
     setAccountStorageAvailable(true);

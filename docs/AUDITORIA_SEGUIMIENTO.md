@@ -1,7 +1,20 @@
 # Seguimiento de la auditoría de Claude
 
-Última revisión: 08/10/2026. Este archivo separa tres cosas distintas: código
+Última revisión: 09/10/2026. Este archivo separa tres cosas distintas: código
 corregido, pruebas locales aprobadas y acciones que realmente están publicadas.
+
+## Acceso/configuración — comprobaciones adicionales, 09/10/2026
+
+Correo verificado para adoptar historial antiguo sin dueño; rutas/arranque y
+salida sin abrir conservan originales. Perfil/presupuestos/marcas confirmados
+juntos; sesión/perfil/moneda antiguos no navegan ni reemplazan una elección nueva.
+Propietario cambia País por Idioma con bandera decorativa, moneda independiente;
+alias mantienen enlaces, catálogos e importes intactos. Avisos/selección únicos.
+Guía PRUEBAS_CONFIGURACION_INICIAL.md: ocho suites originales, regresiones
+19e5dde rojas/actual verde; 180/8 aprobadas, una prueba ajena no versionada.
+**Qué sigue:** restantes IDs/costes/compatibilidad. **Qué falta:** Android,
+correo/Google real, SMTP/moderación, consolas/trámites/cobros y entrega. No
+publicación ni cierre de toda la auditoría; tarjetas/Sentry externo excluidos.
 
 ## FINO-47/49 — barrera de servidor preparada (08/10/2026)
 Ampliación de acceso: `PRUEBAS_ACCESO_INICIAL_VIDEO.md` registra tercer Google,

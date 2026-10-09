@@ -57,7 +57,6 @@ export default function SettingsTab() {
       onCurrency={() => irUnaVez("/currency")}
       userLanguage={userLanguage}
       onLanguage={() => irUnaVez("/language")}
-      onCountry={() => irUnaVez("/country")}
       isPremium={isPremium}
       isTesterPremium={isTesterPremium}
       onCategoryBudgets={() => irUnaVez("/category-budgets")}

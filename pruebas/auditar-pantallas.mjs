@@ -23,6 +23,16 @@ function archivos(dir, out = []) {
 }
 
 const rel = (f) => path.relative(RAIZ, f).replace(/\\/g, "/");
+// Un alias puro mantiene enlaces/imports antiguos sin otra pantalla ni lógica.
+// Solo se admite un destino local existente, distinto y dentro de su carpeta.
+function aliasCompatibilityValid(file, directory) {
+  const text = fs.readFileSync(file, "utf8").replace(/^\s*\/\/[^\r\n]*(?:\r?\n|$)/gm, "").trim();
+  const match = /^export\s*\{\s*default\s*\}\s*from\s*["'](\.\/[\w/-]+)["'];?$/.exec(text);
+  if (!match) return false;
+  const target = path.resolve(path.dirname(file), `${match[1]}.tsx`);
+  return target !== file && target.startsWith(`${directory}${path.sep}`) && fs.existsSync(target)
+    && /export\s+default\s+(?:async\s+)?function\b/.test(fs.readFileSync(target, "utf8"));
+}
 const CODIGO = ["app", "screens", "components", "contexts"].flatMap((c) =>
   archivos(path.join(RAIZ, c))
 );
@@ -55,7 +65,8 @@ console.log("\n--- PANTALLAS A LAS QUE NO SE LLEGA ---");
   for (const p of pantallas) {
     // Se busca su import en cualquier parte. Una pantalla que nadie importa
     // es codigo que se mantiene, se traduce y se audita para nada.
-    const usada = new RegExp(`screens/${p}["'\\s]`).test(TODO_EL_CODIGO);
+    const usada = new RegExp(`screens/${p}["'\\s]`).test(TODO_EL_CODIGO)
+      || aliasCompatibilityValid(path.join(RAIZ, "screens", `${p}.tsx`), path.join(RAIZ, "screens"));
     if (!usada) {
       fallo("screens", `${p}.tsx no lo importa nadie`);
       n++;
@@ -86,6 +97,8 @@ console.log("\n--- RUTAS A LAS QUE NO NAVEGA NADIE ---");
   let n = 0;
   for (const r of rutas) {
     if (PESTANAS.includes(r) || r.includes("[")) continue;
+    const file = path.join(RAIZ, "app", `${r.slice(1)}.tsx`);
+    if (fs.existsSync(file) && aliasCompatibilityValid(file, path.join(RAIZ, "app"))) continue;
     // Se busca la ruta en cualquier forma: entre comillas, o dentro de un
     // texto armado con `/savings/move?id=...`. Buscando solo la cadena exacta
     // se daban por huerfanas rutas que si se usan, con parametros detras.

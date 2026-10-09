@@ -147,13 +147,14 @@ console.log("\n--- LA PRUEBA NO SE MEZCLA CON EL PREMIUM DE LA CUENTA ---");
   // Cerrar sesión y borrar la cuenta pasan por una limpieza común: la prueba
   // pertenece a la cuenta, no al aparato, y no debe pasar a quien entre después.
   const limpieza = /async function limpiarCuentaEnEsteDispositivo\([\s\S]*?\n  \}/.exec(ctx)?.[0] ?? "";
+  const memoria = /function clearLocalAccountMemory\([\s\S]*?\n  \}/.exec(ctx)?.[0] ?? "";
   const inicioLogout = ctx.indexOf("async function logout(");
   const inicioReauth = ctx.indexOf("async function reauthenticate(", inicioLogout);
   const logout = ctx.slice(inicioLogout, inicioReauth);
   const inicioDelete = ctx.indexOf("async function deleteAccount(");
   const inicioInit = ctx.indexOf("useEffect(() => {\n    async function init()", inicioDelete);
   const borrarCuenta = ctx.slice(inicioDelete, inicioInit);
-  ok(/setPruebaInicio\(null\)/.test(limpieza) && /limpiarCuentaEnEsteDispositivo\(localUser\.uid\)/.test(logout) &&
+  ok(/clearLocalAccountMemory\(\)/.test(limpieza) && /setPruebaInicio\(null\)/.test(memoria) && /limpiarCuentaEnEsteDispositivo\(localUser\.uid\)/.test(logout) &&
     /limpiarCuentaEnEsteDispositivo\(user\.uid\)/.test(borrarCuenta),
   "al cerrar sesión y borrar la cuenta, se suelta la prueba local");
   const almacen = fs.readFileSync(path.join(RAIZ, "utils/storage.ts"), "utf8");

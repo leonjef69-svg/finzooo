@@ -4,6 +4,7 @@ import fs from "node:fs";
 const leer = (ruta) => fs.readFileSync(ruta, "utf8");
 const nav = leer("utils/nav.ts");
 const country = leer("app/country.tsx");
+const language = leer("app/language.tsx");
 const currency = leer("app/currency.tsx");
 const login = leer("screens/Login.tsx");
 const register = leer("screens/Register.tsx");
@@ -12,7 +13,8 @@ const layout = leer("app/_layout.tsx");
 const cajas = leer("screens/Cajas.tsx");
 const context = leer("contexts/AppDataContext.tsx");
 
-assert.match(country, /onBack=\{safeBack\}/, "País vuelve al lugar desde el que se abrió");
+assert.match(country, /export \{ default \} from "\.\/language"/, "enlaces antiguos de País abren Idioma, sin cambiar moneda");
+assert.match(language, /onBack=\{safeBack\}/, "Idioma vuelve al lugar desde el que se abrió");
 assert.match(currency, /onBack=\{safeBack\}/, "Moneda vuelve al lugar desde el que se abrió");
 assert.doesNotMatch(country + currency, /router\.replace\("\/setup"\)/, "Ajustes no salta a la configuración inicial");
 assert.match(nav, /export function volverUnaVez/, "volver también ignora un doble toque");

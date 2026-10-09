@@ -13,14 +13,14 @@ export default function LoginRoute() {
       onLoggedIn={async () => {
         const user = auth.currentUser;
         if (!user) return;
+        if (!user.emailVerified) {
+          router.replace("/verify-email");
+          return;
+        }
         const localRestored = await openLocalAccount(user.uid, user.email);
         if (user) {
           if (!localRestored) setUserName(user.displayName || "");
           setUserEmail(user.email || "");
-        }
-        if (user && !user.emailVerified) {
-          router.replace("/verify-email");
-          return;
         }
         // La copia del teléfono es de esta cuenta y se conserva incluso Gratis.
         // No reemplazarla por una copia antigua de la nube al volver a entrar.

@@ -1,5 +1,13 @@
 # Lo que hay que rellenar en Play Console
 
+Configuración/Idioma preparada (09/10/2026): idioma y moneda independientes,
+banderas solo representativas; no seleccionan ubicación ni añaden recogida de
+datos. País histórico no se borra ni se deduce de las banderas. Guardado local
+confirmado y adopción legacy con correo verificado; no añaden permisos,
+proveedores ni campos remotos. Guía PRUEBAS_CONFIGURACION_INICIAL.md separa
+pruebas de código de Android/cuentas reales. Nada publicado; consola/políticas
+reales y entrega siguen pendientes. No afirmar cobertura completa ni compras.
+
 Acceso inicial preparado (08/10/2026): correcciones de registro/reintento,
 verificación y Google; no añaden proveedores, datos ni permisos. Hotmail/
 Outlook significan correo y contraseña, no OAuth Microsoft. Casilla previa

@@ -1,60 +1,43 @@
-import { useEffect, useState } from "react";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { AppState, Image, KeyboardAvoidingView, Linking, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { useRef, useState } from "react";
+import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, ScrollView, StatusBar, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import * as Notifications from "expo-notifications";
 import { Bell, ChevronRight, Globe2, Moon, Sun, WalletCards } from "lucide-react-native";
 import { currencySymbolFor } from "@/constants/currencies";
-import { countryById, countryLabelFor } from "@/constants/countries";
+import { languageLabelFor } from "@/constants/i18n";
+import { currencyFlagFor, languageFlagFor } from "@/utils/decorativeFlags";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { irUnaVez } from "@/utils/nav";
+import { useSetupNotifications } from "@/utils/setupNotifications";
 
-const notificationKey = () => `@fino/setup-notifications-enabled:${auth.currentUser?.uid ?? "local"}`;
-
-export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => void }) {
-  const { userCurrency, userLanguage, userCountry, t, monthNames, themeMode, updateThemeMode } = useAppData();
+export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => void | Promise<void> }) {
+  const { userCurrency, userLanguage, t, monthNames, themeMode, updateThemeMode } = useAppData();
   const [amount, setAmount] = useState("");
-  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const { notificationsEnabled, notificationBusy, notificationErrorKey, enableNotifications } = useSetupNotifications(auth.currentUser?.uid ?? null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState("");
+  const saveBusy = useRef(false);
   const insets = useSafeAreaInsets();
   const now = new Date();
   const monthLabel = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
   const parsed = parseAmountInput(amount, userCurrency);
   const amountError = amountInputError(amount, userCurrency);
-  const disabled = !amount || parsed <= 0;
+  const disabled = !amount || parsed <= 0 || !!amountError || saving || notificationBusy || !auth.currentUser;
 
-  useEffect(() => {
-    async function refreshNotificationState() {
-      try {
-        const [enabledByUser, permission] = await Promise.all([
-          AsyncStorage.getItem(notificationKey()),
-          Notifications.getPermissionsAsync(),
-        ]);
-        const enabled = (enabledByUser === "true" || enabledByUser === "pending") && permission.granted;
-        setNotificationsEnabled(enabled);
-        if (enabled && enabledByUser !== "true") await AsyncStorage.setItem(notificationKey(), "true");
-      } catch {
-        setNotificationsEnabled(false);
-      }
-    }
-    refreshNotificationState();
-    const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "active") refreshNotificationState();
-    });
-    return () => subscription.remove();
-  }, []);
-
-  async function enableNotifications() {
-    if (notificationsEnabled) {
-      await Linking.openSettings();
-      return;
-    }
+  async function saveSetup() {
+    if (saveBusy.current || disabled) return;
+    saveBusy.current = true;
+    setSaving(true);
+    setSaveError("");
     try {
-      if (Platform.OS === "android") await Notifications.setNotificationChannelAsync("default", { name: "Avisos de Fino", importance: Notifications.AndroidImportance.DEFAULT });
-      await AsyncStorage.setItem(notificationKey(), "pending");
-      await Linking.openSettings();
-    } catch { setNotificationsEnabled(false); }
+      await onSaved(parsed);
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : t("setup.saveFailed"));
+    } finally {
+      saveBusy.current = false;
+      setSaving(false);
+    }
   }
 
   return (
@@ -87,9 +70,10 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
         </Text>
       </View>
 
-      <TouchableOpacity onPress={() => irUnaVez("/country")} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Globe2 size={20} color="#d97706" /><Text className="ml-3 flex-1 font-bold text-slate-900">{t("settings.country")}</Text><Text numberOfLines={1} className="max-w-[45%] mr-2 text-slate-600">{countryById(userCountry) ? countryLabelFor(countryById(userCountry)!, userLanguage) : t("country.customShort")}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
-      <TouchableOpacity onPress={() => irUnaVez("/currency")} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Text className="text-xl">💰</Text><Text className="ml-3 flex-1 font-bold text-slate-900">{t("settings.currency")}</Text><Text className="mr-2 text-slate-600">{currencySymbolFor(userCurrency)} · {userCurrency}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
-      <TouchableOpacity onPress={enableNotifications} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Bell size={20} color="#7c3aed" /><Text className="ml-3 flex-1 font-bold text-slate-900">{t("settings.notifications")}</Text><Text className={notificationsEnabled ? "font-bold text-emerald-600" : "text-slate-500"}>{t(notificationsEnabled ? "setup.notificationsOn" : "setup.notificationsOff")}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
+      <TouchableOpacity disabled={saving} onPress={() => { if (!saveBusy.current) irUnaVez("/language"); }} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Globe2 size={20} color="#d97706" /><Text className="ml-3 flex-1 font-bold text-slate-900">{t("settings.language")}</Text><Text accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" className="mr-2 text-xl">{languageFlagFor(userLanguage)}</Text><Text numberOfLines={1} className="max-w-[45%] mr-2 text-slate-600">{languageLabelFor(userLanguage)}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
+      <TouchableOpacity disabled={saving} onPress={() => { if (!saveBusy.current) irUnaVez("/currency"); }} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Text accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" className="text-xl">{currencyFlagFor(userCurrency)}</Text><Text className="ml-3 flex-1 font-bold text-slate-900">{t("settings.currency")}</Text><Text className="mr-2 text-slate-600">{currencySymbolFor(userCurrency)} · {userCurrency}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
+      <TouchableOpacity disabled={saving || notificationBusy} onPress={() => { if (!saveBusy.current) void enableNotifications(); }} className="mb-3 flex-row items-center rounded-2xl bg-white/95 px-4 py-4"><Bell size={20} color="#7c3aed" /><Text className="ml-3 flex-1 font-bold text-slate-900">{t("settings.notifications")}</Text><Text className={notificationsEnabled ? "font-bold text-emerald-600" : "text-slate-500"}>{t(notificationsEnabled ? "setup.notificationsOn" : "setup.notificationsOff")}</Text><ChevronRight size={18} color="#64748b" /></TouchableOpacity>
+      {notificationErrorKey ? <Text accessibilityRole="alert" className="mb-3 text-xs font-semibold text-red-200">{t(notificationErrorKey)}</Text> : null}
 
       <View className="mb-3 rounded-2xl bg-white/95 px-4 py-3.5">
         <View className="flex-row items-center justify-between">
@@ -127,6 +111,7 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
             disableFullscreenUI
             keyboardType="decimal-pad"
             value={amount}
+            editable={!saving}
             onChangeText={(v) => {
               const safe = sanitizeSafeAmountInput(v, userCurrency);
               const [whole = "", decimals] = safe.split(".");
@@ -143,16 +128,17 @@ export default function SetupBudget({ onSaved }: { onSaved: (amount: number) => 
         </View>
 
       {amountError ? <Text className="mt-2 text-xs font-semibold text-red-200">{t(amountError === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")}</Text> : null}
+      {saveError ? <Text accessibilityRole="alert" className="mt-2 text-xs font-semibold text-red-200">{saveError}</Text> : null}
 
       <TouchableOpacity
         activeOpacity={0.85}
-        onPress={() => onSaved(parsed)}
+        onPress={saveSetup}
         disabled={disabled}
         className={`w-full mt-8 bg-amber-500 py-4 rounded-2xl items-center justify-center ${
           disabled ? "opacity-40" : ""
         }`}
       >
-        <Text className="text-white font-bold">{t("setup.start")}</Text>
+        {saving ? <ActivityIndicator color="#ffffff" /> : <Text className="text-white font-bold">{t("setup.start")}</Text>}
       </TouchableOpacity>
       </View>
       </ScrollView>

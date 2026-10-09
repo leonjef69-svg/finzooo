@@ -10,10 +10,12 @@ async function scenario(body) {
   const source = `
     import assert from "node:assert/strict";
     import AsyncStorage, { failNextStorageOperation } from "@react-native-async-storage/async-storage";
+    import { auth } from "@/utils/firebase";
     import { decryptText, encryptText } from "@/utils/encryption";
     import { ACCOUNT_STORAGE_KEYS, clearAccountData, loadJSON, saveJSON, saveJSONNow, setAccountStorageAvailable, STORAGE_KEYS } from "@/utils/storage";
     import { allowBackgroundAccount, allowPreAccountPreferences, archiveLocalAccount, deleteLocalAccountVault, prepareLocalAccount, resumeLocalAccount } from "@/utils/localAccountVault";
     async function seed(uid, email, amount) {
+      auth.currentUser = { uid, email, emailVerified: true };
       setAccountStorageAvailable(true);
       await saveJSONNow(STORAGE_KEYS.profile, { userEmail: email, userName: uid, hasOnboarded: true });
       await saveJSONNow(STORAGE_KEYS.transactions, [{ id: amount, amount }]);

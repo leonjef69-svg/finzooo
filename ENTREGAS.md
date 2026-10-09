@@ -1,5 +1,15 @@
 # Entregas de Fino
 
+## Preparado, no entregado — configuración/Idioma — 09/10/2026
+
+Idioma sustituye País sin cambiar moneda; banderas únicamente decorativas.
+Compatibilidad de enlaces antiguos, guardado inicial confirmado y adopción
+de historial antiguo con correo verificado; salida sin abrir conserva archivos.
+Guía PRUEBAS_CONFIGURACION_INICIAL.md, 180 pruebas/8 auditores aprobados sin
+tarjetas. **Qué sigue:** restantes IDs/consultas/compatibilidad. **Qué falta:**
+Android/Google/correo reales, consolas/trámites/SMTP/cobros y entrega autorizada.
+Sin APK/AAB/OTA/EAS/despliegue. Git no actualiza producción; tarjetas/Sentry fuera.
+
 ## Preparado, no entregado — acceso inicial funcional (08/10/2026)
 
 Registro parcial, Google de Bienvenida, carga de cuenta distinguida del

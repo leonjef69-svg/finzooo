@@ -1,6 +1,6 @@
 # Control de cierre de los 61 hallazgos
 
-Revisión: 08/10/2026. Este índice conserva todos los IDs del informe de Claude.
+Revisión: 09/10/2026. Este índice conserva todos los IDs del informe de Claude.
 No es un porcentaje de correcciones ni declara la auditoría terminada.
 Las notas de código preparado remiten al seguimiento y a Git; no equivalen a
 pruebas físicas ni a publicación. «Revalidar» significa que falta contrastar
@@ -14,6 +14,11 @@ Guía `PRUEBAS_ACCESO_INICIAL_VIDEO.md`: 1.870 fotogramas, acceso simulado
 con SDK de la app, 189/189 comprobaciones SDK/HTTP locales aprobadas y
 correcciones de registro/verificación. Google/correos reales siguen pendientes.
 Las tarjetas de crédito permanecen excluidas por decisión del propietario.
+
+Ampliación: PRUEBAS_CONFIGURACION_INICIAL.md documenta guardado inicial,
+Idioma/Moneda separados, banderas decorativas y protección adicional de legado
+sin dueño. 180/8 aprobadas sin tarjetas, no cierre de pruebas físicas ni de los
+61 IDs. Las decisiones anteriores sobre País se sustituyen por la nueva petición.
 
 | Hallazgo | Tema original | Situación y condición de cierre |
 |---|---|---|

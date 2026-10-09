@@ -23,7 +23,7 @@ import { nativewindThemeVariables, type VisualStyle } from "@/constants/visualTh
 import { seedTransactions, seedGoals } from "@/constants/seed";
 import { currencySymbolFor } from "@/constants/currencies";
 import { countryById, countryFor } from "@/constants/countries";
-import { monthNamesFor, translations } from "@/constants/i18n";
+import { LANGUAGES, monthNamesFor, translations } from "@/constants/i18n";
 import {
   clearAccountData,
   clearRetiredAlternateData,
@@ -32,6 +32,7 @@ import {
   saveJSON,
   saveJSONNow,
   saveJSONBatchNow,
+  getAccountStorageSession,
   flushPendingSaves,
   setAccountStorageAvailable,
   STORAGE_KEYS,
@@ -135,7 +136,7 @@ import { presupuestoCubreTransferencias, presupuestoDelMes, transferidoPendiente
 import { hayDescuadre, maximoAApartar, metaConEstadoActual, saldoLibre, totalApartado } from "@/utils/ahorro";
 import { availablePersonalBalance, totalsForMonth } from "@/utils/finances";
 import { saldoAnteriorDe } from "@/utils/saldoAnterior";
-import { isSafeMoneyAmount } from "@/utils/amount";
+import { amountInputError, isSafeMoneyAmount } from "@/utils/amount";
 import { unlinkCreditPaymentsForHomeTransactions } from "@/utils/creditStore";
 import * as notificationReader from "@/modules/notification-reader";
 import { cancelarProgramacionAlCerrarSesion } from "@/utils/scheduledExport";
@@ -164,7 +165,7 @@ type AppDataContextValue = {
   authReady: boolean;
   needsEmailVerification: boolean;
   hasOnboarded: boolean;
-  completeOnboarding: (budgetAmount: number) => void;
+  completeOnboarding: (budgetAmount: number) => Promise<void>;
   reloadPersistedData: () => Promise<void>;
   openLocalAccount: (uid: string, email?: string | null) => Promise<boolean>;
   hydrateFromCloud: (uid: string) => Promise<"restored" | "none" | "premium-required" | "review-pending">;
@@ -1187,8 +1188,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         setHasOnboarded(false);
       }
       if (error instanceof LocalAccountVaultError) {
-        const accessError = new Error(tRef.current(error.reason === "owner" ? "localAccount.ownerMismatch" : "localAccount.restoreFailed"));
-        accessError.name = "LocalAccountAccessError";
+        const accessError = new Error(tRef.current(error.reason === "verification" ? "localAccount.verifyBeforeRestore" : error.reason === "owner" ? "localAccount.ownerMismatch" : "localAccount.restoreFailed"));
+        accessError.name = error.reason === "verification" ? "LocalAccountVerificationRequired" : "LocalAccountAccessError";
         throw accessError;
       }
       throw error;
@@ -1221,6 +1222,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     try {
     await clearAccountData();
     } finally {
+    clearLocalAccountMemory();
+    }
+  }
+
+  /** También se usa al salir sin haber abierto los datos: no escribe disco. */
+  function clearLocalAccountMemory() {
     setHasOnboarded(false);
     setUserName("");
     setUserEmail("");
@@ -1259,14 +1266,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setRespaldoFallo(null);
     setCelebrateGoal(null);
     setVerComoGratis(false);
-    }
   }
 
   // Cierra la sesión de verdad (Firebase) y limpia los datos de este
   // celular, para que la siguiente cuenta que inicie sesión aquí no vea
   // los movimientos/metas de la cuenta anterior.
   async function logout(options?: { skipBackup?: boolean }) {
-    if (hasUnreadableLocalData()) throw new Error(tRef.current("storage.readBlockedBody"));
+    const localDataOpened = getAccountStorageSession() !== null;
+    if (localDataOpened && hasUnreadableLocalData()) throw new Error(tRef.current("storage.readBlockedBody"));
     const localUser = auth.currentUser;
     if (!localUser) throw new Error(tRef.current("settings.noActiveSession"));
     const captureWasEnabled = notificationReader.isEnabled();
@@ -1276,6 +1283,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setReady(false);
     notificationReader.setEnabled(false);
     try {
+    // Sin abrir la bóveda (por ejemplo, correo legacy pendiente), estos
+    // archivos todavía no son de esta sesión. No archivarlos ni limpiarlos.
+    if (!localDataOpened) {
+      setHasOnboarded(false);
+      await Promise.allSettled([signOutFromGoogle()]);
+      await signOut(auth);
+      setAccountStorageAvailable(false);
+      clearLocalAccountMemory();
+      return;
+    }
     // Antes de salir, espera a que el último cambio (por ejemplo, la
     // moneda que acabas de elegir) termine de subirse a la nube. Si no
     // se espera esto, cerrar sesión muy rápido después de un cambio
@@ -1308,13 +1325,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     await signOut(auth);
     await limpiarCuentaEnEsteDispositivo(localUser.uid);
     } catch (error) {
-      if (auth.currentUser?.uid === localUser.uid) {
-        await resumeLocalAccount(localUser.uid).catch(() => {
+      if (auth.currentUser === localUser) {
+        if (localDataOpened) await resumeLocalAccount(localUser.uid).catch(() => {
           setAccountStorageAvailable(false);
           setStorageReadBlocked(true);
         });
-        setHasOnboarded(onboardedBeforeLogout);
-        notificationReader.setEnabled(captureWasEnabled);
+        setHasOnboarded(localDataOpened && onboardedBeforeLogout);
+        notificationReader.setEnabled(localDataOpened && captureWasEnabled);
       }
       if (archiving || error instanceof LocalAccountVaultError) throw new Error(tRef.current("localAccount.saveFailed"));
       throw error;
@@ -1409,6 +1426,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // ya tienen sus propios valores seguros; esto cubre el último recurso.
       setAccountStorageAvailable(false);
       setHasOnboarded(false);
+      if (error instanceof Error && error.name === "LocalAccountVerificationRequired") {
+        setAccountStorageAvailable(false);
+        setHasOnboarded(false);
+        setReady(true);
+        return;
+      }
       await signOut(auth).catch(() => undefined);
       const message = error instanceof LocalAccountVaultError
         ? tRef.current(error.reason === "owner" ? "localAccount.ownerMismatch" : "localAccount.restoreFailed")
@@ -2166,22 +2189,46 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const descuadre = hayDescuadre(disponible, apartado);
   const monthLabel = `${monthNames[month.m]} ${month.y}`;
 
-  function completeOnboarding(budgetAmount: number) {
+  async function completeOnboarding(budgetAmount: number): Promise<void> {
+    const user = auth.currentUser;
+    const version = localSessionVersion.current;
+    const currency = currencyForReturn.current;
+    const task = captureAccountTask(user?.uid ?? "", () => auth.currentUser === user && version === localSessionVersion.current);
+    if (!ready || !user || !task.current()) throw new Error(tRef.current("settings.noActiveSession"));
+    if (accountConfigured.current) throw new Error(tRef.current("setup.alreadyConfigured"));
+    if (Platform.OS !== "android" || !isSafeMoneyAmount(budgetAmount) || budgetAmount <= 0 || amountInputError(String(budgetAmount), currency)) throw new Error(tRef.current("setup.saveFailed"));
+    const originalProfile = cloudGroupValue(cloudFieldsRef.current ?? datosParaLaNube(), CLOUD_SYNC_GROUPS.profile) as Pick<CloudData, "userName" | "userPhoto" | "userCurrency" | "userLanguage">;
     const initialMonth = currentRealMonth();
     const key = monthKey(initialMonth.y, initialMonth.m);
-    setMonth(initialMonth);
-    setBudgets(markCloudGroup(CLOUD_SYNC_GROUPS.budgets, budgets, (b) => ({ ...b, [key]: budgetAmount })));
-    markCloudProfile({ userName, userPhoto, userCurrency, userLanguage });
-    setHasOnboarded(true);
-    saveJSON(STORAGE_KEYS.profile, {
-      userName,
-      userEmail,
-      userPhoto,
-      userCurrency,
-      userLanguage,
-      userCountry,
-      hasOnboarded: true,
-    });
+    const saved = await withLocalAccountOperation(() => saveJSONBatchNow(
+      [STORAGE_KEYS.profile, STORAGE_KEYS.budgets, STORAGE_KEYS.cloudSyncMeta],
+      () => {
+        const originalFields = cloudFieldsRef.current;
+        const originalMeta = cloudSyncMetaRef.current;
+        const local = originalFields ?? { ...datosParaLaNube(), pagosProgramados, iconosFavoritos };
+        const nextBudgets = { ...local.budgets, [key]: budgetAmount };
+        const profile = { userName, userEmail: user.email || userEmail, userPhoto,
+          userCurrency: currency, userLanguage, userCountry, hasOnboarded: true };
+        let meta = recordCloudGroupChange(originalMeta, CLOUD_SYNC_GROUPS.budgets, local.budgets, nextBudgets);
+        meta = recordCloudGroupChange(meta, CLOUD_SYNC_GROUPS.profile, cloudGroupValue(local, CLOUD_SYNC_GROUPS.profile), cloudGroupValue({ ...local, ...profile }, CLOUD_SYNC_GROUPS.profile));
+        return {
+          entries: [[STORAGE_KEYS.profile, profile], [STORAGE_KEYS.budgets, nextBudgets], [STORAGE_KEYS.cloudSyncMeta, meta]],
+          stillValid: () => task.current() && !accountConfigured.current && currencyForReturn.current === currency
+            && local.userName === originalProfile.userName && local.userPhoto === originalProfile.userPhoto
+            && local.userLanguage === originalProfile.userLanguage && local.userCurrency === originalProfile.userCurrency
+            && cloudFieldsRef.current === originalFields && cloudSyncMetaRef.current === originalMeta,
+          committed: () => {
+            cloudFieldsRef.current = { ...local, ...profile, budgets: nextBudgets, syncUpdatedAt: meta, syncFormat: 2 };
+            cloudSyncMetaRef.current = meta;
+            setMonth(initialMonth);
+            setBudgets(nextBudgets);
+            setCloudSyncMeta(meta);
+            setHasOnboarded(true);
+          },
+        };
+      },
+    ));
+    if (!saved) throw new Error(tRef.current(task.current() ? "setup.saveFailed" : "settings.noActiveSession"));
   }
 
   function updateProfileInfo(name: string, photo: string | null) {
@@ -2200,7 +2247,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function updateLanguage(id: string) {
-    persistCloudProfile(markCloudProfile({ userLanguage: id }));
+    if (!LANGUAGES.some(language => language.id === id)) throw new Error(t("setup.selectionFailed"));
+    persistCloudProfile(markCloudProfile({ userLanguage: id }), userCountry, accountConfigured.current);
     showToast(translations[id as keyof typeof translations]?.["toast.languageUpdated"] || "Idioma actualizado");
   }
 

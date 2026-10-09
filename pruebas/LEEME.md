@@ -1,5 +1,13 @@
 # Pruebas y auditores
 
+Configuración/Idioma (09/10): ocho suites nuevas de originales y adaptadores,
+enumeradas en docs/PRUEBAS_CONFIGURACION_INICIAL.md. Legacy, rutas, guardado,
+avisos, selección, banderas, idioma independiente y aliases; regresiones
+19e5dde rojas/actual verde. Guardado usa AES/HMAC y SQLite reales locales;
+React/Android/IO adaptados, Settings/alias son contratos estáticos. Batería
+180 pruebas/8 auditores sin tarjetas (una ajena no versionada). No acredita
+Google/correo reales, UI/TalkBack ni ausencia total de fallos.
+
 Acceso inicial: `verificar-bienvenida-acceso-real.mjs`,
 `verificar-registro-reintento-real.mjs` y
 `verificar-acceso-inicial-operativo.mjs` ejecutan originales con IO/JSX

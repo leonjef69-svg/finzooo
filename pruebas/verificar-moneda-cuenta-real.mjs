@@ -10,6 +10,10 @@ const baseline = process.env.FINO_TEST_CURRENCY_BASELINE;
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw Error("Se requiere hash Git.");
 const read = file => baseline ? execFileSync("git", ["show", `${baseline}:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");
 const file = "contexts/AppDataContext.tsx", source = read(file);
+const api = {};
+vm.runInNewContext(ts.transpileModule(read("utils/cloudFieldMerge.ts"), {
+  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
+}).outputText, { exports: api, Error });
 const writes = [], notices = [], changes = [];
 const deps = { accountConfigured: { current: true }, currencyForReturn: { current: "PEN" },
   userCurrency: "PEN", userCountry: "PE", userName: "Ana", userPhoto: null,
@@ -17,7 +21,7 @@ const deps = { accountConfigured: { current: true }, currencyForReturn: { curren
   t: key => key, showToast: value => notices.push(value),
   translations: { en: { "toast.countryUpdated": "Country updated", "country.updatedLocked": "Country updated; currency kept" } },
   CLOUD_SYNC_GROUPS: { profile: "profile", budgets: "budgets" },
-  STORAGE_KEYS: { profile: "profile" }, saveJSON: (key, value) => writes.push([key, value]),
+  STORAGE_KEYS: { profile: "profile", budgets: "budgets", cloudSyncMeta: "meta" }, saveJSON: (key, value) => writes.push([key, value]),
   markCloudGroup: (_group, before, update) => { changes.push(_group); return update(before); },
   currentRealMonth: () => ({ y: 2026, m: 9 }), monthKey: () => "2026-10", setMonth() {}, setBudgets() {},
 };
@@ -52,14 +56,29 @@ functions.setInitialCountry("US", "en", "USD");
 assert.equal(writes.at(-1)[1].userCurrency, "USD");
 assert.equal(writes.at(-1)[1].hasOnboarded, false);
 // Simula el nuevo dibujado sin copiar el algoritmo del registro.
-const configuredDeps = { ...deps, userCurrency: "USD" };
+const configuredDeps = { ...deps, userCurrency: "USD", ready: true,
+  auth: { currentUser: { uid: "synthetic", email: "ana@example.com" } },
+  localSessionVersion: { current: 1 }, Platform: { OS: "android" },
+  cloudFieldsRef: { current: null }, cloudSyncMetaRef: { current: {} },
+  tRef: { current: key => key }, captureAccountTask: () => ({ current: () => true }),
+  isSafeMoneyAmount: amount => Number.isFinite(amount) && amount > 0,
+  amountInputError: () => null, withLocalAccountOperation: work => work(),
+  datosParaLaNube: () => ({ userName: "Ana", userPhoto: null, userCurrency: "USD", userLanguage: "en", budgets: {} }),
+  pagosProgramados: [], iconosFavoritos: [],
+  recordCloudGroupChange: api.recordCloudGroupChange, cloudGroupValue: api.cloudGroupValue,
+  setCloudSyncMeta() {}, saveJSONBatchNow: async (_keys, prepare) => {
+    const batch = await prepare(); if (!batch.stillValid()) return false;
+    for (const entry of batch.entries) writes.push(entry);
+    batch.committed(); return true;
+  },
+};
 const complete = handlerOriginal(file, "completeOnboarding", configuredDeps, source);
-complete(100);
+await complete(100);
 assert.equal(deps.accountConfigured.current, true);
 functions.updateCurrency("PEN");
 assert.equal(deps.currencyForReturn.current, "USD");
 // Sin movimientos también sigue fija: la condición no depende de su cantidad.
-assert.equal(writes.at(-1)[1].hasOnboarded, true);
+assert.equal(writes.findLast(([key]) => key === "profile")[1].hasOnboarded, true);
 
 // Ejecuta la implementación del setter de React: actualización inmediata
 // antes del siguiente dibujado, restauración y limpieza de otra cuenta.
@@ -78,10 +97,6 @@ setConfigured(false); assert.equal(lock.current, false);
 setConfigured(true); assert.deepEqual(rendered, [true, false, true]);
 
 // Fusión original: rechaza antes de cambiar presupuesto, calendario o perfil.
-const api = {};
-vm.runInNewContext(ts.transpileModule(read("utils/cloudFieldMerge.ts"), {
-  compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
-}).outputText, { exports: api, Error });
 const data = extra => ({ hasOnboarded: true, userName: "Ana", userPhoto: null,
   userCurrency: "PEN", userLanguage: "es", budgets: {}, categoryBudgets: {},
   transactions: [], goals: [], isPremium: false, ...extra });
@@ -176,7 +191,8 @@ assert.deepEqual(historyWrites, []);
 
 // Contratos estáticos adicionales, NO pruebas visuales ni reglas publicadas.
 assert.match(read("screens/CurrencyPicker.tsx"), /disabled=\{hasOnboarded\}/);
-assert.match(read("screens/CountryPicker.tsx"), /hasOnboarded \? "country.lockedCurrency"/);
+assert.match(read("screens/CountryPicker.tsx"), /export \{ default \} from "\.\/LanguagePicker"/,
+  "el selector antiguo es alias de idioma, no una vía para elegir moneda");
 assert.match(source, /setHasOnboarded\(onboarded\)/, "restaura bloqueo de la cuenta local");
 assert.match(source, /setHasOnboarded\(false\)/, "limpia bloqueo al salir");
 assert.match(read("utils/cloudSync.ts"), /lease, clean\.userCurrency\)/, "historial separado recibe moneda de origen");

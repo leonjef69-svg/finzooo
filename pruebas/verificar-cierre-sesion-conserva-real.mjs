@@ -16,9 +16,10 @@ const require = createRequire(import.meta.url);
 function environment() {
   const result = buildSync({ stdin: { contents: `
     export { default as disk, failNextStorageOperation } from "@react-native-async-storage/async-storage";
+    export { auth } from "@/utils/firebase";
     export { decryptText } from "@/utils/encryption";
     export { archiveLocalAccount, prepareLocalAccount, resumeLocalAccount, LocalAccountVaultError } from "@/utils/localAccountVault";
-    export { clearAccountData, hasUnreadableLocalData, loadJSON, saveJSON, saveJSONNow, setAccountStorageAvailable, STORAGE_KEYS } from "@/utils/storage";
+    export { clearAccountData, getAccountStorageSession, hasUnreadableLocalData, loadJSON, saveJSON, saveJSONNow, setAccountStorageAvailable, STORAGE_KEYS } from "@/utils/storage";
   `, resolveDir: root, sourcefile: "logout-real-dependencies.ts", loader: "ts" },
     bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent",
     alias: { "@": root,
@@ -31,6 +32,7 @@ function environment() {
   return module.exports;
 }
 async function seed(api, uid, amount) {
+  api.auth.currentUser = { uid, email: `${uid}@example.com`, emailVerified: true };
   api.setAccountStorageAvailable(true);
   const values = {
     profile: { userName: uid, userEmail: `${uid}@example.com`, hasOnboarded: true, userCurrency: "PEN" },

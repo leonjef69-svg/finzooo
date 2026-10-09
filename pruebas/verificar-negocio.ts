@@ -248,13 +248,14 @@ console.log("\n--- EL NEGOCIO ESTA ENGANCHADO POR LOS CUATRO LADOS ---");
   // Cerrar sesión y borrar la cuenta pasan por la misma limpieza local. Así no se
   // mantienen dos listas distintas de datos que olvidar vaciar.
   const limpieza = /async function limpiarCuentaEnEsteDispositivo\([\s\S]*?\n  \}/.exec(ctx)?.[0] ?? "";
+  const memoria = /function clearLocalAccountMemory\([\s\S]*?\n  \}/.exec(ctx)?.[0] ?? "";
   const inicioLogout = ctx.indexOf("async function logout(");
   const inicioReauth = ctx.indexOf("async function reauthenticate(", inicioLogout);
   const logout = ctx.slice(inicioLogout, inicioReauth);
   const inicioDelete = ctx.indexOf("async function deleteAccount(");
   const inicioInit = ctx.indexOf("useEffect(() => {\n    async function init()", inicioDelete);
   const borrarCuenta = ctx.slice(inicioDelete, inicioInit);
-  ok(/setDatosNegocio\(NEGOCIO_VACIO, true\)/.test(limpieza), "la limpieza común vacía el negocio sin crear borrados de otra cuenta");
+  ok(/clearLocalAccountMemory\(\)/.test(limpieza) && /setDatosNegocio\(NEGOCIO_VACIO, true\)/.test(memoria), "la limpieza común vacía el negocio sin crear borrados de otra cuenta");
   ok(/await limpiarCuentaEnEsteDispositivo\(localUser\.uid\)/.test(logout), "cerrar sesión usa la limpieza común");
   ok(/await deleteUser\(user\);[\s\S]*?limpiarCuentaEnEsteDispositivo\(user\.uid\)/.test(borrarCuenta),
     "borrar la cuenta limpia el negocio local después de borrarla en la nube");

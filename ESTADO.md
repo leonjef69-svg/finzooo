@@ -1,5 +1,24 @@
 # Estado actual de Fino
 
+## Configuración segura e Idioma separado — 09/10/2026, preparado
+
+- Decisión nueva: País pasa a Idioma en configuración/Ajustes; tres idiomas,
+  moneda aparte y banderas solo decorativas. Enlaces antiguos mantienen alias;
+  datos/catálogo/país histórico intactos, sin convertir ni reetiquetar importes.
+- Perfil/presupuesto/marcas se confirman juntos antes de entrar. Doble toque,
+  error/reintento y sesión/perfil/moneda cambiados comprobados. Idioma inicial
+  no completa el registro. Avisos por cuenta/consulta y selectores reforzados.
+- Historial antiguo sin dueño exige correo real confirmado y misma sesión;
+  registro/arranque/verificación no lo sobrescriben. Salir sin abrir no borra,
+  archiva ni asigna; Auth fallido no reabre datos ni reactiva lector antiguo.
+- Guía PRUEBAS_CONFIGURACION_INICIAL.md: ocho suites originales con regresiones,
+  180 pruebas/8 auditores aprobados sin tarjetas; una ajena no versionada
+  (179 previstas Git limpio, no otro checkout). Android/cuentas reales pendientes.
+- **Qué sigue:** restantes IDs, consultas/costes y compatibilidad.
+  **Qué falta:** Android/Google/correo real, SMTP/moderación, consolas/trámites/
+  cobros/migración y entrega autorizada. Nada publicado; tarjetas/Sentry fuera.
+  Rediseño general diferido; banderas/rótulo son la petición puntual actual.
+
 ## Prioridad: acceso inicial estable, no rediseño (08/10/2026)
 
 - Video decodificado completo: 1.870 fotogramas, 1.706 imágenes distintas
