@@ -184,3 +184,43 @@ Referencias técnicas primarias consultadas: [Expo SDK 54](https://docs.expo.dev
 [correo y contraseña](https://firebase.google.com/docs/auth/web/password-auth),
 [usuarios y verificación](https://firebase.google.com/docs/auth/web/manage-users) y
 [Auth local y credenciales simuladas](https://firebase.google.com/docs/emulator-suite/connect_auth).
+
+### 11/10/2026 — 10:24:27 Lima — motivo del aviso, NO acceso resuelto
+
+Confirmado en código: reason=owner agrupaba correos distintos, perfil antiguo
+sin correo, datos sin perfil terminado y sesión cambiada durante la lectura.
+Todos anunciaban «datos de otra cuenta», incluso cuando esa afirmación no estaba
+demostrada. No significa que se identificó la causa del rechazo del propietario.
+
+Preparado: detalle efímero unidentified/session en LocalAccountVaultError y
+messageKey común para apertura/arranque. Correo diferente conserva el aviso
+anterior; dueño no identificado pide conservar instalación y contactar soporte;
+sesión cambiada pide volver a entrar. Traducciones es/en/pt, sin PII ni diagnósticos
+persistidos/enviados. NO altera adjudicación, correo verificado, UID/instancia,
+cifrado, copia, limpieza o protección. Ningún dato nuevo recogido/permiso/SDK.
+
+Suites existentes ampliadas, no copia del algoritmo: bóveda/almacén/AES-HMAC
+originales rechazan tres casos y conservan exactamente sus bytes y dueño ausente.
+El manejador original muestra el motivo correspondiente. Regresión de rutas
+contra a982dc3 roja por mensaje ownerMismatch en vez de ownerUnidentified;
+actual verde. Se conserva primero la regresión antigua 19e5dde sobre verificación,
+para no sustituirla por un fallo de API ausente. Final 10:26:12: TypeScript y ESLint
+generales exit0; app **196 pruebas/8 auditores** sin tarjetas, exit0 en
+.tmp/auditoria-punto2-motivo-20261011.log. Incluye una prueba preexistente ajena
+no versionada: 195 previstas Git limpio, no otro checkout ejecutado. No nueva
+batería integral SDK/servidor: no presentar los resultados históricos como nuevos.
+
+Emulador original Medium_Phone reabierto con sus datos; primer intento restringido
+falló «snapshot operation pending», reapertura normal autorizada funcionó. Sin
+borrar bloqueos/snapshot, wipe, cold boot ni instalación. ADB detectó device y
+proceso Fino; APK sigue 1.0.8/code10, último cambio 02/10. No identifica JS cargado.
+Computer Use: FrameArrived timed out y único reintento window capture timed out.
+No se obtuvo imagen ni se automatizó Google/contraseñas. No eludir el fallo de
+captura con otra automatización UI. Se pidió al propietario abrir Fino, elegir
+su cuenta y enviar captura del aviso; no recibida aún en este registro.
+
+**Qué sigue/falta:** comprobar motivo/versión reales antes de modificar acceso,
+recorridos Android del punto 2 y servicios/consolas/publicación del 3. Tarjetas
+fuera, Telegram en pausa, Sentry externo excluido, diseño diferido. No nueva
+entrega ni causa del rechazo/acceso exitoso acreditados; no publicar separado
+del resto de preparación pendiente ni dar la auditoría por completa.

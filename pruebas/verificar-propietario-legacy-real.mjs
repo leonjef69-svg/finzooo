@@ -78,6 +78,22 @@ const rejectReason = reason => error => error?.name === "LocalAccountVaultError"
   assert.equal(await api.prepareLocalAccount("legacy-uid", "legacy@example.test"), true, "confirmar la misma cuenta desbloquea sus originales");
   assert.equal((await api.loadJSON(api.STORAGE_KEYS.transactions, []))[0].amount, 50);
 }
+// Avisos precisos sin permitir ninguna adjudicación: correo ausente y datos
+// sin perfil no prueban que la cuenta seleccionada sea una cuenta diferente.
+for (const type of ["missing-email", "missing-profile", "session-changed"]) {
+  const api = await environment(); await legacy(api);
+  api.auth.currentUser = verified();
+  if (type === "missing-email") await api.saveJSONNow(api.STORAGE_KEYS.profile, { hasOnboarded: true });
+  if (type === "missing-profile") await api.disk.removeItem(api.STORAGE_KEYS.profile);
+  const originals = new Map(await api.disk.multiGet([api.STORAGE_KEYS.profile, api.STORAGE_KEYS.transactions, api.STORAGE_KEYS.categoryCustom]));
+  if (type === "session-changed") {
+    const get = api.disk.getItem;
+    api.disk.getItem = async key => { const raw = await get(key); if (key === api.STORAGE_KEYS.profile) api.auth.currentUser = verified(); return raw; };
+  }
+  await assert.rejects(api.prepareLocalAccount("legacy-uid", "legacy@example.test"), error =>
+    rejectReason("owner")(error) && error.messageKey === (type === "session-changed" ? "localAccount.sessionInterrupted" : "localAccount.ownerUnidentified"));
+  await preserved(api, originals);
+}
 for (const session of [null, { ...verified(), uid: "otro-uid" }, { ...verified(), email: "otro@example.test" }]) {
   const api = await environment(), original = await legacy(api);
   api.auth.currentUser = session;

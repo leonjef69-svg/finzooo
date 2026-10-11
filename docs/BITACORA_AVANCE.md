@@ -76,6 +76,21 @@ La bitácora queda como referencia breve, sin duplicar la auditoría ya escrita.
   consolas/publicación (3) después. Tarjetas fuera, Telegram en pausa,
   Sentry externo excluido, rediseño diferido. Sin APK/AAB/OTA/despliegue nuevos.
 
+## 11/10/2026 — 10:24:27 — aviso de dueño y limitación visual
+
+Distinción de aviso preparada sin aflojar protección ni leer/borrar historiales
+reales. Bóveda/rutas originales verdes; a982dc3 rojo por aviso que afirmaba otra
+cuenta sin demostrarlo. Detalle único en PRUEBAS_ACCESO_INICIAL_VIDEO, sección
+10:24:27. Final 10:26:12: TypeScript/ESLint exit0, app 196/8 sin tarjetas
+(una ajena no versionada: 195 previstas Git limpio, no otro checkout).
+Emulador original reabierto, datos conservados; dos capturas Computer Use fallaron.
+Se pidió captura humana del aviso actual. APK sigue 1.0.8/code10 del 02/10;
+JS cargado desconocido. No entrega/instalación/despliegue ni acceso real resuelto.
+**Qué sigue/falta:** captura/diagnóstico legítimo y resto Android (2), servicios/
+consolas/publicación (3). Exclusiones anteriores intactas. El apagado sugerido
+07:05 ya está en el pasado; no se observó confirmación ni se ejecuta ahora por esa
+hora antigua. El guardado permanece en C:\finzo, sin otra copia del proyecto.
+
 ### Instrucciones vigentes para continuar
 
 - Completar punto 2: comprobar versión instalada y acceso con propietario

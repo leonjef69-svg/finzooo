@@ -1,5 +1,17 @@
 # Estado actual de Fino
 
+## Punto 2 — 11/10/2026, 10:24:27 Lima — aviso preparado, diagnóstico pendiente
+
+Aviso distingue dueño sin identificar/sesión cambiada de correo distinto, sin
+abrir ni borrar datos. Bóveda/rutas originales verdes y a982dc3 rojo por mensaje
+incorrecto; guía PRUEBAS_ACCESO_INICIAL_VIDEO conserva prueba/limitaciones.
+Emulador reabierto sin wipe; captura Computer Use falló dos veces. Se pidió
+captura humana. MISMA cuenta Google aún sin causa/acceso real acreditados.
+TypeScript/ESLint y 196 pruebas/8 auditores exit0 (una ajena no versionada;
+195 previstas Git limpio). No servidor integral repetido en esta pasada.
+**Qué sigue/falta:** motivo/JS reales y Android
+(2); servicios/consolas/publicación (3) después. No entrega; exclusiones intactas.
+
 ## Punto 2 retomado — 11/10/2026, 06:18:56 Lima — parcial, NO entregado
 
 Bienvenida libera los botones si la navegación rápida se descarta. Login,

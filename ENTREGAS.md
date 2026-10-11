@@ -1,5 +1,14 @@
 # Entregas de Fino
 
+## 11/10/2026 — 10:26:12 Lima — motivo del aviso preparado, NO entregado
+
+Guía PRUEBAS_ACCESO_INICIAL_VIDEO, apartado 10:24:27: dueño sin identificar,
+sesión interrumpida y correo distinto ya no comparten aviso engañoso.
+Protección/datos conservados; TypeScript/ESLint y app 196/8 aprobados, sin tarjetas.
+No APK/AAB/OTA/instalación/despliegue ni cambio de marcador: JS real desconocido.
+**Qué sigue/falta:** captura humana/diagnóstico y Android (2); servicios/consolas/
+publicación (3). No se acreditó acceso de la misma cuenta; exclusiones intactas.
+
 ## 11/10/2026 — 06:18:56 Lima — acceso inicial preparado, SIN nueva entrega
 
 Bloque del punto 2 y evidencia en `docs/PRUEBAS_ACCESO_INICIAL_VIDEO.md`

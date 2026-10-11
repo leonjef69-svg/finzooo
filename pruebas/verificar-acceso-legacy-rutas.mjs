@@ -86,12 +86,12 @@ function initCatch(dependencies) {
   return new Function(...Object.keys(dependencies), code)(...Object.values(dependencies));
 }
 
-for (const reason of ["verification", "owner", "read"]) {
+for (const [reason, detail] of [["verification"], ["owner"], ["read"], ["owner", "unidentified"], ["owner", "session"]]) {
   const api = environment(), auth = { currentUser: user() }, events = [], active = auth.currentUser;
   const deps = { ...api, auth, localOpenRequest: { current: 0 }, localSessionVersion: { current: 0 }, cloudFieldsRef: { current: { private: "old" } },
     tRef: { current: key => key }, setReady: value => events.push(["ready", value]), setHasOnboarded: value => events.push(["configured", value]),
     setAccountStorageAvailable: value => { events.push(["storage", value]); api.setAccountStorageAvailable(value); },
-    prepareLocalAccount: async () => { throw new api.LocalAccountVaultError(reason); },
+    prepareLocalAccount: async () => { throw new api.LocalAccountVaultError(reason, detail); },
     loadJSON: () => assert.fail("no leer perfil tras error de bóveda"),
     applyLocalProfile: () => assert.fail("no aplicar perfil tras error"), reloadPersistedData: () => assert.fail("no exponer historial tras error"),
     signOut: async () => { events.push(["signout"]); auth.currentUser = null; }, Alert: { alert: (...args) => events.push(["alert", ...args]) } };
@@ -99,6 +99,11 @@ for (const reason of ["verification", "owner", "read"]) {
   const expectedName = reason === "verification" ? "LocalAccountVerificationRequired" : "LocalAccountAccessError";
   let originalError;
   await assert.rejects(open(active.uid, active.email), error => { originalError = error; return error.name === expectedName; });
+  const expectedMessage = reason === "verification" ? "localAccount.verifyBeforeRestore"
+    : reason !== "owner" ? "localAccount.restoreFailed"
+      : detail === "unidentified" ? "localAccount.ownerUnidentified"
+        : detail === "session" ? "localAccount.sessionInterrupted" : "localAccount.ownerMismatch";
+  assert.equal(originalError.message, expectedMessage, "el aviso distingue dueño desconocido/sesión interrumpida de otra cuenta");
   assert.equal(api.getAccountStorageSession(), null);
   assert.deepEqual(events.filter(([event]) => event === "ready"), [["ready", false], ["ready", true]], "openLocalAccount libera la pantalla incluso al rechazar");
   await initCatch(deps)(originalError);

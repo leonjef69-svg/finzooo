@@ -25,9 +25,17 @@ const accountPrefix = (uid: string) => `${PREFIX}${encodeURIComponent(uid)}:`;
 const manifestKey = (uid: string) => `${accountPrefix(uid)}manifest`;
 
 export class LocalAccountVaultError extends Error {
-  constructor(public readonly reason: "owner" | "verification" | "read" | "write") {
+  constructor(public readonly reason: "owner" | "verification" | "read" | "write",
+    public readonly ownerDetail?: "unidentified" | "session") {
     super(`local-account-${reason}`);
     this.name = "LocalAccountVaultError";
+  }
+  get messageKey(): string {
+    if (this.reason === "verification") return "localAccount.verifyBeforeRestore";
+    if (this.reason !== "owner") return "localAccount.restoreFailed";
+    if (this.ownerDetail === "unidentified") return "localAccount.ownerUnidentified";
+    if (this.ownerDetail === "session") return "localAccount.sessionInterrupted";
+    return "localAccount.ownerMismatch";
   }
 }
 
@@ -226,11 +234,13 @@ async function prepare(uid: string, email?: string | null): Promise<boolean> {
     // correo confirmado de la sesión real, no al correo escrito en registro.
     if (profile?.hasOnboarded) {
       setAccountStorageAvailable(false);
-      if (!emailKey(email) || emailKey(profile.userEmail) !== emailKey(email)) throw new LocalAccountVaultError("owner");
+      if (!emailKey(profile.userEmail)) throw new LocalAccountVaultError("owner", "unidentified");
+      if (!emailKey(email)) throw new LocalAccountVaultError("owner", "session");
+      if (emailKey(profile.userEmail) !== emailKey(email)) throw new LocalAccountVaultError("owner");
       const assertLegacySession = () => {
         if (!openingUser || auth.currentUser !== openingUser || openingUser.uid !== uid ||
           !emailKey(openingUser.email) || emailKey(openingUser.email) !== emailKey(profile.userEmail)) {
-          throw new LocalAccountVaultError("owner");
+          throw new LocalAccountVaultError("owner", "session");
         }
         if (!openingUser.emailVerified) throw new LocalAccountVaultError("verification");
       };
@@ -249,7 +259,7 @@ async function prepare(uid: string, email?: string | null): Promise<boolean> {
     } else {
       if (await hasUnownedAccountData()) {
         setAccountStorageAvailable(false);
-        throw new LocalAccountVaultError("owner");
+        throw new LocalAccountVaultError("owner", "unidentified");
       }
       const saved = await readSnapshot(uid);
       if (saved) await restore(uid, saved);

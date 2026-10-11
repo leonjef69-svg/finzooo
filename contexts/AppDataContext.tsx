@@ -1215,7 +1215,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         setHasOnboarded(false);
       }
       if (error instanceof LocalAccountVaultError) {
-        const accessError = new Error(tRef.current(error.reason === "verification" ? "localAccount.verifyBeforeRestore" : error.reason === "owner" ? "localAccount.ownerMismatch" : "localAccount.restoreFailed"));
+        const accessError = new Error(tRef.current(error.messageKey));
         accessError.name = error.reason === "verification" ? "LocalAccountVerificationRequired" : "LocalAccountAccessError";
         throw accessError;
       }
@@ -1461,7 +1461,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }
       await signOut(auth).catch(() => undefined);
       const message = error instanceof LocalAccountVaultError
-        ? tRef.current(error.reason === "owner" ? "localAccount.ownerMismatch" : "localAccount.restoreFailed")
+        ? tRef.current(error.messageKey)
         : error instanceof Error && error.name === "LocalAccountAccessError" ? error.message : tRef.current("localAccount.restoreFailed");
       Alert.alert(tRef.current("localAccount.title"), message);
       setReady(true);
