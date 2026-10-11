@@ -1,5 +1,17 @@
 # Entregas de Fino
 
+## 11/10/2026 — 18:24 Lima — recuperación local confirmada, NO entrega de Play
+
+El propietario vinculó el perfil antiguo sin dueño/correo a su misma cuenta
+Google en el emulador. La pantalla «recuperación11oct1» y `owner-same-active`
+confirman el vínculo local; requieren desarrollo Android y banderas efímeras de
+Metro, y no estarán en la versión de Play. Resultado de pruebas y límites en
+`docs/PRUEBAS_ACCESO_INICIAL_VIDEO.md`. Aún falta abrir Fino normalmente.
+No APK/AAB/OTA, instalación nueva, despliegue ni publicación por este paso;
+el marcador normal no cambió. Git tampoco actualiza la app instalada.
+**Qué sigue/falta:** acceso y demás Android (2), servicios/consolas/publicación
+(3), incluida entrega coordinada cuando corresponda.
+
 ## 11/10/2026 — 12:24:29 Lima — diagnóstico local solicitado, NO entrega funcional
 
 Sesión/bóveda/Google y FINO-63 preparados, app final 201/8 sin tarjetas y TS/lint

@@ -1,5 +1,26 @@
 # Estado actual de Fino
 
+## Punto 2 — 11/10/2026, 18:24 Lima — Google vinculado en el emulador
+
+Capturas del propietario: el diagnóstico local identificó un perfil antiguo ya
+configurado, pero sin dueño ni correo guardados. Su misma cuenta Google quedó
+verificada; no era una cuenta equivocada. Con su autorización expresa se
+vinculó únicamente el identificador local cifrado a esa cuenta. La segunda
+captura muestra «Datos vinculados», `ownerPresent=true`, `ownerMatches=true`
+y `owner-same-active`. La recuperación exige desarrollo Android y dos banderas
+locales de Metro; no aparece en la app publicada. No leyó, borró ni modificó
+movimientos/saldos ni abrió la nube financiera en ese modo.
+
+Regresión de recuperación: 25 casos, incluida conservación de bytes y rechazo
+de sesiones/propietarios distintos. TypeScript, ESLint y app final: 202 pruebas
+y 8 auditores sin tarjetas, exit0 (una prueba ajena sin versionar; 201 previstas
+con Git limpio). Guía: `docs/PRUEBAS_ACCESO_INICIAL_VIDEO.md`. Sin nueva APK,
+AAB, OTA ni activación de reglas/servidor. La captura acredita la vinculación,
+**todavía no la entrada por la pantalla normal ni el resto de Android**.
+**Qué sigue/falta:** comprobar acceso normal y otros recorridos del punto 2;
+luego servicios/consolas/publicación del 3. Tarjetas fuera, Telegram en pausa,
+Sentry externo excluido y diseño diferido.
+
 ## Punto 2 — 11/10/2026, 12:24:29 Lima — protección preparada, acceso real pendiente
 
 Sesión exacta en arranque/apertura/recarga/bóveda y resultado Google preparados;

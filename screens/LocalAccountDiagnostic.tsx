@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import type { User } from "firebase/auth";
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { auth } from "@/utils/firebase";
 import { GoogleSignInCancelled, signInWithGoogle } from "@/utils/googleAuth";
@@ -15,6 +16,10 @@ const labels = {
   authFailed: "No se pudo completar Google. No se abrió ni borró tu información.",
   readFailed: "No se pudo consultar la sesión. Conserva la app y sus datos.",
   safety: "Envía una captura de este resultado. No borres datos ni reinstales la app.",
+  recoveryMarker: "recuperación11oct1", recoveryTitle: "Vincular y conservar tus datos",
+  recoveryExplanation: "Recuperación puntual autorizada. Elige tu misma cuenta Google y confirma el correo mostrado. Solo se guardará a qué cuenta pertenecen los datos; no se borrarán movimientos ni se cambiarán saldos.",
+  link: "Vincular estos datos a mi cuenta", linked: "Datos vinculados. No se borró ningún movimiento ni se cambiaron saldos. Envía una captura para volver al acceso normal.",
+  linkFailed: "No se pudo confirmar la vinculación. Conserva los datos y envía una captura; no reinstales la app.",
 };
 const reasons: Record<LocalAccountDiagnosticReason, string> = {
   disabled: "Diagnóstico no disponible fuera de desarrollo local Android.",
@@ -33,11 +38,15 @@ const reasons: Record<LocalAccountDiagnosticReason, string> = {
   "no-owner-no-profile": "No hay identificador ni perfil. No se han revisado tus otras copias.",
 };
 
-export default function LocalAccountDiagnosticScreen() {
+export default function LocalAccountDiagnosticScreen({ recoverAccount }: { recoverAccount?: (user: User) => Promise<void> } = {}) {
   const [status, setStatus] = useState(labels.waiting);
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<LocalAccountDiagnostic | null>(null);
   const pending = useRef(false), alive = useRef(true);
+  const selectedAccount = useRef<User | null>(null);
+  const linkConfirmed = useRef(false);
+  const [selectedEmail, setSelectedEmail] = useState<string | null>(null);
+  const [linked, setLinked] = useState(false);
   useEffect(() => {
     alive.current = true;
     if (!isLocalAccountDiagnosticMode()) { setStatus(reasons.disabled); return; }
@@ -48,30 +57,61 @@ export default function LocalAccountDiagnosticScreen() {
   async function check(chooseGoogle: boolean) {
     if (!isLocalAccountDiagnosticMode() || pending.current) return;
     pending.current = true; setBusy(true); setResult(null); setStatus(labels.busy);
+    selectedAccount.current = null; setSelectedEmail(null);
     try {
       await auth.authStateReady();
       if (!alive.current) return;
+      let checkedUser = auth.currentUser;
       if (chooseGoogle) {
         const selected = await signInWithGoogle();
+        checkedUser = selected;
         if (!alive.current) return;
         if (auth.currentUser !== selected) { setStatus(reasons["session-changed"]); return; }
       }
       if (!alive.current) return;
       const checked = await readLocalAccountDiagnostic();
+      if (!alive.current) return;
+      if (auth.currentUser !== checkedUser) { setStatus(reasons["session-changed"]); return; }
+      if (recoverAccount && chooseGoogle && checked.reason === "legacy-missing-email" && checked.verified) {
+        selectedAccount.current = checkedUser;
+        setSelectedEmail(checkedUser?.email ?? null);
+      }
       if (alive.current) { setResult(checked); setStatus(reasons[checked.reason]); }
     } catch (error) {
       if (alive.current) setStatus(error instanceof GoogleSignInCancelled ? labels.ready : labels.authFailed);
     } finally { pending.current = false; if (alive.current) setBusy(false); }
   }
+  async function link() {
+    const user = selectedAccount.current;
+    if (!recoverAccount || pending.current || linked || linkConfirmed.current || !user || result?.reason !== "legacy-missing-email") return;
+    pending.current = true; setBusy(true); setStatus(labels.busy);
+    try {
+      if (!alive.current || auth.currentUser !== user) throw new Error("session-changed");
+      await recoverAccount(user);
+      if (!alive.current || auth.currentUser !== user) return;
+      linkConfirmed.current = true;
+      setLinked(true); setStatus(labels.linked);
+      const checked = await readLocalAccountDiagnostic();
+      if (alive.current && auth.currentUser === user) setResult(checked);
+    } catch {
+      if (alive.current) setStatus(labels.linkFailed);
+    } finally { pending.current = false; if (alive.current) setBusy(false); }
+  }
   return (
     <View style={styles.root}>
       <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.marker}>{labels.marker}</Text>
-        <Text style={styles.title}>{labels.title}</Text>
-        <Text style={styles.body}>{labels.explanation}</Text>
-        <TouchableOpacity accessibilityRole="button" accessibilityLabel={labels.google} disabled={busy} onPress={() => void check(true)} style={styles.button}>
+        <Text style={styles.marker}>{recoverAccount ? labels.recoveryMarker : labels.marker}</Text>
+        <Text style={styles.title}>{recoverAccount ? labels.recoveryTitle : labels.title}</Text>
+        <Text style={styles.body}>{recoverAccount ? labels.recoveryExplanation : labels.explanation}</Text>
+        <TouchableOpacity accessibilityRole="button" accessibilityLabel={labels.google} disabled={busy || linked} onPress={() => void check(true)} style={styles.button}>
           <Text style={styles.buttonText}>{labels.google}</Text>
         </TouchableOpacity>
+        {recoverAccount && selectedEmail && <Text style={styles.body}>{selectedEmail}</Text>}
+        {recoverAccount && !linked && result?.reason === "legacy-missing-email" && selectedAccount.current && (
+          <TouchableOpacity accessibilityRole="button" accessibilityLabel={labels.link} disabled={busy} onPress={() => void link()} style={styles.button}>
+            <Text style={styles.buttonText}>{labels.link}</Text>
+          </TouchableOpacity>
+        )}
         <TouchableOpacity accessibilityRole="button" accessibilityLabel={labels.read} disabled={busy} onPress={() => void check(false)} style={styles.button}>
           <Text style={styles.buttonText}>{labels.read}</Text>
         </TouchableOpacity>

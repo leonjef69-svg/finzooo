@@ -326,3 +326,56 @@ guardia de index antes de empezar no cancela una tarea ya enviada. Sin APK/AAB/
 OTA/despliegue ni entrega funcional normal. Tarjetas fuera, Telegram en pausa,
 Sentry externo excluido, UI diferida. No adjudicar datos por el nombre del correo
 ni declarar la auditoría o el acceso real terminados por estas pruebas verdes.
+
+### 11/10/2026 — 18:24 Lima — causa real y recuperación autorizada
+
+La captura `C:\Users\User\Downloads\jtyuty.GIF` muestra que la raíz
+«diagnóstico11oct1» sí se ejecutó en Medium_Phone: Google verificado y perfil
+configurado, pero sin dueño ni correo local (`legacy-missing-email`). El bloqueo
+anterior no demostraba otra cuenta. La lectura CDP de cero/cinco scripts era
+incompleta: **no sirve para negar que el bundle se ejecutó**. La causa observada
+es este legado sin identidad guardada, no un fallo de Google.
+
+El propietario declaró que los datos del emulador son suyos y autorizó
+expresamente vincularlos a la cuenta Google recién elegida, sin borrar
+movimientos ni cambiar saldos. Se preparó la raíz aislada
+«recuperación11oct1», habilitada solo por Android `__DEV__` y las dos banderas
+efímeras de Metro `EXPO_PUBLIC_FINO_LOCAL_ACCESS_DIAGNOSTIC=1` y
+`EXPO_PUBLIC_FINO_LOCAL_LEGACY_RECOVERY=1`. No cambian `.env` ni el arranque de
+producción. El propietario elige Google y pulsa «Vincular estos datos a mi
+cuenta». La escritura está limitada al dueño cifrado `active`; el perfil y
+los bloques financieros originales no se reescriben. Exige misma instancia
+de Auth, correo Google verificado, perfil terminado sin correo y dueño ausente;
+relee dueño/perfil antes de escribir y rechaza sustituciones concurrentes.
+
+La captura posterior `C:\Users\User\Downloads\nfghfg.GIF` muestra «Datos
+vinculados» y `ownerPresent=true`, `ownerMatches=true`, `owner-same-active`.
+Esto confirma el vínculo local en ese emulador. No se inspeccionaron los montos
+reales; la conservación byte a byte se comprobó en pruebas con datos ficticios.
+No confundir este resultado con entrada normal o copia de nube completadas.
+
+`verificar-recuperacion-legacy-autorizada-real.mjs`: 25 casos verdes; la
+repetición en `f60be0c` falla al intentar el legado autorizado. Se mantienen
+los rechazos normales del mismo legado sin confirmación, producción, banderas
+incompletas, sesión cambiada, proveedor distinto, perfil/correo/dueño no
+coincidentes, cambios simultáneos y fallos de escritura. La pantalla prueba
+doble toque sin segunda escritura. TypeScript y ESLint generales exit0;
+`.tmp/auditoria-punto2-recuperacion-definitiva-20261011.log`: **202 pruebas y
+8 auditores** sin tarjetas, exit0; incluye una prueba ajena sin versionar,
+201 previstas en Git limpio, sin generar otro checkout. No se repitió el
+servidor integral ni se hizo instalación/compilación nativa.
+
+Metro de recuperación en proceso local Node PID 22456 (si sigue vivo),
+puerto 8081, logs `.tmp/recuperacion-metro-20261011.*.log`. El emulador
+original se reabrió sin wipe, reinstalación ni pérdida de sus datos. El modo
+local no registra tareas financieras y usa Auth solo en memoria; solo esta
+interacción autorizada añadió el identificador. Una detención anterior de la
+app mediante `am force-stop` puede haber cancelado alarmas Android: habrá que
+comprobar/reprogramar avisos al abrir la app normal. La APK instalada sigue
+siendo 1.0.8/code10 y no incorpora los cambios nativos nuevos; Metro no los
+prueba. No APK/AAB/OTA/Firebase/Play publicados por esta recuperación.
+
+**Qué sigue/falta:** cargar Fino sin banderas de recuperación y verificar con
+el propietario acceso por Google y datos visibles sin cambios; después completar
+los demás recorridos Android del punto 2 y los servicios/consolas/publicación
+del 3. Tarjetas fuera, Telegram en pausa, Sentry externo excluido y UI diferida.

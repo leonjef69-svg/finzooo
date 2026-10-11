@@ -3,6 +3,16 @@
 Fechas y horas en America/Lima (UTC-05:00). No inventar horas históricas.
 Proyecto activo y único lugar de trabajo: `C:\finzo`.
 
+## 11/10/2026 — 18:24 Lima — recuperación del propietario en el emulador
+
+Dos capturas del propietario muestran la secuencia: perfil antiguo configurado
+sin identificador/correo; después de elegir su misma Google y autorizar el
+vínculo, `ownerPresent=true`, `ownerMatches=true`, `owner-same-active`. En la
+pantalla aparece «Datos vinculados». Los detalles, pruebas y límites están en
+`PRUEBAS_ACCESO_INICIAL_VIDEO.md`; no repetirlos aquí. Acceso normal aún
+pendiente; no publicar ni considerar terminada la auditoría. Tarjetas fuera,
+Telegram en pausa, Sentry externo excluido y UI diferida.
+
 ## Documentación existente: leer sin volver a copiarla
 
 1. `AGENTS.md`, `ESTADO.md`, `ENTREGAS.md` y `PLAYSTORE.md`.

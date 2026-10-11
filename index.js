@@ -11,6 +11,7 @@
 import { AppRegistry } from "react-native";
 import { registerRootComponent } from "expo";
 import { isLocalAccountDiagnosticMode } from "./utils/localAccountDiagnosticMode";
+import { isLocalAccountRecoveryEnabled } from "./utils/localAccountRecoveryPermission";
 
 async function runForActiveAccount(loadTask) {
   // El diagnóstico no registra dinero ni exporta mientras identifica el acceso.
@@ -59,7 +60,9 @@ AppRegistry.registerHeadlessTask("FinzoExport", () => async () => {
 // registerRootComponent solo registra "main": no lo monta. Fuera del modo
 // local se conserva la entrada habitual del router, también en web/producción.
 if (isLocalAccountDiagnosticMode()) {
-  const LocalAccountDiagnostic = require("./screens/LocalAccountDiagnostic").default;
+  const LocalAccountDiagnostic = isLocalAccountRecoveryEnabled()
+    ? require("./screens/LocalAccountRecovery").default
+    : require("./screens/LocalAccountDiagnostic").default;
   registerRootComponent(LocalAccountDiagnostic);
 } else {
   require("expo-router/entry");

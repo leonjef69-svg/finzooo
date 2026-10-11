@@ -25,15 +25,21 @@ function mode(dev, platform, flag) {
     __DEV__: dev, Platform: { OS: platform }, process: { env: { EXPO_PUBLIC_FINO_LOCAL_ACCESS_DIAGNOSTIC: flag } },
   });
 }
-for (const [dev, platform, flag, diagnostic] of [
+for (const [dev, platform, flag, diagnostic, recoveryFlag] of [
   [true, "android", "1", true], [false, "android", "1", false],
   [true, "ios", "1", false], [true, "web", "1", false], [true, "android", undefined, false],
+  [true, "android", "1", true, "1"], [false, "android", "1", false, "1"],
+  [true, "ios", "1", false, "1"], [true, "web", "1", false, "1"],
 ]) {
   const isMode = mode(dev, platform, flag), roots = new Map(), tasks = new Map();
-  let financial = 0, ownership = 0, renders = 0, diagnosticImports = 0;
+  const isRecovery = handlerOriginal("utils/localAccountRecoveryPermission.ts", "isLocalAccountRecoveryEnabled", {
+    __DEV__: dev, process: { env: { EXPO_PUBLIC_FINO_LOCAL_ACCESS_DIAGNOSTIC: flag, EXPO_PUBLIC_FINO_LOCAL_LEGACY_RECOVERY: recoveryFlag } },
+  });
+  const recovery = diagnostic && isRecovery();
+  let financial = 0, ownership = 0, renders = 0, diagnosticImports = 0, recoveryImports = 0;
   const ordinaryImports = [];
   assert.equal(isMode(), diagnostic);
-  const Normal = () => {}, Diagnostic = () => {};
+  const Normal = () => {}, Diagnostic = () => {}, Recovery = () => {};
   const register = handlerOriginal("node_modules/react-native/Libraries/ReactNative/AppRegistryImpl.js", "registerComponent", {
     createPerformanceLogger: () => ({}), runnables: Object.create(null), sections: {},
     renderApplication: () => { renders++; }, componentProviderInstrumentationHook: provider => provider(),
@@ -54,6 +60,8 @@ for (const [dev, platform, flag, diagnostic] of [
     if (name === "react-native") return { AppRegistry };
     if (name === "expo") return { registerRootComponent };
     if (name === "./utils/localAccountDiagnosticMode") return { isLocalAccountDiagnosticMode: isMode };
+    if (name === "./utils/localAccountRecoveryPermission") return { isLocalAccountRecoveryEnabled: isRecovery };
+    if (name === "./screens/LocalAccountRecovery") { recoveryImports++; return { default: Recovery }; }
     if (name === "./screens/LocalAccountDiagnostic") { diagnosticImports++; return { default: Diagnostic }; }
     if (name === "expo-router/entry") { registerRootComponent(Normal); return {}; }
     if (name === "./utils/sentry") return { Sentry: { captureException: error => { throw error; } } };
@@ -76,8 +84,9 @@ for (const [dev, platform, flag, diagnostic] of [
   if (diagnostic) assert.deepEqual(ordinaryImports, [], "no evalúa router, bóveda, captura, exportación ni telemetría: los imports normales pueden leer/migrar datos nativos");
   else assert.ok(ordinaryImports.includes("expo-router/entry") && ordinaryImports.includes("./utils/capturaEnFondo") && ordinaryImports.includes("./utils/exportarEnFondo"));
   assert.equal(renders, 0, "registro nativo original no monta una pantalla antes del reemplazo");
-  assert.equal(roots.get("main")(), diagnostic ? Diagnostic : Normal);
-  assert.equal(diagnosticImports, diagnostic ? 1 : 0, "producción y plataformas normales no cargan la pantalla de diagnóstico");
+  assert.equal(roots.get("main")(), recovery ? Recovery : diagnostic ? Diagnostic : Normal);
+  assert.equal(diagnosticImports, diagnostic && !recovery ? 1 : 0, "producción y plataformas normales no cargan la pantalla de diagnóstico");
+  assert.equal(recoveryImports, recovery ? 1 : 0, "recuperación no se carga sin ambos permisos dev/Android; la comparación normal sigue sin acceso a la bóveda");
 
   let configured, nativePersistenceCalls = 0;
   const ordinary = { kind: "encrypted-ordinary" }, inMemory = { kind: "memory-only" };

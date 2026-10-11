@@ -3,6 +3,7 @@ import * as Crypto from "expo-crypto";
 import { decryptText, encryptText } from "@/utils/encryption";
 import { deleteLegalAcceptance } from "@/utils/legalAcceptance";
 import { auth } from "@/utils/firebase";
+import { isLocalAccountRecoveryEnabled } from "@/utils/localAccountRecoveryPermission";
 import {
   ACCOUNT_STORAGE_KEYS,
   clearAccountData,
@@ -19,6 +20,7 @@ type Owner = { uid: string; mode: "active" | "archived" };
 type Snapshot = { version: 1; uid: string; entries: [string, string | null][] };
 type StoredSnapshot = { version: 1 | 2 | 3; uid: string; entries: [string, string | null][] };
 type Manifest = { version: 1; current: string; previous?: string };
+type PreparationOptions = { recoverUnidentifiedLegacyFor?: NonNullable<typeof auth.currentUser> };
 const keys = [...new Set(ACCOUNT_STORAGE_KEYS)];
 const emailKey = (email: string | null | undefined) => (email ?? "").trim().toLowerCase();
 const accountPrefix = (uid: string) => `${PREFIX}${encodeURIComponent(uid)}:`;
@@ -71,11 +73,20 @@ async function removeUnconfirmedOwner(raw: string, previousRaw: string | null = 
   } catch { throw new LocalAccountVaultError("write"); }
 }
 
-async function writeOwner(owner: Owner, assertCurrentSession?: () => void): Promise<string> {
+async function writeOwner(owner: Owner, assertCurrentSession?: () => void,
+  expected?: { ownerRaw: string | null; profileRaw: string | null }): Promise<string> {
   const previousRaw = assertCurrentSession ? await AsyncStorage.getItem(OWNER_KEY) : null;
   assertCurrentSession?.();
+  if (expected && previousRaw !== expected.ownerRaw) throw new LocalAccountVaultError("read");
   const raw = await encryptText(JSON.stringify(owner));
   assertCurrentSession?.();
+  if (expected) {
+    const fresh = new Map(await AsyncStorage.multiGet([OWNER_KEY, STORAGE_KEYS.profile]));
+    assertCurrentSession?.();
+    if (fresh.get(OWNER_KEY) !== expected.ownerRaw || fresh.get(STORAGE_KEYS.profile) !== expected.profileRaw) {
+      throw new LocalAccountVaultError("read");
+    }
+  }
   try {
     await AsyncStorage.setItem(OWNER_KEY, raw);
     assertCurrentSession?.();
@@ -92,8 +103,9 @@ async function writeOwner(owner: Owner, assertCurrentSession?: () => void): Prom
   return raw;
 }
 
-async function readProfile(): Promise<{ hasOnboarded?: boolean; userEmail?: string } | null> {
+async function readProfile(onRaw?: (raw: string | null) => void): Promise<{ hasOnboarded?: boolean; userEmail?: string } | null> {
   const raw = await AsyncStorage.getItem(STORAGE_KEYS.profile);
+  onRaw?.(raw);
   if (!raw) return null;
   try {
     const text = await decryptText(raw);
@@ -239,7 +251,7 @@ async function restore(uid: string, snapshot: Snapshot | null, assertCurrentSess
   setAccountStorageAvailable(true);
 }
 
-async function prepare(uid: string, email?: string | null, openingUser = auth.currentUser): Promise<boolean> {
+async function prepare(uid: string, email?: string | null, openingUser = auth.currentUser, options?: PreparationOptions): Promise<boolean> {
   let owner: Owner | null;
   const assertCurrentSession = () => {
     if (!openingUser || openingUser.uid !== uid || auth.currentUser !== openingUser) {
@@ -251,8 +263,28 @@ async function prepare(uid: string, email?: string | null, openingUser = auth.cu
   };
   owner = await readOwner();
   assertCurrentSession();
-  const profile = await readProfile();
+  const recoveryRequested = !!options?.recoverUnidentifiedLegacyFor;
+  let recoveryProfileRaw: string | null = null;
+  const profile = await readProfile(recoveryRequested ? raw => { recoveryProfileRaw = raw; } : undefined);
   assertCurrentSession();
+  const assertRecoveryPermission = () => {
+    assertCurrentSession();
+    if (!isLocalAccountRecoveryEnabled()) throw new LocalAccountVaultError("owner", "unidentified");
+    if (options?.recoverUnidentifiedLegacyFor !== openingUser || !emailKey(openingUser?.email)
+      || emailKey(openingUser?.email) !== emailKey(email)) throw new LocalAccountVaultError("owner", "session");
+    if (!openingUser?.emailVerified || !openingUser.providerData.some(provider => provider.providerId === "google.com")) {
+      throw new LocalAccountVaultError("verification");
+    }
+  };
+  if (recoveryRequested) {
+    assertRecoveryPermission();
+    // Solo este legado sin dueño/correo y configurado. Una autorización manual
+    // nunca entra por las rutas de cambio, archivo o restauración de cuentas.
+    if (owner || !profile || profile.hasOnboarded !== true || emailKey(profile.userEmail)) {
+      setAccountStorageAvailable(false);
+      throw new LocalAccountVaultError("read");
+    }
+  }
   if (owner?.mode === "active" && !profile) {
     // Perfil ausente no significa cuenta vacía. No sustituir datos activos
     // por una copia vieja ni borrar los bloques que siguen en el teléfono.
@@ -268,13 +300,14 @@ async function prepare(uid: string, email?: string | null, openingUser = auth.cu
     // correo confirmado de la sesión real, no al correo escrito en registro.
     if (profile?.hasOnboarded) {
       setAccountStorageAvailable(false);
-      if (!emailKey(profile.userEmail)) throw new LocalAccountVaultError("owner", "unidentified");
+      if (!emailKey(profile.userEmail) && !recoveryRequested) throw new LocalAccountVaultError("owner", "unidentified");
       if (!emailKey(email)) throw new LocalAccountVaultError("owner", "session");
-      if (emailKey(profile.userEmail) !== emailKey(email)) throw new LocalAccountVaultError("owner");
+      if (!recoveryRequested && emailKey(profile.userEmail) !== emailKey(email)) throw new LocalAccountVaultError("owner");
       const assertLegacySession = () => {
         assertCurrentSession();
+        if (recoveryRequested) assertRecoveryPermission();
         if (!openingUser || auth.currentUser !== openingUser || openingUser.uid !== uid ||
-          !emailKey(openingUser.email) || emailKey(openingUser.email) !== emailKey(profile.userEmail)) {
+          !emailKey(openingUser.email) || emailKey(openingUser.email) !== emailKey(recoveryRequested ? email : profile.userEmail)) {
           throw new LocalAccountVaultError("owner", "session");
         }
         if (!openingUser.emailVerified) throw new LocalAccountVaultError("verification");
@@ -282,7 +315,8 @@ async function prepare(uid: string, email?: string | null, openingUser = auth.cu
       assertLegacySession();
       // Un perfil activo anterior no se reemplaza por una copia archivada.
       // La adjudicación espera al cifrado y vuelve a comprobar la sesión.
-      const claimedOwner = await writeOwner({ uid, mode: "active" }, assertLegacySession);
+      const claimedOwner = await writeOwner({ uid, mode: "active" }, assertLegacySession,
+        recoveryRequested ? { ownerRaw: null, profileRaw: recoveryProfileRaw } : undefined);
       try {
         assertLegacySession();
         setAccountStorageAvailable(true);
@@ -330,9 +364,9 @@ async function prepare(uid: string, email?: string | null, openingUser = auth.cu
   return restoredProfile?.hasOnboarded === true;
 }
 
-export function prepareLocalAccount(uid: string, email?: string | null): Promise<boolean> {
+export function prepareLocalAccount(uid: string, email?: string | null, options?: PreparationOptions): Promise<boolean> {
   const openingUser = auth.currentUser;
-  return withLocalAccountOperation(() => prepare(uid, email, openingUser));
+  return withLocalAccountOperation(() => prepare(uid, email, openingUser, options));
 }
 
 export function archiveLocalAccount(uid: string, email?: string | null): Promise<void> {
