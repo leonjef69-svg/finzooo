@@ -3,6 +3,15 @@
 Fechas y horas en America/Lima (UTC-05:00). No inventar horas históricas.
 Proyecto activo y único lugar de trabajo: `C:\finzo`.
 
+## 11/10/2026 — 18:38 Lima — primera apertura normal después del vínculo
+
+El emulador abrió Inicio, Cajas y Ajustes sin aviso de «otra cuenta». Se vio
+una caja previa y un aviso de 3 transferencias pendientes; no se modificaron.
+Detalles y límites en `PRUEBAS_ACCESO_INICIAL_VIDEO.md`. Falta confirmar
+reingreso persistido, historial completo y resto de Android; punto 3 externo
+sigue pendiente. El commit de recuperación `a38b33a` ya está subido. Sin
+entrega APK/OTA ni publicación de Play/Firebase.
+
 ## 11/10/2026 — 18:24 Lima — recuperación del propietario en el emulador
 
 Dos capturas del propietario muestran la secuencia: perfil antiguo configurado

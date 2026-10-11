@@ -1,5 +1,25 @@
 # Estado actual de Fino
 
+## Punto 2 — 11/10/2026, 18:38 Lima — acceso normal Google comprobado
+
+Tras vincular el dueño local autorizado, se apagaron las dos banderas temporales
+de recuperación y se abrió la app normal en el mismo emulador, sin reinstalar
+ni borrar datos. Se observaron Inicio, Cajas y Ajustes; ya no apareció el aviso
+de «otra cuenta». Cajas mostró la caja existente «hj» con S/20 y un aviso de
+**3 transferencias por revisar**. No se tocaron importes, transferencias ni
+cuentas. Inicio estaba en junio de 2026 y sin movimientos ese mes: esto no
+prueba todo el historial ni la exactitud global de los saldos. La sesión de
+Google normal persistida se deberá volver a comprobar tras un reinicio,
+porque el diagnóstico anterior usó Auth en memoria.
+
+Código y documentación de recuperación en `a38b33a`, subido a `origin/master`;
+la pantalla especial requiere desarrollo y no saldrá en Play. Ninguna APK/AAB,
+OTA, regla o función del servidor fue publicada por esta comprobación.
+**Qué sigue/falta:** reingreso persistido y otros recorridos Android del punto 2,
+revisión segura de las 3 transferencias, después servicios/consolas/publicación
+del punto 3. La auditoría completa no ha terminado. Tarjetas fuera, Telegram
+en pausa, Sentry externo excluido y diseño diferido.
+
 ## Punto 2 — 11/10/2026, 18:24 Lima — Google vinculado en el emulador
 
 Capturas del propietario: el diagnóstico local identificó un perfil antiguo ya

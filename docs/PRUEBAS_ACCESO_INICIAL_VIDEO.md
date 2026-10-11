@@ -379,3 +379,26 @@ prueba. No APK/AAB/OTA/Firebase/Play publicados por esta recuperación.
 el propietario acceso por Google y datos visibles sin cambios; después completar
 los demás recorridos Android del punto 2 y los servicios/consolas/publicación
 del 3. Tarjetas fuera, Telegram en pausa, Sentry externo excluido y UI diferida.
+
+### 11/10/2026 — 18:38 Lima — apertura normal en el emulador
+
+Se detuvo solo el Metro de recuperación identificado por PID/comando y se inició
+Metro normal sin las dos banderas de diagnóstico/recuperación. Se abrió el mismo
+Dev Client instalado, sin wipe ni reinstalación. El bundle Android normal se
+completó (`Android Bundled 72133ms index.js`, 3952 módulos). Capturas locales
+temporales mostraron que la app llegó a Cajas y, al navegar, a Inicio y Ajustes;
+no reapareció el aviso de otra cuenta ni la pantalla de recuperación. La caja
+existente «hj» mostraba S/20. Cajas avisó que existen 3 registros de
+transferencia por revisar; no se pulsó Revisar ni se alteró ningún saldo.
+Inicio estaba seleccionado en junio de 2026 y no tenía movimientos ese mes:
+no inferir que todos los movimientos se conservaron ni que el saldo total está
+auditado. El acceso normal funcionó en esa sesión de emulador, pero la prueba
+anterior de Google usó Auth en memoria; sigue faltando reiniciar y validar la
+sesión persistida/flujo Google normal completo. No se ensayaron exportación,
+notificaciones nativas, reglas publicadas ni segundo dispositivo.
+
+El cambio quedó en commit `a38b33a`, push `origin/master` confirmado.
+No nueva APK/AAB/OTA/Play/Firebase; el Dev Client instalado aún tiene código
+nativo viejo. **Qué sigue/falta:** reingreso y pruebas Android restantes del
+punto 2; revisión sin modificar las transferencias; servicios/consolas/
+publicación del punto 3. No declarar terminada la auditoría por esta apertura.

@@ -1,5 +1,16 @@
 # Entregas de Fino
 
+## 11/10/2026 — 18:38 Lima — acceso normal visto, todavía NO entrega
+
+La app normal abrió Inicio, Cajas y Ajustes en el emulador tras la vinculación;
+desapareció el aviso de «otra cuenta». Cajas conserva una caja visible y muestra
+3 transferencias por revisar. No se conciliaron ni tocaron sus importes.
+`docs/PRUEBAS_ACCESO_INICIAL_VIDEO.md` registra alcance y límites.
+No APK/AAB/OTA/Play/Firebase nuevos ni validación de sesión persistida tras
+reiniciar. El commit `a38b33a` está en `origin/master`, pero Git no distribuye
+un APK. **Qué sigue/falta:** Android restante del punto 2 y punto 3 externo,
+incluida entrega coordinada cuando corresponda.
+
 ## 11/10/2026 — 18:24 Lima — recuperación local confirmada, NO entrega de Play
 
 El propietario vinculó el perfil antiguo sin dueño/correo a su misma cuenta
