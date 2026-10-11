@@ -249,14 +249,16 @@ export default function AppLockGate() {
   // ANTES de pedir la huella, que es justo lo que hay que evitar.
   if (ready && checked && !locked) return null;
 
+  // La cubierta de seguridad debe aparecer completa, no descubrir datos
+  // durante un fundido al abrir/cambiar la cuenta o revisar el candado.
   return (
-    <Modal visible key={`${checkVersion}-${checked ? "checked" : "checking"}`} animationType="fade" onRequestClose={() => undefined} statusBarTranslucent>
+    <Modal visible key={`${checkVersion}-${checked ? "checked" : "checking"}`} animationType="none" onRequestClose={() => undefined} statusBarTranslucent>
     <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top, paddingBottom: insets.bottom + 20 }}>
       {(!ready || !checked) ? (
         <View className="flex-1 items-center justify-center px-6">
           <Lock size={28} color="#059669" />
           <Text className="mt-4 text-center text-base font-bold text-slate-900 dark:text-slate-100">
-            {t("lock.checking")}
+            {t(checked ? "common.loading" : "lock.checking")}
           </Text>
         </View>
       ) : lockError ? (

@@ -25,12 +25,13 @@ import { firebaseErrorMessage } from "@/utils/firebaseErrors";
 import { GoogleSignInCancelled, signInWithGoogle } from "@/utils/googleAuth";
 import { googleSignInErrorMessage } from "@/utils/googleSignInError";
 import { useAppData } from "@/contexts/AppDataContext";
+import { useEntryOperation, type EntryOperationGuard } from "@/utils/entryOperation";
 
 export default function Login({
   onLoggedIn,
   onGoRegister,
 }: {
-  onLoggedIn: () => void | Promise<void>;
+  onLoggedIn: (current?: EntryOperationGuard) => void | Promise<void>;
   onGoRegister: () => void;
 }) {
   const { t, showToast } = useAppData();
@@ -42,6 +43,11 @@ export default function Login({
   const [googleError, setGoogleError] = useState("");
   const [legalAccepted, setLegalAccepted] = useState(false);
   const authBusy = useRef(false);
+  const beginEntryOperation = useEntryOperation(() => {
+    authBusy.current = false;
+    setLoading(false);
+    setGoogleLoading(false);
+  });
   const insets = useSafeAreaInsets();
   const { height } = useWindowDimensions();
 
@@ -53,19 +59,25 @@ export default function Login({
       return;
     }
     setError("");
+    const operationCurrent = beginEntryOperation();
+    if (!operationCurrent()) return;
     authBusy.current = true;
     setLoading(true);
     let authenticated = false;
     try {
-      await signInWithEmailAndPassword(auth, email.trim(), pass);
+      const result = await signInWithEmailAndPassword(auth, email.trim(), pass);
+      if (!operationCurrent() || auth.currentUser !== result.user) return;
       authenticated = true;
-      await onLoggedIn();
+      await onLoggedIn(() => operationCurrent() && auth.currentUser === result.user);
     } catch (err) {
+      if (!operationCurrent()) return;
       const code = (err as { code?: string })?.code || "";
       setError(err instanceof Error && err.name === "LocalAccountAccessError" ? err.message : authenticated && code !== "cloud/history-format-unsupported" ? t("login.accountOpenFailed") : firebaseErrorMessage(code));
     } finally {
-      authBusy.current = false;
-      setLoading(false);
+      if (operationCurrent()) {
+        authBusy.current = false;
+        setLoading(false);
+      }
     }
   }
 
@@ -77,6 +89,8 @@ export default function Login({
       setGoogleError(t("auth.legalRequired"));
       return;
     }
+    const operationCurrent = beginEntryOperation();
+    if (!operationCurrent()) return;
     authBusy.current = true;
     setError("");
     setGoogleError("");
@@ -84,10 +98,16 @@ export default function Login({
     let authenticated = false;
     try {
       await signInWithGoogle();
+      if (!operationCurrent()) return;
+      const user = auth.currentUser;
+      if (!user) throw new Error(t("settings.noActiveSession"));
+      const current = () => operationCurrent() && auth.currentUser === user;
       authenticated = true;
-      await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => showToast(t("legal.saveFailed")));
-      await onLoggedIn();
+      await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => { if (current()) showToast(t("legal.saveFailed")); });
+      if (!current()) return;
+      await onLoggedIn(current);
     } catch (err) {
+      if (!operationCurrent()) return;
       // Cancelar no es un fallo: si la persona cerró la ventana de Google
       // a propósito, mostrarle un error rojo sería confuso.
       if (err instanceof GoogleSignInCancelled) return;
@@ -95,8 +115,10 @@ export default function Login({
       else if (authenticated && (err as { code?: string })?.code !== "cloud/history-format-unsupported") setGoogleError(t("login.accountOpenFailed"));
       else setGoogleError(googleSignInErrorMessage(err));
     } finally {
-      authBusy.current = false;
-      setGoogleLoading(false);
+      if (operationCurrent()) {
+        authBusy.current = false;
+        setGoogleLoading(false);
+      }
     }
   }
 
@@ -106,18 +128,22 @@ export default function Login({
       Alert.alert(t("login.writeEmailFirstTitle"), t("login.writeEmailFirstMessage"));
       return;
     }
+    const operationCurrent = beginEntryOperation();
+    if (!operationCurrent()) return;
     authBusy.current = true;
     try {
       await withTimeout(sendPasswordResetEmail(auth, email.trim()));
+      if (!operationCurrent()) return;
       Alert.alert(
         t("login.resetEmailSentTitle"),
         t("login.resetEmailSentMessage", { email: email.trim() })
       );
     } catch (err) {
+      if (!operationCurrent()) return;
       const code = (err as { code?: string })?.code || "";
       Alert.alert(t("login.resetEmailFailedTitle"), firebaseErrorMessage(code));
     } finally {
-      authBusy.current = false;
+      if (operationCurrent()) authBusy.current = false;
     }
   }
 

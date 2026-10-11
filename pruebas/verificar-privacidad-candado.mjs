@@ -49,7 +49,7 @@ async function componentCode(file) {
         else if (args.path.endsWith("appLock")) contents = `export const GRACE_MS=120000,PIN_LENGTH=4; ${lockExports.map(name => `export const ${name}=(...args)=>globalThis.__gate.io.${name}(...args);`).join("\n")}`;
         else if (args.path.endsWith("screenPrivacy")) contents = "export const applyLockScreenPrivacy=(...args)=>globalThis.__gate.io.applyLockScreenPrivacy(...args);";
         else if (args.path.endsWith("lockState")) contents = "export const setAppLocked=(v)=>globalThis.__gate.cover.push(v); export const useAppLocked=()=>globalThis.__gate.modalLocked;";
-        else if (args.path.endsWith("AppDataContext")) contents = "export const useAppData=()=>({t:(s)=>s,ready:false});";
+        else if (args.path.endsWith("AppDataContext")) contents = "export const useAppData=()=>({t:(s)=>s,ready:globalThis.__gate.dataReady});";
         else contents = "export default function Stub(){return null;}";
         return { contents, loader: "js" };
       });
@@ -57,10 +57,10 @@ async function componentCode(file) {
   return compiled.outputFiles[0].text;
 }
 const gateCode = await componentCode("components/AppLockGate.tsx");
-function mount(io = {}, initial = []) {
+function mount(io = {}, initial = [], dataReady = false) {
   const state = [], effects = [], cover = [];
   let index = 0;
-  const env = { state, effects, cover, modalLocked: false, io: {
+  const env = { state, effects, cover, modalLocked: false, dataReady, io: {
     lockEnabledState: async () => "disabled", applyLockScreenPrivacy: async () => "confirmed",
     salioHaceNada: async () => false, usaHuella: async () => false, biometricKind: async () => "none",
     olvidarSalida: async () => {}, subscribeLockConfiguration: callback => { env.configuration = callback; return () => {}; }, ...io,
@@ -106,6 +106,25 @@ try {
   assert.equal(env.element.key, "0-checking");
   env = mount({}, [true, true, false, 0, true]);
   assert.equal(env.element.key, "0-checked", "Modal del PIN se recrea despues de aplicar FLAG_SECURE");
+  assert.equal(env.element.props.animationType, "none", "La cubierta aparece completa, sin fundido de datos entre cuentas");
+  assert.notEqual(env.element.props.transparent, true, "La espera nunca vuelve transparente el protector");
+  assert.equal(env.element.props.visible, true);
+  const texts = element => !element || typeof element !== "object" ? []
+    : [element.type === "Text" ? element.props.children : null,
+      ...[element.props?.children].flat(Infinity).flatMap(texts)].filter(Boolean);
+  env = mount({}, [false, true, false, 0, false]);
+  assert.ok(env.element, "Datos pendientes mantienen cubierta aunque el candado este apagado");
+  assert.ok(texts(env.element).includes("common.loading"), "Abrir datos no se anuncia como nueva comprobacion de PIN");
+  assert.ok(!texts(env.element).includes("lock.checking"));
+  env = mount();
+  assert.ok(texts(env.element).includes("lock.checking"), "La primera lectura del candado conserva su aviso real");
+  env = mount({}, [false, true, false, 0, false], true);
+  assert.equal(env.element, null, "Solo se retira la cubierta con datos listos y candado comprobado/desbloqueado");
+  env = mount({}, [true, true, false, 0, true], true);
+  assert.ok(texts(env.element).includes("lock.title"), "Un candado activo no desaparece al cargar los datos");
+  const keyBeforeBack = env.element.key;
+  env.element.props.onRequestClose();
+  assert.equal(env.element.key, keyBeforeBack, "Atras no retira la cubierta");
   const modalCode = await componentCode("components/PrivateModal.tsx");
   const module = { exports: {} };
   new Function("module", "exports", "require", modalCode)(module, module.exports, require);

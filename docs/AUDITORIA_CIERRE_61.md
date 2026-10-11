@@ -1,6 +1,6 @@
 # Control de cierre de los 61 hallazgos originales y ampliaciones
 
-Revisión: 10/10/2026. Este índice conserva todos los IDs del informe de Claude
+Revisión: 11/10/2026. Este índice conserva todos los IDs del informe de Claude
 y añade FINO-62, sin sustituir ni omitir los 61 originales.
 No es un porcentaje de correcciones ni declara la auditoría terminada.
 Las notas de código preparado remiten al seguimiento y a Git; no equivalen a
@@ -67,6 +67,15 @@ Orden posterior: terminar SOLO el punto 1 y parar; no iniciar los puntos 2/3.
 Punto 1 de preparación/código/pruebas locales TERMINADO; trabajo detenido.
 Este cierre local no equivale a cerrar FINO-52/62
 globalmente ni a una aceptación jurídica, publicación o prueba en teléfonos.
+
+Orden posterior retomó el punto 2. Se corrigen viaje descartado de Bienvenida,
+continuaciones de rutas de entrada abandonadas y fundido/rótulo de cubierta.
+PRUEBAS_ACCESO_INICIAL_VIDEO, sección 11/10: app 196/8 sin tarjetas (una ajena
+no versionada), Auth aislado 5/5 Node 22 y regresiones ed0cb18 rojas/verde actual.
+No cerrar FINO-41/58/61 ni añadir esos casos como Android probado: falta recorrido
+físico. La MISMA cuenta Google sigue rechazada, causa pendiente; no se quita guardia.
+**Qué sigue/falta:** diagnóstico seguro y resto Android (2); servicios/consolas/
+publicación (3). Sin entrega/despliegue; tarjetas fuera, Telegram en pausa.
 
 | Hallazgo | Tema original | Situación y condición de cierre |
 |---|---|---|

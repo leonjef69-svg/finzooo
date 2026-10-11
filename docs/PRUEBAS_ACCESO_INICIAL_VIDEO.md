@@ -114,6 +114,72 @@ Esto no prueba la selección nativa, tokens, correo real ni la consola de Play.
 FINO-47/49, pruebas físicas y auditoría integral continúan abiertos. No se
 garantiza ausencia total de problemas ni cumplimiento jurídico completo.
 
+## Continuación punto 2 — 11/10/2026, 06:18:56 Lima
+
+El vídeo NUEVO del 10/10, 1909 fotogramas, está registrado en BITACORA_AVANCE;
+no confundirlo con los 1870 anteriores ni volver a copiar su evidencia.
+Se preparan tres correcciones adicionales, sin rediseñar ni entregar:
+
+1. `irUnaVez` informa si descartó el viaje; Bienvenida libera su bloqueo si no
+   cambió de pantalla. Conserva los 1500 ms, doble toque, otros destinos y
+   callbacks antiguos void. Una excepción libera el botón sin ocultarse.
+2. `entryOperation` invalida la continuación cuando la ruta pierde enfoque o
+   se desmonta, no por el estado inactive de Android al abrir Google. Login,
+   Registro y Bienvenida pasan la comprobación hasta sus callbacks de ruta.
+   Tras SDK/perfil/correo/apertura/nube se vuelve a comprobar ruta y sesión.
+   Un finally antiguo no desbloquea una petición nueva; errores antiguos no
+   aparecen sobre otra ruta. NO cancela llamadas SDK ya enviadas, escrituras
+   ya iniciadas ni todos los eventos globales de Auth/AppDataContext.
+3. AppLockGate conserva Modal opaco/Back bloqueado y protección nativa.
+   Sin fundido al cubrir datos; cuando candado ya fue comprobado pero aún se
+   cargan los datos dice cargar, no comprobar candado. Esto no demuestra que
+   desapareció todo negro/destello ni cambia FLAG_SECURE/privacidad existentes.
+
+### Evidencia nueva, sin usar datos reales
+
+- `verificar-bienvenida-viaje-descartado-real.mjs`: pantalla/ruta/helper reales,
+  JSX/reloj/enfoque adaptados. ed0cb18 falla por bloqueo tras viaje descartado;
+  actual verde. No ausencia de API usada como prueba.
+- `verificar-acceso-abandonado-real.mjs`: manejadores/callbacks/hook originales,
+  IO/foco adaptados. SDK atrasado, perfil/correo, apertura/nube, recuperación de
+  contraseña, instancia distinta de misma UID, regreso con nueva petición y
+  error viejo. ed0cb18 falla porque continúa Login abandonado; actual verde.
+  La protección nueva se inyecta también al baseline: fallo conductual, no
+  módulo que no existía. Adaptador inicial tenía dos nombres erróneos, corregidos.
+- `verificar-privacidad-candado.mjs` ampliada, conservando casos previos: carga
+  diferente del candado, pantalla cubierta, sin fundido y retiro solo cuando
+  corresponde. ed0cb18 falla fade/none; actual verde.
+- TypeScript y ESLint generales exit0. App final: **196 pruebas y 8 auditores**,
+  tarjetas excluidas, exit0 (.tmp/auditoria-punto2-app-final-20261011.log).
+  Incluye UNA prueba preexistente del usuario no versionada: 195 previstas en
+  Git limpio, sin ejecutar otro checkout. Primera batería tuvo una fallida por
+  nombre del adaptador; se conserva en .tmp/auditoria-punto2-app-20261011.log.
+  La suite abandonada se amplió después y volvió a pasar individualmente.
+- Auth SDK de la app, Node **22.23.3**, SOLO emulador Auth demo-fino-node22 en
+  127.0.0.1:9099: **5/5** (cuatro casos y padre), cero fallos/cancelados/omitidos.
+  Crear/verificar/reentrar Hotmail y Outlook, reset y Google con credencial
+  simulada. .tmp/auditoria-punto2-auth-aislado-20261011.log. Adaptadores de rutas
+  enfocadas actualizados, sin eliminar aserciones. No email/Google nativo reales.
+  Primer CLI bloqueado por lectura de config externa; repetición con directorio
+  de configuración aislado, sin usar sesión real, aprobada. NO repetir como
+  nuevas las 229 comprobaciones integrales históricas del punto 1.
+
+### Bloqueos y siguiente paso
+
+El propietario confirma que es EXACTAMENTE la misma cuenta Google y el aviso
+la rechaza. El motivo concreto no se identificó; la prueba de legado sintético
+no demuestra que su instalación cumple esos mismos datos/versión/identidad.
+No borrar instalación, claves, datos, propietario ni adjudicar por aproximación.
+Emulator-5554 detectado, paquete com.finoapp.gastos 1.0.8/code10 y último APK
+02/10/2026; la fecha APK no prueba versión JavaScript si recibe OTA/Metro.
+Computer Use no obtuvo captura/entrada: permiso de app caducó. No automatizar
+selector de Google ni acceder a credenciales; esa elección es del propietario.
+Sin compilación/instalación/OTA/despliegue. Lo físico sigue sin acreditarse.
+**Qué sigue/falta:** identificar dueño/versión en el emulador sin exponer ni
+borrar datos, repetir acceso y restantes recorridos Android (2); servicios,
+consolas/Billing/legal/publicación (3) después. Tarjetas excluidas, Telegram
+en pausa, Sentry externo fuera, diseño diferido. Auditoría integral NO terminada.
+
 Referencias técnicas primarias consultadas: [Expo SDK 54](https://docs.expo.dev/versions/v54.0.0/),
 [correo y contraseña](https://firebase.google.com/docs/auth/web/password-auth),
 [usuarios y verificación](https://firebase.google.com/docs/auth/web/manage-users) y

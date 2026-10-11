@@ -42,7 +42,39 @@ Se solicitó enviar a la papelera únicamente la copia parcial creada por el
 agente; no borrar fuentes externas, archivos originales ni C:\finzo.
 La bitácora queda como referencia breve, sin duplicar la auditoría ya escrita.
 
-## Instrucciones para la IA que continúa
+## 11/10/2026 — 06:16:51 — punto 2 retomado, antes del apagado solicitado
+
+- El propietario confirma que Google rechaza exactamente la misma cuenta
+  que usaba antes. No atribuirlo a una cuenta equivocada: causa aún pendiente.
+  No se borraron datos ni se retiró la protección de propietario.
+- Preparados: botones de Bienvenida se liberan si el viaje rápido es descartado;
+  respuestas tardías de acceso/registro no continúan ni navegan por una ruta
+  abandonada. Hook y callbacks originales conservan identidad/enfoque y reintento.
+  No cancela la llamada Auth ya enviada ni todos sus eventos globales.
+- Cubierta de datos sigue opaca, sin fundido; distingue cargar datos de comprobar
+  candado. No acredita desaparición del negro/destellos en Android instalado.
+- Pruebas nuevas originales: viaje descartado y acceso abandonado verdes;
+  ambas contra ed0cb18 rojas por los fallos reales, no por API ausente.
+  Privacidad ampliada verde y baseline ed0cb18 rojo por fundido.
+- Verificación final registrada 06:18:56: TypeScript/ESLint exit0, app final
+  196 pruebas/8 auditores sin tarjetas (una ajena no versionada: 195 previstas
+  Git limpio; no otro checkout). Primera batería falló el adaptador nuevo;
+  corregido y repetido sin retirar aserciones. Auth SDK aislado Node 22: 5/5,
+  sin fallos/omisiones; primer CLI bloqueado por config externa, repetición
+  sin sesión/configuración real aprobada. No servidor integral repetido.
+  Detalle nuevo en PRUEBAS_ACCESO_INICIAL_VIDEO, sección 11/10.
+- Emulador detectado: com.finoapp.gastos 1.0.8/code10, último APK 02/10;
+  eso no identifica el JS cargado. Autorización Computer Use caducó sin obtener
+  captura/operar acceso; usuario elige Google. No prueba Android completada.
+- Solicitado apagado único 11/10 a las 07:05 Lima. Tarjeta sugerida con fecha
+  exacta, todavía sin confirmación observada. Guardar antes; sin cierre forzado.
+  Tres minutos solo tras pregunta imprescindible pendiente, no silencio normal.
+- **Qué sigue/falta:** finalizar verificaciones/commit/push de este bloque,
+  diagnóstico legítimo de propietario y pruebas Android (2); servicios,
+  consolas/publicación (3) después. Tarjetas fuera, Telegram en pausa,
+  Sentry externo excluido, rediseño diferido. Sin APK/AAB/OTA/despliegue nuevos.
+
+### Instrucciones vigentes para continuar
 
 - Completar punto 2: comprobar versión instalada y acceso con propietario
   legítimo/cuenta de prueba; la selección de Google la hace el usuario. Después

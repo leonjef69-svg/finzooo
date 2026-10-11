@@ -16,6 +16,7 @@ for (const [file, name] of paths) {
   const calls = [], errors = [], authBusy = { current: false };
   let pendingResolve;
   const dependencies = {
+    beginEntryOperation: () => () => true,
     withTimeout: promise => promise, recordLegalAcceptanceForCurrentAccount: async () => { calls.push("receipt"); }, showToast: value => errors.push(value),
     authBusy, legalAccepted: false, t: key => key,
     name: "Ana Torres", email: "ana@example.test", pass: "pass-test-only", auth: { currentUser: null }, createdUser: { current: null }, verificationSent: { current: false },
@@ -23,7 +24,7 @@ for (const [file, name] of paths) {
     setLoading: value => calls.push(["loading", value]), setGoogleLoading: value => calls.push(["googleLoading", value]),
     createUserWithEmailAndPassword: async () => { calls.push("create"); const user = { uid: "uid-test" }; dependencies.auth.currentUser = user; return { user }; },
     updateProfile: async () => calls.push("profile"), sendEmailVerification: async () => calls.push("verify"),
-    signInWithGoogle: async () => { calls.push("google"); if (pendingResolve === null) await new Promise(resolve => { pendingResolve = resolve; }); },
+    signInWithGoogle: async () => { calls.push("google"); if (pendingResolve === null) await new Promise(resolve => { pendingResolve = resolve; }); dependencies.auth.currentUser = { uid: "google-test" }; },
     onRegistered: async () => calls.push("registered"), onGoogleSignedIn: async () => calls.push("signed"),
     onLoggedIn: async () => calls.push("logged"), GoogleSignInCancelled: class extends Error {},
     googleSignInErrorMessage: () => "google-failure", firebaseErrorMessage: () => "auth-failure",
@@ -54,7 +55,7 @@ for (const [file, name] of paths) {
   }
   calls.length = 0; errors.length = 0; dependencies.email = "ana@example.test";
   dependencies.createdUser.current = null; dependencies.verificationSent.current = false;
-  dependencies.signInWithGoogle = async () => { calls.push("google"); };
+  dependencies.signInWithGoogle = async () => { calls.push("google"); dependencies.auth.currentUser = { uid: "google-test" }; };
   dependencies.recordLegalAcceptanceForCurrentAccount = async () => { calls.push("receipt-failed"); throw new Error("disk-error"); };
   await handlerOriginal(file, name, dependencies, source(file))();
   assert.equal(calls.filter(value => value === "create" || value === "google").length, 1, "fallo local no repite Auth exitoso");

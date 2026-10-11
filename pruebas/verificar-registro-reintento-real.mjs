@@ -10,6 +10,7 @@ function fixture() {
   const calls = [], errors = [], toasts = [];
   const user = { uid: "registration-test", email: "synthetic@hotmail.com" };
   const values = {
+    beginEntryOperation: () => () => true,
     authBusy: { current: false }, createdUser: { current: null }, verificationSent: { current: false }, legalAccepted: true,
     name: "Persona de prueba", email: "synthetic@hotmail.com", pass: "Test-only-pass-123", auth: { currentUser: null },
     t: key => key, setGoogleError() {}, setLoading() {}, setErrors: value => errors.push(value), showToast: value => toasts.push(value),

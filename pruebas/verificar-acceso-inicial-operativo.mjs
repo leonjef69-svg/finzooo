@@ -24,6 +24,7 @@ await handler("handleCheck")(); assert.equal(messages.at(-1), "cuenta-protegida"
 await handler("handleLogout")(); assert.equal(messages.at(-1), "verifyEmail.logoutFailed"); assert.equal(values.verificationBusy.current, false);
 
 const resetCalls = [], reset = { authBusy: { current: false }, email: " synthetic@hotmail.com ", auth: {}, t: key => key, withTimeout: promise => promise,
+  beginEntryOperation: () => () => true,
   Alert: { alert: (...args) => resetCalls.push(args) }, firebaseErrorMessage: () => "reset-error", sendPasswordResetEmail: async (_, email) => { resetCalls.push(email); await new Promise(resolve => { release = resolve; }); } };
 const forgot = () => handlerOriginal("screens/Login.tsx", "forgotPassword", reset, source("screens/Login.tsx"))();
 const resetPending = forgot(); await forgot(); assert.equal(resetCalls.filter(item => typeof item === "string").length, 1);
@@ -34,7 +35,7 @@ assert.equal(resetCalls[0], "synthetic@hotmail.com");
 const React = { Fragment: "Fragment", createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }) };
 const flatten = node => !node || typeof node !== "object" ? [] : [node, ...node.children.flat(Infinity).flatMap(flatten)];
 const dependencies = { React, ActivityIndicator: "Spinner", View: "View", Text: "Text", Image: "Image", ScrollView: "ScrollView", KeyboardAvoidingView: "KeyboardAvoidingView", StatusBar: "StatusBar", Wallet: "Wallet", TouchableOpacity: "TouchableOpacity", AuthField: "AuthField", AuthLegalAcceptance: "AuthLegalAcceptance", GoogleButton: "GoogleButton", OrDivider: "OrDivider",
-  Platform: { OS: "android" }, useSafeAreaInsets: () => ({ top: 24, bottom: 24 }), useWindowDimensions: () => ({ height: 480 }), useState: value => [value, () => {}], useRef: value => ({ current: value }), useEffect() {}, Keyboard: { addListener: () => ({ remove() {} }) }, useAppData: () => ({ t: key => key, showToast() {} }), require: () => "original-image" };
+  Platform: { OS: "android" }, useSafeAreaInsets: () => ({ top: 24, bottom: 24 }), useWindowDimensions: () => ({ height: 480 }), useState: value => [value, () => {}], useRef: value => ({ current: value }), useEntryOperation: () => () => () => true, useEffect() {}, Keyboard: { addListener: () => ({ remove() {} }) }, useAppData: () => ({ t: key => key, showToast() {} }), require: () => "original-image" };
 for (const [file, name] of [["screens/Login.tsx", "Login"], ["screens/Register.tsx", "Register"]]) {
   const tree = flatten(handlerOriginal(file, name, dependencies, source(file))({ onLoggedIn() {}, onGoRegister() {}, onRegistered() {}, onGoogleSignedIn() {}, onGoLogin() {} }));
   const scroll = tree.find(node => node.type === "ScrollView");

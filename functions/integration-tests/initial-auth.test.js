@@ -26,6 +26,7 @@ test("acceso inicial: SDK Auth real conectado exclusivamente a emulador", async 
       const email = `fino-synthetic-${Date.now()}@${domain}`, password = "Only-local-test-123";
       const errors = [], completed = [];
       const register = {
+        beginEntryOperation: () => () => true, // ruta enfocada; ciclo real cubierto en pruebas de entrada
         authBusy: { current: false }, createdUser: { current: null }, verificationSent: { current: false }, legalAccepted: true,
         name: "Persona sintética", email: ` ${email} `, pass: password, auth,
         t: key => key, setGoogleError() {}, setLoading() {}, setErrors: value => { if (Object.keys(value).length) errors.push(value); },
@@ -46,7 +47,7 @@ test("acceso inicial: SDK Auth real conectado exclusivamente a emulador", async 
       assert.equal(user.emailVerified, true);
       await signOut(auth);
       let entered = false;
-      const login = { authBusy: { current: false }, email: ` ${email} `, pass: password, auth,
+      const login = { beginEntryOperation: () => () => true, authBusy: { current: false }, email: ` ${email} `, pass: password, auth,
         setGoogleError() {}, setError: value => { if (value) errors.push(value); }, setLoading() {}, t: key => key,
         firebaseErrorMessage: code => code, signInWithEmailAndPassword, onLoggedIn: async () => { entered = true; } };
       await handlerOriginal("screens/Login.tsx", "submit", login)();

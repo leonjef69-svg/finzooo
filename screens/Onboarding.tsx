@@ -5,8 +5,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BellRing, ChartNoAxesCombined, ReceiptText, ShieldCheck } from "lucide-react-native";
 import { useAppData } from "@/contexts/AppDataContext";
 import AuthLegalAcceptance from "@/components/AuthLegalAcceptance";
+import { useEntryOperation, type EntryOperationGuard } from "@/utils/entryOperation";
 
-type Props = { onGoogle: () => Promise<void>; onCreateAccount: () => void; onLogin: () => void };
+type Props = { onGoogle: (current?: EntryOperationGuard) => Promise<void>; onCreateAccount: () => void | boolean; onLogin: () => void | boolean };
 
 export default function Onboarding({ onGoogle, onCreateAccount, onLogin }: Props) {
   const { fmt, t } = useAppData();
@@ -17,27 +18,44 @@ export default function Onboarding({ onGoogle, onCreateAccount, onLogin }: Props
   const [navigating, setNavigating] = useState(false);
   const authBusy = useRef(false);
   const navigationBusy = useRef(false);
+  const beginEntryOperation = useEntryOperation(() => {
+    authBusy.current = false;
+    setGoogleLoading(false);
+  });
   useFocusEffect(useCallback(() => {
     navigationBusy.current = false;
     setNavigating(false);
   }, []));
 
-  function navigate(action: () => void) {
+  function navigate(action: () => void | boolean) {
     if (authBusy.current || navigationBusy.current) return;
     navigationBusy.current = true;
     setNavigating(true);
-    action();
+    try {
+      // Un viaje descartado no cambia de pantalla y no recibirá otro enfoque
+      // que quite este bloqueo. Mantener los botones utilizables para reintentar.
+      if (action() === false) {
+        navigationBusy.current = false;
+        setNavigating(false);
+      }
+    } catch (error) {
+      navigationBusy.current = false;
+      setNavigating(false);
+      throw error;
+    }
   }
 
   async function continueWithGoogle() {
     if (authBusy.current || navigationBusy.current) return;
     if (!legalAccepted) { setGoogleError(t("auth.legalRequired")); return; }
+    const operationCurrent = beginEntryOperation();
+    if (!operationCurrent()) return;
     authBusy.current = true;
     setGoogleError("");
     setGoogleLoading(true);
-    try { await onGoogle(); }
-    catch (error) { setGoogleError(error instanceof Error ? error.message : t("login.googleError")); }
-    finally { authBusy.current = false; setGoogleLoading(false); }
+    try { await onGoogle(operationCurrent); }
+    catch (error) { if (operationCurrent()) setGoogleError(error instanceof Error ? error.message : t("login.googleError")); }
+    finally { if (operationCurrent()) { authBusy.current = false; setGoogleLoading(false); } }
   }
 
   return (

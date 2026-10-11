@@ -140,9 +140,10 @@ function seNavegoHacePoco(accion: "push" | "replace", ruta: Parameters<typeof ro
   return false;
 }
 
-export function irUnaVez(ruta: Parameters<typeof router.push>[0]): void {
-  if (seNavegoHacePoco("push", ruta)) return;
+export function irUnaVez(ruta: Parameters<typeof router.push>[0]): boolean {
+  if (seNavegoHacePoco("push", ruta)) return false;
   router.push(ruta);
+  return true;
 }
 
 /**

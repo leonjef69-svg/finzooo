@@ -1,5 +1,26 @@
 # Estado actual de Fino
 
+## Punto 2 retomado — 11/10/2026, 06:18:56 Lima — parcial, NO entregado
+
+Bienvenida libera los botones si la navegación rápida se descarta. Login,
+Registro y Google de Bienvenida descartan la continuación de una ruta abandonada
+y callbacks comprueban la misma instancia de sesión tras apertura/nube. No cancela
+Auth ya enviado ni sus eventos globales; no acredita acceso Android real.
+La cubierta del candado sigue opaca, ahora sin fundido y con carga diferenciada.
+Guía/evidencia: `docs/PRUEBAS_ACCESO_INICIAL_VIDEO.md`, sección 11/10.
+TypeScript/ESLint exit0; app final 196 pruebas/8 auditores sin tarjetas (una
+prueba del usuario no versionada: 195 previstas Git limpio, no otro checkout).
+Auth SDK local Node 22: 5/5, sin fallos/omisiones; no servidor integral repetido.
+Regresiones ed0cb18 rojas por viaje descartado, continuación tardía y fundido;
+actuales verdes. Primera app falló el adaptador nuevo; repetición final aprobada.
+El propietario confirma MISMA cuenta Google y rechazo de dueño en el emulador.
+Causa aún pendiente, sin borrar datos ni quitar guardia; autorización Computer Use
+caducó antes de capturar/operar. APK 1.0.8/code10 instalado 02/10 no identifica JS.
+Sin APK/AAB/OTA/despliegue; marcador no subido porque no hubo entrega.
+**Qué sigue/falta:** diagnóstico seguro del propietario y recorridos Android (2),
+servicios/consolas/publicación (3) después. Tarjetas fuera, Telegram en pausa,
+Sentry externo excluido, diseño diferido. Guardado previo al apagado solicitado.
+
 ## Continuidad — 10/10/2026, 23:47:02 (Lima)
 
 El propietario pide solo incorporar lo faltante aquí, sin otra carpeta/copia.

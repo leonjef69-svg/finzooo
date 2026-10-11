@@ -9,17 +9,21 @@ export default function RegisterRoute() {
   const { t, openLocalAccount, hydrateFromCloud, setUserName, setUserEmail } = useAppData();
   return (
     <Register
-      onRegistered={async (name, email) => {
+      onRegistered={async (name, email, operationCurrent = () => true) => {
+        if (!operationCurrent()) return;
         const user = auth.currentUser;
         if (!user) return;
+        const current = () => operationCurrent() && auth.currentUser === user;
         try { await openLocalAccount(user.uid, user.email); }
         catch (error) {
+          if (!current()) return;
           if (error instanceof Error && error.name === "LocalAccountVerificationRequired") {
             router.replace("/verify-email");
             return;
           }
           throw error;
         }
+        if (!current()) return;
         setUserName(name);
         setUserEmail(email);
         // Orden temporal para revisar todas las pantallas del flujo inicial:
@@ -30,10 +34,14 @@ export default function RegisterRoute() {
       // pasa por /verify-email: sigue el mismo camino que un inicio de
       // sesión normal. Si ya tenía datos en la nube (por ejemplo, porque
       // entró antes desde otro celular), se recuperan aquí.
-      onGoogleSignedIn={async () => {
+      onGoogleSignedIn={async (operationCurrent = () => true) => {
+        if (!operationCurrent()) return;
         const user = auth.currentUser;
+        if (!user) return;
         if (user) {
+          const current = () => operationCurrent() && auth.currentUser === user;
           const localRestored = await openLocalAccount(user.uid, user.email);
+          if (!current()) return;
           if (localRestored) {
             router.replace("/(tabs)");
             return;
@@ -41,6 +49,7 @@ export default function RegisterRoute() {
           setUserName(user.displayName || "");
           setUserEmail(user.email || "");
           const cloudResult = await hydrateFromCloud(user.uid);
+          if (!current()) return;
           if (cloudResult === "restored") {
             router.replace("/(tabs)");
             return;

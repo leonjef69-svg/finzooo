@@ -8,6 +8,7 @@ if (revision && !/^[a-f\d]{7,40}$/i.test(revision)) throw new Error("Revisión i
 const source = file => revision ? execFileSync("git", ["show", `${revision}:${file}`], { encoding: "utf8" }) : readFileSync(file, "utf8");
 const calls = [], errors = [];
 const dependencies = {
+  beginEntryOperation: () => () => true,
   legalAccepted: false, authBusy: { current: false }, navigationBusy: { current: false },
   t: key => key, setGoogleError: value => errors.push(value), setGoogleLoading: value => calls.push(["loading", value]),
   onGoogle: async () => { calls.push("google"); },

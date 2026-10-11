@@ -10,14 +10,17 @@ export default function LoginRoute() {
     useAppData();
   return (
     <Login
-      onLoggedIn={async () => {
+      onLoggedIn={async (operationCurrent = () => true) => {
+        if (!operationCurrent()) return;
         const user = auth.currentUser;
         if (!user) return;
+        const current = () => operationCurrent() && auth.currentUser === user;
         if (!user.emailVerified) {
           router.replace("/verify-email");
           return;
         }
         const localRestored = await openLocalAccount(user.uid, user.email);
+        if (!current()) return;
         if (user) {
           if (!localRestored) setUserName(user.displayName || "");
           setUserEmail(user.email || "");
@@ -31,6 +34,7 @@ export default function LoginRoute() {
         // Sin copia local, intenta recuperar la de esta cuenta desde la nube.
         if (user) {
           const cloudResult = await hydrateFromCloud(user.uid);
+          if (!current()) return;
           if (cloudResult === "restored") {
             router.replace("/(tabs)");
             return;

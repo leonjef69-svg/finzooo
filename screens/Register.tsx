@@ -23,6 +23,7 @@ import { firebaseErrorMessage } from "@/utils/firebaseErrors";
 import { GoogleSignInCancelled, signInWithGoogle } from "@/utils/googleAuth";
 import { googleSignInErrorMessage } from "@/utils/googleSignInError";
 import { useAppData } from "@/contexts/AppDataContext";
+import { useEntryOperation, type EntryOperationGuard } from "@/utils/entryOperation";
 
 type Errors = { name?: string; email?: string; pass?: string; general?: string };
 
@@ -31,12 +32,12 @@ export default function Register({
   onGoogleSignedIn,
   onGoLogin,
 }: {
-  onRegistered: (name: string, email: string) => void | Promise<void>;
+  onRegistered: (name: string, email: string, current?: EntryOperationGuard) => void | Promise<void>;
   // Con Google no hay diferencia entre "crear cuenta" y "entrar": Google
   // crea la cuenta si no existía. Por eso este camino termina igual que el
   // de la pantalla de Login, sin pasar por verificar el correo (las
   // cuentas de Google ya vienen verificadas).
-  onGoogleSignedIn: () => void | Promise<void>;
+  onGoogleSignedIn: (current?: EntryOperationGuard) => void | Promise<void>;
   onGoLogin: () => void;
 }) {
   const { t, showToast } = useAppData();
@@ -49,6 +50,11 @@ export default function Register({
   const [googleError, setGoogleError] = useState("");
   const [legalAccepted, setLegalAccepted] = useState(false);
   const authBusy = useRef(false);
+  const beginEntryOperation = useEntryOperation(() => {
+    authBusy.current = false;
+    setLoading(false);
+    setGoogleLoading(false);
+  });
   const createdUser = useRef<typeof auth.currentUser>(null);
   const verificationSent = useRef(false);
   const insets = useSafeAreaInsets();
@@ -61,6 +67,8 @@ export default function Register({
       setGoogleError(t("auth.legalRequired"));
       return;
     }
+    const operationCurrent = beginEntryOperation();
+    if (!operationCurrent()) return;
     authBusy.current = true;
     setErrors({});
     setGoogleError("");
@@ -68,17 +76,25 @@ export default function Register({
     let authenticated = false;
     try {
       await signInWithGoogle();
+      if (!operationCurrent()) return;
+      const user = auth.currentUser;
+      if (!user) throw new Error(t("settings.noActiveSession"));
+      const current = () => operationCurrent() && auth.currentUser === user;
       authenticated = true;
-      await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => showToast(t("legal.saveFailed")));
-      await onGoogleSignedIn();
+      await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => { if (current()) showToast(t("legal.saveFailed")); });
+      if (!current()) return;
+      await onGoogleSignedIn(current);
     } catch (err) {
+      if (!operationCurrent()) return;
       if (err instanceof GoogleSignInCancelled) return;
       if (err instanceof Error && err.name === "LocalAccountAccessError") setGoogleError(err.message);
       else if (authenticated && (err as { code?: string })?.code !== "cloud/history-format-unsupported") setGoogleError(t("login.accountOpenFailed"));
       else setGoogleError(googleSignInErrorMessage(err));
     } finally {
-      authBusy.current = false;
-      setGoogleLoading(false);
+      if (operationCurrent()) {
+        authBusy.current = false;
+        setGoogleLoading(false);
+      }
     }
   }
 
@@ -97,13 +113,17 @@ export default function Register({
     setErrors(e);
     if (Object.keys(e).length) return;
 
+    const operationCurrent = beginEntryOperation();
+    if (!operationCurrent()) return;
     authBusy.current = true;
     setLoading(true);
     try {
       // Firebase puede haber creado la cuenta antes de que falle perfil,
       // correo o apertura local. Reintentar termina esa cuenta, no crea otra.
       if (!createdUser.current) {
-        createdUser.current = (await createUserWithEmailAndPassword(auth, normalizedEmail, pass)).user;
+        const result = await createUserWithEmailAndPassword(auth, normalizedEmail, pass);
+        if (!operationCurrent()) return;
+        createdUser.current = result.user;
         verificationSent.current = false;
       }
       const user = createdUser.current;
@@ -115,24 +135,31 @@ export default function Register({
         }
       }
       requireSameAccount();
-      await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => showToast(t("legal.saveFailed")));
+      await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => { if (operationCurrent() && auth.currentUser === user) showToast(t("legal.saveFailed")); });
+      if (!operationCurrent()) return;
       requireSameAccount();
       await withTimeout(updateProfile(user, { displayName: name.trim() }));
+      if (!operationCurrent()) return;
       requireSameAccount();
       if (!verificationSent.current) {
         try {
           await withTimeout(sendEmailVerification(user));
+          if (!operationCurrent()) return;
           verificationSent.current = true;
-        } catch { showToast(t("register.verificationRetry")); }
+        } catch { if (operationCurrent() && auth.currentUser === user) showToast(t("register.verificationRetry")); }
       }
+      if (!operationCurrent()) return;
       requireSameAccount();
-      await onRegistered(name.trim(), normalizedEmail);
+      await onRegistered(name.trim(), normalizedEmail, () => operationCurrent() && auth.currentUser === user);
     } catch (err) {
+      if (!operationCurrent()) return;
       const code = (err as { code?: string })?.code || "";
       setErrors({ general: err instanceof Error && err.name === "LocalAccountAccessError" ? err.message : createdUser.current ? t("register.accountCreatedRetry") : firebaseErrorMessage(code) });
     } finally {
-      authBusy.current = false;
-      setLoading(false);
+      if (operationCurrent()) {
+        authBusy.current = false;
+        setLoading(false);
+      }
     }
   }
 

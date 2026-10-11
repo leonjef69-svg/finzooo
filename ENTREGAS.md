@@ -1,5 +1,14 @@
 # Entregas de Fino
 
+## 11/10/2026 — 06:18:56 Lima — acceso inicial preparado, SIN nueva entrega
+
+Bloque del punto 2 y evidencia en `docs/PRUEBAS_ACCESO_INICIAL_VIDEO.md`
+(sección 11/10); continuidad en ESTADO/bitácora. No nuevo APK/AAB/OTA,
+instalación ni despliegue. Git no actualiza el teléfono; CODE_MARKER intacto.
+**Qué sigue/falta:** diagnosticar rechazo de la MISMA cuenta Google sin borrar
+datos, recorridos Android (2), servicios/consolas/publicación (3) después.
+Tarjetas fuera, Telegram en pausa, Sentry externo excluido, diseño diferido.
+
 ## 10/10/2026 — 23:47:02 Lima — continuidad documental, SIN nueva entrega
 
 Información faltante y horas en `docs/BITACORA_AVANCE.md`, sin duplicar informes.
