@@ -69,8 +69,10 @@ La bitácora queda como referencia breve, sin duplicar la auditoría ya escrita.
 - Solicitado apagado único 11/10 a las 07:05 Lima. Tarjeta sugerida con fecha
   exacta, todavía sin confirmación observada. Guardar antes; sin cierre forzado.
   Tres minutos solo tras pregunta imprescindible pendiente, no silencio normal.
-- **Qué sigue/falta:** finalizar verificaciones/commit/push de este bloque,
-  diagnóstico legítimo de propietario y pruebas Android (2); servicios,
+- Bloque guardado en commit `860530ed` (06:20:53 Lima) y push a origin/master
+  confirmado. No incluye pendientes preexistentes de Telegram ni prueba ajena;
+  esos archivos permanecen conservados en C:\finzo. No despliegue/entrega.
+- **Qué sigue/falta:** diagnóstico legítimo de propietario y pruebas Android (2); servicios,
   consolas/publicación (3) después. Tarjetas fuera, Telegram en pausa,
   Sentry externo excluido, rediseño diferido. Sin APK/AAB/OTA/despliegue nuevos.
 
