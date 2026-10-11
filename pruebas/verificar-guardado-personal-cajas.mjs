@@ -7,6 +7,8 @@ import { DatabaseSync } from "node:sqlite";
 import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { createRequire } from "node:module";
+import { randomUUID } from "node:crypto";
+import { recordOriginOriginal } from "./helpers/record-origin-original.mjs";
 const requireCore = createRequire(new URL("../utils/cajas.ts", import.meta.url));
 const requirePure = name => requireCore(name === "./utf8" ? "./utf8.ts" : name);
 
@@ -71,6 +73,7 @@ try {
     assert.equal(h.get("finzo:transactions"), 'v2:["latest"]', "una escritura antigua no puede terminar encima de una nueva");
   }
   const boxes = loadPure("utils/cajas.ts"), personal = loadPure("utils/privateBoxPersonal.ts");
+  const financial = recordOriginOriginal(), reservation = loadPure("utils/privateBoxMoneyLocalWrite.ts");
   const box = { id: "caja-a", nombre: "A", creadaEn: 1 };
   const move = { id: "mov-a", cajaId: box.id, tipo: "ingreso", monto: 100, descripcion: "Aporte", fecha: "2026-10-05", creadoEn: 2, personalTransactionId: 10 };
   const data = { cajas: [box], movimientos: [move], cajasBorradas: [], movimientosBorrados: [] };
@@ -109,6 +112,8 @@ try {
   for (const failure of [null, "rollback"]) {
     const h = harness(); h.failure = failure; const events = [];
     const scope = { ready: true, hasOnboarded: true, Platform: { OS: "android" },
+      ...financial, ...reservation, cloudSyncMetaRef: { current: {} }, setCloudSyncMeta() {}, saveJSON: h.api.saveJSON,
+      currencyForReturn: { current: "PEN" }, randomUUID, issuedCreationId: () => undefined, canonical: JSON.stringify,
       auth: { currentUser: { uid: "a" } }, localSessionVersion: { current: 1 },
       transactionsLive: { current: [] }, deletedTransactionIdsRef: { current: [] }, returnReceipt: { current: null },
       captureAccountTask: () => ({ current: () => true }), withLocalAccountOperation: work => work(),
@@ -133,6 +138,8 @@ try {
   function screenHarness(before, rows = []) {
     const h = harness(), events = [];
     const ctx = { ready: true, hasOnboarded: true, Platform: { OS: "android" }, auth: { currentUser: { uid: "a" } },
+      ...financial, ...reservation, cloudSyncMetaRef: { current: {} }, setCloudSyncMeta() {}, saveJSON: h.api.saveJSON,
+      currencyForReturn: { current: "PEN" }, randomUUID, issuedCreationId: () => undefined, canonical: JSON.stringify,
       localSessionVersion: { current: 1 }, transactionsLive: { current: rows }, deletedTransactionIdsRef: { current: [] }, returnReceipt: { current: null },
       captureAccountTask: () => ({ current: () => true }), withLocalAccountOperation: work => work(),
       hasUnreadableLocalData: h.api.hasUnreadableLocalData, saveJSONBatchNow: h.api.saveJSONBatchNow, STORAGE_KEYS: h.api.STORAGE_KEYS,

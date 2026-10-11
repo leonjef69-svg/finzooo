@@ -53,6 +53,8 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
   const [busy, setBusy] = useState(false);
   const [editandoAporteId, setEditandoAporteId] = useState<string | null>(null);
   const lock = useRef(false);
+  const cierresPendientes = useRef(new Set<string>());
+  const cierresConfirmados = useRef(new Set<string>());
   const accountSession = useRef(getAccountStorageSession()).current;
   const mounted = useRef(true);
   const selectedBoxId = useRef(caja?.id);
@@ -64,10 +66,12 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
   const [subscriptionRevision, setSubscriptionRevision] = useState(0);
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; movementEpoch.current += 1; };
+    const pending = cierresPendientes.current, confirmed = cierresConfirmados.current;
+    return () => { mounted.current = false; movementEpoch.current += 1; pending.clear(); confirmed.clear(); };
   }, []);
   const errorRef = useRef((error?: unknown) => {});
-  errorRef.current = (error?: unknown) => showToast(t(spaceErrorKey(error)));
+  errorRef.current = (error?: unknown) => showToast(t(error instanceof Error && error.message === "personal-save-failed"
+    ? "settings.backupMovementConflict" : spaceErrorKey(error)));
   const moneda = caja?.currency || userCurrency;
   const fmt = (amount: number) => formatAmount(amount, currencySymbolFor(moneda), moneda);
   useEffect(() => {
@@ -127,6 +131,7 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
     const task = captureAccountTask(uid, () => mounted.current && active && selectedBoxId.current === boxId && getAccountStorageSession() === accountSession);
     const stop = observarCierreCaja(boxId, () => {
       if (!task.current()) return;
+      if (cierresPendientes.current.has(boxId)) return;
       movementEpoch.current += 1; confirmedSource.current = null;
       setCajas(items => items.filter(item => item.id !== boxId)); setCaja(null); setMovimientos([]); setMiembros([]);
     }, error => { if (task.current()) errorRef.current(error); });
@@ -184,7 +189,7 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
       lock.current = false;
       if (task.current()) {
         setBusy(false);
-        if (started) setSubscriptionRevision(value => value + 1);
+        if (started && !cierresPendientes.current.size) setSubscriptionRevision(value => value + 1);
       }
     }
   }
@@ -221,7 +226,8 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
     if (saldoDespues < -0.005) { showToast(t("boxes.notEnoughSpace")); return; }
     if (item.personalTransactionId != null) await wait(() => borrarAportePersonal("box", caja.id, item.id));
     else await wait(() => borrarMovimientoCajaCompartida(caja.id, item.id));
-    if (item.personalOwnerUid === uid && item.personalTransactionId != null) deleteLinkedTransferTransaction(item.personalTransactionId);
+    if (item.personalOwnerUid === uid && item.personalTransactionId != null
+      && !await deleteLinkedTransferTransaction(item.personalTransactionId)) throw new Error("personal-save-failed");
   });
   const devolverAPersonal = () => ejecutar(async wait => {
     if (!uid || !caja || devolvibleAPersonal <= 0) return;
@@ -251,10 +257,18 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
     if (!uid || !caja || !owner) return;
     if (!canCloseLinkedSpace(movimientos)) { showToast(t("boxes.closeBalance")); return; }
     Alert.alert(t("boxes.close"), t("boxes.closeWarning"), [{ text: t("common.cancel"), style: "cancel" }, { text: t("boxes.close"), style: "destructive", onPress: () => void ejecutar(async wait => {
-      await wait(() => cerrarCajaCompartida(uid, caja.id));
+      const boxId = caja.id;
+      cierresPendientes.current.add(boxId);
+      if (!cierresConfirmados.current.has(boxId)) {
+        try {
+          await wait(() => cerrarCajaCompartida(uid, boxId));
+          cierresConfirmados.current.add(boxId);
+        } catch (error) { cierresPendientes.current.delete(boxId); throw error; }
+      }
       if (auth.currentUser?.uid !== uid) return;
-      repairLinkedTransferTransactions(settlePersonalTransfers(transactions, "box", caja.id));
-      setCajas(items => items.filter(item => item.id !== caja.id)); setCaja(null);
+      if (!await wait(() => repairLinkedTransferTransactions(settlePersonalTransfers(transactions, "box", boxId)))) throw new Error("personal-save-failed");
+      cierresPendientes.current.delete(boxId);
+      setCajas(items => items.filter(item => item.id !== boxId)); setCaja(null);
     }) }]);
   };
   function boton(label: string, action: () => void) {

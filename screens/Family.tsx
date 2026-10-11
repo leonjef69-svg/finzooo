@@ -117,6 +117,10 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   const [seleccionando, setSeleccionando] = useState(false);
   const [seleccionados, setSeleccionados] = useState<string[]>([]);
   const actionLock = useRef(false);
+  // Confirmación de ESTE cierre en ESTA cuenta/sesión. Un fallo de disco
+  // conserva la ficha y permite reintentar solo su guardado Personal.
+  const cierresPendientes = useRef(new Set<string>());
+  const cierresConfirmados = useRef(new Set<string>());
   // Evita dos reparaciones mientras Firestore confirma el nuevo vínculo.
   const legacyRepairIds = useRef(new Set<string>());
   const reloadId = useRef(0);
@@ -125,7 +129,8 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   const mounted = useRef(true);
   useEffect(() => {
     mounted.current = true;
-    return () => { mounted.current = false; reloadId.current += 1; };
+    const pending = cierresPendientes.current, confirmed = cierresConfirmados.current;
+    return () => { mounted.current = false; reloadId.current += 1; pending.clear(); confirmed.clear(); };
   }, []);
   const tRef = useRef(t);
   const toastRef = useRef(showToast);
@@ -133,6 +138,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   toastRef.current = showToast;
 
   const recargar = useCallback(async (preferida?: string) => {
+    if (cierresPendientes.current.size) return;
     const pedido = ++reloadId.current;
     const uid = accountUid;
     const task = captureAccountTask(uid, () => mounted.current && pedido === reloadId.current && getAccountStorageSession() === accountSession);
@@ -181,6 +187,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     const task = captureAccountTask(accountUid, () => mounted.current && active && getAccountStorageSession() === accountSession);
     const stop = observarCierreFamilia(familiaId, () => {
       if (!task.current()) return;
+      if (cierresPendientes.current.has(familiaId)) return;
       setFamilia(null); setMovimientos([]); setMiembros([]); setTipo(null);
       setInvitacion(""); setFilter(null);
       setVerTodas(true); void recargar();
@@ -266,14 +273,14 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       legacyRepairIds.current.add(item.id);
       const personalId = nextId();
       void task.wait(() => vincularMovimientoPersonalFamilia(familia.id, item.id, personalId, uid))
-        .then(() => {
+        .then(async () => {
           if (!task.current()) return;
-          repairLinkedTransferTransactions([{
+          if (!await task.wait(() => repairLinkedTransferTransactions([{
             id: personalId, type: "expense", amount: item.monto, category: "otros", date: item.fecha,
             time: horaDe(item.creadoEn), method: "transfer", description: t("family.transferTo", { name: familia.nombre }),
             notes: "", origin: "manual", internalTransfer: "family", internalTransferLink: item.id,
             internalTransferSpaceId: familia.id, internalTransferSpaceName: familia.nombre,
-          }]);
+          }]))) throw new Error("personal-save-failed");
           void recargar();
         })
         .catch(() => {
@@ -310,13 +317,13 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     catch (error) {
       if (!task.current()) return;
       if (onError) onError(error);
-      else showToast(t(spaceErrorKey(error)));
+      else showToast(t(error instanceof Error && error.message === "personal-save-failed" ? "settings.backupMovementConflict" : spaceErrorKey(error)));
     }
     finally {
       actionLock.current = false;
       if (task.current()) {
         setOcupado(false);
-        if (mutationRevision !== undefined && mutationRevision === reloadId.current) void recargar();
+        if (!cierresPendientes.current.size && mutationRevision !== undefined && mutationRevision === reloadId.current) void recargar();
       }
     }
   }
@@ -467,16 +474,24 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       { text: t("common.cancel"), style: "cancel" },
       { text: t("common.delete"), style: "destructive", onPress: () => void ejecutar(async wait => {
         for (const item of actuales) {
-          await wait(() => cerrarFamilia(uid, item.id));
+          cierresPendientes.current.add(item.id);
+          if (!cierresConfirmados.current.has(item.id)) {
+            try {
+              await wait(() => cerrarFamilia(uid, item.id));
+              cierresConfirmados.current.add(item.id);
+            } catch (error) { cierresPendientes.current.delete(item.id); throw error; }
+          }
           if (auth.currentUser?.uid !== uid) return;
-          repairLinkedTransferTransactions(settlePersonalTransfers(transactions, "family", item.id));
+          if (!await wait(() => repairLinkedTransferTransactions(settlePersonalTransfers(transactions, "family", item.id)))) throw new Error("personal-save-failed");
+          cierresPendientes.current.delete(item.id);
         }
         setFamiliasSeleccionadas([]);
         setSeleccionandoFamilias(false);
         await wait.reload();
       }, error => {
         const code = (error as { code?: string })?.code;
-        showToast(t(code === "functions/failed-precondition" ? "family.closeBalance" : spaceErrorKey(error)));
+        showToast(t(error instanceof Error && error.message === "personal-save-failed" ? "settings.backupMovementConflict"
+          : code === "functions/failed-precondition" ? "family.closeBalance" : spaceErrorKey(error)));
       }) },
     ]);
   };
@@ -488,14 +503,22 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     Alert.alert(t("family.close"), t("family.closeWarning"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("family.close"), style: "destructive", onPress: () => void ejecutar(async wait => {
-        await wait(() => cerrarFamilia(uid, familyId));
+        cierresPendientes.current.add(familyId);
+        if (!cierresConfirmados.current.has(familyId)) {
+          try {
+            await wait(() => cerrarFamilia(uid, familyId));
+            cierresConfirmados.current.add(familyId);
+          } catch (error) { cierresPendientes.current.delete(familyId); throw error; }
+        }
         if (auth.currentUser?.uid !== uid) return;
-        repairLinkedTransferTransactions(settlePersonalTransfers(transactions, "family", familyId));
+        if (!await wait(() => repairLinkedTransferTransactions(settlePersonalTransfers(transactions, "family", familyId)))) throw new Error("personal-save-failed");
+        cierresPendientes.current.delete(familyId);
         setFamilia(null); setMiembros([]); setMovimientos([]); setTipo(null); setInvitacion("");
         setVerTodas(true); await wait.reload(); showToast(t("family.closed"));
       }, error => {
         const code = (error as { code?: string })?.code;
-        showToast(t(code === "functions/failed-precondition" ? "family.closeBalance" : spaceErrorKey(error)));
+        showToast(t(error instanceof Error && error.message === "personal-save-failed" ? "settings.backupMovementConflict"
+          : code === "functions/failed-precondition" ? "family.closeBalance" : spaceErrorKey(error)));
       }) },
     ]);
   };
@@ -517,7 +540,8 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     for (const item of plan.items) {
       if (item.personalTransactionId != null) await wait(() => borrarAportePersonal("family", familia.id, item.id));
       else await wait(() => borrarMovimientoFamilia(familia.id, item.id));
-      if (item.personalOwnerUid === auth.currentUser?.uid && item.personalTransactionId != null) deleteLinkedTransferTransaction(item.personalTransactionId);
+      if (item.personalOwnerUid === auth.currentUser?.uid && item.personalTransactionId != null
+        && !await deleteLinkedTransferTransaction(item.personalTransactionId)) throw new Error("personal-save-failed");
     }
     setSeleccionados([]); setSeleccionando(false); await wait.reload();
   });

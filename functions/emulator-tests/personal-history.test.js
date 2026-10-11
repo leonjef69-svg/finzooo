@@ -9,6 +9,16 @@ const { deleteDoc, doc, getDoc, setDoc, updateDoc, serverTimestamp } = require("
 const { initializeApp, deleteApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
 const { migratePersonalHistory } = require("../src/personal-history-migration");
+const vm = require("node:vm"), { execFileSync } = require("node:child_process");
+const originBaseline = process.env.FINO_TEST_HISTORY_ADMIN_ORIGIN_BASELINE;
+let raceMigration = migratePersonalHistory;
+if (originBaseline) {
+  assert.match(originBaseline, /^[a-f0-9]{7,40}$/i);
+  const module = { exports: {} };
+  vm.runInNewContext(execFileSync("git", ["show", `${originBaseline}:functions/src/personal-history-migration.js`], { encoding: "utf8" }),
+    { module, exports: module.exports, require });
+  raceMigration = module.exports.migratePersonalHistory;
+}
 
 function rootData() {
   return {
@@ -89,7 +99,7 @@ test("migración reanuda tras corte y conserva una edición concurrente", async 
     id: index + 1, updatedAt: index + 1, amount: 10,
     type: "expense", date: "2026-09-27", category: "otros", method: "cash",
     description: `Movimiento ${index + 1}`,
-  }));
+  })).filter(row => row.id !== 5);
   try {
     const { historyFormat: _format, ...legacyRoot } = rootData();
     void _format;
@@ -97,7 +107,7 @@ test("migración reanuda tras corte y conserva una edición concurrente", async 
     await assert.rejects(migratePersonalHistory(db, "migrating", {
       afterBatch: async batch => { if (batch === 0) throw new Error("SIMULATED_NETWORK_CUT"); },
     }), /SIMULATED_NETWORK_CUT/);
-    assert.equal((await root.get()).data().transactions.length, 425,
+    assert.equal((await root.get()).data().transactions.length, 424,
       "un corte no retira la lista original");
     let edited = false;
     const result = await migratePersonalHistory(db, "migrating", {
@@ -120,6 +130,71 @@ test("migración reanuda tras corte y conserva una edición concurrente", async 
     assert.equal((await root.collection("history").doc("426").get()).data().transaction.amount, 20);
     assert.deepEqual(await migratePersonalHistory(db, "migrating"), { alreadyMigrated: true });
   } finally {
+    await deleteApp(app);
+  }
+});
+
+test("SDK Admin: la edición del shadow entre lectura y commit no se sobrescribe", async () => {
+  const app = initializeApp({ projectId: "demo-fino" }, "history-shadow-race-test");
+  const db = getFirestore(app);
+  const root = db.collection("users").doc("migrating-shadow-race");
+  const rowRef = root.collection("history").doc("99");
+  const source = { id: 99, creationId: "fixture-sdk-shadow-race", amount: 10, updatedAt: 100 };
+  const newer = { id: 99, deleted: false, transaction: { ...source, amount: 30, updatedAt: 200 } };
+  let injected = false, writer, transactionalReads = 0;
+  const inject = () => {
+    if (!injected) { injected = true; writer = rowRef.set(newer); }
+    return writer;
+  };
+  try {
+    const { historyFormat: _format, ...legacy } = rootData();
+    void _format;
+    await root.set({ ...legacy, historyFormat: 1, recordIdentityFormat: 1,
+      transactions: [source], deletedTransactionIds: [] });
+    await rowRef.set({ id: 99, deleted: false, transaction: { ...source, amount: 5, updatedAt: 50 } });
+    // Solo se adapta dónde intercalar el segundo escritor. Todas las
+    // lecturas, commits, bloqueos y reintentos usan el SDK Admin real.
+    const intercepted = {
+      collection: (...args) => db.collection(...args),
+      batch: () => db.batch(),
+      getAll: async (...refs) => {
+        const snapshots = await db.getAll(...refs);
+        if (refs.some(ref => ref.path === rowRef.path)) await inject();
+        return snapshots;
+      },
+      runTransaction: async (work, ...options) => {
+        const result = await db.runTransaction(async tx => work(new Proxy(tx, {
+          get(target, key) {
+            if (key === "get") return async (...args) => {
+              const snapshot = await target.get(...args);
+              if (args[0]?.path === rowRef.path) {
+                transactionalReads++;
+                // No esperar dentro del callback: Admin puede bloquear el
+                // documento hasta el commit. Se conserva tanto si serializa
+                // el otro escritor como si Firestore repite la transacción.
+                inject();
+              }
+              return snapshot;
+            };
+            const value = target[key];
+            return typeof value === "function" ? value.bind(target) : value;
+          },
+        })), ...options);
+        if (writer) await writer;
+        return result;
+      },
+    };
+    const result = await raceMigration(intercepted, "migrating-shadow-race");
+    if (writer) await writer;
+    assert.equal(injected, true, "se intercala la edición tras capturar la fila antigua");
+    const finalRow = (await rowRef.get()).data();
+    assert.equal(finalRow.transaction.amount, 30, "la escritura concurrente no queda reemplazada por 10@100");
+    assert.equal(finalRow.transaction.updatedAt, 200);
+    assert.ok(transactionalReads > 0, "la nueva ruta lee la fila dentro de una transacción real");
+    assert.equal((await root.get()).data().historyFormat, 2);
+    assert.equal(result.copied, 1);
+  } finally {
+    if (writer) await writer;
     await deleteApp(app);
   }
 });

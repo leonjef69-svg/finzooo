@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 import ts from "typescript";
 import { createSourceReader } from "./helpers/source-reader.mjs";
+import { recordOriginOriginal } from "./helpers/record-origin-original.mjs";
 
 // Corre las funciones propias, no una copia de su lógica. Android y la
 // conexión de red se sustituyen; no se usa Firebase ni una cuenta real.
@@ -153,16 +154,17 @@ const helpers = {};
 vm.runInNewContext(ts.transpile(read("utils/mergeTransactions.ts"), {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
 }), { exports: helpers, require: name => {
+  if (["@/utils/recordOrigin", "@/utils/goalFunding", "@/utils/recordMerge"].includes(name)) return recordOriginOriginal();
   assert.equal(name, "@/utils/ordenarMovimientos");
   return orderExports;
 } });
-const scope = { ...exports, ...helpers, ...coordinator, transactionsLive: { current: a.transactions }, goalsLive: { current: a.goals }, auth: { currentUser: { uid: "test" } }, cloudFieldsRef: { current: a }, cloudSyncMetaRef: { current: a.syncUpdatedAt },
+const scope = { ...exports, ...helpers, ...recordOriginOriginal(), ...coordinator, deletedGoalIdsRef: { current: [] }, goalWriteReserved: { current: false }, canonical: JSON.stringify, assertPrivateBoxMoneyLocalMutation() {}, deletedTransactionIdsRef: { current: [] }, transactionsLive: { current: a.transactions }, goalsLive: { current: a.goals }, auth: { currentUser: { uid: "test" } }, cloudFieldsRef: { current: a }, cloudSyncMetaRef: { current: a.syncUpdatedAt },
   setCloudSyncMeta() {}, setRespaldoFallo() {}, userEmail: "test@example.com", userCountry: "PE",
   saveJSON() {}, STORAGE_KEYS: {}, getFavoritos: () => [], ready: true, hasOnboarded: true,
 };
 for (const name of ["setUserName", "setUserPhoto", "setUserCurrency", "setUserLanguage", "setBudgets", "setCategoryBudgets",
   "setPagosProgramados", "setMerchantLearned", "saveOverrides", "setCategoryOverridesState", "savePropias", "setCategoriasPropiasState",
-  "setCarryoverCleared", "saveFavoritos", "setIconosFavoritosState"]) scope[name] = () => {};
+  "setCarryoverCleared", "saveFavoritos", "setIconosFavoritosState", "setTransactions", "setDeletedTransactionIds", "setGoals", "setDeletedGoalIds"]) scope[name] = () => {};
 vm.createContext(scope);
 vm.runInContext(code("markCloudGroup") + code("applyNewerCloudFields"), scope);
 vm.runInContext('markCloudGroup("customCategories", [], () => []); applyNewerCloudFields(incoming);',
@@ -211,6 +213,7 @@ const historyFormats = {};
 vm.runInNewContext(ts.transpile(read("utils/cloudHistoryMigration.ts"), {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
 }), { exports: historyFormats, require: name => {
+  if (["@/utils/recordOrigin", "@/utils/goalFunding", "@/utils/recordMerge"].includes(name)) return recordOriginOriginal();
   if (name === "@/utils/mergeTransactions") return helpers;
   if (name === "@/utils/utf8") return { utf8ByteLength: text => Buffer.byteLength(text) };
   throw new Error(`Dependencia inesperada: ${name}`);
@@ -226,7 +229,7 @@ for (const historyFormat of [1, 2]) {
   if (historyFormat === 2) { stored.historyFormat = 2; delete stored.transactions; }
   const snap = () => ({ exists: () => true, data: () => structuredClone(stored) });
   const cloudScope = {
-    ...exports, ...helpers, ...coordinator, ...historyFormats, db: {}, doc: () => "isolated-user", getDoc: async () => snap(),
+    ...exports, ...helpers, ...recordOriginOriginal(), ...coordinator, ...historyFormats, serverTimestamp: () => "SERVER_TIMESTAMP", db: {}, doc: () => "isolated-user", getDoc: async () => snap(),
     hasUnreadableLocalData: () => false, utf8ByteLength: (text) => Buffer.byteLength(text, "utf8"),
     assertLegacyHistoryFormat: (raw) => { if (raw?.historyFormat === 2) throw new Error("not-legacy"); },
     UnsupportedHistoryFormatError: class extends Error {},
@@ -255,11 +258,14 @@ for (const historyFormat of [1, 2]) {
   assert.ok(stored.categoriasPropias.some((c) => c.id === "foto"), "rechazar un respaldo grande conserva lo último confirmado");
 }
 
-const localHydrate = { ...a, transactions: [transaction(1), transaction(3)], deletedTransactionIds: [3],
+const deleteProof = recordOriginOriginal().rememberTransactionDeletion(a.syncUpdatedAt, [transaction(3)]);
+const localHydrate = { ...a, transactions: [transaction(1)], deletedTransactionIds: [3], syncUpdatedAt: deleteProof,
   iconosFavoritos: [localPhoto, "Home"] };
 const remoteHydrate = { ...b, isPremium: true, transactions: [transaction(2), transaction(3)] };
-const hydrateScope = { ...exports, ...helpers, ...coordinator, setRespaldoFallo() {}, auth: { currentUser: { uid: "test" } }, localSessionVersion: { current: 1 },
-  cloudFieldsRef: { current: localHydrate }, cloudSyncMetaRef: { current: a.syncUpdatedAt },
+const hydrateScope = { ...exports, ...helpers, ...recordOriginOriginal(), ...coordinator, assertPrivateBoxMoneyLocalMutation() {}, setRespaldoFallo() {}, auth: { currentUser: { uid: "test" } }, localSessionVersion: { current: 1 },
+  transactionsLive: { current: localHydrate.transactions }, goalsLive: { current: a.goals }, deletedGoalIdsRef: { current: [] },
+  cloudFieldsRef: { current: localHydrate }, cloudSyncMetaRef: { current: deleteProof },
+  deletedTransactionIdsRef: { current: localHydrate.deletedTransactionIds },
   tRef: { current: (key) => key }, loadCloudData: async () => remoteHydrate,
   CloudPremiumRequiredError: class extends Error {}, userCountry: "PE", userEmail: "test@example.com", pruebaInicio: null,
   countryById: () => ({ id: "PE", currency: "PEN" }), countryFor: () => ({ id: "PE" }),
@@ -302,6 +308,7 @@ assert.deepEqual(plain(scope.cloudFieldsRef.current), beforeInvalid, "una respue
 const favoritesAst = ts.createSourceFile("favorites.ts", read("utils/iconosFavoritos.ts"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 const paymentsAst = ts.createSourceFile("payments.ts", read("utils/calendarioPagos.ts"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
 const builderScope = { ...exports, ...a, deletedTransactionIds: [], deletedGoalIds: [],
+  transactionsLive: { current: a.transactions }, goalsLive: { current: a.goals }, deletedTransactionIdsRef: { current: [] }, deletedGoalIdsRef: { current: [] },
   isPremiumDeLaCuenta: false, pruebaInicio: null, ready: true,
   cloudFieldsRef: { current: { ...a, iconosFavoritos: [localPhoto, "Home"],
     pagosProgramados: [{ ...payment("local"), icono: localPhoto }] } },

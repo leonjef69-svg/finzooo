@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import ts from "typescript";
 import vm from "node:vm";
 import { createSourceReader } from "./helpers/source-reader.mjs";
+import { recordOriginOriginal } from "./helpers/record-origin-original.mjs";
 const read = createSourceReader();
 function original(file, dependencies = {}) {
   const module = { exports: {} };
@@ -13,7 +14,7 @@ function original(file, dependencies = {}) {
   return module.exports;
 }
 const order = original("utils/ordenarMovimientos.ts");
-const merge = original("utils/mergeTransactions.ts", { "@/utils/ordenarMovimientos": order });
+const merge = original("utils/mergeTransactions.ts", { "@/utils/ordenarMovimientos": order, "@/utils/recordOrigin": recordOriginOriginal(), "@/utils/goalFunding": recordOriginOriginal() });
 for (const [name, count] of [["pruneDeletedTransactionIds", 5001], ["pruneDeletedGoalIds", 1001]]) {
   const input = Array.from({ length: count }, (_, index) => index + 1), before = JSON.stringify(input);
   const ids = merge[name]([...input, 1, 2, NaN, Infinity]);

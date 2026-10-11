@@ -1,5 +1,32 @@
 # Pruebas y auditores
 
+Punto 1 de preparación/código/pruebas locales TERMINADO el 10/10; guía
+PRUEBAS_CICLO_BORRADO_RESTAURACION.md. App final3: 194 pruebas y 8 auditores
+sin tarjetas (una ajena no seguida; 193 previstas Git limpio, no otro checkout
+ejecutado). Node 22 final: 64/64 seleccionadas fuera de Telegram/tarjetas.
+SDK/HTTP/reglas final: 229/229, exit0 sin fallos/omisiones/cancelaciones;
+TypeScript/ESLint generales finales aprobados. No cierre de FINO-52/62 globales
+ni de toda la auditoría; no acredita Android ni integración Telegram.
+Antecedente SDK 226/227 falló por exceso de expresiones en conversión válida;
+app final2 falló historial-separado. Correcciones y repetición completa final
+aprobadas; antecedentes conservados en la guía, sin retirar esos casos.
+FINO-52 conserva sus siete diagnósticos, que ahora se bloquean sin reemplazar
+fuentes; FINO-62 reproduce aportes10+20 y verifica30. Regresiones c6959c6 por
+comportamiento, no API faltante. Telegram en pausa; Android/activación pendientes.
+Los conteos y fallos de las pasadas del 09/10 siguientes son antecedentes.
+Actualización del punto 1: siete diagnósticos FINO-52 conservan fuentes al
+detener conflictos, y FINO-62 suma30 en ambos órdenes. La corrección enfocada
+del límite de reglas conserva SHA/recibo/tuplas/escape y sello fresco obligatorio
+para escritores 2 también sobre raíz antigua. verificar-espera-borrados-cierres-real
+ejecuta los callbacks/listeners originales de movimiento/meta/Familia/Caja:
+espera ACK, fallos conservan ficha, reintento no repite RPC confirmado y rechazo
+remoto previo no bloquea lecturas. Verde actual/roja c6959c6 por comportamiento.
+La comprobación enfocada también aprobó 7/7; no sustituye la integral final.
+Nueva orden cumplida: terminar SOLO el punto 1 y parar, esperando nueva orden.
+Android (2) y servicios/consolas/
+activación (3) se mantienen pendientes; no se ejecuta Telegram ni tarjetas para
+rellenar esos pendientes ni se declara cerrada toda la auditoría.
+
 Ampliación posterior 09/10: 188 pruebas/8 auditores sin tarjetas, 92 unitarias
 Node 22 y 208 SDK/reglas/HTTP locales aprobadas; seis casos SDK de formato
 recomprobados al final. TypeScript/ESLint aprobados. Una prueba ajena no

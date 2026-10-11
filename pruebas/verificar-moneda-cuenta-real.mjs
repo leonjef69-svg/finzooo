@@ -4,6 +4,7 @@ import vm from "node:vm";
 import { execFileSync } from "node:child_process";
 import ts from "typescript";
 import { handlerOriginal } from "./helpers/handler-original.mjs";
+import { recordOriginOriginal } from "./helpers/record-origin-original.mjs";
 
 // Funciones originales con IO adaptado; no monta Android ni convierte dinero.
 const baseline = process.env.FINO_TEST_CURRENCY_BASELINE;
@@ -14,10 +15,12 @@ const api = {};
 vm.runInNewContext(ts.transpileModule(read("utils/cloudFieldMerge.ts"), {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
 }).outputText, { exports: api, Error });
+api.assertNoIdentifiedDeletionOverlap = handlerOriginal("utils/mergeTransactions.ts", "assertNoIdentifiedDeletionOverlap", {}, fs.readFileSync("utils/mergeTransactions.ts", "utf8"));
 const historyFormats = {};
 vm.runInNewContext(ts.transpileModule(read("utils/cloudHistoryMigration.ts"), {
   compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS },
 }).outputText, { exports: historyFormats, Error, require: name => {
+  if (["@/utils/recordOrigin", "@/utils/goalFunding", "@/utils/recordMerge"].includes(name)) return recordOriginOriginal();
   if (name === "@/utils/mergeTransactions") return {};
   if (name === "@/utils/utf8") return { utf8ByteLength: text => Buffer.byteLength(text) };
   throw new Error(`Dependencia inesperada: ${name}`);
@@ -129,7 +132,9 @@ function findReceive(node) {
 }
 findReceive(tree); assert.ok(receive);
 const failure = [];
-const receiveDeps = { auth: { currentUser: { uid: "a" } }, privateBoxCloudResponseCurrent: () => true,
+const receiveDeps = { ...recordOriginOriginal(), deletedGoalIdsRef: { current: [] }, goalWriteReserved: { current: false }, canonical: JSON.stringify,
+  assertPrivateBoxMoneyLocalMutation() {}, auth: { currentUser: { uid: "a" } }, privateBoxCloudResponseCurrent: () => true,
+  assertNoIdentifiedDeletionOverlap: api.assertNoIdentifiedDeletionOverlap, deletedTransactionIdsRef: { current: [] },
   cloudFieldsRef: { current: a }, cloudSyncMetaRef: { current: a.syncUpdatedAt }, mergeCloudFields: api.mergeCloudFields,
   transactionsLive: { current: a.transactions },
   goalsLive: { current: a.goals },
@@ -157,7 +162,7 @@ assert.equal(readable(Error("account-currency-conflict")), "monedas-distintas");
 for (const historyFormat of [1, 2]) {
   let saved = { ...b, historyFormat };
   const operations = [], snap = () => ({ exists: () => true, data: () => saved });
-  const cloudDeps = { ...api, ...historyFormats, db: {}, doc: () => "user", getDoc: async () => snap(),
+  const cloudDeps = { ...api, ...recordOriginOriginal(), ...historyFormats, serverTimestamp: () => "SERVER_TIMESTAMP", db: {}, doc: () => "user", getDoc: async () => snap(),
     hasUnreadableLocalData: () => false, utf8ByteLength: text => Buffer.byteLength(text),
     withPrivateBoxCloudOperation: async (_uid, work) => work({ wait: work => work(), remember: value => value, assertCurrent() {} }),
     assertLegacyHistoryFormat() {}, LIMITE_FIRESTORE: 1_000_000, TOPE_SEGURO: 800_000,
@@ -203,5 +208,5 @@ assert.match(read("screens/CountryPicker.tsx"), /export \{ default \} from "\.\/
   "el selector antiguo es alias de idioma, no una vía para elegir moneda");
 assert.match(source, /setHasOnboarded\(onboarded\)/, "restaura bloqueo de la cuenta local");
 assert.match(source, /setHasOnboarded\(false\)/, "limpia bloqueo al salir");
-assert.match(read("utils/cloudSync.ts"), /lease, clean\.userCurrency\)/, "historial separado recibe moneda de origen");
+assert.match(read("utils/cloudSync.ts"), /lease, clean\.userCurrency,/, "historial separado recibe moneda de origen y comprobantes");
 console.log("Moneda fija: manejadores y fusión originales aprobados; UI/restauración con contratos estáticos, Android pendiente.");

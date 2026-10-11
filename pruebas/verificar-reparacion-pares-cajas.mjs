@@ -5,6 +5,8 @@ import ts from "typescript";
 import { execFileSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
 import { createRequire } from "node:module";
+import { recordOriginOriginal } from "./helpers/record-origin-original.mjs";
+import { randomUUID } from "node:crypto";
 const requireCore = createRequire(new URL("../utils/cajas.ts", import.meta.url));
 const requirePure = name => requireCore(name === "./utf8" ? "./utf8.ts" : name);
 
@@ -23,7 +25,7 @@ function load(file) {
   if (cache[file]) return cache[file];
   const module = { exports: {} };
   vm.runInNewContext(js(fs.readFileSync(file, "utf8")), { module, exports: module.exports,
-    require: name => name.startsWith(".") ? requirePure(name) : load(name.replace("@/", "") + ".ts"), Error, Date });
+    require: name => ["@/utils/recordOrigin", "@/utils/goalFunding", "@/utils/recordMerge"].includes(name) ? recordOriginOriginal() : name.startsWith(".") ? requirePure(name) : load(name.replace("@/", "") + ".ts"), Error, Date });
   return cache[file] = module.exports;
 }
 const cajas = load("utils/cajas.ts"), linked = load("utils/linkedTransfers.ts"), repairs = load("utils/privateBoxRepair.ts"), patch = load("utils/privateBoxPersonal.ts");
@@ -163,6 +165,8 @@ for (const [source, sourceRows, expected, mode] of [[data, [], missing, true], [
         encryptText: async text => { if (failure === "obsolete") current = false; return "v2:" + text; }, decryptText: async text => text.slice(3) } });
     const storage = module.exports; storage.setAccountStorageAvailable(true);
     const ctx = { ready: true, hasOnboarded: true, isPremium: failure?.startsWith("remote-") || false, Platform: { OS: "android" }, auth: { currentUser: { uid: "a" } }, localSessionVersion: { current: 1 },
+      ...recordOriginOriginal(), ...load("utils/privateBoxMoneyLocalWrite.ts"), cloudSyncMetaRef: { current: {} }, setCloudSyncMeta() {}, saveJSON: storage.saveJSON,
+      currencyForReturn: { current: "PEN" }, randomUUID, issuedCreationId: () => undefined, canonical: JSON.stringify,
       transactionsLive: { current: sourceRows }, deletedTransactionIdsRef: { current: [] }, returnReceipt: { current: null },
       captureAccountTask: () => ({ current: () => current, wait: work => work() }), withLocalAccountOperation: work => work(), hasUnreadableLocalData: storage.hasUnreadableLocalData,
       assertPrivateBoxRepairCloud: proofApi.assertPrivateBoxRepairCloud,

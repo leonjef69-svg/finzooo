@@ -1,5 +1,31 @@
 # Lo que hay que rellenar en Play Console
 
+Punto 1 (preparación/código/pruebas locales) terminado el 10/10/2026; NO cierre
+global FINO-52/62 ni aprobación de Play/privacidad. Ampliación NO declarada en consola ni
+entregada: origen/versión y cadenas de borrado/recuperación viajan en la copia
+Pro de la cuenta; el teléfono conserva metadatos cifrados/separados por cuenta.
+Las metas guardan base y operaciones de aporte/retiro con ID y cantidad para
+reconocer reintentos y unir aportes distintos, en el mismo registro financiero.
+Las marcas de sincronización incluyen huellas e IDs de generación; algunas
+filas borradas conservan recordIdentity (UUID, captureId y referencias de
+aportes) para demostrar cuál se recupera. captureId puede contener título/texto
+del aviso del lector: NO afirmar que todas las lápidas guardan solo referencias
+técnicas o hashes, ni que esos datos desaparecen al borrar un movimiento.
+Se conservan para evitar que copias antiguas lo revivan, hasta eliminar la
+cuenta; revisar conservación/finalidad y campos realmente transmitidos en
+Privacidad y Seguridad de los datos de la versión final. Sin permiso Android
+o proveedor nuevo; no equivale a aprobación legal ni publicación de la política.
+Telegram está en pausa por decisión del 10/10, sin modificar su declaración
+como si ya estuviera retirado del código/producción. Tarjetas/Sentry externo
+fuera; planes S/3/S/9,90 y Billing aún pendientes, sin cobros/anuncios activos.
+**Qué sigue:** trabajo detenido tras el cierre local, esperando nueva orden.
+**Qué falta:** recorrido Android, proveedor/APK reales, consola, SMTP/moderación,
+web legal coherente y revisión/trámites/publicación coordinada autorizada.
+Orden del propietario cumplida: terminar SOLO el punto 1 local y parar;
+Android (2) y servicios/consolas/publicación (3) siguen pendientes sin iniciarlos
+en este bloque. Las pruebas de callbacks/confirmación no prueban UI Android,
+recepción de correo ni cumplimiento de Play. No se cambian textos aceptados.
+
 Revalidación FINO-16/34 (09/10/2026): ficha siguiente corregida para el código
 preparado, NO copiada a Play Console ni garantía de la APK instalada. La web
 pública sí respondió y contiene cambios anteriores: no afirmar ya «nada

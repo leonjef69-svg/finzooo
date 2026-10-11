@@ -2,14 +2,16 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 import ts from "typescript";
 import { createSourceReader } from "./helpers/source-reader.mjs";
+import { recordOriginOriginal } from "./helpers/record-origin-original.mjs";
 
 // Ejecuta los efectos/setters originales. Solo adapta hooks, Auth y red;
 // Object.is modela la comparación real de dependencias y de useState.
 const read = createSourceReader();
 const ast = ts.createSourceFile("provider.tsx", read("contexts/AppDataContext.tsx"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-let reception, resume;
+let reception, resume, receiveFields;
 const setters = [];
 function collect(node) {
+  if (ts.isVariableDeclaration(node) && node.name.getText(ast) === "applyNewerCloudFields") receiveFields = node.initializer.arguments[0].getText(ast);
   if (ts.isCallExpression(node) && node.expression.getText(ast) === "useEffect"
     && node.arguments[0]?.getText(ast).includes("const sincronizarMovimientos = async")) reception = node.getText(ast);
   if (ts.isCallExpression(node) && node.expression.getText(ast) === "AppState.addEventListener"
@@ -31,10 +33,11 @@ function ownModule(file, dependencies = {}) {
   return module.exports;
 }
 const ordering = ownModule("utils/ordenarMovimientos.ts");
-const merge = ownModule("utils/mergeTransactions.ts", { "@/utils/ordenarMovimientos": ordering });
+const merge = ownModule("utils/mergeTransactions.ts", { "@/utils/ordenarMovimientos": ordering, "@/utils/recordOrigin": recordOriginOriginal(), "@/utils/goalFunding": recordOriginOriginal() });
+const fields = ownModule("utils/cloudFieldMerge.ts");
 const compiledEffect = ts.transpile(reception, { target: ts.ScriptTarget.ES2022 });
 const compiledResume = ts.transpile(`resume = ${resume};`, { target: ts.ScriptTarget.ES2022 });
-const record = (id, amount = 10) => ({ id, type: "expense", amount, category: "otros", date: "2026-10-09", description: `m${id}`, method: "cash" });
+const record = (id, amount = 10) => ({ id, creationId: `fixture-${id}`, type: "expense", amount, category: "otros", date: "2026-10-09", description: `m${id}`, method: "cash" });
 const goal = id => ({ id, name: `g${id}`, target: 100, saved: 10 });
 const copy = data => JSON.parse(JSON.stringify(data));
 const emptyCloud = { transactions: [], goals: [], deletedTransactionIds: [], deletedGoalIds: [] };
@@ -45,12 +48,19 @@ function fixture(initial = {}, { paused = false, accepted = true } = {}) {
   const initialRefs = { ...state }, errors = [];
   const jobs = []; let requests = 0, renders = 0, changes = 0, cleanup, dependencies, dirty = false;
   let response = { ...emptyCloud, ...initial };
-  const scope = { ...merge, ready: true, hasOnboarded: true, uid: "A", isPremium: true,
+  const scope = { ...merge, ...fields, ...recordOriginOriginal(), ready: true, hasOnboarded: true, uid: "A", isPremium: true,
+    goalWriteReserved: { current: false }, canonical: JSON.stringify, deletedGoalIdsRef: { current: state.deletedGoalIds },
+    cloudFieldsRef: { current: { ...emptyCloud, hasOnboarded: true, userName: "A", userPhoto: null, userCurrency: "PEN", userLanguage: "es", budgets: {}, categoryBudgets: {}, ...initial } },
+    cloudSyncMetaRef: { current: initial.syncUpdatedAt ?? {} }, privateBoxCloudResponseCurrent: () => accepted,
+    userEmail: "fixture@example.com", userCountry: "PE", saveJSON() {}, STORAGE_KEYS: {}, setCloudSyncMeta() {},
+    getFavoritos: () => [], saveFavoritos() {}, saveOverrides() {}, savePropias() {},
+    setUserName() {}, setUserPhoto() {}, setUserCurrency() {}, setUserLanguage() {}, setBudgets() {}, setCategoryBudgets() {},
+    setPagosProgramados() {}, setMerchantLearned() {}, setCategoryOverridesState() {}, setCategoriasPropiasState() {}, setCarryoverCleared() {}, setIconosFavoritosState() {},
     alive: true, version: 0, localSessionVersion: { current: 0 }, auth: { currentUser: { uid: "A" } },
     transactionsLive: { current: state.transactions }, goalsLive: { current: state.goals },
     deletedTransactionIdsRef: { current: state.deletedTransactionIds }, useCallback: fn => fn,
     assertPrivateBoxMoneyLocalIdle() {}, assertPrivateBoxMoneyLocalMutation() {},
-    applyNewerCloudFields: () => accepted, setDatosNegocio() {}, setRespaldoFallo: value => errors.push(value),
+    setDatosNegocio() {}, setRespaldoFallo: value => errors.push(value),
     setAutoCapturePermission() {}, notificationReader: { isPermissionGranted: () => false },
     reengancharLector() {}, collect() {},
     loadCloudData: async () => {
@@ -70,9 +80,10 @@ function fixture(initial = {}, { paused = false, accepted = true } = {}) {
   scope.setRenderedTransactions = update => dispatch("transactions", update);
   scope.setRenderedGoals = update => dispatch("goals", update);
   scope.setRenderedDeletedTransactionIds = update => dispatch("deletedTransactionIds", update);
-  scope.setDeletedGoalIds = update => dispatch("deletedGoalIds", update);
+  scope.setDeletedGoalIds = update => { const next = typeof update === "function" ? update(scope.deletedGoalIdsRef.current) : update;
+    scope.deletedGoalIdsRef.current = next; dispatch("deletedGoalIds", next); };
   vm.createContext(scope);
-  vm.runInContext(ts.transpile(`${setters.join("\n")}\nObject.assign(globalThis, { setTransactions, setGoals, setDeletedTransactionIds });`,
+  vm.runInContext(ts.transpile(`${setters.join("\n")}\nconst applyNewerCloudFields = ${receiveFields};\nObject.assign(globalThis, { setTransactions, setGoals, setDeletedTransactionIds, applyNewerCloudFields });`,
     { target: ts.ScriptTarget.ES2022 }), scope);
   function render() {
     dirty = false; renders++;
@@ -117,7 +128,9 @@ for (const initial of [emptyCloud, { ...emptyCloud, transactions: [record(1)], g
 
 {
   const f = fixture({ transactions: [record(1)], goals: [goal(2)] });
-  f.response({ transactions: [record(1), record(3, 15)], goals: [goal(2), goal(4)], deletedTransactionIds: [1], deletedGoalIds: [2] });
+  let proof = recordOriginOriginal().rememberTransactionDeletion({}, [record(1)]);
+  proof = recordOriginOriginal().rememberDeletion(proof, "goal", [goal(2)], recordOriginOriginal().recordOriginOf);
+  f.response({ transactions: [record(3, 15)], goals: [goal(4)], deletedTransactionIds: [1], deletedGoalIds: [2], syncUpdatedAt: proof });
   f.render(); await f.settle();
   assert.equal(f.counts().requests, 2, "un cambio real de borrados admite su consulta siguiente y luego se estabiliza");
   assert.deepEqual(Array.from(f.state.transactions, item => item.id), [3]);
@@ -138,7 +151,8 @@ for (const initial of [emptyCloud, { ...emptyCloud, transactions: [record(1)], g
 
 {
   const f = fixture({ transactions: [record(1)], goals: [goal(2)] }, { paused: true });
-  f.render(); f.dispatch("deletedGoalIds", [2]); f.scope.setGoals([]); f.render();
+  f.render(); f.scope.cloudSyncMetaRef.current = recordOriginOriginal().rememberDeletion({}, "goal", [goal(2)], recordOriginOriginal().recordOriginOf);
+  f.scope.setDeletedGoalIds([2]); f.scope.setGoals([]); f.render();
   f.jobs.shift()({ ...emptyCloud, transactions: [record(99)], goals: [goal(2), goal(99)] }); await f.settle();
   assert.equal(f.state.transactions.length, 1, "limpiar el efecto invalida la respuesta anterior");
   assert.equal(f.state.goals.length, 0);

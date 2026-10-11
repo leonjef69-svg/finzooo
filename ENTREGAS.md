@@ -1,5 +1,38 @@
 # Entregas de Fino
 
+## 10/10/2026 — borrado/recuperación y metas, NO entregado a teléfonos
+
+Punto 1 de preparación/código/pruebas locales TERMINADO. No significa cierre
+global de FINO-52/62 ni de toda la auditoría, ni publicación/instalación.
+Contrato de origen y cadena de recuperación, lote local de movimiento/marcas/
+metadatos y copia Admin con relectura transaccional preparados. FINO-62 añadido:
+aportes independientes a la misma meta y reintentos se reconocen; cantidades
+antiguas contradictorias no se suman ni reemplazan sin prueba.
+Regresiones c6959c6 rojas por los fallos: aporte 10+20 perdido, memoria cambiada
+con disco lleno y carrera Admin que pisaba la edición de 30 con 10.
+Detalle/meta y cierre Familia/Caja esperan ACK local; fallo conserva ficha,
+confirmación genuina permite reintento sin repetir RPC y error remoto anterior
+no deja la lectura bloqueada. verificar-espera-borrados-cierres-real actual
+verde/baseline c6959c6 rojo por comportamiento; no navegación Android real.
+TypeScript/ESLint generales finales aprobados. App final3: 194 pruebas y 8
+auditores sin tarjetas (una prueba del usuario no versionada, 193 previstas
+en Git limpio; no otro checkout ejecutado). Node 22 final: 64/64 seleccionadas
+fuera de Telegram/tarjetas. SDK/HTTP/reglas final: 229/229, exit0 sin omisiones,
+cancelaciones ni fallos. Log .tmp/auditoria-punto1-sdk-final.log. Candidato
+anterior 226/227 falló por exceso de expresiones en conversión válida; corrección
+enfocada 7/7 y repetición completa aprobadas, SHA/recibo/tuplas/escape conservados.
+Guía PRUEBAS_CICLO_BORRADO_RESTAURACION separa evidencia y límites. ADB sin
+dispositivo/emulador conectado; no se ejecutó Android ni integración Telegram.
+Telegram en pausa desde esta petición del 10/10; tarjetas/Sentry externo fuera,
+diseño diferido. No APK/AAB/OTA/EAS/Firebase/Play ni edición HTML publicados
+por este bloque; los textos web antiguos sí existen, según revisión previa.
+Nueva orden: terminar SOLO el punto 1 y parar, sin comenzar los puntos 2/3.
+**Qué sigue:** detenido tras el cierre local del 1, esperando nueva orden.
+**Qué falta:** Android (2) y acciones externas (3), que quedan pendientes por
+esa decisión; antiguos ambiguos, dos dispositivos/cuentas reales,
+App Check/costos, SMTP/moderación, consolas/Billing/privacidad/trámites y
+activación coordinada autorizada. Un commit/push no actualiza la app instalada.
+
 ## 09/10/2026 — formatos/borrados dudosos, NO entregado a teléfonos
 
 Propietario aceptó exigir actualización antes de sincronizar con un contrato

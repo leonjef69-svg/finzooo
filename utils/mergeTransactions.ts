@@ -1,6 +1,8 @@
 import type { Goal, Transaction } from "@/types";
 import type { CaptureLogEntry } from "@/utils/autoCapture";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
+import { canAnchorLegacy, compatibleRecordCreation, sameLegacyContents } from "@/utils/recordOrigin";
+import { assertGoalFunding, mergeGoalFunding } from "@/utils/goalFunding";
 
 /** Un número coincidente no convierte dos avisos/aportes distintos en una
  * edición. No inventa identidades para registros antiguos o manuales, ni
@@ -9,20 +11,26 @@ import { compararMovimientos } from "@/utils/ordenarMovimientos";
 export function assertSameTransactionOrigin(a: Transaction, b: Transaction): void {
   if (a.id !== b.id) return;
   assertSameCreation(a, b);
-  if (a.captureId && b.captureId && a.captureId !== b.captureId) {
+  if ((a.captureId || "") !== (b.captureId || "")) {
     throw new Error("record-origin-conflict");
   }
-  if (a.internalTransferLink && b.internalTransferLink &&
-    (a.internalTransferLink !== b.internalTransferLink ||
-      a.internalTransfer !== b.internalTransfer ||
-      a.internalTransferSpaceId !== b.internalTransferSpaceId)) {
+  if ((a.internalTransferLink || b.internalTransferLink) &&
+    ((a.internalTransferLink || "") !== (b.internalTransferLink || "") ||
+      (a.internalTransfer || "") !== (b.internalTransfer || "") ||
+      (a.internalTransferSpaceId || "") !== (b.internalTransferSpaceId || ""))) {
+    throw new Error("record-origin-conflict");
+  }
+  // Sin origen no es posible saber si dos importes distintos son una edición
+  // o dos altas antiguas independientes. Una edición explícita ya lleva la
+  // huella de su original; una unión automática nunca la inventa.
+  if (canAnchorLegacy(a) && canAnchorLegacy(b) && !sameLegacyContents(a, b)) {
     throw new Error("record-origin-conflict");
   }
 }
 
 /** Un cliente que quite la identidad tampoco puede reemplazar su original. */
 export function assertSameCreation(a: { id: number; creationId?: string }, b: { id: number; creationId?: string }): void {
-  if (a.id === b.id && (a.creationId || b.creationId) && a.creationId !== b.creationId) {
+  if (a.id === b.id && !compatibleRecordCreation(a, b)) {
     throw new Error("record-origin-conflict");
   }
 }
@@ -135,9 +143,10 @@ export function pruneDeletedTransactionIds(ids: number[]) {
 export function mergeGoals(locales: Goal[], remotas: Goal[]): Goal[] {
   const porId = new Map<number, Goal>();
   for (const goal of [...remotas, ...locales]) {
+    assertGoalFunding(goal);
     const previous = porId.get(goal.id);
     if (previous) assertSameCreation(previous, goal);
-    porId.set(goal.id, goal);
+    porId.set(goal.id, previous ? mergeGoalFunding(goal, previous) : goal);
   }
   return [...porId.values()].sort((a, b) => b.id - a.id);
 }

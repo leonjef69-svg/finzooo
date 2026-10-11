@@ -4,6 +4,7 @@ import { randomUUID } from "node:crypto";
 import ts from "typescript";
 import { createSourceReader } from "./helpers/source-reader.mjs";
 import { handlerOriginal } from "./helpers/handler-original.mjs";
+import { recordOriginOriginal } from "./helpers/record-origin-original.mjs";
 
 const read = createSourceReader({ revision: process.env.FINO_TEST_CREATION_ID_BASELINE ?? "" });
 function load(file, dependencies = {}) {
@@ -44,6 +45,7 @@ const failedCrypto = load("utils/id.ts", { Date: Clock, require: () => ({ getRan
 assert.throws(() => failedCrypto.nextId(), /native entropy failed/, "sin entropía no inventar un ID reutilizable");
 const order = load("utils/ordenarMovimientos.ts");
 const merge = load("utils/mergeTransactions.ts", { require: name => {
+  if (["@/utils/recordOrigin", "@/utils/goalFunding", "@/utils/recordMerge"].includes(name)) return recordOriginOriginal();
   assert.equal(name, "@/utils/ordenarMovimientos"); return order;
 } });
 const x = phone(100), y = phone(100); x.reserveIdsAbove(maximum); y.reserveIdsAbove(maximum);
@@ -65,8 +67,8 @@ assert.throws(() => merge.mergeGoals([goal(originA)], [goal(originB)]), /record-
 assert.equal(merge.mergeTransactions([first], [{ ...first, amount: 15, updatedAt: 20 }])[0].amount, 15);
 assert.equal(merge.mergeGoals([goal(originA)], [goal(originA)]).length, 1);
 const writes = [], messages = [];
-const deps = { ...merge, issuedCreationId: x.issuedCreationId, transactionsLive: { current: [first] },
-  goalsLive: { current: [goal(originA)] }, deletedTransactionIdsRef: { current: [] }, deletedGoalIds: [],
+const deps = { ...merge, ...recordOriginOriginal(), issuedCreationId: x.issuedCreationId, transactionsLive: { current: [first] },
+  goalsLive: { current: [goal(originA)] }, deletedTransactionIdsRef: { current: [] }, deletedGoalIdsRef: { current: [] }, goalWriteReserved: { current: false },
   isPremium: true, isSafeMoneyAmount: () => true, metaConEstadoActual: value => value,
   showToast: key => messages.push(key), t: key => key, setTransactions: update => writes.push(update), setGoals: update => writes.push(update),
 };

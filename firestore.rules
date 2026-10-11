@@ -197,94 +197,120 @@ service cloud.firestore {
     // Cada persona guarda todo en un solo documento: users/{su-id}
     match /users/{userId} {
 
+      // Mismo permiso Pro de premiumUser, con la copia ya leída por esta ruta.
+      // No modifica el permiso de Familia/Cajas/otros documentos.
+      function personalTrialAllowed(account) {
+        let trial = account.get('premiumTrialStartedAt', -1);
+        return trial is number && trial >= 0 && trial <= request.time.toMillis()
+          && trial + 24 * 60 * 60 * 1000 > request.time.toMillis();
+      }
+      function personalCopyAllowed(account, existsCopy) {
+        return account.get('accountDeletionPending', false) != true
+          && (!exists(/databases/$(database)/documents/premiumTrialClaims/$(userId))
+            || get(/databases/$(database)/documents/premiumTrialClaims/$(userId)).data.get('deletionPending', false) != true)
+          && ((existsCopy && (account.get('isPremium', false) == true
+            || personalTrialAllowed(account)))
+            || testerPremiumUser(userId));
+      }
+      function personalCopyReadable() {
+        let existsCopy = exists(/databases/$(database)/documents/users/$(userId));
+        let account = existsCopy ? resource.data : {};
+        return personalCopyAllowed(account, existsCopy);
+      }
+
       // Solo puedes leer TU copia financiera con Pro, sesión y correo verificado.
-      allow read: if verified() && request.auth.uid == userId && premiumUser(userId);
+      allow read: if verified() && request.auth.uid == userId && personalCopyReadable();
       // La función administrativa borra sin exigir Pro. Un delete directo
       // dejaría historiales huérfanos y podría retirar la prueba antigua.
       allow delete: if false;
 
-      allow create, update: if request.auth != null
+      function validPersonalCopy(next) {
+        let existsCopy = exists(/databases/$(database)/documents/users/$(userId));
+        let previous = existsCopy ? resource.data : {};
+          return request.auth != null
                          && request.auth.uid == userId
                          && request.auth.token.email_verified == true
-                         && premiumUser(userId)
-                         && (!exists(/databases/$(database)/documents/users/$(userId))
-                           || resource.data.get('accountDeletionPending', false) != true)
+                         && personalCopyAllowed(previous, existsCopy)
+                         && (!existsCopy
+                           || previous.get('accountDeletionPending', false) != true)
                          // Tras migrar, una app antigua no puede quitar las
                          // marcas por elemento ni volver a sustituir listas enteras.
-                         && request.resource.data.get('syncFormat', 1) in [1, 2]
-                         && (!exists(/databases/$(database)/documents/users/$(userId))
-                           || resource.data.get('syncFormat', 1) != 2
-                           || request.resource.data.get('syncFormat', 1) == 2)
+                         && next.get('syncFormat', 1) in [1, 2]
+                         && (!existsCopy
+                           || previous.get('syncFormat', 1) != 2
+                           || next.get('syncFormat', 1) == 2)
                          // Solo el servidor cambia el formato. Un cliente antiguo
                          // no puede quitar el marcador v2 al guardar su lista vieja.
-                         && request.resource.data.get('historyFormat', 1) in [1, 2]
+                         && next.get('historyFormat', 1) in [1, 2]
                          && (
-                           (!exists(/databases/$(database)/documents/users/$(userId))
-                             && request.resource.data.get('historyFormat', 1) == 1)
-                           || (exists(/databases/$(database)/documents/users/$(userId))
-                             && request.resource.data.get('historyFormat', 1)
-                               == resource.data.get('historyFormat', 1))
+                           (!existsCopy
+                             && next.get('historyFormat', 1) == 1)
+                           || (existsCopy
+                             && next.get('historyFormat', 1)
+                               == previous.get('historyFormat', 1))
                          )
-                         && request.resource.data.keys().hasOnly([
+                         && next.keys().hasOnly([
                               'hasOnboarded', 'userName', 'userPhoto', 'userCurrency',
                               'userLanguage', 'budgets', 'categoryBudgets', 'transactions', 'deletedTransactionIds', 'historyFormat',
                               'goals', 'deletedGoalIds', 'pagosProgramados', 'isPremium', 'premiumTrialStartedAt', 'merchantLearned',
                               'categoryOverrides', 'categoriasPropias', 'carryoverCleared',
-                              'iconosFavoritos', 'syncUpdatedAt', 'syncFormat', 'accountDeletionPending', 'recordIdentityFormat'
+                              'iconosFavoritos', 'syncUpdatedAt', 'syncFormat', 'accountDeletionPending', 'recordIdentityFormat', 'recordSyncAt'
                             ])
                          // Los que van siempre.
-                         && request.resource.data.hasOnboarded is bool
-                         && request.resource.data.userName is string
-                         && (request.resource.data.userPhoto is string || request.resource.data.userPhoto == null)
-                         && request.resource.data.userCurrency is string
+                         && next.hasOnboarded is bool
+                         && next.userName is string
+                         && (next.userPhoto is string || next.userPhoto == null)
+                         && next.userCurrency is string
                          // Moneda fija al configurar la cuenta, incluso si
                          // se borran todos los movimientos. Bloquea apps viejas.
-                         && (!exists(/databases/$(database)/documents/users/$(userId))
-                           || resource.data.get('hasOnboarded', false) != true
-                           || (request.resource.data.hasOnboarded == true
-                             && request.resource.data.userCurrency == resource.data.get('userCurrency', 'PEN')))
-                         && request.resource.data.userLanguage is string
-                         && request.resource.data.budgets is map
-                         && request.resource.data.categoryBudgets is map
+                         && (!existsCopy
+                           || previous.get('hasOnboarded', false) != true
+                           || (next.hasOnboarded == true
+                             && next.userCurrency == previous.get('userCurrency', 'PEN')))
+                         && next.userLanguage is string
+                         && next.budgets is map
+                         && next.categoryBudgets is map
                          && (
-                           (request.resource.data.get('historyFormat', 1) == 1
-                             && request.resource.data.transactions is list
-                             && (!('deletedTransactionIds' in request.resource.data)
-                               || request.resource.data.deletedTransactionIds is list))
-                           || (request.resource.data.get('historyFormat', 1) == 2
-                             && !('transactions' in request.resource.data)
-                             && !('deletedTransactionIds' in request.resource.data))
+                           (next.get('historyFormat', 1) == 1
+                             && next.transactions is list
+                             && (!('deletedTransactionIds' in next)
+                               || next.deletedTransactionIds is list))
+                           || (next.get('historyFormat', 1) == 2
+                             && !('transactions' in next)
+                             && !('deletedTransactionIds' in next))
                          )
-                         && request.resource.data.goals is list
-                         && (!('recordIdentityFormat' in request.resource.data) || request.resource.data.recordIdentityFormat == 1)
-                         && (!exists(/databases/$(database)/documents/users/$(userId)) || resource.data.get('recordIdentityFormat', 0) != 1
-                           || request.resource.data.get('recordIdentityFormat', 0) == 1)
-                         && (!('deletedGoalIds' in request.resource.data)
-                              || request.resource.data.deletedGoalIds is list)
-                         && request.resource.data.isPremium is bool
-                         && (!('accountDeletionPending' in request.resource.data)
-                           || request.resource.data.accountDeletionPending == true)
+                         && next.goals is list
+                         && (!('recordIdentityFormat' in next) || next.recordIdentityFormat in [1, 2])
+                         // Una sustitución completa de una app antigua no
+                         // puede retirar/rebajar las protecciones ya adoptadas.
+                         && (!existsCopy
+                           || next.get('recordIdentityFormat', 0) >= previous.get('recordIdentityFormat', 0))
+                         && (!('deletedGoalIds' in next)
+                              || next.deletedGoalIds is list)
+                         && next.isPremium is bool
+                         && (!('accountDeletionPending' in next)
+                           || next.accountDeletionPending == true)
                          // Premium nunca lo concede el celular. Una cuenta nueva empieza
                          // sin Premium y, después, el cliente solo puede conservar el valor
                          // que ya exista. La consola/servidor administrativo sigue pudiendo
                          // activarlo para testers y, más adelante, tras validar una compra.
                          && (
-                              (!exists(/databases/$(database)/documents/users/$(userId))
-                                && request.resource.data.isPremium == false)
-                              || (exists(/databases/$(database)/documents/users/$(userId))
-                                && request.resource.data.isPremium == resource.data.isPremium)
+                              (!existsCopy
+                                && next.isPremium == false)
+                              || (existsCopy
+                                && next.isPremium == previous.isPremium)
                             )
                          // Solo la función del servidor puede iniciar la prueba.
                          && (
-                           (!exists(/databases/$(database)/documents/users/$(userId))
-                             && !('premiumTrialStartedAt' in request.resource.data))
-                           || (exists(/databases/$(database)/documents/users/$(userId))
+                           (!existsCopy
+                             && !('premiumTrialStartedAt' in next))
+                           || (existsCopy
                              && (
-                               (!('premiumTrialStartedAt' in resource.data)
-                                 && !('premiumTrialStartedAt' in request.resource.data))
-                               || (('premiumTrialStartedAt' in resource.data)
-                                 && request.resource.data.premiumTrialStartedAt
-                                   == resource.data.premiumTrialStartedAt)
+                               (!('premiumTrialStartedAt' in previous)
+                                 && !('premiumTrialStartedAt' in next))
+                               || (('premiumTrialStartedAt' in previous)
+                                 && next.premiumTrialStartedAt
+                                   == previous.premiumTrialStartedAt)
                              ))
                          )
                          // Y LOS OPCIONALES, COMPROBADOS SOLO SI VIENEN.
@@ -293,17 +319,33 @@ service cloud.firestore {
                          // los tiene, y JSON.stringify quita las claves vacías antes de subir.
                          // Exigirlos a secas rechazaría a esas cuentas — el mismo fallo de
                          // arriba con otro disfraz.
-                         && (!('merchantLearned' in request.resource.data) || request.resource.data.merchantLearned is map)
-                         && (!('pagosProgramados' in request.resource.data) || request.resource.data.pagosProgramados is list)
-                         && (!('categoryOverrides' in request.resource.data) || request.resource.data.categoryOverrides is map)
-                         && (!('categoriasPropias' in request.resource.data) || request.resource.data.categoriasPropias is list)
-                         && (!('carryoverCleared' in request.resource.data) || request.resource.data.carryoverCleared is list)
-                         && (!('iconosFavoritos' in request.resource.data) || request.resource.data.iconosFavoritos is list)
-                         && (!('syncUpdatedAt' in request.resource.data) || request.resource.data.syncUpdatedAt is map);
+                         && (!('merchantLearned' in next) || next.merchantLearned is map)
+                         && (!('pagosProgramados' in next) || next.pagosProgramados is list)
+                         && (!('categoryOverrides' in next) || next.categoryOverrides is map)
+                         && (!('categoriasPropias' in next) || next.categoriasPropias is list)
+                         && (!('carryoverCleared' in next) || next.carryoverCleared is list)
+                         && (!('iconosFavoritos' in next) || next.iconosFavoritos is list)
+                         && (!('syncUpdatedAt' in next) || next.syncUpdatedAt is map)
+                         && (next.get('recordIdentityFormat', 0) < 2
+                           || (existsCopy
+                             && !next.diff(previous).affectedKeys().hasAny(['transactions', 'deletedTransactionIds', 'goals', 'deletedGoalIds', 'syncUpdatedAt']))
+                           || next.get('recordSyncAt', null) == request.time);
+      }
+      allow create, update: if validPersonalCopy(request.resource.data);
 
       // Cada movimiento vive en su propio documento al migrar. Los clientes
       // solo pueden leer/escribir el historial de su propia cuenta verificada.
       match /history/{historyId} {
+        // Esta ruta siempre tiene raíz v2. Reutilizar esa lectura evita
+        // expandir premiumUser/cloudCopyOpen y sus mismos campos varias veces.
+        function historyAccountAllowed(account) {
+          return account.get('historyFormat', 1) == 2
+            && personalCopyAllowed(account, true);
+        }
+        function referenceValue(value, key) {
+          let field = value.get(key, '');
+          return field == null ? '' : field;
+        }
         // Un cliente antiguo/directo no puede quitar o cambiar un origen ya
         // guardado para sustituir otro aviso/aporte bajo el mismo número.
         // No acredita unicidad para movimientos antiguos sin esas referencias.
@@ -317,30 +359,214 @@ service cloud.firestore {
                 && after.get('internalTransfer', '') == before.get('internalTransfer', '')
                 && after.get('internalTransferSpaceId', '') == before.get('internalTransferSpaceId', '')));
         }
+        function sameDeletedReference(before, after) {
+          return referenceValue(after, 'creationId') == referenceValue(before, 'creationId')
+            && referenceValue(after, 'captureId') == referenceValue(before, 'captureId')
+            && referenceValue(after, 'internalTransferLink') == referenceValue(before, 'internalTransferLink')
+            && referenceValue(after, 'internalTransfer') == referenceValue(before, 'internalTransfer')
+            && referenceValue(after, 'internalTransferSpaceId') == referenceValue(before, 'internalTransferSpaceId');
+        }
+        function sameSnapshotReference(before, after) {
+          return (referenceValue(after, 'creationId') == referenceValue(before, 'creationId')
+              || (before.get('creationId', '') in ['', null]
+                && before.get('captureId', '') in ['', null]
+                && before.get('internalTransferLink', '') in ['', null]
+                && after.get('creationId', '') is string
+                && after.get('creationId', '').matches('^legacy:[a-f0-9]{64}$')))
+            && referenceValue(after, 'captureId') == referenceValue(before, 'captureId')
+            && referenceValue(after, 'internalTransferLink') == referenceValue(before, 'internalTransferLink')
+            && referenceValue(after, 'internalTransfer') == referenceValue(before, 'internalTransfer')
+            && referenceValue(after, 'internalTransferSpaceId') == referenceValue(before, 'internalTransferSpaceId');
+        }
+        // Una marca antigua sin prueba no recibe identidad por adivinación.
+        function keepsDeletionProof() {
+          let oldIdentity = resource.data.get('recordIdentity', {});
+          let nextIdentity = request.resource.data.get('recordIdentity', {});
+          let oldMeta = resource.data.get('mutationMeta', {});
+          let nextMeta = request.resource.data.get('mutationMeta', {});
+          return (resource.data.deleted == false
+              && (nextIdentity.size() == 0
+                ? get(/databases/$(database)/documents/users/$(userId)).data.get('recordIdentityFormat', 0) < 2
+                : (sameSnapshotReference(resource.data.transaction, nextIdentity)
+                  && request.resource.data.get('origin', '') == referenceOrigin(nextIdentity)
+                  && nextIdentity.get('restorationId', '') == resource.data.transaction.get('restorationId', '')
+                  && nextIdentity.get('restorationParent', '') == resource.data.transaction.get('restorationParent', ''))))
+            || (resource.data.deleted == true
+              && (oldIdentity.size() == 0 ? nextIdentity.size() == 0 : sameDeletedReference(oldIdentity, nextIdentity))
+              && request.resource.data.get('origin', '') == resource.data.get('origin', '')
+              && nextMeta.keys().hasAll(oldMeta.keys()));
+        }
+        function jsonReference(value) {
+          // UUID, enlace y espacio normales no necesitan escape JSON. El
+          // segundo helper solo se evalúa cuando sí hay texto/caracteres especiales.
+          return value.matches('^[A-Za-z0-9_-]*$') ? '"' + value + '"' : escapedJsonReference(value);
+        }
+        function escapedJsonReference(value) {
+          return '"' + value.replace('\\\\', '\\\\\\\\').replace('"', '\\\"')
+            .replace('\n', '\\n').replace('\r', '\\r').replace('\t', '\\t') + '"';
+        }
+        function referenceOrigin(value) {
+          let creation = referenceValue(value, 'creationId');
+          return creation.matches('^legacy:[a-f0-9]{64}$') ? creation : fingerprintOrigin(value, creation);
+        }
+        function fingerprintOrigin(value, creation) {
+          let capture = referenceValue(value, 'captureId');
+          let link = referenceValue(value, 'internalTransferLink');
+          let kind = referenceValue(value, 'internalTransfer');
+          let space = referenceValue(value, 'internalTransferSpaceId');
+          let fingerprint = hashing.sha256('{"reference":['
+            + jsonReference(capture) + ',' + jsonReference(link) + ','
+            + jsonReference(kind) + ',' + jsonReference(space) + ']}').toHexString().lower();
+          return creation != '' ? 'creation:' + creation + ':' + fingerprint
+            : capture != '' ? 'capture:' + fingerprint : 'transfer:' + fingerprint;
+        }
+        function restorationKey(origin, parent, nonce, nextOrigin) {
+          return restorationKeyForId(request.resource.data.id, origin, parent, nonce, nextOrigin);
+        }
+        function restorationKeyForId(id, origin, parent, nonce, nextOrigin) {
+          return 'record-restore:transaction:%5B' + string(id) + '%2C%22'
+            + origin.replace(':', '%3A') + '%22%2C%22' + parent + '%22%2C%22' + nonce
+            + (origin == nextOrigin ? '' : '%22%2C%22' + nextOrigin.replace(':', '%3A')) + '%22%5D';
+        }
+        function deletionKey(origin, parent) {
+          return deletionKeyForId(request.resource.data.id, origin, parent);
+        }
+        function deletionKeyForId(id, origin, parent) {
+          return 'record-delete:transaction:%5B' + string(id) + '%2C%22'
+            + origin.replace(':', '%3A') + '%22%2C%22' + parent + '%22%5D';
+        }
+        function referencePrefix(capture, link, kind) {
+          return '{"reference":[' + jsonReference(capture) + ',' + jsonReference(link) + ',' + jsonReference(kind) + ',';
+        }
+        function conversionOrigin(creation, capture, prefix, space) {
+          return creation.matches('^legacy:[a-f0-9]{64}$') ? creation
+            : fingerprintTag(creation, capture, hashing.sha256(prefix + jsonReference(space) + ']}').toHexString().lower());
+        }
+        function fingerprintTag(creation, capture, fingerprint) {
+          return creation != '' ? 'creation:' + creation + ':' + fingerprint
+            : capture != '' ? 'capture:' + fingerprint : 'transfer:' + fingerprint;
+        }
+        // Solo el recibo Admin de una conversión terminada autoriza cambiar
+        // de Caja privada a su destino, con la pareja personal exacta y viva.
+        function verifiedBoxConversion(before, after) {
+          let sourceId = before.get('internalTransferSpaceId', '');
+          let link = before.get('internalTransferLink', '');
+          let receipt = get(/databases/$(database)/documents/privateBoxMigrations/$(userId)/operations/$(sourceId)).data;
+          let targetId = receipt.targetId;
+          let target = get(/databases/$(database)/documents/boxSpaces/$(targetId)).data;
+          let movement = get(/databases/$(database)/documents/boxSpaces/$(targetId)/movements/$(link)).data;
+          return before.get('internalTransfer', '') == 'box' && after.get('internalTransfer', '') == 'box'
+            && before.get('creationId', '') == after.get('creationId', '')
+            && before.get('captureId', '') == after.get('captureId', '')
+            && link != '' && link == after.get('internalTransferLink', '')
+            && sourceId != '' && sourceId != after.get('internalTransferSpaceId', '')
+            && receipt.uid == userId && receipt.sourceId == sourceId
+            && receipt.targetId == after.internalTransferSpaceId
+            && receipt.currency == get(/databases/$(database)/documents/users/$(userId)).data.userCurrency
+            && {'personalId': request.resource.data.id, 'movementId': link} in receipt.links
+            && target.ownerUid == userId && target.migrationComplete == true
+            && target.currency == receipt.currency
+            && target.get('closed', false) == false && target.get('closing', false) == false && target.get('deleting', false) == false
+            && movement.personalOwnerUid == userId && movement.personalTransactionId == request.resource.data.id
+            && movement.creadoPor == userId
+            && movement.tipo == (movement.get('personalReturnAmount', 0) > 0 ? 'gasto' : 'ingreso')
+            && after.amount == movement.get('personalReturnAmount', movement.monto)
+            && after.type == (movement.get('personalReturnAmount', 0) > 0 ? 'income' : 'expense');
+        }
+        function liveBoxConversion() {
+          let before = resource.data.transaction;
+          let after = request.resource.data.transaction;
+          let parent = before.get('restorationId', '');
+          let nonce = after.get('restorationId', '');
+          // verifiedBoxConversion exige ambos tipos 'box'. No repetir esa
+          // misma comprobación: el presupuesto también incluye las lecturas.
+          return before.amount == after.amount && before.type == after.type
+            && nonce.matches('^[A-Za-z0-9_-]{1,128}$') && nonce != parent
+            && after.get('restorationParent', null) == parent
+            && verifiedBoxConversion(before, after) && conversionJournal(before, after, parent, nonce);
+        }
+        function conversionJournal(before, after, parent, nonce) {
+          // El recibo ya acreditó igualdad de creación/captura/enlace/tipo.
+          // Compartir ese prefijo no omite ninguna referencia del SHA.
+          let creation = referenceValue(before, 'creationId');
+          let capture = referenceValue(before, 'captureId');
+          let prefix = referencePrefix(capture, referenceValue(before, 'internalTransferLink'), referenceValue(before, 'internalTransfer'));
+          let oldOrigin = conversionOrigin(creation, capture, prefix, referenceValue(before, 'internalTransferSpaceId'));
+          let nextOrigin = conversionOrigin(creation, capture, prefix, referenceValue(after, 'internalTransferSpaceId'));
+          let next = request.resource.data;
+          let id = next.id;
+          let nextMeta = next.get('mutationMeta', {});
+          let time = nextMeta.get(restorationKeyForId(id, oldOrigin, parent, nonce, nextOrigin), -1);
+          let deleted = nextMeta.get(deletionKeyForId(id, oldOrigin, parent), -1);
+          return nextMeta.keys().hasAll(resource.data.get('mutationMeta', {}).keys())
+            && deleted is int && deleted >= 0
+            && time is int && time >= 0
+            // validHistoryData exige fecha fresca a TODOS los escritores v2,
+            // incluso sobre una raíz antigua; aquí se conserva el requisito v2.
+            && next.get('recordIdentityFormat', 0) == 2;
+        }
+        function restoresSameDeletedRecord() {
+          let identity = resource.data.get('recordIdentity', {});
+          let after = request.resource.data.transaction;
+          let oldMeta = resource.data.get('mutationMeta', {});
+          let nextMeta = request.resource.data.get('mutationMeta', {});
+          let nextOrigin = referenceOrigin(after);
+          let key = restorationKey(resource.data.origin, after.get('restorationParent', ''), after.get('restorationId', ''), nextOrigin);
+          let time = nextMeta.get(key, -1);
+          return identity.size() > 0 && oldMeta.size() > 0
+            && ((sameDeletedReference(identity, after) && nextOrigin == resource.data.origin) || verifiedBoxConversion(identity, after))
+            && after.get('restorationId', '') is string && after.get('restorationId', '').size() > 0
+            && after.get('restorationParent', null) == identity.get('restorationId', '')
+            && after.get('restorationId', '') != after.get('restorationParent', '')
+            && nextMeta.size() > oldMeta.size()
+            && nextMeta.diff(oldMeta).removedKeys().size() == 0
+            && nextMeta.diff(oldMeta).changedKeys().size() == 0
+            && after.get('restorationId', '').matches('^[A-Za-z0-9_-]{1,128}$')
+            && after.get('restorationParent', '').matches('^[A-Za-z0-9_-]{0,128}$')
+            && resource.data.origin.matches('^(creation:[A-Za-z0-9_-]{1,128}:[a-f0-9]{64}|capture:[a-f0-9]{64}|transfer:[a-f0-9]{64}|legacy:[a-f0-9]{64})$')
+            && time is int && time >= 0
+            && request.resource.data.get('recordIdentityFormat', 0) == 2;
+        }
         allow read: if verified() && request.auth.uid == userId
-          && premiumUser(userId)
-          && get(/databases/$(database)/documents/users/$(userId)).data.get('historyFormat', 1) == 2;
-        allow create, update: if verified() && request.auth.uid == userId
-          && premiumUser(userId)
-          && get(/databases/$(database)/documents/users/$(userId)).data.get('historyFormat', 1) == 2
-          && get(/databases/$(database)/documents/users/$(userId)).data.get('accountDeletionPending', false) != true
-          && request.resource.data.keys().hasOnly(['id', 'deleted', 'transaction', 'syncAt'])
-          && request.resource.data.id is number
-          && historyId == string(request.resource.data.id)
-          && request.resource.data.deleted is bool
-          && request.resource.data.syncAt == request.time
+          && historyAccountAllowed(get(/databases/$(database)/documents/users/$(userId)).data);
+        function validHistoryData(next) {
+          let account = get(/databases/$(database)/documents/users/$(userId)).data;
+          return historyAccountAllowed(account)
+          && next.keys().hasOnly(['id', 'deleted', 'transaction', 'syncAt', 'recordIdentityFormat', 'origin', 'mutationMeta', 'recordMutationAt', 'recordIdentity'])
+          && (!('recordIdentity' in next) || (next.deleted == true
+            && next.recordIdentity is map
+            && next.recordIdentity.keys().hasOnly(['creationId', 'captureId', 'internalTransferLink', 'internalTransfer', 'internalTransferSpaceId', 'restorationId', 'restorationParent'])))
+          && (!('mutationMeta' in next) || next.mutationMeta is map)
+          && (!('origin' in next) || (next.deleted == true
+            && next.origin is string && next.origin.size() > 0))
+          && (!('recordIdentityFormat' in next) || next.recordIdentityFormat in [1, 2])
+          // Un escritor v2 siempre sella su operación, también con raíz v1.
+          // Un escritor anterior solo permanece permitido antes de adoptar v2.
+          && (next.get('recordIdentityFormat', 0) == 2
+            ? next.get('recordMutationAt', null) == request.time
+            : account.get('recordIdentityFormat', 0) < 2)
+          && next.id is number
+          && historyId == string(next.id)
+          && next.deleted is bool
+          && next.syncAt == request.time
           && (
-            (request.resource.data.deleted == true && !('transaction' in request.resource.data))
-            || (request.resource.data.deleted == false
-              && request.resource.data.transaction is map
-              && request.resource.data.transaction.id == request.resource.data.id)
+            (next.deleted == true && !('transaction' in next))
+            || (next.deleted == false
+              && next.transaction is map
+              && next.transaction.id == next.id)
           )
           && (!exists(/databases/$(database)/documents/users/$(userId)/history/$(historyId))
-            || request.resource.data.deleted == true
-            || resource.data.deleted == true
-            || keepsKnownOrigin(resource.data.transaction, request.resource.data.transaction))
-          && (!exists(/databases/$(database)/documents/users/$(userId)/history/$(historyId))
-            || resource.data.deleted != true || request.resource.data.deleted == true);
+            || validHistoryTransition(next, resource.data));
+        }
+        function validHistoryTransition(next, previous) {
+          // Las tres transiciones son excluyentes: no repetir exists ni
+          // evaluar pruebas de recuperación para una edición ordinaria.
+          return next.deleted == true ? keepsDeletionProof()
+            : previous.deleted == true ? restoresSameDeletedRecord()
+            : keepsKnownOrigin(previous.transaction, next.transaction) || liveBoxConversion();
+        }
+        allow create, update: if verified() && request.auth.uid == userId
+          && validHistoryData(request.resource.data);
         allow delete: if verified() && request.auth.uid == userId
           && get(/databases/$(database)/documents/users/$(userId)).data.get('accountDeletionPending', false) == true;
       }

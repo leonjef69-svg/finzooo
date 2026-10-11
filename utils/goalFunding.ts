@@ -1,0 +1,64 @@
+import type { Goal } from "@/types";
+import { identityForExplicitEdit } from "@/utils/recordOrigin";
+
+const failure = () => new Error("record-origin-conflict");
+function units(value: number): number {
+  if (typeof value !== "number" || !Number.isFinite(value)) throw failure();
+  const result = Math.round(value * 1000);
+  if (!Number.isSafeInteger(result) || Math.abs(result / 1000 - value) > 0.0000001) throw failure();
+  return result;
+}
+function ledger(goal: Goal): NonNullable<Goal["funding"]> {
+  if (units(goal.saved) < 0) throw failure();
+  if (goal.funding === undefined) return { format: 1, base: goal.saved, changes: {} };
+  const source = goal.funding;
+  if (!source || source.format !== 1 || !source.changes || typeof source.changes !== "object" || Array.isArray(source.changes)
+    || units(source.base) < 0) throw failure();
+  const changes = { ...source.changes };
+  for (const [id, delta] of Object.entries(changes)) if (!id || units(delta) === 0) throw failure();
+  const next = { format: 1 as const, base: source.base, changes };
+  if (units(total(next)) !== units(goal.saved)) throw failure();
+  return next;
+}
+
+export function assertGoalFunding(goal: Goal): void { if (goal.funding !== undefined) ledger(goal); }
+function total(source: NonNullable<Goal["funding"]>): number {
+  let value = units(source.base);
+  for (const delta of Object.values(source.changes)) {
+    value += units(delta);
+    if (!Number.isSafeInteger(value)) throw failure();
+  }
+  // Dos retiros simultáneos no inventan saldo cero ni escogen uno a ciegas.
+  if (value < 0) throw failure();
+  return value / 1000;
+}
+
+/** Operación intencional sobre la meta vigente, no una inferencia al leer. */
+export function goalWithFundingChange(goal: Goal, delta: number, operationId: string): Goal {
+  if (!operationId || typeof operationId !== "string" || !units(delta)) throw failure();
+  const previous = ledger(goal);
+  if (operationId in previous.changes) throw failure();
+  const funding = { ...previous, changes: { ...previous.changes, [operationId]: delta } };
+  const saved = total(funding);
+  return identityForExplicitEdit(goal, { ...goal, funding, saved, completed: saved >= goal.target });
+}
+
+/** Suma operaciones distintas y reconoce la misma operación en dos copias.
+ * Una cifra antigua diferente no dice qué operaciones faltan: se conserva
+ * la fuente interrumpiendo la unión, sin sumarla dos veces ni sobrescribirla. */
+export function mergeGoalFunding(local: Goal, remote: Goal): Goal {
+  if (!local.funding && !remote.funding) {
+    if (units(local.saved) !== units(remote.saved)) throw failure();
+    return local;
+  }
+  const a = ledger(local), b = ledger(remote);
+  if (units(a.base) !== units(b.base)) throw failure();
+  const changes = { ...b.changes };
+  for (const [id, delta] of Object.entries(a.changes)) {
+    if (id in changes && units(changes[id]) !== units(delta)) throw failure();
+    changes[id] = delta;
+  }
+  const funding = { format: 1 as const, base: a.base, changes };
+  const saved = total(funding);
+  return { ...local, funding, saved, completed: saved >= local.target };
+}

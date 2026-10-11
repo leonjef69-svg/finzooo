@@ -25,6 +25,9 @@ export type Transaction = {
   id: number;
   /** Identidad de creación, independiente del número. Ausente en datos antiguos. */
   creationId?: string;
+  /** Recuperación intencional, distinta de una copia antigua del original. */
+  restorationId?: string;
+  restorationParent?: string;
   /** Última modificación; permite que una edición de otro dispositivo gane a una copia vieja. */
   updatedAt?: number;
   type: "expense" | "income";
@@ -101,6 +104,8 @@ export type Goal = {
   id: number;
   /** Se conserva al editar; no se inventa para metas antiguas. */
   creationId?: string;
+  /** Aportes/retiros identificados: no sustituir el ahorro de otro equipo. */
+  funding?: { format: 1; base: number; changes: Record<string, number> };
   name: string;
   target: number;
   saved: number;

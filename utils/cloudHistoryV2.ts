@@ -6,7 +6,7 @@ import type { Transaction } from "@/types";
 import { db } from "@/utils/firebase";
 import {
   type HistoryEntry, assertKnownRecordIdentityFormat, historyDocumentId, mergeHistoryEntries,
-  planLocalHistoryChanges, UnsupportedHistoryFormatError,
+  planLocalHistoryChanges, UnsupportedHistoryFormatError, historyEntryLists,
 } from "@/utils/cloudHistoryMigration";
 import { withPrivateBoxCloudLease, type PrivateBoxCloudLease } from "@/utils/privateBoxSync";
 import { assertMatchingAccountCurrencies } from "@/utils/cloudFieldMerge";
@@ -25,15 +25,21 @@ function exclusive<T>(uid: string, work: () => Promise<T>): Promise<T> {
 }
 
 function parseEntry(raw: Record<string, unknown>): HistoryEntry {
+  assertKnownRecordIdentityFormat(raw);
   const id = raw.id;
   if (typeof id !== "number") throw new Error("historial-documento-invalido");
   historyDocumentId(id);
-  if (raw.deleted === true) return { id, deleted: true };
+  const extra = { ...(raw.mutationMeta !== undefined ? { mutationMeta: raw.mutationMeta as Record<string, number> } : {}),
+    ...(raw.recordIdentity !== undefined ? { recordIdentity: raw.recordIdentity as Record<string, string> } : {}) };
+  if (raw.deleted === true) {
+    if (raw.origin !== undefined && (typeof raw.origin !== "string" || !raw.origin)) throw new Error("historial-documento-invalido");
+    return { id, deleted: true, ...(typeof raw.origin === "string" ? { origin: raw.origin } : {}), ...extra };
+  }
   const transaction = raw.transaction as Transaction | undefined;
   if (raw.deleted !== false || !transaction || transaction.id !== id) {
     throw new Error("historial-documento-invalido");
   }
-  return { id, deleted: false, transaction };
+  return { id, deleted: false, transaction, ...extra };
 }
 
 function maxTimestamp(a: Timestamp | null, b: Timestamp): Timestamp {
@@ -66,18 +72,11 @@ async function refresh(uid: string): Promise<Cache> {
   return next;
 }
 
-function asLists(entries: HistoryEntry[]): { transactions: Transaction[]; deletedIds: number[] } {
-  const transactions: Transaction[] = [];
-  const deletedIds: number[] = [];
-  for (const entry of entries) {
-    if (entry.deleted) deletedIds.push(entry.id);
-    else transactions.push(entry.transaction);
-  }
-  return { transactions, deletedIds };
-}
+const asLists = historyEntryLists;
+export type HistoryLists = ReturnType<typeof historyEntryLists>;
 
 /** Historial completo para restauración o actualización; nunca interpreta fallo como vacío. */
-export function loadHistoryV2(uid: string, lease?: PrivateBoxCloudLease): Promise<{ transactions: Transaction[]; deletedIds: number[] }> {
+export function loadHistoryV2(uid: string, lease?: PrivateBoxCloudLease): Promise<HistoryLists> {
   return withPrivateBoxCloudLease(uid, lease, approved => exclusive(uid, async () => {
     const response = asLists((await approved.wait(() => refresh(uid))).entries);
     return approved.remember(response);
@@ -88,10 +87,12 @@ export function loadHistoryV2(uid: string, lease?: PrivateBoxCloudLease): Promis
 export function saveHistoryV2(
   uid: string, transactions: Transaction[], deletedIds: number[], lease?: PrivateBoxCloudLease,
   currency?: string,
-): Promise<{ transactions: Transaction[]; deletedIds: number[] }> {
+  deletedOrigins: Record<string, string> = {},
+  metadata: Record<string, number> = {},
+): Promise<HistoryLists> {
   return withPrivateBoxCloudLease(uid, lease, approved => exclusive(uid, async () => {
     let cache = await approved.wait(() => refresh(uid));
-    const changes = planLocalHistoryChanges(transactions, deletedIds, cache.entries);
+    const changes = planLocalHistoryChanges(transactions, deletedIds, cache.entries, deletedOrigins, metadata);
     for (const change of changes) {
       const rootRef = doc(db, "users", uid);
       const rowRef = doc(db, "users", uid, "history", historyDocumentId(change.id));
@@ -107,7 +108,7 @@ export function saveHistoryV2(
         const merged = mergeHistoryEntries(old ? [old] : [], [change])[0];
         if (!old || JSON.stringify(old) !== JSON.stringify(merged)) {
           approved.assertCurrent();
-          tx.set(rowRef, { ...merged, syncAt: serverTimestamp() });
+          tx.set(rowRef, { ...merged, recordIdentityFormat: 2, recordMutationAt: serverTimestamp(), syncAt: serverTimestamp() });
         }
         return merged;
       }));

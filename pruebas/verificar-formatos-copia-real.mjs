@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import vm from "node:vm";
 import ts from "typescript";
 import { createSourceReader } from "./helpers/source-reader.mjs";
+import { recordOriginOriginal } from "./helpers/record-origin-original.mjs";
 
 // Lógica original, solo red/almacenamiento/cola nativa adaptados. No Firebase
 // real ni datos de usuario; tarjetas no se cargan. La regresión debe fallar
@@ -36,6 +37,7 @@ function load(file, overrides = {}) {
   vm.runInNewContext(ts.transpile(read(file), { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }), {
     exports, require: name => {
       if (overrides[name]) return overrides[name];
+  if (["@/utils/recordOrigin", "@/utils/goalFunding", "@/utils/recordMerge"].includes(name)) return recordOriginOriginal();
       if (name === "firebase/firestore") return sdk;
       if (name === "@/utils/firebase") return { db: {} };
       if (name === "@/utils/storage") return { hasUnreadableLocalData: () => false };
@@ -55,14 +57,14 @@ function load(file, overrides = {}) {
 const cloud = load("utils/cloudSync.ts");
 for (const historyFormat of [1, 2]) {
   // Las cuentas históricas y la revisión conocida siguen funcionando.
-  for (const recordIdentityFormat of [undefined, 1]) {
+  for (const recordIdentityFormat of [undefined, 1, 2]) {
     reset({ ...local, historyFormat, recordIdentityFormat });
     if (historyFormat === 2) { delete remote.transactions; delete remote.deletedTransactionIds; }
     assert.equal((await cloud.loadCloudData("fixture")).userName, "Ana");
     assert.equal((await cloud.saveCloudData("fixture", local)).ok, true);
-    assert.equal(remote.recordIdentityFormat, 1);
+    assert.equal(remote.recordIdentityFormat, 2);
   }
-  for (const recordIdentityFormat of [2, "1", null, false, 0]) {
+  for (const recordIdentityFormat of [3, "1", null, false, 0]) {
     reset({ ...local, historyFormat, recordIdentityFormat });
     const original = copy(remote), before = JSON.stringify(remote);
     const expectedCode = typeof recordIdentityFormat === "number" && recordIdentityFormat > 1
@@ -80,7 +82,7 @@ for (const historyFormat of [1, 2]) {
     assert.deepEqual(remote, original);
   }
 }
-for (const recordIdentityFormat of [2, "1", null, false, 0]) {
+for (const recordIdentityFormat of [3, "1", null, false, 0]) {
   reset(local);
   const input = { ...local, recordIdentityFormat }, before = JSON.stringify(input);
   const result = await cloud.saveCloudData("fixture", input);
@@ -92,22 +94,22 @@ for (const recordIdentityFormat of [2, "1", null, false, 0]) {
 }
 // El formato puede cambiar entre la consulta inicial y la transacción.
 reset({ ...local, recordIdentityFormat: 1 });
-afterInitialRead = () => { remote = { ...remote, recordIdentityFormat: 2 }; };
+afterInitialRead = () => { remote = { ...remote, recordIdentityFormat: 3 }; };
 assert.equal((await cloud.saveCloudData("fixture", local)).ok, false);
 assert.deepEqual(writes, []);
-assert.equal(remote.recordIdentityFormat, 2, "no rebajar la copia recién cambiada");
+assert.equal(remote.recordIdentityFormat, 3, "no rebajar la copia recién cambiada");
 // También se revalida en la transacción de metadatos v2; no anuncia éxito
 // si hubo un cambio posterior al control inicial. No prueba lote multi-fila.
 reset({ ...local, historyFormat: 2, recordIdentityFormat: 1 });
-afterInitialRead = () => { remote = { ...remote, recordIdentityFormat: 2 }; };
+afterInitialRead = () => { remote = { ...remote, recordIdentityFormat: 3 }; };
 assert.equal((await cloud.saveCloudData("fixture", local)).ok, false);
 assert.deepEqual(writes, []);
-assert.equal(remote.recordIdentityFormat, 2);
+assert.equal(remote.recordIdentityFormat, 3);
 
 // Guardado original por fila, con SDK adaptado: una raíz incompatible corta
 // antes de escribir la fila aunque el llamador ya preparara el cambio.
 const history = load("utils/cloudHistoryV2.ts");
-reset({ ...local, historyFormat: 2, recordIdentityFormat: 2 });
+reset({ ...local, historyFormat: 2, recordIdentityFormat: 3 });
 const identified = { id: 7, creationId: "origen-B", updatedAt: 10, type: "expense", amount: 10,
   category: "otros", date: "2026-10-09", method: "cash", description: "Fixture", notes: "" };
 await assert.rejects(history.saveHistoryV2("fila-incompatible", [identified], []), error => error.code === "cloud/history-format-unsupported");

@@ -1,5 +1,53 @@
 # Estado actual de Fino
 
+## Punto 1 local terminado — borrado, recuperación y metas — 10/10/2026
+
+- Preparación, código y pruebas locales del punto 1 TERMINADOS; no cierre
+  global de FINO-52/62 ni de la auditoría. No entregado a teléfonos. Las copias
+  identifican el origen y la cadena de borrado/recuperación, sin decidir por
+  el reloj qué recuperación eliminar. Marcas antiguas ambiguas se conservan
+  para revisión, no se adjudican, renumeran ni migran automáticamente.
+- Movimiento, marcas y metadatos se confirman juntos en el teléfono antes
+  de mostrar éxito; Personal/Caja privada conserva también su lote conjunto.
+  Recuperación exige el mismo origen. Admin vuelve a comprobar el destino
+  dentro de la transacción para no pisar una edición llegada mientras copiaba.
+- Detalle de movimiento/meta y cierre de Familia/Caja esperan confirmación
+  local: fallo conserva la ficha y no anuncia éxito. Reintento local no repite
+  un cierre remoto ya confirmado; un error remoto anterior a la confirmación
+  retira el bloqueo de lectura, sin deshacer un cierre genuino confirmado.
+- FINO-62 nuevo: dos aportes de 10 y 20 a la misma meta desde dos equipos
+  antes podían conservar solo uno. Operaciones independientes preparadas
+  suman 30, reconocen reintentos y detienen retiros incompatibles sin inventar
+  saldo. Cifras antiguas distintas sin operaciones no se suman a ciegas.
+- Regresiones contra c6959c6: pérdida de un aporte 10+20; borrado que cambiaba
+  memoria pese a disco lleno; carrera Admin que sustituía 30 por la copia de 10.
+  Se prueban manejadores/módulos originales con límites IO adaptados; no Android.
+- Resultados finales exit0: .tmp/auditoria-punto1-app-final3.log, 194 pruebas
+  y 8 auditores sin tarjetas; incluye UNA prueba del usuario no versionada,
+  193 previstas en Git limpio, sin ejecutar otro checkout. SDK/HTTP/reglas:
+  .tmp/auditoria-punto1-sdk-final.log, 229/229, ninguna omitida/cancelada/fallida.
+  .tmp/auditoria-punto1-unit-final.log: 64/64 Node 22 seleccionadas fuera de
+  Telegram/tarjetas. TypeScript/ESLint generales finales aprobados.
+- El candidato SDK anterior falló una conversión válida por exceso de
+  expresiones (226/227); se corrigió conservando SHA/recibo/tuplas/escape,
+  no retirando la prueba. Comprobación enfocada 7/7 y repetición integral
+  final aprobadas; formato 2 exige sello fresco también sobre raíces antiguas.
+  ADB sin dispositivo/emulador conectado; no se ejecutó Android. La guía
+  PRUEBAS_CICLO_BORRADO_RESTAURACION conserva pasadas fallidas y limitaciones.
+- Revisión 2 y sellos frescos preparados para escrituras financieras; no son
+  certificación de APK ni bloqueo universal de lecturas/clientes antiguos.
+  Sin activación real, mínimo global publicado ni revisión de datos reales.
+- Telegram EN PAUSA por petición del propietario del 10/10; pruebas/nota
+  histórica anteriores no equivalen a retomarlo. Tarjetas y Sentry externo
+  siguen fuera; rediseño diferido. Sin APK/AAB/OTA/despliegue ni HTML nuevos.
+- Nueva orden: terminar SOLO el punto 1 y detener el trabajo, sin iniciar 2/3.
+  **Qué sigue:** trabajo detenido tras el cierre local, esperando nueva orden.
+  Los puntos 2 (Android) y 3 (servicios/consolas/publicación) quedan pendientes
+  por esa decisión; no se consideran completados ni excluidos definitivamente.
+  **Qué falta:** fuentes antiguas ambiguas, dos equipos/Android/Google/correo
+  reales, App Check/cupos/métricas, SMTP/bloqueo/moderación, Play/Billing,
+  web/privacidad/trámites y activación coordinada expresamente autorizada.
+
 ## Formatos y fuentes ambiguas — 09/10/2026, preparado
 
 - Propietario aceptó exigir actualización para sincronizar, conservando datos

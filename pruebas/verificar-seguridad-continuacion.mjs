@@ -172,7 +172,7 @@ for (const [name, args] of [["addOrUpdateGoal", [{}]], ["deleteGoal", [1]], ["ad
   vm.createContext(scope);
   vm.runInContext(code(name), scope);
   // Sin Premium debe salir antes de leer o mutar metas, aunque se invoque directamente.
-  assert.doesNotThrow(() => scope[name](...args));
+  await scope[name](...args);
 }
 const rules = read("firestore.rules");
 for (const collection of ["familyInvites", "boxInvites"]) {

@@ -11,6 +11,8 @@ import {
   pruneDeletedGoalIds,
 } from "@/utils/mergeTransactions";
 import type { Goal, Transaction } from "@/types";
+import { identityForExplicitEdit } from "@/utils/recordOrigin";
+import { goalWithFundingChange } from "@/utils/goalFunding";
 
 let fallos = 0;
 function ok(c: boolean, m: string) { console.log(`  ${c ? "OK   " : "FALLA"} ${m}`); if (!c) fallos++; }
@@ -34,9 +36,11 @@ function goal(id: number, name: string, saved = 0): Goal {
 
 console.log("\n--- LAS METAS DE DOS CELULARES NO SE PIERDEN NI REAPARECEN ---");
 {
-  const juntas = mergeGoals([goal(2, "Viaje", 20)], [goal(1, "Laptop"), goal(2, "Viaje viejo")]);
+  const original = goal(2, "Viaje");
+  const changed = goalWithFundingChange(original, 20, "fixture-deposit");
+  const juntas = mergeGoals([changed], [goal(1, "Laptop"), original]);
   ok(juntas.length === 2, "se conservan las metas de ambos celulares");
-  ok(juntas.find((g) => g.id === 2)?.saved === 20, "gana el cambio reciente del celular");
+  ok(juntas.find((g) => g.id === 2)?.saved === 20, "se conserva el aporte identificado del celular");
   const borradas = pruneDeletedGoalIds([1, 1]);
   ok(juntas.filter((g) => !borradas.includes(g.id)).every((g) => g.id !== 1), "una meta eliminada no reaparece");
 }
@@ -58,8 +62,8 @@ console.log("\n--- LO QUE SE ACABA DE TOCAR EN PANTALLA MANDA ---");
 {
   // Mismo identificador, dos versiones: la de pantalla es la buena. Es lo que
   // acaba de escribir la persona, y el disco puede traer la de antes.
-  const memoria = [tx(1, "2026-08-01", 99, "corregido a mano")];
   const disco = [tx(1, "2026-08-01", 20, "el viejo")];
+  const memoria = [identityForExplicitEdit(disco[0], tx(1, "2026-08-01", 99, "corregido a mano"))];
   const juntas = mergeTransactions(memoria, disco);
   ok(juntas.length === 1, "no se duplica");
   ok(juntas[0].amount === 99, "gana el monto corregido en pantalla");

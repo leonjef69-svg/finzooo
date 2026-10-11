@@ -13,6 +13,7 @@ import {
 } from "@/utils/cloudHistoryMigration";
 import { firebaseErrorMessage } from "@/utils/firebaseErrors";
 import { googleSignInErrorMessage } from "@/utils/googleSignInError";
+import { identityForExplicitEdit } from "@/utils/recordOrigin";
 
 assert.doesNotThrow(() => assertLegacyHistoryFormat(null));
 assert.doesNotThrow(() => assertLegacyHistoryFormat({}));
@@ -33,8 +34,14 @@ assert.match(fs.readFileSync("screens/VerifyEmail.tsx", "utf8"),
   /firebaseErrorMessage\(code\)/,
   "la verificación de correo debe explicar cuándo hace falta actualizar");
 const rules = fs.readFileSync("firestore.rules", "utf8");
-assert.match(rules, /resource\.data\.get\('historyFormat', 1\) == 1/,
-  "las reglas deben bloquear a una app vieja tras el corte");
+// Contrato de conexión estático; las reglas se ejecutan aparte con SDK.
+// La copia optimizada usa alias, no repite el acceso a resource.data.
+assert.match(rules, /allow create, update: if validPersonalCopy\(request\.resource\.data\);/,
+  "la escritura debe ejecutar la validación de la copia");
+assert.match(rules, /next\.get\('historyFormat', 1\)\s*== previous\.get\('historyFormat', 1\)/,
+  "el cliente no puede retirar el formato de historial ya adoptado");
+assert.match(rules, /next\.get\('historyFormat', 1\) == 2\s*&& !\('transactions' in next\)/,
+  "tras el corte no se admite de nuevo la lista de movimientos antigua");
 
 const movement = (id: number, updatedAt = id): Transaction => ({
   id,
@@ -49,7 +56,8 @@ const movement = (id: number, updatedAt = id): Transaction => ({
 });
 
 const legacy = Array.from({ length: 10_000 }, (_, index) => movement(index + 1));
-const staged = stageLegacyHistory(legacy, [5, 9_999, 10_001]);
+const staged = stageLegacyHistory(legacy.filter(row => row.id !== 5 && row.id !== 9_999), [5, 9_999, 10_001]);
+assert.throws(() => stageLegacyHistory(legacy, [5]), /record-origin-conflict/, "no descartar el registro histórico contradicho por una marca sin origen");
 assert.equal(staged.length, 10_001, "los borrados antiguos también viajan");
 assert.deepEqual(staged.find((entry) => entry.id === 5), { id: 5, deleted: true });
 assert.equal(staged.find((entry) => entry.id === 10_001)?.deleted, true);
@@ -63,38 +71,41 @@ assert.deepEqual(missingFromShadow(staged, staged), []);
 assert.deepEqual(missingFromShadow(staged, staged.filter((entry) => entry.id !== 9_999)), [9_999]);
 
 const original = stageLegacyHistory([movement(1, 10)], []);
-const edited = stageLegacyHistory([{ ...movement(1, 20), amount: 50 }], []);
+const explicitEdit = identityForExplicitEdit(movement(1, 10), { ...movement(1, 20), amount: 50 });
+const edited = stageLegacyHistory([explicitEdit], []);
 assert.equal(mergeHistoryEntries(original, edited)[0].transaction?.amount, 50);
 assert.equal(mergeHistoryEntries(edited, original)[0].transaction?.amount, 50);
 assert.throws(
   () => mergeHistoryEntries(edited, stageLegacyHistory([{ ...movement(1, 20), amount: 20 }], [])),
-  /historial-edicion-en-conflicto/,
+  /historial-edicion-en-conflicto|record-origin-conflict/,
   "dos ediciones distintas con el mismo momento no se eligen al azar",
 );
-assert.equal(mergeHistoryEntries(edited, [{ id: 1, deleted: true }])[0].deleted, true);
-assert.equal(mergeHistoryEntries([{ id: 1, deleted: true }], edited)[0].deleted, true);
+assert.throws(() => mergeHistoryEntries(edited, [{ id: 1, deleted: true }]), /record-origin-conflict/);
+assert.throws(() => mergeHistoryEntries([{ id: 1, deleted: true }], edited), /record-origin-conflict/);
+assert.throws(() => mergeHistoryEntries(original, [{ id: 1, deleted: true }]), /record-origin-conflict/,
+  "una marca sin origen no adjudica el borrado de un movimiento antiguo");
 assert.deepEqual(missingFromShadow(edited, original), [1], "una edición vieja no confirma la migración");
-assert.deepEqual(
-  missingFromShadow(edited, stageLegacyHistory([{ ...movement(1, 20), amount: 20 }], [])),
-  [1],
+assert.throws(
+  () => missingFromShadow(edited, stageLegacyHistory([{ ...movement(1, 20), amount: 20 }], [])),
+  /record-origin-conflict/,
   "una edición distinta con la misma hora tampoco confirma la migración",
 );
-assert.deepEqual(missingFromShadow(edited, [{ id: 1, deleted: true }]), [], "una eliminación nueva no resucita");
+assert.throws(() => missingFromShadow(edited, [{ id: 1, deleted: true }]), /record-origin-conflict/,
+  "una marca numérica no acredita que la creación identificada fue copiada/borrada");
 assert.deepEqual(planLocalHistoryChanges([movement(1, 10)], [], original), [],
   "guardar de nuevo no debe escribir un movimiento sin cambios");
 assert.deepEqual(planLocalHistoryChanges([movement(1, 10), movement(2, 11)], [], original),
   [{ id: 2, deleted: false, transaction: movement(2, 11) }]);
-assert.deepEqual(planLocalHistoryChanges([movement(1, 10)], [1], original),
-  [{ id: 1, deleted: true }], "un borrado solo escribe su lápida");
-assert.deepEqual(planLocalHistoryChanges([movement(1, 10)], [], [{ id: 1, deleted: true }]), [],
-  "un teléfono atrasado no resucita un borrado");
-assert.deepEqual(planLocalHistoryChanges([{ ...movement(1, 20), amount: 50 }], [], original), edited,
+assert.throws(() => planLocalHistoryChanges([movement(1, 10)], [1], original), /record-origin-conflict/);
+assert.throws(() => planLocalHistoryChanges([movement(1, 10)], [], [{ id: 1, deleted: true }]), /record-origin-conflict/,
+  "el antiguo ambiguo se conserva, no se borra ni se restaura automáticamente");
+assert.deepEqual(planLocalHistoryChanges([explicitEdit], [], original), edited,
   "una edición nueva sí debe guardarse");
 assert.throws(() => planLocalHistoryChanges([{ ...movement(1, 10), amount: 50 }], [], original),
-  /historial-edicion-en-conflicto/);
+  /historial-edicion-en-conflicto|record-origin-conflict/);
 assert.throws(() => historyBatches(stageLegacyHistory([{ ...movement(2), notes: "x".repeat(900_000) }], [])));
 
-const root = { revision: "1", transactions: legacy.slice(0, 425), deletedIds: [5] };
+const root = { revision: "1", transactions: legacy.slice(0, 426).filter(row => row.id !== 5), deletedIds: [5] };
 let shadow = [] as ReturnType<typeof stageLegacyHistory>;
 let writes = 0;
 let interrupt = true;
@@ -113,7 +124,7 @@ interrupt = false;
 assert.deepEqual(await stageHistoryShadow(store), { ready: true, revision: "1", missing: [] });
 assert.deepEqual(missingFromShadow(stageLegacyHistory(root.transactions, root.deletedIds), shadow), []);
 
-root.transactions.push(movement(426));
+root.transactions.push(movement(427));
 root.revision = "2";
 let changeDuringCopy = true;
 const concurrentStore = {
@@ -122,7 +133,7 @@ const concurrentStore = {
     shadow = mergeHistoryEntries(shadow, batch);
     if (changeDuringCopy) {
       changeDuringCopy = false;
-      root.transactions.push(movement(427));
+      root.transactions.push(movement(428));
       root.revision = "3";
     }
   },

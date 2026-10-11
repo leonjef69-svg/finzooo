@@ -61,6 +61,10 @@ import {
 import { reprogramarAvisosDePagos } from "@/utils/avisosDePagos";
 import { useValorEstable } from "@/utils/valorEstable";
 import { nextId, reserveIdsAbove, issuedCreationId } from "@/utils/id";
+import { identityForExplicitEdit, recordOriginOf } from "@/utils/recordOrigin";
+import { mergeTransactionCopies, mergeGoalCopies, mergeMutationMetadata, prepareTransactionMutation, rememberDeletion } from "@/utils/recordMerge";
+import { goalWithFundingChange } from "@/utils/goalFunding";
+import { randomUUID } from "expo-crypto";
 import { applyImportedTransactions } from "@/utils/importCommit";
 import { learnCategory, suggestCategory } from "@/utils/classifier";
 import { bajarNegocio, subirNegocio } from "@/utils/cloudNegocio";
@@ -121,9 +125,7 @@ import { guardarPendientes, limpiarPendientes, pendientesDeCaptura } from "@/uti
 import {
   assertSameCreation,
   assertSameTransactionOrigin,
-  mergeGoals,
   mergeTransactions,
-  hayNovedades,
   mergeCaptureLog,
   pruneDeletedGoalIds,
   pruneDeletedTransactionIds,
@@ -145,7 +147,7 @@ import { desconectarOneDrive } from "@/utils/onedrive";
 import { disableLock } from "@/utils/appLock";
 import { setPendingImport } from "@/utils/pendingImport";
 import { paymentNotificationFormatter } from "@/utils/notificationCurrency";
-import { guardarCajasEnMemoria, limpiarCajasEnMemoria } from "@/utils/cajasMemoria";
+import { guardarCajasEnMemoria, leerCajasEnMemoria, limpiarCajasEnMemoria } from "@/utils/cajasMemoria";
 import { patchPrivateBoxPersonal, validatePrivateBoxPatch } from "@/utils/privateBoxPersonal";
 import { validatePrivateBoxRepair, type PrivateBoxRepairChoice } from "@/utils/privateBoxRepair";
 import { assertPrivateBoxRepairCloud, loadPrivateBoxRepairCloud } from "@/utils/privateBoxRepairCloud";
@@ -274,17 +276,17 @@ type AppDataContextValue = {
   deletedTransactionIds: number[];
   addOrUpdateTransaction: (t: Transaction, allowLinkedTransferUpdate?: boolean, requireExisting?: boolean) => boolean;
   recordPersonalReturn: (receipt: PersonalReturnReceipt) => boolean;
-  deleteTransaction: (id: number) => void;
+  deleteTransaction: (id: number) => Promise<boolean>;
   /** Solo para Familia/Cajas al borrar el movimiento enlazado en su origen. */
-  deleteLinkedTransferTransaction: (id: number) => void;
+  deleteLinkedTransferTransaction: (id: number) => Promise<boolean>;
   /** Repara pares enlazados sin mostrar una cadena de avisos. */
-  repairLinkedTransferTransactions: (upserts: Transaction[], deleteIds?: number[]) => void;
+  repairLinkedTransferTransactions: (upserts: Transaction[], deleteIds?: number[]) => Promise<boolean>;
   commitPrivateBoxData: (before: DatosCajas, data: DatosCajas, upserts: Transaction[], deleteIds: number[], current: () => boolean, apply: (data: DatosCajas) => void, repair?: true | PrivateBoxRepairChoice) => Promise<boolean>;
   commitPrivateBoxMoney: (before: DatosCajas, entry: RevisionImporteCaja, ack: MoneyAck, lease: PrivateBoxCloudLease, current: () => boolean, apply: (data: DatosCajas) => void) => Promise<boolean>;
   retirePrivateBoxMoney: (before: DatosCajas, entry: RevisionImporteCaja, ack: MoneyRetireAck, lease: PrivateBoxCloudLease, current: () => boolean, apply: (data: DatosCajas) => void) => Promise<boolean>;
   stagePrivateBoxMoney: (before: DatosCajas, entry: RevisionImporteCaja, lease: PrivateBoxCloudLease, current: () => boolean, apply: (data: DatosCajas) => void) => Promise<boolean>;
   readPrivateBoxMoneyLocal: () => { transactions: Transaction[]; deletedIds: number[]; currency: string };
-  deleteTransactions: (ids: number[]) => void;
+  deleteTransactions: (ids: number[]) => Promise<boolean>;
   commitImport: (toAdd: Transaction[], toReplace: Transaction[]) => number;
 
   merchantLearned: Record<string, string>;
@@ -328,7 +330,7 @@ type AppDataContextValue = {
    */
   reprogramarAvisos: () => void;
   addOrUpdateGoal: (g: Goal, requireExisting?: boolean) => boolean;
-  deleteGoal: (id: number) => void;
+  deleteGoal: (id: number) => Promise<boolean>;
   addMoneyToGoal: (amount: number, goalId: number) => void;
   withdrawMoneyFromGoal: (goalId: number, amount: number) => void;
 
@@ -500,8 +502,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, []);
   const [goals, setRenderedGoals] = useState<Goal[]>(seedGoals);
   const goalsLive = useRef(goals);
+  const goalWriteReserved = useRef(false);
+  const goalWritePublishing = useRef(false);
   const setGoals = useCallback((update: SetStateAction<Goal[]>) => {
     const next = typeof update === "function" ? update(goalsLive.current) : update;
+    if (goalWriteReserved.current && !goalWritePublishing.current && canonical(next) !== canonical(goalsLive.current)) throw new Error("private-box-source-changed");
     goalsLive.current = next;
     setRenderedGoals(next);
   }, []);
@@ -600,7 +605,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const cloudSyncMetaRef = useRef<Record<string, number>>({});
   const cloudFieldsRef = useRef<CloudData | null>(null);
   const [deletedTransactionIds, setRenderedDeletedTransactionIds] = useState<number[]>([]);
-  const [deletedGoalIds, setDeletedGoalIds] = useState<number[]>([]);
+  const [deletedGoalIds, setRenderedDeletedGoalIds] = useState<number[]>([]);
+  const deletedGoalIdsRef = useRef<number[]>([]);
+  const setDeletedGoalIds = useCallback((update: SetStateAction<number[]>) => {
+    const next = typeof update === "function" ? update(deletedGoalIdsRef.current) : update;
+    if (goalWriteReserved.current && !goalWritePublishing.current && canonical(next) !== canonical(deletedGoalIdsRef.current)) throw new Error("private-box-source-changed");
+    deletedGoalIdsRef.current = next; setRenderedDeletedGoalIds(next);
+  }, []);
   const deletedTransactionIdsRef = useRef<number[]>([]);
   const setDeletedTransactionIds = useCallback((update: SetStateAction<number[]>) => {
     if (typeof update === "function") assertPrivateBoxMoneyLocalIdle();
@@ -625,6 +636,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const localSessionVersion = useRef(0);
   const cloudAccessRevision = useRef(0);
   const returnReceipt = useRef<PersonalReturnReceipt | null>(null);
+  const pendingTransactionDeletes = useRef(new Set<number>());
   const localOpenRequest = useRef(0);
 
   // Una versión de fmt() ya conectada a la moneda elegida — toda la app
@@ -769,9 +781,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     try {
       // Verificar movimientos antes de cambiar perfil, presupuestos o marcas.
       // Las referencias vivas incluyen cambios posteriores al último dibujado.
-      mergeTransactions(transactionsLive.current, cloud.transactions);
-      mergeGoals(goalsLive.current, cloud.goals);
-      merged = mergeCloudFields({ ...local, syncUpdatedAt: cloudSyncMetaRef.current }, cloud);
+      const records = mergeTransactionCopies(transactionsLive.current, cloud.transactions, deletedTransactionIdsRef.current, cloud.deletedTransactionIds ?? [], cloudSyncMetaRef.current, cloud.syncUpdatedAt ?? {});
+      const goalCopies = mergeGoalCopies(goalsLive.current, cloud.goals, deletedGoalIdsRef.current, cloud.deletedGoalIds ?? [], cloudSyncMetaRef.current, cloud.syncUpdatedAt ?? {});
+      assertPrivateBoxMoneyLocalMutation("transactions", records.transactions);
+      assertPrivateBoxMoneyLocalMutation("deletedIds", records.deletedIds);
+      if (goalWriteReserved.current && (canonical(goalCopies.goals) !== canonical(goalsLive.current)
+        || canonical(goalCopies.deletedIds) !== canonical(deletedGoalIdsRef.current))) throw new Error("private-box-source-changed");
+      merged = { ...mergeCloudFields({ ...local, syncUpdatedAt: cloudSyncMetaRef.current }, cloud),
+        transactions: records.transactions, deletedTransactionIds: records.deletedIds, goals: goalCopies.goals, deletedGoalIds: goalCopies.deletedIds,
+        syncUpdatedAt: mergeMutationMetadata(records.metadata, goalCopies.metadata) };
     } catch (error) {
       // Una copia mal formada no modifica la memoria ni la copia local.
       setRespaldoFallo(error instanceof Error && error.message === "record-origin-conflict"
@@ -823,8 +841,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       cloudSyncMetaRef.current = merged.syncUpdatedAt ?? {};
       setCloudSyncMeta(cloudSyncMetaRef.current);
     }
+    if (changed(transactionsLive.current, merged.transactions)) setTransactions(merged.transactions);
+    if (changed(deletedTransactionIdsRef.current, merged.deletedTransactionIds)) setDeletedTransactionIds(merged.deletedTransactionIds ?? []);
+    if (changed(goalsLive.current, merged.goals)) setGoals(merged.goals);
+    if (changed(deletedGoalIdsRef.current, merged.deletedGoalIds ?? [])) setDeletedGoalIds(merged.deletedGoalIds ?? []);
     return true;
-  }, [userEmail, userCountry, setUserCurrency]);
+  }, [userEmail, userCountry, setUserCurrency, setTransactions, setDeletedTransactionIds, setGoals, setDeletedGoalIds]);
 
   /**
    * TODO lo que va a la copia de la cuenta, en UN SOLO SITIO.
@@ -850,10 +872,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       userLanguage,
       budgets,
       categoryBudgets,
-      transactions,
-      deletedTransactionIds,
-      goals,
-      deletedGoalIds,
+      transactions: transactionsLive.current,
+      deletedTransactionIds: deletedTransactionIdsRef.current,
+      goals: goalsLive.current,
+      deletedGoalIds: deletedGoalIdsRef.current,
       /* SIN LAS FOTOS, IGUAL QUE LOS FAVORITOS DE AQUÍ ABAJO. **Esto estaba escrito y sin
          conectar (20/08/2026).** `pagosParaLaNube` existía, con su explicación, y no la
          llamaba nadie: los pagos subían con la foto pegada. Una foto son unos 18 KB en texto,
@@ -946,13 +968,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         }
         throw error;
       }
-      const deleted = pruneDeletedTransactionIds([...(local.deletedTransactionIds ?? []), ...(cloud.deletedTransactionIds ?? [])]);
-      const deletedGoals = pruneDeletedGoalIds([...(local.deletedGoalIds ?? []), ...(cloud.deletedGoalIds ?? [])]);
-      const deletedSet = new Set(deleted);
-      const deletedGoalsSet = new Set(deletedGoals);
-      let restoredTransactions: Transaction[];
+      let records: ReturnType<typeof mergeTransactionCopies>, goalCopies: ReturnType<typeof mergeGoalCopies>;
       try {
-        restoredTransactions = mergeTransactions(local.transactions, cloud.transactions);
+        records = mergeTransactionCopies(transactionsLive.current, cloud.transactions, deletedTransactionIdsRef.current, cloud.deletedTransactionIds ?? [], cloudSyncMetaRef.current, cloud.syncUpdatedAt ?? {});
+        goalCopies = mergeGoalCopies(goalsLive.current, cloud.goals, deletedGoalIdsRef.current, cloud.deletedGoalIds ?? [], cloudSyncMetaRef.current, cloud.syncUpdatedAt ?? {});
+        assertPrivateBoxMoneyLocalMutation("transactions", records.transactions);
+        assertPrivateBoxMoneyLocalMutation("deletedIds", records.deletedIds);
       } catch (error) {
         if (error instanceof Error && error.message === "record-origin-conflict") {
           setRespaldoFallo("movimientos-en-conflicto");
@@ -964,10 +985,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         ...merged,
         isPremium: cloud.isPremium,
         premiumTrialStartedAt: cloud.premiumTrialStartedAt,
-        deletedTransactionIds: deleted,
-        transactions: restoredTransactions.filter((tx) => !deletedSet.has(tx.id)),
-        deletedGoalIds: deletedGoals,
-        goals: mergeGoals(local.goals, cloud.goals).filter((goal) => !deletedGoalsSet.has(goal.id)),
+        deletedTransactionIds: records.deletedIds, transactions: records.transactions,
+        deletedGoalIds: goalCopies.deletedIds, goals: goalCopies.goals,
+        syncUpdatedAt: mergeMutationMetadata(records.metadata, goalCopies.metadata),
         iconosFavoritos: [...(local.iconosFavoritos ?? []).filter((icon) => icon.startsWith("data:")), ...(merged.iconosFavoritos ?? [])],
       };
     }
@@ -1121,8 +1141,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       loadJSON<CaptureLogEntry[]>(STORAGE_KEYS.autoCaptureLog, []),
     ]);
     if (auth.currentUser?.uid !== loadingUid || version !== localSessionVersion.current) return;
-    const savedDeletedSet = new Set(savedDeletedTransactionIds);
-    const savedDeletedGoalsSet = new Set(savedDeletedGoalIds);
+    // Validar ANTES de publicar cualquier bloque. Un dato dudoso no es vacío.
+    const records = mergeTransactionCopies(savedTransactions, [], savedDeletedTransactionIds, [], savedCloudSyncMeta);
+    const goalCopies = mergeGoalCopies(savedGoals, [], savedDeletedGoalIds, [], savedCloudSyncMeta);
     setOverrides(savedOverrides);
     setPropias(savedPropias);
     setFavoritos(savedFavoritos);
@@ -1132,10 +1153,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setCategoriasPropiasState(savedPropias);
     setIconosFavoritosState(savedFavoritos);
     setPruebaInicio(savedPrueba);
-    setDeletedTransactionIds(savedDeletedTransactionIds);
-    setTransactions(savedTransactions.filter((tx) => !savedDeletedSet.has(tx.id)));
-    setDeletedGoalIds(savedDeletedGoalIds);
-    setGoals(savedGoals.filter((goal) => !savedDeletedGoalsSet.has(goal.id)));
+    setDeletedTransactionIds(records.deletedIds);
+    setTransactions(records.transactions);
+    setDeletedGoalIds(goalCopies.deletedIds);
+    setGoals(goalCopies.goals);
     setPagosProgramados(savedPagos);
     protectExistingIds(savedTransactions, savedGoals);
     setIsPremium(savedIsPremium);
@@ -1152,10 +1173,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         userCurrency: profile.userCurrency || "PEN", userLanguage: profile.userLanguage || "es",
         hasOnboarded: profile.hasOnboarded } : {}),
       budgets: savedBudgets, categoryBudgets: savedCategoryBudgets,
-      transactions: savedTransactions.filter((tx) => !savedDeletedSet.has(tx.id)),
-      deletedTransactionIds: savedDeletedTransactionIds,
-      goals: savedGoals.filter((goal) => !savedDeletedGoalsSet.has(goal.id)),
-      deletedGoalIds: savedDeletedGoalIds, pagosProgramados: savedPagos,
+      transactions: records.transactions,
+      deletedTransactionIds: records.deletedIds,
+      goals: goalCopies.goals,
+      deletedGoalIds: goalCopies.deletedIds, pagosProgramados: savedPagos,
       isPremium: savedIsPremium, merchantLearned: savedLearned,
       categoryOverrides: savedOverrides, categoriasPropias: savedPropias,
       carryoverCleared: savedCarryoverCleared, iconosFavoritos: savedFavoritos,
@@ -1699,31 +1720,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       });
       if (!alive || !cloud || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
       if (!applyNewerCloudFields(cloud)) return;
-      const borrados = pruneDeletedTransactionIds([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])]);
-      const metasBorradas = pruneDeletedGoalIds([...deletedGoalIds, ...(cloud.deletedGoalIds ?? [])]);
-      const idsBorrados = new Set(borrados);
-      const idsMetasBorradas = new Set(metasBorradas);
-      setDeletedTransactionIds((actuales) =>
-        actuales.length === borrados.length && actuales.every((id) => idsBorrados.has(id))
-          ? actuales
-          : borrados
-      );
-      // Una copia igual no es un cambio. En especial, crear otro [] de metas
-      // borradas cambiaba la dependencia de este efecto y volvía a descargar
-      // sin parar; las listas nuevas también disparaban otra subida/cifrado.
-      setTransactions((locales) => {
-        const siguientes = mergeTransactions(locales, cloud.transactions).filter((tx) => !idsBorrados.has(tx.id));
-        return JSON.stringify(locales) === JSON.stringify(siguientes) ? locales : siguientes;
-      });
-      setDeletedGoalIds((actuales) =>
-        actuales.length === metasBorradas.length && actuales.every((id) => idsMetasBorradas.has(id))
-          ? actuales
-          : metasBorradas
-      );
-      setGoals((locales) => {
-        const siguientes = mergeGoals(locales, cloud.goals).filter((goal) => !idsMetasBorradas.has(goal.id));
-        return JSON.stringify(locales) === JSON.stringify(siguientes) ? locales : siguientes;
-      });
+      // La recepción aplica una única unión validada dentro de applyNewerCloudFields.
     };
     void sincronizarMovimientos();
     return () => {
@@ -1825,10 +1822,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
      */
     async function recogerDelDisco(): Promise<{ caja: MovimientoNegocio[]; ok: boolean }> {
       try {
-        const [guardadas, registro, caja] = await Promise.all([
+        const [guardadas, registro, caja, borradosDisco, metadataDisco] = await Promise.all([
           loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []),
           loadJSON<CaptureLogEntry[]>(STORAGE_KEYS.autoCaptureLog, []),
           loadJSON<MovimientoNegocio[]>(STORAGE_KEYS.movimientosNegocio, []),
+          loadJSON<number[]>(STORAGE_KEYS.deletedTransactionIds, []),
+          loadJSON<Record<string, number>>(STORAGE_KEYS.cloudSyncMeta, {}),
         ]);
         if (!Array.isArray(guardadas) || !Array.isArray(registro) || !Array.isArray(caja)) {
           return { caja: [], ok: false };
@@ -1836,14 +1835,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         // El disco puede conservar durante unos milisegundos la lista anterior
         // porque el guardado está agrupado. Nunca reincorporamos identificadores
         // que la persona ya borró, aunque todavía aparezcan en esa copia vieja.
-        const deleted = new Set(deletedTransactionIdsRef.current);
-        const savedActive = guardadas.filter((tx) => !deleted.has(tx.id));
-        setTransactions((memoria) => {
-          const memoryActive = memoria.filter((tx) => !deleted.has(tx.id));
-          return hayNovedades(memoryActive, savedActive)
-            ? mergeTransactions(memoryActive, savedActive)
-            : memoryActive;
-        });
+        const records = mergeTransactionCopies(transactionsLive.current, guardadas, deletedTransactionIdsRef.current, borradosDisco, cloudSyncMetaRef.current, metadataDisco);
+        if (JSON.stringify(records.transactions) !== JSON.stringify(transactionsLive.current)) setTransactions(records.transactions);
+        if (JSON.stringify(records.deletedIds) !== JSON.stringify(deletedTransactionIdsRef.current)) setDeletedTransactionIds(records.deletedIds);
+        if (JSON.stringify(records.metadata) !== JSON.stringify(cloudSyncMetaRef.current)) {
+          cloudSyncMetaRef.current = records.metadata; setCloudSyncMeta(records.metadata);
+        }
         // Y EL REGISTRO DE AVISOS, IGUAL.
         //
         // Se leía del disco UNA sola vez, al arrancar. El trabajo de fondo
@@ -2093,28 +2090,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         void loadCloudData(uid).then((cloud) => {
           if (!cloud || !alive || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
           if (!applyNewerCloudFields(cloud)) return;
-          const borrados = pruneDeletedTransactionIds([...deletedTransactionIds, ...(cloud.deletedTransactionIds ?? [])]);
-          const metasBorradas = pruneDeletedGoalIds([...deletedGoalIds, ...(cloud.deletedGoalIds ?? [])]);
-          const idsBorrados = new Set(borrados);
-          const idsMetasBorradas = new Set(metasBorradas);
-          setDeletedTransactionIds((actuales) =>
-            actuales.length === borrados.length && actuales.every((id) => idsBorrados.has(id))
-              ? actuales
-              : borrados
-          );
-          setTransactions((locales) => {
-            const siguientes = mergeTransactions(locales, cloud.transactions).filter((tx) => !idsBorrados.has(tx.id));
-            return JSON.stringify(locales) === JSON.stringify(siguientes) ? locales : siguientes;
-          });
-          setDeletedGoalIds((actuales) =>
-            actuales.length === metasBorradas.length && actuales.every((id) => idsMetasBorradas.has(id))
-              ? actuales
-              : metasBorradas
-          );
-          setGoals((locales) => {
-            const siguientes = mergeGoals(locales, cloud.goals).filter((goal) => !idsMetasBorradas.has(goal.id));
-            return JSON.stringify(locales) === JSON.stringify(siguientes) ? locales : siguientes;
-          });
+          // No volver a unir por números después de aplicar generaciones.
         }).catch((error) => {
           if (alive && version === localSessionVersion.current && auth.currentUser?.uid === uid) {
             const code = (error as { code?: string } | null)?.code;
@@ -2752,7 +2728,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   function recordPersonalReturn(receipt: PersonalReturnReceipt): boolean {
     assertPrivateBoxMoneyLocalIdle();
     if (!personalReturnIsCurrent(receipt)) return false;
-    if (deletedTransactionIdsRef.current.includes(receipt.personalTransactionId)) return false;
+    if (deletedTransactionIdsRef.current.includes(receipt.personalTransactionId) || pendingTransactionDeletes.current.has(receipt.personalTransactionId)) return false;
     if (currencyForReturn.current !== receipt.currency) {
       showToast(tRef.current("spaces.currencyMismatch"));
       return false;
@@ -2764,7 +2740,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       internalTransferSpaceId: receipt.spaceId, internalTransferSpaceName: receipt.spaceName,
       internalTransferAllocations: receipt.allocations, updatedAt: Date.now() };
     returnReceipt.current = receipt;
-    setTransactions(previous => deletedTransactionIdsRef.current.includes(receipt.personalTransactionId)
+    setTransactions(previous => deletedTransactionIdsRef.current.includes(receipt.personalTransactionId) || pendingTransactionDeletes.current.has(receipt.personalTransactionId)
       ? previous : mergePersonalReturn(previous, tx));
     return true;
   }
@@ -2778,7 +2754,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // no se supone equivalente en iOS/web. Operaciones de una Caja sin enlace
     // Personal continúan funcionando allí con una sola clave.
     if (paired && Platform.OS !== "android") throw new Error("private-box-android-only");
-    const keys = paired ? [STORAGE_KEYS.transactions, STORAGE_KEYS.deletedTransactionIds, STORAGE_KEYS.cajasDinero] : [STORAGE_KEYS.cajasDinero];
+    const keys = paired ? [STORAGE_KEYS.transactions, STORAGE_KEYS.deletedTransactionIds, STORAGE_KEYS.cajasDinero, STORAGE_KEYS.cloudSyncMeta] : [STORAGE_KEYS.cajasDinero];
     const checked = validarCajas(JSON.parse(JSON.stringify(data)));
     fusionarCajas(checked, CAJAS_VACIAS);
     const source = validarCajas(JSON.parse(JSON.stringify(before)));
@@ -2794,25 +2770,51 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       if (!task.current() || !current()) return false;
       return saveJSONBatchNow(keys, () => {
         if (!task.current() || !current() || (paired && transactionsLive.current !== initialPersonal)) throw new Error("private-box-source-changed");
-        const base = transactionsLive.current, deleted = deletedTransactionIdsRef.current;
+        const base = transactionsLive.current, deleted = deletedTransactionIdsRef.current, metadata = paired ? cloudSyncMetaRef.current : {};
         if (repair) validatePrivateBoxRepair(source, checked, base, deleted, upserts, deleteIds, owner, repair);
         else validatePrivateBoxPatch(source, checked, base, upserts, deleteIds, owner);
-        const patch = patchPrivateBoxPersonal(base, deleted, upserts, deleteIds);
+        // Solo esta conversión, validada arriba contra ambas mitades, puede cambiar el vínculo inmutable.
+        const allowsVerifiedLink = (prior: Transaction, next: Transaction) => {
+          if (prior.internalTransfer !== "box" || next.internalTransfer !== "box" || prior.amount !== next.amount || prior.type !== next.type) return false;
+          const receipt = checked.conversiones?.[prior.internalTransferSpaceId || ""];
+          const converted = !repair && receipt?.uid === owner && receipt.sourceId === prior.internalTransferSpaceId
+            && receipt.currency === currencyForReturn.current && receipt.targetId === next.internalTransferSpaceId
+            && prior.internalTransferLink === next.internalTransferLink
+            && receipt.links.some(link => link.personalId === prior.id && link.movementId === prior.internalTransferLink);
+          const chosenLink = typeof repair === "object" && repair.from === "link" && repair.personalId === prior.id
+            && !prior.internalTransferLink && !prior.internalTransferSpaceId && next.internalTransferLink === repair.movementId;
+          return !!converted || chosenLink;
+        };
+        const prepared = paired ? prepareTransactionMutation(base, deleted, metadata, upserts, deleteIds, randomUUID, issuedCreationId, allowsVerifiedLink)
+          : { transactions: base, deletedIds: deleted, metadata };
+        const changedIds = new Set(upserts.map(row => row.id));
+        const patch = paired ? patchPrivateBoxPersonal(base, prepared.deletedIds, prepared.transactions.filter(row => changedIds.has(row.id)), deleteIds)
+          : { transactions: base, deletedIds: deleted };
+        const currency = paired ? currencyForReturn.current : "";
+        let reservation: PrivateBoxMoneyLocalWrite | undefined;
         return {
-          entries: paired ? [[STORAGE_KEYS.transactions, patch.transactions], [STORAGE_KEYS.deletedTransactionIds, patch.deletedIds], [STORAGE_KEYS.cajasDinero, checked]] : [[STORAGE_KEYS.cajasDinero, checked]],
-          stillValid: () => task.current() && current() && (!paired || (transactionsLive.current === base && deletedTransactionIdsRef.current === deleted)),
+          entries: paired ? [[STORAGE_KEYS.transactions, patch.transactions], [STORAGE_KEYS.deletedTransactionIds, patch.deletedIds], [STORAGE_KEYS.cajasDinero, checked], [STORAGE_KEYS.cloudSyncMeta, prepared.metadata]] : [[STORAGE_KEYS.cajasDinero, checked]],
+          stillValid: () => task.current() && current() && (!paired || (transactionsLive.current === base && deletedTransactionIdsRef.current === deleted && cloudSyncMetaRef.current === metadata && currencyForReturn.current === currency)),
+          reserve: paired ? () => {
+            reservation = reservePrivateBoxMoneyLocalWrite(task.current, { transactions: base, deletedIds: deleted, currency, boxes: source });
+            return reservation.release;
+          } : undefined,
           committed: () => {
             if (!task.current()) return;
-            if (paired) {
-              const latest = transactionsLive.current === base && deletedTransactionIdsRef.current === deleted
-                ? patch : patchPrivateBoxPersonal(transactionsLive.current, deletedTransactionIdsRef.current, upserts, deleteIds);
-              deletedTransactionIdsRef.current = latest.deletedIds;
+            const publish = () => {
+              if (paired) {
+              const latestMeta = mergeMutationMetadata(prepared.metadata, cloudSyncMetaRef.current);
               if (returnReceipt.current && deleteIds.includes(returnReceipt.current.personalTransactionId)) returnReceipt.current = null;
-              setDeletedTransactionIds(latest.deletedIds);
-              setTransactions(latest.transactions);
-            }
+              setDeletedTransactionIds(patch.deletedIds);
+              setTransactions(patch.transactions);
+              cloudSyncMetaRef.current = latestMeta; setCloudSyncMeta(latestMeta);
+              if (canonical(latestMeta) !== canonical(prepared.metadata)) saveJSON(STORAGE_KEYS.cloudSyncMeta, latestMeta);
+              }
             guardarCajasEnMemoria(checked);
             apply(checked);
+            };
+            if (paired) { if (!reservation) throw new Error("private-box-source-changed"); reservation.publish(publish); }
+            else publish();
           },
         };
       });
@@ -2993,6 +2995,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     t2 = { ...t2, ...(creationId ? { creationId } : {}) };
     if (existing) {
       try {
+        // Solo la edición seleccionada del original vigente; no bautizar
+        // copias remotas ni tocar el módulo excluido de tarjetas.
+        if (existing.method !== "credit-card-payment" && t2.method !== "credit-card-payment") {
+          t2 = identityForExplicitEdit(existing, t2);
+        }
         assertSameCreation(existing, t2);
         if (!allowLinkedTransferUpdate) assertSameTransactionOrigin(existing, t2);
       }
@@ -3059,84 +3066,101 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       (prev) => learnCategory(merchantText, category, prev)));
   }
 
-  function removeTransactions(ids: number[]) {
-    if (!ids.length) return;
-    assertPrivateBoxMoneyLocalIdle();
-    void unlinkCreditPaymentsForHomeTransactions(ids);
-    // Bloquea respuestas atrasadas desde este instante, no recién al dibujar.
-    deletedTransactionIdsRef.current = pruneDeletedTransactionIds([...deletedTransactionIdsRef.current, ...ids]);
-    if (returnReceipt.current && ids.includes(returnReceipt.current.personalTransactionId)) returnReceipt.current = null;
-    setDeletedTransactionIds((prev) => {
-      const next = pruneDeletedTransactionIds([...prev, ...ids]);
-      deletedTransactionIdsRef.current = next;
-      return next;
-    });
-    setTransactions((prev) => prev.filter((p) => !ids.includes(p.id)));
+  async function commitTransactionMutation(upserts: Transaction[], ids: number[]): Promise<boolean> {
+    if (!upserts.length && !ids.length) return true;
+    const owner = auth.currentUser?.uid ?? "", version = localSessionVersion.current;
+    const task = captureAccountTask(owner, () => version === localSessionVersion.current);
+    if (!ready || !hasOnboarded || !task.current() || hasUnreadableLocalData() || Platform.OS !== "android") return false;
+    try {
+      return await withLocalAccountOperation(async () => {
+        await task.wait(() => flushPendingSaves());
+        return saveJSONBatchNow([STORAGE_KEYS.transactions, STORAGE_KEYS.deletedTransactionIds, STORAGE_KEYS.cloudSyncMeta], async () => {
+          const [diskRows, diskDeleted, diskMeta, diskBoxes] = await task.wait(() => Promise.all([
+            loadJSON<Transaction[]>(STORAGE_KEYS.transactions, []), loadJSON<number[]>(STORAGE_KEYS.deletedTransactionIds, []),
+            loadJSON<Record<string, number>>(STORAGE_KEYS.cloudSyncMeta, {}), loadJSON<DatosCajas>(STORAGE_KEYS.cajasDinero, CAJAS_VACIAS),
+          ]));
+          const base = transactionsLive.current, deleted = deletedTransactionIdsRef.current, metadata = cloudSyncMetaRef.current;
+          const source = mergeTransactionCopies(base, diskRows, deleted, diskDeleted, metadata, diskMeta);
+          const next = prepareTransactionMutation(source.transactions, source.deletedIds, source.metadata, upserts, ids, randomUUID, issuedCreationId);
+          const currency = currencyForReturn.current, boxes = leerCajasEnMemoria() ?? diskBoxes;
+          let reservation: PrivateBoxMoneyLocalWrite | undefined;
+          return {
+            entries: [[STORAGE_KEYS.transactions, next.transactions], [STORAGE_KEYS.deletedTransactionIds, next.deletedIds], [STORAGE_KEYS.cloudSyncMeta, next.metadata]],
+            stillValid: () => task.current() && transactionsLive.current === base && deletedTransactionIdsRef.current === deleted
+              && cloudSyncMetaRef.current === metadata && currencyForReturn.current === currency,
+            reserve: () => {
+              reservation = reservePrivateBoxMoneyLocalWrite(task.current, { transactions: base, deletedIds: deleted, currency, boxes });
+              return reservation.release;
+            },
+            committed: () => {
+              if (!reservation) throw new Error("private-box-source-changed");
+              reservation.publish(() => {
+                const latestMeta = mergeMutationMetadata(next.metadata, cloudSyncMetaRef.current);
+                setDeletedTransactionIds(next.deletedIds); setTransactions(next.transactions);
+                cloudSyncMetaRef.current = latestMeta; setCloudSyncMeta(latestMeta);
+                if (canonical(latestMeta) !== canonical(next.metadata)) saveJSON(STORAGE_KEYS.cloudSyncMeta, latestMeta);
+                if (returnReceipt.current && ids.includes(returnReceipt.current.personalTransactionId)) returnReceipt.current = null;
+              });
+            },
+          };
+        });
+      });
+    } catch { if (task.current()) showToast(t("settings.backupMovementConflict")); return false; }
   }
 
-  function deleteTransaction(id: number) {
-    const transaction = transactions.find((item) => item.id === id);
+  async function removeTransactions(ids: number[]) {
+    if (ids.some(id => pendingTransactionDeletes.current.has(id))) return false;
+    for (const id of ids) pendingTransactionDeletes.current.add(id);
+    try {
+      const saved = await commitTransactionMutation([], ids);
+      if (saved) void unlinkCreditPaymentsForHomeTransactions(ids);
+      else showToast(t("settings.backupMovementConflict"));
+      return saved;
+    } finally { for (const id of ids) pendingTransactionDeletes.current.delete(id); }
+  }
+
+  async function deleteTransaction(id: number) {
+    const transaction = transactionsLive.current.find((item) => item.id === id);
     if (transaction?.internalTransfer) {
       showToast(t("toast.transferManagedInSpace"));
-      return;
+      return false;
     }
-    removeTransactions([id]);
-    showToast(t("toast.transactionDeleted"));
+    const saved = await removeTransactions([id]);
+    if (saved) showToast(t("toast.transactionDeleted"));
+    return saved;
   }
 
-  function deleteLinkedTransferTransaction(id: number) {
-    removeTransactions([id]);
-    showToast(t("toast.transactionDeleted"));
+  async function deleteLinkedTransferTransaction(id: number) {
+    const saved = await removeTransactions([id]);
+    if (saved) showToast(t("toast.transactionDeleted"));
+    return saved;
   }
 
-  function repairLinkedTransferTransactions(upserts: Transaction[], deleteIds: number[] = []) {
-    assertPrivateBoxMoneyLocalIdle();
-    if (deleteIds.length) removeTransactions(deleteIds);
-    if (!upserts.length) return;
-    // Si Familia/Caja conserva el vínculo válido, su contraparte de Personal
-    // no puede seguir marcada como borrada: ese tombstone la ocultaría de
-    // nuevo durante la siguiente sincronización. Solo se retiran los IDs que
-    // acabamos de reconstruir desde una fuente enlazada y verificada.
-    const restoredIds = new Set(upserts.map(item => item.id));
-    deletedTransactionIdsRef.current = deletedTransactionIdsRef.current.filter(id => !restoredIds.has(id));
-    setDeletedTransactionIds(prev => {
-      const next = prev.filter(id => !restoredIds.has(id));
-      deletedTransactionIdsRef.current = next;
-      return next.length === prev.length ? prev : next;
-    });
-    setTransactions(prev => {
-      const replacements = new Map(upserts.map(item => [item.id, item]));
-      const repaired = prev.map(item => {
-        const replacement = replacements.get(item.id);
-        if (!replacement) return item;
-        // Un espacio cerrado no se reabre por una copia activa anterior.
-        if (item.internalTransferSettled && !replacement.internalTransferSettled) return item;
-        return { ...item, ...replacement,
-          updatedAt: Math.max(Date.now(), (item.updatedAt ?? 0) + 1, replacement.updatedAt ?? 0) };
-      });
-      const known = new Set(prev.map(item => item.id));
-      return [...upserts.filter(item => !known.has(item.id)).map(item => ({ ...item, updatedAt: Math.max(Date.now(), item.updatedAt ?? 0) })), ...repaired];
-    });
+  async function repairLinkedTransferTransactions(upserts: Transaction[], deleteIds: number[] = []) {
+    const saved = await commitTransactionMutation(upserts, deleteIds);
+    if (!saved) showToast(t("settings.backupMovementConflict"));
+    return saved;
   }
 
-  function deleteTransactions(ids: number[]) {
-    const protectedIds = new Set(transactions.filter((item) => item.internalTransfer).map((item) => item.id));
+  async function deleteTransactions(ids: number[]) {
+    const protectedIds = new Set(transactionsLive.current.filter((item) => item.internalTransfer).map((item) => item.id));
     const deletableIds = ids.filter((id) => !protectedIds.has(id));
     if (!deletableIds.length) {
       if (ids.length) showToast(t("toast.transferManagedInSpace"));
-      return;
+      return false;
     }
-    removeTransactions(deletableIds);
-    showToast(
+    const saved = await removeTransactions(deletableIds);
+    if (saved) showToast(
       t(deletableIds.length > 1 ? "toast.transactionsDeletedPlural" : "toast.transactionsDeleted", {
         count: deletableIds.length,
       })
     );
+    return saved;
   }
 
   function addOrUpdateGoal(g: Goal, requireExisting = false) {
     if (!isPremium) return false;
-    if ((requireExisting && !goalsLive.current.some(goal => goal.id === g.id)) || deletedGoalIds.includes(g.id)) {
+    if ((requireExisting && !goalsLive.current.some(goal => goal.id === g.id)) || deletedGoalIdsRef.current.includes(g.id) || goalWriteReserved.current) {
       showToast(t("common.missingTitle"));
       return false;
     }
@@ -3144,7 +3168,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const creationId = g.creationId ?? issuedCreationId(g.id) ?? existing?.creationId;
     g = { ...g, ...(creationId ? { creationId } : {}) };
     if (existing) {
-      try { assertSameCreation(existing, g); }
+      try {
+        g = identityForExplicitEdit(existing, { ...g, saved: existing.saved,
+          ...(existing.funding ? { funding: existing.funding } : {}) });
+        assertSameCreation(existing, g);
+      }
       catch { showToast(t("settings.backupMovementConflict")); return false; }
     }
     const actualizada = metaConEstadoActual(g);
@@ -3156,21 +3184,49 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return true;
   }
 
-  function deleteGoal(id: number) {
-    if (!isPremium) return;
-    setDeletedGoalIds((prev) => pruneDeletedGoalIds([...prev, id]));
-    setGoals((prev) => prev.filter((g) => g.id !== id));
-    showToast(t("toast.goalDeleted"));
+  async function deleteGoal(id: number) {
+    if (!isPremium) return false;
+    const owner = auth.currentUser?.uid ?? "", version = localSessionVersion.current;
+    const task = captureAccountTask(owner, () => version === localSessionVersion.current);
+    if (!isPremium || !task.current() || Platform.OS !== "android") return false;
+    const saved = await withLocalAccountOperation(() => saveJSONBatchNow(
+      [STORAGE_KEYS.goals, STORAGE_KEYS.deletedGoalIds, STORAGE_KEYS.cloudSyncMeta], () => {
+        const base = goalsLive.current, deleted = deletedGoalIdsRef.current, metadata = cloudSyncMetaRef.current;
+        const source = mergeGoalCopies(base, [], deleted, [], metadata, {});
+        const nextMeta = rememberDeletion(source.metadata, "goal", source.goals.filter(goal => goal.id === id), recordOriginOf);
+        const next = mergeGoalCopies(source.goals.filter(goal => goal.id !== id), [], [...new Set([...source.deletedIds, id])], [], nextMeta, {});
+        return {
+          entries: [[STORAGE_KEYS.goals, next.goals], [STORAGE_KEYS.deletedGoalIds, next.deletedIds], [STORAGE_KEYS.cloudSyncMeta, next.metadata]],
+          stillValid: () => task.current() && goalsLive.current === base && deletedGoalIdsRef.current === deleted && cloudSyncMetaRef.current === metadata,
+          reserve: () => { goalWriteReserved.current = true; return () => { goalWriteReserved.current = false; }; },
+          committed: () => {
+            if (!task.current()) return;
+            goalWritePublishing.current = true;
+            try {
+              const latestMeta = mergeMutationMetadata(next.metadata, cloudSyncMetaRef.current);
+              setGoals(next.goals); setDeletedGoalIds(next.deletedIds);
+              cloudSyncMetaRef.current = latestMeta; setCloudSyncMeta(latestMeta);
+              if (canonical(latestMeta) !== canonical(next.metadata)) saveJSON(STORAGE_KEYS.cloudSyncMeta, latestMeta);
+            } finally { goalWritePublishing.current = false; }
+          },
+        };
+      }));
+    if (task.current()) showToast(t(saved ? "toast.goalDeleted" : "settings.backupMovementConflict"));
+    return saved;
   }
 
   function addMoneyToGoal(amount: number, goalId: number) {
-    if (!isPremium) return;
-    const goal = goals.find((g) => g.id === goalId);
+    if (!isPremium || goalWriteReserved.current) return;
+    const goal = goalsLive.current.find((g) => g.id === goalId);
     if (!goal) return;
-    const newSaved = goal.saved + amount;
-    const justCompleted = !goal.completed && newSaved >= goal.target;
+    let next: Goal;
+    try {
+      if (amount <= 0) throw new Error("record-origin-conflict");
+      next = goalWithFundingChange(goal, amount, randomUUID());
+    } catch { showToast(t("settings.backupMovementConflict")); return; }
+    const justCompleted = !goal.completed && next.completed;
     setGoals((prev) =>
-      prev.map((g) => (g.id === goal.id ? { ...g, saved: newSaved, completed: newSaved >= g.target } : g))
+      prev.map((g) => (g.id === goal.id ? next : g))
     );
     if (justCompleted) {
       setCelebrateGoal(goal.name);
@@ -3181,12 +3237,16 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function withdrawMoneyFromGoal(goalId: number, amount: number) {
-    if (!isPremium) return;
-    const goal = goals.find((g) => g.id === goalId);
+    if (!isPremium || goalWriteReserved.current) return;
+    const goal = goalsLive.current.find((g) => g.id === goalId);
     if (!goal) return;
-    const newSaved = Math.max(0, goal.saved - amount);
+    let next: Goal;
+    try {
+      if (amount <= 0) throw new Error("record-origin-conflict");
+      next = goalWithFundingChange(goal, -amount, randomUUID());
+    } catch { showToast(t("settings.backupMovementConflict")); return; }
     setGoals((prev) =>
-      prev.map((g) => (g.id === goal.id ? { ...g, saved: newSaved, completed: newSaved >= g.target } : g))
+      prev.map((g) => (g.id === goal.id ? next : g))
     );
     showToast(t("toast.moneyWithdrawn"));
   }

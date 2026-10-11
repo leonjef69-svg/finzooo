@@ -6,7 +6,7 @@ const fallos = [];
 if (!contexto.includes('state === "active"') && !contexto.includes('state !== "active"')) {
   fallos.push("Fino no resincroniza al volver al primer plano.");
 }
-if (!contexto.includes("mergeTransactions(locales, cloud.transactions)")) {
+if (!contexto.includes("mergeTransactionCopies(transactionsLive.current, cloud.transactions")) {
   fallos.push("Los movimientos de otro dispositivo reemplazan la lista en vez de fusionarse.");
 }
 if (!contexto.includes("void sincronizarMovimientos();")) {
@@ -17,4 +17,4 @@ if (fallos.length) {
   fallos.forEach((fallo) => console.error("FALLA:", fallo));
   process.exit(1);
 }
-console.log("Todo bien: Fino recoge movimientos de otros dispositivos al entrar y regresar");
+console.log("Contrato estático de consulta/recepción original presente; funcionamiento probado aparte con el receptor y SDK, no Android.");

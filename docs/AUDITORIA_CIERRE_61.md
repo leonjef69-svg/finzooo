@@ -1,6 +1,7 @@
-# Control de cierre de los 61 hallazgos
+# Control de cierre de los 61 hallazgos originales y ampliaciones
 
-Revisión: 09/10/2026. Este índice conserva todos los IDs del informe de Claude.
+Revisión: 10/10/2026. Este índice conserva todos los IDs del informe de Claude
+y añade FINO-62, sin sustituir ni omitir los 61 originales.
 No es un porcentaje de correcciones ni declara la auditoría terminada.
 Las notas de código preparado remiten al seguimiento y a Git; no equivalen a
 pruebas físicas ni a publicación. «Revalidar» significa que falta contrastar
@@ -41,10 +42,36 @@ recomprobados al final. El propietario aceptó actualizar antes de sincronizar,
 no desplegar ni migrar datos reales. El mínimo global todavía necesita contrato
 e implementación/activación compatible; los bloqueos no certifican versiones APK.
 
+Ampliación del 10/10: contrato de origen/generaciones de borrado-recuperación,
+lote local confirmado antes de memoria y migrador Admin con relectura del
+destino preparados. FINO-62 nuevo: aportes independientes a una misma meta.
+Regresiones c6959c6 muestran aporte 10+20 perdido, borrado en memoria pese a
+disco lleno, carrera Admin que pisaba 30 con 10, referencia ausente aceptada
+y callbacks que salían antes del ACK; originales con IO adaptado, no API faltante.
+Final exit0: app 194 pruebas/8 auditores sin tarjetas, incluida UNA prueba del
+usuario no versionada; 193 previstas en Git limpio, no otro checkout ejecutado.
+Node 22: 64/64 seleccionadas fuera de Telegram/tarjetas. TypeScript/ESLint
+generales finales aprobados. SDK/HTTP/reglas final: 229/229, sin omisiones,
+cancelaciones ni fallos (.tmp/auditoria-punto1-sdk-final.log). El candidato
+anterior 226/227 falló por exceso de expresiones en conversión válida; corrección
+enfocada 7/7 y repetición integral aprobadas, SHA/recibo/tuplas/escape conservados
+y sello fresco de escritores 2 también en raíz 1. ADB sin dispositivo/emulador
+conectado; sin Android ni acreditación de integración Telegram.
+Los siete diagnósticos FINO-52 ahora se detienen conservando fuentes y FINO-62
+suma 30 en ambos órdenes. Las notas antiguas rojas quedan como antecedentes.
+FINO-52/62 no cerrados globalmente: faltan Android/antiguos/activación autorizada.
+Telegram EN PAUSA por decisión del propietario del 10/10; evidencia histórica
+conservada, no autorización para retomarlo. Tarjetas/Sentry externo fuera,
+rediseño diferido. No se publicaron app/reglas/funciones/HTML por este bloque.
+Orden posterior: terminar SOLO el punto 1 y parar; no iniciar los puntos 2/3.
+Punto 1 de preparación/código/pruebas locales TERMINADO; trabajo detenido.
+Este cierre local no equivale a cerrar FINO-52/62
+globalmente ni a una aceptación jurídica, publicación o prueba en teléfonos.
+
 | Hallazgo | Tema original | Situación y condición de cierre |
 |---|---|---|
 | FINO-01 | Cerrar sesión en el plan Gratis borra todos los datos del teléfono sin copia ni salida segura | Copia local por cuenta; 26c0e51. Falta recorrido Android A → B → A. |
-| FINO-02 | Dinero aportado desde Personal queda atrapado y el borrado de cuenta se bloquea cuando vence el Premium del dueño de Familia/Caja | Varias correcciones de aportes y conciliación. Faltan dos dispositivos, fallos de red y despliegue. |
+| FINO-02 | Dinero aportado desde Personal queda atrapado y el borrado de cuenta se bloquea cuando vence el Premium del dueño de Familia/Caja | Correcciones de aportes/conciliación preparadas. Último cierre espera el ACK local; fallo conserva ficha, reintento no repite cierre remoto confirmado y error RPC anterior permite lectura fresca. verificar-espera-borrados-cierres-real: originales/IO adaptado y regresión c6959c6. Faltan dos dispositivos, Android, fallos de red físicos y despliegue autorizado. |
 | FINO-03 | La fusión por bloques reemplaza enteros los presupuestos, categorías y calendario de la nube con la copia más reciente del teléfono | Fusión por elemento; 481220d. Falta actualización y dos dispositivos. |
 | FINO-04 | La regla 'la nube personal es solo Pro' existe solo en la app nueva y está incompleta: el servidor permite leer/escribir a cualquier cuenta verificada | Reglas Pro preparadas; ab1fbe2. Falta comprobar/publicar reglas y funciones juntas. |
 | FINO-05 | Las Cloud Functions usan Node.js 20: desde el 30/10/2026 no se podrán desplegar ni corregir y podrían deshabilitarse | Node 22 preparado y probado. CLI solo lectura devolvió success/0 funciones en dotero-2d430 el 09/10; no hay runtime observable en ese inventario. Falta activación coordinada y comprobarla, no significa que la app se detenga automáticamente por la fecha. |
@@ -94,7 +121,7 @@ e implementación/activación compatible; los bloqueos no certifican versiones A
 | FINO-49 | Familia y Cajas compartidas tienen contenido entre usuarios sin términos aceptados, ni denuncia ni bloqueo | PARCIAL: denuncias/responsable preparados y aceptación propia vigente en cliente/servidor/reglas. SDK/Admin/HTTP/Auth locales comprobados; guías PRUEBAS_DENUNCIAS_CONTENIDO.md y PRUEBAS_ACEPTACION_SERVIDOR.md. Configuración ausente rechaza sin anunciar recepción. Faltan SMTP/configuración/retención, bloqueo/moderación efectiva, Android/políticas/consolas/despliegue coordinado. No cumplimiento completo ni correo real. |
 | FINO-50 | Interruptores y botones de solo icono sin rol, estado ni etiqueta para lectores de pantalla | PARCIAL: controles comunes y resto de iconos pulsables/catálogo etiquetados en tres idiomas; funciones/acciones/JSX originales, inventario AST y regresiones comprobados. Guías PRUEBAS_ACCESIBILIDAD_CONTROLES y PRUEBAS_ACCESIBILIDAD_PANTALLAS. Catálogo conserva memorización y no anuncia URI/foto. Faltan foco/agrupación/contraste/tamaño/gestos, Android/TalkBack y entrega; no accesibilidad completa. |
 | FINO-51 | Cambiar la moneda o el país reetiqueta todo el historial sin convertir ni pedir confirmación, y cambia qué funciones aparecen | Preparado según decisión: moneda fija al configurar cuenta; país/idioma independientes; copias discrepantes no se unen ni suben. Manejadores/guardados originales con IO adaptado y SDK/reglas locales roja-verde. Guía PRUEBAS_MONEDA_FIJA.md. Falta Android, dos dispositivos y reglas/app publicadas; no conversión automática ni cambios en tarjetas. |
-| FINO-52 | Dos teléfonos de la misma cuenta pueden generar el mismo id de movimiento y uno se pierde al fusionar | ABIERTO: siete diagnósticos conservados, cuatro ahora bloqueados con fuentes intactas y TRES aún rojos (unión/plan frente a lápida numérica y manual antiguo sin origen). Importación/TS/Admin paran contradicciones identificadas; revisiones desconocidas no se rebajan en nube/Telegram/Admin. Altas reforzadas y marcas sin truncar previas siguen preparadas. Guías PRUEBAS_IDENTIDAD_CREACION, PRUEBAS_COMPATIBILIDAD_PENDIENTE y PRUEBAS_FORMATO_COPIA. Propietario aceptó actualización para sincronizar, pero mínimo global/protocolo de origen/versiones/restauración, antiguos ambiguos, migración/Android y activación siguen pendientes. No recuperar marcas perdidas, renumerar ni migrar a ciegas. |
+| FINO-52 | Dos teléfonos de la misma cuenta pueden generar el mismo id de movimiento y uno se pierde al fusionar | ABIERTO GLOBALMENTE; punto 1 de preparación/código/pruebas locales terminado. Origen y generaciones de borrado/recuperación, lote local antes de memoria, conciliación y Admin transaccional; revisiones desconocidas/antiguos ambiguos se detienen conservando fuentes. Guía PRUEBAS_CICLO_BORRADO_RESTAURACION: originales/regresiones y SDK integral final 229/229; siete diagnósticos se bloquean sin perder fuentes. Revisión 2/sellos frescos no certifican APK ni bloquean todas las lecturas antiguas. Faltan Android/dos equipos, revisión humana de antiguos ambiguos y activación coordinada autorizada; no renumerar, migrar ni quitar identidades para forzar éxito. Telegram en pausa, integración no acreditada. |
 | FINO-53 | El aviso del calendario no dice cuándo vence el pago | Fecha completa en aviso; ecc9aa9. Falta aviso real. |
 | FINO-54 | Importar, revisar duplicados, escanear boleta y aportar a una meta no impiden el doble toque | Manejadores de las cuatro pantallas protegidos y ejecutados en prueba, incluido reintento ante errores. Falta doble toque físico en Android. |
 | FINO-55 | Si el elemento ya no existe, varias pantallas quedan en blanco o actúan mientras se dibujan | Corregido y probado con componentes/manejadores originales: mensaje/Volver y edición con origen vigente; falta recorrido visual Android. |
@@ -104,6 +131,7 @@ e implementación/activación compatible; los bloqueos no certifican versiones A
 | FINO-59 | Herramientas locales con efectos sobre producción o sobre el propio código | Herramientas protegidas; 49f8d2c. Sentry apartado por decisión del propietario: envío apagado en la versión preparada. Reactivación/verificación externa excluidas hasta nueva autorización. |
 | FINO-60 | El cifrado local depende de crypto-js, librería que su autor declara sin mantenimiento | Cifrado sustituido compatible; 9067a37. Falta actualizar instalación Android con datos antiguos. |
 | FINO-61 | 14 pruebas no ejecutan el código de la app: 5 prueban gráficos que ya no existen y 9 usan una copia de la lógica | Pruebas falsas retiradas/reemplazadas; ec0923e. Cuatro recorridos de navegación aún pendientes. |
+| FINO-62 | Dos aportes independientes a la misma meta desde dos equipos sustituyen uno de los importes al fusionar | NUEVO; preparación/código/pruebas locales del punto 1 terminados. Diagnóstico original reproduce 10+20 conservando solo un aporte en c6959c6; operaciones independientes suman 30, reintentos no duplican y retiros incompatibles/cifras antiguas dudosas detienen la unión con fuentes intactas. verificar-aportes-metas-real ejecuta manejadores/fusión originales; SDK local integral final 229/229. Faltan Android/dos equipos, compatibilidad de copias antiguas y entrega/activación autorizadas. No cerrado globalmente ni recuperación de aportes ya perdidos. |
 
 ## Criterio de finalización
 
@@ -112,8 +140,9 @@ por decisión explícita. Los trámites/cuentas externas deben acreditarse y las
 pruebas Android ejecutarse. La publicación es un paso separado que requiere
 coordinación/autorización; un commit en GitHub no actualiza la app instalada.
 
-**Qué sigue:** FINO-52 y contrato compatible, costos/App Check y moderación,
-publicación legal coordinada y pruebas físicas. **Qué falta:** implementar la
-compatibilidad mínima ya aceptada y autorizar activación, Android, consolas,
-trámites/cobros/SMTP y entrega. Este archivo debe
-actualizarse al cerrar cada punto; no omitir los pendientes por ser de gravedad baja.
+**Qué sigue:** detenido tras terminar el punto 1 local, esperando nueva orden;
+no se comienzan puntos 2/3. **Qué falta:** Android/dos equipos/cuentas reales, antiguos ambiguos,
+checkpoint/cupos/App Check/métricas, SMTP/bloqueo/moderación, Billing, web legal,
+Privacidad/Play/trámites y autorización coordinada de entrega/activación.
+Este archivo debe actualizarse al cerrar cada punto; no omitir pendientes de
+gravedad baja ni declarar cerradas pruebas excluidas de Telegram/tarjetas/Sentry.

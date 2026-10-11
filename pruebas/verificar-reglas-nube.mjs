@@ -36,6 +36,14 @@ function ok(condicion, texto) {
 
 const reglas = fs.readFileSync(path.join(RAIZ, "firestore.rules"), "utf8");
 const cloud = fs.readFileSync(path.join(RAIZ, "utils/cloudSync.ts"), "utf8");
+// Contrato estático de conexión, NO ejecución de permisos. El SDK local
+// comprueba cuentas ajenas, Premium y cierre. Al introducir alias para reducir
+// evaluaciones, seguir únicamente el helper realmente llamado por allow.
+const personalWriteCall = /allow create, update: if validPersonalCopy\(request\.resource\.data\);/.test(reglas);
+const personalWriteStart = reglas.indexOf("function validPersonalCopy(next)");
+const personalWriteEnd = reglas.indexOf("allow create, update: if validPersonalCopy", personalWriteStart);
+const personalWrite = personalWriteCall && personalWriteStart >= 0 && personalWriteEnd > personalWriteStart
+  ? reglas.slice(personalWriteStart, personalWriteEnd) : "";
 
 console.log("\n--- LOS CAMPOS DE LA APP Y LOS DE LAS REGLAS SON LOS MISMOS ---");
 {
@@ -67,7 +75,9 @@ console.log("\n--- LOS CAMPOS DE LA APP Y LOS DE LAS REGLAS SON LOS MISMOS ---")
 
   // Y al revés: un campo en las reglas que la app ya no manda no rompe nada, pero es basura
   // que confunde a quien lea esto dentro de un año.
-  const sobran = deLasReglas.filter((c) => !deLaApp.includes(c));
+  const serverFields = ["recordSyncAt"];
+  ok(cloud.includes("recordSyncAt: serverTimestamp()"), "la marca técnica del servidor se envía al guardar");
+  const sobran = deLasReglas.filter((c) => !deLaApp.includes(c) && !serverFields.includes(c));
   ok(
     sobran.length === 0,
     `y ninguno de mas${sobran.length ? " — ya no se mandan: " + sobran.join(", ") : ""}`
@@ -94,7 +104,8 @@ console.log("\n--- Y LO DE SIEMPRE SIGUE CERRADO ---");
     /match \/\{document=\*\*\} \{[\s\S]*?allow read, write: if false;/.test(reglas),
     "todo lo que no este nombrado queda cerrado"
   );
-  const permisos = [...reglas.matchAll(/allow [a-z, ]+: if ([^;]+);/g)].map((m) => m[1]);
+  const permisos = [...reglas.matchAll(/allow [a-z, ]+: if ([^;]+);/g)].map((m) =>
+    m[1].trim() === "validPersonalCopy(request.resource.data)" ? personalWrite : m[1]);
   ok(
     /function verified\(\) \{[\s\S]*request\.auth != null[\s\S]*email_verified == true/.test(reglas),
     "el comprobador compartido exige sesión y correo confirmado"
@@ -114,11 +125,13 @@ console.log("\n--- Y LO DE SIEMPRE SIGUE CERRADO ---");
 console.log("\n--- PREMIUM NO SE PUEDE REGALAR DESDE EL CELULAR ---");
 {
   ok(
-    reglas.includes("request.resource.data.isPremium == false"),
+    reglas.includes("request.resource.data.isPremium == false")
+      || personalWrite.includes("next.isPremium == false"),
     "una cuenta nueva empieza sin Premium"
   );
   ok(
-    reglas.includes("request.resource.data.isPremium == resource.data.isPremium"),
+    reglas.includes("request.resource.data.isPremium == resource.data.isPremium")
+      || personalWrite.includes("next.isPremium == previous.isPremium"),
     "el celular no puede cambiar el Premium existente"
   );
 }

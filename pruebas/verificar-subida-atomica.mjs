@@ -9,7 +9,7 @@ if (!nube.includes("runTransaction")) {
 if (!/await (?:lease\.wait\(\(\) => )?transaction\.get\(ref\)/.test(nube)) {
   fallos.push("La lectura de la copia ocurre fuera de la operación atómica.");
 }
-if (!nube.includes("transaction.set(ref, siguiente)")) {
+if (!nube.includes("transaction.set(ref, { ...siguiente, recordSyncAt: serverTimestamp() })")) {
   fallos.push("La escritura de la copia ocurre fuera de la operación atómica.");
 }
 if (!nube.includes("if (pesa(siguiente) > LIMITE_FIRESTORE)")) {
@@ -21,4 +21,4 @@ if (fallos.length) {
   process.exit(1);
 }
 
-console.log("Subida atómica: dos dispositivos no se pisan al guardar a la vez.");
+console.log("Contrato estático: lectura/escritura/tamaño dentro de transacción y comprobación fresca; no acredita por sí solo concurrencia real.");

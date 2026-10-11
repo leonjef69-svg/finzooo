@@ -4,6 +4,8 @@ import vm from "node:vm";
 import ts from "typescript";
 import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
+import { randomUUID } from "node:crypto";
+import { recordOriginOriginal } from "./helpers/record-origin-original.mjs";
 const requireCore = createRequire(new URL("../utils/cajas.ts", import.meta.url));
 const requirePure = name => requireCore(name === "./utf8" ? "./utf8.ts" : name);
 
@@ -206,16 +208,67 @@ function screenHarness(premium = true) {
 
 // Reparación original: no pierde información ni reabre dinero consumido.
 const contextNode = select("contexts/AppDataContext.tsx", n => ts.isFunctionDeclaration(n) && n.name?.text === "repairLinkedTransferTransactions");
-const queued = [], marks = [], ctx = { ...moneyLocalWrite, deletedTransactionIdsRef: { current: [10] }, removeTransactions() {},
-  setDeletedTransactionIds: callback => marks.push(callback), setTransactions: callback => queued.push(callback), Date };
-vm.runInNewContext(js(contextNode.node.getText(contextNode.tree)), ctx);
-ctx.repairLinkedTransferTransactions([{ id: 10, internalTransfer: "box", amount: 120, updatedAt: 1 }]);
-let personal = [{ id: 10, internalTransfer: "box", amount: 100, updatedAt: 100, extraField: "conservar" }];
-for (const update of queued.splice(0)) personal = update(personal);
-assert.equal(personal[0].extraField, "conservar"); assert.ok(personal[0].updatedAt > 100);
-assert.deepEqual(Array.from(ctx.deletedTransactionIdsRef.current), []);
-ctx.repairLinkedTransferTransactions([{ id: 10, internalTransfer: "box", amount: 200 }]);
-personal[0].internalTransferSettled = true; personal[0].internalTransferConsumed = 120;
-for (const update of queued.splice(0)) personal = update(personal);
-assert.equal(personal[0].amount, 120); assert.equal(personal[0].internalTransferConsumed, 120);
+const financial = recordOriginOriginal();
+const contextTree = ts.createSourceFile("contexts/AppDataContext.tsx", read("contexts/AppDataContext.tsx"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+let commitSource = "";
+function findCommit(node) {
+  if (ts.isFunctionDeclaration(node) && node.name?.text === "commitTransactionMutation") commitSource = node.getText(contextTree);
+  ts.forEachChild(node, findCommit);
+}
+findCommit(contextTree);
+function repairHarness(rows, deleted = [], metadata = {}) {
+  // Solo IO, sesión y setters se adaptan. Preparación, journal y reserva son
+  // los originales; no hay una segunda implementación de la reparación.
+  const keys = { transactions: "transactions", deletedTransactionIds: "deleted", cloudSyncMeta: "meta", cajasDinero: "boxes" };
+  const disk = new Map([[keys.transactions, plain(rows)], [keys.deletedTransactionIds, plain(deleted)], [keys.cloudSyncMeta, plain(metadata)], [keys.cajasDinero, data()]]);
+  const ctx = { ...moneyLocalWrite, ...financial, ready: true, hasOnboarded: true, Platform: { OS: "android" },
+    auth: { currentUser: { uid: "A" } }, localSessionVersion: { current: 1 },
+    transactionsLive: { current: plain(rows) }, deletedTransactionIdsRef: { current: plain(deleted) }, cloudSyncMetaRef: { current: plain(metadata) },
+    currencyForReturn: { current: "PEN" }, returnReceipt: { current: null }, randomUUID, issuedCreationId: () => undefined,
+    STORAGE_KEYS: keys, CAJAS_VACIAS: data([]), leerCajasEnMemoria: () => data(), canonical: JSON.stringify,
+    captureAccountTask: () => ({ current: () => true, wait: work => work() }), withLocalAccountOperation: work => work(),
+    flushPendingSaves: async () => {}, hasUnreadableLocalData: () => false, loadJSON: async (key, fallback) => disk.get(key) ?? fallback,
+    saveJSON: (key, value) => disk.set(key, plain(value)), setCloudSyncMeta() {}, showToast() {}, t: key => key,
+    setDeletedTransactionIds: value => { ctx.deletedTransactionIdsRef.current = typeof value === "function" ? value(ctx.deletedTransactionIdsRef.current) : value; },
+    setTransactions: value => { ctx.transactionsLive.current = typeof value === "function" ? value(ctx.transactionsLive.current) : value; },
+    removeTransactions() {}, Date,
+    saveJSONBatchNow: async (_keys, prepare) => {
+      try {
+        const prepared = await prepare(); if (!prepared.stillValid()) return false;
+        const release = prepared.reserve?.();
+        try { for (const [key, value] of prepared.entries) disk.set(key, plain(value)); prepared.committed?.(); return true; }
+        finally { release?.(); }
+      } catch { return false; }
+    } };
+  vm.runInNewContext(js(commitSource + "\n" + contextNode.node.getText(contextNode.tree)), ctx);
+  return ctx;
+}
+const linkedPrior = { id: 10, type: "expense", internalTransfer: "box", internalTransferLink: row.id, internalTransferSpaceId: box.id,
+  amount: 100, updatedAt: 100, extraField: "conservar" };
+{
+  const ctx = repairHarness([linkedPrior]);
+  await ctx.repairLinkedTransferTransactions([{ id: linkedPrior.id, type: linkedPrior.type, internalTransfer: linkedPrior.internalTransfer,
+    internalTransferLink: linkedPrior.internalTransferLink, internalTransferSpaceId: linkedPrior.internalTransferSpaceId, amount: 120, updatedAt: 1 }]);
+  let personal = ctx.transactionsLive.current;
+  assert.equal(personal[0].extraField, "conservar"); assert.ok(personal[0].updatedAt > 100);
+  const settled = { ...personal[0], internalTransferSettled: true, internalTransferConsumed: 120 };
+  const closed = repairHarness([settled]);
+  await closed.repairLinkedTransferTransactions([{ ...linkedPrior, amount: 200 }]);
+  personal = closed.transactionsLive.current;
+  assert.equal(personal[0].amount, 120); assert.equal(personal[0].internalTransferConsumed, 120);
+}
+{
+  const metadata = financial.rememberTransactionDeletion({}, [linkedPrior]);
+  const ctx = repairHarness([], [10], metadata);
+  await ctx.repairLinkedTransferTransactions([linkedPrior]);
+  assert.equal(ctx.transactionsLive.current[0].amount, 100);
+  assert.deepEqual(Array.from(ctx.deletedTransactionIdsRef.current), []);
+  if (!baseline) assert.ok(ctx.transactionsLive.current[0].restorationId, "la restauración comprobada lleva una generación nueva");
+}
+{
+  const ctx = repairHarness([], [10]);
+  await ctx.repairLinkedTransferTransactions([linkedPrior]);
+  assert.equal(ctx.transactionsLive.current.length, 0, "una marca numérica antigua sin origen no permite inventar una restauración");
+  assert.deepEqual(Array.from(ctx.deletedTransactionIdsRef.current), [10], "el intento ambiguo conserva la marca original");
+}
 console.log("Cajas privadas: versión reciente, conflicto sin reemplazo, servidor, datos inválidos, caché/sesión y aportes consumidos protegidos.");

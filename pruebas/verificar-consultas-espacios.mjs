@@ -43,6 +43,7 @@ function familyHarness() {
   const state = {}, calls = [], cache = new Map();
   const scope = { auth, accountUid: "A", accountSession: 1, getAccountStorageSession, captureAccountTask,
     mounted: { current: true }, reloadId: { current: 0 }, confirmedReload: { current: 0 }, actionLock: { current: false },
+    cierresPendientes: { current: new Set() }, cierresConfirmados: { current: new Set() },
     tRef: { current: key => key }, toastRef: { current: key => calls.push(key) }, showToast: key => calls.push(key),
     t: key => key, spaceErrorKey: () => "error", familiaEnMemoria: cache,
     listarFamilias: async () => [{ id: "f", nombre: "Casa" }], cargarFamiliaActiva: async () => null,

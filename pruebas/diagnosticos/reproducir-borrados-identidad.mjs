@@ -4,9 +4,11 @@ import ts from "typescript";
 import { createRequire } from "node:module";
 import { randomUUID } from "node:crypto";
 import { createSourceReader } from "../helpers/source-reader.mjs";
+import { recordOriginOriginal } from "../helpers/record-origin-original.mjs";
 
-// Diagnóstico pendiente: se espera ROJO hasta completar identidad de borrados.
-// Está fuera del corredor aprobado. Solo registros ficticios en memoria;
+// Diagnóstico histórico conservado: estos siete casos deben bloquearse.
+// También corre desde verificar-borrados-ambiguos-real. Esto NO completa
+// el protocolo de borrado/restauración. Solo registros ficticios en memoria;
 // no usa Firebase, credenciales, almacenamiento, tarjetas ni migración real.
 const read = createSourceReader();
 const cache = new Map();
@@ -17,6 +19,7 @@ function load(file, dependencies = {}) {
   vm.runInNewContext(ts.transpile(read(file), {
     target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS,
   }), { exports, require: name => {
+  if (["@/utils/recordOrigin", "@/utils/goalFunding", "@/utils/recordMerge"].includes(name)) return recordOriginOriginal();
     assert.ok(name.startsWith("@/"), "solo dependencias propias originales");
     return load(`${name.slice(2)}.ts`);
   }, ...dependencies });
@@ -77,4 +80,4 @@ check("manual antiguo ambiguo: no escoger por número sin revisión", () => merg
 assert.equal(JSON.stringify(movement), before, "ningún módulo cambia los objetos originales");
 console.log(JSON.stringify({ diagnostic: "FINO-52 abierto: identidad de borrados/antiguos", results }, null, 2));
 assert.ok(results.every(result => result.passed),
-  "Diagnóstico ROJO esperado y fuera del conteo aprobado: falta protocolo compatible de borrados y revisión de antiguos ambiguos; NO ejecutar una migración real para ocultarlo.");
+  "Una copia ambigua todavía se descarta: conservar fuentes, NO ejecutar una migración real para ocultarlo.");

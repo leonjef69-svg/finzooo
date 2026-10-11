@@ -7,6 +7,12 @@ const funcion = fs.readFileSync("functions/src/premium-trial.js", "utf8");
 const servidor = fs.readFileSync("functions/index.js", "utf8");
 const cliente = fs.readFileSync("utils/premiumTrialCloud.ts", "utf8");
 const fallos = [];
+// Contratos estáticos, no ejecución de permisos. Seguir el helper que allow
+// realmente invoca; las pruebas SDK verifican los intentos de conceder/reiniciar.
+const connected = /allow create, update: if validPersonalCopy\(request\.resource\.data\);/.test(reglas);
+const start = reglas.indexOf("function validPersonalCopy(next)");
+const end = reglas.indexOf("allow create, update: if validPersonalCopy", start);
+const copy = connected && start >= 0 && end > start ? reglas.slice(start, end) : "";
 
 if (!nube.includes("premiumTrialStartedAt?: number")) fallos.push("La nube no guarda el uso de la prueba.");
 if (!contexto.includes("premiumTrialStartedAt: pruebaInicio ?? undefined")) fallos.push("Activar la prueba no la sube con la cuenta.");
@@ -14,8 +20,8 @@ if (!contexto.includes("cloud.premiumTrialStartedAt ?? pruebaInicio")) fallos.pu
 if (!cliente.includes('"activatePremiumTrial"')) fallos.push("La app no pide la prueba al servidor.");
 if (!servidor.includes("exports.activatePremiumTrial = onCall")) fallos.push("Falta la función que concede la prueba.");
 if (!funcion.includes("runTransaction") || !funcion.includes("premiumTrialStartedAt")) fallos.push("La concesión no es atómica.");
-if (!reglas.includes("!('premiumTrialStartedAt' in request.resource.data)")) fallos.push("El teléfono todavía podría iniciar la prueba.");
-if (!reglas.includes("== resource.data.premiumTrialStartedAt")) fallos.push("El celular podría borrar o reiniciar una prueba ya usada.");
+if (!reglas.includes("!('premiumTrialStartedAt' in request.resource.data)") && !copy.includes("!('premiumTrialStartedAt' in next)")) fallos.push("El teléfono todavía podría iniciar la prueba.");
+if (!reglas.includes("== resource.data.premiumTrialStartedAt") && !copy.includes("== previous.premiumTrialStartedAt")) fallos.push("El celular podría borrar o reiniciar una prueba ya usada.");
 
 if (fallos.length) {
   fallos.forEach((fallo) => console.error("FALLA:", fallo));

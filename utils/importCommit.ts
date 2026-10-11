@@ -1,5 +1,6 @@
 import type { Transaction } from "@/types";
 import { assertNoIdentifiedDeletionOverlap, assertSameTransactionOrigin } from "@/utils/mergeTransactions";
+import { identityForExplicitEdit } from "@/utils/recordOrigin";
 
 /** Preparar el lote completo antes de cambiar la lista: un conflicto no
  * guarda solo algunos movimientos ni vuelve a crear un movimiento borrado. */
@@ -16,13 +17,14 @@ export function applyImportedTransactions(
   const replacements = new Map<number, Transaction>();
   for (const replacement of toReplace) {
     const existing = known.get(replacement.id);
-    if (existing) assertSameTransactionOrigin(existing, replacement);
     if (!existing || deleted.has(replacement.id) || existing.internalTransfer ||
       (existing.updatedAt ?? 0) > (replacement.updatedAt ?? 0)) {
       throw new Error("import-source-changed");
     }
+    const prepared = identityForExplicitEdit(existing, replacement);
+    assertSameTransactionOrigin(existing, prepared);
     replacements.set(replacement.id, {
-      ...replacement,
+      ...prepared,
       updatedAt: Math.max(now, (existing.updatedAt ?? 0) + 1),
     });
   }

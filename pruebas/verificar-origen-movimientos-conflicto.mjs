@@ -5,6 +5,7 @@ import { build } from "esbuild";
 import ts from "typescript";
 import { createSourceReader } from "./helpers/source-reader.mjs";
 import { handlerOriginal } from "./helpers/handler-original.mjs";
+import { recordOriginOriginal } from "./helpers/record-origin-original.mjs";
 
 const read = createSourceReader({ revision: process.env.FINO_TEST_MOVEMENT_ORIGIN_BASELINE ?? "" });
 const root = process.cwd();
@@ -24,7 +25,7 @@ const result = await build({ stdin: { contents: `
   } }] });
 const module = { exports: {} };
 new Function("module", "exports", "require", result.outputFiles[0].text)(module, module.exports, createRequire(import.meta.url));
-const api = module.exports;
+const api = { ...module.exports, ...recordOriginOriginal() };
 const movement = (extra = {}) => ({ id: 100, updatedAt: 10, type: "expense", amount: 10,
   category: "servicios", date: "2026-10-08", method: "cash", description: "Original", notes: "", ...extra });
 const first = movement({ captureId: "aviso-A" });
@@ -63,10 +64,9 @@ for (const other of [
 ]) conflict(() => api.mergeTransactions([linked], [other]));
 assert.equal(api.mergeTransactions([linked], [{ ...linked, amount: 5, updatedAt: 20 }])[0].amount, 5,
   "una corrección del mismo aporte sigue permitida, sin renumerarlo");
-// Compatibilidad explícita, NO protección probada: los manuales/metas antiguos
-// carecen de identidad de creación y FINO-52 sigue abierto para ellos.
-assert.equal(api.mergeTransactions([movement()], [movement({ updatedAt: 20, amount: 30 })])[0].amount, 30);
-assert.equal(api.mergeHistoryEntries([{ id: 100, deleted: false, transaction: first }], [{ id: 100, deleted: true }])[0].deleted, true);
+// Antiguos diferentes requieren revisión; una fecha no prueba una edición.
+conflict(() => api.mergeTransactions([movement()], [movement({ updatedAt: 20, amount: 30 })]));
+conflict(() => api.mergeHistoryEntries([{ id: 100, deleted: false, transaction: first }], [{ id: 100, deleted: true }]));
 
 // Recepción y restauración originales: no aplicar ni perfil/presupuestos
 // antes de descubrir que la unión financiera está en conflicto.
@@ -86,7 +86,7 @@ const writes = [], notices = [];
 const deps = { ...api, auth: { currentUser: { uid: "A" } },
   privateBoxCloudResponseCurrent: () => true, cloudFieldsRef: { current: local },
   transactionsLive: { current: [first] }, cloudSyncMetaRef: { current: {} },
-  goalsLive: { current: [] },
+  goalsLive: { current: [] }, deletedTransactionIdsRef: { current: [] },
   localSessionVersion: { current: 0 }, tRef: { current: key => key },
   loadCloudData: async () => incoming, CloudPremiumRequiredError: class extends Error {},
   setRespaldoFallo: reason => notices.push(reason),

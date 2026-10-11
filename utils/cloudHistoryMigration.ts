@@ -1,14 +1,17 @@
 import type { Transaction } from "@/types";
 import { utf8ByteLength } from "@/utils/utf8";
 import { assertNoIdentifiedDeletionOverlap, assertSameTransactionOrigin } from "@/utils/mergeTransactions";
+import { recordOriginOf, recordDeletionIdentity } from "@/utils/recordOrigin";
+import { mergeTransactionCopies, mutationInfo, mutationKey, metadataForRecord, metadataByRecord, mergeMutationMetadata } from "@/utils/recordMerge";
 
 /**
  * Operaciones puras del historial por documentos. La migración de una cuenta
  * real es administrativa y manual; importar este módulo nunca la ejecuta.
  */
-export type HistoryEntry =
-  | { id: number; deleted: true; transaction?: never }
-  | { id: number; deleted: false; transaction: Transaction };
+export type HistoryEntry = (
+  | { id: number; deleted: true; origin?: string; transaction?: never }
+  | { id: number; deleted: false; transaction: Transaction }
+) & { mutationMeta?: Record<string, number>; recordIdentity?: Record<string, string> };
 
 export class UnsupportedHistoryFormatError extends Error {
   readonly code = "cloud/history-format-unsupported";
@@ -31,7 +34,7 @@ export class InvalidRecordIdentityFormatError extends Error {
  * La activación de una revisión nueva requiere app/reglas/servidor juntos. */
 export function assertKnownRecordIdentityFormat(data: { recordIdentityFormat?: unknown } | null): void {
   const format = data?.recordIdentityFormat;
-  if (format === undefined || format === 1) return;
+  if (format === undefined || format === 1 || format === 2) return;
   if (typeof format !== "number" || !Number.isSafeInteger(format) || format < 1) throw new InvalidRecordIdentityFormatError();
   throw new UnsupportedHistoryFormatError();
 }
@@ -53,14 +56,25 @@ export function historyDocumentId(id: number): string {
 }
 
 /** Los borrados conocidos prevalecen sobre copias antiguas del movimiento. */
-export function stageLegacyHistory(transactions: Transaction[], deletedIds: number[]): HistoryEntry[] {
-  assertNoIdentifiedDeletionOverlap(transactions, deletedIds);
+export function stageLegacyHistory(transactions: Transaction[], deletedIds: number[], deletedOrigins: Record<string, string> = {}, metadata: Record<string, number> = {}): HistoryEntry[] {
+  let source = metadata;
+  for (const id of deletedIds) if (deletedOrigins[id] && !mutationInfo(source, "transaction").has(id)) {
+    source = { ...source, [mutationKey("transaction", "delete", id, deletedOrigins[id], "")]: 0 };
+  }
+  const known = mutationInfo(source, "transaction"), metadataGroups = metadataByRecord(source, "transaction");
+  assertNoIdentifiedDeletionOverlap(transactions, deletedIds.filter(id => !known.has(id)));
   const rows: HistoryEntry[] = transactions.map((transaction) => ({
     id: transaction.id,
     deleted: false,
     transaction,
+    ...(known.has(transaction.id) ? { mutationMeta: metadataGroups.get(transaction.id)! } : {}),
   }));
-  rows.push(...deletedIds.map((id) => ({ id, deleted: true as const })));
+  rows.push(...deletedIds.map((id) => {
+    const origin = deletedOrigins[id];
+    if (origin !== undefined && (typeof origin !== "string" || !origin)) throw new InvalidRecordIdentityFormatError();
+    return { id, deleted: true as const, ...(origin ? { origin } : {}),
+      ...(known.has(id) ? { mutationMeta: metadataGroups.get(id)! } : {}) };
+  }));
   return mergeHistoryEntries([], rows);
 }
 
@@ -71,51 +85,87 @@ export function planLocalHistoryChanges(
   transactions: Transaction[],
   deletedIds: number[],
   baseline: HistoryEntry[],
+  deletedOrigins: Record<string, string> = {},
+  metadata: Record<string, number> = {},
 ): HistoryEntry[] {
-  const previous = new Map(baseline.map((entry) => [entry.id, entry]));
-  const changes: HistoryEntry[] = [];
-  for (const entry of stageLegacyHistory(transactions, deletedIds)) {
-    const old = previous.get(entry.id);
-    if (old?.deleted) continue;
-    if (entry.deleted) {
-      changes.push(entry);
-      continue;
-    }
-    if (!old) {
-      changes.push(entry);
-      continue;
-    }
-    assertSameTransactionOrigin(old.transaction, entry.transaction);
-    const before = old.transaction.updatedAt ?? 0;
-    const after = entry.transaction.updatedAt ?? 0;
-    if (after > before) changes.push(entry);
-    else if (after === before && canonical(entry.transaction) !== canonical(old.transaction)) {
-      throw new Error("historial-edicion-en-conflicto");
-    }
-  }
-  return changes;
+  const previous = new Map(baseline.map(entry => [entry.id, entry]));
+  const local = stageLegacyHistory(transactions, deletedIds, deletedOrigins, metadata);
+  return mergeHistoryEntries(baseline, local).filter(entry => canonical(entry) !== canonical(previous.get(entry.id)));
 }
 
 /** Dos teléfonos pueden aportar cambios distintos; un borrado nunca resucita. */
 export function mergeHistoryEntries(existing: HistoryEntry[], incoming: HistoryEntry[]): HistoryEntry[] {
-  const byId = new Map<number, HistoryEntry>();
-  for (const entry of [...existing, ...incoming]) {
-    historyDocumentId(entry.id);
-    const previous = byId.get(entry.id);
-    if (previous && !previous.deleted && !entry.deleted) {
-      assertSameTransactionOrigin(previous.transaction, entry.transaction);
+  const a = historyEntryLists(existing), b = historyEntryLists(incoming);
+  // No escoger al azar dos ediciones con la misma versión/generación.
+  const known = new Map<number, Transaction>();
+  for (const record of [...a.transactions, ...b.transactions]) {
+    const previous = known.get(record.id);
+    if (previous && (previous.restorationId || "") === (record.restorationId || "")
+      && (previous.updatedAt || 0) === (record.updatedAt || 0) && canonical(previous) !== canonical(record)) {
+      assertSameTransactionOrigin(previous, record); throw new Error("historial-edicion-en-conflicto");
     }
-    if (previous && !previous.deleted && !entry.deleted &&
-      (entry.transaction.updatedAt ?? 0) === (previous.transaction.updatedAt ?? 0) &&
-      canonical(entry.transaction) !== canonical(previous.transaction)) {
-      throw new Error("historial-edicion-en-conflicto");
-    }
-    if (!previous || entry.deleted || (!previous.deleted &&
-      (entry.transaction.updatedAt ?? 0) >= (previous.transaction.updatedAt ?? 0))) {
-      byId.set(entry.id, entry);
-    }
+    known.set(record.id, record);
   }
-  return [...byId.values()].sort((a, b) => a.id - b.id);
+  const result = mergeTransactionCopies(a.transactions, b.transactions, a.deletedIds, b.deletedIds, a.syncUpdatedAt, b.syncUpdatedAt);
+  const info = mutationInfo(result.metadata, "transaction"), groups = metadataByRecord(result.metadata, "transaction");
+  const identities = new Map<number, Record<string, string>>();
+  for (const entry of [...existing, ...incoming]) {
+    const state = info.get(entry.id);
+    const identity = entry.deleted ? entry.recordIdentity : state?.deleted ? recordDeletionIdentity(entry.transaction) : undefined;
+    if (identity && state?.deleted && recordOriginOf({ id: entry.id, ...identity }) === state.origin
+      && (identity.restorationId || "") === state.generation) identities.set(entry.id, identity);
+  }
+  const rows: HistoryEntry[] = result.transactions.map(transaction => ({ id: transaction.id, deleted: false, transaction,
+    ...(info.has(transaction.id) ? { mutationMeta: groups.get(transaction.id)! } : {}) }));
+  rows.push(...result.deletedIds.map(id => ({ id, deleted: true as const,
+    ...(info.has(id) ? { origin: info.get(id)!.origin, mutationMeta: groups.get(id)! } : {}),
+    ...(identities.has(id) ? { recordIdentity: identities.get(id)! } : {}) })));
+  return rows.sort((a, b) => a.id - b.id);
+}
+
+export function historyEntryLists(entries: HistoryEntry[]): { transactions: Transaction[]; deletedIds: number[]; syncUpdatedAt: Record<string, number> } {
+  const transactions: Transaction[] = [], deletedIds: number[] = [];
+  let syncUpdatedAt: Record<string, number> = {};
+  for (const entry of entries) {
+    historyDocumentId(entry.id);
+    let metadata = entry.mutationMeta || {};
+    const own = metadataForRecord(metadata, "transaction", entry.id);
+    if (Object.keys(own).length !== Object.keys(metadata).length) throw new InvalidRecordIdentityFormatError();
+    const state = mutationInfo(metadata, "transaction").get(entry.id);
+    if (entry.recordIdentity) {
+      const identity = entry.recordIdentity;
+      if (!entry.deleted || typeof identity !== "object" || Array.isArray(identity)
+        || Object.keys(identity).some(key => !["creationId", "captureId", "internalTransferLink", "internalTransfer", "internalTransferSpaceId", "restorationId", "restorationParent"].includes(key))
+        || Object.values(identity).some(value => typeof value !== "string")
+        || !entry.origin || recordOriginOf({ id: entry.id, ...identity }) !== entry.origin
+        || state && (identity.restorationId || "") !== state.generation) throw new Error("record-origin-conflict");
+    }
+    if (entry.deleted && state && (!state.deleted || entry.origin !== undefined && state.origin !== entry.origin)) throw new Error("record-origin-conflict");
+    if (entry.deleted && entry.origin && !state) {
+      metadata = { ...metadata, [mutationKey("transaction", "delete", entry.id, entry.origin, "")]: 0 };
+    }
+    for (const [key, value] of Object.entries(metadata)) syncUpdatedAt[key] = Math.max(syncUpdatedAt[key] || 0, value);
+    if (entry.deleted) deletedIds.push(entry.id); else transactions.push(entry.transaction);
+  }
+  return { transactions, deletedIds, syncUpdatedAt: mergeMutationMetadata(syncUpdatedAt) };
+}
+
+/** La marca histórica solo tiene un número. No acredita el borrado de una
+ * creación identificada, ni autoriza retirar su original durante migración.
+ * Es un freno conservador, NO un protocolo de restauración ya completado. */
+function assertUnambiguousHistoryDeletion(a: HistoryEntry, b: HistoryEntry): void {
+  if (a.mutationMeta || b.mutationMeta) { mergeHistoryEntries([a], [b]); return; }
+  if (a.deleted && b.deleted && (a.origin || b.origin) && a.origin !== b.origin) throw new Error("record-origin-conflict");
+  if (a.deleted === b.deleted) return;
+  const mark = a.deleted ? a : b;
+  const live = a.deleted ? b : a;
+  if (mark.deleted && mark.origin && !live.deleted) {
+    if (mark.origin !== recordOriginOf(live.transaction)) throw new Error("record-origin-conflict");
+    return;
+  }
+  if (!live.deleted && (live.transaction.creationId || live.transaction.captureId || live.transaction.internalTransferLink)) {
+    throw new Error("record-origin-conflict");
+  }
 }
 
 /** Lotes acotados tanto por cantidad de documentos como por bytes. */
@@ -157,6 +207,11 @@ export function missingFromShadow(source: HistoryEntry[], shadow: HistoryEntry[]
   const missing: number[] = [];
   for (const entry of mergeHistoryEntries([], source)) {
     const stored = persisted.get(entry.id);
+    if (stored && (stored.mutationMeta || entry.mutationMeta)) {
+      if (canonical(mergeHistoryEntries([stored], [entry])[0]) !== canonical(stored)) missing.push(entry.id);
+      continue;
+    }
+    if (stored) assertUnambiguousHistoryDeletion(stored, entry);
     if (!stored || (entry.deleted && !stored.deleted)) {
       missing.push(entry.id);
       continue;
@@ -178,6 +233,8 @@ export type LegacyHistorySnapshot = {
   revision: string;
   transactions: Transaction[];
   deletedIds: number[];
+  syncUpdatedAt?: Record<string, number>;
+  deletedOrigins?: Record<string, string>;
 };
 
 export type HistoryShadowStore = {
@@ -197,7 +254,7 @@ export type HistoryShadowResult =
  */
 export async function stageHistoryShadow(store: HistoryShadowStore): Promise<HistoryShadowResult> {
   const initial = await store.readLegacy();
-  const source = stageLegacyHistory(initial.transactions, initial.deletedIds);
+  const source = stageLegacyHistory(initial.transactions, initial.deletedIds, initial.deletedOrigins ?? {}, initial.syncUpdatedAt ?? {});
   const existing = await store.readShadow();
   const missingIds = new Set(missingFromShadow(source, existing));
   const pending = source.filter((entry) => missingIds.has(entry.id));

@@ -1,4 +1,4 @@
-import { deleteDoc, doc, getDoc, runTransaction } from "firebase/firestore";
+import { deleteDoc, doc, getDoc, runTransaction, serverTimestamp } from "firebase/firestore";
 import { db } from "@/utils/firebase";
 import { borrarNegocioDeLaNube } from "@/utils/cloudNegocio";
 import { borrarCajasDeLaNube } from "@/utils/cloudCajas";
@@ -9,11 +9,8 @@ import type { Goal, Transaction } from "@/types";
 import type { PagoProgramado } from "@/utils/calendarioPagos";
 import { utf8ByteLength } from "@/utils/utf8";
 import {
-  mergeGoals,
-  mergeTransactions,
-  pruneDeletedGoalIds,
-  pruneDeletedTransactionIds,
-} from "@/utils/mergeTransactions";
+  mergeGoalCopies, mergeTransactionCopies, mergeMutationMetadata,
+} from "@/utils/recordMerge";
 import { assertMatchingAccountCurrencies, mergeCloudFields } from "@/utils/cloudFieldMerge";
 import { assertKnownRecordIdentityFormat, assertLegacyHistoryFormat, InvalidRecordIdentityFormatError, UnsupportedHistoryFormatError } from "@/utils/cloudHistoryMigration";
 import { clearHistoryV2Cache, loadHistoryV2, saveHistoryV2 } from "@/utils/cloudHistoryV2";
@@ -23,7 +20,7 @@ import { PrivateBoxSyncError, withPrivateBoxCloudOperation, type PrivateBoxCloud
 
 export type CloudData = {
   /** Impide que una app anterior retire identidades nuevas al volver a subir. */
-  recordIdentityFormat?: 1;
+  recordIdentityFormat?: 1 | 2;
   /** Formato que fusiona campos y conserva marcas de borrado por elemento. */
   syncFormat?: 1 | 2;
   historyFormat?: 1 | 2;
@@ -112,6 +109,9 @@ export async function loadCloudData(
     assertKnownRecordIdentityFormat(data);
     const history = data.historyFormat === 2 ? await loadHistoryV2(uid, lease) : null;
     if (!history) assertLegacyHistoryFormat(data);
+    const sourceMetadata = mergeMutationMetadata(data.syncUpdatedAt || {}, history?.syncUpdatedAt || {});
+    const records = mergeTransactionCopies(history?.transactions ?? data.transactions ?? [], [], history?.deletedIds ?? data.deletedTransactionIds ?? [], [], sourceMetadata);
+    const goals = mergeGoalCopies(data.goals || [], [], data.deletedGoalIds || [], [], sourceMetadata);
     if (!data?.hasOnboarded) return null;
     return lease.remember<CloudData>({
       syncFormat: data.syncFormat === 2 ? 2 : 1,
@@ -122,10 +122,10 @@ export async function loadCloudData(
       userLanguage: data.userLanguage || "es",
       budgets: data.budgets || {},
       categoryBudgets: data.categoryBudgets || {},
-      transactions: history?.transactions ?? data.transactions ?? [],
-      deletedTransactionIds: history?.deletedIds ?? data.deletedTransactionIds ?? [],
-      goals: data.goals || [],
-      deletedGoalIds: data.deletedGoalIds || [],
+      transactions: records.transactions,
+      deletedTransactionIds: records.deletedIds,
+      goals: goals.goals,
+      deletedGoalIds: goals.deletedIds,
       // SE LEE, y no solo se escribe. Ya pasó el 07/08 con las categorías propias: estaban
       // en el tipo, se subían bien, y aquí no se leían — así que al entrar desde otro
       // celular volvían vacías, sin dar ningún error.
@@ -149,8 +149,8 @@ export async function loadCloudData(
       categoryOverrides: data.categoryOverrides || {},
       categoriasPropias: data.categoriasPropias || [],
       iconosFavoritos: data.iconosFavoritos || [],
-      syncUpdatedAt: data.syncUpdatedAt || {},
-      recordIdentityFormat: data.recordIdentityFormat === 1 ? 1 : undefined,
+      syncUpdatedAt: sourceMetadata,
+      recordIdentityFormat: data.recordIdentityFormat === 2 ? 2 : data.recordIdentityFormat === 1 ? 1 : undefined,
     });
     });
   } catch (error) {
@@ -194,14 +194,19 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
   // Validar antes de limpiar campos: no rebajar silenciosamente un formato
   // que venga de otra versión de la app o de una copia importada.
   assertKnownRecordIdentityFormat(data);
+  const preparedRecords = mergeTransactionCopies(data.transactions, [], data.deletedTransactionIds ?? [], [], data.syncUpdatedAt ?? {});
+  const preparedGoals = mergeGoalCopies(data.goals, [], data.deletedGoalIds ?? [], [], data.syncUpdatedAt ?? {});
   // Firestore RECHAZA cualquier campo cuyo valor sea "undefined" y tira el
   // guardado entero. Como los movimientos ahora tienen campos opcionales
   // (comercio, cuenta, referencia...), uno vacío podría hacer que la copia
   // en la nube fallara en silencio y la persona nunca se enterara.
   // Este paso los quita: JSON.stringify descarta las claves con undefined.
   let clean = JSON.parse(JSON.stringify(data)) as CloudData;
+  clean = { ...clean, transactions: preparedRecords.transactions, deletedTransactionIds: preparedRecords.deletedIds,
+    goals: preparedGoals.goals, deletedGoalIds: preparedGoals.deletedIds,
+    syncUpdatedAt: mergeMutationMetadata(preparedRecords.metadata, preparedGoals.metadata) };
   clean.syncFormat = 2;
-  clean.recordIdentityFormat = 1;
+  clean.recordIdentityFormat = 2;
   // Solo el servidor puede cambiar la versión; el cliente conserva la que
   // realmente haya en Firebase, nunca la que venga de memoria local.
   delete clean.historyFormat;
@@ -251,25 +256,14 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
       assertLegacyHistoryFormat(actual);
       let siguiente = conservarPremiumManual(actual, clean);
       if (actual) {
+        const records = mergeTransactionCopies(clean.transactions, actual.transactions || [], clean.deletedTransactionIds || [], actual.deletedTransactionIds || [], clean.syncUpdatedAt || {}, actual.syncUpdatedAt || {});
+        const goals = mergeGoalCopies(clean.goals, actual.goals || [], clean.deletedGoalIds || [], actual.deletedGoalIds || [], clean.syncUpdatedAt || {}, actual.syncUpdatedAt || {});
         siguiente = mergeCloudFields(siguiente, actual as CloudData);
-        const borrados = pruneDeletedTransactionIds([
-          ...(actual.deletedTransactionIds || []),
-          ...(siguiente.deletedTransactionIds || []),
-        ]);
-        const idsBorrados = new Set(borrados);
-        const metasBorradas = pruneDeletedGoalIds([
-          ...(actual.deletedGoalIds || []),
-          ...(siguiente.deletedGoalIds || []),
-        ]);
-        const idsMetasBorradas = new Set(metasBorradas);
         siguiente = {
           ...siguiente,
-          deletedTransactionIds: borrados,
-          transactions: mergeTransactions(siguiente.transactions, actual.transactions || [])
-            .filter((tx) => !idsBorrados.has(tx.id)),
-          deletedGoalIds: metasBorradas,
-          goals: mergeGoals(siguiente.goals, actual.goals || [])
-            .filter((goal) => !idsMetasBorradas.has(goal.id)),
+          deletedTransactionIds: records.deletedIds, transactions: records.transactions,
+          deletedGoalIds: goals.deletedIds, goals: goals.goals,
+          syncUpdatedAt: mergeMutationMetadata(records.metadata, goals.metadata),
         };
       }
 
@@ -280,7 +274,7 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
       if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
       saved = siguiente;
       lease.assertCurrent();
-      transaction.set(ref, siguiente);
+      transaction.set(ref, { ...siguiente, recordSyncAt: serverTimestamp() });
     }));
     return { ok: true, data: lease.remember(saved) };
   } catch (e) {
@@ -292,24 +286,21 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
 async function saveCloudDataV2(uid: string, clean: CloudData, lease: PrivateBoxCloudLease): Promise<ResultadoNube> {
   try {
     if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
-    const history = await saveHistoryV2(uid, clean.transactions, clean.deletedTransactionIds ?? [], lease, clean.userCurrency);
+    const history = await saveHistoryV2(uid, clean.transactions, clean.deletedTransactionIds ?? [], lease, clean.userCurrency, {}, clean.syncUpdatedAt ?? {});
     const ref = doc(db, "users", uid);
-    let saved: CloudData = { ...clean, transactions: history.transactions, deletedTransactionIds: history.deletedIds };
+    let saved: CloudData = { ...clean, transactions: history.transactions, deletedTransactionIds: history.deletedIds,
+      syncUpdatedAt: mergeMutationMetadata(clean.syncUpdatedAt ?? {}, history.syncUpdatedAt ?? {}) };
     await lease.wait(() => runTransaction(db, async (transaction) => {
       if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
       const snap = await lease.wait(() => transaction.get(ref));
       if (!snap.exists() || snap.data().historyFormat !== 2) throw new UnsupportedHistoryFormatError();
       assertKnownRecordIdentityFormat(snap.data());
       const actual = snap.data() as CloudData;
+      const goals = mergeGoalCopies(saved.goals, actual.goals ?? [], saved.deletedGoalIds ?? [], actual.deletedGoalIds ?? [], saved.syncUpdatedAt ?? {}, actual.syncUpdatedAt ?? {});
       let next = mergeCloudFields(conservarPremiumManual(actual, saved), actual);
-      const metasBorradas = pruneDeletedGoalIds([
-        ...(actual.deletedGoalIds ?? []), ...(next.deletedGoalIds ?? []),
-      ]);
-      const idsMetasBorradas = new Set(metasBorradas);
       next = {
         ...next,
-        deletedGoalIds: metasBorradas,
-        goals: mergeGoals(next.goals, actual.goals ?? []).filter((goal) => !idsMetasBorradas.has(goal.id)),
+        deletedGoalIds: goals.deletedIds, goals: goals.goals, syncUpdatedAt: goals.metadata,
       };
       const { transactions: _transactions, deletedTransactionIds: _deleted, ...metadata } = next;
       void _transactions; void _deleted;
@@ -323,7 +314,7 @@ async function saveCloudDataV2(uid: string, clean: CloudData, lease: PrivateBoxC
       if (pesa(root) > LIMITE_FIRESTORE) throw new Error("demasiado-grande");
       if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
       lease.assertCurrent();
-      transaction.set(ref, root);
+      transaction.set(ref, { ...root, recordSyncAt: serverTimestamp() });
       saved = { ...next, ...root, transactions: history.transactions, deletedTransactionIds: history.deletedIds };
     }));
     return { ok: true, data: lease.remember(saved) };

@@ -34,7 +34,9 @@ a.reserveIdsAbove(maximum);
 b.reserveIdsAbove(maximum);
 const idA = a.nextId(), idB = b.nextId();
 const order = load("utils/ordenarMovimientos.ts");
+const { recordOriginOriginal } = await import("../helpers/record-origin-original.mjs");
 const { mergeTransactions, mergeGoals } = load("utils/mergeTransactions.ts", { require: name => {
+  if (["@/utils/recordOrigin", "@/utils/goalFunding", "@/utils/recordMerge"].includes(name)) return recordOriginOriginal();
   assert.equal(name, "@/utils/ordenarMovimientos");
   return order;
 } });

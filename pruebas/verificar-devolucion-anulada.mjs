@@ -4,6 +4,8 @@ import vm from "node:vm";
 import ts from "typescript";
 import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
+import { randomUUID } from "node:crypto";
+import { recordOriginOriginal } from "./helpers/record-origin-original.mjs";
 const requireCore = createRequire(new URL("../utils/privateBoxMoneyLocalWrite.ts", import.meta.url));
 const moneyGuard = { exports: {} };
 vm.runInNewContext(ts.transpile(fs.readFileSync("utils/privateBoxMoneyLocalWrite.ts", "utf8"), { module: ts.ModuleKind.CommonJS }), { exports: moneyGuard.exports, require: requireCore });
@@ -13,12 +15,12 @@ const baseline = process.env.FINO_TEST_BASELINE;
 if (baseline && baseline !== "1" && !/^[a-f0-9]{7,40}$/.test(baseline)) throw new Error("La regresión requiere 1 o un hash de Git.");
 const read = file => baseline ? execFileSync("git", ["show", `${baseline === "1" ? "HEAD" : baseline}:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");
 const ast = ts.createSourceFile("context.tsx", read("contexts/AppDataContext.tsx"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
-const names = new Set(["recordPersonalReturn", "removeTransactions"]), functions = [];
+const names = new Set(["recordPersonalReturn", "removeTransactions", "commitTransactionMutation"]), functions = [];
 function visit(node) {
   if (ts.isFunctionDeclaration(node) && names.has(node.name?.text)) functions.push(node.getText(ast));
   ts.forEachChild(node, visit);
 }
-visit(ast); assert.equal(functions.length, 2);
+visit(ast); assert.equal(functions.length, 3);
 let rows = [], uid = "owner", session = 1, failSave = false, rpcMode = "cancelled";
 const storage = new Map();
 const pending = { uid, payload: { kind: "family", spaceId: "f", amount: 40, currency: "PEN",
@@ -46,19 +48,31 @@ function client() {
 }
 const api = client(), txQueue = [], deletionQueue = [];
 const context = { assertPrivateBoxMoneyLocalIdle, deletedTransactionIdsRef: { current: [] }, returnReceipt: { current: null }, currencyForReturn: { current: "PEN" },
+  ...moneyGuard.exports, ...recordOriginOriginal(), pendingTransactionDeletes: { current: new Set() }, transactionsLive: { current: [] }, cloudSyncMetaRef: { current: {} },
+  ready: true, hasOnboarded: true, Platform: { OS: "android" }, auth: { get currentUser() { return { uid }; } }, localSessionVersion: { current: 1 },
+  captureAccountTask: () => ({ current: () => true, wait: work => work() }), withLocalAccountOperation: work => work(),
+  hasUnreadableLocalData: () => false, flushPendingSaves: async () => {}, loadJSON: async (_key, fallback) => fallback,
+  leerCajasEnMemoria: () => null, CAJAS_VACIAS: { cajas: [], movimientos: [], cajasBorradas: [], movimientosBorrados: [] },
+  STORAGE_KEYS: { transactions: "rows", deletedTransactionIds: "deleted", cloudSyncMeta: "metadata", cajasDinero: "boxes" },
+  setCloudSyncMeta() {}, saveJSON() {}, randomUUID, issuedCreationId: () => undefined, canonical: JSON.stringify, t: key => key,
+  saveJSONBatchNow: async (_keys, prepare) => { const batch = await prepare(); if (!batch.stillValid()) return false;
+    const release = batch.reserve(); try { await Promise.resolve(); batch.committed(); return true; } finally { release(); } },
   personalReturnIsCurrent: value => value.uid === uid && value.localSession === session, mergePersonalReturn: api.mergePersonalReturn,
   tRef: { current: key => key }, horaDe: () => "12:00", showToast() {},
   pruneDeletedTransactionIds: values => [...new Set(values)], unlinkCreditPaymentsForHomeTransactions() {},
-  setDeletedTransactionIds: update => deletionQueue.push(update), setTransactions: update => txQueue.push(update), Date };
+  setDeletedTransactionIds: update => { if (typeof update !== "function") context.deletedTransactionIdsRef.current = update; deletionQueue.push(update); },
+  setTransactions: update => { if (typeof update !== "function") context.transactionsLive.current = update; txQueue.push(update); }, Date };
 // El nombre nativo se sustituye, no su lógica financiera ni los manejadores.
 vm.runInNewContext(ts.transpile(functions.join("\n"), { target: ts.ScriptTarget.ES2022 }), context);
 const tx = { id: 100, type: "income", amount: 40, internalTransfer: "family", internalTransferSpaceId: "f", internalTransferLink: "return_100" };
 rows = [tx];
-context.removeTransactions([100]);
+context.transactionsLive.current = rows;
+const deleting = context.removeTransactions([100]);
 assert.equal(context.recordPersonalReturn(receipt), false, "una respuesta atrasada no revive una devolución eliminada aunque React aún no haya procesado el borrado");
-for (const update of txQueue.splice(0)) rows = update(rows);
+assert.equal(await deleting, true);
+for (const update of txQueue.splice(0)) rows = typeof update === "function" ? update(rows) : update;
 let deleted = [];
-for (const update of deletionQueue.splice(0)) deleted = update(deleted);
+for (const update of deletionQueue.splice(0)) deleted = typeof update === "function" ? update(deleted) : update;
 assert.equal(rows.length, 0); assert.deepEqual(Array.from(deleted), [100]);
 context.deletedTransactionIdsRef.current = [];
 assert.equal(context.recordPersonalReturn(receipt), true);
