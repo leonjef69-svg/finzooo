@@ -1,5 +1,12 @@
 # Entregas de Fino
 
+## 10/10/2026 — 23:47:02 Lima — continuidad documental, SIN nueva entrega
+
+Información faltante y horas en `docs/BITACORA_AVANCE.md`, sin duplicar informes.
+El propietario no quiere otra copia del proyecto; el respaldo iniciado se canceló.
+**Qué sigue/falta:** punto 2 Android y punto 3 servicios/publicación. No nueva
+compilación, instalación, despliegue ni publicación por este registro documental.
+
 ## 10/10/2026 — borrado/recuperación y metas, NO entregado a teléfonos
 
 Punto 1 de preparación/código/pruebas locales TERMINADO. No significa cierre

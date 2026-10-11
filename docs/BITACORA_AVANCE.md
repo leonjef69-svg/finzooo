@@ -1,0 +1,58 @@
+# Bitácora de continuidad de Fino
+
+Fechas y horas en America/Lima (UTC-05:00). No inventar horas históricas.
+Proyecto activo y único lugar de trabajo: `C:\finzo`.
+
+## Documentación existente: leer sin volver a copiarla
+
+1. `AGENTS.md`, `ESTADO.md`, `ENTREGAS.md` y `PLAYSTORE.md`.
+2. `docs/AUDITORIA_CIERRE_61.md`: seguimiento de los hallazgos originales y FINO-62.
+3. `docs/PRUEBAS_CICLO_BORRADO_RESTAURACION.md`: evidencia del punto 1 y límites.
+
+Punto 1 local terminado y subido en `7c6c324`. Resultados y decisiones están
+en esos archivos; no se repiten aquí. No está acreditado como instalado/publicado.
+
+## 10/10/2026 — 23:01:18 — cierre parcial del punto 2 (información nueva)
+
+El propietario autorizó punto 2 hasta las 23:00 y revisar el vídeo
+`C:\Users\User\Videos\2026-10-10 01-18-59.mkv`. La última lectura fue 23:01:18;
+se comunicó el resultado y se detuvo, sin terminar el punto 2.
+
+- Revisado completo: 63,654 segundos, 1909 fotogramas, 1656 imágenes RGB distintas
+  y 253 duplicados exactos. Las 104 hojas se revisaron en tres tramos solapados.
+- Negro breve al abrir Crear cuenta: 22,654–22,788 s.
+- Destellos blancos de «Comprobando el bloqueo de Fino…»; entre otros, a
+  54,554–54,821; 58,988–59,254 y 61,488–61,754 s.
+- Intentos de Google/correo vuelven con aviso de datos de otra cuenta. Puede ser
+  protección correcta: no se demostró rechazo indebido ni acceso exitoso. No
+  quitar la protección ni borrar datos para forzar la entrada.
+- La hoja del gestor de contraseñas observada no es el selector de acceso Google.
+  El vídeo está estirado horizontalmente; no atribuir esa distorsión a la app.
+- Emulador abierto por el usuario y detectado; no se completó acceso real ni se
+  operó la elección de cuenta. Ningún cambio nuevo de código por esta revisión.
+- Evidencia ya existente: `.tmp/auditoria-video-20261010/` (manifiestos, hojas,
+  PNG y `revision-primera-mitad.md`). No generar otra copia ni renumerar hallazgos.
+
+## 10/10/2026 — 23:20:12 y 23:47:02 — conservación y aclaración
+
+El propietario pidió guardar los avances y después aclaró: NO quiere otra
+carpeta/copia del proyecto, solo información faltante dentro de C:\finzo.
+Se detuvo el script de respaldo y su Robocopy, identificados por comando exacto.
+Se solicitó enviar a la papelera únicamente la copia parcial creada por el
+agente; no borrar fuentes externas, archivos originales ni C:\finzo.
+La bitácora queda como referencia breve, sin duplicar la auditoría ya escrita.
+
+## Instrucciones para la IA que continúa
+
+- Completar punto 2: comprobar versión instalada y acceso con propietario
+  legítimo/cuenta de prueba; la selección de Google la hace el usuario. Después
+  corregir lo confirmado y repetir pruebas Android sin tocar datos reales.
+- Punto 3 sigue pendiente: servicios/consolas, App Check/costos, SMTP/moderación,
+  Play/Billing, web/legal/trámites y activación coordinada autorizada.
+- Tarjetas excluidas; Telegram en pausa; Sentry externo fuera; rediseño diferido.
+- Dos archivos de Telegram modificados y la prueba local
+  `pruebas/verificar-resumen-gasto-ingreso-ui.mjs` son pendientes preexistentes:
+  conservarlos, no adjudicarse su autoría ni declararlos publicados/verificados.
+- No APK/AAB/OTA/EAS/Firebase/Play ni migración por este registro documental.
+- Esta bitácora registra lo nuevo; no afirma una exportación literal del chat.
+- **Qué sigue/falta:** terminar punto 2 y luego punto 3; no cerrar toda la auditoría.

@@ -1,5 +1,15 @@
 # Estado actual de Fino
 
+## Continuidad — 10/10/2026, 23:47:02 (Lima)
+
+El propietario pide solo incorporar lo faltante aquí, sin otra carpeta/copia.
+`docs/BITACORA_AVANCE.md` registra el vídeo nuevo, horas, límites y siguiente paso,
+sin repetir los informes anteriores. El respaldo iniciado se canceló.
+El punto 2 se inició por orden posterior al cierre del 1 y continúa pendiente;
+las órdenes antiguas de detenerse tras el 1 quedan como registro histórico.
+**Qué sigue/falta:** terminar Android (2), después servicios/publicación (3).
+Tarjetas fuera, Telegram en pausa, Sentry externo excluido, rediseño diferido.
+
 ## Punto 1 local terminado — borrado, recuperación y metas — 10/10/2026
 
 - Preparación, código y pruebas locales del punto 1 TERMINADOS; no cierre
