@@ -33,7 +33,7 @@ function fixture() {
     setError: value => calls.push(["error", value]), setGoogleError: value => calls.push(["google-error", value]),
     setErrors: value => calls.push(["errors", value]), setLoading: value => calls.push(["loading", value]),
     setGoogleLoading: value => calls.push(["google-loading", value]), showToast: value => calls.push(["toast", value]),
-    signInWithEmailAndPassword: async () => ({ user }), signInWithGoogle: async () => {},
+    signInWithEmailAndPassword: async () => ({ user }), signInWithGoogle: async () => user,
     createUserWithEmailAndPassword: async () => ({ user }),
     recordLegalAcceptanceForCurrentAccount: async () => calls.push(["receipt"]),
     updateProfile: async () => calls.push(["profile"]), sendEmailVerification: async () => calls.push(["verify"]),
@@ -62,7 +62,7 @@ function absent(f, names, message) {
 for (const file of ["screens/Login.tsx", "screens/Register.tsx"]) {
   const f = fixture(), sdk = deferred(); f.values.signInWithGoogle = () => sdk.promise;
   const pending = original(file, file === "screens/Login.tsx" ? "loginWithGoogle" : "registerWithGoogle", f.values)();
-  f.scope.blur(); sdk.resolve(); await pending;
+  f.scope.blur(); sdk.resolve(f.user); await pending;
   absent(f, ["receipt", "entered"], `${file}: Google abandonado no continúa`);
 }
 {
@@ -103,7 +103,7 @@ for (const [file, component, prop] of [
 {
   const f = fixture(), wait = deferred(); f.values.signInWithGoogle = () => wait.promise;
   const pending = original("app/onboarding.tsx", "continueWithGoogle", f.values)(f.scope.begin());
-  f.scope.blur(); wait.resolve(); await pending;
+  f.scope.blur(); wait.resolve(f.user); await pending;
   absent(f, ["receipt", "local", "route"], "Bienvenida abandonada no abre la cuenta de Google atrasada");
 }
 {

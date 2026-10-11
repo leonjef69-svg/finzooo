@@ -64,13 +64,15 @@ export default function Login({
     authBusy.current = true;
     setLoading(true);
     let authenticated = false;
+    let authenticatedUser: typeof auth.currentUser = null;
     try {
       const result = await signInWithEmailAndPassword(auth, email.trim(), pass);
+      authenticatedUser = result.user;
       if (!operationCurrent() || auth.currentUser !== result.user) return;
       authenticated = true;
       await onLoggedIn(() => operationCurrent() && auth.currentUser === result.user);
     } catch (err) {
-      if (!operationCurrent()) return;
+      if (!operationCurrent() || (authenticatedUser && auth.currentUser !== authenticatedUser)) return;
       const code = (err as { code?: string })?.code || "";
       setError(err instanceof Error && err.name === "LocalAccountAccessError" ? err.message : authenticated && code !== "cloud/history-format-unsupported" ? t("login.accountOpenFailed") : firebaseErrorMessage(code));
     } finally {
@@ -96,18 +98,20 @@ export default function Login({
     setGoogleError("");
     setGoogleLoading(true);
     let authenticated = false;
+    let authenticatedUser: typeof auth.currentUser = null;
     try {
-      await signInWithGoogle();
+      const user = await signInWithGoogle();
+      authenticatedUser = user;
       if (!operationCurrent()) return;
-      const user = auth.currentUser;
       if (!user) throw new Error(t("settings.noActiveSession"));
+      if (auth.currentUser !== user) return;
       const current = () => operationCurrent() && auth.currentUser === user;
       authenticated = true;
       await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => { if (current()) showToast(t("legal.saveFailed")); });
       if (!current()) return;
       await onLoggedIn(current);
     } catch (err) {
-      if (!operationCurrent()) return;
+      if (!operationCurrent() || (authenticatedUser && auth.currentUser !== authenticatedUser)) return;
       // Cancelar no es un fallo: si la persona cerró la ventana de Google
       // a propósito, mostrarle un error rojo sería confuso.
       if (err instanceof GoogleSignInCancelled) return;

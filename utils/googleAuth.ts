@@ -2,6 +2,7 @@ import {
   GoogleAuthProvider,
   reauthenticateWithCredential,
   signInWithCredential,
+  type User,
 } from "firebase/auth";
 import { auth } from "@/utils/firebase";
 import { configureGoogleSignIn, getGoogleSignInNative } from "@/utils/googleSignInNative";
@@ -71,8 +72,8 @@ async function googleCredential() {
   return GoogleAuthProvider.credential(idToken);
 }
 
-export async function signInWithGoogle(): Promise<void> {
-  await signInWithCredential(auth, await googleCredential());
+export async function signInWithGoogle(): Promise<User> {
+  return (await signInWithCredential(auth, await googleCredential())).user;
 }
 
 // Una cuenta creada con Google no tiene contraseña de Fino. Para confirmar

@@ -1,5 +1,16 @@
 # Entregas de Fino
 
+## 11/10/2026 — 12:24:29 Lima — diagnóstico local solicitado, NO entrega funcional
+
+Sesión/bóveda/Google y FINO-63 preparados, app final 201/8 sin tarjetas y TS/lint
+exit0. Detalle único en PRUEBAS_ACCESO_INICIAL_VIDEO, apartado 12:24:29.
+Metro local solo diagnóstico «diagnóstico11oct1», sin restaurar/adjudicar datos;
+compilación local HTTP200 no acredita ejecución Android. Captura Reloading,
+resultado aún pendiente. No APK/AAB/OTA/instalación ni despliegue/publicación;
+CODE_MARKER normal intacto: no se entregó ni cargó la app funcional normal.
+**Qué sigue/falta:** diagnóstico y acceso humano (2), servicios/consolas/
+publicación (3) después. Git no actualiza teléfonos; exclusiones intactas.
+
 ## 11/10/2026 — 10:26:12 Lima — motivo del aviso preparado, NO entregado
 
 Guía PRUEBAS_ACCESO_INICIAL_VIDEO, apartado 10:24:27: dueño sin identificar,

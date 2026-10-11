@@ -35,7 +35,7 @@ function aliasCompatibilityValid(file, directory) {
 }
 const CODIGO = ["app", "screens", "components", "contexts"].flatMap((c) =>
   archivos(path.join(RAIZ, c))
-);
+).concat(path.join(RAIZ, "index.js")); // La entrada también registra pantallas sin ruta.
 const TODO_EL_CODIGO = CODIGO.map((f) => fs.readFileSync(f, "utf8")).join("\n");
 
 // ---------------------------------------------------------------------------

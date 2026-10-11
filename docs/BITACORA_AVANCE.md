@@ -91,7 +91,19 @@ consolas/publicación (3). Exclusiones anteriores intactas. El apagado sugerido
 07:05 ya está en el pasado; no se observó confirmación ni se ejecuta ahora por esa
 hora antigua. El guardado permanece en C:\finzo, sin otra copia del proyecto.
 
-### Instrucciones vigentes para continuar
+## 11/10/2026 — 12:24:29 — sesión y diagnóstico del rechazo Google
+
+Información nueva únicamente: PRUEBAS_ACCESO_INICIAL_VIDEO, apartado 12:24:29,
+conserva las correcciones, FINO-63 nuevo, regresiones, APK/Metro y límites.
+Misma Google aún sin acceso real demostrado; imagen actual blanca Reloading.
+TypeScript/ESLint y app final 201/8 sin tarjetas aprobados, una prueba ajena
+sin versionar (200 previstas Git limpio). Solo modo diagnóstico local solicitado;
+no se abrió el libro ni se adjudicó a otra cuenta. No instalación/despliegue.
+**Qué sigue/falta:** resultado de diagnóstico humano y restante Android (2),
+servicios/consolas/publicación (3). Tarjetas fuera, Telegram/Sentry externos
+en pausa/excluidos, diseño diferido. Sin segunda copia de la app.
+
+### Instrucciones vigentes para continuar (actualización)
 
 - Completar punto 2: comprobar versión instalada y acceso con propietario
   legítimo/cuenta de prueba; la selección de Google la hace el usuario. Después

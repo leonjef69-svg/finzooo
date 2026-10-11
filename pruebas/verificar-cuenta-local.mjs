@@ -56,6 +56,7 @@ await scenario(`
   await archiveLocalAccount("A", "a@example.com");
   assert.equal(await allowBackgroundAccount("A", "a@example.com"), false, "sin sesión no se ejecuta el registro de fondo");
   await clearAccountData();
+  auth.currentUser = { uid: "B", email: "b@example.com", emailVerified: true };
   assert.equal(await prepareLocalAccount("B", "b@example.com"), false);
   assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [], "B nunca recibe gastos de A");
   assert.equal(await loadJSON(STORAGE_KEYS.personalReturnPending, null), null, "B nunca recibe la orden de devolución de A");
@@ -64,6 +65,7 @@ await scenario(`
   await seed("B", "b@example.com", 90);
   await archiveLocalAccount("B", "b@example.com");
   await clearAccountData();
+  auth.currentUser = { uid: "A", email: "a@example.com", emailVerified: true };
   assert.equal(await prepareLocalAccount("A", "a@example.com"), true);
   assert.deepEqual(await loadJSON(STORAGE_KEYS.transactions, []), [{ id: 60, amount: 60 }], "A recupera también el último guardado pendiente");
   assert.deepEqual(await loadJSON(STORAGE_KEYS.personalReturnPending, null), pendingReturn, "A recupera su devolución interrumpida al volver a entrar");
@@ -88,6 +90,7 @@ await scenario(`
   await seed("A", "a@example.com", 50);
   const original = await AsyncStorage.getItem(STORAGE_KEYS.transactions);
   setAccountStorageAvailable(false);
+  auth.currentUser = { uid: "B", email: "b@example.com", emailVerified: true };
   await assert.rejects(prepareLocalAccount("B", "b@example.com"), /local-account-owner/);
   assert.equal(await AsyncStorage.getItem(STORAGE_KEYS.transactions), original, "datos antiguos ambiguos se conservan");
 `);

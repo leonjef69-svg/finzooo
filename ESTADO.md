@@ -1,5 +1,19 @@
 # Estado actual de Fino
 
+## Punto 2 — 11/10/2026, 12:24:29 Lima — protección preparada, acceso real pendiente
+
+Sesión exacta en arranque/apertura/recarga/bóveda y resultado Google preparados;
+FINO-63 nuevo: perfil ausente ya no borra bloques ni sustituye por copia vieja.
+Evidencia única en PRUEBAS_ACCESO_INICIAL_VIDEO, apartado 12:24:29. TypeScript/
+ESLint y app final 201/8 sin tarjetas exit0 (una prueba ajena sin versionar;
+200 previstas Git limpio). Diagnóstico local independiente «diagnóstico11oct1»:
+solo metadatos, Auth en memoria, sin tareas/imports financieros ni adjudicación.
+Metro solicitado; propietario muestra blanco Reloading, resultado aún pendiente.
+No APK/AAB/OTA/instalación/despliegue ni entrega funcional normal.
+**Qué sigue/falta:** resultado/causa real de misma Google y demás Android (2),
+servicios/consolas/publicación (3) después. Exclusiones conservadas; no cerrar
+otras operaciones de sesión ni la auditoría por aprobar estas comprobaciones.
+
 ## Punto 2 — 11/10/2026, 10:24:27 Lima — aviso preparado, diagnóstico pendiente
 
 Aviso distingue dueño sin identificar/sesión cambiada de correo distinto, sin

@@ -74,18 +74,20 @@ export default function Register({
     setGoogleError("");
     setGoogleLoading(true);
     let authenticated = false;
+    let authenticatedUser: typeof auth.currentUser = null;
     try {
-      await signInWithGoogle();
+      const user = await signInWithGoogle();
+      authenticatedUser = user;
       if (!operationCurrent()) return;
-      const user = auth.currentUser;
       if (!user) throw new Error(t("settings.noActiveSession"));
+      if (auth.currentUser !== user) return;
       const current = () => operationCurrent() && auth.currentUser === user;
       authenticated = true;
       await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => { if (current()) showToast(t("legal.saveFailed")); });
       if (!current()) return;
       await onGoogleSignedIn(current);
     } catch (err) {
-      if (!operationCurrent()) return;
+      if (!operationCurrent() || (authenticatedUser && auth.currentUser !== authenticatedUser)) return;
       if (err instanceof GoogleSignInCancelled) return;
       if (err instanceof Error && err.name === "LocalAccountAccessError") setGoogleError(err.message);
       else if (authenticated && (err as { code?: string })?.code !== "cloud/history-format-unsupported") setGoogleError(t("login.accountOpenFailed"));

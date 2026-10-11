@@ -106,7 +106,8 @@ for (const [reason, detail] of [["verification"], ["owner"], ["read"], ["owner",
   assert.equal(originalError.message, expectedMessage, "el aviso distingue dueño desconocido/sesión interrumpida de otra cuenta");
   assert.equal(api.getAccountStorageSession(), null);
   assert.deepEqual(events.filter(([event]) => event === "ready"), [["ready", false], ["ready", true]], "openLocalAccount libera la pantalla incluso al rechazar");
-  await initCatch(deps)(originalError);
+  await initCatch({ ...deps, current: () => true, alive: true, initialUser: active,
+    initialRequest: deps.localOpenRequest.current, initialVersion: deps.localSessionVersion.current })(originalError);
   assert.equal(auth.currentUser, reason === "verification" ? active : null);
   assert.equal(events.some(([event]) => event === "signout"), reason !== "verification");
   assert.equal(events.some(([event]) => event === "alert"), reason !== "verification");

@@ -39,7 +39,7 @@ assert.equal(dependencies.authBusy.current, false, "fallo libera el acceso para 
 const routeCalls = [], toasts = [];
 const routeDependencies = {
   auth: { currentUser: { uid: "uid-test", email: "synthetic@example.test", displayName: "Prueba", emailVerified: true } },
-  signInWithGoogle: async () => routeCalls.push("auth"),
+  signInWithGoogle: async () => { routeCalls.push("auth"); return routeDependencies.auth.currentUser; },
   withTimeout: promise => promise,
   recordLegalAcceptanceForCurrentAccount: async () => routeCalls.push("receipt"),
   openLocalAccount: async () => { routeCalls.push("local"); return true; },

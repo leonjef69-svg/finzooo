@@ -9,21 +9,21 @@
 // montada —no hay app— y si el trabajo no estuviera registrado ya, Android no
 // encontraría nada que ejecutar.
 import { AppRegistry } from "react-native";
+import { registerRootComponent } from "expo";
+import { isLocalAccountDiagnosticMode } from "./utils/localAccountDiagnosticMode";
 
-import { Sentry } from "./utils/sentry";
-import "expo-router/entry";
-
-import { capturarEnFondo } from "./utils/capturaEnFondo";
-import { exportarEnFondo } from "./utils/exportarEnFondo";
-import { allowBackgroundAccount, withLocalAccountOperation } from "./utils/localAccountVault";
-import { auth } from "./utils/firebase";
-
-async function runForActiveAccount(task) {
+async function runForActiveAccount(loadTask) {
+  // El diagnóstico no registra dinero ni exporta mientras identifica el acceso.
+  // Tampoco evalúa módulos normales: algunos consultan el buzón al importarlos.
+  if (isLocalAccountDiagnosticMode()) return;
+  const { allowBackgroundAccount, withLocalAccountOperation } = require("./utils/localAccountVault");
+  const { auth } = require("./utils/firebase");
   return withLocalAccountOperation(async () => {
     await auth.authStateReady();
     const user = auth.currentUser;
     if (!user || !await allowBackgroundAccount(user.uid, user.email)) return;
-    await task();
+    if (auth.currentUser !== user) return;
+    await loadTask()();
   });
 }
 
@@ -32,9 +32,9 @@ async function runForActiveAccount(task) {
 // nombre y se cierra sin decir nada: no falla, simplemente no pasa.
 AppRegistry.registerHeadlessTask("FinzoCapture", () => async () => {
   try {
-    await runForActiveAccount(capturarEnFondo);
+    await runForActiveAccount(() => require("./utils/capturaEnFondo").capturarEnFondo);
   } catch (error) {
-    Sentry.captureException(error);
+    require("./utils/sentry").Sentry.captureException(error);
     // Nunca dejar que esto reviente. Si algo sale mal, lo capturado sigue en
     // el buzón y la app lo recoge al abrirse, que es lo que pasaba antes de
     // que este trabajo existiera.
@@ -47,10 +47,20 @@ AppRegistry.registerHeadlessTask("FinzoCapture", () => async () => {
 // ese nombre y se cierra sin decir nada.
 AppRegistry.registerHeadlessTask("FinzoExport", () => async () => {
   try {
-    await runForActiveAccount(exportarEnFondo);
+    await runForActiveAccount(() => require("./utils/exportarEnFondo").exportarEnFondo);
   } catch (error) {
-    Sentry.captureException(error);
+    require("./utils/sentry").Sentry.captureException(error);
     // Igual que el de arriba: si algo sale mal queda el aviso a la hora y el
     // reporte al abrir la app, que es el comportamiento de siempre.
   }
 });
+
+// El diagnóstico no evalúa el router ni sus pantallas normales. En Android
+// registerRootComponent solo registra "main": no lo monta. Fuera del modo
+// local se conserva la entrada habitual del router, también en web/producción.
+if (isLocalAccountDiagnosticMode()) {
+  const LocalAccountDiagnostic = require("./screens/LocalAccountDiagnostic").default;
+  registerRootComponent(LocalAccountDiagnostic);
+} else {
+  require("expo-router/entry");
+}

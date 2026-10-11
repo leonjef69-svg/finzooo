@@ -15,13 +15,15 @@ export default function OnboardingRoute() {
 
   async function continueWithGoogle(operationCurrent: EntryOperationGuard = () => true) {
     let authenticated = false;
+    let authenticatedUser: typeof auth.currentUser = null;
     try {
       if (!operationCurrent()) return;
-      await signInWithGoogle();
+      const user = await signInWithGoogle();
+      authenticatedUser = user;
       if (!operationCurrent()) return;
       authenticated = true;
-      const user = auth.currentUser;
       if (!user) throw new Error("Google no devolvió una cuenta.");
+      if (auth.currentUser !== user) return;
       const current = () => operationCurrent() && auth.currentUser === user;
       await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => { if (current()) showToast(t("legal.saveFailed")); });
       if (!current()) return;
@@ -38,7 +40,7 @@ export default function OnboardingRoute() {
       }
       router.replace(cloudResult === "restored" ? "/(tabs)" : "/setup");
     } catch (error) {
-      if (!operationCurrent()) return;
+      if (!operationCurrent() || (authenticatedUser && auth.currentUser !== authenticatedUser)) return;
       if (error instanceof GoogleSignInCancelled) return;
       if (error instanceof Error && error.name === "LocalAccountAccessError") throw error;
       if (authenticated && (error as { code?: string })?.code !== "cloud/history-format-unsupported") throw new Error(t("login.accountOpenFailed"));

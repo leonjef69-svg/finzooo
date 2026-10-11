@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import {
   initializeAuth,
+  inMemoryPersistence,
   // El revisor de tipos resuelve esta librería como si fuera para una
   // computadora normal, no para un celular, así que no "ve" esta función
   // aunque sí existe y funciona correctamente en el celular real.
@@ -10,6 +11,7 @@ import {
 import { getFirestore } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
 import { encryptedAsyncStorage } from "@/utils/encryptedAsyncStorage";
+import { isLocalAccountDiagnosticMode } from "@/utils/localAccountDiagnosticMode";
 
 // Estos valores no son secretos (son las "señas" públicas de tu proyecto,
 // no una contraseña) — es normal y seguro que estén aquí en el código.
@@ -28,7 +30,10 @@ const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 // normal) para que tu sesión iniciada no quede legible en texto plano
 // en el celular.
 export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(encryptedAsyncStorage),
+  // La comprobación acompañada no lee ni reemplaza la sesión cifrada del
+  // teléfono. Google se elige manualmente y permanece solo en memoria.
+  // Fuera del diagnóstico la persistencia anterior permanece idéntica.
+  persistence: isLocalAccountDiagnosticMode() ? inMemoryPersistence : getReactNativePersistence(encryptedAsyncStorage),
 });
 
 export const db = getFirestore(app);

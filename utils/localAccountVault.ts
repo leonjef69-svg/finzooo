@@ -60,14 +60,20 @@ async function readOwner(): Promise<Owner | null> {
   } catch { throw new LocalAccountVaultError("read"); }
 }
 
-async function removeUnconfirmedOwner(raw: string): Promise<void> {
+async function removeUnconfirmedOwner(raw: string, previousRaw: string | null = null): Promise<void> {
   setAccountStorageAvailable(false);
   try {
-    if (await AsyncStorage.getItem(OWNER_KEY) === raw) await AsyncStorage.removeItem(OWNER_KEY);
+    if (await AsyncStorage.getItem(OWNER_KEY) === raw) {
+      if (previousRaw === null) await AsyncStorage.removeItem(OWNER_KEY);
+      else await AsyncStorage.setItem(OWNER_KEY, previousRaw);
+      if (await AsyncStorage.getItem(OWNER_KEY) !== previousRaw) throw new LocalAccountVaultError("write");
+    }
   } catch { throw new LocalAccountVaultError("write"); }
 }
 
 async function writeOwner(owner: Owner, assertCurrentSession?: () => void): Promise<string> {
+  const previousRaw = assertCurrentSession ? await AsyncStorage.getItem(OWNER_KEY) : null;
+  assertCurrentSession?.();
   const raw = await encryptText(JSON.stringify(owner));
   assertCurrentSession?.();
   try {
@@ -77,9 +83,9 @@ async function writeOwner(owner: Owner, assertCurrentSession?: () => void): Prom
     assertCurrentSession?.();
   } catch (error) {
     if (assertCurrentSession) {
-      // Esta cola impide otra adjudicación mientras se retira únicamente el
-      // dueño recién escrito. Los datos originales nunca se borran aquí.
-      await removeUnconfirmedOwner(raw);
+      // La adjudicación nueva se retira; una restauración conserva el dueño
+      // anterior exacto y su copia, para recuperar una interrupción sin mezclar.
+      await removeUnconfirmedOwner(raw, previousRaw);
     }
     throw error;
   }
@@ -209,26 +215,54 @@ async function saveSnapshot(uid: string): Promise<void> {
   }
 }
 
-async function restore(uid: string, snapshot: Snapshot | null): Promise<void> {
+async function restore(uid: string, snapshot: Snapshot | null, assertCurrentSession: () => void): Promise<void> {
+  assertCurrentSession();
   setAccountStorageAvailable(false);
   await clearAccountData();
+  assertCurrentSession();
   if (snapshot) {
     for (const [key, raw] of snapshot.entries) {
-      if (raw !== null) await AsyncStorage.setItem(key, raw);
+      assertCurrentSession();
+      if (raw !== null) {
+        await AsyncStorage.setItem(key, raw);
+        assertCurrentSession();
+      }
     }
     const restored = new Map(await AsyncStorage.multiGet(keys));
+    assertCurrentSession();
     if (snapshot.entries.some(([key, raw]) => restored.get(key) !== raw)) throw new LocalAccountVaultError("write");
   }
   // Hasta aquí el dueño anterior sigue registrado. Tras una interrupción,
   // el arranque volverá a restaurar antes de habilitar lecturas o escrituras.
-  await writeOwner({ uid, mode: "active" });
+  await writeOwner({ uid, mode: "active" }, assertCurrentSession);
+  assertCurrentSession();
   setAccountStorageAvailable(true);
 }
 
-async function prepare(uid: string, email?: string | null): Promise<boolean> {
-  const openingUser = auth.currentUser;
-  const owner = await readOwner();
+async function prepare(uid: string, email?: string | null, openingUser = auth.currentUser): Promise<boolean> {
+  let owner: Owner | null;
+  const assertCurrentSession = () => {
+    if (!openingUser || openingUser.uid !== uid || auth.currentUser !== openingUser) {
+      // Un intento viejo no retira el acceso de otro dueño activo confirmado.
+      // Datos sin dueño o de una sesión anterior siguen inaccesibles.
+      if (!owner || owner.mode !== "active" || owner.uid !== auth.currentUser?.uid) setAccountStorageAvailable(false);
+      throw new LocalAccountVaultError("owner", "session");
+    }
+  };
+  owner = await readOwner();
+  assertCurrentSession();
   const profile = await readProfile();
+  assertCurrentSession();
+  if (owner?.mode === "active" && !profile) {
+    // Perfil ausente no significa cuenta vacía. No sustituir datos activos
+    // por una copia vieja ni borrar los bloques que siguen en el teléfono.
+    const remainingData = await hasUnownedAccountData();
+    assertCurrentSession();
+    if (remainingData) {
+      setAccountStorageAvailable(false);
+      throw new LocalAccountVaultError("read");
+    }
+  }
   if (!owner) {
     // Migración de la instalación anterior: los datos se vinculan solo al
     // correo confirmado de la sesión real, no al correo escrito en registro.
@@ -238,6 +272,7 @@ async function prepare(uid: string, email?: string | null): Promise<boolean> {
       if (!emailKey(email)) throw new LocalAccountVaultError("owner", "session");
       if (emailKey(profile.userEmail) !== emailKey(email)) throw new LocalAccountVaultError("owner");
       const assertLegacySession = () => {
+        assertCurrentSession();
         if (!openingUser || auth.currentUser !== openingUser || openingUser.uid !== uid ||
           !emailKey(openingUser.email) || emailKey(openingUser.email) !== emailKey(profile.userEmail)) {
           throw new LocalAccountVaultError("owner", "session");
@@ -257,33 +292,47 @@ async function prepare(uid: string, email?: string | null): Promise<boolean> {
         throw error;
       }
     } else {
-      if (await hasUnownedAccountData()) {
+      const unowned = await hasUnownedAccountData();
+      assertCurrentSession();
+      if (unowned) {
         setAccountStorageAvailable(false);
         throw new LocalAccountVaultError("owner", "unidentified");
       }
       const saved = await readSnapshot(uid);
-      if (saved) await restore(uid, saved);
+      assertCurrentSession();
+      if (saved) await restore(uid, saved, assertCurrentSession);
       else {
-        await writeOwner({ uid, mode: "active" });
+        await writeOwner({ uid, mode: "active" }, assertCurrentSession);
+        assertCurrentSession();
         setAccountStorageAvailable(true);
       }
     }
   } else if (owner.uid === uid && owner.mode === "active" && profile) {
+    assertCurrentSession();
     setAccountStorageAvailable(true);
   } else {
-    if (owner.mode === "active" && owner.uid !== uid && profile) await saveSnapshot(owner.uid);
+    if (owner.mode === "active" && owner.uid !== uid && profile) {
+      await saveSnapshot(owner.uid);
+      assertCurrentSession();
+    }
     if (owner.uid !== uid || owner.mode === "archived") {
       // No borrar datos de otra cuenta si su copia no se puede comprobar.
       if (!await readSnapshot(owner.uid)) throw new LocalAccountVaultError("read");
-      if (owner.mode === "active") await writeOwner({ uid: owner.uid, mode: "archived" });
+      assertCurrentSession();
+      if (owner.mode === "active") await writeOwner({ uid: owner.uid, mode: "archived" }, assertCurrentSession);
     }
-    await restore(uid, await readSnapshot(uid));
+    const saved = await readSnapshot(uid);
+    assertCurrentSession();
+    await restore(uid, saved, assertCurrentSession);
   }
-  return (await readProfile())?.hasOnboarded === true;
+  const restoredProfile = await readProfile();
+  assertCurrentSession();
+  return restoredProfile?.hasOnboarded === true;
 }
 
 export function prepareLocalAccount(uid: string, email?: string | null): Promise<boolean> {
-  return withLocalAccountOperation(() => prepare(uid, email));
+  const openingUser = auth.currentUser;
+  return withLocalAccountOperation(() => prepare(uid, email, openingUser));
 }
 
 export function archiveLocalAccount(uid: string, email?: string | null): Promise<void> {

@@ -187,10 +187,12 @@ const scenario = esbuild.buildSync({ stdin: { contents: `
     await assert.rejects(archiveLocalAccount("A", "a@example.com"), /local-account-write/, "no cierra sesión con un guardado fallido pendiente");
     assert.equal(await saveJSONNow(STORAGE_KEYS.cajasDinero, journal), true, "reintento real confirma originales antes de archivar");
     await archiveLocalAccount("A", "a@example.com"); await clearAccountData();
+    auth.currentUser = { uid: "B", email: "b@example.com", emailVerified: true };
     await prepareLocalAccount("B", "b@example.com");
     assert.equal(await loadJSON(STORAGE_KEYS.cajasDinero, null), null);
     await saveJSONNow(STORAGE_KEYS.profile, { hasOnboarded: true, userEmail: "b@example.com" });
     await archiveLocalAccount("B", "b@example.com"); await clearAccountData();
+    auth.currentUser = { uid: "A", email: "a@example.com", emailVerified: true };
     await prepareLocalAccount("A", "a@example.com");
     assert.deepEqual(validarCajas(await loadJSON(STORAGE_KEYS.cajasDinero, null)).revisionesImporte, journal.revisionesImporte);
     await deleteLocalAccountVault("B");

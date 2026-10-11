@@ -83,16 +83,19 @@ function flow(api, uid, options = {}) {
   await a.logout();
   assert.ok((await api.disk.getAllKeys()).includes("finzo:localAccountVault:v1:A:manifest"),
     "FINO-01: el logout original tiene que confirmar la copia de A antes de limpiar; no basta con borrar claves");
+  api.auth.currentUser = { uid: "B", email: "B@example.com", emailVerified: true };
   assert.equal(await api.prepareLocalAccount("B", "B@example.com"), false);
   for (const key of Object.keys(originalA)) assert.equal(await api.loadJSON(api.STORAGE_KEYS[key], null), null, `${key}: B no ve datos de A`);
   const originalB = await seed(api, "B", 70);
   const b = flow(api, "B");
   await b.logout();
+  api.auth.currentUser = { uid: "A", email: "A@example.com", emailVerified: true };
   assert.equal(await api.prepareLocalAccount("A", "A@example.com"), true, "cerrar sesión Gratis no destruye la copia de A");
   await assertValues(api, originalA);
   assert.deepEqual(a.events, ["local-copy", "google", "auth", "active-clean"], "confirmar disco antes de cerrar, sin Firebase en Gratis");
   await api.archiveLocalAccount("A", "A@example.com");
   await api.clearAccountData();
+  api.auth.currentUser = { uid: "B", email: "B@example.com", emailVerified: true };
   assert.equal(await api.prepareLocalAccount("B", "B@example.com"), true);
   await assertValues(api, originalB);
 }
@@ -101,6 +104,7 @@ for (const skipBackup of [false, true]) {
   const values = await seed(api, "Pro", 80);
   const pro = flow(api, "Pro", { pro: true });
   await pro.logout({ skipBackup });
+  api.auth.currentUser = { uid: "Pro", email: "Pro@example.com", emailVerified: true };
   assert.equal(await api.prepareLocalAccount("Pro", "Pro@example.com"), true);
   await assertValues(api, values);
   assert.deepEqual(pro.events, [...(skipBackup ? [] : ["cloud"]), "local-copy", "google", "auth", "active-clean"]);

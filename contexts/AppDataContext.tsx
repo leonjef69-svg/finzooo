@@ -675,15 +675,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const monthNames = monthNamesFor(userLanguage);
 
   useEffect(() => {
-    let previousUser: string | null = null;
+    let previousUser: typeof auth.currentUser | undefined;
     const unsubscribe = onAuthStateChanged(auth, (user) => {
-      if (!user || (previousUser !== null && previousUser !== user.uid)) {
+      if (!user || (previousUser !== undefined && previousUser !== user)) {
         localSessionVersion.current += 1;
         cloudFieldsRef.current = null;
         setAccountStorageAvailable(false);
         setHasOnboarded(false);
       }
-      previousUser = user?.uid ?? null;
+      previousUser = user;
       setUid(user && user.emailVerified ? user.uid : null);
       setNeedsEmailVerification(!!user && !user.emailVerified);
       setAuthReady(true);
@@ -1090,6 +1090,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   async function reloadPersistedData(profile?: Profile | null) {
+    const loadingUser = auth.currentUser;
     const loadingUid = auth.currentUser?.uid;
     const version = localSessionVersion.current;
     const [
@@ -1140,7 +1141,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       loadJSON<Record<string, number>>(STORAGE_KEYS.cloudSyncMeta, {}),
       loadJSON<CaptureLogEntry[]>(STORAGE_KEYS.autoCaptureLog, []),
     ]);
-    if (auth.currentUser?.uid !== loadingUid || version !== localSessionVersion.current) return;
+    if (auth.currentUser !== loadingUser || auth.currentUser?.uid !== loadingUid || version !== localSessionVersion.current) return;
     // Validar ANTES de publicar cualquier bloque. Un dato dudoso no es vacío.
     const records = mergeTransactionCopies(savedTransactions, [], savedDeletedTransactionIds, [], savedCloudSyncMeta);
     const goalCopies = mergeGoalCopies(savedGoals, [], savedDeletedGoalIds, [], savedCloudSyncMeta);
@@ -1195,18 +1196,22 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   async function openLocalAccount(userUid: string, email?: string | null): Promise<boolean> {
-    if (auth.currentUser?.uid !== userUid) throw new Error(tRef.current("settings.noActiveSession"));
+    const openingUser = auth.currentUser;
+    if (openingUser?.uid !== userUid) throw new Error(tRef.current("settings.noActiveSession"));
     setReady(false);
     const request = ++localOpenRequest.current;
-    localSessionVersion.current += 1;
+    const version = ++localSessionVersion.current;
+    const current = () => auth.currentUser === openingUser &&
+      request === localOpenRequest.current && version === localSessionVersion.current;
     cloudFieldsRef.current = null;
     try {
       const onboarded = await prepareLocalAccount(userUid, email);
+      if (!current()) throw new Error(tRef.current("settings.noActiveSession"));
       const profile = await loadJSON<Profile | null>(STORAGE_KEYS.profile, null);
-      if (auth.currentUser?.uid !== userUid || request !== localOpenRequest.current) throw new Error(tRef.current("settings.noActiveSession"));
+      if (!current()) throw new Error(tRef.current("settings.noActiveSession"));
       if (profile) applyLocalProfile(profile);
       await reloadPersistedData(profile);
-      if (auth.currentUser?.uid !== userUid || request !== localOpenRequest.current) throw new Error(tRef.current("settings.noActiveSession"));
+      if (!current()) throw new Error(tRef.current("settings.noActiveSession"));
       setHasOnboarded(onboarded);
       return onboarded;
     } catch (error) {
@@ -1407,6 +1412,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   useEffect(() => {
+    let alive = true;
+    let initialUser: typeof auth.currentUser | undefined;
+    let initialRequest = localOpenRequest.current;
+    let initialVersion = localSessionVersion.current;
+    const current = () => alive && initialRequest === localOpenRequest.current &&
+      (initialUser === undefined || (auth.currentUser === initialUser && initialVersion === localSessionVersion.current));
     async function init() {
       // Estas tres lecturas no dependen entre sí. Hacerlas una detrás de otra
       // alargaba cada arranque con la suma de tres esperas del almacenamiento.
@@ -1422,12 +1433,19 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       colorScheme.set(savedTheme);
       await auth.authStateReady();
       const user = auth.currentUser;
+      initialUser = user;
+      initialVersion = localSessionVersion.current;
+      initialRequest = localOpenRequest.current;
       if (user) {
-        await openLocalAccount(user.uid, user.email);
+        const opening = openLocalAccount(user.uid, user.email);
+        initialRequest = localOpenRequest.current;
+        initialVersion = localSessionVersion.current;
+        await opening;
         return;
       }
       const preAccount = await allowPreAccountPreferences();
       const profile = preAccount ? await loadJSON<Profile | null>(STORAGE_KEYS.profile, null) : null;
+      if (!current()) return;
       // País y moneda se eligen ANTES de crear la cuenta. Android puede
       // cerrar Fino mientras la persona abre el correo de verificación; al
       // volver hay que restaurar esa elección aunque el setup aún no haya
@@ -1448,6 +1466,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setReady(true);
     }
     init().catch(async (error) => {
+      // Un fallo de la cuenta anterior no cierra ni cubre una sesión nueva.
+      if (!current()) return;
       // Una lectura local inesperadamente dañada no debe dejar la primera
       // apertura en una pantalla vacía para siempre. Las lecturas normales
       // ya tienen sus propios valores seguros; esto cubre el último recurso.
@@ -1459,13 +1479,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         setReady(true);
         return;
       }
-      await signOut(auth).catch(() => undefined);
+      if (initialUser) {
+        await signOut(auth).catch(() => undefined);
+        if (!alive || initialRequest !== localOpenRequest.current || auth.currentUser !== null ||
+          localSessionVersion.current > initialVersion + 1) return;
+      }
       const message = error instanceof LocalAccountVaultError
         ? tRef.current(error.messageKey)
         : error instanceof Error && error.name === "LocalAccountAccessError" ? error.message : tRef.current("localAccount.restoreFailed");
       Alert.alert(tRef.current("localAccount.title"), message);
       setReady(true);
     });
+    return () => { alive = false; };
     // Esto debe ejecutarse UNA sola vez, al abrir la app. Si añadiéramos
     // reloadPersistedData a la lista, se volvería a ejecutar en cada
     // recarga y pisaría los datos que la persona esté editando.

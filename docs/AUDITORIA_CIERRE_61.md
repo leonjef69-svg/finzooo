@@ -1,7 +1,7 @@
 # Control de cierre de los 61 hallazgos originales y ampliaciones
 
 Revisión: 11/10/2026. Este índice conserva todos los IDs del informe de Claude
-y añade FINO-62, sin sustituir ni omitir los 61 originales.
+y añade FINO-62/63, sin sustituir ni omitir los 61 originales.
 No es un porcentaje de correcciones ni declara la auditoría terminada.
 Las notas de código preparado remiten al seguimiento y a Git; no equivalen a
 pruebas físicas ni a publicación. «Revalidar» significa que falta contrastar
@@ -77,6 +77,13 @@ físico. La MISMA cuenta Google sigue rechazada, causa pendiente; no se quita gu
 **Qué sigue/falta:** diagnóstico seguro y resto Android (2); servicios/consolas/
 publicación (3). Sin entrega/despliegue; tarjetas fuera, Telegram en pausa.
 
+Ampliación 11/10, 12:24:29: sesión exacta y respuesta Google verificadas en
+originales; FINO-63 nuevo detiene borrado/sustitución con perfil ausente.
+201/8 sin tarjetas (una ajena no versionada), TS/lint aprobados. Diagnóstico
+local solo lectura solicitado, captura Reloading/resultado pendiente; NO
+causa de misma Google demostrada. Detalle en PRUEBAS_ACCESO_INICIAL_VIDEO.
+No entrega funcional ni cierre de recorridos Android/tareas ya enviadas.
+
 | Hallazgo | Tema original | Situación y condición de cierre |
 |---|---|---|
 | FINO-01 | Cerrar sesión en el plan Gratis borra todos los datos del teléfono sin copia ni salida segura | Copia local por cuenta; 26c0e51. Falta recorrido Android A → B → A. |
@@ -141,6 +148,7 @@ publicación (3). Sin entrega/despliegue; tarjetas fuera, Telegram en pausa.
 | FINO-60 | El cifrado local depende de crypto-js, librería que su autor declara sin mantenimiento | Cifrado sustituido compatible; 9067a37. Falta actualizar instalación Android con datos antiguos. |
 | FINO-61 | 14 pruebas no ejecutan el código de la app: 5 prueban gráficos que ya no existen y 9 usan una copia de la lógica | Pruebas falsas retiradas/reemplazadas; ec0923e. Cuatro recorridos de navegación aún pendientes. |
 | FINO-62 | Dos aportes independientes a la misma meta desde dos equipos sustituyen uno de los importes al fusionar | NUEVO; preparación/código/pruebas locales del punto 1 terminados. Diagnóstico original reproduce 10+20 conservando solo un aporte en c6959c6; operaciones independientes suman 30, reintentos no duplican y retiros incompatibles/cifras antiguas dudosas detienen la unión con fuentes intactas. verificar-aportes-metas-real ejecuta manejadores/fusión originales; SDK local integral final 229/229. Faltan Android/dos equipos, compatibilidad de copias antiguas y entrega/activación autorizadas. No cerrado globalmente ni recuperación de aportes ya perdidos. |
+| FINO-63 | Dueño local activo con perfil ausente puede borrar bloques existentes o sustituirlos por una copia anterior al abrir la cuenta | NUEVO; guardia preparada conserva los originales y detiene apertura dudosa. Tres regresiones del módulo/almacén/cifrado originales rojas en 741ed40 por borrar/sustituir movimientos/presupuestos; actual verde, incluida primera cuenta legítima vacía. PRUEBAS_ACCESO_INICIAL_VIDEO, 11/10 12:24:29. Falta Android y recuperación segura del perfil; no acredita causa del rechazo Google del propietario ni recupera datos ya borrados. |
 
 ## Criterio de finalización
 
@@ -149,8 +157,9 @@ por decisión explícita. Los trámites/cuentas externas deben acreditarse y las
 pruebas Android ejecutarse. La publicación es un paso separado que requiere
 coordinación/autorización; un commit en GitHub no actualiza la app instalada.
 
-**Qué sigue:** detenido tras terminar el punto 1 local, esperando nueva orden;
-no se comienzan puntos 2/3. **Qué falta:** Android/dos equipos/cuentas reales, antiguos ambiguos,
+**Qué sigue:** completar punto 2, retomado por orden posterior del propietario:
+diagnóstico de su misma Google y demás Android; después punto 3.
+**Qué falta:** Android/dos equipos/cuentas reales, antiguos ambiguos,
 checkpoint/cupos/App Check/métricas, SMTP/bloqueo/moderación, Billing, web legal,
 Privacidad/Play/trámites y autorización coordinada de entrega/activación.
 Este archivo debe actualizarse al cerrar cada punto; no omitir pendientes de

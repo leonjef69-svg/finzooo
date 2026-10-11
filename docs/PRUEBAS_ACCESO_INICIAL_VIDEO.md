@@ -224,3 +224,105 @@ recorridos Android del punto 2 y servicios/consolas/publicación del 3. Tarjetas
 fuera, Telegram en pausa, Sentry externo excluido, diseño diferido. No nueva
 entrega ni causa del rechazo/acceso exitoso acreditados; no publicar separado
 del resto de preparación pendiente ni dar la auditoría por completa.
+
+### 11/10/2026 — 12:24:29 Lima — sesión exacta y diagnóstico local, parcial
+
+El propietario volvió a aportar `C:\Users\User\Downloads\rwerwerwe.GIF`:
+Registro muestra el aviso de otra cuenta tras elegir su MISMA cuenta Google.
+No confirma el motivo interno ni el JavaScript ejecutado. La nueva imagen
+`C:\Users\User\Downloads\ertertrereer.GIF` muestra blanco con «Reloading…»:
+todavía no acredita que esté ejecutando el diagnóstico ni que haya entrado.
+
+Correcciones adicionales, comprobadas en originales con IO sintético:
+
+- El arranque anterior podía cerrar una sesión nueva al fallar una apertura
+  antigua. Init, apertura y recarga verifican petición, versión e instancia
+  exacta de Auth, incluso cuando otra instancia tiene la misma UID. Las
+  continuaciones viejas no publican datos ni avisos sobre la nueva sesión.
+- La bóveda captura la sesión al solicitar, antes de esperar su cola; vuelve
+  a comprobarla entre lectura, limpieza, copia y confirmación del dueño.
+  Una adjudicación interrumpida conserva/restaura el dueño anterior exacto
+  y las copias recuperables; no permite leer los datos bajo otra sesión.
+- Google devuelve el usuario concreto de la respuesta SDK. Login, Registro
+  y Bienvenida ya no toman otra sesión que haya llegado mientras esperaban.
+- FINO-63 nuevo: dueño activo + perfil ausente podía borrar datos activos
+  sin copia, reemplazarlos por una copia antigua o perderlos al entrar B.
+  Se conserva todo y se detiene la apertura dudosa. Primera configuración
+  legítima sin bloques sigue permitida. No reconstruir el perfil a ciegas.
+
+Evidencia nueva (no es prueba del motivo real del propietario):
+
+- `verificar-apertura-sesion-real.mjs`: 16 casos verdes; `741ed40` rojo
+  (7 fallos/9 aprobados) por cierre/publicación tardíos, no API inexistente.
+- `verificar-boveda-sesion-restauracion-real.mjs`: 15 casos verdes. Baseline
+  de la parte inicial: 10 fallos/1 aprobado; casos nuevos de perfil ausente:
+  tres rojos por bloques borrados/sustituidos, primera configuración verde.
+- `verificar-google-resultado-real.mjs`: helper y tres manejadores originales;
+  reemplazo de Auth entre respuesta y continuación falla en `741ed40`, actual
+  verde. No acredita selección nativa ni cancela SDK ya enviado.
+- `verificar-descifrado-solo-lectura-real.mjs`: AES/HMAC originales con llave
+  ficticia existente/ausente/inválida; cero generación/escritura/escaneo.
+  Baseline `741ed40` rojo por usar otra llave, no por falta de método.
+- `verificar-diagnostico-acceso-local-real.mjs`: entrada/registro originales
+  Expo/RN, modos Android/dev/producción/web/iOS, Firebase en memoria y
+  metadatos con AES/HMAC original/cifrado independiente. Baseline `741ed40`
+  rojo por ejecutar dos tareas financieras, actual verde. La revisión
+  independiente detectó también un import que consultaba `Native.stats()`;
+  la entrada final NO evalúa router, captura, exportación, bóveda ni Sentry
+  en diagnóstico. Las pruebas comprueban ahora esa ausencia de imports.
+
+Los adaptadores antiguos se ajustan a Auth realmente presente al cambiar de
+cuenta y al usuario devuelto por SDK; conservan las aserciones financieras.
+Se corrigió una expectativa nueva de manifiesto idéntico: rearchivar A crea
+legítimamente otra generación; se exige conservar todos los bloques anteriores,
+encadenar el puntero y recuperar A/B, no congelar el manifiesto. El auditor de
+pantallas ahora examina también `index.js`, consumidor real de la pantalla
+independiente, sin exclusión artificial ni apagar comprobaciones.
+
+TypeScript/ESLint globales (incluido index.js) exit0. Repetición final app:
+**201 pruebas y 8 auditores**, sin tarjetas, exit0;
+`.tmp/auditoria-punto2-aislamiento-final-20261011.log`. Incluye una prueba ajena
+preexistente sin versionar: 200 previstas en Git limpio, no otro checkout.
+La pasada previa falló por consumidor index.js no considerado; el antecedente
+se conserva. No se volvió a ejecutar la batería integral SDK/servidor; los
+229/229 y Auth 5/5 históricos no se presentan como nueva evidencia.
+
+#### Comprobación acompañada, todavía sin resultado del teléfono
+
+APK instalada examinada sin leer bases financieras: sí contiene DevLauncher,
+Google Sign-In y AsyncStorage; certificado igual al debug.keystore del proyecto.
+`dumpsys package | Select-String DevLauncher` negativo no era prueba de ausencia.
+No contiene los cambios nativos ScreenPrivacy/NotificationCipher/FinzoBootReceiver;
+por eso Metro no puede certificarlos. Conserva el receptor antiguo exported.
+No se instaló APK, no se borró app, snapshot, claves ni datos; APK temporal
+para leer metadatos en `.tmp/acceso-apk-metadatos-20261011/`, no otra copia fuente.
+
+Diagnóstico exige Android + __DEV__ +
+`EXPO_PUBLIC_FINO_LOCAL_ACCESS_DIAGNOSTIC=1`, solo en el proceso de Metro.
+Raíz independiente marcada **diagnóstico11oct1**, sin AppDataContext. Auth de
+Google solo en memoria; el usuario elige su cuenta. Sí contacta Auth remoto
+como inicio normal autorizado, pero no la nube financiera. Lee exactamente
+dueño/perfil y, si hace falta, la llave existente de SecureStore en modo lectura;
+devuelve enum/booleanos, nunca correo/UID/nombre, movimientos, manifiestos,
+contenido cifrado ni claves. No restaura, adjudica ni registra recibos nuevos.
+Fuera del modo, la persistencia cifrada y entrada Router siguen normales.
+
+Expo CLI local/offline solicitó abrir el cliente ya instalado. `--offline`
+y `--localhost` juntos fueron rechazados antes de iniciar; se usa env
+EXPO_OFFLINE=1 con --localhost. Un primer servidor se detuvo antes de terminar
+el bundle al corregir los imports. Preparación local final dio HTTP 200 y
+bundle completo en ~69 s; no prueba descarga/ejecución por el teléfono. La
+captura blanca requiere carga completa, no solo Fast Refresh sobre la raíz
+normal; Firebase ya inicializado con otra persistencia no se reutiliza.
+Se reinició únicamente el servidor local en modo interactivo para recargar.
+Advertencias EPERM al explorar el runtime temporal del vídeo no se ocultaron.
+El propietario todavía no ha mostrado el rótulo/resultado del diagnóstico.
+
+**Qué sigue/falta:** obtener el resultado con su misma cuenta, identificar la
+causa y corregir/repetir acceso Android sin quitar protección; completar otros
+recorridos (2), servicios/consolas/publicación (3) después. Cierre/borrado y tareas
+financieras ya iniciadas aún requieren comprobar reemplazos de sesión; la nueva
+guardia de index antes de empezar no cancela una tarea ya enviada. Sin APK/AAB/
+OTA/despliegue ni entrega funcional normal. Tarjetas fuera, Telegram en pausa,
+Sentry externo excluido, UI diferida. No adjudicar datos por el nombre del correo
+ni declarar la auditoría o el acceso real terminados por estas pruebas verdes.

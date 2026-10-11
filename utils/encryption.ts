@@ -102,7 +102,7 @@ function constantTimeEqual(left: string, right: string) {
 // Descifra un texto cifrado con encryptText(). Si el texto no se pudo
 // descifrar (por ejemplo, porque es un dato viejo guardado antes de
 // activar el cifrado, o está dañado), devuelve null en vez de fallar.
-export async function decryptText(ciphertext: string): Promise<string | null> {
+export async function decryptText(ciphertext: string, options: { readOnly?: boolean } = {}): Promise<string | null> {
   try {
     const parts = ciphertext.split(":");
     const authenticated = parts[0] === "v2";
@@ -114,7 +114,10 @@ export async function decryptText(ciphertext: string): Promise<string | null> {
     if (authenticated && (!storedMac || !/^[0-9a-f]{64}$/.test(storedMac))) return null;
     const cipherBytes = base64.decode(cipherPart);
     if (!cipherBytes.length || cipherBytes.length % 16 !== 0) return null;
-    const keyHex = await getOrCreateKey();
+    // El diagnóstico no crea llaves ni recorre historiales si falta la llave.
+    // Tampoco usa una llave en caché que Android ya haya retirado.
+    const keyHex = options.readOnly ? await SecureStore.getItemAsync(KEY_STORAGE_NAME) : await getOrCreateKey();
+    if (!keyHex || !/^[0-9a-f]{64}$/i.test(keyHex)) return null;
     const key = hexToBytes(keyHex);
     if (authenticated) {
       if (!storedMac) return null;

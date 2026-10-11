@@ -151,7 +151,7 @@ for (const phase of ["write", "confirm"]) {
   };
   api.disk.getItem = async key => {
     const raw = await get(key);
-    if (key === ownerKey && ++ownerReads === 2 && phase === "confirm") api.auth.currentUser = { ...verified(), uid: "otra-cuenta" };
+    if (key === ownerKey && ++ownerReads === 3 && phase === "confirm") api.auth.currentUser = { ...verified(), uid: "otra-cuenta" };
     return raw;
   };
   await assert.rejects(api.prepareLocalAccount("legacy-uid", "legacy@example.test"), rejectReason("owner"));
