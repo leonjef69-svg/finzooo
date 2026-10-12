@@ -155,9 +155,11 @@ for (const kind of ["language", "currency"].filter(value => selectedCase === "al
     f.setBack(() => {}); await f.screen.rows[1].props.onPress(); assert.equal(f.backs.length, 1);
   }
   if (kind === "currency") {
-    const fixed = fixture(kind, true); assert.equal(fixed.screen.rows.length, 1);
-    assert.equal(fixed.screen.rows[0].props.disabled, true);
-    await fixed.screen.rows[0].props.onPress();
+    const fixed = fixture(kind, true); assert.equal(fixed.screen.rows.length, 3);
+    assert.ok(fixed.screen.rows.every(row => row.props.disabled === true), "todas las monedas se muestran, pero ninguna se puede cambiar en cuenta configurada");
+    assert.equal(fixed.screen.rows.filter(row => row.props.accessibilityState.selected).length, 1, "solo la moneda actual queda marcada");
+    assert.ok(flatten(fixed.screen.tree).some(node => node.type === "TextInput"), "se puede buscar en el catálogo aunque la moneda esté bloqueada");
+    await fixed.screen.rows[1].props.onPress();
     assert.deepEqual(fixed.changes, [], "La protección vive también dentro del manejador de moneda fija");
     assert.deepEqual(fixed.backs, []);
     const changing = fixture(kind), oldRow = changing.screen.rows[1];

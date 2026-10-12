@@ -663,7 +663,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "common.selected": "Seleccionado",
 
     "language.title": "Idioma",
-    "language.subtitle": "Elige el idioma en el que quieres ver la app.",
+    "language.subtitle": "Idiomas disponibles actualmente en Fino.",
 
 
     "detail.title": "Detalle",
@@ -2514,7 +2514,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "common.selected": "Selected",
 
     "language.title": "Language",
-    "language.subtitle": "Choose the language you want to see the app in.",
+    "language.subtitle": "Languages currently available in Fino.",
 
 
     "detail.title": "Detail",
@@ -4355,7 +4355,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "common.selected": "Selecionado",
 
     "language.title": "Idioma",
-    "language.subtitle": "Escolha o idioma em que deseja ver o app.",
+    "language.subtitle": "Idiomas disponíveis atualmente no Fino.",
 
 
     "detail.title": "Detalhe",
