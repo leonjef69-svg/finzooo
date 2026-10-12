@@ -33,7 +33,7 @@ import {
 } from "@/utils/cloudFamilia";
 import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Check, ListChecks, LogOut, Pencil, Plus, RefreshCw, Trash2, UserPlus, UsersRound, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 
@@ -41,6 +41,9 @@ const fechaHoy = () => new Date().toLocaleDateString("sv-SE");
 
 type FamiliaEnMemoria = {
   familia: EspacioFamilia | null;
+  familias: EspacioFamilia[];
+  saldosFamilias: Record<string, number>;
+  movimientosFamilias: Record<string, MovimientoFamilia[]>;
   miembros: MiembroFamilia[];
   movimientos: MovimientoFamilia[];
 };
@@ -65,8 +68,8 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   const uidAlAbrir = auth.currentUser?.uid ?? "";
   const copiaInicial = uidAlAbrir ? familiaEnMemoria.get(uidAlAbrir) : undefined;
   const [familia, setFamilia] = useState<EspacioFamilia | null>(copiaInicial?.familia ?? null);
-  const [familias, setFamilias] = useState<EspacioFamilia[]>(copiaInicial?.familia ? [copiaInicial.familia] : []);
-  const [saldosFamilias, setSaldosFamilias] = useState<Record<string, number>>({});
+  const [familias, setFamilias] = useState<EspacioFamilia[]>(copiaInicial?.familias ?? (copiaInicial?.familia ? [copiaInicial.familia] : []));
+  const [saldosFamilias, setSaldosFamilias] = useState<Record<string, number>>(copiaInicial?.saldosFamilias ?? {});
   // Entrar desde Personal debe llevar al selector de familias, no abrir
   // automáticamente la última familia activa. La persona elige el espacio
   // que quiere consultar en cada entrada.
@@ -78,9 +81,10 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   // La reconciliación de Personal debe conocer los movimientos de TODAS las
   // familias. Mirar solo la activa hacía que una transferencia válida de otra
   // familia se interpretara como huérfana y se borrara de Personal.
-  const [movimientosFamilias, setMovimientosFamilias] = useState<Record<string, MovimientoFamilia[]>>({});
+  const [movimientosFamilias, setMovimientosFamilias] = useState<Record<string, MovimientoFamilia[]>>(copiaInicial?.movimientosFamilias ?? {});
   const [familiasSincronizadas, setFamiliasSincronizadas] = useState(false);
-  const [cargando, setCargando] = useState(true);
+  const [cargando, setCargando] = useState(!copiaInicial);
+  const [actualizando, setActualizando] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [modo, setModo] = useState<"crear" | "unir" | null>(null);
   const [nombre, setNombre] = useState("");
@@ -144,6 +148,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     const uid = accountUid;
     const task = captureAccountTask(uid, () => mounted.current && pedido === reloadId.current && getAccountStorageSession() === accountSession);
     if (!task.current()) { if (!uid && mounted.current) setCargando(false); return; }
+    setActualizando(true);
     setFamiliasSincronizadas(false);
     try {
       const [lista, activaLegacy] = await task.wait(() => Promise.all([listarFamilias(uid), cargarFamiliaActiva(uid)]));
@@ -160,15 +165,20 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       confirmedReload.current = pedido;
       // Publicar juntos los datos completos: nunca reconciliar una mitad nueva
       // de la lista con movimientos/miembros de la consulta anterior.
+      const nextBalances = Object.fromEntries(saldos.map(([id, , info]) => [id, info.saldo]));
+      const nextMovements = Object.fromEntries(saldos.map(([id, items]) => [id, items]));
       setFamilias(lista);
-      setSaldosFamilias(Object.fromEntries(saldos.map(([id, , info]) => [id, info.saldo])));
-      setMovimientosFamilias(Object.fromEntries(saldos.map(([id, items]) => [id, items])));
+      setSaldosFamilias(nextBalances);
+      setMovimientosFamilias(nextMovements);
       setFamilia(activa);
       setMiembros(people); setMovimientos(movements);
       setFamiliasSincronizadas(true);
-      familiaEnMemoria.set(uid, { familia: activa, miembros: people, movimientos: movements });
+      familiaEnMemoria.set(uid, { familia: activa, familias: lista, saldosFamilias: nextBalances,
+        movimientosFamilias: nextMovements, miembros: people, movimientos: movements });
     } catch { if (task.current()) toastRef.current(tRef.current("family.connectionError")); }
-    finally { if (task.current()) setCargando(false); }
+    finally {
+      if (task.current()) { setCargando(false); setActualizando(false); }
+    }
   }, [accountSession, accountUid]);
 
   useFocusEffect(useCallback(() => {
@@ -565,6 +575,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   return <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top + 6, paddingBottom: insets.bottom }}>
     <View className="flex-row items-center justify-between px-5 pb-3"><BackButton onPress={safeBack} /><Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("family.title")}</Text><TouchableOpacity accessibilityLabel={t("common.refresh")} onPress={() => void recargar()} className="h-10 w-10 items-center justify-center"><RefreshCw size={18} color="#64748b" /></TouchableOpacity></View>
     <SpaceSwitcher active="family" />
+    {!cargando && actualizando ? <View accessibilityLiveRegion="polite" className="-mt-1 mb-1 flex-row items-center justify-center gap-2"><ActivityIndicator size="small" color="#059669" /><Text className="text-xs text-slate-500">{t("common.loading")}</Text></View> : null}
     <ScrollView
       className="flex-1 px-5"
       contentContainerStyle={{ paddingBottom: 36 }}

@@ -42,9 +42,17 @@ assert.match(family, /<SpaceSwitcher active="family"/);
 assert.match(family, /crearFamilia/, "Familia permite crear un espacio real");
 assert.match(family, /unirseAFamilia/, "Familia permite entrar mediante invitación");
 assert.match(family, /familiaEnMemoria/, "Familia conserva lo ya mostrado mientras actualiza la nube");
+assert.match(family, /useState\(!copiaInicial\)/, "Familia enseña la copia completa ya conocida mientras refresca");
+assert.match(family, /movimientosFamilias: nextMovements/, "la copia inmediata conserva todas las familias, no solo la última abierta");
+assert.match(family, /setActualizando\(true\)/, "Familia muestra un indicador discreto mientras valida los datos guardados");
 assert.match(boxes, /leerCajasEnMemoria/, "Cajas conserva lo ya mostrado al cambiar de espacio");
 assert.match(boxesMemory, /limpiarCajasEnMemoria/, "la caché de Cajas se puede vaciar al cambiar de cuenta");
 assert.match(boxes, /setReady\(true\)[\s\S]*bajarCajas/, "Cajas muestra primero la copia local y consulta la nube después");
+assert.doesNotMatch(boxes, /setCloudReady\(false\);\s*setReady\(false\)/, "al volver a Cajas no oculta una copia en memoria mientras consulta la nube");
+assert.match(boxes, /setActualizando\(true\)/, "Cajas actualiza sin vaciar la pantalla");
+assert.match(boxes, /ready && actualizando/, "Cajas enseña un indicador pequeño junto a la copia existente");
+assert.match(layout, /Stack\.Screen name="family" options=\{\{ animation: "fade"/, "Familia entra con transición breve y discreta");
+assert.match(layout, /Stack\.Screen name="boxes" options=\{\{ animation: "fade"/, "Cajas entra con transición breve y discreta");
 assert.match(route, /screens\/Family/);
 assert.match(boxesRoute, /screens\/Cajas/);
 

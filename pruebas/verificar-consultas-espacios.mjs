@@ -48,7 +48,7 @@ function familyHarness() {
     t: key => key, spaceErrorKey: () => "error", familiaEnMemoria: cache,
     listarFamilias: async () => [{ id: "f", nombre: "Casa" }], cargarFamiliaActiva: async () => null,
     listarMovimientosFamilia: async () => [{ id: "old", tipo: "ingreso", monto: 40 }], listarMiembrosFamilia: async () => [{ uid: "A" }] };
-  for (const name of ["Cargando", "FamiliasSincronizadas", "Familias", "SaldosFamilias", "MovimientosFamilias", "Familia", "Miembros", "Movimientos", "Ocupado"]) {
+  for (const name of ["Cargando", "Actualizando", "FamiliasSincronizadas", "Familias", "SaldosFamilias", "MovimientosFamilias", "Familia", "Miembros", "Movimientos", "Ocupado"]) {
     scope[`set${name}`] = value => { state[name] = value; };
   }
   vm.runInNewContext(transpile(`globalThis.recargar = (${reload});\n${fn(family, "ejecutar")}`), scope);
@@ -61,9 +61,20 @@ function familyHarness() {
   scope.listarMiembrosFamilia = () => members.promise;
   const load = scope.recargar(); await flush();
   assert.equal(state.Familias, undefined, "no publicar una lista parcial antes del último paso");
+  assert.equal(state.Actualizando, true, "la consulta comunica que se está actualizando");
   members.resolve([{ uid: "A" }]); await load;
   assert.equal(state.FamiliasSincronizadas, true);
+  assert.equal(state.Actualizando, false);
   assert.equal(state.Movimientos[0].id, "old");
+}
+// La copia al volver a entrar conserva TODA la lista, no solo la última familia.
+{
+  const { scope, cache } = familyHarness();
+  scope.listarFamilias = async () => [{ id: "f", nombre: "Casa" }, { id: "g", nombre: "Viaje" }];
+  scope.listarMovimientosFamilia = async id => [{ id: `mov-${id}`, tipo: "ingreso", monto: 40 }];
+  await scope.recargar();
+  assert.deepEqual(plain(cache.get("A").familias.map(item => item.id)), ["f", "g"]);
+  assert.deepEqual(Object.keys(cache.get("A").movimientosFamilias).sort(), ["f", "g"]);
 }
 // Respuesta de A después de entrar a B; también A -> B -> A (misma UID, otra sesión).
 for (const nextUid of ["B", "A"]) {

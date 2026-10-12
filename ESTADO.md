@@ -1,5 +1,19 @@
 # Estado actual de Fino
 
+## Punto 2 — 12/10/2026, 18:29 Lima — cambio entre espacios, mejora local sin entrega
+
+Personal/Familia/Cajas conservan su selector. Familia ahora mantiene en memoria
+la lista completa y muestra la copia conocida mientras actualiza; Cajas deja de
+ocultar su copia al volver. Ambas enseñan un indicador pequeño durante la consulta
+y Familia/Cajas usan fundido corto al cambiar. La nube todavía debe confirmarse
+antes de reparar transferencias; no se tocaron saldos ni movimientos. TypeScript,
+ESLint y las 205 pruebas/8 auditores pasaron. Las pruebas nuevas fallan con el
+código anterior. Ninguna compilación, instalación, OTA, publicación o despliegue.
+**Qué sigue/falta:** probar el cambio visual en el emulador y medir si la consulta
+de Familia/Cajas sigue lenta; luego atender errores o textos de transferencias.
+El punto 2 de la auditoría y el punto 3 externo siguen abiertos. Tarjetas fuera,
+Telegram en pausa y Sentry externo excluido.
+
 ## Punto 2 — 11/10/2026, 18:38 Lima — acceso normal Google comprobado
 
 Tras vincular el dueño local autorizado, se apagaron las dos banderas temporales

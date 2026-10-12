@@ -631,8 +631,8 @@ function RootLayout() {
             <Stack.Screen name="setup" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
             <Stack.Screen name="country" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
             <Stack.Screen name="currency" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
-            <Stack.Screen name="family" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: screenBg } }} />
-            <Stack.Screen name="boxes" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: screenBg } }} />
+            <Stack.Screen name="family" options={{ animation: "fade", contentStyle: { backgroundColor: screenBg } }} />
+            <Stack.Screen name="boxes" options={{ animation: "fade", contentStyle: { backgroundColor: screenBg } }} />
             {/* El alta de un movimiento es un panel superpuesto como el selector
                 del botón +. Su contenido es parcial, así que transparentModal
                 deja Inicio visible detrás sin darle a AddSheet una ventana de

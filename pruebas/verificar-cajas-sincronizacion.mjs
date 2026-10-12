@@ -160,7 +160,7 @@ function screenHarness(premium = true) {
     leerCajasEnMemoria: memory.leerCajasEnMemoria, revisionCajasEnMemoria: memory.revisionCajasEnMemoria,
     guardarCajasEnMemoria: value => { memory.guardarCajasEnMemoria(value); state.memory = value; }, saveJSON: async (_key, value) => { state.saved = value; },
     setRenderedDatos: value => { state.rendered = value; }, setReady: value => { state.ready = value; },
-    setCloudReady: value => { state.cloudReady = value; }, setSyncIssue: value => { state.issue = value; },
+    setCloudReady: value => { state.cloudReady = value; }, setActualizando: value => { state.actualizando = value; }, setSyncIssue: value => { state.issue = value; },
     setNameCopies: value => { state.nameCopies = value; },
     reportSyncError: error => { state.error = error.message; } };
   state.rendered = scope.datosActuales.current;
@@ -170,8 +170,10 @@ function screenHarness(premium = true) {
 }
 {
   const h = screenHarness(); h.localRead.resolve(data()); await flush();
+  assert.equal(h.state.actualizando, true, "conserva visible la copia local mientras revisa la nube");
   h.scope.setDatos(before => ({ ...before, movimientos: [...before.movimientos, { ...row, id: "mov-fast", creadoEn: 2 }] }));
   h.cloudRead.resolve(recent); await flush();
+  assert.equal(h.state.actualizando, false);
   assert.ok(h.state.rendered.movimientos.some(item => item.id === "mov-fast"), "la carga conserva una anotación todavía no pintada");
   assert.equal(h.state.rendered.movimientos.find(item => item.id === row.id).monto, 120);
   assert.equal(h.state.cloudReady, true);
