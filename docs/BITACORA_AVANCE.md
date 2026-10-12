@@ -3,6 +3,18 @@
 Fechas y horas en America/Lima (UTC-05:00). No inventar horas históricas.
 Proyecto activo y único lugar de trabajo: `C:\finzo`.
 
+## 12/10/2026 — 17:59 Lima — filtros recientes también en Familia y Cajas
+
+Se extendió a los espacios el mismo comportamiento pedido para Inicio: ocultar
+«Movimientos» cuando el espacio no tiene registros y enseñar la flecha verde o
+roja solo si hay ingresos o gastos normales de ese tipo. Aportes y devoluciones
+enlazados se dejan fuera de esos filtros; permanecen visibles en la lista normal
+y en su filtro de transferencias. Si el tipo seleccionado deja de existir, se
+restablece la lista general para no dejar a la persona atrapada en «sin
+resultados». Pasaron la prueba nueva de Inicio/Familia/Cajas, las pruebas
+existentes de Familia y Cajas, TypeScript y ESLint. Falta confirmar la apariencia
+en el emulador; no se modificaron movimientos ni saldos.
+
 ## 12/10/2026 — 17:53 Lima — filtros de movimientos recientes en Inicio
 
 Se ajustó Inicio: sin movimientos del mes, no muestra el encabezado «Movimientos
