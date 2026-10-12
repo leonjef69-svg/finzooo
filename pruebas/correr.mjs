@@ -82,6 +82,7 @@ const SUITES = [
     },
   },
   { archivo: "verificar-paises-monedas.ts", alias: BASE },
+  { archivo: "verificar-movimientos-recientes.ts", alias: BASE },
   { archivo: "verificar-presupuesto-exacto.ts", alias: BASE },
   {
     archivo: "verificar-prueba-aviso.ts",

@@ -3,6 +3,16 @@
 Fechas y horas en America/Lima (UTC-05:00). No inventar horas históricas.
 Proyecto activo y único lugar de trabajo: `C:\finzo`.
 
+## 12/10/2026 — 17:53 Lima — filtros de movimientos recientes en Inicio
+
+Se ajustó Inicio: sin movimientos del mes, no muestra el encabezado «Movimientos
+recientes» ni las flechas. Si existen gastos o ingresos personales, aparece solo
+la flecha correspondiente; si existen ambos, aparecen las dos. Las transferencias
+internas no habilitan filtros sin resultados. El mensaje de lista vacía se conserva.
+Pasaron la prueba enfocada `verificar-movimientos-recientes`, `npx tsc --noEmit`
+y ESLint. Falta revisar la apariencia en el emulador; no se modificaron datos ni
+se creó un movimiento de prueba.
+
 ## 12/10/2026 — 17:34 Lima — selectores de moneda e idioma
 
 Se corrigió el selector de moneda: antes, tras configurar la cuenta, el filtro

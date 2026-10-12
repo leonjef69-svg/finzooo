@@ -28,6 +28,7 @@ import { paymentForCalendarNotification } from "@/utils/calendarNotificationTap"
 import { fmtDate, monthKey } from "@/utils/format";
 import { esFoto } from "@/utils/iconosFavoritos";
 import { compactPersonalTransferRows, type TransferGroupSummary } from "@/utils/linkedTransfers";
+import { availableRecentMovementTypes } from "@/utils/recentMovementFilters";
 import { irUnaVez } from "@/utils/nav";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { usePendingImport } from "@/utils/pendingImport";
@@ -446,6 +447,10 @@ export default function Home({
       : row);
   }, [monthTx, transactions]);
   const [recentFilter, setRecentFilter] = useState<"income" | "expense" | null>(null);
+  const recentMovementTypes = useMemo(() => availableRecentMovementTypes(monthTx), [monthTx]);
+  useEffect(() => {
+    if (recentFilter && !recentMovementTypes[recentFilter]) setRecentFilter(null);
+  }, [recentFilter, recentMovementTypes]);
   const visibleRecentRows = useMemo(() => recentFilter
     ? compactMonthRows.filter(row => !row.item.internalTransfer && row.item.type === recentFilter)
     : compactMonthRows, [compactMonthRows, recentFilter]);
@@ -991,16 +996,19 @@ export default function Home({
               </View>
             </>
           ) : (
-            <>
+            compactMonthRows.length > 0 ? <>
               <MovementAllButton label={t("home.recentTransactions")} activeFilter={recentFilter !== null} onPress={() => setRecentFilter(null)} />
-              <View className="flex-row items-center gap-2"><TouchableOpacity accessibilityRole="button" accessibilityLabel={t("home.filterIncome")} accessibilityState={{ selected: recentFilter === "income" }} onPress={() => setRecentFilter("income")} className={`h-10 w-10 items-center justify-center rounded-xl ${recentFilter === "income" ? "bg-emerald-200" : "bg-emerald-50"}`}><ArrowUp size={19} color="#047857" strokeWidth={2.6} /></TouchableOpacity><TouchableOpacity accessibilityRole="button" accessibilityLabel={t("home.filterExpense")} accessibilityState={{ selected: recentFilter === "expense" }} onPress={() => setRecentFilter("expense")} className={`h-10 w-10 items-center justify-center rounded-xl ${recentFilter === "expense" ? "bg-rose-200" : "bg-rose-50"}`}><ArrowDown size={19} color="#be123c" strokeWidth={2.6} /></TouchableOpacity></View>
+              <View className="flex-row items-center gap-2">
+                {recentMovementTypes.income ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("home.filterIncome")} accessibilityState={{ selected: recentFilter === "income" }} onPress={() => setRecentFilter("income")} className={`h-10 w-10 items-center justify-center rounded-xl ${recentFilter === "income" ? "bg-emerald-200" : "bg-emerald-50"}`}><ArrowUp size={19} color="#047857" strokeWidth={2.6} /></TouchableOpacity> : null}
+                {recentMovementTypes.expense ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("home.filterExpense")} accessibilityState={{ selected: recentFilter === "expense" }} onPress={() => setRecentFilter("expense")} className={`h-10 w-10 items-center justify-center rounded-xl ${recentFilter === "expense" ? "bg-rose-200" : "bg-rose-50"}`}><ArrowDown size={19} color="#be123c" strokeWidth={2.6} /></TouchableOpacity> : null}
+              </View>
               {monthTx.length > 0 && (
                 <TouchableOpacity onPress={toggleSelectMode} className="min-h-10 flex-row items-center gap-1.5">
                   <ListChecks size={18} color="#059669" />
                   <Text className="text-[15px] font-bold text-emerald-600">{t("common.select")}</Text>
                 </TouchableOpacity>
               )}
-            </>
+            </> : null
           )}
         </View>
       </View>
