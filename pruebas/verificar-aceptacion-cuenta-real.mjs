@@ -162,7 +162,7 @@ for (const [file, name, args] of guarded) {
 {
   const a = environment(); enter(a, "A"); let writes = 0, errors = [];
   const caja = { id: "box", nombre: "Casa" }, data = { cajas: [caja], movimientos: [] };
-  const deps = { auth: a.auth, caja, repairBlocked: false, compartiendo: false,
+  const deps = { auth: a.auth, caja, repairBlocked: false, repairPlan: { conflicts: [] }, compartiendo: false,
     conversionEnCurso: { current: false }, guardandoRef: { current: false }, isPremium: true,
     movimientos: [], transactions: [], Platform: { OS: "android" },
     privateBoxLinksMatch: () => true, datosActuales: { current: data },

@@ -30,6 +30,7 @@ const deferred = () => {
 };
 const flush = async () => { for (let i = 0; i < 30; i++) await Promise.resolve(); };
 const api = load("utils/cajas.ts");
+const repairApi = load("utils/privateBoxRepair.ts", name => name === "@/utils/cajas" ? api : load("utils/linkedTransfers.ts"));
 const moneyLocalWrite = load("utils/privateBoxMoneyLocalWrite.ts");
 const box = { id: "caja-a", nombre: "A", creadaEn: 1 };
 const row = { id: "mov-a", cajaId: box.id, tipo: "ingreso", monto: 100, descripcion: "Aporte", fecha: "2026-10-05", creadoEn: 1 };
@@ -150,11 +151,13 @@ function screenHarness(premium = true) {
   memory.limpiarCajasEnMemoria();
   const state = {}, localRead = deferred(), cloudRead = deferred(); let count = 0;
   const scope = { auth, accountUid: "A", cuentaActual: () => uid === "A" && session === 1, isPremium: premium,
+    personalReady: true, hasOnboarded: true, personalActuales: { current: [] }, borradosActuales: { current: [] },
     guardandoRef: { current: false },
     refreshVersion: 0, requestedRefresh: { current: 0 },
     premiumForSync: { current: premium }, nubeConfirmadaPara: { current: null }, datosActuales: { current: data() },
     ...moneyLocalWrite, captureAccountTask: capture, hasUnreadableLocalData: () => false, STORAGE_KEYS: { cajasDinero: "cajas" }, CAJAS_VACIAS: data([]),
     validarCajas: api.validarCajas, fusionarCajas: api.fusionarCajas,
+    fusionarCajasProtegidas: api.fusionarCajasProtegidas, planPrivateBoxRepair: repairApi.planPrivateBoxRepair,
     privateBoxCloudResponseCurrent: () => true,
     loadJSON: () => localRead.promise, bajarCajas: () => { count++; return cloudRead.promise; },
     leerCajasEnMemoria: memory.leerCajasEnMemoria, revisionCajasEnMemoria: memory.revisionCajasEnMemoria,

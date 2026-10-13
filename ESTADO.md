@@ -1,5 +1,126 @@
 # Estado actual de Fino
 
+## Cajas independientes — 12/10/2026 — bloqueo por registros antiguos corregido en código
+
+El bloqueo de `repairPlan.conflicts` se aplicaba a todas las Cajas: tres
+incidencias de «hj» impedían crear una Caja distinta, incluso con dinero
+externo. Ahora las incidencias identificables protegen solo la Caja relacionada.
+Crear y usar otra Caja no modifica esos registros ni devuelve dinero supuesto.
+Los datos ilegibles, incidencias sin Caja identificable, revisión de importe
+pendiente y comprobaciones iniciales siguen bloqueando cuando no es seguro.
+
+La sincronización separa las Cajas protegidas de las demás. Conserva en el
+teléfono su fuente dudosa y en el servidor la fuente dudosa del servidor,
+incluidas sus marcas de borrado; no copia una sobre la otra por fecha ni
+resucita la Caja remota al guardar una nueva. Las Cajas sanas siguen pasando
+por la unión habitual, versiones, validación y rechazo de saldo negativo.
+Un enlace Personal antiguo repetido solo permite operaciones independientes
+si su grupo permanece idéntico; no permite editarlo, borrarlo o reutilizarlo.
+
+Se comprobó crear con Personal y dinero externo; conservar los tres registros
+y las marcas antiguas; mantener bloqueo de «hj»; rechazar datos no identificables
+y revisiones pendientes; guardar las dos mitades con la acción/contexto y SQLite
+originales; preservar fuentes diferentes y una Caja borrada en servidor; y
+rechazar dos gastos concurrentes que exceden el saldo. Las tres regresiones
+principales fallan por comportamiento contra `9c146c1`. Guía:
+`docs/PRUEBAS_CAJAS_INDEPENDIENTES.md`. No se consultaron ni corrigieron los
+movimientos reales para estas pruebas ni se cambiaron las reglas de acceso Pro.
+La política existente permite Cajas privadas locales Gratis y requiere Pro
+para su nube/funciones compartidas; Familia conserva sus controles existentes.
+El recordatorio del dueño sobre Pro no se usó para cambiar esa política de
+recuperación o monetización en medio del arreglo.
+
+**Verificación final:** TypeScript y ESLint completos sin errores; corredor
+oficial con tarjetas excluidas: 204 pruebas y 8 auditores verdes. Marcador de
+entrega de desarrollo `12oct-cajas-independientes`. La captura Windows falló
+dos veces; mediante captura Android/ADB se comprobó que la app abre y Cajas
+muestra «hj» S/20 sin el aviso fijo. No se guardó una Caja artificial en la
+cuenta real. Al recargar, el respaldo automático de Personal recibió
+`permission-denied` de Firebase: es un pendiente observado distinto del
+bloqueo localizado; no se cambiaron reglas ni se afirma respaldo real exitoso.
+
+**Qué sigue/falta:** verificar visualmente la creación en Android, aclarar y
+resolver con fuentes comprobadas los tres casos reales de «hj», y continuar los
+hallazgos de Familia/Cajas compartidas: gasto concurrente, guardado del par
+Personal/Familia, historiales grandes y moderación. Los registros antiguos no
+se declararon borrados ni se limpiaron por inferencia; compartir conserva la
+protección global anterior si hay incidencias. No es cierre de la auditoría
+integral, ni prueba con dos cuentas reales, ni publicación APK/AAB/OTA/Firebase.
+
+## Auditoría de Familia y Cajas — 12/10/2026, 21:21 Lima — revisión del código y pruebas enfocadas
+
+Se revisaron las pantallas de Familia, Cajas privadas y compartidas; lectura y
+escritura en Firebase, reglas, membresías/invitaciones, enlaces con Personal,
+devoluciones, cierres, borrados, sincronización, migración y mensajes de
+movimientos recientes. No se leyeron ni cambiaron movimientos reales.
+
+**Lo que está protegido:** las invitaciones vencen y se consumen al entrar;
+solo miembros leen el espacio, el dueño administra miembros/cierres y el
+servidor exige verificar el correo, aceptación de documentos y Pro al dueño
+para operar las funciones que lo requieren. Los aportes/devoluciones llevan
+enlaces entre Personal y el espacio. Fino limita devoluciones al dinero aún
+disponible; el dinero gastado cuenta como consumido y no se exige reponerlo
+para cerrar. Borrar un aporte usado se rechaza. Los cierres y salidas también
+se validan en servidor. En Cajas privadas, la unión local entre Personal y Caja
+se guarda en un lote Android y la sincronización detecta copias atrasadas,
+empates y gastos que dejarían saldo negativo, preservando las fuentes para una
+revisión en vez de elegir a ciegas. La conversión a Caja compartida conserva la
+copia privada hasta confirmar la migración.
+
+**Hallazgo de prioridad alta (diseño, no reproducido con dos teléfonos):** el
+límite de gasto de Familia y Caja compartida se comprueba en la pantalla con
+el saldo que leyó el teléfono. Después cada gasto se envía como alta individual;
+las reglas verifican que el registro sea válido y que quien escribe sea miembro,
+pero no vuelven a sumar el saldo en el servidor. Dos miembros/dispositivos con
+un saldo antiguo podrían guardar gastos que juntos excedan el dinero. Requiere
+una prueba concurrente y, si se confirma, que el servidor acepte cada gasto con
+saldo actualizado de forma transaccional. No se cambió nada.
+
+**Hallazgo de prioridad media:** un aporte nuevo a Familia se escribe primero
+en el espacio de Firebase y su salida correspondiente de Personal se agrega
+después al historial local, en pasos distintos. La pantalla no espera una
+confirmación explícita de ese segundo agregado. Hay conciliación posterior y
+guardas para evitar inventar dinero, pero no es una sola operación indivisible;
+si el segundo paso falla, puede quedar temporalmente una mitad y requerir
+recuperación. Diferente de Cajas privada en Android, que sí comprueba el guardado
+conjunto. La devolución compartida, en cambio, usa recibo del servidor para
+recuperar un resultado confirmado sin duplicarlo.
+
+**Rendimiento y uso:** Familia pide todos los movimientos de cada Familia al
+actualizar, y Familia/Cajas compartidas observan o leen historiales completos,
+sin paginación. Una Caja privada Pro concentra su historial en un documento de
+nube. No es un fallo demostrado con los datos actuales, pero colecciones largas
+pueden aumentar espera, lecturas/costo y acercar el documento privado al límite
+de tamaño de Firebase. La copia conocida reduce el parpadeo al cambiar de
+espacio; el tiempo y la suavidad reales todavía requieren medirlos en Android.
+La prueba de «Movimientos recientes» sí confirma que Familia y Cajas muestran
+el encabezado y flechas solo cuando hay registros del tipo correspondiente.
+
+**Moderación pendiente:** el botón de denuncia está en la interfaz, pero el
+servidor la rechaza si no está configurado el envío. No está conectado el correo
+a dinero123xc@gmail.com ni hay moderación/bloqueo efectivo; no debe prometerse
+que alguien recibió o atendió una denuncia. Es pendiente antes de lanzar los
+espacios compartidos públicamente.
+
+**Comprobaciones de esta revisión:** 15 pruebas enfocadas de la app (Familia,
+transferencias, consultas, saldos recientes, sincronización, pares, lote local,
+recuperación, conversión, cancelación y borrado incompleto) y 34 pruebas
+unitarias del servidor pasaron. `npx tsc --noEmit` y ESLint de los archivos
+revisados también pasaron. La ejecución directa de dos pruebas `.ts` no era el
+método configurado; se repitieron por el corredor oficial y pasaron. No se pudo
+ejecutar Firebase Emulator Suite en esta sesión (Firebase CLI no está disponible
+en la carpeta activa), ni probar simultaneidad real, dos cuentas, red inestable,
+rendimiento grande o apariencia/fluidez en Android.
+
+**Conclusión:** el flujo normal y las protecciones de saldo/identidad están
+bien cubiertos por pruebas locales, pero la auditoría integral de uso real no
+se puede dar por cerrada. **Sigue:** corregir o descartar con una prueba
+concurrente el gasto compartido sin control del servidor y estudiar un guardado
+confirmado para el par de Familia/Personal. **Falta:** Firebase local con reglas
+reales en esta revisión, prueba Android con dos cuentas/dispositivos, medir
+historiales grandes, revisar visualmente el cambio de espacios y habilitar
+moderación/correo antes de publicación. Sin tarjetas, Telegram ni Sentry.
+
 ## Punto 2 — 12/10/2026, 21:04 Lima — emulador cargó el código de prueba actual
 
 Se comprobó por qué seguía apareciendo el aviso anterior: el emulador buscaba

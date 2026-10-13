@@ -1,5 +1,6 @@
 import type { Transaction } from "@/types";
 import type { DatosCajas, MovimientoCaja } from "@/utils/cajas";
+import { canonical } from "../functions/src/private-box-money-shared.js";
 
 /** No compartir una mitad heredada dejando atrás su contraparte. */
 export function privateBoxLinksMatch(data: DatosCajas, rows: Transaction[], boxId: string): boolean {
@@ -18,9 +19,25 @@ export function validatePrivateBoxPatch(before: DatosCajas, next: DatosCajas, ro
   const old = new Map(rows.map(row => [row.id, row]));
   const source = new Map(before.movimientos.filter(row => row.personalTransactionId != null).map(row => [row.personalTransactionId!, row]));
   const target = new Map(next.movimientos.filter(row => row.personalTransactionId != null).map(row => [row.personalTransactionId!, row]));
-  if (source.size !== before.movimientos.filter(row => row.personalTransactionId != null).length
-    || target.size !== next.movimientos.filter(row => row.personalTransactionId != null).length) throw new Error("private-box-id-conflict");
   const changed = new Set(upserts.map(row => row.id)), removed = new Set(deleteIds);
+  // Un enlace antiguo repetido protege sus registros, sin impedir una Caja
+  // independiente. Ninguna edición puede aprovechar esa ambigüedad.
+  const grouped = (movements: MovimientoCaja[]) => {
+    const result = new Map<number, MovimientoCaja[]>();
+    for (const row of movements) {
+      if (row.personalTransactionId == null) continue;
+      const group = result.get(row.personalTransactionId) || [];
+      group.push(row); result.set(row.personalTransactionId, group);
+    }
+    return result;
+  };
+  const fromGroups = grouped(before.movimientos), toGroups = grouped(next.movimientos);
+  for (const id of new Set([...source.keys(), ...target.keys()])) {
+    const from = fromGroups.get(id) || [], to = toGroups.get(id) || [];
+    if (from.length > 1 || to.length > 1) {
+      if (changed.has(id) || removed.has(id) || canonical(from) !== canonical(to)) throw new Error("private-box-id-conflict");
+    }
+  }
   const financial = (row: MovimientoCaja) => JSON.stringify([row.id, row.cajaId, row.tipo, row.monto, row.personalReturnAmount ?? null]);
   for (const [id, row] of target) {
     if ((!source.has(id) || financial(source.get(id)!) !== financial(row)) && !changed.has(id)) throw new Error("private-box-invalid-patch");

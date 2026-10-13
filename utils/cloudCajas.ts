@@ -1,6 +1,6 @@
 import { deleteDoc, doc, getDocFromServer, runTransaction } from "firebase/firestore";
 import { db } from "@/utils/firebase";
-import { cajaNombreCoincide, fusionarCajas, normalizarCajas, validarCajas, type DatosCajas, type RevisionNombreCaja } from "@/utils/cajas";
+import { cajaNombreCoincide, fusionarCajasProtegidas, normalizarCajas, validarCajas, type DatosCajas, type RevisionNombreCaja } from "@/utils/cajas";
 import { captureAccountTask } from "@/utils/accountTask";
 import { hasUnreadableLocalData } from "@/utils/storage";
 import { withPrivateBoxCloudOperation } from "@/utils/privateBoxSync";
@@ -29,7 +29,7 @@ export async function bajarCajas(uid: string): Promise<DatosCajas | null> {
   });
 }
 
-export async function subirCajas(uid: string, datos: DatosCajas, onError?: (error: unknown) => void, onConfirmed?: (data: DatosCajas) => void): Promise<boolean> {
+export async function subirCajas(uid: string, datos: DatosCajas, onError?: (error: unknown) => void, onConfirmed?: (data: DatosCajas) => void, cajasProtegidas: readonly string[] = []): Promise<boolean> {
   const task = captureAccountTask(uid);
   try {
     return await withPrivateBoxCloudOperation(uid, async lease => {
@@ -48,13 +48,16 @@ export async function subirCajas(uid: string, datos: DatosCajas, onError?: (erro
         ? servidor(snap.data())
         : normalizarCajas(null);
       if (hasUnreadableLocalData()) throw new Error("cajas-local-unreadable");
-      let merged: DatosCajas;
-      try { merged = fusionarCajas(clean, remoto); }
+      let merged: { local: DatosCajas; remoto: DatosCajas };
+      try { merged = fusionarCajasProtegidas(clean, remoto, cajasProtegidas); }
       catch (error) { if ((error as { message?: string })?.message === "cajas-sync-conflict") throw new CloudCajasConflictError(remoto); throw error; }
-      for (const box of merged.cajas) { delete box.sharingPending; delete box.sharingAttempt; }
+      // Las fuentes protegidas del servidor se conservan tal como estaban.
+      for (const box of merged.remoto.cajas) {
+        if (!cajasProtegidas.includes(box.id)) { delete box.sharingPending; delete box.sharingAttempt; }
+      }
       lease.assertCurrent();
-      transaction.set(ref, merged);
-      return merged;
+      transaction.set(ref, merged.remoto);
+      return merged.local;
     }));
     lease.remember(saved);
     onConfirmed?.(saved);

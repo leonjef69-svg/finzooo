@@ -3,6 +3,60 @@
 Fechas y horas en America/Lima (UTC-05:00). No inventar horas históricas.
 Proyecto activo y único lugar de trabajo: `C:\finzo`.
 
+## 12/10/2026 — Cajas nuevas sin bloqueo por una Caja antigua
+
+Se localizó el bloqueo de transferencias dudosas por Caja y se separaron las
+fuentes protegidas al sincronizar. Crear con dinero externo o Personal ya no
+queda impedido solo por los tres casos de «hj». Sus filas, enlaces y marcas
+siguen protegidos; no se decidió borrarlas ni devolver dinero. IDs antiguos
+repetidos se toleran exclusivamente como grupo idéntico e intocable.
+
+Pruebas nuevas ejecutan las acciones y nube originales con IO adaptado; las
+tres regresiones fallan contra `9c146c1`. Se añadieron cuatro casos al guardado
+real de pantalla/contexto y SQLite: Personal/externo, con enlaces únicos o
+repetidos. Resultado final: TypeScript, ESLint y 204 pruebas/8 auditores verdes
+(tarjetas excluidas). Guía `docs/PRUEBAS_CAJAS_INDEPENDIENTES.md`.
+
+Se recargó el Dev Client por 8081; Metro compiló el código Android. Windows
+Computer Use no pudo capturar tras dos intentos; con una captura Android/ADB
+se observó Inicio y Cajas sin banner fijo, con «hj» S/20. No se creó/borró ni
+reparó ningún movimiento real. El respaldo automático de Personal registró un
+rechazo `permission-denied`; no se declara éxito de nube real ni se cambian
+reglas desplegadas. Marcador `12oct-cajas-independientes`.
+
+**Qué sigue/falta:** revisar ese rechazo de respaldo; validar creación visual
+con datos de prueba separados; aclarar los tres casos reales de «hj»; continuar
+gasto compartido concurrente, par Familia/Personal, historiales y moderación.
+Compartir sigue restringido ante incidencias; Pro conserva las reglas
+existentes. No hay APK/AAB/OTA/servidor publicados ni cambios de Telegram o tarjetas.
+
+## 12/10/2026 — 21:21 Lima — auditoría de Familia y Cajas
+
+Revisión de solo lectura de las pantallas, Firebase, reglas, servidor, enlaces
+con Personal, cierres/borrados, sincronización y migración. No se consultaron ni
+cambiaron cuentas o movimientos reales.
+
+La seguridad de acceso, invitaciones, quién puede modificar, devoluciones
+limitadas al saldo disponible y cierres con lo gastado como consumido están
+implementados y cubiertos por pruebas locales. Cajas privada Android tiene
+guardado conjunto Personal/Caja; Familia y Personal siguen guardados en pasos
+separados, con conciliación posterior. Hallazgo importante para comprobar:
+gastos de miembros en Familia/Caja compartida se limitan con el saldo leído por
+el teléfono, pero la regla Firebase no recalcula el saldo al guardar. Dos
+escrituras concurrentes con saldos antiguos podrían superar el disponible; no
+se reprodujo con dos cuentas/dispositivos. Historiales compartidos se leen
+completos, sin paginación; falta medirlos y medir fluidez en Android. El botón
+de denuncia no envía correo aún: configuración SMTP/moderación pendiente.
+
+Pasaron 15 pruebas enfocadas de app, 34 pruebas unitarias de servidor,
+TypeScript y ESLint de los archivos auditados. No se pudo ejecutar el conjunto
+con Firebase Emulator (CLI no disponible en esta carpeta); no se probó Android
+visual, dos cuentas, simultaneidad ni datos grandes. **Sigue/falta:** validar
+el gasto concurrente y asegurar su comprobación en servidor; estudiar el par
+Personal/Familia; pruebas con reglas reales, Android y dos cuentas; medir
+historiales grandes y completar moderación antes de publicar. Sin cambios de
+código, datos, saldos, Firebase real o tarjetas.
+
 ## 12/10/2026 — 21:04 Lima — emulador conectado al código actual
 
 El emulador buscaba el servidor de desarrollo en 8081; el servidor anterior

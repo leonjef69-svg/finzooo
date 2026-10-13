@@ -400,3 +400,53 @@ export function saldoCaja(cajaId: string, movimientos: MovimientoCaja[]): number
     return total + (item.tipo === "ingreso" ? item.monto : -item.monto);
   }, 0);
 }
+
+/** Sincroniza las Cajas sanas conservando, por separado, cada fuente dudosa.
+ * Un bloqueo de Personal/Caja no autoriza copiar la versión local sobre la
+ * remota (ni la remota sobre la local), aunque tengan fechas distintas.
+ */
+export function fusionarCajasProtegidas(local: DatosCajas, remoto: DatosCajas, protegidas: readonly string[]): { local: DatosCajas; remoto: DatosCajas } {
+  if (!protegidas.length) {
+    const merged = fusionarCajas(local, remoto);
+    return { local: merged, remoto: merged };
+  }
+  const boxes = new Set(protegidas);
+  const moves = new Set([...local.movimientos, ...remoto.movimientos].filter(row => boxes.has(row.cajaId)).map(row => row.id));
+  for (const source of [local, remoto]) {
+    for (const [id, receipt] of Object.entries(source.conversiones || {})) {
+      if (boxes.has(id)) for (const link of receipt.links) moves.add(link.movementId);
+    }
+  }
+  const safe = (source: DatosCajas): DatosCajas => ({
+    cajas: source.cajas.filter(row => !boxes.has(row.id)),
+    movimientos: source.movimientos.filter(row => !boxes.has(row.cajaId)),
+    cajasBorradas: source.cajasBorradas.filter(id => !boxes.has(id)),
+    movimientosBorrados: source.movimientosBorrados.filter(id => !moves.has(id)),
+    ...(source.syncFormat ? { syncFormat: source.syncFormat } : {}),
+    ...(source.conversiones ? { conversiones: Object.fromEntries(Object.entries(source.conversiones).filter(([id]) => !boxes.has(id))) } : {}),
+  });
+  const merged = fusionarCajas(safe(local), safe(remoto));
+  const restore = (source: DatosCajas): DatosCajas => {
+    const retained = source.movimientos.filter(row => boxes.has(row.cajaId));
+    const protectedPersonal = new Set(retained.flatMap(row => row.personalTransactionId == null ? [] : [row.personalTransactionId]));
+    for (const [id, receipt] of Object.entries(source.conversiones || {})) {
+      if (boxes.has(id)) for (const link of receipt.links) protectedPersonal.add(link.personalId);
+    }
+    // Un ID de movimiento o de Personal no puede cruzar a otra Caja al unir.
+    if (merged.movimientos.some(row => moves.has(row.id) || (row.personalTransactionId != null && protectedPersonal.has(row.personalTransactionId)))) {
+      throw new Error("cajas-sync-conflict");
+    }
+    const conversiones = { ...merged.conversiones, ...Object.fromEntries(Object.entries(source.conversiones || {}).filter(([id]) => boxes.has(id))) };
+    return validarCajas({
+      ...merged,
+      cajas: [...merged.cajas, ...source.cajas.filter(row => boxes.has(row.id))],
+      movimientos: [...merged.movimientos, ...retained],
+      cajasBorradas: [...merged.cajasBorradas, ...source.cajasBorradas.filter(id => boxes.has(id))],
+      movimientosBorrados: [...merged.movimientosBorrados, ...source.movimientosBorrados.filter(id => moves.has(id))],
+      ...(source.syncFormat === 3 || merged.syncFormat === 3 || Object.keys(conversiones).length ? { syncFormat: 3, conversiones } : {}),
+      ...(source.revisionesNombre ? { revisionesNombre: source.revisionesNombre } : {}),
+      ...(source.revisionesImporte ? { revisionesImporte: source.revisionesImporte } : {}),
+    });
+  };
+  return { local: restore(local), remoto: restore(remoto) };
+}

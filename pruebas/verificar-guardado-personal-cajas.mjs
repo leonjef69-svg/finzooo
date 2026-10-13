@@ -159,6 +159,7 @@ try {
       t: key => key, showToast: key => events.push(key), amountInputError: () => null, parseAmountInput: Number, validSpaceDate: () => true,
       fechaLocal: () => "2026-10-05", horaDe: () => "12:00", nextId: () => ++id, nuevoIdCaja: prefix => `${prefix}-${++id}`,
       tomarAccionLocal: () => !s.guardandoRef.current, siguienteVersionCaja: boxes.siguienteVersionCaja,
+      cajaId: before.cajas[0]?.id ?? null, cajaNecesitaRevision: () => false,
       commitPrivateBoxData: ctx.commit, setGuardando: value => { s.guardando = value; }, setRepairCloudChanged() {},
       setDatos: value => { s.datosActuales.current = value; s.datos = value; },
       setNuevoNombre() {}, setMontoInicial() {}, setOrigenDinero() {}, setCreando() {}, setCajaId() {}, setLista() {}, setMonto() {}, setDescripcion() {},
@@ -173,6 +174,29 @@ try {
     assert.equal(s.ctx.transactionsLive.current[0].amount, 100); assert.equal(s.datosActuales.current.movimientos[0].monto, 100);
     assert.ok(s.events.includes("saldo:2026-10-05"), "la Caja valida el saldo de la fecha del aporte inicial");
     assert.equal(s.events.includes("boxes.saved"), true);
+  }
+  // Registros viejos pendientes conservados junto a una Caja nueva: acción,
+  // contexto y lote SQLite originales, no solo un guardado simulado.
+  for (const origin of ["personal", "externo"]) {
+    for (const duplicate of [false, true]) {
+      const oldMoves = [11, 12, 13].map(id => ({ ...move, id: `viejo-${id}`, personalTransactionId: duplicate ? 11 : id }));
+      const before = { ...data, movimientos: oldMoves };
+      const s = screenHarness(before);
+      s.ctx.deletedTransactionIdsRef.current = [11, 12, 13];
+      s.origenDinero = origin;
+      s.repairPlan = { conflicts: oldMoves.map(row => ({ boxId: box.id, movementId: row.id, reason: "deleted" })) };
+      s.accionLocalEnCurso = { current: false };
+      s.setTimeout = work => { work(); return 0; };
+      s.avisarRevisionNecesaria = () => s.events.push("review");
+      vm.runInNewContext(js(["cajaNecesitaRevision", "tomarAccionLocal"].map(name => declaration("screens/Cajas.tsx", name)).join("\n")), s);
+      await s.actions.crearCaja();
+      assert.equal(s.datosActuales.current.cajas.length, 2, `${origin}: lote real permite la Caja independiente`);
+      const disk = await s.h.api.loadJSON(s.h.api.STORAGE_KEYS.cajasDinero, boxes.CAJAS_VACIAS);
+      assert.equal(JSON.stringify(disk.movimientos.slice(0, 3)), JSON.stringify(oldMoves));
+      assert.equal(s.ctx.transactionsLive.current.length, origin === "personal" ? 1 : 0);
+      assert.deepEqual(Array.from(s.ctx.deletedTransactionIdsRef.current).sort((a, b) => a - b), [11, 12, 13]);
+      assert.equal(s.tomarAccionLocal(box.id), false, "el lote no autoriza tocar la Caja pendiente");
+    }
   }
   {
     const s = screenHarness({ ...data, movimientos: [] }); await s.actions.guardarMovimiento();

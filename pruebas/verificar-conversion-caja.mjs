@@ -16,7 +16,7 @@ const load = file => {
 };
 const api = load("utils/cajas.ts");
 const linksModule = { exports: {} };
-vm.runInNewContext(ts.transpile(fs.readFileSync("utils/privateBoxPersonal.ts", "utf8"), { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }), { module: linksModule, exports: linksModule.exports });
+vm.runInNewContext(ts.transpile(fs.readFileSync("utils/privateBoxPersonal.ts", "utf8"), { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }), { module: linksModule, exports: linksModule.exports, require: requirePure });
 const box = { id: "caja-a", nombre: "A", creadaEn: 1 };
 const row = { id: "mov-a", cajaId: box.id, tipo: "ingreso", monto: 100, descripcion: "Aporte", fecha: "2026-10-05", creadoEn: 2, personalTransactionId: 10 };
 const local = { cajas: [box], movimientos: [row], cajasBorradas: [], movimientosBorrados: [] };
@@ -53,7 +53,7 @@ function harness() {
   const events = [], dataRef = { current: local };
   const scope = { Error, auth: { currentUser: { uid: "a" } }, caja: box, movimientos: [row], compartiendo: false,
     Platform: { OS: "android" }, privateBoxLinksMatch: linksModule.exports.privateBoxLinksMatch,
-    guardandoRef: { current: false }, repairBlocked: false,
+    guardandoRef: { current: false }, repairBlocked: false, repairPlan: { conflicts: [] },
     conversionEnCurso: { current: false },
     isPremium: true, accountUid: "a", ready: true, userName: "A", userCurrency: "PEN", active: true,
     // Escenarios financieros con elección válida. La barrera real sin elección

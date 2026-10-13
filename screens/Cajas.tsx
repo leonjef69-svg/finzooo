@@ -13,7 +13,7 @@ import { bajarCajas, CloudCajasConflictError, resolverNombreCaja, subirCajas } f
 import { compartirCajaExistente, crearInvitacionCaja, unirseACaja } from "@/utils/cloudCajasCompartidas";
 import {
   CAJAS_VACIAS,
-  fusionarCajas,
+  fusionarCajasProtegidas,
   nuevoIdCaja,
   saldoCaja,
   siguienteVersionCaja,
@@ -141,6 +141,8 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   premiumForSync.current = isPremium;
   const personalActuales = useRef(transactions);
   personalActuales.current = transactions;
+  const borradosActuales = useRef(deletedTransactionIds);
+  borradosActuales.current = deletedTransactionIds;
   useEffect(() => {
     mounted.current = true;
     return () => { mounted.current = false; };
@@ -177,7 +179,9 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
 
   const repairPlan = useMemo(() => planPrivateBoxRepair(datos, transactions, deletedTransactionIds, accountUid), [datos, transactions, deletedTransactionIds, accountUid]);
   const repairSummaries = useMemo(() => summarizePrivateBoxConflicts(datos, transactions, repairPlan.conflicts), [datos, transactions, repairPlan.conflicts]);
-  const repairBlocked = !personalReady || !hasOnboarded || !cloudReady || repairPlan.conflicts.length > 0 || repairPlan.upserts.length > 0 || repairPlan.data !== datos;
+  const cajasProtegidas = useMemo(() => [...new Set(repairPlan.conflicts.flatMap(issue => issue.boxId ? [issue.boxId] : []))], [repairPlan]);
+  const repairBlocked = !personalReady || !hasOnboarded || !cloudReady || repairPlan.conflicts.some(issue => !issue.boxId || issue.reason === "invalid")
+    || repairPlan.upserts.length > 0 || repairPlan.data !== datos || !!datos.revisionesImporte?.some(entry => entry.estado === "pendiente");
   const linkCandidates = useMemo(() => linkReview ? privateBoxLinkCandidates(datos, transactions, deletedTransactionIds, linkReview) : [], [datos, transactions, deletedTransactionIds, linkReview]);
   const linkMovement = datos.movimientos.find(row => row.id === linkReview);
   const nameOptions = useMemo(() => nameCopies ? diferenciasNombreCajas(nameCopies.local, nameCopies.remoto) : [], [nameCopies]);
@@ -203,8 +207,12 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     showToast(t("boxes.repairWait"));
   }
 
-  function tomarAccionLocal(): boolean {
-    if (repairBlocked) { avisarRevisionNecesaria(); return false; }
+  function cajaNecesitaRevision(id: string | null | undefined): boolean {
+    return repairBlocked || repairPlan.conflicts.some(issue => issue.boxId === id);
+  }
+
+  function tomarAccionLocal(id: string | null = cajaId): boolean {
+    if (cajaNecesitaRevision(id)) { avisarRevisionNecesaria(); return false; }
     if (syncIssue === "boxes.syncConflict") { showToast(t("boxes.syncConflict")); return false; }
     if (caja?.sharingPending) { showToast(t("boxes.sharingPending")); return false; }
     if (!cuentaActual() || !ready || compartiendo || cargandoUnion || guardandoRef.current || accionLocalEnCurso.current) return false;
@@ -241,6 +249,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }
 
   useFocusEffect(useCallback(() => {
+    if (!personalReady || !hasOnboarded) return;
     let alive = true;
     const requested = refreshVersion;
     const current = () => alive && cuentaActual() && !guardandoRef.current && requestedRefresh.current === requested;
@@ -256,8 +265,13 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       if (hasUnreadableLocalData()) throw new Error("cajas-local-unreadable");
       const memoria = leerCajasEnMemoria();
       const checked = validarCajas(local);
+      const memoryData = memoria ? validarCajas(memoria) : null;
+      const localIssues = [checked, ...(memoryData ? [memoryData] : [])].flatMap(source =>
+        planPrivateBoxRepair(source, personalActuales.current, borradosActuales.current, uid).conflicts);
+      const globalIssue = localIssues.some(issue => !issue.boxId || issue.reason === "invalid");
+      const localProtectedIds = [...new Set(localIssues.flatMap(issue => issue.boxId ? [issue.boxId] : []))];
       const visible = memoryRevision !== revisionCajasEnMemoria() && memoria ? validarCajas(memoria)
-        : memoria ? fusionarCajas(checked, validarCajas(memoria)) : checked;
+        : memoryData ? globalIssue ? memoryData : fusionarCajasProtegidas(memoryData, checked, localProtectedIds).local : checked;
       guardarCajasEnMemoria(visible);
       setDatos(visible);
       setReady(true);
@@ -280,7 +294,13 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       // La referencia incorpora inmediatamente cada cambio local, incluso si
       // React todavía no lo pintó. La nube no sustituye una edición encolada.
       let unidos: DatosCajas;
-      try { unidos = remoto ? fusionarCajas(datosActuales.current, remoto) : datosActuales.current; }
+      try {
+        const source = datosActuales.current;
+        const plan = planPrivateBoxRepair(source, personalActuales.current, borradosActuales.current, uid);
+        const global = plan.conflicts.some(issue => !issue.boxId || issue.reason === "invalid");
+        const protectedIds = [...new Set(plan.conflicts.flatMap(issue => issue.boxId ? [issue.boxId] : []))];
+        unidos = remoto && !global ? fusionarCajasProtegidas(source, remoto, protectedIds).local : source;
+      }
       catch (error) {
         if (remoto && (error as { message?: string })?.message === "cajas-sync-conflict" && current()) setNameCopies({ local: datosActuales.current, remoto });
         throw error;
@@ -298,7 +318,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       }
     })();
     return () => { alive = false; };
-  }, [accountUid, cuentaActual, isPremium, refreshVersion, reportSyncError, setDatos]));
+  }, [accountUid, cuentaActual, isPremium, refreshVersion, reportSyncError, setDatos, personalReady, hasOnboarded]));
 
   useEffect(() => {
     if (!cuentaActual() || !ready || datos !== datosActuales.current || guardandoRef.current || hasUnreadableLocalData()) return;
@@ -311,12 +331,12 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     const timer = setTimeout(() => {
       if (!task.current()) return;
       void subirCajas(uid, datos, error => { if (task.current()) reportSyncError(error); }, saved => {
-        if (task.current() && !hasUnreadableLocalData()) setDatos(current => fusionarCajas(current, saved));
-      })
+        if (task.current() && !hasUnreadableLocalData()) setDatos(current => fusionarCajasProtegidas(current, saved, cajasProtegidas).local);
+      }, cajasProtegidas)
         .then(ok => { if (ok && task.current()) setSyncIssue(null); });
     }, 700);
     return () => { active = false; clearTimeout(timer); };
-  }, [accountUid, cuentaActual, datos, ready, cloudReady, repairBlocked, compartiendo, guardando, isPremium, reportSyncError, setDatos]);
+  }, [accountUid, cuentaActual, datos, ready, cloudReady, repairBlocked, cajasProtegidas, compartiendo, guardando, isPremium, reportSyncError, setDatos]);
 
   const caja = datos.cajas.find((item) => item.id === cajaId);
   useEffect(() => {
@@ -565,7 +585,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       showToast(t("boxes.notEnoughPersonal"));
       return;
     }
-    if (!tomarAccionLocal()) return;
+    if (!tomarAccionLocal(nueva.id)) return;
     const movimientoId = nuevoIdCaja("mov");
     const personal = inicial > 0 && origenDinero === "personal"
       ? sacarDePersonal(inicial, nombre, nueva.id, movimientoId)
@@ -685,7 +705,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }
 
   async function borrarSeleccionados(ids = seleccionados) {
-    if (repairBlocked) { avisarRevisionNecesaria(); return; }
+    if (cajaNecesitaRevision(cajaId)) { avisarRevisionNecesaria(); return; }
     if (syncIssue === "boxes.syncConflict") { showToast(t("boxes.syncConflict")); return; }
     if (caja?.sharingPending) { showToast(t("boxes.sharingPending")); return; }
     if (!cuentaActual() || !ready || compartiendo || guardandoRef.current) return;
@@ -713,7 +733,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     ]);
   }
   async function borrarCajas(ids = cajasSeleccionadas) {
-    if (repairBlocked) { avisarRevisionNecesaria(); return false; }
+    if (repairBlocked || ids.some(id => cajaNecesitaRevision(id))) { avisarRevisionNecesaria(); return false; }
     if (syncIssue === "boxes.syncConflict") { showToast(t("boxes.syncConflict")); return false; }
     if (!cuentaActual() || !ready || compartiendo || guardandoRef.current) return false;
     const candidatas = datos.cajas.filter(item => ids.includes(item.id));
@@ -768,7 +788,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }
 
   async function compartirCaja() {
-    if (repairBlocked && !caja?.sharingPending) { avisarRevisionNecesaria(); return; }
+    if ((repairBlocked || repairPlan.conflicts.length > 0) && !caja?.sharingPending) { avisarRevisionNecesaria(); return; }
     const uid = auth.currentUser?.uid;
     if (!uid || !caja || compartiendo || conversionEnCurso.current || guardandoRef.current) return;
     if (!isPremium && !caja.sharingPending) { irUnaVez("/premium"); return; }
