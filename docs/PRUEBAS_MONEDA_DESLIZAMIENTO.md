@@ -8,9 +8,10 @@ auditoría de Bienvenida a Inicio. No autoriza arreglos de otros hallazgos.
 El usuario confirmó que solo las filas desaparecen y vuelven con otro gesto.
 En `screens/CurrencyPicker.tsx` se desactivó `removeClippedSubviews` (en Android
 era verdadero por defecto) y se amplió la reserva: initialNumToRender 20,
-windowSize 11, maxToRenderPerBatch 20, updateCellsBatchingPeriod 16.
-La lista sigue virtualizada; no se convierte a un contenedor que monta las
-155 filas de golpe ni se impone altura fija para nombres de dos líneas/letra
+windowSize 21, maxToRenderPerBatch 20, updateCellsBatchingPeriod 16. El dueño
+informó que la versión previa aún fallaba; por eso se amplió la ventana. Puede
+preparar las 155 filas en el teléfono de prueba y ocupar más memoria mientras
+Moneda está abierta. No se impone altura fija para nombres de dos líneas/letra
 grande. No cambia selección, búsqueda, catálogo, cuenta o cantidades.
 
 La documentación [React Native 0.81](https://reactnative.dev/docs/0.81/optimizing-flatlist-configuration)
@@ -48,8 +49,17 @@ el primer instante de entrada del reporte humano. No se afirma causa nativa
 Se reinició solo el servidor propio 8081 (17280 → 11936), verificado por comando
 y puerto, para leer los cambios que el servidor anterior en CI no vigilaba.
 No se detuvo el servidor desconocido 8082, borró caché/datos ni reinstaló Fino.
-Marcador `13oct-moneda-lista`. Sin APK/AAB/OTA, Firebase o Play publicados.
+Marcador `13oct-moneda-window`. Sin APK/AAB/OTA, Firebase o Play publicados.
 
-Qué sigue/falta: repetir el gesto humano específico al entrar, búsqueda visual
-y letras grandes; los gestos en ambos sentidos ya se comprobaron por capturas.
+Qué sigue/falta: recargar esta segunda versión y repetir el gesto humano
+específico; probar visualmente búsqueda y letras grandes.
+
+## Segunda revisión tras el reporte de persistencia
+
+Tras probar la primera versión, el dueño informó que el fallo persistía. No se
+presenta el cambio inicial como exitoso. Se amplió la ventana a 21 pantallas y
+se ajustó la regresión para exigir ese valor. La prueba enfocada de moneda y la
+de selectores originales ya aprobaron; compilación de TypeScript y ESLint en
+aprobaron. Falta recargar esta revisión y repetir el gesto que lo reproduce.
+La batería completa 209/8 aprobó antes del cambio de ventana y no se ha repetido.
 Los demás hallazgos de la auditoría permanecen pendientes.

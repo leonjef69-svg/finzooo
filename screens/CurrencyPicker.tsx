@@ -79,10 +79,11 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
         // En Android el recorte puede dejar filas invisibles hasta otro gesto.
-        // La reserva sigue acotada: no montamos las 155 monedas de golpe.
         removeClippedSubviews={false}
         initialNumToRender={20}
-        windowSize={11}
+        // El catálogo es corto: preparar la ventana estándar evita huecos
+        // cuando el usuario hace un desplazamiento rápido.
+        windowSize={21}
         maxToRenderPerBatch={20}
         updateCellsBatchingPeriod={16}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}

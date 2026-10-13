@@ -66,7 +66,7 @@ async function fixture(configured) {
   const props = screen.list.props;
   assert.equal(props.removeClippedSubviews, false, "Moneda no retira filas nativas por recorte: evita desapariciones que requieren otro gesto");
   assert.ok(props.initialNumToRender >= 20 && props.initialNumToRender <= 30, "prepara una reserva inicial limitada de filas");
-  assert.ok(props.windowSize >= 11 && props.windowSize <= 15, "reserva de desplazamiento mayor sin montar todo el catálogo");
+  assert.equal(props.windowSize, 21, "prepara una ventana estándar para evitar huecos en el catálogo corto");
   assert.ok(props.maxToRenderPerBatch >= 20 && props.maxToRenderPerBatch <= 30);
   assert.ok(props.updateCellsBatchingPeriod > 0 && props.updateCellsBatchingPeriod <= 20);
   assert.equal(props.getItemLayout, undefined, "no inventa alturas fijas que recorten letras grandes/dos líneas");

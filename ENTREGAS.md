@@ -1,15 +1,15 @@
 # Entregas de Fino
 
-## 13/10/2026 — Moneda, corrección local; NO entrega de Play
+## 13/10/2026 — Moneda, segunda corrección en verificación; NO entrega de Play
 
-Marcador `13oct-moneda-lista`: recorte nativo de filas desactivado y reserva
-de dibujo ampliada sin cargar todo el catálogo. Conserva las 155 monedas,
-búsqueda y bloqueo monetario. Regresión JSX original roja contra `8803281` y
-verde actual; TS/lint y 209 pruebas/8 auditores aprobados sin tarjetas. Android
-recargado: capturas tras gestos rápidos en ambos sentidos conservaron filas;
-queda repetir el gesto humano exacto al entrar. Detalles se documentan en
+El propietario confirmó que el primer cambio no resolvió el fallo. Nueva versión
+de desarrollo con marcador `13oct-moneda-window`: recorte nativo desactivado y
+ventana de dibujo ampliada a 21. Conserva las 155 monedas, búsqueda y bloqueo.
+Prueba JSX y TypeScript/ESLint aprobados; la batería completa 209/8 corresponde
+a la revisión anterior. Falta cargar esta versión en Android. Detalles en
 `docs/PRUEBAS_MONEDA_DESLIZAMIENTO.md`. Sin APK/AAB/OTA, despliegue ni saldos
-modificados. Qué sigue/falta: confirmar ese gesto y retomar auditoría de entrada.
+modificados. Qué sigue/falta: recargar, repetir el gesto y revisar memoria;
+después retomar auditoría de entrada.
 
 ## 13/10/2026 — revisión local Familia/Cajas, NO entrega de Play
 
