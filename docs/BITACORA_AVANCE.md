@@ -3,6 +3,42 @@
 Fechas y horas en America/Lima (UTC-05:00). No inventar horas históricas.
 Proyecto activo y único lugar de trabajo: `C:\finzo`.
 
+## 13/10/2026 — selector de espacios y continuidad del emulador
+
+El usuario reportó Familia/Cajas sin respuesta. Se comprobó un bloqueo de
+regreso rápido en el navegador original: las marcas por destino confundían
+Familia → Cajas → Familia con doble toque. Ahora solo se descarta repetir
+consecutivamente el último destino; no se altera la protección de `push`.
+Regresión `verificar-cambio-espacios-real.mjs`, roja contra `3cb9b90` por perder
+la tercera orden; actual verde, incluyendo error/reintento y parámetros.
+
+Metro terminó por ENOENT al vigilar una carpeta efímera del auditor. Se excluyen
+únicamente artefactos/cache locales y temporales del corredor, conservando
+fuentes, Expo/Sentry/NativeWind. La prueba carga la configuración original con
+dependencias reales y falla contra `3cb9b90`; arranque y auditor efímero se
+ejecutaron conjuntamente sin repetir ese cierre. ADB estaba bloqueado; solo
+su servidor identificado se detuvo/reinició, sin reiniciar Android o limpiar
+datos. Se cargó Android (3953 módulos) y se vieron Inicio, Familia, Cajas y
+regresos. Capturas no acreditan una cifra de latencia o fluidez física.
+
+El trabajo anterior de «hj» queda preparado como archivo local reversible,
+NO solución monetaria ficticia: confirmación, consulta/reactivación, preferencia
+cifrada que no se sube, cuatro registros/S/20/Personal/marcas conservados.
+Prueba original de cierre roja contra `3cb9b90`; contexto/SQLite original y
+subida original con IO aislado verificados. No se actuó sobre los registros
+reales. Archivo/reactivación visual completos aún pendientes.
+
+**Qué sigue/falta:** medir transiciones, comprobar archivo antiguo, gastos
+compartidos simultáneos y Personal/Familia, moderación/Android restante; nube
+real pendiente de autorización/activación coordinada. Sin entrega APK/AAB/OTA,
+facturación, despliegue, tarjetas ni cambios ajenos de Telegram.
+
+TypeScript/ESLint generales y corredor 208/8 aprobados, tarjetas excluidas;
+incluye suite UI no versionada ajena que no entra al commit. La última pantalla
+mostró el aviso de respaldo al cerrar sesión; se paró la interacción sin
+confirmar la salida. No atribuir ese aviso a la navegación ni declarar respaldo
+remoto exitoso. Archivar no fue ejecutado sobre datos reales.
+
 ## 12/10/2026 — rechazo del respaldo y comprobación de Firebase publicado
 
 Consulta de solo lectura con la sesión CLI existente: reglas actualizadas el

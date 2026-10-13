@@ -45,7 +45,7 @@ function screen(origin) {
     amountInputError: () => null, parseAmountInput: Number, saldoPersonalEn: () => 1000,
     nuevoIdCaja: prefix => `${prefix}-${++id}`, nextId: () => ++id, fechaLocal: () => "2026-10-12", horaDe: () => "12:00",
     setTimeout: work => { work(); return 0; }, t: key => key, showToast: key => events.push(key),
-    avisarRevisionNecesaria: () => events.push("review"), setNuevoNombre() {}, setMontoInicial() {}, setOrigenDinero() {}, setCreando() {},
+    avisarRevisionNecesaria: () => events.push("review"), setNuevoNombre() {}, setMontoInicial() {}, setOrigenDinero() {}, setCreando() {}, setVerArchivadas() {},
     setCajaId: value => { s.cajaId = value; s.caja = s.datos.cajas.find(row => row.id === value); }, setLista() {},
     guardarCambioCaja: async (next, upserts = [], deleteIds = []) => {
       personal.validatePrivateBoxPatch(s.datos, next, s.transactions, upserts, deleteIds, "A");

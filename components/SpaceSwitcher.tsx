@@ -14,10 +14,9 @@ const OPTIONS = [
 /**
  * Selector central de espacios.
  *
- * Personal conserva la app financiera actual. Cajas administra dinero separado
- * sin convertirlo en un negocio. Familia tiene una pantalla propia, pero todavía
- * no permite guardar ni compartir: primero deben existir permisos reales en la
- * nube para que nunca se enseñen datos privados a una persona equivocada.
+ * Personal conserva la app financiera actual. Familia y Cajas abren sus rutas
+ * propias; sus comprobaciones de cuenta, Pro y datos siguen en cada pantalla.
+ * Cambiar de pestaña no altera movimientos ni crea un espacio nuevo.
  */
 export default function SpaceSwitcher({ active }: { active: FinoSpace }) {
   const { t } = useAppData();

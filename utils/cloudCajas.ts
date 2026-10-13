@@ -40,7 +40,7 @@ export async function subirCajas(uid: string, datos: DatosCajas, onError?: (erro
     delete clean.revisionesImporte;
     // La señal de una conversión incierta protege ESTE celular; no es una
     // edición monetaria ni un campo de la copia en Firebase.
-    for (const box of clean.cajas) { delete box.sharingPending; delete box.sharingAttempt; }
+    for (const box of clean.cajas) { delete box.sharingPending; delete box.sharingAttempt; delete box.archivadaLocal; }
     const ref = documento(uid);
     const saved = await task.wait(() => runTransaction(db, async (transaction) => {
       const snap = await task.wait(() => transaction.get(ref));

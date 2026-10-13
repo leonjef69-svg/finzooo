@@ -10,6 +10,8 @@ export type Caja = {
   sharingPending?: boolean;
   /** Solo local: distingue un reintento de una conversión nueva. */
   sharingAttempt?: string;
+  /** Solo en este teléfono: conserva dinero/historial y retira de la lista activa. */
+  archivadaLocal?: boolean;
 };
 
 export type MovimientoCaja = {
@@ -103,6 +105,7 @@ export function validarCajas(value: unknown): DatosCajas {
     if (!box || !id(box.id) || ids.has(box.id) || typeof box.nombre !== "string"
       || !time(box.creadaEn) || (box.updatedAt !== undefined && !time(box.updatedAt))
       || (box.sharingPending !== undefined && typeof box.sharingPending !== "boolean")
+      || (box.archivadaLocal !== undefined && typeof box.archivadaLocal !== "boolean")
       || (box.sharingAttempt !== undefined && (typeof box.sharingAttempt !== "string" || !/^[A-Za-z0-9_-]{16,80}$/.test(box.sharingAttempt)))) return invalid();
     ids.add(box.id);
   }
@@ -239,7 +242,7 @@ function unirRevisionesImporte(a: RevisionImporteCaja[], b: RevisionImporteCaja[
 }
 
 const nombreBase = (box: Caja) => JSON.stringify(Object.fromEntries(Object.entries(box)
-  .filter(([key, value]) => !["nombre", "updatedAt"].includes(key) && value !== undefined).sort(([a], [b]) => a.localeCompare(b))));
+  .filter(([key, value]) => !["nombre", "updatedAt", "archivadaLocal"].includes(key) && value !== undefined).sort(([a], [b]) => a.localeCompare(b))));
 export const cajaNombreCoincide = (a: Caja, b: Caja): boolean => a.nombre === b.nombre
   && (a.updatedAt ?? a.creadaEn) === (b.updatedAt ?? b.creadaEn) && nombreBase(a) === nombreBase(b);
 
@@ -304,7 +307,7 @@ export function siguienteVersionCaja(item: VersionedItem, now = Date.now()): num
 
 function firma(item: VersionedItem): string {
   // Los registros son planos. El orden de propiedades/undefined no es edición.
-  return JSON.stringify(Object.fromEntries(Object.entries(item).filter(([key, value]) => key !== "updatedAt" && key !== "sharingPending" && key !== "sharingAttempt" && value !== undefined).sort(([a], [b]) => a.localeCompare(b))));
+  return JSON.stringify(Object.fromEntries(Object.entries(item).filter(([key, value]) => key !== "updatedAt" && key !== "sharingPending" && key !== "sharingAttempt" && key !== "archivadaLocal" && value !== undefined).sort(([a], [b]) => a.localeCompare(b))));
 }
 
 /** No convertir una vista vieja dejando atrás movimientos/ediciones en nube. */
@@ -363,12 +366,19 @@ export function fusionarCajas(local: DatosCajas, remoto: DatosCajas): DatosCajas
   const movimientosFuera = new Set(movimientosBorrados);
   const pending = new Set([...local.cajas, ...remoto.cajas].filter(box => box.sharingPending).map(box => box.id));
   const attempts = new Map<string, string>();
+  const archivePreferences = new Map(local.cajas.map(box => [box.id, box.archivadaLocal]));
   for (const box of [...local.cajas, ...remoto.cajas].filter(box => box.sharingPending && box.sharingAttempt)) {
     if (attempts.has(box.id) && attempts.get(box.id) !== box.sharingAttempt) throw new Error("cajas-sync-conflict");
     attempts.set(box.id, box.sharingAttempt!);
   }
   const cajas = unirPorId(local.cajas.filter(item => !cajasFuera.has(item.id)), remoto.cajas.filter(item => !cajasFuera.has(item.id)))
-    .map(box => pending.has(box.id) ? { ...box, sharingPending: true, ...(attempts.has(box.id) ? { sharingAttempt: attempts.get(box.id)! } : {}) } : box);
+    .map(box => pending.has(box.id) ? { ...box, sharingPending: true, ...(attempts.has(box.id) ? { sharingAttempt: attempts.get(box.id)! } : {}) } : box)
+    .map(box => {
+      const { archivadaLocal: _ignored, ...content } = box;
+      void _ignored;
+      const localPreference = archivePreferences.get(box.id);
+      return localPreference === undefined ? content : { ...content, archivadaLocal: localPreference };
+    });
   const idsCajas = new Set(cajas.map((item) => item.id));
   const presentes = (item: MovimientoCaja) => !movimientosFuera.has(item.id) && idsCajas.has(item.cajaId);
   const movimientos = unirPorId(local.movimientos.filter(presentes), remoto.movimientos.filter(presentes));

@@ -1,5 +1,16 @@
 # Entregas de Fino
 
+## 13/10/2026 — revisión local Familia/Cajas, NO entrega de Play
+
+Preparado el marcador `13oct-espacios-botones`: regresos rápidos entre espacios
+sin ignorar toques válidos, exclusión de artefactos que cerraban Metro y archivo
+local reversible/confirmado de Cajas antiguas. El emulador abrió Inicio,
+Familia y Cajas; no se creó, borró, archivó ni devolvió dinero durante la prueba.
+El archivo no es cierre financiero ni borrado y su recorrido Android completo
+sigue pendiente. Sin APK/AAB/OTA/Play ni reglas/servicios nuevos publicados.
+**Qué sigue/falta:** archivo/latencia Android, concurrencia compartida, guardado
+Personal/Familia y activación/entrega remota coordinada con autorización.
+
 ## 11/10/2026 — 18:38 Lima — acceso normal visto, todavía NO entrega
 
 La app normal abrió Inicio, Cajas y Ajustes en el emulador tras la vinculación;

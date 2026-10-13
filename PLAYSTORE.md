@@ -1,5 +1,14 @@
 # Lo que hay que rellenar en Play Console
 
+Preparación local 13/10/2026, no declarada/publicada: una Caja antigua se puede
+archivar mediante confirmación. La preferencia `archivadaLocal` se conserva
+cifrada en el registro de Cajas de ese teléfono, no se envía a Firebase y no
+cambia movimientos/saldos. Archivar NO es eliminar datos: historial, enlaces
+y marcas permanecen y se permite consultar/reactivar. No añade un permiso,
+destinatario ni categoría nueva, pero hay que mantener clara esta diferencia
+en la información de conservación de la entrega final. No se cambiaron textos
+legales ya aceptados ni se publicó una política nueva por esta preparación.
+
 Punto 1 (preparación/código/pruebas locales) terminado el 10/10/2026; NO cierre
 global FINO-52/62 ni aprobación de Play/privacidad. Ampliación NO declarada en consola ni
 entregada: origen/versión y cadenas de borrado/recuperación viajan en la copia

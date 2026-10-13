@@ -43,7 +43,7 @@ import { assertSharedContentAccepted } from "@/utils/legalAcceptance";
 import type { Transaction } from "@/types";
 import { privateBoxLinksMatch } from "@/utils/privateBoxPersonal";
 import { PrivateBoxSyncError, privateBoxCloudResponseCurrent } from "@/utils/privateBoxSync";
-import { planPrivateBoxRepair, privateBoxLinkCandidates, resolvePrivateBoxConflict, summarizePrivateBoxConflicts, type PrivateBoxConflict, type PrivateBoxRepairChoice } from "@/utils/privateBoxRepair";
+import { planPrivateBoxArchive, planPrivateBoxRepair, privateBoxLinkCandidates, resolvePrivateBoxConflict, summarizePrivateBoxConflicts, type PrivateBoxConflict, type PrivateBoxRepairChoice } from "@/utils/privateBoxRepair";
 import { compararImporteCaja, confirmarImporteCaja, reintentarImporteCaja, retirarImporteCaja, type PrivateBoxMoneyComparison, type PrivateBoxMoneyPort } from "@/utils/privateBoxMoneyFlow";
 import type { MoneySource } from "../functions/src/private-box-money-shared.js";
 import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Boxes, Check, ListChecks, Pencil, Plus, RefreshCw, Trash2, UserPlus, X } from "lucide-react-native";
@@ -111,6 +111,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const [seleccionados, setSeleccionados] = useState<string[]>([]);
   const [seleccionandoCajas, setSeleccionandoCajas] = useState(false);
   const [cajasSeleccionadas, setCajasSeleccionadas] = useState<string[]>([]);
+  const [verArchivadas, setVerArchivadas] = useState(false);
   const accionLocalEnCurso = useRef(false);
   const nubeConfirmadaPara = useRef<string | null>(null);
   const [syncIssue, setSyncIssue] = useState<"boxes.syncFailed" | "boxes.syncConflict" | null>(null);
@@ -180,6 +181,8 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const repairPlan = useMemo(() => planPrivateBoxRepair(datos, transactions, deletedTransactionIds, accountUid), [datos, transactions, deletedTransactionIds, accountUid]);
   const repairSummaries = useMemo(() => summarizePrivateBoxConflicts(datos, transactions, repairPlan.conflicts), [datos, transactions, repairPlan.conflicts]);
   const cajasProtegidas = useMemo(() => [...new Set(repairPlan.conflicts.flatMap(issue => issue.boxId ? [issue.boxId] : []))], [repairPlan]);
+  const cajasArchivadas = datos.cajas.filter(box => box.archivadaLocal);
+  const cajasEnLista = datos.cajas.filter(box => Boolean(box.archivadaLocal) === verArchivadas);
   const repairBlocked = !personalReady || !hasOnboarded || !cloudReady || repairPlan.conflicts.some(issue => !issue.boxId || issue.reason === "invalid")
     || repairPlan.upserts.length > 0 || repairPlan.data !== datos || !!datos.revisionesImporte?.some(entry => entry.estado === "pendiente");
   const linkCandidates = useMemo(() => linkReview ? privateBoxLinkCandidates(datos, transactions, deletedTransactionIds, linkReview) : [], [datos, transactions, deletedTransactionIds, linkReview]);
@@ -212,6 +215,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }
 
   function tomarAccionLocal(id: string | null = cajaId): boolean {
+    if (datosActuales.current.cajas.some(box => box.id === id && box.archivadaLocal)) { showToast(t("boxes.archiveReadOnly")); return false; }
     if (cajaNecesitaRevision(id)) { avisarRevisionNecesaria(); return false; }
     if (syncIssue === "boxes.syncConflict") { showToast(t("boxes.syncConflict")); return false; }
     if (caja?.sharingPending) { showToast(t("boxes.sharingPending")); return false; }
@@ -605,6 +609,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     setMontoInicial("");
     setOrigenDinero("externo");
     setCreando(false);
+    setVerArchivadas(false);
     setCajaId(nueva.id);
     setLista(false);
     showToast(t("boxes.saved"));
@@ -705,7 +710,8 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }
 
   async function borrarSeleccionados(ids = seleccionados) {
-    if (cajaNecesitaRevision(cajaId)) { avisarRevisionNecesaria(); return; }
+    if (caja?.archivadaLocal) return;
+    if (cajaNecesitaRevision(cajaId)) { if (caja) confirmarArchivoCaja(); else avisarRevisionNecesaria(); return; }
     if (syncIssue === "boxes.syncConflict") { showToast(t("boxes.syncConflict")); return; }
     if (caja?.sharingPending) { showToast(t("boxes.sharingPending")); return; }
     if (!cuentaActual() || !ready || compartiendo || guardandoRef.current) return;
@@ -725,6 +731,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     setSeleccionados([]); setSeleccionando(false);
   }
   function confirmarBorrarTodo() {
+    if (caja && cajaNecesitaRevision(caja.id)) { confirmarArchivoCaja(); return; }
     if (!visibles.length) return;
     const messageKey = visibles.some(isLinkedSpaceTransfer) ? "spaces.deleteLinkedMovementsMessage" : "spaces.deleteMovementsMessage";
     Alert.alert(t("spaces.deleteMovementsTitle"), t(messageKey, { count: visibles.length }), [
@@ -733,6 +740,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     ]);
   }
   async function borrarCajas(ids = cajasSeleccionadas) {
+    if (datos.cajas.some(box => ids.includes(box.id) && box.archivadaLocal)) { showToast(t("boxes.archiveReadOnly")); return false; }
     if (repairBlocked || ids.some(id => cajaNecesitaRevision(id))) { avisarRevisionNecesaria(); return false; }
     if (syncIssue === "boxes.syncConflict") { showToast(t("boxes.syncConflict")); return false; }
     if (!cuentaActual() || !ready || compartiendo || guardandoRef.current) return false;
@@ -758,6 +766,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }
   function cerrarCajaActual() {
     if (!caja || !ready) return;
+    if (cajaNecesitaRevision(caja.id)) { confirmarArchivoCaja(); return; }
     if (!canCloseLinkedSpace(movimientos)) { showToast(t("boxes.closeBalance")); return; }
     const cajaIdActual = caja.id;
     Alert.alert(t("boxes.close"), t("boxes.deleteWarning"), [
@@ -770,10 +779,32 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     ]);
   }
   function confirmarBorrarTodasLasCajas() {
-    if (!datos.cajas.length) return;
-    Alert.alert(t("boxes.deleteAllTitle"), t("boxes.deleteAllMessage", { count: datos.cajas.length, amount: fmt(0) }), [
+    const activeIds = datos.cajas.filter(box => !box.archivadaLocal).map(box => box.id);
+    if (!activeIds.length) return;
+    Alert.alert(t("boxes.deleteAllTitle"), t("boxes.deleteAllMessage", { count: activeIds.length, amount: fmt(0) }), [
       { text: t("common.cancel"), style: "cancel" },
-      { text: t("common.deleteAll"), style: "destructive", onPress: () => borrarCajas(datos.cajas.map(item => item.id)) },
+      { text: t("common.deleteAll"), style: "destructive", onPress: () => borrarCajas(activeIds) },
+    ]);
+  }
+
+  async function cambiarArchivoCaja(id: string, archived: boolean, before = datosActuales.current) {
+    if (!cuentaActual() || !ready || !personalReady || !hasOnboarded || compartiendo || guardandoRef.current || conversionEnCurso.current) return;
+    if (datosActuales.current !== before) { showToast(t("boxes.repairCloudChanged")); return; }
+    try {
+      const next = planPrivateBoxArchive(before, id, archived);
+      if (!await guardarCambioCaja(next, [], [], { from: "archive", boxId: id, archived })) return;
+      setSeleccionados([]); setSeleccionando(false); setCajasSeleccionadas([]); setSeleccionandoCajas(false);
+      setVerArchivadas(false); setCajaId(null); setLista(true); setRepairReviewVisible(false);
+      showToast(t(archived ? "boxes.archiveSaved" : "boxes.archiveRestored"));
+    } catch { if (cuentaActual()) showToast(t("boxes.archiveUnavailable")); }
+  }
+
+  function confirmarArchivoCaja() {
+    if (!caja || caja.archivadaLocal || !ready || guardandoRef.current || !cuentaActual()) return;
+    const before = datosActuales.current, id = caja.id;
+    Alert.alert(t("boxes.archiveTitle"), t("boxes.archiveConfirm", { name: caja.nombre, amount: fmt(saldoCaja(id, before.movimientos)) }), [
+      { text: t("common.cancel"), style: "cancel" },
+      { text: t("boxes.archiveAction"), onPress: () => void cambiarArchivoCaja(id, true, before) },
     ]);
   }
 
@@ -788,6 +819,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }
 
   async function compartirCaja() {
+    if (caja?.archivadaLocal) return;
     if ((repairBlocked || repairPlan.conflicts.length > 0) && !caja?.sharingPending) { avisarRevisionNecesaria(); return; }
     const uid = auth.currentUser?.uid;
     if (!uid || !caja || compartiendo || conversionEnCurso.current || guardandoRef.current) return;
@@ -925,9 +957,9 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
                   <Text className="mt-1 text-xs leading-5 text-slate-700 dark:text-slate-200">{t(reasonKey[issue.reason])}</Text>
                   {summary.box ? <Text className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.repairBoxSide", { details: sideText(summary.box) })}</Text> : <Text className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.repairNoBoxSide")}</Text>}
                   {summary.personal ? <Text className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.repairPersonalSide", { details: sideText(summary.personal) })}</Text> : <Text className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.repairNoPersonalSide")}</Text>}
-                  <TouchableOpacity accessibilityRole="button" onPress={() => abrirRevisionTransferencia(issue)} className="mt-2 min-h-11 justify-center">
+                  {issue.selectable || (issue.movementId && privateBoxLinkCandidates(datos, transactions, deletedTransactionIds, issue.movementId).length > 0) ? <TouchableOpacity accessibilityRole="button" onPress={() => abrirRevisionTransferencia(issue)} className="mt-2 min-h-11 justify-center">
                     <Text className="font-bold text-amber-800 dark:text-amber-200">{t("boxes.repairOpenCase")}</Text>
-                  </TouchableOpacity>
+                  </TouchableOpacity> : null}
                 </View>;
               })}
             </ScrollView>
@@ -1013,7 +1045,8 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
                 <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.save")} disabled={cargandoUnion || codigoCaja.length !== 8} onPress={() => void unirseACajaCompartida()} className={`min-h-10 flex-1 items-center justify-center rounded-xl ${cargandoUnion || codigoCaja.length !== 8 ? "bg-emerald-300" : "bg-emerald-600"}`}><Check size={19} color="#fff" /></TouchableOpacity>
               </View>
             </View> : null}
-            {datos.cajas.length > 0 ? <View className="mb-2 flex-row items-center justify-between">
+            {cajasArchivadas.length > 0 ? <TouchableOpacity accessibilityRole="button" disabled={guardando} onPress={() => { setVerArchivadas(value => !value); setSeleccionandoCajas(false); setCajasSeleccionadas([]); }} className="mb-2 min-h-11 justify-center"><Text className="font-bold text-teal-700 dark:text-teal-300">{t(verArchivadas ? "boxes.activeList" : "boxes.archivedList", { count: cajasArchivadas.length })}</Text></TouchableOpacity> : null}
+            {cajasEnLista.length > 0 && !verArchivadas ? <View className="mb-2 flex-row items-center justify-between">
               {seleccionandoCajas ? <>
                 <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{cajasSeleccionadas.length} {cajasSeleccionadas.length === 1 ? "seleccionada" : "seleccionadas"}</Text>
                 <View className="flex-row items-center gap-3">
@@ -1026,7 +1059,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
                 <TouchableOpacity accessibilityLabel={t("common.select")} onPress={() => { setSeleccionandoCajas(true); setCajasSeleccionadas([]); }} className="flex-row items-center gap-1"><ListChecks size={16} color="#059669" /><Text className="text-sm font-bold text-emerald-600">{t("common.select")}</Text></TouchableOpacity>
               </>}
             </View> : null}
-            {datos.cajas.map((item) => (
+            {cajasEnLista.map((item) => (
               <TouchableOpacity
                 key={item.id}
                 disabled={guardando || (!seleccionandoCajas && creando)}
@@ -1041,7 +1074,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
                 {seleccionandoCajas ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${cajasSeleccionadas.includes(item.id) ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : <ArrowLeftRight size={17} color="#64748b" />}
               </TouchableOpacity>
             ))}
-            {datos.cajas.length === 0 && !creando ? (
+            {cajasEnLista.length === 0 && !creando ? (
               <View className="items-center rounded-2xl border-[1.5px] border-dashed border-slate-300 px-5 py-7 dark:border-noche-borde">
                 <Boxes size={28} color="#94a3b8" />
                 <Text className="mt-3 text-center text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.empty")}</Text>
@@ -1062,6 +1095,16 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
               </View>
             ) : null}
           </>
+        ) : caja.archivadaLocal ? (
+          <View className="gap-3 py-3">
+            <TouchableOpacity accessibilityRole="button" onPress={() => { setVerArchivadas(true); setLista(true); }} className="min-h-11 justify-center"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("boxes.archivedList", { count: cajasArchivadas.length })}</Text></TouchableOpacity>
+            <Text className="text-xl font-bold text-slate-900 dark:text-slate-100">{caja.nombre}</Text>
+            <Text className="text-2xl font-extrabold text-teal-700 dark:text-teal-300">{fmt(saldoActual)}</Text>
+            <Text className="text-sm leading-6 text-slate-600 dark:text-slate-300">{t("boxes.archiveReadOnly")}</Text>
+            {movimientos.slice(0, movementLimit).map(row => <View key={row.id} className="rounded-xl border border-slate-200 p-3 dark:border-noche-borde"><Text className="font-bold text-slate-900 dark:text-slate-100">{row.descripcion}</Text><Text className="mt-1 text-sm text-slate-600 dark:text-slate-300">{row.fecha} · {row.tipo === "ingreso" ? "+" : "−"}{fmt(row.monto)}</Text></View>)}
+            {movimientos.length > movementLimit ? <TouchableOpacity accessibilityRole="button" onPress={() => setMovementLimit(value => value + 60)} className="min-h-11 justify-center"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("common.show")}</Text></TouchableOpacity> : null}
+            <TouchableOpacity accessibilityRole="button" disabled={guardando} onPress={() => void cambiarArchivoCaja(caja.id, false)} className="min-h-11 items-center justify-center rounded-xl border border-teal-300"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("boxes.archiveRestore")}</Text></TouchableOpacity>
+          </View>
         ) : (
           <>
             <View className="mb-2 mt-1 flex-row items-center justify-between">

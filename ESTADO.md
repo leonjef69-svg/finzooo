@@ -1,5 +1,74 @@
 # Estado actual de Fino
 
+## Familia/Cajas — 13/10/2026 — botones y archivo local reversible
+
+Se reprodujo en una regresión del selector/navegador original que la protección
+por destino ignoraba Familia → Cajas → Familia si el regreso ocurría antes de
+1,5 segundos. Reemplazar ahora descarta solo repetir el último destino; otro
+espacio y el regreso son válidos. Una orden rechazada no consume el reintento.
+La protección de las pantallas apiladas, cuenta, Pro y dinero sigue intacta.
+
+Metro se había cerrado con ENOENT al vigilar `.tmp/audit-walk-*/node_modules`
+mientras una prueba retiraba su carpeta. La configuración conserva las
+exclusiones Expo/Sentry y excluye artefactos locales y `pruebas/.tmp-PID`, sin
+ocultar fuentes/dependencias de la app. Las dos regresiones fallan por conducta
+contra `3cb9b90`. Se reinició únicamente el puente ADB bloqueado y el servidor
+local; no se reinició/borró Android ni se reinstaló Fino. La app de desarrollo
+se reabrió sin formularios activos. Capturas/árbol Android comprobaron Inicio,
+Familia, Cajas y regresos con el paquete actualizado. No hay una medición de
+latencia por fotogramas ni certificación de fluidez en teléfono físico.
+
+Para «hj», los tres enlaces hacia Personal siguen sin contraparte confirmada:
+no se dedujo que borrar fuera intencional. Se preparó «Archivar caja antigua»
+con confirmación explícita. Retira de activas SOLO en este teléfono, conserva
+los cuatro movimientos, S/20, enlaces y marcas, y permite consultar/reactivar
+sin crear movimientos. NO cierra financieramente, borra ni devuelve dinero.
+La lectura archivada es de consulta; no ofrece gastar, compartir o borrar.
+La preferencia se guarda cifrada con Cajas y no viaja a Firebase; se conserva
+al unir con la copia remota. Una revisión monetaria pendiente impide archivarla.
+La prueba original de contexto/SQLite cubre conservación exacta de Personal,
+fallo/rollback, respuesta perdida y cambio de sesión, con cifrado/IO adaptados.
+La subida original se prueba con IO aislado, no escribiendo en producción.
+No se archivó «hj» ni se modificaron movimientos reales desde las herramientas.
+La confirmación/archivo/reactivación visual completos aún requieren prueba.
+
+**Qué sigue/falta:** medir rapidez/fluidez sin pruebas pesadas simultáneas;
+revisión de archivo antiguo y su recuperación, gastos compartidos concurrentes
+y guardado conjunto Personal/Familia, moderación y Android restante. La nube
+publicada conserva las limitaciones registradas abajo: no se habilitó
+facturación ni desplegó nada. No APK/AAB/OTA/Play nuevos, tarjetas ni Telegram.
+Marcador de desarrollo `13oct-espacios-botones`; Git no actualiza una APK.
+
+**Validación final:** TypeScript, ESLint generales y 208 pruebas/8 auditores
+aprobados, sin tarjetas (incluye una suite UI ajena no versionada). En la
+última observación Android apareció el aviso de respaldo durante cierre de
+sesión: se detuvieron los toques, sin confirmar salida/borrado. El rechazo
+remoto documentado sigue pendiente; no se presenta como fallo del selector.
+
+## Emulador revisado — 12/10/2026 — carga local recuperada
+
+El dueño mostró nuevamente «There was a problem loading the project». El
+emulador seguía conectado y tenía el puente ADB a 8081, pero no había servidor
+de desarrollo activo. Se inició Expo/Metro local y se reabrió el Dev Client,
+sin borrar datos, reinstalar o efectuar movimientos. Metro compiló Android
+(`Android Bundled 27373ms index.js`, 3953 módulos). Capturas Android/ADB
+confirmaron primero Inicio y después la Caja «dotero», S/100 recibido de
+Personal, sin pantalla de error. Esa Caja no se creó desde las herramientas
+del agente. La captura Windows expiró dos veces y se dejó de usar esa vía.
+
+Se cerró exclusivamente el servidor de esta revisión y se inició otro con
+`Start-Process -WindowStyle Hidden`, separado de la llamada interactiva. Se
+comprobó el proceso vivo y `/status` respondió `packager-status:running`.
+No se agregó inicio automático ni una tarea recurrente; el servidor depende
+de que la computadora siga encendida. Logs locales no versionados en `.tmp`.
+
+**Qué sigue/falta:** retomar la prueba de gasto simultáneo y el guardado del
+par Personal/Familia; casos reales antiguos de «hj», moderación, rendimiento
+y Android restante. Firebase volvió a rechazar el respaldo automático por
+permisos; sigue pendiente su activación coordinada/autorización de facturación.
+Abrir la pantalla no prueba respaldo exitoso ni cierre de auditoría. Sin nueva
+APK/AAB/OTA, código financiero, reglas desplegadas, tarjetas o cambios de Pro.
+
 ## Respaldo rechazado — 12/10/2026 — causa remota comprobada, sin despliegue
 
 Se consultaron exclusivamente reglas, lista de servicios y estado de facturación

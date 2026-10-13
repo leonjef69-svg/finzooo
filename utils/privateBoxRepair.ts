@@ -1,8 +1,23 @@
 import type { Transaction } from "@/types";
 import { CAJAS_VACIAS, fusionarCajas, siguienteVersionCaja, type DatosCajas, type MovimientoCaja } from "@/utils/cajas";
 import { linkedTransferLedger } from "@/utils/linkedTransfers";
+import { canonical } from "../functions/src/private-box-money-shared.js";
 
-export type PrivateBoxRepairChoice = { movementId: string; from: "personal" | "box" } | { movementId: string; personalId: number; from: "link" };
+export type PrivateBoxRepairChoice = { movementId: string; from: "personal" | "box" } | { movementId: string; personalId: number; from: "link" }
+  | { from: "archive"; boxId: string; archived: boolean };
+
+/** Preferencia reversible del teléfono; no es reparación ni cierre monetario. */
+export function planPrivateBoxArchive(data: DatosCajas, boxId: string, archived: boolean): DatosCajas {
+  const box = data.cajas.find(item => item.id === boxId);
+  if (!box || typeof archived !== "boolean" || box.sharingPending || data.cajasBorradas.includes(boxId)
+    || data.conversiones?.[boxId] || data.revisionesImporte?.some(entry => entry.estado === "pendiente")) throw new Error("private-box-archive-unavailable");
+  return { ...data, cajas: data.cajas.map(item => {
+    if (item.id !== boxId) return item;
+    const { archivadaLocal: _prior, ...content } = item;
+    void _prior;
+    return archived ? { ...content, archivadaLocal: true } : content;
+  }) };
+}
 export type PrivateBoxConflict = {
   movementId?: string; personalId?: number; boxId?: string;
   reason: "identity" | "deleted" | "settled" | "values" | "missing" | "invalid";
@@ -233,6 +248,7 @@ export function planPrivateBoxRepair(data: DatosCajas, rows: Transaction[], dele
 
 /** Elección explícita, limitada a monto/fecha de una pareja con IDs exactos. */
 export function resolvePrivateBoxConflict(data: DatosCajas, rows: Transaction[], deleted: number[], uid: string, choice: PrivateBoxRepairChoice): PrivateBoxRepairPlan {
+  if (choice.from === "archive") throw new Error("private-box-repair-conflict");
   if (choice.from === "link") {
     const tx = privateBoxLinkCandidates(data, rows, deleted, choice.movementId).find(row => row.id === choice.personalId);
     if (!tx) throw new Error("private-box-repair-conflict");
@@ -263,6 +279,11 @@ export function resolvePrivateBoxConflict(data: DatosCajas, rows: Transaction[],
 
 /** Recalcula desde la fuente viva dentro del guardado, no confía en el plan de pantalla. */
 export function validatePrivateBoxRepair(before: DatosCajas, next: DatosCajas, rows: Transaction[], deleted: number[], upserts: Transaction[], deleteIds: number[], uid: string, repair: true | PrivateBoxRepairChoice): void {
+  if (typeof repair === "object" && repair.from === "archive") {
+    const expected = planPrivateBoxArchive(before, repair.boxId, repair.archived);
+    if (upserts.length || deleteIds.length || canonical(expected) !== canonical(next)) throw new Error("private-box-repair-conflict");
+    return;
+  }
   const plan = repair === true ? planPrivateBoxRepair(before, rows, deleted, uid) : resolvePrivateBoxConflict(before, rows, deleted, uid, repair);
   if ((repair === true && plan.conflicts.length) || deleteIds.length || clean(plan.data) !== clean(next)
     || clean(plan.upserts) !== clean(upserts)) throw new Error("private-box-repair-conflict");

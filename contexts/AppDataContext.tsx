@@ -2774,17 +2774,18 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const owner = auth.currentUser?.uid ?? "", version = localSessionVersion.current;
     const task = captureAccountTask(owner, () => version === localSessionVersion.current);
     if (!ready || !hasOnboarded || !task.current() || !current() || hasUnreadableLocalData()) return false;
-    const paired = !!repair || upserts.length > 0 || deleteIds.length > 0;
+    const metadataOnly = typeof repair === "object" && repair.from === "archive";
+    const paired = (!!repair && !metadataOnly) || upserts.length > 0 || deleteIds.length > 0;
     // El contrato de varias claves está comprobado en el SQLite de Android,
     // no se supone equivalente en iOS/web. Operaciones de una Caja sin enlace
     // Personal continúan funcionando allí con una sola clave.
     if (paired && Platform.OS !== "android") throw new Error("private-box-android-only");
     const keys = paired ? [STORAGE_KEYS.transactions, STORAGE_KEYS.deletedTransactionIds, STORAGE_KEYS.cajasDinero, STORAGE_KEYS.cloudSyncMeta] : [STORAGE_KEYS.cajasDinero];
     const checked = validarCajas(JSON.parse(JSON.stringify(data)));
-    fusionarCajas(checked, CAJAS_VACIAS);
+    if (!metadataOnly) fusionarCajas(checked, CAJAS_VACIAS);
     const source = validarCajas(JSON.parse(JSON.stringify(before)));
     const initialPersonal = transactionsLive.current;
-    if (repair && isPremium) {
+    if (repair && isPremium && !metadataOnly) {
       const oldLinks = new Map(source.movimientos.map(row => [row.id, row.personalTransactionId]));
       const ids = [...new Set([...checked.movimientos.flatMap(row => row.personalTransactionId != null && oldLinks.get(row.id) !== row.personalTransactionId ? [row.personalTransactionId] : []),
         ...upserts.flatMap(row => [row.id, ...(row.internalTransferAllocations || []).map(link => link.transactionId)])])];
@@ -2794,6 +2795,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return withLocalAccountOperation(async () => {
       if (!task.current() || !current()) return false;
       return saveJSONBatchNow(keys, () => {
+        if (metadataOnly) assertPrivateBoxMoneyLocalIdle();
         if (!task.current() || !current() || (paired && transactionsLive.current !== initialPersonal)) throw new Error("private-box-source-changed");
         const base = transactionsLive.current, deleted = deletedTransactionIdsRef.current, metadata = paired ? cloudSyncMetaRef.current : {};
         if (repair) validatePrivateBoxRepair(source, checked, base, deleted, upserts, deleteIds, owner, repair);

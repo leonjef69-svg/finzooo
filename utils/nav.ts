@@ -122,6 +122,7 @@ export function useNavigateWhenReady(
  * tomó con la pausa del reparto de iconos el 07/08.
  */
 const ultimosViajes = new Map<string, number>();
+let ultimoReemplazo: { clave: string; cuando: number } | null = null;
 let ultimoRetroceso = 0;
 const BLOQUEO_NAVEGACION_MS = 1500;
 
@@ -152,8 +153,15 @@ export function irUnaVez(ruta: Parameters<typeof router.push>[0]): boolean {
  * segundo terminaba ganando cuando el primero todavía estaba montándose.
  */
 export function reemplazarUnaVez(ruta: Parameters<typeof router.replace>[0]): void {
-  if (seNavegoHacePoco("replace", ruta)) return;
+  const ahora = Date.now();
+  const clave = claveDeRuta(ruta);
+  const transcurrido = ultimoReemplazo ? ahora - ultimoReemplazo.cuando : Infinity;
+  // Solo se descarta repetir el ÚLTIMO destino. Familia → Cajas → Familia
+  // es un regreso válido, aunque todavía no hayan pasado 1,5 segundos.
+  if (ultimoReemplazo?.clave === clave && transcurrido >= 0 && transcurrido < BLOQUEO_NAVEGACION_MS) return;
   router.replace(ruta);
+  // Si el navegador rechaza la orden, el siguiente toque debe poder reintentar.
+  ultimoReemplazo = { clave, cuando: ahora };
 }
 
 export function volverUnaVez(): void {

@@ -162,7 +162,7 @@ try {
       cajaId: before.cajas[0]?.id ?? null, cajaNecesitaRevision: () => false,
       commitPrivateBoxData: ctx.commit, setGuardando: value => { s.guardando = value; }, setRepairCloudChanged() {},
       setDatos: value => { s.datosActuales.current = value; s.datos = value; },
-      setNuevoNombre() {}, setMontoInicial() {}, setOrigenDinero() {}, setCreando() {}, setCajaId() {}, setLista() {}, setMonto() {}, setDescripcion() {},
+      setNuevoNombre() {}, setMontoInicial() {}, setOrigenDinero() {}, setCreando() {}, setVerArchivadas() {}, setCajaId() {}, setLista() {}, setMonto() {}, setDescripcion() {},
       setEditandoAporteId() {}, setAnotando() {}, setNotes() {}, setMovementDate() {}, setSeleccionados() {}, setSeleccionando() {}, setCajasSeleccionadas() {}, setSeleccionandoCajas() {},
       Error };
     const names = ["guardarCambioCaja", "sacarDePersonal", "crearCaja", "guardarMovimiento", "borrarSeleccionados", "borrarCajas", "devolverAPersonal"];
