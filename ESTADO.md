@@ -1,5 +1,56 @@
 # Estado actual de Fino
 
+## Respaldo rechazado — 12/10/2026 — causa remota comprobada, sin despliegue
+
+Se consultaron exclusivamente reglas, lista de servicios y estado de facturación
+de `dotero-2d430`; no se leyó ni escribió el historial de ninguna cuenta por esas
+consultas. Firebase respondió que la publicación de reglas vigente es de
+`2026-10-02T18:22:31.018596Z`. La lista permitida de `users/{uid}` no incluye
+`syncFormat`, `recordIdentityFormat` ni `recordSyncAt`, campos enviados por el
+respaldo actual. Por tanto esa escritura se rechaza aunque el correo y Pro
+estén correctos. Hash de reglas remotas:
+`05fe9ae1f43dcb57f5b37799ed3c0f1ea4995cc6c420cd226d0ccc78bfda966a`;
+locales `9e8306f313a327e5040d2b77c358c71f19b09252803bd9173c67325d6d0ece6b`.
+La API de funciones devolvió **0 funciones publicadas**; facturación respondió
+**billingEnabled=false**. No asumir que `getCloudAccess`, aceptación legal,
+devoluciones, prueba Pro o correcciones de Cajas preparadas ya existen en nube.
+
+Se corrigió solo el aviso de Ajustes: ahora pide confirmar correo únicamente
+si la sesión dice explícitamente que no está confirmado. Si ya está confirmado
+o se desconoce, explica que la nube rechazó el respaldo, conserva los datos
+locales y pide soporte. Tres idiomas; no se rebajó ningún formato ni se quitó
+una protección para encajar en reglas viejas. La prueba ejecuta la selección
+original de texto y falla contra `f9e1f5b` por la instrucción incorrecta anterior.
+
+**Autorización necesaria:** actualizar la nube real requiere publicación
+coordinada de reglas/servicios/app y habilitar Firebase Blaze para los servicios
+de servidor, lo que puede generar cargos. No se activó facturación, se vinculó
+cuenta de pago, se desplegó ni se cambió Pro. Antes de activar: selección de
+servicios sin Telegram, presupuesto/controles y revisión de compatibilidad de
+clientes anteriores; no publicar automáticamente el código completo de Functions.
+Cambios ajenos de Telegram permanecen intactos y fuera de este commit.
+
+**Seguridad:** `firebase login:list --json` devolvió inesperadamente tokens en
+su salida. No se copiaron al código ni al repositorio; las consultas posteriores
+usan un diagnóstico que imprime solo resúmenes y no credenciales. Se informó
+al dueño y se recomendó revocar esa sesión Firebase CLI y volver a autenticar.
+No se revocó ni se cambió la cuenta Google automáticamente.
+
+**Qué sigue/falta:** decisión del dueño sobre habilitar facturación/activación
+coordinada; resolver los casos reales de «hj» sin inferir borrados; gasto
+concurrente y par Personal/Familia, historiales grandes, moderación y Android.
+Corregir el texto no soluciona por sí solo el respaldo real ni cierra la auditoría.
+
+**Pruebas de esta pasada:** TypeScript y ESLint generales aprobados; 205 pruebas
+de app y 8 auditores (tarjetas excluidas; incluye prueba UI no versionada ajena).
+El corredor `scripts/verificar-servidor.mjs` pudo ejecutarse con CLI en caché,
+Node 22.23.3, Java local y configuración sin credenciales: 229/229 pruebas SDK,
+reglas, Auth/Firestore y HTTP locales, cero omisiones/fallos/cancelaciones. Los
+rechazos y errores de cuentas inexistentes de sus casos negativos son esperados.
+Esto actualiza la limitación anterior de disponibilidad del CLI local: no prueba
+producción, dos cuentas Android reales o los gastos compartidos simultáneos.
+Sin nueva APK/AAB/OTA ni recarga/entrega visual del aviso de Ajustes en esta pasada.
+
 ## Cajas independientes — 12/10/2026 — bloqueo por registros antiguos corregido en código
 
 El bloqueo de `repairPlan.conflicts` se aplicaba a todas las Cajas: tres

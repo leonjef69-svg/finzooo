@@ -330,10 +330,11 @@ async function saveCloudDataV2(uid: string, clean: CloudData, lease: PrivateBoxC
  * las reglas para entender qué pasaba. Ese texto es para quien programa; a quien usa la app
  * no le dice ni qué falló ni qué hacer.
  *
- * Ese error concreto tiene dos causas y ninguna es un fallo del celular: o las reglas de
- * seguridad no están publicadas en Firebase, o el correo de la cuenta no está confirmado —las
- * reglas exigen `email_verified`, así que hasta que se confirme, Firestore rechaza cada
- * escritura. Se dice lo segundo porque es lo único que la persona puede resolver.
+ * Un rechazo de permisos no prueba que falte confirmar el correo: también puede
+ * deberse a reglas publicadas incompatibles, Pro revocado o un borrado en curso.
+ * Se conserva la categoría; Ajustes solo pide verificar el correo si la sesión
+ * dice explícitamente que no está confirmado. Nunca se rebaja el formato ni se
+ * quitan las protecciones para forzar un respaldo sobre reglas antiguas.
  */
 function motivoLegible(e: unknown): string {
   const crudo = String((e as { code?: string })?.code ?? (e as Error)?.message ?? e);

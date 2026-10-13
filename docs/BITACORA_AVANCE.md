@@ -3,6 +3,37 @@
 Fechas y horas en America/Lima (UTC-05:00). No inventar horas históricas.
 Proyecto activo y único lugar de trabajo: `C:\finzo`.
 
+## 12/10/2026 — rechazo del respaldo y comprobación de Firebase publicado
+
+Consulta de solo lectura con la sesión CLI existente: reglas actualizadas el
+02/10 (`2026-10-02T18:22:31.018596Z`) sin permitir `syncFormat`,
+`recordIdentityFormat` ni `recordSyncAt` en Personal; el cliente actual sí los
+envía. La lista `hasOnly` explica el rechazo sin consultar/mutar el historial.
+Cero funciones publicadas y `billingEnabled=false`. Evidencia y hashes en
+`docs/DIAGNOSTICO_RESPALDO_PUBLICADO.md`. No se habilitó API, facturación,
+despliegue, migración ni cambio de Pro.
+
+Se corrigió en Ajustes el mensaje falso que pedía confirmar correo aun si ya
+estaba confirmado. La sesión debe indicar explícitamente `emailVerified=false`
+para mostrarlo; en otros casos explica rechazo y conservación local. Tres
+idiomas; no se quitan campos/protecciones para guardar con reglas anteriores.
+Regresión original roja contra `f9e1f5b`, actual verde; TypeScript/ESLint
+generales aprobados. Corredor app: 205 pruebas/8 auditores, tarjetas excluidas.
+Node 22.23.3 + CLI en caché + Java + servicios demo aislados: 229 pruebas
+SDK/HTTP/reglas aprobadas, sin omisiones ni cancelaciones. No Android ni nube
+de producción acreditados; sin nueva entrega visual/APK/AAB/OTA.
+
+Precaución: `firebase login:list --json` imprimió credenciales inesperadamente.
+Se informó al dueño, se recomendó revocar esa sesión CLI y no se copiaron a
+archivos versionados. Diagnósticos siguientes solo emiten resúmenes sin tokens.
+No se revocó la sesión o cuenta Google automáticamente.
+
+**Qué sigue/falta:** decisión sobre habilitar Firebase Blaze (potenciales
+cargos) y activación coordinada de reglas/servicios/app, con controles y sin
+Telegram; resolver casos reales de «hj», gastos simultáneos, par Familia/Personal,
+moderación y Android. No publicar toda Functions por acompañamiento; cambios
+ajenos de Telegram quedan preservados y fuera del commit.
+
 ## 12/10/2026 — Cajas nuevas sin bloqueo por una Caja antigua
 
 Se localizó el bloqueo de transferencias dudosas por Caja y se separaron las

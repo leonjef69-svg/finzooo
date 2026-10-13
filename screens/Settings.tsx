@@ -380,7 +380,9 @@ export default function Settings({
                      quepa. Con el, la propia pantalla dice que pasa. */
                   t(
                     respaldoFallo === "permisos"
-                      ? "settings.backupNoPermission"
+                      ? auth.currentUser?.emailVerified === false
+                        ? "settings.backupNoPermission"
+                        : "settings.backupPermissionDenied"
                       : respaldoFallo === "sin-internet"
                         ? "settings.backupNoInternet"
                         : respaldoFallo === "demasiado-grande"
