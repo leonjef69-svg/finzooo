@@ -192,8 +192,19 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       && !datos.revisionesImporte?.some(entry => entry.estado === "pendiente" && entry.local.movement.id === row.id));
   }, [datos, repairPlan, nameCopies]);
 
+  function avisarRevisionNecesaria() {
+    if (repairPlan.conflicts.length > 0 && cloudReady) {
+      Alert.alert(t("boxes.repairBlockedTitle"), t("boxes.repairBlockedMessage"), [
+        { text: t("common.cancel"), style: "cancel" },
+        { text: t("boxes.repairOpenList"), onPress: () => setRepairReviewVisible(true) },
+      ]);
+      return;
+    }
+    showToast(t("boxes.repairWait"));
+  }
+
   function tomarAccionLocal(): boolean {
-    if (repairBlocked) { showToast(t("boxes.repairReview")); return false; }
+    if (repairBlocked) { avisarRevisionNecesaria(); return false; }
     if (syncIssue === "boxes.syncConflict") { showToast(t("boxes.syncConflict")); return false; }
     if (caja?.sharingPending) { showToast(t("boxes.sharingPending")); return false; }
     if (!cuentaActual() || !ready || compartiendo || cargandoUnion || guardandoRef.current || accionLocalEnCurso.current) return false;
@@ -674,7 +685,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }
 
   async function borrarSeleccionados(ids = seleccionados) {
-    if (repairBlocked) { showToast(t("boxes.repairReview")); return; }
+    if (repairBlocked) { avisarRevisionNecesaria(); return; }
     if (syncIssue === "boxes.syncConflict") { showToast(t("boxes.syncConflict")); return; }
     if (caja?.sharingPending) { showToast(t("boxes.sharingPending")); return; }
     if (!cuentaActual() || !ready || compartiendo || guardandoRef.current) return;
@@ -702,7 +713,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     ]);
   }
   async function borrarCajas(ids = cajasSeleccionadas) {
-    if (repairBlocked) { showToast(t("boxes.repairReview")); return false; }
+    if (repairBlocked) { avisarRevisionNecesaria(); return false; }
     if (syncIssue === "boxes.syncConflict") { showToast(t("boxes.syncConflict")); return false; }
     if (!cuentaActual() || !ready || compartiendo || guardandoRef.current) return false;
     const candidatas = datos.cajas.filter(item => ids.includes(item.id));
@@ -757,7 +768,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }
 
   async function compartirCaja() {
-    if (repairBlocked && !caja?.sharingPending) { showToast(t("boxes.repairReview")); return; }
+    if (repairBlocked && !caja?.sharingPending) { avisarRevisionNecesaria(); return; }
     const uid = auth.currentUser?.uid;
     if (!uid || !caja || compartiendo || conversionEnCurso.current || guardandoRef.current) return;
     if (!isPremium && !caja.sharingPending) { irUnaVez("/premium"); return; }
@@ -863,11 +874,6 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       </Modal>
       {syncIssue ? <Text accessibilityLiveRegion="polite" className="px-5 pb-2 text-xs leading-5 text-amber-700 dark:text-amber-300">{t(syncIssue)}</Text> : null}
       {repairCloudChanged ? <Text accessibilityLiveRegion="polite" className="px-5 pb-2 text-xs leading-5 text-amber-700 dark:text-amber-300">{t("boxes.repairCloudChanged")}</Text> : null}
-      {ready && cloudReady && repairPlan.conflicts.length > 0 ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.repairOpenList")} disabled={guardando || compartiendo || (syncIssue === "boxes.syncConflict" && !isPremium)} onPress={() => setRepairReviewVisible(true)} className="mx-5 mb-3 rounded-xl bg-amber-50 p-3 dark:bg-amber-950">
-        <Text accessibilityLiveRegion="polite" className="text-xs leading-5 text-amber-800 dark:text-amber-200">{t("boxes.repairNotice", { count: repairPlan.conflicts.length })}</Text>
-        <Text className="mt-1 text-sm font-bold text-amber-800 dark:text-amber-200">{t("boxes.repairOpenList")}</Text>
-      </TouchableOpacity> : null}
-
       <Modal transparent visible={repairReviewVisible} animationType="fade" onRequestClose={() => setRepairReviewVisible(false)}>
         <View className="flex-1 justify-end bg-black/40">
           <View style={{ maxHeight: "88%" }} className="rounded-t-3xl bg-white px-5 pt-4 pb-5 dark:bg-noche">

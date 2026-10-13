@@ -545,3 +545,20 @@ regresión falla contra la versión anterior. Se elevó el `CODE_MARKER` a
 falta que el dueño abra «Ver qué encontró Fino» y comparta captura para explicar
 los tres casos reales y revisar la vista Android. No se tocó saldo, movimiento,
 Telegram, tarjetas ni servicios publicados.
+
+## 12/10/2026 — 20:38 Lima — quitar contador permanente de Cajas
+
+El propietario explicó que el aviso fijo no le resulta útil y confunde. Se quitó
+el banner siempre visible; el usuario solo verá una explicación si una acción
+se detiene por una incidencia. Desde ahí podrá pedir «Ver detalle»; el listado
+conserva explicaciones, pero no altera nada al abrirlo. Se mantiene la barrera
+que evita guardar, borrar, compartir o sincronizar ciertos datos si el plan de
+revisión detecta conflictos. Sin conflicto pero mientras Cajas se comprueba, el
+aviso pide esperar e intentar otra vez. Las reparaciones siguen siendo
+intencionales, no automáticas.
+
+Validación: TypeScript, ESLint, pruebas enfocadas y suite completa (205 pruebas,
+8 auditores). Emulador no verificado visualmente por expiración de captura; falta
+ver texto y recorrido Android y obtener los detalles reales para entender los
+casos. No hubo escritura en registros, saldos, Firebase ni Play. Se actualizó
+CODE_MARKER a `12oct-cajas-aviso-contextual`.

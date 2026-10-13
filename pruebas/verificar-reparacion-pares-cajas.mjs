@@ -52,8 +52,23 @@ assert.match(reviewUi, /repairPlan\.conflicts\.map/);
 assert.match(reviewUi, /summarizePrivateBoxConflicts/);
 assert.match(reviewUi, /repairReadOnlyHint/);
 const i18nSource = code("constants/i18n.ts");
-for (const key of ["repairOpenList", "repairReadOnlyHint", "repairReason.identity", "repairReason.deleted", "repairReason.values", "repairReason.missing", "repairReason.settled", "repairSideDetails"]) {
+for (const key of ["repairBlockedTitle", "repairBlockedMessage", "repairWait", "repairOpenList", "repairReadOnlyHint", "repairReason.identity", "repairReason.deleted", "repairReason.values", "repairReason.missing", "repairReason.settled", "repairSideDetails"]) {
   assert.equal(i18nSource.split(`\"boxes.${key}\"`).length - 1, 3, `${key} debe estar traducido a los tres idiomas`);
+}
+assert.doesNotMatch(reviewUi, /repairPlan\.conflicts\.length > 0 \? <TouchableOpacity/, "no debe quedar un aviso permanente al entrar a Cajas");
+const blockedMessage = pick("screens/Cajas.tsx", node => ts.isFunctionDeclaration(node) && node.name?.text === "avisarRevisionNecesaria");
+{
+  const dialogs = [], toasts = [], state = { opened: false };
+  const scope = { repairPlan: { conflicts: [{ reason: "identity" }] }, cloudReady: true,
+    t: key => key, Alert: { alert: (...args) => dialogs.push(args) }, showToast: key => toasts.push(key),
+    setRepairReviewVisible: value => { state.opened = value; } };
+  vm.runInNewContext(js(blockedMessage), scope); scope.avisarRevisionNecesaria();
+  assert.equal(dialogs[0][0], "boxes.repairBlockedTitle"); assert.equal(toasts.length, 0);
+  assert.equal(state.opened, false); dialogs[0][2][1].onPress();
+  assert.equal(state.opened, true, "los detalles se abren solo si la persona los pide");
+  const waiting = { ...scope, repairPlan: { conflicts: [] }, cloudReady: false };
+  vm.runInNewContext(js(blockedMessage), waiting); waiting.avisarRevisionNecesaria();
+  assert.equal(toasts.at(-1), "boxes.repairWait");
 }
 const conflicting = { ...tx, amount: 80 };
 // Regresión ejecutando la recuperación original, no una copia de su lógica.

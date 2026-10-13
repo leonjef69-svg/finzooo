@@ -1,5 +1,23 @@
 # Estado actual de Fino
 
+## Punto 2 — 12/10/2026, 20:38 Lima — aviso de Cajas solo cuando hace falta
+
+El propietario indicó que el contador visible confundía y no le encontraba
+utilidad. Se quitó el aviso permanente de la pantalla de Cajas. Se conservó la
+protección que detiene operaciones cuando los movimientos no se pueden confirmar.
+Si una acción concreta se bloquea por incidencias, Fino lo explica en lenguaje
+simple y ofrece «Ver detalle»; el listado y las opciones de revisión quedan fuera
+de la pantalla habitual. Si Fino solo sigue comprobando datos, informa que se
+espere y se intente otra vez.
+
+Verificación: TypeScript, ESLint, dos pruebas de Cajas y el conjunto completo
+(205 pruebas, 8 auditores) pasaron. Sin cambios de movimientos/saldos, ni
+publicación. Falta revisar visualmente el emulador y conocer las incidencias
+concretas; la captura de pantalla caducó dos veces. El dueño deberá abrir una
+acción bloqueada solo si quiere ver el detalle; no debe elegir una solución aún.
+La revisión de Cajas continúa abierta hasta validar el texto/pantalla en Android
+y entender los casos reales.
+
 ## Punto 2 — 12/10/2026, 20:25 Lima — lista explicativa de Cajas
 
 Se implementó una vista para que «Hay casos por revisar» deje de ser un número
