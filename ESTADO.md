@@ -1,5 +1,43 @@
 # Estado actual de Fino
 
+## Punto 2 — 12/10/2026, 20:25 Lima — lista explicativa de Cajas
+
+Se implementó una vista para que «Hay casos por revisar» deje de ser un número
+sin explicación. La lista muestra cada incidencia por separado, el tipo de duda,
+el nombre de la Caja y monto/fecha de ambos lados cuando están disponibles. No
+expone identificadores internos. Abrir la lista no guarda ni repara nada; la
+reparación sigue requiriendo elegir explícitamente una opción. El aviso ya no
+afirma que sean transferencias distintas: cuenta «casos» del plan preventivo.
+Los textos están traducidos a español, inglés y portugués.
+
+Verificación: `npx tsc --noEmit`, ESLint del proyecto, la prueba de pares y la
+prueba de recuperación incompleta pasaron; la suite completa terminó con 205
+pruebas y 8 auditores en verde. La prueba nueva también falla al leer el código
+previo, como debe hacerlo. **Falta la comprobación visual con los datos reales**:
+la captura del emulador falló dos veces; no pude confirmar qué describen esos
+casos concretos ni cómo se ve el nuevo panel en Android. El propietario puede
+abrir «Ver qué encontró Fino» y compartir una captura; no debe elegir opciones
+de reparación todavía. Ningún movimiento o saldo fue cambiado por esta tarea.
+
+## Punto 2 — 12/10/2026, 20:02 Lima — aviso de transferencias de Cajas investigado
+
+El aviso se muestra cuando `planPrivateBoxRepair` devuelve incidencias; su número
+cuenta elementos de esa lista, que pueden ser enlaces ausentes, identidades
+repetidas, datos incompatibles, elementos eliminados/ilegibles o revisiones de
+importe pendientes. No demuestra por sí solo que existan tres transferencias
+nuevas ni tres duplicados. El código bloquea ciertas operaciones y la reparación
+automática mientras haya dudas, como protección de saldos.
+
+En el emulador se abrió «Revisar transferencias» sin elegir ni guardar ninguna
+opción. Solo mostró el mensaje general «Faltan enlaces o hay datos que no
+coinciden…»; la pantalla no enumera las tres incidencias y el botón selecciona
+solo la primera. Cajas ya estaba cargada; el clic mostró el caso general y no
+guardó ni alteró movimientos/saldos. **Qué sigue/falta:** exponer una explicación
+legible por incidencia en una vista de
+solo lectura y determinar por qué se cuentan tres elementos; luego revisar con
+el propietario qué casos admiten reparación explícita. No conciliar ni borrar
+automáticamente. Auditoría del punto 2 sigue abierta; punto 3 externo pendiente.
+
 ## Punto 2 — 12/10/2026, 19:15 Lima — cambio rápido entre espacios
 
 Personal/Familia/Cajas ya no muestran «Cargando…» encima de datos conocidos.

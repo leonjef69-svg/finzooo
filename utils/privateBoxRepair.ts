@@ -10,6 +10,34 @@ export type PrivateBoxConflict = {
   selectable?: boolean;
 };
 export type PrivateBoxRepairPlan = { data: DatosCajas; upserts: Transaction[]; conflicts: PrivateBoxConflict[] };
+export type PrivateBoxRepairSummary = {
+  reason: PrivateBoxConflict["reason"];
+  selectable: boolean;
+  boxName: string | null;
+  box: { amount: number | null; date: string | null } | null;
+  personal: { amount: number | null; date: string | null } | null;
+};
+const summaryAmount = (value: unknown): number | null => typeof value === "number" && Number.isFinite(value) ? value : null;
+const summaryDate = (value: unknown): string | null => typeof value === "string" && value.trim() ? value : null;
+
+/** Contexto local de solo lectura para explicar cada incidencia sin exponer IDs internos. */
+export function summarizePrivateBoxConflicts(data: DatosCajas, rows: Transaction[], conflicts: PrivateBoxConflict[]): PrivateBoxRepairSummary[] {
+  const movements = Array.isArray(data?.movimientos) ? data.movimientos : [];
+  const boxes = Array.isArray(data?.cajas) ? data.cajas : [];
+  const transactions = Array.isArray(rows) ? rows : [];
+  return conflicts.map(issue => {
+    const movement = movements.find(row => !!row && row.id === issue.movementId);
+    const transaction = transactions.find(row => !!row && row.id === issue.personalId);
+    const box = boxes.find(row => !!row && row.id === (movement?.cajaId || issue.boxId));
+    return {
+      reason: issue.reason,
+      selectable: issue.selectable === true,
+      boxName: typeof box?.nombre === "string" && box.nombre.trim() ? box.nombre : null,
+      box: movement ? { amount: summaryAmount(movement.monto), date: summaryDate(movement.fecha) } : null,
+      personal: transaction ? { amount: summaryAmount(transaction.amount), date: summaryDate(transaction.date) } : null,
+    };
+  });
+}
 const clean = (value: unknown): string => JSON.stringify(value, (key, item) => key === "updatedAt" ? undefined
   : item && typeof item === "object" && !Array.isArray(item) ? Object.fromEntries(Object.keys(item).sort().map(name => [name, item[name]])) : item);
 const allocationsEqual = (a: Transaction["internalTransferAllocations"], b: Transaction["internalTransferAllocations"]): boolean => {

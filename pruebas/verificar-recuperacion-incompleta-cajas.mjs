@@ -145,6 +145,6 @@ for (const original of [closed, { ...data, movimientos: [{ ...move, fecha: "2026
     privateBoxLinkCandidates: api.privateBoxLinkCandidates, t: key => key, Alert: { alert: (...args) => dialogs.push(args) } };
   vm.runInNewContext(js(review.node.getText(review.tree)), scope); scope.revisarTransferencias();
   assert.equal(dialogs.length, 1); assert.equal(dialogs[0][2].length, 1);
-  assert.equal(dialogs[0][1], original === closed ? "boxes.repairClosedDetails" : "boxes.repairInvalidDetails");
+  assert.equal(dialogs[0][1], original === closed ? "boxes.repairReason.settled" : "boxes.repairInvalidDetails");
 }
 console.log("Recuperación incompleta: cierres/conversiones no reabren dinero, datos inválidos y repartos dañados se conservan sin romper la pantalla.");

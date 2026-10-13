@@ -34,6 +34,27 @@ const move = { id: "mov-a", cajaId: box.id, tipo: "ingreso", monto: 100, descrip
 const tx = { id: 10, type: "expense", amount: 100, category: "otros", date: move.fecha, time: "10:00", method: "transfer", description: "Mi aporte", notes: "conservar", icono: "foto", tags: ["viaje"], internalTransfer: "box", internalTransferLink: move.id, internalTransferSpaceId: box.id, internalTransferSpaceName: box.nombre };
 const data = { cajas: [box], movimientos: [move], cajasBorradas: [], movimientosBorrados: [] };
 const plan = (d = data, rows = [tx], deleted = []) => repairs.planPrivateBoxRepair(d, rows, deleted, "a");
+const summarySource = plain({ data, tx });
+const summaries = repairs.summarizePrivateBoxConflicts(data, [tx], [
+  { reason: "values", movementId: move.id, personalId: tx.id, boxId: box.id, selectable: true },
+  { reason: "missing", personalId: tx.id, boxId: box.id },
+  { reason: "identity", movementId: "unknown", personalId: 999, boxId: "unknown" },
+]);
+assert.equal(summaries.length, 3, "la revisión debe conservar cada incidencia como un caso visible");
+assert.deepEqual(plain(summaries[0]), { reason: "values", selectable: true, boxName: "Viaje", box: { amount: 100, date: "2026-10-06" }, personal: { amount: 100, date: "2026-10-06" } });
+assert.deepEqual(plain(summaries[1].personal), { amount: 100, date: "2026-10-06" });
+assert.equal(summaries[2].boxName, null);
+assert.equal("movementId" in summaries[0], false, "no muestra identificadores internos a la persona");
+assert.deepEqual(plain({ data, tx }), summarySource, "la lista de revisión no modifica los registros fuente");
+const reviewUi = code("screens/Cajas.tsx");
+assert.match(reviewUi, /repairReviewVisible/);
+assert.match(reviewUi, /repairPlan\.conflicts\.map/);
+assert.match(reviewUi, /summarizePrivateBoxConflicts/);
+assert.match(reviewUi, /repairReadOnlyHint/);
+const i18nSource = code("constants/i18n.ts");
+for (const key of ["repairOpenList", "repairReadOnlyHint", "repairReason.identity", "repairReason.deleted", "repairReason.values", "repairReason.missing", "repairReason.settled", "repairSideDetails"]) {
+  assert.equal(i18nSource.split(`\"boxes.${key}\"`).length - 1, 3, `${key} debe estar traducido a los tres idiomas`);
+}
 const conflicting = { ...tx, amount: 80 };
 // Regresión ejecutando la recuperación original, no una copia de su lógica.
 const effect = pick("screens/Cajas.tsx", (node, tree) => ts.isCallExpression(node) && node.expression.getText(tree) === "useEffect"

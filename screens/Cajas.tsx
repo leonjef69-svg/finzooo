@@ -43,7 +43,7 @@ import { assertSharedContentAccepted } from "@/utils/legalAcceptance";
 import type { Transaction } from "@/types";
 import { privateBoxLinksMatch } from "@/utils/privateBoxPersonal";
 import { PrivateBoxSyncError, privateBoxCloudResponseCurrent } from "@/utils/privateBoxSync";
-import { planPrivateBoxRepair, privateBoxLinkCandidates, resolvePrivateBoxConflict, type PrivateBoxRepairChoice } from "@/utils/privateBoxRepair";
+import { planPrivateBoxRepair, privateBoxLinkCandidates, resolvePrivateBoxConflict, summarizePrivateBoxConflicts, type PrivateBoxConflict, type PrivateBoxRepairChoice } from "@/utils/privateBoxRepair";
 import { compararImporteCaja, confirmarImporteCaja, reintentarImporteCaja, retirarImporteCaja, type PrivateBoxMoneyComparison, type PrivateBoxMoneyPort } from "@/utils/privateBoxMoneyFlow";
 import type { MoneySource } from "../functions/src/private-box-money-shared.js";
 import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Boxes, Check, ListChecks, Pencil, Plus, RefreshCw, Trash2, UserPlus, X } from "lucide-react-native";
@@ -130,6 +130,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const conversionEnCurso = useRef(false);
   const reparacionIntentada = useRef<{ data: DatosCajas; rows: Transaction[]; refresh: number } | null>(null);
   const [linkReview, setLinkReview] = useState<string | null>(null);
+  const [repairReviewVisible, setRepairReviewVisible] = useState(false);
   const [linkLimit, setLinkLimit] = useState(20);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const requestedRefresh = useRef(refreshVersion);
@@ -175,6 +176,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }), [cuentaActual, setDatos]);
 
   const repairPlan = useMemo(() => planPrivateBoxRepair(datos, transactions, deletedTransactionIds, accountUid), [datos, transactions, deletedTransactionIds, accountUid]);
+  const repairSummaries = useMemo(() => summarizePrivateBoxConflicts(datos, transactions, repairPlan.conflicts), [datos, transactions, repairPlan.conflicts]);
   const repairBlocked = !personalReady || !hasOnboarded || !cloudReady || repairPlan.conflicts.length > 0 || repairPlan.upserts.length > 0 || repairPlan.data !== datos;
   const linkCandidates = useMemo(() => linkReview ? privateBoxLinkCandidates(datos, transactions, deletedTransactionIds, linkReview) : [], [datos, transactions, deletedTransactionIds, linkReview]);
   const linkMovement = datos.movimientos.find(row => row.id === linkReview);
@@ -336,8 +338,13 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     void guardarCambioCaja(repairPlan.data, repairPlan.upserts, [], true);
   }, [accountUid, cuentaActual, datos, transactions, repairPlan, refreshVersion, personalReady, hasOnboarded, ready, cloudReady, guardando, compartiendo, isPremium]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  function revisarTransferencias() {
-    const issue = repairPlan.conflicts.find(item => item.selectable) || repairPlan.conflicts[0];
+  function abrirRevisionTransferencia(issue: PrivateBoxConflict) {
+    setRepairReviewVisible(false);
+    setTimeout(() => revisarTransferencias(issue), 250);
+  }
+
+  function revisarTransferencias(issueElegido?: PrivateBoxConflict) {
+    const issue = issueElegido || repairPlan.conflicts.find(item => item.selectable) || repairPlan.conflicts[0];
     if (!issue || !cuentaActual() || guardandoRef.current) return;
     if (issue.reason === "invalid") {
       Alert.alert(t("boxes.repairReview"), t("boxes.repairInvalidDetails"), [{ text: t("common.close") }]); return;
@@ -345,9 +352,19 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     const move = datos.movimientos.find(item => item.id === issue.movementId);
     const personal = transactions.find(item => item.id === issue.personalId);
     if (!issue.selectable || !move || !personal) {
-      const linkable = repairPlan.conflicts.find(item => item.movementId && privateBoxLinkCandidates(datos, transactions, deletedTransactionIds, item.movementId).length > 0);
+      const linkable = issueElegido
+        ? issue.movementId && privateBoxLinkCandidates(datos, transactions, deletedTransactionIds, issue.movementId).length > 0 ? issue : undefined
+        : repairPlan.conflicts.find(item => item.movementId && privateBoxLinkCandidates(datos, transactions, deletedTransactionIds, item.movementId).length > 0);
       if (linkable?.movementId) { setLinkLimit(20); setLinkReview(linkable.movementId); return; }
-      Alert.alert(t("boxes.repairReview"), t(issue.reason === "settled" ? "boxes.repairClosedDetails" : "boxes.repairUncertain"), [{ text: t("common.close") }]);
+      const reasonKey: Record<PrivateBoxConflict["reason"], string> = {
+        identity: "boxes.repairReason.identity",
+        deleted: "boxes.repairReason.deleted",
+        settled: "boxes.repairReason.settled",
+        values: "boxes.repairReason.values",
+        missing: "boxes.repairReason.missing",
+        invalid: "boxes.repairInvalidDetails",
+      };
+      Alert.alert(t("boxes.repairReview"), t(reasonKey[issue.reason]), [{ text: t("common.close") }]);
       return;
     }
     if (premiumForSync.current) { void consultarImporteCaja(move.id); return; }
@@ -846,10 +863,54 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       </Modal>
       {syncIssue ? <Text accessibilityLiveRegion="polite" className="px-5 pb-2 text-xs leading-5 text-amber-700 dark:text-amber-300">{t(syncIssue)}</Text> : null}
       {repairCloudChanged ? <Text accessibilityLiveRegion="polite" className="px-5 pb-2 text-xs leading-5 text-amber-700 dark:text-amber-300">{t("boxes.repairCloudChanged")}</Text> : null}
-      {ready && cloudReady && repairPlan.conflicts.length > 0 ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.repairReview")} disabled={guardando || compartiendo || (syncIssue === "boxes.syncConflict" && !isPremium)} onPress={revisarTransferencias} className="mx-5 mb-3 rounded-xl bg-amber-50 p-3 dark:bg-amber-950">
+      {ready && cloudReady && repairPlan.conflicts.length > 0 ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.repairOpenList")} disabled={guardando || compartiendo || (syncIssue === "boxes.syncConflict" && !isPremium)} onPress={() => setRepairReviewVisible(true)} className="mx-5 mb-3 rounded-xl bg-amber-50 p-3 dark:bg-amber-950">
         <Text accessibilityLiveRegion="polite" className="text-xs leading-5 text-amber-800 dark:text-amber-200">{t("boxes.repairNotice", { count: repairPlan.conflicts.length })}</Text>
-        <Text className="mt-1 text-sm font-bold text-amber-800 dark:text-amber-200">{t("boxes.repairReview")}</Text>
+        <Text className="mt-1 text-sm font-bold text-amber-800 dark:text-amber-200">{t("boxes.repairOpenList")}</Text>
       </TouchableOpacity> : null}
+
+      <Modal transparent visible={repairReviewVisible} animationType="fade" onRequestClose={() => setRepairReviewVisible(false)}>
+        <View className="flex-1 justify-end bg-black/40">
+          <View style={{ maxHeight: "88%" }} className="rounded-t-3xl bg-white px-5 pt-4 pb-5 dark:bg-noche">
+            <View className="mb-2 flex-row items-center justify-between">
+              <Text className="flex-1 text-base font-bold text-slate-900 dark:text-slate-100">{t("boxes.repairReview")}</Text>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.close")} onPress={() => setRepairReviewVisible(false)} className="min-h-11 min-w-11 items-end justify-center">
+                <X size={20} color="#64748b" />
+              </TouchableOpacity>
+            </View>
+            <Text className="mb-3 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.repairReadOnlyHint")}</Text>
+            <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 12 }}>
+              {repairPlan.conflicts.map((issue, index) => {
+                const summary = repairSummaries[index];
+                const reasonKey: Record<PrivateBoxConflict["reason"], string> = {
+                  identity: "boxes.repairReason.identity",
+                  deleted: "boxes.repairReason.deleted",
+                  settled: "boxes.repairReason.settled",
+                  values: "boxes.repairReason.values",
+                  missing: "boxes.repairReason.missing",
+                  invalid: "boxes.repairInvalidDetails",
+                };
+                const sideText = (side: { amount: number | null; date: string | null }) => t("boxes.repairSideDetails", {
+                  amount: side.amount === null ? t("boxes.repairUnavailable") : fmt(side.amount),
+                  date: side.date || t("boxes.repairUnavailable"),
+                });
+                return <View key={`${issue.movementId || "sin-movimiento"}:${issue.personalId || "sin-personal"}:${index}`} className="mb-3 rounded-2xl border border-amber-200 bg-amber-50/70 p-3 dark:border-amber-800 dark:bg-amber-950/40">
+                  <Text className="text-xs font-bold text-amber-800 dark:text-amber-200">{t("boxes.repairCase", { index: index + 1, count: repairPlan.conflicts.length })}</Text>
+                  {summary.boxName ? <Text className="mt-1 text-sm font-bold text-slate-900 dark:text-slate-100">{t("boxes.repairBoxName", { name: summary.boxName })}</Text> : null}
+                  <Text className="mt-1 text-xs leading-5 text-slate-700 dark:text-slate-200">{t(reasonKey[issue.reason])}</Text>
+                  {summary.box ? <Text className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.repairBoxSide", { details: sideText(summary.box) })}</Text> : <Text className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.repairNoBoxSide")}</Text>}
+                  {summary.personal ? <Text className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.repairPersonalSide", { details: sideText(summary.personal) })}</Text> : <Text className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.repairNoPersonalSide")}</Text>}
+                  <TouchableOpacity accessibilityRole="button" onPress={() => abrirRevisionTransferencia(issue)} className="mt-2 min-h-11 justify-center">
+                    <Text className="font-bold text-amber-800 dark:text-amber-200">{t("boxes.repairOpenCase")}</Text>
+                  </TouchableOpacity>
+                </View>;
+              })}
+            </ScrollView>
+            <TouchableOpacity accessibilityRole="button" onPress={() => setRepairReviewVisible(false)} className="min-h-11 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2">
+              <Text className="font-bold text-slate-700 dark:text-slate-200">{t("common.close")}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       <ScrollView
         className="flex-1 px-5"

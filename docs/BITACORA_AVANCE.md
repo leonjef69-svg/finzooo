@@ -508,3 +508,40 @@ Android Keystore/SharedPreferences físico ni la actualización de una instalaci
 hasta una prueba segura en Android y confirmar que la nueva versión nativa se
 instala; continuar revisión local de otros puntos. Micrófono y escáner siguen
 pospuestos; consolas externas siguen pendientes.
+
+## 12/10/2026 — 20:02 Lima — aviso de transferencias por revisar en Cajas
+
+Se rastreó el contador hasta `repairPlan.conflicts.length`. Cuenta incidencias
+del plan de revisión, no necesariamente transferencias distintas ni movimientos
+nuevos: el plan incluye vínculos/identidades dudosos, datos incompatibles,
+elementos eliminados o ilegibles y revisiones de importes pendientes. Con una
+incidencia activa, la app evita ciertas operaciones monetarias y no aplica la
+reparación automática, para proteger los saldos.
+
+En el emulador se abrió el botón, se leyó el primer aviso general y se cerró sin
+seleccionar opciones. La pantalla no lista las tres incidencias; el botón toma
+solo la primera y mostró que faltan enlaces o hay datos que no coinciden. Cajas
+ya estaba cargada; el clic no escribió registros ni cambió saldos/movimientos.
+**Qué sigue/falta:** preparar una vista de solo lectura que explique cada incidencia
+y ayude a determinar por qué aparecen tres; después revisar cualquier corrección
+conservando confirmación explícita. El punto 2 sigue abierto; el punto 3 externo
+requiere intervención del propietario. No hubo cambio de código ni despliegue.
+
+## 12/10/2026 — 20:25 Lima — lista explicativa de incidencias en Cajas
+
+Se sustituyó el acceso al aviso genérico por una lista local de solo lectura. Por
+cada elemento explica la causa detectada (identidad dudosa, registro borrado,
+monto/fecha distinto, contraparte ausente, Caja cerrada o datos inválidos) y
+muestra nombre de Caja, monto y fecha de cada lado solo si existen. Los IDs no
+se muestran. El rótulo ahora dice «casos» porque el contador no garantiza que
+sean transferencias diferentes. Abrir la lista no escribe; para reparar aún es
+necesario abrir un caso y elegir de forma explícita una opción. No se eligió ni
+guardó ninguna.
+
+Verificación: TypeScript, ESLint, pruebas enfocadas y `node pruebas/correr.mjs`
+pasaron; resultado final: 205 pruebas y 8 auditores en verde. La prueba de
+regresión falla contra la versión anterior. Se elevó el `CODE_MARKER` a
+`12oct-cajas-casos-revision`. La lectura visual del emulador expiró dos veces;
+falta que el dueño abra «Ver qué encontró Fino» y comparta captura para explicar
+los tres casos reales y revisar la vista Android. No se tocó saldo, movimiento,
+Telegram, tarjetas ni servicios publicados.
