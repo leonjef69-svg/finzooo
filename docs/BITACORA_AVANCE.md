@@ -3,6 +3,22 @@
 Fechas y horas en America/Lima (UTC-05:00). No inventar horas históricas.
 Proyecto activo y único lugar de trabajo: `C:\finzo`.
 
+## 12/10/2026 — 21:04 Lima — emulador conectado al código actual
+
+El emulador buscaba el servidor de desarrollo en 8081; el servidor anterior
+estaba en 8082 y no respondía a la ruta que esperaba Fino. Se inició Metro en
+8081, se corrigió la conexión inversa local y se abrió el Dev Client existente,
+sin reinstalar ni borrar información. El servidor terminó el paquete Android:
+`Android Bundled 25546ms index.js (3953 modules)`. La actividad principal quedó
+al frente y los registros recientes no contienen marcadores de error de
+ejecución. Sin cambios de movimientos/saldos, APK/AAB/OTA o publicación.
+
+No se pudo validar visualmente Cajas: la captura del emulador expiró dos veces,
+así que no se insistió ni se interactuó a ciegas. El aviso fijo fue retirado en
+código; los tres casos de transferencia aún no se han aclarado ni reparado.
+**Qué sigue/falta:** confirmar visualmente que no aparece el aviso fijo y
+revisar los tres casos sin modificar datos; punto 2 abierto y punto 3 pendiente.
+
 ## 12/10/2026 — 17:59 Lima — filtros recientes también en Familia y Cajas
 
 Se extendió a los espacios el mismo comportamiento pedido para Inicio: ocultar

@@ -1,5 +1,22 @@
 # Estado actual de Fino
 
+## Punto 2 — 12/10/2026, 21:04 Lima — emulador cargó el código de prueba actual
+
+Se comprobó por qué seguía apareciendo el aviso anterior: el emulador buscaba
+Metro en 8081, pero se había iniciado en 8082; además, no había servidor activo.
+Se alineó la conexión local y se abrió el Dev Client instalado, sin reinstalarlo
+ni borrar sus datos. Metro confirmó `Android Bundled 25546ms index.js (3953
+modules)` y el emulador volvió a `MainActivity`; el registro no mostró marcadores
+de error de ejecución. No se modificaron movimientos ni saldos ni se hizo una
+nueva APK/AAB/OTA/publicación.
+
+La captura visual volvió a expirar incluso tras un reintento: no afirmo haber
+comprobado a ojo cómo quedó Cajas. Con el código actual ya no hay aviso fijo;
+la protección permanece y explica una acción bloqueada. **Qué sigue/falta:**
+confirmar visualmente que el aviso fijo desapareció y luego revisar, solo en
+lectura, por qué aparecen los tres casos; no elegir reparación ni cambiar datos
+sin confirmar qué ocurrió. El punto 2 sigue abierto; punto 3 también pendiente.
+
 ## Punto 2 — 12/10/2026, 20:38 Lima — aviso de Cajas solo cuando hace falta
 
 El propietario indicó que el contador visible confundía y no le encontraba
