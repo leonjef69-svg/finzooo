@@ -89,6 +89,7 @@ function initCatch(dependencies) {
 for (const [reason, detail] of [["verification"], ["owner"], ["read"], ["owner", "unidentified"], ["owner", "session"]]) {
   const api = environment(), auth = { currentUser: user() }, events = [], active = auth.currentUser;
   const deps = { ...api, auth, localOpenRequest: { current: 0 }, localSessionVersion: { current: 0 }, cloudFieldsRef: { current: { private: "old" } },
+    __DEV__: false,
     tRef: { current: key => key }, setReady: value => events.push(["ready", value]), setHasOnboarded: value => events.push(["configured", value]),
     setAccountStorageAvailable: value => { events.push(["storage", value]); api.setAccountStorageAvailable(value); },
     prepareLocalAccount: async () => { throw new api.LocalAccountVaultError(reason, detail); },

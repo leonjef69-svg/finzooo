@@ -27,6 +27,7 @@ function openFixture() {
   const deps = {
     auth: { currentUser: user }, tRef: { current: key => key },
     localOpenRequest: { current: 0 }, localSessionVersion: { current: 0 }, cloudFieldsRef: { current: null },
+    __DEV__: true,
     LocalAccountVaultError: VaultError,
     prepareLocalAccount: async () => true,
     loadJSON: async () => profile, STORAGE_KEYS: { profile: "synthetic-profile" },
@@ -151,10 +152,23 @@ test("otra apertura de la misma sesión gana al error del request anterior", asy
 test("fallo genuino de la misma apertura conserva la guardia", async () => {
   const f = openFixture(); f.deps.prepareLocalAccount = async () => { throw new VaultError("read"); };
   f.open = handlerOriginal(file, "openLocalAccount", f.deps, text);
-  await assert.rejects(f.open("A", f.user.email), error => error.name === "LocalAccountAccessError");
+  let observedError;
+  await assert.rejects(f.open("A", f.user.email), error => {
+    observedError = error; return error.name === "LocalAccountAccessError";
+  });
+  assert.equal(observedError.message, "localAccount.restoreFailed\nlocalAccount.devReadDetail",
+    "desarrollo distingue lectura sin mostrar identidad ni contenido financiero");
   assert.ok(f.calls.some(([name, value]) => name === "storage" && value === false));
   assert.ok(f.calls.some(([name, value]) => name === "onboarded" && value === false));
   assert.deepEqual(f.calls.filter(([name]) => ["profile", "reload"].includes(name)), []);
+});
+
+test("la versión de producción no emite el diagnóstico de apertura local", async () => {
+  const f = openFixture(); f.deps.__DEV__ = false;
+  f.deps.prepareLocalAccount = async () => { throw new VaultError("write"); };
+  f.open = handlerOriginal(file, "openLocalAccount", f.deps, text);
+  await assert.rejects(f.open("A", f.user.email), error => error.name === "LocalAccountAccessError"
+    && error.message === "localAccount.restoreFailed");
 });
 
 for (const replacement of ["B", "A"]) {

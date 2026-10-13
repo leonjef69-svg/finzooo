@@ -1221,6 +1221,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       }
       if (error instanceof LocalAccountVaultError) {
         const accessError = new Error(tRef.current(error.messageKey));
+        // Solo la compilación de desarrollo muestra si falló la lectura o la
+        // escritura local. No añade identidad ni contenido financiero.
+        if (__DEV__ && (error.reason === "read" || error.reason === "write")) {
+          accessError.message += `\n${tRef.current(error.reason === "read"
+            ? "localAccount.devReadDetail" : "localAccount.devWriteDetail")}`;
+        }
         accessError.name = error.reason === "verification" ? "LocalAccountVerificationRequired" : "LocalAccountAccessError";
         throw accessError;
       }

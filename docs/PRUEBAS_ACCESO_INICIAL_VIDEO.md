@@ -402,3 +402,28 @@ No nueva APK/AAB/OTA/Play/Firebase; el Dev Client instalado aún tiene código
 nativo viejo. **Qué sigue/falta:** reingreso y pruebas Android restantes del
 punto 2; revisión sin modificar las transferencias; servicios/consolas/
 publicación del punto 3. No declarar terminada la auditoría por esta apertura.
+
+### 13/10/2026 — la cuenta coincide; diagnóstico seguro de apertura
+
+El propietario confirma que en el intento actual eligió la misma cuenta Google
+que se vinculó al legado autorizado del 11/10. ADB redirige el emulador a
+`host-18 tcp:8081`; Metro responde y el bundle Android contiene el marcador
+actual de código. El APK base sigue en 1.0.8/code10, última actualización
+02/10/2026, pero esto no significa que el JavaScript servido por Metro sea viejo.
+No se puede afirmar desde aquí que la app ya haya recargado ese bundle.
+
+La pantalla sigue mostrando el fallo genérico al abrir la copia. Los registros
+Android disponibles no expusieron su causa. Para la compilación de desarrollo,
+la apertura ahora distingue lectura de escritura en un detalle traducido; no
+incluye correo, UID ni contenido financiero y no aparece en producción.
+Regresión de apertura: 17 casos; compatibilidad de rutas y traducciones verdes.
+TypeScript, ESLint global y suite completa: **210 pruebas y 8 auditores verdes**,
+tarjetas excluidas. El primer pase integral detectó el adaptador de prueba
+faltante para `__DEV__`; se corrigió y se repitió la suite completa en verde.
+
+La captura visual del emulador falló dos veces; no se pulsó el selector Google
+ni se recargó la app a ciegas. No se borró ni modificó información del emulador.
+**Qué sigue/falta:** que el propietario vuelva a pulsar Google con esa misma
+cuenta en el servidor 8081 actual y comparta el detalle de desarrollo; con esa
+causa se corrige y se repite el acceso normal. El acceso real y la auditoría
+Android completa siguen pendientes; sin APK/AAB/OTA/Firebase/Play nuevo.
