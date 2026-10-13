@@ -1,5 +1,34 @@
 # Estado actual de Fino
 
+## Moneda — 13/10/2026 — corrección de filas durante deslizamiento
+
+El propietario precisó que al deslizar rápido desaparecen SOLO las filas de
+monedas; título/buscador siguen y otro gesto las recupera. Se desactivó el
+recorte nativo en esa lista y se aumentó su reserva acotada: 20 filas iniciales,
+ventana de 11 pantallas, lotes de 20 cada 16 ms. No se montan las 155 de golpe
+ni se supone una altura fija que corte dos líneas o letras grandes. Catálogo,
+búsqueda, bandera, moneda fija, navegación y dinero no cambian.
+
+La regresión `verificar-moneda-deslizamiento-real.mjs` ejecuta el JSX original
+con React/Android adaptados y el catálogo/buscador reales. Falla antes del
+cambio y con `FINO_CURRENCY_SCROLL_BASELINE=8803281` por el recorte anterior;
+aprueba en actual y conserva las 155 opciones, búsqueda y bloqueo/selección.
+Es comprobación de configuración, no reproducción del dibujado Android.
+TypeScript/ESLint generales y 209 pruebas/8 auditores sin tarjetas aprobados
+(incluye suite UI ajena no versionada, no incluida en el commit). El servidor
+recompiló Android y Fino volvió a Inicio; se abrió Moneda desde Ajustes y las
+capturas tras gestos de 50 ms en ambos sentidos conservaron las filas. No es
+medición fotograma a fotograma ni prueba exacta del primer instante de entrada.
+Detalles y límites en
+`docs/PRUEBAS_MONEDA_DESLIZAMIENTO.md`.
+
+**Qué sigue/falta:** confirmar el gesto humano al instante de entrar y comprobar
+letras grandes; búsqueda/catálogo ya comprobados en regresión, visual restante
+pendiente. Se requiere confirmación
+del gesto del propietario. Después retomar el punto 5 de auditoría de entrada.
+Sin saldos/movimientos reales cambiados, APK/AAB/OTA/Play ni servicios remotos.
+Marcador preparado `13oct-moneda-lista`; Git no actualiza una APK instalada.
+
 ## Familia/Cajas — 13/10/2026 — botones y archivo local reversible
 
 Se reprodujo en una regresión del selector/navegador original que la protección

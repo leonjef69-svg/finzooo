@@ -78,8 +78,13 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
         keyExtractor={(currency) => currency.id}
         keyboardShouldPersistTaps="handled"
         automaticallyAdjustKeyboardInsets
-        initialNumToRender={10}
-        windowSize={5}
+        // En Android el recorte puede dejar filas invisibles hasta otro gesto.
+        // La reserva sigue acotada: no montamos las 155 monedas de golpe.
+        removeClippedSubviews={false}
+        initialNumToRender={20}
+        windowSize={11}
+        maxToRenderPerBatch={20}
+        updateCellsBatchingPeriod={16}
         contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
         ItemSeparatorComponent={() => <View className="h-2.5" />}
         ListEmptyComponent={<Text className="mt-8 text-center text-sm font-semibold text-white">{t("common.noResults")}</Text>}
