@@ -40,19 +40,21 @@ const family = ast("screens/Family.tsx");
 const reload = find(family, node => ts.isVariableDeclaration(node) && node.name.getText(family) === "recargar").initializer.arguments[0].getText(family);
 function familyHarness() {
   uid = "A"; session = 1;
-  const state = {}, calls = [], cache = new Map();
+  const state = {}, calls = [], cache = new Map(); let networkReads = 0;
   const scope = { auth, accountUid: "A", accountSession: 1, getAccountStorageSession, captureAccountTask,
     mounted: { current: true }, reloadId: { current: 0 }, confirmedReload: { current: 0 }, actionLock: { current: false },
     cierresPendientes: { current: new Set() }, cierresConfirmados: { current: new Set() },
     tRef: { current: key => key }, toastRef: { current: key => calls.push(key) }, showToast: key => calls.push(key),
-    t: key => key, spaceErrorKey: () => "error", familiaEnMemoria: cache,
-    listarFamilias: async () => [{ id: "f", nombre: "Casa" }], cargarFamiliaActiva: async () => null,
-    listarMovimientosFamilia: async () => [{ id: "old", tipo: "ingreso", monto: 40 }], listarMiembrosFamilia: async () => [{ uid: "A" }] };
+    t: key => key, spaceErrorKey: () => "error", familiaEnMemoria: cache, VENTANA_CAMBIO_RAPIDO_MS: 2_000,
+    listarFamilias: async () => { networkReads++; return [{ id: "f", nombre: "Casa" }]; },
+    cargarFamiliaActiva: async () => { networkReads++; return null; },
+    listarMovimientosFamilia: async () => { networkReads++; return [{ id: "old", tipo: "ingreso", monto: 40 }]; },
+    listarMiembrosFamilia: async () => { networkReads++; return [{ uid: "A" }]; } };
   for (const name of ["Cargando", "Actualizando", "FamiliasSincronizadas", "Familias", "SaldosFamilias", "MovimientosFamilias", "Familia", "Miembros", "Movimientos", "Ocupado"]) {
     scope[`set${name}`] = value => { state[name] = value; };
   }
   vm.runInNewContext(transpile(`globalThis.recargar = (${reload});\n${fn(family, "ejecutar")}`), scope);
-  return { state, calls, cache, scope };
+  return { state, calls, cache, scope, networkReads: () => networkReads };
 }
 
 // Nada de medio resultado mientras aún faltan miembros de la misma consulta.
@@ -61,11 +63,24 @@ function familyHarness() {
   scope.listarMiembrosFamilia = () => members.promise;
   const load = scope.recargar(); await flush();
   assert.equal(state.Familias, undefined, "no publicar una lista parcial antes del último paso");
-  assert.equal(state.Actualizando, true, "la consulta comunica que se está actualizando");
   members.resolve([{ uid: "A" }]); await load;
   assert.equal(state.FamiliasSincronizadas, true);
-  assert.equal(state.Actualizando, false);
   assert.equal(state.Movimientos[0].id, "old");
+}
+// Cambiar de espacio y volver al instante conserva la copia pintada, sin
+// repetir las consultas completas ni tratarla como una confirmación nueva.
+{
+  const { scope, state, cache, networkReads } = familyHarness();
+  const familia = { id: "f", nombre: "Casa", ownerUid: "A", creadoEn: 1, currency: "PEN" };
+  cache.set("A", { familia, familias: [familia], saldosFamilias: { f: 40 }, movimientosFamilias: { f: [] },
+    miembros: [{ uid: "A" }], movimientos: [], actualizadaEn: Date.now() });
+  await scope.recargar();
+  assert.equal(networkReads(), 0, "un cambio rápido no vuelve a descargar lista, movimientos y miembros");
+  assert.equal(state.Cargando, false, "la pantalla con copia conocida queda disponible inmediatamente");
+  assert.notEqual(state.FamiliasSincronizadas, true, "la copia visual no autoriza conciliar transferencias como si se hubiera confirmado nube");
+  await scope.recargar(undefined, true);
+  assert.equal(networkReads(), 4, "la actualización manual fuerza la consulta completa");
+  assert.equal(state.FamiliasSincronizadas, true);
 }
 // La copia al volver a entrar conserva TODA la lista, no solo la última familia.
 {

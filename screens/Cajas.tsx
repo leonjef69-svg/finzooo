@@ -104,7 +104,6 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const [editandoAporteId, setEditandoAporteId] = useState<string | null>(null);
   const [ready, setReady] = useState(leerCajasEnMemoria() !== null);
   const [cloudReady, setCloudReady] = useState(false);
-  const [actualizando, setActualizando] = useState(false);
   const [compartiendo, setCompartiendo] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const guardandoRef = useRef(false);
@@ -232,7 +231,6 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     let alive = true;
     const requested = refreshVersion;
     const current = () => alive && cuentaActual() && !guardandoRef.current && requestedRefresh.current === requested;
-    setActualizando(true);
     setCloudReady(false);
     setNameCopies(null);
     nubeConfirmadaPara.current = null;
@@ -284,8 +282,6 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
           nubeConfirmadaPara.current = null;
           setCloudReady(false); reportSyncError(error);
         }
-      } finally {
-        if (current()) setActualizando(false);
       }
     })();
     return () => { alive = false; };
@@ -840,7 +836,6 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
         <TouchableOpacity accessibilityLabel={t("common.refresh")} disabled={compartiendo || cargandoUnion || guardando} onPress={() => setRefreshVersion(value => value + 1)} className="h-10 w-10 items-center justify-center"><RefreshCw size={18} color="#64748b" /></TouchableOpacity>
       </View>
       <SpaceSwitcher active="boxes" />
-      {ready && actualizando ? <View accessibilityLiveRegion="polite" className="-mt-1 mb-1 flex-row items-center justify-center gap-2"><ActivityIndicator size="small" color="#059669" /><Text className="text-xs text-slate-500">{t("common.loading")}</Text></View> : null}
       <Modal transparent visible={moneyBusy} animationType="fade" onRequestClose={() => undefined}>
         <View className="flex-1 items-center justify-center bg-black/40 px-6">
           <View accessibilityViewIsModal className="w-full rounded-2xl bg-white p-6 dark:bg-noche">

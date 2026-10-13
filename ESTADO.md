@@ -1,5 +1,24 @@
 # Estado actual de Fino
 
+## Punto 2 — 12/10/2026, 19:15 Lima — cambio rápido entre espacios
+
+Personal/Familia/Cajas ya no muestran «Cargando…» encima de datos conocidos.
+Al volver a Familia dentro de 2 segundos se reutiliza su copia completa y se
+evitan las lecturas repetidas de familias, movimientos y miembros. Esa copia no
+se considera una confirmación nueva: la conciliación de transferencias sigue
+esperando una consulta real. Actualizar manualmente, abrir una familia concreta
+y las operaciones que cambian datos fuerzan la consulta. Cajas sigue mostrando
+su copia local al instante, pero no permite operaciones monetarias hasta
+confirmar la nube. No se cambiaron saldos ni movimientos.
+
+TypeScript, ESLint y las 205 pruebas/8 auditores pasaron; la prueba nueva falla
+contra la versión anterior. No se compiló ni instaló APK/AAB y no hubo OTA ni
+despliegue. **Qué sigue/falta:** medir el cambio Personal→Familia→Cajas en el
+emulador y corregir cualquier tirón que aún se observe. Las pruebas automáticas
+no miden la fluidez real del teléfono. La auditoría y el punto 2 siguen abiertos;
+el punto 3 externo también. Tarjetas fuera, Telegram en pausa y Sentry externo
+excluido.
+
 ## Punto 2 — 12/10/2026, 18:29 Lima — cambio entre espacios, mejora local sin entrega
 
 Personal/Familia/Cajas conservan su selector. Familia ahora mantiene en memoria

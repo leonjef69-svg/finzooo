@@ -33,7 +33,7 @@ import {
 } from "@/utils/cloudFamilia";
 import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Check, ListChecks, LogOut, Pencil, Plus, RefreshCw, Trash2, UserPlus, UsersRound, X } from "lucide-react-native";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useFocusEffect } from "expo-router";
 
@@ -46,7 +46,10 @@ type FamiliaEnMemoria = {
   movimientosFamilias: Record<string, MovimientoFamilia[]>;
   miembros: MiembroFamilia[];
   movimientos: MovimientoFamilia[];
+  actualizadaEn: number;
 };
+
+const VENTANA_CAMBIO_RAPIDO_MS = 2_000;
 
 type FamilyActionWait = AccountTaskWait & { reload: (preferred?: string) => Promise<void> };
 
@@ -84,7 +87,6 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   const [movimientosFamilias, setMovimientosFamilias] = useState<Record<string, MovimientoFamilia[]>>(copiaInicial?.movimientosFamilias ?? {});
   const [familiasSincronizadas, setFamiliasSincronizadas] = useState(false);
   const [cargando, setCargando] = useState(!copiaInicial);
-  const [actualizando, setActualizando] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [modo, setModo] = useState<"crear" | "unir" | null>(null);
   const [nombre, setNombre] = useState("");
@@ -142,13 +144,21 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   tRef.current = t;
   toastRef.current = showToast;
 
-  const recargar = useCallback(async (preferida?: string) => {
+  const recargar = useCallback(async (preferida?: string, forzar = false) => {
     if (cierresPendientes.current.size) return;
     const pedido = ++reloadId.current;
     const uid = accountUid;
     const task = captureAccountTask(uid, () => mounted.current && pedido === reloadId.current && getAccountStorageSession() === accountSession);
     if (!task.current()) { if (!uid && mounted.current) setCargando(false); return; }
-    setActualizando(true);
+    const copiaReciente = familiaEnMemoria.get(uid);
+    const edadDeCopia = copiaReciente ? Date.now() - copiaReciente.actualizadaEn : Infinity;
+    // Al alternar espacios rápidamente, enseñar la copia conocida es más útil
+    // que repetir varias lecturas de Firebase. No se marca como confirmada:
+    // la conciliación de transferencias espera una consulta real.
+    if (!preferida && !forzar && edadDeCopia >= 0 && edadDeCopia < VENTANA_CAMBIO_RAPIDO_MS) {
+      setCargando(false);
+      return;
+    }
     setFamiliasSincronizadas(false);
     try {
       const [lista, activaLegacy] = await task.wait(() => Promise.all([listarFamilias(uid), cargarFamiliaActiva(uid)]));
@@ -174,10 +184,10 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       setMiembros(people); setMovimientos(movements);
       setFamiliasSincronizadas(true);
       familiaEnMemoria.set(uid, { familia: activa, familias: lista, saldosFamilias: nextBalances,
-        movimientosFamilias: nextMovements, miembros: people, movimientos: movements });
+        movimientosFamilias: nextMovements, miembros: people, movimientos: movements, actualizadaEn: Date.now() });
     } catch { if (task.current()) toastRef.current(tRef.current("family.connectionError")); }
     finally {
-      if (task.current()) { setCargando(false); setActualizando(false); }
+      if (task.current()) setCargando(false);
     }
   }, [accountSession, accountUid]);
 
@@ -201,7 +211,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       if (cierresPendientes.current.has(familiaId)) return;
       setFamilia(null); setMovimientos([]); setMiembros([]); setTipo(null);
       setInvitacion(""); setFilter(null);
-      setVerTodas(true); void recargar();
+      setVerTodas(true); void recargar(undefined, true);
     }, () => { if (task.current()) toastRef.current(tRef.current("family.connectionError")); });
     return () => { active = false; stop(); };
   }, [accountSession, accountUid, familiaId, recargar]);
@@ -297,7 +307,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
             notes: "", origin: "manual", internalTransfer: "family", internalTransferLink: item.id,
             internalTransferSpaceId: familia.id, internalTransferSpaceName: familia.nombre,
           }]))) throw new Error("personal-save-failed");
-          void recargar();
+          void recargar(undefined, true);
         })
         .catch(() => {
           legacyRepairIds.current.delete(item.id);
@@ -328,7 +338,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
         }
       }
     }
-    const wait = Object.assign(guarded, { reload: (preferred?: string) => task.wait(() => recargar(preferred)) });
+    const wait = Object.assign(guarded, { reload: (preferred?: string) => task.wait(() => recargar(preferred, true)) });
     try { await action(wait); }
     catch (error) {
       if (!task.current()) return;
@@ -339,7 +349,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       actionLock.current = false;
       if (task.current()) {
         setOcupado(false);
-        if (!cierresPendientes.current.size && mutationRevision !== undefined && mutationRevision === reloadId.current) void recargar();
+        if (!cierresPendientes.current.size && mutationRevision !== undefined && mutationRevision === reloadId.current) void recargar(undefined, true);
       }
     }
   }
@@ -573,9 +583,8 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   };
 
   return <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top + 6, paddingBottom: insets.bottom }}>
-    <View className="flex-row items-center justify-between px-5 pb-3"><BackButton onPress={safeBack} /><Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("family.title")}</Text><TouchableOpacity accessibilityLabel={t("common.refresh")} onPress={() => void recargar()} className="h-10 w-10 items-center justify-center"><RefreshCw size={18} color="#64748b" /></TouchableOpacity></View>
+    <View className="flex-row items-center justify-between px-5 pb-3"><BackButton onPress={safeBack} /><Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("family.title")}</Text><TouchableOpacity accessibilityLabel={t("common.refresh")} onPress={() => void recargar(undefined, true)} className="h-10 w-10 items-center justify-center"><RefreshCw size={18} color="#64748b" /></TouchableOpacity></View>
     <SpaceSwitcher active="family" />
-    {!cargando && actualizando ? <View accessibilityLiveRegion="polite" className="-mt-1 mb-1 flex-row items-center justify-center gap-2"><ActivityIndicator size="small" color="#059669" /><Text className="text-xs text-slate-500">{t("common.loading")}</Text></View> : null}
     <ScrollView
       className="flex-1 px-5"
       contentContainerStyle={{ paddingBottom: 36 }}

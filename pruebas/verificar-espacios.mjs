@@ -44,13 +44,14 @@ assert.match(family, /unirseAFamilia/, "Familia permite entrar mediante invitaci
 assert.match(family, /familiaEnMemoria/, "Familia conserva lo ya mostrado mientras actualiza la nube");
 assert.match(family, /useState\(!copiaInicial\)/, "Familia enseña la copia completa ya conocida mientras refresca");
 assert.match(family, /movimientosFamilias: nextMovements/, "la copia inmediata conserva todas las familias, no solo la última abierta");
-assert.match(family, /setActualizando\(true\)/, "Familia muestra un indicador discreto mientras valida los datos guardados");
+assert.match(family, /VENTANA_CAMBIO_RAPIDO_MS = 2_000/, "un cambio rápido reutiliza por poco tiempo la consulta completa ya obtenida");
+assert.doesNotMatch(family, /!cargando && actualizando/, "Familia no tapa datos visibles con un aviso de carga de fondo");
+assert.match(family, /recargar\(undefined, true\)/, "actualizar manualmente o después de un cambio fuerza una lectura real");
 assert.match(boxes, /leerCajasEnMemoria/, "Cajas conserva lo ya mostrado al cambiar de espacio");
 assert.match(boxesMemory, /limpiarCajasEnMemoria/, "la caché de Cajas se puede vaciar al cambiar de cuenta");
 assert.match(boxes, /setReady\(true\)[\s\S]*bajarCajas/, "Cajas muestra primero la copia local y consulta la nube después");
 assert.doesNotMatch(boxes, /setCloudReady\(false\);\s*setReady\(false\)/, "al volver a Cajas no oculta una copia en memoria mientras consulta la nube");
-assert.match(boxes, /setActualizando\(true\)/, "Cajas actualiza sin vaciar la pantalla");
-assert.match(boxes, /ready && actualizando/, "Cajas enseña un indicador pequeño junto a la copia existente");
+assert.doesNotMatch(boxes, /actualizando|setActualizando/, "Cajas actualiza en segundo plano sin añadir un aviso sobre los datos visibles");
 assert.match(layout, /Stack\.Screen name="family" options=\{\{ animation: "fade"/, "Familia entra con transición breve y discreta");
 assert.match(layout, /Stack\.Screen name="boxes" options=\{\{ animation: "fade"/, "Cajas entra con transición breve y discreta");
 assert.match(route, /screens\/Family/);

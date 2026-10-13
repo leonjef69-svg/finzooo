@@ -170,10 +170,10 @@ function screenHarness(premium = true) {
 }
 {
   const h = screenHarness(); h.localRead.resolve(data()); await flush();
-  assert.equal(h.state.actualizando, true, "conserva visible la copia local mientras revisa la nube");
+  assert.equal(h.state.ready, true, "conserva visible la copia local mientras revisa la nube");
+  assert.equal(h.state.cloudReady, false, "la copia visual no habilita operaciones financieras antes de confirmar la nube");
   h.scope.setDatos(before => ({ ...before, movimientos: [...before.movimientos, { ...row, id: "mov-fast", creadoEn: 2 }] }));
   h.cloudRead.resolve(recent); await flush();
-  assert.equal(h.state.actualizando, false);
   assert.ok(h.state.rendered.movimientos.some(item => item.id === "mov-fast"), "la carga conserva una anotación todavía no pintada");
   assert.equal(h.state.rendered.movimientos.find(item => item.id === row.id).monto, 120);
   assert.equal(h.state.cloudReady, true);
