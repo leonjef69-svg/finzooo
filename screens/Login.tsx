@@ -19,7 +19,7 @@ import AuthField from "@/components/AuthField";
 import AuthLegalAcceptance from "@/components/AuthLegalAcceptance";
 import GoogleButton, { OrDivider } from "@/components/GoogleButton";
 import { auth } from "@/utils/firebase";
-import { recordLegalAcceptanceForCurrentAccount } from "@/utils/legalAcceptance";
+import { hasAcceptedLegalDocuments, recordLegalAcceptanceForCurrentAccount } from "@/utils/legalAcceptance";
 import { withTimeout } from "@/utils/withTimeout";
 import { firebaseErrorMessage } from "@/utils/firebaseErrors";
 import { GoogleSignInCancelled, signInWithGoogle } from "@/utils/googleAuth";
@@ -34,7 +34,7 @@ export default function Login({
   onLoggedIn: (current?: EntryOperationGuard) => void | Promise<void>;
   onGoRegister: () => void;
 }) {
-  const { t, showToast } = useAppData();
+  const { t } = useAppData();
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [loading, setLoading] = useState(false);
@@ -42,7 +42,9 @@ export default function Login({
   const [error, setError] = useState("");
   const [googleError, setGoogleError] = useState("");
   const [legalAccepted, setLegalAccepted] = useState(false);
+  const [googleLegalPending, setGoogleLegalPending] = useState(false);
   const authBusy = useRef(false);
+  const pendingGoogleUser = useRef<typeof auth.currentUser>(null);
   const beginEntryOperation = useEntryOperation(() => {
     authBusy.current = false;
     setLoading(false);
@@ -53,6 +55,9 @@ export default function Login({
 
   async function submit() {
     if (authBusy.current) return;
+    pendingGoogleUser.current = null;
+    setGoogleLegalPending(false);
+    setLegalAccepted(false);
     setGoogleError("");
     if (!email || pass.length < 6) {
       setError(t("login.invalidCredentials"));
@@ -85,12 +90,6 @@ export default function Login({
 
   async function loginWithGoogle() {
     if (authBusy.current) return;
-    // Google también crea una cuenta cuando aún no existe. Mostrar la
-    // elección ANTES de enviar credenciales, no después de crearla.
-    if (!legalAccepted) {
-      setGoogleError(t("auth.legalRequired"));
-      return;
-    }
     const operationCurrent = beginEntryOperation();
     if (!operationCurrent()) return;
     authBusy.current = true;
@@ -99,15 +98,49 @@ export default function Login({
     setGoogleLoading(true);
     let authenticated = false;
     let authenticatedUser: typeof auth.currentUser = null;
+    let checkingLegalAcceptance = false;
     try {
-      const user = await signInWithGoogle();
+      // Si la cuenta ya inició sesión en el primer paso, conservarla mientras
+      // la persona acepta explícitamente; no abrir Google otra vez.
+      let user = pendingGoogleUser.current;
+      if (!user || auth.currentUser !== user) {
+        pendingGoogleUser.current = null;
+        setGoogleLegalPending(false);
+        user = await signInWithGoogle();
+      }
       authenticatedUser = user;
       if (!operationCurrent()) return;
       if (!user) throw new Error(t("settings.noActiveSession"));
       if (auth.currentUser !== user) return;
       const current = () => operationCurrent() && auth.currentUser === user;
       authenticated = true;
-      await withTimeout(recordLegalAcceptanceForCurrentAccount()).catch(() => { if (current()) showToast(t("legal.saveFailed")); });
+      const isPendingAcceptance = pendingGoogleUser.current === user;
+      let accepted = false;
+      if (!isPendingAcceptance) {
+        checkingLegalAcceptance = true;
+        try { accepted = await withTimeout(hasAcceptedLegalDocuments(user.uid)); }
+        catch (error) {
+          // Un recibo legal dañado puede sustituirse con una elección nueva;
+          // cualquier otro fallo de lectura debe detener el acceso.
+          if (!(error instanceof Error) || error.message !== "legal-receipt-invalid") throw error;
+        }
+      }
+      if (!current()) return;
+      if (!accepted && !legalAccepted) {
+        pendingGoogleUser.current = user;
+        setGoogleLegalPending(true);
+        setGoogleError(t("auth.legalRequired"));
+        return;
+      }
+      // No reescribir ni volver a fechar una aceptación que ya está vigente.
+      if (!accepted) {
+        checkingLegalAcceptance = true;
+        await withTimeout(recordLegalAcceptanceForCurrentAccount());
+        if (!current()) return;
+      }
+      checkingLegalAcceptance = false;
+      pendingGoogleUser.current = null;
+      setGoogleLegalPending(false);
       if (!current()) return;
       await onLoggedIn(current);
     } catch (err) {
@@ -116,6 +149,7 @@ export default function Login({
       // a propósito, mostrarle un error rojo sería confuso.
       if (err instanceof GoogleSignInCancelled) return;
       if (err instanceof Error && err.name === "LocalAccountAccessError") setGoogleError(err.message);
+      else if (checkingLegalAcceptance) setGoogleError(t("legal.saveFailed"));
       else if (authenticated && (err as { code?: string })?.code !== "cloud/history-format-unsupported") setGoogleError(t("login.accountOpenFailed"));
       else setGoogleError(googleSignInErrorMessage(err));
     } finally {
@@ -224,13 +258,15 @@ export default function Login({
 
         {Platform.OS === "android" ? <>
           <OrDivider label={t("login.or")} />
-          <Text className="text-xs text-slate-600 mb-1">{t("auth.googleCreatesAccount")}</Text>
-          <AuthLegalAcceptance accepted={legalAccepted} onChange={setLegalAccepted} disabled={loading || googleLoading} t={t} />
+          {googleLegalPending ? <>
+            <Text className="text-xs text-slate-600 mb-1">{t("auth.legalRequiredForAccount")}</Text>
+            <AuthLegalAcceptance accepted={legalAccepted} onChange={setLegalAccepted} disabled={loading || googleLoading} t={t} />
+          </> : null}
           <GoogleButton
-            label={t("login.withGoogle")}
+            label={t(googleLegalPending ? "auth.acceptAndContinue" : "login.withGoogle")}
             onPress={loginWithGoogle}
             loading={googleLoading}
-            disabled={loading || !legalAccepted}
+            disabled={loading || (googleLegalPending && !legalAccepted)}
             light
           />
           {googleError ? (

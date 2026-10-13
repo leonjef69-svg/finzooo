@@ -25,6 +25,7 @@ function fixture() {
   const values = {
     beginEntryOperation: () => scope.begin(), auth: { currentUser: user },
     authBusy: { current: false }, navigationBusy: { current: false },
+    pendingGoogleUser: { current: null },
     createdUser: { current: null }, verificationSent: { current: false }, legalAccepted: true,
     email: user.email, name: "Prueba", pass: "Only-test-123",
     t: key => key, firebaseErrorMessage: code => code || "sdk-error",
@@ -32,7 +33,8 @@ function fixture() {
     withTimeout: promise => promise,
     setError: value => calls.push(["error", value]), setGoogleError: value => calls.push(["google-error", value]),
     setErrors: value => calls.push(["errors", value]), setLoading: value => calls.push(["loading", value]),
-    setGoogleLoading: value => calls.push(["google-loading", value]), showToast: value => calls.push(["toast", value]),
+    setGoogleLoading: value => calls.push(["google-loading", value]), setGoogleLegalPending() {}, setLegalAccepted() {},
+    hasAcceptedLegalDocuments: async () => true, showToast: value => calls.push(["toast", value]),
     signInWithEmailAndPassword: async () => ({ user }), signInWithGoogle: async () => user,
     createUserWithEmailAndPassword: async () => ({ user }),
     recordLegalAcceptanceForCurrentAccount: async () => calls.push(["receipt"]),

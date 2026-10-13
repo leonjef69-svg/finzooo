@@ -1710,6 +1710,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "auth.legalAccept": "Acepto los Términos y he leído la Política de privacidad.",
     "auth.legalRequired": "Lee los documentos y marca la casilla antes de continuar.",
     "auth.googleCreatesAccount": "Google puede crear una cuenta nueva. Antes de continuar:",
+    "auth.legalRequiredForAccount": "Esta cuenta aún no tiene una aceptación guardada en este celular. Acepta los documentos para continuar.",
+    "auth.acceptAndContinue": "Aceptar y continuar",
 
     "verifyEmail.title": "Verifica tu correo",
     "verifyEmail.sentTo": "Correo de tu cuenta",
@@ -3582,6 +3584,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "auth.legalAccept": "I accept the Terms and have read the Privacy Policy.",
     "auth.legalRequired": "Read the documents and select the checkbox before continuing.",
     "auth.googleCreatesAccount": "Google can create a new account. Before continuing:",
+    "auth.legalRequiredForAccount": "Fino has no saved acceptance for this account on this phone yet. Accept the documents to continue.",
+    "auth.acceptAndContinue": "Accept and continue",
 
     "verifyEmail.title": "Verify your email",
     "verifyEmail.sentTo": "Your account email",
@@ -5452,6 +5456,8 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "auth.legalAccept": "Aceito os Termos e li a Política de Privacidade.",
     "auth.legalRequired": "Leia os documentos e marque a caixa antes de continuar.",
     "auth.googleCreatesAccount": "O Google pode criar uma conta nova. Antes de continuar:",
+    "auth.legalRequiredForAccount": "Esta conta ainda não tem uma aceitação salva neste celular. Aceite os documentos para continuar.",
+    "auth.acceptAndContinue": "Aceitar e continuar",
 
     "verifyEmail.title": "Verifique seu e-mail",
     "verifyEmail.sentTo": "E-mail da sua conta",

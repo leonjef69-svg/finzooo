@@ -9,7 +9,6 @@ const source = file => revision ? execFileSync("git", ["show", `${revision}:${fi
 const paths = [
   ["screens/Register.tsx", "submit"],
   ["screens/Register.tsx", "registerWithGoogle"],
-  ["screens/Login.tsx", "loginWithGoogle"],
 ];
 
 for (const [file, name] of paths) {

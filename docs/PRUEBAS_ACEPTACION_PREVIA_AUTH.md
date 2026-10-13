@@ -62,3 +62,37 @@ El botón por sí solo no acredita moderación eficaz ni cumplimiento completo.
 **Qué sigue:** recibo/versión por cuenta y aceptación de sesiones existentes,
 bloqueo y demás IDs abiertos. **Qué falta:** Android, envío real de denuncias,
 consolas/trámites/cobros y publicación autorizada. Tarjetas/Sentry fuera.
+
+## Acceso Google — 13/10/2026 — comprobación de aceptación por cuenta
+
+El formulario de Inicio con Google ya no muestra la casilla en cada intento.
+Tras seleccionar la cuenta, Fino comprueba el recibo cifrado guardado para su
+UID y las huellas vigentes de Términos/Privacidad. Si ya aceptó esta versión,
+continúa sin volver a pedirla ni cambiar la fecha del recibo. Si no existe, la
+elección falta o los documentos cambiaron, muestra la casilla y no abre los
+datos hasta que la persona acepte. Conserva la sesión seleccionada durante esa
+confirmación para no repetir el selector de Google. Inicio por correo no exige
+esa casilla; el alta nueva por correo/Google conserva la aceptación explícita
+previa.
+
+`verificar-google-aceptacion-una-vez-real.mjs` ejecuta el manejador original
+con respuestas Auth/almacén adaptadas: aceptación previa, primer consentimiento,
+reintento sin segundo selector, fallo al leer el recibo y traducciones. La
+prueba de aceptación anterior conserva los bloqueos previos de alta; las de
+resultado Google y acceso abandonado comprueban identidad exacta y cancelación.
+No prueba cuentas Google reales, Firebase publicado ni Android.
+
+El aviso de la captura «No se pudo abrir la copia de esta cuenta» sucede después
+de autenticar y es distinto de la casilla: la bóveda local detiene la apertura
+cuando no puede comprobar la copia. Esta corrección no cambia ni borra esa copia.
+ADB estaba disponible solo por ruta absoluta; el emulador está conectado con
+APK 1.0.8/code 10 (última instalación 02/10/2026). No se leyó su almacén privado,
+no se seleccionó cuenta Google y no se reinstaló. El motivo interno exacto de
+ese rechazo necesita una nueva captura del resultado/registro seguro del propio
+emulador; el mensaje mostrado no identifica si falla lectura o escritura.
+
+Marcador de desarrollo: `13oct-google-consent`. Falta recargar el emulador,
+probar repetición con la misma cuenta y verificar el caso sin recibo. La API
+Auth ya está documentada como correcta en pruebas locales con identidad
+simulada; no acredita Google nativo/producción ni que Firebase pueda restaurar
+copias de otro teléfono. No APK/AAB/OTA/Play/Firebase publicado.
