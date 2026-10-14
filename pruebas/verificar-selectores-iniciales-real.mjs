@@ -1,3 +1,4 @@
+import { entryUIFixture } from "./helpers/entry-ui-fixture.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -67,7 +68,7 @@ function fixture(kind, configured = false) {
     });
     return exported;
   }
-  const common = { react: React, "react-native": rn, "@/contexts/AppDataContext": { useAppData: () => context },
+  const common = { "@/components/EntryUI": entryUIFixture, react: React, "react-native": rn, "@/contexts/AppDataContext": { useAppData: () => context },
     "lucide-react-native": { Check: "Check", Search: "Search", ChevronLeft: "ChevronLeft" },
     nativewind: { useColorScheme: () => ({ colorScheme: "light" }) },
     "react-native-safe-area-context": { useSafeAreaInsets: () => ({ top: 24, bottom: 20 }) },
@@ -86,8 +87,9 @@ function fixture(kind, configured = false) {
     index = 0;
     const tree = Root(props), nodes = flatten(tree);
     const back = nodes.find(node => node.type === BackButton);
-    assert.ok(back, "El botón BackButton original sigue conectado");
-    const backTree = BackButton(back.props);
+    const panel = nodes.find(node => node.type === "EntryPanel");
+    assert.ok(back || panel, "la vuelta original sigue conectada al panel o al botón heredado");
+    const backTree = back ? BackButton(back.props) : { props: { onPress: panel.props.onBack } };
     const list = nodes.find(node => node.type === "FlatList");
     const rows = list ? list.props.data.map(item => list.props.renderItem({ item }))
       : nodes.filter(node => node.type === "TouchableOpacity");

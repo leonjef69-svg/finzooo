@@ -82,7 +82,7 @@ function fixture({ accepted = false, checked = false, pending = null, receiptErr
 }
 
 const ui = readFileSync(file, "utf8");
-assert.match(ui, /googleLegalPending \? <>[\s\S]*?<AuthLegalAcceptance/,
+assert.match(ui, /googleLegalPending \? <View[\s\S]*?<AuthLegalAcceptance/,
   "la casilla solo aparece cuando esta cuenta necesita registrar una aceptación");
 assert.match(ui, /disabled=\{loading \|\| \(googleLegalPending && !legalAccepted\)\}/,
   "Google no se bloquea con la casilla en cuentas que ya aceptaron");

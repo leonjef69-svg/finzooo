@@ -1,23 +1,12 @@
 import { useRef, useState } from "react";
-import {
-  ActivityIndicator,
-  Alert,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  useWindowDimensions,
-  View,
-} from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Wallet } from "lucide-react-native";
+import { Alert, Platform, Text, View } from "react-native";
+import { KeyRound, Smile } from "lucide-react-native";
+import { reemplazarUnaVez } from "@/utils/nav";
+import { ENTRY_COLORS, EntryButton, EntryHeading, EntryLink, EntryScreen, entryStyles } from "@/components/EntryUI";
 import { sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
 import AuthField from "@/components/AuthField";
 import AuthLegalAcceptance from "@/components/AuthLegalAcceptance";
-import GoogleButton, { OrDivider } from "@/components/GoogleButton";
+import GoogleButton from "@/components/GoogleButton";
 import { auth } from "@/utils/firebase";
 import { hasAcceptedLegalDocuments, recordLegalAcceptanceForCurrentAccount } from "@/utils/legalAcceptance";
 import { withTimeout } from "@/utils/withTimeout";
@@ -35,6 +24,8 @@ export default function Login({
   onGoRegister: () => void;
 }) {
   const { t } = useAppData();
+  const [recovering, setRecovering] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [loading, setLoading] = useState(false);
@@ -49,9 +40,8 @@ export default function Login({
     authBusy.current = false;
     setLoading(false);
     setGoogleLoading(false);
+    setResetLoading(false);
   });
-  const insets = useSafeAreaInsets();
-  const { height } = useWindowDimensions();
 
   async function submit() {
     if (authBusy.current) return;
@@ -169,6 +159,7 @@ export default function Login({
     const operationCurrent = beginEntryOperation();
     if (!operationCurrent()) return;
     authBusy.current = true;
+    setResetLoading(true);
     try {
       await withTimeout(sendPasswordResetEmail(auth, email.trim()));
       if (!operationCurrent()) return;
@@ -181,112 +172,30 @@ export default function Login({
       const code = (err as { code?: string })?.code || "";
       Alert.alert(t("login.resetEmailFailedTitle"), firebaseErrorMessage(code));
     } finally {
-      if (operationCurrent()) authBusy.current = false;
+      if (operationCurrent()) { authBusy.current = false; setResetLoading(false); }
     }
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      className="flex-1 bg-[#17100c]"
-    >
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image
-        source={require("../assets/images/onboarding/fino-sunset-background.png")}
-        resizeMode="cover"
-        className="absolute inset-0 h-full w-full"
-        style={{ transform: [{ scale: 1.08 }] }}
-      />
-      <View className="absolute inset-0 bg-black/45" />
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingHorizontal: 0,
-          paddingTop: insets.top + 245,
-          paddingBottom: 0,
-        }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <View className="rounded-t-[30px] bg-white/95 px-6 pt-8 pb-7" style={{ minHeight: Math.max(0, height - insets.top - 245), paddingBottom: insets.bottom + 24 }}>
-          <View className="w-12 h-12 rounded-2xl bg-amber-500 items-center justify-center mb-5">
-            <Wallet size={22} color="#ffffff" />
-          </View>
-          <Text className="text-2xl font-extrabold text-slate-900">{t("login.welcomeBack")}</Text>
-          <Text className="text-sm text-slate-500 mt-1 mb-7">{t("login.subtitle")}</Text>
-
-          <View className="gap-4">
-          <AuthField
-            label={t("auth.emailLabel")}
-            value={email}
-            onChange={setEmail}
-            placeholder={t("auth.emailPlaceholder")}
-            keyboardType="email-address"
-            editable={!loading && !googleLoading}
-            light
-          />
-          <AuthField
-            label={t("auth.passwordLabel")}
-            type="password"
-            value={pass}
-            onChange={setPass}
-            placeholder="••••••••"
-            editable={!loading && !googleLoading}
-            light
-          />
-          {error ? <Text className="text-rose-500 text-xs font-medium -mt-2">{error}</Text> : null}
-          <TouchableOpacity disabled={loading || googleLoading} onPress={forgotPassword}>
-            <Text className="text-right text-xs font-semibold text-amber-600">
-              {t("login.forgotPassword")}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <TouchableOpacity
-          activeOpacity={0.85}
-          onPress={submit}
-          disabled={loading || googleLoading}
-          className={`w-full mt-7 bg-amber-500 py-4 rounded-2xl items-center justify-center ${
-            loading ? "opacity-70" : ""
-          }`}
-        >
-          {loading ? (
-            <ActivityIndicator color="#ffffff" />
-          ) : (
-            <Text className="text-white font-bold">{t("login.submit")}</Text>
-          )}
-        </TouchableOpacity>
-
-        {Platform.OS === "android" ? <>
-          <OrDivider label={t("login.or")} />
-          {googleLegalPending ? <>
-            <Text className="text-xs text-slate-600 mb-1">{t("auth.legalRequiredForAccount")}</Text>
-            <AuthLegalAcceptance accepted={legalAccepted} onChange={setLegalAccepted} disabled={loading || googleLoading} t={t} />
+    <EntryScreen center onBack={() => { if (authBusy.current) return; if (recovering) setRecovering(false); else reemplazarUnaVez("/onboarding"); }} disabled={loading || googleLoading || resetLoading}>
+      <EntryHeading title={t(recovering ? "entry.recoverTitle" : "login.welcomeBack")} subtitle={t(recovering ? "entry.recoverSubtitle" : "login.subtitle")} icon={recovering ? <KeyRound size={21} color={ENTRY_COLORS.brown} /> : <Smile size={23} color={ENTRY_COLORS.brown} />} />
+      <View style={{ gap: 13 }}>
+        <AuthField label={t("auth.emailLabel")} value={email} onChange={setEmail} placeholder={t("auth.emailPlaceholder")} keyboardType="email-address" editable={!loading && !googleLoading && !resetLoading} warm light />
+        {!recovering ? <AuthField label={t("auth.passwordLabel")} type="password" value={pass} onChange={setPass} placeholder="••••••••" editable={!loading && !googleLoading} warm light /> : null}
+      </View>
+      {error && !recovering ? <Text accessibilityRole="alert" style={entryStyles.error}>{error}</Text> : null}
+      {!recovering ? <EntryLink label={t("login.forgotPassword")} onPress={() => { if (!authBusy.current) setRecovering(true); }} disabled={loading || googleLoading} /> : null}
+      <View style={{ marginTop: 16 }}>
+        <EntryButton label={t(recovering ? "entry.sendReset" : "login.submit")} onPress={recovering ? forgotPassword : submit} loading={loading || resetLoading} disabled={googleLoading} />
+        {recovering ? <EntryLink label={t("entry.backLogin")} onPress={() => { if (!authBusy.current) setRecovering(false); }} disabled={resetLoading} /> : <>
+          {Platform.OS === "android" ? <>
+            {googleLegalPending ? <View style={entryStyles.card}><Text style={entryStyles.muted}>{t("auth.legalRequiredForAccount")}</Text><AuthLegalAcceptance accepted={legalAccepted} onChange={setLegalAccepted} disabled={loading || googleLoading} t={t} warm /></View> : null}
+            <GoogleButton label={t(googleLegalPending ? "auth.acceptAndContinue" : "login.withGoogle")} onPress={loginWithGoogle} loading={googleLoading} disabled={loading || (googleLegalPending && !legalAccepted)} warm light />
+            {googleError ? <Text accessibilityRole="alert" style={entryStyles.error}>{googleError}</Text> : null}
           </> : null}
-          <GoogleButton
-            label={t(googleLegalPending ? "auth.acceptAndContinue" : "login.withGoogle")}
-            onPress={loginWithGoogle}
-            loading={googleLoading}
-            disabled={loading || (googleLegalPending && !legalAccepted)}
-            light
-          />
-          {googleError ? (
-            <Text className="text-rose-500 text-xs font-medium text-center mt-3">
-              {googleError}
-            </Text>
-          ) : null}
-        </> : null}
-
-        {/* gap-1: la separación con "Regístrate" la pone el diseño. Antes
-            venía de un espacio al final del propio texto traducido, donde
-            no se ve y cualquiera lo borraría sin saber que hacía falta. */}
-        <View className="flex-row justify-center gap-1 mt-6 pb-6">
-          <Text className="text-sm text-slate-500">{t("login.noAccount")}</Text>
-          <TouchableOpacity disabled={loading || googleLoading} onPress={() => { if (!authBusy.current) onGoRegister(); }}>
-            <Text className="text-sm text-amber-600 font-bold">{t("login.register")}</Text>
-          </TouchableOpacity>
-          </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          <EntryLink label={t("login.noAccount") + " " + t("login.register")} onPress={() => { if (!authBusy.current) onGoRegister(); }} disabled={loading || googleLoading} />
+        </>}
+      </View>
+    </EntryScreen>
   );
 }

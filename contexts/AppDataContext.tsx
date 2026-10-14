@@ -2241,7 +2241,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     const task = captureAccountTask(user?.uid ?? "", () => auth.currentUser === user && version === localSessionVersion.current);
     if (!ready || !user || !task.current()) throw new Error(tRef.current("settings.noActiveSession"));
     if (accountConfigured.current) throw new Error(tRef.current("setup.alreadyConfigured"));
-    if (Platform.OS !== "android" || !isSafeMoneyAmount(budgetAmount) || budgetAmount <= 0 || amountInputError(String(budgetAmount), currency)) throw new Error(tRef.current("setup.saveFailed"));
+    if (Platform.OS !== "android" || !isSafeMoneyAmount(budgetAmount) || budgetAmount < 0 || amountInputError(String(budgetAmount), currency)) throw new Error(tRef.current("setup.saveFailed"));
     const originalProfile = cloudGroupValue(cloudFieldsRef.current ?? datosParaLaNube(), CLOUD_SYNC_GROUPS.profile) as Pick<CloudData, "userName" | "userPhoto" | "userCurrency" | "userLanguage">;
     const initialMonth = currentRealMonth();
     const key = monthKey(initialMonth.y, initialMonth.m);
@@ -2251,10 +2251,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         const originalFields = cloudFieldsRef.current;
         const originalMeta = cloudSyncMetaRef.current;
         const local = originalFields ?? { ...datosParaLaNube(), pagosProgramados, iconosFavoritos };
-        const nextBudgets = { ...local.budgets, [key]: budgetAmount };
+        // Cero representa «lo definiré después»: no crea ni reemplaza un presupuesto.
+        const nextBudgets = budgetAmount === 0 ? local.budgets : { ...local.budgets, [key]: budgetAmount };
         const profile = { userName, userEmail: user.email || userEmail, userPhoto,
           userCurrency: currency, userLanguage, userCountry, hasOnboarded: true };
-        let meta = recordCloudGroupChange(originalMeta, CLOUD_SYNC_GROUPS.budgets, local.budgets, nextBudgets);
+        let meta = budgetAmount === 0 ? originalMeta : recordCloudGroupChange(originalMeta, CLOUD_SYNC_GROUPS.budgets, local.budgets, nextBudgets);
         meta = recordCloudGroupChange(meta, CLOUD_SYNC_GROUPS.profile, cloudGroupValue(local, CLOUD_SYNC_GROUPS.profile), cloudGroupValue({ ...local, ...profile }, CLOUD_SYNC_GROUPS.profile));
         return {
           entries: [[STORAGE_KEYS.profile, profile], [STORAGE_KEYS.budgets, nextBudgets], [STORAGE_KEYS.cloudSyncMeta, meta]],

@@ -1,3 +1,4 @@
+import { entryUIFixture } from "./helpers/entry-ui-fixture.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -37,6 +38,7 @@ async function fixture(configured) {
   };
   const rn = Object.fromEntries(["FlatList", "Image", "StatusBar", "Text", "TextInput", "TouchableOpacity", "View"].map(name => [name, name]));
   const imports = {
+    "@/components/EntryUI": entryUIFixture,
     react: React, "react-native": rn,
     "expo-router": { useFocusEffect: callback => { focus = callback; } },
     "react-native-safe-area-context": { useSafeAreaInsets: () => ({ top: 24, bottom: 20 }) },

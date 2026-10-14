@@ -29,7 +29,8 @@ console.log("\n--- PRIMERA APERTURA Y ACCESO ---");
     ["screens/SetupBudget.tsx", "Configuración inicial"],
     ["screens/VerifyEmail.tsx", "Verificación de correo"],
   ]) {
-    const texto = leer(ruta);
+    const fuente = leer(ruta);
+    const texto = /<EntryScreen/.test(fuente) ? fuente + leer("components/EntryUI.tsx") : fuente;
     ok(/ScrollView/.test(texto), `${nombre} se puede desplazar en una pantalla baja`);
     ok(/useSafeAreaInsets/.test(texto), `${nombre} respeta cámara, notch y barra inferior`);
   }

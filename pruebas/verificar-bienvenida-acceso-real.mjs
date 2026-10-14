@@ -9,13 +9,16 @@ const source = file => revision ? execFileSync("git", ["show", `${revision}:${fi
 const calls = [], errors = [];
 const dependencies = {
   beginEntryOperation: () => () => true,
+  googleLegalPending: false, setGoogleLegalPending() {},
   legalAccepted: false, authBusy: { current: false }, navigationBusy: { current: false },
   t: key => key, setGoogleError: value => errors.push(value), setGoogleLoading: value => calls.push(["loading", value]),
   onGoogle: async () => { calls.push("google"); },
 };
 const welcome = () => handlerOriginal("screens/Onboarding.tsx", "continueWithGoogle", dependencies, source("screens/Onboarding.tsx"));
 await welcome()();
-assert.deepEqual(calls, [], "el Google de bienvenida NO inicia Auth sin elección explícita");
+assert.equal(calls.filter(value => value === "google").length, 1, "elige la cuenta antes de exigir nuevamente aceptación");
+dependencies.googleLegalPending = true; calls.length = 0;
+await welcome()(); assert.deepEqual(calls, [], "no continúa una cuenta pendiente sin elección explícita");
 assert.ok(errors.includes("auth.legalRequired"));
 dependencies.legalAccepted = true;
 let release;
@@ -38,6 +41,7 @@ assert.equal(dependencies.authBusy.current, false, "fallo libera el acceso para 
 
 const routeCalls = [], toasts = [];
 const routeDependencies = {
+  pendingGoogleUser: { current: null }, hasAcceptedLegalDocuments: async () => true,
   auth: { currentUser: { uid: "uid-test", email: "synthetic@example.test", displayName: "Prueba", emailVerified: true } },
   signInWithGoogle: async () => { routeCalls.push("auth"); return routeDependencies.auth.currentUser; },
   withTimeout: promise => promise,
@@ -50,11 +54,19 @@ const routeDependencies = {
 };
 const route = () => handlerOriginal("app/onboarding.tsx", "continueWithGoogle", routeDependencies, source("app/onboarding.tsx"));
 await route()();
-assert.deepEqual(routeCalls, ["auth", "receipt", "local", "/(tabs)"], "recibo precede apertura; copia local evita restauración antigua");
+assert.deepEqual(routeCalls, ["auth", "local", "/(tabs)"], "recibo vigente no se reescribe; copia local evita restauración antigua");
+routeCalls.length = 0;
+routeDependencies.hasAcceptedLegalDocuments = async () => false;
+await assert.rejects(route()(), { name: "GoogleLegalAcceptanceRequired" });
+assert.deepEqual(routeCalls, ["auth"], "sin recibo no abre la copia");
+routeCalls.length = 0;
+await route()(undefined, true);
+assert.deepEqual(routeCalls, ["receipt", "local", "/(tabs)"], "aceptación explícita continúa la misma cuenta sin otro Google");
 routeCalls.length = 0;
 routeDependencies.recordLegalAcceptanceForCurrentAccount = async () => { throw new Error("disk-test"); };
-await route()(); assert.deepEqual(routeCalls, ["auth", "local", "/(tabs)"]);
-assert.deepEqual(toasts, ["legal.saveFailed"], "fallo de recibo se avisa sin repetir Auth");
+await assert.rejects(route()(undefined, true), /legal.saveFailed/);
+assert.deepEqual(routeCalls, ["auth"], "fallo de recibo no abre datos");
+routeDependencies.hasAcceptedLegalDocuments = async () => true;
 routeDependencies.openLocalAccount = async () => { const error = new Error("datos-protegidos-test"); error.name = "LocalAccountAccessError"; throw error; };
 await assert.rejects(route()(), { name: "LocalAccountAccessError", message: "datos-protegidos-test" }, "no oculta protección de datos bajo GSIN");
 routeDependencies.openLocalAccount = async () => { throw new Error("local-data-test"); };

@@ -1,5 +1,16 @@
 # Entregas de Fino
 
+## 13/10/2026 — Entrada cálida, revisión local; NO entrega de Play
+
+Marca 13oct-entrada-calida: diseño aprobado en las rutas reales, presupuesto
+opcional y paneles compactos. TypeScript/ESLint, 210 pruebas y 8 auditores
+sin tarjetas aprobados. Bienvenida vista completa en dos tamaños Android;
+Registro/Login visibles. Servidor único 8081 y recarga limpia recuperaron la
+pantalla roja. No se borraron datos ni se publicó APK/AAB/OTA.
+Qué sigue/falta: recorrido físico restante y Google personal; diagnosticar la
+copia protegida, letra grande/teclado y medir suavidad real. No declarar cerrado
+el acceso completo. Guía: docs/ENTRADA_UI_CALIDA.md.
+
 ## 13/10/2026 — Moneda, segunda corrección en verificación; NO entrega de Play
 
 El propietario confirmó que el primer cambio no resolvió el fallo. Nueva versión

@@ -1,11 +1,10 @@
 import { useCallback, useRef } from "react";
 import { useFocusEffect } from "expo-router";
 import { ScrollView, Text, TouchableOpacity, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { ENTRY_COLORS, ENTRY_FONT, EntryPanel, entryStyles } from "@/components/EntryUI";
 import { Check } from "lucide-react-native";
 import { LANGUAGES } from "@/constants/i18n";
 import { useAppData } from "@/contexts/AppDataContext";
-import BackButton from "@/components/BackButton";
 import { languageFlagFor } from "@/utils/decorativeFlags";
 
 export default function LanguagePicker({
@@ -25,7 +24,6 @@ export default function LanguagePicker({
     navigationBusy.current = false;
     return () => { ++focusVersion.current; navigationBusy.current = true; };
   }, []));
-  const insets = useSafeAreaInsets();
 
   function volver() {
     if (navigationBusy.current) return;
@@ -51,15 +49,9 @@ export default function LanguagePicker({
   }
 
   return (
-    <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
-      <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
-        <BackButton onPress={volver} />
-        <Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("language.title")}</Text>
-        <View className="w-10" />
-      </View>
-
-      <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
-        <Text className="text-xs text-slate-500 dark:text-slate-300 mb-4">{t("language.subtitle")}</Text>
+    <EntryPanel title={t("language.title")} onBack={volver} closeLabel={t("common.close")}>
+      <ScrollView contentContainerStyle={{ paddingBottom: 8 }}>
+        <Text style={[entryStyles.muted, { marginBottom: 14 }]}>{t("language.subtitle")}</Text>
         <View className="gap-2.5">
           {LANGUAGES.map((l) => {
             const selected = l.id === current;
@@ -70,11 +62,7 @@ export default function LanguagePicker({
                 accessibilityRole="button"
                 accessibilityLabel={l.label}
                 accessibilityState={{ selected }}
-                className={`flex-row items-center justify-between rounded-2xl p-4 border-[1.5px] ${
-                  selected
-                    ? "border-emerald-400 bg-emerald-50 dark:bg-emerald-950"
-                    : "border-slate-200 dark:border-noche-borde bg-white dark:bg-noche-2"
-                }`}
+                style={[entryStyles.card, { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderColor: selected ? ENTRY_COLORS.olive : ENTRY_COLORS.line, backgroundColor: selected ? ENTRY_COLORS.soft : ENTRY_COLORS.paper }]}
               >
                 <View className="flex-row items-center gap-3">
                   <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
@@ -84,14 +72,14 @@ export default function LanguagePicker({
                       {languageFlagFor(l.id)}
                     </Text>
                   </View>
-                  <Text className="text-sm font-bold text-slate-900 dark:text-slate-100">{l.label}</Text>
+                  <Text style={[entryStyles.text, { fontFamily: ENTRY_FONT.bold }]}>{l.label}</Text>
                 </View>
-                {selected && <Check size={18} color="#059669" />}
+                {selected && <Check size={18} color={ENTRY_COLORS.olive} />}
               </TouchableOpacity>
             );
           })}
         </View>
       </ScrollView>
-    </View>
+    </EntryPanel>
   );
 }

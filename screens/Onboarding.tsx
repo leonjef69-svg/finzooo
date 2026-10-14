@@ -1,20 +1,23 @@
 import { useCallback, useRef, useState, type ReactNode } from "react";
 import { useFocusEffect } from "expo-router";
-import { ActivityIndicator, ImageBackground, Platform, ScrollView, StatusBar, Text, TouchableOpacity, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { BellRing, ChartNoAxesCombined, ReceiptText, ShieldCheck } from "lucide-react-native";
+import { Image, Platform, StyleSheet, Text, View, useWindowDimensions } from "react-native";
+import { BusFront, ChartPie, PiggyBank, Utensils } from "lucide-react-native";
 import { useAppData } from "@/contexts/AppDataContext";
 import AuthLegalAcceptance from "@/components/AuthLegalAcceptance";
 import { useEntryOperation, type EntryOperationGuard } from "@/utils/entryOperation";
+import { ENTRY_COLORS, ENTRY_FONT, EntryButton, EntryLink, EntryPanel, EntryScreen, entryStyles } from "@/components/EntryUI";
+import GoogleButton from "@/components/GoogleButton";
 
-type Props = { onGoogle: (current?: EntryOperationGuard) => Promise<void>; onCreateAccount: () => void | boolean; onLogin: () => void | boolean };
+type Props = { onGoogle: (current?: EntryOperationGuard, accepted?: boolean) => Promise<void>; onCreateAccount: () => void | boolean; onLogin: () => void | boolean };
 
 export default function Onboarding({ onGoogle, onCreateAccount, onLogin }: Props) {
   const { fmt, t } = useAppData();
-  const insets = useSafeAreaInsets();
+  const { height, width } = useWindowDimensions();
+  const illustrationHeight = Math.max(180, Math.min(390, height * (height < 720 ? 0.34 : 0.44)));
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState("");
   const [legalAccepted, setLegalAccepted] = useState(false);
+  const [googleLegalPending, setGoogleLegalPending] = useState(false);
   const [navigating, setNavigating] = useState(false);
   const authBusy = useRef(false);
   const navigationBusy = useRef(false);
@@ -47,66 +50,55 @@ export default function Onboarding({ onGoogle, onCreateAccount, onLogin }: Props
 
   async function continueWithGoogle() {
     if (authBusy.current || navigationBusy.current) return;
-    if (!legalAccepted) { setGoogleError(t("auth.legalRequired")); return; }
+    if (googleLegalPending && !legalAccepted) { setGoogleError(t("auth.legalRequired")); return; }
     const operationCurrent = beginEntryOperation();
     if (!operationCurrent()) return;
     authBusy.current = true;
     setGoogleError("");
     setGoogleLoading(true);
-    try { await onGoogle(operationCurrent); }
-    catch (error) { if (operationCurrent()) setGoogleError(error instanceof Error ? error.message : t("login.googleError")); }
+    try { await onGoogle(operationCurrent, legalAccepted); }
+    catch (error) {
+      if (!operationCurrent()) return;
+      if (error instanceof Error && error.name === "GoogleLegalAcceptanceRequired") setGoogleLegalPending(true);
+      else setGoogleError(error instanceof Error ? error.message : t("login.googleError"));
+    }
     finally { if (operationCurrent()) { authBusy.current = false; setGoogleLoading(false); } }
   }
 
   return (
-    <ImageBackground
-      source={require("../assets/images/onboarding/fino-person-background.png")}
-      resizeMode="cover"
-      className="flex-1 bg-[#17100c]"
-      style={{ flex: 1 }}
-      imageStyle={{ transform: [{ scale: 1.34 }, { translateY: -82 }] }}
-    >
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <View pointerEvents="none" className="absolute inset-0 bg-black/20" />
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          justifyContent: "space-between",
-          paddingHorizontal: 20,
-          paddingTop: insets.top + 34,
-          paddingBottom: insets.bottom + 18,
-        }}
-      >
-        <View className="items-center">
-          <Text className="text-5xl font-extrabold text-white">Fino<Text className="text-amber-300">✦</Text></Text>
-          <Text className="mt-2 text-2xl font-extrabold text-center text-white">{t("onboarding.tagline")}</Text>
-          <Text className="mt-1 text-base font-semibold text-white/90">{t("onboarding.subtitle")}</Text>
+    <View style={{ flex: 1 }}>
+      <EntryScreen center contentStyle={{ paddingTop: 0 }}>
+        <View style={{ height: illustrationHeight, marginBottom: 16 }}>
+          <View style={{ position: "absolute", width: 194, height: 182, backgroundColor: ENTRY_COLORS.soft, borderRadius: 90, alignSelf: "center", top: 35 }} />
+          <Image source={require("../assets/images/onboarding/fino-welcome-person.webp")} resizeMode="contain" style={{ position: "absolute", height: "100%", width: Math.min(220, illustrationHeight * 0.78), alignSelf: "center", bottom: 0 }} />
+          <View style={{ position: "absolute", left: 0, top: 30, transform: [{ rotate: "-5deg" }] }}><Feature icon={<BusFront size={16} color={ENTRY_COLORS.olive} />} title={t("entry.bus")} subtitle={`− ${fmt(2.5)}`} /></View>
+          <View style={{ position: "absolute", right: 0, top: 13, transform: [{ rotate: "5deg" }] }}><Feature icon={<Utensils size={16} color={ENTRY_COLORS.olive} />} title={t("onboarding.food")} subtitle={`− ${fmt(18.5)}`} /></View>
+          <View style={{ position: "absolute", left: 0, bottom: 38, transform: [{ rotate: "-3deg" }] }}><Feature wide icon={<ChartPie size={16} color={ENTRY_COLORS.olive} />} title={t("onboarding.budget")} subtitle={t("entry.thisMonth")} /></View>
+          <View style={{ position: "absolute", right: 0, bottom: 13, transform: [{ rotate: "3deg" }] }}><Feature icon={<PiggyBank size={16} color={ENTRY_COLORS.olive} />} title={t("onboarding.savings")} subtitle={`+ ${fmt(20)}`} /></View>
         </View>
-        <View className="mt-auto mb-5 flex-row flex-wrap justify-between gap-y-3 px-1">
-          <Feature icon={<BellRing size={20} color="#15803d" />} tint="bg-emerald-50" title={t("onboarding.movement")} subtitle={t("onboarding.automatic")} />
-          <Feature icon={<ReceiptText size={20} color="#e11d48" />} tint="bg-rose-50" title={t("onboarding.food")} subtitle={fmt(45)} />
-          <Feature icon={<ChartNoAxesCombined size={20} color="#6d28d9" />} tint="bg-violet-50" title={t("onboarding.budget")} subtitle={fmt(500)} />
-          <Feature icon={<ShieldCheck size={20} color="#15803d" />} tint="bg-emerald-50" title={t("onboarding.savings")} subtitle={fmt(120)} />
+        <Text style={[entryStyles.title, { fontSize: width < 350 ? 28 : 31, lineHeight: width < 350 ? 32 : 35, textAlign: "center" }]}>{t("onboarding.tagline")}</Text>
+        <Text style={[entryStyles.subtitle, { textAlign: "center", marginBottom: 12 }]}>{t("onboarding.subtitle")}</Text>
+        <View style={{ paddingTop: 18 }}>
+        <EntryButton label={t("onboarding.createAccount")} onPress={() => navigate(onCreateAccount)} disabled={googleLoading || navigating} />
+        {Platform.OS === "android" ? <GoogleButton label={t("onboarding.continueGoogle")} onPress={continueWithGoogle} loading={googleLoading} disabled={navigating} warm light /> : null}
+        <EntryLink label={t("onboarding.haveAccount")} onPress={() => navigate(onLogin)} disabled={googleLoading || navigating} />
+        {googleError ? <Text accessibilityRole="alert" style={entryStyles.error}>{googleError}</Text> : null}
         </View>
-        <View>
-          {Platform.OS === "android" ? <View className="rounded-2xl bg-white px-3"><AuthLegalAcceptance accepted={legalAccepted} onChange={setLegalAccepted} disabled={googleLoading || navigating} t={t} /></View> : null}
-          {Platform.OS === "android" ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("onboarding.continueGoogle")} accessibilityState={{ disabled: googleLoading || navigating || !legalAccepted, busy: googleLoading }} disabled={googleLoading || navigating || !legalAccepted} onPress={continueWithGoogle} className="h-14 rounded-2xl bg-white flex-row items-center justify-center">
-            {googleLoading ? <ActivityIndicator color="#0f766e" /> : <><Text className="mr-3 text-2xl font-extrabold text-[#4285F4]">G</Text><Text className="text-base font-extrabold text-slate-900">{t("onboarding.continueGoogle")}</Text></>}
-          </TouchableOpacity> : null}
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("onboarding.createAccount")} disabled={googleLoading || navigating} onPress={() => navigate(onCreateAccount)} className={`${Platform.OS === "android" ? "mt-3" : ""} h-14 rounded-2xl bg-amber-500 items-center justify-center`}><Text className="text-base font-extrabold text-white">{t("onboarding.createAccount")}</Text></TouchableOpacity>
-          <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("onboarding.haveAccount")} disabled={googleLoading || navigating} onPress={() => navigate(onLogin)} className="h-12 items-center justify-center"><Text className="text-sm font-bold text-white underline">{t("onboarding.haveAccount")}</Text></TouchableOpacity>
-          {googleError ? <Text className="mt-2 text-center text-xs font-bold text-red-200">{googleError}</Text> : null}
-        </View>
-      </ScrollView>
-    </ImageBackground>
+      </EntryScreen>
+      {googleLegalPending ? <View style={StyleSheet.absoluteFill}><EntryPanel title={t("entry.beforeStarting")} closeLabel={t("common.close")} onBack={() => { if (!googleLoading) setGoogleLegalPending(false); }}>
+        <Text style={[entryStyles.subtitle, { marginBottom: 12 }]}>{t("auth.legalRequiredForAccount")}</Text>
+        <AuthLegalAcceptance accepted={legalAccepted} onChange={setLegalAccepted} disabled={googleLoading || navigating} t={t} warm />
+        <EntryButton label={t("auth.acceptAndContinue")} onPress={continueWithGoogle} loading={googleLoading} disabled={!legalAccepted || navigating} />
+      </EntryPanel></View> : null}
+    </View>
   );
 }
 
-function Feature({ icon, tint, title, subtitle }: { icon: ReactNode; tint: string; title: string; subtitle: string }) {
+function Feature({ icon, title, subtitle, wide = false }: { icon: ReactNode; title: string; subtitle: string; wide?: boolean }) {
   return (
-    <View className="w-[48%] min-h-16 flex-row items-center rounded-2xl bg-white/95 px-3 py-2">
-      <View className={`h-9 w-9 items-center justify-center rounded-xl ${tint}`}>{icon}</View>
-      <View className="ml-2 flex-1"><Text numberOfLines={1} className="text-xs font-extrabold text-slate-800">{title}</Text><Text numberOfLines={1} className="text-xs font-bold text-slate-500">{subtitle}</Text></View>
+    <View style={{ width: wide ? 128 : 111, minHeight: 52, flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderColor: ENTRY_COLORS.line, borderRadius: 14, backgroundColor: ENTRY_COLORS.paper, padding: 8 }}>
+      <View style={{ width: 25, height: 25, backgroundColor: ENTRY_COLORS.soft, borderRadius: 9, alignItems: "center", justifyContent: "center" }}>{icon}</View>
+      <View style={{ flex: 1 }}><Text numberOfLines={1} style={{ color: ENTRY_COLORS.ink, fontFamily: ENTRY_FONT.bold, fontSize: 11 }}>{title}</Text><Text numberOfLines={1} style={{ color: ENTRY_COLORS.muted, fontFamily: ENTRY_FONT.regular, fontSize: 11 }}>{subtitle}</Text></View>
     </View>
   );
 }

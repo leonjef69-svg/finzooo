@@ -22,7 +22,7 @@ for (const key of claves) {
   assert.ok(bienvenida.includes(`t("${key}")`), `la bienvenida debe usar ${key}`);
 }
 
-assert.ok(bienvenida.includes("fino-person-background.png"), "falta el fondo oficial con la persona");
+assert.ok(bienvenida.includes("fino-welcome-person.webp"), "falta la ilustración ligera aprobada con la persona");
 assert.ok(registro.includes('router.replace("/setup")'), "crear cuenta no lleva a configurar Fino");
 assert.ok(
   configuracion.includes('router.replace(auth.currentUser && !auth.currentUser.emailVerified ? "/verify-email" : "/(tabs)")'),

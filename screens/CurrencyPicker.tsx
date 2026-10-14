@@ -1,10 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useFocusEffect } from "expo-router";
-import { FlatList, Image, StatusBar, Text, TextInput, TouchableOpacity, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { FlatList, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ENTRY_COLORS, ENTRY_FONT, EntryPanel, entryStyles } from "@/components/EntryUI";
 import { Check, Search } from "lucide-react-native";
 import { useAppData } from "@/contexts/AppDataContext";
-import BackButton from "@/components/BackButton";
 import { filterCurrencies } from "@/utils/catalogSearch";
 import { currencyFlagFor } from "@/utils/decorativeFlags";
 
@@ -24,7 +23,6 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
     navigationBusy.current = false;
     return () => { ++focusVersion.current; navigationBusy.current = true; };
   }, []));
-  const insets = useSafeAreaInsets();
   const currencies = useMemo(
     () => filterCurrencies(query, userLanguage, t),
     [query, t, userLanguage],
@@ -54,23 +52,15 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
   }
 
   return (
-    <View className="flex-1 bg-[#17100c]" style={{ paddingTop: insets.top, paddingBottom: insets.bottom }}>
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image source={require("../assets/images/onboarding/fino-settings-background.png")} resizeMode="cover" className="absolute inset-0 h-full w-full" />
-      <View className="absolute inset-0 bg-black/45" />
-      <View className="flex-row items-center justify-between px-5 pt-2 pb-4">
-        <BackButton onPress={volver} onDark />
-        <Text className="text-base font-bold text-white">{t("settings.currency")}</Text>
-        <View className="w-10" />
-      </View>
-      <View className="px-5 pb-3">
-        <Text className="text-xs text-white/80 mb-3">{t(hasOnboarded ? "currency.locked" : "currency.subtitle")}</Text>
-        <View className="flex-row items-center rounded-2xl border-[1.5px] border-white/50 bg-white/95 px-4">
+    <EntryPanel title={t("settings.currency")} onBack={volver} closeLabel={t("common.close")} large>
+      <View style={{ paddingBottom: 12 }}>
+        <Text style={[entryStyles.muted, { marginBottom: 12 }]}>{t(hasOnboarded ? "currency.locked" : "currency.subtitle")}</Text>
+        <View style={[entryStyles.card, { flexDirection: "row", alignItems: "center", paddingVertical: 0 }]}>
           <Search size={18} color="#94a3b8" />
           <TextInput value={query} onChangeText={setQuery} placeholder={t("currency.search")}
             placeholderTextColor="#94a3b8" autoCorrect={false}
             disableFullscreenUI
-            className="flex-1 py-3 px-3 text-sm text-slate-900" />
+            accessibilityLabel={t("currency.search")} style={{ flex: 1, paddingVertical: 11, paddingHorizontal: 10, color: ENTRY_COLORS.ink, fontFamily: ENTRY_FONT.regular, fontSize: 15 }} />
         </View>
       </View>
       <FlatList
@@ -86,9 +76,10 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
         windowSize={21}
         maxToRenderPerBatch={20}
         updateCellsBatchingPeriod={16}
-        contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 32 }}
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 16 }}
         ItemSeparatorComponent={() => <View className="h-2.5" />}
-        ListEmptyComponent={<Text className="mt-8 text-center text-sm font-semibold text-white">{t("common.noResults")}</Text>}
+        ListEmptyComponent={<Text style={[entryStyles.text, { marginTop: 24, textAlign: "center" }]}>{t("common.noResults")}</Text>}
         renderItem={({ item: currency }) => {
             const selected = currency.id === current;
             return (
@@ -97,24 +88,22 @@ export default function CurrencyPicker({ current, onBack, onSelect }: {
                 accessibilityRole="button"
                 accessibilityState={{ selected, disabled: hasOnboarded }}
                 accessibilityLabel={currency.name === currency.id ? currency.id : `${currency.name}. ${currency.symbol}. ${currency.id}`}
-                className={`flex-row items-center justify-between rounded-2xl p-4 border-[1.5px] ${selected
-                  ? "border-amber-500 bg-amber-50"
-                  : hasOnboarded ? "border-white/40 bg-white/75" : "border-white/50 bg-white/95"}`}>
+                style={[entryStyles.card, { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderColor: selected ? ENTRY_COLORS.olive : ENTRY_COLORS.line, backgroundColor: selected ? ENTRY_COLORS.soft : ENTRY_COLORS.paper }]}>
                 <View className="flex-row items-center gap-3 flex-1 min-w-0">
                   <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
                     <Text testID="flag-decoration" accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
                       className="text-xl">{currencyFlagFor(currency.id)}</Text>
                   </View>
-                  <Text className="flex-1 text-sm font-bold leading-5 text-slate-900" numberOfLines={2}>
+                  <Text style={[entryStyles.text, { flex: 1, fontFamily: ENTRY_FONT.bold }]} numberOfLines={2}>
                     {currency.name === currency.id ? currency.id : `${currency.name}${currency.symbol === currency.id ? "" : ` (${currency.symbol})`}`}
                   </Text>
-                  {currency.name !== currency.id ? <Text className="text-xs font-extrabold text-slate-500">{currency.id}</Text> : null}
+                  {currency.name !== currency.id ? <Text style={entryStyles.muted}>{currency.id}</Text> : null}
                 </View>
-                {selected && <Check size={18} color="#d97706" />}
+                {selected && <Check size={18} color={ENTRY_COLORS.olive} />}
               </TouchableOpacity>
             );
         }}
       />
-    </View>
+    </EntryPanel>
   );
 }

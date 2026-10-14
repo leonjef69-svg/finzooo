@@ -1,5 +1,24 @@
 # Estado actual de Fino
 
+## Entrada cálida — 13/10/2026 — desarrollo, no publicación
+
+Rutas actuales renovadas: Bienvenida, Registro, Login/recuperación, Configuración,
+Correo, Legal y paneles Idioma/Moneda. Sin otra navegación encima. Persona WebP,
+Nunito Sans local, sin icono junto a Fino ni Apariencia en configuración.
+Presupuesto opcional sin borrar meses ni crear presupuesto cero. Bienvenida
+comprueba aceptación Google por cuenta; no repite recibos vigentes.
+TypeScript/ESLint y 210 pruebas/8 auditores sin tarjetas aprobados. Regresiones
+rojas c509dabe por comportamiento y verdes actuales. Detalles y límites en
+docs/ENTRADA_UI_CALIDA.md. Marca: 13oct-entrada-calida.
+Android: Bienvenida completa en tamaño normal y 360×640 lógico con arranque
+limpio; Registro/Login vistos. La prueba de densidad en caliente quedó descartada.
+Metro único 8081 recuperó el arranque tras la pantalla roja; no se identificó
+la línea exacta de aquel paquete. No se borraron datos.
+Qué sigue/falta: recorrido físico restante, teclado/letra grande, Google con
+elección personal, copia local protegida y transiciones en teléfono físico.
+La alerta de lectura de copia se observó y NO se anuló; el acceso completo no
+se declara resuelto. Sin APK/AAB/OTA/Play/Firebase/nativo/Telegram.
+
 ## Moneda — 13/10/2026 — corrección de filas durante deslizamiento
 
 El propietario precisó que al deslizar rápido desaparecen SOLO las filas de

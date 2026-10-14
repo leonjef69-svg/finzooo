@@ -1,3 +1,4 @@
+import { entryUIFixture } from "./helpers/entry-ui-fixture.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -27,10 +28,12 @@ function environment() {
   // Los callbacks de la ruta también son originales: no sustituir por un
   // callback que siempre navega, porque ocultaría el descarte del helper real.
   const props = original("app/onboarding.tsx", "OnboardingRoute", {
-    React, Onboarding: "Onboarding", irUnaVez: push,
+    React, useRef: initial => ({ current: initial }), Onboarding: "Onboarding", irUnaVez: push,
     useAppData: () => ({ t: key => key }),
   })().props;
   const screen = original("screens/Onboarding.tsx", "Onboarding", {
+    ...entryUIFixture, useWindowDimensions: () => ({ width: 360, height: 800 }),
+    Image: "Image", BusFront: "Bus", ChartPie: "Chart", PiggyBank: "Savings", Utensils: "Food", GoogleButton: "GoogleButton", StyleSheet: { absoluteFill: {} },
     React, ActivityIndicator: "Spinner", ImageBackground: "ImageBackground", ScrollView: "ScrollView",
     StatusBar: "StatusBar", Text: "Text", TouchableOpacity: "TouchableOpacity", View: "View",
     BellRing: "BellRing", ChartNoAxesCombined: "Chart", ReceiptText: "Receipt", ShieldCheck: "Shield",
@@ -48,7 +51,7 @@ function environment() {
   });
   function render() { stateIndex = 0; refIndex = 0; return flatten(screen(props)); }
   function button(key) {
-    const item = render().find(node => node.type === "TouchableOpacity" && node.props.accessibilityLabel === key);
+    const item = render().find(node => ((node.type === "TouchableOpacity" && node.props.accessibilityLabel === key) || (["EntryButton", "EntryLink"].includes(node.type) && node.props.label === key)));
     assert.ok(item, `botón original disponible: ${key}`);
     return item;
   }

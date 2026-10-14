@@ -6,6 +6,8 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native
 import { Stack, router, useNavigationContainerRef, usePathname } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import * as SystemUI from "expo-system-ui";
+import { useFonts } from "expo-font";
+import { ENTRY_COLORS, ENTRY_FONTS } from "@/components/EntryUI";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { useColorScheme } from "nativewind";
 import "react-native-reanimated";
@@ -561,11 +563,16 @@ export const unstable_settings = {
 
 function ThemedStatusBar() {
   const { colorScheme } = useColorScheme();
-  return <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />;
+  const pathname = usePathname();
+  const entry = ["/onboarding", "/login", "/register", "/verify-email", "/setup", "/language", "/currency", "/country", "/legal"].includes(pathname);
+  return <StatusBar style={entry || colorScheme !== "dark" ? "dark" : "light"} />;
 }
 
 function RootLayout() {
   const { colorScheme } = useColorScheme();
+  useFonts(ENTRY_FONTS);
+  const pathname = usePathname();
+  const entry = ["/onboarding", "/login", "/register", "/verify-email", "/setup", "/legal"].includes(pathname);
   // Mismo color que bg-white / dark:bg-noche (Tailwind). Se usa como
   // fondo nativo de las pantallas de tipo "modal", para que el instante
   // antes de que React pinte su contenido ya se vea del color correcto.
@@ -579,7 +586,7 @@ function RootLayout() {
   // atras —*"por que aparece ese color del antiguo fondo?"*— porque el color estaba escrito a
   // mano en vez de salir de un sitio comun. Es el mismo fallo que dejo la barra de pestañas
   // azul, y por eso ahora los dos beben de `NOCHE`.
-  const screenBg = colorScheme === "dark" ? NOCHE.fondo : "#ffffff";
+  const screenBg = entry ? ENTRY_COLORS.background : colorScheme === "dark" ? NOCHE.fondo : "#ffffff";
 
   /**
    * EL DESTELLO BLANCO AL GUARDAR UN MOVIMIENTO (10/08/2026)
@@ -624,13 +631,14 @@ function RootLayout() {
         <View style={{ flex: 1, backgroundColor: screenBg }}>
           <ThemeProvider value={tema}>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: screenBg } }}>
-            <Stack.Screen name="onboarding" options={{ animation: "fade", contentStyle: { backgroundColor: "#17100c" } }} />
-            <Stack.Screen name="login" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
-            <Stack.Screen name="register" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
-            <Stack.Screen name="verify-email" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
-            <Stack.Screen name="setup" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
-            <Stack.Screen name="country" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
-            <Stack.Screen name="currency" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: "#17100c" } }} />
+            <Stack.Screen name="onboarding" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: ENTRY_COLORS.background } }} />
+            <Stack.Screen name="login" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: ENTRY_COLORS.background } }} />
+            <Stack.Screen name="register" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: ENTRY_COLORS.background } }} />
+            <Stack.Screen name="verify-email" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: ENTRY_COLORS.background } }} />
+            <Stack.Screen name="setup" options={{ animation: "slide_from_right", contentStyle: { backgroundColor: ENTRY_COLORS.background } }} />
+            <Stack.Screen name="language" options={{ presentation: "transparentModal", animation: "slide_from_bottom", contentStyle: { backgroundColor: "transparent" } }} />
+            <Stack.Screen name="country" options={{ presentation: "transparentModal", animation: "slide_from_bottom", contentStyle: { backgroundColor: "transparent" } }} />
+            <Stack.Screen name="currency" options={{ presentation: "transparentModal", animation: "slide_from_bottom", contentStyle: { backgroundColor: "transparent" } }} />
             <Stack.Screen name="family" options={{ animation: "fade", contentStyle: { backgroundColor: screenBg } }} />
             <Stack.Screen name="boxes" options={{ animation: "fade", contentStyle: { backgroundColor: screenBg } }} />
             {/* El alta de un movimiento es un panel superpuesto como el selector

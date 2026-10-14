@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
-import { ActivityIndicator, Image, ScrollView, StatusBar, Text, TouchableOpacity, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient";
+import { Text, View } from "react-native";
+import { MailCheck } from "lucide-react-native";
+import { ENTRY_COLORS, EntryButton, EntryHeading, EntryLink, EntryScreen, entryStyles } from "@/components/EntryUI";
 import { useAppData } from "@/contexts/AppDataContext";
 import { firebaseErrorMessage } from "@/utils/firebaseErrors";
 
@@ -21,7 +21,6 @@ export default function VerifyEmail({
   const [resending, setResending] = useState(false);
   const [message, setMessage] = useState("");
   const verificationBusy = useRef(false);
-  const insets = useSafeAreaInsets();
 
   async function handleCheck() {
     if (verificationBusy.current || checking || resending) return;
@@ -73,73 +72,17 @@ export default function VerifyEmail({
   }
 
   return (
-    <View className="flex-1 bg-[#17100c]">
-      <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
-      <Image
-        source={require("../assets/images/onboarding/fino-email-background-v2.png")}
-        resizeMode="cover"
-        className="absolute inset-0 h-full w-full"
-      />
-      <LinearGradient
-        colors={["rgba(0,0,0,0.12)", "rgba(20,10,4,0.24)", "rgba(24,12,5,0.34)"]}
-        locations={[0, 0.62, 1]}
-        className="absolute inset-0"
-      />
-      <ScrollView
-        contentContainerStyle={{
-          flexGrow: 1,
-          paddingHorizontal: 20,
-          paddingTop: insets.top + 120,
-          paddingBottom: insets.bottom + 24,
-        }}
-      >
-      <View>
-      <View className="items-center mb-7">
-        <Text className="text-3xl font-extrabold text-white mb-1 text-center">
-          {t("verifyEmail.title")}
-        </Text>
-        <Text className="text-base font-semibold text-white/90 mb-7">{t("verifyEmail.linkSent")}</Text>
-        <Text className="mb-7 text-[92px] leading-[106px]">✉️</Text>
-        <View className="w-full rounded-2xl bg-white/95 px-6 py-5">
-          <Text className="text-base text-center text-slate-600">{t("verifyEmail.sentTo")}</Text>
-          <Text numberOfLines={1} adjustsFontSizeToFit className="mt-1 text-center font-extrabold text-slate-900">{email}</Text>
-          <Text className="mt-2 text-sm text-center text-slate-500">{t("verifyEmail.spamHint")}</Text>
-        </View>
+    <EntryScreen center>
+      <EntryHeading title={t("verifyEmail.title")} subtitle={t("verifyEmail.linkSent")} icon={<MailCheck size={23} color={ENTRY_COLORS.brown} />} />
+      <View style={[entryStyles.card, { marginBottom: 22 }]}>
+        <Text style={entryStyles.muted}>{t("verifyEmail.sentTo")}</Text>
+        <Text selectable style={[entryStyles.text, { marginVertical: 7 }]}>{email}</Text>
+        <Text style={entryStyles.muted}>{t("verifyEmail.spamHint")}</Text>
       </View>
-
-      {message ? <Text className="text-xs text-center text-white mb-4">{message}</Text> : null}
-
-      <TouchableOpacity
-        activeOpacity={0.85}
-        onPress={handleCheck}
-        disabled={checking || resending}
-        className={`w-full bg-amber-500 py-4 rounded-2xl items-center justify-center ${
-          checking ? "opacity-70" : ""
-        }`}
-      >
-        {checking ? (
-          <ActivityIndicator color="#ffffff" />
-        ) : (
-          <Text className="text-white font-bold">{t("verifyEmail.checkButton")}</Text>
-        )}
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        activeOpacity={0.7}
-        onPress={handleResend}
-        disabled={checking || resending}
-        className="mt-3 rounded-2xl border-2 border-amber-400 items-center py-3.5"
-      >
-        <Text className="text-sm text-amber-300 font-bold">
-          {resending ? t("verifyEmail.resending") : t("verifyEmail.resendButton")}
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity activeOpacity={0.7} disabled={checking || resending} onPress={handleLogout} className="mt-4 items-center py-2">
-        <Text className="text-sm font-semibold text-white">{t("verifyEmail.useOtherAccount")}</Text>
-      </TouchableOpacity>
-      </View>
-      </ScrollView>
-    </View>
+      {message ? <Text accessibilityRole="alert" style={[entryStyles.text, { marginBottom: 14 }]}>{message}</Text> : null}
+      <EntryButton label={t("verifyEmail.checkButton")} onPress={handleCheck} loading={checking} disabled={resending} />
+      <EntryButton label={t("verifyEmail.resendButton")} onPress={handleResend} loading={resending} disabled={checking} secondary />
+      <EntryLink label={t("verifyEmail.useOtherAccount")} onPress={handleLogout} disabled={checking || resending} />
+    </EntryScreen>
   );
 }

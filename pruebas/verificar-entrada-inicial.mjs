@@ -15,7 +15,7 @@ assert.match(notifications, /permission\.granted/);
 assert.match(onboarding, /\/language/);
 assert.match(onboarding, /\/currency/);
 for (const screen of [onboarding, currencyPicker]) {
-  assert.match(screen, /fino-settings-background\.png/, "configuración y moneda conservan su fondo nítido");
+  assert.match(screen, /EntryScreen|EntryPanel/, "configuración y moneda usan superficies compactas sin foto de fondo");
   assert.doesNotMatch(screen, /blurRadius=/, "el fondo no se amplía ni se desenfoca artificialmente");
 }
 assert.match(languagePicker, /LANGUAGES/);

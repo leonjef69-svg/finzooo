@@ -33,7 +33,7 @@ for (const [file, name] of [["screens/Login.tsx", "loginWithGoogle"], ["screens/
     await handlerOriginal(file, name, values, read(file))();
     if (replaced) assert.deepEqual(calls, [], `${file}: el resultado A no se atribuye a la sesión B que llegó después`);
     else {
-      const expected = file === "screens/Login.tsx" ? [["opened", a.uid]] : [["receipt", a.uid], ["opened", a.uid]];
+      const expected = file !== "screens/Register.tsx" ? [["opened", a.uid]] : [["receipt", a.uid], ["opened", a.uid]];
       assert.deepEqual(calls.filter(([name]) => name === "receipt" || name === "opened"), expected);
       assert.equal(values.authBusy.current, false);
     }

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Text, TextInput, TouchableOpacity, View } from "react-native";
 import { Eye, EyeOff } from "lucide-react-native";
+import { ENTRY_COLORS, ENTRY_FONT } from "@/components/EntryUI";
 
 type Props = {
   label: string;
@@ -12,6 +13,7 @@ type Props = {
   keyboardType?: "default" | "email-address";
   light?: boolean;
   editable?: boolean;
+  warm?: boolean;
 };
 
 export default function AuthField({
@@ -24,14 +26,16 @@ export default function AuthField({
   keyboardType = "default",
   light = false,
   editable = true,
+  warm = false,
 }: Props) {
   const [show, setShow] = useState(false);
   const isPassword = type === "password";
 
   return (
     <View>
-      <Text className={`text-xs font-semibold mb-1.5 ${light ? "text-slate-700" : "text-slate-600 dark:text-slate-200"}`}>{label}</Text>
+      <Text style={warm ? { color: ENTRY_COLORS.muted, fontFamily: ENTRY_FONT.medium, fontSize: 12 } : undefined} className={`text-xs font-semibold mb-1.5 ${light ? "text-slate-700" : "text-slate-600 dark:text-slate-200"}`}>{label}</Text>
       <View
+        style={warm ? { backgroundColor: ENTRY_COLORS.paper, borderColor: error ? ENTRY_COLORS.error : ENTRY_COLORS.line, borderWidth: 1, borderRadius: 14, minHeight: 50, paddingVertical: 10 } : undefined}
         className={`flex-row items-center rounded-xl border-[1.5px] px-4 py-3.5 ${light ? "bg-white" : "bg-slate-50 dark:bg-noche-2"} ${
           error ? "border-rose-400" : light ? "border-slate-300" : "border-slate-200 dark:border-noche-borde"
         }`}
@@ -47,6 +51,7 @@ export default function AuthField({
           placeholderTextColor="#94a3b8"
           secureTextEntry={isPassword && !show}
           keyboardType={keyboardType}
+          style={warm ? { color: ENTRY_COLORS.ink, fontFamily: ENTRY_FONT.regular, fontSize: 16 } : undefined}
           autoCapitalize="none"
           className={`flex-1 text-sm ${light ? "text-slate-900" : "text-slate-900 dark:text-slate-100"}`}
         />

@@ -180,7 +180,7 @@ try {
   }
   {
     const h = await harness(); h.cipherGate = deferred(); h.cipherEntered = deferred();
-    const screen = { saveBusy: { current: false }, disabled: false, parsed: 825, t: key => key,
+    const screen = { saveBusy: { current: false }, disabled: false, amount: "825", parsed: 825, t: key => key,
       setSaving: value => h.events.push(`saving:${value}`), setSaveError: value => h.events.push(`error:${value}`), onSaved: h.original };
     const save = handlerOriginal("screens/SetupBudget.tsx", "saveSetup", screen, read("screens/SetupBudget.tsx"));
     const pending = save(); await h.cipherEntered.promise;
@@ -200,7 +200,23 @@ try {
     assert.equal(results[0].status, "fulfilled"); assert.equal(results[1].status, "rejected");
     assert.equal(h.batches, 1); assert.equal((await h.plain())[1]["2026-10"], 830, "dos envíos simultáneos no reinician el presupuesto de una cuenta configurada");
   }
-  for (const amount of [0, -1, NaN, Infinity, 9_000_000_000_001, 0.123, 1.2345]) {
+  for (const failure of [null, "rollback"]) {
+    const h = await harness(); h.failure = failure;
+    const before = await h.plain();
+    if (failure) {
+      await assert.rejects(h.original(0), /setup.saveFailed/);
+      assert.deepEqual(h.raw(), h.initial);
+      assert.equal(h.deps.accountConfigured.current, false);
+    } else {
+      await h.original(0);
+      const [profile, budgets, meta] = await h.plain();
+      assert.equal(profile.hasOnboarded, true, "se puede continuar sin presupuesto");
+      assert.deepEqual(budgets, before[1], "omitir no borra meses ni crea un presupuesto cero");
+      assert.equal(meta.budgets, before[2].budgets, "omitir no marca un cambio financiero inexistente");
+      assert.equal(h.batches, 1);
+    }
+  }
+  for (const amount of [-1, NaN, Infinity, 9_000_000_000_001, 0.123, 1.2345]) {
     const h = await harness(); await assert.rejects(h.original(amount), /setup.saveFailed/);
     assert.equal(h.batches, 0); assert.deepEqual(h.raw(), h.initial); assert.deepEqual(h.events, []);
   }
@@ -256,7 +272,7 @@ try {
   for (const failure of [null, "rollback"]) {
     const h = await harness(); h.failure = failure;
     h.gate = deferred(); h.entered = deferred();
-    const screen = { saveBusy: { current: false }, disabled: false, parsed: 1200, t: key => key,
+    const screen = { saveBusy: { current: false }, disabled: false, amount: "1200", parsed: 1200, t: key => key,
       setSaving: value => h.events.push(`saving:${value}`), setSaveError: value => h.events.push(`error:${value}`),
       onSaved: h.original };
     const save = handlerOriginal("screens/SetupBudget.tsx", "saveSetup", screen, read("screens/SetupBudget.tsx"));

@@ -23,6 +23,7 @@ function fixture() {
   const calls = [], scope = createScope(); scope.focus();
   const user = { uid: "synthetic-entry", email: "synthetic@example.test", emailVerified: true, displayName: "Prueba" };
   const values = {
+    useRef: initial => ({ current: initial }), setResetLoading() {},
     beginEntryOperation: () => scope.begin(), auth: { currentUser: user },
     authBusy: { current: false }, navigationBusy: { current: false },
     pendingGoogleUser: { current: null },

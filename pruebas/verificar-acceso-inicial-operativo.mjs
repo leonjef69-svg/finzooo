@@ -1,3 +1,4 @@
+import { entryUIFixture } from "./helpers/entry-ui-fixture.mjs";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -23,7 +24,7 @@ values.onCheckAgain = async () => { throw Object.assign(new Error("cuenta-proteg
 await handler("handleCheck")(); assert.equal(messages.at(-1), "cuenta-protegida");
 await handler("handleLogout")(); assert.equal(messages.at(-1), "verifyEmail.logoutFailed"); assert.equal(values.verificationBusy.current, false);
 
-const resetCalls = [], reset = { authBusy: { current: false }, email: " synthetic@hotmail.com ", auth: {}, t: key => key, withTimeout: promise => promise,
+const resetCalls = [], reset = { setResetLoading() {}, authBusy: { current: false }, email: " synthetic@hotmail.com ", auth: {}, t: key => key, withTimeout: promise => promise,
   beginEntryOperation: () => () => true,
   Alert: { alert: (...args) => resetCalls.push(args) }, firebaseErrorMessage: () => "reset-error", sendPasswordResetEmail: async (_, email) => { resetCalls.push(email); await new Promise(resolve => { release = resolve; }); } };
 const forgot = () => handlerOriginal("screens/Login.tsx", "forgotPassword", reset, source("screens/Login.tsx"))();
@@ -34,17 +35,19 @@ assert.equal(resetCalls[0], "synthetic@hotmail.com");
 // Árbol de los componentes originales: operaciones/fondo, no rediseño ni medidas nativas.
 const React = { Fragment: "Fragment", createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }) };
 const flatten = node => !node || typeof node !== "object" ? [] : [node, ...node.children.flat(Infinity).flatMap(flatten)];
-const dependencies = { React, ActivityIndicator: "Spinner", View: "View", Text: "Text", Image: "Image", ScrollView: "ScrollView", KeyboardAvoidingView: "KeyboardAvoidingView", StatusBar: "StatusBar", Wallet: "Wallet", TouchableOpacity: "TouchableOpacity", AuthField: "AuthField", AuthLegalAcceptance: "AuthLegalAcceptance", GoogleButton: "GoogleButton", OrDivider: "OrDivider",
+const dependencies = { ...entryUIFixture, Smile: "Smile", Mail: "Mail", KeyRound: "KeyRound", React, ActivityIndicator: "Spinner", View: "View", Text: "Text", Image: "Image", ScrollView: "ScrollView", KeyboardAvoidingView: "KeyboardAvoidingView", StatusBar: "StatusBar", Wallet: "Wallet", TouchableOpacity: "TouchableOpacity", AuthField: "AuthField", AuthLegalAcceptance: "AuthLegalAcceptance", GoogleButton: "GoogleButton", OrDivider: "OrDivider",
   Platform: { OS: "android" }, useSafeAreaInsets: () => ({ top: 24, bottom: 24 }), useWindowDimensions: () => ({ height: 480 }), useState: value => [value, () => {}], useRef: value => ({ current: value }), useEntryOperation: () => () => () => true, useEffect() {}, Keyboard: { addListener: () => ({ remove() {} }) }, useAppData: () => ({ t: key => key, showToast() {} }), require: () => "original-image" };
 for (const [file, name] of [["screens/Login.tsx", "Login"], ["screens/Register.tsx", "Register"]]) {
   const tree = flatten(handlerOriginal(file, name, dependencies, source(file))({ onLoggedIn() {}, onGoRegister() {}, onRegistered() {}, onGoogleSignedIn() {}, onGoLogin() {} }));
-  const scroll = tree.find(node => node.type === "ScrollView");
-  assert.equal(scroll.props.contentContainerStyle.flexGrow, 1);
-  assert.equal(scroll.props.contentContainerStyle.paddingBottom, 0, "sin hueco oscuro debajo de la ficha");
-  assert.notEqual(scroll.props.scrollEnabled, false, "no encierra contenido en pantallas altas o con letra grande");
-  const image = tree.find(node => node.type === "Image");
-  assert.ok(image.props.style.transform.every(item => item.translateY === undefined));
+  assert.ok(tree.find(node => node.type === "EntryScreen"), "el formulario usa la superficie desplazable común");
 }
+const shared = flatten(handlerOriginal("components/EntryUI.tsx", "EntryScreen", {
+  ...dependencies, useSafeAreaInsets: () => ({ top: 24, bottom: 20 }), entryStyles: { screen: {}, header: {}, content: {} },
+})({ children: "formulario" }));
+const scroll = shared.find(node => node.type === "ScrollView");
+assert.equal(scroll.props.contentContainerStyle.flexGrow, 1);
+assert.ok(scroll.props.contentContainerStyle.paddingBottom >= 20, "sin tapar contenido con la barra inferior");
+assert.notEqual(scroll.props.scrollEnabled, false, "contenido largo sigue desplazable");
 const navCalls = [];
 handlerOriginal("utils/entryNavigation.ts", "switchEntryRoute", { Keyboard: { dismiss: () => navCalls.push("keyboard") }, reemplazarUnaVez: path => navCalls.push(path) })("/register");
 assert.deepEqual(navCalls, ["keyboard", "/register"]);

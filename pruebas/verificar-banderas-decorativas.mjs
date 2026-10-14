@@ -1,3 +1,4 @@
+import { entryUIFixture } from "./helpers/entry-ui-fixture.mjs";
 import assert from "node:assert/strict";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -49,6 +50,7 @@ assert.deepEqual(api.CURRENCIES.map(({ id }) => ({ id, symbol: api.currencySymbo
 const React = { Fragment: "Fragment", createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }) };
 const flatten = node => !node || typeof node !== "object" ? [] : [node, ...node.children.flat(Infinity).flatMap(flatten)];
 const dependencies = {
+  ...entryUIFixture,
   ...api, React, View: "View", Text: "Text", TextInput: "TextInput", TouchableOpacity: "Button", ScrollView: "ScrollView",
   FlatList: "FlatList", Image: "Image", StatusBar: "StatusBar", Check: "Check", Search: "Search", BackButton: "BackButton",
   useCallback: callback => callback, useMemo: factory => factory(), useRef: value => ({ current: value }),

@@ -1,3 +1,4 @@
+import { entryUIFixture } from "./helpers/entry-ui-fixture.mjs";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import vm from "node:vm";
@@ -97,7 +98,7 @@ const React = {
   useRef(initial) { return refs[refIndex++] ??= { current: initial }; },
 };
 const rn = Object.fromEntries(["ActivityIndicator", "Image", "KeyboardAvoidingView", "ScrollView", "StatusBar", "Text", "TextInput", "TouchableOpacity", "View"].map(name => [name, name]));
-const imports = { react: React, "react-native": { ...rn, Platform: { OS: "android" } },
+const imports = { "@/components/EntryUI": entryUIFixture, react: React, "react-native": { ...rn, Platform: { OS: "android" } },
   "react-native-safe-area-context": { useSafeAreaInsets: () => ({ top: 24, bottom: 20 }) },
   "lucide-react-native": Object.fromEntries(["Bell", "ChevronRight", "Globe2", "Moon", "Sun", "WalletCards"].map(name => [name, name])),
   "@/constants/currencies": currencies, "@/constants/i18n": i18n, "@/utils/decorativeFlags": flags,
@@ -124,7 +125,7 @@ function renderSetup() {
 let setup = renderSetup();
 const languageRow = setup.find(node => node.type === "TouchableOpacity" && textOf(node).includes("settings.language"));
 const currencyRow = setup.find(node => node.type === "TouchableOpacity" && textOf(node).includes("settings.currency"));
-const start = setup.find(node => node.type === "TouchableOpacity" && textOf(node).includes("setup.start"));
+const start = setup.find(node => node.type === "EntryButton" && node.props.label === "setup.start");
 assert.ok(languageRow && currencyRow && start);
 assert.ok(textOf(languageRow).includes("English"));
 assert.ok(!textOf(languageRow).includes("PEN") && !textOf(languageRow).includes("S/"), "Idioma no muestra ni selecciona moneda asociada");
