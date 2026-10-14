@@ -1,5 +1,20 @@
 # Estado actual de Fino
 
+## Bienvenida — 13/10/2026 — composición flotante recuperada
+
+El propietario pidió conservar la colocación cercana anterior, no separar las
+tarjetas en tres filas. Sustituye el ajuste intermedio sin-choques: posiciones
+flotantes con separación de 10 junto a cabeza/zapatos, considerando inclinación
+y altura medida del texto. Se conservan persona, iconos 24 y textos 15/14.
+Círculo redondo hasta 272, mayor y centrado detrás de la persona.
+Marca: 13oct-bienvenida-flotante. Android normal completo con los tres accesos.
+TypeScript/ESLint y 211 pruebas/8 auditores sin tarjetas aprobados; regresión
+original/JSX roja e607245 por filas separadas y verde actual. Detalles y límites
+en docs/ENTRADA_UI_CALIDA.md.
+Qué sigue/falta: teléfono físico, letra grande/pantallas pequeñas y acceso/copia
+local ya pendiente. No altera cuentas, movimientos, navegación ni servicios.
+Sin APK/AAB/OTA/Play, cambios nativos, Firebase ni Telegram.
+
 ## Bienvenida — 13/10/2026 — contenido centrado y sin choques
 
 Iconos 24 y textos 15/14 centrados juntos dentro de cada tarjeta, sin columna

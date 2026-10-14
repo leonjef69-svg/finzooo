@@ -1,5 +1,15 @@
 # Entregas de Fino
 
+## 13/10/2026 — Bienvenida flotante recuperada; desarrollo local
+
+Marca 13oct-bienvenida-flotante: ajuste visual posterior a sin-choques, cuyas
+filas separadas no fueron aprobadas. Tarjetas cercanas sin tocar cabeza/zapatos,
+tamaños aprobados conservados y círculo mayor centrado. Visto completo en el
+emulador; TypeScript/ESLint, 211 pruebas/8 auditores sin tarjetas aprobados.
+Regresión roja e607245 por comportamiento y verde actual; ENTRADA_UI_CALIDA.
+Qué sigue/falta: físico, pequeño/letra grande y acceso/copia local protegida.
+Sin datos, APK/AAB/OTA/Play, navegación ni servicios remotos modificados.
+
 ## 13/10/2026 — Tarjetas centradas y separadas; desarrollo local
 
 Marca 13oct-bienvenida-sin-choques: iconos/textos mayores con espacio interior

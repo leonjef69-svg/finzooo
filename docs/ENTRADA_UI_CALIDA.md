@@ -1,5 +1,35 @@
 # Entrada cálida — 13/10/2026
 
+## Ajuste vigente: recuperar la composición flotante
+
+Marca `13oct-bienvenida-flotante`. El propietario rechazó la separación en tres
+filas de `e607245`; el apartado sin-choques siguiente documenta ese paso
+intermedio, no la colocación vigente. Se recuperan tarjetas flotantes cercanas,
+manteniendo tamaños aprobados: persona hasta 262, icono 24/fondo 34 y textos
+15/14; margen lateral 14 y anchos limitados por pantalla.
+
+La posición considera la altura real de las tarjetas y su inclinación para
+dejar 10 junto al contorno visible de cabeza/zapatos (filas 69..577 del WebP,
+medidas con alfa >32). Ahorro conserva un pequeño desnivel de 8 respecto a
+Presupuesto. El aire transparente del archivo no obliga a separar toda la
+imagen. Las mediciones repetidas no vuelven a actualizar las alturas; valores
+no finitos se ignoran. Círculo proporcional y centrado detrás del cuerpo,
+hasta 272 de diámetro (antes hasta 238 de ancho).
+
+Vista Android normal, sin reiniciar Metro ni cambiar la densidad: persona y
+cuatro tarjetas visibles sin roces; título, frase y los tres accesos completos.
+No se enviaron formularios ni se alteraron cuentas/datos. Captura local de QA:
+`.tmp/fino-welcome-floating.png`. No añade animaciones ni trabajo remoto.
+
+Prueba sobre JSX/cálculos originales: cinco tamaños, tres alturas de texto,
+márgenes con inclinación, separación, tamaño del círculo y mediciones estables.
+Verde actual; roja contra `e607245` por la composición separada anterior, no por
+una API ausente. TypeScript/ESLint y batería completa: 211 pruebas y 8 auditores
+aprobados, sin tarjetas; el conteo incluye la suite local ajena no versionada.
+No acredita dibujo Android de todos los tamaños, FPS ni todas las marcas.
+Qué sigue/falta: prueba física de pantalla pequeña/letra grande, transiciones
+y recorrido de acceso/copia protegida ya pendiente. Sin APK/OTA/Play/nativo.
+
 ## Ajuste posterior: espacio dentro de las tarjetas
 
 Marca `13oct-bienvenida-sin-choques`: icono y texto se centran juntos, en vez de
