@@ -1,5 +1,19 @@
 # Entregas de Fino
 
+## 14/10/2026 — Exportación limpia y coherente; desarrollo local
+
+Marca 14oct-exportacion-limpia. Sin tarjetas repetidas en el resumen; presupuesto
+solo positivo y totales acordes al filtro, tanto manual como automático.
+Método de pago en tres idiomas y puntos de categoría azules, sin alterar
+montos, moneda o transferencias. Guía EXPORTACION_RESUMEN_LIMPIO.
+Armadores/manejadores originales con IO ficticio aprobados; regresión
+20b8877 roja por conducta anterior. PDFs sintéticos A4 revisados visualmente,
+incluidas cabeceras repetidas en tres páginas. TypeScript/ESLint y 219 pruebas/
+8 auditores verdes sin tarjetas (una suite local ajena; 218 previstas Git limpio).
+Qué sigue/falta: exportar/abrir
+y comprobar programación/entrega reales en Android. Sin datos reales,
+APK/AAB/OTA/Play ni servicios remotos modificados/publicados.
+
 ## 14/10/2026 — Privacidad del registro; preparación local
 
 Marca 14oct-privacidad-registro. Aviso/aceptación previa al permiso y al

@@ -164,7 +164,7 @@ console.log("\n--- EL FILTRO NO MEZCLA EL RESUMEN CON LAS FILAS ---");
   });
   ok(h.includes("Salario"), "un PDF filtrado a ingresos grafica sus ingresos aunque el mes completo tenga gastos");
   ok(h.includes("Total: <span style=\"color:#059669;\">S/ 40.00</span>"), "el total inferior suma solo las filas exportadas");
-  ok(h.includes("S/ -50.00"), "el resultado mensual completo permanece separado en el resumen");
+  ok(!h.includes("S/ -50.00"), "el resultado del mes sin filtrar no se cuela entre los totales exportados");
 }
 
 console.log("\n--- LA VISTA PREVIA ES EL MISMO DOCUMENTO ---");

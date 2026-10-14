@@ -19,6 +19,7 @@ import { methodLabel } from "@/constants/i18n";
 import { LOGO_DATA_URI } from "@/constants/logo";
 import { fmtDate, monthKey } from "@/utils/format";
 import { buildPdfHtml, type PdfTx } from "@/utils/exportPdfHtml";
+import { movimientosParaReporte } from "@/utils/exportSelection";
 import type { ExportFinancialSummary } from "@/utils/exportSpaces";
 import { toDateKey } from "@/utils/scheduledExport";
 import type { Transaction } from "@/types";
@@ -57,7 +58,8 @@ export function htmlDelReporte(d: DatosDelPdf): string {
   // actual, y así también sale bien febrero en año bisiesto.
   const daysInMonth = new Date(y, m, 0).getDate();
 
-  const pdfTxs: PdfTx[] = movimientos.map((tx) => {
+  const seleccionados = movimientosParaReporte(movimientos, tipo);
+  const pdfTxs: PdfTx[] = seleccionados.map((tx) => {
     const c = catInfo(tx.category);
     return {
       dateLabel: fmtDate(tx.date, nombresDeMes),
@@ -74,8 +76,8 @@ export function htmlDelReporte(d: DatosDelPdf): string {
     };
   });
   const resumen = d.resumen ?? (() => {
-    const income = movimientos.filter((item) => item.type === "income" && !item.internalTransfer).reduce((sum, item) => sum + item.amount, 0);
-    const expenses = movimientos.filter((item) => item.type === "expense" && !item.internalTransfer).reduce((sum, item) => sum + item.amount, 0);
+    const income = seleccionados.filter((item) => item.type === "income" && !item.internalTransfer).reduce((sum, item) => sum + item.amount, 0);
+    const expenses = seleccionados.filter((item) => item.type === "expense" && !item.internalTransfer).reduce((sum, item) => sum + item.amount, 0);
     return { available: income - expenses, income, expenses, result: income - expenses };
   })();
 
@@ -142,6 +144,7 @@ export function htmlDelReporte(d: DatosDelPdf): string {
     monthLabel: d.etiquetaDelMes,
     spaceName: d.nombreDelEspacio || t("spaces.personal"),
     txs: pdfTxs,
+    reportType: tipo,
     daysInMonth,
     fmt: d.fmt,
     charts,

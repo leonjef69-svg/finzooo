@@ -234,7 +234,7 @@ console.log("\n--- RESUMEN FINANCIERO CLARO EN EL PDF ---");
   ok(html.includes("exportPdf.available") && html.includes("S/ 400.00"), "el saldo disponible aparece como dato principal");
   ok(html.includes("exportPdf.budget") && html.includes("S/ 500.00"), "muestra el presupuesto por separado");
   ok(html.includes("exportPdf.previousBalance") && html.includes("S/ 20.00"), "muestra el saldo anterior por separado");
-  ok(html.includes("exportPdf.periodResult") && html.includes("S/ -120.00"), "el resultado del mes no se confunde con el saldo");
+  ok(!html.includes("exportPdf.periodResult"), "el resultado no se repite en otra tarjeta; el total de las filas queda al final");
   ok(!html.includes("height:70px"), "ningún gráfico ocupa media hoja por una sola barra");
 }
 

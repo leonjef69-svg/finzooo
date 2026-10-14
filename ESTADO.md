@@ -1,5 +1,22 @@
 # Estado actual de Fino
 
+## Exportación — 14/10/2026 — resumen limpio y filtro respetado
+
+Marca 14oct-exportacion-limpia. Manual y automática comparten resumen sin
+tarjetas repetidas: presupuesto positivo opcional, saldo anterior no cero y
+totales de las filas elegidas. Solo gastos no muestra ingresos ni al revés;
+el saldo de todo el bolsillo queda únicamente en Todos, sin confundirlo con
+un resultado filtrado. Tabla con Método de pago en tres idiomas y puntos de
+categoría azules; montos/signos, moneda, transferencias y gráficos conservados.
+Guía docs/EXPORTACION_RESUMEN_LIMPIO.md. Prueba original manual/automática con
+IO ficticio verde; regresión 20b8877 roja por resumen anterior. HTML real
+convertido a PDF A4 y revisado visualmente en mixto, gasto, ingreso, sin
+presupuesto y tres páginas. TypeScript/ESLint y 219 pruebas/8 auditores verdes
+sin tarjetas (una suite local ajena; 218 previstas Git limpio).
+Qué sigue/falta: exportación/convertidor y entrega
+reales en Android; Chromium no los acredita. Sin cambios de datos reales,
+nativo, planes, nube, Telegram, tarjetas ni APK/AAB/OTA/Play publicados.
+
 ## Registro automático — 14/10/2026 — permiso y filtro previo
 
 Marca 14oct-privacidad-registro. Dar acceso/Encender muestran el aviso y

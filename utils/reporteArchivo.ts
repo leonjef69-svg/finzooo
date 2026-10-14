@@ -39,13 +39,7 @@ type DatosDelReporte = {
   t: (clave: string, valores?: Record<string, string | number>) => string;
 };
 
-export function movimientosParaReporte(
-  movimientos: Transaction[],
-  tipo: "all" | "expense" | "income",
-): Transaction[] {
-  if (tipo === "all") return movimientos;
-  return movimientos.filter((tx) => !tx.internalTransfer && tx.type === tipo);
-}
+export { movimientosParaReporte } from "@/utils/exportSelection";
 
 /**
  * Las filas del reporte: cabecera, movimientos, una vacía y el total.

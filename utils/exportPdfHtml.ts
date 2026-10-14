@@ -70,6 +70,7 @@ export type PdfOptions = {
   monthLabel: string;
   spaceName?: string;
   txs: PdfTx[];
+  reportType?: "all" | "expense" | "income";
   daysInMonth: number;
   /** Formatea un monto con su moneda ("S/ 1,234.50"). */
   fmt: (n: number) => string;
@@ -94,6 +95,7 @@ export type PdfOptions = {
 
 const VERDE = "#059669";
 const ROJO = "#e11d48";
+const AZUL = "#2563eb";
 
 /**
  * Lo más ancha que puede salir una columna, en los dos gráficos de columnas.
@@ -411,7 +413,7 @@ export function alturaEstimada(p: {
   dias: number;
   movimientos: number;
 }): number {
-  let alto = 120; // cabecera con el logo + las tres tarjetas de totales
+  let alto = 120; // cabecera con el logo + resumen sin tarjetas
   if (p.categorias > 0) alto += 34 + p.categorias * 20;
   if (p.presupuestos > 0) alto += 34 + p.presupuestos * 20;
   if (p.meses > 1) alto += 34 + p.meses * 20;
@@ -437,19 +439,24 @@ export function cabeApretando(alto: number): boolean {
 
 export function buildPdfHtml(o: PdfOptions): string {
   const { texts: T, fmt } = o;
+  const tipo = o.reportType ?? "all";
+  const txs = tipo === "all" ? o.txs : o.txs.filter(tx => !tx.internalTransfer && tx.type === tipo);
 
-  const ingresosCalculados = o.txs.filter((t) => t.type === "income" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0);
-  const gastosCalculados = o.txs.filter((t) => t.type === "expense" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0);
+  const ingresosCalculados = txs.filter((t) => t.type === "income" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0);
+  const gastosCalculados = txs.filter((t) => t.type === "expense" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0);
   const resumen = o.summary ?? {
     available: ingresosCalculados - gastosCalculados,
     income: ingresosCalculados,
     expenses: gastosCalculados,
     result: ingresosCalculados - gastosCalculados,
   };
-  const ingresos = resumen.income;
-  const gastos = resumen.expenses;
-  const balance = resumen.result;
-  const totalSeleccionado = o.txs.reduce(
+  // El resumen del bolsillo puede incluir el otro tipo. Los totales del
+  // documento siempre pertenecen a sus filas, nunca al mes sin filtrar.
+  const ingresos = ingresosCalculados;
+  const gastos = gastosCalculados;
+  const hayIngresos = txs.some(tx => tx.type === "income" && !tx.internalTransfer);
+  const hayGastos = txs.some(tx => tx.type === "expense" && !tx.internalTransfer);
+  const totalSeleccionado = txs.reduce(
     (suma, tx) => suma + (tx.type === "expense" ? -tx.amount : tx.amount),
     0
   );
@@ -457,7 +464,7 @@ export function buildPdfHtml(o: PdfOptions): string {
   // Los gráficos describen los gastos, que es lo que casi siempre se quiere
   // mirar. La excepción es un reporte que solo trae ingresos: ahí graficar
   // gastos daría una hoja en blanco.
-  const gastosGraficables = o.txs
+  const gastosGraficables = txs
     .filter((tx) => tx.type === "expense" && !tx.internalTransfer)
     .reduce((suma, tx) => suma + tx.amount, 0);
   const foco: "expense" | "income" = gastosGraficables > 0 ? "expense" : "income";
@@ -466,13 +473,13 @@ export function buildPdfHtml(o: PdfOptions): string {
   // Los dos repartos, cada uno con sus categorias. Antes solo se calculaba
   // el del "foco" —los gastos salvo que no hubiera ninguno—, asi que en un
   // reporte con las dos cosas los ingresos no salian en ningun grafico.
-  const catsGasto = o.charts ? byCategory(o.txs, "expense") : [];
-  const catsIngreso = o.charts ? byCategory(o.txs, "income") : [];
+  const catsGasto = o.charts ? byCategory(txs, "expense") : [];
+  const catsIngreso = o.charts ? byCategory(txs, "income") : [];
   // Solo los dias con movimiento, con su numero de dia de verdad. Enviar el
   // arreglo entero de 31 posiciones dejaba las columnas en 17 puntos, donde
   // no cabe ningun monto.
   const dias = o.charts
-    ? byDay(o.txs, foco, o.daysInMonth)
+    ? byDay(txs, foco, o.daysInMonth)
         .map((amount, i) => ({ day: i + 1, amount }))
         .filter((d) => d.amount > 0)
     : [];
@@ -493,13 +500,13 @@ export function buildPdfHtml(o: PdfOptions): string {
       presupuestos: o.charts ? o.categoryBudgets.length : 0,
       meses: o.charts ? o.monthly.length : 0,
       dias: dias.length,
-      movimientos: o.txs.length,
+      movimientos: txs.length,
     })
   );
   const sep = apretar ? 11 : 20;
   const padFila = apretar ? "3px 8px" : "6px 8px";
 
-  const filas = o.txs
+  const filas = txs
     .map((tx) => {
       const color = tx.type === "expense" ? ROJO : VERDE;
       const signo = tx.type === "expense" ? "-" : "+";
@@ -509,7 +516,7 @@ export function buildPdfHtml(o: PdfOptions): string {
           <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;white-space:nowrap;">${esc(tx.timeLabel || "-")}</td>
           <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere;">${esc(tx.typeLabel || (tx.type === "expense" ? T.expenses : T.income))}</td>
           <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere;">
-            <span style="display:inline-block;width:7px;height:7px;border-radius:4px;background:${tx.categoryColor};margin-right:5px;"></span>${esc(tx.categoryLabel)}
+            <span aria-hidden="true" style="display:inline-block;width:7px;height:7px;border-radius:4px;background:${AZUL};margin-right:5px;"></span>${esc(tx.categoryLabel)}
           </td>
           <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere;">${esc(tx.description || "-")}</td>
           <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere;">${esc(tx.methodLabel)}</td>
@@ -518,30 +525,27 @@ export function buildPdfHtml(o: PdfOptions): string {
     })
     .join("");
 
-  const tarjeta = (etiqueta: string, monto: string, color: string, width = "25%") => `
-    <td style="width:${width};padding:0 4px 8px 4px;vertical-align:top;">
-      <div style="border:1px solid #e2e8f0;border-radius:9px;padding:8px 10px;background:#fff;">
-        <div style="font-size:9px;color:#64748b;text-transform:uppercase;letter-spacing:.4px;">${esc(etiqueta)}</div>
-        <div style="font-size:13px;font-weight:bold;color:${color};margin-top:3px;white-space:nowrap;">${esc(monto)}</div>
-      </div>
+  const datoResumen = (etiqueta: string, monto: number, color: string) => `
+    <td style="padding:0 28px 0 0;vertical-align:top;">
+      <div style="font-size:10px;color:#475569;">${esc(etiqueta)}</div>
+      <div style="font-size:15px;font-weight:bold;color:${color};margin-top:3px;white-space:nowrap;">${esc(compactChartAmount(monto, fmt))}</div>
     </td>`;
-
-  const tarjetasResumen =
-    resumen.budget == null && resumen.previousBalance == null
-      ? `<tr>
-          ${tarjeta(T.income, compactChartAmount(ingresos, fmt), VERDE, "33.33%")}
-          ${tarjeta(T.expenses, compactChartAmount(gastos, fmt), ROJO, "33.33%")}
-          ${tarjeta(T.periodResult || T.balance, compactChartAmount(balance, fmt), balance < 0 ? ROJO : VERDE, "33.33%")}
-        </tr>`
-      : `<tr>
-          ${resumen.budget == null ? "" : tarjeta(T.budget || "Presupuesto", compactChartAmount(resumen.budget, fmt), "#0f172a")}
-          ${resumen.previousBalance == null ? "" : tarjeta(T.previousBalance || "Saldo anterior", compactChartAmount(resumen.previousBalance, fmt), "#0f766e")}
-          ${tarjeta(T.income, compactChartAmount(ingresos, fmt), VERDE)}
-          ${tarjeta(T.expenses, compactChartAmount(gastos, fmt), ROJO)}
-        </tr>
-        <tr>
-          ${tarjeta(T.periodResult || T.balance, compactChartAmount(balance, fmt), balance < 0 ? ROJO : VERDE, "25%")}
-        </tr>`;
+  const presupuesto = tipo !== "income" && Number.isFinite(resumen.budget) && resumen.budget! > 0
+    ? `<div data-report-budget style="margin-top:5px;font-size:10px;color:#475569;">${esc(T.budget || "Presupuesto")}: ${esc(compactChartAmount(resumen.budget!, fmt))}</div>` : "";
+  const anterior = tipo === "all" && Number.isFinite(resumen.previousBalance) && resumen.previousBalance !== 0
+    ? `<div style="margin-top:4px;font-size:10px;color:#475569;">${esc(T.previousBalance || "Saldo anterior")}: ${esc(compactChartAmount(resumen.previousBalance!, fmt))}</div>` : "";
+  const saldo = tipo === "all" ? `
+      <div style="font-size:10px;color:#475569;letter-spacing:.3px;">${esc(T.available || "Saldo disponible")}</div>
+      <div style="font-size:23px;line-height:1.2;font-weight:bold;color:${resumen.available < 0 ? ROJO : "#0f172a"};margin-top:4px;">${esc(compactChartAmount(resumen.available, fmt))}</div>` : "";
+  const cifras = [
+    hayIngresos && tipo !== "expense" ? datoResumen(T.income, ingresos, VERDE) : "",
+    hayGastos && tipo !== "income" ? datoResumen(T.expenses, gastos, ROJO) : "",
+  ].filter(Boolean).join("");
+  const resumenHtml = `<section data-report-summary style="margin-top:17px;padding-bottom:14px;border-bottom:1px solid #cbd5e1;page-break-inside:avoid;">
+    ${saldo}${tipo === "all" ? presupuesto + anterior : ""}
+    ${cifras ? `<table style="border-collapse:collapse;margin-top:${tipo === "all" ? 14 : 0}px;"><tr>${cifras}</tr></table>` : ""}
+    ${tipo !== "all" ? presupuesto : ""}
+  </section>`;
 
   const totalGastoCats = catsGasto.reduce((s, c) => s + c.amount, 0);
   const totalIngresoCats = catsIngreso.reduce((s, c) => s + c.amount, 0);
@@ -590,7 +594,7 @@ export function buildPdfHtml(o: PdfOptions): string {
   );
 
   const bloquePresupuestos =
-    o.charts && o.categoryBudgets.length > 0
+    o.charts && tipo !== "income" && o.categoryBudgets.length > 0
       ? `
       <div style="margin-top:${sep}px;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;page-break-inside:avoid;">
         <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(T.byCategoryBudget)}</div>
@@ -599,7 +603,7 @@ export function buildPdfHtml(o: PdfOptions): string {
       : "";
 
   const bloqueMeses =
-    o.charts && o.monthly.length > 1
+    o.charts && tipo !== "income" && o.monthly.length > 1
       ? `
       <div style="margin-top:${sep}px;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;page-break-inside:avoid;">
         <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(T.byMonth)}</div>
@@ -662,16 +666,8 @@ export function buildPdfHtml(o: PdfOptions): string {
       </tr>
     </table>
 
-    <!-- SALDO PRINCIPAL -->
-    <div style="margin-top:14px;border-radius:11px;background:#ecfdf5;border:1px solid #a7f3d0;padding:11px 13px;">
-      <div style="font-size:9px;color:#047857;text-transform:uppercase;letter-spacing:.5px;font-weight:bold;">${esc(T.available || "Saldo disponible")}</div>
-      <div style="font-size:22px;line-height:1.2;font-weight:800;color:${resumen.available < 0 ? ROJO : VERDE};margin-top:2px;">${esc(compactChartAmount(resumen.available, fmt))}</div>
-    </div>
-
-    <!-- RESUMEN DEL MES -->
-    <table style="width:calc(100% + 8px);border-collapse:collapse;margin:10px -4px 0 -4px;table-layout:fixed;">
-      ${tarjetasResumen}
-    </table>
+    <!-- RESUMEN: SOLO DATOS PERTINENTES, SIN TARJETAS REPETIDAS -->
+    ${resumenHtml}
 
     <!-- MOVIMIENTOS -->
     <!-- page-break-after:avoid pega el título a su tabla.
@@ -680,7 +676,7 @@ export function buildPdfHtml(o: PdfOptions): string {
          debajo. Desde fuera parece que la lista no salió, no que siguiera en
          la hoja siguiente. -->
     <div style="font-size:11px;font-weight:bold;color:#334155;margin:${sep + 2}px 0 7px 0;page-break-after:avoid;">
-      ${esc(T.movements)} (${o.txs.length})
+      ${esc(T.movements)} (${txs.length})
     </div>
     <table style="width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed;">
       <colgroup>
