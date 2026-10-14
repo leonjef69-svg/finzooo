@@ -4,6 +4,8 @@ import BackButton from "@/components/BackButton";
 import MovementAllButton from "@/components/MovementAllButton";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
 import SpaceTransferAmounts from "@/components/SpaceTransferAmounts";
+import MovementDateHeader from "@/components/MovementDateHeader";
+import { movementRowsByDay, startsMovementDay, linkedMovementRowTime } from "@/utils/movementDates";
 import SpaceMovementSheet from "@/components/SpaceMovementSheet";
 import PrivateBoxMoneyReview from "@/components/PrivateBoxMoneyReview";
 import { validSpaceDate } from "@/components/SpaceMovementFields";
@@ -70,7 +72,7 @@ export default function Cajas() {
 }
 
 function CajasForAccount({ accountUid }: { accountUid: string }) {
-  const { ready: personalReady, hasOnboarded, t, fmt, showToast, budgets, carryoverCleared, transactions, deletedTransactionIds, commitPrivateBoxData, commitPrivateBoxMoney, retirePrivateBoxMoney, stagePrivateBoxMoney, readPrivateBoxMoneyLocal, isPremium, userName, userCurrency } = useAppData();
+  const { ready: personalReady, hasOnboarded, t, fmt, monthNames, showToast, budgets, carryoverCleared, transactions, deletedTransactionIds, commitPrivateBoxData, commitPrivateBoxMoney, retirePrivateBoxMoney, stagePrivateBoxMoney, readPrivateBoxMoneyLocal, isPremium, userName, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
   const [datos, setRenderedDatos] = useState<DatosCajas>(() => leerCajasEnMemoria() ?? CAJAS_VACIAS);
   const datosActuales = useRef(datos);
@@ -564,9 +566,11 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }, [ready, filter, recentMovementTypes]);
   const visibles = movimientos.filter(item => !filter
     || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter));
-  const filasVisibles = filter
-    ? visibles.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }))
-    : compactLinkedTransferRows(visibles);
+  const filasVisibles = movementRowsByDay(visibles, item => item.fecha, dayItems => filter
+    ? dayItems.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }))
+    : compactLinkedTransferRows(dayItems));
+  const filasArchivadas = movementRowsByDay(movimientos, item => item.fecha,
+    dayItems => dayItems.map(item => ({ key: `movement:${item.id}`, item })));
   const filasSeleccionadas = countSelectedCompactRows(filasVisibles, visibles, seleccionados);
   function sacarDePersonal(valor: number, destino: string, spaceId: string, link: string, date = fechaLocal()): Transaction {
     const id = nextId();
@@ -1101,7 +1105,10 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
             <Text className="text-xl font-bold text-slate-900 dark:text-slate-100">{caja.nombre}</Text>
             <Text className="text-2xl font-extrabold text-teal-700 dark:text-teal-300">{fmt(saldoActual)}</Text>
             <Text className="text-sm leading-6 text-slate-600 dark:text-slate-300">{t("boxes.archiveReadOnly")}</Text>
-            {movimientos.slice(0, movementLimit).map(row => <View key={row.id} className="rounded-xl border border-slate-200 p-3 dark:border-noche-borde"><Text className="font-bold text-slate-900 dark:text-slate-100">{row.descripcion}</Text><Text className="mt-1 text-sm text-slate-600 dark:text-slate-300">{row.fecha} · {row.tipo === "ingreso" ? "+" : "−"}{fmt(row.monto)}</Text></View>)}
+            {filasArchivadas.slice(0, movementLimit).map(({ key, item }, index) => <View key={key}>
+              {startsMovementDay(filasArchivadas, index, row => row.item.fecha) ? <MovementDateHeader date={item.fecha} monthNames={monthNames} /> : null}
+              <View className="rounded-xl border border-slate-200 p-3 dark:border-noche-borde"><Text className="font-bold text-slate-900 dark:text-slate-100">{item.descripcion}</Text>{horaDe(item.creadoEn) ? <Text className="text-xs text-slate-500 dark:text-slate-300">{horaDe(item.creadoEn)}</Text> : null}<Text className="mt-1 text-sm text-slate-600 dark:text-slate-300">{item.tipo === "ingreso" ? "+" : "−"}{fmt(item.monto)}</Text></View>
+            </View>)}
             {movimientos.length > movementLimit ? <TouchableOpacity accessibilityRole="button" onPress={() => setMovementLimit(value => value + 60)} className="min-h-11 justify-center"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("common.show")}</Text></TouchableOpacity> : null}
             <TouchableOpacity accessibilityRole="button" disabled={guardando} onPress={() => void cambiarArchivoCaja(caja.id, false)} className="min-h-11 items-center justify-center rounded-xl border border-teal-300"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("boxes.archiveRestore")}</Text></TouchableOpacity>
           </View>
@@ -1163,16 +1170,20 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
                 <TouchableOpacity accessibilityLabel={t("boxes.selectMovements")} onPress={() => { setSeleccionando(true); setSeleccionados([]); }} className="min-h-10 flex-row items-center gap-1 px-1"><ListChecks size={18} color="#059669" /><Text className="text-[15px] font-bold text-emerald-600">{t("common.select")}</Text></TouchableOpacity>
               </> : null}
             </View>
-            {filasVisibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "boxes.noMovements")}</Text> : filasVisibles.slice(0, movementLimit).map(({ key, item, transferGroup }) => {
+            {filasVisibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "boxes.noMovements")}</Text> : filasVisibles.slice(0, movementLimit).map((row, index) => {
+              const { key, item, transferGroup } = row;
+              const rowTime = linkedMovementRowTime(row);
               const transferencia = isLinkedSpaceTransfer(item);
               const retorno = isLinkedSpaceReturn(item);
-              const idsDeFila = movementIdsForCompactRow({ key, item, transferGroup }, visibles);
+              const idsDeFila = movementIdsForCompactRow(row, visibles);
               const filaSeleccionada = idsDeFila.length > 0 && idsDeFila.every(id => seleccionados.includes(id));
-              return <TouchableOpacity key={key} disabled={!seleccionando} onPress={() => setSeleccionados(prev => filaSeleccionada ? prev.filter(id => !idsDeFila.includes(id)) : [...new Set([...prev, ...idsDeFila])])} className={`mb-2 flex-row items-center rounded-2xl border-[1.5px] p-3 dark:border-noche-borde ${filaSeleccionada ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200"}`}>
+              return <View key={key}>
+                {startsMovementDay(filasVisibles, index, row => row.item.fecha) ? <MovementDateHeader date={item.fecha} monthNames={monthNames} /> : null}
+              <TouchableOpacity disabled={!seleccionando} onPress={() => setSeleccionados(prev => filaSeleccionada ? prev.filter(id => !idsDeFila.includes(id)) : [...new Set([...prev, ...idsDeFila])])} className={`mb-2 flex-row items-center rounded-2xl border-[1.5px] p-3 dark:border-noche-borde ${filaSeleccionada ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200"}`}>
                 <View className={`h-9 w-9 items-center justify-center rounded-xl ${transferencia ? "bg-blue-100 dark:bg-blue-950" : item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{transferencia ? <ArrowRightLeft size={17} color="#2563eb" /> : item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
-                {transferencia ? <View className="ml-3 flex-1"><SpaceTransferAmounts title={caja.nombre} sentLabel={t("boxes.receivedFromPersonal")} returnedLabel={t("boxes.returnedToPersonal")} sent={transferGroup?.sent ?? (retorno ? 0 : item.monto)} returned={transferGroup?.returned ?? (retorno ? item.monto : 0)} format={fmt} /></View> : <><View className="ml-3 flex-1"><Text className="text-[15px] font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-2 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></>}
+                {transferencia ? <View className="ml-3 flex-1"><SpaceTransferAmounts title={caja.nombre} sentLabel={t("boxes.receivedFromPersonal")} returnedLabel={t("boxes.returnedToPersonal")} sent={transferGroup?.sent ?? (retorno ? 0 : item.monto)} returned={transferGroup?.returned ?? (retorno ? item.monto : 0)} format={fmt} />{rowTime ? <Text className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">{rowTime}</Text> : null}</View> : <><View className="ml-3 flex-1"><Text className="text-[15px] font-bold text-slate-800 dark:text-slate-100" numberOfLines={1}>{item.descripcion || (item.tipo === "ingreso" ? t("boxes.income") : t("boxes.expense"))}</Text>{rowTime || item.method ? <Text className="text-xs text-slate-500 dark:text-slate-300">{[rowTime, item.method ? methodLabel(item.method, t) : ""].filter(Boolean).join(" · ")}</Text> : null}</View><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-2 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></>}
                 {seleccionando ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${filaSeleccionada ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : null}
-              </TouchableOpacity>;
+              </TouchableOpacity></View>;
             })}
           </>
         )}

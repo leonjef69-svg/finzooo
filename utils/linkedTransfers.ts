@@ -21,7 +21,7 @@ export type TransferGroupSummary = {
   status: TransferStatus;
   spaceName?: string;
 };
-export type CompactTransferRow<T> = { key: string; item: T; transferGroup?: TransferGroupSummary };
+export type CompactTransferRow<T> = { key: string; item: T; transferGroup?: TransferGroupSummary; groupItems?: T[] };
 
 export type SpaceMovementDeletionPlan<T> =
   | { ok: true; items: T[] }
@@ -368,7 +368,7 @@ export function movementIdsForCompactRow<T extends LinkedSpaceMovement>(
   visibleItems: readonly T[],
 ): string[] {
   return row.transferGroup
-    ? visibleItems.filter(isLinkedSpaceTransfer).map(item => item.id)
+    ? (row.groupItems ?? visibleItems).filter(isLinkedSpaceTransfer).map(item => item.id)
     : [row.item.id];
 }
 

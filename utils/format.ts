@@ -116,7 +116,9 @@ export function fmtDate(iso: string, monthNames: string[]) {
  * y bastaria olvidarse en una para que saliera la hora de Londres.
  */
 export function horaDe(ms: number): string {
+  if (!Number.isFinite(ms) || ms <= 0) return "";
   const d = new Date(ms);
+  if (!Number.isFinite(d.getTime())) return "";
   const h24 = d.getHours();
   // En Peru la hora se lee en 12 horas con a.m./p.m. "14:35" obliga a hacer
   // la resta mentalmente; "2:35 p.m." se lee de golpe.

@@ -46,7 +46,8 @@ export type MiembroCajaCompartida = { uid: string; nombre: string; rol: "owner" 
 const alNumero = (value: unknown): number => {
   if (typeof value === "number") return value;
   if (value && typeof value === "object" && "toMillis" in value) return (value as { toMillis(): number }).toMillis();
-  return Date.now();
+  // Un sello ausente no significa que el movimiento acaba de ocurrir.
+  return 0;
 };
 
 function desdeDocumento(id: string, data: Record<string, unknown>): CajaCompartida {

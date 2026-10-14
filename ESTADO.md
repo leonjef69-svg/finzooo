@@ -1,5 +1,26 @@
 # Estado actual de Fino
 
+## Movimientos — 14/10/2026 — fecha exterior y hora registrada
+
+Inicio/Historial, Familia, Cajas privadas/compartidas/archivadas y Negocio:
+una fecha por día, fuera de las tarjetas; dentro solo hora conocida y datos
+del movimiento. Transferencias compactadas por día, sin mezclar otros días
+ni meses; selección conserva únicamente los enlaces de ese grupo diario.
+Saldo, originales, filtros, búsqueda, límites y protecciones conservados.
+Personal ahora toma hora al Guardar, no al abrir el formulario; editar datos
+sin hora no inventa una. Familia/Cajas compartidas ya no convierten un sello
+ausente en hora de lectura. Sin sello válido se omite; no se reparan horas
+históricas desconocidas. Resúmenes muestran intervalo de horas conocidas.
+Marca 14oct-movimientos-por-dia; docs/MOVIMIENTOS_POR_DIA.md.
+TypeScript/ESLint y 216 pruebas/8 auditores verdes sin tarjetas (una suite
+local ajena; 215 previstas Git limpio). Ambas regresiones f7f8800 rojas por
+fecha repetida y hora de apertura, no API ausente; originales actuales verdes.
+Android confirma Inicio/Historial/filtro/selección y Familia con fecha externa.
+Qué sigue/falta: físico/letra grande/TalkBack y registro personal para cotejar
+reloj visible y sello servidor. Respaldo remoto pendiente por separado.
+Sin movimientos de prueba reales escritos/borrados, nativo, Firebase,
+Telegram/tarjetas ni APK/AAB/OTA/Play. No cierra la auditoría global.
+
 ## Ajustes — 14/10/2026 — agrupados y con Pro visible
 
 Encabezado Ajustes en los tres idiomas. Pro arriba, tarjeta completa

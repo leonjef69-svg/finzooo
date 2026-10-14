@@ -52,7 +52,7 @@ export default function AddSheet({
     transaction?.iconColor ?? catInfo(transaction?.category ?? (initialType === "income" ? "salario" : "comida")).color
   );
   const [date, setDate] = useState(transaction?.date || defaultDateForMonth(currentMonth));
-  const [time] = useState(transaction?.time || horaDe(Date.now()));
+  const time = transaction?.time;
   const [method, setMethod] = useState(initialPaymentMethod(transaction));
   const [description, setDescription] = useState(transaction?.description || "");
   const [notes, setNotes] = useState(transaction?.notes || "");
@@ -330,8 +330,9 @@ export default function AddSheet({
       method,
       description,
       notes,
-      // Al editar se conserva la hora original; solo se genera al crear.
-      time,
+      // Se toma al pulsar Guardar, no cuando se abrió el formulario.
+      // Editar un registro sin hora no autoriza inventarle una.
+      time: transaction ? transaction.time : horaDe(Date.now()),
     };
   }
 
@@ -516,8 +517,7 @@ export default function AddSheet({
                 </View>
                 {!dateOk ? <Text className="mt-1 text-[11px] font-semibold text-rose-500">{t("addSheet.dateError")}</Text> : null}
                 <View className="mt-1.5 flex-row items-center gap-1.5 pl-1">
-                  <Clock size={13} color="#94a3b8" />
-                  <Text className="text-xs font-medium text-slate-500 dark:text-slate-300">{time}</Text>
+                  {time ? <><Clock size={13} color="#94a3b8" /><Text className="text-xs font-medium text-slate-500 dark:text-slate-300">{time}</Text></> : null}
                 </View>
               </View>
             </View>

@@ -1,5 +1,18 @@
 # Entregas de Fino
 
+## 14/10/2026 — Movimientos por día y hora real; desarrollo local
+
+Marca 14oct-movimientos-por-dia: fecha encima de cada día, sin repetirla en
+tarjetas de Personal/Historial/Familia/Cajas/Negocio. Resúmenes no mezclan
+días; selección diaria conserva enlaces y saldos. Hora manual al Guardar,
+edición conserva ausencia/original y nube sin sello no usa hora de lectura.
+TypeScript/ESLint y 216 pruebas/8 auditores verdes sin tarjetas (una suite
+local ajena; 215 previstas Git limpio). Regresiones f7f8800 por comportamiento.
+Guía docs/MOVIMIENTOS_POR_DIA.md; Android confirma encabezados y filtros
+con datos existentes, sin registrar/borrar movimientos reales.
+Qué sigue/falta: físico/letra grande/TalkBack y cotejar reloj al registrar;
+respaldo remoto separado. Sin APK/AAB/OTA/Play ni servicios publicados.
+
 ## 14/10/2026 — Ajustes agrupados; desarrollo local
 
 Marca 14oct-ajustes-ordenados. Pro visible y legible arriba; seis secciones

@@ -63,7 +63,8 @@ const alNumero = (value: unknown): number => {
   if (value && typeof value === "object" && "toMillis" in value) {
     return (value as { toMillis(): number }).toMillis();
   }
-  return Date.now();
+  // Sin sello confirmado no hay hora conocida: nunca usar la hora de lectura.
+  return 0;
 };
 
 export async function cargarFamiliaActiva(uid: string): Promise<EspacioFamilia | null> {

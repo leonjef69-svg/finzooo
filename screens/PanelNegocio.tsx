@@ -16,11 +16,13 @@ import {
 } from "lucide-react-native";
 import AvisoSoloLectura from "@/components/AvisoSoloLectura";
 import BackButton from "@/components/BackButton";
+import MovementDateHeader from "@/components/MovementDateHeader";
+import { startsMovementDay } from "@/utils/movementDates";
 import Toggle from "@/components/Toggle";
 import { CARD_SHADOW } from "@/constants/style";
 import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
-import { fmt as fmtConSimbolo, fmtDate } from "@/utils/format";
+import { fmt as fmtConSimbolo } from "@/utils/format";
 import { hayRegistroAutomatico } from "@/utils/dondeHayYape";
 import { ahoraDelNegocio } from "@/utils/negocio";
 import {
@@ -576,11 +578,12 @@ export default function PanelNegocio({
           </View>
         ) : (
           <View className="gap-3">
-            {historial.map((f) => {
+            {historial.map((f, index) => {
               const entra = f.clase !== "gasto";
               return (
+                <View key={f.id}>
+                {startsMovementDay(historial, index, row => row.fecha) ? <MovementDateHeader date={f.fecha} monthNames={monthNames} /> : null}
                 <View
-                  key={f.id}
                   className="rounded-2xl p-4 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
                   style={CARD_SHADOW}
                 >
@@ -612,7 +615,7 @@ export default function PanelNegocio({
                       <View className="flex-row items-center gap-1 mt-0.5">
                         <Store size={10} color="#94a3b8" />
                         <Text className="text-[11px] text-slate-500 dark:text-slate-400" numberOfLines={1}>
-                          {negocio?.nombre} · {fmtDate(f.fecha, monthNames)} {horaVisible(f.hora)} ·{" "}
+                          {negocio?.nombre}{f.hora ? ` · ${horaVisible(f.hora)}` : ""} ·{" "}
                           {t(`venta.metodo.${f.metodo}`)}
                           {f.automatico ? ` · ${t("panel.automatico")}` : ""}
                         </Text>
@@ -662,7 +665,7 @@ export default function PanelNegocio({
                       </TouchableOpacity>
                     </View>
                   )}
-                </View>
+                </View></View>
               );
             })}
           </View>

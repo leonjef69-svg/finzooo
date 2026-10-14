@@ -60,7 +60,7 @@ assert.match(screen, /MovementAllButton label=\{t\("family\.history"\)\}[\s\S]*?
 assert.doesNotMatch(screen, /t\("family\.holdToCopy"\)/, "la tarjeta de código ya no ocupa espacio con una instrucción debajo");
 assert.match(screen, /deleteLinkedTransferTransaction\(item\.personalTransactionId\)/, "el dueño recupera en Personal un aporte familiar que elimina desde Familia");
 assert.match(screen, /planSpaceMovementDeletion\(movimientos, ids\)/, "Familia usa el mismo plan seguro de borrado que Caja");
-assert.match(screen, /movementIdsForCompactRow\(\{ key, item, transferGroup \}, visibles\)/, "la tarjeta familiar agrupada selecciona ambas mitades enlazadas");
+assert.match(screen, /movementIdsForCompactRow\(row, visibles\)/, "la tarjeta familiar conserva su grupo diario al seleccionar los enlaces");
 assert.match(screen, /countSelectedCompactRows\(filasVisibles, visibles, seleccionados\)/, "el contador familiar cuenta las tarjetas visibles, no los registros internos");
 assert.match(screen, /spaces\.deleteLinkedMovementsMessage/, "la confirmación explica por qué la transferencia agrupada cuenta dos registros");
 assert.match(cloud, /export async function quitarMiembroFamilia/, "el propietario puede retirar miembros de Familia");

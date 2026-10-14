@@ -4,6 +4,8 @@ import { currencySymbolFor } from "@/constants/currencies";
 import BackButton from "@/components/BackButton";
 import LegalAcceptancePanel from "@/components/LegalAcceptancePanel";
 import MovementAllButton from "@/components/MovementAllButton";
+import MovementDateHeader from "@/components/MovementDateHeader";
+import { movementRowsByDay, startsMovementDay, linkedMovementRowTime } from "@/utils/movementDates";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
 import SpaceTransferAmounts from "@/components/SpaceTransferAmounts";
 import SpaceMovementSheet from "@/components/SpaceMovementSheet";
@@ -66,7 +68,7 @@ export default function Family() {
 }
 
 function FamilyForAccount({ accountUid }: { accountUid: string }) {
-  const { t, fmt, userCurrency, userName, showToast, isPremium, budgets, carryoverCleared, transactions, addOrUpdateTransaction, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
+  const { t, fmt, monthNames, userCurrency, userName, showToast, isPremium, budgets, carryoverCleared, transactions, addOrUpdateTransaction, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
   const insets = useSafeAreaInsets();
   const uidAlAbrir = auth.currentUser?.uid ?? "";
   const copiaInicial = uidAlAbrir ? familiaEnMemoria.get(uidAlAbrir) : undefined;
@@ -230,9 +232,9 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     if (cargando || !familiasSincronizadas) return;
     if ((filter === "ingreso" && !recentMovementTypes.income) || (filter === "gasto" && !recentMovementTypes.expense)) setFilter(null);
   }, [cargando, familiasSincronizadas, filter, recentMovementTypes]);
-  const filasVisibles = filter
-    ? visibles.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }))
-    : compactLinkedTransferRows(visibles);
+  const filasVisibles = movementRowsByDay(visibles, item => item.fecha, dayItems => filter
+    ? dayItems.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }))
+    : compactLinkedTransferRows(dayItems));
   const filasSeleccionadas = countSelectedCompactRows(filasVisibles, visibles, seleccionados);
   const owner = familia?.ownerUid === auth.currentUser?.uid;
   const devolvibleAPersonal = returnableToPersonal(movimientos, auth.currentUser?.uid);
@@ -684,19 +686,23 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
             <TouchableOpacity accessibilityLabel={t("family.selectMovements")} onPress={() => { setSeleccionando(true); setSeleccionados([]); }} className="min-h-10 flex-row items-center gap-1 px-1"><ListChecks size={18} color="#059669" /><Text className="text-[15px] font-bold text-emerald-600">{t("common.select")}</Text></TouchableOpacity>
           </> : null}
         </View>
-        {filasVisibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "family.noMovements")}</Text> : filasVisibles.slice(0, movementLimit).map(({ key, item, transferGroup }) => {
+        {filasVisibles.length === 0 ? <Text className="py-5 text-center text-sm text-slate-500">{t(filter ? "spaces.noResults" : "family.noMovements")}</Text> : filasVisibles.slice(0, movementLimit).map((row, index) => {
+          const { key, item, transferGroup } = row;
+          const rowTime = linkedMovementRowTime(row);
           const transferencia = isLinkedSpaceTransfer(item);
           const retorno = isLinkedSpaceReturn(item);
-          const idsDeFila = movementIdsForCompactRow({ key, item, transferGroup }, visibles);
+          const idsDeFila = movementIdsForCompactRow(row, visibles);
           const filaSeleccionada = idsDeFila.length > 0 && idsDeFila.every(id => seleccionados.includes(id));
-          return <TouchableOpacity key={key} disabled={!seleccionando} accessible={seleccionando} accessibilityRole={seleccionando ? "checkbox" : undefined} accessibilityState={{ checked: filaSeleccionada, disabled: !seleccionando }} onPress={() => setSeleccionados(prev => filaSeleccionada ? prev.filter(id => !idsDeFila.includes(id)) : [...new Set([...prev, ...idsDeFila])])} className={`mb-2 flex-row items-center rounded-2xl border-[1.5px] p-3 dark:border-noche-borde ${filaSeleccionada ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200"}`}>
+          return <View key={key}>
+            {startsMovementDay(filasVisibles, index, row => row.item.fecha) ? <MovementDateHeader date={item.fecha} monthNames={monthNames} /> : null}
+          <TouchableOpacity disabled={!seleccionando} accessible={seleccionando} accessibilityRole={seleccionando ? "checkbox" : undefined} accessibilityState={{ checked: filaSeleccionada, disabled: !seleccionando }} onPress={() => setSeleccionados(prev => filaSeleccionada ? prev.filter(id => !idsDeFila.includes(id)) : [...new Set([...prev, ...idsDeFila])])} className={`mb-2 flex-row items-center rounded-2xl border-[1.5px] p-3 dark:border-noche-borde ${filaSeleccionada ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200"}`}>
             <View className={`h-9 w-9 items-center justify-center rounded-xl ${transferencia ? "bg-blue-100 dark:bg-blue-950" : item.tipo === "ingreso" ? "bg-emerald-100" : "bg-rose-100"}`}>{transferencia ? <ArrowRightLeft size={17} color="#2563eb" /> : item.tipo === "ingreso" ? <ArrowUp size={17} color="#047857" /> : <ArrowDown size={17} color="#be123c" />}</View>
-            {transferencia ? <View className="ml-3 flex-1"><SpaceTransferAmounts title={familia.nombre} sentLabel={t("boxes.receivedFromPersonal")} returnedLabel={t("boxes.returnedToPersonal")} sent={transferGroup?.sent ?? (retorno ? 0 : item.monto)} returned={transferGroup?.returned ?? (retorno ? item.monto : 0)} format={fmtFamilia} /></View> : <><View className="ml-3 flex-1"><Text numberOfLines={1} className="text-[15px] font-bold text-slate-800 dark:text-slate-100">{item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-1 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmtFamilia(item.monto)}</Text></>}
+            {transferencia ? <View className="ml-3 flex-1"><SpaceTransferAmounts title={familia.nombre} sentLabel={t("boxes.receivedFromPersonal")} returnedLabel={t("boxes.returnedToPersonal")} sent={transferGroup?.sent ?? (retorno ? 0 : item.monto)} returned={transferGroup?.returned ?? (retorno ? item.monto : 0)} format={fmtFamilia} />{rowTime ? <Text className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">{rowTime}</Text> : null}</View> : <><View className="ml-3 flex-1"><Text numberOfLines={1} className="text-[15px] font-bold text-slate-800 dark:text-slate-100">{item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text>{rowTime || item.method ? <Text className="text-xs text-slate-500 dark:text-slate-300">{[rowTime, item.method ? methodLabel(item.method, t) : ""].filter(Boolean).join(" · ")}</Text> : null}</View><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className={`mr-1 max-w-[38%] text-[15px] font-extrabold ${item.tipo === "ingreso" ? "text-emerald-600" : "text-rose-600"}`}>{item.tipo === "ingreso" ? "+" : "-"}{fmtFamilia(item.monto)}</Text></>}
             {!seleccionando ? <ContentReportButton key={`${familia.id}:${item.id}`} target={transferencia
               ? { kind: "family", spaceId: familia.id, targetType: "space", targetId: familia.id, expectedText: familia.nombre.slice(0, 120), expectedUid: familia.ownerUid }
               : { kind: "family", spaceId: familia.id, targetType: "movement", targetId: item.id, expectedText: item.descripcion.slice(0, 120), expectedUid: item.creadoPor }} /> : null}
             {seleccionando ? <View className={`ml-2 h-5 w-5 rounded-full border-2 ${filaSeleccionada ? "border-teal-600 bg-teal-600" : "border-slate-400"}`} /> : null}
-          </TouchableOpacity>;
+          </TouchableOpacity></View>;
         })}
         {!owner ? <TouchableOpacity disabled={ocupado} onPress={salir} className="mt-3 min-h-11 flex-row items-center justify-center gap-2"><LogOut size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("family.leave")}</Text></TouchableOpacity> : null}
       </>}

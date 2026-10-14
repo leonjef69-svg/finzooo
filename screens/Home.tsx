@@ -3,6 +3,7 @@ import EtiquetaMetodo from "@/components/EtiquetaMetodo";
 import IconBadge from "@/components/IconBadge";
 import MonthSelector from "@/components/MonthSelector";
 import MovementAllButton from "@/components/MovementAllButton";
+import MovementDateHeader from "@/components/MovementDateHeader";
 import PressableScale from "@/components/PressableScale";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
 import SpaceTransferAmounts from "@/components/SpaceTransferAmounts";
@@ -25,7 +26,8 @@ import {
 } from "@/utils/calendarioPagos";
 import { availablePersonalBalance, budgetUsed } from "@/utils/finances";
 import { paymentForCalendarNotification } from "@/utils/calendarNotificationTap";
-import { fmtDate, monthKey } from "@/utils/format";
+import { monthKey } from "@/utils/format";
+import { movementRowsByDay, startsMovementDay, personalMovementRowTime } from "@/utils/movementDates";
 import { esFoto } from "@/utils/iconosFavoritos";
 import { compactPersonalTransferRows, type TransferGroupSummary } from "@/utils/linkedTransfers";
 import { availableRecentMovementTypes } from "@/utils/recentMovementFilters";
@@ -113,9 +115,9 @@ const FilaMovimiento = memo(function FilaMovimiento({
   oscuro,
   fmt,
   t,
-  monthNames,
   onPress,
   transferGroup,
+  timeLabel,
 }: {
   tx: Transaction;
   index: number;
@@ -124,9 +126,9 @@ const FilaMovimiento = memo(function FilaMovimiento({
   oscuro: boolean;
   fmt: (n: number) => string;
   t: (k: string, v?: Record<string, string | number>) => string;
-  monthNames: string[];
   onPress: (id: number, grouped: boolean) => void;
   transferGroup?: TransferGroupSummary;
+  timeLabel?: string;
 }) {
   const c = catInfo(tx.category);
   const isTransfer = Boolean(tx.internalTransfer);
@@ -177,7 +179,7 @@ const FilaMovimiento = memo(function FilaMovimiento({
             color={isTransfer ? "#2563eb" : tx.iconColor ?? c.color}
             image={isTransfer ? undefined : esFoto(tx.icono ?? "") ? tx.icono : c.image}
           />
-          {isTransfer ? <SpaceTransferAmounts
+          {isTransfer ? <View className="flex-1"><SpaceTransferAmounts
             title={title}
             sentLabel={t(tx.internalTransfer === "family" ? "transfer.sentToFamily" : "transfer.sentToBox")}
             returnedLabel={t("transfer.returned")}
@@ -186,7 +188,7 @@ const FilaMovimiento = memo(function FilaMovimiento({
             consumed={transferGroup?.consumed}
             consumedLabel={t("transfer.consumed")}
             format={fmt}
-          /> : <><View className="flex-1 min-w-0">
+          />{timeLabel || tx.time ? <Text className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">{timeLabel ?? tx.time}</Text> : null}</View> : <><View className="flex-1 min-w-0">
             <Text
               className="text-base font-bold"
               style={{ color: oscuro ? "#f1f5f9" : "#0f172a" }}
@@ -194,9 +196,7 @@ const FilaMovimiento = memo(function FilaMovimiento({
             >
               {title}
             </Text>
-            <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#94a3b8" : "#64748b" }} numberOfLines={1}>
-              {`${fmtDate(tx.date, monthNames)}${tx.time ? ` · ${tx.time}` : ""}`}
-            </Text>
+            {timeLabel || tx.time ? <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#94a3b8" : "#64748b" }} numberOfLines={1}>{timeLabel ?? tx.time}</Text> : null}
           </View>
           <View className="items-end self-stretch justify-start">
             <Text
@@ -439,13 +439,9 @@ export default function Home({
   const mainIncome = useMemo(() => monthTx.filter((t) => t.type === "income" && !t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
   const transfersOut = useMemo(() => monthTx.filter((t) => t.type === "expense" && t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
   const transfersIn = useMemo(() => monthTx.filter((t) => t.type === "income" && t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
-  const compactMonthRows = useMemo(() => {
-    const acrossMonths = new Map(compactPersonalTransferRows(transactions)
-      .flatMap(row => row.transferGroup ? [[row.transferGroup.key, row.transferGroup] as const] : []));
-    return compactPersonalTransferRows(monthTx).map(row => row.transferGroup
-      ? { ...row, transferGroup: acrossMonths.get(row.transferGroup.key) || row.transferGroup }
-      : row);
-  }, [monthTx, transactions]);
+  // Una transferencia resumida nunca incluye otros días bajo esta fecha.
+  const compactMonthRows = useMemo(() => movementRowsByDay(monthTx, item => item.date,
+    dayItems => compactPersonalTransferRows(dayItems)), [monthTx]);
   const [recentFilter, setRecentFilter] = useState<"income" | "expense" | null>(null);
   const recentMovementTypes = useMemo(() => availableRecentMovementTypes(monthTx), [monthTx]);
   useEffect(() => {
@@ -606,6 +602,8 @@ export default function Home({
 
   const dibujarFila = useCallback(
     ({ item: row, index }: { item: ReturnType<typeof compactPersonalTransferRows<Transaction>>[number]; index: number }) => (
+      <View>
+      {startsMovementDay(visibleRecentRows, index, item => item.item.date) ? <MovementDateHeader date={row.item.date} monthNames={monthNames} inset /> : null}
       <FilaMovimiento
         tx={row.item}
         index={index}
@@ -614,12 +612,13 @@ export default function Home({
         oscuro={colorScheme === "dark"}
         fmt={fmt}
         t={t}
-        monthNames={monthNames}
         onPress={alTocarFila}
         transferGroup={row.transferGroup}
+        timeLabel={personalMovementRowTime(row)}
       />
+      </View>
     ),
-    [marcadas, selectMode, colorScheme, fmt, t, monthNames, alTocarFila]
+    [marcadas, selectMode, colorScheme, fmt, t, monthNames, alTocarFila, visibleRecentRows]
   );
   function confirmBulkDelete() {
     onBulkDelete(seleccionadosBorrables);

@@ -52,7 +52,7 @@ function texts(node) {
 const base = { index: 0, marcada: false, selectMode: false, oscuro: false, t: k => k, monthNames: [], onPress() {},
   tx: { id: 1, date: "2026-10-24", time: "14:32", amount: 12345.67, type: "expense", description: "MOVISTAR", category: "services", method: "cash" } };
 let rendered = texts(render({ ...base, fmt: privateFmt })).join("|");
-assert.ok(rendered.includes("MOVISTAR") && rendered.includes("24 oct.") && rendered.includes("14:32"));
+assert.ok(rendered.includes("MOVISTAR") && !rendered.includes("24 oct.") && rendered.includes("14:32"), "fecha en encabezado externo, hora en tarjeta");
 assert.ok(rendered.includes("• • • • • •") && !rendered.includes("12345.67"));
 rendered = texts(render({ ...base, fmt: visible })).join("|");
 assert.ok(rendered.includes("S/12345.67"), "Mostrar recupera el importe original sin cambiarlo");
@@ -67,5 +67,5 @@ for (const value of ["available", "prevBalance", "mainSpent", "mainIncome", "pag
   assert.ok(source.includes(`fmt(${value})`), `${value} usa el mismo formato privado`);
 }
 assert.ok(source.includes("[hideBalance, formatAmount]"));
-assert.ok(source.includes("[marcadas, selectMode, colorScheme, fmt, t, monthNames, alTocarFila]"), "Lista se redibuja con nuevo formato");
+assert.ok(source.includes("[marcadas, selectMode, colorScheme, fmt, t, monthNames, alTocarFila, visibleRecentRows]"), "Lista se redibuja con nuevo formato/fecha del filtro");
 console.log("Inicio original: formato privado, movimiento/calendario, transferencias, retorno del importe y accesibilidad comprobados. Vista y TalkBack Android pendientes.");

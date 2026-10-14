@@ -14,11 +14,11 @@ const exportsCode = leer("utils/exportSpaces.ts");
 const telegram = leer("functions/src/telegram-guided-handler.js");
 
 assert.match(history, /id: "transfer"[\s\S]*history\.filterTransfer/, "Historial ofrece el filtro Transferencias");
-assert.match(home, /isTransfer \? <SpaceTransferAmounts[\s\S]*transfer\.sentToFamily[\s\S]*transfer\.sentToBox/, "Inicio distingue la transferencia con su tarjeta de montos y etiquetas traducibles");
+assert.match(home, /isTransfer \? <View[\s\S]*SpaceTransferAmounts[\s\S]*transfer\.sentToFamily[\s\S]*transfer\.sentToBox/, "Inicio distingue la transferencia con sus montos y hora guardada");
 assert.match(detail, /transfer\.notIncomeExpense/, "el detalle explica que una transferencia no es ingreso ni gasto");
 assert.match(history, /filter === "transfer" \? Boolean\(t\.internalTransfer\)/, "el filtro separa transferencias de ingresos y gastos");
 assert.match(controls, /"transferencia"[\s\S]*SpaceTransferFilter/, "Familia y Caja comparten un filtro exclusivo de transferencias");
-assert.match(home, /compactPersonalTransferRows\(monthTx\)/, "Inicio agrupa transferencias por familia o caja");
+assert.match(home, /movementRowsByDay\(monthTx[\s\S]*compactPersonalTransferRows\(dayItems\)/, "Inicio agrupa transferencias por destino dentro de cada día");
 assert.match(history, /filter === "all"[\s\S]*compactPersonalTransferRows/, "Historial agrupa por defecto y conserva el filtro con el detalle completo");
 
 for (const [nombre, codigo] of [["Familia", family], ["Caja", boxes], ["Caja compartida", sharedBoxes]]) {

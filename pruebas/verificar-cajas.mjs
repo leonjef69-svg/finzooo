@@ -86,7 +86,7 @@ assert.match(screen, /canSpendFromSpace\(movimientos, valor\)/, "una caja impide
 assert.equal((screen.match(/width: "48%", height: 40/g) || []).length, 2, "Agregar dinero y Cerrar caja ocupan exactamente el mismo ancho y alto");
 assert.ok(screen.indexOf("boxes.returnAmount") < screen.indexOf("width: \"48%\", height: 40"), "Devolver dinero aparece encima de Agregar dinero y Cerrar caja");
 assert.match(screen, /planSpaceMovementDeletion\(movimientos, ids\)/, "Caja usa el plan compartido que valida y ordena el borrado de aportes y devoluciones");
-assert.match(screen, /movementIdsForCompactRow\(\{ key, item, transferGroup \}, visibles\)/, "la tarjeta agrupada selecciona todos sus movimientos enlazados");
+assert.match(screen, /movementIdsForCompactRow\(row, visibles\)/, "la tarjeta conserva el grupo de su día al seleccionar movimientos enlazados");
 assert.match(screen, /countSelectedCompactRows\(filasVisibles, visibles, seleccionados\)/, "el contador de selección coincide con las tarjetas visibles");
 assert.match(screen, /spaces\.deleteLinkedMovementsMessage/, "la confirmación explica que un aporte y una devolución se guardan por separado");
 assert.match(screen, /Movimientos de caja|boxes\.history/, "el control usa la etiqueta breve de movimientos de caja");

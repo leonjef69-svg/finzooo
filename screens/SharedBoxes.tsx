@@ -1,5 +1,7 @@
 import { SpaceOverviewTotals, SpacePaymentMethod, type MovementFilter } from "@/components/SpaceMovementControls";
 import SpaceTransferAmounts from "@/components/SpaceTransferAmounts";
+import MovementDateHeader from "@/components/MovementDateHeader";
+import { movementRowsByDay, startsMovementDay, linkedMovementRowTime } from "@/utils/movementDates";
 import SpaceInvitationSheet from "@/components/SpaceInvitationSheet";
 import ContentReportButton from "@/components/ContentReportButton";
 import { methodLabel } from "@/constants/i18n";
@@ -32,7 +34,7 @@ export default function SharedBoxes() {
 }
 
 function SharedBoxesForAccount({ uid }: { uid: string }) {
-  const { t, userCurrency, isPremium, userName, showToast, budgets, carryoverCleared, transactions, addOrUpdateTransaction, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
+  const { t, monthNames, userCurrency, isPremium, userName, showToast, budgets, carryoverCleared, transactions, addOrUpdateTransaction, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
   const saldoPersonalEn = (fecha: string) => disponiblePersonalEnFecha(fecha, budgets, transactions, carryoverCleared);
   const insets = useSafeAreaInsets();
   const { join, boxId, invitation: invitationInicial } = useLocalSearchParams<{ join?: string; boxId?: string; invitation?: string }>();
@@ -142,9 +144,9 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
   const transferLedger = useMemo(() => linkedTransferLedger(movimientos), [movimientos]);
   const visibles = movimientos.filter(item => !filter
     || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter));
-  const filasVisibles = filter
-    ? visibles.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }))
-    : compactLinkedTransferRows(visibles);
+  const filasVisibles = movementRowsByDay(visibles, item => item.fecha, dayItems => filter
+    ? dayItems.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }))
+    : compactLinkedTransferRows(dayItems));
   const owner = caja?.ownerUid === uid;
   const saldo = movimientos.reduce((sum, item) => sum + (item.tipo === "ingreso" ? item.monto : -item.monto), 0);
   const devolvibleAPersonal = returnableToPersonal(movimientos, uid);
@@ -322,12 +324,14 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
           <View className="flex-row gap-2">{boton(t("common.cancel"), limpiar)}{boton(busy ? t("common.loading") : t("common.save"), guardar)}</View>
         </View> : null}
         {caja && filasVisibles.length === 0 ? <Text className="py-3 text-sm text-slate-500">{t("spaces.noResults")}</Text> : null}
-        {caja ? filasVisibles.slice(0, movementLimit).map(({ key, item, transferGroup }) => {
+        {caja ? filasVisibles.slice(0, movementLimit).map((row, index) => {
+          const { key, item, transferGroup } = row;
+          const rowTime = linkedMovementRowTime(row);
           const puedeBorrar = item.personalOwnerUid ? item.personalOwnerUid === uid : owner || item.creadoPor === uid;
           const puedeEditarAporte = item.tipo === "ingreso" && item.personalOwnerUid === uid && item.personalTransactionId != null;
           const transferencia = isLinkedSpaceTransfer(item);
           const retorno = isLinkedSpaceReturn(item);
-          return <View key={key} className="mb-2 rounded-xl border border-slate-200 p-3 dark:border-noche-borde"><View className="flex-row items-center gap-2">{transferencia ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("transfer.filter")} disabled={!transferGroup} onPress={() => setFilter("transferencia")} className="h-9 w-9 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-950"><ArrowRightLeft size={17} color="#2563eb" /></TouchableOpacity> : null}{transferencia ? <View className="flex-1"><SpaceTransferAmounts title={caja.nombre} sentLabel={t("boxes.receivedFromPersonal")} returnedLabel={t("boxes.returnedToPersonal")} sent={transferGroup?.sent ?? (retorno ? 0 : item.monto)} returned={transferGroup?.returned ?? (retorno ? item.monto : 0)} format={fmt} /></View> : <View className="flex-1"><View className="flex-row gap-3"><Text numberOfLines={1} className="flex-1 text-base font-bold text-slate-900 dark:text-white">{item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className="max-w-[50%] text-base font-bold text-teal-600">{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></View><Text className="text-xs text-slate-500">{item.fecha}{item.method ? ` · ${methodLabel(item.method, t)}` : ""}</Text></View>}<ContentReportButton key={`${caja.id}:${item.id}`} target={transferencia ? { kind: "box", spaceId: caja.id, targetType: "space", targetId: caja.id, expectedText: caja.nombre.slice(0, 120), expectedUid: caja.ownerUid } : { kind: "box", spaceId: caja.id, targetType: "movement", targetId: item.id, expectedText: item.descripcion.slice(0, 120), expectedUid: item.creadoPor }} />{!transferGroup && puedeEditarAporte ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.editContribution")} onPress={() => { setEditandoAporteId(item.id); setModo("ingreso"); setMonto(String(item.monto)); setNombre(item.descripcion); }} className="h-9 w-9 items-center justify-center"><Pencil size={15} color="#0d9488" /></TouchableOpacity> : null}{!transferGroup && puedeBorrar ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.delete")} onPress={() => void borrar(item)} className="h-9 w-9 items-center justify-center"><Trash2 size={15} color="#e11d48" /></TouchableOpacity> : <View className="h-9 w-9" />}</View></View>;
+          return <View key={key}>{startsMovementDay(filasVisibles, index, row => row.item.fecha) ? <MovementDateHeader date={item.fecha} monthNames={monthNames} /> : null}<View className="mb-2 rounded-xl border border-slate-200 p-3 dark:border-noche-borde"><View className="flex-row items-center gap-2">{transferencia ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("transfer.filter")} disabled={!transferGroup} onPress={() => setFilter("transferencia")} className="h-9 w-9 items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-950"><ArrowRightLeft size={17} color="#2563eb" /></TouchableOpacity> : null}{transferencia ? <View className="flex-1"><SpaceTransferAmounts title={caja.nombre} sentLabel={t("boxes.receivedFromPersonal")} returnedLabel={t("boxes.returnedToPersonal")} sent={transferGroup?.sent ?? (retorno ? 0 : item.monto)} returned={transferGroup?.returned ?? (retorno ? item.monto : 0)} format={fmt} />{rowTime ? <Text className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">{rowTime}</Text> : null}</View> : <View className="flex-1"><View className="flex-row gap-3"><Text numberOfLines={1} className="flex-1 text-base font-bold text-slate-900 dark:text-white">{item.descripcion || t(item.tipo === "ingreso" ? "boxes.income" : "boxes.expense")}</Text><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65} className="max-w-[50%] text-base font-bold text-teal-600">{item.tipo === "ingreso" ? "+" : "-"}{fmt(item.monto)}</Text></View><Text className="text-xs text-slate-500">{[rowTime, item.method ? methodLabel(item.method, t) : ""].filter(Boolean).join(" · ")}</Text></View>}<ContentReportButton key={`${caja.id}:${item.id}`} target={transferencia ? { kind: "box", spaceId: caja.id, targetType: "space", targetId: caja.id, expectedText: caja.nombre.slice(0, 120), expectedUid: caja.ownerUid } : { kind: "box", spaceId: caja.id, targetType: "movement", targetId: item.id, expectedText: item.descripcion.slice(0, 120), expectedUid: item.creadoPor }} />{!transferGroup && puedeEditarAporte ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.editContribution")} onPress={() => { setEditandoAporteId(item.id); setModo("ingreso"); setMonto(String(item.monto)); setNombre(item.descripcion); }} className="h-9 w-9 items-center justify-center"><Pencil size={15} color="#0d9488" /></TouchableOpacity> : null}{!transferGroup && puedeBorrar ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.delete")} onPress={() => void borrar(item)} className="h-9 w-9 items-center justify-center"><Trash2 size={15} color="#e11d48" /></TouchableOpacity> : <View className="h-9 w-9" />}</View></View></View>;
         }) : null}
         {caja && !owner ? <TouchableOpacity onPress={salir} className="mt-3 min-h-11 flex-row items-center justify-center gap-2"><LogOut size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("boxes.leave")}</Text></TouchableOpacity> : null}
         {caja && owner ? <TouchableOpacity onPress={cerrar} className="mt-3 min-h-11 flex-row items-center justify-center gap-2"><Trash2 size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("boxes.close")}</Text></TouchableOpacity> : null}

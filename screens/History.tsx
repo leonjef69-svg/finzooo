@@ -7,12 +7,14 @@ import Anuncio from "@/components/Anuncio";
 import EtiquetaMetodo from "@/components/EtiquetaMetodo";
 import IconBadge from "@/components/IconBadge";
 import MonthSelector from "@/components/MonthSelector";
+import MovementDateHeader from "@/components/MovementDateHeader";
 import { catInfo } from "@/constants/categories";
 import { iconoDe } from "@/constants/iconos";
 import { esFoto } from "@/utils/iconosFavoritos";
 import { methodLabel } from "@/constants/i18n";
 import { CARD_SHADOW } from "@/constants/style";
-import { fmtDate, monthKey } from "@/utils/format";
+import { monthKey } from "@/utils/format";
+import { movementRowsByDay, personalMovementRowTime } from "@/utils/movementDates";
 import { parseAmountInput, sanitizeAmountInput } from "@/utils/amount";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { compactPersonalTransferRows, personalTransferStatuses, type TransferGroupSummary, type TransferStatus } from "@/utils/linkedTransfers";
@@ -28,7 +30,7 @@ import { useLocalSearchParams } from "expo-router";
    después. La pantalla se abre igual de rápido con 20 movimientos que con 2000. */
 type Renglon =
   | { clave: string; tipo: "fecha"; fecha: string }
-  | { clave: string; tipo: "fila"; tx: Transaction; transferGroup?: TransferGroupSummary };
+  | { clave: string; tipo: "fila"; tx: Transaction; transferGroup?: TransferGroupSummary; timeLabel?: string };
 
 /* La fila se declara FUERA del componente y memoizada. Dentro se volvería a crear en cada
    dibujado y React la trataría como un tipo distinto cada vez: tiraría todas las filas y
@@ -42,7 +44,7 @@ const Fila = memo(function Fila({
   transferStatus,
   transferGroup,
   onOpenTransferGroup,
-  monthNames,
+  timeLabel,
 }: {
   tx: Transaction;
   fmt: (n: number) => string;
@@ -52,7 +54,7 @@ const Fila = memo(function Fila({
   transferStatus?: TransferStatus;
   transferGroup?: TransferGroupSummary;
   onOpenTransferGroup: () => void;
-  monthNames: string[];
+  timeLabel?: string;
 }) {
   const c = catInfo(tx.category);
   const isTransfer = Boolean(tx.internalTransfer);
@@ -86,10 +88,11 @@ const Fila = memo(function Fila({
         >
           {title}
         </Text>
-        {/* Fecha y hora debajo del nombre; la categoría acompaña visualmente al monto. */}
-        <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#f1f5f9" : "#64748b" }} numberOfLines={1}>
-          {isTransfer ? `${t("transfer.internal")} · ${t(`transfer.${transferGroup?.status || transferStatus || (tx.type === "income" ? "returned" : "pending")}`)}` : `${fmtDate(tx.date, monthNames)}${tx.time ? ` · ${tx.time}` : ""}`}
-        </Text>
+        {/* Solo hora/estado; el día se muestra una vez fuera de las tarjetas. */}
+        {isTransfer || tx.time ? <Text className="mt-0.5 text-[11px]" style={{ color: oscuro ? "#f1f5f9" : "#64748b" }} numberOfLines={1}>
+          {isTransfer ? `${t("transfer.internal")} · ${t(`transfer.${transferGroup?.status || transferStatus || (tx.type === "income" ? "returned" : "pending")}`)}` : timeLabel ?? tx.time}
+        </Text> : null}
+        {isTransfer && (timeLabel || tx.time) ? <Text className="mt-0.5 text-[11px] text-slate-500 dark:text-slate-300">{timeLabel ?? tx.time}</Text> : null}
       </View>
       <View className="items-end self-stretch justify-start">
         <Text
@@ -206,17 +209,18 @@ export default function History({
         return haystack.includes(query);
       })
       .sort(compararMovimientos);
-    const compactRows = filter === "all"
-      ? compactPersonalTransferRows(monthTx)
-      : monthTx.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }));
+    const compactRows = movementRowsByDay(monthTx, item => item.date, dayItems => filter === "all"
+      ? compactPersonalTransferRows(dayItems)
+      : dayItems.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined })));
     const salida: Renglon[] = [];
     let ultimaFecha = "";
-    compactRows.forEach(({ key, item: tx, transferGroup }) => {
+    compactRows.forEach(row => {
+      const { key, item: tx, transferGroup } = row;
       if (tx.date !== ultimaFecha) {
         ultimaFecha = tx.date;
         salida.push({ clave: `f:${tx.date}`, tipo: "fecha", fecha: tx.date });
       }
-      salida.push({ clave: key, tipo: "fila", tx, transferGroup });
+      salida.push({ clave: key, tipo: "fila", tx, transferGroup, timeLabel: personalMovementRowTime(row) });
     });
     return salida;
   }, [allMonthTx, transactions, filter, search, categoryFilter, minAmount, maxAmount, parsedMinAmount, parsedMaxAmount, fmt, t]);
@@ -224,12 +228,10 @@ export default function History({
   const dibujar = useCallback(
     ({ item }: { item: Renglon }) =>
       item.tipo === "fecha" ? (
-        <Text className="px-5 text-xs font-bold text-slate-500 dark:text-slate-300 mb-2 mt-3">
-          {fmtDate(item.fecha, monthNames)}
-        </Text>
+        <MovementDateHeader date={item.fecha} monthNames={monthNames} inset />
       ) : (
         <View className="px-5">
-          <Fila tx={item.tx} fmt={fmt} t={t} oscuro={oscuro} monthNames={monthNames} onOpenDetail={onOpenDetail} onOpenTransferGroup={() => setFilter("transfer")} transferStatus={item.tx.type === "income" && item.tx.internalTransfer ? "returned" : transferStatuses.get(item.tx.id)} transferGroup={item.transferGroup} />
+          <Fila tx={item.tx} fmt={fmt} t={t} oscuro={oscuro} onOpenDetail={onOpenDetail} onOpenTransferGroup={() => setFilter("transfer")} transferStatus={item.tx.type === "income" && item.tx.internalTransfer ? "returned" : transferStatuses.get(item.tx.id)} transferGroup={item.transferGroup} timeLabel={item.timeLabel} />
         </View>
       ),
     [fmt, t, oscuro, onOpenDetail, monthNames, transferStatuses]
