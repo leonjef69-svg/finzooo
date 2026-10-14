@@ -1053,7 +1053,7 @@ console.log("\n--- Y LA APP DE VERDAD LO USA ---");
   // esa puerta no habria forma de crear una.
   const pant = fs.readFileSync(path.join(RAIZ, "screens/NuevaCategoria.tsx"), "utf8");
   ok(pant.includes("gastosDisponibles"), "la pantalla de crear tambien lista las propias");
-  ok(add.includes("/nueva-categoria"), "y se llega a ella desde el movimiento");
+  ok(add.includes("TransactionCategorySheet"), "el movimiento conserva la creación dentro de su selector");
 
   const ctx = fs.readFileSync(path.join(RAIZ, "contexts/AppDataContext.tsx"), "utf8");
   ok(ctx.includes("savePropias"), "el contexto las guarda en disco");

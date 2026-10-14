@@ -1,5 +1,17 @@
 # Entregas de Fino
 
+## 14/10/2026 — Selector sin Personalizar; desarrollo local
+
+Marca 14oct-selector-simple: se retira el acceso Personalizar del selector
+de movimiento; Nueva categoría crece a todo el ancho. Categorías, iconos,
+creación/cierre y datos conservados. Guía SELECTOR_CATEGORIA_SIMPLE.
+TypeScript/ESLint y 217 pruebas/8 auditores verdes sin tarjetas (una suite
+local ajena; 216 previstas Git limpio). Regresión a6fa7a6 roja por botón
+antiguo visible; original actual verde sin crear categorías reales.
+Android confirma selector y Nueva sin guardar. Qué sigue/falta:
+físico/letra grande/TalkBack. Sin
+APK/AAB/OTA/Play, nativo ni servicios remotos; Telegram permanece en pausa.
+
 ## 14/10/2026 — Movimientos por día y hora real; desarrollo local
 
 Marca 14oct-movimientos-por-dia: fecha encima de cada día, sin repetirla en

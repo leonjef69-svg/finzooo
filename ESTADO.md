@@ -1,5 +1,20 @@
 # Estado actual de Fino
 
+## Categorías — 14/10/2026 — selector sin Personalizar
+
+Se retira el botón Personalizar categorías señalado en Inicio; Nueva
+categoría queda a todo el ancho. Selección, creación dentro de la hoja,
+foto opcional y cierre conservados. Sin borrar categorías/personalizaciones,
+movimientos ni rutas de compatibilidad. Sin cambios de hora o de Ajustes.
+Marca 14oct-selector-simple; docs/SELECTOR_CATEGORIA_SIMPLE.md.
+Original/JSX: elegir, cerrar y crear gasto/ingreso comprobados con IO adaptado.
+Regresión a6fa7a6 roja por botón visible; actual verde. TypeScript/ESLint y
+217 pruebas/8 auditores verdes sin tarjetas (una suite local ajena; 216
+previstas Git limpio). Android confirma selector sin Personalizar y Nueva
+a todo el ancho, abre/regresa sin guardar. Qué sigue/falta: físico,
+letra grande/TalkBack; respaldo remoto separado. No APK/AAB/OTA/Play,
+nativo, reglas o servicios remotos modificados; Telegram sigue en pausa.
+
 ## Movimientos — 14/10/2026 — fecha exterior y hora registrada
 
 Inicio/Historial, Familia, Cajas privadas/compartidas/archivadas y Negocio:

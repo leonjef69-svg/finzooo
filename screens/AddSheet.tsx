@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { irUnaVez } from "@/utils/nav";
 import { Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import Animated, {
   KeyboardState,
@@ -547,10 +546,6 @@ export default function AddSheet({
           selectedId={category}
           onClose={() => setShowCategories(false)}
           onSelect={seleccionarCategoria}
-          onManage={() => {
-            setShowCategories(false);
-            irUnaVez({ pathname: "/nueva-categoria", params: { tipo: type, actual: category } });
-          }}
         />
       ) : null}
 

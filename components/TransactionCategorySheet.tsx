@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import * as ImagePicker from "expo-image-picker";
-import { Camera, Check, ImagePlus, Pencil, Plus, X } from "lucide-react-native";
+import { Camera, Check, ImagePlus, Plus, X } from "lucide-react-native";
 import { BackHandler, Image, Keyboard, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import CategoryAvatar from "@/components/CategoryAvatar";
@@ -16,11 +16,10 @@ type Props = {
   selectedId: string;
   onClose: () => void;
   onSelect: (id: string) => void;
-  onManage?: () => void;
   initialCreate?: boolean;
 };
 
-export default function TransactionCategorySheet({ type, categories, selectedId, onClose, onSelect, onManage, initialCreate = false }: Props) {
+export default function TransactionCategorySheet({ type, categories, selectedId, onClose, onSelect, initialCreate = false }: Props) {
   const { t, categoriasPropias, crearCategoria, showToast } = useAppData();
   const insets = useSafeAreaInsets();
   const [creating, setCreating] = useState(initialCreate);
@@ -215,14 +214,6 @@ export default function TransactionCategorySheet({ type, categories, selectedId,
               </View>
             </ScrollView>
             <View className="flex-row gap-2 px-5 pb-3 pt-2">
-              {onManage ? <TouchableOpacity
-                accessibilityRole="button"
-                onPress={onManage}
-                className="h-12 flex-[0.95] flex-row items-center justify-center gap-1.5 rounded-2xl border border-slate-200 bg-slate-50 dark:border-noche-borde dark:bg-noche-3"
-              >
-                <Pencil size={15} color="#64748b" />
-                <Text numberOfLines={1} className="text-xs font-bold text-slate-700 dark:text-slate-200">{t("catCustom.rowLabel")}</Text>
-              </TouchableOpacity> : null}
               <TouchableOpacity
                 accessibilityRole="button"
                 onPress={() => setCreating(true)}

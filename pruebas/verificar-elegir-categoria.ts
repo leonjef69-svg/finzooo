@@ -2,11 +2,11 @@
 //
 // El formulario tiene una sola fila compacta para elegir categoría. Desde ahí
 // se abre esta hoja inferior, que muestra las categorías disponibles del tipo
-// actual, permite crear una categoría con foto opcional y conserva el acceso a
-// la pantalla para personalizar las categorías existentes.
+// actual y permite crear una categoría con foto opcional. El acceso a
+// personalizar se retiró por petición del propietario el 14/10/2026.
 //
 // Las comprobaciones de abajo protegen que ingreso y gasto no se mezclen, que
-// la categoría elegida se guarde con su icono y que crear/administrar siga
+// la categoría elegida se guarde con su icono y que crear siga
 // conectado al mismo movimiento.
 import fs from "fs";
 import path from "path";
@@ -67,8 +67,8 @@ console.log("\n--- EL SELECTOR DE CATEGORIAS DEL MOVIMIENTO ---");
   ok(selectorLimpio.includes('chooseImage("library")'), "la nueva categoria puede usar una foto de galeria");
   ok(selectorLimpio.includes("<ImageCropper"), "la foto se recorta antes de guardarla");
   ok(
-    /pathname: "\/nueva-categoria",\s*\r?\n?\s*params: \{ tipo: type, actual: category \}/.test(addLimpio),
-    "se conserva el acceso a administrar categorias"
+    !addLimpio.includes("onManage=") && !selectorLimpio.includes('t("catCustom.rowLabel")'),
+    "el selector no muestra el acceso a personalizar retirado por el propietario"
   );
   ok(/setCategory\(id\);[\s\S]{0,100}setIcono\(info\.iconoNombre\)/.test(addLimpio), "al elegir, conserva la categoria y su icono");
   ok(/category,\s*icono,/.test(addLimpio), "el movimiento guarda la categoria y el icono elegidos");
