@@ -13,7 +13,11 @@ type Props = { onGoogle: (current?: EntryOperationGuard, accepted?: boolean) => 
 export default function Onboarding({ onGoogle, onCreateAccount, onLogin }: Props) {
   const { fmt, t } = useAppData();
   const { height, width } = useWindowDimensions();
-  const illustrationHeight = Math.max(180, Math.min(390, height * (height < 720 ? 0.34 : 0.44)));
+  const illustrationHeight = Math.max(180, Math.min(430, height * (height < 720 ? 0.34 : 0.47)));
+  const contentWidth = Math.min(width, 460) - 46;
+  const cardWidth = Math.min(132, (contentWidth - 44) / 2);
+  const budgetCardWidth = Math.min(145, (contentWidth - 44) / 2);
+  const personWidth = Math.min(262, illustrationHeight * 0.87, contentWidth * 0.72);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState("");
   const [legalAccepted, setLegalAccepted] = useState(false);
@@ -67,17 +71,17 @@ export default function Onboarding({ onGoogle, onCreateAccount, onLogin }: Props
 
   return (
     <View style={{ flex: 1 }}>
-      <EntryScreen center contentStyle={{ paddingTop: 0 }}>
+      <EntryScreen contentStyle={{ paddingTop: 0 }}>
         <View style={{ height: illustrationHeight, marginBottom: 16 }}>
-          <View style={{ position: "absolute", width: 194, height: 182, backgroundColor: ENTRY_COLORS.soft, borderRadius: 90, alignSelf: "center", top: 35 }} />
-          <Image source={require("../assets/images/onboarding/fino-welcome-person.webp")} resizeMode="contain" style={{ position: "absolute", height: "100%", width: Math.min(220, illustrationHeight * 0.78), alignSelf: "center", bottom: 0 }} />
-          <View style={{ position: "absolute", left: 0, top: 30, transform: [{ rotate: "-5deg" }] }}><Feature icon={<BusFront size={16} color={ENTRY_COLORS.olive} />} title={t("entry.bus")} subtitle={`− ${fmt(2.5)}`} /></View>
-          <View style={{ position: "absolute", right: 0, top: 13, transform: [{ rotate: "5deg" }] }}><Feature icon={<Utensils size={16} color={ENTRY_COLORS.olive} />} title={t("onboarding.food")} subtitle={`− ${fmt(18.5)}`} /></View>
-          <View style={{ position: "absolute", left: 0, bottom: 38, transform: [{ rotate: "-3deg" }] }}><Feature wide icon={<ChartPie size={16} color={ENTRY_COLORS.olive} />} title={t("onboarding.budget")} subtitle={t("entry.thisMonth")} /></View>
-          <View style={{ position: "absolute", right: 0, bottom: 13, transform: [{ rotate: "3deg" }] }}><Feature icon={<PiggyBank size={16} color={ENTRY_COLORS.olive} />} title={t("onboarding.savings")} subtitle={`+ ${fmt(20)}`} /></View>
+          <View style={{ position: "absolute", width: Math.min(238, contentWidth * 0.76), height: Math.min(230, illustrationHeight - 35), backgroundColor: ENTRY_COLORS.soft, borderRadius: 120, alignSelf: "center", top: 35 }} />
+          <Image source={require("../assets/images/onboarding/fino-welcome-person.webp")} resizeMode="contain" style={{ position: "absolute", height: "100%", width: personWidth, alignSelf: "center", bottom: 0 }} />
+          <View style={{ position: "absolute", left: 14, top: 30, transform: [{ rotate: "-5deg" }] }}><Feature width={cardWidth} icon={<BusFront size={18} color={ENTRY_COLORS.olive} />} title={t("entry.bus")} subtitle={`− ${fmt(2.5)}`} /></View>
+          <View style={{ position: "absolute", right: 14, top: 13, transform: [{ rotate: "5deg" }] }}><Feature width={cardWidth} icon={<Utensils size={18} color={ENTRY_COLORS.olive} />} title={t("onboarding.food")} subtitle={`− ${fmt(18.5)}`} /></View>
+          <View style={{ position: "absolute", left: 14, bottom: 38, transform: [{ rotate: "-3deg" }] }}><Feature width={budgetCardWidth} icon={<ChartPie size={18} color={ENTRY_COLORS.olive} />} title={t("onboarding.budget")} subtitle={t("entry.thisMonth")} /></View>
+          <View style={{ position: "absolute", right: 14, bottom: 13, transform: [{ rotate: "3deg" }] }}><Feature width={cardWidth} icon={<PiggyBank size={18} color={ENTRY_COLORS.olive} />} title={t("onboarding.savings")} subtitle={`+ ${fmt(20)}`} /></View>
         </View>
         <Text style={[entryStyles.title, { fontSize: width < 350 ? 28 : 31, lineHeight: width < 350 ? 32 : 35, textAlign: "center" }]}>{t("onboarding.tagline")}</Text>
-        <Text style={[entryStyles.subtitle, { textAlign: "center", marginBottom: 12 }]}>{t("onboarding.subtitle")}</Text>
+        <Text style={[entryStyles.subtitle, { fontSize: 16, lineHeight: 24, textAlign: "center", marginBottom: 12 }]}>{t("onboarding.subtitle")}</Text>
         <View style={{ paddingTop: 18 }}>
         <EntryButton label={t("onboarding.createAccount")} onPress={() => navigate(onCreateAccount)} disabled={googleLoading || navigating} />
         {Platform.OS === "android" ? <GoogleButton label={t("onboarding.continueGoogle")} onPress={continueWithGoogle} loading={googleLoading} disabled={navigating} warm light /> : null}
@@ -94,11 +98,11 @@ export default function Onboarding({ onGoogle, onCreateAccount, onLogin }: Props
   );
 }
 
-function Feature({ icon, title, subtitle, wide = false }: { icon: ReactNode; title: string; subtitle: string; wide?: boolean }) {
+function Feature({ icon, title, subtitle, width }: { icon: ReactNode; title: string; subtitle: string; width: number }) {
   return (
-    <View style={{ width: wide ? 128 : 111, minHeight: 52, flexDirection: "row", alignItems: "center", gap: 6, borderWidth: 1, borderColor: ENTRY_COLORS.line, borderRadius: 14, backgroundColor: ENTRY_COLORS.paper, padding: 8 }}>
-      <View style={{ width: 25, height: 25, backgroundColor: ENTRY_COLORS.soft, borderRadius: 9, alignItems: "center", justifyContent: "center" }}>{icon}</View>
-      <View style={{ flex: 1 }}><Text numberOfLines={1} style={{ color: ENTRY_COLORS.ink, fontFamily: ENTRY_FONT.bold, fontSize: 11 }}>{title}</Text><Text numberOfLines={1} style={{ color: ENTRY_COLORS.muted, fontFamily: ENTRY_FONT.regular, fontSize: 11 }}>{subtitle}</Text></View>
+    <View style={{ width, minHeight: 60, flexDirection: "row", alignItems: "center", gap: 7, borderWidth: 1, borderColor: ENTRY_COLORS.line, borderRadius: 15, backgroundColor: ENTRY_COLORS.paper, padding: 9 }}>
+      <View style={{ width: 28, height: 28, backgroundColor: ENTRY_COLORS.soft, borderRadius: 10, alignItems: "center", justifyContent: "center" }}>{icon}</View>
+      <View style={{ flex: 1 }}><Text numberOfLines={2} style={{ color: ENTRY_COLORS.ink, fontFamily: ENTRY_FONT.bold, fontSize: 13.5 }}>{title}</Text><Text numberOfLines={1} style={{ color: ENTRY_COLORS.muted, fontFamily: ENTRY_FONT.regular, fontSize: 13 }}>{subtitle}</Text></View>
     </View>
   );
 }

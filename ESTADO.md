@@ -1,5 +1,16 @@
 # Estado actual de Fino
 
+## Bienvenida — 13/10/2026 — proporciones y margen lateral
+
+Ajuste visual solicitado: menos hueco bajo Fino, persona y tarjetas mayores,
+letras de nombres/montos más claras, subtítulo 16 y tarjetas hacia dentro.
+Anchos limitados por pantalla, conservando margen incluso con la inclinación.
+No cambia botones, sesión, navegación ni datos. Marca:
+13oct-bienvenida-equilibrada. Prueba original/JSX en cinco tamaños y regresión
+roja 3f5d5b4 por comportamiento; resultados y límites en docs/ENTRADA_UI_CALIDA.md.
+Qué sigue/falta: letra grande/transiciones en teléfono físico y el recorrido
+de acceso/copia local ya pendiente. Sin APK/AAB/OTA/Play ni cambios remotos.
+
 ## Entrada cálida — 13/10/2026 — desarrollo, no publicación
 
 Rutas actuales renovadas: Bienvenida, Registro, Login/recuperación, Configuración,

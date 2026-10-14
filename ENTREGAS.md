@@ -1,5 +1,13 @@
 # Entregas de Fino
 
+## 13/10/2026 — Proporciones de Bienvenida; desarrollo local
+
+Marca 13oct-bienvenida-equilibrada: persona/tarjetas/subtítulo mayores, menor
+hueco bajo Fino y margen lateral más amplio. Sin cambiar acceso ni datos.
+Regresión original/JSX roja 3f5d5b4 y verde actual; guía ENTRADA_UI_CALIDA.
+Qué sigue/falta: comprobación en teléfono físico y acceso/copia protegida
+pendiente. Sin APK/AAB/OTA/Play ni Firebase/Telegram/nativo.
+
 ## 13/10/2026 — Entrada cálida, revisión local; NO entrega de Play
 
 Marca 13oct-entrada-calida: diseño aprobado en las rutas reales, presupuesto

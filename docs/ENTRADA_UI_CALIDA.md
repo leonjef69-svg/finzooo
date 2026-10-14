@@ -1,5 +1,25 @@
 # Entrada cálida — 13/10/2026
 
+## Ajuste posterior: proporciones de Bienvenida
+
+Marca `13oct-bienvenida-equilibrada`: se quitó el centrado vertical solo en
+Bienvenida para reducir el hueco bajo Fino. Persona hasta 262 (antes 220), escena
+hasta 430 (antes 390), tarjetas hasta 132/145 con límites por ancho e inset lateral
+14, nombres 13,5 y montos 13 (antes 11); subtítulo 16/24 (antes 14/21).
+No cambia el título ni las acciones, navegación, sesión o datos.
+TypeScript/ESLint y batería final: 211 pruebas/8 auditores aprobados, sin
+tarjetas; el conteo incluye una suite local ajena no versionada.
+Último ajuste visto completo en Android normal. La primera ampliación también
+se vio completa en 360×640; el último intento pequeño agotó la conexión con
+Metro y NO se cuenta como aprobado. Se restauró el tamaño habitual, se comprobó
+HTTP200 del servidor y se renovó adb reverse: Android abrió el ajuste final.
+No se borraron datos. Prueba nueva ejecuta JSX original en cinco tamaños y valida
+proporciones, márgenes e inclinaciones: verde actual/roja en 3f5d5b4 por el
+hueco superior, no por una API ausente. No mide FPS ni certifica todas las marcas.
+Qué sigue/falta: última versión visual pequeña, prueba física de letra
+grande/transiciones y el recorrido
+pendiente de acceso/copia local registrado abajo. Sin APK/OTA/publicación.
+
 Implementación en las rutas reales existentes, no en otro navegador ni en una
 capa encima del recorrido anterior. Marca: `13oct-entrada-calida`.
 
