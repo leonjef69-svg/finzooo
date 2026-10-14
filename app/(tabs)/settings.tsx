@@ -8,10 +8,7 @@ import { useAppData } from "@/contexts/AppDataContext";
 export default function SettingsTab() {
   const cerrandoSesion = useRef(false);
   const {
-    userName,
     userEmail,
-    userPhoto,
-    updateProfileInfo,
     userCurrency,
     userLanguage,
     isPremium,
@@ -49,10 +46,7 @@ export default function SettingsTab() {
 
   return (
     <Settings
-      userName={userName}
       userEmail={userEmail}
-      userPhoto={userPhoto}
-      onSaveProfile={updateProfileInfo}
       userCurrency={userCurrency}
       onCurrency={() => irUnaVez("/currency")}
       userLanguage={userLanguage}
@@ -60,7 +54,6 @@ export default function SettingsTab() {
       isPremium={isPremium}
       isTesterPremium={isTesterPremium}
       onCategoryBudgets={() => irUnaVez("/category-budgets")}
-      onCategoryStyle={() => irUnaVez("/category-style")}
       onExportPdf={() => irUnaVez("/export-pdf")}
       onScheduledExport={() => irUnaVez("/scheduled-export")}
       onImport={() => irUnaVez("/import")}

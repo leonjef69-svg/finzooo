@@ -1,5 +1,25 @@
 # Estado actual de Fino
 
+## Ajustes — 14/10/2026 — agrupados y con Pro visible
+
+Encabezado Ajustes en los tres idiomas. Pro arriba, tarjeta completa
+táctil y título mayor; sin etiqueta Gratis ni tarjeta/editores de foto y
+nombre. Correo discreto en Cuenta; los datos antiguos no se borran.
+Seis tarjetas por tema con accesos directos y etiquetas Pro: personalizar,
+finanzas, datos/respaldo, registro/atajos, cuenta/seguridad e información.
+Iconos vectoriales 26 y colores de la apariencia, sin imágenes/animaciones
+continuas nuevas. Mismos destinos, condiciones Pro/país/proveedor y
+confirmaciones de cierre/eliminación. Aviso real del respaldo conservado.
+Marca 14oct-ajustes-ordenados; guía docs/AJUSTES_AGRUPADOS.md.
+TypeScript/ESLint y 214 pruebas/8 auditores verdes sin tarjetas (una suite
+local ajena; 213 previstas en Git limpio, no otro checkout ejecutado).
+Regresión 7276cdd roja por lista sin grupos y actual verde. Android confirma
+Pro, idioma/moneda sin seleccionar y claro/oscuro; cuenta Google sin fila
+de contraseña. Sin APK/AAB/OTA/Play, nativo, Firebase ni Telegram cambiados.
+Qué sigue/falta: físico, pequeño/letra grande/TalkBack y rechazo remoto
+del respaldo, separado y pendiente de autorización/decisión de servicios.
+No se cierra la auditoría global ni se afirma que la nube ya guarda.
+
 ## Acceso — 14/10/2026 — correo y Google reales recuperados
 
 El ingreso autenticaba pero fallaba al abrir datos: archive-missing. Una

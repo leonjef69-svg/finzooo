@@ -1,5 +1,18 @@
 # Entregas de Fino
 
+## 14/10/2026 — Ajustes agrupados; desarrollo local
+
+Marca 14oct-ajustes-ordenados. Pro visible y legible arriba; seis secciones
+con destinos directos, iconos mayores adaptados a claro/oscuro/estilo y sin
+perfil grande/editor/etiqueta Gratis. Datos conservados, correo en Cuenta;
+las condiciones Pro y el aviso verdadero de respaldo permanecen.
+TypeScript/ESLint, 214 pruebas y 8 auditores verdes sin tarjetas (una suite
+local ajena; 213 previstas Git limpio). Regresión 7276cdd roja por conducta
+anterior. Guía docs/AJUSTES_AGRUPADOS.md. Android confirma entradas a Pro,
+idioma/moneda y apariencias sin cambiar cuenta, dinero ni permisos.
+Qué sigue/falta: físico, pantalla pequeña/letra grande/TalkBack y respaldo
+remoto separado. No APK/AAB/OTA/Play, nativo ni servicios remotos publicados.
+
 ## 14/10/2026 — Ingreso real recuperado; desarrollo local
 
 Marca 14oct-ingreso-cuentas. Corrige el archivo faltante al cambiar desde

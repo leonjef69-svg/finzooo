@@ -1,42 +1,12 @@
-import { useState } from "react";
-import { irUnaVez } from "@/utils/nav";
-import { ActivityIndicator, Image, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { Platform, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import * as ImagePicker from "expo-image-picker";
-import { ImageManipulator, SaveFormat } from "expo-image-manipulator";
-import {
-  CalendarClock,
-  Camera,
-  Check,
-  ChevronRight,
-  Cloud,
-  Crown,
-  FileDown,
-  FileUp,
-  Lock,
-  PiggyBank,
-  PieChart,
-  Coins,
-  Globe2,
-  KeyRound,
-  Pencil,
-  UserX,
-  LogOut,
-  Info,
-  Shield,
-  Store,
-  Zap,
-  Mic,
-  MessageSquare,
-  Moon,
-  Palette,
-  Sun,
-  X,
-} from "lucide-react-native";
+import { CalendarClock, ChevronRight, Cloud, Crown, FileDown, FileUp, Lock, PiggyBank, PieChart, Coins, Globe2, KeyRound, LogOut, UserX, Info, Shield, Store, Zap, Mic, MessageSquare, Moon, Palette, Sun } from "lucide-react-native";
 import * as voiceWidget from "@/modules/voice-widget";
 import { useColorScheme } from "nativewind";
-import Row from "@/components/Row";
+import { irUnaVez } from "@/utils/nav";
+import { ENTRY_FONT } from "@/components/EntryUI";
+import { SettingsRow as Row, SettingsSection, SettingsIcon, settingsColors } from "@/components/SettingsUI";
 import { currencyLabelFor } from "@/constants/currencies";
 import { languageLabelFor } from "@/constants/i18n";
 import { currencyFlagFor, languageFlagFor } from "@/utils/decorativeFlags";
@@ -45,285 +15,57 @@ import { useAppData } from "@/contexts/AppDataContext";
 import { TELEGRAM_ENABLED } from "@/constants/features";
 import { auth } from "@/utils/firebase";
 
-// Achica y comprime la foto antes de guardarla, para que no pese mucho
-// (así se guarda rápido y no ocupa espacio de más en la nube).
-async function compressPhoto(uri: string): Promise<string> {
-  const context = ImageManipulator.manipulate(uri).resize({ width: 240 });
-  const rendered = await context.renderAsync();
-  const saved = await rendered.saveAsync({ base64: true, compress: 0.5, format: SaveFormat.JPEG });
-  return `data:image/jpeg;base64,${saved.base64}`;
-}
-
 export default function Settings({
-  userName,
-  userEmail,
-  userPhoto,
-  onSaveProfile,
-  userCurrency,
-  onCurrency,
-  userLanguage,
-  onLanguage,
-  isPremium,
-  isTesterPremium,
-  onCategoryBudgets,
-  onCategoryStyle,
-  onExportPdf,
-  onScheduledExport,
-  onImport,
-  onAutoCapture,
-  onLogout,
-  onPremium,
-  onSavings,
-  onAppLock,
-  onChangePassword,
-  onDeleteAccount,
-  onAbout,
-  onLegal,
-  onVoiceHelp,
-  onTelegram,
+  userEmail, userCurrency, onCurrency, userLanguage, onLanguage, isPremium,
+  isTesterPremium, onCategoryBudgets, onExportPdf, onScheduledExport, onImport,
+  onAutoCapture, onLogout, onPremium, onSavings, onAppLock, onChangePassword,
+  onDeleteAccount, onAbout, onLegal, onVoiceHelp, onTelegram,
 }: {
-  userName: string;
-  userEmail: string;
-  userPhoto: string | null;
-  onSaveProfile: (name: string, photo: string | null) => void;
-  userCurrency: string;
-  onCurrency: () => void;
-  userLanguage: string;
-  onLanguage: () => void;
-  isPremium: boolean;
-  isTesterPremium: boolean;
-  onCategoryBudgets: () => void;
-  onCategoryStyle: () => void;
-  onExportPdf: () => void;
-  onScheduledExport: () => void;
-  onImport: () => void;
-  onAutoCapture: () => void;
-  onLogout: () => void;
-  onPremium: () => void;
-  onSavings: () => void;
-  onAppLock: () => void;
-  onChangePassword: () => void;
-  onDeleteAccount: () => void;
-  onAbout: () => void;
-  onLegal: () => void;
-  onVoiceHelp: () => void;
-  onTelegram: () => void;
+  userEmail: string; userCurrency: string; onCurrency: () => void;
+  userLanguage: string; onLanguage: () => void; isPremium: boolean; isTesterPremium: boolean;
+  onCategoryBudgets: () => void; onExportPdf: () => void; onScheduledExport: () => void;
+  onImport: () => void; onAutoCapture: () => void; onLogout: () => void;
+  onPremium: () => void; onSavings: () => void; onAppLock: () => void;
+  onChangePassword: () => void; onDeleteAccount: () => void; onAbout: () => void;
+  onLegal: () => void; onVoiceHelp: () => void; onTelegram: () => void;
 }) {
-  const { t, themeMode, updateThemeMode, visualStyle, updateVisualStyle, hasCloudAccount, isPremium: premiumCloud, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios, testerPremiumPendingVerification } =
-    useAppData();
-  /** El negocio que se está quedando con los yapeos, si hay alguno. Ver la fila de abajo. */
+  const { t, themeMode, updateThemeMode, visualStyle, updateVisualStyle, hasCloudAccount, isPremium: premiumCloud, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios, testerPremiumPendingVerification } = useAppData();
+  const { colorScheme } = useColorScheme();
+  const colors = settingsColors(visualStyle, colorScheme === "dark");
+  const insets = useSafeAreaInsets();
   const negocioQueRecibe = negocios.find((n) => n.activo && n.destinoYapes === "negocio");
+  const usaContrasena = auth.currentUser?.providerData.some(provider => provider.providerId === "password") ?? true;
 
-  // Le pide a Android que coloque el widget del micrófono. Si el lanzador
-  // del celular no lo permite (algunos que se instalan aparte no lo
-  // implementan), se explica el camino a mano en vez de dejar la sensación
-  // de que el botón no hizo nada.
   function addWidgetToHomeScreen(variant: voiceWidget.WidgetVariant) {
     const placed = voiceWidget.requestPin(variant);
     if (!placed) showToast(t("widget.manualHint"));
   }
-  const { colorScheme } = useColorScheme();
-  const primaryTextColor = colorScheme === "dark" ? "#f1f5f9" : "#0f172a";
-  // Qué país corresponde al idioma y la moneda puestos. Puede no haber
-  // ninguno si alguien los ajustó por separado a una combinación que no es
-  // de ningún país; ahí la fila sale sin nombre en vez de mentir.
-  const insets = useSafeAreaInsets();
-  const usaContrasena = auth.currentUser?.providerData.some(provider => provider.providerId === "password") ?? true;
-
-  const [pickingPhoto, setPickingPhoto] = useState(false);
-  const [photoError, setPhotoError] = useState("");
-  const [editingName, setEditingName] = useState(false);
-  const [nameInput, setNameInput] = useState(userName);
-  const [nameError, setNameError] = useState("");
-
-  async function pickPhoto() {
-    setPhotoError("");
-    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) {
-      setPhotoError(t("settings.photoPermission"));
-      return;
-    }
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [1, 1],
-      quality: 0.7,
-    });
-    if (result.canceled || !result.assets[0]) return;
-
-    setPickingPhoto(true);
-    try {
-      const compressed = await compressPhoto(result.assets[0].uri);
-      onSaveProfile(userName, compressed);
-    } catch {
-      setPhotoError(t("settings.photoError"));
-    } finally {
-      setPickingPhoto(false);
-    }
-  }
-
-  function startEditName() {
-    setNameInput(userName);
-    setNameError("");
-    setEditingName(true);
-  }
-
-  function saveName() {
-    if (nameInput.trim().length < 2) {
-      setNameError(t("settings.nameError"));
-      return;
-    }
-    onSaveProfile(nameInput.trim(), userPhoto);
-    setEditingName(false);
-  }
 
   return (
-    <ScrollView
-      className="flex-1 bg-white dark:bg-noche"
-      contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 112 }}
-      keyboardShouldPersistTaps="handled"
-      automaticallyAdjustKeyboardInsets
-    >
-      <View className="px-5 pt-3 pb-1 flex-row items-center justify-between">
-        <Text className="text-xl font-extrabold" style={{ color: primaryTextColor }}>{t("settings.title")}</Text>
-      </View>
+    <ScrollView className="flex-1 bg-slate-50 dark:bg-noche"
+      contentContainerStyle={{ paddingTop: insets.top, paddingBottom: 112 + insets.bottom }}
+      keyboardShouldPersistTaps="handled" automaticallyAdjustKeyboardInsets>
+      <View style={{ width: "100%", maxWidth: 560, alignSelf: "center" }}>
+        <Text accessibilityRole="header" style={{ fontFamily: ENTRY_FONT.bold, fontSize: 26, color: colors.text, marginHorizontal: 20, marginTop: 12, marginBottom: 12 }}>{t("settings.title")}</Text>
 
-      {/* LA TARJETA DEL PERFIL, EN HORIZONTAL (12/08/2026).
-
-          Reportado con la captura: *"muy grande ese recuadro con la foto pequeña, se ve raro"*.
-          Y era exactamente eso: la foto, el nombre y el correo iban centrados uno debajo de
-          otro, así que la tarjeta medía casi lo mismo que las cinco filas de Ajustes juntas y
-          la mayor parte era aire alrededor de una foto de 80 px.
-
-          Puestos en fila —foto a la izquierda, nombre y correo al lado— la tarjeta baja a la
-          mitad de alto y la foto deja de verse perdida. No se quita nada: siguen estando la
-          cámara para cambiarla, el lápiz para el nombre y los dos avisos de error. */}
-      <View className="mx-5 mt-2.5 bg-white dark:bg-noche-2 rounded-2xl px-3 py-2.5 border-[1.5px] border-slate-200 dark:border-noche-borde">
-        <View className="flex-row items-center gap-3">
-          <TouchableOpacity onPress={pickPhoto} disabled={pickingPhoto} activeOpacity={0.8}>
-            <View className="w-[62px] h-[62px] rounded-full bg-emerald-600 items-center justify-center overflow-hidden">
-              {userPhoto ? (
-                <Image source={{ uri: userPhoto }} style={{ width: 62, height: 62 }} />
-              ) : (
-                <Text className="text-white text-xl font-extrabold">{userName[0]}</Text>
-              )}
+        <TouchableOpacity onPress={onPremium} accessibilityRole="button"
+          accessibilityLabel={t("settings.proEntryTitle")} activeOpacity={0.85}
+          style={{ marginHorizontal: 16, borderRadius: 22, overflow: "hidden", borderWidth: 1, borderColor: colors.proBorder }}>
+          <LinearGradient colors={colors.proGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
+            style={{ flexDirection: "row", alignItems: "center", gap: 13, paddingHorizontal: 16, paddingVertical: 16, minHeight: 88 }}>
+            <View style={{ width: 48, height: 48, borderRadius: 16, backgroundColor: colors.proIconBackground, alignItems: "center", justifyContent: "center" }}>
+              <Crown size={30} strokeWidth={2.2} color={colors.proText} fill={colors.proFill} />
             </View>
-            <View className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-slate-900 items-center justify-center border-2 border-white">
-              {pickingPhoto ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Camera size={12} color="#ffffff" />
-              )}
+            <View style={{ flex: 1, minWidth: 0 }}>
+              <Text style={{ fontFamily: ENTRY_FONT.bold, fontSize: 21, lineHeight: 27, color: colors.proText }}>
+                {isTesterPremium ? t("settings.testerPremiumActive") : isPremium ? t("settings.premiumActive") : t("settings.proEntryTitle")}
+              </Text>
+              <Text style={{ fontFamily: ENTRY_FONT.medium, fontSize: 14, lineHeight: 20, color: colors.proText, marginTop: 2 }}>{t("settings.proEntryHint")}</Text>
             </View>
-          </TouchableOpacity>
-
-          {/* EL NOMBRE CENTRADO Y EL LÁPIZ A UN LADO (12/08/2026).
-
-              Pedido suyo. Antes el lápiz iba pegado al nombre, dentro de la misma fila, así que
-              el nombre no podía centrarse: quedaba corrido hacia la izquierda por el ancho del
-              botón. Sacando el lápiz al borde de la tarjeta, el centro es el centro de verdad y
-              el botón sigue a la vista sin meterse en medio.
-
-              min-w-0 NO ES ADORNO: sin él, un nombre o un correo largo empujan la tarjeta fuera
-              de la pantalla en vez de recortarse con puntos suspensivos. */}
-          <View className="flex-1 min-w-0">
-            {editingName ? (
-              /* AL EDITAR, TODO DEL MISMO TAMAÑO QUE AL MIRAR. El nombre pasaba de 18 a 14 y los
-                 botones de 32 a 28, así que la tarjeta se encogía justo al entrar a escribir. */
-              <View className="flex-row items-center gap-2">
-                <TextInput
-                  disableFullscreenUI                  value={nameInput}
-                  onChangeText={setNameInput}
-                  placeholder={t("settings.namePlaceholder")}
-                  autoFocus
-                  className="flex-1 text-lg font-bold border-b border-emerald-400 py-1"
-                  style={{ color: primaryTextColor }}
-                />
-                <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.save")}
-                  onPress={saveName}
-                  hitSlop={6}
-                  className="w-9 h-9 rounded-full bg-emerald-600 items-center justify-center"
-                >
-                  <Check size={17} color="#ffffff" />
-                </TouchableOpacity>
-                <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.cancel")}
-                  onPress={() => setEditingName(false)}
-                  hitSlop={6}
-                  className="w-9 h-9 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
-                >
-                  <X size={17} color="#64748b" />
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <View className="items-center">
-                <Text
-                  className="font-bold text-lg text-center"
-                  numberOfLines={1}
-                  style={{ color: primaryTextColor }}
-                >
-                  {userName}
-                </Text>
-                {userEmail ? (
-                  <Text
-                    className="text-xs text-slate-500 dark:text-slate-300 mt-0.5 text-center"
-                    numberOfLines={1}
-                  >
-                    {userEmail}
-                  </Text>
-                ) : null}
-              </View>
-            )}
-            {nameError ? (
-              <Text className="text-rose-500 text-xs font-medium mt-1 text-center">{nameError}</Text>
-            ) : null}
-          </View>
-
-          {/* EL LÁPIZ, EN EL BORDE. Fuera de la fila del nombre para que el centrado sea real.
-              Al editar desaparece: sus botones —aceptar y cancelar— ya están dentro. */}
-          {!editingName && (
-            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.edit")}
-              onPress={startEditName}
-              hitSlop={10}
-              className="w-8 h-8 rounded-full bg-slate-100 dark:bg-noche-2 items-center justify-center"
-            >
-              <Pencil size={15} color="#64748b" />
-            </TouchableOpacity>
-          )}
-        </View>
-
-        {photoError ? (
-          <Text className="text-rose-500 text-xs font-medium mt-2">{photoError}</Text>
-        ) : null}
-      </View>
-
-      <TouchableOpacity onPress={onPremium} className="mx-5 mt-2.5 rounded-2xl overflow-hidden">
-        <LinearGradient
-          colors={["#fbbf24", "#f59e0b"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          className="flex-row items-center gap-2.5 px-3.5 py-3"
-        >
-          <Crown size={20} color="#ffffff" />
-          <View className="flex-1">
-            <Text className="font-extrabold text-white text-sm">
-              {isTesterPremium
-                ? t("settings.testerPremiumActive")
-                : isPremium ? t("settings.premiumActive") : t("settings.becomePremium")}
-            </Text>
-            <Text className="text-xs leading-4 text-amber-50">
-              {isTesterPremium
-                ? t("settings.testerPremiumThanks")
-                : isPremium ? t("settings.premiumThanks") : t("settings.premiumUnlock")}
-            </Text>
-          </View>
-          <ChevronRight size={16} color="#ffffff" />
-        </LinearGradient>
-      </TouchableOpacity>
-      {testerPremiumPendingVerification ? (
-        <Text className="mx-6 mt-1 text-xs text-amber-700 dark:text-amber-300">
-          {t("settings.testerPremiumNeedsConnection")}
-        </Text>
-      ) : null}
+            <ChevronRight size={23} color={colors.proText} />
+          </LinearGradient>
+        </TouchableOpacity>
+        {testerPremiumPendingVerification ? <Text className="mx-5 mt-2 text-sm text-amber-700 dark:text-amber-300">{t("settings.testerPremiumNeedsConnection")}</Text> : null}
 
       {/* EL CARTEL DICE LO QUE DE VERDAD PASO CON LA ULTIMA SUBIDA.
           Hasta el 20/08/2026 solo miraba `isCloudSynced`, que es "hay sesion iniciada" — asi
@@ -334,42 +76,43 @@ export default function Settings({
         <TouchableOpacity
           onPress={onPremium}
           accessibilityRole="button"
-          className="mx-5 mt-2.5 flex-row items-center gap-2.5 rounded-2xl px-3 py-2.5 border-[1.5px] bg-indigo-50 dark:bg-noche-2 border-indigo-100 dark:border-noche-borde"
+          accessibilityLabel={t("settings.backupProTitle")}
+          className="mx-4 mt-2.5 flex-row items-center gap-2.5 rounded-2xl px-3 py-2.5 border-[1.5px] bg-emerald-50 dark:bg-noche-2 border-emerald-100 dark:border-noche-borde"
         >
-          <View className="w-8 h-8 rounded-xl items-center justify-center bg-indigo-100 dark:bg-noche-3">
-            <Cloud size={16} color="#4f46e5" />
+          <View className="w-10 h-10 rounded-xl items-center justify-center bg-emerald-100 dark:bg-noche-3">
+            <Cloud size={24} color={colors.accent} />
           </View>
           <View className="flex-1">
-            <Text className="text-sm font-bold text-indigo-700 dark:text-slate-100">{t("settings.backupProTitle")}</Text>
-            <Text className="text-xs leading-4 text-indigo-600 dark:text-slate-300">{t("settings.backupProHint")}</Text>
+            <Text className="text-base font-bold text-emerald-700 dark:text-slate-100">{t("settings.backupProTitle")}</Text>
+            <Text className="text-sm leading-5 text-emerald-600 dark:text-slate-300">{t("settings.backupProHint")}</Text>
           </View>
-          <ChevronRight size={16} color="#4f46e5" />
+          <ChevronRight size={24} color={colors.accent} />
         </TouchableOpacity>
       ) : hasCloudAccount && premiumCloud ? (
         <View
-          className={`mx-5 mt-2.5 flex-row items-center gap-2.5 rounded-2xl px-3 py-2.5 border-[1.5px] ${
+          className={`mx-4 mt-2.5 flex-row items-center gap-2.5 rounded-2xl px-3 py-2.5 border-[1.5px] ${
             respaldoAlDia
               ? "bg-emerald-50 dark:bg-noche-2 border-emerald-100 dark:border-noche-borde"
               : "bg-amber-50 dark:bg-noche-2 border-amber-200 dark:border-noche-borde"
           }`}
         >
           <View
-            className={`w-8 h-8 rounded-xl items-center justify-center ${
+            className={`w-10 h-10 rounded-xl items-center justify-center ${
               respaldoAlDia ? "bg-emerald-100 dark:bg-noche-3" : "bg-amber-100 dark:bg-noche-3"
             }`}
           >
-            <Cloud size={16} color={respaldoAlDia ? "#059669" : "#d97706"} />
+            <Cloud size={24} color={respaldoAlDia ? colors.accent : colorScheme === "dark" ? "#fcd34d" : "#b45309"} />
           </View>
           <View className="flex-1">
             <Text
-              className={`text-sm font-bold ${
+              className={`text-base font-bold ${
                 respaldoAlDia ? "text-emerald-700 dark:text-slate-100" : "text-amber-700 dark:text-slate-100"
               }`}
             >
               {t(respaldoAlDia ? "settings.backupActive" : "settings.backupFailed")}
             </Text>
             <Text
-              className={`text-xs leading-4 ${
+              className={`text-sm leading-5 ${
                 respaldoAlDia ? "text-emerald-600 dark:text-slate-300" : "text-amber-700 dark:text-slate-300"
               }`}
             >
@@ -404,278 +147,77 @@ export default function Settings({
         </View>
       ) : null}
 
-      <View className="px-5 mt-3.5 gap-2.5">
-        <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 px-1">{t("settings.sectionSettings")}</Text>
-        <Row
-          Icon={PieChart}
-          label={t("categoryBudgets.rowLabel")}
-          onPress={onCategoryBudgets}
-          right={
-            <View className="bg-amber-50 px-2 py-1 rounded-full">
-              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
-            </View>
-          }
-        />
-        <Row
-          Icon={FileDown}
-          label={t("exportPdf.exportDataTitle")}
-          onPress={onExportPdf}
-          right={
-            <View className="bg-amber-50 px-2 py-1 rounded-full">
-              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
-            </View>
-          }
-        />
-        {/* AQUÍ ESTABA "PERSONALIZAR CATEGORÍAS".
-            Quitada a petición del usuario el 03/08/2026: no le servía y
-            ocupaba sitio en un menú ya largo.
 
-            La pantalla NO se borró: sigue en screens/CategoryCustomize y en
-            la ruta /category-style, y lo que cada quien tuviera
-            personalizado se sigue aplicando. Solo se quitó la puerta de
-            entrada, que es lo reversible. */}
-        <Row
-          Icon={CalendarClock}
-          label={t("schedExport.settingsRow")}
-          onPress={onScheduledExport}
-          right={
-            <View className="bg-amber-50 px-2 py-1 rounded-full">
-              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
+        <SettingsSection title={t("settings.sectionPersonalize")}>
+          <Row Icon={Globe2} label={t("settings.language")} hint={languageLabelFor(userLanguage)} onPress={onLanguage}
+            right={<Text accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ fontSize: 22 }}>{languageFlagFor(userLanguage)}</Text>} />
+          <Row Icon={Coins} label={t("settings.currency")} hint={currencyLabelFor(userCurrency, t, userLanguage)} onPress={onCurrency}
+            right={<Text accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ fontSize: 22 }}>{currencyFlagFor(userCurrency)}</Text>} />
+          <Row Icon={themeMode === "dark" ? Moon : Sun} label={t("setup.appearance")}
+            onPress={() => updateThemeMode(themeMode === "dark" ? "light" : "dark")}
+            right={<View style={{ flexDirection: "row", gap: 4 }}>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("setup.lightAppearance")} accessibilityState={{ selected: themeMode === "light" }} onPress={() => updateThemeMode("light")}
+                style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: themeMode === "light" ? colors.iconBackground : colors.soft, alignItems: "center", justifyContent: "center" }}><Sun size={22} color={themeMode === "light" ? colors.accent : colors.muted} /></TouchableOpacity>
+              <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("setup.darkAppearance")} accessibilityState={{ selected: themeMode === "dark" }} onPress={() => updateThemeMode("dark")}
+                style={{ width: 44, height: 44, borderRadius: 12, backgroundColor: themeMode === "dark" ? colors.iconBackground : colors.soft, alignItems: "center", justifyContent: "center" }}><Moon size={22} color={themeMode === "dark" ? colors.accent : colors.muted} /></TouchableOpacity>
+            </View>} />
+          <View style={{ paddingHorizontal: 14, paddingVertical: 12 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 12 }}>
+              <SettingsIcon Icon={Palette} />
+              <Text style={{ flex: 1, fontFamily: ENTRY_FONT.bold, fontSize: 16, color: colors.text }}>{t("settings.visualStyle")}</Text>
             </View>
-          }
-        />
-        <Row
-          Icon={FileUp}
-          label={t("importSheet.rowLabel")}
-          onPress={onImport}
-          right={
-            <View className="bg-amber-50 px-2 py-1 rounded-full">
-              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
+            <View style={{ flexDirection: "row", gap: 6, marginTop: 10 }}>
+              {(["classic", "peachOlive"] as const).map(style => <TouchableOpacity key={style} accessibilityRole="button"
+                accessibilityLabel={t(style === "classic" ? "settings.visualClassic" : "settings.visualPeachOlive")}
+                accessibilityState={{ selected: visualStyle === style }} onPress={() => updateVisualStyle(style)}
+                style={{ flex: 1, minHeight: 44, paddingHorizontal: 8, paddingVertical: 10, borderRadius: 12, borderWidth: 1, borderColor: visualStyle === style ? colors.accent : colors.border, backgroundColor: visualStyle === style ? colors.iconBackground : colors.soft, alignItems: "center", justifyContent: "center" }}>
+                <Text style={{ fontFamily: ENTRY_FONT.medium, fontSize: 13, textAlign: "center", color: visualStyle === style ? colors.accent : colors.muted }}>{t(style === "classic" ? "settings.visualClassic" : "settings.visualPeachOlive")}</Text>
+              </TouchableOpacity>)}
             </View>
-          }
-        />
-        {/* CALENDARIO DE PAGOS. Va antes del Modo Negocio y de la captura porque es de la
-            misma familia —cosas que cambian CÓMO entra y sale el dinero— y porque es la
-            única de las tres que sirve a cualquiera, tenga negocio o no.
-            Sin candado PRO: decisión del 18/08/2026. Es la clase de función que hace volver
-            a abrir la app cada semana, y eso es justo lo que hace falta con la app recién
-            publicada y sin usuarios. */}
-        <Row
-          Icon={CalendarClock}
-          label={t("calendario.titulo")}
-          onPress={() => irUnaVez("/calendario")}
-        />
-        {/* MODO NEGOCIO. Va aquí, entre importar y la captura automática, porque es de la
-            misma familia: cosas que cambian CÓMO entra el dinero, no ajustes de la cuenta.
-            Con la etiqueta PRO igual que las otras Premium: quien la ve sabe antes de tocar
-            que va a encontrar un candado. */}
-        <Row
-          Icon={Store}
-          label={t("negocios.rowLabel")}
-          // QUÉ ESTÁ PASANDO, SIN TENER QUE ENTRAR. Si un negocio se está quedando con los
-          // yapeos, eso cambia dónde cae la plata todos los días: no puede estar solo a tres
-          // pantallas de distancia. Y si se apagara sin querer, aquí se nota.
-          hint={negocioQueRecibe
-            ? isPremium
-              ? t("negocios.rowYapes", { nombre: negocioQueRecibe.nombre })
-              : t("negocios.rowYapesPausados")
-            : undefined}
-          // CON UN SOLO NEGOCIO SE ENTRA DIRECTO A SU PANEL. La lista de negocios con un solo
-          // negocio es una pantalla que solo sirve para tocar la única fila que tiene. Con dos
-          // o más sí hace falta elegir.
-          onPress={() =>
-            irUnaVez(negocios.length === 1 ? `/negocio/${negocios[0].id}` : "/negocio")
-          }
-          right={
-            <View className="bg-amber-50 px-2 py-1 rounded-full">
-              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
-            </View>
-          }
-        />
-        {/* SOLO DONDE HAY YAPE. Ver utils/dondeHayYape: en Colombia o Argentina esta función no
-            falla, es que no tiene nada que leer, y enseñarla haría que alguien diera el permiso
-            de leer TODAS sus notificaciones para esperar movimientos que no van a llegar.
-            ESTA SÍ SE ESCONDE, y no se toca al devolver las demás: es lo único que de verdad
-            no existe fuera de Perú y Bolivia. Las Premium se ven en todas partes porque se
-            pueden comprar en todas partes. */}
-        {Platform.OS === "android" && hayRegistroAutomatico(userCurrency) && (
-          <Row
-            Icon={Zap}
-            label={t("autoCapture.rowLabel")}
-            onPress={onAutoCapture}
-            right={
-              autoCaptureOn ? (
-                <View className="bg-violet-50 px-2 py-1 rounded-full">
-                  <Text className="text-[10px] font-extrabold text-violet-500">{t("autoCapture.rowOn")}</Text>
-                </View>
-              ) : (
-                <ChevronRight size={16} color="#cbd5e1" />
-              )
-            }
-          />
-        )}
-        {/* Una sola fila, no dos. Antes había una por cada tamaño de
-            widget (el círculo y el ancho con texto), y con el mismo icono
-            y textos casi iguales se leían como una opción repetida. Esta
-            coloca el círculo, que es el que ocupa lo mismo que un ícono
-            normal; el ancho sigue existiendo en la lista de widgets de
-            Android para quien lo prefiera. */}
-        {/* EL MICRÓFONO ES PREMIUM (11/08/2026), dicho por él. Se VE —con su etiqueta, como las
-            demás— y el candado aparece al tocar: es la forma que eligió para todas las de pago.
-            Sin Premium lleva a la pantalla de venta en vez de colocar el widget: poner en el
-            escritorio un botón que luego no deja pasar es peor que no ponerlo. */}
-        {Platform.OS === "android" && voiceWidget.isSupported && (
-          <Row
-            Icon={Mic}
-            label={t("widget.rowLabel")}
-            onPress={() => (isPremium ? addWidgetToHomeScreen("round") : onPremium())}
-            right={
-              <View className="bg-amber-50 px-2 py-1 rounded-full">
-                <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
-              </View>
-            }
-          />
-        )}
-        {/* QUE SE LE PUEDE DECIR AL MICROFONO.
-            Va pegada a la del widget porque las dos hablan de lo mismo. El
-            microfono entiende anotar, preguntar, comparar y exportar, y nada
-            de eso se ve en ninguna parte: sin esta pantalla se usa solo para
-            lo primero, que es lo unico que se adivina al tocarlo. */}
-        <Row
-          Icon={MessageSquare}
-          label={t("voiceHelp.rowLabel")}
-          // ESTA SE ABRE AUNQUE NO HAYA PREMIUM, a propósito: leer para qué sirve el micrófono
-          // no es usarlo, y es de las pocas páginas que pueden convencer a alguien de pagar.
-          // Lleva la etiqueta para que nadie se lleve la sorpresa al ir a dictar.
-          onPress={onVoiceHelp}
-          right={
-            <View className="bg-amber-50 px-2 py-1 rounded-full">
-              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
-            </View>
-          }
-        />
-        {TELEGRAM_ENABLED ? <Row
-          Icon={MessageSquare}
-          label={t("telegram.rowLabel")}
-          onPress={() => (isPremium ? onTelegram() : onPremium())}
-          right={
-            <View className="bg-amber-50 px-2 py-1 rounded-full">
-              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
-            </View>
-          }
-        /> : null}
-        <Row
-          Icon={Lock}
-          label={t("lock.rowLabel")}
-          onPress={onAppLock}
-          right={
-            <View className="bg-amber-50 px-2 py-1 rounded-full">
-              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
-            </View>
-          }
-        />
-        <Row
-          Icon={PiggyBank}
-          label={t("settings.savingsGoals")}
-          onPress={onSavings}
-          right={
-            <View className="bg-amber-50 px-2 py-1 rounded-full">
-              <Text className="text-[10px] font-extrabold text-amber-500">PRO</Text>
-            </View>
-          }
-        />
-        {/* Idioma y moneda independientes; las banderas son solo adornos. */}
-        <Row
-          Icon={Globe2}
-          label={`${t("settings.language")} · ${languageLabelFor(userLanguage)}`}
-          onPress={onLanguage}
-          right={<View className="flex-row items-center gap-2"><Text accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" className="text-xl">{languageFlagFor(userLanguage)}</Text><ChevronRight size={16} color="#cbd5e1" /></View>}
-        />
-        <Row
-          Icon={Coins}
-          label={`${t("settings.currency")} · ${currencyLabelFor(userCurrency, t, userLanguage)}`}
-          onPress={onCurrency}
-          right={<View className="flex-row items-center gap-2"><Text accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants" className="text-xl">{currencyFlagFor(userCurrency)}</Text><ChevronRight size={16} color="#cbd5e1" /></View>}
-        />
-        <Row
-          Icon={themeMode === "dark" ? Moon : Sun}
-          label={t("setup.appearance")}
-          onPress={() => updateThemeMode(themeMode === "dark" ? "light" : "dark")}
-          right={<View className="flex-row rounded-xl bg-slate-100 p-1 dark:bg-noche-2">
-            <TouchableOpacity accessibilityLabel={t("setup.lightAppearance")} accessibilityState={{ selected: themeMode === "light" }} onPress={() => updateThemeMode("light")} className={`h-8 w-9 items-center justify-center rounded-lg ${themeMode === "light" ? "bg-amber-400" : ""}`}><Sun size={16} color={themeMode === "light" ? "#fff" : "#64748b"} /></TouchableOpacity>
-            <TouchableOpacity accessibilityLabel={t("setup.darkAppearance")} accessibilityState={{ selected: themeMode === "dark" }} onPress={() => updateThemeMode("dark")} className={`h-8 w-9 items-center justify-center rounded-lg ${themeMode === "dark" ? "bg-slate-800" : ""}`}><Moon size={16} color={themeMode === "dark" ? "#fff" : "#64748b"} /></TouchableOpacity>
-          </View>}
-        />
-        <View className="w-full rounded-2xl border-[1.5px] border-slate-200 bg-white p-4 dark:border-noche-borde dark:bg-noche-2">
-          <View className="flex-row items-center gap-3">
-            <View className="h-9 w-9 items-center justify-center rounded-xl bg-slate-50 dark:bg-noche-3">
-              <Palette size={17} color={visualStyle === "peachOlive" ? "#65764a" : "#059669"} />
-            </View>
-            <Text className="flex-1 text-sm font-bold text-slate-900 dark:text-slate-100">
-              {t("settings.visualStyle")}
-            </Text>
           </View>
-          <View className="mt-3 flex-row rounded-xl bg-slate-100 p-1 dark:bg-noche-3">
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel={t("settings.visualClassic")}
-              accessibilityState={{ selected: visualStyle === "classic" }}
-              onPress={() => updateVisualStyle("classic")}
-              className={`h-9 flex-1 flex-row items-center justify-center gap-1.5 rounded-lg px-2 ${visualStyle === "classic" ? "bg-white dark:bg-noche-2" : ""}`}
-            >
-              <View className="h-2.5 w-2.5 rounded-full bg-emerald-600" />
-              <Text numberOfLines={1} className="text-[11px] font-bold text-slate-700 dark:text-slate-200">{t("settings.visualClassic")}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel={t("settings.visualPeachOlive")}
-              accessibilityState={{ selected: visualStyle === "peachOlive" }}
-              onPress={() => updateVisualStyle("peachOlive")}
-              className={`h-9 flex-1 flex-row items-center justify-center gap-1.5 rounded-lg px-2 ${visualStyle === "peachOlive" ? "bg-white dark:bg-noche-2" : ""}`}
-            >
-              <View className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "#65764a" }} />
-              <Text numberOfLines={1} className="text-[11px] font-bold text-slate-700 dark:text-slate-200">{t("settings.visualPeachOlive")}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-        {/* LA FILA DE "NOTIFICACIONES" SE FUE AL CALENDARIO (21/08/2026).
-            Mandaba SOLO sobre los avisos del calendario, pero desde aqui parecia mandar sobre
-            todo: la app tiene cuatro cosas que avisan —el calendario, la voz de los yapes, la
-            exportacion automatica y las metas— y cada una lleva su propio interruptor donde
-            vive. Apagar este creyendo apagarlas todas era una sorpresa esperando.
-            Y encima el resto de esos avisos —probarlos, el sonido, cuantos hay puestos— ya
-            estaba en el engranaje del calendario: una sola cosa repartida en dos pantallas.
-            Ahora esta entera alli. Idea suya. */}
-      </View>
+        </SettingsSection>
 
-      <View className="px-5 mt-5 gap-2.5">
-        <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 px-1">{t("settings.sectionAccount")}</Text>
-        {usaContrasena ? (
-          <Row
-            Icon={KeyRound}
-            label={t("settings.changePassword")}
-            onPress={onChangePassword}
-            right={<ChevronRight size={16} color="#cbd5e1" />}
-          />
-        ) : null}
-        <Row Icon={UserX} label={t("settings.deleteAccount")} onPress={onDeleteAccount} danger />
-        <Row Icon={LogOut} label={t("settings.logout")} onPress={onLogout} danger />
-      </View>
+        <SettingsSection title={t("settings.sectionFinances")}>
+          <Row Icon={PieChart} label={t("categoryBudgets.rowLabel")} onPress={onCategoryBudgets} premium />
+          <Row Icon={PiggyBank} label={t("settings.savingsGoals")} onPress={onSavings} premium />
+          <Row Icon={CalendarClock} label={t("calendario.titulo")} onPress={() => irUnaVez("/calendario")} />
+          <Row Icon={Store} label={t("negocios.rowLabel")}
+            hint={negocioQueRecibe ? isPremium ? t("negocios.rowYapes", { nombre: negocioQueRecibe.nombre }) : t("negocios.rowYapesPausados") : undefined}
+            onPress={() => irUnaVez(negocios.length === 1 ? `/negocio/${negocios[0].id}` : "/negocio")} premium />
+        </SettingsSection>
 
-      <View className="px-5 mt-5 gap-2.5">
-        <Text className="text-xs font-bold text-slate-500 dark:text-slate-300 px-1">{t("settings.sectionInfo")}</Text>
-        <Row
-          Icon={Info}
-          label={t("settings.appInfo")}
-          onPress={onAbout}
-          right={<ChevronRight size={16} color="#cbd5e1" />}
-        />
-        <Row
-          Icon={Shield}
-          label={t("settings.legal")}
-          onPress={onLegal}
-          right={<ChevronRight size={16} color="#cbd5e1" />}
-        />
+        <SettingsSection title={t("settings.sectionData")}>
+          <Row Icon={FileDown} label={t("exportPdf.exportDataTitle")} onPress={onExportPdf} premium />
+          <Row Icon={FileUp} label={t("importSheet.rowLabel")} onPress={onImport} premium />
+          <Row Icon={CalendarClock} label={t("schedExport.settingsRow")} onPress={onScheduledExport} premium />
+        </SettingsSection>
+
+        <SettingsSection title={t("settings.sectionRecording")}>
+          {Platform.OS === "android" && hayRegistroAutomatico(userCurrency) && (
+            <Row Icon={Zap} label={t("autoCapture.rowLabel")} onPress={onAutoCapture}
+              right={autoCaptureOn ? <Text style={{ fontFamily: ENTRY_FONT.medium, fontSize: 12, color: colors.accent }}>{t("autoCapture.rowOn")}</Text> : undefined} />
+          )}
+          {/* PRO: se conserva la protección y no se coloca un widget bloqueado. */}
+          {Platform.OS === "android" && voiceWidget.isSupported && (
+            <Row Icon={Mic} label={t("widget.rowLabel")} onPress={() => (isPremium ? addWidgetToHomeScreen("round") : onPremium())} premium />
+          )}
+          <Row Icon={MessageSquare} label={t("voiceHelp.rowLabel")} onPress={onVoiceHelp} premium />
+          {/* PRO de Telegram permanece en pausa; no se activa con el rediseño. */}
+          {TELEGRAM_ENABLED ? <Row Icon={MessageSquare} label={t("telegram.rowLabel")} onPress={() => (isPremium ? onTelegram() : onPremium())} premium /> : null}
+        </SettingsSection>
+
+        <SettingsSection title={t("settings.sectionSecurityAccount")}>
+          {userEmail ? <Text selectable style={{ fontFamily: ENTRY_FONT.regular, fontSize: 13, lineHeight: 19, color: colors.muted, paddingHorizontal: 16, paddingVertical: 12 }}>{userEmail}</Text> : null}
+          <Row Icon={Lock} label={t("lock.rowLabel")} onPress={onAppLock} premium />
+          {usaContrasena ? <Row Icon={KeyRound} label={t("settings.changePassword")} onPress={onChangePassword} /> : null}
+          <Row Icon={LogOut} label={t("settings.logout")} onPress={onLogout} />
+          <Row Icon={UserX} label={t("settings.deleteAccount")} onPress={onDeleteAccount} danger />
+        </SettingsSection>
+
+        <SettingsSection title={t("settings.sectionInfo")}>
+          <Row Icon={Info} label={t("settings.appInfo")} onPress={onAbout} />
+          <Row Icon={Shield} label={t("settings.legal")} onPress={onLegal} />
+        </SettingsSection>
       </View>
     </ScrollView>
   );
