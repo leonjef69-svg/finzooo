@@ -1,5 +1,25 @@
 # Estado actual de Fino
 
+## Acceso — 14/10/2026 — correo y Google reales recuperados
+
+El ingreso autenticaba pero fallaba al abrir datos: archive-missing. Una
+cuenta activa sin terminar, sin perfil ni bloques significativos, no se
+archivaba y después Fino exigía un archivo inexistente. Ahora se confirma
+también ese archivo vacío antes de cambiar de dueño. Datos sin perfil,
+archivos dañados/perdidos y sesiones cambiadas siguen bloqueados; no se
+quitaron guardias ni se borraron movimientos para forzar el ingreso.
+El propietario confirmó entrada con el mismo correo y después Google.
+Android confirmó Inicio; tras detener/reabrir y reconectar Metro, conservó
+Google sin credenciales nuevas. Marca 14oct-ingreso-cuentas; guía
+docs/PRUEBAS_INGRESO_CUENTAS.md. El logger Firestore se silencia porque
+un aviso SDK imprimía una petición privada; los errores propios permanecen.
+TypeScript/ESLint, 213 pruebas y 8 auditores verdes sin tarjetas (una suite local ajena).
+Sin APK/AAB/OTA/Play, reinstalación, cambios nativos/reglas remotas/Telegram.
+Qué sigue/falta: repetir con más cuentas/físico y revisar el rechazo de
+respaldo remoto permission-denied, distinto del ingreso ya comprobado.
+No se cierra la auditoría global ni se certifican los importes mostrados.
+
+
 ## Acceso — 13/10/2026 — formulario único
 
 Bienvenida abre Login en modo entrar o crear. Registro antiguo es un alias

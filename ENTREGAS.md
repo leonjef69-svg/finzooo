@@ -1,5 +1,19 @@
 # Entregas de Fino
 
+## 14/10/2026 — Ingreso real recuperado; desarrollo local
+
+Marca 14oct-ingreso-cuentas. Corrige el archivo faltante al cambiar desde
+una cuenta vacía cuya configuración quedó sin terminar. Conserva las
+comprobaciones de dueño, datos sin perfil, archivos y sesión; sin borrado
+forzado ni mezcla. Correo y Google reales confirmados por el propietario
+y UI Android; Google persistió tras reabrir el mismo proceso/reconectar
+Metro 8081 sin elegir cuenta ni contraseña. Logger SDK sin petición privada.
+TypeScript/ESLint, 213 pruebas y 8 auditores verdes sin tarjetas (una suite local ajena).
+Guía/regresiones: docs/PRUEBAS_INGRESO_CUENTAS.md.
+Qué sigue/falta: más cuentas/físico y respaldo remoto rechazado por permisos;
+no cierre global. No APK/AAB/OTA/Play, reglas publicadas ni cambios nativos.
+
+
 ## 13/10/2026 — Acceso único, desarrollo local; NO entrega de Play
 
 Marca 13oct-acceso-unificado: crear/entrar en un formulario, campos animados,

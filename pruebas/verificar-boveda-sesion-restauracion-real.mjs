@@ -197,6 +197,57 @@ test("perfil ausente: primera cuenta sin bloques todavía puede configurarse", a
   assert.deepEqual(await api.loadJSON(api.STORAGE_KEYS.transactions, []), []);
 });
 
+test("cuenta sin terminar y vacía no bloquea ingreso de otra cuenta", async () => {
+  const api = await environment(); api.auth.currentUser = account("A");
+  assert.equal(await api.prepareLocalAccount("A", "a@example.test"), false);
+  const previousOwner = await api.disk.getItem(ownerKey);
+  assert.equal(await api.disk.getItem(api.STORAGE_KEYS.profile), null);
+  api.auth.currentUser = account("B"); api.setAccountStorageAvailable(false);
+  assert.equal(await api.prepareLocalAccount("B", "b@example.test"), false,
+    "la cuenta activa A sin perfil ni datos puede archivarse antes de configurar B");
+  assert.notEqual(await api.disk.getItem(ownerKey), previousOwner);
+  assert.deepEqual(await owner(api), { uid: "B", mode: "active" });
+  const manifest = JSON.parse(await api.decryptText(await api.disk.getItem(`${prefix}A:manifest`)));
+  const snapshot = JSON.parse(await api.decryptText(await api.disk.getItem(manifest.current)));
+  assert.equal(snapshot.uid, "A");
+  assert.ok(snapshot.entries.every(([, raw]) => raw === null), "la cuenta vacía se conserva con inventario comprobado");
+  api.auth.currentUser = account("A"); api.setAccountStorageAvailable(false);
+  assert.equal(await api.prepareLocalAccount("A", "a@example.test"), false,
+    "también se puede volver a A sin heredar B ni perder su identificación");
+});
+
+test("cuenta vacía no se sustituye si no puede confirmar su archivo", async () => {
+  const api = await environment(); api.auth.currentUser = account("A");
+  await api.prepareLocalAccount("A", "a@example.test");
+  const originalOwner = await api.disk.getItem(ownerKey);
+  const set = api.disk.setItem;
+  let attempted = false;
+  api.disk.setItem = async (key, raw) => {
+    if (key === `${prefix}A:manifest`) { attempted = true; throw new Error("synthetic-manifest-write-failure"); }
+    return set(key, raw);
+  };
+  api.auth.currentUser = account("B"); api.setAccountStorageAvailable(false);
+  await assert.rejects(api.prepareLocalAccount("B", "b@example.test"));
+  assert.equal(attempted, true, "se intentó confirmar la copia original antes de cambiar el dueño");
+  assert.equal(await api.disk.getItem(ownerKey), originalOwner);
+  assert.equal(api.getAccountStorageSession(), null);
+  api.disk.setItem = set;
+  assert.equal(await api.prepareLocalAccount("B", "b@example.test"), false, "reintento confirma la copia y continúa");
+});
+
+test("archivo ausente de una cuenta cerrada sigue bloqueado y conservado", async () => {
+  const api = await seed(); api.auth.currentUser = account("A");
+  await api.archiveLocalAccount("A", "a@example.test"); await api.clearAccountData();
+  await api.disk.removeItem(`${prefix}A:manifest`);
+  const original = await api.disk.multiGet(await api.disk.getAllKeys());
+  api.auth.currentUser = account("B"); api.setAccountStorageAvailable(false);
+  await assert.rejects(api.prepareLocalAccount("B", "b@example.test"),
+    error => error?.name === "LocalAccountVaultError" && error.reason === "read");
+  assert.deepEqual(await api.disk.multiGet(original.map(([key]) => key)), original,
+    "un archivo perdido no se trata como una cuenta vacía ni se reemplaza");
+  await blocked(api);
+});
+
 let failures = 0;
 const selectedCases = process.env.FINO_VAULT_SESSION_CASE_FILTER
   ? cases.filter(({ name }) => name.includes(process.env.FINO_VAULT_SESSION_CASE_FILTER)) : cases;

@@ -171,6 +171,22 @@ test("la versión de producción no emite el diagnóstico de apertura local", as
     && error.message === "localAccount.restoreFailed");
 });
 
+test("desarrollo identifica el punto de lectura sin revelar datos de la cuenta", async () => {
+  const f = openFixture();
+  const failure = new VaultError("read"); failure.readDetail = "archive-missing";
+  f.deps.prepareLocalAccount = async () => { throw failure; };
+  f.open = handlerOriginal(file, "openLocalAccount", f.deps, text);
+  await assert.rejects(f.open("A", f.user.email), error => error.name === "LocalAccountAccessError"
+    && error.message === "localAccount.restoreFailed\nlocalAccount.devReadDetail (archive-missing)"
+    && !error.message.includes(f.user.email));
+  assert.deepEqual(f.calls.filter(([name]) => ["profile", "reload"].includes(name)), []);
+  const production = openFixture(); production.deps.__DEV__ = false;
+  production.deps.prepareLocalAccount = async () => { throw failure; };
+  production.open = handlerOriginal(file, "openLocalAccount", production.deps, text);
+  await assert.rejects(production.open("A", production.user.email),
+    error => error.message === "localAccount.restoreFailed");
+});
+
 for (const replacement of ["B", "A"]) {
   test(`recarga original no publica bloques después de reemplazar la instancia por ${replacement}`, async () => {
     const f = reloadFixture(), pending = f.reload(profile);

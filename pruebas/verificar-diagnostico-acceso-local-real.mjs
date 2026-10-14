@@ -96,7 +96,7 @@ for (const [dev, platform, flag, diagnostic, recoveryFlag] of [
       initializeAuth: (_app, options) => { configured = options.persistence; return {}; },
       inMemoryPersistence: inMemory, getReactNativePersistence: storage => { nativePersistenceCalls++; assert.equal(storage, ordinary); return ordinary; },
     };
-    if (name === "firebase/firestore") return { getFirestore: () => ({}) };
+    if (name === "firebase/firestore") return { getFirestore: () => ({}), setLogLevel: () => {} };
     if (name === "firebase/functions") return { getFunctions: () => ({}) };
     if (name === "@/utils/encryptedAsyncStorage") return { encryptedAsyncStorage: ordinary };
     if (name === "@/utils/localAccountDiagnosticMode") return { isLocalAccountDiagnosticMode: isMode };

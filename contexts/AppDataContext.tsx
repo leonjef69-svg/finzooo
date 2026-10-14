@@ -1226,6 +1226,10 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
         if (__DEV__ && (error.reason === "read" || error.reason === "write")) {
           accessError.message += `\n${tRef.current(error.reason === "read"
             ? "localAccount.devReadDetail" : "localAccount.devWriteDetail")}`;
+          if (error.readDetail) {
+            // Solo un código cerrado: nunca clave, UID, correo ni contenido.
+            accessError.message += ` (${error.readDetail})`;
+          }
         }
         accessError.name = error.reason === "verification" ? "LocalAccountVerificationRequired" : "LocalAccountAccessError";
         throw accessError;

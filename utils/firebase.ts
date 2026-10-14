@@ -8,7 +8,7 @@ import {
   // @ts-expect-error — getReactNativePersistence sí existe en la versión para React Native.
   getReactNativePersistence,
 } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getFirestore, setLogLevel } from "firebase/firestore";
 import { getFunctions } from "firebase/functions";
 import { encryptedAsyncStorage } from "@/utils/encryptedAsyncStorage";
 import { isLocalAccountDiagnosticMode } from "@/utils/localAccountDiagnosticMode";
@@ -25,6 +25,11 @@ const firebaseConfig = {
 };
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
+
+// Los avisos RPC del SDK pueden imprimir la petición completa (perfil,
+// importes e historial). Fino informa los fallos mediante sus mensajes
+// propios; silenciar este registro no cambia rechazos, permisos ni datos.
+setLogLevel("silent");
 
 // Usamos una versión cifrada del "cajón" de guardado (en vez del cajón
 // normal) para que tu sesión iniciada no quede legible en texto plano

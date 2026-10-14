@@ -21,6 +21,9 @@ type Snapshot = { version: 1; uid: string; entries: [string, string | null][] };
 type StoredSnapshot = { version: 1 | 2 | 3; uid: string; entries: [string, string | null][] };
 type Manifest = { version: 1; current: string; previous?: string };
 type PreparationOptions = { recoverUnidentifiedLegacyFor?: NonNullable<typeof auth.currentUser> };
+type ReadDetail = "owner" | "profile" | "active-block" | "manifest" | "snapshot-missing"
+  | "snapshot-decrypt" | "snapshot-format" | "snapshot-block" | "profile-missing"
+  | "source-changed" | "recovery-ineligible" | "archive-missing" | "empty-active-archive-missing";
 const keys = [...new Set(ACCOUNT_STORAGE_KEYS)];
 const emailKey = (email: string | null | undefined) => (email ?? "").trim().toLowerCase();
 const accountPrefix = (uid: string) => `${PREFIX}${encodeURIComponent(uid)}:`;
@@ -28,7 +31,8 @@ const manifestKey = (uid: string) => `${accountPrefix(uid)}manifest`;
 
 export class LocalAccountVaultError extends Error {
   constructor(public readonly reason: "owner" | "verification" | "read" | "write",
-    public readonly ownerDetail?: "unidentified" | "session") {
+    public readonly ownerDetail?: "unidentified" | "session",
+    public readonly readDetail?: ReadDetail) {
     super(`local-account-${reason}`);
     this.name = "LocalAccountVaultError";
   }
@@ -59,7 +63,7 @@ async function readOwner(): Promise<Owner | null> {
     const owner = JSON.parse(text) as Owner;
     if (!owner.uid || !["active", "archived"].includes(owner.mode)) throw new Error();
     return owner;
-  } catch { throw new LocalAccountVaultError("read"); }
+  } catch { throw new LocalAccountVaultError("read", undefined, "owner"); }
 }
 
 async function removeUnconfirmedOwner(raw: string, previousRaw: string | null = null): Promise<void> {
@@ -77,14 +81,14 @@ async function writeOwner(owner: Owner, assertCurrentSession?: () => void,
   expected?: { ownerRaw: string | null; profileRaw: string | null }): Promise<string> {
   const previousRaw = assertCurrentSession ? await AsyncStorage.getItem(OWNER_KEY) : null;
   assertCurrentSession?.();
-  if (expected && previousRaw !== expected.ownerRaw) throw new LocalAccountVaultError("read");
+  if (expected && previousRaw !== expected.ownerRaw) throw new LocalAccountVaultError("read", undefined, "source-changed");
   const raw = await encryptText(JSON.stringify(owner));
   assertCurrentSession?.();
   if (expected) {
     const fresh = new Map(await AsyncStorage.multiGet([OWNER_KEY, STORAGE_KEYS.profile]));
     assertCurrentSession?.();
     if (fresh.get(OWNER_KEY) !== expected.ownerRaw || fresh.get(STORAGE_KEYS.profile) !== expected.profileRaw) {
-      throw new LocalAccountVaultError("read");
+      throw new LocalAccountVaultError("read", undefined, "source-changed");
     }
   }
   try {
@@ -112,7 +116,7 @@ async function readProfile(onRaw?: (raw: string | null) => void): Promise<{ hasO
     const profile = JSON.parse(text ?? raw);
     if (!profile || typeof profile !== "object" || Array.isArray(profile)) throw new Error();
     return profile;
-  } catch { throw new LocalAccountVaultError("read"); }
+  } catch { throw new LocalAccountVaultError("read", undefined, "profile"); }
 }
 
 async function hasUnownedAccountData(): Promise<boolean> {
@@ -122,7 +126,7 @@ async function hasUnownedAccountData(): Promise<boolean> {
     try {
       const value = JSON.parse(await decryptText(raw) ?? raw);
       if (Array.isArray(value) ? value.length > 0 : value && typeof value === "object" ? Object.keys(value).length > 0 : Boolean(value)) return true;
-    } catch { throw new LocalAccountVaultError("read"); }
+    } catch { throw new LocalAccountVaultError("read", undefined, "active-block"); }
   }
   return false;
 }
@@ -136,22 +140,24 @@ async function readManifest(uid: string): Promise<Manifest | null> {
     const manifest = JSON.parse(text) as Manifest;
     if (manifest.version !== 1 || !manifest.current?.startsWith(accountPrefix(uid)) || manifest.current === manifestKey(uid) || (manifest.previous && !manifest.previous.startsWith(accountPrefix(uid)))) throw new Error();
     return manifest;
-  } catch { throw new LocalAccountVaultError("read"); }
+  } catch { throw new LocalAccountVaultError("read", undefined, "manifest"); }
 }
 
 async function readSnapshot(uid: string): Promise<Snapshot | null> {
   const manifest = await readManifest(uid);
   if (!manifest) return null;
   const raw = await AsyncStorage.getItem(manifest.current);
-  if (!raw) throw new LocalAccountVaultError("read");
+  if (!raw) throw new LocalAccountVaultError("read", undefined, "snapshot-missing");
   const text = await decryptText(raw);
-  if (!text) throw new LocalAccountVaultError("read");
+  if (!text) throw new LocalAccountVaultError("read", undefined, "snapshot-decrypt");
+  let detail: ReadDetail = "snapshot-format";
   try {
     const snapshot = JSON.parse(text) as StoredSnapshot;
     const expectedKeys = keys.filter(key =>
       (snapshot.version !== 1 || key !== STORAGE_KEYS.personalReturnPending) &&
       (snapshot.version === 3 || key !== STORAGE_KEYS.businessDeleted));
     if (![1, 2, 3].includes(snapshot.version) || snapshot.uid !== uid || !Array.isArray(snapshot.entries) || snapshot.entries.length !== expectedKeys.length) throw new Error();
+    detail = "snapshot-block";
     const seen = new Set<string>();
     const entries: Snapshot["entries"] = [];
     for (const entry of snapshot.entries) {
@@ -173,7 +179,7 @@ async function readSnapshot(uid: string): Promise<Snapshot | null> {
     if (snapshot.version === 1) entries.push([STORAGE_KEYS.personalReturnPending, null]);
     if (snapshot.version < 3) entries.push([STORAGE_KEYS.businessDeleted, null]);
     return { version: 1, uid, entries };
-  } catch { throw new LocalAccountVaultError("read"); }
+  } catch { throw new LocalAccountVaultError("read", undefined, detail); }
 }
 
 async function saveSnapshot(uid: string): Promise<void> {
@@ -185,7 +191,7 @@ async function saveSnapshot(uid: string): Promise<void> {
   for (const [, raw] of entries) {
     if (raw === null) continue;
     try { JSON.parse(await decryptText(raw) ?? raw); }
-    catch { throw new LocalAccountVaultError("read"); }
+    catch { throw new LocalAccountVaultError("read", undefined, "active-block"); }
   }
   const generation = `${accountPrefix(uid)}${Crypto.randomUUID()}`;
   const old = await readManifest(uid);
@@ -282,7 +288,7 @@ async function prepare(uid: string, email?: string | null, openingUser = auth.cu
     // nunca entra por las rutas de cambio, archivo o restauración de cuentas.
     if (owner || !profile || profile.hasOnboarded !== true || emailKey(profile.userEmail)) {
       setAccountStorageAvailable(false);
-      throw new LocalAccountVaultError("read");
+      throw new LocalAccountVaultError("read", undefined, "recovery-ineligible");
     }
   }
   if (owner?.mode === "active" && !profile) {
@@ -292,7 +298,7 @@ async function prepare(uid: string, email?: string | null, openingUser = auth.cu
     assertCurrentSession();
     if (remainingData) {
       setAccountStorageAvailable(false);
-      throw new LocalAccountVaultError("read");
+      throw new LocalAccountVaultError("read", undefined, "profile-missing");
     }
   }
   if (!owner) {
@@ -345,13 +351,18 @@ async function prepare(uid: string, email?: string | null, openingUser = auth.cu
     assertCurrentSession();
     setAccountStorageAvailable(true);
   } else {
-    if (owner.mode === "active" && owner.uid !== uid && profile) {
+    if (owner.mode === "active" && owner.uid !== uid) {
+      // Una cuenta que abandonó la configuración puede tener dueño, pero
+      // aún no perfil ni archivo. Arriba se comprueba que no queden datos
+      // sin perfil; aquí se conserva también esa cuenta vacía antes de
+      // cambiar, con la misma confirmación de copia que una cuenta completa.
       await saveSnapshot(owner.uid);
       assertCurrentSession();
     }
     if (owner.uid !== uid || owner.mode === "archived") {
       // No borrar datos de otra cuenta si su copia no se puede comprobar.
-      if (!await readSnapshot(owner.uid)) throw new LocalAccountVaultError("read");
+      if (!await readSnapshot(owner.uid)) throw new LocalAccountVaultError("read", undefined,
+        owner.mode === "active" && !profile ? "empty-active-archive-missing" : "archive-missing");
       assertCurrentSession();
       if (owner.mode === "active") await writeOwner({ uid: owner.uid, mode: "archived" }, assertCurrentSession);
     }
