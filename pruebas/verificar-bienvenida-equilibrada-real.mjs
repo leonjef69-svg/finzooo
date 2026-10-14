@@ -36,15 +36,35 @@ for (const [width, height] of [[320, 568], [360, 640], [393, 852], [412, 915], [
     const style = rendered.props.style;
     assert.ok(style.width <= (contentWidth - 44) / 2, "las tarjetas respetan el espacio central y el margen lateral mayor");
     assert.ok(style.minHeight >= 60);
+    const wrapper = nodes.find(node => node.children.includes(card));
+    const placement = wrapper.props.style;
+    assert.notEqual(placement.position, "absolute", "las tarjetas no comparten posiciones superpuestas con la persona");
+    assert.equal(style.justifyContent, "center", "icono y texto se centran como grupo, sin hueco sobrante a un solo lado");
+    const badge = rendered.children[0], copy = rendered.children[1];
+    assert.ok(badge.props.style.width >= 34 && badge.props.style.height >= 34);
+    assert.equal(badge.props.style.flexShrink, 0, "el icono no pierde tamaño al estrechar la tarjeta");
+    assert.notEqual(copy.props.style.flex, 1, "el texto no rellena artificialmente el hueco lateral");
+    assert.equal(copy.props.style.flexShrink, 1, "una pantalla estrecha permite partir texto sin salirse");
+    assert.ok(card.props.icon.props.size >= 24);
     const labels = flatten(rendered).filter(node => node.type === "Text");
     assert.ok(labels.every(node => node.props.style.fontSize >= 13), "nombres y montos legibles");
-    const placement = nodes.find(node => node.children.includes(card)).props.style;
-    const inset = placement.left ?? placement.right;
+    assert.ok(labels[0].props.style.fontSize >= 15 && labels[1].props.style.fontSize >= 14);
+    assert.equal(labels[1].props.numberOfLines, 2, "montos decorativos pueden ocupar dos líneas en vez de cortarse");
+    const row = nodes.find(node => node.children.includes(wrapper));
+    assert.equal(row.props.style.flexDirection, "row");
+    const inset = row.props.style.paddingHorizontal;
     // Incluso la inclinación conserva espacio libre dentro del margen exterior.
     const angle = Math.abs(parseFloat(placement.transform[0].rotate)) * Math.PI / 180;
     const rotatedWidth = style.width * Math.cos(angle) + 92 * Math.sin(angle);
     assert.ok(23 + inset - (rotatedWidth - style.width) / 2 >= 30, "ni la inclinación acerca la tarjeta al borde");
   }
+  const pictureSpace = nodes.find(node => node.children.includes(image));
+  assert.equal(image.props.style.height, pictureSpace.props.style.height);
+  assert.notEqual(image.props.style.position, "absolute");
+  assert.ok(Math.abs(image.props.style.width / image.props.style.height - 427 / 640) < 0.00001, "la persona conserva su proporción y no se estira");
+  const illustration = nodes.find(node => node.children.includes(pictureSpace));
+  assert.equal(illustration.children.length, 3);
+  assert.equal(illustration.children[1], pictureSpace, "persona entre dos filas separadas, no debajo de las tarjetas");
   const subtitle = nodes.find(node => node.type === "Text" && node.children.includes("onboarding.subtitle"));
   assert.equal(subtitle.props.style[1].fontSize, 16, "subtítulo ligeramente mayor, sin agrandar el título");
   assert.equal(nodes.filter(node => node.type === "EntryButton").length, 1);

@@ -1,5 +1,14 @@
 # Entregas de Fino
 
+## 13/10/2026 — Tarjetas centradas y separadas; desarrollo local
+
+Marca 13oct-bienvenida-sin-choques: iconos/textos mayores con espacio interior
+equilibrado y tarjetas fuera de cabeza/piernas/zapatos, conservando el tamaño
+visible aprobado. Vista normal completa; regresión original roja 03324f0 y
+verde actual. Guía ENTRADA_UI_CALIDA.
+Qué sigue/falta: comprobación física/pequeños/letra grande y acceso/copia local
+pendiente. Sin APK/AAB/OTA/Play, cambios nativos/remotos ni datos modificados.
+
 ## 13/10/2026 — Proporciones de Bienvenida; desarrollo local
 
 Marca 13oct-bienvenida-equilibrada: persona/tarjetas/subtítulo mayores, menor

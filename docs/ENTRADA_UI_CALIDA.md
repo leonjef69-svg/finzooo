@@ -1,5 +1,25 @@
 # Entrada cálida — 13/10/2026
 
+## Ajuste posterior: espacio dentro de las tarjetas
+
+Marca `13oct-bienvenida-sin-choques`: icono y texto se centran juntos, en vez de
+dejar la columna de texto expandida hacia un lado. Iconos 24 (antes 18), fondo
+del icono 34 (antes 28), título 15 (antes 13,5) y monto 14 (antes 13).
+Presupuesto admite hasta 160, siempre limitado por el ancho disponible.
+Los montos decorativos pueden usar dos líneas en una tarjeta estrecha.
+Se conserva el margen lateral, el tamaño visible de la persona, botones,
+navegación y datos. Bus/Comida y Presupuesto/Ahorro van en dos filas distintas,
+antes/después de la imagen: no comparten posiciones encima de cabeza o zapatos.
+Las filas crecen con sus textos; no se compensan los choques con otro tamaño.
+Último ajuste visto completo en Android normal sin reiniciar el servidor ni
+cambiar la densidad del emulador. La prueba de JSX/medidas originales agrega
+centrado, icono fijo, texto que puede estrecharse y separación en flujo normal;
+verde actual y roja en 03324f0 por tarjetas superpuestas, no por una API ausente.
+Qué sigue/falta: validación física de letra grande/tamaño pequeño y el recorrido
+de acceso/copia local pendiente. No mide FPS ni certifica todas las marcas.
+Validación final de esta combinación: TypeScript/ESLint, 211 pruebas y 8 auditores
+aprobados, sin tarjetas; incluye la suite local ajena no versionada en el conteo.
+
 ## Ajuste posterior: proporciones de Bienvenida
 
 Marca `13oct-bienvenida-equilibrada`: se quitó el centrado vertical solo en

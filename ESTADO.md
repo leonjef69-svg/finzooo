@@ -1,5 +1,17 @@
 # Estado actual de Fino
 
+## Bienvenida — 13/10/2026 — contenido centrado y sin choques
+
+Iconos 24 y textos 15/14 centrados juntos dentro de cada tarjeta, sin columna
+expandida que dejaba hueco de un lado. Tamaños y margen lateral aprobados
+conservados; Bus/Comida antes de la persona y Presupuesto/Ahorro después, en
+filas que crecen con el texto. La imagen conserva su proporción/tamaño visible.
+Marca: 13oct-bienvenida-sin-choques. Vista completa en Android normal; prueba
+original/JSX verde y regresión roja 03324f0 por superposición real de posiciones.
+Detalles/límites en docs/ENTRADA_UI_CALIDA.md.
+Qué sigue/falta: letra grande/pequeños/físico y acceso/copia local pendientes.
+Sin datos, navegación, Firebase, nativo, APK/AAB/OTA/Play o Telegram cambiados.
+
 ## Bienvenida — 13/10/2026 — proporciones y margen lateral
 
 Ajuste visual solicitado: menos hueco bajo Fino, persona y tarjetas mayores,
