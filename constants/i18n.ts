@@ -1420,7 +1420,14 @@ export const translations: Record<LanguageId, Record<string, string>> = {
       "Fino anota sola tus Yapes. Tú no haces nada: te yapean y el movimiento ya está en tu lista.",
     "autoCapture.privacyTitle": "Qué se lee y qué no",
     "autoCapture.privacyBody":
-      "Solo los avisos de Yape. Los de tu banco, WhatsApp, correo o cualquier otra app se descartan al instante y nunca se guardan ni se leen. Nada sale de tu celular. Puedes apagarlo cuando quieras desde aquí.",
+      "Solo los avisos de Yape se leen para registrar monto, nombre, fecha y hora, incluso con la app cerrada. Fino descarta el contenido de otras apps y los códigos de seguridad antes de guardarlos. El buzón y el diagnóstico permanecen cifrados en este teléfono; con Pro, los movimientos pueden respaldarse en Firebase (Google). Puedes apagarlo aquí. Fino no está afiliado a Yape.",
+    "autoCapture.consentTitle": "Activar registro automático",
+    "autoCapture.consentBody": "Fino leerá notificaciones de Yape para registrar monto, nombre, fecha y hora, incluso con la app cerrada. Android concede acceso general; Fino descarta el contenido de otras apps y los códigos de seguridad antes de guardarlos.\n\nLos avisos se procesan en este teléfono, con un buzón y diagnóstico local cifrados. Con Pro, los movimientos pueden respaldarse en Firebase (Google). Es opcional: puedes apagarlo en Ajustes. Tu aceptación se guarda solo en este teléfono.\n\nFino es independiente y no está afiliado a Yape.",
+    "autoCapture.consentAccept": "Acepto y continuar",
+    "autoCapture.consentCancel": "Ahora no",
+    "autoCapture.consentError": "No se pudo guardar tu aceptación. El registro automático no se activó. Inténtalo de nuevo.",
+    "autoCapture.updateTitle": "Actualiza Fino para continuar",
+    "autoCapture.updateBody": "El registro automático necesita la nueva versión Android, que descarta los códigos de seguridad antes de guardarlos. Una recarga no añade esta protección. No desinstales Fino ni borres sus datos.",
     "autoCapture.unsupportedTitle": "No disponible en este celular",
     "autoCapture.unsupportedBody":
       "Esta función solo funciona en Android y necesita la última versión de Fino instalada desde el archivo de la app. Si estás en iPhone, Android no permite que otras apps lean los avisos.",
@@ -3313,7 +3320,14 @@ export const translations: Record<LanguageId, Record<string, string>> = {
       "Fino logs your Yape payments on its own. You do nothing: you get paid and the movement is already in your list.",
     "autoCapture.privacyTitle": "What is read and what is not",
     "autoCapture.privacyBody":
-      "Only Yape alerts. Those from your bank, WhatsApp, email or any other app are discarded instantly and never stored or read. Nothing leaves your phone. You can turn it off any time from here.",
+      "Only Yape alerts are read to log amount, name, date and time, even while the app is closed. Fino discards other apps' content and security codes before storage. The queue and diagnostic log stay encrypted on this phone; with Pro, movements may be backed up to Firebase (Google). You can turn this off here. Fino is not affiliated with Yape.",
+    "autoCapture.consentTitle": "Enable automatic logging",
+    "autoCapture.consentBody": "Fino will read Yape notifications to log amount, name, date and time, even while the app is closed. Android grants general access; Fino discards other apps' content and security codes before storage.\n\nAlerts are processed on this phone, with an encrypted local queue and diagnostic log. With Pro, movements may be backed up to Firebase (Google). This is optional: turn it off in Settings. Your acceptance stays only on this phone.\n\nFino is independent and not affiliated with Yape.",
+    "autoCapture.consentAccept": "Accept and continue",
+    "autoCapture.consentCancel": "Not now",
+    "autoCapture.consentError": "Your acceptance could not be saved. Automatic logging was not enabled. Please try again.",
+    "autoCapture.updateTitle": "Update Fino to continue",
+    "autoCapture.updateBody": "Automatic logging needs the new Android version, which discards security codes before storage. Reloading does not add this protection. Do not uninstall Fino or clear its data.",
     "autoCapture.unsupportedTitle": "Not available on this phone",
     "autoCapture.unsupportedBody":
       "This feature only works on Android and needs the latest version of Fino installed from the app file. On iPhone, Android's approach is not allowed: other apps cannot read your alerts.",
@@ -5203,7 +5217,14 @@ export const translations: Record<LanguageId, Record<string, string>> = {
       "O Fino anota sozinho seus Yapes. Você não faz nada: recebe e o movimento já está na sua lista.",
     "autoCapture.privacyTitle": "O que é lido e o que não é",
     "autoCapture.privacyBody":
-      "Só os avisos do Yape. Os do seu banco, WhatsApp, e-mail ou qualquer outro app são descartados na hora e nunca são guardados nem lidos. Nada sai do seu celular. Você pode desligar quando quiser aqui.",
+      "Só os avisos do Yape são lidos para registrar valor, nome, data e hora, mesmo com o app fechado. O Fino descarta o conteúdo de outros apps e os códigos de segurança antes de guardá-los. A fila e o diagnóstico ficam cifrados neste celular; com Pro, os movimentos podem ter backup no Firebase (Google). Você pode desligar aqui. O Fino não é afiliado ao Yape.",
+    "autoCapture.consentTitle": "Ativar registro automático",
+    "autoCapture.consentBody": "O Fino lerá notificações do Yape para registrar valor, nome, data e hora, mesmo com o app fechado. O Android concede acesso geral; o Fino descarta o conteúdo de outros apps e os códigos de segurança antes de guardá-los.\n\nOs avisos são processados neste celular, com fila e diagnóstico locais cifrados. Com Pro, os movimentos podem ter backup no Firebase (Google). É opcional: desligue em Ajustes. Sua aceitação fica apenas neste celular.\n\nO Fino é independente e não é afiliado ao Yape.",
+    "autoCapture.consentAccept": "Aceitar e continuar",
+    "autoCapture.consentCancel": "Agora não",
+    "autoCapture.consentError": "Não foi possível guardar sua aceitação. O registro automático não foi ativado. Tente novamente.",
+    "autoCapture.updateTitle": "Atualize o Fino para continuar",
+    "autoCapture.updateBody": "O registro automático precisa da nova versão Android, que descarta os códigos de segurança antes de guardá-los. Recarregar não adiciona essa proteção. Não desinstale o Fino nem apague seus dados.",
     "autoCapture.unsupportedTitle": "Não disponível neste celular",
     "autoCapture.unsupportedBody":
       "Este recurso só funciona no Android e precisa da última versão do Fino instalada pelo arquivo do app. No iPhone, outros apps não podem ler os seus avisos.",

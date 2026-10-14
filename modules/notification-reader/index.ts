@@ -52,6 +52,8 @@ type NativeShape = {
   openPermissionSettings: () => void;
   isEnabled: () => boolean;
   setEnabled: (value: boolean) => void;
+  hasDisclosureConsent: () => boolean;
+  acceptDisclosureConsent: () => void;
   isSpeakEnabled: () => boolean;
   setSpeakEnabled: (value: boolean) => void;
   /** Enciende el motor de voz ya. Ver calentarVoz en el modulo de Android. */
@@ -88,6 +90,25 @@ const Native = requireOptionalNativeModule<NativeShape>("NotificationReader");
  */
 export const isSupported = Platform.OS === "android" && Native != null;
 
+/** Un APK antiguo no puede prometer el filtro previo al guardado. */
+export const hasPrivacyProtection = isSupported &&
+  typeof Native?.hasDisclosureConsent === "function" &&
+  typeof Native?.acceptDisclosureConsent === "function";
+
+export function hasDisclosureConsent(): boolean {
+  if (!hasPrivacyProtection) return false;
+  try { return Native!.hasDisclosureConsent(); } catch { return false; }
+}
+
+/** Solo llamar tras la aceptación explícita del aviso de la aplicación. */
+export function acceptDisclosureConsent(): boolean {
+  if (!hasPrivacyProtection) return false;
+  try {
+    Native!.acceptDisclosureConsent();
+    return Native!.hasDisclosureConsent();
+  } catch { return false; }
+}
+
 /** ¿Android nos dio acceso a las notificaciones? */
 export function isPermissionGranted(): boolean {
   if (!Native) return false;
@@ -100,6 +121,7 @@ export function isPermissionGranted(): boolean {
 
 /** Abre la pantalla de Android donde se concede el acceso. */
 export function openPermissionSettings(): void {
+  if (!hasDisclosureConsent()) return;
   try {
     Native?.openPermissionSettings();
   } catch {
@@ -110,7 +132,7 @@ export function openPermissionSettings(): void {
 
 /** ¿La persona encendió la función dentro de Fino? */
 export function isEnabled(): boolean {
-  if (!Native) return false;
+  if (!Native || !hasDisclosureConsent()) return false;
   try {
     return Native.isEnabled();
   } catch {
@@ -119,6 +141,7 @@ export function isEnabled(): boolean {
 }
 
 export function setEnabled(value: boolean): void {
+  if (value && !hasDisclosureConsent()) return;
   try {
     Native?.setEnabled(value);
   } catch {

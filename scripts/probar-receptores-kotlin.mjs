@@ -46,7 +46,7 @@ const run = args => {
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`Comprobacion Kotlin fallo (${result.status}). Artefactos en ${temp}`);
 };
-const sources = notification ? ["NotificationStore", "NotificationCipher", "NotificationPreferences"]
+const sources = notification ? ["NotificationStore", "NotificationCipher", "NotificationPreferences", "NotificationPrivacy"]
   : privacy ? ["ScreenPrivacy", "ScreenPrivacyPackage"] : ["FinzoExportReceiver", "FinzoBootReceiver", "ExportAlarmPolicy"];
 const fixtureClasses = path.join(temp, "fixture-classes");
 const javaSources = fs.readdirSync(fixture).filter(file => file.endsWith(".java"));

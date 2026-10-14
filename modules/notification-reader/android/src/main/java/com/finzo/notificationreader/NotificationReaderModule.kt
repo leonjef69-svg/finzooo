@@ -46,6 +46,7 @@ class NotificationReaderModule : Module() {
 
     // Abre la pantalla de Android donde se concede ese acceso.
     Function("openPermissionSettings") {
+      check(NotificationStore.hasDisclosureConsent(context)) { "notification-consent-required" }
       val intent = Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)
         .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
       context.startActivity(intent)
@@ -53,6 +54,9 @@ class NotificationReaderModule : Module() {
 
     // Interruptor propio de Fino, independiente del permiso de Android.
     Function("isEnabled") { NotificationStore.isEnabled(context) }
+
+    Function("hasDisclosureConsent") { NotificationStore.hasDisclosureConsent(context) }
+    Function("acceptDisclosureConsent") { NotificationStore.acceptDisclosureConsent(context) }
 
     // SOLO PARA SABER QUE APK ESTA INSTALADO.
     //

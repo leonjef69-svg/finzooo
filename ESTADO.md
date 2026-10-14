@@ -1,5 +1,27 @@
 # Estado actual de Fino
 
+## Registro automático — 14/10/2026 — permiso y filtro previo
+
+Marca 14oct-privacidad-registro. Dar acceso/Encender muestran el aviso y
+requieren aceptación explícita antes de continuar; cancelar/cerrar y una
+respuesta de otra sesión no activan nada. Se conserva solo la versión del
+aviso en ese teléfono, sin identificador, fecha ni envío remoto. El nuevo
+servicio Android no captura sin esa aceptación; aceptarla no reactiva un
+interruptor heredado ni borra pagos pendientes. APK anterior pide actualizar.
+Códigos filtrados antes de buzón/duplicados/voz, con defensa en el almacén;
+limpieza selectiva de códigos antiguos y marcas SHA-256, conservando avisos
+financieros, duplicados y guardias de clave/guardado. Ayuda en tres idiomas
+explica diagnóstico local cifrado y respaldo Pro en Firebase, no «Nada sale».
+Guía docs/REGISTRO_AUTOMATICO_PRIVACIDAD.md; no cambian hashes legales ni HTML
+público, nube/planes, Telegram, tarjetas o servicios remotos. TypeScript y
+ESLint aprobados, Kotlin/JCE original verde y regresiones d156abe rojas por
+conducta anterior. 218 pruebas/8 auditores verdes sin tarjetas (una suite local
+ajena; 217 previstas Git limpio). Debug x86_64 compilado e instalado en
+emulator-5554 con install -r, sin desinstalar/borrar datos. Captura visual falló
+dos veces; ningún permiso aceptado automáticamente. Qué sigue/falta: aviso y
+permiso visibles/avisos reales, físico, política pública y revisión de marca
+antes de publicar. No certifica aprobación de Google ni de Yape.
+
 ## Categorías — 14/10/2026 — selector sin Personalizar
 
 Se retira el botón Personalizar categorías señalado en Inicio; Nueva

@@ -211,7 +211,7 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
       </View>
 
       <ScrollView className="px-5" contentContainerStyle={{ paddingBottom: 32 }}>
-        {!autoCaptureSupported ? (
+        {!autoCaptureSupported || !notificationReader.hasPrivacyProtection ? (
           <View
             className="rounded-2xl p-4 bg-white dark:bg-noche-2 border-[1.5px] border-slate-200 dark:border-noche-borde"
             style={CARD_SHADOW}
@@ -219,11 +219,11 @@ export default function AutoCapture({ onBack }: { onBack: () => void }) {
             <View className="flex-row items-center gap-2 mb-2">
               <Smartphone size={16} color={iconColor} />
               <Text className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                {t("autoCapture.unsupportedTitle")}
+                {t(autoCaptureSupported ? "autoCapture.updateTitle" : "autoCapture.unsupportedTitle")}
               </Text>
             </View>
             <Text className="text-[11px] leading-5 text-slate-500 dark:text-slate-300">
-              {t("autoCapture.unsupportedBody")}
+              {t(autoCaptureSupported ? "autoCapture.updateBody" : "autoCapture.unsupportedBody")}
             </Text>
           </View>
         ) : (

@@ -79,6 +79,12 @@ const AVISOS_DE_SEGURIDAD = [
   "operacion en curso",
   "autocompletado la clave",
   "generado y autocompletado",
+  "codigo de acceso",
+  "clave de verificacion",
+  "verification code",
+  "security code",
+  "one time password",
+  "one time code",
 ];
 
 // Ruido con monto: sorteos, promociones, préstamos. Se descarta igual, pero

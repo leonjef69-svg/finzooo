@@ -1,5 +1,20 @@
 # Entregas de Fino
 
+## 14/10/2026 — Privacidad del registro; preparación local
+
+Marca 14oct-privacidad-registro. Aviso/aceptación previa al permiso y al
+interruptor, servicio cerrado sin aceptación, códigos descartados antes de
+persistir/anunciar y limpieza selectiva de cola/marcas sin perder pagos.
+Ayuda aclara respaldo Pro en Firebase, también en inglés/portugués. Guía
+docs/REGISTRO_AUTOMATICO_PRIVACIDAD.md. TypeScript/ESLint y Kotlin/JCE original
+aprobados; regresiones d156abe rojas por acceso sin aviso/captura heredada.
+Debug x86_64 compilado e instalado sin desinstalar/borrar datos en emulator-5554.
+218 pruebas/8 auditores verdes sin tarjetas (una suite local ajena; 217
+previstas Git limpio). Captura visual agotó espera dos veces; no se aceptó
+ningún permiso. Sin APK de distribución/AAB/OTA/Play, HTML legal o servicios publicados.
+Qué sigue/falta: aviso visible/permiso/avisos reales/físico,
+alinear textos públicos y confirmar uso de marca. No es autorización de Yape.
+
 ## 14/10/2026 — Selector sin Personalizar; desarrollo local
 
 Marca 14oct-selector-simple: se retira el acceso Personalizar del selector

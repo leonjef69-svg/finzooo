@@ -22,6 +22,7 @@ import { colorScheme, useColorScheme, vars } from "nativewind";
 import { nativewindThemeVariables, type VisualStyle } from "@/constants/visualTheme";
 import { seedTransactions, seedGoals } from "@/constants/seed";
 import { currencySymbolFor } from "@/constants/currencies";
+import { requestNotificationConsent } from "@/utils/notificationConsent";
 import { countryById, countryFor } from "@/constants/countries";
 import { LANGUAGES, monthNamesFor, translations } from "@/constants/i18n";
 import {
@@ -2146,7 +2147,15 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds, setGoals, setDatosNegocio]);
 
   function setAutoCaptureOn(value: boolean) {
-    notificationReader.setEnabled(value);
+    if (value) {
+      const version = localSessionVersion.current;
+      requestNotificationConsent(t, () => {
+        notificationReader.setEnabled(true);
+        setAutoCaptureOnState(notificationReader.isEnabled());
+      }, () => ready && hasOnboarded && version === localSessionVersion.current && auth.currentUser?.uid === uid);
+      return;
+    }
+    notificationReader.setEnabled(false);
     setAutoCaptureOnState(notificationReader.isEnabled());
     if (!value) {
       // Al apagar se tira lo que quedara sin procesar: si la persona vuelve
@@ -2157,7 +2166,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   function openAutoCaptureSettings() {
-    notificationReader.openPermissionSettings();
+    const version = localSessionVersion.current;
+    requestNotificationConsent(t, () => notificationReader.openPermissionSettings(),
+      () => ready && hasOnboarded && version === localSessionVersion.current && auth.currentUser?.uid === uid);
   }
 
   function refreshAutoCapture() {

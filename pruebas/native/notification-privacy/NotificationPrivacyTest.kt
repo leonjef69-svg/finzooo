@@ -4,10 +4,24 @@ import java.security.Security
 import org.json.JSONArray
 import org.json.JSONObject
 
+// La fuente anterior no tenía este método. El adaptador no inventa su
+// protección: permite ejecutar ambas fuentes y comprobar su comportamiento.
+fun acceptIfAvailable(context: Context) {
+  NotificationStore::class.java.methods.find { it.name == "acceptDisclosureConsent" }
+    ?.invoke(NotificationStore, context)
+}
+
 fun main() {
   Security.addProvider(TestKeystore())
   val context = Context()
   val p = context.storage
+  val noConsent = Context()
+  noConsent.storage.seed("enabled", true)
+  check(!NotificationStore.isEnabled(noConsent)) { "Captura heredada activa sin aceptación del aviso" }
+  check(runCatching { NotificationStore.setEnabled(noConsent, true) }.isFailure)
+  acceptIfAvailable(noConsent)
+  check(!NotificationStore.isEnabled(noConsent)) { "Aceptar reactivó por sí solo un interruptor heredado" }
+  acceptIfAvailable(context)
   NotificationStore.setEnabled(context, true)
   val text = "Maria privada recibió S/ 123.45"
   val item = JSONObject().put("text", text).put("postedAt", 1729000000000L).put("captureId", "capture-1")
@@ -39,6 +53,8 @@ fun main() {
   check(JSONObject(NotificationStore.stats(legacy)).getInt("queued") == 1)
   check(legacy.storage.getString("queue", "").startsWith("nr1:"))
   check(legacy.storage.getString("seen", "").startsWith("nr1:")) { "No migra marcas antiguas sin otro Yape" }
+  acceptIfAvailable(legacy)
+  NotificationStore.setEnabled(legacy, true)
   check(!NotificationStore.add(legacy, item, dedupe))
   check(legacy.storage.getString("seen", "").startsWith("nr1:"))
   check(JSONArray(NotificationStore.drain(legacy)).length() == 1)
@@ -63,6 +79,7 @@ fun main() {
   check(TestKeystore.generated == generated) { "Inventa llave al leer datos antiguos" }
   val pendingWithoutKey = Context()
   pendingWithoutKey.storage.seed("enabled", true)
+  pendingWithoutKey.storage.seed("disclosureVersion", 1)
   pendingWithoutKey.storage.seed("inFlight", encoded)
   val pendingBefore = pendingWithoutKey.storage.disk.toMap()
   check(runCatching { NotificationStore.add(pendingWithoutKey, item, "new-with-old-pending") }.isFailure)
@@ -96,6 +113,7 @@ fun main() {
   NotificationStore.stats(oldNames)
   check(!oldNames.storage.contains("lastPkg") && !oldNames.storage.contains("ultimasApps"))
   val failedSave = Context()
+  acceptIfAvailable(failedSave)
   NotificationStore.setEnabled(failedSave, true)
   NotificationStore.add(failedSave, item, dedupe)
   val failedBefore = failedSave.storage.disk.toMap()
@@ -113,6 +131,7 @@ fun main() {
   failedSave.storage.reload(); failedSave.storage.failCommit = false
   check(JSONArray(NotificationStore.drain(failedSave)).length() == 1)
   val failedAdd = Context()
+  acceptIfAvailable(failedAdd)
   NotificationStore.setEnabled(failedAdd, true)
   val addBefore = failedAdd.storage.disk.toMap()
   failedAdd.storage.failCommit = true
@@ -120,6 +139,34 @@ fun main() {
   check(failedAdd.storage.disk == addBefore && failedAdd.storage.all == addBefore)
   failedAdd.storage.failCommit = false
   check(NotificationStore.add(failedAdd, item, dedupe)) { "Reintento se considero duplicado sin persistir" }
+
+  val safety = Context()
+  acceptIfAvailable(safety)
+  NotificationStore.setEnabled(safety, true)
+  val sensitive = JSONObject().put("title", "Yape").put("text", "Tu código de verificación es 123456")
+  val beforeSecurity = safety.storage.disk.toMap()
+  check(!NotificationStore.add(safety, sensitive, "secret-123456")) { "Persiste un aviso de código antes del filtro JS" }
+  check(safety.storage.disk == beforeSecurity)
+  val migrated = Context()
+  migrated.storage.seed("queue", JSONArray().put(sensitive).put(item).toString())
+  migrated.storage.seed("inFlight", JSONArray().put(sensitive).toString())
+  migrated.storage.seed("seen", JSONArray().put("Yape|Tu código de verificación es 123456").put(dedupe).toString())
+  acceptIfAvailable(migrated)
+  check(JSONArray(NotificationStore.drain(migrated)).length() == 1)
+  val decoded = NotificationPreferences(migrated.storage, setOf("queue", "inFlight", "seen"))
+  check(!decoded.getString("seen", "")!!.contains("123456"))
+  check(!decoded.getString("seen", "")!!.contains(text)) { "Marca contra duplicados conserva texto completo" }
+  val securityTexts = listOf("Tu CÓDIGO\u00a0de\u202fverificación es 123456", "clave temporal", "verification-code: 123456")
+  for (secret in securityTexts) check(NotificationPrivacy.isSecurityNotice("Yape", secret))
+  check(!NotificationPrivacy.isSecurityNotice("Yape", "María te envió S/ 20"))
+
+  val failedConsent = Context()
+  NotificationStore.stats(failedConsent)
+  failedConsent.storage.failCommit = true
+  check(runCatching { acceptIfAvailable(failedConsent) }.isFailure)
+  check(!NotificationStore.isEnabled(failedConsent))
+  check(NotificationStore::class.java.methods.find { it.name == "hasDisclosureConsent" }
+    ?.invoke(NotificationStore, failedConsent) == false)
   NotificationStore.setEnabled(context, false)
   val cleared = p.disk.toMap()
   NotificationStore.noteSeen(context, "com.private.chat", false)

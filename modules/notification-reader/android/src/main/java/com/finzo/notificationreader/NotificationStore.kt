@@ -21,6 +21,8 @@ object NotificationStore {
   private const val KEY_IN_FLIGHT = "inFlight"
   private const val KEY_SEEN = "seen"
   private const val KEY_ENABLED = "enabled"
+  private const val KEY_CONSENT = "disclosureVersion"
+  private const val KEY_PRIVACY = "privacyVersion"
   private const val KEY_SPEAK = "speak"
   private const val KEY_SPEAK_OUT = "speak_outgoing"
   private const val KEY_MONEDA = "moneda"
@@ -85,11 +87,27 @@ object NotificationStore {
    * de Android: aunque el permiso siga concedido, si la persona apaga la
    * función dentro de la app dejamos de capturar de inmediato.
    */
+  fun hasDisclosureConsent(context: Context): Boolean =
+    prefs(context).getInt(KEY_CONSENT, 0) == NotificationPrivacy.VERSION
+
+  @Synchronized
+  fun acceptDisclosureConsent(context: Context) {
+    if (hasDisclosureConsent(context)) return
+    val p = prefs(context)
+    prepareFinancialLists(p)
+    // Un interruptor heredado no debe reactivarse solo al aceptar el aviso.
+    // Conservar pendientes financieros; no llamar a setEnabled(false), que los vacía.
+    check(p.edit().putBoolean(KEY_ENABLED, false).putInt(KEY_CONSENT, NotificationPrivacy.VERSION).commit()) {
+      "notification-consent-unconfirmed"
+    }
+  }
+
   fun isEnabled(context: Context): Boolean =
-    prefs(context).getBoolean(KEY_ENABLED, false)
+    hasDisclosureConsent(context) && prefs(context).getBoolean(KEY_ENABLED, false)
 
   @Synchronized
   fun setEnabled(context: Context, value: Boolean) {
+    check(!value || hasDisclosureConsent(context)) { "notification-consent-required" }
     val edit = prefs(context).edit().putBoolean(KEY_ENABLED, value)
     if (!value) {
       edit
@@ -172,7 +190,7 @@ object NotificationStore {
   @Synchronized
   fun noteSeen(context: Context, pkg: String, esAppDeDinero: Boolean) {
     val p = prefs(context)
-    if (!p.getBoolean(KEY_ENABLED, false)) return
+    if (!isEnabled(context)) return
 
     val cambio = p.edit()
       .putInt(KEY_TOTAL_SEEN, p.getInt(KEY_TOTAL_SEEN, 0) + 1)
@@ -221,7 +239,7 @@ object NotificationStore {
       put("lastMoneyAt", p.getLong(KEY_LAST_MONEY_AT, 0L))
       put("ultimasApps", "")
       put("lastAt", p.getLong(KEY_LAST_AT, 0L))
-      put("enabled", p.getBoolean(KEY_ENABLED, false))
+      put("enabled", isEnabled(context))
       put("queued", readArray(p.getString(KEY_QUEUE, null)).length() + readArray(p.getString(KEY_IN_FLIGHT, null)).length())
       put("lastSpeak", p.getString(KEY_LAST_SPEAK, "") ?: "")
       put("lastSpeakAt", p.getLong(KEY_LAST_SPEAK_AT, 0L))
@@ -240,13 +258,16 @@ object NotificationStore {
   fun add(context: Context, item: JSONObject, dedupeKey: String): Boolean {
     val p = prefs(context)
     if (!p.getBoolean(KEY_ENABLED, false)) return false
+    if (!hasDisclosureConsent(context)) return false
+    if (NotificationPrivacy.isSecurityNotice(item.optString("title"), item.optString("text"))) return false
     prepareFinancialLists(p)
 
+    val safeKey = NotificationPrivacy.dedupeHash(dedupeKey)
     val seen = readArray(p.getString(KEY_SEEN, null))
     for (i in 0 until seen.length()) {
-      if (seen.optString(i) == dedupeKey) return false
+      if (seen.optString(i) == safeKey) return false
     }
-    seen.put(dedupeKey)
+    seen.put(safeKey)
     while (seen.length() > MAX_SEEN) seen.remove(0)
 
     val queue = readArray(p.getString(KEY_QUEUE, null))
@@ -303,6 +324,30 @@ object NotificationStore {
     // Abrir también las marcas de duplicados, aunque no llegue otro Yape:
     // la primera recogida/diagnóstico migra todas las listas antiguas.
     listOf(KEY_QUEUE, KEY_IN_FLIGHT, KEY_SEEN).forEach { readArray(p.getString(it, null)) }
+    if (p.getInt(KEY_PRIVACY, 0) == NotificationPrivacy.VERSION) return
+
+    // Primero abrir TODO. Si falta la clave o hay corrupción, no reemplazar
+    // movimientos por listas vacías. Solo se retiran avisos de seguridad.
+    val pending = listOf(KEY_QUEUE, KEY_IN_FLIGHT).associateWith { key ->
+      val source = readArray(p.getString(key, null))
+      JSONArray().apply {
+        for (i in 0 until source.length()) {
+          val item = source.getJSONObject(i)
+          if (!NotificationPrivacy.isSecurityNotice(item.optString("title"), item.optString("text"))) put(item)
+        }
+      }
+    }
+    val oldSeen = readArray(p.getString(KEY_SEEN, null))
+    val safeSeen = JSONArray().apply {
+      for (i in 0 until oldSeen.length()) {
+        val key = oldSeen.getString(i)
+        if (!NotificationPrivacy.isSecurityNotice("", key)) put(NotificationPrivacy.dedupeHash(key))
+      }
+    }
+    val edit = p.edit().putString(KEY_SEEN, safeSeen.toString())
+      .putInt(KEY_PRIVACY, NotificationPrivacy.VERSION)
+    pending.forEach { (key, value) -> edit.putString(key, value.toString()) }
+    check(edit.commit()) { "notification-privacy-cleanup-unconfirmed" }
   }
 
   private fun readArray(raw: String?): JSONArray =

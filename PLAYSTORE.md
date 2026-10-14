@@ -506,6 +506,21 @@ la próxima versión; esta preparación no modifica las consolas ni la web publi
 
 ## Permiso delicado: lector de notificaciones
 
+14/10/2026 — preparado, no publicado: aviso destacado y aceptación previa a
+Dar acceso/Encender. Se guarda solo la versión aceptada en las preferencias
+locales del teléfono, sin identidad, fecha ni envío a Firebase; se conserva
+mientras se mantengan los datos de la aplicación. No es un recibo jurídico.
+Sin aceptación vigente el nuevo servicio nativo no captura. Se filtran códigos
+antes del buzón/voz y se limpian selectivamente colas/marcas antiguas; los pagos
+permanecen. Marcas contra duplicados pasan a huellas SHA-256 cifradas, sin copia
+del texto. El diagnóstico queda local; movimientos sí pueden formar parte
+del respaldo Pro en Firebase (Google). No usar «Nada sale de tu celular».
+Requiere APK nuevo y pruebas Android/físico. No publica HTML, cambia hashes
+legales ni acredita autorización de Yape. Sin nueva categoría sensible ni
+destinatario remoto; sí debe declararse el ajuste técnico local y alinear
+política pública/vídeo/formulario al entregar. Guía:
+`docs/REGISTRO_AUTOMATICO_PRIVACIDAD.md`.
+
 FINO-52 preparado (08/10/2026): movimientos personales/metas nuevos conservan
 un UUID de creación, además del número, y el respaldo un marcador técnico de
 compatibilidad. No identifica otro teléfono/persona ni añade un servicio o

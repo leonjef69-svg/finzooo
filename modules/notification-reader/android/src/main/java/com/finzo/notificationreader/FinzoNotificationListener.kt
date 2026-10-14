@@ -196,6 +196,7 @@ class FinzoNotificationListener : NotificationListenerService() {
       // se ve al desplegar la notificación). Nos quedamos con el más completo.
       val body = if (bigText.length > text.length) bigText else text
       if (title.isBlank() && body.isBlank()) return
+      if (NotificationPrivacy.isSecurityNotice(title, "$text $bigText")) return
 
       val item = JSONObject().apply {
         put("captureId", "$pkg|${sbn.key}|${sbn.postTime}")
