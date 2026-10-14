@@ -8,6 +8,10 @@ if (revision && !/^[a-f\d]{7,40}$/i.test(revision)) throw new Error("Revisión i
 const source = file => revision
   ? execFileSync("git", ["show", `${revision}:${file}`], { encoding: "utf8" })
   : readFileSync(file, "utf8");
+const registrationFile = revision ? "screens/Register.tsx" : "screens/Login.tsx";
+const registrationAction = revision ? "submit" : "registerSubmit";
+const registrationRouteFile = revision ? "app/register.tsx" : "app/login.tsx";
+const registrationRoute = revision ? "RegisterRoute" : "LoginRoute";
 const original = (file, name, dependencies) => handlerOriginal(file, name, dependencies, source(file));
 // La protección nueva se usa también con los manejadores antiguos: la regresión
 // debe fallar por continuar/navegar después de salir, no por una API ausente.
@@ -62,22 +66,22 @@ function absent(f, names, message) {
   f.scope.blur(); sdk.resolve({ user: f.user }); await pending;
   absent(f, ["entered"], "Login abandonado no debe abrir/navegar cuando el SDK responde tarde");
 }
-for (const file of ["screens/Login.tsx", "screens/Register.tsx"]) {
+for (const file of ["screens/Login.tsx"]) {
   const f = fixture(), sdk = deferred(); f.values.signInWithGoogle = () => sdk.promise;
-  const pending = original(file, file === "screens/Login.tsx" ? "loginWithGoogle" : "registerWithGoogle", f.values)();
+  const pending = original(file, "loginWithGoogle", f.values)();
   f.scope.blur(); sdk.resolve(f.user); await pending;
   absent(f, ["receipt", "entered"], `${file}: Google abandonado no continúa`);
 }
 {
   const f = fixture(), sdk = deferred(); f.values.createUserWithEmailAndPassword = () => sdk.promise;
-  const pending = original("screens/Register.tsx", "submit", f.values)();
+  const pending = original(registrationFile, registrationAction, f.values)();
   f.scope.blur(); sdk.resolve({ user: f.user }); await pending;
   absent(f, ["receipt", "profile", "verify", "registered"], "Registro abandonado no completa perfil/verificación/ruta");
 }
 for (const step of ["updateProfile", "sendEmailVerification"]) {
   const f = fixture(), wait = deferred(); let reached = false;
   f.values[step] = () => { reached = true; return wait.promise; };
-  const pending = original("screens/Register.tsx", "submit", f.values)();
+  const pending = original(registrationFile, registrationAction, f.values)();
   for (let i = 0; i < 10 && !reached; i++) await Promise.resolve();
   assert.equal(reached, true); f.scope.blur(); wait.resolve(); await pending;
   absent(f, ["registered"], `Registro abandonado después de ${step} no navega`);
@@ -88,7 +92,6 @@ for (const step of ["updateProfile", "sendEmailVerification"]) {
 // la pantalla se abandona dentro de abrir el archivo o consultar la nube.
 for (const [file, component, prop] of [
   ["app/login.tsx", "LoginRoute", "onLoggedIn"],
-  ["app/register.tsx", "RegisterRoute", "onGoogleSignedIn"],
   ["app/onboarding.tsx", "OnboardingRoute", "onGoogle"],
 ]) {
   for (const step of ["openLocalAccount", "hydrateFromCloud"]) {
@@ -112,8 +115,8 @@ for (const [file, component, prop] of [
 {
   const f = fixture(), wait = deferred(); let reached = false;
   f.values.openLocalAccount = () => { reached = true; return wait.promise; };
-  const props = original("app/register.tsx", "RegisterRoute", {
-    ...f.values, React, Register: "Register", useAppData: () => f.values,
+  const props = original(registrationRouteFile, registrationRoute, {
+    ...f.values, React, Register: "Register", Login: "Login", useAppData: () => f.values,
   })().props;
   const pending = props.onRegistered("Prueba", f.user.email, f.scope.begin());
   assert.equal(reached, true); f.scope.blur(); wait.resolve(false); await pending;

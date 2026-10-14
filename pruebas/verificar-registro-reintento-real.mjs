@@ -5,7 +5,9 @@ import { handlerOriginal } from "./helpers/handler-original.mjs";
 
 const revision = process.env.FINO_REGISTRATION_BASELINE;
 if (revision && !/^[a-f\d]{7,40}$/i.test(revision)) throw new Error("Revisión inválida");
-const source = revision ? execFileSync("git", ["show", `${revision}:screens/Register.tsx`], { encoding: "utf8" }) : readFileSync("screens/Register.tsx", "utf8");
+const file = revision ? "screens/Register.tsx" : "screens/Login.tsx";
+const action = revision ? "submit" : "registerSubmit";
+const source = revision ? execFileSync("git", ["show", `${revision}:${file}`], { encoding: "utf8" }) : readFileSync(file, "utf8");
 function fixture() {
   const calls = [], errors = [], toasts = [];
   const user = { uid: "registration-test", email: "synthetic@hotmail.com" };
@@ -20,7 +22,7 @@ function fixture() {
     updateProfile: async () => calls.push(["profile"]), sendEmailVerification: async () => calls.push(["verify"]),
     onRegistered: async (_, email) => calls.push(["registered", email]),
   };
-  return { calls, errors, toasts, user, values, submit: () => handlerOriginal("screens/Register.tsx", "submit", values, source)() };
+  return { calls, errors, toasts, user, values, submit: () => handlerOriginal(file, action, values, source)() };
 }
 // Cuenta creada y correo fallido: permite verificar/reintentar, no repetir el alta.
 {

@@ -1,5 +1,24 @@
 # Estado actual de Fino
 
+## Acceso — 13/10/2026 — formulario único
+
+Bienvenida abre Login en modo entrar o crear. Registro antiguo es un alias
+puro, no otro formulario; screens/Register.tsx se retiró y su alta por correo
+vive en registerSubmit de Login. Alternar conserva el correo y agrega/quita
+Nombre/Términos con transición corta, sin navegar ni montar dos formularios.
+Google comparte el manejador y no repite aceptación vigente; recibo fallido
+no abre datos. Una cuenta parcialmente creada conserva su reintento.
+Correo se verifica antes de abrir copia/configurar. Después, una cuenta nueva
+lleva su nombre/correo confirmado a Setup sin sustituir perfiles existentes;
+la misma sesión se comprueba tras leer copia/nube. Presupuesto sigue opcional.
+Marca 13oct-acceso-unificado. TypeScript/ESLint, 212 pruebas y 8 auditores sin
+tarjetas aprobados; regresión cafc2ec roja por navegar en vez de alternar.
+Guía y alcance visual: docs/ACCESO_UNIFICADO.md.
+Android normal confirmado en ambos modos, sin formularios reales enviados.
+Qué sigue/falta: comprobación personal de Google/correo y copia local protegida,
+físico/teclado/letra grande/TalkBack/FPS y entrega. No se borraron datos ni se
+cambiaron Firebase, nativo, Telegram, tarjetas, APK/AAB/OTA/Play.
+
 ## Bienvenida — 13/10/2026 — posiciones según referencia roja/azul
 
 La referencia yrtyrtyrtyrtyrt.GIF pide tarjetas superiores a los lados de la

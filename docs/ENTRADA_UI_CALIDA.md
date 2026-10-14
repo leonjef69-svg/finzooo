@@ -1,5 +1,13 @@
 # Entrada cálida — 13/10/2026
 
+## Acceso posterior: formulario único
+
+Marca `13oct-acceso-unificado`: Login incorpora crear/entrar sin navegación
+entre modos. Registro separado retirado; enlace antiguo como alias puro.
+Actualiza el recorrido descrito en los apartados históricos siguientes.
+Comprobaciones, flujo, caché de desarrollo y pendientes en
+`docs/ACCESO_UNIFICADO.md`. Bienvenida y configuración aprobadas conservadas.
+
 ## Ajuste vigente: posiciones según marcas rojas y círculo azul
 
 Marca `13oct-bienvenida-posiciones`; supersede la colocación de `edee109`.

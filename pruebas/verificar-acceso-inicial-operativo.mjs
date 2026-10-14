@@ -37,8 +37,8 @@ const React = { Fragment: "Fragment", createElement: (type, props, ...children) 
 const flatten = node => !node || typeof node !== "object" ? [] : [node, ...node.children.flat(Infinity).flatMap(flatten)];
 const dependencies = { ...entryUIFixture, Smile: "Smile", Mail: "Mail", KeyRound: "KeyRound", React, ActivityIndicator: "Spinner", View: "View", Text: "Text", Image: "Image", ScrollView: "ScrollView", KeyboardAvoidingView: "KeyboardAvoidingView", StatusBar: "StatusBar", Wallet: "Wallet", TouchableOpacity: "TouchableOpacity", AuthField: "AuthField", AuthLegalAcceptance: "AuthLegalAcceptance", GoogleButton: "GoogleButton", OrDivider: "OrDivider",
   Platform: { OS: "android" }, useSafeAreaInsets: () => ({ top: 24, bottom: 24 }), useWindowDimensions: () => ({ height: 480 }), useState: value => [value, () => {}], useRef: value => ({ current: value }), useEntryOperation: () => () => () => true, useEffect() {}, Keyboard: { addListener: () => ({ remove() {} }) }, useAppData: () => ({ t: key => key, showToast() {} }), require: () => "original-image" };
-for (const [file, name] of [["screens/Login.tsx", "Login"], ["screens/Register.tsx", "Register"]]) {
-  const tree = flatten(handlerOriginal(file, name, dependencies, source(file))({ onLoggedIn() {}, onGoRegister() {}, onRegistered() {}, onGoogleSignedIn() {}, onGoLogin() {} }));
+for (const initialMode of ["login", "register"]) {
+  const tree = flatten(handlerOriginal("screens/Login.tsx", "Login", dependencies, source("screens/Login.tsx"))({ initialMode, onLoggedIn() {}, onRegistered() {} }));
   assert.ok(tree.find(node => node.type === "EntryScreen"), "el formulario usa la superficie desplazable común");
 }
 const shared = flatten(handlerOriginal("components/EntryUI.tsx", "EntryScreen", {
@@ -50,5 +50,5 @@ assert.ok(scroll.props.contentContainerStyle.paddingBottom >= 20, "sin tapar con
 assert.notEqual(scroll.props.scrollEnabled, false, "contenido largo sigue desplazable");
 const navCalls = [];
 handlerOriginal("utils/entryNavigation.ts", "switchEntryRoute", { Keyboard: { dismiss: () => navCalls.push("keyboard") }, reemplazarUnaVez: path => navCalls.push(path) })("/register");
-assert.deepEqual(navCalls, ["keyboard", "/register"]);
+assert.deepEqual(navCalls, ["keyboard", "/login?mode=register"]);
 console.log("Originales/IO y JSX adaptados: verificación y reset únicos, errores protegidos, salida fallida, scroll y fondo sin hueco, teclado antes de cambiar. Android y cuentas reales pendientes.");

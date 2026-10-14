@@ -26,6 +26,7 @@ function fixture({ accepted = false, checked = false, pending = null, receiptErr
     t: key => key,
     setGoogleLegalPending: () => {},
     setError: value => errors.push(["email", value]),
+    setErrors: () => {},
     setGoogleError: value => errors.push(["google", value]),
     setLoading: () => {}, setGoogleLoading: () => {}, showToast: value => errors.push(["toast", value]),
     GoogleSignInCancelled: class extends Error {}, googleSignInErrorMessage: () => "google-failure",
@@ -82,9 +83,9 @@ function fixture({ accepted = false, checked = false, pending = null, receiptErr
 }
 
 const ui = readFileSync(file, "utf8");
-assert.match(ui, /googleLegalPending \? <View[\s\S]*?<AuthLegalAcceptance/,
-  "la casilla solo aparece cuando esta cuenta necesita registrar una aceptación");
-assert.match(ui, /disabled=\{loading \|\| \(googleLegalPending && !legalAccepted\)\}/,
+assert.match(ui, /!recovering && \(mode === "register" \|\| googleLegalPending\)[\s\S]*?<AuthLegalAcceptance/,
+  "una sola casilla aparece para registrar o cuando falta el recibo de Google");
+assert.match(ui, /disabled=\{loading \|\| !!createdUser.current \|\| \(googleLegalPending && !legalAccepted\)\}/,
   "Google no se bloquea con la casilla en cuentas que ya aceptaron");
 for (const key of ["auth.legalRequiredForAccount", "auth.acceptAndContinue"]) {
   assert.equal((readFileSync("constants/i18n.ts", "utf8").match(new RegExp(`\\"${key}\\"`, "g")) ?? []).length, 3,

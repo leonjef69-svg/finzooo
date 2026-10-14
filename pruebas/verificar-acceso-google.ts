@@ -39,7 +39,8 @@ ok(
 );
 
 console.log("\n--- EL AVISO ESTÁ CON EL BOTÓN DE GOOGLE, NO CON LA CONTRASEÑA ---");
-for (const archivo of ["Register.tsx", "Login.tsx"]) {
+// Login contiene ambos modos; ya no existe un segundo formulario de Registro.
+for (const archivo of ["Login.tsx"]) {
   const pantalla = fs.readFileSync(path.join(process.cwd(), "screens", archivo), "utf8");
   const boton = pantalla.lastIndexOf("<GoogleButton");
   const aviso = pantalla.lastIndexOf("{googleError ?");

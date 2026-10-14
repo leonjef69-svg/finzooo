@@ -6,61 +6,40 @@ import { handlerOriginal } from "./helpers/handler-original.mjs";
 const revision = process.env.FINO_LEGAL_AUTH_BASELINE;
 if (revision && !/^[a-f\d]{7,40}$/i.test(revision)) throw new Error("Revisión inválida");
 const source = file => revision ? execFileSync("git", ["show", `${revision}:${file}`], { encoding: "utf8" }) : readFileSync(file, "utf8");
-const paths = [
-  ["screens/Register.tsx", "submit"],
-  ["screens/Register.tsx", "registerWithGoogle"],
-];
-
-for (const [file, name] of paths) {
-  const calls = [], errors = [], authBusy = { current: false };
-  let pendingResolve;
-  const dependencies = {
-    beginEntryOperation: () => () => true,
-    withTimeout: promise => promise, recordLegalAcceptanceForCurrentAccount: async () => { calls.push("receipt"); }, showToast: value => errors.push(value),
-    authBusy, legalAccepted: false, t: key => key,
-    name: "Ana Torres", email: "ana@example.test", pass: "pass-test-only", auth: { currentUser: null }, createdUser: { current: null }, verificationSent: { current: false },
-    setGoogleError: value => errors.push(value), setErrors: value => errors.push(value), setError: value => errors.push(value),
-    setLoading: value => calls.push(["loading", value]), setGoogleLoading: value => calls.push(["googleLoading", value]),
-    createUserWithEmailAndPassword: async () => { calls.push("create"); const user = { uid: "uid-test" }; dependencies.auth.currentUser = user; return { user }; },
-    updateProfile: async () => calls.push("profile"), sendEmailVerification: async () => calls.push("verify"),
-    signInWithGoogle: async () => { calls.push("google"); if (pendingResolve === null) await new Promise(resolve => { pendingResolve = resolve; }); dependencies.auth.currentUser = { uid: "google-test" }; return dependencies.auth.currentUser; },
-    onRegistered: async () => calls.push("registered"), onGoogleSignedIn: async () => calls.push("signed"),
-    onLoggedIn: async () => calls.push("logged"), GoogleSignInCancelled: class extends Error {},
-    googleSignInErrorMessage: () => "google-failure", firebaseErrorMessage: () => "auth-failure",
-  };
-  await handlerOriginal(file, name, dependencies, source(file))();
-  assert.deepEqual(calls, [], `${file}:${name}: sin marcar no inicia Auth, perfil, verificación ni navegación`);
-  assert.ok(errors.some(value => value === "auth.legalRequired" || value.general === "auth.legalRequired"));
-  assert.equal(authBusy.current, false);
-
-  dependencies.legalAccepted = true;
-  await handlerOriginal(file, name, dependencies, source(file))();
-  if (name === "submit") {
-    assert.deepEqual(calls.filter(value => typeof value === "string"), ["create", "receipt", "profile", "verify", "registered"]);
-    calls.length = 0; dependencies.email = "invalid";
-    await handlerOriginal(file, name, dependencies, source(file))();
-    assert.deepEqual(calls, [], "aceptar no salta la validación del correo");
-  } else {
-    assert.deepEqual(calls.filter(value => typeof value === "string"), ["google", "receipt", file.includes("Register") ? "signed" : "logged"]);
-    calls.length = 0; pendingResolve = null;
-    const handler = handlerOriginal(file, name, dependencies, source(file));
-    const pending = handler(); await handler();
-    assert.equal(calls.filter(value => value === "google").length, 1, "aceptación no rompe el bloqueo de doble toque");
-    pendingResolve(); await pending;
-    dependencies.signInWithGoogle = async () => { throw new dependencies.GoogleSignInCancelled(); };
-    calls.length = 0; await handlerOriginal(file, name, dependencies, source(file))();
-    assert.equal(authBusy.current, false, "cancelar Google libera el bloqueo sin navegar");
-    assert.equal(calls.filter(value => typeof value === "string").length, 0);
-  }
-  calls.length = 0; errors.length = 0; dependencies.email = "ana@example.test";
-  dependencies.createdUser.current = null; dependencies.verificationSent.current = false;
-  dependencies.signInWithGoogle = async () => { calls.push("google"); dependencies.auth.currentUser = { uid: "google-test" }; return dependencies.auth.currentUser; };
-  dependencies.recordLegalAcceptanceForCurrentAccount = async () => { calls.push("receipt-failed"); throw new Error("disk-error"); };
-  await handlerOriginal(file, name, dependencies, source(file))();
-  assert.equal(calls.filter(value => value === "create" || value === "google").length, 1, "fallo local no repite Auth exitoso");
-  assert.ok(errors.includes("legal.saveFailed"), "no anuncia aceptación guardada ante fallo");
-  assert.ok(calls.includes(name === "submit" ? "registered" : file.includes("Register") ? "signed" : "logged"), "acceso válido no queda atrapado por un recibo fallido");
-}
+const file = revision ? "screens/Register.tsx" : "screens/Login.tsx";
+const action = revision ? "submit" : "registerSubmit";
+const calls = [], errors = [];
+const dependencies = {
+  beginEntryOperation: () => () => true, withTimeout: promise => promise,
+  recordLegalAcceptanceForCurrentAccount: async () => calls.push("receipt"),
+  authBusy: { current: false }, legalAccepted: false, t: key => key,
+  name: "Ana Torres", email: "ana@example.test", pass: "pass-test-only",
+  auth: { currentUser: null }, createdUser: { current: null }, verificationSent: { current: false },
+  setGoogleError() {}, setErrors: value => errors.push(value), setLoading() {},
+  showToast: value => errors.push(value), firebaseErrorMessage: () => "auth-failure",
+  createUserWithEmailAndPassword: async () => { calls.push("create"); const user = { uid: "uid-test" }; dependencies.auth.currentUser = user; return { user }; },
+  updateProfile: async () => calls.push("profile"), sendEmailVerification: async () => calls.push("verify"),
+  onRegistered: async () => calls.push("registered"),
+};
+const run = () => handlerOriginal(file, action, dependencies, source(file))();
+await run();
+assert.deepEqual(calls, [], "sin marcar no inicia el alta por correo");
+assert.equal(errors.at(-1).general, "auth.legalRequired");
+dependencies.legalAccepted = true;
+await run(); assert.deepEqual(calls, ["create", "receipt", "profile", "verify", "registered"]);
+calls.length = 0; dependencies.email = "invalid";
+await run(); assert.deepEqual(calls, [], "aceptar no salta la validación");
+dependencies.email = "ana@example.test"; dependencies.createdUser.current = null;
+dependencies.verificationSent.current = false;
+dependencies.recordLegalAcceptanceForCurrentAccount = async () => { calls.push("receipt-failed"); throw new Error("disk-error"); };
+await run();
+assert.deepEqual(calls, ["create", "receipt-failed"], "fallo de recibo no abre datos, modifica perfil ni envía verificación");
+assert.equal(errors.at(-1).general, "register.accountCreatedRetry");
+dependencies.recordLegalAcceptanceForCurrentAccount = async () => calls.push("receipt");
+await run();
+assert.equal(calls.filter(value => value === "create").length, 1, "reintento termina la cuenta ya creada");
+assert.equal(calls.at(-1), "registered");
+assert.equal(dependencies.authBusy.current, false);
 
 // Componente JSX original con árbol/adaptadores, no dispositivo ni TalkBack.
 const changes = [], routes = [];
@@ -80,9 +59,9 @@ for (const accepted of [false, true]) {
 }
 const busyTree = flatten(component({ accepted: true, onChange() {}, disabled: true, t: key => key }));
 assert.ok(busyTree.filter(node => node.props.accessibilityRole === "link" || node.props.accessibilityRole === "checkbox").every(node => node.props.disabled));
-for (const file of ["screens/Register.tsx", "screens/Login.tsx"]) {
+for (const file of ["screens/Login.tsx"]) {
   const text = source(file);
   assert.ok(text.includes("[legalAccepted, setLegalAccepted] = useState(false)"), "casilla nunca premarcada; contrato estático");
   assert.ok(text.includes("<AuthLegalAcceptance"), "conexión de la pantalla; contrato estático");
 }
-console.log("Originales con IO/JSX adaptado: tres altas bloqueadas sin aceptación, recibo tras Auth sin repetir altas ante fallo, validación, doble toque/cancelación y casilla/enlace. Persistencia real probada aparte; no consentimiento jurídico ni Android.");
+console.log("Registro por correo original/IO: aceptación previa, validación y recibo obligatorio; fallo/reintento sin repetir alta. Casilla/enlace originales. Google único se comprueba en sus suites propias, no consentimiento jurídico ni Android.");

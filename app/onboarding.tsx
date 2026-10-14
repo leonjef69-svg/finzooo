@@ -69,7 +69,7 @@ export default function OnboardingRoute() {
   return (
     <Onboarding
       onGoogle={continueWithGoogle}
-      onCreateAccount={() => irUnaVez("/register")}
+      onCreateAccount={() => irUnaVez("/login?mode=register")}
       onLogin={() => irUnaVez("/login")}
     />
   );

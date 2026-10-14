@@ -6,7 +6,7 @@ import { auth } from "@/utils/firebase";
 import { withTimeout } from "@/utils/withTimeout";
 
 export default function VerifyEmailRoute() {
-  const { t, openLocalAccount, hydrateFromCloud, logout } = useAppData();
+  const { t, openLocalAccount, hydrateFromCloud, logout, setUserName, setUserEmail } = useAppData();
 
   return (
     <VerifyEmail
@@ -15,23 +15,32 @@ export default function VerifyEmailRoute() {
         const user = auth.currentUser;
         if (!user) return false;
         await withTimeout(reload(user));
-        if (auth.currentUser !== user) {
-          const failure = new Error(t("settings.noActiveSession"));
-          failure.name = "LocalAccountAccessError";
-          throw failure;
+        function requireSameAccount() {
+          if (auth.currentUser !== user) {
+            const failure = new Error(t("settings.noActiveSession"));
+            failure.name = "LocalAccountAccessError";
+            throw failure;
+          }
         }
+        requireSameAccount();
         if (!user.emailVerified) return false;
         const localRestored = await withTimeout(openLocalAccount(user.uid, user.email));
+        requireSameAccount();
         if (localRestored) {
           router.replace("/(tabs)");
           return true;
         }
 
         const cloudResult = await withTimeout(hydrateFromCloud(user.uid));
+        requireSameAccount();
         if (cloudResult === "restored") {
           router.replace("/(tabs)");
           return true;
         }
+        // Cuenta nueva: llevar el nombre/correo ya confirmados a configuración,
+        // sin sustituir un perfil local o remoto existente.
+        setUserName(user.displayName || "");
+        setUserEmail(user.email || "");
         router.replace("/setup");
         return true;
       }}

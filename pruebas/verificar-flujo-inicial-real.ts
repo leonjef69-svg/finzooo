@@ -4,6 +4,7 @@ import { translations, type LanguageId } from "@/constants/i18n";
 
 const bienvenida = fs.readFileSync("screens/Onboarding.tsx", "utf8");
 const registro = fs.readFileSync("app/register.tsx", "utf8");
+const acceso = fs.readFileSync("app/login.tsx", "utf8");
 const configuracion = fs.readFileSync("app/setup.tsx", "utf8");
 
 const claves = [
@@ -23,7 +24,9 @@ for (const key of claves) {
 }
 
 assert.ok(bienvenida.includes("fino-welcome-person.webp"), "falta la ilustración ligera aprobada con la persona");
-assert.ok(registro.includes('router.replace("/setup")'), "crear cuenta no lleva a configurar Fino");
+assert.match(registro, /export \{ default \} from "\.\/login"/, "el enlace antiguo de registro usa el acceso único");
+assert.ok(acceso.includes('if (!user.emailVerified)'), "verificar precede a abrir una copia");
+assert.ok(acceso.includes('router.replace(localRestored ? "/(tabs)" : "/setup")'), "registro verificado conduce a configuración sin duplicarla");
 assert.ok(
   configuracion.includes('router.replace(auth.currentUser && !auth.currentUser.emailVerified ? "/verify-email" : "/(tabs)")'),
   "configurar Fino no lleva a verificar un correo pendiente",

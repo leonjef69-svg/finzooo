@@ -64,8 +64,8 @@ function environment() {
 }
 
 for (const [label, path, otherLabel, otherPath] of [
-  ["onboarding.createAccount", "/register", "onboarding.haveAccount", "/login"],
-  ["onboarding.haveAccount", "/login", "onboarding.createAccount", "/register"],
+  ["onboarding.createAccount", "/login?mode=register", "onboarding.haveAccount", "/login"],
+  ["onboarding.haveAccount", "/login", "onboarding.createAccount", "/login?mode=register"],
 ]) {
   const e = environment();
   e.button(label).props.onPress();

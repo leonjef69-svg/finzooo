@@ -1,5 +1,16 @@
 # Entregas de Fino
 
+## 13/10/2026 — Acceso único, desarrollo local; NO entrega de Play
+
+Marca 13oct-acceso-unificado: crear/entrar en un formulario, campos animados,
+correo conservado, Google único y reintentos protegidos. Registro viejo solo
+conserva un alias de compatibilidad; no una pantalla adicional.
+TypeScript/ESLint, 212 pruebas y 8 auditores sin tarjetas aprobados; regresión
+cafc2ec roja por navegación anterior y verde actual. Guía ACCESO_UNIFICADO.
+Emulador actualizado: ambos modos completos, sin formularios reales enviados.
+Qué sigue/falta: Google/correo personales, copia protegida, físico y publicación.
+Sin datos borrados ni APK/AAB/OTA/Play/nativo/Firebase/Telegram modificados.
+
 ## 13/10/2026 — Posiciones de Bienvenida según referencia; desarrollo local
 
 Marca 13oct-bienvenida-posiciones: Bus/Comida bajan hacia los costados de la

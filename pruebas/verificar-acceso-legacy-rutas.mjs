@@ -13,6 +13,8 @@ import { createSourceReader } from "./helpers/source-reader.mjs";
 // No toca Firebase, servicios reales, Android, tarjetas ni datos de usuarios.
 const root = process.cwd(), require = createRequire(import.meta.url);
 const read = createSourceReader({ revision: process.env.FINO_LEGACY_ROUTE_BASELINE ?? "" });
+const registrationFile = process.env.FINO_LEGACY_ROUTE_BASELINE ? "app/register.tsx" : "app/login.tsx";
+const registrationRoute = process.env.FINO_LEGACY_ROUTE_BASELINE ? "RegisterRoute" : "LoginRoute";
 const file = "contexts/AppDataContext.tsx", context = read(file);
 const React = { createElement: (type, props, ...children) => ({ type, props, children }) };
 const user = () => ({ uid: "legacy-a", email: "legacy-a@example.test", displayName: "Ana", emailVerified: false });
@@ -37,16 +39,16 @@ function route(file, name, auth, appData, events) {
   const data = { t: key => key, openLocalAccount: async () => { events.push(["open"]); throw verificationRequired(); },
     hydrateFromCloud: async () => { events.push(["cloud"]); return "restored"; },
     setUserName: value => events.push(["name", value]), setUserEmail: value => events.push(["email", value]) };
-  await route("app/register.tsx", "RegisterRoute", auth, data, events).props.onRegistered("Otra persona", "another@example.test");
-  assert.deepEqual(events, [["open"], ["route", "/verify-email"]], "el alta no sustituye el perfil legacy al pedir confirmación ni va a setup");
+  await route(registrationFile, registrationRoute, auth, data, events).props.onRegistered("Otra persona", "another@example.test");
+  assert.deepEqual(events, [["route", "/verify-email"]], "el alta no abre ni sustituye el perfil legacy antes de confirmar, ni va a setup");
   assert.ok(auth.currentUser, "pedir verificar conserva la sesión que enviará el correo");
 }
 {
-  const auth = { currentUser: user() }, events = [];
+  const auth = { currentUser: { ...user(), emailVerified: true } }, events = [];
   const data = { t: key => key, openLocalAccount: async () => { throw Object.assign(new Error("owner-mismatch"), { name: "LocalAccountAccessError" }); },
     hydrateFromCloud: async () => assert.fail("no abrir nube tras un error de dueño"),
     setUserName: () => assert.fail("no sustituir perfil protegido"), setUserEmail: () => assert.fail("no sustituir email protegido") };
-  await assert.rejects(route("app/register.tsx", "RegisterRoute", auth, data, events).props.onRegistered("Ana", auth.currentUser.email), /owner-mismatch/);
+  await assert.rejects(route(registrationFile, registrationRoute, auth, data, events).props.onRegistered("Ana", auth.currentUser.email), /owner-mismatch/);
   assert.deepEqual(events, [], "un error de dueño no se oculta como verificación ni navega");
 }
 {
@@ -54,7 +56,7 @@ function route(file, name, auth, appData, events) {
   const data = { t: key => key, openLocalAccount: () => assert.fail("sin Auth no abrir"),
     setUserName: () => assert.fail("sin Auth no sustituir"), setUserEmail: () => assert.fail("sin Auth no sustituir") };
   await route("app/login.tsx", "LoginRoute", auth, data, events).props.onLoggedIn();
-  await route("app/register.tsx", "RegisterRoute", auth, data, events).props.onRegistered("Ana", "legacy-a@example.test");
+  await route(registrationFile, registrationRoute, auth, data, events).props.onRegistered("Ana", "legacy-a@example.test");
   assert.deepEqual(events, []);
 }
 
