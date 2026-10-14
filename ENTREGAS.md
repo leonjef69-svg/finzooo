@@ -1,5 +1,18 @@
 # Entregas de Fino
 
+## 13/10/2026 — Posiciones de Bienvenida según referencia; desarrollo local
+
+Marca 13oct-bienvenida-posiciones: Bus/Comida bajan hacia los costados de la
+cabeza; Presupuesto/Ahorro se acercan sin tapar pies. Círculo hasta 350, desde
+cabeza a zapatos, centrado y adaptable; tamaños aprobados conservados.
+Referencia lateral jhhh.GIF: las cuatro más hacia fuera, sin cambiar alturas
+ni círculo y con margen prudente incluso al crecer/inclinarse el texto.
+Vista completa en emulador normal con los tres accesos. Guía ENTRADA_UI_CALIDA.
+TypeScript/ESLint, 211 pruebas y 8 auditores sin tarjetas aprobados; regresión
+roja edee109 por colocación anterior y verde actual.
+Qué sigue/falta: físico, pequeño/letra grande y acceso/copia protegida pendiente.
+Sin datos, navegación, APK/AAB/OTA/Play, cambios nativos ni servicios modificados.
+
 ## 13/10/2026 — Bienvenida flotante recuperada; desarrollo local
 
 Marca 13oct-bienvenida-flotante: ajuste visual posterior a sin-choques, cuyas

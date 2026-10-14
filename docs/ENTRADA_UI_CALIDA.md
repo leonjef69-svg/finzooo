@@ -1,6 +1,45 @@
 # Entrada cálida — 13/10/2026
 
-## Ajuste vigente: recuperar la composición flotante
+## Ajuste vigente: posiciones según marcas rojas y círculo azul
+
+Marca `13oct-bienvenida-posiciones`; supersede la colocación de `edee109`.
+Referencia del propietario: `yrtyrtyrtyrtyrt.GIF`. Bus y Comida bajan hacia los
+costados de la cabeza, Presupuesto y Ahorro suben ligeramente, sin tocar pies.
+Persona, tamaños 24/34 de iconos, textos 15/14, anchos y botones conservados.
+Círculo redondo de hasta 350 (antes 272), centrado detrás del cuerpo, limitado
+al 96% del ancho interior y 90% del alto de la imagen. En Android normal abarca
+desde encima de la cabeza hasta debajo de los zapatos, como las marcas azules.
+
+El posicionador considera nueve bandas conservadoras del contorno del WebP
+original 427x640 (alfa >32), incluyendo un margen de 6 y la inclinación de
+cada tarjeta. Busca el acercamiento permitido; si no cabe, conserva la posición
+de partida separada. Máximo de desplazamiento: superiores +44, Presupuesto -14,
+Ahorro -8. La referencia posterior jhhh.GIF pide mover las cuatro tarjetas
+hacia las rayas laterales. Se conservan las alturas calculadas con la referencia
+inicial; solo cambia el inset visible (mínimo 3), ajustado al alto y la inclinación
+para dejar al menos 22 de margen exterior. Persona/círculo/textos no cambian.
+No lee píxeles, añade dependencias ni trabaja continuamente en Android:
+el contorno es una referencia fija y se calcula al dibujar/medir la composición.
+La huella SHA-256 de la imagen en la prueba obliga a revisar el contorno si
+se reemplaza el archivo. Mediciones iguales no generan otro cambio de alturas.
+
+QA Android normal 1080x2400/densidad420: cuatro tarjetas/círculo/persona visibles
+sin choques y los tres accesos completos; Metro actualizó sin reinicio ni cambio
+de densidad. Captura inicial `.tmp/fino-welcome-reference-after.png`;
+ajuste lateral final `.tmp/fino-welcome-blue-margins.png`, visto completo.
+La prueba ejecuta JSX/cálculos originales en cinco tamaños y tres alturas de
+texto. Comprueba el resultado mediante recorte de polígonos contra las bandas
+(con otro algoritmo, margen 4), separación lateral, posiciones solicitadas,
+círculo proporcional y mediciones estables. Verde actual; roja `edee109` por
+la colocación lateral anterior (y en la primera revisión, círculo 272), no por
+una API ausente.
+TypeScript/ESLint y batería final: 211 pruebas/8 auditores aprobados, sin
+tarjetas; el conteo incluye la suite local ajena no versionada, fuera del commit.
+No certifica dibujo nativo pequeño/letra grande, FPS ni todas las marcas.
+Qué sigue/falta: comprobación física y recorrido de acceso/copia protegida
+ya pendiente. Sin datos, navegación, remoto, APK/OTA/Play ni nativo cambiados.
+
+## Ajuste anterior: recuperar la composición flotante
 
 Marca `13oct-bienvenida-flotante`. El propietario rechazó la separación en tres
 filas de `e607245`; el apartado sin-choques siguiente documenta ese paso

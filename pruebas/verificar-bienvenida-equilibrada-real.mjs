@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { handlerOriginal } from "./helpers/handler-original.mjs";
 import { entryUIFixture } from "./helpers/entry-ui-fixture.mjs";
 
@@ -9,8 +10,29 @@ const revision = process.env.FINO_WELCOME_BALANCE_BASELINE;
 if (revision && !/^[a-f\d]{7,40}$/i.test(revision)) throw Error("Revisión inválida");
 const file = "screens/Onboarding.tsx";
 const source = revision ? execFileSync("git", ["show", `${revision}:${file}`], { encoding: "utf8" }) : readFileSync(file, "utf8");
+assert.equal(createHash("sha256").update(readFileSync("assets/images/onboarding/fino-welcome-person.webp")).digest("hex"),
+  "d0d796ed38b46dc1d968b0ba0e31635097f93945720dcb1e9183132223a099dc",
+  "si cambia la ilustración hay que volver a medir su contorno antes de validar la colocación");
 const React = { createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }) };
 const flatten = node => !node || typeof node !== "object" ? [] : [node, ...(node.children ?? []).flat(Infinity).flatMap(flatten)];
+// Referencia de contorno medida en el WebP 427x640; no es una segunda copia
+// del posicionador. Recortar el polígono contra cada banda comprueba el resultado
+// con otro algoritmo, incluyendo la inclinación y un margen visible de 4.
+const silhouette = [[69, 93, 176, 265], [93, 133, 171, 271], [133, 165, 173, 253],
+  [165, 197, 115, 256], [197, 493, 92, 354], [493, 525, 97, 345],
+  [525, 549, 139, 351], [549, 565, 161, 247], [565, 578, 187, 249]];
+function clip(polygon, axis, limit, greater) {
+  const result = [], inside = point => greater ? point[axis] >= limit : point[axis] <= limit;
+  for (let i = 0; i < polygon.length; i++) {
+    const a = polygon[i], b = polygon[(i + 1) % polygon.length];
+    if (inside(a)) result.push(a);
+    if (inside(a) !== inside(b)) {
+      const fraction = (limit - a[axis]) / (b[axis] - a[axis]);
+      result.push([a[0] + fraction * (b[0] - a[0]), a[1] + fraction * (b[1] - a[1])]);
+    }
+  }
+  return result;
+}
 for (const measuredHeights of [[64, 64, 64, 64], [82, 96, 100, 88], [140, 140, 140, 140]]) {
 for (const [width, height] of [[320, 568], [360, 640], [393, 852], [412, 915], [768, 1024]]) {
   const deps = {
@@ -55,15 +77,34 @@ for (const [width, height] of [[320, 568], [360, 640], [393, 852], [412, 915], [
     // Incluso la inclinación conserva espacio libre dentro del margen exterior.
     const angle = Math.abs(parseFloat(placement.transform[0].rotate)) * Math.PI / 180;
     const rotatedWidth = style.width * Math.cos(angle) + measuredHeights[index] * Math.sin(angle);
-    assert.ok(23 + inset - (rotatedWidth - style.width) / 2 >= 30, "ni la inclinación acerca la tarjeta al borde");
+    assert.ok(23 + inset - (rotatedWidth - style.width) / 2 >= 22, "las cuatro tarjetas se acercan a las rayas azules conservando margen incluso con la inclinación");
+    if (measuredHeights.every(value => value === 64)) assert.ok(inset <= 4, "tarjetas un poco más hacia los laterales, sin alterar tamaño ni altura");
     const rotatedHeight = style.width * Math.sin(angle) + measuredHeights[index] * Math.cos(angle);
     const rotationPadding = (rotatedHeight - measuredHeights[index]) / 2;
-    if (index < 2) {
-      const gap = image.props.style.top + image.props.style.height * 69 / 640 - placement.top - measuredHeights[index] - rotationPadding;
-      assert.ok(gap >= 9.99, "tarjeta superior separada de la cabeza incluso al crecer el texto");
-    } else {
-      const gap = placement.top - rotationPadding - image.props.style.top - image.props.style.height * 577 / 640;
-      assert.ok(gap >= 9.99, "tarjeta inferior separada de los zapatos incluso al crecer el texto");
+    const left = placement.left ?? contentWidth - placement.right - style.width;
+    const signedAngle = parseFloat(placement.transform[0].rotate) * Math.PI / 180;
+    const polygon = [[-1, -1], [1, -1], [1, 1], [-1, 1]].map(([x, y]) => [
+      left + style.width / 2 + x * style.width / 2 * Math.cos(signedAngle) - y * measuredHeights[index] / 2 * Math.sin(signedAngle),
+      placement.top + measuredHeights[index] / 2 + x * style.width / 2 * Math.sin(signedAngle) + y * measuredHeights[index] / 2 * Math.cos(signedAngle),
+    ]);
+    for (const [from, to, first, last] of silhouette) {
+      const x1 = (contentWidth - image.props.style.width) / 2 + first * image.props.style.width / 427 - 4;
+      const x2 = (contentWidth - image.props.style.width) / 2 + last * image.props.style.width / 427 + 4;
+      const y1 = image.props.style.top + from * image.props.style.height / 640 - 4;
+      const y2 = image.props.style.top + to * image.props.style.height / 640 + 4;
+      const overlap = clip(clip(clip(clip(polygon, 0, x1, true), 0, x2, false), 1, y1, true), 1, y2, false);
+      const area = Math.abs(overlap.reduce((sum, a, i) => {
+        const b = overlap[(i + 1) % overlap.length]; return sum + a[0] * b[1] - b[0] * a[1];
+      }, 0)) / 2;
+      assert.ok(area < 0.0001, `tarjeta ${index} no tapa el contorno de persona ni su margen en ${width}x${height}`);
+    }
+    if (height >= 720 && width >= 410 && measuredHeights.every(value => value === 64)) {
+      if (index === 0) assert.ok(placement.top >= 40, "Bus baja hacia el costado de la cabeza siguiendo la referencia roja");
+      if (index === 1) assert.ok(placement.top >= 28, "Comida baja hacia el costado, sin quedarse encima de la persona");
+      if (index >= 2) {
+        const earlierTop = image.props.style.top + image.props.style.height * 577 / 640 + (index === 2 ? 10 : 18) + rotationPadding;
+        assert.ok(placement.top < earlierTop - 2, "las tarjetas inferiores se acercan un poco a los pies, sin taparlos");
+      }
     }
   }
   const scene = nodes.find(node => node.children.includes(image));
@@ -76,7 +117,8 @@ for (const [width, height] of [[320, 568], [360, 640], [393, 852], [412, 915], [
   assert.equal(circle.props.style.width, circle.props.style.height, "círculo redondo y proporcional");
   assert.equal(circle.props.style.borderRadius, circle.props.style.width / 2);
   assert.ok(Math.abs(circle.props.style.top + circle.props.style.height / 2 - image.props.style.top - image.props.style.height / 2) < 0.001, "círculo centrado detrás de la persona");
-  if (height >= 720 && width >= 390) assert.ok(circle.props.style.width >= 270, "círculo algo mayor que los 238 anteriores");
+  assert.ok(circle.props.style.width <= contentWidth * 0.96, "círculo con margen lateral y sin desbordarse");
+  if (height >= 720 && width >= 390) assert.ok(circle.props.style.width >= 330, "círculo ampliado de cabeza a zapatos como la referencia azul, no los 272 anteriores");
   const subtitle = nodes.find(node => node.type === "Text" && node.children.includes("onboarding.subtitle"));
   assert.equal(subtitle.props.style[1].fontSize, 16, "subtítulo ligeramente mayor, sin agrandar el título");
   assert.equal(nodes.filter(node => node.type === "EntryButton").length, 1);
@@ -89,4 +131,4 @@ const record = handlerOriginal(file, "recordCardHeight", { setCardHeights: updat
 record(0, 88.2); assert.deepEqual(measured, [89, 64, 64, 64]);
 const stable = measured; record(0, 88.2); assert.equal(measured, stable, "medición igual no provoca otra actualización");
 record(1, NaN); record(2, Infinity); assert.equal(measured, stable);
-console.log("Bienvenida original/JSX: composición flotante, círculo mayor centrado, márgenes y separación cabeza/zapatos en cinco tamaños y tres alturas de texto; mediciones repetidas estables. Dibujo/FPS/otras marcas pendientes.");
+console.log("Bienvenida original/JSX: tarjetas hacia las referencias rojas, círculo amplio centrado, margen y contorno libre mediante recorte independiente en cinco tamaños/tres alturas de texto; mediciones estables. Dibujo/FPS/otras marcas pendientes.");

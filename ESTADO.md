@@ -1,5 +1,22 @@
 # Estado actual de Fino
 
+## Bienvenida — 13/10/2026 — posiciones según referencia roja/azul
+
+La referencia yrtyrtyrtyrtyrt.GIF pide tarjetas superiores a los lados de la
+cabeza, inferiores algo más próximas y círculo desde cabeza hasta zapatos.
+Se mantienen persona, iconos 24, textos 15/14 y botones. El círculo pasa de
+272 a hasta 350, centrado y limitado por el ancho/alto disponible.
+Las tarjetas se acercan solo si respetan el contorno conservador del WebP y
+6 de separación; con poco ancho/letra alta conservan una colocación más abierta.
+La referencia lateral posterior jhhh.GIF desplaza las cuatro hacia fuera,
+conservando alturas/círculo y al menos 22 de margen incluso inclinadas.
+Marca: 13oct-bienvenida-posiciones. Vista completa en Android normal, sin
+reiniciar Metro ni alterar medidas/datos. Guía: docs/ENTRADA_UI_CALIDA.md.
+TypeScript/ESLint, 211 pruebas y 8 auditores sin tarjetas aprobados; regresión
+roja edee109 por colocación anterior y verde actual. Conteo con suite local ajena.
+Qué sigue/falta: físico, pequeño/letra grande y acceso/copia local ya pendiente.
+Sin navegación, sesiones, nativo, Firebase, APK/AAB/OTA/Play ni Telegram cambiados.
+
 ## Bienvenida — 13/10/2026 — composición flotante recuperada
 
 El propietario pidió conservar la colocación cercana anterior, no separar las
