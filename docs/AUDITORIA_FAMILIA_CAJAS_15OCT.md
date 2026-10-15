@@ -5,6 +5,46 @@ devoluciones, cierre/salida, invitaciones, lectura y conservación de originales
 Tarjetas, Telegram, cobros, cambios de facturación y publicación fuera del cambio.
 No se crean, corrigen ni borran movimientos de la cuenta del propietario.
 
+## Tercera pasada — acción inmediata y evidencia remota de «hj»
+
+Solicitud adicional: la respuesta visual debe ser inmediata, no tras ACK. Se
+añade withImmediateRemoval para ocultar IDs solo en presentación antes de enviar
+la operación ya autorizada. No escribe libros/disco/nube ni quita marcas de
+borrado; los cálculos y barreras financieras siguen usando registros confirmados.
+Se ocultan filas/fichas en Familia y Cajas privadas/compartidas. Error/false
+retira la máscara y muestra la fuente intacta. No se anuncia éxito anticipado
+ni se publica tras abandonar la sesión. Un proceso interrumpido sigue necesitando
+el diario durable pendiente: no atribuirle esa garantía a una máscara React.
+
+El dueño respondió «No lo recuerdo» sobre la intención de los tres borrados.
+Se incorporó «Comprobar copia · sin cambiar datos» a la revisión: lecturas del
+servidor mediante la sesión del dueño, con el acceso Pro existente, solo de IDs
+afectados. No se usa acceso administrativo ni se guarda una copia nueva. El
+resultado temporal queda invalidado al cambiar las fuentes. La ausencia no
+demuestra borrado, presencia por ID no prueba identidad; red/permisos fallidos
+no se convierten en ausencia ni autorizan reparación.
+
+Android REAL: Caso 1, Caso 2 y Caso 3 muestran la marca de eliminado también en
+la nube; la jerarquía y la captura confirman los tres resultados. Conservados
+«hj» S/20 y otra Caja S/88, sin restaurar/eliminar/archivar datos. No hay evidencia
+del motivo ni una contraparte activa obtenida de esta consulta. Reparación de
+significado financiero sigue pendiente: se necesita una fuente anterior fiable
+y confirmación informada sobre la operación concreta. Archivar solo conserva
+y oculta, no equivale a reparar; no se ejecuta sin autorización.
+
+Verificación estable: TypeScript/ESLint completos sin errores/avisos y 226
+pruebas/8 auditores, excluidas tarjetas. Prueba nueva corre manejadores reales
+con respuestas retenidas, rechazo y false, conserva libros y restituye UI.
+44859f6 falla en la comparación de ocultación inmediata, no por API faltante.
+La fixture antigua de archivo se adaptó a la máscara vacía y se repitió toda
+la suite; no se cuenta su ejecución fallida ni otra interrumpida como verde.
+No cambios de servidor/reglas/nativo ni publicación. Pendientes: diario durable,
+dos cuentas Android, coste/volumen, tolerancias y externos ya documentados.
+
+El emulador mostró ANR de com.android.systemui/edge-swipe; se eligió Wait y
+se pudo leer la revisión. No se detuvo Fino ni se borró almacenamiento. No
+afirmar estabilidad definitiva del emulador a partir de ese resultado.
+
 ## Segunda pasada — selección, espera y tres casos antiguos
 
 Síntomas enviados por el dueño después de activar servicios: al elegir una

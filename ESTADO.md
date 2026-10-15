@@ -1,5 +1,57 @@
 # Estado actual de Fino
 
+## Familia/Cajas — 15/10/2026 — respuesta inmediata y copia antigua consultada
+
+El dueño pidió que no se espere al servidor para retirar una tarjeta de pantalla.
+Marca `15oct-respuesta-inmediata`: al confirmar un borrado/cierre permitido se
+oculta la fila/ficha en la misma interacción, mediante una máscara SOLO visual.
+Familia y Cajas privadas/compartidas mantienen intactos sus libros, saldos,
+identidades, disco y marcas hasta la confirmación financiera que ya existía.
+No se anuncia éxito anticipado ni se permite gastar un saldo supuesto. Rechazo,
+fallo de disco o resultado false retira la máscara y vuelve a mostrar el original;
+un lote parcialmente confirmado solo conserva retiradas las operaciones reales.
+No publica al terminar en otra pantalla/sesión. La máscara no es diario durable:
+la interrupción entre Firebase y Personal continúa siendo un límite pendiente.
+
+El dueño respondió «No lo recuerdo» sobre los tres borrados de «hj». Se añadió
+en la revisión «Comprobar copia · sin cambiar datos»: usa la sesión de la app,
+el acceso Pro existente y lecturas de servidor solo de los IDs afectados. No
+restaura, fusiona, guarda ni consulta administrativamente otras cuentas. Los
+resultados son temporales y se descartan al cambiar las fuentes/cuenta. Una
+ausencia no se presenta como prueba de borrado; un registro presente tampoco
+demuestra identidad ni autoriza restaurarlo. Red/permisos fallidos no se toman
+como ausencia y no se modifica la protección de sincronización.
+
+Consulta REAL en Android: los tres casos del 02/10/2026 de «hj», S/10 cada uno,
+muestran «La nube también lo marca como eliminado. No confirma si fue
+intencional». Captura y jerarquía Android confirman Caso 1/2/3 y ese texto para
+cada uno. Esto permite confirmar las marcas remotas, NO el motivo ni el importe
+correcto de una contraparte perdida. «hj» sigue S/20, la otra Caja S/88; no se
+borraron, restauraron ni archivaron movimientos o cajas del dueño.
+
+Durante la comprobación apareció ANR de com.android.systemui (edge-swipe), no
+un error nuevo atribuido sin evidencia a Fino. Se eligió «Wait», sin borrar datos,
+cerrar la cuenta, forzar detención o reinstalar. Se recuperó la lectura de la
+revisión. No se afirma reparado de forma definitiva el sistema del emulador.
+
+Verificación final estable: TypeScript/ESLint completos sin errores/avisos;
+226 pruebas y 8 auditores aprobados, tarjetas excluidas. Nueva prueba ejecuta
+los manejadores originales con respuesta retenida, error y false: máscara
+inmediata/libro intacto, restauración y cambio de sesión. Contra 44859f6 falla
+porque Familia NO oculta en el toque, no por API ausente. La primera ejecución
+tuvo una prueba de archivo sin la nueva máscara en su fixture; se corrigió y
+repitió el conjunto. Una ejecución interrumpida no se contó como aprobada;
+resultado final en .tmp/accion-inmediata-verificacion-15oct.log.
+
+**Sigue/falta:** no reparar automáticamente los tres casos ante «No lo recuerdo».
+Conservar protegidos; antes de restaurar/eliminar se necesita evidencia anterior
+fiable y consentimiento informado sobre el efecto en saldo. Archivar es solo
+una opción reversible, NO soluciona los pares ni se hizo de oficio. Pendientes
+de la auditoría: diario durable entre Firebase/Personal/alta de Familia, pruebas
+de dinero Android con dos cuentas, volumen/coste, tolerancias legacy y externos.
+No se cambian Functions/reglas, permisos, datos persistidos nuevos ni se entrega
+APK/AAB/OTA/Play. Las pruebas visuales NO borran dinero real del dueño.
+
 ## Familia/Cajas — 15/10/2026 — selección, espera y conflictos localizados
 
 Marca de desarrollo `15oct-familias-sin-mezclas`. Al elegir una Familia se

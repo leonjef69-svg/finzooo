@@ -11,6 +11,8 @@ import PrivateBoxMoneyReview from "@/components/PrivateBoxMoneyReview";
 import { validSpaceDate } from "@/components/SpaceMovementFields";
 import { useAppData } from "@/contexts/AppDataContext";
 import { auth } from "@/utils/firebase";
+import { withImmediateRemoval } from "@/utils/immediateRemoval";
+import { loadPrivateBoxRepairCloud } from "@/utils/privateBoxRepairCloud";
 import { bajarCajas, CloudCajasConflictError, resolverNombreCaja, subirCajas } from "@/utils/cloudCajas";
 import { compartirCajaExistente, crearInvitacionCaja, unirseACaja } from "@/utils/cloudCajasCompartidas";
 import {
@@ -134,6 +136,11 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const reparacionIntentada = useRef<{ data: DatosCajas; rows: Transaction[]; refresh: number } | null>(null);
   const [linkReview, setLinkReview] = useState<string | null>(null);
   const [repairReviewVisible, setRepairReviewVisible] = useState(false);
+  const [consultandoRespaldo, setConsultandoRespaldo] = useState(false);
+  const consultaRespaldoEnCurso = useRef(false);
+  const [respaldoRevisado, setRespaldoRevisado] = useState<{
+    data: DatosCajas; rows: Transaction[]; deleted: number[]; states: Record<number, "deleted" | "present" | "missing" | "conflict">;
+  } | null>(null);
   const [linkLimit, setLinkLimit] = useState(20);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const requestedRefresh = useRef(refreshVersion);
@@ -184,7 +191,9 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const repairSummaries = useMemo(() => summarizePrivateBoxConflicts(datos, transactions, repairPlan.conflicts), [datos, transactions, repairPlan.conflicts]);
   const cajasProtegidas = useMemo(() => [...new Set(repairPlan.conflicts.flatMap(issue => issue.boxId ? [issue.boxId] : []))], [repairPlan]);
   const cajasArchivadas = datos.cajas.filter(box => box.archivadaLocal);
-  const cajasEnLista = datos.cajas.filter(box => Boolean(box.archivadaLocal) === verArchivadas);
+  const [cajasOcultas, setCajasOcultas] = useState(new Set<string>());
+  const [movimientosOcultos, setMovimientosOcultos] = useState(new Set<string>());
+  const cajasEnLista = datos.cajas.filter(box => Boolean(box.archivadaLocal) === verArchivadas && !cajasOcultas.has(box.id));
   const repairBlocked = !personalReady || !hasOnboarded || !cloudReady || repairPlan.conflicts.some(issue => !issue.boxId || issue.reason === "invalid")
     || repairPlan.upserts.length > 0 || repairPlan.data !== datos || !!datos.revisionesImporte?.some(entry => entry.estado === "pendiente");
   const linkCandidates = useMemo(() => linkReview ? privateBoxLinkCandidates(datos, transactions, deletedTransactionIds, linkReview) : [], [datos, transactions, deletedTransactionIds, linkReview]);
@@ -380,6 +389,29 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     setTimeout(() => revisarTransferencias(issue), 250);
   }
 
+  async function consultarRespaldoTransferencias() {
+    if (!cuentaActual() || consultaRespaldoEnCurso.current || hasUnreadableLocalData()) return;
+    if (!premiumForSync.current) { showToast(t("settings.backupNeedsPaid")); return; }
+    const before = datosActuales.current, rows = personalActuales.current, deleted = borradosActuales.current;
+    const ids = [...new Set(planPrivateBoxRepair(before, rows, deleted, accountUid).conflicts
+      .filter(issue => issue.reason === "deleted" && Number.isSafeInteger(issue.personalId) && issue.personalId! > 0)
+      .map(issue => issue.personalId!))].slice(0, 100);
+    if (!ids.length) return;
+    const task = captureAccountTask(accountUid, () => cuentaActual() && premiumForSync.current
+      && datosActuales.current === before && personalActuales.current === rows && borradosActuales.current === deleted);
+    consultaRespaldoEnCurso.current = true; setConsultandoRespaldo(true);
+    try {
+      // Solo consulta con la sesión del dueño. No restaura, fusiona ni guarda.
+      const remote = await task.wait(() => loadPrivateBoxRepairCloud(accountUid, ids));
+      const states = Object.fromEntries(ids.map(id => {
+        const removed = remote.deletedIds.includes(id), present = remote.transactions.some(row => row.id === id);
+        return [id, removed && present ? "conflict" : removed ? "deleted" : present ? "present" : "missing"];
+      })) as Record<number, "deleted" | "present" | "missing" | "conflict">;
+      setRespaldoRevisado({ data: before, rows, deleted, states });
+    } catch { if (task.current()) showToast(t("boxes.reviewCloudFailed")); }
+    finally { consultaRespaldoEnCurso.current = false; if (cuentaActual()) setConsultandoRespaldo(false); }
+  }
+
   function revisarTransferencias(issueElegido?: PrivateBoxConflict) {
     const issue = issueElegido || repairPlan.conflicts.find(item => item.selectable) || repairPlan.conflicts[0];
     if (!issue || !cuentaActual() || guardandoRef.current) return;
@@ -566,7 +598,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   }, [ready, filter, recentMovementTypes]);
   const visibles = movimientos.filter(item => !filter
     || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter));
-  const filasVisibles = movementRowsByDay(visibles, item => item.fecha, dayItems => filter
+  const filasVisibles = movementRowsByDay(visibles.filter(item => !movimientosOcultos.has(item.id)), item => item.fecha, dayItems => filter
     ? dayItems.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }))
     : compactLinkedTransferRows(dayItems));
   const filasArchivadas = movementRowsByDay(movimientos, item => item.fecha,
@@ -730,7 +762,8 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       // sus marcas de borrado juntas, sin llamar al servidor compartido.
       const idsBorrados = new Set(plan.items.map(item => item.id));
       const antes = datosActuales.current;
-      if (!await guardarCambioCaja({ ...antes, movimientos: antes.movimientos.filter(item => !idsBorrados.has(item.id)), movimientosBorrados: [...new Set([...antes.movimientosBorrados, ...idsBorrados])] }, [], plan.items.flatMap(item => item.personalTransactionId == null ? [] : [item.personalTransactionId]))) return;
+      if (!await withImmediateRemoval([...idsBorrados], setMovimientosOcultos, cuentaActual,
+        () => guardarCambioCaja({ ...antes, movimientos: antes.movimientos.filter(item => !idsBorrados.has(item.id)), movimientosBorrados: [...new Set([...antes.movimientosBorrados, ...idsBorrados])] }, [], plan.items.flatMap(item => item.personalTransactionId == null ? [] : [item.personalTransactionId])))) return;
     }
     setSeleccionados([]); setSeleccionando(false);
   }
@@ -758,13 +791,13 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     const idsMovimientos = datos.movimientos.filter(item => ids.includes(item.cajaId)).map(item => item.id);
     const settled = candidatas.flatMap(item => settlePersonalTransfers(transactions, "box", item.id));
     const antes = datosActuales.current;
-    if (!await guardarCambioCaja({
+    if (!await withImmediateRemoval(candidatas.map(item => item.id), setCajasOcultas, cuentaActual, () => guardarCambioCaja({
       ...antes,
       cajas: antes.cajas.filter(item => !ids.includes(item.id)),
       movimientos: antes.movimientos.filter(item => !ids.includes(item.cajaId)),
       cajasBorradas: [...new Set([...antes.cajasBorradas, ...ids])],
       movimientosBorrados: [...new Set([...antes.movimientosBorrados, ...idsMovimientos])],
-    }, settled)) return false;
+    }, settled))) return false;
     setCajasSeleccionadas([]); setSeleccionandoCajas(false);
     return true;
   }
@@ -944,9 +977,15 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
               </TouchableOpacity>
             </View>
             <Text className="mb-3 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.repairReadOnlyHint")}</Text>
+            {repairPlan.conflicts.some(issue => issue.reason === "deleted" && issue.personalId != null) ? <TouchableOpacity accessibilityRole="button" disabled={consultandoRespaldo} onPress={() => void consultarRespaldoTransferencias()} className="mb-3 min-h-11 flex-row items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 dark:bg-noche-2">
+              {consultandoRespaldo ? <ActivityIndicator size="small" color="#0d9488" /> : null}
+              <Text className="text-sm font-bold text-teal-700 dark:text-teal-300">{t(consultandoRespaldo ? "common.loading" : "boxes.reviewCloudCheck")}</Text>
+            </TouchableOpacity> : null}
             <ScrollView nestedScrollEnabled keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingBottom: 12 }}>
               {repairPlan.conflicts.map((issue, index) => {
                 const summary = repairSummaries[index];
+                const cloudState = respaldoRevisado?.data === datos && respaldoRevisado.rows === transactions
+                  && respaldoRevisado.deleted === deletedTransactionIds && issue.personalId != null ? respaldoRevisado.states[issue.personalId] : undefined;
                 const reasonKey: Record<PrivateBoxConflict["reason"], string> = {
                   identity: "boxes.repairReason.identity",
                   deleted: "boxes.repairReason.deleted",
@@ -965,6 +1004,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
                   <Text className="mt-1 text-xs leading-5 text-slate-700 dark:text-slate-200">{t(reasonKey[issue.reason])}</Text>
                   {summary.box ? <Text className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.repairBoxSide", { details: sideText(summary.box) })}</Text> : <Text className="mt-2 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.repairNoBoxSide")}</Text>}
                   {summary.personal ? <Text className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.repairPersonalSide", { details: sideText(summary.personal) })}</Text> : <Text className="mt-1 text-xs leading-5 text-slate-600 dark:text-slate-300">{t("boxes.repairNoPersonalSide")}</Text>}
+                  {cloudState ? <Text accessibilityLiveRegion="polite" className="mt-2 text-xs leading-5 text-slate-700 dark:text-slate-200">{t(`boxes.reviewCloud.${cloudState}`)}</Text> : null}
                   {issue.selectable || (issue.movementId && privateBoxLinkCandidates(datos, transactions, deletedTransactionIds, issue.movementId).length > 0) ? <TouchableOpacity accessibilityRole="button" onPress={() => abrirRevisionTransferencia(issue)} className="mt-2 min-h-11 justify-center">
                     <Text className="font-bold text-amber-800 dark:text-amber-200">{t("boxes.repairOpenCase")}</Text>
                   </TouchableOpacity> : null}
@@ -1026,7 +1066,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
           {linkCandidates.length > linkLimit ? <TouchableOpacity accessibilityRole="button" onPress={() => setLinkLimit(value => value + 20)} className="min-h-11 justify-center"><Text className="font-bold text-amber-800 dark:text-amber-200">{t("common.show")}</Text></TouchableOpacity> : null}
           <TouchableOpacity accessibilityRole="button" disabled={guardando} onPress={() => setLinkReview(null)} className="min-h-11 justify-center"><Text className="font-bold text-slate-600 dark:text-slate-300">{t("common.cancel")}</Text></TouchableOpacity>
         </View> : null}
-        {!ready ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : lista || !caja ? (
+        {!ready ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : lista || !caja || cajasOcultas.has(caja.id) ? (
           <>
             <Text className="mb-3 mt-2 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("boxes.subtitle")}</Text>
             <View className="mb-3 flex-row gap-3">

@@ -27,6 +27,7 @@ import { devolverAportePersonal } from "@/utils/personalReturn";
 import { spaceErrorKey } from "@/utils/spaceErrors";
 import { captureAccountTask, type AccountTaskWait } from "@/utils/accountTask";
 import { getAccountStorageSession } from "@/utils/storage";
+import { withImmediateRemoval } from "@/utils/immediateRemoval";
 import {
   borrarMovimientoFamilia, cerrarFamilia, crearFamilia, crearInvitacionFamilia, listarFamilias,
   guardarMovimientoFamilia, listarMiembrosFamilia, listarMovimientosFamilia, quitarMiembroFamilia, renombrarFamilia, vincularMovimientoPersonalFamilia,
@@ -93,6 +94,8 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   const [familiasSincronizadas, setFamiliasSincronizadas] = useState(false);
   const [cargando, setCargando] = useState(!copiaInicial);
   const [ocupado, setOcupado] = useState(false);
+  const [familiasOcultas, setFamiliasOcultas] = useState(new Set<string>());
+  const [movimientosOcultos, setMovimientosOcultos] = useState(new Set<string>());
   const [modo, setModo] = useState<"crear" | "unir" | null>(null);
   const [nombre, setNombre] = useState("");
   const [codigo, setCodigo] = useState("");
@@ -303,7 +306,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     if (cargando || !familiasSincronizadas) return;
     if ((filter === "ingreso" && !recentMovementTypes.income) || (filter === "gasto" && !recentMovementTypes.expense)) setFilter(null);
   }, [cargando, familiasSincronizadas, filter, recentMovementTypes]);
-  const filasVisibles = movementRowsByDay(visibles, item => item.fecha, dayItems => filter
+  const filasVisibles = movementRowsByDay(visibles.filter(item => !movimientosOcultos.has(item.id)), item => item.fecha, dayItems => filter
     ? dayItems.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }))
     : compactLinkedTransferRows(dayItems));
   const filasSeleccionadas = countSelectedCompactRows(filasVisibles, visibles, seleccionados);
@@ -595,6 +598,8 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     Alert.alert(t("family.deleteSelectedTitle"), t("family.deleteSelectedMessage"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("common.delete"), style: "destructive", onPress: () => void ejecutar(async wait => {
+        await withImmediateRemoval(actuales.map(item => item.id), setFamiliasOcultas,
+          () => mounted.current && getAccountStorageSession() === accountSession, async () => {
         for (const item of actuales) {
           cierresPendientes.current.add(item.id);
           if (!cierresConfirmados.current.has(item.id)) {
@@ -611,6 +616,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
         setFamiliasSeleccionadas([]);
         setSeleccionandoFamilias(false);
         await wait.reload();
+        });
       }, error => {
         const code = (error as { code?: string })?.code;
         showToast(t(error instanceof Error && error.message === "personal-save-failed" ? "settings.backupMovementConflict"
@@ -626,6 +632,8 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     Alert.alert(t("family.close"), t("family.closeWarning"), [
       { text: t("common.cancel"), style: "cancel" },
       { text: t("family.close"), style: "destructive", onPress: () => void ejecutar(async wait => {
+        await withImmediateRemoval([familyId], setFamiliasOcultas,
+          () => mounted.current && getAccountStorageSession() === accountSession, async () => {
         cierresPendientes.current.add(familyId);
         if (!cierresConfirmados.current.has(familyId)) {
           try {
@@ -639,6 +647,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
         retirarFamiliasConfirmadas([familyId]);
         setFamilia(null); setMiembros([]); setMovimientos([]); setTipo(null); setInvitacion("");
         setVerTodas(true); await wait.reload(); showToast(t("family.closed"));
+        });
       }, error => {
         const code = (error as { code?: string })?.code;
         showToast(t(error instanceof Error && error.message === "personal-save-failed" ? "settings.backupMovementConflict"
@@ -661,6 +670,8 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       showToast(t(plan.reason === "contribution-used" ? "family.contributionUsed" : "family.notEnoughSpace"));
       return;
     }
+    await withImmediateRemoval(plan.items.map(item => item.id), setMovimientosOcultos,
+      () => mounted.current && getAccountStorageSession() === accountSession, async () => {
     for (const item of plan.items) {
       if (item.personalTransactionId != null) await wait(() => borrarAportePersonal("family", familia.id, item.id));
       else await wait(() => borrarMovimientoFamilia(familia.id, item.id));
@@ -669,6 +680,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       retirarMovimientoConfirmado(item.id);
     }
     setSeleccionados([]); setSeleccionando(false); await wait.reload();
+    });
   });
   const confirmarBorrarTodo = () => {
     const currentUid = auth.currentUser?.uid;
@@ -697,7 +709,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     >
       <LegalAcceptancePanel />
       {ocupado || actualizando ? <View accessibilityRole="progressbar" accessibilityLiveRegion="polite" className="mt-2 flex-row items-center justify-center gap-2 py-2"><ActivityIndicator size="small" color="#059669" /><Text className="text-sm text-slate-600 dark:text-slate-300">{t(ocupado ? "spaces.processing" : "common.loading")}</Text></View> : null}
-      {cargando ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : errorCarga ? <Text accessibilityLiveRegion="polite" className="py-8 text-center text-slate-600 dark:text-slate-300">{t("family.connectionError")}</Text> : !auth.currentUser ? <Text className="mt-6 text-center text-slate-600 dark:text-slate-300">{t("family.loginRequired")}</Text> : verTodas ? <>
+      {cargando ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : errorCarga ? <Text accessibilityLiveRegion="polite" className="py-8 text-center text-slate-600 dark:text-slate-300">{t("family.connectionError")}</Text> : !auth.currentUser ? <Text className="mt-6 text-center text-slate-600 dark:text-slate-300">{t("family.loginRequired")}</Text> : verTodas || (familia && familiasOcultas.has(familia.id)) ? <>
         <Text className="mt-3 text-sm text-slate-600 dark:text-slate-300">{t("family.listHelp")}</Text>
         <View className="mt-3 flex-row gap-3"><TouchableOpacity onPress={() => isPremium ? setModo("crear") : irUnaVez("/premium")} className={`min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl ${isPremium ? "bg-emerald-600" : "bg-amber-500"}`}><Plus size={18} color="#fff" /><Text className="font-bold text-white">{isPremium ? t("family.create") : t("family.createPremium")}</Text></TouchableOpacity><TouchableOpacity onPress={() => setModo("unir")} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-slate-100 dark:bg-noche-2"><UserPlus size={18} color="#0d9488" /><Text className="font-bold text-teal-700 dark:text-teal-300">{t("family.join")}</Text></TouchableOpacity></View>
         {modo ? <View className="mt-3 rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde"><TextInput disableFullscreenUI autoFocus value={modo === "crear" ? nombre : codigo} onChangeText={modo === "crear" ? setNombre : value => setCodigo(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8))} maxLength={modo === "crear" ? 35 : 8} placeholder={t(modo === "crear" ? "family.namePlaceholder" : "family.codePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 rounded-xl border-[1.5px] border-emerald-400 px-4 text-slate-900 dark:text-slate-100" />{modo === "crear" ? <><TextInput disableFullscreenUI value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder={t("family.initialAmount")} placeholderTextColor="#94a3b8" className="mt-2 h-12 rounded-xl border-[1.5px] border-emerald-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" /><View className="mt-2 flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} onPress={() => setOrigenInicial(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenInicial === origin ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "family.fromPersonal" : "family.externalMoney")}</Text></TouchableOpacity>)}</View>{origenInicial === "personal" ? <Text className="mt-1 text-[11px] text-slate-500">{t("family.personalAvailable", { amount: fmt(disponible) })}</Text> : null}</> : null}<View className="mt-3 flex-row gap-2"><TouchableOpacity accessibilityLabel={t("common.cancel")} onPress={() => setModo(null)} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-100"><X size={19} color="#64748b" /></TouchableOpacity><TouchableOpacity accessibilityLabel={t("common.save")} onPress={modo === "crear" ? crear : unir} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-emerald-600"><Check size={19} color="#fff" /></TouchableOpacity></View></View> : null}
@@ -713,7 +725,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
             <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.select")} onPress={() => { setSeleccionandoFamilias(true); setFamiliasSeleccionadas([]); }} className="min-h-10 flex-row items-center gap-1"><ListChecks size={18} color="#059669" /><Text className="text-[15px] font-bold text-emerald-600">{t("common.select")}</Text></TouchableOpacity>
           </>}
         </View> : null}
-        <View className="mt-1 gap-2">{familias.map(item => {
+        <View className="mt-1 gap-2">{familias.filter(item => !familiasOcultas.has(item.id)).map(item => {
           const selected = familiasSeleccionadas.includes(item.id);
           const puedeAdministrar = item.ownerUid === auth.currentUser?.uid;
           return <TouchableOpacity key={item.id} disabled={ocupado}

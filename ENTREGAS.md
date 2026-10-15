@@ -1,5 +1,26 @@
 # Entregas de Fino
 
+## 15/10/2026 — Respuesta inmediata y revisión de copia (desarrollo)
+
+Marca `15oct-respuesta-inmediata`. Tras confirmar borrar/cerrar, Familia y Cajas
+privadas/compartidas retiran la tarjeta visualmente sin esperar servidor/disco.
+No cambian libros ni saldos antes del ACK; si falla, la tarjeta vuelve y se
+conservan las protecciones y el aviso. Es una presentación temporal por sesión,
+no una garantía nueva de recuperación tras cerrar el proceso.
+
+Se añadió consulta solo lectura de la copia de los casos antiguos. Android
+con sesión real confirmó marcas de borrado en los TRES casos «hj»; el dueño no
+recuerda su intención. No se restauran, eliminan ni archivan; S/20 conservado.
+La otra Caja mantiene S/88. El resultado queda abierto para consultarlo.
+TypeScript/ESLint sin errores/avisos; 226 pruebas y 8 auditores (sin tarjetas).
+Regresión original contra 44859f6 roja porque la tarjeta no se ocultaba antes
+de la respuesta. Pruebas de rechazo/false conservan libros/saldos originales.
+
+No APK/AAB/OTA/Play ni cambios remotos/nativos. Falta evidencia para resolver
+los tres registros con consentimiento, diario durable y recorrido con dos
+cuentas/Android. El aviso de System UI del emulador se cerró con Wait: no
+reinstalar ni limpiar datos como solución. No cerrar auditoría global.
+
 ## 15/10/2026 — Familias sin mezclas y revisión localizada de Cajas (desarrollo)
 
 Marca `15oct-familias-sin-mezclas`: carga prioritaria de la familia elegida,

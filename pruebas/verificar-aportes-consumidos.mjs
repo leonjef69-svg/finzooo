@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { withImmediateRemoval } from "./helpers/immediate-removal-original.mjs";
 import fs from "node:fs";
 import vm from "node:vm";
 import { execFileSync } from "node:child_process";
@@ -94,6 +95,7 @@ async function deleteLocal(movements, selected) {
   const removedPersonal = [], messages = [];
   let rpcCount = 0;
   const scope = { movimientos: movements, seleccionados: selected, planSpaceMovementDeletion: local.planSpaceMovementDeletion,
+    withImmediateRemoval, setMovimientosOcultos() {},
     caja: data.cajas[0], cajaId: "caja-local", cajaNecesitaRevision: () => false, cuentaActual: () => true, ready: true, compartiendo: false, syncIssue: null, repairBlocked: false, guardandoRef: { current: false }, datosActuales: { get current() { return data; } },
     guardarCambioCaja: async (next, _upserts, deleteIds = []) => { data = next; removedPersonal.push(...deleteIds); return true; },
     borrarAportePersonal: async () => { rpcCount++; throw new Error("NO_SERVER_FOR_LOCAL_BOX"); },
@@ -141,6 +143,7 @@ const familyDeleted = execute(declarations("screens/Family.tsx", ["familiasActiv
 assert.deepEqual(Array.from(familyDeleted), [2], "Familia cerrada no convierte su ausencia en devolución ficticia");
 
 const closeScope = { datos: { cajas: [{ id: "caja-local" }], movimientos: [contribution, { ...spent, monto: 60 }, returned], cajasBorradas: [], movimientosBorrados: [] },
+  withImmediateRemoval, setCajasOcultas() {},
   cuentaActual: () => true, ready: true, compartiendo: false, syncIssue: null, repairBlocked: false, cajaNecesitaRevision: () => false, guardandoRef: { current: false },
   datosActuales: { get current() { return closeScope.datos; } },
   guardarCambioCaja: async (next, upserts = []) => { closeScope.datos = next; closeScope.personalUpdates = upserts; return true; },

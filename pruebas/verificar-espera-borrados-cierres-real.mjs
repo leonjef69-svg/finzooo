@@ -3,6 +3,7 @@ import fs from "node:fs";
 import vm from "node:vm";
 import ts from "typescript";
 import { execFileSync } from "node:child_process";
+import { withImmediateRemoval } from "./helpers/immediate-removal-original.mjs";
 
 const baseline = process.env.FINO_TEST_BASELINE;
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw new Error("Se requiere hash de Git.");
@@ -41,6 +42,7 @@ function closeHarness(kind, outcome) {
   const storage = { getAccountStorageSession: () => h.session };
   const account = moduleOriginal("utils/accountTask.ts", { "@/utils/firebase": { auth }, "@/utils/storage": storage });
   const scope = { ...account, ...transfers, auth, uid: "a", accountUid: "a", accountSession: 1, getAccountStorageSession: storage.getAccountStorageSession,
+    withImmediateRemoval, setFamiliasOcultas() {}, setCajasOcultas() {},
     useCallback: callback => callback,
     mounted: { current: true }, actionLock: { current: false }, lock: { current: false }, reloadId: { current: 0 },
     familiaElegida: { current: "space-a" }, familiaEnMemoria: new Map(),

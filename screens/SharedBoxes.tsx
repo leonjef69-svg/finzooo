@@ -22,6 +22,7 @@ import { spaceErrorKey } from "@/utils/spaceErrors";
 import { balanceOfSpace, canCloseLinkedSpace, canSpendFromSpace, canUndoContribution, compactLinkedTransferRows, isLinkedSpaceReturn, isLinkedSpaceTransfer, linkedTransferLedger, minimumContributionAmount, orphanedPersonalTransferIds, returnableToPersonal, settlePersonalTransfers } from "@/utils/linkedTransfers";
 import { captureAccountTask, type AccountTaskWait } from "@/utils/accountTask";
 import { getAccountStorageSession } from "@/utils/storage";
+import { withImmediateRemoval } from "@/utils/immediateRemoval";
 import { actualizarAportePersonal, borrarAportePersonal } from "@/utils/personalContribution";
 import { devolverAportePersonal } from "@/utils/personalReturn";
 import { ArrowDown, ArrowRightLeft, ArrowUp, Check, LogOut, Pencil, Trash2, UserMinus, UserPlus, UsersRound, X } from "lucide-react-native";
@@ -53,6 +54,8 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
   const [codigo, setCodigo] = useState("");
   const [invitacion, setInvitacion] = useState("");
   const [busy, setBusy] = useState(false);
+  const [cajasOcultas, setCajasOcultas] = useState(new Set<string>());
+  const [movimientosOcultos, setMovimientosOcultos] = useState(new Set<string>());
   const [cargandoCaja, setCargandoCaja] = useState(false);
   const [errorCargaCaja, setErrorCargaCaja] = useState(false);
   const borradosConfirmados = useRef(new Map<string, Set<string>>());
@@ -165,7 +168,7 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
   const transferLedger = useMemo(() => linkedTransferLedger(movimientos), [movimientos]);
   const visibles = movimientos.filter(item => !filter
     || (filter === "transferencia" ? isLinkedSpaceTransfer(item) : !isLinkedSpaceTransfer(item) && item.tipo === filter));
-  const filasVisibles = movementRowsByDay(visibles, item => item.fecha, dayItems => filter
+  const filasVisibles = movementRowsByDay(visibles.filter(item => !movimientosOcultos.has(item.id)), item => item.fecha, dayItems => filter
     ? dayItems.map(item => ({ key: `movement:${item.id}`, item, transferGroup: undefined }))
     : compactLinkedTransferRows(dayItems));
   const owner = caja?.ownerUid === uid;
@@ -249,6 +252,8 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
     if (item.tipo === "ingreso" && item.personalTransactionId != null && !canUndoContribution(movimientos, item, item.personalOwnerUid)) { showToast(t("boxes.contributionUsed")); return; }
     const saldoDespues = balanceOfSpace(movimientos) - (item.tipo === "ingreso" ? item.monto : -item.monto);
     if (saldoDespues < -0.005) { showToast(t("boxes.notEnoughSpace")); return; }
+    await withImmediateRemoval([item.id], setMovimientosOcultos,
+      () => mounted.current && getAccountStorageSession() === accountSession, async () => {
     if (item.personalTransactionId != null) await wait(() => borrarAportePersonal("box", caja.id, item.id));
     else await wait(() => borrarMovimientoCajaCompartida(caja.id, item.id));
     if (item.personalOwnerUid === uid && item.personalTransactionId != null
@@ -256,6 +261,7 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
     const borrados = borradosConfirmados.current.get(caja.id) ?? new Set<string>();
     borrados.add(item.id); borradosConfirmados.current.set(caja.id, borrados);
     setMovimientos(items => items.filter(row => row.id !== item.id));
+    });
   });
   const devolverAPersonal = () => ejecutar(async wait => {
     if (!uid || !caja || devolvibleAPersonal <= 0) return;
@@ -286,6 +292,8 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
     if (!canCloseLinkedSpace(movimientos)) { showToast(t("boxes.closeBalance")); return; }
     Alert.alert(t("boxes.close"), t("boxes.closeWarning"), [{ text: t("common.cancel"), style: "cancel" }, { text: t("boxes.close"), style: "destructive", onPress: () => void ejecutar(async wait => {
       const boxId = caja.id;
+      await withImmediateRemoval([boxId], setCajasOcultas,
+        () => mounted.current && getAccountStorageSession() === accountSession, async () => {
       cierresPendientes.current.add(boxId);
       if (!cierresConfirmados.current.has(boxId)) {
         try {
@@ -297,6 +305,7 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
       if (!await wait(() => repairLinkedTransferTransactions(settlePersonalTransfers(transactions, "box", boxId)))) throw new Error("personal-save-failed");
       cierresPendientes.current.delete(boxId);
       setCajas(items => items.filter(item => item.id !== boxId)); setCaja(null);
+      });
     }) }]);
   };
   function boton(label: string, action: () => void) {
@@ -318,9 +327,9 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
       <LegalAcceptancePanel />
       {busy ? <View accessibilityRole="progressbar" accessibilityLiveRegion="polite" className="flex-row items-center justify-center gap-2 py-2"><ActivityIndicator size="small" color="#059669" /><Text className="text-sm text-slate-600 dark:text-slate-300">{t("spaces.processing")}</Text></View> : null}
       {!uid ? <Text className="text-slate-600 dark:text-slate-200">{t("boxes.loginRequired")}</Text> : <>
-        {!caja ? <>
+        {!caja || cajasOcultas.has(caja.id) ? <>
           <View className="mb-3 flex-row gap-2">{boton(t("boxes.join"), () => { limpiar(); setModo("unir"); })}</View>
-          {cajas.map(item => <TouchableOpacity key={item.id} disabled={busy} onPress={() => abrirCaja(item)} className="mb-2 rounded-2xl border border-slate-200 p-4 dark:border-noche-borde"><Text className="text-base font-bold text-slate-900 dark:text-white">{item.nombre}</Text></TouchableOpacity>)}
+          {cajas.filter(item => !cajasOcultas.has(item.id)).map(item => <TouchableOpacity key={item.id} disabled={busy} onPress={() => abrirCaja(item)} className="mb-2 rounded-2xl border border-slate-200 p-4 dark:border-noche-borde"><Text className="text-base font-bold text-slate-900 dark:text-white">{item.nombre}</Text></TouchableOpacity>)}
         </> : cargandoCaja ? <View accessibilityRole="progressbar" className="items-center gap-2 py-8"><ActivityIndicator color="#059669" /><Text className="text-sm text-slate-600 dark:text-slate-300">{t("common.loading")}</Text></View> : errorCargaCaja ? <Text accessibilityLiveRegion="polite" className="py-8 text-center text-slate-600 dark:text-slate-300">{t("family.connectionError")}</Text> : <>
           <View className="rounded-2xl bg-emerald-600 p-4">
             <View className="flex-row items-center gap-2">

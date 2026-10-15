@@ -70,8 +70,8 @@ function visit(node) {
   ts.forEachChild(node, visit);
 }
 visit(tree); assert.ok(filter);
-assert.deepEqual(Array.from(vm.runInNewContext(filter, { datos: archived, verArchivadas: false }), row => row.id), [other.id]);
-assert.deepEqual(Array.from(vm.runInNewContext(filter, { datos: archived, verArchivadas: true }), row => row.id), [box.id]);
+assert.deepEqual(Array.from(vm.runInNewContext(filter, { datos: archived, verArchivadas: false, cajasOcultas: new Set() }), row => row.id), [other.id]);
+assert.deepEqual(Array.from(vm.runInNewContext(filter, { datos: archived, verArchivadas: true, cajasOcultas: new Set() }), row => row.id), [box.id]);
 
 // No se importa una preferencia de otro teléfono y un ACK no la retira.
 assert.equal(boxes.fusionarCajas(archived, data).cajas.find(row => row.id === box.id).archivadaLocal, true);
