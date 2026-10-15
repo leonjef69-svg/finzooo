@@ -1,5 +1,32 @@
 # Estado actual de Fino
 
+## Caja compartida — 15/10/2026 — invitación limpia
+
+Marca `15oct-caja-invitacion-limpia`. Causa: Invitar abría el código encima de
+la misma vista, pero no cerraba un formulario de Ingreso/Gasto o edición de
+aporte que hubiera quedado abierto. El lápiz del saldo es el control de cambiar
+el nombre de la Caja y seguía visible detrás del código. Al generar bien el
+código, se cierra el formulario, la edición del nombre y el modo Seleccionar;
+el lápiz se oculta mientras el código está abierto. El borrador de Ingreso/Gasto
+queda guardado en pantalla; Agregar dinero lo recupera al volver. Cerrar el
+código deja el detalle limpio. Si falla la red, el código no se abre y el
+formulario sigue como estaba. No se alteran los manejadores de dinero.
+
+Nueva regresión en pruebas/verificar-caja-invitacion-mismo-diseno-real.mjs
+ejecuta el invitar original con borrador abierto, verifica que se oculte y se
+recupere con Agregar dinero, que el lápiz y Seleccionar no queden detrás, y que
+la hoja no invoque operaciones monetarias. La prueba de lista comprueba también
+que un fallo de red conserve el formulario. Verificación final estable: 230
+pruebas y 8 auditores sin tarjetas; TypeScript/ESLint completos sin errores.
+Registros .tmp/caja-invitacion-limpia-final-15oct.log y tsc/eslint asociados.
+
+Emulador ya abierto en Código de invitación: captura de solo lectura tras HMR
+confirma caja y saldo intactos, formulario, lápiz y controles de selección
+ocultos; no se generó otro código ni hubo escritura remota. **Sigue/falta:**
+unión con segundo teléfono/cuenta. Persisten los tres registros antiguos de
+«hj» sin identidad o intención confirmada; esta corrección no los toca. Sin
+cambios de datos, servidor, APK/AAB/OTA/Play ni tarjetas.
+
 ## Cajas — 15/10/2026 — el código conserva el diseño del detalle
 
 Marca `15oct-caja-mismo-diseno`. La lista única anterior todavía usaba la

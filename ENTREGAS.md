@@ -1,5 +1,19 @@
 # Entregas de Fino
 
+## 15/10/2026 — Invitación limpia en Caja (desarrollo)
+
+Marca `15oct-caja-invitacion-limpia`. Invitar conservaba abierto el formulario
+de Ingreso/Gasto; el lápiz seguía visible detrás de la hoja del código. Al
+terminar bien, suspende el formulario y la edición del nombre, oculta acciones
+de selección y el lápiz mientras aparece el código. Agregar dinero recupera el
+borrador al volver. Si falla la red, deja el formulario como estaba. No cambia
+dinero ni sus manejadores.
+
+Emulador muestra el código sin formulario, lápiz ni selector en el fondo; la
+verificación fue solo visual, sin crear otro código. Sigue pendiente la unión
+desde otra cuenta. No toca los tres pares antiguos de «hj». Sin APK/OTA/Play ni
+Firebase desplegado.
+
 ## 15/10/2026 — Código sobre el mismo diseño de Caja (desarrollo)
 
 Marca `15oct-caja-mismo-diseno`: corrige la presentación antigua que conservaba

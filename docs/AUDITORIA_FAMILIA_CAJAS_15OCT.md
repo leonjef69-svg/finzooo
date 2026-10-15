@@ -1,5 +1,23 @@
 # Familia y Cajas — auditoría del 15/10/2026
 
+## Octava pasada — invitar oculta el formulario visible
+
+La invitación comparte el mismo detalle y el estado React conservaba una
+operación de Ingreso/Gasto o edición de aporte que ya estaba abierta. Por eso el
+código aparecía con ese formulario y el botón lápiz de renombrar al fondo. El
+código solo se abre al completar la generación; entonces se cierra el formulario,
+edición del nombre y modo Seleccionar, y el lápiz se oculta hasta cerrar la hoja.
+Si generar falla, se conserva la pantalla para continuar el borrador. Al
+completar, el modo se oculta y el borrador permanece en memoria para recuperarlo
+con Agregar dinero; no se escribe ni se modifica movimiento alguno.
+
+Prueba del manejador original con fixture sin dinero real y pruebas focalizadas
+verifican que Agregar dinero recupere el borrador y que un fallo conserve el
+formulario. 230 pruebas/8 auditores sin tarjetas; TypeScript/ESLint sin errores.
+Android, captura de solo lectura tras HMR: la invitación activa quedó sobre la
+caja sin el formulario, lápiz ni selector. Sigue pendiente unión con otro
+Android/cuenta; sin nuevo código ni movimientos escritos.
+
 Alcance: Cajas privadas y compartidas, Familia, aportes/ediciones/borrados,
 devoluciones, cierre/salida, invitaciones, lectura y conservación de originales.
 Tarjetas, Telegram, cobros, cambios de facturación y publicación fuera del cambio.

@@ -34,23 +34,28 @@ const movements = [
   { id: "gasto", tipo: "gasto", monto: 25, creadoPor: "A", descripcion: "Comida", fecha: "2026-10-15" },
 ];
 const s = { ...ui, React, insets: { top: 0, bottom: 0 }, busy: false, t: key => key, caja: original, uid: "A", owner: true,
-  cajas: [original], cajasOcultas: new Set(), onAllBoxes() {}, cargandoCaja: false, errorCargaCaja: false,
+  cajas: [original], cajasOcultas: new Set(), onAllBoxes() {}, cargandoCaja: false, errorCargaCaja: false, nombreCajaEditado: original.nombre,
   editandoNombreCaja: false, saldo: ledger.exports.balanceOfSpace(movements), devolvibleAPersonal: ledger.exports.returnableToPersonal(movements, "A"), ingresos: 0, gastos: 25, filter: null,
   recentMovementTypes: { income: false, expense: true }, seleccionando: false, modo: null,
+  modoSuspendido: { current: null },
   filasVisibles: ledger.exports.compactLinkedTransferRows(movements),
   isLinkedSpaceTransfer: ledger.exports.isLinkedSpaceTransfer, isLinkedSpaceReturn: ledger.exports.isLinkedSpaceReturn,
   startsMovementDay: () => true, monthNames: [], linkedMovementRowTime: () => "10:03 p.m.", methodLabel: () => "Efectivo",
   borrar: item => changes.push(["delete", item.id]),
-  cajaLista: true, movementLimit: 60, miembros: [{ uid: "A", nombre: "Dueño", rol: "owner" }], verMiembros: false,
+  cajaLista: true, movementLimit: 60, miembros: [{ uid: "A", nombre: "Dueño", rol: "owner" }], verMiembros: false, editandoNombreCaja: false,
   invitacion: "", fmt: value => `S/ ${value}`, volverACajas() {}, setSubscriptionRevision() {},
-  setVerMiembros() {}, invitar() {}, setNombreCajaEditado() {}, setEditandoNombreCaja() {},
+  setVerMiembros() {}, invitar() {}, guardarNombreCaja() {}, setNombreCajaEditado: value => { s.nombreCajaEditado = value; }, setEditandoNombreCaja: value => { s.editandoNombreCaja = value; },
   devolverAPersonal: () => changes.push("return"), cerrar: () => changes.push("close"),
-  limpiar: () => changes.push("clean"), setModo: value => { s.modo = value; }, setEditandoAporteId: value => changes.push(["edit", value]),
-  setFilter() {}, setSeleccionando: update => { s.seleccionando = update(s.seleccionando); }, setInvitacion: value => { s.invitacion = value; },
+  limpiar: () => { s.modoSuspendido.current = null; changes.push("clean"); s.modo = null; s.nombre = ""; s.monto = ""; s.codigo = ""; }, setModo: value => { s.modo = value; }, setEditandoAporteId: value => { s.editandoAporteId = value; },
+  setFilter() {}, setSeleccionando: update => { s.seleccionando = typeof update === "function" ? update(s.seleccionando) : update; }, setInvitacion: value => { s.invitacion = value; },
   quitar() {}, salir() {}, setMovementLimit() {},
 };
 s.boton = (label, action) => React.createElement("TouchableOpacity", { onPress: action }, label);
 vm.runInNewContext(source, s);
+const inviteDeclaration = component.body.statements.find(node => ts.isVariableStatement(node)
+  && node.declarationList.declarations.some(item => ts.isIdentifier(item.name) && item.name.text === "invitar"));
+const inviteInitializer = inviteDeclaration.declarationList.declarations.find(item => ts.isIdentifier(item.name) && item.name.text === "invitar").initializer.getText(tree);
+vm.runInNewContext(ts.transpileModule(`globalThis.invokeInvite = ${inviteInitializer};`, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText, s);
 const first = s.render(), nodes = flatten(first);
 const add = nodes.find(node => node.type === "TouchableOpacity" && labels(node).includes("boxes.addMoney"));
 assert.ok(add, "al compartir debe conservar Agregar dinero; no regresar al sistema antiguo Ingreso/Gasto");
@@ -66,17 +71,31 @@ assert.ok(nodes.some(node => node.props.accessibilityLabel === "boxes.selectMove
 const before = labels(first);
 assert.ok(!nodes.some(node => node.type === "ContentReportButton" && node.props.target?.targetType === "movement"), "las acciones no ensucian la tarjeta normal");
 assert.ok(nodes.some(node => node.type === "Text" && node.props.className?.includes("text-rose-600") && labels(node).join("").includes("25")), "el gasto no aparece verde");
-s.invitacion = "ABCD2345"; const invitation = s.render();
-assert.deepEqual(labels(invitation), before, "abrir el código no cambia el contenido de fondo");
+assert.ok(nodes.some(node => node.props.accessibilityLabel === "boxes.editName"), "el lápiz sigue disponible en el detalle normal");
+s.isPremium = true; s.uid = "A"; s.caja = original; s.owner = true; s.crearInvitacionCaja = async () => "ABCD2345";
+s.ejecutar = async action => action(async work => work());
+s.modo = "ingreso"; s.nombre = "borrador"; s.monto = "15"; s.editandoNombreCaja = true; s.nombreCajaEditado = "Nombre pendiente"; s.seleccionando = true;
+await s.invokeInvite();
+assert.equal(s.modo, null, "al terminar la invitación se oculta el formulario que quedó abierto");
+assert.equal(s.modoSuspendido.current, "ingreso"); assert.equal(s.nombre, "borrador"); assert.equal(s.monto, "15", "el borrador no se pierde");
+assert.equal(s.editandoNombreCaja, false); assert.equal(s.seleccionando, false);
+assert.equal(s.nombreCajaEditado, "Nombre pendiente", "el nombre escrito no se descarta al invitar");
+assert.equal(s.invitacion, "ABCD2345");
+changes.length = 0;
+const invitation = s.render();
+assert.deepEqual(labels(invitation), before.filter(label => label !== "boxes.editName"), "el código no deja formulario ni lápiz abiertos de fondo");
 const sheet = flatten(invitation).find(node => node.type === "SpaceInvitationSheet");
 assert.equal(sheet.props.visible, true); assert.equal(sheet.props.code, "ABCD2345");
 sheet.props.onClose(); assert.equal(s.invitacion, ""); assert.equal(s.caja, original);
-assert.deepEqual(labels(s.render()), before); assert.deepEqual(changes, [], "ver/cerrar el código no ejecuta dinero/cierre");
+assert.deepEqual(labels(s.render()), before.filter(label => label !== "boxes.income" && label !== "boxes.expense"));
+assert.deepEqual(changes, [], "ver/cerrar el código no ejecuta dinero/cierre");
+const rename = flatten(s.render()).find(node => node.props.accessibilityLabel === "boxes.editName");
+rename.props.onPress(); assert.equal(s.nombreCajaEditado, "Nombre pendiente", "Editar nombre recupera el borrador oculto");
 const select = nodes.find(node => node.props.accessibilityLabel === "boxes.selectMovements");
 select.props.onPress(); assert.equal(s.seleccionando, true);
 assert.ok(flatten(s.render()).some(node => node.props.accessibilityLabel === "common.delete"), "Seleccionar conserva acceso al borrado permitido");
 assert.ok(flatten(s.render()).some(node => node.type === "ContentReportButton"), "Seleccionar conserva denuncias y moderación");
-add.props.onPress(); assert.equal(s.modo, "ingreso"); assert.deepEqual(changes, ["clean", ["edit", null]]);
+add.props.onPress(); assert.equal(s.modo, "ingreso"); assert.equal(s.nombre, "borrador"); assert.equal(s.monto, "15", "Agregar dinero recupera el borrador suspendido");
 s.modo = null; close.props.onPress(); assert.equal(changes.at(-1), "close");
 s.owner = false;
 assert.ok(!flatten(s.render()).some(node => node.props.accessibilityLabel === "boxes.close"), "no dar permisos de cierre a un invitado");

@@ -68,6 +68,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
   const [errorCargaCaja, setErrorCargaCaja] = useState(false);
   const borradosConfirmados = useRef(new Map<string, Set<string>>());
   const [editandoAporteId, setEditandoAporteId] = useState<string | null>(null);
+  const modoSuspendido = useRef<"ingreso" | "gasto" | null>(null);
   const lock = useRef(false);
   const moneyLock = useRef(false);
   const cierresPendientes = useRef(new Set<string>());
@@ -210,7 +211,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
     });
     if (upserts.length || orphanIds.length) repairLinkedTransferTransactions(upserts, orphanIds);
   }, [accountSession, caja, movimientos, movimientosConfirmados, repairLinkedTransferTransactions, t, transactions, transferLedger, uid]);
-  function limpiar() { setModo(null); setNombre(""); setMonto(""); setCodigo(""); }
+  function limpiar() { modoSuspendido.current = null; setModo(null); setNombre(""); setMonto(""); setCodigo(""); }
   function volverACajas() {
     if (lock.current) return;
     if (onAllBoxes) onAllBoxes(); else safeBack();
@@ -253,7 +254,12 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
     if (!uid || !caja || !owner) return;
     if (!isPremium) { irUnaVez("/premium"); return; }
     // Crear un código no modifica movimientos: no vaciar ni recargar su lista.
-    setInvitacion(await wait(() => crearInvitacionCaja(uid, caja.id)));
+    const code = await wait(() => crearInvitacionCaja(uid, caja.id));
+    if (modo === "ingreso" || modo === "gasto") modoSuspendido.current = modo;
+    setModo(null);
+    setEditandoNombreCaja(false);
+    setSeleccionando(false);
+    setInvitacion(code);
   }, false);
   const guardar = () => ejecutar(async wait => {
     if (!uid) return;
@@ -382,7 +388,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
                 <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.cancel")} disabled={busy} onPress={() => { setEditandoNombreCaja(false); setNombreCajaEditado(caja.nombre); }} className="h-9 w-9 items-center justify-center rounded-xl bg-white/20"><X size={17} color="#fff" /></TouchableOpacity>
               </> : <>
                 <Text className="flex-1 text-base font-bold text-white" numberOfLines={1}>{caja.nombre}</Text>
-                {owner ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.editName")} disabled={busy} onPress={() => { setNombreCajaEditado(caja.nombre); setEditandoNombreCaja(true); }} className="h-9 w-9 items-center justify-center rounded-xl bg-emerald-700">
+                {owner && !invitacion ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.editName")} disabled={busy} onPress={() => { if (nombreCajaEditado === caja.nombre) setNombreCajaEditado(caja.nombre); setEditandoNombreCaja(true); }} className="h-9 w-9 items-center justify-center rounded-xl bg-emerald-700">
                   <Pencil size={16} color="#fff" />
                 </TouchableOpacity> : null}
               </>}
@@ -391,7 +397,11 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
           </View>
           {devolvibleAPersonal > 0 ? <TouchableOpacity disabled={busy} onPress={() => void devolverAPersonal()} className="mt-2 min-h-11 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Text className="font-bold text-teal-700 dark:text-teal-300">{t("boxes.returnAmount", { amount: fmt(devolvibleAPersonal) })}</Text></TouchableOpacity> : null}
           <View className="mt-2 flex-row justify-between">
-            <TouchableOpacity style={{ width: owner ? "48%" : "100%", height: 40 }} accessibilityRole="button" disabled={busy} onPress={() => { limpiar(); setEditandoAporteId(null); setModo("ingreso"); }} className="flex-row items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-2"><Plus size={16} color="#fff" /><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} className="text-[13px] font-extrabold text-white">{t("boxes.addMoney")}</Text></TouchableOpacity>
+            <TouchableOpacity style={{ width: owner ? "48%" : "100%", height: 40 }} accessibilityRole="button" disabled={busy} onPress={() => {
+              const resume = modoSuspendido.current;
+              if (resume) { modoSuspendido.current = null; setModo(resume); }
+              else { limpiar(); setEditandoAporteId(null); setModo("ingreso"); }
+            }} className="flex-row items-center justify-center gap-1.5 rounded-xl bg-emerald-600 px-2"><Plus size={16} color="#fff" /><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} className="text-[13px] font-extrabold text-white">{t("boxes.addMoney")}</Text></TouchableOpacity>
             {owner ? <TouchableOpacity style={{ width: "48%", height: 40 }} accessibilityRole="button" accessibilityLabel={t("boxes.close")} disabled={busy} onPress={cerrar} className="flex-row items-center justify-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-2 dark:border-rose-900 dark:bg-rose-950"><X size={15} color="#e11d48" /><Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} className="text-[13px] font-extrabold text-rose-700 dark:text-rose-300">{t("boxes.close")}</Text></TouchableOpacity> : null}
           </View>
           <SpaceOverviewTotals income={ingresos} expense={gastos} filter={filter} onFilter={setFilter} format={fmt} />
@@ -402,7 +412,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
             <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.selectMovements")} accessibilityState={{ expanded: seleccionando }} onPress={() => setSeleccionando(value => !value)} className="min-h-10 flex-row items-center gap-1 px-1"><ListChecks size={18} color="#059669" /><Text className="text-[15px] font-bold text-emerald-600">{t(seleccionando ? "common.cancel" : "common.select")}</Text></TouchableOpacity>
           </View>
         </>}
-        {modo ? <View className="my-3 gap-2 rounded-2xl border border-slate-200 p-3 dark:border-noche-borde">
+        {modo && !invitacion ? <View className="my-3 gap-2 rounded-2xl border border-slate-200 p-3 dark:border-noche-borde">
           {modo === "ingreso" || modo === "gasto" ? <View className="flex-row gap-2">{boton(t("boxes.income"), () => setModo("ingreso"))}{boton(t("boxes.expense"), () => setModo("gasto"))}</View> : null}
           <TextInput disableFullscreenUI editable={!busy} value={modo === "unir" ? codigo : nombre} onChangeText={value => modo === "unir" ? setCodigo(value.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 8)) : setNombre(value)} maxLength={modo === "unir" ? 8 : 60} placeholder={t(modo === "unir" ? "family.codePlaceholder" : "boxes.description")} placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-3 text-base text-slate-900 dark:text-white" />
           {modo !== "unir" ? <TextInput disableFullscreenUI editable={!busy} value={monto} onChangeText={value => setMonto(sanitizeSafeAmountInput(value, moneda))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-3 text-lg text-slate-900 dark:text-white" /> : null}
