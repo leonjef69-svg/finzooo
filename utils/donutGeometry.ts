@@ -1,206 +1,60 @@
 const FULL_TURN = Math.PI * 2;
-const MINIMUM_VISUAL_FRACTION = 0.03;
-const MAX_SMALL_VISUAL_SHARE = 0.18;
 
-/**
- * Da un mínimo visual a las categorías diminutas, con un límite común para
- * que el ajuste no las amplíe más del 18% de la dona final. Si por sus montos
- * reales ya superan ese espacio, conserva su proporción sin reducirlas. Los
- * porcentajes siempre salen de los datos reales.
- */
-export function ajustarValoresRosquilla(values: number[], total: number) {
-  if (total <= 0 || values.length === 0) return values;
-
-  const threshold = total * MINIMUM_VISUAL_FRACTION;
-  const smallValues = values.filter((value) => value > 0 && value < threshold);
-  if (smallValues.length === 0) return values;
-
-  const smallTotal = smallValues.reduce((sum, value) => sum + value, 0);
-  const mainTotal = Math.max(0, total - smallTotal);
-  if (mainTotal <= 0) return values;
-
-  // El presupuesto se define como parte de la dona final, no como aumento
-  // independiente por categoría. El 18% equivale a un máximo de 0.18/0.82
-  // del peso de las categorías que ya son visibles.
-  const smallBudget = mainTotal * (MAX_SMALL_VISUAL_SHARE / (1 - MAX_SMALL_VISUAL_SHARE));
-  const minimumValue = Math.min(threshold, smallBudget / smallValues.length);
-  const requiredUplift = smallValues.reduce(
-    (sum, value) => sum + Math.max(0, minimumValue - value),
-    0,
-  );
-  const allowedUplift = Math.max(0, smallBudget - smallTotal);
-  const upliftScale = requiredUplift > 0 ? Math.min(1, allowedUplift / requiredUplift) : 0;
-
-  return values.map((value) => {
-    if (value <= 0 || value >= threshold) return value;
-    return value + Math.max(0, minimumValue - value) * upliftScale;
-  });
-}
-
-/** El texto describe el porcentaje real, nunca el tamaño visual del segmento. */
+/** El porcentaje describe el dinero real, incluidos los importes diminutos. */
 export function textoPorcentajeRosquilla(value: number, total: number) {
   if (total <= 0) return "0%";
   const percentage = (value / total) * 100;
   if (percentage < 1) return "<1%";
-  // Evita que, por redondeo, una categoría deje de mostrar las demás que sí
-  // tienen movimiento y aparecen en la dona.
   if (percentage < 100 && Math.round(percentage) === 100) return ">99%";
   return `${Math.round(percentage)}%`;
 }
 
 type Punto = { x: number; y: number };
 
-export type CurvaConectorRosquilla = {
-  inicio: Punto;
-  control1: Punto;
-  control2: Punto;
-  fin: Punto;
-};
+/** Espaciado por longitud del contorno, también si la rueda necesita más alto. */
+function puntosEnOrbita(count: number, orbitX: number, orbitY: number): Punto[] {
+  if (count <= 0) return [];
+  const samples = 720;
+  const points: (Punto & { distance: number })[] = [];
+  let distance = 0;
+  for (let index = 0; index <= samples; index++) {
+    const angle = -Math.PI / 2 + FULL_TURN * index / samples;
+    const point = { x: Math.cos(angle) * orbitX, y: Math.sin(angle) * orbitY };
+    const previous = points[index - 1];
+    if (previous) distance += Math.hypot(point.x - previous.x, point.y - previous.y);
+    points.push({ ...point, distance });
+  }
+  let sample = 1;
+  return Array.from({ length: count }, (_, index) => {
+    const target = distance * index / count;
+    while (sample < samples && points[sample].distance < target) sample++;
+    const previous = points[sample - 1];
+    const next = points[sample];
+    const fraction = (target - previous.distance) / Math.max(1e-9, next.distance - previous.distance);
+    return { x: previous.x + (next.x - previous.x) * fraction, y: previous.y + (next.y - previous.y) * fraction };
+  });
+}
 
 /**
- * Hace que los conectores salgan en abanico, en vez de correr paralelos por
- * varios píxeles desde segmentos diminutos. Los desplazamientos se limitan y
- * conservan el orden angular entre el segmento y su etiqueta.
+ * Todos los controles mantienen el mismo tamaño y dejan aire entre ellos.
+ * Muchas categorías amplían la órbita vertical en lugar de reducir los iconos.
  */
-export function crearCurvaConectorRosquilla({
-  centerX,
-  centerY,
-  sourceAngle,
-  labelAngle,
-  bubbleX,
-  bubbleY,
-  bubbleSize,
-  sourceRadius,
-}: {
-  centerX: number;
-  centerY: number;
-  sourceAngle: number;
-  labelAngle: number;
-  bubbleX: number;
-  bubbleY: number;
-  bubbleSize: number;
-  sourceRadius: number;
-}): CurvaConectorRosquilla {
-  const radialX = Math.cos(sourceAngle);
-  const radialY = Math.sin(sourceAngle);
-  const inicio = {
-    x: centerX + radialX * sourceRadius,
-    y: centerY + radialY * sourceRadius,
-  };
-  const toBubbleX = bubbleX - inicio.x;
-  const toBubbleY = bubbleY - inicio.y;
-  const length = Math.max(1, Math.hypot(toBubbleX, toBubbleY));
-  const directionX = toBubbleX / length;
-  const directionY = toBubbleY / length;
-  const fin = {
-    x: bubbleX - directionX * (bubbleSize / 2 + 1),
-    y: bubbleY - directionY * (bubbleSize / 2 + 1),
-  };
-
-  const angleDifference = Math.atan2(
-    Math.sin(labelAngle - sourceAngle),
-    Math.cos(labelAngle - sourceAngle),
-  );
-  const fan = Math.max(-44, Math.min(44, angleDifference * 58));
-  const sourceTangentX = -radialY;
-  const sourceTangentY = radialX;
-  const labelTangentX = -Math.sin(labelAngle);
-  const labelTangentY = Math.cos(labelAngle);
-
+export function calcularDistribucionRueda(count: number, requestedWidth = 340) {
+  const width = Math.max(180, Math.min(420, requestedWidth));
+  const bubble = width < 280 ? 48 : count <= 8 ? 60 : 56;
+  const orbitX = (width - bubble) / 2 - 4;
+  let orbitY = Math.max(orbitX, 108);
+  let positions = puntosEnOrbita(count, orbitX, orbitY);
+  const separated = (points: Punto[]) => points.every((point, index) => points.slice(index + 1).every(other => Math.hypot(point.x - other.x, point.y - other.y) >= bubble + 8));
+  while (!separated(positions)) {
+    orbitY += 12;
+    positions = puntosEnOrbita(count, orbitX, orbitY);
+  }
+  const centerX = width / 2;
+  const centerY = orbitY + bubble / 2 + 4;
   return {
-    inicio,
-    control1: {
-      x: inicio.x + radialX * 20 + sourceTangentX * fan * 0.82,
-      y: inicio.y + radialY * 20 + sourceTangentY * fan * 0.82,
-    },
-    control2: {
-      x: fin.x - directionX * 26 + labelTangentX * fan * 0.36,
-      y: fin.y - directionY * 26 + labelTangentY * fan * 0.36,
-    },
-    fin,
+    width, height: centerY * 2, centerX, centerY, bubble,
+    radius: Math.max(24, Math.min(64, orbitX - bubble / 2 - 18)),
+    positions: positions.map(point => ({ x: centerX + point.x, y: centerY + point.y })),
   };
-}
-
-/**
- * Reduce las etiquetas solo cuando la cantidad de categorías lo exige para
- * que puedan repartirse alrededor de la dona sin tocarse. La órbita vuelve a
- * calcularse con cada tamaño porque el borde del gráfico depende del círculo.
- */
-export function calcularTamanoBurbujaRosquilla(
-  count: number,
-  preferredSize: number,
-  width = 340,
-) {
-  if (count <= 1) return preferredSize;
-
-  let size = preferredSize;
-  while (size > 18) {
-    const orbitX = width / 2 - size / 2 - 5;
-    const orbitY = count <= 4
-      ? 102 + (56 - size) * 0.3
-      : 112 + (70 - size) * 0.4;
-    const smallestOrbit = Math.max(1, Math.min(orbitX, orbitY));
-    const distanceBetweenLabels = 2 * smallestOrbit * Math.sin(Math.PI / count);
-    if (distanceBetweenLabels >= size + 6) return size;
-    size -= 1;
-  }
-  return size;
-}
-
-/**
- * Reparte las etiquetas con separación uniforme alrededor de la dona,
- * conservando el orden de sus segmentos. El mayor espacio libre define el
- * punto de corte y el giro se ajusta para moverlas lo menos posible. Así una
- * cola de porciones pequeñas no arrastra todas las etiquetas a un solo lado.
- */
-export function distribuirAngulosEtiquetas(
-  middleAngles: number[],
-  requestedGap: number,
-) {
-  const count = middleAngles.length;
-  if (count <= 1) return [...middleAngles];
-
-  const normalized = middleAngles.map((angle, index) => ({
-    index,
-    angle: ((angle % FULL_TURN) + FULL_TURN) % FULL_TURN,
-  })).sort((a, b) => a.angle - b.angle);
-
-  let largestGapIndex = 0;
-  let largestGap = -1;
-  for (let index = 0; index < count; index++) {
-    const current = normalized[index].angle;
-    const next = index === count - 1
-      ? normalized[0].angle + FULL_TURN
-      : normalized[index + 1].angle;
-    const gap = next - current;
-    if (gap > largestGap) {
-      largestGap = gap;
-      largestGapIndex = index;
-    }
-  }
-
-  const minimumGap = Math.min(requestedGap, FULL_TURN / count);
-  const step = Math.max(minimumGap, FULL_TURN / count);
-  const firstIndex = (largestGapIndex + 1) % count;
-  const ordered = Array.from({ length: count }, (_, offset) => normalized[(firstIndex + offset) % count]);
-  const placed = new Array<number>(count);
-  const unwrapped = new Array<number>(count);
-  let wrapOffset = 0;
-  let previousAngle = ordered[0].angle;
-
-  ordered.forEach((entry, index) => {
-    if (index > 0 && entry.angle < previousAngle) wrapOffset += FULL_TURN;
-    unwrapped[index] = entry.angle + wrapOffset;
-    previousAngle = entry.angle;
-  });
-
-  // Busca el giro que minimiza el desplazamiento angular total, manteniendo
-  // etiquetas equidistantes para evitar racimos y dar espacio parejo a cada
-  // conector, aunque sus porciones reales tengan tamaños muy distintos.
-  const phase = unwrapped.reduce((sum, angle, index) => sum + angle - index * step, 0) / count;
-  ordered.forEach((entry, index) => {
-    placed[entry.index] = phase + index * step;
-  });
-
-  return placed;
 }

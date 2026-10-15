@@ -6,14 +6,12 @@ import { TrendingDown, TrendingUp } from "lucide-react-native";
 import DonutChart from "@/components/DonutChart";
 import BarChartSimple from "@/components/BarChartSimple";
 import DailyBarsChart from "@/components/DailyBarsChart";
-import AnimatedBar from "@/components/AnimatedBar";
 import MonthSelector from "@/components/MonthSelector";
 import { catInfo } from "@/constants/categories";
 import { COLOR_HEX_600 } from "@/constants/colors";
 import { CARD_SHADOW } from "@/constants/style";
 import { monthKey } from "@/utils/format";
 import { dailySpendBars } from "@/utils/reportDaily";
-import { budgetLeft, budgetUsed, health } from "@/utils/finances";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
 
@@ -34,10 +32,6 @@ export default function Reports({
     userLanguage,
     categoryBudgets,
     categorySpent,
-    budget,
-    spent,
-    income,
-    prevBalance,
   } = useAppData();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
@@ -89,7 +83,7 @@ export default function Reports({
     [transactions],
   );
 
-  const { pieData, totalCategory } = useMemo(() => {
+  const { pieData } = useMemo(() => {
     const typedTransactions = transactions.filter(
       (transaction) => transaction.date.startsWith(mk) && transaction.type === categoryType && !transaction.internalTransfer,
     );
@@ -103,8 +97,7 @@ export default function Reports({
         return { id, name: t(c.label), value, color: COLOR_HEX_600[c.color] || "#64748b", Icon: c.icon };
       })
       .sort((a, b) => b.value - a.value);
-    const total = typedTransactions.reduce((s, t) => s + t.amount, 0);
-    return { pieData: pie, totalCategory: total };
+    return { pieData: pie };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [transactions, mk, userLanguage, categoryType]);
 
@@ -178,33 +171,6 @@ export default function Reports({
   const shownBarData = chartPreview ? previewBarData : barData;
   const shownDaily = chartPreview ? previewDaily : daily.bars;
 
-  // EL RESUMEN DE ARRIBA.
-  //
-  // Todo lo de aquí sale de los movimientos y los presupuestos que ya están
-  // guardados. No hay ni un número de ejemplo, ni una estimación, ni un
-  // relleno para cuando faltan datos: si algo no se puede calcular, no se
-  // enseña. Por eso el porcentaje contra el mes pasado puede no aparecer, y
-  // por eso sin presupuesto no se dice si la salud es buena.
-  //
-  // Las cuentas están en utils/finances.ts, que es el mismo sitio del que
-  // bebe Inicio. El "Disponible" de esta pantalla y el de Inicio no pueden
-  // salir distintos porque son literalmente la misma función.
-  const resumen = useMemo(() => {
-    const cifras = { budget, spent, income, prevBalance };
-    return {
-      usado: budgetUsed(cifras),
-      restante: budgetLeft(cifras),
-      salud: health(cifras),
-    };
-  }, [budget, spent, income, prevBalance]);
-
-  const SALUD_COLOR: Record<string, string> = {
-    good: "#34d399",
-    tight: "#fbbf24",
-    over: "#fb7185",
-    unknown: "#94a3b8",
-  };
-
   return (
     <ScrollView
       className="flex-1 bg-white dark:bg-noche"
@@ -268,25 +234,11 @@ export default function Reports({
         {pieData.length === 0 ? (
           <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">{t("reports.noDataThisMonth")}</Text>
         ) : (
-          <>
-            <View className="items-center py-2">
-              <DonutChart data={pieData} />
-            </View>
-            <View className="mt-1 rounded-xl bg-slate-50 px-3 py-2.5 dark:bg-noche">
-              <View className="mb-2 flex-row items-center justify-between gap-3">
-                <Text className="text-xs font-bold text-slate-600 dark:text-slate-200">
-                  {t(categoryType === "expense" ? "reports.totalSpent" : "reports.totalIncome")}
-                </Text>
-                <Text className={`text-sm font-extrabold ${categoryType === "expense" ? "text-rose-500" : "text-emerald-600"}`} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
-                  {fmt(totalCategory)}
-                </Text>
-              </View>
-              <AnimatedBar
-                pct={categoryType === "expense" && budget > 0 ? resumen.usado : 1}
-                color={categoryType === "expense" && budget > 0 ? SALUD_COLOR[resumen.salud] : "#10b981"}
-              />
-            </View>
-          </>
+          <View className="items-center py-2">
+            <DonutChart key={`${categoryType}-${mk}`} data={pieData} formatValue={fmt}
+              totalLabel={t(categoryType === "expense" ? "reports.totalSpent" : "reports.totalIncome")}
+              width={Math.max(180, Math.min(380, windowWidth - 76))} />
+          </View>
         )}
       </View>
 

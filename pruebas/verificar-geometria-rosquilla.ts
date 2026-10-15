@@ -1,223 +1,199 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import {
-  ajustarValoresRosquilla,
-  calcularTamanoBurbujaRosquilla,
-  crearCurvaConectorRosquilla,
-  distribuirAngulosEtiquetas,
-  textoPorcentajeRosquilla,
-} from "@/utils/donutGeometry";
+import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
 
-const montos = [9_999_999_999, 8, 5, 3, 1];
-const total = montos.reduce((sum, value) => sum + value, 0);
-const visuales = ajustarValoresRosquilla(montos, total);
-const totalVisual = visuales.reduce((sum, value) => sum + value, 0);
-assert.ok(visuales[0] / totalVisual > 0.88, "la categoría dominante conserva claramente la mayor parte de la dona");
-for (const [index, montoVisible] of visuales.slice(1).entries()) {
-  assert.ok(montoVisible / totalVisual > 0.015, `la categoría pequeña ${index + 1} conserva un segmento visible`);
-  assert.ok(montos[index + 1] / total < 0.01, "el porcentaje mostrado puede seguir siendo el dato real menor a 1%");
+const ts = createRequire(import.meta.url)("typescript") as typeof import("typescript");
+
+// Ejecuta el componente original y sus cuentas. React/Android se sustituyen
+// por un árbol de elementos y cajas de hooks; no es una captura ni TalkBack.
+// Para comprobar la regresión: FINO_TEST_DONUT_WHEEL_BASELINE=<hash Git>.
+const baseline = process.env.FINO_TEST_DONUT_WHEEL_BASELINE;
+if (baseline && !/^[a-f\d]{7,40}$/i.test(baseline)) throw new Error("Se requiere una revisión Git válida");
+const source = (file: string) => baseline
+  ? execFileSync("git", ["show", `${baseline}:${file}`], { encoding: "utf8" })
+  : fs.readFileSync(file, "utf8");
+
+type Element = {
+  type: string | ((...args: unknown[]) => unknown);
+  props: Record<string, any>;
+  children: unknown[];
+};
+type Item = { id: string; name: string; value: number; color: string; Icon: () => null };
+let hooks: unknown[] = [];
+let cursor = 0;
+const React = {
+  createElement: (type: Element["type"], props: Element["props"] | null, ...children: unknown[]) => ({
+    type, props: props ?? {}, children,
+  }),
+};
+function moduleOriginal(file: string, dependencies: Record<string, unknown>) {
+  const code = ts.transpileModule(source(file), { fileName: file, compilerOptions: {
+    module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.React, target: ts.ScriptTarget.ES2022,
+  } }).outputText;
+  const module = { exports: {} as Record<string, any> };
+  new Function("React", "module", "exports", "require", code)(React, module, module.exports, (name: string) => {
+    if (!(name in dependencies)) throw new Error(`Dependencia no adaptada: ${name}`);
+    return dependencies[name];
+  });
+  return module.exports;
 }
-assert.ok(totalVisual <= total * 1.16, "cuatro porciones pequeñas no inflan la dona sin límite");
-assert.ok(
-  visuales.slice(1).reduce((sum, value) => sum + value, 0) / totalVisual <= 0.18,
-  "las porciones pequeñas comparten un límite visual del 18%",
-);
-assert.deepEqual(montos, [9_999_999_999, 8, 5, 3, 1], "el ajuste visual no cambia los montos originales");
-assert.deepEqual(
-  montos.map((monto) => textoPorcentajeRosquilla(monto, total)),
-  [">99%", "<1%", "<1%", "<1%", "<1%"],
-  "las etiquetas muestran porcentajes reales y no redondean categorías distintas a 100%",
-);
-assert.equal(textoPorcentajeRosquilla(10, 10), "100%", "100% se conserva cuando sí existe una sola categoría");
-
-// El caso de diez categorías: una cifra dominante y nueve montos mínimos.
-// Se comprueba que cada segmento pequeño se distingue, sin quitarle la mayor
-// parte de la dona a la categoría principal ni superar el presupuesto común.
-const diezCategorias = [1_000_000_000_000, ...Array.from({ length: 9 }, (_, index) => index + 1)];
-const diezVisuales = ajustarValoresRosquilla(
-  diezCategorias,
-  diezCategorias.reduce((sum, value) => sum + value, 0),
-);
-const totalDiezVisual = diezVisuales.reduce((sum, value) => sum + value, 0);
-const colaDiezVisual = diezVisuales.slice(1).reduce((sum, value) => sum + value, 0);
-assert.ok(diezVisuales[0] / totalDiezVisual > 0.81, "con diez categorías la dominante conserva más del 80% visual");
-assert.ok(colaDiezVisual / totalDiezVisual <= 0.18 + 1e-9, "nueve porciones pequeñas no exceden el presupuesto común del 18%");
-for (const value of diezVisuales.slice(1)) {
-  assert.ok(value / totalDiezVisual >= 0.019, "cada una de las nueve porciones pequeñas queda cerca del 2% visual");
+const geometry = moduleOriginal("utils/donutGeometry.ts", {});
+const DonutChart = moduleOriginal("components/DonutChart.tsx", {
+  react: {
+    useState: (initial: unknown) => {
+      const slot = cursor++;
+      if (!(slot in hooks)) hooks[slot] = typeof initial === "function" ? initial() : initial;
+      return [hooks[slot], (value: unknown) => {
+        hooks[slot] = typeof value === "function" ? value(hooks[slot]) : value;
+      }];
+    },
+    useMemo: (calculate: () => unknown) => calculate(),
+    useCallback: (callback: unknown) => callback,
+  },
+  "react-native": Object.fromEntries(["Text", "TouchableOpacity", "Pressable", "View"].map(name => [name, name])),
+  "react-native-svg": { __esModule: true, default: "Svg", Circle: "Circle", Path: "Path" },
+  nativewind: { useColorScheme: () => ({ colorScheme: "light" }) },
+  "@/utils/donutGeometry": geometry,
+  "@/components/EntryUI": { ENTRY_FONT: { medium: "test-medium", bold: "test-bold" } },
+  "@/contexts/AppDataContext": { useAppData: () => ({ t: (key: string) => ({
+    "reports.lessThanOnePercent": "menos de 1 por ciento",
+    "reports.moreThan99Percent": "más de 99 por ciento",
+  } as Record<string, string>)[key] ?? key }) },
+}).default;
+function flatten(node: unknown): Element[] {
+  if (Array.isArray(node)) return node.flatMap(flatten);
+  if (node == null || typeof node !== "object" || !("type" in node)) return [];
+  const element = node as Element;
+  return [element, ...element.children.flatMap(flatten)];
 }
-
-const sieteCategorias = [1_000_000_000_000, ...Array.from({ length: 6 }, () => 1)];
-const sieteVisuales = ajustarValoresRosquilla(
-  sieteCategorias,
-  sieteCategorias.reduce((sum, value) => sum + value, 0),
-);
-const totalSieteVisual = sieteVisuales.reduce((sum, value) => sum + value, 0);
-assert.ok(sieteVisuales[0] / totalSieteVisual > 0.84, "en la composición de la captura la categoría mayor sigue dominando");
-for (const value of sieteVisuales.slice(1)) {
-  assert.ok(value / totalSieteVisual > 0.02, "las seis porciones pequeñas de la captura se distinguen");
+function text(node: unknown): string {
+  if (node == null || typeof node === "boolean") return "";
+  if (typeof node !== "object") return String(node);
+  if (Array.isArray(node)) return node.map(text).join("");
+  return (node as Element).children.map(text).join("");
 }
-
-const bubble = 56;
-const orbitX = 137;
-const orbitY = 102;
-const minimumGap = 2 * Math.asin((bubble + 8) / (2 * Math.min(orbitX, orbitY)));
-const labelAngles = distribuirAngulosEtiquetas([4.70, 4.705, 1.56, 1.565, 1.57], minimumGap);
-const positions = labelAngles.map((angle) => ({
-  x: 170 + Math.cos(angle) * orbitX,
-  y: 146 + Math.sin(angle) * orbitY,
+const style = (value: unknown): Record<string, any> => Array.isArray(value)
+  ? Object.assign({}, ...value.map(style))
+  : value && typeof value === "object" ? value : {};
+const makeData = (values: number[]): Item[] => values.map((value, index) => ({
+  id: `categoria-${index}`, name: `Categoría ${index}`, value,
+  color: `hsl(${index * 31}, 80%, 40%)`, Icon: () => null,
 }));
-
-for (let first = 0; first < positions.length; first++) {
-  for (let second = first + 1; second < positions.length; second++) {
-    const distance = Math.hypot(
-      positions[first].x - positions[second].x,
-      positions[first].y - positions[second].y,
-    );
-    assert.ok(
-      distance >= bubble + 7,
-      `las etiquetas quedan separadas incluso al cruzar el inicio de la dona (${first}, ${second}: ${distance.toFixed(2)} px; ángulos ${labelAngles.join(",")})`,
-    );
-  }
+const formatValue = (value: number) => `Bs ${value.toFixed(2)}`;
+function render(data: Item[], width = 340) {
+  cursor = 0;
+  return flatten(DonutChart({ data, width, formatValue, totalLabel: "Total gastado" }));
 }
+const bubbles = (nodes: Element[]) => nodes.filter(node => node.type === "TouchableOpacity"
+  && node.props.accessibilityRole === "button" && String(node.props.accessibilityLabel).includes("Categoría"));
+const segments = (nodes: Element[]) => nodes.filter(node => node.type === "Circle" && typeof node.props.onPress === "function");
+const texts = (nodes: Element[]) => nodes.filter(node => node.type === "Text").map(text);
+const categoryButton = (nodes: Element[], index: number) => bubbles(nodes)
+  .find(node => String(node.props.accessibilityLabel).startsWith(`Categoría ${index}:`));
 
-// En la captura de Reportes había dos categorías grandes y varias menores.
-// Aunque no se tocaban, sus etiquetas quedaban en racimo y desequilibraban las
-// líneas. La nueva distribución debe darles un espacio angular uniforme.
-{
-  const grados = [40, 185, 203, 215, 227, 239, 251, 263];
-  const entrada = grados.map(value => value * Math.PI / 180);
-  const equilibrados = distribuirAngulosEtiquetas(entrada, minimumGap);
-  const ordenados = equilibrados
-    .map(angle => ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI))
-    .sort((a, b) => a - b);
-  const gaps = ordenados.map((angle, index) => {
-    const next = index === ordenados.length - 1 ? ordenados[0] + 2 * Math.PI : ordenados[index + 1];
-    return next - angle;
-  });
-  const gapIdeal = (2 * Math.PI) / entrada.length;
-  assert.ok(
-    gaps.every(gap => Math.abs(gap - gapIdeal) < 1e-6),
-    "las etiquetas se reparten alrededor de toda la rosquilla aunque los segmentos pequeños estén agrupados",
-  );
+const data = makeData([1_234_567, 123_456, 11_122, 11_111, 1_234, 1_234, 123, 11]);
+const total = data.reduce((sum, item) => sum + item.value, 0);
+const original = structuredClone(data.map(({ Icon: _Icon, ...item }) => item));
+let nodes = render(data);
+assert.ok(texts(nodes).includes("Total gastado"), "la rueda muestra qué total está representando en su centro");
+assert.ok(texts(nodes).includes(formatValue(total)), "el centro recibe el total real y usa la moneda elegida en Reportes");
+assert.equal(bubbles(nodes).length, data.length, "ninguna categoría pequeña se oculta o se agrupa");
+assert.equal(nodes.filter(node => node.type === "Path" && node.props.fill === "none").length, 0,
+  "la rueda elimina los conectores que se cruzaban entre categorías");
+
+const small = categoryButton(nodes, 7);
+assert.ok(small, "la categoría menor a 1% sigue teniendo un botón propio");
+assert.ok(String(small.props.accessibilityLabel).includes("menos de 1"), "su etiqueta accesible conserva el porcentaje real");
+small.props.onPress();
+nodes = render(data);
+assert.ok(texts(nodes).includes(data[7].name), "al tocar el icono, el centro identifica la categoría");
+assert.ok(texts(nodes).includes(formatValue(11)), "la selección muestra exactamente su monto, sin ampliar el dato");
+assert.equal(categoryButton(nodes, 7)?.props.accessibilityState.selected, true, "el icono comunica su selección");
+assert.ok(segments(nodes)[7].props.strokeOpacity > segments(nodes)[0].props.strokeOpacity,
+  "el bloque elegido resalta frente a los demás");
+categoryButton(nodes, 7)?.props.onPress();
+nodes = render(data);
+assert.ok(texts(nodes).includes(formatValue(total)), "el segundo toque al mismo icono restaura el total");
+assert.equal(categoryButton(nodes, 7)?.props.accessibilityState.selected, false);
+segments(nodes)[1].props.onPress();
+nodes = render(data);
+assert.ok(texts(nodes).includes(data[1].name), "tocar el bloque de la rosquilla también selecciona su categoría");
+assert.ok(texts(nodes).includes(formatValue(data[1].value)));
+segments(nodes)[1].props.onPress();
+nodes = render(data);
+assert.ok(texts(nodes).includes(formatValue(total)), "el segundo toque al mismo bloque restaura el total");
+categoryButton(nodes, 7)?.props.onPress();
+const changed = data.map(item => item.id === data[7].id ? { ...item, value: 17 } : item);
+nodes = render(changed);
+assert.ok(texts(nodes).includes(formatValue(17)), "una categoría seleccionada refleja el monto actualizado");
+nodes = render(data.slice(0, 7));
+assert.ok(texts(nodes).includes(formatValue(total - 11)), "si desaparece la categoría, el centro vuelve al total vigente");
+assert.ok(bubbles(nodes).every(node => node.props.accessibilityState.selected === false), "no queda una selección fantasma");
+
+// La presencia pareja corresponde a los botones. Las porciones de dinero no
+// se inflan, incluso con una categoría miles de millones de veces mayor.
+hooks = [];
+const extremeData = makeData([9_999_999_999, 8, 5, 3, 1]);
+nodes = render(extremeData);
+const realTotal = extremeData.reduce((sum, item) => sum + item.value, 0);
+const arcs = segments(nodes);
+assert.equal(arcs.length, extremeData.length);
+for (let index = 0; index < arcs.length; index++) {
+  const arc = arcs[index].props;
+  const dash = Number(String(arc.strokeDasharray).split(/[ ,]+/)[0]);
+  const renderedFraction = dash / (2 * Math.PI * arc.r);
+  const trueFraction = extremeData[index].value / realTotal;
+  assert.ok(Math.abs(renderedFraction - trueFraction) < 0.005,
+    `el bloque ${index} respeta su proporción financiera, con solo la separación entre bloques`);
 }
+assert.deepEqual(data.map(({ Icon: _Icon, ...item }) => item), original, "seleccionar nunca modifica movimientos o montos");
 
-// Las cuatro porciones pequeñas se colocan juntas en la parte superior cuando
-// la dominante va al final. Sus rutas deben empezar en ángulos distintos y
-// curvarse hacia las etiquetas, no quedar como una sola línea gruesa.
-const escenarioAbanico = [8, 5, 3, 1, 9_999_999_999];
-const sumaAbanico = escenarioAbanico.reduce((sum, value) => sum + value, 0);
-const valoresAbanico = ajustarValoresRosquilla(escenarioAbanico, sumaAbanico);
-let acumuladoAbanico = 0;
-const totalAbanicoVisual = valoresAbanico.reduce((sum, item) => sum + item, 0);
-const angulosOrigen = valoresAbanico.map((value) => {
-  const inicio = -Math.PI / 2 + (acumuladoAbanico / totalAbanicoVisual) * Math.PI * 2;
-  const medio = inicio + (value / totalAbanicoVisual) * Math.PI;
-  acumuladoAbanico += value;
-  return medio;
-});
-const angulosDestino = distribuirAngulosEtiquetas(angulosOrigen, minimumGap);
-const rutas = angulosOrigen.map((sourceAngle, index) => {
-  const labelAngle = angulosDestino[index];
-  const x = 170 + Math.cos(labelAngle) * orbitX;
-  const y = 156 + Math.sin(labelAngle) * orbitY;
-  return crearCurvaConectorRosquilla({
-    centerX: 170,
-    centerY: 156,
-    sourceAngle,
-    labelAngle,
-    bubbleX: x,
-    bubbleY: y,
-    bubbleSize: bubble,
-    sourceRadius: 77,
-  });
-});
-
-for (let index = 0; index < 4; index++) {
-  const sourceGap = Math.hypot(
-    rutas[index].inicio.x - rutas[index + 1].inicio.x,
-    rutas[index].inicio.y - rutas[index + 1].inicio.y,
-  );
-  assert.ok(sourceGap >= 7, `las porciones pequeñas tienen puntos de salida distinguibles (${sourceGap.toFixed(1)} px)`);
-}
-assert.ok(
-  rutas.slice(0, 4).some((route) => Math.hypot(route.control1.x - route.inicio.x, route.control1.y - route.inicio.y) > 24),
-  "los conectores abren pronto hacia su etiqueta para que no se vean amontonados",
-);
-
-for (const count of [2, 5, 10, 20, 30]) {
-  const desired = Math.max(18, Math.min(56, Math.round(66 - count * 1.5)));
-  const size = calcularTamanoBurbujaRosquilla(count, desired);
-  const xOrbit = 170 - size / 2 - 5;
-  const yOrbit = count <= 4 ? 102 + (56 - size) * 0.3 : 112 + (70 - size) * 0.4;
-  const smallest = Math.min(xOrbit, yOrbit);
-  const gap = 2 * Math.asin(Math.min(1, (size + 8) / (2 * smallest)));
-  const angles = distribuirAngulosEtiquetas(
-    Array.from({ length: count }, (_, index) => index < count - 1 ? -Math.PI / 2 + index * 0.001 : 1.2),
-    gap,
-  );
-  const points = angles.map((angle) => ({
-    x: 170 + Math.cos(angle) * xOrbit,
-    y: 156 + Math.sin(angle) * yOrbit,
-  }));
-  for (let first = 0; first < points.length; first++) {
-    for (let second = first + 1; second < points.length; second++) {
-      const distance = Math.hypot(points[first].x - points[second].x, points[first].y - points[second].y);
-      assert.ok(distance >= size + 5, `${count} categorías: las etiquetas no chocan (${distance.toFixed(1)} px para círculos de ${size} px)`);
+// Composición real a partir del JSX: mismo tamaño, dentro de la tarjeta y sin
+// colisiones. Con muchas categorías se permite crecer de alto, no encogerlas.
+for (const width of [280, 340, 380]) {
+  for (const count of [1, 2, 4, 8, 10, 20, 30]) {
+    hooks = [];
+    nodes = render(makeData(Array.from({ length: count }, (_, index) => index + 1)), width);
+    const root = style(nodes[0].props.style);
+    const buttons = bubbles(nodes).map(node => style(node.props.style));
+    assert.equal(buttons.length, count);
+    assert.ok(buttons.every(button => button.width === buttons[0].width && button.height === buttons[0].height),
+      "los iconos tienen el mismo espacio visual, aunque sus montos sean distintos");
+    assert.ok(buttons[0].width >= 52, `${count} categorías: los botones no se vuelven diminutos`);
+    if (count === 8 && width >= 340) {
+      const radii = buttons.map(button => Math.hypot(button.left + button.width / 2 - width / 2,
+        button.top + button.height / 2 - root.height / 2));
+      assert.ok(Math.max(...radii) - Math.min(...radii) < 0.01,
+        "las ocho categorías de la captura conservan la misma distancia al centro");
+      const gaps = buttons.map((button, index) => {
+        const next = buttons[(index + 1) % buttons.length];
+        return Math.hypot(button.left - next.left, button.top - next.top);
+      });
+      assert.ok(Math.max(...gaps) - Math.min(...gaps) < 0.01,
+        "las ocho categorías tienen espacio uniforme alrededor del círculo");
+    }
+    for (const button of buttons) {
+      assert.ok(button.left >= -0.001 && button.top >= -0.001 && button.left + button.width <= width + 0.001
+        && button.top + button.height <= root.height + 0.001, `${width}px/${count}: ninguna categoría se recorta`);
+    }
+    for (let first = 0; first < buttons.length; first++) {
+      for (let second = first + 1; second < buttons.length; second++) {
+        const a = buttons[first], b = buttons[second];
+        const distance = Math.hypot(a.left - b.left, a.top - b.top);
+        assert.ok(distance >= a.width + 7.9, `${width}px/${count}: dos categorías no chocan (${distance.toFixed(2)}px)`);
+      }
     }
   }
 }
 
-// También se prueba el diseño geométrico real de diez categorías, no solo diez
-// puntos inventados. Los arranques de las porciones pequeñas deben quedar
-// separados y las burbujas no deben tocarse.
-{
-  const count = diezVisuales.length;
-  const bubbleSize = calcularTamanoBurbujaRosquilla(count, Math.round(66 - count * 1.5));
-  const chartRadius = Math.max(52, Math.min(66, Math.round(74 - count * 1.7)));
-  const orbitHorizontal = 340 / 2 - bubbleSize / 2 - 5;
-  const orbitVertical = 112 + (70 - bubbleSize) * 0.4;
-  const gap = 2 * Math.asin(Math.min(1, (bubbleSize + 8) / (2 * Math.min(orbitHorizontal, orbitVertical))));
-  const starts: number[] = [];
-  const middles: number[] = [];
-  let accumulated = 0;
-  for (const value of diezVisuales) {
-    const start = -Math.PI / 2 + (accumulated / totalDiezVisual) * Math.PI * 2;
-    starts.push(start);
-    middles.push(start + (value / totalDiezVisual) * Math.PI);
-    accumulated += value;
-  }
-  const labels = distribuirAngulosEtiquetas(middles, gap);
-  const labelPoints = labels.map((angle) => ({
-    x: 170 + Math.cos(angle) * orbitHorizontal,
-    y: 156 + Math.sin(angle) * orbitVertical,
-  }));
-  for (let first = 0; first < count; first++) {
-    for (let second = first + 1; second < count; second++) {
-      const distance = Math.hypot(
-        labelPoints[first].x - labelPoints[second].x,
-        labelPoints[first].y - labelPoints[second].y,
-      );
-      assert.ok(distance >= bubbleSize + 5, "las diez burbujas separadas por segmentos reales no se enciman");
-    }
-  }
-  for (let index = 1; index < count; index++) {
-    const previousMiddle = starts[index] - (diezVisuales[index - 1] / totalDiezVisual) * Math.PI;
-    const sourceGap = 2 * (chartRadius + 11) * Math.sin((middles[index] - previousMiddle) / 2);
-    assert.ok(sourceGap >= 7, "los conectores de los nueve segmentos pequeños parten de puntos distinguibles");
-  }
-}
+hooks = [];
+nodes = render(makeData([42]));
+assert.ok(texts(nodes).includes("100%"), "una sola categoría conserva el 100% real");
+assert.ok(texts(nodes).includes(formatValue(42)));
+hooks = [];
+assert.equal(render([]).length, 0, "sin movimientos no se dibuja una rueda ni se inventa un total");
+assert.equal(geometry.textoPorcentajeRosquilla(9_999_999_999, 10_000_000_000), ">99%");
+assert.equal(geometry.textoPorcentajeRosquilla(1, 10_000_000_000), "<1%");
 
-const donutChart = fs.readFileSync("components/DonutChart.tsx", "utf8");
-assert.match(donutChart, /strokeWidth=\{1\.8\}/, "las líneas tienen un grosor visible en pantalla pequeña");
-assert.match(donutChart, /strokeOpacity=\{1\}/, "las líneas conservan todo su contraste");
-assert.ok(
-  (donutChart.match(/stroke=\{item\.color\}/g) ?? []).length >= 2,
-  "las líneas y porciones usan exactamente el mismo color de categoría",
-);
-assert.match(
-  donutChart,
-  /sourceRadius:\s*radius \+ \(selected === item\.id \? 11 : 9\)/,
-  "cada línea toca el borde real del segmento, también cuando se resalta",
-);
-
-console.log("✓ Los segmentos pequeños se ven; el monto y el porcentaje reales permanecen intactos; etiquetas y conectores se distinguen.");
+console.log("✓ Rueda original: botones iguales y separados, proporciones/moneda reales, selección por icono/bloque y retorno al total. Android visual pendiente.");

@@ -1,5 +1,28 @@
 # Estado actual de Fino
 
+## Reportes — 15/10/2026 — rueda interactiva sin conectores
+
+Diseño aprobado: categorías con botones iguales de 60 (56 con más categorías,
+48 en ancho reducido), órbita uniforme y sin líneas. Total real en el centro;
+tocar icono o bloque muestra nombre, monto formateado por Reportes y porcentaje
+real; segundo toque devuelve el total. Se resalta el bloque y un marcador hace
+localizable una porción seleccionada diminuta. La rosquilla ya no infla los
+valores pequeños: los ángulos representan sus importes y los huecos se limitan
+para no eliminarlos. Todas las categorías siguen accesibles individualmente.
+Con muchas categorías crece el alto de la órbita en lugar de achicar controles.
+Gastos e ingresos comparten componente; tipo/mes reinicia selección. Se retira
+el resumen inferior duplicado. Marca `15oct-rueda-categorias`.
+
+TypeScript y ESLint completos aprobados. La prueba original de rueda verifica
+selección/retorno, moneda, datos actualizados, proporciones y 21 composiciones;
+la revisión anterior falla por falta del total central. Android confirma rueda
+de gastos, Entretenimiento S/ 11 <1%, retorno a S/ 1,382,858 y entrada Ingresos
+sin datos; no se crean movimientos. Batería general aprobada: 222 pruebas y
+8 auditores, con tarjetas excluidas por decisión vigente.
+Qué sigue/falta: comprobar teléfono físico, letra grande y anchos muy reducidos;
+no se acredita una rueda con ingresos reales porque este mes no los tiene.
+No hay APK/AAB/OTA/Play ni cambios nativos, permisos o datos guardados nuevos.
+
 ## Ajustes — 15/10/2026 — coronitas en lugar de «De pago»
 
 Corrección solicitada: se retira la coronita superpuesta al icono de nube en

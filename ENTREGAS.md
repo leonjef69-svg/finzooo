@@ -1,5 +1,17 @@
 # Entregas de Fino
 
+## 15/10/2026 — Rueda de categorías interactiva; emulador actualizado
+
+Marca `15oct-rueda-categorias`. Reportes muestra iconos grandes y parejos,
+sin conectores, total central y selección de categoría con monto/% reales.
+Gastos/ingresos comparten rueda; ninguna categoría se agrupa y el anillo deja
+de ampliar artificialmente valores pequeños. Capturas reales de Android
+confirman gastos, selección de S/ 11 <1% y retorno al total; ingresos vacío
+se conserva. Se deja el emulador en Reportes/Gastos con total al centro.
+TypeScript/ESLint, 222 pruebas y 8 auditores aprobados; tarjetas excluidas.
+No APK/AAB/OTA/Play. Qué sigue/falta: entrega de distribución y revisión física,
+letra grande/anchos mínimos y una rueda con ingresos reales por separado.
+
 ## 15/10/2026 — Coronas en Ajustes; desarrollo verificado en emulador
 
 Marca `15oct-coronas-ajustes`. Sustituye los textos visibles «De pago» por

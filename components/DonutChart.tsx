@@ -1,14 +1,9 @@
-import { useState, type ComponentType } from "react";
+import { useMemo, useState, type ComponentType } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
-import Svg, { Circle, Path } from "react-native-svg";
-import { useColorScheme } from "nativewind";
-import {
-  ajustarValoresRosquilla,
-  calcularTamanoBurbujaRosquilla,
-  crearCurvaConectorRosquilla,
-  distribuirAngulosEtiquetas,
-  textoPorcentajeRosquilla,
-} from "@/utils/donutGeometry";
+import Svg, { Circle } from "react-native-svg";
+import { calcularDistribucionRueda, textoPorcentajeRosquilla } from "@/utils/donutGeometry";
+import { ENTRY_FONT } from "@/components/EntryUI";
+import { useAppData } from "@/contexts/AppDataContext";
 
 type Slice = {
   id: string;
@@ -18,151 +13,98 @@ type Slice = {
   Icon?: ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
 };
 
-// El gráfico usa casi todo el ancho de la tarjeta. Así las llamadas laterales
-// tienen aire y no se necesita una tarjeta innecesariamente alta.
-const WIDTH = 340;
-const HEIGHT = 320;
-const CENTER_X = WIDTH / 2;
-const CENTER_Y = 156;
-
-/**
- * Todas las categorías quedan visibles alrededor de la rosquilla. Cuando hay
- * más categorías, tanto los círculos como la rosquilla se compactan un poco;
- * nunca se omite una categoría ni se la esconde en una lista aparte.
- */
-export default function DonutChart({ data }: { data: Slice[] }) {
+/** El anillo expresa los montos; los controles dan presencia pareja a cada categoría. */
+export default function DonutChart({ data, formatValue, totalLabel, width = 340 }: {
+  data: Slice[];
+  formatValue: (value: number) => string;
+  totalLabel: string;
+  width?: number;
+}) {
   const [selected, setSelected] = useState<string | null>(null);
-  const { colorScheme } = useColorScheme();
-  const total = data.reduce((sum, item) => sum + item.value, 0);
-  const count = data.length;
-  // No hay posiciones ni tamaños fijos por categoría. Al añadir o quitar una,
-  // todo se reequilibra gradualmente: pocas categorías ganan presencia y una
-  // lista extensa se compacta sin que se superpongan sus rótulos.
-  const preferredBubble = Math.max(18, Math.min(56, Math.round(66 - count * 1.5)));
-  const bubble = calcularTamanoBurbujaRosquilla(count, preferredBubble, WIDTH);
-  const radius = Math.max(52, Math.min(66, Math.round(74 - count * 1.7)));
-  // Con una sola categoría, la etiqueta queda debajo de la rosquilla. Se deja
-  // suficiente separación para que la línea que la une con su segmento se vea.
-  const centerY = count === 1 ? 118 : count <= 4 ? 146 : CENTER_Y;
-  const height = count === 1 ? 280 : count <= 4 ? 300 : HEIGHT;
-  const orbitX = WIDTH / 2 - bubble / 2 - 5;
-  // En vez de dibujar un círculo vertical enorme, se abre la composición hacia
-  // los lados. Conserva la separación de los rótulos y reduce 60 px de alto.
-  const orbitY = count === 1 ? 126 : count <= 4 ? 102 + (56 - bubble) * 0.3 : 112 + (70 - bubble) * 0.4;
-  const visualValues = ajustarValoresRosquilla(data.map((item) => item.value), total);
-  const visualTotal = visualValues.reduce((sum, value) => sum + value, 0);
+  const { t } = useAppData();
+  const items = data.filter(item => Number.isFinite(item.value) && item.value > 0);
+  const total = items.reduce((sum, item) => sum + item.value, 0);
+  const count = items.length;
+  const layout = useMemo(() => calcularDistribucionRueda(count, width), [count, width]);
+  const { centerX, centerY, radius, bubble, positions } = layout;
+  const selectedItem = items.find(item => item.id === selected);
+  const selectedId = selectedItem?.id ?? null;
   const circumference = 2 * Math.PI * radius;
   let accumulated = 0;
-  const sectors = visualValues.map((value) => {
-    const start = -Math.PI / 2 + (accumulated / visualTotal) * Math.PI * 2;
-    const middle = start + (value / visualTotal) * Math.PI;
-    accumulated += value;
-    return { start, middle, value };
+  const sectors = items.map(item => {
+    const fraction = item.value / total;
+    const start = -90 + accumulated / total * 360;
+    accumulated += item.value;
+    return { fraction, start, middle: (start + fraction * 180) * Math.PI / 180 };
   });
-  // La separación se calcula por el tamaño real de las etiquetas y se
-  // distribuye alrededor del círculo, incluso al cruzar el punto de inicio.
-  const smallestOrbit = Math.max(1, Math.min(orbitX, orbitY));
-  const labelDistance = bubble + 8;
-  const minimumLabelGap = 2 * Math.asin(Math.min(1, labelDistance / (2 * smallestOrbit)));
-  const bubbleAngles = distribuirAngulosEtiquetas(
-    sectors.map((sector) => sector.middle),
-    minimumLabelGap,
-  );
+  const toggle = (id: string) => setSelected(current => current === id ? null : id);
+  const centerLabel = selectedItem?.name ?? totalLabel;
+  const centerValue = formatValue(selectedItem?.value ?? total);
+  const selectedPercentage = selectedItem ? textoPorcentajeRosquilla(selectedItem.value, total) : null;
+  const describePercentage = (percentage: string) => percentage === "<1%"
+    ? t("reports.lessThanOnePercent")
+    : percentage === ">99%" ? t("reports.moreThan99Percent") : percentage;
+  const centerWidth = Math.max(36, (radius - 12) * 2);
 
   if (total <= 0) return null;
 
   return (
-    <View style={{ width: WIDTH, height, maxWidth: "100%" }}>
-      <Svg width={WIDTH} height={height} viewBox={`0 0 ${WIDTH} ${height}`}>
-        {data.map((item, index) => {
+    <View style={{ width: layout.width, height: layout.height, maxWidth: "100%" }}>
+      <Svg width={layout.width} height={layout.height} viewBox={`0 0 ${layout.width} ${layout.height}`}>
+        {items.map((item, index) => {
           const sector = sectors[index];
-          const bubbleAngle = bubbleAngles[index];
-          const bubbleX = CENTER_X + Math.cos(bubbleAngle) * orbitX;
-          const bubbleY = centerY + Math.sin(bubbleAngle) * orbitY;
-          // El conector toca el borde exterior de su segmento (también al
-          // seleccionarlo) y se abre enseguida hacia una etiqueta equilibrada.
-          const route = crearCurvaConectorRosquilla({
-            centerX: CENTER_X,
-            centerY,
-            sourceAngle: sector.middle,
-            labelAngle: bubbleAngle,
-            bubbleX,
-            bubbleY,
-            bubbleSize: bubble,
-            sourceRadius: radius + (selected === item.id ? 11 : 9),
-          });
-          return (
-            <Path
-              key={`line-${item.id}`}
-              d={`M ${route.inicio.x} ${route.inicio.y} C ${route.control1.x} ${route.control1.y}, ${route.control2.x} ${route.control2.y}, ${route.fin.x} ${route.fin.y}`}
-              fill="none"
-              stroke={item.color}
-              strokeWidth={1.8}
-              strokeOpacity={1}
-            />
-          );
-        })}
-        {data.map((item, index) => {
-          const sector = sectors[index];
-          const fraction = sector.value / visualTotal;
-          const dash = fraction * circumference;
-          const gap = circumference - dash;
-          const rotation = (sector.start / Math.PI) * 180;
-          const active = selected === item.id;
+          const length = sector.fraction * circumference;
+          // El hueco se limita por el propio segmento para no borrar porciones pequeñas.
+          const separation = count > 1 ? Math.min(2, length * 0.12) : 0;
+          const dash = length - separation;
+          const active = selectedId === item.id;
           return (
             <Circle
               key={item.id}
-              cx={CENTER_X}
-              cy={centerY}
-              r={radius}
-              fill="none"
-              stroke={item.color}
-              strokeWidth={active ? 22 : 18}
-              strokeOpacity={selected == null || active ? 1 : 0.34}
-              strokeDasharray={`${dash} ${gap}`}
-              rotation={rotation}
-              origin={`${CENTER_X}, ${centerY}`}
-              onPress={() => setSelected((current) => (current === item.id ? null : item.id))}
+              cx={centerX} cy={centerY} r={radius}
+              fill="none" stroke={item.color}
+              strokeWidth={active ? 22 : 16}
+              strokeOpacity={selectedId == null || active ? 1 : 0.2}
+              strokeDasharray={`${dash} ${circumference - dash}`}
+              rotation={sector.start + separation / circumference * 180}
+              origin={`${centerX}, ${centerY}`}
+              onPress={() => toggle(item.id)}
             />
           );
         })}
+        {selectedItem && sectors[items.indexOf(selectedItem)].fraction < 0.015 ? (
+          <Circle
+            cx={centerX + Math.cos(sectors[items.indexOf(selectedItem)].middle) * radius}
+            cy={centerY + Math.sin(sectors[items.indexOf(selectedItem)].middle) * radius}
+            r={3} fill={selectedItem.color}
+          />
+        ) : null}
       </Svg>
 
-      {data.map((item, index) => {
-        const bubbleAngle = bubbleAngles[index];
-        const left = CENTER_X + Math.cos(bubbleAngle) * orbitX - bubble / 2;
-        const top = centerY + Math.sin(bubbleAngle) * orbitY - bubble / 2;
+      <View pointerEvents="none" accessible accessibilityLiveRegion="polite"
+        accessibilityLabel={`${centerLabel}: ${centerValue}${selectedPercentage ? `, ${describePercentage(selectedPercentage)}` : ""}`}
+        style={{ position: "absolute", left: centerX - centerWidth / 2, top: centerY - 43, width: centerWidth, height: 86, alignItems: "center", justifyContent: "center", gap: 4 }}>
+        <Text className="text-slate-500 dark:text-slate-300" numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.75} maxFontSizeMultiplier={1.3}
+          style={{ fontFamily: ENTRY_FONT.medium, fontSize: 12, lineHeight: 16, textAlign: "center" }}>{centerLabel}</Text>
+        <Text className="text-slate-900 dark:text-slate-100" numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.65} maxFontSizeMultiplier={1.3}
+          style={{ fontFamily: ENTRY_FONT.bold, fontSize: 17, textAlign: "center" }}>{centerValue}</Text>
+        {selectedPercentage ? <Text style={{ fontFamily: ENTRY_FONT.bold, fontSize: 13, color: selectedItem?.color }}>{selectedPercentage}</Text> : null}
+      </View>
+
+      {items.map((item, index) => {
         const Icon = item.Icon;
+        const active = selectedId === item.id;
         const percentageText = textoPorcentajeRosquilla(item.value, total);
-        const percentageAccessible = percentageText === "<1%"
-          ? "menos de 1 por ciento"
-          : percentageText === ">99%" ? "más de 99 por ciento" : percentageText;
-        const iconSize = bubble >= 56 ? 19 : bubble >= 48 ? 16 : bubble >= 36 ? 12 : bubble >= 26 ? 10 : 8;
-        const textSize = bubble >= 56 ? 12 : bubble >= 48 ? 11 : bubble >= 36 ? 9 : bubble >= 26 ? 8 : 7;
         return (
-          <TouchableOpacity
-            key={`bubble-${item.id}`}
-            className="bg-white dark:bg-noche-2"
-            onPress={() => setSelected((current) => (current === item.id ? null : item.id))}
-            accessibilityRole="button"
-            accessibilityLabel={`${item.name}: ${percentageAccessible}`}
-            style={{
-              position: "absolute",
-              left,
-              top,
-              width: bubble,
-              height: bubble,
-              borderRadius: bubble / 2,
-              borderWidth: 2.25,
-              borderColor: item.color,
-              alignItems: "center",
-              justifyContent: "center",
-            }}
-          >
-            {Icon ? <Icon size={iconSize} color={item.color} strokeWidth={2.35} /> : null}
-            <Text numberOfLines={1} style={{ marginTop: 2, color: colorScheme === "dark" ? "#ffffff" : "#0f172a", fontSize: textSize, fontWeight: "800" }}>
-              {percentageText}
-            </Text>
+          <TouchableOpacity key={`bubble-${item.id}`} className="bg-white dark:bg-noche-2"
+            onPress={() => toggle(item.id)} activeOpacity={0.75}
+            accessibilityRole="button" accessibilityState={{ selected: active }}
+            accessibilityLabel={`${item.name}: ${describePercentage(percentageText)}, ${formatValue(item.value)}`}
+            style={{ position: "absolute", left: positions[index].x - bubble / 2, top: positions[index].y - bubble / 2, width: bubble, height: bubble, borderRadius: bubble / 2, borderWidth: active ? 3 : 1.5, borderColor: item.color, alignItems: "center", justifyContent: "center", overflow: "hidden" }}>
+            {active ? <View pointerEvents="none" style={{ position: "absolute", inset: 0, backgroundColor: item.color, opacity: 0.12 }} /> : null}
+            {Icon ? <Icon size={bubble >= 56 ? 23 : 20} color={item.color} strokeWidth={2.1} /> : null}
+            <Text className="text-slate-900 dark:text-slate-100" numberOfLines={1} maxFontSizeMultiplier={1.3}
+              style={{ marginTop: 3, fontFamily: ENTRY_FONT.bold, fontSize: bubble >= 56 ? 12 : 11 }}>{percentageText}</Text>
           </TouchableOpacity>
         );
       })}
