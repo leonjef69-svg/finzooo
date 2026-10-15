@@ -1,5 +1,34 @@
 # Estado actual de Fino
 
+## Cajas — 15/10/2026 — el código conserva el diseño del detalle
+
+Marca `15oct-caja-mismo-diseno`. La lista única anterior todavía usaba la
+presentación antigua del detalle compartido. Invitar podía mostrar Ingreso/Gasto,
+devolución abajo y Cerrar al pie: no demostraba datos antiguos. El detalle
+compartido conserva ahora tarjeta, devolución, Agregar dinero/Cerrar, totales e
+historial en el mismo orden que el privado. Miembros/Invitar siguen arriba.
+Editar/borrar/denunciar movimientos se despliega con Seleccionar, respetando los
+permisos originales; no se añadió borrado masivo. El formulario conserva sus
+tipos Ingreso/Gasto al abrirlo. Sin cambios en cálculos, devoluciones ni servidor.
+
+Android del emulador comprobado con autorización y sin uso simultáneo: caja
+«ww» ya compartida, S/100 e historial conservados al abrir código real y cerrarlo
+con Atrás. Fondo nuevo antes/durante/después; sin la pantalla antigua. No hubo
+movimientos, devoluciones, conversiones, cierres ni borrados de prueba. La espera
+de red conserva un indicador honesto; no se promete generación instantánea.
+
+230 pruebas y 8 auditores sin tarjetas; TypeScript/ESLint completos sin errores.
+Nueva prueba ejecuta el JSX original con saldo calculado por linkedTransfers,
+comprueba controles, permisos y cierre de hoja sin acciones de dinero. Falla
+contra 9a29f31 por los botones antiguos. Registros locales
+.tmp/caja-mismo-diseno-app-15oct.log, tsc/eslint asociados y
+.tmp/caja-diseno-regresion-15oct.log. Capturas/códigos fuera de Git.
+
+**Sigue/falta:** probar unirse desde segundo Android/cuenta real y los pendientes
+previos de diario durable/volumen/pares históricos dudosos. Este cambio visual
+no reconstruye ni borra los tres casos antiguos. Sin campos nuevos, APK/AAB/OTA,
+Play, Functions/reglas ni tarjetas; PLAYSTORE sin cambios de datos recolectados.
+
 ## Cajas — 15/10/2026 — una lista y miembros/invitación como Familia
 
 Marca `15oct-cajas-lista-unica`. Petición del dueño: quitar la tarjeta extra

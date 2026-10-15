@@ -7,6 +7,31 @@ No se crean, corrigen ni borran movimientos de la cuenta del propietario.
 Excepción autorizada posterior: comprobar la conversión/invitación de su Caja
 S/88 conservando importes, historial y Personal; no tocar «hj» ni devolver dinero.
 
+## Séptima pasada — mismo diseño antes y después del código
+
+Marca 15oct-caja-mismo-diseno. La sexta pasada quitó la segunda ruta/lista, pero
+el detalle de SharedBoxes mantenía su presentación antigua. Se alinean tarjeta,
+devolución, Agregar dinero/Cerrar, totales e historial con el detalle privado.
+No se cambian protocolos de dinero ni invitaciones; el formulario aún permite
+Ingreso/Gasto. Seleccionar despliega las acciones originales de edición/borrado
+y denuncia, sin elevar permisos ni añadir borrado masivo.
+
+Prueba nueva renderiza el JSX original, usa linkedTransfers real para la muestra
+aislada y comprueba orden, controles, permisos, gasto rojo, selección y abrir/
+cerrar código sin acciones monetarias. Contra 9a29f31 falla por los botones viejos.
+Suite final estable: 230 pruebas y 8 auditores sin tarjetas, TypeScript/ESLint
+completos sin errores. Registros .tmp/caja-mismo-diseno-app-15oct.log y asociados.
+
+Comprobación Android autorizada sin uso simultáneo: «ww» compartida con S/100 e
+historial real, abrir código y cerrar con Atrás conserva el mismo fondo moderno.
+No se convirtió otra privada, no se hizo ningún movimiento/devolución/cierre/
+borrado. La preparación del código puede requerir red y conserva su indicador.
+Capturas/códigos excluidos de Git; sin APK/OTA, servidor, reglas ni nuevos campos.
+
+**Sigue/falta:** unión desde segundo Android/cuenta real y pendientes históricos
+de diario durable/volumen/pares dudosos. No se reconstruyen ni borran mitades
+antiguas y no se presenta esta corrección visual como auditoría financiera completa.
+
 ## Sexta pasada — una lista y código sin recarga financiera
 
 Marca 15oct-cajas-lista-unica. El usuario señaló falsa advertencia de conversión

@@ -1,5 +1,24 @@
 # Entregas de Fino
 
+## 15/10/2026 — Código sobre el mismo diseño de Caja (desarrollo)
+
+Marca `15oct-caja-mismo-diseno`: corrige la presentación antigua que conservaba
+el detalle compartido tras la unificación de listas. Devolución debajo del
+saldo, Agregar dinero/Cerrar arriba y movimientos con Seleccionar; Ingreso/Gasto
+quedan dentro del formulario, no cambian el fondo al invitar. Acciones y permisos
+financieros conservados; no se añade borrado masivo.
+
+Emulador actualizado por el servidor de desarrollo: código real abierto/cerrado
+en «ww», S/100, misma caja/historial/diseño antes, detrás de la hoja y después.
+Sin operaciones de dinero, conversiones, cierres ni borrados para probar.
+230 pruebas/8 auditores sin tarjetas, TypeScript/ESLint sin errores; regresión
+9a29f31 falla por la ausencia de Agregar dinero en el diseño anterior.
+Evidencia .tmp/caja-mismo-diseno-app-15oct.log y registros asociados, no publicados.
+
+**Sigue/falta:** unión desde otro Android/cuenta y pendientes previos de auditoría.
+Sin APK/AAB/OTA/Play, servidor/reglas ni nuevos datos recolectados. No se repararon
+automáticamente transferencias antiguas ni se movió Personal.
+
 ## 15/10/2026 — Lista única de Cajas e invitación estable (desarrollo)
 
 Marca `15oct-cajas-lista-unica`: sin tarjeta Cajas compartidas ni una segunda

@@ -142,9 +142,10 @@ for (const file of [main, shared]) {
   for (const [cargandoCaja, errorCargaCaja] of [[true, false], [false, true], [false, false]]) {
     assert.equal(run(node.initializer.getText(tree), { caja: box, cargandoCaja, errorCargaCaja }), !cargandoCaja && !errorCargaCaja);
   }
-  const close = find(shared, node => ts.isJsxExpression(node) && node.expression?.getText().includes('onPress={cerrar}')
-    && node.expression.getText().startsWith("cajaLista"));
-  assert.ok(close, "Cerrar no aparece durante la carga ni un historial fallido");
+  const loading = find(shared, node => ts.isConditionalExpression(node) && node.condition.getText() === "cargandoCaja");
+  assert.ok(!loading.node.whenTrue.getText().includes('onPress={cerrar}'), "Cerrar no aparece durante la carga");
+  const error = find(shared, node => ts.isConditionalExpression(node) && node.condition.getText() === "errorCargaCaja");
+  assert.ok(!error.node.whenTrue.getText().includes('onPress={cerrar}'), "Cerrar no aparece con historial fallido");
   const invite = button(shared, "boxes.inviteAccessibility");
   assert.equal(run(attr(invite.node, "disabled").getText(invite.tree), { busy: true }), true);
 }
