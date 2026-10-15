@@ -111,6 +111,7 @@ const sharing = load("utils/cloudCajasCompartidas.ts", name => {
   // Estos escenarios financieros presuponen documentos aceptados. La barrera
   // sin aceptación se ejecuta aparte con el módulo original de recibos.
   if (name === "@/utils/legalAcceptance") return { assertSharedContentAccepted: async () => {} };
+  if (name === "@/utils/sharedMovements") return {};
   if (name === "@/utils/firebase") return { db: {}, auth };
   if (name === "@/utils/cajas") return api;
   if (name === "@/utils/accountTask") return { captureAccountTask: capture };

@@ -685,6 +685,11 @@ service cloud.firestore {
                       )
                       && familyOwnerPremiumAfter(familyId)
                       && validSharedMovement(request.resource.data)
+                      // Solo el primer ingreso junto con una raíz NUEVA.
+                      // Las demás altas pasan por el servidor: también deben
+                      // serializarse frente a un cierre o salida concurrente.
+                      && request.resource.data.tipo == 'ingreso'
+                      && !exists(/databases/$(database)/documents/familySpaces/$(familyId))
                       && !('personalReturnAmount' in request.resource.data)
                       && (!('personalTransactionId' in request.resource.data)
                         || getAfter(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid);
@@ -716,6 +721,7 @@ service cloud.firestore {
                         (get(/databases/$(database)/documents/familySpaces/$(familyId)).data.get('deleting', false) == true
                           && get(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid)
                         || (resource.data.get('personalOwnerUid', '') == ''
+                          && resource.data.tipo == 'gasto'
                           && (resource.data.creadoPor == request.auth.uid
                             || get(/databases/$(database)/documents/familySpaces/$(familyId)).data.ownerUid == request.auth.uid))
                       );
@@ -880,11 +886,9 @@ service cloud.firestore {
           && validSharedMovement(request.resource.data)
           && cloudCopyOpen(request.auth.uid)
           && (
-            (boxOpenAfter(boxId) && !('personalReturnAmount' in request.resource.data)
-              && !('migrationSourceIndex' in request.resource.data)
-              && !('migrationAttemptId' in request.resource.data)
-              && (boxMember(boxId) || getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid))
-            || (boxMember(boxId) && validMigratedBoxReturn(boxId, movementId, request.resource.data))
+            // La única escritura SDK es copiar un origen privado confirmado
+            // mientras la conversión aún no se publicó. Altas nuevas: servidor.
+            (boxMember(boxId) && validMigratedBoxReturn(boxId, movementId, request.resource.data))
           )
           && (!('personalTransactionId' in request.resource.data)
             || getAfter(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid);
@@ -905,6 +909,7 @@ service cloud.firestore {
                         (get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.get('deleting', false) == true
                           && get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid)
                         || (resource.data.get('personalOwnerUid', '') == ''
+                          && resource.data.tipo == 'gasto'
                           && (resource.data.creadoPor == request.auth.uid
                             || get(/databases/$(database)/documents/boxSpaces/$(boxId)).data.ownerUid == request.auth.uid))
                       );

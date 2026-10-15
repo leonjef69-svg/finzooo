@@ -20,6 +20,7 @@ const { privateBoxMigration } = require("./src/private-box-migration");
 const { prepareIncompleteBoxDeletion } = require("./src/incomplete-box-cleanup");
 const { resolvePrivateBoxMoney, recoverPrivateBoxMoney, retirePrivateBoxMoney } = require("./src/private-box-money");
 const { submitContentReport, cleanupExpiredReports } = require("./src/content-reports");
+const { mutateSharedMovement } = require("./src/shared-movements");
 
 initializeApp();
 const { acceptLegalDocuments, assertLegalAcceptance } = require("./src/legal-acceptance");
@@ -41,6 +42,17 @@ function verifiedAccount(request, recent = false) {
 
 exports.getCloudAccess = onCall({ region: "southamerica-east1", maxInstances: 10 }, request =>
   getCloudAccess(getFirestore(), verifiedAccount(request)));
+
+exports.mutateSharedMovement = onCall({ region: "southamerica-east1", maxInstances: 3, timeoutSeconds: 120 }, async request => {
+  const uid = verifiedAccount(request);
+  try { return await mutateSharedMovement(getFirestore(), uid, request.data); }
+  catch (error) {
+    if (!error?.reason) throw error;
+    throw new HttpsError(error.reason === "shared-invalid-request" ? "invalid-argument"
+      : error.reason === "shared-permission-denied" ? "permission-denied" : "failed-precondition",
+    "No se confirmó el movimiento. Actualiza el espacio e inténtalo de nuevo.", { reason: error.reason });
+  }
+});
 
 exports.acceptLegalDocuments = onCall({ region: "southamerica-east1", maxInstances: 2, timeoutSeconds: 60 }, async request => {
   const uid = verifiedAccount(request);
@@ -300,10 +312,12 @@ exports.changePersonalContribution = onCall(
       if (action === "delete") {
         if (!limits.canDelete) throw new HttpsError("failed-precondition", "Este aporte ya fue usado.");
         transaction.delete(movementRef);
+        transaction.update(spaceRef, { sharedMoneyVersion: (Number(space.data().sharedMoneyVersion) || 0) + 1 });
         return;
       }
       if (amount < limits.minimum - CENT) throw new HttpsError("failed-precondition", "No puedes reducir la parte ya usada.");
       transaction.update(movementRef, { monto: amount, descripcion: description.trim() });
+      transaction.update(spaceRef, { sharedMoneyVersion: (Number(space.data().sharedMoneyVersion) || 0) + 1 });
     });
     return { ok: true };
   },

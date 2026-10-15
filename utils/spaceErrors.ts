@@ -12,6 +12,12 @@ export function spaceErrorKey(error: unknown, invalidCode = false): string {
   if (detail.includes("legal-account-")) return "family.loginRequired";
   if (detail.includes("legal-")) return "legal.saveFailed";
   const reason = value?.details?.reason;
+  if (reason === "shared-insufficient-balance") return "spaces.balanceChanged";
+  if (reason === "shared-space-closed") return "spaces.returnClosed";
+  if (reason === "shared-premium-required") return "spaces.proRequired";
+  if (reason === "shared-invalid-request") return "spaces.invalidMovement";
+  if (reason === "shared-linked-movement") return "toast.transferManagedInSpace";
+  if (reason === "shared-invalid-data" || reason === "shared-conflict" || detail.includes("shared-invalid-response")) return "settings.backupMovementConflict";
   if (typeof reason === "string" && reason.startsWith("migration-")) return "boxes.syncConflict";
   if (reason === "return-changed") return "spaces.returnChanged";
   if (reason === "return-currency-mismatch") return "spaces.currencyMismatch";

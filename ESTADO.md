@@ -1,5 +1,45 @@
 # Estado actual de Fino
 
+## Familia/Cajas — 15/10/2026 — auditoría y Blaze confirmado
+
+El propietario solicitó auditoría profunda sin borrar datos. Orden: saldo
+compartido, aportes Personal/Familia, sincronización y resto del recorrido.
+Comprobación remota inicial encontró facturación desactivada; tras vincularla
+el dueño, segunda consulta confirmó `billingEnabled=true` en dotero-2d430.
+Siguen cero Functions y reglas publicadas del 02/10, distintas de las locales.
+Blaze ya está activo: no volver a pedir que lo active, ni asumir desplegado.
+
+Preparación: callable transaccional de movimientos con saldo real y unidades
+monetarias enteras; raíz compartida con cambios de aportes/devoluciones para
+ordenar operaciones simultáneas. Borrar ingreso externo usado se rechaza.
+Las reglas cierran escritura directa normal y borrado SDK de ingresos; conservan
+primer ingreso atómico de Familia nueva y copia exacta de Caja en conversión.
+Reintento de sesión con ID estable y recibo remoto evita duplicar/resucitar.
+Familia espera confirmación de disco de su débito Personal (incluido inicial)
+y conserva esa pareja en pantalla si debe reintentar. Ediciones Familia/Cajas
+compartidas esperan lo mismo. No se interpretan fallos de red como espacios
+desaparecidos. Nombre familiar vacío y errores de saldo/Pro/fecha corregidos.
+
+Verificación final estable: TypeScript y ESLint completos aprobados; 223 pruebas
+de app y 8 auditores, 97 unitarias Functions y 245 SDK/reglas/Auth/HTTP en Node22
+con Firebase Emulator Suite, sin fallos ni omisiones. Nueva regresión de gastos
+ejecuta escritores antiguos originales de ab441d3 contra reglas antiguas:
+ambos gastos de 80 se aceptaban con saldo 100; falla por 2 frente a 1, no API
+ausente. Pantalla original antigua también anuncia guardado antes de disco.
+Una ejecución intermedia falló por un helper no exportado; se corrigió y se
+repitió TODO el servidor, 245/245. No presentar esa ejecución roja como verde.
+El propietario confirmó que solo prueba en este emulador, sin otros teléfonos;
+se puede coordinar activación para esta versión sin clientes antiguos activos.
+
+No se modifican movimientos reales, saldos, «hj», permisos nativos, billing,
+reglas remotas, APK/AAB/OTA/Play, tarjetas o Telegram. Marca preparada
+`15oct-auditoria-familia-cajas`. Ver docs/AUDITORIA_FAMILIA_CAJAS_15OCT.md:
+no equivale a cierre global. **Sigue/falta:** activación coordinada de servicios,
+reglas y app (las anteriores escriben directo), dos cuentas/Android, diario
+durable para cierre inesperado entre Firebase y Personal/alta de Familia,
+casos antiguos de «hj», historiales grandes/coste, tres decimales en ayudantes
+antiguos y moderación. No resolver diferencias eligiendo o inventando una fuente.
+
 ## Reportes — 15/10/2026 — bloques visibles y conexiones individuales
 
 Corrección aprobada después de la rueda sin líneas: todas las categorías con

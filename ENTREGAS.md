@@ -1,5 +1,19 @@
 # Entregas de Fino
 
+## 15/10/2026 — Auditoría Familia/Cajas; preparación verificada
+
+Marca `15oct-auditoria-familia-cajas`. Saldo compartido transaccional, borrado
+de ingreso usado protegido, reintentos de sesión sin duplicar y confirmación
+de guardado Personal. Fallo de red no oculta espacios; nombres/errores revisados.
+TypeScript/ESLint completos, 223 pruebas/8 auditores sin tarjetas, 97 unitarias
+Functions y 245 Firebase SDK/reglas/Auth/HTTP estables aprobados. Regresiones
+originales ab441d3 rojas por el fallo real. Sin modificar datos del propietario.
+Blaze confirmado activo en dotero-2d430; el dueño confirma solo uso en emulador.
+Activación de servicios/reglas se comprobará por separado; todavía no es entrega
+APK/AAB/OTA/Play ni cierre global. Faltan reinicio entre aportes, dos cuentas,
+historiales grandes, fuentes antiguas «hj», tres decimales legacy y moderación.
+Detalle: docs/AUDITORIA_FAMILIA_CAJAS_15OCT.md.
+
 ## 15/10/2026 — Bloques y conectores corregidos; visible en emulador
 
 Marca `15oct-bloques-conectados`. Todas las categorías del reporte conservan

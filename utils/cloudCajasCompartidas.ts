@@ -1,9 +1,10 @@
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, getDocFromServer, getDocs, orderBy, query,
+  collection, doc, getDoc, getDocFromServer, getDocs, orderBy, query,
   runTransaction, serverTimestamp, setDoc, onSnapshot, updateDoc, writeBatch,
   where,
 } from "firebase/firestore";
 import { db } from "@/utils/firebase";
+import { guardarMovimientoCompartido, borrarMovimientoCompartido } from "@/utils/sharedMovements";
 import { assertSharedContentAccepted } from "@/utils/legalAcceptance";
 import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
@@ -60,9 +61,11 @@ export async function listarCajasCompartidas(uid: string): Promise<CajaCompartid
     try {
       const caja = await getDoc(doc(db, "boxSpaces", enlace.id));
       return caja.exists() && caja.data().migrationComplete !== false && caja.data().closed !== true ? desdeDocumento(caja.id, caja.data()) : null;
-    } catch {
+    } catch (error) {
       // Un vínculo antiguo o dañado no debe ocultar las demás cajas válidas.
-      return null;
+      if ((error as { code?: string })?.code === "permission-denied") return null;
+      // Una caída de red no significa que la Caja desapareció.
+      throw error;
     }
   }));
   return cajas.filter((caja): caja is CajaCompartida => caja !== null).sort((a, b) => b.creadaEn - a.creadaEn);
@@ -188,12 +191,11 @@ export async function listarMovimientosCajaCompartida(boxId: string): Promise<Mo
 export async function guardarMovimientoCajaCompartida(boxId: string, uid: string, movimiento: Omit<MovimientoCajaCompartida, "id" | "creadoPor" | "creadoEn">): Promise<string> {
   await assertSharedContentAccepted(uid);
   if (!isSafeMoneyAmount(movimiento.monto) || movimiento.monto <= 0) throw new Error("invalid-amount");
-  const ref = await addDoc(collection(db, "boxSpaces", boxId, "movements"), { ...movimiento, creadoPor: uid, creadoEn: serverTimestamp() });
-  return ref.id;
+  return guardarMovimientoCompartido("box", boxId, uid, movimiento);
 }
 
 export async function borrarMovimientoCajaCompartida(boxId: string, movementId: string): Promise<void> {
-  await deleteDoc(doc(db, "boxSpaces", boxId, "movements", movementId));
+  await borrarMovimientoCompartido("box", boxId, movementId);
 }
 
 export async function listarMiembrosCaja(boxId: string): Promise<MiembroCajaCompartida[]> {

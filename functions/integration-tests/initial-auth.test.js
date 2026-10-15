@@ -35,7 +35,7 @@ test("acceso inicial: SDK Auth real conectado exclusivamente a emulador", async 
         recordLegalAcceptanceForCurrentAccount: async () => {}, // solo recibo local sustituido
         onRegistered: async (_, normalized) => completed.push(normalized), // apertura/Router no Android
       };
-      await handlerOriginal("screens/Register.tsx", "submit", register)();
+      await handlerOriginal("screens/Login.tsx", "registerSubmit", register)();
       assert.deepEqual(errors, []); assert.deepEqual(completed, [email]);
       const user = register.createdUser.current;
       assert.equal(auth.currentUser, user, "sesión SDK real conserva la instancia del registro");
@@ -48,6 +48,7 @@ test("acceso inicial: SDK Auth real conectado exclusivamente a emulador", async 
       await signOut(auth);
       let entered = false;
       const login = { beginEntryOperation: () => () => true, authBusy: { current: false }, email: ` ${email} `, pass: password, auth,
+        pendingGoogleUser: { current: null }, setGoogleLegalPending() {}, setLegalAccepted() {},
         setGoogleError() {}, setError: value => { if (value) errors.push(value); }, setLoading() {}, t: key => key,
         firebaseErrorMessage: code => code, signInWithEmailAndPassword, onLoggedIn: async () => { entered = true; } };
       await handlerOriginal("screens/Login.tsx", "submit", login)();

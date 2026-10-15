@@ -1,5 +1,11 @@
 # Respaldo y versión publicada de Firebase — 12/10/2026
 
+**Actualización 15/10/2026:** después de que el propietario vinculó la cuenta,
+Cloud Billing confirma `billingEnabled=true` en dotero-2d430. Blaze ya está activo.
+Siguen cero Functions y las mismas reglas del 02/10. La evidencia de abajo es
+histórica; no volver a pedir activar Blaze. Servicios/reglas/app y controles de
+consumo siguen pendientes de activación coordinada. Ver la auditoría del 15/10.
+
 ## Evidencia de solo lectura
 
 Proyecto de la app: `dotero-2d430`.

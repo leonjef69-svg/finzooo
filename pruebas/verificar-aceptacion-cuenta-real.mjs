@@ -136,7 +136,7 @@ for (const [file, name, args] of guarded) {
   const deps = { assertSharedContentAccepted: a.assertSharedContentAccepted, db: {},
     doc: () => ({}), collection: () => ({}), crearCodigoFamilia: () => "CODE", isSafeMoneyAmount: () => true,
     getDoc: remote, setDoc: remote, updateDoc: remote, addDoc: remote, runTransaction: remote, serverTimestamp: () => 1,
-    functions: {}, httpsCallable: () => remote };
+    functions: {}, httpsCallable: () => remote, guardarMovimientoCompartido: remote };
   const fn = handlerOriginal(file, name, deps, read(file));
   await assert.rejects(fn(...args), /legal-acceptance-required/, `${name}: la versión anterior llega al servidor sin elección`);
   assert.equal(calls, 0);
@@ -179,8 +179,8 @@ for (const [file, name, args] of guarded) {
 }
 // Acciones de salida originales no dependen de aceptación.
 for (const [file, name, args, dependency] of [
-  ["utils/cloudFamilia.ts", "borrarMovimientoFamilia", ["space", "row"], "deleteDoc"],
-  ["utils/cloudCajasCompartidas.ts", "borrarMovimientoCajaCompartida", ["space", "row"], "deleteDoc"],
+  ["utils/cloudFamilia.ts", "borrarMovimientoFamilia", ["space", "row"], "borrarMovimientoCompartido"],
+  ["utils/cloudCajasCompartidas.ts", "borrarMovimientoCajaCompartida", ["space", "row"], "borrarMovimientoCompartido"],
   ["utils/personalContribution.ts", "borrarAportePersonal", ["family", "space", "row"], "httpsCallable"],
   ["utils/personalContribution.ts", "cerrarEspacioCompartido", ["family", "space"], "httpsCallable"],
   ["utils/personalContribution.ts", "salirEspacioCompartido", ["family", "space"], "httpsCallable"],

@@ -91,7 +91,8 @@ test("devolución sin Pro: límites reales, reintentos, concurrencia y migració
       const row = { tipo: "gasto", monto: 40, descripcion: "Devolver", method: "transfer", fecha: "2026-10-05", creadoPor: "owner", creadoEn: serverTimestamp(),
         personalTransactionId: 300, personalOwnerUid: "owner", personalReturnAmount: 40 };
       await assertFails(setDoc(doc(client, "familySpaces", "foreign", "movements", "direct-return"), row));
-      await assertSucceeds(setDoc(doc(client, "familySpaces", "foreign", "movements", "ordinary"), {
+      // Tampoco un gasto sin enlace puede saltarse la comprobación de saldo.
+      await assertFails(setDoc(doc(client, "familySpaces", "foreign", "movements", "ordinary"), {
         tipo: "gasto", monto: 1, descripcion: "Normal", method: "cash", fecha: "2026-10-05", creadoPor: "owner", creadoEn: serverTimestamp() }));
     });
     await t.test("historia de Caja privada: solo copia exacta y no puede reabrir la migración", async () => {

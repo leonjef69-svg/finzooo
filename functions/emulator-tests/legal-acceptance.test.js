@@ -29,7 +29,7 @@ test("aceptación: reglas SDK originales sin saltos desde versiones antiguas", a
       const spaces = kind === "family" ? "familySpaces" : "boxSpaces", invites = kind === "family" ? "familyInvites" : "boxInvites", field = kind === "family" ? "familyId" : "boxId";
       await admin.doc(`${spaces}/home`).set({ nombre: "Casa", ownerUid: "owner", currency: "PEN" });
       await admin.doc(`${spaces}/home/members/owner`).set({ uid: "owner", nombre: "Dueño", rol: "owner" });
-      await admin.doc(`${spaces}/home/movements/old`).set({ ...movement, creadoEn: new Date() });
+      await admin.doc(`${spaces}/home/movements/old`).set({ ...movement, tipo: "gasto", creadoEn: new Date() });
       await t.test(`${kind}: puede leer/borrar registro viejo, no nombre/movimiento/invitación nuevos`, async () => {
         await assertSucceeds(getDoc(doc(owner, spaces, "home", "movements", "old")));
         await assertSucceeds(deleteDoc(doc(owner, spaces, "home", "movements", "old")));
@@ -46,11 +46,13 @@ test("aceptación: reglas SDK originales sin saltos desde versiones antiguas", a
       await admin.doc("legalAcceptances/owner").delete();
     });
     await acceptLegalDocuments(admin, "owner", payload);
-    await t.test("elección vigente permite espacio/nombre/movimiento/invitación con permisos anteriores", async () => {
+    await t.test("elección vigente permite espacio/nombre/invitación; las altas de dinero existentes exigen servidor", async () => {
       for (const kind of ["family", "box"]) {
         const spaces = kind === "family" ? "familySpaces" : "boxSpaces", invites = kind === "family" ? "familyInvites" : "boxInvites", field = kind === "family" ? "familyId" : "boxId";
         await assertSucceeds(updateDoc(doc(owner, spaces, "home"), { nombre: "Otro" }));
-        await assertSucceeds(setDoc(doc(owner, spaces, "home", "movements", "new"), movement));
+        await assertFails(setDoc(doc(owner, spaces, "home", "movements", "new"), movement));
+        // Fixture de ingreso ya confirmado, para el borrado protegido posterior.
+        await admin.doc(`${spaces}/home/movements/new`).set({ ...movement, creadoEn: new Date() });
         await assertSucceeds(setDoc(doc(owner, invites, "new"), { [field]: "home", createdBy: "owner", expiresAt: Date.now() + 60000 }));
         const batch = writeBatch(owner);
         batch.set(doc(owner, spaces, "fresh"), { nombre: "Nueva", ownerUid: "owner", currency: "PEN", [kind === "family" ? "creadoEn" : "creadaEn"]: serverTimestamp() });
@@ -79,7 +81,8 @@ test("aceptación: reglas SDK originales sin saltos desde versiones antiguas", a
       await admin.doc("premiumTrialClaims/owner").set({ deletionPending: true });
       await assertFails(setDoc(doc(owner, "familySpaces", "home", "movements", "late"), movement));
       await assertSucceeds(getDoc(doc(owner, "familySpaces", "home")));
-      await assertSucceeds(deleteDoc(doc(owner, "familySpaces", "home", "movements", "new")));
+      // Un ingreso puede estar usado: su borrado ahora pasa por el servidor.
+      await assertFails(deleteDoc(doc(owner, "familySpaces", "home", "movements", "new")));
     });
   } finally { await env.cleanup(); await deleteApp(app); }
 });

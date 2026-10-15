@@ -47,4 +47,4 @@ async function acceptLegalDocuments(db, uid, input, now) {
     return receipt;
   });
 }
-module.exports = { DOCUMENTS, validLegalReceipt, acceptLegalDocuments, assertLegalAcceptance };
+module.exports = { DOCUMENTS, validLegalReceipt, acceptLegalDocuments, assertLegalAcceptance, assertLegalAccountOpen };

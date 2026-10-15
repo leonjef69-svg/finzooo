@@ -68,7 +68,7 @@ export default function Family() {
 }
 
 function FamilyForAccount({ accountUid }: { accountUid: string }) {
-  const { t, fmt, monthNames, userCurrency, userName, showToast, isPremium, budgets, carryoverCleared, transactions, addOrUpdateTransaction, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
+  const { t, fmt, monthNames, userCurrency, userName, showToast, isPremium, budgets, carryoverCleared, transactions, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
   const insets = useSafeAreaInsets();
   const uidAlAbrir = auth.currentUser?.uid ?? "";
   const copiaInicial = uidAlAbrir ? familiaEnMemoria.get(uidAlAbrir) : undefined;
@@ -83,6 +83,9 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   const [familiasSeleccionadas, setFamiliasSeleccionadas] = useState<string[]>([]);
   const [miembros, setMiembros] = useState<MiembroFamilia[]>(copiaInicial?.miembros ?? []);
   const [movimientos, setMovimientos] = useState<MovimientoFamilia[]>(copiaInicial?.movimientos ?? []);
+  // Si el servidor guardó el aporte pero el disco falló, el siguiente intento
+  // confirma esa misma pareja; nunca crea otro aporte para compensarlo.
+  const pendingDebit = useRef<{ confirm: () => Promise<boolean> } | null>(null);
   // La reconciliación de Personal debe conocer los movimientos de TODAS las
   // familias. Mirar solo la activa hacía que una transferencia válida de otra
   // familia se interpretara como huérfana y se borrara de Personal.
@@ -357,6 +360,11 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   }
 
   const crear = () => ejecutar(async wait => {
+    if (pendingDebit.current) {
+      if (!await wait(pendingDebit.current.confirm)) throw new Error("personal-save-failed");
+      pendingDebit.current = null;
+      setModo(null); await wait.reload(); return;
+    }
     if (!isPremium) { irUnaVez("/premium"); return; }
     const issue = amountInputError(montoInicial, userCurrency);
     if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
@@ -378,12 +386,15 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     } : undefined;
     const nueva = await wait(() => crearFamilia(uid, userName || t("family.member"), value, userCurrency, movimientoInicial));
     if (personalTransactionId != null && nueva.movimientoInicialId) {
-      addOrUpdateTransaction({
+      const debit = {
         id: personalTransactionId, type: "expense", amount: initial, category: "otros", date: fechaHoy(),
         time: horaDe(Date.now()), method: "transfer", description: t("family.transferTo", { name: value }),
         notes: "", origin: "manual", internalTransfer: "family", internalTransferLink: nueva.movimientoInicialId,
         internalTransferSpaceId: nueva.id, internalTransferSpaceName: value,
-      });
+      } as const;
+      pendingDebit.current = { confirm: () => repairLinkedTransferTransactions([debit]) };
+      if (!await wait(pendingDebit.current.confirm)) throw new Error("personal-save-failed");
+      pendingDebit.current = null;
     }
     setModo(null); setNombre(""); setMontoInicial(""); setOrigenInicial("externo"); setVerTodas(false); await wait.reload(nueva.id); showToast(t("family.created"));
   });
@@ -431,6 +442,11 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     ]);
   };
   const guardar = () => ejecutar(async wait => {
+    if (pendingDebit.current) {
+      if (!await wait(pendingDebit.current.confirm)) throw new Error("personal-save-failed");
+      pendingDebit.current = null;
+      setTipo(null); await wait.reload(); return;
+    }
     const issue = amountInputError(monto, familia?.currency || userCurrency);
     if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
     const uid = auth.currentUser?.uid; const value = parseAmountInput(monto, familia?.currency || userCurrency);
@@ -443,7 +459,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       if (value - aporteEditado.monto > saldoPersonalEn(aporteEditado.fecha)) { showToast(t("family.notEnoughPersonal")); return; }
       await wait(() => actualizarAportePersonal("family", familia.id, aporteEditado.id, value, descripcion || aporteEditado.descripcion));
       const personal = transactions.find(tx => tx.id === aporteEditado.personalTransactionId);
-      if (personal) addOrUpdateTransaction({ ...personal, amount: value }, true);
+      if (personal && !await wait(() => repairLinkedTransferTransactions([{ ...personal, amount: value }]))) throw new Error("personal-save-failed");
       setMonto(""); setDescripcion(""); setEditandoAporteId(null); setTipo(null); await wait.reload();
       return;
     }
@@ -453,7 +469,12 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     if (tipo === "gasto" && !canSpendFromSpace(movimientos, value)) { showToast(t("family.notEnoughSpace")); return; }
     const personalTransactionId = desdePersonal ? nextId() : undefined;
     const movementId = await wait(() => guardarMovimientoFamilia(familia.id, uid, { tipo, monto: value, descripcion: descripcion.trim().slice(0, 60) || (tipo === "ingreso" ? t(desdePersonal ? "family.initialFromPersonal" : "family.externalMoney") : ""), ...(desdePersonal ? {} : { category }), notes: notes.trim(), fecha: movementDate, method: personalTransactionId != null ? "transfer" : method, ...(personalTransactionId != null ? { personalTransactionId, personalOwnerUid: uid } : {}) }));
-    if (personalTransactionId != null) addOrUpdateTransaction({ id: personalTransactionId, type: "expense", amount: value, category: "otros", date: movementDate, time: horaDe(Date.now()), method: "transfer", description: t("family.transferTo", { name: familia.nombre }), notes: notes.trim(), origin: "manual", internalTransfer: "family", internalTransferLink: movementId, internalTransferSpaceId: familia.id, internalTransferSpaceName: familia.nombre });
+    if (personalTransactionId != null) {
+      const debit = { id: personalTransactionId, type: "expense", amount: value, category: "otros", date: movementDate, time: horaDe(Date.now()), method: "transfer", description: t("family.transferTo", { name: familia.nombre }), notes: notes.trim(), origin: "manual", internalTransfer: "family", internalTransferLink: movementId, internalTransferSpaceId: familia.id, internalTransferSpaceName: familia.nombre } as const;
+      pendingDebit.current = { confirm: () => repairLinkedTransferTransactions([debit]) };
+      if (!await wait(pendingDebit.current.confirm)) throw new Error("personal-save-failed");
+      pendingDebit.current = null;
+    }
     setMonto(""); setDescripcion(""); setNotes(""); setMovementDate(fechaHoy()); setOrigenDinero("externo"); setTipo(null); await wait.reload(); showToast(t("family.movementSaved"));
   });
 

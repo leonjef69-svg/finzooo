@@ -88,7 +88,8 @@ for (const kind of ["family", "box"]) {
       await env.api.changePersonalContribution({ auth: auth(owner), data: { kind, spaceId: "fixture", movementId: "contribution", action: "delete" } });
       assert.equal(env.bulk(), 1);
       assert.equal(env.documents.has(base + "/movements/contribution"), false);
-      assert.equal(env.writes.length, 1);
+      assert.equal(env.writes.length, 2, "borrado y versión del espacio se confirman juntos");
+      assert.equal(env.documents.get(base).sharedMoneyVersion, 1);
     }
   }
   const updated = environment({ ...data, "legalAcceptances/member": receipt("member") });

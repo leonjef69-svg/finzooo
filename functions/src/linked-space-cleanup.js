@@ -23,6 +23,14 @@ async function finalizeLinkedSpaceDeletion(db, uid, input) {
   const root = db.doc(`${kind === "family" ? "familySpaces" : "boxSpaces"}/${spaceId}`);
   checkOwner(await root.get(), uid);
   if (!(await root.collection("movements").limit(1).get()).empty) fail("cleanup-movements-remain");
+  // Solo al eliminar explícitamente el espacio preparado; nunca al cerrarlo.
+  while (true) {
+    const operations = await root.collection("moneyOperations").limit(200).get();
+    if (operations.empty) break;
+    const batch = db.batch();
+    for (const operation of operations.docs) batch.delete(operation.ref);
+    await batch.commit();
+  }
   // El propietario conserva membresía e índice hasta la confirmación final:
   // una interrupción puede descubrir y retomar el espacio preparado.
   while (true) {

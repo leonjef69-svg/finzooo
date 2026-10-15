@@ -34,7 +34,7 @@ export default function SharedBoxes() {
 }
 
 function SharedBoxesForAccount({ uid }: { uid: string }) {
-  const { t, monthNames, userCurrency, isPremium, userName, showToast, budgets, carryoverCleared, transactions, addOrUpdateTransaction, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
+  const { t, monthNames, userCurrency, isPremium, userName, showToast, budgets, carryoverCleared, transactions, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
   const saldoPersonalEn = (fecha: string) => disponiblePersonalEnFecha(fecha, budgets, transactions, carryoverCleared);
   const insets = useSafeAreaInsets();
   const { join, boxId, invitation: invitationInicial } = useLocalSearchParams<{ join?: string; boxId?: string; invitation?: string }>();
@@ -212,7 +212,7 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
         if (valor - aporteEditado.monto > saldoPersonalEn(aporteEditado.fecha)) { showToast(t("boxes.notEnoughPersonal")); return; }
         await wait(() => actualizarAportePersonal("box", caja.id, aporteEditado.id, valor, nombre || aporteEditado.descripcion));
         const personal = transactions.find(tx => tx.id === aporteEditado.personalTransactionId);
-        if (personal) addOrUpdateTransaction({ ...personal, amount: valor }, true);
+        if (personal && !await wait(() => repairLinkedTransferTransactions([{ ...personal, amount: valor }]))) throw new Error("personal-save-failed");
         setEditandoAporteId(null); limpiar(); return;
       }
       if (modo === "gasto" && !canSpendFromSpace(movimientos, valor)) { showToast(t("boxes.notEnoughSpace")); return; }

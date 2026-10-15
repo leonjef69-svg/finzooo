@@ -1,5 +1,4 @@
 import {
-  addDoc,
   arrayUnion,
   collection,
   deleteDoc,
@@ -19,6 +18,7 @@ import {
   where,
 } from "firebase/firestore";
 import { db } from "@/utils/firebase";
+import { guardarMovimientoCompartido, borrarMovimientoCompartido } from "@/utils/sharedMovements";
 import { assertSharedContentAccepted } from "@/utils/legalAcceptance";
 import { crearCodigoFamilia } from "@/utils/familia";
 import { isSafeMoneyAmount } from "@/utils/amount";
@@ -97,7 +97,10 @@ export async function listarFamilias(uid: string): Promise<EspacioFamilia[]> {
   if (legacyId) ids.add(legacyId);
   // Un índice heredado puede apuntar a una familia que el dueño ya purgó. Un
   // vínculo roto no debe impedir abrir todas las demás familias válidas.
-  const familias = (await Promise.all([...ids].map(id => leerFamilia(id).catch(() => null))))
+  const familias = (await Promise.all([...ids].map(id => leerFamilia(id).catch(error => {
+    if ((error as { code?: string })?.code === "permission-denied") return null;
+    throw error;
+  }))))
     .filter((item): item is EspacioFamilia => item !== null);
   return familias.sort((a, b) => b.creadoEn - a.creadoEn);
 }
@@ -149,7 +152,9 @@ export async function crearInvitacionFamilia(uid: string, familiaId: string): Pr
 
 export async function renombrarFamilia(familiaId: string, nombre: string): Promise<void> {
   await assertSharedContentAccepted();
-  await updateDoc(doc(db, "familySpaces", familiaId), { nombre: nombre.trim().slice(0, 35) });
+  const limpio = nombre.trim().slice(0, 35);
+  if (!limpio) throw new Error("invalid-name");
+  await updateDoc(doc(db, "familySpaces", familiaId), { nombre: limpio });
 }
 
 export async function cerrarFamilia(uid: string, familiaId: string): Promise<void> {
@@ -237,8 +242,7 @@ export async function listarMovimientosFamilia(familyId: string, confirmarServid
 export async function guardarMovimientoFamilia(familyId: string, uid: string, movimiento: Omit<MovimientoFamilia, "id" | "creadoEn" | "creadoPor">): Promise<string> {
   await assertSharedContentAccepted(uid);
   if (!isSafeMoneyAmount(movimiento.monto) || movimiento.monto <= 0) throw new Error("invalid-amount");
-  const ref = await addDoc(collection(db, "familySpaces", familyId, "movements"), { ...movimiento, creadoPor: uid, creadoEn: serverTimestamp() });
-  return ref.id;
+  return guardarMovimientoCompartido("family", familyId, uid, movimiento);
 }
 
 /** Vincula de una sola vez un aporte familiar antiguo con su débito de Personal. */
@@ -251,7 +255,7 @@ export async function vincularMovimientoPersonalFamilia(familyId: string, moveme
 }
 
 export async function borrarMovimientoFamilia(familyId: string, movementId: string): Promise<void> {
-  await deleteDoc(doc(db, "familySpaces", familyId, "movements", movementId));
+  await borrarMovimientoCompartido("family", familyId, movementId);
 }
 
 export async function salirDeFamilia(uid: string, familyId: string): Promise<void> {
