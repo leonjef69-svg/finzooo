@@ -150,7 +150,6 @@ export default function Premium({
     { texto: t("premium.todoElGratis") },
     { texto: t("premium.perkCloudSync") },
     ...(hayRegistroAutomatico(userCurrency) ? [{ texto: t("premium.perkYape") }] : []),
-    { texto: t("premium.perkCategoryBudgets") },
     // Sin los formatos: en exportar no ayudan a decidir nada —se paga y luego se elige— y solo
     // alargan la lista. En importar sí, porque ahí la pregunta es si el archivo del banco de uno
     // va a funcionar.

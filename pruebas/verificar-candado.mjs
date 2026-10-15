@@ -52,7 +52,6 @@ console.log("\n--- SE PUEDE VER LO PROPIO SIN PREMIUM ---");
   for (const [ruta, nombre] of [
     ["app/negocio/[id].tsx", "el panel del negocio"],
     ["app/savings/index.tsx", "las metas de ahorro"],
-    ["app/category-budgets.tsx", "los limites por categoria"],
   ]) {
     const txt = leer(ruta);
     ok(/candadoPremium\(isPremium, /.test(txt), `${nombre} usa el candado de tres respuestas`);
@@ -83,11 +82,13 @@ console.log("\n--- Y NO SE PUEDE CREAR NI CAMBIAR NADA ---");
   ok(/libre > 0 && !soloLectura/.test(metas), "ni se mueve plata a una meta");
 
   const limites = leer("screens/CategoryBudgets.tsx");
-  // AQUI EL PORTERO ESTA DENTRO DE LA FUNCION, no solo en el boton: esconder no es impedir, y
-  // el dato se protege en el sitio donde se escribe.
-  ok(/if \(soloLectura\) return;/.test(limites), "y guardar un limite no hace nada en solo lectura");
-  ok(/editable=\{!soloLectura\}/.test(limites), "ni se puede escribir en la casilla");
-  ok(/\{!soloLectura && \(/.test(limites), "y el boton de guardar no esta");
+  const rutaLimites = leer("app/category-budgets.tsx");
+  const fichaPremium = leer("screens/Premium.tsx");
+  ok(/return <CategoryBudgets onBack=\{safeBack\} \/>/.test(rutaLimites), "presupuestos por categoría abre gratis, sin candado Pro");
+  ok(!/soloLectura|AvisoSoloLectura/.test(limites + rutaLimites), "se pueden consultar y cambiar los límites sin Premium");
+  ok(!/categoryBudgets/.test(fichaPremium), "presupuestos por categoría no se anuncian como beneficio Pro");
+  ok(/onPress=\{save\}/.test(limites), "guardar los límites está disponible sin Premium");
+  ok(/onPress=\{\(\) => setShowCategories\(true\)\}/.test(limites), "crear categorías también está disponible sin Premium");
 }
 
 console.log("\n--- Y SE DICE POR QUE, QUE ES LO QUE LO SEPARA DE UN FALLO ---");
@@ -105,7 +106,6 @@ console.log("\n--- Y SE DICE POR QUE, QUE ES LO QUE LO SEPARA DE UN FALLO ---");
   for (const [ruta, nombre] of [
     ["screens/PanelNegocio.tsx", "el panel"],
     ["screens/SavingsList.tsx", "las metas"],
-    ["screens/CategoryBudgets.tsx", "los limites"],
   ]) {
     ok(/soloLectura && <AvisoSoloLectura \/>/.test(leer(ruta)), `${nombre} lo enseña`);
   }
@@ -203,10 +203,9 @@ console.log("\n--- LOS LIMITES SE PUEDEN PONER A LAS CATEGORIAS PROPIAS (12/08/2
   ok(/initialCreate/.test(limites), "presupuesto abre directamente el formulario breve de categoría");
   ok(!/irUnaVez\("\/nueva-categoria"\)/.test(limites), "presupuesto ya no abre la pantalla antigua");
   ok(/\[categoriasPropias\]/.test(limites), "y al volver aparece sola, sin cerrar la pantalla");
-  // En solo lectura no sale: crear es de las cosas que Premium si cierra.
   const indiceNueva = limites.indexOf('t("categoryBudgets.nueva")');
   const trozoNueva = limites.slice(Math.max(0, indiceNueva - 700), indiceNueva);
-  ok(/\{!soloLectura && \(/.test(trozoNueva), "pero no en solo lectura");
+  ok(!/soloLectura/.test(trozoNueva), "crear una categoría no depende de Premium");
   ok(/setShowCategories\(true\)/.test(trozoNueva), "el botón de presupuesto abre la nueva hoja");
 }
 

@@ -11,17 +11,13 @@ import { currencySymbolFor } from "@/constants/currencies";
 import { useAppData } from "@/contexts/AppDataContext";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { useKeyboardAnimatedPadding } from "@/utils/keyboard";
-import AvisoSoloLectura from "@/components/AvisoSoloLectura";
 import BackButton from "@/components/BackButton";
 import TransactionCategorySheet from "@/components/TransactionCategorySheet";
 
 export default function CategoryBudgets({
   onBack,
-  soloLectura = false,
 }: {
   onBack: () => void;
-  /** Se acabó la prueba y ya había límites puestos: se ven, pero no se cambian. */
-  soloLectura?: boolean;
 }) {
   const { t, fmt, userCurrency, showToast, categoryBudgets, categorySpent, updateCategoryBudgets, categoriasPropias } =
     useAppData();
@@ -82,9 +78,6 @@ export default function CategoryBudgets({
   const [showCategories, setShowCategories] = useState(false);
 
   function save() {
-    // EL PORTERO, POR SI ALGÚN DÍA QUEDA UN BOTÓN SUELTO. Esconder el botón de guardar basta
-    // hoy, pero esconder no es impedir: esta línea es la que de verdad protege el dato.
-    if (soloLectura) return;
     const issue = Object.values(amounts).map((value) => amountInputError(value, userCurrency)).find(Boolean);
     if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
     const newBudgets: Record<string, number> = {};
@@ -108,7 +101,6 @@ export default function CategoryBudgets({
       </View>
 
       <ScrollView className="flex-1 px-5" contentContainerStyle={{ paddingBottom: 20 }} keyboardShouldPersistTaps="handled">
-        {soloLectura && <AvisoSoloLectura />}
         <Text className="text-xs text-slate-500 dark:text-slate-300 mb-4">{t("categoryBudgets.subtitle")}</Text>
         <View className="gap-3">
           {categorias.map((c) => {
@@ -153,12 +145,8 @@ export default function CategoryBudgets({
                     <Text className="text-slate-500 dark:text-slate-300 text-xs font-bold mr-1">
                       {currencySymbolFor(userCurrency)}
                     </Text>
-                    {/* EN SOLO LECTURA LA CASILLA SE VE Y NO SE ESCRIBE. Se deja a la vista y
-                        no se esconde porque el límite es el dato: sin él, la barra de "llevas
-                        X de Y" no significa nada. */}
                     <TextInput
                       disableFullscreenUI                      value={amounts[c.id] ?? ""}
-                      editable={!soloLectura}
                       onChangeText={(v) =>
                         setAmounts((prev) => ({ ...prev, [c.id]: sanitizeSafeAmountInput(v, userCurrency) }))
                       }
@@ -203,8 +191,7 @@ export default function CategoryBudgets({
               casillas dentro de otra. Se lleva a la que ya existe y sabe hacerlo —con su
               catálogo, sus colores y sus fotos— y al volver, la categoría nueva ya está en esta
               lista con su casilla, lista para ponerle el límite.
-              En solo lectura no sale: crear es de las cosas que Premium sí cierra. */}
-          {!soloLectura && (
+              Los presupuestos por categoría son gratuitos; se puede crear la categoría aquí mismo. */}
             <TouchableOpacity
               onPress={() => setShowCategories(true)}
               className="flex-row items-center justify-center gap-2 rounded-2xl border-[1.5px] border-dashed border-slate-300 dark:border-noche-borde py-4"
@@ -214,7 +201,6 @@ export default function CategoryBudgets({
                 {t("categoryBudgets.nueva")}
               </Text>
             </TouchableOpacity>
-          )}
         </View>
       </ScrollView>
 
@@ -230,16 +216,14 @@ export default function CategoryBudgets({
         }}
       /> : null}
 
-      {!soloLectura && (
-        <View
+      <View
           className="px-5 py-4 border-t border-slate-200 dark:border-noche-borde"
           style={{ paddingBottom: 16 + insets.bottom }}
         >
           <TouchableOpacity onPress={save} className="w-full bg-emerald-600 py-4 rounded-2xl items-center">
             <Text className="text-white font-bold">{t("common.saveChanges")}</Text>
           </TouchableOpacity>
-        </View>
-      )}
+      </View>
     </Animated.View>
   );
 }

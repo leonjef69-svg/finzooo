@@ -30,9 +30,10 @@ trabajar sobre una copia muerta leyendo instrucciones de hace tres semanas.
 
 ## Para probar lo que está bajo Premium
 
-Ocho funciones son Premium: importar, exportar, exportación automática, metas de
-ahorro, huella/PIN, límites por categoría, y el panorama y los consejos de
-Reportes. **El Modo Negocio también.**
+Siete funciones son Premium: importar, exportar, exportación automática, metas de
+ahorro, huella/PIN, y el panorama y los consejos de Reportes. **El Modo Negocio y
+el respaldo en la nube también requieren Pro.** Los presupuestos por categoría son
+gratis: no deben tener candado ni aparecer como beneficio Premium.
 
 No hay forma de comprar —no existe el cobro, ver ESTADO.md— pero la pantalla de
 Premium tiene una **prueba gratuita de 24 horas**. Es lo que permite entrar a

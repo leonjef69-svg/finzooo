@@ -97,7 +97,7 @@ export default function Settings({
         </SettingsSection>
 
         <SettingsSection title={t("settings.sectionFinances")}>
-          <Row Icon={PieChart} label={t("categoryBudgets.rowLabel")} onPress={onCategoryBudgets} premium />
+          <Row Icon={PieChart} label={t("categoryBudgets.rowLabel")} onPress={onCategoryBudgets} />
           <Row Icon={PiggyBank} label={t("settings.savingsGoals")} onPress={onSavings} premium />
           <Row Icon={CalendarClock} label={t("calendario.titulo")} onPress={() => irUnaVez("/calendario")} />
           <Row Icon={Store} label={t("negocios.rowLabel")}

@@ -100,7 +100,8 @@ for (const [label, callback] of [
   assert.ok(row, "acceso conservado: " + label); row.props.onPress();
   assert.deepEqual(calls.pop(), label === "autoCapture.rowLabel" ? ["onPremium"] : [callback]);
 }
-for (const label of ["categoryBudgets.rowLabel", "settings.savingsGoals", "exportPdf.exportDataTitle", "importSheet.rowLabel", "schedExport.settingsRow", "autoCapture.rowLabel", "negocios.rowLabel", "widget.rowLabel", "voiceHelp.rowLabel", "lock.rowLabel"])
+assert.equal(rows.find(row => row.props.label === "categoryBudgets.rowLabel").props.premium, undefined, "presupuestos por categoría son gratis");
+for (const label of ["settings.savingsGoals", "exportPdf.exportDataTitle", "importSheet.rowLabel", "schedExport.settingsRow", "autoCapture.rowLabel", "negocios.rowLabel", "widget.rowLabel", "voiceHelp.rowLabel", "lock.rowLabel"])
   assert.equal(rows.find(row => row.props.label === label).props.premium, true, label + ": etiqueta de pago");
 const cloudSection = sections.find(node => node.props.title === "settings.sectionCloud");
 assert.ok(walk(cloudSection).some(node => node.type === "Row" && node.props.label === "settings.backupProTitle"), "la copia en nube está agrupada y marcada como de pago");

@@ -567,8 +567,6 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "categoryBudgets.overBudget": "Te pasaste del límite",
     "categoryBudgets.noneSet": "Aún no le pusiste límite a ninguna categoría.",
     "categoryBudgets.noneSpentYet": "Todavía no gastaste en ninguna categoría con límite este mes.",
-    "categoryBudgets.lockedDescription":
-      "Ponle un límite de gasto a cada categoría y recibe un aviso cuando te estés por pasar. Disponible con Premium.",
 
     "reports.title": "Reportes",
     "reports.availableShort": "Disponible",
@@ -941,7 +939,6 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "premium.freeSearch": "Buscar movimientos",
     "premium.freeTheme": "Modo claro y oscuro",
     "premium.perkCloudSync": "Respaldo y sincronización en la nube",
-    "premium.perkCategoryBudgets": "Presupuesto por categoría",
     "premium.perkSavingsGoals": "Meta de ahorro",
     "premium.perkExport": "Exportar movimientos",
     "premium.perkImport": "Importar movimientos",
@@ -1965,7 +1962,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "country.updatedLocked": "País actualizado. Tu moneda se conservó.",
     "currency.locked": "La moneda se elige al crear la cuenta y queda fija para proteger tus montos. Para usar otra, crea una cuenta nueva.",
     "settings.backupCurrencyConflict": "El celular y la nube tienen monedas distintas. No unimos ni cambiamos tus datos. No desinstales Fino; contacta con soporte para revisar las copias.",
-    "settings.backupMovementConflict": "Hay movimientos distintos con el mismo identificador. Detuvimos la unión para no reemplazarlos. Conserva las copias de ambos celulares y contacta con soporte; no desinstales Fino ni borres tus datos.",
+    "settings.backupMovementConflict": "Hay dos versiones distintas de un movimiento. Pausamos la copia en la nube para proteger tus datos. Conserva los datos de tus celulares y contacta a soporte; no desinstales Fino ni borres sus datos.",
     "country.custom": "Tienes una combinación propia: {language} con {currency}.",
     "country.customShort": "Personalizado",
     "country.PE": "Perú",
@@ -2482,8 +2479,6 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "categoryBudgets.overBudget": "You went over the limit",
     "categoryBudgets.noneSet": "You haven't set a limit for any category yet.",
     "categoryBudgets.noneSpentYet": "You have not spent in any category with a limit this month.",
-    "categoryBudgets.lockedDescription":
-      "Set a spending limit for each category and get a heads-up before you go over. Available with Premium.",
 
     "reports.title": "Reports",
     "reports.availableShort": "Available",
@@ -2856,7 +2851,6 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "premium.freeSearch": "Search transactions",
     "premium.freeTheme": "Light and dark mode",
     "premium.perkCloudSync": "Cloud backup and sync",
-    "premium.perkCategoryBudgets": "Budgets by category",
     "premium.perkSavingsGoals": "Savings goal",
     "premium.perkExport": "Export transactions",
     "premium.perkImport": "Import transactions",
@@ -3870,7 +3864,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "country.updatedLocked": "Country updated. Your currency was kept.",
     "currency.locked": "Choose the currency when creating the account. It stays fixed to protect your amounts. To use another, create a new account.",
     "settings.backupCurrencyConflict": "The phone and cloud have different currencies. We did not merge or change your data. Do not uninstall Fino; contact support to review both copies.",
-    "settings.backupMovementConflict": "Different transactions have the same identifier. We stopped the merge to avoid replacing them. Keep both phones' copies and contact support; do not uninstall Fino or delete your data.",
+    "settings.backupMovementConflict": "There are two different versions of a transaction. Cloud backup is paused to protect your data. Keep your phone data and contact support; do not uninstall Fino or delete its data.",
     "country.custom": "You have your own mix: {language} with {currency}.",
     "country.customShort": "Custom",
     "country.PE": "Peru",
@@ -4387,8 +4381,6 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "categoryBudgets.overBudget": "Você ultrapassou o limite",
     "categoryBudgets.noneSet": "Você ainda não definiu um limite para nenhuma categoria.",
     "categoryBudgets.noneSpentYet": "Você ainda não gastou em nenhuma categoria com limite neste mês.",
-    "categoryBudgets.lockedDescription":
-      "Defina um limite de gastos para cada categoria e receba um aviso antes de ultrapassá-lo. Disponível com o Premium.",
 
     "reports.title": "Relatórios",
     "reports.availableShort": "Disponível",
@@ -4761,7 +4753,6 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "premium.freeSearch": "Buscar movimentos",
     "premium.freeTheme": "Modo claro e escuro",
     "premium.perkCloudSync": "Backup e sincronização na nuvem",
-    "premium.perkCategoryBudgets": "Orçamento por categoria",
     "premium.perkSavingsGoals": "Meta de poupança",
     "premium.perkExport": "Exportar movimentos",
     "premium.perkImport": "Importar movimentos",
@@ -5775,7 +5766,7 @@ export const translations: Record<LanguageId, Record<string, string>> = {
     "country.updatedLocked": "País atualizado. Sua moeda foi mantida.",
     "currency.locked": "A moeda é escolhida ao criar a conta e fica fixa para proteger seus valores. Para usar outra, crie uma nova conta.",
     "settings.backupCurrencyConflict": "O celular e a nuvem têm moedas diferentes. Não unimos nem alteramos seus dados. Não desinstale o Fino; contate o suporte para revisar as cópias.",
-    "settings.backupMovementConflict": "Movimentos diferentes têm o mesmo identificador. Interrompemos a união para não substituí-los. Conserve as cópias dos dois celulares e contate o suporte; não desinstale o Fino nem apague seus dados.",
+    "settings.backupMovementConflict": "Há duas versões diferentes de um movimento. Pausamos o backup na nuvem para proteger seus dados. Mantenha os dados dos seus celulares e contate o suporte; não desinstale o Fino nem apague os dados.",
     "country.custom": "Você tem uma combinação própria: {language} com {currency}.",
     "country.customShort": "Personalizado",
     "country.PE": "Peru",

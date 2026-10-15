@@ -146,7 +146,7 @@ Organiza gastos, ingresos y presupuesto. Registro opcional de Yape.
 **67 caracteres** de los 80 que deja Google. Contado, no estimado — pasarse hace que el
 formulario lo rechace al pegarlo, y ahí se recorta a las prisas.
 
-La descripción completa tiene **1962** caracteres de los 4.000 permitidos,
+La descripción completa tiene **1985** caracteres de los 4.000 permitidos,
 incluidos saltos LF (verificar el contador de Play al pegar).
 
 **En qué países funciona el registro automático, dicho en la propia descripción**
@@ -172,7 +172,7 @@ USO PERSONAL GRATIS
 • Tus registros financieros se guardan cifrados en el celular.
 
 FUNCIONES PRO
-La copia y sincronización personal en la nube, importar estados de cuenta, exportar PDF, Excel y CSV, exportación automática, metas de ahorro, límites por categoría, activar PIN o biometría y Modo Negocio requieren Pro. Familia y Cajas compartidas dependen de Pro de su propietario. Al vencer Pro, las funciones de recuperación, salida y eliminación de cuenta no deben quedar bloqueadas.
+La copia y sincronización personal en la nube, importar estados de cuenta, exportar PDF, Excel y CSV, exportación automática, metas de ahorro, activar PIN o biometría y Modo Negocio requieren Pro. Los presupuestos por categoría son gratuitos. Familia y Cajas compartidas dependen de Pro de su propietario. Al vencer Pro, las funciones de recuperación, salida y eliminación de cuenta no deben quedar bloqueadas.
 
 Esta versión ofrece una prueba de 24 horas. Las compras todavía no están habilitadas; no ofrecemos aún un plan de pago sin anuncios. No se muestran anuncios en esta versión.
 
