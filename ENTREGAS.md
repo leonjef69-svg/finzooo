@@ -1,5 +1,18 @@
 # Entregas de Fino
 
+## 15/10/2026 — Bloques y conectores corregidos; visible en emulador
+
+Marca `15oct-bloques-conectados`. Todas las categorías del reporte conservan
+su bloque, icono y línea. Tamaño mínimo visual explicado; monto/% reales.
+Conectores por fuera del anillo sin cruzarse y monto completo debajo con
+fmtExact, ancho disponible y alto libre. Gastos/ingresos comparten diseño.
+TypeScript, ESLint, 222 pruebas y 8 auditores verdes, sin tarjetas. Regresión
+e4e10fd detectada por falta de conectores. Android confirma nueve categorías,
+Hogar S/ 1,099 <1% y regreso a S/ 1,383,957; Reportes queda abierto.
+Sin movimientos ficticios ni APK/AAB/OTA/Play. Qué sigue/falta: distribución,
+físico/letra grande/TalkBack y nativo con ingresos/importes extremos; las cifras
+S/ 445,443,876,578 se comprobaron en la suite original, no en una cuenta real.
+
 ## 15/10/2026 — Rueda de categorías interactiva; emulador actualizado
 
 Marca `15oct-rueda-categorias`. Reportes muestra iconos grandes y parejos,

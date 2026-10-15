@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
+import { fmtExact } from "@/utils/format";
 
 const ts = createRequire(import.meta.url)("typescript") as typeof import("typescript");
 
@@ -55,10 +56,12 @@ const DonutChart = moduleOriginal("components/DonutChart.tsx", {
   "react-native-svg": { __esModule: true, default: "Svg", Circle: "Circle", Path: "Path" },
   nativewind: { useColorScheme: () => ({ colorScheme: "light" }) },
   "@/utils/donutGeometry": geometry,
-  "@/components/EntryUI": { ENTRY_FONT: { medium: "test-medium", bold: "test-bold" } },
+  "@/components/EntryUI": { ENTRY_FONT: { regular: "test-regular", medium: "test-medium", bold: "test-bold" } },
   "@/contexts/AppDataContext": { useAppData: () => ({ t: (key: string) => ({
     "reports.lessThanOnePercent": "menos de 1 por ciento",
     "reports.moreThan99Percent": "más de 99 por ciento",
+    "reports.allCategories": "Todas las categorías",
+    "reports.smallSlicesEnlarged": "Porciones pequeñas ampliadas",
   } as Record<string, string>)[key] ?? key }) },
 }).default;
 function flatten(node: unknown): Element[] {
@@ -81,9 +84,9 @@ const makeData = (values: number[]): Item[] => values.map((value, index) => ({
   color: `hsl(${index * 31}, 80%, 40%)`, Icon: () => null,
 }));
 const formatValue = (value: number) => `Bs ${value.toFixed(2)}`;
-function render(data: Item[], width = 340) {
+function render(data: Item[], width = 340, formatter = formatValue, totalLabel = "Total gastado") {
   cursor = 0;
-  return flatten(DonutChart({ data, width, formatValue, totalLabel: "Total gastado" }));
+  return flatten(DonutChart({ data, width, formatValue: formatter, totalLabel }));
 }
 const bubbles = (nodes: Element[]) => nodes.filter(node => node.type === "TouchableOpacity"
   && node.props.accessibilityRole === "button" && String(node.props.accessibilityLabel).includes("Categoría"));
@@ -96,11 +99,12 @@ const data = makeData([1_234_567, 123_456, 11_122, 11_111, 1_234, 1_234, 123, 11
 const total = data.reduce((sum, item) => sum + item.value, 0);
 const original = structuredClone(data.map(({ Icon: _Icon, ...item }) => item));
 let nodes = render(data);
-assert.ok(texts(nodes).includes("Total gastado"), "la rueda muestra qué total está representando en su centro");
-assert.ok(texts(nodes).includes(formatValue(total)), "el centro recibe el total real y usa la moneda elegida en Reportes");
+assert.ok(texts(nodes).includes("Total gastado"), "se identifica el total debajo del anillo");
+assert.ok(texts(nodes).includes(formatValue(total)), "el resumen usa el total real y la moneda elegida");
 assert.equal(bubbles(nodes).length, data.length, "ninguna categoría pequeña se oculta o se agrupa");
-assert.equal(nodes.filter(node => node.type === "Path" && node.props.fill === "none").length, 0,
-  "la rueda elimina los conectores que se cruzaban entre categorías");
+assert.equal(nodes.filter(node => node.type === "Path" && node.props.fill === "none").length, data.length,
+  "cada categoría, incluso la más pequeña, conserva su propio conector");
+assert.ok(texts(nodes).includes("Porciones pequeñas ampliadas"), "el ajuste de tamaño se explica y no se presenta como una proporción exacta");
 
 const small = categoryButton(nodes, 7);
 assert.ok(small, "la categoría menor a 1% sigue teniendo un botón propio");
@@ -131,22 +135,22 @@ nodes = render(data.slice(0, 7));
 assert.ok(texts(nodes).includes(formatValue(total - 11)), "si desaparece la categoría, el centro vuelve al total vigente");
 assert.ok(bubbles(nodes).every(node => node.props.accessibilityState.selected === false), "no queda una selección fantasma");
 
-// La presencia pareja corresponde a los botones. Las porciones de dinero no
-// se inflan, incluso con una categoría miles de millones de veces mayor.
+// El ajuste afecta al dibujo. Importes, porcentajes y categorías permanecen.
 hooks = [];
 const extremeData = makeData([9_999_999_999, 8, 5, 3, 1]);
 nodes = render(extremeData);
-const realTotal = extremeData.reduce((sum, item) => sum + item.value, 0);
 const arcs = segments(nodes);
 assert.equal(arcs.length, extremeData.length);
 for (let index = 0; index < arcs.length; index++) {
   const arc = arcs[index].props;
   const dash = Number(String(arc.strokeDasharray).split(/[ ,]+/)[0]);
-  const renderedFraction = dash / (2 * Math.PI * arc.r);
-  const trueFraction = extremeData[index].value / realTotal;
-  assert.ok(Math.abs(renderedFraction - trueFraction) < 0.005,
-    `el bloque ${index} respeta su proporción financiera, con solo la separación entre bloques`);
+  assert.ok(dash >= 16, `el bloque ${index} tiene un arco visible y deja de ser una raya microscópica`);
 }
+assert.ok(texts(nodes).includes("Porciones pequeñas ampliadas"));
+categoryButton(nodes, 4)?.props.onPress();
+nodes = render(extremeData);
+assert.ok(texts(nodes).includes(formatValue(1)), "ampliar el bloque no amplía el dinero");
+assert.ok(String(categoryButton(nodes, 4)?.props.accessibilityLabel).includes("menos de 1"));
 assert.deepEqual(data.map(({ Icon: _Icon, ...item }) => item), original, "seleccionar nunca modifica movimientos o montos");
 
 // Composición real a partir del JSX: mismo tamaño, dentro de la tarjeta y sin
@@ -155,15 +159,17 @@ for (const width of [280, 340, 380]) {
   for (const count of [1, 2, 4, 8, 10, 20, 30]) {
     hooks = [];
     nodes = render(makeData(Array.from({ length: count }, (_, index) => index + 1)), width);
-    const root = style(nodes[0].props.style);
+    const chartHeight = Number(nodes.find(node => node.type === "Svg")?.props.height);
     const buttons = bubbles(nodes).map(node => style(node.props.style));
     assert.equal(buttons.length, count);
+    assert.equal(segments(nodes).length, count, "cada categoría conserva su bloque");
+    assert.equal(nodes.filter(node => node.type === "Path").length, count, "cada categoría conserva su línea");
     assert.ok(buttons.every(button => button.width === buttons[0].width && button.height === buttons[0].height),
       "los iconos tienen el mismo espacio visual, aunque sus montos sean distintos");
     assert.ok(buttons[0].width >= 52, `${count} categorías: los botones no se vuelven diminutos`);
     if (count === 8 && width >= 340) {
       const radii = buttons.map(button => Math.hypot(button.left + button.width / 2 - width / 2,
-        button.top + button.height / 2 - root.height / 2));
+        button.top + button.height / 2 - chartHeight / 2));
       assert.ok(Math.max(...radii) - Math.min(...radii) < 0.01,
         "las ocho categorías de la captura conservan la misma distancia al centro");
       const gaps = buttons.map((button, index) => {
@@ -175,7 +181,7 @@ for (const width of [280, 340, 380]) {
     }
     for (const button of buttons) {
       assert.ok(button.left >= -0.001 && button.top >= -0.001 && button.left + button.width <= width + 0.001
-        && button.top + button.height <= root.height + 0.001, `${width}px/${count}: ninguna categoría se recorta`);
+        && button.top + button.height <= chartHeight + 0.001, `${width}px/${count}: ninguna categoría se recorta`);
     }
     for (let first = 0; first < buttons.length; first++) {
       for (let second = first + 1; second < buttons.length; second++) {
@@ -187,6 +193,49 @@ for (const width of [280, 340, 380]) {
   }
 }
 
+// Las rutas salen del bloque correcto, terminan en su icono y no se cruzan.
+type Point = { x: number; y: number };
+const cross = (a: Point, b: Point, c: Point) => (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+const intersects = (a: Point, b: Point, c: Point, d: Point) => cross(a, b, c) * cross(a, b, d) < -1e-8
+  && cross(c, d, a) * cross(c, d, b) < -1e-8;
+for (const width of [244, 280, 340, 380]) for (const count of [1, 2, 4, 8, 10, 20, 30]) {
+  const layout = geometry.calcularDistribucionRueda(count, width);
+  const values = Array.from({ length: count }, (_, index) => index === 0 ? 1e12 : index + 1);
+  const { sectors } = geometry.crearSectoresVisibles(values);
+  assert.equal(sectors.length, count, "no se omite ni agrupa una categoría");
+  assert.ok(Math.abs(sectors.reduce((sum: number, sector: { fraction: number }) => sum + sector.fraction, 0) - 1) < 1e-9);
+  const routes = sectors.map((sector: { middle: number }, index: number) => geometry.crearConectorRosquilla(sector.middle, layout.positions[index], layout).points as Point[]);
+  routes.forEach((points: Point[], index: number) => {
+    const first = points[0], last = points[points.length - 1], target = layout.positions[index];
+    assert.ok(Math.abs(first.x - layout.centerX - Math.cos(sectors[index].middle) * (layout.radius + 10)) < 1e-6);
+    assert.ok(Math.abs(first.y - layout.centerY - Math.sin(sectors[index].middle) * (layout.radius + 10)) < 1e-6);
+    assert.ok(Math.abs(Math.hypot(last.x - target.x, last.y - target.y) - layout.bubble / 2) < 0.02, `${width}/${count}/${index}: la línea toca su categoría (distancia ${Math.hypot(last.x - target.x, last.y - target.y)}, radio ${layout.bubble / 2})`);
+    for (const point of points) {
+      assert.ok(Math.hypot(point.x - layout.centerX, point.y - layout.centerY) >= layout.radius + 9.99, "la línea se mantiene fuera de la rosquilla");
+      for (const bubble of layout.positions) assert.ok(Math.hypot(point.x - bubble.x, point.y - bubble.y) >= layout.bubble / 2 - 0.02, "la ruta no atraviesa ningún icono");
+    }
+  });
+  for (let first = 0; first < routes.length; first++) for (let second = first + 1; second < routes.length; second++) {
+    for (let a = 1; a < routes[first].length; a++) for (let b = 1; b < routes[second].length; b++)
+      assert.ok(!intersects(routes[first][a - 1], routes[first][a], routes[second][b - 1], routes[second][b]), `${width}/${count}: dos conectores se cruzan`);
+  }
+}
+
+// Importe completo en un bloque que crece debajo del gráfico, sin elipsis.
+for (const width of [244, 280, 340]) for (const totalLabel of ["Total gastado", "Total ingresos"]) {
+  hooks = [];
+  const huge = 445_443_876_578;
+  nodes = render(makeData([huge]), width, value => fmtExact(value, "S/", "PEN"), totalLabel);
+  const amount = nodes.find(node => node.type === "Text" && text(node) === "S/ 445,443,876,578");
+  assert.ok(amount, "se muestran todas las cifras, sin B/K/M ni valores de ejemplo");
+  assert.equal(amount.props.numberOfLines, undefined, "las cifras pueden ocupar las líneas necesarias");
+  const summary = nodes.find(node => node.type === "View" && node.props.accessibilityLabel === `${totalLabel}: S/ 445,443,876,578`);
+  assert.ok(summary);
+  assert.equal(style(summary.props.style).position, undefined, "el monto está debajo, fuera del círculo");
+  assert.equal(style(summary.props.style).height, undefined, "el recuadro no corta el monto con un alto fijo");
+  assert.equal(style(summary.props.style).width, "100%", "el monto aprovecha todo el ancho");
+}
+
 hooks = [];
 nodes = render(makeData([42]));
 assert.ok(texts(nodes).includes("100%"), "una sola categoría conserva el 100% real");
@@ -196,4 +245,4 @@ assert.equal(render([]).length, 0, "sin movimientos no se dibuja una rueda ni se
 assert.equal(geometry.textoPorcentajeRosquilla(9_999_999_999, 10_000_000_000), ">99%");
 assert.equal(geometry.textoPorcentajeRosquilla(1, 10_000_000_000), "<1%");
 
-console.log("✓ Rueda original: botones iguales y separados, proporciones/moneda reales, selección por icono/bloque y retorno al total. Android visual pendiente.");
+console.log("✓ Bloques visibles sin omitir categorías; conectores propios fuera del anillo y sin cruces; importes/% reales, selección y cifras grandes completas debajo. React/Android adaptados, no prueba visual física.");

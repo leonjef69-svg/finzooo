@@ -10,7 +10,8 @@ import MonthSelector from "@/components/MonthSelector";
 import { catInfo } from "@/constants/categories";
 import { COLOR_HEX_600 } from "@/constants/colors";
 import { CARD_SHADOW } from "@/constants/style";
-import { monthKey } from "@/utils/format";
+import { fmtExact, monthKey } from "@/utils/format";
+import { currencySymbolFor } from "@/constants/currencies";
 import { dailySpendBars } from "@/utils/reportDaily";
 import { useAppData } from "@/contexts/AppDataContext";
 import type { Month, Transaction } from "@/types";
@@ -30,6 +31,7 @@ export default function Reports({
     t,
     monthNames,
     userLanguage,
+    userCurrency,
     categoryBudgets,
     categorySpent,
   } = useAppData();
@@ -235,7 +237,7 @@ export default function Reports({
           <Text className="text-center text-slate-500 dark:text-slate-300 text-sm py-10">{t("reports.noDataThisMonth")}</Text>
         ) : (
           <View className="items-center py-2">
-            <DonutChart key={`${categoryType}-${mk}`} data={pieData} formatValue={fmt}
+            <DonutChart key={`${categoryType}-${mk}`} data={pieData} formatValue={value => fmtExact(value, currencySymbolFor(userCurrency), userCurrency)}
               totalLabel={t(categoryType === "expense" ? "reports.totalSpent" : "reports.totalIncome")}
               width={Math.max(180, Math.min(380, windowWidth - 76))} />
           </View>

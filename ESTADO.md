@@ -1,5 +1,29 @@
 # Estado actual de Fino
 
+## Reportes — 15/10/2026 — bloques visibles y conexiones individuales
+
+Corrección aprobada después de la rueda sin líneas: todas las categorías con
+movimientos conservan bloque, icono y conector; ninguna se agrupa en Otros.
+Las pequeñas reciben un mínimo visual adaptable y el aviso «Porciones pequeñas
+ampliadas». Importes y porcentajes siguen calculados desde los registros reales;
+el anillo se presenta como ajustado, no como proporción exacta. Conectores
+ordenados por fuera del anillo desde el centro de cada bloque hasta su icono,
+sin cruces. Muchas categorías alargan el contorno sin reducir sus controles.
+El centro muestra categoría/%; el monto se mueve debajo, a todo el ancho y sin
+alto ni líneas limitados. Usa fmtExact con la moneda real, sin abreviaturas.
+Marca `15oct-bloques-conectados`; gastos e ingresos usan el mismo componente.
+
+TypeScript, ESLint, 222 pruebas y 8 auditores aprobados, tarjetas excluidas.
+La suite original verifica todos los bloques/iconos/líneas, 28 escenarios de
+conectores sin cruces ni paso por iconos, y cifras completas como
+S/ 445,443,876,578 en gastos/ingresos y tres anchos. Regresión e4e10fd roja por
+ausencia de las ocho conexiones, no API faltante. Android confirma nueve
+categorías con Hogar existente, su selección S/ 1,099 <1% y retorno al total
+S/ 1,383,957. Queda Reportes abierto; no se crearon movimientos de prueba.
+Qué sigue/falta: teléfono físico/letra grande/TalkBack y comprobación nativa
+con importes extremos e ingresos reales. No se cambiaron datos guardados,
+nativo o servicios, ni se generó/publicó APK/AAB/OTA/Play.
+
 ## Reportes — 15/10/2026 — rueda interactiva sin conectores
 
 Diseño aprobado: categorías con botones iguales de 60 (56 con más categorías,
