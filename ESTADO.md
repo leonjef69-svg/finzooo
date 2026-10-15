@@ -1,5 +1,14 @@
 # Estado actual de Fino
 
+## Planes Plus/Pro — 14/10/2026 — distintivo de respaldo Pro
+
+La fila de respaldo y sincronización en la nube conserva su icono de nube y
+muestra una coronita pequeña como distintivo de que está incluido en Pro. Solo
+cambia la presentación; no modifica acceso, copia, sincronización ni cobros.
+TypeScript, ESLint, 222 pruebas y 8 auditores pasan, con tarjetas excluidas por
+decisión vigente. No se generó APK/AAB. Qué sigue/falta: revisar visualmente en
+el emulador cuando responda; compras y nube real siguen pendientes por separado.
+
 ## Planes Plus/Pro — 14/10/2026 — pantalla compacta y precio anual propuesto
 
 La pantalla Premium adopta la distribución aprobada: selector Plus/Pro,

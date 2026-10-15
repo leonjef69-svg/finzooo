@@ -246,17 +246,29 @@ export default function Premium({
             )}
 
             <View style={{ flexDirection: "row", flexWrap: "wrap", columnGap: 8, rowGap: 7 }}>
-              {beneficios.filter(item => item.label !== t("premium.perkYape")).map(({ Icon, label, detail }, index) => (
-                <View key={`${label}-${index}`} style={{ width: "48%", minHeight: detail ? 48 : 42, flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 3 }}>
-                  <View style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: colors.iconBackground }}>
-                    <Icon size={22} color={colors.accent} strokeWidth={2.1} />
+              {beneficios.filter(item => item.label !== t("premium.perkYape")).map(({ Icon, label, detail }, index) => {
+                const esRespaldoNube = label === t("premium.perkCloudSync");
+                return (
+                  <View
+                    key={`${label}-${index}`}
+                    accessibilityLabel={esRespaldoNube ? `${label}, ${t("premium.proName")}` : label}
+                    style={{ width: "48%", minHeight: detail ? 48 : 42, flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 3 }}
+                  >
+                    <View style={{ width: 34, height: 34, flexShrink: 0, borderRadius: 12, alignItems: "center", justifyContent: "center", backgroundColor: colors.iconBackground }}>
+                      <Icon size={22} color={colors.accent} strokeWidth={2.1} />
+                      {esRespaldoNube && (
+                        <View style={{ position: "absolute", top: -4, right: -4, width: 15, height: 15, borderRadius: 8, alignItems: "center", justifyContent: "center", backgroundColor: colors.accent, borderWidth: 1, borderColor: colors.surface }}>
+                          <Crown size={9} color={textoBoton} strokeWidth={2.5} />
+                        </View>
+                      )}
+                    </View>
+                    <View style={{ flex: 1, minWidth: 0 }}>
+                      <Text style={{ fontFamily: ENTRY_FONT.medium, fontSize: 12, lineHeight: 16, color: colors.text }}>{label}</Text>
+                      {detail ? <Text style={{ fontFamily: ENTRY_FONT.regular, fontSize: 10, lineHeight: 13, color: colors.muted, marginTop: 1 }}>{detail}</Text> : null}
+                    </View>
                   </View>
-                  <View style={{ flex: 1, minWidth: 0 }}>
-                    <Text style={{ fontFamily: ENTRY_FONT.medium, fontSize: 12, lineHeight: 16, color: colors.text }}>{label}</Text>
-                    {detail ? <Text style={{ fontFamily: ENTRY_FONT.regular, fontSize: 10, lineHeight: 13, color: colors.muted, marginTop: 1 }}>{detail}</Text> : null}
-                  </View>
-                </View>
-              ))}
+                );
+              })}
             </View>
 
             <View style={{ height: 1, backgroundColor: colors.border, marginTop: 10, marginBottom: 12 }} />
