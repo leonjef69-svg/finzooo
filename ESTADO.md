@@ -1,5 +1,26 @@
 # Estado actual de Fino
 
+## Exportación — 14/10/2026 — tarjetas únicas y montos completos
+
+Marca 14oct-pdf-montos-completos. Ajuste posterior del propietario: una tarjeta
+de color por saldo, ingreso/gasto presente y saldo anterior no cero.
+Presupuesto positivo dentro de Saldo: «de [monto] presupuestado», sin otra
+tarjeta. Saldo real y presupuesto definido también en Solo gastos/
+Solo ingresos, sin mostrar el tipo excluido ni repetir resultado del mes.
+Números completos en tarjetas, tabla, totales y gráficos; moneda/decimales
+del espacio, sin K/M/B/T ni sustituir cifras por letras. Ancho del monto
+adaptable; saldo negativo rojo. Cuenta real compartida de cada mes/espacio,
+incluidas transferencias y arrastre, sin valores de ejemplo en producción.
+Prueba ampliada ejecuta resúmenes/formatos/manejadores originales; regresión
+acf28d9f roja por falta de tarjeta/saldo, no API ausente. PDFs sintéticos A4
+revisados visualmente, sin tocar la cuenta. Guía EXPORTACION_RESUMEN_LIMPIO.
+TypeScript/ESLint y 219 pruebas/8 auditores verdes sin tarjetas, incluida la
+tarjeta conjunta final (una suite local ajena; 218 previstas Git limpio).
+Qué sigue/falta: exportar/abrir y entrega programada reales en Android;
+revisar redondeo de céntimos preexistente en acumulados extremos, documentado
+en la guía. No acredita convertidor Android ni recepción externa. Sin nativo, datos
+recopilados, nube/planes, Telegram/tarjetas ni APK/AAB/OTA/Play modificados.
+
 ## Exportación — 14/10/2026 — resumen limpio y filtro respetado
 
 Marca 14oct-exportacion-limpia. Manual y automática comparten resumen sin

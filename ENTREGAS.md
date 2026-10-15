@@ -1,5 +1,21 @@
 # Entregas de Fino
 
+## 14/10/2026 — Tarjetas y cifras completas; desarrollo local
+
+Marca 14oct-pdf-montos-completos. Ajuste solicitado: tarjetas únicas de color,
+saldo y presupuesto juntos en UNA tarjeta, también en todos los filtros;
+presupuesto solo positivo. Únicamente totales del tipo
+elegido. Sin montos abreviados en PDF; moneda y decimales del espacio.
+Manual/automática conectadas a las cuentas originales de mes/espacio;
+prueba amplía arrastre, transferencias, seis monedas y tres idiomas.
+Regresión acf28d9f roja por conducta. PDF sintético revisado visualmente,
+no datos de la cuenta del usuario. Guía EXPORTACION_RESUMEN_LIMPIO.
+TypeScript/ESLint y 219 pruebas/8 auditores verdes sin tarjetas, también con
+Saldo/presupuesto juntos (una suite local ajena; 218 previstas Git limpio).
+Qué sigue/falta: exportar/abrir y comprobar convertidor/entrega programada
+en Android; redondeo preexistente de acumulados extremos separado en la guía.
+Sin APK/AAB/OTA/Play, nativo o servicios remotos publicados.
+
 ## 14/10/2026 — Exportación limpia y coherente; desarrollo local
 
 Marca 14oct-exportacion-limpia. Sin tarjetas repetidas en el resumen; presupuesto

@@ -12,7 +12,7 @@ import {
   type MovimientoCajaCompartida,
 } from "@/utils/cloudCajasCompartidas";
 import { availablePersonalBalance } from "@/utils/finances";
-import { fmt as formatAmount, horaDe } from "@/utils/format";
+import { fmtExact as formatAmount, horaDe } from "@/utils/format";
 import { saldoAnteriorDe } from "@/utils/saldoAnterior";
 import { loadJSON, STORAGE_KEYS } from "@/utils/storage";
 import type { Transaction } from "@/types";

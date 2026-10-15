@@ -41,6 +41,7 @@ export type PdfTexts = {
   balance: string;
   available?: string;
   budget?: string;
+  budgeted?: string;
   previousBalance?: string;
   periodResult?: string;
   space?: string;
@@ -115,33 +116,6 @@ const AZUL = "#2563eb";
  * que este proyecto repite. Compartiendo el número no puede volver a pasar.
  */
 export const ANCHO_MAX_BARRA = 30;
-
-/**
- * Los gráficos necesitan una cifra que se lea de un vistazo. El valor exacto
- * sigue en la tabla de movimientos; aquí se abrevia únicamente cuando ocuparía
- * más que su columna. K, M, B y T evitan que una cifra enorme empuje la barra
- * y las demás etiquetas fuera de la hoja.
- */
-export function compactChartAmount(amount: number, fmt: (n: number) => string): string {
-  const exacto = fmt(amount);
-  if (exacto.length <= 14) return exacto;
-
-  const absoluto = Math.abs(amount);
-  const unidades = [
-    { valor: 1e12, sufijo: "T" },
-    { valor: 1e9, sufijo: "B" },
-    { valor: 1e6, sufijo: "M" },
-    { valor: 1e3, sufijo: "K" },
-  ];
-  const unidad = unidades.find((u) => absoluto >= u.valor);
-  if (!unidad) return exacto;
-
-  const escalado = amount / unidad.valor;
-  const decimales = Math.abs(escalado) >= 100 ? 0 : Math.abs(escalado) >= 10 ? 1 : 2;
-  const numero = escalado.toFixed(decimales).replace(/\.0+$|(?<=\.[0-9])0$/g, "");
-  const moneda = exacto.replace(/[\d\s.,'’\-]/g, "").trim();
-  return `${moneda ? `${moneda} ` : ""}${numero} ${unidad.sufijo}`;
-}
 
 /**
  * Escapa el texto que escribió la persona antes de meterlo en el HTML.
@@ -252,9 +226,9 @@ function barrasPresupuesto(filas: PdfCategoryBudget[], fmt: (n: number) => strin
               <div style="background:${color};width:${(parte * 100).toFixed(1)}%;height:8px;border-radius:5px;"></div>
             </div>
           </td>
-          <td style="padding:5px 0 5px 10px;width:24%;font-size:8px;text-align:right;color:#475569;line-height:1.35;">
-            <strong style="color:${color};">${esc(compactChartAmount(f.spent, fmt))}</strong><br />
-            de ${esc(compactChartAmount(f.limit, fmt))} · ${Math.round((f.limit > 0 ? f.spent / f.limit : 0) * 100)}%
+          <td style="padding:5px 0 5px 10px;width:24%;font-size:8px;text-align:right;color:#475569;line-height:1.35;overflow-wrap:anywhere;">
+            <strong style="color:${color};">${esc(fmt(f.spent))}</strong><br />
+            de ${esc(fmt(f.limit))} · ${Math.round((f.limit > 0 ? f.spent / f.limit : 0) * 100)}%
           </td>
         </tr>`;
     })
@@ -275,7 +249,7 @@ function barrasPorMes(meses: PdfMonth[], fmt: (n: number) => string): string {
             <div style="height:8px;width:${ancho.toFixed(1)}%;background:${VERDE};border-radius:5px;"></div>
           </div>
         </td>
-        <td style="width:24%;padding:5px 0 5px 10px;text-align:right;font-size:9px;font-weight:bold;color:#0f766e;">${esc(compactChartAmount(m.value, fmt))}</td>
+        <td style="width:24%;padding:5px 0 5px 10px;text-align:right;font-size:9px;font-weight:bold;color:#0f766e;overflow-wrap:anywhere;">${esc(fmt(m.value))}</td>
       </tr>`;
     })
     .join("");
@@ -302,8 +276,8 @@ function barrasPorCategoria(
               <div style="background:${f.color};width:${(f.share * 100).toFixed(1)}%;height:8px;border-radius:5px;"></div>
             </div>
           </td>
-          <td style="padding:5px 0 5px 10px;width:24%;font-size:9px;text-align:right;font-weight:bold;line-height:1.35;">
-            ${esc(compactChartAmount(f.amount, fmt))}<br /><span style="font-size:8px;font-weight:normal;color:#64748b;">${Math.round(f.share * 100)}%</span>
+          <td style="padding:5px 0 5px 10px;width:24%;font-size:9px;text-align:right;font-weight:bold;line-height:1.35;overflow-wrap:anywhere;">
+            ${esc(fmt(f.amount))}<br /><span style="font-size:8px;font-weight:normal;color:#64748b;">${Math.round(f.share * 100)}%</span>
           </td>
         </tr>`
     )
@@ -389,7 +363,7 @@ function barrasPorDia(
             <div style="height:8px;width:${ancho.toFixed(1)}%;background:${color};border-radius:5px;"></div>
           </div>
         </td>
-        <td style="width:24%;padding:5px 0 5px 10px;text-align:right;font-size:9px;font-weight:bold;color:${color};">${esc(compactChartAmount(d.amount, fmt))}</td>
+        <td style="width:24%;padding:5px 0 5px 10px;text-align:right;font-size:9px;font-weight:bold;color:${color};overflow-wrap:anywhere;">${esc(fmt(d.amount))}</td>
       </tr>`;
     })
     .join("");
@@ -413,7 +387,7 @@ export function alturaEstimada(p: {
   dias: number;
   movimientos: number;
 }): number {
-  let alto = 120; // cabecera con el logo + resumen sin tarjetas
+  let alto = 200; // cabecera con el logo + hasta cuatro tarjetas únicas
   if (p.categorias > 0) alto += 34 + p.categorias * 20;
   if (p.presupuestos > 0) alto += 34 + p.presupuestos * 20;
   if (p.meses > 1) alto += 34 + p.meses * 20;
@@ -505,6 +479,10 @@ export function buildPdfHtml(o: PdfOptions): string {
   );
   const sep = apretar ? 11 : 20;
   const padFila = apretar ? "3px 8px" : "6px 8px";
+  // Dar más ancho al monto completo antes de permitir un salto de línea.
+  // Se conserva el resto de columnas, reduciendo solo la descripción.
+  const largoMonto = txs.reduce((largo, tx) => Math.max(largo, fmt(tx.amount).length + 1), 0);
+  const anchoMonto = Math.min(28, Math.max(13, Math.ceil((largoMonto * 9 * 0.58 + 18) / 734 * 100)));
 
   const filas = txs
     .map((tx) => {
@@ -520,31 +498,38 @@ export function buildPdfHtml(o: PdfOptions): string {
           </td>
           <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere;">${esc(tx.description || "-")}</td>
           <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;overflow-wrap:anywhere;">${esc(tx.methodLabel)}</td>
-          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;text-align:right;white-space:nowrap;color:${color};font-weight:bold;">${signo}${esc(compactChartAmount(tx.amount, fmt))}</td>
+          <td style="padding:${padFila};border-bottom:1px solid #e2e8f0;text-align:right;overflow-wrap:anywhere;color:${color};font-weight:bold;">${signo}${esc(fmt(tx.amount))}</td>
         </tr>`;
     })
     .join("");
 
-  const datoResumen = (etiqueta: string, monto: number, color: string) => `
-    <td style="padding:0 28px 0 0;vertical-align:top;">
+  const tarjeta = (id: string, etiqueta: string, monto: number, color: string, fondo: string, principal = false, detalle = "") => `
+    <div data-report-card="${id}" style="border:1px solid ${color}33;border-left:3px solid ${color};border-radius:8px;background:${fondo};padding:10px 12px;page-break-inside:avoid;">
       <div style="font-size:10px;color:#475569;">${esc(etiqueta)}</div>
-      <div style="font-size:15px;font-weight:bold;color:${color};margin-top:3px;white-space:nowrap;">${esc(compactChartAmount(monto, fmt))}</div>
-    </td>`;
-  const presupuesto = tipo !== "income" && Number.isFinite(resumen.budget) && resumen.budget! > 0
-    ? `<div data-report-budget style="margin-top:5px;font-size:10px;color:#475569;">${esc(T.budget || "Presupuesto")}: ${esc(compactChartAmount(resumen.budget!, fmt))}</div>` : "";
+      <div style="font-size:${principal ? 23 : 16}px;line-height:1.25;font-weight:bold;color:${color};margin-top:4px;overflow-wrap:anywhere;">${esc(fmt(monto))}</div>
+      ${detalle}
+    </div>`;
+  const presupuesto = Number.isFinite(resumen.budget) && resumen.budget! > 0
+    ? `<div data-report-budget aria-label="${esc(T.budget || "Presupuesto")}" style="margin-top:5px;font-size:11px;color:#475569;overflow-wrap:anywhere;">${esc((T.budgeted?.includes("{amount}") ? T.budgeted : "de {amount} presupuestado").replace("{amount}", fmt(resumen.budget!)))}</div>` : "";
+  // El saldo es el real del espacio/mes, incluso al pedir solo un tipo.
+  // El filtro limita movimientos y sus totales, no cambia el dinero disponible.
+  const saldo = tarjeta("available", T.available || "Saldo disponible", resumen.available,
+    resumen.available < 0 ? ROJO : AZUL, resumen.available < 0 ? "#fff1f2" : "#eff6ff", true, presupuesto);
   const anterior = tipo === "all" && Number.isFinite(resumen.previousBalance) && resumen.previousBalance !== 0
-    ? `<div style="margin-top:4px;font-size:10px;color:#475569;">${esc(T.previousBalance || "Saldo anterior")}: ${esc(compactChartAmount(resumen.previousBalance!, fmt))}</div>` : "";
-  const saldo = tipo === "all" ? `
-      <div style="font-size:10px;color:#475569;letter-spacing:.3px;">${esc(T.available || "Saldo disponible")}</div>
-      <div style="font-size:23px;line-height:1.2;font-weight:bold;color:${resumen.available < 0 ? ROJO : "#0f172a"};margin-top:4px;">${esc(compactChartAmount(resumen.available, fmt))}</div>` : "";
-  const cifras = [
-    hayIngresos && tipo !== "expense" ? datoResumen(T.income, ingresos, VERDE) : "",
-    hayGastos && tipo !== "income" ? datoResumen(T.expenses, gastos, ROJO) : "",
-  ].filter(Boolean).join("");
-  const resumenHtml = `<section data-report-summary style="margin-top:17px;padding-bottom:14px;border-bottom:1px solid #cbd5e1;page-break-inside:avoid;">
-    ${saldo}${tipo === "all" ? presupuesto + anterior : ""}
-    ${cifras ? `<table style="border-collapse:collapse;margin-top:${tipo === "all" ? 14 : 0}px;"><tr>${cifras}</tr></table>` : ""}
-    ${tipo !== "all" ? presupuesto : ""}
+    ? tarjeta("previousBalance", T.previousBalance || "Saldo anterior", resumen.previousBalance!,
+      resumen.previousBalance! < 0 ? ROJO : "#7c3aed", resumen.previousBalance! < 0 ? "#fff1f2" : "#f5f3ff") : "";
+  const tarjetas = [
+    hayIngresos && tipo !== "expense" ? tarjeta("income", T.income, ingresos, VERDE, "#ecfdf5") : "",
+    hayGastos && tipo !== "income" ? tarjeta("expenses", T.expenses, gastos, ROJO, "#fff1f2") : "",
+    anterior,
+  ].filter(Boolean);
+  const filasResumen = [];
+  for (let i = 0; i < tarjetas.length; i += 2) {
+    filasResumen.push(`<tr><td style="width:50%;padding:8px 4px 0 0;vertical-align:top;">${tarjetas[i]}</td><td style="width:50%;padding:8px 0 0 4px;vertical-align:top;">${tarjetas[i + 1] || ""}</td></tr>`);
+  }
+  const resumenHtml = `<section data-report-summary style="margin-top:17px;page-break-inside:avoid;">
+    ${saldo}
+    ${filasResumen.length ? `<table style="width:100%;border-collapse:collapse;table-layout:fixed;">${filasResumen.join("")}</table>` : ""}
   </section>`;
 
   const totalGastoCats = catsGasto.reduce((s, c) => s + c.amount, 0);
@@ -567,7 +552,7 @@ export function buildPdfHtml(o: PdfOptions): string {
       : `
       <div style="margin-top:${sep}px;border:1px solid #e2e8f0;border-radius:9px;padding:10px 12px;page-break-inside:avoid;">
         <div style="font-size:11px;font-weight:bold;color:#334155;margin-bottom:7px;">${esc(titulo)}</div>
-        <div style="font-size:8px;color:#64748b;margin-bottom:5px;">${esc(T.total)}: <strong style="color:#334155;">${esc(compactChartAmount(total, fmt))}</strong></div>
+        <div style="font-size:8px;color:#64748b;margin-bottom:5px;">${esc(T.total)}: <strong style="color:#334155;">${esc(fmt(total))}</strong></div>
         <table style="width:100%;border-collapse:collapse;table-layout:fixed;">${barrasPorCategoria(lista, fmt)}</table>
       </div>`;
 
@@ -666,7 +651,7 @@ export function buildPdfHtml(o: PdfOptions): string {
       </tr>
     </table>
 
-    <!-- RESUMEN: SOLO DATOS PERTINENTES, SIN TARJETAS REPETIDAS -->
+    <!-- RESUMEN: UNA TARJETA POR DATO REAL, SIN REPETIDOS -->
     ${resumenHtml}
 
     <!-- MOVIMIENTOS -->
@@ -681,8 +666,8 @@ export function buildPdfHtml(o: PdfOptions): string {
     <table style="width:100%;border-collapse:collapse;font-size:9px;table-layout:fixed;">
       <colgroup>
         <col style="width:10%;" /><col style="width:9%;" /><col style="width:11%;" />
-        <col style="width:14%;" /><col style="width:28%;" /><col style="width:15%;" />
-        <col style="width:13%;" />
+        <col style="width:14%;" /><col style="width:${41 - anchoMonto}%;" /><col style="width:15%;" />
+        <col style="width:${anchoMonto}%;" />
       </colgroup>
       <thead>
         <tr style="background:#f1f5f9;">
@@ -701,7 +686,7 @@ export function buildPdfHtml(o: PdfOptions): string {
     <table style="width:100%;border-collapse:collapse;margin-top:11px;">
       <tr>
         <td style="text-align:right;font-size:13px;font-weight:bold;padding-top:7px;border-top:2px solid #334155;">
-          ${esc(T.total)}: <span style="color:${totalSeleccionado < 0 ? ROJO : VERDE};">${esc(compactChartAmount(totalSeleccionado, fmt))}</span>
+          ${esc(T.total)}: <span style="color:${totalSeleccionado < 0 ? ROJO : VERDE};">${esc(fmt(totalSeleccionado))}</span>
         </td>
       </tr>
     </table>

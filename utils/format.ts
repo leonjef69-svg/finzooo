@@ -45,6 +45,12 @@ export function fmt(n: number, symbol: string, currencyId = "PEN") {
   if (!Number.isFinite(n)) return `${symbol} 0`;
   if (Math.abs(n) > MAX_MONEY_AMOUNT)
     return montoMuyGrande(n, symbol, currencyId);
+  return fmtExact(n, symbol, currencyId);
+}
+
+/** Documentos: cifras completas, también si el total acumulado supera un movimiento. */
+export function fmtExact(n: number, symbol: string, currencyId = "PEN") {
+  if (!Number.isFinite(n)) return `${symbol} 0`;
   const sign = n < 0 ? "-" : "";
   const abs = Math.abs(n);
   const decimals = currencyDecimals(currencyId);

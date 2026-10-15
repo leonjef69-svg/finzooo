@@ -173,6 +173,7 @@ export function htmlDelReporte(d: DatosDelPdf): string {
       balance: t("exportPdf.balance"),
       available: t("exportPdf.available"),
       budget: t("exportPdf.budget"),
+      budgeted: t("exportPdf.budgeted"),
       previousBalance: t("exportPdf.previousBalance"),
       periodResult: t("exportPdf.periodResult"),
       space: t("exportPdf.space"),
