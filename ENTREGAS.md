@@ -1,5 +1,32 @@
 # Entregas de Fino
 
+## 15/10/2026 — Código de invitación y Compartir (desarrollo)
+
+Marca `15oct-codigo-compartir`: la hoja compartida de Familia/Caja ofrece el
+código seleccionable, Compartir por el selector del teléfono y Copiar. El mensaje
+explica dónde entrar; cancelar no se anuncia como envío ni consume la invitación.
+Invitar ya no deriva a detalles financieros cuando la caja privada tiene pares
+dudosos; aviso breve, sin quitar la protección. «hj» NO está reparada/habilitada:
+sus tres mitades borradas siguen conservadas, no se alteró ningún saldo.
+
+Acceso Cajas compartidas añadido a la lista principal: la Caja convertida no
+queda escondida y el invitado no necesita Pro para abrir sus espacios.
+15/15 pruebas Firebase locales de invitación: generación/unión originales con
+otra cuenta sin Pro, mismo espacio/historial y dinero intacto, consumo único,
+permisos/caducidad/cierres. Nueva prueba de hoja original falla en 99d0be2 por
+ausencia de Compartir. TypeScript/ESLint completos sin errores/avisos y última
+pasada estable 227 pruebas/8 auditores aprobados sin tarjetas. No presentar la
+primera pasada con contrato estático de JSX desactualizado como aprobada.
+El dueño autorizó usar la Caja S/88 para la prueba real. Verificada compartida:
+mismo saldo/historial (externo88, aporte100/devuelto100), dueño, código auténtico,
+selector Compartir y cancelación sin envío. Personal antes/después idéntico,
+«hj» sigue S/20 privada. No se recrean/deshacen conversiones para simular prueba.
+Metro estaba apagado: recuperado oculto Node22/8081 y adb reverse, bundle real
+3958 módulos; sin limpiar almacenamiento ni cerrar sesión. La lectura Windows
+falló dos capturas; la comprobación se hizo mediante conexión Android.
+Sin entrega APK/AAB/OTA/Play ni cambios de servidor/reglas. Sigue/falta «hj»,
+prueba Android con dos cuentas y pendientes financieros de la auditoría.
+
 ## 15/10/2026 — Respuesta inmediata y revisión de copia (desarrollo)
 
 Marca `15oct-respuesta-inmediata`. Tras confirmar borrar/cerrar, Familia y Cajas

@@ -1,5 +1,5 @@
-import { Copy, X } from "lucide-react-native";
-import { Pressable, Text, TouchableOpacity, View } from "react-native";
+import { Copy, Share2, X } from "lucide-react-native";
+import { Pressable, Share, Text, TouchableOpacity, View } from "react-native";
 import Modal from "@/components/PrivateModal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -8,13 +8,25 @@ export default function SpaceInvitationSheet({
   code,
   visible,
   onClose,
+  kind,
 }: {
   code: string;
   visible: boolean;
   onClose: () => void;
+  kind: "box" | "family";
 }) {
   const { t, showToast } = useAppData();
   const insets = useSafeAreaInsets();
+
+  async function shareCode() {
+    if (!visible || !code) return;
+    try {
+      // Abre el selector del teléfono; no confirma envío ni consume el código.
+      await Share.share({ message: t(kind === "box" ? "boxes.invitationMessage" : "family.invitationMessage", { code }) });
+    } catch {
+      showToast(t("family.codeShareFailed"));
+    }
+  }
 
   async function copyCode() {
     try {
@@ -71,12 +83,21 @@ export default function SpaceInvitationSheet({
           </View>
           <TouchableOpacity
             accessibilityRole="button"
-            accessibilityLabel={t("family.copyCode")}
-            onPress={() => void copyCode()}
+            accessibilityLabel={t("family.shareInvitation")}
+            onPress={() => void shareCode()}
             className="mt-2 min-h-12 flex-row items-center justify-center gap-2 rounded-xl bg-emerald-600"
           >
-            <Copy size={17} color="#ffffff" />
-            <Text className="font-extrabold text-white">{t("family.copyCode")}</Text>
+            <Share2 size={20} color="#ffffff" />
+            <Text className="font-extrabold text-white">{t("family.shareInvitation")}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel={t("family.copyCode")}
+            onPress={() => void copyCode()}
+            className="mt-2 min-h-12 flex-row items-center justify-center gap-2 rounded-xl border border-emerald-300 dark:border-emerald-800"
+          >
+            <Copy size={19} color="#059669" />
+            <Text className="font-extrabold text-emerald-700 dark:text-emerald-300">{t("family.copyCode")}</Text>
           </TouchableOpacity>
         </View>
       </View>

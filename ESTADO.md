@@ -1,5 +1,62 @@
 # Estado actual de Fino
 
+## Invitaciones — 15/10/2026 — compartir código sin revisión financiera
+
+Marca de desarrollo `15oct-codigo-compartir`. La hoja de Familia/Caja conserva
+el código real seleccionable y Copiar, y añade Compartir código con el selector
+nativo del teléfono. El texto incluye el mismo código y el camino Familia/Cajas
+→ Unirme según corresponda. Abrir/cancelar Compartir NO afirma envío, no consume
+la invitación ni cambia movimientos. Si falla, queda disponible Copiar.
+
+Invitar en Caja privada con pares dudosos ya NO abre el diálogo técnico ni
+«Ver detalle». Conserva la protección y muestra solo un aviso breve de que no
+se pudo generar el código. Esto NO repara «hj» ni habilita su conversión: los
+tres casos con Personal marcado borrado siguen intactos. Una lápida no prueba
+devolución; no volver a abonar dinero por inferencia ni generar códigos ficticios.
+Las otras cajas sin conflicto mantienen el recorrido de conversión comprobada,
+remapeo de enlaces sin cambiar importe y creación de invitación real.
+
+Se detectó además que Cajas privadas no ofrecía ninguna entrada visible a las
+compartidas: tras convertir podían parecer desaparecidas al regresar. Se añade
+un acceso Cajas compartidas en la lista, sin bloqueo Pro para el invitado ni
+pasar por la reparación de privadas; navega a la lista existente sin escribir.
+
+Prueba de interfaz ejecuta la hoja original con botones Compartir/Copiar,
+cancelación/error, mismo código visible y texto del espacio correcto. Contra
+99d0be2 falla por ausencia del botón Compartir. Suite Firebase aislada: 15/15
+aprobadas (14 casos + contenedor), incluyendo generadores/uniones originales
+para Familia/Caja, invitado sin Pro, lectura del mismo historial, código consumido,
+dueño conservado y documentos/movimientos sin cambios. No usa dotero-2d430 ni
+cuentas/dinero reales. No acredita un segundo teléfono Android ni resuelve «hj».
+
+Android REAL, con autorización explícita para usar la Caja S/88: se abre desde
+Cajas → Cajas compartidas, conserva externo S/88 y aporte/devolución S/100,
+miembro propietario intacto, genera código genuino y abre selector nativo con
+texto/código coincidentes. Se canceló sin elegir destinatario; no se consumió
+el código ni se hizo un abono/devolución. Personal antes/después idéntico y
+«hj» sigue privada S/20. Al abrirla inicialmente se observó un intento pendiente
+que terminó de retirarla de privadas; no atribuir ese toque a una creación
+financiera nueva ni recrearla como privada para probar. No se entró con otra
+cuenta real ni se prueba Android físico con la suite local.
+
+Metro anterior estaba apagado. Arranque oculto Node22 desde C:/finzo, puerto8081,
+espera de preparación real y conexión por adb reverse/127.0.0.1:8081; Bundled
+36834ms/3958 módulos. El primer enlace 10.0.2.2 agotó tiempo durante arranque.
+No limpiar datos/reinstalar/cerrar sesión. Control visual Windows agotó dos
+capturas; se comprobó mediante conexión Android, no con coordenadas caducadas.
+
+Verificación de entrega: TypeScript/ESLint completos sin errores/avisos;
+227 pruebas y 8 auditores aprobados sin tarjetas, última pasada estable en
+.tmp/invitar-pruebas-entrega-15oct.log. Primera pasada falló un contrato JSX por
+orden del nuevo atributo; se mantuvo el contrato y se repitió el conjunto.
+
+**Sigue/falta:** resolver los tres pares de «hj» con evidencia y elección informada antes de compartirla.
+No borrar ni archivar originales de oficio para esconder el bloqueo. Siguen los
+pendientes de diario durable/dos dispositivos/volumen de la auditoría anterior.
+Observación pendiente: al cargar compartida aparece brevemente el texto vacío y
+Cerrar debajo del indicador; no se probó ni se ejecutó un cierre con datos cargando.
+Sin nuevos datos guardados, Functions/reglas, APK/AAB/OTA/Play ni tarjetas.
+
 ## Familia/Cajas — 15/10/2026 — respuesta inmediata y copia antigua consultada
 
 El dueño pidió que no se espere al servidor para retirar una tarjeta de pantalla.

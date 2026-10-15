@@ -5,7 +5,8 @@ const fs = require("node:fs");
 const path = require("node:path");
 const { execFileSync } = require("node:child_process");
 const { initializeTestEnvironment, assertFails, assertSucceeds } = require("@firebase/rules-unit-testing");
-const { doc, getDoc, setDoc, deleteDoc, writeBatch, runTransaction, serverTimestamp } = require("firebase/firestore");
+const { collection: firestoreCollection, doc, getDoc, getDocs, setDoc, deleteDoc, writeBatch, runTransaction, serverTimestamp } = require("firebase/firestore");
+const { randomBytes } = require("node:crypto");
 const root = path.resolve(__dirname, "../..");
 const { DOCUMENTS } = require("../src/legal-acceptance");
 
@@ -26,7 +27,7 @@ test("Invitaciones Familia/Caja: una entrada consume su código en el mismo guar
       await setDoc(doc(db, "users", "owner"), { isPremium: true });
       // Estos escenarios prueban invitaciones con elección vigente; la ausencia
       // y el callable real se prueban en las suites legal-acceptance aparte.
-      for (const uid of ["owner", ...["family", "box"].flatMap(kind => ["single", "ok", "reuse", "bad", "race-a", "race-b", "deleting", "closed"].map(suffix => `${kind}-${suffix}`))]) {
+      for (const uid of ["owner", ...["family", "box"].flatMap(kind => ["generated", "single", "ok", "reuse", "bad", "race-a", "race-b", "deleting", "closed"].map(suffix => `${kind}-${suffix}`))]) {
         await setDoc(doc(db, "legalAcceptances", uid), { format: 1, uid, ...DOCUMENTS, termsAccepted: true, privacyRead: true, acceptedAt: Date.now() - 1000 });
       }
       for (const name of ["familySpaces", "boxSpaces"]) {
@@ -56,6 +57,33 @@ test("Invitaciones Familia/Caja: una entrada consume su código en el mismo guar
         if (kind === "box") deps.desdeDocumento = handlerOriginal(source, "desdeDocumento", { alNumero });
         return handlerOriginal(source, kind === "family" ? "unirseAFamilia" : "unirseACaja", deps);
       }
+      await t.test(`${kind}: generar código real y entrar desde otra cuenta no cambia dinero`, async () => {
+        const codeSource = path.join(root, "utils/familia.ts");
+        const crearCodigoFamilia = handlerOriginal(codeSource, "crearCodigoFamilia", {
+          Crypto: { getRandomBytes: randomBytes }, CARACTERES_CODIGO_FAMILIA: "ABCDEFGHJKLMNPQRSTUVWXYZ23456789",
+        });
+        const create = handlerOriginal(source, kind === "family" ? "crearInvitacionFamilia" : "crearInvitacionCaja", {
+          db: owner, doc, setDoc, serverTimestamp, crearCodigoFamilia, assertSharedContentAccepted: async () => {},
+        });
+        await env.withSecurityRulesDisabled(context => setDoc(doc(context.firestore(), collection, "home", "movements", "original"), {
+          tipo: "ingreso", monto: 100, descripcion: "Ingreso de prueba aislada", fecha: "2026-10-15", creadoPor: "owner", creadoEn: serverTimestamp(),
+        }));
+        const before = (await getDoc(doc(owner, collection, "home"))).data();
+        const movementsBefore = (await getDocs(collectionRef(owner))).docs.map(row => row.data());
+        const code = await create("owner", "home");
+        assert.match(code, /^[A-HJ-NP-Z2-9]{8}$/);
+        const invitation = (await getDoc(doc(owner, invites, code))).data();
+        assert.equal(invitation[field], "home"); assert.equal(invitation.createdBy, "owner");
+        assert.ok(invitation.expiresAt > Date.now() + 6 * 86400000);
+        const uid = `${kind}-generated`, db = database(uid); // El invitado no tiene Pro.
+        const joined = await originalJoin(db)(uid, "Invitado", code.toLowerCase());
+        assert.equal(joined.id, "home");
+        assert.deepEqual((await getDoc(doc(db, collection, "home"))).data(), before);
+        assert.deepEqual((await getDocs(collectionRef(db))).docs.map(row => row.data()), movementsBefore);
+        assert.equal((await getDoc(doc(owner, invites, code))).exists(), false);
+        assert.equal((await getDoc(doc(owner, collection, "home", "members", "owner"))).data().rol, "owner");
+        function collectionRef(db) { return firestoreCollection(db, collection, "home", "movements"); }
+      });
       await t.test(`${kind}: no se puede entrar sin consumir, ni quitar el código sin entrar`, async () => {
         await makeInvite("SINGLE01");
         const db = database(`${kind}-single`);

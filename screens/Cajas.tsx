@@ -859,7 +859,11 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     if (caja?.archivadaLocal) return;
     // Una incidencia identificada en otra Caja no invalida esta conversión.
     // Las dudas globales y los enlaces cruzados siguen bloqueados.
-    if ((repairBlocked || repairPlan.conflicts.some(issue => issue.boxId === caja?.id)) && !caja?.sharingPending) { avisarRevisionNecesaria(); return; }
+    if ((repairBlocked || repairPlan.conflicts.some(issue => issue.boxId === caja?.id)) && !caja?.sharingPending) {
+      // Invitar no es una entrada a la revisión financiera. Informar sin
+      // interrumpir ni pedir al usuario interpretar/enlazar registros antiguos.
+      showToast(t("boxes.inviteUnavailable")); return;
+    }
     const uid = auth.currentUser?.uid;
     if (!uid || !caja || compartiendo || conversionEnCurso.current || guardandoRef.current) return;
     if (!isPremium && !caja.sharingPending) { irUnaVez("/premium"); return; }
@@ -1073,6 +1077,11 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
               <TouchableOpacity onPress={() => setCreando(true)} className="min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-600"><Plus size={18} color="#fff" /><Text className="font-bold text-white">{t("family.create")}</Text></TouchableOpacity>
               <TouchableOpacity onPress={() => { setUniendoCaja(value => !value); setCodigoCaja(""); }} className="min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950"><UserPlus size={18} color="#0d9488" /><Text className="font-bold text-teal-700 dark:text-teal-300">{t("family.join")}</Text></TouchableOpacity>
             </View>
+            <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.shared")} onPress={() => irUnaVez("/shared-boxes")} className="mb-3 min-h-12 flex-row items-center gap-3 rounded-2xl border border-teal-200 bg-teal-50 px-4 dark:border-teal-800 dark:bg-teal-950">
+              <Boxes size={21} color="#0d9488" />
+              <Text className="flex-1 text-sm font-bold text-teal-700 dark:text-teal-300">{t("boxes.shared")}</Text>
+              <ArrowLeftRight size={18} color="#0d9488" />
+            </TouchableOpacity>
             {uniendoCaja ? <View className="mb-3 rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde">
               <TextInput
                 disableFullscreenUI

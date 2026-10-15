@@ -1,5 +1,12 @@
 # Lo que hay que rellenar en Play Console
 
+15/10/2026 — Compartir invitación preparado: solo tras tocar Compartir código,
+el selector del teléfono recibe el código de acceso y una instrucción para unirse
+a Familia/Caja. El usuario elige aplicación/destinatario; no se envían saldos,
+movimientos ni contactos, ni se afirma que se haya entregado. No crea colección,
+retención, proveedor propio ni permiso Android nuevos. El código mantiene sus
+reglas de caducidad/consumo. No se publica política ni formulario con este cambio.
+
 ## Auditoría Familia/Cajas — 15/10/2026, servidor activado para pruebas privadas
 
 Nuevo control financiero publicado en Firebase: cada orden compartida confirmada conserva

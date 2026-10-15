@@ -373,6 +373,6 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
         {caja && owner ? <TouchableOpacity onPress={cerrar} className="mt-3 min-h-11 flex-row items-center justify-center gap-2"><Trash2 size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("boxes.close")}</Text></TouchableOpacity> : null}
       </>}
     </ScrollView>
-    <SpaceInvitationSheet code={invitacion} visible={Boolean(invitacion)} onClose={() => setInvitacion("")} />
+    <SpaceInvitationSheet code={invitacion} kind="box" visible={Boolean(invitacion)} onClose={() => setInvitacion("")} />
   </View>;
 }

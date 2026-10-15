@@ -826,7 +826,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
         {!owner ? <TouchableOpacity disabled={ocupado} onPress={salir} className="mt-3 min-h-11 flex-row items-center justify-center gap-2"><LogOut size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("family.leave")}</Text></TouchableOpacity> : null}
       </>}
     </ScrollView>
-    <SpaceInvitationSheet code={invitacion} visible={Boolean(invitacion)} onClose={() => setInvitacion("")} />
+    <SpaceInvitationSheet code={invitacion} kind="family" visible={Boolean(invitacion)} onClose={() => setInvitacion("")} />
     {familia ? <SpaceMembersSheet familyName={familia.nombre} members={miembros} visible={verMiembros} canManage={owner} onRemove={quitarMiembro} onClose={() => setVerMiembros(false)} reportSpace={{ kind: "family", spaceId: familia.id, ownerUid: familia.ownerUid }} /> : null}
   </View>;
 }

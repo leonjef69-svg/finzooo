@@ -4,6 +4,37 @@ Alcance: Cajas privadas y compartidas, Familia, aportes/ediciones/borrados,
 devoluciones, cierre/salida, invitaciones, lectura y conservación de originales.
 Tarjetas, Telegram, cobros, cambios de facturación y publicación fuera del cambio.
 No se crean, corrigen ni borran movimientos de la cuenta del propietario.
+Excepción autorizada posterior: comprobar la conversión/invitación de su Caja
+S/88 conservando importes, historial y Personal; no tocar «hj» ni devolver dinero.
+
+## Cuarta pasada — código, compartir y acceso a las cajas compartidas
+
+Marca 15oct-codigo-compartir. Invitar no abre la revisión financiera ante pares
+privados dudosos: aviso breve sin código supuesto; protección conservada.
+La hoja real incorpora Compartir nativo, Copiar y texto según Familia/Caja.
+Cajas incorpora entrada visible a compartidas (antes no existía): no bloqueada
+por Pro del invitado ni por pares de otra privada. No modifica libros/saldos.
+
+15/15 Firebase SDK/reglas aisladas: generar con el cliente original y unirse
+desde otro UID sin Pro, misma raíz e historial intactos, dueño conservado,
+consumo de código atómico, caducidad/roles/carreras protegidos. Prueba UI original
+ejecuta los botones reales; 99d0be2 falla por ausencia de Compartir. Otra
+regresión demuestra que antes Invitar abría el aviso técnico. TypeScript/ESLint
+completos y 227 pruebas/8 auditores finales verdes sin tarjetas.
+
+Android autorizado: Caja S/88 verificada compartida, externo88 y aporte100/
+devuelto100 conservados; código real, selector nativo con texto coincidente y
+cancelación sin destinatario/envío. Personal antes/después idéntico. «hj» privada
+S/20 intacta. No borrar cuentas ni crear dinero ficticio. Conexión de desarrollo
+recuperada al detectar Metro apagado; sin limpiar datos. Dos capturas Windows
+agotadas; comprobación mediante conexión Android. No acredita ingreso de otro
+teléfono real ni cambia servidor/reglas. Código de acceso no se guarda en Git.
+
+**Sigue/falta:** los tres pares de «hj» siguen sin intención demostrada; no
+inferir devolución de una marca de borrado. Diario durable, dos cuentas/Android,
+volumen y demás límites anteriores continúan. Al cargar una compartida se vio
+texto vacío y Cerrar bajo el indicador; no se ejecutó cierre y queda revisión
+visual pendiente. Sin publicar APK/AAB/OTA/Play ni retomar tarjetas.
 
 ## Tercera pasada — acción inmediata y evidencia remota de «hj»
 

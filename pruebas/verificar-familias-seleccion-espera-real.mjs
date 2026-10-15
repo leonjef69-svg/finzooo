@@ -170,7 +170,7 @@ function harness() {
 {
   const box = { id: "caja-sana", nombre: "Actual" };
   const conflicts = [1, 2, 3].map(id => ({ boxId: "caja-hj", movementId: `mov-${id}`, personalId: id, reason: "deleted" }));
-  let remote = 0, review = 0;
+  let remote = 0, review = 0; const notices = [];
   const s = { caja: box, repairBlocked: false, repairPlan: { conflicts }, auth: { currentUser: { uid: "A" } },
     avisarRevisionNecesaria: () => { review++; }, compartiendo: false, conversionEnCurso: { current: false }, guardandoRef: { current: false },
     isPremium: true, movimientos: [], transactions: [], privateBoxLinksMatch: () => true,
@@ -179,13 +179,14 @@ function harness() {
     datosActuales: { current: { cajas: [box], movimientos: [] } }, nuevoIntentoCaja: () => "attempt", userName: "A", userCurrency: "PEN",
     guardarCambioCaja: async next => { s.datosActuales.current = next; return true; },
     compartirCajaExistente: async (...args) => { remote++; assert.deepEqual(plain(args[6]), ["caja-hj", "caja-hj", "caja-hj"]); throw Error("test-stop"); },
-    t: key => key, reportSyncError() {}, spaceErrorKey: () => "error", showToast() {},
+    t: key => key, reportSyncError() {}, spaceErrorKey: () => "error", showToast: key => notices.push(key),
   };
   const before = plain(conflicts);
   const share = handlerOriginal("screens/Cajas.tsx", "compartirCaja", s, read("screens/Cajas.tsx"));
   await share(); assert.equal(remote, 1, "los tres casos de hj no bloquean compartir una caja independiente");
   assert.equal(review, 0); assert.deepEqual(conflicts, before);
-  s.caja.id = "caja-hj"; await share(); assert.equal(remote, 1); assert.equal(review, 1, "hj sigue protegida");
+  s.caja.id = "caja-hj"; await share(); assert.equal(remote, 1); assert.equal(review, 0, "invitar no abre los detalles financieros");
+  assert.equal(notices.at(-1), "boxes.inviteUnavailable", "hj sigue protegida con un aviso breve, sin reparación ni código falso");
 }
 {
   const output = buildSync({ entryPoints: ["utils/privateBoxRepair.ts"], bundle: true, write: false, platform: "node", format: "cjs", alias: { "@": process.cwd() } });
