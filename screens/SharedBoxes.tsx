@@ -253,13 +253,26 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
   const invitar = () => ejecutar(async wait => {
     if (!uid || !caja || !owner) return;
     if (!isPremium) { irUnaVez("/premium"); return; }
-    // Crear un código no modifica movimientos: no vaciar ni recargar su lista.
-    const code = await wait(() => crearInvitacionCaja(uid, caja.id));
+    // Ocultar el borrador durante la espera; recuperarlo si no se pudo crear el código.
+    const modoAnterior = modo;
+    const modoSuspendidoAnterior = modoSuspendido.current;
+    const estabaEditandoNombre = editandoNombreCaja;
+    const estabaSeleccionando = seleccionando;
     if (modo === "ingreso" || modo === "gasto") modoSuspendido.current = modo;
     setModo(null);
     setEditandoNombreCaja(false);
     setSeleccionando(false);
-    setInvitacion(code);
+    try {
+      // Crear un código no modifica movimientos: no vaciar ni recargar su lista.
+      const code = await wait(() => crearInvitacionCaja(uid, caja.id));
+      setInvitacion(code);
+    } catch (error) {
+      modoSuspendido.current = modoSuspendidoAnterior;
+      setModo(modoAnterior);
+      setEditandoNombreCaja(estabaEditandoNombre);
+      setSeleccionando(estabaSeleccionando);
+      throw error;
+    }
   }, false);
   const guardar = () => ejecutar(async wait => {
     if (!uid) return;
@@ -388,7 +401,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
                 <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.cancel")} disabled={busy} onPress={() => { setEditandoNombreCaja(false); setNombreCajaEditado(caja.nombre); }} className="h-9 w-9 items-center justify-center rounded-xl bg-white/20"><X size={17} color="#fff" /></TouchableOpacity>
               </> : <>
                 <Text className="flex-1 text-base font-bold text-white" numberOfLines={1}>{caja.nombre}</Text>
-                {owner && !invitacion ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.editName")} disabled={busy} onPress={() => { if (nombreCajaEditado === caja.nombre) setNombreCajaEditado(caja.nombre); setEditandoNombreCaja(true); }} className="h-9 w-9 items-center justify-center rounded-xl bg-emerald-700">
+                {owner && !invitacion && !busy ? <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.editName")} disabled={busy} onPress={() => { if (nombreCajaEditado === caja.nombre) setNombreCajaEditado(caja.nombre); setEditandoNombreCaja(true); }} className="h-9 w-9 items-center justify-center rounded-xl bg-emerald-700">
                   <Pencil size={16} color="#fff" />
                 </TouchableOpacity> : null}
               </>}

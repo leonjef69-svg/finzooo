@@ -2,27 +2,29 @@
 
 ## Caja compartida — 15/10/2026 — invitación limpia
 
-Marca `15oct-caja-invitacion-limpia`. Causa: Invitar abría el código encima de
-la misma vista, pero no cerraba un formulario de Ingreso/Gasto o edición de
-aporte que hubiera quedado abierto. El lápiz del saldo es el control de cambiar
-el nombre de la Caja y seguía visible detrás del código. Al generar bien el
-código, se cierra el formulario, la edición del nombre y el modo Seleccionar;
-el lápiz se oculta mientras el código está abierto. El borrador de Ingreso/Gasto
-queda guardado en pantalla; Agregar dinero lo recupera al volver. Cerrar el
-código deja el detalle limpio. Si falla la red, el código no se abre y el
-formulario sigue como estaba. No se alteran los manejadores de dinero.
+Marca `15oct-caja-invitacion-espera-limpia`. Causa: Invitar abría el código
+encima de la misma vista, pero dejaba abierto un formulario de Ingreso/Gasto o
+edición de aporte durante la espera de red. El lápiz del saldo cambia el nombre
+de la Caja y también seguía visible. Desde el toque se ocultan el formulario,
+edición del nombre y modo Seleccionar; el lápiz queda oculto durante la espera y
+al ver el código. Si el código se crea, Agregar dinero permite recuperar el
+borrador. Si falla la red, se restauran el formulario y controles que estaban
+abiertos. No se alteran los manejadores de dinero.
 
 Nueva regresión en pruebas/verificar-caja-invitacion-mismo-diseno-real.mjs
-ejecuta el invitar original con borrador abierto, verifica que se oculte y se
-recupere con Agregar dinero, que el lápiz y Seleccionar no queden detrás, y que
-la hoja no invoque operaciones monetarias. La prueba de lista comprueba también
-que un fallo de red conserve el formulario. Verificación final estable: 230
-pruebas y 8 auditores sin tarjetas; TypeScript/ESLint completos sin errores.
-Registros .tmp/caja-invitacion-limpia-final-15oct.log y tsc/eslint asociados.
+ejecuta el invitar original con borrador abierto, verifica que se oculte mientras
+espera y se recupere con Agregar dinero, que lápiz y Seleccionar se oculten, y
+que la hoja no invoque operaciones monetarias. También prueba que un fallo de
+red restaure controles. Suite final aprobada: 230 pruebas/8 auditores sin
+tarjetas; TypeScript y ESLint limpios.
 
-Emulador ya abierto en Código de invitación: captura de solo lectura tras HMR
-confirma caja y saldo intactos, formulario, lápiz y controles de selección
-ocultos; no se generó otro código ni hubo escritura remota. **Sigue/falta:**
+Emulador probó el intento con el cambio anterior: el formulario seguía visible
+mientras Firebase respondía; al completarse, el código dejó fondo limpio. Ese
+instante de espera era la parte faltante. El emulador sirve el paquete de
+desarrollo con la marca de esta versión; la comprobación visual de la espera con
+esta versión aún falta. Esta versión oculta el formulario
+desde el toque y restaura si hay error; falta repetir esta comprobación visual.
+**Sigue/falta:**
 unión con segundo teléfono/cuenta. Persisten los tres registros antiguos de
 «hj» sin identidad o intención confirmada; esta corrección no los toca. Sin
 cambios de datos, servidor, APK/AAB/OTA/Play ni tarjetas.

@@ -51,11 +51,11 @@ const rows = [{ id: "real", tipo: "ingreso", monto: 100 }, { id: "spent", tipo: 
   const s = { uid: "A", caja: box, owner: true, isPremium: true, lock: { current: false }, moneyLock: { current: false }, mounted: { current: true },
     getAccountStorageSession: () => 1, accountSession: 1, movementEpoch: { current: 4 }, confirmedSource: { current: origin },
     cierresPendientes: { current: new Set() }, errorRef: { current: error => errors.push(error) }, rows,
-    subscription: 0, busy: false, confirmed: true, code: "", calls: 0, modo: null, modoSuspendido: { current: null },
+    subscription: 0, busy: false, confirmed: true, code: "", calls: 0, modo: null, modoSuspendido: { current: null }, editandoNombreCaja: false, seleccionando: false,
     captureAccountTask: (_uid, valid) => ({ current: valid, wait: async work => { if (!valid()) throw Error("stale"); const value = await work(); if (!valid()) throw Error("stale"); return value; } }),
     setBusy: value => { s.busy = value; }, setMovimientosConfirmados: value => { s.confirmed = value; },
     setSubscriptionRevision: update => { s.subscription = update(s.subscription); },
-    limpiar() {}, setModo: value => { s.modo = value; }, setEditandoAporteId() {}, setEditandoNombreCaja() {}, setNombreCajaEditado() {}, setSeleccionando() {},
+    limpiar() {}, setModo: value => { s.modo = value; }, setEditandoAporteId() {}, setEditandoNombreCaja: value => { s.editandoNombreCaja = value; }, setNombreCajaEditado() {}, setSeleccionando: value => { s.seleccionando = value; },
     crearInvitacionCaja: (uid, id) => { assert.equal(uid, "A"); assert.equal(id, box.id); s.calls++; return network.promise; },
     setInvitacion: value => { s.code = value; }, irUnaVez() { throw Error("no abrir otra ruta"); },
   };
@@ -68,9 +68,11 @@ const rows = [{ id: "real", tipo: "ingreso", monto: 100 }, { id: "spent", tipo: 
   const close = find(shared, node => ts.isJsxSelfClosingElement(node) && node.tagName.getText() === "SpaceInvitationSheet");
   run(`(${attr(close.node, "onClose").getText(close.tree)})()`, s);
   assert.equal(s.code, ""); assert.equal(s.caja, box); assert.equal(s.rows, rows); assert.equal(s.subscription, 0);
-  s.modo = "gasto"; s.crearInvitacionCaja = async () => { throw Error("offline"); }; await s.invite();
+  s.modo = "gasto"; s.editandoNombreCaja = true; s.seleccionando = true;
+  s.crearInvitacionCaja = async () => { throw Error("offline"); }; await s.invite();
   assert.equal(errors.length, 1); assert.equal(s.busy, false); assert.equal(s.confirmedSource.current, origin);
   assert.equal(s.modo, "gasto", "si no se genera el código el formulario no se oculta");
+  assert.equal(s.editandoNombreCaja, true); assert.equal(s.seleccionando, true, "al fallar la conexión se restauran los controles previos");
   await s.work(wait => wait(async () => {}));
   assert.equal(s.movementEpoch.current, 5); assert.equal(s.confirmedSource.current, null);
   assert.equal(s.subscription, 1, "las operaciones de dinero SÍ conservan su invalidación/recarga");
