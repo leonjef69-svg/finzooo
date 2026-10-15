@@ -148,9 +148,10 @@ export function calcularTamanoBurbujaRosquilla(
 }
 
 /**
- * Separa las etiquetas siguiendo el orden angular de sus segmentos. El corte
- * se hace en el mayor espacio libre de la dona, evitando que las etiquetas
- * cercanas al inicio y al final de la lista se amontonen al cruzar 360 grados.
+ * Reparte las etiquetas con separación uniforme alrededor de la dona,
+ * conservando el orden de sus segmentos. El mayor espacio libre define el
+ * punto de corte y el giro se ajusta para moverlas lo menos posible. Así una
+ * cola de porciones pequeñas no arrastra todas las etiquetas a un solo lado.
  */
 export function distribuirAngulosEtiquetas(
   middleAngles: number[],
@@ -179,20 +180,26 @@ export function distribuirAngulosEtiquetas(
   }
 
   const minimumGap = Math.min(requestedGap, FULL_TURN / count);
+  const step = Math.max(minimumGap, FULL_TURN / count);
   const firstIndex = (largestGapIndex + 1) % count;
   const ordered = Array.from({ length: count }, (_, offset) => normalized[(firstIndex + offset) % count]);
   const placed = new Array<number>(count);
-  let previous = ordered[0].angle;
-  let previousTarget = ordered[0].angle;
+  const unwrapped = new Array<number>(count);
   let wrapOffset = 0;
+  let previousAngle = ordered[0].angle;
 
   ordered.forEach((entry, index) => {
-    if (index > 0 && entry.angle < previousTarget) wrapOffset += FULL_TURN;
-    const target = entry.angle + wrapOffset;
-    const angle = index === 0 ? target : Math.max(target, previous + minimumGap);
-    placed[entry.index] = angle;
-    previous = angle;
-    previousTarget = entry.angle;
+    if (index > 0 && entry.angle < previousAngle) wrapOffset += FULL_TURN;
+    unwrapped[index] = entry.angle + wrapOffset;
+    previousAngle = entry.angle;
+  });
+
+  // Busca el giro que minimiza el desplazamiento angular total, manteniendo
+  // etiquetas equidistantes para evitar racimos y dar espacio parejo a cada
+  // conector, aunque sus porciones reales tengan tamaños muy distintos.
+  const phase = unwrapped.reduce((sum, angle, index) => sum + angle - index * step, 0) / count;
+  ordered.forEach((entry, index) => {
+    placed[entry.index] = phase + index * step;
   });
 
   return placed;

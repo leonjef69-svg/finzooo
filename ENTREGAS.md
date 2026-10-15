@@ -1,5 +1,14 @@
 # Entregas de Fino
 
+## 14/10/2026 — Rosquilla de Reportes equilibrada; solo código
+
+Se reparte por igual la posición de etiquetas para gráficos de gastos e
+ingresos, conservando su orden y los montos/porcentajes reales. Las líneas
+tocan el borde del segmento y mantienen su color. TypeScript, ESLint, 222
+pruebas y 8 auditores verdes (tarjetas excluidas por decisión vigente).
+No se generó APK/AAB ni se publicó OTA/Play. Falta confirmar el dibujo en el
+emulador: el servidor local responde, pero la captura de pantalla está bloqueada.
+
 ## 14/10/2026 — Planes compactos Plus/Pro; solo código local
 
 Se llevó a la pantalla Premium la maqueta aprobada, sin alterar las funciones

@@ -1,5 +1,15 @@
 # Estado actual de Fino
 
+## Reportes — 14/10/2026 — rosquilla equilibrada en gastos e ingresos
+
+Gastos e ingresos usan el mismo gráfico y ahora reparten las categorías de
+forma uniforme alrededor de la rosquilla, manteniendo el orden y la proporción
+real. Cada línea llega al borde de su segmento, incluso al resaltarlo. Montos,
+porcentajes, filtros y movimientos no cambian. TypeScript, ESLint, 222 pruebas
+y 8 auditores pasan; tarjetas excluidas por decisión vigente. No se generó
+APK/AAB. El emulador tiene un servidor activo en 8081, pero la captura visual
+fue bloqueada por la herramienta; falta confirmar el dibujo actualizado allí.
+
 ## Planes Plus/Pro — 14/10/2026 — distintivo de respaldo Pro
 
 La fila de respaldo y sincronización en la nube conserva su icono de nube y

@@ -80,6 +80,27 @@ for (let first = 0; first < positions.length; first++) {
   }
 }
 
+// En la captura de Reportes había dos categorías grandes y varias menores.
+// Aunque no se tocaban, sus etiquetas quedaban en racimo y desequilibraban las
+// líneas. La nueva distribución debe darles un espacio angular uniforme.
+{
+  const grados = [40, 185, 203, 215, 227, 239, 251, 263];
+  const entrada = grados.map(value => value * Math.PI / 180);
+  const equilibrados = distribuirAngulosEtiquetas(entrada, minimumGap);
+  const ordenados = equilibrados
+    .map(angle => ((angle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI))
+    .sort((a, b) => a - b);
+  const gaps = ordenados.map((angle, index) => {
+    const next = index === ordenados.length - 1 ? ordenados[0] + 2 * Math.PI : ordenados[index + 1];
+    return next - angle;
+  });
+  const gapIdeal = (2 * Math.PI) / entrada.length;
+  assert.ok(
+    gaps.every(gap => Math.abs(gap - gapIdeal) < 1e-6),
+    "las etiquetas se reparten alrededor de toda la rosquilla aunque los segmentos pequeños estén agrupados",
+  );
+}
+
 // Las cuatro porciones pequeñas se colocan juntas en la parte superior cuando
 // la dominante va al final. Sus rutas deben empezar en ángulos distintos y
 // curvarse hacia las etiquetas, no quedar como una sola línea gruesa.
@@ -192,6 +213,11 @@ assert.match(donutChart, /strokeOpacity=\{1\}/, "las líneas conservan todo su c
 assert.ok(
   (donutChart.match(/stroke=\{item\.color\}/g) ?? []).length >= 2,
   "las líneas y porciones usan exactamente el mismo color de categoría",
+);
+assert.match(
+  donutChart,
+  /sourceRadius:\s*radius \+ \(selected === item\.id \? 11 : 9\)/,
+  "cada línea toca el borde real del segmento, también cuando se resalta",
 );
 
 console.log("✓ Los segmentos pequeños se ven; el monto y el porcentaje reales permanecen intactos; etiquetas y conectores se distinguen.");

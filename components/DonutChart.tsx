@@ -79,8 +79,8 @@ export default function DonutChart({ data }: { data: Slice[] }) {
           const bubbleAngle = bubbleAngles[index];
           const bubbleX = CENTER_X + Math.cos(bubbleAngle) * orbitX;
           const bubbleY = centerY + Math.sin(bubbleAngle) * orbitY;
-          // El conector comienza en el segmento de su color y se abre en
-          // abanico de inmediato, incluso cuando varios montos son diminutos.
+          // El conector toca el borde exterior de su segmento (también al
+          // seleccionarlo) y se abre enseguida hacia una etiqueta equilibrada.
           const route = crearCurvaConectorRosquilla({
             centerX: CENTER_X,
             centerY,
@@ -89,7 +89,7 @@ export default function DonutChart({ data }: { data: Slice[] }) {
             bubbleX,
             bubbleY,
             bubbleSize: bubble,
-            sourceRadius: radius + 11,
+            sourceRadius: radius + (selected === item.id ? 11 : 9),
           });
           return (
             <Path
