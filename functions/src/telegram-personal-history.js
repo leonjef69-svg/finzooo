@@ -1,11 +1,12 @@
 "use strict";
 
 const { FieldValue } = require("firebase-admin/firestore");
+const { identityForExplicitEdit, recordOriginOf } = require("./record-origin");
 
 function isV2(userData) { return userData?.historyFormat === 2; }
 function assertActive(userData) {
   if (userData?.accountDeletionPending === true) throw new Error("ACCOUNT_DELETION_PENDING");
-  if (userData?.recordIdentityFormat !== undefined && userData.recordIdentityFormat !== 1) throw new Error("HISTORY_FORMAT_UNSUPPORTED");
+  if (userData?.recordIdentityFormat !== undefined && ![1, 2].includes(userData.recordIdentityFormat)) throw new Error("HISTORY_FORMAT_UNSUPPORTED");
 }
 function rowRef(userRef, id) {
   if (!Number.isSafeInteger(id)) throw new Error("INVALID_ID");
@@ -17,7 +18,8 @@ async function allPersonalTransactions(userRef, userData, tx) {
   if (!isV2(userData)) return Array.isArray(userData.transactions) ? userData.transactions : [];
   const ref = userRef.collection("history");
   const snap = tx ? await tx.get(ref) : await ref.get();
-  return snap.docs.filter(item => item.data().deleted === false).map(item => item.data().transaction);
+  const rows = snap.docs.map(item => { const data = item.data(); assertActive(data); return data; });
+  return rows.filter(data => data.deleted === false).map(data => data.transaction);
 }
 
 async function personalRecord(tx, userRef, userData, id) {
@@ -27,6 +29,7 @@ async function personalRecord(tx, userRef, userData, id) {
   }
   const ref = rowRef(userRef, id);
   const snap = await tx.get(ref);
+  if (snap.exists) assertActive(snap.data());
   return { ref, transaction: snap.exists && snap.data().deleted === false ? snap.data().transaction : null, exists: snap.exists };
 }
 
@@ -34,7 +37,7 @@ function addPersonal(tx, userRef, userData, record, movement, maxBytes) {
   assertActive(userData);
   if (record.transaction || record.exists) throw new Error("DUPLICATE_ID");
   if (isV2(userData)) {
-    tx.set(record.ref, { id: movement.id, deleted: false, transaction: movement, syncAt: FieldValue.serverTimestamp() });
+    tx.set(record.ref, { id: movement.id, deleted: false, transaction: movement, recordIdentityFormat: 2, syncAt: FieldValue.serverTimestamp() });
     return;
   }
   // Un ID eliminado sigue reservado: agregarlo de nuevo anunciaría éxito,
@@ -50,8 +53,9 @@ function addPersonal(tx, userRef, userData, record, movement, maxBytes) {
 function editPersonal(tx, userRef, userData, record, edited, maxBytes) {
   assertActive(userData);
   if (!record.transaction) throw new Error("NOTHING_TO_EDIT");
+  edited = identityForExplicitEdit(record.transaction, edited);
   if (isV2(userData)) {
-    tx.set(record.ref, { id: edited.id, deleted: false, transaction: edited, syncAt: FieldValue.serverTimestamp() });
+    tx.set(record.ref, { id: edited.id, deleted: false, transaction: edited, recordIdentityFormat: 2, syncAt: FieldValue.serverTimestamp() });
     return;
   }
   const next = userData.transactions.map(item => item.id === edited.id ? edited : item);
@@ -63,7 +67,7 @@ function deletePersonal(tx, userRef, userData, record, id) {
   assertActive(userData);
   if (!record.transaction) throw new Error("NOTHING_TO_UNDO");
   if (isV2(userData)) {
-    tx.set(record.ref, { id, deleted: true, syncAt: FieldValue.serverTimestamp() });
+    tx.set(record.ref, { id, deleted: true, origin: recordOriginOf(record.transaction), recordIdentityFormat: 2, syncAt: FieldValue.serverTimestamp() });
     return;
   }
   const deletedTransactionIds = [...new Set([

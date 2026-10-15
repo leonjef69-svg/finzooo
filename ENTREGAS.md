@@ -1,5 +1,19 @@
 # Entregas de Fino
 
+## 14/10/2026 — Planes compactos Plus/Pro; solo código local
+
+Se llevó a la pantalla Premium la maqueta aprobada, sin alterar las funciones
+ni los beneficios acordados. Plus S/ 3.60/mes; Pro S/ 9.99/mes o S/ 84/año,
+con ahorro calculado de S/ 35.88. Se especifica que son precios propuestos y
+que todavía no se puede pagar. Prueba de 24 horas conservada; no se concede
+Premium con la selección del plan. TypeScript, ESLint y 222 pruebas/8 auditores
+verdes (tarjetas excluidas por decisión vigente).
+
+No se generó APK/AAB ni se publicó en OTA/Play. La captura del emulador se
+quedó negra y la ventana no respondió; hace falta verificarla en una sesión
+de desarrollo conectada y estable. Compras reales, identificadores de Play y
+precios localizados siguen pendientes.
+
 ## 14/10/2026 — Tarjetas y cifras completas; desarrollo local
 
 Marca 14oct-pdf-montos-completos. Ajuste solicitado: tarjetas únicas de color,
@@ -159,16 +173,17 @@ Qué sigue/falta: recorrido físico restante y Google personal; diagnosticar la
 copia protegida, letra grande/teclado y medir suavidad real. No declarar cerrado
 el acceso completo. Guía: docs/ENTRADA_UI_CALIDA.md.
 
-## 13/10/2026 — Moneda, segunda corrección en verificación; NO entrega de Play
+## 13/10/2026 — Moneda, corrección confirmada en emulador; NO entrega de Play
 
 El propietario confirmó que el primer cambio no resolvió el fallo. Nueva versión
 de desarrollo con marcador `13oct-moneda-window`: recorte nativo desactivado y
 ventana de dibujo ampliada a 21. Conserva las 155 monedas, búsqueda y bloqueo.
-Prueba JSX y TypeScript/ESLint aprobados; la batería completa 209/8 corresponde
-a la revisión anterior. Falta cargar esta versión en Android. Detalles en
+Prueba JSX, TypeScript/ESLint y batería actual (211 pruebas, 8 auditores)
+aprobados. El propietario recargó el emulador e informó que las
+filas ya no desaparecen al deslizar rápido. Detalles en
 `docs/PRUEBAS_MONEDA_DESLIZAMIENTO.md`. Sin APK/AAB/OTA, despliegue ni saldos
-modificados. Qué sigue/falta: recargar, repetir el gesto y revisar memoria;
-después retomar auditoría de entrada.
+modificados. Qué sigue/falta: revisar memoria, letras grandes y búsqueda;
+continuar la auditoría del recorrido desde apertura hasta Inicio.
 
 ## 13/10/2026 — revisión local Familia/Cajas, NO entrega de Play
 

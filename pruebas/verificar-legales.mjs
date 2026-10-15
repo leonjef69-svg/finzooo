@@ -184,10 +184,9 @@ console.log("\n--- ANUNCIOS: QUIEN PAGA NO LOS VE, Y LO QUE SE DICE DE ELLOS ---
     ok(/AdMob/.test(legal), "con anuncios, la politica los nombra");
   } else {
     ok(/Fino no muestra anuncios/.test(legal), "sin anuncios, la politica dice que no los hay");
-    // Y NO SE PROMETE "SIN PUBLICIDAD" SI NO HAY PUBLICIDAD. La frase existe en los textos,
-    // pero solo se enseña cuando es cierta.
+    // La propuesta menciona el beneficio futuro de Plus, pero aclara que hoy no hay anuncios.
     const premium = fs.readFileSync(path.join(RAIZ, "screens/Premium.tsx"), "utf8");
-    ok(/anunciosActivos\(\) \? t\("premium\.subtitleSinAnuncios"\)/.test(premium), 'y "sin publicidad" solo se dice si hay publicidad que quitar');
+    ok(/!sinAnuncios/.test(premium) && /premium\.noAdsCurrentNote/.test(premium), "la propuesta aclara si hoy Fino muestra anuncios");
   }
 
   // Los dos textos, en los tres idiomas.
@@ -212,7 +211,7 @@ console.log("\n--- EL COBRO: NI REGALAR PREMIUM NI COBRAR DOS VECES ---");
   // precio, y lo que hacia era setIsPremium(true) — REGALAR Premium. Google lo trata como
   // afirmacion engañosa y era motivo de rechazo.
   ok(/export function comprasDisponibles/.test(compras), "hay un solo sitio que decide si se puede cobrar");
-  ok(/comprasDisponibles\(\) \?/.test(premium), "y el boton de compra depende de el");
+  ok(/comprasDisponibles\(\) && plan === "pro"/.test(premium), "y el botón de compra depende de que Pro pueda cobrarse");
 
   // Y LO QUE NO PUEDE VOLVER NUNCA: dar Premium sin haber cobrado. Si esta linea reaparece en
   // la pantalla de Premium, es que alguien volvio a regalarlo.
@@ -221,7 +220,7 @@ console.log("\n--- EL COBRO: NI REGALAR PREMIUM NI COBRAR DOS VECES ---");
   // NI COBRAR DOS VECES. Dos toques seguidos —lo que hace cualquiera cuando algo tarda— no
   // pueden lanzar dos compras. En una pantalla de pago eso no es un parpadeo.
   ok(/if \(comprando\) return/.test(premium), "dos toques seguidos no lanzan dos compras");
-  ok(/disabled=\{comprando !== null\}/.test(premium), "y los botones se apagan mientras la tienda responde");
+  ok(/disabled=\{comprando !== null\}/.test(premium), "y el botón se apaga mientras la tienda responde");
 
   // RESTAURAR COMPRA ES OBLIGATORIO PARA GOOGLE, no opcional: quien cambia de celular o
   // reinstala tiene que poder recuperar lo que pago sin volver a pagarlo.

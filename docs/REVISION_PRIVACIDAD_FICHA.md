@@ -7,7 +7,7 @@ sin Premium vigente en esta versión de trabajo. La nube tiene una preferencia
 local para pausar futuras sincronizaciones; apagarla no borra la copia remota.
 El respaldo sigue asociado al Premium existente y la prueba autorizada. No hay
 Billing, Plus, planes cobrables ni compras habilitadas. La propuesta comercial
-actual del propietario es Plus S/ 3.60 mensual y Pro S/ 9.99 mensual o S/ 99
+actual del propietario es Plus S/ 3.60 mensual y Pro S/ 9.99 mensual o S/ 84
 anual, pero no debe mostrarse como precio disponible hasta implementar y probar
 los productos de Play.
 

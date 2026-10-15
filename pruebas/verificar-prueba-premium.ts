@@ -161,50 +161,14 @@ console.log("\n--- LA PRUEBA NO SE MEZCLA CON EL PREMIUM DE LA CUENTA ---");
   ok(/STORAGE_KEYS\.pruebaPremium,/.test(almacen), "y su marca se borra del celular");
 }
 
-console.log("\n--- LA PANTALLA NO PROMETE UN COBRO QUE NO EXISTE ---");
+console.log("\n--- LA PANTALLA DISTINGUE PRECIOS PROPUESTOS Y COBROS REALES ---");
 {
-  // No hay pago integrado. Un boton "ADQUIRIR VERSION PREMIUM" que no cobra y no lo
-  // advierte es lo que hace que alguien se sienta engañado, asi que la pantalla lo
-  // dice con letra pequeña. Y esta en la lista de Play Store de ESTADO.
   const pant = fs.readFileSync(path.join(RAIZ, "screens/Premium.tsx"), "utf8");
-  ok(pant.includes("premium.sinCobro"), "se avisa de que el pago no esta disponible");
-
-  // Los precios salen de UN sitio. Los mismos numeros aparecen en cuatro lugares de
-  // la pantalla; escritos a mano, cambiar el precio una vez dejaria dos diciendo
-  // otra cosa, y un precio que se contradice en una app de dinero se paga caro.
-  // AQUI DECIA "los precios salen de un solo sitio", Y ESO CAMBIO EL 07/08/2026.
-  //
-  // La regla vieja tenia su motivo y conviene dejarlo escrito: los mismos numeros aparecian
-  // en cuatro lugares de la pantalla, y escritos a mano bastaba cambiar uno para que dos
-  // dijeran otra cosa. Un precio que se contradice en una app de dinero se paga caro.
-  //
-  // Pero el fallo era mas grande que la coherencia: NO HAY COBRO. No hay Play Billing ni
-  // pasarela, asi que esos precios eran lo que COSTARIA, y el boton "ADQUIRIR" lo unico que
-  // hacia era regalar Premium (setIsPremium(true)). Google trata como engañoso un precio con
-  // un boton de compra que no cobra, y era el bloqueo NUMERO UNO para publicar.
-  //
-  // Y EL 08/08/2026 SE AFINO OTRA VEZ, con su motivo, porque "que no haya precio" dejo de ser
-  // la regla correcta el dia que se preparo el cobro (utils/compras.ts).
-  //
-  // La regla de verdad nunca fue "sin precio": era **sin precio mientras no se pueda cobrar**.
-  // Prohibirlo para siempre obligaria a borrar esta comprobacion el dia que llegue Play
-  // Billing, y una prueba que estorba es una prueba que alguien quita sin leerla.
-  //
-  // Asi que lo que se vigila ahora es que el precio viva DENTRO de la rama de
-  // comprasDisponibles(): si aparece antes de esa condicion, es que alguien volvio a enseñar un
-  // precio en una version que no cobra.
+  ok(pant.includes("premium.priceProposal"), "se aclara que el precio es propuesto y el pago no está disponible");
+  ok(pant.includes("PRECIOS.mensualNormal") && pant.includes("PRECIOS.anual"), "los dos precios Pro salen del catálogo común");
+  ok(pant.includes("AHORRO_PRO_ANUAL") && pant.includes("premium.savingsAnnual"), "el anual muestra el ahorro calculado");
   const sinComentarios = pant.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
-  const dondeLaCondicion = sinComentarios.indexOf("comprasDisponibles()");
-  const dondeElPrecio = sinComentarios.indexOf("PRECIOS.");
-  ok(dondeLaCondicion !== -1, "la pantalla pregunta si se puede cobrar");
-  ok(
-    dondeElPrecio === -1 || dondeElPrecio > dondeLaCondicion,
-    "y ningun precio se enseña fuera de esa condicion"
-  );
-  ok(
-    !/\b9\.9\b|\bmensualPromo\b|\banualDetalle\b/.test(sinComentarios),
-    "ni un precio escrito a mano ni el selector de planes"
-  );
+  ok(/comprasDisponibles\(\) && plan === "pro"/.test(sinComentarios), "el botón de compra solo aparece si Pro puede cobrarse");
 
   // Y LO QUE DE VERDAD IMPORTA: que nadie pueda "comprar" y llevarse Premium gratis. Es lo
   // que hacia el boton, y es el motivo del rechazo.
@@ -223,9 +187,9 @@ console.log("\n--- LA PANTALLA NO PROMETE UN COBRO QUE NO EXISTE ---");
   ok(/activarPruebaPremium/.test(pant), "la prueba de 24 horas se queda");
   ok(/premium\.llegaPronto/.test(sinComentarios), "y se dice que el pago llega pronto");
 
-  // "Sin anuncios" ya no se anuncia: no hay anuncios que quitar, asi que era una
-  // promesa vacia. Esta en la lista de cosas que bloquean Play Store.
-  ok(!pant.includes("premium.perkNoAds"), "y no se promete quitar anuncios que no existen");
+  // Plus/Pro anuncian el beneficio futuro, pero la pantalla debe aclarar que Fino no muestra
+  // anuncios en esta versión mientras AdMob siga apagado.
+  ok(pant.includes("premium.plusNoAds") && /!sinAnuncios/.test(sinComentarios) && pant.includes("premium.noAdsCurrentNote"), "el beneficio no oculta que hoy Fino no muestra anuncios");
 }
 
 console.log("\n--- CUÁNDO TERMINA, NO CUÁNTO QUEDA (13/08/2026) ---");

@@ -51,15 +51,16 @@ y puerto, para leer los cambios que el servidor anterior en CI no vigilaba.
 No se detuvo el servidor desconocido 8082, borró caché/datos ni reinstaló Fino.
 Marcador `13oct-moneda-window`. Sin APK/AAB/OTA, Firebase o Play publicados.
 
-Qué sigue/falta: recargar esta segunda versión y repetir el gesto humano
-específico; probar visualmente búsqueda y letras grandes.
+Resultado de la primera revisión: pese a capturas donde las filas se mantenían,
+el propietario confirmó que su gesto rápido todavía las hacía desaparecer.
 
 ## Segunda revisión tras el reporte de persistencia
 
 Tras probar la primera versión, el dueño informó que el fallo persistía. No se
 presenta el cambio inicial como exitoso. Se amplió la ventana a 21 pantallas y
 se ajustó la regresión para exigir ese valor. La prueba enfocada de moneda y la
-de selectores originales ya aprobaron; compilación de TypeScript y ESLint en
-aprobaron. Falta recargar esta revisión y repetir el gesto que lo reproduce.
-La batería completa 209/8 aprobó antes del cambio de ventana y no se ha repetido.
-Los demás hallazgos de la auditoría permanecen pendientes.
+de selectores originales ya aprobaron; TypeScript y ESLint también.
+La batería oficial se repitió después del cambio: **211 pruebas y 8 auditores**
+aprobaron. El propietario recargó el emulador y confirmó que las filas ya no
+desaparecen con su gesto rápido. Siguen sin medirse memoria física ni probarse
+letras grandes/búsqueda; el resto del recorrido de auditoría continúa pendiente.

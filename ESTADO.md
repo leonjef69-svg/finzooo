@@ -1,5 +1,25 @@
 # Estado actual de Fino
 
+## Planes Plus/Pro — 14/10/2026 — pantalla compacta y precio anual propuesto
+
+La pantalla Premium adopta la distribución aprobada: selector Plus/Pro,
+beneficios en una tarjeta compacta, registro automático con explicación y
+alcance de Perú/Bolivia, precio de referencia y selector mensual/anual. Pro
+figura a S/ 9.99 mensual o S/ 84 anual; el ahorro anual se calcula desde doce
+pagos mensuales: S/ 35.88. Plus queda en S/ 3.60 mensual. La pantalla avisa que
+son precios propuestos y que no hay cobros disponibles; no se simula una compra.
+Se conserva la prueba gratuita real, la apariencia actual y el acceso atrás.
+
+TypeScript, ESLint y 222 pruebas/8 auditores pasan con tarjetas de crédito
+excluidas por decisión vigente. La pantalla no escribe nuevos datos ni cambia
+Firebase, Billing, anuncios, permisos o funciones nativas. No se generó APK/AAB.
+La comprobación visual en Android queda pendiente: la ventana del emulador no
+respondió a captura y mostró pantalla negra; no se reinició ni se tocaron cuentas.
+**Qué sigue/falta:** revisar esta pantalla en el emulador cuando vuelva a
+responder; conectar compras de Play, productos Plus/Pro y precios reales antes
+de cobrar o publicar precios como disponibles. La versión aún no cobra y no
+muestra anuncios.
+
 ## Exportación — 14/10/2026 — tarjetas únicas y montos completos
 
 Marca 14oct-pdf-montos-completos. Ajuste posterior del propietario: una tarjeta
@@ -231,6 +251,8 @@ se declara resuelto. Sin APK/AAB/OTA/Play/Firebase/nativo/Telegram.
 
 ## Moneda — 13/10/2026 — corrección de filas durante deslizamiento
 
+## Moneda — 13/10/2026 — corrección de filas durante deslizamiento
+
 El propietario precisó que al deslizar rápido desaparecen SOLO las filas de
 monedas; título/buscador siguen y otro gesto las recupera. Se desactivó el
 recorte nativo en esa lista y se aumentó su reserva acotada: 20 filas iniciales,
@@ -240,8 +262,10 @@ el selector está abierto. No se supone una altura fija que corte dos líneas o
 letras grandes. Catálogo,
 búsqueda, bandera, moneda fija, navegación y dinero no cambian.
 
-La regresión `verificar-moneda-deslizamiento-real.mjs` ejecuta el JSX original
-con React/Android adaptados y el catálogo/buscador reales. Falla antes del
+El propietario confirmó en Android que el segundo cambio ya evita que las
+filas desaparezcan al deslizar rápido. La regresión
+`verificar-moneda-deslizamiento-real.mjs` ejecuta el JSX original con
+React/Android adaptados y el catálogo/buscador reales. Falla antes del
 cambio y con `FINO_CURRENCY_SCROLL_BASELINE=8803281` por el recorte anterior;
 aprueba en actual y conserva las 155 opciones, búsqueda y bloqueo/selección.
 Es comprobación de configuración, no reproducción del dibujado Android.
@@ -250,14 +274,15 @@ tarjetas (suite UI ajena no versionada incluida en esa cifra, no en el commit).
 El servidor recompiló Android; las capturas tras gestos de 50 ms en ambos
 sentidos conservaron filas, pero el dueño informó que su gesto aún fallaba.
 El segundo cambio amplía la ventana de 11 a 21 pantallas. Su prueba enfocada,
-TypeScript y ESLint aprobaron; falta recargarlo en Android. Detalles en
+TypeScript y ESLint aprobaron; la batería vigente pasó 211 pruebas y 8
+auditores. Se recargó y el propietario confirmó el gesto. No equivale a una
+medición de memoria ni certifica todos los teléfonos. Detalles en
 `docs/PRUEBAS_MONEDA_DESLIZAMIENTO.md`.
 
-**Qué sigue/falta:** recargar el segundo cambio y confirmar el gesto humano;
-revisar memoria al dejar abierta la lista y probar letras grandes/búsqueda.
-Después retomar el punto 5 de auditoría de entrada.
+**Qué sigue/falta:** revisar memoria al dejar abierta la lista y probar letras
+grandes/búsqueda. Después continuar el recorrido de auditoría hasta Inicio.
 Sin saldos/movimientos reales cambiados, APK/AAB/OTA/Play ni servicios remotos.
-Marcador preparado `13oct-moneda-lista`; Git no actualiza una APK instalada.
+Marcador servido por Metro `13oct-moneda-window`; Git no actualiza una APK instalada.
 
 ## Familia/Cajas — 13/10/2026 — botones y archivo local reversible
 

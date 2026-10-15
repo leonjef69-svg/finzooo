@@ -5,7 +5,7 @@
 El registro automático está limitado al acceso Premium existente en el código
 local, y la nube permite pausar futuras sincronizaciones sin borrar la copia
 remota. No existe Billing activo ni se pueden cobrar los precios propuestos:
-Plus S/ 3.60 al mes y Pro S/ 9.99 al mes o S/ 99 al año. Son propuesta del
+Plus S/ 3.60 al mes y Pro S/ 9.99 al mes o S/ 84 al año. Son propuesta del
 propietario, no precios disponibles en Play.
 
 No usar aún los textos de ficha más abajo como declaración final: contienen

@@ -1,11 +1,7 @@
 // LO QUE COSTARÍA PREMIUM
 //
-// Vive aquí y no escrito dentro de la pantalla por un motivo concreto: los mismos
-// números aparecen en cuatro sitios de esa pantalla (el selector de arriba, el
-// precio grande, el precio tachado y el cálculo por mes del plan anual). Escritos a
-// mano en cada uno, basta cambiar el precio una vez para que dos de los cuatro digan
-// otra cosa — y un precio que se contradice a sí mismo es de las cosas que hacen
-// desconfiar de una app de dinero.
+// Son precios propuestos que la pantalla comparte entre selector, importe y ahorro.
+// No son precios de tienda: Play Billing todavía no está activado y nada se cobra.
 //
 // EL PAGO TODAVÍA NO EXISTE, Y ESO ESTÁ DICHO EN LA PANTALLA
 //
@@ -19,12 +15,17 @@
 
 /** Los precios, en la moneda de la tienda (soles). */
 export const PRECIOS = {
-  /** Lo que costaría normalmente cada mes. Es el precio tachado. */
-  mensualNormal: 9.9,
+  /** Propuesta de precio mensual para Fino Pro. */
+  mensualNormal: 9.99,
   /** Lo que se paga en la promoción de los tres primeros meses. */
   mensualPromo: 5,
   /** Cuántos meses dura la promoción mensual. */
   mesesPromo: 3,
   /** El plan de un año, de una sola vez. */
-  anual: 50,
+  anual: 84,
+  /** Propuesta mensual de Fino Plus; todavía no se cobra en la app. */
+  plusMensual: 3.6,
 } as const;
+
+/** Ahorro anual frente a pagar Pro mes a mes durante doce meses. */
+export const AHORRO_PRO_ANUAL = Number((PRECIOS.mensualNormal * 12 - PRECIOS.anual).toFixed(2));

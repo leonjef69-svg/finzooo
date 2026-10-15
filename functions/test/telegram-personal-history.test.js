@@ -46,7 +46,20 @@ test("Telegram guarda, corrige y deshace sin tocar la lista antigua", async () =
   deletePersonal(tx, root, data, existing, 7);
   assert.equal(writes[1].data.transaction.amount, 20);
   assert.equal(writes[2].data.deleted, true);
+  assert.equal(writes[2].data.origin, require("../src/record-origin").recordOriginOf(existing.transaction));
   assert.ok(writes.every(item => item.kind === "set" && item.ref.key.startsWith("history/")));
+});
+
+test("Telegram no rebaja una fila futura aunque la raíz todavía sea conocida", async () => {
+  const original = historyOriginal();
+  for (const recordIdentityFormat of [3, "2", null, false, 0]) {
+    const row = { id: 7, deleted: false, transaction: { id: 7, amount: 10 }, recordIdentityFormat };
+    const { root, tx, writes } = fakeRoot({ 7: row });
+    const before = JSON.stringify(row);
+    await assert.rejects(original.personalRecord(tx, root, { historyFormat: 2, recordIdentityFormat: 1 }, 7), /HISTORY_FORMAT_UNSUPPORTED/);
+    await assert.rejects(original.allPersonalTransactions(root, { historyFormat: 2, recordIdentityFormat: 1 }, tx), /HISTORY_FORMAT_UNSUPPORTED/);
+    assert.deepEqual(writes, []); assert.equal(JSON.stringify(row), before);
+  }
 });
 
 test("Telegram mantiene compatibilidad con la lista antigua", async () => {
@@ -76,6 +89,7 @@ function historyOriginal() {
     : fs.readFileSync(require.resolve("../src/telegram-personal-history"), "utf8");
   const module = { exports: {} };
   vm.runInNewContext(source, { module, require: name => {
+    if (name === "./record-origin") return require("../src/record-origin");
     assert.equal(name, "firebase-admin/firestore");
     return { FieldValue: { serverTimestamp: () => "SERVER_TIMESTAMP" } };
   }, Buffer });
@@ -114,7 +128,7 @@ test("Telegram conserva también el primer borrado después de superar 5000 marc
 
 test("Telegram conserva la copia de una revisión desconocida sin leer historial ni guardar", async () => {
   const original = historyOriginal();
-  for (const historyFormat of [1, 2]) for (const recordIdentityFormat of [2, "1", null, false, 0]) {
+  for (const historyFormat of [1, 2]) for (const recordIdentityFormat of [3, "1", null, false, 0]) {
     const { root, tx, writes } = fakeRoot();
     const data = { historyFormat, recordIdentityFormat, transactions: [{ id: 1, amount: 10 }], deletedTransactionIds: [] };
     const before = JSON.stringify(data);

@@ -83,10 +83,8 @@ console.log("\n--- LA VENTA SOLO PROMETE FUNCIONES PREMIUM REALES ---");
   // desde su ruta sin Premium. La ficha mantiene otros beneficios comprobados.
   const premium = leerSinComentarios("screens/Premium.tsx");
   ok(/perkYape/.test(premium) && /hayRegistroAutomatico/.test(premium), "muestra el registro automático como beneficio solo donde está disponible");
-  for (const clave of ["perkFamily", "perkSharedBoxes"]) {
-    ok(premium.includes(`premium.${clave}`), `sí anuncia ${clave}`);
-  }
-  ok(/TELEGRAM_ENABLED \? \[\{ texto: t\("premium\.perkTelegram"\)/.test(premium), "Telegram solo se anuncia con servidor habilitado");
+  ok(premium.includes("premium.perkFamilyBoxes"), "muestra familias y cajas compartidas en la lista compacta");
+  ok(/TELEGRAM_ENABLED \? \[\{ Icon: MessageSquare, label: t\("premium\.perkTelegram"\) \}\] : \[\]/.test(premium), "Telegram solo se anuncia con servidor habilitado");
 }
 
 console.log(fallos === 0 ? "\nTodo bien: la funcion solo se ve donde tiene sentido" : `\n${fallos} fallas`);
