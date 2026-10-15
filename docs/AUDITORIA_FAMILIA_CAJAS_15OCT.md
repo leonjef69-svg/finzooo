@@ -48,9 +48,9 @@ las protecciones de sincronización, originales y marcas de borrado.
 
 La primera consulta remota del 15/10 encontró facturación desactivada. Tras
 vincularla el propietario, una segunda consulta confirmó `billingEnabled=true`
-en dotero-2d430: Blaze ACTIVO. Siguen cero Functions y reglas del 02/10.
-Faltan syncFormat/recordIdentityFormat/recordSyncAt en la lista remota de campos.
-Blaze no es un despliegue ni una reparación remota del respaldo.
+en dotero-2d430: Blaze ACTIVO. En ese momento aún había cero Functions y reglas
+del 02/10 sin los tres campos nuevos. Después se activaron los servicios y
+reglas probados, descritos al final. Activar Blaze por sí solo no los desplegó.
 
 **No publicar reglas solas:** las versiones antiguas escriben dinero directo.
 Primero preparar servicios compatibles, después entregar la app y coordinar el
@@ -68,8 +68,8 @@ los reintentos pueden repetir lecturas. maxInstances=3 NO es un límite de gasto
 
 ## Qué falta y límites de esta entrega
 
-- Activación coordinada real de servicios/reglas/app y alertas de consumo.
-  Blaze ya está confirmado, no está pendiente volver a activarlo.
+- Comprobar uso financiero autenticado y alertas de consumo. Blaze, servicios
+  y reglas ya están activos; no está pendiente volver a activarlos.
 - Dos cuentas/dispositivos Android y red intermitente en producción controlada.
   Firebase Emulator Suite no equivale a dos teléfonos ni a la APK distribuida.
 - **Personal y Firebase no son una sola transacción:** el cierre del proceso
@@ -109,3 +109,21 @@ en una ejecución intermedia se corrigió; el servidor completo se repitió y
 aprobó 245/245. Sin prueba física ni escrituras financieras de la cuenta real.
 El dueño confirmó que solo prueba en el emulador; no hay otros clientes activos
 que obliguen a mantener el escritor SDK antiguo durante la activación.
+
+## Activación remota completada
+
+Ya no está pendiente activar Blaze, los 16 servicios aprobados o estas reglas.
+Publicación real de reglas 15/10 08:00:28 UTC, hash local/remoto idéntico
+360bcda5d08c453db266f5f962f60b4d36ed3737645f72ce253e4153ad342b41.
+Paquete aislado generado por scripts/preparar-servidor-cuentas.mjs, sin secretos
+Telegram, cron ni copias de .env; los 16 handlers son literalmente los probados.
+App: 224 pruebas y 8 auditores tras añadir la comprobación de empaquetado.
+Autorización explícita para limpiar imágenes técnicas después de 7 días, aplicada.
+El hook de Auth fue bloqueado hasta la explicación y aprobación «ok hazlo» del
+dueño; creado después, sin ejecutar eliminación de cuenta alguna. La consulta
+sin sesión a mutateSharedMovement devuelve 401; no prueba un movimiento real.
+Todo el apartado de límites financieros/Android, datos legacy, volumen/coste,
+moderación y política final sigue vigente. No hay APK/AAB/OTA/Play entregados.
+Verificación visual posterior: Inicio, Familia y Cajas existentes abiertos en
+Android; «hj» mantiene S/20 y la otra Caja S/88. No se crearon movimientos.
+Esto acredita carga/lectura/navegación, no las operaciones con dinero ni 2 cuentas.

@@ -1,5 +1,49 @@
 # Estado actual de Fino
 
+## Familia/Cajas — 15/10/2026 — servicios y reglas ACTIVADOS
+
+Blaze confirmado activo. Tras confirmar el dueño que solo usa este emulador,
+se publicaron los 16 servicios de cuenta/Familia/Cajas en southamerica-east1,
+Node22, desde el código f2573a5, sin Telegram ni SMTP/cron de moderación.
+Reglas publicadas 2026-10-15T08:00:28.446830Z; SHA-256 normalizado remoto y local
+idéntico: 360bcda5d08c453db266f5f962f60b4d36ed3737645f72ce253e4153ad342b41.
+syncFormat/recordIdentityFormat/recordSyncAt ya están admitidos en la nube.
+Petición sin sesión a mutateSharedMovement devuelve HTTP401 UNAUTHENTICATED,
+sin invocar movimientos. No confundir esto con probar dinero real autenticado.
+
+El descubrimiento de Firebase pedía secretos de Telegram aunque se eligieran
+otras funciones. No se habilitó Secret Manager ni Telegram por acompañamiento:
+scripts/preparar-servidor-cuentas.mjs genera un paquete mecánico aislado, sin
+secretos ni handlers Telegram/cron. Prueba compara los 16 cuerpos originales
+literalmente y demuestra que la entrada antigua declara dos secretos, el
+paquete ninguno. Usar esa preparación y grupos explícitos de hasta 8; NO
+`firebase deploy --only functions` desde la entrada general.
+
+El dueño aprobó retención técnica de compilaciones a 7 días en gcf-artifacts,
+southamerica-east1; política aplicada. NO es borrado de respaldos o movimientos.
+cleanupDeletedCloudAccount quedó primero bloqueado por revisión automática;
+tras explicarlo y la aprobación humana «ok hazlo», se publicó SOLO ese hook
+con reintentos. Solo actúa DESPUÉS de eliminar Auth, no al cerrar sesión ni
+salir de Fino. No se eliminó ninguna cuenta ni se probó ese disparador con una
+cuenta real. No probar borrado del dueño para demostrar que funciona.
+
+Verificación: 224 pruebas/8 auditores de app sin tarjetas, TypeScript/ESLint,
+97 unitarias Functions y 245 SDK/reglas/Auth/HTTP locales aprobadas. Las 245
+corresponden a los cuerpos desplegados; el empaquetado adicional conserva esos
+cuerpos y añade una prueba. Código de app marca 15oct-auditoria-familia-cajas.
+Metro en 8081 se reinició solo tras comprobar PID/ruta, sin limpiar almacenamiento
+Android; URL nativa correcta exp+finzo y host 10.0.2.2. Android Bundled 152945ms,
+3957 módulos. Confirmado visualmente Inicio y listas existentes de Familia y
+Cajas; «hj» sigue S/20 y la otra Caja S/88. Se deja Cajas abierta. No se registra
+dinero ficticio ni se prueban borrados/cierres de cuentas reales.
+
+**Sigue/falta:** recorrido financiero Android con dos cuentas/dispositivos y
+reinicio entre aportes; diario durable de aporte/
+alta de Familia, casos antiguos «hj», coste/historiales grandes y tolerancias
+legacy de tres decimales. Moderación/SMTP, alertas de presupuesto, políticas
+finales y distribución siguen pendientes. No se tocan tarjetas ni se publica
+APK/AAB/OTA/Play. La activación remota NO cierra esos puntos por sí sola.
+
 ## Familia/Cajas — 15/10/2026 — auditoría y Blaze confirmado
 
 El propietario solicitó auditoría profunda sin borrar datos. Orden: saldo

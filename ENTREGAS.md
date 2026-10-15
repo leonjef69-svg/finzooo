@@ -1,5 +1,36 @@
 # Entregas de Fino
 
+## 15/10/2026 — Activación Firebase real de Familia/Cajas
+
+Código f2573a5, Node22, southamerica-east1: 16 servicios de cuenta/Familia/Cajas
+publicados en grupos explícitos, sin Telegram ni SMTP/cron. Reglas activadas
+2026-10-15T08:00:28.446830Z, hash local/remoto 360bcda5d08c453db266f5f962f60b4d36ed3737645f72ce253e4153ad342b41.
+Blaze activo, campos nuevos de sincronización permitidos y llamada sin sesión
+rechazada HTTP401. No se hicieron escrituras financieras de prueba ni borrados
+de cuentas del propietario. Las lecturas/guardados auténticos y 2 cuentas no
+se deducen de esa prueba sin sesión.
+
+Preparar SOLO con `node scripts/preparar-servidor-cuentas.mjs`: genera config
+aislada bajo .tmp conservando funciones originales y sin declaraciones de
+secretos Telegram. Desplegar los nombres aprobados en grupos de hasta 8 usando
+esa config y proyecto explícito dotero-2d430. Nunca publicar toda la entrada
+general de Functions por acompañamiento. El primer intento se detuvo ante
+Secret Manager; no se habilitó Telegram como solución. El aviso de artefactos
+del primer grupo no significó fallo de creación: los ocho ya estaban activos.
+
+Retención de imágenes técnicas de compilación: 7 días, autorizada por dueño y
+aplicada en gcf-artifacts. El dueño aprobó expresamente el hook de limpieza
+posterior a eliminar Auth y sus reintentos, tras bloquearlo la revisión inicial;
+publicado sin eliminar ninguna cuenta ahora. No es «cerrar sesión».
+
+224 pruebas/8 auditores de app sin tarjetas, 97 unitarias y 245 Firebase locales,
+TypeScript/ESLint verdes. La prueba adicional de empaquetado demuestra igualdad
+literal de los 16 handlers. Android vuelve a cargar (3957 módulos); Inicio,
+Familia y Cajas existentes visibles, «hj» S/20 conservada y Cajas abierta.
+Sin registros ficticios ni APK/AAB/OTA/Play. Qué sigue/falta: dinero Android/dos
+cuentas, cortes/reinicio entre mitades de aportes, «hj», volumen/coste, tres
+decimales legacy, moderación/políticas/alertas y distribución.
+
 ## 15/10/2026 — Auditoría Familia/Cajas; preparación verificada
 
 Marca `15oct-auditoria-familia-cajas`. Saldo compartido transaccional, borrado

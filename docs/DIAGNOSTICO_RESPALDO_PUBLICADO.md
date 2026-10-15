@@ -2,9 +2,11 @@
 
 **Actualización 15/10/2026:** después de que el propietario vinculó la cuenta,
 Cloud Billing confirma `billingEnabled=true` en dotero-2d430. Blaze ya está activo.
-Siguen cero Functions y las mismas reglas del 02/10. La evidencia de abajo es
-histórica; no volver a pedir activar Blaze. Servicios/reglas/app y controles de
-consumo siguen pendientes de activación coordinada. Ver la auditoría del 15/10.
+Después se publicaron 16 servicios de cuenta/Familia/Cajas y las reglas nuevas
+(15/10 08:00:28 UTC, hash 360bcda5d08c453db266f5f962f60b4d36ed3737645f72ce253e4153ad342b41).
+Los tres campos de sincronización ya están permitidos. La evidencia de abajo es
+histórica; no volver a pedir activar Blaze o afirmar cero servicios. Telegram
+sigue fuera; las pruebas autenticadas reales y alertas de consumo quedan pendientes.
 
 ## Evidencia de solo lectura
 

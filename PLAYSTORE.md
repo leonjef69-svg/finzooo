@@ -1,8 +1,8 @@
 # Lo que hay que rellenar en Play Console
 
-## Auditoría Familia/Cajas — 15/10/2026, preparación local
+## Auditoría Familia/Cajas — 15/10/2026, servidor activado para pruebas privadas
 
-Nuevo control financiero preparado: cada orden compartida confirmada conserva
+Nuevo control financiero publicado en Firebase: cada orden compartida confirmada conserva
 una huella derivada y fecha en `moneyOperations` bajo el espacio, sin texto,
 importe ni UID en claro; versión de raíz para ordenar gastos y devoluciones.
 Son metadatos vinculados al espacio, no datos anónimos. No lectura cliente;
@@ -10,7 +10,7 @@ se retiran con el borrado explícito del espacio preparado, no por cerrarlo.
 Revisar finalidad/conservación en la política y Seguridad de los datos antes
 de distribuir; no se publican declaraciones nuevas ni se cambian documentos
 ya aceptados. No hay permiso Android ni proveedor nuevo. Ver
-docs/AUDITORIA_FAMILIA_CAJAS_15OCT.md para límites y activación pendiente.
+docs/AUDITORIA_FAMILIA_CAJAS_15OCT.md para límites y pruebas pendientes.
 
 ## Revisión de coherencia — 14/10/2026 (no subir a Play todavía)
 
