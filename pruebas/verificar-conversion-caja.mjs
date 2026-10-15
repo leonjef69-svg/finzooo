@@ -71,6 +71,7 @@ function harness() {
     nuevoIntentoCaja: () => "prueba-intento-0001",
     crearInvitacionCaja: async () => { events.push("invite"); throw new Error("network"); },
     irUnaVez: params => events.push(["open", params]), spaceErrorKey: () => "network" };
+  scope.abrirCompartida = (item, code) => events.push(["open", { item, code }]);
   vm.runInNewContext(ts.transpile(`${action}\nglobalThis.run = compartirCaja;`, { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }), scope);
   return { scope, events, dataRef };
 }
@@ -79,7 +80,7 @@ function harness() {
   assert.ok(h.events.indexOf("accepted") < h.events.indexOf("pending"), "aceptar antes de inmovilizar la Caja");
   assert.ok(h.events.indexOf("retired") < h.events.indexOf("invite"), "la invitación no decide si se retira una copia ya confirmada");
   assert.equal(h.dataRef.current.cajas.length, 0); assert.ok(h.events.includes("boxes.invitationRetry"));
-  assert.equal(h.events.find(item => Array.isArray(item) && item[0] === "open")[1].params.boxId, receipt.targetId);
+  assert.equal(h.events.find(item => Array.isArray(item) && item[0] === "open")[1].item.id, receipt.targetId);
 }
 {
   const h = harness(); h.scope.compartirCajaExistente = async () => {

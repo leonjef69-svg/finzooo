@@ -1,5 +1,35 @@
 # Entregas de Fino
 
+## 15/10/2026 — Lista única de Cajas e invitación estable (desarrollo)
+
+Marca `15oct-cajas-lista-unica`: sin tarjeta Cajas compartidas ni una segunda
+lista/ruta al invitar, unirse o regresar. Cajas existentes permanecen accesibles,
+con saldo real y su moneda; Miembros/Invitar arriba como Familia, detalle de
+integrantes en la hoja compartida. Cerrar código conserva caja/movimientos.
+No se muestra un fallo pendiente durante el intento activo; un resultado
+verdaderamente incierto mantiene recuperación y datos protegidos. Indicador en
+la cabecera sin desplazar botones, sin texto No repitas la acción.
+
+Invitar no invalida ni reinicia movimientos. La confirmación financiera que
+llega durante la creación del código sigue siendo válida; una operación de
+dinero conserva sus bloqueos/recarga. Cerrar no aparece durante carga/error.
+Selección exacta, consultas tardías/cuenta, miembros, cierre/salida sin tarjeta
+reaparecida y regresiones originales verificadas contra 4bc800e.
+
+Android: lista única con las cajas reales; prueba en S/88 ya compartida, dueño1,
+historial externo88/aporte100/devuelto100 conservado; código real, Compartir,
+cancelación sin destinatario, cierre de hoja sin cambio de caja y regreso a
+lista única; Miembros abre su detalle. No se hicieron operaciones monetarias,
+cierres/borrados ni conversiones de otras cajas del dueño. Sin APK/AAB/OTA/Play,
+servidor/reglas, campos/colecciones nuevos ni tarjetas. Sigue/falta segundo
+Android/cuenta real y los pendientes históricos de la auditoría.
+
+Verificación final estable: 229 pruebas y 8 auditores aprobados sin tarjetas,
+TypeScript/ESLint completos sin errores/avisos. Registros locales
+.tmp/cajas-lista-unica-final-15oct.log y tsc/eslint asociados. Las pasadas
+intermedias detectaron contratos antiguos de rutas y un inventario que aún
+enumeraba el archivo retirado antes de prepararlo en Git; no fueron finales.
+
 ## 15/10/2026 — Cajas utilizables conservando borrados antiguos (desarrollo)
 
 Marca `15oct-caja-historial-conservado`: agrega movimientos, permite devolución

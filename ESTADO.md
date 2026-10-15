@@ -1,5 +1,59 @@
 # Estado actual de Fino
 
+## Cajas — 15/10/2026 — una lista y miembros/invitación como Familia
+
+Marca `15oct-cajas-lista-unica`. Petición del dueño: quitar la tarjeta extra
+Cajas compartidas y el segundo recorrido de listas; Miembros e Invitar arriba,
+al lado de Ver todas, como Familia. Privadas y compartidas siguen siendo libros
+distintos, pero se eligen desde Cajas. No se copian/migran por mostrarlas juntas.
+Compartidas se consultan con la cuenta vigente, sin exigir Pro al invitado;
+saldo de cada tarjeta viene de sus movimientos reales/moneda, o … mientras carga.
+Las escuchas terminan al salir de la lista y no aceptan respuestas de otra sesión.
+Seleccionar una existente no reordena tarjetas. Cierre/salida confirmados retiran
+su tarjeta antes de la nueva consulta, sin hacerla reaparecer entre pantallas.
+
+Convertir/invitar/unirse abre el detalle dentro de la misma ruta /boxes, con
+objeto e invitación reales, no apila /shared-boxes. Se retira la antigua ruta
+sin consumidores; no era un enlace público del código compartido. Atrás y Ver
+todas vuelven a la lista única; cerrar el código solo cierra la hoja. Miembros
+usa la misma hoja de Familia, con permisos/denuncias conservados. La privada
+tiene únicamente al dueño de la sesión; la compartida usa su lista real.
+
+El aviso Compartir quedó pendiente se mostraba al guardar sharingPending ANTES
+de terminar, no demostraba un fallo. Se oculta durante el intento activo;
+si realmente queda incierto, conserva reintento/cancelación y protecciones.
+Sin No repitas la acción en estos recorridos; el indicador ocupa el lugar del
+botón de actualizar para no mover controles. Generar un código no invalida ni
+reinicia los movimientos. Separación del bloqueo de interacción y el monetario:
+una confirmación que llega durante Invitar no se pierde ni queda esperando
+otra instantánea; operaciones de dinero mantienen invalidación/recarga habitual.
+Cargar/error no muestra un falso historial vacío ni Cerrar debajo del indicador.
+
+Nueva prueba ejecuta acciones originales y expresiones JSX: selección exacta,
+lista/saldos, doble toque, rechazo, cierre de hoja, navegación, cierre confirmado,
+consultas tardías y código sin recarga monetaria. Regresión contra 4bc800e falla
+por aviso pendiente DURANTE el trabajo. Otra regresión de consultas falla porque
+Invitar descartaba una confirmación recibida con el bloqueo activo. Contratos
+antiguos se actualizan al recorrido único; no se retiran suites financieras.
+Verificación final estable: 229 pruebas y 8 auditores sin tarjetas;
+TypeScript/ESLint completos sin errores/avisos. Evidencia:
+.tmp/cajas-lista-unica-final-15oct.log y sus registros tsc/eslint.
+No presentar pasadas intermedias como finales. Entre retirar la privada y
+recibir el código se muestra carga, no una lista ajena fugaz.
+
+Android real del emulador: todas las cajas existentes en la lista única,
+sin tarjeta adicional. Caja S/88 ya compartida: mismo externo88, aporte100/
+devuelto100 y propietario1; Miembros real abre la hoja, Invitar genera código,
+Compartir abre selector con texto/código coincidentes. Se canceló sin elegir
+destinatario; cerrar código conserva caja y movimientos, Atrás vuelve a lista.
+No se cerró/borró ninguna caja, no se creó dinero, no se convirtió otra privada,
+ni se alteró Personal para probar. Capturas/código quedan fuera de Git.
+
+**Sigue/falta:** ingreso desde un segundo Android/cuenta real y los pendientes
+de auditoría anteriores (diario durable/volumen/antiguos pares dudosos). La
+unificación no repara ni habilita convertir un historial incompatible como «hj».
+Sin campos/colecciones/retención nuevos, reglas/Functions, APK/AAB/OTA/Play ni tarjetas.
+
 ## Cajas — 15/10/2026 — operar sin reconstruir el historial borrado
 
 Marca `15oct-caja-historial-conservado`. Se retira la oferta de Archivar caja

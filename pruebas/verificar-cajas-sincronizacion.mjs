@@ -134,7 +134,8 @@ session = 3; sourceGate.resolve(); await assert.rejects(conversion, /account-tas
 assert.equal(groupWrites, 0);
 
 // Se ejecutan el callback de carga y el aplicador originales de Cajas.
-const focusNode = select("screens/Cajas.tsx", (n, tree) => ts.isCallExpression(n) && n.expression.getText(tree) === "useFocusEffect");
+const focusNode = select("screens/Cajas.tsx", (n, tree) => ts.isCallExpression(n) && n.expression.getText(tree) === "useFocusEffect"
+  && n.arguments[0]?.getText(tree).includes("bajarCajas"));
 const focus = focusNode.node.arguments[0].arguments[0].getText(focusNode.tree);
 const setterNode = select("screens/Cajas.tsx", (n, tree) => ts.isVariableDeclaration(n) && n.name.getText(tree) === "setDatos");
 const setter = setterNode.node.initializer.arguments[0].getText(setterNode.tree);

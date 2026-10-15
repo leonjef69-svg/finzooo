@@ -44,7 +44,7 @@ function closeHarness(kind, outcome) {
   const scope = { ...account, ...transfers, auth, uid: "a", accountUid: "a", accountSession: 1, getAccountStorageSession: storage.getAccountStorageSession,
     withImmediateRemoval, setFamiliasOcultas() {}, setCajasOcultas() {},
     useCallback: callback => callback,
-    mounted: { current: true }, actionLock: { current: false }, lock: { current: false }, reloadId: { current: 0 },
+    mounted: { current: true }, actionLock: { current: false }, lock: { current: false }, moneyLock: { current: false }, reloadId: { current: 0 },
     familiaElegida: { current: "space-a" }, familiaEnMemoria: new Map(),
     movementEpoch: { current: 0 }, confirmedSource: { current: null }, selectedBoxId: { current: "space-a" },
     cierresPendientes: { current: new Set() }, cierresConfirmados: { current: new Set() },

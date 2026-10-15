@@ -72,7 +72,7 @@ assert.match(screen, /Solo después de terminar toda la copia se retira la versi
 assert.match(screen, /crearInvitacionCaja\(uid, compartida\.id\)/, "compartir genera el código para la persona invitada");
 assert.match(screen, /unirseACaja\(uid, userName \|\| t\("family\.member"\), codigo\)/, "Caja valida el código desde su propia pantalla antes de abrir el espacio compartido");
 assert.doesNotMatch(screen, /shared-boxes\?join=1/, "Unirme ya no manda a un formulario diferente en otra pantalla");
-assert.match(screen, /params: \{ boxId: compartida\.id, \.\.\.\(codigo \? \{ invitation: codigo \}/, "se abre la Caja con código si se pudo crear, sin deshacer la conversión si falla Invitar");
+assert.match(screen, /abrirCompartida\(compartida, codigo\)/, "se abre la misma Caja con código sin otra ruta/lista y sin deshacer la conversión si falla Invitar");
 assert.match(sharedScreen, /SpaceInvitationSheet code=\{invitacion\}/, "la invitación de una caja compartida usa la misma hoja");
 assert.match(invitationSheet, /import\("expo-clipboard"\)[\s\S]*?setStringAsync\(code\)/, "la hoja compartida solo carga el portapapeles al pedir copiar");
 assert.match(screen, /boxes\.inviteAccessibility/, "el propietario conserva un acceso accesible para invitar a una caja");

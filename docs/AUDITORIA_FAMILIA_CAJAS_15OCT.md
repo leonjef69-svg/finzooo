@@ -7,6 +7,53 @@ No se crean, corrigen ni borran movimientos de la cuenta del propietario.
 Excepción autorizada posterior: comprobar la conversión/invitación de su Caja
 S/88 conservando importes, historial y Personal; no tocar «hj» ni devolver dinero.
 
+## Sexta pasada — una lista y código sin recarga financiera
+
+Marca 15oct-cajas-lista-unica. El usuario señaló falsa advertencia de conversión
+pendiente durante el intento, código en otra pantalla, cambio al salir y una
+segunda lista con otro Unirme. Se elimina el acceso extra y la ruta interna
+huérfana /shared-boxes; las cajas compartidas se muestran JUNTO a privadas en
+la lista de Cajas. No se fusionan libros ni se convierten al listarlas. Lecturas
+por sesión y cancelables; sus saldos/monedas vienen del historial, nunca ceros
+supuestos mientras carga. La selección existente mantiene el orden; una salida/
+cierre confirmado retira la tarjeta antes de refrescar, sin reaparecerla.
+
+Detalle compartido incrustado en /boxes, con caja/código originales. Atrás/Ver
+todas regresan a la lista única; cerrar código no limpia selección ni sus datos.
+Miembros e Invitar en la fila superior, igual que Familia. Hoja reutilizada para
+miembros, denuncia de espacio/persona y retirar acceso con roles intactos. La
+privada muestra al único dueño; la compartida solo sus integrantes reales.
+
+La señal persistida sharingPending se conserva para recuperación, pero no se
+presenta como fallo mientras compartiendo es verdadero. Se conserva el aviso
+solo si el resultado es realmente incierto, sin desactivar comprobaciones del
+servidor. Indicador en el botón de actualizar, sin mover controles ni texto
+No repitas la acción. Carga/error no muestra noResults ni cierre engañosos.
+
+Crear invitación usa la exclusión original de doble toque pero NO reinicia
+la comprobación financiera. Un bloqueo monetario separado evita descartar una confirmación
+que llega mientras se genera un código; dinero real mantiene épocas, bloqueo,
+comprobación de espacio abierto y recarga. No se cambia protocolo de dinero.
+Regresión 4bc800e: aviso pendiente durante proceso; segunda regresión original:
+confirmación descartada por lock de Invitar. Ambas rojas por comportamiento,
+no por exportaciones inexistentes. Suites anteriores conservadas; contratos
+de rutas/entrada adaptados a la lista única. Última pasada estable:
+229 pruebas y 8 auditores sin tarjetas; TypeScript/ESLint sin errores/avisos.
+Registro .tmp/cajas-lista-unica-final-15oct.log; no confundir con pasadas
+intermedias. Esperar código después de retirar privada muestra carga, no otra lista.
+
+Android del emulador: lista única, S/88 ya compartida conserva externo88 y
+aporte100/devuelto100, propietario1; Miembros abre detalle real; Invitar genera
+código, Compartir abre selector con el mismo código/instrucción y se cancela
+sin destinatario. Cerrar hoja conserva caja, historial y saldo; Atrás regresa
+a lista única, sin otra pantalla compartida. No se probó moviendo dinero,
+cerrando/borrando datos del dueño ni convirtiendo nuevas privadas.
+
+**Sigue/falta:** prueba con dos Android/cuentas reales y los pendientes previos
+de diario durable/volumen/pares antiguos. Esto no resuelve la intención de «hj»
+ni autoriza reconstruir mitades borradas. Sin campos/colecciones/retención nuevos,
+servidor/reglas, APK/AAB/OTA/Play ni tarjetas.
+
 ## Quinta pasada — operaciones explícitas sin resucitar los tres borrados
 
 Marca 15oct-caja-historial-conservado. El dueño pidió quitar Archivar caja y

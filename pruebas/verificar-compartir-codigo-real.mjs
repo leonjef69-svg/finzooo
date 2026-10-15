@@ -57,20 +57,20 @@ for (const [code, visible] of [["", true], ["ABCD2345", false]]) {
   nodes(tree).find(node => node.type === "TouchableOpacity" && node.props.accessibilityLabel === t("family.shareInvitation")).props.onPress();
   await tick(); assert.equal(shares.length, count, "No comparte códigos vacíos ni una invitación cerrada");
 }
-// La Caja convertida debe seguir siendo accesible desde Cajas, sin comprar de
-// nuevo ni pasar por los tres conflictos de otra caja privada.
+// La Caja convertida sigue accesible en la lista ÚNICA, sin comprar de nuevo.
 const boxesFile = "screens/Cajas.tsx";
 const boxesSource = baseline ? execFileSync("git", ["show", `${baseline}:${boxesFile}`], { encoding: "utf8" }) : fs.readFileSync(boxesFile, "utf8");
 const tree = ts.createSourceFile(boxesFile, boxesSource, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 let entry;
 function find(node) {
   if (ts.isJsxOpeningElement(node) && node.tagName.getText(tree) === "TouchableOpacity"
-    && node.attributes.properties.some(prop => prop.name?.text === "accessibilityLabel" && prop.initializer?.getText(tree) === '{t("boxes.shared")}')) entry = node;
+    && node.attributes.properties.some(prop => prop.name?.text === "onPress" && prop.initializer?.getText(tree) === '{() => abrirCompartida(item)}')) entry = node;
   ts.forEachChild(node, find);
 }
-find(tree); assert.ok(entry, "Cajas debe ofrecer una entrada visible a las compartidas, no hacerlas desaparecer tras convertir");
+find(tree); assert.ok(entry, "Cajas debe mostrar las compartidas en la lista principal, sin esconderlas al quitar el acceso extra");
 const press = entry.attributes.properties.find(prop => prop.name?.text === "onPress").initializer.expression;
 const action = ts.transpile(`(${press.getText(tree)})`, { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None });
-const routes = []; new Function("irUnaVez", `return ${action}`)(route => routes.push(route))();
-assert.deepEqual(routes, ["/shared-boxes"], "La entrada no escribe, no devuelve dinero y no exige Pro al invitado");
+const opened = [], realBox = { id: "shared-real", nombre: "Caja" };
+new Function("abrirCompartida", "item", `return ${action}`)(item => opened.push(item), realBox)();
+assert.deepEqual(opened, [realBox], "La entrada abre exactamente la caja elegida, no otra lista ni un formulario de código");
 console.log("Invitación original: Compartir/Copiar reales, cancelación sin éxito supuesto, fallos recuperables y acceso visible a cajas compartidas sin escribir dinero.");

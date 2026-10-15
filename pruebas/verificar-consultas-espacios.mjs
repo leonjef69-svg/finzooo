@@ -168,7 +168,7 @@ function boxHarness() {
     caja: { id: "box-a", nombre: "Caja" }, cajaId: "box-a", mounted: { current: true },
     selectedBoxId: { current: "box-a" }, movementEpoch: { current: 0 }, confirmedSource: { current: null },
     borradosConfirmados: { current: new Map() }, setCargandoCaja() {}, setErrorCargaCaja() {},
-    lock: { current: false }, errorRef: { current: error => { state.error = error; } },
+    lock: { current: false }, moneyLock: { current: false }, errorRef: { current: error => { state.error = error; } },
     listarMiembrosCaja: () => members.promise, confirmarCajaAbierta: () => confirmation.promise,
     escucharMovimientosCaja: (_id, callback) => { receive = callback; return () => stopCount++; },
     setMovimientos: items => { state.movimientos = items; }, setMiembros: items => { state.miembros = items; },
@@ -203,6 +203,16 @@ function boxHarness() {
   assert.equal(h.state.repaired, null);
 }
 // Cerrar/purgar no convierte aportes consumidos en devoluciones inventadas.
+{
+  const h = boxHarness(); h.scope.lock.current = true;
+  h.receive([{ id: "real" }], true); h.confirmation.resolve(true); await flush();
+  assert.equal(h.state.confirmado, true, "crear un código no descarta una confirmación que llega durante la invitación");
+}
+{
+  const h = boxHarness(); h.scope.lock.current = true; h.scope.moneyLock.current = true;
+  h.receive([{ id: "real" }], true); h.confirmation.resolve(true); await flush();
+  assert.equal(h.state.confirmado, false, "una operación monetaria sí mantiene la barrera");
+}
 {
   const h = boxHarness(); h.receive([], true); h.confirmation.resolve(false); await flush();
   assert.equal(h.state.confirmado, false);

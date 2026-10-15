@@ -39,7 +39,7 @@ function harness() {
   assert.ok(h.events.includes("boxes.sharingCancelled"));
 }
 {
-  const h = harness(); h.scope.cancelarConversionCaja = async () => receipt; await h.scope.run();
+  const h = harness(); h.scope.abrirCompartida = item => h.events.push(["open", item]); h.scope.cancelarConversionCaja = async () => receipt; await h.scope.run();
   assert.equal(h.ref.current.cajas.length, 0); assert.equal(h.events.find(item => item[0] === "saved")[1][0].internalTransferSpaceId, receipt.targetId);
   assert.equal(h.events.find(item => item[0] === "saved")[1][0].amount, 100); assert.ok(h.events.includes("boxes.alreadyShared"));
 }
