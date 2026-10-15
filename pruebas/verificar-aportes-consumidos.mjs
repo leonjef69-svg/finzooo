@@ -149,6 +149,7 @@ const closeScope = { datos: { cajas: [{ id: "caja-local" }], movimientos: [contr
   guardarCambioCaja: async (next, upserts = []) => { closeScope.datos = next; closeScope.personalUpdates = upserts; return true; },
   cajasSeleccionadas: ["caja-local"], canCloseLinkedSpace: local.canCloseLinkedSpace, settlePersonalTransfers: local.settlePersonalTransfers,
   transactions: personal, repairLinkedTransferTransactions: updates => { closeScope.personalUpdates = updates; },
+  readPrivateBoxMoneyLocal: () => ({ transactions: personal, deletedIds: [] }),
   setDatos: update => { closeScope.datos = update(closeScope.datos); }, setCajasSeleccionadas() {}, setSeleccionandoCajas() {},
   showToast() { throw new Error("SHOULD_CLOSE"); }, t: key => key };
 await execute(declarations("screens/Cajas.tsx", ["borrarCajas"]), closeScope, "borrarCajas()");

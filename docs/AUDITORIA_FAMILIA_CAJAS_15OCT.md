@@ -7,6 +7,48 @@ No se crean, corrigen ni borran movimientos de la cuenta del propietario.
 Excepción autorizada posterior: comprobar la conversión/invitación de su Caja
 S/88 conservando importes, historial y Personal; no tocar «hj» ni devolver dinero.
 
+## Quinta pasada — operaciones explícitas sin resucitar los tres borrados
+
+Marca 15oct-caja-historial-conservado. El dueño pidió quitar Archivar caja y
+avisos técnicos, después denunció que no podía agregar, devolver, borrar ni
+cerrar. No se deduce que autorizara restaurar las tres mitades de Personal.
+
+La excepción opera solo con contraparte AUSENTE + marca de borrado + identidad
+exacta y sin otros conflictos de la caja: permite ingreso externo/Personal,
+gasto nuevo, devolución NUEVA calculada del libro actual, borrado explícito y
+cierre con saldo cero/aportes liquidados. No repara libros al abrir, no retira
+registros antiguos sin elección y no restaura ni borra saldos de Personal de
+oficio. Cerrar conserva las marcas ausentes; liquida solo contrapartes existentes.
+Las ausencias sin marca se comprueban todas, aunque el plan las omita al hallar
+otro conflicto; contraparte reaparecida, duplicados, formatos/valores inválidos,
+conversión incierta y revisiones monetarias mantienen sus protecciones.
+
+Sin oferta Archivar al cerrar/borrar; compatibilidad de lectura/restauración
+conservada. Sin diálogo/toast técnico automático en acciones de «hj». Revisar
+transferencias queda como entrada voluntaria de la caja actual. Invitar queda
+desactivado en ella: no se usa la excepción para una conversión que podría
+reconstruir los pares. Familia y cajas sanas siguen separadas de esos conflictos.
+
+Validación final: 228 pruebas + 8 auditores sin tarjetas, TypeScript/ESLint
+sin errores/avisos. Acciones originales, contexto original y SQLite real:
+aportes externos/Personal conservan cuatro filas antiguas; devolución nueva
+S/10 una sola vez; gasto sin mover Personal; cierre en cero con tres marcas
+antiguas intactas; borrado elegido sin abono inventado; rollback deja ambos
+libros originales. Regresión de acciones contra 361466b falla por bloqueo real
+en la misma caja, no por función ausente. Nueva prueba de avisos reproduce
+diálogo automático anterior y confirma revisión voluntaria/Familia aislada.
+
+Android mostró «hj» S/20 con botones activos. Durante la captura siguiente
+pasó a S/10 y el dueño confirmó que él pulsó Devolver S/10. Se detuvieron los
+toques para no interferir; no se prueba cerrando/borrando/creando datos suyos.
+No afirmar que el agente restauró dinero ni que permaneció S/20 después de su
+acción. Primer Fast Refresh de exportación nueva falló transitoriamente; la
+reentrada posterior mostró la pantalla nueva. No limpiar datos ni reinstalar.
+
+**Sigue/falta:** invitación/conversión de «hj», intención histórica de sus tres
+casos, diario durable/dos Android/volumen y los pendientes anteriores. Sin
+nuevas colecciones/campos/retención, Functions/reglas ni APK/AAB/OTA/Play.
+
 ## Cuarta pasada — código, compartir y acceso a las cajas compartidas
 
 Marca 15oct-codigo-compartir. Invitar no abre la revisión financiera ante pares

@@ -1,5 +1,24 @@
 # Entregas de Fino
 
+## 15/10/2026 — Cajas utilizables conservando borrados antiguos (desarrollo)
+
+Marca `15oct-caja-historial-conservado`: agrega movimientos, permite devolución
+nueva y borrado elegido sin reconstruir las contrapartes Personal antiguas ya
+borradas. Cierra solo con saldo cero y aportes liquidados; conserva las marcas
+ausentes y liquida lo existente sin otra devolución. No se archiva ni repara
+dinero automáticamente. Retirada la oferta Archivar caja y los avisos técnicos
+automáticos; revisión solo voluntaria. Invitar «hj» sigue protegido, no se
+presenta como resuelto ni se altera la conversión para sortearlo.
+
+Android muestra los botones activos. El propietario confirmó su devolución
+manual S/10 durante la comprobación; se dejaron de hacer toques para no cruzarse
+con su uso. No se hicieron movimientos/cierres/borrados de prueba en su cuenta.
+228 pruebas/8 auditores sin tarjetas y TypeScript/ESLint sin errores/avisos.
+Acciones originales/contexto/SQLite: aportes, gasto, devolución única, rollback,
+borrado elegido y cierre en cero; regresión 361466b reproduce bloqueo anterior.
+Sigue/falta compartir «hj», resolver intención de sus tres casos antiguos y
+pendientes de dos Android/diario durable/volumen. Sin APK/AAB/OTA/Play ni servidor.
+
 ## 15/10/2026 — Código de invitación y Compartir (desarrollo)
 
 Marca `15oct-codigo-compartir`: la hoja compartida de Familia/Caja ofrece el

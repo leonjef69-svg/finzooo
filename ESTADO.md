@@ -1,5 +1,50 @@
 # Estado actual de Fino
 
+## Cajas — 15/10/2026 — operar sin reconstruir el historial borrado
+
+Marca `15oct-caja-historial-conservado`. Se retira la oferta de Archivar caja
+de Cerrar/Borrar; no se archiva nada automáticamente. Lectura/restauración de
+archivos anteriores conservada para no esconder datos. Los casos antiguos no
+abren avisos ni detalles durante una operación normal: Revisar transferencias
+solo se abre voluntariamente dentro de la caja seleccionada.
+
+Agregar dinero/gasto, nueva devolución, borrado explícito y cierre dejan de
+bloquearse por un historial cuya contraparte Personal está ausente Y ya marcada
+borrada con identidad exacta. No se restaura ninguna de esas mitades ni se
+abonan saldos al entrar. Se mantienen controles de saldo, aporte consumido,
+doble toque, cuenta, lote conjunto y rechazo. Cerrar exige saldo cero y aportes
+liquidados; no devuelve ni elimina dinero silenciosamente. Al cerrar se conservan
+las marcas Personal ya borradas y solo se liquidan las mitades aún existentes.
+Una ausencia sin marca, contraparte presente, identidad duplicada, dato inválido,
+importe discrepante o conversión incierta NO recibe esta excepción. La prueba
+detectó que el plan podía omitir reconstrucciones ante otro conflicto: el criterio
+comprueba además TODAS las ausencias de esa caja, no solo los conflictos listados.
+
+Esto NO habilita compartir «hj»: la conversión aún requiere pares comprobables.
+Invitar queda desactivado solo en la caja afectada, sin mensajes técnicos;
+los espacios sanos y Familia no heredan sus tres casos. No convertir esta
+excepción de operaciones explícitas en permiso para reparar/convertir a ciegas.
+
+228 pruebas y 8 auditores aprobados sin tarjetas; TypeScript/ESLint sin errores
+ni avisos. Acciones originales + contexto + SQLite real: aporte externo/Personal,
+gasto, devolución única, rollback, borrado elegido y cierre en cero sin resucitar
+los tres IDs antiguos. Regresión de las acciones en 361466b falla porque seguían
+bloqueadas, no por ausencia de una API. La revisión voluntaria también falla en
+esa versión por abrir el diálogo automático. Evidencia local .tmp/caja-historial-*.
+
+Android: botones activos observados en «hj» con S/20; durante la comprobación
+pasó a S/10 y el propietario confirmó explícitamente que él pulsó Devolver S/10.
+No atribuir ese abono a una reparación automática ni afirmar saldo intacto tras
+su operación. Se detuvieron los toques para no cruzarse con su uso; no se
+ejecutó un cierre/borrado/aporte de prueba en su cuenta. El primer Fast Refresh
+de una exportación nueva dio error transitorio; reentrada posterior mostró la
+pantalla nueva sin ese error. No se limpiaron datos ni se reinstaló la app.
+
+**Sigue/falta:** conversión/invitación segura de «hj», intención histórica de los
+tres casos y los pendientes anteriores de diario durable/dos Android/volumen.
+No se han eliminado los tres originales por antigüedad. Sin datos nuevos,
+servidor/reglas, APK/AAB/OTA/Play ni tarjetas en esta entrega.
+
 ## Invitaciones — 15/10/2026 — compartir código sin revisión financiera
 
 Marca de desarrollo `15oct-codigo-compartir`. La hoja de Familia/Caja conserva

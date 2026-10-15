@@ -30,14 +30,14 @@ const data = { cajas: [box, other], movimientos: moves, cajasBorradas: [], movim
 const personalRows = [{ id: 900, type: "income", amount: 50, date: "2026-10-02", description: "Conservar" }];
 const deleted = [11, 12, 13];
 
-// Primero el síntoma anterior: Cerrar ofrecía solo saldo cero, sin salida
-// reversible para una Caja pendiente. La regresión falla por comportamiento.
+// Archivar ya no se ofrece desde Cerrar. Las lecturas/restauraciones de un
+// archivo anterior se conservan y siguen probándose sin tocar datos reales.
 {
   let offers = 0;
   const scope = { caja: box, ready: true, movimientos: moves, cajaNecesitaRevision: () => true,
-    confirmarArchivoCaja: () => offers++, canCloseLinkedSpace: () => false, showToast() {}, t: key => key };
+    confirmarArchivoCaja: () => offers++, avisarRevisionNecesaria() {}, canCloseLinkedSpace: () => false, showToast() {}, t: key => key };
   handlerOriginal(screenFile, "cerrarCajaActual", scope, screen)();
-  assert.equal(offers, 1, "Cerrar una Caja dudosa ofrece conservarla en historial, no exige una devolución imposible");
+  assert.equal(offers, 0, "Cerrar no ofrece archivar ni cambia el destino de una acción normal");
 }
 
 const boxes = load("utils/cajas.ts"), repairs = load("utils/privateBoxRepair.ts"), reservations = load("utils/privateBoxMoneyLocalWrite.ts");
@@ -172,14 +172,5 @@ for (const failure of [null, "rollback", "lost-ack"]) {
     assert.equal(await pending, false); assert.equal(h.visible(), data, "cambio de sesión no publica el archivo en otra cuenta");
   } finally { h.db.close(); }
 }
-// La confirmación original es reversible y Cancelar nunca ejecuta guardado.
-{
-  let proposal, applied = 0;
-  const scope = { caja: box, ready: true, guardandoRef: { current: false }, cuentaActual: () => true,
-    datosActuales: { current: data }, saldoCaja: boxes.saldoCaja, fmt: String, t: key => key,
-    Alert: { alert: (_title, _message, options) => { proposal = options; } }, cambiarArchivoCaja: async () => applied++ };
-  handlerOriginal(screenFile, "confirmarArchivoCaja", scope, screen)();
-  assert.equal(applied, 0); assert.equal(proposal[0].style, "cancel");
-  await proposal[1].onPress(); assert.equal(applied, 1);
-}
+assert.doesNotMatch(screen, /confirmarArchivoCaja|t\("boxes\.archiveAction"\)/, "se retiró la opción de archivar a petición del dueño");
 console.log("Archivo local reversible: acciones/contexto/SQLite originales; historial y Personal intactos, filtro, regreso, fallos y sesión comprobados. Sin borrar ni reparar datos reales; Android pendiente.");

@@ -185,8 +185,9 @@ function harness() {
   const share = handlerOriginal("screens/Cajas.tsx", "compartirCaja", s, read("screens/Cajas.tsx"));
   await share(); assert.equal(remote, 1, "los tres casos de hj no bloquean compartir una caja independiente");
   assert.equal(review, 0); assert.deepEqual(conflicts, before);
+  const noticeCount = notices.length;
   s.caja.id = "caja-hj"; await share(); assert.equal(remote, 1); assert.equal(review, 0, "invitar no abre los detalles financieros");
-  assert.equal(notices.at(-1), "boxes.inviteUnavailable", "hj sigue protegida con un aviso breve, sin reparación ni código falso");
+  assert.equal(notices.length, noticeCount, "hj queda desactivada sin repetir avisos, reparar dinero ni generar código falso");
 }
 {
   const output = buildSync({ entryPoints: ["utils/privateBoxRepair.ts"], bundle: true, write: false, platform: "node", format: "cjs", alias: { "@": process.cwd() } });

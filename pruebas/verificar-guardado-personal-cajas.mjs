@@ -57,8 +57,9 @@ function harness() {
   h.api = module.exports; h.api.setAccountStorageAvailable(true); h.adapter = adapter; h.get = get;
   return h;
 }
-function loadPure(file) {
-  const module = { exports: {} }; vm.runInNewContext(js(read(file)), { module, exports: module.exports, Error, require: requirePure }); return module.exports;
+function loadPure(file, current = false) {
+  const module = { exports: {} }; vm.runInNewContext(js(current ? fs.readFileSync(file, "utf8") : read(file)), { module, exports: module.exports, Error,
+    require: name => name.startsWith("@/") ? loadPure(name.replace("@/", "") + ".ts", current) : requirePure(name) }); return module.exports;
 }
 function declaration(file, name) {
   const tree = ts.createSourceFile(file, read(file), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX); let result;
@@ -136,6 +137,9 @@ try {
   // Ejecuta también las acciones reales de pantalla con el contexto y el
   // almacén reales. Traducción, teclado y React son las únicas piezas simuladas.
   const linked = loadPure("utils/linkedTransfers.ts");
+  // El criterio nuevo se prueba actual; la regresión sustituye las acciones
+  // anteriores de pantalla/contexto, no falla por una exportación inexistente.
+  const repairs = loadPure("utils/privateBoxRepair.ts", true);
   function screenHarness(before, rows = []) {
     const h = harness(), events = [];
     const ctx = { ready: true, hasOnboarded: true, Platform: { OS: "android" }, auth: { currentUser: { uid: "a" } },
@@ -155,6 +159,9 @@ try {
       guardandoRef: { current: false }, guardando: false, syncIssue: null, repairBlocked: false, ready: true, cloudReady: true, compartiendo: false, cargandoUnion: false,
       cuentaActual: () => true, hasUnreadableLocalData: h.api.hasUnreadableLocalData, datosActuales: { current: before }, datos: before,
       movimientos: before.movimientos, transactions: rows, caja: before.cajas[0],
+      readPrivateBoxMoneyLocal: () => ({ transactions: ctx.transactionsLive.current, deletedIds: ctx.deletedTransactionIdsRef.current }),
+      personalActuales: ctx.transactionsLive, borradosActuales: ctx.deletedTransactionIdsRef,
+      canPreserveDeletedPrivateBoxHistory: repairs.canPreserveDeletedPrivateBoxHistory,
       saldoPersonalEn: fecha => { events.push(`saldo:${fecha}`); return 500; },
       nuevoNombre: "Viaje", montoInicial: "100", origenDinero: "personal", monto: "20", anotando: "ingreso", descripcion: "Aporte",
       category: "otros", method: "transfer", notes: "", movementDate: "2026-10-05", editandoAporteId: null, seleccionados: [], cajasSeleccionadas: [],
@@ -204,6 +211,94 @@ try {
     const s = screenHarness({ ...data, movimientos: [] }); await s.actions.guardarMovimiento();
     assert.equal(s.ctx.transactionsLive.current[0].amount, 20); assert.equal(s.datosActuales.current.movimientos[0].monto, 20);
     assert.ok(s.events.includes("saldo:2026-10-05"), "la Caja valida el saldo de la fecha elegida");
+  }
+  // Historial EXACTO ausente y ya borrado: acciones originales, contexto y
+  // SQLite reales. No reconstruye las tres mitades ni abona nada al abrir.
+  {
+    const oldMoves = [
+      ...[11, 12].map((id, index) => ({ ...move, id: `viejo-${id}`, monto: 10, personalTransactionId: id, creadoEn: index + 2 })),
+      { ...move, id: "viejo-13", tipo: "gasto", monto: 10, personalTransactionId: 13, personalReturnAmount: 10, creadoEn: 4 },
+      { ...move, id: "externo", monto: 10, personalTransactionId: undefined, creadoEn: 5 },
+    ];
+    const before = { ...data, movimientos: oldMoves }, original = JSON.stringify(before);
+    const preserved = (d = before, rows = [], deleted = [11, 12, 13]) => repairs.canPreserveDeletedPrivateBoxHistory(d, rows, deleted, "a", box.id);
+    assert.equal(preserved(), true);
+    const present = { ...transfer, id: 11, amount: 10, internalTransferLink: "viejo-11" };
+    assert.equal(preserved(before, [present]), false, "si reaparece Personal, no se da por borrado");
+    assert.equal(preserved(before, [], [12, 13]), false, "una ausencia sin marca no basta");
+    assert.equal(preserved({ ...before, movimientosBorrados: ["viejo-11"] }), false);
+    assert.equal(preserved({ ...before, movimientos: [...oldMoves, { ...oldMoves[0], id: "duplicado" }] }), false);
+    assert.equal(preserved({ ...before, movimientos: [{ ...oldMoves[0], monto: NaN }, ...oldMoves.slice(1)] }), false);
+    for (const flag of ["sharingPending", "archivadaLocal"]) assert.equal(preserved({ ...before, cajas: [{ ...box, [flag]: true }] }), false);
+    assert.equal(preserved({ ...before, cajasBorradas: [box.id] }), false);
+    function historyHarness() {
+      const s = screenHarness(before);
+      s.ctx.deletedTransactionIdsRef.current = [11, 12, 13];
+      s.repairPlan = repairs.planPrivateBoxRepair(before, [], [11, 12, 13], "a");
+      s.accionLocalEnCurso = { current: false };
+      s.setTimeout = work => { work(); return 0; };
+      s.avisarRevisionNecesaria = () => s.events.push("review");
+      vm.runInNewContext(js(["cajaNecesitaRevision", "tomarAccionLocal"].map(name => declaration("screens/Cajas.tsx", name)).join("\n")), s);
+      return s;
+    }
+    const refresh = s => {
+      s.movimientos = s.datosActuales.current.movimientos;
+      s.transactions = s.ctx.transactionsLive.current;
+      s.devolvibleAPersonal = linked.returnableToPersonal(s.movimientos);
+      s.repairPlan = repairs.planPrivateBoxRepair(s.datosActuales.current, s.transactions, s.ctx.deletedTransactionIdsRef.current, "a");
+    };
+    const s = historyHarness();
+    assert.equal(s.cajaNecesitaRevision(box.id, true), false, "no paraliza operaciones que conservan historia");
+    assert.equal(s.cajaNecesitaRevision(box.id), true, "la conversión no hereda esta excepción");
+    assert.equal(s.ctx.transactionsLive.current.length, 0);
+    s.cajasSeleccionadas = [box.id]; assert.equal(await s.actions.borrarCajas(), false, "no cierra con saldo positivo");
+    assert.equal(JSON.stringify(s.datosActuales.current), original);
+    refresh(s); assert.equal(s.devolvibleAPersonal, 10);
+    await s.actions.devolverAPersonal(); refresh(s);
+    assert.equal(boxes.saldoCaja(box.id, s.movimientos), 10);
+    assert.equal(s.transactions.length, 1); assert.equal(s.transactions[0].type, "income"); assert.equal(s.transactions[0].amount, 10);
+    assert.equal(s.movimientos.length, 5); assert.equal(JSON.stringify(s.movimientos.slice(0, 4)), JSON.stringify(oldMoves));
+    assert.deepEqual(Array.from(s.ctx.deletedTransactionIdsRef.current).sort((a, b) => a - b), [11, 12, 13]);
+    const once = JSON.stringify(s.transactions); assert.equal(s.devolvibleAPersonal, 0);
+    await s.actions.devolverAPersonal(); refresh(s);
+    assert.equal(JSON.stringify(s.transactions), once, "no devuelve dos veces");
+    s.origenDinero = "externo"; s.anotando = "gasto"; s.monto = "10";
+    await s.actions.guardarMovimiento(); refresh(s);
+    assert.equal(boxes.saldoCaja(box.id, s.movimientos), 0);
+    assert.equal(JSON.stringify(s.transactions), once, "gasto externo no mueve Personal");
+    assert.equal(await s.actions.borrarCajas(), true, "cerrar en cero conserva las marcas antiguas y liquida solo la devolución nueva");
+    assert.equal(s.datosActuales.current.cajas.length, 0);
+    assert.equal(s.ctx.transactionsLive.current.length, 1); assert.equal(s.ctx.transactionsLive.current[0].amount, 10);
+    assert.ok(s.ctx.transactionsLive.current[0].internalTransferSettled);
+    assert.deepEqual(Array.from(s.ctx.deletedTransactionIdsRef.current).sort((a, b) => a - b), [11, 12, 13]);
+    const disk = await s.h.api.loadJSON(s.h.api.STORAGE_KEYS.cajasDinero, boxes.CAJAS_VACIAS);
+    assert.equal(disk.cajas.length, 0); assert.equal(disk.movimientosBorrados.length, 6);
+    for (const origin of ["externo", "personal"]) {
+      const add = historyHarness(); add.origenDinero = origin; add.monto = "5";
+      await add.actions.guardarMovimiento(); refresh(add);
+      assert.equal(boxes.saldoCaja(box.id, add.movimientos), 25);
+      assert.equal(JSON.stringify(add.movimientos.slice(0, 4)), JSON.stringify(oldMoves));
+      assert.equal(add.transactions.length, origin === "personal" ? 1 : 0);
+      assert.deepEqual(Array.from(add.ctx.deletedTransactionIdsRef.current).sort((a, b) => a - b), [11, 12, 13]);
+    }
+    const remove = historyHarness(); remove.seleccionados = ["externo"];
+    await remove.actions.borrarSeleccionados(); refresh(remove);
+    assert.equal(boxes.saldoCaja(box.id, remove.movimientos), 10);
+    assert.equal(remove.transactions.length, 0);
+    assert.equal(JSON.stringify(remove.movimientos), JSON.stringify(oldMoves.slice(0, 3)));
+    assert.deepEqual(Array.from(remove.ctx.deletedTransactionIdsRef.current).sort((a, b) => a - b), [11, 12, 13]);
+    const removeLinked = historyHarness(); removeLinked.seleccionados = oldMoves.slice(0, 3).map(row => row.id);
+    await removeLinked.actions.borrarSeleccionados(); refresh(removeLinked);
+    assert.equal(boxes.saldoCaja(box.id, removeLinked.movimientos), 10);
+    assert.equal(removeLinked.transactions.length, 0, "borrar explícitamente filas antiguas no vuelve a abonar Personal");
+    assert.equal(JSON.stringify(removeLinked.movimientos), JSON.stringify(oldMoves.slice(3)));
+    assert.deepEqual(Array.from(removeLinked.ctx.deletedTransactionIdsRef.current).sort((a, b) => a - b), [11, 12, 13]);
+    const failed = historyHarness(); refresh(failed); failed.h.failure = "rollback";
+    await failed.actions.devolverAPersonal(); refresh(failed);
+    assert.equal(JSON.stringify(failed.datosActuales.current), original);
+    assert.equal(failed.transactions.length, 0, "un fallo no deja una devolución sin su otra mitad");
+    assert.equal(boxes.saldoCaja(box.id, failed.movimientos), 20);
+    assert.equal(JSON.stringify(before), original, "las pruebas no mutan el original");
   }
   {
     const s = screenHarness(data, [transfer]); s.editandoAporteId = move.id; s.monto = "80"; await s.actions.guardarMovimiento();

@@ -246,6 +246,27 @@ export function planPrivateBoxRepair(data: DatosCajas, rows: Transaction[], dele
   return conflicts.length ? { data, upserts: [], conflicts } : { data: nextData, upserts: [...upserts.values()], conflicts };
 }
 
+/** Operaciones nuevas que conservan las mitades antiguas, sin reconstruirlas.
+ * No autoriza convertir a compartida ni editar importes/identidades dudosos.
+ */
+export function canPreserveDeletedPrivateBoxHistory(data: DatosCajas, rows: Transaction[], deleted: number[], uid: string, boxId: string): boolean {
+  const box = data.cajas.find(item => item.id === boxId);
+  if (!box || box.archivadaLocal || box.sharingPending || data.cajasBorradas.includes(boxId) || data.conversiones?.[boxId]) return false;
+  const plan = planPrivateBoxRepair(data, rows, deleted, uid);
+  if (plan.conflicts.some(issue => !issue.boxId || issue.reason === "invalid")) return false;
+  // El plan omite reconstrucciones cuando hay otro conflicto. No confundir
+  // esa omisión con evidencia de que TODAS las mitades ausentes se borraron.
+  if (data.movimientos.some(move => move.cajaId === boxId && move.personalTransactionId != null
+    && !rows.some(tx => tx.id === move.personalTransactionId) && !deleted.includes(move.personalTransactionId))) return false;
+  const affected = plan.conflicts.filter(issue => issue.boxId === boxId);
+  return affected.length > 0 && affected.every(issue => {
+    const move = data.movimientos.find(item => item.id === issue.movementId && item.cajaId === boxId);
+    return issue.reason === "deleted" && !!move && move.personalTransactionId === issue.personalId
+      && issue.personalId != null && deleted.includes(issue.personalId) && !rows.some(tx => tx.id === issue.personalId)
+      && !data.movimientosBorrados.includes(move.id);
+  });
+}
+
 /** Elección explícita, limitada a monto/fecha de una pareja con IDs exactos. */
 export function resolvePrivateBoxConflict(data: DatosCajas, rows: Transaction[], deleted: number[], uid: string, choice: PrivateBoxRepairChoice): PrivateBoxRepairPlan {
   if (choice.from === "archive") throw new Error("private-box-repair-conflict");

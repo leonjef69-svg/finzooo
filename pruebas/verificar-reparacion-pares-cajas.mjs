@@ -63,9 +63,8 @@ const blockedMessage = pick("screens/Cajas.tsx", node => ts.isFunctionDeclaratio
     t: key => key, Alert: { alert: (...args) => dialogs.push(args) }, showToast: key => toasts.push(key),
     setRepairReviewVisible: value => { state.opened = value; } };
   vm.runInNewContext(js(blockedMessage), scope); scope.avisarRevisionNecesaria();
-  assert.equal(dialogs[0][0], "boxes.repairBlockedTitle"); assert.equal(toasts.length, 0);
-  assert.equal(state.opened, false); dialogs[0][2][1].onPress();
-  assert.equal(state.opened, true, "los detalles se abren solo si la persona los pide");
+  assert.equal(dialogs.length, 0, "una acción normal no abre un diálogo técnico"); assert.equal(toasts.length, 0);
+  assert.equal(state.opened, false, "la revisión solo se abre desde su entrada voluntaria");
   const waiting = { ...scope, repairPlan: { conflicts: [] }, cloudReady: false };
   vm.runInNewContext(js(blockedMessage), waiting); waiting.avisarRevisionNecesaria();
   assert.equal(toasts.at(-1), "boxes.repairWait");
