@@ -24,7 +24,7 @@ import {
   type EstadoDelPago,
   type PagoProgramado,
 } from "@/utils/calendarioPagos";
-import { availablePersonalBalance, budgetUsed } from "@/utils/finances";
+import { availablePersonalBalance, budgetUsed, totalsForMonth } from "@/utils/finances";
 import { paymentForCalendarNotification } from "@/utils/calendarNotificationTap";
 import { monthKey } from "@/utils/format";
 import { movementRowsByDay, startsMovementDay, personalMovementRowTime } from "@/utils/movementDates";
@@ -435,10 +435,10 @@ export default function Home({
     prevBalance !== 0 || carryoverActive || availableMonths.some((key) => key < mk);
   const showPreviousBalanceCard =
     hasPreviousBalanceHistory && !collapsedPreviousBalanceMonths.includes(mk);
-  const mainSpent = useMemo(() => monthTx.filter((t) => t.type === "expense" && !t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
-  const mainIncome = useMemo(() => monthTx.filter((t) => t.type === "income" && !t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
-  const transfersOut = useMemo(() => monthTx.filter((t) => t.type === "expense" && t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
-  const transfersIn = useMemo(() => monthTx.filter((t) => t.type === "income" && t.internalTransfer).reduce((sum,t)=>sum+t.amount,0), [monthTx]);
+  const { spent: mainSpent, income: mainIncome, transfersOut, transfersIn } = useMemo(
+    () => totalsForMonth(monthTx, mk),
+    [monthTx, mk],
+  );
   // Una transferencia resumida nunca incluye otros días bajo esta fecha.
   const compactMonthRows = useMemo(() => movementRowsByDay(monthTx, item => item.date,
     dayItems => compactPersonalTransferRows(dayItems)), [monthTx]);
@@ -770,14 +770,9 @@ export default function Home({
                 </Text>
               </View>
               <View className="mt-2">
-                <View className="flex-row items-center justify-between gap-3">
-                  <Text numberOfLines={1} className={`min-w-0 flex-1 text-base font-bold ${peachOlive ? "text-emerald-800" : "text-emerald-100"}`}>
-                    {t("home.monthlyBudget")}
-                  </Text>
-                  <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7} className={`max-w-[48%] text-sm font-extrabold ${peachOlive ? "text-slate-900" : "text-white"}`}>
-                    {formatBudgetDisplay(hideBalance, budget, fmt)}
-                  </Text>
-                </View>
+                <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.72} className={`text-sm font-bold ${peachOlive ? "text-emerald-800" : "text-emerald-100"}`}>
+                  {t("home.budgetedOf", { amount: formatBudgetDisplay(hideBalance, budget, fmt) })}
+                </Text>
                 <View
                   className="mt-2 h-2 overflow-hidden rounded-full"
                   style={{ backgroundColor: peachOlive ? "rgba(101, 118, 74, 0.16)" : "rgba(255, 255, 255, 0.27)" }}

@@ -139,6 +139,7 @@ import { presupuestoCubreTransferencias, presupuestoDelMes, transferidoPendiente
 import { hayDescuadre, maximoAApartar, metaConEstadoActual, saldoLibre, totalApartado } from "@/utils/ahorro";
 import { availablePersonalBalance, totalsForMonth } from "@/utils/finances";
 import { saldoAnteriorDe } from "@/utils/saldoAnterior";
+import { moneyFromUnits, moneyUnits } from "@/utils/moneyPrecision";
 import { amountInputError, isSafeMoneyAmount } from "@/utils/amount";
 import { unlinkCreditPaymentsForHomeTransactions } from "@/utils/creditStore";
 import * as notificationReader from "@/modules/notification-reader";
@@ -421,6 +422,8 @@ type AppDataContextValue = {
   tienePremiumDeVerdad: boolean;
   isCloudSynced: boolean;
   hasCloudAccount: boolean;
+  cloudBackupEnabled: boolean;
+  setCloudBackupEnabled: (enabled: boolean) => Promise<void>;
   /** La ultima subida a la nube termino bien. NO es lo mismo que tener sesion iniciada. */
   respaldoAlDia: boolean;
   /** Por que fallo la ultima subida, para poder decirlo en vez de callarlo. */
@@ -603,6 +606,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // independiente del resto. Lo maneja el botón de Inicio.
   const [carryoverCleared, setCarryoverCleared] = useState<string[]>([]);
   const [cloudSyncMeta, setCloudSyncMeta] = useState<Record<string, number>>({});
+  const [cloudBackupEnabled, setCloudBackupEnabledState] = useState(true);
   const cloudSyncMetaRef = useRef<Record<string, number>>({});
   const cloudFieldsRef = useRef<CloudData | null>(null);
   const [deletedTransactionIds, setRenderedDeletedTransactionIds] = useState<number[]>([]);
@@ -1111,6 +1115,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       savedNegocio,
       savedPagos,
       savedCloudSyncMeta,
+      savedCloudBackupEnabled,
       savedCaptureLog,
     ] = await Promise.all([
       loadJSON<Record<string, number>>(STORAGE_KEYS.budgets, {}),
@@ -1140,6 +1145,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // El calendario de pagos. Ver utils/calendarioPagos.
       loadJSON<PagoProgramado[]>(STORAGE_KEYS.pagosProgramados, []),
       loadJSON<Record<string, number>>(STORAGE_KEYS.cloudSyncMeta, {}),
+      loadJSON<boolean>(STORAGE_KEYS.cloudBackupEnabled, true),
       loadJSON<CaptureLogEntry[]>(STORAGE_KEYS.autoCaptureLog, []),
     ]);
     if (auth.currentUser !== loadingUser || auth.currentUser?.uid !== loadingUid || version !== localSessionVersion.current) return;
@@ -1167,6 +1173,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setDatosNegocio(savedNegocio, true);
     cloudSyncMetaRef.current = savedCloudSyncMeta;
     setCloudSyncMeta(savedCloudSyncMeta);
+    setCloudBackupEnabledState(savedCloudBackupEnabled !== false);
     // La copia para respuestas de red queda lista antes de resolver la
     // apertura, incluso si React todavía no dibujó estos datos cargados.
     cloudFieldsRef.current = {
@@ -1306,6 +1313,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     cloudSyncMetaRef.current = {};
     cloudFieldsRef.current = null;
     setCloudSyncMeta({});
+    setCloudBackupEnabledState(true);
     setRespaldoFallo(null);
     setCelebrateGoal(null);
     setVerComoGratis(false);
@@ -1341,7 +1349,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     // se espera esto, cerrar sesión muy rápido después de un cambio
     // podía "perderlo": ya no quedaba ni en el celular (se borra abajo)
     // ni en la nube (no le había dado tiempo de subir).
-    if (uid && isPremium && !options?.skipBackup) {
+    if (uid && isPremium && cloudBackupEnabled && !options?.skipBackup) {
       const respaldo = await saveCloudData(uid, datosParaLaNube());
       if (!respaldo.ok) {
         const error = new Error("No se pudo respaldar tu información. Tu sesión y tus datos se conservaron. Revisa tu conexión y vuelve a intentarlo.");
@@ -1653,7 +1661,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
    * una subida por letra.
    */
   useEffect(() => {
-    if (!(ready && hasOnboarded && uid && isPremium)) return;
+    if (!(ready && hasOnboarded && uid && isPremium && cloudBackupEnabled)) return;
     let alive = true;
     const version = localSessionVersion.current;
     const timer = setTimeout(() => {
@@ -1669,7 +1677,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       });
     }, 1500);
     return () => { alive = false; clearTimeout(timer); };
-  }, [datosNegocio, ready, hasOnboarded, uid, isPremium, setDatosNegocio]);
+  }, [datosNegocio, ready, hasOnboarded, uid, isPremium, cloudBackupEnabled, setDatosNegocio]);
 
   // Además de guardar en este celular, si hay una cuenta con sesión
   // iniciada y correo verificado, también sube los datos a la nube.
@@ -1683,7 +1691,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // Perder la última subida no pierde datos: el celular ya los tiene
   // guardados, y logout() sube todo explícitamente antes de cerrar sesión.
   useEffect(() => {
-    if (!(ready && hasOnboarded && uid && isPremium)) return;
+    if (!(ready && hasOnboarded && uid && isPremium && cloudBackupEnabled)) return;
     let alive = true;
     const version = localSessionVersion.current;
     const timer = setTimeout(() => {
@@ -1709,6 +1717,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     hasOnboarded,
     uid,
     isPremium,
+    cloudBackupEnabled,
     userName,
     userPhoto,
     userCurrency,
@@ -1742,7 +1751,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // movimientos que otro dispositivo haya subido. Se fusionan por id: nunca
   // se sustituye la lista local completa por una copia posiblemente antigua.
   useEffect(() => {
-    if (!(ready && hasOnboarded && uid && isPremium)) return;
+    if (!(ready && hasOnboarded && uid && isPremium && cloudBackupEnabled)) return;
     let alive = true;
     const version = localSessionVersion.current;
     const sincronizarMovimientos = async () => {
@@ -1762,12 +1771,20 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
     };
-  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds, setGoals, setDatosNegocio]);
+  }, [ready, hasOnboarded, uid, isPremium, cloudBackupEnabled, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds, setGoals, setDatosNegocio]);
 
   function showToast(msg: string) {
     setToast(msg);
     if (toastTimer.current) clearTimeout(toastTimer.current);
     toastTimer.current = setTimeout(() => setToast(""), 2200);
+  }
+
+  async function changeCloudBackupEnabled(enabled: boolean): Promise<void> {
+    if (enabled && !isPremium) throw new Error(tRef.current("settings.backupNeedsPaid"));
+    const saved = await saveJSONNow(STORAGE_KEYS.cloudBackupEnabled, enabled);
+    if (!saved) throw new Error(tRef.current("toast.localSaveFailed"));
+    setCloudBackupEnabledState(enabled);
+    if (enabled) setRespaldoFallo(null);
   }
 
   useEffect(() => {
@@ -1830,6 +1847,12 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       setAutoCapturePermission(notificationReader.isPermissionGranted());
     }
   }, []);
+
+  useEffect(() => {
+    if (!ready || !hasOnboarded || isPremium || !notificationReader.isEnabled()) return;
+    notificationReader.setEnabled(false);
+    setAutoCaptureOnState(false);
+  }, [ready, hasOnboarded, isPremium]);
 
   useEffect(() => {
     if (ready && hasOnboarded) saveJSON(STORAGE_KEYS.autoCaptureLog, autoCaptureLog);
@@ -1914,6 +1937,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // Un regreso al frente no se pierde si otra recogida está en curso.
       if (forzarConciliacion) solicitudesConciliacion++;
       if (captureBusy.current) return;
+      const currentCapture = captureInputs.current;
+      if (currentCapture.vistaGratis || !(currentCapture.premiumCuenta || currentCapture.testerActivo ||
+        pruebaVigente(currentCapture.inicioPrueba, Date.now()))) return;
       // El permiso de Android se puede quitar desde los ajustes del sistema
       // en cualquier momento. Se comprueba ANTES de descifrar listas grandes:
       // con la captura apagada, el temporizador no debe tocar el disco.
@@ -2122,7 +2148,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       // plano — los Honor y Huawei aprietan el ahorro de batería. Ver reengancharLector.
       reengancharLector();
       collect(true);
-      if (uid && isPremium) {
+      if (uid && isPremium && cloudBackupEnabled) {
         void loadCloudData(uid).then((cloud) => {
           if (!cloud || !alive || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
           if (!applyNewerCloudFields(cloud)) return;
@@ -2144,10 +2170,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     };
     // Solo depende de si la app ya está lista: los datos que necesita los
     // lee de captureInputs en el momento de recoger.
-  }, [ready, hasOnboarded, uid, isPremium, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds, setGoals, setDatosNegocio]);
+  }, [ready, hasOnboarded, uid, isPremium, cloudBackupEnabled, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds, setGoals, setDatosNegocio]);
 
   function setAutoCaptureOn(value: boolean) {
     if (value) {
+      if (!isPremium) {
+        showToast(t("autoCapture.premiumRequired"));
+        return;
+      }
       const version = localSessionVersion.current;
       requestNotificationConsent(t, () => {
         notificationReader.setEnabled(true);
@@ -2204,7 +2234,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     transactions
       .filter((t) => t.date.startsWith(mk) && t.type === "expense" && !t.internalTransfer)
       .forEach((t) => {
-        result[t.category] = (result[t.category] || 0) + t.amount;
+        result[t.category] = moneyFromUnits(moneyUnits(result[t.category] || 0) + moneyUnits(t.amount));
       });
     return result;
   }, [transactions, mk]);
@@ -2229,7 +2259,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   // que es el único desde el que tiene sentido volver a abrirla.
   const carryoverActive = carryoverCleared.includes(mk);
 
-  const autoSavings = budget + income - spent;
+  const autoSavings = moneyFromUnits(moneyUnits(budget) + moneyUnits(income) - moneyUnits(spent));
 
   // EL AHORRO, COMO SOBRES. Ver utils/ahorro.
   //
@@ -3431,11 +3461,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     verComoGratis,
     setVerComoGratis,
     tienePremiumDeVerdad: isPremiumDeLaCuenta || pruebaCorriendo || testerPremium.active,
-    isCloudSynced: uid !== null && isPremium,
+    isCloudSynced: uid !== null && isPremium && cloudBackupEnabled,
     hasCloudAccount: uid !== null,
+    cloudBackupEnabled,
+    setCloudBackupEnabled: changeCloudBackupEnabled,
     /* "Respaldados" quiere decir que la ULTIMA subida termino bien, no que haya sesion
        iniciada. Ver el cartel de Ajustes y utils/cloudSync. */
-    respaldoAlDia: uid !== null && respaldoFallo === null,
+    respaldoAlDia: uid !== null && isPremium && cloudBackupEnabled && respaldoFallo === null,
     respaldoFallo,
     celebrateGoal,
     clearCelebration: () => setCelebrateGoal(null),

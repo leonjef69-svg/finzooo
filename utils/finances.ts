@@ -18,6 +18,7 @@
 
 import { presupuestoDelMes } from "@/utils/presupuestoMensual";
 import { saldoAnteriorDe, type MovimientoDelSaldo } from "@/utils/saldoAnterior";
+import { moneyFromUnits, moneyUnits } from "@/utils/moneyPrecision";
 
 export type MonthFigures = {
   /** Presupuesto puesto para ese mes. 0 si no se puso ninguno. */
@@ -38,7 +39,7 @@ export type MonthFigures = {
  * distintas en dos pantallas de la misma app.
  */
 export function availableBalance(f: MonthFigures): number {
-  return f.budget + f.prevBalance + f.income - f.spent;
+  return moneyFromUnits(moneyUnits(f.budget) + moneyUnits(f.prevBalance) + moneyUnits(f.income) - moneyUnits(f.spent));
 }
 
 export type PersonalMonthFigures = MonthFigures & {
@@ -56,7 +57,10 @@ export type PersonalMonthFigures = MonthFigures & {
  * debe ser única para que Inicio, el contexto y Telegram no diverjan.
  */
 export function availablePersonalBalance(f: PersonalMonthFigures): number {
-  return availableBalance(f) - f.transfersOut + f.transfersIn;
+  return moneyFromUnits(
+    moneyUnits(f.budget) + moneyUnits(f.prevBalance) + moneyUnits(f.income) - moneyUnits(f.spent)
+      - moneyUnits(f.transfersOut) + moneyUnits(f.transfersIn)
+  );
 }
 
 /** Qué parte del presupuesto se lleva gastada, de 0 a 1. Sin presupuesto, 0. */
@@ -114,22 +118,27 @@ export function totalsForMonth(
   }[],
   monthKey: string
 ): { spent: number; income: number; transfersOut: number; transfersIn: number } {
-  let spent = 0;
-  let income = 0;
-  let transfersOut = 0;
-  let transfersIn = 0;
+  let spentUnits = 0n;
+  let incomeUnits = 0n;
+  let transfersOutUnits = 0n;
+  let transfersInUnits = 0n;
   for (const tx of txs) {
     if (!tx.date.startsWith(monthKey)) continue;
     if (tx.internalTransfer) {
-      if (tx.type === "expense") transfersOut += tx.amount;
-      else transfersIn += tx.amount;
+      if (tx.type === "expense") transfersOutUnits += moneyUnits(tx.amount);
+      else transfersInUnits += moneyUnits(tx.amount);
     } else if (tx.type === "expense") {
-      spent += tx.amount;
+      spentUnits += moneyUnits(tx.amount);
     } else {
-      income += tx.amount;
+      incomeUnits += moneyUnits(tx.amount);
     }
   }
-  return { spent, income, transfersOut, transfersIn };
+  return {
+    spent: moneyFromUnits(spentUnits),
+    income: moneyFromUnits(incomeUnits),
+    transfersOut: moneyFromUnits(transfersOutUnits),
+    transfersIn: moneyFromUnits(transfersInUnits),
+  };
 }
 
 /** Saldo de Personal en el mes de una operación, no en el mes abierto en Inicio. */

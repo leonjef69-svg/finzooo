@@ -34,12 +34,13 @@ assert.match(accion, /min-h-\[68px\]/, "la acción mantiene un alto cómodo sin 
 assert.equal((inicio.match(/onPress=\{startEditBudget\}/g) || []).length, 1,
   "el monto y la acción compacta son la única entrada al editor mensual");
 const indiceMontoPresupuesto = inicio.indexOf("formatBudgetDisplay(hideBalance, budget, fmt)");
-const indiceEtiquetaPresupuesto = inicio.lastIndexOf('{t("home.monthlyBudget")}', indiceMontoPresupuesto);
-const inicioFilaPresupuesto = inicio.lastIndexOf('<View className="flex-row items-center justify-between gap-3">', indiceEtiquetaPresupuesto);
-const finFilaPresupuesto = inicio.indexOf("</View>", indiceMontoPresupuesto);
-const filaPresupuesto = inicio.slice(inicioFilaPresupuesto, finFilaPresupuesto);
-assert.ok(inicioFilaPresupuesto >= 0 && finFilaPresupuesto > inicioFilaPresupuesto, "la etiqueta y el monto comparten una fila normal de texto");
-assert.doesNotMatch(filaPresupuesto, /onPress|rounded-xl border border-white\/20 bg-white\/10/, "el monto del presupuesto no debe parecer un campo ni abrir el editor");
+const frasePresupuesto = inicio.lastIndexOf('t("home.budgetedOf", { amount:', indiceMontoPresupuesto);
+assert.ok(frasePresupuesto >= 0 && indiceMontoPresupuesto > frasePresupuesto,
+  "el monto aparece dentro de la frase presupuestado del mes");
+assert.match(idiomas, /"home\.budgetedOf": "de \{amount\} presupuestado del mes"/,
+  "la frase deja primero el monto y aclara que corresponde al mes");
+assert.match(inicio, /numberOfLines=\{1\} adjustsFontSizeToFit minimumFontScale=\{0\.72\} className=\{`text-sm font-bold/,
+  "la frase completa se adapta sin chocar con los lados de la tarjeta");
 assert.match(inicio, /const hasPreviousBalanceHistory =\s*prevBalance !== 0 \|\| carryoverActive \|\| availableMonths\.some\(\(key\) => key < mk\)/,
   "el primer mes no muestra una opción para un saldo anterior inexistente");
 assert.match(inicio, /hasPreviousBalanceHistory \? \(\s*<PressableScale\s+onPress=\{togglePreviousBalance\}/,
@@ -69,8 +70,8 @@ assert.match(inicio, /showPreviousBalanceCard \? <Animated\.View entering=\{Fade
   "la tarjeta anterior entra y sale con una transición breve");
 assert.match(inicio, /layout=\{LinearTransition\.duration\(240\)\}/,
   "el contenido inferior acompaña el alto de la tarjeta con una transición suave");
-assert.match(inicio, /className=\{`min-w-0 flex-1 text-base font-bold \$\{peachOlive \? "text-emerald-800" : "text-emerald-100"\}`\}>\s*\{t\("home\.monthlyBudget"\)\}/,
-  "Presupuesto del mes debe resaltarse con texto un poco más grande");
+assert.match(inicio, /className=\{`text-sm font-bold \$\{peachOlive \? "text-emerald-800" : "text-emerald-100"\}`\}>\s*\{t\("home\.budgetedOf", \{ amount: formatBudgetDisplay\(hideBalance, budget, fmt\) \}\)\}/,
+  "el presupuesto del mes va después del monto en una sola frase legible");
 assert.match(inicio, /className="mt-2 h-2 overflow-hidden rounded-full"\s+style=\{\{ backgroundColor: peachOlive \? "rgba\(101, 118, 74, 0\.16\)" : "rgba\(255, 255, 255, 0\.27\)" \}\}/,
   "la barra de presupuesto queda algo más gruesa y su fondo se adapta al tema");
 assert.match(inicio, /className="flex-1 text-base text-slate-600 dark:text-slate-200 font-semibold" numberOfLines=\{1\}>\s*\{t\("home\.spent"\)\}/,

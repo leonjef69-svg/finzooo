@@ -1,5 +1,28 @@
 # Lo que hay que rellenar en Play Console
 
+## Revisión de coherencia — 14/10/2026 (no subir a Play todavía)
+
+El registro automático está limitado al acceso Premium existente en el código
+local, y la nube permite pausar futuras sincronizaciones sin borrar la copia
+remota. No existe Billing activo ni se pueden cobrar los precios propuestos:
+Plus S/ 3.60 al mes y Pro S/ 9.99 al mes o S/ 99 al año. Son propuesta del
+propietario, no precios disponibles en Play.
+
+No usar aún los textos de ficha más abajo como declaración final: contienen
+afirmaciones incompatibles con el código. En particular, `constants/legal.ts`
+y este borrador dicen que el registro de avisos no sale del teléfono; los
+movimientos derivados pueden sincronizarse en Firebase con Premium, y algunas
+marcas de borrado conservan un `captureId` que puede contener título/texto del
+aviso. No asegurar «no se envía a terceros» ni «solo se guardan hashes» hasta
+confirmar los campos, destinos y retención de la versión que se distribuya.
+La política, la huella de consentimiento y Seguridad de los datos deben
+corregirse coordinadamente. No editar ni publicar la política desde este cambio.
+
+La mención de Yape describe la compatibilidad, no una afiliación o aprobación.
+Antes de subir ficha, vídeo o capturas, confirmar revisión de marca y que el
+texto no sugiera respaldo del titular. Esta nota es una auditoría de coherencia,
+no dictamen jurídico ni autorización de Play.
+
 Preparación local 13/10/2026, no declarada/publicada: una Caja antigua se puede
 archivar mediante confirmación. La preferencia `archivadaLocal` se conserva
 cifrada en el registro de Cajas de ese teléfono, no se envía a Firebase y no

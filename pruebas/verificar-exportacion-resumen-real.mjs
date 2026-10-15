@@ -10,7 +10,7 @@ const baseline = process.env.FINO_EXPORT_SUMMARY_BASELINE;
 if (baseline && !/^[a-f0-9]{7,40}$/.test(baseline)) throw Error("Se requiere hash Git.");
 const root = process.cwd();
 const read = file => baseline ? execFileSync("git", ["show", `${baseline}:${file}`], { encoding: "utf8" }) : fs.readFileSync(file, "utf8");
-const originalFiles = new Set(["utils/reportePdfDatos.ts", "utils/exportPdfHtml.ts", "utils/reporteArchivo.ts", "constants/i18n.ts"]);
+const originalFiles = new Set(["utils/reportePdfDatos.ts", "utils/exportPdfHtml.ts", "utils/reporteArchivo.ts", "utils/exportSpaces.ts", "utils/finances.ts", "utils/saldoAnterior.ts", "constants/i18n.ts"]);
 const aliases = Object.fromEntries(Object.entries({ "react-native": "rn.ts", "lucide-react-native": "lucide.ts", "@expo/vector-icons": "vectoricons.ts", "expo-font": "font.ts", "@/modules/export-scheduler": "programador.ts", "expo-notifications": "notif.ts", "expo-crypto": "crypto.ts" }).map(([key, file]) => [key, path.join(root, "pruebas/stubs", file)]));
 async function original(file) {
   const result = await build({ entryPoints: [file], bundle: true, platform: "node", format: "cjs", write: false, logLevel: "silent", alias: { "@": root, ...aliases },
@@ -29,7 +29,9 @@ const { availablePersonalBalance } = await original("utils/finances.ts");
 const { saldoAnteriorDe } = await original("utils/saldoAnterior.ts");
 const { fmtExact } = await original("utils/format.ts");
 const { currencySymbolFor } = await original("constants/currencies.ts");
-const resumenFinanciero = handlerOriginal("utils/exportSpaces.ts", "resumenFinanciero", { availablePersonalBalance, saldoAnteriorDe }, read("utils/exportSpaces.ts"));
+const { moneyFromUnits, moneyUnits } = await original("utils/moneyPrecision.ts");
+const sumAmounts = items => moneyFromUnits(items.reduce((sum, item) => sum + moneyUnits(item.amount), 0n));
+const resumenFinanciero = handlerOriginal("utils/exportSpaces.ts", "resumenFinanciero", { availablePersonalBalance, saldoAnteriorDe, moneyFromUnits, moneyUnits, sumAmounts }, read("utils/exportSpaces.ts"));
 const formateadorDelEspacio = handlerOriginal("utils/exportSpaces.ts", "formateadorDelEspacio", { formatAmount: fmtExact, currencySymbolFor }, read("utils/exportSpaces.ts"));
 const selectionFile = /export function movimientosParaReporte\(/.test(read("utils/reporteArchivo.ts")) ? "utils/reporteArchivo.ts" : "utils/exportSelection.ts";
 const movimientosParaReporte = handlerOriginal(selectionFile, "movimientosParaReporte", {}, read(selectionFile));
@@ -106,6 +108,20 @@ for (const kind of ["family", "box", "sharedBox"]) {
   assert.ok(!html.includes("data-report-budget"));
   assert.ok(text(html).includes("S/ 230"));
 }
+
+// Acumulados grandes con céntimos, arrastre y transferencias internas.
+const precisionMovements = [
+  { ...movimientos[0], id: 10, amount: 9_000_000_000_000, date: "2026-10-01" },
+  ...Array.from({ length: 44 }, (_, i) => ({ ...movimientos[0], id: 11 + i, amount: 50.15, date: `2026-10-${String((i % 28) + 1).padStart(2, "0")}` })),
+  ...Array.from({ length: 45 }, (_, i) => ({ ...movimientos[1], id: 60 + i, amount: 30.45, date: `2026-10-${String((i % 28) + 1).padStart(2, "0")}` })),
+  { ...transfer, id: 110, type: "expense", amount: 2.15, date: "2026-10-14" },
+  { ...transfer, id: 111, type: "income", amount: 0.1, date: "2026-10-14" },
+];
+const resumenPrecision = resumenFinanciero({ ...espacioReal, transactions: precisionMovements }, "2026-10", { "2026-09": 310.25, "2026-10": 1_999_202_020.75 }, []);
+assert.equal(Number(resumenPrecision.expenses.toFixed(2)), 9_000_000_002_206.6, "el PDF suma los gastos con céntimos exactos");
+assert.equal(Number(resumenPrecision.income.toFixed(2)), 1_370.25, "el PDF suma los ingresos con céntimos exactos");
+assert.equal(Number(resumenPrecision.previousBalance.toFixed(2)), 310.25, "el PDF conserva el saldo arrastrado exacto");
+assert.equal(Number(resumenPrecision.available.toFixed(2)), -8_998_000_798_507.4, "el PDF coincide con Inicio y respeta las transferencias");
 const grandes = [19_992_020.75, 999_999_999.99, 9_000_000_000_000, 19_999_202_020_020.75];
 for (const currency of ["PEN", "USD", "EUR", "JPY", "CLP", "BHD"]) {
   const format = formateadorDelEspacio({ ...espacioReal, currency });

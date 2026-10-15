@@ -11,6 +11,8 @@
 // del propio HTML. Por eso los gráficos son cajas con ancho y alto en
 // porcentaje y no una librería de gráficos: no habría forma de cargarla.
 
+import { moneyFromUnits, moneyUnits, sumMoney, sumMoneySigned } from "@/utils/moneyPrecision";
+
 export type PdfTx = {
   /** Fecha ya escrita para leer ("12 de julio"). */
   dateLabel: string;
@@ -142,30 +144,36 @@ export function byCategory(
   txs: PdfTx[],
   type: "expense" | "income"
 ): { label: string; color: string; amount: number; share: number }[] {
-  const sums = new Map<string, { color: string; amount: number }>();
-  let total = 0;
+  const sums = new Map<string, { color: string; units: bigint }>();
+  let totalUnits = 0n;
   for (const tx of txs) {
     if (tx.type !== type || tx.internalTransfer) continue;
-    total += tx.amount;
+    const units = moneyUnits(tx.amount);
+    totalUnits += units;
     const prev = sums.get(tx.categoryLabel);
-    if (prev) prev.amount += tx.amount;
-    else sums.set(tx.categoryLabel, { color: tx.categoryColor, amount: tx.amount });
+    if (prev) prev.units += units;
+    else sums.set(tx.categoryLabel, { color: tx.categoryColor, units });
   }
-  if (total === 0) return [];
+  if (totalUnits === 0n) return [];
   return [...sums.entries()]
-    .map(([label, v]) => ({ label, color: v.color, amount: v.amount, share: v.amount / total }))
+    .map(([label, v]) => ({
+      label,
+      color: v.color,
+      amount: moneyFromUnits(v.units),
+      share: Number(v.units) / Number(totalUnits),
+    }))
     .sort((a, b) => b.amount - a.amount);
 }
 
 /** Suma por día del mes. Devuelve un arreglo de daysInMonth posiciones. */
 export function byDay(txs: PdfTx[], type: "expense" | "income", daysInMonth: number): number[] {
-  const out = new Array(daysInMonth).fill(0);
+  const out = Array.from({ length: daysInMonth }, () => 0n);
   for (const tx of txs) {
     if (tx.type !== type || tx.internalTransfer) continue;
     if (tx.day < 1 || tx.day > daysInMonth) continue;
-    out[tx.day - 1] += tx.amount;
+    out[tx.day - 1] += moneyUnits(tx.amount);
   }
-  return out;
+  return out.map(moneyFromUnits);
 }
 
 /**
@@ -416,13 +424,17 @@ export function buildPdfHtml(o: PdfOptions): string {
   const tipo = o.reportType ?? "all";
   const txs = tipo === "all" ? o.txs : o.txs.filter(tx => !tx.internalTransfer && tx.type === tipo);
 
-  const ingresosCalculados = txs.filter((t) => t.type === "income" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0);
-  const gastosCalculados = txs.filter((t) => t.type === "expense" && !t.internalTransfer).reduce((s, t) => s + t.amount, 0);
+  const ingresosCalculados = sumMoney(txs.filter((t) => t.type === "income" && !t.internalTransfer).map((t) => t.amount));
+  const gastosCalculados = sumMoney(txs.filter((t) => t.type === "expense" && !t.internalTransfer).map((t) => t.amount));
+  const resultadoCalculado = sumMoneySigned([
+    ...txs.filter((t) => t.type === "income" && !t.internalTransfer).map((t) => ({ amount: t.amount, sign: 1 as const })),
+    ...txs.filter((t) => t.type === "expense" && !t.internalTransfer).map((t) => ({ amount: t.amount, sign: -1 as const })),
+  ]);
   const resumen = o.summary ?? {
-    available: ingresosCalculados - gastosCalculados,
+    available: resultadoCalculado,
     income: ingresosCalculados,
     expenses: gastosCalculados,
-    result: ingresosCalculados - gastosCalculados,
+    result: resultadoCalculado,
   };
   // El resumen del bolsillo puede incluir el otro tipo. Los totales del
   // documento siempre pertenecen a sus filas, nunca al mes sin filtrar.
@@ -430,17 +442,14 @@ export function buildPdfHtml(o: PdfOptions): string {
   const gastos = gastosCalculados;
   const hayIngresos = txs.some(tx => tx.type === "income" && !tx.internalTransfer);
   const hayGastos = txs.some(tx => tx.type === "expense" && !tx.internalTransfer);
-  const totalSeleccionado = txs.reduce(
-    (suma, tx) => suma + (tx.type === "expense" ? -tx.amount : tx.amount),
-    0
-  );
+  const totalSeleccionado = sumMoneySigned(txs.map((tx) => ({ amount: tx.amount, sign: tx.type === "expense" ? -1 : 1 })));
 
   // Los gráficos describen los gastos, que es lo que casi siempre se quiere
   // mirar. La excepción es un reporte que solo trae ingresos: ahí graficar
   // gastos daría una hoja en blanco.
   const gastosGraficables = txs
     .filter((tx) => tx.type === "expense" && !tx.internalTransfer)
-    .reduce((suma, tx) => suma + tx.amount, 0);
+    .reduce((suma, tx) => suma + moneyUnits(tx.amount), 0n);
   const foco: "expense" | "income" = gastosGraficables > 0 ? "expense" : "income";
   const colorFoco = foco === "expense" ? ROJO : VERDE;
 
@@ -532,8 +541,8 @@ export function buildPdfHtml(o: PdfOptions): string {
     ${filasResumen.length ? `<table style="width:100%;border-collapse:collapse;table-layout:fixed;">${filasResumen.join("")}</table>` : ""}
   </section>`;
 
-  const totalGastoCats = catsGasto.reduce((s, c) => s + c.amount, 0);
-  const totalIngresoCats = catsIngreso.reduce((s, c) => s + c.amount, 0);
+  const totalGastoCats = sumMoney(catsGasto.map((c) => c.amount));
+  const totalIngresoCats = sumMoney(catsIngreso.map((c) => c.amount));
   /**
    * El reparto por categoría de un lado: la rosquilla y sus barras.
    *

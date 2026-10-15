@@ -26,6 +26,8 @@ function logoutScope() {
     openLocalAccount: async () => true,
     resumeLocalAccount: async () => undefined,
     hasOnboarded: true,
+    cloudBackupEnabled: true,
+    setCloudBackupEnabledState() {},
     localSessionVersion: { current: 0 },
     archiveLocalAccount: async () => undefined,
     LocalAccountVaultError: class extends Error {},

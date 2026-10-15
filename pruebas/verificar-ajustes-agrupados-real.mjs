@@ -21,13 +21,13 @@ const fonts = { regular: "FinoEntryRegular", medium: "FinoEntryMedium", bold: "F
 let dark = false, visualStyle = "peachOlive";
 const ui = evaluate("components/SettingsUI.tsx", name => {
   if (name === "react") return React;
-  if (name === "react-native") return { Text: "Text", View: "View", TouchableOpacity: "TouchableOpacity" };
+  if (name === "react-native") return { Text: "Text", View: "View", TouchableOpacity: "TouchableOpacity", Switch: "Switch" };
   if (name === "lucide-react-native") return { ChevronRight: "ChevronRight" };
   if (name === "nativewind") return { useColorScheme: () => ({ colorScheme: dark ? "dark" : "light" }) };
   if (name === "@/constants/visualTheme") return theme;
   if (name === "@/constants/style") return style;
   if (name === "@/components/EntryUI") return { ENTRY_FONT: fonts };
-  if (name === "@/contexts/AppDataContext") return { useAppData: () => ({ visualStyle }) };
+  if (name === "@/contexts/AppDataContext") return { useAppData: () => ({ visualStyle, t: key => key }) };
   throw Error("Unexpected SettingsUI dependency: " + name);
 });
 function walk(node, found = []) {
@@ -37,13 +37,14 @@ function walk(node, found = []) {
 }
 const textOf = node => typeof node === "string" ? node : Array.isArray(node) ? node.map(textOf).join("") : node?.children?.map(textOf).join("") ?? "";
 const iconNames = "CalendarClock Camera Check ChevronRight Cloud Crown FileDown FileUp Lock PiggyBank PieChart Coins Globe2 KeyRound Pencil UserX LogOut Info Shield Store Zap Mic MessageSquare Moon Palette Sun X".split(" ");
-const contexts = { themeMode: "light", visualStyle, hasCloudAccount: true, isPremium: false, respaldoAlDia: false,
-  respaldoFallo: "permisos", autoCaptureOn: false, testerPremiumPendingVerification: false, negocios: [] };
+const contexts = { themeMode: "light", visualStyle, hasCloudAccount: true, isPremium: false, cloudBackupEnabled: true,
+  setCloudBackupEnabled: async enabled => { calls.push(["cloud", enabled]); }, respaldoAlDia: false, respaldoFallo: "permisos", autoCaptureOn: false,
+  testerPremiumPendingVerification: false, negocios: [] };
 const calls = [];
 const t = key => key;
 const deps = {
   React, useState: value => [value, () => {}], Platform: { OS: "android" },
-  ScrollView: "ScrollView", Text: "Text", TouchableOpacity: "TouchableOpacity", View: "View", Image: "Image",
+  ScrollView: "ScrollView", Text: "Text", TouchableOpacity: "TouchableOpacity", View: "View", Image: "Image", Switch: "Switch",
   ActivityIndicator: "ActivityIndicator", TextInput: "TextInput", LinearGradient: "LinearGradient",
   Row: "Row", SettingsSection: "Section", SettingsIcon: "SettingsIcon", ENTRY_FONT: fonts,
   settingsColors: ui.settingsColors, useSafeAreaInsets: () => ({ top: 24, bottom: 8 }),
@@ -59,6 +60,7 @@ const deps = {
 };
 const screen = handlerOriginal("screens/Settings.tsx", "Settings", deps, read("screens/Settings.tsx"));
 function render(premium = false, currency = "PEN") {
+  contexts.isPremium = premium;
   return screen({ userName: "SYNTHETIC-NAME", userPhoto: "SYNTHETIC-PHOTO", userEmail: "synthetic@example.test",
     userCurrency: currency, userLanguage: "es", isPremium: premium, isTesterPremium: false,
     ...Object.fromEntries(["onSaveProfile", "onCurrency", "onLanguage", "onCategoryBudgets", "onExportPdf",
@@ -68,7 +70,7 @@ function render(premium = false, currency = "PEN") {
 const nodes = walk(render()), sections = nodes.filter(node => node.type === "Section");
 assert.deepEqual(sections.map(node => node.props.title), [
   "settings.sectionPersonalize", "settings.sectionFinances", "settings.sectionData",
-  "settings.sectionRecording", "settings.sectionSecurityAccount", "settings.sectionInfo",
+  "settings.sectionCloud", "settings.sectionRecording", "settings.sectionSecurityAccount", "settings.sectionInfo",
 ], "todas las opciones están clasificadas en seis secciones visibles, no una lista mezclada");
 assert.equal(nodes.some(node => ["Image", "TextInput", "Camera", "Pencil"].includes(node.type)), false, "perfil/editor/cámara retirados sin borrar datos");
 const account = sections.find(node => node.props.title === "settings.sectionSecurityAccount");
@@ -81,7 +83,7 @@ const title = walk(premiumEntry).find(node => node.type === "Text" && textOf(nod
 assert.ok(title.props.style.fontSize >= 20, "título Pro mayor que antes, legible y sin texto Gratis");
 assert.equal(premiumEntry.props.style.marginHorizontal, 16);
 assert.equal(nodes.indexOf(premiumEntry) < nodes.indexOf(sections[0]), true);
-assert.ok(nodes.some(node => node.type === "Text" && textOf(node) === "settings.backupProTitle"), "respaldo conserva la condición Pro");
+assert.ok(nodes.some(node => node.type === "Row" && node.props.label === "settings.backupProTitle"), "respaldo conserva la condición de pago");
 assert.ok(walk(render(true)).some(node => node.type === "Text" && textOf(node) === "settings.premiumActive"));
 
 const rows = nodes.filter(node => node.type === "Row");
@@ -95,10 +97,19 @@ for (const [label, callback] of [
   ["settings.appInfo", "onAbout"], ["settings.legal", "onLegal"], ["voiceHelp.rowLabel", "onVoiceHelp"],
 ]) {
   const row = rows.find(node => node.props.label === label);
-  assert.ok(row, "acceso conservado: " + label); row.props.onPress(); assert.deepEqual(calls.pop(), [callback]);
+  assert.ok(row, "acceso conservado: " + label); row.props.onPress();
+  assert.deepEqual(calls.pop(), label === "autoCapture.rowLabel" ? ["onPremium"] : [callback]);
 }
-for (const label of ["categoryBudgets.rowLabel", "settings.savingsGoals", "exportPdf.exportDataTitle", "importSheet.rowLabel", "schedExport.settingsRow", "negocios.rowLabel", "widget.rowLabel", "voiceHelp.rowLabel", "lock.rowLabel"])
-  assert.equal(rows.find(row => row.props.label === label).props.premium, true, label + ": etiqueta Pro");
+for (const label of ["categoryBudgets.rowLabel", "settings.savingsGoals", "exportPdf.exportDataTitle", "importSheet.rowLabel", "schedExport.settingsRow", "autoCapture.rowLabel", "negocios.rowLabel", "widget.rowLabel", "voiceHelp.rowLabel", "lock.rowLabel"])
+  assert.equal(rows.find(row => row.props.label === label).props.premium, true, label + ": etiqueta de pago");
+const cloudSection = sections.find(node => node.props.title === "settings.sectionCloud");
+assert.ok(walk(cloudSection).some(node => node.type === "Row" && node.props.label === "settings.backupProTitle"), "la copia en nube está agrupada y marcada como de pago");
+const proSettings = walk(render(true));
+const cloudSwitch = proSettings.find(node => node.type === "Switch" && node.props.accessibilityLabel === "settings.backupSwitch");
+assert.ok(cloudSwitch, "Pro muestra un interruptor real para pausar o activar la copia");
+assert.equal(cloudSwitch.props.value, true);
+cloudSwitch.props.onValueChange(false);
+assert.deepEqual(calls.pop(), ["cloud", false], "el interruptor comunica la pausa al almacenamiento de Ajustes");
 rows.find(row => row.props.label === "widget.rowLabel").props.onPress(); assert.deepEqual(calls.pop(), ["onPremium"]);
 walk(render(true)).find(row => row.type === "Row" && row.props.label === "widget.rowLabel").props.onPress();
 assert.deepEqual(calls.pop(), ["widget", "round"], "sin conceder Pro ni cambiar la acción");
@@ -119,7 +130,7 @@ for (const appearance of ["classic", "peachOlive"]) for (const isDark of [false,
   const row = ui.SettingsRow({ Icon: "TestIcon", label: "label", premium: true, onPress: () => calls.push(["row"]) });
   assert.equal(row.props.accessibilityRole, "button"); row.props.onPress(); assert.deepEqual(calls.pop(), ["row"]);
   assert.equal(row.props.style.minHeight, 64, "zona táctil no diminuta");
-  assert.equal(walk(row).filter(node => node.type === "Text").map(textOf).includes("PRO"), true);
+  assert.equal(walk(row).filter(node => node.type === "Text").map(textOf).includes("settings.paidBadge"), true);
   assert.equal(walk(row).find(node => node.type === "Text" && textOf(node) === "label").props.style.color, palette.text);
   assert.equal(ui.SettingsSection({ title: "group", children: [null, false, row] }).children[1].props.style.backgroundColor, palette.surface);
 }
@@ -127,6 +138,6 @@ assert.notDeepEqual(ui.settingsColors("classic", false).proGradient, ui.settings
 assert.equal(ui.settingsColors("peachOlive", true).surface, style.NOCHE.tarjeta, "oscuro conserva el carbón de Fino");
 const languageData = evaluate("constants/i18n.ts", () => { throw Error("pure-i18n"); }).translations;
 assert.equal(languageData.es["settings.title"], "Ajustes", "ya no se presenta como Perfil");
-for (const lang of ["es", "en", "pt"]) for (const key of [...sections.map(node => node.props.title), "settings.proEntryTitle", "settings.proEntryHint"])
+for (const lang of ["es", "en", "pt"]) for (const key of [...sections.map(node => node.props.title), "settings.proEntryTitle", "settings.proEntryHint", "settings.paidBadge"])
   assert.ok(languageData[lang][key], lang + ": " + key);
-console.log("Ajustes originales: seis grupos, Pro visible/grande, sin perfil ni etiqueta Gratis; accesos/condiciones Pro, correo, Yape/widget/Google, cuatro apariencias e iconos conservados. No prueba Firebase ni teléfono físico.");
+console.log("Ajustes originales: siete grupos, nube pagada agrupada con interruptor y pausas respetadas, sin perfil ni etiqueta Gratis; accesos/condiciones Pro, correo, Yape/widget/Google, cuatro apariencias e iconos conservados. No prueba Firebase ni teléfono físico.");

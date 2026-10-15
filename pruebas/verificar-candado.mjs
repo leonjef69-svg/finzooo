@@ -153,11 +153,11 @@ console.log("\n--- EL MICROFONO ES PREMIUM, Y SE VE (11/08/2026) ---");
   // y decidio volver atras, porque quien no las ve no sabe que existen y no paga.
   const ajustes = leer("screens/Settings.tsx");
   const antesWidget = ajustes.slice(Math.max(0, ajustes.indexOf("Icon={Mic}") - 300), ajustes.indexOf("Icon={Mic}") + 400);
-  ok(/PRO/.test(antesWidget), "la fila del microfono lleva su etiqueta PRO");
+  ok(/premium/.test(antesWidget), "la fila del microfono lleva su etiqueta de pago");
   ok(/isPremium \? addWidgetToHomeScreen\("round"\) : onPremium\(\)/.test(ajustes), "y sin Premium lleva a la venta, no coloca el widget");
 
   const antesAyuda = ajustes.slice(ajustes.indexOf("Icon={MessageSquare}"), ajustes.indexOf("Icon={MessageSquare}") + 700);
-  ok(/PRO/.test(antesAyuda), "la ayuda del microfono tambien la lleva");
+  ok(/premium/.test(antesAyuda), "la ayuda del microfono tambien la lleva");
   // Y ESA SI SE ABRE SIN PREMIUM, a proposito: leer para que sirve no es usarlo, y es de las
   // pocas paginas que pueden convencer a alguien de pagar.
   ok(/onPress=\{onVoiceHelp\}/.test(ajustes), "pero se abre igual: leer no es usar");

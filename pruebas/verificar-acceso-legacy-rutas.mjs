@@ -150,7 +150,7 @@ async function closedFlow({ hasOnboarded = true, contextUid = null, rejectAuth =
     "setBudgets", "setCategoryBudgets", "setCategoryOverridesState", "setOverrides", "setCategoriasPropiasState", "setPropias", "setIconosFavoritosState", "setFavoritos",
     "setCategoriaRecienCreada", "setTransactions", "setDeletedTransactionIds", "setDeletedGoalIds", "setGoals", "setPagosProgramados", "setAvisosProgramados", "setAvisosFallo",
     "setIsPremium", "setTesterPremium", "setDatosNegocio", "setAutoCaptureOnState", "setAutoCaptureLog", "setPruebaInicio", "setMerchantLearned", "setCarryoverCleared",
-    "setCloudSyncMeta", "setRespaldoFallo", "setCelebrateGoal", "setVerComoGratis"]) deps[name] = value => events.push([name, value]);
+    "setCloudSyncMeta", "setCloudBackupEnabledState", "setRespaldoFallo", "setCelebrateGoal", "setVerComoGratis"]) deps[name] = value => events.push([name, value]);
   deps.clearLocalAccountMemory = handlerOriginal(file, "clearLocalAccountMemory", deps, context);
   const logout = handlerOriginal(file, "logout", deps, context);
   return { api, auth, events, deps, logout, original, keys, writes: () => writes, checks: () => unreadableChecks,

@@ -57,10 +57,10 @@ function flow(api, uid, options = {}) {
   const auth = { currentUser: { uid, email: `${uid}@example.com` } };
   let reader = true, onboarded = true;
   const dependencies = {
-    ...api, auth, uid, isPremium: options.pro ?? false, hasOnboarded: true,
+    ...api, auth, uid, isPremium: options.pro ?? false, cloudBackupEnabled: options.cloud !== false, hasOnboarded: true,
     captureBusy: { current: false }, localSessionVersion: { current: 0 },
     tRef: { current: key => key }, setReady() {}, setStorageReadBlocked() {},
-    setHasOnboarded: value => { onboarded = value; },
+    setHasOnboarded: value => { onboarded = value; }, setCloudBackupEnabledState() {},
     notificationReader: { isEnabled: () => reader, setEnabled: value => { reader = value; } },
     datosParaLaNube: () => ({ hasOnboarded: true }),
     saveCloudData: async () => { events.push("cloud"); return options.cloudFailure ? { ok: false } : { ok: true }; },

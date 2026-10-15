@@ -6,7 +6,7 @@ import { hayRegistroAutomatico } from "@/utils/dondeHayYape";
 import { safeBack, useRedirectIfOrphaned } from "@/utils/nav";
 
 export default function AutoCaptureRoute() {
-  const { refreshAutoCapture, userCurrency } = useAppData();
+  const { refreshAutoCapture, userCurrency, isPremium, ready } = useAppData();
   const blocked = useRedirectIfOrphaned();
   const disponible = hayRegistroAutomatico(userCurrency);
 
@@ -31,6 +31,10 @@ export default function AutoCaptureRoute() {
     if (!blocked && !disponible) router.replace("/(tabs)");
   }, [blocked, disponible]);
 
-  if (blocked || !disponible) return null;
+  useEffect(() => {
+    if (ready && !blocked && disponible && !isPremium) router.replace("/premium");
+  }, [ready, blocked, disponible, isPremium]);
+
+  if (blocked || !disponible || !isPremium) return null;
   return <AutoCapture onBack={safeBack} />;
 }

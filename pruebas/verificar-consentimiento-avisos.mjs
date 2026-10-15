@@ -22,8 +22,8 @@ function execute(file, imports, source = read(file)) {
 for (const name of ["openAutoCaptureSettings", "setAutoCaptureOn"]) {
   const calls = [], session = { current: 4 }, user = { uid: "A" };
   const dependencies = {
-    ready: true, hasOnboarded: true, uid: "A", auth: { currentUser: user }, localSessionVersion: session,
-    t: key => key,
+    ready: true, hasOnboarded: true, isPremium: true, uid: "A", auth: { currentUser: user }, localSessionVersion: session,
+    t: key => key, showToast() {},
     notificationReader: { openPermissionSettings: () => calls.push("android"), setEnabled: () => calls.push("enabled"), isEnabled: () => true, clear() {} },
     setAutoCaptureOnState() {},
     requestNotificationConsent: (_t, action, current) => calls.push({ action, current }),

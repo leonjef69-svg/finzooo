@@ -32,6 +32,8 @@
 // mismo; mientras hubo herencia no lo decían, y un mes futuro enseñaba un disponible que luego
 // no llegaba entero al siguiente.
 
+import { moneyFromUnits, moneyUnits } from "@/utils/moneyPrecision";
+
 /** Lo justo de un movimiento para esta cuenta. Nada más hace falta. */
 export type MovimientoDelSaldo = {
   date: string;
@@ -54,16 +56,16 @@ function netoPorMes(
   budgets: Record<string, number>,
   transactions: MovimientoDelSaldo[],
   hasta: string
-): Record<string, number> {
-  const neto: Record<string, number> = {};
+): Record<string, bigint> {
+  const neto: Record<string, bigint> = {};
   for (const [mes, monto] of Object.entries(budgets)) {
     if (!/^\d{4}-\d{2}$/.test(mes) || mes >= hasta) continue;
-    neto[mes] = (neto[mes] ?? 0) + (monto || 0);
+    neto[mes] = (neto[mes] ?? 0n) + moneyUnits(monto || 0);
   }
   for (const tx of transactions) {
     const mes = tx.date.slice(0, 7);
     if (mes >= hasta) continue;
-    neto[mes] = (neto[mes] ?? 0) + (tx.type === "income" ? tx.amount : -tx.amount);
+    neto[mes] = (neto[mes] ?? 0n) + moneyUnits(tx.type === "income" ? tx.amount : -tx.amount);
   }
   return neto;
 }
@@ -98,11 +100,11 @@ export function saldoAnteriorDe(
     new Set([...Object.keys(neto), ...cortes.filter((c) => c < mes)])
   ).sort();
 
-  let saldo = 0;
+  let saldoUnits = 0n;
   for (const m of aRecorrer) {
     // La puerta cerrada tira lo acumulado, pero NO lo que ese mes gane o gaste por su cuenta.
-    if (tieneCorte(cortes, m)) saldo = 0;
-    saldo += neto[m] ?? 0;
+    if (tieneCorte(cortes, m)) saldoUnits = 0n;
+    saldoUnits += neto[m] ?? 0n;
   }
-  return saldo;
+  return moneyFromUnits(saldoUnits);
 }

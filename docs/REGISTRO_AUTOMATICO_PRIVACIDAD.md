@@ -1,5 +1,28 @@
 # Registro automático: permiso y filtro previo — 14/10/2026
 
+## Actualización de acceso y nube — 14/10/2026 (código local, no publicado)
+
+La ruta y el ajuste de Registro automático ahora requieren el acceso Premium
+existente (incluida la prueba); al perderlo, se detiene la captura sin borrar
+la cola local pendiente. La nube tiene un interruptor local: apagarlo pausa
+futuras descargas/subidas y conserva la copia remota ya existente. Al reactivarlo
+se reanuda la sincronización. No se añadió Billing ni se habilitaron cargos.
+
+Pendiente legal relevante: la política en `constants/legal.ts` y la ficha Play
+aún afirman que el registro no se envía fuera del teléfono o que no se envía a
+terceros. Eso ya no describe correctamente los movimientos derivados que el
+usuario puede respaldar en Firebase con Premium; las marcas de borrado pueden
+incluir `captureId` formado con título/texto original. No afirmar que esos
+campos nunca salen o que solo se conservan hashes. Antes de distribuir, medir
+los datos sincronizados y su retención y coordinar política, consentimiento,
+huellas aceptadas y Seguridad de los datos de Play. No se editaron los términos
+aceptados ni el HTML público; esta revisión no es aprobación legal ni de Play.
+
+**Qué sigue:** actualizar textos públicos de forma coordinada y validar en el
+APK real los interruptores, el permiso y la copia. **Qué falta:** prueba Android
+física, confirmar conservación y borrado del `captureId`, revisión competente
+de la marca Yape, cambios autorizados a política/huellas y publicación.
+
 Marca `14oct-privacidad-registro`. Preparado en código; no certifica aprobación
 legal, autorización de Yape ni aceptación/publicación en Play.
 

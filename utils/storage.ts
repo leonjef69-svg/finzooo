@@ -42,6 +42,8 @@ export const STORAGE_KEYS = {
   // Fechas de los bloques sincronizados; evita que un teléfono con una copia
   // antigua pise presupuesto, calendario o categorías al subir otro cambio.
   cloudSyncMeta: "finzo:cloudSyncMeta",
+  // El respaldo puede pausarse sin borrar la copia que ya existe en Firebase.
+  cloudBackupEnabled: "finzo:cloudBackupEnabled",
   /**
    * A QUIÉN LE MANDAS LOS REPORTES. **Y ESTA ES LA CUARTA QUE FALTABA** (18/08/2026).
    *
@@ -144,6 +146,7 @@ export const ACCOUNT_STORAGE_KEYS = [
         STORAGE_KEYS.categoryCustom,
         STORAGE_KEYS.iconosFavoritos,
         STORAGE_KEYS.cloudSyncMeta,
+        STORAGE_KEYS.cloudBackupEnabled,
         // Y la cuarta, encontrada el 18/08/2026: son correos y teléfonos de OTRAS
         // personas. Ver la nota en STORAGE_KEYS.
         STORAGE_KEYS.sendContacts,

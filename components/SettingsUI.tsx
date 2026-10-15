@@ -49,6 +49,7 @@ export function SettingsRow({ Icon, label, hint, right, onPress, danger = false,
   onPress?: () => void; danger?: boolean; premium?: boolean;
 }) {
   const colors = useSettingsColors();
+  const { t } = useAppData();
   return <TouchableOpacity onPress={onPress} disabled={!onPress} activeOpacity={0.65}
     accessibilityRole={onPress ? "button" : undefined} accessibilityLabel={label}
     accessibilityHint={hint} style={{ flexDirection: "row", alignItems: "center", minHeight: 64, paddingHorizontal: 14, paddingVertical: 10, gap: 12 }}>
@@ -57,7 +58,7 @@ export function SettingsRow({ Icon, label, hint, right, onPress, danger = false,
       <Text style={{ fontFamily: ENTRY_FONT.bold, fontSize: 16, lineHeight: 22, color: danger ? colors.danger : colors.text }}>{label}</Text>
       {hint ? <Text style={{ fontFamily: ENTRY_FONT.regular, fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 }}>{hint}</Text> : null}
     </View>
-    {premium ? <View style={{ borderRadius: 8, paddingHorizontal: 7, paddingVertical: 4, backgroundColor: colors.soft }}><Text style={{ fontFamily: ENTRY_FONT.bold, fontSize: 10, color: colors.accent }}>PRO</Text></View> : null}
+    {premium ? <View style={{ borderRadius: 8, paddingHorizontal: 7, paddingVertical: 4, backgroundColor: colors.soft }}><Text style={{ fontFamily: ENTRY_FONT.bold, fontSize: 10, color: colors.accent }}>{t("settings.paidBadge")}</Text></View> : null}
     {right}
     {onPress && !right ? <ChevronRight size={19} color={danger ? colors.danger : colors.muted} /> : null}
   </TouchableOpacity>;

@@ -42,7 +42,7 @@ function openFixture() {
 
 function reloadFixture() {
   const calls = [], waiting = deferred(), auth = { currentUser: account("A") };
-  const keyNames = ["budgets", "categoryBudgets", "transactions", "deletedTransactionIds", "goals", "deletedGoalIds", "isPremium", "merchantLearned", "carryoverCleared", "pagosProgramados", "cloudSyncMeta", "autoCaptureLog"];
+  const keyNames = ["budgets", "categoryBudgets", "transactions", "deletedTransactionIds", "goals", "deletedGoalIds", "isPremium", "merchantLearned", "carryoverCleared", "pagosProgramados", "cloudSyncMeta", "autoCaptureLog", "cloudBackupEnabled"];
   const deps = {
     auth, localSessionVersion: { current: 0 },
     STORAGE_KEYS: Object.fromEntries(keyNames.map(key => [key, key])),
@@ -57,7 +57,7 @@ function reloadFixture() {
     cloudSyncMetaRef: { current: {} }, cloudFieldsRef: { current: null },
     datosParaLaNube: () => ({}),
   };
-  for (const name of ["setOverrides", "setPropias", "setFavoritos", "setBudgets", "setCategoryBudgets", "setCategoryOverridesState", "setCategoriasPropiasState", "setIconosFavoritosState", "setPruebaInicio", "setDeletedTransactionIds", "setTransactions", "setDeletedGoalIds", "setGoals", "setPagosProgramados", "protectExistingIds", "setIsPremium", "setMerchantLearned", "setCarryoverCleared", "setDatosNegocio", "setCloudSyncMeta", "setAutoCaptureLog"]) {
+  for (const name of ["setOverrides", "setPropias", "setFavoritos", "setBudgets", "setCategoryBudgets", "setCategoryOverridesState", "setCategoriasPropiasState", "setIconosFavoritosState", "setPruebaInicio", "setDeletedTransactionIds", "setTransactions", "setDeletedGoalIds", "setGoals", "setPagosProgramados", "protectExistingIds", "setIsPremium", "setMerchantLearned", "setCarryoverCleared", "setDatosNegocio", "setCloudSyncMeta", "setAutoCaptureLog", "setCloudBackupEnabledState"]) {
     deps[name] = (...values) => calls.push([name, ...values]);
   }
   return { calls, waiting, auth, deps, reload: handlerOriginal(file, "reloadPersistedData", deps, text) };

@@ -48,7 +48,7 @@ function fixture(initial = {}, { paused = false, accepted = true } = {}) {
   const initialRefs = { ...state }, errors = [];
   const jobs = []; let requests = 0, renders = 0, changes = 0, cleanup, dependencies, dirty = false;
   let response = { ...emptyCloud, ...initial };
-  const scope = { ...merge, ...fields, ...recordOriginOriginal(), ready: true, hasOnboarded: true, uid: "A", isPremium: true,
+  const scope = { ...merge, ...fields, ...recordOriginOriginal(), ready: true, hasOnboarded: true, uid: "A", isPremium: true, cloudBackupEnabled: true,
     goalWriteReserved: { current: false }, canonical: JSON.stringify, deletedGoalIdsRef: { current: state.deletedGoalIds },
     cloudFieldsRef: { current: { ...emptyCloud, hasOnboarded: true, userName: "A", userPhoto: null, userCurrency: "PEN", userLanguage: "es", budgets: {}, categoryBudgets: {}, ...initial } },
     cloudSyncMetaRef: { current: initial.syncUpdatedAt ?? {} }, privateBoxCloudResponseCurrent: () => accepted,

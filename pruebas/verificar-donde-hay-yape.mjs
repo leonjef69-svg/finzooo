@@ -59,7 +59,7 @@ console.log("\n--- LAS TRES PUERTAS, TODAS CERRADAS ---");
   const ruta = leer("app/auto-capture.tsx");
   ok(/hayRegistroAutomatico\(userCurrency\)/.test(ruta), "2. la pantalla comprueba la moneda");
   ok(/router\.replace\("\/\(tabs\)"\)/.test(ruta), "   y manda a Inicio si no toca");
-  ok(/if \(blocked \|\| !disponible\) return null/.test(ruta), "   sin dibujarla ni un instante");
+  ok(/if \(blocked \|\| !disponible \|\| !isPremium\) return null/.test(ruta), "   sin dibujarla ni un instante si no está disponible o no es de pago");
 
   // 3. EL INTERRUPTOR DEL PANEL DEL NEGOCIO —"los yapeos entran aqui"—, que es la misma
   //    funcion por otro camino. Sin esto quedaba un interruptor que reparte algo que no llega.
@@ -79,10 +79,10 @@ console.log("\n--- Y NO SE APAGA NADA DE LO QUE YA ESTABA ---");
 
 console.log("\n--- LA VENTA SOLO PROMETE FUNCIONES PREMIUM REALES ---");
 {
-  // El registro automático depende del país y no es el motivo para cobrar Premium. La lista
-  // comercial debe nombrar los espacios colaborativos que sí están protegidos por el plan.
+  // Registro automático es una función de pago: no debe prometerse como gratis ni abrirse
+  // desde su ruta sin Premium. La ficha mantiene otros beneficios comprobados.
   const premium = leerSinComentarios("screens/Premium.tsx");
-  ok(!/perkYape|hayRegistroAutomatico/.test(premium), "no vende la captura Yape como Premium");
+  ok(/perkYape/.test(premium) && /hayRegistroAutomatico/.test(premium), "muestra el registro automático como beneficio solo donde está disponible");
   for (const clave of ["perkFamily", "perkSharedBoxes"]) {
     ok(premium.includes(`premium.${clave}`), `sí anuncia ${clave}`);
   }

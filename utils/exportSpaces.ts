@@ -14,6 +14,7 @@ import {
 import { availablePersonalBalance } from "@/utils/finances";
 import { fmtExact as formatAmount, horaDe } from "@/utils/format";
 import { saldoAnteriorDe } from "@/utils/saldoAnterior";
+import { moneyFromUnits, moneyUnits } from "@/utils/moneyPrecision";
 import { loadJSON, STORAGE_KEYS } from "@/utils/storage";
 import type { Transaction } from "@/types";
 
@@ -159,37 +160,33 @@ export function resumenFinanciero(
 ): ExportFinancialSummary {
   const delMes = espacio.transactions.filter((item) => item.date.startsWith(mes));
   if (espacio.kind === "personal") {
-    const expenses = delMes
-      .filter((item) => item.type === "expense" && !item.internalTransfer)
-      .reduce((sum, item) => sum + item.amount, 0);
-    const income = delMes
-      .filter((item) => item.type === "income" && !item.internalTransfer)
-      .reduce((sum, item) => sum + item.amount, 0);
-    const transfersOut = delMes
-      .filter((item) => item.type === "expense" && item.internalTransfer)
-      .reduce((sum, item) => sum + item.amount, 0);
-    const transfersIn = delMes
-      .filter((item) => item.type === "income" && item.internalTransfer)
-      .reduce((sum, item) => sum + item.amount, 0);
+    const expenses = sumAmounts(delMes.filter((item) => item.type === "expense" && !item.internalTransfer));
+    const income = sumAmounts(delMes.filter((item) => item.type === "income" && !item.internalTransfer));
+    const transfersOut = sumAmounts(delMes.filter((item) => item.type === "expense" && item.internalTransfer));
+    const transfersIn = sumAmounts(delMes.filter((item) => item.type === "income" && item.internalTransfer));
     const budget = budgets[mes] ?? 0;
     const previousBalance = saldoAnteriorDe(mes, budgets, espacio.transactions, carryoverCleared);
     return {
       available: availablePersonalBalance({ budget, prevBalance: previousBalance, income, spent: expenses, transfersOut, transfersIn }),
       income,
       expenses,
-      result: income - expenses,
+      result: moneyFromUnits(moneyUnits(income) - moneyUnits(expenses)),
       budget,
       previousBalance,
     };
   }
 
-  const income = delMes.filter((item) => item.type === "income" && !item.internalTransfer).reduce((sum, item) => sum + item.amount, 0);
-  const expenses = delMes.filter((item) => item.type === "expense" && !item.internalTransfer).reduce((sum, item) => sum + item.amount, 0);
+  const income = sumAmounts(delMes.filter((item) => item.type === "income" && !item.internalTransfer));
+  const expenses = sumAmounts(delMes.filter((item) => item.type === "expense" && !item.internalTransfer));
   const finDeMes = `${mes}-31`;
   const available = espacio.transactions
     .filter((item) => item.date <= finDeMes)
-    .reduce((sum, item) => sum + (item.type === "income" ? item.amount : -item.amount), 0);
-  return { available, income, expenses, result: income - expenses };
+    .reduce((sum, item) => sum + moneyUnits(item.type === "income" ? item.amount : -item.amount), 0n);
+  return { available: moneyFromUnits(available), income, expenses, result: moneyFromUnits(moneyUnits(income) - moneyUnits(expenses)) };
+}
+
+function sumAmounts(items: Transaction[]): number {
+  return moneyFromUnits(items.reduce((sum, item) => sum + moneyUnits(item.amount), 0n));
 }
 
 export function formateadorDelEspacio(espacio: ExportSpace): (value: number) => string {

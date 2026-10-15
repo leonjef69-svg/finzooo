@@ -22,6 +22,7 @@ import {
 } from "@/utils/compras";
 import { DURACION_PRUEBA_HORAS, diaDeLaFecha, pruebaTerminaEn } from "@/utils/pruebaPremium";
 import { TELEGRAM_ENABLED } from "@/constants/features";
+import { hayRegistroAutomatico } from "@/utils/dondeHayYape";
 
 /**
  * FINZO PREMIUM: las dos columnas, el precio y la prueba gratuita.
@@ -59,7 +60,7 @@ export default function Premium({
   isPremium: boolean;
   isTesterPremium: boolean;
 }) {
-  const { t, fmt, monthNames, pruebaInicio, pruebaHoras, activarPruebaPremium, showToast } =
+  const { t, fmt, monthNames, userCurrency, pruebaInicio, pruebaHoras, activarPruebaPremium, showToast } =
     useAppData();
   const insets = useSafeAreaInsets();
 
@@ -148,6 +149,7 @@ export default function Premium({
   const PREMIUM: { texto: string; detalle?: string }[] = [
     { texto: t("premium.todoElGratis") },
     { texto: t("premium.perkCloudSync") },
+    ...(hayRegistroAutomatico(userCurrency) ? [{ texto: t("premium.perkYape") }] : []),
     { texto: t("premium.perkCategoryBudgets") },
     // Sin los formatos: en exportar no ayudan a decidir nada —se paga y luego se elige— y solo
     // alargan la lista. En importar sí, porque ahí la pregunta es si el archivo del banco de uno

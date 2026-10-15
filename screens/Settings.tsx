@@ -1,4 +1,4 @@
-import { Platform, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { Platform, ScrollView, Switch, Text, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
 import { CalendarClock, ChevronRight, Cloud, Crown, FileDown, FileUp, Lock, PiggyBank, PieChart, Coins, Globe2, KeyRound, LogOut, UserX, Info, Shield, Store, Zap, Mic, MessageSquare, Moon, Palette, Sun } from "lucide-react-native";
@@ -29,7 +29,7 @@ export default function Settings({
   onChangePassword: () => void; onDeleteAccount: () => void; onAbout: () => void;
   onLegal: () => void; onVoiceHelp: () => void; onTelegram: () => void;
 }) {
-  const { t, themeMode, updateThemeMode, visualStyle, updateVisualStyle, hasCloudAccount, isPremium: premiumCloud, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios, testerPremiumPendingVerification } = useAppData();
+  const { t, themeMode, updateThemeMode, visualStyle, updateVisualStyle, hasCloudAccount, cloudBackupEnabled, setCloudBackupEnabled, isPremium: premiumCloud, respaldoAlDia, respaldoFallo, autoCaptureOn, showToast, negocios, testerPremiumPendingVerification } = useAppData();
   const { colorScheme } = useColorScheme();
   const colors = settingsColors(visualStyle, colorScheme === "dark");
   const insets = useSafeAreaInsets();
@@ -66,87 +66,6 @@ export default function Settings({
           </LinearGradient>
         </TouchableOpacity>
         {testerPremiumPendingVerification ? <Text className="mx-5 mt-2 text-sm text-amber-700 dark:text-amber-300">{t("settings.testerPremiumNeedsConnection")}</Text> : null}
-
-      {/* EL CARTEL DICE LO QUE DE VERDAD PASO CON LA ULTIMA SUBIDA.
-          Hasta el 20/08/2026 solo miraba `isCloudSynced`, que es "hay sesion iniciada" — asi
-          que decia "Tus datos estan respaldados" aunque la subida llevara semanas fallando.
-          Un respaldo que miente es peor que no tener respaldo: con el segundo, uno guarda una
-          copia por su cuenta. */}
-      {hasCloudAccount && !premiumCloud ? (
-        <TouchableOpacity
-          onPress={onPremium}
-          accessibilityRole="button"
-          accessibilityLabel={t("settings.backupProTitle")}
-          className="mx-4 mt-2.5 flex-row items-center gap-2.5 rounded-2xl px-3 py-2.5 border-[1.5px] bg-emerald-50 dark:bg-noche-2 border-emerald-100 dark:border-noche-borde"
-        >
-          <View className="w-10 h-10 rounded-xl items-center justify-center bg-emerald-100 dark:bg-noche-3">
-            <Cloud size={24} color={colors.accent} />
-          </View>
-          <View className="flex-1">
-            <Text className="text-base font-bold text-emerald-700 dark:text-slate-100">{t("settings.backupProTitle")}</Text>
-            <Text className="text-sm leading-5 text-emerald-600 dark:text-slate-300">{t("settings.backupProHint")}</Text>
-          </View>
-          <ChevronRight size={24} color={colors.accent} />
-        </TouchableOpacity>
-      ) : hasCloudAccount && premiumCloud ? (
-        <View
-          className={`mx-4 mt-2.5 flex-row items-center gap-2.5 rounded-2xl px-3 py-2.5 border-[1.5px] ${
-            respaldoAlDia
-              ? "bg-emerald-50 dark:bg-noche-2 border-emerald-100 dark:border-noche-borde"
-              : "bg-amber-50 dark:bg-noche-2 border-amber-200 dark:border-noche-borde"
-          }`}
-        >
-          <View
-            className={`w-10 h-10 rounded-xl items-center justify-center ${
-              respaldoAlDia ? "bg-emerald-100 dark:bg-noche-3" : "bg-amber-100 dark:bg-noche-3"
-            }`}
-          >
-            <Cloud size={24} color={respaldoAlDia ? colors.accent : colorScheme === "dark" ? "#fcd34d" : "#b45309"} />
-          </View>
-          <View className="flex-1">
-            <Text
-              className={`text-base font-bold ${
-                respaldoAlDia ? "text-emerald-700 dark:text-slate-100" : "text-amber-700 dark:text-slate-100"
-              }`}
-            >
-              {t(respaldoAlDia ? "settings.backupActive" : "settings.backupFailed")}
-            </Text>
-            <Text
-              className={`text-sm leading-5 ${
-                respaldoAlDia ? "text-emerald-600 dark:text-slate-300" : "text-amber-700 dark:text-slate-300"
-              }`}
-            >
-              {respaldoAlDia
-                ? t("settings.backupDescription")
-                : /* EL MOTIVO, ESCRITO TAL CUAL. Sin el, "no se pudo guardar" no da para
-                     hacer nada: no distingue entre falta de internet, permisos o que no
-                     quepa. Con el, la propia pantalla dice que pasa. */
-                  t(
-                    respaldoFallo === "permisos"
-                      ? auth.currentUser?.emailVerified === false
-                        ? "settings.backupNoPermission"
-                        : "settings.backupPermissionDenied"
-                      : respaldoFallo === "sin-internet"
-                        ? "settings.backupNoInternet"
-                        : respaldoFallo === "demasiado-grande"
-                          ? "settings.backupTooLarge"
-                        : respaldoFallo === "datos-nube-invalidos"
-                          ? "settings.backupInvalid"
-                        : respaldoFallo === "monedas-distintas"
-                          ? "settings.backupCurrencyConflict"
-                        : respaldoFallo === "movimientos-en-conflicto"
-                          ? "settings.backupMovementConflict"
-                        : respaldoFallo === "actualizacion-necesaria"
-                          ? "settings.backupUpdateRequired"
-                        : respaldoFallo === "revision-caja-pendiente"
-                          ? "settings.backupBoxReview"
-                        : "settings.backupFailedHint"
-                  )}
-            </Text>
-          </View>
-        </View>
-      ) : null}
-
 
         <SettingsSection title={t("settings.sectionPersonalize")}>
           <Row Icon={Globe2} label={t("settings.language")} hint={languageLabelFor(userLanguage)} onPress={onLanguage}
@@ -192,9 +111,44 @@ export default function Settings({
           <Row Icon={CalendarClock} label={t("schedExport.settingsRow")} onPress={onScheduledExport} premium />
         </SettingsSection>
 
+        {hasCloudAccount ? <SettingsSection title={t("settings.sectionCloud")}>
+          {premiumCloud ? <>
+            <View style={{ flexDirection: "row", alignItems: "center", minHeight: 68, paddingHorizontal: 14, paddingVertical: 10, gap: 12 }}>
+              <SettingsIcon Icon={Cloud} />
+              <View style={{ flex: 1, minWidth: 0 }}>
+                <Text style={{ fontFamily: ENTRY_FONT.bold, fontSize: 16, lineHeight: 22, color: colors.text }}>{t("settings.backupSwitch")}</Text>
+                <Text style={{ fontFamily: ENTRY_FONT.regular, fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 }}>
+                  {t(cloudBackupEnabled ? respaldoAlDia ? "settings.backupDescription" : "settings.backupFailed" : "settings.backupPausedHint")}
+                </Text>
+              </View>
+              <Switch
+                accessibilityLabel={t("settings.backupSwitch")}
+                value={cloudBackupEnabled}
+                onValueChange={(enabled) => { void setCloudBackupEnabled(enabled).catch(error => showToast(error instanceof Error ? error.message : t("toast.localSaveFailed"))); }}
+                trackColor={{ true: colors.accent, false: colors.border }}
+                thumbColor="#ffffff"
+              />
+            </View>
+            {cloudBackupEnabled && !respaldoAlDia && respaldoFallo ? <Text style={{ fontFamily: ENTRY_FONT.regular, fontSize: 13, lineHeight: 19, color: colorScheme === "dark" ? "#fcd34d" : "#92400e", paddingHorizontal: 16, paddingBottom: 12 }}>
+              {t(
+                respaldoFallo === "permisos"
+                  ? auth.currentUser?.emailVerified === false ? "settings.backupNoPermission" : "settings.backupPermissionDenied"
+                  : respaldoFallo === "sin-internet" ? "settings.backupNoInternet"
+                    : respaldoFallo === "demasiado-grande" ? "settings.backupTooLarge"
+                      : respaldoFallo === "datos-nube-invalidos" ? "settings.backupInvalid"
+                        : respaldoFallo === "monedas-distintas" ? "settings.backupCurrencyConflict"
+                          : respaldoFallo === "movimientos-en-conflicto" ? "settings.backupMovementConflict"
+                            : respaldoFallo === "actualizacion-necesaria" ? "settings.backupUpdateRequired"
+                              : respaldoFallo === "revision-caja-pendiente" ? "settings.backupBoxReview"
+                                : "settings.backupFailedHint"
+              )}
+            </Text> : null}
+          </> : <Row Icon={Cloud} label={t("settings.backupProTitle")} hint={t("settings.backupProHint")} onPress={onPremium} premium />}
+        </SettingsSection> : null}
+
         <SettingsSection title={t("settings.sectionRecording")}>
           {Platform.OS === "android" && hayRegistroAutomatico(userCurrency) && (
-            <Row Icon={Zap} label={t("autoCapture.rowLabel")} onPress={onAutoCapture}
+            <Row Icon={Zap} label={t("autoCapture.rowLabel")} onPress={() => (isPremium ? onAutoCapture() : onPremium())} premium
               right={autoCaptureOn ? <Text style={{ fontFamily: ENTRY_FONT.medium, fontSize: 12, color: colors.accent }}>{t("autoCapture.rowOn")}</Text> : undefined} />
           )}
           {/* PRO: se conserva la protección y no se coloca un widget bloqueado. */}
