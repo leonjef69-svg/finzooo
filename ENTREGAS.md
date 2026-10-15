@@ -1,5 +1,16 @@
 # Entregas de Fino
 
+## 15/10/2026 — Coronas en Ajustes; desarrollo verificado en emulador
+
+Marca `15oct-coronas-ajustes`. Sustituye los textos visibles «De pago» por
+coronas en Ajustes, incluida la copia automática de nube. Retira la coronita
+superpuesta al beneficio de nube en Premium. No cambia acceso ni respaldo.
+TypeScript, ESLint, 222 pruebas y 8 auditores aprobados, sin tarjetas.
+Capturas reales de emulator-5554 confirman ambas pantallas actualizadas;
+Ajustes queda abierto mostrando las coronas y la nube pausada, sin activarla.
+No se generó APK/AAB ni se publicó OTA/Play. Qué sigue/falta: distribución y
+compras reales por separado; este ajuste visual ya se ve en desarrollo.
+
 ## 14/10/2026 — Rosquilla de Reportes equilibrada; solo código
 
 Se reparte por igual la posición de etiquetas para gráficos de gastos e

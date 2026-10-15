@@ -121,6 +121,10 @@ export default function Settings({
                   {t(cloudBackupEnabled ? respaldoAlDia ? "settings.backupDescription" : "settings.backupFailed" : "settings.backupPausedHint")}
                 </Text>
               </View>
+              <View accessible accessibilityLabel={t("settings.paidBadge")}
+                style={{ width: 28, height: 28, flexShrink: 0, borderRadius: 9, alignItems: "center", justifyContent: "center", backgroundColor: colors.soft }}>
+                <Crown size={18} strokeWidth={2.1} color={colors.accent} fill={colors.proFill} />
+              </View>
               <Switch
                 accessibilityLabel={t("settings.backupSwitch")}
                 value={cloudBackupEnabled}

@@ -3,6 +3,16 @@
 Marca: `14oct-ajustes-ordenados`. Cambio de presentación aprobado por el
 propietario; no modifica movimientos, cuentas, permisos ni servicios remotos.
 
+Actualización 15/10/2026, marca `15oct-coronas-ajustes`: los distintivos
+visibles «De pago» se sustituyen por coronas de 18 con fondo suave y colores
+de la apariencia. La copia automática muestra la misma corona junto a su
+interruptor, también con Premium activo. La nube sin Pro mantiene el acceso
+a Premium y omite el sufijo «De pago». La condición pagada se anuncia al lector
+de pantalla. Presupuestos por categoría sigue sin distintivo. Se retira la
+coronita extra del beneficio de nube en Premium. TypeScript, ESLint y las
+222 pruebas/8 auditores sin tarjetas aprobados; ambas pantallas comprobadas
+visualmente en el emulador. Accesos, datos y servicios no cambian.
+
 ## Diseño y recorrido
 
 El encabezado ahora dice Ajustes, no Perfil. Pro permanece visible arriba,

@@ -22,7 +22,7 @@ let dark = false, visualStyle = "peachOlive";
 const ui = evaluate("components/SettingsUI.tsx", name => {
   if (name === "react") return React;
   if (name === "react-native") return { Text: "Text", View: "View", TouchableOpacity: "TouchableOpacity", Switch: "Switch" };
-  if (name === "lucide-react-native") return { ChevronRight: "ChevronRight" };
+  if (name === "lucide-react-native") return { ChevronRight: "ChevronRight", Crown: "Crown" };
   if (name === "nativewind") return { useColorScheme: () => ({ colorScheme: dark ? "dark" : "light" }) };
   if (name === "@/constants/visualTheme") return theme;
   if (name === "@/constants/style") return style;
@@ -131,7 +131,9 @@ for (const appearance of ["classic", "peachOlive"]) for (const isDark of [false,
   const row = ui.SettingsRow({ Icon: "TestIcon", label: "label", premium: true, onPress: () => calls.push(["row"]) });
   assert.equal(row.props.accessibilityRole, "button"); row.props.onPress(); assert.deepEqual(calls.pop(), ["row"]);
   assert.equal(row.props.style.minHeight, 64, "zona táctil no diminuta");
-  assert.equal(walk(row).filter(node => node.type === "Text").map(textOf).includes("settings.paidBadge"), true);
+  assert.equal(walk(row).filter(node => node.type === "Text").map(textOf).includes("settings.paidBadge"), false);
+  assert.equal(walk(row).find(node => node.type === "Crown").props.size, 18);
+  assert.equal(row.props.accessibilityLabel, "label, settings.paidBadge");
   assert.equal(walk(row).find(node => node.type === "Text" && textOf(node) === "label").props.style.color, palette.text);
   assert.equal(ui.SettingsSection({ title: "group", children: [null, false, row] }).children[1].props.style.backgroundColor, palette.surface);
 }

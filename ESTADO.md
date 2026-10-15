@@ -1,5 +1,21 @@
 # Estado actual de Fino
 
+## Ajustes — 15/10/2026 — coronitas en lugar de «De pago»
+
+Corrección solicitada: se retira la coronita superpuesta al icono de nube en
+Premium. En Ajustes, todas las filas que mostraban «De pago» muestran ahora
+una corona de 18, con colores de la apariencia. También aparece junto al
+interruptor real de copia automática; sin Pro, la fila de nube conserva el
+acceso a Premium y el título sin sufijo «De pago». Presupuestos por categoría
+sigue gratis y sin distintivo. La identificación de pago se conserva para
+lectores de pantalla, sin texto visible. Accesos, planes y respaldo no cambian.
+Marca `15oct-coronas-ajustes`. TypeScript, ESLint, 222 pruebas y 8 auditores
+verdes, con tarjetas excluidas por decisión vigente. Comprobado visualmente
+en emulator-5554: coronas en Ajustes/nube y ausencia del distintivo en Premium.
+Se deja Ajustes abierto. No APK/AAB/OTA/Play ni cambios nativos o de datos.
+Qué sigue/falta: este ajuste está entregado en desarrollo; la entrega de
+distribución y las compras reales siguen pendientes por separado.
+
 ## Reportes — 14/10/2026 — rosquilla equilibrada en gastos e ingresos
 
 Gastos e ingresos usan el mismo gráfico y ahora reparten las categorías de
