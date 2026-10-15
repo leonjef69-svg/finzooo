@@ -1,5 +1,60 @@
 # Estado actual de Fino
 
+## Familia/Cajas — 15/10/2026 — selección, espera y conflictos localizados
+
+Marca de desarrollo `15oct-familias-sin-mezclas`. Al elegir una Familia se
+instalan juntos su ficha y SUS movimientos conocidos; se limpian miembros,
+selección, filtro e invitación ajenos. Sin copia propia se muestra carga, no
+un saldo cero supuesto. La consulta prioriza movimientos/miembros de la elegida,
+elimina la lectura duplicada del índice legacy y comprueba las demás en segundo
+plano. Personal solo se concilia tras confirmar TODAS las familias de la misma
+consulta/sesión. Respuestas y avisos de cierre de la familia anterior se descartan.
+
+Borrados/cierres ya confirmados (servidor Y Personal cuando corresponde) se
+retiran inmediatamente de pantalla y caché de esta sesión, antes de recargar
+otras familias. No es borrado anticipado: un rechazo/fallo local conserva la
+ficha para reintentar. Familia y Cajas muestran progreso durante la operación.
+Cajas compartidas limpian el espacio anterior antes de pintarlo y filtran las
+instantáneas atrasadas de un borrado confirmado. Un error de consulta no se
+presenta como saldo cero. Abrir una Caja por ruta se aplica una vez, sin vaciar
+el detalle cuando se vuelve a recibir su lista.
+
+Compartir una Caja ya no se bloquea por conflictos identificados en OTRA Caja.
+Los casos globales, de la propia caja y enlaces cruzados siguen bloqueados.
+Se pasan los IDs protegidos a la unión de nube para conservar intactas las
+fuentes antiguas. El aviso ya no dice incorrectamente «esta Caja»; textos en
+los tres idiomas, sin nuevos datos/permisos ni cambios legales aceptados.
+
+Revisión de las capturas: los tres casos de «hj», S/10 y fecha 02/10/2026,
+son pares con una mitad presente y una marca de borrado; NO prueba de tres
+duplicados ni autorización para restaurar dinero. La reproducción equivalente
+del plan original mantiene tres conflictos, cero altas automáticas y rechaza
+elegir una mitad ausente. No se inspeccionaron por acceso administrativo los
+originales privados ni se eligió su destino; quedan conservados para aclarar
+si el borrado de Personal fue intencional. No archivar ni eliminar de oficio.
+
+Prueba nueva ejecuta botones/callbacks originales: mezcla A/B, respuesta tardía,
+prioridad con otro historial bloqueado, creación con carga explícita, borrado
+confirmado antes de recarga, cierre atrasado, Caja por ruta y aislamiento de
+«hj». Contra 66e4504 falla por mostrar mov-a al abrir B, no por API ausente.
+Android: lista existente con una sola Familia y apertura de dotero123xc S/100,
+ingreso externo inicial S/100 del 15/10 8:22; Cajas conserva S/88 y «hj» S/20.
+No crear/borrar datos del dueño para acreditar una prueba. El cambio entre dos
+familias, altas y borrados se comprueba en código, no se acredita nativo aún.
+
+**Sigue/falta:** confirmación del dueño sobre los tres borrados antiguos y
+recorrido Android con dos familias/cuentas, incluidos borrados sin usar datos
+reales del dueño. Continúan diario durable entre Firebase/Personal y alta,
+historiales grandes/coste, tres decimales legacy y pendientes externos de la
+auditoría anterior. No se modifica servidor/reglas ni se publica APK/AAB/OTA/Play.
+
+Verificación de entrega: TypeScript/ESLint completos sin errores ni avisos;
+225 pruebas y 8 auditores aprobados, tarjetas excluidas. Última ejecución:
+.tmp/familias-seleccion-entrega-15oct.log. La regresión original contra
+66e4504 falla por la mezcla real de movimientos. La navegación nativa de
+lectura conserva la Familia S/100 y ambas Cajas S/88/S/20; no acredita borrados
+financieros nuevos ni migración real de la caja del dueño.
+
 ## Familia/Cajas — 15/10/2026 — servicios y reglas ACTIVADOS
 
 Blaze confirmado activo. Tras confirmar el dueño que solo usa este emulador,

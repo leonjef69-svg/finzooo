@@ -5,6 +5,58 @@ devoluciones, cierre/salida, invitaciones, lectura y conservación de originales
 Tarjetas, Telegram, cobros, cambios de facturación y publicación fuera del cambio.
 No se crean, corrigen ni borran movimientos de la cuenta del propietario.
 
+## Segunda pasada — selección, espera y tres casos antiguos
+
+Síntomas enviados por el dueño después de activar servicios: al elegir una
+Familia se veía momentáneamente otra, cerrar/borrar tardaba en reflejarse,
+crear mostraba unos segundos la pantalla sin familias y compartir otra Caja
+abría tres incidencias de «hj» del 02/10, S/10 cada una.
+
+Causas confirmadas y correcciones de cliente:
+
+- El botón cambiaba la ficha sin cambiar sus movimientos/miembros. Ahora cambia
+  el conjunto visual, limpia controles del espacio anterior y usa carga cuando
+  la elegida no tiene copia conocida. No se muestran ceros supuestos al fallar.
+- recargar esperaba listas, todos los historiales y miembros en serie. Ahora
+  prioriza la elegida y publica sus movimientos/miembros juntos; el resto va
+  detrás. No se da permiso de conciliar Personal hasta confirmar el conjunto
+  completo y vigente. Se elimina la consulta legacy duplicada.
+- Cierres y borrados confirmados se retiraban solo después de recargar el
+  conjunto. Se retiran de la vista/caché de sesión después de ambos ACK; nunca
+  antes del guardado ni al fallar. Se conserva reintento de cierre local.
+- Compartir comprobaba conflictos.length global. Ahora conserva la barrera
+  global, la de la Caja elegida y enlaces cruzados, y mantiene intactas las
+  fuentes de las otras cajas protegidas al subir la copia privada.
+- Cajas compartidas limpian selección vieja y muestran carga/progreso; una
+  respuesta en caché no repinta el movimiento cuyo borrado ya fue confirmado.
+  Se evita reiniciar la apertura por ruta al cambiar la lista, por ejemplo
+  después de renombrar.
+
+Las capturas describen tres marcas de borrado con la contraparte Personal no
+encontrada, NO tres duplicados demostrados ni tres operaciones nuevas. La
+reproducción equivalente del plan original devuelve tres conflictos deleted,
+sin altas; se rechaza imponer Personal/Caja cuando falta la contraparte. Se
+conservan movimientos, lápidas e importes. No se recuperan los originales
+privados mediante acceso administrativo ni se elige qué historial prevalece.
+Para cerrar esos casos falta evidencia del dueño sobre la intención del borrado.
+
+La regresión nueva ejecuta el botón ORIGINAL de ambas revisiones: 66e4504
+muestra mov-a al abrir B y falla esa comparación real. Comprueba también
+respuesta tardía, historial ajeno retenido, carga al crear, borrado antes de
+recarga, cierre tardío y aislamiento de los casos antiguos. Son sustitutos de
+red/SDK para ordenar respuestas, no prueba de dinero real.
+
+Android observado sin escrituras financieras de prueba: una sola Familia en
+la lista, dotero123xc S/100 y su ingreso externo inicial del 15/10 8:22; Cajas
+mantiene la caja S/88 y «hj» S/20. No se crea otra Familia ni se borra un
+movimiento real para justificar cobertura. El cambio A/B, altas y borrados
+Android sigue pendiente. No se cambian servicios/reglas nativos ni se publica.
+
+Verificación final de esta pasada: TypeScript y ESLint completos sin errores
+ni avisos, 225 pruebas y 8 auditores aprobados (tarjetas excluidas). El servidor
+y las reglas no cambian; las 245 pruebas Firebase de la activación anterior
+son evidencia histórica de aquella entrega, no se afirman ejecutadas de nuevo.
+
 ## Orden y hallazgos
 
 1. **Saldo compartido (alto, reproducido):** el teléfono validaba un saldo viejo

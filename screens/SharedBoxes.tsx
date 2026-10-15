@@ -6,7 +6,7 @@ import SpaceInvitationSheet from "@/components/SpaceInvitationSheet";
 import ContentReportButton from "@/components/ContentReportButton";
 import { methodLabel } from "@/constants/i18n";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLocalSearchParams } from "expo-router";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -53,6 +53,9 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
   const [codigo, setCodigo] = useState("");
   const [invitacion, setInvitacion] = useState("");
   const [busy, setBusy] = useState(false);
+  const [cargandoCaja, setCargandoCaja] = useState(false);
+  const [errorCargaCaja, setErrorCargaCaja] = useState(false);
+  const borradosConfirmados = useRef(new Map<string, Set<string>>());
   const [editandoAporteId, setEditandoAporteId] = useState<string | null>(null);
   const lock = useRef(false);
   const cierresPendientes = useRef(new Set<string>());
@@ -60,6 +63,7 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
   const accountSession = useRef(getAccountStorageSession()).current;
   const mounted = useRef(true);
   const selectedBoxId = useRef(caja?.id);
+  const routeBoxOpened = useRef<string | undefined>(undefined);
   const cajaId = caja?.id;
   selectedBoxId.current = caja?.id;
   const movementEpoch = useRef(0);
@@ -85,9 +89,12 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
   // Cuando una caja privada se convierte para invitar, se abre directamente
   // esta caja y se conserva el código recién creado en el recuadro.
   useEffect(() => {
-    if (!boxId || !cajas.length) return;
+    if (!boxId || !cajas.length || routeBoxOpened.current === boxId) return;
     const destino = cajas.find(item => item.id === boxId);
     if (!destino) return;
+    routeBoxOpened.current = boxId;
+    selectedBoxId.current = destino.id;
+    setMovimientos([]); setMiembros([]); setMovimientosConfirmados(false); setCargandoCaja(true);
     setCaja(destino);
     if (invitationInicial) setInvitacion(invitationInicial);
   }, [boxId, cajas, invitationInicial]);
@@ -96,6 +103,8 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
     confirmedSource.current = null;
     setMovimientosConfirmados(false); setMovimientos([]); setMiembros([]);
     if (!cajaId) return;
+    setCargandoCaja(true);
+    setErrorCargaCaja(false);
     const boxId = cajaId;
     let active = true, snapshotRevision = 0;
     const task = captureAccountTask(uid, () => mounted.current && active && getAccountStorageSession() === accountSession
@@ -107,7 +116,12 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
       if (!task.current()) return;
       const revision = ++snapshotRevision;
       confirmedSource.current = null;
-      setMovimientosConfirmados(false); setMovimientos(items);
+      const borrados = borradosConfirmados.current.get(boxId);
+      const visibles = items.filter(item => !borrados?.has(item.id));
+      if (confirmado && borrados) for (const id of borrados) {
+        if (!items.some(item => item.id === id)) borrados.delete(id);
+      }
+      setMovimientosConfirmados(false); setMovimientos(visibles); setCargandoCaja(false); setErrorCargaCaja(false);
       if (!confirmado || lock.current) return;
       void task.wait(() => confirmarCajaAbierta(boxId)).then(abierta => {
         if (!task.current() || revision !== snapshotRevision || lock.current || !abierta) return;
@@ -117,10 +131,17 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
     }, error => {
       if (!task.current()) return;
       snapshotRevision += 1; confirmedSource.current = null;
-      setMovimientosConfirmados(false); errorRef.current(error);
+      setMovimientosConfirmados(false); setCargandoCaja(false); setErrorCargaCaja(true); errorRef.current(error);
     });
     return () => { active = false; stop(); };
   }, [accountSession, cajaId, subscriptionRevision, uid]);
+  function abrirCaja(item: CajaCompartida) {
+    if (lock.current) return;
+    selectedBoxId.current = item.id;
+    movementEpoch.current += 1; confirmedSource.current = null;
+    setMovimientos([]); setMiembros([]); setMovimientosConfirmados(false); setCargandoCaja(true);
+    limpiar(); setInvitacion(""); setFilter(null); setCaja(item);
+  }
   useEffect(() => setMovementLimit(60), [caja?.id, filter]);
   useEffect(() => {
     setEditandoNombreCaja(false);
@@ -200,6 +221,8 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
     if (modo === "unir") {
       if (codigo.length !== 8) return;
       const nueva = await wait(() => unirseACaja(uid, userName, codigo));
+      selectedBoxId.current = nueva.id;
+      setMovimientos([]); setMiembros([]); setMovimientosConfirmados(false); setCargandoCaja(true);
       setCajas(items => [nueva, ...items.filter(item => item.id !== nueva.id)]); setCaja(nueva);
     } else if (caja && (modo === "ingreso" || modo === "gasto")) {
       const issue = amountInputError(monto, moneda);
@@ -230,6 +253,9 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
     else await wait(() => borrarMovimientoCajaCompartida(caja.id, item.id));
     if (item.personalOwnerUid === uid && item.personalTransactionId != null
       && !await deleteLinkedTransferTransaction(item.personalTransactionId)) throw new Error("personal-save-failed");
+    const borrados = borradosConfirmados.current.get(caja.id) ?? new Set<string>();
+    borrados.add(item.id); borradosConfirmados.current.set(caja.id, borrados);
+    setMovimientos(items => items.filter(row => row.id !== item.id));
   });
   const devolverAPersonal = () => ejecutar(async wait => {
     if (!uid || !caja || devolvibleAPersonal <= 0) return;
@@ -290,11 +316,12 @@ function SharedBoxesForAccount({ uid }: { uid: string }) {
       }}
     >
       <LegalAcceptancePanel />
+      {busy ? <View accessibilityRole="progressbar" accessibilityLiveRegion="polite" className="flex-row items-center justify-center gap-2 py-2"><ActivityIndicator size="small" color="#059669" /><Text className="text-sm text-slate-600 dark:text-slate-300">{t("spaces.processing")}</Text></View> : null}
       {!uid ? <Text className="text-slate-600 dark:text-slate-200">{t("boxes.loginRequired")}</Text> : <>
         {!caja ? <>
           <View className="mb-3 flex-row gap-2">{boton(t("boxes.join"), () => { limpiar(); setModo("unir"); })}</View>
-          {cajas.map(item => <TouchableOpacity key={item.id} onPress={() => { limpiar(); setCaja(item); }} className="mb-2 rounded-2xl border border-slate-200 p-4 dark:border-noche-borde"><Text className="text-base font-bold text-slate-900 dark:text-white">{item.nombre}</Text></TouchableOpacity>)}
-        </> : <>
+          {cajas.map(item => <TouchableOpacity key={item.id} disabled={busy} onPress={() => abrirCaja(item)} className="mb-2 rounded-2xl border border-slate-200 p-4 dark:border-noche-borde"><Text className="text-base font-bold text-slate-900 dark:text-white">{item.nombre}</Text></TouchableOpacity>)}
+        </> : cargandoCaja ? <View accessibilityRole="progressbar" className="items-center gap-2 py-8"><ActivityIndicator color="#059669" /><Text className="text-sm text-slate-600 dark:text-slate-300">{t("common.loading")}</Text></View> : errorCargaCaja ? <Text accessibilityLiveRegion="polite" className="py-8 text-center text-slate-600 dark:text-slate-300">{t("family.connectionError")}</Text> : <>
           <View className="rounded-2xl bg-emerald-600 p-4">
             <View className="flex-row items-center gap-2">
               {editandoNombreCaja && owner ? <>

@@ -41,7 +41,9 @@ function closeHarness(kind, outcome) {
   const storage = { getAccountStorageSession: () => h.session };
   const account = moduleOriginal("utils/accountTask.ts", { "@/utils/firebase": { auth }, "@/utils/storage": storage });
   const scope = { ...account, ...transfers, auth, uid: "a", accountUid: "a", accountSession: 1, getAccountStorageSession: storage.getAccountStorageSession,
+    useCallback: callback => callback,
     mounted: { current: true }, actionLock: { current: false }, lock: { current: false }, reloadId: { current: 0 },
+    familiaElegida: { current: "space-a" }, familiaEnMemoria: new Map(),
     movementEpoch: { current: 0 }, confirmedSource: { current: null }, selectedBoxId: { current: "space-a" },
     cierresPendientes: { current: new Set() }, cierresConfirmados: { current: new Set() },
     familia: { id: "space-a", nombre: "F", ownerUid: "a" }, familiaId: "space-a", caja: { id: "space-a", nombre: "C", ownerUid: "a" }, cajaId: "space-a",
@@ -51,6 +53,7 @@ function closeHarness(kind, outcome) {
     spaceErrorKey: () => "family.connectionError", errorRef: { current: error => h.toasts.push(error?.message || "error") },
     setOcupado() {}, setBusy() {}, setFamiliasSincronizadas() {}, setMovimientosConfirmados() {}, setSubscriptionRevision: () => { h.subscriptions++; },
     setFamilia: value => { scope.familia = value; }, setCaja: value => { scope.caja = value; },
+    setFamilias: update => { scope.familias = typeof update === "function" ? update(scope.familias) : update; },
     setCajas() {}, setMiembros() {}, setMovimientos() {}, setTipo() {}, setInvitacion() {}, setFilter() {}, setVerTodas() {},
     setFamiliasSeleccionadas() {}, setSeleccionandoFamilias() {},
     recargar: async () => { h.reloads++; },
@@ -65,7 +68,7 @@ function closeHarness(kind, outcome) {
     observarCierreCaja: (_id, callback) => { h.closed = callback; return () => {}; },
     Alert: { alert: (_title, _message, buttons) => { h.confirm = buttons.find(button => button.onPress).onPress; } }, Error };
   vm.runInNewContext(js(declaration(file, "ejecutar") + "\n" + declaration(file, kind === "family" ? "cerrarFamiliaActiva" : "cerrar")
-    + (kind === "family" ? "\n" + declaration(file, "confirmarBorrarFamilias") + "\nglobalThis.closeSelected = confirmarBorrarFamilias;" : "")
+    + (kind === "family" ? "\n" + declaration(file, "retirarFamiliasConfirmadas") + "\n" + declaration(file, "confirmarBorrarFamilias") + "\nglobalThis.closeSelected = confirmarBorrarFamilias;" : "")
     + `\nglobalThis.closeAction = ${kind === "family" ? "cerrarFamiliaActiva" : "cerrar"}; globalThis.watch = (${effect(file, kind === "family" ? "observarCierreFamilia(" : "observarCierreCaja(")}); globalThis.lifecycle = (${effect(file, "mounted.current = true;")});`), scope);
   const run = scope.ejecutar; scope.ejecutar = (...args) => { h.running = run(...args); return h.running; };
   h.scope = scope; h.stop = scope.watch(); h.unmount = scope.lifecycle();

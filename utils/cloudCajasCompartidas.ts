@@ -83,6 +83,7 @@ export async function compartirCajaExistente(
   movimientos: MovimientoCaja[],
   currency = "PEN",
   allowNew = true,
+  protectedBoxIds: readonly string[] = [],
 ): Promise<CajaCompartida & { conversion: ConversionCaja }> {
   const task = captureAccountTask(uid);
   const digest = await task.wait(() => huellaCaja(caja, movimientos, currency));
@@ -99,7 +100,7 @@ export async function compartirCajaExistente(
   }
   // Confirma el origen privado antes de copiar devoluciones históricas.
   await task.wait(() => assertSharedContentAccepted(uid));
-  const sourceSaved = await task.wait(() => subirCajas(uid, { cajas: [caja], movimientos, cajasBorradas: [], movimientosBorrados: [] }));
+  const sourceSaved = await task.wait(() => subirCajas(uid, { cajas: [caja], movimientos, cajasBorradas: [], movimientosBorrados: [] }, undefined, undefined, protectedBoxIds));
   if (!sourceSaved) throw new Error("permission-denied");
   const privateCopy = await task.wait(() => getDocFromServer(doc(db, "cajas", uid)));
   if (!privateCopy.exists() || !copiaPrivadaCoincide(caja, movimientos, validarCajas(privateCopy.data()))) throw new Error("cajas-sync-conflict");

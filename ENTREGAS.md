@@ -1,5 +1,28 @@
 # Entregas de Fino
 
+## 15/10/2026 — Familias sin mezclas y revisión localizada de Cajas (desarrollo)
+
+Marca `15oct-familias-sin-mezclas`: carga prioritaria de la familia elegida,
+sin datos temporales de la anterior ni pantalla vacía al crear. Confirmaciones
+de borrado retiran la fila/caché sin esperar todas las demás familias; indicador
+de proceso y errores sin saldo cero ficticio. La conciliación conserva la
+exigencia de todas las lecturas confirmadas y la sesión vigente.
+
+Compartir Caja solo se bloquea por su propia revisión o un problema global;
+se conservan fuentes antiguas protegidas al unir nube. Los tres casos «hj» del
+02/10 no se borran, restauran ni archivan automáticamente. Aviso corregido en
+tres idiomas. Sin datos, permisos o cambios nativos nuevos; sin APK/AAB/OTA/Play
+ni despliegue servidor/reglas. Detalle y límites en ESTADO.md y auditoría del día.
+
+Android de lectura: dotero123xc S/100 e ingreso inicial existente, cajas S/88 y
+«hj» S/20. Falta recorrido de dos familias/cuentas y altas/borrados Android sin
+comprometer datos reales, además de aclarar si los borrados antiguos fueron
+intencionales. No declarar la auditoría global terminada por esta entrega.
+
+TypeScript/ESLint sin errores ni avisos; 225 pruebas y 8 auditores aprobados
+con tarjetas excluidas. Regresión contra 66e4504 roja por movimientos de A
+al elegir B. Los tres casos antiguos se reproducen sin restaurar ni eliminar.
+
 ## 15/10/2026 — Activación Firebase real de Familia/Cajas
 
 Código f2573a5, Node22, southamerica-east1: 16 servicios de cuenta/Familia/Cajas

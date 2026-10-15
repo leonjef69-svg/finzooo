@@ -43,6 +43,7 @@ function familyHarness() {
   const state = {}, calls = [], cache = new Map(); let networkReads = 0;
   const scope = { auth, accountUid: "A", accountSession: 1, getAccountStorageSession, captureAccountTask,
     mounted: { current: true }, reloadId: { current: 0 }, confirmedReload: { current: 0 }, actionLock: { current: false },
+    familiaElegida: { current: null },
     cierresPendientes: { current: new Set() }, cierresConfirmados: { current: new Set() },
     tRef: { current: key => key }, toastRef: { current: key => calls.push(key) }, showToast: key => calls.push(key),
     t: key => key, spaceErrorKey: () => "error", familiaEnMemoria: cache, VENTANA_CAMBIO_RAPIDO_MS: 2_000,
@@ -50,7 +51,7 @@ function familyHarness() {
     cargarFamiliaActiva: async () => { networkReads++; return null; },
     listarMovimientosFamilia: async () => { networkReads++; return [{ id: "old", tipo: "ingreso", monto: 40 }]; },
     listarMiembrosFamilia: async () => { networkReads++; return [{ uid: "A" }]; } };
-  for (const name of ["Cargando", "Actualizando", "FamiliasSincronizadas", "Familias", "SaldosFamilias", "MovimientosFamilias", "Familia", "Miembros", "Movimientos", "Ocupado"]) {
+  for (const name of ["Cargando", "Actualizando", "ErrorCarga", "VerTodas", "FamiliasSincronizadas", "Familias", "SaldosFamilias", "MovimientosFamilias", "Familia", "Miembros", "Movimientos", "Ocupado"]) {
     scope[`set${name}`] = value => { state[name] = value; };
   }
   vm.runInNewContext(transpile(`globalThis.recargar = (${reload});\n${fn(family, "ejecutar")}`), scope);
@@ -63,7 +64,7 @@ function familyHarness() {
   scope.listarMiembrosFamilia = () => members.promise;
   const load = scope.recargar(); await flush();
   assert.equal(state.Familias, undefined, "no publicar una lista parcial antes del último paso");
-  members.resolve([{ uid: "A" }]); await load;
+  members.resolve([{ uid: "A" }]); await load; await flush();
   assert.equal(state.FamiliasSincronizadas, true);
   assert.equal(state.Movimientos[0].id, "old");
 }
@@ -79,7 +80,8 @@ function familyHarness() {
   assert.equal(state.Cargando, false, "la pantalla con copia conocida queda disponible inmediatamente");
   assert.notEqual(state.FamiliasSincronizadas, true, "la copia visual no autoriza conciliar transferencias como si se hubiera confirmado nube");
   await scope.recargar(undefined, true);
-  assert.equal(networkReads(), 4, "la actualización manual fuerza la consulta completa");
+  await flush();
+  assert.equal(networkReads(), 3, "la actualización manual confirma todo sin repetir el índice heredado");
   assert.equal(state.FamiliasSincronizadas, true);
 }
 // La copia al volver a entrar conserva TODA la lista, no solo la última familia.
@@ -87,7 +89,7 @@ function familyHarness() {
   const { scope, cache } = familyHarness();
   scope.listarFamilias = async () => [{ id: "f", nombre: "Casa" }, { id: "g", nombre: "Viaje" }];
   scope.listarMovimientosFamilia = async id => [{ id: `mov-${id}`, tipo: "ingreso", monto: 40 }];
-  await scope.recargar();
+  await scope.recargar(); await flush();
   assert.deepEqual(plain(cache.get("A").familias.map(item => item.id)), ["f", "g"]);
   assert.deepEqual(Object.keys(cache.get("A").movimientosFamilias).sort(), ["f", "g"]);
 }
@@ -137,7 +139,7 @@ for (const nextUid of ["B", "A"]) {
   assert.notEqual(scope.reloadId.current, intermediateRevision);
   assert.equal(state.FamiliasSincronizadas, false, "se obliga a leer después de la confirmación, no se usa la foto intermedia");
   assert.ok(finalLoad, "inició la carga posterior a la modificación");
-  after.resolve([]); await finalLoad;
+  after.resolve([]); await finalLoad; await flush();
   assert.deepEqual(plain(state.Movimientos), []);
   assert.equal(scope.confirmedReload.current, scope.reloadId.current);
 }
@@ -165,6 +167,7 @@ function boxHarness() {
   const scope = { auth, uid: "A", accountSession: 1, getAccountStorageSession, captureAccountTask,
     caja: { id: "box-a", nombre: "Caja" }, cajaId: "box-a", mounted: { current: true },
     selectedBoxId: { current: "box-a" }, movementEpoch: { current: 0 }, confirmedSource: { current: null },
+    borradosConfirmados: { current: new Map() }, setCargandoCaja() {}, setErrorCargaCaja() {},
     lock: { current: false }, errorRef: { current: error => { state.error = error; } },
     listarMiembrosCaja: () => members.promise, confirmarCajaAbierta: () => confirmation.promise,
     escucharMovimientosCaja: (_id, callback) => { receive = callback; return () => stopCount++; },

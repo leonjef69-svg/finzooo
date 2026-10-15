@@ -824,7 +824,9 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
 
   async function compartirCaja() {
     if (caja?.archivadaLocal) return;
-    if ((repairBlocked || repairPlan.conflicts.length > 0) && !caja?.sharingPending) { avisarRevisionNecesaria(); return; }
+    // Una incidencia identificada en otra Caja no invalida esta conversión.
+    // Las dudas globales y los enlaces cruzados siguen bloqueados.
+    if ((repairBlocked || repairPlan.conflicts.some(issue => issue.boxId === caja?.id)) && !caja?.sharingPending) { avisarRevisionNecesaria(); return; }
     const uid = auth.currentUser?.uid;
     if (!uid || !caja || compartiendo || conversionEnCurso.current || guardandoRef.current) return;
     if (!isPremium && !caja.sharingPending) { irUnaVez("/premium"); return; }
@@ -847,7 +849,8 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
         pendingBox = { ...caja, sharingPending: true, sharingAttempt: nuevoIntentoCaja() };
         if (!await guardarCambioCaja({ ...before, cajas: before.cajas.map(box => box.id === caja.id ? pendingBox : box) })) return;
       }
-      const compartida = await task.wait(() => compartirCajaExistente(uid, userName || t("family.member"), pendingBox, movimientos, userCurrency, isPremium));
+      const compartida = await task.wait(() => compartirCajaExistente(uid, userName || t("family.member"), pendingBox, movimientos, userCurrency, isPremium,
+        repairPlan.conflicts.flatMap(issue => issue.boxId ? [issue.boxId] : [])));
       const currentData = datosActuales.current;
       const currentBox = currentData.cajas.find(box => box.id === caja.id);
       if (!currentBox) throw new Error("cajas-sync-conflict");
@@ -920,6 +923,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
         <TouchableOpacity accessibilityLabel={t("common.refresh")} disabled={compartiendo || cargandoUnion || guardando} onPress={() => setRefreshVersion(value => value + 1)} className="h-10 w-10 items-center justify-center"><RefreshCw size={18} color="#64748b" /></TouchableOpacity>
       </View>
       <SpaceSwitcher active="boxes" />
+      {(guardando || compartiendo || cargandoUnion) && !moneyBusy ? <View accessibilityRole="progressbar" accessibilityLiveRegion="polite" className="flex-row items-center justify-center gap-2 px-5 py-2"><ActivityIndicator size="small" color="#059669" /><Text className="text-sm text-slate-600 dark:text-slate-300">{t("spaces.processing")}</Text></View> : null}
       <Modal transparent visible={moneyBusy} animationType="fade" onRequestClose={() => undefined}>
         <View className="flex-1 items-center justify-center bg-black/40 px-6">
           <View accessibilityViewIsModal className="w-full rounded-2xl bg-white p-6 dark:bg-noche">
