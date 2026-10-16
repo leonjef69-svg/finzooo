@@ -1,5 +1,14 @@
 # Entregas de Fino
 
+## 16/10/2026 — Ocultar el aviso legal mientras comprueba la aceptación
+
+El emulador apunta al servidor local 8081 y este sirve el marcador
+`16oct-aviso-legal-sin-destello`. El aviso legal fugaz aparecía mientras Fino
+revisaba el recibo guardado en el propio teléfono. Ahora no se dibuja durante esa
+comprobación; si falta la aceptación, el aviso aparece después. Se conserva el
+recibo y no se tocan saldos ni movimientos. Falta volver a mirar el cambio en la
+pantalla. Sin APK/AAB/OTA/Play.
+
 ## 15/10/2026 — Invitación limpia en Caja (desarrollo)
 
 Marca `15oct-caja-invitacion-espera-limpia`. Invitar ocultaba el formulario de

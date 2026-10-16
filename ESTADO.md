@@ -1,5 +1,20 @@
 # Estado actual de Fino
 
+## Familia y Cajas — 16/10/2026 — aviso legal sin destello
+
+El emulador está conectado al Metro local 8081 y este entrega el marcador
+`16oct-aviso-legal-sin-destello`; eso confirma que sirve el JavaScript actual.
+Al abrir Cajas se mostraba brevemente «Antes de crear o compartir contenido…»
+porque el panel pintaba la advertencia mientras consultaba el recibo legal
+cifrado en el almacenamiento local. Ahora el panel permanece oculto durante esa
+comprobación y aparece solo si falta una aceptación válida. No se cambia ni
+elimina el recibo, no se cambian reglas ni operaciones de Familia/Cajas y no se
+toca ningún movimiento o saldo.
+
+Regresión añadida a `pruebas/verificar-aceptacion-cuenta-real.mjs`. Sigue
+pendiente una comprobación visual de la pantalla después de esta edición; Metro
+debe recargar el paquete. Sin APK/AAB/OTA/Play.
+
 ## Caja compartida — 15/10/2026 — invitación limpia
 
 Marca `15oct-caja-invitacion-espera-limpia`. Causa: Invitar abría el código

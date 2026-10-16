@@ -53,7 +53,9 @@ function LegalAcceptanceForAccount({ uid, session, allowAccept }: { uid: string;
     finally { lock.current = false; if (current()) setBusy(false); }
   }
 
-  if (status === "accepted" && !allowAccept) return null;
+  // La nota solo es necesaria si falta la aceptación. Evita mostrarla durante
+  // los milisegundos en que se lee el recibo local al entrar a Familia/Cajas.
+  if (!allowAccept && (status === "accepted" || status === "checking")) return null;
   return (
     <View className="rounded-2xl bg-slate-50 dark:bg-noche-2 px-4 py-3 mb-3">
       <Text className="text-sm font-bold text-slate-900 dark:text-slate-100" accessibilityLiveRegion="polite">

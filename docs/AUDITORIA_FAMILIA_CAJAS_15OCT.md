@@ -1,5 +1,18 @@
 # Familia y Cajas — auditoría del 15/10/2026
 
+## 16/10/2026 — evitar el destello de aceptación legal
+
+La captura mostraba el aviso «Antes de crear o compartir contenido…» durante la
+carga de Cajas. El componente presentaba el aviso mientras `hasAcceptedLegalDocuments`
+leía el recibo cifrado local, y enseguida lo ocultaba cuando encontraba una
+aceptación válida. Ahora no monta ese aviso durante el estado de comprobación;
+si no hay recibo válido, se presenta tras concluir la lectura. No altera la
+aceptación ni los datos financieros.
+
+Metro 8081 sirve el bundle Android con la marca nueva y el emulador mantiene una
+conexión activa a ese servidor. Sigue pendiente observar visualmente este cambio
+en el emulador. Sin escritura a Firebase, edición o borrado de datos de usuario.
+
 ## Octava pasada — invitar oculta el formulario durante la espera
 
 La invitación comparte el mismo detalle y el estado React conservaba una

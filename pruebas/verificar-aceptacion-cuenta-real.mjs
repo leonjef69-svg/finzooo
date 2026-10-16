@@ -195,6 +195,11 @@ for (const [file, name, args, dependency] of [
 // Manejador de la casilla existente original, no montaje React.
 const file = "components/LegalAcceptancePanel.tsx";
 {
+  const panel = readFileSync(file, "utf8");
+  assert.match(panel, /if \(!allowAccept && \(status === "accepted" \|\| status === "checking"\)\) return null;/,
+    "la nota legal no aparece mientras comprueba un recibo existente");
+}
+{
   const a = environment(); enter(a, "A"); let busy = false, status = "required";
   const gate = deferred(), lock = { current: false }, epoch = { current: 0 };
   let calls = 0;
