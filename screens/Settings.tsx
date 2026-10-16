@@ -118,7 +118,7 @@ export default function Settings({
               <View style={{ flex: 1, minWidth: 0 }}>
                 <Text style={{ fontFamily: ENTRY_FONT.bold, fontSize: 16, lineHeight: 22, color: colors.text }}>{t("settings.backupSwitch")}</Text>
                 <Text style={{ fontFamily: ENTRY_FONT.regular, fontSize: 13, lineHeight: 18, color: colors.muted, marginTop: 2 }}>
-                  {t(cloudBackupEnabled ? respaldoAlDia ? "settings.backupDescription" : "settings.backupFailed" : "settings.backupPausedHint")}
+                  {t(cloudBackupEnabled ? respaldoFallo === "pendiente" ? "settings.backupSaving" : respaldoAlDia ? "settings.backupDescription" : "settings.backupFailed" : "settings.backupPausedHint")}
                 </Text>
               </View>
               <View accessible accessibilityLabel={t("settings.paidBadge")}
@@ -133,7 +133,7 @@ export default function Settings({
                 thumbColor="#ffffff"
               />
             </View>
-            {cloudBackupEnabled && !respaldoAlDia && respaldoFallo ? <Text style={{ fontFamily: ENTRY_FONT.regular, fontSize: 13, lineHeight: 19, color: colorScheme === "dark" ? "#fcd34d" : "#92400e", paddingHorizontal: 16, paddingBottom: 12 }}>
+            {cloudBackupEnabled && !respaldoAlDia && respaldoFallo && respaldoFallo !== "pendiente" ? <View style={{ paddingHorizontal: 16, paddingBottom: 12 }}><Text style={{ fontFamily: ENTRY_FONT.regular, fontSize: 13, lineHeight: 19, color: colorScheme === "dark" ? "#fcd34d" : "#92400e" }}>
               {t(
                 respaldoFallo === "permisos"
                   ? auth.currentUser?.emailVerified === false ? "settings.backupNoPermission" : "settings.backupPermissionDenied"
@@ -146,7 +146,7 @@ export default function Settings({
                               : respaldoFallo === "revision-caja-pendiente" ? "settings.backupBoxReview"
                                 : "settings.backupFailedHint"
               )}
-            </Text> : null}
+            </Text><TouchableOpacity accessibilityRole="button" accessibilityLabel={t("settings.backupRetry")} onPress={() => { void setCloudBackupEnabled(true).catch(error => showToast(error instanceof Error ? error.message : t("toast.localSaveFailed"))); }} style={{ minHeight: 44, justifyContent: "center", alignSelf: "flex-start" }}><Text style={{ fontFamily: ENTRY_FONT.bold, color: colors.accent }}>{t("settings.backupRetry")}</Text></TouchableOpacity></View> : null}
           </> : <Row Icon={Cloud} label={t("settings.backupProTitle")} hint={t("settings.backupProHint")} onPress={onPremium} premium />}
         </SettingsSection> : null}
 

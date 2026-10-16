@@ -79,7 +79,7 @@ export default function Cajas() {
 }
 
 function CajasForAccount({ accountUid }: { accountUid: string }) {
-  const { ready: personalReady, hasOnboarded, t, fmt, monthNames, showToast, budgets, carryoverCleared, transactions, deletedTransactionIds, commitPrivateBoxData, commitPrivateBoxMoney, retirePrivateBoxMoney, stagePrivateBoxMoney, readPrivateBoxMoneyLocal, isPremium, userName, userCurrency } = useAppData();
+  const { ready: personalReady, hasOnboarded, t, fmt, monthNames, showToast, budgets, carryoverCleared, transactions, deletedTransactionIds, commitPrivateBoxData, commitPrivateBoxMoney, retirePrivateBoxMoney, stagePrivateBoxMoney, readPrivateBoxMoneyLocal, isPremium, cloudBackupEnabled, userName, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
   const copiaCompartidaInicial = useRef(leerCajasCompartidasEnMemoria()).current;
   const [datos, setRenderedDatos] = useState<DatosCajas>(() => leerCajasEnMemoria() ?? CAJAS_VACIAS);
@@ -366,7 +366,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       setReady(true);
 
       let remoto: DatosCajas | null = null;
-      if (uid && isPremium) {
+      if (uid && isPremium && cloudBackupEnabled) {
         const task = captureAccountTask(uid, () => current() && premiumForSync.current);
         try {
           remoto = await task.wait(() => bajarCajas(uid));
@@ -421,25 +421,25 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       }
     })();
     return () => { alive = false; };
-  }, [accountUid, cuentaActual, isPremium, refreshVersion, reportSyncError, setDatos, personalReady, hasOnboarded, userCurrency])); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [accountUid, cuentaActual, isPremium, cloudBackupEnabled, refreshVersion, reportSyncError, setDatos, personalReady, hasOnboarded, userCurrency])); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!cuentaActual() || !ready || datos !== datosActuales.current || guardandoRef.current || hasUnreadableLocalData()) return;
     guardarCajasEnMemoria(datos);
     void saveJSON(STORAGE_KEYS.cajasDinero, datos);
     const uid = accountUid;
-    if (!cloudReady || repairBlocked || !uid || !isPremium || compartiendo || guardando || nubeConfirmadaPara.current !== uid) return;
+    if (!cloudReady || repairBlocked || !uid || !isPremium || !cloudBackupEnabled || compartiendo || guardando || nubeConfirmadaPara.current !== uid) return;
     let active = true;
     const task = captureAccountTask(uid, () => active && cuentaActual() && !guardandoRef.current && premiumForSync.current);
     const timer = setTimeout(() => {
       if (!task.current()) return;
       void subirCajas(uid, datos, error => { if (task.current()) reportSyncError(error); }, saved => {
         if (task.current() && !hasUnreadableLocalData()) setDatos(current => fusionarCajasProtegidas(current, saved, cajasProtegidas).local);
-      }, cajasProtegidas)
+      }, cajasProtegidas, () => task.current())
         .then(ok => { if (ok && task.current()) setSyncIssue(null); });
     }, 700);
     return () => { active = false; clearTimeout(timer); };
-  }, [accountUid, cuentaActual, datos, ready, cloudReady, repairBlocked, cajasProtegidas, compartiendo, guardando, isPremium, reportSyncError, setDatos]);
+  }, [accountUid, cuentaActual, datos, ready, cloudReady, repairBlocked, cajasProtegidas, compartiendo, guardando, isPremium, cloudBackupEnabled, reportSyncError, setDatos]);
 
   const caja = datos.cajas.find((item) => item.id === cajaId);
   const cajaEnRevision = !!caja && cajaNecesitaRevision(caja.id);
@@ -466,14 +466,14 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
 
   // Recuperación comprobada: Personal, Caja y marcas se guardan juntos.
   useEffect(() => {
-    if (!cuentaActual() || !personalReady || !hasOnboarded || !ready || !cloudReady || guardando || (isPremium && nubeConfirmadaPara.current !== accountUid)
+    if (!cuentaActual() || !personalReady || !hasOnboarded || !ready || !cloudReady || guardando || (isPremium && cloudBackupEnabled && nubeConfirmadaPara.current !== accountUid)
       || guardandoRef.current || compartiendo || repairPlan.conflicts.length || hasUnreadableLocalData()
       || (repairPlan.upserts.length === 0 && repairPlan.data === datos)) return;
     const prior = reparacionIntentada.current;
     if (prior?.data === datos && prior.rows === transactions && prior.refresh === refreshVersion) return;
     reparacionIntentada.current = { data: datos, rows: transactions, refresh: refreshVersion };
     void guardarCambioCaja(repairPlan.data, repairPlan.upserts, [], true);
-  }, [accountUid, cuentaActual, datos, transactions, repairPlan, refreshVersion, personalReady, hasOnboarded, ready, cloudReady, guardando, compartiendo, isPremium]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [accountUid, cuentaActual, datos, transactions, repairPlan, refreshVersion, personalReady, hasOnboarded, ready, cloudReady, guardando, compartiendo, isPremium, cloudBackupEnabled]); // eslint-disable-line react-hooks/exhaustive-deps
 
   function abrirRevisionTransferencia(issue: PrivateBoxConflict) {
     setRepairReviewVisible(false);

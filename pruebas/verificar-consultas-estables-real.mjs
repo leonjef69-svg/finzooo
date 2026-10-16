@@ -49,6 +49,7 @@ function fixture(initial = {}, { paused = false, accepted = true } = {}) {
   const jobs = []; let requests = 0, renders = 0, changes = 0, cleanup, dependencies, dirty = false;
   let response = { ...emptyCloud, ...initial };
   const scope = { ...merge, ...fields, ...recordOriginOriginal(), ready: true, hasOnboarded: true, uid: "A", isPremium: true, cloudBackupEnabled: true,
+    cloudBackupRevision: 0, cloudBackupPreference: { current: { enabled: true, revision: 0 } },
     goalWriteReserved: { current: false }, canonical: JSON.stringify, deletedGoalIdsRef: { current: state.deletedGoalIds },
     cloudFieldsRef: { current: { ...emptyCloud, hasOnboarded: true, userName: "A", userPhoto: null, userCurrency: "PEN", userLanguage: "es", budgets: {}, categoryBudgets: {}, ...initial } },
     cloudSyncMetaRef: { current: initial.syncUpdatedAt ?? {} }, privateBoxCloudResponseCurrent: () => accepted,
@@ -161,7 +162,8 @@ for (const initial of [emptyCloud, { ...emptyCloud, transactions: [record(1)], g
   assert.deepEqual(Array.from(f.state.deletedGoalIds), [2]); f.stop();
 }
 
-for (const invalidate of [f => { f.scope.auth.currentUser = { uid: "B" }; }, f => { f.scope.localSessionVersion.current++; }, f => f.stop()]) {
+for (const invalidate of [f => { f.scope.auth.currentUser = { uid: "B" }; }, f => { f.scope.localSessionVersion.current++; }, f => f.stop(),
+  f => { f.scope.cloudBackupPreference.current.enabled = false; }, f => { f.scope.cloudBackupPreference.current.revision++; }]) {
   const f = fixture({}, { paused: true }); f.render(); invalidate(f);
   f.jobs.shift()({ ...emptyCloud, transactions: [record(9)], goals: [goal(9)] }); await f.settle();
   assert.equal(f.state.transactions.length, 0); assert.equal(f.state.goals.length, 0);
@@ -202,7 +204,7 @@ for (const [code, reason] of [["cloud/history-format-unsupported", "actualizacio
   for (const key of Object.keys(f.state)) assert.equal(f.state[key], f.initialRefs[key], "sin formato conocido no se modifica una lista");
   f.stop();
 }
-for (const invalidation of ["uid", "version", "unmount"]) {
+for (const invalidation of ["uid", "version", "unmount", "pause", "preference"]) {
   const f = fixture({ transactions: [record(1)] });
   let rejectRead;
   f.scope.loadCloudData = () => new Promise((_resolve, reject) => { rejectRead = reject; });
@@ -210,6 +212,8 @@ for (const invalidation of ["uid", "version", "unmount"]) {
   if (invalidation === "uid") f.scope.auth.currentUser = { uid: "B" };
   if (invalidation === "version") f.scope.localSessionVersion.current++;
   if (invalidation === "unmount") f.stop();
+  if (invalidation === "pause") f.scope.cloudBackupPreference.current.enabled = false;
+  if (invalidation === "preference") f.scope.cloudBackupPreference.current.revision++;
   rejectRead(Object.assign(new Error("formato desconocido"), { code: "cloud/history-format-unsupported" }));
   await f.settle();
   assert.deepEqual(f.errors, [], "un fallo atrasado no pone un aviso en otra sesión/pantalla");

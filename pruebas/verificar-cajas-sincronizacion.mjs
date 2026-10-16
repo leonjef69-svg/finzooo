@@ -100,6 +100,13 @@ readGate = deferred(); const becameUnreadable = cloud.subirCajas(uid, old); awai
 unreadable = true; readGate.resolve(); assert.equal(await becameUnreadable, false);
 assert.equal(writes.length, 0, "un fallo local aparecido durante la transacción también impide subir");
 unreadable = false; readGate = null;
+{
+  let active = true; readGate = deferred();
+  const paused = cloud.subirCajas(uid, old, undefined, undefined, [], () => active);
+  await flush(); active = false; readGate.resolve();
+  assert.equal(await paused, false, "pausar mientras esperaba no confirma una nueva escritura privada");
+  assert.equal(writes.length, 0); readGate = null;
+}
 const memory = load("utils/cajasMemoria.ts", name => name.endsWith("privateBoxMoneyLocalWrite") ? moneyLocalWrite : name.endsWith("firebase") ? { auth } : storage);
 memory.guardarCajasEnMemoria(old); assert.ok(memory.leerCajasEnMemoria());
 uid = "B"; assert.equal(memory.leerCajasEnMemoria(), null); uid = "A"; session++;
@@ -143,16 +150,16 @@ const repairNode = select("screens/Cajas.tsx", (node, tree) => ts.isCallExpressi
   && node.arguments[0]?.getText(tree).includes("const prior = reparacionIntentada"));
 const repairEffect = repairNode.node.arguments[0].getText(repairNode.tree);
 for (const [ready, cloudReady, premium, confirmed, sameAccount] of [[false, true, false, null, true], [true, false, true, "A", true], [true, true, true, null, true], [true, true, false, null, false]]) {
-  const scope = { personalReady: true, hasOnboarded: true, ready, cloudReady, guardando: false, isPremium: premium, accountUid: "A", nubeConfirmadaPara: { current: confirmed }, cuentaActual: () => sameAccount };
+  const scope = { personalReady: true, hasOnboarded: true, ready, cloudReady, guardando: false, isPremium: premium, cloudBackupEnabled: true, accountUid: "A", nubeConfirmadaPara: { current: confirmed }, cuentaActual: () => sameAccount };
   Object.defineProperty(scope, "datos", { get() { throw new Error("PASSED_GUARD"); } });
   vm.runInNewContext(js(`globalThis.repair = (${repairEffect});`), scope);
   assert.doesNotThrow(() => scope.repair(), "no concilia antes de cargar ni con cuenta/copia sin confirmar");
 }
-function screenHarness(premium = true) {
+function screenHarness(premium = true, enabled = true) {
   uid = "A"; session = 1;
   memory.limpiarCajasEnMemoria();
   const state = {}, localRead = deferred(), cloudRead = deferred(); let count = 0;
-  const scope = { auth, accountUid: "A", cuentaActual: () => uid === "A" && session === 1, isPremium: premium,
+  const scope = { auth, accountUid: "A", cuentaActual: () => uid === "A" && session === 1, isPremium: premium, cloudBackupEnabled: enabled,
     personalReady: true, hasOnboarded: true, personalActuales: { current: [] }, borradosActuales: { current: [] },
     guardandoRef: { current: false }, conversionEnCurso: { current: false }, recuperacionConversionEnCurso: { current: false },
     refreshVersion: 0, requestedRefresh: { current: 0 },
@@ -194,6 +201,23 @@ function screenHarness(premium = true) {
 {
   const h = screenHarness(false); h.localRead.resolve(data()); await flush();
   assert.equal(h.count(), 0, "Gratis conserva solo la copia del celular"); assert.equal(h.state.cloudReady, true);
+}
+{
+  const h = screenHarness(true, false); h.localRead.resolve(data()); await flush();
+  assert.equal(h.count(), 0, "pausar la copia también pausa la descarga automática de Cajas privadas");
+  assert.equal(h.state.cloudReady, true); assert.equal(h.state.rendered.movimientos[0].monto, 100);
+  h.stop();
+}
+const uploadNode = select("screens/Cajas.tsx", (node, tree) => ts.isCallExpression(node) && node.expression.getText(tree) === "useEffect"
+  && node.arguments[0]?.getText(tree).includes("void subirCajas(uid, datos"));
+for (const enabled of [false, true]) {
+  const rows = data(); let timers = 0;
+  const scope = { cuentaActual: () => true, ready: true, datos: rows, datosActuales: { current: rows }, guardandoRef: { current: false },
+    hasUnreadableLocalData: () => false, guardarCajasEnMemoria() {}, saveJSON() {}, STORAGE_KEYS: { cajasDinero: "boxes" }, accountUid: "A",
+    cloudReady: true, repairBlocked: false, isPremium: true, cloudBackupEnabled: enabled, compartiendo: false, guardando: false,
+    nubeConfirmadaPara: { current: "A" }, captureAccountTask: () => ({ current: () => true }), setTimeout: () => { timers++; return 1; } };
+  vm.runInNewContext(js(`globalThis.upload = (${uploadNode.node.arguments[0].getText(uploadNode.tree)});`), scope); scope.upload();
+  assert.equal(timers, enabled ? 1 : 0, "la copia privada pausada no programa subidas; activada conserva el recorrido normal");
 }
 {
   const h = screenHarness(false);

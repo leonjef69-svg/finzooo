@@ -45,6 +45,7 @@ function reloadFixture() {
   const keyNames = ["budgets", "categoryBudgets", "transactions", "deletedTransactionIds", "goals", "deletedGoalIds", "isPremium", "merchantLearned", "carryoverCleared", "pagosProgramados", "cloudSyncMeta", "autoCaptureLog", "cloudBackupEnabled"];
   const deps = {
     auth, localSessionVersion: { current: 0 },
+    cloudBackupPreference: { current: { enabled: true, saved: true, revision: 0 } }, setCloudBackupRevision() {}, setRespaldoFallo() {}, setRespaldoNegocioFallo() {},
     STORAGE_KEYS: Object.fromEntries(keyNames.map(key => [key, key])),
     loadJSON: async (key, fallback) => key === "budgets" ? waiting.promise : fallback,
     seedTransactions: [], seedGoals: [], loadOverrides: async () => ({}),

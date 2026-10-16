@@ -17,6 +17,7 @@ import { clearHistoryV2Cache, loadHistoryV2, saveHistoryV2 } from "@/utils/cloud
 import { hasUnreadableLocalData } from "@/utils/storage";
 import { deletePersonalCloudCopy, getCloudAccountAccess } from "@/utils/cloudAccountAccess";
 import { PrivateBoxSyncError, withPrivateBoxCloudOperation, type PrivateBoxCloudLease } from "@/utils/privateBoxSync";
+import { completarReferenciasCompartidasAntiguas, type SharedTransferProof } from "@/utils/cloudLegacyTransfers";
 
 export type CloudData = {
   /** Impide que una app anterior retire identidades nuevas al volver a subir. */
@@ -184,8 +185,9 @@ export function conservarPremiumManual(
 // intentar subir de nuevo la próxima vez que algo cambie. Devuelve la
 // promesa por si quien la llama necesita esperar a que termine (por
 // ejemplo, antes de cerrar sesión) en vez de solo "lanzarla y olvidarla".
-export async function saveCloudData(uid: string, data: CloudData): Promise<ResultadoNube> {
+export async function saveCloudData(uid: string, data: CloudData, current: () => boolean = () => true): Promise<ResultadoNube> {
   try { return await withPrivateBoxCloudOperation<ResultadoNube>(uid, async lease => {
+  if (!current()) throw new Error("cloud-copy-paused");
   // Si una lectura local falló, el contexto puede tener valores de respaldo
   // vacíos. Nunca se suben sobre la copia válida de otro teléfono.
   if (hasUnreadableLocalData()) {
@@ -219,7 +221,7 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
     if (existing.exists()) assertKnownRecordIdentityFormat(existing.data());
     if (existing.exists()) assertMatchingAccountCurrencies(clean, existing.data() as CloudData);
     if (existing.exists() && existing.data().historyFormat === 2) {
-      return await saveCloudDataV2(uid, clean, lease);
+      return await saveCloudDataV2(uid, clean, lease, current);
     }
     if (existing.exists()) assertLegacyHistoryFormat(existing.data());
   } catch (error) {
@@ -256,7 +258,17 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
       assertLegacyHistoryFormat(actual);
       let siguiente = conservarPremiumManual(actual, clean);
       if (actual) {
-        const records = mergeTransactionCopies(clean.transactions, actual.transactions || [], clean.deletedTransactionIds || [], actual.deletedTransactionIds || [], clean.syncUpdatedAt || {}, actual.syncUpdatedAt || {});
+        const proofs = new Map<string, Promise<SharedTransferProof | null>>();
+        const compatible = await completarReferenciasCompartidasAntiguas(uid, clean.userCurrency, clean.transactions, actual.transactions || [],
+          clean.syncUpdatedAt || {}, actual.syncUpdatedAt || {}, (kind, spaceId, movementId) => {
+            const root = kind === "family" ? "familySpaces" : "boxSpaces", key = `${root}/${spaceId}/${movementId}`;
+            if (!proofs.has(key)) proofs.set(key, lease.wait(async () => {
+              const [space, movement] = await Promise.all([transaction.get(doc(db, root, spaceId)), transaction.get(doc(db, root, spaceId, "movements", movementId))]);
+              return space.exists() && movement.exists() ? { space: space.data(), movement: movement.data() } : null;
+            }));
+            return proofs.get(key)!;
+          });
+        const records = mergeTransactionCopies(clean.transactions, compatible.transactions, clean.deletedTransactionIds || [], actual.deletedTransactionIds || [], clean.syncUpdatedAt || {}, compatible.metadata);
         const goals = mergeGoalCopies(clean.goals, actual.goals || [], clean.deletedGoalIds || [], actual.deletedGoalIds || [], clean.syncUpdatedAt || {}, actual.syncUpdatedAt || {});
         siguiente = mergeCloudFields(siguiente, actual as CloudData);
         siguiente = {
@@ -274,6 +286,7 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
       if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
       saved = siguiente;
       lease.assertCurrent();
+      if (!current()) throw new Error("cloud-copy-paused");
       transaction.set(ref, { ...siguiente, recordSyncAt: serverTimestamp() });
     }));
     return { ok: true, data: lease.remember(saved) };
@@ -283,10 +296,10 @@ export async function saveCloudData(uid: string, data: CloudData): Promise<Resul
   }); } catch (error) { return { ok: false, motivo: motivoLegible(error) }; }
 }
 
-async function saveCloudDataV2(uid: string, clean: CloudData, lease: PrivateBoxCloudLease): Promise<ResultadoNube> {
+async function saveCloudDataV2(uid: string, clean: CloudData, lease: PrivateBoxCloudLease, current: () => boolean): Promise<ResultadoNube> {
   try {
     if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
-    const history = await saveHistoryV2(uid, clean.transactions, clean.deletedTransactionIds ?? [], lease, clean.userCurrency, {}, clean.syncUpdatedAt ?? {});
+    const history = await saveHistoryV2(uid, clean.transactions, clean.deletedTransactionIds ?? [], lease, clean.userCurrency, {}, clean.syncUpdatedAt ?? {}, current);
     const ref = doc(db, "users", uid);
     let saved: CloudData = { ...clean, transactions: history.transactions, deletedTransactionIds: history.deletedIds,
       syncUpdatedAt: mergeMutationMetadata(clean.syncUpdatedAt ?? {}, history.syncUpdatedAt ?? {}) };
@@ -314,6 +327,7 @@ async function saveCloudDataV2(uid: string, clean: CloudData, lease: PrivateBoxC
       if (pesa(root) > LIMITE_FIRESTORE) throw new Error("demasiado-grande");
       if (hasUnreadableLocalData()) throw new Error("datos-locales-ilegibles");
       lease.assertCurrent();
+      if (!current()) throw new Error("cloud-copy-paused");
       transaction.set(ref, { ...root, recordSyncAt: serverTimestamp() });
       saved = { ...next, ...root, transactions: history.transactions, deletedTransactionIds: history.deletedIds };
     }));
@@ -342,7 +356,7 @@ function motivoLegible(e: unknown): string {
   if (/cloud\/record-identity-invalid/.test(crudo)) return "datos-nube-invalidos";
   if (/private-box-review-(pending|changed)/.test(crudo)) return "revision-caja-pendiente";
   if (/account-currency-conflict/.test(crudo)) return "monedas-distintas";
-    if (/record-origin-conflict/.test(crudo)) return "movimientos-en-conflicto";
+  if (/record-origin-conflict/.test(crudo)) return "movimientos-en-conflicto";
   if (/demasiado-grande/i.test(crudo)) return "demasiado-grande";
   if (/cloud-field-invalid|cloud-field-duplicate-id|sync-clock-overflow/i.test(crudo)) return "datos-nube-invalidos";
   if (/permission-denied|insufficient permissions/i.test(crudo)) return "permisos";

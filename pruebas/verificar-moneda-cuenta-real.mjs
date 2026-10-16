@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { cloudLegacyOriginal } from "./helpers/cloud-legacy-original.mjs";
 import fs from "node:fs";
 import vm from "node:vm";
 import { execFileSync } from "node:child_process";
@@ -162,7 +163,7 @@ assert.equal(readable(Error("account-currency-conflict")), "monedas-distintas");
 for (const historyFormat of [1, 2]) {
   let saved = { ...b, historyFormat };
   const operations = [], snap = () => ({ exists: () => true, data: () => saved });
-  const cloudDeps = { ...api, ...recordOriginOriginal(), ...historyFormats, serverTimestamp: () => "SERVER_TIMESTAMP", db: {}, doc: () => "user", getDoc: async () => snap(),
+  const cloudDeps = { ...api, ...recordOriginOriginal(), ...cloudLegacyOriginal(), ...historyFormats, serverTimestamp: () => "SERVER_TIMESTAMP", db: {}, doc: () => "user", getDoc: async () => snap(),
     hasUnreadableLocalData: () => false, utf8ByteLength: text => Buffer.byteLength(text),
     withPrivateBoxCloudOperation: async (_uid, work) => work({ wait: work => work(), remember: value => value, assertCurrent() {} }),
     assertLegacyHistoryFormat() {}, LIMITE_FIRESTORE: 1_000_000, TOPE_SEGURO: 800_000,

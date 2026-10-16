@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { cloudLegacyOriginal } from "./helpers/cloud-legacy-original.mjs";
 import vm from "node:vm";
 import ts from "typescript";
 import { createSourceReader } from "./helpers/source-reader.mjs";
@@ -42,6 +43,7 @@ function load(file, overrides = {}) {
       if (name === "@/utils/firebase") return { db: {} };
       if (name === "@/utils/storage") return { hasUnreadableLocalData: () => false };
       if (name === "@/utils/privateBoxSync") return queue;
+      if (name === "@/utils/cloudLegacyTransfers") return cloudLegacyOriginal();
       if (name === "@/utils/cloudAccountAccess") return { getCloudAccountAccess: async () => ({ canSync: true, hasCloudCopy: true }) };
       if (name === "@/utils/cloudHistoryV2") return {
         loadHistoryV2: async () => { historyReads++; return { transactions: [], deletedIds: [] }; },

@@ -131,6 +131,7 @@ async function closedFlow({ hasOnboarded = true, contextUid = null, rejectAuth =
     api.disk[name] = async (...args) => { writes++; return previous(...args); };
   }
   const deps = { ...api, auth, uid: contextUid, isPremium: true, hasOnboarded,
+    cloudBackupPreference: { current: { enabled: true, saved: true, revision: 0 } }, setCloudBackupRevision() {}, setRespaldoNegocioFallo() {},
     captureBusy: { current: true }, localSessionVersion: { current: 1 }, tRef: { current: key => key },
     cloudSyncMetaRef: { current: { private: 1 } }, cloudFieldsRef: { current: { private: "old" } }, solicitarPermisoDePagos: { current: true },
     NEGOCIO_VACIO: {}, TESTER_PREMIUM_INACTIVE: {},

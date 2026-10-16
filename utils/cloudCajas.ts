@@ -29,10 +29,11 @@ export async function bajarCajas(uid: string): Promise<DatosCajas | null> {
   });
 }
 
-export async function subirCajas(uid: string, datos: DatosCajas, onError?: (error: unknown) => void, onConfirmed?: (data: DatosCajas) => void, cajasProtegidas: readonly string[] = []): Promise<boolean> {
-  const task = captureAccountTask(uid);
+export async function subirCajas(uid: string, datos: DatosCajas, onError?: (error: unknown) => void, onConfirmed?: (data: DatosCajas) => void, cajasProtegidas: readonly string[] = [], current: () => boolean = () => true): Promise<boolean> {
+  const task = captureAccountTask(uid, current);
   try {
     return await withPrivateBoxCloudOperation(uid, async lease => {
+    if (!task.current()) throw new Error("cloud-copy-paused");
     if (hasUnreadableLocalData()) throw new Error("cajas-local-unreadable");
     const clean = validarCajas(JSON.parse(JSON.stringify(datos)));
     if (clean.revisionesImporte?.some(entry => entry.estado === "pendiente")) throw new Error("cajas-sync-conflict");
@@ -56,6 +57,7 @@ export async function subirCajas(uid: string, datos: DatosCajas, onError?: (erro
         if (!cajasProtegidas.includes(box.id)) { delete box.sharingPending; delete box.sharingAttempt; }
       }
       lease.assertCurrent();
+      if (!task.current()) throw new Error("cloud-copy-paused");
       transaction.set(ref, merged.remoto);
       return merged.local;
     }));

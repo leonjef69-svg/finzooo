@@ -1,5 +1,56 @@
 # Estado actual de Fino
 
+## Nube — 16/10/2026 — copia antigua comprobada e interruptor inmediato
+
+Marca `16oct-nube-copia-interruptor`, base 8f0d1ec. El aviso de Ajustes venía
+de TRES transferencias presentes en el teléfono y en una copia v1 antigua sin
+creationId ni espacio de destino. Mismo importe/tipo/fecha/enlace; no eran los
+tres casos incompletos de hj ni un problema del plan Blaze. La comparación
+general de identidades rechazaba correctamente una referencia diferente, pero
+no reconocía esa copia anterior al contrato nuevo.
+
+Compatibilidad acotada en el guardado v1: solo completa referencias ausentes,
+con versión local posterior, resto de campos conservado y prueba del movimiento
+original de Familia/Caja (dueño, ID personal, moneda, fecha, tipo e importe).
+Lectura de prueba y escritura van en la MISMA transacción; al reintentarse se
+comprueba otra vez. Devoluciones con asignaciones exigen también sus aportes
+originales. No se elige a ciegas entre UUID, importes, notas, consumos,
+asignaciones o marcas de borrado distintos; el contrato general no se relaja.
+No crea movimientos, UUID, devoluciones ni marcas de borrado nuevos.
+
+Interruptor: respuesta visual y pausa inmediata en memoria, persistencia
+cifrada ordenada y protección del último toque/sesión. Un error vigente de
+disco revierte a la última elección guardada; fallos antiguos no lo hacen.
+Resultados/timers anteriores no aplican datos ni avisos al pausar o reactivar.
+Guardado v1/v2 comprueba la pausa antes de escribir y v2 entre filas; una
+escritura ya enviada no puede deshacerse. Cajas privadas respeta la pausa en
+sus lecturas/subidas automáticas; compartir y colaborar no se desactivan.
+
+Personal y Negocio confirman por separado: Guardando copia no significa fallo
+ni Copia al día. Un éxito de Personal ya no oculta un error de Negocio. Aviso
+comprensible y Reintentar copia ante un fallo real, sin quitar la protección.
+Sin nuevos datos recogidos ni cambios de declaración Play Store.
+
+Android/Firebase reales: copia automática volvió a confirmar los 33 movimientos
+del teléfono; ambos lados conservan las 210 marcas de borrado y la unión ya no
+presenta conflictos. Pausar, cerrar/abrir y reactivar comprobados visualmente;
+queda activada y muestra Copia al día. Saldo Personal S/998,949,050 sin cambios;
+no se añadieron/borraron movimientos ni se devolvió dinero. Evidencia en .tmp,
+no en Git; no se guardan credenciales ni registros financieros en las pruebas.
+
+236 suites/8 auditores sin tarjetas aprobados; TypeScript/ESLint completos.
+Nueva regresión usa guardado/merger originales con IO adaptado y 17 rechazos
+seguros; la anterior 8f0d1ec falla por bloquear el mismo aporte comprobado.
+Interruptor ampliado reproduce el falso Copia al día en esa base; comprueba
+toques rápidos, error de disco, sesión, respuestas/timers viejos y Personal/
+Negocio. Pausa v2 antes de escribir/entre filas y Cajas privadas comprobadas
+con originales, no integración real de todas las reglas o caída de Android.
+
+**Sigue/falta:** restauración completa en otro teléfono/cuenta de prueba,
+corte real de red durante guardado v2 y pendientes históricos de hj ya
+documentados. No se declara cerrada toda la auditoría. Sin APK/AAB/OTA ni
+despliegues de Firebase; entrega al emulador mediante Metro actual.
+
 ## Cajas — 16/10/2026 — invitación, recuperación y recorrido antiguo retirado
 
 Marca `16oct-cajas-invitacion-sin-duplicados`, base 52a718d. La lectura normal

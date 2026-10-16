@@ -1,5 +1,29 @@
 # Entregas de Fino
 
+## 16/10/2026 — Nube: copia antigua comprobada y pausa inmediata (desarrollo)
+
+Marca `16oct-nube-copia-interruptor`; base 8f0d1ec. Tres transferencias de la
+copia v1 carecían de sus referencias nuevas. Se completan solo después de
+comprobar el movimiento original compartido en la misma transacción del
+respaldo; sin cambiar importes ni rebajar la comparación general de identidades.
+No son los tres casos antiguos de hj, que permanecen documentados aparte.
+
+Interruptor inmediato con persistencia ordenada, último toque y sesión
+protegidos; pausa antes de nuevas escrituras v1/v2 y entre filas v2. Recepciones
+tardías no reactivan la copia ni aplican datos. Cajas privadas respeta la pausa
+automática; colaboración y acciones expresas siguen disponibles. Personal y
+Negocio confirman por separado; textos sencillos y reintento de fallo real.
+
+Comprobado en Android/Firebase: 33 movimientos respaldados, cero conflictos
+en la unión, marcas de borrado conservadas y mismos saldos. Pausa recordada
+tras cerrar/abrir y reactivación Guardando → Copia al día; queda activada.
+236 suites y 8 auditores sin tarjetas, TypeScript/ESLint generales aprobados.
+Regresiones 8f0d1ec rojas por bloqueo/falsa confirmación, no import faltante.
+
+**Sigue/falta:** restauración completa desde otro teléfono de prueba y corte
+real con historial v2; históricos de hj no reconstruidos ni borrados. Sin APK,
+AAB, OTA, publicación Play o despliegue remoto; código actual en Metro.
+
 ## 16/10/2026 — Cajas: invitación sin duplicados y retirada de recorrido antiguo (desarrollo)
 
 Marca `16oct-cajas-invitacion-sin-duplicados`; base 52a718d. Recuperación de una

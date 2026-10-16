@@ -562,7 +562,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /** El motivo del ultimo fallo al subir, o null si la ultima subida salio bien. */
-  const [respaldoFallo, setRespaldoFallo] = useState<string | null>(null);
+  const [respaldoFallo, setRespaldoFallo] = useState<string | null>("pendiente");
+  const [respaldoNegocioFallo, setRespaldoNegocioFallo] = useState<string | null>("pendiente");
 
   const [ahora, setAhora] = useState(() => Date.now());
   const pruebaCorriendo = pruebaVigente(pruebaInicio, ahora);
@@ -607,6 +608,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   const [carryoverCleared, setCarryoverCleared] = useState<string[]>([]);
   const [cloudSyncMeta, setCloudSyncMeta] = useState<Record<string, number>>({});
   const [cloudBackupEnabled, setCloudBackupEnabledState] = useState(true);
+  const cloudBackupPreference = useRef({ enabled: true, saved: true, revision: 0 });
+  const [cloudBackupRevision, setCloudBackupRevision] = useState(0);
   const cloudSyncMetaRef = useRef<Record<string, number>>({});
   const cloudFieldsRef = useRef<CloudData | null>(null);
   const [deletedTransactionIds, setRenderedDeletedTransactionIds] = useState<number[]>([]);
@@ -1174,6 +1177,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     cloudSyncMetaRef.current = savedCloudSyncMeta;
     setCloudSyncMeta(savedCloudSyncMeta);
     setCloudBackupEnabledState(savedCloudBackupEnabled !== false);
+    cloudBackupPreference.current = { enabled: savedCloudBackupEnabled !== false, saved: savedCloudBackupEnabled !== false, revision: cloudBackupPreference.current.revision + 1 };
+    setCloudBackupRevision(cloudBackupPreference.current.revision);
+    setRespaldoFallo("pendiente"); setRespaldoNegocioFallo("pendiente");
     // La copia para respuestas de red queda lista antes de resolver la
     // apertura, incluso si React todavía no dibujó estos datos cargados.
     cloudFieldsRef.current = {
@@ -1314,7 +1320,9 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     cloudFieldsRef.current = null;
     setCloudSyncMeta({});
     setCloudBackupEnabledState(true);
-    setRespaldoFallo(null);
+    cloudBackupPreference.current = { enabled: true, saved: true, revision: cloudBackupPreference.current.revision + 1 };
+    setCloudBackupRevision(cloudBackupPreference.current.revision);
+    setRespaldoFallo("pendiente"); setRespaldoNegocioFallo("pendiente");
     setCelebrateGoal(null);
     setVerComoGratis(false);
   }
@@ -1664,20 +1672,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (!(ready && hasOnboarded && uid && isPremium && cloudBackupEnabled)) return;
     let alive = true;
     const version = localSessionVersion.current;
+    const preferenceRevision = cloudBackupPreference.current.revision;
+    const current = () => alive && version === localSessionVersion.current && auth.currentUser?.uid === uid
+      && cloudBackupPreference.current.enabled && cloudBackupPreference.current.revision === preferenceRevision;
+    setRespaldoNegocioFallo("pendiente");
     const timer = setTimeout(() => {
-      void subirNegocio(uid, datosNegocio, () => alive && version === localSessionVersion.current &&
-        auth.currentUser?.uid === uid && datosNegocioLive.current === datosNegocio).then((confirmed) => {
-        if (!alive || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
+      if (!current()) return;
+      void subirNegocio(uid, datosNegocio, () => current() && datosNegocioLive.current === datosNegocio).then((confirmed) => {
+        if (!current()) return;
         const combined = mergeBusinessData(datosNegocioLive.current, confirmed);
         if (JSON.stringify(combined) !== JSON.stringify(datosNegocioLive.current)) setDatosNegocio(combined, true);
+        setRespaldoNegocioFallo(null);
       }).catch((error) => {
-        if (!alive || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
+        if (!current()) return;
         const mensaje = String((error as Error)?.message ?? error);
-        setRespaldoFallo(mensaje.includes("demasiado-grande") ? "demasiado-grande" : "negocio");
+        setRespaldoNegocioFallo(mensaje.includes("demasiado-grande") ? "demasiado-grande" : "negocio");
       });
     }, 1500);
     return () => { alive = false; clearTimeout(timer); };
-  }, [datosNegocio, ready, hasOnboarded, uid, isPremium, cloudBackupEnabled, setDatosNegocio]);
+  }, [datosNegocio, ready, hasOnboarded, uid, isPremium, cloudBackupEnabled, cloudBackupRevision, setDatosNegocio]);
 
   // Además de guardar en este celular, si hay una cuenta con sesión
   // iniciada y correo verificado, también sube los datos a la nube.
@@ -1694,12 +1707,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (!(ready && hasOnboarded && uid && isPremium && cloudBackupEnabled)) return;
     let alive = true;
     const version = localSessionVersion.current;
+    const preferenceRevision = cloudBackupPreference.current.revision;
+    const current = () => alive && version === localSessionVersion.current && auth.currentUser?.uid === uid
+      && cloudBackupPreference.current.enabled && cloudBackupPreference.current.revision === preferenceRevision;
+    setRespaldoFallo("pendiente");
     const timer = setTimeout(() => {
+      if (!current()) return;
       /* SE MIRA COMO FUE. Antes se lanzaba y se olvidaba, y el cartel de Ajustes decia
          "Tus datos estan respaldados" solo por haber iniciado sesion — aunque la subida
          llevara semanas fallando. Ver utils/cloudSync. */
-      void saveCloudData(uid, datosParaLaNube()).then((r) => {
-        if (!alive || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
+      void saveCloudData(uid, datosParaLaNube(), current).then((r) => {
+        if (!current()) return;
         if (r.ok && !privateBoxCloudResponseCurrent(uid, r.data)) { setRespaldoFallo("revision-caja-pendiente"); return; }
         setRespaldoFallo(r.ok ? null : r.motivo);
         if (r.ok) applyNewerCloudFields(r.data);
@@ -1718,6 +1736,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     uid,
     isPremium,
     cloudBackupEnabled,
+    cloudBackupRevision,
     userName,
     userPhoto,
     userCurrency,
@@ -1754,16 +1773,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     if (!(ready && hasOnboarded && uid && isPremium && cloudBackupEnabled)) return;
     let alive = true;
     const version = localSessionVersion.current;
+    const preferenceRevision = cloudBackupPreference.current.revision;
     const sincronizarMovimientos = async () => {
       const cloud = await loadCloudData(uid).catch((error) => {
-        if (alive && version === localSessionVersion.current && auth.currentUser?.uid === uid) {
+        if (alive && version === localSessionVersion.current && auth.currentUser?.uid === uid && cloudBackupPreference.current.enabled && cloudBackupPreference.current.revision === preferenceRevision) {
           const code = (error as { code?: string } | null)?.code;
           if (code === "cloud/history-format-unsupported") setRespaldoFallo("actualizacion-necesaria");
           if (code === "cloud/record-identity-invalid") setRespaldoFallo("datos-nube-invalidos");
         }
         return null;
       });
-      if (!alive || !cloud || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
+      if (!alive || !cloud || version !== localSessionVersion.current || auth.currentUser?.uid !== uid || !cloudBackupPreference.current.enabled || cloudBackupPreference.current.revision !== preferenceRevision) return;
       if (!applyNewerCloudFields(cloud)) return;
       // La recepción aplica una única unión validada dentro de applyNewerCloudFields.
     };
@@ -1771,7 +1791,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     return () => {
       alive = false;
     };
-  }, [ready, hasOnboarded, uid, isPremium, cloudBackupEnabled, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds, setGoals, setDatosNegocio]);
+  }, [ready, hasOnboarded, uid, isPremium, cloudBackupEnabled, cloudBackupRevision, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds, setGoals, setDatosNegocio]);
 
   function showToast(msg: string) {
     setToast(msg);
@@ -1781,10 +1801,25 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
 
   async function changeCloudBackupEnabled(enabled: boolean): Promise<void> {
     if (enabled && !isPremium) throw new Error(tRef.current("settings.backupNeedsPaid"));
-    const saved = await saveJSONNow(STORAGE_KEYS.cloudBackupEnabled, enabled);
-    if (!saved) throw new Error(tRef.current("toast.localSaveFailed"));
+    const version = localSessionVersion.current;
+    const task = captureAccountTask(auth.currentUser?.uid ?? "", () => version === localSessionVersion.current);
+    if (!task.current()) return;
+    const revision = ++cloudBackupPreference.current.revision;
+    cloudBackupPreference.current.enabled = enabled;
     setCloudBackupEnabledState(enabled);
-    if (enabled) setRespaldoFallo(null);
+    setCloudBackupRevision(revision);
+    if (enabled) { setRespaldoFallo("pendiente"); setRespaldoNegocioFallo("pendiente"); }
+    let saved = false;
+    try { saved = await saveJSONNow(STORAGE_KEYS.cloudBackupEnabled, enabled); } catch { /* Se informa solo a la elección vigente. */ }
+    if (!task.current()) return;
+    if (saved) cloudBackupPreference.current.saved = enabled;
+    if (revision !== cloudBackupPreference.current.revision) return;
+    if (!saved) {
+      cloudBackupPreference.current.enabled = cloudBackupPreference.current.saved;
+      setCloudBackupEnabledState(cloudBackupPreference.current.saved);
+      setCloudBackupRevision(++cloudBackupPreference.current.revision);
+      throw new Error(tRef.current("toast.localSaveFailed"));
+    }
   }
 
   useEffect(() => {
@@ -2149,12 +2184,13 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       reengancharLector();
       collect(true);
       if (uid && isPremium && cloudBackupEnabled) {
+        const preferenceRevision = cloudBackupPreference.current.revision;
         void loadCloudData(uid).then((cloud) => {
-          if (!cloud || !alive || version !== localSessionVersion.current || auth.currentUser?.uid !== uid) return;
+          if (!cloud || !alive || version !== localSessionVersion.current || auth.currentUser?.uid !== uid || !cloudBackupPreference.current.enabled || cloudBackupPreference.current.revision !== preferenceRevision) return;
           if (!applyNewerCloudFields(cloud)) return;
           // No volver a unir por números después de aplicar generaciones.
         }).catch((error) => {
-          if (alive && version === localSessionVersion.current && auth.currentUser?.uid === uid) {
+          if (alive && version === localSessionVersion.current && auth.currentUser?.uid === uid && cloudBackupPreference.current.enabled && cloudBackupPreference.current.revision === preferenceRevision) {
             const code = (error as { code?: string } | null)?.code;
             if (code === "cloud/history-format-unsupported") setRespaldoFallo("actualizacion-necesaria");
             if (code === "cloud/record-identity-invalid") setRespaldoFallo("datos-nube-invalidos");
@@ -2170,7 +2206,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     };
     // Solo depende de si la app ya está lista: los datos que necesita los
     // lee de captureInputs en el momento de recoger.
-  }, [ready, hasOnboarded, uid, isPremium, cloudBackupEnabled, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds, setGoals, setDatosNegocio]);
+  }, [ready, hasOnboarded, uid, isPremium, cloudBackupEnabled, cloudBackupRevision, deletedTransactionIds, deletedGoalIds, applyNewerCloudFields, setTransactions, setDeletedTransactionIds, setGoals, setDatosNegocio]);
 
   function setAutoCaptureOn(value: boolean) {
     if (value) {
@@ -3467,8 +3503,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
     setCloudBackupEnabled: changeCloudBackupEnabled,
     /* "Respaldados" quiere decir que la ULTIMA subida termino bien, no que haya sesion
        iniciada. Ver el cartel de Ajustes y utils/cloudSync. */
-    respaldoAlDia: uid !== null && isPremium && cloudBackupEnabled && respaldoFallo === null,
-    respaldoFallo,
+    respaldoAlDia: uid !== null && isPremium && cloudBackupEnabled && respaldoFallo === null && respaldoNegocioFallo === null,
+    respaldoFallo: respaldoFallo && respaldoFallo !== "pendiente" ? respaldoFallo : respaldoNegocioFallo && respaldoNegocioFallo !== "pendiente" ? respaldoNegocioFallo : respaldoFallo ?? respaldoNegocioFallo,
     celebrateGoal,
     clearCelebration: () => setCelebrateGoal(null),
     toast,

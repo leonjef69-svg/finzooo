@@ -1,5 +1,20 @@
 # Pruebas y auditores
 
+16/10 Nube: 236 pruebas y 8 auditores aprobados con --sin-tarjetas;
+TypeScript/ESLint completos. verificar-nube-transferencias-antiguas-real usa
+guardado/merger originales y comprueba tres transferencias v1 anteriores a las
+referencias nuevas: prueba compartida en la misma transacción, conservación de
+importes/listas/borrados, 17 rechazos seguros y pausa v1/v2 antes de escribir y
+entre filas. IO de Firebase adaptado; no es la prueba de todas las reglas.
+verificar-interruptor-nube-real amplía último toque inmediato, disco fallido,
+sesión, timers/respuestas anteriores y confirmación Personal/Negocio separada.
+Ambas rojas contra 8f0d1ec por comportamiento anterior, no API ausente.
+Consultas estables añade pausa/revisión antes de recibir o mostrar errores;
+Cajas sincronización comprueba que pausar no programa lecturas/subidas privadas.
+En emulador/Firebase se comprobó copia 33/33 sin conflicto, pausa persistente y
+reactivación confirmada sin movimientos ni cambio de saldos. Restauración en
+otro dispositivo y corte físico en v2 siguen pendientes; históricos hj aparte.
+
 16/10 Cajas/invitación: 235 pruebas y 8 auditores aprobados con --sin-tarjetas.
 verificar-recuperacion-invitacion-caja-real ejecuta helper SHA/validadores,
 lectura de pantalla y colección/JSX originales con IO adaptado: recibo exacto

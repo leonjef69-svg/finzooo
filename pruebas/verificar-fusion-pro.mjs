@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { cloudLegacyOriginal } from "./helpers/cloud-legacy-original.mjs";
 import vm from "node:vm";
 import ts from "typescript";
 import { createSourceReader } from "./helpers/source-reader.mjs";
@@ -229,7 +230,7 @@ for (const historyFormat of [1, 2]) {
   if (historyFormat === 2) { stored.historyFormat = 2; delete stored.transactions; }
   const snap = () => ({ exists: () => true, data: () => structuredClone(stored) });
   const cloudScope = {
-    ...exports, ...helpers, ...recordOriginOriginal(), ...coordinator, ...historyFormats, serverTimestamp: () => "SERVER_TIMESTAMP", db: {}, doc: () => "isolated-user", getDoc: async () => snap(),
+    ...exports, ...helpers, ...recordOriginOriginal(), ...cloudLegacyOriginal(), ...coordinator, ...historyFormats, serverTimestamp: () => "SERVER_TIMESTAMP", db: {}, doc: () => "isolated-user", getDoc: async () => snap(),
     hasUnreadableLocalData: () => false, utf8ByteLength: (text) => Buffer.byteLength(text, "utf8"),
     assertLegacyHistoryFormat: (raw) => { if (raw?.historyFormat === 2) throw new Error("not-legacy"); },
     UnsupportedHistoryFormatError: class extends Error {},

@@ -99,7 +99,7 @@ visit(tree); assert.ok(focus,'ejecutar la lectura original de Cajas');
 }
 const tick=async()=>{for(let i=0;i<100;i++)await Promise.resolve();};
 function harness() {
- const s={personalReady:true,hasOnboarded:true,accountUid:'owner',userCurrency:'PEN',isPremium:true,premiumForSync:{current:true},
+ const s={personalReady:true,hasOnboarded:true,accountUid:'owner',userCurrency:'PEN',isPremium:true,cloudBackupEnabled:true,premiumForSync:{current:true},
   refreshVersion:1,requestedRefresh:{current:1},conversionEnCurso:{current:false},recuperacionConversionEnCurso:{current:false},guardandoRef:{current:false},
   datosActuales:{current:plain(local)},personalActuales:{current:[plain(tx)]},borradosActuales:{current:[]},nubeConfirmadaPara:{current:null},
   cuentaActual:()=>true,hasUnreadableLocalData:()=>false,revisionCajasEnMemoria:()=>1,leerCajasEnMemoria:()=>s.datosActuales.current,

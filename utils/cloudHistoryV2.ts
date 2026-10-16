@@ -89,11 +89,13 @@ export function saveHistoryV2(
   currency?: string,
   deletedOrigins: Record<string, string> = {},
   metadata: Record<string, number> = {},
+  current: () => boolean = () => true,
 ): Promise<HistoryLists> {
   return withPrivateBoxCloudLease(uid, lease, approved => exclusive(uid, async () => {
     let cache = await approved.wait(() => refresh(uid));
     const changes = planLocalHistoryChanges(transactions, deletedIds, cache.entries, deletedOrigins, metadata);
     for (const change of changes) {
+      if (!current()) throw new Error("cloud-copy-paused");
       const rootRef = doc(db, "users", uid);
       const rowRef = doc(db, "users", uid, "history", historyDocumentId(change.id));
       const saved = await approved.wait(() => runTransaction(db, async (tx) => {
@@ -108,6 +110,7 @@ export function saveHistoryV2(
         const merged = mergeHistoryEntries(old ? [old] : [], [change])[0];
         if (!old || JSON.stringify(old) !== JSON.stringify(merged)) {
           approved.assertCurrent();
+          if (!current()) throw new Error("cloud-copy-paused");
           tx.set(rowRef, { ...merged, recordIdentityFormat: 2, recordMutationAt: serverTimestamp(), syncAt: serverTimestamp() });
         }
         return merged;
