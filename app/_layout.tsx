@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
-import { NOCHE } from "@/constants/style";
+import { screenBackgroundForVisualStyle } from "@/constants/visualTheme";
+import { useReduceMotion } from "@/utils/useReduceMotion";
 import { irUnaVez, isNavigationMounted, reemplazarUnaVez } from "@/utils/nav";
 import { AppState, View } from "react-native";
 import { DarkTheme, DefaultTheme, ThemeProvider } from "@react-navigation/native";
@@ -569,6 +570,12 @@ function ThemedStatusBar() {
 }
 
 function RootLayout() {
+  return <SafeAreaProvider><AppDataProvider><RootNavigator /></AppDataProvider></SafeAreaProvider>;
+}
+
+function RootNavigator() {
+  const { visualStyle } = useAppData();
+  const reducedMotion = useReduceMotion();
   const { colorScheme } = useColorScheme();
   useFonts(ENTRY_FONTS);
   const pathname = usePathname();
@@ -586,7 +593,10 @@ function RootLayout() {
   // atras —*"por que aparece ese color del antiguo fondo?"*— porque el color estaba escrito a
   // mano en vez de salir de un sitio comun. Es el mismo fallo que dejo la barra de pestañas
   // azul, y por eso ahora los dos beben de `NOCHE`.
-  const screenBg = entry ? ENTRY_COLORS.background : colorScheme === "dark" ? NOCHE.fondo : "#ffffff";
+  const screenBg = entry ? ENTRY_COLORS.background : screenBackgroundForVisualStyle(visualStyle, colorScheme === "dark");
+  // El reemplazo lateral mantiene la pantalla saliente bajo la entrante.
+  // No fundir todo el contenido hacia un fondo vacío entre espacios.
+  const spaceAnimation = reducedMotion ? "none" : "slide_from_right";
 
   /**
    * EL DESTELLO BLANCO AL GUARDAR UN MOVIMIENTO (10/08/2026)
@@ -626,8 +636,6 @@ function RootLayout() {
   }, [screenBg]);
 
   return (
-    <SafeAreaProvider>
-      <AppDataProvider>
         <View style={{ flex: 1, backgroundColor: screenBg }}>
           <ThemeProvider value={tema}>
           <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: screenBg } }}>
@@ -639,8 +647,9 @@ function RootLayout() {
             <Stack.Screen name="language" options={{ presentation: "transparentModal", animation: "slide_from_bottom", contentStyle: { backgroundColor: "transparent" } }} />
             <Stack.Screen name="country" options={{ presentation: "transparentModal", animation: "slide_from_bottom", contentStyle: { backgroundColor: "transparent" } }} />
             <Stack.Screen name="currency" options={{ presentation: "transparentModal", animation: "slide_from_bottom", contentStyle: { backgroundColor: "transparent" } }} />
-            <Stack.Screen name="family" options={{ animation: "fade", contentStyle: { backgroundColor: screenBg } }} />
-            <Stack.Screen name="boxes" options={{ animation: "fade", contentStyle: { backgroundColor: screenBg } }} />
+            <Stack.Screen name="(tabs)" options={{ animation: spaceAnimation, animationTypeForReplace: "push", contentStyle: { backgroundColor: screenBg } }} />
+            <Stack.Screen name="family" options={{ animation: spaceAnimation, animationTypeForReplace: "push", contentStyle: { backgroundColor: screenBg } }} />
+            <Stack.Screen name="boxes" options={{ animation: spaceAnimation, animationTypeForReplace: "push", contentStyle: { backgroundColor: screenBg } }} />
             {/* El alta de un movimiento es un panel superpuesto como el selector
                 del botón +. Su contenido es parcial, así que transparentModal
                 deja Inicio visible detrás sin darle a AddSheet una ventana de
@@ -769,8 +778,6 @@ function RootLayout() {
           <AppLockGate />
           <ThemedStatusBar />
         </View>
-      </AppDataProvider>
-    </SafeAreaProvider>
   );
 }
 

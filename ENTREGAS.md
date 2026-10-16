@@ -1,5 +1,27 @@
 # Entregas de Fino
 
+## 16/10/2026 — Cambio de espacio uniforme y ocultación recordada (desarrollo)
+
+Marca `16oct-cambio-suave-saldo-oculto`. Personal, Familia y Cajas comparten
+transición lateral opaca, con pantalla anterior debajo de la entrante y sin
+fade hacia el fondo. Se iguala el fondo nativo con el estilo real y se respeta
+Movimiento reducido. Sin cambios de rutas, controles de acceso o dinero.
+
+Ocultar la tarjeta anterior por mes y ocultar importes ya no se reinician al
+volver a Personal: memoria inmediata más preferencia cifrada local por cuenta.
+No se revela la tarjeta durante la lectura inicial; Mostrar es explícito. Clave
+nueva incluida en archivo/limpieza de cuenta; no se sincroniza con Firebase.
+
+Prueba Android: ocultar tarjeta, ir a Familia/Cajas y volver; permanece plegada
+con los mismos importes. Capturas y grabación locales, sin operaciones monetarias.
+Regresiones contra a846c19 rojas por tarjeta reabierta y color intermedio distinto.
+Resultado final: 234 pruebas/8 auditores sin tarjetas; TypeScript/ESLint completos
+sin errores. Grabación Android revisada por muestras de 50 ms sin pantalla
+totalmente vacía; no sustituye pruebas en segundo teléfono ni todos los recorridos.
+
+**Sigue/falta:** unión con segunda cuenta/teléfono y pendientes financieros
+históricos ya documentados. Sin entrega APK/AAB/OTA/Play ni despliegues remotos.
+
 ## 16/10/2026 — Cajas completas al volver, sin carga automática (desarrollo)
 
 Marca `16oct-lista-cajas-completa`. La memoria anterior solo conservaba las cajas

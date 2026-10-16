@@ -1,4 +1,11 @@
+import { NOCHE } from "@/constants/style";
+
 export type VisualStyle = "classic" | "peachOlive";
+
+/** Igual que bg-white/dark:bg-noche: también para las capas nativas. */
+export function screenBackgroundForVisualStyle(style: VisualStyle, isDark: boolean): string {
+  return isDark ? NOCHE.fondo : style === "peachOlive" ? "#fffdf8" : "#ffffff";
+}
 
 const SHADES = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950] as const;
 
@@ -23,7 +30,7 @@ function rgbTriplet(hex: string): string {
 export function nativewindThemeVariables(style: VisualStyle, isDark: boolean): Record<string, string> {
   const palette = style === "peachOlive" && !isDark ? PEACH_OLIVE : CLASSIC;
   const variables: Record<string, string> = {
-    "--fino-white": rgbTriplet(style === "peachOlive" && !isDark ? "#fffdf8" : "#ffffff"),
+    "--fino-white": rgbTriplet(style === "peachOlive" && !isDark ? screenBackgroundForVisualStyle(style, false) : "#ffffff"),
   };
 
   for (const color of ["slate", "emerald", "rose"] as const) {

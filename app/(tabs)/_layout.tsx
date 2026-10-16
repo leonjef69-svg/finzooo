@@ -5,7 +5,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import Animated, { useAnimatedStyle, useSharedValue, withSpring } from "react-native-reanimated";
 import { irUnaVez } from "@/utils/nav";
 import { NOCHE } from "@/constants/style";
-import { accentForVisualStyle } from "@/constants/visualTheme";
+import { accentForVisualStyle, screenBackgroundForVisualStyle } from "@/constants/visualTheme";
 import {
   Home as HomeIcon,
   History as HistoryIcon,
@@ -45,7 +45,7 @@ export default function TabsLayout() {
         // desde "Nuevo movimiento" — el instante entre que la hoja se cierra e Inicio pinta.
         // Ver la explicación entera en app/_layout.
         // Ver NOCHE en constants/style: el color NO se escribe aqui a mano.
-        sceneStyle: { backgroundColor: surfaceColor },
+        sceneStyle: { backgroundColor: screenBackgroundForVisualStyle(visualStyle, isDark) },
         tabBarActiveTintColor: accentColor,
         tabBarInactiveTintColor: isDark ? NOCHE.textoSuave : "#475569",
       }}

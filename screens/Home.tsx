@@ -34,6 +34,7 @@ import { availableRecentMovementTypes } from "@/utils/recentMovementFilters";
 import { irUnaVez } from "@/utils/nav";
 import { compararMovimientos } from "@/utils/ordenarMovimientos";
 import { usePendingImport } from "@/utils/pendingImport";
+import { useHomeVisibility } from "@/utils/useHomeVisibility";
 import {
   mergeSeenHomeNotificationIds,
   shouldShowHomeExportResult,
@@ -272,10 +273,9 @@ export default function Home({
   const mk = monthKey(month.y, month.m);
   const [editingBudget, setEditingBudget] = useState(false);
   const [budgetInput, setBudgetInput] = useState("");
-  const [hideBalance, setHideBalance] = useState(false);
+  const { visibilityReady, hideBalance, setHideBalance, collapsedPreviousBalanceMonths, setCollapsedPreviousBalanceMonths } = useHomeVisibility(ready);
   // El ojo oculta todos los importes de Inicio sin cambiar los datos.
   const fmt = useCallback((amount: number) => hideBalance ? "• • • • • •" : formatAmount(amount), [hideBalance, formatAmount]);
-  const [collapsedPreviousBalanceMonths, setCollapsedPreviousBalanceMonths] = useState<string[]>([]);
   const archivoPendiente = usePendingImport();
   const [avisosAbiertos, setAvisosAbiertos] = useState(false);
   const [ahoraAvisos, setAhoraAvisos] = useState(() => Date.now());
@@ -434,7 +434,7 @@ export default function Home({
   const hasPreviousBalanceHistory =
     prevBalance !== 0 || carryoverActive || availableMonths.some((key) => key < mk);
   const showPreviousBalanceCard =
-    hasPreviousBalanceHistory && !collapsedPreviousBalanceMonths.includes(mk);
+    visibilityReady && hasPreviousBalanceHistory && !collapsedPreviousBalanceMonths.includes(mk);
   const { spent: mainSpent, income: mainIncome, transfersOut, transfersIn } = useMemo(
     () => totalsForMonth(monthTx, mk),
     [monthTx, mk],
@@ -720,6 +720,7 @@ export default function Home({
             {!editingBudget && (
               <TouchableOpacity
                 onPress={() => setHideBalance((v) => !v)}
+                disabled={!visibilityReady}
                 accessibilityRole="switch"
                 accessibilityLabel={t(hideBalance ? "home.showAmounts" : "home.hideAmounts")}
                 accessibilityState={{ checked: hideBalance }}
@@ -796,6 +797,7 @@ export default function Home({
                   {hasPreviousBalanceHistory ? (
                     <PressableScale
                       onPress={togglePreviousBalance}
+                      disabled={!visibilityReady}
                       accessibilityRole="button"
                       accessibilityLabel={t(showPreviousBalanceCard ? "home.hidePreviousBalance" : "home.showPreviousBalance")}
                       containerStyle={{ flexGrow: 1, flexBasis: 0, minHeight: 68 }}

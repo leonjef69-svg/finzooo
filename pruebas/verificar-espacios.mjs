@@ -53,8 +53,10 @@ assert.match(boxes, /setReady\(true\)[\s\S]*bajarCajas/, "Cajas muestra primero 
 assert.doesNotMatch(boxes, /setCloudReady\(false\);\s*setReady\(false\)/, "al volver a Cajas no oculta una copia en memoria mientras consulta la nube");
 assert.doesNotMatch(boxes, /t\("spaces\.processing"\)/, "Cajas no añade un aviso de proceso sobre los datos visibles");
 assert.match(boxes, /leerCajasCompartidasEnMemoria/, "al volver también conserva las cajas compartidas, no solo las privadas");
-assert.match(layout, /Stack\.Screen name="family" options=\{\{ animation: "fade"/, "Familia entra con transición breve y discreta");
-assert.match(layout, /Stack\.Screen name="boxes" options=\{\{ animation: "fade"/, "Cajas entra con transición breve y discreta");
+for (const name of ["(tabs)", "family", "boxes"]) {
+  assert.ok(layout.includes(`Stack.Screen name="${name}" options={{ animation: spaceAnimation, animationTypeForReplace: "push"`),
+    `${name} conserva la misma transición opaca entre espacios, sin fundido hacia blanco`);
+}
 assert.match(route, /screens\/Family/);
 assert.match(boxesRoute, /screens\/Cajas/);
 

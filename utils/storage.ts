@@ -114,6 +114,8 @@ export const STORAGE_KEYS = {
   // Avisos que ya se revisaron en Inicio. Es solo estado local para el punto
   // rojo de la campana; no se comparte ni se sincroniza con la nube.
   homeNotificationSeen: "finzo:homeNotificationSeen",
+  // Preferencias visuales de Inicio, cifradas por cuenta; no alteran dinero.
+  homeVisibility: "finzo:homeVisibility",
   personalReturnPending: "finzo:personalReturnPending",
 } as const;
 
@@ -167,6 +169,7 @@ export const ACCOUNT_STORAGE_KEYS = [
         STORAGE_KEYS.cajasDinero,
         STORAGE_KEYS.plusHint,
         STORAGE_KEYS.homeNotificationSeen,
+        STORAGE_KEYS.homeVisibility,
         STORAGE_KEYS.personalReturnPending,
         // Integraciones y tareas que pertenecen a la cuenta, aunque sus claves
         // vivan fuera del almacén principal.

@@ -1,5 +1,45 @@
 # Estado actual de Fino
 
+## Personal/Familia/Cajas — 16/10/2026 — transición y saldo anterior oculto
+
+Marca `16oct-cambio-suave-saldo-oculto`. El selector reemplazaba pantallas
+completas con fade para Familia/Cajas y una transición diferente para Personal.
+El fondo nativo seguía blanco aun con el estilo crema; RootLayout estaba por
+fuera del proveedor que conoce el estilo. Se separa RootNavigator dentro del
+proveedor y se unifica el color de ventana, navegador y escenas con bg-white
+real (#fffdf8 en Melocotón y oliva). Las tres rutas usan la misma transición
+lateral con reemplazo push: la pantalla saliente queda debajo de la entrante,
+sin fundido de todo el contenido. Movimiento reducido usa cambio sin animación.
+
+Ocultar la tarjeta anterior y el ojo eran elecciones locales de Home que se
+reiniciaban al navegar. Ahora `homeVisibility` las recuerda inmediatamente en
+memoria y las guarda cifradas, separadas por cuenta/sesión, con el inventario
+existente de archivo/limpieza. Ocultación de tarjeta por mes conservada; solo
+Mostrar vuelve a abrirla. Mientras se lee la preferencia inicial no se revelan
+importes ni tarjeta. Un fallo de guardado no revierte la ocultación en memoria
+y se avisa; cambiar de cuenta rechaza respuestas/controles antiguos. No cambia
+presupuestos, carryoverCleared, movimientos, saldos ni campos remotos.
+
+Android: ocultar tarjeta → Familia → Cajas → Personal conserva Mostrar saldo del
+mes anterior y la tarjeta plegada. Mismos importes y cajas; solo navegación y
+preferencia visual, sin movimientos, devoluciones ni borrados. Grabación y
+capturas .tmp/*16oct fuera de Git. La primera consulta de Familia sin copia aún
+puede mostrar Cargando; no se elimina la necesidad de red ni se fingen datos.
+
+Dos regresiones nuevas ejecutan inicializadores/acciones/hook/almacén y opciones
+originales. Contra a846c19 reproducen tarjeta reabierta al remontar y fondo
+blanco frente al crema. Incluyen lectura inicial protegida, reinicio, errores de
+disco, otra cuenta/sesión, Mostrar explícito y preferencia de movimiento reducido.
+Verificación final: 234 pruebas y 8 auditores sin tarjetas, TypeScript y ESLint
+completos sin errores. La grabación de 78,3 s, muestreada cada 50 ms (1566
+muestras), no mostró pantalla totalmente vacía; incluye la transición a Familia
+y su primera carga real. No acredita todos los dispositivos ni elimina esperas
+de una consulta inicial. Registros/capturas/vídeo fuera de Git.
+
+**Sigue/falta:** segundo Android/cuenta para unión, recuperación financiera tras
+cierre abrupto, tres casos antiguos de «hj», volumen/coste y pendientes de
+auditoría previos. Sin APK/AAB/OTA/Play, reglas/Functions o tarjetas.
+
 ## Cajas — 16/10/2026 — lista completa al regresar
 
 Marca `16oct-lista-cajas-completa`. Las privadas ya conservaban su copia visual,

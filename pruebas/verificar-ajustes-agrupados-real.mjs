@@ -15,8 +15,11 @@ function evaluate(file, dependency) {
   new Function("React", "require", "module", "exports", code)(React, dependency, module, module.exports);
   return module.exports;
 }
-const theme = evaluate("constants/visualTheme.ts", () => { throw Error("pure-theme"); });
 const style = evaluate("constants/style.ts", () => { throw Error("pure-style"); });
+const theme = evaluate("constants/visualTheme.ts", name => {
+  if (name === "@/constants/style") return style;
+  throw Error("pure-theme");
+});
 const fonts = { regular: "FinoEntryRegular", medium: "FinoEntryMedium", bold: "FinoEntryBold" };
 let dark = false, visualStyle = "peachOlive";
 const ui = evaluate("components/SettingsUI.tsx", name => {

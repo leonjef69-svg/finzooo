@@ -1,5 +1,11 @@
 # Lo que hay que rellenar en Play Console
 
+16/10/2026 — Ocultación de Inicio: se recuerda el ojo de los importes y la
+tarjeta de saldo anterior por mes en `finzo:homeVisibility`, preferencia local
+cifrada por cuenta. No cambia importes ni se sube a Firebase; usa el archivo y
+limpieza locales de cuenta ya existentes. No añade permiso Android, proveedor
+o categoría de datos recogidos. Sin publicar textos legales ni ficha de Play.
+
 15/10/2026 — Compartir invitación preparado: solo tras tocar Compartir código,
 el selector del teléfono recibe el código de acceso y una instrucción para unirse
 a Familia/Caja. El usuario elige aplicación/destinatario; no se envían saldos,

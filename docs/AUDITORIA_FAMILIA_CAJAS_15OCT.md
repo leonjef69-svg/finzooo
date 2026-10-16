@@ -1,5 +1,32 @@
 # Familia y Cajas — auditoría del 15/10/2026
 
+## 16/10/2026 — navegación sin fundido a vacío y ocultación conservada
+
+Marca `16oct-cambio-suave-saldo-oculto`. Navegador dentro del proveedor visual;
+fondo crema/oscuro coincidente y reemplazo lateral uniforme para Personal,
+Familia y Cajas, sin fade completo. Preferencia de movimiento reducido respetada.
+
+Home perdía hideBalance y collapsedPreviousBalanceMonths al desmontarse. Se
+extrae preferencia local cifrada por cuenta/sesión, memoria síncrona antes del
+guardado y lectura inicial conservadora para no revelar saldo. Se conserva la
+ocultación por mes; Mostrar restaura solo la presentación. Archivo/limpieza de
+cuenta incluye la clave nueva; sin nube ni dinero nuevo.
+
+Regresiones originales: remonte tras ocultar (a846c19 vuelve a mostrar tarjeta),
+disco/reinicio/errores/cuentas/lectura tardía y opciones/fondos (a846c19 blanco
+distinto de bg-white crema). Android comprobó ocultar → Familia → Cajas → Personal
+sin reabrir tarjeta, conservando importes. Solo preferencia/navegación; grabación
+y capturas fuera de Git. Primera consulta sin copia puede requerir red.
+234 pruebas y 8 auditores sin tarjetas aprobados; TypeScript/ESLint completos
+sin errores. Grabación de 78,3 s muestreada en 1566 instantes cada 50 ms, sin
+pantalla totalmente vacía en ese muestreo. La primera pasada falló por el
+adaptador que impedía importar constants/style (solo datos) desde visualTheme;
+actualizado con el módulo original y repetida la batería completa aprobada.
+
+**Sigue/falta:** segunda cuenta/Android, recuperación tras cierre abrupto,
+volumen/costes, tres casos antiguos y límites de auditoría anteriores. Sin
+APK/AAB/OTA/Play, Functions/reglas ni cambios monetarios.
+
 ## 16/10/2026 — lista compartida inmediata al volver
 
 Marca `16oct-lista-cajas-completa`. El componente recordaba privadas pero
