@@ -1,5 +1,45 @@
 # Estado actual de Fino
 
+## Familia y Cajas — 16/10/2026 — formulario compartido actual y espera sin desplazar
+
+Marca `16oct-formularios-familia-cajas`. Causa real de la nueva captura: había
+dos formularios de movimientos. Al invitar una Caja privada se convertía en
+compartida y SharedBoxes todavía abría el antiguo formulario dentro del historial.
+Las correcciones anteriores lo plegaban al invitar, pero no lo sustituían al
+tocar Agregar dinero. No era solamente una recarga pendiente del emulador.
+
+SharedBoxes usa ahora SpaceMovementSheet, el mismo formulario actual de Familia
+y Caja privada: monto, método, categoría, fecha, notas y origen Personal para el
+propietario. Reutiliza campos y operaciones existentes; valida fecha, moneda y
+saldo. Si falla la confirmación local de un aporte Personal ya recibido por la
+nube, reintenta esa confirmación, sin crear otro movimiento remoto. El formulario
+Crear Caja queda debajo de Crear/Unirme, antes de las cajas existentes.
+
+Invitar abre inmediatamente la hoja del código con espera dentro de ella. La
+respuesta de red no reabre la hoja si se cerró. Familia ya no recarga todo su
+historial financiero para generar un código; las operaciones de dinero sí
+mantienen sus comprobaciones. Los indicadores de actualización ocupan el botón
+fijo de cabecera, sin insertar una banda que desplace la pantalla. Actualizar una
+Caja compartida conserva la copia visible mientras confirma la nueva. La primera
+carga sin datos disponibles y la generación real del código todavía requieren red.
+
+Comprobado en Android conectado al Metro 8081: Crear aparece encima de la lista;
+Caja propia de prueba vacía convertida, código real generado, Agregar dinero abre
+la hoja moderna después de invitar. No se guardaron movimientos y se cerró solo
+esa Caja de prueba en S/0. Cajas preexistentes conservadas. Familia «ww» mantiene
+S/400 y su historial tras abrir/cerrar código; actualización sin banda adicional.
+Capturas/códigos en .tmp, fuera de Git.
+
+Verificación: 231 pruebas y 8 auditores sin tarjetas, TypeScript/ESLint completos
+sin errores. La nueva prueba falla contra b3676c5 porque antes se descartaban
+categoría/notas/fecha elegida; prueba también aporte Personal/reintento único,
+validaciones y Familia sin recarga financiera. Sin nuevos datos recolectados ni
+cambios de esquema, reglas, Functions, APK/AAB/OTA/Play.
+
+**Sigue/falta:** unión real desde segundo Android/cuenta; pendientes históricos
+de auditoría (diario durable/volumen/los tres pares dudosos de «hj»). No se
+reconstruyeron ni borraron esos registros. Tarjetas siguen fuera del alcance.
+
 ## Familia y Cajas — 16/10/2026 — invitación no reactiva el formulario al fallar
 
 Si no se generaba el código, el manejo del error restauraba Ingreso/Gasto y

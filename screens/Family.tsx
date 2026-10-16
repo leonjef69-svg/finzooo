@@ -102,6 +102,8 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   const [montoInicial, setMontoInicial] = useState("");
   const [origenInicial, setOrigenInicial] = useState<"personal" | "externo">("externo");
   const [invitacion, setInvitacion] = useState("");
+  const [invitacionVisible, setInvitacionVisible] = useState(false);
+  const [preparandoInvitacion, setPreparandoInvitacion] = useState(false);
   const [verMiembros, setVerMiembros] = useState(false);
   const [editandoNombreFamilia, setEditandoNombreFamilia] = useState(false);
   const [nombreFamiliaEditado, setNombreFamiliaEditado] = useState("");
@@ -273,6 +275,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   const familiaId = familia?.id;
   useEffect(() => {
     setVerMiembros(false);
+    setInvitacionVisible(false);
     setEditandoNombreFamilia(false);
     setNombreFamiliaEditado(familia?.nombre ?? "");
   }, [familia?.id, familia?.nombre]);
@@ -392,7 +395,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     }
   }, [accountSession, accountUid, cargando, familia, familias, familiasSincronizadas, movimientos, movimientosFamilias, ocupado, owner, recargar, repairLinkedTransferTransactions, t, transactions]);
 
-  async function ejecutar(action: (wait: FamilyActionWait) => Promise<void>, onError?: (error: unknown) => void) {
+  async function ejecutar(action: (wait: FamilyActionWait) => Promise<void>, onError?: (error: unknown) => void, financial = true) {
     if (actionLock.current) return;
     const task = captureAccountTask(accountUid, () => mounted.current && getAccountStorageSession() === accountSession);
     if (!task.current()) return;
@@ -400,6 +403,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
     setOcupado(true);
     let mutationRevision: number | undefined;
     async function guarded<T>(work: () => Promise<T>): Promise<T> {
+      if (!financial) return task.wait(work);
       // Invalidar antes de enviar, no después de recibir: una lectura iniciada
       // antes del borrado no puede restaurarlo durante la espera del servidor.
       mutationRevision = ++reloadId.current;
@@ -484,8 +488,12 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   const invitar = () => ejecutar(async wait => {
     const uid = auth.currentUser?.uid; if (!uid || !familia || !owner) return;
     if (!isPremium) { irUnaVez("/premium"); return; }
-    setInvitacion(await wait(() => crearInvitacionFamilia(uid, familia.id)));
-  });
+    setTipo(null); setEditandoNombreFamilia(false); setSeleccionando(false);
+    setInvitacion(""); setInvitacionVisible(true); setPreparandoInvitacion(true);
+    try { setInvitacion(await wait(() => crearInvitacionFamilia(uid, familia.id))); }
+    catch (error) { setInvitacionVisible(false); throw error; }
+    finally { setPreparandoInvitacion(false); }
+  }, undefined, false);
   const guardarNombreFamilia = () => {
     if (!familia || !owner || ocupado) return;
     const nombreNuevo = nombreFamiliaEditado.trim().slice(0, 35);
@@ -694,7 +702,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
   };
 
   return <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top + 6, paddingBottom: insets.bottom }}>
-    <View className="flex-row items-center justify-between px-5 pb-3"><BackButton onPress={safeBack} /><Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("family.title")}</Text><TouchableOpacity accessibilityLabel={t("common.refresh")} onPress={() => void recargar(undefined, true)} className="h-10 w-10 items-center justify-center"><RefreshCw size={18} color="#64748b" /></TouchableOpacity></View>
+    <View className="flex-row items-center justify-between px-5 pb-3"><BackButton onPress={safeBack} /><Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("family.title")}</Text><TouchableOpacity accessibilityLabel={t("common.refresh")} accessibilityState={{ busy: ocupado || actualizando }} disabled={ocupado || actualizando} onPress={() => void recargar(undefined, true)} className="h-10 w-10 items-center justify-center">{(ocupado || actualizando) && !preparandoInvitacion ? <ActivityIndicator accessibilityLabel={t("common.loading")} size="small" color="#059669" /> : <RefreshCw size={18} color="#64748b" />}</TouchableOpacity></View>
     <SpaceSwitcher active="family" />
     <ScrollView
       className="flex-1 px-5"
@@ -708,8 +716,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
       }}
     >
       <LegalAcceptancePanel />
-      {ocupado || actualizando ? <View accessibilityRole="progressbar" accessibilityLiveRegion="polite" className="mt-2 flex-row items-center justify-center gap-2 py-2"><ActivityIndicator size="small" color="#059669" /><Text className="text-sm text-slate-600 dark:text-slate-300">{t(ocupado ? "spaces.processing" : "common.loading")}</Text></View> : null}
-      {cargando ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : errorCarga ? <Text accessibilityLiveRegion="polite" className="py-8 text-center text-slate-600 dark:text-slate-300">{t("family.connectionError")}</Text> : !auth.currentUser ? <Text className="mt-6 text-center text-slate-600 dark:text-slate-300">{t("family.loginRequired")}</Text> : verTodas || (familia && familiasOcultas.has(familia.id)) ? <>
+      {cargando ? <Text className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : errorCarga && !familias.length && !familia ? <Text accessibilityLiveRegion="polite" className="py-8 text-center text-slate-600 dark:text-slate-300">{t("family.connectionError")}</Text> : !auth.currentUser ? <Text className="mt-6 text-center text-slate-600 dark:text-slate-300">{t("family.loginRequired")}</Text> : verTodas || (familia && familiasOcultas.has(familia.id)) ? <>
         <Text className="mt-3 text-sm text-slate-600 dark:text-slate-300">{t("family.listHelp")}</Text>
         <View className="mt-3 flex-row gap-3"><TouchableOpacity onPress={() => isPremium ? setModo("crear") : irUnaVez("/premium")} className={`min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl ${isPremium ? "bg-emerald-600" : "bg-amber-500"}`}><Plus size={18} color="#fff" /><Text className="font-bold text-white">{isPremium ? t("family.create") : t("family.createPremium")}</Text></TouchableOpacity><TouchableOpacity onPress={() => setModo("unir")} className="min-h-12 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-slate-100 dark:bg-noche-2"><UserPlus size={18} color="#0d9488" /><Text className="font-bold text-teal-700 dark:text-teal-300">{t("family.join")}</Text></TouchableOpacity></View>
         {modo ? <View className="mt-3 rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde"><TextInput disableFullscreenUI autoFocus value={modo === "crear" ? nombre : codigo} onChangeText={modo === "crear" ? setNombre : value => setCodigo(value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 8))} maxLength={modo === "crear" ? 35 : 8} placeholder={t(modo === "crear" ? "family.namePlaceholder" : "family.codePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 rounded-xl border-[1.5px] border-emerald-400 px-4 text-slate-900 dark:text-slate-100" />{modo === "crear" ? <><TextInput disableFullscreenUI value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder={t("family.initialAmount")} placeholderTextColor="#94a3b8" className="mt-2 h-12 rounded-xl border-[1.5px] border-emerald-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" /><View className="mt-2 flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} onPress={() => setOrigenInicial(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenInicial === origin ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "family.fromPersonal" : "family.externalMoney")}</Text></TouchableOpacity>)}</View>{origenInicial === "personal" ? <Text className="mt-1 text-[11px] text-slate-500">{t("family.personalAvailable", { amount: fmt(disponible) })}</Text> : null}</> : null}<View className="mt-3 flex-row gap-2"><TouchableOpacity accessibilityLabel={t("common.cancel")} onPress={() => setModo(null)} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-slate-100"><X size={19} color="#64748b" /></TouchableOpacity><TouchableOpacity accessibilityLabel={t("common.save")} onPress={modo === "crear" ? crear : unir} className="min-h-11 flex-1 items-center justify-center rounded-xl bg-emerald-600"><Check size={19} color="#fff" /></TouchableOpacity></View></View> : null}
@@ -826,7 +833,7 @@ function FamilyForAccount({ accountUid }: { accountUid: string }) {
         {!owner ? <TouchableOpacity disabled={ocupado} onPress={salir} className="mt-3 min-h-11 flex-row items-center justify-center gap-2"><LogOut size={17} color="#e11d48" /><Text className="font-bold text-rose-600">{t("family.leave")}</Text></TouchableOpacity> : null}
       </>}
     </ScrollView>
-    <SpaceInvitationSheet code={invitacion} kind="family" visible={Boolean(invitacion)} onClose={() => setInvitacion("")} />
+    <SpaceInvitationSheet code={invitacion} kind="family" visible={invitacionVisible} loading={preparandoInvitacion} onClose={() => { setInvitacionVisible(false); setInvitacion(""); }} />
     {familia ? <SpaceMembersSheet familyName={familia.nombre} members={miembros} visible={verMiembros} canManage={owner} onRemove={quitarMiembro} onClose={() => setVerMiembros(false)} reportSpace={{ kind: "family", spaceId: familia.id, ownerUid: familia.ownerUid }} /> : null}
   </View>;
 }

@@ -55,6 +55,7 @@ function harness() {
     Platform: { OS: "android" }, privateBoxLinksMatch: linksModule.exports.privateBoxLinksMatch,
     guardandoRef: { current: false }, repairBlocked: false, repairPlan: { conflicts: [] },
     conversionEnCurso: { current: false },
+    invitacionPrivadaSolicitada: { current: false }, setInvitacionPrivadaVisible: value => { scope.invitationVisible = value; },
     isPremium: true, accountUid: "a", ready: true, userName: "A", userCurrency: "PEN", active: true,
     // Escenarios financieros con elección válida. La barrera real sin elección
     // se ejecuta en verificar-aceptacion-cuenta-real, antes de guardar pendiente.
@@ -99,5 +100,18 @@ function harness() {
   const h = harness(); h.scope.Platform.OS = "ios";
   h.scope.compartirCajaExistente = async () => { throw new Error("NO_SERVER_WRITE_ALLOWED"); };
   await h.scope.run(); assert.ok(h.events.includes("boxes.atomicAndroidOnly")); assert.equal(h.dataRef.current.cajas.length, 1);
+}
+{
+  const h = harness(); let finish;
+  h.scope.crearInvitacionCaja = () => { h.events.push("invite"); return new Promise(resolve => { finish = resolve; }); };
+  const pending = h.scope.run();
+  assert.equal(h.scope.invitationVisible, true, "la hoja abre antes de esperar a la conversión");
+  for (let i = 0; i < 40 && !finish; i++) await Promise.resolve();
+  assert.ok(finish, "se llegó a generar el código real");
+  h.scope.invitacionPrivadaSolicitada.current = false;
+  finish("ABCD2345"); await pending;
+  const opened = h.events.find(item => Array.isArray(item) && item[0] === "open")[1];
+  assert.equal(opened.item.id, receipt.targetId); assert.equal(opened.code, "", "cerrar durante la espera no reabre el código al responder");
+  assert.equal(h.scope.invitationVisible, false);
 }
 console.log("Conversión de Caja: copia atrasada preservada, confirmación y enlaces sin duplicación comprobados.");

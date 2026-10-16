@@ -169,6 +169,7 @@ for (const [file, name, args] of guarded) {
     captureAccountTask: () => ({ current: () => true, wait: operation => operation() }),
     accountUid: "A", cuentaActual: () => true, ready: true, hasUnreadableLocalData: () => false,
     setCompartiendo() {}, assertSharedContentAccepted: a.assertSharedContentAccepted,
+    invitacionPrivadaSolicitada: { current: false }, setInvitacionPrivadaVisible() {},
     guardarCambioCaja: async () => { writes++; return true; }, nuevoIntentoCaja: () => "attempt",
     compartirCajaExistente: async () => { throw new Error("legal-acceptance-required"); },
     showToast: value => errors.push(value), t: key => key, spaceErrorKey: () => "legal.sharedRequired" };

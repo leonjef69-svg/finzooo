@@ -4,6 +4,7 @@ import BackButton from "@/components/BackButton";
 import MovementAllButton from "@/components/MovementAllButton";
 import SpaceSwitcher from "@/components/SpaceSwitcher";
 import SpaceMembersSheet from "@/components/SpaceMembersSheet";
+import SpaceInvitationSheet from "@/components/SpaceInvitationSheet";
 import SharedBoxes from "@/screens/SharedBoxes";
 import SpaceTransferAmounts from "@/components/SpaceTransferAmounts";
 import MovementDateHeader from "@/components/MovementDateHeader";
@@ -88,6 +89,8 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const [errorCompartidas, setErrorCompartidas] = useState(false);
   const [compartidaAbierta, setCompartidaAbierta] = useState<CajaCompartida | null>(null);
   const [invitacionInicialCompartida, setInvitacionInicialCompartida] = useState("");
+  const [invitacionPrivadaVisible, setInvitacionPrivadaVisible] = useState(false);
+  const invitacionPrivadaSolicitada = useRef(false);
   const [verMiembros, setVerMiembros] = useState(false);
   const [cajaId, setCajaId] = useState<string | null>(null);
   const [editandoNombreCaja, setEditandoNombreCaja] = useState(false);
@@ -918,6 +921,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
     const task = captureAccountTask(accountUid, cuentaActual);
     if (!task.current() || !ready || hasUnreadableLocalData()) return;
     conversionEnCurso.current = true; setCompartiendo(true);
+    invitacionPrivadaSolicitada.current = true; setInvitacionPrivadaVisible(true);
     try {
       let pendingBox = caja;
       if (!caja.sharingPending) {
@@ -944,7 +948,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       let codigo: string | undefined;
       try { codigo = await task.wait(() => crearInvitacionCaja(uid, compartida.id)); }
       catch { if (task.current()) showToast(t("boxes.invitationRetry")); }
-      if (task.current()) abrirCompartida(compartida, codigo);
+      if (task.current()) abrirCompartida(compartida, invitacionPrivadaSolicitada.current ? codigo : "");
     } catch (error) {
       if (task.current()) {
         const original = error instanceof Error && error.message === "cajas-sharing-unconfirmed" ? error.cause : error;
@@ -955,7 +959,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
         else showToast(t(spaceErrorKey(error)));
       }
     }
-    finally { if (task.current()) { conversionEnCurso.current = false; setCompartiendo(false); } }
+    finally { if (task.current()) { conversionEnCurso.current = false; setCompartiendo(false); setInvitacionPrivadaVisible(false); invitacionPrivadaSolicitada.current = false; } }
   }
 
   async function cancelarCompartirCaja() {
@@ -999,7 +1003,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       <View className="flex-row items-center justify-between px-5 pb-3">
         <BackButton onPress={safeBack} />
         <Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("boxes.title")}</Text>
-        <TouchableOpacity accessibilityLabel={t("common.refresh")} accessibilityState={{ busy: compartiendo || cargandoUnion || guardando }} disabled={compartiendo || cargandoUnion || guardando} onPress={() => setRefreshVersion(value => value + 1)} className="h-10 w-10 items-center justify-center">{guardando || compartiendo || cargandoUnion ? <ActivityIndicator accessibilityLabel={t("common.loading")} size="small" color="#059669" /> : <RefreshCw size={18} color="#64748b" />}</TouchableOpacity>
+        <TouchableOpacity accessibilityLabel={t("common.refresh")} accessibilityState={{ busy: compartiendo || cargandoUnion || guardando || (lista && cargandoCompartidas) }} disabled={compartiendo || cargandoUnion || guardando || (lista && cargandoCompartidas)} onPress={() => setRefreshVersion(value => value + 1)} className="h-10 w-10 items-center justify-center">{(guardando || compartiendo || cargandoUnion || (lista && cargandoCompartidas)) && !invitacionPrivadaVisible ? <ActivityIndicator accessibilityLabel={t("common.loading")} size="small" color="#059669" /> : <RefreshCw size={18} color="#64748b" />}</TouchableOpacity>
       </View>
       <SpaceSwitcher active="boxes" />
       <Modal transparent visible={moneyBusy} animationType="fade" onRequestClose={() => undefined}>
@@ -1115,9 +1119,23 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
           <>
             <Text className="mb-3 mt-2 text-xs leading-5 text-slate-500 dark:text-slate-300">{t("boxes.subtitle")}</Text>
             <View className="mb-3 flex-row gap-3">
-              <TouchableOpacity onPress={() => setCreando(true)} className="min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-600"><Plus size={18} color="#fff" /><Text className="font-bold text-white">{t("family.create")}</Text></TouchableOpacity>
-              <TouchableOpacity onPress={() => { setUniendoCaja(value => !value); setCodigoCaja(""); }} className="min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950"><UserPlus size={18} color="#0d9488" /><Text className="font-bold text-teal-700 dark:text-teal-300">{t("family.join")}</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => { setUniendoCaja(false); setCreando(true); }} className="min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-2xl bg-emerald-600"><Plus size={18} color="#fff" /><Text className="font-bold text-white">{t("family.create")}</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => { setCreando(false); setUniendoCaja(value => !value); setCodigoCaja(""); }} className="min-h-11 flex-1 flex-row items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 dark:border-emerald-800 dark:bg-emerald-950"><UserPlus size={18} color="#0d9488" /><Text className="font-bold text-teal-700 dark:text-teal-300">{t("family.join")}</Text></TouchableOpacity>
             </View>
+            {creando ? (
+              <View className="mb-3 gap-2">
+                <View className="flex-row items-center gap-2">
+                <TextInput disableFullscreenUI editable={!guardando} value={nuevoNombre} onChangeText={setNuevoNombre} maxLength={30} autoFocus placeholder={t("boxes.namePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 flex-1 rounded-xl border-[1.5px] border-teal-400 px-4 text-slate-900 dark:text-slate-100" />
+                <TouchableOpacity accessibilityLabel={t("common.save")} accessibilityState={{ busy: guardando }} disabled={guardando} onPress={crearCaja} className="h-12 w-12 items-center justify-center rounded-xl bg-emerald-600"><Check size={20} color="#fff" /></TouchableOpacity>
+                <TouchableOpacity accessibilityLabel={t("common.cancel")} disabled={guardando} onPress={() => setCreando(false)} className="h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><X size={20} color="#64748b" /></TouchableOpacity>
+                </View>
+                <Text className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.initialAmount")}</Text>
+                <TextInput disableFullscreenUI editable={!guardando} value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
+                <Text className="text-xs font-semibold text-slate-600 dark:text-slate-300">{t("boxes.moneyOrigin")}</Text>
+                <View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} disabled={guardando} onPress={() => setOrigenDinero(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenDinero === origin ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text></TouchableOpacity>)}</View>
+                {origenDinero === "personal" ? <Text className="text-[11px] text-slate-500">{t("boxes.personalAvailable", { amount: fmt(disponible) })}</Text> : null}
+              </View>
+            ) : null}
             {uniendoCaja ? <View className="mb-3 rounded-2xl border-[1.5px] border-slate-200 p-3 dark:border-noche-borde">
               <TextInput
                 disableFullscreenUI
@@ -1171,26 +1189,11 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
               <View className="h-9 w-9 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Boxes size={19} color="#0d9488" /></View>
               <View className="ml-2.5 flex-1"><Text numberOfLines={1} className="text-[15px] font-extrabold text-slate-900 dark:text-slate-100">{item.nombre}</Text><Text className="mt-0.5 text-[13px] font-bold text-teal-700 dark:text-teal-300">{saldosCompartidas[item.id] === undefined ? "…" : formatAmount(saldosCompartidas[item.id], currencySymbolFor(item.currency), item.currency)}</Text></View><ArrowLeftRight size={17} color="#64748b" />
             </TouchableOpacity>) : null}
-            {cargandoCompartidas && !verArchivadas ? <ActivityIndicator accessibilityLabel={t("common.loading")} color="#059669" /> : null}
             {errorCompartidas && !verArchivadas ? <TouchableOpacity accessibilityRole="button" onPress={() => setRefreshVersion(value => value + 1)} className="min-h-11 justify-center"><Text className="text-sm text-slate-500">{t("family.connectionError")} {t("boxes.retrySharing")}</Text></TouchableOpacity> : null}
             {cajasEnLista.length === 0 && (verArchivadas || (!compartidas.length && !cargandoCompartidas && !errorCompartidas)) && !creando ? (
               <View className="items-center rounded-2xl border-[1.5px] border-dashed border-slate-300 px-5 py-7 dark:border-noche-borde">
                 <Boxes size={28} color="#94a3b8" />
                 <Text className="mt-3 text-center text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.empty")}</Text>
-              </View>
-            ) : null}
-            {creando ? (
-              <View className="mt-2 gap-2">
-                <View className="flex-row items-center gap-2">
-                <TextInput disableFullscreenUI editable={!guardando} value={nuevoNombre} onChangeText={setNuevoNombre} maxLength={30} autoFocus placeholder={t("boxes.namePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 flex-1 rounded-xl border-[1.5px] border-teal-400 px-4 text-slate-900 dark:text-slate-100" />
-                <TouchableOpacity accessibilityLabel={t("common.save")} accessibilityState={{ busy: guardando }} disabled={guardando} onPress={crearCaja} className="h-12 w-12 items-center justify-center rounded-xl bg-emerald-600"><Check size={20} color="#fff" /></TouchableOpacity>
-                <TouchableOpacity accessibilityLabel={t("common.cancel")} disabled={guardando} onPress={() => setCreando(false)} className="h-12 w-12 items-center justify-center rounded-xl bg-slate-100 dark:bg-noche-2"><X size={20} color="#64748b" /></TouchableOpacity>
-                </View>
-                <Text className="text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.initialAmount")}</Text>
-                <TextInput disableFullscreenUI editable={!guardando} value={montoInicial} onChangeText={value => setMontoInicial(sanitizeSafeAmountInput(value, userCurrency))} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-4 text-lg font-bold text-slate-900 dark:text-slate-100" />
-                <Text className="text-xs font-semibold text-slate-600 dark:text-slate-300">{t("boxes.moneyOrigin")}</Text>
-                <View className="flex-row gap-2">{(["externo", "personal"] as const).map(origin => <TouchableOpacity key={origin} disabled={guardando} onPress={() => setOrigenDinero(origin)} className={`min-h-10 flex-1 items-center justify-center rounded-xl border ${origenDinero === origin ? "border-teal-500 bg-teal-50 dark:bg-teal-950" : "border-slate-200 dark:border-noche-borde"}`}><Text className="text-xs font-bold text-slate-700 dark:text-slate-200">{t(origin === "personal" ? "boxes.fromPersonal" : "boxes.externalMoney")}</Text></TouchableOpacity>)}</View>
-                {origenDinero === "personal" ? <Text className="text-[11px] text-slate-500">{t("boxes.personalAvailable", { amount: fmt(disponible) })}</Text> : null}
               </View>
             ) : null}
           </>
@@ -1289,6 +1292,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
           </>
         )}
       </ScrollView>
+      <SpaceInvitationSheet code="" kind="box" visible={invitacionPrivadaVisible} loading onClose={() => { invitacionPrivadaSolicitada.current = false; setInvitacionPrivadaVisible(false); }} />
       {caja ? <SpaceMembersSheet familyName={caja.nombre} members={accountUid ? [{ uid: accountUid, nombre: userName || t("family.member"), rol: "owner" }] : []} visible={verMiembros} onClose={() => setVerMiembros(false)} /> : null}
     </View>
   );

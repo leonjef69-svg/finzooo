@@ -1,5 +1,5 @@
 import { Copy, Share2, X } from "lucide-react-native";
-import { Pressable, Share, Text, TouchableOpacity, View } from "react-native";
+import { ActivityIndicator, Pressable, Share, Text, TouchableOpacity, View } from "react-native";
 import Modal from "@/components/PrivateModal";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useAppData } from "@/contexts/AppDataContext";
@@ -9,17 +9,19 @@ export default function SpaceInvitationSheet({
   visible,
   onClose,
   kind,
+  loading = false,
 }: {
   code: string;
   visible: boolean;
   onClose: () => void;
   kind: "box" | "family";
+  loading?: boolean;
 }) {
   const { t, showToast } = useAppData();
   const insets = useSafeAreaInsets();
 
   async function shareCode() {
-    if (!visible || !code) return;
+    if (!visible || !code || loading) return;
     try {
       // Abre el selector del teléfono; no confirma envío ni consume el código.
       await Share.share({ message: t(kind === "box" ? "boxes.invitationMessage" : "family.invitationMessage", { code }) });
@@ -29,6 +31,7 @@ export default function SpaceInvitationSheet({
   }
 
   async function copyCode() {
+    if (!visible || !code || loading) return;
     try {
       const clipboard = await import("expo-clipboard");
       await clipboard.setStringAsync(code);
@@ -40,7 +43,7 @@ export default function SpaceInvitationSheet({
 
   return (
     <Modal
-      visible={visible && Boolean(code)}
+      visible={visible && (Boolean(code) || loading)}
       transparent
       animationType="slide"
       statusBarTranslucent
@@ -64,7 +67,7 @@ export default function SpaceInvitationSheet({
                 {t("boxes.invitationCode")}
               </Text>
               <Text className="mt-0.5 text-sm text-slate-600 dark:text-slate-300">
-                {t("family.codeExpires")}
+                {loading ? t("common.loading") : t("family.codeExpires")}
               </Text>
             </View>
             <TouchableOpacity
@@ -76,16 +79,17 @@ export default function SpaceInvitationSheet({
               <X size={19} color="#64748b" />
             </TouchableOpacity>
           </View>
-          <View className="my-2 items-center rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 dark:border-emerald-800 dark:bg-emerald-950/40">
-            <Text selectable className="text-3xl font-black tracking-[5px] text-emerald-700 dark:text-emerald-300">
+          <View className="my-2 min-h-20 items-center justify-center rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 dark:border-emerald-800 dark:bg-emerald-950/40">
+            {loading ? <ActivityIndicator accessibilityLabel={t("common.loading")} color="#059669" /> : <Text selectable className="text-3xl font-black tracking-[5px] text-emerald-700 dark:text-emerald-300">
               {code}
-            </Text>
+            </Text>}
           </View>
           <TouchableOpacity
             accessibilityRole="button"
             accessibilityLabel={t("family.shareInvitation")}
+            disabled={loading || !code}
             onPress={() => void shareCode()}
-            className="mt-2 min-h-12 flex-row items-center justify-center gap-2 rounded-xl bg-emerald-600"
+            className={`mt-2 min-h-12 flex-row items-center justify-center gap-2 rounded-xl bg-emerald-600 ${loading || !code ? "opacity-40" : ""}`}
           >
             <Share2 size={20} color="#ffffff" />
             <Text className="font-extrabold text-white">{t("family.shareInvitation")}</Text>
@@ -93,8 +97,9 @@ export default function SpaceInvitationSheet({
           <TouchableOpacity
             accessibilityRole="button"
             accessibilityLabel={t("family.copyCode")}
+            disabled={loading || !code}
             onPress={() => void copyCode()}
-            className="mt-2 min-h-12 flex-row items-center justify-center gap-2 rounded-xl border border-emerald-300 dark:border-emerald-800"
+            className={`mt-2 min-h-12 flex-row items-center justify-center gap-2 rounded-xl border border-emerald-300 dark:border-emerald-800 ${loading || !code ? "opacity-40" : ""}`}
           >
             <Copy size={19} color="#059669" />
             <Text className="font-extrabold text-emerald-700 dark:text-emerald-300">{t("family.copyCode")}</Text>

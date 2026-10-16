@@ -17,7 +17,7 @@ const t = (key, values = {}) => {
 const alerts = [], shares = [], copied = [];
 let shareResult = { action: "sharedAction" }, rejectShare = false, rejectCopy = false;
 const element = (type, props) => ({ type, props });
-const rn = Object.fromEntries(["Pressable", "Text", "TouchableOpacity", "View"].map(key => [key, key]));
+const rn = Object.fromEntries(["ActivityIndicator", "Pressable", "Text", "TouchableOpacity", "View"].map(key => [key, key]));
 rn.Share = { share: async content => { shares.push(content); if (rejectShare) throw Error("native"); return shareResult; } };
 const deps = {
   "react/jsx-runtime": { jsx: (type, props) => element(type, props), jsxs: (type, props) => element(type, props) },
@@ -31,7 +31,7 @@ const deps = {
 const module = { exports: {} };
 const js = ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX } }).outputText;
 vm.runInNewContext(js, { module, exports: module.exports, require: key => { assert.ok(deps[key], `Dependencia inesperada ${key}`); return deps[key]; } });
-const render = (kind, code = "ABCD2345", visible = true) => module.exports.default({ kind, code, visible, onClose() {} });
+const render = (kind, code = "ABCD2345", visible = true, loading = false) => module.exports.default({ kind, code, visible, loading, onClose() {} });
 function nodes(tree) {
   if (!tree || typeof tree !== "object") return [];
   return [tree, ...[tree.props?.children].flat(Infinity).flatMap(nodes)];
@@ -56,6 +56,16 @@ for (const [code, visible] of [["", true], ["ABCD2345", false]]) {
   assert.equal(tree.props.visible, false);
   nodes(tree).find(node => node.type === "TouchableOpacity" && node.props.accessibilityLabel === t("family.shareInvitation")).props.onPress();
   await tick(); assert.equal(shares.length, count, "No comparte códigos vacíos ni una invitación cerrada");
+}
+for (const kind of ["box", "family"]) {
+  const waiting = render(kind, "", true, true), beforeShare = shares.length, beforeCopy = copied.length;
+  assert.equal(waiting.props.visible, true, "el código se prepara en su propia hoja desde el toque");
+  assert.ok(nodes(waiting).some(node => node.type === "ActivityIndicator"));
+  for (const label of ["family.shareInvitation", "family.copyCode"]) {
+    const button = nodes(waiting).find(node => node.type === "TouchableOpacity" && node.props.accessibilityLabel === t(label));
+    assert.equal(button.props.disabled, true); button.props.onPress();
+  }
+  await tick(); assert.equal(shares.length, beforeShare); assert.equal(copied.length, beforeCopy, "nunca comparte/copia un código vacío");
 }
 // La Caja convertida sigue accesible en la lista ÚNICA, sin comprar de nuevo.
 const boxesFile = "screens/Cajas.tsx";

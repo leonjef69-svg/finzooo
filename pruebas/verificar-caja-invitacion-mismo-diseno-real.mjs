@@ -12,7 +12,7 @@ const tree = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true, ts.Sc
 const component = tree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "SharedBoxesForAccount");
 const renderCode = component.body.statements.findLast(ts.isReturnStatement).expression.getText(tree);
 const React = { createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }) };
-const ui = Object.fromEntries(["View", "Text", "ScrollView", "TouchableOpacity", "TextInput", "BackButton", "SpaceSwitcher", "ActivityIndicator", "LegalAcceptancePanel", "MovementAllButton", "SpaceOverviewTotals", "SpaceInvitationSheet", "SpaceMembersSheet", "SpacePaymentMethod", "ArrowLeftRight", "UsersRound", "UserPlus", "Pencil", "Plus", "X", "Check", "RefreshCw", "ListChecks", "ArrowUp", "ArrowDown", "Trash2", "LogOut", "ArrowRightLeft", "ContentReportButton", "SpaceTransferAmounts", "MovementDateHeader"].map(name => [name, name]));
+const ui = Object.fromEntries(["View", "Text", "ScrollView", "TouchableOpacity", "TextInput", "BackButton", "SpaceSwitcher", "ActivityIndicator", "LegalAcceptancePanel", "MovementAllButton", "SpaceOverviewTotals", "SpaceMovementSheet", "SpaceInvitationSheet", "SpaceMembersSheet", "SpacePaymentMethod", "ArrowLeftRight", "UsersRound", "UserPlus", "Pencil", "Plus", "X", "Check", "RefreshCw", "ListChecks", "ArrowUp", "ArrowDown", "Trash2", "LogOut", "ArrowRightLeft", "ContentReportButton", "SpaceTransferAmounts", "MovementDateHeader"].map(name => [name, name]));
 const source = ts.transpileModule(`globalThis.render=()=>(${renderCode});`, { compilerOptions: {
   target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None, jsx: ts.JsxEmit.React,
 } }).outputText;
@@ -38,6 +38,11 @@ const s = { ...ui, React, insets: { top: 0, bottom: 0 }, busy: false, t: key => 
   editandoNombreCaja: false, saldo: ledger.exports.balanceOfSpace(movements), devolvibleAPersonal: ledger.exports.returnableToPersonal(movements, "A"), ingresos: 0, gastos: 25, filter: null,
   recentMovementTypes: { income: false, expense: true }, seleccionando: false, modo: null,
   modoSuspendido: { current: null },
+  invitacionVisible: false, preparandoInvitacion: false, nombre: "", monto: "", method: "cash", moneda: "PEN", userCurrency: "PEN",
+  category: "salario", movementDate: "2026-10-16", notes: "", origenDinero: "externo", saldoPersonalEn: () => 100,
+  currencySymbolFor: () => "S/", formatAmount: amount => `S/ ${amount}`,
+  setNombre() {}, setMonto() {}, setMethod() {}, setCategory: value => { s.category = value; }, setMovementDate() {}, setNotes() {}, setOrigenDinero() {}, guardar() {},
+  setInvitacionVisible: value => { s.invitacionVisible = value; }, setPreparandoInvitacion: value => { s.preparandoInvitacion = value; },
   filasVisibles: ledger.exports.compactLinkedTransferRows(movements),
   isLinkedSpaceTransfer: ledger.exports.isLinkedSpaceTransfer, isLinkedSpaceReturn: ledger.exports.isLinkedSpaceReturn,
   startsMovementDay: () => true, monthNames: [], linkedMovementRowTime: () => "10:03 p.m.", methodLabel: () => "Efectivo",
@@ -78,6 +83,9 @@ s.modo = "ingreso"; s.nombre = "borrador"; s.monto = "15"; s.editandoNombreCaja 
 let finishInvite;
 s.crearInvitacionCaja = () => new Promise(resolve => { finishInvite = resolve; });
 const pendingInvite = s.invokeInvite();
+const waitingSheet = flatten(s.render()).find(node => node.type === "SpaceInvitationSheet");
+assert.equal(waitingSheet.props.visible, true, "Invitar abre su hoja desde el toque, sin esperar ni cambiar de pantalla");
+assert.equal(waitingSheet.props.loading, true); assert.equal(waitingSheet.props.code, "");
 assert.equal(s.modo, null, "al terminar la invitación se oculta el formulario que quedó abierto");
 assert.equal(s.modoSuspendido.current, "ingreso"); assert.equal(s.nombre, "borrador"); assert.equal(s.monto, "15", "el borrador no se pierde");
 assert.equal(s.editandoNombreCaja, false); assert.equal(s.seleccionando, false);
@@ -100,11 +108,19 @@ select.props.onPress(); assert.equal(s.seleccionando, true);
 assert.ok(flatten(s.render()).some(node => node.props.accessibilityLabel === "common.delete"), "Seleccionar conserva acceso al borrado permitido");
 assert.ok(flatten(s.render()).some(node => node.type === "ContentReportButton"), "Seleccionar conserva denuncias y moderación");
 add.props.onPress(); assert.equal(s.modo, "ingreso"); assert.equal(s.nombre, "borrador"); assert.equal(s.monto, "15", "Agregar dinero recupera el borrador suspendido");
+const modernForm = flatten(s.render()).find(node => node.type === "SpaceMovementSheet");
+assert.ok(modernForm?.props.visible, "Agregar dinero compartida debe abrir la misma hoja actual de Familia/Caja privada");
+assert.equal(modernForm.props.amount, "15"); assert.equal(modernForm.props.description, "borrador");
+assert.equal(modernForm.props.date, "2026-10-16"); assert.equal(modernForm.props.category, "salario");
+assert.equal(modernForm.props.origin, "externo");
+assert.ok(!flatten(s.render()).some(node => node.type === "TextInput" && node.props.placeholder === "boxes.description"), "no queda el formulario antiguo intercalado en el historial");
+modernForm.props.onType("gasto"); assert.equal(s.modo, "gasto"); assert.equal(s.category, "otros");
 s.modo = null; close.props.onPress(); assert.equal(changes.at(-1), "close");
 s.owner = true; s.modo = "gasto"; s.nombre = "borrador pendiente"; s.monto = "20";
 s.crearInvitacionCaja = async () => { throw Error("offline"); };
 await assert.rejects(s.invokeInvite(), /offline/);
 assert.equal(s.modo, null, "si falla el código no reaparece el formulario antiguo");
+assert.equal(s.invitacionVisible, false); assert.equal(s.preparandoInvitacion, false);
 assert.equal(s.modoSuspendido.current, "gasto"); assert.equal(s.nombre, "borrador pendiente"); assert.equal(s.monto, "20");
 s.modoSuspendido.current = null;
 s.owner = false;

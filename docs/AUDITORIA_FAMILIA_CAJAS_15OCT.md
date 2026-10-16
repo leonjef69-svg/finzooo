@@ -1,5 +1,38 @@
 # Familia y Cajas — auditoría del 15/10/2026
 
+## 16/10/2026 — sustituir el formulario antiguo, no solo ocultarlo
+
+Marca `16oct-formularios-familia-cajas`. La captura nueva permitió distinguir el
+error real de una recarga pendiente: tras convertir una Caja con Invitar,
+SharedBoxes todavía abría su formulario inline antiguo al tocar Agregar dinero.
+Se elimina ese formulario y se conecta SpaceMovementSheet, ya usado en Familia
+y Cajas privadas. Se reutilizan los campos existentes de categoría/fecha/notas,
+método y vínculo Personal. Se valida fecha, saldo y moneda; un fallo local tras
+confirmar el movimiento remoto reintenta el mismo débito sin otro movimiento.
+
+Crear Caja pasa inmediatamente debajo de Crear/Unirme y antes de las cajas.
+Invitar responde con la hoja de código en preparación y no la reabre si se
+cerró durante la espera. Familia deja de invalidar/recargar todas las consultas
+financieras por una invitación. Las operaciones monetarias siguen invalidando y
+confirmando como antes. Actualizar conserva el detalle conocido y no inserta
+una banda de carga que mueva controles. No se promete red instantánea ni se
+oculta la primera carga sin copia disponible.
+
+Prueba Android: crear únicamente Caja temporal vacía S/0, invitar/conversión
+real, abrir/cerrar código y observar el formulario moderno. Sin guardar dinero;
+cerrada solo la Caja temporal, lista original conservada. Familia «ww» S/400:
+generación real de código, cierre sin cambiar familia, saldo o historial;
+actualización con lista en el mismo sitio. Capturas/códigos excluidos de Git.
+
+231 pruebas/8 auditores sin tarjetas, TypeScript/ESLint completos aprobados.
+Nueva regresión ejecuta guardar e invitar originales, falla contra b3676c5 por
+descarte de categoría/notas/fecha; comprueba validaciones, reintento de débito
+único y que Invitar no recargue Familia mientras el dinero sí se confirma.
+
+**Sigue/falta:** unión real en segundo Android/cuenta y auditoría histórica de
+diario durable/volumen/pares incompletos. Los tres casos de «hj» permanecen sin
+reconstruir ni borrar. Sin despliegue, cambios de esquema o datos recolectados.
+
 ## 16/10/2026 — Invitar no reactiva Ingreso/Gasto al fallar
 
 La rama de error restauraba automáticamente el formulario. Ahora queda plegado

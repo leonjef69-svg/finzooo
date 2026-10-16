@@ -157,7 +157,7 @@ function harness() {
   const boxFile = "screens/SharedBoxes.tsx", box = { id: "box", nombre: "Actual" };
   const s = { boxId: box.id, cajas: [box], routeBoxOpened: { current: undefined }, selectedBoxId: { current: undefined },
     invitationInicial: "code", setMovimientos: rows => { s.rows = rows; }, setMiembros() {}, setMovimientosConfirmados() {},
-    setCargandoCaja: value => { s.loading = value; }, setCaja() {}, setInvitacion() {} };
+    setCargandoCaja: value => { s.loading = value; }, setCaja() {}, setInvitacion() {}, setInvitacionVisible() {} };
   const { node, tree } = find(boxFile, (node, tree) => ts.isCallExpression(node) && node.expression.getText(tree) === "useEffect"
     && node.arguments[0]?.getText(tree).includes("if (invitationInicial)"));
   vm.runInNewContext(js(`globalThis.openRoute = (${node.arguments[0].getText(tree)});`), s);
@@ -176,6 +176,7 @@ function harness() {
     isPremium: true, movimientos: [], transactions: [], privateBoxLinksMatch: () => true,
     captureAccountTask: () => ({ current: () => true, wait: work => work() }), accountUid: "A", cuentaActual: () => true, ready: true,
     hasUnreadableLocalData: () => false, setCompartiendo() {}, assertSharedContentAccepted: async () => {},
+    invitacionPrivadaSolicitada: { current: false }, setInvitacionPrivadaVisible() {},
     datosActuales: { current: { cajas: [box], movimientos: [] } }, nuevoIntentoCaja: () => "attempt", userName: "A", userCurrency: "PEN",
     guardarCambioCaja: async next => { s.datosActuales.current = next; return true; },
     compartirCajaExistente: async (...args) => { remote++; assert.deepEqual(plain(args[6]), ["caja-hj", "caja-hj", "caja-hj"]); throw Error("test-stop"); },

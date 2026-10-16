@@ -167,7 +167,7 @@ function boxHarness() {
   const scope = { auth, uid: "A", accountSession: 1, getAccountStorageSession, captureAccountTask,
     caja: { id: "box-a", nombre: "Caja" }, cajaId: "box-a", mounted: { current: true },
     selectedBoxId: { current: "box-a" }, movementEpoch: { current: 0 }, confirmedSource: { current: null },
-    borradosConfirmados: { current: new Map() }, setCargandoCaja() {}, setErrorCargaCaja() {},
+    borradosConfirmados: { current: new Map() }, loadedBoxId: { current: undefined }, setCargandoCaja() {}, setErrorCargaCaja() {},
     lock: { current: false }, moneyLock: { current: false }, errorRef: { current: error => { state.error = error; } },
     listarMiembrosCaja: () => members.promise, confirmarCajaAbierta: () => confirmation.promise,
     escucharMovimientosCaja: (_id, callback) => { receive = callback; return () => stopCount++; },

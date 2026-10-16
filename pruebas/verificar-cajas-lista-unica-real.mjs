@@ -58,9 +58,11 @@ const rows = [{ id: "real", tipo: "ingreso", monto: 100 }, { id: "spent", tipo: 
     limpiar() {}, setModo: value => { s.modo = value; }, setEditandoAporteId() {}, setEditandoNombreCaja: value => { s.editandoNombreCaja = value; }, setNombreCajaEditado() {}, setSeleccionando: value => { s.seleccionando = value; },
     crearInvitacionCaja: (uid, id) => { assert.equal(uid, "A"); assert.equal(id, box.id); s.calls++; return network.promise; },
     setInvitacion: value => { s.code = value; }, irUnaVez() { throw Error("no abrir otra ruta"); },
+    setInvitacionVisible: value => { s.invitationVisible = value; }, setPreparandoInvitacion: value => { s.preparing = value; },
   };
   run(`${original(shared, "ejecutar")}\n${original(shared, "invitar")}\nglobalThis.invite=invitar; globalThis.work=ejecutar;`, s);
   const pending = s.invite(); await s.invite(); assert.equal(s.calls, 1, "dos toques generan un solo código");
+  assert.equal(s.invitationVisible, true); assert.equal(s.preparing, true);
   assert.equal(s.confirmedSource.current, origin); assert.equal(s.movementEpoch.current, 4); assert.equal(s.confirmed, true);
   network.resolve("ABCD2345"); await pending;
   assert.equal(s.code, "ABCD2345"); assert.equal(s.rows, rows); assert.equal(s.caja, box);
@@ -77,6 +79,13 @@ const rows = [{ id: "real", tipo: "ingreso", monto: 100 }, { id: "spent", tipo: 
   await s.work(wait => wait(async () => {}));
   assert.equal(s.movementEpoch.current, 5); assert.equal(s.confirmedSource.current, null);
   assert.equal(s.subscription, 1, "las operaciones de dinero SÍ conservan su invalidación/recarga");
+}
+// El alta se despliega junto a Crear, antes de cualquier Caja existente.
+{
+  const form = find(main, node => ts.isConditionalExpression(node) && node.condition.getText() === "creando"
+    && node.whenTrue.getText().includes('value={nuevoNombre}')).node;
+  const list = find(main, node => ts.isCallExpression(node) && node.expression.getText() === "cajasEnLista.map").node;
+  assert.ok(form.pos < list.pos, "Crear no debe enviar el formulario debajo de la lista de Cajas");
 }
 // La selección es local, exacta y accesible al invitado sin Pro; no migra dinero.
 {

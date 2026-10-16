@@ -79,6 +79,7 @@ const family = { ...scope, auth: { currentUser: { uid: "A" } }, familia: { id: "
   descripcion: "Ejemplo aislado", category: "otros", notes: "", method: "cash", fechaHoy: () => "2026-10-15",
   guardarMovimientoFamilia: async (...args) => { writes.push(["guardar", ...args]); return "family-movement"; },
   setMonto() {}, setDescripcion() {}, setNotes() {}, setMovementDate() {}, setOrigenDinero() {}, setTipo() {},
+  setEditandoNombreFamilia() {}, setSeleccionando() {}, setInvitacionVisible() {}, setPreparandoInvitacion() {},
 };
 function familyAction(name) {
   const node = find(node => ts.isVariableDeclaration(node) && node.name.getText(familyTree) === name, familyTree);

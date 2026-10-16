@@ -1,5 +1,29 @@
 # Entregas de Fino
 
+## 16/10/2026 — Formulario actual también después de invitar (desarrollo)
+
+Marca `16oct-formularios-familia-cajas`. El detalle compartido aún conservaba un
+formulario antiguo dentro del historial: plegarlo durante Invitar no corregía
+Agregar dinero después de convertir la Caja. Se sustituye por la hoja actual de
+Familia/Caja privada y se conservan categoría, fecha, notas, método y origen.
+Crear Caja se muestra debajo de Crear/Unirme, antes de la lista.
+
+La hoja de invitación responde al toque y prepara el código dentro de ella, sin
+desplazar el detalle. Cerrar durante la espera no la reabre. Familia no vuelve a
+consultar todo el historial para generar el código. Actualizaciones conservan la
+copia visible y usan el lugar fijo de la cabecera; la primera consulta real sigue
+necesitando conexión. Las comprobaciones financieras no se desactivan.
+
+Emulador con código actual: Caja propia temporal en S/0 creada, convertida,
+código real abierto/cerrado y formulario moderno observado; cerrada únicamente
+esa Caja vacía al terminar. Ningún movimiento guardado ni saldo preexistente
+modificado. Familia «ww» S/400 conserva diseño/historial al abrir/cerrar el código.
+231 pruebas/8 auditores sin tarjetas y TypeScript/ESLint limpios. Regresión nueva
+falla contra b3676c5 por metadatos descartados en el guardado anterior.
+
+**Sigue/falta:** unión con otra cuenta/teléfono y pendientes históricos ya
+documentados. Sin APK/AAB/OTA/Play, servidor/reglas ni cambios de datos recolectados.
+
 ## 16/10/2026 — Invitar no muestra el formulario anterior si falla
 
 Si falla la creación del código, la Caja permanece en su vista normal y el
