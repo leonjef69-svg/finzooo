@@ -1,5 +1,37 @@
 # Familia y Cajas — auditoría del 15/10/2026
 
+## 16/10/2026 — lista compartida inmediata al volver
+
+Marca `16oct-lista-cajas-completa`. El componente recordaba privadas pero
+reiniciaba compartidas/saldos al desmontarse. Esa asimetría producía la lista
+incompleta y el giro automático de Actualizar que muestra la captura nueva.
+Se reutiliza cajasMemoria para la última lista compartida completa y sus saldos,
+separados por UID/sesión, sin disco ni autoridad para operaciones financieras.
+
+Al volver se pintan privadas y compartidas juntas; consulta automática discreta,
+manual con indicador. Cerrar/salir confirma y retira la copia visual; respuestas
+tardías o de otra sesión no la alteran. No se recuerda una lista parcial como
+completa solo por haber abierto/unido/creado una Caja. Si aún no existe copia,
+la primera consulta espera antes de mostrar una lista aparentemente completa.
+
+Regresión con inicializadores, setters, consulta y memoria originales: volver,
+red lenta/fallida, cierre/retirada, remoto vacío, manual, UID y sesión. Contra
+35ca9d2 reproduce la lista vacía y carga activa de la primera imagen, no una
+API ausente. Ajustado contrato estático antiguo que prohibía cualquier variable
+de actualización: ahora se permite el indicador de Actualizar voluntario y se
+comprueba que la consulta automática no lo active.
+
+Android: Personal → Cajas conserva «uyyj» y «j», saldos visibles sin escalón
+entre tarjetas ni giro automático. Ninguna operación de dinero, creación,
+cierre o borrado en esta pasada. Capturas .tmp/lista-cajas-* fuera de Git.
+Verificación final: 232 pruebas/8 auditores sin tarjetas; TypeScript y ESLint
+completos sin errores. La pasada inicial detectó el contrato estático anticuado
+ya descrito; corregido y repetida la batería completa con resultado aprobado.
+
+**Sigue/falta:** primer acceso tras reinicio completo depende de la red; unión
+desde segundo Android/cuenta y pendientes históricos de auditoría siguen sin
+cerrarse. Los tres casos antiguos de «hj» intactos. Sin despliegue ni recopilación.
+
 ## 16/10/2026 — sustituir el formulario antiguo, no solo ocultarlo
 
 Marca `16oct-formularios-familia-cajas`. La captura nueva permitió distinguir el

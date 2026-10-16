@@ -125,6 +125,8 @@ const rows = [{ id: "real", tipo: "ingreso", monto: 100 }, { id: "spent", tipo: 
   const s = { personalReady: true, hasOnboarded: true, accountUid: "A", compartidaAbierta: null, cuentaActual: () => true, refreshVersion: 1, requestedRefresh: { current: 1 },
     useCallback: callback => callback, captureAccountTask: (_uid, valid) => ({ current: valid, wait: work => work() }),
     setCargandoCompartidas() {}, setErrorCompartidas() {}, listarCajasCompartidas: () => network.promise,
+    leerCajasCompartidasEnMemoria: () => null, setActualizandoListaCompartida() {},
+    listaCompartidaCompleta: { current: false }, setCompartidasConocidas() {},
     setCompartidas: () => { sets++; }, isPremium: false,
   };
   const expr = node.arguments[0].arguments[0].getText(tree);

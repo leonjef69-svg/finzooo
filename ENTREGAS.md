@@ -1,5 +1,27 @@
 # Entregas de Fino
 
+## 16/10/2026 — Cajas completas al volver, sin carga automática (desarrollo)
+
+Marca `16oct-lista-cajas-completa`. La memoria anterior solo conservaba las cajas
+privadas. Compartidas y saldos se olvidaban al salir, por eso «j» aparecía después
+de «uyyj». Se conserva también la lista compartida completa, aislada por cuenta
+y sesión; actualizaciones automáticas comprueban novedades sin vaciar la lista
+ni hacer girar la cabecera. Actualizar manualmente mantiene su indicador.
+
+La retirada confirmada se recuerda y las respuestas tardías se descartan. Sin
+copia aún no se enseña una lista privada como si fuera toda la lista. Solo
+presentación en memoria: sin disco nuevo, autoridad financiera o cambios remotos.
+
+Emulador: Personal → Cajas muestra ambas tarjetas/saldos sin espera adicional
+entre ellas. Solo navegación; ningún movimiento ni dato real modificado.
+Prueba nueva falla contra 35ca9d2 por lista compartida vacía en la primera imagen,
+no por ausencia de una API. La primera consulta tras reiniciar sigue usando red.
+232 pruebas y 8 auditores sin tarjetas aprobados; TypeScript/ESLint completos
+sin errores. Evidencia y capturas locales fuera de Git.
+
+**Sigue/falta:** unión real con otra cuenta/teléfono y casos históricos ya
+documentados. Sin APK/AAB/OTA/Play, Functions/reglas o nuevos datos recolectados.
+
 ## 16/10/2026 — Formulario actual también después de invitar (desarrollo)
 
 Marca `16oct-formularios-familia-cajas`. El detalle compartido aún conservaba un

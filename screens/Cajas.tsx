@@ -43,7 +43,7 @@ import { nextId } from "@/utils/id";
 import { irUnaVez, safeBack } from "@/utils/nav";
 import { getAccountStorageSession, hasUnreadableLocalData, loadJSON, saveJSON, STORAGE_KEYS } from "@/utils/storage";
 import { captureAccountTask } from "@/utils/accountTask";
-import { guardarCajasEnMemoria, leerCajasEnMemoria, observarCajasEnMemoria, revisionCajasEnMemoria } from "@/utils/cajasMemoria";
+import { guardarCajasCompartidasEnMemoria, leerCajasCompartidasEnMemoria, guardarCajasEnMemoria, leerCajasEnMemoria, observarCajasEnMemoria, revisionCajasEnMemoria } from "@/utils/cajasMemoria";
 import { assertPrivateBoxMoneyLocalIdle, assertPrivateBoxMoneyLocalMutation } from "@/utils/privateBoxMoneyLocalWrite";
 import { cancelarConversionCaja, enlacesCajaConvertida, huellaCaja, nuevoIntentoCaja, retirarCajaConvertida } from "@/utils/boxMigration";
 import { spaceErrorKey } from "@/utils/spaceErrors";
@@ -80,12 +80,18 @@ export default function Cajas() {
 function CajasForAccount({ accountUid }: { accountUid: string }) {
   const { ready: personalReady, hasOnboarded, t, fmt, monthNames, showToast, budgets, carryoverCleared, transactions, deletedTransactionIds, commitPrivateBoxData, commitPrivateBoxMoney, retirePrivateBoxMoney, stagePrivateBoxMoney, readPrivateBoxMoneyLocal, isPremium, userName, userCurrency } = useAppData();
   const insets = useSafeAreaInsets();
+  const copiaCompartidaInicial = useRef(leerCajasCompartidasEnMemoria()).current;
   const [datos, setRenderedDatos] = useState<DatosCajas>(() => leerCajasEnMemoria() ?? CAJAS_VACIAS);
   const datosActuales = useRef(datos);
   const [lista, setLista] = useState(true);
-  const [compartidas, setCompartidas] = useState<CajaCompartida[]>([]);
-  const [saldosCompartidas, setSaldosCompartidas] = useState<Record<string, number>>({});
-  const [cargandoCompartidas, setCargandoCompartidas] = useState(true);
+  const [compartidas, setRenderedCompartidas] = useState<CajaCompartida[]>(copiaCompartidaInicial?.cajas ?? []);
+  const [saldosCompartidas, setRenderedSaldosCompartidas] = useState<Record<string, number>>(copiaCompartidaInicial?.saldos ?? {});
+  const compartidasActuales = useRef(compartidas);
+  const saldosCompartidasActuales = useRef(saldosCompartidas);
+  const listaCompartidaCompleta = useRef(copiaCompartidaInicial !== null);
+  const [compartidasConocidas, setCompartidasConocidas] = useState(copiaCompartidaInicial !== null);
+  const [cargandoCompartidas, setCargandoCompartidas] = useState(copiaCompartidaInicial === null);
+  const [actualizandoListaCompartida, setActualizandoListaCompartida] = useState(false);
   const [errorCompartidas, setErrorCompartidas] = useState(false);
   const [compartidaAbierta, setCompartidaAbierta] = useState<CajaCompartida | null>(null);
   const [invitacionInicialCompartida, setInvitacionInicialCompartida] = useState("");
@@ -173,19 +179,36 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
   const cuentaActual = useCallback(() => mounted.current && accountSession !== null
     && accountSession === getAccountStorageSession() && (auth.currentUser?.uid ?? "") === accountUid,
   [accountSession, accountUid]);
+  const setCompartidas = useCallback((update: SetStateAction<CajaCompartida[]>) => {
+    if (!cuentaActual()) return;
+    const next = typeof update === "function" ? update(compartidasActuales.current) : update;
+    compartidasActuales.current = next;
+    if (listaCompartidaCompleta.current) guardarCajasCompartidasEnMemoria(next, saldosCompartidasActuales.current, accountUid, accountSession);
+    setRenderedCompartidas(next);
+  }, [cuentaActual, accountUid, accountSession]);
+  const setSaldosCompartidas = useCallback((update: SetStateAction<Record<string, number>>) => {
+    if (!cuentaActual()) return;
+    const next = typeof update === "function" ? update(saldosCompartidasActuales.current) : update;
+    saldosCompartidasActuales.current = next;
+    if (listaCompartidaCompleta.current) guardarCajasCompartidasEnMemoria(compartidasActuales.current, next, accountUid, accountSession);
+    setRenderedSaldosCompartidas(next);
+  }, [cuentaActual, accountUid, accountSession]);
+  function actualizarListaCajas() {
+    setActualizandoListaCompartida(true); setRefreshVersion(value => value + 1);
+  }
   // Elegir privadas/compartidas en una sola lista no convierte ni repara dinero.
   useFocusEffect(useCallback(() => {
     if (!personalReady || !hasOnboarded || compartidaAbierta) return;
-    if (!accountUid) { setCargandoCompartidas(false); return; }
+    if (!accountUid) { setCargandoCompartidas(false); setActualizandoListaCompartida(false); return; }
     let active = true;
     const requested = refreshVersion;
     const task = captureAccountTask(accountUid, () => active && cuentaActual() && requestedRefresh.current === requested);
-    setCargandoCompartidas(true); setErrorCompartidas(false);
+    setCargandoCompartidas(leerCajasCompartidasEnMemoria() === null); setErrorCompartidas(false);
     void task.wait(() => listarCajasCompartidas(accountUid)).then(items => {
-      if (task.current()) { setCompartidas(items); setCargandoCompartidas(false); }
-    }).catch(() => { if (task.current()) { setCargandoCompartidas(false); setErrorCompartidas(true); } });
+      if (task.current()) { listaCompartidaCompleta.current = true; setCompartidas(items); setCompartidasConocidas(true); setCargandoCompartidas(false); setActualizandoListaCompartida(false); }
+    }).catch(() => { if (task.current()) { setCargandoCompartidas(false); setActualizandoListaCompartida(false); setErrorCompartidas(true); } });
     return () => { active = false; };
-  }, [accountUid, cuentaActual, personalReady, hasOnboarded, compartidaAbierta, refreshVersion]));
+  }, [accountUid, cuentaActual, personalReady, hasOnboarded, compartidaAbierta, refreshVersion, setCompartidas]));
   useEffect(() => {
     if (!lista || compartidaAbierta || verArchivadas) return;
     let active = true;
@@ -194,7 +217,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       setSaldosCompartidas(previous => ({ ...previous, [item.id]: rows.reduce((total, row) => total + (row.tipo === "ingreso" ? row.monto : -row.monto), 0) }));
     }, () => { if (active && cuentaActual()) setErrorCompartidas(true); }));
     return () => { active = false; stops.forEach(stop => stop()); };
-  }, [compartidas, compartidaAbierta, lista, verArchivadas, cuentaActual]);
+  }, [compartidas, compartidaAbierta, lista, verArchivadas, cuentaActual, setSaldosCompartidas]);
   function abrirCompartida(item: CajaCompartida, codigo = "") {
     if (!cuentaActual()) return;
     setCompartidas(previous => previous.some(other => other.id === item.id)
@@ -1003,7 +1026,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
       <View className="flex-row items-center justify-between px-5 pb-3">
         <BackButton onPress={safeBack} />
         <Text className="text-base font-bold text-slate-900 dark:text-slate-100">{t("boxes.title")}</Text>
-        <TouchableOpacity accessibilityLabel={t("common.refresh")} accessibilityState={{ busy: compartiendo || cargandoUnion || guardando || (lista && cargandoCompartidas) }} disabled={compartiendo || cargandoUnion || guardando || (lista && cargandoCompartidas)} onPress={() => setRefreshVersion(value => value + 1)} className="h-10 w-10 items-center justify-center">{(guardando || compartiendo || cargandoUnion || (lista && cargandoCompartidas)) && !invitacionPrivadaVisible ? <ActivityIndicator accessibilityLabel={t("common.loading")} size="small" color="#059669" /> : <RefreshCw size={18} color="#64748b" />}</TouchableOpacity>
+        <TouchableOpacity accessibilityLabel={t("common.refresh")} accessibilityState={{ busy: compartiendo || cargandoUnion || guardando || actualizandoListaCompartida }} disabled={compartiendo || cargandoUnion || guardando || actualizandoListaCompartida} onPress={actualizarListaCajas} className="h-10 w-10 items-center justify-center">{(guardando || compartiendo || cargandoUnion || actualizandoListaCompartida) && !invitacionPrivadaVisible ? <ActivityIndicator accessibilityLabel={t("common.loading")} size="small" color="#059669" /> : <RefreshCw size={18} color="#64748b" />}</TouchableOpacity>
       </View>
       <SpaceSwitcher active="boxes" />
       <Modal transparent visible={moneyBusy} animationType="fade" onRequestClose={() => undefined}>
@@ -1157,6 +1180,7 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
               </View>
             </View> : null}
             {cajasArchivadas.length > 0 ? <TouchableOpacity accessibilityRole="button" disabled={guardando} onPress={() => { setVerArchivadas(value => !value); setSeleccionandoCajas(false); setCajasSeleccionadas([]); }} className="mb-2 min-h-11 justify-center"><Text className="font-bold text-teal-700 dark:text-teal-300">{t(verArchivadas ? "boxes.activeList" : "boxes.archivedList", { count: cajasArchivadas.length })}</Text></TouchableOpacity> : null}
+            {accountUid && !verArchivadas && !compartidasConocidas && cargandoCompartidas ? <Text accessibilityLiveRegion="polite" className="py-8 text-center text-slate-500">{t("common.loading")}</Text> : <>
             {cajasEnLista.length > 0 && !verArchivadas ? <View className="mb-2 flex-row items-center justify-between">
               {seleccionandoCajas ? <>
                 <Text className="text-sm font-extrabold text-slate-900 dark:text-slate-100">{cajasSeleccionadas.length} {cajasSeleccionadas.length === 1 ? "seleccionada" : "seleccionadas"}</Text>
@@ -1189,13 +1213,14 @@ function CajasForAccount({ accountUid }: { accountUid: string }) {
               <View className="h-9 w-9 items-center justify-center rounded-xl bg-teal-50 dark:bg-teal-950"><Boxes size={19} color="#0d9488" /></View>
               <View className="ml-2.5 flex-1"><Text numberOfLines={1} className="text-[15px] font-extrabold text-slate-900 dark:text-slate-100">{item.nombre}</Text><Text className="mt-0.5 text-[13px] font-bold text-teal-700 dark:text-teal-300">{saldosCompartidas[item.id] === undefined ? "…" : formatAmount(saldosCompartidas[item.id], currencySymbolFor(item.currency), item.currency)}</Text></View><ArrowLeftRight size={17} color="#64748b" />
             </TouchableOpacity>) : null}
-            {errorCompartidas && !verArchivadas ? <TouchableOpacity accessibilityRole="button" onPress={() => setRefreshVersion(value => value + 1)} className="min-h-11 justify-center"><Text className="text-sm text-slate-500">{t("family.connectionError")} {t("boxes.retrySharing")}</Text></TouchableOpacity> : null}
+            {errorCompartidas && !verArchivadas ? <TouchableOpacity accessibilityRole="button" onPress={actualizarListaCajas} className="min-h-11 justify-center"><Text className="text-sm text-slate-500">{t("family.connectionError")} {t("boxes.retrySharing")}</Text></TouchableOpacity> : null}
             {cajasEnLista.length === 0 && (verArchivadas || (!compartidas.length && !cargandoCompartidas && !errorCompartidas)) && !creando ? (
               <View className="items-center rounded-2xl border-[1.5px] border-dashed border-slate-300 px-5 py-7 dark:border-noche-borde">
                 <Boxes size={28} color="#94a3b8" />
                 <Text className="mt-3 text-center text-sm font-bold text-slate-700 dark:text-slate-200">{t("boxes.empty")}</Text>
               </View>
             ) : null}
+            </>}
           </>
         ) : caja.archivadaLocal ? (
           <View className="gap-3 py-3">

@@ -1,5 +1,41 @@
 # Estado actual de Fino
 
+## Cajas — 16/10/2026 — lista completa al regresar
+
+Marca `16oct-lista-cajas-completa`. Las privadas ya conservaban su copia visual,
+pero compartidas/saldos arrancaban vacíos en cada montaje. La pantalla mostraba
+primero «uyyj» y añadía «j» al terminar Firebase. Mover el indicador a la cabecera
+en la entrega anterior no había corregido esa pérdida de la lista compartida.
+
+Se conserva también la última lista compartida completa y sus saldos, únicamente
+en memoria y para la cuenta/sesión vigente. Al regresar se muestran junto con
+las privadas, mientras la consulta comprueba novedades sin encender Actualizar.
+Actualizar manualmente sí conserva su indicador. No se considera completa una
+lista obtenida solo por crear/unirse/abrir una Caja. Sin copia previa se espera
+la primera consulta antes de presentar una lista aparentemente completa.
+
+Lecturas tardías no reemplazan la copia tras salir/cambiar de sesión; cierre o
+salida confirmados retiran su tarjeta recordada y una lista remota vacía se
+respeta. Se usa la limpieza de memoria existente al cerrar sesión. La copia es
+solo visual: no confirma operaciones financieras ni sirve para conciliar dinero.
+No se añade almacenamiento en disco, campos remotos, permisos o recopilación.
+
+Android: regreso Personal → Cajas con «uyyj» y «j» visibles juntas, mismos saldos
+y sin indicador automático en cabecera. Solo navegación; ningún movimiento,
+creación, cierre, devolución o borrado en la cuenta. Evidencia .tmp/lista-cajas-*
+fuera de Git. La primera consulta tras reiniciar completamente aún necesita red.
+
+Nueva regresión ejecuta memoria, inicialización y callbacks originales; contra
+35ca9d2 falla porque la primera imagen vuelve a tener lista vacía, sin S/3 y
+con carga activa. Comprueba también red lenta/fallida, retirada, respuesta
+tardía, lista vacía conocida, Actualizar voluntario y aislamiento de sesión.
+Verificación final: 232 pruebas y 8 auditores sin tarjetas, TypeScript y ESLint
+completos sin errores. Registros .tmp/lista-cajas-*-final-16oct.log, fuera de Git.
+
+**Sigue/falta:** prueba de unión desde segundo Android/cuenta y aclaración segura
+de los tres pares antiguos de «hj»/pendientes históricos de la auditoría. Esta
+corrección no toca esos registros ni cambia saldos. Sin APK/AAB/OTA/Play/Firebase.
+
 ## Familia y Cajas — 16/10/2026 — formulario compartido actual y espera sin desplazar
 
 Marca `16oct-formularios-familia-cajas`. Causa real de la nueva captura: había

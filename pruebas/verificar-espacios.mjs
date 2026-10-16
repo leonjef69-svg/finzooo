@@ -51,7 +51,8 @@ assert.match(boxes, /leerCajasEnMemoria/, "Cajas conserva lo ya mostrado al camb
 assert.match(boxesMemory, /limpiarCajasEnMemoria/, "la caché de Cajas se puede vaciar al cambiar de cuenta");
 assert.match(boxes, /setReady\(true\)[\s\S]*bajarCajas/, "Cajas muestra primero la copia local y consulta la nube después");
 assert.doesNotMatch(boxes, /setCloudReady\(false\);\s*setReady\(false\)/, "al volver a Cajas no oculta una copia en memoria mientras consulta la nube");
-assert.doesNotMatch(boxes, /actualizando|setActualizando/, "Cajas actualiza en segundo plano sin añadir un aviso sobre los datos visibles");
+assert.doesNotMatch(boxes, /t\("spaces\.processing"\)/, "Cajas no añade un aviso de proceso sobre los datos visibles");
+assert.match(boxes, /leerCajasCompartidasEnMemoria/, "al volver también conserva las cajas compartidas, no solo las privadas");
 assert.match(layout, /Stack\.Screen name="family" options=\{\{ animation: "fade"/, "Familia entra con transición breve y discreta");
 assert.match(layout, /Stack\.Screen name="boxes" options=\{\{ animation: "fade"/, "Cajas entra con transición breve y discreta");
 assert.match(route, /screens\/Family/);
