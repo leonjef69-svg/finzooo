@@ -13,14 +13,14 @@ import { methodLabel } from "@/constants/i18n";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Alert, BackHandler, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useFocusEffect, useLocalSearchParams } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import { useAppData } from "@/contexts/AppDataContext";
 import BackButton from "@/components/BackButton";
 import LegalAcceptancePanel from "@/components/LegalAcceptancePanel";
 import { fmt as formatAmount, horaDe } from "@/utils/format";
 import { currencySymbolFor } from "@/constants/currencies";
 import { auth } from "@/utils/firebase";
-import { irUnaVez, safeBack } from "@/utils/nav";
+import { irUnaVez } from "@/utils/nav";
 import { amountInputError, parseAmountInput, sanitizeSafeAmountInput } from "@/utils/amount";
 import { disponiblePersonalEnFecha } from "@/utils/finances";
 import { nextId } from "@/utils/id";
@@ -33,29 +33,27 @@ import { withImmediateRemoval } from "@/utils/immediateRemoval";
 import { actualizarAportePersonal, borrarAportePersonal } from "@/utils/personalContribution";
 import { devolverAportePersonal } from "@/utils/personalReturn";
 import { ArrowDown, ArrowLeftRight, ArrowRightLeft, ArrowUp, Check, ListChecks, LogOut, Pencil, Plus, RefreshCw, Trash2, UserPlus, UsersRound, X } from "lucide-react-native";
-import { borrarMovimientoCajaCompartida, cerrarCajaCompartida, confirmarCajaAbierta, crearInvitacionCaja, escucharMovimientosCaja, guardarMovimientoCajaCompartida, listarCajasCompartidas, listarMiembrosCaja, observarCierreCaja, quitarMiembroCaja, renombrarCajaCompartida, salirDeCaja, unirseACaja, type CajaCompartida, type MiembroCajaCompartida, type MovimientoCajaCompartida } from "@/utils/cloudCajasCompartidas";
+import { borrarMovimientoCajaCompartida, cerrarCajaCompartida, confirmarCajaAbierta, crearInvitacionCaja, escucharMovimientosCaja, guardarMovimientoCajaCompartida, listarMiembrosCaja, observarCierreCaja, quitarMiembroCaja, renombrarCajaCompartida, salirDeCaja, type CajaCompartida, type MiembroCajaCompartida, type MovimientoCajaCompartida } from "@/utils/cloudCajasCompartidas";
 
-type SharedBoxesProps = { initialBox?: CajaCompartida; initialInvitation?: string; onAllBoxes?: (removedId?: string) => void };
+type SharedBoxesProps = { initialBox: CajaCompartida; initialInvitation?: string; onAllBoxes: (removedId?: string) => void };
 const fechaHoy = () => new Date().toLocaleDateString("sv-SE");
 
-export default function SharedBoxes(props: SharedBoxesProps = {}) {
+export default function SharedBoxes(props: SharedBoxesProps) {
   useAppData();
   const uid = auth.currentUser?.uid ?? "";
-  return <SharedBoxesForAccount key={`${uid}:${getAccountStorageSession()}:${props.initialBox?.id ?? "route"}`} uid={uid} {...props} />;
+  return <SharedBoxesForAccount key={`${uid}:${getAccountStorageSession()}:${props.initialBox.id}`} uid={uid} {...props} />;
 }
 
 function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes }: SharedBoxesProps & { uid: string }) {
-  const { t, monthNames, userCurrency, isPremium, userName, showToast, budgets, carryoverCleared, transactions, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
+  const { t, monthNames, userCurrency, isPremium, showToast, budgets, carryoverCleared, transactions, recordPersonalReturn, deleteLinkedTransferTransaction, repairLinkedTransferTransactions } = useAppData();
   const saldoPersonalEn = (fecha: string) => disponiblePersonalEnFecha(fecha, budgets, transactions, carryoverCleared);
   const insets = useSafeAreaInsets();
-  const { join, boxId, invitation: invitationInicial } = useLocalSearchParams<{ join?: string; boxId?: string; invitation?: string }>();
-  const [cajas, setCajas] = useState<CajaCompartida[]>([]);
-  const [caja, setCaja] = useState<CajaCompartida | null>(initialBox ?? null);
+  const [caja, setCaja] = useState<CajaCompartida | null>(initialBox);
   const [editandoNombreCaja, setEditandoNombreCaja] = useState(false);
   const [nombreCajaEditado, setNombreCajaEditado] = useState("");
   const [movimientos, setMovimientos] = useState<MovimientoCajaCompartida[]>([]);
   const [miembros, setMiembros] = useState<MiembroCajaCompartida[]>([]);
-  const [modo, setModo] = useState<"unir" | "ingreso" | "gasto" | null>(join === "1" ? "unir" : null);
+  const [modo, setModo] = useState<"ingreso" | "gasto" | null>(null);
   const [nombre, setNombre] = useState("");
   const [monto, setMonto] = useState("");
   const [method, setMethod] = useState("cash");
@@ -67,7 +65,6 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
   const [filter, setFilter] = useState<MovementFilter>(null);
   const [seleccionando, setSeleccionando] = useState(false);
   const [movementLimit, setMovementLimit] = useState(60);
-  const [codigo, setCodigo] = useState("");
   const [invitacion, setInvitacion] = useState(initialInvitation ?? "");
   const [invitacionVisible, setInvitacionVisible] = useState(Boolean(initialInvitation));
   const [preparandoInvitacion, setPreparandoInvitacion] = useState(false);
@@ -75,7 +72,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
   const [busy, setBusy] = useState(false);
   const [cajasOcultas, setCajasOcultas] = useState(new Set<string>());
   const [movimientosOcultos, setMovimientosOcultos] = useState(new Set<string>());
-  const [cargandoCaja, setCargandoCaja] = useState(Boolean(initialBox || boxId));
+  const [cargandoCaja, setCargandoCaja] = useState(true);
   const [errorCargaCaja, setErrorCargaCaja] = useState(false);
   const borradosConfirmados = useRef(new Map<string, Set<string>>());
   const [editandoAporteId, setEditandoAporteId] = useState<string | null>(null);
@@ -87,7 +84,6 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
   const accountSession = useRef(getAccountStorageSession()).current;
   const mounted = useRef(true);
   const selectedBoxId = useRef(caja?.id);
-  const routeBoxOpened = useRef<string | undefined>(undefined);
   const cajaId = caja?.id;
   const cajaLista = !!caja && !cargandoCaja && !errorCargaCaja;
   selectedBoxId.current = caja?.id;
@@ -106,25 +102,6 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
     ? "settings.backupMovementConflict" : spaceErrorKey(error)));
   const moneda = caja?.currency || userCurrency;
   const fmt = (amount: number) => formatAmount(amount, currencySymbolFor(moneda), moneda);
-  useEffect(() => {
-    if (initialBox) return;
-    let active = true;
-    const task = captureAccountTask(uid, () => mounted.current && active && getAccountStorageSession() === accountSession);
-    if (task.current()) void task.wait(() => listarCajasCompartidas(uid)).then(items => { if (task.current()) setCajas(items); }).catch(error => { if (task.current()) errorRef.current(error); });
-    return () => { active = false; };
-  }, [accountSession, uid, initialBox]);
-  // Cuando una caja privada se convierte para invitar, se abre directamente
-  // esta caja y se conserva el código recién creado en el recuadro.
-  useEffect(() => {
-    if (!boxId || !cajas.length || routeBoxOpened.current === boxId) return;
-    const destino = cajas.find(item => item.id === boxId);
-    if (!destino) return;
-    routeBoxOpened.current = boxId;
-    selectedBoxId.current = destino.id;
-    setMovimientos([]); setMiembros([]); setMovimientosConfirmados(false); setCargandoCaja(true);
-    setCaja(destino);
-    if (invitationInicial) { setInvitacion(invitationInicial); setInvitacionVisible(true); }
-  }, [boxId, cajas, invitationInicial]);
   useEffect(() => {
     const epoch = ++movementEpoch.current;
     confirmedSource.current = null;
@@ -164,16 +141,9 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
     });
     return () => { active = false; stop(); };
   }, [accountSession, cajaId, subscriptionRevision, uid]);
-  function abrirCaja(item: CajaCompartida) {
-    if (lock.current) return;
-    selectedBoxId.current = item.id;
-    movementEpoch.current += 1; confirmedSource.current = null;
-    setMovimientos([]); setMiembros([]); setMovimientosConfirmados(false); setCargandoCaja(true);
-    limpiar(); setInvitacion(""); setInvitacionVisible(false); setFilter(null); setCaja(item);
-  }
   useEffect(() => setMovementLimit(60), [caja?.id, filter]);
   useEffect(() => { setVerMiembros(false); setSeleccionando(false); }, [caja?.id]);
-  useEffect(() => { if (initialBox && !caja) onAllBoxes?.(initialBox.id); }, [initialBox, caja, onAllBoxes]);
+  useEffect(() => { if (!caja) onAllBoxes(initialBox.id); }, [initialBox, caja, onAllBoxes]);
   useEffect(() => {
     setEditandoNombreCaja(false);
     setNombreCajaEditado(caja?.nombre ?? "");
@@ -187,7 +157,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
       if (!task.current()) return;
       if (cierresPendientes.current.has(boxId)) return;
       movementEpoch.current += 1; confirmedSource.current = null;
-      setCajas(items => items.filter(item => item.id !== boxId)); setCaja(null); setMovimientos([]); setMiembros([]);
+      setCaja(null); setMovimientos([]); setMiembros([]);
     }, error => { if (task.current()) errorRef.current(error); });
     return () => { active = false; stop(); };
   }, [accountSession, cajaId, uid]);
@@ -226,15 +196,14 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
     if (upserts.length || orphanIds.length) repairLinkedTransferTransactions(upserts, orphanIds);
   }, [accountSession, caja, movimientos, movimientosConfirmados, repairLinkedTransferTransactions, t, transactions, transferLedger, uid]);
   function limpiar() {
-    modoSuspendido.current = null; setModo(null); setNombre(""); setMonto(""); setCodigo("");
+    modoSuspendido.current = null; setModo(null); setNombre(""); setMonto("");
     setEditandoAporteId(null); setNotes(""); setCategory("salario"); setMovementDate(fechaHoy()); setOrigenDinero("externo"); setMethod("cash");
   }
   function volverACajas() {
     if (lock.current) return;
-    if (onAllBoxes) onAllBoxes(); else safeBack();
+    onAllBoxes();
   }
   useFocusEffect(useCallback(() => {
-    if (!onAllBoxes) return;
     const subscription = BackHandler.addEventListener("hardwareBackPress", () => {
       if (lock.current) return true;
       if (invitacionVisible) { setInvitacionVisible(false); setInvitacion(""); }
@@ -288,13 +257,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
       if (!await wait(pendingDebit.current.confirm)) throw new Error("personal-save-failed");
       pendingDebit.current = null; limpiar(); return;
     }
-    if (modo === "unir") {
-      if (codigo.length !== 8) return;
-      const nueva = await wait(() => unirseACaja(uid, userName, codigo));
-      selectedBoxId.current = nueva.id;
-      setMovimientos([]); setMiembros([]); setMovimientosConfirmados(false); setCargandoCaja(true);
-      setCajas(items => [nueva, ...items.filter(item => item.id !== nueva.id)]); setCaja(nueva);
-    } else if (caja && (modo === "ingreso" || modo === "gasto")) {
+    if (caja && (modo === "ingreso" || modo === "gasto")) {
       const issue = amountInputError(monto, moneda);
       if (issue) { showToast(t(issue === "tooLarge" ? "toast.amountTooLarge" : "toast.amountDecimals")); return; }
       const valor = parseAmountInput(monto, moneda); if (valor <= 0) return;
@@ -354,7 +317,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
       currency: userCurrency, fecha: new Date().toLocaleDateString("sv-SE"), description: t("boxes.returnToPersonal") }));
     recordPersonalReturn(receipt);
   });
-  const salir = () => { if (!uid || !caja || owner) return; Alert.alert(t("boxes.leave"), t("boxes.leaveWarning"), [{ text: t("common.cancel"), style: "cancel" }, { text: t("boxes.leave"), style: "destructive", onPress: () => void ejecutar(async wait => { await wait(() => salirDeCaja(uid, caja.id)); setCajas(items => items.filter(item => item.id !== caja.id)); setCaja(null); }) }]); };
+  const salir = () => { if (!uid || !caja || owner) return; Alert.alert(t("boxes.leave"), t("boxes.leaveWarning"), [{ text: t("common.cancel"), style: "cancel" }, { text: t("boxes.leave"), style: "destructive", onPress: () => void ejecutar(async wait => { await wait(() => salirDeCaja(uid, caja.id)); setCaja(null); }) }]); };
   const quitar = (member: MiembroCajaCompartida) => { if (!caja || !owner || member.rol === "owner") return; Alert.alert(t("boxes.removeMember"), member.nombre, [{ text: t("common.cancel"), style: "cancel" }, { text: t("common.delete"), style: "destructive", onPress: () => void ejecutar(async wait => { await wait(() => quitarMiembroCaja(caja.id, member.uid)); setMiembros(items => items.filter(item => item.uid !== member.uid)); }) }]); };
   const guardarNombreCaja = () => {
     if (!caja || !owner || busy) return;
@@ -365,7 +328,6 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
       await wait(() => renombrarCajaCompartida(caja.id, nombreNuevo));
       const actualizada = { ...caja, nombre: nombreNuevo };
       setCaja(actualizada);
-      setCajas(items => items.map(item => item.id === caja.id ? actualizada : item));
       setNombreCajaEditado(nombreNuevo);
       setEditandoNombreCaja(false);
       showToast(t("boxes.renamed"));
@@ -388,13 +350,10 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
       if (auth.currentUser?.uid !== uid) return;
       if (!await wait(() => repairLinkedTransferTransactions(settlePersonalTransfers(transactions, "box", boxId)))) throw new Error("personal-save-failed");
       cierresPendientes.current.delete(boxId);
-      setCajas(items => items.filter(item => item.id !== boxId)); setCaja(null);
+      setCaja(null);
       });
     }) }]);
   };
-  function boton(label: string, action: () => void) {
-    return <TouchableOpacity disabled={busy} onPress={action} className="min-h-12 flex-1 items-center justify-center rounded-xl bg-emerald-600 px-3"><Text className="text-sm font-bold text-white">{label}</Text></TouchableOpacity>;
-  }
   return <View className="flex-1 bg-white dark:bg-noche" style={{ paddingTop: insets.top + 6, paddingBottom: insets.bottom }}>
     <View className="flex-row items-center justify-between px-5 pb-3"><BackButton onPress={volverACajas} /><Text className="text-base font-bold text-slate-900 dark:text-white">{t("boxes.title")}</Text><TouchableOpacity accessibilityLabel={t("common.refresh")} accessibilityState={{ busy }} disabled={busy} onPress={() => setSubscriptionRevision(value => value + 1)} className="h-10 w-10 items-center justify-center">{busy && !preparandoInvitacion ? <ActivityIndicator accessibilityLabel={t("common.loading")} size="small" color="#059669" /> : <RefreshCw size={18} color="#64748b" />}</TouchableOpacity></View>
     <SpaceSwitcher active="boxes" />
@@ -411,10 +370,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
     >
       <LegalAcceptancePanel />
       {!uid ? <Text className="text-slate-600 dark:text-slate-200">{t("boxes.loginRequired")}</Text> : <>
-        {!caja || cajasOcultas.has(caja.id) ? onAllBoxes ? null : <>
-          <View className="mb-3 flex-row gap-2">{boton(t("boxes.join"), () => { limpiar(); setModo("unir"); })}</View>
-          {cajas.filter(item => !cajasOcultas.has(item.id)).map(item => <TouchableOpacity key={item.id} disabled={busy} onPress={() => abrirCaja(item)} className="mb-2 rounded-2xl border border-slate-200 p-4 dark:border-noche-borde"><Text className="text-base font-bold text-slate-900 dark:text-white">{item.nombre}</Text></TouchableOpacity>)}
-        </> : cargandoCaja ? <View accessibilityRole="progressbar" className="items-center gap-2 py-8"><ActivityIndicator color="#059669" /><Text className="text-sm text-slate-600 dark:text-slate-300">{t("common.loading")}</Text></View> : errorCargaCaja ? <Text accessibilityLiveRegion="polite" className="py-8 text-center text-slate-600 dark:text-slate-300">{t("family.connectionError")}</Text> : <>
+        {!caja || cajasOcultas.has(caja.id) ? null : cargandoCaja ? <View accessibilityRole="progressbar" className="items-center gap-2 py-8"><ActivityIndicator color="#059669" /><Text className="text-sm text-slate-600 dark:text-slate-300">{t("common.loading")}</Text></View> : errorCargaCaja ? <Text accessibilityLiveRegion="polite" className="py-8 text-center text-slate-600 dark:text-slate-300">{t("family.connectionError")}</Text> : <>
           <View className="mb-2 mt-1 flex-row items-center justify-between">
             <TouchableOpacity accessibilityRole="button" disabled={busy} onPress={volverACajas} className="flex-row items-center gap-1 rounded-xl px-1 py-2"><ArrowLeftRight size={16} color="#059669" /><Text className="text-xs font-bold text-emerald-700 dark:text-emerald-300">{t("boxes.all")}</Text></TouchableOpacity>
             <View className="flex-row items-center gap-2">
@@ -423,7 +379,7 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
             </View>
           </View>
           <View className="rounded-3xl bg-teal-600 px-4 py-3">
-            <View className="flex-row items-center gap-2">
+            <View className="min-h-9 flex-row items-center gap-2">
               {editandoNombreCaja && owner ? <>
                 <TextInput disableFullscreenUI autoFocus editable={!busy} value={nombreCajaEditado} onChangeText={setNombreCajaEditado} onSubmitEditing={guardarNombreCaja} returnKeyType="done" maxLength={30} selectTextOnFocus placeholder={t("boxes.namePlaceholder")} placeholderTextColor="#a7f3d0" className="h-9 min-w-0 flex-1 rounded-xl bg-emerald-700/70 px-3 text-base font-bold text-white" />
                 <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("common.save")} disabled={busy} onPress={guardarNombreCaja} className="h-9 w-9 items-center justify-center rounded-xl bg-white/20"><Check size={18} color="#fff" /></TouchableOpacity>
@@ -454,10 +410,6 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
             <TouchableOpacity accessibilityRole="button" accessibilityLabel={t("boxes.selectMovements")} accessibilityState={{ expanded: seleccionando }} onPress={() => setSeleccionando(value => !value)} className="min-h-10 flex-row items-center gap-1 px-1"><ListChecks size={18} color="#059669" /><Text className="text-[15px] font-bold text-emerald-600">{t(seleccionando ? "common.cancel" : "common.select")}</Text></TouchableOpacity>
           </View>
         </>}
-        {modo === "unir" && !invitacionVisible ? <View className="my-3 gap-2 rounded-2xl border border-slate-200 p-3 dark:border-noche-borde">
-          <TextInput disableFullscreenUI editable={!busy} value={codigo} onChangeText={value => setCodigo(value.replace(/[^a-z0-9]/gi, "").toUpperCase().slice(0, 8))} maxLength={8} placeholder={t("family.codePlaceholder")} placeholderTextColor="#94a3b8" className="h-12 rounded-xl border border-teal-400 px-3 text-base text-slate-900 dark:text-white" />
-          <View className="flex-row gap-2">{boton(t("common.cancel"), limpiar)}{boton(busy ? t("common.loading") : t("common.save"), guardar)}</View>
-        </View> : null}
         {cajaLista && filasVisibles.length === 0 ? <Text className="py-3 text-sm text-slate-500">{t("spaces.noResults")}</Text> : null}
         {cajaLista && caja ? filasVisibles.slice(0, movementLimit).map((row, index) => {
           const { key, item, transferGroup } = row;

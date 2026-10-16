@@ -62,6 +62,16 @@ const inviteDeclaration = component.body.statements.find(node => ts.isVariableSt
 const inviteInitializer = inviteDeclaration.declarationList.declarations.find(item => ts.isIdentifier(item.name) && item.name.text === "invitar").initializer.getText(tree);
 vm.runInNewContext(ts.transpileModule(`globalThis.invokeInvite = ${inviteInitializer};`, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None } }).outputText, s);
 const first = s.render(), nodes = flatten(first);
+function titleRowHeight(rendered) {
+  const row = flatten(rendered).find(node => node.type === "View" && node.props.className?.includes("flex-row") && node.props.className?.includes("gap-2")
+    && node.children.flatMap(flatten).some(child => child.type === "Text" && labels(child).join("") === original.nombre));
+  assert.ok(row, "fila real del nombre de Caja");
+  // Tailwind h-9/min-h-9 = 36 dp; texto leading normal de 16 = 24 dp.
+  // Es medida del JSX adaptado; la geometría Android se captura aparte.
+  return Math.max(row.props.className?.includes("min-h-9") ? 36 : 0,
+    ...row.children.flatMap(flatten).map(child => child.props.className?.includes("h-9") ? 36 : 24));
+}
+const normalTitleHeight = titleRowHeight(first);
 const add = nodes.find(node => node.type === "TouchableOpacity" && labels(node).includes("boxes.addMoney"));
 assert.ok(add, "al compartir debe conservar Agregar dinero; no regresar al sistema antiguo Ingreso/Gasto");
 const close = nodes.find(node => node.type === "TouchableOpacity" && node.props.accessibilityLabel === "boxes.close");
@@ -95,6 +105,7 @@ finishInvite("ABCD2345"); await pendingInvite;
 assert.equal(s.invitacion, "ABCD2345");
 changes.length = 0;
 const invitation = s.render();
+assert.equal(titleRowHeight(invitation), normalTitleHeight, "ocultar el lápiz al invitar no encoge la tarjeta ni desplaza todo el historial");
 assert.deepEqual(labels(invitation), before.filter(label => label !== "boxes.editName"), "el código no deja formulario ni lápiz abiertos de fondo");
 const sheet = flatten(invitation).find(node => node.type === "SpaceInvitationSheet");
 assert.equal(sheet.props.visible, true); assert.equal(sheet.props.code, "ABCD2345");

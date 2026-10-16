@@ -100,7 +100,7 @@ const save = pick("screens/Cajas.tsx", "guardarCambioCaja");
 for (const kind of ["ok", "cloud", "cancel", "disk-before", "disk-after", "network", "bad-ack", "source-before", "copies-before", "account-before", "premium-before", "busy-before", "source-after", "account-after", "premium-after", "unreadable-after", "free", "pending"] ) {
   const events = [], dialogs = [], toasts = []; let current = true, commits = 0;
   const s = { ...core, accountUid: uid, ready: true, compartiendo: false, isPremium: kind !== "free", cloudReady: false,
-    cuentaActual: () => current, guardandoRef: { current: false }, premiumForSync: { current: kind !== "free" },
+    cuentaActual: () => current, guardandoRef: { current: false }, premiumForSync: { current: kind !== "free" }, conversionEnCurso: { current: false }, recuperacionConversionEnCurso: { current: false },
     datosActuales: { current: plain(local) }, hasUnreadableLocalData: () => kind === "unreadable-after" && events.includes("rpc"),
     nameCopies: null, nameCopiesActual: { current: null }, nameOptions: core.diferenciasNombreCajas(local, remote),
     nuevoIdCaja: () => "ui-name", captureAccountTask: task.captureAccountTask, t: key => key, Error, Date,

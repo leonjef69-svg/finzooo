@@ -122,7 +122,7 @@ const rows = [{ id: "real", tipo: "ingreso", monto: 100 }, { id: "spent", tipo: 
   const { node, tree } = find(main, node => ts.isCallExpression(node) && node.expression.getText() === "useFocusEffect"
     && node.arguments[0]?.getText().includes("listarCajasCompartidas"));
   const network = gate(); let cleanup, sets = 0;
-  const s = { personalReady: true, hasOnboarded: true, accountUid: "A", compartidaAbierta: null, cuentaActual: () => true, refreshVersion: 1, requestedRefresh: { current: 1 },
+  const s = { personalReady: true, hasOnboarded: true, accountUid: "A", compartidaAbierta: null, cuentaActual: () => true, refreshVersion: 1, requestedRefresh: { current: 1 }, conversionEnCurso: { current: false },
     useCallback: callback => callback, captureAccountTask: (_uid, valid) => ({ current: valid, wait: work => work() }),
     setCargandoCompartidas() {}, setErrorCompartidas() {}, listarCajasCompartidas: () => network.promise,
     leerCajasCompartidasEnMemoria: () => null, setActualizandoListaCompartida() {},

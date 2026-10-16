@@ -32,7 +32,8 @@ assert.match(transferAmounts, /returned > 0 &&/, "la devolución no aparece hast
 assert.match(sharedBoxes, /const saldo = movimientos\.reduce/, "la caja compartida conserva las transferencias en su saldo disponible");
 assert.match(exportsCode, /item\.type === "income" && !item\.internalTransfer/, "las exportaciones tampoco cuentan transferencias como ingresos");
 assert.match(exportsCode, /item\.type === "expense" && !item\.internalTransfer/, "las exportaciones tampoco cuentan transferencias como gastos");
-assert.match(boxes, /enlacesCajaConvertida\(transactions, compartida\.conversion\)/, "convertir una caja usa los enlaces confirmados por el servidor");
+assert.match(boxes, /prepararRetiroCajaConfirmada\(compartida\.conversion, uid, userCurrency/, "convertir una caja verifica el recibo del servidor contra las fuentes actuales");
+assert.match(leer("utils/boxConversionRecovery.ts"), /enlacesCajaConvertida\(latest\.rows, receipt\)/, "la recuperación conserva los enlaces usando Personal actual, no una copia anterior a la espera");
 const migration = fs.readFileSync(new URL("../utils/boxMigration.ts", import.meta.url), "utf8");
 assert.match(migration, /internalTransferSpaceId: receipt\.targetId/, "la conversión conserva el destino de las transferencias confirmadas");
 assert.match(telegram, /internalTransferLink: movementRef\.id/, "Telegram enlaza Personal con el movimiento compartido exacto");

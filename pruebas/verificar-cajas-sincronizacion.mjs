@@ -154,7 +154,7 @@ function screenHarness(premium = true) {
   const state = {}, localRead = deferred(), cloudRead = deferred(); let count = 0;
   const scope = { auth, accountUid: "A", cuentaActual: () => uid === "A" && session === 1, isPremium: premium,
     personalReady: true, hasOnboarded: true, personalActuales: { current: [] }, borradosActuales: { current: [] },
-    guardandoRef: { current: false },
+    guardandoRef: { current: false }, conversionEnCurso: { current: false }, recuperacionConversionEnCurso: { current: false },
     refreshVersion: 0, requestedRefresh: { current: 0 },
     premiumForSync: { current: premium }, nubeConfirmadaPara: { current: null }, datosActuales: { current: data() },
     ...moneyLocalWrite, captureAccountTask: capture, hasUnreadableLocalData: () => false, STORAGE_KEYS: { cajasDinero: "cajas" }, CAJAS_VACIAS: data([]),

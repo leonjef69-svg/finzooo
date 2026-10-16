@@ -1,5 +1,28 @@
 # Entregas de Fino
 
+## 16/10/2026 — Cajas: invitación sin duplicados y retirada de recorrido antiguo (desarrollo)
+
+Marca `16oct-cajas-invitacion-sin-duplicados`; base 52a718d. Recuperación de una
+conversión confirmada por servidor antes de la fusión ordinaria, comprobando
+SHA/dueño/moneda/enlaces y guardando con el lote local existente. Consultas
+ordinarias pausadas durante Compartir/Cancelar; actualización ajena no invalida
+el origen y volver a Todas no reabre el detalle al terminar. Lista sin doble
+representación de la misma conversión, sin borrar cajas por nombre o saldo.
+
+Retirados segunda lista, formulario de unión y apertura por ruta antiguos de
+SharedBoxes. El detalle solo se abre desde Cajas, con formulario actual y una
+única entrada Unirme. Fila del título estable al ocultar lápiz durante código.
+
+235 pruebas y 8 auditores sin tarjetas aprobados; TypeScript/ESLint generales
+aprobados. Regresiones contra 52a718d rojas por comportamientos reales, no por
+API faltante. Invitación y selector de compartir comprobados en emulador con
+uyyj; sin enviar código a terceros ni hacer movimientos, devolver dinero o
+cerrar cajas. No se eliminan registros antiguos ni se cambian saldos.
+
+**Sigue/falta:** conversión nueva/corte real con datos de prueba y unión desde
+otra cuenta/teléfono; primera preparación aún depende de Internet. Sin APK,
+AAB, OTA, publicación Play ni despliegue remoto; no cierre de auditoría global.
+
 ## 16/10/2026 — Cambio de espacio uniforme y ocultación recordada (desarrollo)
 
 Marca `16oct-cambio-suave-saldo-oculto`. Personal, Familia y Cajas comparten

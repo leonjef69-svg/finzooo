@@ -31,7 +31,7 @@ const focus = find(node => ts.isCallExpression(node) && node.expression.getText(
 const focusCode = `(${focus.arguments[0].arguments[0].getText(tree)})()`;
 function screen() {
   const s = { accountUid: uid, accountSession: session, personalReady: true, hasOnboarded: true, compartidaAbierta: null,
-    lista: true, verArchivadas: false, refreshVersion: 0, requestedRefresh: { current: 0 }, known: false, listaCompartidaCompleta: { current: false },
+    lista: true, verArchivadas: false, refreshVersion: 0, requestedRefresh: { current: 0 }, known: false, listaCompartidaCompleta: { current: false }, conversionEnCurso: { current: false },
     compartidasActuales: { current: [] }, saldosCompartidasActuales: { current: {} }, useCallback: fn => fn,
     cuentaActual: () => s.accountUid === uid && s.accountSession === session,
     captureAccountTask: (_uid, valid) => ({ current: valid, wait: work => work() }),

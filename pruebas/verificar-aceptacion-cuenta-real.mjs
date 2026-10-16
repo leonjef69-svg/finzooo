@@ -163,12 +163,12 @@ for (const [file, name, args] of guarded) {
   const a = environment(); enter(a, "A"); let writes = 0, errors = [];
   const caja = { id: "box", nombre: "Casa" }, data = { cajas: [caja], movimientos: [] };
   const deps = { auth: a.auth, caja, repairBlocked: false, repairPlan: { conflicts: [] }, compartiendo: false,
-    conversionEnCurso: { current: false }, guardandoRef: { current: false }, isPremium: true,
+    conversionEnCurso: { current: false }, recuperacionConversionEnCurso: { current: false }, guardandoRef: { current: false }, isPremium: true,
     movimientos: [], transactions: [], Platform: { OS: "android" },
     privateBoxLinksMatch: () => true, datosActuales: { current: data },
     captureAccountTask: () => ({ current: () => true, wait: operation => operation() }),
     accountUid: "A", cuentaActual: () => true, ready: true, hasUnreadableLocalData: () => false,
-    setCompartiendo() {}, assertSharedContentAccepted: a.assertSharedContentAccepted,
+    setCompartiendo() {}, setRefreshVersion() {}, assertSharedContentAccepted: a.assertSharedContentAccepted,
     invitacionPrivadaSolicitada: { current: false }, setInvitacionPrivadaVisible() {},
     guardarCambioCaja: async () => { writes++; return true; }, nuevoIntentoCaja: () => "attempt",
     compartirCajaExistente: async () => { throw new Error("legal-acceptance-required"); },

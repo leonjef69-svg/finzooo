@@ -152,18 +152,13 @@ function harness() {
   s.watch(); s.familiaElegida.current = "b"; receive(); assert.equal(removed, 0);
 }
 
-// Volver a recibir la lista (p. ej. renombrar) no deja vacía una Caja ya abierta por ruta.
+// Cajas ya no usa una segunda ruta/lista: el detalle recibe la elegida de la
+// lista única. La regresión visual de la ruta antigua se ejecuta también en
+// verificar-recuperacion-invitacion-caja-real.
 {
-  const boxFile = "screens/SharedBoxes.tsx", box = { id: "box", nombre: "Actual" };
-  const s = { boxId: box.id, cajas: [box], routeBoxOpened: { current: undefined }, selectedBoxId: { current: undefined },
-    invitationInicial: "code", setMovimientos: rows => { s.rows = rows; }, setMiembros() {}, setMovimientosConfirmados() {},
-    setCargandoCaja: value => { s.loading = value; }, setCaja() {}, setInvitacion() {}, setInvitacionVisible() {} };
-  const { node, tree } = find(boxFile, (node, tree) => ts.isCallExpression(node) && node.expression.getText(tree) === "useEffect"
-    && node.arguments[0]?.getText(tree).includes("if (invitationInicial)"));
-  vm.runInNewContext(js(`globalThis.openRoute = (${node.arguments[0].getText(tree)});`), s);
-  s.openRoute(); s.rows = [{ id: "confirmed" }]; s.loading = false;
-  s.cajas = [{ ...box, nombre: "Renombrada" }]; s.openRoute();
-  assert.equal(s.loading, false); assert.equal(s.rows[0].id, "confirmed");
+  const code = read("screens/SharedBoxes.tsx");
+  assert.doesNotMatch(code, /useLocalSearchParams|routeBoxOpened|setModo\("unir"\)/, "no conservar un segundo recorrido antiguo que cambie la Caja abierta");
+  assert.match(code, /useState<CajaCompartida \| null>\(initialBox\)/);
 }
 
 // Tres casos equivalentes a hj: se conservan y no bloquean una caja independiente.
@@ -172,10 +167,10 @@ function harness() {
   const conflicts = [1, 2, 3].map(id => ({ boxId: "caja-hj", movementId: `mov-${id}`, personalId: id, reason: "deleted" }));
   let remote = 0, review = 0; const notices = [];
   const s = { caja: box, repairBlocked: false, repairPlan: { conflicts }, auth: { currentUser: { uid: "A" } },
-    avisarRevisionNecesaria: () => { review++; }, compartiendo: false, conversionEnCurso: { current: false }, guardandoRef: { current: false },
+    avisarRevisionNecesaria: () => { review++; }, compartiendo: false, conversionEnCurso: { current: false }, recuperacionConversionEnCurso: { current: false }, guardandoRef: { current: false },
     isPremium: true, movimientos: [], transactions: [], privateBoxLinksMatch: () => true,
     captureAccountTask: () => ({ current: () => true, wait: work => work() }), accountUid: "A", cuentaActual: () => true, ready: true,
-    hasUnreadableLocalData: () => false, setCompartiendo() {}, assertSharedContentAccepted: async () => {},
+    hasUnreadableLocalData: () => false, setCompartiendo() {}, setRefreshVersion() {}, assertSharedContentAccepted: async () => {},
     invitacionPrivadaSolicitada: { current: false }, setInvitacionPrivadaVisible() {},
     datosActuales: { current: { cajas: [box], movimientos: [] } }, nuevoIntentoCaja: () => "attempt", userName: "A", userCurrency: "PEN",
     guardarCambioCaja: async next => { s.datosActuales.current = next; return true; },

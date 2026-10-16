@@ -1,5 +1,53 @@
 # Estado actual de Fino
 
+## Cajas — 16/10/2026 — invitación, recuperación y recorrido antiguo retirado
+
+Marca `16oct-cajas-invitacion-sin-duplicados`, base 52a718d. La lectura normal
+podía cruzarse con Compartir: Firebase ya había confirmado el destino pero el
+celular conservaba el origen pendiente. La fusión ordinaria lo trataba como dos
+versiones; la lista pintaba origen y destino por separado. Además, una nueva
+referencia de toda la lista durante SHA podía invalidar una conversión aunque
+solo hubiera cambiado otra Caja.
+
+Se pausa la lectura ordinaria durante Compartir/Cancelar y se reanuda al acabar,
+también tras error. Antes de fusionar, un origen pendiente se concilia SOLO con
+el recibo del servidor, dueño/moneda, SHA exacto y todos los enlaces de Personal.
+El lote local existente conserva importes e historial y cambia únicamente el
+destino de los enlaces. Cambios reales, recibos ajenos o disco fallido no se
+descartan ni se convierten en devoluciones. Se conserva la última lista al
+validar SHA y se comprueban de nuevo ambas fuentes antes del guardado. El índice
+compartido no pinta dos veces la misma identidad pendiente; no deduplica por
+nombre/saldo ni borra cajas. Si el usuario volvió a Todas mientras esperaba,
+terminar Compartir no lo manda otra vez al detalle.
+
+SharedBoxes queda exclusivamente como detalle de la Caja elegida en Cajas.
+Retirados su segunda lista, formulario Unirme y apertura heredada por parámetros
+de ruta; la unión actual permanece en Cajas. No se retiran APIs de unión ni
+datos compartidos. Nombre de sección visible también con solo compartidas; no
+se ofrece selección masiva privada si solo hay compartidas. La fila del título
+reserva 36 dp: ocultar el lápiz durante la invitación ya no encoge la tarjeta.
+
+Pruebas: 235 suites y 8 auditores con --sin-tarjetas; TypeScript/ESLint generales
+sin errores. Nueva suite ejecuta recuperación/lectura/colección/JSX originales
+con IO adaptado, helper SHA real Node y validadores de enlaces reales. Contra
+52a718d reproduce el conflicto al recuperar y la segunda lista heredada. La
+continuidad visual ampliada reproduce 24 frente a 36 dp contra la misma base.
+No son pruebas de caída real de Android ni de dos usuarios.
+
+Comprobación de lectura del emulador: al inicio de esta revisión ya no había
+privadas activas ni duplicados activos remotos; «uyyj» y «j» son compartidas,
+S/11,111,111 y S/3. No se borró ninguna por nombre ni por antigüedad. Se probó
+abrir código y selector Android de compartir (sin enviar a nadie), copiar y
+cerrar; no se crearon movimientos, devoluciones ni cierres reales. La primera
+conversión privada aún necesita red para confirmar la copia: no se inventa un
+código ni se promete latencia cero. Sin datos nuevos de perfil/finanzas ni
+cambio de declaraciones Play Store; sin APK/OTA/despliegues de Firebase.
+
+**Sigue/falta:** prueba de una conversión nueva y corte/reinicio en Android con
+datos de prueba autorizados, y unión real desde segunda cuenta/teléfono. Los
+tres casos antiguos de hj y pendientes generales ya documentados no se borran
+ni se declaran resueltos por esta corrección de Cajas.
+
 ## Personal/Familia/Cajas — 16/10/2026 — transición y saldo anterior oculto
 
 Marca `16oct-cambio-suave-saldo-oculto`. El selector reemplazaba pantallas

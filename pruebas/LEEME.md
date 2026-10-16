@@ -1,5 +1,16 @@
 # Pruebas y auditores
 
+16/10 Cajas/invitación: 235 pruebas y 8 auditores aprobados con --sin-tarjetas.
+verificar-recuperacion-invitacion-caja-real ejecuta helper SHA/validadores,
+lectura de pantalla y colección/JSX originales con IO adaptado: recibo exacto
+tras reinicio, identidad/dueño/moneda, fuente cambiada, cambio ajeno conservado,
+lecturas sin cruzarse y lista heredada retirada. Base 52a718d roja por conflicto
+de recuperación y segunda lista antigua, no import faltante. Continuidad visual
+ampliada reproduce 24 vs36 dp al ocultar lápiz en esa base; actual verde.
+verificar-conversion-caja añade salida a Todas durante la espera sin reapertura.
+TypeScript/ESLint generales verdes. Sin caída física/reinicio durante conversión
+nueva ni unión desde dos cuentas; no declarar toda la auditoría terminada.
+
 Punto 1 de preparación/código/pruebas locales TERMINADO el 10/10; guía
 PRUEBAS_CICLO_BORRADO_RESTAURACION.md. App final3: 194 pruebas y 8 auditores
 sin tarjetas (una ajena no seguida; 193 previstas Git limpio, no otro checkout

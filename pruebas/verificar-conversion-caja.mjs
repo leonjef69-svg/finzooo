@@ -54,8 +54,10 @@ function harness() {
   const scope = { Error, auth: { currentUser: { uid: "a" } }, caja: box, movimientos: [row], compartiendo: false,
     Platform: { OS: "android" }, privateBoxLinksMatch: linksModule.exports.privateBoxLinksMatch,
     guardandoRef: { current: false }, repairBlocked: false, repairPlan: { conflicts: [] },
-    conversionEnCurso: { current: false },
+    conversionEnCurso: { current: false }, recuperacionConversionEnCurso: { current: false },
     invitacionPrivadaSolicitada: { current: false }, setInvitacionPrivadaVisible: value => { scope.invitationVisible = value; },
+    seleccionActual: { current: { lista: false, cajaId: box.id } },
+    setCompartidas: update => { scope.shared = update(scope.shared || []); }, setSaldosCompartidas: update => { scope.balances = update(scope.balances || {}); }, saldoCaja: api.saldoCaja,
     isPremium: true, accountUid: "a", ready: true, userName: "A", userCurrency: "PEN", active: true,
     // Escenarios financieros con elección válida. La barrera real sin elección
     // se ejecuta en verificar-aceptacion-cuenta-real, antes de guardar pendiente.
@@ -67,12 +69,20 @@ function harness() {
     compartirCajaExistente: async () => ({ id: receipt.targetId, nombre: receipt.name, conversion: receipt }),
     huellaCaja: async (_box, rows) => rows[0].monto === 100 ? receipt.digest : "b".repeat(64),
     repairLinkedTransferTransactions: rows => events.push(["repair", rows]), setCompartiendo: value => events.push(["busy", value]),
-    setDatos: work => { dataRef.current = work(dataRef.current); events.push("retired"); }, setCajaId: () => {}, setLista: () => {},
+    setDatos: work => { dataRef.current = work(dataRef.current); events.push("retired"); }, setCajaId: () => {}, setLista: () => {}, setNameCopies: () => {}, setSyncIssue: () => {}, setRefreshVersion: () => {},
     guardarCambioCaja: async (next, upserts = []) => { if (upserts.length) scope.repairLinkedTransferTransactions(upserts); dataRef.current = next; events.push(next.cajas.some(row => row.id === box.id) ? "pending" : "retired"); return true; },
     nuevoIntentoCaja: () => "prueba-intento-0001",
     crearInvitacionCaja: async () => { events.push("invite"); throw new Error("network"); },
     irUnaVez: params => events.push(["open", params]), spaceErrorKey: () => "network" };
   scope.abrirCompartida = (item, code) => events.push(["open", { item, code }]);
+  scope.personalActuales = { current: scope.transactions };
+  scope.validarCajas = api.validarCajas;
+  scope.canonical = requireCore("../functions/src/private-box-money-shared.js").canonical;
+  scope.privateBoxSourceString = requireCore("../functions/src/private-box-source.js").privateBoxSourceString;
+  const recoverySource = fs.readFileSync("utils/boxConversionRecovery.ts", "utf8");
+  const recoveryTree = ts.createSourceFile("recovery.ts", recoverySource, ts.ScriptTarget.Latest, true);
+  const recoveryFunction = recoveryTree.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === "prepararRetiroCajaConfirmada").getText(recoveryTree).replace(/^export /, "");
+  vm.runInNewContext(ts.transpile(`${recoveryFunction}\nglobalThis.prepararRetiroCajaConfirmada = prepararRetiroCajaConfirmada;`, { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.None }), scope);
   vm.runInNewContext(ts.transpile(`${action}\nglobalThis.run = compartirCaja;`, { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.CommonJS }), scope);
   return { scope, events, dataRef };
 }
@@ -100,6 +110,11 @@ function harness() {
   const h = harness(); h.scope.Platform.OS = "ios";
   h.scope.compartirCajaExistente = async () => { throw new Error("NO_SERVER_WRITE_ALLOWED"); };
   await h.scope.run(); assert.ok(h.events.includes("boxes.atomicAndroidOnly")); assert.equal(h.dataRef.current.cajas.length, 1);
+}
+{
+  const h = harness(); h.scope.seleccionActual.current = { lista: true, cajaId: box.id };
+  await h.scope.run(); assert.equal(h.events.some(item => Array.isArray(item) && item[0] === "open"), false, "volver a Todas durante la espera no reabre la Caja ni otra pantalla");
+  assert.equal(h.scope.shared.length, 1); assert.equal(h.scope.balances[receipt.targetId], 100);
 }
 {
   const h = harness(); let finish;
