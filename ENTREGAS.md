@@ -1,20 +1,26 @@
 # Entregas de Fino
 
+## 16/10/2026 — Invitar no muestra el formulario anterior si falla
+
+Si falla la creación del código, la Caja permanece en su vista normal y el
+borrador queda guardado. Agregar dinero permite recuperarlo si se desea. El
+emulador está conectado al servidor local 8081; falta observar visualmente la
+última recarga. Pasaron 230 pruebas/8 auditores, TypeScript y ESLint. No modifica
+saldos ni movimientos. Sin APK/AAB/OTA/Play.
+
 ## 16/10/2026 — Ocultar el aviso legal mientras comprueba la aceptación
 
-El emulador apunta al servidor local 8081 y este sirve el marcador
-`16oct-aviso-legal-sin-destello`. El aviso legal fugaz aparecía mientras Fino
-revisaba el recibo guardado en el propio teléfono. Ahora no se dibuja durante esa
-comprobación; si falta la aceptación, el aviso aparece después. Se conserva el
-recibo y no se tocan saldos ni movimientos. Falta volver a mirar el cambio en la
-pantalla. Sin APK/AAB/OTA/Play.
+El emulador apunta al servidor local 8081 y este sirve el marcador más reciente.
+El aviso legal fugaz aparecía mientras Fino revisaba el recibo guardado en el
+propio teléfono. Ahora no se dibuja durante esa comprobación; si falta la
+aceptación, el aviso aparece después. Se conserva el recibo y no se tocan saldos
+ni movimientos. Falta volver a mirar el cambio en la pantalla. Sin APK/AAB/OTA/Play.
 
 ## 15/10/2026 — Invitación limpia en Caja (desarrollo)
 
-Marca `15oct-caja-invitacion-espera-limpia`. Invitar ocultaba el formulario de
-Ingreso/Gasto solo cuando terminaba la petición. Desde el toque ahora suspende
-formulario y controles, conserva el borrador y restaura el estado si falla red.
-No cambia dinero ni sus manejadores.
+Marca `15oct-caja-invitacion-espera-limpia`. Invitar oculta el formulario y los
+controles desde el toque. Conserva el borrador sin reabrirlo automáticamente si
+falla la petición. No cambia dinero ni sus manejadores.
 
 La prueba visual anterior reprodujo que el formulario seguía durante la carga y
 se ocultaba después. El emulador ya sirve el paquete de desarrollo con la marca

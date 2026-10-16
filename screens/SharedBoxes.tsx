@@ -253,26 +253,15 @@ function SharedBoxesForAccount({ uid, initialBox, initialInvitation, onAllBoxes 
   const invitar = () => ejecutar(async wait => {
     if (!uid || !caja || !owner) return;
     if (!isPremium) { irUnaVez("/premium"); return; }
-    // Ocultar el borrador durante la espera; recuperarlo si no se pudo crear el código.
-    const modoAnterior = modo;
-    const modoSuspendidoAnterior = modoSuspendido.current;
-    const estabaEditandoNombre = editandoNombreCaja;
-    const estabaSeleccionando = seleccionando;
+    // Plegar siempre la edición. Si falla la petición no reabrir el formulario:
+    // el borrador queda guardado en estado y el usuario decide si lo recupera.
     if (modo === "ingreso" || modo === "gasto") modoSuspendido.current = modo;
     setModo(null);
     setEditandoNombreCaja(false);
     setSeleccionando(false);
-    try {
-      // Crear un código no modifica movimientos: no vaciar ni recargar su lista.
-      const code = await wait(() => crearInvitacionCaja(uid, caja.id));
-      setInvitacion(code);
-    } catch (error) {
-      modoSuspendido.current = modoSuspendidoAnterior;
-      setModo(modoAnterior);
-      setEditandoNombreCaja(estabaEditandoNombre);
-      setSeleccionando(estabaSeleccionando);
-      throw error;
-    }
+    // Crear un código no modifica movimientos: no vaciar ni recargar su lista.
+    const code = await wait(() => crearInvitacionCaja(uid, caja.id));
+    setInvitacion(code);
   }, false);
   const guardar = () => ejecutar(async wait => {
     if (!uid) return;

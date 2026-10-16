@@ -101,6 +101,12 @@ assert.ok(flatten(s.render()).some(node => node.props.accessibilityLabel === "co
 assert.ok(flatten(s.render()).some(node => node.type === "ContentReportButton"), "Seleccionar conserva denuncias y moderación");
 add.props.onPress(); assert.equal(s.modo, "ingreso"); assert.equal(s.nombre, "borrador"); assert.equal(s.monto, "15", "Agregar dinero recupera el borrador suspendido");
 s.modo = null; close.props.onPress(); assert.equal(changes.at(-1), "close");
+s.owner = true; s.modo = "gasto"; s.nombre = "borrador pendiente"; s.monto = "20";
+s.crearInvitacionCaja = async () => { throw Error("offline"); };
+await assert.rejects(s.invokeInvite(), /offline/);
+assert.equal(s.modo, null, "si falla el código no reaparece el formulario antiguo");
+assert.equal(s.modoSuspendido.current, "gasto"); assert.equal(s.nombre, "borrador pendiente"); assert.equal(s.monto, "20");
+s.modoSuspendido.current = null;
 s.owner = false;
 assert.ok(!flatten(s.render()).some(node => node.props.accessibilityLabel === "boxes.close"), "no dar permisos de cierre a un invitado");
 console.log("JSX original compartido: conserva Agregar/Cerrar, devolución/totales/filas modernas, abre/cierra solo el código y mantiene permisos/acciones. No mueve dinero real.");

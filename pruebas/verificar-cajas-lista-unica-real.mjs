@@ -71,8 +71,9 @@ const rows = [{ id: "real", tipo: "ingreso", monto: 100 }, { id: "spent", tipo: 
   s.modo = "gasto"; s.editandoNombreCaja = true; s.seleccionando = true;
   s.crearInvitacionCaja = async () => { throw Error("offline"); }; await s.invite();
   assert.equal(errors.length, 1); assert.equal(s.busy, false); assert.equal(s.confirmedSource.current, origin);
-  assert.equal(s.modo, "gasto", "si no se genera el código el formulario no se oculta");
-  assert.equal(s.editandoNombreCaja, true); assert.equal(s.seleccionando, true, "al fallar la conexión se restauran los controles previos");
+  assert.equal(s.modo, null, "si falla Invitar no vuelve a abrir Ingreso/Gasto de fondo");
+  assert.equal(s.modoSuspendido.current, "gasto", "el borrador se conserva para que el usuario elija recuperarlo");
+  assert.equal(s.editandoNombreCaja, false); assert.equal(s.seleccionando, false, "el fallo deja limpia la vista normal de la Caja");
   await s.work(wait => wait(async () => {}));
   assert.equal(s.movementEpoch.current, 5); assert.equal(s.confirmedSource.current, null);
   assert.equal(s.subscription, 1, "las operaciones de dinero SÍ conservan su invalidación/recarga");

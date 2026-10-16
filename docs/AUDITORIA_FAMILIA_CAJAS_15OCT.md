@@ -1,5 +1,13 @@
 # Familia y Cajas — auditoría del 15/10/2026
 
+## 16/10/2026 — Invitar no reactiva Ingreso/Gasto al fallar
+
+La rama de error restauraba automáticamente el formulario. Ahora queda plegado
+y el borrador sigue guardado hasta que el usuario elija Agregar dinero. Pruebas
+de error verifican que no reaparezca el formulario ni se toquen los movimientos.
+Suite completa: 230 pruebas/8 auditores; TypeScript/ESLint sin errores. El emulador
+sigue conectado al Metro del proyecto, pero falta observar la nueva pantalla.
+
 ## 16/10/2026 — evitar el destello de aceptación legal
 
 La captura mostraba el aviso «Antes de crear o compartir contenido…» durante la
@@ -20,12 +28,12 @@ operación de Ingreso/Gasto o edición de aporte que ya estaba abierta. Por eso 
 el código aparecía con ese formulario y el botón lápiz de renombrar al fondo
 mientras Firebase respondía. Ahora se ocultan desde el toque el formulario,
 edición del nombre, Seleccionar y lápiz, antes de la petición. Al completarse,
-Agregar dinero recupera el borrador; si falla, se restaura el formulario y los
-controles que estaban abiertos. No se escribe ni se modifica movimiento alguno.
+Agregar dinero recupera el borrador; si falla, el formulario permanece plegado.
+No se escribe ni se modifica movimiento alguno.
 
 Prueba del manejador original con fixture sin dinero real y pruebas focalizadas
 verifican la vista oculta antes de resolver la promesa, la recuperación del
-borrador y la restauración tras fallo. La comprobación Android mostró el hueco
+borrador y que el fallo no reabra la vista anterior. La comprobación Android mostró el hueco
 anterior durante la espera; el emulador ahora sirve el paquete actualizado con
 la marca de esta versión, pero falta observar visualmente la nueva espera.
 Sigue pendiente unión con otro Android/cuenta; sin cambios monetarios.

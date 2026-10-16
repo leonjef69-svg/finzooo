@@ -1,9 +1,22 @@
 # Estado actual de Fino
 
+## Familia y Cajas — 16/10/2026 — invitación no reactiva el formulario al fallar
+
+Si no se generaba el código, el manejo del error restauraba Ingreso/Gasto y
+edición, mostrando el formulario que el usuario llama sistema antiguo. Ahora el
+fallo deja la vista normal de la Caja, conserva el borrador y Agregar dinero
+permite recuperarlo de forma voluntaria. No modifica movimientos ni saldos.
+
+Pruebas focalizadas y suite completa verifican invitación, espera y error de red
+sin reabrir el formulario ni cambiar el historial: 230 pruebas/8 auditores,
+TypeScript y ESLint limpios. El emulador tiene conexiones activas al Metro 8081,
+que entrega el marcador `16oct-invitar-sin-formulario`. Falta verificar
+visualmente esta última recarga. Sin APK/AAB/OTA/Play.
+
 ## Familia y Cajas — 16/10/2026 — aviso legal sin destello
 
-El emulador está conectado al Metro local 8081 y este entrega el marcador
-`16oct-aviso-legal-sin-destello`; eso confirma que sirve el JavaScript actual.
+El emulador está conectado al Metro local 8081 y este entrega el marcador más
+reciente; eso confirma que sirve el JavaScript actual.
 Al abrir Cajas se mostraba brevemente «Antes de crear o compartir contenido…»
 porque el panel pintaba la advertencia mientras consultaba el recibo legal
 cifrado en el almacenamiento local. Ahora el panel permanece oculto durante esa
@@ -23,22 +36,22 @@ edición de aporte durante la espera de red. El lápiz del saldo cambia el nombr
 de la Caja y también seguía visible. Desde el toque se ocultan el formulario,
 edición del nombre y modo Seleccionar; el lápiz queda oculto durante la espera y
 al ver el código. Si el código se crea, Agregar dinero permite recuperar el
-borrador. Si falla la red, se restauran el formulario y controles que estaban
-abiertos. No se alteran los manejadores de dinero.
+borrador. Si falla la red, el formulario queda plegado y el borrador se conserva
+para recuperarlo desde Agregar dinero. No se alteran los manejadores de dinero.
 
 Nueva regresión en pruebas/verificar-caja-invitacion-mismo-diseno-real.mjs
 ejecuta el invitar original con borrador abierto, verifica que se oculte mientras
 espera y se recupere con Agregar dinero, que lápiz y Seleccionar se oculten, y
 que la hoja no invoque operaciones monetarias. También prueba que un fallo de
-red restaure controles. Suite final aprobada: 230 pruebas/8 auditores sin
+red no reabra el formulario. Suite final aprobada: 230 pruebas/8 auditores sin
 tarjetas; TypeScript y ESLint limpios.
 
 Emulador probó el intento con el cambio anterior: el formulario seguía visible
 mientras Firebase respondía; al completarse, el código dejó fondo limpio. Ese
 instante de espera era la parte faltante. El emulador sirve el paquete de
 desarrollo con la marca de esta versión; la comprobación visual de la espera con
-esta versión aún falta. Esta versión oculta el formulario
-desde el toque y restaura si hay error; falta repetir esta comprobación visual.
+esta versión aún falta. Esta versión oculta el formulario desde el toque, y no
+lo reabre si hay error; falta repetir esta comprobación visual.
 **Sigue/falta:**
 unión con segundo teléfono/cuenta. Persisten los tres registros antiguos de
 «hj» sin identidad o intención confirmada; esta corrección no los toca. Sin
