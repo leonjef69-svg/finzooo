@@ -1,5 +1,20 @@
 # Pruebas y auditores
 
+17/10 Selección/devoluciones antiguas: 240 pruebas y 8 auditores sin tarjetas;
+TypeScript/ESLint completos. verificar-seleccion-ahorro-real ejecuta selector
+original y JSX del menú: una fila individual, resumen por espacio/tipo/día,
+grupos bloqueados intactos y un solo Editar funcional. Base 781887d roja por
+seleccionar ocho filas al tocar una. verificar-devoluciones-antiguas-real falla
+en esa base por bloqueo real; exige espacio cerrado, aportes ya eliminados y
+asignaciones exactas, verifica borrado real 62→0 y rechazo de copia atrasada.
+verificar-lote-borrado-real añade dos devoluciones juntas y rollback/ACK perdido/
+reinicio con SQLite original. Fallos iniciales de dos suites de reparación se
+corrigieron aislando la validación nueva de las reparaciones sin borrado antiguo;
+corrida completa final verde, sin quitar pruebas. Emulador comprobó una fila
+marcada sin marcar la otra y borrado de las dos devoluciones autorizadas;
+38 filas y 229 marcas confirmadas en nube. FPS de Ajustes medidos aparte,
+no prueban rendimiento de APK final ni cierre de auditoría global.
+
 17/10 Ahorro: 238 pruebas y 8 auditores aprobados con --sin-tarjetas;
 TypeScript/ESLint completos. verificar-ahorro-unificado-real y
 verificar-metas-edicion-historial-real fallan contra 866b969 por liberar una

@@ -163,6 +163,19 @@ if (process.argv[2] === "--crash-worker") {
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), "fino-delete-batch-"));
 try {
   if (!baseline) {
+    for (const failure of [null, "rollback", "lost-ack"]) {
+      const returns = [50, 12].map((amount, index) => ({ ...row, id: 42 + index * 2, type: "income", amount, date: "2026-10-15",
+        internalTransfer: index ? "box" : "family", internalTransferSpaceId: `closed-${index}`, internalTransferLink: `return-${index}`,
+        internalTransferSettled: true, internalTransferAllocations: [{ transactionId: 40 + index, amount }] }));
+      const h = harness(":memory:", returns, []); await h.seed();
+      h.ctx.deletedTransactionIdsRef.current = [40, 41];
+      await h.storage.saveJSONNow(h.storage.STORAGE_KEYS.deletedTransactionIds, [40, 41]); h.failure = failure;
+      const saved = await h.ctx.deleteTransactions(returns.map(item => item.id));
+      assert.equal(saved, failure !== "rollback");
+      assert.equal(h.ctx.transactionsLive.current.length, saved ? 0 : 2, "las devoluciones se borran juntas, no se ocultan");
+      const restarted = await h.restartLists(); assert.equal(restarted.records.transactions.length, saved ? 0 : 2);
+      assert.equal(balances.disponiblePersonalEnFecha("2026-10-17", { "2026-10": 0 }, restarted.records.transactions, ["2026-10"]), saved ? 0 : 62);
+    }
     for (const kind of ["edit", "use"]) for (const failure of [null, "rollback", "lost-ack"]) {
       const funded = { ...goal, saved: 20 }, h = harness(":memory:", [], [funded]); await h.seed(); h.failure = failure;
       const action = kind === "edit" ? { kind, goal: { ...funded, target: 40 }, saved: 10, expectedSaved: 20 }

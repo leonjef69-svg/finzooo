@@ -1,5 +1,60 @@
 # Estado actual de Fino
 
+## Personal/Ahorro — 17/10/2026 — selección individual y devoluciones antiguas
+
+Marca `17oct-ahorro-seleccion-individual`, base 781887d. Retirado el acceso
+Editar meta bajo Ahorrar/Usar ahorro; permanece el único Editar del menú.
+Seleccionar una fila en Inicio tomaba groupItems, que contiene todo el día
+para encabezados/horas. Ahora una fila normal o de ahorro selecciona solo su ID;
+un resumen solo expande a las transferencias de su mismo espacio/tipo/día.
+No incluye otra Familia/Caja ni movimientos ordinarios del día.
+
+S/62 investigados en el emulador y servidor: dos aportes de S/50 y S/12 a uu
+y 12 el 26/09, devueltos el 15/10. Familias cerradas y aportes borrados de
+Personal anteriormente, sin diario moderno de eliminación; originales remotos
+todavía comprobables. Octubre tiene presupuesto cero y arrastre reiniciado:
+las devoluciones sí explicaban el disponible, no eran ingresos ni dinero
+inventado. El bloqueo exigía un par presente y no contemplaba este caso antiguo.
+
+Se permite borrado REAL explícito de una devolución visible de Familia/Caja
+cerrada cuando todas sus asignaciones son válidas/exactas y sus aportes constan
+eliminados y ausentes. Se vuelve a validar dentro del lote con las fuentes de
+disco actuales. No adivina parejas, reconstruye aportes ni oculta estas filas;
+avisa cuánto baja Personal. Pares completos siguen su retirada visual sin
+cambiar dinero; aportes activos, referencias desconocidas e incompletos no se
+habilitan. No se cambian cierres, movimientos remotos ni documentos de Familia.
+
+El usuario eligió expresamente eliminar ambas devoluciones y dejar S/0. Se hizo
+por la selección y confirmación de la app: 40→38 movimientos y 227→229 marcas;
+únicos registros retirados: las dos devoluciones autorizadas; otros movimientos
+y meta intactos. Personal muestra S/0; nube confirmó 38 filas, ambas marcas y
+ninguna devolución presente. No hay Deshacer automático; los comprobantes de
+las familias cerradas permanecen, no se purgan datos compartidos.
+Tras cerrar completamente y reabrir, se conservan 38 movimientos/229 marcas,
+una meta y S/0 disponible; segunda consulta al servidor confirma los dos borrados.
+Consulta de espacios activos: ninguna Familia abierta, ninguna Caja privada y
+dos Cajas compartidas con sus mismos saldos, sin enlaces de aporte del Personal
+actual. No se escribieron ni purgaron datos en esos espacios durante esta revisión.
+
+240 pruebas y 8 auditores sin tarjetas, TypeScript/ESLint generales aprobados.
+Dos regresiones nuevas fallan contra 781887d por seleccionar ocho filas al tocar
+una y por bloquear la devolución antigua, no por API ausente. SQLite original
+cubre borrado conjunto, fallo de disco, confirmación perdida, reinicio y copia
+atrasada. Ampliación inicial detectó dependencia innecesaria en reparaciones de
+Cajas/devoluciones: se limita al borrado antiguo solicitado; ambas regresiones
+y corrida completa final aprobadas, sin retirar las comprobaciones.
+
+FPS: tres desplazamientos de Ajustes medidos con actualPresentTime de
+SurfaceFlinger: 38,1 / 38,3 / 38,3 FPS, 63 fotogramas y unos 1,62 s por muestra,
+sin llenar el búfer. Pantalla del emulador a 60 Hz. Es una muestra de la build
+de desarrollo, no FPS fijos de toda la app ni medición de APK final/teléfono.
+Capturas, métricas y diagnóstico financiero permanecen en .tmp, fuera de Git.
+
+**Sigue/falta:** medir/optimizar fluidez de la versión final en Android físico,
+restauración completa en segundo teléfono y casos antiguos de hj. No cierre
+de auditoría global de Familia/Cajas/Personal; sin APK/AAB/OTA/Play, despliegue
+Firebase o tarjetas. No se borran otras cosas por su antigüedad.
+
 ## Ahorro — 17/10/2026 — edición conjunta, compra y recibos claros
 
 Marca `17oct-metas-edicion-y-movimientos`, base 866b969. Una sola vista de

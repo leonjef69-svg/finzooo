@@ -1,7 +1,7 @@
 import ConfirmDialog from "@/components/ConfirmDialog";
 import SavingsMovementRow from "@/components/SavingsMovementRow";
 import { saldoLibre } from "@/utils/ahorro";
-import { removablePersonalHistoryIds, visiblePersonalMovement } from "@/utils/personalHistory";
+import { removablePersonalHistoryIds, removableLegacyReturnIds, visiblePersonalMovement } from "@/utils/personalHistory";
 import EtiquetaMetodo from "@/components/EtiquetaMetodo";
 import IconBadge from "@/components/IconBadge";
 import MonthSelector from "@/components/MonthSelector";
@@ -264,6 +264,7 @@ export default function Home({
     marcarPagoDelMes,
     visualStyle,
     apartado,
+    deletedTransactionIds,
   } = useAppData();
   const { avisoPagoId, avisoMes, avisoTap } = useLocalSearchParams<{
     avisoPagoId?: string; avisoMes?: string; avisoTap?: string;
@@ -562,11 +563,16 @@ export default function Home({
   const [confirmandoBorrarTodo, setConfirmandoBorrarTodo] = useState(false);
   const [confirmandoSeleccionados, setConfirmandoSeleccionados] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
-  const historyRemovable = useMemo(() => removablePersonalHistoryIds(transactions), [transactions]);
+  const historyRemovable = useMemo(() => removablePersonalHistoryIds(transactions, deletedTransactionIds), [transactions, deletedTransactionIds]);
+  const legacyReturns = useMemo(() => removableLegacyReturnIds(transactions, deletedTransactionIds), [transactions, deletedTransactionIds]);
   const movimientosBorrablesDelMes = useMemo(() => monthTx.filter(m => historyRemovable.has(m.id)), [monthTx, historyRemovable]);
   const seleccionadosBorrables = useMemo(() => selected.filter((id) =>
     movimientosBorrablesDelMes.some((tx) => tx.id === id)
   ), [selected, movimientosBorrablesDelMes]);
+  const removalMessage = (ids: number[]) => {
+    const amount = transactions.filter(row => ids.includes(row.id) && legacyReturns.has(row.id)).reduce((sum, row) => sum + row.amount, 0);
+    return t("history.removeMixedBody") + (amount > 0 ? `\n\n${t("history.deleteLegacyReturnBody", { amount: fmt(amount) })}` : "");
+  };
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
   const balanceColors = peachOlive ? balanceGradientForVisualStyle(visualStyle) : SALDO_VERDE;
@@ -593,7 +599,13 @@ export default function Home({
   historyNotice.current = () => showToast(t("history.returnBeforeRemove"));
   const toggleSelected = useCallback((id: number) => {
     const row = visibleRecentRows.find(item => item.item.id === id);
-    const ids = row?.groupItems?.map(item => item.id) ?? [id];
+    // groupItems contiene todo el día para sus horas/encabezado. Solo un
+    // resumen de transferencias expande la selección, y solo a SU espacio.
+    const space = row?.item.internalTransferSpaceId || row?.item.internalTransferSpaceName || "legacy";
+    const ids = row?.transferGroup
+      ? (row.groupItems ?? [row.item]).filter(item => item.internalTransfer === row.item.internalTransfer
+        && (item.internalTransferSpaceId || item.internalTransferSpaceName || "legacy") === space).map(item => item.id)
+      : [id];
     if (ids.some(value => !historyRemovable.has(value))) { historyNotice.current(); return; }
     setSelected(prev => ids.every(value => prev.includes(value)) ? prev.filter(value => !ids.includes(value)) : [...new Set([...prev, ...ids])]);
   }, [historyRemovable, visibleRecentRows]);
@@ -1086,7 +1098,7 @@ export default function Home({
       <ConfirmDialog
         visible={confirmandoBorrarTodo}
         title={t("home.deleteAllTitle", { count: movimientosBorrablesDelMes.length, month: monthLabel })}
-        message={t("history.removeMixedBody")}
+        message={removalMessage(movimientosBorrablesDelMes.map(row => row.id))}
         confirmLabel={t("home.deleteAllConfirm")}
         cancelLabel={t("common.cancel")}
         danger
@@ -1096,7 +1108,7 @@ export default function Home({
       <ConfirmDialog
         visible={confirmandoSeleccionados}
         title={t("home.deleteSelectedTitle", { count: seleccionadosBorrables.length })}
-        message={t("history.removeMixedBody")}
+        message={removalMessage(seleccionadosBorrables)}
         confirmLabel={t("common.delete")}
         cancelLabel={t("common.cancel")}
         danger

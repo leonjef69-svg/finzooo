@@ -1,5 +1,12 @@
 # Lo que hay que rellenar en Play Console
 
+17/10/2026 — Devoluciones antiguas de espacios cerrados: si el aporte ya
+consta eliminado, se admite borrar realmente su devolución con confirmación
+del cambio de saldo. Se retira de los movimientos de Personal y conserva la
+marca de borrado existente para no reaparecer desde una copia antigua. No
+purga los comprobantes compartidos del espacio cerrado ni equivale a borrar
+todo el historial de la cuenta. Sin campo, permiso ni destinatario nuevo.
+
 17/10/2026 — Ahorro: recibos de apartado/devolución en los movimientos de
 Personal, con referencia a la meta y operación de su libro de aportes. Una
 compra pagada con metas conserva `goalFundingAllocations` (ID/nombre de meta,

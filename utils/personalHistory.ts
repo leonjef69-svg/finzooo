@@ -53,8 +53,25 @@ export function returnedTransferHistoryIds(rows: Transaction[], id: number): num
   return finish(queue);
 }
 
-export function removablePersonalHistoryIds(rows: Transaction[]): Set<number> {
-  const result = new Set<number>(), checked = new Set<number>();
+/** Devolución de un espacio cerrado cuyo aporte YA fue eliminado. Se puede
+ * borrar de verdad, con aviso de que baja Personal; no ocultar ni reconstruir
+ * el aporte. Un enlace desconocido, asignación incompleta o espacio activo no entra aquí. */
+export function removableLegacyReturnIds(rows: Transaction[], deletedIds: number[]): Set<number> {
+  const known = new Set(rows.map(row => row.id)), deleted = new Set(deletedIds), result = new Set<number>();
+  for (const row of rows) {
+    const parts = row.internalTransferAllocations;
+    if (!visiblePersonalMovement(row) || row.type !== "income" || !["family", "box"].includes(row.internalTransfer || "") || row.internalTransferSettled !== true
+      || !row.internalTransferLink || !row.internalTransferSpaceId || !Number.isFinite(row.amount) || row.amount <= 0
+      || !Array.isArray(parts) || !parts.length || new Set(parts.map(part => part.transactionId)).size !== parts.length) continue;
+    if (parts.some(part => !Number.isSafeInteger(part.transactionId) || part.transactionId <= 0 || known.has(part.transactionId)
+      || !deleted.has(part.transactionId) || !Number.isFinite(part.amount) || part.amount <= 0)) continue;
+    if (parts.reduce((total, part) => total + moneyUnits(part.amount), 0n) === moneyUnits(row.amount)) result.add(row.id);
+  }
+  return result;
+}
+
+export function removablePersonalHistoryIds(rows: Transaction[], deletedIds: number[] = []): Set<number> {
+  const result = removableLegacyReturnIds(rows, deletedIds), checked = new Set<number>();
   for (const row of rows) {
     if (!visiblePersonalMovement(row)) continue;
     if (!row.internalTransfer || row.internalTransfer === "goal") { result.add(row.id); continue; }

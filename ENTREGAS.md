@@ -1,5 +1,31 @@
 # Entregas de Fino
 
+## 17/10/2026 — Selección individual, Editar único y borrado antiguo explícito (desarrollo)
+
+Marca `17oct-ahorro-seleccion-individual`; base 781887d. Retirado Editar meta
+duplicado, conservado Editar del menú. Una fila de ahorro/ordinaria selecciona
+solo ella; los resúmenes solo incluyen su mismo espacio, tipo y fecha.
+
+Dos devoluciones antiguas de familias cerradas tenían sus aportes ya eliminados
+de Personal y no podían quitarse. Se habilita borrado real solo con cierre,
+asignaciones exactas, aportes ausentes y marcas de eliminación; revalidación en
+el lote y aviso de reducción del disponible. No es ocultación ni recreación.
+Con autorización expresa se eliminaron únicamente S/50 de uu y S/12 de 12:
+Personal S/62→S/0, otros movimientos/meta intactos. Nube confirmó el borrado;
+comprobantes de las familias cerradas conservados y sin Deshacer automático.
+Cerrar/reabrir conserva S/0 y las dos marcas confirmadas en nube; dos Cajas
+compartidas activas revisadas solo en lectura, sin alterar sus saldos.
+
+240 pruebas/8 auditores sin tarjetas y TypeScript/ESLint completos aprobados.
+Regresiones rojas contra 781887d por selección de todo el día y bloqueo antiguo.
+Pruebas con SQLite incluyen fallos/reinicio; selección y borrado real comprobados
+en el emulador. FPS medidos al desplazar Ajustes: 38,1–38,3 en tres muestras,
+pantalla 60 Hz, build de desarrollo; no cifra de APK final ni toda la app.
+
+**Sigue/falta:** rendimiento de versión final en teléfono real, restauración
+en segundo teléfono y antiguos de hj. Sin APK/AAB/OTA/Play, despliegues remotos
+o tarjetas; no cierre de auditoría global. Evidencias privadas fuera de Git.
+
 ## 17/10/2026 — Ahorro compacto, edición conjunta y uso del ahorro (desarrollo)
 
 Marca `17oct-metas-edicion-y-movimientos`; base 866b969. Vista única con Saldo

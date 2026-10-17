@@ -14,7 +14,7 @@ import type { Transaction } from "@/types";
 import BackButton from "@/components/BackButton";
 import MissingItem from "@/components/MissingItem";
 import { personalTransferStatuses } from "@/utils/linkedTransfers";
-import { returnedTransferHistoryIds } from "@/utils/personalHistory";
+import { returnedTransferHistoryIds, removableLegacyReturnIds } from "@/utils/personalHistory";
 
 export default function Detail({
   transaction,
@@ -27,7 +27,7 @@ export default function Detail({
   onEdit: () => void;
   onDelete: (id: number) => void;
 }) {
-  const { fmt, t, monthNames, transactions } = useAppData();
+  const { fmt, t, monthNames, transactions, deletedTransactionIds } = useAppData();
   const [confirm, setConfirm] = useState(false);
   const insets = useSafeAreaInsets();
   const { colorScheme } = useColorScheme();
@@ -37,8 +37,9 @@ export default function Detail({
   const linkedCreditPayment = transaction.method === "credit-card-payment";
   const managedTransfer = Boolean(transaction.internalTransfer);
   const returnedCompletely = managedTransfer && returnedTransferHistoryIds(transactions, transaction.id).length > 0;
+  const legacyReturn = managedTransfer && removableLegacyReturnIds(transactions, deletedTransactionIds).has(transaction.id);
   const transferStatus = managedTransfer
-    ? transaction.type === "income" ? returnedCompletely ? "returned" : "partial" : personalTransferStatuses(transactions).get(transaction.id) || "pending"
+    ? transaction.type === "income" ? returnedCompletely || legacyReturn ? "returned" : "partial" : personalTransferStatuses(transactions).get(transaction.id) || "pending"
     : null;
   const transferSpace = transaction.internalTransferSpaceName || t(transaction.internalTransfer === "family" ? "spaces.family" : "spaces.boxes");
   const transferDirection = transaction.type === "expense"
@@ -97,9 +98,9 @@ export default function Detail({
       {managedTransfer ? (
         <View className="mt-auto mx-6 mb-8 rounded-2xl bg-teal-50 px-4 py-3 dark:bg-teal-950">
           <Text className="text-center text-sm font-semibold text-teal-700 dark:text-teal-200">
-            {t(returnedCompletely ? "history.removeTransferBody" : "history.returnBeforeRemove")}
+            {t(legacyReturn ? "history.deleteLegacyReturnBody" : returnedCompletely ? "history.removeTransferBody" : "history.returnBeforeRemove", { amount: fmt(transaction.amount) })}
           </Text>
-          {returnedCompletely && <TouchableOpacity onPress={() => setConfirm(true)} accessibilityRole="button" className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-white py-3 dark:bg-noche-2"><Trash2 size={16} color="#f43f5e" /><Text className="text-sm font-bold text-rose-500">{t("history.removeRecord")}</Text></TouchableOpacity>}
+          {(returnedCompletely || legacyReturn) && <TouchableOpacity onPress={() => setConfirm(true)} accessibilityRole="button" className="mt-3 flex-row items-center justify-center gap-2 rounded-xl bg-white py-3 dark:bg-noche-2"><Trash2 size={16} color="#f43f5e" /><Text className="text-sm font-bold text-rose-500">{t(legacyReturn ? "history.deleteLegacyReturn" : "history.removeRecord")}</Text></TouchableOpacity>}
         </View>
       ) : <View className="mt-auto px-6 pb-8 pt-4 flex-row gap-3">
         <TouchableOpacity
@@ -124,9 +125,9 @@ export default function Detail({
 
       <ConfirmDialog
         visible={confirm}
-        title={t(managedTransfer ? "history.removeTitle" : "detail.confirmDeleteTitle")}
-        message={t(managedTransfer ? "history.removeTransferBody" : "common.cannotUndo")}
-        confirmLabel={t(managedTransfer ? "history.removeRecord" : "common.delete")}
+        title={t(legacyReturn ? "history.deleteLegacyReturn" : managedTransfer ? "history.removeTitle" : "detail.confirmDeleteTitle")}
+        message={t(legacyReturn ? "history.deleteLegacyReturnBody" : managedTransfer ? "history.removeTransferBody" : "common.cannotUndo", { amount: fmt(transaction.amount) })}
+        confirmLabel={t(legacyReturn ? "common.delete" : managedTransfer ? "history.removeRecord" : "common.delete")}
         cancelLabel={t("common.cancel")}
         onCancel={() => setConfirm(false)}
         onConfirm={() => onDelete(transaction.id)}

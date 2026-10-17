@@ -66,7 +66,7 @@ import { identityForExplicitEdit, recordOriginOf } from "@/utils/recordOrigin";
 import { mergeTransactionCopies, mergeGoalCopies, mergeMutationMetadata, prepareTransactionMutation, rememberDeletion } from "@/utils/recordMerge";
 import { goalWithFundingChange } from "@/utils/goalFunding";
 import { prepareSavingsAction, type SavingsAction } from "@/utils/savingsActions";
-import { preparePersonalHistoryRemoval, removablePersonalHistoryIds } from "@/utils/personalHistory";
+import { preparePersonalHistoryRemoval, removablePersonalHistoryIds, removableLegacyReturnIds } from "@/utils/personalHistory";
 import { fechaLocalISO } from "@/utils/date";
 import { randomUUID } from "expo-crypto";
 import { applyImportedTransactions } from "@/utils/importCommit";
@@ -3186,8 +3186,8 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
       (prev) => learnCategory(merchantText, category, prev)));
   }
 
-  async function commitTransactionMutation(upserts: Transaction[], ids: number[], historyIds: number[] = []): Promise<boolean> {
-    if (!upserts.length && !ids.length && !historyIds.length) return true;
+  async function commitTransactionMutation(upserts: Transaction[], ids: number[], historyIds: number[] = [], legacyReturnIds: number[] = []): Promise<boolean> {
+    if (!upserts.length && !ids.length && !historyIds.length && !legacyReturnIds.length) return true;
     const owner = auth.currentUser?.uid ?? "", version = localSessionVersion.current;
     const task = captureAccountTask(owner, () => version === localSessionVersion.current);
     if (!ready || !hasOnboarded || !task.current() || hasUnreadableLocalData() || Platform.OS !== "android") return false;
@@ -3201,10 +3201,14 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
           ]));
           const base = transactionsLive.current, deleted = deletedTransactionIdsRef.current, metadata = cloudSyncMetaRef.current;
           const source = mergeTransactionCopies(base, diskRows, deleted, diskDeleted, metadata, diskMeta);
+          if (legacyReturnIds.length) {
+            const legacyEligible = removableLegacyReturnIds(source.transactions, source.deletedIds);
+            if (legacyReturnIds.some(id => !legacyEligible.has(id))) throw new Error("history-return-changed");
+          }
           const historyChanges = historyIds.length ? preparePersonalHistoryRemoval(source.transactions, historyIds) : [];
           const preserved = upserts.map(row => source.transactions.some(prior => prior.id === row.id && prior.internalTransfer && prior.hiddenFromHistory === true)
             ? { ...row, hiddenFromHistory: true } : row);
-          const next = prepareTransactionMutation(source.transactions, source.deletedIds, source.metadata, [...preserved, ...historyChanges], ids, randomUUID, issuedCreationId);
+          const next = prepareTransactionMutation(source.transactions, source.deletedIds, source.metadata, [...preserved, ...historyChanges], [...ids, ...legacyReturnIds], randomUUID, issuedCreationId);
           const currency = currencyForReturn.current, boxes = leerCajasEnMemoria() ?? diskBoxes;
           let reservation: PrivateBoxMoneyLocalWrite | undefined;
           return {
@@ -3222,7 +3226,7 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
                 setDeletedTransactionIds(next.deletedIds); setTransactions(next.transactions);
                 cloudSyncMetaRef.current = latestMeta; setCloudSyncMeta(latestMeta);
                 if (canonical(latestMeta) !== canonical(next.metadata)) saveJSON(STORAGE_KEYS.cloudSyncMeta, latestMeta);
-                if (returnReceipt.current && ids.includes(returnReceipt.current.personalTransactionId)) returnReceipt.current = null;
+                if (returnReceipt.current && [...ids, ...legacyReturnIds].includes(returnReceipt.current.personalTransactionId)) returnReceipt.current = null;
               });
             },
           };
@@ -3245,6 +3249,11 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   async function deleteTransaction(id: number) {
     const transaction = transactionsLive.current.find((item) => item.id === id);
     if (transaction?.internalTransfer) {
+      if (removableLegacyReturnIds(transactionsLive.current, deletedTransactionIdsRef.current).has(id)) {
+        const saved = await commitTransactionMutation([], [], [], [id]);
+        if (saved) showToast(t("toast.transactionDeleted"));
+        return saved;
+      }
       if (transaction.hiddenFromHistory === true) return true;
       if (!removablePersonalHistoryIds(transactionsLive.current).has(id)) { showToast(t("history.returnBeforeRemove")); return false; }
       const saved = await commitTransactionMutation([], [], [id]);
@@ -3269,15 +3278,17 @@ export function AppDataProvider({ children }: { children: ReactNode }) {
   }
 
   async function deleteTransactions(ids: number[]) {
-    const eligible = removablePersonalHistoryIds(transactionsLive.current);
+    const eligible = removablePersonalHistoryIds(transactionsLive.current, deletedTransactionIdsRef.current);
     const deletableIds = [...new Set(ids)].filter(id => eligible.has(id));
     if (!deletableIds.length) {
       if (ids.length) showToast(t("history.returnBeforeRemove"));
       return false;
     }
+    const legacyEligible = removableLegacyReturnIds(transactionsLive.current, deletedTransactionIdsRef.current);
+    const legacy = deletableIds.filter(id => legacyEligible.has(id));
     const ordinary = deletableIds.filter(id => !transactionsLive.current.find(row => row.id === id)?.internalTransfer);
-    const internal = deletableIds.filter(id => transactionsLive.current.find(row => row.id === id)?.internalTransfer);
-    const saved = internal.length ? await commitTransactionMutation([], ordinary, internal) : await removeTransactions(ordinary);
+    const internal = deletableIds.filter(id => !legacyEligible.has(id) && transactionsLive.current.find(row => row.id === id)?.internalTransfer);
+    const saved = internal.length || legacy.length ? await commitTransactionMutation([], ordinary, internal, legacy) : await removeTransactions(ordinary);
     if (saved) showToast(
       t(deletableIds.length > 1 ? "toast.transactionsDeletedPlural" : "toast.transactionsDeleted", {
         count: deletableIds.length,
